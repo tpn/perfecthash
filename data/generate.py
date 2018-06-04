@@ -93,13 +93,15 @@ sizes = (
     245000,
     255000,
     265000,
+    389161,
+    472374,
 )
 
 functions = (
     ('linear', gen_linear_array),
     ('random', gen_random_unique_array),
-    ('curved', gen_curved_unique_array),
-    ('spiked', gen_spiked_unique_array),
+    #('curved', gen_curved_unique_array),
+    #('spiked', gen_spiked_unique_array),
 )
 
 def main():
