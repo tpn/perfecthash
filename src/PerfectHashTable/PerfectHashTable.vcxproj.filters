@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{FF4861D8-3241-4CE3-8BD8-FDDDF64615B4}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tga;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{2A6D6AF5-7D40-4157-A09D-8FAF8EAECE92}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{4092B02B-0708-4760-936B-0A5B66A60704}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PerfectHashTableTls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableConstants.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableAllocator.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Rtl\__C_specific_handler.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CreatePerfectHashTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DestroyPerfectHashTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SelfTestPerfectHashTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LoadPerfectHashTableKeys.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DestroyPerfectHashTableKeys.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TestPerfectHashTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm_01.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DestroyPerfectHashTableContext.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CreatePerfectHashTableContext.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LoadPerfectHashTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableHash.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableLookup.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableMask.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableRefCount.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableInsert.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTablePrime.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableDelete.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableNames.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BenchmarkPerfectHashTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PerfectHashTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTableConstants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTablePrivate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Chm_01.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTablePrime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="PerfectHashTable.def">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+  </ItemGroup>
+</Project>

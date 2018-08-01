@@ -1,0 +1,9 @@
+# Set the default behavior (used when a rule below doesn't match)
+* text=auto
+
+# Some Windows-specific files should always be CRLF
+*.bat eol=crlf
+*.sln* eol=crlf
+*.vcxproj* eol=crlf
+*.pyproj* eol=crlf
+*.dgml eol=crlf
