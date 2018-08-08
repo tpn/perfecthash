@@ -118,11 +118,19 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
+
     //
     // Validate arguments.
     //
 
     if (!ARGUMENT_PRESENT(Table)) {
+        return;
+    }
+
+    Rtl = Table->Rtl;
+
+    if (!Rtl) {
         return;
     }
 

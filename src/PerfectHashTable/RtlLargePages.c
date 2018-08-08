@@ -17,11 +17,11 @@ Abstract:
 
 #include "stdafx.h"
 
-RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlpTryLargePageVirtualAlloc;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlTryLargePageVirtualAlloc;
 
 _Use_decl_annotations_
 LPVOID
-RtlpTryLargePageVirtualAlloc(
+RtlTryLargePageVirtualAlloc(
     PRTL     Rtl,
     LPVOID   lpAddress,
     SIZE_T   dwSize,
@@ -71,11 +71,11 @@ Fallback:
     return BaseAddress;
 }
 
-RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlpNoLargePageVirtualAlloc;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlNoLargePageVirtualAlloc;
 
 _Use_decl_annotations_
 LPVOID
-RtlpNoLargePageVirtualAlloc(
+RtlNoLargePageVirtualAlloc(
     PRTL     Rtl,
     LPVOID   lpAddress,
     SIZE_T   dwSize,
@@ -98,11 +98,11 @@ RtlpNoLargePageVirtualAlloc(
     return BaseAddress;
 }
 
-RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlpTryLargePageVirtualAllocEx;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlTryLargePageVirtualAllocEx;
 
 _Use_decl_annotations_
 LPVOID
-RtlpTryLargePageVirtualAllocEx(
+RtlTryLargePageVirtualAllocEx(
     PRTL     Rtl,
     HANDLE   hProcess,
     LPVOID   lpAddress,
@@ -155,11 +155,11 @@ Fallback:
     return BaseAddress;
 }
 
-RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlpNoLargePageVirtualAllocEx;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlNoLargePageVirtualAllocEx;
 
 _Use_decl_annotations_
 LPVOID
-RtlpNoLargePageVirtualAllocEx(
+RtlNoLargePageVirtualAllocEx(
     PRTL     Rtl,
     HANDLE   hProcess,
     LPVOID   lpAddress,
@@ -184,11 +184,11 @@ RtlpNoLargePageVirtualAllocEx(
     return BaseAddress;
 }
 
-RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlpTryLargePageCreateFileMappingW;
+RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlTryLargePageCreateFileMappingW;
 
 _Use_decl_annotations_
 HANDLE
-RtlpTryLargePageCreateFileMappingW(
+RtlTryLargePageCreateFileMappingW(
     PRTL Rtl,
     HANDLE hFile,
     LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
@@ -253,11 +253,11 @@ Fallback:
     return Handle;
 }
 
-RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlpNoLargePageCreateFileMappingW;
+RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlNoLargePageCreateFileMappingW;
 
 _Use_decl_annotations_
 HANDLE
-RtlpNoLargePageCreateFileMappingW(
+RtlNoLargePageCreateFileMappingW(
     PRTL Rtl,
     HANDLE hFile,
     LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
@@ -299,15 +299,15 @@ RtlInitializeLargePages(
     Rtl->LargePageMinimum = GetLargePageMinimum();
 
     if (Rtl->Flags.IsLargePageEnabled) {
-        Rtl->Vtbl->TryLargePageVirtualAlloc = RtlpTryLargePageVirtualAlloc;
-        Rtl->Vtbl->TryLargePageVirtualAllocEx = RtlpTryLargePageVirtualAllocEx;
+        Rtl->Vtbl->TryLargePageVirtualAlloc = RtlTryLargePageVirtualAlloc;
+        Rtl->Vtbl->TryLargePageVirtualAllocEx = RtlTryLargePageVirtualAllocEx;
         Rtl->Vtbl->TryLargePageCreateFileMappingW =
-            RtlpTryLargePageCreateFileMappingW;
+            RtlTryLargePageCreateFileMappingW;
     } else {
-        Rtl->Vtbl->TryLargePageVirtualAlloc = RtlpNoLargePageVirtualAlloc;
-        Rtl->Vtbl->TryLargePageVirtualAllocEx = RtlpNoLargePageVirtualAllocEx;
+        Rtl->Vtbl->TryLargePageVirtualAlloc = RtlNoLargePageVirtualAlloc;
+        Rtl->Vtbl->TryLargePageVirtualAllocEx = RtlNoLargePageVirtualAllocEx;
         Rtl->Vtbl->TryLargePageCreateFileMappingW =
-            RtlpNoLargePageCreateFileMappingW;
+            RtlNoLargePageCreateFileMappingW;
     }
 
     return S_OK;

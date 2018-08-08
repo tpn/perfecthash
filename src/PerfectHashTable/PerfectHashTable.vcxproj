@@ -101,6 +101,7 @@
     <ClCompile Include="Chm_01.c" />
     <ClCompile Include="Component.c" />
     <ClCompile Include="dllmain.c" />
+    <ClCompile Include="PerfectHashTable.c" />
     <ClCompile Include="PerfectHashTableContextCreateTable.c" />
     <ClCompile Include="PerfectHashTableContext.c" />
     <ClCompile Include="PerfectHashTableKeys.c" />
