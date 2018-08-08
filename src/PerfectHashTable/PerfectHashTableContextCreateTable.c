@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    CreatePerfectHashTable.c
+    PerfectHashTableContextCreateTable.c
 
 Abstract:
 
@@ -15,18 +15,15 @@ Abstract:
 
 #include "stdafx.h"
 
-CREATE_PERFECT_HASH_TABLE CreatePerfectHashTable;
+PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE PerfectHashTableContextCreateTable;
 
 _Use_decl_annotations_
-BOOLEAN
-CreatePerfectHashTable(
-    PRTL Rtl,
-    PALLOCATOR Allocator,
+HRESULT
+PerfectHashTableContextCreateTable(
     PPERFECT_HASH_TABLE_CONTEXT Context,
     PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    PULARGE_INTEGER NumberOfTableElementsPointer,
     PPERFECT_HASH_TABLE_KEYS Keys,
     PCUNICODE_STRING HashTablePath
     )
@@ -39,11 +36,6 @@ Routine Description:
 
 Arguments:
 
-    Rtl - Supplies a pointer to an initialized RTL structure.
-
-    Allocator - Supplies a pointer to an initialized ALLOCATOR structure that
-        will be used for all memory allocations.
-
     Context - Supplies a pointer to an initialized PERFECT_HASH_TABLE_CONTEXT
         structure that can be used by the underlying algorithm in order to
         search for perfect hash solutions in parallel.
@@ -55,20 +47,7 @@ Arguments:
 
     HashFunctionId - Supplies the hash function to use.
 
-    NumberOfTableElementsPointer - Optionally supplies a pointer to a
-        ULARGE_INTEGER structure that, if non-zero, indicates the number of
-        elements to assume when sizing the hash table.  If a non-NULL pointer
-        is supplied, it will receive the final number of elements in the table
-        if a solution could be found.
-
-        N.B. If this value is non-zero, it must be equal to or greater than
-             the number of keys indicated by the Keys parameter.  (It should be
-             at least 2.09 times the number of keys; the higher the value, the
-             larger the hash table, the faster a perfect hash solution will be
-             found.)
-
-    Keys - Supplies a pointer to a PERFECT_HASH_TABLE_KEYS structure obtained
-        from LoadPerfectHashTableKeys().
+    Keys - Supplies a pointer to a PERFECT_HASH_TABLE_KEYS interface.
 
     HashTablePath - Optionally supplies a pointer to a UNICODE_STRING structure
         that represents the fully-qualified, NULL-terminated path of the backing
@@ -85,15 +64,17 @@ Return Value:
 
 --*/
 {
-    BOOLEAN Success;
-    BOOLEAN UsingKeysPath;
+    PRTL Rtl;
+    BOOL Success;
     PWSTR Dest;
     PWSTR Source;
-    PBYTE Buffer;
+    PCHAR Buffer;
+    PCHAR BaseBuffer;
+    PCHAR ExpectedBuffer;
     PWSTR PathBuffer;
     ULONG Key;
     ULONG Index;
-    ULONG Result;
+    ULONG Status;
     ULONGLONG Bit;
     ULONG ShareMode;
     ULONG LastError;
@@ -102,11 +83,13 @@ Return Value:
     ULONG NumberOfSetBits;
     ULONG InfoMappingSize;
     ULONG FlagsAndAttributes;
+    BOOLEAN UsingKeysPath;
     PLONGLONG BitmapBuffer;
-    USHORT VtblExSize;
     PVOID BaseAddress;
     HANDLE FileHandle;
     HANDLE MappingHandle;
+    HRESULT Result;
+    PALLOCATOR Allocator;
     SYSTEM_INFO SystemInfo;
     ULARGE_INTEGER AllocSize;
     ULONG_INTEGER PathBufferSize;
@@ -116,42 +99,57 @@ Return Value:
     ULONG_INTEGER AlignedPathBufferSize;
     ULONG_INTEGER InfoStreamPathBufferSize;
     ULONG_INTEGER AlignedInfoStreamPathBufferSize;
-    ULARGE_INTEGER NumberOfTableElements;
-    PPERFECT_HASH_TABLE_VTBL_EX Vtbl;
     PPERFECT_HASH_TABLE Table = NULL;
+
+    //
+    // XXX TODO: relocate these to constants.
+    //
+
     UNICODE_STRING Suffix = RTL_CONSTANT_STRING(L".pht1");
     UNICODE_STRING InfoStreamSuffix = RTL_CONSTANT_STRING(L":Info");
+
+    //
+    // XXX TODO.
+    //
+
+#define PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS E_UNEXPECTED
+#define PH_E_TOO_MANY_KEYS E_UNEXPECTED
+#define PerfectHashTableContextReset(Context) (E_UNEXPECTED)
 
     //
     // Validate arguments.
     //
 
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(Allocator)) {
-        return FALSE;
-    }
-
     if (!ARGUMENT_PRESENT(Context)) {
 
-        return FALSE;
+        return E_POINTER;
 
-    } else if (Context->Table) {
+    } else {
 
         //
-        // We don't support a context being used more than once at the moment.
-        // If it has been used before, Context->Table will have a value, and
-        // thus, we need to error out.
+        // Initialize aliases.
         //
 
-        return FALSE;
+        Allocator = Context->Allocator;
+        Rtl = Context->Rtl;
+
+    }
+
+    if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
+        return E_INVALIDARG;
+    }
+
+    if (!IsValidPerfectHashTableHashFunctionId(HashFunctionId)) {
+        return E_INVALIDARG;
+    }
+
+    if (!IsValidPerfectHashTableMaskFunctionId(MaskFunctionId)) {
+        return E_INVALIDARG;
     }
 
     if (!ARGUMENT_PRESENT(Keys)) {
 
-        return FALSE;
+        return E_POINTER;
 
     } else {
 
@@ -160,65 +158,36 @@ Return Value:
         //
 
         if (Keys->NumberOfElements.QuadPart > MAXIMUM_NUMBER_OF_KEYS) {
-
-            return FALSE;
-
+            return PH_E_TOO_MANY_KEYS;
         }
     }
 
-    if (!IsValidPerfectHashTableMaskFunctionId(MaskFunctionId)) {
-        return FALSE;
+    if (!TryAcquirePerfectHashTableContextLockExclusive(Context)) {
+        return PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS;
     }
 
-    if (ARGUMENT_PRESENT(NumberOfTableElementsPointer)) {
-
-        //
-        // If the number of table elements is non-zero, verify it is greater
-        // than or equal to the number of keys present.
-        //
-
-        NumberOfTableElements.QuadPart = (
-            NumberOfTableElementsPointer->QuadPart
-        );
-
-        if (NumberOfTableElements.QuadPart > 0) {
-
-            if (NumberOfTableElements.QuadPart <
-                Keys->NumberOfElements.QuadPart) {
-
-                //
-                // Requested table size is too small, abort.
-                //
-
-                return FALSE;
-            }
+    if (Context->State.NeedsReset) {
+        Result = PerfectHashTableContextReset(Context);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashTableContextReset, Result);
+            return E_FAIL;
         }
-    } else {
-
-        NumberOfTableElements.QuadPart = 0;
-
     }
+
+    //
+    // No table should be associated with the context at this point.
+    //
+
+    ASSERT(!Context->Table);
 
     if (ARGUMENT_PRESENT(HashTablePath) &&
         !IsValidMinimumDirectoryNullTerminatedUnicodeString(HashTablePath)) {
-
-        return FALSE;
-    }
-
-    if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
-        return FALSE;
-    }
-
-    if (!IsValidPerfectHashTableHashFunctionId(HashFunctionId)) {
-        return FALSE;
+        return E_INVALIDARG;
     }
 
     //
-    // Calculate the allocation size required for the structure, including the
-    // memory required to take a copy of the backing file name path.
+    // Calculate the allocation size required for the backing file name path.
     //
-
-    AllocSize.QuadPart = sizeof(*Table);
 
     if (ARGUMENT_PRESENT(HashTablePath)) {
 
@@ -241,13 +210,16 @@ Return Value:
         // No path has been provided by the caller, so we'll use the path of
         // the keys file with ".pht1" appended.  Perform a quick invariant check
         // first: maximum length should be 1 character (2 bytes) larger than
-        // length.  (This is handled in LoadPerfectHashTableKeys().)
+        // length.  (This is handled in PerfectHashTableKeysLoad().)
         //
 
         ASSERT(Keys->Path.Length + sizeof(Keys->Path.Buffer[0]) ==
                Keys->Path.MaximumLength);
 
-        PathBufferSize.LongPart = (Keys->Path.MaximumLength + Suffix.Length);
+        PathBufferSize.LongPart = (
+            Keys->Path.MaximumLength +
+            Suffix.Length
+        );
 
         UsingKeysPath = TRUE;
         IncomingPathBufferSizeInBytes = Keys->Path.Length;
@@ -265,15 +237,6 @@ Return Value:
     //
 
     ASSERT(!AlignedPathBufferSize.HighPart);
-
-    //
-    // Add the path buffer size to the structure allocation size, then check
-    // we haven't overflowed MAX_ULONG.
-    //
-
-    AllocSize.QuadPart += AlignedPathBufferSize.LowPart;
-
-    ASSERT(!AllocSize.HighPart);
 
     //
     // Calculate the size required by the :Info stream that will be created
@@ -305,48 +268,61 @@ Return Value:
     ASSERT(!AlignedInfoStreamPathBufferSize.HighPart);
 
     //
-    // Add the stream path size to the total size and perform a final overflow
-    // check.
+    // Compute the total size required, then check we haven't overflowed
+    // MAX_ULONG.
     //
 
-    AllocSize.QuadPart += AlignedInfoStreamPathBufferSize.LowPart;
-
-    ASSERT(!AllocSize.HighPart);
-
-    //
-    // Account for the vtbl interface size.
-    //
-
-    VtblExSize = GetVtblExSizeRoutines[AlgorithmId]();
-    AllocSize.QuadPart += VtblExSize;
-
-    ASSERT(!AllocSize.HighPart);
-
-    //
-    // Allocate space for the structure and backing paths.
-    //
-
-    Table = (PPERFECT_HASH_TABLE)(
-        Allocator->Calloc(Allocator->Context,
-                          1,
-                          AllocSize.LowPart)
+    AllocSize.QuadPart = (
+        AlignedPathBufferSize.LowPart +
+        AlignedInfoStreamPathBufferSize.LowPart
     );
 
-    if (!Table) {
-        return FALSE;
+    ASSERT(!AllocSize.HighPart);
+
+    //
+    // Allocate space for the buffer.
+    //
+
+    BaseBuffer = Buffer = (PCHAR)(
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            AllocSize.LowPart
+        )
+    );
+
+    if (!BaseBuffer) {
+        SYS_ERROR(HeapAlloc);
+        return E_OUTOFMEMORY;
     }
 
     //
-    // Allocation was successful, continue with initialization.
+    // Allocation was successful.  Create a new table instance then continue
+    // initializing its internal state.
     //
 
-    Table->SizeOfStruct = sizeof(*Table);
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_TABLE,
+                                           &Context->Table);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Table = Context->Table;
+
+    Rtl->Vtbl->AddRef(Rtl);
     Table->Rtl = Rtl;
+
+    Allocator->Vtbl->AddRef(Allocator);
     Table->Allocator = Allocator;
-    Table->Flags.AsULong = 0;
+
+    Keys->Vtbl->AddRef(Keys);
     Table->Keys = Keys;
+
+    Context->Vtbl->AddRef(Context);
     Table->Context = Context;
-    Context->Table = Table;
 
     //
     // Our main enumeration IDs get replicated in both structures.
@@ -361,7 +337,6 @@ Return Value:
     // for the path names.
     //
 
-    Buffer = RtlOffsetToPointer(Table, sizeof(*Table));
     Table->Path.Buffer = (PWSTR)Buffer;
     CopyMemory(Table->Path.Buffer, PathBuffer, IncomingPathBufferSizeInBytes);
 
@@ -377,7 +352,8 @@ Return Value:
     } else {
 
         //
-        // Replace the ".keys" suffix with ".pht1".
+        // Replace the keys file's file name extension (".keys") with our table
+        // file name extension.
         //
 
         Dest = Table->Path.Buffer;
@@ -416,15 +392,20 @@ Return Value:
     );
 
     //
-    // Advance the buffer to the vtbl interface area and initialize it.
+    // Advance the buffer and verify it points to the expected location, then
+    // clear it, as it isn't required for the remainder of the routine.  (The
+    // original address was captured in BaseBuffer, which we use at the end
+    // to free the memory.)
     //
 
     Buffer += AlignedInfoStreamPathBufferSize.LongPart;
-    Vtbl = (PPERFECT_HASH_TABLE_VTBL_EX)Buffer;
-    InitializeExtendedVtbl(Table, Vtbl);
+    ExpectedBuffer = RtlOffsetToPointer(BaseBuffer, AllocSize.LowPart);
+    ASSERT(Buffer == ExpectedBuffer);
+    Buffer = NULL;
 
     //
-    // Copy the full path into the info stream buffer.
+    // Continue with path processing.  Copy the full path into the info stream
+    // buffer.
     //
 
     CopyMemory(Table->InfoStreamPath.Buffer,
@@ -470,13 +451,13 @@ Return Value:
 
     FlagsAndAttributes = FILE_FLAG_OVERLAPPED;
 
-    FileHandle = Rtl->CreateFileW(Table->Path.Buffer,
-                                  DesiredAccess,
-                                  ShareMode,
-                                  NULL,
-                                  OPEN_ALWAYS,
-                                  FlagsAndAttributes,
-                                  NULL);
+    FileHandle = CreateFileW(Table->Path.Buffer,
+                             DesiredAccess,
+                             ShareMode,
+                             NULL,
+                             OPEN_ALWAYS,
+                             FlagsAndAttributes,
+                             NULL);
 
     LastError = GetLastError();
 
@@ -488,6 +469,7 @@ Return Value:
         // Failed to open the file successfully.
         //
 
+        SYS_ERROR(CreateFileW);
         goto Error;
 
     } else if (LastError == ERROR_ALREADY_EXISTS) {
@@ -499,15 +481,15 @@ Return Value:
 
         LastError = ERROR_SUCCESS;
 
-        Result = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
-        if (Result == INVALID_SET_FILE_POINTER) {
-            LastError = GetLastError();
+        Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
+        if (Status == INVALID_SET_FILE_POINTER) {
+            SYS_ERROR(SetFilePointer);
             goto Error;
         }
 
         Success = SetEndOfFile(FileHandle);
         if (!Success) {
-            LastError = GetLastError();
+            SYS_ERROR(SetEndOfFile);
             goto Error;
         }
 
@@ -525,13 +507,13 @@ Return Value:
     // the algorithm implementation.  So, do that now.
     //
 
-    FileHandle = Rtl->CreateFileW(Table->InfoStreamPath.Buffer,
-                                  DesiredAccess,
-                                  ShareMode,
-                                  NULL,
-                                  OPEN_ALWAYS,
-                                  FlagsAndAttributes,
-                                  NULL);
+    FileHandle = CreateFileW(Table->InfoStreamPath.Buffer,
+                             DesiredAccess,
+                             ShareMode,
+                             NULL,
+                             OPEN_ALWAYS,
+                             FlagsAndAttributes,
+                             NULL);
 
     Table->InfoStreamFileHandle = FileHandle;
 
@@ -543,6 +525,7 @@ Return Value:
         // Failed to open the file successfully.
         //
 
+        SYS_ERROR(CreateFileW);
         goto Error;
 
     } else if (LastError == ERROR_ALREADY_EXISTS) {
@@ -554,15 +537,15 @@ Return Value:
 
         LastError = ERROR_SUCCESS;
 
-        Result = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
-        if (Result == INVALID_SET_FILE_POINTER) {
-            LastError = GetLastError();
+        Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
+        if (Status == INVALID_SET_FILE_POINTER) {
+            SYS_ERROR(SetFilePointer);
             goto Error;
         }
 
         Success = SetEndOfFile(FileHandle);
         if (!Success) {
-            LastError = GetLastError();
+            SYS_ERROR(SetEndOfFile);
             goto Error;
         }
 
@@ -597,6 +580,7 @@ Return Value:
     Table->InfoMappingSizeInBytes.QuadPart = InfoMappingSize;
 
     if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
+        SYS_ERROR(CreateFileMappingW);
         goto Error;
     }
 
@@ -614,17 +598,9 @@ Return Value:
     Table->InfoStreamBaseAddress = BaseAddress;
 
     if (!BaseAddress) {
+        SYS_ERROR(MapViewOfFile);
         goto Error;
     }
-
-    //
-    // Set the number of table elements requested by the user (0 is a valid
-    // value here).
-    //
-
-    Table->RequestedNumberOfTableElements.QuadPart = (
-        NumberOfTableElements.QuadPart
-    );
 
     //
     // Allocate a 512MB buffer for the keys bitmap.
@@ -637,11 +613,15 @@ Return Value:
     //
 
     LargePagesForBitmapBuffer = TRUE;
-    BaseAddress = Rtl->TryLargePageVirtualAlloc(NULL,
-                                                KeysBitmapBufferSize,
-                                                MEM_RESERVE | MEM_COMMIT,
-                                                PAGE_READWRITE,
-                                                &LargePagesForBitmapBuffer);
+
+    BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(
+        Rtl,
+        NULL,
+        KeysBitmapBufferSize,
+        MEM_RESERVE | MEM_COMMIT,
+        PAGE_READWRITE,
+        &LargePagesForBitmapBuffer
+    );
 
     Table->KeysBitmap.Buffer = (PULONG)BaseAddress;
 
@@ -651,7 +631,7 @@ Return Value:
         // Failed to create a bitmap buffer, abort.
         //
 
-        LastError = GetLastError();
+        SYS_ERROR(VirtualAlloc);
         goto Error;
     }
 
@@ -677,7 +657,6 @@ Return Value:
         Bit = Key + 1;
 
         ASSERT(!BitTestAndSet64(BitmapBuffer, Bit));
-
     }
 
     //
@@ -698,23 +677,17 @@ Return Value:
     }
 
     //
-    // Update the caller's number of table elements pointer, if applicable.
+    // We're done!  Indicate success and finish up.
     //
 
-    if (ARGUMENT_PRESENT(NumberOfTableElementsPointer)) {
-        NumberOfTableElementsPointer->QuadPart = Table->HashSize;
-    }
-
-    //
-    // We're done!  Set the reference count to 1 and finish up.
-    //
-
-    Table->ReferenceCount = 1;
+    Result = S_OK;
     goto End;
 
 Error:
 
-    Success = FALSE;
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
 
     //
     // Intentional follow-on to End.
@@ -723,33 +696,32 @@ Error:
 End:
 
     //
-    // Call the destroy routine on the table if one is present.
+    // Release the table if one is present.
     //
     // N.B. We currently always delete the table if it is created successfully
     //      so as to ensure the only way to use a table is by loading one from
-    //      disk via LoadPerfectHashTable().
+    //      disk via PerfectHashTableLoad().
     //
 
     if (Table) {
-
-        if (!DestroyPerfectHashTable(&Table, NULL)) {
-
-            //
-            // There's nothing we can do here.
-            //
-
-            NOTHING;
-        }
-
-        //
-        // N.B. DestroyPerfectHashTable() should clear the Table pointer.
-        //      Assert that invariant now.
-        //
-
-        ASSERT(Table == NULL);
+        Table->Vtbl->Release(Table);
+        Table = NULL;
     }
 
-    return Success;
+    Context->Table = NULL;
+    Context->State.NeedsReset = TRUE;
+
+    //
+    // Release the buffer we allocated for paths if applicable.
+    //
+
+    if (BaseBuffer) {
+        Allocator->Vtbl->FreePointer(Allocator, &BaseBuffer);
+    }
+
+    ReleasePerfectHashTableContextLockExclusive(Context);
+
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

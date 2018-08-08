@@ -153,7 +153,7 @@ Return Value:
     // Free the underlying memory and clear the caller's pointer.
     //
 
-    Allocator->FreePointer(Allocator->Context, PerfectHashTablePointer);
+    Allocator->Vtbl->FreePointer(Allocator, PerfectHashTablePointer);
 
     Success = TRUE;
 

@@ -52,111 +52,92 @@ TP_WORK_CALLBACK ErrorWorkCallback;
 TP_WORK_CALLBACK FinishedWorkCallback;
 TP_CLEANUP_GROUP_CANCEL_CALLBACK CleanupCallback;
 
-CREATE_PERFECT_HASH_TABLE_CONTEXT CreatePerfectHashTableContext;
+PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
 
 //
 // Main context creation routine.
 //
 
 _Use_decl_annotations_
-BOOLEAN
-CreatePerfectHashTableContext(
-    PRTL Rtl,
-    PALLOCATOR Allocator,
-    PULONG MaximumConcurrencyPointer,
-    PPERFECT_HASH_TABLE_CONTEXT *ContextPointer
+HRESULT
+PerfectHashTableContextInitialize(
+    PPERFECT_HASH_TABLE_CONTEXT Context
     )
 /*++
 
 Routine Description:
 
-    Creates and initializes a PERFECT_HASH_TABLE_CONTEXT structure, which
-    creates a main threadpool with a maximum of threads indicated by the
-    MaximumConcurrency parameter, if applicable.
+    Initializes a perfect hash table context.  This involves creating the
+    threadpool and associated resources for the context.
 
 Arguments:
 
-    Rtl - Supplies a pointer to an initialized RTL structure.
-
-    Allocator - Supplies a pointer to an initialized ALLOCATOR structure that
-        will be used for all memory allocations.
-
-    AnyApi - Supplies a pointer to the active API structure in use.
-
-    MaximumConcurrency - Optionally supplies a pointer to a variable that
-        contains the desired maximum concurrency to be used for the underlying
-        threadpool.  If NULL, or non-NULL but points to a value of 0, then the
-        number of system processors will be used as a default value.
-
-        N.B. This value is passed directly to SetThreadpoolThreadMinimum() and
-             SetThreadpoolThreadMaximum().
-
-    ContextPointer - Supplies the address of a variable that receives the
-        address of the newly created PERFECT_HASH_TABLE_CONTEXT structure on
-        success, NULL on failure.
+    Context - Supplies a pointer to a PERFECT_HASH_TABLE_CONTEXT structure
+        for which initialization is to be performed.
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    S_OK on success, an appropriate error code on failure.
 
 --*/
 {
+    PRTL Rtl;
     BYTE Index;
     BYTE NumberOfEvents;
+    HRESULT Result = S_OK;
     ULONG LastError;
     PHANDLE Event;
-    BOOLEAN Success;
-    PBYTE Buffer;
-    PBYTE ExpectedBuffer;
+    PCHAR Buffer;
+    PCHAR ExpectedBuffer;
     ULONG MaximumConcurrency;
     ULONG NumberOfProcessors;
     ULONG SizeOfNamesWideBuffer;
     PWSTR NamesWideBuffer;
     PTP_POOL Threadpool;
+    PALLOCATOR Allocator;
     ULARGE_INTEGER AllocSize;
     ULARGE_INTEGER ObjectNameArraySize;
     ULARGE_INTEGER ObjectNamePointersArraySize;
     PUNICODE_STRING Name;
     PPUNICODE_STRING Names;
     PPUNICODE_STRING Prefixes;
-    PPERFECT_HASH_TABLE_CONTEXT Context = NULL;
 
     //
     // Validate arguments.
     //
 
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(Allocator)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(ContextPointer)) {
-        return FALSE;
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
     }
 
     //
-    // Default the maximum concurrency to 0 if a NULL pointer was provided.
+    // Create Rtl and Allocator components.
     //
 
-    if (ARGUMENT_PRESENT(MaximumConcurrencyPointer)) {
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_TABLE_RTL,
+                                           &Context->Rtl);
 
-        MaximumConcurrency = *MaximumConcurrencyPointer;
+    if (FAILED(Result)) {
+        goto End;
+    }
 
-    } else {
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+                                           &Context->Allocator);
 
-        MaximumConcurrency = 0;
-
+    if (FAILED(Result)) {
+        goto End;
     }
 
     //
-    // Argument validation complete.  Clear the caller's pointer up-front and
-    // continue with creation.
+    // Initialize aliases.
     //
 
-    *ContextPointer = NULL;
+    Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
 
     //
     // Calculate the size required by the array of UNICODE_STRING structures
@@ -174,25 +155,9 @@ Return Value:
     ASSERT(!ObjectNameArraySize.HighPart);
     ASSERT(!ObjectNamePointersArraySize.HighPart);
 
-    //
-    // Calculate allocation size required by the structure.
-    //
-
     AllocSize.QuadPart = (
-
-        //
-        // Account for the size of the context structure itself.
-        //
-
-        sizeof(PERFECT_HASH_TABLE_CONTEXT) +
-
-        //
-        // Account for the object name overhead.
-        //
-
         ObjectNameArraySize.QuadPart +
         ObjectNamePointersArraySize.QuadPart
-
     );
 
     //
@@ -202,40 +167,38 @@ Return Value:
     ASSERT(!AllocSize.HighPart);
 
     //
-    // Allocate space for the context.
+    // Allocate space for the object name buffer.
     //
 
-    Context = (PPERFECT_HASH_TABLE_CONTEXT)(
-        Allocator->Calloc(Allocator->Context,
-                          1,
-                          AllocSize.LowPart)
+    Buffer = (PCHAR)(
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            AllocSize.LowPart
+        )
     );
 
-    if (!Context) {
-        return FALSE;
+    if (!Buffer) {
+        SYS_ERROR(HeapAlloc);
+        Result = E_OUTOFMEMORY;
+        goto Error;
     }
 
     //
-    // Allocation was successful, continue with initialization.
+    // Allocation of buffer was successful, continue with initialization.
     //
 
     Context->SizeOfStruct = sizeof(*Context);
-    Context->Rtl = Rtl;
-    Context->Allocator = Allocator;
+    Context->State.AsULong = 0;
     Context->Flags.AsULong = 0;
 
+    InitializeSRWLock(&Context->Lock);
+
     //
-    // The context structure will be trailed by an array of UNICODE_STRING
-    // structures that will be filled in by Rtl->CreateRandomObjectNames().
-    // This is then followed by an array of PUNICODE_STRING pointers, with
-    // each one initialized to point to the corresponding offset into the
-    // first array.  This is a bit quirky, but it's required by the Rtl
-    // method (which allows for prefixes to be ignored for certain objects
-    // if desired).
+    // Carve the buffer we just allocated up into an array of UNICODE_STRING
+    // structures that will be filled out by RtlCreateRandomObjectNames().
     //
 
-    Buffer = (PBYTE)Context;
-    Buffer += sizeof(*Context);
     Context->ObjectNames = (PUNICODE_STRING)Buffer;
 
     Buffer += ObjectNameArraySize.LowPart;
@@ -268,18 +231,21 @@ Return Value:
 
     Prefixes = (PPUNICODE_STRING)&ContextObjectPrefixes;
 
-    Success = Rtl->CreateRandomObjectNames(Rtl,
-                                           Allocator,
-                                           Allocator,
-                                           NumberOfContextObjectPrefixes,
-                                           64,
-                                           NULL,
-                                           Context->ObjectNamesPointerArray,
-                                           Prefixes,
-                                           &SizeOfNamesWideBuffer,
-                                           &NamesWideBuffer);
+    Result = Rtl->Vtbl->CreateRandomObjectNames(
+        Rtl,
+        Allocator,
+        Allocator,
+        NumberOfContextObjectPrefixes,
+        64,
+        NULL,
+        Context->ObjectNamesPointerArray,
+        Prefixes,
+        &SizeOfNamesWideBuffer,
+        &NamesWideBuffer
+    );
 
-    if (!Success) {
+    if (FAILED(Result)) {
+        PH_ERROR(RtlCreateRandomObjectNames, Result);
         goto Error;
     }
 
@@ -290,7 +256,6 @@ Return Value:
     Context->ObjectNamesWideBuffer = NamesWideBuffer;
     Context->SizeOfObjectNamesWideBuffer = SizeOfNamesWideBuffer;
     Context->NumberOfObjects = NumberOfContextObjectPrefixes;
-
 
     //
     // Initialize the event pointer to the first handle, and the name pointer
@@ -310,10 +275,10 @@ Return Value:
 
         BOOLEAN ManualReset = TRUE;
 
-        *Event = Rtl->CreateEventW(NULL,
-                                   ManualReset,
-                                   FALSE,
-                                   Name->Buffer);
+        *Event = CreateEventW(NULL,
+                              ManualReset,
+                              FALSE,
+                              Name->Buffer);
 
         LastError = GetLastError();
 
@@ -325,9 +290,16 @@ Return Value:
             // Treat this as a fatal.
             //
 
+            SYS_ERROR(CreateEventW);
             goto Error;
         }
     }
+
+    //
+    // XXX TODO: temp hack.
+    //
+
+    MaximumConcurrency = 0;
 
     //
     // If the maximum concurrency is 0, default to the number of processors.
@@ -350,10 +322,12 @@ Return Value:
 
     Threadpool = Context->MainThreadpool = CreateThreadpool(NULL);
     if (!Threadpool) {
+        SYS_ERROR(CreateThreadpool);
         goto Error;
     }
 
     if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
+        SYS_ERROR(SetThreadpoolThreadMinimum);
         goto Error;
     }
 
@@ -376,6 +350,7 @@ Return Value:
 
     Context->MainCleanupGroup = CreateThreadpoolCleanupGroup();
     if (!Context->MainCleanupGroup) {
+        SYS_ERROR(CreateThreadpoolCleanupGroup);
         goto Error;
     }
 
@@ -392,6 +367,7 @@ Return Value:
                                              &Context->MainCallbackEnv);
 
     if (!Context->MainWork) {
+        SYS_ERROR(CreateThreadpoolWork);
         goto Error;
     }
 
@@ -410,6 +386,7 @@ Return Value:
 
     Threadpool = Context->FileThreadpool = CreateThreadpool(NULL);
     if (!Threadpool) {
+        SYS_ERROR(CreateThreadpool);
         goto Error;
     }
 
@@ -428,6 +405,7 @@ Return Value:
 
     Context->FileCleanupGroup = CreateThreadpoolCleanupGroup();
     if (!Context->FileCleanupGroup) {
+        SYS_ERROR(CreateThreadpoolCleanupGroup);
         goto Error;
     }
 
@@ -444,11 +422,12 @@ Return Value:
                                              &Context->FileCallbackEnv);
 
     if (!Context->FileWork) {
+        SYS_ERROR(CreateThreadpoolWork);
         goto Error;
     }
 
     //
-    // Initialize the main work list head.
+    // Initialize the file work list head.
     //
 
     InitializeSListHead(&Context->FileWorkListHead);
@@ -461,10 +440,12 @@ Return Value:
 
     Context->FinishedThreadpool = CreateThreadpool(NULL);
     if (!Context->FinishedThreadpool) {
+        SYS_ERROR(CreateThreadpool);
         goto Error;
     }
 
     if (!SetThreadpoolThreadMinimum(Context->FinishedThreadpool, 1)) {
+        SYS_ERROR(SetThreadpoolThreadMinimum);
         goto Error;
     }
 
@@ -474,6 +455,7 @@ Return Value:
                                                  Context,
                                                  &Context->FinishedCallbackEnv);
     if (!Context->FinishedWork) {
+        SYS_ERROR(CreateThreadpoolWork);
         goto Error;
     }
 
@@ -489,10 +471,12 @@ Return Value:
 
     Context->ErrorThreadpool = CreateThreadpool(NULL);
     if (!Context->ErrorThreadpool) {
+        SYS_ERROR(CreateThreadpool);
         goto Error;
     }
 
     if (!SetThreadpoolThreadMinimum(Context->ErrorThreadpool, 1)) {
+        SYS_ERROR(SetThreadpoolThreadMinimum);
         goto Error;
     }
 
@@ -502,42 +486,21 @@ Return Value:
                                               Context,
                                               &Context->ErrorCallbackEnv);
     if (!Context->ErrorWork) {
+        SYS_ERROR(CreateThreadpoolWork);
         goto Error;
     }
 
-
     //
-    // We're done!  Jump to the end of the routine to finish up.
+    // We're done!  Indicate success and finish up.
     //
 
-    Success = TRUE;
+    Result = S_OK;
     goto End;
 
 Error:
 
-    Success = FALSE;
-
-    //
-    // Call the destroy routine on the context if it is non-NULL.
-    //
-
-    if (Context) {
-
-        if (!DestroyPerfectHashTableContext(&Context, NULL)) {
-
-            //
-            // There's nothing we can do here.
-            //
-
-            NOTHING;
-        }
-
-        //
-        // N.B. DestroyPerfectHashTableContext() should clear the Context
-        //      pointer.  Assert that invariant now.
-        //
-
-        ASSERT(Context == NULL);
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
     }
 
     //
@@ -546,15 +509,136 @@ Error:
 
 End:
 
+    return Result;
+}
+
+PERFECT_HASH_TABLE_CONTEXT_RUNDOWN PerfectHashTableContextRundown;
+
+_Use_decl_annotations_
+VOID
+PerfectHashTableContextRundown(
+    PPERFECT_HASH_TABLE_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    Release all resources associated with a context.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT to rundown.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PRTL Rtl;
+    BYTE Index;
+    BYTE NumberOfEvents;
+    PALLOCATOR Allocator;
+    PHANDLE Event;
+
     //
-    // Update the caller's pointer and return.
-    //
-    // N.B. Context could be NULL here, which is fine.
+    // Validate arguments.
     //
 
-    *ContextPointer = Context;
+    if (!ARGUMENT_PRESENT(Context)) {
+        return;
+    }
 
-    return Success;
+    Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
+
+    if (!Rtl || !Allocator) {
+        return;
+    }
+
+    //
+    // Sanity check the perfect hash structure size matches what we expect.
+    //
+
+    ASSERT(Context->SizeOfStruct == sizeof(*Context));
+
+    //
+    // Loop through all the events associated with the context and check if
+    // they need to be closed.  (We do this instead of explicit calls to each
+    // named event (e.g. CloseHandle(Context->ShutdownEvent)) as it means we
+    // don't have to add new destructor code here every time we add an event.)
+    //
+    //
+
+    Event = (PHANDLE)&Context->FirstEvent;
+    NumberOfEvents = GetNumberOfContextEvents(Context);
+
+    for (Index = 0; Index < NumberOfEvents; Index++, Event++) {
+
+        if (*Event && *Event != INVALID_HANDLE_VALUE) {
+            if (!CloseHandle(*Event)) {
+                SYS_ERROR(CloseHandle);
+            }
+            *Event = NULL;
+        }
+    }
+
+    if (Context->MainCleanupGroup) {
+
+        CloseThreadpoolCleanupGroupMembers(Context->MainCleanupGroup,
+                                           TRUE,
+                                           NULL);
+        Context->MainWork = NULL;
+        CloseThreadpoolCleanupGroup(Context->MainCleanupGroup);
+        Context->MainCleanupGroup = NULL;
+
+    } else {
+
+        //
+        // Invariant check: Context->MainWork should never be set if
+        // MainCleanupGroup is not set.
+        //
+
+        ASSERT(!Context->MainWork);
+    }
+
+    if (Context->MainThreadpool) {
+        CloseThreadpool(Context->MainThreadpool);
+        Context->MainThreadpool = NULL;
+    }
+
+    //
+    // The Finished and Error threadpools do not have a cleanup group associated
+    // with them, so we can close their work items directly, if applicable.
+    //
+
+    if (Context->FinishedWork) {
+        CloseThreadpoolWork(Context->FinishedWork);
+        Context->FinishedWork = NULL;
+    }
+
+    if (Context->FinishedThreadpool) {
+        CloseThreadpool(Context->FinishedThreadpool);
+        Context->FinishedThreadpool = NULL;
+    }
+
+    if (Context->ErrorWork) {
+        CloseThreadpoolWork(Context->ErrorWork);
+        Context->ErrorWork = NULL;
+    }
+
+    if (Context->ErrorThreadpool) {
+        CloseThreadpool(Context->ErrorThreadpool);
+        Context->ErrorThreadpool = NULL;
+    }
+
+    if (Context->ObjectNamesWideBuffer) {
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     &Context->ObjectNamesWideBuffer);
+    }
+
+    Allocator->Vtbl->Release(Allocator);
+    Rtl->Vtbl->Release(Rtl);
 }
 
 //
@@ -597,6 +681,8 @@ Return Value:
 {
     PSLIST_ENTRY ListEntry;
     PPERFECT_HASH_TABLE_CONTEXT Context;
+
+    UNREFERENCED_PARAMETER(Work);
 
     //
     // Cast the Ctx variable into a suitable type, then pop a list entry off
@@ -664,6 +750,8 @@ Return Value:
     PSLIST_ENTRY ListEntry;
     PPERFECT_HASH_TABLE_CONTEXT Context;
 
+    UNREFERENCED_PARAMETER(Work);
+
     //
     // Cast the Ctx variable into a suitable type, then pop a list entry off
     // the file work list head.
@@ -725,6 +813,9 @@ Return Value:
 --*/
 {
     PPERFECT_HASH_TABLE_CONTEXT Context;
+
+    UNREFERENCED_PARAMETER(Instance);
+    UNREFERENCED_PARAMETER(Work);
 
     //
     // Cast the Ctx variable into a suitable type.
@@ -795,6 +886,10 @@ Return Value:
     //      threads cannot cause termination of the entire context.
     //
 
+    UNREFERENCED_PARAMETER(Instance);
+    UNREFERENCED_PARAMETER(Ctx);
+    UNREFERENCED_PARAMETER(Work);
+
     return;
 }
 
@@ -829,6 +924,7 @@ Return Value:
 {
     PPERFECT_HASH_TABLE_CONTEXT Context;
 
+    UNREFERENCED_PARAMETER(CleanupContext);
 
     Context = (PPERFECT_HASH_TABLE_CONTEXT)ObjectContext;
 

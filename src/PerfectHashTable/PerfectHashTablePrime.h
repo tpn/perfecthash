@@ -20,7 +20,7 @@ Abstract:
 // Declare array of prime numbers.
 //
 
-const ULONGLONG Primes[];
-const USHORT NumberOfPrimes;
+extern const ULONGLONG Primes[];
+extern const USHORT NumberOfPrimes;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

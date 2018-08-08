@@ -66,8 +66,9 @@ Return Value:
     ULONG NumberOfKeys;
     BOOLEAN CaughtException;
     PALLOCATOR Allocator;
-    HANDLE ProcessHandle;
+    HANDLE ProcessHandle = NULL;
     PHANDLE Event;
+    HRESULT Result;
     USHORT NumberOfGraphs;
     USHORT NumberOfPagesPerGraph;
     USHORT NumberOfGuardPages;
@@ -176,9 +177,9 @@ RetryWithLargerTableSize:
     NumberOfKeys = NumberOfEdges.LowPart;
 
     //
-    // Determine the number of vertices.  If a caller has requested a certain
-    // table size, Table->RequestedNumberOfTableElements will be non-zero, and
-    // takes precedence.
+    // Determine the number of vertices.  If we've reached here due to a resize
+    // event, Table->RequestedNumberOfTableElements will be non-zero, and takes
+    // precedence.  Otherwise, determine the vertices heuristically.
     //
 
     if (Table->RequestedNumberOfTableElements.QuadPart) {
@@ -510,21 +511,18 @@ RetryWithLargerTableSize:
     // to VirtualAllocEx().
     //
 
-    ProcessHandle = NULL;
+    Result = Rtl->Vtbl->CreateMultipleBuffers(Rtl,
+                                              &ProcessHandle,
+                                              PageSize,
+                                              NumberOfGraphs,
+                                              NumberOfPagesPerGraph,
+                                              NULL,
+                                              NULL,
+                                              &UsableBufferSizeInBytesPerBuffer,
+                                              &TotalBufferSizeInBytes,
+                                              &BaseAddress);
 
-    Success = Rtl->CreateMultipleBuffers(Rtl,
-                                         &ProcessHandle,
-                                         PageSize,
-                                         NumberOfGraphs,
-                                         NumberOfPagesPerGraph,
-                                         NULL,
-                                         NULL,
-                                         &UsableBufferSizeInBytesPerBuffer,
-                                         &TotalBufferSizeInBytes,
-                                         &BaseAddress);
-
-    if (!Success) {
-        SYS_ERROR(VirtualAlloc);
+    if (FAILED(Result)) {
         goto Error;
     }
 
@@ -640,10 +638,10 @@ RetryWithLargerTableSize:
         // structure.
         //
 
-        ASSERT(_mm_popcnt_u32(Info.EdgeMask) ==
+        ASSERT(PopulationCount32(Info.EdgeMask) ==
                Dim->NumberOfEdgesPowerOf2Exponent);
 
-        ASSERT(_mm_popcnt_u32(Info.VertexMask) ==
+        ASSERT(PopulationCount32(Info.VertexMask) ==
                Dim->NumberOfVerticesPowerOf2Exponent);
 
     }
@@ -676,7 +674,7 @@ RetryWithLargerTableSize:
 
     if (MaskFunctionId == PerfectHashTableFoldAutoMaskFunctionId) {
 
-        ASSERT(Table->HashFold >= 0 && Table->HashFold <= 4);
+        ASSERT(Table->HashFold <= 4);
 
         switch (Table->HashFold) {
             case 4:
@@ -840,7 +838,7 @@ RetryWithLargerTableSize:
 
             CaughtException = FALSE;
 
-            TRY_PROBE_MEMORY{
+            TRY_PROBE_MEMORY {
 
                 *Unusable = 1;
 
@@ -942,7 +940,7 @@ RetryWithLargerTableSize:
         // need a new, larger one to accommodate the resize.
         //
 
-        if (!Rtl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress)) {
+        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress)) {
             SYS_ERROR(VirtualFree);
             goto Error;
         }
@@ -1206,7 +1204,7 @@ End:
     //
 
     if (BaseAddress) {
-        if (!Rtl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress)) {
+        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress)) {
             Success = FALSE;
             SYS_ERROR(VirtualFree);
         }
@@ -1228,15 +1226,6 @@ End:
     }
 
     return Success;
-}
-
-_Use_decl_annotations_
-USHORT
-GetVtblExSizeChm01(
-    VOID
-    )
-{
-    return sizeof(PERFECT_HASH_TABLE_VTBL_EX);
 }
 
 _Use_decl_annotations_
@@ -1323,7 +1312,9 @@ Return Value:
     PGRAPH Graph;
     ULONG Attempt = 0;
     PGRAPH_INFO Info;
-    PFILL_PAGES FillPages;
+    PRTL_FILL_PAGES FillPages;
+
+    UNREFERENCED_PARAMETER(Instance);
 
     //
     // Resolve the graph base address from the list entry.  Nothing will be
@@ -1337,7 +1328,7 @@ Return Value:
     //
 
     Rtl = Context->Rtl;
-    FillPages = Rtl->FillPages;
+    FillPages = Rtl->Vtbl->FillPages;
 
     //
     // The graph info structure will be stashed in the algo context field.
@@ -1370,7 +1361,7 @@ Return Value:
         // graph and then try again with new seed data.
         //
 
-        FillPages((PCHAR)Graph, 0, Info->NumberOfPagesPerGraph);
+        FillPages(Rtl, (PCHAR)Graph, 0, Info->NumberOfPagesPerGraph);
 
     }
 
@@ -1502,11 +1493,11 @@ Return Value:
 
         case FileWorkSaveId: {
 
+            BOOL Success;
             PULONG Dest;
             PULONG Source;
             PGRAPH Graph;
             ULONG WaitResult;
-            BOOLEAN Success;
             ULONGLONG SizeInBytes;
             LARGE_INTEGER EndOfFile;
             PPERFECT_HASH_TABLE Table;
@@ -1766,8 +1757,8 @@ Return Value:
 {
     PRTL Rtl;
     ULONG Index;
-    PBYTE Buffer;
-    PBYTE ExpectedBuffer;
+    PCHAR Buffer;
+    PCHAR ExpectedBuffer;
     USHORT BitmapCount = 0;
     PPERFECT_HASH_TABLE Table;
     PTABLE_INFO_ON_DISK_HEADER Header;
@@ -1977,13 +1968,13 @@ ShouldWeContinueTryingToSolveGraph(
     )
 {
     ULONG WaitResult;
-    HANDLE Events[] = {
-        Context->ShutdownEvent,
-        Context->SucceededEvent,
-        Context->FailedEvent,
-        Context->CompletedEvent,
-    };
+    HANDLE Events[4];
     USHORT NumberOfEvents = ARRAYSIZE(Events);
+    
+    Events[0] = Context->ShutdownEvent;
+    Events[1] = Context->SucceededEvent;
+    Events[2] = Context->FailedEvent;
+    Events[3] = Context->CompletedEvent;
 
     //
     // Fast-path exit: if the finished count is not 0, then someone has already
@@ -2592,9 +2583,11 @@ Return Value:
                     break;
                 }
 
-                InterlockedCompareExchange(&Context->HighestDeletedEdgesCount,
-                                           NumberOfEdgesDeleted,
-                                           HighestDeletedEdges);
+                InterlockedCompareExchange(
+                    (PLONG)&Context->HighestDeletedEdgesCount,
+                    NumberOfEdgesDeleted,
+                    HighestDeletedEdges
+                );
 
             }
         }
@@ -2990,13 +2983,13 @@ Return Value:
 
         MASK_INDEX(ThisId, &MaskedThisId);
 
-        ASSERT(MaskedThisId >= 0 && MaskedThisId <= Graph->NumberOfVertices);
+        ASSERT(MaskedThisId <= Graph->NumberOfVertices);
 
         FinalId = EdgeId + ExistingId;
 
         MASK_INDEX(FinalId, &MaskedFinalId);
 
-        ASSERT(MaskedFinalId >= 0 && MaskedFinalId <= Graph->NumberOfVertices);
+        ASSERT(MaskedFinalId <= Graph->NumberOfVertices);
 
         Bit = MaskedFinalId + 1;
         if (Bit >= Graph->NumberOfVertices) {

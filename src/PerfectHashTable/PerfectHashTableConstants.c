@@ -8,7 +8,7 @@ Module Name:
 
 Abstract:
 
-    This module declares constants used by the PerfectHashTable component.
+    This module declares constants used by the perfect hash table library.
 
 --*/
 
@@ -132,6 +132,7 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
         PerfectHashTableChm01AlgorithmId,
         PerfectHashTableHashCrc32RotateFunctionId,
         PerfectHashTableAndMaskFunctionId,
+        0,
         PerfectHashTableFastIndexImplChm01Crc32RotateHashAndMask,
     },
 
@@ -139,6 +140,7 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
         PerfectHashTableChm01AlgorithmId,
         PerfectHashTableHashJenkinsFunctionId,
         PerfectHashTableAndMaskFunctionId,
+        0,
         PerfectHashTableFastIndexImplChm01JenkinsHashAndMask,
     },
 
@@ -317,5 +319,307 @@ const ULONG Seed3Placeholder = 0x33333333;
 const ULONG Seed4Placeholder = 0x44444444;
 const ULONG HashMaskPlaceholder = 0xaaaaaaaa;
 const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
+
+//
+// COM glue.
+//
+
+//
+// Bump this every time an interface is added.  This allows us to succeed every
+// array declaration (for arrays intended to be indexed via the interface ID
+// enum) with a VERIFY_ARRAY_SIZE() static assertion that ensures we've got
+// entries for each ID.  The +2 on the EXPECTED_ARRAY_SIZE macro accounts for
+// the leading NullInterfaceId and trailing InvalidInterfaceId slots.
+//
+
+#define NUMBER_OF_INTERFACES 7
+#define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
+#define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
+
+C_ASSERT(EXPECTED_ARRAY_SIZE == PerfectHashTableInvalidInterfaceId+1);
+
+const USHORT ComponentSizes[] = {
+    0,
+
+    sizeof(IUNKNOWN),
+    sizeof(ICLASSFACTORY),
+    sizeof(PERFECT_HASH_TABLE_KEYS),
+    sizeof(PERFECT_HASH_TABLE_CONTEXT),
+    sizeof(PERFECT_HASH_TABLE),
+    sizeof(RTL),
+    sizeof(ALLOCATOR),
+
+    0,
+};
+VERIFY_ARRAY_SIZE(ComponentSizes);
+
+const USHORT ComponentInterfaceSizes[] = {
+    0,
+
+    sizeof(IUNKNOWN_VTBL),
+    sizeof(ICLASSFACTORY_VTBL),
+    sizeof(PERFECT_HASH_TABLE_KEYS_VTBL),
+    sizeof(PERFECT_HASH_TABLE_CONTEXT_VTBL),
+    sizeof(PERFECT_HASH_TABLE_VTBL),
+    sizeof(RTL_VTBL),
+    sizeof(ALLOCATOR_VTBL),
+
+    0,
+};
+VERIFY_ARRAY_SIZE(ComponentInterfaceSizes);
+
+const USHORT ComponentInterfaceOffsets[] = {
+    0,
+
+    (USHORT)FIELD_OFFSET(IUNKNOWN, Interface),
+    (USHORT)FIELD_OFFSET(ICLASSFACTORY, Interface),
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE_KEYS, Interface),
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE_CONTEXT, Interface),
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE, Interface),
+    (USHORT)FIELD_OFFSET(RTL, Interface),
+    (USHORT)FIELD_OFFSET(ALLOCATOR, Interface),
+
+    0,
+};
+VERIFY_ARRAY_SIZE(ComponentInterfaceOffsets);
+
+extern COMPONENT_QUERY_INTERFACE ComponentQueryInterface;
+extern COMPONENT_ADD_REF ComponentAddRef;
+extern COMPONENT_RELEASE ComponentRelease;
+extern COMPONENT_CREATE_INSTANCE ComponentCreateInstance;
+extern COMPONENT_LOCK_SERVER ComponentLockServer;
+
+//
+// IUnknown
+//
+
+const IUNKNOWN_VTBL IUnknownInterface = {
+    (PIUNKNOWN_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PIUNKNOWN_ADD_REF)&ComponentAddRef,
+    (PIUNKNOWN_RELEASE)&ComponentRelease,
+    (PIUNKNOWN_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PIUNKNOWN_LOCK_SERVER)&ComponentLockServer,
+};
+
+//
+// IClassFactory
+//
+
+const ICLASSFACTORY_VTBL IClassFactoryInterface = {
+    (PICLASSFACTORY_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PICLASSFACTORY_ADD_REF)&ComponentAddRef,
+    (PICLASSFACTORY_RELEASE)&ComponentRelease,
+    (PICLASSFACTORY_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PICLASSFACTORY_LOCK_SERVER)&ComponentLockServer,
+};
+
+//
+// PerfectHashTableKeys
+//
+
+extern PERFECT_HASH_TABLE_KEYS_LOAD PerfectHashTableKeysLoad;
+
+const PERFECT_HASH_TABLE_KEYS_VTBL PerfectHashTableKeysInterface = {
+    (PPERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_TABLE_KEYS_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_TABLE_KEYS_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_TABLE_KEYS_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashTableKeysLoad,
+};
+
+//
+// PerfectHashTableContext
+//
+
+extern PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
+    PerfectHashTableContextSetMaximumConcurrency;
+
+extern PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
+    PerfectHashTableContextGetMaximumConcurrency;
+
+extern PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
+    PerfectHashTableContextCreateTable;
+
+extern PERFECT_HASH_TABLE_CONTEXT_CREATE_FASTEST_TABLE
+    PerfectHashTableContextCreateFastestTable;
+
+extern PERFECT_HASH_TABLE_CONTEXT_SELF_TEST PerfectHashTableContextSelfTest;
+
+const PERFECT_HASH_TABLE_CONTEXT_VTBL PerfectHashTableContextInterface = {
+    (PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_TABLE_CONTEXT_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_TABLE_CONTEXT_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashTableContextSetMaximumConcurrency,
+    &PerfectHashTableContextGetMaximumConcurrency,
+    &PerfectHashTableContextCreateTable,
+    &PerfectHashTableContextCreateFastestTable,
+    &PerfectHashTableContextSelfTest,
+};
+
+//
+// PerfectHashTable
+//
+
+extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
+extern PERFECT_HASH_TABLE_TEST PerfectHashTableTest;
+extern PERFECT_HASH_TABLE_INSERT PerfectHashTableInsert;
+extern PERFECT_HASH_TABLE_LOOKUP PerfectHashTableLookup;
+extern PERFECT_HASH_TABLE_DELETE PerfectHashTableDelete;
+extern PERFECT_HASH_TABLE_INDEX PerfectHashTableIndex;
+extern PERFECT_HASH_TABLE_GET_ALGORITHM_NAME
+    PerfectHashTableGetAlgorithmName;
+extern PERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME
+    PerfectHashTableGetHashFunctionName;
+extern PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
+    PerfectHashTableGetMaskFunctionName;
+
+const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
+    (PPERFECT_HASH_TABLE_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_TABLE_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_TABLE_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_TABLE_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_TABLE_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashTableLoad,
+    &PerfectHashTableTest,
+    &PerfectHashTableInsert,
+    &PerfectHashTableLookup,
+    &PerfectHashTableDelete,
+    &PerfectHashTableIndex,
+    NULL,   // Hash
+    NULL,   // MaskHash
+    NULL,   // MaskIndex
+    NULL,   // SeededHash
+    NULL,   // FastIndex
+    NULL,   // SlowIndex
+    &PerfectHashTableGetAlgorithmName,
+    &PerfectHashTableGetHashFunctionName,
+    &PerfectHashTableGetMaskFunctionName,
+};
+
+//
+// Rtl
+//
+
+extern RTL_GENERATE_RANDOM_BYTES RtlGenerateRandomBytes;
+extern RTL_PRINT_SYS_ERROR RtlPrintSysError;
+extern RTL_CREATE_BUFFER RtlCreateBuffer;
+extern RTL_CREATE_MULTIPLE_BUFFERS RtlCreateMultipleBuffers;
+extern RTL_DESTROY_BUFFER RtlDestroyBuffer;
+extern RTL_CREATE_RANDOM_OBJECT_NAMES RtlCreateRandomObjectNames;
+extern RTL_CREATE_SINGLE_RANDOM_OBJECT_NAME RtlCreateSingleRandomObjectName;
+extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlTryLargePageVirtualAlloc;
+extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlTryLargePageVirtualAllocEx;
+extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W TryLargePageCreateFileMappingW;
+
+const RTL_VTBL RtlInterface = {
+    (PRTL_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PRTL_ADD_REF)&ComponentAddRef,
+    (PRTL_RELEASE)&ComponentRelease,
+    (PRTL_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PRTL_LOCK_SERVER)&ComponentLockServer,
+    &RtlGenerateRandomBytes,
+    &RtlPrintSysError,
+    &RtlCreateBuffer,
+    &RtlCreateMultipleBuffers,
+    &RtlDestroyBuffer,
+
+    //
+    // CopyPages and FillPages are initialized at runtime in the
+    // RtlInitialize() routine based on the architecture of the
+    // underlying machine (SIMD-accelerated assembly versions are
+    // used when on x64).
+    //
+
+    NULL,   // CopyPages
+    NULL,   // FillPages
+
+    &RtlCreateRandomObjectNames,
+    &RtlCreateSingleRandomObjectName,
+    &RtlTryLargePageVirtualAlloc,
+    &RtlTryLargePageVirtualAllocEx,
+    &RtlTryLargePageCreateFileMapping,
+};
+
+//
+// Allocator
+//
+
+const ALLOCATOR_VTBL AllocatorInterface = {
+    (PALLOCATOR_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PALLOCATOR_ADD_REF)&ComponentAddRef,
+    (PALLOCATOR_RELEASE)&ComponentRelease,
+    (PALLOCATOR_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PALLOCATOR_LOCK_SERVER)&ComponentLockServer,
+    &AllocatorMalloc,
+    &AllocatorCalloc,
+    &AllocatorFree,
+    &AllocatorFreePointer,
+};
+
+//
+// Interface array.
+//
+
+const VOID *ComponentInterfaces[] = {
+    NULL,
+
+    &IUnknownInterface,
+    &IClassFactoryInterface,
+    &PerfectHashTableKeysInterface,
+    &PerfectHashTableContextInterface,
+    &PerfectHashTableInterface,
+    &RtlInterface,
+    &AllocatorInterface,
+
+    NULL,
+};
+VERIFY_ARRAY_SIZE(ComponentInterfaces);
+
+extern PERFECT_HASH_TABLE_KEYS_INITIALIZE PerfectHashTableKeysInitialize;
+extern PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
+extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
+extern RTL_INITIALIZE RtlInitialize;
+extern ALLOCATOR_INITIALIZE AllocatorInitialize;
+
+const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
+    NULL,
+
+    NULL, // IUnknown
+    NULL, // IClassFactory
+
+    (PCOMPONENT_INITIALIZE)PerfectHashTableKeysInitialize,
+    (PCOMPONENT_INITIALIZE)PerfectHashTableContextInitialize,
+    (PCOMPONENT_INITIALIZE)PerfectHashTableInitialize,
+    (PCOMPONENT_INITIALIZE)RtlInitialize,
+    (PCOMPONENT_INITIALIZE)AllocatorInitialize,
+
+    NULL,
+};
+VERIFY_ARRAY_SIZE(ComponentInitializeRoutines);
+
+extern PERFECT_HASH_TABLE_KEYS_RUNDOWN PerfectHashTableKeysRundown;
+extern PERFECT_HASH_TABLE_CONTEXT_RUNDOWN PerfectHashTableContextRundown;
+extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
+extern RTL_RUNDOWN RtlRundown;
+extern ALLOCATOR_RUNDOWN AllocatorRundown;
+
+const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
+    NULL,
+
+    NULL, // IUnknown
+    NULL, // IClassFactory
+
+    (PCOMPONENT_RUNDOWN)PerfectHashTableKeysRundown,
+    (PCOMPONENT_RUNDOWN)PerfectHashTableContextRundown,
+    (PCOMPONENT_RUNDOWN)PerfectHashTableRundown,
+    (PCOMPONENT_RUNDOWN)RtlRundown,
+    (PCOMPONENT_RUNDOWN)AllocatorRundown,
+
+    NULL,
+};
+VERIFY_ARRAY_SIZE(ComponentRundownRoutines);
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab nowrap                              :

@@ -41,6 +41,7 @@ PerfectHashTableTlsProcessAttach(
 PERFECT_HASH_TABLE_TLS_FUNCTION PerfectHashTableTlsProcessDetach;
 
 _Use_decl_annotations_
+BOOLEAN
 PerfectHashTableTlsProcessDetach(
     HMODULE Module,
     ULONG   Reason,

@@ -83,24 +83,27 @@
     <None Include="PerfectHashTable.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\PerfectHashTable.h" />
+    <ClInclude Include="PerfectHashTableAllocator.h" />
     <ClInclude Include="Chm_01.h" />
-    <ClInclude Include="PerfectHashTable.h" />
+    <ClInclude Include="Component.h" />
+    <ClInclude Include="PerfectHashTableContext.h" />
     <ClInclude Include="PerfectHashTablePrime.h" />
     <ClInclude Include="PerfectHashTablePrivate.h" />
     <ClInclude Include="PerfectHashTableConstants.h" />
+    <ClInclude Include="Rtl.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Rtl\__C_specific_handler.c" />
-    <ClCompile Include="BenchmarkPerfectHashTable.c" />
     <ClCompile Include="Chm_01.c" />
-    <ClCompile Include="CreatePerfectHashTable.c" />
-    <ClCompile Include="CreatePerfectHashTableContext.c" />
+    <ClCompile Include="Component.c" />
+    <ClCompile Include="PerfectHashTableContextCreateTable.c" />
+    <ClCompile Include="PerfectHashTableContext.c" />
     <ClCompile Include="DestroyPerfectHashTable.c" />
     <ClCompile Include="DestroyPerfectHashTableContext.c" />
     <ClCompile Include="DestroyPerfectHashTableKeys.c" />
-    <ClCompile Include="LoadPerfectHashTable.c" />
+    <ClCompile Include="PerfectHashTableLoad.c" />
     <ClCompile Include="LoadPerfectHashTableKeys.c" />
     <ClCompile Include="PerfectHashTableDelete.c" />
     <ClCompile Include="PerfectHashTableHash.c" />
@@ -110,14 +113,16 @@
     <ClCompile Include="PerfectHashTableNames.c" />
     <ClCompile Include="PerfectHashTablePrime.c" />
     <ClCompile Include="PerfectHashTableRefCount.c" />
-    <ClCompile Include="PerfectHashTableTls.c" />
     <ClCompile Include="PerfectHashTableAllocator.c" />
     <ClCompile Include="PerfectHashTableConstants.c" />
-    <ClCompile Include="dllmain.c" />
-    <ClCompile Include="SelfTestPerfectHashTable.c" />
+    <ClCompile Include="Rtl.c" />
+    <ClCompile Include="RtlPrivilege.c" />
+    <ClCompile Include="RtlRandomObjectNames.c" />
+    <ClCompile Include="PerfectHashTableContextSelfTest.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="TestPerfectHashTable.c" />
   </ItemGroup>
   <ItemGroup>

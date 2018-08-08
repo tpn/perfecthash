@@ -150,8 +150,8 @@ Return Value:
     //
 
     BitmapBuffer = (PLONG)(
-        Allocator->Calloc(
-            Allocator->Context,
+        Allocator->Vtbl->Calloc(
+            Allocator,
             1,
             BitmapBufferSize.LowPart
         )
@@ -165,7 +165,7 @@ Return Value:
     //      test and set intrinsic below, and that wants PLONG.
     //
 
-    Indices.Buffer = (PLONG)BitmapBuffer;
+    Indices.Buffer = (PULONG)BitmapBuffer;
 
     //
     // Grab the first key from the underlying keys table such that we've got

@@ -4,27 +4,26 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    SelfTestPerfectHashTable.c
+    PerfectHashTableContextSelfTest.c
 
 Abstract:
 
     This module implements the self-test routine for the PerfectHashTable
     component.  It is responsible for end-to-end testing of the entire
-    component with all known test data from a single function entry point
-    (SelfTestPerfectHashTable()).
+    component with all known test data from a single function entry point.
 
 --*/
 
 #include "stdafx.h"
 
+PERFECT_HASH_TABLE_CONTEXT_SELF_TEST PerfectHashTableContextSelfTest;
+
 _Use_decl_annotations_
-BOOLEAN
-SelfTestPerfectHashTable(
-    PRTL Rtl,
-    PALLOCATOR Allocator,
-    PPERFECT_HASH_TABLE_ANY_API AnyApi,
+HRESULT
+PerfectHashTableContextSelfTest(
+    PPERFECT_HASH_TABLE_CONTEXT Context,
     PCUNICODE_STRING TestDataDirectory,
-    PULONG MaximumConcurrency,
+    PCUNICODE_STRING OutputDirectory,
     PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
     PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
@@ -37,26 +36,14 @@ Routine Description:
 
 Arguments:
 
-    Rtl - Supplies a pointer to an initialized RTL structure.
-
-    Allocator - Supplies a pointer to an initialized ALLOCATOR structure that
-        will be used for all memory allocations.
-
-    AnyApi - Supplies a pointer to an initialized PERFECT_HASH_TABLE_ANY_API
-        structure.  Note that this must be an instance of the extended API;
-        this is verified by looking at the Api->SizeOfStruct field and ensuring
-        it matches our expected size of the extended API structure.
+    Context - Supplies an instance of PERFECT_HASH_TABLE_CONTEXT.
 
     TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
         represents a fully-qualified path of the test data directory.
 
-    MaximumConcurrency - Optionally supplies a pointer to a variable that
-        contains the desired maximum concurrency to be used for the underlying
-        threadpool.  If NULL, or non-NULL but points to a value of 0, then the
-        number of system processors will be used as a default value.
-
-        N.B. This value is passed directly to SetThreadpoolThreadMinimum() and
-             SetThreadpoolThreadMaximum().
+    OutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
+        represents a fully-qualified path of the directory where the perfect
+        hash table files generated as part of this routine will be saved.
 
     AlgorithmId - Supplies the algorithm to use.
 
@@ -66,22 +53,26 @@ Arguments:
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    S_OK on success, an appropriate error code on failure.
 
 --*/
 {
+    PRTL Rtl;
     PWSTR Dest;
     PWSTR Source;
     USHORT Length;
     USHORT BaseLength;
     USHORT NumberOfPages;
+    USHORT FileNameLengthInBytes;
     BOOLEAN Success;
     BOOLEAN Failed;
-    BOOLEAN IsProcessTerminating = FALSE;
+    BOOLEAN Terminate;
+    HRESULT Result;
     PWCHAR Buffer;
     PWCHAR BaseBuffer;
     PWCHAR WideOutput;
     PWCHAR WideOutputBuffer;
+    PWCHAR FileName;
     HANDLE FindHandle = NULL;
     HANDLE WideOutputHandle;
     HANDLE ProcessHandle = NULL;
@@ -90,19 +81,18 @@ Return Value:
     ULONG WideCharsWritten;
     ULONGLONG BufferSize;
     ULONGLONG WideOutputBufferSize;
+    PALLOCATOR Allocator;
     LONG_INTEGER AllocSize;
     LARGE_INTEGER BytesToWrite;
     LARGE_INTEGER WideCharsToWrite;
     WIN32_FIND_DATAW FindData;
-    UNICODE_STRING SearchPath;
+    UNICODE_STRING WildcardPath;
     UNICODE_STRING KeysPath;
     UNICODE_STRING TablePath;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_KEYS Keys;
     PTABLE_INFO_ON_DISK_HEADER Header;
     PPERFECT_HASH_TABLE_CONTEXT Context;
-    PPERFECT_HASH_TABLE_API Api;
-    PPERFECT_HASH_TABLE_API_EX ApiEx;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
     PUNICODE_STRING AlgorithmName;
     PUNICODE_STRING HashFunctionName;
@@ -112,53 +102,37 @@ Return Value:
     // Validate arguments.
     //
 
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(Allocator)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(AnyApi)) {
-
-        return FALSE;
-
-    } else {
-
-        Api = &AnyApi->Api;
-
-        if (Api->SizeOfStruct == sizeof(*ApiEx)) {
-
-            ApiEx = &AnyApi->ApiEx;
-
-        } else {
-
-            //
-            // The API should be the extended version.  (Otherwise, how did
-            // the caller even find this function?)
-            //
-
-            return FALSE;
-        }
-
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
     }
 
     if (!ARGUMENT_PRESENT(TestDataDirectory)) {
-        return FALSE;
+        return E_POINTER;
+    } else if (!IsValidMinimumDirectoryUnicodeString(TestDataDirectory)) {
+        return E_INVALIDARG;
     }
 
-    if (!IsValidMinimumDirectoryUnicodeString(TestDataDirectory)) {
-        return FALSE;
+    if (!ARGUMENT_PRESENT(OutputDirectory)) {
+        return E_POINTER;
+    } else if (!IsValidMinimumDirectoryUnicodeString(OutputDirectory)) {
+        return E_INVALIDARG;
+    } else {
+        if (!CreateDirectoryW(OutputDirectory->Buffer, NULL)) {
+            SYS_ERROR(CreateDirectoryW);
+            return E_INVALIDARG;
+        }
     }
 
     if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
+        return E_INVALIDARG;
+    }
 
-        return FALSE;
+    if (!IsValidPerfectHashTableHashFunctionId(HashFunctionId)) {
+        return E_INVALIDARG;
+    }
 
-    } else {
-
-
+    if (!IsValidPerfectHashTableMaskFunctionId(MaskFunctionId)) {
+        return E_INVALIDARG;
     }
 
     //
@@ -170,15 +144,16 @@ Return Value:
     //
 
     NumberOfPages = 10;
-    Success = Rtl->CreateBuffer(Rtl,
-                                &ProcessHandle,
-                                NumberOfPages,
-                                NULL,
-                                &WideOutputBufferSize,
-                                &WideOutputBuffer);
 
-    if (!Success) {
-        return FALSE;
+    Result = Rtl->Vtbl->CreateBuffer(Rtl,
+                                     &ProcessHandle,
+                                     NumberOfPages,
+                                     NULL,
+                                     &WideOutputBufferSize,
+                                     &WideOutputBuffer);
+
+    if (FAILED(Result)) {
+        return Result;
     }
 
     WideOutput = WideOutputBuffer;
@@ -190,15 +165,19 @@ Return Value:
     //
 
     NumberOfPages = (1 << 16) >> PAGE_SHIFT;
-    Success = Rtl->CreateBuffer(Rtl,
-                                &ProcessHandle,
-                                NumberOfPages,
-                                NULL,
-                                &BufferSize,
-                                &BaseBuffer);
 
-    if (!Success) {
-        return FALSE;
+    Result = Rtl->Vtbl->CreateBuffer(Rtl,
+                                     &ProcessHandle,
+                                     NumberOfPages,
+                                     NULL,
+                                     &BufferSize,
+                                     &BaseBuffer);
+
+    if (FAILED(Result)) {
+        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &WideOutputBuffer)) {
+            NOTHING;
+        }
+        return Result;
     }
 
     Buffer = BaseBuffer;
@@ -221,9 +200,9 @@ Return Value:
 
     ASSERT(!AllocSize.HighPart);
 
-    SearchPath.Buffer = (PWSTR)Buffer;
+    WildcardPath.Buffer = (PWSTR)Buffer;
 
-    if (!SearchPath.Buffer) {
+    if (!WildcardPath.Buffer) {
         goto Error;
     }
 
@@ -232,7 +211,7 @@ Return Value:
     //
 
     Length = TestDataDirectory->Length;
-    CopyMemory(SearchPath.Buffer,
+    CopyMemory(WildcardPath.Buffer,
                TestDataDirectory->Buffer,
                Length);
 
@@ -241,7 +220,7 @@ Return Value:
     // slash, then copy the suffix over.
     //
 
-    Dest = (PWSTR)RtlOffsetToPointer(SearchPath.Buffer, Length);
+    Dest = (PWSTR)RtlOffsetToPointer(WildcardPath.Buffer, Length);
     *Dest++ = L'\\';
     CopyMemory(Dest, Suffix->Buffer, Suffix->Length);
 
@@ -251,9 +230,9 @@ Return Value:
     // account for the trailing NULL.
     //
 
-    SearchPath.MaximumLength = AllocSize.LowPart;
-    SearchPath.Length = AllocSize.LowPart - sizeof(*Dest);
-    ASSERT(SearchPath.Buffer[SearchPath.Length] == L'\0');
+    WildcardPath.MaximumLength = AllocSize.LowPart;
+    WildcardPath.Length = AllocSize.LowPart - sizeof(*Dest);
+    ASSERT(WildcardPath.Buffer[WildcardPath.Length] == L'\0');
 
     //
     // Advance the buffer past this string allocation, up to the next 16-byte
@@ -263,7 +242,7 @@ Return Value:
     Buffer = (PWSTR)(
         RtlOffsetToPointer(
             Buffer,
-            ALIGN_UP(SearchPath.MaximumLength, 16)
+            ALIGN_UP(WildcardPath.MaximumLength, 16)
         )
     );
 
@@ -278,7 +257,7 @@ Return Value:
     // created.
     //
 
-    FindHandle = FindFirstFileW(SearchPath.Buffer, &FindData);
+    FindHandle = FindFirstFileW(WildcardPath.Buffer, &FindData);
 
     if (!FindHandle || FindHandle == INVALID_HANDLE_VALUE) {
 
@@ -341,10 +320,11 @@ Return Value:
     BaseLength = Length;
 
     //
-    // Zero the failure count and begin the main loop.
+    // Zero the failure count and terminate flag and begin the main loop.
     //
 
     Failures = 0;
+    Terminate = FALSE;
 
     do {
 
@@ -358,27 +338,6 @@ Return Value:
         WIDE_OUTPUT_WCSTR(WideOutput, (PCWSZ)FindData.cFileName);
         WIDE_OUTPUT_LF(WideOutput);
         WIDE_OUTPUT_FLUSH();
-
-        //
-        // Create a new perfect hash table context.
-        //
-
-        Success = Api->CreatePerfectHashTableContext(Rtl,
-                                                     Allocator,
-                                                     MaximumConcurrency,
-                                                     &Context);
-
-        if (!Success) {
-
-            //
-            // We can't do anything without a context.
-            //
-
-            WIDE_OUTPUT_RAW(WideOutput, L"Fatal: failed to create context.\n");
-            WIDE_OUTPUT_FLUSH();
-            Failures++;
-            break;
-        }
 
         //
         // Copy the filename over to the fully-qualified keys path.
@@ -398,12 +357,21 @@ Return Value:
         ASSERT(KeysPath.Buffer[KeysPath.Length >> 1] == L'\0');
         ASSERT(&KeysPath.Buffer[KeysPath.Length >> 1] == Dest);
 
-        Success = Api->LoadPerfectHashTableKeys(Rtl,
-                                                Allocator,
-                                                &KeysPath,
-                                                &Keys);
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_TABLE_KEYS,
+                                               &Keys);
 
-        if (!Success) {
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to create keys instance.\n");
+            WIDE_OUTPUT_FLUSH();
+            Failures++;
+            break;
+        }
+
+        Result = Keys->Vtbl->Load(Keys, &KeysPath);
+
+        if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to load keys for ");
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
@@ -411,16 +379,13 @@ Return Value:
             WIDE_OUTPUT_FLUSH();
 
             Failures++;
-            goto DestroyContext;
+            Terminate = TRUE;
+            goto ReleaseKeys;
         }
 
         //
         // Keys were loaded successfully.  Construct the equivalent path name
-        // for the backing perfect hash table when persisted to disk.  Although
-        // this can be automated for us as part of CreatePerfectHashTable(),
-        // having it backed by our memory simplifies things a little further
-        // down the track when we want to load the table via the path but have
-        // destroyed the original table that came from CreatePerfectHashTable().
+        // for the backing perfect hash table when persisted to disk.
         //
 
         //
@@ -432,37 +397,70 @@ Return Value:
         Dest = (PWSTR)ALIGN_UP(Dest + 1, 16);
 
         //
-        // We know the keys file ended with ".keys".  We're going to use the
-        // identical name for the backing hash table file, except replace the
-        // ".keys" extension at the end with ".pht1".  So, we can just copy the
-        // lengths used for KeysPath, plus the entire buffer, then just copy the
-        // new extension over the old one.  The 1 doesn't have any significance
-        // other than it padding out the extension length such that it matches
-        // the length of ".keys".  (Although it may act as a nice versioning
-        // tool down the track.)
+        // Calculate the length in bytes of the final table path name, which
+        // consists of the output directory length, plus a joining slash, plus
+        // the file name part of the keys file, plus the trailing table suffix.
         //
 
-        TablePath.Length = KeysPath.Length;
-        TablePath.MaximumLength = KeysPath.MaximumLength;
-        TablePath.Buffer = Dest;
+        FileNameLengthInBytes = (
+            KeysPath.Length -
+            ((USHORT)wcslen("keys") << 1) -
+            TestDataDirectory->Length
+        );
+
+        FileName = (PWCHAR)(
+            RtlOffsetToPointer(
+                TestDataDirectory->Buffer,
+                TestDataDirectory->Length + sizeof(WCHAR)
+            )
+        );
+
+        ASSERT(*FileName != L'\\');
+        ASSERT(*(FileName - 1) == L'\\');
+
+        TablePath.Length = (
+
+            OutputDirectory->Length +
+
+            //
+            // Account for the joining slash.
+            //
+
+            sizeof(WCHAR) +
+
+            //
+            // Account for the file name, including the period.
+            //
+
+            FileNameLengthInBytes +
+
+            //
+            // Account for the table suffix.
+            //
+
+            TableSuffix->Length
+        );
+
+        TablePath.MaximumLength = TablePath.Length + sizeof(WCHAR);
+        TablePath.Buffer = (PWSTR)Dest;
 
         //
-        // Copy the keys path over.
+        // Copy the output directory and trailing slash.
         //
 
-        CopyMemory(Dest, KeysPath.Buffer, KeysPath.MaximumLength);
+        CopyMemory(Dest, OutputDirectory->Buffer, OutputDirectory->Length);
+        *Dest++ L'\\';
 
         //
-        // Advance the Dest pointer to the end of the buffer, then retreat it
-        // five characters, such that it's positioned on the 'k' of keys.
+        // Copy the filename.
         //
 
-        Dest += (KeysPath.MaximumLength >> 1) - 5;
-        ASSERT(*Dest == L'k');
+        CopyMemory(Dest, FileName, FileNameLengthInBytes);
+        Dest += (FileNameLengthInBytes << 1);
         ASSERT(*(Dest - 1) == L'.');
 
         //
-        // Copy the "pht1" extension over "keys".
+        // Copy the suffix then null terminate the path.
         //
 
         Source = TableSuffix.Buffer;
@@ -485,17 +483,15 @@ Return Value:
         // that were loaded.
         //
 
-        Success = Api->CreatePerfectHashTable(Rtl,
-                                              Allocator,
-                                              Context,
-                                              AlgorithmId,
-                                              MaskFunctionId,
-                                              HashFunctionId,
-                                              NULL,
-                                              Keys,
-                                              &TablePath);
+        Result = Context->Vtbl->CreateTable(Context,
+                                            AlgorithmId,
+                                            MaskFunctionId,
+                                            HashFunctionId,
+                                            NULL,
+                                            Keys,
+                                            &TablePath);
 
-        if (!Success) {
+        if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to create perfect hash "
                                         L"table for keys: ");
@@ -505,7 +501,7 @@ Return Value:
 
             Failed = TRUE;
             Failures++;
-            goto DestroyKeys;
+            goto ReleaseKeys;
         }
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully created perfect "
@@ -517,13 +513,22 @@ Return Value:
         // Load the perfect hash table we just created.
         //
 
-        Success = Api->LoadPerfectHashTable(Rtl,
-                                            Allocator,
-                                            Keys,
-                                            &TablePath,
-                                            &Table);
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_TABLE,
+                                               &Table);
 
-        if (!Success) {
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to create table instance.\n");
+            WIDE_OUTPUT_FLUSH();
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
+
+        Result = Table->Vtbl->Load(Table, &TablePath, Keys);
+
+        if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to load perfect hash table: ");
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
@@ -531,8 +536,8 @@ Return Value:
             WIDE_OUTPUT_FLUSH();
 
             Failures++;
-            goto DestroyKeys;
-
+            Terminate = TRUE;
+            goto ReleaseKeys;
         }
 
         //
@@ -540,18 +545,18 @@ Return Value:
         // the enumeration IDs.  Currently these should always match the same
         // enums provided as input parameters to this routine.
         //
-        // N.B. I'm being lazy with the ASSERT()s here instead of reporting the
-        //      error properly like we do with other failures.
-        //
 
-        ASSERT(Api->GetAlgorithmName(Table->AlgorithmId, &AlgorithmName));
+#define GET_NAME(Desc)                                                   \
+        Result = Table->Vtbl->Get##Desc##Name(Table, &##Desc##Name);     \
+        if (FAILED(Result)) {                                            \
+            WIDE_OUTPUT_RAW(WideOutput, "Get" #Desc "Name() failed.\n"); \
+            Terminate = TRUE;                                            \
+            goto ReleaseTable;                                           \
+        }
 
-        ASSERT(Api->GetHashFunctionName(Table->HashFunctionId,
-                                        &HashFunctionName));
-
-        ASSERT(Api->GetMaskFunctionName(Table->MaskFunctionId,
-                                        &MaskFunctionName));
-
+        GET_NAME(Algorithm);
+        GET_NAME(HashFunction);
+        GET_NAME(MaskFunction);
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully loaded perfect "
                                     L"hash table: ");
@@ -597,9 +602,9 @@ Return Value:
         // Test the table.
         //
 
-        Success = Api->TestPerfectHashTable(Table, TRUE);
+        Result = Table->Vtbl->Test(Table, Keys, TRUE);
 
-        if (!Success) {
+        if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Test failed for perfect hash table "
                                         L"loaded from disk: ");
@@ -609,7 +614,7 @@ Return Value:
 
             Failures++;
             Failed = TRUE;
-            goto DestroyTable;
+            goto ReleaseTable;
         }
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully tested perfect hash "
@@ -682,40 +687,18 @@ Return Value:
         WIDE_OUTPUT_FLUSH();
 
         //
-        // Destroy the table.
+        // Release the table and keys.
         //
 
-DestroyTable:
+ReleaseTable:
 
         Table->Vtbl->Release(Table);
 
-DestroyKeys:
+ReleaseKeys:
 
-        Success = Api->DestroyPerfectHashTableKeys(&Keys);
-        if (!Success) {
+        Keys->Vtbl->Release(Keys);
 
-            WIDE_OUTPUT_RAW(WideOutput, L"Failed to destroy keys for ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
-            WIDE_OUTPUT_RAW(WideOutput, L".\n");
-            WIDE_OUTPUT_FLUSH();
-
-            Failures++;
-        }
-
-DestroyContext:
-
-        Success = Api->DestroyPerfectHashTableContext(&Context, NULL);
-        if (!Success) {
-
-            //
-            // Failure to destroy a context is a fatal error that we can't
-            // recover from.  Bomb out now.
-            //
-
-            WIDE_OUTPUT_RAW(WideOutput, L"Fatal: failed to destroy context.\n");
-            WIDE_OUTPUT_FLUSH();
-
-            Failures++;
+        if (Terminate) {
             break;
         }
 
@@ -725,8 +708,8 @@ DestroyContext:
     // Self test complete!
     //
 
-    if (!Failures) {
-        Success = TRUE;
+    if (!Failures && !Terminate) {
+        Result = S_OK;
         goto End;
     }
 
@@ -736,7 +719,9 @@ DestroyContext:
 
 Error:
 
-    Success = FALSE;
+    if (Result == S_OK) {
+        Result = E_FAIL;
+    }
 
     //
     // Intentional follow-on to End.
@@ -749,14 +734,14 @@ End:
     //
 
     if (WideOutputBuffer) {
-        if (!Rtl->DestroyBuffer(Rtl, ProcessHandle, &WideOutputBuffer)) {
+        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &WideOutputBuffer)) {
             NOTHING;
         }
         WideOutput = NULL;
     }
 
     if (BaseBuffer) {
-        if (!Rtl->DestroyBuffer(Rtl, ProcessHandle, &BaseBuffer)) {
+        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseBuffer)) {
             NOTHING;
         }
         Buffer = NULL;

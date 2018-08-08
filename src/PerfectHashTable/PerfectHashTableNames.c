@@ -161,4 +161,70 @@ Return Value:
     return TRUE;
 }
 
+//
+// COM wrappers around the routines above.
+//
+
+PERFECT_HASH_TABLE_GET_ALGORITHM_NAME PerfectHashTableGetAlgorithmName;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableGetAlgorithmName(
+    PPERFECT_HASH_TABLE Table,
+    PCUNICODE_STRING *Name
+    )
+{
+    if (IsValidTable(Table)) {
+        return E_UNEXPECTED;
+    }
+
+    if (!GetPerfectHashTableAlgorithmName(Table->AlgorithmId, Name)) {
+        return E_FAIL;
+    } else {
+        return S_OK;
+    }
+}
+
+
+PERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME PerfectHashTableGetHashFunctionName;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableGetHashFunctionName(
+    PPERFECT_HASH_TABLE Table,
+    PCUNICODE_STRING *Name
+    )
+{
+    if (IsValidTable(Table)) {
+        return E_UNEXPECTED;
+    }
+
+    if (!GetPerfectHashTableHashFunctionName(Table->HashFunctionId, Name)) {
+        return E_FAIL;
+    } else {
+        return S_OK;
+    }
+}
+
+
+PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME PerfectHashTableGetMaskFunctionName;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableGetMaskFunctionName(
+    PPERFECT_HASH_TABLE Table,
+    PCUNICODE_STRING *Name
+    )
+{
+    if (IsValidTable(Table)) {
+        return E_UNEXPECTED;
+    }
+
+    if (!GetPerfectHashTableMaskFunctionName(Table->MaskFunctionId, Name)) {
+        return E_FAIL;
+    } else {
+        return S_OK;
+    }
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

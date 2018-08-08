@@ -9,109 +9,92 @@ Module Name:
 Abstract:
 
     This module implements functionality for loading on-disk representations
-    of previously created perfect hash tables (from CreatePerfectHashTable())
-    via the LoadPerfectHashTable() routine.
+    of previously created perfect hash tables.
 
 --*/
 
 #include "stdafx.h"
 
-LOAD_PERFECT_HASH_TABLE LoadPerfectHashTable;
+PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
 
 _Use_decl_annotations_
-BOOLEAN
-LoadPerfectHashTable(
-    PRTL Rtl,
-    PALLOCATOR Allocator,
-    PPERFECT_HASH_TABLE_KEYS Keys,
+HRESULT
+PerfectHashTableLoad(
+    PPERFECT_HASH_TABLE Table,
     PCUNICODE_STRING Path,
-    PPERFECT_HASH_TABLE *TablePointer
+    PPERFECT_HASH_TABLE_KEYS Keys
     )
 /*++
 
 Routine Description:
 
-    Initializes a new PERFECT_HASH_TABLE structure based on an on-disk
-    representation of the table created via CreatePerfectHashTable().
+    Loads an on-disk representation of a perfect hash table.
 
 Arguments:
 
-    Rtl - Supplies a pointer to an initialized RTL structure.
-
-    Allocator - Supplies a pointer to an initialized ALLOCATOR structure that
-        will be used to allocate memory for the underlying PERFECT_HASH
-        structure.
-
-    Keys - Optionally supplies a pointer to the keys for the hash table.
+    Table - Supplies a pointer to the PERFECT_HASH_TABLE interface for which
+        the on-disk table is to be loaded.
 
     Path - Supplies a pointer to a UNICODE_STRING structure representing the
         fully-qualified, NULL-terminated path of the file to be used to load
         the table.
 
-    TablePointer - Supplies the address of a variable that will receive
-        the address of the newly created PERFECT_HASH_TABLE structure
-        if the routine is successful, or NULL if the routine fails.
+    Keys - Optionally supplies a pointer to the keys for the hash table.
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    S_OK on success, an appropriate error code on failure.
 
 --*/
 {
+    BOOL Success;
+    PRTL Rtl = NULL;
     PWSTR Dest;
     PWSTR Source;
-    PBYTE Buffer;
-    BOOLEAN Success;
-    ULONG LastError;
+    PCHAR Buffer;
+    PCHAR BaseBuffer = NULL;
+    PCHAR ExpectedBuffer;
     ULONG ShareMode;
-    ULONG FlagsAndAttributes;
-    USHORT VtblExSize;
-    USHORT ActualVtblExSize;
+    HRESULT Result;
     PVOID BaseAddress;
     HANDLE FileHandle;
     HANDLE MappingHandle;
+    PALLOCATOR Allocator = NULL;
+    ULONG FlagsAndAttributes;
     ULARGE_INTEGER AllocSize;
     FILE_STANDARD_INFO FileInfo;
     BOOLEAN LargePagesForValues;
     ULONG_INTEGER PathBufferSize;
     ULONG_INTEGER InfoPathBufferSize;
-    ULARGE_INTEGER ExpectedEndOfFile;
+    LARGE_INTEGER ExpectedEndOfFile;
     ULONG_INTEGER AlignedPathBufferSize;
     ULONG_INTEGER AlignedInfoPathBufferSize;
     ULONGLONG NumberOfKeys;
     ULONGLONG NumberOfTableElements;
     ULONGLONG ValuesSizeInBytes;
-    PPERFECT_HASH_TABLE Table;
     PTABLE_INFO_ON_DISK_HEADER Header;
     PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId;
-    PPERFECT_HASH_TABLE_VTBL_EX Vtbl;
     UNICODE_STRING InfoSuffix = RTL_CONSTANT_STRING(L":Info");
 
     //
     // Validate arguments.
     //
 
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return FALSE;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(Allocator)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(TablePointer)) {
-        return FALSE;
+    if (!ARGUMENT_PRESENT(Path)) {
+        return E_POINTER;
     }
 
     if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(Path)) {
-        return FALSE;
+        return E_INVALIDARG;
     }
 
     //
-    // Clear the caller's pointer up-front.
+    // Argument validation complete.
     //
-
-    *TablePointer = NULL;
 
     //
     // Calculate the size required to store a copy of the Path's unicode string
@@ -190,17 +173,11 @@ Return Value:
     ASSERT(!AlignedInfoPathBufferSize.HighPart);
 
     //
-    // Calculate the entire allocation size, including size of the table
-    // structure and supporting unicode string buffers.
+    // Calculate the allocation size required for supporting unicode
+    // string buffers.
     //
 
     AllocSize.QuadPart = (
-
-        //
-        // Account for the table structure.
-        //
-
-        sizeof(*Table) +
 
         //
         // Account for the unicode string buffer backing the path.
@@ -220,60 +197,58 @@ Return Value:
     // Sanity check we haven't overflowed MAX_ULONG.
     //
 
-
     ASSERT(!AllocSize.HighPart);
 
     //
-    // Account for the vtbl interface size.  We haven't derived the algorithm
-    // ID yet so we need to default this to the maximum size known.  There's
-    // an assertion later in the routine that verifies this.
+    // XXX TODO: refine this.  We shouldn't need an Rtl component when we're
+    // loading tables.
     //
 
-    VtblExSize = sizeof(PERFECT_HASH_TABLE_VTBL_EX);
-    AllocSize.QuadPart += VtblExSize;
+    //
+    // Create Rtl and Allocator components.
+    //
 
-    ASSERT(!AllocSize.HighPart);
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_TABLE_RTL,
+                                         &Table->Rtl);
+
+    if (FAILED(Result)) {
+        goto End;
+    }
+
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+                                         &Table->Allocator);
+
+    if (FAILED(Result)) {
+        goto End;
+    }
+
+    Rtl = Table->Rtl;
+    Allocator = Table->Allocator;
 
     //
     // Proceed with allocation.
     //
 
-    Table = (PPERFECT_HASH_TABLE)(
-        Allocator->Calloc(Allocator->Context,
-                          1,
-                          AllocSize.LowPart)
+    BaseBuffer = Buffer = (PCHAR)(
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            AllocSize.LowPart
+        )
     );
 
-    if (!Table) {
-        return FALSE;
+    if (!BaseBuffer) {
+        SYS_ERROR(HeapAlloc);
+        return E_OUTOFMEMORY;
     }
 
     //
-    // Allocation was successful, continue with initialization.
-    //
-
-    Table->SizeOfStruct = sizeof(*Table);
-    Table->Rtl = Rtl;
-    Table->Keys = Keys;
-    Table->Allocator = Allocator;
-
-    //
-    // Clear the flags, then toggle the loaded bit, indicating that this table
-    // structure was derived from the LoadPerfectHashTable() routine, and not
-    // the CreatePerfectHashTable() routine.
-    //
-
-    Table->Flags.AsULong = 0;
-    Table->Flags.Loaded = TRUE;
-
-    //
-    // Carve out the backing memory structures for the path's unicode buffer.
-    //
-
-    Buffer = RtlOffsetToPointer(Table, sizeof(*Table));
-
-    //
-    // Wire up the path structure.
+    // Allocation was successful, continue with initialization.  Carve out the
+    // backing memory structures for the path's unicode buffer.
     //
 
     Table->Path.Buffer = (PWSTR)Buffer;
@@ -307,13 +282,16 @@ Return Value:
     );
 
     //
-    // Advance the buffer to the vtbl interface area.  Don't initialize it
-    // yet; we need to postpone that until the enumeration IDs have been
-    // loaded from the :Info stream.
+    // Advance the buffer and verify it points to the expected location, then
+    // clear it, as it isn't required for the remainder of the routine.  (The
+    // original address was captured in BaseBuffer, which we use at the end
+    // to free the memory.)
     //
 
     Buffer += AlignedInfoPathBufferSize.LongPart;
-    Vtbl = (PPERFECT_HASH_TABLE_VTBL_EX)Buffer;
+    ExpectedBuffer = RtlOffsetToPointer(BaseBuffer, AllocSize.LowPart);
+    ASSERT(Buffer == ExpectedBuffer);
+    Buffer = NULL;
 
     //
     // Copy the full path into the info stream buffer.
@@ -377,7 +355,7 @@ Return Value:
         // error out.
         //
 
-        LastError = GetLastError();
+        SYS_ERROR(CreateFileW);
         goto Error;
     }
 
@@ -395,7 +373,7 @@ Return Value:
     );
 
     if (!Success) {
-        LastError = GetLastError();
+        SYS_ERROR(GetFileInformationByHandleEx);
         goto Error;
     }
 
@@ -405,6 +383,7 @@ Return Value:
         // File is too small, it can't be an :Info we know about.
         //
 
+        Result = PH_E_INFO_FILE_SMALLER_THAN_HEADER;
         goto Error;
     }
 
@@ -424,7 +403,7 @@ Return Value:
     Table->InfoStreamMappingHandle = MappingHandle;
 
     if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-        LastError = GetLastError();
+        SYS_ERROR(CreateFileMappingW);
         goto Error;
     }
 
@@ -437,7 +416,7 @@ Return Value:
     Table->InfoStreamBaseAddress = BaseAddress;
 
     if (!BaseAddress) {
-        LastError = GetLastError();
+        SYS_ERROR(MapViewOfFile);
         goto Error;
     }
 
@@ -455,6 +434,7 @@ Return Value:
         // Magic values don't match what we expect.  Abort the loading efforts.
         //
 
+        Result = PH_E_INVALID_MAGIC_VALUES;
         goto Error;
     }
 
@@ -464,7 +444,7 @@ Return Value:
     //
 
     if (Header->SizeOfStruct < sizeof(*Header)) {
-        __debugbreak();
+        Result = PH_E_INVALID_INFO_HEADER_SIZE;
         goto Error;
     }
 
@@ -477,7 +457,7 @@ Return Value:
     if (ARGUMENT_PRESENT(Keys)) {
 
         if (Keys->NumberOfElements.QuadPart != Header->NumberOfKeys.QuadPart) {
-            __debugbreak();
+            Result = PH_E_NUM_KEYS_MISMATCH_BETWEEN_HEADER_AND_KEYS;
             goto Error;
         }
 
@@ -490,7 +470,7 @@ Return Value:
 
     AlgorithmId = Header->AlgorithmId;
     if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
-        __debugbreak();
+        Result = PH_E_INVALID_ALGORITHM_ID;
         goto Error;
     }
 
@@ -499,7 +479,7 @@ Return Value:
     //
 
     if (!IsValidPerfectHashTableHashFunctionId(Header->HashFunctionId)) {
-        __debugbreak();
+        Result = PH_E_INVALID_HASH_FUNCTION_ID;
         goto Error;
     }
 
@@ -508,16 +488,9 @@ Return Value:
     //
 
     if (!IsValidPerfectHashTableMaskFunctionId(Header->MaskFunctionId)) {
-        __debugbreak();
+        Result = PH_E_INVALID_MASK_FUNCTION_ID;
         goto Error;
     }
-
-    //
-    // Make sure the vtbl size we used was large enough.
-    //
-
-    ActualVtblExSize = GetVtblExSizeRoutines[AlgorithmId]();
-    ASSERT(VtblExSize >= ActualVtblExSize);
 
     //
     // Copy the enumeration IDs back into the table structure.
@@ -528,17 +501,12 @@ Return Value:
     Table->HashFunctionId = Header->HashFunctionId;
 
     //
-    // We can initialize the vtbl now that the enuemration IDs have been set.
-    //
-
-    InitializeExtendedVtbl(Table, Vtbl);
-
-    //
     // We only support 32-bit (4 byte) keys at the moment.  Enforce this
     // restriction now.
+    //
 
     if (Header->KeySizeInBytes != sizeof(ULONG)) {
-        __debugbreak();
+        Result = PH_E_HEADER_KEY_SIZE_TOO_LARGE;
         goto Error;
     }
 
@@ -551,19 +519,24 @@ Return Value:
     NumberOfKeys = Header->NumberOfKeys.QuadPart;
     NumberOfTableElements = Header->NumberOfTableElements.QuadPart;
 
-    if (NumberOfKeys == 0 || NumberOfTableElements == 0) {
-        __debugbreak();
+    if (NumberOfKeys == 0) {
+        Result = PH_E_NUM_KEYS_IS_ZERO;
+        goto Error;
+    }
+
+    if (NumberOfTableElements == 0) {
+        Result = PH_E_NUM_TABLE_ELEMENTS_IS_ZERO;
         goto Error;
     }
 
     if (NumberOfKeys > NumberOfTableElements) {
-        __debugbreak();
+        Result = PH_E_NUM_KEYS_EXCEEDS_NUM_TABLE_ELEMENTS;
         goto Error;
     }
 
     //
-    // Algorithm looks valid.  Proceed with opening up the actual table data
-    // file.
+    // Initial validation checks have passed.  Proceed with opening up the
+    // actual table data file.
     //
 
     FileHandle = CreateFileW(Table->Path.Buffer,
@@ -582,7 +555,7 @@ Return Value:
         // Failed to open the underlying data file.  Abort.
         //
 
-        LastError = GetLastError();
+        SYS_ERROR(CreateFileW);
         goto Error;
     }
 
@@ -598,7 +571,7 @@ Return Value:
     );
 
     if (!Success) {
-        LastError = GetLastError();
+        SYS_ERROR(GetFileInformationByHandleEx);
         goto Error;
     }
 
@@ -627,7 +600,7 @@ Return Value:
         // Sizes don't match, abort.
         //
 
-        LastError = GetLastError();
+        Result = PH_E_EXPECTED_EOF_ACTUAL_EOF_MISMATCH;
         goto Error;
     }
 
@@ -652,7 +625,7 @@ Return Value:
         // Couldn't obtain a mapping, abort.
         //
 
-        LastError = GetLastError();
+        SYS_ERROR(CreateFileMappingW);
         goto Error;
     }
 
@@ -670,7 +643,7 @@ Return Value:
         // Failed to map the contents into memory.  Abort.
         //
 
-        LastError = GetLastError();
+        SYS_ERROR(MapViewOfFile);
         goto Error;
     }
 
@@ -688,15 +661,17 @@ Return Value:
         (ULONGLONG)Header->KeySizeInBytes
     );
 
-    BaseAddress = Rtl->TryLargePageVirtualAlloc(NULL,
-                                                ValuesSizeInBytes,
-                                                MEM_RESERVE | MEM_COMMIT,
-                                                PAGE_READWRITE,
-                                                &LargePagesForValues);
+    BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
+                                                      NULL,
+                                                      ValuesSizeInBytes,
+                                                      MEM_RESERVE | MEM_COMMIT,
+                                                      PAGE_READWRITE,
+                                                      &LargePagesForValues);
 
     Table->ValuesBaseAddress = BaseAddress;
 
     if (!BaseAddress) {
+        SYS_ERROR(VirtualAlloc);
         goto Error;
     }
 
@@ -714,49 +689,23 @@ Return Value:
 
     Success = LoaderRoutines[AlgorithmId](Table);
 
-    if (Success) {
-
-        //
-        // We're finally done!  Set the reference count to 1 and goto end.
-        //
-
-        Table->ReferenceCount = 1;
-
-        goto End;
+    if (!Success) {
+        goto Error;
     }
 
     //
-    // Intentional follow-on to Error.
+    // We're done!  Indicate success and finish up.
     //
+
+    Table->State.Valid = TRUE;
+    Table->Flags.Loaded = TRUE;
+    Result = S_OK;
+    goto End;
 
 Error:
 
-    Success = FALSE;
-
-    //
-    // Call the destroy routine on the table if one is present.  This will
-    // take care of cleaning up any partial resource state regarding handles
-    // and mappings etc.  i.e. it's safe to call at any point during the table
-    // initialization.
-    //
-
-    if (Table) {
-
-        if (!DestroyPerfectHashTable(&Table, NULL)) {
-
-            //
-            // There's nothing we can do here.
-            //
-
-            NOTHING;
-        }
-
-        //
-        // N.B. DestroyPerfectHashTable() should clear the Table pointer.
-        //      Assert that invariant now.
-        //
-
-        ASSERT(Table == NULL);
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
     }
 
     //
@@ -766,14 +715,14 @@ Error:
 End:
 
     //
-    // Update the caller's pointer and return.
-    //
-    // N.B. Table could be NULL here, which is fine.
+    // Release the buffer we allocated for paths if applicable.
     //
 
-    *TablePointer = Table;
+    if (BaseBuffer && Allocator != NULL) {
+        Allocator->Vtbl->FreePointer(Allocator, &BaseBuffer);
+    }
 
-    return Success;
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

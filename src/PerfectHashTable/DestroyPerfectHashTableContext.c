@@ -115,8 +115,8 @@ Return Value:
     //
 
     if (Context->ObjectNamesWideBuffer) {
-        Allocator->FreePointer(Allocator->Context,
-                               &Context->ObjectNamesWideBuffer);
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     &Context->ObjectNamesWideBuffer);
     }
 
     if (Context->MainCleanupGroup) {
@@ -172,7 +172,7 @@ Return Value:
     // Free the underlying memory and clear the caller's pointer.
     //
 
-    Allocator->FreePointer(Allocator->Context, ContextPointer);
+    Allocator->Vtbl->FreePointer(Allocator, ContextPointer);
 
     Success = TRUE;
 

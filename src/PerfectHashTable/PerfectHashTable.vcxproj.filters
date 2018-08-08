@@ -8,36 +8,24 @@
     <Filter Include="Source Files">
       <UniqueIdentifier>{2A6D6AF5-7D40-4157-A09D-8FAF8EAECE92}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files">
+    <Filter Include="Private Header Files">
       <UniqueIdentifier>{4092B02B-0708-4760-936B-0A5B66A60704}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Public Header Files">
+      <UniqueIdentifier>{f54d8165-140c-47c4-8d6d-fe7fcce97b78}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PerfectHashTableTls.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PerfectHashTableConstants.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="dllmain.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PerfectHashTableAllocator.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Rtl\__C_specific_handler.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CreatePerfectHashTable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DestroyPerfectHashTable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SelfTestPerfectHashTable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LoadPerfectHashTableKeys.c">
@@ -53,12 +41,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DestroyPerfectHashTableContext.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CreatePerfectHashTableContext.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LoadPerfectHashTable.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableHash.c">
@@ -85,31 +67,67 @@
     <ClCompile Include="PerfectHashTableNames.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BenchmarkPerfectHashTable.c">
+    <ClCompile Include="Component.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Rtl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SymbolLoader.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableContext.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableContextCreateTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlPrivilege.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlRandomObjectNames.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableContextSelfTest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableLoad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PerfectHashTable.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PerfectHashTableConstants.h">
-      <Filter>Header Files</Filter>
+      <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashTablePrivate.h">
-      <Filter>Header Files</Filter>
+      <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="targetver.h">
-      <Filter>Header Files</Filter>
+      <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
+      <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Chm_01.h">
-      <Filter>Header Files</Filter>
+      <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashTablePrime.h">
-      <Filter>Header Files</Filter>
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\PerfectHashTable.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Rtl.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Component.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTableAllocator.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTableContext.h">
+      <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

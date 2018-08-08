@@ -8,37 +8,110 @@ Module Name:
 
 Abstract:
 
-    This module implements the perfect hash allocator initialization routines.
-    We currently use the Rtl component's heap-backed allocator, although this
-    can be changed easily at a later date.
-
-    N.B. Two allocators are provided, one bootstrap allocator and one normal
-         one, as this allows a downstream component to obtain an allocator
-         prior to initializing the RTL structure.  This is useful in unit tests.
+    This module implements the perfect hash table allocator component.
 
 --*/
 
 #include "stdafx.h"
 
+ALLOCATOR_MALLOC AllocatorMalloc;
+
 _Use_decl_annotations_
-BOOL
-InitializePerfectHashTableAllocatorFromRtlBootstrap(
-    PRTL_BOOTSTRAP RtlBootstrap,
+PVOID
+AllocatorMalloc(
+    PALLOCATOR Allocator,
+    SIZE_T Size
+    )
+{
+    return HeapAlloc(Allocator->HeapHandle, 0, Size);
+}
+
+
+ALLOCATOR_CALLOC AllocatorCalloc;
+
+_Use_decl_annotations_
+PVOID
+AllocatorCalloc(
+    PALLOCATOR Allocator,
+    SIZE_T NumberOfElements,
+    SIZE_T ElementSize
+    )
+{
+    SIZE_T Size = NumberOfElements * ElementSize;
+    return HeapAlloc(
+        Allocator->HeapHandle,
+        HEAP_ZERO_MEMORY,
+        Size
+    );
+}
+
+
+ALLOCATOR_FREE AllocatorFree;
+
+_Use_decl_annotations_
+VOID
+AllocatorFree(
+    PALLOCATOR Allocator,
+    PVOID Address
+    )
+{
+    HeapFree(Allocator->HeapHandle, 0, Address);
+    return;
+}
+
+
+ALLOCATOR_FREE_POINTER AllocatorFreePointer;
+
+_Use_decl_annotations_
+VOID
+AllocatorFreePointer(
+    PALLOCATOR Allocator,
+    PVOID *AddressPointer
+    )
+{
+    if (!ARGUMENT_PRESENT(AddressPointer)) {
+        return;
+    }
+
+    if (!ARGUMENT_PRESENT(*AddressPointer)) {
+        return;
+    }
+
+    AllocatorFree(Allocator, *AddressPointer);
+    *AddressPointer = NULL;
+
+    return;
+}
+
+
+ALLOCATOR_INITIALIZE AllocatorInitialize;
+
+_Use_decl_annotations_
+HRESULT
+AllocatorInitialize(
     PALLOCATOR Allocator
     )
 {
-    return RtlBootstrap->InitializeHeapAllocator(Allocator);
+    Allocator->HeapHandle = HeapCreate(0, 0, 0);
+
+    if (!Allocator->HeapHandle) {
+        SYS_ERROR(HeapCreate);
+        return E_FAIL;
+    }
+
+    return S_OK;
 }
 
+
+ALLOCATOR_RUNDOWN AllocatorRundown;
+
 _Use_decl_annotations_
-BOOL
-InitializePerfectHashTableAllocator(
-    PRTL Rtl,
+VOID
+AllocatorRundown(
     PALLOCATOR Allocator
     )
 {
-    return Rtl->InitializeHeapAllocator(Allocator);
+    HeapDestroy(Allocator->HeapHandle);
 }
-
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

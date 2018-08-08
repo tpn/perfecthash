@@ -233,6 +233,8 @@ typedef struct _GRAPH_INFO {
 
     GRAPH_DIMENSIONS Dimensions;
 
+    ULONG Padding;
+
     //
     // Pointer to the owning context.
     //
@@ -419,6 +421,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         GRAPH_DIMENSIONS Dimensions;
     };
 
+    ULONG Padding;
+
     //
     // Duplicate the context pointer.  (This is also available from Info.)
     //
@@ -500,6 +504,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     ULONG NumberOfSeeds;
+
+    ULONG Padding2;
 
     struct {
         union {

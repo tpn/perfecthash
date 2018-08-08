@@ -71,8 +71,7 @@ Return Value:
     }
 
     if (Keys->Allocator) {
-        Keys->Allocator->FreePointer(Keys->Allocator->Context,
-                                     KeysPointer);
+        Keys->Allocator->Vtbl->Release(Keys->Allocator);
     } else {
         *KeysPointer = NULL;
     }

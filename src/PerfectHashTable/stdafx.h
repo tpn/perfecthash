@@ -12,9 +12,36 @@ Abstract:
 
 --*/
 
+#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+#error PerfectHashTable's stdafx.h being included but _PERFECT_HASH_TABLE_INTERNAL_BUILD not set.
+#endif
+
 #pragma once
 
 #include "targetver.h"
+
+//
+// N.B. The warning disable glue is necessary to get the system headers to
+//      include with all errors enabled (/Wall).
+//
+
+//
+// 4255:
+//      winuser.h(6502): warning C4255: 'EnableMouseInPointerForThread':
+//          no function prototype given: converting '()' to '(void)'
+//
+// 4668:
+//      winioctl.h(8910): warning C4668: '_WIN32_WINNT_WIN10_TH2'
+//          is not defined as a preprocessor macro, replacing with
+//          '0' for '#if/#elif'
+//
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4255)
+#pragma warning(disable: 4668)
+#include <Windows.h>
+#pragma warning(pop)
 
 //
 // <concurrencysal.h> appears to need _PREFAST_ defined.
@@ -29,15 +56,15 @@ Abstract:
 
 #include <Windows.h>
 #include <Strsafe.h>
-#include "../Rtl/Rtl.h"
-#include "../Rtl/__C_specific_handler.h"
-#include "../Rtl/atexit.h"
-#include "PerfectHashTable.h"
 
-#ifdef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+#include <PerfectHashTable.h>
+
+#include "Component.h"
+#include "Rtl.h"
 #include "PerfectHashTablePrime.h"
+#include "PerfectHashTableAllocator.h"
+#include "PerfectHashTableContext.h"
 #include "PerfectHashTablePrivate.h"
 #include "PerfectHashTableConstants.h"
-#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -23,12 +23,29 @@ Abstract:
 
 #include "stdafx.h"
 
-#ifndef ASSERT
-#define ASSERT(Condition) \
-    if (!(Condition)) {   \
-        __debugbreak();   \
-    }
-#endif
+#define PERFECT_HASH_TABLE_KEY_SIZE_IN_BYTES 4
+
+//
+// XXX temporary dummy error handling macro and placeholder errors.
+//
+
+#define PH_ERROR(Name, Result)
+
+#define PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS E_UNEXPECTED
+#define PH_E_TOO_MANY_KEYS E_UNEXPECTED
+#define PH_E_INFO_FILE_SMALLER_THAN_HEADER E_UNEXPECTED
+#define PH_E_INVALID_MAGIC_VALUES E_UNEXPECTED
+#define PH_E_INVALID_INFO_HEADER_SIZE E_UNEXPECTED
+#define PH_E_NUM_KEYS_MISMATCH_BETWEEN_HEADER_AND_KEYS E_UNEXPECTED
+#define PH_E_INVALID_ALGORITHM_ID E_UNEXPECTED
+#define PH_E_INVALID_HASH_FUNCTION_ID E_UNEXPECTED
+#define PH_E_INVALID_MASK_FUNCTION_ID E_UNEXPECTED
+#define PH_E_HEADER_KEY_SIZE_TOO_LARGE E_UNEXPECTED
+#define PH_E_NUM_KEYS_IS_ZERO E_UNEXPECTED
+#define PH_E_NUM_TABLE_ELEMENTS_IS_ZERO E_UNEXPECTED
+#define PH_E_NUM_KEYS_EXCEEDS_NUM_TABLE_ELEMENTS E_UNEXPECTED
+#define PH_E_EXPECTED_EOF_ACTUAL_EOF_MISMATCH E_UNEXPECTED
+#define PH_E_KEYS_FILE_SIZE_NOT_MULTIPLE_OF_KEY_SIZE E_UNEXPECTED
 
 //
 //
@@ -41,7 +58,29 @@ Abstract:
 // Define the PERFECT_HASH_TABLE_KEYS_FLAGS structure.
 //
 
-typedef union _PERFECT_HASH_TABLE_FLAGS_KEYS {
+typedef union _PERFECT_HASH_TABLE_KEYS_STATE {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the keys were mapped using large pages.
+        //
+
+        ULONG MappedWithLargePages:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_KEYS_STATE;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_KEYS_STATE) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_KEYS_STATE *PPERFECT_HASH_TABLE_KEYS_STATE;
+
+typedef union _PERFECT_HASH_TABLE_KEYS_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
@@ -69,24 +108,7 @@ typedef PERFECT_HASH_TABLE_KEYS_FLAGS *PPERFECT_HASH_TABLE_KEYS_FLAGS;
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_KEYS {
 
-    //
-    // Reserve a slot for a vtable.  Currently unused.
-    //
-
-    PPVOID Vtbl;
-
-    //
-    // Size of the structure, in bytes.
-    //
-
-    _Field_range_(==, sizeof(struct _PERFECT_HASH_TABLE_KEYS))
-        ULONG SizeOfStruct;
-
-    //
-    // Flags.
-    //
-
-    PERFECT_HASH_TABLE_KEYS_FLAGS Flags;
+    COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE_KEYS);
 
     //
     // Pointer to an initialized RTL structure.
@@ -99,12 +121,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_KEYS {
     //
 
     PALLOCATOR Allocator;
-
-    //
-    // Pointer to the API structure in use.
-    //
-
-    PPERFECT_HASH_TABLE_ANY_API AnyApi;
 
     //
     // Number of keys in the mapping.
@@ -139,487 +155,41 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_KEYS {
 
     UNICODE_STRING Path;
 
+    //
+    // Backing vtbl.
+    //
+
+    PERFECT_HASH_TABLE_KEYS_VTBL Interface;
+
 } PERFECT_HASH_TABLE_KEYS;
 typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
 
 //
-// Algorithms are required to register a callback routine with the perfect hash
-// table context that matches the following signature.  This routine will be
-// called for each work item it pushes to the context's main threadpool, with
-// a pointer to the SLIST_ENTRY that was popped off the list.
+// Define the PERFECT_HASH_TABLE_STATE structure.
 //
 
-typedef
-VOID
-(CALLBACK PERFECT_HASH_TABLE_MAIN_WORK_CALLBACK)(
-    _In_ PTP_CALLBACK_INSTANCE Instance,
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
-    _In_ PSLIST_ENTRY ListEntry
-    );
-typedef PERFECT_HASH_TABLE_MAIN_WORK_CALLBACK
-      *PPERFECT_HASH_TABLE_MAIN_WORK_CALLBACK;
-
-//
-// Additionally, algorithms can register a callback routine for performing
-// file-oriented operations in the main threadpool (not directly related to
-// graph solving).
-//
-
-typedef
-VOID
-(CALLBACK PERFECT_HASH_TABLE_FILE_WORK_CALLBACK)(
-    _In_ PTP_CALLBACK_INSTANCE Instance,
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
-    _In_ PSLIST_ENTRY ListEntry
-    );
-typedef PERFECT_HASH_TABLE_FILE_WORK_CALLBACK
-      *PPERFECT_HASH_TABLE_FILE_WORK_CALLBACK;
-
-
-//
-// Define a runtime context to encapsulate threadpool resources.  This is
-// passed to CreatePerfectHashTable() and allows for algorithms to search for
-// perfect hash solutions in parallel.
-//
-
-typedef union _PERFECT_HASH_TABLE_CONTEXT_FLAGS {
+typedef union _PERFECT_HASH_TABLE_STATE {
     struct {
-        ULONG Unused:32;
+
+        //
+        // When set, indicates the table is in a valid state.
+        //
+
+        ULONG Valid:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
     };
     LONG AsLong;
     ULONG AsULong;
-} PERFECT_HASH_TABLE_CONTEXT_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_CONTEXT_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_CONTEXT_FLAGS *PPERFECT_HASH_TABLE_CONTEXT_FLAGS;
-
-typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
-
-    //
-    // Size of the structure, in bytes.
-    //
-
-    _Field_range_(==, sizeof(struct _PERFECT_HASH_TABLE_CONTEXT))
-        ULONG SizeOfStruct;
-
-    //
-    // Flags.
-    //
-
-    PERFECT_HASH_TABLE_CONTEXT_FLAGS Flags;
-
-    //
-    // The algorithm in use.
-    //
-
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId;
-
-    //
-    // The masking type in use.
-    //
-
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId;
-
-    //
-    // The hash function in use.
-    //
-
-    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId;
-
-    //
-    // Pointer to an initialized RTL structure.
-    //
-
-    PRTL Rtl;
-
-    //
-    // Pointer to an initialized allocator.
-    //
-
-    PALLOCATOR Allocator;
-
-    //
-    // Pointer to the API structure in use.
-    //
-
-    PPERFECT_HASH_TABLE_ANY_API AnyApi;
-
-    //
-    // Pointer to the active perfect hash table.
-    //
-
-    struct _PERFECT_HASH_TABLE *Table;
-
-    //
-    // The highest number of deleted edges count encountered by a worker thread.
-    // This is useful when debugging a poorly performing hash/mask combo that is
-    // failing to find a solution.
-    //
-
-    volatile ULONG HighestDeletedEdgesCount;
-
-    //
-    // The number of attempts we'll make at trying to solve the graph before
-    // giving up and resizing with a larger underlying table.
-    //
-
-    ULONG ResizeTableThreshold;
-
-    //
-    // Limit on how many times a resize will be kicked off.
-    //
-
-    ULONG ResizeLimit;
-
-    //
-    // Define the events used to communicate various internal state changes
-    // between the CreatePerfectHashTable() function and the algorithm-specific
-    // creation routine.
-    //
-    // N.B. All of these events are created with the manual reset flag set to
-    //      TRUE, such that they stay signalled even after they have satisfied
-    //      a wait.
-    //
-
-    //
-    // A global "shutdown" event handle that threads can query to determine
-    // whether or not they should continue processing at various internal
-    // checkpoints.
-    //
-
-    union {
-        HANDLE ShutdownEvent;
-        PVOID FirstEvent;
-    };
-
-    //
-    // This event will be set if an algorithm was successful in finding a
-    // perfect hash.  Either it or the FailedEvent will be set; never both.
-    //
-
-    HANDLE SucceededEvent;
-
-    //
-    // This event will be set if an algorithm failed to find a perfect hash
-    // solution.  This may be due to the algorithm exhausting all possible
-    // options, hitting a time limit, or potentially as a result of being
-    // forcibly terminated or some other internal error.  It will never be
-    // set if SucceededEvent is also set.
-    //
-
-    HANDLE FailedEvent;
-
-    //
-    // The following event is required to be set by an algorithm's creation
-    // routine upon completion (regardless of success or failure).  This event
-    // is waited upon by the CreatePerfectHashTable() function, and thus, is
-    // critical in synchronizing the execution of parallel perfect hash solution
-    // finding.
-    //
-
-    HANDLE CompletedEvent;
-
-    //
-    // The following event is set when a worker thread detects that the number
-    // of attempts has exceeded a specified threshold, and that the main thread
-    // should cancel the current attempts and try again with a larger vertex
-    // table size.
-    //
-
-    HANDLE TryLargerTableSizeEvent;
-
-    //
-    // The following event is set when a worker thread has completed preparing
-    // the underlying backing file in order for the solved graph to be persisted
-    // to disk.
-    //
-
-    HANDLE PreparedFileEvent;
-
-    //
-    // The following event is set by the main thread when it has completed
-    // verification of the solved graph.  It is used to signal to the save
-    // file worker that verification has finished such that cycle counts can
-    // be captured in order to calculate the number of cycles and microseconds
-    // it took to verify the graph.
-    //
-
-    HANDLE VerifiedEvent;
-
-    //
-    // The following event is set when a worker thread has completed saving the
-    // solved graph to disk.
-    //
-
-    union {
-        HANDLE SavedFileEvent;
-        PVOID LastEvent;
-    };
-
-    //
-    // N.B. All events are created as named events, using the random object
-    //      name generation helper Rtl->CreateRandomObjectNames().  This will
-    //      fill out an array of PUNICODE_STRING pointers.  The next field
-    //      points to the first element of that array.  Subsequent fields
-    //      capture various book-keeping items about the random object names
-    //      allocation (provided by the Rtl routine).
-    //
-
-    PUNICODE_STRING ObjectNames;
-    PPUNICODE_STRING ObjectNamesPointerArray;
-    PWSTR ObjectNamesWideBuffer;
-    ULONG SizeOfObjectNamesWideBuffer;
-    ULONG NumberOfObjects;
-
-    //
-    // Number of attempts made by the algorithm to find a solution.
-    //
-
-    volatile ULONGLONG Attempts;
-
-    //
-    // Counters used for capturing performance information.  We capture both a
-    // cycle count, using __rdtsc(), plus a "performance counter" count, via
-    // QueryPerformanceCounter().  The former provides a finer resolution, but
-    // can't be used to calculate elapsed microseconds due to turbo boost and
-    // variable frequencies.  The latter provides a coarser resolution, but
-    // can be used to convert into elapsed microseconds (via the frequency,
-    // also captured below).
-    //
-
-    LARGE_INTEGER Frequency;
-
-    //
-    // Capture the time required to solve the perfect hash table.  This is not
-    // a sum of all cycles consumed by all worker threads; it is the cycles
-    // consumed between the "main" thread (i.e. the CreatePerfectHashTable()
-    // impl routine (CreatePerfectHashTableImplChm01())) dispatching parallel
-    // work to the threadpool, and a solution being found.
-    //
-
-    ULARGE_INTEGER SolveStartCycles;
-    LARGE_INTEGER SolveStartCounter;
-
-    ULARGE_INTEGER SolveEndCycles;
-    LARGE_INTEGER SolveEndCounter;
-
-    ULARGE_INTEGER SolveElapsedCycles;
-    ULARGE_INTEGER SolveElapsedMicroseconds;
-
-    //
-    // Capture the time required to verify the solution.  This involves walking
-    // the entire key set, applying the perfect hash function to derive an index
-    // into the Assigned array, and verifying that we only saw each index value
-    // at most once.
-    //
-    // This is a reasonably good measure of the combined performance of the
-    // chosen hash and mask algorithm, with lower cycles and counter values
-    // indicating better performance.
-    //
-
-    ULARGE_INTEGER VerifyStartCycles;
-    LARGE_INTEGER VerifyStartCounter;
-
-    ULARGE_INTEGER VerifyEndCycles;
-    LARGE_INTEGER VerifyEndCounter;
-
-    ULARGE_INTEGER VerifyElapsedCycles;
-    ULARGE_INTEGER VerifyElapsedMicroseconds;
-
-    //
-    // Capture the time required to prepare the backing .pht1 file in the file
-    // work threadpool.
-    //
-
-    ULARGE_INTEGER PrepareFileStartCycles;
-    LARGE_INTEGER PrepareFileStartCounter;
-
-    ULARGE_INTEGER PrepareFileEndCycles;
-    LARGE_INTEGER PrepareFileEndCounter;
-
-    ULARGE_INTEGER PrepareFileElapsedCycles;
-    ULARGE_INTEGER PrepareFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to save the final Assigned array to the backing
-    // file prepared in an earlier step.  This is also dispatched to the file
-    // work thread pool, and consists of a memory copy from the assigned array
-    // of the graph to the base address of the backing file's memory map, then
-    // flushing the map, unmapping it, closing the section, and closing the
-    // file.
-    //
-
-    ULARGE_INTEGER SaveFileStartCycles;
-    LARGE_INTEGER SaveFileStartCounter;
-
-    ULARGE_INTEGER SaveFileEndCycles;
-    LARGE_INTEGER SaveFileEndCounter;
-
-    ULARGE_INTEGER SaveFileElapsedCycles;
-    ULARGE_INTEGER SaveFileElapsedMicroseconds;
-
-    //
-    // Number of failed attempts at solving the graph across all threads.
-    //
-
-    volatile ULONGLONG FailedAttempts;
-
-    //
-    // The main threadpool callback environment, used for solving perfect hash
-    // solutions in parallel.
-    //
-
-    TP_CALLBACK_ENVIRON MainCallbackEnv;
-    PTP_CLEANUP_GROUP MainCleanupGroup;
-    PTP_POOL MainThreadpool;
-    PTP_WORK MainWork;
-    SLIST_HEADER MainWorkListHead;
-    ULONG MinimumConcurrency;
-    ULONG MaximumConcurrency;
-
-    //
-    // The algorithm is responsible for registering an appropriate callback
-    // for main thread work items in this next field.
-    //
-
-    PPERFECT_HASH_TABLE_MAIN_WORK_CALLBACK MainWorkCallback;
-
-    //
-    // A threadpool for offloading file operations.
-    //
-
-    TP_CALLBACK_ENVIRON FileCallbackEnv;
-    PTP_CLEANUP_GROUP FileCleanupGroup;
-    PTP_POOL FileThreadpool;
-    PTP_WORK FileWork;
-    SLIST_HEADER FileWorkListHead;
-
-    //
-    // Provide a means for file work callbacks to indicate an error back to
-    // the creation routine by incrementing the following counter.
-    //
-
-    volatile ULONG FileWorkErrors;
-    volatile ULONG FileWorkLastError;
-
-    //
-    // The algorithm is responsible for registering an appropriate callback
-    // for file work threadpool work items in this next field.
-    //
-
-    PPERFECT_HASH_TABLE_FILE_WORK_CALLBACK FileWorkCallback;
-
-    //
-    // If a threadpool worker thread finds a perfect hash solution, it will
-    // enqueue a "Finished!"-type work item to a separate threadpool, captured
-    // by the following callback environment.  This allows for a separate
-    // threadpool worker to schedule the cancellation of other in-progress
-    // and outstanding perfect hash solution attempts without deadlocking.
-    //
-    // This threadpool environment is serviced by a single thread.
-    //
-    // N.B. This cleanup only refers to the main graph solving thread pool.
-    //      The file threadpool is managed by the implicit lifetime of the
-    //      algorithm's creation routine (e.g. CreatePerfectHashTableImplChm01).
-    //
-
-    TP_CALLBACK_ENVIRON FinishedCallbackEnv;
-    PTP_POOL FinishedThreadpool;
-    PTP_WORK FinishedWork;
-    SLIST_HEADER FinishedWorkListHead;
-
-    //
-    // If a worker thread successfully finds a perfect hash solution, it will
-    // push its solution to the FinishedListHead above, then submit a finished
-    // work item via SubmitThreadpoolWork(Context->FinishedWork).
-    //
-    // This callback will be processed by the finished group above, and provides
-    // a means for that thread to set the ShutdownEvent and cancel outstanding
-    // main work callbacks.
-    //
-    // N.B. Although we only need one solution, we don't prevent multiple
-    //      successful solutions from being pushed to the FinishedListHead.
-    //      Whatever the first solution is that the finished callback pops
-    //      off that list is the solution that wins.
-    //
-
-    volatile ULONGLONG FinishedCount;
-
-    //
-    // Similar to the Finished group above, provide an Error group that also
-    // consists of a single thread.  If a main threadpool worker thread runs
-    // into a fatal error that requires termination of all in-progress and
-    // outstanding threadpool work items, it can just dispatch a work item
-    // to this particular pool (e.g. SubmitThreadpoolWork(Context->ErrorWork)).
-    //
-    // There is no ErrorListHead as no error information is captured that needs
-    // communicating back to a central location.
-    //
-
-    TP_CALLBACK_ENVIRON ErrorCallbackEnv;
-    PTP_POOL ErrorThreadpool;
-    PTP_WORK ErrorWork;
-
-    //
-    // An opaque pointer that can be used by the algorithm to stash additional
-    // context.
-    //
-
-    PVOID AlgorithmContext;
-
-    //
-    // An opaque pointer that can be used by the hash function to stash
-    // additional context.
-    //
-
-    PVOID HashFunctionContext;
-
-    //
-    // An opaque pointer to the winning solution (i.e. the solved graph).
-    //
-
-    PVOID SolvedContext;
-
-} PERFECT_HASH_TABLE_CONTEXT;
-typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
-
-//
-// Define helper macros for marking start/end points for the context's
-// cycle/counter fields.  When starting, we put __rdtsc() last, and when
-// stopping we put it first, as its resolution is more sensitive than the
-// QueryPerformanceCounter() routine.
-//
-
-#define CONTEXT_START_TIMERS(Name)                           \
-    QueryPerformanceCounter(&Context->##Name##StartCounter); \
-    Context->##Name##StartCycles.QuadPart = __rdtsc()
-
-#define CONTEXT_END_TIMERS(Name)                              \
-    Context->##Name##EndCycles.QuadPart = __rdtsc();          \
-    QueryPerformanceCounter(&Context->##Name##EndCounter);    \
-    Context->##Name##ElapsedCycles.QuadPart = (               \
-        Context->##Name##EndCycles.QuadPart -                 \
-        Context->##Name##StartCycles.QuadPart                 \
-    );                                                        \
-    Context->##Name##ElapsedMicroseconds.QuadPart = (         \
-        Context->##Name##EndCounter.QuadPart -                \
-        Context->##Name##StartCounter.QuadPart                \
-    );                                                        \
-    Context->##Name##ElapsedMicroseconds.QuadPart *= 1000000; \
-    Context->##Name##ElapsedMicroseconds.QuadPart /= (        \
-        Context->Frequency.QuadPart                           \
-    )
-
-#define CONTEXT_SAVE_TIMERS_TO_HEADER(Name)                                    \
-    Header->##Name##Cycles.QuadPart = Context->##Name##ElapsedCycles.QuadPart; \
-    Header->##Name##Microseconds.QuadPart = (                                  \
-        Context->##Name##ElapsedMicroseconds.QuadPart                          \
-    )
-
-//
-// Forward definition of the hash table context destructor.
-//
-
-DESTROY_PERFECT_HASH_TABLE_CONTEXT DestroyPerfectHashTableContext;
+} PERFECT_HASH_TABLE_STATE;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_STATE) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
+
+#define IsValidTable(Table) (Table->State.Valid == TRUE)
 
 //
 // Define the PERFECT_HASH_TABLE_FLAGS structure.
@@ -685,11 +255,7 @@ typedef PERFECT_HASH_TABLE_FLAGS *PPERFECT_HASH_TABLE_FLAGS;
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
-    //
-    // Our extended vtbl slot comes first, COM-style.
-    //
-
-    struct _PERFECT_HASH_TABLE_VTBL_EX *Vtbl;
+    COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE);
 
     //
     // Base address of the memory map for the backing file.
@@ -711,18 +277,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
         PULONG Values;
     };
 
-
     //
-    // Size of the structure, in bytes.
-    //
-
-    _Field_range_(==, sizeof(struct _PERFECT_HASH_TABLE)) ULONG SizeOfStruct;
-
-    //
-    // Flags.
+    // Pointer to an initialized RTL structure.
     //
 
-    PERFECT_HASH_TABLE_FLAGS Flags;
+    PRTL Rtl;
 
     //
     // Generic singly-linked list entry.
@@ -731,22 +290,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     SLIST_ENTRY ListEntry;
 
     //
-    // Pointer to an initialized RTL structure.
-    //
-
-    PRTL Rtl;
-
-    //
     // Pointer to an initialized ALLOCATOR structure.
     //
 
     PALLOCATOR Allocator;
-
-    //
-    // Reference count.  Affected by AddRef() and Release().
-    //
-
-    volatile ULONG ReferenceCount;
 
     //
     // Capture the number of elements in the underlying perfect hash table.
@@ -797,10 +344,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG IndexModulus;
 
     //
-    // If a caller provided the number of table elements as a parameter to the
-    // CreatePerfectHashTable() function, that value will be captured here.  It
-    // overrides the default sizing heuristics.  (If non-zero, it will be at
-    // least equal to or greater than the number of keys.)
+    // If a resize event is triggered, this field will capture the new number
+    // of vertices to use in search of a perfect hash table solution.  (This
+    // will always be at least equal to or greater than the number of keys.)
     //
 
     ULARGE_INTEGER RequestedNumberOfTableElements;
@@ -822,6 +368,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId;
+
+    ULONG Padding2;
 
     //
     // Pointer to the keys corresponding to this perfect hash table.  May be
@@ -905,66 +453,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     RTL_BITMAP KeysBitmap;
 
+    //
+    // Backing vtbl.
+    //
+
+    PERFECT_HASH_TABLE_VTBL Interface;
+
+    PVOID Padding3;
+
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
-
-//
-// Declare the AddRef and Release functions for the hash table.
-//
-
-PERFECT_HASH_TABLE_ADD_REF PerfectHashTableAddRef;
-PERFECT_HASH_TABLE_RELEASE PerfectHashTableRelease;
-
-//
-// Define the seeded hash routine, which explicitly takes an array of seeds.
-// This is used by the solving routines when attempting to create a perfect
-// hash table, and seed values are being generated randomly.  It is not used
-// for loaded tables, as those have hash values that can be accessed easily
-// via the Table->Header->Seed fields.
-//
-
-typedef
-HRESULT
-(NTAPI PERFECT_HASH_TABLE_SEEDED_HASH)(
-    _In_ PPERFECT_HASH_TABLE Table,
-    _In_ ULONG Input,
-    _In_ ULONG NumberOfSeeds,
-    _In_reads_(NumberOfSeeds) PULONG Seeds,
-    _Out_ PULONGLONG Hash
-    );
-typedef PERFECT_HASH_TABLE_SEEDED_HASH *PPERFECT_HASH_TABLE_SEEDED_HASH;
-
-//
-// Extend the public vtable with internal methods we need for the hash table.
-//
-
-typedef struct _PERFECT_HASH_TABLE_VTBL_EX {
-
-    //
-    // Inline PERFECT_HASH_TABLE_VTBL.
-    //
-
-    PVOID Unused;
-    PPERFECT_HASH_TABLE_ADD_REF AddRef;
-    PPERFECT_HASH_TABLE_RELEASE Release;
-    PPERFECT_HASH_TABLE_INSERT Insert;
-    PPERFECT_HASH_TABLE_LOOKUP Lookup;
-    PPERFECT_HASH_TABLE_DELETE Delete;
-    PPERFECT_HASH_TABLE_INDEX Index;
-    PPERFECT_HASH_TABLE_HASH Hash;
-    PPERFECT_HASH_TABLE_MASK_HASH MaskHash;
-    PPERFECT_HASH_TABLE_MASK_INDEX MaskIndex;
-
-    //
-    // Begin extended functions.
-    //
-
-    PPERFECT_HASH_TABLE_SEEDED_HASH SeededHash;
-    PPERFECT_HASH_TABLE_INDEX FastIndex;
-    PPERFECT_HASH_TABLE_INDEX SlowIndex;
-
-} PERFECT_HASH_TABLE_VTBL_EX;
-typedef PERFECT_HASH_TABLE_VTBL_EX *PPERFECT_HASH_TABLE_VTBL_EX;
 
 //
 // Add some helper macros that improve the aesthetics of using the index,
@@ -972,7 +470,6 @@ typedef PERFECT_HASH_TABLE_VTBL_EX *PPERFECT_HASH_TABLE_VTBL_EX;
 // in scope, as well as an Error: label that can be jumped to if the method
 // fails.
 //
-
 
 #define INDEX(Key, Result)                                \
     if (FAILED(Table->Vtbl->Index(Table, Key, Result))) { \
@@ -994,16 +491,6 @@ typedef PERFECT_HASH_TABLE_VTBL_EX *PPERFECT_HASH_TABLE_VTBL_EX;
         goto Error;                                            \
     }
 
-
-//
-// Forward definitions of our generic (i.e. non-algorithm specific) routines
-// for insert, index, lookup, hashing and masking.
-//
-
-PERFECT_HASH_TABLE_INSERT PerfectHashTableInsert;
-PERFECT_HASH_TABLE_LOOKUP PerfectHashTableLookup;
-PERFECT_HASH_TABLE_DELETE PerfectHashTableDelete;
-PERFECT_HASH_TABLE_INDEX PerfectHashTableIndex;
 
 PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32Rotate;
 PERFECT_HASH_TABLE_HASH PerfectHashTableHashJenkins;
@@ -1174,6 +661,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK_HEADER {
         ULONG Seed4;
         ULONG LastSeed;
     };
+
+    ULONG Padding2;
 
     //
     // Capture statistics about the perfect hash table solution that can be
@@ -1374,22 +863,10 @@ typedef struct _FILE_WORK_ITEM {
 
     FILE_WORK_ID FileWorkId;
 
-    //
-    // Pad out to an 8 byte boundary.
-    //
-
-    ULONG Unused;
+    ULONG Padding[3];
 
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;
-
-//
-// Private function definition for destroying a hash table.  We don't make
-// this a public function as the CreatePerfectHashTable() does not return
-// a table to the caller, and LoadPerfectHashTable() returns a vtbl pointer
-// that we expect the caller to use AddRef()/Release() on correctly in order
-// to manage lifetime.
-//
 
 typedef
 BOOLEAN
@@ -1400,17 +877,6 @@ BOOLEAN
     );
 typedef DESTROY_PERFECT_HASH_TABLE *PDESTROY_PERFECT_HASH_TABLE;
 DESTROY_PERFECT_HASH_TABLE DestroyPerfectHashTable;
-
-//
-// TLS-related structures and functions.
-//
-
-typedef struct _PERFECT_HASH_TABLE_TLS_CONTEXT {
-    PVOID Unused;
-} PERFECT_HASH_TABLE_TLS_CONTEXT;
-typedef PERFECT_HASH_TABLE_TLS_CONTEXT *PPERFECT_HASH_TABLE_TLS_CONTEXT;
-
-extern ULONG PerfectHashTableTlsIndex;
 
 //
 // Function typedefs for private functions.
@@ -1464,19 +930,6 @@ typedef LOAD_PERFECT_HASH_TABLE_IMPL *PLOAD_PERFECT_HASH_TABLE_IMPL;
 LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm01;
 
 //
-// Each algorithm implements a routine that returns the required size of the
-// extended vtbl.
-//
-
-typedef
-_Check_return_
-USHORT
-(NTAPI GET_VTBL_EX_SIZE)(
-    VOID
-    );
-typedef GET_VTBL_EX_SIZE *PGET_VTBL_EX_SIZE;
-
-//
 // For each algorithm, declare the index impl routine.  These are gathered in an
 // array named LookupIndexRoutines[] (see PerfectHashTableConstants.[ch]).
 //
@@ -1505,6 +958,7 @@ typedef struct _PERFECT_HASH_TABLE_FAST_INDEX_TUPLE {
     PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId;
     PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId;
+    ULONG Unused;
     PPERFECT_HASH_TABLE_INDEX FastIndex;
 } PERFECT_HASH_TABLE_FAST_INDEX_TUPLE;
 typedef PERFECT_HASH_TABLE_FAST_INDEX_TUPLE
@@ -1513,53 +967,72 @@ typedef const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE
            *PCPERFECT_HASH_TABLE_FAST_INDEX_TUPLE;
 
 //
-// For each algorithm, declare a routine that returns the size of the vtbl used
-// by that algorithm.
+// Symbol loader helpers.
 //
 
-GET_VTBL_EX_SIZE GetVtblExSizeChm01;
-
-//
-// The PROCESS_ATTACH and PROCESS_ATTACH functions share the same signature.
-//
-
-typedef
-_Check_return_
-_Success_(return != 0)
-(PERFECT_HASH_TABLE_TLS_FUNCTION)(
-    _In_    HMODULE     Module,
-    _In_    DWORD       Reason,
-    _In_    LPVOID      Reserved
-    );
-typedef PERFECT_HASH_TABLE_TLS_FUNCTION *PPERFECT_HASH_TABLE_TLS_FUNCTION;
-
-PERFECT_HASH_TABLE_TLS_FUNCTION PerfectHashTableTlsProcessAttach;
-PERFECT_HASH_TABLE_TLS_FUNCTION PerfectHashTableTlsProcessDetach;
-
-//
-// Define TLS Get/Set context functions.
-//
+typedef _Null_terminated_ CONST CHAR *PCSZ;
 
 typedef
 _Check_return_
 _Success_(return != 0)
 BOOLEAN
-(PERFECT_HASH_TABLE_TLS_SET_CONTEXT)(
-    _In_ struct _PERFECT_HASH_TABLE_CONTEXT *Context
+(LOAD_SYMBOLS)(
+    _In_count_(NumberOfSymbolNames) CONST PCSZ *SymbolNameArray,
+    _In_ ULONG NumberOfSymbolNames,
+    _In_count_(NumberOfSymbolAddresses) PULONG_PTR SymbolAddressArray,
+    _In_ ULONG NumberOfSymbolAddresses,
+    _In_ HMODULE Module,
+    _In_ PRTL_BITMAP FailedSymbols,
+    _Out_ PULONG NumberOfResolvedSymbolsPointer
     );
-typedef PERFECT_HASH_TABLE_TLS_SET_CONTEXT *PPERFECT_HASH_TABLE_TLS_SET_CONTEXT;
+typedef LOAD_SYMBOLS *PLOAD_SYMBOLS;
 
 typedef
 _Check_return_
 _Success_(return != 0)
-struct _PERFECT_HASH_TABLE_CONTEXT *
-(PERFECT_HASH_TABLE_TLS_GET_CONTEXT)(
+BOOLEAN
+(LOAD_SYMBOLS_FROM_MULTIPLE_MODULES)(
+    _In_count_(NumberOfSymbolNames) CONST PCSZ *SymbolNameArray,
+    _In_ ULONG NumberOfSymbolNames,
+    _In_count_(NumberOfSymbolAddresses) PULONG_PTR SymbolAddressArray,
+    _In_ ULONG NumberOfSymbolAddresses,
+    _In_count_(NumberOfModules) HMODULE *ModuleArray,
+    _In_ USHORT NumberOfModules,
+    _In_ PRTL_BITMAP FailedSymbols,
+    _Out_ PULONG NumberOfResolvedSymbolsPointer
+    );
+typedef LOAD_SYMBOLS_FROM_MULTIPLE_MODULES *PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES;
+
+//
+// Exception helpers.
+//
+
+typedef
+EXCEPTION_DISPOSITION
+(__cdecl RTL_EXCEPTION_HANDLER)(
+    PEXCEPTION_RECORD ExceptionRecord,
+    ULONG_PTR Frame,
+    PCONTEXT Context,
+    struct _DISPATCHER_CONTEXT *Dispatch
+    );
+typedef RTL_EXCEPTION_HANDLER *PRTL_EXCEPTION_HANDLER;
+
+typedef RTL_EXCEPTION_HANDLER __C_SPECIFIC_HANDLER;
+typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
+
+typedef
+VOID
+(NTAPI SET_C_SPECIFIC_HANDLER)(
+    _In_ P__C_SPECIFIC_HANDLER Handler
+    );
+typedef SET_C_SPECIFIC_HANDLER *PSET_C_SPECIFIC_HANDLER;
+
+typedef
+VOID
+(__cdecl __SECURITY_INIT_COOKIE)(
     VOID
     );
-typedef PERFECT_HASH_TABLE_TLS_GET_CONTEXT *PPERFECT_HASH_TABLE_TLS_GET_CONTEXT;
-
-extern PERFECT_HASH_TABLE_TLS_SET_CONTEXT PerfectHashTableTlsSetContext;
-extern PERFECT_HASH_TABLE_TLS_GET_CONTEXT PerfectHashTableTlsGetContext;
+typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
 
 //
 // Inline helper functions.

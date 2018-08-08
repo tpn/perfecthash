@@ -61,6 +61,8 @@ Return Value:
     ULONG Vertex2;
     ULARGE_INTEGER Result;
 
+    UNREFERENCED_PARAMETER(Table);
+
     ASSERT(NumberOfSeeds >= 3);
 
     //
@@ -162,6 +164,8 @@ Return Value:
     ULONG Vertex2;
     ULARGE_INTEGER Result;
 
+    UNREFERENCED_PARAMETER(Table);
+
     ASSERT(NumberOfSeeds >= 3);
 
     //
@@ -256,6 +260,8 @@ Return Value:
     ULONG Vertex2;
     ULARGE_INTEGER Result;
 
+    UNREFERENCED_PARAMETER(Table);
+
     ASSERT(NumberOfSeeds >= 3);
 
     //
@@ -344,6 +350,8 @@ Return Value:
     ULONG Vertex1;
     ULONG Vertex2;
     ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 2);
 
@@ -435,6 +443,8 @@ Return Value:
     ULONG Vertex1;
     ULONG Vertex2;
     ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 2);
 
@@ -567,6 +577,8 @@ Return Value:
     ULONG Vertex1;
     ULONG Vertex2;
     ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 3);
 

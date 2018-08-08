@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    LoadPerfectHashTableKeys.c
+    PerfectHashTableKeysLoad.c
 
 Abstract:
 
@@ -14,29 +14,24 @@ Abstract:
 
 #include "stdafx.h"
 
-LOAD_PERFECT_HASH_TABLE_KEYS LoadPerfectHashTableKeys;
+PERFECT_HASH_TABLE_KEYS_LOAD PerfectHashTableKeysLoad;
 
 _Use_decl_annotations_
-BOOLEAN
-LoadPerfectHashTableKeys(
-    PRTL Rtl,
-    PALLOCATOR Allocator,
-    PCUNICODE_STRING Path,
-    PPERFECT_HASH_TABLE_KEYS *KeysPointer
+HRESULT
+PerfectHashTableKeysLoad(
+    PPERFECT_HASH_TABLE_KEYS Keys,
+    PCUNICODE_STRING Path
     )
 /*++
 
 Routine Description:
 
-    Loads a keys file from the file system and returns a PERFECT_HASH_TABLE_KEYS
-    structure.
+    Loads a keys file from the file system.
 
 Arguments:
 
-    Rtl - Supplies a pointer to an initialized RTL structure.
-
-    Allocator - Supplies a pointer to an initialized ALLOCATOR structure that
-        will be used for al memory allocations.
+    Keys - Supplies a pointer to the PERFECT_HASH_TABLE_KEYS structure for
+        which the keys are to be loaded.
 
     Path - Supplies a pointer to a UNICODE_STRING structure that represents
         a fully-qualified path of the keys to use for the perfect hash table.
@@ -45,17 +40,16 @@ Arguments:
              UNICODE_STRING structures.  Howver, the underlying buffer is passed
              to CreateFileW(), which requires a NULL-terminated wstr.
 
-    KeysPointers - Supplies the address of a variable that will receive the
-        address of the newly created PERFECT_HASH_TABLE_KEYS structure if the
-        routine is successful, or NULL if the routine fails.
-
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    S_OK on success, an appropriate error code on failure.
 
 --*/
 {
+    PRTL Rtl;
+    HRESULT Result = S_OK;
     BOOLEAN Success;
+    PALLOCATOR Allocator;
     PVOID BaseAddress = NULL;
     HANDLE FileHandle = NULL;
     HANDLE MappingHandle = NULL;
@@ -68,37 +62,30 @@ Return Value:
     // Validate arguments.
     //
 
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(Allocator)) {
-        return FALSE;
-    }
-
-    if (!ARGUMENT_PRESENT(KeysPointer)) {
-        return FALSE;
+    if (!ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
     }
 
     if (!ARGUMENT_PRESENT(Path)) {
-        return FALSE;
+        return E_POINTER;
     }
 
     if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(Path)) {
-        return FALSE;
+        return E_INVALIDARG;
     }
 
     //
-    // Clear the caller's pointer up-front.
+    // Initialize aliases.
     //
 
-    *KeysPointer = NULL;
+    Rtl = Keys->Rtl;
+    Allocator = Keys->Allocator;
 
     //
     // Open the file, create a file mapping, then map it into memory.
     //
 
-    FileHandle = Rtl->CreateFileW(
+    FileHandle = CreateFileW(
         Path->Buffer,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -109,7 +96,8 @@ Return Value:
     );
 
     if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
-        return FALSE;
+        SYS_ERROR(CreateFileW);
+        return E_UNEXPECTED;
     }
 
     //
@@ -125,6 +113,7 @@ Return Value:
     );
 
     if (!Success) {
+        SYS_ERROR(GetFileInformationByHandleEx);
         goto Error;
     }
 
@@ -132,7 +121,8 @@ Return Value:
     // Make sure the file is a multiple of our key size.
     //
 
-    if (FileInfo.EndOfFile.QuadPart % 4ULL) {
+    if (FileInfo.EndOfFile.QuadPart % PERFECT_HASH_TABLE_KEY_SIZE_IN_BYTES) {
+        Result = PH_E_KEYS_FILE_SIZE_NOT_MULTIPLE_OF_KEY_SIZE;
         goto Error;
     }
 
@@ -148,7 +138,10 @@ Return Value:
     // MAX_ULONG.
     //
 
-    ASSERT(!NumberOfElements.HighPart);
+    if (NumberOfElements.HighPart) {
+        Result = PH_E_TOO_MANY_KEYS;
+        goto Error;
+    }
 
     //
     // Create the file mapping.
@@ -162,6 +155,7 @@ Return Value:
                                        NULL);
 
     if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
+        SYS_ERROR(CreateFileMappingW);
         goto Error;
     }
 
@@ -176,31 +170,16 @@ Return Value:
                                 FileInfo.EndOfFile.LowPart);
 
     if (!BaseAddress) {
+        SYS_ERROR(MapViewOfFile);
         goto Error;
     }
 
     //
     // The file has been mapped successfully.  Calculate the size required for
-    // the keys structure and a copy of the Path's underlying unicode string
-    // buffer.
+    // a copy of the Path's underlying unicode string buffer.
     //
 
-    AllocSize.QuadPart = (
-
-        //
-        // Account for the keys structure size.
-        //
-
-        sizeof(*Keys) +
-
-        //
-        // Account for the length of the UNICODE_STRING buffer and terminating
-        // NULL.
-        //
-
-        Path->Length + sizeof(Path->Buffer[0])
-
-    );
+    AllocSize.QuadPart = Path->Length + sizeof(Path->Buffer[0]):
 
     //
     // Sanity check our size.
@@ -213,12 +192,15 @@ Return Value:
     //
 
     Keys = (PPERFECT_HASH_TABLE_KEYS)(
-        Allocator->Calloc(Allocator->Context,
-                          1,
-                          AllocSize.LowPart)
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            AllocSize.LowPart
+        )
     );
 
     if (!Keys) {
+        SYS_ERROR(HeapAlloc);
         goto Error;
     }
 
@@ -226,9 +208,6 @@ Return Value:
     // Fill out the main structure details.
     //
 
-    Keys->SizeOfStruct = sizeof(*Keys);
-    Keys->Rtl = Rtl;
-    Keys->Allocator = Allocator;
     Keys->FileHandle = FileHandle;
     Keys->MappingHandle = MappingHandle;
     Keys->BaseAddress = BaseAddress;
@@ -249,8 +228,8 @@ Return Value:
     // We've completed initialization, indicate success and jump to the end.
     //
 
-    Success = TRUE;
-
+    Keys->State.Loaded = TRUE;
+    Result = S_OK;
     goto End;
 
 Error:
@@ -277,7 +256,7 @@ Error:
     }
 
     if (Keys) {
-        Allocator->FreePointer(Allocator->Context, &Keys);
+        Allocator->Vtbl->FreePointer(Allocator, &Keys);
     }
 
     //
