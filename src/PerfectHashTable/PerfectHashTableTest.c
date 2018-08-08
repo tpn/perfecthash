@@ -38,12 +38,13 @@ Abstract:
         goto Error;                \
     }
 
-TEST_PERFECT_HASH_TABLE TestPerfectHashTable;
+PERFECT_HASH_TABLE_TEST PerfectHashTableTest;
 
 _Use_decl_annotations_
-BOOLEAN
-TestPerfectHashTable(
+HRESULT
+PerfectHashTableTest(
     PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_TABLE_KEYS Keys,
     BOOLEAN DebugBreakOnFailure
     )
 /*++
@@ -55,8 +56,11 @@ Routine Description:
 Arguments:
 
     Table - Supplies a pointer to an initialized PERFECT_HASH_TABLE structure
-        for which the testing will be undertaken.  This structure is obtained
-        via either CreatePerfectHashTable() or LoadPerfectHashTable().
+        for which the testing will be undertaken.
+
+    Keys - Optionally supplies the keys associatd with the table.  This is
+        mandatory if keys were not originally provided when the table was
+        loaded.
 
     DebugBreakOnFailure - Supplies a boolean flag that indicates whether or
         not a __debugbreak() should be issued if a test fails.
@@ -77,7 +81,6 @@ Return Value:
     ULONG ValueIndex;
     ULONG Bit;
     ULONG NumberOfBitsSet;
-    PULONG Keys;
     BOOLEAN Success;
     HRESULT Result;
     PALLOCATOR Allocator;
@@ -173,8 +176,7 @@ Return Value:
     //
 
 
-    Keys = Table->Keys->Keys;
-    Key = Keys[0];
+    Key = Keys->Keys[0];
 
     //
     // Rotate the key such that it differs from the original value, but in a
@@ -235,7 +237,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys[Index];
+        Key = Keys->Keys[Index];
 
         Result = Table->Vtbl->Index(Table, Key, &ValueIndex);
         ASSERT(!FAILED(Result));
@@ -267,7 +269,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys[Index];
+        Key = Keys->Keys[Index];
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Insert(Table, Key, Rotated, &Previous);
@@ -283,7 +285,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys[Index];
+        Key = Keys->Keys[Index];
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Lookup(Table, Key, &Value);
@@ -298,7 +300,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys[Index];
+        Key = Keys->Keys[Index];
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Delete(Table, Key, &Previous);
@@ -313,7 +315,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys[Index];
+        Key = Keys->Keys[Index];
 
         Result = Table->Vtbl->Lookup(Table, Key, &Value);
         ASSERT(!FAILED(Result));

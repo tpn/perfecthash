@@ -61,6 +61,9 @@ Abstract:
 
 #include "Component.h"
 #include "Rtl.h"
+#include "RtlOutput.h"
+#include "PerfectHashTableTls.h"
+#include "PerfectHashTableKeys.h"
 #include "PerfectHashTablePrime.h"
 #include "PerfectHashTableAllocator.h"
 #include "PerfectHashTableContext.h"

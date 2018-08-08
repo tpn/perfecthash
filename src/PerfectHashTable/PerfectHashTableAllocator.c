@@ -95,8 +95,7 @@ AllocatorInitialize(
     Allocator->HeapHandle = HeapCreate(0, 0, 0);
 
     if (!Allocator->HeapHandle) {
-        SYS_ERROR(HeapCreate);
-        return E_FAIL;
+        return PH_E_HEAP_CREATE_FAILED;
     }
 
     return S_OK;

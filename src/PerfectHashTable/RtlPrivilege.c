@@ -77,7 +77,7 @@ Return Value:
     Success = OpenProcessToken(ProcessHandle, DesiredAccess, &TokenHandle);
 
     if (!Success) {
-        SYS_ERROR(OpenProcessToken)
+        SYS_ERROR(OpenProcessToken);
         return E_FAIL;
     }
 

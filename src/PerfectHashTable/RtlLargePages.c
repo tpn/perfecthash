@@ -17,7 +17,7 @@ Abstract:
 
 #include "stdafx.h"
 
-TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlpTryLargePageVirtualAlloc;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlpTryLargePageVirtualAlloc;
 
 _Use_decl_annotations_
 LPVOID
@@ -71,7 +71,7 @@ Fallback:
     return BaseAddress;
 }
 
-TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlpNoLargePageVirtualAlloc;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlpNoLargePageVirtualAlloc;
 
 _Use_decl_annotations_
 LPVOID
@@ -98,7 +98,7 @@ RtlpNoLargePageVirtualAlloc(
     return BaseAddress;
 }
 
-TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlpTryLargePageVirtualAllocEx;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlpTryLargePageVirtualAllocEx;
 
 _Use_decl_annotations_
 LPVOID
@@ -155,7 +155,7 @@ Fallback:
     return BaseAddress;
 }
 
-TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlpNoLargePageVirtualAllocEx;
+RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlpNoLargePageVirtualAllocEx;
 
 _Use_decl_annotations_
 LPVOID
@@ -171,6 +171,8 @@ RtlpNoLargePageVirtualAllocEx(
 {
     PVOID BaseAddress;
 
+    UNREFERENCED_PARAMETER(Rtl);
+
     *LargePages = FALSE;
 
     BaseAddress = VirtualAllocEx(hProcess,
@@ -182,7 +184,7 @@ RtlpNoLargePageVirtualAllocEx(
     return BaseAddress;
 }
 
-TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlpTryLargePageCreateFileMappingW;
+RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlpTryLargePageCreateFileMappingW;
 
 _Use_decl_annotations_
 HANDLE
@@ -251,7 +253,7 @@ Fallback:
     return Handle;
 }
 
-TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlpNoLargePageCreateFileMappingW;
+RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlpNoLargePageCreateFileMappingW;
 
 _Use_decl_annotations_
 HANDLE
@@ -282,28 +284,30 @@ RtlpNoLargePageCreateFileMappingW(
     return Handle;
 }
 
-INITIALIZE_LARGE_PAGES InitializeLargePages;
+RTL_INITIALIZE_LARGE_PAGES RtlInitializeLargePages;
+extern ENABLE_LOCK_MEMORY_PRIVILEGE EnableLockMemoryPrivilege;
 
 _Use_decl_annotations_
 HRESULT
-InitializeLargePages(
+RtlInitializeLargePages(
     PRTL Rtl
     )
 {
     Rtl->Flags.IsLargePageEnabled = (
-        Rtl->EnableLockMemoryPrivilege() == S_OK ? TRUE : FALSE
+        EnableLockMemoryPrivilege(Rtl) == S_OK ? TRUE : FALSE
     );
     Rtl->LargePageMinimum = GetLargePageMinimum();
 
     if (Rtl->Flags.IsLargePageEnabled) {
-        Rtl->TryLargePageVirtualAlloc = RtlpTryLargePageVirtualAlloc;
-        Rtl->TryLargePageVirtualAllocEx = RtlpTryLargePageVirtualAllocEx;
-        Rtl->TryLargePageCreateFileMappingW =
+        Rtl->Vtbl->TryLargePageVirtualAlloc = RtlpTryLargePageVirtualAlloc;
+        Rtl->Vtbl->TryLargePageVirtualAllocEx = RtlpTryLargePageVirtualAllocEx;
+        Rtl->Vtbl->TryLargePageCreateFileMappingW =
             RtlpTryLargePageCreateFileMappingW;
     } else {
-        Rtl->TryLargePageVirtualAlloc = RtlpNoLargePageVirtualAlloc;
-        Rtl->TryLargePageVirtualAllocEx = RtlpNoLargePageVirtualAllocEx;
-        Rtl->TryLargePageCreateFileMappingW = RtlpNoLargePageCreateFileMappingW;
+        Rtl->Vtbl->TryLargePageVirtualAlloc = RtlpNoLargePageVirtualAlloc;
+        Rtl->Vtbl->TryLargePageVirtualAllocEx = RtlpNoLargePageVirtualAllocEx;
+        Rtl->Vtbl->TryLargePageCreateFileMappingW =
+            RtlpNoLargePageCreateFileMappingW;
     }
 
     return S_OK;

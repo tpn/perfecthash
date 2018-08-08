@@ -255,15 +255,6 @@ typedef RTL_FILL_MEMORY *PRTL_FILL_MEMORY;
 
 typedef
 VOID
-(NTAPI RTL_COPY_MEMORY)(
-    _Out_writes_bytes_all_(Length) PVOID Destination,
-    _In_ const PVOID Source,
-    _In_ ULONG_PTR Length
-    );
-typedef RTL_COPY_MEMORY *PRTL_COPY_MEMORY;
-
-typedef
-VOID
 (NTAPI RTL_MOVE_MEMORY)(
     _Out_writes_bytes_all_(Length) PVOID Destination,
     _In_ const PVOID Source,
@@ -288,6 +279,48 @@ NTSTATUS
     _Out_ PULONG Value
     );
 typedef RTL_CHAR_TO_INTEGER *PRTL_CHAR_TO_INTEGER;
+
+typedef
+VOID
+(NTAPI RTL_COPY_MEMORY)(
+    _Out_writes_bytes_all_(Length) PVOID Destination,
+    _In_ const PVOID Source,
+    _In_ ULONG_PTR Length
+    );
+typedef RTL_COPY_MEMORY *PRTL_COPY_MEMORY;
+
+FORCEINLINE
+VOID
+CopyMemoryInline(
+    _Out_writes_bytes_all_(SizeInBytes) PVOID Dst,
+    _In_ const VOID *Src,
+    _In_ SIZE_T SizeInBytes
+    )
+{
+    PDWORD64 Dest = (PDWORD64)Dst;
+    PDWORD64 Source = (PDWORD64)Src;
+    PCHAR TrailingDest;
+    PCHAR TrailingSource;
+    SIZE_T TrailingBytes;
+    SIZE_T NumberOfQuadwords;
+
+    NumberOfQuadwords = SizeInBytes >> 3;
+    TrailingBytes = SizeInBytes - (NumberOfQuadwords << 3);
+
+    while (NumberOfQuadwords) {
+        *Dest++ = *Source++;
+        NumberOfQuadwords--;
+    }
+
+    TrailingDest = (PCHAR)Dest;
+    TrailingSource = (PCHAR)Source;
+
+    while (TrailingBytes) {
+        *TrailingDest++ = *TrailingSource++;
+        TrailingBytes--;
+    }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Crypto
@@ -316,6 +349,7 @@ BOOL
     _Inout_ DWORD *pcchString
     );
 typedef CRYPT_BINARY_TO_STRING_W *PCRYPT_BINARY_TO_STRING_W;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Stdio
 ////////////////////////////////////////////////////////////////////////////////
@@ -1800,10 +1834,10 @@ typedef struct _RTL {
 } RTL;
 typedef RTL *PRTL;
 
-#define AcquireRtlErrorMessageBufferLock(Rtl) \
+#define AcquireRtlSysErrorMessageBufferLock(Rtl) \
     AcquireSRWLockExclusive(&Rtl->SysErrorMessageBufferLock)
 
-#define ReleaseRtlErrorMessageBufferLock(Rtl) \
+#define ReleaseRtlSysErrorMessageBufferLock(Rtl) \
     ReleaseSRWLockExclusive(&Rtl->SysErrorMessageBufferLock)
 
 #define _RTL_MODULE_NAMES_HEAD  \
@@ -1859,5 +1893,20 @@ VOID
     _In_ _Post_ptr_invalid_ PRTL Rtl
     );
 typedef RTL_RUNDOWN *PRTL_RUNDOWN;
+
+extern RTL_INITIALIZE RtlInitialize;
+extern RTL_RUNDOWN RtlRundown;
+extern RTL_GENERATE_RANDOM_BYTES RtlGenerateRandomBytes;
+extern RTL_PRINT_SYS_ERROR RtlPrintSysError;
+extern RTL_CREATE_BUFFER RtlCreateBuffer;
+extern RTL_CREATE_MULTIPLE_BUFFERS RtlCreateMultipleBuffers;
+extern RTL_DESTROY_BUFFER RtlDestroyBuffer;
+extern RTL_CREATE_RANDOM_OBJECT_NAMES RtlCreateRandomObjectNames;
+extern RTL_CREATE_SINGLE_RANDOM_OBJECT_NAME RtlCreateSingleRandomObjectName;
+extern RTL_INITIALIZE_LARGE_PAGES RtlInitializeLargePages;
+extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlTryLargePageVirtualAlloc;
+extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlTryLargePageVirtualAllocEx;
+extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlTryLargePageCreateFileMappingW;
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -23,12 +23,17 @@ ULONG PerfectHashTableTlsIndex;
 PERFECT_HASH_TABLE_TLS_FUNCTION PerfectHashTableTlsProcessAttach;
 
 _Use_decl_annotations_
+BOOLEAN
 PerfectHashTableTlsProcessAttach(
     HMODULE Module,
     ULONG   Reason,
     LPVOID  Reserved
     )
 {
+    UNREFERENCED_PARAMETER(Module);
+    UNREFERENCED_PARAMETER(Reason);
+    UNREFERENCED_PARAMETER(Reserved);
+
     PerfectHashTableTlsIndex = TlsAlloc();
 
     if (PerfectHashTableTlsIndex == TLS_OUT_OF_INDEXES) {
@@ -48,6 +53,9 @@ PerfectHashTableTlsProcessDetach(
     LPVOID  Reserved
     )
 {
+    UNREFERENCED_PARAMETER(Module);
+    UNREFERENCED_PARAMETER(Reason);
+
     BOOL IsProcessTerminating;
 
     IsProcessTerminating = (Reserved != NULL);
@@ -87,7 +95,7 @@ End:
 PERFECT_HASH_TABLE_TLS_SET_CONTEXT PerfectHashTableTlsSetContext;
 
 _Use_decl_annotations_
-BOOLEAN
+BOOL
 PerfectHashTableTlsSetContext(
     PPERFECT_HASH_TABLE_CONTEXT Context
     )

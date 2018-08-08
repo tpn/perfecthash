@@ -9,6 +9,8 @@ Module Name:
 Abstract:
 
     This is the main public header file for the PerfectHashTable component.
+    It defines structures and functions related to creating perfect hash
+    tables, contexts, loading keys, testing, benchmarking and destruction.
 
 --*/
 
@@ -18,41 +20,609 @@ Abstract:
 extern "C" {
 #endif
 
-#include "../Rtl/__C_specific_handler.h"
-#include "../Rtl/Rtl.h"
+//
+// N.B. The warning disable glue is necessary to get the system headers to
+//      include with all errors enabled (/Wall).
+//
 
 //
-// Define an opaque PERFECT_HASH_TABLE_KEYS structure.
+// Disable the "function selected for inlining" and "function not inlined"
+// warnings.
+//
+
+#pragma warning(disable: 4710 4711)
+
+//
+// 4255:
+//      winuser.h(6502): warning C4255: 'EnableMouseInPointerForThread':
+//          no function prototype given: converting '()' to '(void)'
+//
+// 4668:
+//      winioctl.h(8910): warning C4668: '_WIN32_WINNT_WIN10_TH2'
+//          is not defined as a preprocessor macro, replacing with
+//          '0' for '#if/#elif'
+//
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4255)
+#pragma warning(disable: 4668)
+#include <minwindef.h>
+#pragma warning(pop)
+
+#include <sal.h>
+
+//
+// Disable the anonymous union/struct warning.
+//
+
+#pragma warning(disable: 4201)
+
+//
+// Disable "bit field types other than int" warning.
+//
+
+#pragma warning(disable: 4214)
+
+//
+// NT DDK types.
+//
+
+typedef struct _STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+#ifdef _WIN64
+    union {
+        LONG Hash;
+        LONG Padding;
+    };
+#endif
+    PCHAR Buffer;
+} STRING, ANSI_STRING, *PSTRING, *PANSI_STRING, **PPSTRING, **PPANSI_STRING;
+typedef const STRING *PCSTRING;
+
+typedef struct _UNICODE_STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+#ifdef _WIN64
+    union {
+        LONG Hash;
+        LONG Padding;
+    };
+#endif
+    PWSTR Buffer;
+} UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING, ***PPPUNICODE_STRING;
+typedef const UNICODE_STRING *PCUNICODE_STRING;
+#define UNICODE_NULL ((WCHAR)0)
+
+//
+// Define an enumeration for identifying COM interfaces.
+//
+
+typedef enum _PERFECT_HASH_TABLE_INTERFACE_ID {
+
+    //
+    // Explicitly define a null ID to take the 0-index slot.  This makes enum
+    // validation easier.
+    //
+
+    PerfectHashTableNullInterfaceId             = 0,
+
+    //
+    // Begin valid interfaces.
+    //
+
+    PerfectHashTableUnknownInterfaceId          = 1,
+    PerfectHashTableClassFactoryInterfaceId     = 2,
+    PerfectHashTableKeysInterfaceId             = 3,
+    PerfectHashTableContextInterfaceId          = 4,
+    PerfectHashTableInterfaceId                 = 5,
+    PerfectHashTableRtlInterfaceId              = 6,
+    PerfectHashTableAllocatorInterfaceId        = 7,
+
+    //
+    // End valid interfaces.
+    //
+
+    //
+    // N.B. Keep the next value last.
+    //
+
+    PerfectHashTableInvalidInterfaceId,
+
+} PERFECT_HASH_TABLE_INTERFACE_ID;
+
+//
+// Provide a simple inline interface enum validation routine.
+//
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashTableInterfaceId(
+    _In_ PERFECT_HASH_TABLE_INTERFACE_ID InterfaceId
+    )
+{
+    return (
+        InterfaceId > PerfectHashTableNullInterfaceId &&
+        InterfaceId < PerfectHashTableInvalidInterfaceId
+    );
+}
+
+//
+// COM-related typedefs.
+//
+
+typedef
+HRESULT
+(CO_INITIALIZE_EX)(
+    _In_opt_ LPVOID Reserved,
+    _In_ DWORD CoInit
+    );
+typedef CO_INITIALIZE_EX *PCO_INITIALIZE_EX;
+
+typedef
+_Check_return_
+HRESULT
+(STDAPICALLTYPE DLL_GET_CLASS_OBJECT)(
+    _In_ REFCLSID ClassId,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ LPVOID *Interface
+    );
+typedef DLL_GET_CLASS_OBJECT *PDLL_GET_CLASS_OBJECT;
+
+typedef
+HRESULT
+(STDAPICALLTYPE DLL_CAN_UNLOAD_NOW)(
+    VOID
+    );
+typedef DLL_CAN_UNLOAD_NOW *PDLL_CAN_UNLOAD_NOW;
+
+#define DEFINE_GUID_EX(Name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+    static const GUID Name                                              \
+        = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+
+typedef GUID *PGUID;
+typedef const GUID CGUID;
+typedef GUID const *PCGUID;
+
+//
+// IID_IUNKNOWN: 00000000-0000-0000-C000-000000000046
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_IUNKNOWN, 0x00000000, 0x0000, 0x0000,
+               0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+
+//
+// IID_ICLASSFACTORY: 00000001-0000-0000-C000-000000000046
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_ICLASSFACTORY, 0x00000001, 0x0000, 0x0000,
+               0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+
+//
+// CLSID_PERFECT_HASH_TABLE: 402045FD-72F4-4A05-902E-D22B7C1877B4
+//
+
+DEFINE_GUID_EX(CLSID_PERFECT_HASH_TABLE, 0x402045fd, 0x72f4, 0x4a05,
+               0x90, 0x2e, 0xd2, 0x2b, 0x7c, 0x18, 0x77, 0xb4);
+
+//
+// IID_PERFECT_HASH_TABLE_KEYS: 7E43EBEA-8671-47BA-B844-760B7A9EA921
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_KEYS, 0x7e43ebea, 0x8671, 0x47ba,
+               0xb8, 0x44, 0x76, 0xb, 0x7a, 0x9e, 0xa9, 0x21);
+
+//
+// IID_PERFECT_HASH_TABLE_CONTEXT: D4B24571-99D7-44BA-8A27-63D8739F9B81
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_CONTEXT, 0xd4b24571, 0x99d7, 0x44ba,
+               0x8a, 0x27, 0x63, 0xd8, 0x73, 0x9f, 0x9b, 0x81);
+
+//
+// IID_PERFECT_HASH_TABLE: C265816F-C6A9-4B44-BCEE-EC5A12ABE1EF
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE, 0xc265816f, 0xc6a9, 0x4b44,
+               0xbc, 0xee, 0xec, 0x5a, 0x12, 0xab, 0xe1, 0xef);
+
+//
+// IID_PERFECT_HASH_TABLE_RTL: 9C05A3D6-BC30-45E6-BEA6-504FCC9243A8
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_RTL, 0x9c05a3d6, 0xbc30, 0x45e6,
+               0xbe, 0xa6, 0x50, 0x4f, 0xcc, 0x92, 0x43, 0xa8);
+
+//
+// IID_PERFECT_HASH_TABLE_ALLOCATOR: F87564D2-B3C7-4CCA-9013-EB59C1E253B7
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_ALLOCATOR,
+               0xf87564d2, 0xb3c7, 0x4cca,
+               0x90, 0x13, 0xeb, 0x59, 0xc1, 0xe2, 0x53, 0xb7);
+
+//
+// GUID array.
+//
+
+static const PCGUID PerfectHashTableInterfaceGuids[] = {
+
+    NULL,
+
+    &IID_PERFECT_HASH_TABLE_IUNKNOWN,
+    &IID_PERFECT_HASH_TABLE_ICLASSFACTORY,
+    &IID_PERFECT_HASH_TABLE_KEYS,
+    &IID_PERFECT_HASH_TABLE_CONTEXT,
+    &IID_PERFECT_HASH_TABLE,
+    &IID_PERFECT_HASH_TABLE_RTL,
+    &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+
+    NULL
+};
+
+static const BYTE NumberOfPerfectHashTableInterfaceGuids =
+    ARRAYSIZE(PerfectHashTableInterfaceGuids);
+
+//
+// Convert a GUID to an interface ID.
+//
+
+FORCEINLINE
+PERFECT_HASH_TABLE_INTERFACE_ID
+PerfectHashTableInterfaceGuidToId(
+    _In_ REFIID Guid
+    )
+{
+    BYTE Index;
+    BYTE Count;
+    PERFECT_HASH_TABLE_INTERFACE_ID Id = PerfectHashTableNullInterfaceId;
+
+    if (!Guid) {
+        return PerfectHashTableInvalidInterfaceId;
+    }
+
+    //
+    // We start the index at 1 in order to skip the first NULL entry.
+    //
+
+    Count = NumberOfPerfectHashTableInterfaceGuids;
+
+    for (Index = 1; Index < Count; Index++) {
+        if (InlineIsEqualGUID(Guid, PerfectHashTableInterfaceGuids[Index])) {
+            Id = (PERFECT_HASH_TABLE_INTERFACE_ID)Index;
+            break;
+        }
+    }
+
+    return Id;
+}
+
+//
+// IUnknown
+//
+
+typedef struct _IUNKNOWN IUNKNOWN;
+typedef IUNKNOWN *PIUNKNOWN;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE IUNKNOWN_QUERY_INTERFACE)(
+    _In_ PIUNKNOWN Unknown,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
+    );
+typedef IUNKNOWN_QUERY_INTERFACE *PIUNKNOWN_QUERY_INTERFACE;
+
+typedef
+ULONG
+(STDAPICALLTYPE IUNKNOWN_ADD_REF)(
+    _In_ PIUNKNOWN Unknown
+    );
+typedef IUNKNOWN_ADD_REF *PIUNKNOWN_ADD_REF;
+
+typedef
+ULONG
+(STDAPICALLTYPE IUNKNOWN_RELEASE)(
+    _In_ PIUNKNOWN Unknown
+    );
+typedef IUNKNOWN_RELEASE *PIUNKNOWN_RELEASE;
+
+//
+// N.B. We abuse the COM spec a bit here in that all of our components,
+//      including IUnknown, actually implement IClassFactory.
+//
+
+typedef
+_Success_(return != 0)
+HRESULT
+(STDAPICALLTYPE IUNKNOWN_CREATE_INSTANCE)(
+    _In_ PIUNKNOWN Unknown,
+    _In_opt_ PIUNKNOWN UnknownOuter,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Instance
+    );
+typedef IUNKNOWN_CREATE_INSTANCE *PIUNKNOWN_CREATE_INSTANCE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE IUNKNOWN_LOCK_SERVER)(
+    _In_ PIUNKNOWN Unknown,
+    _In_opt_ BOOL Lock
+    );
+typedef IUNKNOWN_LOCK_SERVER *PIUNKNOWN_LOCK_SERVER;
+
+typedef struct _IUNKNOWN_VTBL {
+    PIUNKNOWN_QUERY_INTERFACE QueryInterface;
+    PIUNKNOWN_ADD_REF AddRef;
+    PIUNKNOWN_RELEASE Release;
+    PIUNKNOWN_CREATE_INSTANCE CreateInstance;
+    PIUNKNOWN_LOCK_SERVER LockServer;
+} IUNKNOWN_VTBL;
+typedef IUNKNOWN_VTBL *PIUNKNOWN_VTBL;
+
+#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+typedef struct _IUNKNOWN {
+    PIUNKNOWN_VTBL Vtbl;
+} IUNKNOWN;
+typedef IUNKNOWN *PIUNKNOWN;
+#endif
+
+//
+// IClassFactory
+//
+
+typedef struct _ICLASSFACTORY ICLASSFACTORY;
+typedef ICLASSFACTORY *PICLASSFACTORY;
+
+typedef
+_Must_inspect_impl_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE ICLASSFACTORY_QUERY_INTERFACE)(
+    _In_ PICLASSFACTORY ClassFactory,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
+    );
+typedef ICLASSFACTORY_QUERY_INTERFACE *PICLASSFACTORY_QUERY_INTERFACE;
+
+typedef
+ULONG
+(STDAPICALLTYPE ICLASSFACTORY_ADD_REF)(
+    _In_ PICLASSFACTORY ClassFactory
+    );
+typedef ICLASSFACTORY_ADD_REF *PICLASSFACTORY_ADD_REF;
+
+typedef
+ULONG
+(STDAPICALLTYPE ICLASSFACTORY_RELEASE)(
+    _In_ PICLASSFACTORY ClassFactory
+    );
+typedef ICLASSFACTORY_RELEASE *PICLASSFACTORY_RELEASE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE ICLASSFACTORY_CREATE_INSTANCE)(
+    _In_ PICLASSFACTORY ClassFactory,
+    _In_opt_ PIUNKNOWN UnknownOuter,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
+    );
+typedef ICLASSFACTORY_CREATE_INSTANCE *PICLASSFACTORY_CREATE_INSTANCE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE ICLASSFACTORY_LOCK_SERVER)(
+    _In_ PICLASSFACTORY ClassFactory,
+    _In_opt_ BOOL Lock
+    );
+typedef ICLASSFACTORY_LOCK_SERVER *PICLASSFACTORY_LOCK_SERVER;
+
+typedef struct _ICLASSFACTORY_VTBL {
+    PICLASSFACTORY_QUERY_INTERFACE QueryInterface;
+    PICLASSFACTORY_ADD_REF AddRef;
+    PICLASSFACTORY_RELEASE Release;
+    PICLASSFACTORY_CREATE_INSTANCE CreateInstance;
+    PICLASSFACTORY_LOCK_SERVER LockServer;
+} ICLASSFACTORY_VTBL;
+typedef ICLASSFACTORY_VTBL *PICLASSFACTORY_VTBL;
+
+#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+typedef struct _ICLASSFACTORY {
+    PICLASSFACTORY_VTBL Vtbl;
+} ICLASSFACTORY;
+typedef ICLASSFACTORY *PICLASSFACTORY;
+#endif
+
+//
+// Define the ALLOCATOR interface.
+//
+
+typedef struct _ALLOCATOR ALLOCATOR;
+typedef ALLOCATOR *PALLOCATOR;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE ALLOCATOR_QUERY_INTERFACE)(
+    _In_ PALLOCATOR Allocator,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
+    );
+typedef ALLOCATOR_QUERY_INTERFACE *PALLOCATOR_QUERY_INTERFACE;
+
+typedef
+ULONG
+(STDAPICALLTYPE ALLOCATOR_ADD_REF)(
+    _In_ PALLOCATOR Allocator
+    );
+typedef ALLOCATOR_ADD_REF *PALLOCATOR_ADD_REF;
+
+typedef
+ULONG
+(STDAPICALLTYPE ALLOCATOR_RELEASE)(
+    _In_ PALLOCATOR Allocator
+    );
+typedef ALLOCATOR_RELEASE *PALLOCATOR_RELEASE;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE ALLOCATOR_CREATE_INSTANCE)(
+    _In_ PALLOCATOR Allocator,
+    _In_opt_ PIUNKNOWN UnknownOuter,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Instance
+    );
+typedef ALLOCATOR_CREATE_INSTANCE *PALLOCATOR_CREATE_INSTANCE;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE ALLOCATOR_LOCK_SERVER)(
+    _In_ PALLOCATOR Allocator,
+    _In_opt_ BOOL Lock
+    );
+typedef ALLOCATOR_LOCK_SERVER *PALLOCATOR_LOCK_SERVER;
+
+typedef
+_Check_return_
+_Ret_maybenull_
+_Post_writable_byte_size_(Size)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_MALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _In_ SIZE_T Size
+    );
+typedef ALLOCATOR_MALLOC *PALLOCATOR_MALLOC;
+
+typedef
+_Check_return_
+_Ret_maybenull_
+_Post_writable_byte_size_(NumberOfElements * ElementSize)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_CALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T ElementSize
+    );
+typedef ALLOCATOR_CALLOC *PALLOCATOR_CALLOC;
+
+typedef
+VOID
+(STDAPICALLTYPE ALLOCATOR_FREE)(
+    _In_ PALLOCATOR Allocator,
+    _Pre_maybenull_ _Post_invalid_ PVOID Address
+    );
+typedef ALLOCATOR_FREE *PALLOCATOR_FREE;
+
+typedef
+VOID
+(STDAPICALLTYPE ALLOCATOR_FREE_POINTER)(
+    _In_ PALLOCATOR Allocator,
+    _Out_ _Post_ptr_invalid_ PVOID *AddressPointer
+    );
+typedef ALLOCATOR_FREE_POINTER *PALLOCATOR_FREE_POINTER;
+
+typedef struct _ALLOCATOR_VTBL {
+    PALLOCATOR_QUERY_INTERFACE QueryInterface;
+    PALLOCATOR_ADD_REF AddRef;
+    PALLOCATOR_RELEASE Release;
+    PALLOCATOR_CREATE_INSTANCE CreateInstance;
+    PALLOCATOR_LOCK_SERVER LockServer;
+    PALLOCATOR_MALLOC Malloc;
+    PALLOCATOR_CALLOC Calloc;
+    PALLOCATOR_FREE Free;
+    PALLOCATOR_FREE_POINTER FreePointer;
+} ALLOCATOR_VTBL;
+typedef ALLOCATOR_VTBL *PALLOCATOR_VTBL;
+
+#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+typedef struct _ALLOCATOR {
+    PALLOCATOR_VTBL Vtbl;
+} ALLOCATOR;
+typedef ALLOCATOR *PALLOCATOR;
+#endif
+
+//
+// Define the PERFECT_HASH_TABLE_KEYS interface.
 //
 
 typedef struct _PERFECT_HASH_TABLE_KEYS PERFECT_HASH_TABLE_KEYS;
 typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
-typedef const PERFECT_HASH_TABLE_KEYS *PCPERFECT_HASH_TABLE_KEYS;
-
-//
-// Define the PERFECT_HASH_TABLE_KEYS interface function pointers.
-//
 
 typedef
-_Check_return_
-_Success_(return != 0)
-BOOLEAN
-(NTAPI LOAD_PERFECT_HASH_TABLE_KEYS)(
-    _In_ PRTL Rtl,
-    _In_ PALLOCATOR Allocator,
-    _In_ PCUNICODE_STRING Path,
-    _Outptr_result_nullonfailure_ PPERFECT_HASH_TABLE_KEYS *Keys
+_Must_inspect_impl_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE)(
+    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
     );
-typedef LOAD_PERFECT_HASH_TABLE_KEYS *PLOAD_PERFECT_HASH_TABLE_KEYS;
+typedef PERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE
+      *PPERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE;
 
 typedef
-_Check_return_
-_Success_(return != 0)
-BOOLEAN
-(NTAPI DESTROY_PERFECT_HASH_TABLE_KEYS)(
-    _Inout_ PPERFECT_HASH_TABLE_KEYS *Keys
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_ADD_REF)(
+    _In_ PPERFECT_HASH_TABLE_KEYS Keys
     );
-typedef DESTROY_PERFECT_HASH_TABLE_KEYS *PDESTROY_PERFECT_HASH_TABLE_KEYS;
+typedef PERFECT_HASH_TABLE_KEYS_ADD_REF *PPERFECT_HASH_TABLE_KEYS_ADD_REF;
+
+typedef
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_RELEASE)(
+    _In_ PPERFECT_HASH_TABLE_KEYS Keys
+    );
+typedef PERFECT_HASH_TABLE_KEYS_RELEASE *PPERFECT_HASH_TABLE_KEYS_RELEASE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE)(
+    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+    _In_opt_ PIUNKNOWN UnknownOuter,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
+    );
+typedef PERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE
+      *PPERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_LOCK_SERVER)(
+    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+    _In_opt_ BOOL Lock
+    );
+typedef PERFECT_HASH_TABLE_KEYS_LOCK_SERVER
+      *PPERFECT_HASH_TABLE_KEYS_LOCK_SERVER;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_LOAD)(
+    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+    _In_ PCUNICODE_STRING Path
+    );
+typedef PERFECT_HASH_TABLE_KEYS_LOAD
+      *PPERFECT_HASH_TABLE_KEYS_LOAD;
+
+typedef struct _PERFECT_HASH_TABLE_KEYS_VTBL {
+    PPERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE QueryInterface;
+    PPERFECT_HASH_TABLE_KEYS_ADD_REF AddRef;
+    PPERFECT_HASH_TABLE_KEYS_RELEASE Release;
+    PPERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE CreateInstance;
+    PPERFECT_HASH_TABLE_KEYS_LOCK_SERVER LockServer;
+    PPERFECT_HASH_TABLE_KEYS_LOAD Load;
+} PERFECT_HASH_TABLE_KEYS_VTBL;
+typedef PERFECT_HASH_TABLE_KEYS_VTBL *PPERFECT_HASH_TABLE_KEYS_VTBL;
+
+#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_TABLE_KEYS {
+    PPERFECT_HASH_TABLE_KEYS_VTBL Vtbl;
+} PERFECT_HASH_TABLE_KEYS;
+typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
+#endif
 
 //
 // Define an enumeration for identifying which backend algorithm variant to
@@ -342,116 +912,201 @@ IsValidPerfectHashTableBenchmarkType(
     );
 }
 
-
 //
-// Define an opaque runtime context to encapsulate threadpool resources.  This
-// is created via CreatePerfectHashTableContext() with a desired concurrency,
-// and then passed to CreatePerfectHashTable(), allowing it to search for
-// perfect hash solutions in parallel.
+// Define the PERFECT_HASH_TABLE_CONTEXT interface.  This interface is
+// responsible for encapsulating threadpool resources and allows perfect hash
+// table solutions to be found in parallel.  An instance of this interface must
+// be provided to the PERFECT_HASH_TABLE interface's creation routine.
 //
 
 typedef struct _PERFECT_HASH_TABLE_CONTEXT PERFECT_HASH_TABLE_CONTEXT;
 typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
 
-//
-// Define the create and destroy functions for the runtime context.
-//
-
 typedef
-_Check_return_
-_Success_(return != 0)
-BOOLEAN
-(NTAPI CREATE_PERFECT_HASH_TABLE_CONTEXT)(
-    _In_ PRTL Rtl,
-    _In_ PALLOCATOR Allocator,
-    _In_opt_ PULONG MaximumConcurrency,
-    _Outptr_opt_result_nullonfailure_ PPERFECT_HASH_TABLE_CONTEXT *Context
+_Must_inspect_impl_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
     );
-typedef CREATE_PERFECT_HASH_TABLE_CONTEXT *PCREATE_PERFECT_HASH_TABLE_CONTEXT;
+typedef PERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE
+      *PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE;
 
 typedef
-_Check_return_
-_Success_(return != 0)
-BOOLEAN
-(NTAPI DESTROY_PERFECT_HASH_TABLE_CONTEXT)(
-    _Pre_notnull_ _Post_satisfies_(*ContextPointer == 0)
-        PPERFECT_HASH_TABLE_CONTEXT *ContextPointer,
-    _In_opt_ PBOOLEAN IsProcessTerminating
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_ADD_REF)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
     );
-typedef DESTROY_PERFECT_HASH_TABLE_CONTEXT *PDESTROY_PERFECT_HASH_TABLE_CONTEXT;
-
-//
-// Perfect hash tables are created via the CreatePerfectHashTable() routine,
-// the signature for which is defined below.  This routine returns a TRUE value
-// if a perfect hash table was successfully created from the given parameters.
-// If creation was successful, an on-disk representation of the table will be
-// saved at the given hash table path.
-//
-// N.B. Perfect hash tables are used via the PERFECT_HASH_TABLE_VTBL interface,
-//      which is obtained from the Vtbl field of the PERFECT_HASH_TABLE struct
-//      returned by LoadPerfectHashTableInstance().
-//
+typedef PERFECT_HASH_TABLE_CONTEXT_ADD_REF *PPERFECT_HASH_TABLE_CONTEXT_ADD_REF;
 
 typedef
-_Check_return_
-_Success_(return != 0)
-BOOLEAN
-(NTAPI CREATE_PERFECT_HASH_TABLE)(
-    _In_ PRTL Rtl,
-    _In_ PALLOCATOR Allocator,
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_RELEASE)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_RELEASE *PPERFECT_HASH_TABLE_CONTEXT_RELEASE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _In_opt_ PIUNKNOWN UnknownOuter,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE
+      *PPERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _In_opt_ BOOL Lock
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER
+      *PPERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _Inout_ PULONG MaximumConcurrency
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _Out_ PULONG MaximumConcurrency
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE)(
     _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
     _In_ PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
     _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    _Inout_opt_ PULARGE_INTEGER NumberOfTableElements,
     _In_ PPERFECT_HASH_TABLE_KEYS Keys,
     _Inout_opt_ PCUNICODE_STRING HashTablePath
     );
-typedef CREATE_PERFECT_HASH_TABLE *PCREATE_PERFECT_HASH_TABLE;
+typedef PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
+      *PPERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE;
 
-//
-// Forward definition of the interface.
-//
 
-typedef struct _PERFECT_HASH_TABLE_VTBL PERFECT_HASH_TABLE_VTBL;
-typedef PERFECT_HASH_TABLE_VTBL *PPERFECT_HASH_TABLE_VTBL;
-typedef PERFECT_HASH_TABLE_VTBL **PPPERFECT_HASH_TABLE;
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_SELF_TEST)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _In_ PCUNICODE_STRING TestDataDirectory,
+    _In_ PCUNICODE_STRING OutputDirectory,
+    _In_ PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_SELF_TEST *PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST;
 
-//
-// Define a minimal vtbl encapsulation structure if we're a public
-// (i.e. non-internal) build.  The actual structure is defined in
-// PerfectHashTablePrivate.h.
-//
+typedef struct _PERFECT_HASH_TABLE_CONTEXT_VTBL {
+    PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE QueryInterface;
+    PPERFECT_HASH_TABLE_CONTEXT_ADD_REF AddRef;
+    PPERFECT_HASH_TABLE_CONTEXT_RELEASE Release;
+    PPERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE CreateInstance;
+    PPERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER LockServer;
+    PPERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
+    PPERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
+    PPERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE CreateTable;
+    PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST SelfTest;
+} PERFECT_HASH_TABLE_CONTEXT_VTBL;
+typedef PERFECT_HASH_TABLE_CONTEXT_VTBL *PPERFECT_HASH_TABLE_CONTEXT_VTBL;
 
 #ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
-typedef struct _PERFECT_HASH_TABLE {
-    PPERFECT_HASH_TABLE_VTBL Vtbl;
-} PERFECT_HASH_TABLE;
-#else
-typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
+typedef struct _PERFECT_HASH_TABLE_CONTEXT {
+    PPERFECT_HASH_TABLE_CONTEXT_VTBL Vtbl;
+} PERFECT_HASH_TABLE_CONTEXT;
+typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
 #endif
+
+//
+// Define the PERFECT_HASH_TABLE interface.
+//
+
+typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
 
 typedef
-_Check_return_
-_Success_(return != 0)
-BOOLEAN
-(NTAPI LOAD_PERFECT_HASH_TABLE)(
-    _In_ PRTL Rtl,
-    _In_ PALLOCATOR Allocator,
-    _In_opt_ PPERFECT_HASH_TABLE_KEYS Keys,
-    _In_ PCUNICODE_STRING Path,
-    _Out_ PPERFECT_HASH_TABLE *TablePointer
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_QUERY_INTERFACE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Interface
     );
-typedef LOAD_PERFECT_HASH_TABLE *PLOAD_PERFECT_HASH_TABLE;
+typedef PERFECT_HASH_TABLE_QUERY_INTERFACE *PPERFECT_HASH_TABLE_QUERY_INTERFACE;
 
-//
-// Define the public perfect hash table functions.
-//
+typedef
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_TABLE_ADD_REF)(
+    _In_ PPERFECT_HASH_TABLE Table
+    );
+typedef PERFECT_HASH_TABLE_ADD_REF *PPERFECT_HASH_TABLE_ADD_REF;
+
+typedef
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_TABLE_RELEASE)(
+    _In_ PPERFECT_HASH_TABLE Table
+    );
+typedef PERFECT_HASH_TABLE_RELEASE *PPERFECT_HASH_TABLE_RELEASE;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CREATE_INSTANCE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_opt_ PIUNKNOWN UnknownOuter,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ PVOID *Instance
+    );
+typedef PERFECT_HASH_TABLE_CREATE_INSTANCE *PPERFECT_HASH_TABLE_CREATE_INSTANCE;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_LOCK_SERVER)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_opt_ BOOL Lock
+    );
+typedef PERFECT_HASH_TABLE_LOCK_SERVER *PPERFECT_HASH_TABLE_LOCK_SERVER;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_LOAD)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PCUNICODE_STRING Path,
+    _In_opt_ PPERFECT_HASH_TABLE_KEYS Keys
+    );
+typedef PERFECT_HASH_TABLE_LOAD *PPERFECT_HASH_TABLE_LOAD;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_TEST)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_opt_ PPERFECT_HASH_TABLE_KEYS Keys,
+    _In_opt_ BOOLEAN DebugBreakOnFailure
+    );
+typedef PERFECT_HASH_TABLE_TEST *PPERFECT_HASH_TABLE_TEST;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_INSERT)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_INSERT)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONG Key,
     _In_ ULONG Value,
@@ -461,7 +1116,7 @@ typedef PERFECT_HASH_TABLE_INSERT *PPERFECT_HASH_TABLE_INSERT;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_LOOKUP)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_LOOKUP)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONG Key,
     _Out_ PULONG Value
@@ -470,7 +1125,7 @@ typedef PERFECT_HASH_TABLE_LOOKUP *PPERFECT_HASH_TABLE_LOOKUP;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_DELETE)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_DELETE)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONG Key,
     _Out_opt_ PULONG PreviousValue
@@ -485,7 +1140,7 @@ typedef PERFECT_HASH_TABLE_DELETE *PPERFECT_HASH_TABLE_DELETE;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_INDEX)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_INDEX)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONG Key,
     _In_ PULONG Index
@@ -494,7 +1149,7 @@ typedef PERFECT_HASH_TABLE_INDEX *PPERFECT_HASH_TABLE_INDEX;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_HASH)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONG Input,
     _Out_ PULONGLONG Hash
@@ -503,7 +1158,18 @@ typedef PERFECT_HASH_TABLE_HASH *PPERFECT_HASH_TABLE_HASH;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_MASK_HASH)(
+(NTAPI PERFECT_HASH_TABLE_SEEDED_HASH)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ ULONG Input,
+    _In_ ULONG NumberOfSeeds,
+    _In_reads_(NumberOfSeeds) PULONG Seeds,
+    _Out_ PULONGLONG Hash
+    );
+typedef PERFECT_HASH_TABLE_SEEDED_HASH *PPERFECT_HASH_TABLE_SEEDED_HASH;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_MASK_HASH)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONG Input,
     _Out_ PULONG Masked
@@ -512,43 +1178,51 @@ typedef PERFECT_HASH_TABLE_MASK_HASH *PPERFECT_HASH_TABLE_MASK_HASH;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_MASK_INDEX)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_MASK_INDEX)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONGLONG Input,
     _Out_ PULONG Masked
     );
 typedef PERFECT_HASH_TABLE_MASK_INDEX *PPERFECT_HASH_TABLE_MASK_INDEX;
 
-//
-// Loaded hash tables are reference counted using the AddRef()/Release() COM
-// semantics.  The number of AddRef() calls should match the number of Release()
-// calls.  The resources will be released when the final Release() is called.
-//
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_GET_ALGORITHM_NAME)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _Out_ PCUNICODE_STRING *Name
+    );
+typedef PERFECT_HASH_TABLE_GET_ALGORITHM_NAME
+      *PPERFECT_HASH_TABLE_GET_ALGORITHM_NAME;
 
 typedef
-ULONG
-(NTAPI PERFECT_HASH_TABLE_ADD_REF)(
-    _In_ PPERFECT_HASH_TABLE Table
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _Out_ PCUNICODE_STRING *Name
     );
-typedef PERFECT_HASH_TABLE_ADD_REF *PPERFECT_HASH_TABLE_ADD_REF;
+typedef PERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME
+      *PPERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME;
 
 typedef
-ULONG
-(NTAPI PERFECT_HASH_TABLE_RELEASE)(
-    _In_ PPERFECT_HASH_TABLE Table
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _Out_ PCUNICODE_STRING *Name
     );
-typedef PERFECT_HASH_TABLE_RELEASE *PPERFECT_HASH_TABLE_RELEASE;
-
-//
-// The interface as a vtbl.  Note that we're *almost* a valid COM interface,
-// except for the NULL pointer that will occupy the first slot where the impl
-// for QueryInterface() is meant to live.
-//
+typedef PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
+      *PPERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME;
 
 typedef struct _PERFECT_HASH_TABLE_VTBL {
-    PVOID Unused;
+    PPERFECT_HASH_TABLE_QUERY_INTERFACE QueryInterface;
     PPERFECT_HASH_TABLE_ADD_REF AddRef;
     PPERFECT_HASH_TABLE_RELEASE Release;
+    PPERFECT_HASH_TABLE_CREATE_INSTANCE CreateInstance;
+    PPERFECT_HASH_TABLE_LOCK_SERVER LockServer;
+    PPERFECT_HASH_TABLE_LOAD Load;
+    PPERFECT_HASH_TABLE_TEST Test;
     PPERFECT_HASH_TABLE_INSERT Insert;
     PPERFECT_HASH_TABLE_LOOKUP Lookup;
     PPERFECT_HASH_TABLE_DELETE Delete;
@@ -556,62 +1230,14 @@ typedef struct _PERFECT_HASH_TABLE_VTBL {
     PPERFECT_HASH_TABLE_HASH Hash;
     PPERFECT_HASH_TABLE_MASK_HASH MaskHash;
     PPERFECT_HASH_TABLE_MASK_INDEX MaskIndex;
+    PPERFECT_HASH_TABLE_SEEDED_HASH SeededHash;
+    PPERFECT_HASH_TABLE_INDEX FastIndex;
+    PPERFECT_HASH_TABLE_INDEX SlowIndex;
+    PPERFECT_HASH_TABLE_GET_ALGORITHM_NAME GetAlgorithmName;
+    PPERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME GetHashFunctionName;
+    PPERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME GetMaskFunctionName;
 } PERFECT_HASH_TABLE_VTBL;
 typedef PERFECT_HASH_TABLE_VTBL *PPERFECT_HASH_TABLE_VTBL;
-
-//
-// Allocator-specific typedefs.
-//
-
-typedef
-_Check_return_
-_Success_(return != 0)
-BOOL
-(NTAPI INITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR_FROM_RTL_BOOTSTRAP)(
-    _In_ PRTL_BOOTSTRAP RtlBootstrap,
-    _In_ PALLOCATOR Allocator
-    );
-typedef INITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR_FROM_RTL_BOOTSTRAP
-      *PINITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR_FROM_RTL_BOOTSTRAP;
-
-typedef
-_Check_return_
-_Success_(return != 0)
-BOOL
-(NTAPI INITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR)(
-    _In_ PRTL Rtl,
-    _In_ PALLOCATOR Allocator
-    );
-typedef INITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR
-      *PINITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR;
-
-//
-// Self-test typedefs.
-//
-
-typedef
-_Success_(return != 0)
-BOOLEAN
-(NTAPI SELF_TEST_PERFECT_HASH_TABLE)(
-    _In_ PRTL Rtl,
-    _In_ PALLOCATOR Allocator,
-    _In_ struct _PERFECT_HASH_TABLE_ANY_API *AnyApi,
-    _In_ PCUNICODE_STRING TestDataDirectory,
-    _In_ PULONG MaximumConcurrency,
-    _In_ PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
-    _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
-    );
-typedef SELF_TEST_PERFECT_HASH_TABLE *PSELF_TEST_PERFECT_HASH_TABLE;
-
-typedef
-_Success_(return != 0)
-BOOLEAN
-(NTAPI TEST_PERFECT_HASH_TABLE)(
-    _In_ PPERFECT_HASH_TABLE Table,
-    _In_opt_ BOOLEAN DebugBreakOnFailure
-    );
-typedef TEST_PERFECT_HASH_TABLE *PTEST_PERFECT_HASH_TABLE;
 
 //
 // Helper functions for obtaining the string representation of enumeration IDs.
@@ -647,327 +1273,6 @@ BOOLEAN
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
       *PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME;
 
-//
-// Define the main PerfectHash API structure.
-//
-
-typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_API {
-
-    //
-    // Size of the structure, in bytes.  This is filled in automatically by
-    // LoadPerfectHashTableApi() based on the initial SizeOfAnyApi parameter.
-    //
-
-    _In_range_(sizeof(struct _PERFECT_HASH_TABLE_API),
-               sizeof(struct _PERFECT_HASH_TABLE_API_EX)) ULONG SizeOfStruct;
-
-    //
-    // Number of function pointers contained in the structure.  This is filled
-    // in automatically by LoadPerfectHashTableApi() based on the initial
-    // SizeOfAnyApi parameter divided by the size of a function pointer.
-    //
-
-    ULONG NumberOfFunctions;
-
-    //
-    // Begin function pointers.
-    //
-
-    union {
-        PVOID FirstFunctionPointer;
-        PSET_C_SPECIFIC_HANDLER SetCSpecificHandler;
-    };
-
-    PLOAD_PERFECT_HASH_TABLE_KEYS LoadPerfectHashTableKeys;
-    PDESTROY_PERFECT_HASH_TABLE_KEYS DestroyPerfectHashTableKeys;
-
-    PCREATE_PERFECT_HASH_TABLE_CONTEXT CreatePerfectHashTableContext;
-    PDESTROY_PERFECT_HASH_TABLE_CONTEXT DestroyPerfectHashTableContext;
-
-    PCREATE_PERFECT_HASH_TABLE CreatePerfectHashTable;
-    PLOAD_PERFECT_HASH_TABLE LoadPerfectHashTable;
-    PTEST_PERFECT_HASH_TABLE TestPerfectHashTable;
-
-    PGET_PERFECT_HASH_TABLE_ALGORITHM_NAME GetAlgorithmName;
-    PGET_PERFECT_HASH_TABLE_HASH_FUNCTION_NAME GetHashFunctionName;
-    PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME GetMaskFunctionName;
-
-    PINITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR InitializePerfectHashAllocator;
-
-    PINITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR_FROM_RTL_BOOTSTRAP
-        InitializePerfectHashAllocatorFromRtlBootstrap;
-
-} PERFECT_HASH_TABLE_API;
-typedef PERFECT_HASH_TABLE_API *PPERFECT_HASH_TABLE_API;
-
-//
-// Define the extended API.
-//
-
-typedef struct _PERFECT_HASH_TABLE_API_EX {
-
-    //
-    // Inline PERFECT_HASH_TABLE_API.
-    //
-
-    //
-    // Size of the structure, in bytes.  This is filled in automatically by
-    // LoadPerfectHashTableApi() based on the initial SizeOfAnyApi parameter.
-    //
-
-    _In_range_(sizeof(struct _PERFECT_HASH_TABLE_API),
-               sizeof(struct _PERFECT_HASH_TABLE_API_EX)) ULONG SizeOfStruct;
-
-    //
-    // Number of function pointers contained in the structure.  This is filled
-    // in automatically by LoadPerfectHashTableApi() based on the initial
-    // SizeOfAnyApi parameter divided by the size of a function pointer.
-    //
-
-    ULONG NumberOfFunctions;
-
-    //
-    // Begin function pointers.
-    //
-
-    union {
-        PVOID FirstFunctionPointer;
-        PSET_C_SPECIFIC_HANDLER SetCSpecificHandler;
-    };
-
-    PLOAD_PERFECT_HASH_TABLE_KEYS LoadPerfectHashTableKeys;
-    PDESTROY_PERFECT_HASH_TABLE_KEYS DestroyPerfectHashTableKeys;
-
-    PCREATE_PERFECT_HASH_TABLE_CONTEXT CreatePerfectHashTableContext;
-    PDESTROY_PERFECT_HASH_TABLE_CONTEXT DestroyPerfectHashTableContext;
-
-    PCREATE_PERFECT_HASH_TABLE CreatePerfectHashTable;
-    PLOAD_PERFECT_HASH_TABLE LoadPerfectHashTable;
-    PTEST_PERFECT_HASH_TABLE TestPerfectHashTable;
-
-    PGET_PERFECT_HASH_TABLE_ALGORITHM_NAME GetAlgorithmName;
-    PGET_PERFECT_HASH_TABLE_HASH_FUNCTION_NAME GetHashFunctionName;
-    PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME GetMaskFunctionName;
-
-    PINITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR InitializePerfectHashAllocator;
-
-    PINITIALIZE_PERFECT_HASH_TABLE_ALLOCATOR_FROM_RTL_BOOTSTRAP
-        InitializePerfectHashAllocatorFromRtlBootstrap;
-
-    //
-    // Extended API functions used for testing and benchmarking.
-    //
-
-    PSELF_TEST_PERFECT_HASH_TABLE SelfTestPerfectHashTable;
-
-} PERFECT_HASH_TABLE_API_EX;
-typedef PERFECT_HASH_TABLE_API_EX *PPERFECT_HASH_TABLE_API_EX;
-
-typedef union _PERFECT_HASH_TABLE_ANY_API {
-    PERFECT_HASH_TABLE_API Api;
-    PERFECT_HASH_TABLE_API_EX ApiEx;
-} PERFECT_HASH_TABLE_ANY_API;
-typedef PERFECT_HASH_TABLE_ANY_API *PPERFECT_HASH_TABLE_ANY_API;
-
-FORCEINLINE
-BOOLEAN
-LoadPerfectHashTableApi(
-    _In_ PRTL Rtl,
-    _Inout_ HMODULE *ModulePointer,
-    _In_opt_ PUNICODE_STRING ModulePath,
-    _In_ ULONG SizeOfAnyApi,
-    _Out_writes_bytes_all_(SizeOfAnyApi) PPERFECT_HASH_TABLE_ANY_API AnyApi
-    )
-/*++
-
-Routine Description:
-
-    Loads the perfect hash table module and resolves all API functions for
-    either the PERFECT_HASH_TABLE_API or PERFECT_HASH_TABLE_API_EX structure.
-    The desired API is indicated by the SizeOfAnyApi parameter.
-
-    Example use:
-
-        PERFECT_HASH_TABLE_API_EX GlobalApi;
-        PPERFECT_HASH_TABLE_API_EX Api;
-
-        Success = LoadPerfectHashApi(Rtl,
-                                     NULL,
-                                     NULL,
-                                     sizeof(GlobalApi),
-                                     (PPERFECT_HASH_TABLE_ANY_API)&GlobalApi);
-        ASSERT(Success);
-        Api = &GlobalApi;
-
-    In this example, the extended API will be provided as our sizeof(GlobalApi)
-    will indicate the structure size used by PERFECT_HASH_TABLE_API_EX.
-
-Arguments:
-
-    Rtl - Supplies a pointer to an initialized RTL structure.
-
-    ModulePointer - Optionally supplies a pointer to an existing module handle
-        for which the API symbols are to be resolved.  May be NULL.  If not
-        NULL, but the pointed-to value is NULL, then this parameter will
-        receive the handle obtained by LoadLibrary() as part of this call.
-        If the string table module is no longer needed, but the program will
-        keep running, the caller should issue a FreeLibrary() against this
-        module handle.
-
-    ModulePath - Optionally supplies a pointer to a UNICODE_STRING structure
-        representing a path name of the string table module to be loaded.
-        If *ModulePointer is not NULL, it takes precedence over this parameter.
-        If NULL, and no module has been provided via *ModulePointer, loading
-        will be attempted via LoadLibraryA("PerfectHashTable.dll")'.
-
-    SizeOfAnyApi - Supplies the size, in bytes, of the underlying structure
-        pointed to by the AnyApi parameter.
-
-    AnyApi - Supplies the address of a structure which will receive resolved
-        API function pointers.  The API furnished will depend on the size
-        indicated by the SizeOfAnyApi parameter.
-
-Return Value:
-
-    TRUE on success, FALSE on failure.
-
---*/
-{
-    BOOL Success;
-    HMODULE Module = NULL;
-    ULONG NumberOfSymbols;
-    ULONG NumberOfResolvedSymbols;
-
-    //
-    // Define the API names.
-    //
-    // N.B. These names must match PERFECT_HASH_TABLE_API_EX exactly (including
-    //      the order).
-    //
-
-    CONST PCSTR Names[] = {
-        "SetCSpecificHandler",
-        "LoadPerfectHashTableKeys",
-        "DestroyPerfectHashTableKeys",
-        "CreatePerfectHashTableContext",
-        "DestroyPerfectHashTableContext",
-        "CreatePerfectHashTable",
-        "LoadPerfectHashTable",
-        "TestPerfectHashTable",
-        "GetPerfectHashTableAlgorithmName",
-        "GetPerfectHashTableHashFunctionName",
-        "GetPerfectHashTableMaskFunctionName",
-        "InitializePerfectHashTableAllocator",
-        "InitializePerfectHashTableAllocatorFromRtlBootstrap",
-        "SelfTestPerfectHashTable",
-    };
-
-    //
-    // Define an appropriately sized bitmap we can passed to Rtl->LoadSymbols().
-    //
-
-    ULONG BitmapBuffer[(ALIGN_UP(ARRAYSIZE(Names), sizeof(ULONG) << 3) >> 5)+1];
-    RTL_BITMAP FailedBitmap = { ARRAYSIZE(Names)+1, (PULONG)&BitmapBuffer };
-
-    //
-    // Determine the number of symbols we want to resolve based on the size of
-    // the API indicated by the caller.
-    //
-
-    if (SizeOfAnyApi == sizeof(AnyApi->Api)) {
-        NumberOfSymbols = sizeof(AnyApi->Api) / sizeof(ULONG_PTR);
-    } else if (SizeOfAnyApi == sizeof(AnyApi->ApiEx)) {
-        NumberOfSymbols = sizeof(AnyApi->ApiEx) / sizeof(ULONG_PTR);
-    } else {
-        return FALSE;
-    }
-
-    //
-    // Subtract the structure header (size, number of symbols, etc).
-    //
-
-    NumberOfSymbols -= (
-        (FIELD_OFFSET(PERFECT_HASH_TABLE_API, FirstFunctionPointer)) /
-        sizeof(ULONG_PTR)
-    );
-
-    //
-    // Attempt to load the underlying perfect hash table module if necessary.
-    //
-
-    if (ARGUMENT_PRESENT(ModulePointer)) {
-        Module = *ModulePointer;
-    }
-
-    if (!Module) {
-        if (ARGUMENT_PRESENT(ModulePath)) {
-            Module = LoadLibraryW(ModulePath->Buffer);
-        } else {
-            Module = LoadLibraryA("PerfectHashTable.dll");
-        }
-    }
-
-    if (!Module) {
-        return FALSE;
-    }
-
-    //
-    // We've got a handle to the perfect hash table.  Load the symbols we want
-    // dynamically via Rtl->LoadSymbols().
-    //
-
-    Success = Rtl->LoadSymbols(Names,
-                               NumberOfSymbols,
-                               (PULONG_PTR)&AnyApi->Api.FirstFunctionPointer,
-                               NumberOfSymbols,
-                               Module,
-                               &FailedBitmap,
-                               TRUE,
-                               &NumberOfResolvedSymbols);
-
-    ASSERT(Success);
-
-    //
-    // Debug helper: if the breakpoint below is hit, then the symbol names
-    // have potentially become out of sync.  Look at the value of first failed
-    // symbol to assist in determining the cause.
-    //
-
-    if (NumberOfSymbols != NumberOfResolvedSymbols) {
-        PCSTR FirstFailedSymbolName;
-        ULONG FirstFailedSymbol;
-        ULONG NumberOfFailedSymbols;
-
-        NumberOfFailedSymbols = Rtl->RtlNumberOfSetBits(&FailedBitmap);
-        FirstFailedSymbol = Rtl->RtlFindSetBits(&FailedBitmap, 1, 0);
-        FirstFailedSymbolName = Names[FirstFailedSymbol-1];
-        __debugbreak();
-    }
-
-    //
-    // Set the C specific handler for the module, such that structured
-    // exception handling will work.
-    //
-
-    AnyApi->Api.SetCSpecificHandler(Rtl->__C_specific_handler);
-
-    //
-    // Save the structure size and number of function pointers.
-    //
-
-    AnyApi->Api.SizeOfStruct = SizeOfAnyApi;
-    AnyApi->Api.NumberOfFunctions = NumberOfSymbols;
-
-    //
-    // Update the caller's pointer and return success.
-    //
-
-    if (ARGUMENT_PRESENT(ModulePointer)) {
-        *ModulePointer = Module;
-    }
-
-    return TRUE;
-}
 
 #ifdef __cplusplus
 } // extern "C"

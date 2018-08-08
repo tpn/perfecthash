@@ -19,7 +19,6 @@ Abstract:
 //
 
 extern LOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
-extern INITIALIZE_LARGE_PAGES InitializeLargePages;
 
 const PCSTR RtlFunctionNames[] = {
     _RTL_FUNCTION_NAMES_HEAD
@@ -39,9 +38,9 @@ RtlInitialize(
     PRTL Rtl
     )
 {
+    BOOL Success;
     ULONG Index;
     HRESULT Result;
-    BOOLEAN Success;
     HMODULE *Module;
     PWSTR *Name;
     ULONG NumberOfModules;
@@ -186,7 +185,7 @@ RtlRundown(
         if (!CryptReleaseContext(Rtl->CryptProv, 0)) {
             SYS_ERROR(CryptReleaseContext);
         }
-        Rtl->CryptProv = NULL;
+        Rtl->CryptProv = 0;
     }
 
     //

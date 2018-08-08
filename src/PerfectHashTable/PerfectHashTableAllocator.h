@@ -42,4 +42,11 @@ VOID
     );
 typedef ALLOCATOR_RUNDOWN *PALLOCATOR_RUNDOWN;
 
+extern ALLOCATOR_INITIALIZE AllocatorInitialize;
+extern ALLOCATOR_RUNDOWN AllocatorRundown;
+extern ALLOCATOR_MALLOC AllocatorMalloc;
+extern ALLOCATOR_CALLOC AllocatorCalloc;
+extern ALLOCATOR_FREE AllocatorFree;
+extern ALLOCATOR_FREE_POINTER AllocatorFreePointer;
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -149,16 +149,6 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
 const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
 
 //
-// Define the array of vtbl sizes.
-//
-
-const PGET_VTBL_EX_SIZE GetVtblExSizeRoutines[] = {
-    NULL,
-    GetVtblExSizeChm01,
-    NULL,
-};
-
-//
 // Define UNICODE_STRING structures for each algorithm name.
 //
 
@@ -432,20 +422,6 @@ const PERFECT_HASH_TABLE_KEYS_VTBL PerfectHashTableKeysInterface = {
 // PerfectHashTableContext
 //
 
-extern PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
-    PerfectHashTableContextSetMaximumConcurrency;
-
-extern PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
-    PerfectHashTableContextGetMaximumConcurrency;
-
-extern PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
-    PerfectHashTableContextCreateTable;
-
-extern PERFECT_HASH_TABLE_CONTEXT_CREATE_FASTEST_TABLE
-    PerfectHashTableContextCreateFastestTable;
-
-extern PERFECT_HASH_TABLE_CONTEXT_SELF_TEST PerfectHashTableContextSelfTest;
-
 const PERFECT_HASH_TABLE_CONTEXT_VTBL PerfectHashTableContextInterface = {
     (PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE)&ComponentQueryInterface,
     (PPERFECT_HASH_TABLE_CONTEXT_ADD_REF)&ComponentAddRef,
@@ -455,26 +431,12 @@ const PERFECT_HASH_TABLE_CONTEXT_VTBL PerfectHashTableContextInterface = {
     &PerfectHashTableContextSetMaximumConcurrency,
     &PerfectHashTableContextGetMaximumConcurrency,
     &PerfectHashTableContextCreateTable,
-    &PerfectHashTableContextCreateFastestTable,
     &PerfectHashTableContextSelfTest,
 };
 
 //
 // PerfectHashTable
 //
-
-extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
-extern PERFECT_HASH_TABLE_TEST PerfectHashTableTest;
-extern PERFECT_HASH_TABLE_INSERT PerfectHashTableInsert;
-extern PERFECT_HASH_TABLE_LOOKUP PerfectHashTableLookup;
-extern PERFECT_HASH_TABLE_DELETE PerfectHashTableDelete;
-extern PERFECT_HASH_TABLE_INDEX PerfectHashTableIndex;
-extern PERFECT_HASH_TABLE_GET_ALGORITHM_NAME
-    PerfectHashTableGetAlgorithmName;
-extern PERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME
-    PerfectHashTableGetHashFunctionName;
-extern PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
-    PerfectHashTableGetMaskFunctionName;
 
 const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     (PPERFECT_HASH_TABLE_QUERY_INTERFACE)&ComponentQueryInterface,
@@ -503,17 +465,6 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
 // Rtl
 //
 
-extern RTL_GENERATE_RANDOM_BYTES RtlGenerateRandomBytes;
-extern RTL_PRINT_SYS_ERROR RtlPrintSysError;
-extern RTL_CREATE_BUFFER RtlCreateBuffer;
-extern RTL_CREATE_MULTIPLE_BUFFERS RtlCreateMultipleBuffers;
-extern RTL_DESTROY_BUFFER RtlDestroyBuffer;
-extern RTL_CREATE_RANDOM_OBJECT_NAMES RtlCreateRandomObjectNames;
-extern RTL_CREATE_SINGLE_RANDOM_OBJECT_NAME RtlCreateSingleRandomObjectName;
-extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlTryLargePageVirtualAlloc;
-extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlTryLargePageVirtualAllocEx;
-extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W TryLargePageCreateFileMappingW;
-
 const RTL_VTBL RtlInterface = {
     (PRTL_QUERY_INTERFACE)&ComponentQueryInterface,
     (PRTL_ADD_REF)&ComponentAddRef,
@@ -540,7 +491,7 @@ const RTL_VTBL RtlInterface = {
     &RtlCreateSingleRandomObjectName,
     &RtlTryLargePageVirtualAlloc,
     &RtlTryLargePageVirtualAllocEx,
-    &RtlTryLargePageCreateFileMapping,
+    &RtlTryLargePageCreateFileMappingW,
 };
 
 //
@@ -578,12 +529,6 @@ const VOID *ComponentInterfaces[] = {
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaces);
 
-extern PERFECT_HASH_TABLE_KEYS_INITIALIZE PerfectHashTableKeysInitialize;
-extern PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
-extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
-extern RTL_INITIALIZE RtlInitialize;
-extern ALLOCATOR_INITIALIZE AllocatorInitialize;
-
 const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     NULL,
 
@@ -599,12 +544,6 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     NULL,
 };
 VERIFY_ARRAY_SIZE(ComponentInitializeRoutines);
-
-extern PERFECT_HASH_TABLE_KEYS_RUNDOWN PerfectHashTableKeysRundown;
-extern PERFECT_HASH_TABLE_CONTEXT_RUNDOWN PerfectHashTableContextRundown;
-extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
-extern RTL_RUNDOWN RtlRundown;
-extern ALLOCATOR_RUNDOWN AllocatorRundown;
 
 const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     NULL,

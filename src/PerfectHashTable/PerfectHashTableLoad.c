@@ -55,7 +55,7 @@ Return Value:
     PCHAR BaseBuffer = NULL;
     PCHAR ExpectedBuffer;
     ULONG ShareMode;
-    HRESULT Result;
+    HRESULT Result = S_OK;
     PVOID BaseAddress;
     HANDLE FileHandle;
     HANDLE MappingHandle;
@@ -200,31 +200,8 @@ Return Value:
     ASSERT(!AllocSize.HighPart);
 
     //
-    // XXX TODO: refine this.  We shouldn't need an Rtl component when we're
-    // loading tables.
+    // Initialize aliases.
     //
-
-    //
-    // Create Rtl and Allocator components.
-    //
-
-    Result = Table->Vtbl->CreateInstance(Table,
-                                         NULL,
-                                         &IID_PERFECT_HASH_TABLE_RTL,
-                                         &Table->Rtl);
-
-    if (FAILED(Result)) {
-        goto End;
-    }
-
-    Result = Table->Vtbl->CreateInstance(Table,
-                                         NULL,
-                                         &IID_PERFECT_HASH_TABLE_ALLOCATOR,
-                                         &Table->Allocator);
-
-    if (FAILED(Result)) {
-        goto End;
-    }
 
     Rtl = Table->Rtl;
     Allocator = Table->Allocator;

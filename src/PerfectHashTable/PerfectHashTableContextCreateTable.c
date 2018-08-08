@@ -72,19 +72,13 @@ Return Value:
     PCHAR BaseBuffer;
     PCHAR ExpectedBuffer;
     PWSTR PathBuffer;
-    ULONG Key;
-    ULONG Index;
     ULONG Status;
-    ULONGLONG Bit;
     ULONG ShareMode;
     ULONG LastError;
-    ULONG NumberOfKeys;
     ULONG DesiredAccess;
-    ULONG NumberOfSetBits;
     ULONG InfoMappingSize;
     ULONG FlagsAndAttributes;
     BOOLEAN UsingKeysPath;
-    PLONGLONG BitmapBuffer;
     PVOID BaseAddress;
     HANDLE FileHandle;
     HANDLE MappingHandle;
@@ -93,8 +87,6 @@ Return Value:
     SYSTEM_INFO SystemInfo;
     ULARGE_INTEGER AllocSize;
     ULONG_INTEGER PathBufferSize;
-    ULONGLONG KeysBitmapBufferSize;
-    BOOLEAN LargePagesForBitmapBuffer;
     ULONG IncomingPathBufferSizeInBytes;
     ULONG_INTEGER AlignedPathBufferSize;
     ULONG_INTEGER InfoStreamPathBufferSize;
@@ -112,8 +104,6 @@ Return Value:
     // XXX TODO.
     //
 
-#define PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS E_UNEXPECTED
-#define PH_E_TOO_MANY_KEYS E_UNEXPECTED
 #define PerfectHashTableContextReset(Context) (E_UNEXPECTED)
 
     //
@@ -311,12 +301,6 @@ Return Value:
     }
 
     Table = Context->Table;
-
-    Rtl->Vtbl->AddRef(Rtl);
-    Table->Rtl = Rtl;
-
-    Allocator->Vtbl->AddRef(Allocator);
-    Table->Allocator = Allocator;
 
     Keys->Vtbl->AddRef(Keys);
     Table->Keys = Keys;
@@ -601,70 +585,6 @@ Return Value:
         SYS_ERROR(MapViewOfFile);
         goto Error;
     }
-
-    //
-    // Allocate a 512MB buffer for the keys bitmap.
-    //
-
-    KeysBitmapBufferSize = ((1ULL << 32ULL) >> 3ULL);
-
-    //
-    // Try a large page allocation for the bitmap buffer.
-    //
-
-    LargePagesForBitmapBuffer = TRUE;
-
-    BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(
-        Rtl,
-        NULL,
-        KeysBitmapBufferSize,
-        MEM_RESERVE | MEM_COMMIT,
-        PAGE_READWRITE,
-        &LargePagesForBitmapBuffer
-    );
-
-    Table->KeysBitmap.Buffer = (PULONG)BaseAddress;
-
-    if (!BaseAddress) {
-
-        //
-        // Failed to create a bitmap buffer, abort.
-        //
-
-        SYS_ERROR(VirtualAlloc);
-        goto Error;
-    }
-
-    //
-    // Initialize the keys bitmap.
-    //
-
-    Table->KeysBitmap.SizeOfBitMap = (ULONG)-1;
-    BitmapBuffer = (PLONGLONG)Table->KeysBitmap.Buffer;
-
-    ASSERT(!Keys->NumberOfElements.HighPart);
-
-    NumberOfKeys = Keys->NumberOfElements.LowPart;
-
-    //
-    // Loop through all the keys, obtain the bitmap bit representation, verify
-    // that the bit hasn't been set yet, and set it.
-    //
-
-    for (Index = 0; Index < NumberOfKeys; Index++) {
-
-        Key = Keys->Keys[Index];
-        Bit = Key + 1;
-
-        ASSERT(!BitTestAndSet64(BitmapBuffer, Bit));
-    }
-
-    //
-    // Count all bits set.  It should match the number of keys.
-    //
-
-    NumberOfSetBits = Rtl->RtlNumberOfSetBits(&Table->KeysBitmap);
-    ASSERT(NumberOfSetBits == NumberOfKeys);
 
     //
     // Common initialization is complete, dispatch remaining work to the

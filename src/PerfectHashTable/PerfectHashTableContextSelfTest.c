@@ -64,7 +64,7 @@ Return Value:
     USHORT BaseLength;
     USHORT NumberOfPages;
     USHORT FileNameLengthInBytes;
-    BOOLEAN Success;
+    BOOL Success;
     BOOLEAN Failed;
     BOOLEAN Terminate;
     HRESULT Result;
@@ -81,7 +81,6 @@ Return Value:
     ULONG WideCharsWritten;
     ULONGLONG BufferSize;
     ULONGLONG WideOutputBufferSize;
-    PALLOCATOR Allocator;
     LONG_INTEGER AllocSize;
     LARGE_INTEGER BytesToWrite;
     LARGE_INTEGER WideCharsToWrite;
@@ -92,11 +91,10 @@ Return Value:
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_KEYS Keys;
     PTABLE_INFO_ON_DISK_HEADER Header;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
-    PUNICODE_STRING AlgorithmName;
-    PUNICODE_STRING HashFunctionName;
-    PUNICODE_STRING MaskFunctionName;
+    //PUNICODE_STRING AlgorithmName;
+    //PUNICODE_STRING HashFunctionName;
+    //PUNICODE_STRING MaskFunctionName;
 
     //
     // Validate arguments.
@@ -104,6 +102,8 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
+    } else {
+        Rtl = Context->Rtl;
     }
 
     if (!ARGUMENT_PRESENT(TestDataDirectory)) {
@@ -351,7 +351,7 @@ Return Value:
         }
         *Dest = L'\0';
 
-        Length = (USHORT)RtlOffsetFromPointer(Dest, KeysPath.Buffer);
+        Length = (USHORT)RtlPointerToOffset(Dest, KeysPath.Buffer);
         KeysPath.Length = Length;
         KeysPath.MaximumLength = Length + sizeof(*Dest);
         ASSERT(KeysPath.Buffer[KeysPath.Length >> 1] == L'\0');
@@ -404,7 +404,7 @@ Return Value:
 
         FileNameLengthInBytes = (
             KeysPath.Length -
-            ((USHORT)wcslen("keys") << 1) -
+            ((USHORT)wcslen(L"keys") << 1) -
             TestDataDirectory->Length
         );
 
@@ -438,7 +438,7 @@ Return Value:
             // Account for the table suffix.
             //
 
-            TableSuffix->Length
+            TableSuffix.Length
         );
 
         TablePath.MaximumLength = TablePath.Length + sizeof(WCHAR);
@@ -449,7 +449,7 @@ Return Value:
         //
 
         CopyMemory(Dest, OutputDirectory->Buffer, OutputDirectory->Length);
-        *Dest++ L'\\';
+        *Dest++ = L'\\';
 
         //
         // Copy the filename.
@@ -487,7 +487,6 @@ Return Value:
                                             AlgorithmId,
                                             MaskFunctionId,
                                             HashFunctionId,
-                                            NULL,
                                             Keys,
                                             &TablePath);
 
@@ -549,20 +548,22 @@ Return Value:
 #define GET_NAME(Desc)                                                   \
         Result = Table->Vtbl->Get##Desc##Name(Table, &##Desc##Name);     \
         if (FAILED(Result)) {                                            \
-            WIDE_OUTPUT_RAW(WideOutput, "Get" #Desc "Name() failed.\n"); \
+            WIDE_OUTPUT_RAW(WideOutput,                                  \
+                            (PCWCHAR)L"Get" #Desc "Name() failed.\n");   \
             Terminate = TRUE;                                            \
             goto ReleaseTable;                                           \
         }
 
-        GET_NAME(Algorithm);
-        GET_NAME(HashFunction);
-        GET_NAME(MaskFunction);
+        //GET_NAME(Algorithm);
+        //GET_NAME(HashFunction);
+        //GET_NAME(MaskFunction);
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully loaded perfect "
                                     L"hash table: ");
         WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
 
+#if 0
         WIDE_OUTPUT_RAW(WideOutput, L"Algorithm: ");
         WIDE_OUTPUT_UNICODE_STRING(WideOutput, AlgorithmName);
         WIDE_OUTPUT_RAW(WideOutput, L" (");
@@ -580,6 +581,7 @@ Return Value:
         WIDE_OUTPUT_RAW(WideOutput, L" (");
         WIDE_OUTPUT_INT(WideOutput, Table->MaskFunctionId);
         WIDE_OUTPUT_RAW(WideOutput, L").\n");
+#endif
 
         WIDE_OUTPUT_RAW(WideOutput, L"Table data backed by large pages: ");
         if (Table->Flags.TableDataUsesLargePages) {
@@ -754,7 +756,7 @@ End:
         FindHandle = NULL;
     }
 
-    return Success;
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

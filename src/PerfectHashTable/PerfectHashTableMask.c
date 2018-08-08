@@ -17,6 +17,15 @@ Abstract:
 
 #include "stdafx.h"
 
+//
+// XXX: disable 'unreferenced formal parameter' and 'unreachable code'
+// warnings for now.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4100 4702)
+
+
 _Use_decl_annotations_
 HRESULT
 PerfectHashTableMaskHashModulus(
@@ -679,5 +688,7 @@ Return Value:
     return S_OK;
 #endif
 }
+
+#pragma warning(pop)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -26,6 +26,16 @@ Abstract:
 #define PERFECT_HASH_TABLE_KEY_SIZE_IN_BYTES 4
 
 //
+// A handle to the PerfectHashTable.dll module will be captured in this variable
+// via the DLL_PROCESS_ATTACH message.  This is required in order for proper
+// operation of FormatMessage() when specifying FORMAT_MESSAGE_FROM_HMODULE and
+// using our own internal error codes.
+//
+
+extern HMODULE PerfectHashTableModule;
+
+
+//
 // XXX temporary dummy error handling macro and placeholder errors.
 //
 
@@ -46,6 +56,9 @@ Abstract:
 #define PH_E_NUM_KEYS_EXCEEDS_NUM_TABLE_ELEMENTS E_UNEXPECTED
 #define PH_E_EXPECTED_EOF_ACTUAL_EOF_MISMATCH E_UNEXPECTED
 #define PH_E_KEYS_FILE_SIZE_NOT_MULTIPLE_OF_KEY_SIZE E_UNEXPECTED
+#define PH_E_KEYS_NUM_SET_BITS_NUM_KEYS_MISMATCH E_UNEXPECTED
+#define PH_E_DUPLICATE_KEYS_DETECTED E_UNEXPECTED
+#define PH_E_HEAP_CREATE_FAILED E_UNEXPECTED
 
 //
 //
@@ -53,116 +66,6 @@ Abstract:
 //
 
 #define MAXIMUM_NUMBER_OF_KEYS 500000
-
-//
-// Define the PERFECT_HASH_TABLE_KEYS_FLAGS structure.
-//
-
-typedef union _PERFECT_HASH_TABLE_KEYS_STATE {
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When set, indicates the keys were mapped using large pages.
-        //
-
-        ULONG MappedWithLargePages:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:31;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_TABLE_KEYS_STATE;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_KEYS_STATE) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_KEYS_STATE *PPERFECT_HASH_TABLE_KEYS_STATE;
-
-typedef union _PERFECT_HASH_TABLE_KEYS_FLAGS {
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When set, indicates the keys were mapped using large pages.
-        //
-
-        ULONG MappedWithLargePages:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:31;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_TABLE_KEYS_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_KEYS_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_KEYS_FLAGS *PPERFECT_HASH_TABLE_KEYS_FLAGS;
-
-//
-// Define the PERFECT_HASH_TABLE_KEYS structure.
-//
-
-typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_KEYS {
-
-    COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE_KEYS);
-
-    //
-    // Pointer to an initialized RTL structure.
-    //
-
-    PRTL Rtl;
-
-    //
-    // Pointer to an initialized ALLOCATOR structure.
-    //
-
-    PALLOCATOR Allocator;
-
-    //
-    // Number of keys in the mapping.
-    //
-
-    ULARGE_INTEGER NumberOfElements;
-
-    //
-    // Handle to the underlying keys file.
-    //
-
-    HANDLE FileHandle;
-
-    //
-    // Handle to the memory mapping for the keys file.
-    //
-
-    HANDLE MappingHandle;
-
-    //
-    // Base address of the memory map.
-    //
-
-    union {
-        PVOID BaseAddress;
-        PULONG Keys;
-    };
-
-    //
-    // Fully-qualified, NULL-terminated path of the source keys file.
-    //
-
-    UNICODE_STRING Path;
-
-    //
-    // Backing vtbl.
-    //
-
-    PERFECT_HASH_TABLE_KEYS_VTBL Interface;
-
-} PERFECT_HASH_TABLE_KEYS;
-typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
 
 //
 // Define the PERFECT_HASH_TABLE_STATE structure.
@@ -446,14 +349,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULARGE_INTEGER InfoActualStructureSizeInBytes;
 
     //
-    // During creation, a large bitmap is created to cover the entire range of
-    // possible ULONG keys.  This is used to ensure no duplicate keys appear in
-    // the input key set, and also assists in debugging.
-    //
-
-    RTL_BITMAP KeysBitmap;
-
-    //
     // Backing vtbl.
     //
 
@@ -463,6 +358,46 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
+
+//
+// Internal method typedefs.
+//
+
+typedef
+HRESULT
+(NTAPI PERFECT_HASH_TABLE_INITIALIZE)(
+    _In_ PPERFECT_HASH_TABLE Table
+    );
+typedef PERFECT_HASH_TABLE_INITIALIZE
+      *PPERFECT_HASH_TABLE_INITIALIZE;
+
+typedef
+VOID
+(NTAPI PERFECT_HASH_TABLE_RUNDOWN)(
+    _In_ _Post_ptr_invalid_ PPERFECT_HASH_TABLE Table
+    );
+typedef PERFECT_HASH_TABLE_RUNDOWN
+      *PPERFECT_HASH_TABLE_RUNDOWN;
+
+//
+// Function decls.
+//
+
+extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
+extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
+extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
+extern PERFECT_HASH_TABLE_TEST PerfectHashTableTest;
+extern PERFECT_HASH_TABLE_INSERT PerfectHashTableInsert;
+extern PERFECT_HASH_TABLE_LOOKUP PerfectHashTableLookup;
+extern PERFECT_HASH_TABLE_DELETE PerfectHashTableDelete;
+extern PERFECT_HASH_TABLE_INDEX PerfectHashTableIndex;
+extern PERFECT_HASH_TABLE_GET_ALGORITHM_NAME
+    PerfectHashTableGetAlgorithmName;
+extern PERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME
+    PerfectHashTableGetHashFunctionName;
+extern PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
+    PerfectHashTableGetMaskFunctionName;
+
 
 //
 // Add some helper macros that improve the aesthetics of using the index,

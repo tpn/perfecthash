@@ -25,22 +25,7 @@
     <ClCompile Include="PerfectHashTableAllocator.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DestroyPerfectHashTable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="LoadPerfectHashTableKeys.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DestroyPerfectHashTableKeys.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TestPerfectHashTable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Chm_01.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DestroyPerfectHashTableContext.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableHash.c">
@@ -50,9 +35,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableMask.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PerfectHashTableRefCount.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableInsert.c">
@@ -94,6 +76,30 @@
     <ClCompile Include="PerfectHashTableLoad.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashTableKeysLoad.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableKeys.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableTls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlBuffers.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlLargePages.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlOutput.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableTest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PerfectHashTableConstants.h">
@@ -127,6 +133,12 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashTableContext.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTableKeys.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RtlOutput.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

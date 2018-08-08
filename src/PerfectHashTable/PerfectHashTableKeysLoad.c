@@ -47,8 +47,9 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    BOOL Success;
+    PCHAR Buffer = NULL;
     HRESULT Result = S_OK;
-    BOOLEAN Success;
     PALLOCATOR Allocator;
     PVOID BaseAddress = NULL;
     HANDLE FileHandle = NULL;
@@ -56,7 +57,6 @@ Return Value:
     LARGE_INTEGER AllocSize;
     LARGE_INTEGER NumberOfElements;
     FILE_STANDARD_INFO FileInfo;
-    PPERFECT_HASH_TABLE_KEYS Keys = NULL;
 
     //
     // Validate arguments.
@@ -179,7 +179,7 @@ Return Value:
     // a copy of the Path's underlying unicode string buffer.
     //
 
-    AllocSize.QuadPart = Path->Length + sizeof(Path->Buffer[0]):
+    AllocSize.QuadPart = Path->Length + sizeof(Path->Buffer[0]);
 
     //
     // Sanity check our size.
@@ -191,7 +191,7 @@ Return Value:
     // Proceed with allocation.
     //
 
-    Keys = (PPERFECT_HASH_TABLE_KEYS)(
+    Buffer = (PCHAR)(
         Allocator->Vtbl->Calloc(
             Allocator,
             1,
@@ -220,7 +220,7 @@ Return Value:
 
     Keys->Path.Length = Path->Length;
     Keys->Path.MaximumLength = Path->Length + sizeof(Path->Buffer[0]);
-    Keys->Path.Buffer = (PWSTR)RtlOffsetToPointer(Keys, sizeof(*Keys));
+    Keys->Path.Buffer = (PWSTR)Buffer;
     CopyMemory(Keys->Path.Buffer, Path->Buffer, Path->Length);
     Keys->Path.Buffer[Path->Length >> 1] = L'\0';
 
@@ -234,29 +234,33 @@ Return Value:
 
 Error:
 
-    Success = FALSE;
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
 
     //
     // Clean up any resources we may have allocated.
     //
 
     if (BaseAddress) {
-        UnmapViewOfFile(BaseAddress);
+        if (!UnmapViewOfFile(BaseAddress)) {
+            SYS_ERROR(UnmapViewOfFile);
+        }
         BaseAddress = NULL;
     }
 
     if (MappingHandle) {
-        CloseHandle(MappingHandle);
+        if (!CloseHandle(MappingHandle)) {
+            SYS_ERROR(CloseHandle);
+        }
         MappingHandle = NULL;
     }
 
     if (FileHandle) {
-        CloseHandle(FileHandle);
+        if (!CloseHandle(FileHandle)) {
+            SYS_ERROR(CloseHandle);
+        }
         FileHandle = NULL;
-    }
-
-    if (Keys) {
-        Allocator->Vtbl->FreePointer(Allocator, &Keys);
     }
 
     //
@@ -265,15 +269,7 @@ Error:
 
 End:
 
-    //
-    // Update the caller's pointer and return.
-    //
-    // N.B. Keys could be NULL here, which is fine.
-    //
-
-    *KeysPointer = Keys;
-
-    return Success;
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

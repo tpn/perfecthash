@@ -42,15 +42,56 @@ Return Value:
 
 --*/
 {
+    HRESULT Result = S_OK;
+
     if (!ARGUMENT_PRESENT(Table)) {
         return E_POINTER;
     }
 
     Table->SizeOfStruct = sizeof(*Table);
-    Table->Flags.AsULong = 0;
-    Table->State.AsULong = 0;
 
-    return S_OK;
+    //
+    // Create Rtl and Allocator components.
+    //
+
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_TABLE_RTL,
+                                         &Table->Rtl);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+                                         &Table->Allocator);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // We're done!  Indicate success and finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
 }
 
 PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
@@ -139,18 +180,6 @@ Return Value:
             SYS_ERROR(CloseHandle);
         }
         Table->FileHandle = NULL;
-    }
-
-    //
-    // Free the buffer created as part of key validation, if applicable.
-    //
-
-    if (Table->KeysBitmap.Buffer) {
-        if (!VirtualFree(Table->KeysBitmap.Buffer, 0, MEM_RELEASE)) {
-            SYS_ERROR(VirtualFree);
-        }
-        Table->KeysBitmap.Buffer = NULL;
-        Table->KeysBitmap.SizeOfBitMap = 0;
     }
 
     //

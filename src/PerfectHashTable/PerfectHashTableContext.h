@@ -472,7 +472,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
 
     PERFECT_HASH_TABLE_CONTEXT_VTBL Interface;
 
-    PVOID Padding3[2];
+    PVOID Padding3;
 
 } PERFECT_HASH_TABLE_CONTEXT;
 typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
@@ -482,22 +482,6 @@ typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
 
 #define ReleasePerfectHashTableContextLockExclusive(Context) \
     ReleaseSRWLockExclusive(&Context->Lock)
-
-typedef
-HRESULT
-(NTAPI PERFECT_HASH_TABLE_CONTEXT_INITIALIZE)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
-    );
-typedef PERFECT_HASH_TABLE_CONTEXT_INITIALIZE
-      *PPERFECT_HASH_TABLE_CONTEXT_INITIALIZE;
-
-typedef
-VOID
-(NTAPI PERFECT_HASH_TABLE_CONTEXT_RUNDOWN)(
-    _In_ _Post_ptr_invalid_ PPERFECT_HASH_TABLE_CONTEXT Context
-    );
-typedef PERFECT_HASH_TABLE_CONTEXT_RUNDOWN
-      *PPERFECT_HASH_TABLE_CONTEXT_RUNDOWN;
 
 //
 // Define helper macros for marking start/end points for the context's
@@ -531,6 +515,40 @@ typedef PERFECT_HASH_TABLE_CONTEXT_RUNDOWN
     Header->##Name##Microseconds.QuadPart = (                                  \
         Context->##Name##ElapsedMicroseconds.QuadPart                          \
     )
+
+//
+// Internal method typedefs.
+//
+
+typedef
+HRESULT
+(NTAPI PERFECT_HASH_TABLE_CONTEXT_INITIALIZE)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_INITIALIZE
+      *PPERFECT_HASH_TABLE_CONTEXT_INITIALIZE;
+
+typedef
+VOID
+(NTAPI PERFECT_HASH_TABLE_CONTEXT_RUNDOWN)(
+    _In_ _Post_ptr_invalid_ PPERFECT_HASH_TABLE_CONTEXT Context
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_RUNDOWN
+      *PPERFECT_HASH_TABLE_CONTEXT_RUNDOWN;
+
+//
+// Function decls.
+//
+
+extern PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
+extern PERFECT_HASH_TABLE_CONTEXT_RUNDOWN PerfectHashTableContextRundown;
+extern PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
+    PerfectHashTableContextSetMaximumConcurrency;
+extern PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
+    PerfectHashTableContextGetMaximumConcurrency;
+extern PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
+    PerfectHashTableContextCreateTable;
+extern PERFECT_HASH_TABLE_CONTEXT_SELF_TEST PerfectHashTableContextSelfTest;
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -88,23 +88,24 @@
     <ClInclude Include="Chm_01.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="PerfectHashTableContext.h" />
+    <ClInclude Include="PerfectHashTableKeys.h" />
     <ClInclude Include="PerfectHashTablePrime.h" />
     <ClInclude Include="PerfectHashTablePrivate.h" />
     <ClInclude Include="PerfectHashTableConstants.h" />
     <ClInclude Include="Rtl.h" />
+    <ClInclude Include="RtlOutput.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Chm_01.c" />
     <ClCompile Include="Component.c" />
+    <ClCompile Include="dllmain.c" />
     <ClCompile Include="PerfectHashTableContextCreateTable.c" />
     <ClCompile Include="PerfectHashTableContext.c" />
-    <ClCompile Include="DestroyPerfectHashTable.c" />
-    <ClCompile Include="DestroyPerfectHashTableContext.c" />
-    <ClCompile Include="DestroyPerfectHashTableKeys.c" />
+    <ClCompile Include="PerfectHashTableKeys.c" />
     <ClCompile Include="PerfectHashTableLoad.c" />
-    <ClCompile Include="LoadPerfectHashTableKeys.c" />
+    <ClCompile Include="PerfectHashTableKeysLoad.c" />
     <ClCompile Include="PerfectHashTableDelete.c" />
     <ClCompile Include="PerfectHashTableHash.c" />
     <ClCompile Include="PerfectHashTableInsert.c" />
@@ -112,10 +113,13 @@
     <ClCompile Include="PerfectHashTableMask.c" />
     <ClCompile Include="PerfectHashTableNames.c" />
     <ClCompile Include="PerfectHashTablePrime.c" />
-    <ClCompile Include="PerfectHashTableRefCount.c" />
     <ClCompile Include="PerfectHashTableAllocator.c" />
     <ClCompile Include="PerfectHashTableConstants.c" />
+    <ClCompile Include="PerfectHashTableTls.c" />
     <ClCompile Include="Rtl.c" />
+    <ClCompile Include="RtlBuffers.c" />
+    <ClCompile Include="RtlLargePages.c" />
+    <ClCompile Include="RtlOutput.c" />
     <ClCompile Include="RtlPrivilege.c" />
     <ClCompile Include="RtlRandomObjectNames.c" />
     <ClCompile Include="PerfectHashTableContextSelfTest.c" />
@@ -123,7 +127,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="SymbolLoader.c" />
-    <ClCompile Include="TestPerfectHashTable.c" />
+    <ClCompile Include="PerfectHashTableTest.c" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm" />

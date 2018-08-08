@@ -120,7 +120,7 @@ Return Value:
                                            &Context->Rtl);
 
     if (FAILED(Result)) {
-        goto End;
+        goto Error;
     }
 
     Result = Context->Vtbl->CreateInstance(Context,
@@ -129,7 +129,7 @@ Return Value:
                                            &Context->Allocator);
 
     if (FAILED(Result)) {
-        goto End;
+        goto Error;
     }
 
     //
