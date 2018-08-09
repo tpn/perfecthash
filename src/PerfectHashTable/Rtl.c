@@ -8,7 +8,8 @@ Module Name:
 
 Abstract:
 
-    TBD.
+    This module implements functionality related to the Rtl component of
+    the perfect hash table library.
 
 --*/
 
@@ -19,6 +20,7 @@ Abstract:
 //
 
 extern LOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
+extern SET_C_SPECIFIC_HANDLER SetCSpecificHandler;
 
 const PCSTR RtlFunctionNames[] = {
     _RTL_FUNCTION_NAMES_HEAD
@@ -29,6 +31,80 @@ const PCZPCWSTR RtlModuleNames[] = {
     _RTL_MODULE_NAMES_HEAD
 };
 #define ModuleNames RtlModuleNames
+
+
+//
+// As we don't link to the CRT, we don't get a __C_specific_handler entry,
+// which the linker will complain about as soon as we use __try/__except.
+// What we do is define a __C_specific_handler_impl pointer to the original
+// function (that lives in ntdll), then implement our own function by the
+// same name that calls the underlying impl pointer.  In order to do this
+// we have to disable some compiler/linker warnings regarding mismatched
+// stuff.
+//
+
+P__C_SPECIFIC_HANDLER __C_specific_handler_impl = NULL;
+
+#pragma warning(push)
+#pragma warning(disable: 4028 4273 28251)
+
+EXCEPTION_DISPOSITION
+__cdecl
+__C_specific_handler(
+    PEXCEPTION_RECORD ExceptionRecord,
+    ULONG_PTR Frame,
+    PCONTEXT Context,
+    struct _DISPATCHER_CONTEXT *Dispatch
+    )
+{
+    return __C_specific_handler_impl(ExceptionRecord,
+                                     Frame,
+                                     Context,
+                                     Dispatch);
+}
+
+#pragma warning(pop)
+
+INIT_ONCE InitOnceCSpecificHandler = INIT_ONCE_STATIC_INIT;
+
+BOOL
+CALLBACK
+SetCSpecificHandlerCallback(
+    PINIT_ONCE InitOnce,
+    PVOID Parameter,
+    PVOID *Context
+    )
+{
+    UNREFERENCED_PARAMETER(InitOnce);
+    UNREFERENCED_PARAMETER(Context);
+
+    __C_specific_handler_impl = (P__C_SPECIFIC_HANDLER)Parameter;
+
+    return TRUE;
+}
+
+VOID
+SetCSpecificHandler(
+    _In_ P__C_SPECIFIC_HANDLER Handler
+    )
+{
+    BOOL Status;
+
+    Status = InitOnceExecuteOnce(&InitOnceCSpecificHandler,
+                                 SetCSpecificHandlerCallback,
+                                 (PVOID)Handler,
+                                 NULL);
+
+    //
+    // This should never return FALSE.
+    //
+
+    ASSERT(Status);
+}
+
+//
+// Initialize and rundown functions.
+//
 
 RTL_INITIALIZE RtlInitialize;
 
@@ -130,8 +206,11 @@ RtlInitialize(
                                              &NumberOfResolvedSymbols);
 
     if (!Success) {
+        Result = PH_E_RTL_LOAD_SYMBOLS_FROM_MULTIPLE_MODULES_FAILED;
         goto Error;
     }
+
+    SetCSpecificHandler(Rtl->__C_specific_handler);
 
     ASSERT(NumberOfSymbols == NumberOfResolvedSymbols);
 

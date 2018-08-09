@@ -28,6 +28,7 @@ _DllMainCRTStartup(
 {
     switch (Reason) {
         case DLL_PROCESS_ATTACH:
+            __security_init_cookie();
             PerfectHashTableModule = Module;
             if (!PerfectHashTableTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;

@@ -97,7 +97,7 @@ PERFECT_HASH_TABLE_TLS_SET_CONTEXT PerfectHashTableTlsSetContext;
 _Use_decl_annotations_
 BOOL
 PerfectHashTableTlsSetContext(
-    PPERFECT_HASH_TABLE_CONTEXT Context
+    PPERFECT_HASH_TABLE_TLS_CONTEXT Context
     )
 {
     return TlsSetValue(PerfectHashTableTlsIndex, Context);
@@ -106,7 +106,7 @@ PerfectHashTableTlsSetContext(
 PERFECT_HASH_TABLE_TLS_GET_CONTEXT PerfectHashTableTlsGetContext;
 
 _Use_decl_annotations_
-PPERFECT_HASH_TABLE_CONTEXT
+PPERFECT_HASH_TABLE_TLS_CONTEXT
 PerfectHashTableTlsGetContext(
     VOID
     )
@@ -115,7 +115,7 @@ PerfectHashTableTlsGetContext(
 
     Value = TlsGetValue(PerfectHashTableTlsIndex);
 
-    return (PPERFECT_HASH_TABLE_CONTEXT)Value;
+    return (PPERFECT_HASH_TABLE_TLS_CONTEXT)Value;
 }
 
 

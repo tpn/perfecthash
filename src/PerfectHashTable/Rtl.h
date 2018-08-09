@@ -8,7 +8,25 @@ Module Name:
 
 Abstract:
 
-    TBD.
+    This is the main header file for the Rtl (Run-time Library) component.
+    It is named after the NT kernel's Rtl component.  It has two main roles:
+    provide an interface to useful NT kernel primitives (such as bitmaps,
+    prefix trees, hash tables, splay trees, AVL trees, etc) without the need
+    to include ntddk.h or link to ntdll.lib ntoskrnl.lib.  (Ntddk.h can't be
+    included if Windows.h is also included, and ntdll.lib and ntoskrnl.lib
+    require the DDK to be installed.)
+
+    Type definitions for the data structures (e.g. RTL_BITMAP) are mirrored,
+    and function type definitions and pointer types are provided for the NT
+    functions we use.  They are made accessible as function pointers through a
+    structure named RTL.
+
+    In addition to NT functionality, this module also defines structures and
+    functions for additional functionality we implement, such as convenience
+    functions for string and path handling, memory management, etc.  In most
+    cases, our helper routines are exposed through the Rtl->Vtbl interface and
+    thus conform to COM semantics (i.e. they return a HRESULT and take PRTL
+    as their first parameter).
 
 --*/
 
@@ -288,6 +306,12 @@ VOID
     _In_ ULONG_PTR Length
     );
 typedef RTL_COPY_MEMORY *PRTL_COPY_MEMORY;
+
+//
+// In some situations, an Rtl pointer may not be available, which means the
+// CopyMemory() macro can't be used, as it expands to Rtl->RtlCopyMemory().
+// CopyMemoryInline() routine can be used instead.
+//
 
 FORCEINLINE
 VOID
@@ -1721,6 +1745,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     "RtlCharToInteger",            \
     "CryptBinaryToStringA",        \
     "CryptBinaryToStringW",        \
+    "__C_specific_handler",        \
     "sprintf_s",                   \
     "swprintf_s",                  \
     "vsprintf_s",                  \
@@ -1755,6 +1780,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     PRTL_CHAR_TO_INTEGER RtlCharToInteger;                         \
     PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                \
     PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                \
+    P__C_SPECIFIC_HANDLER __C_specific_handler;                    \
     PSPRINTF_S sprintf_s;                                          \
     PSWPRINTF_S swprintf_s;                                        \
     PVSPRINTF_S vsprintf_s;                                        \

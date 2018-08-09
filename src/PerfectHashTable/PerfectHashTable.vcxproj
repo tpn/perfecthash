@@ -75,7 +75,6 @@
       <PreserveSbr>false</PreserveSbr>
     </Bscmake>
     <Link>
-      <SubSystem>Console</SubSystem>
       <ModuleDefinitionFile>PerfectHashTable.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
@@ -92,6 +91,7 @@
     <ClInclude Include="PerfectHashTablePrime.h" />
     <ClInclude Include="PerfectHashTablePrivate.h" />
     <ClInclude Include="PerfectHashTableConstants.h" />
+    <ClInclude Include="PerfectHashTableTls.h" />
     <ClInclude Include="Rtl.h" />
     <ClInclude Include="RtlOutput.h" />
     <ClInclude Include="stdafx.h" />
