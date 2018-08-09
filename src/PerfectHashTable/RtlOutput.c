@@ -315,6 +315,7 @@ AppendIntegerToWideCharBuffer(
     return;
 }
 
+APPEND_INTEGER_TO_WIDE_CHAR_BUFFER_EX AppendIntegerToWideCharBufferEx;
 
 _Use_decl_annotations_
 VOID

@@ -67,7 +67,8 @@ Arguments:
 
 Return Value:
 
-    TRUE if all internal tests pass, FALSE if not.
+    S_OK if all internal tests pass, an appropriate error code if a failure
+    is encountered.
 
 --*/
 {
@@ -81,8 +82,7 @@ Return Value:
     ULONG ValueIndex;
     ULONG Bit;
     ULONG NumberOfBitsSet;
-    BOOLEAN Success;
-    HRESULT Result;
+    HRESULT Result = S_OK;
     PALLOCATOR Allocator;
     RTL_BITMAP Indices;
     PLONG BitmapBuffer = NULL;
@@ -94,7 +94,15 @@ Return Value:
     //
 
     if (!ARGUMENT_PRESENT(Table)) {
-        return FALSE;
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Keys)) {
+        Keys = Table->Keys;
+    }
+
+    if (!Keys) {
+        return E_UNEXPECTED;
     }
 
     //
@@ -235,6 +243,8 @@ Return Value:
     // different keys, which is a pretty severe error.
     //
 
+    ValueIndex = 0;
+
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
         Key = Keys->Keys[Index];
@@ -327,13 +337,14 @@ Return Value:
     // We're finished!  Indicate success and finish up.
     //
 
-    Success = TRUE;
-
+    Result = S_OK;
     goto End;
 
 Error:
 
-    Success = FALSE;
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
 
     //
     // Intentional follow-on to End.
@@ -341,7 +352,7 @@ Error:
 
 End:
 
-    return Success;
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

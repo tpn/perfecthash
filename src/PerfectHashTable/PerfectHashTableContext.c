@@ -4,13 +4,17 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    CreatePerfectHashTableContext.c
+    PerfectHashTableContext.c
 
 Abstract:
 
     This module implements the runtime context creation routine for the
     PerfectHashTable component.  The context encapsulates threadpool resources
     in order to support finding perfect hash table solutions in parallel.
+
+    Routines are provided for context initialization and rundown, setting
+    and getting the maximum concurrency associated with a context, and callback
+    routines for the various threadpool functions.
 
 --*/
 
@@ -91,7 +95,7 @@ Return Value:
     PCHAR ExpectedBuffer;
     ULONG MaximumConcurrency;
     ULONG NumberOfProcessors;
-    ULONG SizeOfNamesWideBuffer;
+    ULONG SizeOfNamesWideBuffer = 0;
     PWSTR NamesWideBuffer;
     PTP_POOL Threadpool;
     PALLOCATOR Allocator;
@@ -684,6 +688,10 @@ Return Value:
 
     UNREFERENCED_PARAMETER(Work);
 
+    if (!ARGUMENT_PRESENT(Ctx)) {
+        return;
+    }
+
     //
     // Cast the Ctx variable into a suitable type, then pop a list entry off
     // the main work list head.
@@ -752,6 +760,10 @@ Return Value:
 
     UNREFERENCED_PARAMETER(Work);
 
+    if (!ARGUMENT_PRESENT(Ctx)) {
+        return;
+    }
+
     //
     // Cast the Ctx variable into a suitable type, then pop a list entry off
     // the file work list head.
@@ -816,6 +828,10 @@ Return Value:
 
     UNREFERENCED_PARAMETER(Instance);
     UNREFERENCED_PARAMETER(Work);
+
+    if (!ARGUMENT_PRESENT(Ctx)) {
+        return;
+    }
 
     //
     // Cast the Ctx variable into a suitable type.
@@ -934,6 +950,106 @@ Return Value:
     //
 
     return;
+}
+
+PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
+    PerfectHashTableContextSetMaximumConcurrency;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableContextSetMaximumConcurrency(
+    PPERFECT_HASH_TABLE_CONTEXT Context,
+    ULONG MaximumConcurrency
+    )
+/*++
+
+Routine Description:
+
+    Sets the maximum number of threads of the underlying main work threadpool
+    used by the perfect hash table context.  This controls how many parallel
+    worker threads will attempt to concurrently find a solution.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+        for which the maximum concurrency is to be set.
+
+    MaximumConcurrency - Supplies the maximum concurrency.
+
+Return Value:
+
+    S_OK on success.
+
+    E_POINTER if Context is NULL.
+
+    PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS if a table creation is in progress.
+
+    E_UNEXPECTED for any other error.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!Context->MainThreadpool) {
+        return E_UNEXPECTED;
+    }
+
+    if (!TryAcquirePerfectHashTableContextLockExclusive(Context)) {
+        return PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS;
+    }
+
+    SetThreadpoolThreadMaximum(Context->MainThreadpool, MaximumConcurrency);
+    Context->MaximumConcurrency = MaximumConcurrency;
+
+    ReleasePerfectHashTableContextLockExclusive(Context);
+
+    return S_OK;
+}
+
+PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
+    PerfectHashTableContextGetMaximumConcurrency;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableContextGetMaximumConcurrency(
+    PPERFECT_HASH_TABLE_CONTEXT Context,
+    PULONG MaximumConcurrency
+    )
+/*++
+
+Routine Description:
+
+    Gets the maximum number of threads of the underlying main work threadpool
+    used by the perfect hash table context.  This controls how many parallel
+    worker threads will attempt to concurrently find a solution.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+        for which the maximum concurrency is to be obtained.
+
+    MaximumConcurrency - Supplies the address of a variable that will receive
+        the maximum concurrency configured for the given context.
+
+Return Value:
+
+    S_OK on success, E_POINTER if Context or MaximumConcurrency is NULL.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(MaximumConcurrency)) {
+        return E_POINTER;
+    }
+
+    *MaximumConcurrency = Context->MaximumConcurrency;
+
+    return S_OK;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

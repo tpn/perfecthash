@@ -119,10 +119,12 @@
     <ClCompile Include="PerfectHashTableTls.c" />
     <ClCompile Include="Rtl.c" />
     <ClCompile Include="RtlBuffers.c" />
+    <ClCompile Include="RtlErrorHandling.c" />
     <ClCompile Include="RtlLargePages.c" />
+    <ClCompile Include="RtlMemory.c" />
     <ClCompile Include="RtlOutput.c" />
     <ClCompile Include="RtlPrivilege.c" />
-    <ClCompile Include="RtlRandomObjectNames.c" />
+    <ClCompile Include="RtlRandom.c" />
     <ClCompile Include="PerfectHashTableContextSelfTest.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>

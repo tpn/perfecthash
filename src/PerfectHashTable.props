@@ -38,12 +38,13 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <CompileAsManaged>false</CompileAsManaged>
+      <!--
+      <SDLCheck>false</SDLCheck>
+      -->
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <CallingConvention>StdCall</CallingConvention>
-      <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)\..\include;$(VC_IncludePath)</AdditionalIncludeDirectories>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
       <SubSystem>Console</SubSystem>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -52,6 +53,10 @@
       <!--
       <BrowseInformationFile>$(IntDir)$(ProjectName).bsc</BrowseInformationFile>
       -->
+    </ClCompile>
+
+    <ClCompile Condition="$(Platform) == 'x64'">
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
 
     <ClCompile Condition="$(Configuration) == 'Debug'">
@@ -88,10 +93,9 @@
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
       <!--
       <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>$(OutDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       -->
-      <AdditionalDependencies>chkstk.obj;bufferoverflowu.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>chkstk.obj;bufferoverflowU.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <SuppressStartupBanner>true</SuppressStartupBanner>

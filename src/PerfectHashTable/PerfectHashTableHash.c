@@ -532,6 +532,7 @@ PerfectHashTableHashJenkins(
                                              Hash);
 }
 
+PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashCrc32Rotate2;
 
 _Use_decl_annotations_
 HRESULT
@@ -617,6 +618,9 @@ Return Value:
 
     return S_OK;
 }
+
+
+PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32Rotate2;
 
 _Use_decl_annotations_
 HRESULT

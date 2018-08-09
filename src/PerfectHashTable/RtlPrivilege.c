@@ -140,6 +140,8 @@ End:
     return Result;
 }
 
+ENABLE_PRIVILEGE EnablePrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnablePrivilege(
@@ -149,6 +151,8 @@ EnablePrivilege(
 {
     return SetPrivilege(Rtl, PrivilegeName, TRUE);
 }
+
+DISABLE_PRIVILEGE DisablePrivilege;
 
 _Use_decl_annotations_
 HRESULT
@@ -164,6 +168,8 @@ DisablePrivilege(
 // SE_MANAGE_VOLUME/SeManageVolume
 ////////////////////////////////////////////////////////////////////////////////
 
+ENABLE_MANAGE_VOLUME_PRIVILEGE EnableManageVolumePrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnableManageVolumePrivilege(
@@ -172,6 +178,8 @@ EnableManageVolumePrivilege(
 {
     return EnablePrivilege(Rtl, SE_MANAGE_VOLUME_NAME);
 }
+
+DISABLE_MANAGE_VOLUME_PRIVILEGE DisableManageVolumePrivilege;
 
 _Use_decl_annotations_
 HRESULT
@@ -186,6 +194,8 @@ DisableManageVolumePrivilege(
 // SE_LOCK_MEMORY/SeLockMemory
 ////////////////////////////////////////////////////////////////////////////////
 
+ENABLE_LOCK_MEMORY_PRIVILEGE EnableLockMemoryPrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnableLockMemoryPrivilege(
@@ -194,6 +204,8 @@ EnableLockMemoryPrivilege(
 {
     return EnablePrivilege(Rtl, SE_LOCK_MEMORY_NAME);
 }
+
+DISABLE_LOCK_MEMORY_PRIVILEGE DisableLockMemoryPrivilege;
 
 _Use_decl_annotations_
 HRESULT
@@ -208,6 +220,8 @@ DisableLockMemoryPrivilege(
 // SE_DEBUG/SeDebug
 ////////////////////////////////////////////////////////////////////////////////
 
+ENABLE_DEBUG_PRIVILEGE EnableDebugPrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnableDebugPrivilege(
@@ -216,6 +230,8 @@ EnableDebugPrivilege(
 {
     return EnablePrivilege(Rtl, SE_DEBUG_NAME);
 }
+
+DISABLE_DEBUG_PRIVILEGE DisableDebugPrivilege;
 
 _Use_decl_annotations_
 HRESULT
@@ -230,6 +246,9 @@ DisableDebugPrivilege(
 // SE_SYSTEM_PROFILE/SeSystemProfile
 ////////////////////////////////////////////////////////////////////////////////
 
+
+ENABLE_SYSTEM_PROFILE_PRIVILEGE EnableSystemProfilePrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnableSystemProfilePrivilege(
@@ -238,6 +257,8 @@ EnableSystemProfilePrivilege(
 {
     return EnablePrivilege(Rtl, SE_SYSTEM_PROFILE_NAME);
 }
+
+DISABLE_SYSTEM_PROFILE_PRIVILEGE DisableSystemProfilePrivilege;
 
 _Use_decl_annotations_
 HRESULT
@@ -252,6 +273,8 @@ DisableSystemProfilePrivilege(
 // PROF_SINGLE_PROCESS/SeProfileSingleProcess
 ////////////////////////////////////////////////////////////////////////////////
 
+ENABLE_PROFILE_SINGLE_PROCESS_PRIVILEGE EnableProfileSingleProcessPrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnableProfileSingleProcessPrivilege(
@@ -260,6 +283,8 @@ EnableProfileSingleProcessPrivilege(
 {
     return EnablePrivilege(Rtl, SE_PROF_SINGLE_PROCESS_NAME);
 }
+
+DISABLE_PROFILE_SINGLE_PROCESS_PRIVILEGE DisableProfileSingleProcessPrivilege;
 
 _Use_decl_annotations_
 HRESULT
@@ -274,6 +299,8 @@ DisableProfileSingleProcessPrivilege(
 // SE_INC_WORKING_SET/SeIncreaseWorkingSet
 ////////////////////////////////////////////////////////////////////////////////
 
+ENABLE_INCREASE_WORKING_SET_PRIVILEGE EnableIncreaseWorkingSetPrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnableIncreaseWorkingSetPrivilege(
@@ -282,6 +309,8 @@ EnableIncreaseWorkingSetPrivilege(
 {
     return EnablePrivilege(Rtl, SE_INC_WORKING_SET_NAME);
 }
+
+DISABLE_INCREASE_WORKING_SET_PRIVILEGE DisableIncreaseWorkingSetPrivilege;
 
 _Use_decl_annotations_
 HRESULT
@@ -296,6 +325,8 @@ DisableIncreaseWorkingSetPrivilege(
 // SE_CREATE_SYMBOLIC_LINK/SeCreateSymbolicLink
 ////////////////////////////////////////////////////////////////////////////////
 
+ENABLE_CREATE_SYMBOLIC_LINK_PRIVILEGE EnableCreateSymbolicLinkPrivilege;
+
 _Use_decl_annotations_
 HRESULT
 EnableCreateSymbolicLinkPrivilege(
@@ -304,6 +335,8 @@ EnableCreateSymbolicLinkPrivilege(
 {
     return EnablePrivilege(Rtl, SE_CREATE_SYMBOLIC_LINK_NAME);
 }
+
+DISABLE_CREATE_SYMBOLIC_LINK_PRIVILEGE DisableCreateSymbolicLinkPrivilege;
 
 _Use_decl_annotations_
 HRESULT

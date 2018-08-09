@@ -133,6 +133,7 @@ RetryWithLargerTableSize:
     Allocator = Table->Allocator;
     Context = Table->Context;
     MaskFunctionId = Context->MaskFunctionId;
+    ProcessHandle = GetCurrentProcess();
 
     //
     // If no threshold has been set, use the default.
@@ -940,7 +941,8 @@ RetryWithLargerTableSize:
         // need a new, larger one to accommodate the resize.
         //
 
-        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress)) {
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress);
+        if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
             goto Error;
         }
@@ -1006,12 +1008,14 @@ RetryWithLargerTableSize:
         // Unmap the existing mapping and close the section.
         //
 
+        _Analysis_assume_(Table->BaseAddress != NULL);
         if (!UnmapViewOfFile(Table->BaseAddress)) {
             SYS_ERROR(UnmapViewOfFile);
             goto Error;
         }
         Table->BaseAddress = NULL;
 
+        _Analysis_assume_(Table->MappingHandle != NULL);
         if (!CloseHandle(Table->MappingHandle)) {
             SYS_ERROR(CloseHandle);
             goto Error;
@@ -1203,10 +1207,11 @@ End:
     //      VirtualAllocEx() call was dispatched for the entire buffer.
     //
 
-    if (BaseAddress) {
-        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress)) {
-            Success = FALSE;
+    if (BaseAddress && ProcessHandle) {
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress);
+        if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
+            Success = FALSE;
         }
     }
 
@@ -1220,8 +1225,8 @@ End:
     for (Index = 0; Index < NumberOfEvents; Index++, Event++) {
 
         if (!ResetEvent(*Event)) {
-            Success = FALSE;
             SYS_ERROR(ResetEvent);
+            Success = FALSE;
         }
     }
 
@@ -2128,6 +2133,8 @@ Return Value:
 
 }
 
+GRAPH_DELETE_EDGE GraphDeleteEdge;
+
 _Use_decl_annotations_
 VOID
 GraphDeleteEdge(
@@ -2666,6 +2673,8 @@ Return Value:
 
     return;
 }
+
+GRAPH_NEIGHBORS_ITERATOR GraphNeighborsIterator;
 
 _Use_decl_annotations_
 GRAPH_ITERATOR
@@ -3825,6 +3834,8 @@ Error:
     *Index = 0;
     return E_FAIL;
 }
+
+PERFECT_HASH_TABLE_INDEX PerfectHashTableFastIndexImplChm01JenkinsHashModMask;
 
 _Use_decl_annotations_
 HRESULT

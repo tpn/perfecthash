@@ -449,7 +449,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableInsert,
     &PerfectHashTableLookup,
     &PerfectHashTableDelete,
-    &PerfectHashTableIndex,
+    NULL,   // Index
     NULL,   // Hash
     NULL,   // MaskHash
     NULL,   // MaskIndex
@@ -476,17 +476,8 @@ const RTL_VTBL RtlInterface = {
     &RtlCreateBuffer,
     &RtlCreateMultipleBuffers,
     &RtlDestroyBuffer,
-
-    //
-    // CopyPages and FillPages are initialized at runtime in the
-    // RtlInitialize() routine based on the architecture of the
-    // underlying machine (SIMD-accelerated assembly versions are
-    // used when on x64).
-    //
-
-    NULL,   // CopyPages
-    NULL,   // FillPages
-
+    &RtlCopyPages,
+    &RtlFillPages,
     &RtlCreateRandomObjectNames,
     &RtlCreateSingleRandomObjectName,
     &RtlTryLargePageVirtualAlloc,

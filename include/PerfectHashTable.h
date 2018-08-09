@@ -10,7 +10,7 @@ Abstract:
 
     This is the main public header file for the PerfectHashTable component.
     It defines structures and functions related to creating perfect hash
-    tables, contexts, loading keys, testing, benchmarking and destruction.
+    tables, contexts, loading keys, testing and benchmarking.
 
 --*/
 
@@ -521,7 +521,7 @@ typedef
 VOID
 (STDAPICALLTYPE ALLOCATOR_FREE_POINTER)(
     _In_ PALLOCATOR Allocator,
-    _Out_ _Post_ptr_invalid_ PVOID *AddressPointer
+    _Inout_ PVOID *AddressPointer
     );
 typedef ALLOCATOR_FREE_POINTER *PALLOCATOR_FREE_POINTER;
 
@@ -579,6 +579,7 @@ ULONG
 typedef PERFECT_HASH_TABLE_KEYS_RELEASE *PPERFECT_HASH_TABLE_KEYS_RELEASE;
 
 typedef
+_Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE)(
     _In_ PPERFECT_HASH_TABLE_KEYS Keys,
@@ -972,7 +973,7 @@ typedef
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY)(
     _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
-    _Inout_ PULONG MaximumConcurrency
+    _In_ ULONG MaximumConcurrency
     );
 typedef PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
       *PPERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY;
@@ -1143,7 +1144,7 @@ HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_INDEX)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ ULONG Key,
-    _In_ PULONG Index
+    _Out_ PULONG Index
     );
 typedef PERFECT_HASH_TABLE_INDEX *PPERFECT_HASH_TABLE_INDEX;
 
@@ -1273,6 +1274,49 @@ BOOLEAN
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
       *PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME;
 
+//
+// Scaffolding required to support structured exception handling via __try
+// blocks without having to link to the C runtime library.
+//
+
+typedef
+EXCEPTION_DISPOSITION
+(__cdecl __C_SPECIFIC_HANDLER)(
+    PEXCEPTION_RECORD ExceptionRecord,
+    ULONG_PTR Frame,
+    PCONTEXT Context,
+    struct _DISPATCHER_CONTEXT *Dispatch
+    );
+typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
+
+typedef
+EXCEPTION_DISPOSITION
+(__cdecl RTL_EXCEPTION_HANDLER)(
+    PEXCEPTION_RECORD ExceptionRecord,
+    ULONG_PTR Frame,
+    PCONTEXT Context,
+    struct _DISPATCHER_CONTEXT *Dispatch
+    );
+typedef RTL_EXCEPTION_HANDLER *PRTL_EXCEPTION_HANDLER;
+
+typedef RTL_EXCEPTION_HANDLER __C_SPECIFIC_HANDLER;
+typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
+
+typedef
+VOID
+(SET_C_SPECIFIC_HANDLER)(
+    _In_ P__C_SPECIFIC_HANDLER Handler
+    );
+typedef SET_C_SPECIFIC_HANDLER *PSET_C_SPECIFIC_HANDLER;
+
+typedef
+VOID
+(__cdecl __SECURITY_INIT_COOKIE)(
+    VOID
+    );
+typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
+
+extern __SECURITY_INIT_COOKIE __security_init_cookie;
 
 #ifdef __cplusplus
 } // extern "C"

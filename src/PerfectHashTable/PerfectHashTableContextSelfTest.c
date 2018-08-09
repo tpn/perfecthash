@@ -144,6 +144,7 @@ Return Value:
     //
 
     NumberOfPages = 10;
+    ProcessHandle = GetCurrentProcess();
 
     Result = Rtl->Vtbl->CreateBuffer(Rtl,
                                      &ProcessHandle,
@@ -174,8 +175,12 @@ Return Value:
                                      &BaseBuffer);
 
     if (FAILED(Result)) {
-        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &WideOutputBuffer)) {
-            NOTHING;
+        SYS_ERROR(VirtualAlloc);
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          ProcessHandle,
+                                          &WideOutputBuffer);
+        if (FAILED(Result)) {
+            SYS_ERROR(VirtualFree);
         }
         return Result;
     }
@@ -187,7 +192,10 @@ Return Value:
     //
 
     WideOutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    ASSERT(WideOutputHandle);
+    if (!WideOutputHandle) {
+        SYS_ERROR(GetStdHandle);
+        return E_UNEXPECTED;
+    }
 
     //
     // Calculate the size required for a new concatenated wide string buffer
@@ -456,7 +464,7 @@ Return Value:
         //
 
         CopyMemory(Dest, FileName, FileNameLengthInBytes);
-        Dest += (FileNameLengthInBytes << 1);
+        Dest += ((ULONG_PTR)FileNameLengthInBytes << 1);
         ASSERT(*(Dest - 1) == L'.');
 
         //
@@ -731,22 +739,24 @@ Error:
 
 End:
 
-    //
-    // We can't do much if any of these routines error out, hence the NOTHINGs.
-    //
-
     if (WideOutputBuffer) {
-        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &WideOutputBuffer)) {
-            NOTHING;
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          ProcessHandle,
+                                          &WideOutputBuffer);
+        if (FAILED(Result)) {
+            SYS_ERROR(VirtualFree);
         }
         WideOutput = NULL;
     }
 
     if (BaseBuffer) {
-        if (!Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseBuffer)) {
-            NOTHING;
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          ProcessHandle,
+                                          &BaseBuffer);
+        if (FAILED(Result)) {
+            SYS_ERROR(VirtualFree);
         }
-        Buffer = NULL;
+        BaseBuffer = NULL;
     }
 
     if (FindHandle) {

@@ -67,9 +67,6 @@
     <ClCompile Include="RtlPrivilege.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RtlRandomObjectNames.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PerfectHashTableContextSelfTest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -101,6 +98,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlRandom.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlErrorHandling.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlMemory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

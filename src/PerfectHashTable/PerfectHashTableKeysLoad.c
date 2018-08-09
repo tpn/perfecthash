@@ -199,7 +199,7 @@ Return Value:
         )
     );
 
-    if (!Keys) {
+    if (!Buffer) {
         SYS_ERROR(HeapAlloc);
         goto Error;
     }

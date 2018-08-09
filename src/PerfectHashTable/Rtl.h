@@ -1369,7 +1369,7 @@ HRESULT
 (STDAPICALLTYPE RTL_DESTROY_BUFFER)(
     _In_ PRTL Rtl,
     _In_ HANDLE ProcessHandle,
-    _Out_ PVOID *BufferAddress
+    _Inout_ PVOID *BufferAddress
     );
 typedef RTL_DESTROY_BUFFER *PRTL_DESTROY_BUFFER;
 
@@ -1378,17 +1378,17 @@ typedef RTL_DESTROY_BUFFER *PRTL_DESTROY_BUFFER;
 //
 
 typedef
-VOID
+HRESULT
 (RTL_COPY_PAGES)(
     _In_ PRTL Rtl,
     _Out_writes_bytes_all_(NumberOfPages * 4096) PCHAR Dest,
-    _In_reads_bytes_(NumberOfPages * 4096) _Const_ PCHAR Source,
+    _In_reads_bytes_(NumberOfPages * 4096) const PCHAR Source,
     _In_ ULONG NumberOfPages
     );
 typedef RTL_COPY_PAGES *PRTL_COPY_PAGES;
 
 typedef
-VOID
+HRESULT
 (RTL_FILL_PAGES)(
     _In_ PRTL Rtl,
     _Out_writes_bytes_all_(NumberOfPages * 4096) PCHAR Dest,
@@ -1624,7 +1624,7 @@ HRESULT
     _In_opt_ PUNICODE_STRING NamespacePrefix,
     _Inout_ PPUNICODE_STRING NamesArrayPointer,
     _In_opt_ PPUNICODE_STRING PrefixArrayPointer,
-    _Out_ PULONG SizeOfWideBufferInBytes,
+    _Inout_ PULONG SizeOfWideBufferInBytes,
     _Out_writes_bytes_all_(*SizeOfWideBufferInBytes) PWSTR *WideBufferPointer
     );
 typedef RTL_CREATE_RANDOM_OBJECT_NAMES *PRTL_CREATE_RANDOM_OBJECT_NAMES;
@@ -1932,8 +1932,9 @@ extern RTL_CREATE_SINGLE_RANDOM_OBJECT_NAME RtlCreateSingleRandomObjectName;
 extern RTL_INITIALIZE_LARGE_PAGES RtlInitializeLargePages;
 extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlTryLargePageVirtualAlloc;
 extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlTryLargePageVirtualAllocEx;
-extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W \
+extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W
     RtlTryLargePageCreateFileMappingW;
-
+extern RTL_COPY_PAGES RtlCopyPages;
+extern RTL_FILL_PAGES RtlFillPages;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

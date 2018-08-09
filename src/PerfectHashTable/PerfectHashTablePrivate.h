@@ -979,9 +979,9 @@ typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
 FORCEINLINE
 BOOLEAN
 GetRandomSeeds(
-    _Out_ PULARGE_INTEGER Output,
-    _Out_opt_ PULARGE_INTEGER Cycles,
-    _Out_opt_ PULONG Attempts
+    _Inout_ PULARGE_INTEGER Output,
+    _Inout_opt_ PULARGE_INTEGER Cycles,
+    _Inout_opt_ PULONG Attempts
     )
 /*++
 
@@ -1044,7 +1044,7 @@ Return Value:
 FORCEINLINE
 VOID
 GetRandomSeedsBlocking(
-    _Out_ PULARGE_INTEGER Output
+    _Inout_ PULARGE_INTEGER Output
     )
 /*++
 

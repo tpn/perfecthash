@@ -4,17 +4,77 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    RandomObjectNames.c
+    RtlRandom.c
 
 Abstract:
 
-    This module implements the CreateRandomObjectNames() and
-    CreateSingleRandomObjectName() routines used by the perfect hash
-    table library.
+    This module implements functionality related to random data.  Routines are
+    provided for generating random bytes, and creating random object names.
 
 --*/
 
 #include "stdafx.h"
+
+RTL_GENERATE_RANDOM_BYTES RtlGenerateRandomBytes;
+
+_Use_decl_annotations_
+HRESULT
+RtlGenerateRandomBytes(
+    PRTL Rtl,
+    ULONG SizeOfBufferInBytes,
+    PBYTE Buffer
+    )
+/*++
+
+Routine Description:
+
+    This routine writes random bytes into a given buffer using the system's
+    random data generation facilities.
+
+Arguments:
+
+    Rtl - Supplies a pointer to an RTL instance.
+
+    SizeOfBufferInBytes - Supplies the size of the Buffer parameter, in bytes.
+
+    Buffer - Supplies the address for which random bytes will be written.
+
+Return Value:
+
+    S_OK on success.
+
+    E_POINTER if Rtl or Buffer is NULL.
+
+    E_INVALIDARG if SizeOfBufferInBytes is 0.
+
+    E_UNEXPECTED if the system routine failed to generate random data.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Rtl)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Buffer)) {
+        return E_POINTER;
+    }
+
+    if (SizeOfBufferInBytes == 0) {
+        return E_INVALIDARG;
+    }
+
+    if (!ARGUMENT_PRESENT(Rtl->CryptProv)) {
+        return E_UNEXPECTED;
+    }
+
+    if (!CryptGenRandom(Rtl->CryptProv, SizeOfBufferInBytes, Buffer)) {
+        SYS_ERROR(CryptGenRandom);
+        return E_UNEXPECTED;
+    }
+
+    return S_OK;
+}
+
 
 RTL_CREATE_RANDOM_OBJECT_NAMES RtlCreateRandomObjectNames;
 
@@ -42,9 +102,7 @@ Routine Description:
 
 Arguments:
 
-    Rtl - Supplies a pointer to an initialized RTL structure.  If the crypto
-        subsystem hasn't yet been initialized, this routine will also initialize
-        it.
+    Rtl - Supplies a pointer to an initialized RTL structure.
 
     TemporaryAllocator - Supplies a pointer to an initialized ALLOCATOR struct
         that this routine will use for temporary allocations.  (Any temporarily
@@ -58,7 +116,7 @@ Arguments:
         top of it.  (That is, the UNICODE_STRING structures pointed to by the
         NamesArray will have their Buffer addresses point within this buffer
         space.)  The caller is responsible for freeing this address (which will
-        be received via the output param WideBufferPointer).
+        be received via the output parameter WideBufferPointer).
 
     NumberOfNames - Supplies the number of names that will be carved out of the
         provided WideBuffer by the caller.  This parameter is used in concert
@@ -103,9 +161,9 @@ Return Value:
 --*/
 {
     BOOL Success;
-    HRESULT Result;
     USHORT Index;
     USHORT Count;
+    HRESULT Result = S_OK;
     LONG PrefixLengthInChars;
     LONG NumberOfWideBase64CharsToCopy;
     LONG CharsRemaining;
@@ -117,7 +175,7 @@ Return Value:
     ULONG SizeOfWideBase64BufferInBytes = 0;
     ULONG OldLengthOfWideBase64BufferInChars;
     ULONG LengthOfWideBase64BufferInChars;
-    PBYTE BinaryBuffer;
+    PBYTE BinaryBuffer = NULL;
     PWCHAR Dest;
     PWCHAR WideBase64Buffer = NULL;
     PUNICODE_STRING String;
@@ -213,6 +271,7 @@ Return Value:
 
     if (!WideBase64Buffer) {
         SYS_ERROR(HeapAlloc);
+        Result = E_OUTOFMEMORY;
         goto Error;
     }
 
@@ -331,7 +390,7 @@ Return Value:
         // the random characters.
         //
 
-        String->Length = (USHORT)(FinalCharCount << 1) - sizeof(WCHAR);
+        String->Length = (USHORT)(FinalCharCount << 1) - (USHORT)sizeof(WCHAR);
         String->MaximumLength = String->Length + sizeof(WCHAR);
 
         Dest = String->Buffer = (WideBase64Buffer + RandomCharsUsed);
@@ -369,7 +428,9 @@ Return Value:
 
 Error:
 
-    Result = E_FAIL;
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
 
     //
     // Intentional follow-on to End.
@@ -409,9 +470,7 @@ Routine Description:
 
 Arguments:
 
-    Rtl - Supplies a pointer to an initialized RTL structure.  If the crypto
-        subsystem hasn't yet been initialized, this routine will also initialize
-        it.
+    Rtl - Supplies a pointer to an initialized RTL structure.
 
     TemporaryAllocator - Supplies a pointer to an initialized ALLOCATOR struct
         that this routine will use for temporary allocations.  (Any temporarily
@@ -441,7 +500,7 @@ Return Value:
 --*/
 {
     HRESULT Result;
-    ULONG SizeOfBuffer;
+    ULONG SizeOfBuffer = 0;
     PWSTR WideBuffer;
     PUNICODE_STRING Names[1];
     PCUNICODE_STRING Prefixes[1];

@@ -713,8 +713,7 @@ typedef
 VOID
 (NTAPI GRAPH_DELETE_EDGE)(
     _In_ PGRAPH Graph,
-    _In_ VERTEX Vertex1,
-    _In_ VERTEX Vertex2
+    _In_ EDGE Edge
     );
 typedef GRAPH_DELETE_EDGE *PGRAPH_DELETE_EDGE;
 

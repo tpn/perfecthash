@@ -160,6 +160,7 @@ Return Value:
         Result = PerfectHashTableContextReset(Context);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashTableContextReset, Result);
+            ReleasePerfectHashTableContextLockExclusive(Context);
             return E_FAIL;
         }
     }
@@ -172,6 +173,7 @@ Return Value:
 
     if (ARGUMENT_PRESENT(HashTablePath) &&
         !IsValidMinimumDirectoryNullTerminatedUnicodeString(HashTablePath)) {
+        ReleasePerfectHashTableContextLockExclusive(Context);
         return E_INVALIDARG;
     }
 
@@ -283,6 +285,7 @@ Return Value:
 
     if (!BaseBuffer) {
         SYS_ERROR(HeapAlloc);
+        ReleasePerfectHashTableContextLockExclusive(Context);
         return E_OUTOFMEMORY;
     }
 
