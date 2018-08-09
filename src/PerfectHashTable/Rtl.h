@@ -1906,7 +1906,8 @@ extern RTL_CREATE_SINGLE_RANDOM_OBJECT_NAME RtlCreateSingleRandomObjectName;
 extern RTL_INITIALIZE_LARGE_PAGES RtlInitializeLargePages;
 extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC RtlTryLargePageVirtualAlloc;
 extern RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC_EX RtlTryLargePageVirtualAllocEx;
-extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W RtlTryLargePageCreateFileMappingW;
+extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W \
+    RtlTryLargePageCreateFileMappingW;
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
