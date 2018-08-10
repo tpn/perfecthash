@@ -1975,7 +1975,7 @@ ShouldWeContinueTryingToSolveGraph(
     ULONG WaitResult;
     HANDLE Events[4];
     USHORT NumberOfEvents = ARRAYSIZE(Events);
-    
+
     Events[0] = Context->ShutdownEvent;
     Events[1] = Context->SucceededEvent;
     Events[2] = Context->FailedEvent;
