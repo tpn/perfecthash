@@ -301,20 +301,11 @@ Return Value:
     }
 
     //
-    // XXX TODO: temp hack.
-    //
-
-    MaximumConcurrency = 0;
-
-    //
-    // If the maximum concurrency is 0, default to the number of processors.
+    // Default the maximum concurrency to the number of processors.
     //
 
     NumberOfProcessors = GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
-
-    if (MaximumConcurrency == 0) {
-        MaximumConcurrency = NumberOfProcessors;
-    }
+    MaximumConcurrency = NumberOfProcessors;
 
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
@@ -646,6 +637,75 @@ Return Value:
     Rtl->Vtbl->Release(Rtl);
 }
 
+PERFECT_HASH_TABLE_CONTEXT_RESET PerfectHashTableContext;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableContextReset(
+    PPERFECT_HASH_TABLE_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    Resets a context; required after a context has created a table before it
+    can create a new table.
+
+Arguments:
+
+    Context - Supplies a pointer to a PERFECT_HASH_TABLE_CONTEXT structure
+        for which the reset is to be performed.
+
+Return Value:
+
+    S_OK on success.
+
+    E_POINTER if Context is NULL.
+
+    E_UNEXPECTED for other errors.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    Context->AlgorithmId = PerfectHashTableNullAlgorithmId;
+    Context->HashFunctionId = PerfectHashTableNullHashFunctionId;
+    Context->MaskFunctionId = PerfectHashTableNullMaskFunctionId;
+    Context->HighestDeletedEdgesCount = 0;
+    Context->ResizeTableThreshold = 0;
+    Context->ResizeLimit = 0;
+    Context->Attempts = 0;
+    Context->SolveStartCycles.QuadPart = 0;
+    Context->SolveStartCounter.QuadPart = 0;
+    Context->SolveEndCycles.QuadPart = 0;
+    Context->SolveEndCounter.QuadPart = 0;
+    Context->SolveElapsedCycles.QuadPart = 0;
+    Context->SolveElapsedMicroseconds.QuadPart = 0;
+    Context->VerifyStartCycles.QuadPart = 0;
+    Context->VerifyStartCounter.QuadPart = 0;
+    Context->VerifyEndCycles.QuadPart = 0;
+    Context->VerifyEndCounter.QuadPart = 0;
+    Context->VerifyElapsedCycles.QuadPart = 0;
+    Context->VerifyElapsedMicroseconds.QuadPart = 0;
+    Context->SaveFileStartCycles.QuadPart = 0;
+    Context->SaveFileStartCounter.QuadPart = 0;
+    Context->SaveFileEndCycles.QuadPart = 0;
+    Context->SaveFileEndCounter.QuadPart = 0;
+    Context->SaveFileElapsedCycles.QuadPart = 0;
+    Context->SaveFileElapsedMicroseconds.QuadPart = 0;
+    Context->FailedAttempts = 0;
+    Context->FileWorkErrors = 0;
+    Context->FileWorkLastError = 0;
+    Context->FinishedCount = 0;
+    Context->AlgorithmContext = NULL;
+    Context->HashFunctionContext = NULL;
+    Context->SolvedContext = NULL;
+
+    return S_OK;
+}
+
 //
 // Implement callback routines.
 //
@@ -825,6 +885,7 @@ Return Value:
 
 --*/
 {
+    BOOL CancelPending = TRUE;
     PPERFECT_HASH_TABLE_CONTEXT Context;
 
     UNREFERENCED_PARAMETER(Instance);
@@ -841,23 +902,11 @@ Return Value:
     Context = (PPERFECT_HASH_TABLE_CONTEXT)Ctx;
 
     //
-    // Cancel the main thread work group members.  This should block until all
+    // Wait for the main work group members.  This should block until all
     // the workers have returned.
     //
 
-    CloseThreadpoolCleanupGroupMembers(Context->MainCleanupGroup,
-                                       TRUE,
-                                       NULL);
-
-    //
-    // Clear the MainWork member to make it explicit that it has been closed.
-    //
-
-    Context->MainWork = NULL;
-
-    //
-    // Set the completed event and return.
-    //
+    WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
 
     //
     // Signal the shutdown, succeeded and completed events.
@@ -989,6 +1038,10 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
+    HRESULT Result = S_OK;
+    PTP_POOL Threadpool;
+
     if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
     }
@@ -1001,12 +1054,23 @@ Return Value:
         return PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS;
     }
 
-    SetThreadpoolThreadMaximum(Context->MainThreadpool, MaximumConcurrency);
+    Rtl = Context->Rtl;
+    Threadpool = Context->MainThreadpool;
+
+    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
     Context->MaximumConcurrency = MaximumConcurrency;
+
+    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
+        Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
+        SYS_ERROR(SetThreadpoolThreadMinimum);
+    } else {
+        Context->MinimumConcurrency = MaximumConcurrency;
+    }
+
 
     ReleasePerfectHashTableContextLockExclusive(Context);
 
-    return S_OK;
+    return Result;
 }
 
 PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY

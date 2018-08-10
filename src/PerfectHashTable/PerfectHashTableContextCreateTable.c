@@ -101,12 +101,6 @@ Return Value:
     UNICODE_STRING InfoStreamSuffix = RTL_CONSTANT_STRING(L":Info");
 
     //
-    // XXX TODO.
-    //
-
-#define PerfectHashTableContextReset(Context) (E_UNEXPECTED)
-
-    //
     // Validate arguments.
     //
 

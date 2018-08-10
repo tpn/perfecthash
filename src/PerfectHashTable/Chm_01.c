@@ -965,11 +965,9 @@ RetryWithLargerTableSize:
         );
 
         if (!LastClosest || Closest < LastClosest) {
-
             OnDiskHeader->ClosestWeCameToSolvingGraphWithSmallerTableSizes = (
                 Closest
             );
-
         }
 
         //
@@ -977,9 +975,7 @@ RetryWithLargerTableSize:
         //
 
         if (!OnDiskHeader->InitialTableSize) {
-
             OnDiskHeader->InitialTableSize = NumberOfVertices.QuadPart;
-
         }
 
         //
@@ -1040,6 +1036,8 @@ RetryWithLargerTableSize:
 
     if (!Success) {
 
+        BOOL CancelPending = TRUE;
+
         //
         // Invariant check: if no worker thread registered a solved graph (i.e.
         // Context->FinishedCount > 0), then verify that the shutdown event was
@@ -1062,17 +1060,14 @@ RetryWithLargerTableSize:
         }
 
         //
-        // Clean up the main thread work group members and clear the work field.
+        // Wait for the main thread work group members.
         // This will block until all the worker threads have returned.  We need
         // to put this in place prior to jumping to the End: label as that step
         // will destroy the buffer we allocated earlier for the parallel graphs,
         // which we mustn't do if any threads are still working.
         //
 
-        Context->MainWork = NULL;
-        CloseThreadpoolCleanupGroupMembers(Context->MainCleanupGroup,
-                                           TRUE,
-                                           NULL);
+        WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
 
         //
         // Perform the same operation for the file work threadpool.  Note that
@@ -1080,10 +1075,7 @@ RetryWithLargerTableSize:
         // initial file preparation work.
         //
 
-        Context->FileWork = NULL;
-        CloseThreadpoolCleanupGroupMembers(Context->FileCleanupGroup,
-                                           TRUE,
-                                           NULL);
+        WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
 
         goto End;
     }
