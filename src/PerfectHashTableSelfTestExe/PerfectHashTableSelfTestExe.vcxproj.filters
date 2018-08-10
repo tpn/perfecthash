@@ -23,13 +23,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="stdafx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Rtl\__C_specific_handler.c">
+    <ClCompile Include="PerfectHashTableSelfTestExe.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

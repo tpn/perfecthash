@@ -96,9 +96,8 @@ extern const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[];
 
 FORCEINLINE
 VOID
-InitializePerfectHashTableVtbl(
-    _In_ PPERFECT_HASH_TABLE Table,
-    _Inout_ PPERFECT_HASH_TABLE_VTBL Vtbl
+CompletePerfectHashTableVtblInitialization(
+    _In_ PPERFECT_HASH_TABLE Table
     )
 {
     BYTE Index;
@@ -106,23 +105,19 @@ InitializePerfectHashTableVtbl(
     PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId;
     PCPERFECT_HASH_TABLE_FAST_INDEX_TUPLE Tuple;
+    PPERFECT_HASH_TABLE_VTBL Vtbl;
 
     //
     // Initialize aliases.
     //
 
+    Vtbl = Table->Vtbl;
     AlgorithmId = Table->AlgorithmId;
     HashFunctionId = Table->HashFunctionId;
     MaskFunctionId = Table->MaskFunctionId;
 
     //
-    // Wire up the table to the vtbl.
-    //
-
-    Table->Vtbl = Vtbl;
-
-    //
-    // Initialize the specific routines.
+    // Initialize the routines specific to the given hash/mask ID.
     //
 
     Vtbl->Hash = HashRoutines[HashFunctionId];
@@ -164,9 +159,7 @@ InitializePerfectHashTableVtbl(
     Vtbl->Index = (Vtbl->FastIndex ? Vtbl->FastIndex : Vtbl->SlowIndex);
 }
 
-#ifdef WITH_PARALLEL
-
-#endif//
+//
 // Declare the array of algorithm names.
 //
 
@@ -246,6 +239,8 @@ extern const UNICODE_STRING No;
 extern const UNICODE_STRING Yes;
 extern const UNICODE_STRING KeysSuffix;
 extern const UNICODE_STRING TableSuffix;
+extern const UNICODE_STRING DotKeysSuffix;
+extern const UNICODE_STRING DotTableSuffix;
 extern const UNICODE_STRING KeysWildcardSuffix;
 
 //

@@ -470,14 +470,6 @@ Return Value:
     }
 
     //
-    // Copy the enumeration IDs back into the table structure.
-    //
-
-    Table->AlgorithmId = AlgorithmId;
-    Table->MaskFunctionId = Header->MaskFunctionId;
-    Table->HashFunctionId = Header->HashFunctionId;
-
-    //
     // We only support 32-bit (4 byte) keys at the moment.  Enforce this
     // restriction now.
     //
@@ -657,6 +649,21 @@ Return Value:
     //
 
     Table->Flags.ValuesArrayUsesLargePages = LargePagesForValues;
+
+    //
+    // Copy the enumeration IDs back into the table structure.
+    //
+
+    Table->AlgorithmId = AlgorithmId;
+    Table->MaskFunctionId = Header->MaskFunctionId;
+    Table->HashFunctionId = Header->HashFunctionId;
+
+    //
+    // Complete initialization of the table's vtbl now that the hash/mask IDs
+    // have been set.
+    //
+
+    CompletePerfectHashTableVtblInitialization(Table);
 
     //
     // We've completed loading the :Info structure and corresponding data array.

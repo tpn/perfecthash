@@ -537,7 +537,7 @@ typedef PERFECT_HASH_TABLE_CONTEXT_RUNDOWN
       *PPERFECT_HASH_TABLE_CONTEXT_RUNDOWN;
 
 //
-// Function decls.
+// Public vtbl function decls.
 //
 
 extern PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
@@ -549,6 +549,9 @@ extern PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
 extern PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
     PerfectHashTableContextCreateTable;
 extern PERFECT_HASH_TABLE_CONTEXT_SELF_TEST PerfectHashTableContextSelfTest;
-
+extern PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW
+    PerfectHashTableContextSelfTestArgvW;
+extern PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+    PerfectHashTableContextExtractSelfTestArgsFromArgvW;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

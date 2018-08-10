@@ -92,6 +92,7 @@ Return Value:
     ULONG LastError;
     PHANDLE Event;
     PCHAR Buffer;
+    PCHAR BaseBuffer;
     PCHAR ExpectedBuffer;
     ULONG MaximumConcurrency;
     ULONG NumberOfProcessors;
@@ -174,7 +175,7 @@ Return Value:
     // Allocate space for the object name buffer.
     //
 
-    Buffer = (PCHAR)(
+    BaseBuffer = Buffer = (PCHAR)(
         Allocator->Vtbl->Calloc(
             Allocator,
             1,
@@ -216,7 +217,7 @@ Return Value:
     // Assert this invariant now.
     //
 
-    ExpectedBuffer = RtlOffsetToPointer(Context, AllocSize.LowPart);
+    ExpectedBuffer = RtlOffsetToPointer(BaseBuffer, AllocSize.LowPart);
     ASSERT(Buffer == ExpectedBuffer);
 
     //
@@ -636,9 +637,9 @@ Return Value:
         Context->ErrorThreadpool = NULL;
     }
 
-    if (Context->ObjectNamesWideBuffer) {
+    if (Context->ObjectNames) {
         Allocator->Vtbl->FreePointer(Allocator,
-                                     &Context->ObjectNamesWideBuffer);
+                                     &Context->ObjectNames);
     }
 
     Allocator->Vtbl->Release(Allocator);

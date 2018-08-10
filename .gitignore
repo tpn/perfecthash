@@ -21,3 +21,4 @@ TestResults
 .idea
 .cache
 *.dgml
+output

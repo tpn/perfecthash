@@ -123,10 +123,10 @@ Return Value:
     // of keys is within MAX_ULONG.
     //
 
-    ASSERT(Table->Keys && Table->Keys->Keys);
-    ASSERT(!Table->Keys->NumberOfElements.HighPart);
+    ASSERT(Keys && Keys->Keys);
+    ASSERT(!Keys->NumberOfElements.HighPart);
 
-    NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+    NumberOfKeys = Keys->NumberOfElements.LowPart;
 
     //
     // Calculate the space required for a bitmap buffer that allows us to set

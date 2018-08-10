@@ -85,7 +85,6 @@ CreateComponent(
     DestFunction = (PULONG_PTR)Component->Vtbl;
     SourceFunction = (PULONG_PTR)Interface;
 
-    __debugbreak();
     for (Index = 0; Index < NumberOfFunctions; Index++) {
         *DestFunction++ = *SourceFunction++;
     }
@@ -255,8 +254,12 @@ ComponentCreateInstance(
     PVOID *Interface
     )
 {
+    PRTL Rtl;
+    PALLOCATOR Allocator;
+
     PCOMPONENT NewComponent;
     PERFECT_HASH_TABLE_INTERFACE_ID Id;
+    PPERFECT_HASH_TABLE_TLS_CONTEXT TlsContext;
 
     //
     // Validate parameters.
@@ -288,6 +291,43 @@ ComponentCreateInstance(
 
     if (!IsValidPerfectHashTableInterfaceId(Id)) {
         return E_NOINTERFACE;
+    }
+
+    //
+    // If we've been requested to create an Rtl or Allocator component, check
+    // to see if the TLS context is set, and if so, whether or not instances
+    // of these classes are already available, in which case, we can simply
+    // re-use them instead of creating a new instance.  This is leveraged by
+    // routines like PerfectHashTableContextSelfTest(), which enumerates all
+    // key files in a directory and attempts to create a perfect hash table for
+    // each one.  The underlying keys and table initializers all end up calling
+    // this function to obtain Rtl and Allocator interfaces, so by re-using the
+    // instances associated with the context structure, we can avoid a lot of
+    // unnecessary work (creation and subsequent rundown).
+    //
+
+    if (Id == PerfectHashTableRtlInterfaceId ||
+        Id == PerfectHashTableAllocatorInterfaceId) {
+
+        TlsContext = PerfectHashTableTlsGetContext();
+
+        if (TlsContext) {
+            if (Id == PerfectHashTableRtlInterfaceId) {
+                Rtl = TlsContext->Rtl;
+                if (Rtl) {
+                    Rtl->Vtbl->AddRef(Rtl);
+                    *Interface = Rtl;
+                    return S_OK;
+                }
+            } else if (Id == PerfectHashTableAllocatorInterfaceId) {
+                Allocator = TlsContext->Allocator;
+                if (Allocator) {
+                    Allocator->Vtbl->AddRef(Allocator);
+                    *Interface = Allocator;
+                    return S_OK;
+                }
+            }
+        }
     }
 
     //

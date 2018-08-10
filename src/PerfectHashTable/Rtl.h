@@ -299,6 +299,15 @@ NTSTATUS
 typedef RTL_CHAR_TO_INTEGER *PRTL_CHAR_TO_INTEGER;
 
 typedef
+NTSTATUS
+(NTAPI RTL_UNICODE_STRING_TO_INTEGER)(
+    _In_ PCUNICODE_STRING String,
+    _In_opt_ ULONG Base,
+    _Out_ PULONG Value
+    );
+typedef RTL_UNICODE_STRING_TO_INTEGER *PRTL_UNICODE_STRING_TO_INTEGER;
+
+typedef
 VOID
 (NTAPI RTL_COPY_MEMORY)(
     _Out_writes_bytes_all_(Length) PVOID Destination,
@@ -1743,6 +1752,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     "RtlCompareMemory",            \
     "RtlFirstEntrySList",          \
     "RtlCharToInteger",            \
+    "RtlUnicodeStringToInteger",   \
     "CryptBinaryToStringA",        \
     "CryptBinaryToStringW",        \
     "__C_specific_handler",        \
@@ -1778,6 +1788,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     PRTL_COMPARE_MEMORY RtlCompareMemory;                          \
     PRTL_FIRST_ENTRY_SLIST RtlFirstEntrySList;                     \
     PRTL_CHAR_TO_INTEGER RtlCharToInteger;                         \
+    PRTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;      \
     PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                \
     PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                \
     P__C_SPECIFIC_HANDLER __C_specific_handler;                    \

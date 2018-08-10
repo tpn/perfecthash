@@ -60,6 +60,7 @@ Return Value:
     PRTL Rtl;
     PWSTR Dest;
     PWSTR Source;
+    ULONG LastError;
     USHORT Length;
     USHORT BaseLength;
     USHORT NumberOfPages;
@@ -92,6 +93,7 @@ Return Value:
     PPERFECT_HASH_TABLE_KEYS Keys;
     PTABLE_INFO_ON_DISK_HEADER Header;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
+    PERFECT_HASH_TABLE_TLS_CONTEXT TlsContext;
     //PUNICODE_STRING AlgorithmName;
     //PUNICODE_STRING HashFunctionName;
     //PUNICODE_STRING MaskFunctionName;
@@ -118,8 +120,11 @@ Return Value:
         return E_INVALIDARG;
     } else {
         if (!CreateDirectoryW(OutputDirectory->Buffer, NULL)) {
-            SYS_ERROR(CreateDirectoryW);
-            return E_INVALIDARG;
+            LastError = GetLastError();
+            if (LastError != ERROR_ALREADY_EXISTS) {
+                SYS_ERROR(CreateDirectoryW);
+                return E_INVALIDARG;
+            }
         }
     }
 
@@ -269,8 +274,6 @@ Return Value:
 
     if (!FindHandle || FindHandle == INVALID_HANDLE_VALUE) {
 
-        ULONG LastError;
-
         //
         // Check to see if we failed because there were no files matching the
         // wildcard *.keys in the test directory.  In this case, GetLastError()
@@ -328,6 +331,20 @@ Return Value:
     BaseLength = Length;
 
     //
+    // Zero the local TLS context structure, fill out the relevant fields,
+    // then set it.  This will allow other components to re-use our Allocator
+    // and Rtl components (this is handled in our COM creation logic).
+    //
+
+    ZeroStruct(TlsContext);
+    TlsContext.Rtl = Context->Rtl;
+    TlsContext.Allocator = Context->Allocator;
+    if (!PerfectHashTableTlsSetContext(&TlsContext)) {
+        SYS_ERROR(TlsSetValue);
+        goto Error;
+    }
+
+    //
     // Zero the failure count and terminate flag and begin the main loop.
     //
 
@@ -359,7 +376,7 @@ Return Value:
         }
         *Dest = L'\0';
 
-        Length = (USHORT)RtlPointerToOffset(Dest, KeysPath.Buffer);
+        Length = (USHORT)RtlPointerToOffset(KeysPath.Buffer, Dest);
         KeysPath.Length = Length;
         KeysPath.MaximumLength = Length + sizeof(*Dest);
         ASSERT(KeysPath.Buffer[KeysPath.Length >> 1] == L'\0');
@@ -412,13 +429,13 @@ Return Value:
 
         FileNameLengthInBytes = (
             KeysPath.Length -
-            ((USHORT)wcslen(L"keys") << 1) -
-            TestDataDirectory->Length
+            TestDataDirectory->Length -
+            DotKeysSuffix.Length
         );
 
         FileName = (PWCHAR)(
             RtlOffsetToPointer(
-                TestDataDirectory->Buffer,
+                KeysPath.Buffer,
                 TestDataDirectory->Length + sizeof(WCHAR)
             )
         );
@@ -457,6 +474,7 @@ Return Value:
         //
 
         CopyMemory(Dest, OutputDirectory->Buffer, OutputDirectory->Length);
+        Dest += ((ULONG_PTR)OutputDirectory->Length >> 1);
         *Dest++ = L'\\';
 
         //
@@ -464,7 +482,7 @@ Return Value:
         //
 
         CopyMemory(Dest, FileName, FileNameLengthInBytes);
-        Dest += ((ULONG_PTR)FileNameLengthInBytes << 1);
+        Dest += ((ULONG_PTR)FileNameLengthInBytes >> 1);
         ASSERT(*(Dest - 1) == L'.');
 
         //
@@ -553,13 +571,13 @@ Return Value:
         // enums provided as input parameters to this routine.
         //
 
-#define GET_NAME(Desc)                                                   \
-        Result = Table->Vtbl->Get##Desc##Name(Table, &##Desc##Name);     \
-        if (FAILED(Result)) {                                            \
-            WIDE_OUTPUT_RAW(WideOutput,                                  \
-                            (PCWCHAR)L"Get" #Desc "Name() failed.\n");   \
-            Terminate = TRUE;                                            \
-            goto ReleaseTable;                                           \
+#define GET_NAME(Desc)                                                 \
+        Result = Table->Vtbl->Get##Desc##Name(Table, &##Desc##Name);   \
+        if (FAILED(Result)) {                                          \
+            WIDE_OUTPUT_RAW(WideOutput,                                \
+                            (PCWCHAR)L"Get" #Desc "Name() failed.\n"); \
+            Terminate = TRUE;                                          \
+            goto ReleaseTable;                                         \
         }
 
         //GET_NAME(Algorithm);
@@ -739,6 +757,10 @@ Error:
 
 End:
 
+    if (!PerfectHashTableTlsSetContext(NULL)) {
+        SYS_ERROR(TlsSetValue);
+    }
+
     if (WideOutputBuffer) {
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
@@ -764,6 +786,344 @@ End:
             NOTHING;
         }
         FindHandle = NULL;
+    }
+
+    return Result;
+}
+
+//
+// Commandline support.
+//
+
+const STRING Usage = RTL_CONSTANT_STRING(
+    "Usage: PerfectHashTableSelfTest.exe "
+    "<TestDataDirectory (must be fully-qualified)> "
+    "<OutputDirectory (must be fully-qualified)> "
+    "<AlgorithmId> "
+    "<HashFunctionId> "
+    "<MaskFunctionId> "
+    "<MaximumConcurrency (0-ncpu)> "
+    "[PauseBeforeExit (can be any character)]\n"
+    "E.g.: PerfectHashTableSelfTest.exe "
+    "C:\\Users\\Trent\\Home\\src\\perfecthash\\data "
+    "1 1 2 0\n"
+);
+
+//
+// Helper macros for argument extraction.
+//
+
+#define GET_LENGTH(Name) (USHORT)wcslen(Name->Buffer) << (USHORT)1
+#define GET_MAX_LENGTH(Name) Name->Length + 2
+
+#define VALIDATE_ID(Name, Upper)                                      \
+    if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                 \
+                                              10,                     \
+                                              (PULONG)##Name##Id))) { \
+        return PH_E_INVALID_##Upper##_ID;                             \
+    } else if (!IsValidPerfectHashTable##Name##Id(*##Name##Id)) {     \
+        return PH_E_INVALID_##Upper##_ID;                             \
+    }
+
+
+
+PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+    PerfectHashTableContextExtractSelfTestArgsFromArgvW;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableContextExtractSelfTestArgsFromArgvW(
+    PPERFECT_HASH_TABLE_CONTEXT Context,
+    ULONG NumberOfArguments,
+    LPWSTR *ArgvW,
+    PUNICODE_STRING TestDataDirectory,
+    PUNICODE_STRING OutputDirectory,
+    PPERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
+    PPERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
+    PPERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
+    PULONG MaximumConcurrency,
+    PBOOLEAN PauseBeforeExit
+    )
+/*++
+
+Routine Description:
+
+    Extracts arguments for the self-test functionality from an argument vector
+    array, typically obtained from a commandline invocation.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+        for which the arguments are to be extracted.
+
+    NumberOfArguments - Supplies the number of elements in the ArgvW array.
+
+    ArgvW - Supplies a pointer to an array of wide C string arguments.
+
+    TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
+        will be filled out with the test data directory.
+
+    TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
+        will be filled out with the test data directory.
+
+    OutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
+        will be filled out with the output directory.
+
+    AlgorithmId - Supplies the address of a variable that will receive the
+        algorithm ID.
+
+    HashFunctionId - Supplies the address of a variable that will receive the
+        hash function ID.
+
+    MaskFunctionId - Supplies the address of a variable that will receive the
+        mask function ID.
+
+    MaximumConcurrency - Supplies the address of a variable that will receive
+        the maximum concurrency.
+
+    PauseBeforeExit - Supplies the address of a variable that will receive the
+        boolean TRUE value if a pause before exit has been requested.
+
+Return Value:
+
+    S_OK on success.
+
+    E_POINTER if any pointer arguments are NULL.
+
+    PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS if NumberOfArguments is not a valid
+        value.
+
+    PH_E_INVALID_ALGORITHM_ID if algorithm ID is invalid.
+
+    PH_E_INVALID_HASH_FUNCTION_ID if hash function ID is invalid.
+
+    PH_E_INVALID_MASK_FUNCTION_ID if mask function ID is invalid.
+
+    PH_E_INVALID_MAXIMUM_CONCURRENCY is maximum concurrency value is invalid.
+
+--*/
+{
+    PRTL Rtl;
+    LPWSTR *ArgW;
+    UNICODE_STRING Temp;
+    PUNICODE_STRING String;
+    BOOLEAN ValidNumberOfArguments;
+
+    String = &Temp;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(ArgvW)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(TestDataDirectory)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(OutputDirectory)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(AlgorithmId)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(HashFunctionId)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(MaskFunctionId)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(MaximumConcurrency)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(PauseBeforeExit)) {
+        return E_POINTER;
+    }
+
+    ValidNumberOfArguments = (
+        NumberOfArguments == 7 ||
+        NumberOfArguments == 8
+    );
+
+    if (!ValidNumberOfArguments) {
+        return PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS;
+    }
+
+    //
+    // Argument validation complete, continue.
+    //
+
+    ArgW = &ArgvW[1];
+    Rtl = Context->Rtl;
+
+    //
+    // Extract test data directory.
+    //
+
+    TestDataDirectory->Buffer = *ArgW++;
+    TestDataDirectory->Length = GET_LENGTH(TestDataDirectory);
+    TestDataDirectory->MaximumLength = GET_MAX_LENGTH(TestDataDirectory);
+
+    //
+    // Extract test data directory.
+    //
+
+    OutputDirectory->Buffer = *ArgW++;
+    OutputDirectory->Length = GET_LENGTH(OutputDirectory);
+    OutputDirectory->MaximumLength = GET_MAX_LENGTH(OutputDirectory);
+
+    //
+    // Extract algorithm ID.
+    //
+
+    String->Buffer = *ArgW++;
+    String->Length = GET_LENGTH(String);
+    String->MaximumLength = GET_MAX_LENGTH(String);
+    VALIDATE_ID(Algorithm, ALGORITHM);
+
+    //
+    // Extract hash function ID.
+    //
+
+    String->Buffer = *ArgW++;
+    String->Length = GET_LENGTH(String);
+    String->MaximumLength = GET_MAX_LENGTH(String);
+    VALIDATE_ID(HashFunction, HASH_FUNCTION);
+
+    //
+    // Extract mask function ID.
+    //
+
+    String->Buffer = *ArgW++;
+    String->Length = GET_LENGTH(String);
+    String->MaximumLength = GET_MAX_LENGTH(String);
+    VALIDATE_ID(MaskFunction, MASK_FUNCTION);
+
+    //
+    // Extract maximum concurrency.
+    //
+
+    String->Buffer = *ArgW++;
+    String->Length = GET_LENGTH(String);
+    String->MaximumLength = GET_MAX_LENGTH(String);
+
+    if (FAILED(Rtl->RtlUnicodeStringToInteger(String,
+                                              10,
+                                              MaximumConcurrency))) {
+        return PH_E_INVALID_MAXIMUM_CONCURRENCY;
+    }
+
+    if (NumberOfArguments == 8) {
+        *PauseBeforeExit = TRUE;
+    }
+
+    return S_OK;
+}
+
+PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW PerfectHashTableContextSelfTestArgvW;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableContextSelfTestArgvW(
+    PPERFECT_HASH_TABLE_CONTEXT Context,
+    ULONG NumberOfArguments,
+    LPWSTR *ArgvW
+    )
+/*++
+
+Routine Description:
+
+    Extracts arguments for the self-test functionality from an argument vector
+    array and then invokes the context self-test functionality.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+        for which the arguments are to be extracted.
+
+    NumberOfArguments - Supplies the number of elements in the ArgvW array.
+
+    ArgvW - Supplies a pointer to an array of wide C string arguments.
+
+Return Value:
+
+    S_OK on success.
+
+    E_POINTER if any pointer arguments are NULL.
+
+    PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS if NumberOfArguments is not a valid
+        value.
+
+    PH_E_INVALID_ALGORITHM_ID if algorithm ID is invalid.
+
+    PH_E_INVALID_HASH_FUNCTION_ID if hash function ID is invalid.
+
+    PH_E_INVALID_MASK_FUNCTION_ID if mask function ID is invalid.
+
+    PH_E_INVALID_MAXIMUM_CONCURRENCY is maximum concurrency value is invalid.
+
+    PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS if a create table is in progress.
+
+    PH_E_SET_MAXIMUM_CONCURRENCY_FAILED if setting the context's maximum
+        concurrency failed.
+
+--*/
+{
+    HRESULT Result;
+    UNICODE_STRING TestDataDirectory = { 0 };
+    UNICODE_STRING OutputDirectory = { 0 };
+    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId = 0;
+    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId = 0;
+    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId = 0;
+    ULONG MaximumConcurrency = 0;
+    BOOLEAN PauseBeforeExit = FALSE;
+
+    Result = Context->Vtbl->ExtractSelfTestArgsFromArgvW(Context,
+                                                         NumberOfArguments,
+                                                         ArgvW,
+                                                         &TestDataDirectory,
+                                                         &OutputDirectory,
+                                                         &AlgorithmId,
+                                                         &HashFunctionId,
+                                                         &MaskFunctionId,
+                                                         &MaximumConcurrency,
+                                                         &PauseBeforeExit);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableContextSelfTestArgvW, Result);
+        return Result;
+    }
+
+    if (MaximumConcurrency > 0) {
+        Result = Context->Vtbl->SetMaximumConcurrency(Context,
+                                                      MaximumConcurrency);
+        if (FAILED(Result)) {
+            Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
+            PH_ERROR(PerfectHashTableContextSelfTestArgvW, Result);
+            return Result;
+        }
+    }
+
+    Result = Context->Vtbl->SelfTest(Context,
+                                     &TestDataDirectory,
+                                     &OutputDirectory,
+                                     AlgorithmId,
+                                     HashFunctionId,
+                                     MaskFunctionId);
+
+    if (FAILED(Result)) {
+        NOTHING;
     }
 
     return Result;

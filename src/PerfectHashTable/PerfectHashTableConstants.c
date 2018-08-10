@@ -297,6 +297,8 @@ const UNICODE_STRING No = RTL_CONSTANT_STRING(L"No.\n");
 const UNICODE_STRING Yes = RTL_CONSTANT_STRING(L"Yes.\n");
 const UNICODE_STRING KeysSuffix = RTL_CONSTANT_STRING(L"keys");
 const UNICODE_STRING TableSuffix = RTL_CONSTANT_STRING(L"pht1");
+const UNICODE_STRING DotKeysSuffix = RTL_CONSTANT_STRING(L".keys");
+const UNICODE_STRING DotTableSuffix = RTL_CONSTANT_STRING(L".pht1");
 const UNICODE_STRING KeysWildcardSuffix = RTL_CONSTANT_STRING(L"*.keys");
 
 //
@@ -432,6 +434,8 @@ const PERFECT_HASH_TABLE_CONTEXT_VTBL PerfectHashTableContextInterface = {
     &PerfectHashTableContextGetMaximumConcurrency,
     &PerfectHashTableContextCreateTable,
     &PerfectHashTableContextSelfTest,
+    &PerfectHashTableContextSelfTestArgvW,
+    &PerfectHashTableContextExtractSelfTestArgsFromArgvW,
 };
 
 //
@@ -526,11 +530,11 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     NULL, // IUnknown
     NULL, // IClassFactory
 
-    (PCOMPONENT_INITIALIZE)PerfectHashTableKeysInitialize,
-    (PCOMPONENT_INITIALIZE)PerfectHashTableContextInitialize,
-    (PCOMPONENT_INITIALIZE)PerfectHashTableInitialize,
-    (PCOMPONENT_INITIALIZE)RtlInitialize,
-    (PCOMPONENT_INITIALIZE)AllocatorInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashTableKeysInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashTableContextInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashTableInitialize,
+    (PCOMPONENT_INITIALIZE)&RtlInitialize,
+    (PCOMPONENT_INITIALIZE)&AllocatorInitialize,
 
     NULL,
 };
@@ -542,11 +546,11 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     NULL, // IUnknown
     NULL, // IClassFactory
 
-    (PCOMPONENT_RUNDOWN)PerfectHashTableKeysRundown,
-    (PCOMPONENT_RUNDOWN)PerfectHashTableContextRundown,
-    (PCOMPONENT_RUNDOWN)PerfectHashTableRundown,
-    (PCOMPONENT_RUNDOWN)RtlRundown,
-    (PCOMPONENT_RUNDOWN)AllocatorRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashTableKeysRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashTableContextRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashTableRundown,
+    (PCOMPONENT_RUNDOWN)&RtlRundown,
+    (PCOMPONENT_RUNDOWN)&AllocatorRundown,
 
     NULL,
 };

@@ -47,7 +47,7 @@ extern "C" {
 #pragma warning(push)
 #pragma warning(disable: 4255)
 #pragma warning(disable: 4668)
-#include <minwindef.h>
+#include <Windows.h>
 #pragma warning(pop)
 
 #include <sal.h>
@@ -1000,7 +1000,6 @@ HRESULT
 typedef PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
       *PPERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE;
 
-
 typedef
 _Success_(return >= 0)
 HRESULT
@@ -1012,7 +1011,38 @@ HRESULT
     _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
     _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_SELF_TEST *PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST;
+typedef PERFECT_HASH_TABLE_CONTEXT_SELF_TEST
+    *PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW
+    *PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW)(
+    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW,
+    _In_ PUNICODE_STRING TestDataDirectory,
+    _In_ PUNICODE_STRING OutputDirectory,
+    _Inout_ PPERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
+    _Inout_ PPERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
+    _Inout_ PPERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
+    _Inout_ PULONG MaximumConcurrency,
+    _Inout_ PBOOLEAN PauseBeforeExit
+    );
+typedef PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+      *PPERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
+
 
 typedef struct _PERFECT_HASH_TABLE_CONTEXT_VTBL {
     PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE QueryInterface;
@@ -1024,6 +1054,9 @@ typedef struct _PERFECT_HASH_TABLE_CONTEXT_VTBL {
     PPERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
     PPERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE CreateTable;
     PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST SelfTest;
+    PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
+    PPERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+        ExtractSelfTestArgsFromArgvW;
 } PERFECT_HASH_TABLE_CONTEXT_VTBL;
 typedef PERFECT_HASH_TABLE_CONTEXT_VTBL *PPERFECT_HASH_TABLE_CONTEXT_VTBL;
 
@@ -1317,6 +1350,63 @@ VOID
 typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
 
 extern __SECURITY_INIT_COOKIE __security_init_cookie;
+
+FORCEINLINE
+_Success_(return >= 0)
+HRESULT
+PerfectHashTableLoadLibraryAndGetClassFactory(
+    _Out_ PICLASSFACTORY *ClassFactoryPointer
+    )
+/*++
+
+Routine Description:
+
+    This is a simple helper routine that loads the PerfectHashTable.dll library
+    and obtains an IClassFactory interface.  It is useful for using the library
+    without needing any underlying system COM support (e.g. CoCreateInstance).
+
+Arguments:
+
+    ClassFactoryPointer - Supplies the address of a variable that will receive
+        an instance of an ICLASSFACTORY interface if the routine is successful.
+
+Return Value:
+
+    S_OK on success, an appropriate error code on failure.
+
+--*/
+{
+    PROC Proc;
+    HRESULT Result;
+    HMODULE Module;
+    PDLL_GET_CLASS_OBJECT PhDllGetClassObject;
+    PICLASSFACTORY ClassFactory;
+
+    Module = LoadLibraryA("PerfectHashTable.dll");
+    if (!Module) {
+        return E_FAIL;
+    }
+
+    Proc = GetProcAddress(Module, "PerfectHashTableDllGetClassObject");
+    if (!Proc) {
+        FreeLibrary(Module);
+        return E_UNEXPECTED;
+    }
+
+    PhDllGetClassObject = (PDLL_GET_CLASS_OBJECT)Proc;
+
+    Result = PhDllGetClassObject(&CLSID_PERFECT_HASH_TABLE,
+                                 &IID_PERFECT_HASH_TABLE_ICLASSFACTORY,
+                                 &ClassFactory);
+
+    if (FAILED(Result)) {
+        FreeLibrary(Module);
+        return Result;
+    }
+
+    *ClassFactoryPointer = ClassFactory;
+    return S_OK;
+}
 
 #ifdef __cplusplus
 } // extern "C"

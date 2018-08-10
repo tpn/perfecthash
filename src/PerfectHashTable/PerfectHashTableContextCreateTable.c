@@ -320,6 +320,13 @@ Return Value:
     Table->HashFunctionId = Context->HashFunctionId = HashFunctionId;
 
     //
+    // Complete initialization of the table's vtbl now that the hash/mask IDs
+    // have been set.
+    //
+
+    CompletePerfectHashTableVtblInitialization(Table);
+
+    //
     // Carve out the backing memory structures for the unicode string buffers
     // for the path names.
     //
