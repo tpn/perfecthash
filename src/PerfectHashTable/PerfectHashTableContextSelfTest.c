@@ -94,9 +94,9 @@ Return Value:
     PTABLE_INFO_ON_DISK_HEADER Header;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
     PERFECT_HASH_TABLE_TLS_CONTEXT TlsContext;
-    //PUNICODE_STRING AlgorithmName;
-    //PUNICODE_STRING HashFunctionName;
-    //PUNICODE_STRING MaskFunctionName;
+    PUNICODE_STRING AlgorithmName;
+    PUNICODE_STRING HashFunctionName;
+    PUNICODE_STRING MaskFunctionName;
 
     //
     // Validate arguments.
@@ -571,25 +571,24 @@ Return Value:
         // enums provided as input parameters to this routine.
         //
 
-#define GET_NAME(Desc)                                                 \
-        Result = Table->Vtbl->Get##Desc##Name(Table, &##Desc##Name);   \
-        if (FAILED(Result)) {                                          \
-            WIDE_OUTPUT_RAW(WideOutput,                                \
-                            (PCWCHAR)L"Get" #Desc "Name() failed.\n"); \
-            Terminate = TRUE;                                          \
-            goto ReleaseTable;                                         \
+#define GET_NAME(Desc)                                               \
+        Result = Table->Vtbl->Get##Desc##Name(Table, &##Desc##Name); \
+        if (FAILED(Result)) {                                        \
+            WIDE_OUTPUT_RAW(WideOutput,                              \
+                            L"Get" L#Desc "Name() failed.\n");       \
+            Terminate = TRUE;                                        \
+            goto ReleaseTable;                                       \
         }
 
-        //GET_NAME(Algorithm);
-        //GET_NAME(HashFunction);
-        //GET_NAME(MaskFunction);
+        GET_NAME(Algorithm);
+        GET_NAME(HashFunction);
+        GET_NAME(MaskFunction);
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully loaded perfect "
                                     L"hash table: ");
         WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
 
-#if 0
         WIDE_OUTPUT_RAW(WideOutput, L"Algorithm: ");
         WIDE_OUTPUT_UNICODE_STRING(WideOutput, AlgorithmName);
         WIDE_OUTPUT_RAW(WideOutput, L" (");
@@ -607,7 +606,6 @@ Return Value:
         WIDE_OUTPUT_RAW(WideOutput, L" (");
         WIDE_OUTPUT_INT(WideOutput, Table->MaskFunctionId);
         WIDE_OUTPUT_RAW(WideOutput, L").\n");
-#endif
 
         WIDE_OUTPUT_RAW(WideOutput, L"Table data backed by large pages: ");
         if (Table->Flags.TableDataUsesLargePages) {

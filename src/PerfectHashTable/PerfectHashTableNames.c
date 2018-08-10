@@ -174,7 +174,7 @@ PerfectHashTableGetAlgorithmName(
     PCUNICODE_STRING *Name
     )
 {
-    if (IsValidTable(Table)) {
+    if (!IsValidTable(Table)) {
         return E_UNEXPECTED;
     }
 
@@ -195,7 +195,7 @@ PerfectHashTableGetHashFunctionName(
     PCUNICODE_STRING *Name
     )
 {
-    if (IsValidTable(Table)) {
+    if (!IsValidTable(Table)) {
         return E_UNEXPECTED;
     }
 
@@ -216,7 +216,7 @@ PerfectHashTableGetMaskFunctionName(
     PCUNICODE_STRING *Name
     )
 {
-    if (IsValidTable(Table)) {
+    if (!IsValidTable(Table)) {
         return E_UNEXPECTED;
     }
 
