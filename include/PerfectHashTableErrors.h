@@ -258,3 +258,12 @@ Abstract:
 //
 #define PH_E_SET_MAXIMUM_CONCURRENCY_FAILED ((HRESULT)0xE0040216L)
 
+//
+// MessageId: PH_E_INITIALIZE_LARGE_PAGES_FAILED
+//
+// MessageText:
+//
+// Internal error when attempting to initialize large pages.
+//
+#define PH_E_INITIALIZE_LARGE_PAGES_FAILED ((HRESULT)0xE0040217L)
+

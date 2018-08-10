@@ -197,4 +197,12 @@ Language=English
 Setting the maximum concurrency of the context failed.
 .
 
+MessageId=0x217
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INITIALIZE_LARGE_PAGES_FAILED
+Language=English
+Internal error when attempting to initialize large pages.
+.
+
 

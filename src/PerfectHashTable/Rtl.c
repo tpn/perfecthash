@@ -37,7 +37,7 @@ const PCZPCWSTR RtlModuleNames[] = {
 // As we don't link to the CRT, we don't get a __C_specific_handler entry,
 // which the linker will complain about as soon as we use __try/__except.
 // What we do is define a __C_specific_handler_impl pointer to the original
-// function (that lives in ntdll), then implement our own function by the
+// function (that lives in ntoskrnl), then implement our own function by the
 // same name that calls the underlying impl pointer.  In order to do this
 // we have to disable some compiler/linker warnings regarding mismatched
 // stuff.
@@ -116,7 +116,7 @@ RtlInitialize(
 {
     BOOL Success;
     ULONG Index;
-    HRESULT Result;
+    HRESULT Result = S_OK;
     HMODULE *Module;
     PWSTR *Name;
     ULONG NumberOfModules;
@@ -225,6 +225,12 @@ RtlInitialize(
         goto Error;
     }
 
+    Result = RtlInitializeLargePages(Rtl);
+    if (FAILED(Result)) {
+        PH_ERROR(RtlInitializeLargePages, Result);
+        goto Error;
+    }
+
     //
     // We're done, indicate success and finish up.
     //
@@ -234,7 +240,9 @@ RtlInitialize(
 
 Error:
 
-    Result = E_FAIL;
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
 
     //
     // Intentional follow-on to End.
