@@ -875,7 +875,9 @@ HRESULT
     _In_opt_ ULONG LineNumber
     );
 typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
-#define SYS_ERROR(Name) Rtl->Vtbl->PrintSysError(Rtl, #Name, __FILE__, __LINE__)
+
+#define RTL_SYS_ERROR(Name) \
+    Rtl->Vtbl->PrintSysError(Rtl, #Name, __FILE__, __LINE__)
 
 //
 // SEH macro glue.

@@ -109,6 +109,9 @@
     <ClCompile Include="RtlMemory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashTableErrorHandling.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PerfectHashTableConstants.h">
@@ -153,6 +156,12 @@
     <ClInclude Include="PerfectHashTableTls.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\PerfectHashTableErrors.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTableErrorHandling.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHashTable.def">
@@ -163,5 +172,10 @@
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm">
       <Filter>Source Files</Filter>
     </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PerfectHashTable.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

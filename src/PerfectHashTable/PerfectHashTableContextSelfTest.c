@@ -1080,6 +1080,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     HRESULT Result;
     UNICODE_STRING TestDataDirectory = { 0 };
     UNICODE_STRING OutputDirectory = { 0 };
@@ -1088,6 +1089,8 @@ Return Value:
     PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId = 0;
     ULONG MaximumConcurrency = 0;
     BOOLEAN PauseBeforeExit = FALSE;
+
+    Rtl = Context->Rtl;
 
     Result = Context->Vtbl->ExtractSelfTestArgsFromArgvW(Context,
                                                          NumberOfArguments,

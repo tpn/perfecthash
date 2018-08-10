@@ -58,10 +58,12 @@ Abstract:
 #include <Strsafe.h>
 
 #include <PerfectHashTable.h>
+#include <PerfectHashTableErrors.h>
 
 #include "Component.h"
 #include "Rtl.h"
 #include "RtlOutput.h"
+#include "PerfectHashTableErrorHandling.h"
 #include "PerfectHashTableTls.h"
 #include "PerfectHashTableKeys.h"
 #include "PerfectHashTablePrime.h"
@@ -69,5 +71,15 @@ Abstract:
 #include "PerfectHashTableContext.h"
 #include "PerfectHashTablePrivate.h"
 #include "PerfectHashTableConstants.h"
+
+//
+// warning C4820: '<unnamed-tag>': '4' bytes padding added after
+//      data member 'MessageId'
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4820)
+#include "PerfectHashTableErrors.dbg"
+#pragma warning(pop)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

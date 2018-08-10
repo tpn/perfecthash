@@ -83,10 +83,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\PerfectHashTable.h" />
+    <ClInclude Include="..\..\include\PerfectHashTableErrors.h" />
     <ClInclude Include="PerfectHashTableAllocator.h" />
     <ClInclude Include="Chm_01.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="PerfectHashTableContext.h" />
+    <ClInclude Include="PerfectHashTableErrorHandling.h" />
     <ClInclude Include="PerfectHashTableKeys.h" />
     <ClInclude Include="PerfectHashTablePrime.h" />
     <ClInclude Include="PerfectHashTablePrivate.h" />
@@ -104,6 +106,7 @@
     <ClCompile Include="PerfectHashTable.c" />
     <ClCompile Include="PerfectHashTableContextCreateTable.c" />
     <ClCompile Include="PerfectHashTableContext.c" />
+    <ClCompile Include="PerfectHashTableErrorHandling.c" />
     <ClCompile Include="PerfectHashTableKeys.c" />
     <ClCompile Include="PerfectHashTableLoad.c" />
     <ClCompile Include="PerfectHashTableKeysLoad.c" />
@@ -134,6 +137,9 @@
   </ItemGroup>
   <ItemGroup>
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="PerfectHashTable.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
