@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableAllocator.c
+    PerfectHashAllocator.c
 
 Abstract:
 
-    This module implements the perfect hash table allocator component.
+    This module implements the perfect hash allocator component.
 
 --*/
 

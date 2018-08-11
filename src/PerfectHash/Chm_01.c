@@ -94,7 +94,7 @@ Return Value:
     ULONGLONG ExpectedTotalBufferSizeInBytes;
     ULONGLONG ExpectedUsableBufferSizeInBytesPerBuffer;
     ULONGLONG GraphSizeInBytesIncludingGuardPage;
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
     ULARGE_INTEGER AllocSize;
     ULARGE_INTEGER NumberOfEdges;
     ULARGE_INTEGER NumberOfVertices;
@@ -103,7 +103,7 @@ Return Value:
     ULARGE_INTEGER VisitedVerticesBitmapBufferSizeInBytes;
     ULARGE_INTEGER AssignedBitmapBufferSizeInBytes;
     ULARGE_INTEGER IndexBitmapBufferSizeInBytes;
-    PPERFECT_HASH_TABLE_CONTEXT Context = Table->Context;
+    PPERFECT_HASH_CONTEXT Context = Table->Context;
     HANDLE Events[5];
 
     //
@@ -673,7 +673,7 @@ RetryWithLargerTableSize:
     // on the table fold and update the vtbl.
     //
 
-    if (MaskFunctionId == PerfectHashTableFoldAutoMaskFunctionId) {
+    if (MaskFunctionId == PerfectHashFoldAutoMaskFunctionId) {
 
         ASSERT(Table->HashFold <= 4);
 
@@ -681,15 +681,15 @@ RetryWithLargerTableSize:
             case 4:
             case 3:
             case 2:
-                MaskFunctionId = PerfectHashTableFoldOnceMaskFunctionId;
+                MaskFunctionId = PerfectHashFoldOnceMaskFunctionId;
                 break;
 
             case 1:
-                MaskFunctionId = PerfectHashTableFoldTwiceMaskFunctionId;
+                MaskFunctionId = PerfectHashFoldTwiceMaskFunctionId;
                 break;
 
             case 0:
-                MaskFunctionId = PerfectHashTableFoldThriceMaskFunctionId;
+                MaskFunctionId = PerfectHashFoldThriceMaskFunctionId;
                 break;
         }
 
@@ -1274,7 +1274,7 @@ _Use_decl_annotations_
 VOID
 ProcessGraphCallbackChm01(
     PTP_CALLBACK_INSTANCE Instance,
-    PPERFECT_HASH_TABLE_CONTEXT Context,
+    PPERFECT_HASH_CONTEXT Context,
     PSLIST_ENTRY ListEntry
     )
 /*++
@@ -1369,7 +1369,7 @@ _Use_decl_annotations_
 VOID
 FileWorkCallbackChm01(
     PTP_CALLBACK_INSTANCE Instance,
-    PPERFECT_HASH_TABLE_CONTEXT Context,
+    PPERFECT_HASH_CONTEXT Context,
     PSLIST_ENTRY ListEntry
     )
 /*++
@@ -1759,7 +1759,7 @@ Return Value:
     USHORT BitmapCount = 0;
     PPERFECT_HASH_TABLE Table;
     PTABLE_INFO_ON_DISK_HEADER Header;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     //
     // Initialize aliases.
@@ -1961,7 +1961,7 @@ Return Value:
 
 BOOLEAN
 ShouldWeContinueTryingToSolveGraph(
-    PPERFECT_HASH_TABLE_CONTEXT Context
+    PPERFECT_HASH_CONTEXT Context
     )
 {
     ULONG WaitResult;
@@ -2564,7 +2564,7 @@ Return Value:
     } else {
 
         ULONG HighestDeletedEdges;
-        PPERFECT_HASH_TABLE_CONTEXT Context;
+        PPERFECT_HASH_CONTEXT Context;
 
         Context = Graph->Info->Context;
 
@@ -3075,7 +3075,7 @@ Return Value:
     ULONG NumberOfKeys;
     ULARGE_INTEGER Hash;
     PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
     const ULONG CheckForTerminationAfterIterations = 1024;
 
     Info = Graph->Info;
@@ -3275,7 +3275,7 @@ Return Value:
     ULARGE_INTEGER Hash;
     ULARGE_INTEGER PrevHash;
     PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     Info = Graph->Info;
     Context = Info->Context;

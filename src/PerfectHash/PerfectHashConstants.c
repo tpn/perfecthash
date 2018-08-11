@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableConstants.c
+    PerfectHashConstants.c
 
 Abstract:
 
-    This module declares constants used by the perfect hash table library.
+    This module declares constants used by the perfect hash library.
 
 --*/
 
@@ -129,17 +129,17 @@ const PPERFECT_HASH_TABLE_INDEX IndexRoutines[] = {
 const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
 
     {
-        PerfectHashTableChm01AlgorithmId,
-        PerfectHashTableHashCrc32RotateFunctionId,
-        PerfectHashTableAndMaskFunctionId,
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashCrc32RotateFunctionId,
+        PerfectHashAndMaskFunctionId,
         0,
         PerfectHashTableFastIndexImplChm01Crc32RotateHashAndMask,
     },
 
     {
-        PerfectHashTableChm01AlgorithmId,
-        PerfectHashTableHashJenkinsFunctionId,
-        PerfectHashTableAndMaskFunctionId,
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashJenkinsFunctionId,
+        PerfectHashAndMaskFunctionId,
         0,
         PerfectHashTableFastIndexImplChm01JenkinsHashAndMask,
     },
@@ -152,17 +152,17 @@ const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
 // Define UNICODE_STRING structures for each algorithm name.
 //
 
-const UNICODE_STRING PerfectHashTableChm01AlgorithmName =
+const UNICODE_STRING PerfectHashChm01AlgorithmName =
     RTL_CONSTANT_STRING(L"Chm01");
 
 //
 // Define the array of algorithm names.  This is intended to be indexed by the
-// PERFECT_HASH_TABLE_ALGORITHM_ID enum.
+// PERFECT_HASH_ALGORITHM_ID enum.
 //
 
 const PCUNICODE_STRING AlgorithmNames[] = {
     NULL,
-    &PerfectHashTableChm01AlgorithmName,
+    &PerfectHashChm01AlgorithmName,
     NULL,
 };
 
@@ -170,19 +170,19 @@ const PCUNICODE_STRING AlgorithmNames[] = {
 // Define UNICODE_STRING structures for each hash function name.
 //
 
-const UNICODE_STRING PerfectHashTableHashCrc32RotateFunctionName =
+const UNICODE_STRING PerfectHashHashCrc32RotateFunctionName =
     RTL_CONSTANT_STRING(L"Crc32Rotate");
 
-const UNICODE_STRING PerfectHashTableHashJenkinsFunctionName =
+const UNICODE_STRING PerfectHashHashJenkinsFunctionName =
     RTL_CONSTANT_STRING(L"Jenkins");
 
-const UNICODE_STRING PerfectHashTableHashRotateXorFunctionName =
+const UNICODE_STRING PerfectHashHashRotateXorFunctionName =
     RTL_CONSTANT_STRING(L"RotateXor");
 
-const UNICODE_STRING PerfectHashTableHashAddSubXorFunctionName =
+const UNICODE_STRING PerfectHashHashAddSubXorFunctionName =
     RTL_CONSTANT_STRING(L"AddSubXor");
 
-const UNICODE_STRING PerfectHashTableHashXorFunctionName =
+const UNICODE_STRING PerfectHashHashXorFunctionName =
     RTL_CONSTANT_STRING(L"Xor");
 
 //
@@ -192,11 +192,11 @@ const UNICODE_STRING PerfectHashTableHashXorFunctionName =
 
 const PCUNICODE_STRING HashFunctionNames[] = {
     NULL,
-    &PerfectHashTableHashCrc32RotateFunctionName,
-    &PerfectHashTableHashJenkinsFunctionName,
-    &PerfectHashTableHashRotateXorFunctionName,
-    &PerfectHashTableHashAddSubXorFunctionName,
-    &PerfectHashTableHashXorFunctionName,
+    &PerfectHashHashCrc32RotateFunctionName,
+    &PerfectHashHashJenkinsFunctionName,
+    &PerfectHashHashRotateXorFunctionName,
+    &PerfectHashHashAddSubXorFunctionName,
+    &PerfectHashHashXorFunctionName,
     NULL,
 };
 
@@ -204,41 +204,41 @@ const PCUNICODE_STRING HashFunctionNames[] = {
 // Define UNICODE_STRING structures for each mask function name.
 //
 
-const UNICODE_STRING PerfectHashTableModulusMaskFunctionName =
+const UNICODE_STRING PerfectHashModulusMaskFunctionName =
     RTL_CONSTANT_STRING(L"Modulus");
 
-const UNICODE_STRING PerfectHashTableAndMaskFunctionName =
+const UNICODE_STRING PerfectHashAndMaskFunctionName =
     RTL_CONSTANT_STRING(L"And");
 
-const UNICODE_STRING PerfectHashTableXorAndMaskFunctionName =
+const UNICODE_STRING PerfectHashXorAndMaskFunctionName =
     RTL_CONSTANT_STRING(L"XorAnd");
 
-const UNICODE_STRING PerfectHashTableFoldAutoMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldAutoMaskFunctionName =
     RTL_CONSTANT_STRING(L"FoldAuto");
 
-const UNICODE_STRING PerfectHashTableFoldOnceMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldOnceMaskFunctionName =
     RTL_CONSTANT_STRING(L"FoldOnce");
 
-const UNICODE_STRING PerfectHashTableFoldTwiceMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldTwiceMaskFunctionName =
     RTL_CONSTANT_STRING(L"FoldTwice");
 
-const UNICODE_STRING PerfectHashTableFoldThriceMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldThriceMaskFunctionName =
     RTL_CONSTANT_STRING(L"FoldThrice");
 
 //
 // Define the array of mask function names.  This is intended to be indexed by
-// the PERFECT_HASH_TABLE_MASK_FUNCTION_ID enum.
+// the PERFECT_HASH_MASK_FUNCTION_ID enum.
 //
 
 const PCUNICODE_STRING MaskFunctionNames[] = {
     NULL,
-    &PerfectHashTableModulusMaskFunctionName,
-    &PerfectHashTableAndMaskFunctionName,
-    &PerfectHashTableXorAndMaskFunctionName,
-    &PerfectHashTableFoldAutoMaskFunctionName,
-    &PerfectHashTableFoldOnceMaskFunctionName,
-    &PerfectHashTableFoldTwiceMaskFunctionName,
-    &PerfectHashTableFoldThriceMaskFunctionName,
+    &PerfectHashModulusMaskFunctionName,
+    &PerfectHashAndMaskFunctionName,
+    &PerfectHashXorAndMaskFunctionName,
+    &PerfectHashFoldAutoMaskFunctionName,
+    &PerfectHashFoldOnceMaskFunctionName,
+    &PerfectHashFoldTwiceMaskFunctionName,
+    &PerfectHashFoldThriceMaskFunctionName,
     NULL,
 };
 
@@ -247,28 +247,28 @@ const PCUNICODE_STRING MaskFunctionNames[] = {
 //
 
 const UNICODE_STRING ContextShutdownEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_ShutdownEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_ShutdownEvent_");
 
 const UNICODE_STRING ContextSucceededEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_SucceededEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SucceededEvent_");
 
 const UNICODE_STRING ContextFailedEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_FailedEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_FailedEvent_");
 
 const UNICODE_STRING ContextCompletedEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_CompletedEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_CompletedEvent_");
 
 const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_TryLargerTableSizeEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_TryLargerTableSizeEvent_");
 
 const UNICODE_STRING ContextPreparedFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_PreparedFileEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedFileEvent_");
 
 const UNICODE_STRING ContextVerifiedEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_VerifiedEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_VerifiedEvent_");
 
 const UNICODE_STRING ContextSavedFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashTableContext_SavedFileEvent_");
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedFileEvent_");
 
 const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextShutdownEventPrefix,
@@ -328,15 +328,15 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
-C_ASSERT(EXPECTED_ARRAY_SIZE == PerfectHashTableInvalidInterfaceId+1);
+C_ASSERT(EXPECTED_ARRAY_SIZE == PerfectHashInvalidInterfaceId+1);
 
 const USHORT ComponentSizes[] = {
     0,
 
     sizeof(IUNKNOWN),
     sizeof(ICLASSFACTORY),
-    sizeof(PERFECT_HASH_TABLE_KEYS),
-    sizeof(PERFECT_HASH_TABLE_CONTEXT),
+    sizeof(PERFECT_HASH_KEYS),
+    sizeof(PERFECT_HASH_CONTEXT),
     sizeof(PERFECT_HASH_TABLE),
     sizeof(RTL),
     sizeof(ALLOCATOR),
@@ -350,8 +350,8 @@ const USHORT ComponentInterfaceSizes[] = {
 
     sizeof(IUNKNOWN_VTBL),
     sizeof(ICLASSFACTORY_VTBL),
-    sizeof(PERFECT_HASH_TABLE_KEYS_VTBL),
-    sizeof(PERFECT_HASH_TABLE_CONTEXT_VTBL),
+    sizeof(PERFECT_HASH_KEYS_VTBL),
+    sizeof(PERFECT_HASH_CONTEXT_VTBL),
     sizeof(PERFECT_HASH_TABLE_VTBL),
     sizeof(RTL_VTBL),
     sizeof(ALLOCATOR_VTBL),
@@ -365,8 +365,8 @@ const USHORT ComponentInterfaceOffsets[] = {
 
     (USHORT)FIELD_OFFSET(IUNKNOWN, Interface),
     (USHORT)FIELD_OFFSET(ICLASSFACTORY, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE_KEYS, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE_CONTEXT, Interface),
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_KEYS, Interface),
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_CONTEXT, Interface),
     (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE, Interface),
     (USHORT)FIELD_OFFSET(RTL, Interface),
     (USHORT)FIELD_OFFSET(ALLOCATOR, Interface),
@@ -406,36 +406,36 @@ const ICLASSFACTORY_VTBL IClassFactoryInterface = {
 };
 
 //
-// PerfectHashTableKeys
+// PerfectHashKeys
 //
 
-extern PERFECT_HASH_TABLE_KEYS_LOAD PerfectHashTableKeysLoad;
+extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
 
-const PERFECT_HASH_TABLE_KEYS_VTBL PerfectHashTableKeysInterface = {
-    (PPERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE)&ComponentQueryInterface,
-    (PPERFECT_HASH_TABLE_KEYS_ADD_REF)&ComponentAddRef,
-    (PPERFECT_HASH_TABLE_KEYS_RELEASE)&ComponentRelease,
-    (PPERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE)&ComponentCreateInstance,
-    (PPERFECT_HASH_TABLE_KEYS_LOCK_SERVER)&ComponentLockServer,
-    &PerfectHashTableKeysLoad,
+const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface = {
+    (PPERFECT_HASH_KEYS_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_KEYS_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_KEYS_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_KEYS_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_KEYS_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashKeysLoad,
 };
 
 //
-// PerfectHashTableContext
+// PerfectHashContext
 //
 
-const PERFECT_HASH_TABLE_CONTEXT_VTBL PerfectHashTableContextInterface = {
-    (PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE)&ComponentQueryInterface,
-    (PPERFECT_HASH_TABLE_CONTEXT_ADD_REF)&ComponentAddRef,
-    (PPERFECT_HASH_TABLE_CONTEXT_RELEASE)&ComponentRelease,
-    (PPERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE)&ComponentCreateInstance,
-    (PPERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER)&ComponentLockServer,
-    &PerfectHashTableContextSetMaximumConcurrency,
-    &PerfectHashTableContextGetMaximumConcurrency,
-    &PerfectHashTableContextCreateTable,
-    &PerfectHashTableContextSelfTest,
-    &PerfectHashTableContextSelfTestArgvW,
-    &PerfectHashTableContextExtractSelfTestArgsFromArgvW,
+const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
+    (PPERFECT_HASH_CONTEXT_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_CONTEXT_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_CONTEXT_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_CONTEXT_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_CONTEXT_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashContextSetMaximumConcurrency,
+    &PerfectHashContextGetMaximumConcurrency,
+    &PerfectHashContextCreateTable,
+    &PerfectHashContextSelfTest,
+    &PerfectHashContextSelfTestArgvW,
+    &PerfectHashContextExtractSelfTestArgsFromArgvW,
 };
 
 //
@@ -514,8 +514,8 @@ const VOID *ComponentInterfaces[] = {
 
     &IUnknownInterface,
     &IClassFactoryInterface,
-    &PerfectHashTableKeysInterface,
-    &PerfectHashTableContextInterface,
+    &PerfectHashKeysInterface,
+    &PerfectHashContextInterface,
     &PerfectHashTableInterface,
     &RtlInterface,
     &AllocatorInterface,
@@ -530,8 +530,8 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     NULL, // IUnknown
     NULL, // IClassFactory
 
-    (PCOMPONENT_INITIALIZE)&PerfectHashTableKeysInitialize,
-    (PCOMPONENT_INITIALIZE)&PerfectHashTableContextInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashKeysInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashContextInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashTableInitialize,
     (PCOMPONENT_INITIALIZE)&RtlInitialize,
     (PCOMPONENT_INITIALIZE)&AllocatorInitialize,
@@ -546,8 +546,8 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     NULL, // IUnknown
     NULL, // IClassFactory
 
-    (PCOMPONENT_RUNDOWN)&PerfectHashTableKeysRundown,
-    (PCOMPONENT_RUNDOWN)&PerfectHashTableContextRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashKeysRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashContextRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashTableRundown,
     (PCOMPONENT_RUNDOWN)&RtlRundown,
     (PCOMPONENT_RUNDOWN)&AllocatorRundown,

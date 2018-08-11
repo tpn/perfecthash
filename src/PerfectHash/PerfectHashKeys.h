@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableKeys.h
+    PerfectHashKeys.h
 
 Abstract:
 
-    This is the private header file for the PERFECT_HASH_TABLE_KEYS
+    This is the private header file for the PERFECT_HASH_KEYS
     component of the perfect hash table library.  It defines the structure,
     and function pointer typedefs for the initialize and rundown functions.
 
@@ -19,10 +19,10 @@ Abstract:
 #include "stdafx.h"
 
 //
-// Define the PERFECT_HASH_TABLE_KEYS_FLAGS structure.
+// Define the PERFECT_HASH_KEYS_FLAGS structure.
 //
 
-typedef union _PERFECT_HASH_TABLE_KEYS_STATE {
+typedef union _PERFECT_HASH_KEYS_STATE {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
@@ -40,11 +40,11 @@ typedef union _PERFECT_HASH_TABLE_KEYS_STATE {
 
     LONG AsLong;
     ULONG AsULong;
-} PERFECT_HASH_TABLE_KEYS_STATE;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_KEYS_STATE) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_KEYS_STATE *PPERFECT_HASH_TABLE_KEYS_STATE;
+} PERFECT_HASH_KEYS_STATE;
+C_ASSERT(sizeof(PERFECT_HASH_KEYS_STATE) == sizeof(ULONG));
+typedef PERFECT_HASH_KEYS_STATE *PPERFECT_HASH_KEYS_STATE;
 
-typedef union _PERFECT_HASH_TABLE_KEYS_FLAGS {
+typedef union _PERFECT_HASH_KEYS_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
@@ -62,17 +62,17 @@ typedef union _PERFECT_HASH_TABLE_KEYS_FLAGS {
 
     LONG AsLong;
     ULONG AsULong;
-} PERFECT_HASH_TABLE_KEYS_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_KEYS_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_KEYS_FLAGS *PPERFECT_HASH_TABLE_KEYS_FLAGS;
+} PERFECT_HASH_KEYS_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_KEYS_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_KEYS_FLAGS *PPERFECT_HASH_KEYS_FLAGS;
 
 //
-// Define the PERFECT_HASH_TABLE_KEYS structure.
+// Define the PERFECT_HASH_KEYS structure.
 //
 
-typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_KEYS {
+typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
 
-    COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE_KEYS);
+    COMMON_COMPONENT_HEADER(PERFECT_HASH_KEYS);
 
     //
     // Slim read/write lock guarding the structure.
@@ -129,43 +129,43 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_KEYS {
     // Backing interface.
     //
 
-    PERFECT_HASH_TABLE_KEYS_VTBL Interface;
+    PERFECT_HASH_KEYS_VTBL Interface;
 
-} PERFECT_HASH_TABLE_KEYS;
-typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
+} PERFECT_HASH_KEYS;
+typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
 
-#define TryAcquirePerfectHashTableKeysLockExclusive(Keys) \
+#define TryAcquirePerfectHashKeysLockExclusive(Keys) \
     TryAcquireSRWLockExclusive(&Keys->Lock)
 
-#define ReleasePerfectHashTableKeysLockExclusive(Keys) \
+#define ReleasePerfectHashKeysLockExclusive(Keys) \
     ReleaseSRWLockExclusive(&Keys->Lock)
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_KEYS_INITIALIZE)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys
+(NTAPI PERFECT_HASH_KEYS_INITIALIZE)(
+    _In_ PPERFECT_HASH_KEYS Keys
     );
-typedef PERFECT_HASH_TABLE_KEYS_INITIALIZE
-      *PPERFECT_HASH_TABLE_KEYS_INITIALIZE;
+typedef PERFECT_HASH_KEYS_INITIALIZE
+      *PPERFECT_HASH_KEYS_INITIALIZE;
 
 typedef
 VOID
-(NTAPI PERFECT_HASH_TABLE_KEYS_RUNDOWN)(
-    _In_ _Post_ptr_invalid_ PPERFECT_HASH_TABLE_KEYS Keys
+(NTAPI PERFECT_HASH_KEYS_RUNDOWN)(
+    _In_ _Post_ptr_invalid_ PPERFECT_HASH_KEYS Keys
     );
-typedef PERFECT_HASH_TABLE_KEYS_RUNDOWN
-      *PPERFECT_HASH_TABLE_KEYS_RUNDOWN;
+typedef PERFECT_HASH_KEYS_RUNDOWN
+      *PPERFECT_HASH_KEYS_RUNDOWN;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_KEYS_VERIFY_UNIQUE)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys
+(NTAPI PERFECT_HASH_KEYS_VERIFY_UNIQUE)(
+    _In_ PPERFECT_HASH_KEYS Keys
     );
-typedef PERFECT_HASH_TABLE_KEYS_VERIFY_UNIQUE
-      *PPERFECT_HASH_TABLE_KEYS_VERIFY_UNIQUE;
+typedef PERFECT_HASH_KEYS_VERIFY_UNIQUE
+      *PPERFECT_HASH_KEYS_VERIFY_UNIQUE;
 
-extern PERFECT_HASH_TABLE_KEYS_INITIALIZE PerfectHashTableKeysInitialize;
-extern PERFECT_HASH_TABLE_KEYS_RUNDOWN PerfectHashTableKeysRundown;
-extern PERFECT_HASH_TABLE_KEYS_VERIFY_UNIQUE PerfectHashTableKeysVerifyUnique;
+extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
+extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
+extern PERFECT_HASH_KEYS_VERIFY_UNIQUE PerfectHashKeysVerifyUnique;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

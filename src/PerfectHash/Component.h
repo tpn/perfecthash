@@ -17,14 +17,14 @@ Abstract:
 
 #include "stdafx.h"
 
-#define COMMON_COMPONENT_HEADER(Name)   \
-    P##Name##_VTBL Vtbl;                \
-    PIUNKNOWN OuterUnknown;             \
-    volatile LONG ReferenceCount;       \
-    PERFECT_HASH_TABLE_INTERFACE_ID Id; \
-    ULONG SizeOfStruct;                 \
-    Name##_STATE State;                 \
-    Name##_FLAGS Flags;                 \
+#define COMMON_COMPONENT_HEADER(Name) \
+    P##Name##_VTBL Vtbl;              \
+    PIUNKNOWN OuterUnknown;           \
+    volatile LONG ReferenceCount;     \
+    PERFECT_HASH_INTERFACE_ID Id;     \
+    ULONG SizeOfStruct;               \
+    Name##_STATE State;               \
+    Name##_FLAGS Flags;               \
     ULONG Reserved
 
 #define DEFINE_UNUSED_STATE(Name)                  \
@@ -145,7 +145,7 @@ typedef
 _Success_(return != 0)
 PCOMPONENT
 (STDAPICALLTYPE CREATE_COMPONENT)(
-    _In_ PERFECT_HASH_TABLE_INTERFACE_ID Id,
+    _In_ PERFECT_HASH_INTERFACE_ID Id,
     _In_opt_ PIUNKNOWN OuterUnknown
     );
 typedef CREATE_COMPONENT *PCREATE_COMPONENT;

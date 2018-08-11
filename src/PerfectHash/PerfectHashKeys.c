@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableKeys.c
+    PerfectHashKeys.c
 
 Abstract:
 
-    This is the module for the PERFECT_HASH_TABLE_KEYS component of the perfect
+    This is the module for the PERFECT_HASH_KEYS component of the perfect
     hash table library.  Keys refer to the set of ULONGs for which a perfect
     hash table is to be generated.  Routines are provided for initialization,
     rundown, and verification of unique keys.
@@ -17,29 +17,33 @@ Abstract:
 
 #include "stdafx.h"
 
-PERFECT_HASH_TABLE_KEYS_INITIALIZE PerfectHashTableKeysInitialize;
+PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableKeysInitialize(
-    PPERFECT_HASH_TABLE_KEYS Keys
+PerfectHashKeysInitialize(
+    PPERFECT_HASH_KEYS Keys
     )
 /*++
 
 Routine Description:
 
-    Initializes a perfect hash table keys structure.  This is a relatively
-    simple method that just primes the COM scaffolding; the bulk of the work
-    is done when loading the keys file (via PerfectHashTableKeys->Vtbl->Load).
+    Initializes a perfect hash keys structure.  This is a relatively simple
+    method that just primes the COM scaffolding; the bulk of the work is done
+    when loading the keys file (via PerfectHashKeys->Vtbl->Load).
 
 Arguments:
 
-    Keys - Supplies a pointer to a PERFECT_HASH_TABLE_KEYS structure for which
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS structure for which
         initialization is to be performed.
 
 Return Value:
 
-    S_OK on success.  E_POINTER if Keys is NULL.
+    S_OK - Success.
+
+    E_POINTER - Keys is NULL.
+
+    E_UNEXPECTED - All other errors.
 
 --*/
 {
@@ -57,7 +61,7 @@ Return Value:
 
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
-                                        &IID_PERFECT_HASH_TABLE_RTL,
+                                        &IID_PERFECT_HASH_RTL,
                                         &Keys->Rtl);
 
     if (FAILED(Result)) {
@@ -66,7 +70,7 @@ Return Value:
 
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
-                                        &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+                                        &IID_PERFECT_HASH_ALLOCATOR,
                                         &Keys->Allocator);
 
     if (FAILED(Result)) {
@@ -95,12 +99,12 @@ End:
     return Result;
 }
 
-PERFECT_HASH_TABLE_KEYS_RUNDOWN PerfectHashTableKeysRundown;
+PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 
 _Use_decl_annotations_
 VOID
-PerfectHashTableKeysRundown(
-    PPERFECT_HASH_TABLE_KEYS Keys
+PerfectHashKeysRundown(
+    PPERFECT_HASH_KEYS Keys
     )
 /*++
 
@@ -110,7 +114,7 @@ Routine Description:
 
 Arguments:
 
-    Keys - Supplies a pointer to a PERFECT_HASH_TABLE_KEYS structure for which
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS structure for which
         rundown is to be performed.
 
 Return Value:
@@ -184,12 +188,12 @@ Return Value:
     }
 }
 
-PERFECT_HASH_TABLE_KEYS_VERIFY_UNIQUE PerfectHashTableKeysVerifyUnique;
+PERFECT_HASH_KEYS_VERIFY_UNIQUE PerfectHashKeysVerifyUnique;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableKeysVerifyUnique(
-    PPERFECT_HASH_TABLE_KEYS Keys
+PerfectHashKeysVerifyUnique(
+    PPERFECT_HASH_KEYS Keys
     )
 /*++
 
@@ -209,7 +213,7 @@ Routine Description:
 
 Arguments:
 
-    Keys - Supplies a pointer to a PERFECT_HASH_TABLE_KEYS instance for which
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS instance for which
         the duplicate key check will be performed.
 
 Return Value:

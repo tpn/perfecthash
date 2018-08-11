@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    LoadPerfectHashTable.c
+    PerfectHashTableLoad.c
 
 Abstract:
 
@@ -22,7 +22,7 @@ HRESULT
 PerfectHashTableLoad(
     PPERFECT_HASH_TABLE Table,
     PCUNICODE_STRING Path,
-    PPERFECT_HASH_TABLE_KEYS Keys
+    PPERFECT_HASH_KEYS Keys
     )
 /*++
 
@@ -73,7 +73,7 @@ Return Value:
     ULONGLONG NumberOfTableElements;
     ULONGLONG ValuesSizeInBytes;
     PTABLE_INFO_ON_DISK_HEADER Header;
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId;
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     UNICODE_STRING InfoSuffix = RTL_CONSTANT_STRING(L":Info");
 
     //
@@ -446,7 +446,7 @@ Return Value:
     //
 
     AlgorithmId = Header->AlgorithmId;
-    if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
+    if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         Result = PH_E_INVALID_ALGORITHM_ID;
         goto Error;
     }
@@ -455,7 +455,7 @@ Return Value:
     // Validate the hash function ID.
     //
 
-    if (!IsValidPerfectHashTableHashFunctionId(Header->HashFunctionId)) {
+    if (!IsValidPerfectHashHashFunctionId(Header->HashFunctionId)) {
         Result = PH_E_INVALID_HASH_FUNCTION_ID;
         goto Error;
     }
@@ -464,7 +464,7 @@ Return Value:
     // Validate the masking type.
     //
 
-    if (!IsValidPerfectHashTableMaskFunctionId(Header->MaskFunctionId)) {
+    if (!IsValidPerfectHashMaskFunctionId(Header->MaskFunctionId)) {
         Result = PH_E_INVALID_MASK_FUNCTION_ID;
         goto Error;
     }

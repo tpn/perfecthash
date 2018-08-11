@@ -8,15 +8,15 @@ Module Name:
 
 Abstract:
 
-    This is the DLL main entry point for the PerfectHashTable component.  It
-    hooks into process and thread attach and detach messages in order to provide
-    TLS glue (see PerfectHashTableTls.c for more information).
+    This is the DLL main entry point for the PerfectHash component.  It hooks
+    into process and thread attach and detach messages in order to provide TLS
+    glue (see PerfectHashTls.c for more information).
 
 --*/
 
 #include "stdafx.h"
 
-HMODULE PerfectHashTableModule;
+HMODULE PerfectHashModule;
 
 BOOL
 APIENTRY
@@ -29,8 +29,8 @@ _DllMainCRTStartup(
     switch (Reason) {
         case DLL_PROCESS_ATTACH:
             __security_init_cookie();
-            PerfectHashTableModule = Module;
-            if (!PerfectHashTableTlsProcessAttach(Module, Reason, Reserved)) {
+            PerfectHashModule = Module;
+            if (!PerfectHashTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;
             }
             break;
@@ -39,7 +39,7 @@ _DllMainCRTStartup(
         case DLL_THREAD_DETACH:
             break;
         case DLL_PROCESS_DETACH:
-            if (!PerfectHashTableTlsProcessDetach(Module, Reason, Reserved)) {
+            if (!PerfectHashTlsProcessDetach(Module, Reason, Reserved)) {
                 NOTHING;
             }
             break;

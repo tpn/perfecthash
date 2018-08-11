@@ -25,7 +25,7 @@ volatile LONG ServerLockCount = 0;
 _Must_inspect_result_
 PCOMPONENT
 CreateComponent(
-    PERFECT_HASH_TABLE_INTERFACE_ID Id,
+    PERFECT_HASH_INTERFACE_ID Id,
     PIUNKNOWN OuterUnknown
     )
 {
@@ -43,7 +43,7 @@ CreateComponent(
     PCOMPONENT Component;
     PCOMPONENT_INITIALIZE Initialize;
 
-    if (!IsValidPerfectHashTableInterfaceId(Id)) {
+    if (!IsValidPerfectHashInterfaceId(Id)) {
         return NULL;
     }
 
@@ -128,7 +128,7 @@ ComponentQueryInterface(
     BOOLEAN Match;
     PIUNKNOWN Unknown;
     PCOMPONENT NewComponent;
-    PERFECT_HASH_TABLE_INTERFACE_ID Id;
+    PERFECT_HASH_INTERFACE_ID Id;
 
     //
     // Validate caller's pointer.
@@ -148,9 +148,9 @@ ComponentQueryInterface(
     // Validate the IID and process the request.
     //
 
-    Id = PerfectHashTableInterfaceGuidToId(InterfaceId);
+    Id = PerfectHashInterfaceGuidToId(InterfaceId);
 
-    if (!IsValidPerfectHashTableInterfaceId(Id)) {
+    if (!IsValidPerfectHashInterfaceId(Id)) {
         return E_NOINTERFACE;
     }
 
@@ -161,8 +161,8 @@ ComponentQueryInterface(
 
     Match = (
         Id == Component->Id                             ||
-        Id == PerfectHashTableUnknownInterfaceId        ||
-        Id == PerfectHashTableClassFactoryInterfaceId
+        Id == PerfectHashUnknownInterfaceId        ||
+        Id == PerfectHashClassFactoryInterfaceId
     );
 
     if (Match) {
@@ -258,8 +258,8 @@ ComponentCreateInstance(
     PALLOCATOR Allocator;
 
     PCOMPONENT NewComponent;
-    PERFECT_HASH_TABLE_INTERFACE_ID Id;
-    PPERFECT_HASH_TABLE_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_INTERFACE_ID Id;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
 
     //
     // Validate parameters.
@@ -287,39 +287,39 @@ ComponentCreateInstance(
     // Validate the IID and process the request.
     //
 
-    Id = PerfectHashTableInterfaceGuidToId(InterfaceId);
+    Id = PerfectHashInterfaceGuidToId(InterfaceId);
 
-    if (!IsValidPerfectHashTableInterfaceId(Id)) {
+    if (!IsValidPerfectHashInterfaceId(Id)) {
         return E_NOINTERFACE;
     }
 
     //
-    // If we've been requested to create an Rtl or Allocator component, check
-    // to see if the TLS context is set, and if so, whether or not instances
-    // of these classes are already available, in which case, we can simply
-    // re-use them instead of creating a new instance.  This is leveraged by
-    // routines like PerfectHashTableContextSelfTest(), which enumerates all
-    // key files in a directory and attempts to create a perfect hash table for
-    // each one.  The underlying keys and table initializers all end up calling
-    // this function to obtain Rtl and Allocator interfaces, so by re-using the
-    // instances associated with the context structure, we can avoid a lot of
-    // unnecessary work (creation and subsequent rundown).
+    // If we've been requested to create an Rtl or Allocator component, check to
+    // see if the TLS context is set, and if so, whether or not instances of
+    // these classes are already available, in which case, we can simply re-use
+    // them instead of creating a new instance.  This is leveraged by routines
+    // like PerfectHashContextSelfTest(), which enumerates all key files in a
+    // directory and attempts to create a perfect hash table for each one.  The
+    // underlying keys and table initializers all end up calling this function
+    // to obtain Rtl and Allocator interfaces, so by re-using the instances
+    // associated with the context structure, we can avoid a lot of unnecessary
+    // work (creation and subsequent rundown).
     //
 
-    if (Id == PerfectHashTableRtlInterfaceId ||
-        Id == PerfectHashTableAllocatorInterfaceId) {
+    if (Id == PerfectHashRtlInterfaceId ||
+        Id == PerfectHashAllocatorInterfaceId) {
 
-        TlsContext = PerfectHashTableTlsGetContext();
+        TlsContext = PerfectHashTlsGetContext();
 
         if (TlsContext) {
-            if (Id == PerfectHashTableRtlInterfaceId) {
+            if (Id == PerfectHashRtlInterfaceId) {
                 Rtl = TlsContext->Rtl;
                 if (Rtl) {
                     Rtl->Vtbl->AddRef(Rtl);
                     *Interface = Rtl;
                     return S_OK;
                 }
-            } else if (Id == PerfectHashTableAllocatorInterfaceId) {
+            } else if (Id == PerfectHashAllocatorInterfaceId) {
                 Allocator = TlsContext->Allocator;
                 if (Allocator) {
                     Allocator->Vtbl->AddRef(Allocator);
@@ -373,20 +373,20 @@ ComponentLockServer(
 //
 
 //
-// We use PerfectHashTableDllGetClassObject() instead of DllGetClassObject() as
-// the latter is defined in system headers but has incorrect SAL annotations on
-// it.  The SAL annotations on our internal DLL_GET_CLASS_OBJECT function are
-// correct so we need to declare the function of that type in order to compile
-// under max warnings.
+// We use PerfectHashDllGetClassObject() instead of DllGetClassObject() as the
+// latter is defined in system headers but has incorrect SAL annotations on it.
+// The SAL annotations on our internal DLL_GET_CLASS_OBJECT function are correct
+// so we need to declare the function of that type in order to compile under max
+// warnings.
 //
-// The PerfectHashTable.def file is responsible for exporting the correct name.
+// The PerfectHash.def file is responsible for exporting the correct name.
 //
 
-DLL_GET_CLASS_OBJECT PerfectHashTableDllGetClassObject;
+DLL_GET_CLASS_OBJECT PerfectHashDllGetClassObject;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableDllGetClassObject(
+PerfectHashDllGetClassObject(
     REFCLSID ClassId,
     REFIID InterfaceId,
     LPVOID *Interface
@@ -394,7 +394,7 @@ PerfectHashTableDllGetClassObject(
 {
     HRESULT Result;
     PICLASSFACTORY ClassFactory;
-    PERFECT_HASH_TABLE_INTERFACE_ID Id;
+    PERFECT_HASH_INTERFACE_ID Id;
 
     if (!ARGUMENT_PRESENT(Interface)) {
         return E_POINTER;
@@ -406,7 +406,7 @@ PerfectHashTableDllGetClassObject(
     // Validate the CLSID.
     //
 
-    if (!InlineIsEqualGUID(ClassId, &CLSID_PERFECT_HASH_TABLE)) {
+    if (!InlineIsEqualGUID(ClassId, &CLSID_PERFECT_HASH)) {
         return CLASS_E_CLASSNOTAVAILABLE;
     }
 
@@ -414,7 +414,7 @@ PerfectHashTableDllGetClassObject(
     // Class ID was valid, proceed with class factory creation.
     //
 
-    Id = PerfectHashTableClassFactoryInterfaceId;
+    Id = PerfectHashClassFactoryInterfaceId;
     ClassFactory = (PICLASSFACTORY)CreateComponent(Id, NULL);
     if (!ClassFactory) {
         return E_OUTOFMEMORY;
@@ -434,7 +434,7 @@ PerfectHashTableDllGetClassObject(
 }
 
 HRESULT
-PerfectHashTableDllCanUnloadNow(
+PerfectHashDllCanUnloadNow(
     VOID
     )
 {

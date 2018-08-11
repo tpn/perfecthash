@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableContextSelfTest.c
+    PerfectHashContextSelfTest.c
 
 Abstract:
 
-    This module implements the self-test routine for the PerfectHashTable
+    This module implements the self-test routine for the PerfectHash
     component.  It is responsible for end-to-end testing of the entire
     component with all known test data from a single function entry point.
 
@@ -16,27 +16,27 @@ Abstract:
 
 #include "stdafx.h"
 
-PERFECT_HASH_TABLE_CONTEXT_SELF_TEST PerfectHashTableContextSelfTest;
+PERFECT_HASH_CONTEXT_SELF_TEST PerfectHashContextSelfTest;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextSelfTest(
-    PPERFECT_HASH_TABLE_CONTEXT Context,
+PerfectHashContextSelfTest(
+    PPERFECT_HASH_CONTEXT Context,
     PCUNICODE_STRING TestDataDirectory,
     PCUNICODE_STRING OutputDirectory,
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
-    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId
     )
 /*++
 
 Routine Description:
 
-    Performs a self-test of the entire PerfectHashTable component.
+    Performs a self-test of the entire PerfectHash component.
 
 Arguments:
 
-    Context - Supplies an instance of PERFECT_HASH_TABLE_CONTEXT.
+    Context - Supplies an instance of PERFECT_HASH_CONTEXT.
 
     TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
         represents a fully-qualified path of the test data directory.
@@ -90,10 +90,10 @@ Return Value:
     UNICODE_STRING KeysPath;
     UNICODE_STRING TablePath;
     PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_TABLE_KEYS Keys;
+    PPERFECT_HASH_KEYS Keys;
     PTABLE_INFO_ON_DISK_HEADER Header;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
-    PERFECT_HASH_TABLE_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT TlsContext;
     PUNICODE_STRING AlgorithmName;
     PUNICODE_STRING HashFunctionName;
     PUNICODE_STRING MaskFunctionName;
@@ -128,15 +128,15 @@ Return Value:
         }
     }
 
-    if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
+    if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         return E_INVALIDARG;
     }
 
-    if (!IsValidPerfectHashTableHashFunctionId(HashFunctionId)) {
+    if (!IsValidPerfectHashHashFunctionId(HashFunctionId)) {
         return E_INVALIDARG;
     }
 
-    if (!IsValidPerfectHashTableMaskFunctionId(MaskFunctionId)) {
+    if (!IsValidPerfectHashMaskFunctionId(MaskFunctionId)) {
         return E_INVALIDARG;
     }
 
@@ -339,7 +339,7 @@ Return Value:
     ZeroStruct(TlsContext);
     TlsContext.Rtl = Context->Rtl;
     TlsContext.Allocator = Context->Allocator;
-    if (!PerfectHashTableTlsSetContext(&TlsContext)) {
+    if (!PerfectHashTlsSetContext(&TlsContext)) {
         SYS_ERROR(TlsSetValue);
         goto Error;
     }
@@ -384,7 +384,7 @@ Return Value:
 
         Result = Context->Vtbl->CreateInstance(Context,
                                                NULL,
-                                               &IID_PERFECT_HASH_TABLE_KEYS,
+                                               &IID_PERFECT_HASH_KEYS,
                                                &Keys);
 
         if (FAILED(Result)) {
@@ -755,7 +755,7 @@ Error:
 
 End:
 
-    if (!PerfectHashTableTlsSetContext(NULL)) {
+    if (!PerfectHashTlsSetContext(NULL)) {
         SYS_ERROR(TlsSetValue);
     }
 
@@ -794,7 +794,7 @@ End:
 //
 
 const STRING Usage = RTL_CONSTANT_STRING(
-    "Usage: PerfectHashTableSelfTest.exe "
+    "Usage: PerfectHashSelfTest.exe "
     "<TestDataDirectory (must be fully-qualified)> "
     "<OutputDirectory (must be fully-qualified)> "
     "<AlgorithmId> "
@@ -802,7 +802,7 @@ const STRING Usage = RTL_CONSTANT_STRING(
     "<MaskFunctionId> "
     "<MaximumConcurrency (0-ncpu)> "
     "[PauseBeforeExit (can be any character)]\n"
-    "E.g.: PerfectHashTableSelfTest.exe "
+    "E.g.: PerfectHashSelfTest.exe "
     "C:\\Users\\Trent\\Home\\src\\perfecthash\\data "
     "1 1 2 0\n"
 );
@@ -819,26 +819,26 @@ const STRING Usage = RTL_CONSTANT_STRING(
                                               10,                     \
                                               (PULONG)##Name##Id))) { \
         return PH_E_INVALID_##Upper##_ID;                             \
-    } else if (!IsValidPerfectHashTable##Name##Id(*##Name##Id)) {     \
+    } else if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {     \
         return PH_E_INVALID_##Upper##_ID;                             \
     }
 
 
 
-PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-    PerfectHashTableContextExtractSelfTestArgsFromArgvW;
+PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+    PerfectHashContextExtractSelfTestArgsFromArgvW;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextExtractSelfTestArgsFromArgvW(
-    PPERFECT_HASH_TABLE_CONTEXT Context,
+PerfectHashContextExtractSelfTestArgsFromArgvW(
+    PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
     LPWSTR *ArgvW,
     PUNICODE_STRING TestDataDirectory,
     PUNICODE_STRING OutputDirectory,
-    PPERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
-    PPERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    PPERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
+    PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PULONG MaximumConcurrency,
     PBOOLEAN PauseBeforeExit
     )
@@ -851,7 +851,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
         for which the arguments are to be extracted.
 
     NumberOfArguments - Supplies the number of elements in the ArgvW array.
@@ -1029,12 +1029,12 @@ Return Value:
     return S_OK;
 }
 
-PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW PerfectHashTableContextSelfTestArgvW;
+PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW PerfectHashContextSelfTestArgvW;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextSelfTestArgvW(
-    PPERFECT_HASH_TABLE_CONTEXT Context,
+PerfectHashContextSelfTestArgvW(
+    PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
     LPWSTR *ArgvW
     )
@@ -1047,7 +1047,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
         for which the arguments are to be extracted.
 
     NumberOfArguments - Supplies the number of elements in the ArgvW array.
@@ -1082,9 +1082,9 @@ Return Value:
     HRESULT Result;
     UNICODE_STRING TestDataDirectory = { 0 };
     UNICODE_STRING OutputDirectory = { 0 };
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId = 0;
-    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId = 0;
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId = 0;
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId = 0;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId = 0;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId = 0;
     ULONG MaximumConcurrency = 0;
     BOOLEAN PauseBeforeExit = FALSE;
 
@@ -1102,7 +1102,7 @@ Return Value:
                                                          &PauseBeforeExit);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashTableContextSelfTestArgvW, Result);
+        PH_ERROR(PerfectHashContextSelfTestArgvW, Result);
         return Result;
     }
 
@@ -1111,7 +1111,7 @@ Return Value:
                                                       MaximumConcurrency);
         if (FAILED(Result)) {
             Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
-            PH_ERROR(PerfectHashTableContextSelfTestArgvW, Result);
+            PH_ERROR(PerfectHashContextSelfTestArgvW, Result);
             return Result;
         }
     }

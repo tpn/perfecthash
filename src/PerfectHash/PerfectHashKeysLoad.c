@@ -4,22 +4,22 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableKeysLoad.c
+    PerfectHashKeysLoad.c
 
 Abstract:
 
-    This module implements the key load routine for PerfectHashTable component.
+    This module implements the key load routine for PerfectHash component.
 
 --*/
 
 #include "stdafx.h"
 
-PERFECT_HASH_TABLE_KEYS_LOAD PerfectHashTableKeysLoad;
+PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableKeysLoad(
-    PPERFECT_HASH_TABLE_KEYS Keys,
+PerfectHashKeysLoad(
+    PPERFECT_HASH_KEYS Keys,
     PCUNICODE_STRING Path
     )
 /*++
@@ -30,7 +30,7 @@ Routine Description:
 
 Arguments:
 
-    Keys - Supplies a pointer to the PERFECT_HASH_TABLE_KEYS structure for
+    Keys - Supplies a pointer to the PERFECT_HASH_KEYS structure for
         which the keys are to be loaded.
 
     Path - Supplies a pointer to a UNICODE_STRING structure that represents
@@ -121,7 +121,7 @@ Return Value:
     // Make sure the file is a multiple of our key size.
     //
 
-    if (FileInfo.EndOfFile.QuadPart % PERFECT_HASH_TABLE_KEY_SIZE_IN_BYTES) {
+    if (FileInfo.EndOfFile.QuadPart % PERFECT_HASH_KEY_SIZE_IN_BYTES) {
         Result = PH_E_KEYS_FILE_SIZE_NOT_MULTIPLE_OF_KEY_SIZE;
         goto Error;
     }

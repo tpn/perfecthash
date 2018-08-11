@@ -4,12 +4,12 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableContext.c
+    PerfectHashContext.c
 
 Abstract:
 
     This module implements the runtime context creation routine for the
-    PerfectHashTable component.  The context encapsulates threadpool resources
+    PerfectHash component.  The context encapsulates threadpool resources
     in order to support finding perfect hash table solutions in parallel.
 
     Routines are provided for context initialization and rundown, setting
@@ -56,7 +56,7 @@ TP_WORK_CALLBACK ErrorWorkCallback;
 TP_WORK_CALLBACK FinishedWorkCallback;
 TP_CLEANUP_GROUP_CANCEL_CALLBACK CleanupCallback;
 
-PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
+PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
 
 //
 // Main context creation routine.
@@ -64,8 +64,8 @@ PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextInitialize(
-    PPERFECT_HASH_TABLE_CONTEXT Context
+PerfectHashContextInitialize(
+    PPERFECT_HASH_CONTEXT Context
     )
 /*++
 
@@ -76,7 +76,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to a PERFECT_HASH_TABLE_CONTEXT structure
+    Context - Supplies a pointer to a PERFECT_HASH_CONTEXT structure
         for which initialization is to be performed.
 
 Return Value:
@@ -121,7 +121,7 @@ Return Value:
 
     Result = Context->Vtbl->CreateInstance(Context,
                                            NULL,
-                                           &IID_PERFECT_HASH_TABLE_RTL,
+                                           &IID_PERFECT_HASH_RTL,
                                            &Context->Rtl);
 
     if (FAILED(Result)) {
@@ -130,7 +130,7 @@ Return Value:
 
     Result = Context->Vtbl->CreateInstance(Context,
                                            NULL,
-                                           &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+                                           &IID_PERFECT_HASH_ALLOCATOR,
                                            &Context->Allocator);
 
     if (FAILED(Result)) {
@@ -508,12 +508,12 @@ End:
     return Result;
 }
 
-PERFECT_HASH_TABLE_CONTEXT_RUNDOWN PerfectHashTableContextRundown;
+PERFECT_HASH_CONTEXT_RUNDOWN PerfectHashContextRundown;
 
 _Use_decl_annotations_
 VOID
-PerfectHashTableContextRundown(
-    PPERFECT_HASH_TABLE_CONTEXT Context
+PerfectHashContextRundown(
+    PPERFECT_HASH_CONTEXT Context
     )
 /*++
 
@@ -523,7 +523,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT to rundown.
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT to rundown.
 
 Return Value:
 
@@ -637,12 +637,12 @@ Return Value:
     Rtl->Vtbl->Release(Rtl);
 }
 
-PERFECT_HASH_TABLE_CONTEXT_RESET PerfectHashTableContext;
+PERFECT_HASH_CONTEXT_RESET PerfectHashContext;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextReset(
-    PPERFECT_HASH_TABLE_CONTEXT Context
+PerfectHashContextReset(
+    PPERFECT_HASH_CONTEXT Context
     )
 /*++
 
@@ -653,7 +653,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to a PERFECT_HASH_TABLE_CONTEXT structure
+    Context - Supplies a pointer to a PERFECT_HASH_CONTEXT structure
         for which the reset is to be performed.
 
 Return Value:
@@ -670,9 +670,9 @@ Return Value:
         return E_POINTER;
     }
 
-    Context->AlgorithmId = PerfectHashTableNullAlgorithmId;
-    Context->HashFunctionId = PerfectHashTableNullHashFunctionId;
-    Context->MaskFunctionId = PerfectHashTableNullMaskFunctionId;
+    Context->AlgorithmId = PerfectHashNullAlgorithmId;
+    Context->HashFunctionId = PerfectHashNullHashFunctionId;
+    Context->MaskFunctionId = PerfectHashNullMaskFunctionId;
     Context->HighestDeletedEdgesCount = 0;
     Context->ResizeTableThreshold = 0;
     Context->ResizeLimit = 0;
@@ -734,7 +734,7 @@ Arguments:
     Instance - Supplies a pointer to the callback instance responsible for this
         threadpool callback invocation.
 
-    Ctx - Supplies a pointer to the owning PERFECT_HASH_TABLE_CONTEXT.
+    Ctx - Supplies a pointer to the owning PERFECT_HASH_CONTEXT.
 
     Work - Supplies a pointer to the TP_WORK object for this routine.
 
@@ -745,7 +745,7 @@ Return Value:
 --*/
 {
     PSLIST_ENTRY ListEntry;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     UNREFERENCED_PARAMETER(Work);
 
@@ -758,7 +758,7 @@ Return Value:
     // the main work list head.
     //
 
-    Context = (PPERFECT_HASH_TABLE_CONTEXT)Ctx;
+    Context = (PPERFECT_HASH_CONTEXT)Ctx;
     ListEntry = InterlockedPopEntrySList(&Context->MainWorkListHead);
 
     if (!ListEntry) {
@@ -806,7 +806,7 @@ Arguments:
     Instance - Supplies a pointer to the callback instance responsible for this
         threadpool callback invocation.
 
-    Ctx - Supplies a pointer to the owning PERFECT_HASH_TABLE_CONTEXT.
+    Ctx - Supplies a pointer to the owning PERFECT_HASH_CONTEXT.
 
     Work - Supplies a pointer to the TP_WORK object for this routine.
 
@@ -817,7 +817,7 @@ Return Value:
 --*/
 {
     PSLIST_ENTRY ListEntry;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     UNREFERENCED_PARAMETER(Work);
 
@@ -830,7 +830,7 @@ Return Value:
     // the file work list head.
     //
 
-    Context = (PPERFECT_HASH_TABLE_CONTEXT)Ctx;
+    Context = (PPERFECT_HASH_CONTEXT)Ctx;
     ListEntry = InterlockedPopEntrySList(&Context->FileWorkListHead);
 
     if (!ListEntry) {
@@ -875,7 +875,7 @@ Arguments:
     Instance - Supplies a pointer to the callback instance responsible for this
         threadpool callback invocation.
 
-    Ctx - Supplies a pointer to the owning PERFECT_HASH_TABLE_CONTEXT.
+    Ctx - Supplies a pointer to the owning PERFECT_HASH_CONTEXT.
 
     Work - Supplies a pointer to the TP_WORK object for this routine.
 
@@ -886,7 +886,7 @@ Return Value:
 --*/
 {
     BOOL CancelPending = TRUE;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     UNREFERENCED_PARAMETER(Instance);
     UNREFERENCED_PARAMETER(Work);
@@ -899,7 +899,7 @@ Return Value:
     // Cast the Ctx variable into a suitable type.
     //
 
-    Context = (PPERFECT_HASH_TABLE_CONTEXT)Ctx;
+    Context = (PPERFECT_HASH_CONTEXT)Ctx;
 
     //
     // Wait for the main work group members.  This should block until all
@@ -937,7 +937,7 @@ Arguments:
     Instance - Supplies a pointer to the callback instance responsible for this
         threadpool callback invocation.
 
-    Ctx - Supplies a pointer to the owning PERFECT_HASH_TABLE_CONTEXT.
+    Ctx - Supplies a pointer to the owning PERFECT_HASH_CONTEXT.
 
     Work - Supplies a pointer to the TP_WORK object for this routine.
 
@@ -975,7 +975,7 @@ Routine Description:
 
 Arguments:
 
-    ObjectContext - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT
+    ObjectContext - Supplies a pointer to the PERFECT_HASH_CONTEXT
         structure for which this cleanup was associated.
 
     CleanupContext - Optionally supplies per-cleanup context information at the
@@ -988,11 +988,11 @@ Return Value:
 
 --*/
 {
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     UNREFERENCED_PARAMETER(CleanupContext);
 
-    Context = (PPERFECT_HASH_TABLE_CONTEXT)ObjectContext;
+    Context = (PPERFECT_HASH_CONTEXT)ObjectContext;
 
     //
     // (This is placeholder scaffolding at the moment.  We don't do anything
@@ -1002,13 +1002,13 @@ Return Value:
     return;
 }
 
-PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
-    PerfectHashTableContextSetMaximumConcurrency;
+PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY
+    PerfectHashContextSetMaximumConcurrency;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextSetMaximumConcurrency(
-    PPERFECT_HASH_TABLE_CONTEXT Context,
+PerfectHashContextSetMaximumConcurrency(
+    PPERFECT_HASH_CONTEXT Context,
     ULONG MaximumConcurrency
     )
 /*++
@@ -1021,7 +1021,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
         for which the maximum concurrency is to be set.
 
     MaximumConcurrency - Supplies the maximum concurrency.
@@ -1050,7 +1050,7 @@ Return Value:
         return E_UNEXPECTED;
     }
 
-    if (!TryAcquirePerfectHashTableContextLockExclusive(Context)) {
+    if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
         return PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS;
     }
 
@@ -1068,18 +1068,18 @@ Return Value:
     }
 
 
-    ReleasePerfectHashTableContextLockExclusive(Context);
+    ReleasePerfectHashContextLockExclusive(Context);
 
     return Result;
 }
 
-PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
-    PerfectHashTableContextGetMaximumConcurrency;
+PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
+    PerfectHashContextGetMaximumConcurrency;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextGetMaximumConcurrency(
-    PPERFECT_HASH_TABLE_CONTEXT Context,
+PerfectHashContextGetMaximumConcurrency(
+    PPERFECT_HASH_CONTEXT Context,
     PULONG MaximumConcurrency
     )
 /*++
@@ -1092,7 +1092,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to the PERFECT_HASH_TABLE_CONTEXT instance
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
         for which the maximum concurrency is to be obtained.
 
     MaximumConcurrency - Supplies the address of a variable that will receive

@@ -8,13 +8,13 @@ Module Name:
 
 Abstract:
 
-    This is the precompiled header file for the PerfectHashTable's
+    This is the precompiled header file for the perfect hash library's
     self-test component.
 
 --*/
 
 #pragma once
 
-#include <PerfectHashTable.h>
+#include <PerfectHash.h>
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

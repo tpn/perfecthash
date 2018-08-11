@@ -4,12 +4,12 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTablePrime.h
+    PerfectHashPrimes.h
 
 Abstract:
 
-    This is the header file for the prime number module of the PerfectHashTable
-    component.  It declares structures and functions related to the handling of
+    This is the header file for the prime number module of the perfect hash
+    library.  It declares structures and functions related to the handling of
     prime numbers.
 
 --*/

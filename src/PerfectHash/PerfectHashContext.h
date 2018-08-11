@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableContext.h
+    PerfectHashContext.h
 
 Abstract:
 
-    This is the private header file for the PERFECT_HASH_TABLE_CONTEXT
+    This is the private header file for the PERFECT_HASH_CONTEXT
     component of the perfect hash table library.  It defines the structure,
     and function pointer typedefs for the initialize and rundown functions.
 
@@ -27,13 +27,13 @@ Abstract:
 
 typedef
 VOID
-(CALLBACK PERFECT_HASH_TABLE_MAIN_WORK_CALLBACK)(
+(CALLBACK PERFECT_HASH_MAIN_WORK_CALLBACK)(
     _In_ PTP_CALLBACK_INSTANCE Instance,
-    _In_ struct _PERFECT_HASH_TABLE_CONTEXT *Context,
+    _In_ struct _PERFECT_HASH_CONTEXT *Context,
     _In_ PSLIST_ENTRY ListEntry
     );
-typedef PERFECT_HASH_TABLE_MAIN_WORK_CALLBACK
-      *PPERFECT_HASH_TABLE_MAIN_WORK_CALLBACK;
+typedef PERFECT_HASH_MAIN_WORK_CALLBACK
+      *PPERFECT_HASH_MAIN_WORK_CALLBACK;
 
 //
 // Additionally, algorithms can register a callback routine for performing
@@ -43,22 +43,22 @@ typedef PERFECT_HASH_TABLE_MAIN_WORK_CALLBACK
 
 typedef
 VOID
-(CALLBACK PERFECT_HASH_TABLE_FILE_WORK_CALLBACK)(
+(CALLBACK PERFECT_HASH_FILE_WORK_CALLBACK)(
     _In_ PTP_CALLBACK_INSTANCE Instance,
-    _In_ struct _PERFECT_HASH_TABLE_CONTEXT *Context,
+    _In_ struct _PERFECT_HASH_CONTEXT *Context,
     _In_ PSLIST_ENTRY ListEntry
     );
-typedef PERFECT_HASH_TABLE_FILE_WORK_CALLBACK
-      *PPERFECT_HASH_TABLE_FILE_WORK_CALLBACK;
+typedef PERFECT_HASH_FILE_WORK_CALLBACK
+      *PPERFECT_HASH_FILE_WORK_CALLBACK;
 
 
 //
 // Define a runtime context to encapsulate threadpool resources.  This is
-// passed to CreatePerfectHashTable() and allows for algorithms to search for
+// passed to CreatePerfectHash() and allows for algorithms to search for
 // perfect hash solutions in parallel.
 //
 
-typedef union _PERFECT_HASH_TABLE_CONTEXT_STATE {
+typedef union _PERFECT_HASH_CONTEXT_STATE {
     struct {
 
         //
@@ -76,15 +76,15 @@ typedef union _PERFECT_HASH_TABLE_CONTEXT_STATE {
     };
     LONG AsLong;
     ULONG AsULong;
-} PERFECT_HASH_TABLE_CONTEXT_STATE;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_CONTEXT_STATE) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_CONTEXT_STATE *PPERFECT_HASH_TABLE_CONTEXT_STATE;
+} PERFECT_HASH_CONTEXT_STATE;
+C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_STATE) == sizeof(ULONG));
+typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
-DEFINE_UNUSED_FLAGS(PERFECT_HASH_TABLE_CONTEXT);
+DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
 
-typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
+typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
-    COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE_CONTEXT);
+    COMMON_COMPONENT_HEADER(PERFECT_HASH_CONTEXT);
 
     //
     // Slim read/write lock guarding the structure.
@@ -96,19 +96,19 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     // The algorithm in use.
     //
 
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId;
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId;
 
     //
     // The masking type in use.
     //
 
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
 
     //
     // The hash function in use.
     //
 
-    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
 
     //
     // Pad out to an 8-byte boundary.
@@ -159,7 +159,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
 
     //
     // Define the events used to communicate various internal state changes
-    // between the CreatePerfectHashTable() function and the algorithm-specific
+    // between the CreatePerfectHash() function and the algorithm-specific
     // creation routine.
     //
     // N.B. All of these events are created with the manual reset flag set to
@@ -198,7 +198,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     //
     // The following event is required to be set by an algorithm's creation
     // routine upon completion (regardless of success or failure).  This event
-    // is waited upon by the CreatePerfectHashTable() function, and thus, is
+    // is waited upon by the CreatePerfectHash() function, and thus, is
     // critical in synchronizing the execution of parallel perfect hash solution
     // finding.
     //
@@ -283,8 +283,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     //
     // Capture the time required to solve the perfect hash table.  This is not
     // a sum of all cycles consumed by all worker threads; it is the cycles
-    // consumed between the "main" thread (i.e. the CreatePerfectHashTable()
-    // impl routine (CreatePerfectHashTableImplChm01())) dispatching parallel
+    // consumed between the "main" thread (i.e. the CreatePerfectHash()
+    // impl routine (CreatePerfectHashImplChm01())) dispatching parallel
     // work to the threadpool, and a solution being found.
     //
 
@@ -373,7 +373,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     // for main thread work items in this next field.
     //
 
-    PPERFECT_HASH_TABLE_MAIN_WORK_CALLBACK MainWorkCallback;
+    PPERFECT_HASH_MAIN_WORK_CALLBACK MainWorkCallback;
 
     //
     // A threadpool for offloading file operations.
@@ -398,7 +398,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     // for file work threadpool work items in this next field.
     //
 
-    PPERFECT_HASH_TABLE_FILE_WORK_CALLBACK FileWorkCallback;
+    PPERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallback;
 
     //
     // If a threadpool worker thread finds a perfect hash solution, it will
@@ -411,7 +411,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     //
     // N.B. This cleanup only refers to the main graph solving thread pool.
     //      The file threadpool is managed by the implicit lifetime of the
-    //      algorithm's creation routine (e.g. CreatePerfectHashTableImplChm01).
+    //      algorithm's creation routine (e.g. CreatePerfectHashImplChm01).
     //
 
     TP_CALLBACK_ENVIRON FinishedCallbackEnv;
@@ -475,17 +475,17 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     // Backing vtbl.
     //
 
-    PERFECT_HASH_TABLE_CONTEXT_VTBL Interface;
+    PERFECT_HASH_CONTEXT_VTBL Interface;
 
     PVOID Padding3;
 
-} PERFECT_HASH_TABLE_CONTEXT;
-typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
+} PERFECT_HASH_CONTEXT;
+typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 
-#define TryAcquirePerfectHashTableContextLockExclusive(Context) \
+#define TryAcquirePerfectHashContextLockExclusive(Context) \
     TryAcquireSRWLockExclusive(&Context->Lock)
 
-#define ReleasePerfectHashTableContextLockExclusive(Context) \
+#define ReleasePerfectHashContextLockExclusive(Context) \
     ReleaseSRWLockExclusive(&Context->Lock)
 
 //
@@ -527,44 +527,44 @@ typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_CONTEXT_INITIALIZE)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+(NTAPI PERFECT_HASH_CONTEXT_INITIALIZE)(
+    _In_ PPERFECT_HASH_CONTEXT Context
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_INITIALIZE
-      *PPERFECT_HASH_TABLE_CONTEXT_INITIALIZE;
+typedef PERFECT_HASH_CONTEXT_INITIALIZE
+      *PPERFECT_HASH_CONTEXT_INITIALIZE;
 
 typedef
 VOID
-(NTAPI PERFECT_HASH_TABLE_CONTEXT_RUNDOWN)(
-    _In_ _Post_ptr_invalid_ PPERFECT_HASH_TABLE_CONTEXT Context
+(NTAPI PERFECT_HASH_CONTEXT_RUNDOWN)(
+    _In_ _Post_ptr_invalid_ PPERFECT_HASH_CONTEXT Context
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_RUNDOWN
-      *PPERFECT_HASH_TABLE_CONTEXT_RUNDOWN;
+typedef PERFECT_HASH_CONTEXT_RUNDOWN
+      *PPERFECT_HASH_CONTEXT_RUNDOWN;
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_CONTEXT_RESET)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+(NTAPI PERFECT_HASH_CONTEXT_RESET)(
+    _In_ PPERFECT_HASH_CONTEXT Context
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_RESET *PPERFECT_HASH_TABLE_CONTEXT_RESET;
+typedef PERFECT_HASH_CONTEXT_RESET *PPERFECT_HASH_CONTEXT_RESET;
 
 //
 // Public vtbl function decls.
 //
 
-extern PERFECT_HASH_TABLE_CONTEXT_INITIALIZE PerfectHashTableContextInitialize;
-extern PERFECT_HASH_TABLE_CONTEXT_RUNDOWN PerfectHashTableContextRundown;
-extern PERFECT_HASH_TABLE_CONTEXT_RESET PerfectHashTableContextReset;
-extern PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
-    PerfectHashTableContextSetMaximumConcurrency;
-extern PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
-    PerfectHashTableContextGetMaximumConcurrency;
-extern PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
-    PerfectHashTableContextCreateTable;
-extern PERFECT_HASH_TABLE_CONTEXT_SELF_TEST PerfectHashTableContextSelfTest;
-extern PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW
-    PerfectHashTableContextSelfTestArgvW;
-extern PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-    PerfectHashTableContextExtractSelfTestArgsFromArgvW;
+extern PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
+extern PERFECT_HASH_CONTEXT_RUNDOWN PerfectHashContextRundown;
+extern PERFECT_HASH_CONTEXT_RESET PerfectHashContextReset;
+extern PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY
+    PerfectHashContextSetMaximumConcurrency;
+extern PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
+    PerfectHashContextGetMaximumConcurrency;
+extern PERFECT_HASH_CONTEXT_CREATE_TABLE
+    PerfectHashContextCreateTable;
+extern PERFECT_HASH_CONTEXT_SELF_TEST PerfectHashContextSelfTest;
+extern PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
+    PerfectHashContextSelfTestArgvW;
+extern PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+    PerfectHashContextExtractSelfTestArgsFromArgvW;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

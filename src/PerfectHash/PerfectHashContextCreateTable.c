@@ -4,27 +4,27 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableContextCreateTable.c
+    PerfectHashContextCreateTable.c
 
 Abstract:
 
-    This module implements the creation routine for the PerfectHashTable
+    This module implements the creation routine for the PerfectHash
     component.
 
 --*/
 
 #include "stdafx.h"
 
-PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE PerfectHashTableContextCreateTable;
+PERFECT_HASH_CONTEXT_CREATE_TABLE PerfectHashContextCreateTable;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableContextCreateTable(
-    PPERFECT_HASH_TABLE_CONTEXT Context,
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
-    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    PPERFECT_HASH_TABLE_KEYS Keys,
+PerfectHashContextCreateTable(
+    PPERFECT_HASH_CONTEXT Context,
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    PPERFECT_HASH_KEYS Keys,
     PCUNICODE_STRING HashTablePath
     )
 /*++
@@ -36,7 +36,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to an initialized PERFECT_HASH_TABLE_CONTEXT
+    Context - Supplies a pointer to an initialized PERFECT_HASH_CONTEXT
         structure that can be used by the underlying algorithm in order to
         search for perfect hash solutions in parallel.
 
@@ -47,7 +47,7 @@ Arguments:
 
     HashFunctionId - Supplies the hash function to use.
 
-    Keys - Supplies a pointer to a PERFECT_HASH_TABLE_KEYS interface.
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS interface.
 
     HashTablePath - Optionally supplies a pointer to a UNICODE_STRING structure
         that represents the fully-qualified, NULL-terminated path of the backing
@@ -60,7 +60,7 @@ Return Value:
 
     If TRUE, the table will be persisted at the path described by for the
     HashTablePath parameter above.  This can be subsequently interacted with
-    once loaded via LoadPerfectHashTable().
+    once loaded via LoadPerfectHash().
 
 --*/
 {
@@ -119,15 +119,15 @@ Return Value:
 
     }
 
-    if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
+    if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         return E_INVALIDARG;
     }
 
-    if (!IsValidPerfectHashTableHashFunctionId(HashFunctionId)) {
+    if (!IsValidPerfectHashHashFunctionId(HashFunctionId)) {
         return E_INVALIDARG;
     }
 
-    if (!IsValidPerfectHashTableMaskFunctionId(MaskFunctionId)) {
+    if (!IsValidPerfectHashMaskFunctionId(MaskFunctionId)) {
         return E_INVALIDARG;
     }
 
@@ -146,15 +146,15 @@ Return Value:
         }
     }
 
-    if (!TryAcquirePerfectHashTableContextLockExclusive(Context)) {
+    if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
         return PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS;
     }
 
     if (Context->State.NeedsReset) {
-        Result = PerfectHashTableContextReset(Context);
+        Result = PerfectHashContextReset(Context);
         if (FAILED(Result)) {
-            PH_ERROR(PerfectHashTableContextReset, Result);
-            ReleasePerfectHashTableContextLockExclusive(Context);
+            PH_ERROR(PerfectHashContextReset, Result);
+            ReleasePerfectHashContextLockExclusive(Context);
             return E_FAIL;
         }
     }
@@ -167,7 +167,7 @@ Return Value:
 
     if (ARGUMENT_PRESENT(HashTablePath) &&
         !IsValidMinimumDirectoryNullTerminatedUnicodeString(HashTablePath)) {
-        ReleasePerfectHashTableContextLockExclusive(Context);
+        ReleasePerfectHashContextLockExclusive(Context);
         return E_INVALIDARG;
     }
 
@@ -196,7 +196,7 @@ Return Value:
         // No path has been provided by the caller, so we'll use the path of
         // the keys file with ".pht1" appended.  Perform a quick invariant check
         // first: maximum length should be 1 character (2 bytes) larger than
-        // length.  (This is handled in PerfectHashTableKeysLoad().)
+        // length.  (This is handled in PerfectHashKeysLoad().)
         //
 
         ASSERT(Keys->Path.Length + sizeof(Keys->Path.Buffer[0]) ==
@@ -279,7 +279,7 @@ Return Value:
 
     if (!BaseBuffer) {
         SYS_ERROR(HeapAlloc);
-        ReleasePerfectHashTableContextLockExclusive(Context);
+        ReleasePerfectHashContextLockExclusive(Context);
         return E_OUTOFMEMORY;
     }
 
@@ -624,7 +624,7 @@ End:
     //
     // N.B. We currently always delete the table if it is created successfully
     //      so as to ensure the only way to use a table is by loading one from
-    //      disk via PerfectHashTableLoad().
+    //      disk via PerfectHashLoad().
     //
 
     if (Table) {
@@ -643,7 +643,7 @@ End:
         Allocator->Vtbl->FreePointer(Allocator, &BaseBuffer);
     }
 
-    ReleasePerfectHashTableContextLockExclusive(Context);
+    ReleasePerfectHashContextLockExclusive(Context);
 
     return Result;
 }

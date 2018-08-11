@@ -44,20 +44,20 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{741C0AD4-D461-4E15-96E3-B6D30B7068EA}</ProjectGuid>
-    <RootNamespace>PerfectHashTableSelfTestExe</RootNamespace>
+    <RootNamespace>PerfectHashSelfTestExe</RootNamespace>
     <PlatformToolset>v141</PlatformToolset>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
-    <ProjectName>PerfectHashTableSelfTestExe</ProjectName>
+    <ProjectName>PerfectHashSelfTestExe</ProjectName>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetName>PerfectHashTableSelfTest</TargetName>
+    <TargetName>PerfectHashSelfTest</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
   </PropertyGroup>
-  <Import Project="..\PerfectHashTable.props" />
+  <Import Project="..\PerfectHash.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -83,7 +83,7 @@
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="PerfectHashTableSelfTestExe.c" />
+    <ClCompile Include="PerfectHashSelfTestExe.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

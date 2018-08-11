@@ -103,9 +103,9 @@
     <ClCompile Include="Chm_01.c" />
     <ClCompile Include="Component.c" />
     <ClCompile Include="dllmain.c" />
+    <ClCompile Include="PerfectHashContextSelfTest.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />
     <ClCompile Include="PerfectHashContext.c" />
-    <ClCompile Include="PerfectHashContextSelfTest.c" />
     <ClCompile Include="PerfectHashContextCreateTable.c" />
     <ClCompile Include="PerfectHashKeys.c" />
     <ClCompile Include="PerfectHashKeysLoad.c" />

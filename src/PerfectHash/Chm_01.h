@@ -239,7 +239,7 @@ typedef struct _GRAPH_INFO {
     // Pointer to the owning context.
     //
 
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     //
     // Base address of the entire graph allocation.
@@ -331,7 +331,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // decision to use the two masks above.
     //
 
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
 
     //
     // Duplicate the number of keys, as this is also frequently referenced.
@@ -427,7 +427,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // Duplicate the context pointer.  (This is also available from Info.)
     //
 
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
 
     //
     // Edges array.  The number of elements in this array is governed by the
@@ -605,8 +605,8 @@ typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
 // Declare the main work and file work callback functions.
 //
 
-PERFECT_HASH_TABLE_MAIN_WORK_CALLBACK ProcessGraphCallbackChm01;
-PERFECT_HASH_TABLE_FILE_WORK_CALLBACK FileWorkCallbackChm01;
+PERFECT_HASH_MAIN_WORK_CALLBACK ProcessGraphCallbackChm01;
+PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
 typedef
 VOID
@@ -633,7 +633,7 @@ typedef VERIFY_SOLVED_GRAPH *PVERIFY_SOLVED_GRAPH;
 typedef
 BOOLEAN
 (NTAPI SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+    _In_ PPERFECT_HASH_CONTEXT Context
     );
 typedef SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
       *PSHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH;

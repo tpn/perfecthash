@@ -12,8 +12,8 @@ Abstract:
 
 --*/
 
-#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
-#error PerfectHashTable's stdafx.h being included but _PERFECT_HASH_TABLE_INTERNAL_BUILD not set.
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+#error PerfectHash's stdafx.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
 #endif
 
 #pragma once
@@ -57,20 +57,21 @@ Abstract:
 #include <Windows.h>
 #include <Strsafe.h>
 
-#include <PerfectHashTable.h>
-#include <PerfectHashTableErrors.h>
+#include <PerfectHash.h>
+#include <PerfectHashErrors.h>
 
 #include "Component.h"
 #include "Rtl.h"
 #include "RtlOutput.h"
-#include "PerfectHashTableErrorHandling.h"
-#include "PerfectHashTableTls.h"
-#include "PerfectHashTableKeys.h"
-#include "PerfectHashTablePrime.h"
-#include "PerfectHashTableAllocator.h"
-#include "PerfectHashTableContext.h"
-#include "PerfectHashTablePrivate.h"
-#include "PerfectHashTableConstants.h"
+#include "PerfectHashTls.h"
+#include "PerfectHashKeys.h"
+#include "PerfectHashTable.h"
+#include "PerfectHashPrimes.h"
+#include "PerfectHashContext.h"
+#include "PerfectHashPrivate.h"
+#include "PerfectHashAllocator.h"
+#include "PerfectHashConstants.h"
+#include "PerfectHashErrorHandling.h"
 
 //
 // warning C4820: '<unnamed-tag>': '4' bytes padding added after
@@ -79,7 +80,7 @@ Abstract:
 
 #pragma warning(push)
 #pragma warning(disable: 4820)
-#include "PerfectHashTableErrors.dbg"
+#include "PerfectHashErrors.dbg"
 #pragma warning(pop)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

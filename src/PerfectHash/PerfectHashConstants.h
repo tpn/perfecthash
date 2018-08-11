@@ -4,19 +4,15 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableConstants.h
+    PerfectHashConstants.h
 
 Abstract:
 
-    This module declares constants related to the PerfectHashTable component.
+    This module declares constants related to the perfect hash library.
 
 --*/
 
 #pragma once
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include "stdafx.h"
 
@@ -37,14 +33,14 @@ extern const PCREATE_PERFECT_HASH_TABLE_IMPL CreationRoutines[];
 
 //
 // Declare an array of loader routines.  This is intended to be indexed by
-// the PERFECT_HASH_TABLE_ALGORITHM_ID enumeration.
+// the PERFECT_HASH_ALGORITHM_ID enumeration.
 //
 
 extern const PLOAD_PERFECT_HASH_TABLE_IMPL LoaderRoutines[];
 
 //
 // Declare an array of index routines.  This is intended to be indexed by
-// the PERFECT_HASH_TABLE_ALGORITHM_ID enumeration.
+// the PERFECT_HASH_ALGORITHM_ID enumeration.
 //
 
 extern const PPERFECT_HASH_TABLE_INDEX IndexRoutines[];
@@ -52,11 +48,12 @@ extern const PPERFECT_HASH_TABLE_INDEX IndexRoutines[];
 //
 // Declare an array of fast-index routines.  Unlike our other arrays that are
 // all indexed by enumeration IDs, this array captures <algorith, hash, mask,
-// func> tuples of supporting fast index routines.  The InitializeExtendedVtbl()
-// routine below is responsible for walking the array and determining if there
-// is an entry present for the requested IDs.  This approach has been selected
-// over a 3-dimensional array as there will only typically be a small number of
-// fast-index routines and maintaining a 3D array of mostly NULLs is cumbersome.
+// func> tuples of supporting fast index routines.  The inline method below
+// (CompletePerfectHashTableVtblInitialization()) is responsible for walking the
+// array and determining if there is an entry present for the requested IDs.
+// This approach has been selected over a 3-dimensional array as there will only
+// typically be a small number of fast-index routines and maintaining a 3D array
+// of mostly NULLs is cumbersome.
 //
 
 extern const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[];
@@ -64,7 +61,7 @@ extern const BYTE NumberOfFastIndexRoutines;
 
 //
 // Declare an array of hash routines.  This is intended to be indexed by
-// the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enumeration.
+// the PERFECT_HASH_HASH_FUNCTION_ID enumeration.
 //
 
 extern const PPERFECT_HASH_TABLE_HASH HashRoutines[];
@@ -101,9 +98,9 @@ CompletePerfectHashTableVtblInitialization(
     )
 {
     BYTE Index;
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId;
-    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId;
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId;
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
     PCPERFECT_HASH_TABLE_FAST_INDEX_TUPLE Tuple;
     PPERFECT_HASH_TABLE_VTBL Vtbl;
 
@@ -190,13 +187,12 @@ extern const BYTE NumberOfContextObjectPrefixes;
 //
 // Helper inline function for programmatically determining how many events
 // are present in the context based on the FirstEvent and LastEvent addresses.
-// Used by CreatePerfectHashTableContext() and DestroyPerfectHashTableContext().
 //
 
 FORCEINLINE
 BYTE
 GetNumberOfContextEvents(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+    _In_ PPERFECT_HASH_CONTEXT Context
     )
 {
     BYTE NumberOfEvents;
@@ -268,15 +264,11 @@ extern const IUNKNOWN_VTBL IUnknownInterface;
 extern const ICLASSFACTORY_VTBL IClassFactoryInterface;
 extern const ALLOCATOR_VTBL AllocatorInterface;
 extern const RTL_VTBL RtlInterface;
-extern const PERFECT_HASH_TABLE_KEYS_VTBL PerfectHashTableKeysInterface;
-extern const PERFECT_HASH_TABLE_CONTEXT_VTBL PerfectHashTableContextInterface;
+extern const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface;
+extern const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface;
 extern const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface;
 
 extern const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[];
 extern const PCOMPONENT_RUNDOWN ComponentRundownRoutines[];
-
-#ifdef __cplusplus
-}; // extern "C" {
-#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

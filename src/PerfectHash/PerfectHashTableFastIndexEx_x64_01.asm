@@ -14,7 +14,7 @@
 ;
 ;--
 
-include PerfectHashTable.inc
+include PerfectHash.inc
 
 ;
 ; Forward declaration of addresses we'll be patching.

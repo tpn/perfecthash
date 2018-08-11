@@ -8,7 +8,7 @@ Module Name:
 
 Abstract:
 
-    This is the main file for the PerfectHashTableSelfTest component..
+    This is the main file for the PerfectHashSelfTest component..
 
 --*/
 
@@ -29,14 +29,14 @@ mainCRTStartup(
     LPWSTR *ArgvW;
     LPWSTR CommandLineW;
     PICLASSFACTORY ClassFactory;
-    PPERFECT_HASH_TABLE_CONTEXT Context;
+    PPERFECT_HASH_CONTEXT Context;
     PICLASSFACTORY_CREATE_INSTANCE CreateInstance;
     INT NumberOfArguments = 0;
 
     CommandLineW = GetCommandLineW();
     ArgvW = CommandLineToArgvW(CommandLineW, &NumberOfArguments);
 
-    Result = PerfectHashTableLoadLibraryAndGetClassFactory(&ClassFactory);
+    Result = PerfectHashLoadLibraryAndGetClassFactory(&ClassFactory);
     if (FAILED(Result)) {
         ExitProcess(1);
     }
@@ -45,7 +45,7 @@ mainCRTStartup(
 
     Result = CreateInstance(ClassFactory,
                             NULL,
-                            &IID_PERFECT_HASH_TABLE_CONTEXT,
+                            &IID_PERFECT_HASH_CONTEXT,
                             &Context);
 
     if (FAILED(Result)) {

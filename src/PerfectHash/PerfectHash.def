@@ -1,4 +1,4 @@
-LIBRARY PerfectHashTable
+LIBRARY PerfectHash
 EXPORTS
-    PerfectHashTableDllGetClassObject
-    DllGetClassObject=PerfectHashTableDllGetClassObject PRIVATE
+    PerfectHashDllGetClassObject
+    DllGetClassObject=PerfectHashDllGetClassObject PRIVATE

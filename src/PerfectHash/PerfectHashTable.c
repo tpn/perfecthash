@@ -56,7 +56,7 @@ Return Value:
 
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
-                                         &IID_PERFECT_HASH_TABLE_RTL,
+                                         &IID_PERFECT_HASH_RTL,
                                          &Table->Rtl);
 
     if (FAILED(Result)) {
@@ -65,7 +65,7 @@ Return Value:
 
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
-                                         &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+                                         &IID_PERFECT_HASH_ALLOCATOR,
                                          &Table->Allocator);
 
     if (FAILED(Result)) {

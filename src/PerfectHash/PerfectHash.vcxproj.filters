@@ -46,9 +46,6 @@
     <ClCompile Include="PerfectHashTableDelete.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PerfectHashNames.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Component.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -65,9 +62,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RtlPrivilege.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="PerfectHashContextSelfTest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableLoad.c">
@@ -112,14 +106,14 @@
     <ClCompile Include="PerfectHashErrorHandling.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashTableNames.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashContextSelfTest.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PerfectHashTableConstants.h">
-      <Filter>Private Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PerfectHashTablePrivate.h">
-      <Filter>Private Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="targetver.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
@@ -162,6 +156,12 @@
     <ClInclude Include="PerfectHashErrorHandling.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PerfectHashConstants.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashTable.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">
@@ -183,5 +183,16 @@
     <ResourceCompile Include="PerfectHash.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="RtlCopyPages_x64.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="RtlFillPages_x64.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

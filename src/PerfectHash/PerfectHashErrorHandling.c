@@ -81,7 +81,7 @@ PerfectHashTablePrintError(
     LanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 
     Result2 = FormatMessageA(Flags,
-                             PerfectHashTableModule,
+                             PerfectHashModule,
                              Error,
                              LanguageId,
                              (PSTR)Buffer,

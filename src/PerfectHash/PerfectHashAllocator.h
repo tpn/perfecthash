@@ -4,13 +4,13 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableAllocator.h
+    PerfectHashAllocator.h
 
 Abstract:
 
     This is the private header file for the allocator component of the perfect
-    hash table library.  It defines the ALLOCATOR structure, and function
-    pointer typedefs for the initialize and rundown functions.
+    hash library.  It defines the ALLOCATOR structure, and function pointer
+    typedefs for the initialize and rundown functions.
 
 --*/
 

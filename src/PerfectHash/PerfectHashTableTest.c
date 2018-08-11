@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    TestPerfectHashTable.c
+    PerfectHashTableTest.c
 
 Abstract:
 
@@ -44,7 +44,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableTest(
     PPERFECT_HASH_TABLE Table,
-    PPERFECT_HASH_TABLE_KEYS Keys,
+    PPERFECT_HASH_KEYS Keys,
     BOOLEAN DebugBreakOnFailure
     )
 /*++

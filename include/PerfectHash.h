@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTable.h
+    PerfectHash.h
 
 Abstract:
 
-    This is the main public header file for the PerfectHashTable component.
+    This is the main public header file for the PerfectHash component.
     It defines structures and functions related to creating perfect hash
     tables, contexts, loading keys, testing and benchmarking.
 
@@ -99,26 +99,26 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 // Define an enumeration for identifying COM interfaces.
 //
 
-typedef enum _PERFECT_HASH_TABLE_INTERFACE_ID {
+typedef enum _PERFECT_HASH_INTERFACE_ID {
 
     //
     // Explicitly define a null ID to take the 0-index slot.  This makes enum
     // validation easier.
     //
 
-    PerfectHashTableNullInterfaceId             = 0,
+    PerfectHashNullInterfaceId             = 0,
 
     //
     // Begin valid interfaces.
     //
 
-    PerfectHashTableUnknownInterfaceId          = 1,
-    PerfectHashTableClassFactoryInterfaceId     = 2,
-    PerfectHashTableKeysInterfaceId             = 3,
-    PerfectHashTableContextInterfaceId          = 4,
-    PerfectHashTableInterfaceId                 = 5,
-    PerfectHashTableRtlInterfaceId              = 6,
-    PerfectHashTableAllocatorInterfaceId        = 7,
+    PerfectHashUnknownInterfaceId          = 1,
+    PerfectHashClassFactoryInterfaceId     = 2,
+    PerfectHashKeysInterfaceId             = 3,
+    PerfectHashContextInterfaceId          = 4,
+    PerfectHashInterfaceId                 = 5,
+    PerfectHashRtlInterfaceId              = 6,
+    PerfectHashAllocatorInterfaceId        = 7,
 
     //
     // End valid interfaces.
@@ -128,9 +128,9 @@ typedef enum _PERFECT_HASH_TABLE_INTERFACE_ID {
     // N.B. Keep the next value last.
     //
 
-    PerfectHashTableInvalidInterfaceId,
+    PerfectHashInvalidInterfaceId,
 
-} PERFECT_HASH_TABLE_INTERFACE_ID;
+} PERFECT_HASH_INTERFACE_ID;
 
 //
 // Provide a simple inline interface enum validation routine.
@@ -138,13 +138,13 @@ typedef enum _PERFECT_HASH_TABLE_INTERFACE_ID {
 
 FORCEINLINE
 BOOLEAN
-IsValidPerfectHashTableInterfaceId(
-    _In_ PERFECT_HASH_TABLE_INTERFACE_ID InterfaceId
+IsValidPerfectHashInterfaceId(
+    _In_ PERFECT_HASH_INTERFACE_ID InterfaceId
     )
 {
     return (
-        InterfaceId > PerfectHashTableNullInterfaceId &&
-        InterfaceId < PerfectHashTableInvalidInterfaceId
+        InterfaceId > PerfectHashNullInterfaceId &&
+        InterfaceId < PerfectHashInvalidInterfaceId
     );
 }
 
@@ -189,35 +189,35 @@ typedef GUID const *PCGUID;
 // IID_IUNKNOWN: 00000000-0000-0000-C000-000000000046
 //
 
-DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_IUNKNOWN, 0x00000000, 0x0000, 0x0000,
+DEFINE_GUID_EX(IID_PERFECT_HASH_IUNKNOWN, 0x00000000, 0x0000, 0x0000,
                0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
 
 //
 // IID_ICLASSFACTORY: 00000001-0000-0000-C000-000000000046
 //
 
-DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_ICLASSFACTORY, 0x00000001, 0x0000, 0x0000,
+DEFINE_GUID_EX(IID_PERFECT_HASH_ICLASSFACTORY, 0x00000001, 0x0000, 0x0000,
                0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
 
 //
-// CLSID_PERFECT_HASH_TABLE: 402045FD-72F4-4A05-902E-D22B7C1877B4
+// CLSID_PERFECT_HASH: 402045FD-72F4-4A05-902E-D22B7C1877B4
 //
 
-DEFINE_GUID_EX(CLSID_PERFECT_HASH_TABLE, 0x402045fd, 0x72f4, 0x4a05,
+DEFINE_GUID_EX(CLSID_PERFECT_HASH, 0x402045fd, 0x72f4, 0x4a05,
                0x90, 0x2e, 0xd2, 0x2b, 0x7c, 0x18, 0x77, 0xb4);
 
 //
-// IID_PERFECT_HASH_TABLE_KEYS: 7E43EBEA-8671-47BA-B844-760B7A9EA921
+// IID_PERFECT_HASH_KEYS: 7E43EBEA-8671-47BA-B844-760B7A9EA921
 //
 
-DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_KEYS, 0x7e43ebea, 0x8671, 0x47ba,
+DEFINE_GUID_EX(IID_PERFECT_HASH_KEYS, 0x7e43ebea, 0x8671, 0x47ba,
                0xb8, 0x44, 0x76, 0xb, 0x7a, 0x9e, 0xa9, 0x21);
 
 //
-// IID_PERFECT_HASH_TABLE_CONTEXT: D4B24571-99D7-44BA-8A27-63D8739F9B81
+// IID_PERFECT_HASH_CONTEXT: D4B24571-99D7-44BA-8A27-63D8739F9B81
 //
 
-DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_CONTEXT, 0xd4b24571, 0x99d7, 0x44ba,
+DEFINE_GUID_EX(IID_PERFECT_HASH_CONTEXT, 0xd4b24571, 0x99d7, 0x44ba,
                0x8a, 0x27, 0x63, 0xd8, 0x73, 0x9f, 0x9b, 0x81);
 
 //
@@ -228,17 +228,17 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE, 0xc265816f, 0xc6a9, 0x4b44,
                0xbc, 0xee, 0xec, 0x5a, 0x12, 0xab, 0xe1, 0xef);
 
 //
-// IID_PERFECT_HASH_TABLE_RTL: 9C05A3D6-BC30-45E6-BEA6-504FCC9243A8
+// IID_PERFECT_HASH_RTL: 9C05A3D6-BC30-45E6-BEA6-504FCC9243A8
 //
 
-DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_RTL, 0x9c05a3d6, 0xbc30, 0x45e6,
+DEFINE_GUID_EX(IID_PERFECT_HASH_RTL, 0x9c05a3d6, 0xbc30, 0x45e6,
                0xbe, 0xa6, 0x50, 0x4f, 0xcc, 0x92, 0x43, 0xa8);
 
 //
-// IID_PERFECT_HASH_TABLE_ALLOCATOR: F87564D2-B3C7-4CCA-9013-EB59C1E253B7
+// IID_PERFECT_HASH_ALLOCATOR: F87564D2-B3C7-4CCA-9013-EB59C1E253B7
 //
 
-DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_ALLOCATOR,
+DEFINE_GUID_EX(IID_PERFECT_HASH_ALLOCATOR,
                0xf87564d2, 0xb3c7, 0x4cca,
                0x90, 0x13, 0xeb, 0x59, 0xc1, 0xe2, 0x53, 0xb7);
 
@@ -246,51 +246,51 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_ALLOCATOR,
 // GUID array.
 //
 
-static const PCGUID PerfectHashTableInterfaceGuids[] = {
+static const PCGUID PerfectHashInterfaceGuids[] = {
 
     NULL,
 
-    &IID_PERFECT_HASH_TABLE_IUNKNOWN,
-    &IID_PERFECT_HASH_TABLE_ICLASSFACTORY,
-    &IID_PERFECT_HASH_TABLE_KEYS,
-    &IID_PERFECT_HASH_TABLE_CONTEXT,
+    &IID_PERFECT_HASH_IUNKNOWN,
+    &IID_PERFECT_HASH_ICLASSFACTORY,
+    &IID_PERFECT_HASH_KEYS,
+    &IID_PERFECT_HASH_CONTEXT,
     &IID_PERFECT_HASH_TABLE,
-    &IID_PERFECT_HASH_TABLE_RTL,
-    &IID_PERFECT_HASH_TABLE_ALLOCATOR,
+    &IID_PERFECT_HASH_RTL,
+    &IID_PERFECT_HASH_ALLOCATOR,
 
     NULL
 };
 
-static const BYTE NumberOfPerfectHashTableInterfaceGuids =
-    ARRAYSIZE(PerfectHashTableInterfaceGuids);
+static const BYTE NumberOfPerfectHashInterfaceGuids =
+    ARRAYSIZE(PerfectHashInterfaceGuids);
 
 //
 // Convert a GUID to an interface ID.
 //
 
 FORCEINLINE
-PERFECT_HASH_TABLE_INTERFACE_ID
-PerfectHashTableInterfaceGuidToId(
+PERFECT_HASH_INTERFACE_ID
+PerfectHashInterfaceGuidToId(
     _In_ REFIID Guid
     )
 {
     BYTE Index;
     BYTE Count;
-    PERFECT_HASH_TABLE_INTERFACE_ID Id = PerfectHashTableNullInterfaceId;
+    PERFECT_HASH_INTERFACE_ID Id = PerfectHashNullInterfaceId;
 
     if (!Guid) {
-        return PerfectHashTableInvalidInterfaceId;
+        return PerfectHashInvalidInterfaceId;
     }
 
     //
     // We start the index at 1 in order to skip the first NULL entry.
     //
 
-    Count = NumberOfPerfectHashTableInterfaceGuids;
+    Count = NumberOfPerfectHashInterfaceGuids;
 
     for (Index = 1; Index < Count; Index++) {
-        if (InlineIsEqualGUID(Guid, PerfectHashTableInterfaceGuids[Index])) {
-            Id = (PERFECT_HASH_TABLE_INTERFACE_ID)Index;
+        if (InlineIsEqualGUID(Guid, PerfectHashInterfaceGuids[Index])) {
+            Id = (PERFECT_HASH_INTERFACE_ID)Index;
             break;
         }
     }
@@ -362,7 +362,7 @@ typedef struct _IUNKNOWN_VTBL {
 } IUNKNOWN_VTBL;
 typedef IUNKNOWN_VTBL *PIUNKNOWN_VTBL;
 
-#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
 typedef struct _IUNKNOWN {
     PIUNKNOWN_VTBL Vtbl;
 } IUNKNOWN;
@@ -428,7 +428,7 @@ typedef struct _ICLASSFACTORY_VTBL {
 } ICLASSFACTORY_VTBL;
 typedef ICLASSFACTORY_VTBL *PICLASSFACTORY_VTBL;
 
-#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
 typedef struct _ICLASSFACTORY {
     PICLASSFACTORY_VTBL Vtbl;
 } ICLASSFACTORY;
@@ -538,7 +538,7 @@ typedef struct _ALLOCATOR_VTBL {
 } ALLOCATOR_VTBL;
 typedef ALLOCATOR_VTBL *PALLOCATOR_VTBL;
 
-#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
 typedef struct _ALLOCATOR {
     PALLOCATOR_VTBL Vtbl;
 } ALLOCATOR;
@@ -546,83 +546,83 @@ typedef ALLOCATOR *PALLOCATOR;
 #endif
 
 //
-// Define the PERFECT_HASH_TABLE_KEYS interface.
+// Define the PERFECT_HASH_KEYS interface.
 //
 
-typedef struct _PERFECT_HASH_TABLE_KEYS PERFECT_HASH_TABLE_KEYS;
-typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
+typedef struct _PERFECT_HASH_KEYS PERFECT_HASH_KEYS;
+typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
 
 typedef
 _Must_inspect_impl_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+(STDAPICALLTYPE PERFECT_HASH_KEYS_QUERY_INTERFACE)(
+    _In_ PPERFECT_HASH_KEYS Keys,
     _In_ REFIID InterfaceId,
     _COM_Outptr_ PVOID *Interface
     );
-typedef PERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE
-      *PPERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE;
+typedef PERFECT_HASH_KEYS_QUERY_INTERFACE
+      *PPERFECT_HASH_KEYS_QUERY_INTERFACE;
 
 typedef
 ULONG
-(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_ADD_REF)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys
+(STDAPICALLTYPE PERFECT_HASH_KEYS_ADD_REF)(
+    _In_ PPERFECT_HASH_KEYS Keys
     );
-typedef PERFECT_HASH_TABLE_KEYS_ADD_REF *PPERFECT_HASH_TABLE_KEYS_ADD_REF;
+typedef PERFECT_HASH_KEYS_ADD_REF *PPERFECT_HASH_KEYS_ADD_REF;
 
 typedef
 ULONG
-(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_RELEASE)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys
+(STDAPICALLTYPE PERFECT_HASH_KEYS_RELEASE)(
+    _In_ PPERFECT_HASH_KEYS Keys
     );
-typedef PERFECT_HASH_TABLE_KEYS_RELEASE *PPERFECT_HASH_TABLE_KEYS_RELEASE;
+typedef PERFECT_HASH_KEYS_RELEASE *PPERFECT_HASH_KEYS_RELEASE;
 
 typedef
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+(STDAPICALLTYPE PERFECT_HASH_KEYS_CREATE_INSTANCE)(
+    _In_ PPERFECT_HASH_KEYS Keys,
     _In_opt_ PIUNKNOWN UnknownOuter,
     _In_ REFIID InterfaceId,
     _COM_Outptr_ PVOID *Interface
     );
-typedef PERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE
-      *PPERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE;
+typedef PERFECT_HASH_KEYS_CREATE_INSTANCE
+      *PPERFECT_HASH_KEYS_CREATE_INSTANCE;
 
 typedef
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_LOCK_SERVER)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+(STDAPICALLTYPE PERFECT_HASH_KEYS_LOCK_SERVER)(
+    _In_ PPERFECT_HASH_KEYS Keys,
     _In_opt_ BOOL Lock
     );
-typedef PERFECT_HASH_TABLE_KEYS_LOCK_SERVER
-      *PPERFECT_HASH_TABLE_KEYS_LOCK_SERVER;
+typedef PERFECT_HASH_KEYS_LOCK_SERVER
+      *PPERFECT_HASH_KEYS_LOCK_SERVER;
 
 typedef
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_KEYS_LOAD)(
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+(STDAPICALLTYPE PERFECT_HASH_KEYS_LOAD)(
+    _In_ PPERFECT_HASH_KEYS Keys,
     _In_ PCUNICODE_STRING Path
     );
-typedef PERFECT_HASH_TABLE_KEYS_LOAD
-      *PPERFECT_HASH_TABLE_KEYS_LOAD;
+typedef PERFECT_HASH_KEYS_LOAD
+      *PPERFECT_HASH_KEYS_LOAD;
 
-typedef struct _PERFECT_HASH_TABLE_KEYS_VTBL {
-    PPERFECT_HASH_TABLE_KEYS_QUERY_INTERFACE QueryInterface;
-    PPERFECT_HASH_TABLE_KEYS_ADD_REF AddRef;
-    PPERFECT_HASH_TABLE_KEYS_RELEASE Release;
-    PPERFECT_HASH_TABLE_KEYS_CREATE_INSTANCE CreateInstance;
-    PPERFECT_HASH_TABLE_KEYS_LOCK_SERVER LockServer;
-    PPERFECT_HASH_TABLE_KEYS_LOAD Load;
-} PERFECT_HASH_TABLE_KEYS_VTBL;
-typedef PERFECT_HASH_TABLE_KEYS_VTBL *PPERFECT_HASH_TABLE_KEYS_VTBL;
+typedef struct _PERFECT_HASH_KEYS_VTBL {
+    PPERFECT_HASH_KEYS_QUERY_INTERFACE QueryInterface;
+    PPERFECT_HASH_KEYS_ADD_REF AddRef;
+    PPERFECT_HASH_KEYS_RELEASE Release;
+    PPERFECT_HASH_KEYS_CREATE_INSTANCE CreateInstance;
+    PPERFECT_HASH_KEYS_LOCK_SERVER LockServer;
+    PPERFECT_HASH_KEYS_LOAD Load;
+} PERFECT_HASH_KEYS_VTBL;
+typedef PERFECT_HASH_KEYS_VTBL *PPERFECT_HASH_KEYS_VTBL;
 
-#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
-typedef struct _PERFECT_HASH_TABLE_KEYS {
-    PPERFECT_HASH_TABLE_KEYS_VTBL Vtbl;
-} PERFECT_HASH_TABLE_KEYS;
-typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_KEYS {
+    PPERFECT_HASH_KEYS_VTBL Vtbl;
+} PERFECT_HASH_KEYS;
+typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
 #endif
 
 //
@@ -630,21 +630,21 @@ typedef PERFECT_HASH_TABLE_KEYS *PPERFECT_HASH_TABLE_KEYS;
 // use for creating the perfect hash table.
 //
 
-typedef enum _PERFECT_HASH_TABLE_ALGORITHM_ID {
+typedef enum _PERFECT_HASH_ALGORITHM_ID {
 
     //
     // Explicitly define a null algorithm to take the 0-index slot.
     // This makes enum validation easier.
     //
 
-    PerfectHashTableNullAlgorithmId         = 0,
+    PerfectHashNullAlgorithmId         = 0,
 
     //
     // Begin valid algorithms.
     //
 
-    PerfectHashTableChm01AlgorithmId        = 1,
-    PerfectHashTableDefaultAlgorithmId      = 1,
+    PerfectHashChm01AlgorithmId        = 1,
+    PerfectHashDefaultAlgorithmId      = 1,
 
     //
     // End valid algorithms.
@@ -654,10 +654,10 @@ typedef enum _PERFECT_HASH_TABLE_ALGORITHM_ID {
     // N.B. Keep the next value last.
     //
 
-    PerfectHashTableInvalidAlgorithmId,
+    PerfectHashInvalidAlgorithmId,
 
-} PERFECT_HASH_TABLE_ALGORITHM_ID;
-typedef PERFECT_HASH_TABLE_ALGORITHM_ID *PPERFECT_HASH_TABLE_ALGORITHM_ID;
+} PERFECT_HASH_ALGORITHM_ID;
+typedef PERFECT_HASH_ALGORITHM_ID *PPERFECT_HASH_ALGORITHM_ID;
 
 //
 // Provide a simple inline algorithm validation routine.
@@ -665,13 +665,13 @@ typedef PERFECT_HASH_TABLE_ALGORITHM_ID *PPERFECT_HASH_TABLE_ALGORITHM_ID;
 
 FORCEINLINE
 BOOLEAN
-IsValidPerfectHashTableAlgorithmId(
-    _In_ PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId
+IsValidPerfectHashAlgorithmId(
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId
     )
 {
     return (
-        AlgorithmId > PerfectHashTableNullAlgorithmId &&
-        AlgorithmId < PerfectHashTableInvalidAlgorithmId
+        AlgorithmId > PerfectHashNullAlgorithmId &&
+        AlgorithmId < PerfectHashInvalidAlgorithmId
     );
 }
 
@@ -679,23 +679,23 @@ IsValidPerfectHashTableAlgorithmId(
 // Define an enumeration for identifying which hash function variant to use.
 //
 
-typedef enum _PERFECT_HASH_TABLE_HASH_FUNCTION_ID {
+typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
 
     //
     // Explicitly define a null algorithm to take the 0-index slot.
     // This makes enum validation easier.
     //
 
-    PerfectHashTableNullHashFunctionId              = 0,
+    PerfectHashNullHashFunctionId              = 0,
 
     //
     // Begin valid hash functions.
     //
 
-    PerfectHashTableHashCrc32RotateFunctionId       = 1,
-    PerfectHashTableDefaultHashFunctionId           = 1,
+    PerfectHashHashCrc32RotateFunctionId       = 1,
+    PerfectHashDefaultHashFunctionId           = 1,
 
-    PerfectHashTableHashJenkinsFunctionId           = 2,
+    PerfectHashHashJenkinsFunctionId           = 2,
 
     //
     // N.B. The following three hash functions are purposefully terrible from
@@ -705,9 +705,9 @@ typedef enum _PERFECT_HASH_TABLE_HASH_FUNCTION_ID {
     //      seed, the hash quality is unimportant.
     //
 
-    PerfectHashTableHashRotateXorFunctionId         = 3,
-    PerfectHashTableHashAddSubXorFunctionId         = 4,
-    PerfectHashTableHashXorFunctionId               = 5,
+    PerfectHashHashRotateXorFunctionId         = 3,
+    PerfectHashHashAddSubXorFunctionId         = 4,
+    PerfectHashHashXorFunctionId               = 5,
 
     //
     // End valid hash functions.
@@ -717,11 +717,11 @@ typedef enum _PERFECT_HASH_TABLE_HASH_FUNCTION_ID {
     // N.B. Keep the next value last.
     //
 
-    PerfectHashTableInvalidHashFunctionId,
+    PerfectHashInvalidHashFunctionId,
 
-} PERFECT_HASH_TABLE_HASH_FUNCTION_ID;
-typedef PERFECT_HASH_TABLE_HASH_FUNCTION_ID
-      *PPERFECT_HASH_TABLE_HASH_FUNCTION_ID;
+} PERFECT_HASH_HASH_FUNCTION_ID;
+typedef PERFECT_HASH_HASH_FUNCTION_ID
+      *PPERFECT_HASH_HASH_FUNCTION_ID;
 
 //
 // Provide a simple inline hash function validation routine.
@@ -729,13 +729,13 @@ typedef PERFECT_HASH_TABLE_HASH_FUNCTION_ID
 
 FORCEINLINE
 BOOLEAN
-IsValidPerfectHashTableHashFunctionId(
-    _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId
+IsValidPerfectHashHashFunctionId(
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId
     )
 {
     return (
-        HashFunctionId > PerfectHashTableNullHashFunctionId &&
-        HashFunctionId < PerfectHashTableInvalidHashFunctionId
+        HashFunctionId > PerfectHashNullHashFunctionId &&
+        HashFunctionId < PerfectHashInvalidHashFunctionId
     );
 }
 
@@ -748,28 +748,28 @@ IsValidPerfectHashTableHashFunctionId(
 // by logical AND instructions, which are fast.
 //
 
-typedef enum _PERFECT_HASH_TABLE_MASK_FUNCTION_ID {
+typedef enum _PERFECT_HASH_MASK_FUNCTION_ID {
 
     //
     // Null masking type.
     //
 
-    PerfectHashTableNullMaskFunctionId          = 0,
+    PerfectHashNullMaskFunctionId          = 0,
 
     //
     // Being valid masking types.
     //
 
-    PerfectHashTableModulusMaskFunctionId       = 1,
+    PerfectHashModulusMaskFunctionId       = 1,
 
-    PerfectHashTableAndMaskFunctionId           = 2,
-    PerfectHashTableDefaultMaskFunctionId       = 2,
+    PerfectHashAndMaskFunctionId           = 2,
+    PerfectHashDefaultMaskFunctionId       = 2,
 
-    PerfectHashTableXorAndMaskFunctionId        = 3,
-    PerfectHashTableFoldAutoMaskFunctionId      = 4,
-    PerfectHashTableFoldOnceMaskFunctionId      = 5,
-    PerfectHashTableFoldTwiceMaskFunctionId     = 6,
-    PerfectHashTableFoldThriceMaskFunctionId    = 7,
+    PerfectHashXorAndMaskFunctionId        = 3,
+    PerfectHashFoldAutoMaskFunctionId      = 4,
+    PerfectHashFoldOnceMaskFunctionId      = 5,
+    PerfectHashFoldTwiceMaskFunctionId     = 6,
+    PerfectHashFoldThriceMaskFunctionId    = 7,
 
     //
     // End valid masking types.
@@ -779,12 +779,12 @@ typedef enum _PERFECT_HASH_TABLE_MASK_FUNCTION_ID {
     // N.B. Keep the next value last.
     //
 
-    PerfectHashTableInvalidMaskFunctionId,
+    PerfectHashInvalidMaskFunctionId,
 
 
-} PERFECT_HASH_TABLE_MASK_FUNCTION_ID;
-typedef PERFECT_HASH_TABLE_MASK_FUNCTION_ID
-      *PPERFECT_HASH_TABLE_MASK_FUNCTION_ID;
+} PERFECT_HASH_MASK_FUNCTION_ID;
+typedef PERFECT_HASH_MASK_FUNCTION_ID
+      *PPERFECT_HASH_MASK_FUNCTION_ID;
 
 //
 // Provide a simple inline masking type validation routine.
@@ -792,13 +792,13 @@ typedef PERFECT_HASH_TABLE_MASK_FUNCTION_ID
 
 FORCEINLINE
 BOOLEAN
-IsValidPerfectHashTableMaskFunctionId(
-    _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
+IsValidPerfectHashMaskFunctionId(
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId
     )
 {
     return (
-        MaskFunctionId > PerfectHashTableNullMaskFunctionId &&
-        MaskFunctionId < PerfectHashTableInvalidMaskFunctionId
+        MaskFunctionId > PerfectHashNullMaskFunctionId &&
+        MaskFunctionId < PerfectHashInvalidMaskFunctionId
     );
 }
 
@@ -811,30 +811,30 @@ IsValidPerfectHashTableMaskFunctionId(
 FORCEINLINE
 BOOLEAN
 IsModulusMasking(
-    _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId
     )
 {
-    return MaskFunctionId == PerfectHashTableModulusMaskFunctionId;
+    return MaskFunctionId == PerfectHashModulusMaskFunctionId;
 }
 
 //
 // Define an enumeration for identifying benchmark routines.
 //
 
-typedef enum _PERFECT_HASH_TABLE_BENCHMARK_FUNCTION_ID {
+typedef enum _PERFECT_HASH_BENCHMARK_FUNCTION_ID {
 
     //
     // Explicitly define a null algorithm to take the 0-index slot.
     // This makes enum validation easier.
     //
 
-    PerfectHashTableNullBenchmarkFunctionId         = 0,
+    PerfectHashNullBenchmarkFunctionId         = 0,
 
     //
     // Begin valid benchmarks.
     //
 
-    PerfectHashTableFastIndexBenchmarkFunctionId    = 1,
+    PerfectHashFastIndexBenchmarkFunctionId    = 1,
 
     //
     // End valid benchmarks.
@@ -844,9 +844,9 @@ typedef enum _PERFECT_HASH_TABLE_BENCHMARK_FUNCTION_ID {
     // N.B. Keep the next value last.
     //
 
-    PerfectHashTableInvalidBenchmarkFunctionId,
+    PerfectHashInvalidBenchmarkFunctionId,
 
-} PERFECT_HASH_TABLE_BENCHMARK_FUNCTION_ID;
+} PERFECT_HASH_BENCHMARK_FUNCTION_ID;
 
 //
 // Provide a simple inline benchmark validation routine.
@@ -854,13 +854,13 @@ typedef enum _PERFECT_HASH_TABLE_BENCHMARK_FUNCTION_ID {
 
 FORCEINLINE
 BOOLEAN
-IsValidPerfectHashTableBenchmarkFunctionId(
-    _In_ PERFECT_HASH_TABLE_BENCHMARK_FUNCTION_ID BenchmarkFunctionId
+IsValidPerfectHashBenchmarkFunctionId(
+    _In_ PERFECT_HASH_BENCHMARK_FUNCTION_ID BenchmarkFunctionId
     )
 {
     return (
-        BenchmarkFunctionId > PerfectHashTableNullBenchmarkFunctionId &&
-        BenchmarkFunctionId < PerfectHashTableInvalidBenchmarkFunctionId
+        BenchmarkFunctionId > PerfectHashNullBenchmarkFunctionId &&
+        BenchmarkFunctionId < PerfectHashInvalidBenchmarkFunctionId
     );
 }
 
@@ -868,21 +868,21 @@ IsValidPerfectHashTableBenchmarkFunctionId(
 // Define an enumeration for identifying benchmark types.
 //
 
-typedef enum _PERFECT_HASH_TABLE_BENCHMARK_TYPE {
+typedef enum _PERFECT_HASH_BENCHMARK_TYPE {
 
     //
     // Explicitly define a null benchmark type to take the 0-index slot.
     // This makes enum validation easier.
     //
 
-    PerfectHashTableNullBenchmarkType       = 0,
+    PerfectHashNullBenchmarkType       = 0,
 
     //
     // Begin valid benchmark typess.
     //
 
-    PerfectHashTableSingleBenchmarkType     = 1,
-    PerfectHashTableAllBenchmarkType        = 2,
+    PerfectHashSingleBenchmarkType     = 1,
+    PerfectHashAllBenchmarkType        = 2,
 
     //
     // End valid benchmark typess.
@@ -892,10 +892,10 @@ typedef enum _PERFECT_HASH_TABLE_BENCHMARK_TYPE {
     // N.B. Keep the next value last.
     //
 
-    PerfectHashTableInvalidBenchmarkType,
+    PerfectHashInvalidBenchmarkType,
 
-} PERFECT_HASH_TABLE_BENCHMARK_TYPE;
-typedef PERFECT_HASH_TABLE_BENCHMARK_TYPE *PPERFECT_HASH_TABLE_BENCHMARK_TYPE;
+} PERFECT_HASH_BENCHMARK_TYPE;
+typedef PERFECT_HASH_BENCHMARK_TYPE *PPERFECT_HASH_BENCHMARK_TYPE;
 
 //
 // Provide a simple inline benchmark type validation routine.
@@ -903,168 +903,168 @@ typedef PERFECT_HASH_TABLE_BENCHMARK_TYPE *PPERFECT_HASH_TABLE_BENCHMARK_TYPE;
 
 FORCEINLINE
 BOOLEAN
-IsValidPerfectHashTableBenchmarkType(
-    _In_ PERFECT_HASH_TABLE_BENCHMARK_TYPE BenchmarkType
+IsValidPerfectHashBenchmarkType(
+    _In_ PERFECT_HASH_BENCHMARK_TYPE BenchmarkType
     )
 {
     return (
-        BenchmarkType > PerfectHashTableNullBenchmarkType &&
-        BenchmarkType < PerfectHashTableInvalidBenchmarkType
+        BenchmarkType > PerfectHashNullBenchmarkType &&
+        BenchmarkType < PerfectHashInvalidBenchmarkType
     );
 }
 
 //
-// Define the PERFECT_HASH_TABLE_CONTEXT interface.  This interface is
+// Define the PERFECT_HASH_CONTEXT interface.  This interface is
 // responsible for encapsulating threadpool resources and allows perfect hash
 // table solutions to be found in parallel.  An instance of this interface must
 // be provided to the PERFECT_HASH_TABLE interface's creation routine.
 //
 
-typedef struct _PERFECT_HASH_TABLE_CONTEXT PERFECT_HASH_TABLE_CONTEXT;
-typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
+typedef struct _PERFECT_HASH_CONTEXT PERFECT_HASH_CONTEXT;
+typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 
 typedef
 _Must_inspect_impl_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_QUERY_INTERFACE)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ REFIID InterfaceId,
     _COM_Outptr_ PVOID *Interface
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE
-      *PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE;
+typedef PERFECT_HASH_CONTEXT_QUERY_INTERFACE
+      *PPERFECT_HASH_CONTEXT_QUERY_INTERFACE;
 
 typedef
 ULONG
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_ADD_REF)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_ADD_REF)(
+    _In_ PPERFECT_HASH_CONTEXT Context
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_ADD_REF *PPERFECT_HASH_TABLE_CONTEXT_ADD_REF;
+typedef PERFECT_HASH_CONTEXT_ADD_REF *PPERFECT_HASH_CONTEXT_ADD_REF;
 
 typedef
 ULONG
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_RELEASE)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_RELEASE)(
+    _In_ PPERFECT_HASH_CONTEXT Context
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_RELEASE *PPERFECT_HASH_TABLE_CONTEXT_RELEASE;
+typedef PERFECT_HASH_CONTEXT_RELEASE *PPERFECT_HASH_CONTEXT_RELEASE;
 
 typedef
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_CREATE_INSTANCE)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _In_opt_ PIUNKNOWN UnknownOuter,
     _In_ REFIID InterfaceId,
     _COM_Outptr_ PVOID *Interface
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE
-      *PPERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE;
+typedef PERFECT_HASH_CONTEXT_CREATE_INSTANCE
+      *PPERFECT_HASH_CONTEXT_CREATE_INSTANCE;
 
 typedef
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_LOCK_SERVER)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _In_opt_ BOOL Lock
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER
-      *PPERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER;
+typedef PERFECT_HASH_CONTEXT_LOCK_SERVER
+      *PPERFECT_HASH_CONTEXT_LOCK_SERVER;
 
 typedef
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ ULONG MaximumConcurrency
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY
-      *PPERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY;
+typedef PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY;
 
 typedef
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _Out_ PULONG MaximumConcurrency
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY
-      *PPERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY;
+typedef PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY;
 
 typedef
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
-    _In_ PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
-    _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
-    _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    _In_ PPERFECT_HASH_TABLE_KEYS Keys,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_CREATE_TABLE)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PPERFECT_HASH_KEYS Keys,
     _Inout_opt_ PCUNICODE_STRING HashTablePath
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE
-      *PPERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE;
+typedef PERFECT_HASH_CONTEXT_CREATE_TABLE
+      *PPERFECT_HASH_CONTEXT_CREATE_TABLE;
 
 typedef
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_SELF_TEST)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ PCUNICODE_STRING TestDataDirectory,
     _In_ PCUNICODE_STRING OutputDirectory,
-    _In_ PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
-    _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_SELF_TEST
-    *PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST;
+typedef PERFECT_HASH_CONTEXT_SELF_TEST
+    *PPERFECT_HASH_CONTEXT_SELF_TEST;
 
 typedef
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ ULONG NumberOfArguments,
     _In_ LPWSTR *ArgvW
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW
-    *PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW;
+typedef PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
+    *PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW;
 
 typedef
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW)(
-    _In_ PPERFECT_HASH_TABLE_CONTEXT Context,
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ ULONG NumberOfArguments,
     _In_ LPWSTR *ArgvW,
     _In_ PUNICODE_STRING TestDataDirectory,
     _In_ PUNICODE_STRING OutputDirectory,
-    _Inout_ PPERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
-    _Inout_ PPERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
-    _Inout_ PPERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
+    _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _Inout_ PULONG MaximumConcurrency,
     _Inout_ PBOOLEAN PauseBeforeExit
     );
-typedef PERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-      *PPERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
+typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+      *PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
 
 
-typedef struct _PERFECT_HASH_TABLE_CONTEXT_VTBL {
-    PPERFECT_HASH_TABLE_CONTEXT_QUERY_INTERFACE QueryInterface;
-    PPERFECT_HASH_TABLE_CONTEXT_ADD_REF AddRef;
-    PPERFECT_HASH_TABLE_CONTEXT_RELEASE Release;
-    PPERFECT_HASH_TABLE_CONTEXT_CREATE_INSTANCE CreateInstance;
-    PPERFECT_HASH_TABLE_CONTEXT_LOCK_SERVER LockServer;
-    PPERFECT_HASH_TABLE_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
-    PPERFECT_HASH_TABLE_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
-    PPERFECT_HASH_TABLE_CONTEXT_CREATE_TABLE CreateTable;
-    PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST SelfTest;
-    PPERFECT_HASH_TABLE_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
-    PPERFECT_HASH_TABLE_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
+typedef struct _PERFECT_HASH_CONTEXT_VTBL {
+    PPERFECT_HASH_CONTEXT_QUERY_INTERFACE QueryInterface;
+    PPERFECT_HASH_CONTEXT_ADD_REF AddRef;
+    PPERFECT_HASH_CONTEXT_RELEASE Release;
+    PPERFECT_HASH_CONTEXT_CREATE_INSTANCE CreateInstance;
+    PPERFECT_HASH_CONTEXT_LOCK_SERVER LockServer;
+    PPERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
+    PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
+    PPERFECT_HASH_CONTEXT_CREATE_TABLE CreateTable;
+    PPERFECT_HASH_CONTEXT_SELF_TEST SelfTest;
+    PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
+    PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
         ExtractSelfTestArgsFromArgvW;
-} PERFECT_HASH_TABLE_CONTEXT_VTBL;
-typedef PERFECT_HASH_TABLE_CONTEXT_VTBL *PPERFECT_HASH_TABLE_CONTEXT_VTBL;
+} PERFECT_HASH_CONTEXT_VTBL;
+typedef PERFECT_HASH_CONTEXT_VTBL *PPERFECT_HASH_CONTEXT_VTBL;
 
-#ifndef _PERFECT_HASH_TABLE_INTERNAL_BUILD
-typedef struct _PERFECT_HASH_TABLE_CONTEXT {
-    PPERFECT_HASH_TABLE_CONTEXT_VTBL Vtbl;
-} PERFECT_HASH_TABLE_CONTEXT;
-typedef PERFECT_HASH_TABLE_CONTEXT *PPERFECT_HASH_TABLE_CONTEXT;
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_CONTEXT {
+    PPERFECT_HASH_CONTEXT_VTBL Vtbl;
+} PERFECT_HASH_CONTEXT;
+typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 #endif
 
 //
@@ -1124,7 +1124,7 @@ HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_LOAD)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ PCUNICODE_STRING Path,
-    _In_opt_ PPERFECT_HASH_TABLE_KEYS Keys
+    _In_opt_ PPERFECT_HASH_KEYS Keys
     );
 typedef PERFECT_HASH_TABLE_LOAD *PPERFECT_HASH_TABLE_LOAD;
 
@@ -1133,7 +1133,7 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_TEST)(
     _In_ PPERFECT_HASH_TABLE Table,
-    _In_opt_ PPERFECT_HASH_TABLE_KEYS Keys,
+    _In_opt_ PPERFECT_HASH_KEYS Keys,
     _In_opt_ BOOLEAN DebugBreakOnFailure
     );
 typedef PERFECT_HASH_TABLE_TEST *PPERFECT_HASH_TABLE_TEST;
@@ -1281,7 +1281,7 @@ typedef
 _Success_(return != 0)
 BOOLEAN
 (NTAPI GET_PERFECT_HASH_TABLE_ALGORITHM_NAME)(
-    _In_ PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _Out_ PCUNICODE_STRING *Name
     );
 typedef GET_PERFECT_HASH_TABLE_ALGORITHM_NAME
@@ -1291,7 +1291,7 @@ typedef
 _Success_(return != 0)
 BOOLEAN
 (NTAPI GET_PERFECT_HASH_TABLE_HASH_FUNCTION_NAME)(
-    _In_ PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _Out_ PCUNICODE_STRING *Name
     );
 typedef GET_PERFECT_HASH_TABLE_HASH_FUNCTION_NAME
@@ -1301,7 +1301,7 @@ typedef
 _Success_(return != 0)
 BOOLEAN
 (NTAPI GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME)(
-    _In_ PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _Out_ PCUNICODE_STRING *Name
     );
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
@@ -1354,14 +1354,14 @@ extern __SECURITY_INIT_COOKIE __security_init_cookie;
 FORCEINLINE
 _Success_(return >= 0)
 HRESULT
-PerfectHashTableLoadLibraryAndGetClassFactory(
+PerfectHashLoadLibraryAndGetClassFactory(
     _Out_ PICLASSFACTORY *ClassFactoryPointer
     )
 /*++
 
 Routine Description:
 
-    This is a simple helper routine that loads the PerfectHashTable.dll library
+    This is a simple helper routine that loads the PerfectHash.dll library
     and obtains an IClassFactory interface.  It is useful for using the library
     without needing any underlying system COM support (e.g. CoCreateInstance).
 
@@ -1382,12 +1382,12 @@ Return Value:
     PDLL_GET_CLASS_OBJECT PhDllGetClassObject;
     PICLASSFACTORY ClassFactory;
 
-    Module = LoadLibraryA("PerfectHashTable.dll");
+    Module = LoadLibraryA("PerfectHash.dll");
     if (!Module) {
         return E_FAIL;
     }
 
-    Proc = GetProcAddress(Module, "PerfectHashTableDllGetClassObject");
+    Proc = GetProcAddress(Module, "PerfectHashDllGetClassObject");
     if (!Proc) {
         FreeLibrary(Module);
         return E_UNEXPECTED;
@@ -1395,8 +1395,8 @@ Return Value:
 
     PhDllGetClassObject = (PDLL_GET_CLASS_OBJECT)Proc;
 
-    Result = PhDllGetClassObject(&CLSID_PERFECT_HASH_TABLE,
-                                 &IID_PERFECT_HASH_TABLE_ICLASSFACTORY,
+    Result = PhDllGetClassObject(&CLSID_PERFECT_HASH,
+                                 &IID_PERFECT_HASH_ICLASSFACTORY,
                                  &ClassFactory);
 
     if (FAILED(Result)) {

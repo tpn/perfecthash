@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTablePrime.c
+    PerfectHashPrimes.c
 
 Abstract:
 

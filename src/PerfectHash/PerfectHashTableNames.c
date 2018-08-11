@@ -20,7 +20,7 @@ GET_PERFECT_HASH_TABLE_ALGORITHM_NAME GetPerfectHashTableAlgorithmName;
 _Use_decl_annotations_
 BOOLEAN
 GetPerfectHashTableAlgorithmName(
-    PERFECT_HASH_TABLE_ALGORITHM_ID AlgorithmId,
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PCUNICODE_STRING *Name
     )
 /*++
@@ -52,7 +52,7 @@ Return Value:
         return FALSE;
     }
 
-    if (!IsValidPerfectHashTableAlgorithmId(AlgorithmId)) {
+    if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         *Name = NULL;
         return FALSE;
     }
@@ -70,7 +70,7 @@ GET_PERFECT_HASH_TABLE_HASH_FUNCTION_NAME GetPerfectHashTableHashFunctionName;
 _Use_decl_annotations_
 BOOLEAN
 GetPerfectHashTableHashFunctionName(
-    PERFECT_HASH_TABLE_HASH_FUNCTION_ID HashFunctionId,
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PCUNICODE_STRING *Name
     )
 /*++
@@ -102,7 +102,7 @@ Return Value:
         return FALSE;
     }
 
-    if (!IsValidPerfectHashTableHashFunctionId(HashFunctionId)) {
+    if (!IsValidPerfectHashHashFunctionId(HashFunctionId)) {
         *Name = NULL;
         return FALSE;
     }
@@ -120,7 +120,7 @@ GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME GetPerfectHashTableMaskFunctionName;
 _Use_decl_annotations_
 BOOLEAN
 GetPerfectHashTableMaskFunctionName(
-    PERFECT_HASH_TABLE_MASK_FUNCTION_ID MaskFunctionId,
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PCUNICODE_STRING *Name
     )
 /*++
@@ -152,7 +152,7 @@ Return Value:
         return FALSE;
     }
 
-    if (!IsValidPerfectHashTableMaskFunctionId(MaskFunctionId)) {
+    if (!IsValidPerfectHashMaskFunctionId(MaskFunctionId)) {
         *Name = NULL;
         return FALSE;
     }

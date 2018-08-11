@@ -4,11 +4,11 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableTls.c
+    PerfectHashTls.c
 
 Abstract:
 
-    This module provides TLS glue to the PerfectHashTable component.
+    This module provides TLS glue to the perfect hash library.
 
 --*/
 
@@ -18,13 +18,13 @@ Abstract:
 // Our TLS index.  Assigned at PROCESS_ATTACH, free'd at PROCESS_DETACH.
 //
 
-ULONG PerfectHashTableTlsIndex;
+ULONG PerfectHashTlsIndex;
 
-PERFECT_HASH_TABLE_TLS_FUNCTION PerfectHashTableTlsProcessAttach;
+PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessAttach;
 
 _Use_decl_annotations_
 BOOLEAN
-PerfectHashTableTlsProcessAttach(
+PerfectHashTlsProcessAttach(
     HMODULE Module,
     ULONG   Reason,
     LPVOID  Reserved
@@ -34,20 +34,20 @@ PerfectHashTableTlsProcessAttach(
     UNREFERENCED_PARAMETER(Reason);
     UNREFERENCED_PARAMETER(Reserved);
 
-    PerfectHashTableTlsIndex = TlsAlloc();
+    PerfectHashTlsIndex = TlsAlloc();
 
-    if (PerfectHashTableTlsIndex == TLS_OUT_OF_INDEXES) {
+    if (PerfectHashTlsIndex == TLS_OUT_OF_INDEXES) {
         return FALSE;
     }
 
     return TRUE;
 }
 
-PERFECT_HASH_TABLE_TLS_FUNCTION PerfectHashTableTlsProcessDetach;
+PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessDetach;
 
 _Use_decl_annotations_
 BOOLEAN
-PerfectHashTableTlsProcessDetach(
+PerfectHashTlsProcessDetach(
     HMODULE Module,
     ULONG   Reason,
     LPVOID  Reserved
@@ -64,11 +64,11 @@ PerfectHashTableTlsProcessDetach(
         goto End;
     }
 
-    if (PerfectHashTableTlsIndex == TLS_OUT_OF_INDEXES) {
+    if (PerfectHashTlsIndex == TLS_OUT_OF_INDEXES) {
         goto End;
     }
 
-    if (!TlsFree(PerfectHashTableTlsIndex)) {
+    if (!TlsFree(PerfectHashTlsIndex)) {
 
         //
         // Can't do anything here.
@@ -92,30 +92,30 @@ End:
 // TLS Set/Get Context functions.
 //
 
-PERFECT_HASH_TABLE_TLS_SET_CONTEXT PerfectHashTableTlsSetContext;
+PERFECT_HASH_TLS_SET_CONTEXT PerfectHashTlsSetContext;
 
 _Use_decl_annotations_
 BOOL
-PerfectHashTableTlsSetContext(
-    PPERFECT_HASH_TABLE_TLS_CONTEXT Context
+PerfectHashTlsSetContext(
+    PPERFECT_HASH_TLS_CONTEXT Context
     )
 {
-    return TlsSetValue(PerfectHashTableTlsIndex, Context);
+    return TlsSetValue(PerfectHashTlsIndex, Context);
 }
 
-PERFECT_HASH_TABLE_TLS_GET_CONTEXT PerfectHashTableTlsGetContext;
+PERFECT_HASH_TLS_GET_CONTEXT PerfectHashTlsGetContext;
 
 _Use_decl_annotations_
-PPERFECT_HASH_TABLE_TLS_CONTEXT
-PerfectHashTableTlsGetContext(
+PPERFECT_HASH_TLS_CONTEXT
+PerfectHashTlsGetContext(
     VOID
     )
 {
     PVOID Value;
 
-    Value = TlsGetValue(PerfectHashTableTlsIndex);
+    Value = TlsGetValue(PerfectHashTlsIndex);
 
-    return (PPERFECT_HASH_TABLE_TLS_CONTEXT)Value;
+    return (PPERFECT_HASH_TLS_CONTEXT)Value;
 }
 
 
