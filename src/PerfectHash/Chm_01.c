@@ -70,8 +70,8 @@ Return Value:
     PHANDLE Event;
     HRESULT Result;
     USHORT NumberOfGraphs;
-    USHORT NumberOfPagesPerGraph;
     USHORT NumberOfGuardPages;
+    ULONG NumberOfPagesPerGraph;
     ULONG TotalNumberOfPages;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
@@ -496,7 +496,7 @@ RetryWithLargerTableSize:
     PageSize = PAGE_SIZE;
     PageShift = (USHORT)TrailingZeros(PageSize);
     NumberOfGraphs = (USHORT)Context->MaximumConcurrency;
-    NumberOfPagesPerGraph = ROUND_TO_PAGES(AllocSize.LowPart) >> PageShift;
+    NumberOfPagesPerGraph = BYTES_TO_PAGES(AllocSize.LowPart);
     NumberOfGuardPages = (USHORT)Context->MaximumConcurrency;
     TotalNumberOfPages = (
         (NumberOfGraphs * NumberOfPagesPerGraph) +

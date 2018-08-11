@@ -159,6 +159,12 @@ typedef const WCHAR *PCWCHAR;
 )
 #endif
 
+#ifndef ALIGN_UP_LARGE_PAGE
+#define ALIGN_UP_LARGE_PAGE(Address) (       \
+    ALIGN_UP(Address, GetLargePageMinimum()) \
+)
+#endif
+
 #ifndef ALIGN_DOWN_POINTER
 #define ALIGN_DOWN_POINTER(Address) (ALIGN_DOWN(Address, sizeof(ULONG_PTR)))
 #endif

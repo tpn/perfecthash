@@ -656,6 +656,13 @@ Return Value:
         WIDE_OUTPUT_INT(WideOutput, Table->MaskFunctionId);
         WIDE_OUTPUT_RAW(WideOutput, L").\n");
 
+        WIDE_OUTPUT_RAW(WideOutput, L"Keys backed by large pages: ");
+        if (Keys->Flags.MappedWithLargePages) {
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &Yes);
+        } else {
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &No);
+        }
+
         WIDE_OUTPUT_RAW(WideOutput, L"Table data backed by large pages: ");
         if (Table->Flags.TableDataUsesLargePages) {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &Yes);

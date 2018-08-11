@@ -126,6 +126,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     };
 
     //
+    // If we were able to allocate a large page buffer of sufficient size,
+    // BaseAddress above will point to it, and the following variable will
+    // capture the original mapped address.
+    //
+
+    PVOID MappedAddress;
+
+    //
     // If a table is loaded successfully, an array will be allocated for storing
     // values (as part of the Insert()/Lookup() API), the base address for which
     // is captured by the next field.
@@ -143,16 +151,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     PRTL Rtl;
 
     //
-    // Generic singly-linked list entry.
-    //
-
-    SLIST_ENTRY ListEntry;
-
-    //
     // Pointer to an initialized ALLOCATOR structure.
     //
 
     PALLOCATOR Allocator;
+
+    //
+    // Generic singly-linked list entry.
+    //
+
+    SLIST_ENTRY ListEntry;
 
     //
     // Capture the number of elements in the underlying perfect hash table.
@@ -309,8 +317,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     PERFECT_HASH_TABLE_VTBL Interface;
-
-    PVOID Padding3;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;

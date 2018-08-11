@@ -169,6 +169,26 @@ Return Value:
     // Clean up any resources that are still active.
     //
 
+    if (Table->MappedAddress) {
+
+        //
+        // If MappedAddress is non-NULL, BaseAddress is actually our
+        // large page address which needs to be freed with VirtualFree().
+        //
+
+        ASSERT(Table->Flags.TableDataUsesLargePages);
+        if (!VirtualFree(Table->BaseAddress, 0, MEM_RELEASE)) {
+            SYS_ERROR(VirtualFree);
+        }
+
+        //
+        // Switch the base address back so it's unmapped correctly below.
+        //
+
+        Table->BaseAddress = Table->MappedAddress;
+        Table->MappedAddress = NULL;
+    }
+
     if (Table->BaseAddress) {
         if (!UnmapViewOfFile(Table->BaseAddress)) {
             SYS_ERROR(UnmapViewOfFile);

@@ -57,6 +57,8 @@ Return Value:
     ULONG ShareMode;
     HRESULT Result = S_OK;
     PVOID BaseAddress;
+    PVOID LargePageAddress;
+    ULONG_PTR LargePageAllocSize;
     HANDLE FileHandle;
     HANDLE MappingHandle;
     PALLOCATOR Allocator = NULL;
@@ -614,6 +616,51 @@ Return Value:
 
         SYS_ERROR(MapViewOfFile);
         goto Error;
+    }
+
+    //
+    // Attempt a large page allocation to contain the table data buffer.
+    //
+
+    LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
+    LargePageAddress = VirtualAlloc(NULL,
+                                    LargePageAllocSize,
+                                    MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
+                                    PAGE_READWRITE);
+
+    if (LargePageAddress) {
+        ULONG_PTR NumberOfPages;
+
+        Table->Flags.TableDataUsesLargePages = TRUE;
+        Table->MappedAddress = Table->BaseAddress;
+        Table->BaseAddress = LargePageAddress;
+
+        //
+        // We can use the allocation size here to capture the appropriate
+        // number of pages that are mapped and accessible.
+        //
+
+        NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
+
+        Rtl->Vtbl->CopyPages(Rtl,
+                             LargePageAddress,
+                             BaseAddress,
+                             (ULONG)NumberOfPages);
+
+#if 0
+        {
+            ULONGLONG TotalBytes;
+            ULONGLONG MatchingBytes;
+
+            TotalBytes = (ULONGLONG)FileInfo.AllocationSize.QuadPart;
+            MatchingBytes = Rtl->RtlCompareMemory(BaseAddress,
+                                                  LargePageAddress,
+                                                  TotalBytes);
+
+            ASSERT(MatchingBytes == TotalBytes);
+        }
+#endif
+
     }
 
     //

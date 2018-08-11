@@ -65,11 +65,13 @@ Return Value:
     HRESULT Result = S_OK;
     PALLOCATOR Allocator;
     PVOID BaseAddress = NULL;
+    PVOID LargePageAddress = NULL;
     HANDLE FileHandle = NULL;
     HANDLE MappingHandle = NULL;
     LARGE_INTEGER AllocSize;
     LARGE_INTEGER NumberOfElements;
     FILE_STANDARD_INFO FileInfo;
+    ULONG_PTR LargePageAllocSize;
 
     //
     // Validate arguments.
@@ -102,6 +104,36 @@ Return Value:
 
     Rtl = Keys->Rtl;
     Allocator = Keys->Allocator;
+
+    //
+    // Calculate the size required for a copy of the Path's underlying
+    // unicode string buffer.
+    //
+
+    AllocSize.QuadPart = Path->Length + sizeof(Path->Buffer[0]);
+
+    //
+    // Sanity check our size.
+    //
+
+    ASSERT(!AllocSize.HighPart);
+
+    //
+    // Proceed with allocation.
+    //
+
+    Buffer = (PCHAR)(
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            AllocSize.LowPart
+        )
+    );
+
+    if (!Buffer) {
+        SYS_ERROR(HeapAlloc);
+        goto Error;
+    }
 
     //
     // Open the file, create a file mapping, then map it into memory.
@@ -189,43 +221,44 @@ Return Value:
     }
 
     //
-    // The file has been mapped successfully.  Calculate the size required for
-    // a copy of the Path's underlying unicode string buffer.
-    //
-
-    AllocSize.QuadPart = Path->Length + sizeof(Path->Buffer[0]);
-
-    //
-    // Sanity check our size.
-    //
-
-    ASSERT(!AllocSize.HighPart);
-
-    //
-    // Proceed with allocation.
-    //
-
-    Buffer = (PCHAR)(
-        Allocator->Vtbl->Calloc(
-            Allocator,
-            1,
-            AllocSize.LowPart
-        )
-    );
-
-    if (!Buffer) {
-        SYS_ERROR(HeapAlloc);
-        goto Error;
-    }
-
-    //
-    // Fill out the main structure details.
+    // The file has been mapped successfully.  Fill out the main structure
+    // details.
     //
 
     Keys->FileHandle = FileHandle;
     Keys->MappingHandle = MappingHandle;
     Keys->BaseAddress = BaseAddress;
     Keys->NumberOfElements.QuadPart = NumberOfElements.QuadPart;
+
+    //
+    // Attempt a large page allocation to contain the keys buffer.
+    //
+
+    LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
+    LargePageAddress = VirtualAlloc(NULL,
+                                    LargePageAllocSize,
+                                    MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
+                                    PAGE_READWRITE);
+
+    if (LargePageAddress) {
+        ULONG_PTR NumberOfPages;
+
+        Keys->Flags.MappedWithLargePages = TRUE;
+        Keys->MappedAddress = Keys->BaseAddress;
+        Keys->BaseAddress = LargePageAddress;
+
+        //
+        // We can use the allocation size here to capture the appropriate
+        // number of pages that are mapped and accessible.
+        //
+
+        NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
+
+        Rtl->Vtbl->CopyPages(Rtl,
+                             LargePageAddress,
+                             BaseAddress,
+                             (ULONG)NumberOfPages);
+    }
 
     //
     // Initialize the path length variables, point the buffer at the space after
@@ -261,6 +294,13 @@ Error:
     //
     // Clean up any resources we may have allocated.
     //
+
+    if (LargePageAddress) {
+        if (!VirtualFree(LargePageAddress, 0, MEM_RELEASE)) {
+            SYS_ERROR(VirtualFree);
+        }
+        LargePageAddress = NULL;
+    }
 
     if (BaseAddress) {
         if (!UnmapViewOfFile(BaseAddress)) {

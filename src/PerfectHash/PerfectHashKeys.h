@@ -149,6 +149,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     };
 
     //
+    // If we were able to allocate a large page buffer of sufficient size,
+    // BaseAddress above will point to it, and the following variable will
+    // capture the original mapped address.
+    //
+
+    PVOID MappedAddress;
+
+    //
     // Fully-qualified, NULL-terminated path of the source keys file.
     //
 
