@@ -669,37 +669,6 @@ RetryWithLargerTableSize:
     Table->IndexFold = Table->IndexShift >> 3;
 
     //
-    // If auto folding has been requested, set the appropriate function ID based
-    // on the table fold and update the vtbl.
-    //
-
-    if (MaskFunctionId == PerfectHashFoldAutoMaskFunctionId) {
-
-        ASSERT(Table->HashFold <= 4);
-
-        switch (Table->HashFold) {
-            case 4:
-            case 3:
-            case 2:
-                MaskFunctionId = PerfectHashFoldOnceMaskFunctionId;
-                break;
-
-            case 1:
-                MaskFunctionId = PerfectHashFoldTwiceMaskFunctionId;
-                break;
-
-            case 0:
-                MaskFunctionId = PerfectHashFoldThriceMaskFunctionId;
-                break;
-        }
-
-        Table->MaskFunctionId = MaskFunctionId;
-        Context->MaskFunctionId = MaskFunctionId;
-        Table->Vtbl->MaskHash = MaskHashRoutines[MaskFunctionId];
-        Table->Vtbl->MaskIndex = MaskIndexRoutines[MaskFunctionId];
-    }
-
-    //
     // Save the on-disk representation of the graph information.  This is a
     // smaller subset of data needed in order to load a previously-solved
     // graph as a perfect hash table.  The data resides in an NTFS stream named

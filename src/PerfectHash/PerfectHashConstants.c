@@ -70,23 +70,6 @@ const PPERFECT_HASH_TABLE_MASK_HASH MaskHashRoutines[] = {
     NULL,
     PerfectHashTableMaskHashModulus,
     PerfectHashTableMaskHashAnd,
-    PerfectHashTableMaskHashXorAnd,
-
-    //
-    // The PerfectHashTableFoldAutoMaskFunctionId slot is next.  This is a
-    // psuedo ID that don't actually match to a mask implementation.  The
-    // algorithm is required to detect when this mask function is being used
-    // and swap out the Vtbl pointer to one of the following fold methods
-    // depending on the table size.  Thus, we use a NULL pointer in this array
-    // such that we'll trap on the first attempt to mask if this hasn't been
-    // done.
-    //
-
-    NULL,
-
-    PerfectHashTableMaskHashFoldOnce,
-    PerfectHashTableMaskHashFoldTwice,
-    PerfectHashTableMaskHashFoldThrice,
     NULL
 };
 
@@ -98,17 +81,6 @@ const PPERFECT_HASH_TABLE_MASK_INDEX MaskIndexRoutines[] = {
     NULL,
     PerfectHashTableMaskIndexModulus,
     PerfectHashTableMaskIndexAnd,
-    PerfectHashTableMaskIndexXorAnd,
-
-    //
-    // See above description regarding the following NULL slot.
-    //
-
-    NULL,
-
-    PerfectHashTableMaskIndexFoldOnce,
-    PerfectHashTableMaskIndexFoldTwice,
-    PerfectHashTableMaskIndexFoldThrice,
     NULL
 };
 
@@ -213,16 +185,16 @@ const UNICODE_STRING PerfectHashAndMaskFunctionName =
 const UNICODE_STRING PerfectHashXorAndMaskFunctionName =
     RTL_CONSTANT_STRING(L"XorAnd");
 
-const UNICODE_STRING PerfectHashFoldAutoMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldAutoHashFunctionName =
     RTL_CONSTANT_STRING(L"FoldAuto");
 
-const UNICODE_STRING PerfectHashFoldOnceMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldOnceHashFunctionName =
     RTL_CONSTANT_STRING(L"FoldOnce");
 
-const UNICODE_STRING PerfectHashFoldTwiceMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldTwiceHashFunctionName =
     RTL_CONSTANT_STRING(L"FoldTwice");
 
-const UNICODE_STRING PerfectHashFoldThriceMaskFunctionName =
+const UNICODE_STRING PerfectHashFoldThriceHashFunctionName =
     RTL_CONSTANT_STRING(L"FoldThrice");
 
 //
@@ -234,11 +206,6 @@ const PCUNICODE_STRING MaskFunctionNames[] = {
     NULL,
     &PerfectHashModulusMaskFunctionName,
     &PerfectHashAndMaskFunctionName,
-    &PerfectHashXorAndMaskFunctionName,
-    &PerfectHashFoldAutoMaskFunctionName,
-    &PerfectHashFoldOnceMaskFunctionName,
-    &PerfectHashFoldTwiceMaskFunctionName,
-    &PerfectHashFoldThriceMaskFunctionName,
     NULL,
 };
 

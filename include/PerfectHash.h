@@ -695,16 +695,16 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     // This makes enum validation easier.
     //
 
-    PerfectHashNullHashFunctionId              = 0,
+    PerfectHashNullHashFunctionId               = 0,
 
     //
     // Begin valid hash functions.
     //
 
-    PerfectHashHashCrc32RotateFunctionId       = 1,
-    PerfectHashDefaultHashFunctionId           = 1,
+    PerfectHashHashCrc32RotateFunctionId        = 1,
+    PerfectHashDefaultHashFunctionId            = 1,
 
-    PerfectHashHashJenkinsFunctionId           = 2,
+    PerfectHashHashJenkinsFunctionId            = 2,
 
     //
     // N.B. The following three hash functions are purposefully terrible from
@@ -714,9 +714,9 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     //      seed, the hash quality is unimportant.
     //
 
-    PerfectHashHashRotateXorFunctionId         = 3,
-    PerfectHashHashAddSubXorFunctionId         = 4,
-    PerfectHashHashXorFunctionId               = 5,
+    PerfectHashHashRotateXorFunctionId          = 3,
+    PerfectHashHashAddSubXorFunctionId          = 4,
+    PerfectHashHashXorFunctionId                = 5,
 
     //
     // End valid hash functions.
@@ -729,8 +729,7 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     PerfectHashInvalidHashFunctionId,
 
 } PERFECT_HASH_HASH_FUNCTION_ID;
-typedef PERFECT_HASH_HASH_FUNCTION_ID
-      *PPERFECT_HASH_HASH_FUNCTION_ID;
+typedef PERFECT_HASH_HASH_FUNCTION_ID *PPERFECT_HASH_HASH_FUNCTION_ID;
 
 //
 // Provide a simple inline hash function validation routine.
@@ -773,12 +772,6 @@ typedef enum _PERFECT_HASH_MASK_FUNCTION_ID {
 
     PerfectHashAndMaskFunctionId           = 2,
     PerfectHashDefaultMaskFunctionId       = 2,
-
-    PerfectHashXorAndMaskFunctionId        = 3,
-    PerfectHashFoldAutoMaskFunctionId      = 4,
-    PerfectHashFoldOnceMaskFunctionId      = 5,
-    PerfectHashFoldTwiceMaskFunctionId     = 6,
-    PerfectHashFoldThriceMaskFunctionId    = 7,
 
     //
     // End valid masking types.
@@ -837,13 +830,13 @@ typedef enum _PERFECT_HASH_BENCHMARK_FUNCTION_ID {
     // This makes enum validation easier.
     //
 
-    PerfectHashNullBenchmarkFunctionId         = 0,
+    PerfectHashNullBenchmarkFunctionId          = 0,
 
     //
     // Begin valid benchmarks.
     //
 
-    PerfectHashFastIndexBenchmarkFunctionId    = 1,
+    PerfectHashFastIndexBenchmarkFunctionId     = 1,
 
     //
     // End valid benchmarks.
@@ -884,14 +877,14 @@ typedef enum _PERFECT_HASH_BENCHMARK_TYPE {
     // This makes enum validation easier.
     //
 
-    PerfectHashNullBenchmarkType       = 0,
+    PerfectHashNullBenchmarkType        = 0,
 
     //
     // Begin valid benchmark typess.
     //
 
-    PerfectHashSingleBenchmarkType     = 1,
-    PerfectHashAllBenchmarkType        = 2,
+    PerfectHashSingleBenchmarkType      = 1,
+    PerfectHashAllBenchmarkType         = 2,
 
     //
     // End valid benchmark typess.
