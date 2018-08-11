@@ -1029,11 +1029,11 @@ RetryWithLargerTableSize:
         }
 
         //
-        // Wait for the main thread work group members.
-        // This will block until all the worker threads have returned.  We need
-        // to put this in place prior to jumping to the End: label as that step
-        // will destroy the buffer we allocated earlier for the parallel graphs,
-        // which we mustn't do if any threads are still working.
+        // Wait for the main thread work group members.  This will block until
+        // all the worker threads have returned.  We need to put this in place
+        // prior to jumping to the End: label as that step will destroy the
+        // buffer we allocated earlier for the parallel graphs, which we mustn't
+        // do if any threads are still working.
         //
 
         WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
