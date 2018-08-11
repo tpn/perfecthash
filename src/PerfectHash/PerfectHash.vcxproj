@@ -90,7 +90,7 @@
     <ClInclude Include="PerfectHashContext.h" />
     <ClInclude Include="PerfectHashErrorHandling.h" />
     <ClInclude Include="PerfectHashKeys.h" />
-    <ClInclude Include="PerfectHashPrime.h" />
+    <ClInclude Include="PerfectHashPrimes.h" />
     <ClInclude Include="PerfectHashTable.h" />
     <ClInclude Include="PerfectHashConstants.h" />
     <ClInclude Include="PerfectHashTls.h" />

@@ -123,9 +123,6 @@
     <ClInclude Include="Chm_01.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PerfectHashPrime.h">
-      <Filter>Private Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\PerfectHash.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
@@ -160,6 +157,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashTable.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashPrimes.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
