@@ -5,19 +5,19 @@ VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A70C4C43-F7F1-4D59-8478-3DA0797E362C}"
 	ProjectSection(SolutionItems) = preProject
-		PerfectHashTable.props = PerfectHashTable.props
+		PerfectHash.props = PerfectHash.props
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashTable", "PerfectHashTable\PerfectHashTable.vcxproj", "{14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHash", "PerfectHash\PerfectHash.vcxproj", "{14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashTableSelfTestExe", "PerfectHashTableSelfTestExe\PerfectHashTableSelfTestExe.vcxproj", "{741C0AD4-D461-4E15-96E3-B6D30B7068EA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashSelfTestExe", "PerfectHashSelfTestExe\PerfectHashSelfTestExe.vcxproj", "{741C0AD4-D461-4E15-96E3-B6D30B7068EA}"
 	ProjectSection(ProjectDependencies) = postProject
 		{14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8} = {14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashTableBenchmarkSingleExe", "PerfectHashTableBenchmarkSingleExe\PerfectHashTableBenchmarkSingleExe.vcxproj", "{741C0AD4-D461-4E15-96E3-C6D30B7068EB}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashBenchmarkSingleExe", "PerfectHashBenchmarkSingleExe\PerfectHashBenchmarkSingleExe.vcxproj", "{741C0AD4-D461-4E15-96E3-C6D30B7068EB}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashTableBenchmarkExe", "PerfectHashTableBenchmarkExe\PerfectHashTableBenchmarkExe.vcxproj", "{741C0AD4-D461-4E15-96E3-C6D30B7068EA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashBenchmarkExe", "PerfectHashBenchmarkExe\PerfectHashBenchmarkExe.vcxproj", "{741C0AD4-D461-4E15-96E3-C6D30B7068EA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
