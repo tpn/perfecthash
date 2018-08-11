@@ -44,17 +44,17 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8}</ProjectGuid>
-    <RootNamespace>PerfectHashTable</RootNamespace>
+    <RootNamespace>PerfectHash</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
     <PlatformToolset>v141</PlatformToolset>
-    <ProjectName>PerfectHashTable</ProjectName>
+    <ProjectName>PerfectHash</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
-  <Import Project="..\PerfectHashTable.props" />
+  <Import Project="..\PerfectHash.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -69,31 +69,31 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>_PERFECT_HASH_TABLE_INTERNAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PERFECT_HASH_INTERNAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Bscmake>
       <PreserveSbr>false</PreserveSbr>
     </Bscmake>
     <Link>
-      <ModuleDefinitionFile>PerfectHashTable.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>PerfectHash.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="PerfectHashTable.def" />
+    <None Include="PerfectHash.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\PerfectHashTable.h" />
-    <ClInclude Include="..\..\include\PerfectHashTableErrors.h" />
-    <ClInclude Include="PerfectHashTableAllocator.h" />
+    <ClInclude Include="..\..\include\PerfectHash.h" />
+    <ClInclude Include="..\..\include\PerfectHashErrors.h" />
     <ClInclude Include="Chm_01.h" />
     <ClInclude Include="Component.h" />
-    <ClInclude Include="PerfectHashTableContext.h" />
-    <ClInclude Include="PerfectHashTableErrorHandling.h" />
-    <ClInclude Include="PerfectHashTableKeys.h" />
-    <ClInclude Include="PerfectHashTablePrime.h" />
-    <ClInclude Include="PerfectHashTablePrivate.h" />
-    <ClInclude Include="PerfectHashTableConstants.h" />
-    <ClInclude Include="PerfectHashTableTls.h" />
+    <ClInclude Include="PerfectHashAllocator.h" />
+    <ClInclude Include="PerfectHashContext.h" />
+    <ClInclude Include="PerfectHashErrorHandling.h" />
+    <ClInclude Include="PerfectHashKeys.h" />
+    <ClInclude Include="PerfectHashPrime.h" />
+    <ClInclude Include="PerfectHashTable.h" />
+    <ClInclude Include="PerfectHashConstants.h" />
+    <ClInclude Include="PerfectHashTls.h" />
     <ClInclude Include="Rtl.h" />
     <ClInclude Include="RtlOutput.h" />
     <ClInclude Include="stdafx.h" />
@@ -103,23 +103,25 @@
     <ClCompile Include="Chm_01.c" />
     <ClCompile Include="Component.c" />
     <ClCompile Include="dllmain.c" />
+    <ClCompile Include="PerfectHashErrorHandling.c" />
+    <ClCompile Include="PerfectHashContext.c" />
+    <ClCompile Include="PerfectHashContextSelfTest.c" />
+    <ClCompile Include="PerfectHashContextCreateTable.c" />
+    <ClCompile Include="PerfectHashKeys.c" />
+    <ClCompile Include="PerfectHashKeysLoad.c" />
+    <ClCompile Include="PerfectHashPrimes.c" />
+    <ClCompile Include="PerfectHashAllocator.c" />
+    <ClCompile Include="PerfectHashConstants.c" />
+    <ClCompile Include="PerfectHashTls.c" />
     <ClCompile Include="PerfectHashTable.c" />
-    <ClCompile Include="PerfectHashTableContextCreateTable.c" />
-    <ClCompile Include="PerfectHashTableContext.c" />
-    <ClCompile Include="PerfectHashTableErrorHandling.c" />
-    <ClCompile Include="PerfectHashTableKeys.c" />
     <ClCompile Include="PerfectHashTableLoad.c" />
-    <ClCompile Include="PerfectHashTableKeysLoad.c" />
     <ClCompile Include="PerfectHashTableDelete.c" />
     <ClCompile Include="PerfectHashTableHash.c" />
     <ClCompile Include="PerfectHashTableInsert.c" />
     <ClCompile Include="PerfectHashTableLookup.c" />
     <ClCompile Include="PerfectHashTableMask.c" />
     <ClCompile Include="PerfectHashTableNames.c" />
-    <ClCompile Include="PerfectHashTablePrime.c" />
-    <ClCompile Include="PerfectHashTableAllocator.c" />
-    <ClCompile Include="PerfectHashTableConstants.c" />
-    <ClCompile Include="PerfectHashTableTls.c" />
+    <ClCompile Include="PerfectHashTableTest.c" />
     <ClCompile Include="Rtl.c" />
     <ClCompile Include="RtlBuffers.c" />
     <ClCompile Include="RtlErrorHandling.c" />
@@ -128,12 +130,10 @@
     <ClCompile Include="RtlOutput.c" />
     <ClCompile Include="RtlPrivilege.c" />
     <ClCompile Include="RtlRandom.c" />
-    <ClCompile Include="PerfectHashTableContextSelfTest.c" />
+    <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="SymbolLoader.c" />
-    <ClCompile Include="PerfectHashTableTest.c" />
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x64'">
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm" />
@@ -141,7 +141,7 @@
     <MASM Include="RtlFillPages_x64.asm" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="PerfectHashTable.rc" />
+    <ResourceCompile Include="PerfectHash.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

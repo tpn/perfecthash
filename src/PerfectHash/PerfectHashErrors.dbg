@@ -7,7 +7,7 @@
 struct {
     HRESULT MessageId;
     char *SymbolicName;
-} PerfectHashTableErrorsSymbolicNames[] = {
+} PerfectHashErrorsSymbolicNames[] = {
  (HRESULT) PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS, "PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS",
  (HRESULT) PH_E_TOO_MANY_KEYS, "PH_E_TOO_MANY_KEYS",
  (HRESULT) PH_E_INFO_FILE_SMALLER_THAN_HEADER, "PH_E_INFO_FILE_SMALLER_THAN_HEADER",

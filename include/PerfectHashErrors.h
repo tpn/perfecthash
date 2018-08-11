@@ -4,12 +4,12 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableErrors.h
+    PerfectHashErrors.h
 
 Abstract:
 
     This is the public header file for error codes used by the perfect
-    hash table library.  It is automatically generated.
+    hash library.  It is automatically generated.
 
 --*/
 //
