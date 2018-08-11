@@ -299,66 +299,82 @@ PerfectHashInterfaceGuidToId(
 }
 
 //
-// IUnknown
 //
-
-typedef struct _IUNKNOWN IUNKNOWN;
-typedef IUNKNOWN *PIUNKNOWN;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE IUNKNOWN_QUERY_INTERFACE)(
-    _In_ PIUNKNOWN Unknown,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef IUNKNOWN_QUERY_INTERFACE *PIUNKNOWN_QUERY_INTERFACE;
-
-typedef
-ULONG
-(STDAPICALLTYPE IUNKNOWN_ADD_REF)(
-    _In_ PIUNKNOWN Unknown
-    );
-typedef IUNKNOWN_ADD_REF *PIUNKNOWN_ADD_REF;
-
-typedef
-ULONG
-(STDAPICALLTYPE IUNKNOWN_RELEASE)(
-    _In_ PIUNKNOWN Unknown
-    );
-typedef IUNKNOWN_RELEASE *PIUNKNOWN_RELEASE;
-
+// Define helper macros to handle COM interface glue.
 //
 // N.B. We abuse the COM spec a bit here in that all of our components,
 //      including IUnknown, actually implement IClassFactory.
 //
 
-typedef
-_Success_(return != 0)
-HRESULT
-(STDAPICALLTYPE IUNKNOWN_CREATE_INSTANCE)(
-    _In_ PIUNKNOWN Unknown,
-    _In_opt_ PIUNKNOWN UnknownOuter,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Instance
-    );
-typedef IUNKNOWN_CREATE_INSTANCE *PIUNKNOWN_CREATE_INSTANCE;
 
-typedef
-HRESULT
-(STDAPICALLTYPE IUNKNOWN_LOCK_SERVER)(
-    _In_ PIUNKNOWN Unknown,
-    _In_opt_ BOOL Lock
-    );
-typedef IUNKNOWN_LOCK_SERVER *PIUNKNOWN_LOCK_SERVER;
+#define DECLARE_COMPONENT(Name, Upper)                           \
+    typedef struct _##Upper Upper;                               \
+    typedef Upper *P##Upper;                                     \
+                                                                 \
+    typedef                                                      \
+    _Must_inspect_impl_                                          \
+    _Success_(return >= 0)                                       \
+    HRESULT                                                      \
+    (STDAPICALLTYPE Upper##_QUERY_INTERFACE)(                    \
+        _In_ P##Upper Name,                                      \
+        _In_ REFIID InterfaceId,                                 \
+        _COM_Outptr_ PVOID *Interface                            \
+        );                                                       \
+    typedef Upper##_QUERY_INTERFACE *P##Upper##_QUERY_INTERFACE; \
+                                                                 \
+    typedef                                                      \
+    ULONG                                                        \
+    (STDAPICALLTYPE Upper##_ADD_REF)(                            \
+        _In_ P##Upper Name                                       \
+        );                                                       \
+    typedef Upper##_ADD_REF *P##Upper##_ADD_REF;                 \
+                                                                 \
+    typedef                                                      \
+    ULONG                                                        \
+    (STDAPICALLTYPE Upper##_RELEASE)(                            \
+        _In_ P##Upper Name                                       \
+        );                                                       \
+    typedef Upper##_RELEASE *P##Upper##_RELEASE;                 \
+                                                                 \
+    typedef                                                      \
+    HRESULT                                                      \
+    (STDAPICALLTYPE Upper##_CREATE_INSTANCE)(                    \
+        _In_ P##Upper Name,                                      \
+        _In_opt_ PIUNKNOWN UnknownOuter,                         \
+        _In_ REFIID InterfaceId,                                 \
+        _COM_Outptr_ PVOID *Interface                            \
+        );                                                       \
+    typedef Upper##_CREATE_INSTANCE *P##Upper##_CREATE_INSTANCE; \
+                                                                 \
+    typedef                                                      \
+    HRESULT                                                      \
+    (STDAPICALLTYPE Upper##_LOCK_SERVER)(                        \
+        _In_ P##Upper Name,                                      \
+        _In_opt_ BOOL Lock                                       \
+        );                                                       \
+    typedef Upper##_LOCK_SERVER *P##Upper##_LOCK_SERVER
+
+
+#define DECLARE_COMPONENT_VTBL_HEADER(Upper)   \
+    P##Upper##_QUERY_INTERFACE QueryInterface; \
+    P##Upper##_ADD_REF AddRef;                 \
+    P##Upper##_RELEASE Release;                \
+    P##Upper##_CREATE_INSTANCE CreateInstance; \
+    P##Upper##_LOCK_SERVER LockServer
+
+//
+// Define our COM interfaces.  We include IUnknown and IClassFactory just so
+// we're consistent with our Cutler-Normal-Form naming scheme.
+//
+
+//
+// IUnknown
+//
+
+DECLARE_COMPONENT(Unknown, IUNKNOWN);
 
 typedef struct _IUNKNOWN_VTBL {
-    PIUNKNOWN_QUERY_INTERFACE QueryInterface;
-    PIUNKNOWN_ADD_REF AddRef;
-    PIUNKNOWN_RELEASE Release;
-    PIUNKNOWN_CREATE_INSTANCE CreateInstance;
-    PIUNKNOWN_LOCK_SERVER LockServer;
+    DECLARE_COMPONENT_VTBL_HEADER(IUNKNOWN);
 } IUNKNOWN_VTBL;
 typedef IUNKNOWN_VTBL *PIUNKNOWN_VTBL;
 
@@ -373,58 +389,10 @@ typedef IUNKNOWN *PIUNKNOWN;
 // IClassFactory
 //
 
-typedef struct _ICLASSFACTORY ICLASSFACTORY;
-typedef ICLASSFACTORY *PICLASSFACTORY;
-
-typedef
-_Must_inspect_impl_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE ICLASSFACTORY_QUERY_INTERFACE)(
-    _In_ PICLASSFACTORY ClassFactory,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef ICLASSFACTORY_QUERY_INTERFACE *PICLASSFACTORY_QUERY_INTERFACE;
-
-typedef
-ULONG
-(STDAPICALLTYPE ICLASSFACTORY_ADD_REF)(
-    _In_ PICLASSFACTORY ClassFactory
-    );
-typedef ICLASSFACTORY_ADD_REF *PICLASSFACTORY_ADD_REF;
-
-typedef
-ULONG
-(STDAPICALLTYPE ICLASSFACTORY_RELEASE)(
-    _In_ PICLASSFACTORY ClassFactory
-    );
-typedef ICLASSFACTORY_RELEASE *PICLASSFACTORY_RELEASE;
-
-typedef
-HRESULT
-(STDAPICALLTYPE ICLASSFACTORY_CREATE_INSTANCE)(
-    _In_ PICLASSFACTORY ClassFactory,
-    _In_opt_ PIUNKNOWN UnknownOuter,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef ICLASSFACTORY_CREATE_INSTANCE *PICLASSFACTORY_CREATE_INSTANCE;
-
-typedef
-HRESULT
-(STDAPICALLTYPE ICLASSFACTORY_LOCK_SERVER)(
-    _In_ PICLASSFACTORY ClassFactory,
-    _In_opt_ BOOL Lock
-    );
-typedef ICLASSFACTORY_LOCK_SERVER *PICLASSFACTORY_LOCK_SERVER;
+DECLARE_COMPONENT(ClassFactory, ICLASSFACTORY);
 
 typedef struct _ICLASSFACTORY_VTBL {
-    PICLASSFACTORY_QUERY_INTERFACE QueryInterface;
-    PICLASSFACTORY_ADD_REF AddRef;
-    PICLASSFACTORY_RELEASE Release;
-    PICLASSFACTORY_CREATE_INSTANCE CreateInstance;
-    PICLASSFACTORY_LOCK_SERVER LockServer;
+    DECLARE_COMPONENT_VTBL_HEADER(ICLASSFACTORY);
 } ICLASSFACTORY_VTBL;
 typedef ICLASSFACTORY_VTBL *PICLASSFACTORY_VTBL;
 
@@ -439,52 +407,7 @@ typedef ICLASSFACTORY *PICLASSFACTORY;
 // Define the ALLOCATOR interface.
 //
 
-typedef struct _ALLOCATOR ALLOCATOR;
-typedef ALLOCATOR *PALLOCATOR;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE ALLOCATOR_QUERY_INTERFACE)(
-    _In_ PALLOCATOR Allocator,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef ALLOCATOR_QUERY_INTERFACE *PALLOCATOR_QUERY_INTERFACE;
-
-typedef
-ULONG
-(STDAPICALLTYPE ALLOCATOR_ADD_REF)(
-    _In_ PALLOCATOR Allocator
-    );
-typedef ALLOCATOR_ADD_REF *PALLOCATOR_ADD_REF;
-
-typedef
-ULONG
-(STDAPICALLTYPE ALLOCATOR_RELEASE)(
-    _In_ PALLOCATOR Allocator
-    );
-typedef ALLOCATOR_RELEASE *PALLOCATOR_RELEASE;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE ALLOCATOR_CREATE_INSTANCE)(
-    _In_ PALLOCATOR Allocator,
-    _In_opt_ PIUNKNOWN UnknownOuter,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Instance
-    );
-typedef ALLOCATOR_CREATE_INSTANCE *PALLOCATOR_CREATE_INSTANCE;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE ALLOCATOR_LOCK_SERVER)(
-    _In_ PALLOCATOR Allocator,
-    _In_opt_ BOOL Lock
-    );
-typedef ALLOCATOR_LOCK_SERVER *PALLOCATOR_LOCK_SERVER;
+DECLARE_COMPONENT(Allocator, ALLOCATOR);
 
 typedef
 _Check_return_
@@ -526,11 +449,7 @@ VOID
 typedef ALLOCATOR_FREE_POINTER *PALLOCATOR_FREE_POINTER;
 
 typedef struct _ALLOCATOR_VTBL {
-    PALLOCATOR_QUERY_INTERFACE QueryInterface;
-    PALLOCATOR_ADD_REF AddRef;
-    PALLOCATOR_RELEASE Release;
-    PALLOCATOR_CREATE_INSTANCE CreateInstance;
-    PALLOCATOR_LOCK_SERVER LockServer;
+    DECLARE_COMPONENT_VTBL_HEADER(ALLOCATOR);
     PALLOCATOR_MALLOC Malloc;
     PALLOCATOR_CALLOC Calloc;
     PALLOCATOR_FREE Free;
@@ -549,55 +468,7 @@ typedef ALLOCATOR *PALLOCATOR;
 // Define the PERFECT_HASH_KEYS interface.
 //
 
-typedef struct _PERFECT_HASH_KEYS PERFECT_HASH_KEYS;
-typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
-
-typedef
-_Must_inspect_impl_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_KEYS_QUERY_INTERFACE)(
-    _In_ PPERFECT_HASH_KEYS Keys,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef PERFECT_HASH_KEYS_QUERY_INTERFACE
-      *PPERFECT_HASH_KEYS_QUERY_INTERFACE;
-
-typedef
-ULONG
-(STDAPICALLTYPE PERFECT_HASH_KEYS_ADD_REF)(
-    _In_ PPERFECT_HASH_KEYS Keys
-    );
-typedef PERFECT_HASH_KEYS_ADD_REF *PPERFECT_HASH_KEYS_ADD_REF;
-
-typedef
-ULONG
-(STDAPICALLTYPE PERFECT_HASH_KEYS_RELEASE)(
-    _In_ PPERFECT_HASH_KEYS Keys
-    );
-typedef PERFECT_HASH_KEYS_RELEASE *PPERFECT_HASH_KEYS_RELEASE;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_KEYS_CREATE_INSTANCE)(
-    _In_ PPERFECT_HASH_KEYS Keys,
-    _In_opt_ PIUNKNOWN UnknownOuter,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef PERFECT_HASH_KEYS_CREATE_INSTANCE
-      *PPERFECT_HASH_KEYS_CREATE_INSTANCE;
-
-typedef
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_KEYS_LOCK_SERVER)(
-    _In_ PPERFECT_HASH_KEYS Keys,
-    _In_opt_ BOOL Lock
-    );
-typedef PERFECT_HASH_KEYS_LOCK_SERVER
-      *PPERFECT_HASH_KEYS_LOCK_SERVER;
+DECLARE_COMPONENT(Keys, PERFECT_HASH_KEYS);
 
 typedef
 HRESULT
@@ -617,11 +488,7 @@ HRESULT
 typedef PERFECT_HASH_KEYS_GET_BITMAP *PPERFECT_HASH_KEYS_GET_BITMAP;
 
 typedef struct _PERFECT_HASH_KEYS_VTBL {
-    PPERFECT_HASH_KEYS_QUERY_INTERFACE QueryInterface;
-    PPERFECT_HASH_KEYS_ADD_REF AddRef;
-    PPERFECT_HASH_KEYS_RELEASE Release;
-    PPERFECT_HASH_KEYS_CREATE_INSTANCE CreateInstance;
-    PPERFECT_HASH_KEYS_LOCK_SERVER LockServer;
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_KEYS);
     PPERFECT_HASH_KEYS_LOAD Load;
     PPERFECT_HASH_KEYS_GET_BITMAP GetBitmap;
 } PERFECT_HASH_KEYS_VTBL;
@@ -922,54 +789,7 @@ IsValidPerfectHashBenchmarkType(
 // be provided to the PERFECT_HASH_TABLE interface's creation routine.
 //
 
-typedef struct _PERFECT_HASH_CONTEXT PERFECT_HASH_CONTEXT;
-typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
-
-typedef
-_Must_inspect_impl_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_QUERY_INTERFACE)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef PERFECT_HASH_CONTEXT_QUERY_INTERFACE
-      *PPERFECT_HASH_CONTEXT_QUERY_INTERFACE;
-
-typedef
-ULONG
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_ADD_REF)(
-    _In_ PPERFECT_HASH_CONTEXT Context
-    );
-typedef PERFECT_HASH_CONTEXT_ADD_REF *PPERFECT_HASH_CONTEXT_ADD_REF;
-
-typedef
-ULONG
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_RELEASE)(
-    _In_ PPERFECT_HASH_CONTEXT Context
-    );
-typedef PERFECT_HASH_CONTEXT_RELEASE *PPERFECT_HASH_CONTEXT_RELEASE;
-
-typedef
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_CREATE_INSTANCE)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_opt_ PIUNKNOWN UnknownOuter,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef PERFECT_HASH_CONTEXT_CREATE_INSTANCE
-      *PPERFECT_HASH_CONTEXT_CREATE_INSTANCE;
-
-typedef
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_LOCK_SERVER)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_opt_ BOOL Lock
-    );
-typedef PERFECT_HASH_CONTEXT_LOCK_SERVER
-      *PPERFECT_HASH_CONTEXT_LOCK_SERVER;
+DECLARE_COMPONENT(Context, PERFECT_HASH_CONTEXT);
 
 typedef
 HRESULT
@@ -1047,11 +867,7 @@ typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
 
 
 typedef struct _PERFECT_HASH_CONTEXT_VTBL {
-    PPERFECT_HASH_CONTEXT_QUERY_INTERFACE QueryInterface;
-    PPERFECT_HASH_CONTEXT_ADD_REF AddRef;
-    PPERFECT_HASH_CONTEXT_RELEASE Release;
-    PPERFECT_HASH_CONTEXT_CREATE_INSTANCE CreateInstance;
-    PPERFECT_HASH_CONTEXT_LOCK_SERVER LockServer;
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
     PPERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_CREATE_TABLE CreateTable;
@@ -1073,52 +889,7 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 // Define the PERFECT_HASH_TABLE interface.
 //
 
-typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
-typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_QUERY_INTERFACE)(
-    _In_ PPERFECT_HASH_TABLE Table,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Interface
-    );
-typedef PERFECT_HASH_TABLE_QUERY_INTERFACE *PPERFECT_HASH_TABLE_QUERY_INTERFACE;
-
-typedef
-ULONG
-(STDAPICALLTYPE PERFECT_HASH_TABLE_ADD_REF)(
-    _In_ PPERFECT_HASH_TABLE Table
-    );
-typedef PERFECT_HASH_TABLE_ADD_REF *PPERFECT_HASH_TABLE_ADD_REF;
-
-typedef
-ULONG
-(STDAPICALLTYPE PERFECT_HASH_TABLE_RELEASE)(
-    _In_ PPERFECT_HASH_TABLE Table
-    );
-typedef PERFECT_HASH_TABLE_RELEASE *PPERFECT_HASH_TABLE_RELEASE;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_CREATE_INSTANCE)(
-    _In_ PPERFECT_HASH_TABLE Table,
-    _In_opt_ PIUNKNOWN UnknownOuter,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ PVOID *Instance
-    );
-typedef PERFECT_HASH_TABLE_CREATE_INSTANCE *PPERFECT_HASH_TABLE_CREATE_INSTANCE;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_LOCK_SERVER)(
-    _In_ PPERFECT_HASH_TABLE Table,
-    _In_opt_ BOOL Lock
-    );
-typedef PERFECT_HASH_TABLE_LOCK_SERVER *PPERFECT_HASH_TABLE_LOCK_SERVER;
+DECLARE_COMPONENT(Table, PERFECT_HASH_TABLE);
 
 typedef
 _Success_(return >= 0)
@@ -1167,12 +938,6 @@ HRESULT
     _Out_opt_ PULONG PreviousValue
     );
 typedef PERFECT_HASH_TABLE_DELETE *PPERFECT_HASH_TABLE_DELETE;
-
-//
-// Given a key, this routine returns the relative index of the key in the
-// underlying hash table.  This is guaranteed to be within the bounds of the
-// table size.
-//
 
 typedef
 HRESULT
@@ -1252,11 +1017,7 @@ typedef PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
       *PPERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME;
 
 typedef struct _PERFECT_HASH_TABLE_VTBL {
-    PPERFECT_HASH_TABLE_QUERY_INTERFACE QueryInterface;
-    PPERFECT_HASH_TABLE_ADD_REF AddRef;
-    PPERFECT_HASH_TABLE_RELEASE Release;
-    PPERFECT_HASH_TABLE_CREATE_INSTANCE CreateInstance;
-    PPERFECT_HASH_TABLE_LOCK_SERVER LockServer;
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE);
     PPERFECT_HASH_TABLE_LOAD Load;
     PPERFECT_HASH_TABLE_TEST Test;
     PPERFECT_HASH_TABLE_INSERT Insert;
