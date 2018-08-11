@@ -190,6 +190,27 @@ typedef const WCHAR *PCWCHAR;
 )
 #endif
 
+#ifndef NOTHING
+#define NOTHING
+#endif
+
+#ifndef DECLSPEC_NOINLINE
+#define DECLSPEC_NOINLINE __declspec(noinline)
+#endif
+
+#ifndef NOINLINE
+#define NOINLINE __declspec(noinline)
+#endif
+
+#ifndef INLINE
+#define INLINE __inline
+#endif
+
+#ifndef FORCEINLINE
+#define FORCEINLINE __forceinline
+#endif
+
+
 #ifdef RtlCopyMemory
 #undef RtlCopyMemory
 #endif
@@ -254,24 +275,20 @@ typedef const WCHAR *PCWCHAR;
     BitTestAndSet((PLONG)Bitmap->Buffer, BitNumber) \
 )
 
-#ifndef NOTHING
-#define NOTHING
+#ifndef FlagOn
+#define FlagOn(_F,_SF)        ((_F) & (_SF))
 #endif
 
-#ifndef DECLSPEC_NOINLINE
-#define DECLSPEC_NOINLINE __declspec(noinline)
+#ifndef BooleanFlagOn
+#define BooleanFlagOn(F,SF)   ((BOOLEAN)(((F) & (SF)) != 0))
 #endif
 
-#ifndef NOINLINE
-#define NOINLINE __declspec(noinline)
+#ifndef SetFlag
+#define SetFlag(_F,_SF)       ((_F) |= (_SF))
 #endif
 
-#ifndef INLINE
-#define INLINE __inline
-#endif
-
-#ifndef FORCEINLINE
-#define FORCEINLINE __forceinline
+#ifndef ClearFlag
+#define ClearFlag(_F,_SF)     ((_F) &= ~(_SF))
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -409,8 +409,6 @@ const ICLASSFACTORY_VTBL IClassFactoryInterface = {
 // PerfectHashKeys
 //
 
-extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
-
 const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface = {
     (PPERFECT_HASH_KEYS_QUERY_INTERFACE)&ComponentQueryInterface,
     (PPERFECT_HASH_KEYS_ADD_REF)&ComponentAddRef,
@@ -418,6 +416,7 @@ const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface = {
     (PPERFECT_HASH_KEYS_CREATE_INSTANCE)&ComponentCreateInstance,
     (PPERFECT_HASH_KEYS_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashKeysLoad,
+    &PerfectHashKeysGetBitmap,
 };
 
 //

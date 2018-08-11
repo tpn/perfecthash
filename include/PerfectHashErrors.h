@@ -267,3 +267,39 @@ Abstract:
 //
 #define PH_E_INITIALIZE_LARGE_PAGES_FAILED ((HRESULT)0xE0040217L)
 
+//
+// MessageId: PH_E_KEYS_NOT_SORTED
+//
+// MessageText:
+//
+// The keys file supplied was not sorted.
+//
+#define PH_E_KEYS_NOT_SORTED             ((HRESULT)0xE0040218L)
+
+//
+// MessageId: PH_E_KEYS_NOT_LOADED
+//
+// MessageText:
+//
+// A keys file has not been loaded yet.
+//
+#define PH_E_KEYS_NOT_LOADED             ((HRESULT)0xE0040219L)
+
+//
+// MessageId: PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS
+//
+// MessageText:
+//
+// A key loading operation is already in progress.
+//
+#define PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS ((HRESULT)0xE004021AL)
+
+//
+// MessageId: PH_E_KEYS_ALREADY_LOADED
+//
+// MessageText:
+//
+// A set of keys has already been loaded.
+//
+#define PH_E_KEYS_ALREADY_LOADED         ((HRESULT)0xE004021BL)
+

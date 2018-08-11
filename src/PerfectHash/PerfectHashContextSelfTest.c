@@ -77,6 +77,7 @@ Return Value:
     HANDLE FindHandle = NULL;
     HANDLE WideOutputHandle;
     HANDLE ProcessHandle = NULL;
+    ULONG Bitmap;
     ULONG Failures;
     ULONG BytesWritten;
     ULONG WideCharsWritten;
@@ -399,6 +400,54 @@ Return Value:
         if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to load keys for ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
+
+        WIDE_OUTPUT_RAW(WideOutput, L"Successfully loaded keys: ");
+        WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+        WIDE_OUTPUT_RAW(WideOutput, L".\n");
+        WIDE_OUTPUT_FLUSH();
+
+        //
+        // Verify the bitmap function returns success.  We can't easily
+        // validate the value of the bitmap at this stage, though.
+        //
+
+        Result = Keys->Vtbl->GetBitmap(Keys, &Bitmap);
+
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to get keys bitmap for ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
+
+        WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap: ");
+        WIDE_OUTPUT_INT(WideOutput, Bitmap);
+        WIDE_OUTPUT_RAW(WideOutput, L".\n");
+        WIDE_OUTPUT_FLUSH();
+
+        //
+        // Verify a subsequent load attempt indicates keys have already
+        // been loaded.
+        //
+
+        Result = Keys->Vtbl->Load(Keys, &KeysPath);
+
+        if (Result != PH_E_KEYS_ALREADY_LOADED) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; multiple "
+                                        L"key loads did not raise an "
+                                        L"error for ");
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();

@@ -11,7 +11,7 @@ Abstract:
     This is the module for the PERFECT_HASH_KEYS component of the perfect
     hash table library.  Keys refer to the set of ULONGs for which a perfect
     hash table is to be generated.  Routines are provided for initialization,
-    rundown, and verification of unique keys.
+    rundown, and getting the bitmap of all key values.
 
 --*/
 
@@ -188,155 +188,61 @@ Return Value:
     }
 }
 
-PERFECT_HASH_KEYS_VERIFY_UNIQUE PerfectHashKeysVerifyUnique;
+PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashKeysVerifyUnique(
-    PPERFECT_HASH_KEYS Keys
+PerfectHashKeysGetBitmap(
+    PPERFECT_HASH_KEYS Keys,
+    PULONG Bitmap
     )
 /*++
 
 Routine Description:
 
-    This routine verifies that there are no duplicate values in a given keys
-    file.
-
-    N.B. The current implementation simply creates a 512MB bitmap buffer (1
-         bit for every possible value) and uses that to detect duplicates.
-         This adds a non-negligible amount of memory pressure, which could
-         be alleviated with a more efficient data structure.
-
-         Additionally, no information is currently provided as to which keys
-         are duplicate.  This could be improved by at least adding an error
-         message reporting which value is at fault.
+    Returns a bitmap that reflects all seen bits within the key file.
 
 Arguments:
 
-    Keys - Supplies a pointer to a PERFECT_HASH_KEYS instance for which
-        the duplicate key check will be performed.
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS structure for which the
+        bitmap is to be obtained.
+
+    Bitmap - Supplies the address of a variable that receives the bitmap.
 
 Return Value:
 
-    S_OK on success, PH_E_DUPLICATE_KEYS_DETECTED if duplicate keys are
-    detected, PH_E_TOO_MANY_KEYS if the keys instance has too many keys in
-    it, and E_UNEXPECTED for all other errors.
+    S_OK - Success.
+
+    E_POINTER - Keys or Bitmap is NULL.
+
+    PH_E_KEYS_NOT_LOADED - No file has been loaded yet.
+
+    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
 
 --*/
 {
-    PRTL Rtl;
-    ULONG Key;
-    ULONG Index;
-    ULONG NumberOfKeys;
-    ULONG NumberOfSetBits;
-    PVOID Buffer = NULL;
-    ULONGLONG Bit;
-    HRESULT Result = S_OK;
-    RTL_BITMAP Bitmap;
-    PLONGLONG BitmapBuffer;
-    ULONGLONG BitmapBufferSize;
-    BOOLEAN LargePagesForBitmapBuffer;
-
     if (!ARGUMENT_PRESENT(Keys)) {
         return E_POINTER;
     }
 
-    if (Keys->NumberOfElements.HighPart) {
-        return PH_E_TOO_MANY_KEYS;
+    if (!ARGUMENT_PRESENT(Bitmap)) {
+        return E_POINTER;
     }
 
-    NumberOfKeys = Keys->NumberOfElements.LowPart;
-
-    //
-    // Allocate a 512MB buffer for the keys bitmap.
-    //
-
-    BitmapBufferSize = ((1ULL << 32ULL) >> 3ULL);
-
-    //
-    // Try a large page allocation for the bitmap buffer.
-    //
-
-    LargePagesForBitmapBuffer = TRUE;
-
-    Rtl = Keys->Rtl;
-
-    Buffer = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
-                                                 NULL,
-                                                 BitmapBufferSize,
-                                                 MEM_RESERVE | MEM_COMMIT,
-                                                 PAGE_READWRITE,
-                                                 &LargePagesForBitmapBuffer);
-
-    if (!Buffer) {
-
-        //
-        // Failed to create a bitmap buffer, abort.
-        //
-
-        SYS_ERROR(VirtualAlloc);
-        goto Error;
+    if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
+        return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
     }
 
-    BitmapBuffer = (PLONGLONG)Buffer;
-
-    //
-    // Loop through all the keys, obtain the bitmap bit representation, verify
-    // that the bit hasn't been set yet, and set it.
-    //
-
-    for (Index = 0; Index < NumberOfKeys; Index++) {
-
-        Key = Keys->Keys[Index];
-        Bit = Key + 1;
-
-        if (BitTestAndSet64(BitmapBuffer, Bit)) {
-            Result = PH_E_DUPLICATE_KEYS_DETECTED;
-            goto Error;
-        }
+    if (!Keys->State.Loaded) {
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return PH_E_KEYS_NOT_LOADED;
     }
 
-    //
-    // Count all bits set.  It should match the number of keys.
-    //
+    *Bitmap = Keys->Stats.Bitmap;
 
-    Bitmap.SizeOfBitMap = (ULONG)-1;
-    Bitmap.Buffer = (PULONG)Buffer;
+    ReleasePerfectHashKeysLockExclusive(Keys);
 
-    NumberOfSetBits = Rtl->RtlNumberOfSetBits(&Bitmap);
-
-    if (NumberOfSetBits != NumberOfKeys) {
-        Result = PH_E_KEYS_NUM_SET_BITS_NUM_KEYS_MISMATCH;
-        goto Error;
-    }
-
-    //
-    // We're done!  Indicate success and finish up.
-    //
-
-    Result = S_OK;
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    if (Buffer) {
-        if (!VirtualFree(Buffer, 0, MEM_RELEASE)) {
-            SYS_ERROR(VirtualFree);
-        }
-        Buffer = NULL;
-    }
-
-    return Result;
+    return S_OK;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

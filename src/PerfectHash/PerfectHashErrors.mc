@@ -205,4 +205,35 @@ Language=English
 Internal error when attempting to initialize large pages.
 .
 
+MessageId=0x218
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_NOT_SORTED
+Language=English
+The keys file supplied was not sorted.
+.
+
+MessageId=0x219
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_NOT_LOADED
+Language=English
+A keys file has not been loaded yet.
+.
+
+MessageId=0x21a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS
+Language=English
+A key loading operation is already in progress.
+.
+
+MessageId=0x21b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_ALREADY_LOADED
+Language=English
+A set of keys has already been loaded.
+.
 

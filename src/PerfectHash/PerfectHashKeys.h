@@ -54,10 +54,17 @@ typedef union _PERFECT_HASH_KEYS_FLAGS {
         ULONG MappedWithLargePages:1;
 
         //
+        // When set, indicates the keys are a sequential linear array of
+        // values.
+        //
+
+        ULONG Linear:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -65,6 +72,28 @@ typedef union _PERFECT_HASH_KEYS_FLAGS {
 } PERFECT_HASH_KEYS_FLAGS;
 C_ASSERT(sizeof(PERFECT_HASH_KEYS_FLAGS) == sizeof(ULONG));
 typedef PERFECT_HASH_KEYS_FLAGS *PPERFECT_HASH_KEYS_FLAGS;
+
+//
+// Define the PERFECT_HASH_KEYS_STATS structure.
+//
+
+typedef struct _PERFECT_HASH_KEYS_STATS {
+
+    BYTE MinLowestSetBit;
+    BYTE MaxHighestSetBit;
+
+    USHORT Padding;
+
+    ULONG MinValue;
+    ULONG MaxValue;
+
+    ULONG Bitmap;
+
+    ULONG BitCount[32];
+    ULONG PopCount[32];
+
+} PERFECT_HASH_KEYS_STATS;
+typedef PERFECT_HASH_KEYS_STATS *PPERFECT_HASH_KEYS_STATS;
 
 //
 // Define the PERFECT_HASH_KEYS structure.
@@ -126,6 +155,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     UNICODE_STRING Path;
 
     //
+    // Capture simple statistics about the keys that were loaded.
+    //
+
+    PERFECT_HASH_KEYS_STATS Stats;
+
+    //
     // Backing interface.
     //
 
@@ -158,14 +193,17 @@ typedef PERFECT_HASH_KEYS_RUNDOWN
 
 typedef
 HRESULT
-(NTAPI PERFECT_HASH_KEYS_VERIFY_UNIQUE)(
+(NTAPI PERFECT_HASH_KEYS_LOAD_STATS)(
     _In_ PPERFECT_HASH_KEYS Keys
     );
-typedef PERFECT_HASH_KEYS_VERIFY_UNIQUE
-      *PPERFECT_HASH_KEYS_VERIFY_UNIQUE;
+typedef PERFECT_HASH_KEYS_LOAD_STATS
+      *PPERFECT_HASH_KEYS_LOAD_STATS;
+
 
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
-extern PERFECT_HASH_KEYS_VERIFY_UNIQUE PerfectHashKeysVerifyUnique;
+extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats;
+extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
+extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -8,7 +8,8 @@ Module Name:
 
 Abstract:
 
-    This module implements the key load routine for PerfectHash component.
+    This module implements the key load and stats load routines for the perfect
+    hash library's PERFECT_HASH_KEYS component.
 
 --*/
 
@@ -42,7 +43,19 @@ Arguments:
 
 Return Value:
 
-    S_OK on success, an appropriate error code on failure.
+    S_OK - Success.
+
+    E_POINTER - Keys or Path was NULL.
+
+    PH_E_KEYS_NOT_SORTED - Keys were not sorted.
+
+    PH_E_DUPLICATE_KEYS_DETECTED - Duplicate keys were detected.
+
+    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
+
+    PH_E_KEYS_ALREADY_LOADED - A keys file has already been loaded.
+
+    E_UNEXPECTED - All other errors.
 
 --*/
 {
@@ -74,6 +87,15 @@ Return Value:
         return E_INVALIDARG;
     }
 
+    if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
+        return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
+    }
+
+    if (Keys->State.Loaded) {
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return PH_E_KEYS_ALREADY_LOADED;
+    }
+
     //
     // Initialize aliases.
     //
@@ -97,6 +119,7 @@ Return Value:
 
     if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
         SYS_ERROR(CreateFileW);
+        ReleasePerfectHashKeysLockExclusive(Keys);
         return E_UNEXPECTED;
     }
 
@@ -113,15 +136,6 @@ Return Value:
     );
 
     if (!Success) {
-        SYS_ERROR(GetFileInformationByHandleEx);
-        goto Error;
-    }
-
-    //
-    // Make sure the file is a multiple of our key size.
-    //
-
-    if (FileInfo.EndOfFile.QuadPart % PERFECT_HASH_KEY_SIZE_IN_BYTES) {
         Result = PH_E_KEYS_FILE_SIZE_NOT_MULTIPLE_OF_KEY_SIZE;
         goto Error;
     }
@@ -224,6 +238,12 @@ Return Value:
     CopyMemory(Keys->Path.Buffer, Path->Buffer, Path->Length);
     Keys->Path.Buffer[Path->Length >> 1] = L'\0';
 
+    Result = PerfectHashKeysLoadStats(Keys);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashKeysLoadStats, Result);
+        goto Error;
+    }
+
     //
     // We've completed initialization, indicate success and jump to the end.
     //
@@ -269,7 +289,143 @@ Error:
 
 End:
 
+    ReleasePerfectHashKeysLockExclusive(Keys);
+
     return Result;
+}
+
+PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysLoadStats(
+    PPERFECT_HASH_KEYS Keys
+    )
+/*++
+
+Routine Description:
+
+    Loads statistics about a set of keys during initialization.
+
+Arguments:
+
+    Keys - Supplies a pointer to the PERFECT_HASH_KEYS structure for
+        which the stats are to be gathered.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Keys was NULL.
+
+    PH_E_TOO_MANY_KEYS - Too many keys were present.
+
+    PH_E_KEYS_NOT_SORTED - Keys were not sorted.
+
+    PH_E_DUPLICATE_KEYS_DETECTED - Duplicate keys were detected.
+
+--*/
+{
+    PRTL Rtl;
+    ULONG Key;
+    ULONG Prev;
+    ULONG Bitmap;
+    ULONG PopCount;
+    PULONG Values;
+    ULONG_PTR Bit;
+    ULONG_PTR Index;
+    ULONG_PTR NumberOfKeys;
+    PERFECT_HASH_KEYS_STATS Stats;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (Keys->NumberOfElements.HighPart) {
+        return PH_E_TOO_MANY_KEYS;
+    }
+
+    //
+    // Zero the stats struct, initialize local variables, then loop through
+    // the key array, verify the keys are sorted and unique, and update the
+    // bit position histogram and population count histogram.
+    //
+
+    Rtl = Keys->Rtl;
+    ZeroStruct(Stats);
+    Bitmap = 0;
+    Prev = (ULONG)-1;
+    Values = Keys->Keys;
+    NumberOfKeys = Keys->NumberOfElements.LowPart;
+
+    Stats.MinValue = (ULONG)-1;
+    Stats.MaxValue = 0;
+
+    for (Index = 0; Index < NumberOfKeys; Index++) {
+        Key = *Values++;
+
+        if (Index > 0) {
+            if (Prev > Key) {
+                return PH_E_KEYS_NOT_SORTED;
+            } else if (Prev == Key) {
+                return PH_E_DUPLICATE_KEYS_DETECTED;
+            }
+        }
+
+        Prev = Key;
+
+        PopCount = PopulationCount32(Key);
+        Stats.PopCount[PopCount] += 1;
+
+        while (Key) {
+            Bit = TrailingZeros(Key);
+            Key &= Key - 1;
+            Bitmap |= (1 << Bit);
+            Stats.BitCount[Bit] += 1;
+        }
+    }
+
+    //
+    // We've verified the keys are sorted and unique, so we can obtain the
+    // min/max values from the start and end of the array.
+    //
+
+    Stats.Bitmap = Bitmap;
+    Stats.MinValue = Keys->Keys[0];
+    Stats.MaxValue = Keys->Keys[NumberOfKeys - 1];
+
+    //
+    // Find the minimum and maximum values for leading and trailing bits.
+    //
+
+    Stats.MinLowestSetBit = (BYTE)TrailingZeros(Bitmap);
+    Stats.MaxHighestSetBit = (BYTE)(32 - LeadingZeros(Bitmap));
+
+    //
+    // Sanity check our bit math.
+    //
+
+    ASSERT((Bitmap >> (Stats.MaxHighestSetBit - 1)) == 1);
+    if (Stats.MaxHighestSetBit < 32) {
+        ASSERT((Bitmap >> (Stats.MaxHighestSetBit    )) == 0);
+    }
+
+    Keys->Flags.Linear = (
+        (Stats.MaxValue - Stats.MinValue) == NumberOfKeys
+    );
+
+    //
+    // Copy the local stack structure back to the keys instance and return
+    // success.
+    //
+
+    CopyMemory(&Keys->Stats, &Stats, sizeof(Keys->Stats));
+
+    return S_OK;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
