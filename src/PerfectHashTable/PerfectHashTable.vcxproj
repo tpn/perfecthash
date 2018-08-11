@@ -135,8 +135,10 @@
     <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="PerfectHashTableTest.c" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x64'">
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm" />
+    <MASM Include="RtlCopyPages_x64.asm" />
+    <MASM Include="RtlFillPages_x64.asm" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PerfectHashTable.rc" />

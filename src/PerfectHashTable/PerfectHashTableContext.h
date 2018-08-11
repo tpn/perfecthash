@@ -276,6 +276,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CONTEXT {
     LARGE_INTEGER Frequency;
 
     //
+    // XXX TODO: relocate the context stats into a separate :Stats data
+    // structure.
+    //
+
+    //
     // Capture the time required to solve the perfect hash table.  This is not
     // a sum of all cycles consumed by all worker threads; it is the cycles
     // consumed between the "main" thread (i.e. the CreatePerfectHashTable()

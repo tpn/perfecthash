@@ -103,6 +103,45 @@ SetCSpecificHandler(
 }
 
 //
+// Helper routine for determining if we can use AVX2.
+//
+
+#if defined(_M_AMD64) || defined(_M_X64)
+
+//
+// The intrinsics headers trigger a lot of warnings when /Wall is on.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4255 4514 4668 4820 28251)
+#include <intrin.h>
+#include <mmintrin.h>
+#pragma warning(pop)
+
+typedef __m128i DECLSPEC_ALIGN(16) XMMWORD, *PXMMWORD, **PPXMMWORD;
+typedef __m256i DECLSPEC_ALIGN(32) YMMWORD, *PYMMWORD, **PPYMMWORD;
+
+#pragma optimize("", off)
+NOINLINE
+BOOLEAN
+CanWeUseAvx2(
+    VOID
+    )
+{
+    BOOLEAN Success = TRUE;
+    TRY_AVX2 {
+        YMMWORD Test1 = _mm256_set1_epi8(1);
+        YMMWORD Test2 = _mm256_add_epi8(Test1, Test1);
+        Test2 = _mm256_add_epi8(Test2, Test2);
+    } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION{
+        Success = FALSE;
+    }
+    return Success;
+}
+#pragma optimize("", on)
+#endif
+
+//
 // Initialize and rundown functions.
 //
 
@@ -230,6 +269,13 @@ RtlInitialize(
         PH_ERROR(RtlInitializeLargePages, Result);
         goto Error;
     }
+
+#if defined(_M_AMD64) || defined(_M_X64)
+    if (CanWeUseAvx2()) {
+        Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporalAvx2_v1;
+        Rtl->Vtbl->FillPages = RtlFillPagesNonTemporalAvx2_v1;
+    }
+#endif
 
     //
     // We're done, indicate success and finish up.

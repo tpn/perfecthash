@@ -168,8 +168,14 @@
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(Platform)' == 'x64'">
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="RtlCopyPages_x64.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="RtlFillPages_x64.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>

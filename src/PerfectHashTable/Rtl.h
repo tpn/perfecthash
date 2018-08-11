@@ -258,6 +258,22 @@ typedef const WCHAR *PCWCHAR;
 #define NOTHING
 #endif
 
+#ifndef DECLSPEC_NOINLINE
+#define DECLSPEC_NOINLINE __declspec(noinline)
+#endif
+
+#ifndef NOINLINE
+#define NOINLINE __declspec(noinline)
+#endif
+
+#ifndef INLINE
+#define INLINE __inline
+#endif
+
+#ifndef FORCEINLINE
+#define FORCEINLINE __forceinline
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Memory/String
 ////////////////////////////////////////////////////////////////////////////////
@@ -890,6 +906,7 @@ typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
 
 #define TRY_TSX __try
 #define TRY_AVX __try
+#define TRY_AVX2 __try
 #define TRY_AVX512 __try
 #define TRY_AVX_ALIGNED __try
 #define TRY_AVX_UNALIGNED __try
@@ -1949,5 +1966,10 @@ extern RTL_TRY_LARGE_PAGE_CREATE_FILE_MAPPING_W
     RtlTryLargePageCreateFileMappingW;
 extern RTL_COPY_PAGES RtlCopyPages;
 extern RTL_FILL_PAGES RtlFillPages;
+
+#if defined(_M_AMD64) || defined(_M_X64)
+extern RTL_COPY_PAGES RtlCopyPagesNonTemporalAvx2_v1;
+extern RTL_FILL_PAGES RtlFillPagesNonTemporalAvx2_v1;
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
