@@ -1132,6 +1132,8 @@ Arguments:
 
     ClassFactoryPointer - Supplies the address of a variable that will receive
         an instance of an ICLASSFACTORY interface if the routine is successful.
+        Caller is responsible for calling ClassFactory->Vtbl->Release() when
+        finished with the instance.
 
 Return Value:
 
