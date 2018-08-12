@@ -624,7 +624,7 @@ End:
     //
     // N.B. We currently always delete the table if it is created successfully
     //      so as to ensure the only way to use a table is by loading one from
-    //      disk via PerfectHashLoad().
+    //      disk via the Table->Vtbl->Load() interface.
     //
 
     if (Table) {
