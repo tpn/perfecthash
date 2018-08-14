@@ -71,11 +71,11 @@ class DumpCfgTargets(InvariantAwareCommand):
             raise CommandError("%s is not CF instrumented." % dll)
 
         self.addresses = db.guard_cf_func_table_addresses_base0
-        self.addresses_text = '\n'.join(self.addresses)
+        self.addresses_text = b'\n'.join(self.addresses)
 
         from .cli import INTERACTIVE
         if not INTERACTIVE:
-            self.ostream.write(self.addresses_text)
+            self.ostream.write(self.addresses_text.decode('utf-8'))
 
 
 class ExtractAllCfgTargets(InvariantAwareCommand):
@@ -129,6 +129,48 @@ class ExtractAllCfgTargets(InvariantAwareCommand):
             if not db.is_cf_instrumented:
                 continue
             db.save(output_dir)
+
+class ExtractSingleCfgTarget(InvariantAwareCommand):
+    """
+    TBD.
+    """
+    _verbose_ = True
+
+
+    dll = None
+    _dll = None
+    class DllArg(PathInvariant):
+        _help = "Path to the DLL (e.g. C:\\Windows\\System32\\ntdll.dll)"
+        _mandatory = True
+
+    base_output_dir = None
+    _base_output_dir = None
+    class BaseOutputDirArg(DirectoryInvariant):
+        _help = ("Base output directory.")
+        _mandatory = False
+
+    def run(self):
+        InvariantAwareCommand.run(self)
+        conf = self.conf
+        out = self._out
+
+        from .util import mkdir
+
+        if not self._base_output_dir:
+            base = self.conf.base_output_dir
+            mkdir(base)
+            self.base_output_dir = base
+
+        output_dir = self._base_output_dir
+
+        from .dumpbin import Dumpbin
+
+        dll = self._dll
+        db = Dumpbin(dll)
+
+        if not db.is_cf_instrumented:
+            raise CommandError("%s is not CF instrumented." % dll)
+        db.save(output_dir)
 
 class ComScratch(InvariantAwareCommand):
     """

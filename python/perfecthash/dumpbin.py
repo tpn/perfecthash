@@ -49,11 +49,14 @@ def parse_image_base(line):
     """
     >>> l='        140000000 image base (0000000140000000 to 00000001409DAFFF)'
     >>> parse_image_base(l)
-    ('14', '0000000140000000', '00000001409DAFFF')
+    (5368709120, '0000000140000000', '00000001409DAFFF')
+    >>> l='       160880000 image base (0000000160880000 to 0000000160B26FFF)'
+    >>> parse_image_base(l)
+    (5914492928, '0000000160880000', '0000000160B26FFF')
     """
 
     ls = line.lstrip()
-    base = ls[:ls.find(' ')].replace('0', '')
+    base = int(ls[:ls.find(' ')], base=16)
 
     ix1 = ls.find('(')+1
     ix2 = ls.find(' ', ix1+1)
@@ -107,6 +110,7 @@ class Dumpbin(InvariantAwareObject):
         self._guard_cf_targets_start = None
         self._guard_cf_targets_end = None
         self._section_header_4_lineno = None
+        self._save_plot = False
 
         self._load()
 
@@ -136,7 +140,7 @@ class Dumpbin(InvariantAwareObject):
                 self._image_base_lineno = i
                 self._image_base_line = line
                 parsed = parse_image_base(line)
-                self._image_base_chars = parsed[0]
+                self._image_base = parsed[0]
                 self._image_base_start = parsed[1]
                 self._image_base_end = parsed[2]
             elif line.startswith('    Guard CF Function Table'):
@@ -178,22 +182,35 @@ class Dumpbin(InvariantAwareObject):
         return self._image_base_end
 
     @property
-    def image_base_chars(self):
-        return self._image_base_chars
+    def image_base(self):
+        return self._image_base
+
+    @property
+    @memoize
+    def guard_cf_func_table_addresses(self):
+        return [ l[10:26][-10:] for l in self.guard_cf_func_table_lines ]
+
+    @property
+    @memoize
+    def guard_cf_func_table_address_values(self):
+        addresses = self.guard_cf_func_table_addresses
+        values = [ int(address, base=16) for address in addresses ]
+        return values
+
+    @property
+    @memoize
+    def guard_cf_func_table_address_array_base0(self):
+        values = self.guard_cf_func_table_address_values
+        import numpy as np
+        b = np.array(values)
+        a = b - self.image_base
+        return a
 
     @property
     @memoize
     def guard_cf_func_table_addresses_base0(self):
-        chars = self._image_base_chars
-        zeros = '0' * len(chars)
-
-        lines = []
-
-        for line in self.guard_cf_func_table_lines:
-            l = line[10:26].replace(chars, zeros, 1)[-10:]
-            lines.append(l)
-
-        return lines
+        array = self.guard_cf_func_table_address_array_base0
+        return [ hex(i)[2:].zfill(8).encode('ascii') for i in array ]
 
     def save(self, output_dir):
 
@@ -206,24 +223,21 @@ class Dumpbin(InvariantAwareObject):
         filename = basename(self.path)
         name = splitext(filename)[0]
 
-        addresses = self.guard_cf_func_table_addresses_base0
-        values = [ int(address, base=16) for address in addresses ]
+        a = self.guard_cf_func_table_address_array_base0
 
-        prefix = join_path(output_dir, '%s-%d.' % (name, len(values)))
+        prefix = join_path(output_dir, '%s-%d.' % (name, len(a)))
 
         text_path = ''.join((prefix, '.txt'))
-        plot_path = ''.join((prefix, '.png'))
         binary_path = ''.join((prefix, '.keys'))
 
-        with open(text_path, 'w') as f:
-            f.write('\n'.join(addresses))
+        with open(text_path, 'wb') as f:
+            f.write(b'\n'.join(self.guard_cf_func_table_addresses_base0))
+
+        if self._save_plot:
+            plot_path = ''.join((prefix, '.png'))
+            save_array_plot_to_png_file(plot_path, a)
 
         import numpy as np
-
-        a = np.array(values)
-
-        save_array_plot_to_png_file(plot_path, a)
-
         fp = np.memmap(binary_path, dtype='uint32', mode='w+', shape=a.shape)
         fp[:] = a[:]
         del fp
