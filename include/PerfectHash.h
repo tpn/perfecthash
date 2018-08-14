@@ -337,6 +337,8 @@ PerfectHashInterfaceGuidToId(
     typedef Upper##_RELEASE *P##Upper##_RELEASE;                 \
                                                                  \
     typedef                                                      \
+    _Must_inspect_impl_                                          \
+    _Success_(return >= 0)                                       \
     HRESULT                                                      \
     (STDAPICALLTYPE Upper##_CREATE_INSTANCE)(                    \
         _In_ P##Upper Name,                                      \
@@ -347,6 +349,8 @@ PerfectHashInterfaceGuidToId(
     typedef Upper##_CREATE_INSTANCE *P##Upper##_CREATE_INSTANCE; \
                                                                  \
     typedef                                                      \
+    _Must_inspect_impl_                                          \
+    _Success_(return >= 0)                                       \
     HRESULT                                                      \
     (STDAPICALLTYPE Upper##_LOCK_SERVER)(                        \
         _In_ P##Upper Name,                                      \
