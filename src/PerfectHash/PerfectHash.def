@@ -1,4 +1,21 @@
 LIBRARY PerfectHash
 EXPORTS
-    PerfectHashDllGetClassObject
     DllGetClassObject=PerfectHashDllGetClassObject PRIVATE
+    DllCanUnloadNow=PerfectHashDllCanUnloadNow PRIVATE
+    PerfectHashDllGetClassObject
+    PerfectHashDllCanUnloadNow
+    CreateComponent
+    ComponentQueryInterface
+    ComponentAddRef
+    ComponentRelease
+    ComponentCreateInstance
+    ComponentLockServer
+    PerfectHashKeysInitialize
+    PerfectHashKeysRundown
+    PerfectHashKeysLoad
+    PerfectHashKeysGetBitmap
+    PerfectHashContextInitialize
+    PerfectHashContextRundown
+    PerfectHashContextCreateTable
+    PerfectHashTableLoad
+    PerfectHashTableTest
