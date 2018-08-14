@@ -112,6 +112,9 @@
     <ClCompile Include="PerfectHashContextSelfTest.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Graph.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -160,6 +163,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashPrimes.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Graph.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

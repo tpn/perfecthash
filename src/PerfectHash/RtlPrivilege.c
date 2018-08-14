@@ -57,6 +57,8 @@ Return Value:
     HANDLE TokenHandle;
     TOKEN_PRIVILEGES TokenPrivileges;
 
+    UNREFERENCED_PARAMETER(Rtl);
+
     //
     // Initialize local variables.
     //
