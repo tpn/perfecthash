@@ -20,7 +20,6 @@ PERFECT_HASH_TABLE_PRINT_ERROR PerfectHashTablePrintError;
 _Use_decl_annotations_
 HRESULT
 PerfectHashTablePrintError(
-    PRTL Rtl,
     PCSZ FunctionName,
     PCSZ FileName,
     ULONG LineNumber,
@@ -28,9 +27,8 @@ PerfectHashTablePrintError(
     )
 {
     BOOL Success;
-    LONG Result1;
-    ULONG Result2;
     ULONG Flags;
+    ULONG Count;
     PCHAR Buffer;
     PCHAR BaseBuffer;
     PCHAR EndBuffer;
@@ -41,6 +39,16 @@ PerfectHashTablePrintError(
     LONG_PTR SizeOfBufferInBytes;
     LONG_PTR SizeOfBufferInChars;
     CHAR LocalBuffer[1024];
+    ULONG_PTR Args[5];
+    const STRING Prefix = RTL_CONSTANT_STRING(
+        "%1: %2!lu!: %3 failed with error: %4!lu! (0x%4!lx!).  "
+    );
+
+    Args[0] = (ULONG_PTR)FileName,
+    Args[1] = (ULONG_PTR)LineNumber;
+    Args[2] = (ULONG_PTR)FunctionName;
+    Args[3] = (ULONG_PTR)Error;
+    Args[4] = 0;
 
     SizeOfBufferInBytes = sizeof(LocalBuffer);
     BaseBuffer = Buffer = (PCHAR)&LocalBuffer;
@@ -56,21 +64,25 @@ PerfectHashTablePrintError(
         (LONG_PTR)sizeof(*Buffer)
     );
 
-    Result1 = Rtl->sprintf_s(Buffer,
-                             (ULONG)SizeOfBufferInChars,
-                             "%s: %lu: %s failed with error: %lu.  ",
-                             FileName,
-                             LineNumber,
-                             FunctionName,
-                             Error);
+    Flags = FORMAT_MESSAGE_FROM_STRING | FORMAT_MESSAGE_ARGUMENT_ARRAY;
 
-    if (Result1 <= 0) {
-        OutputDebugStringA("PhtPrintError: Rtl->sprintf_s() failed.\n");
+    LanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+
+    Count = FormatMessageA(Flags,
+                           Prefix.Buffer,
+                           0,
+                           LanguageId,
+                           (PSTR)Buffer,
+                           (ULONG)SizeOfBufferInChars,
+                           (va_list *)Args);
+
+    if (!Count) {
+        OutputDebugStringA("PhtPrintError: FormatMessageA() 1 failed.\n");
         goto Error;
     }
 
-    Buffer += Result1;
-    SizeOfBufferInChars -= Result1;
+    Buffer += Count;
+    SizeOfBufferInChars -= Count;
 
     Flags = (
         FORMAT_MESSAGE_FROM_HMODULE |
@@ -78,23 +90,21 @@ PerfectHashTablePrintError(
         FORMAT_MESSAGE_IGNORE_INSERTS
     );
 
-    LanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+    Count = FormatMessageA(Flags,
+                           PerfectHashModule,
+                           Error,
+                           LanguageId,
+                           (PSTR)Buffer,
+                           (ULONG)SizeOfBufferInChars,
+                           NULL);
 
-    Result2 = FormatMessageA(Flags,
-                             PerfectHashModule,
-                             Error,
-                             LanguageId,
-                             (PSTR)Buffer,
-                             (ULONG)SizeOfBufferInChars,
-                             NULL);
-
-    if (!Result2) {
-        OutputDebugStringA("PhtPrintError: FormatMessageA() failed.\n");
+    if (!Count) {
+        OutputDebugStringA("PhtPrintError: FormatMessageA() 2 failed.\n");
         goto Error;
     }
 
-    Buffer += Result2;
-    SizeOfBufferInChars -= Result2;
+    Buffer += Count;
+    SizeOfBufferInChars -= Count;
 
     //
     // We want at least two characters left in the buffer for the \n and

@@ -22,7 +22,6 @@ _Success_(return >= 0)
 _Check_return_opt_
 HRESULT
 (NTAPI PERFECT_HASH_TABLE_PRINT_ERROR)(
-    _In_ PRTL Rtl,
     _In_ PCSZ FunctionName,
     _In_ PCSZ FileName,
     _In_opt_ ULONG LineNumber,
@@ -33,9 +32,9 @@ typedef PERFECT_HASH_TABLE_PRINT_ERROR *PPERFECT_HASH_TABLE_PRINT_ERROR;
 extern PERFECT_HASH_TABLE_PRINT_ERROR PerfectHashTablePrintError;
 
 #define SYS_ERROR(Name) \
-    PerfectHashTablePrintError(Rtl, #Name, __FILE__, __LINE__, GetLastError())
+    PerfectHashTablePrintError(#Name, __FILE__, __LINE__, GetLastError())
 
 #define PH_ERROR(Name, Result) \
-    PerfectHashTablePrintError(Rtl, #Name, __FILE__, __LINE__, (ULONG)Result)
+    PerfectHashTablePrintError(#Name, __FILE__, __LINE__, (ULONG)Result)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
