@@ -66,7 +66,7 @@ PerfectHashTablePrintError(
 
     Flags = FORMAT_MESSAGE_FROM_STRING | FORMAT_MESSAGE_ARGUMENT_ARRAY;
 
-    LanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+    LanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
 
     Count = FormatMessageA(Flags,
                            Prefix.Buffer,
