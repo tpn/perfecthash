@@ -168,8 +168,9 @@ Return Value:
     );
 
     if (!Success) {
-        Result = PH_E_KEYS_FILE_SIZE_NOT_MULTIPLE_OF_KEY_SIZE;
-        goto Error;
+        SYS_ERROR(GetFileInformationByHandleEx);
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return E_UNEXPECTED;
     }
 
     //
