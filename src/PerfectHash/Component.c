@@ -160,7 +160,7 @@ ComponentQueryInterface(
     //
 
     Match = (
-        Id == Component->Id                             ||
+        Id == Component->Id                        ||
         Id == PerfectHashUnknownInterfaceId        ||
         Id == PerfectHashClassFactoryInterfaceId
     );
