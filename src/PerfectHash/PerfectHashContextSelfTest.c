@@ -60,6 +60,7 @@ Return Value:
     PRTL Rtl;
     PWSTR Dest;
     PWSTR Source;
+    ULONG Index;
     ULONG LastError;
     USHORT Length;
     USHORT BaseLength;
@@ -74,6 +75,9 @@ Return Value:
     PWCHAR WideOutput;
     PWCHAR WideOutputBuffer;
     PWCHAR FileName;
+    CHAR BitmapString[33];
+    WCHAR WideBitmapString[33];
+    UNICODE_STRING UnicodeBitmapString;
     HANDLE FindHandle = NULL;
     HANDLE WideOutputHandle;
     HANDLE ProcessHandle = NULL;
@@ -346,11 +350,17 @@ Return Value:
     }
 
     //
-    // Zero the failure count and terminate flag and begin the main loop.
+    // Zero the failure count and terminate flag, zero the bitmap string array,
+    // wire up the unicode string representation of the bitmap, and begin the
+    // main loop.
     //
 
     Failures = 0;
     Terminate = FALSE;
+    ZeroArray(BitmapString);
+    UnicodeBitmapString.Buffer = (PWCHAR)WideBitmapString;
+    UnicodeBitmapString.Length = sizeof(WideBitmapString)-2;
+    UnicodeBitmapString.MaximumLength = sizeof(WideBitmapString);
 
     do {
 
@@ -434,6 +444,41 @@ Return Value:
 
         WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap: ");
         WIDE_OUTPUT_INT(WideOutput, Bitmap);
+        WIDE_OUTPUT_RAW(WideOutput, L".\n");
+        WIDE_OUTPUT_FLUSH();
+
+        //
+        // Verify the bitmap-as-string function returns success.
+        //
+
+        Result = Keys->Vtbl->GetBitmapAsString(Keys,
+                                               sizeof(BitmapString),
+                                               (PCHAR)BitmapString);
+
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to get bitmap string for ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
+
+        //
+        // The bitmap buffer is a normal 8-bit character string, but our output
+        // uses 16-bit wide character strings.  Do a simple conversion now.  We
+        // don't need to worry about utf-8 multi-byte characters as the only
+        // possible bitmap character values are '0' and '1'.
+        //
+
+        for (Index = 0; Index < sizeof(BitmapString); Index++) {
+            WideBitmapString[Index] = (WCHAR)BitmapString[Index];
+        }
+
+        WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap string: ");
+        WIDE_OUTPUT_UNICODE_STRING(WideOutput, &UnicodeBitmapString);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
         WIDE_OUTPUT_FLUSH();
 

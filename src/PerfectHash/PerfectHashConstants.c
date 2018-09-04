@@ -349,6 +349,17 @@ extern COMPONENT_CREATE_INSTANCE ComponentCreateInstance;
 extern COMPONENT_LOCK_SERVER ComponentLockServer;
 
 //
+// Define a helper macro for catching compile-time errors where additional vtbl
+// members have been added to a struct, but the initializer in this module has
+// not yet been updated to include the new function pointer.  The 'Count' param
+// excludes the 5 members that are present on every interface (the IUnknown +
+// IClassFactory).
+//
+
+#define VERIFY_VTBL_SIZE(Name, Count) \
+    C_ASSERT((sizeof(Name##_VTBL) / sizeof(ULONG_PTR)) == (5 + Count))
+
+//
 // IUnknown
 //
 
@@ -359,6 +370,7 @@ const IUNKNOWN_VTBL IUnknownInterface = {
     (PIUNKNOWN_CREATE_INSTANCE)&ComponentCreateInstance,
     (PIUNKNOWN_LOCK_SERVER)&ComponentLockServer,
 };
+VERIFY_VTBL_SIZE(IUNKNOWN, 0);
 
 //
 // IClassFactory
@@ -371,6 +383,7 @@ const ICLASSFACTORY_VTBL IClassFactoryInterface = {
     (PICLASSFACTORY_CREATE_INSTANCE)&ComponentCreateInstance,
     (PICLASSFACTORY_LOCK_SERVER)&ComponentLockServer,
 };
+VERIFY_VTBL_SIZE(ICLASSFACTORY, 0);
 
 //
 // PerfectHashKeys
@@ -384,7 +397,9 @@ const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface = {
     (PPERFECT_HASH_KEYS_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashKeysLoad,
     &PerfectHashKeysGetBitmap,
+    &PerfectHashKeysGetBitmapAsString,
 };
+VERIFY_VTBL_SIZE(PERFECT_HASH_KEYS, 3);
 
 //
 // PerfectHashContext
@@ -403,6 +418,7 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextSelfTestArgvW,
     &PerfectHashContextExtractSelfTestArgsFromArgvW,
 };
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 6);
 
 //
 // PerfectHashTable
@@ -430,6 +446,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableGetHashFunctionName,
     &PerfectHashTableGetMaskFunctionName,
 };
+VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 15);
 
 //
 // Rtl
@@ -454,6 +471,7 @@ const RTL_VTBL RtlInterface = {
     &RtlTryLargePageVirtualAllocEx,
     &RtlTryLargePageCreateFileMappingW,
 };
+VERIFY_VTBL_SIZE(RTL, 12);
 
 //
 // Allocator
@@ -470,6 +488,7 @@ const ALLOCATOR_VTBL AllocatorInterface = {
     &AllocatorFree,
     &AllocatorFreePointer,
 };
+VERIFY_VTBL_SIZE(ALLOCATOR, 4);
 
 //
 // Interface array.

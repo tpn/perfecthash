@@ -375,6 +375,7 @@ Return Value:
     PULONG Values;
     ULONG_PTR Bit;
     ULONG_PTR Index;
+    ULONG_PTR Offset;
     ULONG_PTR NumberOfKeys;
     PERFECT_HASH_KEYS_STATS Stats;
 
@@ -440,11 +441,17 @@ Return Value:
     Stats.MaxValue = Keys->Keys[NumberOfKeys - 1];
 
     //
-    // Find the minimum and maximum values for leading and trailing bits.
+    // Find the minimum and maximum values for leading and trailing bits.  Set
+    // the linear flag if the array of keys represents a linear sequence of
+    // values with no gaps.
     //
 
-    Stats.MinLowestSetBit = (BYTE)TrailingZeros(Bitmap);
+    Stats.MinLowestSetBit = (BYTE)TrailingZeros(Bitmap) + 1;
     Stats.MaxHighestSetBit = (BYTE)(32 - LeadingZeros(Bitmap));
+
+    Keys->Flags.Linear = (
+        (Stats.MaxValue - Stats.MinValue) == NumberOfKeys
+    );
 
     //
     // Sanity check our bit math.
@@ -455,9 +462,22 @@ Return Value:
         ASSERT((Bitmap >> (Stats.MaxHighestSetBit)) == 0);
     }
 
-    Keys->Flags.Linear = (
-        (Stats.MaxValue - Stats.MinValue) == NumberOfKeys
-    );
+    //
+    // Construct a string representation of the bitmap.  All bit positions are
+    // initialized with the '0' character, the bitmap is enumerated, and a set
+    // bit has its corresponding character set to '1'.
+    //
+
+    FillMemory(Stats.BitmapString, sizeof(Stats.BitmapString), '0');
+
+    Key = Bitmap;
+
+    while (Key) {
+        Bit = TrailingZeros(Key);
+        Offset = (31 - Bit);
+        Key &= Key - 1;
+        Stats.BitmapString[Offset] = '1';
+    }
 
     //
     // Copy the local stack structure back to the keys instance and return

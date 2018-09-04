@@ -92,6 +92,8 @@ typedef struct _PERFECT_HASH_KEYS_STATS {
     ULONG BitCount[32];
     ULONG PopCount[32];
 
+    CHAR BitmapString[32];
+
 } PERFECT_HASH_KEYS_STATS;
 typedef PERFECT_HASH_KEYS_STATS *PPERFECT_HASH_KEYS_STATS;
 
@@ -213,5 +215,6 @@ extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats;
 extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
 extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
+extern PERFECT_HASH_KEYS_GET_BITMAP_AS_STRING PerfectHashKeysGetBitmapAsString;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

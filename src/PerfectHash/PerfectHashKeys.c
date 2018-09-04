@@ -265,4 +265,78 @@ Return Value:
     return S_OK;
 }
 
+PERFECT_HASH_KEYS_GET_BITMAP_AS_STRING PerfectHashKeysGetBitmapAsString;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysGetBitmapAsString(
+    PPERFECT_HASH_KEYS Keys,
+    ULONG SizeOfBitmapString,
+    PCHAR BitmapString
+    )
+/*++
+
+Routine Description:
+
+    Returns a string representation of the bitmap that reflects all seen bits
+    within the key file.
+
+Arguments:
+
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS structure for which the
+        bitmap string is to be obtained.
+
+    SizeOfBitmapString - Supplies the size of the BitmapString array in bytes.
+        This should be equal to the number of bits in the key, e.g. 32.
+
+    BitmapString - Supplies a pointer to a buffer that will receive the string
+        representation of the bitmap for the given keys instance.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Keys or BitmapString is NULL.
+
+    E_INVALIDARG - SizeOfBitmapString is less than the required buffer size.
+
+    PH_E_KEYS_NOT_LOADED - No file has been loaded yet.
+
+    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
+
+--*/
+{
+    PRTL Rtl;
+
+    if (!ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (SizeOfBitmapString < sizeof(Keys->Stats.BitmapString)) {
+        return E_INVALIDARG;
+    }
+
+    if (!ARGUMENT_PRESENT(BitmapString)) {
+        return E_POINTER;
+    }
+
+    if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
+        return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
+    }
+
+    if (!Keys->State.Loaded) {
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return PH_E_KEYS_NOT_LOADED;
+    }
+
+    Rtl = Keys->Rtl;
+    CopyMemory(BitmapString,
+               Keys->Stats.BitmapString,
+               sizeof(Keys->Stats.BitmapString));
+
+    ReleasePerfectHashKeysLockExclusive(Keys);
+
+    return S_OK;
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
