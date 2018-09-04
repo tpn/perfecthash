@@ -4,11 +4,14 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    main.c
+    PerfectHashSelfTestExe.c
 
 Abstract:
 
-    This is the main file for the PerfectHashSelfTest component..
+    This module implements the main entry point for the perfect hash library's
+    self-test functionality.  It loads the perfect hash library, obtains a
+    class factory, creates a context, then calls the self-test function against
+    the current executable's command line parameters.
 
 --*/
 
