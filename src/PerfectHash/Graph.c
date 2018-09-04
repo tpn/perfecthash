@@ -62,6 +62,20 @@ Return Value:
     Header = Table->Header;
     Rtl = Context->Rtl;
 
+    Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
+
+    //
+    // If this attempt has exceeded our threshold, inform our parent.
+    //
+
+    if (Graph->Attempt == Context->ResizeTableThreshold) {
+
+        if (!SetEvent(Context->TryLargerTableSizeEvent)) {
+            SYS_ERROR(SetEvent);
+        }
+
+    }
+
     //
     // Obtain new seed data for the first two seeds and initialize the number
     // of seeds.
@@ -195,19 +209,6 @@ Return Value:
 
     Graph->Info = Info;
     Graph->ThreadId = GetCurrentThreadId();
-    Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
-
-    //
-    // If this attempt has exceeded our threshold, inform our parent.
-    //
-
-    if (Graph->Attempt == Context->ResizeTableThreshold &&
-        Header->NumberOfTableResizeEvents < Context->ResizeLimit) {
-
-        if (!SetEvent(Context->TryLargerTableSizeEvent)) {
-            SYS_ERROR(SetEvent);
-        }
-    }
 
     //
     // Copy the edge and vertex masks, and the masking type.

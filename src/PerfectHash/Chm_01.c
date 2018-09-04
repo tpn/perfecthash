@@ -906,6 +906,14 @@ RetryWithLargerTableSize:
         }
 
         //
+        // Check to see if we've exceeded the maximum number of resize events.
+        //
+
+        if (OnDiskHeader->NumberOfTableResizeEvents >= Context->ResizeLimit) {
+            goto Error;
+        }
+
+        //
         // Destroy the existing buffer we allocated for this attempt.  We'll
         // need a new, larger one to accommodate the resize.
         //
