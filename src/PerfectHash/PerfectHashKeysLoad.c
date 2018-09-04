@@ -452,7 +452,7 @@ Return Value:
 
     ASSERT((Bitmap >> (Stats.MaxHighestSetBit - 1)) == 1);
     if (Stats.MaxHighestSetBit < 32) {
-        ASSERT((Bitmap >> (Stats.MaxHighestSetBit    )) == 0);
+        ASSERT((Bitmap >> (Stats.MaxHighestSetBit)) == 0);
     }
 
     Keys->Flags.Linear = (
