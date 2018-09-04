@@ -75,13 +75,11 @@ Return Value:
     PWCHAR WideOutput;
     PWCHAR WideOutputBuffer;
     PWCHAR FileName;
-    CHAR BitmapString[33];
     WCHAR WideBitmapString[33];
     UNICODE_STRING UnicodeBitmapString;
     HANDLE FindHandle = NULL;
     HANDLE WideOutputHandle;
     HANDLE ProcessHandle = NULL;
-    ULONG Bitmap;
     ULONG Failures;
     ULONG BytesWritten;
     ULONG WideCharsWritten;
@@ -96,6 +94,7 @@ Return Value:
     UNICODE_STRING TablePath;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_KEYS Keys;
+    PERFECT_HASH_KEYS_BITMAP KeysBitmap;
     PTABLE_INFO_ON_DISK_HEADER Header;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
     PERFECT_HASH_TLS_CONTEXT TlsContext;
@@ -350,17 +349,18 @@ Return Value:
     }
 
     //
-    // Zero the failure count and terminate flag, zero the bitmap string array,
+    // Zero the failure count and terminate flag, zero the bitmap structure,
     // wire up the unicode string representation of the bitmap, and begin the
     // main loop.
     //
 
     Failures = 0;
     Terminate = FALSE;
-    ZeroArray(BitmapString);
+    ZeroStruct(KeysBitmap);
     UnicodeBitmapString.Buffer = (PWCHAR)WideBitmapString;
     UnicodeBitmapString.Length = sizeof(WideBitmapString)-2;
     UnicodeBitmapString.MaximumLength = sizeof(WideBitmapString);
+    UnicodeBitmapString.Buffer[UnicodeBitmapString.Length >> 1] = L'\0';
 
     do {
 
@@ -425,11 +425,10 @@ Return Value:
         WIDE_OUTPUT_FLUSH();
 
         //
-        // Verify the bitmap function returns success.  We can't easily
-        // validate the value of the bitmap at this stage, though.
+        // Verify the bitmap function returns success.
         //
 
-        Result = Keys->Vtbl->GetBitmap(Keys, &Bitmap);
+        Result = Keys->Vtbl->GetBitmap(Keys, sizeof(KeysBitmap), &KeysBitmap);
 
         if (FAILED(Result)) {
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to get keys bitmap for ");
@@ -443,28 +442,8 @@ Return Value:
         }
 
         WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap: ");
-        WIDE_OUTPUT_INT(WideOutput, Bitmap);
+        WIDE_OUTPUT_INT(WideOutput, KeysBitmap.Bitmap);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
-        WIDE_OUTPUT_FLUSH();
-
-        //
-        // Verify the bitmap-as-string function returns success.
-        //
-
-        Result = Keys->Vtbl->GetBitmapAsString(Keys,
-                                               sizeof(BitmapString),
-                                               (PCHAR)BitmapString);
-
-        if (FAILED(Result)) {
-            WIDE_OUTPUT_RAW(WideOutput, L"Failed to get bitmap string for ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
-            WIDE_OUTPUT_RAW(WideOutput, L".\n");
-            WIDE_OUTPUT_FLUSH();
-
-            Failures++;
-            Terminate = TRUE;
-            goto ReleaseKeys;
-        }
 
         //
         // The bitmap buffer is a normal 8-bit character string, but our output
@@ -473,13 +452,35 @@ Return Value:
         // possible bitmap character values are '0' and '1'.
         //
 
-        for (Index = 0; Index < sizeof(BitmapString); Index++) {
-            WideBitmapString[Index] = (WCHAR)BitmapString[Index];
+        for (Index = 0; Index < sizeof(KeysBitmap.String); Index++) {
+            WideBitmapString[Index] = (WCHAR)KeysBitmap.String[Index];
         }
 
         WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap string: ");
         WIDE_OUTPUT_UNICODE_STRING(WideOutput, &UnicodeBitmapString);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
+
+        WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap contiguous? ");
+        if (KeysBitmap.Flags.Contiguous) {
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &Yes);
+            WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap shifted mask: ");
+            WIDE_OUTPUT_INT(WideOutput, KeysBitmap.ShiftedMask);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+        } else {
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &No);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+        }
+
+        WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap longest run length: ");
+        WIDE_OUTPUT_INT(WideOutput, KeysBitmap.LongestRunLength);
+        WIDE_OUTPUT_RAW(WideOutput, L".\nKeys bitmap longest run start: ");
+        WIDE_OUTPUT_INT(WideOutput, KeysBitmap.LongestRunStart);
+        WIDE_OUTPUT_RAW(WideOutput, L".\nKeys bitmap trailing zeros: ");
+        WIDE_OUTPUT_INT(WideOutput, KeysBitmap.TrailingZeros);
+        WIDE_OUTPUT_RAW(WideOutput, L".\nKeys bitmap leading zeros: ");
+        WIDE_OUTPUT_INT(WideOutput, KeysBitmap.LeadingZeros);
+        WIDE_OUTPUT_RAW(WideOutput, L".\n");
+
         WIDE_OUTPUT_FLUSH();
 
         //

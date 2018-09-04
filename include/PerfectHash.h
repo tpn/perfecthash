@@ -472,6 +472,52 @@ typedef ALLOCATOR *PALLOCATOR;
 // Define the PERFECT_HASH_KEYS interface.
 //
 
+typedef union _PERFECT_HASH_KEYS_BITMAP_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the bitmap for the keys contains a single
+        // contiguous run of set bits.  That is, between the highest set
+        // bit and lowest set bit, all intermediate bits are set.  E.g.:
+        //
+        //  Contiguous:     00000000000111111111111111110000
+        //  Not Contiguous: 00110000000111111111111111110000
+        //
+
+        ULONG Contiguous:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_KEYS_BITMAP_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_KEYS_BITMAP_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_KEYS_BITMAP_FLAGS *PPERFECT_HASH_KEYS_BITMAP_FLAGS;
+
+typedef struct _PERFECT_HASH_KEYS_BITMAP {
+
+    PERFECT_HASH_KEYS_BITMAP_FLAGS Flags;
+
+    ULONG Bitmap;
+
+    BYTE LongestRunLength;
+    BYTE LongestRunStart;
+    BYTE TrailingZeros;
+    BYTE LeadingZeros;
+
+    ULONG ShiftedMask;
+
+    CHAR String[32];
+
+} PERFECT_HASH_KEYS_BITMAP;
+typedef PERFECT_HASH_KEYS_BITMAP *PPERFECT_HASH_KEYS_BITMAP;
+
 DECLARE_COMPONENT(Keys, PERFECT_HASH_KEYS);
 
 typedef
@@ -487,25 +533,15 @@ typedef
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_KEYS_GET_BITMAP)(
     _In_ PPERFECT_HASH_KEYS Keys,
-    _In_ PULONG Bitmap
+    _In_ ULONG SizeOfBitmap,
+    _Out_writes_bytes_(SizeOfBitmap) PPERFECT_HASH_KEYS_BITMAP Bitmap
     );
 typedef PERFECT_HASH_KEYS_GET_BITMAP *PPERFECT_HASH_KEYS_GET_BITMAP;
-
-typedef
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_KEYS_GET_BITMAP_AS_STRING)(
-    _In_ PPERFECT_HASH_KEYS Keys,
-    _In_ ULONG SizeOfBitmapString,
-    _Out_writes_bytes_(SizeOfBitmapString) PCHAR BitmapString
-    );
-typedef PERFECT_HASH_KEYS_GET_BITMAP_AS_STRING
-      *PPERFECT_HASH_KEYS_GET_BITMAP_AS_STRING;
 
 typedef struct _PERFECT_HASH_KEYS_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_KEYS);
     PPERFECT_HASH_KEYS_LOAD Load;
     PPERFECT_HASH_KEYS_GET_BITMAP GetBitmap;
-    PPERFECT_HASH_KEYS_GET_BITMAP_AS_STRING GetBitmapAsString;
 } PERFECT_HASH_KEYS_VTBL;
 typedef PERFECT_HASH_KEYS_VTBL *PPERFECT_HASH_KEYS_VTBL;
 

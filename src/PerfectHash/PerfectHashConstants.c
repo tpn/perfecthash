@@ -397,9 +397,8 @@ const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface = {
     (PPERFECT_HASH_KEYS_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashKeysLoad,
     &PerfectHashKeysGetBitmap,
-    &PerfectHashKeysGetBitmapAsString,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_KEYS, 3);
+VERIFY_VTBL_SIZE(PERFECT_HASH_KEYS, 2);
 
 //
 // PerfectHashContext

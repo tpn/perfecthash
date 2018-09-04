@@ -372,12 +372,22 @@ Return Value:
     ULONG Prev;
     ULONG Bitmap;
     ULONG PopCount;
+    ULONG Longest;
+    ULONG Leading;
+    ULONG Trailing;
+    ULONG Start;
     PULONG Values;
+    PCHAR String;
     ULONG_PTR Bit;
+    ULONG_PTR Mask;
     ULONG_PTR Index;
     ULONG_PTR Offset;
+    ULONG_PTR Shifted;
     ULONG_PTR NumberOfKeys;
+    ULONG InvertedBitmap;
+    RTL_BITMAP RtlBitmap;
     PERFECT_HASH_KEYS_STATS Stats;
+    PPERFECT_HASH_KEYS_BITMAP KeysBitmap;
 
     //
     // Validate arguments.
@@ -403,6 +413,7 @@ Return Value:
     Prev = (ULONG)-1;
     Values = Keys->Keys;
     NumberOfKeys = Keys->NumberOfElements.LowPart;
+    KeysBitmap = &Stats.KeysBitmap;
 
     Stats.MinValue = (ULONG)-1;
     Stats.MaxValue = 0;
@@ -436,31 +447,59 @@ Return Value:
     // min/max values from the start and end of the array.
     //
 
-    Stats.Bitmap = Bitmap;
     Stats.MinValue = Keys->Keys[0];
     Stats.MaxValue = Keys->Keys[NumberOfKeys - 1];
 
     //
-    // Find the minimum and maximum values for leading and trailing bits.  Set
-    // the linear flag if the array of keys represents a linear sequence of
+    // Set the linear flag if the array of keys represents a linear sequence of
     // values with no gaps.
     //
-
-    Stats.MinLowestSetBit = (BYTE)TrailingZeros(Bitmap) + 1;
-    Stats.MaxHighestSetBit = (BYTE)(32 - LeadingZeros(Bitmap));
 
     Keys->Flags.Linear = (
         (Stats.MaxValue - Stats.MinValue) == NumberOfKeys
     );
 
     //
-    // Sanity check our bit math.
+    // Determine if the set bits in the bitmap are all contiguous.
     //
 
-    ASSERT((Bitmap >> (Stats.MaxHighestSetBit - 1)) == 1);
-    if (Stats.MaxHighestSetBit < 32) {
-        ASSERT((Bitmap >> (Stats.MaxHighestSetBit)) == 0);
+    KeysBitmap->Bitmap = Bitmap;
+
+    Leading = LeadingZeros(Bitmap);
+    Trailing = TrailingZeros(Bitmap);
+    PopCount = PopulationCount32(Bitmap);
+    Mask = (1 << (32 - Leading - Trailing)) - 1;
+
+    KeysBitmap->LeadingZeros = (BYTE)Leading;
+    KeysBitmap->TrailingZeros = (BYTE)Trailing;
+
+    if (PopCount == 32) {
+        KeysBitmap->Flags.Contiguous = TRUE;
+    } else if (Leading == 0) {
+        KeysBitmap->Flags.Contiguous = FALSE;
+    } else {
+        Shifted = Bitmap;
+        Shifted >>= Trailing;
+        KeysBitmap->Flags.Contiguous = (Mask == Shifted);
     }
+
+    if (KeysBitmap->Flags.Contiguous) {
+        KeysBitmap->ShiftedMask = (ULONG)Mask;
+    }
+
+    //
+    // Wire up the RTL_BITMAP structure and obtain the longest run of set bits.
+    // We invert the bitmap first as we rely on RtlFindLongestRunClear().
+    //
+
+    InvertedBitmap = ~Bitmap;
+    RtlBitmap.Buffer = &InvertedBitmap;
+    RtlBitmap.SizeOfBitMap = 32;
+
+    Start = 0;
+    Longest = Rtl->RtlFindLongestRunClear(&RtlBitmap, &Start);
+    KeysBitmap->LongestRunLength = (BYTE)Longest;
+    KeysBitmap->LongestRunStart = (BYTE)Start;
 
     //
     // Construct a string representation of the bitmap.  All bit positions are
@@ -468,15 +507,15 @@ Return Value:
     // bit has its corresponding character set to '1'.
     //
 
-    FillMemory(Stats.BitmapString, sizeof(Stats.BitmapString), '0');
-
     Key = Bitmap;
+    String = (PCHAR)&KeysBitmap->String;
+    FillMemory(String, sizeof(KeysBitmap->String), '0');
 
     while (Key) {
         Bit = TrailingZeros(Key);
         Offset = (31 - Bit);
         Key &= Key - 1;
-        Stats.BitmapString[Offset] = '1';
+        String[Offset] = '1';
     }
 
     //
