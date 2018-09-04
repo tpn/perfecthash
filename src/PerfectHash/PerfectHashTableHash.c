@@ -349,6 +349,9 @@ Return Value:
     ULONG Seed2;
     ULONG Vertex1;
     ULONG Vertex2;
+    ULONG_INTEGER Long1;
+    ULONG_INTEGER Long2;
+
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
@@ -368,15 +371,21 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = Input ^ Seed1;
-    Vertex2 = Input ^ Seed2;
+    Long1.LongPart = Vertex1 = Input ^ Seed1;
+    Long2.LongPart = Vertex2 = _rotl(Input, 15) ^ Seed2;
 
-    if (Vertex1 == Vertex2) {
+    Long1.LowPart ^= Long1.HighPart;
+    Long1.HighPart = 0;
+
+    Long2.LowPart ^= Long2.HighPart;
+    Long2.HighPart = 0;
+
+    if (Long1.LowPart == Long2.LowPart) {
         return E_FAIL;
     }
 
-    Result.LowPart = Vertex1;
-    Result.HighPart = Vertex2;
+    Result.LowPart = Long1.LowPart;
+    Result.HighPart = Long2.LowPart;
 
     *Hash = Result.QuadPart;
 
@@ -532,11 +541,11 @@ PerfectHashTableHashJenkins(
                                              Hash);
 }
 
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashCrc32Rotate2;
+PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashCrc32RotateXor;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableSeededHashCrc32Rotate2(
+PerfectHashTableSeededHashCrc32RotateXor(
     PPERFECT_HASH_TABLE Table,
     ULONG Input,
     ULONG NumberOfSeeds,
@@ -575,8 +584,14 @@ Return Value:
     ULONG Seed1;
     ULONG Seed2;
     ULONG Seed3;
+    ULONG Folds;
     ULONG Vertex1;
     ULONG Vertex2;
+    ULONG Extra1;
+    ULONG Extra2;
+    ULONG ExtraShift = 0;
+    ULONG_INTEGER Long1;
+    ULONG_INTEGER Long2;
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
@@ -597,15 +612,47 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    A = _mm_crc32_u32(Seed1, Input);
-    B = _mm_crc32_u32(Seed2, _rotl(Input, 15));
+    A = _mm_crc32_u32(Seed1, Input ^ 0x9e3779b9);
+    B = _mm_crc32_u32(Seed2, _rotl(Input, 15) ^ 0x9e3779b9);
     C = Seed3 ^ Input;
     D = _mm_crc32_u32(B, C);
 
+    Long1.LongPart = A;
+    Long2.LongPart = D;
+
+    if (Table->HashShift <= 32 && Table->HashShift > 16) {
+        Folds = 2;
+    } else if (Table->HashShift <= 16 && Table->HashShift > 8) {
+        Folds = 1;
+        ExtraShift = 16 - Table->HashShift;
+    } else if (Table->HashShift >= 8) {
+        Folds = 0;
+    } else {
+        Folds = (ULONG)-1;
+    }
+
+    if (Folds == 1) {
+        ULONG Temp1;
+        ULONG Temp2;
+        Long1.LowPart ^= Long1.HighPart;
+        Long2.LowPart ^= Long2.HighPart;
+        Temp1 = Long1.LowPart & Table->HashMask;
+        Temp2 = Long2.LowPart & Table->HashMask;
+        Extra1 = (ULONG)Long1.LowPart >> ExtraShift;
+        Extra2 = (ULONG)Long2.LowPart >> ExtraShift;
+        Long1.LowPart ^= (USHORT)Extra1;
+        Long2.LowPart ^= (USHORT)Extra2;
+        Long1.LowPart &= Table->HashMask;
+        Long2.LowPart &= Table->HashMask;
+        Vertex1 = Long1.LowPart;
+        Vertex2 = Long2.LowPart;
+    } else {
+        Vertex1 = A;
+        Vertex2 = D;
+    }
+
     //IACA_VC_END();
 
-    Vertex1 = A;
-    Vertex2 = D;
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -619,22 +666,23 @@ Return Value:
     return S_OK;
 }
 
-
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32Rotate2;
+PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32RotateXor;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableHashCrc32Rotate2(
+PerfectHashTableHashCrc32RotateXor(
     PPERFECT_HASH_TABLE Table,
     ULONG Input,
     PULONGLONG Hash
     )
 {
-    return PerfectHashTableSeededHashCrc32Rotate(Table,
-                                                 Input,
-                                                 Table->Header->NumberOfSeeds,
-                                                 &Table->Header->FirstSeed,
-                                                 Hash);
+    return PerfectHashTableSeededHashCrc32RotateXor(
+        Table,
+        Input,
+        Table->Header->NumberOfSeeds,
+        &Table->Header->FirstSeed,
+        Hash
+    );
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

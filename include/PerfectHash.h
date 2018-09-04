@@ -637,6 +637,12 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     PerfectHashHashXorFunctionId                = 5,
 
     //
+    // Experimental hash functions.
+    //
+
+    PerfectHashHashCrc32RotateXorFunctionId     = 6,
+
+    //
     // End valid hash functions.
     //
 

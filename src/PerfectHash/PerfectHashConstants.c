@@ -45,6 +45,7 @@ const PPERFECT_HASH_TABLE_HASH HashRoutines[] = {
     PerfectHashTableHashRotateXor,
     PerfectHashTableHashAddSubXor,
     PerfectHashTableHashXor,
+    PerfectHashTableHashCrc32RotateXor,
     NULL
 };
 
@@ -59,6 +60,7 @@ const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[] = {
     PerfectHashTableSeededHashRotateXor,
     PerfectHashTableSeededHashAddSubXor,
     PerfectHashTableSeededHashXor,
+    PerfectHashTableSeededHashCrc32RotateXor,
     NULL
 };
 
@@ -157,6 +159,9 @@ const UNICODE_STRING PerfectHashHashAddSubXorFunctionName =
 const UNICODE_STRING PerfectHashHashXorFunctionName =
     RTL_CONSTANT_STRING(L"Xor");
 
+const UNICODE_STRING PerfectHashHashCrc32RotateXorFunctionName =
+    RTL_CONSTANT_STRING(L"Crc32RotateXor");
+
 //
 // Define the array of hash function names.  This is intended to be indexed by
 // the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enum.
@@ -169,6 +174,7 @@ const PCUNICODE_STRING HashFunctionNames[] = {
     &PerfectHashHashRotateXorFunctionName,
     &PerfectHashHashAddSubXorFunctionName,
     &PerfectHashHashXorFunctionName,
+    &PerfectHashHashCrc32RotateXorFunctionName,
     NULL,
 };
 

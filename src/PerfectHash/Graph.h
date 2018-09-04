@@ -15,25 +15,6 @@ Abstract:
 #include "stdafx.h"
 
 //
-// Define the threshold for how many attempts need to be made at finding a
-// perfect hash solution before we double our number of vertices and try again.
-//
-// N.B. 100 is quite generous; normally, solutions are found on average within
-//      3 attempts, and there's a 99.9% chance a solution will be found by the
-//      18th attempt.
-//
-
-#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 100
-
-//
-// Define a limit for how many times the table resizing will be attempted before
-// giving up.  For large table sizes and large concurrency values, note that we
-// may hit memory limits before we hit this resize limit.
-//
-
-#define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 10
-
-//
 // Define the primitive key, edge and vertex types and pointers to said types.
 //
 
