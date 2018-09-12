@@ -312,7 +312,7 @@ PerfectHashInterfaceGuidToId(
     typedef Upper *P##Upper;                                     \
                                                                  \
     typedef                                                      \
-    _Must_inspect_impl_                                          \
+    _Must_inspect_result_                                        \
     _Success_(return >= 0)                                       \
     HRESULT                                                      \
     (STDAPICALLTYPE Upper##_QUERY_INTERFACE)(                    \
@@ -337,7 +337,7 @@ PerfectHashInterfaceGuidToId(
     typedef Upper##_RELEASE *P##Upper##_RELEASE;                 \
                                                                  \
     typedef                                                      \
-    _Must_inspect_impl_                                          \
+    _Must_inspect_result_                                        \
     _Success_(return >= 0)                                       \
     HRESULT                                                      \
     (STDAPICALLTYPE Upper##_CREATE_INSTANCE)(                    \
@@ -349,7 +349,7 @@ PerfectHashInterfaceGuidToId(
     typedef Upper##_CREATE_INSTANCE *P##Upper##_CREATE_INSTANCE; \
                                                                  \
     typedef                                                      \
-    _Must_inspect_impl_                                          \
+    _Must_inspect_result_                                        \
     _Success_(return >= 0)                                       \
     HRESULT                                                      \
     (STDAPICALLTYPE Upper##_LOCK_SERVER)(                        \
