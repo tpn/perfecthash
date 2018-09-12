@@ -468,7 +468,6 @@ Return Value:
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
         } else {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &No);
-            WIDE_OUTPUT_RAW(WideOutput, L".\n");
         }
 
         WIDE_OUTPUT_RAW(WideOutput, L"Keys bitmap longest run length: ");
