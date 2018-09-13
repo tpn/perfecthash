@@ -168,6 +168,9 @@
     <ClInclude Include="Graph.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\CompiledPerfectHashTable.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">
