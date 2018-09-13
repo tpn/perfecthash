@@ -779,6 +779,29 @@ Return Value:
         }
 
         //
+        // Verify a subsequent load attempt indicates that the table is already
+        // loaded.
+        //
+
+        Result = Table->Vtbl->Load(Table,
+                                   &LoadTableFlags,
+                                   &TablePath,
+                                   Keys);
+
+        if (Result != PH_E_TABLE_ALREADY_LOADED) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; multiple "
+                                        L"table loads did not raise an "
+                                        L"error for ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseTable;
+        }
+
+        //
         // Table was loaded successfully from disk.  Obtain the names of all
         // the enumeration IDs.  Currently these should always match the same
         // enums provided as input parameters to this routine.
