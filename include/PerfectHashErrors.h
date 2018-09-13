@@ -402,3 +402,22 @@ Abstract:
 //
 #define PH_E_TABLE_ALREADY_LOADED        ((HRESULT)0xE0040226L)
 
+//
+// MessageId: PH_E_INVALID_TABLE_COMPILE_FLAGS
+//
+// MessageText:
+//
+// Invalid table compile flags.
+//
+#define PH_E_INVALID_TABLE_COMPILE_FLAGS ((HRESULT)0xE0040227L)
+
+//
+// MessageId: PH_E_TABLE_COMPILATION_NOT_AVAILABLE
+//
+// MessageText:
+//
+// Table compilation is not available for the current combination of
+// architecture, algorithm ID, hash function and masking type.
+//
+#define PH_E_TABLE_COMPILATION_NOT_AVAILABLE ((HRESULT)0xE0040228L)
+

@@ -325,3 +325,19 @@ Language=English
 The table instance has already been loaded.
 .
 
+MessageId=0x227
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE_COMPILE_FLAGS
+Language=English
+Invalid table compile flags.
+.
+
+MessageId=0x228
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_COMPILATION_NOT_AVAILABLE
+Language=English
+Table compilation is not available for the current combination of
+architecture, algorithm ID, hash function and masking type.
+.
