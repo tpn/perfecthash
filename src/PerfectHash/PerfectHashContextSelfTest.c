@@ -118,6 +118,7 @@ Return Value:
     PPERFECT_HASH_KEYS Keys;
     PERFECT_HASH_KEYS_FLAGS KeysFlags;
     PERFECT_HASH_KEYS_BITMAP KeysBitmap;
+    PERFECT_HASH_TABLE_FLAGS TableFlags;
     PTABLE_INFO_ON_DISK_HEADER Header;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
     PERFECT_HASH_TLS_CONTEXT TlsContext;
@@ -850,8 +851,27 @@ Return Value:
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &No);
         }
 
+        //
+        // Verify GetFlags().
+        //
+
+        Result = Table->Vtbl->GetFlags(Table,
+                                       sizeof(TableFlags),
+                                       &TableFlags);
+
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to obtain flags for table: ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseTable;
+        }
+
         WIDE_OUTPUT_RAW(WideOutput, L"Table data backed by large pages: ");
-        if (Table->Flags.TableDataUsesLargePages) {
+        if (TableFlags.TableDataUsesLargePages) {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &Yes);
         } else {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &No);
@@ -859,7 +879,7 @@ Return Value:
 
         WIDE_OUTPUT_RAW(WideOutput, L"Values array allocated with large "
                                     L"pages: ");
-        if (Table->Flags.ValuesArrayUsesLargePages) {
+        if (TableFlags.ValuesArrayUsesLargePages) {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &Yes);
         } else {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &No);
