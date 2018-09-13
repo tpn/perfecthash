@@ -8,17 +8,7 @@ Module Name:
 
 Abstract:
 
-    This module implements the CHM perfect hash table algorithm.  As a time
-    saving measure, this module contains *everything* pertaining to the CHM
-    implementation, including more general structures like hypergraphs etc.
-
-    The general structures and functions can be moved out into their own
-    modules at a later date if we author other algorithms that wish to use them.
-
-    N.B. This implementation attempts to mirror the chm.c implementation as
-         best it can, including but not limited to the underlying algorithm
-         approach and function names.  This will be used as the baseline for
-         evaluating the performance of subsequent revisions.
+    This module implements the CHM perfect hash table algorithm.
 
 --*/
 
@@ -43,7 +33,6 @@ Abstract:
 //
 
 #define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 10
-
 
 
 _Use_decl_annotations_
