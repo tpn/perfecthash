@@ -11,7 +11,8 @@ Abstract:
     This is the module for the PERFECT_HASH_KEYS component of the perfect
     hash table library.  Keys refer to the set of ULONGs for which a perfect
     hash table is to be generated.  Routines are provided for initialization,
-    rundown, and getting the bitmap of all key values.
+    rundown, getting flags, getting the base address, and getting the bitmap
+    of all key values.
 
 --*/
 
@@ -148,14 +149,18 @@ Return Value:
     // Clean up any resources that are still active.
     //
 
-    if (Keys->MappedAddress) {
+    if (!Keys->MappedAddress) {
+
+        ASSERT(!Keys->Flags.KeysDataUsesLargePages);
+
+    } else {
 
         //
         // If MappedAddress is non-NULL, BaseAddress is actually our
         // large page address which needs to be freed with VirtualFree().
         //
 
-        ASSERT(Keys->Flags.MappedWithLargePages);
+        ASSERT(Keys->Flags.KeysDataUsesLargePages);
         if (!VirtualFree(Keys->BaseAddress, 0, MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
@@ -206,6 +211,141 @@ Return Value:
         Keys->Rtl->Vtbl->Release(Keys->Rtl);
         Keys->Rtl = NULL;
     }
+}
+
+PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysGetFlags(
+    PPERFECT_HASH_KEYS Keys,
+    ULONG SizeOfFlags,
+    PPERFECT_HASH_KEYS_FLAGS Flags
+    )
+/*++
+
+Routine Description:
+
+    Returns the flags associated with a loaded keys instance.
+
+Arguments:
+
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS structure for which the
+        flags are to be obtained.
+
+    SizeOfFlags - Supplies the size of the structure pointed to by the Flags
+        parameter, in bytes.
+
+    Flags - Supplies the address of a variable that receives the flags.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Keys or Flags is NULL.
+
+    E_INVALIDARG - SizeOfFlags does not match the size of the flags structure.
+
+    PH_E_KEYS_NOT_LOADED - No file has been loaded yet.
+
+    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
+
+--*/
+{
+    PRTL Rtl;
+
+    if (!ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Flags)) {
+        return E_POINTER;
+    }
+
+    if (SizeOfFlags != sizeof(*Flags)) {
+        return E_INVALIDARG;
+    }
+
+    if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
+        return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
+    }
+
+    if (!Keys->State.Loaded) {
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return PH_E_KEYS_NOT_LOADED;
+    }
+
+    Rtl = Keys->Rtl;
+
+    Flags->AsULong = Keys->Flags.AsULong;
+
+    ReleasePerfectHashKeysLockExclusive(Keys);
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysGetAddress(
+    PPERFECT_HASH_KEYS Keys,
+    PVOID *BaseAddress,
+    PULARGE_INTEGER NumberOfElements
+    )
+/*++
+
+Routine Description:
+
+    Obtains the base address of the keys array and the number of elements
+    present in the array.
+
+Arguments:
+
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS structure for which the
+        base address and number of elements are to be obtained.
+
+    BaseAddress - Receives the base address of the keys array.
+
+    NumberOfElements - Receives the number of elements present in the array.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Keys, BaseAddress, or NumberOfElements is NULL.
+
+    PH_E_KEYS_NOT_LOADED - No file has been loaded yet.
+
+    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(BaseAddress)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(NumberOfElements)) {
+        return E_POINTER;
+    }
+
+    if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
+        return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
+    }
+
+    if (!Keys->State.Loaded) {
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return PH_E_KEYS_NOT_LOADED;
+    }
+
+    *BaseAddress = Keys->BaseAddress;
+    NumberOfElements->QuadPart = Keys->NumberOfElements.QuadPart;
+
+    ReleasePerfectHashKeysLockExclusive(Keys);
+
+    return S_OK;
 }
 
 PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;

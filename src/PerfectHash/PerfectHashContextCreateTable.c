@@ -21,6 +21,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashContextCreateTable(
     PPERFECT_HASH_CONTEXT Context,
+    PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlagsPointer,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
@@ -40,6 +41,9 @@ Arguments:
         structure that can be used by the underlying algorithm in order to
         search for perfect hash solutions in parallel.
 
+    CreateTableFlags - Optionally supplies a pointer to a create table flags
+        structure that can be used to customize table creation.
+
     AlgorithmId - Supplies the algorithm to use.
 
     MaskFunctionId - Supplies the type of masking to use.  The algorithm and hash
@@ -56,11 +60,25 @@ Arguments:
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    S_OK - Table was created successfully.
 
-    If TRUE, the table will be persisted at the path described by for the
-    HashTablePath parameter above.  This can be subsequently interacted with
-    once loaded via LoadPerfectHash().
+    The following error codes may also be returned.  Note that this list is not
+    guaranteed to be exhaustive; that is, error codes other than the ones listed
+    below may also be returned.
+
+    E_POINTER - Table or Path was NULL.
+
+    E_INVALIDARG - Path was not valid.
+
+    E_UNEXPECTED - General error.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS - Invalid flags value pointed to by
+        CreateTableFlags parameter.
+
+    PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS - A create table operation is already
+        in progress for this context.
 
 --*/
 {
@@ -92,6 +110,7 @@ Return Value:
     ULONG_INTEGER InfoStreamPathBufferSize;
     ULONG_INTEGER AlignedInfoStreamPathBufferSize;
     PPERFECT_HASH_TABLE Table = NULL;
+    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags;
 
     //
     // XXX TODO: relocate these to constants.
@@ -117,6 +136,16 @@ Return Value:
         Allocator = Context->Allocator;
         Rtl = Context->Rtl;
 
+    }
+
+    if (ARGUMENT_PRESENT(CreateTableFlagsPointer)) {
+        if (FAILED(IsValidContextCreateTableFlags(CreateTableFlagsPointer))) {
+            return PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS;
+        } else {
+            CreateTableFlags.AsULong = CreateTableFlagsPointer->AsULong;
+        }
+    } else {
+        CreateTableFlags.AsULong = 0;
     }
 
     if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {

@@ -95,6 +95,13 @@ typedef struct _UNICODE_STRING {
 typedef const UNICODE_STRING *PCUNICODE_STRING;
 #define UNICODE_NULL ((WCHAR)0)
 
+#ifndef ARGUMENT_PRESENT
+#define ARGUMENT_PRESENT(ArgumentPointer) (                  \
+    (CHAR *)((ULONG_PTR)(ArgumentPointer)) != (CHAR *)(NULL) \
+)
+#endif
+
+
 //
 // Define an enumeration for identifying COM interfaces.
 //
@@ -520,14 +527,117 @@ typedef PERFECT_HASH_KEYS_BITMAP *PPERFECT_HASH_KEYS_BITMAP;
 
 DECLARE_COMPONENT(Keys, PERFECT_HASH_KEYS);
 
+typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, tries to allocate the keys buffer using large pages.  The
+        // caller is responsible for ensuring the process can create large pages
+        // first by enabling the lock memory privilege.  If large pages can't
+        // be allocated (because the lock memory privilege hasn't been enabled,
+        // or there are insufficient large pages available to the system), the
+        // keys will be accessed via the normal memory-mapped address of the
+        // underlying file.
+        //
+        // To determine whether or not the large page allocation was successful,
+        // check the KeysDataUsesLargePages bit of the PERFECT_HASH_KEYS_FLAGS
+        // enum (the flags can be obtained after loading via the GetFlags() vtbl
+        // function).
+        //
+
+        ULONG TryLargePagesForKeysData:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_KEYS_LOAD_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_KEYS_LOAD_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_KEYS_LOAD_FLAGS *PPERFECT_HASH_KEYS_LOAD_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidKeysLoadFlags(
+    _In_ PPERFECT_HASH_KEYS_LOAD_FLAGS LoadFlags
+    )
+{
+    if (!ARGUMENT_PRESENT(LoadFlags)) {
+        return E_POINTER;
+    }
+
+    if (LoadFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
 typedef
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_KEYS_LOAD)(
     _In_ PPERFECT_HASH_KEYS Keys,
-    _In_ PCUNICODE_STRING Path
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS LoadFlags,
+    _In_ PCUNICODE_STRING Path,
+    _In_ ULONG KeySizeInBytes
     );
-typedef PERFECT_HASH_KEYS_LOAD
-      *PPERFECT_HASH_KEYS_LOAD;
+typedef PERFECT_HASH_KEYS_LOAD *PPERFECT_HASH_KEYS_LOAD;
+
+//
+// Define the keys flags union and get flags function.
+//
+
+typedef union _PERFECT_HASH_KEYS_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the keys were mapped using large pages.
+        //
+
+        ULONG KeysDataUsesLargePages:1;
+
+        //
+        // When set, indicates the keys are a sequential linear array of
+        // values.
+        //
+
+        ULONG Linear:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:30;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_KEYS_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_KEYS_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_KEYS_FLAGS *PPERFECT_HASH_KEYS_FLAGS;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_KEYS_GET_FLAGS)(
+    _In_ PPERFECT_HASH_KEYS Keys,
+    _In_ ULONG SizeOfFlags,
+    _Out_writes_bytes_(SizeOfFlags) PPERFECT_HASH_KEYS_FLAGS Flags
+    );
+typedef PERFECT_HASH_KEYS_GET_FLAGS *PPERFECT_HASH_KEYS_GET_FLAGS;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_KEYS_GET_ADDRESS)(
+    _In_ PPERFECT_HASH_KEYS Keys,
+    _Out_ PVOID *BaseAddress,
+    _Out_ PULARGE_INTEGER NumberOfElements
+    );
+typedef PERFECT_HASH_KEYS_GET_ADDRESS *PPERFECT_HASH_KEYS_GET_ADDRESS;
 
 typedef
 HRESULT
@@ -541,6 +651,8 @@ typedef PERFECT_HASH_KEYS_GET_BITMAP *PPERFECT_HASH_KEYS_GET_BITMAP;
 typedef struct _PERFECT_HASH_KEYS_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_KEYS);
     PPERFECT_HASH_KEYS_LOAD Load;
+    PPERFECT_HASH_KEYS_GET_FLAGS GetFlags;
+    PPERFECT_HASH_KEYS_GET_ADDRESS GetAddress;
     PPERFECT_HASH_KEYS_GET_BITMAP GetBitmap;
 } PERFECT_HASH_KEYS_VTBL;
 typedef PERFECT_HASH_KEYS_VTBL *PPERFECT_HASH_KEYS_VTBL;
@@ -866,32 +978,188 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
       *PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY;
 
+//
+// Define create table flags and associated function pointer.
+//
+
+typedef union _PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:32;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS
+      *PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidContextCreateTableFlags(
+    _In_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(CreateTableFlags)) {
+        return E_POINTER;
+    }
+
+    if (CreateTableFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
 typedef
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_CREATE_TABLE)(
     _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
     _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PPERFECT_HASH_KEYS Keys,
     _Inout_opt_ PCUNICODE_STRING HashTablePath
     );
-typedef PERFECT_HASH_CONTEXT_CREATE_TABLE
-      *PPERFECT_HASH_CONTEXT_CREATE_TABLE;
+typedef PERFECT_HASH_CONTEXT_CREATE_TABLE *PPERFECT_HASH_CONTEXT_CREATE_TABLE;
+
+//
+// Define the self-test flags and associated function pointer.
+//
+
+typedef union _PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // Indicates that the self-test routine should pause (i.e. wait for a
+        // keypress) before exiting.  This is useful when debugging with an
+        // IDE as it allows for the console output to be reviewed before the
+        // containing window is closed.
+        //
+
+        ULONG PauseBeforeExit:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS
+      *PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidContextSelfTestFlags(
+    _In_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(SelfTestFlags)) {
+        return E_POINTER;
+    }
+
+    if (SelfTestFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+//
+// Define the table load flags here as they're needed for SelfTest().
+//
+
+typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, tries to allocate the table data using large pages.  The
+        // caller is responsible for ensuring the process can create large pages
+        // first by enabling the lock memory privilege.  If large pages can't
+        // be allocated (because the lock memory privilege hasn't been enabled,
+        // or there are insufficient large pages available to the system), the
+        // table data will be accessed via the normal memory-mapped address of
+        // the underlying file.
+        //
+        // To determine whether or not the large page allocation was successful,
+        // check the TableDataUsesLargePages bit of PERFECT_HASH_TABLE_FLAGS
+        // enum (the flags can be obtained after loading via the GetFlags() vtbl
+        // function).
+        //
+
+        ULONG TryLargePagesForTableData:1;
+
+        //
+        // As above, but for the values array (i.e. the memory used to save the
+        // values inserted into the table via Insert()).  Corresponds to the
+        // ValuesArrayUsesLargePages bit of PERFECT_HASH_TABLE_FLAGS.
+        //
+
+        ULONG TryLargePagesForValuesArray:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:30;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_LOAD_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_LOAD_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_LOAD_FLAGS *PPERFECT_HASH_TABLE_LOAD_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidTableLoadFlags(
+    _In_ PPERFECT_HASH_TABLE_LOAD_FLAGS LoadFlags
+    )
+{
+    if (!ARGUMENT_PRESENT(LoadFlags)) {
+        return E_POINTER;
+    }
+
+    if (LoadFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
 
 typedef
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST)(
     _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_opt_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags,
+    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags,
     _In_ PCUNICODE_STRING TestDataDirectory,
     _In_ PCUNICODE_STRING OutputDirectory,
     _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId
     );
-typedef PERFECT_HASH_CONTEXT_SELF_TEST
-    *PPERFECT_HASH_CONTEXT_SELF_TEST;
+typedef PERFECT_HASH_CONTEXT_SELF_TEST *PPERFECT_HASH_CONTEXT_SELF_TEST;
 
 typedef
 _Success_(return >= 0)
@@ -917,11 +1185,13 @@ HRESULT
     _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _Inout_ PULONG MaximumConcurrency,
-    _Inout_ PBOOLEAN PauseBeforeExit
+    _Inout_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags,
+    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags,
+    _Inout_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
+    _Inout_ PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags
     );
 typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
       *PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
-
 
 typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
@@ -953,10 +1223,80 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_LOAD)(
     _In_ PPERFECT_HASH_TABLE Table,
+    _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS LoadFlags,
     _In_ PCUNICODE_STRING Path,
     _In_opt_ PPERFECT_HASH_KEYS Keys
     );
 typedef PERFECT_HASH_TABLE_LOAD *PPERFECT_HASH_TABLE_LOAD;
+
+//
+// Define the table flags enum and associated function pointer to obtain the
+// flags from a loaded table.
+//
+
+typedef union _PERFECT_HASH_TABLE_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the table was created via a context.
+        //
+        // Invariant:
+        //
+        //  - If Created == TRUE:
+        //      Assert Loaded == FALSE
+        //
+
+        ULONG Created:1;
+
+        //
+        // When set, indicates the table was loaded from disk via a previously
+        // created instance.
+        //
+        // Invariant:
+        //
+        //  - If Loaded == TRUE:
+        //      Assert Created == FALSE
+        //
+
+        ULONG Loaded:1;
+
+        //
+        // When set, indicates large pages are in use for the memory backing
+        // the table data (e.g. the vertices array).  This will only ever be
+        // set for loaded tables, not created ones.
+        //
+
+        ULONG TableDataUsesLargePages:1;
+
+        //
+        // When set, indicates the values array was allocated with large pages.
+        // This will only ever be set for loaded tables, not created ones.
+        //
+
+        ULONG ValuesArrayUsesLargePages:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:28;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_FLAGS *PPERFECT_HASH_TABLE_FLAGS;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_GET_FLAGS)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ ULONG SizeOfFlags,
+    _Out_writes_bytes_(SizeOfFlags) PPERFECT_HASH_TABLE_FLAGS Flags
+    );
+typedef PERFECT_HASH_TABLE_GET_FLAGS *PPERFECT_HASH_TABLE_GET_FLAGS;
 
 typedef
 _Success_(return >= 0)
@@ -1076,6 +1416,7 @@ typedef PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
 typedef struct _PERFECT_HASH_TABLE_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE);
     PPERFECT_HASH_TABLE_LOAD Load;
+    PPERFECT_HASH_TABLE_GET_FLAGS GetFlags;
     PPERFECT_HASH_TABLE_TEST Test;
     PPERFECT_HASH_TABLE_INSERT Insert;
     PPERFECT_HASH_TABLE_LOOKUP Lookup;

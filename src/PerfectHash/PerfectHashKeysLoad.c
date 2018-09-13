@@ -21,7 +21,9 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashKeysLoad(
     PPERFECT_HASH_KEYS Keys,
-    PCUNICODE_STRING Path
+    PPERFECT_HASH_KEYS_LOAD_FLAGS LoadFlagsPointer,
+    PCUNICODE_STRING Path,
+    ULONG KeySizeInBytes
     )
 /*++
 
@@ -34,6 +36,9 @@ Arguments:
     Keys - Supplies a pointer to the PERFECT_HASH_KEYS structure for
         which the keys are to be loaded.
 
+    LoadFlags - Optionally supplies a pointer to a PERFECT_HASH_KEYS_LOAD_FLAGS
+        structure.
+
     Path - Supplies a pointer to a UNICODE_STRING structure that represents
         a fully-qualified path of the keys to use for the perfect hash table.
 
@@ -41,11 +46,17 @@ Arguments:
              UNICODE_STRING structures.  Howver, the underlying buffer is passed
              to CreateFileW(), which requires a NULL-terminated wstr.
 
+    KeySizeInBytes - Supplies the size of each key element, in bytes.
+
 Return Value:
 
     S_OK - Success.
 
     E_POINTER - Keys or Path was NULL.
+
+    PH_E_INVALID_KEY_SIZE - The key size provided was not valid.
+
+    PH_E_INVALID_KEYS_LOAD_FLAGS - The provided load flags were invalid.
 
     PH_E_KEYS_NOT_SORTED - Keys were not sorted.
 
@@ -72,6 +83,7 @@ Return Value:
     LARGE_INTEGER NumberOfElements;
     FILE_STANDARD_INFO FileInfo;
     ULONG_PTR LargePageAllocSize;
+    PERFECT_HASH_KEYS_LOAD_FLAGS LoadFlags;
 
     //
     // Validate arguments.
@@ -87,6 +99,20 @@ Return Value:
 
     if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(Path)) {
         return E_INVALIDARG;
+    }
+
+    if (KeySizeInBytes != 4) {
+        return PH_E_INVALID_KEY_SIZE;
+    }
+
+    if (ARGUMENT_PRESENT(LoadFlagsPointer)) {
+        if (FAILED(IsValidKeysLoadFlags(LoadFlagsPointer))) {
+            return PH_E_INVALID_KEYS_LOAD_FLAGS;
+        } else {
+            LoadFlags.AsULong = LoadFlagsPointer->AsULong;
+        }
+    } else {
+        LoadFlags.AsULong = 0;
     }
 
     if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
@@ -231,34 +257,46 @@ Return Value:
     Keys->BaseAddress = BaseAddress;
     Keys->NumberOfElements.QuadPart = NumberOfElements.QuadPart;
 
-    //
-    // Attempt a large page allocation to contain the keys buffer.
-    //
-
-    LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
-    LargePageAddress = VirtualAlloc(NULL,
-                                    LargePageAllocSize,
-                                    MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
-                                    PAGE_READWRITE);
-
-    if (LargePageAddress) {
-        ULONG_PTR NumberOfPages;
-
-        Keys->Flags.MappedWithLargePages = TRUE;
-        Keys->MappedAddress = Keys->BaseAddress;
-        Keys->BaseAddress = LargePageAddress;
+    if (LoadFlags.TryLargePagesForKeysData) {
 
         //
-        // We can use the allocation size here to capture the appropriate
-        // number of pages that are mapped and accessible.
+        // Attempt a large page allocation to contain the keys buffer.
         //
 
-        NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
+        ULONG LargePageAllocFlags;
 
-        Rtl->Vtbl->CopyPages(Rtl,
-                             LargePageAddress,
-                             BaseAddress,
-                             (ULONG)NumberOfPages);
+        LargePageAllocFlags = MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
+        LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
+        LargePageAddress = VirtualAlloc(NULL,
+                                        LargePageAllocSize,
+                                        LargePageAllocFlags,
+                                        PAGE_READWRITE);
+
+        if (LargePageAddress) {
+
+            //
+            // The large page allocation was successful.
+            //
+
+            ULONG_PTR NumberOfPages;
+
+            Keys->Flags.KeysDataUsesLargePages = TRUE;
+            Keys->MappedAddress = Keys->BaseAddress;
+            Keys->BaseAddress = LargePageAddress;
+
+            //
+            // We can use the allocation size here to capture the appropriate
+            // number of pages that are mapped and accessible.
+            //
+
+            NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
+
+            Rtl->Vtbl->CopyPages(Rtl,
+                                 LargePageAddress,
+                                 BaseAddress,
+                                 (ULONG)NumberOfPages);
+        }
+
     }
 
     //
@@ -283,6 +321,7 @@ Return Value:
     //
 
     Keys->State.Loaded = TRUE;
+    Keys->LoadFlags.AsULong = LoadFlags.AsULong;
     Result = S_OK;
     goto End;
 

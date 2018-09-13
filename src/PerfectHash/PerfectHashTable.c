@@ -9,7 +9,7 @@ Module Name:
 Abstract:
 
     This module implements the initialization and rundown routines for the
-    PERFECT_HASH_TABLE instance.
+    PERFECT_HASH_TABLE instance, and the get flags routine.
 
 --*/
 
@@ -244,6 +244,74 @@ Return Value:
         Table->Rtl->Vtbl->Release(Table->Rtl);
         Table->Rtl = NULL;
     }
+}
+
+
+PERFECT_HASH_TABLE_GET_FLAGS PerfectHashTableGetFlags;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableGetFlags(
+    PPERFECT_HASH_TABLE Table,
+    ULONG SizeOfFlags,
+    PPERFECT_HASH_TABLE_FLAGS Flags
+    )
+/*++
+
+Routine Description:
+
+    Returns the flags associated with a loaded table instance.
+
+Arguments:
+
+    Table - Supplies a pointer to a PERFECT_HASH_TABLE structure for which the
+        flags are to be obtained.
+
+    SizeOfFlags - Supplies the size of the structure pointed to by the Flags
+        parameter, in bytes.
+
+    Flags - Supplies the address of a variable that receives the flags.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Table or Flags is NULL.
+
+    E_INVALIDARG - SizeOfFlags does not match the size of the flags structure.
+
+    PH_E_TABLE_NOT_LOADED - No file has been loaded yet.
+
+    PH_E_TABLE_LOCKED - The table is locked.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Flags)) {
+        return E_POINTER;
+    }
+
+    if (SizeOfFlags != sizeof(*Flags)) {
+        return E_INVALIDARG;
+    }
+
+    if (!TryAcquirePerfectHashTableLockExclusive(Table)) {
+        return PH_E_TABLE_LOCKED;
+    }
+
+    if (!Table->Flags.Loaded) {
+        ReleasePerfectHashTableLockExclusive(Table);
+        return PH_E_TABLE_NOT_LOADED;
+    }
+
+    Flags->AsULong = Table->Flags.AsULong;
+
+    ReleasePerfectHashTableLockExclusive(Table);
+
+    return S_OK;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -22,6 +22,10 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashContextSelfTest(
     PPERFECT_HASH_CONTEXT Context,
+    PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlagsPointer,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlagsPointer,
+    PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlagsPointer,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlagsPointer,
     PCUNICODE_STRING TestDataDirectory,
     PCUNICODE_STRING OutputDirectory,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
@@ -38,6 +42,20 @@ Arguments:
 
     Context - Supplies an instance of PERFECT_HASH_CONTEXT.
 
+    SelfTestFlags - Optionally supplies a pointer to a self-test flags
+        structure that can be used to customize self-test behavior.
+
+    LoadKeysFlags - Optionally supplies a pointer to a key loading flags
+        structure that can be used to customize key loading behavior.
+
+    CreateTableFlags - Optionally supplies a pointer to a create table
+        flags structure that can be used to customize table creation
+        behavior.
+
+    LoadTableFlags - Optionally supplies a pointer to a load table
+        flags structure that can be used to customize table loading
+        behavior.
+
     TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
         represents a fully-qualified path of the test data directory.
 
@@ -53,7 +71,9 @@ Arguments:
 
 Return Value:
 
-    S_OK on success, an appropriate error code on failure.
+    S_OK - Self test performed successfully.
+
+    An apppropriate error code otherwise.
 
 --*/
 {
@@ -75,6 +95,8 @@ Return Value:
     PWCHAR WideOutput;
     PWCHAR WideOutputBuffer;
     PWCHAR FileName;
+    PVOID KeysBaseAddress;
+    ULARGE_INTEGER NumberOfKeys;
     WCHAR WideBitmapString[33];
     UNICODE_STRING UnicodeBitmapString;
     HANDLE FindHandle = NULL;
@@ -94,6 +116,7 @@ Return Value:
     UNICODE_STRING TablePath;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_KEYS Keys;
+    PERFECT_HASH_KEYS_FLAGS KeysFlags;
     PERFECT_HASH_KEYS_BITMAP KeysBitmap;
     PTABLE_INFO_ON_DISK_HEADER Header;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
@@ -101,6 +124,10 @@ Return Value:
     PUNICODE_STRING AlgorithmName;
     PUNICODE_STRING HashFunctionName;
     PUNICODE_STRING MaskFunctionName;
+    PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags;
+    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags;
+    PERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags;
+    PERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags;
 
     //
     // Validate arguments.
@@ -110,6 +137,46 @@ Return Value:
         return E_POINTER;
     } else {
         Rtl = Context->Rtl;
+    }
+
+    if (ARGUMENT_PRESENT(SelfTestFlagsPointer)) {
+        if (FAILED(IsValidContextSelfTestFlags(SelfTestFlagsPointer))) {
+            return PH_E_INVALID_CONTEXT_SELF_TEST_FLAGS;
+        } else {
+            SelfTestFlags.AsULong = SelfTestFlagsPointer->AsULong;
+        }
+    } else {
+        SelfTestFlags.AsULong = 0;
+    }
+
+    if (ARGUMENT_PRESENT(LoadKeysFlagsPointer)) {
+        if (FAILED(IsValidKeysLoadFlags(LoadKeysFlagsPointer))) {
+            return PH_E_INVALID_KEYS_LOAD_FLAGS;
+        } else {
+            LoadKeysFlags.AsULong = LoadKeysFlagsPointer->AsULong;
+        }
+    } else {
+        LoadKeysFlags.AsULong = 0;
+    }
+
+    if (ARGUMENT_PRESENT(CreateTableFlagsPointer)) {
+        if (FAILED(IsValidContextCreateTableFlags(CreateTableFlagsPointer))) {
+            return PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS;
+        } else {
+            CreateTableFlags.AsULong = CreateTableFlagsPointer->AsULong;
+        }
+    } else {
+        CreateTableFlags.AsULong = 0;
+    }
+
+    if (ARGUMENT_PRESENT(LoadTableFlagsPointer)) {
+        if (FAILED(IsValidTableLoadFlags(LoadTableFlagsPointer))) {
+            return PH_E_INVALID_TABLE_LOAD_FLAGS;
+        } else {
+            LoadTableFlags.AsULong = LoadTableFlagsPointer->AsULong;
+        }
+    } else {
+        LoadTableFlags.AsULong = 0;
     }
 
     if (!ARGUMENT_PRESENT(TestDataDirectory)) {
@@ -350,8 +417,8 @@ Return Value:
 
     //
     // Zero the failure count and terminate flag, zero the bitmap structure,
-    // wire up the unicode string representation of the bitmap, and begin the
-    // main loop.
+    // wire up the unicode string representation of the bitmap, initialize
+    // various flags, and begin the main loop.
     //
 
     Failures = 0;
@@ -361,6 +428,9 @@ Return Value:
     UnicodeBitmapString.Length = sizeof(WideBitmapString)-2;
     UnicodeBitmapString.MaximumLength = sizeof(WideBitmapString);
     UnicodeBitmapString.Buffer[UnicodeBitmapString.Length >> 1] = L'\0';
+    KeysBaseAddress = NULL;
+    NumberOfKeys.QuadPart = 0;
+    KeysFlags.AsULong = 0;
 
     do {
 
@@ -405,7 +475,10 @@ Return Value:
             break;
         }
 
-        Result = Keys->Vtbl->Load(Keys, &KeysPath);
+        Result = Keys->Vtbl->Load(Keys,
+                                  &LoadKeysFlags,
+                                  &KeysPath,
+                                  sizeof(ULONG));
 
         if (FAILED(Result)) {
 
@@ -423,6 +496,45 @@ Return Value:
         WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
         WIDE_OUTPUT_FLUSH();
+
+        //
+        // Verify GetFlags().
+        //
+
+        Result = Keys->Vtbl->GetFlags(Keys,
+                                      sizeof(KeysFlags),
+                                      &KeysFlags);
+
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to obtain flags for keys: ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
+
+        //
+        // Verify base address and number of keys.
+        //
+
+        Result = Keys->Vtbl->GetAddress(Keys,
+                                        &KeysBaseAddress,
+                                        &NumberOfKeys);
+
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to obtain base "
+                                        L"address for keys: ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
 
         //
         // Verify the bitmap function returns success.
@@ -487,7 +599,10 @@ Return Value:
         // been loaded.
         //
 
-        Result = Keys->Vtbl->Load(Keys, &KeysPath);
+        Result = Keys->Vtbl->Load(Keys,
+                                  &LoadKeysFlags,
+                                  &KeysPath,
+                                  sizeof(ULONG));
 
         if (Result != PH_E_KEYS_ALREADY_LOADED) {
             WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; multiple "
@@ -604,6 +719,7 @@ Return Value:
         //
 
         Result = Context->Vtbl->CreateTable(Context,
+                                            &CreateTableFlags,
                                             AlgorithmId,
                                             MaskFunctionId,
                                             HashFunctionId,
@@ -645,7 +761,10 @@ Return Value:
             goto ReleaseKeys;
         }
 
-        Result = Table->Vtbl->Load(Table, &TablePath, Keys);
+        Result = Table->Vtbl->Load(Table,
+                                   &LoadTableFlags,
+                                   &TablePath,
+                                   Keys);
 
         if (FAILED(Result)) {
 
@@ -702,7 +821,7 @@ Return Value:
         WIDE_OUTPUT_RAW(WideOutput, L").\n");
 
         WIDE_OUTPUT_RAW(WideOutput, L"Keys backed by large pages: ");
-        if (Keys->Flags.MappedWithLargePages) {
+        if (KeysFlags.KeysDataUsesLargePages) {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &Yes);
         } else {
             WIDE_OUTPUT_UNICODE_STRING(WideOutput, &No);
@@ -941,7 +1060,10 @@ PerfectHashContextExtractSelfTestArgsFromArgvW(
     PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PULONG MaximumConcurrency,
-    PBOOLEAN PauseBeforeExit
+    PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags,
+    PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags
     )
 /*++
 
@@ -980,8 +1102,17 @@ Arguments:
     MaximumConcurrency - Supplies the address of a variable that will receive
         the maximum concurrency.
 
-    PauseBeforeExit - Supplies the address of a variable that will receive the
-        boolean TRUE value if a pause before exit has been requested.
+    SelfTestFlags - Supplies the address of a variable that will receive the
+        self-test flags.
+
+    LoadKeysFlags - Supplies the address of a variable that will receive
+        the key loading flags.
+
+    CreateTableFlags - Supplies the address of a variable that will receive
+        the create table flags.
+
+    LoadTableFlags - Supplies the address of a variable that will receive the
+        the load table flags.
 
 Return Value:
 
@@ -1046,9 +1177,52 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(PauseBeforeExit)) {
+    if (!ARGUMENT_PRESENT(SelfTestFlags)) {
         return E_POINTER;
     }
+
+    if (!ARGUMENT_PRESENT(LoadKeysFlags)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(CreateTableFlags)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(LoadTableFlags)) {
+        return E_POINTER;
+    }
+
+    ValidNumberOfArguments = (
+        NumberOfArguments == 7 ||
+        NumberOfArguments == 8
+    );
+
+    if (!ValidNumberOfArguments) {
+        return PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS;
+    }
+
+    //
+    // Argument validation complete, continue.
+    //
+
+    ArgW = &ArgvW[1];
+    Rtl = Context->Rtl;
+
+    //
+    // Extract test data directory.
+    //
+
+    TestDataDirectory->Buffer = *ArgW++;
+    TestDataDirectory->Length = GET_LENGTH(TestDataDirectory);
+    TestDataDirectory->MaximumLength = GET_MAX_LENGTH(TestDataDirectory);
+
+    //
+    // Extract test data directory.
+    //
+
+    OutputDirectory->Buffer = *ArgW++;
+    OutputDirectory->Length = GET_LENGTH(OutputDirectory);
 
     ValidNumberOfArguments = (
         NumberOfArguments == 7 ||
@@ -1124,8 +1298,16 @@ Return Value:
     }
 
     if (NumberOfArguments == 8) {
-        *PauseBeforeExit = TRUE;
+        SelfTestFlags->PauseBeforeExit = TRUE;
     }
+
+    //
+    // Remaining flags not yet supported.
+    //
+
+    LoadKeysFlags->AsULong = 0;
+    CreateTableFlags->AsULong = 0;
+    LoadTableFlags->AsULong = 0;
 
     return S_OK;
 }
@@ -1187,7 +1369,10 @@ Return Value:
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId = 0;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId = 0;
     ULONG MaximumConcurrency = 0;
-    BOOLEAN PauseBeforeExit = FALSE;
+    PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags = { 0 };
+    PERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags = { 0 };
+    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags = { 0 };
+    PERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags = { 0 };
 
     Rtl = Context->Rtl;
 
@@ -1200,7 +1385,10 @@ Return Value:
                                                          &HashFunctionId,
                                                          &MaskFunctionId,
                                                          &MaximumConcurrency,
-                                                         &PauseBeforeExit);
+                                                         &SelfTestFlags,
+                                                         &LoadKeysFlags,
+                                                         &CreateTableFlags,
+                                                         &LoadTableFlags);
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashContextSelfTestArgvW, Result);
@@ -1218,6 +1406,10 @@ Return Value:
     }
 
     Result = Context->Vtbl->SelfTest(Context,
+                                     &SelfTestFlags,
+                                     &LoadKeysFlags,
+                                     &CreateTableFlags,
+                                     &LoadTableFlags,
                                      &TestDataDirectory,
                                      &OutputDirectory,
                                      AlgorithmId,

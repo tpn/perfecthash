@@ -402,9 +402,11 @@ const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface = {
     (PPERFECT_HASH_KEYS_CREATE_INSTANCE)&ComponentCreateInstance,
     (PPERFECT_HASH_KEYS_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashKeysLoad,
+    &PerfectHashKeysGetFlags,
+    &PerfectHashKeysGetAddress,
     &PerfectHashKeysGetBitmap,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_KEYS, 2);
+VERIFY_VTBL_SIZE(PERFECT_HASH_KEYS, 4);
 
 //
 // PerfectHashContext
@@ -436,6 +438,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     (PPERFECT_HASH_TABLE_CREATE_INSTANCE)&ComponentCreateInstance,
     (PPERFECT_HASH_TABLE_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashTableLoad,
+    &PerfectHashTableGetFlags,
     &PerfectHashTableTest,
     &PerfectHashTableInsert,
     &PerfectHashTableLookup,
@@ -451,7 +454,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableGetHashFunctionName,
     &PerfectHashTableGetMaskFunctionName,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 15);
+VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 16);
 
 //
 // Rtl

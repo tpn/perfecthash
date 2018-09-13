@@ -303,3 +303,102 @@ Abstract:
 //
 #define PH_E_KEYS_ALREADY_LOADED         ((HRESULT)0xE004021BL)
 
+//
+// MessageId: PH_E_INVALID_KEYS_LOAD_FLAGS
+//
+// MessageText:
+//
+// Invalid key load flags.
+//
+#define PH_E_INVALID_KEYS_LOAD_FLAGS     ((HRESULT)0xE004021CL)
+
+//
+// MessageId: PH_E_INVALID_KEY_SIZE
+//
+// MessageText:
+//
+// Invalid key size.
+//
+#define PH_E_INVALID_KEY_SIZE            ((HRESULT)0xE004021DL)
+
+//
+// MessageId: PH_E_TABLE_NOT_LOADED
+//
+// MessageText:
+//
+// No table has been loaded yet.
+//
+#define PH_E_TABLE_NOT_LOADED            ((HRESULT)0xE004021EL)
+
+//
+// MessageId: PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS
+//
+// MessageText:
+//
+// A table loading operation is already in progress.
+//
+#define PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS ((HRESULT)0xE004021FL)
+
+//
+// MessageId: PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS
+//
+// MessageText:
+//
+// Invalid context create table flags.
+//
+#define PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS ((HRESULT)0xE0040220L)
+
+//
+// MessageId: PH_E_INVALID_CONTEXT_SELF_TEST_FLAGS
+//
+// MessageText:
+//
+// Invalid context self-test flags.
+//
+#define PH_E_INVALID_CONTEXT_SELF_TEST_FLAGS ((HRESULT)0xE0040221L)
+
+//
+// MessageId: PH_E_INVALID_TABLE_LOAD_FLAGS
+//
+// MessageText:
+//
+// Invalid table load flags.
+//
+#define PH_E_INVALID_TABLE_LOAD_FLAGS    ((HRESULT)0xE0040222L)
+
+//
+// MessageId: PH_E_TABLE_LOCKED
+//
+// MessageText:
+//
+// Table is locked.
+//
+#define PH_E_TABLE_LOCKED                ((HRESULT)0xE0040223L)
+
+//
+// MessageId: PH_E_SYSTEM_CALL_FAILED
+//
+// MessageText:
+//
+// A routine supplied by the operating system has indicated failure.
+//
+#define PH_E_SYSTEM_CALL_FAILED          ((HRESULT)0xE0040224L)
+
+//
+// MessageId: PH_E_TABLE_ALREADY_CREATED
+//
+// MessageText:
+//
+// The table instance has already been created.
+//
+#define PH_E_TABLE_ALREADY_CREATED       ((HRESULT)0xE0040225L)
+
+//
+// MessageId: PH_E_TABLE_ALREADY_LOADED
+//
+// MessageText:
+//
+// The table instance has already been loaded.
+//
+#define PH_E_TABLE_ALREADY_LOADED        ((HRESULT)0xE0040226L)
+

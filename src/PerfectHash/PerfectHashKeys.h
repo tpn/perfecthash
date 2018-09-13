@@ -44,35 +44,6 @@ typedef union _PERFECT_HASH_KEYS_STATE {
 C_ASSERT(sizeof(PERFECT_HASH_KEYS_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_KEYS_STATE *PPERFECT_HASH_KEYS_STATE;
 
-typedef union _PERFECT_HASH_KEYS_FLAGS {
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When set, indicates the keys were mapped using large pages.
-        //
-
-        ULONG MappedWithLargePages:1;
-
-        //
-        // When set, indicates the keys are a sequential linear array of
-        // values.
-        //
-
-        ULONG Linear:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:30;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_KEYS_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_KEYS_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_KEYS_FLAGS *PPERFECT_HASH_KEYS_FLAGS;
-
 //
 // Define the PERFECT_HASH_KEYS_STATS structure.
 //
@@ -97,6 +68,18 @@ typedef PERFECT_HASH_KEYS_STATS *PPERFECT_HASH_KEYS_STATS;
 typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
 
     COMMON_COMPONENT_HEADER(PERFECT_HASH_KEYS);
+
+    //
+    // Size of each key element, in bytes.
+    //
+
+    ULONG SizeOfKeyInBytes;
+
+    //
+    // Load flags provided to the Load() routine.
+    //
+
+    PERFECT_HASH_KEYS_LOAD_FLAGS LoadFlags;
 
     //
     // Slim read/write lock guarding the structure.
@@ -207,6 +190,8 @@ extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats;
 extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
+extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
+extern PERFECT_HASH_KEYS_GET_ADDRESS PerfectHashKeysGetAddress;
 extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

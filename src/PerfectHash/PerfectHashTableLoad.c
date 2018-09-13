@@ -21,6 +21,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableLoad(
     PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadFlagsPointer,
     PCUNICODE_STRING Path,
     PPERFECT_HASH_KEYS Keys
     )
@@ -35,6 +36,9 @@ Arguments:
     Table - Supplies a pointer to the PERFECT_HASH_TABLE interface for which
         the on-disk table is to be loaded.
 
+    LoadFlags - Optionally supplies a pointer to a PERFECT_HASH_TABLE_LOAD_FLAGS
+        structure that can be used to customize the loading behavior.
+
     Path - Supplies a pointer to a UNICODE_STRING structure representing the
         fully-qualified, NULL-terminated path of the file to be used to load
         the table.
@@ -43,7 +47,60 @@ Arguments:
 
 Return Value:
 
-    S_OK on success, an appropriate error code on failure.
+    S_OK - Table loaded successfully.
+
+    The following error codes may also be returned.  Note that this list is not
+    guaranteed to be exhaustive; that is, error codes other than the ones listed
+    below may also be returned.
+
+    E_POINTER - Table or Path was NULL.
+
+    E_INVALIDARG - Path was not valid.
+
+    E_UNEXPECTED - General error.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    PH_E_INVALID_TABLE_LOAD_FLAGS - Invalid table load flags provided.
+
+    PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS - A table load is already in progress.
+
+    PH_E_TABLE_ALREADY_CREATED - A table has already been created.
+
+    PH_E_TABLE_ALREADY_LOADED - A table file has already been loaded.
+
+    PH_E_INFO_FILE_SMALLER_THAN_HEADER - The table's :Info file was smaller
+        than our smallest-known on-disk header structure.
+
+    PH_E_INVALID_MAGIC_VALUES - The table's magic numbers were invalid.
+
+    PH_E_INVALID_INFO_HEADER_SIZE - Invalid header size reported by :Info.
+
+    PH_E_NUM_KEYS_MISMATCH_BETWEEN_HEADER_AND_KEYS - The number of keys
+        reported by the header does not match the deduced number of keys
+        (obtained by dividing the file size by the key size reported by
+        the header).
+
+    PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID in header.
+
+    PH_E_INVALID_HASH_FUNCTION_ID - Invalid hash function ID in header.
+
+    PH_E_INVALID_MASK_FUNCTION_ID - Invalid mask function ID in header.
+
+    PH_E_HEADER_KEY_SIZE_TOO_LARGE - Key size reported by the header is
+        too large.
+
+    PH_E_NUM_KEYS_IS_ZERO - The number of keys reported by the header is 0.
+
+    PH_E_NUM_TABLE_ELEMENTS_IS_ZERO - The number of table elements reported by
+        the header is 0.
+
+    PH_E_NUM_KEYS_EXCEEDS_NUM_TABLE_ELEMENTS - The number of keys indicated in
+        the header exceeds the number of table elements indicated by the header.
+
+    PH_E_EXPECTED_EOF_ACTUAL_EOF_MISMATCH - The expected end-of-file, which
+        is calculated by dividing the file size by number of table elements,
+        did not match the actual on-disk file size.
 
 --*/
 {
@@ -77,6 +134,7 @@ Return Value:
     PTABLE_INFO_ON_DISK_HEADER Header;
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     UNICODE_STRING InfoSuffix = RTL_CONSTANT_STRING(L":Info");
+    PERFECT_HASH_TABLE_LOAD_FLAGS LoadFlags;
 
     //
     // Validate arguments.
@@ -92,6 +150,28 @@ Return Value:
 
     if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(Path)) {
         return E_INVALIDARG;
+    }
+
+    if (ARGUMENT_PRESENT(LoadFlagsPointer)) {
+        if (FAILED(IsValidTableLoadFlags(LoadFlagsPointer))) {
+            return PH_E_INVALID_TABLE_LOAD_FLAGS;
+        } else {
+            LoadFlags.AsULong = LoadFlagsPointer->AsULong;
+        }
+    } else {
+        LoadFlags.AsULong = 0;
+    }
+
+    if (!TryAcquirePerfectHashTableLockExclusive(Table)) {
+        return PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS;
+    }
+
+    if (Table->Flags.Loaded) {
+        ReleasePerfectHashTableLockExclusive(Table);
+        return PH_E_TABLE_ALREADY_LOADED;
+    } else if (Table->Flags.Created) {
+        ReleasePerfectHashTableLockExclusive(Table);
+        return PH_E_TABLE_ALREADY_CREATED;
     }
 
     //
@@ -222,6 +302,7 @@ Return Value:
 
     if (!BaseBuffer) {
         SYS_ERROR(HeapAlloc);
+        ReleasePerfectHashTableLockExclusive(Table);
         return E_OUTOFMEMORY;
     }
 
@@ -618,49 +699,46 @@ Return Value:
         goto Error;
     }
 
-    //
-    // Attempt a large page allocation to contain the table data buffer.
-    //
-
-    LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
-    LargePageAddress = VirtualAlloc(NULL,
-                                    LargePageAllocSize,
-                                    MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
-                                    PAGE_READWRITE);
-
-    if (LargePageAddress) {
-        ULONG_PTR NumberOfPages;
-
-        Table->Flags.TableDataUsesLargePages = TRUE;
-        Table->MappedAddress = Table->BaseAddress;
-        Table->BaseAddress = LargePageAddress;
+    if (LoadFlags.TryLargePagesForTableData) {
 
         //
-        // We can use the allocation size here to capture the appropriate
-        // number of pages that are mapped and accessible.
+        // Attempt a large page allocation to contain the table data buffer.
         //
 
-        NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
+        ULONG LargePageAllocFlags;
 
-        Rtl->Vtbl->CopyPages(Rtl,
-                             LargePageAddress,
-                             BaseAddress,
-                             (ULONG)NumberOfPages);
+        LargePageAllocFlags = MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
+        LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
+        LargePageAddress = VirtualAlloc(NULL,
+                                        LargePageAllocSize,
+                                        LargePageAllocFlags,
+                                        PAGE_READWRITE);
 
-#if 0
-        {
-            ULONGLONG TotalBytes;
-            ULONGLONG MatchingBytes;
+        if (LargePageAddress) {
 
-            TotalBytes = (ULONGLONG)FileInfo.AllocationSize.QuadPart;
-            MatchingBytes = Rtl->RtlCompareMemory(BaseAddress,
-                                                  LargePageAddress,
-                                                  TotalBytes);
+            //
+            // The large page allocation was successful.
+            //
 
-            ASSERT(MatchingBytes == TotalBytes);
+            ULONG_PTR NumberOfPages;
+
+            Table->Flags.TableDataUsesLargePages = TRUE;
+            Table->MappedAddress = Table->BaseAddress;
+            Table->BaseAddress = LargePageAddress;
+
+            //
+            // We can use the allocation size here to capture the appropriate
+            // number of pages that are mapped and accessible.
+            //
+
+            NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
+
+            Rtl->Vtbl->CopyPages(Rtl,
+                                 LargePageAddress,
+                                 BaseAddress,
+                                 (ULONG)NumberOfPages);
+
         }
-#endif
-
     }
 
     //
@@ -670,7 +748,7 @@ Return Value:
     // by the result of the Index() routine.
     //
 
-    LargePagesForValues = TRUE;
+    LargePagesForValues = (BOOLEAN)LoadFlags.TryLargePagesForValuesArray;
 
     ValuesSizeInBytes = (
         Header->NumberOfTableElements.QuadPart *
@@ -730,6 +808,7 @@ Return Value:
 
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
+    Table->LoadFlags.AsULong = LoadFlags.AsULong;
     Result = S_OK;
     goto End;
 
@@ -752,6 +831,8 @@ End:
     if (BaseBuffer && Allocator != NULL) {
         Allocator->Vtbl->FreePointer(Allocator, &BaseBuffer);
     }
+
+    ReleasePerfectHashTableLockExclusive(Table);
 
     return Result;
 }

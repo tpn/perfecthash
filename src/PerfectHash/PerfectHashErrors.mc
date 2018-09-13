@@ -237,3 +237,91 @@ Language=English
 A set of keys has already been loaded.
 .
 
+MessageId=0x21c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_KEYS_LOAD_FLAGS
+Language=English
+Invalid key load flags.
+.
+
+MessageId=0x21d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_KEY_SIZE
+Language=English
+Invalid key size.
+.
+
+MessageId=0x21e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_NOT_LOADED
+Language=English
+No table has been loaded yet.
+.
+
+MessageId=0x21f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS
+Language=English
+A table loading operation is already in progress.
+.
+
+MessageId=0x220
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS
+Language=English
+Invalid context create table flags.
+.
+
+MessageId=0x221
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CONTEXT_SELF_TEST_FLAGS
+Language=English
+Invalid context self-test flags.
+.
+
+MessageId=0x222
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE_LOAD_FLAGS
+Language=English
+Invalid table load flags.
+.
+
+MessageId=0x223
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_LOCKED
+Language=English
+Table is locked.
+.
+
+MessageId=0x224
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SYSTEM_CALL_FAILED
+Language=English
+A routine supplied by the operating system has indicated failure.
+.
+
+MessageId=0x225
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_ALREADY_CREATED
+Language=English
+The table instance has already been created.
+.
+
+MessageId=0x226
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_ALREADY_LOADED
+Language=English
+The table instance has already been loaded.
+.
+

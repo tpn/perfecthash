@@ -51,70 +51,25 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 #define IsValidTable(Table) (Table->State.Valid == TRUE)
 
 //
-// Define the PERFECT_HASH_TABLE_FLAGS structure.
-//
-
-typedef union _PERFECT_HASH_TABLE_FLAGS {
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When set, indicates the table came from CreatePerfectHashTable().
-        //
-        // Invariant:
-        //
-        //  - If Created == TRUE:
-        //      Assert Loaded == FALSE
-        //
-
-        ULONG Created:1;
-
-        //
-        // When set, indicates the table came from LoadPerfectHashTable().
-        //
-        // Invariant:
-        //
-        //  - If Loaded == TRUE:
-        //      Assert Created == FALSE
-        //
-
-        ULONG Loaded:1;
-
-        //
-        // When set, indicates large pages are in use for the memory backing
-        // Table->Data.
-        //
-        // N.B. This is not currently supported.
-        //
-
-        ULONG TableDataUsesLargePages:1;
-
-        //
-        // When set, indicates the Table->Values[] array was allocated with
-        // large pages.
-        //
-
-        ULONG ValuesArrayUsesLargePages:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:28;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_TABLE_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_FLAGS *PPERFECT_HASH_TABLE_FLAGS;
-
-//
 // Define the PERFECT_HASH_TABLE structure.
 //
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE);
+
+    //
+    // Flags provided during table creation/loading.
+    //
+
+    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags;
+    PERFECT_HASH_TABLE_LOAD_FLAGS LoadFlags;
+
+    //
+    // Slim read/write lock guarding the structure.
+    //
+
+    SRWLOCK Lock;
 
     //
     // Base address of the memory map for the backing file.
@@ -318,8 +273,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     PERFECT_HASH_TABLE_VTBL Interface;
 
+    PVOID Padding;
+
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
+
+#define TryAcquirePerfectHashTableLockExclusive(Table) \
+    TryAcquireSRWLockExclusive(&Table->Lock)
+
+#define ReleasePerfectHashTableLockExclusive(Table) \
+    ReleaseSRWLockExclusive(&Table->Lock)
 
 //
 // Internal method typedefs.
@@ -348,6 +311,7 @@ typedef PERFECT_HASH_TABLE_RUNDOWN
 extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
 extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
 extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
+extern PERFECT_HASH_TABLE_GET_FLAGS PerfectHashTableGetFlags;
 extern PERFECT_HASH_TABLE_TEST PerfectHashTableTest;
 extern PERFECT_HASH_TABLE_INSERT PerfectHashTableInsert;
 extern PERFECT_HASH_TABLE_LOOKUP PerfectHashTableLookup;
