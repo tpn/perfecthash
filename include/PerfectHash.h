@@ -532,12 +532,12 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When set, tries to allocate the keys buffer using large pages.  The
+        // When clear, tries to allocate the keys buffer using large pages.  The
         // caller is responsible for ensuring the process can create large pages
-        // first by enabling the lock memory privilege.  If large pages can't
-        // be allocated (because the lock memory privilege hasn't been enabled,
-        // or there are insufficient large pages available to the system), the
-        // keys will be accessed via the normal memory-mapped address of the
+        // first by enabling the lock memory privilege.  If large pages can't be
+        // allocated (because the lock memory privilege hasn't been enabled, or
+        // there are insufficient large pages available to the system), the keys
+        // will be accessed via the normal memory-mapped address of the
         // underlying file.
         //
         // To determine whether or not the large page allocation was successful,
@@ -546,7 +546,7 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         // function).
         //
 
-        ULONG TryLargePagesForKeysData:1;
+        ULONG DisableTryLargePagesForKeysData:1;
 
         //
         // Unused bits.
@@ -1089,11 +1089,11 @@ typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When set, tries to allocate the table data using large pages.  The
+        // When clear, tries to allocate the table data using large pages.  The
         // caller is responsible for ensuring the process can create large pages
-        // first by enabling the lock memory privilege.  If large pages can't
-        // be allocated (because the lock memory privilege hasn't been enabled,
-        // or there are insufficient large pages available to the system), the
+        // first by enabling the lock memory privilege.  If large pages can't be
+        // allocated (because the lock memory privilege hasn't been enabled, or
+        // there are insufficient large pages available to the system), the
         // table data will be accessed via the normal memory-mapped address of
         // the underlying file.
         //
@@ -1103,7 +1103,7 @@ typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
         // function).
         //
 
-        ULONG TryLargePagesForTableData:1;
+        ULONG DisableTryLargePagesForTableData:1;
 
         //
         // As above, but for the values array (i.e. the memory used to save the
@@ -1111,7 +1111,7 @@ typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
         // ValuesArrayUsesLargePages bit of PERFECT_HASH_TABLE_FLAGS.
         //
 
-        ULONG TryLargePagesForValuesArray:1;
+        ULONG DisableTryLargePagesForValuesArray:1;
 
         //
         // Unused bits.

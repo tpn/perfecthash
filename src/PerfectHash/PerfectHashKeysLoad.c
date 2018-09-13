@@ -257,7 +257,7 @@ Return Value:
     Keys->BaseAddress = BaseAddress;
     Keys->NumberOfElements.QuadPart = NumberOfElements.QuadPart;
 
-    if (LoadFlags.TryLargePagesForKeysData) {
+    if (!LoadFlags.DisableTryLargePagesForKeysData) {
 
         //
         // Attempt a large page allocation to contain the keys buffer.

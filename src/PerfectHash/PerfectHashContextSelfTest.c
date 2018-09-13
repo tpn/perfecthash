@@ -1309,14 +1309,6 @@ Return Value:
     CreateTableFlags->AsULong = 0;
     LoadTableFlags->AsULong = 0;
 
-    //
-    // Temp hack: default the large page flags to 'on'.
-    //
-
-    LoadKeysFlags->TryLargePagesForKeysData = TRUE;
-    LoadTableFlags->TryLargePagesForTableData = TRUE;
-    LoadTableFlags->TryLargePagesForValuesArray = TRUE;
-
     return S_OK;
 }
 

@@ -699,7 +699,7 @@ Return Value:
         goto Error;
     }
 
-    if (LoadFlags.TryLargePagesForTableData) {
+    if (!LoadFlags.DisableTryLargePagesForTableData) {
 
         //
         // Attempt a large page allocation to contain the table data buffer.
@@ -748,7 +748,9 @@ Return Value:
     // by the result of the Index() routine.
     //
 
-    LargePagesForValues = (BOOLEAN)LoadFlags.TryLargePagesForValuesArray;
+    LargePagesForValues = (BOOLEAN)(
+        !LoadFlags.DisableTryLargePagesForValuesArray
+    );
 
     ValuesSizeInBytes = (
         Header->NumberOfTableElements.QuadPart *
