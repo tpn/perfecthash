@@ -101,7 +101,7 @@ Return Value:
         return E_INVALIDARG;
     }
 
-    if (KeySizeInBytes != 4) {
+    if (KeySizeInBytes != sizeof(ULONG)) {
         return PH_E_INVALID_KEY_SIZE;
     }
 
