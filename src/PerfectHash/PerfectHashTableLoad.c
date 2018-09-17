@@ -21,7 +21,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableLoad(
     PPERFECT_HASH_TABLE Table,
-    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadFlagsPointer,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
     PCUNICODE_STRING Path,
     PPERFECT_HASH_KEYS Keys
     )
@@ -36,7 +36,7 @@ Arguments:
     Table - Supplies a pointer to the PERFECT_HASH_TABLE interface for which
         the on-disk table is to be loaded.
 
-    LoadFlags - Optionally supplies a pointer to a PERFECT_HASH_TABLE_LOAD_FLAGS
+    TableLoadFlags - Optionally supplies a pointer to a table load flags
         structure that can be used to customize the loading behavior.
 
     Path - Supplies a pointer to a UNICODE_STRING structure representing the
@@ -136,7 +136,7 @@ Return Value:
     PTABLE_INFO_ON_DISK_HEADER Header;
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     UNICODE_STRING InfoSuffix = RTL_CONSTANT_STRING(L":Info");
-    PERFECT_HASH_TABLE_LOAD_FLAGS LoadFlags;
+    PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
 
     //
     // Validate arguments.
@@ -154,15 +154,7 @@ Return Value:
         return E_INVALIDARG;
     }
 
-    if (ARGUMENT_PRESENT(LoadFlagsPointer)) {
-        if (FAILED(IsValidTableLoadFlags(LoadFlagsPointer))) {
-            return PH_E_INVALID_TABLE_LOAD_FLAGS;
-        } else {
-            LoadFlags.AsULong = LoadFlagsPointer->AsULong;
-        }
-    } else {
-        LoadFlags.AsULong = 0;
-    }
+    VALIDATE_FLAGS(TableLoad, TABLE_LOAD);
 
     if (!TryAcquirePerfectHashTableLockExclusive(Table)) {
         return PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS;
@@ -708,7 +700,7 @@ Return Value:
         goto Error;
     }
 
-    if (!LoadFlags.DisableTryLargePagesForTableData) {
+    if (!TableLoadFlags.DisableTryLargePagesForTableData) {
 
         //
         // Attempt a large page allocation to contain the table data buffer.
@@ -758,7 +750,7 @@ Return Value:
     //
 
     LargePagesForValues = (BOOLEAN)(
-        !LoadFlags.DisableTryLargePagesForValuesArray
+        !TableLoadFlags.DisableTryLargePagesForValuesArray
     );
 
     ValuesSizeInBytes = (
@@ -820,7 +812,7 @@ Return Value:
 
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
-    Table->LoadFlags.AsULong = LoadFlags.AsULong;
+    Table->LoadFlags.AsULong = TableLoadFlags.AsULong;
     goto End;
 
 Error:

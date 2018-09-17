@@ -21,7 +21,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashKeysLoad(
     PPERFECT_HASH_KEYS Keys,
-    PPERFECT_HASH_KEYS_LOAD_FLAGS LoadFlagsPointer,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
     PCUNICODE_STRING Path,
     ULONG KeySizeInBytes
     )
@@ -36,8 +36,8 @@ Arguments:
     Keys - Supplies a pointer to the PERFECT_HASH_KEYS structure for
         which the keys are to be loaded.
 
-    LoadFlags - Optionally supplies a pointer to a PERFECT_HASH_KEYS_LOAD_FLAGS
-        structure.
+    KeysLoadFlags - Optionally supplies a pointer to a keys load flags structure
+        that can be used to customize key loading behavior.
 
     Path - Supplies a pointer to a UNICODE_STRING structure that represents
         a fully-qualified path of the keys to use for the perfect hash table.
@@ -53,6 +53,8 @@ Return Value:
     S_OK - Success.
 
     E_POINTER - Keys or Path was NULL.
+
+    E_INVALIDARG - Path was invalid.
 
     PH_E_INVALID_KEY_SIZE - The key size provided was not valid.
 
@@ -83,7 +85,7 @@ Return Value:
     LARGE_INTEGER NumberOfElements;
     FILE_STANDARD_INFO FileInfo;
     ULONG_PTR LargePageAllocSize;
-    PERFECT_HASH_KEYS_LOAD_FLAGS LoadFlags;
+    PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
 
     //
     // Validate arguments.
@@ -105,15 +107,7 @@ Return Value:
         return PH_E_INVALID_KEY_SIZE;
     }
 
-    if (ARGUMENT_PRESENT(LoadFlagsPointer)) {
-        if (FAILED(IsValidKeysLoadFlags(LoadFlagsPointer))) {
-            return PH_E_INVALID_KEYS_LOAD_FLAGS;
-        } else {
-            LoadFlags.AsULong = LoadFlagsPointer->AsULong;
-        }
-    } else {
-        LoadFlags.AsULong = 0;
-    }
+    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
 
     if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
         return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
@@ -257,7 +251,7 @@ Return Value:
     Keys->BaseAddress = BaseAddress;
     Keys->NumberOfElements.QuadPart = NumberOfElements.QuadPart;
 
-    if (!LoadFlags.DisableTryLargePagesForKeysData) {
+    if (!KeysLoadFlags.DisableTryLargePagesForKeysData) {
 
         //
         // Attempt a large page allocation to contain the keys buffer.
@@ -321,7 +315,7 @@ Return Value:
     //
 
     Keys->State.Loaded = TRUE;
-    Keys->LoadFlags.AsULong = LoadFlags.AsULong;
+    Keys->LoadFlags.AsULong = KeysLoadFlags.AsULong;
     Result = S_OK;
     goto End;
 

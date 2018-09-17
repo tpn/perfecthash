@@ -1095,12 +1095,12 @@ typedef
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_CREATE_TABLE)(
     _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
     _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PPERFECT_HASH_KEYS Keys,
-    _Inout_opt_ PCUNICODE_STRING HashTablePath
+    _Inout_opt_ PCUNICODE_STRING HashTablePath,
+    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags
     );
 typedef PERFECT_HASH_CONTEXT_CREATE_TABLE *PPERFECT_HASH_CONTEXT_CREATE_TABLE;
 
@@ -1216,21 +1216,69 @@ IsValidTableLoadFlags(
     return S_OK;
 }
 
+//
+// Define table compilation flags here as they're needed for SelfTest().
+//
+
+typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, ignores any optimized assembly routines available for
+        // compilation and uses the standard C routines.  If no assembly
+        // routine has been written for the given table configuration (i.e.
+        // algorithm, hash function and masking type), setting this bit has no
+        // effect.
+        //
+
+        ULONG IgnoreAssembly:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_COMPILE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_COMPILE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_COMPILE_FLAGS *PPERFECT_HASH_TABLE_COMPILE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidTableCompileFlags(
+    _In_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
+    )
+{
+    if (!ARGUMENT_PRESENT(CompileFlags)) {
+        return E_POINTER;
+    }
+
+    if (CompileFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
 
 typedef
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST)(
     _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_opt_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags,
-    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags,
-    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags,
     _In_ PCUNICODE_STRING TestDataDirectory,
     _In_ PCUNICODE_STRING OutputDirectory,
     _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
     );
 typedef PERFECT_HASH_CONTEXT_SELF_TEST *PPERFECT_HASH_CONTEXT_SELF_TEST;
 
@@ -1243,7 +1291,7 @@ HRESULT
     _In_ LPWSTR *ArgvW
     );
 typedef PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
-    *PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW;
+      *PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW;
 
 typedef
 _Success_(return >= 0)
@@ -1258,10 +1306,11 @@ HRESULT
     _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _Inout_ PULONG MaximumConcurrency,
-    _Inout_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags,
-    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags,
-    _Inout_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
-    _Inout_ PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags
+    _Inout_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
+    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _Inout_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags,
+    _Inout_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
+    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
     );
 typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
       *PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
@@ -1370,54 +1419,6 @@ HRESULT
     _Out_writes_bytes_(SizeOfFlags) PPERFECT_HASH_TABLE_FLAGS Flags
     );
 typedef PERFECT_HASH_TABLE_GET_FLAGS *PPERFECT_HASH_TABLE_GET_FLAGS;
-
-//
-// Define table compilation flags and compile function pointer.
-//
-
-typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When set, ignores any optimized assembly routines available for
-        // compilation and uses the standard C routines.  If no assembly
-        // routine has been written for the given table configuration (i.e.
-        // algorithm, hash function and masking type), setting this bit has no
-        // effect.
-        //
-
-        ULONG IgnoreAssembly:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:31;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_TABLE_COMPILE_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_COMPILE_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_COMPILE_FLAGS *PPERFECT_HASH_TABLE_COMPILE_FLAGS;
-
-FORCEINLINE
-HRESULT
-IsValidTableCompileFlags(
-    _In_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
-    )
-{
-    if (!ARGUMENT_PRESENT(CompileFlags)) {
-        return E_POINTER;
-    }
-
-    if (CompileFlags->Unused != 0) {
-        return E_FAIL;
-    }
-
-    return S_OK;
-}
 
 typedef
 _Success_(return >= 0)

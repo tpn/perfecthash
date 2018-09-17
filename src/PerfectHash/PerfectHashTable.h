@@ -59,11 +59,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE);
 
     //
-    // Flags provided during table creation/loading.
+    // Flags provided during table creation, loading and compilation.
     //
 
-    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags;
-    PERFECT_HASH_TABLE_LOAD_FLAGS LoadFlags;
+    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
+    PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
+    PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding2;
 
     //
     // Slim read/write lock guarding the structure.
@@ -191,7 +198,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
 
-    ULONG Padding2;
+    ULONG Padding3;
 
     //
     // Pointer to the keys corresponding to this perfect hash table.  May be
@@ -268,12 +275,19 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULARGE_INTEGER InfoActualStructureSizeInBytes;
 
     //
+    // Base address of allocation used to contain the Path.Buffer and
+    // InfoStreamPath.Buffer strings.
+    //
+
+    PVOID BaseBufferAddress;
+
+    //
     // Backing vtbl.
     //
 
     PERFECT_HASH_TABLE_VTBL Interface;
 
-    //PVOID Padding;
+    //PVOID Padding4;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;

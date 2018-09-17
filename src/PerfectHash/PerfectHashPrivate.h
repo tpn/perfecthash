@@ -42,6 +42,21 @@ extern HMODULE PerfectHashModule;
 #define MAXIMUM_NUMBER_OF_KEYS 500000
 
 //
+// Define a helper macro for validating flags passed as parameters to routines.
+//
+
+#define VALIDATE_FLAGS(Name, Upper)                                      \
+    if (ARGUMENT_PRESENT(##Name##FlagsPointer)) {                        \
+        if (FAILED(IsValid##Name##Flags(##Name##FlagsPointer))) { \
+            return PH_E_INVALID_##Upper##_FLAGS;                         \
+        } else {                                                         \
+            ##Name##Flags.AsULong = ##Name##FlagsPointer->AsULong;       \
+        }                                                                \
+    } else {                                                             \
+        ##Name##Flags.AsULong = 0;                                       \
+    }
+
+//
 // Metadata about a perfect hash table is stored in an NTFS stream named :Info
 // that is tacked onto the end of the perfect hash table's file name.  Define
 // a structure, TABLE_INFO_ON_DISK_HEADER, that literally represents the on-disk

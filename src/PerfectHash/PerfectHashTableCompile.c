@@ -21,7 +21,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableCompile(
     PPERFECT_HASH_TABLE Table,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlagsPointer,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer,
     PERFECT_HASH_CPU_ARCH_ID CpuArchId
     )
 /*++
@@ -35,8 +35,8 @@ Arguments:
     Table - Supplies a pointer to the PERFECT_HASH_TABLE interface for which
         the compilation is to be performed.
 
-    CompileFlags - Optionally supplies a pointer to a compile flags structure
-        that can be used to customize the compilation behavior.
+    TableCompileFlags - Optionally supplies a pointer to a table compile flags
+        structure that can be used to customize the compilation behavior.
 
     CpuArchId - Supplies the CPU architecture for which the perfect hash table
         compilation is to target.  If this differs from the current CPU arch,
@@ -75,7 +75,7 @@ Return Value:
 --*/
 {
     HRESULT Result = S_OK;
-    PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags;
+    PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
 
     //
     // Validate arguments.
@@ -85,19 +85,11 @@ Return Value:
         return E_POINTER;
     }
 
-    if (IsValidPerfectHashCpuArchId(CpuArchId)) {
+    if (!IsValidPerfectHashCpuArchId(CpuArchId)) {
         return PH_E_INVALID_CPU_ARCH_ID;
     }
 
-    if (ARGUMENT_PRESENT(CompileFlagsPointer)) {
-        if (FAILED(IsValidTableCompileFlags(CompileFlagsPointer))) {
-            return PH_E_INVALID_TABLE_COMPILE_FLAGS;
-        } else {
-            CompileFlags.AsULong = CompileFlagsPointer->AsULong;
-        }
-    } else {
-        CompileFlags.AsULong = 0;
-    }
+    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
 
     if (!TryAcquirePerfectHashTableLockExclusive(Table)) {
         return PH_E_TABLE_LOCKED;
@@ -116,7 +108,7 @@ Return Value:
     // WIP.
     //
 
-    Result = PH_E_TABLE_COMPILATION_NOT_AVAILABLE;
+    Result = PH_E_WORK_IN_PROGRESS;
     goto End;
 
 #if 0

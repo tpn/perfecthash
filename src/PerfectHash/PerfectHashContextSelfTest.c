@@ -22,15 +22,16 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashContextSelfTest(
     PPERFECT_HASH_CONTEXT Context,
-    PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlagsPointer,
-    PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlagsPointer,
-    PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlagsPointer,
-    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlagsPointer,
     PCUNICODE_STRING TestDataDirectory,
     PCUNICODE_STRING OutputDirectory,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlagsPointer,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
+    PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlagsPointer,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer
     )
 /*++
 
@@ -41,20 +42,6 @@ Routine Description:
 Arguments:
 
     Context - Supplies an instance of PERFECT_HASH_CONTEXT.
-
-    SelfTestFlags - Optionally supplies a pointer to a self-test flags
-        structure that can be used to customize self-test behavior.
-
-    LoadKeysFlags - Optionally supplies a pointer to a key loading flags
-        structure that can be used to customize key loading behavior.
-
-    CreateTableFlags - Optionally supplies a pointer to a create table
-        flags structure that can be used to customize table creation
-        behavior.
-
-    LoadTableFlags - Optionally supplies a pointer to a load table
-        flags structure that can be used to customize table loading
-        behavior.
 
     TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
         represents a fully-qualified path of the test data directory.
@@ -69,11 +56,49 @@ Arguments:
 
     HashFunctionId - Supplies the hash function to use.
 
+    ContextSelfTestFlags - Optionally supplies a pointer to a self-test flags
+        structure that can be used to customize self-test behavior.
+
+    KeysLoadFlags - Optionally supplies a pointer to a key loading flags
+        structure that can be used to customize key loading behavior.
+
+    ContextCreateTableFlags - Optionally supplies a pointer to a create table
+        flags structure that can be used to customize table creation behavior.
+
+    TableLoadFlags - Optionally supplies a pointer to a load table flags
+        structure that can be used to customize table loading behavior.
+
+    TableCompileFlags - Optionally supplies a pointer to a compile table flags
+        structure that can be used to customize table compilation behavior.
+
 Return Value:
 
     S_OK - Self test performed successfully.
 
-    An apppropriate error code otherwise.
+    The following error codes may also be returned.  Note that this list is not
+    guaranteed to be exhaustive; that is, error codes other than the ones listed
+    below may also be returned.
+
+    E_POINTER - One or more mandatory parameters were NULL pointers.
+
+    E_INVALIDARG - TestDataDirectory or OutputDirectory were invalid.
+
+    PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID.
+
+    PH_E_INVALID_HASH_FUNCTION_ID - Invalid hash function ID.
+
+    PH_E_INVALID_MASK_FUNCTION_ID - Invalid mask function ID.
+
+    PH_E_INVALID_MAXIMUM_CONCURRENCY - Invalid maximum concurrency.
+
+    PH_E_INVALID_KEYS_LOAD_FLAGS - Invalid keys load flags.
+
+    PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS - Invalid context create table
+        flags.
+
+    PH_E_INVALID_TABLE_LOAD_FLAGS - Invalid table load flags.
+
+    PH_E_INVALID_TABLE_COMPILE_FLAGS - Invalid table compile flags.
 
 --*/
 {
@@ -125,10 +150,12 @@ Return Value:
     PUNICODE_STRING AlgorithmName;
     PUNICODE_STRING HashFunctionName;
     PUNICODE_STRING MaskFunctionName;
-    PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags;
-    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags;
-    PERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags;
-    PERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags;
+    PERFECT_HASH_CPU_ARCH_ID CpuArchId;
+    PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags;
+    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
+    PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
+    PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
+    PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
 
     //
     // Validate arguments.
@@ -140,45 +167,11 @@ Return Value:
         Rtl = Context->Rtl;
     }
 
-    if (ARGUMENT_PRESENT(SelfTestFlagsPointer)) {
-        if (FAILED(IsValidContextSelfTestFlags(SelfTestFlagsPointer))) {
-            return PH_E_INVALID_CONTEXT_SELF_TEST_FLAGS;
-        } else {
-            SelfTestFlags.AsULong = SelfTestFlagsPointer->AsULong;
-        }
-    } else {
-        SelfTestFlags.AsULong = 0;
-    }
-
-    if (ARGUMENT_PRESENT(LoadKeysFlagsPointer)) {
-        if (FAILED(IsValidKeysLoadFlags(LoadKeysFlagsPointer))) {
-            return PH_E_INVALID_KEYS_LOAD_FLAGS;
-        } else {
-            LoadKeysFlags.AsULong = LoadKeysFlagsPointer->AsULong;
-        }
-    } else {
-        LoadKeysFlags.AsULong = 0;
-    }
-
-    if (ARGUMENT_PRESENT(CreateTableFlagsPointer)) {
-        if (FAILED(IsValidContextCreateTableFlags(CreateTableFlagsPointer))) {
-            return PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS;
-        } else {
-            CreateTableFlags.AsULong = CreateTableFlagsPointer->AsULong;
-        }
-    } else {
-        CreateTableFlags.AsULong = 0;
-    }
-
-    if (ARGUMENT_PRESENT(LoadTableFlagsPointer)) {
-        if (FAILED(IsValidTableLoadFlags(LoadTableFlagsPointer))) {
-            return PH_E_INVALID_TABLE_LOAD_FLAGS;
-        } else {
-            LoadTableFlags.AsULong = LoadTableFlagsPointer->AsULong;
-        }
-    } else {
-        LoadTableFlags.AsULong = 0;
-    }
+    VALIDATE_FLAGS(ContextSelfTest, CONTEXT_SELF_TEST);
+    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
+    VALIDATE_FLAGS(ContextCreateTable, CONTEXT_CREATE_TABLE);
+    VALIDATE_FLAGS(TableLoad, TABLE_LOAD);
+    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
 
     if (!ARGUMENT_PRESENT(TestDataDirectory)) {
         return E_POINTER;
@@ -419,7 +412,8 @@ Return Value:
     //
     // Zero the failure count and terminate flag, zero the bitmap structure,
     // wire up the unicode string representation of the bitmap, initialize
-    // various flags, and begin the main loop.
+    // various flags, obtain the current CPU architecture ID, and begin the main
+    // loop.
     //
 
     Failures = 0;
@@ -432,6 +426,9 @@ Return Value:
     KeysBaseAddress = NULL;
     NumberOfKeys.QuadPart = 0;
     KeysFlags.AsULong = 0;
+    CpuArchId = PerfectHashGetCurrentCpuArch();
+
+    ASSERT(IsValidPerfectHashCpuArchId(CpuArchId));
 
     do {
 
@@ -477,7 +474,7 @@ Return Value:
         }
 
         Result = Keys->Vtbl->Load(Keys,
-                                  &LoadKeysFlags,
+                                  &KeysLoadFlags,
                                   &KeysPath,
                                   sizeof(ULONG));
 
@@ -601,7 +598,7 @@ Return Value:
         //
 
         Result = Keys->Vtbl->Load(Keys,
-                                  &LoadKeysFlags,
+                                  &KeysLoadFlags,
                                   &KeysPath,
                                   sizeof(ULONG));
 
@@ -720,12 +717,12 @@ Return Value:
         //
 
         Result = Context->Vtbl->CreateTable(Context,
-                                            &CreateTableFlags,
                                             AlgorithmId,
                                             MaskFunctionId,
                                             HashFunctionId,
                                             Keys,
-                                            &TablePath);
+                                            &TablePath,
+                                            &ContextCreateTableFlags);
 
         if (FAILED(Result)) {
 
@@ -763,7 +760,7 @@ Return Value:
         }
 
         Result = Table->Vtbl->Load(Table,
-                                   &LoadTableFlags,
+                                   &TableLoadFlags,
                                    &TablePath,
                                    Keys);
 
@@ -785,7 +782,7 @@ Return Value:
         //
 
         Result = Table->Vtbl->Load(Table,
-                                   &LoadTableFlags,
+                                   &TableLoadFlags,
                                    &TablePath,
                                    Keys);
 
@@ -976,6 +973,16 @@ Return Value:
         WIDE_OUTPUT_FLUSH();
 
         //
+        // Attempt to compile the table.  WIP.
+        //
+
+        Result = Table->Vtbl->Compile(Table,
+                                      &TableCompileFlags,
+                                      CpuArchId);
+
+        ASSERT(Result == PH_E_WORK_IN_PROGRESS);
+
+        //
         // Release the table and keys.
         //
 
@@ -1082,7 +1089,7 @@ const STRING Usage = RTL_CONSTANT_STRING(
                                               10,                     \
                                               (PULONG)##Name##Id))) { \
         return PH_E_INVALID_##Upper##_ID;                             \
-    } else if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {     \
+    } else if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {          \
         return PH_E_INVALID_##Upper##_ID;                             \
     }
 
@@ -1106,7 +1113,8 @@ PerfectHashContextExtractSelfTestArgsFromArgvW(
     PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags,
     PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags,
     PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
-    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags
+    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileTableFlags
     )
 /*++
 
@@ -1157,22 +1165,33 @@ Arguments:
     LoadTableFlags - Supplies the address of a variable that will receive the
         the load table flags.
 
+    CompileTableFlags - Supplies the address of a variable that will receive the
+        the compile table flags.
+
 Return Value:
 
-    S_OK on success.
+    S_OK - Arguments extracted successfully.
 
-    E_POINTER if any pointer arguments are NULL.
+    E_POINTER - One or more mandatory parameters were NULL pointers.
 
-    PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS if NumberOfArguments is not a valid
-        value.
+    PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS - Invalid number of arguments.
 
-    PH_E_INVALID_ALGORITHM_ID if algorithm ID is invalid.
+    PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID.
 
-    PH_E_INVALID_HASH_FUNCTION_ID if hash function ID is invalid.
+    PH_E_INVALID_HASH_FUNCTION_ID - Invalid hash function ID.
 
-    PH_E_INVALID_MASK_FUNCTION_ID if mask function ID is invalid.
+    PH_E_INVALID_MASK_FUNCTION_ID - Invalid mask function ID.
 
-    PH_E_INVALID_MAXIMUM_CONCURRENCY is maximum concurrency value is invalid.
+    PH_E_INVALID_MAXIMUM_CONCURRENCY - Invalid maximum concurrency.
+
+    PH_E_INVALID_KEYS_LOAD_FLAGS - Invalid keys load flags.
+
+    PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS - Invalid context create table
+        flags.
+
+    PH_E_INVALID_TABLE_LOAD_FLAGS - Invalid table load flags.
+
+    PH_E_INVALID_TABLE_COMPILE_FLAGS - Invalid table compile flags.
 
 --*/
 {
@@ -1345,12 +1364,14 @@ Return Value:
     }
 
     //
-    // Remaining flags not yet supported.
+    // Extraction (and subsequent validation) of remaining flags is not yet
+    // implemented.  Zero everything up-front for now.
     //
 
     LoadKeysFlags->AsULong = 0;
     CreateTableFlags->AsULong = 0;
     LoadTableFlags->AsULong = 0;
+    CompileTableFlags->AsULong = 0;
 
     return S_OK;
 }
@@ -1382,25 +1403,28 @@ Arguments:
 
 Return Value:
 
-    S_OK on success.
+    S_OK - Arguments extracted successfully.
 
-    E_POINTER if any pointer arguments are NULL.
+    E_POINTER - One or more mandatory parameters were NULL pointers.
 
-    PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS if NumberOfArguments is not a valid
-        value.
+    PH_E_CONTEXT_SELF_TEST_INVALID_NUM_ARGS - Invalid number of arguments.
 
-    PH_E_INVALID_ALGORITHM_ID if algorithm ID is invalid.
+    PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID.
 
-    PH_E_INVALID_HASH_FUNCTION_ID if hash function ID is invalid.
+    PH_E_INVALID_HASH_FUNCTION_ID - Invalid hash function ID.
 
-    PH_E_INVALID_MASK_FUNCTION_ID if mask function ID is invalid.
+    PH_E_INVALID_MASK_FUNCTION_ID - Invalid mask function ID.
 
-    PH_E_INVALID_MAXIMUM_CONCURRENCY is maximum concurrency value is invalid.
+    PH_E_INVALID_MAXIMUM_CONCURRENCY - Invalid maximum concurrency.
 
-    PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS if a create table is in progress.
+    PH_E_INVALID_KEYS_LOAD_FLAGS - Invalid keys load flags.
 
-    PH_E_SET_MAXIMUM_CONCURRENCY_FAILED if setting the context's maximum
-        concurrency failed.
+    PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS - Invalid context create table
+        flags.
+
+    PH_E_INVALID_TABLE_LOAD_FLAGS - Invalid table load flags.
+
+    PH_E_INVALID_TABLE_COMPILE_FLAGS - Invalid table compile flags.
 
 --*/
 {
@@ -1412,29 +1436,33 @@ Return Value:
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId = 0;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId = 0;
     ULONG MaximumConcurrency = 0;
-    PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags = { 0 };
-    PERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags = { 0 };
-    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags = { 0 };
-    PERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags = { 0 };
+    PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags = { 0 };
+    PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags = { 0 };
+    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags = { 0 };
+    PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags = { 0 };
+    PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
+    PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW ExtractSelfTestArgs;
 
     Rtl = Context->Rtl;
 
-    Result = Context->Vtbl->ExtractSelfTestArgsFromArgvW(Context,
-                                                         NumberOfArguments,
-                                                         ArgvW,
-                                                         &TestDataDirectory,
-                                                         &OutputDirectory,
-                                                         &AlgorithmId,
-                                                         &HashFunctionId,
-                                                         &MaskFunctionId,
-                                                         &MaximumConcurrency,
-                                                         &SelfTestFlags,
-                                                         &LoadKeysFlags,
-                                                         &CreateTableFlags,
-                                                         &LoadTableFlags);
+    ExtractSelfTestArgs = Context->Vtbl->ExtractSelfTestArgsFromArgvW;
+    Result = ExtractSelfTestArgs(Context,
+                                 NumberOfArguments,
+                                 ArgvW,
+                                 &TestDataDirectory,
+                                 &OutputDirectory,
+                                 &AlgorithmId,
+                                 &HashFunctionId,
+                                 &MaskFunctionId,
+                                 &MaximumConcurrency,
+                                 &ContextSelfTestFlags,
+                                 &KeysLoadFlags,
+                                 &ContextCreateTableFlags,
+                                 &TableLoadFlags,
+                                 &TableCompileFlags);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextSelfTestArgvW, Result);
+        PH_ERROR(PerfectHashContextContextSelfTestArgvW, Result);
         return Result;
     }
 
@@ -1443,21 +1471,22 @@ Return Value:
                                                       MaximumConcurrency);
         if (FAILED(Result)) {
             Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
-            PH_ERROR(PerfectHashContextSelfTestArgvW, Result);
+            PH_ERROR(PerfectHashContextContextSelfTestArgvW, Result);
             return Result;
         }
     }
 
     Result = Context->Vtbl->SelfTest(Context,
-                                     &SelfTestFlags,
-                                     &LoadKeysFlags,
-                                     &CreateTableFlags,
-                                     &LoadTableFlags,
                                      &TestDataDirectory,
                                      &OutputDirectory,
                                      AlgorithmId,
                                      HashFunctionId,
-                                     MaskFunctionId);
+                                     MaskFunctionId,
+                                     &ContextSelfTestFlags,
+                                     &KeysLoadFlags,
+                                     &ContextCreateTableFlags,
+                                     &TableLoadFlags,
+                                     &TableCompileFlags);
 
     if (FAILED(Result)) {
         NOTHING;
