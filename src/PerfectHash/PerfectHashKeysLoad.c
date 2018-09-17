@@ -332,36 +332,9 @@ Error:
     }
 
     //
-    // Clean up any resources we may have allocated.
+    // N.B. We don't clean up any resources here; the rundown routine will
+    //      take care of that.
     //
-
-    if (LargePageAddress) {
-        if (!VirtualFree(LargePageAddress, 0, MEM_RELEASE)) {
-            SYS_ERROR(VirtualFree);
-        }
-        LargePageAddress = NULL;
-    }
-
-    if (BaseAddress) {
-        if (!UnmapViewOfFile(BaseAddress)) {
-            SYS_ERROR(UnmapViewOfFile);
-        }
-        BaseAddress = NULL;
-    }
-
-    if (MappingHandle) {
-        if (!CloseHandle(MappingHandle)) {
-            SYS_ERROR(CloseHandle);
-        }
-        MappingHandle = NULL;
-    }
-
-    if (FileHandle) {
-        if (!CloseHandle(FileHandle)) {
-            SYS_ERROR(CloseHandle);
-        }
-        FileHandle = NULL;
-    }
 
     //
     // Intentional follow-on to End.

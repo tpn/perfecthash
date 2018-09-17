@@ -153,7 +153,7 @@ Return Value:
 
         ASSERT(!Keys->Flags.KeysDataUsesLargePages);
 
-    } else {
+    } else if (Keys->BaseAddress) {
 
         //
         // If MappedAddress is non-NULL, BaseAddress is actually our
