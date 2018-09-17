@@ -169,7 +169,11 @@ Return Value:
     // Clean up any resources that are still active.
     //
 
-    if (Table->MappedAddress) {
+    if (!Table->MappedAddress) {
+
+        ASSERT(!Table->Flags.TableDataUsesLargePages);
+
+    } else if (Table->BaseAddress) {
 
         //
         // If MappedAddress is non-NULL, BaseAddress is actually our
