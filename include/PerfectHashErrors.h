@@ -490,3 +490,21 @@ Abstract:
 //
 #define PH_E_INVALID_CPU_ARCH_ID         ((HRESULT)0xE004022FL)
 
+//
+// MessageId: PH_E_NOT_IMPLEMENTED
+//
+// MessageText:
+//
+// Functionality not yet implemented.
+//
+#define PH_E_NOT_IMPLEMENTED             ((HRESULT)0xE0040230L)
+
+//
+// MessageId: PH_E_WORK_IN_PROGRESS
+//
+// MessageText:
+//
+// This functionality is actively undergoing development and is not yet working.
+//
+#define PH_E_WORK_IN_PROGRESS            ((HRESULT)0xE0040231L)
+

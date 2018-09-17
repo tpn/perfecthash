@@ -404,3 +404,19 @@ Language=English
 The CPU architecture ID was invalid.
 .
 
+MessageId=0x230
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NOT_IMPLEMENTED
+Language=English
+Functionality not yet implemented.
+.
+
+MessageId=0x231
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_WORK_IN_PROGRESS
+Language=English
+This functionality is actively undergoing development and is not yet working.
+.
+
