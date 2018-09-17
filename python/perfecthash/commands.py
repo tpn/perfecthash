@@ -231,5 +231,56 @@ class LoadKeys(InvariantAwareCommand):
 
         self._out("Bitmap: %s [%d]" % (bitmap, ones))
 
+class TrailingSlashesAlign(InvariantAwareCommand):
+    """
+    Finds all multi-line macros and aligns trailing slashes where necessary.
+    """
+
+    path = None
+    class PathArg(PathInvariant):
+        _help = "path of the file"
+
+    def run(self):
+        out = self._out
+        options = self.options
+        verbose = self._verbose
+
+        path = options.path
+
+        from .sourcefile import SourceFile
+
+        source = SourceFile(path)
+        orig_data = source.data
+        orig_lines = source.lines
+
+        defines = source.defines
+        multiline_macro_defines = source.multiline_macro_defines
+
+        if not multiline_macro_defines:
+            return
+
+        lines = source.lines
+        dirty = False
+
+        from .util import align_trailing_slashes
+
+        for (name, macro) in multiline_macro_defines.items():
+            old_lines = macro.lines
+            new_lines = align_trailing_slashes(old_lines)
+            old_length = len(old_lines)
+            new_length = len(new_lines)
+            assert old_length == new_length, (old_length, new_length)
+            if new_lines == old_lines:
+                continue
+
+            lines[macro.first_lineno:macro.last_lineno+1] = new_lines
+            dirty = True
+            out("Aligned trailing slashes for %s macro." % name)
+
+        if dirty:
+            text = '%s\n' % '\n'.join(lines)
+            text = text.encode('utf-8')
+            with open(path, 'wb') as f:
+                f.write(text)
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
