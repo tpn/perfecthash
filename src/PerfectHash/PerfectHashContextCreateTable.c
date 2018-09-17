@@ -313,8 +313,7 @@ Return Value:
     }
 
     //
-    // Allocation was successful.  Create a new table instance then continue
-    // initializing its internal state.
+    // Create a new table instance.
     //
 
     Result = Context->Vtbl->CreateInstance(Context,
@@ -323,10 +322,12 @@ Return Value:
                                            &Context->Table);
 
     if (FAILED(Result)) {
+        Allocator->Vtbl->FreePointer(Allocator, &BaseBuffer);
         goto Error;
     }
 
     Table = Context->Table;
+    Table->BaseBufferAddress = BaseBuffer;
 
     Keys->Vtbl->AddRef(Keys);
     Table->Keys = Keys;
@@ -670,14 +671,6 @@ End:
 
     Context->Table = NULL;
     Context->State.NeedsReset = TRUE;
-
-    //
-    // Release the buffer we allocated for paths if applicable.
-    //
-
-    if (BaseBuffer) {
-        Allocator->Vtbl->FreePointer(Allocator, &BaseBuffer);
-    }
 
     ReleasePerfectHashContextLockExclusive(Context);
 

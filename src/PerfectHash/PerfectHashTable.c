@@ -226,6 +226,13 @@ Return Value:
     }
 
     //
+    // Free the base buffer address if applicable.
+    //
+
+    if (Table->BaseBufferAddress) {
+        Allocator->Vtbl->FreePointer(Allocator, &Table->BaseBufferAddress);
+    }
+
     // Release COM references, if applicable.
     //
 
