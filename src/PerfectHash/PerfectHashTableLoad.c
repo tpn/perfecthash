@@ -102,6 +102,8 @@ Return Value:
         is calculated by dividing the file size by number of table elements,
         did not match the actual on-disk file size.
 
+    PH_E_SYSTEM_CALL_FAILED - A system call failed.
+
 --*/
 {
     BOOL Success;
@@ -384,7 +386,7 @@ Return Value:
 
     //
     // We've finished initializing our two unicode string buffers for the
-    // backing file and it's :Info counterpart.  Initialize some aliases for
+    // backing file and its :Info counterpart.  Initialize some aliases for
     // the CreateFile() calls, then attempt to open the :Info stream.
     //
 
@@ -416,6 +418,7 @@ Return Value:
         //
 
         SYS_ERROR(CreateFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -434,6 +437,7 @@ Return Value:
 
     if (!Success) {
         SYS_ERROR(GetFileInformationByHandleEx);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -477,6 +481,7 @@ Return Value:
 
     if (!BaseAddress) {
         SYS_ERROR(MapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -608,6 +613,7 @@ Return Value:
         //
 
         SYS_ERROR(CreateFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -624,6 +630,7 @@ Return Value:
 
     if (!Success) {
         SYS_ERROR(GetFileInformationByHandleEx);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -678,6 +685,7 @@ Return Value:
         //
 
         SYS_ERROR(CreateFileMappingW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -696,6 +704,7 @@ Return Value:
         //
 
         SYS_ERROR(MapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -768,6 +777,7 @@ Return Value:
 
     if (!BaseAddress) {
         SYS_ERROR(VirtualAlloc);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -798,9 +808,9 @@ Return Value:
     // initialization.
     //
 
-    Success = LoaderRoutines[AlgorithmId](Table);
+    Result = LoaderRoutines[AlgorithmId](Table);
 
-    if (!Success) {
+    if (FAILED(Result)) {
         goto Error;
     }
 
@@ -811,7 +821,6 @@ Return Value:
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
     Table->LoadFlags.AsULong = LoadFlags.AsULong;
-    Result = S_OK;
     goto End;
 
 Error:

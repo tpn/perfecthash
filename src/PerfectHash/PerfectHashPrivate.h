@@ -404,8 +404,8 @@ typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;
 
 typedef
 _Check_return_
-_Success_(return != 0)
-BOOLEAN
+_Success_(return >= 0)
+HRESULT
 (NTAPI CREATE_PERFECT_HASH_TABLE_IMPL)(
     _Inout_ PPERFECT_HASH_TABLE Table
     );
@@ -428,8 +428,8 @@ CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm01;
 
 typedef
 _Check_return_
-_Success_(return != 0)
-BOOLEAN
+_Success_(return >= 0)
+HRESULT
 (NTAPI LOAD_PERFECT_HASH_TABLE_IMPL)(
     _Inout_ PPERFECT_HASH_TABLE Table
     );

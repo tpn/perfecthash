@@ -36,7 +36,7 @@ Abstract:
 
 
 _Use_decl_annotations_
-BOOLEAN
+HRESULT
 CreatePerfectHashTableImplChm01(
     PPERFECT_HASH_TABLE Table
     )
@@ -54,7 +54,35 @@ Arguments:
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    S_OK - Table created successfully.
+
+
+    The following error codes may also be returned.  Note that this list is not
+    guaranteed to be exhaustive; that is, error codes other than the ones listed
+    below may also be returned.
+
+    E_POINTER - Table was NULL.
+
+    E_UNEXPECTED - Catastrophic internal error.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    PH_E_SYSTEM_CALL_FAILED - A system call failed.
+
+    PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE - The requested number
+        of table elements exceeded limits.  If a table resize event occurrs,
+        the number of requested table elements is doubled.  If this number
+        exceeds MAX_ULONG, this error will be returned.
+
+    PH_E_ERROR_PREPARING_FILE - An error occurred whilst preparing a file to
+        use for saving the perfect hash table.
+
+    PH_E_ERROR_SAVING_FILE - An error occurred whilst trying to save the perfect
+        hash table to the file prepared earlier.
+
+    PH_E_TABLE_VERIFICATION_FAILED - The winning perfect hash table solution
+        failed internal verification.  The primary cause of this is typically
+        when collisions are detected during verification.
 
 --*/
 {
@@ -69,6 +97,7 @@ Return Value:
     ULONG_PTR LastPage;
     ULONG_PTR ThisPage;
     BYTE NumberOfEvents;
+    HRESULT Result = S_OK;
     PVOID BaseAddress = NULL;
     ULONG WaitResult;
     GRAPH_INFO Info;
@@ -78,7 +107,6 @@ Return Value:
     PALLOCATOR Allocator;
     HANDLE ProcessHandle = NULL;
     PHANDLE Event;
-    HRESULT Result;
     USHORT NumberOfGraphs;
     USHORT NumberOfGuardPages;
     ULONG NumberOfPagesPerGraph;
@@ -121,7 +149,7 @@ Return Value:
     //
 
     if (!ARGUMENT_PRESENT(Table)) {
-        return FALSE;
+        return E_POINTER;
     }
 
     //
@@ -167,6 +195,7 @@ RetryWithLargerTableSize:
 
         if (!ResetEvent(*Event)) {
             SYS_ERROR(ResetEvent);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
     }
@@ -534,6 +563,8 @@ RetryWithLargerTableSize:
                                               &BaseAddress);
 
     if (FAILED(Result)) {
+        SYS_ERROR(VirtualAlloc);
+        Result = E_OUTOFMEMORY;
         goto Error;
     }
 
@@ -901,6 +932,7 @@ RetryWithLargerTableSize:
 
         if (WaitResult != WAIT_OBJECT_0) {
             SYS_ERROR(WaitForSingleObject);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
 
@@ -920,6 +952,7 @@ RetryWithLargerTableSize:
         //
 
         if (OnDiskHeader->NumberOfTableResizeEvents >= Context->ResizeLimit) {
+            Result = PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED;
             goto Error;
         }
 
@@ -931,6 +964,7 @@ RetryWithLargerTableSize:
         Result = Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
 
@@ -984,6 +1018,7 @@ RetryWithLargerTableSize:
         Table->RequestedNumberOfTableElements.QuadPart <<= 1ULL;
 
         if (Table->RequestedNumberOfTableElements.HighPart) {
+            Result = PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
             goto Error;
         }
 
@@ -994,6 +1029,7 @@ RetryWithLargerTableSize:
         _Analysis_assume_(Table->BaseAddress != NULL);
         if (!UnmapViewOfFile(Table->BaseAddress)) {
             SYS_ERROR(UnmapViewOfFile);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
         Table->BaseAddress = NULL;
@@ -1001,6 +1037,7 @@ RetryWithLargerTableSize:
         _Analysis_assume_(Table->MappingHandle != NULL);
         if (!CloseHandle(Table->MappingHandle)) {
             SYS_ERROR(CloseHandle);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
         Table->MappingHandle = NULL;
@@ -1042,6 +1079,7 @@ RetryWithLargerTableSize:
 
             if (WaitResult != WAIT_OBJECT_0) {
                 SYS_ERROR(WaitForSingleObject);
+                Result = PH_E_SYSTEM_CALL_FAILED;
                 goto Error;
             }
         }
@@ -1104,10 +1142,12 @@ FinishedSolution:
     WaitResult = WaitForSingleObject(Context->PreparedFileEvent, INFINITE);
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForSingleObject);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
     if (Context->FileWorkErrors > 0) {
+        Result = PH_E_ERROR_PREPARING_FILE;
         goto Error;
     }
 
@@ -1128,7 +1168,7 @@ FinishedSolution:
 
     CONTEXT_START_TIMERS(Verify);
 
-    Success = VerifySolvedGraph(Graph);
+    Result = VerifySolvedGraph(Graph);
 
     CONTEXT_END_TIMERS(Verify);
 
@@ -1140,10 +1180,12 @@ FinishedSolution:
 
     if (!SetEvent(Context->VerifiedEvent)) {
         SYS_ERROR(SetEvent);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
-    if (!Success) {
+    if (FAILED(Result)) {
+        Result = PH_E_TABLE_VERIFICATION_FAILED;
         goto Error;
     }
 
@@ -1154,23 +1196,26 @@ FinishedSolution:
     WaitResult = WaitForSingleObject(Context->SavedFileEvent, INFINITE);
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForSingleObject);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
     if (Context->FileWorkErrors > 0) {
+        Result = PH_E_ERROR_SAVING_FILE;
         goto Error;
     }
 
     //
-    // We're done, indicate success and finish up.
+    // We're done, finish up.
     //
 
-    Success = TRUE;
     goto End;
 
 Error:
 
-    Success = FALSE;
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
 
     //
     // Intentional follow-on to End.
@@ -1190,7 +1235,7 @@ End:
         Result = Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
-            Success = FALSE;
+            Result = PH_E_SYSTEM_CALL_FAILED;
         }
     }
 
@@ -1205,15 +1250,15 @@ End:
 
         if (!ResetEvent(*Event)) {
             SYS_ERROR(ResetEvent);
-            Success = FALSE;
+            Result = PH_E_SYSTEM_CALL_FAILED;
         }
     }
 
-    return Success;
+    return Result;
 }
 
 _Use_decl_annotations_
-BOOLEAN
+HRESULT
 LoadPerfectHashTableImplChm01(
     PPERFECT_HASH_TABLE Table
     )
@@ -1230,7 +1275,7 @@ Arguments:
 
 Return Value:
 
-    TRUE on success, FALSE on failure.
+    S_OK - Table was loaded successfully.
 
 --*/
 {
@@ -1249,7 +1294,7 @@ Return Value:
     Table->HashModulus = Header->HashModulus;
     Table->IndexModulus = Header->IndexModulus;
 
-    return TRUE;
+    return S_OK;
 }
 
 //

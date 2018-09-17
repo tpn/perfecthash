@@ -421,3 +421,53 @@ Abstract:
 //
 #define PH_E_TABLE_COMPILATION_NOT_AVAILABLE ((HRESULT)0xE0040228L)
 
+//
+// MessageId: PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+//
+// MessageText:
+//
+// The maximum number of table resize events was reached before a perfect hash
+// table solution could be found.
+//
+#define PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED ((HRESULT)0xE0040229L)
+
+//
+// MessageId: PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+//
+// MessageText:
+//
+// The requested number of table elements was too large.
+//
+#define PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE ((HRESULT)0xE004022AL)
+
+//
+// MessageId: PH_E_ERROR_PREPARING_FILE
+//
+// MessageText:
+//
+// An error occurred whilst preparing a file to use for saving the
+// perfect hash table.
+//
+#define PH_E_ERROR_PREPARING_FILE        ((HRESULT)0xE004022BL)
+
+//
+// MessageId: PH_E_ERROR_SAVING_FILE
+//
+// MessageText:
+//
+// An error occurred whilst trying to save a perfect hash table to
+// the previously prepared file.
+//
+#define PH_E_ERROR_SAVING_FILE           ((HRESULT)0xE004022CL)
+
+//
+// MessageId: PH_E_TABLE_VERIFICATION_FAILED
+//
+// MessageText:
+//
+// A perfect hash table solution was found, however, it did not pass internal
+// validation checks (e.g. collisions were found when attempting to independently
+// verify that the perfect hash function generated no collisions).
+//
+#define PH_E_TABLE_VERIFICATION_FAILED   ((HRESULT)0xE004022DL)
+

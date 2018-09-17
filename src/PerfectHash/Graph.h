@@ -598,7 +598,9 @@ BOOLEAN
 typedef SOLVE_GRAPH *PSOLVE_GRAPH;
 
 typedef
-BOOLEAN
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
 (NTAPI VERIFY_SOLVED_GRAPH)(
     _In_ PGRAPH Graph
     );

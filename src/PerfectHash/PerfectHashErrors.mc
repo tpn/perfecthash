@@ -341,3 +341,49 @@ Language=English
 Table compilation is not available for the current combination of
 architecture, algorithm ID, hash function and masking type.
 .
+
+MessageId=0x229
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+Language=English
+The maximum number of table resize events was reached before a perfect hash
+table solution could be found.
+.
+
+MessageId=0x22a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+Language=English
+The requested number of table elements was too large.
+.
+
+MessageId=0x22b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_PREPARING_FILE
+Language=English
+An error occurred whilst preparing a file to use for saving the
+perfect hash table.
+.
+
+MessageId=0x22c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_SAVING_FILE
+Language=English
+An error occurred whilst trying to save a perfect hash table to
+the previously prepared file.
+.
+
+MessageId=0x22d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_VERIFICATION_FAILED
+Language=English
+A perfect hash table solution was found, however, it did not pass internal
+validation checks (e.g. collisions were found when attempting to independently
+verify that the perfect hash function generated no collisions).
+.
+

@@ -100,7 +100,7 @@ Return Value:
     PVOID BaseAddress;
     HANDLE FileHandle;
     HANDLE MappingHandle;
-    HRESULT Result;
+    HRESULT Result = S_OK;
     PALLOCATOR Allocator;
     SYSTEM_INFO SystemInfo;
     ULARGE_INTEGER AllocSize;
@@ -487,6 +487,7 @@ Return Value:
         //
 
         SYS_ERROR(CreateFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
 
     } else if (LastError == ERROR_ALREADY_EXISTS) {
@@ -501,12 +502,14 @@ Return Value:
         Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
         if (Status == INVALID_SET_FILE_POINTER) {
             SYS_ERROR(SetFilePointer);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
 
         Success = SetEndOfFile(FileHandle);
         if (!Success) {
             SYS_ERROR(SetEndOfFile);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
 
@@ -543,6 +546,7 @@ Return Value:
         //
 
         SYS_ERROR(CreateFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
 
     } else if (LastError == ERROR_ALREADY_EXISTS) {
@@ -557,12 +561,14 @@ Return Value:
         Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
         if (Status == INVALID_SET_FILE_POINTER) {
             SYS_ERROR(SetFilePointer);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
 
         Success = SetEndOfFile(FileHandle);
         if (!Success) {
             SYS_ERROR(SetEndOfFile);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
 
@@ -598,6 +604,7 @@ Return Value:
 
     if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
         SYS_ERROR(CreateFileMappingW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -616,6 +623,7 @@ Return Value:
 
     if (!BaseAddress) {
         SYS_ERROR(MapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -624,16 +632,15 @@ Return Value:
     // algorithm's creation routine.
     //
 
-    Success = CreationRoutines[AlgorithmId](Table);
-    if (!Success) {
+    Result = CreationRoutines[AlgorithmId](Table);
+    if (FAILED(Result)) {
         goto Error;
     }
 
     //
-    // We're done!  Indicate success and finish up.
+    // We're done!  Jump to the end to finish up.
     //
 
-    Result = S_OK;
     goto End;
 
 Error:

@@ -1460,7 +1460,7 @@ Error:
 }
 
 _Use_decl_annotations_
-BOOLEAN
+HRESULT
 VerifySolvedGraph(
     _In_ PGRAPH Graph
     )
@@ -1485,7 +1485,9 @@ Arguments:
 
 Return Value:
 
-    TRUE if the graph was solved successfully, FALSE otherwise.
+    S_OK - Graph was solved successfully.
+
+    E_FAIL - Graph failed verification.
 
 --*/
 {
@@ -1617,11 +1619,11 @@ Return Value:
 
     ASSERT(NumberOfAssignments == NumberOfKeys);
 
-    return TRUE;
+    return S_OK;
 
 Error:
 
-    return FALSE;
+    return E_FAIL;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
