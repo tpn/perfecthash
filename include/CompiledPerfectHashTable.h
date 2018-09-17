@@ -80,8 +80,7 @@ Return Value:
     The index associated with the given key.
 
 --*/
-typedef COMPILED_PERFECT_HASH_TABLE_INDEX
-      *PCOMPILED_PERFECT_HASH_TABLE_INDEX;
+typedef COMPILED_PERFECT_HASH_TABLE_INDEX *PCOMPILED_PERFECT_HASH_TABLE_INDEX;
 
 
 typedef
@@ -112,8 +111,7 @@ Return Value:
     The value at the given location.
 
 --*/
-typedef COMPILED_PERFECT_HASH_TABLE_LOOKUP
-      *PCOMPILED_PERFECT_HASH_TABLE_LOOKUP;
+typedef COMPILED_PERFECT_HASH_TABLE_LOOKUP *PCOMPILED_PERFECT_HASH_TABLE_LOOKUP;
 
 
 typedef
@@ -146,8 +144,7 @@ Return Value:
     Previous value at the relevant table location prior to this insertion.
 
 --*/
-typedef COMPILED_PERFECT_HASH_TABLE_INSERT
-      *PCOMPILED_PERFECT_HASH_TABLE_INSERT;
+typedef COMPILED_PERFECT_HASH_TABLE_INSERT *PCOMPILED_PERFECT_HASH_TABLE_INSERT;
 
 
 typedef
@@ -329,8 +326,7 @@ Return Value:
     to fail is if SizeOfTable isn't correct.
 
 --*/
-typedef GET_COMPILED_PERFECT_HASH_TABLE
-      *PGET_COMPILED_PERFECT_HASH_TABLE;
+typedef GET_COMPILED_PERFECT_HASH_TABLE *PGET_COMPILED_PERFECT_HASH_TABLE;
 
 #ifdef __cplusplus
 } // extern "C"
