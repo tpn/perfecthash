@@ -101,6 +101,79 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 )
 #endif
 
+//
+// Define an enumeration for identifying CPU architectures.
+//
+
+typedef enum _Enum_is_bitflag_ _PERFECT_HASH_CPU_ARCH_ID {
+
+    //
+    // Explicitly define a null ID to take the 0-index slot.  This makes enum
+    // validation easier.
+    //
+
+    PerfectHashNullCpuArchId                = 0,
+
+    //
+    // Begin valid CPU architectures.
+    //
+
+    PerfectHashx86CpuArchId                 = 1,
+    PerfectHashx64CpuArchId                 = 2,
+    PerfectHashArmCpuArchId                 = 3,
+    PerfectHashArm64CpuArchId               = 4,
+
+    //
+    // End valid CPU architectures.
+    //
+
+    //
+    // N.B. Keep the next value last.
+    //
+
+    PerfectHashInvalidCpuArchId
+
+} PERFECT_HASH_CPU_ARCH_ID;
+typedef PERFECT_HASH_CPU_ARCH_ID *PPERFECT_HASH_CPU_ARCH_ID;
+
+//
+// Provide a simple inline CPU architecture enum validation routine.
+//
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashCpuArchId(
+    _In_ PERFECT_HASH_CPU_ARCH_ID CpuArchId
+    )
+{
+    return (
+        CpuArchId > PerfectHashNullCpuArchId &&
+        CpuArchId < PerfectHashInvalidCpuArchId
+    );
+}
+
+//
+// Provide a simple inline routine for obtaining the current CPU architecture.
+//
+
+FORCEINLINE
+PERFECT_HASH_CPU_ARCH_ID
+PerfectHashGetCurrentCpuArch(
+    VOID
+    )
+{
+#ifdef _M_AMD64
+    return PerfectHashx64CpuArchId;
+#elif defined(_M_IX86)
+    return PerfectHashx86CpuArchId;
+#elif defined(_M_ARM64)
+    return PerfectHashArm64CpuArchId;
+#elif defined(_M_ARM)
+    return PerfectHashArmCpuArchId;
+#else
+#error Unknown CPU architecture.
+#endif
+}
 
 //
 // Define an enumeration for identifying COM interfaces.
@@ -1298,6 +1371,64 @@ HRESULT
     );
 typedef PERFECT_HASH_TABLE_GET_FLAGS *PPERFECT_HASH_TABLE_GET_FLAGS;
 
+//
+// Define table compilation flags and compile function pointer.
+//
+
+typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, ignores any optimized assembly routines available for
+        // compilation and uses the standard C routines.  If no assembly
+        // routine has been written for the given table configuration (i.e.
+        // algorithm, hash function and masking type), setting this bit has no
+        // effect.
+        //
+
+        ULONG IgnoreAssembly:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_COMPILE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_COMPILE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_COMPILE_FLAGS *PPERFECT_HASH_TABLE_COMPILE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidTableCompileFlags(
+    _In_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
+    )
+{
+    if (!ARGUMENT_PRESENT(CompileFlags)) {
+        return E_POINTER;
+    }
+
+    if (CompileFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_COMPILE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags,
+    _In_ PERFECT_HASH_CPU_ARCH_ID CpuArchId
+    );
+typedef PERFECT_HASH_TABLE_COMPILE *PPERFECT_HASH_TABLE_COMPILE;
+
 typedef
 _Success_(return >= 0)
 HRESULT
@@ -1417,6 +1548,7 @@ typedef struct _PERFECT_HASH_TABLE_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE);
     PPERFECT_HASH_TABLE_LOAD Load;
     PPERFECT_HASH_TABLE_GET_FLAGS GetFlags;
+    PPERFECT_HASH_TABLE_COMPILE Compile;
     PPERFECT_HASH_TABLE_TEST Test;
     PPERFECT_HASH_TABLE_INSERT Insert;
     PPERFECT_HASH_TABLE_LOOKUP Lookup;

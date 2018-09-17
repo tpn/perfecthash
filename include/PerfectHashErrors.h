@@ -471,3 +471,22 @@ Abstract:
 //
 #define PH_E_TABLE_VERIFICATION_FAILED   ((HRESULT)0xE004022DL)
 
+//
+// MessageId: PH_E_TABLE_CROSS_COMPILATION_NOT_AVAILABLE
+//
+// MessageText:
+//
+// Table cross-compilation is not available between the current architecture
+// and requested architecture.
+//
+#define PH_E_TABLE_CROSS_COMPILATION_NOT_AVAILABLE ((HRESULT)0xE004022EL)
+
+//
+// MessageId: PH_E_INVALID_CPU_ARCH_ID
+//
+// MessageText:
+//
+// The CPU architecture ID was invalid.
+//
+#define PH_E_INVALID_CPU_ARCH_ID         ((HRESULT)0xE004022FL)
+

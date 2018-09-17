@@ -115,6 +115,9 @@
     <ClCompile Include="Graph.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashTableCompile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">

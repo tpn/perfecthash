@@ -273,7 +273,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     PERFECT_HASH_TABLE_VTBL Interface;
 
-    PVOID Padding;
+    //PVOID Padding;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
@@ -312,6 +312,7 @@ extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
 extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
 extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
 extern PERFECT_HASH_TABLE_GET_FLAGS PerfectHashTableGetFlags;
+extern PERFECT_HASH_TABLE_COMPILE PerfectHashTableCompile;
 extern PERFECT_HASH_TABLE_TEST PerfectHashTableTest;
 extern PERFECT_HASH_TABLE_INSERT PerfectHashTableInsert;
 extern PERFECT_HASH_TABLE_LOOKUP PerfectHashTableLookup;

@@ -387,3 +387,20 @@ validation checks (e.g. collisions were found when attempting to independently
 verify that the perfect hash function generated no collisions).
 .
 
+MessageId=0x22e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_CROSS_COMPILATION_NOT_AVAILABLE
+Language=English
+Table cross-compilation is not available between the current architecture
+and requested architecture.
+.
+
+MessageId=0x22f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CPU_ARCH_ID
+Language=English
+The CPU architecture ID was invalid.
+.
+

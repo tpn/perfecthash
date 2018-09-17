@@ -115,6 +115,7 @@
     <ClCompile Include="PerfectHashPrimes.c" />
     <ClCompile Include="PerfectHashAllocator.c" />
     <ClCompile Include="PerfectHashConstants.c" />
+    <ClCompile Include="PerfectHashTableCompile.c" />
     <ClCompile Include="PerfectHashTls.c" />
     <ClCompile Include="PerfectHashTable.c" />
     <ClCompile Include="PerfectHashTableLoad.c" />

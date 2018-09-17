@@ -439,6 +439,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     (PPERFECT_HASH_TABLE_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashTableLoad,
     &PerfectHashTableGetFlags,
+    &PerfectHashTableCompile,
     &PerfectHashTableTest,
     &PerfectHashTableInsert,
     &PerfectHashTableLookup,
@@ -454,7 +455,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableGetHashFunctionName,
     &PerfectHashTableGetMaskFunctionName,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 16);
+VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 17);
 
 //
 // Rtl
