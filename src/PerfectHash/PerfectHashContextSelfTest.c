@@ -146,7 +146,7 @@ Return Value:
     PERFECT_HASH_KEYS_FLAGS KeysFlags;
     PERFECT_HASH_KEYS_BITMAP KeysBitmap;
     PERFECT_HASH_TABLE_FLAGS TableFlags;
-    PTABLE_INFO_ON_DISK_HEADER Header;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
     PERFECT_HASH_TLS_CONTEXT TlsContext;
     PUNICODE_STRING AlgorithmName;
@@ -952,27 +952,23 @@ Return Value:
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully tested perfect hash "
                                     L"table.\n");
 
-        //
-        // Initialize header alias.
-        //
-
-        Header = Table->Header;
+        TableInfoOnDisk = Table->TableInfoOnDisk;
 
         //
         // Define some helper macros here for dumping stats.
         //
 
-#define STATS_INT(String, Name)                               \
-        WIDE_OUTPUT_RAW(WideOutput, String);                  \
-        WIDE_OUTPUT_INT(WideOutput, Table->Header->##Name##); \
-        WIDE_OUTPUT_RAW(WideOutput, L".\n")
-
-#define STATS_QUAD(String, Name)                                       \
+#define STATS_INT(String, Name)                                        \
         WIDE_OUTPUT_RAW(WideOutput, String);                           \
-        WIDE_OUTPUT_INT(WideOutput, Table->Header->##Name##.QuadPart); \
+        WIDE_OUTPUT_INT(WideOutput, Table->TableInfoOnDisk->##Name##); \
         WIDE_OUTPUT_RAW(WideOutput, L".\n")
 
-        if (Header->NumberOfTableResizeEvents > 0) {
+#define STATS_QUAD(String, Name)                                                \
+        WIDE_OUTPUT_RAW(WideOutput, String);                                    \
+        WIDE_OUTPUT_INT(WideOutput, Table->TableInfoOnDisk->##Name##.QuadPart); \
+        WIDE_OUTPUT_RAW(WideOutput, L".\n")
+
+        if (TableInfoOnDisk->NumberOfTableResizeEvents > 0) {
 
             STATS_INT(L"Number of table resize events: ",
                       NumberOfTableResizeEvents);
@@ -1006,14 +1002,21 @@ Return Value:
 
         STATS_QUAD(L"Cycles to solve: ", SolveCycles);
         STATS_QUAD(L"Cycles to verify: ", VerifyCycles);
-        STATS_QUAD(L"Cycles to prepare file: ", PrepareFileCycles);
-        STATS_QUAD(L"Cycles to save file: ", SaveFileCycles);
+        STATS_QUAD(L"Cycles to prepare table file: ", PrepareTableFileCycles);
+        STATS_QUAD(L"Cycles to save table file: ", SaveTableFileCycles);
+        STATS_QUAD(L"Cycles to prepare header file: ", PrepareHeaderFileCycles);
+        STATS_QUAD(L"Cycles to save header file: ", SaveHeaderFileCycles);
 
         STATS_QUAD(L"Microseconds to solve: ", SolveMicroseconds);
         STATS_QUAD(L"Microseconds to verify: ", VerifyMicroseconds);
-        STATS_QUAD(L"Microseconds to prepare file: ", PrepareFileMicroseconds);
-        STATS_QUAD(L"Microseconds to save file: ", SaveFileMicroseconds);
-
+        STATS_QUAD(L"Microseconds to prepare table file: ",
+                   PrepareTableFileMicroseconds);
+        STATS_QUAD(L"Microseconds to save table file: ",
+                   SaveTableFileMicroseconds);
+        STATS_QUAD(L"Microseconds to prepare header file: ",
+                   PrepareHeaderFileMicroseconds);
+        STATS_QUAD(L"Microseconds to save header file: ",
+                   SaveHeaderFileMicroseconds);
 
         WIDE_OUTPUT_RAW(WideOutput, L"\n\n");
         WIDE_OUTPUT_FLUSH();

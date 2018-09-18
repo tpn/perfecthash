@@ -115,10 +115,12 @@ Return Value:
     PGRAPH_DIMENSIONS Dim;
     PSLIST_ENTRY ListEntry;
     SYSTEM_INFO SystemInfo;
-    FILE_WORK_ITEM SaveFile;
-    FILE_WORK_ITEM PrepareFile;
-    PGRAPH_INFO_ON_DISK OnDiskInfo;
-    PTABLE_INFO_ON_DISK_HEADER OnDiskHeader;
+    FILE_WORK_ITEM SaveTableFile;
+    FILE_WORK_ITEM PrepareTableFile;
+    FILE_WORK_ITEM SaveHeaderFile;
+    FILE_WORK_ITEM PrepareHeaderFile;
+    PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
     ULONGLONG Closest;
     ULONGLONG LastClosest;
     ULONGLONG NextSizeInBytes;
@@ -142,7 +144,9 @@ Return Value:
     ULARGE_INTEGER AssignedBitmapBufferSizeInBytes;
     ULARGE_INTEGER IndexBitmapBufferSizeInBytes;
     PPERFECT_HASH_CONTEXT Context = Table->Context;
+    BOOL WaitForAllEvents;
     HANDLE Events[5];
+    HANDLE SaveFileEvents[2];
 
     //
     // Validate arguments.
@@ -717,32 +721,32 @@ RetryWithLargerTableSize:
     // us already at Table->InfoStreamBaseAddress.
     //
 
-    OnDiskInfo = (PGRAPH_INFO_ON_DISK)Table->InfoStreamBaseAddress;
-    ASSERT(OnDiskInfo);
-    OnDiskHeader = &OnDiskInfo->Header;
-    OnDiskHeader->Magic.LowPart = TABLE_INFO_ON_DISK_MAGIC_LOWPART;
-    OnDiskHeader->Magic.HighPart = TABLE_INFO_ON_DISK_MAGIC_HIGHPART;
-    OnDiskHeader->SizeOfStruct = sizeof(*OnDiskInfo);
-    OnDiskHeader->Flags.AsULong = 0;
-    OnDiskHeader->Concurrency = Context->MaximumConcurrency;
-    OnDiskHeader->AlgorithmId = Context->AlgorithmId;
-    OnDiskHeader->MaskFunctionId = Context->MaskFunctionId;
-    OnDiskHeader->HashFunctionId = Context->HashFunctionId;
-    OnDiskHeader->KeySizeInBytes = sizeof(ULONG);
-    OnDiskHeader->HashSize = Table->HashSize;
-    OnDiskHeader->IndexSize = Table->IndexSize;
-    OnDiskHeader->HashShift = Table->HashShift;
-    OnDiskHeader->IndexShift = Table->IndexShift;
-    OnDiskHeader->HashMask = Table->HashMask;
-    OnDiskHeader->IndexMask = Table->IndexMask;
-    OnDiskHeader->HashFold = Table->HashFold;
-    OnDiskHeader->IndexFold = Table->IndexFold;
-    OnDiskHeader->HashModulus = Table->HashModulus;
-    OnDiskHeader->IndexModulus = Table->IndexModulus;
-    OnDiskHeader->NumberOfKeys.QuadPart = (
+    GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)Table->InfoStreamBaseAddress;
+    ASSERT(GraphInfoOnDisk);
+    TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
+    TableInfoOnDisk->Magic.LowPart = TABLE_INFO_ON_DISK_MAGIC_LOWPART;
+    TableInfoOnDisk->Magic.HighPart = TABLE_INFO_ON_DISK_MAGIC_HIGHPART;
+    TableInfoOnDisk->SizeOfStruct = sizeof(*GraphInfoOnDisk);
+    TableInfoOnDisk->Flags.AsULong = 0;
+    TableInfoOnDisk->Concurrency = Context->MaximumConcurrency;
+    TableInfoOnDisk->AlgorithmId = Context->AlgorithmId;
+    TableInfoOnDisk->MaskFunctionId = Context->MaskFunctionId;
+    TableInfoOnDisk->HashFunctionId = Context->HashFunctionId;
+    TableInfoOnDisk->KeySizeInBytes = sizeof(ULONG);
+    TableInfoOnDisk->HashSize = Table->HashSize;
+    TableInfoOnDisk->IndexSize = Table->IndexSize;
+    TableInfoOnDisk->HashShift = Table->HashShift;
+    TableInfoOnDisk->IndexShift = Table->IndexShift;
+    TableInfoOnDisk->HashMask = Table->HashMask;
+    TableInfoOnDisk->IndexMask = Table->IndexMask;
+    TableInfoOnDisk->HashFold = Table->HashFold;
+    TableInfoOnDisk->IndexFold = Table->IndexFold;
+    TableInfoOnDisk->HashModulus = Table->HashModulus;
+    TableInfoOnDisk->IndexModulus = Table->IndexModulus;
+    TableInfoOnDisk->NumberOfKeys.QuadPart = (
         Table->Keys->NumberOfElements.QuadPart
     );
-    OnDiskHeader->NumberOfSeeds = ((
+    TableInfoOnDisk->NumberOfSeeds = ((
         FIELD_OFFSET(GRAPH, LastSeed) -
         FIELD_OFFSET(GRAPH, FirstSeed)
     ) / sizeof(ULONG)) + 1;
@@ -753,11 +757,11 @@ RetryWithLargerTableSize:
     // the number of vertices.
     //
 
-    OnDiskHeader->NumberOfTableElements.QuadPart = (
+    TableInfoOnDisk->NumberOfTableElements.QuadPart = (
         NumberOfVertices.QuadPart
     );
 
-    CopyMemory(&OnDiskInfo->Dimensions, Dim, sizeof(*Dim));
+    CopyMemory(&GraphInfoOnDisk->Dimensions, Dim, sizeof(*Dim));
 
     //
     // Set the context's main work callback to our worker routine, and the algo
@@ -774,16 +778,31 @@ RetryWithLargerTableSize:
     Context->FileWorkCallback = FileWorkCallbackChm01;
 
     //
-    // Prepare the initial "file preparation" work callback.  This will extend
-    // the backing file to the appropriate size.
+    // Prepare the initial "table file preparation" work callback.  This will
+    // extend the backing file to the appropriate size.
     //
 
-    ZeroStruct(PrepareFile);
-    PrepareFile.FileWorkId = FileWorkPrepareId;
+    ZeroStruct(PrepareTableFile);
+    PrepareTableFile.FileWorkId = FileWorkPrepareTableId;
     InterlockedPushEntrySList(&Context->FileWorkListHead,
-                              &PrepareFile.ListEntry);
+                              &PrepareTableFile.ListEntry);
 
-    CONTEXT_START_TIMERS(PrepareFile);
+    CONTEXT_START_TIMERS(PrepareTableFile);
+
+    SubmitThreadpoolWork(Context->FileWork);
+
+    //
+    // Prepare the initial "header file preparation" work callback.  This will
+    // write the common code shared by all headers (i.e. everything that can
+    // be written prior to the perfect hash table solution being solved).
+    //
+
+    ZeroStruct(PrepareHeaderFile);
+    PrepareHeaderFile.FileWorkId = FileWorkPrepareHeaderId;
+    InterlockedPushEntrySList(&Context->FileWorkListHead,
+                              &PrepareHeaderFile.ListEntry);
+
+    CONTEXT_START_TIMERS(PrepareHeaderFile);
 
     SubmitThreadpoolWork(Context->FileWork);
 
@@ -886,7 +905,7 @@ RetryWithLargerTableSize:
         // submitting new solver attempts and just break out of the loop here.
         //
 
-        if (!ShouldWeContinueTryingToSolveGraph(Context)) {
+        if (!ShouldWeContinueTryingToSolveGraphChm01(Context)) {
             break;
         }
     }
@@ -924,17 +943,24 @@ RetryWithLargerTableSize:
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
 
         //
-        // Perform a blocking wait for the prepare file work to complete.  (It
-        // would be highly unlikely that this event hasn't been set yet.)
+        // Perform a blocking wait for the prepare table file work to complete.
+        // (It would be highly unlikely that this event hasn't been set yet.)
         //
 
-        WaitResult = WaitForSingleObject(Context->PreparedFileEvent, INFINITE);
+        WaitResult = WaitForSingleObject(Context->PreparedTableFileEvent,
+                                         INFINITE);
 
         if (WaitResult != WAIT_OBJECT_0) {
             SYS_ERROR(WaitForSingleObject);
             Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
+
+        //
+        // N.B. We don't need to wait for the C header file preparation to
+        //      complete here as the size of that file isn't coupled so tightly
+        //      with the underlying table size.
+        //
 
         //
         // There are no more threadpool callbacks running.  However, a thread
@@ -951,7 +977,7 @@ RetryWithLargerTableSize:
         // Check to see if we've exceeded the maximum number of resize events.
         //
 
-        if (OnDiskHeader->NumberOfTableResizeEvents >= Context->ResizeLimit) {
+        if (TableInfoOnDisk->NumberOfTableResizeEvents >= Context->ResizeLimit) {
             Result = PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED;
             goto Error;
         }
@@ -975,18 +1001,18 @@ RetryWithLargerTableSize:
         // (or no previous version is present).
         //
 
-        OnDiskHeader->NumberOfTableResizeEvents++;
-        OnDiskHeader->TotalNumberOfAttemptsWithSmallerTableSizes += (
+        TableInfoOnDisk->NumberOfTableResizeEvents++;
+        TableInfoOnDisk->TotalNumberOfAttemptsWithSmallerTableSizes += (
             Context->Attempts
         );
 
         Closest = NumberOfEdges.LowPart - Context->HighestDeletedEdgesCount;
         LastClosest = (
-            OnDiskHeader->ClosestWeCameToSolvingGraphWithSmallerTableSizes
+            TableInfoOnDisk->ClosestWeCameToSolvingGraphWithSmallerTableSizes
         );
 
         if (!LastClosest || Closest < LastClosest) {
-            OnDiskHeader->ClosestWeCameToSolvingGraphWithSmallerTableSizes = (
+            TableInfoOnDisk->ClosestWeCameToSolvingGraphWithSmallerTableSizes = (
                 Closest
             );
         }
@@ -995,8 +1021,8 @@ RetryWithLargerTableSize:
         // If this is our first resize, capture the initial size we used.
         //
 
-        if (!OnDiskHeader->InitialTableSize) {
-            OnDiskHeader->InitialTableSize = NumberOfVertices.QuadPart;
+        if (!TableInfoOnDisk->InitialTableSize) {
+            TableInfoOnDisk->InitialTableSize = NumberOfVertices.QuadPart;
         }
 
         //
@@ -1097,7 +1123,7 @@ RetryWithLargerTableSize:
         //
         // Perform the same operation for the file work threadpool.  Note that
         // the only work we've dispatched to this pool at this point is the
-        // initial file preparation work.
+        // initial table and header file preparation work.
         //
 
         WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
@@ -1131,23 +1157,26 @@ FinishedSolution:
     // solved correctly.
     //
 
-    ZeroStruct(SaveFile);
-    SaveFile.FileWorkId = FileWorkSaveId;
+    ZeroStruct(SaveTableFile);
+    SaveTableFile.FileWorkId = FileWorkSaveTableId;
 
     //
     // Before we dispatch the save file work, make sure the preparation has
     // completed.
     //
 
-    WaitResult = WaitForSingleObject(Context->PreparedFileEvent, INFINITE);
+    WaitResult = WaitForSingleObject(Context->PreparedTableFileEvent, INFINITE);
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForSingleObject);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
-    if (Context->FileWorkErrors > 0) {
-        Result = PH_E_ERROR_PREPARING_FILE;
+    if (Context->TableFileWorkErrors > 0) {
+        Result = Context->TableFileWorkLastResult;
+        if (Result == S_OK) {
+            Result = PH_E_ERROR_PREPARING_TABLE_FILE;
+        }
         goto Error;
     }
 
@@ -1156,9 +1185,42 @@ FinishedSolution:
     // work for it.
     //
 
-    CONTEXT_START_TIMERS(SaveFile);
+    CONTEXT_START_TIMERS(SaveTableFile);
 
-    InterlockedPushEntrySList(&Context->FileWorkListHead, &SaveFile.ListEntry);
+    InterlockedPushEntrySList(&Context->FileWorkListHead,
+                              &SaveTableFile.ListEntry);
+    SubmitThreadpoolWork(Context->FileWork);
+
+    //
+    // As above, dispatch a save header file work item in parallel to graph
+    // verification.
+    //
+
+    CONTEXT_START_TIMERS(SaveHeaderFile);
+
+    ZeroStruct(SaveHeaderFile);
+    SaveHeaderFile.FileWorkId = FileWorkSaveHeaderId;
+
+    WaitResult = WaitForSingleObject(Context->PreparedHeaderFileEvent,
+                                     INFINITE);
+    if (WaitResult != WAIT_OBJECT_0) {
+        SYS_ERROR(WaitForSingleObject);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (Context->HeaderFileWorkErrors > 0) {
+        Result = Context->HeaderFileWorkLastResult;
+        if (Result == S_OK) {
+            Result = PH_E_ERROR_PREPARING_HEADER_FILE;
+        }
+        goto Error;
+    }
+
+    CONTEXT_START_TIMERS(SaveHeaderFile);
+
+    InterlockedPushEntrySList(&Context->FileWorkListHead,
+                              &SaveHeaderFile.ListEntry);
     SubmitThreadpoolWork(Context->FileWork);
 
     //
@@ -1173,12 +1235,12 @@ FinishedSolution:
     CONTEXT_END_TIMERS(Verify);
 
     //
-    // Set the verified event (regardless of whether or not we succeeded in
-    // verification).  The save file work will be waiting upon it in order to
+    // Set the verified table event (regardless of whether or not we succeeded
+    // in verification).  The save file work will be waiting upon it in order to
     // write the final timing details to the on-disk header.
     //
 
-    if (!SetEvent(Context->VerifiedEvent)) {
+    if (!SetEvent(Context->VerifiedTableEvent)) {
         SYS_ERROR(SetEvent);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
@@ -1190,18 +1252,37 @@ FinishedSolution:
     }
 
     //
-    // Wait on the saved file event before returning.
+    // Wait on the saved file events before returning.
     //
 
-    WaitResult = WaitForSingleObject(Context->SavedFileEvent, INFINITE);
+    WaitForAllEvents = TRUE;
+    SaveFileEvents[0] = Context->SavedTableFileEvent;
+    SaveFileEvents[1] = Context->SavedHeaderFileEvent;
+
+    WaitResult = WaitForMultipleObjects(ARRAYSIZE(SaveFileEvents),
+                                        SaveFileEvents,
+                                        WaitForAllEvents,
+                                        INFINITE);
+
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForSingleObject);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
-    if (Context->FileWorkErrors > 0) {
-        Result = PH_E_ERROR_SAVING_FILE;
+    if (Context->TableFileWorkErrors > 0) {
+        Result = Context->TableFileWorkLastResult;
+        if (Result == S_OK) {
+            Result = PH_E_ERROR_SAVING_TABLE_FILE;
+        }
+        goto Error;
+    }
+
+    if (Context->HeaderFileWorkErrors > 0) {
+        Result = Context->HeaderFileWorkLastResult;
+        if (Result == S_OK) {
+            Result = PH_E_ERROR_SAVING_HEADER_FILE;
+        }
         goto Error;
     }
 
@@ -1279,20 +1360,20 @@ Return Value:
 
 --*/
 {
-    PTABLE_INFO_ON_DISK_HEADER Header;
+    PTABLE_INFO_ON_DISK OnDisk;
 
-    Header = Table->Header;
+    OnDisk = Table->TableInfoOnDisk;
 
-    Table->HashSize = Header->HashSize;
-    Table->IndexSize = Header->IndexSize;
-    Table->HashShift = Header->HashShift;
-    Table->IndexShift = Header->IndexShift;
-    Table->HashMask = Header->HashMask;
-    Table->IndexMask = Header->IndexMask;
-    Table->HashFold = Header->HashFold;
-    Table->IndexFold = Header->IndexFold;
-    Table->HashModulus = Header->HashModulus;
-    Table->IndexModulus = Header->IndexModulus;
+    Table->HashSize = OnDisk->HashSize;
+    Table->IndexSize = OnDisk->IndexSize;
+    Table->HashShift = OnDisk->HashShift;
+    Table->IndexShift = OnDisk->IndexShift;
+    Table->HashMask = OnDisk->HashMask;
+    Table->IndexMask = OnDisk->IndexMask;
+    Table->HashFold = OnDisk->HashFold;
+    Table->IndexFold = OnDisk->IndexFold;
+    Table->HashModulus = OnDisk->HashModulus;
+    Table->IndexModulus = OnDisk->IndexModulus;
 
     return S_OK;
 }
@@ -1370,7 +1451,7 @@ Return Value:
     // so each loop iteration will be attempting to solve the graph uniquely.
     //
 
-    while (ShouldWeContinueTryingToSolveGraph(Context)) {
+    while (ShouldWeContinueTryingToSolveGraphChm01(Context)) {
 
         InitializeGraph(Info, Graph);
 
@@ -1426,23 +1507,11 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
-    HANDLE SavedEvent;
-    HANDLE PreparedEvent;
-    HANDLE SetOnReturnEvent;
-    PGRAPH_INFO Info;
+    PHANDLE Event;
+    volatile HRESULT *Result;
+    volatile LONG *Errors;
+    volatile LONG *LastError;
     PFILE_WORK_ITEM Item;
-    PGRAPH_INFO_ON_DISK OnDiskInfo;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Info = (PGRAPH_INFO)Context->AlgorithmContext;
-    SavedEvent = Context->SavedFileEvent;
-    PreparedEvent = Context->PreparedFileEvent;
-    OnDiskInfo = (PGRAPH_INFO_ON_DISK)Context->Table->InfoStreamBaseAddress;
 
     //
     // Resolve the work item base address from the list entry.
@@ -1454,269 +1523,41 @@ Return Value:
 
     switch (Item->FileWorkId) {
 
-        case FileWorkPrepareId: {
+        case FileWorkPrepareTableId:
 
-            PVOID BaseAddress;
-            HANDLE MappingHandle;
-            PPERFECT_HASH_TABLE Table;
-            ULARGE_INTEGER SectorAlignedSize;
-
-            //
-            // Indicate we've completed the preparation work when this callback
-            // completes.
-            //
-
-            SetOnReturnEvent = PreparedEvent;
-
-            //
-            // We need to extend the file to accommodate for the solved graph.
-            //
-
-            SectorAlignedSize.QuadPart = ALIGN_UP(Info->AssignedSizeInBytes,
-                                                  Info->AllocationGranularity);
-
-            Table = Context->Table;
-
-            //
-            // Create the file mapping for the sector-aligned size.  This will
-            // extend the underlying file size accordingly.
-            //
-
-            MappingHandle = CreateFileMappingW(Table->FileHandle,
-                                               NULL,
-                                               PAGE_READWRITE,
-                                               SectorAlignedSize.HighPart,
-                                               SectorAlignedSize.LowPart,
-                                               NULL);
-
-            Table->MappingHandle = MappingHandle;
-
-            if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-                SYS_ERROR(CreateFileMappingW);
-                goto Error;
-            }
-
-            BaseAddress = MapViewOfFile(MappingHandle,
-                                        FILE_MAP_READ | FILE_MAP_WRITE,
-                                        0,
-                                        0,
-                                        SectorAlignedSize.QuadPart);
-
-            Table->BaseAddress = BaseAddress;
-
-            if (!BaseAddress) {
-                SYS_ERROR(MapViewOfFile);
-                goto Error;
-            }
-
-            CONTEXT_END_TIMERS(PrepareFile);
-
-            //
-            // We've successfully mapped an area of sufficient space to store
-            // the underlying table array if a perfect hash table solution is
-            // found.  Nothing more to do.
-            //
-
+            Event = &Context->PreparedTableFileEvent;
+            Result = &Context->TableFileWorkLastResult;
+            Errors = &Context->TableFileWorkErrors;
+            LastError = &Context->TableFileWorkLastError;
+            *Result = PrepareTableCallbackChm01(Context);
             break;
-        }
 
-        case FileWorkSaveId: {
+        case FileWorkSaveTableId:
 
-            BOOL Success;
-            PULONG Dest;
-            PULONG Source;
-            PGRAPH Graph;
-            ULONG WaitResult;
-            ULONGLONG SizeInBytes;
-            LARGE_INTEGER EndOfFile;
-            PPERFECT_HASH_TABLE Table;
-            PTABLE_INFO_ON_DISK_HEADER Header;
-
-            //
-            // Indicate the save event has completed upon return of this
-            // callback.
-            //
-
-            SetOnReturnEvent = SavedEvent;
-
-            //
-            // Initialize aliases.
-            //
-
-            Table = Context->Table;
-            Dest = (PULONG)Table->BaseAddress;
-            Graph = (PGRAPH)Context->SolvedContext;
-            Source = Graph->Assigned;
-            Header = Table->Header;
-
-            SizeInBytes = (
-                Header->NumberOfTableElements.QuadPart *
-                Header->KeySizeInBytes
-            );
-
-            //
-            // The graph has been solved.  Copy the array of assigned values
-            // to the mapped area we prepared earlier (above).
-            //
-
-            CopyMemory(Dest, Source, SizeInBytes);
-
-            //
-            // Save the seed values used by this graph.  (Everything else in
-            // the on-disk info representation was saved earlier.)
-            //
-
-            Header->Seed1 = Graph->Seed1;
-            Header->Seed2 = Graph->Seed2;
-            Header->Seed3 = Graph->Seed3;
-            Header->Seed4 = Graph->Seed4;
-
-            //
-            // Kick off a flush file buffers now before we wait on the verified
-            // event.  The flush will be a blocking call.  The wait on verified
-            // will be blocking if the event isn't signaled.  So, we may as well
-            // get some useful blocking work done, before potentially going into
-            // another wait state where we're not doing anything useful.
-            //
-
-            if (!FlushFileBuffers(Table->FileHandle)) {
-                SYS_ERROR(FlushFileBuffers);
-                goto Error;
-            }
-
-            //
-            // Stop the save file timer here, after flushing the file buffers,
-            // but before we potentially wait on the verified state.
-            //
-
-            CONTEXT_END_TIMERS(SaveFile);
-
-            //
-            // Wait on the verification complete event.  This is done in the
-            // main thread straight after it dispatches our file work callback
-            // (that ended up here).  We need to block on this event as we want
-            // to save the timings for verification to the header.
-            //
-
-            WaitResult = WaitForSingleObject(Context->VerifiedEvent, INFINITE);
-            if (WaitResult != WAIT_OBJECT_0) {
-                SYS_ERROR(WaitForSingleObject);
-                goto Error;
-            }
-
-            //
-            // When we mapped the array in the work item above, we used a size
-            // that was aligned with the system allocation granularity.  We now
-            // want to set the end of file explicitly to the exact size of the
-            // underlying array.  To do this, we unmap the view, delete the
-            // section, set the file pointer to where we want, set the end of
-            // file (which will apply the file pointer position as EOF), then
-            // close the file handle.
-            //
-
-            if (!UnmapViewOfFile(Table->BaseAddress)) {
-                SYS_ERROR(UnmapViewOfFile);
-                goto Error;
-            }
-            Table->BaseAddress = NULL;
-
-            if (!CloseHandle(Table->MappingHandle)) {
-                SYS_ERROR(UnmapViewOfFile);
-                goto Error;
-            }
-            Table->MappingHandle = NULL;
-
-            EndOfFile.QuadPart = SizeInBytes;
-
-            Success = SetFilePointerEx(Table->FileHandle,
-                                       EndOfFile,
-                                       NULL,
-                                       FILE_BEGIN);
-
-            if (!Success) {
-                SYS_ERROR(SetFilePointerEx);
-                goto Error;
-            }
-
-            if (!SetEndOfFile(Table->FileHandle)) {
-                SYS_ERROR(SetEndOfFile);
-                goto Error;
-            }
-
-            if (!CloseHandle(Table->FileHandle)) {
-                SYS_ERROR(CloseHandle);
-                goto Error;
-            }
-
-            Table->FileHandle = NULL;
-
-            //
-            // Stop the save file timers, then copy all the timer values into
-            // the header (before closing the :Info stream).
-            //
-
-            CONTEXT_SAVE_TIMERS_TO_HEADER(Solve);
-            CONTEXT_SAVE_TIMERS_TO_HEADER(Verify);
-            CONTEXT_SAVE_TIMERS_TO_HEADER(PrepareFile);
-            CONTEXT_SAVE_TIMERS_TO_HEADER(SaveFile);
-
-            //
-            // Save the number of attempts and number of finished solutions.
-            //
-
-            Header->NumberOfAttempts = Context->Attempts;
-            Header->NumberOfFailedAttempts = Context->FailedAttempts;
-            Header->NumberOfSolutionsFound = Context->FinishedCount;
-
-            //
-            // Finalize the :Info stream the same way we handled the backing
-            // file above; unmap, delete section, set file pointer, set eof,
-            // close file.
-            //
-
-            if (!UnmapViewOfFile(Table->InfoStreamBaseAddress)) {
-                SYS_ERROR(UnmapViewOfFile);
-                goto Error;
-            }
-            Table->InfoStreamBaseAddress = NULL;
-
-            if (!CloseHandle(Table->InfoStreamMappingHandle)) {
-                SYS_ERROR(CloseHandle);
-                goto Error;
-            }
-            Table->InfoStreamMappingHandle = NULL;
-
-            //
-            // The file size for the :Info stream will be the size of our
-            // on-disk info structure.
-            //
-
-            EndOfFile.QuadPart = sizeof(*OnDiskInfo);
-
-            Success = SetFilePointerEx(Table->InfoStreamFileHandle,
-                                       EndOfFile,
-                                       NULL,
-                                       FILE_BEGIN);
-
-            if (!Success) {
-                SYS_ERROR(SetFilePointerEx);
-                goto Error;
-            }
-
-            if (!SetEndOfFile(Table->InfoStreamFileHandle)) {
-                SYS_ERROR(SetEndOfFile);
-                goto Error;
-            }
-
-            if (!CloseHandle(Table->InfoStreamFileHandle)) {
-                SYS_ERROR(CloseHandle);
-                goto Error;
-            }
-
-            Table->InfoStreamFileHandle = NULL;
-
+            Event = &Context->SavedTableFileEvent;
+            Result = &Context->TableFileWorkLastResult;
+            Errors = &Context->TableFileWorkErrors;
+            LastError = &Context->TableFileWorkLastError;
+            *Result = SaveTableCallbackChm01(Context);
             break;
-        }
+
+        case FileWorkPrepareHeaderId:
+
+            Event = &Context->PreparedHeaderFileEvent;
+            Result = &Context->HeaderFileWorkLastResult;
+            Errors = &Context->HeaderFileWorkErrors;
+            LastError = &Context->HeaderFileWorkLastError;
+            *Result = PrepareHeaderCallbackChm01(Context);
+            break;
+
+        case FileWorkSaveHeaderId:
+
+            Event = &Context->SavedHeaderFileEvent;
+            Result = &Context->HeaderFileWorkLastResult;
+            Errors = &Context->HeaderFileWorkErrors;
+            LastError = &Context->HeaderFileWorkLastError;
+            *Result = SaveHeaderCallbackChm01(Context);
+            break;
 
         default:
 
@@ -1726,8 +1567,330 @@ Return Value:
 
             ASSERT(FALSE);
             return;
-
     }
+
+    if (FAILED(*Result)) {
+        InterlockedIncrement(Errors);
+        *LastError = GetLastError();
+    }
+
+    //
+    // Register the relevant event to be set when this threadpool callback
+    // returns, then return.
+    //
+
+    SetEventWhenCallbackReturns(Instance, *Event);
+
+    return;
+}
+
+_Use_decl_annotations_
+HRESULT
+PrepareTableCallbackChm01(
+    PPERFECT_HASH_CONTEXT Context
+    )
+{
+    PRTL Rtl;
+    HRESULT Result = S_OK;
+    PGRAPH_INFO Info;
+    PVOID BaseAddress;
+    HANDLE MappingHandle;
+    PPERFECT_HASH_TABLE Table;
+    ULARGE_INTEGER SectorAlignedSize;
+    PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    Info = (PGRAPH_INFO)Context->AlgorithmContext;
+    GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)Table->InfoStreamBaseAddress;
+
+    //
+    // We need to extend the file to accommodate for the solved graph.
+    //
+
+    SectorAlignedSize.QuadPart = ALIGN_UP(Info->AssignedSizeInBytes,
+                                          Info->AllocationGranularity);
+
+    //
+    // Create the file mapping for the sector-aligned size.  This will
+    // extend the underlying file size accordingly.
+    //
+
+    MappingHandle = CreateFileMappingW(Table->FileHandle,
+                                       NULL,
+                                       PAGE_READWRITE,
+                                       SectorAlignedSize.HighPart,
+                                       SectorAlignedSize.LowPart,
+                                       NULL);
+
+    Table->MappingHandle = MappingHandle;
+
+    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
+        SYS_ERROR(CreateFileMappingW);
+        goto Error;
+    }
+
+    BaseAddress = MapViewOfFile(MappingHandle,
+                                FILE_MAP_READ | FILE_MAP_WRITE,
+                                0,
+                                0,
+                                SectorAlignedSize.QuadPart);
+
+    Table->BaseAddress = BaseAddress;
+
+    if (!BaseAddress) {
+        SYS_ERROR(MapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    CONTEXT_END_TIMERS(PrepareTableFile);
+
+    //
+    // We've successfully mapped an area of sufficient space to store
+    // the underlying table array if a perfect hash table solution is
+    // found.  Nothing more to do.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_ERROR_PREPARING_TABLE_FILE;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+SaveTableCallbackChm01(
+    PPERFECT_HASH_CONTEXT Context
+    )
+{
+    PRTL Rtl;
+    BOOL Success;
+    PULONG Dest;
+    PGRAPH Graph;
+    PULONG Source;
+    ULONG WaitResult;
+    HRESULT Result = S_OK;
+    ULONGLONG SizeInBytes;
+    LARGE_INTEGER EndOfFile;
+    PPERFECT_HASH_TABLE Table;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    Table = Context->Table;
+    Dest = (PULONG)Table->BaseAddress;
+    Graph = (PGRAPH)Context->SolvedContext;
+    Source = Graph->Assigned;
+    TableInfoOnDisk = Table->TableInfoOnDisk;
+
+    SizeInBytes = (
+        TableInfoOnDisk->NumberOfTableElements.QuadPart *
+        TableInfoOnDisk->KeySizeInBytes
+    );
+
+    //
+    // The graph has been solved.  Copy the array of assigned values
+    // to the mapped area we prepared earlier (above).
+    //
+
+    CopyMemory(Dest, Source, SizeInBytes);
+
+    //
+    // Save the seed values used by this graph.  (Everything else in
+    // the on-disk info representation was saved earlier.)
+    //
+
+    TableInfoOnDisk->Seed1 = Graph->Seed1;
+    TableInfoOnDisk->Seed2 = Graph->Seed2;
+    TableInfoOnDisk->Seed3 = Graph->Seed3;
+    TableInfoOnDisk->Seed4 = Graph->Seed4;
+
+    //
+    // Kick off a flush file buffers now before we wait on the verified
+    // event.  The flush will be a blocking call.  The wait on verified
+    // will be blocking if the event isn't signaled.  So, we may as well
+    // get some useful blocking work done, before potentially going into
+    // another wait state where we're not doing anything useful.
+    //
+
+    if (!FlushFileBuffers(Table->FileHandle)) {
+        SYS_ERROR(FlushFileBuffers);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Stop the save file timer here, after flushing the file buffers,
+    // but before we potentially wait on the verified state.
+    //
+
+    CONTEXT_END_TIMERS(SaveTableFile);
+
+    //
+    // Wait on the verification complete event.  This is done in the
+    // main thread straight after it dispatches our file work callback
+    // (that ended up here).  We need to block on this event as we want
+    // to save the timings for verification to the header.
+    //
+
+    WaitResult = WaitForSingleObject(Context->VerifiedTableEvent, INFINITE);
+    if (WaitResult != WAIT_OBJECT_0) {
+        SYS_ERROR(WaitForSingleObject);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // When we mapped the array in the work item above, we used a size
+    // that was aligned with the system allocation granularity.  We now
+    // want to set the end of file explicitly to the exact size of the
+    // underlying array.  To do this, we unmap the view, delete the
+    // section, set the file pointer to where we want, set the end of
+    // file (which will apply the file pointer position as EOF), then
+    // close the file handle.
+    //
+
+    if (!UnmapViewOfFile(Table->BaseAddress)) {
+        SYS_ERROR(UnmapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+    Table->BaseAddress = NULL;
+
+    if (!CloseHandle(Table->MappingHandle)) {
+        SYS_ERROR(UnmapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+    Table->MappingHandle = NULL;
+
+    EndOfFile.QuadPart = SizeInBytes;
+
+    Success = SetFilePointerEx(Table->FileHandle,
+                               EndOfFile,
+                               NULL,
+                               FILE_BEGIN);
+
+    if (!Success) {
+        SYS_ERROR(SetFilePointerEx);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (!SetEndOfFile(Table->FileHandle)) {
+        SYS_ERROR(SetEndOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (!CloseHandle(Table->FileHandle)) {
+        SYS_ERROR(CloseHandle);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    Table->FileHandle = NULL;
+
+    //
+    // Save the number of attempts and number of finished solutions.
+    //
+
+    TableInfoOnDisk->NumberOfAttempts = Context->Attempts;
+    TableInfoOnDisk->NumberOfFailedAttempts = Context->FailedAttempts;
+    TableInfoOnDisk->NumberOfSolutionsFound = Context->FinishedCount;
+
+    //
+    // Copy timer values for everything except the save header event.
+    //
+
+    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Solve);
+    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Verify);
+    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareTableFile);
+    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveTableFile);
+    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareHeaderFile);
+
+    //
+    // We need to wait on the header saved event before we can capture
+    // the header timers.
+    //
+
+    WaitResult = WaitForSingleObject(Context->SavedHeaderFileEvent,
+                                     INFINITE);
+
+    if (WaitResult != WAIT_OBJECT_0) {
+        SYS_ERROR(WaitForSingleObject);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveHeaderFile);
+
+    //
+    // Finalize the :Info stream the same way we handled the backing
+    // file above; unmap, delete section, set file pointer, set eof,
+    // close file.
+    //
+
+    if (!UnmapViewOfFile(Table->InfoStreamBaseAddress)) {
+        SYS_ERROR(UnmapViewOfFile);
+        goto Error;
+    }
+    Table->InfoStreamBaseAddress = NULL;
+
+    if (!CloseHandle(Table->InfoStreamMappingHandle)) {
+        SYS_ERROR(CloseHandle);
+        goto Error;
+    }
+    Table->InfoStreamMappingHandle = NULL;
+
+    //
+    // The file size for the :Info stream will be the size of our
+    // on-disk graph info structure.
+    //
+
+    EndOfFile.QuadPart = sizeof(GRAPH_INFO_ON_DISK);
+
+    Success = SetFilePointerEx(Table->InfoStreamFileHandle,
+                               EndOfFile,
+                               NULL,
+                               FILE_BEGIN);
+
+    if (!Success) {
+        SYS_ERROR(SetFilePointerEx);
+        goto Error;
+    }
+
+    if (!SetEndOfFile(Table->InfoStreamFileHandle)) {
+        SYS_ERROR(SetEndOfFile);
+        goto Error;
+    }
+
+    if (!CloseHandle(Table->InfoStreamFileHandle)) {
+        SYS_ERROR(CloseHandle);
+        goto Error;
+    }
+
+    Table->InfoStreamFileHandle = NULL;
 
     //
     // We're done, jump to the end.
@@ -1737,8 +1900,9 @@ Return Value:
 
 Error:
 
-    InterlockedIncrement((PLONG)&Context->FileWorkErrors);
-    Context->FileWorkLastError = GetLastError();
+    if (Result == S_OK) {
+        Result = PH_E_ERROR_SAVING_TABLE_FILE;
+    }
 
     //
     // Intentional follow-on to End.
@@ -1746,20 +1910,140 @@ Error:
 
 End:
 
-    //
-    // Register the relevant event to be set when this threadpool callback
-    // returns, then return.
-    //
-
-    SetEventWhenCallbackReturns(Instance, SetOnReturnEvent);
-
-    return;
+    return Result;
 }
 
-SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH ShouldWeContinueTryingToSolveGraph;
+_Use_decl_annotations_
+HRESULT
+PrepareHeaderCallbackChm01(
+    PPERFECT_HASH_CONTEXT Context
+    )
+{
+    PRTL Rtl;
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE Table;
 
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+
+#if 0
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_ERROR_PREPARING_HEADER_FILE;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+#endif
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+SaveHeaderCallbackChm01(
+    PPERFECT_HASH_CONTEXT Context
+    )
+{
+    PRTL Rtl;
+    BOOL Success;
+    HRESULT Result = S_OK;
+    LARGE_INTEGER EndOfFile;
+    PPERFECT_HASH_TABLE Table;
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+
+    //
+    // XXX TODO: write table data.
+    //
+
+
+    //
+    // Save the header file: unmap the view, close the mapping handle, set the
+    // file pointer, set EOF, and then close the handle.
+    //
+
+    if (!UnmapViewOfFile(Table->HeaderBaseAddress)) {
+        SYS_ERROR(UnmapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+    Table->HeaderBaseAddress = NULL;
+
+    if (!CloseHandle(Table->HeaderMappingHandle)) {
+        SYS_ERROR(UnmapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+    Table->HeaderMappingHandle = NULL;
+
+    EndOfFile.QuadPart = Table->HeaderSizeInBytes;
+
+    Success = SetFilePointerEx(Table->HeaderFileHandle,
+                               EndOfFile,
+                               NULL,
+                               FILE_BEGIN);
+
+    if (!Success) {
+        SYS_ERROR(SetFilePointerEx);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (!SetEndOfFile(Table->HeaderFileHandle)) {
+        SYS_ERROR(SetEndOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (!CloseHandle(Table->HeaderFileHandle)) {
+        SYS_ERROR(CloseHandle);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    Table->HeaderFileHandle = NULL;
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_ERROR_SAVING_HEADER_FILE;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
+    ShouldWeContinueTryingToSolveGraphChm01;
+
+_Use_decl_annotations_
 BOOLEAN
-ShouldWeContinueTryingToSolveGraph(
+ShouldWeContinueTryingToSolveGraphChm01(
     PPERFECT_HASH_CONTEXT Context
     )
 {
@@ -1984,7 +2268,7 @@ Return Value:
     // Initialize aliases.
     //
 
-    Seeds = &Table->Header->FirstSeed;
+    Seeds = &Table->TableInfoOnDisk->FirstSeed;
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Seed3 = Seeds[2];
@@ -2129,7 +2413,7 @@ Return Value:
 
     //IACA_VC_START();
 
-    Seeds = &Table->Header->FirstSeed;
+    Seeds = &Table->TableInfoOnDisk->FirstSeed;
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Input = Key;
@@ -2312,7 +2596,7 @@ Return Value:
 
     //IACA_VC_START();
 
-    Seeds = &Table->Header->FirstSeed;
+    Seeds = &Table->TableInfoOnDisk->FirstSeed;
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Input = Key;

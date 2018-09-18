@@ -50,7 +50,7 @@ Return Value:
     PCHAR ExpectedBuffer;
     USHORT BitmapCount = 0;
     PPERFECT_HASH_TABLE Table;
-    PTABLE_INFO_ON_DISK_HEADER Header;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PPERFECT_HASH_CONTEXT Context;
 
     //
@@ -59,7 +59,7 @@ Return Value:
 
     Context = Info->Context;
     Table = Context->Table;
-    Header = Table->Header;
+    TableInfoOnDisk = Table->TableInfoOnDisk;
     Rtl = Context->Rtl;
 
     Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
@@ -82,7 +82,7 @@ Return Value:
     //
 
     GetRandomSeedsBlocking(&Graph->Seeds12);
-    Graph->NumberOfSeeds = Table->Header->NumberOfSeeds;
+    Graph->NumberOfSeeds = Table->TableInfoOnDisk->NumberOfSeeds;
 
     //
     // Initialize the number of keys.

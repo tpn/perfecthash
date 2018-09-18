@@ -59,13 +59,13 @@ extern HMODULE PerfectHashModule;
 //
 // Metadata about a perfect hash table is stored in an NTFS stream named :Info
 // that is tacked onto the end of the perfect hash table's file name.  Define
-// a structure, TABLE_INFO_ON_DISK_HEADER, that literally represents the on-disk
+// a structure, TABLE_INFO_ON_DISK, that literally represents the on-disk
 // layout of this metadata.  Each algorithm implementation must write out an
 // info record that conforms with this common header.  They are free to extend
 // it with additional details.
 //
 
-typedef union _TABLE_INFO_ON_DISK_HEADER_FLAGS {
+typedef union _TABLE_INFO_ON_DISK_FLAGS {
 
     struct {
 
@@ -80,10 +80,10 @@ typedef union _TABLE_INFO_ON_DISK_HEADER_FLAGS {
     LONG AsLong;
     ULONG AsULong;
 
-} TABLE_INFO_ON_DISK_HEADER_FLAGS;
-C_ASSERT(sizeof(TABLE_INFO_ON_DISK_HEADER_FLAGS) == sizeof(ULONG));
+} TABLE_INFO_ON_DISK_FLAGS;
+C_ASSERT(sizeof(TABLE_INFO_ON_DISK_FLAGS) == sizeof(ULONG));
 
-typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK_HEADER {
+typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
 
     //
     // A magic value used to identify the structure.
@@ -105,7 +105,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK_HEADER {
     // Flags.
     //
 
-    TABLE_INFO_ON_DISK_HEADER_FLAGS Flags;
+    TABLE_INFO_ON_DISK_FLAGS Flags;
 
     //
     // Algorithm that was used.
@@ -311,31 +311,55 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK_HEADER {
     ULARGE_INTEGER VerifyMicroseconds;
 
     //
-    // Number of cycles taken to prepare the file.
+    // Number of cycles taken to prepare the table file.
     //
 
-    ULARGE_INTEGER PrepareFileCycles;
+    ULARGE_INTEGER PrepareTableFileCycles;
 
     //
-    // Number of microseconds taken to prepare the file.
+    // Number of microseconds taken to prepare the table file.
     //
 
-    ULARGE_INTEGER PrepareFileMicroseconds;
+    ULARGE_INTEGER PrepareTableFileMicroseconds;
 
     //
-    // Number of cycles taken to save the file.
+    // Number of cycles taken to save the table file.
     //
 
-    ULARGE_INTEGER SaveFileCycles;
+    ULARGE_INTEGER SaveTableFileCycles;
 
     //
-    // Number of microseconds taken to save the file.
+    // Number of microseconds taken to save the table file.
     //
 
-    ULARGE_INTEGER SaveFileMicroseconds;
+    ULARGE_INTEGER SaveTableFileMicroseconds;
 
-} TABLE_INFO_ON_DISK_HEADER;
-typedef TABLE_INFO_ON_DISK_HEADER *PTABLE_INFO_ON_DISK_HEADER;
+    //
+    // Number of cycles taken to prepare the header file.
+    //
+
+    ULARGE_INTEGER PrepareHeaderFileCycles;
+
+    //
+    // Number of microseconds taken to prepare the header file.
+    //
+
+    ULARGE_INTEGER PrepareHeaderFileMicroseconds;
+
+    //
+    // Number of cycles taken to save the header file.
+    //
+
+    ULARGE_INTEGER SaveHeaderFileCycles;
+
+    //
+    // Number of microseconds taken to save the header file.
+    //
+
+    ULARGE_INTEGER SaveHeaderFileMicroseconds;
+
+} TABLE_INFO_ON_DISK;
+typedef TABLE_INFO_ON_DISK *PTABLE_INFO_ON_DISK;
 
 //
 // Define an enumeration to capture the type of file work operations we want
@@ -351,16 +375,31 @@ typedef enum _FILE_WORK_ID {
     FileWorkNullId = 0,
 
     //
-    // Initial file preparation once the underlying sizes required are known.
+    // Initial table file preparation once the underlying sizes required are
+    // known.
     //
 
-    FileWorkPrepareId = 1,
+    FileWorkPrepareTableId = 1,
 
     //
     // Perfect hash solution has been solved and is ready to be saved to disk.
     //
 
-    FileWorkSaveId,
+    FileWorkSaveTableId,
+
+    //
+    // Initial work required to prepare the header file prior to a solution
+    // being found.
+    //
+
+    FileWorkPrepareHeaderId,
+
+    //
+    // Perfect hash solution has been solved and the file header can be saved
+    // to disk.
+    //
+
+    FileWorkSaveHeaderId,
 
     //
     // Invalid ID, this must come last.
@@ -405,6 +444,55 @@ typedef struct _FILE_WORK_ITEM {
 
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;
+
+//
+// Define specific file work functions.
+//
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PREPARE_TABLE_CALLBACK)(
+    _In_ struct _PERFECT_HASH_CONTEXT *Context
+    );
+typedef PREPARE_TABLE_CALLBACK *PPREPARE_TABLE_CALLBACK;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI SAVE_TABLE_CALLBACK)(
+    _In_ struct _PERFECT_HASH_CONTEXT *Context
+    );
+typedef SAVE_TABLE_CALLBACK *PSAVE_TABLE_CALLBACK;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PREPARE_HEADER_CALLBACK)(
+    _In_ struct _PERFECT_HASH_CONTEXT *Context
+    );
+typedef PREPARE_HEADER_CALLBACK *PPREPARE_HEADER_CALLBACK;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI SAVE_HEADER_CALLBACK)(
+    _In_ struct _PERFECT_HASH_CONTEXT *Context
+    );
+typedef SAVE_HEADER_CALLBACK *PSAVE_HEADER_CALLBACK;
+
+typedef
+BOOLEAN
+(NTAPI SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH)(
+    _In_ struct _PERFECT_HASH_CONTEXT *Context
+    );
+typedef SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
+      *PSHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH;
+
 
 //
 // Function typedefs for private functions.

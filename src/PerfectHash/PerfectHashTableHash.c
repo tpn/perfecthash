@@ -109,10 +109,11 @@ PerfectHashTableHashCrc32Rotate(
     PULONGLONG Hash
     )
 {
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashCrc32Rotate(Table,
                                                  Input,
-                                                 Table->Header->NumberOfSeeds,
-                                                 &Table->Header->FirstSeed,
+                                                 TableInfo->NumberOfSeeds,
+                                                 &TableInfo->FirstSeed,
                                                  Hash);
 }
 
@@ -208,10 +209,11 @@ PerfectHashTableHashRotateXor(
     PULONGLONG Hash
     )
 {
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashRotateXor(Table,
                                                Input,
-                                               Table->Header->NumberOfSeeds,
-                                               &Table->Header->FirstSeed,
+                                               TableInfo->NumberOfSeeds,
+                                               &TableInfo->FirstSeed,
                                                Hash);
 }
 
@@ -303,13 +305,13 @@ PerfectHashTableHashAddSubXor(
     PULONGLONG Hash
     )
 {
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashAddSubXor(Table,
                                                Input,
-                                               Table->Header->NumberOfSeeds,
-                                               &Table->Header->FirstSeed,
+                                               TableInfo->NumberOfSeeds,
+                                               &TableInfo->FirstSeed,
                                                Hash);
 }
-
 
 _Use_decl_annotations_
 HRESULT
@@ -402,10 +404,11 @@ PerfectHashTableHashXor(
     PULONGLONG Hash
     )
 {
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashXor(Table,
                                          Input,
-                                         Table->Header->NumberOfSeeds,
-                                         &Table->Header->FirstSeed,
+                                         TableInfo->NumberOfSeeds,
+                                         &TableInfo->FirstSeed,
                                          Hash);
 }
 
@@ -534,10 +537,11 @@ PerfectHashTableHashJenkins(
     PULONGLONG Hash
     )
 {
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashJenkins(Table,
                                              Input,
-                                             Table->Header->NumberOfSeeds,
-                                             &Table->Header->FirstSeed,
+                                             TableInfo->NumberOfSeeds,
+                                             &TableInfo->FirstSeed,
                                              Hash);
 }
 
@@ -676,11 +680,12 @@ PerfectHashTableHashCrc32RotateXor(
     PULONGLONG Hash
     )
 {
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashCrc32RotateXor(
         Table,
         Input,
-        Table->Header->NumberOfSeeds,
-        &Table->Header->FirstSeed,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
         Hash
     );
 }

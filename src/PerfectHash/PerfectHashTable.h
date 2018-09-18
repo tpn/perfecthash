@@ -250,7 +250,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     union {
         PVOID InfoStreamBaseAddress;
-        struct _TABLE_INFO_ON_DISK_HEADER *Header;
+        struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
     };
 
     //
@@ -283,6 +283,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     HANDLE HeaderMappingHandle;
     PVOID HeaderBaseAddress;
     ULARGE_INTEGER HeaderMappingSizeInBytes;
+    ULONGLONG HeaderSizeInBytes;
 
     //
     // The table name is a valid C identifier name derived from the input

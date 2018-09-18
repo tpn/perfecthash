@@ -133,9 +133,8 @@ Return Value:
     ULONGLONG NumberOfKeys;
     ULONGLONG NumberOfTableElements;
     ULONGLONG ValuesSizeInBytes;
-    PTABLE_INFO_ON_DISK_HEADER Header;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
-    UNICODE_STRING InfoSuffix = RTL_CONSTANT_STRING(L":Info");
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
 
     //
@@ -217,16 +216,11 @@ Return Value:
         Path->Length +
 
         //
-        // Account for the length of the suffix.
+        // Account for the length of the suffix including trailing NULL.
         //
 
-        InfoSuffix.Length +
+        InfoStreamSuffix.MaximumLength
 
-        //
-        // Account for a trailing NULL.
-        //
-
-        sizeof(InfoSuffix.Buffer[0])
     );
 
     //
@@ -370,7 +364,7 @@ Return Value:
     // Copy the :Info suffix over, then NULL-terminate.
     //
 
-    Source = InfoSuffix.Buffer;
+    Source = InfoStreamSuffix.Buffer;
 
     while (*Source) {
         *Dest++ = *Source++;
@@ -435,7 +429,7 @@ Return Value:
         goto Error;
     }
 
-    if (FileInfo.EndOfFile.QuadPart < sizeof(*Header)) {
+    if (FileInfo.EndOfFile.QuadPart < sizeof(*TableInfoOnDisk)) {
 
         //
         // File is too small, it can't be an :Info we know about.
@@ -480,14 +474,14 @@ Return Value:
     }
 
     //
-    // We've obtained the TABLE_INFO_ON_DISK_HEADER structure.  Ensure the
+    // We've obtained the TABLE_INFO_ON_DISK structure.  Ensure the
     // magic values are what we expect.
     //
 
-    Header = (PTABLE_INFO_ON_DISK_HEADER)BaseAddress;
+    TableInfoOnDisk = (PTABLE_INFO_ON_DISK)BaseAddress;
 
-    if (Header->Magic.LowPart  != TABLE_INFO_ON_DISK_MAGIC_LOWPART ||
-        Header->Magic.HighPart != TABLE_INFO_ON_DISK_MAGIC_HIGHPART) {
+    if (TableInfoOnDisk->Magic.LowPart  != TABLE_INFO_ON_DISK_MAGIC_LOWPART ||
+        TableInfoOnDisk->Magic.HighPart != TABLE_INFO_ON_DISK_MAGIC_HIGHPART) {
 
         //
         // Magic values don't match what we expect.  Abort the loading efforts.
@@ -502,7 +496,7 @@ Return Value:
     // large as our header structure size.
     //
 
-    if (Header->SizeOfStruct < sizeof(*Header)) {
+    if (TableInfoOnDisk->SizeOfStruct < sizeof(*TableInfoOnDisk)) {
         Result = PH_E_INVALID_INFO_HEADER_SIZE;
         goto Error;
     }
@@ -515,7 +509,9 @@ Return Value:
 
     if (ARGUMENT_PRESENT(Keys)) {
 
-        if (Keys->NumberOfElements.QuadPart != Header->NumberOfKeys.QuadPart) {
+        if (Keys->NumberOfElements.QuadPart !=
+            TableInfoOnDisk->NumberOfKeys.QuadPart) {
+
             Result = PH_E_NUM_KEYS_MISMATCH_BETWEEN_HEADER_AND_KEYS;
             goto Error;
         }
@@ -527,7 +523,7 @@ Return Value:
     // loader routines array, so validation is especially important.
     //
 
-    AlgorithmId = Header->AlgorithmId;
+    AlgorithmId = TableInfoOnDisk->AlgorithmId;
     if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         Result = PH_E_INVALID_ALGORITHM_ID;
         goto Error;
@@ -537,7 +533,7 @@ Return Value:
     // Validate the hash function ID.
     //
 
-    if (!IsValidPerfectHashHashFunctionId(Header->HashFunctionId)) {
+    if (!IsValidPerfectHashHashFunctionId(TableInfoOnDisk->HashFunctionId)) {
         Result = PH_E_INVALID_HASH_FUNCTION_ID;
         goto Error;
     }
@@ -546,7 +542,7 @@ Return Value:
     // Validate the masking type.
     //
 
-    if (!IsValidPerfectHashMaskFunctionId(Header->MaskFunctionId)) {
+    if (!IsValidPerfectHashMaskFunctionId(TableInfoOnDisk->MaskFunctionId)) {
         Result = PH_E_INVALID_MASK_FUNCTION_ID;
         goto Error;
     }
@@ -556,7 +552,7 @@ Return Value:
     // restriction now.
     //
 
-    if (Header->KeySizeInBytes != sizeof(ULONG)) {
+    if (TableInfoOnDisk->KeySizeInBytes != sizeof(ULONG)) {
         Result = PH_E_HEADER_KEY_SIZE_TOO_LARGE;
         goto Error;
     }
@@ -567,8 +563,8 @@ Return Value:
     // elements.
     //
 
-    NumberOfKeys = Header->NumberOfKeys.QuadPart;
-    NumberOfTableElements = Header->NumberOfTableElements.QuadPart;
+    NumberOfKeys = TableInfoOnDisk->NumberOfKeys.QuadPart;
+    NumberOfTableElements = TableInfoOnDisk->NumberOfTableElements.QuadPart;
 
     if (NumberOfKeys == 0) {
         Result = PH_E_NUM_KEYS_IS_ZERO;
@@ -634,7 +630,10 @@ Return Value:
     // :Info header.
     //
 
-    ExpectedEndOfFile.QuadPart = NumberOfTableElements * Header->KeySizeInBytes;
+    ExpectedEndOfFile.QuadPart = (
+        NumberOfTableElements *
+        TableInfoOnDisk->KeySizeInBytes
+    );
 
     //
     // Sanity check that the expected end of file is not 0.
@@ -756,8 +755,8 @@ Return Value:
     );
 
     ValuesSizeInBytes = (
-        Header->NumberOfTableElements.QuadPart *
-        (ULONGLONG)Header->KeySizeInBytes
+        TableInfoOnDisk->NumberOfTableElements.QuadPart *
+        (ULONGLONG)TableInfoOnDisk->KeySizeInBytes
     );
 
     BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
@@ -786,8 +785,8 @@ Return Value:
     //
 
     Table->AlgorithmId = AlgorithmId;
-    Table->MaskFunctionId = Header->MaskFunctionId;
-    Table->HashFunctionId = Header->HashFunctionId;
+    Table->MaskFunctionId = TableInfoOnDisk->MaskFunctionId;
+    Table->HashFunctionId = TableInfoOnDisk->HashFunctionId;
 
     //
     // Complete initialization of the table's vtbl now that the hash/mask IDs

@@ -234,14 +234,20 @@ const UNICODE_STRING ContextCompletedEventPrefix =
 const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
     RTL_CONSTANT_STRING(L"PerfectHashContext_TryLargerTableSizeEvent_");
 
-const UNICODE_STRING ContextPreparedFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedFileEvent_");
+const UNICODE_STRING ContextPreparedTableFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedTableFileEvent_");
 
-const UNICODE_STRING ContextVerifiedEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_VerifiedEvent_");
+const UNICODE_STRING ContextVerifiedTableEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_VerifiedTableEvent_");
 
-const UNICODE_STRING ContextSavedFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedFileEvent_");
+const UNICODE_STRING ContextSavedTableFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedTableFileEvent_");
+
+const UNICODE_STRING ContextPreparedHeaderFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedHeaderFileEvent_");
+
+const UNICODE_STRING ContextSavedHeaderFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedHeaderFileEvent_");
 
 const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextShutdownEventPrefix,
@@ -249,9 +255,11 @@ const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextFailedEventPrefix,
     &ContextCompletedEventPrefix,
     &ContextTryLargerTableSizeEventPrefix,
-    &ContextPreparedFileEventPrefix,
-    &ContextVerifiedEventPrefix,
-    &ContextSavedFileEventPrefix,
+    &ContextPreparedTableFileEventPrefix,
+    &ContextVerifiedTableEventPrefix,
+    &ContextSavedTableFileEventPrefix,
+    &ContextPreparedHeaderFileEventPrefix,
+    &ContextSavedHeaderFileEventPrefix,
 };
 
 //

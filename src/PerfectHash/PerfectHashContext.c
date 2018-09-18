@@ -673,35 +673,68 @@ Return Value:
     Context->AlgorithmId = PerfectHashNullAlgorithmId;
     Context->HashFunctionId = PerfectHashNullHashFunctionId;
     Context->MaskFunctionId = PerfectHashNullMaskFunctionId;
+
+    Context->AlgorithmContext = NULL;
+    Context->HashFunctionContext = NULL;
+    Context->SolvedContext = NULL;
+
     Context->HighestDeletedEdgesCount = 0;
     Context->ResizeTableThreshold = 0;
     Context->ResizeLimit = 0;
     Context->Attempts = 0;
+
     Context->SolveStartCycles.QuadPart = 0;
     Context->SolveStartCounter.QuadPart = 0;
     Context->SolveEndCycles.QuadPart = 0;
     Context->SolveEndCounter.QuadPart = 0;
     Context->SolveElapsedCycles.QuadPart = 0;
     Context->SolveElapsedMicroseconds.QuadPart = 0;
+
     Context->VerifyStartCycles.QuadPart = 0;
     Context->VerifyStartCounter.QuadPart = 0;
     Context->VerifyEndCycles.QuadPart = 0;
     Context->VerifyEndCounter.QuadPart = 0;
     Context->VerifyElapsedCycles.QuadPart = 0;
     Context->VerifyElapsedMicroseconds.QuadPart = 0;
-    Context->SaveFileStartCycles.QuadPart = 0;
-    Context->SaveFileStartCounter.QuadPart = 0;
-    Context->SaveFileEndCycles.QuadPart = 0;
-    Context->SaveFileEndCounter.QuadPart = 0;
-    Context->SaveFileElapsedCycles.QuadPart = 0;
-    Context->SaveFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->PrepareTableFileStartCycles.QuadPart = 0;
+    Context->PrepareTableFileStartCounter.QuadPart = 0;
+    Context->PrepareTableFileEndCycles.QuadPart = 0;
+    Context->PrepareTableFileEndCounter.QuadPart = 0;
+    Context->PrepareTableFileElapsedCycles.QuadPart = 0;
+    Context->PrepareTableFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->SaveTableFileStartCycles.QuadPart = 0;
+    Context->SaveTableFileStartCounter.QuadPart = 0;
+    Context->SaveTableFileEndCycles.QuadPart = 0;
+    Context->SaveTableFileEndCounter.QuadPart = 0;
+    Context->SaveTableFileElapsedCycles.QuadPart = 0;
+    Context->SaveTableFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->PrepareHeaderFileStartCycles.QuadPart = 0;
+    Context->PrepareHeaderFileStartCounter.QuadPart = 0;
+    Context->PrepareHeaderFileEndCycles.QuadPart = 0;
+    Context->PrepareHeaderFileEndCounter.QuadPart = 0;
+    Context->PrepareHeaderFileElapsedCycles.QuadPart = 0;
+    Context->PrepareHeaderFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->SaveHeaderFileStartCycles.QuadPart = 0;
+    Context->SaveHeaderFileStartCounter.QuadPart = 0;
+    Context->SaveHeaderFileEndCycles.QuadPart = 0;
+    Context->SaveHeaderFileEndCounter.QuadPart = 0;
+    Context->SaveHeaderFileElapsedCycles.QuadPart = 0;
+    Context->SaveHeaderFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->TableFileWorkErrors = 0;
+    Context->TableFileWorkLastError = 0;
+    Context->TableFileWorkLastResult = S_OK;
+
+    Context->HeaderFileWorkErrors = 0;
+    Context->HeaderFileWorkLastError = 0;
+    Context->HeaderFileWorkLastResult = S_OK;
+
     Context->FailedAttempts = 0;
-    Context->FileWorkErrors = 0;
-    Context->FileWorkLastError = 0;
     Context->FinishedCount = 0;
-    Context->AlgorithmContext = NULL;
-    Context->HashFunctionContext = NULL;
-    Context->SolvedContext = NULL;
 
     return S_OK;
 }

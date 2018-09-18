@@ -548,7 +548,7 @@ typedef struct _Struct_size_bytes_(Header.SizeOfStruct) _GRAPH_INFO_ON_DISK {
     // Include the required header.
     //
 
-    TABLE_INFO_ON_DISK_HEADER Header;
+    TABLE_INFO_ON_DISK TableInfoOnDisk;
 
     //
     // Additional information we capture is mostly just for informational

@@ -362,19 +362,19 @@ The requested number of table elements was too large.
 MessageId=0x22b
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_FILE
+SymbolicName=PH_E_ERROR_PREPARING_TABLE_FILE
 Language=English
-An error occurred whilst preparing a file to use for saving the
-perfect hash table.
+An error occurred whilst preparing a table file to use for saving the
+perfect hash table solution.
 .
 
 MessageId=0x22c
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_FILE
+SymbolicName=PH_E_ERROR_SAVING_TABLE_FILE
 Language=English
 An error occurred whilst trying to save a perfect hash table to
-the previously prepared file.
+the previously prepared table file.
 .
 
 MessageId=0x22d
@@ -428,5 +428,23 @@ Language=English
 The file name component of the perfect hash table file is not a valid C
 identifier.  (This is caused by file names containing characters other than
 '0-9', 'A-Z', 'a-z' and '_'.)
+.
+
+MessageId=0x233
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_PREPARING_HEADER_FILE
+Language=English
+An error occurred whilst preparing a C header file to use for saving the
+perfect hash table solution.
+.
+
+MessageId=0x234
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_SAVING_HEADER_FILE
+Language=English
+An error occurred whilst trying to save a perfect hash table to
+the previously prepared C header file.
 .
 

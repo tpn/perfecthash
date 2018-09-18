@@ -216,11 +216,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     //
     // The following event is set when a worker thread has completed preparing
-    // the underlying backing file in order for the solved graph to be persisted
-    // to disk.
+    // the underlying backing table file in order for the solved graph to be
+    // persisted to disk.
     //
 
-    HANDLE PreparedFileEvent;
+    HANDLE PreparedTableFileEvent;
 
     //
     // The following event is set by the main thread when it has completed
@@ -230,15 +230,30 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // it took to verify the graph.
     //
 
-    HANDLE VerifiedEvent;
+    HANDLE VerifiedTableEvent;
 
     //
     // The following event is set when a worker thread has completed saving the
     // solved graph to disk.
     //
 
+    HANDLE SavedTableFileEvent;
+
+    //
+    // The following event is set when a worker thread has completed preparing
+    // the C header file for the perfect hash table.
+    //
+
+    HANDLE PreparedHeaderFileEvent;
+
+    //
+    // The following event is set when a worker thread has completed writing
+    // the contents of the C header file once a perfect hash table solution has
+    // been found.
+    //
+
     union {
-        HANDLE SavedFileEvent;
+        HANDLE SavedHeaderFileEvent;
         PVOID LastEvent;
     };
 
@@ -276,8 +291,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     LARGE_INTEGER Frequency;
 
     //
-    // XXX TODO: relocate the context stats into a separate :Stats data
-    // structure.
+    // N.B. These stats should probably be relocated into a separate structure.
     //
 
     //
@@ -322,14 +336,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // work threadpool.
     //
 
-    ULARGE_INTEGER PrepareFileStartCycles;
-    LARGE_INTEGER PrepareFileStartCounter;
+    ULARGE_INTEGER PrepareTableFileStartCycles;
+    LARGE_INTEGER PrepareTableFileStartCounter;
 
-    ULARGE_INTEGER PrepareFileEndCycles;
-    LARGE_INTEGER PrepareFileEndCounter;
+    ULARGE_INTEGER PrepareTableFileEndCycles;
+    LARGE_INTEGER PrepareTableFileEndCounter;
 
-    ULARGE_INTEGER PrepareFileElapsedCycles;
-    ULARGE_INTEGER PrepareFileElapsedMicroseconds;
+    ULARGE_INTEGER PrepareTableFileElapsedCycles;
+    ULARGE_INTEGER PrepareTableFileElapsedMicroseconds;
 
     //
     // Capture the time required to save the final Assigned array to the backing
@@ -340,14 +354,40 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // file.
     //
 
-    ULARGE_INTEGER SaveFileStartCycles;
-    LARGE_INTEGER SaveFileStartCounter;
+    ULARGE_INTEGER SaveTableFileStartCycles;
+    LARGE_INTEGER SaveTableFileStartCounter;
 
-    ULARGE_INTEGER SaveFileEndCycles;
-    LARGE_INTEGER SaveFileEndCounter;
+    ULARGE_INTEGER SaveTableFileEndCycles;
+    LARGE_INTEGER SaveTableFileEndCounter;
 
-    ULARGE_INTEGER SaveFileElapsedCycles;
-    ULARGE_INTEGER SaveFileElapsedMicroseconds;
+    ULARGE_INTEGER SaveTableFileElapsedCycles;
+    ULARGE_INTEGER SaveTableFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to prepare the C header file.
+    //
+
+    ULARGE_INTEGER PrepareHeaderFileStartCycles;
+    LARGE_INTEGER PrepareHeaderFileStartCounter;
+
+    ULARGE_INTEGER PrepareHeaderFileEndCycles;
+    LARGE_INTEGER PrepareHeaderFileEndCounter;
+
+    ULARGE_INTEGER PrepareHeaderFileElapsedCycles;
+    ULARGE_INTEGER PrepareHeaderFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to save the C header.
+    //
+
+    ULARGE_INTEGER SaveHeaderFileStartCycles;
+    LARGE_INTEGER SaveHeaderFileStartCounter;
+
+    ULARGE_INTEGER SaveHeaderFileEndCycles;
+    LARGE_INTEGER SaveHeaderFileEndCounter;
+
+    ULARGE_INTEGER SaveHeaderFileElapsedCycles;
+    ULARGE_INTEGER SaveHeaderFileElapsedMicroseconds;
 
     //
     // Number of failed attempts at solving the graph across all threads.
@@ -386,12 +426,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_WORK FileWork;
 
     //
-    // Provide a means for file work callbacks to indicate an error back to
-    // the creation routine by incrementing the following counter.
+    // Provide a means for file work callbacks to indicate an error details
+    // back to the creation routine.
     //
 
-    volatile LONG FileWorkErrors;
-    volatile LONG FileWorkLastError;
+    volatile LONG TableFileWorkErrors;
+    volatile LONG TableFileWorkLastError;
+
+    volatile LONG HeaderFileWorkErrors;
+    volatile LONG HeaderFileWorkLastError;
+
+    volatile HRESULT TableFileWorkLastResult;
+    volatile HRESULT HeaderFileWorkLastResult;
 
     //
     // The algorithm is responsible for registering an appropriate callback
@@ -477,6 +523,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     PERFECT_HASH_CONTEXT_VTBL Interface;
 
+    //
+    // N.B. As additional table functions are added to the context vtbl, you'll
+    //      need to comment and un-comment the following padding field in order
+    //      to avoid "warning: additional 8 bytes padding added after Interface
+    //      member"-type warning.
+    //
+
     PVOID Padding3;
 
 } PERFECT_HASH_CONTEXT;
@@ -515,10 +568,12 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
         Context->Frequency.QuadPart                           \
     )
 
-#define CONTEXT_SAVE_TIMERS_TO_HEADER(Name)                                    \
-    Header->##Name##Cycles.QuadPart = Context->##Name##ElapsedCycles.QuadPart; \
-    Header->##Name##Microseconds.QuadPart = (                                  \
-        Context->##Name##ElapsedMicroseconds.QuadPart                          \
+#define CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Name) \
+    TableInfoOnDisk->##Name##Cycles.QuadPart = (        \
+        Context->##Name##ElapsedCycles.QuadPart         \
+    );                                                  \
+    TableInfoOnDisk->##Name##Microseconds.QuadPart = (  \
+        Context->##Name##ElapsedMicroseconds.QuadPart   \
     )
 
 //

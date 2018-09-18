@@ -441,24 +441,24 @@ Abstract:
 #define PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE ((HRESULT)0xE004022AL)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_FILE
+// MessageId: PH_E_ERROR_PREPARING_TABLE_FILE
 //
 // MessageText:
 //
-// An error occurred whilst preparing a file to use for saving the
-// perfect hash table.
+// An error occurred whilst preparing a table file to use for saving the
+// perfect hash table solution.
 //
-#define PH_E_ERROR_PREPARING_FILE        ((HRESULT)0xE004022BL)
+#define PH_E_ERROR_PREPARING_TABLE_FILE  ((HRESULT)0xE004022BL)
 
 //
-// MessageId: PH_E_ERROR_SAVING_FILE
+// MessageId: PH_E_ERROR_SAVING_TABLE_FILE
 //
 // MessageText:
 //
 // An error occurred whilst trying to save a perfect hash table to
-// the previously prepared file.
+// the previously prepared table file.
 //
-#define PH_E_ERROR_SAVING_FILE           ((HRESULT)0xE004022CL)
+#define PH_E_ERROR_SAVING_TABLE_FILE     ((HRESULT)0xE004022CL)
 
 //
 // MessageId: PH_E_TABLE_VERIFICATION_FAILED
@@ -518,4 +518,24 @@ Abstract:
 // '0-9', 'A-Z', 'a-z' and '_'.)
 //
 #define PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER ((HRESULT)0xE0040232L)
+
+//
+// MessageId: PH_E_ERROR_PREPARING_HEADER_FILE
+//
+// MessageText:
+//
+// An error occurred whilst preparing a C header file to use for saving the
+// perfect hash table solution.
+//
+#define PH_E_ERROR_PREPARING_HEADER_FILE ((HRESULT)0xE0040233L)
+
+//
+// MessageId: PH_E_ERROR_SAVING_HEADER_FILE
+//
+// MessageText:
+//
+// An error occurred whilst trying to save a perfect hash table to
+// the previously prepared C header file.
+//
+#define PH_E_ERROR_SAVING_HEADER_FILE    ((HRESULT)0xE0040234L)
 
