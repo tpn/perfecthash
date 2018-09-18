@@ -305,6 +305,8 @@ Return Value:
     // backing memory structures for the path's unicode buffer.
     //
 
+    Table->BasePathBufferAddress = BaseBuffer;
+
     Table->Path.Buffer = (PWSTR)Buffer;
     Table->Path.Length = Path->Length;
     Table->Path.MaximumLength = Path->MaximumLength;
@@ -812,7 +814,7 @@ Return Value:
 
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
-    Table->LoadFlags.AsULong = TableLoadFlags.AsULong;
+    Table->TableLoadFlags.AsULong = TableLoadFlags.AsULong;
     goto End;
 
 Error:
@@ -826,14 +828,6 @@ Error:
     //
 
 End:
-
-    //
-    // Release the buffer we allocated for paths if applicable.
-    //
-
-    if (BaseBuffer && Allocator != NULL) {
-        Allocator->Vtbl->FreePointer(Allocator, &BaseBuffer);
-    }
 
     ReleasePerfectHashTableLockExclusive(Table);
 

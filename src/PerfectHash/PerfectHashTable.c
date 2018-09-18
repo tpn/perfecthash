@@ -119,6 +119,7 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    PALLOCATOR Allocator;
 
     //
     // Validate arguments.
@@ -129,8 +130,13 @@ Return Value:
     }
 
     Rtl = Table->Rtl;
+    Allocator = Table->Allocator;
 
     if (!Rtl) {
+        return;
+    }
+
+    if (!Allocator) {
         return;
     }
 
@@ -139,6 +145,31 @@ Return Value:
     //
 
     ASSERT(Table->SizeOfStruct == sizeof(*Table));
+
+    //
+    // Close resources associated with the header file.
+    //
+
+    if (Table->HeaderBaseAddress) {
+        if (!UnmapViewOfFile(Table->HeaderBaseAddress)) {
+            SYS_ERROR(UnmapViewOfFile);
+        }
+        Table->HeaderBaseAddress = NULL;
+    }
+
+    if (Table->HeaderMappingHandle) {
+        if (!CloseHandle(Table->HeaderMappingHandle)) {
+            SYS_ERROR(CloseHandle);
+        }
+        Table->HeaderMappingHandle = NULL;
+    }
+
+    if (Table->HeaderFileHandle) {
+        if (!CloseHandle(Table->HeaderFileHandle)) {
+            SYS_ERROR(CloseHandle);
+        }
+        Table->HeaderFileHandle = NULL;
+    }
 
     //
     // Close resources associated with the :Info stream.
@@ -226,13 +257,35 @@ Return Value:
     }
 
     //
-    // Free the base buffer address if applicable.
+    // Clear all UNICODE_STRING and STRING structs.
     //
 
-    if (Table->BaseBufferAddress) {
-        Allocator->Vtbl->FreePointer(Allocator, &Table->BaseBufferAddress);
+    ZeroStruct(Table->Path);
+    ZeroStruct(Table->InfoStreamPath);
+    ZeroStruct(Table->HeaderPath);
+    ZeroStruct(Table->TableNameW);
+    ZeroStruct(Table->TableNameA);
+
+    //
+    // Free the base path buffer address if applicable.
+    //
+
+    if (Table->BasePathBufferAddress) {
+        Allocator->Vtbl->FreePointer(Allocator, &Table->BasePathBufferAddress);
     }
 
+    //
+    // Free handles related to table compilation, if applicable.
+    //
+
+    if (Table->HeaderFileHandle) {
+        if (!CloseHandle(Table->HeaderFileHandle)) {
+            SYS_ERROR(CloseHandle);
+        }
+        Table->HeaderFileHandle = NULL;
+    }
+
+    //
     // Release COM references, if applicable.
     //
 

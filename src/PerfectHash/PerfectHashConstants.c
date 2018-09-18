@@ -269,10 +269,14 @@ const BYTE NumberOfContextObjectPrefixes = ARRAYSIZE(ContextObjectPrefixes);
 const UNICODE_STRING No = RTL_CONSTANT_STRING(L"No.\n");
 const UNICODE_STRING Yes = RTL_CONSTANT_STRING(L"Yes.\n");
 const UNICODE_STRING KeysSuffix = RTL_CONSTANT_STRING(L"keys");
+const UNICODE_STRING HeaderSuffix = RTL_CONSTANT_STRING(L"h");
 const UNICODE_STRING TableSuffix = RTL_CONSTANT_STRING(L"pht1");
 const UNICODE_STRING DotKeysSuffix = RTL_CONSTANT_STRING(L".keys");
 const UNICODE_STRING DotTableSuffix = RTL_CONSTANT_STRING(L".pht1");
+const UNICODE_STRING DotHeaderSuffix = RTL_CONSTANT_STRING(L".h");
+const UNICODE_STRING InfoStreamSuffix = RTL_CONSTANT_STRING(L":Info");
 const UNICODE_STRING KeysWildcardSuffix = RTL_CONSTANT_STRING(L"*.keys");
+
 
 //
 // Placeholders for values we patch in the FastIndexEx() instruction streams.

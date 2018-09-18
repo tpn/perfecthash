@@ -82,22 +82,36 @@ Return Value:
     PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS - Invalid context create table
         flags were supplied.
 
+    PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER - The file name component of
+        the perfect hash table path contained characters that prevented it from
+        being considered a valid C identifier.
+
 --*/
 {
     PRTL Rtl;
+    BOOL Found;
+    BOOL Valid;
     BOOL Success;
+    WCHAR Wide;
+    PWSTR Ext;
+    PWSTR NameW;
     PWSTR Dest;
     PWSTR Source;
+    PSTR NameA;
     PCHAR Buffer;
     PCHAR BaseBuffer;
     PCHAR ExpectedBuffer;
     PWSTR PathBuffer;
+    ULONG Index;
+    ULONG Count;
     ULONG Status;
     ULONG ShareMode;
     ULONG LastError;
     ULONG DesiredAccess;
     ULONG InfoMappingSize;
+    ULONG HeaderMappingSize;
     ULONG FlagsAndAttributes;
+    USHORT DirectoryAndNameLength;
     BOOLEAN UsingKeysPath;
     PVOID BaseAddress;
     HANDLE FileHandle;
@@ -111,15 +125,16 @@ Return Value:
     ULONG_INTEGER AlignedPathBufferSize;
     ULONG_INTEGER InfoStreamPathBufferSize;
     ULONG_INTEGER AlignedInfoStreamPathBufferSize;
+    ULONG_INTEGER HeaderPathBufferSize;
+    ULONG_INTEGER AlignedHeaderPathBufferSize;
+    ULONG_INTEGER NameWBufferSize;
+    ULONG_INTEGER AlignedNameWBufferSize;
+    ULONG_INTEGER NameABufferSize;
+    ULONG_INTEGER AlignedNameABufferSize;
+    PSTRING NameAString;
+    PUNICODE_STRING NameWString;
     PPERFECT_HASH_TABLE Table = NULL;
     PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
-
-    //
-    // XXX TODO: relocate these to constants.
-    //
-
-    UNICODE_STRING Suffix = RTL_CONSTANT_STRING(L".pht1");
-    UNICODE_STRING InfoStreamSuffix = RTL_CONSTANT_STRING(L":Info");
 
     //
     // Validate arguments.
@@ -227,13 +242,103 @@ Return Value:
 
         PathBufferSize.LongPart = (
             Keys->Path.MaximumLength +
-            Suffix.Length
+            DotTableSuffix.Length
         );
 
         UsingKeysPath = TRUE;
         IncomingPathBufferSizeInBytes = Keys->Path.Length;
         PathBuffer = Keys->Path.Buffer;
     }
+
+    //
+    // Isolate the table name and verify it's a valid C identifier.
+    //
+
+    Found = FALSE;
+    Count = IncomingPathBufferSizeInBytes >> 1;
+    Ext = PathBuffer + Count;
+    for (Index = 0; Index < Count; Index++) {
+        if (*Ext == L'.') {
+            Found = TRUE;
+            break;
+        }
+        --Ext;
+    }
+
+    if (!Found) {
+        Result = E_UNEXPECTED;
+        goto Error;
+    }
+
+    Found = FALSE;
+    Count -= Index;
+    NameW = PathBuffer + Count;
+    for (Index = 0; Index < Count; Index++) {
+        if (*NameW == L'\\') {
+            Found = TRUE;
+            NameW++;
+            break;
+        }
+        --NameW;
+    }
+
+    if (!Found) {
+        Result = E_UNEXPECTED;
+        goto Error;
+    }
+
+    NameWBufferSize.LongPart = (ULONG)(((ULONG_PTR)Ext - (ULONG_PTR)NameW));
+    AlignedNameWBufferSize.LongPart = ALIGN_UP(NameWBufferSize.LongPart, 16);
+    ASSERT(!AlignedNameWBufferSize.HighPart);
+
+    NameABufferSize.LongPart = NameWBufferSize.LongPart >> 1;
+    AlignedNameABufferSize.LongPart = ALIGN_UP(NameABufferSize.LongPart, 16);
+    ASSERT(!AlignedNameABufferSize.HighPart);
+
+    //
+    // Verify the name is a valid C identifier.  Handle the first character
+    // separately -- verifying it doesn't start with a digit.
+    //
+
+    Wide = NameW[0];
+
+    Valid = (
+        Wide == L'_' || (
+            (Wide >= L'a' && Wide <= L'z') ||
+            (Wide >= L'A' && Wide <= L'Z')
+        )
+    );
+
+    if (!Valid) {
+        Result = PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER;
+        goto Error;
+    }
+
+    Count = ((NameWBufferSize.LongPart >> 1) - 1);
+    ASSERT(NameW[Count] != L'.');
+
+    for (Index = 1; Index < Count; Index++) {
+
+        Wide = NameW[Index];
+
+        Valid = (
+            Wide == L'_' || (
+                (Wide >= L'a' && Wide <= L'z') ||
+                (Wide >= L'A' && Wide <= L'Z') ||
+                (Wide >= L'0' && Wide <= L'9')
+            )
+        );
+
+        if (!Valid) {
+            Result = PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER;
+            goto Error;
+        }
+
+    }
+
+    //
+    // Table name is a valid C identifier.
+    //
 
     //
     // Align the path buffer up to a 16 byte boundary.
@@ -246,6 +351,27 @@ Return Value:
     //
 
     ASSERT(!AlignedPathBufferSize.HighPart);
+
+    //
+    // Calculate the size required for the C header file.  The name for this
+    // file will be composed of the table path but with .h as the extension
+    // (i.e. instead of the default ".pht1").
+    //
+
+    DirectoryAndNameLength = (USHORT)((ULONG_PTR)Ext - (ULONG_PTR)PathBuffer);
+    ASSERT(PathBuffer[ DirectoryAndNameLength >> 1     ] == L'.');
+    ASSERT(PathBuffer[(DirectoryAndNameLength >> 1) - 1] != L'.');
+
+    HeaderPathBufferSize.LongPart = (
+        DirectoryAndNameLength +
+        DotHeaderSuffix.MaximumLength
+    );
+
+    AlignedHeaderPathBufferSize.LongPart = ALIGN_UP(
+        HeaderPathBufferSize.LongPart,
+        16
+    );
+    ASSERT(!AlignedHeaderPathBufferSize.HighPart);
 
     //
     // Calculate the size required by the :Info stream that will be created
@@ -283,7 +409,10 @@ Return Value:
 
     AllocSize.QuadPart = (
         AlignedPathBufferSize.LowPart +
-        AlignedInfoStreamPathBufferSize.LowPart
+        AlignedHeaderPathBufferSize.LowPart +
+        AlignedInfoStreamPathBufferSize.LowPart +
+        AlignedNameWBufferSize.LowPart +
+        AlignedNameABufferSize.LowPart
     );
 
     ASSERT(!AllocSize.HighPart);
@@ -321,7 +450,7 @@ Return Value:
     }
 
     Table = Context->Table;
-    Table->BaseBufferAddress = BaseBuffer;
+    Table->BasePathBufferAddress = BaseBuffer;
 
     Keys->Vtbl->AddRef(Keys);
     Table->Keys = Keys;
@@ -374,7 +503,7 @@ Return Value:
         ASSERT(*Dest == L'k');
         ASSERT(*(Dest - 1) == L'.');
 
-        Source = Suffix.Buffer;
+        Source = TableSuffix.Buffer;
 
         while (*Source) {
             *Dest++ = *Source++;
@@ -391,11 +520,46 @@ Return Value:
     }
 
     //
-    // Advance past the aligned path buffer size such that we're positioned at
-    // the start of the info stream buffer.
+    // Advance past the aligned path buffer size such that we're positioned
+    // at the start of the :Info stream buffer.
     //
 
     Buffer += AlignedPathBufferSize.LongPart;
+    Table->HeaderPath.Buffer = (PWSTR)Buffer;
+    Table->HeaderPath.MaximumLength = HeaderPathBufferSize.LowPart;
+    Table->HeaderPath.Length = (
+        Table->HeaderPath.MaximumLength -
+        sizeof(Table->HeaderPath.Buffer[0])
+    );
+
+    //
+    // Copy the table path's directory and name into the header path.
+    //
+
+    Dest = Table->HeaderPath.Buffer;
+    CopyMemory(Dest, Table->Path.Buffer, DirectoryAndNameLength);
+    Dest += ((ULONG_PTR)DirectoryAndNameLength >> 1);
+    ASSERT(*Dest == L'\0');
+
+    //
+    // Copy the header suffix.
+    //
+
+    Source = DotHeaderSuffix.Buffer;
+
+    while (*Source) {
+        *Dest++ = *Source++;
+    }
+
+    *Dest = L'\0';
+
+    //
+    // Advance past the aligned header path buffer size such that we're
+    // positioned at the start of the info stream buffer.
+    //
+
+    Buffer += AlignedHeaderPathBufferSize.LongPart;
+    ASSERT((ULONG_PTR)Dest <= (ULONG_PTR)Buffer);
     Table->InfoStreamPath.Buffer = (PWSTR)Buffer;
     Table->InfoStreamPath.MaximumLength = InfoStreamPathBufferSize.LowPart;
     Table->InfoStreamPath.Length = (
@@ -404,16 +568,10 @@ Return Value:
     );
 
     //
-    // Advance the buffer and verify it points to the expected location, then
-    // clear it, as it isn't required for the remainder of the routine.  (The
-    // original address was captured in BaseBuffer, which we use at the end
-    // to free the memory.)
+    // Advance the buffer past the aligned :Info header path.
     //
 
     Buffer += AlignedInfoStreamPathBufferSize.LongPart;
-    ExpectedBuffer = RtlOffsetToPointer(BaseBuffer, AllocSize.LowPart);
-    ASSERT(Buffer == ExpectedBuffer);
-    Buffer = NULL;
 
     //
     // Continue with path processing.  Copy the full path into the info stream
@@ -441,9 +599,49 @@ Return Value:
     *Dest = L'\0';
 
     //
-    // We've finished initializing our two unicode string buffers for the
-    // backing file and it's :Info counterpart.  Now, let's open file handles
-    // to them.
+    // Initialize the table name strings.
+    //
+
+    NameWString = &Table->TableNameW;
+    NameWString->Length = NameWBufferSize.LowPart;
+    NameWString->MaximumLength = AlignedNameWBufferSize.LowPart;
+    NameWString->Buffer = (PWSTR)Buffer;
+
+    CopyMemory(NameWString->Buffer,
+               NameW,
+               NameWString->Length);
+
+    NameWString->Buffer[NameWString->Length >> 1] = '\0';
+
+    Buffer += AlignedNameWBufferSize.LowPart;
+
+    NameAString = &Table->TableNameA;
+    NameAString->Length = NameABufferSize.LowPart;
+    NameAString->MaximumLength = AlignedNameABufferSize.LowPart;
+    NameAString->Buffer = NameA = Buffer;
+
+    for (Index = 0; Index < NameAString->Length; Index++) {
+        Wide = NameWString->Buffer[Index];
+        *NameA++ = (CHAR)Wide;
+    }
+
+    NameAString->Buffer[NameAString->Length] = '\0';
+
+    //
+    // Advance the buffer past the aligned name, and verify it points to the
+    // expected location, then clear it, as it isn't required for the remainder
+    // of the routine.
+    //
+
+    Buffer += AlignedNameABufferSize.LowPart;
+    ExpectedBuffer = RtlOffsetToPointer(BaseBuffer, AllocSize.LowPart);
+    ASSERT(Buffer == ExpectedBuffer);
+    Buffer = NULL;
+
+    //
+    // We've finished initializing our unicode string buffers for the backing
+    // table and :Info, and C header file, and the table name in wide and ascii
+    // character format.  Now, let's open file handles to the paths.
     //
 
     //
@@ -615,6 +813,107 @@ Return Value:
                                 InfoMappingSize);
 
     Table->InfoStreamBaseAddress = BaseAddress;
+
+    if (!BaseAddress) {
+        SYS_ERROR(MapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Finally, create a file handle to the header file.
+    //
+
+    FileHandle = CreateFileW(Table->HeaderPath.Buffer,
+                             DesiredAccess,
+                             ShareMode,
+                             NULL,
+                             OPEN_ALWAYS,
+                             FlagsAndAttributes,
+                             NULL);
+
+    LastError = GetLastError();
+
+    Table->HeaderFileHandle = FileHandle;
+
+    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
+
+        //
+        // Failed to open the file successfully.
+        //
+
+        SYS_ERROR(CreateFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+
+    } else if (LastError == ERROR_ALREADY_EXISTS) {
+
+        //
+        // The file was opened successfully, but it already existed.  Clear the
+        // local last error variable then truncate the file.
+        //
+
+        LastError = ERROR_SUCCESS;
+
+        Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
+        if (Status == INVALID_SET_FILE_POINTER) {
+            SYS_ERROR(SetFilePointer);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+        Success = SetEndOfFile(FileHandle);
+        if (!Success) {
+            SYS_ERROR(SetEndOfFile);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // We've successfully truncated the file.
+        //
+
+    }
+
+    //
+    // Create a file mapping for the header file.
+    //
+
+    HeaderMappingSize = SystemInfo.dwAllocationGranularity;
+    ASSERT(HeaderMappingSize >= PAGE_SIZE);
+
+    //
+    // Create a file mapping for the header.
+    //
+
+    MappingHandle = CreateFileMappingW(FileHandle,
+                                       NULL,
+                                       PAGE_READWRITE,
+                                       0,
+                                       HeaderMappingSize,
+                                       NULL);
+
+    Table->HeaderMappingHandle = MappingHandle;
+    Table->HeaderMappingSizeInBytes.QuadPart = HeaderMappingSize;
+
+    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
+        SYS_ERROR(CreateFileMappingW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // We successfully created a file mapping.  Proceed with mapping it into
+    // memory.
+    //
+
+    BaseAddress = MapViewOfFile(MappingHandle,
+                                FILE_MAP_READ | FILE_MAP_WRITE,
+                                0,
+                                0,
+                                HeaderMappingSize);
+
+    Table->HeaderBaseAddress = BaseAddress;
 
     if (!BaseAddress) {
         SYS_ERROR(MapViewOfFile);

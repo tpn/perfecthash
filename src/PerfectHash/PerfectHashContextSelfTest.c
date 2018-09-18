@@ -111,6 +111,8 @@ Return Value:
     USHORT BaseLength;
     USHORT NumberOfPages;
     USHORT FileNameLengthInBytes;
+    USHORT TableSuffixLengthInBytes;
+    ULONG NumberOfFileNameChars;
     BOOL Success;
     BOOLEAN Failed;
     BOOLEAN Terminate;
@@ -640,6 +642,27 @@ Return Value:
             DotKeysSuffix.Length
         );
 
+        //
+        // Calculate the length of the trailing string representation of the
+        // algorithm ID, hash function type and masking type, including the
+        // joining underscores.
+        //
+
+        AlgorithmName = (PUNICODE_STRING)AlgorithmNames[AlgorithmId];
+        HashFunctionName = (PUNICODE_STRING)HashFunctionNames[HashFunctionId];
+        MaskFunctionName = (PUNICODE_STRING)MaskFunctionNames[MaskFunctionId];
+
+        TableSuffixLengthInBytes = (
+            sizeof(L'_') +
+            AlgorithmName->Length +
+            sizeof(L'_') +
+            HashFunctionName->Length +
+            sizeof(L'_') +
+            MaskFunctionName->Length +
+            sizeof(L'.') +
+            TableSuffix.Length
+        );
+
         FileName = (PWCHAR)(
             RtlOffsetToPointer(
                 KeysPath.Buffer,
@@ -655,22 +678,18 @@ Return Value:
             OutputDirectory->Length +
 
             //
-            // Account for the joining slash.
-            //
-
-            sizeof(WCHAR) +
-
-            //
             // Account for the file name, including the period.
             //
 
             FileNameLengthInBytes +
 
             //
-            // Account for the table suffix.
+            // Account for the trailing algo/hash/mask string and
+            // table suffix.
             //
 
-            TableSuffix.Length
+            TableSuffixLengthInBytes
+
         );
 
         TablePath.MaximumLength = TablePath.Length + sizeof(WCHAR);
@@ -685,12 +704,39 @@ Return Value:
         *Dest++ = L'\\';
 
         //
-        // Copy the filename.
+        // Copy the filename character by character, replacing any hyphens with
+        // underscores as we go.
         //
 
-        CopyMemory(Dest, FileName, FileNameLengthInBytes);
-        Dest += ((ULONG_PTR)FileNameLengthInBytes >> 1);
-        ASSERT(*(Dest - 1) == L'.');
+        NumberOfFileNameChars = ((FileNameLengthInBytes >> 1) - 1);
+        for (Index = 0; Index < NumberOfFileNameChars; Index++) {
+            WCHAR Wide;
+
+            Wide = FileName[Index];
+            if (Wide == L'-') {
+                Wide = L'_';
+            }
+
+            *Dest++ = Wide;
+        }
+
+        //
+        // Copy the string representations of the algo/hash/mask.
+        //
+
+        *Dest++ = L'_';
+        CopyMemory(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
+        Dest += ((ULONG_PTR)AlgorithmName->Length >> 1);
+
+        *Dest++ = L'_';
+        CopyMemory(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
+        Dest += ((ULONG_PTR)HashFunctionName->Length >> 1);
+
+        *Dest++ = L'_';
+        CopyMemory(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
+        Dest += ((ULONG_PTR)MaskFunctionName->Length >> 1);
+
+        *Dest++ = L'.';
 
         //
         // Copy the suffix then null terminate the path.

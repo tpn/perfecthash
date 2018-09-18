@@ -119,12 +119,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     PALLOCATOR Allocator;
 
     //
-    // Generic singly-linked list entry.
-    //
-
-    SLIST_ENTRY ListEntry;
-
-    //
     // Capture the number of elements in the underlying perfect hash table.
     // This refers to the number of vertices for the CHM algorithm, or can
     // mean the rounded-up power-of-2 size.  The masking implementations need
@@ -226,8 +220,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     HANDLE MappingHandle;
 
     //
-    // Fully-qualified, NULL-terminated path of the backing file.  The path is
-    // automatically derived from the keys file.
+    // Fully-qualified, NULL-terminated path of the backing file.
     //
 
     UNICODE_STRING Path;
@@ -275,11 +268,29 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULARGE_INTEGER InfoActualStructureSizeInBytes;
 
     //
-    // Base address of allocation used to contain the Path.Buffer and
-    // InfoStreamPath.Buffer strings.
+    // Base address of allocation used for the Path.Buffer, HeaderPath.Buffer,
+    // and InfoStreamPath.Buffer strings.
     //
 
-    PVOID BaseBufferAddress;
+    PVOID BasePathBufferAddress;
+
+    //
+    // The C header file variables.
+    //
+
+    UNICODE_STRING HeaderPath;
+    HANDLE HeaderFileHandle;
+    HANDLE HeaderMappingHandle;
+    PVOID HeaderBaseAddress;
+    ULARGE_INTEGER HeaderMappingSizeInBytes;
+
+    //
+    // The table name is a valid C identifier name derived from the input
+    // file.
+    //
+
+    UNICODE_STRING TableNameW;
+    STRING TableNameA;
 
     //
     // Backing vtbl.

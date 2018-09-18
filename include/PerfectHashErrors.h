@@ -508,3 +508,14 @@ Abstract:
 //
 #define PH_E_WORK_IN_PROGRESS            ((HRESULT)0xE0040231L)
 
+//
+// MessageId: PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER
+//
+// MessageText:
+//
+// The file name component of the perfect hash table file is not a valid C
+// identifier.  (This is caused by file names containing characters other than
+// '0-9', 'A-Z', 'a-z' and '_'.)
+//
+#define PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER ((HRESULT)0xE0040232L)
+

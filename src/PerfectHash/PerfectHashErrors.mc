@@ -420,3 +420,13 @@ Language=English
 This functionality is actively undergoing development and is not yet working.
 .
 
+MessageId=0x232
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER
+Language=English
+The file name component of the perfect hash table file is not a valid C
+identifier.  (This is caused by file names containing characters other than
+'0-9', 'A-Z', 'a-z' and '_'.)
+.
+
