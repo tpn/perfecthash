@@ -1881,6 +1881,8 @@ typedef union _RTL_FLAGS {
     LONG AsLong;
     ULONG AsULong;
 } RTL_FLAGS;
+C_ASSERT(sizeof(RTL_FLAGS) == sizeof(ULONG));
+typedef RTL_FLAGS *PRTL_FLAGS;
 
 typedef struct _RTL {
     COMMON_COMPONENT_HEADER(RTL);
