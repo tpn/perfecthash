@@ -470,6 +470,21 @@ LONG
     );
 typedef VSWPRINTF_S *PVSWPRINTF_S;
 
+typedef
+LONG
+(__cdecl _WSPLITPATH_S)(
+   const _In_ WCHAR *Path,
+   _Out_writes_bytes_(SizeOfDrive) WCHAR *Drive,
+   _In_ SIZE_T SizeOfDrive,
+   _Out_writes_bytes_(SizeOfDir) WCHAR *Dir,
+   _In_ SIZE_T SizeOfDir,
+   _Out_writes_bytes_(SizeOfFileName) WCHAR *FileName,
+   _In_ SIZE_T SizeOfFileName,
+   _Out_writes_bytes_(SizeOfExt) WCHAR *Ext,
+   _In_ SIZE_T SizeOfExt
+   );
+typedef _WSPLITPATH_S *P_WSPLITPATH_S;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Bitmaps
 ////////////////////////////////////////////////////////////////////////////////
@@ -1798,6 +1813,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     "CryptBinaryToStringA",        \
     "CryptBinaryToStringW",        \
     "__C_specific_handler",        \
+    "_wsplitpath_s",               \
     "sprintf_s",                   \
     "swprintf_s",                  \
     "vsprintf_s",                  \
@@ -1834,6 +1850,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                \
     PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                \
     P__C_SPECIFIC_HANDLER __C_specific_handler;                    \
+    P_WSPLITPATH_S _wsplitpath_s;                                  \
     PSPRINTF_S sprintf_s;                                          \
     PSWPRINTF_S swprintf_s;                                        \
     PVSPRINTF_S vsprintf_s;                                        \
