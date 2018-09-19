@@ -92,6 +92,7 @@ Return Value:
     PGRAPH Graph;
     PBYTE Buffer;
     BOOLEAN Success;
+    BOOLEAN PreparedHeader = FALSE;
     USHORT PageSize;
     USHORT PageShift;
     ULONG_PTR LastPage;
@@ -187,9 +188,12 @@ RetryWithLargerTableSize:
     }
 
     //
-    // Explicitly reset all events.  This ensures everything is back in the
+    // Explicitly reset all events*.  This ensures everything is back in the
     // starting state if we happen to be attempting to solve the graph after
     // a resize event.
+    //
+    // [*]: Except the PreparedFileHeaderEvent, which is only set once
+    //      regardless of how many table resize events occur.
     //
 
     Event = (PHANDLE)&Context->FirstEvent;
@@ -197,11 +201,35 @@ RetryWithLargerTableSize:
 
     for (Index = 0; Index < NumberOfEvents; Index++, Event++) {
 
+        if (*Event == Context->PreparedHeaderFileEvent) {
+            continue;
+        }
+
         if (!ResetEvent(*Event)) {
             SYS_ERROR(ResetEvent);
             Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
+    }
+
+    //
+    // Prepare the initial "header file preparation" work callback.  This will
+    // write the common code shared by all headers (i.e. everything that can
+    // be written prior to the perfect hash table solution being solved).
+    //
+
+    if (!PreparedHeader) {
+
+        ZeroStruct(PrepareHeaderFile);
+        PrepareHeaderFile.FileWorkId = FileWorkPrepareHeaderId;
+        InterlockedPushEntrySList(&Context->FileWorkListHead,
+                                  &PrepareHeaderFile.ListEntry);
+
+        CONTEXT_START_TIMERS(PrepareHeaderFile);
+
+        SubmitThreadpoolWork(Context->FileWork);
+
+        PreparedHeader = TRUE;
     }
 
     //
@@ -792,21 +820,6 @@ RetryWithLargerTableSize:
     SubmitThreadpoolWork(Context->FileWork);
 
     //
-    // Prepare the initial "header file preparation" work callback.  This will
-    // write the common code shared by all headers (i.e. everything that can
-    // be written prior to the perfect hash table solution being solved).
-    //
-
-    ZeroStruct(PrepareHeaderFile);
-    PrepareHeaderFile.FileWorkId = FileWorkPrepareHeaderId;
-    InterlockedPushEntrySList(&Context->FileWorkListHead,
-                              &PrepareHeaderFile.ListEntry);
-
-    CONTEXT_START_TIMERS(PrepareHeaderFile);
-
-    SubmitThreadpoolWork(Context->FileWork);
-
-    //
     // Capture initial cycles as reported by __rdtsc() and the performance
     // counter.  The former is used to report a raw cycle count, the latter
     // is used to convert to microseconds reliably (i.e. unaffected by turbo
@@ -1203,6 +1216,7 @@ FinishedSolution:
 
     WaitResult = WaitForSingleObject(Context->PreparedHeaderFileEvent,
                                      INFINITE);
+
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForSingleObject);
         Result = PH_E_SYSTEM_CALL_FAILED;
@@ -1913,6 +1927,69 @@ End:
     return Result;
 }
 
+static CONST CHAR IntegerToCharTable[] = {
+    '0',
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
+    'F'
+};
+
+VOID
+AppendIntegerToCharBufferAsHex(
+    _Inout_ PCHAR *BufferPointer,
+    _In_opt_ ULONG Integer
+    )
+{
+    ULONG Pad;
+    ULONG Count;
+    ULONG Digit;
+    ULONG Value;
+    PCHAR Buffer;
+    CHAR Char;
+    PCHAR End;
+    PCHAR Dest;
+
+    Buffer = *BufferPointer;
+
+    End = Dest = RtlOffsetToPointer(Buffer, 9);
+
+    Count = 0;
+    Value = Integer;
+
+    do {
+        Count++;
+        Digit = Value & 0xf;
+        Value >>= 4;
+        Char = IntegerToCharTable[Digit];
+        *Dest-- = Char;
+    } while (Value != 0);
+
+    Pad = 8 - Count;
+    while (Pad) {
+        *Dest-- = '0';
+        Pad--;
+    }
+
+    *Dest-- = 'x';
+    *Dest-- = '0';
+
+    *BufferPointer = End + 1;
+}
+
+#define OUTPUT_HEX(Integer) AppendIntegerToCharBufferAsHex(&Output, Integer)
+
 _Use_decl_annotations_
 HRESULT
 PrepareHeaderCallbackChm01(
@@ -1920,8 +1997,18 @@ PrepareHeaderCallbackChm01(
     )
 {
     PRTL Rtl;
+    PCHAR Base;
+    PCHAR Output;
+    ULONG Count;
+    PULONG Long;
+    ULONG Key;
+    ULONGLONG Index;
+    ULONGLONG NumberOfKeys;
+    PCSTRING Name;
     HRESULT Result = S_OK;
+    PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_TABLE Table;
+    const ULONG Indent = 0x20202020;
 
     //
     // Initialize aliases.
@@ -1929,20 +2016,65 @@ PrepareHeaderCallbackChm01(
 
     Rtl = Context->Rtl;
     Table = Context->Table;
+    Keys = Table->Keys;
+    Name = &Table->TableNameA;
+    Base = (PCHAR)Table->HeaderBaseAddress;
+    Output = Base;
 
-#if 0
-Error:
+    //
+    // Write the keys.
+    //
 
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_PREPARING_HEADER_FILE;
+#define INDENT() {            \
+    Long = (PULONG)Output;    \
+    *Long = Indent;           \
+    Output += sizeof(Indent); \
+}
+
+    OUTPUT_RAW("//\n// Compiled Perfect Hash Table.  Auto-generated.\n//\n\n");
+
+    OUTPUT_RAW("#ifdef COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS\n");
+    OUTPUT_RAW("#pragma const_seg(\".cpht_keys\")\n");
+    OUTPUT_RAW("static const unsigned long TableKeys[");
+    OUTPUT_INT(Keys->NumberOfElements.QuadPart);
+    OUTPUT_RAW("] = {\n");
+
+    Count = 0;
+    NumberOfKeys = Keys->NumberOfElements.QuadPart;
+
+    for (Index = 0; Index < NumberOfKeys; Index++) {
+
+        if (Count == 0) {
+            INDENT();
+        }
+
+        Key = Keys->Keys[Index];
+
+        OUTPUT_HEX(Key);
+
+        *Output++ = ',';
+
+        if (++Count == 4) {
+            Count = 0;
+            *Output++ = '\n';
+        } else {
+            *Output++ = ' ';
+        }
     }
 
     //
-    // Intentional follow-on to End.
+    // If the last character written was a trailing space, replace
+    // it with a newline.
     //
 
-End:
-#endif
+    if (*(Output - 1) == ' ') {
+        *(Output - 1) = '\n';
+    }
+
+    OUTPUT_RAW("};\n#endif "
+               "/* COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS */\n\n");
+
+    Table->HeaderSizeInBytes = ((ULONG_PTR)Output - (ULONG_PTR)Base);
 
     return Result;
 }
@@ -1972,9 +2104,15 @@ SaveHeaderCallbackChm01(
 
 
     //
-    // Save the header file: unmap the view, close the mapping handle, set the
-    // file pointer, set EOF, and then close the handle.
+    // Save the header file: flush file buffers, unmap the view, close the
+    // mapping handle, set the file pointer, set EOF, and then close the handle.
     //
+
+    if (!FlushFileBuffers(Table->HeaderFileHandle)) {
+        SYS_ERROR(FlushFileBuffers);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
 
     if (!UnmapViewOfFile(Table->HeaderBaseAddress)) {
         SYS_ERROR(UnmapViewOfFile);
