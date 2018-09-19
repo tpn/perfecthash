@@ -952,6 +952,7 @@ typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
 //      SEH operations.
 //
 
+#define TRY __try
 #define TRY_TSX __try
 #define TRY_AVX __try
 #define TRY_AVX2 __try
@@ -965,6 +966,12 @@ typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
 
 #define TRY_PROBE_MEMORY __try
 #define TRY_MAPPED_MEMORY_OP __try
+
+#define EXCEPT __except
+#define EXCEPT_FILTER(Name) __except( \
+    Name(GetExceptionCode(),          \
+         GetExceptionInformation())   \
+    )
 
 #define CATCH_EXCEPTION_ILLEGAL_INSTRUCTION __except(     \
     GetExceptionCode() == EXCEPTION_ILLEGAL_INSTRUCTION ? \

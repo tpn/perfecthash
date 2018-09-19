@@ -27,18 +27,20 @@ extern "C" {
 //
 
 #define CPHAPI __stdcall
+#define FORCEINLINE __forceinline
 
 typedef char BOOLEAN;
 typedef unsigned long ULONG;
 typedef unsigned long *PULONG;
 typedef unsigned long long ULONGLONG;
+typedef void *PVOID;
 
 //
 // Disable the anonymous union/struct warning.
 //
 
 #pragma warning(push)
-#pragma warning(disable: 4201)
+#pragma warning(disable: 4201 4094)
 
 typedef union _ULARGE_INTEGER {
     struct {
@@ -47,8 +49,6 @@ typedef union _ULARGE_INTEGER {
     };
     ULONGLONG QuadPart;
 } ULARGE_INTEGER;
-
-#pragma warning(pop)
 
 //
 // Define the main functions exposed by a compiled perfect hash table: index,
@@ -188,10 +188,10 @@ typedef COMPILED_PERFECT_HASH_TABLE_DELETE
 //
 
 typedef struct _COMPILED_PERFECT_HASH_TABLE_VTBL {
-    COMPILED_PERFECT_HASH_TABLE_INDEX  Index;
-    COMPILED_PERFECT_HASH_TABLE_LOOKUP Lookup;
-    COMPILED_PERFECT_HASH_TABLE_INSERT Insert;
-    COMPILED_PERFECT_HASH_TABLE_DELETE Delete;
+    PCOMPILED_PERFECT_HASH_TABLE_INDEX  Index;
+    PCOMPILED_PERFECT_HASH_TABLE_LOOKUP Lookup;
+    PCOMPILED_PERFECT_HASH_TABLE_INSERT Insert;
+    PCOMPILED_PERFECT_HASH_TABLE_DELETE Delete;
 } COMPILED_PERFECT_HASH_TABLE_VTBL;
 typedef COMPILED_PERFECT_HASH_TABLE_VTBL *PCOMPILED_PERFECT_HASH_TABLE_VTBL;
 
@@ -297,6 +297,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _COMPILED_PERFECT_HASH_TABLE {
         ULONG LastSeed;
     };
 
+    ULONG Padding2;
+
 } COMPILED_PERFECT_HASH_TABLE;
 typedef COMPILED_PERFECT_HASH_TABLE *PCOMPILED_PERFECT_HASH_TABLE;
 
@@ -327,6 +329,246 @@ Return Value:
 
 --*/
 typedef GET_COMPILED_PERFECT_HASH_TABLE *PGET_COMPILED_PERFECT_HASH_TABLE;
+
+//
+// Define a helper macro for implementing the Lookup, Insert and Delete routines
+// once an Index routine has been implemented.  Assumes the table values array
+// is accessible via the symbol 'TableValues'.
+//
+
+#define DECLARE_COMPILED_PERFECT_HASH_ROUTINES(Name) \
+COMPILED_PERFECT_HASH_TABLE_LOOKUP                   \
+    CompiledPerfectHash_##Name##_Lookup;             \
+                                                     \
+_Use_decl_annotations_                               \
+ULONG                                                \
+CompiledPerfectHash_##Name##_Lookup(                 \
+    ULONG Key                                        \
+    )                                                \
+{                                                    \
+    ULONG Index;                                     \
+                                                     \
+    Index = CompiledPerfectHash_##Name##_Index(Key); \
+    return TableValues[Index];                       \
+}                                                    \
+                                                     \
+COMPILED_PERFECT_HASH_TABLE_INSERT                   \
+    CompiledPerfectHash_##Name##_Insert;             \
+                                                     \
+_Use_decl_annotations_                               \
+ULONG                                                \
+CompiledPerfectHash_##Name##_Insert(                 \
+    ULONG Key,                                       \
+    ULONG Value                                      \
+    )                                                \
+{                                                    \
+    ULONG Index;                                     \
+    ULONG Previous;                                  \
+                                                     \
+    Index = CompiledPerfectHash_##Name##_Index(Key); \
+    Previous = TableValues[Index];                   \
+    TableValues[Index] = Value;                      \
+    return Previous;                                 \
+}                                                    \
+                                                     \
+COMPILED_PERFECT_HASH_TABLE_DELETE                   \
+    CompiledPerfectHash_##Name##_Delete;             \
+                                                     \
+_Use_decl_annotations_                               \
+ULONG                                                \
+CompiledPerfectHash_##Name##_Delete(                 \
+    ULONG Key                                        \
+    )                                                \
+{                                                    \
+    ULONG Index;                                     \
+    ULONG Previous;                                  \
+                                                     \
+    Index = CompiledPerfectHash_##Name##_Index(Key); \
+    Previous = TableValues[Index];                   \
+    TableValues[Index] = 0;                          \
+    return Previous;                                 \
+}
+
+//
+// Inline versions of above.
+//
+
+#define DECLARE_COMPILED_PERFECT_HASH_ROUTINES_INLINE(Name) \
+ULONG                                                       \
+CompiledPerfectHash_##Name##_LookupInline(                  \
+    _In_ ULONG Key                                          \
+    )                                                       \
+{                                                           \
+    ULONG Index;                                            \
+                                                            \
+    Index = CompiledPerfectHash_##Name##_IndexInline(Key);  \
+    return TableValues[Index];                              \
+}                                                           \
+                                                            \
+ULONG                                                       \
+CompiledPerfectHash_##Name##_InsertInline(                  \
+    ULONG Key,                                              \
+    ULONG Value                                             \
+    )                                                       \
+{                                                           \
+    ULONG Index;                                            \
+    ULONG Previous;                                         \
+                                                            \
+    Index = CompiledPerfectHash_##Name##_IndexInline(Key);  \
+    Previous = TableValues[Index];                          \
+    TableValues[Index] = Value;                             \
+    return Previous;                                        \
+}                                                           \
+                                                            \
+ULONG                                                       \
+CompiledPerfectHash_##Name##_DeleteInline(                  \
+    ULONG Key                                               \
+    )                                                       \
+{                                                           \
+    ULONG Index;                                            \
+    ULONG Previous;                                         \
+                                                            \
+    Index = CompiledPerfectHash_##Name##_IndexInline(Key);  \
+    Previous = TableValues[Index];                          \
+    TableValues[Index] = 0;                                 \
+    return Previous;                                        \
+}
+
+#ifndef SEED1
+#define SEED1 0x11111111
+#endif
+
+#ifndef SEED2
+#define SEED2 0x22222222
+#endif
+
+#ifndef SEED3
+#define SEED3 0x33333333
+#endif
+
+#ifndef HASH_MASK
+#define HASH_MASK 0xaaaaaaaa
+#endif
+
+#ifndef INDEX_MASK
+#define INDEX_MASK 0xbbbbbbbb
+#endif
+
+#ifndef TABLE_DATA
+extern const ULONG TableData[];
+#define TABLE_DATA TableData
+#endif
+
+//
+// Chm01_Crc32Rotate_And_IndexInline() routine.
+//
+
+FORCEINLINE
+ULONG
+CompiledPerfectHash_Chm01_Crc32Rotate_And_IndexInline(
+    ULONG Key
+    )
+{
+    ULONG A;
+    ULONG B;
+    ULONG C;
+    ULONG D;
+    ULONG Index;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG MaskedLow;
+    ULONG MaskedHigh;
+    ULONGLONG Combined;
+
+    //IACA_VC_START();
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    A = _mm_crc32_u32(SEED1, Key);
+    B = _mm_crc32_u32(SEED2, _rotl(Key, 15));
+    C = SEED3 ^ Key;
+    D = _mm_crc32_u32(B, C);
+
+    //IACA_VC_END();
+
+    Vertex1 = A;
+    Vertex2 = D;
+
+    //
+    // Mask each hash value such that it falls within the confines of the
+    // number of vertices.
+    //
+
+    MaskedLow = Vertex1 & HASH_MASK;
+    MaskedHigh = Vertex2 & HASH_MASK;
+
+    //
+    // Obtain the corresponding vertex values for the masked high and low hash
+    // values.  These are derived from the "assigned" array that we construct
+    // during the creation routine's assignment step (GraphAssign()).
+    //
+
+    Vertex1 = TABLE_DATA[MaskedLow];
+    Vertex2 = TABLE_DATA[MaskedHigh];
+
+    //
+    // Combine the two values, then perform the index masking operation, such
+    // that our final index into the array falls within the confines of the
+    // number of edges, or keys, in the table.  That is, make sure the index
+    // value is between 0 and Table->Keys->NumberOfElements-1.
+    //
+
+    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
+
+    Index = Combined & INDEX_MASK;
+
+    return Index;
+}
+
+#define DECLARE_CHM01_CRC32ROTATE_AND_INDEX_ROUTINE(              \
+    FuncName, Seed1, Seed2, Seed3, HashMask, IndexMask, TableData \
+    )                                                             \
+FORCEINLINE                                                       \
+ULONG                                                             \
+FuncName##IndexInline(                                            \
+    ULONG Key                                                     \
+    )                                                             \
+{                                                                 \
+    ULONG A;                                                      \
+    ULONG B;                                                      \
+    ULONG C;                                                      \
+    ULONG D;                                                      \
+    ULONG Index;                                                  \
+    ULONG Vertex1;                                                \
+    ULONG Vertex2;                                                \
+    ULONG MaskedLow;                                              \
+    ULONG MaskedHigh;                                             \
+    ULONGLONG Combined;                                           \
+                                                                  \
+    A = _mm_crc32_u32(Seed1, Key);                                \
+    B = _mm_crc32_u32(Seed2, _rotl(Key, 15));                     \
+    C = Seed3 ^ Key;                                              \
+    D = _mm_crc32_u32(B, C);                                      \
+                                                                  \
+    Vertex1 = A;                                                  \
+    Vertex2 = D;                                                  \
+                                                                  \
+    MaskedLow = Vertex1 & HashMask;                               \
+    MaskedHigh = Vertex2 & HashMask;                              \
+                                                                  \
+    Vertex1 = TableData[MaskedLow];                               \
+    Vertex2 = TableData[MaskedHigh];                              \
+                                                                  \
+    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;           \
+                                                                  \
+    Index = Combined & IndexMask;                                 \
+                                                                  \
+    return Index;                                                 \
+}
+
+#pragma warning(pop)
 
 #ifdef __cplusplus
 } // extern "C"

@@ -109,7 +109,6 @@ Return Value:
     ULONG LastError;
     ULONG DesiredAccess;
     ULONG InfoMappingSize;
-    ULONG HeaderMappingSize;
     ULONG FlagsAndAttributes;
     USHORT DirectoryAndNameLength;
     BOOLEAN UsingKeysPath;
@@ -813,107 +812,6 @@ Return Value:
                                 InfoMappingSize);
 
     Table->InfoStreamBaseAddress = BaseAddress;
-
-    if (!BaseAddress) {
-        SYS_ERROR(MapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // Finally, create a file handle to the header file.
-    //
-
-    FileHandle = CreateFileW(Table->HeaderPath.Buffer,
-                             DesiredAccess,
-                             ShareMode,
-                             NULL,
-                             OPEN_ALWAYS,
-                             FlagsAndAttributes,
-                             NULL);
-
-    LastError = GetLastError();
-
-    Table->HeaderFileHandle = FileHandle;
-
-    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
-
-        //
-        // Failed to open the file successfully.
-        //
-
-        SYS_ERROR(CreateFileW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-
-    } else if (LastError == ERROR_ALREADY_EXISTS) {
-
-        //
-        // The file was opened successfully, but it already existed.  Clear the
-        // local last error variable then truncate the file.
-        //
-
-        LastError = ERROR_SUCCESS;
-
-        Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
-        if (Status == INVALID_SET_FILE_POINTER) {
-            SYS_ERROR(SetFilePointer);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-
-        Success = SetEndOfFile(FileHandle);
-        if (!Success) {
-            SYS_ERROR(SetEndOfFile);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-
-        //
-        // We've successfully truncated the file.
-        //
-
-    }
-
-    //
-    // Create a file mapping for the header file.
-    //
-
-    HeaderMappingSize = SystemInfo.dwAllocationGranularity;
-    ASSERT(HeaderMappingSize >= PAGE_SIZE);
-
-    //
-    // Create a file mapping for the header.
-    //
-
-    MappingHandle = CreateFileMappingW(FileHandle,
-                                       NULL,
-                                       PAGE_READWRITE,
-                                       0,
-                                       HeaderMappingSize,
-                                       NULL);
-
-    Table->HeaderMappingHandle = MappingHandle;
-    Table->HeaderMappingSizeInBytes.QuadPart = HeaderMappingSize;
-
-    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-        SYS_ERROR(CreateFileMappingW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // We successfully created a file mapping.  Proceed with mapping it into
-    // memory.
-    //
-
-    BaseAddress = MapViewOfFile(MappingHandle,
-                                FILE_MAP_READ | FILE_MAP_WRITE,
-                                0,
-                                0,
-                                HeaderMappingSize);
-
-    Table->HeaderBaseAddress = BaseAddress;
 
     if (!BaseAddress) {
         SYS_ERROR(MapViewOfFile);

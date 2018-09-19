@@ -19,12 +19,11 @@ Abstract:
 // Define the threshold for how many attempts need to be made at finding a
 // perfect hash solution before we double our number of vertices and try again.
 //
-// N.B. 100 is quite generous; normally, solutions are found on average within
-//      3 attempts, and there's a 99.9% chance a solution will be found by the
-//      18th attempt.
+// With a 2-part hypergraph, solutions are found on average in sqrt(3) attempts.
+// By attempt 18, there's a 99.9% chance we will have found a solution.
 //
 
-#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 100
+#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 18
 
 //
 // Define a limit for how many times the table resizing will be attempted before
@@ -32,7 +31,7 @@ Abstract:
 // may hit memory limits before we hit this resize limit.
 //
 
-#define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 10
+#define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 5
 
 
 _Use_decl_annotations_
@@ -74,11 +73,17 @@ Return Value:
         the number of requested table elements is doubled.  If this number
         exceeds MAX_ULONG, this error will be returned.
 
-    PH_E_ERROR_PREPARING_FILE - An error occurred whilst preparing a file to
-        use for saving the perfect hash table.
+    PH_E_ERROR_PREPARING_TABLE_FILE - An error occurred whilst preparing a file
+        to use for saving the perfect hash table.
 
-    PH_E_ERROR_SAVING_FILE - An error occurred whilst trying to save the perfect
-        hash table to the file prepared earlier.
+    PH_E_ERROR_SAVING_TABLE_FILE - An error occurred whilst trying to save the
+        perfect hash table to the file prepared earlier.
+
+    PH_E_ERROR_PREPARING_HEADER_FILE - An error occurred whilst preparing a file
+        to use for saving the perfect hash table C header.
+
+    PH_E_ERROR_SAVING_HEADER_FILE - An error occurred whilst trying to save the
+        C header representation of the perfect hash table.
 
     PH_E_TABLE_VERIFICATION_FAILED - The winning perfect hash table solution
         failed internal verification.  The primary cause of this is typically
@@ -210,26 +215,6 @@ RetryWithLargerTableSize:
             Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
-    }
-
-    //
-    // Prepare the initial "header file preparation" work callback.  This will
-    // write the common code shared by all headers (i.e. everything that can
-    // be written prior to the perfect hash table solution being solved).
-    //
-
-    if (!PreparedHeader) {
-
-        ZeroStruct(PrepareHeaderFile);
-        PrepareHeaderFile.FileWorkId = FileWorkPrepareHeaderId;
-        InterlockedPushEntrySList(&Context->FileWorkListHead,
-                                  &PrepareHeaderFile.ListEntry);
-
-        CONTEXT_START_TIMERS(PrepareHeaderFile);
-
-        SubmitThreadpoolWork(Context->FileWork);
-
-        PreparedHeader = TRUE;
     }
 
     //
@@ -818,6 +803,26 @@ RetryWithLargerTableSize:
     CONTEXT_START_TIMERS(PrepareTableFile);
 
     SubmitThreadpoolWork(Context->FileWork);
+
+    //
+    // Prepare the initial "header file preparation" work callback.  This will
+    // write the common code shared by all headers (i.e. everything that can
+    // be written prior to the perfect hash table solution being solved).
+    //
+
+    if (!PreparedHeader) {
+
+        ZeroStruct(PrepareHeaderFile);
+        PrepareHeaderFile.FileWorkId = FileWorkPrepareHeaderId;
+        InterlockedPushEntrySList(&Context->FileWorkListHead,
+                                  &PrepareHeaderFile.ListEntry);
+
+        CONTEXT_START_TIMERS(PrepareHeaderFile);
+
+        SubmitThreadpoolWork(Context->FileWork);
+
+        PreparedHeader = TRUE;
+    }
 
     //
     // Capture initial cycles as reported by __rdtsc() and the performance
@@ -1521,11 +1526,21 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     PHANDLE Event;
     volatile HRESULT *Result;
     volatile LONG *Errors;
     volatile LONG *LastError;
     PFILE_WORK_ITEM Item;
+    PERFECT_HASH_TLS_CONTEXT TlsContext;
+    PFILE_WORK_CALLBACK_IMPL Impl;
+    PFILE_WORK_CALLBACK_WRAPPER Wrapper = NULL;
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
 
     //
     // Resolve the work item base address from the list entry.
@@ -1535,6 +1550,19 @@ Return Value:
 
     ASSERT(IsValidFileWorkId(Item->FileWorkId));
 
+    //
+    // Zero the local TLS context structure, fill out the relevant fields,
+    // then set it.  This allows our exception filters to obtain the active
+    // context when handling exceptions.
+    //
+
+    ZeroStruct(TlsContext);
+    TlsContext.Context = Context;
+    if (!PerfectHashTlsSetContext(&TlsContext)) {
+        SYS_ERROR(TlsSetValue);
+        return;
+    }
+
     switch (Item->FileWorkId) {
 
         case FileWorkPrepareTableId:
@@ -1543,7 +1571,7 @@ Return Value:
             Result = &Context->TableFileWorkLastResult;
             Errors = &Context->TableFileWorkErrors;
             LastError = &Context->TableFileWorkLastError;
-            *Result = PrepareTableCallbackChm01(Context);
+            Impl = PrepareTableCallbackChm01;
             break;
 
         case FileWorkSaveTableId:
@@ -1552,7 +1580,7 @@ Return Value:
             Result = &Context->TableFileWorkLastResult;
             Errors = &Context->TableFileWorkErrors;
             LastError = &Context->TableFileWorkLastError;
-            *Result = SaveTableCallbackChm01(Context);
+            Impl = SaveTableCallbackChm01;
             break;
 
         case FileWorkPrepareHeaderId:
@@ -1561,7 +1589,7 @@ Return Value:
             Result = &Context->HeaderFileWorkLastResult;
             Errors = &Context->HeaderFileWorkErrors;
             LastError = &Context->HeaderFileWorkLastError;
-            *Result = PrepareHeaderCallbackChm01(Context);
+            Impl = PrepareHeaderCallbackChm01;
             break;
 
         case FileWorkSaveHeaderId:
@@ -1570,7 +1598,7 @@ Return Value:
             Result = &Context->HeaderFileWorkLastResult;
             Errors = &Context->HeaderFileWorkErrors;
             LastError = &Context->HeaderFileWorkLastError;
-            *Result = SaveHeaderCallbackChm01(Context);
+            Impl = SaveHeaderCallbackChm01;
             break;
 
         default:
@@ -1583,9 +1611,23 @@ Return Value:
             return;
     }
 
+    if (Wrapper) {
+        *Result = Wrapper(Impl, Context);
+    } else {
+        *Result = Impl(Context);
+    }
+
     if (FAILED(*Result)) {
         InterlockedIncrement(Errors);
         *LastError = GetLastError();
+    }
+
+    //
+    // Clear the TLS context we set earlier.
+    //
+
+    if (!PerfectHashTlsSetContext(NULL)) {
+        SYS_ERROR(TlsSetValue);
     }
 
     //
@@ -1841,7 +1883,6 @@ SaveTableCallbackChm01(
     CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Verify);
     CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareTableFile);
     CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveTableFile);
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareHeaderFile);
 
     //
     // We need to wait on the header saved event before we can capture
@@ -1857,7 +1898,14 @@ SaveTableCallbackChm01(
         goto Error;
     }
 
+    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareHeaderFile);
     CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveHeaderFile);
+
+    if (!FlushFileBuffers(Table->InfoStreamFileHandle)) {
+        SYS_ERROR(FlushFileBuffers);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
 
     //
     // Finalize the :Info stream the same way we handled the backing
@@ -1929,6 +1977,267 @@ End:
 
 _Use_decl_annotations_
 HRESULT
+PrepareHeaderFileChm01(
+    PPERFECT_HASH_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    Creates the underlying C header file, extends it to an appropriate size,
+    and maps it into memory.
+
+Arguments:
+
+    Context - Supplies the active context for which the header file is to be
+        prepared.
+
+Return Value:
+
+    S_OK - Header file prepared successfully.
+
+    PH_E_SYSTEM_CALL_FAILED - A system call failed.
+
+    PH_E_ERROR_PREPARING_HEADER_FILE - Encountered an error during preparation.
+
+    PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE - The maximum calculated size for
+        the header exceeded 4GB, and we're a 32-bit executable.
+
+--*/
+{
+    PRTL Rtl;
+    BOOL Success;
+    ULONG Status;
+    ULONG LastError;
+    ULONG ShareMode;
+    ULONG DesiredAccess;
+    SIZE_T ViewSize;
+    HANDLE FileHandle;
+    HANDLE MappingHandle;
+    ULONG FlagsAndAttributes;
+    ULONG AllocationGranularity;
+    SYSTEM_INFO SystemInfo;
+    HRESULT Result = S_OK;
+    PVOID BaseAddress;
+    LARGE_INTEGER MappingSize;
+    PPERFECT_HASH_TABLE Table;
+    ULONGLONG NumberOfKeys;
+    ULONGLONG MaxTotalNumberOfEdges;
+    ULONGLONG MaxTotalNumberOfVertices;
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    NumberOfKeys = Table->Keys->NumberOfElements.QuadPart;
+
+    //
+    // Create the file.
+    //
+
+    ShareMode = (
+        FILE_SHARE_READ  |
+        FILE_SHARE_WRITE |
+        FILE_SHARE_DELETE
+    );
+
+    DesiredAccess = (
+        GENERIC_READ |
+        GENERIC_WRITE
+    );
+
+    FlagsAndAttributes = FILE_FLAG_OVERLAPPED;
+
+    FileHandle = CreateFileW(Table->HeaderPath.Buffer,
+                             DesiredAccess,
+                             ShareMode,
+                             NULL,
+                             OPEN_ALWAYS,
+                             FlagsAndAttributes,
+                             NULL);
+
+    LastError = GetLastError();
+
+    Table->HeaderFileHandle = FileHandle;
+
+    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
+
+        //
+        // Failed to open the file successfully.
+        //
+
+        SYS_ERROR(CreateFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+
+    } else if (LastError == ERROR_ALREADY_EXISTS) {
+
+        //
+        // The file was opened successfully, but it already existed.  Clear the
+        // local last error variable then truncate the file.
+        //
+
+        LastError = ERROR_SUCCESS;
+
+        Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
+        if (Status == INVALID_SET_FILE_POINTER) {
+            SYS_ERROR(SetFilePointer);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+        Success = SetEndOfFile(FileHandle);
+        if (!Success) {
+            SYS_ERROR(SetEndOfFile);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // We've successfully truncated the file.
+        //
+
+    }
+
+    //
+    // Calculate (a very generous) size to use for the file.  As we map the
+    // entire file up-front and then simply write to the memory map without
+    // closely tracking bytes written, we want to ensure the allocated space
+    // is bigger than the largest possible size we'll consume.  When we save
+    // the file, we update the end-of-file accordingly.
+    //
+
+    GetSystemInfo(&SystemInfo);
+    AllocationGranularity = SystemInfo.dwAllocationGranularity;
+
+    MaxTotalNumberOfEdges = (
+        ((ULONGLONG)RoundUpPowerOf2((ULONG)NumberOfKeys) << 1ULL) <<
+        GRAPH_SOLVING_RESIZE_TABLE_LIMIT
+    );
+
+    MaxTotalNumberOfVertices = (
+        ((ULONGLONG)RoundUpNextPowerOf2((ULONG)NumberOfKeys)) <<
+        GRAPH_SOLVING_RESIZE_TABLE_LIMIT
+    );
+
+    MappingSize.QuadPart = NumberOfKeys * 16;
+
+    MappingSize.QuadPart += (MaxTotalNumberOfEdges * 16);
+
+    MappingSize.QuadPart += (MaxTotalNumberOfVertices * 16);
+
+    //
+    // Add in an additional 64KB for all other text/code, then align up to a
+    // 64KB boundary.
+    //
+
+    MappingSize.QuadPart += AllocationGranularity;
+
+    MappingSize.QuadPart = ALIGN_UP(MappingSize.QuadPart,
+                                    AllocationGranularity);
+
+#ifdef _WIN64
+    ViewSize = MappingSize.QuadPart;
+#else
+
+    //
+    // Verify we haven't overflowed MAX_ULONG.
+    //
+
+    if (MappingSize.HighPart) {
+        Result = PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE;
+        PH_ERROR(PrepareHeaderFileChm01, Result);
+        goto Error;
+    }
+
+    ViewSize = MappingSize.LowPart;
+#endif
+
+    //
+    // Extend the file to the mapping size.
+    //
+
+    Success = SetFilePointerEx(FileHandle,
+                               MappingSize,
+                               NULL,
+                               FILE_BEGIN);
+
+    if (!Success) {
+        SYS_ERROR(SetFilePointerEx);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (!SetEndOfFile(FileHandle)) {
+        SYS_ERROR(SetEndOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Create a file mapping.
+    //
+
+    MappingHandle = CreateFileMappingW(FileHandle,
+                                       NULL,
+                                       PAGE_READWRITE,
+                                       MappingSize.HighPart,
+                                       MappingSize.LowPart,
+                                       NULL);
+
+    Table->HeaderMappingHandle = MappingHandle;
+    Table->HeaderMappingSizeInBytes.QuadPart = MappingSize.QuadPart;
+
+    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
+        SYS_ERROR(CreateFileMappingW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // We successfully created a file mapping.  Proceed with mapping it into
+    // memory.
+    //
+
+    BaseAddress = MapViewOfFile(MappingHandle,
+                                FILE_MAP_READ | FILE_MAP_WRITE,
+                                0,
+                                0,
+                                ViewSize);
+
+    Table->HeaderBaseAddress = BaseAddress;
+
+    if (!BaseAddress) {
+        SYS_ERROR(MapViewOfFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_ERROR_PREPARING_TABLE_FILE;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
 PrepareHeaderCallbackChm01(
     PPERFECT_HASH_CONTEXT Context
     )
@@ -1955,6 +2264,18 @@ PrepareHeaderCallbackChm01(
     Table = Context->Table;
     Keys = Table->Keys;
     Name = &Table->TableNameA;
+    NumberOfKeys = Keys->NumberOfElements.QuadPart;
+
+    //
+    // Prepare the underlying file and memory maps.
+    //
+
+    Result = PrepareHeaderFileChm01(Context);
+    if (FAILED(Result)) {
+        PH_ERROR(PrepareHeaderCallbackChm01, Result);
+        goto Error;
+    }
+
     Base = (PCHAR)Table->HeaderBaseAddress;
     Output = Base;
 
@@ -1973,13 +2294,10 @@ PrepareHeaderCallbackChm01(
     OUTPUT_RAW("#ifdef COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS\n");
     OUTPUT_RAW("#pragma const_seg(\".cpht_keys\")\n");
     OUTPUT_RAW("static const unsigned long TableKeys[");
-    OUTPUT_INT(Keys->NumberOfElements.QuadPart);
+    OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW("] = {\n");
 
-    Count = 0;
-    NumberOfKeys = Keys->NumberOfElements.QuadPart;
-
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = 0, Count = 0; Index < NumberOfKeys; Index++) {
 
         if (Count == 0) {
             INDENT();
@@ -2012,6 +2330,26 @@ PrepareHeaderCallbackChm01(
                "/* COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS */\n\n");
 
     Table->HeaderSizeInBytes = ((ULONG_PTR)Output - (ULONG_PTR)Base);
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_ERROR_PREPARING_HEADER_FILE;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    CONTEXT_END_TIMERS(PrepareHeaderFile);
 
     return Result;
 }
@@ -2109,6 +2447,8 @@ Error:
     //
 
 End:
+
+    CONTEXT_END_TIMERS(SaveHeaderFile);
 
     return Result;
 }

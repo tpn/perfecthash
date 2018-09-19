@@ -453,38 +453,28 @@ typedef
 _Check_return_
 _Success_(return >= 0)
 HRESULT
-(NTAPI PREPARE_TABLE_CALLBACK)(
+(NTAPI FILE_WORK_CALLBACK_IMPL)(
     _In_ struct _PERFECT_HASH_CONTEXT *Context
     );
-typedef PREPARE_TABLE_CALLBACK *PPREPARE_TABLE_CALLBACK;
+typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
 
 typedef
 _Check_return_
 _Success_(return >= 0)
 HRESULT
-(NTAPI SAVE_TABLE_CALLBACK)(
+(NTAPI FILE_WORK_CALLBACK_WRAPPER)(
+    _In_ PFILE_WORK_CALLBACK_IMPL Function,
     _In_ struct _PERFECT_HASH_CONTEXT *Context
     );
-typedef SAVE_TABLE_CALLBACK *PSAVE_TABLE_CALLBACK;
+typedef FILE_WORK_CALLBACK_WRAPPER *PFILE_WORK_CALLBACK_WRAPPER;
 
-typedef
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-(NTAPI PREPARE_HEADER_CALLBACK)(
-    _In_ struct _PERFECT_HASH_CONTEXT *Context
-    );
-typedef PREPARE_HEADER_CALLBACK *PPREPARE_HEADER_CALLBACK;
-
-typedef
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-(NTAPI SAVE_HEADER_CALLBACK)(
-    _In_ struct _PERFECT_HASH_CONTEXT *Context
-    );
-typedef SAVE_HEADER_CALLBACK *PSAVE_HEADER_CALLBACK;
-
+//
+// Define function pointer for function that determines whether graph solving
+// should continue.  This provides a means for the graph solving threads to
+// break out of their infinite loops once a certain condition is satisified
+// (such as when the graph has been solved, or the maximum number of attempts
+//  has been reached).
+//
 typedef
 BOOLEAN
 (NTAPI SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH)(
@@ -492,7 +482,6 @@ BOOLEAN
     );
 typedef SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
       *PSHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH;
-
 
 //
 // Function typedefs for private functions.

@@ -23,10 +23,11 @@ Abstract:
 extern PERFECT_HASH_MAIN_WORK_CALLBACK ProcessGraphCallbackChm01;
 extern PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
-extern PREPARE_TABLE_CALLBACK PrepareTableCallbackChm01;
-extern SAVE_TABLE_CALLBACK SaveTableCallbackChm01;
-extern PREPARE_HEADER_CALLBACK PrepareHeaderCallbackChm01;
-extern SAVE_HEADER_CALLBACK SaveHeaderCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareTableCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveTableCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareHeaderCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareHeaderFileChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveHeaderCallbackChm01;
 
 extern SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
     ShouldWeContinueTryingToSolveGraphChm01;

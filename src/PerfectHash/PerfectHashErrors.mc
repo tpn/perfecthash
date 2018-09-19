@@ -448,3 +448,27 @@ An error occurred whilst trying to save a perfect hash table to
 the previously prepared C header file.
 .
 
+MessageId=0x235
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_UNREACHABLE_CODE
+Language=English
+An internal error has occurred; code marked as unreachable has been reached.
+.
+
+MessageId=0x236
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVARIANT_CHECK_FAILED
+Language=English
+An internal error has occurred; an invariant check has failed.
+.
+
+MessageId=0x237
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE
+Language=English
+The calculated C header file size exceeded 4GB.
+.
+

@@ -539,3 +539,30 @@ Abstract:
 //
 #define PH_E_ERROR_SAVING_HEADER_FILE    ((HRESULT)0xE0040234L)
 
+//
+// MessageId: PH_E_UNREACHABLE_CODE
+//
+// MessageText:
+//
+// An internal error has occurred; code marked as unreachable has been reached.
+//
+#define PH_E_UNREACHABLE_CODE            ((HRESULT)0xE0040235L)
+
+//
+// MessageId: PH_E_INVARIANT_CHECK_FAILED
+//
+// MessageText:
+//
+// An internal error has occurred; an invariant check has failed.
+//
+#define PH_E_INVARIANT_CHECK_FAILED      ((HRESULT)0xE0040236L)
+
+//
+// MessageId: PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE
+//
+// MessageText:
+//
+// The calculated C header file size exceeded 4GB.
+//
+#define PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE ((HRESULT)0xE0040237L)
+

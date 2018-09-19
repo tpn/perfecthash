@@ -930,28 +930,6 @@ Return Value:
 
         WIDE_OUTPUT_FLUSH();
 
-        //
-        // Test the table.
-        //
-
-        Result = Table->Vtbl->Test(Table, Keys, TRUE);
-
-        if (FAILED(Result)) {
-
-            WIDE_OUTPUT_RAW(WideOutput, L"Test failed for perfect hash table "
-                                        L"loaded from disk: ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
-            WIDE_OUTPUT_RAW(WideOutput, L".\n");
-            WIDE_OUTPUT_FLUSH();
-
-            Failures++;
-            Failed = TRUE;
-            goto ReleaseTable;
-        }
-
-        WIDE_OUTPUT_RAW(WideOutput, L"Successfully tested perfect hash "
-                                    L"table.\n");
-
         TableInfoOnDisk = Table->TableInfoOnDisk;
 
         //
@@ -983,6 +961,10 @@ Return Value:
                       L"attempts by number of deleted edges away: ",
                       ClosestWeCameToSolvingGraphWithSmallerTableSizes);
 
+        } else {
+
+            WIDE_OUTPUT_RAW(WideOutput,
+                            L"Number of table resize events: 0.\n");
         }
 
         STATS_INT(L"Concurrency: ", Concurrency);
@@ -1018,8 +1000,29 @@ Return Value:
         STATS_QUAD(L"Microseconds to save header file: ",
                    SaveHeaderFileMicroseconds);
 
-        WIDE_OUTPUT_RAW(WideOutput, L"\n\n");
         WIDE_OUTPUT_FLUSH();
+
+        //
+        // Test the table.
+        //
+
+        Result = Table->Vtbl->Test(Table, Keys, TRUE);
+
+        if (FAILED(Result)) {
+
+            WIDE_OUTPUT_RAW(WideOutput, L"Test failed for perfect hash table "
+                                        L"loaded from disk: ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Failed = TRUE;
+            goto ReleaseTable;
+        }
+
+        WIDE_OUTPUT_RAW(WideOutput, L"Successfully tested perfect hash "
+                                    L"table.\n\n");
 
         //
         // Attempt to compile the table.  WIP.
