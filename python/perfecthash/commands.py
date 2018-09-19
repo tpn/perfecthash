@@ -283,4 +283,42 @@ class TrailingSlashesAlign(InvariantAwareCommand):
             with open(path, 'wb') as f:
                 f.write(text)
 
+class ReplaceUuid(InvariantAwareCommand):
+    """
+    Replaces UUIDs in a file with new ones.
+    """
+
+    path = None
+    _path = None
+    class PathArg(PathInvariant):
+        _help = "path of file to replace UUIDs in"
+
+    def run(self):
+        out = self._out
+        options = self.options
+        verbose = self._verbose
+
+        path = self._path
+
+        import re
+        from uuid import uuid4
+        import linecache
+
+        regex = re.compile(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){4}[0-9a-f]{8}', re.I)
+
+        with open(path, 'r') as f:
+            text = f.read()
+
+        uuid_map = {
+            src_uuid: str(uuid4()).upper()
+                for src_uuid in regex.findall(text)
+        }
+
+        for (old_uuid, new_uuid) in uuid_map.items():
+            out("Replacing %s -> %s." % (old_uuid, new_uuid))
+            text = text.replace(old_uuid, new_uuid)
+
+        with open(path, 'w') as f:
+            f.write(text)
+
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
