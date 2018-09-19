@@ -1927,69 +1927,6 @@ End:
     return Result;
 }
 
-static CONST CHAR IntegerToCharTable[] = {
-    '0',
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    'A',
-    'B',
-    'C',
-    'D',
-    'E',
-    'F'
-};
-
-VOID
-AppendIntegerToCharBufferAsHex(
-    _Inout_ PCHAR *BufferPointer,
-    _In_opt_ ULONG Integer
-    )
-{
-    ULONG Pad;
-    ULONG Count;
-    ULONG Digit;
-    ULONG Value;
-    PCHAR Buffer;
-    CHAR Char;
-    PCHAR End;
-    PCHAR Dest;
-
-    Buffer = *BufferPointer;
-
-    End = Dest = RtlOffsetToPointer(Buffer, 9);
-
-    Count = 0;
-    Value = Integer;
-
-    do {
-        Count++;
-        Digit = Value & 0xf;
-        Value >>= 4;
-        Char = IntegerToCharTable[Digit];
-        *Dest-- = Char;
-    } while (Value != 0);
-
-    Pad = 8 - Count;
-    while (Pad) {
-        *Dest-- = '0';
-        Pad--;
-    }
-
-    *Dest-- = 'x';
-    *Dest-- = '0';
-
-    *BufferPointer = End + 1;
-}
-
-#define OUTPUT_HEX(Integer) AppendIntegerToCharBufferAsHex(&Output, Integer)
-
 _Use_decl_annotations_
 HRESULT
 PrepareHeaderCallbackChm01(

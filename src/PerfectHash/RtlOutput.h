@@ -8,9 +8,7 @@ Module Name:
 
 Abstract:
 
-    Temporary stop-gap measure for console output.  Currently used by the
-    PerfectHashTableSelfTest() routine.  Will eventually be eradicated in
-    favor of snprintf_s-type functions.
+    Helper methods for various string writing functionality.
 
 --*/
 
@@ -18,24 +16,16 @@ Abstract:
 
 #include "stdafx.h"
 
-static CONST WCHAR IntegerToWCharTable[] = {
-    L'0',
-    L'1',
-    L'2',
-    L'3',
-    L'4',
-    L'5',
-    L'6',
-    L'7',
-    L'8',
-    L'9',
-    L'A',
-    L'B',
-    L'C',
-    L'D',
-    L'E',
-    L'F'
+static CONST CHAR IntegerToCharTable[] = {
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    'A', 'B', 'C', 'D', 'E', 'F'
 };
+
+static CONST WCHAR IntegerToWCharTable[] = {
+    L'0', L'1', L'2', L'3', L'4', L'5', L'6', L'7', L'8', L'9',
+    L'A', L'B', L'C', L'D', L'E', L'F'
+};
+
 
 FORCEINLINE
 BYTE
@@ -358,7 +348,16 @@ VOID
 typedef APPEND_INTEGER_TO_CHAR_BUFFER *PAPPEND_INTEGER_TO_CHAR_BUFFER;
 
 typedef
-BOOLEAN
+VOID
+(NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_opt_ ULONG Integer
+    );
+typedef APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX
+      *PAPPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX;
+
+typedef
+VOID
 (NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_EX)(
     _Inout_ PCHAR *BufferPointer,
     _In_ ULONGLONG Integer,
@@ -463,6 +462,7 @@ typedef APPEND_WIDE_CSTR_TO_WIDE_CHAR_BUFFER
       *PAPPEND_WIDE_CSTR_TO_WIDE_CHAR_BUFFER;
 
 extern APPEND_INTEGER_TO_CHAR_BUFFER AppendIntegerToCharBuffer;
+extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_EX AppendIntegerToCharBufferEx;
 extern APPEND_STRING_TO_CHAR_BUFFER AppendStringToCharBuffer;
 extern APPEND_CHAR_BUFFER_TO_CHAR_BUFFER AppendCharBufferToCharBuffer;
@@ -482,6 +482,8 @@ extern APPEND_INTEGER_TO_WIDE_CHAR_BUFFER AppendIntegerToWideCharBuffer;
 
 #define OUTPUT_RAW(String)                                          \
     AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
+
+#define OUTPUT_HEX(Integer) AppendIntegerToCharBufferAsHex(&Output, Integer)
 
 #define OUTPUT_STRING(String) AppendStringToCharBuffer(&Output, String)
 

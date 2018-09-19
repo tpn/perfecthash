@@ -71,9 +71,78 @@ AppendIntegerToCharBuffer(
     return;
 }
 
+APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
 
 _Use_decl_annotations_
-BOOLEAN
+VOID
+AppendIntegerToCharBufferAsHex(
+    PCHAR *BufferPointer,
+    ULONG Integer
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that appends an integer to a character buffer
+    in the hexadecimal format 0x00000000 (i.e. zeros are added as padding where
+    necessary and the 0x prefix is included).
+
+Arguments:
+
+    BufferPointer - Supplies a pointer to a variable that contains the address
+        of a character buffer to which the hex string representation of the
+        integer will be written.  The pointer is adjusted to point after the
+        length of the written bytes prior to returning.  This will always be
+        10 characters/bytes.
+
+    Integer - Supplies the integer value to be appended to the string.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    CHAR Char;
+    ULONG Pad;
+    ULONG Count;
+    ULONG Digit;
+    ULONG Value;
+    PCHAR End;
+    PCHAR Dest;
+    PCHAR Buffer;
+
+    Buffer = *BufferPointer;
+
+    End = Dest = RtlOffsetToPointer(Buffer, 9);
+
+    Count = 0;
+    Value = Integer;
+
+    do {
+        Count++;
+        Digit = Value & 0xf;
+        Value >>= 4;
+        Char = IntegerToCharTable[Digit];
+        *Dest-- = Char;
+    } while (Value != 0);
+
+    Pad = 8 - Count;
+    while (Pad) {
+        *Dest-- = '0';
+        Pad--;
+    }
+
+    *Dest-- = 'x';
+    *Dest-- = '0';
+
+    *BufferPointer = End + 1;
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
 AppendIntegerToCharBufferEx(
     PCHAR *BufferPointer,
     ULONGLONG Integer,
@@ -189,7 +258,7 @@ Return Value:
 
     *BufferPointer = End;
 
-    return TRUE;
+    return;
 }
 
 _Use_decl_annotations_
