@@ -2511,12 +2511,11 @@ SaveHeaderCallbackChm01(
 
     OUTPUT_RAW("\n#pragma const_seg()\n\n");
 
+    //
+    // Update the header size, then save it.
+    //
 
     Table->HeaderSizeInBytes = ((ULONG_PTR)Output - (ULONG_PTR)Base);
-
-    //
-    // Save the header file.
-    //
 
     Result = SaveHeaderFileChm01(Context);
     if (FAILED(Result)) {
