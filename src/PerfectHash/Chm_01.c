@@ -2236,6 +2236,12 @@ End:
     return Result;
 }
 
+#define INDENT() {            \
+    Long = (PULONG)Output;    \
+    *Long = Indent;           \
+    Output += sizeof(Indent); \
+}
+
 _Use_decl_annotations_
 HRESULT
 PrepareHeaderCallbackChm01(
@@ -2283,12 +2289,6 @@ PrepareHeaderCallbackChm01(
     // Write the keys.
     //
 
-#define INDENT() {            \
-    Long = (PULONG)Output;    \
-    *Long = Indent;           \
-    Output += sizeof(Indent); \
-}
-
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table.  Auto-generated.\n//\n\n");
 
     OUTPUT_RAW("#ifdef COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS\n");
@@ -2326,8 +2326,9 @@ PrepareHeaderCallbackChm01(
         *(Output - 1) = '\n';
     }
 
-    OUTPUT_RAW("};\n#endif "
-               "/* COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS */\n\n");
+    OUTPUT_RAW("};\n#pragma const_seg()\n"
+               "#endif "
+               "/* COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS */\n");
 
     Table->HeaderSizeInBytes = ((ULONG_PTR)Output - (ULONG_PTR)Base);
 
@@ -2361,6 +2362,198 @@ SaveHeaderCallbackChm01(
     )
 {
     PRTL Rtl;
+    PCHAR Base;
+    PCHAR Output;
+    ULONG Value;
+    ULONG Count;
+    PULONG Long;
+    PULONG Seed;
+    PGRAPH Graph;
+    PULONG Source;
+    PCSTRING Name;
+    ULONGLONG Index;
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE Table;
+    PTABLE_INFO_ON_DISK TableInfo;
+    ULONGLONG NumberOfElements;
+    ULONGLONG TotalNumberOfElements;
+    const ULONG Indent = 0x20202020;
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    TableInfo = Table->TableInfoOnDisk;
+    Name = &Table->TableNameA;
+    TotalNumberOfElements = TableInfo->NumberOfTableElements.QuadPart;
+    NumberOfElements = TotalNumberOfElements >> 1;
+    Graph = (PGRAPH)Context->SolvedContext;
+    Source = Graph->Assigned;
+
+    //
+    // Write the table data.
+    //
+
+    Base = (PCHAR)Table->HeaderBaseAddress;
+    Output = RtlOffsetToPointer(Base, Table->HeaderSizeInBytes);
+
+    OUTPUT_RAW("\n\n#pragma const_seg(\".cpht_data\")\n");
+    OUTPUT_RAW("static const unsigned long HashMask = ");
+    OUTPUT_HEX(TableInfo->HashMask);
+    OUTPUT_RAW(";\nstatic const unsigned long IndexMask = ");
+    OUTPUT_HEX(TableInfo->IndexMask);
+    OUTPUT_RAW(";\n#define HASH_MASK ");
+    OUTPUT_HEX(TableInfo->HashMask);
+    OUTPUT_RAW("\n#define INDEX_MASK ");
+    OUTPUT_HEX(TableInfo->IndexMask);
+    OUTPUT_RAW("\nstatic const unsigned long TableData[");
+    OUTPUT_INT(TotalNumberOfElements);
+    OUTPUT_RAW("] = {\n\n    //\n    // 1st half.\n    //\n\n");
+
+    for (Index = 0, Count = 0; Index < TotalNumberOfElements; Index++) {
+
+        if (Count == 0) {
+            INDENT();
+        }
+
+        Value = *Source++;
+
+        OUTPUT_HEX(Value);
+
+        *Output++ = ',';
+
+        if (++Count == 4) {
+            Count = 0;
+            *Output++ = '\n';
+        } else {
+            *Output++ = ' ';
+        }
+
+        if (Index == NumberOfElements-1) {
+            OUTPUT_RAW("\n    //\n    // 2nd half.\n    //\n\n");
+        }
+    }
+
+    //
+    // If the last character written was a trailing space, replace
+    // it with a newline.
+    //
+
+    if (*(Output - 1) == ' ') {
+        *(Output - 1) = '\n';
+    }
+
+    OUTPUT_RAW("};\n#define TABLE_DATA TableData\n#pragma const_seg()\n\n");
+
+    //
+    // Write seed data.
+    //
+
+    OUTPUT_RAW("#pragma const_seg(\".cpht_seeds\")\n");
+    OUTPUT_RAW("static const unsigned long Seeds[");
+    OUTPUT_INT(TableInfo->NumberOfSeeds);
+    OUTPUT_RAW("] = {\n");
+
+    Seed = &TableInfo->FirstSeed;
+
+    for (Index = 0, Count = 0; Index < TableInfo->NumberOfSeeds; Index++) {
+
+        if (Count == 0) {
+            INDENT();
+        }
+
+        OUTPUT_HEX(*Seed++);
+
+        *Output++ = ',';
+
+        if (++Count == 4) {
+            Count = 0;
+            *Output++ = '\n';
+        } else {
+            *Output++ = ' ';
+        }
+    }
+
+    //
+    // If the last character written was a trailing space, replace
+    // it with a newline.
+    //
+
+    if (*(Output - 1) == ' ') {
+        *(Output - 1) = '\n';
+    }
+
+    ASSERT(TableInfo->NumberOfSeeds == 4);
+
+    Seed = &TableInfo->FirstSeed;
+
+    OUTPUT_RAW("};\nstatic const unsigned long Seed1 = ");
+    OUTPUT_HEX(*Seed++);
+    OUTPUT_RAW(";\nstatic const unsigned long Seed2 = ");
+    OUTPUT_HEX(*Seed++);
+    OUTPUT_RAW(";\nstatic const unsigned long Seed3 = ");
+    OUTPUT_HEX(*Seed++);
+    OUTPUT_RAW(";\nstatic const unsigned long Seed4 = ");
+    OUTPUT_HEX(*Seed++);
+
+    Seed = &TableInfo->FirstSeed;
+
+    OUTPUT_RAW(";\n#define SEED1 ");
+    OUTPUT_HEX(*Seed++);
+    OUTPUT_RAW("\n#define SEED2 ");
+    OUTPUT_HEX(*Seed++);
+    OUTPUT_RAW("\n#define SEED3 ");
+    OUTPUT_HEX(*Seed++);
+    OUTPUT_RAW("\n#define SEED4 ");
+    OUTPUT_HEX(*Seed++);
+
+    OUTPUT_RAW("\n#pragma const_seg()\n\n");
+
+
+    Table->HeaderSizeInBytes = ((ULONG_PTR)Output - (ULONG_PTR)Base);
+
+    //
+    // Save the header file.
+    //
+
+    Result = SaveHeaderFileChm01(Context);
+    if (FAILED(Result)) {
+        PH_ERROR(SaveHeaderCallbackChm01, Result);
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_ERROR_SAVING_HEADER_FILE;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    CONTEXT_END_TIMERS(SaveHeaderFile);
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+SaveHeaderFileChm01(
+    PPERFECT_HASH_CONTEXT Context
+    )
+{
+    PRTL Rtl;
     BOOL Success;
     HRESULT Result = S_OK;
     LARGE_INTEGER EndOfFile;
@@ -2372,11 +2565,6 @@ SaveHeaderCallbackChm01(
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-
-    //
-    // XXX TODO: write table data.
-    //
-
 
     //
     // Save the header file: flush file buffers, unmap the view, close the

@@ -28,6 +28,7 @@ extern FILE_WORK_CALLBACK_IMPL SaveTableCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL PrepareHeaderCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL PrepareHeaderFileChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveHeaderCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveHeaderFileChm01;
 
 extern SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
     ShouldWeContinueTryingToSolveGraphChm01;
