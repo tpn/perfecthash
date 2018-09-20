@@ -111,7 +111,7 @@ PerfectHashKeysRundown(
 
 Routine Description:
 
-    Release all resources associated with a perfect hash table.
+    Release all resources associated with a perfect hash keys instance.
 
 Arguments:
 
