@@ -1079,6 +1079,7 @@ End:
 
     if (!PerfectHashTlsSetContext(NULL)) {
         SYS_ERROR(TlsSetValue);
+        Result = PH_E_SYSTEM_CALL_FAILED;
     }
 
     if (WideOutputBuffer) {
@@ -1087,6 +1088,7 @@ End:
                                           &WideOutputBuffer);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
+            Result = PH_E_SYSTEM_CALL_FAILED;
         }
         WideOutput = NULL;
     }
@@ -1097,13 +1099,15 @@ End:
                                           &BaseBuffer);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
+            Result = PH_E_SYSTEM_CALL_FAILED;
         }
         BaseBuffer = NULL;
     }
 
     if (FindHandle) {
         if (!FindClose(FindHandle)) {
-            NOTHING;
+            SYS_ERROR(FindClose);
+            Result = PH_E_SYSTEM_CALL_FAILED;
         }
         FindHandle = NULL;
     }
