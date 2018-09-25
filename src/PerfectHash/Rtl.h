@@ -196,6 +196,22 @@ typedef const WCHAR *PCWCHAR;
 )
 #endif
 
+#ifndef LARGE_INTEGER_TO_SIZE_T
+#ifdef _WIN32
+#define LARGE_INTEGER_TO_SIZE_T(Name) ((SIZE_T)Name.LowPart)
+#else
+#define LARGE_INTEGER_TO_SIZE_T(Name) ((SIZE_T)Name.QuadPart)
+#endif
+#endif
+
+#ifndef PLARGE_INTEGER_TO_SIZE_T
+#ifdef _WIN32
+#define PLARGE_INTEGER_TO_SIZE_T(Name) ((SIZE_T)Name->LowPart)
+#else
+#define PLARGE_INTEGER_TO_SIZE_T(Name) ((SIZE_T)Name->QuadPart)
+#endif
+#endif
+
 #ifndef NOTHING
 #define NOTHING
 #endif
