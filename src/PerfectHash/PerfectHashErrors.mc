@@ -423,17 +423,17 @@ This functionality is actively undergoing development and is not yet working.
 MessageId=0x232
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER
+SymbolicName=PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER
 Language=English
-The file name component of the perfect hash table file is not a valid C
-identifier.  (This is caused by file names containing characters other than
-'0-9', 'A-Z', 'a-z' and '_'.)
+The base component of the keys file name (name excluding extension)
+is not a valid C identifier.  (This is caused by file names containing
+characters other than '0-9', 'A-Z', 'a-z' and '_'.)
 .
 
 MessageId=0x233
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_HEADER_FILE
+SymbolicName=PH_E_ERROR_PREPARING_C_HEADER_FILE
 Language=English
 An error occurred whilst preparing a C header file to use for saving the
 perfect hash table solution.
@@ -470,5 +470,333 @@ Facility=ITF
 SymbolicName=PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE
 Language=English
 The calculated C header file size exceeded 4GB.
+.
+
+MessageId=0x238
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET
+Language=English
+No output directory has been set for the perfect hash context.
+.
+
+MessageId=0x239
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_LOCKED
+Language=English
+The context is locked.
+.
+
+MessageId=0x23a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_RESET_FAILED
+Language=English
+Failed to reset context.
+.
+
+MessageId=0x23b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED
+Language=English
+Failed to set context output directory.
+.
+
+MessageId=0x23c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_TABLE_CREATED_OR_LOADED
+Language=English
+The table has not been created or loaded.
+.
+
+MessageId=0x23d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_PATHS_ALREADY_INITIALIZED
+Language=English
+Paths have already been initialized for this table instance.
+.
+
+MessageId=0x23e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_PREPARING_TABLE_INFO_STREAM
+Language=English
+An error occurred whilst trying to prepare the perfect hash table's :Info
+stream.
+.
+
+MessageId=0x23f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_SAVING_TABLE_INFO_STREAM
+Language=English
+An error occurred whilst trying to save the perfect hash table's :Info
+stream.
+.
+
+MessageId=0x240
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_FILE
+Language=English
+An error occurred whilst trying to save the C source file for the perfect
+hash table solution.
+.
+
+MessageId=0x241
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_KEYS_FILE
+Language=English
+An error occurred whilst trying to save the C source keys file for the perfect
+hash table solution.
+.
+
+MessageId=0x242
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE
+Language=English
+An error occurred whilst trying to save the C source table data file for the
+perfect hash table solution.
+.
+
+MessageId=0x243
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_CLOSED
+Language=English
+The file has already been closed.
+.
+
+MessageId=0x244
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_NOT_OPEN
+Language=English
+The file has not been opened yet, or has been closed.
+.
+
+MessageId=0x245
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_LOCKED
+Language=English
+The file is locked.
+.
+
+MessageId=0x246
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_LOCKED
+Language=English
+The keys are locked.
+.
+
+MessageId=0x247
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_MAPPING_SIZE_LESS_THAN_OR_EQUAL_TO_CURRENT_SIZE
+Language=English
+The mapping size provided is less than or equal to the current file size.
+.
+
+MessageId=0x248
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_READONLY
+Language=English
+The file is readonly.
+.
+
+MessageId=0x249
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_VIEW_CREATED
+Language=English
+A file view has already been created.
+.
+
+MessageId=0x24a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_VIEW_MAPPED
+Language=English
+A file view has already been mapped.
+.
+
+MessageId=0x24b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_MAPPING_SIZE_IS_ZERO
+Language=English
+The mapping size for the file is zero.
+.
+
+MessageId=0x24c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_MAPPING_SIZE_NOT_SYSTEM_ALIGNED
+Language=English
+The mapping size for the file is not aligned to the system allocation
+granularity.
+.
+
+MessageId=0x24d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_MAPPING_SIZE_NOT_LARGE_PAGE_ALIGNED
+Language=English
+The mapping size for the file is not aligned to the large page granularity,
+and large pages have been requested.
+.
+
+MessageId=0x24e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_ALREADY_OPEN
+Language=English
+An existing file has already been loaded or created for this file instance.
+.
+
+MessageId=0x24f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_FILE_LOAD_FLAGS
+Language=English
+Invalid file load flags.
+.
+
+MessageId=0x250
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_ALREADY_CLOSED
+Language=English
+An existing file was already loaded or created and then subsequently closed
+for this file instance.
+.
+
+MessageId=0x251
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_EMPTY
+Language=English
+The file is empty.
+.
+
+MessageId=0x252
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_PATH_PARTS_EXTRACTION_FAILED
+Language=English
+Failed to extract the path into parts.
+.
+
+MessageId=0x253
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_PATH_LOCKED
+Language=English
+Path is locked.
+.
+
+MessageId=0x254
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_EXISTING_PATH_LOCKED
+Language=English
+Existing path parameter is locked.
+.
+
+MessageId=0x255
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_PATH_ALREADY_SET
+Language=English
+A path has already been set for this instance.
+.
+
+MessageId=0x256
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_EXISTING_PATH_NO_PATH_SET
+Language=English
+Existing path parameter has not had a path set.
+.
+
+MessageId=0x257
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_PATH_SET
+Language=English
+No path set.
+.
+
+MessageId=0x258
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_STRING_BUFFER_OVERFLOW
+Language=English
+An internal string buffer has overflowed.
+.
+
+MessageId=0x259
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SOURCE_PATH_LOCKED
+Language=English
+Source path parameter is locked.
+.
+
+MessageId=0x25a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SOURCE_PATH_NO_PATH_SET
+Language=English
+Source path parameter had no path set.
+.
+
+MessageId=0x25b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE
+Language=English
+Invalid table.
+.
+
+MessageId=0x25c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE_CREATE_FLAGS
+Language=English
+Invalid table create flags.
+.
+
+MessageId=0x25d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_FILE
+Language=English
+An error occurred whilst preparing the C source file.
+.
+
+MessageId=0x25e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_KEYS_FILE
+Language=English
+An error occurred whilst preparing the C source keys file.
+.
+
+MessageId=0x25f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE
+Language=English
+An error occurred whilst preparing the C source table data file.
 .
 

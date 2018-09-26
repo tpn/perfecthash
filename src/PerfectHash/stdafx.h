@@ -64,6 +64,8 @@ Abstract:
 #include "Rtl.h"
 #include "RtlOutput.h"
 #include "PerfectHashTls.h"
+#include "PerfectHashPath.h"
+#include "PerfectHashFile.h"
 #include "PerfectHashKeys.h"
 #include "PerfectHashTable.h"
 #include "PerfectHashPrimes.h"

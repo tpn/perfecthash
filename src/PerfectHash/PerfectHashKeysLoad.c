@@ -64,27 +64,23 @@ Return Value:
 
     PH_E_DUPLICATE_KEYS_DETECTED - Duplicate keys were detected.
 
-    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
+    PH_E_KEYS_LOCKED - The keys are locked.
 
     PH_E_KEYS_ALREADY_LOADED - A keys file has already been loaded.
+
+    PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER - The basename of the file
+        is not a valid C identifier.
 
     E_UNEXPECTED - All other errors.
 
 --*/
 {
     PRTL Rtl;
-    BOOL Success;
-    PCHAR Buffer = NULL;
     HRESULT Result = S_OK;
-    PALLOCATOR Allocator;
-    PVOID BaseAddress = NULL;
-    PVOID LargePageAddress = NULL;
-    HANDLE FileHandle = NULL;
-    HANDLE MappingHandle = NULL;
-    LARGE_INTEGER AllocSize;
+    PPERFECT_HASH_FILE File;
+    LARGE_INTEGER EndOfFile = { 0 };
     LARGE_INTEGER NumberOfElements;
-    FILE_STANDARD_INFO FileInfo;
-    ULONG_PTR LargePageAllocSize;
+    PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags;
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
 
     //
@@ -110,7 +106,7 @@ Return Value:
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
 
     if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
-        return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
+        return PH_E_KEYS_LOCKED;
     }
 
     if (Keys->State.Loaded) {
@@ -119,11 +115,48 @@ Return Value:
     }
 
     //
+    // Argument validation complete.  Continue with loading.
+    //
+
+    //
     // Initialize aliases.
     //
 
     Rtl = Keys->Rtl;
-    Allocator = Keys->Allocator;
+
+    //
+    // Create a file instance.
+    //
+
+    Result = Keys->Vtbl->CreateInstance(Keys,
+                                        NULL,
+                                        &IID_PERFECT_HASH_FILE,
+                                        &Keys->File);
+
+    if (FAILED(Result)) {
+        PH_ERROR(CreateInstancePerfectHashFile, Result);
+        goto Error;
+    }
+
+    File = Keys->File;
+
+    //
+    // Initialize load flags, then load the path.
+    //
+
+    FileLoadFlags.AsULong = 0;
+
+    if (KeysLoadFlags.DisableTryLargePagesForKeysData) {
+        FileLoadFlags.DisableTryLargePagesForFileData = TRUE;
+    }
+
+    Result = File->Vtbl->Load(File, Path, &FileLoadFlags, &EndOfFile);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileLoad, Result);
+        goto Error;
+    }
+
 
     //
     // Calculate the size required for a copy of the Path's underlying

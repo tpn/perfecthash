@@ -234,20 +234,44 @@ const UNICODE_STRING ContextCompletedEventPrefix =
 const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
     RTL_CONSTANT_STRING(L"PerfectHashContext_TryLargerTableSizeEvent_");
 
-const UNICODE_STRING ContextPreparedTableFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedTableFileEvent_");
-
 const UNICODE_STRING ContextVerifiedTableEventPrefix =
     RTL_CONSTANT_STRING(L"PerfectHashContext_VerifiedTableEvent_");
+
+const UNICODE_STRING ContextPreparedTableFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedTableFileEvent_");
 
 const UNICODE_STRING ContextSavedTableFileEventPrefix =
     RTL_CONSTANT_STRING(L"PerfectHashContext_SavedTableFileEvent_");
 
-const UNICODE_STRING ContextPreparedHeaderFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedHeaderFileEvent_");
+const UNICODE_STRING ContextPreparedCSourceTableDataFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCSourceTableDataEvent_");
 
-const UNICODE_STRING ContextSavedHeaderFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedHeaderFileEvent_");
+const UNICODE_STRING ContextSavedCSourceTableDataFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCSourceTableDataFileEvent_");
+
+const UNICODE_STRING ContextPreparedTableInfoStreamEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedTableInfoStreamEvent_");
+
+const UNICODE_STRING ContextSavedTableInfoStreamEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedTableInfoStreamEvent_");
+
+const UNICODE_STRING ContextPreparedCHeaderFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCHeaderFileEvent_");
+
+const UNICODE_STRING ContextSavedCHeaderFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCHeaderFileEvent_");
+
+const UNICODE_STRING ContextPreparedCSourceFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCSourceFileEvent_");
+
+const UNICODE_STRING ContextSavedCSourceFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCSourceFileEvent_");
+
+const UNICODE_STRING ContextPreparedCSourceKeysFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCSourceKeysFileEvent_");
+
+const UNICODE_STRING ContextSavedCSourceKeysFileEventPrefix =
+    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCSourceKeysFileEvent_");
 
 const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextShutdownEventPrefix,
@@ -255,11 +279,19 @@ const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextFailedEventPrefix,
     &ContextCompletedEventPrefix,
     &ContextTryLargerTableSizeEventPrefix,
-    &ContextPreparedTableFileEventPrefix,
     &ContextVerifiedTableEventPrefix,
+    &ContextPreparedTableFileEventPrefix,
     &ContextSavedTableFileEventPrefix,
-    &ContextPreparedHeaderFileEventPrefix,
-    &ContextSavedHeaderFileEventPrefix,
+    &ContextPreparedCSourceTableDataFileEventPrefix,
+    &ContextSavedCSourceTableDataFileEventPrefix,
+    &ContextPreparedTableInfoStreamEventPrefix,
+    &ContextSavedTableInfoStreamEventPrefix,
+    &ContextPreparedCHeaderFileEventPrefix,
+    &ContextSavedCHeaderFileEventPrefix,
+    &ContextPreparedCSourceFileEventPrefix,
+    &ContextSavedCSourceFileEventPrefix,
+    &ContextPreparedCSourceKeysFileEventPrefix,
+    &ContextSavedCSourceKeysFileEventPrefix,
 };
 
 //
@@ -276,14 +308,19 @@ const BYTE NumberOfContextObjectPrefixes = ARRAYSIZE(ContextObjectPrefixes);
 
 const UNICODE_STRING No = RTL_CONSTANT_STRING(L"No.\n");
 const UNICODE_STRING Yes = RTL_CONSTANT_STRING(L"Yes.\n");
-const UNICODE_STRING KeysSuffix = RTL_CONSTANT_STRING(L"keys");
-const UNICODE_STRING HeaderSuffix = RTL_CONSTANT_STRING(L"h");
-const UNICODE_STRING TableSuffix = RTL_CONSTANT_STRING(L"pht1");
+const UNICODE_STRING KeysExtension = RTL_CONSTANT_STRING(L"keys");
+const UNICODE_STRING CHeaderExtension = RTL_CONSTANT_STRING(L"h");
+const UNICODE_STRING TableExtension = RTL_CONSTANT_STRING(L"pht1");
 const UNICODE_STRING DotKeysSuffix = RTL_CONSTANT_STRING(L".keys");
 const UNICODE_STRING DotTableSuffix = RTL_CONSTANT_STRING(L".pht1");
-const UNICODE_STRING DotHeaderSuffix = RTL_CONSTANT_STRING(L".h");
+const UNICODE_STRING DotCHeaderSuffix = RTL_CONSTANT_STRING(L".h");
+const UNICODE_STRING DotCSourceSuffix = RTL_CONSTANT_STRING(L".c");
 const UNICODE_STRING InfoStreamSuffix = RTL_CONSTANT_STRING(L":Info");
 const UNICODE_STRING KeysWildcardSuffix = RTL_CONSTANT_STRING(L"*.keys");
+const UNICODE_STRING CSourceExtension = RTL_CONSTANT_STRING(L"c");
+const UNICODE_STRING CSourceKeysSuffix = RTL_CONSTANT_STRING(L"_Keys");
+const UNICODE_STRING CSourceTableDataSuffix =
+    RTL_CONSTANT_STRING(L"_TableData");
 
 
 //
@@ -309,7 +346,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
-#define NUMBER_OF_INTERFACES 7
+#define NUMBER_OF_INTERFACES 9
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -325,6 +362,8 @@ const USHORT ComponentSizes[] = {
     sizeof(PERFECT_HASH_TABLE),
     sizeof(RTL),
     sizeof(ALLOCATOR),
+    sizeof(PERFECT_HASH_FILE),
+    sizeof(PERFECT_HASH_PATH),
 
     0,
 };
@@ -340,6 +379,8 @@ const USHORT ComponentInterfaceSizes[] = {
     sizeof(PERFECT_HASH_TABLE_VTBL),
     sizeof(RTL_VTBL),
     sizeof(ALLOCATOR_VTBL),
+    sizeof(PERFECT_HASH_FILE_VTBL),
+    sizeof(PERFECT_HASH_PATH_VTBL),
 
     0,
 };
@@ -355,6 +396,8 @@ const USHORT ComponentInterfaceOffsets[] = {
     (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE, Interface),
     (USHORT)FIELD_OFFSET(RTL, Interface),
     (USHORT)FIELD_OFFSET(ALLOCATOR, Interface),
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface);
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface);
 
     0,
 };
@@ -432,12 +475,14 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     (PPERFECT_HASH_CONTEXT_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashContextSetMaximumConcurrency,
     &PerfectHashContextGetMaximumConcurrency,
+    &PerfectHashContextSetOutputDirectory,
+    &PerfectHashContextGetOutputDirectory,
     &PerfectHashContextCreateTable,
     &PerfectHashContextSelfTest,
     &PerfectHashContextSelfTestArgvW,
     &PerfectHashContextExtractSelfTestArgsFromArgvW,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 6);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 8);
 
 //
 // PerfectHashTable
@@ -449,6 +494,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     (PPERFECT_HASH_TABLE_RELEASE)&ComponentRelease,
     (PPERFECT_HASH_TABLE_CREATE_INSTANCE)&ComponentCreateInstance,
     (PPERFECT_HASH_TABLE_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashTableCreate,
     &PerfectHashTableLoad,
     &PerfectHashTableGetFlags,
     &PerfectHashTableCompile,
@@ -466,8 +512,9 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableGetAlgorithmName,
     &PerfectHashTableGetHashFunctionName,
     &PerfectHashTableGetMaskFunctionName,
+    &PerfectHashTableGetFile,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 17);
+VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 19);
 
 //
 // Rtl
@@ -508,8 +555,61 @@ const ALLOCATOR_VTBL AllocatorInterface = {
     &AllocatorCalloc,
     &AllocatorFree,
     &AllocatorFreePointer,
+    &AllocatorFreeStringBuffer,
+    &AllocatorFreeUnicodeStringBuffer,
 };
-VERIFY_VTBL_SIZE(ALLOCATOR, 4);
+VERIFY_VTBL_SIZE(ALLOCATOR, 6);
+
+//
+// PerfectHashFile
+//
+
+const PERFECT_HASH_FILE_VTBL FileInterface = {
+    (PPERFECT_HASH_FILE_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_FILE_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_FILE_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_FILE_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_FILE_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashFileLoad,
+    &PerfectHashFileCreate,
+    &PerfectHashFileGetFlags,
+    &PerfectHashFileGetPath,
+    &PerfectHashFileGetResources,
+
+    //
+    // Begin private methods.
+    //
+
+    &PerfectHashFileClose,
+    &PerfectHashFileExtend,
+    &PerfectHashFileTruncate,
+    &PerfectHashFileMap,
+    &PerfectHashFileUnmap,
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_FILE, 10);
+
+//
+// PerfectHashPath
+//
+
+const PERFECT_HASH_PATH_VTBL PathInterface = {
+    (PPERFECT_HASH_PATH_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_PATH_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_PATH_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_PATH_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_PATH_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashPathCopy,
+    &PerfectHashPathCreate,
+    &PerfectHashPathReset,
+    &PerfectHashPathGetParts,
+
+    //
+    // Begin private methods.
+    //
+
+    &PerfectHashPathExtractParts,
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_PATH, 5);
 
 //
 // Interface array.
@@ -525,6 +625,8 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashTableInterface,
     &RtlInterface,
     &AllocatorInterface,
+    &PerfectHashFileInterface,
+    &PerfectHashPathInterface,
 
     NULL,
 };
@@ -541,6 +643,8 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashTableInitialize,
     (PCOMPONENT_INITIALIZE)&RtlInitialize,
     (PCOMPONENT_INITIALIZE)&AllocatorInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashFileInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashPathInitialize,
 
     NULL,
 };
@@ -557,6 +661,8 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashTableRundown,
     (PCOMPONENT_RUNDOWN)&RtlRundown,
     (PCOMPONENT_RUNDOWN)&AllocatorRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashFileRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashPathRundown,
 
     NULL,
 };

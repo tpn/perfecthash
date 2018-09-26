@@ -37,10 +37,17 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         ULONG Valid:1;
 
         //
+        // When set, indicates paths have been initialized via a call to
+        // PerfectHashTableInitializePaths().
+        //
+
+        ULONG PathsInitialized:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -59,64 +66,25 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     COMMON_COMPONENT_HEADER(PERFECT_HASH_TABLE);
 
     //
-    // Flags provided during table creation, loading and compilation.
+    // Capture any flags provided during table creation, loading and
+    // compilation.
     //
 
     PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
+    PERFECT_HASH_TABLE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
 
     //
-    // Pad out to an 8-byte boundary.
-    //
-
-    ULONG Padding2;
-
-    //
-    // Slim read/write lock guarding the structure.
-    //
-
-    SRWLOCK Lock;
-
-    //
-    // Base address of the memory map for the backing file.
-    //
-
-    union {
-        PVOID BaseAddress;
-        PULONG Data;
-    };
-
-    //
-    // If we were able to allocate a large page buffer of sufficient size,
-    // BaseAddress above will point to it, and the following variable will
-    // capture the original mapped address.
-    //
-
-    PVOID MappedAddress;
-
-    //
-    // If a table is loaded successfully, an array will be allocated for storing
-    // values (as part of the Insert()/Lookup() API), the base address for which
-    // is captured by the next field.
+    // If a table is loaded or created successfully, an array will be allocated
+    // for storing values (as part of the Insert()/Lookup() API), the base
+    // address for which is captured by the next field.
     //
 
     union {
         PVOID ValuesBaseAddress;
         PULONG Values;
     };
-
-    //
-    // Pointer to an initialized RTL structure.
-    //
-
-    PRTL Rtl;
-
-    //
-    // Pointer to an initialized ALLOCATOR structure.
-    //
-
-    PALLOCATOR Allocator;
 
     //
     // Capture the number of elements in the underlying perfect hash table.
@@ -208,90 +176,23 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     PPERFECT_HASH_CONTEXT Context;
 
     //
-    // Handle to the backing file.
+    // Pointer to the path associated with the table file.  This is constructed
+    // up-front such that it is available for other file creation logic to
+    // create new paths from.
     //
 
-    HANDLE FileHandle;
+    PPERFECT_HASH_PATH TablePath;
 
     //
-    // Handle to the memory mapping for the backing file.
+    // Pointers to files associated with the table.
     //
 
-    HANDLE MappingHandle;
-
-    //
-    // Fully-qualified, NULL-terminated path of the backing file.
-    //
-
-    UNICODE_STRING Path;
-
-    //
-    // Capture the mapping size of the underlying array, which will be aligned
-    // up to a system allocation granularity.
-    //
-
-    ULARGE_INTEGER MappingSizeInBytes;
-
-    //
-    // Handle to the info stream backing file.
-    //
-
-    HANDLE InfoStreamFileHandle;
-
-    //
-    // Handle to the memory mapping for the backing file.
-    //
-
-    HANDLE InfoStreamMappingHandle;
-
-    //
-    // Base address of the memory map for the :Info stream.
-    //
-
-    union {
-        PVOID InfoStreamBaseAddress;
-        struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
-    };
-
-    //
-    // Fully-qualified, NULL-terminated path of the :Info stream associated with
-    // the path above.
-    //
-
-    UNICODE_STRING InfoStreamPath;
-
-    //
-    // Capture the mapping size and actual structure size for the :Info stream.
-    //
-
-    ULARGE_INTEGER InfoMappingSizeInBytes;
-    ULARGE_INTEGER InfoActualStructureSizeInBytes;
-
-    //
-    // Base address of allocation used for the Path.Buffer, HeaderPath.Buffer,
-    // and InfoStreamPath.Buffer strings.
-    //
-
-    PVOID BasePathBufferAddress;
-
-    //
-    // The C header file variables.
-    //
-
-    UNICODE_STRING HeaderPath;
-    HANDLE HeaderFileHandle;
-    HANDLE HeaderMappingHandle;
-    PVOID HeaderBaseAddress;
-    ULARGE_INTEGER HeaderMappingSizeInBytes;
-    ULONGLONG HeaderSizeInBytes;
-
-    //
-    // The table name is a valid C identifier name derived from the input
-    // file.
-    //
-
-    UNICODE_STRING TableNameW;
-    STRING TableNameA;
+    PPERFECT_HASH_FILE TableFile;
+    PPERFECT_HASH_FILE InfoStream;
+    PPERFECT_HASH_FILE CHeaderFile;
+    PPERFECT_HASH_FILE CSourceFile;
+    PPERFECT_HASH_FILE CSourceKeysFile;
+    PPERFECT_HASH_FILE CSourceTableDataFile;
 
     //
     // Backing vtbl.
@@ -310,6 +211,9 @@ typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
 #define ReleasePerfectHashTableLockExclusive(Table) \
     ReleaseSRWLockExclusive(&Table->Lock)
 
+#define PerfectHashTableName(Table) \
+    &Table->TableFile->Path->BaseNameA
+
 //
 // Internal method typedefs.
 //
@@ -319,23 +223,42 @@ HRESULT
 (NTAPI PERFECT_HASH_TABLE_INITIALIZE)(
     _In_ PPERFECT_HASH_TABLE Table
     );
-typedef PERFECT_HASH_TABLE_INITIALIZE
-      *PPERFECT_HASH_TABLE_INITIALIZE;
+typedef PERFECT_HASH_TABLE_INITIALIZE *PPERFECT_HASH_TABLE_INITIALIZE;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PERFECT_HASH_TABLE_CREATE_PATH)(
+    _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_opt_ PCUNICODE_STRING NewOutputDirectory,
+    _In_opt_ PCUNICODE_STRING NewBaseName,
+    _In_opt_ PCUNICODE_STRING AdditionalSuffix,
+    _In_opt_ PCUNICODE_STRING NewExtension,
+    _In_opt_ PCUNICODE_STRING NewStreamName,
+    _In_ PPERFECT_HASH_PATH ExistingPath,
+    _Out_ PPERFECT_HASH_PATH *Path,
+    _Out_ PPERFECT_HASH_PATH_PARTS *Parts
+    );
+typedef PERFECT_HASH_TABLE_CREATE_PATH *PPERFECT_HASH_TABLE_CREATE_PATH;
 
 typedef
 VOID
 (NTAPI PERFECT_HASH_TABLE_RUNDOWN)(
     _In_ _Post_ptr_invalid_ PPERFECT_HASH_TABLE Table
     );
-typedef PERFECT_HASH_TABLE_RUNDOWN
-      *PPERFECT_HASH_TABLE_RUNDOWN;
+typedef PERFECT_HASH_TABLE_RUNDOWN *PPERFECT_HASH_TABLE_RUNDOWN;
 
 //
 // Function decls.
 //
 
 extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
+extern PERFECT_HASH_TABLE_CREATE_PATH PerfectHashTableCreatePath;
 extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
+extern PERFECT_HASH_TABLE_CREATE PerfectHashTableCreate;
 extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
 extern PERFECT_HASH_TABLE_GET_FLAGS PerfectHashTableGetFlags;
 extern PERFECT_HASH_TABLE_COMPILE PerfectHashTableCompile;
@@ -350,6 +273,7 @@ extern PERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME
     PerfectHashTableGetHashFunctionName;
 extern PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
     PerfectHashTableGetMaskFunctionName;
+extern PERFECT_HASH_TABLE_GET_FILE PerfectHashTableGetFile;
 
 //
 // Add some helper macros that improve the aesthetics of using the index,
@@ -406,5 +330,148 @@ PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexXorAnd;
 PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexFoldOnce;
 PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexFoldTwice;
 PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexFoldThrice;
+
+//
+// Helper method for initializing a table suffix from a given algorithm, mask
+// and hash function.
+//
+
+FORCEINLINE
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+InitializeTableSuffix(
+    _In_ PUNICODE_STRING Suffix,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_opt_ PCUNICODE_STRING AdditionalSuffix,
+    _In_opt_ PULONG_INTEGER TableSize
+    )
+{
+    PWSTR Dest;
+    USHORT Index;
+    USHORT Count;
+    HRESULT Result;
+    BOOLEAN Success;
+    ULONG_PTR ExpectedDest;
+    BYTE NumberOfDigits = 0;
+    LONG_INTEGER TableSuffixLength = { 0 };
+    PUNICODE_STRING AlgorithmName = NULL;
+    PUNICODE_STRING HashFunctionName = NULL;
+    PUNICODE_STRING MaskFunctionName = NULL;
+
+    if (ARGUMENT_PRESENT(TableSize)) {
+        NumberOfDigits = CountNumberOfLongLongDigitsInline(TableSize->QuadPart);
+        TableSuffixLength.LongPart += (
+            sizeof(L'_') +
+            NumberOfDigits
+        );
+    }
+
+    if (IsValidPerfectHashAlgorithmId(AlgorithmId)) {
+        AlgorithmName = (PUNICODE_STRING)AlgorithmNames[AlgorithmId];
+        TableSuffixLength.LongPart += (
+            sizeof(L'_') +
+            AlgorithmName->Length
+        );
+    }
+
+    if (IsValidPerfectHashHashFunctionId(HashFunctionId)) {
+        HashFunctionName = (PUNICODE_STRING)HashFunctionNames[HashFunctionId];
+        TableSuffixLength.LongPart += (
+            sizeof(L'_') +
+            HashFunctionName->Length
+        );
+    }
+
+    if (IsValidPerfectHashMaskFunctionId(MaskFunctionId)) {
+        MaskFunctionName = (PUNICODE_STRING)MaskFunctionNames[MaskFunctionId];
+        TableSuffixLength.LongPart += (
+            sizeof(L'_') +
+            HashFunctionName->Length
+        );
+    }
+
+    if (ARGUMENT_PRESENT(AdditionalSuffix)) {
+        if (!IsValidUnicodeString(AdditionalSuffix)) {
+            return E_INVALIDARG;
+        }
+        TableSuffixLength.LongPart += (
+            sizeof(L'_') +
+            AdditionalSuffix->Length
+        );
+    }
+
+    if (TableSuffixLength.HighPart) {
+        return PH_E_STRING_BUFFER_OVERFLOW;
+    }
+
+    if ((ULONG)Suffix->MaximumLength <
+        TableSuffixLength.LongPart + sizeof(WCHAR)) {
+        return PH_E_STRING_BUFFER_OVERFLOW;
+    }
+
+    Dest = Suffix->Buffer;
+
+    if (NumberOfDigits) {
+        *Dest++ = L'_';
+        Suffix->Length = 1;
+        Success = AppendLongLongIntegerToUnicodeString(Suffix,
+                                                       TableSize->QuadPart,
+                                                       NumberOfDigits,
+                                                       L'\0');
+        if (!Success) {
+            return PH_E_STRING_BUFFER_OVERFLOW;
+        }
+
+        Dest += NumberOfDigits;
+    }
+
+    if (AlgorithmName) {
+        *Dest++ = L'_';
+        Count = AlgorithmName->Length >> 1;
+        CopyMemory(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
+        Dest += Count;
+    }
+
+    if (HashFunctionName) {
+        *Dest++ = L'_';
+        Count = HashFunctionName->Length >> 1;
+        CopyMemory(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
+        Dest += Count;
+    }
+
+    if (MaskFunctionName) {
+        *Dest++ = L'_';
+        Count = MaskFunctionName->Length >> 1;
+        CopyMemory(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
+        Dest += Count;
+    }
+
+    if (AdditionalSuffix) {
+        *Dest++ = L'_';
+        Count = AdditionalSuffix->Length >> 1;
+        CopyMemory(Dest, AdditionalSuffix->Buffer, AdditionalSuffix->Length);
+        Dest += Count;
+    }
+
+    ExpectedDest = (
+        RtlPointerToOffset(
+            Suffix->Buffer,
+            TableSuffixLength.LowPart
+        )
+    );
+
+    if ((ULONG_PTR)Dest != ExpectedDest) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    Suffix->Length = TableSuffixLength.LowPart;
+
+    *Dest++ = L'\0';
+
+    return S_OK;
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

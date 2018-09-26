@@ -509,25 +509,25 @@ Abstract:
 #define PH_E_WORK_IN_PROGRESS            ((HRESULT)0xE0040231L)
 
 //
-// MessageId: PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER
+// MessageId: PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER
 //
 // MessageText:
 //
-// The file name component of the perfect hash table file is not a valid C
-// identifier.  (This is caused by file names containing characters other than
-// '0-9', 'A-Z', 'a-z' and '_'.)
+// The base component of the keys file name (name excluding extension)
+// is not a valid C identifier.  (This is caused by file names containing
+// characters other than '0-9', 'A-Z', 'a-z' and '_'.)
 //
-#define PH_E_TABLE_FILE_NAME_NOT_VALID_C_IDENTIFIER ((HRESULT)0xE0040232L)
+#define PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER ((HRESULT)0xE0040232L)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_HEADER_FILE
+// MessageId: PH_E_ERROR_PREPARING_C_HEADER_FILE
 //
 // MessageText:
 //
 // An error occurred whilst preparing a C header file to use for saving the
 // perfect hash table solution.
 //
-#define PH_E_ERROR_PREPARING_HEADER_FILE ((HRESULT)0xE0040233L)
+#define PH_E_ERROR_PREPARING_C_HEADER_FILE ((HRESULT)0xE0040233L)
 
 //
 // MessageId: PH_E_ERROR_SAVING_HEADER_FILE
@@ -565,4 +565,372 @@ Abstract:
 // The calculated C header file size exceeded 4GB.
 //
 #define PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE ((HRESULT)0xE0040237L)
+
+//
+// MessageId: PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET
+//
+// MessageText:
+//
+// No output directory has been set for the perfect hash context.
+//
+#define PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET ((HRESULT)0xE0040238L)
+
+//
+// MessageId: PH_E_CONTEXT_LOCKED
+//
+// MessageText:
+//
+// The context is locked.
+//
+#define PH_E_CONTEXT_LOCKED              ((HRESULT)0xE0040239L)
+
+//
+// MessageId: PH_E_CONTEXT_RESET_FAILED
+//
+// MessageText:
+//
+// Failed to reset context.
+//
+#define PH_E_CONTEXT_RESET_FAILED        ((HRESULT)0xE004023AL)
+
+//
+// MessageId: PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED
+//
+// MessageText:
+//
+// Failed to set context output directory.
+//
+#define PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED ((HRESULT)0xE004023BL)
+
+//
+// MessageId: PH_E_NO_TABLE_CREATED_OR_LOADED
+//
+// MessageText:
+//
+// The table has not been created or loaded.
+//
+#define PH_E_NO_TABLE_CREATED_OR_LOADED  ((HRESULT)0xE004023CL)
+
+//
+// MessageId: PH_E_TABLE_PATHS_ALREADY_INITIALIZED
+//
+// MessageText:
+//
+// Paths have already been initialized for this table instance.
+//
+#define PH_E_TABLE_PATHS_ALREADY_INITIALIZED ((HRESULT)0xE004023DL)
+
+//
+// MessageId: PH_E_ERROR_PREPARING_TABLE_INFO_STREAM
+//
+// MessageText:
+//
+// An error occurred whilst trying to prepare the perfect hash table's :Info
+// stream.
+//
+#define PH_E_ERROR_PREPARING_TABLE_INFO_STREAM ((HRESULT)0xE004023EL)
+
+//
+// MessageId: PH_E_ERROR_SAVING_TABLE_INFO_STREAM
+//
+// MessageText:
+//
+// An error occurred whilst trying to save the perfect hash table's :Info
+// stream.
+//
+#define PH_E_ERROR_SAVING_TABLE_INFO_STREAM ((HRESULT)0xE004023FL)
+
+//
+// MessageId: PH_E_ERROR_SAVING_C_SOURCE_FILE
+//
+// MessageText:
+//
+// An error occurred whilst trying to save the C source file for the perfect
+// hash table solution.
+//
+#define PH_E_ERROR_SAVING_C_SOURCE_FILE  ((HRESULT)0xE0040240L)
+
+//
+// MessageId: PH_E_ERROR_SAVING_C_SOURCE_KEYS_FILE
+//
+// MessageText:
+//
+// An error occurred whilst trying to save the C source keys file for the perfect
+// hash table solution.
+//
+#define PH_E_ERROR_SAVING_C_SOURCE_KEYS_FILE ((HRESULT)0xE0040241L)
+
+//
+// MessageId: PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE
+//
+// MessageText:
+//
+// An error occurred whilst trying to save the C source table data file for the
+// perfect hash table solution.
+//
+#define PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE0040242L)
+
+//
+// MessageId: PH_E_FILE_CLOSED
+//
+// MessageText:
+//
+// The file has already been closed.
+//
+#define PH_E_FILE_CLOSED                 ((HRESULT)0xE0040243L)
+
+//
+// MessageId: PH_E_FILE_NOT_OPEN
+//
+// MessageText:
+//
+// The file has not been opened yet, or has been closed.
+//
+#define PH_E_FILE_NOT_OPEN               ((HRESULT)0xE0040244L)
+
+//
+// MessageId: PH_E_FILE_LOCKED
+//
+// MessageText:
+//
+// The file is locked.
+//
+#define PH_E_FILE_LOCKED                 ((HRESULT)0xE0040245L)
+
+//
+// MessageId: PH_E_KEYS_LOCKED
+//
+// MessageText:
+//
+// The keys are locked.
+//
+#define PH_E_KEYS_LOCKED                 ((HRESULT)0xE0040246L)
+
+//
+// MessageId: PH_E_MAPPING_SIZE_LESS_THAN_OR_EQUAL_TO_CURRENT_SIZE
+//
+// MessageText:
+//
+// The mapping size provided is less than or equal to the current file size.
+//
+#define PH_E_MAPPING_SIZE_LESS_THAN_OR_EQUAL_TO_CURRENT_SIZE ((HRESULT)0xE0040247L)
+
+//
+// MessageId: PH_E_FILE_READONLY
+//
+// MessageText:
+//
+// The file is readonly.
+//
+#define PH_E_FILE_READONLY               ((HRESULT)0xE0040248L)
+
+//
+// MessageId: PH_E_FILE_VIEW_CREATED
+//
+// MessageText:
+//
+// A file view has already been created.
+//
+#define PH_E_FILE_VIEW_CREATED           ((HRESULT)0xE0040249L)
+
+//
+// MessageId: PH_E_FILE_VIEW_MAPPED
+//
+// MessageText:
+//
+// A file view has already been mapped.
+//
+#define PH_E_FILE_VIEW_MAPPED            ((HRESULT)0xE004024AL)
+
+//
+// MessageId: PH_E_FILE_MAPPING_SIZE_IS_ZERO
+//
+// MessageText:
+//
+// The mapping size for the file is zero.
+//
+#define PH_E_FILE_MAPPING_SIZE_IS_ZERO   ((HRESULT)0xE004024BL)
+
+//
+// MessageId: PH_E_FILE_MAPPING_SIZE_NOT_SYSTEM_ALIGNED
+//
+// MessageText:
+//
+// The mapping size for the file is not aligned to the system allocation
+// granularity.
+//
+#define PH_E_FILE_MAPPING_SIZE_NOT_SYSTEM_ALIGNED ((HRESULT)0xE004024CL)
+
+//
+// MessageId: PH_E_FILE_MAPPING_SIZE_NOT_LARGE_PAGE_ALIGNED
+//
+// MessageText:
+//
+// The mapping size for the file is not aligned to the large page granularity,
+// and large pages have been requested.
+//
+#define PH_E_FILE_MAPPING_SIZE_NOT_LARGE_PAGE_ALIGNED ((HRESULT)0xE004024DL)
+
+//
+// MessageId: PH_E_FILE_ALREADY_OPEN
+//
+// MessageText:
+//
+// An existing file has already been loaded or created for this file instance.
+//
+#define PH_E_FILE_ALREADY_OPEN           ((HRESULT)0xE004024EL)
+
+//
+// MessageId: PH_E_INVALID_FILE_LOAD_FLAGS
+//
+// MessageText:
+//
+// Invalid file load flags.
+//
+#define PH_E_INVALID_FILE_LOAD_FLAGS     ((HRESULT)0xE004024FL)
+
+//
+// MessageId: PH_E_FILE_ALREADY_CLOSED
+//
+// MessageText:
+//
+// An existing file was already loaded or created and then subsequently closed
+// for this file instance.
+//
+#define PH_E_FILE_ALREADY_CLOSED         ((HRESULT)0xE0040250L)
+
+//
+// MessageId: PH_E_FILE_EMPTY
+//
+// MessageText:
+//
+// The file is empty.
+//
+#define PH_E_FILE_EMPTY                  ((HRESULT)0xE0040251L)
+
+//
+// MessageId: PH_E_PATH_PARTS_EXTRACTION_FAILED
+//
+// MessageText:
+//
+// Failed to extract the path into parts.
+//
+#define PH_E_PATH_PARTS_EXTRACTION_FAILED ((HRESULT)0xE0040252L)
+
+//
+// MessageId: PH_E_PATH_LOCKED
+//
+// MessageText:
+//
+// Path is locked.
+//
+#define PH_E_PATH_LOCKED                 ((HRESULT)0xE0040253L)
+
+//
+// MessageId: PH_E_EXISTING_PATH_LOCKED
+//
+// MessageText:
+//
+// Existing path parameter is locked.
+//
+#define PH_E_EXISTING_PATH_LOCKED        ((HRESULT)0xE0040254L)
+
+//
+// MessageId: PH_E_PATH_ALREADY_SET
+//
+// MessageText:
+//
+// A path has already been set for this instance.
+//
+#define PH_E_PATH_ALREADY_SET            ((HRESULT)0xE0040255L)
+
+//
+// MessageId: PH_E_EXISTING_PATH_NO_PATH_SET
+//
+// MessageText:
+//
+// Existing path parameter has not had a path set.
+//
+#define PH_E_EXISTING_PATH_NO_PATH_SET   ((HRESULT)0xE0040256L)
+
+//
+// MessageId: PH_E_NO_PATH_SET
+//
+// MessageText:
+//
+// No path set.
+//
+#define PH_E_NO_PATH_SET                 ((HRESULT)0xE0040257L)
+
+//
+// MessageId: PH_E_STRING_BUFFER_OVERFLOW
+//
+// MessageText:
+//
+// An internal string buffer has overflowed.
+//
+#define PH_E_STRING_BUFFER_OVERFLOW      ((HRESULT)0xE0040258L)
+
+//
+// MessageId: PH_E_SOURCE_PATH_LOCKED
+//
+// MessageText:
+//
+// Source path parameter is locked.
+//
+#define PH_E_SOURCE_PATH_LOCKED          ((HRESULT)0xE0040259L)
+
+//
+// MessageId: PH_E_SOURCE_PATH_NO_PATH_SET
+//
+// MessageText:
+//
+// Source path parameter had no path set.
+//
+#define PH_E_SOURCE_PATH_NO_PATH_SET     ((HRESULT)0xE004025AL)
+
+//
+// MessageId: PH_E_INVALID_TABLE
+//
+// MessageText:
+//
+// Invalid table.
+//
+#define PH_E_INVALID_TABLE               ((HRESULT)0xE004025BL)
+
+//
+// MessageId: PH_E_INVALID_TABLE_CREATE_FLAGS
+//
+// MessageText:
+//
+// Invalid table create flags.
+//
+#define PH_E_INVALID_TABLE_CREATE_FLAGS  ((HRESULT)0xE004025CL)
+
+//
+// MessageId: PH_E_ERROR_PREPARING_C_SOURCE_FILE
+//
+// MessageText:
+//
+// An error occurred whilst preparing the C source file.
+//
+#define PH_E_ERROR_PREPARING_C_SOURCE_FILE ((HRESULT)0xE004025DL)
+
+//
+// MessageId: PH_E_ERROR_PREPARING_C_SOURCE_KEYS_FILE
+//
+// MessageText:
+//
+// An error occurred whilst preparing the C source keys file.
+//
+#define PH_E_ERROR_PREPARING_C_SOURCE_KEYS_FILE ((HRESULT)0xE004025EL)
+
+//
+// MessageId: PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE
+//
+// MessageText:
+//
+// An error occurred whilst preparing the C source table data file.
+//
+#define PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE004025FL)
 

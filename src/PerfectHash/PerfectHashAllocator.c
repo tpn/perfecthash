@@ -83,6 +83,41 @@ AllocatorFreePointer(
     return;
 }
 
+ALLOCATOR_FREE_STRING_BUFFER AllocatorFreeStringBuffer;
+
+_Use_decl_annotations_
+VOID
+AllocatorFreeStringBuffer(
+    PALLOCATOR Allocator,
+    PSTRING String
+    )
+{
+    if (String->Buffer) {
+        AllocatorFree(Allocator, String->Buffer);
+    }
+
+    String->Buffer = NULL;
+    String->Length = 0;
+    String->MaximumLength = 0;
+}
+
+ALLOCATOR_FREE_UNICODE_STRING_BUFFER AllocatorFreeUnicodeStringBuffer;
+
+_Use_decl_annotations_
+VOID
+AllocatorFreeUnicodeStringBuffer(
+    PALLOCATOR Allocator,
+    PUNICODE_STRING String
+    )
+{
+    if (String->Buffer) {
+        AllocatorFree(Allocator, String->Buffer);
+    }
+
+    String->Buffer = NULL;
+    String->Length = 0;
+    String->MaximumLength = 0;
+}
 
 ALLOCATOR_INITIALIZE AllocatorInitialize;
 

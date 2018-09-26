@@ -57,6 +57,17 @@ extern HMODULE PerfectHashModule;
     }
 
 //
+// Define a helper macro for releasing references to COM objects and clearing
+// the associated pointer.  Typically used in Rundown() routines.
+//
+
+#define RELEASE(Name)              \
+    if (ARGUMENT_PRESENT(Name)) {  \
+        Name->Vtbl->Release(Name); \
+        Name = NULL;               \
+    }
+
+//
 // Metadata about a perfect hash table is stored in an NTFS stream named :Info
 // that is tacked onto the end of the perfect hash table's file name.  Define
 // a structure, TABLE_INFO_ON_DISK, that literally represents the on-disk
@@ -375,31 +386,26 @@ typedef enum _FILE_WORK_ID {
     FileWorkNullId = 0,
 
     //
-    // Initial table file preparation once the underlying sizes required are
-    // known.
+    // Initial file preparation work.
     //
 
-    FileWorkPrepareTableId = 1,
+    FileWorkPrepareTableFileId = 1,
+    FileWorkPrepareTableInfoStreamId,
+    FileWorkPrepareHeaderFileId,
+    FileWorkPrepareSourceFileId,
+    FileWorkPrepareSourceKeysFileId,
+    FileWorkPrepareSourceTableDataFileId,
 
     //
-    // Perfect hash solution has been solved and is ready to be saved to disk.
+    // File save work once a solution has been found.
     //
 
-    FileWorkSaveTableId,
-
-    //
-    // Initial work required to prepare the header file prior to a solution
-    // being found.
-    //
-
-    FileWorkPrepareHeaderId,
-
-    //
-    // Perfect hash solution has been solved and the file header can be saved
-    // to disk.
-    //
-
-    FileWorkSaveHeaderId,
+    FileWorkSaveTableFileId,
+    FileWorkSaveTableInfoStreamId,
+    FileWorkSaveHeaderFileId,
+    FileWorkSaveSourceFileId,
+    FileWorkSaveSourceKeysFileId,
+    FileWorkSaveSourceTableDataFileId,
 
     //
     // Invalid ID, this must come last.

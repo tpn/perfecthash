@@ -82,63 +82,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     PERFECT_HASH_KEYS_LOAD_FLAGS LoadFlags;
 
     //
-    // Slim read/write lock guarding the structure.
-    //
-
-    SRWLOCK Lock;
-
-    //
-    // Pointer to an initialized RTL structure.
-    //
-
-    PRTL Rtl;
-
-    //
-    // Pointer to an initialized ALLOCATOR structure.
-    //
-
-    PALLOCATOR Allocator;
-
-    //
     // Number of keys in the mapping.
     //
 
     ULARGE_INTEGER NumberOfElements;
 
     //
-    // Handle to the underlying keys file.
+    // Reference to a file instance backing the keys.
     //
 
-    HANDLE FileHandle;
-
-    //
-    // Handle to the memory mapping for the keys file.
-    //
-
-    HANDLE MappingHandle;
-
-    //
-    // Base address of the memory map.
-    //
-
-    union {
-        PVOID BaseAddress;
-        PULONG Keys;
-    };
-
-    //
-    // If we were able to allocate a large page buffer of sufficient size,
-    // BaseAddress above will point to it, and the following variable will
-    // capture the original mapped address.
-    //
-
-    PVOID MappedAddress;
-
-    //
-    // Fully-qualified, NULL-terminated path of the source keys file.
-    //
-
-    UNICODE_STRING Path;
+    PPERFECT_HASH_FILE File;
 
     //
     // Capture simple statistics about the keys that were loaded.

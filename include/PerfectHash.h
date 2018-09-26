@@ -101,6 +101,8 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 )
 #endif
 
+#define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
+
 //
 // Define an enumeration for identifying CPU architectures.
 //
@@ -199,6 +201,8 @@ typedef enum _PERFECT_HASH_INTERFACE_ID {
     PerfectHashInterfaceId                 = 5,
     PerfectHashRtlInterfaceId              = 6,
     PerfectHashAllocatorInterfaceId        = 7,
+    PerfectHashFileInterfaceId             = 8,
+    PerfectHashPathInterfaceId             = 9,
 
     //
     // End valid interfaces.
@@ -323,6 +327,22 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_ALLOCATOR,
                0x90, 0x13, 0xeb, 0x59, 0xc1, 0xe2, 0x53, 0xb7);
 
 //
+// IID_PERFECT_HASH_FILE 27549274-968A-499A-8349-3133E3D5E649
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_FILE,
+               0x27549274, 0x968a, 0x499a,
+               0x83, 0x49, 0x31, 0x33, 0xe3, 0xd5, 0xe6, 0x49);
+
+//
+// IID_PERFECT_HASH_PATH: 267623B1-0C5D-47B1-A297-DF0E5467AFD1
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_PATH,
+               0x267623b1, 0xc5d, 0x47b1,
+               0xa2, 0x97, 0xdf, 0xe, 0x54, 0x67, 0xaf, 0xd1);
+
+//
 // GUID array.
 //
 
@@ -337,6 +357,8 @@ static const PCGUID PerfectHashInterfaceGuids[] = {
     &IID_PERFECT_HASH_TABLE,
     &IID_PERFECT_HASH_RTL,
     &IID_PERFECT_HASH_ALLOCATOR,
+    &IID_PERFECT_HASH_FILE,
+    &IID_PERFECT_HASH_PATH,
 
     NULL
 };
@@ -390,6 +412,7 @@ PerfectHashInterfaceGuidToId(
 #define DECLARE_COMPONENT(Name, Upper)                           \
     typedef struct _##Upper Upper;                               \
     typedef Upper *P##Upper;                                     \
+    typedef const Upper *PC##Upper;                              \
                                                                  \
     typedef                                                      \
     _Must_inspect_result_                                        \
@@ -532,12 +555,32 @@ VOID
     );
 typedef ALLOCATOR_FREE_POINTER *PALLOCATOR_FREE_POINTER;
 
+typedef
+VOID
+(STDAPICALLTYPE ALLOCATOR_FREE_STRING_BUFFER)(
+    _In_ PALLOCATOR Allocator,
+    _In_ PSTRING String
+    );
+typedef ALLOCATOR_FREE_STRING_BUFFER
+      *PALLOCATOR_FREE_STRING_BUFFER;
+
+typedef
+VOID
+(STDAPICALLTYPE ALLOCATOR_FREE_UNICODE_STRING_BUFFER)(
+    _In_ PALLOCATOR Allocator,
+    _In_ PUNICODE_STRING String
+    );
+typedef ALLOCATOR_FREE_UNICODE_STRING_BUFFER
+      *PALLOCATOR_FREE_UNICODE_STRING_BUFFER;
+
 typedef struct _ALLOCATOR_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(ALLOCATOR);
     PALLOCATOR_MALLOC Malloc;
     PALLOCATOR_CALLOC Calloc;
     PALLOCATOR_FREE Free;
     PALLOCATOR_FREE_POINTER FreePointer;
+    PALLOCATOR_FREE_STRING_BUFFER FreeStringBuffer;
+    PALLOCATOR_FREE_UNICODE_STRING_BUFFER FreeUnicodeStringBuffer;
 } ALLOCATOR_VTBL;
 typedef ALLOCATOR_VTBL *PALLOCATOR_VTBL;
 
@@ -546,6 +589,429 @@ typedef struct _ALLOCATOR {
     PALLOCATOR_VTBL Vtbl;
 } ALLOCATOR;
 typedef ALLOCATOR *PALLOCATOR;
+#endif
+
+//
+// Define the PERFECT_HASH_PATH interface.
+//
+
+DECLARE_COMPONENT(Path, PERFECT_HASH_PATH);
+
+typedef struct _PERFECT_HASH_PATH_PARTS {
+
+    //
+    // Fully-qualified, NULL-terminated path of the file.  Path.Buffer is
+    // owned by this component, and allocated via the Allocator.
+    //
+
+    UNICODE_STRING FullPath;
+
+    //
+    // N.B. The following path component fields all point within Path.Buffer.
+    //
+
+    //
+    // Drive (e.g. "C" or "\\??\\...".
+    //
+
+    UNICODE_STRING Drive;
+
+    //
+    // Fully-qualified directory, including drive.
+    //
+
+    UNICODE_STRING Directory;
+
+    //
+    // Base name of the file (i.e. file name excluding extension).
+    //
+
+    UNICODE_STRING BaseName;
+
+    //
+    // If the base name (above) is a valid C identifier, an ASCII-encoded
+    // version of the string will be available in the following field.  This
+    // is guaranteed to only use ASCII (7-bit) characters and will be a valid
+    // C identifier (only starts with _, a-z or A-Z, and only contains _, 0-9,
+    // a-z and A-Z characters).
+    //
+
+    STRING BaseNameA;
+
+    //
+    // File name (includes extension).
+    //
+
+    UNICODE_STRING FileName;
+
+    //
+    // File extension (e.g. ".keys").
+    //
+
+    UNICODE_STRING Extension;
+
+    //
+    // Stream name if applicable (e.g. ":Info").
+    //
+
+    UNICODE_STRING StreamName;
+
+} PERFECT_HASH_PATH_PARTS;
+typedef PERFECT_HASH_PATH_PARTS *PPERFECT_HASH_PATH_PARTS;
+typedef const PERFECT_HASH_PATH_PARTS *PCPERFECT_HASH_PATH_PARTS;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_lock_not_held_(Path->Lock)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_PATH_COPY)(
+    _In_ PPERFECT_HASH_PATH Path,
+    _In_ PCUNICODE_STRING Source,
+    _Out_opt_ PCPERFECT_HASH_PATH_PARTS *Parts,
+    _In_opt_ PVOID Reserved
+    );
+typedef PERFECT_HASH_PATH_COPY *PPERFECT_HASH_PATH_COPY;
+
+//
+// Define path creation method and supporting flags.
+//
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_lock_not_held_(Path->Lock)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_PATH_CREATE)(
+    _In_ PPERFECT_HASH_PATH Path,
+    _In_ PCPERFECT_HASH_PATH ExistingPath,
+    _In_opt_ PCUNICODE_STRING NewDirectory,
+    _In_opt_ PCUNICODE_STRING NewBaseName,
+    _In_opt_ PCUNICODE_STRING BaseNameSuffix,
+    _In_opt_ PCUNICODE_STRING NewExtension,
+    _In_opt_ PCUNICODE_STRING NewStreamName,
+    _Out_opt_ PCPERFECT_HASH_PATH_PARTS *Parts,
+    _In_opt_ PVOID Reserved
+    );
+typedef PERFECT_HASH_PATH_CREATE *PPERFECT_HASH_PATH_CREATE;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Path->Lock)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_PATH_RESET)(
+    _In_ PPERFECT_HASH_PATH Path
+    );
+typedef PERFECT_HASH_PATH_RESET *PPERFECT_HASH_PATH_RESET;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Path->Lock)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_PATH_GET_PARTS)(
+    _In_ PPERFECT_HASH_PATH Path,
+    _Out_ PCPERFECT_HASH_PATH_PARTS *Parts
+    );
+typedef PERFECT_HASH_PATH_GET_PARTS *PPERFECT_HASH_PATH_GET_PARTS;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_PATH_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_PATH);
+    PPERFECT_HASH_PATH_COPY Copy;
+    PPERFECT_HASH_PATH_CREATE Create;
+    PPERFECT_HASH_PATH_RESET Reset;
+    PPERFECT_HASH_PATH_GET_PARTS GetParts;
+} PERFECT_HASH_PATH_VTBL;
+typedef PERFECT_HASH_PATH_VTBL *PPERFECT_HASH_PATH_VTBL;
+
+typedef struct _PERFECT_HASH_PATH {
+    PPERFECT_HASH_PATH_VTBL Vtbl;
+    SRWLOCK Lock;
+} PERFECT_HASH_PATH;
+typedef PERFECT_HASH_PATH *PPERFECT_HASH_PATH;
+#endif
+
+//
+// Define helper macros for acquiring and releasing the perfect hash path lock
+// in shared and exclusive mode.
+//
+
+#define TryAcquirePerfectHashPathLockExclusive(Path) \
+    TryAcquireSRWLockExclusive(&Path->Lock)
+
+#define AcquirePerfectHashPathLockExclusive(Path) \
+    AcquireSRWLockExclusive(&Path->Lock)
+
+#define ReleasePerfectHashPathLockExclusive(Path) \
+    ReleaseSRWLockExclusive(&Path->Lock)
+
+#define TryAcquirePerfectHashPathLockShared(Path) \
+    TryAcquireSRWLockShared(&Path->Lock)
+
+#define AcquirePerfectHashPathLockShared(Path) \
+    AcquireSRWLockShared(&Path->Lock)
+
+#define ReleasePerfectHashPathLockShared(Path) \
+    ReleaseSRWLockShared(&Path->Lock)
+
+//
+// Define the PERFECT_HASH_FILE interface.
+//
+
+DECLARE_COMPONENT(File, PERFECT_HASH_FILE);
+
+typedef union _PERFECT_HASH_FILE_LOAD_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When clear, tries to allocate the file buffer using large pages.  The
+        // caller is responsible for ensuring the process can create large pages
+        // first by enabling the lock memory privilege.  If large pages can't be
+        // allocated (because the lock memory privilege hasn't been enabled, or
+        // there are insufficient large pages available to the system), the file
+        // will be accessed via the normal memory-mapped address of the
+        // underlying file.
+        //
+        // To determine whether or not the large page allocation was successful,
+        // check the UsesLargePages bit of the PERFECT_HASH_FILE_FLAGS enum
+        // enum (the flags can be obtained via the GetFlags() vtbl function).
+        //
+
+        ULONG DisableTryLargePagesForFileData:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_FILE_LOAD_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_FILE_LOAD_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_FILE_LOAD_FLAGS *PPERFECT_HASH_FILE_LOAD_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidFileLoadFlags(
+    _In_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(FileLoadFlags)) {
+        return E_POINTER;
+    }
+
+    if (FileLoadFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_LOAD)(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ PCPERFECT_HASH_PATH Path,
+    _In_opt_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags,
+    _Out_opt_ PLARGE_INTEGER EndOfFile
+    );
+typedef PERFECT_HASH_FILE_LOAD *PPERFECT_HASH_FILE_LOAD;
+
+//
+// Define CreateFrom() method and supporting flags.
+//
+
+typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When clear, tries to allocate the file buffer using large pages.  The
+        // caller is responsible for ensuring the process can create large pages
+        // first by enabling the lock memory privilege.  If large pages can't be
+        // allocated (because the lock memory privilege hasn't been enabled, or
+        // there are insufficient large pages available to the system), the file
+        // will be accessed via the normal memory-mapped address of the
+        // underlying file.
+        //
+        // To determine whether or not the large page allocation was successful,
+        // check the UsesLargePages bit of the PERFECT_HASH_FILE_FLAGS enum
+        // enum (the flags can be obtained via the GetFlags() vtbl function).
+        //
+
+        ULONG DisableTryLargePagesForFileData:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_FILE_CREATE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_FILE_CREATE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_FILE_CREATE_FLAGS *PPERFECT_HASH_FILE_CREATE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidFileCreateFlags(
+    _In_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(FileCreateFlags)) {
+        return E_POINTER;
+    }
+
+    if (FileCreateFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_CREATE)(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ PCPERFECT_HASH_FILE Path,
+    _In_opt_ PULARGE_INTEGER MappingSize,
+    _In_opt_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
+    );
+typedef PERFECT_HASH_FILE_CREATE *PPERFECT_HASH_FILE_CREATE;
+
+//
+// Define the PERFECT_HASH_FILE_FLAGS structure.
+//
+
+typedef union _PERFECT_HASH_FILE_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the file was initialized via Load().
+        //
+        // Invariant:
+        //
+        //      If Loaded == TRUE:
+        //          Assert Created == FALSE
+        //
+
+        ULONG Loaded:1;
+
+        //
+        // When set, indicates the file was initialized via CreateFrom().
+        //
+        // Invariant:
+        //
+        //      If Created == TRUE:
+        //          Assert Loaded == FALSE
+        //
+
+        ULONG Created:1;
+
+        //
+        // When set, indicates this file is an NTFS stream.
+        //
+        // Invariant:
+        //
+        //      If IsStream == TRUE:
+        //          Assert File.StreamName.Buffer != NULL
+        //
+        //      If IsStream == FALSE:
+        //          Assert File.StreamName.Buffer == NULL
+        //
+
+        ULONG IsStream:1;
+
+        //
+        // When set, indicates the caller disabled large pages at creation or
+        // load time via the DisableTryLargePagesForFileData flag.
+        //
+
+        ULONG DoesNotWantLargePages:1;
+
+        //
+        // When set, indicates the file data resides in a memory allocation
+        // backed by large pages.  In this case, BaseAddress represents the
+        // large page address, and MappedAddress represents the original
+        // address the file was mapped at.
+        //
+
+        ULONG UsesLargePages:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:27;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_FILE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_FILE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_FILE_FLAGS *PPERFECT_HASH_FILE_FLAGS;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_GET_FLAGS)(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ ULONG SizeOfFlags,
+    _Out_writes_bytes_(SizeOfFlags) PPERFECT_HASH_FILE_FLAGS Flags
+    );
+typedef PERFECT_HASH_FILE_GET_FLAGS *PPERFECT_HASH_FILE_GET_FLAGS;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_GET_PATH)(
+    _In_ PPERFECT_HASH_FILE File,
+    _Out_ PCPERFECT_HASH_PATH *Path
+    );
+typedef PERFECT_HASH_FILE_GET_PATH *PPERFECT_HASH_FILE_GET_PATH;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_GET_RESOURCES)(
+    _In_ PPERFECT_HASH_FILE File,
+    _Out_opt_ PHANDLE FileHandle,
+    _Out_opt_ PHANDLE MappingHandle,
+    _Out_opt_ PVOID *BaseAddress,
+    _Out_opt_ PVOID *MappedAddress,
+    _Out_opt_ PULARGE_INTEGER *MappingSize
+    );
+typedef PERFECT_HASH_FILE_GET_RESOURCES
+      *PPERFECT_HASH_FILE_GET_RESOURCES;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_FILE_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_FILE);
+    PPERFECT_HASH_FILE_LOAD Load;
+    PPERFECT_HASH_FILE_CREATE Create;
+    PPERFECT_HASH_FILE_GET_FLAGS GetFlags;
+    PPERFECT_HASH_FILE_GET_PATH GetPath;
+    PPERFECT_HASH_FILE_GET_RESOURCES GetResources;
+} PERFECT_HASH_FILE_VTBL;
+typedef PERFECT_HASH_FILE_VTBL *PPERFECT_HASH_FILE_VTBL;
+
+typedef struct _PERFECT_HASH_FILE {
+    PPERFECT_HASH_FILE_VTBL Vtbl;
+} PERFECT_HASH_FILE;
+typedef PERFECT_HASH_FILE *PPERFECT_HASH_FILE;
 #endif
 
 //
@@ -1051,6 +1517,24 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
       *PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY;
 
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PCUNICODE_STRING OutputDirectory
+    );
+typedef PERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY
+      *PPERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PCUNICODE_STRING *OutputDirectory
+    );
+typedef PERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY
+      *PPERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY;
+
 //
 // Define create table flags and associated function pointer.
 //
@@ -1091,7 +1575,12 @@ IsValidContextCreateTableFlags(
     return S_OK;
 }
 
+typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
+typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
+
 typedef
+_Check_return_
+_Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_CREATE_TABLE)(
     _In_ PPERFECT_HASH_CONTEXT Context,
@@ -1099,8 +1588,8 @@ HRESULT
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PPERFECT_HASH_KEYS Keys,
-    _Inout_opt_ PCUNICODE_STRING HashTablePath,
-    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags
+    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags,
+    _Out_ PPERFECT_HASH_TABLE *Table
     );
 typedef PERFECT_HASH_CONTEXT_CREATE_TABLE *PPERFECT_HASH_CONTEXT_CREATE_TABLE;
 
@@ -1319,6 +1808,8 @@ typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
     PPERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
+    PPERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY SetOutputDirectory;
+    PPERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY GetOutputDirectory;
     PPERFECT_HASH_CONTEXT_CREATE_TABLE CreateTable;
     PPERFECT_HASH_CONTEXT_SELF_TEST SelfTest;
     PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
@@ -1339,6 +1830,62 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 //
 
 DECLARE_COMPONENT(Table, PERFECT_HASH_TABLE);
+
+typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:32;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_CREATE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_CREATE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_CREATE_FLAGS
+      *PPERFECT_HASH_TABLE_CREATE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidTableCreateFlags(
+    _In_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(TableCreateFlags)) {
+        return E_POINTER;
+    }
+
+    if (TableCreateFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
+typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_CREATE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PPERFECT_HASH_KEYS Keys,
+    _In_ PCUNICODE_STRING OutputDirectory,
+    _In_opt_ PCUNICODE_STRING TableBaseName,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
+    );
+typedef PERFECT_HASH_TABLE_CREATE *PPERFECT_HASH_TABLE_CREATE;
 
 typedef
 _Success_(return >= 0)
@@ -1364,8 +1911,8 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         //
         // Invariant:
         //
-        //  - If Created == TRUE:
-        //      Assert Loaded == FALSE
+        //      If Created == TRUE:
+        //          Assert Loaded == FALSE
         //
 
         ULONG Created:1;
@@ -1376,8 +1923,8 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         //
         // Invariant:
         //
-        //  - If Loaded == TRUE:
-        //      Assert Created == FALSE
+        //      If Loaded == TRUE:
+        //          Assert Created == FALSE
         //
 
         ULONG Loaded:1;
@@ -1545,8 +2092,18 @@ HRESULT
 typedef PERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME
       *PPERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME;
 
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_GET_FILE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PPERFECT_HASH_FILE *File
+    );
+typedef PERFECT_HASH_TABLE_GET_FILE *PPERFECT_HASH_TABLE_GET_FILE;
+
 typedef struct _PERFECT_HASH_TABLE_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE);
+    PPERFECT_HASH_TABLE_CREATE Create;
     PPERFECT_HASH_TABLE_LOAD Load;
     PPERFECT_HASH_TABLE_GET_FLAGS GetFlags;
     PPERFECT_HASH_TABLE_COMPILE Compile;
@@ -1564,6 +2121,7 @@ typedef struct _PERFECT_HASH_TABLE_VTBL {
     PPERFECT_HASH_TABLE_GET_ALGORITHM_NAME GetAlgorithmName;
     PPERFECT_HASH_TABLE_GET_HASH_FUNCTION_NAME GetHashFunctionName;
     PPERFECT_HASH_TABLE_GET_MASK_FUNCTION_NAME GetMaskFunctionName;
+    PPERFECT_HASH_TABLE_GET_FILE GetFile;
 } PERFECT_HASH_TABLE_VTBL;
 typedef PERFECT_HASH_TABLE_VTBL *PPERFECT_HASH_TABLE_VTBL;
 

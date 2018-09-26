@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm_01.h
+    Chm01.h
 
 Abstract:
 
@@ -25,10 +25,18 @@ extern PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
 extern FILE_WORK_CALLBACK_IMPL PrepareTableCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveTableCallbackChm01;
-extern FILE_WORK_CALLBACK_IMPL PrepareHeaderCallbackChm01;
-extern FILE_WORK_CALLBACK_IMPL PrepareHeaderFileChm01;
-extern FILE_WORK_CALLBACK_IMPL SaveHeaderCallbackChm01;
-extern FILE_WORK_CALLBACK_IMPL SaveHeaderFileChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareTableInfoStreamCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveTableInfoStreamCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareCHeaderCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareCHeaderFileChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCHeaderCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCHeaderFileChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareCSourceCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCSourceCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareCSourceKeysCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCSourceKeysCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareCSourceTableDataCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCSourceTableDataCallbackChm01;
 
 extern SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
     ShouldWeContinueTryingToSolveGraphChm01;

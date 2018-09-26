@@ -12,9 +12,10 @@ Abstract:
     PerfectHash component.  The context encapsulates threadpool resources
     in order to support finding perfect hash table solutions in parallel.
 
-    Routines are provided for context initialization and rundown, setting
-    and getting the maximum concurrency associated with a context, and callback
-    routines for the various threadpool functions.
+    Routines are provided for context initialization and rundown, setting and
+    getting the maximum concurrency associated with a context, setting and
+    getting the output directory, and callback routines for the various
+    threadpool functions.
 
 --*/
 
@@ -683,6 +684,11 @@ Return Value:
     Context->ResizeLimit = 0;
     Context->Attempts = 0;
 
+    //
+    // N.B. This is horrible.  We should really relocate all the counters etc
+    //      out of the context.
+    //
+
     Context->SolveStartCycles.QuadPart = 0;
     Context->SolveStartCounter.QuadPart = 0;
     Context->SolveEndCycles.QuadPart = 0;
@@ -711,27 +717,81 @@ Return Value:
     Context->SaveTableFileElapsedCycles.QuadPart = 0;
     Context->SaveTableFileElapsedMicroseconds.QuadPart = 0;
 
-    Context->PrepareHeaderFileStartCycles.QuadPart = 0;
-    Context->PrepareHeaderFileStartCounter.QuadPart = 0;
-    Context->PrepareHeaderFileEndCycles.QuadPart = 0;
-    Context->PrepareHeaderFileEndCounter.QuadPart = 0;
-    Context->PrepareHeaderFileElapsedCycles.QuadPart = 0;
-    Context->PrepareHeaderFileElapsedMicroseconds.QuadPart = 0;
+    Context->PrepareCHeaderFileStartCycles.QuadPart = 0;
+    Context->PrepareCHeaderFileStartCounter.QuadPart = 0;
+    Context->PrepareCHeaderFileEndCycles.QuadPart = 0;
+    Context->PrepareCHeaderFileEndCounter.QuadPart = 0;
+    Context->PrepareCHeaderFileElapsedCycles.QuadPart = 0;
+    Context->PrepareCHeaderFileElapsedMicroseconds.QuadPart = 0;
 
-    Context->SaveHeaderFileStartCycles.QuadPart = 0;
-    Context->SaveHeaderFileStartCounter.QuadPart = 0;
-    Context->SaveHeaderFileEndCycles.QuadPart = 0;
-    Context->SaveHeaderFileEndCounter.QuadPart = 0;
-    Context->SaveHeaderFileElapsedCycles.QuadPart = 0;
-    Context->SaveHeaderFileElapsedMicroseconds.QuadPart = 0;
+    Context->SaveCHeaderFileStartCycles.QuadPart = 0;
+    Context->SaveCHeaderFileStartCounter.QuadPart = 0;
+    Context->SaveCHeaderFileEndCycles.QuadPart = 0;
+    Context->SaveCHeaderFileEndCounter.QuadPart = 0;
+    Context->SaveCHeaderFileElapsedCycles.QuadPart = 0;
+    Context->SaveCHeaderFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->PrepareCSourceFileStartCycles.QuadPart = 0;
+    Context->PrepareCSourceFileStartCounter.QuadPart = 0;
+    Context->PrepareCSourceFileEndCycles.QuadPart = 0;
+    Context->PrepareCSourceFileEndCounter.QuadPart = 0;
+    Context->PrepareCSourceFileElapsedCycles.QuadPart = 0;
+    Context->PrepareCSourceFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->SaveCSourceFileStartCycles.QuadPart = 0;
+    Context->SaveCSourceFileStartCounter.QuadPart = 0;
+    Context->SaveCSourceFileEndCycles.QuadPart = 0;
+    Context->SaveCSourceFileEndCounter.QuadPart = 0;
+    Context->SaveCSourceFileElapsedCycles.QuadPart = 0;
+    Context->SaveCSourceFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->PrepareCSourceKeysFileStartCycles.QuadPart = 0;
+    Context->PrepareCSourceKeysFileStartCounter.QuadPart = 0;
+    Context->PrepareCSourceKeysFileEndCycles.QuadPart = 0;
+    Context->PrepareCSourceKeysFileEndCounter.QuadPart = 0;
+    Context->PrepareCSourceKeysFileElapsedCycles.QuadPart = 0;
+    Context->PrepareCSourceKeysFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->SaveCSourceKeysFileStartCycles.QuadPart = 0;
+    Context->SaveCSourceKeysFileStartCounter.QuadPart = 0;
+    Context->SaveCSourceKeysFileEndCycles.QuadPart = 0;
+    Context->SaveCSourceKeysFileEndCounter.QuadPart = 0;
+    Context->SaveCSourceKeysFileElapsedCycles.QuadPart = 0;
+    Context->SaveCSourceKeysFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->PrepareCSourceTableDataFileStartCycles.QuadPart = 0;
+    Context->PrepareCSourceTableDataFileStartCounter.QuadPart = 0;
+    Context->PrepareCSourceTableDataFileEndCycles.QuadPart = 0;
+    Context->PrepareCSourceTableDataFileEndCounter.QuadPart = 0;
+    Context->PrepareCSourceTableDataFileElapsedCycles.QuadPart = 0;
+    Context->PrepareCSourceTableDataFileElapsedMicroseconds.QuadPart = 0;
+
+    Context->SaveCSourceTableDataFileStartCycles.QuadPart = 0;
+    Context->SaveCSourceTableDataFileStartCounter.QuadPart = 0;
+    Context->SaveCSourceTableDataFileEndCycles.QuadPart = 0;
+    Context->SaveCSourceTableDataFileEndCounter.QuadPart = 0;
+    Context->SaveCSourceTableDataFileElapsedCycles.QuadPart = 0;
+    Context->SaveCSourceTableDataFileElapsedMicroseconds.QuadPart = 0;
 
     Context->TableFileWorkErrors = 0;
     Context->TableFileWorkLastError = 0;
     Context->TableFileWorkLastResult = S_OK;
 
-    Context->HeaderFileWorkErrors = 0;
-    Context->HeaderFileWorkLastError = 0;
-    Context->HeaderFileWorkLastResult = S_OK;
+    Context->CHeaderFileWorkErrors = 0;
+    Context->CHeaderFileWorkLastError = 0;
+    Context->CHeaderFileWorkLastResult = S_OK;
+
+    Context->CSourceFileWorkErrors = 0;
+    Context->CSourceFileWorkLastError = 0;
+    Context->CSourceFileWorkLastResult = S_OK;
+
+    Context->CSourceKeysFileWorkErrors = 0;
+    Context->CSourceKeysFileWorkLastError = 0;
+    Context->CSourceKeysFileWorkLastResult = S_OK;
+
+    Context->CHeaderFileWorkErrors = 0;
+    Context->CHeaderFileWorkLastError = 0;
+    Context->CHeaderFileWorkLastResult = S_OK;
 
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;
@@ -1061,13 +1121,16 @@ Arguments:
 
 Return Value:
 
-    S_OK on success.
+    S_OK - Maximum concurrency was set successfully.
 
-    E_POINTER if Context is NULL.
+    E_POINTER - Context parameter is NULL.
 
-    PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS if a table creation is in progress.
+    PH_E_CONTEXT_LOCKED - The context is locked.
 
-    E_UNEXPECTED for any other error.
+    PH_E_SET_MAXIMUM_CONCURRENCY_FAILED - The call to
+        SetThreadpoolThreadMinimum() failed.
+
+    E_UNEXPECTED - Internal error.
 
 --*/
 {
@@ -1084,7 +1147,7 @@ Return Value:
     }
 
     if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
-        return PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS;
+        return PH_E_CONTEXT_LOCKED;
     }
 
     Rtl = Context->Rtl;
@@ -1094,12 +1157,11 @@ Return Value:
     Context->MaximumConcurrency = MaximumConcurrency;
 
     if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
-        Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
         SYS_ERROR(SetThreadpoolThreadMinimum);
+        Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
     } else {
         Context->MinimumConcurrency = MaximumConcurrency;
     }
-
 
     ReleasePerfectHashContextLockExclusive(Context);
 
@@ -1133,7 +1195,9 @@ Arguments:
 
 Return Value:
 
-    S_OK on success, E_POINTER if Context or MaximumConcurrency is NULL.
+    S_OK - Concurrency was successfully obtained.
+
+    E_POINTER - Context or MaximumConcurrency parameters were NULL.
 
 --*/
 {
@@ -1146,6 +1210,194 @@ Return Value:
     }
 
     *MaximumConcurrency = Context->MaximumConcurrency;
+
+    return S_OK;
+}
+
+PERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY PerfectHashContextSetOutputDirectory;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextSetOutputDirectory(
+    PPERFECT_HASH_CONTEXT Context,
+    PCUNICODE_STRING OutputDirectory
+    )
+/*++
+
+Routine Description:
+
+    Sets the output directory for a given context.  All generated files will be
+    saved to this directory.  This routine must be called before attempting to
+    create any perfect hash tables.
+
+Arguments:
+
+    Context - Supplies the context for which the output directory is to be set.
+
+    OutputDirectory - Supplies the output directory to set.
+
+Return Value:
+
+    S_OK - Output directory was set successfully.
+
+    E_POINTER - Context or OutputDirectory parameters were NULL.
+
+    E_INVALIDARG - OutputDirectory was not a valid directory string.
+
+    E_UNEXPECTED - Internal error.
+
+    PH_E_CONTEXT_LOCKED - The context is locked.
+
+--*/
+{
+    PRTL Rtl;
+    PWSTR Buffer;
+    PALLOCATOR Allocator;
+    HRESULT Result = S_OK;
+    PUNICODE_STRING Directory;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(OutputDirectory)) {
+        return E_POINTER;
+    }
+
+    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(OutputDirectory)) {
+        return E_INVALIDARG;
+    }
+
+    if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
+        return PH_E_CONTEXT_LOCKED;
+    }
+
+    //
+    // Argument validation complete.
+    //
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Directory = &Context->OutputDirectory;
+    Allocator = Context->Allocator;
+
+    //
+    // If an output directory is already set, free it.
+    //
+
+    if (Directory->Buffer) {
+        Allocator->Vtbl->FreePointer(Allocator, &Directory->Buffer);
+    }
+
+    //
+    // Allocate and copy the string.
+    //
+
+    Buffer = Allocator->Vtbl->Calloc(Allocator,
+                                     1,
+                                     OutputDirectory->MaximumLength);
+
+    if (!Buffer) {
+        SYS_ERROR(VirtualAlloc);
+        goto Error;
+    }
+
+    CopyMemory(Buffer,
+               OutputDirectory->Buffer,
+               OutputDirectory->MaximumLength);
+
+    Directory->Length = OutputDirectory->Length;
+    Directory->MaximumLength = OutputDirectory->MaximumLength;
+    Directory->Buffer = Buffer;
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    ReleasePerfectHashContextLockExclusive(Context);
+
+    return Result;
+}
+
+PERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY PerfectHashContextGetOutputDirectory;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextGetOutputDirectory(
+    PPERFECT_HASH_CONTEXT Context,
+    PCUNICODE_STRING *OutputDirectoryPointer
+    )
+/*++
+
+Routine Description:
+
+    Obtains a previously set output directory for a given context.
+
+Arguments:
+
+    Context - Supplies the context for which the output directory is to be
+        obtained.
+
+    OuputDirectory - Supplies the address of a variable that receives a pointer
+        to the UNICODE_STRING structure representing the output directory.
+
+Return Value:
+
+    S_OK - Output directory obtained successfully.
+
+    E_POINTER - Context or OutputDirectory parameters were NULL.
+
+    PH_E_CONTEXT_LOCKED - The context was locked.
+
+    PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET - No output directory has been set.
+
+--*/
+{
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(OutputDirectoryPointer)) {
+        return E_POINTER;
+    }
+
+    if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
+        return PH_E_CONTEXT_LOCKED;
+    }
+
+    if (!Context->OutputDirectory.Buffer) {
+        ReleasePerfectHashContextLockExclusive(Context);
+        return PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET;
+    }
+
+    *OutputDirectoryPointer = &Context->OutputDirectory;
+
+    ReleasePerfectHashContextLockExclusive(Context);
 
     return S_OK;
 }

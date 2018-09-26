@@ -57,7 +57,7 @@ Return Value:
     Keys->SizeOfStruct = sizeof(*Keys);
 
     //
-    // Create Rtl and Allocator components.
+    // Create Rtl, Allocator and File components.
     //
 
     Result = Keys->Vtbl->CreateInstance(Keys,
@@ -73,6 +73,15 @@ Return Value:
                                         NULL,
                                         &IID_PERFECT_HASH_ALLOCATOR,
                                         &Keys->Allocator);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Keys->Vtbl->CreateInstance(Keys,
+                                        NULL,
+                                        &IID_PERFECT_HASH_FILE,
+                                        &Keys->File);
 
     if (FAILED(Result)) {
         goto Error;
@@ -124,8 +133,6 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
-
     //
     // Validate arguments.
     //
@@ -140,69 +147,16 @@ Return Value:
 
     ASSERT(Keys->SizeOfStruct == sizeof(*Keys));
 
-    Rtl = Keys->Rtl;
-    if (!Rtl) {
-        return;
-    }
-
-    //
-    // Clean up any resources that are still active.
-    //
-
-    if (!Keys->MappedAddress) {
-
-        ASSERT(!Keys->Flags.KeysDataUsesLargePages);
-
-    } else if (Keys->BaseAddress) {
-
-        //
-        // If MappedAddress is non-NULL, BaseAddress is actually our
-        // large page address which needs to be freed with VirtualFree().
-        //
-
-        ASSERT(Keys->Flags.KeysDataUsesLargePages);
-        if (!VirtualFree(Keys->BaseAddress, 0, MEM_RELEASE)) {
-            SYS_ERROR(VirtualFree);
-        }
-
-        //
-        // Switch the base address back so it's unmapped correctly below.
-        //
-
-        Keys->BaseAddress = Keys->MappedAddress;
-        Keys->MappedAddress = NULL;
-    }
-
-    if (Keys->BaseAddress) {
-        if (!UnmapViewOfFile(Keys->BaseAddress)) {
-            SYS_ERROR(UnmapViewOfFile);
-        }
-        Keys->BaseAddress = NULL;
-    }
-
-    if (Keys->MappingHandle) {
-        if (!CloseHandle(Keys->MappingHandle)) {
-            SYS_ERROR(CloseHandle);
-        }
-        Keys->MappingHandle = NULL;
-    }
-
-    if (Keys->FileHandle) {
-        if (!CloseHandle(Keys->FileHandle)) {
-            SYS_ERROR(CloseHandle);
-        }
-        Keys->FileHandle = NULL;
-    }
-
     //
     // Release COM references, if applicable.
     //
 
+    if (Keys->File) {
+        Keys->File->Vtbl->Release(Keys->File);
+        Keys->File = NULL;
+    }
+
     if (Keys->Allocator) {
-        if (Keys->Path.Buffer) {
-            Keys->Allocator->Vtbl->FreePointer(Keys->Allocator,
-                                               &Keys->Path.Buffer);
-        }
         Keys->Allocator->Vtbl->Release(Keys->Allocator);
         Keys->Allocator = NULL;
     }
@@ -211,6 +165,7 @@ Return Value:
         Keys->Rtl->Vtbl->Release(Keys->Rtl);
         Keys->Rtl = NULL;
     }
+
 }
 
 PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
@@ -315,7 +270,7 @@ Return Value:
 
     PH_E_KEYS_NOT_LOADED - No file has been loaded yet.
 
-    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
+    PH_E_KEYS_LOCKED - The keys are locked.
 
 --*/
 {
@@ -340,7 +295,7 @@ Return Value:
         return PH_E_KEYS_NOT_LOADED;
     }
 
-    *BaseAddress = Keys->BaseAddress;
+    *BaseAddress = Keys->File->BaseAddress;
     NumberOfElements->QuadPart = Keys->NumberOfElements.QuadPart;
 
     ReleasePerfectHashKeysLockExclusive(Keys);
@@ -384,7 +339,7 @@ Return Value:
 
     PH_E_KEYS_NOT_LOADED - No file has been loaded yet.
 
-    PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS - A keys file load is in progress.
+    PH_E_KEYS_LOCKED - The keys are locked.
 
 --*/
 {
@@ -403,7 +358,7 @@ Return Value:
     }
 
     if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
-        return PH_E_KEYS_LOAD_ALREADY_IN_PROGRESS;
+        return PH_E_KEYS_LOCKED;
     }
 
     if (!Keys->State.Loaded) {

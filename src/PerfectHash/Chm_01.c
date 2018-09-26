@@ -33,6 +33,43 @@ Abstract:
 
 #define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 5
 
+//
+// Define helper macros for checking prepare and save file work errors.
+//
+
+#define CHECK_PREPARE_ERRORS(Name, Upper)            \
+    if (Context->##Name##WorkErrors > 0) {           \
+        Result = Context->##Name##WorkLastResult;    \
+        if (Result == S_OK) {                        \
+            Result = PH_E_ERROR_PREPARING_##Upper##; \
+        }                                            \
+        goto Error;                                  \
+    }
+
+#define CHECK_ALL_PREPARE_ERRORS()                                       \
+    CHECK_PREPARE_ERRORS(TableFile, TABLE_FILE);                         \
+    CHECK_PREPARE_ERRORS(TableInfoStream, TABLE_INFO_STREAM);            \
+    CHECK_PREPARE_ERRORS(CHeaderFile, C_HEADER_FILE);                    \
+    CHECK_PREPARE_ERRORS(CSourceFile, C_SOURCE_FILE);                    \
+    CHECK_PREPARE_ERRORS(CSourceKeysFile, C_SOURCE_KEYS_FILE);           \
+    CHECK_PREPARE_ERRORS(CSourceTableDataFile, C_SOURCE_TABLE_DATA_FILE)
+
+#define CHECK_SAVE_ERRORS(Name, Upper)            \
+    if (Context->##Name##WorkErrors > 0) {        \
+        Result = Context->##Name##WorkLastResult; \
+        if (Result == S_OK) {                     \
+            Result = PH_E_ERROR_SAVING_##Upper##; \
+        }                                         \
+        goto Error;                               \
+    }
+
+#define CHECK_ALL_SAVE_ERRORS()                                       \
+    CHECK_SAVE_ERRORS(TableFile, TABLE_FILE);                         \
+    CHECK_SAVE_ERRORS(TableInfoStream, TABLE_INFO_STREAM);            \
+    CHECK_SAVE_ERRORS(CHeaderFile, C_HEADER_FILE);                    \
+    CHECK_SAVE_ERRORS(CSourceFile, C_SOURCE_FILE);                    \
+    CHECK_SAVE_ERRORS(CSourceKeysFile, C_SOURCE_KEYS_FILE);           \
+    CHECK_SAVE_ERRORS(CSourceTableDataFile, C_SOURCE_TABLE_DATA_FILE)
 
 _Use_decl_annotations_
 HRESULT
@@ -97,7 +134,6 @@ Return Value:
     PGRAPH Graph;
     PBYTE Buffer;
     BOOLEAN Success;
-    BOOLEAN PreparedHeader = FALSE;
     USHORT PageSize;
     USHORT PageShift;
     ULONG_PTR LastPage;
@@ -121,10 +157,17 @@ Return Value:
     PGRAPH_DIMENSIONS Dim;
     PSLIST_ENTRY ListEntry;
     SYSTEM_INFO SystemInfo;
-    FILE_WORK_ITEM SaveTableFile;
     FILE_WORK_ITEM PrepareTableFile;
-    FILE_WORK_ITEM SaveHeaderFile;
-    FILE_WORK_ITEM PrepareHeaderFile;
+    FILE_WORK_ITEM PrepareTableInfoStream;
+    FILE_WORK_ITEM PrepareCHeaderFile;
+    FILE_WORK_ITEM PrepareCSourceFile;
+    FILE_WORK_ITEM PrepareCSourceKeysFile;
+    FILE_WORK_ITEM PrepareCSourceTableDataFile;
+    FILE_WORK_ITEM SaveTableFile;
+    FILE_WORK_ITEM SaveCHeaderFile;
+    FILE_WORK_ITEM SaveCSourceFile;
+    FILE_WORK_ITEM SaveCSourceKeysFile;
+    FILE_WORK_ITEM SaveCSourceTableDataFile;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
     ULONGLONG Closest;
@@ -140,7 +183,6 @@ Return Value:
     ULONGLONG ExpectedTotalBufferSizeInBytes;
     ULONGLONG ExpectedUsableBufferSizeInBytesPerBuffer;
     ULONGLONG GraphSizeInBytesIncludingGuardPage;
-    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
     ULARGE_INTEGER AllocSize;
     ULARGE_INTEGER NumberOfEdges;
     ULARGE_INTEGER NumberOfVertices;
@@ -150,17 +192,35 @@ Return Value:
     ULARGE_INTEGER AssignedBitmapBufferSizeInBytes;
     ULARGE_INTEGER IndexBitmapBufferSizeInBytes;
     PPERFECT_HASH_CONTEXT Context = Table->Context;
-    BOOL WaitForAllEvents;
+    BOOL WaitForAllEvents = TRUE;
+
     HANDLE Events[5];
-    HANDLE SaveFileEvents[2];
+    HANDLE SaveEvents[6];
+    HANDLE PrepareEvents[6];
 
     //
-    // Validate arguments.
+    // Initialize event arrays.
     //
 
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
+    Events[0] = Context->SucceededEvent;
+    Events[1] = Context->CompletedEvent;
+    Events[2] = Context->ShutdownEvent;
+    Events[3] = Context->FailedEvent;
+    Events[4] = Context->TryLargerTableSizeEvent;
+
+    SaveEvents[0] = Context->SavedTableFileEvent;
+    SaveEvents[1] = Context->SavedTableInfoStreamEvent;
+    SaveEvents[2] = Context->SavedCHeaderFileEvent;
+    SaveEvents[3] = Context->SavedCSourceFileEvent;
+    SaveEvents[4] = Context->SavedCSourceKeysFileEvent;
+    SaveEvents[5] = Context->SavedCSourceTableDataFileEvent;
+
+    PrepareEvents[0] = Context->PreparedTableFileEvent;
+    PrepareEvents[1] = Context->PreparedTableInfoStreamEvent;
+    PrepareEvents[2] = Context->PreparedCHeaderFileEvent;
+    PrepareEvents[3] = Context->PreparedCSourceFileEvent;
+    PrepareEvents[4] = Context->PreparedCSourceKeysFileEvent;
+    PrepareEvents[5] = Context->PreparedCSourceTableDataFileEvent;
 
     //
     // The following label is jumped to by code later in this routine when we
@@ -177,10 +237,9 @@ RetryWithLargerTableSize:
     //
 
     Rtl = Table->Rtl;
-    Keys = (PULONG)Table->Keys->BaseAddress;
+    Keys = (PULONG)Table->Keys->File->BaseAddress;
     Allocator = Table->Allocator;
     Context = Table->Context;
-    MaskFunctionId = Context->MaskFunctionId;
     ProcessHandle = GetCurrentProcess();
 
     //
@@ -193,22 +252,16 @@ RetryWithLargerTableSize:
     }
 
     //
-    // Explicitly reset all events*.  This ensures everything is back in the
+    // Explicitly reset all events.  This ensures everything is back in the
     // starting state if we happen to be attempting to solve the graph after
     // a resize event.
     //
-    // [*]: Except the PreparedFileHeaderEvent, which is only set once
-    //      regardless of how many table resize events occur.
-    //
 
     Event = (PHANDLE)&Context->FirstEvent;
+
     NumberOfEvents = GetNumberOfContextEvents(Context);
 
     for (Index = 0; Index < NumberOfEvents; Index++, Event++) {
-
-        if (*Event == Context->PreparedHeaderFileEvent) {
-            continue;
-        }
 
         if (!ResetEvent(*Event)) {
             SYS_ERROR(ResetEvent);
@@ -727,15 +780,13 @@ RetryWithLargerTableSize:
     Table->IndexFold = Table->IndexShift >> 3;
 
     //
-    // Save the on-disk representation of the graph information.  This is a
-    // smaller subset of data needed in order to load a previously-solved
-    // graph as a perfect hash table.  The data resides in an NTFS stream named
-    // :Info off the main perfect hash table file.  It will have been mapped for
-    // us already at Table->InfoStreamBaseAddress.
+    // Fill out the in-memory representation of the on-disk table/graph info.
+    // This is a smaller subset of data needed in order to load a previously
+    // solved graph as a perfect hash table.  The data will eventually be
+    // written into the NTFS stream :Info.
     //
 
-    GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)Table->InfoStreamBaseAddress;
-    ASSERT(GraphInfoOnDisk);
+    GraphInfoOnDisk = &Context->GraphInfoOnDisk;
     TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
     TableInfoOnDisk->Magic.LowPart = TABLE_INFO_ON_DISK_MAGIC_LOWPART;
     TableInfoOnDisk->Magic.HighPart = TABLE_INFO_ON_DISK_MAGIC_HIGHPART;
@@ -791,38 +842,22 @@ RetryWithLargerTableSize:
     Context->FileWorkCallback = FileWorkCallbackChm01;
 
     //
-    // Prepare the initial "table file preparation" work callback.  This will
-    // extend the backing file to the appropriate size.
+    // Submit all of the file preparation work items.
     //
 
-    ZeroStruct(PrepareTableFile);
-    PrepareTableFile.FileWorkId = FileWorkPrepareTableId;
-    InterlockedPushEntrySList(&Context->FileWorkListHead,
-                              &PrepareTableFile.ListEntry);
+#define SUBMIT_FILE_WORK(Name)                            \
+    ZeroStruct(##Name##);                                 \
+    ##Name##.FileWorkId = FileWork##Name##Id;             \
+    InterlockedPushEntrySList(&Context->FileWorkListHead, \
+                              &##Name##.ListEntry);       \
+    SubmitThreadpoolWork(Context->FileWork)
 
-    CONTEXT_START_TIMERS(PrepareTableFile);
-
-    SubmitThreadpoolWork(Context->FileWork);
-
-    //
-    // Prepare the initial "header file preparation" work callback.  This will
-    // write the common code shared by all headers (i.e. everything that can
-    // be written prior to the perfect hash table solution being solved).
-    //
-
-    if (!PreparedHeader) {
-
-        ZeroStruct(PrepareHeaderFile);
-        PrepareHeaderFile.FileWorkId = FileWorkPrepareHeaderId;
-        InterlockedPushEntrySList(&Context->FileWorkListHead,
-                                  &PrepareHeaderFile.ListEntry);
-
-        CONTEXT_START_TIMERS(PrepareHeaderFile);
-
-        SubmitThreadpoolWork(Context->FileWork);
-
-        PreparedHeader = TRUE;
-    }
+    SUBMIT_FILE_WORK(PrepareTableFile);
+    SUBMIT_FILE_WORK(PrepareTableInfoStream);
+    SUBMIT_FILE_WORK(PrepareCSourceTableDataFile);
+    SUBMIT_FILE_WORK(PrepareCHeaderFile);
+    SUBMIT_FILE_WORK(PrepareCSourceFile);
+    SUBMIT_FILE_WORK(PrepareCSourceKeysFile);
 
     //
     // Capture initial cycles as reported by __rdtsc() and the performance
@@ -932,12 +967,6 @@ RetryWithLargerTableSize:
     // Wait on the context's events.
     //
 
-    Events[0] = Context->SucceededEvent;
-    Events[1] = Context->CompletedEvent;
-    Events[2] = Context->ShutdownEvent;
-    Events[3] = Context->FailedEvent;
-    Events[4] = Context->TryLargerTableSizeEvent;
-
     WaitResult = WaitForMultipleObjects(ARRAYSIZE(Events),
                                         Events,
                                         FALSE,
@@ -961,12 +990,13 @@ RetryWithLargerTableSize:
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
 
         //
-        // Perform a blocking wait for the prepare table file work to complete.
-        // (It would be highly unlikely that this event hasn't been set yet.)
+        // Perform a blocking wait for the prepare work to complete.
         //
 
-        WaitResult = WaitForSingleObject(Context->PreparedTableFileEvent,
-                                         INFINITE);
+        WaitResult = WaitForMultipleObjects(ARRAYSIZE(PrepareEvents),
+                                            PrepareEvents,
+                                            WaitForAllEvents,
+                                            INFINITE);
 
         if (WaitResult != WAIT_OBJECT_0) {
             SYS_ERROR(WaitForSingleObject);
@@ -975,9 +1005,16 @@ RetryWithLargerTableSize:
         }
 
         //
-        // N.B. We don't need to wait for the C header file preparation to
-        //      complete here as the size of that file isn't coupled so tightly
-        //      with the underlying table size.
+        // Verify none of the file work callbacks reported an error during
+        // preparation.
+        //
+
+        CHECK_ALL_PREPARE_ERRORS();
+
+        //
+        // N.B. We don't need to wait for the C header, source or source keys
+        //      file preparation to complete here as the size of those files
+        //      isn't dependent upon the underlying table size.
         //
 
         //
@@ -1065,26 +1102,6 @@ RetryWithLargerTableSize:
             Result = PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
             goto Error;
         }
-
-        //
-        // Unmap the existing mapping and close the section.
-        //
-
-        _Analysis_assume_(Table->BaseAddress != NULL);
-        if (!UnmapViewOfFile(Table->BaseAddress)) {
-            SYS_ERROR(UnmapViewOfFile);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-        Table->BaseAddress = NULL;
-
-        _Analysis_assume_(Table->MappingHandle != NULL);
-        if (!CloseHandle(Table->MappingHandle)) {
-            SYS_ERROR(CloseHandle);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-        Table->MappingHandle = NULL;
 
         //
         // Jump back to the start and try again with a larger vertex count.
@@ -1175,72 +1192,15 @@ FinishedSolution:
     // solved correctly.
     //
 
-    ZeroStruct(SaveTableFile);
-    SaveTableFile.FileWorkId = FileWorkSaveTableId;
-
     //
-    // Before we dispatch the save file work, make sure the preparation has
-    // completed.
+    // Dispatch save file work for the table data.
     //
 
-    WaitResult = WaitForSingleObject(Context->PreparedTableFileEvent, INFINITE);
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForSingleObject);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (Context->TableFileWorkErrors > 0) {
-        Result = Context->TableFileWorkLastResult;
-        if (Result == S_OK) {
-            Result = PH_E_ERROR_PREPARING_TABLE_FILE;
-        }
-        goto Error;
-    }
-
-    //
-    // Push this work item to the file work list head and submit the threadpool
-    // work for it.
-    //
-
-    CONTEXT_START_TIMERS(SaveTableFile);
-
-    InterlockedPushEntrySList(&Context->FileWorkListHead,
-                              &SaveTableFile.ListEntry);
-    SubmitThreadpoolWork(Context->FileWork);
-
-    //
-    // As above, dispatch a save header file work item in parallel to graph
-    // verification.
-    //
-
-    CONTEXT_START_TIMERS(SaveHeaderFile);
-
-    ZeroStruct(SaveHeaderFile);
-    SaveHeaderFile.FileWorkId = FileWorkSaveHeaderId;
-
-    WaitResult = WaitForSingleObject(Context->PreparedHeaderFileEvent,
-                                     INFINITE);
-
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForSingleObject);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (Context->HeaderFileWorkErrors > 0) {
-        Result = Context->HeaderFileWorkLastResult;
-        if (Result == S_OK) {
-            Result = PH_E_ERROR_PREPARING_HEADER_FILE;
-        }
-        goto Error;
-    }
-
-    CONTEXT_START_TIMERS(SaveHeaderFile);
-
-    InterlockedPushEntrySList(&Context->FileWorkListHead,
-                              &SaveHeaderFile.ListEntry);
-    SubmitThreadpoolWork(Context->FileWork);
+    SUBMIT_FILE_WORK(SaveTableFile);
+    SUBMIT_FILE_WORK(SaveCHeaderFile);
+    SUBMIT_FILE_WORK(SaveCSourceFile);
+    SUBMIT_FILE_WORK(SaveCSourceKeysFile);
+    SUBMIT_FILE_WORK(SaveCSourceTableDataFile);
 
     //
     // Capture another round of cycles and performance counter values, then
@@ -1274,12 +1234,8 @@ FinishedSolution:
     // Wait on the saved file events before returning.
     //
 
-    WaitForAllEvents = TRUE;
-    SaveFileEvents[0] = Context->SavedTableFileEvent;
-    SaveFileEvents[1] = Context->SavedHeaderFileEvent;
-
-    WaitResult = WaitForMultipleObjects(ARRAYSIZE(SaveFileEvents),
-                                        SaveFileEvents,
+    WaitResult = WaitForMultipleObjects(ARRAYSIZE(SaveEvents),
+                                        SaveEvents,
                                         WaitForAllEvents,
                                         INFINITE);
 
@@ -1289,21 +1245,11 @@ FinishedSolution:
         goto Error;
     }
 
-    if (Context->TableFileWorkErrors > 0) {
-        Result = Context->TableFileWorkLastResult;
-        if (Result == S_OK) {
-            Result = PH_E_ERROR_SAVING_TABLE_FILE;
-        }
-        goto Error;
-    }
+    //
+    // Check all of the save file work error indicators.
+    //
 
-    if (Context->HeaderFileWorkErrors > 0) {
-        Result = Context->HeaderFileWorkLastResult;
-        if (Result == S_OK) {
-            Result = PH_E_ERROR_SAVING_HEADER_FILE;
-        }
-        goto Error;
-    }
+    CHECK_ALL_SAVE_ERRORS();
 
     //
     // We're done, finish up.
@@ -1495,1149 +1441,6 @@ Return Value:
     }
 
     return;
-}
-
-_Use_decl_annotations_
-VOID
-FileWorkCallbackChm01(
-    PTP_CALLBACK_INSTANCE Instance,
-    PPERFECT_HASH_CONTEXT Context,
-    PSLIST_ENTRY ListEntry
-    )
-/*++
-
-Routine Description:
-
-    This routine is the callback entry point for file-oriented work we want
-    to perform in the file work threadpool context.
-
-Arguments:
-
-    Instance - Supplies a pointer to the callback instance for this invocation.
-
-    Context - Supplies a pointer to the active context for the graph solving.
-
-    ListEntry - Supplies a pointer to the list entry that was popped off the
-        context's file work interlocked singly-linked list head.
-
-Return Value:
-
-    None.
-
---*/
-{
-    PRTL Rtl;
-    PHANDLE Event;
-    volatile HRESULT *Result;
-    volatile LONG *Errors;
-    volatile LONG *LastError;
-    PFILE_WORK_ITEM Item;
-    PERFECT_HASH_TLS_CONTEXT TlsContext;
-    PFILE_WORK_CALLBACK_IMPL Impl;
-    PFILE_WORK_CALLBACK_WRAPPER Wrapper = NULL;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-
-    //
-    // Resolve the work item base address from the list entry.
-    //
-
-    Item = CONTAINING_RECORD(ListEntry, FILE_WORK_ITEM, ListEntry);
-
-    ASSERT(IsValidFileWorkId(Item->FileWorkId));
-
-    //
-    // Zero the local TLS context structure, fill out the relevant fields,
-    // then set it.  This allows our exception filters to obtain the active
-    // context when handling exceptions.
-    //
-
-    ZeroStruct(TlsContext);
-    TlsContext.Context = Context;
-    if (!PerfectHashTlsSetContext(&TlsContext)) {
-        SYS_ERROR(TlsSetValue);
-        return;
-    }
-
-    switch (Item->FileWorkId) {
-
-        case FileWorkPrepareTableId:
-
-            Event = &Context->PreparedTableFileEvent;
-            Result = &Context->TableFileWorkLastResult;
-            Errors = &Context->TableFileWorkErrors;
-            LastError = &Context->TableFileWorkLastError;
-            Impl = PrepareTableCallbackChm01;
-            break;
-
-        case FileWorkSaveTableId:
-
-            Event = &Context->SavedTableFileEvent;
-            Result = &Context->TableFileWorkLastResult;
-            Errors = &Context->TableFileWorkErrors;
-            LastError = &Context->TableFileWorkLastError;
-            Impl = SaveTableCallbackChm01;
-            break;
-
-        case FileWorkPrepareHeaderId:
-
-            Event = &Context->PreparedHeaderFileEvent;
-            Result = &Context->HeaderFileWorkLastResult;
-            Errors = &Context->HeaderFileWorkErrors;
-            LastError = &Context->HeaderFileWorkLastError;
-            Impl = PrepareHeaderCallbackChm01;
-            break;
-
-        case FileWorkSaveHeaderId:
-
-            Event = &Context->SavedHeaderFileEvent;
-            Result = &Context->HeaderFileWorkLastResult;
-            Errors = &Context->HeaderFileWorkErrors;
-            LastError = &Context->HeaderFileWorkLastError;
-            Impl = SaveHeaderCallbackChm01;
-            break;
-
-        default:
-
-            //
-            // Should never get here.
-            //
-
-            ASSERT(FALSE);
-            return;
-    }
-
-    if (Wrapper) {
-        *Result = Wrapper(Impl, Context);
-    } else {
-        *Result = Impl(Context);
-    }
-
-    if (FAILED(*Result)) {
-        InterlockedIncrement(Errors);
-        *LastError = GetLastError();
-    }
-
-    //
-    // Clear the TLS context we set earlier.
-    //
-
-    if (!PerfectHashTlsSetContext(NULL)) {
-        SYS_ERROR(TlsSetValue);
-    }
-
-    //
-    // Register the relevant event to be set when this threadpool callback
-    // returns, then return.
-    //
-
-    SetEventWhenCallbackReturns(Instance, *Event);
-
-    return;
-}
-
-_Use_decl_annotations_
-HRESULT
-PrepareTableCallbackChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    PRTL Rtl;
-    HRESULT Result = S_OK;
-    PGRAPH_INFO Info;
-    PVOID BaseAddress;
-    HANDLE MappingHandle;
-    PPERFECT_HASH_TABLE Table;
-    ULARGE_INTEGER SectorAlignedSize;
-    PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Table = Context->Table;
-    Info = (PGRAPH_INFO)Context->AlgorithmContext;
-    GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)Table->InfoStreamBaseAddress;
-
-    //
-    // We need to extend the file to accommodate for the solved graph.
-    //
-
-    SectorAlignedSize.QuadPart = ALIGN_UP(Info->AssignedSizeInBytes,
-                                          Info->AllocationGranularity);
-
-    //
-    // Create the file mapping for the sector-aligned size.  This will
-    // extend the underlying file size accordingly.
-    //
-
-    MappingHandle = CreateFileMappingW(Table->FileHandle,
-                                       NULL,
-                                       PAGE_READWRITE,
-                                       SectorAlignedSize.HighPart,
-                                       SectorAlignedSize.LowPart,
-                                       NULL);
-
-    Table->MappingHandle = MappingHandle;
-
-    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-        SYS_ERROR(CreateFileMappingW);
-        goto Error;
-    }
-
-    BaseAddress = MapViewOfFile(MappingHandle,
-                                FILE_MAP_READ | FILE_MAP_WRITE,
-                                0,
-                                0,
-                                SectorAlignedSize.QuadPart);
-
-    Table->BaseAddress = BaseAddress;
-
-    if (!BaseAddress) {
-        SYS_ERROR(MapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    CONTEXT_END_TIMERS(PrepareTableFile);
-
-    //
-    // We've successfully mapped an area of sufficient space to store
-    // the underlying table array if a perfect hash table solution is
-    // found.  Nothing more to do.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_PREPARING_TABLE_FILE;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    return Result;
-}
-
-_Use_decl_annotations_
-HRESULT
-SaveTableCallbackChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    PRTL Rtl;
-    BOOL Success;
-    PULONG Dest;
-    PGRAPH Graph;
-    PULONG Source;
-    ULONG WaitResult;
-    HRESULT Result = S_OK;
-    ULONGLONG SizeInBytes;
-    LARGE_INTEGER EndOfFile;
-    PPERFECT_HASH_TABLE Table;
-    PTABLE_INFO_ON_DISK TableInfoOnDisk;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Table = Context->Table;
-    Table = Context->Table;
-    Dest = (PULONG)Table->BaseAddress;
-    Graph = (PGRAPH)Context->SolvedContext;
-    Source = Graph->Assigned;
-    TableInfoOnDisk = Table->TableInfoOnDisk;
-
-    SizeInBytes = (
-        TableInfoOnDisk->NumberOfTableElements.QuadPart *
-        TableInfoOnDisk->KeySizeInBytes
-    );
-
-    //
-    // The graph has been solved.  Copy the array of assigned values
-    // to the mapped area we prepared earlier (above).
-    //
-
-    CopyMemory(Dest, Source, SizeInBytes);
-
-    //
-    // Save the seed values used by this graph.  (Everything else in
-    // the on-disk info representation was saved earlier.)
-    //
-
-    TableInfoOnDisk->Seed1 = Graph->Seed1;
-    TableInfoOnDisk->Seed2 = Graph->Seed2;
-    TableInfoOnDisk->Seed3 = Graph->Seed3;
-    TableInfoOnDisk->Seed4 = Graph->Seed4;
-
-    //
-    // Kick off a flush file buffers now before we wait on the verified
-    // event.  The flush will be a blocking call.  The wait on verified
-    // will be blocking if the event isn't signaled.  So, we may as well
-    // get some useful blocking work done, before potentially going into
-    // another wait state where we're not doing anything useful.
-    //
-
-    if (!FlushFileBuffers(Table->FileHandle)) {
-        SYS_ERROR(FlushFileBuffers);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // Stop the save file timer here, after flushing the file buffers,
-    // but before we potentially wait on the verified state.
-    //
-
-    CONTEXT_END_TIMERS(SaveTableFile);
-
-    //
-    // Wait on the verification complete event.  This is done in the
-    // main thread straight after it dispatches our file work callback
-    // (that ended up here).  We need to block on this event as we want
-    // to save the timings for verification to the header.
-    //
-
-    WaitResult = WaitForSingleObject(Context->VerifiedTableEvent, INFINITE);
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForSingleObject);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // When we mapped the array in the work item above, we used a size
-    // that was aligned with the system allocation granularity.  We now
-    // want to set the end of file explicitly to the exact size of the
-    // underlying array.  To do this, we unmap the view, delete the
-    // section, set the file pointer to where we want, set the end of
-    // file (which will apply the file pointer position as EOF), then
-    // close the file handle.
-    //
-
-    if (!UnmapViewOfFile(Table->BaseAddress)) {
-        SYS_ERROR(UnmapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-    Table->BaseAddress = NULL;
-
-    if (!CloseHandle(Table->MappingHandle)) {
-        SYS_ERROR(UnmapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-    Table->MappingHandle = NULL;
-
-    EndOfFile.QuadPart = SizeInBytes;
-
-    Success = SetFilePointerEx(Table->FileHandle,
-                               EndOfFile,
-                               NULL,
-                               FILE_BEGIN);
-
-    if (!Success) {
-        SYS_ERROR(SetFilePointerEx);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (!SetEndOfFile(Table->FileHandle)) {
-        SYS_ERROR(SetEndOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (!CloseHandle(Table->FileHandle)) {
-        SYS_ERROR(CloseHandle);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    Table->FileHandle = NULL;
-
-    //
-    // Save the number of attempts and number of finished solutions.
-    //
-
-    TableInfoOnDisk->NumberOfAttempts = Context->Attempts;
-    TableInfoOnDisk->NumberOfFailedAttempts = Context->FailedAttempts;
-    TableInfoOnDisk->NumberOfSolutionsFound = Context->FinishedCount;
-
-    //
-    // Copy timer values for everything except the save header event.
-    //
-
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Solve);
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Verify);
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareTableFile);
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveTableFile);
-
-    //
-    // We need to wait on the header saved event before we can capture
-    // the header timers.
-    //
-
-    WaitResult = WaitForSingleObject(Context->SavedHeaderFileEvent,
-                                     INFINITE);
-
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForSingleObject);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareHeaderFile);
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveHeaderFile);
-
-    if (!FlushFileBuffers(Table->InfoStreamFileHandle)) {
-        SYS_ERROR(FlushFileBuffers);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // Finalize the :Info stream the same way we handled the backing
-    // file above; unmap, delete section, set file pointer, set eof,
-    // close file.
-    //
-
-    if (!UnmapViewOfFile(Table->InfoStreamBaseAddress)) {
-        SYS_ERROR(UnmapViewOfFile);
-        goto Error;
-    }
-    Table->InfoStreamBaseAddress = NULL;
-
-    if (!CloseHandle(Table->InfoStreamMappingHandle)) {
-        SYS_ERROR(CloseHandle);
-        goto Error;
-    }
-    Table->InfoStreamMappingHandle = NULL;
-
-    //
-    // The file size for the :Info stream will be the size of our
-    // on-disk graph info structure.
-    //
-
-    EndOfFile.QuadPart = sizeof(GRAPH_INFO_ON_DISK);
-
-    Success = SetFilePointerEx(Table->InfoStreamFileHandle,
-                               EndOfFile,
-                               NULL,
-                               FILE_BEGIN);
-
-    if (!Success) {
-        SYS_ERROR(SetFilePointerEx);
-        goto Error;
-    }
-
-    if (!SetEndOfFile(Table->InfoStreamFileHandle)) {
-        SYS_ERROR(SetEndOfFile);
-        goto Error;
-    }
-
-    if (!CloseHandle(Table->InfoStreamFileHandle)) {
-        SYS_ERROR(CloseHandle);
-        goto Error;
-    }
-
-    Table->InfoStreamFileHandle = NULL;
-
-    //
-    // We're done, jump to the end.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_SAVING_TABLE_FILE;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    return Result;
-}
-
-_Use_decl_annotations_
-HRESULT
-PrepareHeaderFileChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-/*++
-
-Routine Description:
-
-    Creates the underlying C header file, extends it to an appropriate size,
-    and maps it into memory.
-
-Arguments:
-
-    Context - Supplies the active context for which the header file is to be
-        prepared.
-
-Return Value:
-
-    S_OK - Header file prepared successfully.
-
-    PH_E_SYSTEM_CALL_FAILED - A system call failed.
-
-    PH_E_ERROR_PREPARING_HEADER_FILE - Encountered an error during preparation.
-
-    PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE - The maximum calculated size for
-        the header exceeded 4GB, and we're a 32-bit executable.
-
---*/
-{
-    PRTL Rtl;
-    BOOL Success;
-    ULONG Status;
-    ULONG LastError;
-    ULONG ShareMode;
-    ULONG DesiredAccess;
-    SIZE_T ViewSize;
-    HANDLE FileHandle;
-    HANDLE MappingHandle;
-    ULONG FlagsAndAttributes;
-    ULONG AllocationGranularity;
-    SYSTEM_INFO SystemInfo;
-    HRESULT Result = S_OK;
-    PVOID BaseAddress;
-    LARGE_INTEGER MappingSize;
-    PPERFECT_HASH_TABLE Table;
-    ULONGLONG NumberOfKeys;
-    ULONGLONG MaxTotalNumberOfEdges;
-    ULONGLONG MaxTotalNumberOfVertices;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Table = Context->Table;
-    NumberOfKeys = Table->Keys->NumberOfElements.QuadPart;
-
-    //
-    // Create the file.
-    //
-
-    ShareMode = (
-        FILE_SHARE_READ  |
-        FILE_SHARE_WRITE |
-        FILE_SHARE_DELETE
-    );
-
-    DesiredAccess = (
-        GENERIC_READ |
-        GENERIC_WRITE
-    );
-
-    FlagsAndAttributes = FILE_FLAG_OVERLAPPED;
-
-    FileHandle = CreateFileW(Table->HeaderPath.Buffer,
-                             DesiredAccess,
-                             ShareMode,
-                             NULL,
-                             OPEN_ALWAYS,
-                             FlagsAndAttributes,
-                             NULL);
-
-    LastError = GetLastError();
-
-    Table->HeaderFileHandle = FileHandle;
-
-    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
-
-        //
-        // Failed to open the file successfully.
-        //
-
-        SYS_ERROR(CreateFileW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-
-    } else if (LastError == ERROR_ALREADY_EXISTS) {
-
-        //
-        // The file was opened successfully, but it already existed.  Clear the
-        // local last error variable then truncate the file.
-        //
-
-        LastError = ERROR_SUCCESS;
-
-        Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
-        if (Status == INVALID_SET_FILE_POINTER) {
-            SYS_ERROR(SetFilePointer);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-
-        Success = SetEndOfFile(FileHandle);
-        if (!Success) {
-            SYS_ERROR(SetEndOfFile);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-
-        //
-        // We've successfully truncated the file.
-        //
-
-    }
-
-    //
-    // Calculate (a very generous) size to use for the file.  As we map the
-    // entire file up-front and then simply write to the memory map without
-    // closely tracking bytes written, we want to ensure the allocated space
-    // is bigger than the largest possible size we'll consume.  When we save
-    // the file, we update the end-of-file accordingly.
-    //
-
-    GetSystemInfo(&SystemInfo);
-    AllocationGranularity = SystemInfo.dwAllocationGranularity;
-
-    MaxTotalNumberOfEdges = (
-        ((ULONGLONG)RoundUpPowerOf2((ULONG)NumberOfKeys) << 1ULL) <<
-        GRAPH_SOLVING_RESIZE_TABLE_LIMIT
-    );
-
-    MaxTotalNumberOfVertices = (
-        ((ULONGLONG)RoundUpNextPowerOf2((ULONG)NumberOfKeys)) <<
-        GRAPH_SOLVING_RESIZE_TABLE_LIMIT
-    );
-
-    MappingSize.QuadPart = NumberOfKeys * 16;
-
-    MappingSize.QuadPart += (MaxTotalNumberOfEdges * 16);
-
-    MappingSize.QuadPart += (MaxTotalNumberOfVertices * 16);
-
-    //
-    // Add in an additional 64KB for all other text/code, then align up to a
-    // 64KB boundary.
-    //
-
-    MappingSize.QuadPart += AllocationGranularity;
-
-    MappingSize.QuadPart = ALIGN_UP(MappingSize.QuadPart,
-                                    AllocationGranularity);
-
-#ifdef _WIN64
-    ViewSize = MappingSize.QuadPart;
-#else
-
-    //
-    // Verify we haven't overflowed MAX_ULONG.
-    //
-
-    if (MappingSize.HighPart) {
-        Result = PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE;
-        PH_ERROR(PrepareHeaderFileChm01, Result);
-        goto Error;
-    }
-
-    ViewSize = MappingSize.LowPart;
-#endif
-
-    //
-    // Extend the file to the mapping size.
-    //
-
-    Success = SetFilePointerEx(FileHandle,
-                               MappingSize,
-                               NULL,
-                               FILE_BEGIN);
-
-    if (!Success) {
-        SYS_ERROR(SetFilePointerEx);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (!SetEndOfFile(FileHandle)) {
-        SYS_ERROR(SetEndOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // Create a file mapping.
-    //
-
-    MappingHandle = CreateFileMappingW(FileHandle,
-                                       NULL,
-                                       PAGE_READWRITE,
-                                       MappingSize.HighPart,
-                                       MappingSize.LowPart,
-                                       NULL);
-
-    Table->HeaderMappingHandle = MappingHandle;
-    Table->HeaderMappingSizeInBytes.QuadPart = MappingSize.QuadPart;
-
-    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-        SYS_ERROR(CreateFileMappingW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // We successfully created a file mapping.  Proceed with mapping it into
-    // memory.
-    //
-
-    BaseAddress = MapViewOfFile(MappingHandle,
-                                FILE_MAP_READ | FILE_MAP_WRITE,
-                                0,
-                                0,
-                                ViewSize);
-
-    Table->HeaderBaseAddress = BaseAddress;
-
-    if (!BaseAddress) {
-        SYS_ERROR(MapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // We're done, finish up.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_PREPARING_TABLE_FILE;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    return Result;
-}
-
-#define INDENT() {            \
-    Long = (PULONG)Output;    \
-    *Long = Indent;           \
-    Output += sizeof(Indent); \
-}
-
-_Use_decl_annotations_
-HRESULT
-PrepareHeaderCallbackChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    PRTL Rtl;
-    PCHAR Base;
-    PCHAR Output;
-    ULONG Count;
-    PULONG Long;
-    ULONG Key;
-    ULONGLONG Index;
-    ULONGLONG NumberOfKeys;
-    PCSTRING Name;
-    HRESULT Result = S_OK;
-    PPERFECT_HASH_KEYS Keys;
-    PPERFECT_HASH_TABLE Table;
-    const ULONG Indent = 0x20202020;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Table = Context->Table;
-    Keys = Table->Keys;
-    Name = &Table->TableNameA;
-    NumberOfKeys = Keys->NumberOfElements.QuadPart;
-
-    //
-    // Prepare the underlying file and memory maps.
-    //
-
-    Result = PrepareHeaderFileChm01(Context);
-    if (FAILED(Result)) {
-        PH_ERROR(PrepareHeaderCallbackChm01, Result);
-        goto Error;
-    }
-
-    Base = (PCHAR)Table->HeaderBaseAddress;
-    Output = Base;
-
-    //
-    // Write the keys.
-    //
-
-    OUTPUT_RAW("//\n// Compiled Perfect Hash Table.  Auto-generated.\n//\n\n");
-
-    OUTPUT_RAW("#ifdef COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS\n");
-    OUTPUT_RAW("#pragma const_seg(\".cpht_keys\")\n");
-    OUTPUT_RAW("static const unsigned long TableKeys[");
-    OUTPUT_INT(NumberOfKeys);
-    OUTPUT_RAW("] = {\n");
-
-    for (Index = 0, Count = 0; Index < NumberOfKeys; Index++) {
-
-        if (Count == 0) {
-            INDENT();
-        }
-
-        Key = Keys->Keys[Index];
-
-        OUTPUT_HEX(Key);
-
-        *Output++ = ',';
-
-        if (++Count == 4) {
-            Count = 0;
-            *Output++ = '\n';
-        } else {
-            *Output++ = ' ';
-        }
-    }
-
-    //
-    // If the last character written was a trailing space, replace
-    // it with a newline.
-    //
-
-    if (*(Output - 1) == ' ') {
-        *(Output - 1) = '\n';
-    }
-
-    OUTPUT_RAW("};\n#pragma const_seg()\n"
-               "#endif "
-               "/* COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS */\n");
-
-    Table->HeaderSizeInBytes = ((ULONG_PTR)Output - (ULONG_PTR)Base);
-
-    //
-    // We're done, finish up.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_PREPARING_HEADER_FILE;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    CONTEXT_END_TIMERS(PrepareHeaderFile);
-
-    return Result;
-}
-
-_Use_decl_annotations_
-HRESULT
-SaveHeaderCallbackChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    PRTL Rtl;
-    PCHAR Base;
-    PCHAR Output;
-    ULONG Value;
-    ULONG Count;
-    PULONG Long;
-    PULONG Seed;
-    PGRAPH Graph;
-    PULONG Source;
-    PCSTRING Name;
-    ULONGLONG Index;
-    HRESULT Result = S_OK;
-    PPERFECT_HASH_TABLE Table;
-    PTABLE_INFO_ON_DISK TableInfo;
-    ULONGLONG NumberOfElements;
-    ULONGLONG TotalNumberOfElements;
-    const ULONG Indent = 0x20202020;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Table = Context->Table;
-    TableInfo = Table->TableInfoOnDisk;
-    Name = &Table->TableNameA;
-    TotalNumberOfElements = TableInfo->NumberOfTableElements.QuadPart;
-    NumberOfElements = TotalNumberOfElements >> 1;
-    Graph = (PGRAPH)Context->SolvedContext;
-    Source = Graph->Assigned;
-
-    //
-    // Write the table data.
-    //
-
-    Base = (PCHAR)Table->HeaderBaseAddress;
-    Output = RtlOffsetToPointer(Base, Table->HeaderSizeInBytes);
-
-    OUTPUT_RAW("\n\n#pragma const_seg(\".cpht_data\")\n");
-    OUTPUT_RAW("static const unsigned long HashMask = ");
-    OUTPUT_HEX(TableInfo->HashMask);
-    OUTPUT_RAW(";\nstatic const unsigned long IndexMask = ");
-    OUTPUT_HEX(TableInfo->IndexMask);
-    OUTPUT_RAW(";\n#define HASH_MASK ");
-    OUTPUT_HEX(TableInfo->HashMask);
-    OUTPUT_RAW("\n#define INDEX_MASK ");
-    OUTPUT_HEX(TableInfo->IndexMask);
-    OUTPUT_RAW("\nstatic const unsigned long TableData[");
-    OUTPUT_INT(TotalNumberOfElements);
-    OUTPUT_RAW("] = {\n\n    //\n    // 1st half.\n    //\n\n");
-
-    for (Index = 0, Count = 0; Index < TotalNumberOfElements; Index++) {
-
-        if (Count == 0) {
-            INDENT();
-        }
-
-        Value = *Source++;
-
-        OUTPUT_HEX(Value);
-
-        *Output++ = ',';
-
-        if (++Count == 4) {
-            Count = 0;
-            *Output++ = '\n';
-        } else {
-            *Output++ = ' ';
-        }
-
-        if (Index == NumberOfElements-1) {
-            OUTPUT_RAW("\n    //\n    // 2nd half.\n    //\n\n");
-        }
-    }
-
-    //
-    // If the last character written was a trailing space, replace
-    // it with a newline.
-    //
-
-    if (*(Output - 1) == ' ') {
-        *(Output - 1) = '\n';
-    }
-
-    OUTPUT_RAW("};\n#define TABLE_DATA TableData\n#pragma const_seg()\n\n");
-
-    //
-    // Write seed data.
-    //
-
-    OUTPUT_RAW("#pragma const_seg(\".cpht_seeds\")\n");
-    OUTPUT_RAW("static const unsigned long Seeds[");
-    OUTPUT_INT(TableInfo->NumberOfSeeds);
-    OUTPUT_RAW("] = {\n");
-
-    Seed = &TableInfo->FirstSeed;
-
-    for (Index = 0, Count = 0; Index < TableInfo->NumberOfSeeds; Index++) {
-
-        if (Count == 0) {
-            INDENT();
-        }
-
-        OUTPUT_HEX(*Seed++);
-
-        *Output++ = ',';
-
-        if (++Count == 4) {
-            Count = 0;
-            *Output++ = '\n';
-        } else {
-            *Output++ = ' ';
-        }
-    }
-
-    //
-    // If the last character written was a trailing space, replace
-    // it with a newline.
-    //
-
-    if (*(Output - 1) == ' ') {
-        *(Output - 1) = '\n';
-    }
-
-    ASSERT(TableInfo->NumberOfSeeds == 4);
-
-    Seed = &TableInfo->FirstSeed;
-
-    OUTPUT_RAW("};\nstatic const unsigned long Seed1 = ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW(";\nstatic const unsigned long Seed2 = ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW(";\nstatic const unsigned long Seed3 = ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW(";\nstatic const unsigned long Seed4 = ");
-    OUTPUT_HEX(*Seed++);
-
-    Seed = &TableInfo->FirstSeed;
-
-    OUTPUT_RAW(";\n#define SEED1 ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW("\n#define SEED2 ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW("\n#define SEED3 ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW("\n#define SEED4 ");
-    OUTPUT_HEX(*Seed++);
-
-    OUTPUT_RAW("\n#pragma const_seg()\n\n");
-
-    //
-    // Update the header size, then save it.
-    //
-
-    Table->HeaderSizeInBytes = ((ULONG_PTR)Output - (ULONG_PTR)Base);
-
-    Result = SaveHeaderFileChm01(Context);
-    if (FAILED(Result)) {
-        PH_ERROR(SaveHeaderCallbackChm01, Result);
-        goto Error;
-    }
-
-    //
-    // We're done, finish up.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_SAVING_HEADER_FILE;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    CONTEXT_END_TIMERS(SaveHeaderFile);
-
-    return Result;
-}
-
-_Use_decl_annotations_
-HRESULT
-SaveHeaderFileChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    PRTL Rtl;
-    BOOL Success;
-    HRESULT Result = S_OK;
-    LARGE_INTEGER EndOfFile;
-    PPERFECT_HASH_TABLE Table;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Table = Context->Table;
-
-    //
-    // Save the header file: flush file buffers, unmap the view, close the
-    // mapping handle, set the file pointer, set EOF, and then close the handle.
-    //
-
-    if (!FlushFileBuffers(Table->HeaderFileHandle)) {
-        SYS_ERROR(FlushFileBuffers);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (!UnmapViewOfFile(Table->HeaderBaseAddress)) {
-        SYS_ERROR(UnmapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-    Table->HeaderBaseAddress = NULL;
-
-    if (!CloseHandle(Table->HeaderMappingHandle)) {
-        SYS_ERROR(UnmapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-    Table->HeaderMappingHandle = NULL;
-
-    EndOfFile.QuadPart = Table->HeaderSizeInBytes;
-
-    Success = SetFilePointerEx(Table->HeaderFileHandle,
-                               EndOfFile,
-                               NULL,
-                               FILE_BEGIN);
-
-    if (!Success) {
-        SYS_ERROR(SetFilePointerEx);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (!SetEndOfFile(Table->HeaderFileHandle)) {
-        SYS_ERROR(SetEndOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (!CloseHandle(Table->HeaderFileHandle)) {
-        SYS_ERROR(CloseHandle);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    Table->HeaderFileHandle = NULL;
-
-    //
-    // We're done, finish up.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_SAVING_HEADER_FILE;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    CONTEXT_END_TIMERS(SaveHeaderFile);
-
-    return Result;
 }
 
 SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH

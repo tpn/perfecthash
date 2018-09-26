@@ -19,6 +19,9 @@ Abstract:
 
 #define COMMON_COMPONENT_HEADER(Name) \
     P##Name##_VTBL Vtbl;              \
+    SRWLOCK Lock;                     \
+    struct _RTL *Rtl;                 \
+    struct _ALLOCATOR *Allocator;     \
     PIUNKNOWN OuterUnknown;           \
     volatile LONG ReferenceCount;     \
     PERFECT_HASH_INTERFACE_ID Id;     \

@@ -25,9 +25,6 @@
     <ClCompile Include="PerfectHashAllocator.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Chm_01.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PerfectHashTableHash.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -118,15 +115,21 @@
     <ClCompile Include="PerfectHashTableCompile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashPath.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm_01.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
-      <Filter>Private Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Chm_01.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\PerfectHash.h">
@@ -173,6 +176,15 @@
     </ClInclude>
     <ClInclude Include="..\..\include\CompiledPerfectHashTable.h">
       <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashFile.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashPath.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Chm_01.h">
+      <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

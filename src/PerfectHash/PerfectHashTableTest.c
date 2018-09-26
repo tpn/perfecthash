@@ -82,6 +82,7 @@ Return Value:
     ULONG ValueIndex;
     ULONG Bit;
     ULONG NumberOfBitsSet;
+    PKEY SourceKeys;
     HRESULT Result = S_OK;
     PALLOCATOR Allocator;
     RTL_BITMAP Indices;
@@ -123,7 +124,7 @@ Return Value:
     // of keys is within MAX_ULONG.
     //
 
-    ASSERT(Keys && Keys->Keys);
+    ASSERT(Keys && Keys->File && Keys->File->BaseAddress);
     ASSERT(!Keys->NumberOfElements.HighPart);
 
     NumberOfKeys = Keys->NumberOfElements.LowPart;
@@ -184,7 +185,8 @@ Return Value:
     //
 
 
-    Key = Keys->Keys[0];
+    SourceKeys = (PKEY)Keys->File->BaseAddress;
+    Key = SourceKeys[0];
 
     //
     // Rotate the key such that it differs from the original value, but in a
@@ -247,7 +249,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys->Keys[Index];
+        Key = SourceKeys[Index];
 
         Result = Table->Vtbl->Index(Table, Key, &ValueIndex);
         ASSERT(!FAILED(Result));
@@ -279,7 +281,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys->Keys[Index];
+        Key = SourceKeys[Index];
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Insert(Table, Key, Rotated, &Previous);
@@ -295,7 +297,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys->Keys[Index];
+        Key = SourceKeys[Index];
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Lookup(Table, Key, &Value);
@@ -310,7 +312,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys->Keys[Index];
+        Key = SourceKeys[Index];
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Delete(Table, Key, &Previous);
@@ -325,7 +327,7 @@ Return Value:
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
-        Key = Keys->Keys[Index];
+        Key = SourceKeys[Index];
 
         Result = Table->Vtbl->Lookup(Table, Key, &Value);
         ASSERT(!FAILED(Result));

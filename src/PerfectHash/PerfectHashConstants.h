@@ -233,14 +233,17 @@ GetNumberOfContextEvents(
 
 extern const UNICODE_STRING No;
 extern const UNICODE_STRING Yes;
-extern const UNICODE_STRING KeysSuffix;
-extern const UNICODE_STRING TableSuffix;
-extern const UNICODE_STRING HeaderSuffix;
+extern const UNICODE_STRING KeysExtension;
+extern const UNICODE_STRING TableExtension;
 extern const UNICODE_STRING DotKeysSuffix;
 extern const UNICODE_STRING DotTableSuffix;
 extern const UNICODE_STRING DotHeaderSuffix;
 extern const UNICODE_STRING InfoStreamSuffix;
 extern const UNICODE_STRING KeysWildcardSuffix;
+extern const UNICODE_STRING CHeaderExtension;
+extern const UNICODE_STRING CSourceExtension;
+extern const UNICODE_STRING CSourceKeysSuffix;
+extern const UNICODE_STRING CSourceTableDataSuffix;
 
 //
 // Declare placeholders for values we patch in the FastIndexEx() instruction

@@ -110,9 +110,6 @@ Return Value:
     USHORT Length;
     USHORT BaseLength;
     USHORT NumberOfPages;
-    USHORT FileNameLengthInBytes;
-    USHORT TableSuffixLengthInBytes;
-    ULONG NumberOfFileNameChars;
     BOOL Success;
     BOOLEAN Failed;
     BOOLEAN Terminate;
@@ -121,7 +118,7 @@ Return Value:
     PWCHAR BaseBuffer;
     PWCHAR WideOutput;
     PWCHAR WideOutputBuffer;
-    PWCHAR FileName;
+    PALLOCATOR Allocator;
     PVOID KeysBaseAddress;
     ULARGE_INTEGER NumberOfKeys;
     WCHAR WideBitmapString[33];
@@ -139,10 +136,13 @@ Return Value:
     LARGE_INTEGER WideCharsToWrite;
     WIN32_FIND_DATAW FindData;
     UNICODE_STRING WildcardPath;
-    UNICODE_STRING KeysPath;
-    UNICODE_STRING TablePath;
-    PPERFECT_HASH_TABLE Table;
+    UNICODE_STRING KeysPathString;
+    PUNICODE_STRING TableFullPath;
     PPERFECT_HASH_KEYS Keys;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_FILE TableFile = NULL;
+    PPERFECT_HASH_PATH TablePath = NULL;
+    PPERFECT_HASH_PATH_PARTS TablePathParts;
     PERFECT_HASH_KEYS_FLAGS KeysFlags;
     PERFECT_HASH_KEYS_BITMAP KeysBitmap;
     PERFECT_HASH_TABLE_FLAGS TableFlags;
@@ -167,6 +167,7 @@ Return Value:
         return E_POINTER;
     } else {
         Rtl = Context->Rtl;
+        Allocator = Context->Allocator;
     }
 
     VALIDATE_FLAGS(ContextSelfTest, CONTEXT_SELF_TEST);
@@ -205,6 +206,12 @@ Return Value:
 
     if (!IsValidPerfectHashMaskFunctionId(MaskFunctionId)) {
         return E_INVALIDARG;
+    }
+
+    Result = Context->Vtbl->SetOutputDirectory(Context, OutputDirectory);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextSelfTest, Result);
+        return Result;
     }
 
     //
@@ -378,15 +385,15 @@ Return Value:
     // Initialize the fully-qualified keys path.
     //
 
-    KeysPath.Buffer = Buffer;
-    CopyMemory(KeysPath.Buffer, TestDataDirectory->Buffer, Length);
+    KeysPathString.Buffer = Buffer;
+    CopyMemory(KeysPathString.Buffer, TestDataDirectory->Buffer, Length);
 
     //
     // Advance our Dest pointer to the end of the directory name, then write
     // a slash.
     //
 
-    Dest = (PWSTR)RtlOffsetToPointer(KeysPath.Buffer, Length);
+    Dest = (PWSTR)RtlOffsetToPointer(KeysPathString.Buffer, Length);
     *Dest++ = L'\\';
 
     //
@@ -449,7 +456,7 @@ Return Value:
         // Copy the filename over to the fully-qualified keys path.
         //
 
-        Dest = (PWSTR)RtlOffsetToPointer(KeysPath.Buffer, BaseLength);
+        Dest = (PWSTR)RtlOffsetToPointer(KeysPathString.Buffer, BaseLength);
         Source = (PWSTR)FindData.cFileName;
 
         while (*Source) {
@@ -457,11 +464,11 @@ Return Value:
         }
         *Dest = L'\0';
 
-        Length = (USHORT)RtlPointerToOffset(KeysPath.Buffer, Dest);
-        KeysPath.Length = Length;
-        KeysPath.MaximumLength = Length + sizeof(*Dest);
-        ASSERT(KeysPath.Buffer[KeysPath.Length >> 1] == L'\0');
-        ASSERT(&KeysPath.Buffer[KeysPath.Length >> 1] == Dest);
+        Length = (USHORT)RtlPointerToOffset(KeysPathString.Buffer, Dest);
+        KeysPathString.Length = Length;
+        KeysPathString.MaximumLength = Length + sizeof(*Dest);
+        ASSERT(KeysPathString.Buffer[KeysPathString.Length >> 1] == L'\0');
+        ASSERT(&KeysPathString.Buffer[KeysPathString.Length >> 1] == Dest);
 
         Result = Context->Vtbl->CreateInstance(Context,
                                                NULL,
@@ -477,13 +484,13 @@ Return Value:
 
         Result = Keys->Vtbl->Load(Keys,
                                   &KeysLoadFlags,
-                                  &KeysPath,
+                                  &KeysPathString,
                                   sizeof(ULONG));
 
         if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to load keys for ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPathString);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -493,7 +500,7 @@ Return Value:
         }
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully loaded keys: ");
-        WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+        WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPathString);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
         WIDE_OUTPUT_FLUSH();
 
@@ -507,7 +514,7 @@ Return Value:
 
         if (FAILED(Result)) {
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to obtain flags for keys: ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPathString);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -527,7 +534,7 @@ Return Value:
         if (FAILED(Result)) {
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to obtain base "
                                         L"address for keys: ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPathString);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -544,7 +551,7 @@ Return Value:
 
         if (FAILED(Result)) {
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to get keys bitmap for ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPathString);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -601,14 +608,14 @@ Return Value:
 
         Result = Keys->Vtbl->Load(Keys,
                                   &KeysLoadFlags,
-                                  &KeysPath,
+                                  &KeysPathString,
                                   sizeof(ULONG));
 
         if (Result != PH_E_KEYS_ALREADY_LOADED) {
             WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; multiple "
                                         L"key loads did not raise an "
                                         L"error for ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPathString);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -618,148 +625,7 @@ Return Value:
         }
 
         //
-        // Keys were loaded successfully.  Construct the equivalent path name
-        // for the backing perfect hash table when persisted to disk.
-        //
-
-        //
-        // Align the Dest pointer up to a 16-byte boundary.  (We add 1 to its
-        // current value to advance it past the terminating NULL of the keys
-        // path.)
-        //
-
-        Dest = (PWSTR)ALIGN_UP(Dest + 1, 16);
-
-        //
-        // Calculate the length in bytes of the final table path name, which
-        // consists of the output directory length, plus a joining slash, plus
-        // the file name part of the keys file, plus the trailing table suffix.
-        //
-
-        FileNameLengthInBytes = (
-            KeysPath.Length -
-            TestDataDirectory->Length -
-            DotKeysSuffix.Length
-        );
-
-        //
-        // Calculate the length of the trailing string representation of the
-        // algorithm ID, hash function type and masking type, including the
-        // joining underscores.
-        //
-
-        AlgorithmName = (PUNICODE_STRING)AlgorithmNames[AlgorithmId];
-        HashFunctionName = (PUNICODE_STRING)HashFunctionNames[HashFunctionId];
-        MaskFunctionName = (PUNICODE_STRING)MaskFunctionNames[MaskFunctionId];
-
-        TableSuffixLengthInBytes = (
-            sizeof(L'_') +
-            AlgorithmName->Length +
-            sizeof(L'_') +
-            HashFunctionName->Length +
-            sizeof(L'_') +
-            MaskFunctionName->Length +
-            sizeof(L'.') +
-            TableSuffix.Length
-        );
-
-        FileName = (PWCHAR)(
-            RtlOffsetToPointer(
-                KeysPath.Buffer,
-                TestDataDirectory->Length + sizeof(WCHAR)
-            )
-        );
-
-        ASSERT(*FileName != L'\\');
-        ASSERT(*(FileName - 1) == L'\\');
-
-        TablePath.Length = (
-
-            OutputDirectory->Length +
-
-            //
-            // Account for the file name, including the period.
-            //
-
-            FileNameLengthInBytes +
-
-            //
-            // Account for the trailing algo/hash/mask string and
-            // table suffix.
-            //
-
-            TableSuffixLengthInBytes
-
-        );
-
-        TablePath.MaximumLength = TablePath.Length + sizeof(WCHAR);
-        TablePath.Buffer = (PWSTR)Dest;
-
-        //
-        // Copy the output directory and trailing slash.
-        //
-
-        CopyMemory(Dest, OutputDirectory->Buffer, OutputDirectory->Length);
-        Dest += ((ULONG_PTR)OutputDirectory->Length >> 1);
-        *Dest++ = L'\\';
-
-        //
-        // Copy the filename character by character, replacing any hyphens with
-        // underscores as we go.
-        //
-
-        NumberOfFileNameChars = ((FileNameLengthInBytes >> 1) - 1);
-        for (Index = 0; Index < NumberOfFileNameChars; Index++) {
-            WCHAR Wide;
-
-            Wide = FileName[Index];
-            if (Wide == L'-') {
-                Wide = L'_';
-            }
-
-            *Dest++ = Wide;
-        }
-
-        //
-        // Copy the string representations of the algo/hash/mask.
-        //
-
-        *Dest++ = L'_';
-        CopyMemory(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
-        Dest += ((ULONG_PTR)AlgorithmName->Length >> 1);
-
-        *Dest++ = L'_';
-        CopyMemory(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
-        Dest += ((ULONG_PTR)HashFunctionName->Length >> 1);
-
-        *Dest++ = L'_';
-        CopyMemory(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
-        Dest += ((ULONG_PTR)MaskFunctionName->Length >> 1);
-
-        *Dest++ = L'.';
-
-        //
-        // Copy the suffix then null terminate the path.
-        //
-
-        Source = TableSuffix.Buffer;
-        while (*Source) {
-            *Dest++ = *Source++;
-        }
-        *Dest = L'\0';
-
-        //
-        // Sanity check invariants.
-        //
-
-        ASSERT(TablePath.Buffer[TablePath.Length >> 1] == L'\0');
-        ASSERT(&TablePath.Buffer[TablePath.Length >> 1] == Dest);
-
-        //
-        // We now have the fully-qualified path name of the backing perfect
-        // hash table file living in TablePath.  Continue with creation of the
-        // perfect hash table, using this path we've just created and the keys
-        // that were loaded.
+        // Keys were loaded successfully.  Proceed with table creation.
         //
 
         Result = Context->Vtbl->CreateTable(Context,
@@ -767,14 +633,14 @@ Return Value:
                                             MaskFunctionId,
                                             HashFunctionId,
                                             Keys,
-                                            &TablePath,
-                                            &ContextCreateTableFlags);
+                                            &ContextCreateTableFlags,
+                                            &Table);
 
         if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to create perfect hash "
                                         L"table for keys: ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &KeysPathString);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -783,13 +649,108 @@ Return Value:
             goto ReleaseKeys;
         }
 
-        WIDE_OUTPUT_RAW(WideOutput, L"Successfully created perfect "
-                                    L"hash table: ");
-        WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
-        WIDE_OUTPUT_RAW(WideOutput, L".\n");
+        //
+        // Get the underlying file for the table.
+        //
+
+        Result = Table->Vtbl->GetFile(Table, &TableFile);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashTableGetFile, Result);
+            Failed = TRUE;
+            Failures++;
+            goto ReleaseTable;
+        }
 
         //
-        // Load the perfect hash table we just created.
+        // Get the underlying path for the table's file.
+        //
+
+        Result = TableFile->Vtbl->GetPath(TableFile, &TablePath);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileGetPath, Result);
+            Failed = TRUE;
+            Failures++;
+            goto ReleaseTable;
+        }
+
+        //
+        // Obtain the path parts.
+        //
+
+        Result = TablePath->Vtbl->GetParts(TablePath, &TablePathParts);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashPathGetParts, Result);
+            Failed = TRUE;
+            Failures++;
+            goto ReleaseTable;
+        }
+
+        TableFullPath = &TablePathParts->FullPath;
+        WIDE_OUTPUT_RAW(WideOutput, L"Successfully created perfect "
+                                    L"hash table: ");
+        WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
+        WIDE_OUTPUT_RAW(WideOutput, L".\n");
+        WIDE_OUTPUT_FLUSH();
+
+        //
+        // Verify a subsequent load attempt indicates that the table is already
+        // loaded.
+        //
+
+        Result = Table->Vtbl->Load(Table,
+                                   &TableLoadFlags,
+                                   TableFullPath,
+                                   Keys);
+
+        if (Result != PH_E_TABLE_ALREADY_LOADED) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; multiple "
+                                        L"table loads did not raise an "
+                                        L"error for ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseTable;
+        }
+
+        //
+        // Test the newly-created table.
+        //
+
+        Result = Table->Vtbl->Test(Table, Keys, TRUE);
+
+        if (FAILED(Result)) {
+
+            WIDE_OUTPUT_RAW(WideOutput, L"Test failed for perfect hash table "
+                                        L"created from context: ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Failed = TRUE;
+            goto ReleaseTable;
+        }
+
+        //
+        // Release the table.
+        //
+
+        if (Table->Vtbl->Release(Table) != 0) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; releasing table "
+                                        L"did not indicate a refcount of 0.\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Table = NULL;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
+
+        //
+        // Create a new table instance.
         //
 
         Result = Context->Vtbl->CreateInstance(Context,
@@ -805,15 +766,19 @@ Return Value:
             goto ReleaseKeys;
         }
 
+        //
+        // Load the perfect hash table we just created.
+        //
+
         Result = Table->Vtbl->Load(Table,
                                    &TableLoadFlags,
-                                   &TablePath,
+                                   TableFullPath,
                                    Keys);
 
         if (FAILED(Result)) {
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to load perfect hash table: ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -829,14 +794,14 @@ Return Value:
 
         Result = Table->Vtbl->Load(Table,
                                    &TableLoadFlags,
-                                   &TablePath,
+                                   TableFullPath,
                                    Keys);
 
         if (Result != PH_E_TABLE_ALREADY_LOADED) {
             WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; multiple "
                                         L"table loads did not raise an "
                                         L"error for ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -866,7 +831,7 @@ Return Value:
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully loaded perfect "
                                     L"hash table: ");
-        WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+        WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
         WIDE_OUTPUT_RAW(WideOutput, L".\n");
 
         WIDE_OUTPUT_RAW(WideOutput, L"Algorithm: ");
@@ -904,7 +869,7 @@ Return Value:
 
         if (FAILED(Result)) {
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to obtain flags for table: ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -1003,7 +968,7 @@ Return Value:
         WIDE_OUTPUT_FLUSH();
 
         //
-        // Test the table.
+        // Test the table loaded from disk.
         //
 
         Result = Table->Vtbl->Test(Table, Keys, TRUE);
@@ -1012,7 +977,7 @@ Return Value:
 
             WIDE_OUTPUT_RAW(WideOutput, L"Test failed for perfect hash table "
                                         L"loaded from disk: ");
-            WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TablePath);
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
             WIDE_OUTPUT_RAW(WideOutput, L".\n");
             WIDE_OUTPUT_FLUSH();
 
@@ -1040,11 +1005,23 @@ Return Value:
 
 ReleaseTable:
 
+        if (TablePath) {
+            TablePath->Vtbl->Release(TablePath);
+            TablePath = NULL;
+        }
+
+        if (TableFile) {
+            TableFile->Vtbl->Release(TableFile);
+            TableFile = NULL;
+        }
+
         Table->Vtbl->Release(Table);
+        Table = NULL;
 
 ReleaseKeys:
 
         Keys->Vtbl->Release(Keys);
+        Keys = NULL;
 
         if (Terminate) {
             break;

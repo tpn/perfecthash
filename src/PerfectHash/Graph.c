@@ -1323,7 +1323,7 @@ Return Value:
     Context = Info->Context;
     Table = Context->Table;
     NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
-    Keys = (PKEY)Table->Keys->BaseAddress;
+    Keys = (PKEY)Table->Keys->File->BaseAddress;
 
     //
     // Enumerate all keys in the input set, hash them into two unique vertices,
@@ -1525,7 +1525,7 @@ Return Value:
     Rtl = Context->Rtl;
     Table = Context->Table;
     NumberOfKeys = Graph->NumberOfKeys;
-    Keys = (PKEY)Table->Keys->BaseAddress;
+    Keys = (PKEY)Table->Keys->File->BaseAddress;
     Assigned = Graph->Assigned;
 
     NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
