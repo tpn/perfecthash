@@ -114,7 +114,7 @@ C_ASSERT(sizeof(PERFECT_HASH_PATH_FLAGS) == sizeof(ULONG));
 typedef PERFECT_HASH_PATH_FLAGS *PPERFECT_HASH_PATH_FLAGS;
 
 #define IsBaseNameValidCIdentifier(Path) \
-    (Path->Flags.IsBaseNameValidCIdentifier)
+    (Path->Flags.BaseNameIsValidCIdentifier)
 
 #define ClearPathState(Path) (Path->State.AsULong = 0)
 #define ClearPathFlags(Path) (Path->Flags.AsULong = 0)

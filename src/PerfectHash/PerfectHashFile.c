@@ -206,7 +206,7 @@ PerfectHashFileLoad(
     PPERFECT_HASH_FILE File,
     PPERFECT_HASH_PATH SourcePath,
     PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlagsPointer,
-    PLARGE_INTEGER EndOfFile
+    PLARGE_INTEGER EndOfFilePointer
     )
 /*++
 
@@ -379,8 +379,8 @@ Return Value:
     // Update the caller's EndOfFile pointer if applicable.
     //
 
-    if (ARGUMENT_PRESENT(EndOfFile)) {
-        EndOfFile->QuadPart = File->FileInfo.EndOfFile.QuadPart;
+    if (ARGUMENT_PRESENT(EndOfFilePointer)) {
+        EndOfFilePointer->QuadPart = File->FileInfo.EndOfFile.QuadPart;
     }
 
     //

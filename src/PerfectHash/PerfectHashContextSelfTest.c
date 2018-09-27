@@ -949,21 +949,23 @@ Return Value:
 
         STATS_QUAD(L"Cycles to solve: ", SolveCycles);
         STATS_QUAD(L"Cycles to verify: ", VerifyCycles);
-        STATS_QUAD(L"Cycles to prepare table file: ", PrepareTableFileCycles);
-        STATS_QUAD(L"Cycles to save table file: ", SaveTableFileCycles);
-        STATS_QUAD(L"Cycles to prepare header file: ", PrepareHeaderFileCycles);
-        STATS_QUAD(L"Cycles to save header file: ", SaveHeaderFileCycles);
+
+        //STATS_QUAD(L"Cycles to prepare table file: ", PrepareTableFileCycles);
+        //STATS_QUAD(L"Cycles to save table file: ", SaveTableFileCycles);
+        //STATS_QUAD(L"Cycles to prepare header file: ", PrepareHeaderFileCycles);
+        //STATS_QUAD(L"Cycles to save header file: ", SaveHeaderFileCycles);
 
         STATS_QUAD(L"Microseconds to solve: ", SolveMicroseconds);
         STATS_QUAD(L"Microseconds to verify: ", VerifyMicroseconds);
-        STATS_QUAD(L"Microseconds to prepare table file: ",
-                   PrepareTableFileMicroseconds);
-        STATS_QUAD(L"Microseconds to save table file: ",
-                   SaveTableFileMicroseconds);
-        STATS_QUAD(L"Microseconds to prepare header file: ",
-                   PrepareHeaderFileMicroseconds);
-        STATS_QUAD(L"Microseconds to save header file: ",
-                   SaveHeaderFileMicroseconds);
+
+        //STATS_QUAD(L"Microseconds to prepare table file: ",
+        //           PrepareTableFileMicroseconds);
+        //STATS_QUAD(L"Microseconds to save table file: ",
+        //           SaveTableFileMicroseconds);
+        //STATS_QUAD(L"Microseconds to prepare header file: ",
+        //           PrepareHeaderFileMicroseconds);
+        //STATS_QUAD(L"Microseconds to save header file: ",
+        //           SaveHeaderFileMicroseconds);
 
         WIDE_OUTPUT_FLUSH();
 

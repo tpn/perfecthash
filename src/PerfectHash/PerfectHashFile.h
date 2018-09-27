@@ -341,5 +341,6 @@ extern PERFECT_HASH_FILE_TRUNCATE PerfectHashFileTruncate;
 extern PERFECT_HASH_FILE_MAP PerfectHashFileMap;
 extern PERFECT_HASH_FILE_UNMAP PerfectHashFileUnmap;
 extern PERFECT_HASH_FILE_SCHEDULE_RENAME PerfectHashFileScheduleRename;
+extern PERFECT_HASH_FILE_DO_RENAME PerfectHashFileDoRename;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

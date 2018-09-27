@@ -95,7 +95,7 @@ Return Value:
     // during the creation routine's assignment step (GraphAssign()).
     //
 
-    Assigned = Table->Data;
+    Assigned = (PULONG)Table->TableFile->BaseAddress;
 
     Vertex1 = Assigned[MaskedLow];
     Vertex2 = Assigned[MaskedHigh];
@@ -205,7 +205,7 @@ Return Value:
     Seed2 = Seeds[1];
     Seed3 = Seeds[2];
     Input = Key;
-    Assigned = Table->Data;
+    Assigned = (PULONG)Table->TableFile->BaseAddress;
 
     //
     // Calculate the individual hash parts.
@@ -420,7 +420,7 @@ Return Value:
     // during the creation routine's assignment step (GraphAssign()).
     //
 
-    Assigned = Table->Data;
+    Assigned = (PULONG)Table->TableFile->BaseAddress;
 
     Vertex1 = Assigned[MaskedLow];
     Vertex2 = Assigned[MaskedHigh];
@@ -603,7 +603,7 @@ Return Value:
     // during the creation routine's assignment step (GraphAssign()).
     //
 
-    Assigned = Table->Data;
+    Assigned = (PULONG)Table->TableFile->BaseAddress;
 
     Vertex1 = Assigned[MaskedLow];
     Vertex2 = Assigned[MaskedHigh];

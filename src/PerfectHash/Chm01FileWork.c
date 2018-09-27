@@ -29,9 +29,8 @@ PrepareFileChm01(
     HANDLE DependentEvent
     )
 {
-    HANDLE Event;
     HRESULT Result = S_OK;
-    PPERFECT_HASH_FILE File;
+    PPERFECT_HASH_FILE File = NULL;
 
     if (IsValidHandle(DependentEvent)) {
         ULONG WaitResult;
@@ -54,7 +53,7 @@ PrepareFileChm01(
             goto Error;
         }
 
-        Result = File->Vtbl->Extend(File, MappingSize->QuadPart);
+        Result = File->Vtbl->Extend(File, *MappingSize);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileExtend, Result);
             goto Error;
@@ -65,7 +64,7 @@ PrepareFileChm01(
         Result = Table->Vtbl->CreateInstance(Table,
                                              NULL,
                                              &IID_PERFECT_HASH_FILE,
-                                             File);
+                                             &File);
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileCreateInstance, Result);
@@ -74,7 +73,7 @@ PrepareFileChm01(
 
         Result = File->Vtbl->Create(File,
                                     Path,
-                                    &MappingSize,
+                                    MappingSize,
                                     NULL);
 
         if (FAILED(Result)) {
@@ -85,6 +84,12 @@ PrepareFileChm01(
         }
 
     }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
 
 Error:
 
@@ -135,17 +140,15 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    PHANDLE Event;
-    HRESULT Result;
+    HRESULT Result = S_OK;
     PGRAPH_INFO Info;
     PFILE_WORK_ITEM Item;
-    PERFECT_HASH_TLS_CONTEXT TlsContext;
-    PFILE_WORK_CALLBACK_IMPL Impl;
-    PFILE_WORK_CALLBACK_WRAPPER Wrapper = NULL;
+    PFILE_WORK_CALLBACK_IMPL Impl = NULL;
     PPERFECT_HASH_PATH Path = NULL;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_KEYS Keys;
     HANDLE DependentEvent = NULL;
+    PTABLE_INFO_ON_DISK TableInfo;
 
     //
     // Initialize aliases.
@@ -154,6 +157,7 @@ Return Value:
     Rtl = Context->Rtl;
     Info = (PGRAPH_INFO)Context->AlgorithmContext;
     Table = Context->Table;
+    TableInfo = Table->TableInfoOnDisk;
     Keys = Table->Keys;
 
     //
@@ -170,7 +174,6 @@ Return Value:
         PCUNICODE_STRING NewExtension = NULL;
         PCUNICODE_STRING NewStreamName = NULL;
         PCUNICODE_STRING AdditionalSuffix = NULL;
-        ULARGE_INTEGER NumberOfTableElements;
         ULARGE_INTEGER MappingSize;
         SYSTEM_INFO SystemInfo;
         PPERFECT_HASH_FILE *File;
@@ -294,7 +297,7 @@ Return Value:
             if (WaitResult != WAIT_OBJECT_0) {
                 SYS_ERROR(WaitForSingleObject);
                 Result = PH_E_SYSTEM_CALL_FAILED;
-                goto Error;
+                goto End;
             }
         }
     }
@@ -348,6 +351,8 @@ SaveTableCallbackChm01(
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_FILE File;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
+
+    UNREFERENCED_PARAMETER(Item);
 
     //
     // Initialize aliases.
@@ -417,13 +422,10 @@ SaveTableInfoStreamCallbackChm01(
     )
 {
     PRTL Rtl;
-    BOOL Success;
     PULONG Dest;
     PGRAPH Graph;
-    PULONG Source;
     ULONG WaitResult;
     HRESULT Result = S_OK;
-    ULONGLONG SizeInBytes;
     LARGE_INTEGER EndOfFile;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
@@ -492,8 +494,8 @@ SaveTableInfoStreamCallbackChm01(
     CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Solve);
     CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Verify);
 
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareTableFile);
-    CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveTableFile);
+    //CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(PrepareTableFile);
+    //CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveTableFile);
 
     //
     // Update the number of bytes written and close the file.
@@ -559,6 +561,8 @@ PrepareCSourceKeysCallbackChm01(
     PPERFECT_HASH_TABLE Table;
     LARGE_INTEGER EndOfFile;
     const ULONG Indent = 0x20202020;
+
+    UNREFERENCED_PARAMETER(Item);
 
     //
     // Initialize aliases.
@@ -638,7 +642,7 @@ PrepareCSourceKeysCallbackChm01(
 Error:
 
     if (Result == S_OK) {
-        Result = PH_E_ERROR_PREPARING_HEADER_FILE;
+        Result = PH_E_ERROR_PREPARING_C_HEADER_FILE;
     }
 
     //
@@ -675,7 +679,10 @@ SaveCSourceTableDataCallbackChm01(
     PTABLE_INFO_ON_DISK TableInfo;
     ULONGLONG NumberOfElements;
     ULONGLONG TotalNumberOfElements;
+    LARGE_INTEGER EndOfFile;
     const ULONG Indent = 0x20202020;
+
+    UNREFERENCED_PARAMETER(Item);
 
     //
     // Initialize aliases.
@@ -691,6 +698,7 @@ SaveCSourceTableDataCallbackChm01(
     NumberOfElements = TotalNumberOfElements >> 1;
     Graph = (PGRAPH)Context->SolvedContext;
     Source = Graph->Assigned;
+    Base = (PCHAR)File->BaseAddress;
 
     //
     // Write seed data.
@@ -760,8 +768,6 @@ SaveCSourceTableDataCallbackChm01(
     // Write the table data.
     //
 
-    Base = (PCHAR)Table->HeaderBaseAddress;
-
     OUTPUT_RAW("\n\n#pragma const_seg(\".cpht_data\")\n");
     OUTPUT_RAW("static const unsigned long HashMask = ");
     OUTPUT_HEX(TableInfo->HashMask);
@@ -828,7 +834,7 @@ SaveCSourceTableDataCallbackChm01(
 Error:
 
     if (Result == S_OK) {
-        Result = PH_E_ERROR_SAVING_HEADER_FILE;
+        Result = PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE;
     }
 
     //

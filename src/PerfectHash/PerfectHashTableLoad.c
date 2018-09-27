@@ -133,6 +133,9 @@ Return Value:
     ULONGLONG NumberOfKeys;
     ULONGLONG NumberOfTableElements;
     ULONGLONG ValuesSizeInBytes;
+    PPERFECT_HASH_FILE File;
+    PPERFECT_HASH_FILE InfoStream;
+    LARGE_INTEGER EndOfFile;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
@@ -172,264 +175,21 @@ Return Value:
     //
 
     //
-    // Calculate the size required to store a copy of the Path's unicode string
-    // buffer, plus a trailing NULL.
-    //
-
-    PathBufferSize.LongPart = Path->Length + sizeof(Path->Buffer[0]);
-
-    //
-    // Ensure we haven't overflowed MAX_USHORT.
-    //
-
-    ASSERT(!PathBufferSize.HighPart);
-
-    //
-    // Align up to a 16 byte boundary.
-    //
-
-    AlignedPathBufferSize.LongPart = (
-        ALIGN_UP(
-            PathBufferSize.LongPart,
-            16
-        )
-    );
-
-    //
-    // Repeat overflow check.
-    //
-
-    ASSERT(!AlignedPathBufferSize.HighPart);
-
-    //
-    // Calculate the size required for the :Info stream's fully-qualified path
-    // name, which we obtain by adding the main path's length to the length
-    // of the suffix, then plus the trailing NULL.
-    //
-
-    InfoPathBufferSize.LongPart = (
-
-        //
-        // Account for the length in bytes of the incoming path name.
-        //
-
-        Path->Length +
-
-        //
-        // Account for the length of the suffix including trailing NULL.
-        //
-
-        InfoStreamSuffix.MaximumLength
-
-    );
-
-    //
-    // Overflow check.
-    //
-
-    ASSERT(!InfoPathBufferSize.HighPart);
-
-    //
-    // Align up to a 16 byte boundary.
-    //
-
-    AlignedInfoPathBufferSize.LongPart = (
-        ALIGN_UP(
-            InfoPathBufferSize.LongPart,
-            16
-        )
-    );
-
-    ASSERT(!AlignedInfoPathBufferSize.HighPart);
-
-    //
-    // Calculate the allocation size required for supporting unicode
-    // string buffers.
-    //
-
-    AllocSize.QuadPart = (
-
-        //
-        // Account for the unicode string buffer backing the path.
-        //
-
-        AlignedPathBufferSize.LongPart +
-
-        //
-        // Account for the unicode string buffer backing the :Info stream.
-        //
-
-        AlignedInfoPathBufferSize.LongPart
-
-    );
-
-    //
-    // Sanity check we haven't overflowed MAX_ULONG.
-    //
-
-    ASSERT(!AllocSize.HighPart);
-
-    //
     // Initialize aliases.
     //
 
     Rtl = Table->Rtl;
     Allocator = Table->Allocator;
+    File = Table->TableFile;
+    InfoStream = Table->InfoStream;
 
-    //
-    // Proceed with allocation.
-    //
-
-    BaseBuffer = Buffer = (PCHAR)(
-        Allocator->Vtbl->Calloc(
-            Allocator,
-            1,
-            AllocSize.LowPart
-        )
-    );
-
-    if (!BaseBuffer) {
-        SYS_ERROR(HeapAlloc);
-        ReleasePerfectHashTableLockExclusive(Table);
-        return E_OUTOFMEMORY;
-    }
-
-    //
-    // Allocation was successful, continue with initialization.  Carve out the
-    // backing memory structures for the path's unicode buffer.
-    //
-
-    Table->BasePathBufferAddress = BaseBuffer;
-
-    Table->Path.Buffer = (PWSTR)Buffer;
-    Table->Path.Length = Path->Length;
-    Table->Path.MaximumLength = Path->MaximumLength;
-
-    //
-    // Copy the path provided as a parameter to our local table's copy.
-    //
-
-    CopyMemory(Table->Path.Buffer, Path->Buffer, Path->Length);
-
-    //
-    // Verify the buffer is NULL-terminated.
-    //
-
-    Dest = &Table->Path.Buffer[Table->Path.Length >> 1];
-    ASSERT(*Dest == L'\0');
-
-    //
-    // Advance past the aligned path buffer size such that we're positioned at
-    // the start of the info stream buffer.
-    //
-
-    Buffer += AlignedPathBufferSize.LongPart;
-    Table->InfoStreamPath.Buffer = (PWSTR)Buffer;
-    Table->InfoStreamPath.MaximumLength = InfoPathBufferSize.LowPart;
-    Table->InfoStreamPath.Length = (
-        Table->InfoStreamPath.MaximumLength -
-        sizeof(Table->InfoStreamPath.Buffer[0])
-    );
-
-    //
-    // Advance the buffer and verify it points to the expected location, then
-    // clear it, as it isn't required for the remainder of the routine.  (The
-    // original address was captured in BaseBuffer, which we use at the end
-    // to free the memory.)
-    //
-
-    Buffer += AlignedInfoPathBufferSize.LongPart;
-    ExpectedBuffer = RtlOffsetToPointer(BaseBuffer, AllocSize.LowPart);
-    ASSERT(Buffer == ExpectedBuffer);
-    Buffer = NULL;
-
-    //
-    // Copy the full path into the info stream buffer.
-    //
-
-    CopyMemory(Table->InfoStreamPath.Buffer,
-               Table->Path.Buffer,
-               Table->Path.Length);
-
-    //
-    // Advance the Dest pointer to the end of the path buffer (e.g. after the
-    // ".pht1" suffix).  Assert we're looking at a NULL character.
-    //
-
-    Dest = Table->InfoStreamPath.Buffer;
-    Dest += (Table->Path.Length >> 1);
-    ASSERT(*Dest == L'\0');
-
-    //
-    // Copy the :Info suffix over, then NULL-terminate.
-    //
-
-    Source = InfoStreamSuffix.Buffer;
-
-    while (*Source) {
-        *Dest++ = *Source++;
-    }
-
-    *Dest = L'\0';
-
-    //
-    // We've finished initializing our two unicode string buffers for the
-    // backing file and its :Info counterpart.  Initialize some aliases for
-    // the CreateFile() calls, then attempt to open the :Info stream.
-    //
-
-    ShareMode = (
-        FILE_SHARE_READ  |
-        FILE_SHARE_WRITE |
-        FILE_SHARE_DELETE
-    );
-
-    FlagsAndAttributes = FILE_FLAG_OVERLAPPED;
-
-    FileHandle = CreateFileW(Table->InfoStreamPath.Buffer,
-                             GENERIC_READ,
-                             ShareMode,
-                             NULL,
-                             OPEN_EXISTING,
-                             FlagsAndAttributes,
-                             NULL);
-
-    Table->InfoStreamFileHandle = FileHandle;
-
-    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
-
-        //
-        // Failed to open the file.  Without the :Info file, we can't proceed,
-        // as it contains metadata information about the underlying perfect
-        // hash table (such as algorithm used, hash function used, etc).  So,
-        // error out.
-        //
-
-        SYS_ERROR(CreateFileW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
+    Result = InfoStream->Vtbl->Load(InfoStream, Path, NULL, &EndOfFile);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableLoad, Result);
         goto Error;
     }
 
-    //
-    // Successfully opened the :Info stream.  Obtain the current size of the
-    // file and make sure it has a file size that meets our minimum :Info
-    // on-disk size.
-    //
-
-    Success = GetFileInformationByHandleEx(
-        FileHandle,
-        (FILE_INFO_BY_HANDLE_CLASS)FileStandardInfo,
-        &FileInfo,
-        sizeof(FileInfo)
-    );
-
-    if (!Success) {
-        SYS_ERROR(GetFileInformationByHandleEx);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (FileInfo.EndOfFile.QuadPart < sizeof(*TableInfoOnDisk)) {
+    if (EndOfFile.QuadPart < sizeof(*TableInfoOnDisk)) {
 
         //
         // File is too small, it can't be an :Info we know about.
@@ -440,45 +200,11 @@ Return Value:
     }
 
     //
-    // The file is a sensible non-zero size.  Proceed with creating a mapping.
-    // We use 0 as the mapping size such that it defaults to whatever the file
-    // size is.
-    //
-
-    MappingHandle = CreateFileMappingW(FileHandle,
-                                       NULL,
-                                       PAGE_READONLY,
-                                       0,
-                                       0,
-                                       NULL);
-
-    Table->InfoStreamMappingHandle = MappingHandle;
-
-    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-        SYS_ERROR(CreateFileMappingW);
-        goto Error;
-    }
-
-    //
-    // Successfully created the mapping handle.  Now, map it.
-    //
-
-    BaseAddress = MapViewOfFile(MappingHandle, FILE_MAP_READ, 0, 0, 0);
-
-    Table->InfoStreamBaseAddress = BaseAddress;
-
-    if (!BaseAddress) {
-        SYS_ERROR(MapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
     // We've obtained the TABLE_INFO_ON_DISK structure.  Ensure the
     // magic values are what we expect.
     //
 
-    TableInfoOnDisk = (PTABLE_INFO_ON_DISK)BaseAddress;
+    TableInfoOnDisk = (PTABLE_INFO_ON_DISK)File->BaseAddress;
 
     if (TableInfoOnDisk->Magic.LowPart  != TABLE_INFO_ON_DISK_MAGIC_LOWPART ||
         TableInfoOnDisk->Magic.HighPart != TABLE_INFO_ON_DISK_MAGIC_HIGHPART) {
@@ -581,20 +307,6 @@ Return Value:
         goto Error;
     }
 
-    //
-    // Initial validation checks have passed.  Proceed with opening up the
-    // actual table data file.
-    //
-
-    FileHandle = CreateFileW(Table->Path.Buffer,
-                             GENERIC_READ,
-                             ShareMode,
-                             NULL,
-                             OPEN_EXISTING,
-                             FILE_FLAG_OVERLAPPED,
-                             NULL);
-
-    Table->FileHandle = FileHandle;
 
     if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
 

@@ -396,8 +396,8 @@ const USHORT ComponentInterfaceOffsets[] = {
     (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE, Interface),
     (USHORT)FIELD_OFFSET(RTL, Interface),
     (USHORT)FIELD_OFFSET(ALLOCATOR, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface);
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface);
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface),
+    (USHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface),
 
     0,
 };
@@ -565,7 +565,7 @@ VERIFY_VTBL_SIZE(ALLOCATOR, 6);
 // PerfectHashFile
 //
 
-const PERFECT_HASH_FILE_VTBL FileInterface = {
+const PERFECT_HASH_FILE_VTBL PerfectHashFileInterface = {
     (PPERFECT_HASH_FILE_QUERY_INTERFACE)&ComponentQueryInterface,
     (PPERFECT_HASH_FILE_ADD_REF)&ComponentAddRef,
     (PPERFECT_HASH_FILE_RELEASE)&ComponentRelease,
@@ -595,7 +595,7 @@ VERIFY_VTBL_SIZE(PERFECT_HASH_FILE, 12);
 // PerfectHashPath
 //
 
-const PERFECT_HASH_PATH_VTBL PathInterface = {
+const PERFECT_HASH_PATH_VTBL PerfectHashPathInterface = {
     (PPERFECT_HASH_PATH_QUERY_INTERFACE)&ComponentQueryInterface,
     (PPERFECT_HASH_PATH_ADD_REF)&ComponentAddRef,
     (PPERFECT_HASH_PATH_RELEASE)&ComponentRelease,

@@ -140,7 +140,7 @@ Return Value:
     }
 
     if (!IsBaseNameValidCIdentifier(Path)) {
-        Result = PH_E_KEYS_FILE_NAME_NOT_VALID_C_IDENTIFIER;
+        Result = PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER;
         PH_ERROR(PerfectHashKeysLoad, Result);
         goto Error;
     }

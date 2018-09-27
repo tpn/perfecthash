@@ -467,8 +467,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     TP_CALLBACK_ENVIRON FinishedCallbackEnv;
-    SLIST_HEADER FinishedWorkListHead;
     PTP_POOL FinishedThreadpool;
+    SLIST_HEADER FinishedWorkListHead;
     PTP_WORK FinishedWork;
 
     //
@@ -536,7 +536,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    //PVOID Padding3;
+    PVOID Padding3;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;

@@ -698,26 +698,6 @@ Return Value:
     Context->VerifyElapsedCycles.QuadPart = 0;
     Context->VerifyElapsedMicroseconds.QuadPart = 0;
 
-    Context->TableFileWorkErrors = 0;
-    Context->TableFileWorkLastError = 0;
-    Context->TableFileWorkLastResult = S_OK;
-
-    Context->CHeaderFileWorkErrors = 0;
-    Context->CHeaderFileWorkLastError = 0;
-    Context->CHeaderFileWorkLastResult = S_OK;
-
-    Context->CSourceFileWorkErrors = 0;
-    Context->CSourceFileWorkLastError = 0;
-    Context->CSourceFileWorkLastResult = S_OK;
-
-    Context->CSourceKeysFileWorkErrors = 0;
-    Context->CSourceKeysFileWorkLastError = 0;
-    Context->CSourceKeysFileWorkLastResult = S_OK;
-
-    Context->CSourceTableDataFileWorkErrors = 0;
-    Context->CSourceTableDataFileWorkLastError = 0;
-    Context->CSourceTableDataFileWorkLastResult = S_OK;
-
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;
 

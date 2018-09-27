@@ -66,9 +66,6 @@ Abstract:
 #define CHECK_ALL_SAVE_ERRORS()                                       \
     CHECK_SAVE_ERRORS(TableFile, TABLE_FILE);                         \
     CHECK_SAVE_ERRORS(TableInfoStream, TABLE_INFO_STREAM);            \
-    CHECK_SAVE_ERRORS(CHeaderFile, C_HEADER_FILE);                    \
-    CHECK_SAVE_ERRORS(CSourceFile, C_SOURCE_FILE);                    \
-    CHECK_SAVE_ERRORS(CSourceKeysFile, C_SOURCE_KEYS_FILE);           \
     CHECK_SAVE_ERRORS(CSourceTableDataFile, C_SOURCE_TABLE_DATA_FILE)
 
 
@@ -165,9 +162,7 @@ Return Value:
     FILE_WORK_ITEM PrepareCSourceKeysFile;
     FILE_WORK_ITEM PrepareCSourceTableDataFile;
     FILE_WORK_ITEM SaveTableFile;
-    FILE_WORK_ITEM SaveCHeaderFile;
-    FILE_WORK_ITEM SaveCSourceFile;
-    FILE_WORK_ITEM SaveCSourceKeysFile;
+    FILE_WORK_ITEM SaveTableInfoStream;
     FILE_WORK_ITEM SaveCSourceTableDataFile;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
@@ -198,7 +193,7 @@ Return Value:
     BOOL WaitForAllEvents = TRUE;
 
     HANDLE Events[5];
-    HANDLE SaveEvents[6];
+    HANDLE SaveEvents[3];
     HANDLE PrepareEvents[6];
 
     //
@@ -213,10 +208,7 @@ Return Value:
 
     SaveEvents[0] = Context->SavedTableFileEvent;
     SaveEvents[1] = Context->SavedTableInfoStreamEvent;
-    SaveEvents[2] = Context->SavedCHeaderFileEvent;
-    SaveEvents[3] = Context->SavedCSourceFileEvent;
-    SaveEvents[4] = Context->SavedCSourceKeysFileEvent;
-    SaveEvents[5] = Context->SavedCSourceTableDataFileEvent;
+    SaveEvents[2] = Context->SavedCSourceTableDataFileEvent;
 
     PrepareEvents[0] = Context->PreparedTableFileEvent;
     PrepareEvents[1] = Context->PreparedTableInfoStreamEvent;
@@ -852,11 +844,11 @@ RetryWithLargerTableSize:
     //
 
 #define SUBMIT_FILE_WORK(Verb, Name)                      \
-    ZeroStruct(Verb##Name##);                             \
+    ZeroStruct(##Verb####Name##);                         \
     Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
     Verb##Name##.Event = Context->##Verb##d##Name##Event; \
     InterlockedPushEntrySList(&Context->FileWorkListHead, \
-                              &##Name##.ListEntry);       \
+                              &Verb##Name##.ListEntry);   \
     SubmitThreadpoolWork(Context->FileWork)
 
     SUBMIT_FILE_WORK(Prepare, TableFile);
@@ -1204,9 +1196,7 @@ FinishedSolution:
     //
 
     SUBMIT_FILE_WORK(Save, TableFile);
-    SUBMIT_FILE_WORK(Save, CHeaderFile);
-    SUBMIT_FILE_WORK(Save, CSourceFile);
-    SUBMIT_FILE_WORK(Save, CSourceKeysFile);
+    SUBMIT_FILE_WORK(Save, TableInfoStream);
     SUBMIT_FILE_WORK(Save, CSourceTableDataFile);
 
     //

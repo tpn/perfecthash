@@ -391,7 +391,7 @@ IsPrepareFileWorkId(
 {
     return (
         FileWorkId >= FileWorkPrepareFirstId &&
-        FileWorkId =< FileWorkPrepareLastId
+        FileWorkId <= FileWorkPrepareLastId
     );
 }
 
@@ -403,7 +403,7 @@ IsSaveFileWorkId(
 {
     return (
         FileWorkId >= FileWorkSaveFirstId &&
-        FileWorkId =< FileWorkSaveLastId
+        FileWorkId <= FileWorkSaveLastId
     );
 }
 
@@ -432,6 +432,8 @@ typedef struct _FILE_WORK_ITEM {
     volatile HRESULT LastResult;
 
     HANDLE Event;
+
+    PVOID Padding;
 
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;

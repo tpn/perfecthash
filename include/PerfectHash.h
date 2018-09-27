@@ -886,7 +886,7 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_CREATE)(
     _In_ PPERFECT_HASH_FILE File,
-    _In_ PPERFECT_HASH_FILE Path,
+    _In_ PPERFECT_HASH_PATH Path,
     _In_opt_ PULARGE_INTEGER MappingSize,
     _In_opt_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
     );

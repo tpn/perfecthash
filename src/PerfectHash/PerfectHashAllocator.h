@@ -48,6 +48,7 @@ extern ALLOCATOR_MALLOC AllocatorMalloc;
 extern ALLOCATOR_CALLOC AllocatorCalloc;
 extern ALLOCATOR_FREE AllocatorFree;
 extern ALLOCATOR_FREE_POINTER AllocatorFreePointer;
+extern ALLOCATOR_FREE_STRING_BUFFER AllocatorFreeStringBuffer;
 extern ALLOCATOR_FREE_UNICODE_STRING_BUFFER AllocatorFreeUnicodeStringBuffer;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
