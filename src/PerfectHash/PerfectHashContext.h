@@ -81,7 +81,6 @@ C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
 DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
-
 typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     COMMON_COMPONENT_HEADER(PERFECT_HASH_CONTEXT);
@@ -126,12 +125,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
     // An in-memory union of all possible on-disk table info representations.
     // This is used to capture table info prior to the :Info stream being
-    // available.
+    // available.  The backing memory is stack-allocated in the algorithm's
+    // create table routine.
     //
 
     union {
-        TABLE_INFO_ON_DISK TableInfoOnDisk;
-        GRAPH_INFO_ON_DISK GraphInfoOnDisk;
+        struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
+        struct _GRAPH_INFO_ON_DISK *GraphInfoOnDisk;
     };
 
     //
@@ -244,14 +244,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // the C source file containing table data.
     //
 
-    HANDLE PreparedSourceTableDataFileEvent;
+    HANDLE PreparedCSourceTableDataFileEvent;
 
     //
     // The following event is set when a worker thread has completed saving
     // the C source file containing table data.
     //
 
-    HANDLE SavedSourceTableDataFileEvent;
+    HANDLE SavedCSourceTableDataFileEvent;
 
     //
     // The following event is set when a worker thread has completed preparing
@@ -410,110 +410,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULARGE_INTEGER SaveTableFileElapsedMicroseconds;
 
     //
-    // Capture the time required to prepare the C header file.
-    //
-
-    ULARGE_INTEGER PrepareCHeaderFileStartCycles;
-    LARGE_INTEGER PrepareCHeaderFileStartCounter;
-
-    ULARGE_INTEGER PrepareCHeaderFileEndCycles;
-    LARGE_INTEGER PrepareCHeaderFileEndCounter;
-
-    ULARGE_INTEGER PrepareCHeaderFileElapsedCycles;
-    ULARGE_INTEGER PrepareCHeaderFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to save the C header.
-    //
-
-    ULARGE_INTEGER SaveCHeaderFileStartCycles;
-    LARGE_INTEGER SaveCHeaderFileStartCounter;
-
-    ULARGE_INTEGER SaveCHeaderFileEndCycles;
-    LARGE_INTEGER SaveCHeaderFileEndCounter;
-
-    ULARGE_INTEGER SaveCHeaderFileElapsedCycles;
-    ULARGE_INTEGER SaveCHeaderFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to prepare the C source file.
-    //
-
-    ULARGE_INTEGER PrepareCSourceFileStartCycles;
-    LARGE_INTEGER PrepareCSourceFileStartCounter;
-
-    ULARGE_INTEGER PrepareCSourceFileEndCycles;
-    LARGE_INTEGER PrepareCSourceFileEndCounter;
-
-    ULARGE_INTEGER PrepareCSourceFileElapsedCycles;
-    ULARGE_INTEGER PrepareCSourceFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to save the C source file.
-    //
-
-    ULARGE_INTEGER SaveCSourceFileStartCycles;
-    LARGE_INTEGER SaveCSourceFileStartCounter;
-
-    ULARGE_INTEGER SaveCSourceFileEndCycles;
-    LARGE_INTEGER SaveCSourceFileEndCounter;
-
-    ULARGE_INTEGER SaveCSourceFileElapsedCycles;
-    ULARGE_INTEGER SaveCSourceFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to prepare the C source keys file.
-    //
-
-    ULARGE_INTEGER PrepareCSourceKeysFileStartCycles;
-    LARGE_INTEGER PrepareCSourceKeysFileStartCounter;
-
-    ULARGE_INTEGER PrepareCSourceKeysFileEndCycles;
-    LARGE_INTEGER PrepareCSourceKeysFileEndCounter;
-
-    ULARGE_INTEGER PrepareCSourceKeysFileElapsedCycles;
-    ULARGE_INTEGER PrepareCSourceKeysFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to save the C source keys file.
-    //
-
-    ULARGE_INTEGER SaveCSourceKeysFileStartCycles;
-    LARGE_INTEGER SaveCSourceKeysFileStartCounter;
-
-    ULARGE_INTEGER SaveCSourceKeysFileEndCycles;
-    LARGE_INTEGER SaveCSourceKeysFileEndCounter;
-
-    ULARGE_INTEGER SaveCSourceKeysFileElapsedCycles;
-    ULARGE_INTEGER SaveCSourceKeysFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to prepare the C source table data file.
-    //
-
-    ULARGE_INTEGER PrepareCSourceTableDataFileStartCycles;
-    LARGE_INTEGER PrepareCSourceTableDataFileStartCounter;
-
-    ULARGE_INTEGER PrepareCSourceTableDataFileEndCycles;
-    LARGE_INTEGER PrepareCSourceTableDataFileEndCounter;
-
-    ULARGE_INTEGER PrepareCSourceTableDataFileElapsedCycles;
-    ULARGE_INTEGER PrepareCSourceTableDataFileElapsedMicroseconds;
-
-    //
-    // Capture the time required to save the C source file table data file.
-    //
-
-    ULARGE_INTEGER SaveCSourceTableDataFileStartCycles;
-    LARGE_INTEGER SaveCSourceTableDataFileStartCounter;
-
-    ULARGE_INTEGER SaveCSourceTableDataFileEndCycles;
-    LARGE_INTEGER SaveCSourceTableDataFileEndCounter;
-
-    ULARGE_INTEGER SaveCSourceTableDataFileElapsedCycles;
-    ULARGE_INTEGER SaveCSourceTableDataFileElapsedMicroseconds;
-
-    //
     // Number of failed attempts at solving the graph across all threads.
     //
 
@@ -525,10 +421,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     TP_CALLBACK_ENVIRON MainCallbackEnv;
+    SLIST_HEADER MainWorkListHead;
     PTP_CLEANUP_GROUP MainCleanupGroup;
     PTP_POOL MainThreadpool;
     PTP_WORK MainWork;
-    SLIST_HEADER MainWorkListHead;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
 
@@ -544,40 +440,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     TP_CALLBACK_ENVIRON FileCallbackEnv;
-    PTP_CLEANUP_GROUP FileCleanupGroup;
     SLIST_HEADER FileWorkListHead;
+    PTP_CLEANUP_GROUP FileCleanupGroup;
     PTP_POOL FileThreadpool;
     PTP_WORK FileWork;
-
-    //
-    // Provide a means for file work callbacks to indicate an error details
-    // back to the creation routine.
-    //
-
-    volatile LONG TableFileWorkErrors;
-    volatile LONG TableFileWorkLastError;
-
-    volatile LONG TableInfoStreamWorkErrors;
-    volatile LONG TableInfoStreamWorkLastError;
-
-    volatile LONG CHeaderFileWorkErrors;
-    volatile LONG CHeaderFileWorkLastError;
-
-    volatile LONG CSourceFileWorkErrors;
-    volatile LONG CSourceFileWorkLastError;
-
-    volatile LONG CSourceKeysFileWorkErrors;
-    volatile LONG CSourceKeysFileWorkLastError;
-
-    volatile LONG CSourceTableDataFileWorkErrors;
-    volatile LONG CSourceTableDataFileWorkLastError;
-
-    volatile HRESULT TableFileWorkLastResult;
-    volatile HRESULT TableInfoStreamWorkLastResult;
-    volatile HRESULT CHeaderFileWorkLastResult;
-    volatile HRESULT CSourceFileWorkLastResult;
-    volatile HRESULT CSourceKeysFileWorkLastResult;
-    volatile HRESULT CSourceTableDataFileWorkLastResult;
 
     //
     // The algorithm is responsible for registering an appropriate callback
@@ -601,8 +467,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     TP_CALLBACK_ENVIRON FinishedCallbackEnv;
-    PTP_POOL FinishedThreadpool;
     SLIST_HEADER FinishedWorkListHead;
+    PTP_POOL FinishedThreadpool;
     PTP_WORK FinishedWork;
 
     //
@@ -666,11 +532,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
     // N.B. As additional table functions are added to the context vtbl, you'll
     //      need to comment and un-comment the following padding field in order
-    //      to avoid "warning: additional 8 bytes padding added after Interface
-    //      member"-type warning.
+    //      to avoid "warning: additional 8 bytes padding added after ..."-type
+    //      warnings.
     //
 
-    PVOID Padding3;
+    //PVOID Padding3;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;

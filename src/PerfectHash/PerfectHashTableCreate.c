@@ -106,6 +106,7 @@ Return Value:
 {
     PRTL Rtl;
     PALLOCATOR Allocator;
+    HRESULT Result = S_OK;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
 
     //
@@ -178,7 +179,8 @@ Return Value:
     }
 
     //
-    // No table should be associated with the context at this point.
+    // No table should be associated with the context at this point and vice
+    // versa, and no keys should be set.
     //
 
     if (Context->Table) {
@@ -187,7 +189,60 @@ Return Value:
         goto Error;
     }
 
-    Result = PH_E_NOT_IMPLEMENTED;
+    if (Table->Context) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableCreate, Result);
+        goto Error;
+    }
+
+    if (Table->Keys) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableCreate, Result);
+        goto Error;
+    }
+
+    Context->Vtbl->AddRef(Context);
+    Table->Context = Context;
+    Context->Table = Table;
+
+    Keys->Vtbl->AddRef(Keys);
+    Table->Keys = Keys;
+
+    Table->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
+
+    //
+    // Our main enumeration IDs get replicated in both structures.
+    //
+
+    Table->AlgorithmId = Context->AlgorithmId = AlgorithmId;
+    Table->MaskFunctionId = Context->MaskFunctionId = MaskFunctionId;
+    Table->HashFunctionId = Context->HashFunctionId = HashFunctionId;
+
+    //
+    // Complete initialization of the table's vtbl now that the hash/mask IDs
+    // have been set.
+    //
+
+    CompletePerfectHashTableVtblInitialization(Table);
+
+    //
+    // Dispatch remaining creation work to the algorithm-specific routine.
+    //
+
+    Result = CreationRoutines[AlgorithmId](Table);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // Successfully created the table.
+    //
+
+    Table->Flags.Created = TRUE;
+    Table->Flags.Loaded = FALSE;
+    Table->State.Valid = TRUE;
+
     goto End;
 
 Error:
@@ -201,6 +256,10 @@ Error:
     //
 
 End:
+
+    Table->Context = NULL;
+    Context->Table = NULL;
+    Context->State.NeedsReset = TRUE;
 
     ReleasePerfectHashContextLockExclusive(Context);
     ReleasePerfectHashContextLockExclusive(Table);

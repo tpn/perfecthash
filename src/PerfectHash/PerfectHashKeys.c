@@ -57,7 +57,7 @@ Return Value:
     Keys->SizeOfStruct = sizeof(*Keys);
 
     //
-    // Create Rtl, Allocator and File components.
+    // Create Rtl and Allocator components.
     //
 
     Result = Keys->Vtbl->CreateInstance(Keys,
@@ -73,15 +73,6 @@ Return Value:
                                         NULL,
                                         &IID_PERFECT_HASH_ALLOCATOR,
                                         &Keys->Allocator);
-
-    if (FAILED(Result)) {
-        goto Error;
-    }
-
-    Result = Keys->Vtbl->CreateInstance(Keys,
-                                        NULL,
-                                        &IID_PERFECT_HASH_FILE,
-                                        &Keys->File);
 
     if (FAILED(Result)) {
         goto Error;
@@ -151,21 +142,11 @@ Return Value:
     // Release COM references, if applicable.
     //
 
-    if (Keys->File) {
-        Keys->File->Vtbl->Release(Keys->File);
-        Keys->File = NULL;
-    }
+    RELEASE(Keys->File);
+    RELEASE(Keys->Allocator);
+    RELEASE(Keys->Rtl);
 
-    if (Keys->Allocator) {
-        Keys->Allocator->Vtbl->Release(Keys->Allocator);
-        Keys->Allocator = NULL;
-    }
-
-    if (Keys->Rtl) {
-        Keys->Rtl->Vtbl->Release(Keys->Rtl);
-        Keys->Rtl = NULL;
-    }
-
+    return;
 }
 
 PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
@@ -376,5 +357,82 @@ Return Value:
 
     return S_OK;
 }
+
+PERFECT_HASH_KEYS_GET_FILE PerfectHashKeysGetFile;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysGetFile(
+    PPERFECT_HASH_KEYS Keys,
+    PPERFECT_HASH_FILE *File
+    )
+/*++
+
+Routine Description:
+
+    Obtains the file instance for a given keys instance.
+
+Arguments:
+
+    Keys - Supplies a pointer to a PERFECT_HASH_KEYS structure for which the
+        file is to be obtained.
+
+    File - Supplies the address of a variable that receives a pointer to the
+        file instance.  The caller must release this reference when finished
+        with it via File->Vtbl->Release(File).
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Keys or File parameters were NULL.
+
+    PH_E_KEYS_LOCKED - Keys locked.
+
+    PH_E_KEYS_NOT_LOADED - Keys not loaded.
+
+--*/
+{
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    //
+    // Clear the caller's pointer up-front.
+    //
+
+    *File = NULL;
+
+    if (!TryAcquirePerfectHashKeysLockShared(Keys)) {
+        return PH_E_KEYS_LOCKED;
+    }
+
+    if (!IsLoadedKeys(Keys)) {
+        ReleasePerfectHashKeysLockShared(Keys);
+        return PH_E_KEYS_NOT_LOADED;
+    }
+
+    //
+    // Argument validation complete.  Add a reference to the path and update
+    // the caller's pointer, then return success.
+    //
+
+    Keys->File->Vtbl->AddRef(Keys->File);
+    *File = Keys->File;
+
+    ReleasePerfectHashKeysLockShared(Keys);
+
+    return S_OK;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

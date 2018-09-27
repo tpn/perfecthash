@@ -530,14 +530,14 @@ Abstract:
 #define PH_E_ERROR_PREPARING_C_HEADER_FILE ((HRESULT)0xE0040233L)
 
 //
-// MessageId: PH_E_ERROR_SAVING_HEADER_FILE
+// MessageId: PH_E_ERROR_SAVING_C_HEADER_FILE
 //
 // MessageText:
 //
 // An error occurred whilst trying to save a perfect hash table to
 // the previously prepared C header file.
 //
-#define PH_E_ERROR_SAVING_HEADER_FILE    ((HRESULT)0xE0040234L)
+#define PH_E_ERROR_SAVING_C_HEADER_FILE  ((HRESULT)0xE0040234L)
 
 //
 // MessageId: PH_E_UNREACHABLE_CODE
@@ -933,4 +933,31 @@ Abstract:
 // An error occurred whilst preparing the C source table data file.
 //
 #define PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE004025FL)
+
+//
+// MessageId: PH_E_FILE_NEVER_OPENED
+//
+// MessageText:
+//
+// The file has never been opened.
+//
+#define PH_E_FILE_NEVER_OPENED           ((HRESULT)0xE0040260L)
+
+//
+// MessageId: PH_E_FILE_NO_RENAME_SCHEDULED
+//
+// MessageText:
+//
+// The file has not had a rename operation scheduled.
+//
+#define PH_E_FILE_NO_RENAME_SCHEDULED    ((HRESULT)0xE0040261L)
+
+//
+// MessageId: PH_E_FILE_NOT_CLOSED
+//
+// MessageText:
+//
+// The file has not yet been closed.
+//
+#define PH_E_FILE_NOT_CLOSED             ((HRESULT)0xE0040262L)
 

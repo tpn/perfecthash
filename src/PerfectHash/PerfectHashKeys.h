@@ -44,6 +44,8 @@ typedef union _PERFECT_HASH_KEYS_STATE {
 C_ASSERT(sizeof(PERFECT_HASH_KEYS_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_KEYS_STATE *PPERFECT_HASH_KEYS_STATE;
 
+#define IsLoadedKeys(Keys) (Keys->State.Loaded == TRUE)
+
 //
 // Define the PERFECT_HASH_KEYS_STATS structure.
 //
@@ -111,8 +113,20 @@ typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
 #define TryAcquirePerfectHashKeysLockExclusive(Keys) \
     TryAcquireSRWLockExclusive(&Keys->Lock)
 
+#define AcquirePerfectHashKeysLockExclusive(Keys) \
+    AcquireSRWLockExclusive(&Keys->Lock)
+
 #define ReleasePerfectHashKeysLockExclusive(Keys) \
     ReleaseSRWLockExclusive(&Keys->Lock)
+
+#define TryAcquirePerfectHashKeysLockShared(Keys) \
+    TryAcquireSRWLockShared(&Keys->Lock)
+
+#define AcquirePerfectHashKeysLockShared(Keys) \
+    AcquireSRWLockShared(&Keys->Lock)
+
+#define ReleasePerfectHashKeysLockShared(Keys) \
+    ReleaseSRWLockShared(&Keys->Lock)
 
 typedef
 HRESULT
@@ -146,5 +160,6 @@ extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
 extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
 extern PERFECT_HASH_KEYS_GET_ADDRESS PerfectHashKeysGetAddress;
 extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
+extern PERFECT_HASH_KEYS_GET_FILE PerfectHashKeysGetFile;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

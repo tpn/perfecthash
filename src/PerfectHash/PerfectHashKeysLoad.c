@@ -22,7 +22,7 @@ HRESULT
 PerfectHashKeysLoad(
     PPERFECT_HASH_KEYS Keys,
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
-    PCUNICODE_STRING Path,
+    PCUNICODE_STRING KeysPath,
     ULONG KeySizeInBytes
     )
 /*++
@@ -39,7 +39,7 @@ Arguments:
     KeysLoadFlags - Optionally supplies a pointer to a keys load flags structure
         that can be used to customize key loading behavior.
 
-    Path - Supplies a pointer to a UNICODE_STRING structure that represents
+    KeysPath - Supplies a pointer to a UNICODE_STRING structure that represents
         a fully-qualified path of the keys to use for the perfect hash table.
 
         N.B. Path must be NULL-terminated, which is not normally required for
@@ -52,9 +52,9 @@ Return Value:
 
     S_OK - Success.
 
-    E_POINTER - Keys or Path was NULL.
+    E_POINTER - Keys or KeysPath was NULL.
 
-    E_INVALIDARG - Path was invalid.
+    E_INVALIDARG - KeysPath was invalid.
 
     PH_E_INVALID_KEY_SIZE - The key size provided was not valid.
 
@@ -75,11 +75,11 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File;
+    PPERFECT_HASH_PATH Path = NULL;
     LARGE_INTEGER EndOfFile = { 0 };
-    LARGE_INTEGER NumberOfElements;
+    PPERFECT_HASH_PATH_PARTS Parts = NULL;
     PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags;
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
 
@@ -91,11 +91,11 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(Path)) {
+    if (!ARGUMENT_PRESENT(KeysPath)) {
         return E_POINTER;
     }
 
-    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(Path)) {
+    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(KeysPath)) {
         return E_INVALIDARG;
     }
 
@@ -109,7 +109,7 @@ Return Value:
         return PH_E_KEYS_LOCKED;
     }
 
-    if (Keys->State.Loaded) {
+    if (IsLoadedKeys(Keys)) {
         ReleasePerfectHashKeysLockExclusive(Keys);
         return PH_E_KEYS_ALREADY_LOADED;
     }
@@ -119,10 +119,31 @@ Return Value:
     //
 
     //
-    // Initialize aliases.
+    // Create a path instance.
     //
 
-    Rtl = Keys->Rtl;
+    Result = Keys->Vtbl->CreateInstance(Keys,
+                                        NULL,
+                                        &IID_PERFECT_HASH_PATH,
+                                        &Path);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreateInstance, Result);
+        goto Error;
+    }
+
+    Result = Path->Vtbl->Copy(Path, KeysPath, &Parts, NULL);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCopy, Result);
+        goto Error;
+    }
+
+    if (!IsBaseNameValidCIdentifier(Path)) {
+        Result = PH_E_KEYS_FILE_NAME_NOT_VALID_C_IDENTIFIER;
+        PH_ERROR(PerfectHashKeysLoad, Result);
+        goto Error;
+    }
 
     //
     // Create a file instance.
@@ -157,186 +178,6 @@ Return Value:
         goto Error;
     }
 
-
-    //
-    // Calculate the size required for a copy of the Path's underlying
-    // unicode string buffer.
-    //
-
-    AllocSize.QuadPart = Path->Length + sizeof(Path->Buffer[0]);
-
-    //
-    // Sanity check our size.
-    //
-
-    ASSERT(!AllocSize.HighPart);
-
-    //
-    // Proceed with allocation.
-    //
-
-    Buffer = (PCHAR)(
-        Allocator->Vtbl->Calloc(
-            Allocator,
-            1,
-            AllocSize.LowPart
-        )
-    );
-
-    if (!Buffer) {
-        SYS_ERROR(HeapAlloc);
-        goto Error;
-    }
-
-    //
-    // Open the file, create a file mapping, then map it into memory.
-    //
-
-    FileHandle = CreateFileW(
-        Path->Buffer,
-        GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_OVERLAPPED,
-        NULL
-    );
-
-    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
-        SYS_ERROR(CreateFileW);
-        ReleasePerfectHashKeysLockExclusive(Keys);
-        return E_UNEXPECTED;
-    }
-
-    //
-    // N.B. Error handling should 'goto Error' from this point onward now that
-    //      we have resources that may need to be cleaned up.
-    //
-
-    Success = GetFileInformationByHandleEx(
-        FileHandle,
-        (FILE_INFO_BY_HANDLE_CLASS)FileStandardInfo,
-        &FileInfo,
-        sizeof(FileInfo)
-    );
-
-    if (!Success) {
-        SYS_ERROR(GetFileInformationByHandleEx);
-        ReleasePerfectHashKeysLockExclusive(Keys);
-        return E_UNEXPECTED;
-    }
-
-    //
-    // The number of elements in the key file can be ascertained by right
-    // shifting by 2.
-    //
-
-    NumberOfElements.QuadPart = FileInfo.EndOfFile.QuadPart >> 2;
-
-    //
-    // Sanity check the number of elements.  There shouldn't be more than
-    // MAX_ULONG.
-    //
-
-    if (NumberOfElements.HighPart) {
-        Result = PH_E_TOO_MANY_KEYS;
-        goto Error;
-    }
-
-    //
-    // Create the file mapping.
-    //
-
-    MappingHandle = CreateFileMappingW(FileHandle,
-                                       NULL,
-                                       PAGE_READONLY,
-                                       FileInfo.EndOfFile.HighPart,
-                                       FileInfo.EndOfFile.LowPart,
-                                       NULL);
-
-    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-        SYS_ERROR(CreateFileMappingW);
-        goto Error;
-    }
-
-    //
-    // Successfully created a file mapping.  Now map it into memory.
-    //
-
-    BaseAddress = MapViewOfFile(MappingHandle,
-                                FILE_MAP_READ,
-                                0,
-                                0,
-                                FileInfo.EndOfFile.LowPart);
-
-    if (!BaseAddress) {
-        SYS_ERROR(MapViewOfFile);
-        goto Error;
-    }
-
-    //
-    // The file has been mapped successfully.  Fill out the main structure
-    // details.
-    //
-
-    Keys->FileHandle = FileHandle;
-    Keys->MappingHandle = MappingHandle;
-    Keys->BaseAddress = BaseAddress;
-    Keys->NumberOfElements.QuadPart = NumberOfElements.QuadPart;
-
-    if (!KeysLoadFlags.DisableTryLargePagesForKeysData) {
-
-        //
-        // Attempt a large page allocation to contain the keys buffer.
-        //
-
-        ULONG LargePageAllocFlags;
-
-        LargePageAllocFlags = MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
-        LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
-        LargePageAddress = VirtualAlloc(NULL,
-                                        LargePageAllocSize,
-                                        LargePageAllocFlags,
-                                        PAGE_READWRITE);
-
-        if (LargePageAddress) {
-
-            //
-            // The large page allocation was successful.
-            //
-
-            ULONG_PTR NumberOfPages;
-
-            Keys->Flags.KeysDataUsesLargePages = TRUE;
-            Keys->MappedAddress = Keys->BaseAddress;
-            Keys->BaseAddress = LargePageAddress;
-
-            //
-            // We can use the allocation size here to capture the appropriate
-            // number of pages that are mapped and accessible.
-            //
-
-            NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
-
-            Rtl->Vtbl->CopyPages(Rtl,
-                                 LargePageAddress,
-                                 BaseAddress,
-                                 (ULONG)NumberOfPages);
-        }
-
-    }
-
-    //
-    // Initialize the path length variables, point the buffer at the space after
-    // our structure, then copy the string over and NULL-terminate it.
-    //
-
-    Keys->Path.Length = Path->Length;
-    Keys->Path.MaximumLength = Path->Length + sizeof(Path->Buffer[0]);
-    Keys->Path.Buffer = (PWSTR)Buffer;
-    CopyMemory(Keys->Path.Buffer, Path->Buffer, Path->Length);
-    Keys->Path.Buffer[Path->Length >> 1] = L'\0';
-
     Result = PerfectHashKeysLoadStats(Keys);
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashKeysLoadStats, Result);
@@ -368,6 +209,11 @@ Error:
     //
 
 End:
+
+    if (Path) {
+        Path->Vtbl->Release(Path);
+        Path = NULL;
+    }
 
     ReleasePerfectHashKeysLockExclusive(Keys);
 
@@ -450,7 +296,7 @@ Return Value:
     ZeroStruct(Stats);
     Bitmap = 0;
     Prev = (ULONG)-1;
-    Values = Keys->Keys;
+    Values = (PULONG)Keys->File->BaseAddress;
     NumberOfKeys = Keys->NumberOfElements.LowPart;
     KeysBitmap = &Stats.KeysBitmap;
 
@@ -486,8 +332,8 @@ Return Value:
     // min/max values from the start and end of the array.
     //
 
-    Stats.MinValue = Keys->Keys[0];
-    Stats.MaxValue = Keys->Keys[NumberOfKeys - 1];
+    Stats.MinValue = Values[0];
+    Stats.MaxValue = Values[NumberOfKeys - 1];
 
     //
     // Set the linear flag if the array of keys represents a linear sequence of

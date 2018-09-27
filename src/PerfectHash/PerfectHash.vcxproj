@@ -95,6 +95,7 @@
     <ClInclude Include="PerfectHashKeys.h" />
     <ClInclude Include="PerfectHashPath.h" />
     <ClInclude Include="PerfectHashPrimes.h" />
+    <ClInclude Include="PerfectHashPrivate.h" />
     <ClInclude Include="PerfectHashTable.h" />
     <ClInclude Include="PerfectHashConstants.h" />
     <ClInclude Include="PerfectHashTls.h" />
@@ -104,6 +105,8 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Chm01FileWork.c" />
+    <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm_01.c" />
     <ClCompile Include="Component.c" />
     <ClCompile Include="dllmain.c" />
@@ -120,6 +123,7 @@
     <ClCompile Include="PerfectHashAllocator.c" />
     <ClCompile Include="PerfectHashConstants.c" />
     <ClCompile Include="PerfectHashTableCompile.c" />
+    <ClCompile Include="PerfectHashTableCreate.c" />
     <ClCompile Include="PerfectHashTls.c" />
     <ClCompile Include="PerfectHashTable.c" />
     <ClCompile Include="PerfectHashTableLoad.c" />

@@ -311,11 +311,11 @@ const UNICODE_STRING Yes = RTL_CONSTANT_STRING(L"Yes.\n");
 const UNICODE_STRING KeysExtension = RTL_CONSTANT_STRING(L"keys");
 const UNICODE_STRING CHeaderExtension = RTL_CONSTANT_STRING(L"h");
 const UNICODE_STRING TableExtension = RTL_CONSTANT_STRING(L"pht1");
+const UNICODE_STRING TableInfoStreamName = RTL_CONSTANT_STRING(L"Info");
 const UNICODE_STRING DotKeysSuffix = RTL_CONSTANT_STRING(L".keys");
 const UNICODE_STRING DotTableSuffix = RTL_CONSTANT_STRING(L".pht1");
 const UNICODE_STRING DotCHeaderSuffix = RTL_CONSTANT_STRING(L".h");
 const UNICODE_STRING DotCSourceSuffix = RTL_CONSTANT_STRING(L".c");
-const UNICODE_STRING InfoStreamSuffix = RTL_CONSTANT_STRING(L":Info");
 const UNICODE_STRING KeysWildcardSuffix = RTL_CONSTANT_STRING(L"*.keys");
 const UNICODE_STRING CSourceExtension = RTL_CONSTANT_STRING(L"c");
 const UNICODE_STRING CSourceKeysSuffix = RTL_CONSTANT_STRING(L"_Keys");
@@ -460,8 +460,9 @@ const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface = {
     &PerfectHashKeysGetFlags,
     &PerfectHashKeysGetAddress,
     &PerfectHashKeysGetBitmap,
+    &PerfectHashKeysGetFile,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_KEYS, 4);
+VERIFY_VTBL_SIZE(PERFECT_HASH_KEYS, 5);
 
 //
 // PerfectHashContext
@@ -585,8 +586,10 @@ const PERFECT_HASH_FILE_VTBL FileInterface = {
     &PerfectHashFileTruncate,
     &PerfectHashFileMap,
     &PerfectHashFileUnmap,
+    &PerfectHashFileScheduleRename,
+    &PerfectHashFileDoRename,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_FILE, 10);
+VERIFY_VTBL_SIZE(PERFECT_HASH_FILE, 12);
 
 //
 // PerfectHashPath

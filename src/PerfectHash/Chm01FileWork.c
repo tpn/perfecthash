@@ -18,6 +18,92 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "Chm_01.h"
+
+HRESULT
+PrepareFileChm01(
+    PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_FILE *FilePointer,
+    PPERFECT_HASH_PATH Path,
+    PULARGE_INTEGER MappingSize,
+    HANDLE DependentEvent
+    )
+{
+    HANDLE Event;
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_FILE File;
+
+    if (IsValidHandle(DependentEvent)) {
+        ULONG WaitResult;
+
+        WaitResult = WaitForSingleObject(DependentEvent, INFINITE);
+        if (WaitResult != WAIT_OBJECT_0) {
+            SYS_ERROR(WaitForSingleObject);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+    }
+
+    File = *FilePointer;
+
+    if (File) {
+
+        Result = File->Vtbl->ScheduleRename(File, Path);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileScheduleRename, Result);
+            goto Error;
+        }
+
+        Result = File->Vtbl->Extend(File, MappingSize->QuadPart);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileExtend, Result);
+            goto Error;
+        }
+
+    } else {
+
+        Result = Table->Vtbl->CreateInstance(Table,
+                                             NULL,
+                                             &IID_PERFECT_HASH_FILE,
+                                             File);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileCreateInstance, Result);
+            goto Error;
+        }
+
+        Result = File->Vtbl->Create(File,
+                                    Path,
+                                    &MappingSize,
+                                    NULL);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileCreate, Result);
+            File->Vtbl->Release(File);
+            File = NULL;
+            goto Error;
+        }
+
+    }
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (File) {
+        *FilePointer = File;
+    }
+
+    return Result;
+}
 
 _Use_decl_annotations_
 VOID
@@ -50,19 +136,25 @@ Return Value:
 {
     PRTL Rtl;
     PHANDLE Event;
-    volatile HRESULT *Result;
-    volatile LONG *Errors;
-    volatile LONG *LastError;
+    HRESULT Result;
+    PGRAPH_INFO Info;
     PFILE_WORK_ITEM Item;
     PERFECT_HASH_TLS_CONTEXT TlsContext;
     PFILE_WORK_CALLBACK_IMPL Impl;
     PFILE_WORK_CALLBACK_WRAPPER Wrapper = NULL;
+    PPERFECT_HASH_PATH Path = NULL;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_KEYS Keys;
+    HANDLE DependentEvent = NULL;
 
     //
     // Initialize aliases.
     //
 
     Rtl = Context->Rtl;
+    Info = (PGRAPH_INFO)Context->AlgorithmContext;
+    Table = Context->Table;
+    Keys = Table->Keys;
 
     //
     // Resolve the work item base address from the list entry.
@@ -72,237 +164,144 @@ Return Value:
 
     ASSERT(IsValidFileWorkId(Item->FileWorkId));
 
-    //
-    // Zero the local TLS context structure, fill out the relevant fields,
-    // then set it.  This allows our exception filters to obtain the active
-    // context when handling exceptions.
-    //
+    if (IsPrepareFileWorkId(Item->FileWorkId)) {
 
-    ZeroStruct(TlsContext);
-    TlsContext.Context = Context;
-    if (!PerfectHashTlsSetContext(&TlsContext)) {
-        SYS_ERROR(TlsSetValue);
-        return;
-    }
+        PCUNICODE_STRING NewBaseName = NULL;
+        PCUNICODE_STRING NewExtension = NULL;
+        PCUNICODE_STRING NewStreamName = NULL;
+        PCUNICODE_STRING AdditionalSuffix = NULL;
+        ULARGE_INTEGER NumberOfTableElements;
+        ULARGE_INTEGER MappingSize;
+        SYSTEM_INFO SystemInfo;
+        PPERFECT_HASH_FILE *File;
 
-#define DISPATCH_FILE_WORK(Verb, Name)               \
-    case FileWork##Verb####Name##Id:                 \
-        Event = &Context->##Verb##d##Name##Event;    \
-        Result = &Context->##Name##WorkLastResult;   \
-        Errors = &Context->##Name##WorkErrors;       \
-        LastError = &Context->##Name##WorkLastError; \
-        Impl = ##Verb##TableCallbackChm01;           \
-        break;
+        GetSystemInfo(&SystemInfo);
+        MappingSize.QuadPart = SystemInfo.dwAllocationGranularity;
 
-    switch (Item->FileWorkId) {
+        switch (Item->FileWorkId) {
 
-        DISPATCH_FILE_WORK(Prepare, TableFile);
-        DISPATCH_FILE_WORK(Prepare, TableInfoStream);
-        DISPATCH_FILE_WORK(Prepare, CHeaderFile);
-        DISPATCH_FILE_WORK(Prepare, CSourceFile);
-        DISPATCH_FILE_WORK(Prepare, CSourceKeysFile);
-        DISPATCH_FILE_WORK(Prepare, CSourceTableDataFile);
+            case FileWorkPrepareTableFileId:
+                File = &Table->TableFile;
+                NewExtension = &TableExtension;
+                MappingSize.QuadPart = Info->AssignedSizeInBytes;
+                break;
 
-        DISPATCH_FILE_WORK(Save, TableFile);
-        DISPATCH_FILE_WORK(Save, TableInfoStream);
-        DISPATCH_FILE_WORK(Save, CHeaderFile);
-        DISPATCH_FILE_WORK(Save, CSourceFile);
-        DISPATCH_FILE_WORK(Save, CSourceKeysFile);
-        DISPATCH_FILE_WORK(Save, CSourceTableDataFile);
+            case FileWorkPrepareTableInfoStreamId:
+                File = &Table->InfoStream;
+                NewExtension = &TableExtension;
+                NewStreamName = &TableInfoStreamName;
+                DependentEvent = Context->PreparedTableFileEvent;
+                MappingSize.QuadPart = sizeof(GRAPH_INFO_ON_DISK);
+                Impl = PrepareTableInfoStreamCallbackChm01;
+                break;
 
-        default:
+            case FileWorkPrepareCHeaderFileId:
+                File = &Table->CHeaderFile;
+                NewExtension = &CHeaderExtension;
+                Impl = PrepareCHeaderCallbackChm01;
+                break;
 
-            //
-            // Should never get here.
-            //
+            case FileWorkPrepareCSourceFileId:
+                File = &Table->CSourceFile;
+                NewExtension = &CSourceExtension;
+                Impl = PrepareCSourceCallbackChm01;
+                break;
 
-            ASSERT(FALSE);
-            return;
-    }
+            case FileWorkPrepareCSourceKeysFileId:
+                File = &Table->CSourceKeysFile;
+                NewExtension = &CSourceExtension;
+                AdditionalSuffix = &CSourceKeysSuffix;
+                MappingSize.QuadPart += Keys->NumberOfElements.QuadPart * 16;
+                Impl = PrepareCSourceKeysCallbackChm01;
+                break;
 
-    if (Wrapper) {
-        *Result = Wrapper(Impl, Context);
+            case FileWorkPrepareCSourceTableDataFileId:
+                File = &Table->CSourceTableDataFile;
+                NewExtension = &CSourceExtension;
+                AdditionalSuffix = &CSourceTableDataSuffix;
+                MappingSize.QuadPart += (
+                    TableInfo->NumberOfTableElements.QuadPart * 16
+                );
+                break;
+
+            default:
+                Result = PH_E_INVALID_FILE_WORK_ID;
+                goto End;
+        }
+
+        Result = PerfectHashTableCreatePath(Table,
+                                            Table->Keys->File->Path,
+                                            &TableInfo->NumberOfTableElements,
+                                            Table->AlgorithmId,
+                                            Table->MaskFunctionId,
+                                            Table->HashFunctionId,
+                                            Table->OutputDirectory,
+                                            NewBaseName,
+                                            AdditionalSuffix,
+                                            NewExtension,
+                                            NewStreamName,
+                                            &Path,
+                                            NULL);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashTableCreatePath, Result);
+            goto End;
+        }
+
+        Result = PrepareFileChm01(Table,
+                                  File,
+                                  Path,
+                                  &MappingSize,
+                                  DependentEvent);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PrepareFileChm01, Result);
+            goto End;
+        }
+
     } else {
-        *Result = Impl(Context);
-    }
 
-    if (FAILED(*Result)) {
-        InterlockedIncrement(Errors);
-        *LastError = GetLastError();
-    }
+        ULONG WaitResult;
 
-    //
-    // Clear the TLS context we set earlier.
-    //
-
-    if (!PerfectHashTlsSetContext(NULL)) {
-        SYS_ERROR(TlsSetValue);
-    }
-
-    //
-    // Register the relevant event to be set when this threadpool callback
-    // returns, then return.
-    //
-
-    SetEventWhenCallbackReturns(Instance, *Event);
-
-    return;
-}
-
-_Use_decl_annotations_
-HRESULT
-PrepareTableCallbackChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    PRTL Rtl;
-    BOOL Success;
-    ULONG Status;
-    PGRAPH_INFO Info;
-    ULONG LastError;
-    ULONG DesiredAccess;
-    ULONG FlagsAndAttributes;
-    ULONG AllocationGranularity;
-    SYSTEM_INFO SystemInfo;
-    PVOID BaseAddress;
-    HRESULT Result = S_OK;
-    HANDLE FileHandle;
-    HANDLE MappingHandle;
-    PPERFECT_HASH_TABLE Table;
-    LARGE_INTEGER MappingSize;
-    ULARGE_INTEGER SectorAlignedSize;
-    PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Context->Rtl;
-    Table = Context->Table;
-    Info = (PGRAPH_INFO)Context->AlgorithmContext;
-    GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)Table->InfoStreamBaseAddress;
-
-    ShareMode = (
-        FILE_SHARE_READ  |
-        FILE_SHARE_WRITE |
-        FILE_SHARE_DELETE
-    );
-
-    DesiredAccess = (
-        GENERIC_READ |
-        GENERIC_WRITE
-    );
-
-    FlagsAndAttributes = FILE_FLAG_OVERLAPPED;
-
-    FileHandle = CreateFileW(Table->Path.Buffer,
-                             DesiredAccess,
-                             ShareMode,
-                             NULL,
-                             OPEN_ALWAYS,
-                             FlagsAndAttributes,
-                             NULL);
-
-    LastError = GetLastError();
-
-    Table->FileHandle = FileHandle;
-
-    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
-
-        //
-        // Failed to open the file successfully.
-        //
-
-        SYS_ERROR(CreateFileW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-
-    } else if (LastError == ERROR_ALREADY_EXISTS) {
-
-        //
-        // The file was opened successfully, but it already existed.  Clear the
-        // local last error variable then truncate the file.
-        //
-
-        LastError = ERROR_SUCCESS;
-
-        Status = SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
-        if (Status == INVALID_SET_FILE_POINTER) {
-            SYS_ERROR(SetFilePointer);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
+        if (!IsSaveFileWorkId(Item->FileWorkId)) {
+            ASSERT(FALSE);
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            goto End;
         }
 
-        Success = SetEndOfFile(FileHandle);
-        if (!Success) {
-            SYS_ERROR(SetEndOfFile);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
+        switch (Item->FileWorkId) {
+
+            case FileWorkSaveTableFileId:
+                Impl = SaveTableCallbackChm01;
+                DependentEvent = Context->PreparedTableFileEvent;
+                break;
+
+            case FileWorkSaveTableInfoStreamId:
+                Impl = SaveTableInfoStreamCallbackChm01;
+                DependentEvent = Context->PreparedTableInfoStreamEvent;
+                break;
+
+            case FileWorkSaveCSourceTableDataFileId:
+                Impl = SaveCSourceTableDataCallbackChm01;
+                DependentEvent = Context->PreparedCSourceTableDataFileEvent;
+                break;
+
+            default:
+                break;
         }
 
-        //
-        // We've successfully truncated the file.  The creation routine
-        // implementation can now allocate the space required for it as part
-        // of successful graph solving.
-        //
-
+        if (DependentEvent) {
+            WaitResult = WaitForSingleObject(DependentEvent, INFINITE);
+            if (WaitResult != WAIT_OBJECT_0) {
+                SYS_ERROR(WaitForSingleObject);
+                Result = PH_E_SYSTEM_CALL_FAILED;
+                goto Error;
+            }
+        }
     }
 
-
-    //
-    // We need to extend the file to accommodate for the solved graph.
-    //
-
-    SectorAlignedSize.QuadPart = ALIGN_UP(Info->AssignedSizeInBytes,
-                                          Info->AllocationGranularity);
-
-    //
-    // Create the file mapping for the sector-aligned size.  This will
-    // extend the underlying file size accordingly.
-    //
-
-    MappingHandle = CreateFileMappingW(Table->FileHandle,
-                                       NULL,
-                                       PAGE_READWRITE,
-                                       SectorAlignedSize.HighPart,
-                                       SectorAlignedSize.LowPart,
-                                       NULL);
-
-    Table->MappingHandle = MappingHandle;
-
-    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-        SYS_ERROR(CreateFileMappingW);
-        goto Error;
-    }
-
-    BaseAddress = MapViewOfFile(MappingHandle,
-                                FILE_MAP_READ | FILE_MAP_WRITE,
-                                0,
-                                0,
-                                SectorAlignedSize.QuadPart);
-
-    Table->BaseAddress = BaseAddress;
-
-    if (!BaseAddress) {
-        SYS_ERROR(MapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    CONTEXT_END_TIMERS(PrepareTableFile);
-
-    //
-    // We've successfully mapped an area of sufficient space to store
-    // the underlying table array if a perfect hash table solution is
-    // found.  Nothing more to do.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_PREPARING_TABLE_FILE;
+    if (Impl) {
+        Result = Impl(Context, Item);
     }
 
     //
@@ -311,13 +310,33 @@ Error:
 
 End:
 
-    return Result;
+    if (Path) {
+        Path->Vtbl->Release(Path);
+        Path = NULL;
+    }
+
+    Item->LastResult = Result;
+
+    if (FAILED(Result)) {
+        InterlockedIncrement(&Item->NumberOfErrors);
+        Item->LastError = GetLastError();
+    }
+
+    //
+    // Register the relevant event to be set when this threadpool callback
+    // returns, then return.
+    //
+
+    SetEventWhenCallbackReturns(Instance, Item->Event);
+
+    return;
 }
 
 _Use_decl_annotations_
 HRESULT
 SaveTableCallbackChm01(
-    PPERFECT_HASH_CONTEXT Context
+    PPERFECT_HASH_CONTEXT Context,
+    PFILE_WORK_ITEM Item
     )
 {
     PRTL Rtl;
@@ -330,6 +349,7 @@ SaveTableCallbackChm01(
     ULONGLONG SizeInBytes;
     LARGE_INTEGER EndOfFile;
     PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_FILE File;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
 
     //
@@ -338,8 +358,8 @@ SaveTableCallbackChm01(
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    Table = Context->Table;
-    Dest = (PULONG)Table->BaseAddress;
+    File = Table->TableFile;
+    Dest = (PULONG)File->BaseAddress;
     Graph = (PGRAPH)Context->SolvedContext;
     Source = Graph->Assigned;
     TableInfoOnDisk = Table->TableInfoOnDisk;
@@ -349,29 +369,15 @@ SaveTableCallbackChm01(
         TableInfoOnDisk->KeySizeInBytes
     );
 
-    //
-    // Before we dispatch the save file work, make sure the preparation has
-    // completed.
-    //
-
-    WaitResult = WaitForSingleObject(Context->PreparedTableFileEvent, INFINITE);
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForSingleObject);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (Context->TableFileWorkErrors > 0) {
-        Result = Context->TableFileWorkLastResult;
-        if (Result == S_OK) {
-            Result = PH_E_ERROR_PREPARING_TABLE_FILE;
-        }
+    if (SizeInBytes != File->MappingSize.QuadPart) {
+        ASSERT(FALSE);
+        Result = PH_E_INVARIANT_CHECK_FAILED;
         goto Error;
     }
 
     //
-    // The graph has been solved.  Copy the array of assigned values
-    // to the mapped area we prepared earlier (above).
+    // The graph has been solved.  Copy the array of assigned values to the
+    // backing memory map.
     //
 
     CopyMemory(Dest, Source, SizeInBytes);
@@ -1395,681 +1401,6 @@ End:
     CONTEXT_END_TIMERS(SaveHeaderFile);
 
     return Result;
-}
-
-SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
-    ShouldWeContinueTryingToSolveGraphChm01;
-
-_Use_decl_annotations_
-BOOLEAN
-ShouldWeContinueTryingToSolveGraphChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    ULONG WaitResult;
-    HANDLE Events[4];
-    USHORT NumberOfEvents = ARRAYSIZE(Events);
-
-    Events[0] = Context->ShutdownEvent;
-    Events[1] = Context->SucceededEvent;
-    Events[2] = Context->FailedEvent;
-    Events[3] = Context->CompletedEvent;
-
-    //
-    // Fast-path exit: if the finished count is not 0, then someone has already
-    // solved the solution, and we don't need to wait on any of the events.
-    //
-
-    if (Context->FinishedCount > 0) {
-        return FALSE;
-    }
-
-    //
-    // N.B. We should probably switch this to simply use volatile field of the
-    //      context structure to indicate whether or not the context is active.
-    //      WaitForMultipleObjects() on four events seems a bit... excessive.
-    //
-
-    WaitResult = WaitForMultipleObjects(NumberOfEvents,
-                                        Events,
-                                        FALSE,
-                                        0);
-
-    //
-    // The only situation where we continue attempting to solve the graph is
-    // if the result from the wait is WAIT_TIMEOUT, which indicates none of
-    // the events have been set.  We treat any other situation as an indication
-    // to stop processing.  (This includes wait failures and abandonment.)
-    //
-
-    return (WaitResult == WAIT_TIMEOUT ? TRUE : FALSE);
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableIndexImplChm01(
-    PPERFECT_HASH_TABLE Table,
-    ULONG Key,
-    PULONG Index
-    )
-/*++
-
-Routine Description:
-
-    Looks up given key in a perfect hash table and returns its index.
-
-    N.B. If Key did not appear in the original set the hash table was created
-         from, the behavior of this routine is undefined.  (In practice, the
-         key will hash to either an existing key's location or an empty slot,
-         so there is potential for returning a non-unique index.)
-
-Arguments:
-
-    Table - Supplies a pointer to the table for which the key lookup is to be
-        performed.
-
-    Key - Supplies the key to look up.
-
-    Index - Receives the index associated with this key.  The index will be
-        between 0 and Table->HashSize-1, and can be safely used to offset
-        directly into an appropriately sized array (e.g. Table->Values[]).
-
-Return Value:
-
-    S_OK on success, E_FAIL if the underlying hash function returned a failure.
-    This will happen if the two hash values for a key happen to be identical.
-    It shouldn't happen once a perfect graph has been created (i.e. it only
-    happens when attempting to solve the graph).  The Index parameter will
-    be cleared in the case of E_FAIL.
-
---*/
-{
-    ULONG Masked;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    ULONG MaskedLow;
-    ULONG MaskedHigh;
-    PULONG Assigned;
-    ULONGLONG Combined;
-    ULARGE_INTEGER Hash;
-
-    //
-    // Hash the incoming key into the 64-bit representation, which is two
-    // 32-bit ULONGs in disguise, each one driven by a separate seed value.
-    //
-
-    if (FAILED(Table->Vtbl->Hash(Table, Key, &Hash.QuadPart))) {
-        goto Error;
-    }
-
-    //
-    // Mask each hash value such that it falls within the confines of the
-    // number of vertices.  That is, make sure the value is between 0 and
-    // Table->NumberOfVertices-1.
-    //
-
-    if (FAILED(Table->Vtbl->MaskHash(Table, Hash.LowPart, &MaskedLow))) {
-        goto Error;
-    }
-
-    if (FAILED(Table->Vtbl->MaskHash(Table, Hash.HighPart, &MaskedHigh))) {
-        goto Error;
-    }
-
-    //
-    // Obtain the corresponding vertex values for the masked high and low hash
-    // values.  These are derived from the "assigned" array that we construct
-    // during the creation routine's assignment step (GraphAssign()).
-    //
-
-    Assigned = Table->Data;
-
-    Vertex1 = Assigned[MaskedLow];
-    Vertex2 = Assigned[MaskedHigh];
-
-    //
-    // Combine the two values, then perform the index masking operation, such
-    // that our final index into the array falls within the confines of the
-    // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
-    //
-
-    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
-
-    if (FAILED(Table->Vtbl->MaskIndex(Table, Combined, &Masked))) {
-        goto Error;
-    }
-
-    //
-    // Update the caller's pointer and return success.  The resulting index
-    // value represents the array offset index for this given key in the
-    // underlying table, and is guaranteed to be unique amongst the original
-    // keys in the input set.
-    //
-
-    *Index = Masked;
-    return S_OK;
-
-Error:
-
-    //
-    // Clear the caller's pointer and return failure.  We should only hit this
-    // point if the caller supplies a key that both: a) wasn't in the original
-    // input set, and b) happens to result in a hash value where both the high
-    // part and low part are identical, which is rare, but not impossible.
-    //
-
-    *Index = 0;
-    return E_FAIL;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableFastIndexImplChm01Crc32RotateHashAndMask(
-    PPERFECT_HASH_TABLE Table,
-    ULONG Key,
-    PULONG Index
-    )
-/*++
-
-Routine Description:
-
-    Looks up given key in a perfect hash table and returns its index.  This
-    is a fast version of the normal Index() routine that inlines the Crc32Rotate
-    hash function and AND masking.
-
-    N.B. If Key did not appear in the original set the hash table was created
-         from, the behavior of this routine is undefined.  (In practice, the
-         key will hash to either an existing key's location or an empty slot,
-         so there is potential for returning a non-unique index.)
-
-Arguments:
-
-    Table - Supplies a pointer to the table for which the key lookup is to be
-        performed.
-
-    Key - Supplies the key to look up.
-
-    Index - Receives the index associated with this key.  The index will be
-        between 0 and Table->HashSize-1, and can be safely used to offset
-        directly into an appropriately sized array (e.g. Table->Values[]).
-
-Return Value:
-
-    S_OK on success, E_FAIL if the underlying hash function returned a failure.
-    This will happen if the two hash values for a key happen to be identical.
-    It shouldn't happen once a perfect graph has been created (i.e. it only
-    happens when attempting to solve the graph).  The Index parameter will
-    be cleared in the case of E_FAIL.
-
---*/
-{
-    ULONG A;
-    ULONG B;
-    ULONG C;
-    ULONG D;
-    ULONG Seed1;
-    ULONG Seed2;
-    ULONG Seed3;
-    ULONG Input;
-    PULONG Seeds;
-    ULONG Masked;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    PULONG Assigned;
-    ULONG MaskedLow;
-    ULONG MaskedHigh;
-    ULONGLONG Combined;
-
-    //IACA_VC_START();
-
-    //
-    // Initialize aliases.
-    //
-
-    Seeds = &Table->TableInfoOnDisk->FirstSeed;
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
-    Seed3 = Seeds[2];
-    Input = Key;
-    Assigned = Table->Data;
-
-    //
-    // Calculate the individual hash parts.
-    //
-
-    A = _mm_crc32_u32(Seed1, Input);
-    B = _mm_crc32_u32(Seed2, _rotl(Input, 15));
-    C = Seed3 ^ Input;
-    D = _mm_crc32_u32(B, C);
-
-    //IACA_VC_END();
-
-    Vertex1 = A;
-    Vertex2 = D;
-
-    if (Vertex1 == Vertex2) {
-        goto Error;
-    }
-
-    //
-    // Mask each hash value such that it falls within the confines of the
-    // number of vertices.
-    //
-
-    MaskedLow = Vertex1 & Table->HashMask;
-    MaskedHigh = Vertex2 & Table->HashMask;
-
-    //
-    // Obtain the corresponding vertex values for the masked high and low hash
-    // values.  These are derived from the "assigned" array that we construct
-    // during the creation routine's assignment step (GraphAssign()).
-    //
-
-    Vertex1 = Assigned[MaskedLow];
-    Vertex2 = Assigned[MaskedHigh];
-
-    //
-    // Combine the two values, then perform the index masking operation, such
-    // that our final index into the array falls within the confines of the
-    // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
-    //
-
-    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
-
-    Masked = Combined & Table->IndexMask;
-
-    //
-    // Update the caller's pointer and return success.  The resulting index
-    // value represents the array offset index for this given key in the
-    // underlying table, and is guaranteed to be unique amongst the original
-    // keys in the input set.
-    //
-
-    *Index = Masked;
-
-    //IACA_VC_END();
-
-    return S_OK;
-
-Error:
-
-    //
-    // Clear the caller's pointer and return failure.  We should only hit this
-    // point if the caller supplies a key that both: a) wasn't in the original
-    // input set, and b) happens to result in a hash value where both the high
-    // part and low part are identical, which is rare, but not impossible.
-    //
-
-    *Index = 0;
-    return E_FAIL;
-}
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableFastIndexImplChm01JenkinsHashAndMask(
-    PPERFECT_HASH_TABLE Table,
-    ULONG Key,
-    PULONG Index
-    )
-/*++
-
-Routine Description:
-
-    Looks up given key in a perfect hash table and returns its index.  This
-    is a fast version of the normal Index() routine that inlines the Jenkins
-    hash function and AND masking.
-
-    N.B. If Key did not appear in the original set the hash table was created
-         from, the behavior of this routine is undefined.  (In practice, the
-         key will hash to either an existing key's location or an empty slot,
-         so there is potential for returning a non-unique index.)
-
-Arguments:
-
-    Table - Supplies a pointer to the table for which the key lookup is to be
-        performed.
-
-    Key - Supplies the key to look up.
-
-    Index - Receives the index associated with this key.  The index will be
-        between 0 and Table->HashSize-1, and can be safely used to offset
-        directly into an appropriately sized array (e.g. Table->Values[]).
-
-Return Value:
-
-    S_OK on success, E_FAIL if the underlying hash function returned a failure.
-    This will happen if the two hash values for a key happen to be identical.
-    It shouldn't happen once a perfect graph has been created (i.e. it only
-    happens when attempting to solve the graph).  The Index parameter will
-    be cleared in the case of E_FAIL.
-
---*/
-{
-    ULONG A;
-    ULONG B;
-    ULONG C;
-    ULONG D;
-    ULONG E;
-    ULONG F;
-    PBYTE Byte;
-    ULONG Seed1;
-    ULONG Seed2;
-    ULONG Input;
-    PULONG Seeds;
-    ULONG Masked;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    PULONG Assigned;
-    ULONG MaskedLow;
-    ULONG MaskedHigh;
-    ULONGLONG Combined;
-
-    //
-    // Initialize aliases.
-    //
-
-    //IACA_VC_START();
-
-    Seeds = &Table->TableInfoOnDisk->FirstSeed;
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
-    Input = Key;
-
-    Byte = (PBYTE)&Input;
-
-    //
-    // Generate the first hash.
-    //
-
-    A = B = 0x9e3779b9;
-    C = Seed1;
-
-    A += (((ULONG)Byte[3]) << 24);
-    A += (((ULONG)Byte[2]) << 16);
-    A += (((ULONG)Byte[1]) <<  8);
-    A += ((ULONG)Byte[0]);
-
-    A -= B; A -= C; A ^= (C >> 13);
-    B -= C; B -= A; B ^= (A <<  8);
-    C -= A; C -= B; C ^= (B >> 13);
-    A -= B; A -= C; A ^= (C >> 12);
-    B -= C; B -= A; B ^= (A << 16);
-    C -= A; C -= B; C ^= (B >>  5);
-    A -= B; A -= C; A ^= (C >>  3);
-    B -= C; B -= A; B ^= (A << 10);
-    C -= A; C -= B; C ^= (B >> 15);
-
-    Vertex1 = C;
-
-    //
-    // Generate the second hash.
-    //
-
-    D = E = 0x9e3779b9;
-    F = Seed2;
-
-    D += (((ULONG)Byte[3]) << 24);
-    D += (((ULONG)Byte[2]) << 16);
-    D += (((ULONG)Byte[1]) <<  8);
-    D += ((ULONG)Byte[0]);
-
-    D -= E; D -= F; D ^= (F >> 13);
-    E -= F; E -= D; E ^= (D <<  8);
-    F -= D; F -= E; F ^= (E >> 13);
-    D -= E; D -= F; D ^= (F >> 12);
-    E -= F; E -= D; E ^= (D << 16);
-    F -= D; F -= E; F ^= (E >>  5);
-    D -= E; D -= F; D ^= (F >>  3);
-    E -= F; E -= D; E ^= (D << 10);
-    F -= D; F -= E; F ^= (E >> 15);
-
-    //IACA_VC_END();
-
-    Vertex2 = F;
-
-    if (Vertex1 == Vertex2) {
-        goto Error;
-    }
-
-    //
-    // Mask each hash value such that it falls within the confines of the
-    // number of vertices.
-    //
-
-    MaskedLow = Vertex1 & Table->HashMask;
-    MaskedHigh = Vertex2 & Table->HashMask;
-
-    //
-    // Obtain the corresponding vertex values for the masked high and low hash
-    // values.  These are derived from the "assigned" array that we construct
-    // during the creation routine's assignment step (GraphAssign()).
-    //
-
-    Assigned = Table->Data;
-
-    Vertex1 = Assigned[MaskedLow];
-    Vertex2 = Assigned[MaskedHigh];
-
-    //
-    // Combine the two values, then perform the index masking operation, such
-    // that our final index into the array falls within the confines of the
-    // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
-    //
-
-    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
-
-    Masked = Combined & Table->IndexMask;
-
-    //
-    // Update the caller's pointer and return success.  The resulting index
-    // value represents the array offset index for this given key in the
-    // underlying table, and is guaranteed to be unique amongst the original
-    // keys in the input set.
-    //
-
-    *Index = Masked;
-
-    //IACA_VC_END();
-
-    return S_OK;
-
-Error:
-
-    //
-    // Clear the caller's pointer and return failure.  We should only hit this
-    // point if the caller supplies a key that both: a) wasn't in the original
-    // input set, and b) happens to result in a hash value where both the high
-    // part and low part are identical, which is rare, but not impossible.
-    //
-
-    *Index = 0;
-    return E_FAIL;
-}
-
-PERFECT_HASH_TABLE_INDEX PerfectHashTableFastIndexImplChm01JenkinsHashModMask;
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashTableFastIndexImplChm01JenkinsHashModMask(
-    PPERFECT_HASH_TABLE Table,
-    ULONG Key,
-    PULONG Index
-    )
-/*++
-
-Routine Description:
-
-    Looks up given key in a perfect hash table and returns its index.
-
-    N.B. This version is based off the Jenkins hash function and modulus
-         masking.  As we don't use modulus masking at all, it's not intended
-         to be used in reality.  However, it's useful to feed to IACA to see
-         the impact of the modulus operation.
-
-Arguments:
-
-    Table - Supplies a pointer to the table for which the key lookup is to be
-        performed.
-
-    Key - Supplies the key to look up.
-
-    Index - Receives the index associated with this key.  The index will be
-        between 0 and Table->HashSize-1, and can be safely used to offset
-        directly into an appropriately sized array (e.g. Table->Values[]).
-
-Return Value:
-
-    S_OK on success, E_FAIL if the underlying hash function returned a failure.
-    This will happen if the two hash values for a key happen to be identical.
-    It shouldn't happen once a perfect graph has been created (i.e. it only
-    happens when attempting to solve the graph).  The Index parameter will
-    be cleared in the case of E_FAIL.
-
---*/
-{
-    ULONG A;
-    ULONG B;
-    ULONG C;
-    ULONG D;
-    ULONG E;
-    ULONG F;
-    PBYTE Byte;
-    ULONG Seed1;
-    ULONG Seed2;
-    ULONG Input;
-    PULONG Seeds;
-    ULONG Masked;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    PULONG Assigned;
-    ULONG MaskedLow;
-    ULONG MaskedHigh;
-    ULONGLONG Combined;
-
-    //
-    // Initialize aliases.
-    //
-
-    //IACA_VC_START();
-
-    Seeds = &Table->TableInfoOnDisk->FirstSeed;
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
-    Input = Key;
-
-    Byte = (PBYTE)&Input;
-
-    //
-    // Generate the first hash.
-    //
-
-    A = B = 0x9e3779b9;
-    C = Seed1;
-
-    A += (((ULONG)Byte[3]) << 24);
-    A += (((ULONG)Byte[2]) << 16);
-    A += (((ULONG)Byte[1]) <<  8);
-    A += ((ULONG)Byte[0]);
-
-    A -= B; A -= C; A ^= (C >> 13);
-    B -= C; B -= A; B ^= (A <<  8);
-    C -= A; C -= B; C ^= (B >> 13);
-    A -= B; A -= C; A ^= (C >> 12);
-    B -= C; B -= A; B ^= (A << 16);
-    C -= A; C -= B; C ^= (B >>  5);
-    A -= B; A -= C; A ^= (C >>  3);
-    B -= C; B -= A; B ^= (A << 10);
-    C -= A; C -= B; C ^= (B >> 15);
-
-    Vertex1 = C;
-
-    //
-    // Generate the second hash.
-    //
-
-    D = E = 0x9e3779b9;
-    F = Seed2;
-
-    D += (((ULONG)Byte[3]) << 24);
-    D += (((ULONG)Byte[2]) << 16);
-    D += (((ULONG)Byte[1]) <<  8);
-    D += ((ULONG)Byte[0]);
-
-    D -= E; D -= F; D ^= (F >> 13);
-    E -= F; E -= D; E ^= (D <<  8);
-    F -= D; F -= E; F ^= (E >> 13);
-    D -= E; D -= F; D ^= (F >> 12);
-    E -= F; E -= D; E ^= (D << 16);
-    F -= D; F -= E; F ^= (E >>  5);
-    D -= E; D -= F; D ^= (F >>  3);
-    E -= F; E -= D; E ^= (D << 10);
-    F -= D; F -= E; F ^= (E >> 15);
-
-    //IACA_VC_END();
-
-    Vertex2 = F;
-
-    if (Vertex1 == Vertex2) {
-        goto Error;
-    }
-
-    //
-    // Mask each hash value such that it falls within the confines of the
-    // number of vertices.
-    //
-
-    MaskedLow = Vertex1 % Table->HashModulus;
-    MaskedHigh = Vertex2 % Table->HashModulus;
-
-    //
-    // Obtain the corresponding vertex values for the masked high and low hash
-    // values.  These are derived from the "assigned" array that we construct
-    // during the creation routine's assignment step (GraphAssign()).
-    //
-
-    Assigned = Table->Data;
-
-    Vertex1 = Assigned[MaskedLow];
-    Vertex2 = Assigned[MaskedHigh];
-
-    //
-    // Combine the two values, then perform the index masking operation, such
-    // that our final index into the array falls within the confines of the
-    // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
-    //
-
-    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
-
-    Masked = Combined % Table->IndexModulus;
-
-    //
-    // Update the caller's pointer and return success.  The resulting index
-    // value represents the array offset index for this given key in the
-    // underlying table, and is guaranteed to be unique amongst the original
-    // keys in the input set.
-    //
-
-    *Index = Masked;
-
-    //IACA_VC_END();
-
-    return S_OK;
-
-Error:
-
-    //
-    // Clear the caller's pointer and return failure.  We should only hit this
-    // point if the caller supplies a key that both: a) wasn't in the original
-    // input set, and b) happens to result in a hash value where both the high
-    // part and low part are identical, which is rare, but not impossible.
-    //
-
-    *Index = 0;
-    return E_FAIL;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

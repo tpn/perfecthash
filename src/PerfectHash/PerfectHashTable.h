@@ -37,17 +37,10 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         ULONG Valid:1;
 
         //
-        // When set, indicates paths have been initialized via a call to
-        // PerfectHashTableInitializePaths().
-        //
-
-        ULONG PathsInitialized:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:31;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -74,6 +67,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     PERFECT_HASH_TABLE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
+
+    //
+    // Pointer to the active on-disk structure describing the table.  This may
+    // be backed by stack-allocated memory (during creation) or memory mapped
+    // (if loaded from an existing table).
+    //
+
+    struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
+
+    //
+    // Pointer to the output directory requested for this table.  Only valid
+    // during table creation operations.  Temporarily set to the parameter
+    // OutputDirectory supplied to the Create() function.
+    //
+
+    PCUNICODE_STRING OutputDirectory;
 
     //
     // If a table is loaded or created successfully, an array will be allocated
@@ -176,14 +185,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     PPERFECT_HASH_CONTEXT Context;
 
     //
-    // Pointer to the path associated with the table file.  This is constructed
-    // up-front such that it is available for other file creation logic to
-    // create new paths from.
-    //
-
-    PPERFECT_HASH_PATH TablePath;
-
-    //
     // Pointers to files associated with the table.
     //
 
@@ -208,8 +209,20 @@ typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
 #define TryAcquirePerfectHashTableLockExclusive(Table) \
     TryAcquireSRWLockExclusive(&Table->Lock)
 
+#define AcquirePerfectHashTableLockExclusive(Table) \
+    AcquireSRWLockExclusive(&Table->Lock)
+
 #define ReleasePerfectHashTableLockExclusive(Table) \
     ReleaseSRWLockExclusive(&Table->Lock)
+
+#define TryAcquirePerfectHashTableLockShared(Table) \
+    TryAcquireSRWLockShared(&Table->Lock)
+
+#define AcquirePerfectHashTableLockShared(Table) \
+    AcquireSRWLockShared(&Table->Lock)
+
+#define ReleasePerfectHashTableLockShared(Table) \
+    ReleaseSRWLockShared(&Table->Lock)
 
 #define PerfectHashTableName(Table) \
     &Table->TableFile->Path->BaseNameA
@@ -229,16 +242,34 @@ typedef
 _Check_return_
 _Success_(return >= 0)
 HRESULT
-(NTAPI PERFECT_HASH_TABLE_CREATE_PATH)(
+(NTAPI PERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PUNICODE_STRING Suffix,
+    _In_opt_ PULARGE_INTEGER NumberOfTableElements,
     _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_opt_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_opt_ PCUNICODE_STRING NewOutputDirectory,
+    _In_opt_ PCUNICODE_STRING AdditionalSuffix
+    );
+typedef PERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX
+      *PPERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PERFECT_HASH_TABLE_CREATE_PATH)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PPERFECT_HASH_PATH ExistingPath,
+    _In_opt_ PULARGE_INTEGER NumberOfTableElements,
+    _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_opt_ PCUNICODE_STRING NewDirectory,
     _In_opt_ PCUNICODE_STRING NewBaseName,
     _In_opt_ PCUNICODE_STRING AdditionalSuffix,
     _In_opt_ PCUNICODE_STRING NewExtension,
     _In_opt_ PCUNICODE_STRING NewStreamName,
-    _In_ PPERFECT_HASH_PATH ExistingPath,
     _Out_ PPERFECT_HASH_PATH *Path,
     _Out_ PPERFECT_HASH_PATH_PARTS *Parts
     );
@@ -256,6 +287,8 @@ typedef PERFECT_HASH_TABLE_RUNDOWN *PPERFECT_HASH_TABLE_RUNDOWN;
 //
 
 extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
+extern PERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX
+    PerfectHashTableInitializeTableSuffix;
 extern PERFECT_HASH_TABLE_CREATE_PATH PerfectHashTableCreatePath;
 extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
 extern PERFECT_HASH_TABLE_CREATE PerfectHashTableCreate;
@@ -336,142 +369,5 @@ PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexFoldThrice;
 // and hash function.
 //
 
-FORCEINLINE
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-InitializeTableSuffix(
-    _In_ PUNICODE_STRING Suffix,
-    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_opt_ PCUNICODE_STRING AdditionalSuffix,
-    _In_opt_ PULONG_INTEGER TableSize
-    )
-{
-    PWSTR Dest;
-    USHORT Index;
-    USHORT Count;
-    HRESULT Result;
-    BOOLEAN Success;
-    ULONG_PTR ExpectedDest;
-    BYTE NumberOfDigits = 0;
-    LONG_INTEGER TableSuffixLength = { 0 };
-    PUNICODE_STRING AlgorithmName = NULL;
-    PUNICODE_STRING HashFunctionName = NULL;
-    PUNICODE_STRING MaskFunctionName = NULL;
-
-    if (ARGUMENT_PRESENT(TableSize)) {
-        NumberOfDigits = CountNumberOfLongLongDigitsInline(TableSize->QuadPart);
-        TableSuffixLength.LongPart += (
-            sizeof(L'_') +
-            NumberOfDigits
-        );
-    }
-
-    if (IsValidPerfectHashAlgorithmId(AlgorithmId)) {
-        AlgorithmName = (PUNICODE_STRING)AlgorithmNames[AlgorithmId];
-        TableSuffixLength.LongPart += (
-            sizeof(L'_') +
-            AlgorithmName->Length
-        );
-    }
-
-    if (IsValidPerfectHashHashFunctionId(HashFunctionId)) {
-        HashFunctionName = (PUNICODE_STRING)HashFunctionNames[HashFunctionId];
-        TableSuffixLength.LongPart += (
-            sizeof(L'_') +
-            HashFunctionName->Length
-        );
-    }
-
-    if (IsValidPerfectHashMaskFunctionId(MaskFunctionId)) {
-        MaskFunctionName = (PUNICODE_STRING)MaskFunctionNames[MaskFunctionId];
-        TableSuffixLength.LongPart += (
-            sizeof(L'_') +
-            HashFunctionName->Length
-        );
-    }
-
-    if (ARGUMENT_PRESENT(AdditionalSuffix)) {
-        if (!IsValidUnicodeString(AdditionalSuffix)) {
-            return E_INVALIDARG;
-        }
-        TableSuffixLength.LongPart += (
-            sizeof(L'_') +
-            AdditionalSuffix->Length
-        );
-    }
-
-    if (TableSuffixLength.HighPart) {
-        return PH_E_STRING_BUFFER_OVERFLOW;
-    }
-
-    if ((ULONG)Suffix->MaximumLength <
-        TableSuffixLength.LongPart + sizeof(WCHAR)) {
-        return PH_E_STRING_BUFFER_OVERFLOW;
-    }
-
-    Dest = Suffix->Buffer;
-
-    if (NumberOfDigits) {
-        *Dest++ = L'_';
-        Suffix->Length = 1;
-        Success = AppendLongLongIntegerToUnicodeString(Suffix,
-                                                       TableSize->QuadPart,
-                                                       NumberOfDigits,
-                                                       L'\0');
-        if (!Success) {
-            return PH_E_STRING_BUFFER_OVERFLOW;
-        }
-
-        Dest += NumberOfDigits;
-    }
-
-    if (AlgorithmName) {
-        *Dest++ = L'_';
-        Count = AlgorithmName->Length >> 1;
-        CopyMemory(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
-        Dest += Count;
-    }
-
-    if (HashFunctionName) {
-        *Dest++ = L'_';
-        Count = HashFunctionName->Length >> 1;
-        CopyMemory(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
-        Dest += Count;
-    }
-
-    if (MaskFunctionName) {
-        *Dest++ = L'_';
-        Count = MaskFunctionName->Length >> 1;
-        CopyMemory(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
-        Dest += Count;
-    }
-
-    if (AdditionalSuffix) {
-        *Dest++ = L'_';
-        Count = AdditionalSuffix->Length >> 1;
-        CopyMemory(Dest, AdditionalSuffix->Buffer, AdditionalSuffix->Length);
-        Dest += Count;
-    }
-
-    ExpectedDest = (
-        RtlPointerToOffset(
-            Suffix->Buffer,
-            TableSuffixLength.LowPart
-        )
-    );
-
-    if ((ULONG_PTR)Dest != ExpectedDest) {
-        return PH_E_INVARIANT_CHECK_FAILED;
-    }
-
-    Suffix->Length = TableSuffixLength.LowPart;
-
-    *Dest++ = L'\0';
-
-    return S_OK;
-}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

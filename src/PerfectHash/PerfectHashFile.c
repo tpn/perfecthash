@@ -16,6 +16,32 @@ Abstract:
 
 #include "stdafx.h"
 
+//
+// Helper inline method for updating the file's FILE_INFO structure.
+//
+
+FORCEINLINE
+HRESULT
+PerfectHashFileUpdateFileInfo(
+    _In_ PPERFECT_HASH_FILE File
+    )
+{
+    BOOL Success;
+
+    Success = GetFileInformationByHandleEx(File->FileHandle,
+                                           FileStandardInfo,
+                                           &File->FileInfo,
+                                           sizeof(File->FileInfo));
+
+    if (!Success) {
+        SYS_ERROR(GetFileInformationByHandleEx);
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
+
+    return S_OK;
+}
+
+
 PERFECT_HASH_FILE_INITIALIZE PerfectHashFileInitialize;
 
 _Use_decl_annotations_
@@ -47,6 +73,7 @@ Return Value:
 --*/
 {
     HRESULT Result = S_OK;
+    SYSTEM_INFO SystemInfo;
 
     if (!ARGUMENT_PRESENT(File)) {
         return E_POINTER;
@@ -75,6 +102,14 @@ Return Value:
     if (FAILED(Result)) {
         goto Error;
     }
+
+    //
+    // Capture the system's file allocation granularity.  This is used in
+    // various places to align a given memory mapping size.
+    //
+
+    GetSystemInfo(&SystemInfo);
+    File->AllocationGranularity = SystemInfo.dwAllocationGranularity;
 
     //
     // We're done!  Indicate success and finish up.
@@ -122,17 +157,7 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     HRESULT Result;
-    PALLOCATOR Allocator;
-
-    //
-    // Validate arguments.
-    //
-
-    if (!ARGUMENT_PRESENT(File)) {
-        return;
-    }
 
     //
     // Sanity check structure size.
@@ -141,42 +166,24 @@ Return Value:
     ASSERT(File->SizeOfStruct == sizeof(*File));
 
     //
-    // Initialize aliases.
-    //
-
-    Rtl = File->Rtl;
-    Allocator = File->Allocator;
-
-    if (!Rtl) {
-        return;
-    }
-
-    ASSERT(Allocator);
-
-    //
     // Close the file if necessary.
     //
 
-    if (!File->State.IsClosed) {
+    if (!IsFileClosed(File)) {
         Result = File->Vtbl->Close(File);
         if (FAILED(Result)) {
-            PH_ERROR(PerfectHashFileRundown, Result);
+            PH_ERROR(PerfectHashFileClose, Result);
         }
-        ASSERT(IsFileClosed(File));
     }
 
     //
     // Release COM references.
     //
 
-    File->Path->Vtbl->Release(File->Path);
-    File->Path = NULL;
-
-    Allocator->Vtbl->Release(Allocator);
-    File->Allocator = NULL;
-
-    Rtl->Vtbl->Release(Rtl);
-    File->Rtl = NULL;
+    RELEASE(File->Path);
+    RELEASE(File->RenamePath);
+    RELEASE(File->Rtl);
+    RELEASE(File->Allocator);
 
     return;
 }
@@ -232,7 +239,6 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    BOOL Success;
     ULONG ShareMode;
     ULONG DesiredAccess;
     ULONG FlagsAndAttributes;
@@ -305,7 +311,7 @@ Return Value:
 
     Result = Path->Vtbl->Copy(Path, &SourcePath->FullPath, &Parts, NULL);
 
-    ReleasePerfectHashPathLockShared(Path);
+    ReleasePerfectHashPathLockShared(SourcePath);
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCopy, Result);
@@ -339,17 +345,12 @@ Return Value:
     SetFileLoaded(File);
 
     //
-    // Get the current file size.
+    // Update the file info in order to obtain the current file size.
     //
 
-    Success = GetFileInformationByHandleEx(File->FileHandle,
-                                           FileStandardInfo,
-                                           &File->FileInfo,
-                                           sizeof(File->FileInfo));
-
-    if (!Success) {
-        SYS_ERROR(GetFileInformationByHandleEx);
-        Result = PH_E_SYSTEM_CALL_FAILED;
+    Result = PerfectHashFileUpdateFileInfo(File);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileLoad, Result);
         goto Error;
     }
 
@@ -607,12 +608,8 @@ Return Value:
 
         } else {
 
-            SYSTEM_INFO SystemInfo;
-
-            GetSystemInfo(&SystemInfo);
-
             Aligned.QuadPart = ALIGN_UP(File->MappingSize.QuadPart,
-                                        SystemInfo.dwAllocationGranularity);
+                                        File->AllocationGranularity);
 
             if (File->MappingSize.QuadPart != Aligned.QuadPart) {
                 return PH_E_FILE_MAPPING_SIZE_NOT_SYSTEM_ALIGNED;
@@ -697,12 +694,19 @@ Return Value:
             //
 
             ULONG_PTR NumberOfPages;
+            LARGE_INTEGER AllocationSize;
 
             File->Flags.UsesLargePages = TRUE;
             File->MappedAddress = File->BaseAddress;
             File->BaseAddress = LargePageAddress;
 
-            NumberOfPages = BYTES_TO_PAGES(F);
+            //
+            // We can use the allocation size here to capture the appropriate
+            // number of pages that are mapped and accessible.
+            //
+
+            AllocationSize.QuadPart = File->FileInfo.AllocationSize.QuadPart;
+            NumberOfPages = BYTES_TO_PAGES(AllocationSize.QuadPart);
 
             Rtl->Vtbl->CopyPages(Rtl,
                                  LargePageAddress,
@@ -1110,11 +1114,7 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    BOOL Success;
     HRESULT Result = S_OK;
-    SYSTEM_INFO SystemInfo;
-    FILE_STANDARD_INFO FileInfo;
-    ULONG AllocationGranularity;
     LARGE_INTEGER EndOfFile;
     ULARGE_INTEGER MappingSize;
 
@@ -1146,28 +1146,14 @@ Return Value:
 
     Rtl = File->Rtl;
 
-    Success = GetFileInformationByHandleEx(File->FileHandle,
-                                           FileStandardInfo,
-                                           &FileInfo,
-                                           sizeof(FileInfo));
-
-    if (!Success) {
-        SYS_ERROR(GetFileInformationByHandleEx);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    GetSystemInfo(&SystemInfo);
-    AllocationGranularity = SystemInfo.dwAllocationGranularity;
-
     //
     // Align the provided size up to the system allocation granularity.
     //
 
     MappingSize.QuadPart = ALIGN_UP(NewMappingSize.QuadPart,
-                                    AllocationGranularity);
+                                    File->AllocationGranularity);
 
-    if (FileInfo.EndOfFile.QuadPart >= (LONGLONG)MappingSize.QuadPart) {
+    if (File->FileInfo.EndOfFile.QuadPart >= (LONGLONG)MappingSize.QuadPart) {
         Result = PH_E_MAPPING_SIZE_LESS_THAN_OR_EQUAL_TO_CURRENT_SIZE;
         goto Error;
     }
@@ -1270,8 +1256,8 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     BOOL Success;
+    HRESULT Result = S_OK;
 
     //
     // Validate arguments.
@@ -1292,8 +1278,6 @@ Return Value:
     //
     // Argument validation complete, continue truncation.
     //
-
-    Rtl = File->Rtl;
 
     //
     // Set the file pointer to the desired size.
@@ -1320,10 +1304,221 @@ Return Value:
     }
 
     //
-    // Indicate success and return.
+    // Update the file info to reflect the new size.
     //
 
-    return S_OK;
+    Result = PerfectHashFileUpdateFileInfo(File);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileUpdateFileInfo, Result);
+    }
+
+    return Result;
+}
+
+PERFECT_HASH_FILE_SCHEDULE_RENAME PerfectHashFileScheduleRename;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashFileScheduleRename(
+    PPERFECT_HASH_FILE File,
+    PPERFECT_HASH_PATH NewPath
+    )
+/*++
+
+Routine Description:
+
+    Schedules the renaming of the underlying file once it has been unmapped and
+    closed.  If this routine is called after a previous rename request has been
+    scheduled but not issued, the previous path is released.  That is, it is
+    safe to call this routine multiple times prior to the underlying file being
+    unmapped and closed.
+
+Arguments:
+
+    File - Supplies a pointer to the file to truncate.
+
+    NewEndOfFile - Supplies the new file size, in bytes.
+
+Return Value:
+
+    S_OK - File extended successfully.
+
+    E_POINTER - File or NewPath parameters were NULL.
+
+    E_UNEXPECTED - Internal error.
+
+    E_INVALIDARG - NewPath was invalid.
+
+    PH_E_PATH_LOCKED - NewPath was locked.
+
+    PH_E_FILE_NEVER_OPENED - The file has never been opened.
+
+    PH_E_FILE_READONLY - The file is read-only.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    PVOID OldAddress;
+    PVOID OriginalAddress;
+    PPERFECT_HASH_PATH OldPath;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(NewPath)) {
+        return E_POINTER;
+    }
+
+    if (!FileNeverOpened(File)) {
+        return PH_E_FILE_NEVER_OPENED;
+    }
+
+    if (IsFileReadOnly(File)) {
+        return PH_E_FILE_READONLY;
+    }
+
+    if (!TryAcquirePerfectHashFileLockExclusive(NewPath)) {
+        return PH_E_PATH_LOCKED;
+    }
+
+    //
+    // Argument validation complete.  Atomically exchange the underlying rename
+    // path pointer with the new path.
+    //
+
+    do {
+        OriginalAddress = File->RenamePath;
+        OldAddress = InterlockedCompareExchangePointer(&File->RenamePath,
+                                                       NewPath,
+                                                       OriginalAddress);
+    } while (OriginalAddress != OldAddress);
+
+    OldPath = (PPERFECT_HASH_PATH)OriginalAddress;
+
+    //
+    // Release the old path if one was present and add ref on the new path.
+    //
+
+    if (OldPath) {
+        ReleasePerfectHashPathLockExclusive(OldPath);
+        OldPath->Vtbl->Release(OldPath);
+        OldPath = NULL;
+    }
+
+    NewPath->Vtbl->AddRef(NewPath);
+
+    //
+    // If the file has already been closed, do the rename now.
+    //
+
+    if (IsFileClosed(File)) {
+        Result = File->Vtbl->DoRename(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileDoRename, Result);
+        }
+    }
+
+    return Result;
+}
+
+PERFECT_HASH_FILE_DO_RENAME PerfectHashFileDoRename;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashFileDoRename(
+    PPERFECT_HASH_FILE File
+    )
+/*++
+
+Routine Description:
+
+    Renames a closed file based on a previous rename request via ScheduleRename.
+
+Arguments:
+
+    File - Supplies a pointer to the file to be renamed.
+
+Return Value:
+
+    S_OK - File renamed successfully.
+
+    E_POINTER - File was NULL.
+
+    PH_E_FILE_NEVER_OPENED - The file was never opened.
+
+    PH_E_FILE_NOT_CLOSED - The file is not closed.
+
+    PH_E_FILE_NO_RENAME_SCHEDULED - No rename is scheduled.
+
+    PH_E_SYSTEM_CALL_FAILED - A system call failed.
+
+--*/
+{
+    BOOL Success;
+    ULONG MoveFileFlags;
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_PATH OldPath;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    if (FileNeverOpened(File)) {
+        return PH_E_FILE_NEVER_OPENED;
+    }
+
+    if (IsFileOpen(File)) {
+        return PH_E_FILE_NOT_CLOSED;
+    }
+
+    if (!IsRenameScheduled(File)) {
+        return PH_E_FILE_NO_RENAME_SCHEDULED;
+    }
+
+    if (!File->Path || IsPathSet(File->Path)) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    //
+    // Argument validation complete.  Continue with rename.
+    //
+
+    MoveFileFlags = MOVEFILE_REPLACE_EXISTING;
+
+    Success = MoveFileExW(File->Path->FullPath.Buffer,
+                          File->RenamePath->FullPath.Buffer,
+                          MoveFileFlags);
+
+    if (!Success) {
+        SYS_ERROR(MoveFileEx);
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
+
+    //
+    // File was renamed successfully.  Update the path variables accordingly.
+    //
+
+    OldPath = File->Path;
+    File->Path = File->RenamePath;
+    File->RenamePath = NULL;
+
+    //
+    // Release the old path's lock and COM reference count.
+    //
+
+    ReleasePerfectHashPathLockExclusive(OldPath);
+    OldPath->Vtbl->Release(OldPath);
+
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

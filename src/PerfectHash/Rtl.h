@@ -1423,7 +1423,7 @@ IsValidUnicodeString(
         String != NULL &&
         String->Buffer != NULL &&
         String->Length >= 1 &&
-        String->MaximumLength >= 1
+        String->MaximumLength >= String->Length
     );
 }
 

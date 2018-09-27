@@ -442,7 +442,7 @@ perfect hash table solution.
 MessageId=0x234
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_HEADER_FILE
+SymbolicName=PH_E_ERROR_SAVING_C_HEADER_FILE
 Language=English
 An error occurred whilst trying to save a perfect hash table to
 the previously prepared C header file.
@@ -798,5 +798,37 @@ Facility=ITF
 SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE
 Language=English
 An error occurred whilst preparing the C source table data file.
+.
+
+MessageId=0x260
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_NEVER_OPENED
+Language=English
+The file has never been opened.
+.
+
+MessageId=0x261
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_NO_RENAME_SCHEDULED
+Language=English
+The file has not had a rename operation scheduled.
+.
+
+MessageId=0x262
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_NOT_CLOSED
+Language=English
+The file has not yet been closed.
+.
+
+MessageId=0x263
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_FILE_WORK_ID
+Language=English
+Invalid file work ID.
 .
 

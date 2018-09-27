@@ -24,9 +24,17 @@ Abstract:
 typedef struct _PERFECT_HASH_TLS_CONTEXT {
     PRTL Rtl;
     PALLOCATOR Allocator;
-    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_PATH Path;
+    PPERFECT_HASH_FILE File;
     PPERFECT_HASH_KEYS Keys;
+    PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+    ULARGE_INTEGER PrepareFileCycles;
+    ULARGE_INTEGER PrepareFileMicroseconds;
+    ULARGE_INTEGER SaveFileCycles;
+    ULARGE_INTEGER SaveFileMicroseconds;
+    FILE_WORK_ID FileWorkId;
+    ULONG Padding;
 } PERFECT_HASH_TLS_CONTEXT;
 typedef PERFECT_HASH_TLS_CONTEXT *PPERFECT_HASH_TLS_CONTEXT;
 

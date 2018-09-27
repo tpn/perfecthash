@@ -232,6 +232,12 @@ ComponentRelease(
     ASSERT(InterlockedDecrement(&ComponentCount) >= 0);
 
     //
+    // Acquire an exclusive lock on the component prior to rundown.
+    //
+
+    AcquireSRWLockExclusive(&Component->Lock);
+
+    //
     // Call the component's custom rundown routine if applicable.
     //
 

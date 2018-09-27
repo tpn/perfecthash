@@ -684,11 +684,6 @@ Return Value:
     Context->ResizeLimit = 0;
     Context->Attempts = 0;
 
-    //
-    // N.B. This is horrible.  We should really relocate all the counters etc
-    //      out of the context.
-    //
-
     Context->SolveStartCycles.QuadPart = 0;
     Context->SolveStartCounter.QuadPart = 0;
     Context->SolveEndCycles.QuadPart = 0;
@@ -702,76 +697,6 @@ Return Value:
     Context->VerifyEndCounter.QuadPart = 0;
     Context->VerifyElapsedCycles.QuadPart = 0;
     Context->VerifyElapsedMicroseconds.QuadPart = 0;
-
-    Context->PrepareTableFileStartCycles.QuadPart = 0;
-    Context->PrepareTableFileStartCounter.QuadPart = 0;
-    Context->PrepareTableFileEndCycles.QuadPart = 0;
-    Context->PrepareTableFileEndCounter.QuadPart = 0;
-    Context->PrepareTableFileElapsedCycles.QuadPart = 0;
-    Context->PrepareTableFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->SaveTableFileStartCycles.QuadPart = 0;
-    Context->SaveTableFileStartCounter.QuadPart = 0;
-    Context->SaveTableFileEndCycles.QuadPart = 0;
-    Context->SaveTableFileEndCounter.QuadPart = 0;
-    Context->SaveTableFileElapsedCycles.QuadPart = 0;
-    Context->SaveTableFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->PrepareCHeaderFileStartCycles.QuadPart = 0;
-    Context->PrepareCHeaderFileStartCounter.QuadPart = 0;
-    Context->PrepareCHeaderFileEndCycles.QuadPart = 0;
-    Context->PrepareCHeaderFileEndCounter.QuadPart = 0;
-    Context->PrepareCHeaderFileElapsedCycles.QuadPart = 0;
-    Context->PrepareCHeaderFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->SaveCHeaderFileStartCycles.QuadPart = 0;
-    Context->SaveCHeaderFileStartCounter.QuadPart = 0;
-    Context->SaveCHeaderFileEndCycles.QuadPart = 0;
-    Context->SaveCHeaderFileEndCounter.QuadPart = 0;
-    Context->SaveCHeaderFileElapsedCycles.QuadPart = 0;
-    Context->SaveCHeaderFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->PrepareCSourceFileStartCycles.QuadPart = 0;
-    Context->PrepareCSourceFileStartCounter.QuadPart = 0;
-    Context->PrepareCSourceFileEndCycles.QuadPart = 0;
-    Context->PrepareCSourceFileEndCounter.QuadPart = 0;
-    Context->PrepareCSourceFileElapsedCycles.QuadPart = 0;
-    Context->PrepareCSourceFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->SaveCSourceFileStartCycles.QuadPart = 0;
-    Context->SaveCSourceFileStartCounter.QuadPart = 0;
-    Context->SaveCSourceFileEndCycles.QuadPart = 0;
-    Context->SaveCSourceFileEndCounter.QuadPart = 0;
-    Context->SaveCSourceFileElapsedCycles.QuadPart = 0;
-    Context->SaveCSourceFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->PrepareCSourceKeysFileStartCycles.QuadPart = 0;
-    Context->PrepareCSourceKeysFileStartCounter.QuadPart = 0;
-    Context->PrepareCSourceKeysFileEndCycles.QuadPart = 0;
-    Context->PrepareCSourceKeysFileEndCounter.QuadPart = 0;
-    Context->PrepareCSourceKeysFileElapsedCycles.QuadPart = 0;
-    Context->PrepareCSourceKeysFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->SaveCSourceKeysFileStartCycles.QuadPart = 0;
-    Context->SaveCSourceKeysFileStartCounter.QuadPart = 0;
-    Context->SaveCSourceKeysFileEndCycles.QuadPart = 0;
-    Context->SaveCSourceKeysFileEndCounter.QuadPart = 0;
-    Context->SaveCSourceKeysFileElapsedCycles.QuadPart = 0;
-    Context->SaveCSourceKeysFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->PrepareCSourceTableDataFileStartCycles.QuadPart = 0;
-    Context->PrepareCSourceTableDataFileStartCounter.QuadPart = 0;
-    Context->PrepareCSourceTableDataFileEndCycles.QuadPart = 0;
-    Context->PrepareCSourceTableDataFileEndCounter.QuadPart = 0;
-    Context->PrepareCSourceTableDataFileElapsedCycles.QuadPart = 0;
-    Context->PrepareCSourceTableDataFileElapsedMicroseconds.QuadPart = 0;
-
-    Context->SaveCSourceTableDataFileStartCycles.QuadPart = 0;
-    Context->SaveCSourceTableDataFileStartCounter.QuadPart = 0;
-    Context->SaveCSourceTableDataFileEndCycles.QuadPart = 0;
-    Context->SaveCSourceTableDataFileEndCounter.QuadPart = 0;
-    Context->SaveCSourceTableDataFileElapsedCycles.QuadPart = 0;
-    Context->SaveCSourceTableDataFileElapsedMicroseconds.QuadPart = 0;
 
     Context->TableFileWorkErrors = 0;
     Context->TableFileWorkLastError = 0;
@@ -789,9 +714,9 @@ Return Value:
     Context->CSourceKeysFileWorkLastError = 0;
     Context->CSourceKeysFileWorkLastResult = S_OK;
 
-    Context->CHeaderFileWorkErrors = 0;
-    Context->CHeaderFileWorkLastError = 0;
-    Context->CHeaderFileWorkLastResult = S_OK;
+    Context->CSourceTableDataFileWorkErrors = 0;
+    Context->CSourceTableDataFileWorkLastError = 0;
+    Context->CSourceTableDataFileWorkLastResult = S_OK;
 
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;

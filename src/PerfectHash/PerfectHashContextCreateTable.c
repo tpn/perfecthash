@@ -96,49 +96,8 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    BOOL Found;
-    BOOL Valid;
-    BOOL Success;
-    WCHAR Wide;
-    PWSTR Ext;
-    PWSTR NameW;
-    PWSTR Dest;
-    PWSTR Source;
-    PSTR NameA;
-    PCHAR Buffer;
-    PCHAR BaseBuffer;
-    PCHAR ExpectedBuffer;
-    PWSTR PathBuffer;
-    ULONG Index;
-    ULONG Count;
-    ULONG Status;
-    ULONG ShareMode;
-    ULONG LastError;
-    ULONG DesiredAccess;
-    ULONG InfoMappingSize;
-    ULONG FlagsAndAttributes;
-    USHORT DirectoryAndNameLength;
-    BOOLEAN UsingKeysPath;
-    PVOID BaseAddress;
-    HANDLE FileHandle;
-    HANDLE MappingHandle;
     HRESULT Result = S_OK;
     PALLOCATOR Allocator;
-    SYSTEM_INFO SystemInfo;
-    ULARGE_INTEGER AllocSize;
-    ULONG_INTEGER PathBufferSize;
-    ULONG IncomingPathBufferSizeInBytes;
-    ULONG_INTEGER AlignedPathBufferSize;
-    ULONG_INTEGER InfoStreamPathBufferSize;
-    ULONG_INTEGER AlignedInfoStreamPathBufferSize;
-    ULONG_INTEGER HeaderPathBufferSize;
-    ULONG_INTEGER AlignedHeaderPathBufferSize;
-    ULONG_INTEGER NameWBufferSize;
-    ULONG_INTEGER AlignedNameWBufferSize;
-    ULONG_INTEGER NameABufferSize;
-    ULONG_INTEGER AlignedNameABufferSize;
-    PSTRING NameAString;
-    PUNICODE_STRING NameWString;
     PUNICODE_STRING OutputDirectory;
     PPERFECT_HASH_TABLE Table = NULL;
     PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
@@ -235,22 +194,6 @@ Return Value:
         goto Error;
     }
 
-    //
-    // Initialize table paths.
-    //
-
-    Result = PerfectHashTableInitializePaths(Table,
-                                             AlgorithmId,
-                                             MaskFunctionId,
-                                             HashFunctionId,
-                                             OutputDirectory,
-                                             &Keys->Path);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextCreateTable, Result);
-        goto Error;
-    }
-
     Context->Table = Table;
 
     Keys->Vtbl->AddRef(Keys);
@@ -273,10 +216,6 @@ Return Value:
     //
 
     CompletePerfectHashTableVtblInitialization(Table);
-
-    //
-    // Open the file handle for the backing hash table store.
-    //
 
     //
     // Common initialization is complete, dispatch remaining work to the

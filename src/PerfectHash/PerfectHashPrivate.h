@@ -321,54 +321,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
 
     ULARGE_INTEGER VerifyMicroseconds;
 
-    //
-    // Number of cycles taken to prepare the table file.
-    //
-
-    ULARGE_INTEGER PrepareTableFileCycles;
-
-    //
-    // Number of microseconds taken to prepare the table file.
-    //
-
-    ULARGE_INTEGER PrepareTableFileMicroseconds;
-
-    //
-    // Number of cycles taken to save the table file.
-    //
-
-    ULARGE_INTEGER SaveTableFileCycles;
-
-    //
-    // Number of microseconds taken to save the table file.
-    //
-
-    ULARGE_INTEGER SaveTableFileMicroseconds;
-
-    //
-    // Number of cycles taken to prepare the header file.
-    //
-
-    ULARGE_INTEGER PrepareHeaderFileCycles;
-
-    //
-    // Number of microseconds taken to prepare the header file.
-    //
-
-    ULARGE_INTEGER PrepareHeaderFileMicroseconds;
-
-    //
-    // Number of cycles taken to save the header file.
-    //
-
-    ULARGE_INTEGER SaveHeaderFileCycles;
-
-    //
-    // Number of microseconds taken to save the header file.
-    //
-
-    ULARGE_INTEGER SaveHeaderFileMicroseconds;
-
 } TABLE_INFO_ON_DISK;
 typedef TABLE_INFO_ON_DISK *PTABLE_INFO_ON_DISK;
 
@@ -390,22 +342,26 @@ typedef enum _FILE_WORK_ID {
     //
 
     FileWorkPrepareTableFileId = 1,
+    FileWorkPrepareFirstId = FileWorkPrepareTableFileId,
     FileWorkPrepareTableInfoStreamId,
-    FileWorkPrepareHeaderFileId,
-    FileWorkPrepareSourceFileId,
-    FileWorkPrepareSourceKeysFileId,
-    FileWorkPrepareSourceTableDataFileId,
+    FileWorkPrepareCHeaderFileId,
+    FileWorkPrepareCSourceFileId,
+    FileWorkPrepareCSourceKeysFileId,
+    FileWorkPrepareCSourceTableDataFileId,
+    FileWorkPrepareLastId = FileWorkPrepareCSourceTableDataFileId,
 
     //
     // File save work once a solution has been found.
     //
 
     FileWorkSaveTableFileId,
+    FileWorkSaveFirstId = FileWorkSaveTableFileId,
     FileWorkSaveTableInfoStreamId,
-    FileWorkSaveHeaderFileId,
-    FileWorkSaveSourceFileId,
-    FileWorkSaveSourceKeysFileId,
-    FileWorkSaveSourceTableDataFileId,
+    FileWorkSaveCHeaderFileId,
+    FileWorkSaveCSourceFileId,
+    FileWorkSaveCSourceKeysFileId,
+    FileWorkSaveCSourceTableDataFileId,
+    FileWorkSaveLastId = FileWorkSaveCSourceTableDataFileId,
 
     //
     // Invalid ID, this must come last.
@@ -424,6 +380,30 @@ IsValidFileWorkId(
     return (
         FileWorkId > FileWorkNullId &&
         FileWorkId < FileWorkInvalidId
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+IsPrepareFileWorkId(
+    _In_ FILE_WORK_ID FileWorkId
+    )
+{
+    return (
+        FileWorkId >= FileWorkPrepareFirstId &&
+        FileWorkId =< FileWorkPrepareLastId
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+IsSaveFileWorkId(
+    _In_ FILE_WORK_ID FileWorkId
+    )
+{
+    return (
+        FileWorkId >= FileWorkSaveFirstId &&
+        FileWorkId =< FileWorkSaveLastId
     );
 }
 
@@ -446,7 +426,12 @@ typedef struct _FILE_WORK_ITEM {
 
     FILE_WORK_ID FileWorkId;
 
-    ULONG Padding[3];
+    volatile LONG NumberOfErrors;
+    volatile LONG LastError;
+
+    volatile HRESULT LastResult;
+
+    HANDLE Event;
 
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;
@@ -460,19 +445,152 @@ _Check_return_
 _Success_(return >= 0)
 HRESULT
 (NTAPI FILE_WORK_CALLBACK_IMPL)(
-    _In_ struct _PERFECT_HASH_CONTEXT *Context
+    _In_ struct _PERFECT_HASH_CONTEXT *Context,
+    _In_ PFILE_WORK_ITEM Item
     );
 typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
 
-typedef
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-(NTAPI FILE_WORK_CALLBACK_WRAPPER)(
-    _In_ PFILE_WORK_CALLBACK_IMPL Function,
-    _In_ struct _PERFECT_HASH_CONTEXT *Context
-    );
-typedef FILE_WORK_CALLBACK_WRAPPER *PFILE_WORK_CALLBACK_WRAPPER;
+//
+// Define a struct for capturing preparation and save file timers.
+//
+
+typedef struct _FILE_TIMERS {
+
+    //
+    // Capture the time required to prepare the C header file.
+    //
+
+    ULARGE_INTEGER PrepareCHeaderFileStartCycles;
+    LARGE_INTEGER PrepareCHeaderFileStartCounter;
+
+    ULARGE_INTEGER PrepareCHeaderFileEndCycles;
+    LARGE_INTEGER PrepareCHeaderFileEndCounter;
+
+    ULARGE_INTEGER PrepareCHeaderFileElapsedCycles;
+    ULARGE_INTEGER PrepareCHeaderFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to save the C header.
+    //
+
+    ULARGE_INTEGER SaveCHeaderFileStartCycles;
+    LARGE_INTEGER SaveCHeaderFileStartCounter;
+
+    ULARGE_INTEGER SaveCHeaderFileEndCycles;
+    LARGE_INTEGER SaveCHeaderFileEndCounter;
+
+    ULARGE_INTEGER SaveCHeaderFileElapsedCycles;
+    ULARGE_INTEGER SaveCHeaderFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to prepare the C source file.
+    //
+
+    ULARGE_INTEGER PrepareCSourceFileStartCycles;
+    LARGE_INTEGER PrepareCSourceFileStartCounter;
+
+    ULARGE_INTEGER PrepareCSourceFileEndCycles;
+    LARGE_INTEGER PrepareCSourceFileEndCounter;
+
+    ULARGE_INTEGER PrepareCSourceFileElapsedCycles;
+    ULARGE_INTEGER PrepareCSourceFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to save the C source file.
+    //
+
+    ULARGE_INTEGER SaveCSourceFileStartCycles;
+    LARGE_INTEGER SaveCSourceFileStartCounter;
+
+    ULARGE_INTEGER SaveCSourceFileEndCycles;
+    LARGE_INTEGER SaveCSourceFileEndCounter;
+
+    ULARGE_INTEGER SaveCSourceFileElapsedCycles;
+    ULARGE_INTEGER SaveCSourceFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to prepare the C source keys file.
+    //
+
+    ULARGE_INTEGER PrepareCSourceKeysFileStartCycles;
+    LARGE_INTEGER PrepareCSourceKeysFileStartCounter;
+
+    ULARGE_INTEGER PrepareCSourceKeysFileEndCycles;
+    LARGE_INTEGER PrepareCSourceKeysFileEndCounter;
+
+    ULARGE_INTEGER PrepareCSourceKeysFileElapsedCycles;
+    ULARGE_INTEGER PrepareCSourceKeysFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to save the C source keys file.
+    //
+
+    ULARGE_INTEGER SaveCSourceKeysFileStartCycles;
+    LARGE_INTEGER SaveCSourceKeysFileStartCounter;
+
+    ULARGE_INTEGER SaveCSourceKeysFileEndCycles;
+    LARGE_INTEGER SaveCSourceKeysFileEndCounter;
+
+    ULARGE_INTEGER SaveCSourceKeysFileElapsedCycles;
+    ULARGE_INTEGER SaveCSourceKeysFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to prepare the C source table data file.
+    //
+
+    ULARGE_INTEGER PrepareCSourceTableDataFileStartCycles;
+    LARGE_INTEGER PrepareCSourceTableDataFileStartCounter;
+
+    ULARGE_INTEGER PrepareCSourceTableDataFileEndCycles;
+    LARGE_INTEGER PrepareCSourceTableDataFileEndCounter;
+
+    ULARGE_INTEGER PrepareCSourceTableDataFileElapsedCycles;
+    ULARGE_INTEGER PrepareCSourceTableDataFileElapsedMicroseconds;
+
+    //
+    // Capture the time required to save the C source file table data file.
+    //
+
+    ULARGE_INTEGER SaveCSourceTableDataFileStartCycles;
+    LARGE_INTEGER SaveCSourceTableDataFileStartCounter;
+
+    ULARGE_INTEGER SaveCSourceTableDataFileEndCycles;
+    LARGE_INTEGER SaveCSourceTableDataFileEndCounter;
+
+    ULARGE_INTEGER SaveCSourceTableDataFileElapsedCycles;
+    ULARGE_INTEGER SaveCSourceTableDataFileElapsedMicroseconds;
+
+} FILE_TIMERS;
+typedef FILE_TIMERS *PFILE_TIMERS;
+
+//
+// Define helper macros for marking start/end points for the context's
+// cycle/counter fields.  When starting, we put __rdtsc() last, and when
+// stopping we put it first, as its resolution is more sensitive than the
+// QueryPerformanceCounter() routine.
+//
+
+#define START_FILE_TIMERS(Name)                              \
+    QueryPerformanceCounter(&Timers->##Name##StartCounter); \
+    Timers->##Name##StartCycles.QuadPart = __rdtsc()
+
+#define END_FILE_TIMERS(Name)                              \
+    Timers->##Name##EndCycles.QuadPart = __rdtsc();          \
+    QueryPerformanceCounter(&Timers->##Name##EndCounter);    \
+    Timers->##Name##ElapsedCycles.QuadPart = (               \
+        Timers->##Name##EndCycles.QuadPart -                 \
+        Timers->##Name##StartCycles.QuadPart                 \
+    );                                                        \
+    Timers->##Name##ElapsedMicroseconds.QuadPart = (         \
+        Timers->##Name##EndCounter.QuadPart -                \
+        Timers->##Name##StartCounter.QuadPart                \
+    );                                                        \
+    Timers->##Name##ElapsedMicroseconds.QuadPart *= 1000000; \
+    Timers->##Name##ElapsedMicroseconds.QuadPart /= (        \
+        Timers->Frequency.QuadPart                           \
+    )
+
+#define SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Name)
 
 //
 // Define function pointer for function that determines whether graph solving

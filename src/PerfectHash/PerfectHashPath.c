@@ -129,6 +129,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     PALLOCATOR Allocator;
 
     //
@@ -138,6 +139,13 @@ Return Value:
     if (!ARGUMENT_PRESENT(Path)) {
         return E_POINTER;
     }
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Path->Rtl;
+    Allocator = Path->Allocator;
 
     //
     // Free the full path's buffer.
@@ -265,7 +273,6 @@ Return Value:
     PRTL Rtl;
     USHORT Index;
     USHORT Count;
-    USHORT Length;
     PWSTR Start;
     PWSTR End;
     PWSTR Char;
@@ -274,7 +281,6 @@ Return Value:
     BOOLEAN Found = FALSE;
     BOOLEAN Valid;
     HRESULT ResetResult;
-    PALLOCATOR Allocator;
 
     //
     // Validate arguments.
@@ -296,14 +302,14 @@ Return Value:
 
     ASSERT(IsValidMinimumDirectoryNullTerminatedUnicodeString(&Path->FullPath));
 
-    Start = &Path->Full>Path;
-    End = RtlOffsetToPointer(Start, Path->FullPath.Buffer);
+    Start = Path->FullPath.Buffer;
+    End = (PWSTR)RtlOffsetToPointer(Start, Path->FullPath.Length);
 
     //
     // Reverse through the string and find the first dot.
     //
 
-    Count = Full->Length >> 1;
+    Count = Path->FullPath.Length >> 1;
 
     for (Index = 0, Char = End; Index < Count; Index++, Char--) {
         if (*Char == L'.') {
@@ -394,7 +400,7 @@ Return Value:
 
     Path->FileName.Buffer = Char;
     Path->FileName.Length = (USHORT)(
-        RtlOffsetToPointer(
+        RtlPointerToOffset(
             Path->FileName.Buffer,
             End
         )
@@ -424,7 +430,7 @@ Return Value:
 
         Path->Drive.Length = sizeof(WCHAR);
         Path->Drive.MaximumLength = Path->Drive.Length;
-        Path->Buffer = Start;
+        Path->Drive.Buffer = Start;
 
     } else {
 
@@ -615,6 +621,8 @@ Return Value:
     HRESULT Result = S_OK;
     PALLOCATOR Allocator;
 
+    UNREFERENCED_PARAMETER(Reserved);
+
     //
     // Validate arguments.
     //
@@ -682,13 +690,19 @@ Return Value:
         *Parts = &Path->Parts;
     }
 
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
 Error:
 
     if (Result == S_OK) {
         Result = E_UNEXPECTED;
     }
 
-    ResetResult = Path->Vtbl->Reset(Path, TRUE);
+    ResetResult = Path->Vtbl->Reset(Path);
     if (FAILED(ResetResult)) {
         PH_ERROR(PerfectHashPathReset, ResetResult);
     }
@@ -710,7 +724,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashPathCreate(
     PPERFECT_HASH_PATH Path,
-    PCPERFECT_HASH_PATH ExistingPath,
+    PPERFECT_HASH_PATH ExistingPath,
     PCUNICODE_STRING NewDirectory,
     PCUNICODE_STRING NewBaseName,
     PCUNICODE_STRING BaseNameSuffix,
@@ -780,7 +794,6 @@ Return Value:
 {
     PRTL Rtl;
     USHORT Count;
-    USHORT Length;
     USHORT FullPathLength;
     USHORT FullPathMaximumLength;
     PWSTR Dest;
@@ -790,11 +803,13 @@ Return Value:
     HRESULT Result = S_OK;
     BOOLEAN HasStream = FALSE;
     PALLOCATOR Allocator;
-    PUNICODE_STRING Source;
+    PCUNICODE_STRING Source;
     ULONG_INTEGER AllocSize = { 0 };
     ULONG_INTEGER AlignedAllocSize;
     ULONG_INTEGER BaseNameALength;
     ULONG_INTEGER BaseNameAMaximumLength;
+
+    UNREFERENCED_PARAMETER(Reserved);
 
     //
     // Validate arguments and calculate the string buffer allocation size where
@@ -897,7 +912,7 @@ Return Value:
             HasStream = TRUE;
             AllocSize.LongPart += NewStreamName->Length;
         }
-    } else if (IsValidUnicodeString(ExistingPath->StreamName)) {
+    } else if (IsValidUnicodeString(&ExistingPath->StreamName)) {
         HasStream = TRUE;
         AllocSize.LongPart += ExistingPath->StreamName.Length;
     }
@@ -911,10 +926,15 @@ Return Value:
     }
 
     //
-    // Account for the trailing NULL.
+    // Account for the trailing NULL and verify we haven't overflowed USHORT.
     //
 
     AllocSize.LongPart += sizeof(WCHAR);
+
+    if (AllocSize.HighPart) {
+        Result = PH_E_STRING_BUFFER_OVERFLOW;
+        goto Error;
+    }
 
     //
     // Align up to an 8-byte boundary and verify we haven't overflowed USHORT.
@@ -935,7 +955,7 @@ Return Value:
     // N.B. FullPathLength includes the trailing NULL.
     //
 
-    FullPathLength = AllocSize.Length;
+    FullPathLength = AllocSize.LowPart;
     FullPathMaximumLength = AlignedAllocSize.LowPart;
 
     //
@@ -981,7 +1001,7 @@ Return Value:
 
     Path->FullPath.Buffer = (PWSTR)BaseAddress;
     Path->FullPath.Length = FullPathLength;
-    Path->FullPathMaximumLength = FullPathMaximumLength;
+    Path->FullPath.MaximumLength = FullPathMaximumLength;
 
     Dest = Path->FullPath.Buffer;
 
@@ -1080,7 +1100,7 @@ Return Value:
     // Verify the Dest pointer matches where we expect it to.
     //
 
-    ExpectedDest = RtlPointerToOffset(BaseAddress, AllocSize.LowPart);
+    ExpectedDest = RtlOffsetToPointer(BaseAddress, AllocSize.LowPart);
     if ((ULONG_PTR)Dest != (ULONG_PTR)ExpectedDest) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         goto Error;
@@ -1092,7 +1112,7 @@ Return Value:
     //
 
     Dest = (PWSTR)ALIGN_UP(Dest, 8);
-    ExpectedDest = RtlPointerToOffset(BaseAddress, AlignedAllocSize.LongPart);
+    ExpectedDest = RtlOffsetToPointer(BaseAddress, AlignedAllocSize.LongPart);
     if ((ULONG_PTR)Dest != (ULONG_PTR)ExpectedDest) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         goto Error;
@@ -1105,7 +1125,7 @@ Return Value:
 
     Path->BaseNameA.Buffer = (PSTR)Dest;
     Path->BaseNameA.Length = BaseNameALength.LowPart;
-    Path->BaseNameA.MaximumLength = BaseNameALength.MaximumLength;
+    Path->BaseNameA.MaximumLength = BaseNameALength.LowPart;
 
     //
     // We've finished constructing our new path's FullPath.Buffer.  Final step
@@ -1139,7 +1159,7 @@ Error:
         Result = E_UNEXPECTED;
     }
 
-    ResetResult = Path->Vtbl->Reset(Path, TRUE);
+    ResetResult = Path->Vtbl->Reset(Path);
     if (FAILED(ResetResult)) {
         PH_ERROR(PerfectHashPathReset, ResetResult);
     }

@@ -77,6 +77,35 @@ HRESULT
     );
 typedef PERFECT_HASH_FILE_UNMAP *PPERFECT_HASH_FILE_UNMAP;
 
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(File->Lock)
+_Requires_lock_not_held_(NewPath->Lock)
+_Acquires_exclusive_lock_(NewPath->Lock)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_SCHEDULE_RENAME)(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ PPERFECT_HASH_PATH NewPath
+    );
+typedef PERFECT_HASH_FILE_SCHEDULE_RENAME *PPERFECT_HASH_FILE_SCHEDULE_RENAME;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(File->Lock)
+_Pre_satisfies_(
+    File->RenamePath != NULL &&
+    File->State.IsOpen == FALSE &&
+    File->State.IsClosed == TRUE
+)
+_Post_satisfies_(File->RenamePath == NULL)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_DO_RENAME)(
+    _In_ PPERFECT_HASH_FILE File
+    );
+typedef PERFECT_HASH_FILE_DO_RENAME *PPERFECT_HASH_FILE_DO_RENAME;
+
 //
 // Define our private PERFECT_HASH_FILE_VTBL structure.
 //
@@ -98,6 +127,8 @@ typedef struct _PERFECT_HASH_FILE_VTBL {
     PPERFECT_HASH_FILE_TRUNCATE Truncate;
     PPERFECT_HASH_FILE_MAP Map;
     PPERFECT_HASH_FILE_UNMAP Unmap;
+    PPERFECT_HASH_FILE_SCHEDULE_RENAME ScheduleRename;
+    PPERFECT_HASH_FILE_DO_RENAME DoRename;
 } PERFECT_HASH_FILE_VTBL;
 typedef PERFECT_HASH_FILE_VTBL *PPERFECT_HASH_FILE_VTBL;
 
@@ -115,13 +146,15 @@ typedef union _PERFECT_HASH_FILE_STATE {
         ULONG IsOpen:1;
 
         //
-        // File has been closed.
+        // File was open, but has been subsequently closed.
         //
 
         ULONG IsClosed:1;
 
         //
-        // File is read-only.
+        // File is read-only.  This will only ever be set if the file is open.
+        // (That is, it is cleared when the file is closed, regardless of
+        // whether or not the file *was* read-only when open.)
         //
 
         ULONG IsReadOnly:1;
@@ -145,10 +178,12 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 
 #define IsFileOpen(File) (File->State.IsOpen)
 #define IsFileClosed(File) (File->State.IsClosed)
+#define FileNeverOpened(File) (!IsFileOpen(File) && !IsFileClosed(File))
 #define IsFileReadOnly(File) (File->State.IsReadOnly)
 #define IsViewMapped(File) (File->MappedAddress != NULL)
 #define IsViewCreated(File) (File->MappingHandle != NULL)
 #define WantsLargePages(File) (!File->Flags.DoesNotWantLargePages)
+#define IsRenameScheduled(File) (File->RenamePath)
 
 #define SetFileOpened(File)      \
     File->State.IsOpen = TRUE;   \
@@ -182,10 +217,28 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     PERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags;
 
     //
+    // System allocation granularity.
+    //
+
+    ULONG AllocationGranularity;
+
+    //
+    // Align up to an 8-byte boundary.
+    //
+
+    ULONG Padding;
+
+    //
     // Pointer to the path instance from which we were loaded or created.
     //
 
-    PPERFECT_HASH_PATH Path;
+    volatile PPERFECT_HASH_PATH Path;
+
+    //
+    // Pointer to the new path name requested by a call to ScheduleRename().
+    //
+
+    volatile PPERFECT_HASH_PATH RenamePath;
 
     //
     // Handle to the underlying file.
@@ -281,10 +334,11 @@ extern PERFECT_HASH_FILE_CREATE PerfectHashFileCreate;
 extern PERFECT_HASH_FILE_GET_FLAGS PerfectHashFileGetFlags;
 extern PERFECT_HASH_FILE_GET_PATH PerfectHashFileGetPath;
 extern PERFECT_HASH_FILE_GET_RESOURCES PerfectHashFileGetResources;
+extern PERFECT_HASH_FILE_CLOSE PerfectHashFileClose;
 extern PERFECT_HASH_FILE_EXTEND PerfectHashFileExtend;
 extern PERFECT_HASH_FILE_TRUNCATE PerfectHashFileTruncate;
 extern PERFECT_HASH_FILE_MAP PerfectHashFileMap;
 extern PERFECT_HASH_FILE_UNMAP PerfectHashFileUnmap;
-extern PERFECT_HASH_FILE_CLOSE PerfectHashFileClose;
+extern PERFECT_HASH_FILE_SCHEDULE_RENAME PerfectHashFileScheduleRename;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

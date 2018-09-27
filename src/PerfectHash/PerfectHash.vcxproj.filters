@@ -124,6 +124,15 @@
     <ClCompile Include="Chm_01.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWork.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01Index.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashTableCreate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -184,6 +193,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Chm_01.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashPrivate.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
