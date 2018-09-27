@@ -170,7 +170,17 @@ Return Value:
     //
 
     if (!IsFileClosed(File)) {
-        Result = File->Vtbl->Close(File);
+
+        //
+        // Issue a close with 0 for end-of-file, indicating the file should
+        // be deleted.  (Callers should explicitly Close() a file prior to
+        // rundown; otherwise, if we get to this point, we assume the absense
+        // of a Close() call is indicative of an error, and the file should be
+        // discarded.)
+        //
+
+        LARGE_INTEGER EndOfFile = { 0 };
+        Result = File->Vtbl->Close(File, &EndOfFile);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileClose, Result);
         }
@@ -408,8 +418,9 @@ End:
 
     if (Opened && FAILED(Result)) {
         HRESULT CloseResult;
+        LARGE_INTEGER EndOfFile = { 0 };
 
-        CloseResult = File->Vtbl->Close(File);
+        CloseResult = File->Vtbl->Close(File, &EndOfFile);
         if (FAILED(CloseResult)) {
             PH_ERROR(PerfectHashFileClose, CloseResult);
         }
@@ -424,7 +435,8 @@ PERFECT_HASH_FILE_CLOSE PerfectHashFileClose;
 _Use_decl_annotations_
 HRESULT
 PerfectHashFileClose(
-    PPERFECT_HASH_FILE File
+    PPERFECT_HASH_FILE File,
+    PLARGE_INTEGER EndOfFilePointer
     )
 /*++
 
@@ -442,11 +454,16 @@ Arguments:
 
     File - Supplies a pointer to the file to close.
 
+    EndOfFile - Optionally supplies a pointer to a LARGE_INTEGER structure that
+        contains the desired end-of-file offset.
+
 Return Value:
 
     S_OK - File was closed successfully.
 
     E_POINTER - File parameter was NULL.
+
+    E_INVALIDARG - EndOfFile was invalid (e.g. negative).
 
     PH_E_FILE_LOCKED - The file is locked.
 
@@ -462,6 +479,7 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    LARGE_INTEGER EndOfFile = { 0 };
 
     //
     // Validate arguments.
@@ -469,6 +487,13 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(File)) {
         return E_POINTER;
+    }
+
+    if (ARGUMENT_PRESENT(EndOfFilePointer)) {
+        EndOfFile.QuadPart = EndOfFilePointer->QuadPart;
+        if (EndOfFile.QuadPart < 0) {
+            return E_INVALIDARG;
+        }
     }
 
     if (!TryAcquirePerfectHashFileLockExclusive(File)) {
@@ -489,20 +514,49 @@ Return Value:
         PH_ERROR(PerfectHashFileUnmap, Result);
     }
 
+    if (!ARGUMENT_PRESENT(EndOfFilePointer)) {
+        EndOfFile.QuadPart = File->NumberOfBytesWritten.QuadPart;
+    }
+
     //
-    // If bytes have been written to the mapping, truncate the file.
+    // If the end of file is non-zero, truncate the file.  Otherwise, if it's
+    // zero, treat this as an indication that the file should be deleted.
     //
 
-    if (File->NumberOfBytesWritten.QuadPart > 0) {
+    if (EndOfFile.QuadPart < 0) {
+
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileClose, Result);
+
+    } else if (EndOfFile.QuadPart > 0) {
+
         if (IsFileReadOnly(File)) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
             PH_ERROR(PerfectHashFileClose, Result);
         } else {
-            Result = File->Vtbl->Truncate(File, File->NumberOfBytesWritten);
+            Result = File->Vtbl->Truncate(File, EndOfFile);
             if (FAILED(Result)) {
                 PH_ERROR(PerfectHashFileTruncate, Result);
             }
         }
+
+    } else {
+
+        //
+        // End of file is 0, indicating that we should delete the file.  If a
+        // rename is scheduled, release the rename path.
+        //
+
+        if (IsRenameScheduled(File)) {
+            File->RenamePath->Vtbl->Release(File->RenamePath);
+            File->RenamePath = NULL;
+        }
+
+        if (!DeleteFileW(File->Path->FullPath.Buffer)) {
+            SYS_ERROR(DeleteFileW);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+
     }
 
     if (File->FileHandle) {
@@ -514,6 +568,17 @@ Return Value:
     }
 
     SetFileClosed(File);
+
+    //
+    // If a rename has been scheduled, do it now.
+    //
+
+    if (IsRenameScheduled(File)) {
+        Result = File->Vtbl->DoRename(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileDoRename, Result);
+        }
+    }
 
     ReleasePerfectHashFileLockExclusive(File);
 

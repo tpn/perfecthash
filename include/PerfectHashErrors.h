@@ -961,3 +961,12 @@ Abstract:
 //
 #define PH_E_FILE_NOT_CLOSED             ((HRESULT)0xE0040262L)
 
+//
+// MessageId: PH_E_INVALID_FILE_WORK_ID
+//
+// MessageText:
+//
+// Invalid file work ID.
+//
+#define PH_E_INVALID_FILE_WORK_ID        ((HRESULT)0xE0040263L)
+

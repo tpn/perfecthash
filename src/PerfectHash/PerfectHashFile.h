@@ -31,7 +31,8 @@ _Success_(return >= 0)
 _Requires_exclusive_lock_held_(File->Lock)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_CLOSE)(
-    _In_ PPERFECT_HASH_FILE File
+    _In_ PPERFECT_HASH_FILE File,
+    _In_opt_ PLARGE_INTEGER NewEndOfFile
     );
 typedef PERFECT_HASH_FILE_CLOSE *PPERFECT_HASH_FILE_CLOSE;
 
