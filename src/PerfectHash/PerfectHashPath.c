@@ -325,7 +325,7 @@ Return Value:
     ASSERT(*Char == L'.');
     Char++;
     Path->Extension.Buffer = Char;
-    Path->Extension.Length = (USHORT)RtlPointerToOffset(End, Char);
+    Path->Extension.Length = (USHORT)RtlPointerToOffset(Char, End);
     Path->Extension.MaximumLength = Path->Extension.Length;
 
     //
@@ -349,7 +349,7 @@ Return Value:
         ASSERT(*Char == L':');
         Char++;
         Path->StreamName.Buffer = Char;
-        Path->StreamName.Length = (USHORT)RtlPointerToOffset(End, Char);
+        Path->StreamName.Length = (USHORT)RtlPointerToOffset(Char, End);
         Path->StreamName.MaximumLength = Path->StreamName.Length;
         ASSERT(Path->StreamName.Buffer[Path->StreamName.Length >> 1] == L'\0');
 
@@ -368,13 +368,13 @@ Return Value:
     //
 
     Found = FALSE;
-    Char = Path->Extension.Buffer;
+    Char = Path->Extension.Buffer - 2;
     while (Char != Start) {
         if (*Char == L'\\') {
             Found = TRUE;
             break;
         }
-        Char++;
+        Char--;
     }
 
     if (!Found) {
@@ -391,8 +391,8 @@ Return Value:
     Path->BaseName.Buffer = Char;
     Path->BaseName.Length = (USHORT)(
         RtlPointerToOffset(
-            Path->Extension.Buffer,
-            Path->BaseName.Buffer
+            Path->BaseName.Buffer,
+            Path->Extension.Buffer - 1
         )
     );
     Path->BaseName.MaximumLength = Path->BaseName.Length;
@@ -484,9 +484,9 @@ Return Value:
 
         Path->BaseNameA.Buffer[0] = (CHAR)Wide;
 
-        Count = (Path->BaseName.Length >> 1) - 1;
-        ASSERT(Path->BaseName.Buffer[Count] != L'.');
-        ASSERT(Path->BaseName.Buffer[Count + 1] == L'.');
+        Count = Path->BaseName.Length >> 1;
+        Path->BaseNameA.Length = Count;
+        ASSERT(Path->BaseName.Buffer[Count] == L'.');
 
         for (Index = 1; Index < Count; Index++) {
 
@@ -614,6 +614,7 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    ULONG AllocSize;
     PVOID BaseAddress;
     HRESULT ResetResult;
     HRESULT Result = S_OK;
@@ -657,9 +658,16 @@ Return Value:
     Rtl = Path->Rtl;
     Allocator = Path->Allocator;
 
-    BaseAddress = Allocator->Vtbl->Calloc(Allocator,
-                                          1,
-                                          Source->MaximumLength);
+    //
+    // We need to allocate space for the BaseNameA buffer, but we haven't
+    // extracted the parts of the path yet to know how long the base name
+    // is.  So, just double the size of the incoming source string.  It's
+    // a bit wasteful, but it's not the end of the world.
+    //
+
+    AllocSize = ALIGN_UP_POINTER(Source->MaximumLength) << 1;
+
+    BaseAddress = Allocator->Vtbl->Calloc(Allocator, 1, AllocSize);
 
     if (!BaseAddress) {
         SYS_ERROR(VirtualAlloc);
@@ -674,6 +682,15 @@ Return Value:
     CopyMemory(Path->FullPath.Buffer,
                Source->Buffer,
                Path->FullPath.Length);
+
+    Path->BaseNameA.Buffer = (PSTR)(
+        RtlOffsetToPointer(
+            BaseAddress,
+            ALIGN_UP_POINTER(Source->MaximumLength)
+        )
+    );
+    Path->BaseNameA.Length = 0;
+    Path->BaseNameA.MaximumLength = ALIGN_UP_POINTER(Source->MaximumLength);
 
     Result = Path->Vtbl->ExtractParts(Path);
     if (FAILED(Result)) {
@@ -692,6 +709,8 @@ Return Value:
     //
     // We're done, finish up.
     //
+
+    Path->State.PathSet = TRUE;
 
     goto End;
 
@@ -1149,6 +1168,8 @@ Return Value:
     //
     // We're done, finish up.
     //
+
+    Path->State.PathSet = TRUE;
 
     goto End;
 

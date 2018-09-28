@@ -227,7 +227,7 @@ Return Value:
     Context = Table->Context;
     MaskFunctionId = Table->MaskFunctionId;
     ProcessHandle = GetCurrentProcess();
-    GraphInfoOnDisk = &GraphInfo;
+    GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
     TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
 
     //
@@ -784,8 +784,7 @@ RetryWithLargerTableSize:
     // written into the NTFS stream :Info.
     //
 
-    GraphInfoOnDisk = Context->GraphInfoOnDisk;
-    TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
+    ZeroStructPointer(GraphInfoOnDisk);
     TableInfoOnDisk->Magic.LowPart = TABLE_INFO_ON_DISK_MAGIC_LOWPART;
     TableInfoOnDisk->Magic.HighPart = TABLE_INFO_ON_DISK_MAGIC_HIGHPART;
     TableInfoOnDisk->SizeOfStruct = sizeof(*GraphInfoOnDisk);

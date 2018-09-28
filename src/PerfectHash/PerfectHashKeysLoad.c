@@ -178,6 +178,11 @@ Return Value:
         goto Error;
     }
 
+    Keys->NumberOfElements.QuadPart = (
+        File->FileInfo.EndOfFile.QuadPart /
+        KeySizeInBytes
+    );
+
     Result = PerfectHashKeysLoadStats(Keys);
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashKeysLoadStats, Result);
@@ -262,6 +267,7 @@ Return Value:
     ULONG Trailing;
     ULONG Start;
     PULONG Values;
+    PULONG KeyArray;
     PCHAR String;
     ULONG_PTR Bit;
     ULONG_PTR Mask;
@@ -296,12 +302,14 @@ Return Value:
     ZeroStruct(Stats);
     Bitmap = 0;
     Prev = (ULONG)-1;
-    Values = (PULONG)Keys->File->BaseAddress;
+    KeyArray = (PULONG)Keys->File->BaseAddress;
     NumberOfKeys = Keys->NumberOfElements.LowPart;
     KeysBitmap = &Stats.KeysBitmap;
 
     Stats.MinValue = (ULONG)-1;
     Stats.MaxValue = 0;
+
+    Values = KeyArray;
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
         Key = *Values++;
@@ -332,8 +340,8 @@ Return Value:
     // min/max values from the start and end of the array.
     //
 
-    Stats.MinValue = Values[0];
-    Stats.MaxValue = Values[NumberOfKeys - 1];
+    Stats.MinValue = KeyArray[0];
+    Stats.MaxValue = KeyArray[NumberOfKeys - 1];
 
     //
     // Set the linear flag if the array of keys represents a linear sequence of

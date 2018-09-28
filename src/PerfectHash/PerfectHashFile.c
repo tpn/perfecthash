@@ -260,9 +260,7 @@ Return Value:
     PALLOCATOR Allocator;
     HRESULT Result = S_OK;
     BOOLEAN Opened = FALSE;
-    PPERFECT_HASH_PATH Path = NULL;
     PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags = { 0 };
-    PCPERFECT_HASH_PATH_PARTS Parts = NULL;
 
     //
     // Validate arguments.
@@ -324,7 +322,7 @@ Return Value:
     //
 
     //
-    // Initialize aliases and load flags.
+    // Initialize aliases, flags and state.
     //
 
     Rtl = File->Rtl;
@@ -334,32 +332,14 @@ Return Value:
         File->Flags.DoesNotWantLargePages = TRUE;
     }
 
-    //
-    // Create a new path instance.
-    //
-
-    Result = File->Vtbl->CreateInstance(File,
-                                        NULL,
-                                        &IID_PERFECT_HASH_FILE,
-                                        &Path);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileCreateInstance, Result);
-        goto Error;
-    }
-
-    File->Path = Path;
+    File->State.IsReadOnly = TRUE;
 
     //
-    // Deep copy the incoming path and extract the various components.
+    // Add a reference to the source path.
     //
 
-    Result = Path->Vtbl->Copy(Path, &SourcePath->FullPath, &Parts, NULL);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashPathCopy, Result);
-        goto Error;
-    }
+    SourcePath->Vtbl->AddRef(SourcePath);
+    File->Path = SourcePath;
 
     //
     // Open the file using the newly created path.
@@ -369,7 +349,7 @@ Return Value:
     ShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     FlagsAndAttributes = FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_OVERLAPPED;
 
-    File->FileHandle = CreateFileW(Path->FullPath.Buffer,
+    File->FileHandle = CreateFileW(File->Path->FullPath.Buffer,
                                    DesiredAccess,
                                    ShareMode,
                                    NULL,
@@ -1041,7 +1021,7 @@ Return Value:
 
                 Rtl->Vtbl->CopyPages(Rtl,
                                      LargePageAddress,
-                                     File->BaseAddress,
+                                     File->MappedAddress,
                                      NumberOfPages);
 
             }
