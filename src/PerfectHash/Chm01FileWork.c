@@ -28,9 +28,57 @@ PrepareFileChm01(
     PULARGE_INTEGER MappingSize,
     HANDLE DependentEvent
     )
+/*++
+
+Routine Description:
+
+    Performs common file preparation work for a given file instance associated
+    with a table.  If this is the first call to the function, indicated by a
+    NULL value pointed to by the FilePointer argument, then a new file instance
+    is created, and a Create() call is issued with the path and mapping size
+    parameters.  Otherwise, if it is not NULL, a rename is scheduled for the
+    new path name and the mapping size is extended (this involves unmapping the
+    existing map, closing the mapping handle, extending the file by setting the
+    file pointer and then end-of-file, and then creating a new mapping handle
+    and re-mapping the address).
+
+Arguments:
+
+    Table - Supplies a pointer to the table owning the file to be prepared.
+
+    FilePointer - Supplies the address of a variable that contains a pointer
+        to the relevant PERFECT_HASH_FILE instance for this file within the
+        PERFECT_HASH_TABLE structure.  If this value points to a NULL, it is
+        assumed this is the first time the routine is being called.  Otherwise,
+        it is assumed that a resize event has occurred and a new preparation
+        request is being furnished.  In the case of the former, a new file
+        instance is created and saved to the address specified by this param.
+
+    Path - Supplies a pointer to the path to use for the file.  If the file
+        has already been prepared at least once, this path is scheduled for
+        rename.
+
+    MappingSize - Supplies a pointer to a ULARGE_INTEGER that contains the
+        desired memory mapping size.
+
+    DependentEvent - Optionally supplies a handle to an event that must be
+        signaled prior to this routine proceeding.  This is used, for example,
+        to wait for the perfect hash table file to be created before creating
+        the :Info stream that hangs off it.
+
+Return Value:
+
+    S_OK - File prepared successfully.  Otherwise, an appropriate error code.
+
+--*/
 {
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File = NULL;
+
+    //
+    // If a dependent event has been provided, wait for this object to become
+    // signaled first before proceeding.
+    //
 
     if (IsValidHandle(DependentEvent)) {
         ULONG WaitResult;
@@ -43,23 +91,24 @@ PrepareFileChm01(
         }
     }
 
+    //
+    // Dereference the file pointer provided by the caller.  If NULL, this
+    // is the first preparation request for the given file instance.  Otherwise,
+    // a table resize event has occurred, which means a file rename needs to be
+    // scheduled (as we include the number of table elements in the file name),
+    // and the mapping size needs to be extended (as a larger table size means
+    // larger files are required to capture table data).
+    //
+
     File = *FilePointer;
 
-    if (File) {
+    if (!File) {
 
-        Result = File->Vtbl->ScheduleRename(File, Path);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashFileScheduleRename, Result);
-            goto Error;
-        }
-
-        Result = File->Vtbl->Extend(File, *MappingSize);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashFileExtend, Result);
-            goto Error;
-        }
-
-    } else {
+        //
+        // File does not exist, so create a new instance, then issue a Create()
+        // call with the desired path and mapping size parameters provided by
+        // the caller.
+        //
 
         Result = Table->Vtbl->CreateInstance(Table,
                                              NULL,
@@ -83,6 +132,31 @@ PrepareFileChm01(
             goto Error;
         }
 
+        //
+        // Update the table's pointer to this file instance.
+        //
+
+        *FilePointer = File;
+
+    } else {
+
+        //
+        // File already exists.  Schedule a rename and then extend the file
+        // according to the requested mapping size.
+        //
+
+        Result = File->Vtbl->ScheduleRename(File, Path);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileScheduleRename, Result);
+            goto Error;
+        }
+
+        Result = File->Vtbl->Extend(File, *MappingSize);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileExtend, Result);
+            goto Error;
+        }
+
     }
 
     //
@@ -102,10 +176,6 @@ Error:
     //
 
 End:
-
-    if (File) {
-        *FilePointer = File;
-    }
 
     return Result;
 }
