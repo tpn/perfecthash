@@ -571,8 +571,6 @@ Error:
 
 End:
 
-    ReleasePerfectHashPathLockExclusive(Path);
-
     return Result;
 }
 
@@ -644,8 +642,8 @@ Return Value:
     }
 
     if (IsPathSet(Path)) {
-        ReleasePerfectHashPathLockExclusive(Path);
-        return PH_E_PATH_ALREADY_SET;
+        Result = PH_E_PATH_ALREADY_SET;
+        goto Error;
     }
 
     //
@@ -665,7 +663,8 @@ Return Value:
 
     if (!BaseAddress) {
         SYS_ERROR(VirtualAlloc);
-        return E_OUTOFMEMORY;
+        Result = E_OUTOFMEMORY;
+        goto Error;
     }
 
     Path->FullPath.Buffer = (PWSTR)BaseAddress;

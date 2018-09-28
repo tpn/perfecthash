@@ -270,8 +270,8 @@ HRESULT
     _In_opt_ PCUNICODE_STRING AdditionalSuffix,
     _In_opt_ PCUNICODE_STRING NewExtension,
     _In_opt_ PCUNICODE_STRING NewStreamName,
-    _Out_ PPERFECT_HASH_PATH *Path,
-    _Out_ PPERFECT_HASH_PATH_PARTS *Parts
+    _Inout_opt_ PPERFECT_HASH_PATH *Path,
+    _Inout_opt_ PPERFECT_HASH_PATH_PARTS *Parts
     );
 typedef PERFECT_HASH_TABLE_CREATE_PATH *PPERFECT_HASH_TABLE_CREATE_PATH;
 

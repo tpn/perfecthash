@@ -134,10 +134,16 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(OutputDirectory)) {
         return E_POINTER;
+    } else if (Table->OutputDirectory) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableCreate, Result);
+        return Result;
     }
 
     if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(OutputDirectory)) {
         return E_INVALIDARG;
+    } else {
+        Table->OutputDirectory = OutputDirectory;
     }
 
     if (ARGUMENT_PRESENT(TableBaseName)) {
@@ -173,8 +179,7 @@ Return Value:
         Result = PerfectHashContextReset(Context);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextReset, Result);
-            ReleasePerfectHashContextLockExclusive(Context);
-            return PH_E_CONTEXT_RESET_FAILED;
+            goto Error;
         }
     }
 

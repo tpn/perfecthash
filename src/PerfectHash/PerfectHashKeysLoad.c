@@ -171,7 +171,7 @@ Return Value:
         FileLoadFlags.DisableTryLargePagesForFileData = TRUE;
     }
 
-    Result = File->Vtbl->Load(File, Path, &FileLoadFlags, &EndOfFile);
+    Result = File->Vtbl->Load(File, Path, &EndOfFile, &FileLoadFlags);
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashFileLoad, Result);

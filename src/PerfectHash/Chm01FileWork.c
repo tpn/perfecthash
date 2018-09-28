@@ -20,6 +20,20 @@ Abstract:
 #include "stdafx.h"
 #include "Chm_01.h"
 
+//
+// Temporarily disable the following concurrency SAL warning, as I
+// can't figure out how to suppress it at the moment.
+//
+//  warning C26165: Possibly failing to release lock 'Path->Lock'
+//      in function 'PrepareFileChm01'.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 26165)
+
+PREPARE_FILE PrepareFileChm01;
+
+_Use_decl_annotations_
 HRESULT
 PrepareFileChm01(
     PPERFECT_HASH_TABLE Table,
@@ -151,7 +165,9 @@ Return Value:
             goto Error;
         }
 
+        AcquirePerfectHashFileLockExclusive(File);
         Result = File->Vtbl->Extend(File, EndOfFile);
+        ReleasePerfectHashFileLockExclusive(File);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileExtend, Result);
             goto Error;
@@ -403,6 +419,8 @@ End:
 
     return;
 }
+
+#pragma warning(pop)
 
 _Use_decl_annotations_
 HRESULT
@@ -794,7 +812,7 @@ SaveCSourceTableDataCallbackChm01(
     NumberOfElements = TotalNumberOfElements >> 1;
     Graph = (PGRAPH)Context->SolvedContext;
     Source = Graph->Assigned;
-    Base = (PCHAR)File->BaseAddress;
+    Output = Base = (PCHAR)File->BaseAddress;
 
     //
     // Write seed data.
@@ -941,6 +959,5 @@ End:
 
     return Result;
 }
-
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

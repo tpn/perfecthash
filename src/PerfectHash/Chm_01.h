@@ -36,4 +36,19 @@ extern FILE_WORK_CALLBACK_IMPL PrepareCSourceKeysCallbackChm01;
 extern SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
     ShouldWeContinueTryingToSolveGraphChm01;
 
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PREPARE_FILE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PPERFECT_HASH_FILE *FilePointer,
+    _In_ PPERFECT_HASH_PATH Path,
+    _In_ PLARGE_INTEGER EndOfFile,
+    _In_opt_ HANDLE DependentEvent
+    );
+typedef PREPARE_FILE *PPREPARE_FILE;
+
+extern PREPARE_FILE PrepareFileChm01;
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

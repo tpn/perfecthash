@@ -25,7 +25,7 @@ PerfectHashContextCreateTable(
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_KEYS Keys,
     PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlagsPointer,
-    PPERFECT_HASH_TABLE *TablePointer
+    PVOID *TablePointer
     )
 /*++
 
@@ -101,6 +101,12 @@ Return Value:
     PUNICODE_STRING OutputDirectory;
     PPERFECT_HASH_TABLE Table = NULL;
     PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
+
+    if (ARGUMENT_PRESENT(TablePointer)) {
+        *TablePointer = NULL;
+    } else {
+        return E_POINTER;
+    }
 
     //
     // Validate arguments.
@@ -231,6 +237,10 @@ Return Value:
     // We're done!  Jump to the end to finish up.
     //
 
+    if (ARGUMENT_PRESENT(TablePointer)) {
+        *TablePointer = Table;
+    }
+
     goto End;
 
 Error:
@@ -243,6 +253,8 @@ Error:
         Table->Vtbl->Release(Table);
         Table = NULL;
     }
+
+    //*TablePointer = NULL;
 
     //
     // Intentional follow-on to End.
@@ -257,8 +269,6 @@ End:
     // Update the caller's pointer to the table.  This will be NULL if an error
     // occurred, which is fine.
     //
-
-    *TablePointer = Table;
 
     ReleasePerfectHashContextLockExclusive(Context);
 

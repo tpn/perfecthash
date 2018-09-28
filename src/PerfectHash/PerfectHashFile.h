@@ -28,7 +28,7 @@ Abstract:
 typedef
 _Check_return_
 _Success_(return >= 0)
-_Requires_exclusive_lock_held_(File->Lock)
+_Requires_lock_not_held_(File->Lock)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_CLOSE)(
     _In_ PPERFECT_HASH_FILE File,
@@ -81,7 +81,7 @@ typedef PERFECT_HASH_FILE_UNMAP *PPERFECT_HASH_FILE_UNMAP;
 typedef
 _Check_return_
 _Success_(return >= 0)
-_Requires_exclusive_lock_held_(File->Lock)
+_Requires_lock_not_held_(File->Lock)
 _Requires_lock_not_held_(NewPath->Lock)
 _Acquires_exclusive_lock_(NewPath->Lock)
 HRESULT
@@ -296,11 +296,17 @@ typedef PERFECT_HASH_FILE *PPERFECT_HASH_FILE;
 #define TryAcquirePerfectHashFileLockExclusive(File) \
     TryAcquireSRWLockExclusive(&File->Lock)
 
+#define AcquirePerfectHashFileLockExclusive(File) \
+    AcquireSRWLockExclusive(&File->Lock)
+
 #define ReleasePerfectHashFileLockExclusive(File) \
     ReleaseSRWLockExclusive(&File->Lock)
 
 #define TryAcquirePerfectHashFileLockShared(File) \
     TryAcquireSRWLockShared(&File->Lock)
+
+#define AcquirePerfectHashFileLockShared(File) \
+    AcquireSRWLockShared(&File->Lock)
 
 #define ReleasePerfectHashFileLockShared(File) \
     ReleaseSRWLockShared(&File->Lock)

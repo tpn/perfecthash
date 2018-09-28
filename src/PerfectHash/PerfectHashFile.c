@@ -293,15 +293,13 @@ Return Value:
     }
 
     if (IsFileOpen(File)) {
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return PH_E_FILE_ALREADY_OPEN;
+        Result = PH_E_FILE_ALREADY_OPEN;
+        goto Error;
     }
 
     if (IsFileClosed(File)) {
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return PH_E_FILE_ALREADY_CLOSED;
+        Result = PH_E_FILE_ALREADY_CLOSED;
+        goto Error;
     }
 
     //
@@ -312,17 +310,13 @@ Return Value:
     if (File->Path) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashFileCreate, Result);
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return Result;
+        goto Error;
     }
 
     if (File->RenamePath) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashFileCreate, Result);
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return Result;
+        goto Error;
     }
 
     //
@@ -361,8 +355,6 @@ Return Value:
     //
 
     Result = Path->Vtbl->Copy(Path, &SourcePath->FullPath, &Parts, NULL);
-
-    ReleasePerfectHashPathLockShared(SourcePath);
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCopy, Result);
@@ -455,6 +447,7 @@ Error:
 
 End:
 
+    ReleasePerfectHashPathLockShared(SourcePath);
     ReleasePerfectHashFileLockExclusive(File);
 
     if (Opened && FAILED(Result)) {
@@ -576,15 +569,13 @@ Return Value:
     }
 
     if (IsFileOpen(File)) {
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return PH_E_FILE_ALREADY_OPEN;
+        Result = PH_E_FILE_ALREADY_OPEN;
+        goto Error;
     }
 
     if (IsFileClosed(File)) {
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return PH_E_FILE_ALREADY_CLOSED;
+        Result = PH_E_FILE_ALREADY_CLOSED;
+        goto Error;
     }
 
     //
@@ -595,17 +586,13 @@ Return Value:
     if (File->Path) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashFileCreate, Result);
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return Result;
+        goto Error;
     }
 
     if (File->RenamePath) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashFileCreate, Result);
-        ReleasePerfectHashPathLockShared(SourcePath);
-        ReleasePerfectHashFileLockExclusive(File);
-        return Result;
+        goto Error;
     }
 
     //
@@ -643,8 +630,6 @@ Return Value:
     //
 
     Result = Path->Vtbl->Copy(Path, &SourcePath->FullPath, &Parts, NULL);
-
-    ReleasePerfectHashPathLockShared(SourcePath);
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCopy, Result);
@@ -734,6 +719,7 @@ Error:
 
 End:
 
+    ReleasePerfectHashPathLockShared(SourcePath);
     ReleasePerfectHashFileLockExclusive(File);
 
     if (Opened && FAILED(Result)) {
@@ -1265,7 +1251,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashFileGetPath(
     PPERFECT_HASH_FILE File,
-    PCPERFECT_HASH_PATH *Path
+    PPERFECT_HASH_PATH *Path
     )
 /*++
 
@@ -1294,19 +1280,16 @@ Return Value:
 
 --*/
 {
+
     if (!ARGUMENT_PRESENT(File)) {
         return E_POINTER;
     }
 
     if (!ARGUMENT_PRESENT(Path)) {
         return E_POINTER;
+    } else {
+        *Path = NULL;
     }
-
-    //
-    // Clear the caller's pointer up-front.
-    //
-
-    *Path = NULL;
 
     if (!TryAcquirePerfectHashFileLockShared(File)) {
         return PH_E_FILE_LOCKED;
@@ -1395,12 +1378,12 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!TryAcquirePerfectHashFileLockShared(File)) {
-        return PH_E_FILE_LOCKED;
-    }
-
     if (!IsFileOpen(File)) {
         return PH_E_FILE_NOT_OPEN;
+    }
+
+    if (!TryAcquirePerfectHashFileLockShared(File)) {
+        return PH_E_FILE_LOCKED;
     }
 
     SAVE_POINTER(FileHandle);
@@ -1449,8 +1432,6 @@ Return Value:
 
     PH_E_INVALID_END_OF_FILE - Invalid end of file value.
 
-    PH_E_FILE_LOCKED - The file is locked.
-
     PH_E_FILE_NOT_OPEN - The file is not open.
 
     PH_E_FILE_READONLY - The file is read-only.
@@ -1483,10 +1464,6 @@ Return Value:
 
     if (EndOfFile.QuadPart <= 0) {
         return PH_E_INVALID_END_OF_FILE;
-    }
-
-    if (!TryAcquirePerfectHashFileLockExclusive(File)) {
-        return PH_E_FILE_LOCKED;
     }
 
     if (!IsFileOpen(File)) {
@@ -1554,8 +1531,6 @@ Error:
     //
 
 End:
-
-    ReleasePerfectHashFileLockExclusive(File);
 
     return Result;
 }
@@ -1702,6 +1677,8 @@ Return Value:
 
     E_INVALIDARG - NewPath was invalid.
 
+    PH_E_FILE_LOCKED - File was locked.
+
     PH_E_PATH_LOCKED - NewPath was locked.
 
     PH_E_FILE_NEVER_OPENED - The file has never been opened.
@@ -1732,16 +1709,23 @@ Return Value:
         return E_POINTER;
     }
 
+    if (!TryAcquirePerfectHashFileLockExclusive(File)) {
+        return PH_E_FILE_LOCKED;
+    }
+
     if (!FileNeverOpened(File)) {
-        return PH_E_FILE_NEVER_OPENED;
+        Result = PH_E_FILE_NEVER_OPENED;
+        goto Error;
     }
 
     if (IsFileReadOnly(File)) {
-        return PH_E_FILE_READONLY;
+        Result = PH_E_FILE_READONLY;
+        goto Error;
     }
 
-    if (!TryAcquirePerfectHashFileLockExclusive(NewPath)) {
-        return PH_E_PATH_LOCKED;
+    if (!TryAcquirePerfectHashPathLockExclusive(NewPath)) {
+        Result = PH_E_PATH_LOCKED;
+        goto Error;
     }
 
     //
@@ -1755,7 +1739,8 @@ Return Value:
 
     if (Equal) {
         ReleasePerfectHashPathLockExclusive(NewPath);
-        return PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH;
+        Result = PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH;
+        goto Error;
     }
 
     //
@@ -1777,6 +1762,7 @@ Return Value:
     //
 
     if (OldPath) {
+        _Analysis_assume_lock_held_(OldPath->Lock);
         ReleasePerfectHashPathLockExclusive(OldPath);
         OldPath->Vtbl->Release(OldPath);
         OldPath = NULL;
@@ -1794,6 +1780,26 @@ Return Value:
             PH_ERROR(PerfectHashFileDoRename, Result);
         }
     }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    ReleasePerfectHashFileLockExclusive(File);
 
     return Result;
 }

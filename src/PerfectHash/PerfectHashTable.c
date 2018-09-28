@@ -331,7 +331,7 @@ Return Value:
         MaskFunctionName = (PUNICODE_STRING)MaskFunctionNames[MaskFunctionId];
         TableSuffixLength.LongPart += (
             sizeof(L'_') +
-            HashFunctionName->Length
+            MaskFunctionName->Length
         );
     }
 
@@ -497,12 +497,19 @@ Return Value:
 --*/
 {
     HRESULT Result = S_OK;
-    PPERFECT_HASH_PATH Path;
+    PPERFECT_HASH_PATH Path = NULL;
+    PPERFECT_HASH_PATH_PARTS Parts = NULL;
     UNICODE_STRING TableSuffix;
     WCHAR TableSuffixBuffer[256];
 
     if (!ARGUMENT_PRESENT(PathPointer)) {
         return E_POINTER;
+    } else {
+        *PathPointer = NULL;
+    }
+
+    if (ARGUMENT_PRESENT(PartsPointer)) {
+        *PartsPointer = NULL;
     }
 
     //
@@ -555,7 +562,7 @@ Return Value:
                                 &TableSuffix,
                                 NewExtension,
                                 NewStreamName,
-                                PartsPointer,
+                                &Parts,
                                 NULL);
 
     if (FAILED(Result)) {
@@ -568,6 +575,11 @@ Return Value:
     //
 
     *PathPointer = Path;
+
+    if (ARGUMENT_PRESENT(PartsPointer)) {
+        *PartsPointer = Parts;
+    }
+
     goto End;
 
 Error:
@@ -632,12 +644,6 @@ Return Value:
     if (!ARGUMENT_PRESENT(File)) {
         return E_POINTER;
     }
-
-    //
-    // Clear the caller's pointer up-front.
-    //
-
-    *File = NULL;
 
     if (!TryAcquirePerfectHashTableLockShared(Table)) {
         return PH_E_TABLE_LOCKED;
