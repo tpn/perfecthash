@@ -25,7 +25,7 @@ PrepareFileChm01(
     PPERFECT_HASH_TABLE Table,
     PPERFECT_HASH_FILE *FilePointer,
     PPERFECT_HASH_PATH Path,
-    PULARGE_INTEGER MappingSize,
+    PLARGE_INTEGER EndOfFile,
     HANDLE DependentEvent
     )
 /*++
@@ -58,8 +58,8 @@ Arguments:
         has already been prepared at least once, this path is scheduled for
         rename.
 
-    MappingSize - Supplies a pointer to a ULARGE_INTEGER that contains the
-        desired memory mapping size.
+    EndOfFile - Supplies a pointer to a LARGE_INTEGER that contains the
+        desired file size.
 
     DependentEvent - Optionally supplies a handle to an event that must be
         signaled prior to this routine proceeding.  This is used, for example,
@@ -122,7 +122,7 @@ Return Value:
 
         Result = File->Vtbl->Create(File,
                                     Path,
-                                    MappingSize,
+                                    EndOfFile,
                                     NULL);
 
         if (FAILED(Result)) {
@@ -151,7 +151,7 @@ Return Value:
             goto Error;
         }
 
-        Result = File->Vtbl->Extend(File, *MappingSize);
+        Result = File->Vtbl->Extend(File, EndOfFile);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileExtend, Result);
             goto Error;
@@ -244,19 +244,19 @@ Return Value:
         PCUNICODE_STRING NewExtension = NULL;
         PCUNICODE_STRING NewStreamName = NULL;
         PCUNICODE_STRING AdditionalSuffix = NULL;
-        ULARGE_INTEGER MappingSize;
+        LARGE_INTEGER EndOfFile;
         SYSTEM_INFO SystemInfo;
         PPERFECT_HASH_FILE *File;
 
         GetSystemInfo(&SystemInfo);
-        MappingSize.QuadPart = SystemInfo.dwAllocationGranularity;
+        EndOfFile.QuadPart = SystemInfo.dwAllocationGranularity;
 
         switch (Item->FileWorkId) {
 
             case FileWorkPrepareTableFileId:
                 File = &Table->TableFile;
                 NewExtension = &TableExtension;
-                MappingSize.QuadPart = Info->AssignedSizeInBytes;
+                EndOfFile.QuadPart = Info->AssignedSizeInBytes;
                 break;
 
             case FileWorkPrepareTableInfoStreamId:
@@ -264,7 +264,7 @@ Return Value:
                 NewExtension = &TableExtension;
                 NewStreamName = &TableInfoStreamName;
                 DependentEvent = Context->PreparedTableFileEvent;
-                MappingSize.QuadPart = sizeof(GRAPH_INFO_ON_DISK);
+                EndOfFile.QuadPart = sizeof(GRAPH_INFO_ON_DISK);
                 break;
 
             case FileWorkPrepareCHeaderFileId:
@@ -283,7 +283,7 @@ Return Value:
                 File = &Table->CSourceKeysFile;
                 NewExtension = &CSourceExtension;
                 AdditionalSuffix = &CSourceKeysSuffix;
-                MappingSize.QuadPart += Keys->NumberOfElements.QuadPart * 16;
+                EndOfFile.QuadPart += Keys->NumberOfElements.QuadPart * 16;
                 Impl = PrepareCSourceKeysCallbackChm01;
                 break;
 
@@ -291,7 +291,7 @@ Return Value:
                 File = &Table->CSourceTableDataFile;
                 NewExtension = &CSourceExtension;
                 AdditionalSuffix = &CSourceTableDataSuffix;
-                MappingSize.QuadPart += (
+                EndOfFile.QuadPart += (
                     TableInfo->NumberOfTableElements.QuadPart * 16
                 );
                 break;
@@ -323,7 +323,7 @@ Return Value:
         Result = PrepareFileChm01(Table,
                                   File,
                                   Path,
-                                  &MappingSize,
+                                  &EndOfFile,
                                   DependentEvent);
 
         if (FAILED(Result)) {
@@ -416,7 +416,7 @@ SaveTableCallbackChm01(
     PGRAPH Graph;
     PULONG Source;
     HRESULT Result = S_OK;
-    ULONGLONG SizeInBytes;
+    LONGLONG SizeInBytes;
     LARGE_INTEGER EndOfFile;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_FILE File;
@@ -441,7 +441,7 @@ SaveTableCallbackChm01(
         TableInfoOnDisk->KeySizeInBytes
     );
 
-    if (SizeInBytes != File->MappingSize.QuadPart) {
+    if (SizeInBytes != File->FileInfo.EndOfFile.QuadPart) {
         ASSERT(FALSE);
         Result = PH_E_INVARIANT_CHECK_FAILED;
         goto Error;
@@ -605,6 +605,32 @@ End:
     Long = (PULONG)Output;    \
     *Long = Indent;           \
     Output += sizeof(Indent); \
+}
+
+_Use_decl_annotations_
+HRESULT
+PrepareCHeaderCallbackChm01(
+    PPERFECT_HASH_CONTEXT Context,
+    PFILE_WORK_ITEM Item
+    )
+{
+    UNREFERENCED_PARAMETER(Context);
+    UNREFERENCED_PARAMETER(Item);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
+_Use_decl_annotations_
+HRESULT
+PrepareCSourceCallbackChm01(
+    PPERFECT_HASH_CONTEXT Context,
+    PFILE_WORK_ITEM Item
+    )
+{
+    UNREFERENCED_PARAMETER(Context);
+    UNREFERENCED_PARAMETER(Item);
+
+    return PH_E_NOT_IMPLEMENTED;
 }
 
 _Use_decl_annotations_

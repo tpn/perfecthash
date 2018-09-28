@@ -819,9 +819,9 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_LOAD)(
     _In_ PPERFECT_HASH_FILE File,
-    _In_ PPERFECT_HASH_PATH Path,
-    _In_opt_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags,
-    _Out_opt_ PLARGE_INTEGER EndOfFile
+    _In_ PPERFECT_HASH_PATH SourcePath,
+    _Out_opt_ PLARGE_INTEGER EndOfFile,
+    _In_opt_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags
     );
 typedef PERFECT_HASH_FILE_LOAD *PPERFECT_HASH_FILE_LOAD;
 
@@ -886,8 +886,8 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_CREATE)(
     _In_ PPERFECT_HASH_FILE File,
-    _In_ PPERFECT_HASH_PATH Path,
-    _In_opt_ PULARGE_INTEGER MappingSize,
+    _In_ PPERFECT_HASH_PATH SourcePath,
+    _In_ PLARGE_INTEGER EndOfFile,
     _In_opt_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
     );
 typedef PERFECT_HASH_FILE_CREATE *PPERFECT_HASH_FILE_CREATE;
@@ -992,7 +992,7 @@ HRESULT
     _Out_opt_ PHANDLE MappingHandle,
     _Out_opt_ PVOID *BaseAddress,
     _Out_opt_ PVOID *MappedAddress,
-    _Out_opt_ PULARGE_INTEGER *MappingSize
+    _Out_opt_ PLARGE_INTEGER EndOfFile
     );
 typedef PERFECT_HASH_FILE_GET_RESOURCES
       *PPERFECT_HASH_FILE_GET_RESOURCES;

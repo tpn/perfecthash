@@ -832,3 +832,35 @@ Language=English
 Invalid file work ID.
 .
 
+MessageId=0x264
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_END_OF_FILE
+Language=English
+Invalid end of file (less than or equal to 0).
+.
+
+MessageId=0x265
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NEW_EOF_LESS_THAN_OR_EQUAL_TO_CURRENT_EOF
+Language=English
+New end-of-file is less than or equal to current end-of-file.
+.
+
+MessageId=0x266
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH
+Language=English
+The rename path equivalent to the existing path.
+.
+
+MessageId=0x267
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_FILE_CREATE_FLAGS
+Language=English
+Invalid file create flags.
+.
+

@@ -43,7 +43,7 @@ _Requires_exclusive_lock_held_(File->Lock)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_EXTEND)(
     _In_ PPERFECT_HASH_FILE File,
-    _In_ ULARGE_INTEGER NewMappingSize
+    _In_ PLARGE_INTEGER NewEndOfFile
     );
 typedef PERFECT_HASH_FILE_EXTEND *PPERFECT_HASH_FILE_EXTEND;
 
@@ -54,7 +54,7 @@ HRESULT
 _Requires_exclusive_lock_held_(File->Lock)
 (STDAPICALLTYPE PERFECT_HASH_FILE_TRUNCATE)(
     _In_ PPERFECT_HASH_FILE File,
-    _In_ LARGE_INTEGER NewEndOfFile
+    _In_opt_ PLARGE_INTEGER NewEndOfFile
     );
 typedef PERFECT_HASH_FILE_TRUNCATE *PPERFECT_HASH_FILE_TRUNCATE;
 
@@ -202,6 +202,9 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
     File->Flags.Loaded = FALSE; \
     File->Flags.Created = TRUE
 
+#define NumberOfPagesForFile(File) \
+    (ULONG)BYTES_TO_PAGES(File->FileInfo.AllocationSize.QuadPart)
+
 //
 // Define the PERFECT_HASH_FILE structure.
 //
@@ -266,12 +269,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     //
 
     PVOID MappedAddress;
-
-    //
-    // Size of the memory map.
-    //
-
-    ULARGE_INTEGER MappingSize;
 
     //
     // File info for the current file.  Updated whenever any routine mutates

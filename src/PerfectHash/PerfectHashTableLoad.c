@@ -257,8 +257,8 @@ Return Value:
 
     Result = InfoStream->Vtbl->Load(InfoStream,
                                     InfoStreamPath,
-                                    &InfoStreamLoadFlags,
-                                    &EndOfFile);
+                                    &EndOfFile,
+                                    &InfoStreamLoadFlags);
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashTableLoad, Result);
@@ -412,7 +412,7 @@ Return Value:
         FileLoadFlags.DisableTryLargePagesForFileData = TRUE;
     }
 
-    Result = File->Vtbl->Load(File, Path, &FileLoadFlags, &EndOfFile);
+    Result = File->Vtbl->Load(File, Path, &EndOfFile, &FileLoadFlags);
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashTableLoad, Result);

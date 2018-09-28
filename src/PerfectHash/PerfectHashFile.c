@@ -205,8 +205,8 @@ HRESULT
 PerfectHashFileLoad(
     PPERFECT_HASH_FILE File,
     PPERFECT_HASH_PATH SourcePath,
-    PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlagsPointer,
-    PLARGE_INTEGER EndOfFilePointer
+    PLARGE_INTEGER EndOfFilePointer,
+    PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlagsPointer
     )
 /*++
 
@@ -220,12 +220,12 @@ Arguments:
 
     SourcePath - Supplies a pointer to the path instance to load.
 
-    FileLoadFlags - Optionally supplies a pointer to file load flags that can
-        be used to customize load behavior.
-
     EndOfFile - Optionally supplies a pointer to a variable that will receive
         the current end of file (i.e. size in bytes) if the file was loaded
         successfully.
+
+    FileLoadFlags - Optionally supplies a pointer to file load flags that can
+        be used to customize load behavior.
 
 Return Value:
 
@@ -243,6 +243,11 @@ Return Value:
 
     PH_E_FILE_ALREADY_OPEN - An existing file has already been loaded/created.
 
+    PH_E_FILE_ALREADY_CLOSED - File has been opened and then subsequently
+        closed already.
+
+    PH_E_FILE_EMPTY - The file was empty.
+
     PH_E_SYSTEM_CALL_FAILED - A system call failed; the file may be in an
         inconsistent state.
 
@@ -255,7 +260,7 @@ Return Value:
     PALLOCATOR Allocator;
     HRESULT Result = S_OK;
     BOOLEAN Opened = FALSE;
-    PPERFECT_HASH_PATH Path;
+    PPERFECT_HASH_PATH Path = NULL;
     PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags = { 0 };
     PCPERFECT_HASH_PATH_PARTS Parts = NULL;
 
@@ -300,6 +305,27 @@ Return Value:
     }
 
     //
+    // Invariant check: File->Path and File->RenamePath should both be NULL
+    // at this point.
+    //
+
+    if (File->Path) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileCreate, Result);
+        ReleasePerfectHashPathLockShared(SourcePath);
+        ReleasePerfectHashFileLockExclusive(File);
+        return Result;
+    }
+
+    if (File->RenamePath) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileCreate, Result);
+        ReleasePerfectHashPathLockShared(SourcePath);
+        ReleasePerfectHashFileLockExclusive(File);
+        return Result;
+    }
+
+    //
     // Argument validation complete, continue with loading.
     //
 
@@ -308,12 +334,27 @@ Return Value:
     //
 
     Rtl = File->Rtl;
-    Path = File->Path;
     Allocator = File->Allocator;
 
     if (FileLoadFlags.DisableTryLargePagesForFileData) {
         File->Flags.DoesNotWantLargePages = TRUE;
     }
+
+    //
+    // Create a new path instance.
+    //
+
+    Result = File->Vtbl->CreateInstance(File,
+                                        NULL,
+                                        &IID_PERFECT_HASH_FILE,
+                                        &Path);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileCreateInstance, Result);
+        goto Error;
+    }
+
+    File->Path = Path;
 
     //
     // Deep copy the incoming path and extract the various components.
@@ -336,7 +377,7 @@ Return Value:
     ShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     FlagsAndAttributes = FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_OVERLAPPED;
 
-    File->FileHandle = CreateFileW(File->Path->FullPath.Buffer,
+    File->FileHandle = CreateFileW(Path->FullPath.Buffer,
                                    DesiredAccess,
                                    ShareMode,
                                    NULL,
@@ -369,7 +410,7 @@ Return Value:
     // existing file, which won't work on an empty file.
     //
 
-    if (File->FileInfo.EndOfFile.QuadPart > 0) {
+    if (File->FileInfo.EndOfFile.QuadPart == 0) {
         Result = PH_E_FILE_EMPTY;
         PH_ERROR(PerfectHashFileLoad, Result);
         goto Error;
@@ -382,12 +423,6 @@ Return Value:
     if (ARGUMENT_PRESENT(EndOfFilePointer)) {
         EndOfFilePointer->QuadPart = File->FileInfo.EndOfFile.QuadPart;
     }
-
-    //
-    // Set the mapping size to the total size of the file.
-    //
-
-    File->MappingSize.QuadPart = File->FileInfo.EndOfFile.QuadPart;
 
     //
     // Map the file into memory.
@@ -412,6 +447,12 @@ Error:
         Result = E_UNEXPECTED;
     }
 
+    RELEASE(File->Path);
+
+    //
+    // Intentional follow-on to End.
+    //
+
 End:
 
     ReleasePerfectHashFileLockExclusive(File);
@@ -421,6 +462,284 @@ End:
         LARGE_INTEGER EndOfFile = { 0 };
 
         CloseResult = File->Vtbl->Close(File, &EndOfFile);
+        if (FAILED(CloseResult)) {
+            PH_ERROR(PerfectHashFileClose, CloseResult);
+        }
+    }
+
+    return Result;
+}
+
+PERFECT_HASH_FILE_CREATE PerfectHashFileCreate;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashFileCreate(
+    PPERFECT_HASH_FILE File,
+    PPERFECT_HASH_PATH SourcePath,
+    PLARGE_INTEGER EndOfFilePointer,
+    PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlagsPointer
+    )
+/*++
+
+Routine Description:
+
+    Creates a file.
+
+Arguments:
+
+    File - Supplies a pointer to the file to load.
+
+    SourcePath - Supplies a pointer to the path instance to load.
+
+    EndOfFile - Supplies a pointer to a LARGE_INTEGER structure that contains
+        the desired size of the file being created.  Once created (and truncated
+        if necessary), a memory map will be created for the entire file size.
+
+    FileCreateFlags - Optionally supplies a pointer to file load flags that can
+        be used to customize load behavior.
+
+Return Value:
+
+    S_OK - File was closed successfully.
+
+    E_POINTER - File, SourcePath or EndOfFile parameters were NULL.
+
+    PH_E_INVALID_FILE_CREATE_FLAGS - Invalid file create flags.
+
+    PH_E_INVALID_END_OF_FILE - EndOfFile parameter was invalid (<= 0).
+
+    PH_E_SOURCE_PATH_LOCKED - Source path is locked.
+
+    PH_E_SOURCE_PATH_NO_PATH_SET - Source path has not been set.
+
+    PH_E_FILE_LOCKED - The file is locked.
+
+    PH_E_FILE_ALREADY_OPEN - An existing file has already been loaded/created.
+
+    PH_E_FILE_ALREADY_CLOSED - File has been opened and then subsequently
+        closed already.
+
+    PH_E_SYSTEM_CALL_FAILED - A system call failed; the file may be in an
+        inconsistent state.
+
+--*/
+{
+    PRTL Rtl;
+    ULONG LastError;
+    ULONG ShareMode;
+    ULONG DesiredAccess;
+    ULONG FlagsAndAttributes;
+    HRESULT Result = S_OK;
+    BOOLEAN Opened = FALSE;
+    PPERFECT_HASH_PATH Path;
+    LARGE_INTEGER EndOfFile;
+    LARGE_INTEGER EmptyEndOfFile = { 0 };
+    PERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags = { 0 };
+    PCPERFECT_HASH_PATH_PARTS Parts = NULL;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(SourcePath)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(EndOfFilePointer)) {
+        return E_POINTER;
+    } else {
+        EndOfFile.QuadPart = EndOfFilePointer->QuadPart;
+        if (EndOfFile.QuadPart <= 0) {
+            return PH_E_INVALID_END_OF_FILE;
+        }
+    }
+
+    VALIDATE_FLAGS(FileCreate, FILE_CREATE);
+
+    if (!TryAcquirePerfectHashPathLockShared(SourcePath)) {
+        return PH_E_SOURCE_PATH_LOCKED;
+    }
+
+    if (!IsPathSet(SourcePath)) {
+        ReleasePerfectHashPathLockShared(SourcePath);
+        return PH_E_SOURCE_PATH_NO_PATH_SET;
+    }
+
+    if (!TryAcquirePerfectHashFileLockExclusive(File)) {
+        ReleasePerfectHashPathLockShared(SourcePath);
+        return PH_E_FILE_LOCKED;
+    }
+
+    if (IsFileOpen(File)) {
+        ReleasePerfectHashPathLockShared(SourcePath);
+        ReleasePerfectHashFileLockExclusive(File);
+        return PH_E_FILE_ALREADY_OPEN;
+    }
+
+    if (IsFileClosed(File)) {
+        ReleasePerfectHashPathLockShared(SourcePath);
+        ReleasePerfectHashFileLockExclusive(File);
+        return PH_E_FILE_ALREADY_CLOSED;
+    }
+
+    //
+    // Invariant check: File->Path and File->RenamePath should both be NULL
+    // at this point.
+    //
+
+    if (File->Path) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileCreate, Result);
+        ReleasePerfectHashPathLockShared(SourcePath);
+        ReleasePerfectHashFileLockExclusive(File);
+        return Result;
+    }
+
+    if (File->RenamePath) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileCreate, Result);
+        ReleasePerfectHashPathLockShared(SourcePath);
+        ReleasePerfectHashFileLockExclusive(File);
+        return Result;
+    }
+
+    //
+    // Argument validation complete, continue with creation.
+    //
+
+    //
+    // Initialize aliases and create flags.
+    //
+
+    Rtl = File->Rtl;
+
+    if (FileCreateFlags.DisableTryLargePagesForFileData) {
+        File->Flags.DoesNotWantLargePages = TRUE;
+    }
+
+    //
+    // Create a new path instance.
+    //
+
+    Result = File->Vtbl->CreateInstance(File,
+                                        NULL,
+                                        &IID_PERFECT_HASH_FILE,
+                                        &Path);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileCreateInstance, Result);
+        goto Error;
+    }
+
+    File->Path = Path;
+
+    //
+    // Deep copy the incoming path and extract the various components.
+    //
+
+    Result = Path->Vtbl->Copy(Path, &SourcePath->FullPath, &Parts, NULL);
+
+    ReleasePerfectHashPathLockShared(SourcePath);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCopy, Result);
+        goto Error;
+    }
+
+    //
+    // Open the file using the newly created path.
+    //
+
+    DesiredAccess = GENERIC_READ | GENERIC_WRITE;
+    ShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+    FlagsAndAttributes = FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_OVERLAPPED;
+
+    File->FileHandle = CreateFileW(File->Path->FullPath.Buffer,
+                                   DesiredAccess,
+                                   ShareMode,
+                                   NULL,
+                                   OPEN_ALWAYS,
+                                   FlagsAndAttributes,
+                                   NULL);
+
+    LastError = GetLastError();
+
+    if (!IsValidHandle(File->FileHandle)) {
+        File->FileHandle = NULL;
+        SYS_ERROR(CreateFileW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    Opened = TRUE;
+    SetFileOpened(File);
+    SetFileCreated(File);
+
+    //
+    // If the file already existed, truncate it to 0.  This ensures we're not
+    // picking up any existing file contents.
+    //
+
+    if (LastError == ERROR_ALREADY_EXISTS) {
+        Result = File->Vtbl->Truncate(File, &EmptyEndOfFile);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileTruncate, Result);
+            goto Error;
+        }
+    }
+
+    //
+    // Extend the file to the desired size.
+    //
+
+    Result = File->Vtbl->Truncate(File, &EndOfFile);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileTruncate, Result);
+        goto Error;
+    }
+
+    //
+    // Map the file into memory.
+    //
+
+    Result = File->Vtbl->Map(File);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileMap, Result);
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    RELEASE(File->Path);
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    ReleasePerfectHashFileLockExclusive(File);
+
+    if (Opened && FAILED(Result)) {
+        HRESULT CloseResult;
+
+        CloseResult = File->Vtbl->Close(File, &EmptyEndOfFile);
         if (FAILED(CloseResult)) {
             PH_ERROR(PerfectHashFileClose, CloseResult);
         }
@@ -534,7 +853,7 @@ Return Value:
             Result = PH_E_INVARIANT_CHECK_FAILED;
             PH_ERROR(PerfectHashFileClose, Result);
         } else {
-            Result = File->Vtbl->Truncate(File, EndOfFile);
+            Result = File->Vtbl->Truncate(File, &EndOfFile);
             if (FAILED(Result)) {
                 PH_ERROR(PerfectHashFileTruncate, Result);
             }
@@ -608,14 +927,7 @@ Return Value:
 
     E_POINTER - File parameter was NULL.
 
-    PH_E_FILE_MAPPING_SIZE_IS_ZERO - The mapping size is 0.
-
-    PH_E_FILE_MAPPING_SIZE_NOT_SYSTEM_ALIGNED - The mapping size for the file is
-        not aligned to the system allocation granularity.
-
-    PH_E_FILE_MAPPING_SIZE_NOT_LARGE_PAGE_ALIGNED - The mapping size for the
-        file is not aligned to the large page granularity, and large pages have
-        been requested.
+    PH_E_INVALID_END_OF_FILE - Invalid end of file.
 
     PH_E_FILE_NOT_OPEN - File is not open.
 
@@ -628,12 +940,10 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
-    ULONG Access = FILE_MAP_READ;
+    ULONG Access;
     ULONG Protection;
-    SIZE_T BytesToMap;
     HRESULT Result = S_OK;
-    ULARGE_INTEGER Aligned;
+    LARGE_INTEGER EndOfFile;
 
     //
     // Validate arguments.
@@ -655,52 +965,29 @@ Return Value:
         return PH_E_FILE_VIEW_MAPPED;
     }
 
-    if (!IsFileReadOnly(File)) {
+    EndOfFile.QuadPart = File->FileInfo.EndOfFile.QuadPart;
 
-        Access |= FILE_MAP_WRITE;
-
-        if (File->MappingSize.QuadPart == 0) {
-
-            return PH_E_FILE_MAPPING_SIZE_IS_ZERO;
-
-        } else if (WantsLargePages(File)) {
-
-            Aligned.QuadPart = ALIGN_UP_LARGE_PAGE(File->MappingSize.QuadPart);
-
-            if (File->MappingSize.QuadPart != Aligned.QuadPart) {
-                return PH_E_FILE_MAPPING_SIZE_NOT_LARGE_PAGE_ALIGNED;
-            }
-
-        } else {
-
-            Aligned.QuadPart = ALIGN_UP(File->MappingSize.QuadPart,
-                                        File->AllocationGranularity);
-
-            if (File->MappingSize.QuadPart != Aligned.QuadPart) {
-                return PH_E_FILE_MAPPING_SIZE_NOT_SYSTEM_ALIGNED;
-            }
-
-        }
-
+    if (EndOfFile.QuadPart <= 0) {
+        return PH_E_INVALID_END_OF_FILE;
     }
 
     //
-    // Argument validation complete.
+    // Argument validation complete.  Create the file mapping.
     //
 
-    Rtl = File->Rtl;
-
-    //
-    // Create the file mapping.
-    //
-
-    Protection = (IsFileReadOnly(File) ? PAGE_READONLY : PAGE_READWRITE);
+    if (IsFileReadOnly(File)) {
+        Protection = PAGE_READONLY;
+        Access = FILE_MAP_READ;
+    } else {
+        Protection = PAGE_READWRITE;
+        Access = FILE_MAP_READ | FILE_MAP_WRITE;
+    }
 
     File->MappingHandle = CreateFileMappingW(File->FileHandle,
                                              NULL,
                                              Protection,
-                                             File->MappingSize.HighPart,
-                                             File->MappingSize.LowPart,
+                                             0,
+                                             0,
                                              NULL);
 
     if (!IsValidHandle(File->MappingHandle)) {
@@ -713,13 +1000,7 @@ Return Value:
     // Successfully created the file mapping.  Now, map it into memory.
     //
 
-    BytesToMap = LARGE_INTEGER_TO_SIZE_T(File->MappingSize);
-
-    File->BaseAddress = MapViewOfFile(File->MappingHandle,
-                                      Access,
-                                      0,
-                                      0,
-                                      BytesToMap);
+    File->BaseAddress = MapViewOfFile(File->MappingHandle, Access, 0, 0, 0);
 
     if (!File->BaseAddress) {
         SYS_ERROR(MapViewOfFile);
@@ -744,7 +1025,7 @@ Return Value:
 
         LargePageAllocFlags = MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
         LargePageAllocSize = (
-            ALIGN_UP_LARGE_PAGE(LARGE_INTEGER_TO_SIZE_T(File->MappingSize))
+            ALIGN_UP_LARGE_PAGE(LARGE_INTEGER_TO_SIZE_T(EndOfFile))
         );
 
         LargePageAddress = VirtualAlloc(NULL,
@@ -758,25 +1039,27 @@ Return Value:
             // The large page allocation was successful.
             //
 
-            ULONG_PTR NumberOfPages;
-            LARGE_INTEGER AllocationSize;
-
             File->Flags.UsesLargePages = TRUE;
             File->MappedAddress = File->BaseAddress;
             File->BaseAddress = LargePageAddress;
 
             //
-            // We can use the allocation size here to capture the appropriate
-            // number of pages that are mapped and accessible.
+            // If the file is readonly, copy the mapped contents into the large
+            // page buffer.
             //
 
-            AllocationSize.QuadPart = File->FileInfo.AllocationSize.QuadPart;
-            NumberOfPages = BYTES_TO_PAGES(AllocationSize.QuadPart);
+            if (IsFileReadOnly(File)) {
 
-            Rtl->Vtbl->CopyPages(Rtl,
-                                 LargePageAddress,
-                                 File->BaseAddress,
-                                 (ULONG)NumberOfPages);
+                PRTL Rtl = File->Rtl;
+                ULONG NumberOfPages = NumberOfPagesForFile(File);
+
+                Rtl->Vtbl->CopyPages(Rtl,
+                                     LargePageAddress,
+                                     File->BaseAddress,
+                                     NumberOfPages);
+
+            }
+
         }
 
     }
@@ -1068,7 +1351,7 @@ PerfectHashFileGetResources(
     PHANDLE MappingHandle,
     PVOID *BaseAddress,
     PVOID *MappedAddress,
-    PULARGE_INTEGER *MappingSize
+    PLARGE_INTEGER EndOfFile
     )
 /*++
 
@@ -1089,7 +1372,7 @@ Arguments:
 
     MappedAddress - Optionally receives the mapped address.
 
-    MappingSize - Optionally receives the mapping size.
+    EndOfFile - Optionally receives current end of file.
 
 Return Value:
 
@@ -1124,7 +1407,11 @@ Return Value:
     SAVE_POINTER(MappingHandle);
     SAVE_POINTER(BaseAddress);
     SAVE_POINTER(MappedAddress);
-    SAVE_POINTER(MappingSize);
+
+    if (ARGUMENT_PRESENT(EndOfFile)) {
+        Count++;
+        EndOfFile->QuadPart = File->FileInfo.EndOfFile.QuadPart;
+    }
 
     ReleasePerfectHashFileLockShared(File);
 
@@ -1137,7 +1424,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashFileExtend(
     PPERFECT_HASH_FILE File,
-    ULARGE_INTEGER NewMappingSize
+    PLARGE_INTEGER NewEndOfFile
     )
 /*++
 
@@ -1150,19 +1437,17 @@ Arguments:
 
     File - Supplies a pointer to the file to extend.
 
-    NewMappingSize - Supplies the new mapping size to be used.  This value
-        will be automatically aligned up to a system allocation granularity
-        if necessary.
+    NewEndOfFile - Supplies a pointer to the new end-of-file size to be used.
 
 Return Value:
 
     S_OK - File extended successfully.
 
-    E_POINTER - File parameter was NULL.
-
-    E_INVALIDARG - NewMappingSize was 0.
+    E_POINTER - File or NewEndOfFile parameter were NULL.
 
     E_UNEXPECTED - Internal error.
+
+    PH_E_INVALID_END_OF_FILE - Invalid end of file value.
 
     PH_E_FILE_LOCKED - The file is locked.
 
@@ -1173,15 +1458,14 @@ Return Value:
     PH_E_SYSTEM_CALL_FAILED - A system call failed and the file was not
         extended.
 
-    PH_E_MAPPING_SIZE_LESS_THAN_OR_EQUAL_TO_CURRENT_SIZE - The supplied size
-        by NewMappingSize is less than or equal to the current file size.
+    PH_E_NEW_EOF_LESS_THAN_OR_EQUAL_TO_CURRENT_EOF - The new end-of-file is
+        less than or equal to the current end-of-file.  (To reduce the size
+        of an existing file, Truncate() should be used.)
 
 --*/
 {
-    PRTL Rtl;
     HRESULT Result = S_OK;
     LARGE_INTEGER EndOfFile;
-    ULARGE_INTEGER MappingSize;
 
     //
     // Validate arguments.
@@ -1191,8 +1475,14 @@ Return Value:
         return E_POINTER;
     }
 
-    if (NewMappingSize.QuadPart == 0) {
-        return E_INVALIDARG;
+    if (!ARGUMENT_PRESENT(NewEndOfFile)) {
+        return E_POINTER;
+    }
+
+    EndOfFile.QuadPart = NewEndOfFile->QuadPart;
+
+    if (EndOfFile.QuadPart <= 0) {
+        return PH_E_INVALID_END_OF_FILE;
     }
 
     if (!TryAcquirePerfectHashFileLockExclusive(File)) {
@@ -1209,17 +1499,8 @@ Return Value:
         goto Error;
     }
 
-    Rtl = File->Rtl;
-
-    //
-    // Align the provided size up to the system allocation granularity.
-    //
-
-    MappingSize.QuadPart = ALIGN_UP(NewMappingSize.QuadPart,
-                                    File->AllocationGranularity);
-
-    if (File->FileInfo.EndOfFile.QuadPart >= (LONGLONG)MappingSize.QuadPart) {
-        Result = PH_E_MAPPING_SIZE_LESS_THAN_OR_EQUAL_TO_CURRENT_SIZE;
+    if (EndOfFile.QuadPart <= File->FileInfo.EndOfFile.QuadPart) {
+        Result = PH_E_NEW_EOF_LESS_THAN_OR_EQUAL_TO_CURRENT_EOF;
         goto Error;
     }
 
@@ -1238,20 +1519,16 @@ Return Value:
     // Extend the file to the new size via Truncate().
     //
 
-    EndOfFile.QuadPart = (LONGLONG)MappingSize.QuadPart;
-
-    Result = File->Vtbl->Truncate(File, EndOfFile);
+    Result = File->Vtbl->Truncate(File, &EndOfFile);
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashFileTruncate, Result);
         goto Error;
     }
 
     //
-    // Update the mapping size, clear the number of bytes written, and re-map
-    // the file.
+    // Clear the number of bytes written and map the file.
     //
 
-    File->MappingSize.QuadPart = MappingSize.QuadPart;
     File->NumberOfBytesWritten.QuadPart = 0;
 
     Result = File->Vtbl->Map(File);
@@ -1289,7 +1566,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashFileTruncate(
     PPERFECT_HASH_FILE File,
-    LARGE_INTEGER NewEndOfFile
+    PLARGE_INTEGER NewEndOfFile
     )
 /*++
 
@@ -1306,9 +1583,9 @@ Arguments:
 
 Return Value:
 
-    S_OK - File extended successfully.
+    S_OK - File truncated successfully.
 
-    E_POINTER - File parameter was NULL.
+    E_POINTER - File or NewEndOfFile parameters were NULL.
 
     E_UNEXPECTED - Internal error.
 
@@ -1323,6 +1600,7 @@ Return Value:
 {
     BOOL Success;
     HRESULT Result = S_OK;
+    LARGE_INTEGER EndOfFile;
 
     //
     // Validate arguments.
@@ -1330,6 +1608,16 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(File)) {
         return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(NewEndOfFile)) {
+        return E_POINTER;
+    }
+
+    EndOfFile.QuadPart = NewEndOfFile->QuadPart;
+
+    if (EndOfFile.QuadPart <= 0) {
+        return PH_E_INVALID_END_OF_FILE;
     }
 
     if (!IsFileOpen(File)) {
@@ -1349,7 +1637,7 @@ Return Value:
     //
 
     Success = SetFilePointerEx(File->FileHandle,
-                               NewEndOfFile,
+                               EndOfFile,
                                NULL,
                                FILE_BEGIN);
 
@@ -1420,8 +1708,13 @@ Return Value:
 
     PH_E_FILE_READONLY - The file is read-only.
 
+    PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH - The rename path requested is the
+        same as the current path.
+
 --*/
 {
+    PRTL Rtl;
+    BOOLEAN Equal;
     HRESULT Result = S_OK;
     PVOID OldAddress;
     PVOID OriginalAddress;
@@ -1449,6 +1742,20 @@ Return Value:
 
     if (!TryAcquirePerfectHashFileLockExclusive(NewPath)) {
         return PH_E_PATH_LOCKED;
+    }
+
+    //
+    // Verify the requested new path and current path differ.
+    //
+
+    Rtl = File->Rtl;
+    Equal = Rtl->RtlEqualUnicodeString(&File->Path->FullPath,
+                                       &NewPath->FullPath,
+                                       TRUE);
+
+    if (Equal) {
+        ReleasePerfectHashPathLockExclusive(NewPath);
+        return PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH;
     }
 
     //

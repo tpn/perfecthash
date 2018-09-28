@@ -373,6 +373,15 @@ NTSTATUS
 typedef RTL_UNICODE_STRING_TO_INTEGER *PRTL_UNICODE_STRING_TO_INTEGER;
 
 typedef
+BOOLEAN
+(NTAPI RTL_EQUAL_UNICODE_STRING)(
+    _In_ PCUNICODE_STRING String1,
+    _In_ PCUNICODE_STRING String2,
+    _In_ BOOLEAN CaseInSensitive
+    );
+typedef RTL_EQUAL_UNICODE_STRING *PRTL_EQUAL_UNICODE_STRING;
+
+typedef
 VOID
 (NTAPI RTL_COPY_MEMORY)(
     _Out_writes_bytes_all_(Length) PVOID Destination,
@@ -1844,6 +1853,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     "RtlCharToInteger",            \
     "RtlIntegerToChar",            \
     "RtlUnicodeStringToInteger",   \
+    "RtlEqualUnicodeString",       \
     "CryptBinaryToStringA",        \
     "CryptBinaryToStringW",        \
     "__C_specific_handler",        \
@@ -1882,6 +1892,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     PRTL_CHAR_TO_INTEGER RtlCharToInteger;                         \
     PRTL_INTEGER_TO_CHAR RtlIntegerToChar;                         \
     PRTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;      \
+    PRTL_EQUAL_UNICODE_STRING RtlEqualUnicodeString;               \
     PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                \
     PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                \
     P__C_SPECIFIC_HANDLER __C_specific_handler;                    \

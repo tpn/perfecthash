@@ -1176,4 +1176,78 @@ End:
     return Result;
 }
 
+PERFECT_HASH_PATH_GET_PARTS PerfectHashPathGetParts;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashPathGetParts(
+    PPERFECT_HASH_PATH Path,
+    PCPERFECT_HASH_PATH_PARTS *Parts
+    )
+/*++
+
+Routine Description:
+
+    Obtains the path parts for a given path instance.
+
+Arguments:
+
+    Path - Supplies a pointer to a PERFECT_HASH_PATH structure for which the
+        parts are to be obtained.
+
+    Parts - Supplies the address of a variable that receives a pointer to the
+        parts structure.  This structure is valid as long as the underlying
+        path object persists.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Path or Parts parameters were NULL.
+
+    PH_E_PATH_LOCKED - The file is locked exclusively.
+
+    PH_E_NO_PATH_SET - No path has been set.
+
+--*/
+{
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Path)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Parts)) {
+        return E_POINTER;
+    }
+
+    //
+    // Clear the caller's pointer up-front.
+    //
+
+    *Parts = NULL;
+
+    if (!TryAcquirePerfectHashPathLockShared(Path)) {
+        return PH_E_PATH_LOCKED;
+    }
+
+    if (!IsPathSet(Path)) {
+        ReleasePerfectHashPathLockShared(Path);
+        return PH_E_NO_PATH_SET;
+    }
+
+    //
+    // Argument validation complete.  Update the caller's pointer and return.
+    //
+
+    *Parts = &Path->Parts;
+
+    ReleasePerfectHashPathLockShared(Path);
+
+    return S_OK;
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

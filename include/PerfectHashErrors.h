@@ -970,3 +970,39 @@ Abstract:
 //
 #define PH_E_INVALID_FILE_WORK_ID        ((HRESULT)0xE0040263L)
 
+//
+// MessageId: PH_E_INVALID_END_OF_FILE
+//
+// MessageText:
+//
+// Invalid end of file (less than or equal to 0).
+//
+#define PH_E_INVALID_END_OF_FILE         ((HRESULT)0xE0040264L)
+
+//
+// MessageId: PH_E_NEW_EOF_LESS_THAN_OR_EQUAL_TO_CURRENT_EOF
+//
+// MessageText:
+//
+// New end-of-file is less than or equal to current end-of-file.
+//
+#define PH_E_NEW_EOF_LESS_THAN_OR_EQUAL_TO_CURRENT_EOF ((HRESULT)0xE0040265L)
+
+//
+// MessageId: PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH
+//
+// MessageText:
+//
+// The rename path equivalent to the existing path.
+//
+#define PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH ((HRESULT)0xE0040266L)
+
+//
+// MessageId: PH_E_INVALID_FILE_CREATE_FLAGS
+//
+// MessageText:
+//
+// Invalid file create flags.
+//
+#define PH_E_INVALID_FILE_CREATE_FLAGS   ((HRESULT)0xE0040267L)
+
