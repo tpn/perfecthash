@@ -17,6 +17,42 @@ Abstract:
 
 #include "stdafx.h"
 
+//
+// Define a global component structure consisting of INIT_ONCE members for each
+// interface we wish to support from a singleton perspective.
+//
+
+typedef struct _GLOBAL_COMPONENTS {
+    INIT_ONCE Rtl;
+    INIT_ONCE Allocator;
+} GLOBAL_COMPONENTS;
+typedef GLOBAL_COMPONENTS *PGLOBAL_COMPONENTS;
+
+extern GLOBAL_COMPONENTS GlobalComponents;
+
+typedef struct _CREATE_COMPONENT_PARAMS {
+    PERFECT_HASH_INTERFACE_ID Id;
+    ULONG Padding;
+    PIUNKNOWN OuterUnknown;
+} CREATE_COMPONENT_PARAMS;
+typedef CREATE_COMPONENT_PARAMS *PCREATE_COMPONENT_PARAMS;
+
+FORCEINLINE
+BOOLEAN
+IsGlobalComponentInterfaceId(
+    _In_ PERFECT_HASH_INTERFACE_ID Id
+    )
+{
+    return (
+        Id == PerfectHashRtlInterfaceId ||
+        Id == PerfectHashAllocatorInterfaceId
+    );
+}
+
+//
+// Define helper macros for component definition.
+//
+
 #define COMMON_COMPONENT_HEADER(Name) \
     P##Name##_VTBL Vtbl;              \
     SRWLOCK Lock;                     \

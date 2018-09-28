@@ -4,22 +4,22 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashTableErrorHandling.c
+    PerfectHashErrorHandling.c
 
 Abstract:
 
     This module is responsible for error handling related to the perfect hash
-    table library.
+    library.
 
 --*/
 
 #include "stdafx.h"
 
-PERFECT_HASH_TABLE_PRINT_ERROR PerfectHashTablePrintError;
+PERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTablePrintError(
+PerfectHashPrintError(
     PCSZ FunctionName,
     PCSZ FileName,
     ULONG LineNumber,

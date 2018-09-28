@@ -263,8 +263,11 @@ extern const ULONG IndexMaskPlaceholder;
 
 extern const USHORT ComponentSizes[];
 extern const USHORT ComponentInterfaceSizes[];
-extern const USHORT ComponentInterfaceOffsets[];
+extern const SHORT ComponentInterfaceOffsets[];
+extern const SHORT ComponentInterfaceTlsContextOffsets[];
+extern const SHORT GlobalComponentsInterfaceOffsets[];
 extern const VOID *ComponentInterfaces[];
+
 
 extern const IUNKNOWN_VTBL IUnknownInterface;
 extern const ICLASSFACTORY_VTBL IClassFactoryInterface;

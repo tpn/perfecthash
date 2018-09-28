@@ -95,6 +95,8 @@ typedef struct _UNICODE_STRING {
 typedef const UNICODE_STRING *PCUNICODE_STRING;
 #define UNICODE_NULL ((WCHAR)0)
 
+typedef _Null_terminated_ CONST CHAR *PCSZ;
+
 #ifndef ARGUMENT_PRESENT
 #define ARGUMENT_PRESENT(ArgumentPointer) (                  \
     (CHAR *)((ULONG_PTR)(ArgumentPointer)) != (CHAR *)(NULL) \
@@ -2215,19 +2217,57 @@ typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
 
 extern __SECURITY_INIT_COOKIE __security_init_cookie;
 
+//
+// Define bootstrap helpers.
+//
+
+typedef
+_Success_(return >= 0)
+_Check_return_opt_
+HRESULT
+(NTAPI PERFECT_HASH_PRINT_ERROR)(
+    _In_ PCSZ FunctionName,
+    _In_ PCSZ FileName,
+    _In_opt_ ULONG LineNumber,
+    _In_opt_ ULONG Error
+    );
+typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
+
+//
+// Define helper macros for printing errors to stdout.  Requires the symbol
+// PerfectHashPrintError to be in scope.
+//
+
+#define SYS_ERROR(Name) \
+    PerfectHashPrintError(#Name, __FILE__, __LINE__, GetLastError())
+
+#define PH_ERROR(Name, Result) \
+    PerfectHashPrintError(#Name, __FILE__, __LINE__, (ULONG)Result)
+
+//
+// Helper macro for raising non-continuable exceptions.
+//
+
+#define PH_RAISE(Result) \
+    RaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
 FORCEINLINE
 _Success_(return >= 0)
 HRESULT
-PerfectHashLoadLibraryAndGetClassFactory(
-    _Out_ PICLASSFACTORY *ClassFactoryPointer
+PerfectHashBootstrap(
+    _Out_ PICLASSFACTORY *ClassFactoryPointer,
+    _Out_ PPERFECT_HASH_PRINT_ERROR *PrintErrorPointer,
+    _Out_ HMODULE *ModulePointer
     )
 /*++
 
 Routine Description:
 
-    This is a simple helper routine that loads the PerfectHash.dll library
-    and obtains an IClassFactory interface.  It is useful for using the library
-    without needing any underlying system COM support (e.g. CoCreateInstance).
+    This is a simple helper routine that loads the PerfectHash.dll library,
+    obtains an IClassFactory interface, and an error handling function pointer.
+    It is useful for using the library without needing any underlying system
+    COM support (e.g. CoCreateInstance).
 
 Arguments:
 
@@ -2236,25 +2276,53 @@ Arguments:
         Caller is responsible for calling ClassFactory->Vtbl->Release() when
         finished with the instance.
 
+    PrintErrorPointer - Supplies the address of a variable that will receive the
+        function pointer to the PerfectHashPrintError error handling routine.
+
+    ModulePointer - Supplies the address of a variable that will receive the
+        handle of the loaded module.  Callers can call FreeLibrary() against
+        this handle when finished with the library.
+
 Return Value:
 
-    S_OK on success, an appropriate error code on failure.
+    S_OK - Routine completed successfully.
+
+    The following error codes may also be returned.  This is not an exhaustive
+    list.
+
+    E_FAIL - Failed to load PerfectHash.dll.
+
+    E_UNEXPECTED - Failed to resolve symbol from loaded PerfectHash.dll.
 
 --*/
 {
     PROC Proc;
     HRESULT Result;
     HMODULE Module;
+    PPERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
     PDLL_GET_CLASS_OBJECT PhDllGetClassObject;
     PICLASSFACTORY ClassFactory;
+
+    *ClassFactoryPointer = NULL;
+    *PrintErrorPointer = NULL;
+    *ModulePointer = NULL;
 
     Module = LoadLibraryA("PerfectHash.dll");
     if (!Module) {
         return E_FAIL;
     }
 
+    Proc = GetProcAddress(Module, "PerfectHashPrintError");
+    if (!Proc) {
+        FreeLibrary(Module);
+        return E_UNEXPECTED;
+    }
+
+    PerfectHashPrintError = (PPERFECT_HASH_PRINT_ERROR)Proc;
+
     Proc = GetProcAddress(Module, "PerfectHashDllGetClassObject");
     if (!Proc) {
+        SYS_ERROR(GetProcAddress);
         FreeLibrary(Module);
         return E_UNEXPECTED;
     }
@@ -2266,13 +2334,18 @@ Return Value:
                                  &ClassFactory);
 
     if (FAILED(Result)) {
+        PH_ERROR(PerfectHashDllGetClassObject, Result);
         FreeLibrary(Module);
         return Result;
     }
 
     *ClassFactoryPointer = ClassFactory;
+    *PrintErrorPointer = PerfectHashPrintError;
+    *ModulePointer = Module;
+
     return S_OK;
 }
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

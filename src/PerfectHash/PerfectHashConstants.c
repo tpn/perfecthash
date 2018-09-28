@@ -386,22 +386,61 @@ const USHORT ComponentInterfaceSizes[] = {
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaceSizes);
 
-const USHORT ComponentInterfaceOffsets[] = {
-    0,
+//
+// N.B. We use -1 for invalid offsets instead of 0, as 0 could be a legitimate
+// field offset if the member is the first element in the structure.
+//
 
-    (USHORT)FIELD_OFFSET(IUNKNOWN, Interface),
-    (USHORT)FIELD_OFFSET(ICLASSFACTORY, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_KEYS, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_CONTEXT, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_TABLE, Interface),
-    (USHORT)FIELD_OFFSET(RTL, Interface),
-    (USHORT)FIELD_OFFSET(ALLOCATOR, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface),
-    (USHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface),
+const SHORT ComponentInterfaceOffsets[] = {
+    -1,
 
-    0,
+    (SHORT)FIELD_OFFSET(IUNKNOWN, Interface),
+    (SHORT)FIELD_OFFSET(ICLASSFACTORY, Interface),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_KEYS, Interface),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_CONTEXT, Interface),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TABLE, Interface),
+    (SHORT)FIELD_OFFSET(RTL, Interface),
+    (SHORT)FIELD_OFFSET(ALLOCATOR, Interface),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface),
+
+    -1,
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaceOffsets);
+
+const SHORT ComponentInterfaceTlsContextOffsets[] = {
+    -1,
+
+    -1, // IUnknown
+    -1, // IClassFactory
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Keys),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Context),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Table),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Rtl),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Allocator),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, File),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Path),
+
+    -1,
+};
+VERIFY_ARRAY_SIZE(ComponentInterfaceTlsContextOffsets);
+
+const SHORT GlobalComponentsInterfaceOffsets[] = {
+    -1,
+
+    -1, // IUnknown
+    -1, // IClassFactory
+    -1, // Keys
+    -1, // Context
+    -1, // Table
+    (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Rtl),
+    (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Allocator),
+    -1, // File
+    -1, // Path
+
+    -1,
+};
+VERIFY_ARRAY_SIZE(GlobalComponentsInterfaceOffsets);
 
 extern COMPONENT_QUERY_INTERFACE ComponentQueryInterface;
 extern COMPONENT_ADD_REF ComponentAddRef;

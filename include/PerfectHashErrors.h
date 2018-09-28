@@ -1006,3 +1006,30 @@ Abstract:
 //
 #define PH_E_INVALID_FILE_CREATE_FLAGS   ((HRESULT)0xE0040267L)
 
+//
+// MessageId: PH_E_INVALID_INTERFACE_ID
+//
+// MessageText:
+//
+// Invalid interface ID.
+//
+#define PH_E_INVALID_INTERFACE_ID        ((HRESULT)0xE0040268L)
+
+//
+// MessageId: PH_E_NO_TLS_CONTEXT_SET
+//
+// MessageText:
+//
+// PerfectHashTlsEnsureContext() was called but no TLS context was set.
+//
+#define PH_E_NO_TLS_CONTEXT_SET          ((HRESULT)0xE0040269L)
+
+//
+// MessageId: PH_E_NOT_GLOBAL_INTERFACE_ID
+//
+// MessageText:
+//
+// The interface ID provided is not a global interface.
+//
+#define PH_E_NOT_GLOBAL_INTERFACE_ID     ((HRESULT)0xE004026AL)
+

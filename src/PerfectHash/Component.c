@@ -16,13 +16,141 @@ Abstract:
 #include "stdafx.h"
 
 //
+// Forward decls.
+//
+
+_Must_inspect_impl_
+_Success_(return != 0)
+PCOMPONENT
+CreateComponent(
+    _In_ PERFECT_HASH_INTERFACE_ID Id,
+    _Reserved_ PIUNKNOWN OuterUnknown
+    );
+
+//
 // Globals for capturing component counts and server locks.
 //
 
 volatile LONG ComponentCount = 0;
 volatile LONG ServerLockCount = 0;
 
-_Must_inspect_result_
+//
+// The "global" global components structure.
+//
+
+GLOBAL_COMPONENTS GlobalComponents = { 0 };
+
+FORCEINLINE
+PINIT_ONCE
+GetGlobalComponentInitOnce(
+    _In_ PERFECT_HASH_INTERFACE_ID Id
+    )
+{
+    SHORT Offset;
+    PINIT_ONCE InitOnce;
+
+    if (!IsValidPerfectHashInterfaceId(Id)) {
+        PH_RAISE(PH_E_INVALID_INTERFACE_ID);
+    }
+
+    Offset = GlobalComponentsInterfaceOffsets[Id];
+
+    if (Offset < 0) {
+        PH_RAISE(PH_E_NOT_GLOBAL_INTERFACE_ID);
+    }
+
+    InitOnce = (PINIT_ONCE)RtlOffsetToPointer(&GlobalComponents, Offset);
+    return InitOnce;
+}
+
+
+
+_Success_(return != 0)
+BOOL
+CALLBACK
+CreateGlobalComponentCallback(
+    _Inout_ PINIT_ONCE InitOnce,
+    _Inout_ PVOID Parameter,
+    _Inout_opt_ PVOID *Context
+    )
+{
+    SHORT Offset;
+    PCOMPONENT Component;
+    PINIT_ONCE ExpectedInitOnce;
+    PCREATE_COMPONENT_PARAMS Params;
+
+    Params = (PCREATE_COMPONENT_PARAMS)Parameter;
+
+    if (!IsGlobalComponentInterfaceId(Params->Id)) {
+        PH_RAISE(PH_E_NOT_GLOBAL_INTERFACE_ID);
+    }
+
+    Offset = GlobalComponentsInterfaceOffsets[Params->Id];
+    ExpectedInitOnce = (PINIT_ONCE)(
+        RtlOffsetToPointer(
+            &GlobalComponents,
+            Offset
+        )
+    );
+
+    if (InitOnce != ExpectedInitOnce) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    Component = CreateComponent(Params->Id, NULL);
+
+    if (!Component) {
+        return FALSE;
+    }
+
+    if (ARGUMENT_PRESENT(Context)) {
+        *Context = Component;
+    }
+
+    return TRUE;
+}
+
+PCOMPONENT
+CreateGlobalComponent(
+    PERFECT_HASH_INTERFACE_ID Id,
+    PIUNKNOWN OuterUnknown
+    )
+{
+    BOOL Success;
+    PCOMPONENT Component;
+    PINIT_ONCE InitOnce = NULL;
+    CREATE_COMPONENT_PARAMS Params = { 0 };
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+
+    TlsContext = PerfectHashTlsEnsureContext();
+
+    InitOnce = GetGlobalComponentInitOnce(Id);
+
+    Params.Id = Id;
+    Params.OuterUnknown = OuterUnknown;
+
+    Success = InitOnceExecuteOnce(InitOnce,
+                                  CreateGlobalComponentCallback,
+                                  &Params,
+                                  &Component);
+
+    if (!Success) {
+        SYS_ERROR(InitOnceExecuteOnce);
+        TlsContext->LastError = GetLastError();
+        if (TlsContext->LastResult == S_OK) {
+            TlsContext->LastResult = PH_E_SYSTEM_CALL_FAILED;
+        }
+        return NULL;
+    }
+
+    return Component;
+}
+
+//
+// Component functions.
+//
+
+_Use_decl_annotations_
 PCOMPONENT
 CreateComponent(
     PERFECT_HASH_INTERFACE_ID Id,
@@ -44,6 +172,7 @@ CreateComponent(
     PCOMPONENT_INITIALIZE Initialize;
 
     if (!IsValidPerfectHashInterfaceId(Id)) {
+        PH_ERROR(PerfectHashCreateComponent, PH_E_INVALID_INTERFACE_ID);
         return NULL;
     }
 
@@ -53,6 +182,7 @@ CreateComponent(
 
     Component = (PCOMPONENT)HeapAlloc(HeapHandle, HEAP_ZERO_MEMORY, AllocSize);
     if (!Component) {
+        SYS_ERROR(HeapAlloc);
         return NULL;
     }
 
@@ -107,6 +237,7 @@ CreateComponent(
     if (Initialize) {
         Result = Initialize(Component);
         if (FAILED(Result)) {
+            PH_ERROR(PerfectHashComponentInitialize, Result);
             Unknown->Vtbl->Release(Unknown);
             Component = NULL;
         }
@@ -240,6 +371,14 @@ ComponentRelease(
         Rundown(Component);
     }
 
+    //
+    // Free the backing interface memory.
+    //
+
+    if (!HeapFree(GetProcessHeap(), 0, Component)) {
+        SYS_ERROR(HeapFree);
+    }
+
     return (ULONG)Count;
 }
 
@@ -249,17 +388,17 @@ _Use_decl_annotations_
 HRESULT
 ComponentCreateInstance(
     PCOMPONENT Component,
-    PIUNKNOWN UnknownOuter,
+    PIUNKNOWN OuterUnknown,
     REFIID InterfaceId,
     PVOID *Interface
     )
 {
-    PRTL Rtl;
-    PALLOCATOR Allocator;
-
-    PCOMPONENT NewComponent;
+    PIUNKNOWN Unknown;
+    HRESULT Result = S_OK;
     PERFECT_HASH_INTERFACE_ID Id;
+    PCOMPONENT NewComponent = NULL;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
 
     //
     // Validate parameters.
@@ -279,7 +418,7 @@ ComponentCreateInstance(
     // None of our interfaces support aggregation yet.
     //
 
-    if (UnknownOuter != NULL) {
+    if (OuterUnknown != NULL) {
         return CLASS_E_NOAGGREGATION;
     }
 
@@ -294,58 +433,83 @@ ComponentCreateInstance(
     }
 
     //
-    // If we've been requested to create an Rtl or Allocator component, check to
-    // see if the TLS context is set, and if so, whether or not instances of
-    // these classes are already available, in which case, we can simply re-use
-    // them instead of creating a new instance.  This is leveraged by routines
-    // like PerfectHashContextSelfTest(), which enumerates all key files in a
-    // directory and attempts to create a perfect hash table for each one.  The
-    // underlying keys and table initializers all end up calling this function
-    // to obtain Rtl and Allocator interfaces, so by re-using the instances
-    // associated with the context structure, we can avoid a lot of unnecessary
-    // work (creation and subsequent rundown).
+    // Obtain the active TLS context, using our local stack-allocated one if
+    // need be.
     //
 
-    if (Id == PerfectHashRtlInterfaceId ||
-        Id == PerfectHashAllocatorInterfaceId) {
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
 
-        TlsContext = PerfectHashTlsGetContext();
+    if (IsGlobalComponentInterfaceId(Id)) {
+        SHORT Offset;
 
-        if (TlsContext) {
-            if (Id == PerfectHashRtlInterfaceId) {
-                Rtl = TlsContext->Rtl;
-                if (Rtl) {
-                    Rtl->Vtbl->AddRef(Rtl);
-                    *Interface = Rtl;
-                    return S_OK;
-                }
-            } else if (Id == PerfectHashAllocatorInterfaceId) {
-                Allocator = TlsContext->Allocator;
-                if (Allocator) {
-                    Allocator->Vtbl->AddRef(Allocator);
-                    *Interface = Allocator;
-                    return S_OK;
-                }
+        //
+        // Determine if there's a TLS override for this component.
+        //
+
+        Offset = ComponentInterfaceTlsContextOffsets[Id];
+        NewComponent = (PCOMPONENT)RtlOffsetToPointer(TlsContext, Offset);
+
+        if (!NewComponent) {
+
+            //
+            // No TLS override was set.  Create a new global component.
+            //
+
+            NewComponent = CreateGlobalComponent(Id, OuterUnknown);
+
+            if (!NewComponent) {
+                Result = TlsContext->LastResult;
+                PH_ERROR(CreateGlobalComponent, Result);
+                goto Error;
             }
         }
+
+        Unknown = &NewComponent->Unknown;
+        Unknown->Vtbl->AddRef(Unknown);
+
+    } else {
+
+        //
+        // Create a new instance of the requested interface.
+        //
+
+        NewComponent = CreateComponent(Id, OuterUnknown);
+
+        if (!NewComponent) {
+            Result = TlsContext->LastResult;
+            PH_ERROR(CreateComponent, Result);
+            goto Error;
+        }
+
     }
 
     //
-    // Create a new instance of the requested interface.
+    // If we get to here, NewComponent should be non-NULL.  Assert this, then
+    // update the caller's pointer.
     //
 
-    NewComponent = CreateComponent(Id, UnknownOuter);
-    if (!NewComponent) {
-        return E_OUTOFMEMORY;
-    }
-
-    //
-    // Update the caller's pointer and return success.
-    //
-
+    ASSERT(NewComponent);
     *Interface = NewComponent;
 
-    return S_OK;
+    goto End;
+
+Error:
+
+    ASSERT(!NewComponent);
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    PerfectHashTlsClearContextIfActive(&LocalTlsContext);
+
+    return Result;
 }
 
 COMPONENT_LOCK_SERVER ComponentLockServer;

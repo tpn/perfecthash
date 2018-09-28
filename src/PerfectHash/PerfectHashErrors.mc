@@ -864,3 +864,27 @@ Language=English
 Invalid file create flags.
 .
 
+MessageId=0x268
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_INTERFACE_ID
+Language=English
+Invalid interface ID.
+.
+
+MessageId=0x269
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_TLS_CONTEXT_SET
+Language=English
+PerfectHashTlsEnsureContext() was called but no TLS context was set.
+.
+
+MessageId=0x26a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NOT_GLOBAL_INTERFACE_ID
+Language=English
+The interface ID provided is not a global interface.
+.
+

@@ -4,18 +4,4 @@ EXPORTS
     DllCanUnloadNow=PerfectHashDllCanUnloadNow PRIVATE
     PerfectHashDllGetClassObject
     PerfectHashDllCanUnloadNow
-    CreateComponent
-    ComponentQueryInterface
-    ComponentAddRef
-    ComponentRelease
-    ComponentCreateInstance
-    ComponentLockServer
-    PerfectHashKeysInitialize
-    PerfectHashKeysRundown
-    PerfectHashKeysLoad
-    PerfectHashKeysGetBitmap
-    PerfectHashContextInitialize
-    PerfectHashContextRundown
-    PerfectHashContextCreateTable
-    PerfectHashTableLoad
-    PerfectHashTableTest
+    PerfectHashPrintError

@@ -118,5 +118,59 @@ PerfectHashTlsGetContext(
     return (PPERFECT_HASH_TLS_CONTEXT)Value;
 }
 
+_Use_decl_annotations_
+PPERFECT_HASH_TLS_CONTEXT
+PerfectHashTlsEnsureContext(
+    VOID
+    )
+{
+    PVOID Value;
+
+    Value = TlsGetValue(PerfectHashTlsIndex);
+
+    if (!Value) {
+        PH_RAISE(PH_E_NO_TLS_CONTEXT_SET);
+    }
+
+    return (PPERFECT_HASH_TLS_CONTEXT)Value;
+}
+
+PERFECT_HASH_TLS_GET_OR_SET_CONTEXT PerfectHashTlsGetOrSetContext;
+
+_Use_decl_annotations_
+PPERFECT_HASH_TLS_CONTEXT
+PerfectHashTlsGetOrSetContext(
+    PPERFECT_HASH_TLS_CONTEXT Context
+    )
+{
+    PVOID Value;
+
+    Value = TlsGetValue(PerfectHashTlsIndex);
+
+    if (!Value) {
+        TlsSetValue(PerfectHashTlsIndex, Context);
+        Value = Context;
+    }
+
+    return (PPERFECT_HASH_TLS_CONTEXT)Value;
+}
+
+PERFECT_HASH_TLS_CLEAR_CONTEXT_IF_ACTIVE PerfectHashTlsClearContextIfActive;
+
+_Use_decl_annotations_
+VOID
+PerfectHashTlsClearContextIfActive(
+    PPERFECT_HASH_TLS_CONTEXT Context
+    )
+{
+    PPERFECT_HASH_TLS_CONTEXT Active;
+
+    Active = PerfectHashTlsEnsureContext();
+
+    if (Active == Context) {
+        TlsSetValue(PerfectHashTlsIndex, NULL);
+    }
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
