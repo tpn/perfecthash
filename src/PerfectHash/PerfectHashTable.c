@@ -307,7 +307,7 @@ Return Value:
         );
         TableSuffixLength.LongPart += (
             sizeof(L'_') +
-            NumberOfDigits
+            (NumberOfDigits * sizeof(WCHAR))
         );
     }
 
@@ -358,7 +358,7 @@ Return Value:
 
     if (NumberOfDigits) {
         *Dest++ = L'_';
-        Suffix->Length = 1;
+        Suffix->Length = sizeof(L'_');
 
         Success = (
             AppendLongLongIntegerToUnicodeString(
@@ -496,6 +496,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     HRESULT Result = S_OK;
     PPERFECT_HASH_PATH Path = NULL;
     PPERFECT_HASH_PATH_PARTS Parts = NULL;
@@ -511,6 +512,9 @@ Return Value:
     if (ARGUMENT_PRESENT(PartsPointer)) {
         *PartsPointer = NULL;
     }
+
+    Rtl = Table->Rtl;
+    ZeroArray(TableSuffixBuffer);
 
     //
     // Initialize the table suffix.

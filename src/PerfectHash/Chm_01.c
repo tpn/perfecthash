@@ -228,7 +228,7 @@ Return Value:
     MaskFunctionId = Table->MaskFunctionId;
     ProcessHandle = GetCurrentProcess();
     GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
-    TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
+    TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
 
     //
     // If no threshold has been set, use the default.

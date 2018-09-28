@@ -997,7 +997,7 @@ Return Value:
         LargePageAddress = VirtualAlloc(NULL,
                                         LargePageAllocSize,
                                         LargePageAllocFlags,
-                                        Protection);
+                                        PAGE_READWRITE);
 
         if (LargePageAddress) {
 
