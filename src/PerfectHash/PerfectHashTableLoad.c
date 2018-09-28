@@ -22,7 +22,7 @@ HRESULT
 PerfectHashTableLoad(
     PPERFECT_HASH_TABLE Table,
     PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
-    PCUNICODE_STRING Path,
+    PCUNICODE_STRING TablePath,
     PPERFECT_HASH_KEYS Keys
     )
 /*++
@@ -39,9 +39,9 @@ Arguments:
     TableLoadFlags - Optionally supplies a pointer to a table load flags
         structure that can be used to customize the loading behavior.
 
-    Path - Supplies a pointer to a UNICODE_STRING structure representing the
-        fully-qualified, NULL-terminated path of the file to be used to load
-        the table.
+    TablePath - Supplies a pointer to a UNICODE_STRING structure representing
+        the fully-qualified, NULL-terminated path of the file to be used to
+        load the table.
 
     Keys - Optionally supplies a pointer to the keys for the hash table.
 
@@ -63,7 +63,7 @@ Return Value:
 
     PH_E_INVALID_TABLE_LOAD_FLAGS - Invalid table load flags provided.
 
-    PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS - A table load is already in progress.
+    PH_E_TABLE_LOCKED - The table is locked.
 
     PH_E_TABLE_ALREADY_CREATED - A table has already been created.
 
@@ -104,40 +104,27 @@ Return Value:
 
     PH_E_SYSTEM_CALL_FAILED - A system call failed.
 
+    PH_E_INVARIANT_CHECK_FAILED - An internal invariant check failed.
+
 --*/
 {
-    BOOL Success;
-    PRTL Rtl = NULL;
-    PWSTR Dest;
-    PWSTR Source;
-    PCHAR Buffer;
-    PCHAR BaseBuffer = NULL;
-    PCHAR ExpectedBuffer;
-    ULONG ShareMode;
+    PRTL Rtl;
     HRESULT Result = S_OK;
     PVOID BaseAddress;
-    PVOID LargePageAddress;
-    ULONG_PTR LargePageAllocSize;
-    HANDLE FileHandle;
-    HANDLE MappingHandle;
-    PALLOCATOR Allocator = NULL;
-    ULONG FlagsAndAttributes;
-    ULARGE_INTEGER AllocSize;
-    FILE_STANDARD_INFO FileInfo;
     BOOLEAN LargePagesForValues;
-    ULONG_INTEGER PathBufferSize;
-    ULONG_INTEGER InfoPathBufferSize;
     LARGE_INTEGER ExpectedEndOfFile;
-    ULONG_INTEGER AlignedPathBufferSize;
-    ULONG_INTEGER AlignedInfoPathBufferSize;
     ULONGLONG NumberOfKeys;
     ULONGLONG NumberOfTableElements;
     ULONGLONG ValuesSizeInBytes;
-    PPERFECT_HASH_FILE File;
-    PPERFECT_HASH_FILE InfoStream;
     LARGE_INTEGER EndOfFile;
+    PPERFECT_HASH_FILE File = NULL;
+    PPERFECT_HASH_PATH Path = NULL;
+    PPERFECT_HASH_FILE InfoStream = NULL;
+    PPERFECT_HASH_PATH InfoStreamPath = NULL;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
+    PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags;
+    PERFECT_HASH_FILE_LOAD_FLAGS InfoStreamLoadFlags;
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
 
     //
@@ -152,14 +139,14 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(Path)) {
+    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(TablePath)) {
         return E_INVALIDARG;
     }
 
     VALIDATE_FLAGS(TableLoad, TABLE_LOAD);
 
     if (!TryAcquirePerfectHashTableLockExclusive(Table)) {
-        return PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS;
+        return PH_E_TABLE_LOCKED;
     }
 
     if (Table->Flags.Loaded) {
@@ -171,23 +158,114 @@ Return Value:
     }
 
     //
+    // Verify Table->File and Table->InfoStream are NULL.  (If the loaded flag
+    // is not set, they should be.)
+    //
+
+    if (Table->TableFile) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableLoad, Result);
+        ReleasePerfectHashTableLockExclusive(Table);
+        return Result;
+    }
+
+    if (Table->InfoStream) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableLoad, Result);
+        ReleasePerfectHashTableLockExclusive(Table);
+        return Result;
+    }
+
+    //
     // Argument validation complete.
     //
 
     //
-    // Initialize aliases.
+    // We need to create two path instances.  One for the table path, and one
+    // for the :Info stream.
     //
 
-    Rtl = Table->Rtl;
-    Allocator = Table->Allocator;
-    File = Table->TableFile;
-    InfoStream = Table->InfoStream;
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_PATH,
+                                         &Path);
 
-    Result = InfoStream->Vtbl->Load(InfoStream, Path, NULL, &EndOfFile);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreateInstance, Result);
+        goto Error;
+    }
+
+    Result = Path->Vtbl->Copy(Path, TablePath, NULL, NULL);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCopy, Result);
+        goto Error;
+    }
+
+    //
+    // Table path created successfully.  Now create one for the :Info stream.
+    //
+
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_PATH,
+                                         &InfoStreamPath);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreateInstance, Result);
+        goto Error;
+    }
+
+    Result = InfoStreamPath->Vtbl->Create(
+        InfoStreamPath,
+        Path,                   // ExistingPath
+        NULL,                   // NewDirectory
+        NULL,                   // NewBaseName
+        NULL,                   // BaseNameSuffix
+        NULL,                   // NewExtension
+        &TableInfoStreamName,   // NewStreamName
+        NULL,                   // Parts
+        NULL                    // Reserved
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreate, Result);
+        goto Error;
+    }
+
+    //
+    // :Info stream path created successfully.  Create a file instance for it,
+    // then Load() it.
+    //
+
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_FILE,
+                                         &InfoStream);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileCreateInstance, Result);
+        goto Error;
+    }
+
+    //
+    // We don't need large pages for the :Info stream.
+    //
+
+    InfoStreamLoadFlags.AsULong = 0;
+    InfoStreamLoadFlags.DisableTryLargePagesForFileData = TRUE;
+
+    Result = InfoStream->Vtbl->Load(InfoStream,
+                                    InfoStreamPath,
+                                    &InfoStreamLoadFlags,
+                                    &EndOfFile);
+
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashTableLoad, Result);
         goto Error;
     }
+
+    Table->InfoStream = InfoStream;
 
     if (EndOfFile.QuadPart < sizeof(*TableInfoOnDisk)) {
 
@@ -200,11 +278,11 @@ Return Value:
     }
 
     //
-    // We've obtained the TABLE_INFO_ON_DISK structure.  Ensure the
-    // magic values are what we expect.
+    // Cast the :Info stream's base address to the TABLE_INFO_ON_DISK structure
+    // and verify the magic values are what we expect.
     //
 
-    TableInfoOnDisk = (PTABLE_INFO_ON_DISK)File->BaseAddress;
+    TableInfoOnDisk = (PTABLE_INFO_ON_DISK)InfoStream->BaseAddress;
 
     if (TableInfoOnDisk->Magic.LowPart  != TABLE_INFO_ON_DISK_MAGIC_LOWPART ||
         TableInfoOnDisk->Magic.HighPart != TABLE_INFO_ON_DISK_MAGIC_HIGHPART) {
@@ -307,34 +385,41 @@ Return Value:
         goto Error;
     }
 
+    //
+    // We've completed our validation of the :Info stream.  Proceed with the
+    // table data file; create a new file instance, then Load() the path we
+    // prepared earlier.
+    //
 
-    if (!FileHandle || FileHandle == INVALID_HANDLE_VALUE) {
+    Result = Table->Vtbl->CreateInstance(Table,
+                                         NULL,
+                                         &IID_PERFECT_HASH_FILE,
+                                         &File);
 
-        //
-        // Failed to open the underlying data file.  Abort.
-        //
-
-        SYS_ERROR(CreateFileW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileCreateInstance, Result);
         goto Error;
     }
 
     //
-    // Successfully opened the data file.  Get the file information.
+    // Reset the end of file and initialize load flags.
     //
 
-    Success = GetFileInformationByHandleEx(
-        FileHandle,
-        (FILE_INFO_BY_HANDLE_CLASS)FileStandardInfo,
-        &FileInfo,
-        sizeof(FileInfo)
-    );
+    EndOfFile.QuadPart = 0;
+    FileLoadFlags.AsULong = 0;
 
-    if (!Success) {
-        SYS_ERROR(GetFileInformationByHandleEx);
-        Result = PH_E_SYSTEM_CALL_FAILED;
+    if (TableLoadFlags.DisableTryLargePagesForTableData) {
+        FileLoadFlags.DisableTryLargePagesForFileData = TRUE;
+    }
+
+    Result = File->Vtbl->Load(File, Path, &FileLoadFlags, &EndOfFile);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableLoad, Result);
         goto Error;
     }
+
+    Table->TableFile = File;
 
     //
     // We can determine the expected file size by multipling the number of
@@ -351,14 +436,18 @@ Return Value:
     // Sanity check that the expected end of file is not 0.
     //
 
-    ASSERT(ExpectedEndOfFile.QuadPart > 0);
+    if (ExpectedEndOfFile.QuadPart <= 0) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableLoad, Result);
+        goto Error;
+    }
 
     //
     // Compare the expected value to the actual on-disk file size.  They should
     // be identical.  If they're not, abort.
     //
 
-    if (FileInfo.EndOfFile.QuadPart != ExpectedEndOfFile.QuadPart) {
+    if (EndOfFile.QuadPart != ExpectedEndOfFile.QuadPart) {
 
         //
         // Sizes don't match, abort.
@@ -366,93 +455,6 @@ Return Value:
 
         Result = PH_E_EXPECTED_EOF_ACTUAL_EOF_MISMATCH;
         goto Error;
-    }
-
-    //
-    // File size is valid.  Proceed with creating a mapping.  As with :Info,
-    // we don't specify a size, allowing instead to just default to the
-    // underlying file size.
-    //
-
-    MappingHandle = CreateFileMappingW(FileHandle,
-                                       NULL,
-                                       PAGE_READONLY,
-                                       0,
-                                       0,
-                                       NULL);
-
-    Table->MappingHandle = MappingHandle;
-
-    if (!MappingHandle || MappingHandle == INVALID_HANDLE_VALUE) {
-
-        //
-        // Couldn't obtain a mapping, abort.
-        //
-
-        SYS_ERROR(CreateFileMappingW);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // Created the mapping successfully.  Now, map it.
-    //
-
-    BaseAddress = MapViewOfFile(MappingHandle, FILE_MAP_READ, 0, 0, 0);
-
-    Table->BaseAddress = BaseAddress;
-
-    if (!BaseAddress) {
-
-        //
-        // Failed to map the contents into memory.  Abort.
-        //
-
-        SYS_ERROR(MapViewOfFile);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    if (!TableLoadFlags.DisableTryLargePagesForTableData) {
-
-        //
-        // Attempt a large page allocation to contain the table data buffer.
-        //
-
-        ULONG LargePageAllocFlags;
-
-        LargePageAllocFlags = MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES,
-        LargePageAllocSize = ALIGN_UP_LARGE_PAGE(FileInfo.EndOfFile.QuadPart);
-        LargePageAddress = VirtualAlloc(NULL,
-                                        LargePageAllocSize,
-                                        LargePageAllocFlags,
-                                        PAGE_READWRITE);
-
-        if (LargePageAddress) {
-
-            //
-            // The large page allocation was successful.
-            //
-
-            ULONG_PTR NumberOfPages;
-
-            Table->Flags.TableDataUsesLargePages = TRUE;
-            Table->MappedAddress = Table->BaseAddress;
-            Table->BaseAddress = LargePageAddress;
-
-            //
-            // We can use the allocation size here to capture the appropriate
-            // number of pages that are mapped and accessible.
-            //
-
-            NumberOfPages = BYTES_TO_PAGES(FileInfo.AllocationSize.QuadPart);
-
-            Rtl->Vtbl->CopyPages(Rtl,
-                                 LargePageAddress,
-                                 BaseAddress,
-                                 (ULONG)NumberOfPages);
-
-        }
     }
 
     //
@@ -470,6 +472,8 @@ Return Value:
         TableInfoOnDisk->NumberOfTableElements.QuadPart *
         (ULONGLONG)TableInfoOnDisk->KeySizeInBytes
     );
+
+    Rtl = Table->Rtl;
 
     BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
                                                       NULL,
@@ -516,6 +520,7 @@ Return Value:
     Result = LoaderRoutines[AlgorithmId](Table);
 
     if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableLoad, Result);
         goto Error;
     }
 
@@ -526,6 +531,7 @@ Return Value:
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
     Table->TableLoadFlags.AsULong = TableLoadFlags.AsULong;
+
     goto End;
 
 Error:
@@ -535,10 +541,24 @@ Error:
     }
 
     //
+    // Release file and :Info stream references if applicable.
+    //
+
+    RELEASE(Table->TableFile);
+    RELEASE(Table->InfoStream);
+
+    //
     // Intentional follow-on to End.
     //
 
 End:
+
+    //
+    // Release path instances if applicable.
+    //
+
+    RELEASE(Path);
+    RELEASE(InfoStreamPath);
 
     ReleasePerfectHashTableLockExclusive(Table);
 
