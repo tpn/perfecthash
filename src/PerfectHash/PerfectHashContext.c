@@ -380,12 +380,19 @@ Return Value:
     // it at the moment as we don't bulk-enqueue work items (that can cause
     // the threadpool machinery to think more threads need to be created).
     //
+    // That being said, it can be useful during debugging to clamp to a single
+    // thread, hence the #if 0 block.
+    //
 
     Threadpool = Context->FileThreadpool = CreateThreadpool(NULL);
     if (!Threadpool) {
         SYS_ERROR(CreateThreadpool);
         goto Error;
     }
+
+#if 0
+    SetThreadpoolThreadMaximum(Context->FileThreadpool, 1);
+#endif
 
     //
     // Initialize the File threadpool environment and associate it with the
