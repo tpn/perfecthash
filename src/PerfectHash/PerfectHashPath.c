@@ -300,7 +300,7 @@ Return Value:
 
     Rtl = Path->Rtl;
 
-    ASSERT(IsValidMinimumDirectoryNullTerminatedUnicodeString(&Path->FullPath));
+    ASSERT(IsValidUnicodeString(&Path->FullPath));
 
     Start = Path->FullPath.Buffer;
     End = (PWSTR)RtlOffsetToPointer(Start, Path->FullPath.Length);
@@ -354,10 +354,15 @@ Return Value:
         ASSERT(Path->StreamName.Buffer[Path->StreamName.Length >> 1] == L'\0');
 
         //
-        // Remove the stream name from the extension.
+        // Remove the stream name and ':' from the extension length.
         //
 
-        Path->Extension.Length -= Path->StreamName.Length;
+        Path->Extension.Length = (USHORT)(
+            RtlPointerToOffset(
+                Path->Extension.Buffer,
+                Path->StreamName.Buffer - 1
+            )
+        );
         Path->Extension.MaximumLength = Path->Extension.Length;
         ASSERT(Path->Extension.Buffer[Path->Extension.Length >> 1] == L':');
     }
@@ -406,11 +411,7 @@ Return Value:
         )
     );
     Path->FileName.MaximumLength = Path->FileName.Length;
-    if (Path->StreamName.Buffer) {
-        ASSERT(Path->FileName.Buffer[Path->FileName.Length >> 1] == L':');
-    } else {
-        ASSERT(Path->FileName.Buffer[Path->FileName.Length >> 1] == L'\0');
-    }
+    ASSERT(Path->FileName.Buffer[Path->FileName.Length >> 1] == L'\0');
 
     Path->Directory.Buffer = Start;
     Path->Directory.Length = (USHORT)(
@@ -812,16 +813,30 @@ Return Value:
 {
     PRTL Rtl;
     USHORT Count;
+    USHORT Index;
+    USHORT DirectoryLength;
+    USHORT BaseNameLength;
+    USHORT BaseNameSuffixLength;
+    USHORT ExtensionLength;
+    USHORT StreamNameLength;
     USHORT FullPathLength;
     USHORT FullPathMaximumLength;
     PWSTR Dest;
+    WCHAR Wide;
     PVOID BaseAddress;
-    PCHAR ExpectedDest;
+    PWSTR ExpectedDest;
+    PWSTR LastExpectedDest;
     HRESULT ResetResult;
     HRESULT Result = S_OK;
     BOOLEAN HasStream = FALSE;
     PALLOCATOR Allocator;
     PCUNICODE_STRING Source;
+    PCUNICODE_STRING Directory;
+    PCUNICODE_STRING BaseName;
+    PCUNICODE_STRING NewBaseNameSuffix;
+    PCUNICODE_STRING Extension;
+    PCUNICODE_STRING StreamName;
+    UNICODE_STRING EmptyString = { 0 };
     ULONG_INTEGER AllocSize = { 0 };
     ULONG_INTEGER AlignedAllocSize;
     ULONG_INTEGER BaseNameALength;
@@ -867,90 +882,120 @@ Return Value:
         goto Error;
     }
 
-    if (ARGUMENT_PRESENT(NewDirectory)) {
+    if (!ARGUMENT_PRESENT(NewDirectory)) {
+        Directory = &ExistingPath->Directory;
+    } else {
         if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(NewDirectory)) {
             Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_NewDirectory, Result);
             goto Error;
         } else {
-            AllocSize.LongPart = NewDirectory->Length;
+            Directory = NewDirectory;
         }
-    } else {
-        AllocSize.LongPart = ExistingPath->Directory.Length;
     }
+
+    //
+    // Verify the length of the directory does not include a trailing slash.
+    //
+
+    Wide = Directory->Buffer[(Directory->Length >> 1) - 1];
+    if (Wide == L'\\') {
+        Result = E_INVALIDARG;
+        PH_ERROR(PerfectHashPathCreate_DirectorySlash, Result);
+        goto Error;
+    }
+
+    DirectoryLength = Directory->Length;
 
     if (ARGUMENT_PRESENT(NewBaseName)) {
         if (!IsValidUnicodeString(NewBaseName)) {
             Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_NewBaseName, Result);
             goto Error;
         }
-        AllocSize.LongPart += NewBaseName->Length;
-        BaseNameALength.LongPart = NewBaseName->Length >> 1;
+        BaseName = NewBaseName;
     } else {
-        AllocSize.LongPart += ExistingPath->BaseName.Length;
-        BaseNameALength.LongPart = ExistingPath->BaseName.Length >> 1;
+        BaseName = &ExistingPath->BaseName;
     }
+
+    BaseNameLength = BaseName->Length;
+    BaseNameALength.LongPart = BaseNameLength >> 1;
 
     if (ARGUMENT_PRESENT(BaseNameSuffix)) {
         if (!IsValidUnicodeString(BaseNameSuffix)) {
             Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_BaseNameSuffix, Result);
             goto Error;
         } else {
-            AllocSize.LongPart += BaseNameSuffix->Length;
-            BaseNameALength.LongPart += BaseNameSuffix->Length >> 1;
+            NewBaseNameSuffix = BaseNameSuffix;
         }
+    } else {
+        NewBaseNameSuffix = &EmptyString;
     }
+
+    BaseNameSuffixLength = NewBaseNameSuffix->Length;
+    BaseNameALength.LongPart += BaseNameSuffixLength >> 1;
 
     if (ARGUMENT_PRESENT(NewExtension)) {
         if (!IsValidUnicodeString(NewExtension)) {
             Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_NewExtension, Result);
             goto Error;
         } else {
-            AllocSize.LongPart += NewExtension->Length;
+            Extension = NewExtension;
         }
     } else {
-        AllocSize.LongPart += ExistingPath->Extension.Length;
+        Extension = &ExistingPath->Extension;
     }
 
-    //
-    // Account for the period preceeding the extension, which isn't included
-    // in the Extension.Length part.
-    //
-
-    AllocSize.LongPart += sizeof(WCHAR);
-
-    //
-    // Continue with argument validation.
-    //
+    ExtensionLength = Extension->Length;
 
     if (ARGUMENT_PRESENT(NewStreamName)) {
         if (!IsValidUnicodeString(NewStreamName)) {
             Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_NewStreamName, Result);
             goto Error;
         } else {
             HasStream = TRUE;
-            AllocSize.LongPart += NewStreamName->Length;
+            StreamName = NewStreamName;
         }
     } else if (IsValidUnicodeString(&ExistingPath->StreamName)) {
         HasStream = TRUE;
-        AllocSize.LongPart += ExistingPath->StreamName.Length;
+        StreamName = &ExistingPath->StreamName;
+    } else {
+        StreamName = &EmptyString;
     }
 
+    StreamNameLength = StreamName->Length;
+
     //
-    // If a stream is present, account for the colon.
+    // Calculate the allocation size.  Things are broken down explicitly to
+    // aid debugging.
     //
 
+    AllocSize.LongPart = DirectoryLength;
+    AllocSize.LongPart += sizeof(L'\\');
+
+    AllocSize.LongPart += BaseNameLength;
+    AllocSize.LongPart += BaseNameSuffixLength;
+
+    AllocSize.LongPart += sizeof(L'.');
+    AllocSize.LongPart += ExtensionLength;
+
     if (HasStream) {
-        AllocSize.LongPart += sizeof(WCHAR);
+        AllocSize.LongPart += sizeof(L':');
+        AllocSize.LongPart += StreamName->Length;
     }
 
     //
     // Account for the trailing NULL and verify we haven't overflowed USHORT.
     //
 
-    AllocSize.LongPart += sizeof(WCHAR);
+    AllocSize.LongPart += sizeof(L'\0');
 
     if (AllocSize.HighPart) {
         Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(PerfectHashPathCreate_AllocSize, Result);
         goto Error;
     }
 
@@ -962,6 +1007,7 @@ Return Value:
 
     if (AlignedAllocSize.HighPart) {
         Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(PerfectHashPathCreate_AlignedAllocSize, Result);
         goto Error;
     }
 
@@ -970,11 +1016,11 @@ Return Value:
     // to factoring in space required for the ASCII representation of the base
     // name.
     //
-    // N.B. FullPathLength includes the trailing NULL.
+    // N.B. FullPathLength does *not* include the trailing NULL.
     //
 
-    FullPathLength = AllocSize.LowPart;
-    FullPathMaximumLength = AlignedAllocSize.LowPart;
+    FullPathLength = AllocSize.LowPart - sizeof(WCHAR);
+    FullPathMaximumLength = AllocSize.LowPart;
 
     //
     // Align the base name ASCII representation length up to an 8-byte boundary
@@ -983,8 +1029,9 @@ Return Value:
     //
 
     BaseNameAMaximumLength.LongPart = ALIGN_UP(BaseNameALength.LongPart + 1, 8);
-    if (!BaseNameAMaximumLength.HighPart) {
+    if (BaseNameAMaximumLength.HighPart) {
         Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(PerfectHashPathCreate_BaseNameAMaximumLength, Result);
         goto Error;
     }
 
@@ -1023,52 +1070,73 @@ Return Value:
 
     Dest = Path->FullPath.Buffer;
 
-    if (ARGUMENT_PRESENT(NewDirectory)) {
-        Source = NewDirectory;
-    } else {
-        Source = &ExistingPath->Directory;
-    }
-
-    Count = Source->Length >> 1;
-
     //
     // Copy the directory.
     //
 
-    CopyMemory(Dest, Source->Buffer, Source->Length);
-    Dest += Count;
-    ASSERT(*Dest == L'\0');
-    ASSERT(*(Dest - 1) != L'\\');
-
-    *Dest++ = L'\\';
-
-    //
-    // Copy the base name.
-    //
-
-    if (ARGUMENT_PRESENT(NewBaseName)) {
-        Source = NewBaseName;
-    } else {
-        Source = &ExistingPath->BaseName;
-    }
-
+    Source = Directory;
     Count = Source->Length >> 1;
 
     CopyMemory(Dest, Source->Buffer, Source->Length);
     Dest += Count;
-    ASSERT(*Dest == L'\0');
-    ASSERT(*(Dest - 1) == L'\\');
+
+#define CHECK_DEST() ASSERT((ULONG_PTR)Dest == (ULONG_PTR)ExpectedDest)
+
+    ExpectedDest = (PWSTR)RtlOffsetToPointer(BaseAddress, DirectoryLength);
+    CHECK_DEST();
+
+    *Dest++ = L'\\';
+
+    //
+    // Copy the base name, replacing any hyphens or spaces with underscores.
+    //
+
+    Source = BaseName;
+    Count = Source->Length >> 1;
+
+    for (Index = 0; Index < Count; Index++) {
+        BOOLEAN Replace;
+
+        Wide = Source->Buffer[Index];
+
+        Replace = (
+            Wide == L'-' ||
+            Wide == ' '
+        );
+
+        if (Replace) {
+            Wide = L'_';
+        }
+
+        *Dest++ = (CHAR)Wide;
+    }
+
+    ExpectedDest = (PWSTR)(
+        RtlOffsetToPointer(
+            BaseAddress,
+            (
+                DirectoryLength +
+                sizeof(L'\\') +
+                BaseNameLength
+            )
+        )
+    );
+
+    CHECK_DEST();
+    LastExpectedDest = ExpectedDest;
 
     //
     // Copy the base name suffix if applicable.
     //
 
-    if (ARGUMENT_PRESENT(BaseNameSuffix)) {
-        Source = BaseNameSuffix;
+    if (BaseNameSuffixLength) {
+        Source = NewBaseNameSuffix;
         Count = Source->Length >> 1;
         CopyMemory(Dest, Source->Buffer, Source->Length);
         Dest += Count;
-        ASSERT(*Dest == L'\0');
+        ExpectedDest = LastExpectedDest + Count;
+        CHECK_DEST();
+        LastExpectedDest = ExpectedDest;
     }
 
     //
@@ -1106,6 +1174,8 @@ Return Value:
 
         CopyMemory(Dest, Source->Buffer, Source->Length);
         Dest += Count;
+        ASSERT(*Dest == L'\0');
+
     }
 
     //
@@ -1118,9 +1188,18 @@ Return Value:
     // Verify the Dest pointer matches where we expect it to.
     //
 
-    ExpectedDest = RtlOffsetToPointer(BaseAddress, AllocSize.LowPart);
+    ExpectedDest = (PWSTR)(
+        RtlOffsetToPointer(
+            BaseAddress,
+            AllocSize.LowPart
+        )
+    );
+
+    CHECK_DEST();
+
     if ((ULONG_PTR)Dest != (ULONG_PTR)ExpectedDest) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashPathCreate_ExpectedDest_AllocSize, Result);
         goto Error;
     }
 
@@ -1130,7 +1209,15 @@ Return Value:
     //
 
     Dest = (PWSTR)ALIGN_UP(Dest, 8);
-    ExpectedDest = RtlOffsetToPointer(BaseAddress, AlignedAllocSize.LongPart);
+    ExpectedDest = (PWSTR)(
+        RtlOffsetToPointer(
+            BaseAddress,
+            ALIGN_UP(Path->FullPath.MaximumLength, 8)
+        )
+    );
+
+    CHECK_DEST();
+
     if ((ULONG_PTR)Dest != (ULONG_PTR)ExpectedDest) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         goto Error;
@@ -1142,8 +1229,8 @@ Return Value:
     //
 
     Path->BaseNameA.Buffer = (PSTR)Dest;
-    Path->BaseNameA.Length = BaseNameALength.LowPart;
-    Path->BaseNameA.MaximumLength = BaseNameALength.LowPart;
+    Path->BaseNameA.Length = 0;
+    Path->BaseNameA.MaximumLength = BaseNameAMaximumLength.LowPart;
 
     //
     // We've finished constructing our new path's FullPath.Buffer.  Final step
@@ -1151,11 +1238,19 @@ Return Value:
     // structures.
     //
 
+    ASSERT(Path->FullPath.Buffer[Path->FullPath.Length >> 1] == L'\0');
+
     Result = Path->Vtbl->ExtractParts(Path);
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathExtractParts, Result);
         goto Error;
     }
+
+    //
+    // Sanity check ExtractParts() hasn't blown away our NULL terminator.
+    //
+
+    ASSERT(Path->FullPath.Buffer[Path->FullPath.Length >> 1] == L'\0');
 
     //
     // Update the caller's pointer if applicable.

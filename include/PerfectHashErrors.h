@@ -1033,3 +1033,12 @@ Abstract:
 //
 #define PH_E_NOT_GLOBAL_INTERFACE_ID     ((HRESULT)0xE004026AL)
 
+//
+// MessageId: PH_E_INVALID_VALUE_SIZE
+//
+// MessageText:
+//
+// Invalid value size.
+//
+#define PH_E_INVALID_VALUE_SIZE          ((HRESULT)0xE004026BL)
+

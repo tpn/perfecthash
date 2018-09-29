@@ -701,8 +701,6 @@ typedef const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE
 // Symbol loader helpers.
 //
 
-typedef _Null_terminated_ CONST CHAR *PCSZ;
-
 typedef
 _Check_return_
 _Success_(return != 0)

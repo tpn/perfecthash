@@ -207,6 +207,7 @@ Return Value:
 
     Context->Vtbl->AddRef(Context);
     Table->Context = Context;
+    Table->OutputDirectory = OutputDirectory;
 
     //
     // Our main enumeration IDs get replicated in both structures.
@@ -237,6 +238,9 @@ Return Value:
     // We're done!  Jump to the end to finish up.
     //
 
+    Table->State.Valid = TRUE;
+    Table->Flags.Created = TRUE;
+
     if (ARGUMENT_PRESENT(TablePointer)) {
         *TablePointer = Table;
     }
@@ -253,8 +257,6 @@ Error:
         Table->Vtbl->Release(Table);
         Table = NULL;
     }
-
-    //*TablePointer = NULL;
 
     //
     // Intentional follow-on to End.

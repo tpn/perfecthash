@@ -213,7 +213,21 @@ Return Value:
     Keys->Vtbl->AddRef(Keys);
     Table->Keys = Keys;
 
+    //
+    // Copy create flags.
+    //
+
     Table->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
+
+    //
+    // Create the values array.
+    //
+
+    Result = PerfectHashTableCreateValuesArray(Table, 0);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableCreateValuesArray, Result);
+        goto Error;
+    }
 
     //
     // Our main enumeration IDs get replicated in both structures.

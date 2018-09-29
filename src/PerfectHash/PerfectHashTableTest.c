@@ -169,7 +169,11 @@ Return Value:
         )
     );
 
-    ASSERT(BitmapBuffer);
+    if (!BitmapBuffer) {
+        SYS_ERROR(VirtualAlloc);
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
 
     //
     // N.B. We use PLONG for the BitmapBuffer type instead of PULONG (which is

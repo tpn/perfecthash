@@ -276,6 +276,18 @@ HRESULT
 typedef PERFECT_HASH_TABLE_CREATE_PATH *PPERFECT_HASH_TABLE_CREATE_PATH;
 
 typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Table->Lock)
+HRESULT
+(NTAPI PERFECT_HASH_TABLE_CREATE_VALUES_ARRAY)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_opt_ ULONG ValueSizeInBytes
+    );
+typedef PERFECT_HASH_TABLE_CREATE_VALUES_ARRAY
+      *PPERFECT_HASH_TABLE_CREATE_VALUES_ARRAY;
+
+typedef
 VOID
 (NTAPI PERFECT_HASH_TABLE_RUNDOWN)(
     _In_ _Post_ptr_invalid_ PPERFECT_HASH_TABLE Table
@@ -290,6 +302,8 @@ extern PERFECT_HASH_TABLE_INITIALIZE PerfectHashTableInitialize;
 extern PERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX
     PerfectHashTableInitializeTableSuffix;
 extern PERFECT_HASH_TABLE_CREATE_PATH PerfectHashTableCreatePath;
+extern PERFECT_HASH_TABLE_CREATE_VALUES_ARRAY
+    PerfectHashTableCreateValuesArray;
 extern PERFECT_HASH_TABLE_RUNDOWN PerfectHashTableRundown;
 extern PERFECT_HASH_TABLE_CREATE PerfectHashTableCreate;
 extern PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;

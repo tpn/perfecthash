@@ -110,6 +110,7 @@ Return Value:
     USHORT Length;
     USHORT BaseLength;
     USHORT NumberOfPages;
+    ULONG ReferenceCount;
     BOOL Success;
     BOOLEAN Failed;
     BOOLEAN Terminate;
@@ -148,7 +149,6 @@ Return Value:
     PERFECT_HASH_TABLE_FLAGS TableFlags;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
-    PERFECT_HASH_TLS_CONTEXT TlsContext;
     PUNICODE_STRING AlgorithmName;
     PUNICODE_STRING HashFunctionName;
     PUNICODE_STRING MaskFunctionName;
@@ -157,6 +157,7 @@ Return Value:
     PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
 
     //
@@ -346,13 +347,15 @@ Return Value:
 
     FindHandle = FindFirstFileW(WildcardPath.Buffer, &FindData);
 
-    if (!FindHandle || FindHandle == INVALID_HANDLE_VALUE) {
+    if (!IsValidHandle(FindHandle)) {
 
         //
         // Check to see if we failed because there were no files matching the
         // wildcard *.keys in the test directory.  In this case, GetLastError()
         // will report ERROR_FILE_NOT_FOUND.
         //
+
+        FindHandle = NULL;
 
         LastError = GetLastError();
 
@@ -405,20 +408,6 @@ Return Value:
     BaseLength = Length;
 
     //
-    // Zero the local TLS context structure, fill out the relevant fields,
-    // then set it.  This will allow other components to re-use our Allocator
-    // and Rtl components (this is handled in our COM creation logic).
-    //
-
-    ZeroStruct(TlsContext);
-    TlsContext.Rtl = Context->Rtl;
-    TlsContext.Allocator = Context->Allocator;
-    if (!PerfectHashTlsSetContext(&TlsContext)) {
-        SYS_ERROR(TlsSetValue);
-        goto Error;
-    }
-
-    //
     // Zero the failure count and terminate flag, zero the bitmap structure,
     // wire up the unicode string representation of the bitmap, initialize
     // various flags, obtain the current CPU architecture ID, and begin the main
@@ -432,6 +421,7 @@ Return Value:
     UnicodeBitmapString.Length = sizeof(WideBitmapString)-2;
     UnicodeBitmapString.MaximumLength = sizeof(WideBitmapString);
     UnicodeBitmapString.Buffer[UnicodeBitmapString.Length >> 1] = L'\0';
+    Table = NULL;
     KeysBaseAddress = NULL;
     NumberOfKeys.QuadPart = 0;
     KeysFlags.AsULong = 0;
@@ -628,13 +618,30 @@ Return Value:
         // Keys were loaded successfully.  Proceed with table creation.
         //
 
-        Result = Context->Vtbl->CreateTable(Context,
-                                            AlgorithmId,
-                                            MaskFunctionId,
-                                            HashFunctionId,
-                                            Keys,
-                                            &ContextCreateTableFlags,
-                                            &Table);
+        ASSERT(Table == NULL);
+
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_TABLE,
+                                               &Table);
+
+        if (FAILED(Result)) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to create table instance.\n");
+            WIDE_OUTPUT_FLUSH();
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseKeys;
+        }
+
+        Result = Table->Vtbl->Create(Table,
+                                     Context,
+                                     AlgorithmId,
+                                     MaskFunctionId,
+                                     HashFunctionId,
+                                     Keys,
+                                     OutputDirectory,
+                                     NULL,
+                                     &TableCreateFlags);
 
         if (FAILED(Result)) {
 
@@ -702,7 +709,7 @@ Return Value:
                                    TableFullPath,
                                    Keys);
 
-        if (Result != PH_E_TABLE_ALREADY_LOADED) {
+        if (Result != PH_E_TABLE_ALREADY_CREATED) {
             WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; multiple "
                                         L"table loads did not raise an "
                                         L"error for ");
@@ -738,13 +745,15 @@ Return Value:
         // Release the table.
         //
 
-        if (Table->Vtbl->Release(Table) != 0) {
+        ReferenceCount = Table->Vtbl->Release(Table);
+        Table = NULL;
+
+        if (ReferenceCount != 0) {
             WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; releasing table "
                                         L"did not indicate a refcount of 0.\n");
             WIDE_OUTPUT_FLUSH();
 
             Failures++;
-            Table = NULL;
             Terminate = TRUE;
             goto ReleaseKeys;
         }
@@ -1055,11 +1064,6 @@ Error:
     //
 
 End:
-
-    if (!PerfectHashTlsSetContext(NULL)) {
-        SYS_ERROR(TlsSetValue);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-    }
 
     if (WideOutputBuffer) {
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,

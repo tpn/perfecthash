@@ -850,12 +850,12 @@ RetryWithLargerTableSize:
                               &Verb##Name##.ListEntry);   \
     SubmitThreadpoolWork(Context->FileWork)
 
-    SUBMIT_FILE_WORK(Prepare, TableFile);
     SUBMIT_FILE_WORK(Prepare, TableInfoStream);
-    SUBMIT_FILE_WORK(Prepare, CSourceTableDataFile);
-    SUBMIT_FILE_WORK(Prepare, CHeaderFile);
-    SUBMIT_FILE_WORK(Prepare, CSourceFile);
     SUBMIT_FILE_WORK(Prepare, CSourceKeysFile);
+    SUBMIT_FILE_WORK(Prepare, CSourceFile);
+    SUBMIT_FILE_WORK(Prepare, CHeaderFile);
+    SUBMIT_FILE_WORK(Prepare, CSourceTableDataFile);
+    SUBMIT_FILE_WORK(Prepare, TableFile);
 
     //
     // Capture initial cycles as reported by __rdtsc() and the performance
@@ -1194,9 +1194,9 @@ FinishedSolution:
     // Dispatch save file work for the table data.
     //
 
-    SUBMIT_FILE_WORK(Save, TableFile);
-    SUBMIT_FILE_WORK(Save, TableInfoStream);
     SUBMIT_FILE_WORK(Save, CSourceTableDataFile);
+    SUBMIT_FILE_WORK(Save, TableInfoStream);
+    SUBMIT_FILE_WORK(Save, TableFile);
 
     //
     // Capture another round of cycles and performance counter values, then

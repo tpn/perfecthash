@@ -318,9 +318,9 @@ const UNICODE_STRING DotCHeaderSuffix = RTL_CONSTANT_STRING(L".h");
 const UNICODE_STRING DotCSourceSuffix = RTL_CONSTANT_STRING(L".c");
 const UNICODE_STRING KeysWildcardSuffix = RTL_CONSTANT_STRING(L"*.keys");
 const UNICODE_STRING CSourceExtension = RTL_CONSTANT_STRING(L"c");
-const UNICODE_STRING CSourceKeysSuffix = RTL_CONSTANT_STRING(L"_Keys");
+const UNICODE_STRING CSourceKeysSuffix = RTL_CONSTANT_STRING(L"Keys");
 const UNICODE_STRING CSourceTableDataSuffix =
-    RTL_CONSTANT_STRING(L"_TableData");
+    RTL_CONSTANT_STRING(L"TableData");
 
 
 //

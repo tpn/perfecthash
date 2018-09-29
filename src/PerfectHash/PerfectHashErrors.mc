@@ -888,3 +888,11 @@ Language=English
 The interface ID provided is not a global interface.
 .
 
+MessageId=0x26b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_VALUE_SIZE
+Language=English
+Invalid value size.
+.
+

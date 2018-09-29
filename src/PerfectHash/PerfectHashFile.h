@@ -205,6 +205,9 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 #define NumberOfPagesForFile(File) \
     (ULONG)BYTES_TO_PAGES(File->FileInfo.AllocationSize.QuadPart)
 
+#define NumberOfPagesForPendingEndOfFile(File) \
+    (ULONG)BYTES_TO_PAGES(File->PendingEndOfFile.QuadPart)
+
 //
 // Define the PERFECT_HASH_FILE structure.
 //
@@ -278,11 +281,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     FILE_STANDARD_INFO FileInfo;
 
     //
-    // Number of bytes written to BaseAddress if the file is writable.  This
-    // is used to adjust the file's end-of-file during rundown.
+    // If there's a pending end-of-file change that needs to be made, that is
+    // captured here.  This is set by Close(), and subsequently read by Unmap(),
+    // which uses it to determine how many pages to copy back from the large
+    // page buffer if one was allocated and the file is not read-only.
     //
 
-    LARGE_INTEGER NumberOfBytesWritten;
+    LARGE_INTEGER PendingEndOfFile;
 
     //
     // Backing interface.

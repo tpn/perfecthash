@@ -390,8 +390,8 @@ Return Value:
         goto Error;
     }
 
-#if 0
-    SetThreadpoolThreadMaximum(Context->FileThreadpool, 1);
+#if 1
+    SetThreadpoolThreadMaximum(Context->FileThreadpool, 2);
 #endif
 
     //

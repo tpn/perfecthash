@@ -671,5 +671,134 @@ Return Value:
     return S_OK;
 }
 
+PERFECT_HASH_TABLE_CREATE_VALUES_ARRAY PerfectHashTableCreateValuesArray;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableCreateValuesArray(
+    PPERFECT_HASH_TABLE Table,
+    ULONG ValueSizeInBytes
+    )
+/*++
+
+Routine Description:
+
+    Creates the values array for a given table.
+
+Arguments:
+
+    Table - Supplies a pointer to a table instance for which the values array
+        is to be created.
+
+    ValueSizeInBytes - Optionally supplies a custom size, in bytes, of an
+        individual value element.  Currently, only sizeof(ULONG) is supported.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Table was NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    PH_E_INVALID_VALUE_SIZE - Invalid value size.
+
+--*/
+{
+    PRTL Rtl;
+    ULONG LastError;
+    PVOID BaseAddress;
+    HRESULT Result = S_OK;
+    ULONGLONG ArrayAllocSize;
+    BOOLEAN LargePagesForValues;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    if (ValueSizeInBytes != 0 && ValueSizeInBytes != sizeof(ULONG)) {
+        return PH_E_INVALID_VALUE_SIZE;
+    }
+
+    //
+    // The values array base address should be NULL at this point.
+    //
+
+    if (Table->ValuesBaseAddress) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableCreateValuesArray_ValuesBaseAddress, Result);
+        goto Error;
+    }
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Table->Rtl;
+
+    //
+    // Allocate an array for the table values (i.e. the things stored when the
+    // Insert(Key, Value) routine is called).  The dimensions will be the same
+    // as the number of table elements * key size, and can be indexed directly
+    // by the result of the Index() routine.
+    //
+
+    //
+    // N.B. Default to true for large pages for the value array for now.
+    //
+
+    LargePagesForValues = TRUE;
+
+    ArrayAllocSize = (
+        Table->TableInfoOnDisk->NumberOfTableElements.QuadPart *
+        (ULONGLONG)ValueSizeInBytes
+    );
+
+    BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
+                                                      NULL,
+                                                      ArrayAllocSize,
+                                                      MEM_RESERVE | MEM_COMMIT,
+                                                      PAGE_READWRITE,
+                                                      &LargePagesForValues);
+
+    Table->ValuesBaseAddress = BaseAddress;
+
+    if (!BaseAddress) {
+        LastError = GetLastError();
+        SYS_ERROR(VirtualAlloc);
+        if (LastError == ERROR_OUTOFMEMORY) {
+            Result = E_OUTOFMEMORY;
+        } else {
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+        goto Error;
+    }
+
+    //
+    // Update flags with large page result for values array.
+    //
+
+    Table->Flags.ValuesArrayUsesLargePages = LargePagesForValues;
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

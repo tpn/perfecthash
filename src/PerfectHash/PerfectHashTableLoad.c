@@ -108,14 +108,10 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     HRESULT Result = S_OK;
-    PVOID BaseAddress;
-    BOOLEAN LargePagesForValues;
     LARGE_INTEGER ExpectedEndOfFile;
     ULONGLONG NumberOfKeys;
     ULONGLONG NumberOfTableElements;
-    ULONGLONG ValuesSizeInBytes;
     LARGE_INTEGER EndOfFile;
     PPERFECT_HASH_FILE File = NULL;
     PPERFECT_HASH_PATH Path = NULL;
@@ -135,7 +131,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(Path)) {
+    if (!ARGUMENT_PRESENT(TablePath)) {
         return E_POINTER;
     }
 
@@ -458,43 +454,20 @@ Return Value:
     }
 
     //
-    // Allocate an array for the table values (i.e. the things stored when the
-    // Insert(Key, Value) routine is called).  The dimensions will be the same
-    // as the number of table elements * key size, and can be indexed directly
-    // by the result of the Index() routine.
+    // Copy load flags.
     //
 
-    LargePagesForValues = (BOOLEAN)(
-        !TableLoadFlags.DisableTryLargePagesForValuesArray
-    );
+    Table->TableLoadFlags.AsULong = TableLoadFlags.AsULong;
 
-    ValuesSizeInBytes = (
-        TableInfoOnDisk->NumberOfTableElements.QuadPart *
-        (ULONGLONG)TableInfoOnDisk->KeySizeInBytes
-    );
+    //
+    // Create the values array.
+    //
 
-    Rtl = Table->Rtl;
-
-    BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
-                                                      NULL,
-                                                      ValuesSizeInBytes,
-                                                      MEM_RESERVE | MEM_COMMIT,
-                                                      PAGE_READWRITE,
-                                                      &LargePagesForValues);
-
-    Table->ValuesBaseAddress = BaseAddress;
-
-    if (!BaseAddress) {
-        SYS_ERROR(VirtualAlloc);
-        Result = PH_E_SYSTEM_CALL_FAILED;
+    Result = PerfectHashTableCreateValuesArray(Table, 0);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableCreateValuesArray, Result);
         goto Error;
     }
-
-    //
-    // Update flags with large page result for values array.
-    //
-
-    Table->Flags.ValuesArrayUsesLargePages = LargePagesForValues;
 
     //
     // Copy the enumeration IDs back into the table structure.
@@ -530,7 +503,6 @@ Return Value:
 
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
-    Table->TableLoadFlags.AsULong = TableLoadFlags.AsULong;
 
     goto End;
 

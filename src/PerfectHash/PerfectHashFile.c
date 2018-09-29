@@ -364,6 +364,7 @@ Return Value:
         goto Error;
     }
 
+    Opened = TRUE;
     SetFileOpened(File);
     SetFileLoaded(File);
 
@@ -505,11 +506,9 @@ Return Value:
     ULONG FlagsAndAttributes;
     HRESULT Result = S_OK;
     BOOLEAN Opened = FALSE;
-    PPERFECT_HASH_PATH Path;
     LARGE_INTEGER EndOfFile;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags = { 0 };
-    PCPERFECT_HASH_PATH_PARTS Parts = NULL;
 
     //
     // Validate arguments.
@@ -589,32 +588,14 @@ Return Value:
         File->Flags.DoesNotWantLargePages = TRUE;
     }
 
-    //
-    // Create a new path instance.
-    //
-
-    Result = File->Vtbl->CreateInstance(File,
-                                        NULL,
-                                        &IID_PERFECT_HASH_FILE,
-                                        &Path);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileCreateInstance, Result);
-        goto Error;
-    }
-
-    File->Path = Path;
+    File->State.IsReadOnly = FALSE;
 
     //
-    // Deep copy the incoming path and extract the various components.
+    // Add a reference to the source path.
     //
 
-    Result = Path->Vtbl->Copy(Path, &SourcePath->FullPath, &Parts, NULL);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashPathCopy, Result);
-        goto Error;
-    }
+    SourcePath->Vtbl->AddRef(SourcePath);
+    File->Path = SourcePath;
 
     //
     // Open the file using the newly created path.
@@ -790,6 +771,15 @@ Return Value:
         return PH_E_FILE_NOT_OPEN;
     }
 
+    if (EndOfFile.QuadPart < 0) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileClose, Result);
+        ReleasePerfectHashFileLockExclusive(File);
+        return Result;
+    }
+
+    File->PendingEndOfFile.QuadPart = EndOfFile.QuadPart;
+
     //
     // Unmap the file.
     //
@@ -799,21 +789,12 @@ Return Value:
         PH_ERROR(PerfectHashFileUnmap, Result);
     }
 
-    if (!ARGUMENT_PRESENT(EndOfFilePointer)) {
-        EndOfFile.QuadPart = File->NumberOfBytesWritten.QuadPart;
-    }
-
     //
     // If the end of file is non-zero, truncate the file.  Otherwise, if it's
     // zero, treat this as an indication that the file should be deleted.
     //
 
-    if (EndOfFile.QuadPart < 0) {
-
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashFileClose, Result);
-
-    } else if (EndOfFile.QuadPart > 0) {
+    if (EndOfFile.QuadPart > 0) {
 
         if (IsFileReadOnly(File)) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
@@ -825,7 +806,9 @@ Return Value:
             }
         }
 
-    } else {
+    } else if (!IsFileReadOnly(File)) {
+
+        ASSERT(EndOfFile.QuadPart == 0);
 
         //
         // End of file is 0, indicating that we should delete the file.  If a
@@ -859,6 +842,7 @@ Return Value:
     //
 
     if (IsRenameScheduled(File)) {
+        ASSERT(!IsFileReadOnly(File));
         Result = File->Vtbl->DoRename(File);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileDoRename, Result);
@@ -1102,18 +1086,6 @@ Return Value:
 
     Rtl = File->Rtl;
 
-    //
-    // Flush file buffers, potentially free a large page allocation, unmap the
-    // file view, and close the mapping handle.
-    //
-
-    if (File->FileHandle) {
-        if (!FlushFileBuffers(File->FileHandle)) {
-            SYS_ERROR(FlushFileBuffers);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-    }
-
     if (!File->MappedAddress) {
 
         ASSERT(!File->Flags.UsesLargePages);
@@ -1123,9 +1095,26 @@ Return Value:
         //
         // If MappedAddress is non-NULL, BaseAddress is actually our
         // large page address which needs to be freed with VirtualFree().
+        // If the file is not read-only, copy the base address contents
+        // back to the mapped address.
         //
 
         ASSERT(File->Flags.UsesLargePages);
+
+        if (!IsFileReadOnly(File)) {
+            ULONG NumberOfPages;
+
+            NumberOfPages = NumberOfPagesForPendingEndOfFile(File);
+
+            if (NumberOfPages > 0) {
+
+                Rtl->Vtbl->CopyPages(Rtl,
+                                     File->MappedAddress,
+                                     File->BaseAddress,
+                                     NumberOfPages);
+            }
+        }
+
         if (!VirtualFree(File->BaseAddress, 0, MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
             Result = PH_E_SYSTEM_CALL_FAILED;
@@ -1137,6 +1126,13 @@ Return Value:
 
         File->BaseAddress = File->MappedAddress;
         File->MappedAddress = NULL;
+    }
+
+    if (File->FileHandle) {
+        if (!FlushFileBuffers(File->FileHandle)) {
+            SYS_ERROR(FlushFileBuffers);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
     }
 
     if (File->BaseAddress) {
@@ -1461,6 +1457,8 @@ Return Value:
         goto Error;
     }
 
+    File->PendingEndOfFile.QuadPart = EndOfFile.QuadPart;
+
     //
     // Validation complete, continue with extension.  The first step is to
     // unmap any existing mapping.
@@ -1481,12 +1479,6 @@ Return Value:
         PH_ERROR(PerfectHashFileTruncate, Result);
         goto Error;
     }
-
-    //
-    // Clear the number of bytes written and map the file.
-    //
-
-    File->NumberOfBytesWritten.QuadPart = 0;
 
     Result = File->Vtbl->Map(File);
     if (FAILED(Result)) {
@@ -1571,7 +1563,7 @@ Return Value:
 
     EndOfFile.QuadPart = NewEndOfFile->QuadPart;
 
-    if (EndOfFile.QuadPart <= 0) {
+    if (EndOfFile.QuadPart < 0) {
         return PH_E_INVALID_END_OF_FILE;
     }
 

@@ -170,11 +170,14 @@ CreateComponent(
     PULONG_PTR SourceFunction;
     PCOMPONENT Component;
     PCOMPONENT_INITIALIZE Initialize;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
 
     if (!IsValidPerfectHashInterfaceId(Id)) {
         PH_ERROR(PerfectHashCreateComponent, PH_E_INVALID_INTERFACE_ID);
         return NULL;
     }
+
+    TlsContext = PerfectHashTlsEnsureContext();
 
     HeapHandle = GetProcessHeap();
 
@@ -183,6 +186,8 @@ CreateComponent(
     Component = (PCOMPONENT)HeapAlloc(HeapHandle, HEAP_ZERO_MEMORY, AllocSize);
     if (!Component) {
         SYS_ERROR(HeapAlloc);
+        TlsContext->LastError = GetLastError();
+        TlsContext->LastResult = E_OUTOFMEMORY;
         return NULL;
     }
 
@@ -238,6 +243,7 @@ CreateComponent(
         Result = Initialize(Component);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashComponentInitialize, Result);
+            TlsContext->LastResult = Result;
             Unknown->Vtbl->Release(Unknown);
             Component = NULL;
         }
@@ -447,7 +453,7 @@ ComponentCreateInstance(
         //
 
         Offset = ComponentInterfaceTlsContextOffsets[Id];
-        NewComponent = (PCOMPONENT)RtlOffsetToPointer(TlsContext, Offset);
+        NewComponent = *((PCOMPONENT *)RtlOffsetToPointer(TlsContext, Offset));
 
         if (!NewComponent) {
 
@@ -559,6 +565,8 @@ PerfectHashDllGetClassObject(
     HRESULT Result;
     PICLASSFACTORY ClassFactory;
     PERFECT_HASH_INTERFACE_ID Id;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
 
     if (!ARGUMENT_PRESENT(Interface)) {
         return E_POINTER;
@@ -574,6 +582,8 @@ PerfectHashDllGetClassObject(
         return CLASS_E_CLASSNOTAVAILABLE;
     }
 
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+
     //
     // Class ID was valid, proceed with class factory creation.
     //
@@ -581,7 +591,9 @@ PerfectHashDllGetClassObject(
     Id = PerfectHashClassFactoryInterfaceId;
     ClassFactory = (PICLASSFACTORY)CreateComponent(Id, NULL);
     if (!ClassFactory) {
-        return E_OUTOFMEMORY;
+        Result = TlsContext->LastResult;
+        _Analysis_assume_(Result < 0);
+        goto End;
     }
 
     //
@@ -593,6 +605,10 @@ PerfectHashDllGetClassObject(
                                                 Interface);
 
     ClassFactory->Vtbl->Release(ClassFactory);
+
+End:
+
+    PerfectHashTlsClearContextIfActive(&LocalTlsContext);
 
     return Result;
 }
