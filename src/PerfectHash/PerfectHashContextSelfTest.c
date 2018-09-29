@@ -425,6 +425,7 @@ Return Value:
     KeysBaseAddress = NULL;
     NumberOfKeys.QuadPart = 0;
     KeysFlags.AsULong = 0;
+    TableCreateFlags.AsULong = 0;
     CpuArchId = PerfectHashGetCurrentCpuArch();
 
     ASSERT(IsValidPerfectHashCpuArchId(CpuArchId));
@@ -644,6 +645,7 @@ Return Value:
                                      &TableCreateFlags);
 
         if (FAILED(Result)) {
+            PH_ERROR(PerfectHashTableCreate, Result);
 
             WIDE_OUTPUT_RAW(WideOutput, L"Failed to create perfect hash "
                                         L"table for keys: ");

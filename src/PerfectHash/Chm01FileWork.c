@@ -156,7 +156,7 @@ Return Value:
 
         //
         // File already exists.  Schedule a rename and then extend the file
-        // according to the requested mapping size.
+        // according to the requested mapping size, assuming they differ.
         //
 
         Result = File->Vtbl->ScheduleRename(File, Path);
@@ -165,12 +165,14 @@ Return Value:
             goto Error;
         }
 
-        AcquirePerfectHashFileLockExclusive(File);
-        Result = File->Vtbl->Extend(File, EndOfFile);
-        ReleasePerfectHashFileLockExclusive(File);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashFileExtend, Result);
-            goto Error;
+        if (File->FileInfo.EndOfFile.QuadPart < EndOfFile->QuadPart) {
+            AcquirePerfectHashFileLockExclusive(File);
+            Result = File->Vtbl->Extend(File, EndOfFile);
+            ReleasePerfectHashFileLockExclusive(File);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashFileExtend, Result);
+                goto Error;
+            }
         }
 
     }
@@ -195,6 +197,57 @@ End:
 
     return Result;
 }
+
+#pragma warning(pop)
+
+SAVE_FILE SaveFileChm01;
+
+_Use_decl_annotations_
+HRESULT
+SaveFileChm01(
+    PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_FILE File
+    )
+/*++
+
+Routine Description:
+
+    Performs common file save work for a given file instance associated with a
+    table.  This routine is typically called for files that are not dependent
+    upon table data (e.g. a C header file).  They are written in their entirety
+    in the prepare callback, however, we don't Close() the file at that point,
+    as it prevents our rundown logic kicking in whereby we delete the file if
+    an error occurred.
+
+    Each file preparation routine should update File->NumberOfBytesWritten with
+    the number of bytes they wrote in order to ensure the file is successfully
+    truncated to this size during Close().
+
+Arguments:
+
+    Table - Supplies a pointer to the table owning the file to be saved.
+
+    File - Supplies a pointer to the file to save.
+
+Return Value:
+
+    S_OK - File saved successfully.  Otherwise, an appropriate error code.
+
+--*/
+{
+    HRESULT Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    Result = File->Vtbl->Close(File, NULL);
+    if (FAILED(Result)) {
+        PH_ERROR(SaveFileChm01_CloseFile, Result);
+    }
+
+    return Result;
+}
+
+
 
 _Use_decl_annotations_
 VOID
@@ -230,10 +283,10 @@ Return Value:
     PGRAPH_INFO Info;
     PFILE_WORK_ITEM Item;
     PFILE_WORK_CALLBACK_IMPL Impl = NULL;
-    PPERFECT_HASH_PATH Path = NULL;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_KEYS Keys;
     HANDLE DependentEvent = NULL;
+    PPERFECT_HASH_PATH Path = NULL;
     PTABLE_INFO_ON_DISK TableInfo;
 
     //
@@ -261,11 +314,13 @@ Return Value:
         PCUNICODE_STRING NewStreamName = NULL;
         PCUNICODE_STRING AdditionalSuffix = NULL;
         LARGE_INTEGER EndOfFile;
+        ULARGE_INTEGER NumTableElements;
         SYSTEM_INFO SystemInfo;
         PPERFECT_HASH_FILE *File;
 
         GetSystemInfo(&SystemInfo);
         EndOfFile.QuadPart = SystemInfo.dwAllocationGranularity;
+        NumTableElements.QuadPart = TableInfo->NumberOfTableElements.QuadPart;
 
         switch (Item->FileWorkId) {
 
@@ -277,6 +332,19 @@ Return Value:
 
             case FileWorkPrepareTableInfoStreamId:
                 File = &Table->InfoStream;
+
+                if (*File) {
+
+                    //
+                    // :Info streams don't need more than one prepare call, as
+                    // their path hangs off the main table path (and thus, will
+                    // automatically inherit its scheduled rename), and their
+                    // size never changes.
+                    //
+
+                    goto End;
+                }
+
                 NewExtension = &TableExtension;
                 NewStreamName = &TableInfoStreamName;
                 DependentEvent = Context->PreparedTableFileEvent;
@@ -307,19 +375,18 @@ Return Value:
                 File = &Table->CSourceTableDataFile;
                 NewExtension = &CSourceExtension;
                 AdditionalSuffix = &CSourceTableDataSuffix;
-                EndOfFile.QuadPart += (
-                    TableInfo->NumberOfTableElements.QuadPart * 16
-                );
+                EndOfFile.QuadPart += NumTableElements.QuadPart * 16;
                 break;
 
             default:
                 Result = PH_E_INVALID_FILE_WORK_ID;
+                PH_ERROR(FileWorkCallbackChm01, Result);
                 goto End;
         }
 
         Result = PerfectHashTableCreatePath(Table,
                                             Table->Keys->File->Path,
-                                            &TableInfo->NumberOfTableElements,
+                                            &NumTableElements,
                                             Table->AlgorithmId,
                                             Table->MaskFunctionId,
                                             Table->HashFunctionId,
@@ -350,6 +417,7 @@ Return Value:
     } else {
 
         ULONG WaitResult;
+        PPERFECT_HASH_FILE File = NULL;
 
         if (!IsSaveFileWorkId(Item->FileWorkId)) {
             ASSERT(FALSE);
@@ -369,6 +437,21 @@ Return Value:
                 DependentEvent = Context->PreparedTableInfoStreamEvent;
                 break;
 
+            case FileWorkSaveCHeaderFileId:
+                File = Table->CHeaderFile;
+                DependentEvent = Context->PreparedCHeaderFileEvent;
+                break;
+
+            case FileWorkSaveCSourceFileId:
+                File = Table->CSourceFile;
+                DependentEvent = Context->PreparedCSourceFileEvent;
+                break;
+
+            case FileWorkSaveCSourceKeysFileId:
+                File = Table->CSourceKeysFile;
+                DependentEvent = Context->PreparedCSourceKeysFileEvent;
+                break;
+
             case FileWorkSaveCSourceTableDataFileId:
                 Impl = SaveCSourceTableDataCallbackChm01;
                 DependentEvent = Context->PreparedCSourceTableDataFileEvent;
@@ -385,6 +468,22 @@ Return Value:
                 Result = PH_E_SYSTEM_CALL_FAILED;
                 goto End;
             }
+        }
+
+        if (!Impl) {
+            ASSERT(File);
+            Result = SaveFileChm01(Table, File);
+            if (FAILED(Result)) {
+
+                //
+                // Nothing needs doing here.  The Result will bubble back up
+                // via the normal mechanisms.
+                //
+
+                NOTHING;
+            }
+        } else {
+            ASSERT(!File);
         }
     }
 
@@ -419,8 +518,6 @@ End:
 
     return;
 }
-
-#pragma warning(pop)
 
 _Use_decl_annotations_
 HRESULT
@@ -513,12 +610,14 @@ SaveTableInfoStreamCallbackChm01(
     PULONG Dest;
     PGRAPH Graph;
     ULONG WaitResult;
+    PALLOCATOR Allocator;
     HRESULT Result = S_OK;
     LARGE_INTEGER EndOfFile;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
-    PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
+    PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
+    PGRAPH_INFO_ON_DISK NewGraphInfoOnDisk;
 
     UNREFERENCED_PARAMETER(Item);
 
@@ -528,7 +627,7 @@ SaveTableInfoStreamCallbackChm01(
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    File = Table->TableFile;
+    File = Table->InfoStream;
     Dest = (PULONG)File->BaseAddress;
     Graph = (PGRAPH)Context->SolvedContext;
     GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)File->BaseAddress;
@@ -586,6 +685,44 @@ SaveTableInfoStreamCallbackChm01(
     //CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(SaveTableFile);
 
     //
+    // This next part is a bit hacky.  Originally, this library provided no
+    // facility for obtaining a table after creation -- you would have to
+    // explicitly create a table instance and call Load() on the desired path.
+    // As this restriction has now been removed and tables can be interacted
+    // with directly after their Create() method has been called, we need to
+    // provide a way to make the on-disk table info available after the :Info
+    // stream has been closed.  So, we simply do a heap-based alloc and memcpy
+    // the structure over.  The table rundown routine knows to free this memory
+    // if Table->TableInfoOnDisk is not NULL and Table->Flags.Created == TRUE.
+    //
+
+    Allocator = Table->Allocator;
+
+    NewGraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)(
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            sizeof(*GraphInfoOnDisk)
+        )
+    );
+
+    if (!NewGraphInfoOnDisk) {
+        SYS_ERROR(HeapAlloc);
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    CopyMemory(NewGraphInfoOnDisk,
+               GraphInfoOnDisk,
+               sizeof(*GraphInfoOnDisk));
+
+    //
+    // Switch the pointers.
+    //
+
+    Table->TableInfoOnDisk = &NewGraphInfoOnDisk->TableInfoOnDisk;
+
+    //
     // Update the number of bytes written and close the file.
     //
 
@@ -635,7 +772,8 @@ PrepareCHeaderCallbackChm01(
     UNREFERENCED_PARAMETER(Context);
     UNREFERENCED_PARAMETER(Item);
 
-    return PH_E_NOT_IMPLEMENTED;
+    return S_OK;
+    //return PH_E_NOT_IMPLEMENTED;
 }
 
 _Use_decl_annotations_
@@ -648,7 +786,8 @@ PrepareCSourceCallbackChm01(
     UNREFERENCED_PARAMETER(Context);
     UNREFERENCED_PARAMETER(Item);
 
-    return PH_E_NOT_IMPLEMENTED;
+    return S_OK;
+    //return PH_E_NOT_IMPLEMENTED;
 }
 
 _Use_decl_annotations_
@@ -673,7 +812,6 @@ PrepareCSourceKeysCallbackChm01(
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
-    LARGE_INTEGER EndOfFile;
     const ULONG Indent = 0x20202020;
 
     UNREFERENCED_PARAMETER(Item);
@@ -739,31 +877,7 @@ PrepareCSourceKeysCallbackChm01(
                "#endif "
                "/* COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS */\n");
 
-    EndOfFile.QuadPart = ((ULONG_PTR)Output - (ULONG_PTR)Base);
-
-    Result = File->Vtbl->Close(File, &EndOfFile);
-    if (FAILED(Result)) {
-        PH_ERROR(PrepareCSourceKeysCallbackChm01, Result);
-        goto Error;
-    }
-
-    //
-    // We're done, finish up.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = PH_E_ERROR_PREPARING_C_HEADER_FILE;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
+    File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 
     return Result;
 }

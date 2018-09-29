@@ -70,8 +70,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     //
     // Pointer to the active on-disk structure describing the table.  This may
-    // be backed by stack-allocated memory (during creation) or memory mapped
-    // (if loaded from an existing table).
+    // be backed by stack-allocated memory (during creation), heap-allocated
+    // memory (after creation), or memory mapped memory (if loaded from disk).
     //
 
     struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;

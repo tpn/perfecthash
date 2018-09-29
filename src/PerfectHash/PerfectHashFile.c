@@ -133,6 +133,19 @@ End:
     return Result;
 }
 
+//
+// Disable SAL concurrency warnings:
+//
+//      warning C26110: Caller failing to hold lock 'File->Path->Lock'
+//          before calling function 'ReleaseSRWLockExclusive'.
+//
+//      warning C26167: Possibly releasing unheld lock 'File->Path->Lock'
+//          in function 'PerfectHashFileRundown'.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 26110 26167)
+
 PERFECT_HASH_FILE_RUNDOWN PerfectHashFileRundown;
 
 _Use_decl_annotations_
@@ -190,13 +203,15 @@ Return Value:
     // Release COM references.
     //
 
-    RELEASE(File->Path);
-    RELEASE(File->RenamePath);
+    UNLOCK_AND_RELEASE(File->Path);
+    UNLOCK_AND_RELEASE(File->RenamePath);
     RELEASE(File->Rtl);
     RELEASE(File->Allocator);
 
     return;
 }
+
+#pragma warning(pop)
 
 PERFECT_HASH_FILE_LOAD PerfectHashFileLoad;
 
@@ -695,6 +710,18 @@ End:
     return Result;
 }
 
+//
+// Suppress the following warnings that I can't figure out how to fix:
+//
+//      warning C26165: Possibly failing to release lock 'File->RenamePath'
+//          in function 'PerfectHashFileClose'.
+//
+//      warning C26167: Possibly releasing unheld lock 'RenamePath->Lock'
+//          in function 'PerfectHashFileClose'.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 26165 26167)
 
 PERFECT_HASH_FILE_CLOSE PerfectHashFileClose;
 
@@ -760,6 +787,8 @@ Return Value:
         if (EndOfFile.QuadPart < 0) {
             return E_INVALIDARG;
         }
+    } else {
+        EndOfFile.QuadPart = File->NumberOfBytesWritten.QuadPart;
     }
 
     if (!TryAcquirePerfectHashFileLockExclusive(File)) {
@@ -812,10 +841,14 @@ Return Value:
 
         //
         // End of file is 0, indicating that we should delete the file.  If a
-        // rename is scheduled, release the rename path.
+        // rename is scheduled, release the rename path's lock and ref count.
         //
 
         if (IsRenameScheduled(File)) {
+            _Analysis_assume_lock_acquired_(File->RenamePath);
+            _No_competing_thread_begin_
+            ReleasePerfectHashPathLockExclusive(File->RenamePath);
+            _No_competing_thread_end_
             File->RenamePath->Vtbl->Release(File->RenamePath);
             File->RenamePath = NULL;
         }
@@ -853,6 +886,8 @@ Return Value:
 
     return Result;
 }
+
+#pragma warning(pop)
 
 PERFECT_HASH_FILE_MAP PerfectHashFileMap;
 
@@ -1252,7 +1287,7 @@ Return Value:
 
     PH_E_FILE_LOCKED - The file is locked exclusively.
 
-    PH_E_FILE_NOT_OPEN - No file has been opened, or has been closed.
+    PH_E_FILE_NEVER_OPENED - No file has ever been loaded or created.
 
 --*/
 {
@@ -1271,9 +1306,9 @@ Return Value:
         return PH_E_FILE_LOCKED;
     }
 
-    if (!IsFileOpen(File)) {
+    if (FileNeverOpened(File)) {
         ReleasePerfectHashFileLockShared(File);
-        return PH_E_FILE_NOT_OPEN;
+        return PH_E_FILE_NEVER_OPENED;
     }
 
     //
@@ -1480,6 +1515,12 @@ Return Value:
         goto Error;
     }
 
+    //
+    // Clear the number of bytes written and map the file.
+    //
+
+    File->NumberOfBytesWritten.QuadPart = 0;
+
     Result = File->Vtbl->Map(File);
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashFileExtend, Result);
@@ -1685,7 +1726,7 @@ Return Value:
         return PH_E_FILE_LOCKED;
     }
 
-    if (!FileNeverOpened(File)) {
+    if (FileNeverOpened(File)) {
         Result = PH_E_FILE_NEVER_OPENED;
         goto Error;
     }
@@ -1734,7 +1775,7 @@ Return Value:
     //
 
     if (OldPath) {
-        _Analysis_assume_lock_held_(OldPath->Lock);
+        _Analysis_assume_lock_acquired_(OldPath->Lock);
         ReleasePerfectHashPathLockExclusive(OldPath);
         OldPath->Vtbl->Release(OldPath);
         OldPath = NULL;
@@ -1834,7 +1875,11 @@ Return Value:
         return PH_E_FILE_NO_RENAME_SCHEDULED;
     }
 
-    if (!File->Path || IsPathSet(File->Path)) {
+    //
+    // File->Path should be non-NULL, and point to a 'set' path.
+    //
+
+    if (!File->Path || !IsPathSet(File->Path)) {
         return PH_E_INVARIANT_CHECK_FAILED;
     }
 
@@ -1865,7 +1910,6 @@ Return Value:
     // Release the old path's lock and COM reference count.
     //
 
-    ReleasePerfectHashPathLockExclusive(OldPath);
     OldPath->Vtbl->Release(OldPath);
 
     return Result;

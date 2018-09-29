@@ -145,6 +145,16 @@ Return Value:
     }
 
     //
+    // Free the post-create in-memory allocation for the table info, if
+    // applicable.
+    //
+
+    if (Table->Flags.Created && Table->TableInfoOnDisk) {
+        PALLOCATOR Allocator = Table->Allocator;
+        Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
+    }
+
+    //
     // Release applicable COM references.
     //
 
@@ -720,8 +730,12 @@ Return Value:
         return E_POINTER;
     }
 
-    if (ValueSizeInBytes != 0 && ValueSizeInBytes != sizeof(ULONG)) {
-        return PH_E_INVALID_VALUE_SIZE;
+    if (ValueSizeInBytes != 0) {
+        if (ValueSizeInBytes != sizeof(ULONG)) {
+            return PH_E_INVALID_VALUE_SIZE;
+        }
+    } else {
+        ValueSizeInBytes = sizeof(ULONG);
     }
 
     //

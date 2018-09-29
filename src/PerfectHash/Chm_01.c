@@ -37,13 +37,17 @@ Abstract:
 // Define helper macros for checking prepare and save file work errors.
 //
 
-#define CHECK_PREPARE_ERRORS(Name, Upper)            \
-    if (Prepare##Name##.NumberOfErrors > 0) {        \
-        Result = Prepare##Name##.LastResult;         \
-        if (Result == S_OK) {                        \
-            Result = PH_E_ERROR_PREPARING_##Upper##; \
-        }                                            \
-        goto Error;                                  \
+#define CHECK_PREPARE_ERRORS(Name, Upper)                               \
+    if (Prepare##Name##.NumberOfErrors > 0) {                           \
+        Result = Prepare##Name##.LastResult;                            \
+        if (Result == S_OK) {                                           \
+            Result = PH_E_ERROR_PREPARING_##Upper##;                    \
+        }                                                               \
+            PH_ERROR(                                                   \
+                CreatePerfectHashTableImplChm01_ErrorPreparing##Name##, \
+                Result                                                  \
+            );                                                          \
+        goto Error;                                                     \
     }
 
 #define CHECK_ALL_PREPARE_ERRORS()                                       \
@@ -54,18 +58,25 @@ Abstract:
     CHECK_PREPARE_ERRORS(CSourceKeysFile, C_SOURCE_KEYS_FILE);           \
     CHECK_PREPARE_ERRORS(CSourceTableDataFile, C_SOURCE_TABLE_DATA_FILE)
 
-#define CHECK_SAVE_ERRORS(Name, Upper)            \
-    if (Save##Name##.NumberOfErrors > 0) {        \
-        Result = Save##Name##.LastResult;         \
-        if (Result == S_OK) {                     \
-            Result = PH_E_ERROR_SAVING_##Upper##; \
-        }                                         \
-        goto Error;                               \
+#define CHECK_SAVE_ERRORS(Name, Upper)                           \
+    if (Save##Name##.NumberOfErrors > 0) {                       \
+        Result = Save##Name##.LastResult;                        \
+        if (Result == S_OK) {                                    \
+            Result = PH_E_ERROR_SAVING_##Upper##;                \
+        }                                                        \
+        PH_ERROR(                                                \
+            CreatePerfectHashTableImplChm01_ErrorSaving##Name##, \
+            Result                                               \
+        );                                                       \
+        goto Error;                                              \
     }
 
 #define CHECK_ALL_SAVE_ERRORS()                                       \
     CHECK_SAVE_ERRORS(TableFile, TABLE_FILE);                         \
     CHECK_SAVE_ERRORS(TableInfoStream, TABLE_INFO_STREAM);            \
+    CHECK_SAVE_ERRORS(CHeaderFile, C_HEADER_FILE);                    \
+    CHECK_SAVE_ERRORS(CSourceFile, C_SOURCE_FILE);                    \
+    CHECK_SAVE_ERRORS(CSourceKeysFile, C_SOURCE_KEYS_FILE);           \
     CHECK_SAVE_ERRORS(CSourceTableDataFile, C_SOURCE_TABLE_DATA_FILE)
 
 
@@ -138,6 +149,7 @@ Return Value:
     ULONG_PTR ThisPage;
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
+    HRESULT SecondResult;
     PVOID BaseAddress = NULL;
     ULONG WaitResult;
     GRAPH_INFO Info;
@@ -163,6 +175,9 @@ Return Value:
     FILE_WORK_ITEM PrepareCSourceTableDataFile;
     FILE_WORK_ITEM SaveTableFile;
     FILE_WORK_ITEM SaveTableInfoStream;
+    FILE_WORK_ITEM SaveCHeaderFile;
+    FILE_WORK_ITEM SaveCSourceFile;
+    FILE_WORK_ITEM SaveCSourceKeysFile;
     FILE_WORK_ITEM SaveCSourceTableDataFile;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
@@ -193,7 +208,7 @@ Return Value:
     BOOL WaitForAllEvents = TRUE;
 
     HANDLE Events[5];
-    HANDLE SaveEvents[3];
+    HANDLE SaveEvents[6];
     HANDLE PrepareEvents[6];
 
     //
@@ -208,7 +223,10 @@ Return Value:
 
     SaveEvents[0] = Context->SavedTableFileEvent;
     SaveEvents[1] = Context->SavedTableInfoStreamEvent;
-    SaveEvents[2] = Context->SavedCSourceTableDataFileEvent;
+    SaveEvents[2] = Context->SavedCHeaderFileEvent;
+    SaveEvents[3] = Context->SavedCSourceFileEvent;
+    SaveEvents[4] = Context->SavedCSourceKeysFileEvent;
+    SaveEvents[5] = Context->SavedCSourceTableDataFileEvent;
 
     PrepareEvents[0] = Context->PreparedTableFileEvent;
     PrepareEvents[1] = Context->PreparedTableInfoStreamEvent;
@@ -1194,6 +1212,9 @@ FinishedSolution:
     // Dispatch save file work for the table data.
     //
 
+    SUBMIT_FILE_WORK(Save, CHeaderFile);
+    SUBMIT_FILE_WORK(Save, CSourceFile);
+    SUBMIT_FILE_WORK(Save, CSourceKeysFile);
     SUBMIT_FILE_WORK(Save, CSourceTableDataFile);
     SUBMIT_FILE_WORK(Save, TableInfoStream);
     SUBMIT_FILE_WORK(Save, TableFile);
@@ -1274,10 +1295,16 @@ End:
     //
 
     if (BaseAddress && ProcessHandle) {
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress);
-        if (FAILED(Result)) {
+        SecondResult = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                                ProcessHandle,
+                                                &BaseAddress);
+        if (FAILED(SecondResult)) {
             SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            PH_ERROR(CreatePerfectHashTableImplChm01_DestroyBuffer,
+                     SecondResult);
+            if (Result == S_OK) {
+                Result = SecondResult;
+            }
         }
     }
 
@@ -1292,7 +1319,9 @@ End:
 
         if (!ResetEvent(*Event)) {
             SYS_ERROR(ResetEvent);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+            if (Result == S_OK) {
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
     }
 

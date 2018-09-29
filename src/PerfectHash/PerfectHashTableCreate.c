@@ -220,16 +220,6 @@ Return Value:
     Table->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
 
     //
-    // Create the values array.
-    //
-
-    Result = PerfectHashTableCreateValuesArray(Table, 0);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashTableCreateValuesArray, Result);
-        goto Error;
-    }
-
-    //
     // Our main enumeration IDs get replicated in both structures.
     //
 
@@ -255,8 +245,15 @@ Return Value:
     }
 
     //
-    // Successfully created the table.
+    // Successfully created the table.  Create the values array, then update
+    // flags and state.
     //
+
+    Result = PerfectHashTableCreateValuesArray(Table, 0);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableCreateValuesArray, Result);
+        goto Error;
+    }
 
     Table->Flags.Created = TRUE;
     Table->Flags.Loaded = FALSE;
@@ -287,3 +284,4 @@ End:
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+// # vim:set ts=8 sw=4 sts=4 tw=78 et:

@@ -45,15 +45,15 @@ extern HMODULE PerfectHashModule;
 // Define a helper macro for validating flags passed as parameters to routines.
 //
 
-#define VALIDATE_FLAGS(Name, Upper)                                      \
-    if (ARGUMENT_PRESENT(##Name##FlagsPointer)) {                        \
-        if (FAILED(IsValid##Name##Flags(##Name##FlagsPointer))) { \
-            return PH_E_INVALID_##Upper##_FLAGS;                         \
-        } else {                                                         \
-            ##Name##Flags.AsULong = ##Name##FlagsPointer->AsULong;       \
-        }                                                                \
-    } else {                                                             \
-        ##Name##Flags.AsULong = 0;                                       \
+#define VALIDATE_FLAGS(Name, Upper)                                \
+    if (ARGUMENT_PRESENT(##Name##FlagsPointer)) {                  \
+        if (FAILED(IsValid##Name##Flags(##Name##FlagsPointer))) {  \
+            return PH_E_INVALID_##Upper##_FLAGS;                   \
+        } else {                                                   \
+            ##Name##Flags.AsULong = ##Name##FlagsPointer->AsULong; \
+        }                                                          \
+    } else {                                                       \
+        ##Name##Flags.AsULong = 0;                                 \
     }
 
 //
@@ -65,6 +65,13 @@ extern HMODULE PerfectHashModule;
     if (ARGUMENT_PRESENT(Name)) {  \
         Name->Vtbl->Release(Name); \
         Name = NULL;               \
+    }
+
+#define UNLOCK_AND_RELEASE(Name)              \
+    if (ARGUMENT_PRESENT(Name)) {             \
+        ReleaseSRWLockExclusive(&Name->Lock); \
+        Name->Vtbl->Release(Name);            \
+        Name = NULL;                          \
     }
 
 //
@@ -572,21 +579,21 @@ typedef FILE_TIMERS *PFILE_TIMERS;
 // QueryPerformanceCounter() routine.
 //
 
-#define START_FILE_TIMERS(Name)                              \
+#define START_FILE_TIMERS(Name)                             \
     QueryPerformanceCounter(&Timers->##Name##StartCounter); \
     Timers->##Name##StartCycles.QuadPart = __rdtsc()
 
-#define END_FILE_TIMERS(Name)                              \
+#define END_FILE_TIMERS(Name)                                \
     Timers->##Name##EndCycles.QuadPart = __rdtsc();          \
     QueryPerformanceCounter(&Timers->##Name##EndCounter);    \
     Timers->##Name##ElapsedCycles.QuadPart = (               \
         Timers->##Name##EndCycles.QuadPart -                 \
         Timers->##Name##StartCycles.QuadPart                 \
-    );                                                        \
+    );                                                       \
     Timers->##Name##ElapsedMicroseconds.QuadPart = (         \
         Timers->##Name##EndCounter.QuadPart -                \
         Timers->##Name##StartCounter.QuadPart                \
-    );                                                        \
+    );                                                       \
     Timers->##Name##ElapsedMicroseconds.QuadPart *= 1000000; \
     Timers->##Name##ElapsedMicroseconds.QuadPart /= (        \
         Timers->Frequency.QuadPart                           \

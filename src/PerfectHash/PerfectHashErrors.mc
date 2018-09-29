@@ -306,7 +306,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_SYSTEM_CALL_FAILED
 Language=English
-A routine supplied by the operating system has indicated failure.
+System call failed.
 .
 
 MessageId=0x225

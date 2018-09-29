@@ -380,7 +380,7 @@ Abstract:
 //
 // MessageText:
 //
-// A routine supplied by the operating system has indicated failure.
+// System call failed.
 //
 #define PH_E_SYSTEM_CALL_FAILED          ((HRESULT)0xE0040224L)
 

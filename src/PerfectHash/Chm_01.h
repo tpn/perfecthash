@@ -49,6 +49,17 @@ HRESULT
     );
 typedef PREPARE_FILE *PPREPARE_FILE;
 
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI SAVE_FILE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PPERFECT_HASH_FILE File
+    );
+typedef SAVE_FILE *PSAVE_FILE;
+
 extern PREPARE_FILE PrepareFileChm01;
+extern SAVE_FILE SaveFileChm01;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

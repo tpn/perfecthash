@@ -281,6 +281,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     FILE_STANDARD_INFO FileInfo;
 
     //
+    // Number of bytes written to BaseAddress if the file is writable.  This
+    // is used to adjust the file's end-of-file during Close() if no explicit
+    // end-of-file has been provided.
+    //
+
+    LARGE_INTEGER NumberOfBytesWritten;
+
+    //
     // If there's a pending end-of-file change that needs to be made, that is
     // captured here.  This is set by Close(), and subsequently read by Unmap(),
     // which uses it to determine how many pages to copy back from the large
