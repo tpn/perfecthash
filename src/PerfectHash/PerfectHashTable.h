@@ -96,6 +96,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     };
 
     //
+    // Pointer to the base address of the table data.  During creation, this
+    // is referred to as the "Assigned" array.  During the load phase, it is
+    // referred to as "table data".
+    //
+
+    union {
+        PULONG Assigned;
+        PULONG TableData;
+        PVOID TableDataBaseAddress;
+    };
+
+    //
     // Capture the number of elements in the underlying perfect hash table.
     // This refers to the number of vertices for the CHM algorithm, or can
     // mean the rounded-up power-of-2 size.  The masking implementations need

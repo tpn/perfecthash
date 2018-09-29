@@ -1129,7 +1129,7 @@ Return Value:
         File->MappedAddress = NULL;
     }
 
-    if (File->FileHandle) {
+    if (File->FileHandle && !IsFileReadOnly(File)) {
         if (!FlushFileBuffers(File->FileHandle)) {
             SYS_ERROR(FlushFileBuffers);
             Result = PH_E_SYSTEM_CALL_FAILED;

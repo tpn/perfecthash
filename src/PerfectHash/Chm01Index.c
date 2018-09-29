@@ -205,7 +205,7 @@ Return Value:
     Seed2 = Seeds[1];
     Seed3 = Seeds[2];
     Input = Key;
-    Assigned = (PULONG)Table->TableFile->BaseAddress;
+    Assigned = Table->Assigned;
 
     //
     // Calculate the individual hash parts.

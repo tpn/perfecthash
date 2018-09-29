@@ -381,6 +381,8 @@ Return Value:
         goto Error;
     }
 
+    Table->TableInfoOnDisk = TableInfoOnDisk;
+
     //
     // We've completed our validation of the :Info stream.  Proceed with the
     // table data file; create a new file instance, then Load() the path we
@@ -503,6 +505,7 @@ Return Value:
 
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
+    Table->TableDataBaseAddress = Table->TableFile->BaseAddress;
 
     goto End;
 

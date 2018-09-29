@@ -517,11 +517,14 @@ SaveTableCallbackChm01(
     PULONG Dest;
     PGRAPH Graph;
     PULONG Source;
+    ULONG LastError;
+    PVOID BaseAddress;
     HRESULT Result = S_OK;
     LONGLONG SizeInBytes;
     LARGE_INTEGER EndOfFile;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_FILE File;
+    BOOLEAN LargePagesForTableData;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
 
     UNREFERENCED_PARAMETER(Item);
@@ -557,6 +560,50 @@ SaveTableCallbackChm01(
     CopyMemory(Dest, Source, SizeInBytes);
 
     EndOfFile.QuadPart = (LONGLONG)SizeInBytes;
+
+    //
+    // Allocate and copy the table data to an in-memory copy so that the table
+    // can be used after Create() completes successfully.  See the comment in
+    // the SaveTableInfoStreamCallbackChm01() routine for more information.
+    //
+
+    LargePagesForTableData = TRUE;
+
+    BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
+                                                      NULL,
+                                                      SizeInBytes,
+                                                      MEM_RESERVE | MEM_COMMIT,
+                                                      PAGE_READWRITE,
+                                                      &LargePagesForTableData);
+
+    Table->TableDataBaseAddress = BaseAddress;
+
+    if (!BaseAddress) {
+        LastError = GetLastError();
+        SYS_ERROR(VirtualAlloc);
+        if (LastError == ERROR_OUTOFMEMORY) {
+            Result = E_OUTOFMEMORY;
+        } else {
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+        goto Error;
+    }
+
+    //
+    // Update flags with large page result for values array.
+    //
+
+    Table->Flags.TableDataUsesLargePages = LargePagesForTableData;
+
+    //
+    // Copy the table data over to the newly allocated buffer.
+    //
+
+    CopyMemory(Table->TableDataBaseAddress, Source, SizeInBytes);
+
+    //
+    // Proceed with closing the file.
+    //
 
     Result = File->Vtbl->Close(File, &EndOfFile);
 

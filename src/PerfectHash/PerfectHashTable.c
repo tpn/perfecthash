@@ -145,13 +145,21 @@ Return Value:
     }
 
     //
-    // Free the post-create in-memory allocation for the table info, if
-    // applicable.
+    // Free the post-create in-memory allocation for the table info and table
+    // data, if applicable.
     //
 
-    if (Table->Flags.Created && Table->TableInfoOnDisk) {
-        PALLOCATOR Allocator = Table->Allocator;
-        Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
+    if (Table->Flags.Created) {
+        if (Table->TableInfoOnDisk) {
+            PALLOCATOR Allocator = Table->Allocator;
+            Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
+        }
+        if (Table->Assigned) {
+            if (!VirtualFree(Table->Assigned, 0, MEM_RELEASE)) {
+                SYS_ERROR(VirtualFree);
+            }
+            Table->Assigned = NULL;
+        }
     }
 
     //
