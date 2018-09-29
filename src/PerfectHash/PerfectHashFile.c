@@ -133,19 +133,6 @@ End:
     return Result;
 }
 
-//
-// Disable SAL concurrency warnings:
-//
-//      warning C26110: Caller failing to hold lock 'File->Path->Lock'
-//          before calling function 'ReleaseSRWLockExclusive'.
-//
-//      warning C26167: Possibly releasing unheld lock 'File->Path->Lock'
-//          in function 'PerfectHashFileRundown'.
-//
-
-#pragma warning(push)
-#pragma warning(disable: 26110 26167)
-
 PERFECT_HASH_FILE_RUNDOWN PerfectHashFileRundown;
 
 _Use_decl_annotations_
@@ -203,15 +190,13 @@ Return Value:
     // Release COM references.
     //
 
-    UNLOCK_AND_RELEASE(File->Path);
-    UNLOCK_AND_RELEASE(File->RenamePath);
+    RELEASE(File->Path);
+    RELEASE(File->RenamePath);
     RELEASE(File->Rtl);
     RELEASE(File->Allocator);
 
     return;
 }
-
-#pragma warning(pop)
 
 PERFECT_HASH_FILE_LOAD PerfectHashFileLoad;
 
@@ -710,19 +695,6 @@ End:
     return Result;
 }
 
-//
-// Suppress the following warnings that I can't figure out how to fix:
-//
-//      warning C26165: Possibly failing to release lock 'File->RenamePath'
-//          in function 'PerfectHashFileClose'.
-//
-//      warning C26167: Possibly releasing unheld lock 'RenamePath->Lock'
-//          in function 'PerfectHashFileClose'.
-//
-
-#pragma warning(push)
-#pragma warning(disable: 26165 26167)
-
 PERFECT_HASH_FILE_CLOSE PerfectHashFileClose;
 
 _Use_decl_annotations_
@@ -845,10 +817,6 @@ Return Value:
         //
 
         if (IsRenameScheduled(File)) {
-            _Analysis_assume_lock_acquired_(File->RenamePath);
-            _No_competing_thread_begin_
-            ReleasePerfectHashPathLockExclusive(File->RenamePath);
-            _No_competing_thread_end_
             File->RenamePath->Vtbl->Release(File->RenamePath);
             File->RenamePath = NULL;
         }
@@ -886,8 +854,6 @@ Return Value:
 
     return Result;
 }
-
-#pragma warning(pop)
 
 PERFECT_HASH_FILE_MAP PerfectHashFileMap;
 
@@ -1726,6 +1692,11 @@ Return Value:
         return PH_E_FILE_LOCKED;
     }
 
+    if (!TryAcquirePerfectHashPathLockExclusive(NewPath)) {
+        ReleasePerfectHashFileLockExclusive(File);
+        return PH_E_PATH_LOCKED;
+    }
+
     if (FileNeverOpened(File)) {
         Result = PH_E_FILE_NEVER_OPENED;
         goto Error;
@@ -1736,10 +1707,6 @@ Return Value:
         goto Error;
     }
 
-    if (!TryAcquirePerfectHashPathLockExclusive(NewPath)) {
-        Result = PH_E_PATH_LOCKED;
-        goto Error;
-    }
 
     //
     // Verify the requested new path and current path differ.
@@ -1751,7 +1718,6 @@ Return Value:
                                        TRUE);
 
     if (Equal) {
-        ReleasePerfectHashPathLockExclusive(NewPath);
         Result = PH_E_RENAME_PATH_IS_SAME_AS_CURRENT_PATH;
         goto Error;
     }
@@ -1775,8 +1741,6 @@ Return Value:
     //
 
     if (OldPath) {
-        _Analysis_assume_lock_acquired_(OldPath->Lock);
-        ReleasePerfectHashPathLockExclusive(OldPath);
         OldPath->Vtbl->Release(OldPath);
         OldPath = NULL;
     }
@@ -1812,6 +1776,7 @@ Error:
 
 End:
 
+    ReleasePerfectHashPathLockExclusive(NewPath);
     ReleasePerfectHashFileLockExclusive(File);
 
     return Result;

@@ -20,17 +20,6 @@ Abstract:
 #include "stdafx.h"
 #include "Chm_01.h"
 
-//
-// Temporarily disable the following concurrency SAL warning, as I
-// can't figure out how to suppress it at the moment.
-//
-//  warning C26165: Possibly failing to release lock 'Path->Lock'
-//      in function 'PrepareFileChm01'.
-//
-
-#pragma warning(push)
-#pragma warning(disable: 26165)
-
 PREPARE_FILE PrepareFileChm01;
 
 _Use_decl_annotations_
@@ -197,8 +186,6 @@ End:
 
     return Result;
 }
-
-#pragma warning(pop)
 
 SAVE_FILE SaveFileChm01;
 

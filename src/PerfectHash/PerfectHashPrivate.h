@@ -67,13 +67,6 @@ extern HMODULE PerfectHashModule;
         Name = NULL;               \
     }
 
-#define UNLOCK_AND_RELEASE(Name)              \
-    if (ARGUMENT_PRESENT(Name)) {             \
-        ReleaseSRWLockExclusive(&Name->Lock); \
-        Name->Vtbl->Release(Name);            \
-        Name = NULL;                          \
-    }
-
 //
 // Metadata about a perfect hash table is stored in an NTFS stream named :Info
 // that is tacked onto the end of the perfect hash table's file name.  Define

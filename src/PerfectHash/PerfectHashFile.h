@@ -83,7 +83,6 @@ _Check_return_
 _Success_(return >= 0)
 _Requires_lock_not_held_(File->Lock)
 _Requires_lock_not_held_(NewPath->Lock)
-_Acquires_exclusive_lock_(NewPath->Lock)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_SCHEDULE_RENAME)(
     _In_ PPERFECT_HASH_FILE File,
