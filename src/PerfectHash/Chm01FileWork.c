@@ -275,6 +275,7 @@ Return Value:
     HANDLE DependentEvent = NULL;
     PPERFECT_HASH_PATH Path = NULL;
     PTABLE_INFO_ON_DISK TableInfo;
+    PPERFECT_HASH_FILE *File = NULL;
 
     //
     // Initialize aliases.
@@ -303,7 +304,6 @@ Return Value:
         LARGE_INTEGER EndOfFile;
         ULARGE_INTEGER NumTableElements;
         SYSTEM_INFO SystemInfo;
-        PPERFECT_HASH_FILE *File;
 
         GetSystemInfo(&SystemInfo);
         EndOfFile.QuadPart = SystemInfo.dwAllocationGranularity;
@@ -366,6 +366,7 @@ Return Value:
                 break;
 
             default:
+                ASSERT(FALSE);
                 Result = PH_E_INVALID_FILE_WORK_ID;
                 PH_ERROR(FileWorkCallbackChm01, Result);
                 goto End;
@@ -404,7 +405,6 @@ Return Value:
     } else {
 
         ULONG WaitResult;
-        PPERFECT_HASH_FILE File = NULL;
 
         if (!IsSaveFileWorkId(Item->FileWorkId)) {
             ASSERT(FALSE);
@@ -425,17 +425,17 @@ Return Value:
                 break;
 
             case FileWorkSaveCHeaderFileId:
-                File = Table->CHeaderFile;
+                File = &Table->CHeaderFile;
                 DependentEvent = Context->PreparedCHeaderFileEvent;
                 break;
 
             case FileWorkSaveCSourceFileId:
-                File = Table->CSourceFile;
+                File = &Table->CSourceFile;
                 DependentEvent = Context->PreparedCSourceFileEvent;
                 break;
 
             case FileWorkSaveCSourceKeysFileId:
-                File = Table->CSourceKeysFile;
+                File = &Table->CSourceKeysFile;
                 DependentEvent = Context->PreparedCSourceKeysFileEvent;
                 break;
 
@@ -445,6 +445,7 @@ Return Value:
                 break;
 
             default:
+                ASSERT(FALSE);
                 break;
         }
 
@@ -459,7 +460,7 @@ Return Value:
 
         if (!Impl) {
             ASSERT(File);
-            Result = SaveFileChm01(Table, File);
+            Result = SaveFileChm01(Table, *File);
             if (FAILED(Result)) {
 
                 //
