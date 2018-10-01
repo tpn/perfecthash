@@ -160,10 +160,16 @@ typedef union _PERFECT_HASH_FILE_STATE {
         ULONG IsReadOnly:1;
 
         //
+        // The file is in the process of being extended.
+        //
+
+        ULONG IsBeingExtended:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
 
     LONG AsLong;
@@ -180,6 +186,7 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 #define IsFileClosed(File) (File->State.IsClosed)
 #define FileNeverOpened(File) (!IsFileOpen(File) && !IsFileClosed(File))
 #define IsFileReadOnly(File) (File->State.IsReadOnly)
+#define IsFileBeingExtended(File) (File->State.IsBeingExtended)
 #define IsViewMapped(File) (File->MappedAddress != NULL)
 #define IsViewCreated(File) (File->MappingHandle != NULL)
 #define WantsLargePages(File) (!File->Flags.DoesNotWantLargePages)

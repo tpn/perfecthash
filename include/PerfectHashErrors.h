@@ -1042,3 +1042,12 @@ Abstract:
 //
 #define PH_E_INVALID_VALUE_SIZE          ((HRESULT)0xE004026BL)
 
+//
+// MessageId: PH_E_FILE_ALREADY_BEING_EXTENDED
+//
+// MessageText:
+//
+// A file extension operation is already in progress.
+//
+#define PH_E_FILE_ALREADY_BEING_EXTENDED ((HRESULT)0xE004026CL)
+

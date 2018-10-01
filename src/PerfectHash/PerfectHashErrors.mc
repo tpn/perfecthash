@@ -896,3 +896,11 @@ Language=English
 Invalid value size.
 .
 
+MessageId=0x26c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_ALREADY_BEING_EXTENDED
+Language=English
+A file extension operation is already in progress.
+.
+

@@ -1096,23 +1096,31 @@ Return Value:
         //
         // If MappedAddress is non-NULL, BaseAddress is actually our
         // large page address which needs to be freed with VirtualFree().
-        // If the file is not read-only, copy the base address contents
-        // back to the mapped address.
         //
 
         ASSERT(File->Flags.UsesLargePages);
 
-        if (!IsFileReadOnly(File)) {
-            ULONG NumberOfPages;
+        if (!IsFileReadOnly(File) && !IsFileBeingExtended(File)) {
 
-            NumberOfPages = NumberOfPagesForPendingEndOfFile(File);
+            //
+            // The file is not read only and not being extended, so, copy the
+            // data back to the mapped address first.
+            //
 
-            if (NumberOfPages > 0) {
+            ULONG NumberOfPagesForAllocation;
+            ULONG NumberOfPagesForPending;
+
+            NumberOfPagesForAllocation = NumberOfPagesForFile(File);
+            NumberOfPagesForPending = NumberOfPagesForPendingEndOfFile(File);
+
+            ASSERT(NumberOfPagesForPending <= NumberOfPagesForAllocation);
+
+            if (NumberOfPagesForPending > 0) {
 
                 Rtl->Vtbl->CopyPages(Rtl,
                                      File->MappedAddress,
                                      File->BaseAddress,
-                                     NumberOfPages);
+                                     NumberOfPagesForPending);
             }
         }
 
@@ -1420,6 +1428,9 @@ Return Value:
         less than or equal to the current end-of-file.  (To reduce the size
         of an existing file, Truncate() should be used.)
 
+    PH_E_FILE_ALREADY_BEING_EXTENDED - A file extension is already in
+        progress.
+
 --*/
 {
     HRESULT Result = S_OK;
@@ -1452,6 +1463,13 @@ Return Value:
         Result = PH_E_FILE_READONLY;
         goto Error;
     }
+
+    if (IsFileBeingExtended(File)) {
+        Result = PH_E_FILE_ALREADY_BEING_EXTENDED;
+        goto Error;
+    }
+
+    File->State.IsBeingExtended = TRUE;
 
     if (EndOfFile.QuadPart <= File->FileInfo.EndOfFile.QuadPart) {
         Result = PH_E_NEW_EOF_LESS_THAN_OR_EQUAL_TO_CURRENT_EOF;
@@ -1510,6 +1528,8 @@ Error:
     //
 
 End:
+
+    File->State.IsBeingExtended = FALSE;
 
     return Result;
 }
