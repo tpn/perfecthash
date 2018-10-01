@@ -85,7 +85,7 @@
     <ClInclude Include="..\..\include\CompiledPerfectHashTable.h" />
     <ClInclude Include="..\..\include\PerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHashErrors.h" />
-    <ClInclude Include="Chm_01.h" />
+    <ClInclude Include="Chm01.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Graph.h" />
     <ClInclude Include="PerfectHashAllocator.h" />
@@ -107,7 +107,7 @@
   <ItemGroup>
     <ClCompile Include="Chm01FileWork.c" />
     <ClCompile Include="Chm01Index.c" />
-    <ClCompile Include="Chm_01.c" />
+    <ClCompile Include="Chm01.c" />
     <ClCompile Include="Component.c" />
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="Graph.c" />

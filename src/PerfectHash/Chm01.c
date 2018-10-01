@@ -13,7 +13,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
-#include "Chm_01.h"
+#include "Chm01.h"
 
 //
 // Define the threshold for how many attempts need to be made at finding a

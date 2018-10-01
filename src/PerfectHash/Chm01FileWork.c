@@ -18,7 +18,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
-#include "Chm_01.h"
+#include "Chm01.h"
 
 PREPARE_FILE PrepareFileChm01;
 
