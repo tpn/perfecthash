@@ -95,7 +95,7 @@ Return Value:
     // during the creation routine's assignment step (GraphAssign()).
     //
 
-    Assigned = (PULONG)Table->TableFile->BaseAddress;
+    Assigned = Table->Assigned;
 
     Vertex1 = Assigned[MaskedLow];
     Vertex2 = Assigned[MaskedHigh];
@@ -420,7 +420,7 @@ Return Value:
     // during the creation routine's assignment step (GraphAssign()).
     //
 
-    Assigned = (PULONG)Table->TableFile->BaseAddress;
+    Assigned = Table->Assigned;
 
     Vertex1 = Assigned[MaskedLow];
     Vertex2 = Assigned[MaskedHigh];
@@ -603,7 +603,7 @@ Return Value:
     // during the creation routine's assignment step (GraphAssign()).
     //
 
-    Assigned = (PULONG)Table->TableFile->BaseAddress;
+    Assigned = Table->Assigned;
 
     Vertex1 = Assigned[MaskedLow];
     Vertex2 = Assigned[MaskedHigh];
