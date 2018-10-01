@@ -1001,6 +1001,7 @@ Return Value:
 
         WIDE_OUTPUT_RAW(WideOutput, L"Successfully tested perfect hash "
                                     L"table.\n\n");
+        WIDE_OUTPUT_FLUSH();
 
         //
         // Attempt to compile the table.  WIP.
