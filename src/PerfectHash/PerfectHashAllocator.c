@@ -38,11 +38,10 @@ AllocatorCalloc(
     )
 {
     SIZE_T Size = NumberOfElements * ElementSize;
-    return HeapAlloc(
-        Allocator->HeapHandle,
-        HEAP_ZERO_MEMORY,
-        Size
-    );
+    PVOID Address;
+
+    Address = HeapAlloc(Allocator->HeapHandle, HEAP_ZERO_MEMORY, Size);
+    return Address;
 }
 
 
