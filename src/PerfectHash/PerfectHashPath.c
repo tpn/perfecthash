@@ -542,7 +542,7 @@ Return Value:
         Path->Flags.BaseNameIsValidCIdentifier = TRUE;
 
         ASSERT(Path->BaseNameA.Length + 1 <= Path->BaseNameA.MaximumLength);
-        Path->BaseNameA.Buffer[Path->BaseNameA.Length + 1] = '\0';
+        Path->BaseNameA.Buffer[Path->BaseNameA.Length] = '\0';
     }
 
     //
