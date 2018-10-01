@@ -1051,3 +1051,22 @@ Abstract:
 //
 #define PH_E_FILE_ALREADY_BEING_EXTENDED ((HRESULT)0xE004026CL)
 
+//
+// MessageId: PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION
+//
+// MessageText:
+//
+// Collisions encountered during graph validation.
+//
+#define PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION ((HRESULT)0xE004026DL)
+
+//
+// MessageId: PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
+//
+// MessageText:
+//
+// The number of value assignments did not equal the number of keys during
+// graph validation.
+//
+#define PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION ((HRESULT)0xE004026EL)
+

@@ -1487,7 +1487,14 @@ Return Value:
 
     S_OK - Graph was solved successfully.
 
-    E_FAIL - Graph failed verification.
+    E_UNEXPECTED - Internal error during graph validation.
+
+    PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION - Collisions were
+        detected during graph validation.
+
+    PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION -
+        The number of value assignments did not equal the number of keys
+        during graph validation.
 
 --*/
 {
@@ -1517,6 +1524,7 @@ Return Value:
     LONGLONG PrevCombined;
     ULARGE_INTEGER Hash;
     ULARGE_INTEGER PrevHash;
+    HRESULT Result = S_OK;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
 
@@ -1601,7 +1609,6 @@ Return Value:
 
             Collisions++;
 
-            __debugbreak();
         }
 
         //
@@ -1613,17 +1620,38 @@ Return Value:
 
     }
 
-    ASSERT(Collisions == 0);
+    if (Collisions) {
+        Result = PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION;
+        goto Error;
+    }
 
     NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
 
-    ASSERT(NumberOfAssignments == NumberOfKeys);
+    if (NumberOfAssignments != NumberOfKeys) {
+        Result =
+            PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION;
+        goto Error;
+    }
 
-    return S_OK;
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
 
 Error:
 
-    return E_FAIL;
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
 }
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     : 

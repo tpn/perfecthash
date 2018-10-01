@@ -904,3 +904,19 @@ Language=English
 A file extension operation is already in progress.
 .
 
+MessageId=0x26d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION
+Language=English
+Collisions encountered during graph validation.
+.
+
+MessageId=0x26e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
+Language=English
+The number of value assignments did not equal the number of keys during
+graph validation.
+.
