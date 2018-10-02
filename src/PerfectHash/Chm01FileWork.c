@@ -935,6 +935,7 @@ SaveCSourceTableDataCallbackChm01(
     PULONG Source;
     PCSTRING Name;
     ULONGLONG Index;
+    ULONG WaitResult;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_PATH Path;
@@ -955,13 +956,25 @@ SaveCSourceTableDataCallbackChm01(
     Table = Context->Table;
     File = Table->CSourceTableDataFile;
     Path = File->Path;
-    Name = &Table->TableFile->Path->BaseNameA;
     TableInfo = Table->TableInfoOnDisk;
     TotalNumberOfElements = TableInfo->NumberOfTableElements.QuadPart;
     NumberOfElements = TotalNumberOfElements >> 1;
     Graph = (PGRAPH)Context->SolvedContext;
     Source = Graph->Assigned;
     Output = Base = (PCHAR)File->BaseAddress;
+
+    //
+    // We need to wait on the table file's prepared event before we can access
+    // the path's basename.
+    //
+
+    WaitResult = WaitForSingleObject(Context->PreparedTableFileEvent, INFINITE);
+    if (WaitResult != WAIT_OBJECT_0) {
+        SYS_ERROR(WaitForSingleObject);
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
+
+    Name = &Table->TableFile->Path->BaseNameA;
 
     //
     // Write seed data.
