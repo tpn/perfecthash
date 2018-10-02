@@ -678,14 +678,14 @@ SaveTableInfoStreamCallbackChm01(
                sizeof(*GraphInfoOnDisk));
 
     //
-    // Save the seed values used by this graph.  (Everything else in the on-disk
-    // info representation was saved earlier.)
+    // Copy the seed data from the graph to the table info structure.
     //
 
-    TableInfoOnDisk->Seed1 = Graph->Seed1;
-    TableInfoOnDisk->Seed2 = Graph->Seed2;
-    TableInfoOnDisk->Seed3 = Graph->Seed3;
-    TableInfoOnDisk->Seed4 = Graph->Seed4;
+    ASSERT(Graph->FirstSeed);
+
+    CopyMemory(&TableInfoOnDisk->FirstSeed,
+               &Graph->FirstSeed,
+               Graph->NumberOfSeeds * sizeof(Graph->FirstSeed));
 
     //
     // Wait on the verification complete event.  This is done in the
@@ -969,12 +969,12 @@ SaveCSourceTableDataCallbackChm01(
 
     OUTPUT_RAW("#pragma const_seg(\".cpht_seeds\")\n");
     OUTPUT_RAW("const unsigned long Seeds[");
-    OUTPUT_INT(TableInfo->NumberOfSeeds);
+    OUTPUT_INT(Graph->NumberOfSeeds);
     OUTPUT_RAW("] = {\n");
 
-    Seed = &TableInfo->FirstSeed;
+    Seed = &Graph->FirstSeed;
 
-    for (Index = 0, Count = 0; Index < TableInfo->NumberOfSeeds; Index++) {
+    for (Index = 0, Count = 0; Index < Graph->NumberOfSeeds; Index++) {
 
         if (Count == 0) {
             INDENT();
@@ -1001,9 +1001,9 @@ SaveCSourceTableDataCallbackChm01(
         *(Output - 1) = '\n';
     }
 
-    ASSERT(TableInfo->NumberOfSeeds == 4);
+    ASSERT(Graph->NumberOfSeeds == 4);
 
-    Seed = &TableInfo->FirstSeed;
+    Seed = &Graph->FirstSeed;
 
     OUTPUT_RAW("};\nstatic const unsigned long Seed1 = ");
     OUTPUT_HEX(*Seed++);
@@ -1014,7 +1014,7 @@ SaveCSourceTableDataCallbackChm01(
     OUTPUT_RAW(";\nstatic const unsigned long Seed4 = ");
     OUTPUT_HEX(*Seed++);
 
-    Seed = &TableInfo->FirstSeed;
+    Seed = &Graph->FirstSeed;
 
     OUTPUT_RAW(";\n#define SEED1 ");
     OUTPUT_HEX(*Seed++);
