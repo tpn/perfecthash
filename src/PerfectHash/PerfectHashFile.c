@@ -984,7 +984,11 @@ Return Value:
                                         LargePageAllocFlags,
                                         PAGE_READWRITE);
 
-        if (LargePageAddress) {
+        if (!LargePageAddress) {
+
+            File->Flags.UsesLargePages = FALSE;
+
+        } else {
 
             //
             // The large page allocation was successful.
@@ -1133,6 +1137,7 @@ Return Value:
         // Switch the base address back so it's unmapped correctly below.
         //
 
+        File->Flags.UsesLargePages = FALSE;
         File->BaseAddress = File->MappedAddress;
         File->MappedAddress = NULL;
     }
