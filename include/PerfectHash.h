@@ -106,6 +106,13 @@ typedef _Null_terminated_ CONST CHAR *PCSZ;
 #define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
 
 //
+// Define start/end markers for IACA.
+//
+
+#define IACA_VC_START() __writegsbyte(111, 111)
+#define IACA_VC_END()   __writegsbyte(222, 222)
+
+//
 // Define an enumeration for identifying CPU architectures.
 //
 
