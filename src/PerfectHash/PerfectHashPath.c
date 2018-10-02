@@ -1140,42 +1140,33 @@ Return Value:
     }
 
     //
-    // Write the period prior to the extension.
+    // Write the period prior to the extension, then copy the extension.
     //
 
     *Dest++ = L'.';
 
-    if (ARGUMENT_PRESENT(NewExtension)) {
-        Source = NewExtension;
-    } else {
-        Source = &ExistingPath->Extension;
-    }
-
+    Source = Extension;
     Count = Source->Length >> 1;
     CopyMemory(Dest, Source->Buffer, Source->Length);
     Dest += Count;
     ASSERT(*Dest == L'\0');
+    ExpectedDest = LastExpectedDest + Count + 1;
+    CHECK_DEST();
+    LastExpectedDest = ExpectedDest;
 
     //
     // Copy the NTFS stream name if applicable.
     //
 
     if (HasStream) {
-
-        if (ARGUMENT_PRESENT(NewStreamName)) {
-            Source = NewStreamName;
-        } else {
-            Source = &ExistingPath->StreamName;
-        }
-
         *Dest++ = L':';
-
+        Source = StreamName;
         Count = Source->Length >> 1;
-
         CopyMemory(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ASSERT(*Dest == L'\0');
-
+        ExpectedDest = LastExpectedDest + Count + 1;
+        CHECK_DEST();
     }
 
     //
@@ -1185,7 +1176,7 @@ Return Value:
     *Dest++ = L'\0';
 
     //
-    // Verify the Dest pointer matches where we expect it to.
+    // Verify the final Dest pointer matches where we expect it to.
     //
 
     ExpectedDest = (PWSTR)(
@@ -1196,12 +1187,6 @@ Return Value:
     );
 
     CHECK_DEST();
-
-    if ((ULONG_PTR)Dest != (ULONG_PTR)ExpectedDest) {
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashPathCreate_ExpectedDest_AllocSize, Result);
-        goto Error;
-    }
 
     //
     // Align the destination pointer up to an 8-byte boundary and verify it
@@ -1217,11 +1202,6 @@ Return Value:
     );
 
     CHECK_DEST();
-
-    if ((ULONG_PTR)Dest != (ULONG_PTR)ExpectedDest) {
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        goto Error;
-    }
 
     //
     // Initialize the BaseNameA string to point to the area after the full path
