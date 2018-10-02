@@ -269,13 +269,17 @@ Language=English
 A table loading operation is already in progress.
 .
 
-MessageId=0x220
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS
-Language=English
-Invalid context create table flags.
-.
+;//
+;// Removed 2018-10-01.
+;//
+;// MessageId=0x220
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS
+;// Language=English
+;// Invalid context create table flags.
+;// .
+;//
 
 MessageId=0x221
 Severity=Fail

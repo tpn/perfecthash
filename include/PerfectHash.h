@@ -1531,82 +1531,6 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
       *PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY;
 
-typedef
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ PCUNICODE_STRING OutputDirectory
-    );
-typedef PERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY
-      *PPERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY;
-
-typedef
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ PCUNICODE_STRING *OutputDirectory
-    );
-typedef PERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY
-      *PPERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY;
-
-//
-// Define create table flags and associated function pointer.
-//
-
-typedef union _PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS {
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:32;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS
-      *PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS;
-
-FORCEINLINE
-HRESULT
-IsValidContextCreateTableFlags(
-    _In_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags
-    )
-{
-
-    if (!ARGUMENT_PRESENT(CreateTableFlags)) {
-        return E_POINTER;
-    }
-
-    if (CreateTableFlags->Unused != 0) {
-        return E_FAIL;
-    }
-
-    return S_OK;
-}
-
-typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
-typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
-
-typedef
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_CREATE_TABLE)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_ PPERFECT_HASH_KEYS Keys,
-    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags,
-    _COM_Outptr_ PVOID *Table
-    );
-typedef PERFECT_HASH_CONTEXT_CREATE_TABLE *PPERFECT_HASH_CONTEXT_CREATE_TABLE;
-
 //
 // Define the self-test flags and associated function pointer.
 //
@@ -1655,6 +1579,47 @@ IsValidContextSelfTestFlags(
 
     return S_OK;
 }
+
+//
+// Define the table create flags here as they're needed for SelfTest().
+//
+
+typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:32;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_CREATE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_CREATE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_CREATE_FLAGS
+      *PPERFECT_HASH_TABLE_CREATE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidTableCreateFlags(
+    _In_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(TableCreateFlags)) {
+        return E_POINTER;
+    }
+
+    if (TableCreateFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
 
 //
 // Define the table load flags here as they're needed for SelfTest().
@@ -1779,7 +1744,7 @@ HRESULT
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_opt_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
     _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    _In_opt_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
     _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
     );
@@ -1811,7 +1776,7 @@ HRESULT
     _Inout_ PULONG MaximumConcurrency,
     _Inout_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
     _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    _Inout_ PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags,
+    _Inout_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     _Inout_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
     _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
     );
@@ -1822,9 +1787,6 @@ typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
     PPERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
-    PPERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY SetOutputDirectory;
-    PPERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY GetOutputDirectory;
-    PPERFECT_HASH_CONTEXT_CREATE_TABLE CreateTable;
     PPERFECT_HASH_CONTEXT_SELF_TEST SelfTest;
     PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
     PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
@@ -1844,42 +1806,6 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 //
 
 DECLARE_COMPONENT(Table, PERFECT_HASH_TABLE);
-
-typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:32;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_TABLE_CREATE_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_CREATE_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_TABLE_CREATE_FLAGS
-      *PPERFECT_HASH_TABLE_CREATE_FLAGS;
-
-FORCEINLINE
-HRESULT
-IsValidTableCreateFlags(
-    _In_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
-    )
-{
-
-    if (!ARGUMENT_PRESENT(TableCreateFlags)) {
-        return E_POINTER;
-    }
-
-    if (TableCreateFlags->Unused != 0) {
-        return E_FAIL;
-    }
-
-    return S_OK;
-}
 
 typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;

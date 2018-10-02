@@ -536,7 +536,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding3;
+    //PVOID Padding3;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
@@ -620,12 +620,6 @@ extern PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY
     PerfectHashContextSetMaximumConcurrency;
 extern PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
     PerfectHashContextGetMaximumConcurrency;
-extern PERFECT_HASH_CONTEXT_SET_OUTPUT_DIRECTORY
-    PerfectHashContextSetOutputDirectory;
-extern PERFECT_HASH_CONTEXT_GET_OUTPUT_DIRECTORY
-    PerfectHashContextGetOutputDirectory;
-extern PERFECT_HASH_CONTEXT_CREATE_TABLE
-    PerfectHashContextCreateTable;
 extern PERFECT_HASH_CONTEXT_SELF_TEST PerfectHashContextSelfTest;
 extern PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
     PerfectHashContextSelfTestArgvW;

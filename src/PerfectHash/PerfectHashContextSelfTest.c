@@ -29,7 +29,7 @@ PerfectHashContextSelfTest(
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlagsPointer,
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
-    PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlagsPointer,
+    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
     PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
     PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer
     )
@@ -62,8 +62,8 @@ Arguments:
     KeysLoadFlags - Optionally supplies a pointer to a key loading flags
         structure that can be used to customize key loading behavior.
 
-    ContextCreateTableFlags - Optionally supplies a pointer to a create table
-        flags structure that can be used to customize table creation behavior.
+    TableCreateFlags - Optionally supplies a pointer to a table create flags
+        structure that can be used to customize table creation behavior.
 
     TableLoadFlags - Optionally supplies a pointer to a load table flags
         structure that can be used to customize table loading behavior.
@@ -93,8 +93,7 @@ Return Value:
 
     PH_E_INVALID_KEYS_LOAD_FLAGS - Invalid keys load flags.
 
-    PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS - Invalid context create table
-        flags.
+    PH_E_INVALID_TABLE_CREATE_FLAGS - Invalid table create flags.
 
     PH_E_INVALID_TABLE_LOAD_FLAGS - Invalid table load flags.
 
@@ -154,7 +153,6 @@ Return Value:
     PUNICODE_STRING MaskFunctionName;
     PERFECT_HASH_CPU_ARCH_ID CpuArchId;
     PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags;
-    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags;
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
@@ -173,7 +171,7 @@ Return Value:
 
     VALIDATE_FLAGS(ContextSelfTest, CONTEXT_SELF_TEST);
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
-    VALIDATE_FLAGS(ContextCreateTable, CONTEXT_CREATE_TABLE);
+    VALIDATE_FLAGS(TableCreate, TABLE_CREATE);
     VALIDATE_FLAGS(TableLoad, TABLE_LOAD);
     VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
 
@@ -207,12 +205,6 @@ Return Value:
 
     if (!IsValidPerfectHashMaskFunctionId(MaskFunctionId)) {
         return E_INVALIDARG;
-    }
-
-    Result = Context->Vtbl->SetOutputDirectory(Context, OutputDirectory);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextSelfTest, Result);
-        return Result;
     }
 
     //
@@ -1152,11 +1144,11 @@ PerfectHashContextExtractSelfTestArgsFromArgvW(
     PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PULONG MaximumConcurrency,
-    PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags,
-    PPERFECT_HASH_KEYS_LOAD_FLAGS LoadKeysFlags,
-    PPERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS CreateTableFlags,
-    PPERFECT_HASH_TABLE_LOAD_FLAGS LoadTableFlags,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileTableFlags
+    PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
     )
 /*++
 
@@ -1198,17 +1190,17 @@ Arguments:
     SelfTestFlags - Supplies the address of a variable that will receive the
         self-test flags.
 
-    LoadKeysFlags - Supplies the address of a variable that will receive
-        the key loading flags.
+    KeysLoadFlags - Supplies the address of a variable that will receive
+        the keys load flags.
 
-    CreateTableFlags - Supplies the address of a variable that will receive
-        the create table flags.
+    TableCreateFlags - Supplies the address of a variable that will receive
+        the table create flags.
 
-    LoadTableFlags - Supplies the address of a variable that will receive the
+    TableLoadFlags - Supplies the address of a variable that will receive the
         the load table flags.
 
-    CompileTableFlags - Supplies the address of a variable that will receive the
-        the compile table flags.
+    TableCompileFlags - Supplies the address of a variable that will receive
+        the table compile flags.
 
 Return Value:
 
@@ -1225,15 +1217,6 @@ Return Value:
     PH_E_INVALID_MASK_FUNCTION_ID - Invalid mask function ID.
 
     PH_E_INVALID_MAXIMUM_CONCURRENCY - Invalid maximum concurrency.
-
-    PH_E_INVALID_KEYS_LOAD_FLAGS - Invalid keys load flags.
-
-    PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS - Invalid context create table
-        flags.
-
-    PH_E_INVALID_TABLE_LOAD_FLAGS - Invalid table load flags.
-
-    PH_E_INVALID_TABLE_COMPILE_FLAGS - Invalid table compile flags.
 
 --*/
 {
@@ -1281,19 +1264,23 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(SelfTestFlags)) {
+    if (!ARGUMENT_PRESENT(ContextSelfTestFlags)) {
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(LoadKeysFlags)) {
+    if (!ARGUMENT_PRESENT(KeysLoadFlags)) {
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(CreateTableFlags)) {
+    if (!ARGUMENT_PRESENT(TableCreateFlags)) {
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(LoadTableFlags)) {
+    if (!ARGUMENT_PRESENT(TableLoadFlags)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(TableCompileFlags)) {
         return E_POINTER;
     }
 
@@ -1401,19 +1388,21 @@ Return Value:
         return PH_E_INVALID_MAXIMUM_CONCURRENCY;
     }
 
+    ContextSelfTestFlags->AsULong = 0;
+
     if (NumberOfArguments == 8) {
-        SelfTestFlags->PauseBeforeExit = TRUE;
+        ContextSelfTestFlags->PauseBeforeExit = TRUE;
     }
 
     //
-    // Extraction (and subsequent validation) of remaining flags is not yet
-    // implemented.  Zero everything up-front for now.
+    // We haven't implemented support for parsing flags from the command line,
+    // so zero everything for now.
     //
 
-    LoadKeysFlags->AsULong = 0;
-    CreateTableFlags->AsULong = 0;
-    LoadTableFlags->AsULong = 0;
-    CompileTableFlags->AsULong = 0;
+    KeysLoadFlags->AsULong = 0;
+    TableCreateFlags->AsULong = 0;
+    TableLoadFlags->AsULong = 0;
+    TableCompileFlags->AsULong = 0;
 
     return S_OK;
 }
@@ -1480,7 +1469,7 @@ Return Value:
     ULONG MaximumConcurrency = 0;
     PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags = { 0 };
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags = { 0 };
-    PERFECT_HASH_CONTEXT_CREATE_TABLE_FLAGS ContextCreateTableFlags = { 0 };
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags = { 0 };
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags = { 0 };
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
     PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW ExtractSelfTestArgs;
@@ -1499,12 +1488,12 @@ Return Value:
                                  &MaximumConcurrency,
                                  &ContextSelfTestFlags,
                                  &KeysLoadFlags,
-                                 &ContextCreateTableFlags,
+                                 &TableCreateFlags,
                                  &TableLoadFlags,
                                  &TableCompileFlags);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextContextSelfTestArgvW, Result);
+        PH_ERROR(PerfectHashContextExtractSelfTestArgs, Result);
         return Result;
     }
 
@@ -1526,12 +1515,12 @@ Return Value:
                                      MaskFunctionId,
                                      &ContextSelfTestFlags,
                                      &KeysLoadFlags,
-                                     &ContextCreateTableFlags,
+                                     &TableCreateFlags,
                                      &TableLoadFlags,
                                      &TableCompileFlags);
 
     if (FAILED(Result)) {
-        NOTHING;
+        PH_ERROR(PerfectHashTableContextSelfTest, Result);
     }
 
     return Result;

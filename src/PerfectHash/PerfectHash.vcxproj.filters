@@ -55,9 +55,6 @@
     <ClCompile Include="PerfectHashContext.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PerfectHashContextCreateTable.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="RtlPrivilege.c">
       <Filter>Source Files</Filter>
     </ClCompile>

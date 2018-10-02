@@ -114,7 +114,6 @@
     <ClCompile Include="PerfectHashContextSelfTest.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />
     <ClCompile Include="PerfectHashContext.c" />
-    <ClCompile Include="PerfectHashContextCreateTable.c" />
     <ClCompile Include="PerfectHashFile.c" />
     <ClCompile Include="PerfectHashKeys.c" />
     <ClCompile Include="PerfectHashKeysLoad.c" />

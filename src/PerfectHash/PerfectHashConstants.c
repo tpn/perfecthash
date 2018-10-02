@@ -515,14 +515,11 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     (PPERFECT_HASH_CONTEXT_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashContextSetMaximumConcurrency,
     &PerfectHashContextGetMaximumConcurrency,
-    &PerfectHashContextSetOutputDirectory,
-    &PerfectHashContextGetOutputDirectory,
-    &PerfectHashContextCreateTable,
     &PerfectHashContextSelfTest,
     &PerfectHashContextSelfTestArgvW,
     &PerfectHashContextExtractSelfTestArgsFromArgvW,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 8);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 5);
 
 //
 // PerfectHashTable

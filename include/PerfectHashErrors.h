@@ -340,14 +340,16 @@ Abstract:
 #define PH_E_TABLE_LOAD_ALREADY_IN_PROGRESS ((HRESULT)0xE004021FL)
 
 //
-// MessageId: PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS
+// Removed 2018-10-01.
 //
-// MessageText:
-//
+// MessageId=0x220
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS
+// Language=English
 // Invalid context create table flags.
+// .
 //
-#define PH_E_INVALID_CONTEXT_CREATE_TABLE_FLAGS ((HRESULT)0xE0040220L)
-
 //
 // MessageId: PH_E_INVALID_CONTEXT_SELF_TEST_FLAGS
 //
