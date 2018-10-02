@@ -638,16 +638,6 @@ typedef struct _PERFECT_HASH_PATH_PARTS {
     UNICODE_STRING BaseName;
 
     //
-    // If the base name (above) is a valid C identifier, an ASCII-encoded
-    // version of the string will be available in the following field.  This
-    // is guaranteed to only use ASCII (7-bit) characters and will be a valid
-    // C identifier (only starts with _, a-z or A-Z, and only contains _, 0-9,
-    // a-z and A-Z characters).
-    //
-
-    STRING BaseNameA;
-
-    //
     // File name (includes extension).
     //
 
@@ -664,6 +654,25 @@ typedef struct _PERFECT_HASH_PATH_PARTS {
     //
 
     UNICODE_STRING StreamName;
+
+    //
+    // If the base name (above) is a valid C identifier, an ASCII-encoded
+    // version of the string will be available in the following field.  This
+    // is guaranteed to only use ASCII (7-bit) characters and will be a valid
+    // C identifier (only starts with _, a-z or A-Z, and only contains _, 0-9,
+    // a-z and A-Z characters).
+    //
+
+    STRING BaseNameA;
+
+    //
+    // As above, but captures just the "table name" part of the file.  This
+    // will exclude any additional suffix string data appended to the file name
+    // during creation.  This buffer is identical to BaseNameA.Buffer, however,
+    // the lengths differ.
+    //
+
+    STRING TableNameA;
 
 } PERFECT_HASH_PATH_PARTS;
 typedef PERFECT_HASH_PATH_PARTS *PPERFECT_HASH_PATH_PARTS;

@@ -494,10 +494,10 @@ Return Value:
             Wide = *Char++;
 
             //
-            // Replace hyphens and spaces with underscores.
+            // Replace things like hyphens, and spaces etc with underscores.
             //
 
-            if (Wide == L'-' || Wide == L' ') {
+            if (IsReplaceableBaseNameChar(Wide)) {
                 Wide = L'_';
             }
 
@@ -525,24 +525,38 @@ Return Value:
 
         //
         // Base name was not a valid C identifier.  Clear the BaseNameA
-        // representation.
+        // and TableNameA representations.
         //
 
         ZeroMemory(Path->BaseNameA.Buffer, Path->BaseNameA.MaximumLength);
         ZeroStruct(Path->BaseNameA);
+        ZeroStruct(Path->TableNameA);
 
     } else {
 
         //
         // If we get here, we've found a valid C identifier in the file's base
-        // name.  Toggle the relevant flag and NULL-terminate the ASCII
-        // representation.
+        // name.  Toggle the relevant flag and NULL-terminate the ASCII buffer.
         //
 
         Path->Flags.BaseNameIsValidCIdentifier = TRUE;
 
         ASSERT(Path->BaseNameA.Length + 1 <= Path->BaseNameA.MaximumLength);
         Path->BaseNameA.Buffer[Path->BaseNameA.Length] = '\0';
+
+        //
+        // As the ASCII base name was extracted successfully, wire up the
+        // TableNameA member to point to it.  This can be further refined
+        // downstream by the caller if they wish to restrict the length of
+        // the table name to a subset of the entire base name.  (This is
+        // done by PerfectHashTableCreatePath(), for example, in order to
+        // exclude additional suffixes like "_Keys" and "_TableData" from
+        // being included in the table name.)
+        //
+
+        Path->TableNameA.Buffer = Path->BaseNameA.Buffer;
+        Path->TableNameA.Length = Path->BaseNameA.Length;
+        Path->TableNameA.MaximumLength = Path->BaseNameA.MaximumLength;
     }
 
     //
@@ -1088,23 +1102,17 @@ Return Value:
     *Dest++ = L'\\';
 
     //
-    // Copy the base name, replacing any hyphens or spaces with underscores.
+    // Copy the base name, replacing any chars as necessary with underscores.
     //
 
     Source = BaseName;
     Count = Source->Length >> 1;
 
     for (Index = 0; Index < Count; Index++) {
-        BOOLEAN Replace;
 
         Wide = Source->Buffer[Index];
 
-        Replace = (
-            Wide == L'-' ||
-            Wide == ' '
-        );
-
-        if (Replace) {
+        if (IsReplaceableBaseNameChar(Wide)) {
             Wide = L'_';
         }
 
