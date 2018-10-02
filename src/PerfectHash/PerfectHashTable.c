@@ -545,6 +545,7 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result = S_OK;
+    USHORT AdditionalSuffixALength = 0;
     PPERFECT_HASH_PATH Path = NULL;
     PPERFECT_HASH_PATH_PARTS Parts = NULL;
     UNICODE_STRING TableSuffix;
@@ -558,6 +559,18 @@ Return Value:
 
     if (ARGUMENT_PRESENT(PartsPointer)) {
         *PartsPointer = NULL;
+    }
+
+    if (ARGUMENT_PRESENT(AdditionalSuffix)) {
+
+        //
+        // Capture the length in bytes for an ASCII representation of the
+        // additional suffix length; the + 1 accounts for the leading '_'
+        // that will automatically be added by the suffix initialization
+        // routine below.
+        //
+
+        AdditionalSuffixALength = (AdditionalSuffix->Length >> 1) + 1;
     }
 
     Rtl = Table->Rtl;
@@ -619,6 +632,26 @@ Return Value:
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCreate, Result);
         goto Error;
+    }
+
+    //
+    // If an ASCII base name was successfully extracted, we can update the
+    // table name's length now to exclude the additional suffix we may have
+    // added above.
+    //
+
+    if (Path->BaseNameA.Length > 0 && AdditionalSuffixALength > 0) {
+
+        ASSERT(Path->BaseNameA.Buffer);
+        ASSERT(Path->TableNameA.Buffer);
+        ASSERT(Path->BaseNameA.Buffer == Path->TableNameA.Buffer);
+
+        ASSERT(Path->TableNameA.Length != 0);
+        ASSERT(Path->TableNameA.Length <= Path->TableNameA.MaximumLength);
+        ASSERT(Path->TableNameA.Length > AdditionalSuffixALength);
+
+        Path->TableNameA.Length -= AdditionalSuffixALength;
+        Path->TableNameA.MaximumLength = Path->TableNameA.Length;
     }
 
     //
