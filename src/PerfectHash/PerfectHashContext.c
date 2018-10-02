@@ -686,10 +686,14 @@ Return Value:
     Context->HashFunctionContext = NULL;
     Context->SolvedContext = NULL;
 
-    Context->HighestDeletedEdgesCount = 0;
-    Context->ResizeTableThreshold = 0;
-    Context->ResizeLimit = 0;
     Context->Attempts = 0;
+    Context->ResizeLimit = 0;
+    Context->InitialTableSize = 0;
+    Context->ResizeTableThreshold = 0;
+    Context->HighestDeletedEdgesCount = 0;
+    Context->NumberOfTableResizeEvents = 0;
+    Context->TotalNumberOfAttemptsWithSmallerTableSizes = 0;
+    Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes = 0;
 
     Context->SolveStartCycles.QuadPart = 0;
     Context->SolveStartCounter.QuadPart = 0;

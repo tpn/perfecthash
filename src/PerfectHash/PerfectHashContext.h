@@ -524,6 +524,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PVOID SolvedContext;
 
     //
+    // N.B. These fields are commented in the definition of the structure
+    //      TABLE_INFO_ON_DISK.
+    //
+
+    ULONGLONG InitialTableSize;
+    ULONGLONG NumberOfTableResizeEvents;
+    ULONGLONG TotalNumberOfAttemptsWithSmallerTableSizes;
+    ULONGLONG ClosestWeCameToSolvingGraphWithSmallerTableSizes;
+
+    //
     // Backing vtbl.
     //
 

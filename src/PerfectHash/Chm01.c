@@ -1048,7 +1048,7 @@ RetryWithLargerTableSize:
         // Check to see if we've exceeded the maximum number of resize events.
         //
 
-        if (TableInfoOnDisk->NumberOfTableResizeEvents >= Context->ResizeLimit) {
+        if (Context->NumberOfTableResizeEvents >= Context->ResizeLimit) {
             Result = PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED;
             goto Error;
         }
@@ -1072,18 +1072,18 @@ RetryWithLargerTableSize:
         // (or no previous version is present).
         //
 
-        TableInfoOnDisk->NumberOfTableResizeEvents++;
-        TableInfoOnDisk->TotalNumberOfAttemptsWithSmallerTableSizes += (
+        Context->NumberOfTableResizeEvents++;
+        Context->TotalNumberOfAttemptsWithSmallerTableSizes += (
             Context->Attempts
         );
 
         Closest = NumberOfEdges.LowPart - Context->HighestDeletedEdgesCount;
         LastClosest = (
-            TableInfoOnDisk->ClosestWeCameToSolvingGraphWithSmallerTableSizes
+            Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes
         );
 
         if (!LastClosest || Closest < LastClosest) {
-            TableInfoOnDisk->ClosestWeCameToSolvingGraphWithSmallerTableSizes = (
+            Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes = (
                 Closest
             );
         }
@@ -1092,8 +1092,8 @@ RetryWithLargerTableSize:
         // If this is our first resize, capture the initial size we used.
         //
 
-        if (!TableInfoOnDisk->InitialTableSize) {
-            TableInfoOnDisk->InitialTableSize = NumberOfVertices.QuadPart;
+        if (!Context->InitialTableSize) {
+            Context->InitialTableSize = NumberOfVertices.QuadPart;
         }
 
         //

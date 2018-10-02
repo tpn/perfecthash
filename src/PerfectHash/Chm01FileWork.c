@@ -709,6 +709,17 @@ SaveTableInfoStreamCallbackChm01(
     TableInfoOnDisk->NumberOfFailedAttempts = Context->FailedAttempts;
     TableInfoOnDisk->NumberOfSolutionsFound = Context->FinishedCount;
 
+    TableInfoOnDisk->NumberOfTableResizeEvents =
+        Context->NumberOfTableResizeEvents;
+
+    TableInfoOnDisk->TotalNumberOfAttemptsWithSmallerTableSizes =
+        Context->TotalNumberOfAttemptsWithSmallerTableSizes;
+
+    TableInfoOnDisk->InitialTableSize = Context->InitialTableSize;
+
+    TableInfoOnDisk->ClosestWeCameToSolvingGraphWithSmallerTableSizes =
+        Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes;
+
     //
     // Copy timer values.
     //
