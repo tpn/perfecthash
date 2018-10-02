@@ -1308,6 +1308,14 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     PerfectHashHashCrc32RotateXorFunctionId     = 6,
 
     //
+    // A scratch hash function to use for quickly iterating on new hash
+    // functionality without the overhead of having to define a new
+    // implementation.
+    //
+
+    PerfectHashHashScratchId                    = 7,
+
+    //
     // End valid hash functions.
     //
 
