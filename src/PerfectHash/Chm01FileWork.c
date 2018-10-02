@@ -804,11 +804,70 @@ PrepareCHeaderCallbackChm01(
     PFILE_WORK_ITEM Item
     )
 {
-    UNREFERENCED_PARAMETER(Context);
+    PRTL Rtl;
+    PCHAR Base;
+    PCHAR Output;
+    ULONG Count;
+    ULONG NumberOfSeeds;
+    ULONGLONG Index;
+    PCSTRING Name;
+    PPERFECT_HASH_KEYS Keys;
+    PPERFECT_HASH_PATH Path;
+    PPERFECT_HASH_FILE File;
+    PPERFECT_HASH_TABLE Table;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
+
     UNREFERENCED_PARAMETER(Item);
 
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    Keys = Table->Keys;
+    File = Table->CHeaderFile;
+    Path = File->Path;
+    Name = &Path->TableNameA;
+    TableInfoOnDisk = Table->TableInfoOnDisk;
+    NumberOfSeeds = TableInfoOnDisk->NumberOfSeeds;
+
+    Base = (PCHAR)File->BaseAddress;
+    Output = Base;
+
+    //
+    // Write the keys.
+    //
+
+    OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Header File.  "
+               "Auto-generated.\n//\n\n");
+
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_Seeds[");
+    OUTPUT_INT(NumberOfSeeds);
+    OUTPUT_RAW("];\n");
+
+    for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
+        OUTPUT_RAW("extern const ULONG ");
+        OUTPUT_STRING(Name);
+        OUTPUT_RAW("_Seed");
+        OUTPUT_INT(Count);
+        OUTPUT_RAW(";\n");
+    }
+
+    *Output++ = '\n';
+    *Output++ = '\n';
+
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_HashMask;\nextern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_IndexMask;\n\n");
+
+    File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
+
     return S_OK;
-    //return PH_E_NOT_IMPLEMENTED;
 }
 
 _Use_decl_annotations_
@@ -860,7 +919,7 @@ PrepareCSourceKeysCallbackChm01(
     Keys = Table->Keys;
     File = Table->CSourceKeysFile;
     Path = File->Path;
-    Name = &Path->BaseNameA;
+    Name = &Path->TableNameA;
     NumberOfKeys = Keys->NumberOfElements.QuadPart;
     SourceKeys = (PULONG)Keys->File->BaseAddress;
 
@@ -871,11 +930,13 @@ PrepareCSourceKeysCallbackChm01(
     // Write the keys.
     //
 
-    OUTPUT_RAW("//\n// Compiled Perfect Hash Table.  Auto-generated.\n//\n\n");
+    OUTPUT_RAW("//\n// Compiled Perfect Hash Table Keys File.  "
+               "Auto-generated.\n//\n\n");
 
-    OUTPUT_RAW("#ifdef COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS\n");
     OUTPUT_RAW("#pragma const_seg(\".cpht_keys\")\n");
-    OUTPUT_RAW("const unsigned long TableKeys[");
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_Keys[");
     OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW("] = {\n");
 
@@ -908,9 +969,7 @@ PrepareCSourceKeysCallbackChm01(
         *(Output - 1) = '\n';
     }
 
-    OUTPUT_RAW("};\n#pragma const_seg()\n"
-               "#endif "
-               "/* COMPILED_PERFECT_HASH_TABLE_INCLUDE_KEYS */\n");
+    OUTPUT_RAW("};\n#pragma const_seg()\n");
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 
@@ -933,9 +992,9 @@ SaveCSourceTableDataCallbackChm01(
     PULONG Seed;
     PGRAPH Graph;
     PULONG Source;
+    ULONG NumberOfSeeds;
     PCSTRING Name;
     ULONGLONG Index;
-    ULONG WaitResult;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_PATH Path;
@@ -956,38 +1015,32 @@ SaveCSourceTableDataCallbackChm01(
     Table = Context->Table;
     File = Table->CSourceTableDataFile;
     Path = File->Path;
+    Name = &Path->TableNameA;
     TableInfo = Table->TableInfoOnDisk;
     TotalNumberOfElements = TableInfo->NumberOfTableElements.QuadPart;
     NumberOfElements = TotalNumberOfElements >> 1;
     Graph = (PGRAPH)Context->SolvedContext;
+    NumberOfSeeds = Graph->NumberOfSeeds;
     Source = Graph->Assigned;
     Output = Base = (PCHAR)File->BaseAddress;
 
     //
-    // We need to wait on the table file's prepared event before we can access
-    // the path's basename.
+    // Write seed and mask data.
     //
 
-    WaitResult = WaitForSingleObject(Context->PreparedTableFileEvent, INFINITE);
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForSingleObject);
-        return PH_E_SYSTEM_CALL_FAILED;
-    }
+    OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Source Table Data File.  "
+               "Auto-generated.\n//\n\n");
 
-    Name = &Table->TableFile->Path->BaseNameA;
-
-    //
-    // Write seed data.
-    //
-
-    OUTPUT_RAW("#pragma const_seg(\".cpht_seeds\")\n");
-    OUTPUT_RAW("const unsigned long Seeds[");
-    OUTPUT_INT(Graph->NumberOfSeeds);
+    OUTPUT_RAW("#pragma const_seg(\".cpht_sm\")\n");
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_Seeds[");
+    OUTPUT_INT(NumberOfSeeds);
     OUTPUT_RAW("] = {\n");
 
     Seed = &Graph->FirstSeed;
 
-    for (Index = 0, Count = 0; Index < Graph->NumberOfSeeds; Index++) {
+    for (Index = 0, Count = 0; Index < NumberOfSeeds; Index++) {
 
         if (Count == 0) {
             INDENT();
@@ -1014,29 +1067,51 @@ SaveCSourceTableDataCallbackChm01(
         *(Output - 1) = '\n';
     }
 
-    ASSERT(Graph->NumberOfSeeds == 4);
+    OUTPUT_RAW("};\n\n");
 
     Seed = &Graph->FirstSeed;
 
-    OUTPUT_RAW("};\nstatic const unsigned long Seed1 = ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW(";\nstatic const unsigned long Seed2 = ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW(";\nstatic const unsigned long Seed3 = ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW(";\nstatic const unsigned long Seed4 = ");
-    OUTPUT_HEX(*Seed++);
+    for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
+        OUTPUT_RAW("const ULONG ");
+        OUTPUT_STRING(Name);
+        OUTPUT_RAW("_Seed");
+        OUTPUT_INT(Count);
+        OUTPUT_RAW(" = ");
+        OUTPUT_HEX(*Seed++);
+        OUTPUT_RAW(";\n");
+    }
+
+    OUTPUT_RAW("\nconst ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_HashMask = ");
+    OUTPUT_HEX(TableInfo->HashMask);
+    OUTPUT_RAW(";\nconst ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_IndexMask = ");
+    OUTPUT_HEX(TableInfo->IndexMask);
+
+    OUTPUT_RAW(";\n\n");
 
     Seed = &Graph->FirstSeed;
 
-    OUTPUT_RAW(";\n#define SEED1 ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW("\n#define SEED2 ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW("\n#define SEED3 ");
-    OUTPUT_HEX(*Seed++);
-    OUTPUT_RAW("\n#define SEED4 ");
-    OUTPUT_HEX(*Seed++);
+    for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Name);
+        OUTPUT_RAW("_SEED");
+        OUTPUT_INT(Count);
+        *Output++ = ' ';
+        OUTPUT_HEX(*Seed++);
+        *Output++ = '\n';
+    }
+
+    OUTPUT_RAW("\n#define ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_HASH_MASK ");
+    OUTPUT_HEX(TableInfo->HashMask);
+    OUTPUT_RAW("\n#define ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_INDEX_MASK ");
+    OUTPUT_HEX(TableInfo->IndexMask);
 
     OUTPUT_RAW("\n#pragma const_seg()\n\n");
 
@@ -1044,17 +1119,11 @@ SaveCSourceTableDataCallbackChm01(
     // Write the table data.
     //
 
-    OUTPUT_RAW("\n\n#pragma const_seg(\".cpht_data\")\n");
-    OUTPUT_RAW("static const unsigned long HashMask = ");
-    OUTPUT_HEX(TableInfo->HashMask);
-    OUTPUT_RAW(";\nstatic const unsigned long IndexMask = ");
-    OUTPUT_HEX(TableInfo->IndexMask);
-    OUTPUT_RAW(";\n#define HASH_MASK ");
-    OUTPUT_HEX(TableInfo->HashMask);
-    OUTPUT_RAW("\n#define INDEX_MASK ");
-    OUTPUT_HEX(TableInfo->IndexMask);
+    OUTPUT_RAW("#pragma const_seg(\".cpht_data\")\n");
 
-    OUTPUT_RAW("\nstatic const unsigned long TableData[");
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_TableData[");
     OUTPUT_INT(TotalNumberOfElements);
     OUTPUT_RAW("] = {\n\n    //\n    // 1st half.\n    //\n\n");
 
@@ -1091,9 +1160,9 @@ SaveCSourceTableDataCallbackChm01(
         *(Output - 1) = '\n';
     }
 
-    OUTPUT_RAW("};\n#define TABLE_DATA TableData\n#pragma const_seg()\n\n");
+    OUTPUT_RAW("};\n");
 
-    EndOfFile.QuadPart = ((ULONG_PTR)Output - (ULONG_PTR)Base);
+    EndOfFile.QuadPart = RtlPointerToOffset(Base, Output);
 
     Result = File->Vtbl->Close(File, &EndOfFile);
     if (FAILED(Result)) {
