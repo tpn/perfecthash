@@ -310,6 +310,7 @@ Return Value:
     PWSTR Dest;
     USHORT Count;
     BOOLEAN Success;
+    HRESULT Result = S_OK;
     ULONG_PTR ExpectedDest;
     BYTE NumberOfDigits = 0;
     LONG_INTEGER TableSuffixLength = { 0 };
@@ -355,7 +356,9 @@ Return Value:
 
     if (ARGUMENT_PRESENT(AdditionalSuffix)) {
         if (!IsValidUnicodeString(AdditionalSuffix)) {
-            return E_INVALIDARG;
+            Result = E_INVALIDARG;
+            PH_ERROR(InitializeTableSuffix_AdditionalSuffix, Result);
+            goto Error;
         }
         TableSuffixLength.LongPart += (
             sizeof(L'_') +
@@ -364,12 +367,16 @@ Return Value:
     }
 
     if (TableSuffixLength.HighPart) {
-        return PH_E_STRING_BUFFER_OVERFLOW;
+        Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(InitializeTableSuffix_TableSuffixLength, Result);
+        goto Error;
     }
 
     if ((ULONG)Suffix->MaximumLength <
         TableSuffixLength.LongPart + sizeof(WCHAR)) {
-        return PH_E_STRING_BUFFER_OVERFLOW;
+        Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(InitializeTableSuffix_SuffixMaxLength, Result);
+        goto Error;
     }
 
     Dest = Suffix->Buffer;
@@ -388,7 +395,9 @@ Return Value:
         );
 
         if (!Success) {
-            return PH_E_STRING_BUFFER_OVERFLOW;
+            Result = PH_E_STRING_BUFFER_OVERFLOW;
+            PH_ERROR(InitializeTableSuffix_AppendInteger, Result);
+            goto Error;
         }
 
         Dest += NumberOfDigits;
@@ -430,14 +439,34 @@ Return Value:
     );
 
     if ((ULONG_PTR)Dest != ExpectedDest) {
-        return PH_E_INVARIANT_CHECK_FAILED;
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashTableInitializeTableSuffix_DestCheck, Result);
+        goto Error;
     }
 
     Suffix->Length = TableSuffixLength.LowPart;
 
     *Dest++ = L'\0';
 
-    return S_OK;
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
 }
 
 PERFECT_HASH_TABLE_CREATE_PATH PerfectHashTableCreatePath;
