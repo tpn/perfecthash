@@ -58,7 +58,7 @@ altentry PatchInstructionIndexMaskEnd
 
         LEAF_ENTRY FastIndexEx_x64_01, _TEXT$00
 
-        IACA_VC_START
+        ;IACA_VC_START
 
         mov     eax, edx                        ; Copy Key into rax.
         mov     r10, Table.Data[rcx]            ; Copy Assigned into r10.
@@ -108,7 +108,7 @@ ALTERNATE_ENTRY PatchInstructionIndexMaskBegin
         and     eax, IndexMask                  ; Mask the return index.
 ALTERNATE_ENTRY PatchInstructionIndexMaskEnd
 
-        IACA_VC_END
+        ;IACA_VC_END
 
         ret                                     ; Return.
 
