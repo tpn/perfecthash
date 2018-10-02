@@ -1493,7 +1493,6 @@ Return Value:
                                  &TableCompileFlags);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextExtractSelfTestArgs, Result);
         return Result;
     }
 
@@ -1520,7 +1519,7 @@ Return Value:
                                      &TableCompileFlags);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashTableContextSelfTest, Result);
+        return Result;
     }
 
     return Result;
