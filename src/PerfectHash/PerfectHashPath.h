@@ -119,6 +119,31 @@ typedef PERFECT_HASH_PATH_FLAGS *PPERFECT_HASH_PATH_FLAGS;
 #define ClearPathState(Path) (Path->State.AsULong = 0)
 #define ClearPathFlags(Path) (Path->Flags.AsULong = 0)
 
+FORCEINLINE
+BOOLEAN
+IsReplaceableBaseNameChar(
+    WCHAR Wide
+    )
+{
+    BOOLEAN Replace;
+
+    Replace = (
+        Wide == L'-' ||
+        Wide == L' ' ||
+        Wide == L'.' ||
+        Wide == L',' ||
+        Wide == L'#' ||
+        Wide == L'^' ||
+        Wide == L'!' ||
+        Wide == L'~' ||
+        Wide == L'%' ||
+        Wide == L'@' ||
+        Wide == L'*'
+    );
+
+    return Replace;
+}
+
 //
 // Define the PERFECT_HASH_PATH structure.
 //
@@ -141,10 +166,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_PATH {
             UNICODE_STRING Drive;
             UNICODE_STRING Directory;
             UNICODE_STRING BaseName;
-            STRING BaseNameA;
             UNICODE_STRING FileName;
             UNICODE_STRING Extension;
             UNICODE_STRING StreamName;
+            STRING BaseNameA;
+            STRING TableNameA;
         };
     };
 
