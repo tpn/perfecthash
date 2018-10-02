@@ -177,13 +177,8 @@ Return Value:
 
 --*/
 {
-    ULONG A;
-    ULONG B;
-    ULONG C;
-    ULONG D;
     ULONG Seed1;
     ULONG Seed2;
-    ULONG Seed3;
     ULONG Input;
     PULONG Seeds;
     ULONG Masked;
@@ -203,7 +198,6 @@ Return Value:
     Seeds = &Table->TableInfoOnDisk->FirstSeed;
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
-    Seed3 = Seeds[2];
     Input = Key;
     Assigned = Table->Assigned;
 
@@ -211,15 +205,10 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    A = _mm_crc32_u32(Seed1, Input);
-    B = _mm_crc32_u32(Seed2, _rotl(Input, 15));
-    C = Seed3 ^ Input;
-    D = _mm_crc32_u32(B, C);
+    Vertex1 = _mm_crc32_u32(Seed1, Input);
+    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Input, 15));
 
     //IACA_VC_END();
-
-    Vertex1 = A;
-    Vertex2 = D;
 
     if (Vertex1 == Vertex2) {
         goto Error;
