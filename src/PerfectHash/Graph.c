@@ -1309,6 +1309,7 @@ Return Value:
     KEY Key;
     PKEY Keys;
     EDGE Edge;
+    PEDGE Edges;
     VERTEX Vertex1;
     VERTEX Vertex2;
     PGRAPH_INFO Info;
@@ -1323,7 +1324,7 @@ Return Value:
     Context = Info->Context;
     Table = Context->Table;
     NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
-    Keys = (PKEY)Table->Keys->File->BaseAddress;
+    Edges = Keys = (PKEY)Table->Keys->File->BaseAddress;
 
     //
     // Enumerate all keys in the input set, hash them into two unique vertices,
@@ -1333,7 +1334,7 @@ Return Value:
     Iterations = CheckForTerminationAfterIterations;
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
-        Key = Keys[Edge];
+        Key = *Edges++;
 
         SEEDED_HASH(Key, &Hash.QuadPart);
 
@@ -1503,6 +1504,7 @@ Return Value:
     KEY PreviousKey;
     PKEY Keys;
     EDGE Edge;
+    PEDGE Edges;
     ULONG Bit;
     ULONG Index;
     ULONG PrevIndex;
@@ -1533,7 +1535,7 @@ Return Value:
     Rtl = Context->Rtl;
     Table = Context->Table;
     NumberOfKeys = Graph->NumberOfKeys;
-    Keys = (PKEY)Table->Keys->File->BaseAddress;
+    Edges = Keys = (PKEY)Table->Keys->File->BaseAddress;
     Assigned = Graph->Assigned;
 
     NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
@@ -1547,7 +1549,7 @@ Return Value:
     //
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
-        Key = Keys[Edge];
+        Key = *Edges++;
 
         //
         // Hash the key.

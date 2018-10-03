@@ -82,6 +82,7 @@ Return Value:
     ULONG ValueIndex;
     ULONG Bit;
     ULONG NumberOfBitsSet;
+    PKEY Source;
     PKEY SourceKeys;
     HRESULT Result = S_OK;
     PALLOCATOR Allocator;
@@ -190,7 +191,7 @@ Return Value:
 
 
     SourceKeys = (PKEY)Keys->File->BaseAddress;
-    Key = SourceKeys[0];
+    Key = *SourceKeys;
 
     //
     // Rotate the key such that it differs from the original value, but in a
@@ -251,9 +252,9 @@ Return Value:
 
     ValueIndex = 0;
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = 0, Source = SourceKeys; Index < NumberOfKeys; Index++) {
 
-        Key = SourceKeys[Index];
+        Key = *Source++;
 
         Result = Table->Vtbl->Index(Table, Key, &ValueIndex);
         ASSERT(!FAILED(Result));
@@ -283,9 +284,9 @@ Return Value:
     // Loop through the entire key set and insert a rotated version of the key.
     //
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = 0, Source = SourceKeys; Index < NumberOfKeys; Index++) {
 
-        Key = SourceKeys[Index];
+        Key = *Source++;
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Insert(Table, Key, Rotated, &Previous);
@@ -299,9 +300,9 @@ Return Value:
     // rotated version.
     //
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = 0, Source = SourceKeys; Index < NumberOfKeys; Index++) {
 
-        Key = SourceKeys[Index];
+        Key = *Source++;
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Lookup(Table, Key, &Value);
@@ -314,9 +315,9 @@ Return Value:
     // Loop through again and delete everything.
     //
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = 0, Source = SourceKeys; Index < NumberOfKeys; Index++) {
 
-        Key = SourceKeys[Index];
+        Key = *Source++;
         Rotated = _rotl(Key, 15);
 
         Result = Table->Vtbl->Delete(Table, Key, &Previous);
@@ -329,9 +330,9 @@ Return Value:
     // And a final loop through to confirm all lookups now return 0.
     //
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = 0, Source = SourceKeys; Index < NumberOfKeys; Index++) {
 
-        Key = SourceKeys[Index];
+        Key = *Source++;
 
         Result = Table->Vtbl->Lookup(Table, Key, &Value);
         ASSERT(!FAILED(Result));
