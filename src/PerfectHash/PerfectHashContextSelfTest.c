@@ -647,7 +647,7 @@ Return Value:
 
             Failed = TRUE;
             Failures++;
-            goto ReleaseKeys;
+            goto ReleaseTable;
         }
 
         //
