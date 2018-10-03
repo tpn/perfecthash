@@ -838,7 +838,7 @@ PrepareCHeaderCallbackChm01(
     Table = Context->Table;
     Keys = Table->Keys;
     File = Table->CHeaderFile;
-    Path = File->Path;
+    Path = (File->RenamePath ? File->RenamePath : File->Path);
     Name = &Path->TableNameA;
     TableInfoOnDisk = Table->TableInfoOnDisk;
     NumberOfSeeds = TableInfoOnDisk->NumberOfSeeds;
@@ -929,7 +929,7 @@ PrepareCSourceKeysCallbackChm01(
     Table = Context->Table;
     Keys = Table->Keys;
     File = Table->CSourceKeysFile;
-    Path = File->Path;
+    Path = (File->RenamePath ? File->RenamePath : File->Path);
     Name = &Path->TableNameA;
     NumberOfKeys = Keys->NumberOfElements.QuadPart;
     SourceKeys = (PULONG)Keys->File->BaseAddress;
@@ -1005,6 +1005,7 @@ SaveCSourceTableDataCallbackChm01(
     PULONG Source;
     ULONG NumberOfSeeds;
     PCSTRING Name;
+    PCSTRING Upper;
     ULONGLONG Index;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File;
@@ -1025,8 +1026,9 @@ SaveCSourceTableDataCallbackChm01(
     Rtl = Context->Rtl;
     Table = Context->Table;
     File = Table->CSourceTableDataFile;
-    Path = File->Path;
+    Path = (File->RenamePath ? File->RenamePath : File->Path);
     Name = &Path->TableNameA;
+    Upper = &Path->TableNameUpperA;
     TableInfo = Table->TableInfoOnDisk;
     TotalNumberOfElements = TableInfo->NumberOfTableElements.QuadPart;
     NumberOfElements = TotalNumberOfElements >> 1;
@@ -1107,7 +1109,7 @@ SaveCSourceTableDataCallbackChm01(
 
     for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
         OUTPUT_RAW("#define ");
-        OUTPUT_STRING(Name);
+        OUTPUT_STRING(Upper);
         OUTPUT_RAW("_SEED");
         OUTPUT_INT(Count);
         *Output++ = ' ';
@@ -1116,11 +1118,11 @@ SaveCSourceTableDataCallbackChm01(
     }
 
     OUTPUT_RAW("\n#define ");
-    OUTPUT_STRING(Name);
+    OUTPUT_STRING(Upper);
     OUTPUT_RAW("_HASH_MASK ");
     OUTPUT_HEX(TableInfo->HashMask);
     OUTPUT_RAW("\n#define ");
-    OUTPUT_STRING(Name);
+    OUTPUT_STRING(Upper);
     OUTPUT_RAW("_INDEX_MASK ");
     OUTPUT_HEX(TableInfo->IndexMask);
 
