@@ -744,6 +744,7 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    ULONG LastError;
     LARGE_INTEGER EndOfFile = { 0 };
 
     //
@@ -822,8 +823,21 @@ Return Value:
         }
 
         if (!DeleteFileW(File->Path->FullPath.Buffer)) {
-            SYS_ERROR(DeleteFileW);
-            Result = PH_E_SYSTEM_CALL_FAILED;
+
+            //
+            // DeleteFileW() will fail with ERROR_ACCESS_DENIED if this was an
+            // NTFS stream (e.g. the :Info stream) and the parent file has been
+            // deleted.  Check for this condition now and suppress the error if
+            // applicable.
+            //
+
+            LastError = GetLastError();
+            if (LastError == ERROR_ACCESS_DENIED && IsFileStream(File)) {
+                SetLastError(ERROR_SUCCESS);
+            } else {
+                SYS_ERROR(DeleteFileW);
+                Result = PH_E_SYSTEM_CALL_FAILED;
+            }
         }
 
     }
