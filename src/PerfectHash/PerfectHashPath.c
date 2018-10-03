@@ -1042,7 +1042,9 @@ Return Value:
     // NULL (which *isn't* included in BaseNameA.Length).
     //
 
-    BaseNameAMaximumLength.LongPart = ALIGN_UP(BaseNameALength.LongPart + 1, 8);
+    BaseNameAMaximumLength.LongPart = ALIGN_UP_POINTER(
+        ((ULONG_PTR)BaseNameALength.LongPart + 1)
+    );
     if (BaseNameAMaximumLength.HighPart) {
         Result = PH_E_STRING_BUFFER_OVERFLOW;
         PH_ERROR(PerfectHashPathCreate_BaseNameAMaximumLength, Result);

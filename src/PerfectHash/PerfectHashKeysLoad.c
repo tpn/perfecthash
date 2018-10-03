@@ -263,17 +263,18 @@ Return Value:
     ULONG Bitmap;
     ULONG PopCount;
     ULONG Longest;
-    ULONG Leading;
-    ULONG Trailing;
     ULONG Start;
     PULONG Values;
     PULONG KeyArray;
     PCHAR String;
+    const ULONG_PTR One = 1;
     ULONG_PTR Bit;
     ULONG_PTR Mask;
     ULONG_PTR Index;
     ULONG_PTR Offset;
     ULONG_PTR Shifted;
+    ULONG_PTR Leading;
+    ULONG_PTR Trailing;
     ULONG_PTR NumberOfKeys;
     ULONG InvertedBitmap;
     RTL_BITMAP RtlBitmap;
@@ -361,7 +362,7 @@ Return Value:
     Leading = LeadingZeros(Bitmap);
     Trailing = TrailingZeros(Bitmap);
     PopCount = PopulationCount32(Bitmap);
-    Mask = (1 << (32 - Leading - Trailing)) - 1;
+    Mask = (One << (32 - Leading - Trailing)) - One;
 
     KeysBitmap->LeadingZeros = (BYTE)Leading;
     KeysBitmap->TrailingZeros = (BYTE)Trailing;

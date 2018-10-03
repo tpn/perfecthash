@@ -255,8 +255,8 @@ Return Value:
     //
 
     SizeOfWideBase64BufferInBytes = ALIGN_UP_POINTER(
-        NumberOfNames *
-        LengthOfNameInChars *
+        (ULONG_PTR)NumberOfNames *
+        (ULONG_PTR)LengthOfNameInChars *
         sizeof(WCHAR) *
         2
     );
