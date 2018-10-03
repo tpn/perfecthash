@@ -153,7 +153,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_PATH {
     COMMON_COMPONENT_HEADER(PERFECT_HASH_PATH);
 
     //
-    // We inline the parts structure for convenience.
+    // Inline the parts structure for convenience.
     //
 
     _Guarded_by_(Path->Lock)
@@ -162,7 +162,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_PATH {
         PERFECT_HASH_PATH_PARTS Parts;
 
         struct {
-            UNICODE_STRING FullPath;
+            union {
+                UNICODE_STRING FullPath;
+                UNICODE_STRING FirstPart;
+            };
             UNICODE_STRING Drive;
             UNICODE_STRING Directory;
             UNICODE_STRING BaseName;
@@ -171,6 +174,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_PATH {
             UNICODE_STRING StreamName;
             STRING BaseNameA;
             STRING TableNameA;
+            STRING BaseNameUpperA;
+            union {
+                STRING TableNameUpperA;
+                STRING LastPart;
+            };
         };
     };
 
@@ -183,6 +191,19 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_PATH {
 
 } PERFECT_HASH_PATH;
 typedef PERFECT_HASH_PATH *PPERFECT_HASH_PATH;
+
+//
+// Verify we've manually inlined the structure correctly.  If compilation fails
+// on this next line, verify the inline representation matches the structure
+// definition of PERFECT_HASH_PATH_PARTS.
+//
+
+C_ASSERT(
+    RTL_FIELD_SIZE(PERFECT_HASH_PATH, Parts) == ((
+        FIELD_OFFSET(PERFECT_HASH_PATH, LastPart) -
+        FIELD_OFFSET(PERFECT_HASH_PATH, FirstPart)
+    ) + RTL_FIELD_SIZE(PERFECT_HASH_PATH, LastPart))
+);
 
 //
 // Private non-vtbl methods.

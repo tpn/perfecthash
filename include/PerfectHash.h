@@ -674,6 +674,14 @@ typedef struct _PERFECT_HASH_PATH_PARTS {
 
     STRING TableNameA;
 
+    //
+    // As above, but an uppercase version of the base name and table name if
+    // applicable.
+    //
+
+    STRING BaseNameUpperA;
+    STRING TableNameUpperA;
+
 } PERFECT_HASH_PATH_PARTS;
 typedef PERFECT_HASH_PATH_PARTS *PPERFECT_HASH_PATH_PARTS;
 typedef const PERFECT_HASH_PATH_PARTS *PCPERFECT_HASH_PATH_PARTS;

@@ -277,6 +277,8 @@ Return Value:
     PWSTR End;
     PWSTR Char;
     WCHAR Wide;
+    PCHAR Base;
+    CHAR Upper;
     HRESULT Result = S_OK;
     BOOLEAN Found = FALSE;
     BOOLEAN Valid;
@@ -525,12 +527,14 @@ Return Value:
 
         //
         // Base name was not a valid C identifier.  Clear the BaseNameA
-        // and TableNameA representations.
+        // and TableNameA representations, and their uppercase variants.
         //
 
         ZeroMemory(Path->BaseNameA.Buffer, Path->BaseNameA.MaximumLength);
         ZeroStruct(Path->BaseNameA);
         ZeroStruct(Path->TableNameA);
+        ZeroStruct(Path->BaseNameUpperA);
+        ZeroStruct(Path->TableNameUpperA);
 
     } else {
 
@@ -557,6 +561,34 @@ Return Value:
         Path->TableNameA.Buffer = Path->BaseNameA.Buffer;
         Path->TableNameA.Length = Path->BaseNameA.Length;
         Path->TableNameA.MaximumLength = Path->BaseNameA.MaximumLength;
+
+        //
+        // Convert the base name into an uppercase representation.
+        //
+
+        Path->BaseNameUpperA.Length = Path->BaseNameA.Length;
+        Path->BaseNameUpperA.MaximumLength = Path->BaseNameA.MaximumLength;
+
+        Base = Path->BaseNameA.Buffer;
+        for (Index = 0; Index < Path->BaseNameUpperA.Length; Index++) {
+            Upper = *Base++;
+
+            if (Upper >= 'a' && Upper <= 'z') {
+                Upper -= 0x20;
+            }
+
+            Path->BaseNameUpperA.Buffer[Index] = Upper;
+        }
+
+        //
+        // Wire up the uppercase table name in the same fashion as the table
+        // name above.
+        //
+
+        Path->TableNameUpperA.Buffer = Path->BaseNameUpperA.Buffer;
+        Path->TableNameUpperA.Length = Path->BaseNameUpperA.Length;
+        Path->TableNameUpperA.MaximumLength =
+            Path->BaseNameUpperA.MaximumLength;
     }
 
     //
@@ -630,6 +662,7 @@ Return Value:
 {
     PRTL Rtl;
     ULONG AllocSize;
+    ULONG AlignedMaxLength;
     PVOID BaseAddress;
     HRESULT ResetResult;
     HRESULT Result = S_OK;
@@ -674,13 +707,14 @@ Return Value:
     Allocator = Path->Allocator;
 
     //
-    // We need to allocate space for the BaseNameA buffer, but we haven't
-    // extracted the parts of the path yet to know how long the base name
-    // is.  So, just double the size of the incoming source string.  It's
-    // a bit wasteful, but it's not the end of the world.
+    // We need to allocate space for the BaseNameA and BaseNameUpperA buffers,
+    // but we haven't extracted the parts of the path yet to know how long the
+    // base name is.  So, just triple the size of the incoming source string.
+    // It's a bit wasteful, but it's not the end of the world.
     //
 
-    AllocSize = ALIGN_UP_POINTER(Source->MaximumLength) << 1;
+    AlignedMaxLength = ALIGN_UP_POINTER(Source->MaximumLength);
+    AllocSize = (AlignedMaxLength << 1) + AlignedMaxLength;
 
     BaseAddress = Allocator->Vtbl->Calloc(Allocator, 1, AllocSize);
 
@@ -698,6 +732,10 @@ Return Value:
                Source->Buffer,
                Path->FullPath.Length);
 
+    //
+    // Carve out the BaseNameA and BaseNameUpperA buffers from the allocation.
+    //
+
     Path->BaseNameA.Buffer = (PSTR)(
         RtlOffsetToPointer(
             BaseAddress,
@@ -706,6 +744,15 @@ Return Value:
     );
     Path->BaseNameA.Length = 0;
     Path->BaseNameA.MaximumLength = ALIGN_UP_POINTER(Source->MaximumLength);
+
+    Path->BaseNameUpperA.Buffer = (PSTR)(
+        RtlOffsetToPointer(
+            Path->BaseNameA.Buffer,
+            Path->BaseNameA.MaximumLength
+        )
+    );
+    Path->BaseNameUpperA.Length = 0;
+    Path->BaseNameUpperA.MaximumLength = Path->BaseNameA.MaximumLength;
 
     Result = Path->Vtbl->ExtractParts(Path);
     if (FAILED(Result)) {
@@ -1052,10 +1099,12 @@ Return Value:
     }
 
     //
-    // Add the base name buffer length into the total aligned alloc length.
+    // Add the 2 x base name buffer length into the total aligned alloc length.
+    // We multiply by 2 (shift left once) to account for both the BaseNameA and
+    // BaseNameUpperA buffers.
     //
 
-    AlignedAllocSize.LongPart += BaseNameAMaximumLength.LowPart;
+    AlignedAllocSize.LongPart += (BaseNameAMaximumLength.LongPart << 1);
 
     //
     // Argument validation complete.  Initialize aliases then attempt to
@@ -1221,6 +1270,20 @@ Return Value:
     Path->BaseNameA.Buffer = (PSTR)Dest;
     Path->BaseNameA.Length = 0;
     Path->BaseNameA.MaximumLength = BaseNameAMaximumLength.LowPart;
+
+    //
+    // Initialize the BaseNameUpperA buffer to point to the area after the
+    // BaseNameA buffer.
+    //
+
+    Path->BaseNameUpperA.Buffer = (PSTR)(
+        RtlOffsetToPointer(
+            Path->BaseNameA.Buffer,
+            Path->BaseNameA.MaximumLength
+        )
+    );
+    Path->BaseNameUpperA.Length = 0;
+    Path->BaseNameUpperA.MaximumLength = BaseNameAMaximumLength.LowPart;
 
     //
     // We've finished constructing our new path's FullPath.Buffer.  Final step
