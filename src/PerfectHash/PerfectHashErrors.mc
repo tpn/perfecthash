@@ -9,7 +9,10 @@
 ;Abstract:
 ;
 ;    This is the public header file for error codes used by the perfect
-;    hash library.  It is automatically generated.
+;    hash library.  It is automatically generated from the messages
+;    messages defined in src/PerfectHash/PerfectHashErrors.mc by the
+;    helper script src/PerfectHash/build-message-tables.bat (which must
+;    be run whenever the .mc file changes).
 ;
 ;--*/
 
@@ -342,8 +345,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_TABLE_COMPILATION_NOT_AVAILABLE
 Language=English
-Table compilation is not available for the current combination of
-architecture, algorithm ID, hash function and masking type.
+Table compilation is not available for the current combination of architecture, algorithm ID, hash function and masking type.
 .
 
 MessageId=0x229
@@ -351,8 +353,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
 Language=English
-The maximum number of table resize events was reached before a perfect hash
-table solution could be found.
+The maximum number of table resize events was reached before a perfect hash table solution could be found.
 .
 
 MessageId=0x22a
@@ -368,8 +369,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_PREPARING_TABLE_FILE
 Language=English
-An error occurred whilst preparing a table file to use for saving the
-perfect hash table solution.
+Error preparing perfect hash table file.
 .
 
 MessageId=0x22c
@@ -377,18 +377,22 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_SAVING_TABLE_FILE
 Language=English
-An error occurred whilst trying to save a perfect hash table to
-the previously prepared table file.
+Error saving perfect hash table file.
 .
+
+;//
+;// A perfect hash table solution was found, however, it did not
+;// pass internal validation checks (e.g. collisions were found
+;// when attempting to independently verify that the perfect hash
+;// function generated no collisions).
+;//
 
 MessageId=0x22d
 Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_TABLE_VERIFICATION_FAILED
 Language=English
-A perfect hash table solution was found, however, it did not pass internal
-validation checks (e.g. collisions were found when attempting to independently
-verify that the perfect hash function generated no collisions).
+Table verification failed.
 .
 
 MessageId=0x22e
@@ -396,8 +400,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_TABLE_CROSS_COMPILATION_NOT_AVAILABLE
 Language=English
-Table cross-compilation is not available between the current architecture
-and requested architecture.
+Table cross-compilation is not available.
 .
 
 MessageId=0x22f
@@ -421,7 +424,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_WORK_IN_PROGRESS
 Language=English
-This functionality is actively undergoing development and is not yet working.
+Work in progress.
 .
 
 MessageId=0x232
@@ -429,9 +432,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER
 Language=English
-The base component of the keys file name (name excluding extension)
-is not a valid C identifier.  (This is caused by file names containing
-characters other than '0-9', 'A-Z', 'a-z' and '_'.)
+Keys file base name is not a valid C identifier.
 .
 
 MessageId=0x233
@@ -439,8 +440,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_PREPARING_C_HEADER_FILE
 Language=English
-An error occurred whilst preparing a C header file to use for saving the
-perfect hash table solution.
+Error preparing C header file.
 .
 
 MessageId=0x234
@@ -448,8 +448,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_SAVING_C_HEADER_FILE
 Language=English
-An error occurred whilst trying to save a perfect hash table to
-the previously prepared C header file.
+Error saving C header file.
 .
 
 MessageId=0x235
@@ -457,7 +456,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_UNREACHABLE_CODE
 Language=English
-An internal error has occurred; code marked as unreachable has been reached.
+Unreachable code reached.
 .
 
 MessageId=0x236
@@ -465,7 +464,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_INVARIANT_CHECK_FAILED
 Language=English
-An internal error has occurred; an invariant check has failed.
+Internal invariant check failed.
 .
 
 MessageId=0x237
@@ -500,13 +499,17 @@ Language=English
 Failed to reset context.
 .
 
-MessageId=0x23b
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED
-Language=English
-Failed to set context output directory.
-.
+;//
+;// Removed 2018-10-03.
+;//
+;// MessageId=0x23b
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED
+;// Language=English
+;// Failed to set context output directory.
+;// .
+;//
 
 MessageId=0x23c
 Severity=Fail
@@ -529,8 +532,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_PREPARING_TABLE_INFO_STREAM
 Language=English
-An error occurred whilst trying to prepare the perfect hash table's :Info
-stream.
+Error preparing :Info stream.
 .
 
 MessageId=0x23f
@@ -538,8 +540,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_SAVING_TABLE_INFO_STREAM
 Language=English
-An error occurred whilst trying to save the perfect hash table's :Info
-stream.
+Error saving :Info stream.
 .
 
 MessageId=0x240
@@ -547,8 +548,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_FILE
 Language=English
-An error occurred whilst trying to save the C source file for the perfect
-hash table solution.
+Error saving C source file.
 .
 
 MessageId=0x241
@@ -556,8 +556,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_KEYS_FILE
 Language=English
-An error occurred whilst trying to save the C source keys file for the perfect
-hash table solution.
+Error saving C source keys file.
 .
 
 MessageId=0x242
@@ -565,8 +564,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE
 Language=English
-An error occurred whilst trying to save the C source table data file for the
-perfect hash table solution.
+Error saving C source table data file.
 .
 
 MessageId=0x243
@@ -606,7 +604,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_MAPPING_SIZE_LESS_THAN_OR_EQUAL_TO_CURRENT_SIZE
 Language=English
-The mapping size provided is less than or equal to the current file size.
+Mapping size is less than or equal to current file size.
 .
 
 MessageId=0x248
@@ -646,8 +644,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_FILE_MAPPING_SIZE_NOT_SYSTEM_ALIGNED
 Language=English
-The mapping size for the file is not aligned to the system allocation
-granularity.
+Mapping size is not aligned to the system allocation granularity.
 .
 
 MessageId=0x24d
@@ -655,8 +652,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_FILE_MAPPING_SIZE_NOT_LARGE_PAGE_ALIGNED
 Language=English
-The mapping size for the file is not aligned to the large page granularity,
-and large pages have been requested.
+Mapping size is not aligned to the large page granularity.
 .
 
 MessageId=0x24e
@@ -680,8 +676,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_FILE_ALREADY_CLOSED
 Language=English
-An existing file was already loaded or created and then subsequently closed
-for this file instance.
+File already closed.
 .
 
 MessageId=0x251
@@ -785,7 +780,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_FILE
 Language=English
-An error occurred whilst preparing the C source file.
+Error preparing C source file.
 .
 
 MessageId=0x25e
@@ -793,7 +788,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_KEYS_FILE
 Language=English
-An error occurred whilst preparing the C source keys file.
+Error preparing C source keys file.
 .
 
 MessageId=0x25f
@@ -801,7 +796,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE
 Language=English
-An error occurred whilst preparing the C source table data file.
+Error preparing C source table data file..
 .
 
 MessageId=0x260
@@ -921,6 +916,5 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
 Language=English
-The number of value assignments did not equal the number of keys during
-graph validation.
+The number of value assignments did not equal the number of keys during graph validation.
 .
