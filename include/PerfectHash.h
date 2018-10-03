@@ -940,20 +940,6 @@ typedef union _PERFECT_HASH_FILE_FLAGS {
         ULONG Created:1;
 
         //
-        // When set, indicates this file is an NTFS stream.
-        //
-        // Invariant:
-        //
-        //      If IsStream == TRUE:
-        //          Assert File.StreamName.Buffer != NULL
-        //
-        //      If IsStream == FALSE:
-        //          Assert File.StreamName.Buffer == NULL
-        //
-
-        ULONG IsStream:1;
-
-        //
         // When set, indicates the caller disabled large pages at creation or
         // load time via the DisableTryLargePagesForFileData flag.
         //
@@ -973,7 +959,7 @@ typedef union _PERFECT_HASH_FILE_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:27;
+        ULONG Unused:28;
     };
 
     LONG AsLong;
