@@ -29,8 +29,8 @@ extern FILE_WORK_CALLBACK_IMPL SaveCSourceTableDataCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL PrepareTableInfoStreamCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveTableInfoStreamCallbackChm01;
 
-extern FILE_WORK_CALLBACK_IMPL PrepareCHeaderCallbackChm01;
-extern FILE_WORK_CALLBACK_IMPL SaveCHeaderCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareCHeaderFileChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCHeaderFileChm01;
 
 extern FILE_WORK_CALLBACK_IMPL PrepareCSourceCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL PrepareCSourceKeysCallbackChm01;
@@ -63,5 +63,15 @@ typedef SAVE_FILE *PSAVE_FILE;
 
 extern PREPARE_FILE PrepareFileChm01;
 extern SAVE_FILE SaveFileChm01;
+
+//
+// Helper macro for adding a 4-space indent to the output stream.
+//
+
+#define INDENT() {            \
+    Long = (PULONG)Output;    \
+    *Long = Indent;           \
+    Output += sizeof(Indent); \
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
