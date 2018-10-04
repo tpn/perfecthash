@@ -108,6 +108,7 @@
     <ClCompile Include="Chm01FileWork.c" />
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
     <ClCompile Include="Chm01FileWorkTableFile.c" />
+    <ClCompile Include="Chm01FileWorkTableInfoStream.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Component.c" />
