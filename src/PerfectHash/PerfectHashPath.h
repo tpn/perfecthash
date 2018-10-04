@@ -182,6 +182,20 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_PATH {
         };
     };
 
+    //
+    // The offset of the additional suffix added to the keys file name to
+    // create the table name, relative to the BaseNameA and BaseNameUpperA.
+    // This is used by the PERFECT_HASH_TABLE component to capture where
+    // the algorithm name (that has been automatically appended) starts
+    // within a base name/table name.
+    //
+    // N.B. This field is not used by the path component; downstream
+    //      components are free to use it for whatever they want.
+    //
+
+    USHORT AdditionalSuffixAOffset;
+
+    USHORT Padding[3];
 
     //
     // Backing interface.

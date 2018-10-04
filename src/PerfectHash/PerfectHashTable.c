@@ -260,7 +260,8 @@ PerfectHashTableInitializeTableSuffix(
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    PCUNICODE_STRING AdditionalSuffix
+    PCUNICODE_STRING AdditionalSuffix,
+    PUSHORT AlgorithmOffset
     )
 /*++
 
@@ -294,6 +295,11 @@ Arguments:
     AdditionalSuffix - Optionally supplies an additional suffix to append to
         the buffer.
 
+    AlgorithmOffset - Receives the byte offset of the algorithm name, relative
+        to Suffix->Buffer, excluding the leading '_'.  E.g. given the suffix
+        "_Chm01_Crc32Rotate_And", the algorithm offset will be the position of
+        the 'C' in "_Chm01...".
+
 Return Value:
 
     S_OK - Initialized suffix successfully.
@@ -309,6 +315,7 @@ Return Value:
     PRTL Rtl;
     PWSTR Dest;
     USHORT Count;
+    USHORT Offset = 0;
     BOOLEAN Success;
     HRESULT Result = S_OK;
     ULONG_PTR ExpectedDest;
@@ -405,6 +412,7 @@ Return Value:
 
     if (AlgorithmName) {
         *Dest++ = L'_';
+        Offset = (USHORT)RtlPointerToOffset(Suffix->Buffer, Dest);
         Count = AlgorithmName->Length >> 1;
         CopyMemory(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
         Dest += Count;
@@ -465,6 +473,8 @@ Error:
     //
 
 End:
+
+    *AlgorithmOffset = Offset;
 
     return Result;
 }
@@ -545,6 +555,7 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result = S_OK;
+    USHORT AlgorithmOffset = 0;
     USHORT AdditionalSuffixALength = 0;
     PPERFECT_HASH_PATH Path = NULL;
     PPERFECT_HASH_PATH_PARTS Parts = NULL;
@@ -592,7 +603,8 @@ Return Value:
             AlgorithmId,
             MaskFunctionId,
             HashFunctionId,
-            AdditionalSuffix
+            AdditionalSuffix,
+            &AlgorithmOffset
         )
     );
 
@@ -640,7 +652,11 @@ Return Value:
     // added above.
     //
 
-    if (Path->BaseNameA.Length > 0 && AdditionalSuffixALength > 0) {
+    if (Path->BaseNameA.Length > 0) {
+
+        //
+        // N.B. AdditionalSuffixALength may be 0 here, which is ok.
+        //
 
         ASSERT(Path->BaseNameA.Buffer);
         ASSERT(Path->TableNameA.Buffer);
@@ -652,6 +668,33 @@ Return Value:
 
         Path->TableNameA.Length -= AdditionalSuffixALength;
         Path->TableNameA.MaximumLength = Path->TableNameA.Length;
+
+        //
+        // As above, but for the uppercase variants.
+        //
+
+        ASSERT(Path->BaseNameUpperA.Buffer);
+        ASSERT(Path->TableNameUpperA.Buffer);
+        ASSERT(Path->BaseNameUpperA.Buffer == Path->TableNameUpperA.Buffer);
+
+        ASSERT(Path->TableNameUpperA.Length != 0);
+        ASSERT(Path->TableNameUpperA.Length <=
+               Path->TableNameUpperA.MaximumLength);
+        ASSERT(Path->TableNameUpperA.Length > AdditionalSuffixALength);
+
+        Path->TableNameUpperA.Length -= AdditionalSuffixALength;
+        Path->TableNameUpperA.MaximumLength = Path->TableNameUpperA.Length;
+
+        //
+        // Convert the algorithm offset into the byte offset of the first
+        // character of the algorithm name relative to the base/table name
+        // ASCII buffers initialized above.  We shift right to convert from
+        // wchar to char, then add the existing path length.
+        //
+
+        Path->AdditionalSuffixAOffset = (
+            (AlgorithmOffset >> 1) + ExistingPath->BaseNameA.Length
+        );
     }
 
     //

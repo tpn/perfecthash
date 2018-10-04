@@ -180,9 +180,6 @@
     <ClInclude Include="Graph.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\CompiledPerfectHashTable.h">
-      <Filter>Public Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PerfectHashFile.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
@@ -194,6 +191,9 @@
     </ClInclude>
     <ClInclude Include="Chm01.h">
       <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\CompiledPerfectHash.h">
+      <Filter>Public Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

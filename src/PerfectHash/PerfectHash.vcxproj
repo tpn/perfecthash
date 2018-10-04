@@ -82,7 +82,7 @@
     <None Include="PerfectHash.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\CompiledPerfectHashTable.h" />
+    <ClInclude Include="..\..\include\CompiledPerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHashErrors.h" />
     <ClInclude Include="Chm01.h" />

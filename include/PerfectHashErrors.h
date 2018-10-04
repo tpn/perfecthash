@@ -1063,3 +1063,12 @@ Abstract:
 //
 #define PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION ((HRESULT)0xE004026EL)
 
+//
+// MessageId: PH_E_INVALID_NUMBER_OF_SEEDS
+//
+// MessageText:
+//
+// Invalid number of seeds.
+//
+#define PH_E_INVALID_NUMBER_OF_SEEDS     ((HRESULT)0xE004026FL)
+

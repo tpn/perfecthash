@@ -30,6 +30,8 @@ extern FILE_WORK_CALLBACK_IMPL PrepareTableInfoStreamCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveTableInfoStreamCallbackChm01;
 
 extern FILE_WORK_CALLBACK_IMPL PrepareCHeaderCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCHeaderCallbackChm01;
+
 extern FILE_WORK_CALLBACK_IMPL PrepareCSourceCallbackChm01;
 extern FILE_WORK_CALLBACK_IMPL PrepareCSourceKeysCallbackChm01;
 

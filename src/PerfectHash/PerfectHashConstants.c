@@ -51,6 +51,24 @@ const PPERFECT_HASH_TABLE_HASH HashRoutines[] = {
 };
 
 //
+// Define the array of number of seeds required per hash routine.
+//
+
+const SHORT HashRoutineNumberOfSeeds[] = {
+    -1,
+
+    2, // Crc32Rotate
+    3, // Jenkins
+    3, // RotateXor
+    2, // AddSub
+    2, // Xor
+    3, // Crc32RotateXor
+    2, // Scratch
+
+    -1,
+};
+
+//
 // Define the array of seeded hash routines.
 //
 

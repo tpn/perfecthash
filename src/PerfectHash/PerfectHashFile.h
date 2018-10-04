@@ -179,7 +179,7 @@ C_ASSERT(sizeof(PERFECT_HASH_FILE_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 
 //
-// Helper macros for discerning file state.
+// Helper macros.
 //
 
 #define IsFileOpen(File) (File->State.IsOpen)
@@ -214,6 +214,8 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 
 #define NumberOfPagesForPendingEndOfFile(File) \
     (ULONG)BYTES_TO_PAGES(File->PendingEndOfFile.QuadPart)
+
+#define GetActivePath(File) (File->RenamePath ? File->RenamePath : File->Path)
 
 //
 // Define the PERFECT_HASH_FILE structure.

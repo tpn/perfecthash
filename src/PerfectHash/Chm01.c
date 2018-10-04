@@ -119,21 +119,16 @@ Return Value:
         the number of requested table elements is doubled.  If this number
         exceeds MAX_ULONG, this error will be returned.
 
-    PH_E_ERROR_PREPARING_TABLE_FILE - An error occurred whilst preparing a file
-        to use for saving the perfect hash table.
-
-    PH_E_ERROR_SAVING_TABLE_FILE - An error occurred whilst trying to save the
-        perfect hash table to the file prepared earlier.
-
-    PH_E_ERROR_PREPARING_HEADER_FILE - An error occurred whilst preparing a file
-        to use for saving the perfect hash table C header.
-
-    PH_E_ERROR_SAVING_HEADER_FILE - An error occurred whilst trying to save the
-        C header representation of the perfect hash table.
-
     PH_E_TABLE_VERIFICATION_FAILED - The winning perfect hash table solution
         failed internal verification.  The primary cause of this is typically
         when collisions are detected during verification.
+
+    PH_E_INVALID_NUMBER_OF_SEEDS - The number of seeds required for the given
+        hash function exceeds the number of seeds available in the on-disk
+        table info structure.
+
+    PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED - The maximum number
+        of table resize events was reached before a solution could be found.
 
 --*/
 {
@@ -167,6 +162,8 @@ Return Value:
     PGRAPH_DIMENSIONS Dim;
     PSLIST_ENTRY ListEntry;
     SYSTEM_INFO SystemInfo;
+    ULONG NumberOfSeedsRequired;
+    ULONG NumberOfSeedsAvailable;
     FILE_WORK_ITEM PrepareTableFile;
     FILE_WORK_ITEM PrepareTableInfoStream;
     FILE_WORK_ITEM PrepareCHeaderFile;
@@ -255,6 +252,21 @@ Return Value:
     if (!Context->ResizeTableThreshold) {
         Context->ResizeTableThreshold = GRAPH_SOLVING_ATTEMPTS_THRESHOLD;
         Context->ResizeLimit = GRAPH_SOLVING_RESIZE_TABLE_LIMIT;
+    }
+
+    //
+    // Verify we have sufficient seeds available in our on-disk structure
+    // for the given hash function.
+    //
+
+    NumberOfSeedsRequired = HashRoutineNumberOfSeeds[Table->HashFunctionId];
+    NumberOfSeedsAvailable = ((
+        FIELD_OFFSET(GRAPH, LastSeed) -
+        FIELD_OFFSET(GRAPH, FirstSeed)
+    ) / sizeof(ULONG)) + 1;
+
+    if (NumberOfSeedsAvailable < NumberOfSeedsRequired) {
+        return PH_E_INVALID_NUMBER_OF_SEEDS;
     }
 
     //
@@ -825,10 +837,7 @@ RetryWithLargerTableSize:
     TableInfoOnDisk->NumberOfKeys.QuadPart = (
         Table->Keys->NumberOfElements.QuadPart
     );
-    TableInfoOnDisk->NumberOfSeeds = ((
-        FIELD_OFFSET(GRAPH, LastSeed) -
-        FIELD_OFFSET(GRAPH, FirstSeed)
-    ) / sizeof(ULONG)) + 1;
+    TableInfoOnDisk->NumberOfSeeds = NumberOfSeedsRequired;
 
     //
     // This will change based on masking type and whether or not the caller

@@ -67,6 +67,13 @@ extern const BYTE NumberOfFastIndexRoutines;
 extern const PPERFECT_HASH_TABLE_HASH HashRoutines[];
 
 //
+// Declare an array of numbers representing the number of seeds used by each
+// hash function.  Also indexed by PERFECT_HASH_TABLE_HASH_FUNCTION_ID.
+//
+
+extern const SHORT HashRoutineNumberOfSeeds[];
+
+//
 // Declare an array of hash mask routines.  This is intended to be indexed by
 // the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enumeration.
 //

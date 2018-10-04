@@ -918,3 +918,11 @@ SymbolicName=PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
 Language=English
 The number of value assignments did not equal the number of keys during graph validation.
 .
+
+MessageId=0x26f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_NUMBER_OF_SEEDS
+Language=English
+Invalid number of seeds.
+.
