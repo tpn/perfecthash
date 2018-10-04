@@ -31,7 +31,7 @@ extern FILE_WORK_CALLBACK_IMPL PrepareCHeaderFileChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveCHeaderFileChm01;
 
 extern FILE_WORK_CALLBACK_IMPL PrepareCSourceFileChm01;
-extern FILE_WORK_CALLBACK_IMPL PrepareCSourceKeysCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL PrepareCSourceKeysFileChm01;
 
 extern SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
     ShouldWeContinueTryingToSolveGraphChm01;
