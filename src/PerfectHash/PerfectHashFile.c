@@ -822,21 +822,23 @@ Return Value:
             File->RenamePath = NULL;
         }
 
-        if (!DeleteFileW(File->Path->FullPath.Buffer)) {
+        if (File->Path) {
+            if (!DeleteFileW(File->Path->FullPath.Buffer)) {
 
-            //
-            // DeleteFileW() will fail with ERROR_ACCESS_DENIED if this was an
-            // NTFS stream (e.g. the :Info stream) and the parent file has been
-            // deleted.  Check for this condition now and suppress the error if
-            // applicable.
-            //
+                //
+                // DeleteFileW() will fail with ERROR_ACCESS_DENIED if this was an
+                // NTFS stream (e.g. the :Info stream) and the parent file has been
+                // deleted.  Check for this condition now and suppress the error if
+                // applicable.
+                //
 
-            LastError = GetLastError();
-            if (LastError == ERROR_ACCESS_DENIED && IsFileStream(File)) {
-                SetLastError(ERROR_SUCCESS);
-            } else {
-                SYS_ERROR(DeleteFileW);
-                Result = PH_E_SYSTEM_CALL_FAILED;
+                LastError = GetLastError();
+                if (LastError == ERROR_ACCESS_DENIED && IsFileStream(File)) {
+                    SetLastError(ERROR_SUCCESS);
+                } else {
+                    SYS_ERROR(DeleteFileW);
+                    Result = PH_E_SYSTEM_CALL_FAILED;
+                }
             }
         }
 
