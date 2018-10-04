@@ -25,7 +25,7 @@ extern PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
 extern FILE_WORK_CALLBACK_IMPL SaveTableFileChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveTableInfoStreamChm01;
-extern FILE_WORK_CALLBACK_IMPL SaveCSourceTableDataCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveCSourceTableDataFileChm01;
 
 extern FILE_WORK_CALLBACK_IMPL PrepareCHeaderFileChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveCHeaderFileChm01;

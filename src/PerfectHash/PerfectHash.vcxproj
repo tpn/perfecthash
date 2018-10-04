@@ -109,6 +109,7 @@
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceKeysFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceTableDataFile.c" />
     <ClCompile Include="Chm01FileWorkTableFile.c" />
     <ClCompile Include="Chm01FileWorkTableInfoStream.c" />
     <ClCompile Include="Chm01Index.c" />
