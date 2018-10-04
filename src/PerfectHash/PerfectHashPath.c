@@ -279,6 +279,9 @@ Return Value:
     WCHAR Wide;
     PCHAR Base;
     CHAR Upper;
+    PWSTR LastDot = NULL;
+    PWSTR LastSlash = NULL;
+    PWSTR LastColon = NULL;
     HRESULT Result = S_OK;
     BOOLEAN Found = FALSE;
     BOOLEAN Valid;
@@ -315,6 +318,11 @@ Return Value:
 
     for (Index = 0, Char = End; Index < Count; Index++, Char--) {
         if (*Char == L'.') {
+            LastDot = Char;
+            Found = TRUE;
+            break;
+        } else if (*Char == L'\\') {
+            LastSlash = Char;
             Found = TRUE;
             break;
         }
@@ -324,11 +332,17 @@ Return Value:
         goto Error;
     }
 
-    ASSERT(*Char == L'.');
+    ASSERT((LastSlash && !LastDot) || (!LastSlash && LastDot));
+
     Char++;
-    Path->Extension.Buffer = Char;
-    Path->Extension.Length = (USHORT)RtlPointerToOffset(Char, End);
-    Path->Extension.MaximumLength = Path->Extension.Length;
+
+    if (LastDot) {
+        Path->Extension.Buffer = Char;
+        Path->Extension.Length = (USHORT)RtlPointerToOffset(Char, End);
+        Path->Extension.MaximumLength = Path->Extension.Length;
+    } else {
+        ZeroStruct(Path->Extension);
+    }
 
     //
     // Advance through the string and try see if there's a colon, indicating
@@ -339,6 +353,7 @@ Return Value:
 
     while (Char != End) {
         if (*Char == L':') {
+            LastColon = Char;
             Found = TRUE;
             break;
         }
@@ -348,44 +363,56 @@ Return Value:
     ASSERT(!Path->StreamName.Buffer);
 
     if (Found) {
-        ASSERT(*Char == L':');
+        ASSERT(*LastColon == L':');
         Char++;
         Path->StreamName.Buffer = Char;
         Path->StreamName.Length = (USHORT)RtlPointerToOffset(Char, End);
         Path->StreamName.MaximumLength = Path->StreamName.Length;
         ASSERT(Path->StreamName.Buffer[Path->StreamName.Length >> 1] == L'\0');
 
-        //
-        // Remove the stream name and ':' from the extension length.
-        //
+        if (LastDot) {
 
-        Path->Extension.Length = (USHORT)(
-            RtlPointerToOffset(
-                Path->Extension.Buffer,
-                Path->StreamName.Buffer - 1
-            )
-        );
-        Path->Extension.MaximumLength = Path->Extension.Length;
-        ASSERT(Path->Extension.Buffer[Path->Extension.Length >> 1] == L':');
-    }
+            //
+            // Remove the stream name and ':' from the extension length.
+            //
 
-    //
-    // Reset the Char pointer back to the dot, then reverse backward looking
-    // for the first directory slash.
-    //
-
-    Found = FALSE;
-    Char = Path->Extension.Buffer - 2;
-    while (Char != Start) {
-        if (*Char == L'\\') {
-            Found = TRUE;
-            break;
+            Path->Extension.Length = (USHORT)(
+                RtlPointerToOffset(
+                    Path->Extension.Buffer,
+                    Path->StreamName.Buffer - 1
+                )
+            );
+            Path->Extension.MaximumLength = Path->Extension.Length;
+            ASSERT(Path->Extension.Buffer[Path->Extension.Length >> 1] == L':');
         }
-        Char--;
     }
 
-    if (!Found) {
-        goto Error;
+    //
+    // If we previously didn't find the last slash, find it now.
+    //
+
+    if (!LastSlash) {
+
+        //
+        // Reset the Char pointer back to the dot, then reverse backward looking
+        // for the first directory slash.
+        //
+
+        Found = FALSE;
+        Char = Path->Extension.Buffer - 2;
+        while (Char != Start) {
+            if (*Char == L'\\') {
+                Found = TRUE;
+                break;
+            }
+            Char--;
+        }
+
+        if (!Found) {
+            goto Error;
+        }
+    } else {
+        Char = LastSlash;
     }
 
     //
@@ -403,7 +430,10 @@ Return Value:
         )
     );
     Path->BaseName.MaximumLength = Path->BaseName.Length;
-    ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'.');
+
+    if (LastDot) {
+        ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'.');
+    }
 
     Path->FileName.Buffer = Char;
     Path->FileName.Length = (USHORT)(
@@ -489,7 +519,10 @@ Return Value:
 
         Count = Path->BaseName.Length >> 1;
         Path->BaseNameA.Length = Count;
-        ASSERT(Path->BaseName.Buffer[Count] == L'.');
+
+        if (LastDot) {
+            ASSERT(Path->BaseName.Buffer[Count] == L'.');
+        }
 
         for (Index = 1; Index < Count; Index++) {
 
@@ -890,6 +923,7 @@ Return Value:
     HRESULT ResetResult;
     HRESULT Result = S_OK;
     BOOLEAN HasStream = FALSE;
+    BOOLEAN HasExtension = FALSE;
     PALLOCATOR Allocator;
     PCUNICODE_STRING Source;
     PCUNICODE_STRING Directory;
@@ -1010,6 +1044,9 @@ Return Value:
     }
 
     ExtensionLength = Extension->Length;
+    if (ExtensionLength > 0) {
+        HasExtension = TRUE;
+    }
 
     if (ARGUMENT_PRESENT(NewStreamName)) {
         if (!IsValidUnicodeString(NewStreamName)) {
@@ -1040,8 +1077,10 @@ Return Value:
     AllocSize.LongPart += BaseNameLength;
     AllocSize.LongPart += BaseNameSuffixLength;
 
-    AllocSize.LongPart += sizeof(L'.');
-    AllocSize.LongPart += ExtensionLength;
+    if (HasExtension) {
+        AllocSize.LongPart += sizeof(L'.');
+        AllocSize.LongPart += ExtensionLength;
+    }
 
     if (HasStream) {
         AllocSize.LongPart += sizeof(L':');
@@ -1199,19 +1238,20 @@ Return Value:
     }
 
     //
-    // Write the period prior to the extension, then copy the extension.
+    // Copy the extension if applicable.
     //
 
-    *Dest++ = L'.';
-
-    Source = Extension;
-    Count = Source->Length >> 1;
-    CopyMemory(Dest, Source->Buffer, Source->Length);
-    Dest += Count;
-    ASSERT(*Dest == L'\0');
-    ExpectedDest = LastExpectedDest + Count + 1;
-    CHECK_DEST();
-    LastExpectedDest = ExpectedDest;
+    if (HasExtension) {
+        *Dest++ = L'.';
+        Source = Extension;
+        Count = Source->Length >> 1;
+        CopyMemory(Dest, Source->Buffer, Source->Length);
+        Dest += Count;
+        ASSERT(*Dest == L'\0');
+        ExpectedDest = LastExpectedDest + Count + 1;
+        CHECK_DEST();
+        LastExpectedDest = ExpectedDest;
+    }
 
     //
     // Copy the NTFS stream name if applicable.
