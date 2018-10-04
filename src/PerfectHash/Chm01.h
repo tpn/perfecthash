@@ -23,7 +23,7 @@ Abstract:
 extern PERFECT_HASH_MAIN_WORK_CALLBACK ProcessGraphCallbackChm01;
 extern PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
-extern FILE_WORK_CALLBACK_IMPL SaveTableCallbackChm01;
+extern FILE_WORK_CALLBACK_IMPL SaveTableFileChm01;
 extern FILE_WORK_CALLBACK_IMPL SaveCSourceTableDataCallbackChm01;
 
 extern FILE_WORK_CALLBACK_IMPL PrepareTableInfoStreamCallbackChm01;

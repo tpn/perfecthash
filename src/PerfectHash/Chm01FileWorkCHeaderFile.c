@@ -9,7 +9,8 @@ Module Name:
 Abstract:
 
     This module implements the prepare and save file work callback routines for
-    the CHM v1 algorithm as part of the perfect hash library.
+    the C header file as part of the CHM v1 algorithm implementation for the
+    perfect hash table library.
 
 --*/
 

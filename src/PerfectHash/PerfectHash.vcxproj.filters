@@ -133,6 +133,9 @@
     <ClCompile Include="Chm01FileWorkCHeaderFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkTableFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
