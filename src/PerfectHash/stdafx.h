@@ -75,6 +75,7 @@ Abstract:
 #include "PerfectHashConstants.h"
 #include "PerfectHashErrorHandling.h"
 #include "Graph.h"
+#include "Chm01.h"
 
 //
 // warning C4820: '<unnamed-tag>': '4' bytes padding added after

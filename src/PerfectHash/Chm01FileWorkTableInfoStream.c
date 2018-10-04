@@ -24,7 +24,6 @@ Abstract:
 --*/
 
 #include "stdafx.h"
-#include "Chm01.h"
 
 _Use_decl_annotations_
 HRESULT
