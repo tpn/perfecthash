@@ -1191,7 +1191,7 @@ Return Value:
     Source = Directory;
     Count = Source->Length >> 1;
 
-    CopyMemory(Dest, Source->Buffer, Source->Length);
+    CopyInline(Dest, Source->Buffer, Source->Length);
     Dest += Count;
 
 #define CHECK_DEST() ASSERT((ULONG_PTR)Dest == (ULONG_PTR)ExpectedDest)
@@ -1240,7 +1240,7 @@ Return Value:
     if (BaseNameSuffixLength) {
         Source = NewBaseNameSuffix;
         Count = Source->Length >> 1;
-        CopyMemory(Dest, Source->Buffer, Source->Length);
+        CopyInline(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ExpectedDest = LastExpectedDest + Count;
         CHECK_DEST();
@@ -1255,7 +1255,7 @@ Return Value:
         *Dest++ = L'.';
         Source = Extension;
         Count = Source->Length >> 1;
-        CopyMemory(Dest, Source->Buffer, Source->Length);
+        CopyInline(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ASSERT(*Dest == L'\0');
         ExpectedDest = LastExpectedDest + Count + 1;
@@ -1271,7 +1271,7 @@ Return Value:
         *Dest++ = L':';
         Source = StreamName;
         Count = Source->Length >> 1;
-        CopyMemory(Dest, Source->Buffer, Source->Length);
+        CopyInline(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ASSERT(*Dest == L'\0');
         ExpectedDest = LastExpectedDest + Count + 1;
