@@ -365,8 +365,18 @@ Return Value:
     if (Found) {
         ASSERT(*LastColon == L':');
         Char++;
+        ASSERT((ULONG_PTR)Char <= (ULONG_PTR)End);
         Path->StreamName.Buffer = Char;
         Path->StreamName.Length = (USHORT)RtlPointerToOffset(Char, End);
+
+        //
+        // Verify the stream name is at least one character long.
+        //
+
+        if (Path->StreamName.Length == 0) {
+            goto Error;
+        }
+
         Path->StreamName.MaximumLength = Path->StreamName.Length;
         ASSERT(Path->StreamName.Buffer[Path->StreamName.Length >> 1] == L'\0');
 
