@@ -110,11 +110,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG Padding;
 
     //
-    // Fully-qualified path of the output directory.  Manipulated via the
-    // SetOutputDirectory() and GetOutputDirectory() routines.
+    // Fully-qualified path of the base output directory.
     //
 
-    UNICODE_STRING OutputDirectory;
+    UNICODE_STRING BaseOutputDirectory;
 
     //
     // Pointer to the active perfect hash table.

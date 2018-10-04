@@ -173,7 +173,7 @@ Return Value:
                                             Table->AlgorithmId,
                                             Table->MaskFunctionId,
                                             Table->HashFunctionId,
-                                            Table->OutputDirectory,
+                                            Table->BaseOutputDirectory,
                                             NewBaseName,
                                             AdditionalSuffix,
                                             NewExtension,

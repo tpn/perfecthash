@@ -1756,7 +1756,7 @@ HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST)(
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ PCUNICODE_STRING TestDataDirectory,
-    _In_ PCUNICODE_STRING OutputDirectory,
+    _In_ PCUNICODE_STRING BaseOutputDirectory,
     _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
@@ -1787,7 +1787,7 @@ HRESULT
     _In_ ULONG NumberOfArguments,
     _In_ LPWSTR *ArgvW,
     _In_ PUNICODE_STRING TestDataDirectory,
-    _In_ PUNICODE_STRING OutputDirectory,
+    _In_ PUNICODE_STRING BaseOutputDirectory,
     _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
@@ -1839,7 +1839,7 @@ HRESULT
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PPERFECT_HASH_KEYS Keys,
-    _In_ PCUNICODE_STRING OutputDirectory,
+    _In_ PCUNICODE_STRING BaseOutputDirectory,
     _In_opt_ PCUNICODE_STRING TableBaseName,
     _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
     );

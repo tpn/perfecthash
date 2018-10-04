@@ -23,7 +23,7 @@ HRESULT
 PerfectHashContextSelfTest(
     PPERFECT_HASH_CONTEXT Context,
     PCUNICODE_STRING TestDataDirectory,
-    PCUNICODE_STRING OutputDirectory,
+    PCUNICODE_STRING BaseOutputDirectory,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
@@ -46,7 +46,7 @@ Arguments:
     TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
         represents a fully-qualified path of the test data directory.
 
-    OutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
+    BaseOutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
         represents a fully-qualified path of the directory where the perfect
         hash table files generated as part of this routine will be saved.
 
@@ -81,7 +81,7 @@ Return Value:
 
     E_POINTER - One or more mandatory parameters were NULL pointers.
 
-    E_INVALIDARG - TestDataDirectory or OutputDirectory were invalid.
+    E_INVALIDARG - TestDataDirectory or BaseOutputDirectory were invalid.
 
     PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID.
 
@@ -181,12 +181,12 @@ Return Value:
         return E_INVALIDARG;
     }
 
-    if (!ARGUMENT_PRESENT(OutputDirectory)) {
+    if (!ARGUMENT_PRESENT(BaseOutputDirectory)) {
         return E_POINTER;
-    } else if (!IsValidMinimumDirectoryUnicodeString(OutputDirectory)) {
+    } else if (!IsValidMinimumDirectoryUnicodeString(BaseOutputDirectory)) {
         return E_INVALIDARG;
     } else {
-        if (!CreateDirectoryW(OutputDirectory->Buffer, NULL)) {
+        if (!CreateDirectoryW(BaseOutputDirectory->Buffer, NULL)) {
             LastError = GetLastError();
             if (LastError != ERROR_ALREADY_EXISTS) {
                 SYS_ERROR(CreateDirectoryW);
@@ -632,7 +632,7 @@ Return Value:
                                      MaskFunctionId,
                                      HashFunctionId,
                                      Keys,
-                                     OutputDirectory,
+                                     BaseOutputDirectory,
                                      NULL,
                                      &TableCreateFlags);
 
@@ -1100,7 +1100,7 @@ End:
 const STRING Usage = RTL_CONSTANT_STRING(
     "Usage: PerfectHashSelfTest.exe "
     "<TestDataDirectory (must be fully-qualified)> "
-    "<OutputDirectory (must be fully-qualified)> "
+    "<BaseOutputDirectory (must be fully-qualified)> "
     "<AlgorithmId> "
     "<HashFunctionId> "
     "<MaskFunctionId> "
@@ -1139,7 +1139,7 @@ PerfectHashContextExtractSelfTestArgsFromArgvW(
     ULONG NumberOfArguments,
     LPWSTR *ArgvW,
     PUNICODE_STRING TestDataDirectory,
-    PUNICODE_STRING OutputDirectory,
+    PUNICODE_STRING BaseOutputDirectory,
     PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
@@ -1172,7 +1172,7 @@ Arguments:
     TestDataDirectory - Supplies a pointer to a UNICODE_STRING structure that
         will be filled out with the test data directory.
 
-    OutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
+    BaseOutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
         will be filled out with the output directory.
 
     AlgorithmId - Supplies the address of a variable that will receive the
@@ -1244,7 +1244,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(OutputDirectory)) {
+    if (!ARGUMENT_PRESENT(BaseOutputDirectory)) {
         return E_POINTER;
     }
 
@@ -1312,8 +1312,8 @@ Return Value:
     // Extract test data directory.
     //
 
-    OutputDirectory->Buffer = *ArgW++;
-    OutputDirectory->Length = GET_LENGTH(OutputDirectory);
+    BaseOutputDirectory->Buffer = *ArgW++;
+    BaseOutputDirectory->Length = GET_LENGTH(BaseOutputDirectory);
 
     ValidNumberOfArguments = (
         NumberOfArguments == 7 ||
@@ -1343,9 +1343,9 @@ Return Value:
     // Extract test data directory.
     //
 
-    OutputDirectory->Buffer = *ArgW++;
-    OutputDirectory->Length = GET_LENGTH(OutputDirectory);
-    OutputDirectory->MaximumLength = GET_MAX_LENGTH(OutputDirectory);
+    BaseOutputDirectory->Buffer = *ArgW++;
+    BaseOutputDirectory->Length = GET_LENGTH(BaseOutputDirectory);
+    BaseOutputDirectory->MaximumLength = GET_MAX_LENGTH(BaseOutputDirectory);
 
     //
     // Extract algorithm ID.
@@ -1462,7 +1462,7 @@ Return Value:
     PRTL Rtl;
     HRESULT Result;
     UNICODE_STRING TestDataDirectory = { 0 };
-    UNICODE_STRING OutputDirectory = { 0 };
+    UNICODE_STRING BaseOutputDirectory = { 0 };
     PERFECT_HASH_ALGORITHM_ID AlgorithmId = 0;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId = 0;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId = 0;
@@ -1481,7 +1481,7 @@ Return Value:
                                  NumberOfArguments,
                                  ArgvW,
                                  &TestDataDirectory,
-                                 &OutputDirectory,
+                                 &BaseOutputDirectory,
                                  &AlgorithmId,
                                  &HashFunctionId,
                                  &MaskFunctionId,
@@ -1508,7 +1508,7 @@ Return Value:
 
     Result = Context->Vtbl->SelfTest(Context,
                                      &TestDataDirectory,
-                                     &OutputDirectory,
+                                     &BaseOutputDirectory,
                                      AlgorithmId,
                                      HashFunctionId,
                                      MaskFunctionId,

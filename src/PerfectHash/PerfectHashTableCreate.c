@@ -26,7 +26,7 @@ PerfectHashTableCreate(
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_KEYS Keys,
-    PCUNICODE_STRING OutputDirectory,
+    PCUNICODE_STRING BaseOutputDirectory,
     PCUNICODE_STRING TableBaseName,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer
     )
@@ -56,8 +56,8 @@ Arguments:
 
     Keys - Supplies a pointer to a PERFECT_HASH_KEYS interface.
 
-    OutputDirectory - Supplies the output directory to use for saving files
-        related to the perfect hash table solution.
+    BaseOutputDirectory - Supplies the base output directory to use for saving
+        files related to the perfect hash table solution.
 
     TableBaseName - Optionally supplies an explicit base name to use for the
         perfect hash table.  This will override the base name that is derived
@@ -74,9 +74,9 @@ Return Value:
     guaranteed to be exhaustive; that is, error codes other than the ones listed
     below may also be returned.
 
-    E_POINTER - Table, Context, Keys, or OutputDirectory parameters were NULL.
+    E_POINTER - Table, Context, Keys or BaseOutputDirectory params were NULL.
 
-    E_INVALIDARG - OutputDirectory or TableBaseName were not valid.
+    E_INVALIDARG - BaseOutputDirectory or TableBaseName were not valid.
 
     E_UNEXPECTED - Internal error.
 
@@ -132,18 +132,19 @@ Return Value:
         return PH_E_TOO_MANY_KEYS;
     }
 
-    if (!ARGUMENT_PRESENT(OutputDirectory)) {
+    if (!ARGUMENT_PRESENT(BaseOutputDirectory)) {
         return E_POINTER;
-    } else if (Table->OutputDirectory) {
+    } else if (Table->BaseOutputDirectory) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashTableCreate, Result);
         return Result;
     }
 
-    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(OutputDirectory)) {
+    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(
+            BaseOutputDirectory)) {
         return E_INVALIDARG;
     } else {
-        Table->OutputDirectory = OutputDirectory;
+        Table->BaseOutputDirectory = BaseOutputDirectory;
     }
 
     if (ARGUMENT_PRESENT(TableBaseName)) {
