@@ -1683,13 +1683,13 @@ Routine Description:
 
 Arguments:
 
-    File - Supplies a pointer to the file to truncate.
+    File - Supplies a pointer to the file for which a rename will be scheduled.
 
-    NewEndOfFile - Supplies the new file size, in bytes.
+    NewPath - Supplies the new path to rename.
 
 Return Value:
 
-    S_OK - File extended successfully.
+    S_OK - File rename scheduled successfully.
 
     E_POINTER - File or NewPath parameters were NULL.
 
