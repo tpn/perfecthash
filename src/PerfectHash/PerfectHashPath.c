@@ -273,6 +273,7 @@ Return Value:
     PRTL Rtl;
     USHORT Index;
     USHORT Count;
+    USHORT BaseNameSubtract = 0;
     PWSTR Start;
     PWSTR End;
     PWSTR Char;
@@ -340,8 +341,7 @@ Return Value:
         Path->Extension.Buffer = Char;
         Path->Extension.Length = (USHORT)RtlPointerToOffset(Char, End);
         Path->Extension.MaximumLength = Path->Extension.Length;
-    } else {
-        ZeroStruct(Path->Extension);
+        BaseNameSubtract = sizeof(L'.') + Path->Extension.Length;
     }
 
     //
@@ -368,6 +368,7 @@ Return Value:
         ASSERT((ULONG_PTR)Char <= (ULONG_PTR)End);
         Path->StreamName.Buffer = Char;
         Path->StreamName.Length = (USHORT)RtlPointerToOffset(Char, End);
+        BaseNameSubtract += sizeof(L':') + Path->StreamName.Length;
 
         //
         // Verify the stream name is at least one character long.
@@ -436,13 +437,18 @@ Return Value:
     Path->BaseName.Length = (USHORT)(
         RtlPointerToOffset(
             Path->BaseName.Buffer,
-            Path->Extension.Buffer - 1
+            End
         )
     );
+    Path->BaseName.Length -= BaseNameSubtract;
     Path->BaseName.MaximumLength = Path->BaseName.Length;
 
-    if (LastDot) {
+    if (LastDot && !LastColon) {
         ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'.');
+    } else if (!LastDot && LastColon) {
+        ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L':');
+    } else {
+        ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'\0');
     }
 
     Path->FileName.Buffer = Char;
@@ -564,10 +570,6 @@ Return Value:
 
         Count = Path->BaseName.Length >> 1;
         Path->BaseNameA.Length = Count;
-
-        if (LastDot) {
-            ASSERT(Path->BaseName.Buffer[Count] == L'.');
-        }
 
         for (Index = 1; Index < Count; Index++) {
 
