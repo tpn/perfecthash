@@ -105,6 +105,18 @@ typedef _Null_terminated_ CONST CHAR *PCSZ;
 
 #define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
 
+#ifdef _WIN64
+#define InterlockedIncrementULongPtr(Ptr) InterlockedIncrement64((PLONG64)Ptr)
+#define InterlockedDecrementULongPtr(Ptr) InterlockedDecrement64((PLONG64)Ptr)
+#define InterlockedAddULongPtr(Ptr, Val) \
+    InterlockedAdd64((PLONG64)Ptr, (LONG64)Val)
+#else
+#define InterlockedIncrementULongPtr(Ptr) InterlockedIncrement((PLONG)Ptr)
+#define InterlockedDecrementULongPtr(Ptr) InterlockedDecrement((PLONG)Ptr)
+#define InterlockedAddULongPtr(Ptr, Val) \
+    InterlockedAdd((PLONG)Ptr, (LONG)Val)
+#endif
+
 //
 // Define start/end markers for IACA.
 //
@@ -213,8 +225,9 @@ typedef enum _PERFECT_HASH_INTERFACE_ID {
     PerfectHashFileInterfaceId             =  8,
     PerfectHashPathInterfaceId             =  9,
     PerfectHashDirectoryInterfaceId        = 10,
+    PerfectHashGuardedListInterfaceId      = 11,
 
-    PerfectHashLastInterfaceId             = PerfectHashDirectoryInterfaceId,
+    PerfectHashLastInterfaceId             = PerfectHashGuardedListInterfaceId,
 
     //
     // End valid interfaces.
@@ -363,6 +376,14 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_DIRECTORY,
                0x99, 0x2, 0x46, 0xc6, 0xe9, 0x7c, 0xa5, 0x67);
 
 //
+// IID_PERFECT_HASH_GUARDED_LIST: {14A25BA2-3C18-413F-8C76-A7A91EC88C2A}
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_GUARDED_LIST,
+               0x14a25ba2, 0x3c18, 0x413f,
+               0x8c, 0x76, 0xa7, 0xa9, 0x1e, 0xc8, 0x8c, 0x2a);
+
+//
 // GUID array.
 //
 
@@ -380,6 +401,7 @@ static const PCGUID PerfectHashInterfaceGuids[] = {
     &IID_PERFECT_HASH_FILE,
     &IID_PERFECT_HASH_PATH,
     &IID_PERFECT_HASH_DIRECTORY,
+    &IID_PERFECT_HASH_GUARDED_LIST,
 
     NULL
 };
@@ -1848,7 +1870,6 @@ IsValidTableCreateFlags(
 
     return S_OK;
 }
-
 
 //
 // Define the table load flags here as they're needed for SelfTest().

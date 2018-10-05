@@ -370,7 +370,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
-#define NUMBER_OF_INTERFACES 10
+#define NUMBER_OF_INTERFACES 11
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -391,6 +391,7 @@ const USHORT ComponentSizes[] = {
     sizeof(PERFECT_HASH_FILE),
     sizeof(PERFECT_HASH_PATH),
     sizeof(PERFECT_HASH_DIRECTORY),
+    sizeof(GUARDED_LIST),
 
     0,
 };
@@ -409,6 +410,7 @@ const USHORT ComponentInterfaceSizes[] = {
     sizeof(PERFECT_HASH_FILE_VTBL),
     sizeof(PERFECT_HASH_PATH_VTBL),
     sizeof(PERFECT_HASH_DIRECTORY_VTBL),
+    sizeof(GUARDED_LIST_VTBL),
 
     0,
 };
@@ -432,6 +434,7 @@ const SHORT ComponentInterfaceOffsets[] = {
     (SHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_DIRECTORY, Interface),
+    (SHORT)FIELD_OFFSET(GUARDED_LIST, Interface),
 
     -1,
 };
@@ -450,6 +453,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, File),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Path),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Directory),
+    -1, // GuardedList
 
     -1,
 };
@@ -468,6 +472,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // File
     -1, // Path
     -1, // Directory
+    -1, // GuardedList
 
     -1,
 };
@@ -709,6 +714,50 @@ const PERFECT_HASH_DIRECTORY_VTBL PerfectHashDirectoryInterface = {
 VERIFY_VTBL_SIZE(PERFECT_HASH_DIRECTORY, 4 + 3);
 
 //
+// GuardedList
+//
+
+const GUARDED_LIST_VTBL GuardedListInterface = {
+    (PGUARDED_LIST_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PGUARDED_LIST_ADD_REF)&ComponentAddRef,
+    (PGUARDED_LIST_RELEASE)&ComponentRelease,
+    (PGUARDED_LIST_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PGUARDED_LIST_LOCK_SERVER)&ComponentLockServer,
+    &GuardedListSetCallbacks,
+    &GuardedListIsEmpty,
+    &GuardedListQueryDepth,
+    &GuardedListInsertHead,
+    &GuardedListInsertTail,
+    &GuardedListAppendTail,
+    &GuardedListRemoveHead,
+    &GuardedListRemoveTail,
+    &GuardedListRemoveEntry,
+};
+VERIFY_VTBL_SIZE(GUARDED_LIST, 9);
+
+//
+// TSX versions of the GuardedList interface.  See dllmain.c for more info.
+//
+
+const GUARDED_LIST_VTBL GuardedListTsxInterface = {
+    (PGUARDED_LIST_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PGUARDED_LIST_ADD_REF)&ComponentAddRef,
+    (PGUARDED_LIST_RELEASE)&ComponentRelease,
+    (PGUARDED_LIST_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PGUARDED_LIST_LOCK_SERVER)&ComponentLockServer,
+    &GuardedListSetCallbacks,
+    &GuardedListIsEmptyTsx,
+    &GuardedListQueryDepthTsx,
+    &GuardedListInsertHeadTsx,
+    &GuardedListInsertTailTsx,
+    &GuardedListAppendTailTsx,
+    &GuardedListRemoveHeadTsx,
+    &GuardedListRemoveTailTsx,
+    &GuardedListRemoveEntryTsx,
+};
+VERIFY_VTBL_SIZE(GUARDED_LIST, 9);
+
+//
 // Interface array.
 //
 
@@ -725,6 +774,7 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashFileInterface,
     &PerfectHashPathInterface,
     &PerfectHashDirectoryInterface,
+    &GuardedListInterface,
 
     NULL,
 };
@@ -744,6 +794,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashFileInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashPathInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
+    (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
 
     NULL,
 };
@@ -763,6 +814,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashFileRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashPathRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
+    (PCOMPONENT_RUNDOWN)&GuardedListRundown,
 
     NULL,
 };

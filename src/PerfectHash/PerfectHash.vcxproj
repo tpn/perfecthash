@@ -88,6 +88,7 @@
     <ClInclude Include="Chm01.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Graph.h" />
+    <ClInclude Include="GuardedList.h" />
     <ClInclude Include="PerfectHashAllocator.h" />
     <ClInclude Include="PerfectHashContext.h" />
     <ClInclude Include="PerfectHashDirectory.h" />
@@ -118,6 +119,7 @@
     <ClCompile Include="Component.c" />
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="Graph.c" />
+    <ClCompile Include="GuardedList.c" />
     <ClCompile Include="PerfectHashContextSelfTest.c" />
     <ClCompile Include="PerfectHashDirectory.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />

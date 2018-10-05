@@ -151,6 +151,9 @@
     <ClCompile Include="PerfectHashDirectory.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GuardedList.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -217,6 +220,9 @@
       <Filter>Public Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashDirectory.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GuardedList.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

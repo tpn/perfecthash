@@ -56,6 +56,7 @@ IsGlobalComponentInterfaceId(
 #define COMMON_COMPONENT_HEADER(Name) \
     P##Name##_VTBL Vtbl;              \
     SRWLOCK Lock;                     \
+    LIST_ENTRY ListEntry;             \
     struct _RTL *Rtl;                 \
     struct _ALLOCATOR *Allocator;     \
     PIUNKNOWN OuterUnknown;           \

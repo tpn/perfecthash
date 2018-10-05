@@ -38,8 +38,7 @@ Abstract:
 //
 
 #pragma warning(push)
-#pragma warning(disable: 4255)
-#pragma warning(disable: 4668)
+#pragma warning(disable: 4255 4668)
 #include <Windows.h>
 #pragma warning(pop)
 
@@ -57,12 +56,38 @@ Abstract:
 #include <Windows.h>
 #include <Strsafe.h>
 
+//
+// Include intrinsic headers if we're x64.
+//
+
+#ifdef _M_AMD64
+
+//
+// 4255: no function prototype given
+//
+// 4668: not defined as preprocessor macro
+//
+// 4820: padding added after member
+//
+// 28251: inconsistent SAL annotations
+//
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4255 4668 4820 28251)
+#include <intrin.h>
+#include <mmintrin.h>
+#pragma warning(pop)
+
+#endif
+
 #include <PerfectHash.h>
 #include <PerfectHashErrors.h>
 
 #include "Component.h"
 #include "Rtl.h"
 #include "RtlOutput.h"
+#include "GuardedList.h"
 #include "PerfectHashTls.h"
 #include "PerfectHashPath.h"
 #include "PerfectHashFile.h"
