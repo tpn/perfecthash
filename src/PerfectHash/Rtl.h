@@ -1437,6 +1437,33 @@ IsValidUnicodeString(
     );
 }
 
+FORCEINLINE
+BOOLEAN
+IsEmptyUnicodeString(
+    _In_ PCUNICODE_STRING String
+    )
+{
+    return (
+        String != NULL &&
+        String->Buffer == NULL &&
+        String->Length == 0 &&
+        String->MaximumLength == 0
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+IsValidOrEmptyUnicodeString(
+    _In_ PCUNICODE_STRING String
+    )
+{
+    return IsEmptyUnicodeString(String) || (
+        String != NULL &&
+        String->Buffer != NULL &&
+        String->Length >= 1 &&
+        String->MaximumLength >= String->Length
+    );
+}
 
 //
 // Buffer-related functions.

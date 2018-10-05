@@ -383,9 +383,14 @@ Return Value:
 
         if (LastDot) {
 
+            USHORT OldLength;
+            USHORT Diff;
+
             //
             // Remove the stream name and ':' from the extension length.
             //
+
+            OldLength = Path->Extension.Length;
 
             Path->Extension.Length = (USHORT)(
                 RtlPointerToOffset(
@@ -395,6 +400,9 @@ Return Value:
             );
             Path->Extension.MaximumLength = Path->Extension.Length;
             ASSERT(Path->Extension.Buffer[Path->Extension.Length >> 1] == L':');
+
+            Diff = OldLength - Path->Extension.Length;
+            BaseNameSubtract -= Diff;
         }
     }
 
@@ -443,9 +451,9 @@ Return Value:
     Path->BaseName.Length -= BaseNameSubtract;
     Path->BaseName.MaximumLength = Path->BaseName.Length;
 
-    if (LastDot && !LastColon) {
+    if (LastDot) {
         ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'.');
-    } else if (!LastDot && LastColon) {
+    } else if (LastColon) {
         ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L':');
     } else {
         ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'\0');
@@ -1079,7 +1087,7 @@ Return Value:
     BaseNameALength.LongPart += BaseNameSuffixLength >> 1;
 
     if (ARGUMENT_PRESENT(NewExtension)) {
-        if (!IsValidUnicodeString(NewExtension)) {
+        if (!IsValidOrEmptyUnicodeString(NewExtension)) {
             Result = E_INVALIDARG;
             PH_ERROR(PerfectHashPathCreate_NewExtension, Result);
             goto Error;
@@ -1096,7 +1104,7 @@ Return Value:
     }
 
     if (ARGUMENT_PRESENT(NewStreamName)) {
-        if (!IsValidUnicodeString(NewStreamName)) {
+        if (!IsValidOrEmptyUnicodeString(NewStreamName)) {
             Result = E_INVALIDARG;
             PH_ERROR(PerfectHashPathCreate_NewStreamName, Result);
             goto Error;
@@ -1112,6 +1120,11 @@ Return Value:
     }
 
     StreamNameLength = StreamName->Length;
+    if (HasStream) {
+        ASSERT(StreamNameLength > 0);
+    } else {
+        ASSERT(StreamNameLength == 0);
+    }
 
     //
     // Calculate the allocation size.  Things are broken down explicitly to
