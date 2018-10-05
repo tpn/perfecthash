@@ -852,7 +852,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_LOAD *PPERFECT_HASH_FILE_LOAD;
 
 //
-// Define CreateFrom() method and supporting flags.
+// Define Create() method and supporting flags.
 //
 
 typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
