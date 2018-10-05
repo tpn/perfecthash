@@ -471,6 +471,10 @@ Return Value:
 
     if (Path->Directory.Buffer[1] == L':') {
 
+        //
+        // Path is in the normal Windows format, e.g. C:\Temp.
+        //
+
         Path->Drive.Length = sizeof(WCHAR);
         Path->Drive.MaximumLength = Path->Drive.Length;
         Path->Drive.Buffer = Start;
@@ -478,27 +482,58 @@ Return Value:
     } else {
 
         //
-        // N.B. This won't work for network drives.
+        // Check for UNC format (\\?\C:\Temp).
         //
 
-        Found = FALSE;
+        BOOLEAN IsUnc = FALSE;
+
         Char = Start;
-        while (Char != Path->FileName.Buffer) {
-            if (*Char == L':') {
-                Found = TRUE;
-                break;
+
+        ASSERT((ULONG_PTR)(Char+4) < (ULONG_PTR)End);
+
+        IsUnc = (
+            *Char++ == L'\\' &&
+            *Char++ == L'\\' &&
+            *Char++ == L'?'  &&
+            *Char++ == L'\\'
+        );
+
+        if (IsUnc) {
+
+            //
+            // Path is in the UNC format, e.g. \\?\C:\Temp.  Scan forward from
+            // the current position to the start of the file name buffer and
+            // look for a colon.
+            //
+
+            Found = FALSE;
+            while (Char != Path->FileName.Buffer) {
+                if (*Char == L':') {
+                    Found = TRUE;
+                    break;
+                }
+                Char++;
             }
-            Char++;
-        }
 
-        ASSERT(!Path->Drive.Buffer);
+            ASSERT(!Path->Drive.Buffer);
 
-        if (Found) {
-            ASSERT(*Char == L':');
-            Char--;
-            Path->Drive.Buffer = Char;
-            Path->Drive.Length = sizeof(WCHAR);
-            Path->Drive.MaximumLength = Path->Drive.Length;
+            if (Found) {
+                ASSERT(*Char == L':');
+                Char--;
+                Path->Drive.Buffer = Char;
+                Path->Drive.Length = sizeof(WCHAR);
+                Path->Drive.MaximumLength = Path->Drive.Length;
+            }
+
+        } else {
+
+            //
+            // We couldn't find a conventional "drive" letter (perhaps because
+            // the path was a network share, e.g. \\foo\bar), so, don't fill
+            // out anything for the Path->Drive member.
+            //
+
+            NOTHING;
         }
     }
 
