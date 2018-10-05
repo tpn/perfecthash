@@ -937,7 +937,7 @@ typedef union _PERFECT_HASH_FILE_FLAGS {
         ULONG Loaded:1;
 
         //
-        // When set, indicates the file was initialized via CreateFrom().
+        // When set, indicates the file was initialized via Create().
         //
         // Invariant:
         //
