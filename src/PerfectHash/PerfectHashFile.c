@@ -307,13 +307,13 @@ Return Value:
 
     if (File->Path) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashFileCreate, Result);
+        PH_ERROR(PerfectHashFileLoad, Result);
         goto Error;
     }
 
     if (File->RenamePath) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashFileCreate, Result);
+        PH_ERROR(PerfectHashFileLoad, Result);
         goto Error;
     }
 
@@ -462,20 +462,20 @@ Routine Description:
 
 Arguments:
 
-    File - Supplies a pointer to the file to load.
+    File - Supplies a pointer to the file to create.
 
-    SourcePath - Supplies a pointer to the path instance to load.
+    SourcePath - Supplies a pointer to the path instance to create.
 
     EndOfFile - Supplies a pointer to a LARGE_INTEGER structure that contains
         the desired size of the file being created.  Once created (and truncated
         if necessary), a memory map will be created for the entire file size.
 
-    FileCreateFlags - Optionally supplies a pointer to file load flags that can
-        be used to customize load behavior.
+    FileCreateFlags - Optionally supplies a pointer to file create flags that
+        can be used to customize create behavior.
 
 Return Value:
 
-    S_OK - File was closed successfully.
+    S_OK - File was created successfully.
 
     E_POINTER - File, SourcePath or EndOfFile parameters were NULL.
 
