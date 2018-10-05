@@ -66,7 +66,7 @@ typedef union _PERFECT_HASH_PATH_STATE {
         // or Create() can be dispatched.
         //
 
-        ULONG PathSet:1;
+        ULONG IsSet:1;
 
         //
         // Unused bits.
@@ -82,10 +82,10 @@ C_ASSERT(sizeof(PERFECT_HASH_PATH_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_PATH_STATE *PPERFECT_HASH_PATH_STATE;
 
 //
-// Helper macros for discerning file state.
+// Helper macros for discerning path state.
 //
 
-#define IsPathSet(Path) (Path->State.PathSet)
+#define IsPathSet(Path) (Path->State.IsSet)
 
 //
 // Define the PERFECT_HASH_PATH_FLAGS structure.

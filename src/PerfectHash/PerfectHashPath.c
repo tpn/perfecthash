@@ -850,7 +850,7 @@ Return Value:
     // We're done, finish up.
     //
 
-    Path->State.PathSet = TRUE;
+    Path->State.IsSet = TRUE;
 
     goto End;
 
@@ -1402,7 +1402,7 @@ Return Value:
     // We're done, finish up.
     //
 
-    Path->State.PathSet = TRUE;
+    Path->State.IsSet = TRUE;
 
     goto End;
 
