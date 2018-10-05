@@ -275,14 +275,15 @@ extern const SHORT ComponentInterfaceTlsContextOffsets[];
 extern const SHORT GlobalComponentsInterfaceOffsets[];
 extern const VOID *ComponentInterfaces[];
 
-
+#if 0
 extern const IUNKNOWN_VTBL IUnknownInterface;
 extern const ICLASSFACTORY_VTBL IClassFactoryInterface;
-extern const ALLOCATOR_VTBL AllocatorInterface;
-extern const RTL_VTBL RtlInterface;
 extern const PERFECT_HASH_KEYS_VTBL PerfectHashKeysInterface;
 extern const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface;
 extern const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface;
+extern const ALLOCATOR_VTBL AllocatorInterface;
+extern const RTL_VTBL RtlInterface;
+#endif
 
 extern const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[];
 extern const PCOMPONENT_RUNDOWN ComponentRundownRoutines[];

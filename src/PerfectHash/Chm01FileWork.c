@@ -96,6 +96,7 @@ Return Value:
         PCUNICODE_STRING NewExtension = NULL;
         PCUNICODE_STRING NewStreamName = NULL;
         PCUNICODE_STRING AdditionalSuffix = NULL;
+        PCUNICODE_STRING NewDirectory;
         LARGE_INTEGER EndOfFile;
         ULARGE_INTEGER NumTableElements;
         SYSTEM_INFO SystemInfo;
@@ -103,6 +104,7 @@ Return Value:
         GetSystemInfo(&SystemInfo);
         EndOfFile.QuadPart = SystemInfo.dwAllocationGranularity;
         NumTableElements.QuadPart = TableInfo->NumberOfTableElements.QuadPart;
+        NewDirectory = &Table->OutputDirectory->Path->FullPath;
 
         switch (Item->FileWorkId) {
 
@@ -173,7 +175,7 @@ Return Value:
                                             Table->AlgorithmId,
                                             Table->MaskFunctionId,
                                             Table->HashFunctionId,
-                                            Table->BaseOutputDirectory,
+                                            NewDirectory,
                                             NewBaseName,
                                             AdditionalSuffix,
                                             NewExtension,

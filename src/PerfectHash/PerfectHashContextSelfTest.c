@@ -142,6 +142,7 @@ Return Value:
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_FILE TableFile = NULL;
     PPERFECT_HASH_PATH TablePath = NULL;
+    PPERFECT_HASH_DIRECTORY BaseOutputDir = NULL;
     PPERFECT_HASH_PATH_PARTS TablePathParts;
     PERFECT_HASH_KEYS_FLAGS KeysFlags;
     PERFECT_HASH_KEYS_BITMAP KeysBitmap;
@@ -185,14 +186,21 @@ Return Value:
         return E_POINTER;
     } else if (!IsValidMinimumDirectoryUnicodeString(BaseOutputDirectory)) {
         return E_INVALIDARG;
-    } else {
-        if (!CreateDirectoryW(BaseOutputDirectory->Buffer, NULL)) {
-            LastError = GetLastError();
-            if (LastError != ERROR_ALREADY_EXISTS) {
-                SYS_ERROR(CreateDirectoryW);
-                return E_INVALIDARG;
-            }
+    }
+    else {
+        Result = Context->Vtbl->SetBaseOutputDirectory(Context,
+                                                       BaseOutputDirectory);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextSetBaseOutputDirectory, Result);
+            return Result;
         }
+
+        Result = Context->Vtbl->GetBaseOutputDirectory(Context, &BaseOutputDir);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextGetBaseOutputDirectory, Result);
+            return Result;
+        }
+        RELEASE(BaseOutputDir);
     }
 
     if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
@@ -632,8 +640,6 @@ Return Value:
                                      MaskFunctionId,
                                      HashFunctionId,
                                      Keys,
-                                     BaseOutputDirectory,
-                                     NULL,
                                      &TableCreateFlags);
 
         if (FAILED(Result)) {

@@ -190,7 +190,7 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 #define IsViewMapped(File) (File->MappedAddress != NULL)
 #define IsViewCreated(File) (File->MappingHandle != NULL)
 #define WantsLargePages(File) (!File->Flags.DoesNotWantLargePages)
-#define IsRenameScheduled(File) (File->RenamePath)
+#define IsFileRenameScheduled(File) (File->RenamePath)
 #define IsFileStream(File) (File->Path->StreamName.Buffer != NULL)
 
 #define SetFileOpened(File)      \

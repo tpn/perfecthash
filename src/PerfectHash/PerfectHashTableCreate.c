@@ -26,8 +26,6 @@ PerfectHashTableCreate(
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_KEYS Keys,
-    PCUNICODE_STRING BaseOutputDirectory,
-    PCUNICODE_STRING TableBaseName,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer
     )
 /*++
@@ -56,13 +54,6 @@ Arguments:
 
     Keys - Supplies a pointer to a PERFECT_HASH_KEYS interface.
 
-    BaseOutputDirectory - Supplies the base output directory to use for saving
-        files related to the perfect hash table solution.
-
-    TableBaseName - Optionally supplies an explicit base name to use for the
-        perfect hash table.  This will override the base name that is derived
-        from the Keys instance.
-
     TableCreateFlags - Optionally supplies a pointer to a context create
         table flags structure that can be used to customize table creation.
 
@@ -74,9 +65,7 @@ Return Value:
     guaranteed to be exhaustive; that is, error codes other than the ones listed
     below may also be returned.
 
-    E_POINTER - Table, Context, Keys or BaseOutputDirectory params were NULL.
-
-    E_INVALIDARG - BaseOutputDirectory or TableBaseName were not valid.
+    E_POINTER - Table, Context or Keys parameters were NULL.
 
     E_UNEXPECTED - Internal error.
 
@@ -101,6 +90,9 @@ Return Value:
 
     PH_E_BASE_NAME_INVALID_C_IDENTIFIER - The table base name component was
         not a valid C identifier.
+
+    PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_NOT_SET - The base output directory
+        has not been set for the context.
 
 --*/
 {
@@ -130,27 +122,6 @@ Return Value:
 
     if (Keys->NumberOfElements.QuadPart > MAXIMUM_NUMBER_OF_KEYS) {
         return PH_E_TOO_MANY_KEYS;
-    }
-
-    if (!ARGUMENT_PRESENT(BaseOutputDirectory)) {
-        return E_POINTER;
-    } else if (Table->BaseOutputDirectory) {
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashTableCreate, Result);
-        return Result;
-    }
-
-    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(
-            BaseOutputDirectory)) {
-        return E_INVALIDARG;
-    } else {
-        Table->BaseOutputDirectory = BaseOutputDirectory;
-    }
-
-    if (ARGUMENT_PRESENT(TableBaseName)) {
-        if (!IsValidUnicodeString(TableBaseName)) {
-            return E_INVALIDARG;
-        }
     }
 
     VALIDATE_FLAGS(TableCreate, TABLE_CREATE);
@@ -240,6 +211,10 @@ Return Value:
     //
 
     Result = CreationRoutines[AlgorithmId](Table);
+
+    if (Table->OutputDirectory) {
+        Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);
+    }
 
     if (FAILED(Result)) {
         goto Error;

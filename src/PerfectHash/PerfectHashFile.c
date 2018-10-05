@@ -817,7 +817,7 @@ Return Value:
         // rename is scheduled, release the rename path's lock and ref count.
         //
 
-        if (IsRenameScheduled(File)) {
+        if (IsFileRenameScheduled(File)) {
             File->RenamePath->Vtbl->Release(File->RenamePath);
             File->RenamePath = NULL;
         }
@@ -858,7 +858,7 @@ Return Value:
     // If a rename has been scheduled, do it now.
     //
 
-    if (IsRenameScheduled(File)) {
+    if (IsFileRenameScheduled(File)) {
         ASSERT(!IsFileReadOnly(File));
         Result = File->Vtbl->DoRename(File);
         if (FAILED(Result)) {
@@ -1877,7 +1877,7 @@ Return Value:
         return PH_E_FILE_NOT_CLOSED;
     }
 
-    if (!IsRenameScheduled(File)) {
+    if (!IsFileRenameScheduled(File)) {
         return PH_E_FILE_NO_RENAME_SCHEDULED;
     }
 

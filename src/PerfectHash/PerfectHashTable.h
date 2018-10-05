@@ -82,12 +82,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
 
     //
-    // Pointer to the base output directory requested for this table.  Only
-    // valid during table creation operations.  Temporarily set to the parameter
-    // BaseOutputDirectory supplied to the Create() function.
+    // Pointer to the output directory for this table.
     //
 
-    PCUNICODE_STRING BaseOutputDirectory;
+    PPERFECT_HASH_DIRECTORY OutputDirectory;
 
     //
     // If a table is loaded or created successfully, an array will be allocated

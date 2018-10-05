@@ -370,11 +370,13 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
-#define NUMBER_OF_INTERFACES 9
+#define NUMBER_OF_INTERFACES 10
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
 C_ASSERT(EXPECTED_ARRAY_SIZE == PerfectHashInvalidInterfaceId+1);
+C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashLastInterfaceId);
+C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 
 const USHORT ComponentSizes[] = {
     0,
@@ -388,6 +390,7 @@ const USHORT ComponentSizes[] = {
     sizeof(ALLOCATOR),
     sizeof(PERFECT_HASH_FILE),
     sizeof(PERFECT_HASH_PATH),
+    sizeof(PERFECT_HASH_DIRECTORY),
 
     0,
 };
@@ -405,6 +408,7 @@ const USHORT ComponentInterfaceSizes[] = {
     sizeof(ALLOCATOR_VTBL),
     sizeof(PERFECT_HASH_FILE_VTBL),
     sizeof(PERFECT_HASH_PATH_VTBL),
+    sizeof(PERFECT_HASH_DIRECTORY_VTBL),
 
     0,
 };
@@ -427,6 +431,7 @@ const SHORT ComponentInterfaceOffsets[] = {
     (SHORT)FIELD_OFFSET(ALLOCATOR, Interface),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_DIRECTORY, Interface),
 
     -1,
 };
@@ -444,6 +449,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Allocator),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, File),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Path),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Directory),
 
     -1,
 };
@@ -461,6 +467,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Allocator),
     -1, // File
     -1, // Path
+    -1, // Directory
 
     -1,
 };
@@ -539,11 +546,13 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     (PPERFECT_HASH_CONTEXT_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashContextSetMaximumConcurrency,
     &PerfectHashContextGetMaximumConcurrency,
+    &PerfectHashContextSetBaseOutputDirectory,
+    &PerfectHashContextGetBaseOutputDirectory,
     &PerfectHashContextSelfTest,
     &PerfectHashContextSelfTestArgvW,
     &PerfectHashContextExtractSelfTestArgsFromArgvW,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 5);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 7);
 
 //
 // PerfectHashTable
@@ -675,6 +684,31 @@ const PERFECT_HASH_PATH_VTBL PerfectHashPathInterface = {
 VERIFY_VTBL_SIZE(PERFECT_HASH_PATH, 5);
 
 //
+// PerfectHashDirectory
+//
+
+const PERFECT_HASH_DIRECTORY_VTBL PerfectHashDirectoryInterface = {
+    (PPERFECT_HASH_DIRECTORY_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_DIRECTORY_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_DIRECTORY_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_DIRECTORY_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_DIRECTORY_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashDirectoryOpen,
+    &PerfectHashDirectoryCreate,
+    &PerfectHashDirectoryGetFlags,
+    &PerfectHashDirectoryGetPath,
+
+    //
+    // Begin private methods.
+    //
+
+    &PerfectHashDirectoryClose,
+    &PerfectHashDirectoryScheduleRename,
+    &PerfectHashDirectoryDoRename,
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_DIRECTORY, 4 + 3);
+
+//
 // Interface array.
 //
 
@@ -690,6 +724,7 @@ const VOID *ComponentInterfaces[] = {
     &AllocatorInterface,
     &PerfectHashFileInterface,
     &PerfectHashPathInterface,
+    &PerfectHashDirectoryInterface,
 
     NULL,
 };
@@ -708,6 +743,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&AllocatorInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashFileInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashPathInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
 
     NULL,
 };
@@ -726,6 +762,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&AllocatorRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashFileRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashPathRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
 
     NULL,
 };

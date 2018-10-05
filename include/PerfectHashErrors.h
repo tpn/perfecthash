@@ -567,13 +567,13 @@ Abstract:
 #define PH_E_OVERFLOWED_HEADER_FILE_MAPPING_SIZE ((HRESULT)0xE0040237L)
 
 //
-// MessageId: PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET
+// MessageId: PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_NOT_SET
 //
 // MessageText:
 //
-// No output directory has been set for the perfect hash context.
+// Base output directory has not been set.
 //
-#define PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET ((HRESULT)0xE0040238L)
+#define PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_NOT_SET ((HRESULT)0xE0040238L)
 
 //
 // MessageId: PH_E_CONTEXT_LOCKED
@@ -594,16 +594,14 @@ Abstract:
 #define PH_E_CONTEXT_RESET_FAILED        ((HRESULT)0xE004023AL)
 
 //
-// Removed 2018-10-03.
+// MessageId: PH_E_CONTEXT_SET_BASE_OUTPUT_DIRECTORY_FAILED
 //
-// MessageId=0x23b
-// Severity=Fail
-// Facility=ITF
-// SymbolicName=PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED
-// Language=English
+// MessageText:
+//
 // Failed to set context output directory.
-// .
 //
+#define PH_E_CONTEXT_SET_BASE_OUTPUT_DIRECTORY_FAILED ((HRESULT)0xE004023BL)
+
 //
 // MessageId: PH_E_NO_TABLE_CREATED_OR_LOADED
 //
@@ -1071,4 +1069,112 @@ Abstract:
 // Invalid number of seeds.
 //
 #define PH_E_INVALID_NUMBER_OF_SEEDS     ((HRESULT)0xE004026FL)
+
+//
+// MessageId: PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_ALREADY_SET
+//
+// MessageText:
+//
+// Base output directory already set.
+//
+#define PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_ALREADY_SET ((HRESULT)0xE0040270L)
+
+//
+// MessageId: PH_E_DIRECTORY_ALREADY_CLOSED
+//
+// MessageText:
+//
+// The directory has already been closed.
+//
+#define PH_E_DIRECTORY_ALREADY_CLOSED    ((HRESULT)0xE0040271L)
+
+//
+// MessageId: PH_E_DIRECTORY_NOT_SET
+//
+// MessageText:
+//
+// The directory has not been opened yet, or has been closed.
+//
+#define PH_E_DIRECTORY_NOT_SET           ((HRESULT)0xE0040272L)
+
+//
+// MessageId: PH_E_DIRECTORY_LOCKED
+//
+// MessageText:
+//
+// The directory is locked.
+//
+#define PH_E_DIRECTORY_LOCKED            ((HRESULT)0xE0040273L)
+
+//
+// MessageId: PH_E_DIRECTORY_ALREADY_SET
+//
+// MessageText:
+//
+// The directory is already set.
+//
+#define PH_E_DIRECTORY_ALREADY_SET       ((HRESULT)0xE0040274L)
+
+//
+// MessageId: PH_E_DIRECTORY_DOES_NOT_EXIST
+//
+// MessageText:
+//
+// Directory does not exist.
+//
+#define PH_E_DIRECTORY_DOES_NOT_EXIST    ((HRESULT)0xE0040275L)
+
+//
+// MessageId: PH_E_INVALID_DIRECTORY_OPEN_FLAGS
+//
+// MessageText:
+//
+// Invalid directory open flags.
+//
+#define PH_E_INVALID_DIRECTORY_OPEN_FLAGS ((HRESULT)0xE0040276L)
+
+//
+// MessageId: PH_E_INVALID_DIRECTORY_CREATE_FLAGS
+//
+// MessageText:
+//
+// Invalid directory create flags.
+//
+#define PH_E_INVALID_DIRECTORY_CREATE_FLAGS ((HRESULT)0xE0040277L)
+
+//
+// MessageId: PH_E_DIRECTORY_NEVER_SET
+//
+// MessageText:
+//
+// The directory was never set.
+//
+#define PH_E_DIRECTORY_NEVER_SET         ((HRESULT)0xE0040278L)
+
+//
+// MessageId: PH_E_DIRECTORY_READONLY
+//
+// MessageText:
+//
+// The directory is readonly.
+//
+#define PH_E_DIRECTORY_READONLY          ((HRESULT)0xE0040279L)
+
+//
+// MessageId: PH_E_DIRECTORY_NO_RENAME_SCHEDULED
+//
+// MessageText:
+//
+// The directory has not had a rename operation scheduled.
+//
+#define PH_E_DIRECTORY_NO_RENAME_SCHEDULED ((HRESULT)0xE004027AL)
+
+//
+// MessageId: PH_E_DIRECTORY_NOT_CLOSED
+//
+// MessageText:
+//
+// Directory is not closed.
+//
+#define PH_E_DIRECTORY_NOT_CLOSED        ((HRESULT)0xE004027BL)
 

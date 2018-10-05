@@ -14,8 +14,9 @@ Abstract:
     perfect hash table solutions in parallel.
 
     Routines are provided for context initialization and rundown, setting and
-    getting the maximum concurrency associated with a context, and callback
-    routines for the various threadpool functions.
+    getting the maximum concurrency associated with a context, setting and
+    getting the base output directory, and callback routines for the various
+    threadpool functions.
 
 --*/
 
@@ -641,8 +642,9 @@ Return Value:
                                      &Context->ObjectNames);
     }
 
-    Allocator->Vtbl->Release(Allocator);
-    Rtl->Vtbl->Release(Rtl);
+    RELEASE(Context->BaseOutputDirectory);
+    RELEASE(Context->Allocator);
+    RELEASE(Context->Rtl);
 }
 
 PERFECT_HASH_CONTEXT_RESET PerfectHashContext;
@@ -1126,6 +1128,235 @@ Return Value:
     }
 
     *MaximumConcurrency = Context->MaximumConcurrency;
+
+    return S_OK;
+}
+
+PERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY
+    PerfectHashContextSetBaseOutputDirectory;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextSetBaseOutputDirectory(
+    PPERFECT_HASH_CONTEXT Context,
+    PCUNICODE_STRING BaseOutputDirectory
+    )
+/*++
+
+Routine Description:
+
+    Sets the base output directory for a given context.  All generated files
+    will be saved to this directory.  This routine must be called before
+    attempting to create any perfect hash tables.
+
+    N.B. This routine can only be called once for a given context.  If a
+         different base output directory is desired, a new context must
+         be created.
+
+Arguments:
+
+    Context - Supplies the context for which the bsae output directory is to
+        be set.
+
+    BaseOutputDirectory - Supplies the base output directory to set.
+
+Return Value:
+
+    S_OK - Base output directory was set successfully.
+
+    E_POINTER - Context or BaseOutputDirectory parameters were NULL.
+
+    E_INVALIDARG - BaseOutputDirectory was not a valid directory string.
+
+    E_UNEXPECTED - Internal error.
+
+    PH_E_CONTEXT_LOCKED - The context is locked.
+
+    PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_ALREADY_SET - The base output directory
+        has already been set.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_PATH Path = NULL;
+    PPERFECT_HASH_PATH_PARTS Parts = NULL;
+    PPERFECT_HASH_DIRECTORY Directory;
+    PERFECT_HASH_DIRECTORY_CREATE_FLAGS DirectoryCreateFlags = { 0 };
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(BaseOutputDirectory)) {
+        return E_POINTER;
+    }
+
+    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(
+        BaseOutputDirectory)) {
+        return E_INVALIDARG;
+    }
+
+    if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
+        return PH_E_CONTEXT_LOCKED;
+    }
+
+    if (Context->BaseOutputDirectory) {
+        ReleasePerfectHashContextLockExclusive(Context);
+        return PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_ALREADY_SET;
+    }
+
+    //
+    // Argument validation complete.
+    //
+
+    //
+    // Create a path instance.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_PATH,
+                                           &Path);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreateInstance, Result);
+        goto Error;
+    }
+
+    Result = Path->Vtbl->Copy(Path, BaseOutputDirectory, &Parts, NULL);
+
+    //
+    // Create a directory instance.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_DIRECTORY,
+                                           &Context->BaseOutputDirectory);
+
+    if (FAILED(Result)) {
+        PH_ERROR(CreateInstancePerfectHashDirectory, Result);
+        goto Error;
+    }
+
+    Directory = Context->BaseOutputDirectory;
+
+    //
+    // Create the directory using the base output directory path.
+    //
+
+    Result = Directory->Vtbl->Create(Directory,
+                                     Path,
+                                     &DirectoryCreateFlags);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashDirectoryCreate, Result);
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_CONTEXT_SET_BASE_OUTPUT_DIRECTORY_FAILED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (Path) {
+        Path->Vtbl->Release(Path);
+        Path = NULL;
+    }
+
+    ReleasePerfectHashContextLockExclusive(Context);
+
+    return Result;
+}
+
+PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY
+    PerfectHashContextGetBaseOutputDirectory;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextGetBaseOutputDirectory(
+    PPERFECT_HASH_CONTEXT Context,
+    PPERFECT_HASH_DIRECTORY *BaseOutputDirectoryPointer
+    )
+/*++
+
+Routine Description:
+
+    Obtains a previously set output directory for a given context.
+
+Arguments:
+
+    Context - Supplies the context for which the output directory is to be
+        obtained.
+
+    BaseOuputDirectory - Supplies the address of a variable that receives a
+        pointer to the PERFECT_HASH_DIRECTORY instance of a previously set
+        base output directory.  Caller is responsible for calling Release().
+
+Return Value:
+
+    S_OK - Base output directory obtained successfully.
+
+    E_POINTER - Context or BaseOutputDirectory parameters were NULL.
+
+    PH_E_CONTEXT_LOCKED - The context was locked.
+
+    PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_NOT_SET - No base output directory has
+        been set.
+
+--*/
+{
+    PPERFECT_HASH_DIRECTORY Directory;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(BaseOutputDirectoryPointer)) {
+        return E_POINTER;
+    }
+
+    if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
+        return PH_E_CONTEXT_LOCKED;
+    }
+
+    if (!Context->BaseOutputDirectory) {
+        ReleasePerfectHashContextLockExclusive(Context);
+        return PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_NOT_SET;
+    }
+
+    //
+    // Argument validation complete.  Add a reference to the directory and
+    // update the caller's pointer, then return success.
+    //
+
+    Directory = Context->BaseOutputDirectory;
+    Directory->Vtbl->AddRef(Directory);
+
+    *BaseOutputDirectoryPointer = Directory;
+
+    ReleasePerfectHashContextLockExclusive(Context);
 
     return S_OK;
 }

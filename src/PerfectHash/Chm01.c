@@ -202,6 +202,11 @@ Return Value:
     ULARGE_INTEGER AssignedBitmapBufferSizeInBytes;
     ULARGE_INTEGER IndexBitmapBufferSizeInBytes;
     PPERFECT_HASH_CONTEXT Context = Table->Context;
+    PPERFECT_HASH_PATH OutputPath = NULL;
+    PPERFECT_HASH_DIRECTORY OutputDir = NULL;
+    PPERFECT_HASH_DIRECTORY BaseOutputDirectory;
+    PCUNICODE_STRING BaseOutputDirectoryPath;
+    const UNICODE_STRING EmptyString = { 0 };
     BOOL WaitForAllEvents = TRUE;
 
     HANDLE Events[5];
@@ -244,6 +249,8 @@ Return Value:
     ProcessHandle = GetCurrentProcess();
     GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
     TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
+    BaseOutputDirectory = Context->BaseOutputDirectory;
+    BaseOutputDirectoryPath = &BaseOutputDirectory->Path->FullPath;
 
     //
     // If no threshold has been set, use the default.
@@ -866,6 +873,94 @@ RetryWithLargerTableSize:
     Context->FileWorkCallback = FileWorkCallbackChm01;
 
     //
+    // Create an output directory path name.
+    //
+
+    RELEASE(OutputPath);
+
+    Result = PerfectHashTableCreatePath(Table,
+                                        Table->Keys->File->Path,
+                                        &NumberOfVertices,
+                                        Table->AlgorithmId,
+                                        Table->MaskFunctionId,
+                                        Table->HashFunctionId,
+                                        BaseOutputDirectoryPath,
+                                        NULL,           // NewBaseName
+                                        NULL,           // AdditionalSuffix
+                                        &EmptyString,   // NewExtension
+                                        NULL,           // NewStreamName
+                                        &OutputPath,
+                                        NULL);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // Either create a new directory instance if this is our first pass, or
+    // schedule a rename if not.
+    //
+
+    if (!OutputDir) {
+
+        PERFECT_HASH_DIRECTORY_CREATE_FLAGS DirectoryCreateFlags = { 0 };
+
+        ASSERT(!Table->OutputDirectory);
+
+        //
+        // No output directory has been set; this is the first attempt at
+        // trying to solve the graph.  Create a new directory instance, then
+        // issue a Create() call against the output path we constructed above.
+        //
+
+        Result = Table->Vtbl->CreateInstance(Table,
+                                             NULL,
+                                             &IID_PERFECT_HASH_DIRECTORY,
+                                             &OutputDir);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashDirectoryCreateInstance, Result);
+            goto Error;
+        }
+
+        Result = OutputDir->Vtbl->Create(OutputDir,
+                                         OutputPath,
+                                         &DirectoryCreateFlags);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashDirectoryCreate, Result);
+            goto Error;
+        }
+
+        //
+        // Directory creation was successful.  AddRef() against the instance
+        // to capture the table's ownership of it.  (We release the local
+        // OutputDir at the end of this routine.)
+        //
+
+        Table->OutputDirectory = OutputDir;
+        OutputDir->Vtbl->AddRef(OutputDir);
+
+    } else {
+
+        ASSERT(Table->OutputDirectory);
+
+        //
+        // Directory already exists; a resize event must have occurred.
+        // Schedule a rename of the directory to the output path constructed
+        // above.
+        //
+
+        Result = OutputDir->Vtbl->ScheduleRename(OutputDir, OutputPath);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashDirectoryScheduleRename, Result);
+            goto Error;
+        }
+
+    }
+
+
+    //
     // Submit all of the file preparation work items.
     //
 
@@ -1333,6 +1428,13 @@ End:
             }
         }
     }
+
+    //
+    // Release applicable COM references.
+    //
+
+    RELEASE(OutputPath);
+    RELEASE(OutputDir);
 
     return Result;
 }

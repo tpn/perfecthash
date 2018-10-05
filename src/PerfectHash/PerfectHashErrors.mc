@@ -478,9 +478,9 @@ The calculated C header file size exceeded 4GB.
 MessageId=0x238
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_CONTEXT_OUTPUT_DIRECTORY_NOT_SET
+SymbolicName=PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_NOT_SET
 Language=English
-No output directory has been set for the perfect hash context.
+Base output directory has not been set.
 .
 
 MessageId=0x239
@@ -499,17 +499,13 @@ Language=English
 Failed to reset context.
 .
 
-;//
-;// Removed 2018-10-03.
-;//
-;// MessageId=0x23b
-;// Severity=Fail
-;// Facility=ITF
-;// SymbolicName=PH_E_CONTEXT_SET_OUTPUT_DIRECTORY_FAILED
-;// Language=English
-;// Failed to set context output directory.
-;// .
-;//
+MessageId=0x23b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_SET_BASE_OUTPUT_DIRECTORY_FAILED
+Language=English
+Failed to set context output directory.
+.
 
 MessageId=0x23c
 Severity=Fail
@@ -926,3 +922,100 @@ SymbolicName=PH_E_INVALID_NUMBER_OF_SEEDS
 Language=English
 Invalid number of seeds.
 .
+
+MessageId=0x270
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_ALREADY_SET
+Language=English
+Base output directory already set.
+.
+
+MessageId=0x271
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_ALREADY_CLOSED
+Language=English
+The directory has already been closed.
+.
+
+MessageId=0x272
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_NOT_SET
+Language=English
+The directory has not been opened yet, or has been closed.
+.
+
+MessageId=0x273
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_LOCKED
+Language=English
+The directory is locked.
+.
+
+MessageId=0x274
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_ALREADY_SET
+Language=English
+The directory is already set.
+.
+
+MessageId=0x275
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_DOES_NOT_EXIST
+Language=English
+Directory does not exist.
+.
+
+MessageId=0x276
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_DIRECTORY_OPEN_FLAGS
+Language=English
+Invalid directory open flags.
+.
+
+MessageId=0x277
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_DIRECTORY_CREATE_FLAGS
+Language=English
+Invalid directory create flags.
+.
+
+MessageId=0x278
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_NEVER_SET
+Language=English
+The directory was never set.
+.
+
+MessageId=0x279
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_READONLY
+Language=English
+The directory is readonly.
+.
+
+MessageId=0x27a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_NO_RENAME_SCHEDULED
+Language=English
+The directory has not had a rename operation scheduled.
+.
+
+MessageId=0x27b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_NOT_CLOSED
+Language=English
+Directory is not closed.
+.
+

@@ -203,15 +203,18 @@ typedef enum _PERFECT_HASH_INTERFACE_ID {
     // Begin valid interfaces.
     //
 
-    PerfectHashUnknownInterfaceId          = 1,
-    PerfectHashClassFactoryInterfaceId     = 2,
-    PerfectHashKeysInterfaceId             = 3,
-    PerfectHashContextInterfaceId          = 4,
-    PerfectHashInterfaceId                 = 5,
-    PerfectHashRtlInterfaceId              = 6,
-    PerfectHashAllocatorInterfaceId        = 7,
-    PerfectHashFileInterfaceId             = 8,
-    PerfectHashPathInterfaceId             = 9,
+    PerfectHashUnknownInterfaceId          =  1,
+    PerfectHashClassFactoryInterfaceId     =  2,
+    PerfectHashKeysInterfaceId             =  3,
+    PerfectHashContextInterfaceId          =  4,
+    PerfectHashTableInterfaceId            =  5,
+    PerfectHashRtlInterfaceId              =  6,
+    PerfectHashAllocatorInterfaceId        =  7,
+    PerfectHashFileInterfaceId             =  8,
+    PerfectHashPathInterfaceId             =  9,
+    PerfectHashDirectoryInterfaceId        = 10,
+
+    PerfectHashLastInterfaceId             = PerfectHashDirectoryInterfaceId,
 
     //
     // End valid interfaces.
@@ -352,6 +355,14 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_PATH,
                0xa2, 0x97, 0xdf, 0xe, 0x54, 0x67, 0xaf, 0xd1);
 
 //
+// IID_PERFECT_HASH_DIRECTORY: {5D673839-1686-411E-9902-46C6E97CA567}
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_DIRECTORY,
+               0x5d673839, 0x1686, 0x411e,
+               0x99, 0x2, 0x46, 0xc6, 0xe9, 0x7c, 0xa5, 0x67);
+
+//
 // GUID array.
 //
 
@@ -368,6 +379,7 @@ static const PCGUID PerfectHashInterfaceGuids[] = {
     &IID_PERFECT_HASH_ALLOCATOR,
     &IID_PERFECT_HASH_FILE,
     &IID_PERFECT_HASH_PATH,
+    &IID_PERFECT_HASH_DIRECTORY,
 
     NULL
 };
@@ -1028,6 +1040,187 @@ typedef PERFECT_HASH_FILE *PPERFECT_HASH_FILE;
 #endif
 
 //
+// Define the PERFECT_HASH_DIRECTORY interface.
+//
+
+DECLARE_COMPONENT(Directory, PERFECT_HASH_DIRECTORY);
+
+typedef union _PERFECT_HASH_DIRECTORY_OPEN_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:32;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_DIRECTORY_OPEN_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_DIRECTORY_OPEN_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_DIRECTORY_OPEN_FLAGS *PPERFECT_HASH_DIRECTORY_OPEN_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidDirectoryOpenFlags(
+    _In_ PPERFECT_HASH_DIRECTORY_OPEN_FLAGS DirectoryOpenFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(DirectoryOpenFlags)) {
+        return E_POINTER;
+    }
+
+    if (DirectoryOpenFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_DIRECTORY_OPEN)(
+    _In_ PPERFECT_HASH_DIRECTORY Directory,
+    _In_ PPERFECT_HASH_PATH SourcePath,
+    _In_opt_ PPERFECT_HASH_DIRECTORY_OPEN_FLAGS DirectoryOpenFlags
+    );
+typedef PERFECT_HASH_DIRECTORY_OPEN *PPERFECT_HASH_DIRECTORY_OPEN;
+
+//
+// Define Create() method and supporting flags.
+//
+
+typedef union _PERFECT_HASH_DIRECTORY_CREATE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:32;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_DIRECTORY_CREATE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_DIRECTORY_CREATE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_DIRECTORY_CREATE_FLAGS
+      *PPERFECT_HASH_DIRECTORY_CREATE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidDirectoryCreateFlags(
+    _In_ PPERFECT_HASH_DIRECTORY_CREATE_FLAGS DirectoryCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(DirectoryCreateFlags)) {
+        return E_POINTER;
+    }
+
+    if (DirectoryCreateFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_DIRECTORY_CREATE)(
+    _In_ PPERFECT_HASH_DIRECTORY Directory,
+    _In_ PPERFECT_HASH_PATH SourcePath,
+    _In_opt_ PPERFECT_HASH_DIRECTORY_CREATE_FLAGS DirectoryCreateFlags
+    );
+typedef PERFECT_HASH_DIRECTORY_CREATE *PPERFECT_HASH_DIRECTORY_CREATE;
+
+//
+// Define the PERFECT_HASH_DIRECTORY_FLAGS structure.
+//
+
+typedef union _PERFECT_HASH_DIRECTORY_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the directory was initialized via Open().
+        //
+        // Invariant:
+        //
+        //      If Opened == TRUE:
+        //          Assert Created == FALSE
+        //
+
+        ULONG Opened:1;
+
+        //
+        // When set, indicates the directory was initialized via Create().
+        //
+        // Invariant:
+        //
+        //      If Created == TRUE:
+        //          Assert Loaded == FALSE
+        //
+
+        ULONG Created:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:30;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_DIRECTORY_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_DIRECTORY_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_DIRECTORY_FLAGS *PPERFECT_HASH_DIRECTORY_FLAGS;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_DIRECTORY_GET_FLAGS)(
+    _In_ PPERFECT_HASH_DIRECTORY Directory,
+    _In_ ULONG SizeOfFlags,
+    _Out_writes_bytes_(SizeOfFlags) PPERFECT_HASH_DIRECTORY_FLAGS Flags
+    );
+typedef PERFECT_HASH_DIRECTORY_GET_FLAGS *PPERFECT_HASH_DIRECTORY_GET_FLAGS;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_DIRECTORY_GET_PATH)(
+    _In_ PPERFECT_HASH_DIRECTORY Directory,
+    _Inout_opt_ PPERFECT_HASH_PATH *Path
+    );
+typedef PERFECT_HASH_DIRECTORY_GET_PATH *PPERFECT_HASH_DIRECTORY_GET_PATH;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_DIRECTORY_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_DIRECTORY);
+    PPERFECT_HASH_DIRECTORY_OPEN Open;
+    PPERFECT_HASH_DIRECTORY_CREATE Create;
+    PPERFECT_HASH_DIRECTORY_GET_FLAGS GetFlags;
+    PPERFECT_HASH_DIRECTORY_GET_PATH GetPath;
+} PERFECT_HASH_DIRECTORY_VTBL;
+typedef PERFECT_HASH_DIRECTORY_VTBL *PPERFECT_HASH_DIRECTORY_VTBL;
+
+typedef struct _PERFECT_HASH_DIRECTORY {
+    PPERFECT_HASH_DIRECTORY_VTBL Vtbl;
+} PERFECT_HASH_DIRECTORY;
+typedef PERFECT_HASH_DIRECTORY *PPERFECT_HASH_DIRECTORY;
+#endif
+
+//
 // Define the PERFECT_HASH_KEYS interface.
 //
 
@@ -1549,6 +1742,24 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
       *PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY;
 
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PCUNICODE_STRING BaseOutputDirectory
+    );
+typedef PERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY
+      *PPERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _Inout_ PPERFECT_HASH_DIRECTORY *BaseOutputDirectory
+    );
+typedef PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY
+      *PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY;
+
 //
 // Define the self-test flags and associated function pointer.
 //
@@ -1805,6 +2016,8 @@ typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
     PPERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
+    PPERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY SetBaseOutputDirectory;
+    PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY GetBaseOutputDirectory;
     PPERFECT_HASH_CONTEXT_SELF_TEST SelfTest;
     PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
     PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
@@ -1839,8 +2052,6 @@ HRESULT
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PPERFECT_HASH_KEYS Keys,
-    _In_ PCUNICODE_STRING BaseOutputDirectory,
-    _In_opt_ PCUNICODE_STRING TableBaseName,
     _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
     );
 typedef PERFECT_HASH_TABLE_CREATE *PPERFECT_HASH_TABLE_CREATE;

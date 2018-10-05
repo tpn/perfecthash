@@ -66,6 +66,7 @@ Abstract:
 #include "PerfectHashTls.h"
 #include "PerfectHashPath.h"
 #include "PerfectHashFile.h"
+#include "PerfectHashDirectory.h"
 #include "PerfectHashKeys.h"
 #include "PerfectHashTable.h"
 #include "PerfectHashPrimes.h"

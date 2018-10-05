@@ -148,6 +148,9 @@
     <ClCompile Include="Chm01FileWorkCSourceTableDataFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashDirectory.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -212,6 +215,9 @@
     </ClInclude>
     <ClInclude Include="..\..\include\CompiledPerfectHash.h">
       <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashDirectory.h">
+      <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

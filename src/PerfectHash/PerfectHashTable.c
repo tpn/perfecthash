@@ -166,6 +166,7 @@ Return Value:
     // Release applicable COM references.
     //
 
+    RELEASE(Table->OutputDirectory);
     RELEASE(Table->TableFile);
     RELEASE(Table->InfoStream);
     RELEASE(Table->CHeaderFile);

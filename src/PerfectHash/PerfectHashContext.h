@@ -110,10 +110,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG Padding;
 
     //
-    // Fully-qualified path of the base output directory.
+    // Pointer to the path instance of the base output directory set via
+    // SetBaseOutputDirectory().
     //
 
-    UNICODE_STRING BaseOutputDirectory;
+    PPERFECT_HASH_DIRECTORY BaseOutputDirectory;
 
     //
     // Pointer to the active perfect hash table.
@@ -420,8 +421,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     TP_CALLBACK_ENVIRON MainCallbackEnv;
-    SLIST_HEADER MainWorkListHead;
     PTP_CLEANUP_GROUP MainCleanupGroup;
+    SLIST_HEADER MainWorkListHead;
     PTP_POOL MainThreadpool;
     PTP_WORK MainWork;
     ULONG MinimumConcurrency;
@@ -439,8 +440,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     TP_CALLBACK_ENVIRON FileCallbackEnv;
-    SLIST_HEADER FileWorkListHead;
     PTP_CLEANUP_GROUP FileCleanupGroup;
+    SLIST_HEADER FileWorkListHead;
     PTP_POOL FileThreadpool;
     PTP_WORK FileWork;
 
@@ -466,8 +467,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     TP_CALLBACK_ENVIRON FinishedCallbackEnv;
-    PTP_POOL FinishedThreadpool;
     SLIST_HEADER FinishedWorkListHead;
+    PTP_POOL FinishedThreadpool;
     PTP_WORK FinishedWork;
 
     //
@@ -545,7 +546,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    //PVOID Padding3;
+    PVOID Padding3;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
@@ -629,6 +630,10 @@ extern PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY
     PerfectHashContextSetMaximumConcurrency;
 extern PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY
     PerfectHashContextGetMaximumConcurrency;
+extern PERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY
+    PerfectHashContextSetBaseOutputDirectory;
+extern PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY
+    PerfectHashContextGetBaseOutputDirectory;
 extern PERFECT_HASH_CONTEXT_SELF_TEST PerfectHashContextSelfTest;
 extern PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
     PerfectHashContextSelfTestArgvW;

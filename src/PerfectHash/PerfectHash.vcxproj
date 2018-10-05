@@ -90,6 +90,7 @@
     <ClInclude Include="Graph.h" />
     <ClInclude Include="PerfectHashAllocator.h" />
     <ClInclude Include="PerfectHashContext.h" />
+    <ClInclude Include="PerfectHashDirectory.h" />
     <ClInclude Include="PerfectHashErrorHandling.h" />
     <ClInclude Include="PerfectHashFile.h" />
     <ClInclude Include="PerfectHashKeys.h" />
@@ -118,6 +119,7 @@
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="Graph.c" />
     <ClCompile Include="PerfectHashContextSelfTest.c" />
+    <ClCompile Include="PerfectHashDirectory.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />
     <ClCompile Include="PerfectHashContext.c" />
     <ClCompile Include="PerfectHashFile.c" />
