@@ -1465,6 +1465,55 @@ IsValidOrEmptyUnicodeString(
     );
 }
 
+FORCEINLINE
+BOOLEAN
+FindCharInUnicodeString(
+    _In_ PCUNICODE_STRING String,
+    _In_ WCHAR Char,
+    _In_opt_ _Field_range_(<=, String->Length >> 1) USHORT StartAtCharOffset,
+    _Out_opt_ PUSHORT FoundAtCharOffset
+    )
+{
+    USHORT Index;
+    USHORT Count;
+    PWSTR Wide;
+    BOOLEAN Found = FALSE;
+    USHORT Start = StartAtCharOffset;
+
+    Count = String->Length >> 1;
+
+    if (!StartAtCharOffset || StartAtCharOffset > Count) {
+        Start = 0;
+    }
+
+    Wide = String->Buffer;
+    for (Index = 0; Index < Count; Index++, Wide++) {
+        if (*Wide == Char) {
+            Found = TRUE;
+            break;
+        }
+    }
+
+    if (!Found) {
+        Index = 0;
+    }
+
+    if (ARGUMENT_PRESENT(FoundAtCharOffset)) {
+        *FoundAtCharOffset = Index;
+    }
+
+    return Found;
+}
+
+FORCEINLINE
+BOOLEAN
+VerifyNoSlashInUnicodeString(
+    _In_ PCUNICODE_STRING String
+    )
+{
+    return !FindCharInUnicodeString(String, L'\\', 0, NULL);
+}
+
 //
 // Buffer-related functions.
 //
