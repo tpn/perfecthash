@@ -907,8 +907,8 @@ PerfectHashPathCreate(
 Routine Description:
 
     Creates a new path structure, using an existing path as a base template,
-    optionally replacing the directory, adding a base name suffix, changing
-    the extension, and adding a stream name.
+    optionally replacing the directory, adding a directory suffix, adding a base
+    name suffix, changing the extension, and adding a stream name.
 
 Arguments:
 
