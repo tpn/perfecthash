@@ -190,6 +190,7 @@ Return Value:
     // Release COM references.
     //
 
+    RELEASE(File->ParentDirectory);
     RELEASE(File->Path);
     RELEASE(File->RenamePath);
     RELEASE(File->Rtl);
@@ -452,6 +453,7 @@ PerfectHashFileCreate(
     PPERFECT_HASH_FILE File,
     PPERFECT_HASH_PATH SourcePath,
     PLARGE_INTEGER EndOfFilePointer,
+    PPERFECT_HASH_DIRECTORY ParentDirectory,
     PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlagsPointer
     )
 /*++
@@ -469,6 +471,9 @@ Arguments:
     EndOfFile - Supplies a pointer to a LARGE_INTEGER structure that contains
         the desired size of the file being created.  Once created (and truncated
         if necessary), a memory map will be created for the entire file size.
+
+    ParentDirectory - Optionally supplies a pointer to the parent directory
+        for this file.
 
     FileCreateFlags - Optionally supplies a pointer to file create flags that
         can be used to customize create behavior.
@@ -558,19 +563,25 @@ Return Value:
     }
 
     //
-    // Invariant check: File->Path and File->RenamePath should both be NULL
-    // at this point.
+    // Invariant check: verify instance pointers that should be NULL at this
+    // point, are actually NULL.
     //
 
     if (File->Path) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashFileCreate, Result);
+        PH_ERROR(PerfectHashFileCreate_PathNotNull, Result);
         goto Error;
     }
 
     if (File->RenamePath) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashFileCreate, Result);
+        PH_ERROR(PerfectHashFileCreate_RenamePathNotNull, Result);
+        goto Error;
+    }
+
+    if (File->ParentDirectory) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileCreate_DirectoryNotNull, Result);
         goto Error;
     }
 
@@ -596,6 +607,16 @@ Return Value:
 
     SourcePath->Vtbl->AddRef(SourcePath);
     File->Path = SourcePath;
+
+    if (ParentDirectory) {
+        Result = ParentDirectory->Vtbl->AddFile(ParentDirectory, File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileCreate_DirectoryAddFile, Result);
+            goto Error;
+        }
+        ParentDirectory->Vtbl->AddRef(ParentDirectory);
+        File->ParentDirectory = ParentDirectory;
+    }
 
     //
     // Open the file using the newly created path.
@@ -746,6 +767,7 @@ Return Value:
     HRESULT Result;
     ULONG LastError;
     LARGE_INTEGER EndOfFile = { 0 };
+    PPERFECT_HASH_DIRECTORY Directory;
 
     //
     // Validate arguments.
@@ -840,6 +862,23 @@ Return Value:
                     Result = PH_E_SYSTEM_CALL_FAILED;
                 }
             }
+        }
+
+        //
+        // Remove ourselves from our parent directory if applicable.  This
+        // ensures the directory won't attempt to adjust our path if it has
+        // been renamed.
+        //
+
+        Directory = File->ParentDirectory;
+
+        if (Directory) {
+            Result = Directory->Vtbl->RemoveFile(Directory, File);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashFileClose_DirectoryRemoveFile, Result);
+            }
+            Directory->Vtbl->Release(Directory);
+            Directory = File->ParentDirectory = NULL;
         }
 
     }

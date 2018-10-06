@@ -107,6 +107,14 @@ BOOLEAN
     );
 typedef GUARDED_LIST_REMOVE_ENTRY *PGUARDED_LIST_REMOVE_ENTRY;
 
+typedef
+BOOLEAN
+(STDAPICALLTYPE GUARDED_LIST_REMOVE_HEAD_EX)(
+    _In_ PGUARDED_LIST List,
+    _Out_ PLIST_ENTRY *Entry
+    );
+typedef GUARDED_LIST_REMOVE_HEAD_EX *PGUARDED_LIST_REMOVE_HEAD_EX;
+
 typedef struct _GUARDED_LIST_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GUARDED_LIST);
     PGUARDED_LIST_SET_CALLBACKS SetCallbacks;
@@ -118,6 +126,7 @@ typedef struct _GUARDED_LIST_VTBL {
     PGUARDED_LIST_REMOVE_HEAD RemoveHead;
     PGUARDED_LIST_REMOVE_TAIL RemoveTail;
     PGUARDED_LIST_REMOVE_ENTRY RemoveEntry;
+    PGUARDED_LIST_REMOVE_HEAD_EX RemoveHeadEx;
 } GUARDED_LIST_VTBL;
 typedef GUARDED_LIST_VTBL *PGUARDED_LIST_VTBL;
 
@@ -180,6 +189,7 @@ extern GUARDED_LIST_APPEND_TAIL GuardedListAppendTail;
 extern GUARDED_LIST_REMOVE_HEAD GuardedListRemoveHead;
 extern GUARDED_LIST_REMOVE_TAIL GuardedListRemoveTail;
 extern GUARDED_LIST_REMOVE_ENTRY GuardedListRemoveEntry;
+extern GUARDED_LIST_REMOVE_HEAD_EX GuardedListRemoveHeadEx;
 
 extern GUARDED_LIST_IS_EMPTY GuardedListIsEmptyTsx;
 extern GUARDED_LIST_QUERY_DEPTH GuardedListQueryDepthTsx;
@@ -189,5 +199,6 @@ extern GUARDED_LIST_APPEND_TAIL GuardedListAppendTailTsx;
 extern GUARDED_LIST_REMOVE_HEAD GuardedListRemoveHeadTsx;
 extern GUARDED_LIST_REMOVE_TAIL GuardedListRemoveTailTsx;
 extern GUARDED_LIST_REMOVE_ENTRY GuardedListRemoveEntryTsx;
+extern GUARDED_LIST_REMOVE_HEAD_EX GuardedListRemoveHeadExTsx;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

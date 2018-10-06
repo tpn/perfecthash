@@ -746,6 +746,7 @@ HRESULT
     _In_ PPERFECT_HASH_PATH Path,
     _In_ PPERFECT_HASH_PATH ExistingPath,
     _In_opt_ PCUNICODE_STRING NewDirectory,
+    _In_opt_ PCUNICODE_STRING DirectorySuffix,
     _In_opt_ PCUNICODE_STRING NewBaseName,
     _In_opt_ PCUNICODE_STRING BaseNameSuffix,
     _In_opt_ PCUNICODE_STRING NewExtension,
@@ -815,251 +816,6 @@ typedef PERFECT_HASH_PATH *PPERFECT_HASH_PATH;
 
 #define ReleasePerfectHashPathLockShared(Path) \
     ReleaseSRWLockShared(&Path->Lock)
-
-//
-// Define the PERFECT_HASH_FILE interface.
-//
-
-DECLARE_COMPONENT(File, PERFECT_HASH_FILE);
-
-typedef union _PERFECT_HASH_FILE_LOAD_FLAGS {
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When clear, tries to allocate the file buffer using large pages.  The
-        // caller is responsible for ensuring the process can create large pages
-        // first by enabling the lock memory privilege.  If large pages can't be
-        // allocated (because the lock memory privilege hasn't been enabled, or
-        // there are insufficient large pages available to the system), the file
-        // will be accessed via the normal memory-mapped address of the
-        // underlying file.
-        //
-        // To determine whether or not the large page allocation was successful,
-        // check the UsesLargePages bit of the PERFECT_HASH_FILE_FLAGS enum
-        // enum (the flags can be obtained via the GetFlags() vtbl function).
-        //
-
-        ULONG DisableTryLargePagesForFileData:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:31;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_FILE_LOAD_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_FILE_LOAD_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_FILE_LOAD_FLAGS *PPERFECT_HASH_FILE_LOAD_FLAGS;
-
-FORCEINLINE
-HRESULT
-IsValidFileLoadFlags(
-    _In_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags
-    )
-{
-
-    if (!ARGUMENT_PRESENT(FileLoadFlags)) {
-        return E_POINTER;
-    }
-
-    if (FileLoadFlags->Unused != 0) {
-        return E_FAIL;
-    }
-
-    return S_OK;
-}
-
-typedef
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_FILE_LOAD)(
-    _In_ PPERFECT_HASH_FILE File,
-    _In_ PPERFECT_HASH_PATH SourcePath,
-    _Out_opt_ PLARGE_INTEGER EndOfFile,
-    _In_opt_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags
-    );
-typedef PERFECT_HASH_FILE_LOAD *PPERFECT_HASH_FILE_LOAD;
-
-//
-// Define Create() method and supporting flags.
-//
-
-typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When clear, tries to allocate the file buffer using large pages.  The
-        // caller is responsible for ensuring the process can create large pages
-        // first by enabling the lock memory privilege.  If large pages can't be
-        // allocated (because the lock memory privilege hasn't been enabled, or
-        // there are insufficient large pages available to the system), the file
-        // will be accessed via the normal memory-mapped address of the
-        // underlying file.
-        //
-        // To determine whether or not the large page allocation was successful,
-        // check the UsesLargePages bit of the PERFECT_HASH_FILE_FLAGS enum
-        // enum (the flags can be obtained via the GetFlags() vtbl function).
-        //
-
-        ULONG DisableTryLargePagesForFileData:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:31;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_FILE_CREATE_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_FILE_CREATE_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_FILE_CREATE_FLAGS *PPERFECT_HASH_FILE_CREATE_FLAGS;
-
-FORCEINLINE
-HRESULT
-IsValidFileCreateFlags(
-    _In_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
-    )
-{
-
-    if (!ARGUMENT_PRESENT(FileCreateFlags)) {
-        return E_POINTER;
-    }
-
-    if (FileCreateFlags->Unused != 0) {
-        return E_FAIL;
-    }
-
-    return S_OK;
-}
-
-typedef
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_FILE_CREATE)(
-    _In_ PPERFECT_HASH_FILE File,
-    _In_ PPERFECT_HASH_PATH SourcePath,
-    _In_ PLARGE_INTEGER EndOfFile,
-    _In_opt_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
-    );
-typedef PERFECT_HASH_FILE_CREATE *PPERFECT_HASH_FILE_CREATE;
-
-//
-// Define the PERFECT_HASH_FILE_FLAGS structure.
-//
-
-typedef union _PERFECT_HASH_FILE_FLAGS {
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // When set, indicates the file was initialized via Load().
-        //
-        // Invariant:
-        //
-        //      If Loaded == TRUE:
-        //          Assert Created == FALSE
-        //
-
-        ULONG Loaded:1;
-
-        //
-        // When set, indicates the file was initialized via Create().
-        //
-        // Invariant:
-        //
-        //      If Created == TRUE:
-        //          Assert Loaded == FALSE
-        //
-
-        ULONG Created:1;
-
-        //
-        // When set, indicates the caller disabled large pages at creation or
-        // load time via the DisableTryLargePagesForFileData flag.
-        //
-
-        ULONG DoesNotWantLargePages:1;
-
-        //
-        // When set, indicates the file data resides in a memory allocation
-        // backed by large pages.  In this case, BaseAddress represents the
-        // large page address, and MappedAddress represents the original
-        // address the file was mapped at.
-        //
-
-        ULONG UsesLargePages:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:28;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_FILE_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_FILE_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_FILE_FLAGS *PPERFECT_HASH_FILE_FLAGS;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_FILE_GET_FLAGS)(
-    _In_ PPERFECT_HASH_FILE File,
-    _In_ ULONG SizeOfFlags,
-    _Out_writes_bytes_(SizeOfFlags) PPERFECT_HASH_FILE_FLAGS Flags
-    );
-typedef PERFECT_HASH_FILE_GET_FLAGS *PPERFECT_HASH_FILE_GET_FLAGS;
-
-typedef
-_Check_return_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_FILE_GET_PATH)(
-    _In_ PPERFECT_HASH_FILE File,
-    _Inout_opt_ PPERFECT_HASH_PATH *Path
-    );
-typedef PERFECT_HASH_FILE_GET_PATH *PPERFECT_HASH_FILE_GET_PATH;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_FILE_GET_RESOURCES)(
-    _In_ PPERFECT_HASH_FILE File,
-    _Out_opt_ PHANDLE FileHandle,
-    _Out_opt_ PHANDLE MappingHandle,
-    _Out_opt_ PVOID *BaseAddress,
-    _Out_opt_ PVOID *MappedAddress,
-    _Out_opt_ PLARGE_INTEGER EndOfFile
-    );
-typedef PERFECT_HASH_FILE_GET_RESOURCES
-      *PPERFECT_HASH_FILE_GET_RESOURCES;
-
-#ifndef _PERFECT_HASH_INTERNAL_BUILD
-typedef struct _PERFECT_HASH_FILE_VTBL {
-    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_FILE);
-    PPERFECT_HASH_FILE_LOAD Load;
-    PPERFECT_HASH_FILE_CREATE Create;
-    PPERFECT_HASH_FILE_GET_FLAGS GetFlags;
-    PPERFECT_HASH_FILE_GET_PATH GetPath;
-    PPERFECT_HASH_FILE_GET_RESOURCES GetResources;
-} PERFECT_HASH_FILE_VTBL;
-typedef PERFECT_HASH_FILE_VTBL *PPERFECT_HASH_FILE_VTBL;
-
-typedef struct _PERFECT_HASH_FILE {
-    PPERFECT_HASH_FILE_VTBL Vtbl;
-} PERFECT_HASH_FILE;
-typedef PERFECT_HASH_FILE *PPERFECT_HASH_FILE;
-#endif
 
 //
 // Define the PERFECT_HASH_DIRECTORY interface.
@@ -1241,6 +997,253 @@ typedef struct _PERFECT_HASH_DIRECTORY {
 } PERFECT_HASH_DIRECTORY;
 typedef PERFECT_HASH_DIRECTORY *PPERFECT_HASH_DIRECTORY;
 #endif
+
+//
+// Define the PERFECT_HASH_FILE interface.
+//
+
+DECLARE_COMPONENT(File, PERFECT_HASH_FILE);
+
+typedef union _PERFECT_HASH_FILE_LOAD_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When clear, tries to allocate the file buffer using large pages.  The
+        // caller is responsible for ensuring the process can create large pages
+        // first by enabling the lock memory privilege.  If large pages can't be
+        // allocated (because the lock memory privilege hasn't been enabled, or
+        // there are insufficient large pages available to the system), the file
+        // will be accessed via the normal memory-mapped address of the
+        // underlying file.
+        //
+        // To determine whether or not the large page allocation was successful,
+        // check the UsesLargePages bit of the PERFECT_HASH_FILE_FLAGS enum
+        // enum (the flags can be obtained via the GetFlags() vtbl function).
+        //
+
+        ULONG DisableTryLargePagesForFileData:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_FILE_LOAD_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_FILE_LOAD_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_FILE_LOAD_FLAGS *PPERFECT_HASH_FILE_LOAD_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidFileLoadFlags(
+    _In_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(FileLoadFlags)) {
+        return E_POINTER;
+    }
+
+    if (FileLoadFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_LOAD)(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ PPERFECT_HASH_PATH SourcePath,
+    _Out_opt_ PLARGE_INTEGER EndOfFile,
+    _In_opt_ PPERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags
+    );
+typedef PERFECT_HASH_FILE_LOAD *PPERFECT_HASH_FILE_LOAD;
+
+//
+// Define Create() method and supporting flags.
+//
+
+typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When clear, tries to allocate the file buffer using large pages.  The
+        // caller is responsible for ensuring the process can create large pages
+        // first by enabling the lock memory privilege.  If large pages can't be
+        // allocated (because the lock memory privilege hasn't been enabled, or
+        // there are insufficient large pages available to the system), the file
+        // will be accessed via the normal memory-mapped address of the
+        // underlying file.
+        //
+        // To determine whether or not the large page allocation was successful,
+        // check the UsesLargePages bit of the PERFECT_HASH_FILE_FLAGS enum
+        // enum (the flags can be obtained via the GetFlags() vtbl function).
+        //
+
+        ULONG DisableTryLargePagesForFileData:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_FILE_CREATE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_FILE_CREATE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_FILE_CREATE_FLAGS *PPERFECT_HASH_FILE_CREATE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidFileCreateFlags(
+    _In_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(FileCreateFlags)) {
+        return E_POINTER;
+    }
+
+    if (FileCreateFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_CREATE)(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ PPERFECT_HASH_PATH SourcePath,
+    _In_ PLARGE_INTEGER EndOfFile,
+    _In_opt_ PPERFECT_HASH_DIRECTORY ParentDirectory,
+    _In_opt_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
+    );
+typedef PERFECT_HASH_FILE_CREATE *PPERFECT_HASH_FILE_CREATE;
+
+//
+// Define the PERFECT_HASH_FILE_FLAGS structure.
+//
+
+typedef union _PERFECT_HASH_FILE_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the file was initialized via Load().
+        //
+        // Invariant:
+        //
+        //      If Loaded == TRUE:
+        //          Assert Created == FALSE
+        //
+
+        ULONG Loaded:1;
+
+        //
+        // When set, indicates the file was initialized via Create().
+        //
+        // Invariant:
+        //
+        //      If Created == TRUE:
+        //          Assert Loaded == FALSE
+        //
+
+        ULONG Created:1;
+
+        //
+        // When set, indicates the caller disabled large pages at creation or
+        // load time via the DisableTryLargePagesForFileData flag.
+        //
+
+        ULONG DoesNotWantLargePages:1;
+
+        //
+        // When set, indicates the file data resides in a memory allocation
+        // backed by large pages.  In this case, BaseAddress represents the
+        // large page address, and MappedAddress represents the original
+        // address the file was mapped at.
+        //
+
+        ULONG UsesLargePages:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:28;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_FILE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_FILE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_FILE_FLAGS *PPERFECT_HASH_FILE_FLAGS;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_GET_FLAGS)(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ ULONG SizeOfFlags,
+    _Out_writes_bytes_(SizeOfFlags) PPERFECT_HASH_FILE_FLAGS Flags
+    );
+typedef PERFECT_HASH_FILE_GET_FLAGS *PPERFECT_HASH_FILE_GET_FLAGS;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_GET_PATH)(
+    _In_ PPERFECT_HASH_FILE File,
+    _Inout_opt_ PPERFECT_HASH_PATH *Path
+    );
+typedef PERFECT_HASH_FILE_GET_PATH *PPERFECT_HASH_FILE_GET_PATH;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_FILE_GET_RESOURCES)(
+    _In_ PPERFECT_HASH_FILE File,
+    _Out_opt_ PHANDLE FileHandle,
+    _Out_opt_ PHANDLE MappingHandle,
+    _Out_opt_ PVOID *BaseAddress,
+    _Out_opt_ PVOID *MappedAddress,
+    _Out_opt_ PLARGE_INTEGER EndOfFile
+    );
+typedef PERFECT_HASH_FILE_GET_RESOURCES
+      *PPERFECT_HASH_FILE_GET_RESOURCES;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_FILE_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_FILE);
+    PPERFECT_HASH_FILE_LOAD Load;
+    PPERFECT_HASH_FILE_CREATE Create;
+    PPERFECT_HASH_FILE_GET_FLAGS GetFlags;
+    PPERFECT_HASH_FILE_GET_PATH GetPath;
+    PPERFECT_HASH_FILE_GET_RESOURCES GetResources;
+} PERFECT_HASH_FILE_VTBL;
+typedef PERFECT_HASH_FILE_VTBL *PPERFECT_HASH_FILE_VTBL;
+
+typedef struct _PERFECT_HASH_FILE {
+    PPERFECT_HASH_FILE_VTBL Vtbl;
+} PERFECT_HASH_FILE;
+typedef PERFECT_HASH_FILE *PPERFECT_HASH_FILE;
+#endif
+
 
 //
 // Define the PERFECT_HASH_KEYS interface.

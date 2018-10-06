@@ -257,6 +257,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     volatile PPERFECT_HASH_PATH RenamePath;
 
     //
+    // Pointer to our parent directory, if applicable.
+    //
+
+    PPERFECT_HASH_DIRECTORY ParentDirectory;
+
+    //
     // Handle to the underlying file.
     //
 

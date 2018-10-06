@@ -427,6 +427,7 @@ Return Value:
         Result = File->Vtbl->Create(File,
                                     Path,
                                     EndOfFile,
+                                    Table->OutputDirectory,
                                     NULL);
 
         if (FAILED(Result)) {

@@ -55,7 +55,7 @@ Return Value:
     Directory->SizeOfStruct = sizeof(*Directory);
 
     //
-    // Create Rtl and Allocator components.
+    // Create Rtl, Allocator and GuardedList components.
     //
 
     Result = Directory->Vtbl->CreateInstance(Directory,
@@ -71,6 +71,16 @@ Return Value:
                                              NULL,
                                              &IID_PERFECT_HASH_ALLOCATOR,
                                              &Directory->Allocator);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+
+    Result = Directory->Vtbl->CreateInstance(Directory,
+                                             NULL,
+                                             &IID_PERFECT_HASH_GUARDED_LIST,
+                                             &Directory->FilesList);
 
     if (FAILED(Result)) {
         goto Error;
@@ -145,6 +155,7 @@ Return Value:
     // Release COM references.
     //
 
+    RELEASE(Directory->FilesList);
     RELEASE(Directory->Path);
     RELEASE(Directory->RenamePath);
     RELEASE(Directory->Rtl);
@@ -201,7 +212,6 @@ Return Value:
 
 --*/
 {
-    ULONG LastError;
     ULONG ShareMode;
     ULONG DesiredAccess;
     ULONG FlagsAndAttributes;
@@ -293,33 +303,11 @@ Return Value:
                                              FlagsAndAttributes,
                                              NULL);
 
-    LastError = GetLastError();
-
     if (!IsValidHandle(Directory->DirectoryHandle)) {
         Directory->DirectoryHandle = NULL;
-        SYS_ERROR(CreateDirectoryW);
+        SYS_ERROR(CreateFileW);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
-    }
-
-    if (LastError == ERROR_SUCCESS) {
-
-        Directory->State.WasCreatedByUs = TRUE;
-
-    } else if (LastError != ERROR_ALREADY_EXISTS) {
-
-        //
-        // If we get here, the only permissible value for last error, other
-        // than success, is ERROR_ALREADY_EXISTS.  So, as we've encountered
-        // something else, treat that as an invariant failure.
-        //
-
-        PH_ERROR(PerfectHashDirectoryOpen_InvalidLastError, LastError);
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        goto Error;
-
-    } else {
-        Directory->State.WasCreatedByUs = FALSE;
     }
 
     Opened = TRUE;
@@ -510,15 +498,13 @@ Return Value:
                                              DesiredAccess,
                                              ShareMode,
                                              NULL,
-                                             OPEN_ALWAYS,
+                                             OPEN_EXISTING,
                                              FlagsAndAttributes,
                                              NULL);
 
-    LastError = GetLastError();
-
     if (!IsValidHandle(Directory->DirectoryHandle)) {
         Directory->DirectoryHandle = NULL;
-        SYS_ERROR(CreateDirectoryW);
+        SYS_ERROR(CreateFileW);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
@@ -1003,10 +989,19 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     BOOL Success;
+    BOOLEAN Equal;
+    ULONG LastError;
     ULONG MoveFileFlags;
     HRESULT Result = S_OK;
+    PGUARDED_LIST List;
+    PLIST_ENTRY Entry;
     PPERFECT_HASH_PATH OldPath;
+    PPERFECT_HASH_FILE File = NULL;
+    PPERFECT_HASH_PATH Path;
+    PCUNICODE_STRING NewDirectory;
+    BOOLEAN FileInvariantCheckFailed = FALSE;
 
     //
     // Validate arguments.
@@ -1037,18 +1032,212 @@ Return Value:
     }
 
     //
-    // Argument validation complete.  Continue with rename.
+    // Argument validation complete.  Continue with rename.  Unlike files,
+    // we can't just specify "replace existing" when moving directories.  As
+    // it's highly likely there will already be a directory in place with our
+    // desired final name (i.e. the path currently captured in RenamePath), we
+    // will move the existing one into an "old" subdirectory (that we may need
+    // to create first), appending the directory's creation time whilst we're
+    // at it.
     //
 
-    MoveFileFlags = MOVEFILE_REPLACE_EXISTING;
+    MoveFileFlags = 0;
 
     Success = MoveFileExW(Directory->Path->FullPath.Buffer,
                           Directory->RenamePath->FullPath.Buffer,
                           MoveFileFlags);
 
-    if (!Success) {
+    LastError = GetLastError();
+
+    if (Success) {
+
+        NOTHING;
+
+    } else if (LastError != ERROR_ALREADY_EXISTS) {
+
         SYS_ERROR(MoveDirectoryEx);
         return PH_E_SYSTEM_CALL_FAILED;
+
+    } else {
+
+        HANDLE Handle;
+        ULONG Value;
+        ULONG ShareMode;
+        ULONG DesiredAccess;
+        FILETIME CreationFileTime = { 0 };
+        SYSTEMTIME CreationSysTime = { 0 };
+        const UNICODE_STRING Old = RTL_CONSTANT_STRING(L"old");
+        WCHAR Buffer[] = L"_YYYY-MM-DD_hhmmss.SSS";
+        UNICODE_STRING Suffix;
+        PUNICODE_STRING String = &Suffix;
+        PUNICODE_STRING Dir;
+        PPERFECT_HASH_PATH ExistingPath;
+        PCUNICODE_STRING BaseNameSuffix;
+
+        DesiredAccess = GENERIC_READ | GENERIC_WRITE;
+        ShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+
+        Handle = CreateFileW(Directory->RenamePath->FullPath.Buffer,
+                             DesiredAccess,
+                             ShareMode,
+                             NULL,
+                             OPEN_EXISTING,
+                             FILE_FLAG_BACKUP_SEMANTICS,
+                             NULL);
+
+        if (!IsValidHandle(Handle)) {
+            SYS_ERROR(CreateFileW);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Get the creation file time, then convert into a system time.
+        //
+
+        Success = GetFileTime(Handle, &CreationFileTime, NULL, NULL);
+        if (!Success) {
+            SYS_ERROR(GetFileTime);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+        if (!CloseHandle(Handle)) {
+            SYS_ERROR(CloseHandle);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+        Handle = NULL;
+
+        Success = FileTimeToSystemTime(&CreationFileTime, &CreationSysTime);
+        if (!Success) {
+            SYS_ERROR(FileTimeToSystemTime);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+
+#define APPEND_TIME_FIELD(Field, Digits, Trailer)                        \
+    Value = CreationSysTime.Field;                                       \
+    if (!AppendIntegerToUnicodeString(String, Value, Digits, Trailer)) { \
+        Result = PH_E_STRING_BUFFER_OVERFLOW;                            \
+        PH_ERROR(PerfectHashDirectoryDoRename_AppendTimeField, Result);  \
+        goto Error;                                                      \
+    }
+
+        //
+        // Wire up the length such that we skip the leading underscore.
+        //
+
+        String->Length = sizeof(L'_');
+        String->MaximumLength = sizeof(Buffer);
+        String->Buffer = (PWSTR)Buffer;
+
+        APPEND_TIME_FIELD(wYear,          4, L'-');
+        APPEND_TIME_FIELD(wMonth,         2, L'-');
+        APPEND_TIME_FIELD(wDay,           2, L'-');
+        APPEND_TIME_FIELD(wHour,          2,    0);
+        APPEND_TIME_FIELD(wMinute,        2,    0);
+        APPEND_TIME_FIELD(wSecond,        2, L'-');
+        APPEND_TIME_FIELD(wMilliseconds,  3,    0);
+
+        //
+        // Create a new path instance.
+        //
+
+        Result = Directory->Vtbl->CreateInstance(Directory,
+                                                 NULL,
+                                                 &IID_PERFECT_HASH_PATH,
+                                                 &Path);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashPathCreateInstance, Result);
+            return Result;
+        }
+
+        //
+        // Construct a new path name.
+        //
+
+        ExistingPath = Directory->RenamePath;
+        NewDirectory = &Directory->RenamePath->Directory;
+        BaseNameSuffix = (PCUNICODE_STRING)&Suffix;
+
+        Result = Path->Vtbl->Create(Path,
+                                    ExistingPath,
+                                    NewDirectory,
+                                    &Old,           // DirectorySuffix
+                                    NULL,           // NewBaseName
+                                    BaseNameSuffix,
+                                    NULL,           // NewExtension
+                                    NULL,           // NewStreamName
+                                    NULL,           // Parts
+                                    NULL);          // Reserved
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashDirectoryDoRename_PathCreate, Result);
+            RELEASE(Path);
+            goto Error;
+        }
+
+        //
+        // Attempt to create the underlying directory (i.e. the "old" part).
+        // Temporarily NULL-terminate the Path->Directory buffer so that we
+        // can pass it directly to CreateDirectoryW().
+        //
+
+        Dir = &Path->Directory;
+
+        ASSERT(Dir->Buffer[Dir->Length >> 1] == L'\\');
+        Dir->Buffer[Dir->Length >> 1] = L'\0';
+
+        Success = CreateDirectoryW(Dir->Buffer, NULL);
+
+        //
+        // Restore the slash.
+        //
+
+        Dir->Buffer[Dir->Length >> 1] = L'\\';
+
+        if (!Success) {
+            LastError = GetLastError();
+            if (LastError != ERROR_ALREADY_EXISTS) {
+                SYS_ERROR(CreateDirectoryW);
+                RELEASE(Path);
+                goto Error;
+            }
+        }
+
+        //
+        // We can now try moving the path at our desired location to the new
+        // location in the old subdirectory.
+        //
+
+        Success = MoveFileExW(Directory->RenamePath->FullPath.Buffer,
+                              Path->FullPath.Buffer,
+                              MoveFileFlags);
+
+        if (!Success) {
+            SYS_ERROR(MoveFileEx);
+            RELEASE(Path);
+            goto Error;
+        }
+
+        //
+        // Move was successful.  Attempt the original move again.
+        //
+
+        Success = MoveFileExW(Directory->Path->FullPath.Buffer,
+                              Directory->RenamePath->FullPath.Buffer,
+                              MoveFileFlags);
+
+        if (!Success) {
+            SYS_ERROR(MoveFileEx);
+            RELEASE(Path);
+            goto Error;
+        }
+
+        RELEASE(Path);
     }
 
     //
@@ -1066,7 +1255,392 @@ Return Value:
 
     OldPath->Vtbl->Release(OldPath);
 
+    Rtl = Directory->Rtl;
+    List = Directory->FilesList;
+    NewDirectory = &Directory->Path->FullPath;
+
+    while (List->Vtbl->RemoveHeadEx(List, &Entry)) {
+
+        //
+        // One or more files are associated with this directory.  We need to
+        // update their File->Path instances to point to a new path instance
+        // that features our new directory name.
+        //
+
+        File = CONTAINING_RECORD(Entry, PERFECT_HASH_FILE, ListEntry);
+
+        AcquirePerfectHashFileLockExclusive(File);
+
+        //
+        // Invariant checks: file should not be readonly, should be closed,
+        // should not have any renames scheduled, and the file's directory
+        // path should not match ours.
+        //
+
+        if (IsFileReadOnly(File)) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashDirectoryDoRename_FileReadonly, Result);
+            goto InvariantFailed;
+        }
+
+        if (!IsFileClosed(File)) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashDirectoryDoRename_FileNotClosed, Result);
+            goto InvariantFailed;
+        }
+
+        if (IsFileRenameScheduled(File)) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashDirectoryDoRename_FileRenameScheduled, Result);
+            goto InvariantFailed;
+        }
+
+        Equal = Rtl->RtlEqualUnicodeString(&File->Path->Directory,
+                                           NewDirectory,
+                                           TRUE);
+
+        if (Equal) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashDirectoryDoRename_DirsEqual, Result);
+            goto InvariantFailed;
+        }
+
+        //
+        // Invariant checks complete, proceed with creating a new path with
+        // an updated directory.
+        //
+
+        Result = File->Vtbl->CreateInstance(File,
+                                            NULL,
+                                            &IID_PERFECT_HASH_PATH,
+                                            &Path);
+
+        if (FAILED(Result)) {
+
+            //
+            // If we can't create instances anymore, things are pretty dire.
+            // Log the error then break out of the loop.
+            //
+
+            PH_ERROR(PerfectHashPathCreateInstance, Result);
+            ReleasePerfectHashFileLockExclusive(File);
+            goto Error;
+        }
+
+
+        Result = Path->Vtbl->Create(Path,
+                                    File->Path,     // ExistingPath
+                                    NewDirectory,
+                                    NULL,           // DirectorySuffix
+                                    NULL,           // NewBaseName
+                                    NULL,           // BaseNameSuffix
+                                    NULL,           // NewExtension
+                                    NULL,           // NewStreamName
+                                    NULL,           // Parts
+                                    NULL);          // Reserved
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashPathCreate, Result);
+            goto FinishFile;
+        }
+
+        //
+        // Path creation was successful, swap the paths over and release the
+        // old path.
+        //
+
+        OldPath = File->Path;
+        File->Path = Path;
+        OldPath->Vtbl->Release(OldPath);
+
+        goto FinishFile;
+
+InvariantFailed:
+
+        FileInvariantCheckFailed = TRUE;
+
+        //
+        // Intentional follow-on to FinishFile.
+        //
+
+FinishFile:
+
+        RELEASE(File->ParentDirectory);
+        File->Vtbl->Release(File);
+
+        ReleasePerfectHashFileLockExclusive(File);
+    }
+
+    if (FileInvariantCheckFailed) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
     return Result;
 }
+
+PERFECT_HASH_DIRECTORY_ADD_FILE PerfectHashDirectoryAddFile;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashDirectoryAddFile(
+    PPERFECT_HASH_DIRECTORY Directory,
+    PPERFECT_HASH_FILE File
+    )
+/*++
+
+Routine Description:
+
+    Associates a given file instance with the directory.
+
+Arguments:
+
+    Directory - Supplies a pointer to the directory instance for which the
+        file will be added.
+
+    File - Supplies a pointer to the file instance to add.
+
+Return Value:
+
+    S_OK - File added to directory successfully.
+
+    E_POINTER - Directory or File parameters were NULL.
+
+    PH_E_DIRECTORY_NOT_SET - The directory is not set.
+
+    PH_E_DIRECTORY_READONLY - The directory is readonly.
+
+    PH_E_DIRECTORY_CLOSED - The directory is closed.
+
+    PH_E_FILE_NOT_OPEN - The file has not yet been opened, or has been closed.
+
+    PH_E_FILE_ALREADY_ADDED_TO_A_DIRECTORY - The file has already been added
+        to a directory.
+
+    PH_E_DIRECTORY_RENAME_ALREADY_SCHEDULED - A directory rename has already
+        been scheduled.  Files must be added to a directory prior to this.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    PGUARDED_LIST List;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Directory)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    if (File->ParentDirectory) {
+        return PH_E_FILE_ALREADY_ADDED_TO_A_DIRECTORY;
+    }
+
+    //
+    // If the parent directory isn't set; the list entry should indicate empty.
+    //
+
+    if (!IsListEmpty(&File->ListEntry)) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashDirectoryAddFile_FileListEntry, Result);
+        return Result;
+    }
+
+    AcquirePerfectHashDirectoryLockShared(Directory);
+
+    if (!IsDirectorySet(Directory)) {
+        Result = PH_E_DIRECTORY_NOT_SET;
+        goto Error;
+    }
+
+    if (IsDirectoryReadOnly(Directory)) {
+        Result = PH_E_DIRECTORY_READONLY;
+        goto Error;
+    }
+
+    if (IsDirectoryRenameScheduled(Directory)) {
+        Result = PH_E_DIRECTORY_RENAME_ALREADY_SCHEDULED;
+        goto Error;
+    }
+
+    if (IsDirectoryClosed(Directory)) {
+        Result = PH_E_DIRECTORY_CLOSED;
+        goto Error;
+    }
+
+    //
+    // Argument validation complete.  Add the file to the files list and
+    // increment the reference counts for both the file and the directory.
+    //
+
+    List = Directory->FilesList;
+    List->Vtbl->InsertTail(List, &File->ListEntry);
+
+    Directory->Vtbl->AddRef(Directory);
+    File->Vtbl->AddRef(File);
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    ReleasePerfectHashDirectoryLockShared(Directory);
+
+    return Result;
+}
+
+PERFECT_HASH_DIRECTORY_REMOVE_FILE PerfectHashDirectoryRemoveFile;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashDirectoryRemoveFile(
+    PPERFECT_HASH_DIRECTORY Directory,
+    PPERFECT_HASH_FILE File
+    )
+/*++
+
+Routine Description:
+
+    Removes a file previously added to a directory.
+
+Arguments:
+
+    Directory - Supplies a pointer to the directory instance for which the
+        file will be removed.
+
+    File - Supplies a pointer to the file instance to remove.
+
+Return Value:
+
+    S_OK - File added to directory successfully.
+
+    E_POINTER - Directory or File parameters were NULL.
+
+    PH_E_DIRECTORY_NOT_SET - The directory is not set.
+
+    PH_E_DIRECTORY_READONLY - The directory is readonly.
+
+    PH_E_DIRECTORY_ALREADY_CLOSED - The directory has already been closed.
+
+    PH_E_FILE_NOT_OPEN - The file has not yet been opened, or has been closed.
+
+    PH_E_FILE_ADDED_TO_DIFFERENT_DIRECTORY - The file has already been added
+        to a different directory.
+
+    PH_E_FILE_NOT_ADDED_TO_DIRECTORY - The file has not been added to a
+        directory.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    PGUARDED_LIST List;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Directory)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    if (!File->ParentDirectory) {
+        return PH_E_FILE_NOT_ADDED_TO_DIRECTORY;
+    }
+
+    if (File->ParentDirectory != Directory) {
+        return PH_E_FILE_ADDED_TO_DIFFERENT_DIRECTORY;
+    }
+
+    //
+    // If the parent directory is set; the list entry shouldn't be empty.
+    //
+
+    if (IsListEmpty(&File->ListEntry)) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashDirectoryRemoveFile_FileListEntry, Result);
+        return Result;
+    }
+
+    AcquirePerfectHashDirectoryLockShared(Directory);
+
+    if (!IsDirectorySet(Directory)) {
+        Result = PH_E_DIRECTORY_NOT_SET;
+        goto Error;
+    }
+
+    if (IsDirectoryReadOnly(Directory)) {
+        Result = PH_E_DIRECTORY_READONLY;
+        goto Error;
+    }
+
+    if (IsDirectoryClosed(Directory)) {
+        Result = PH_E_DIRECTORY_CLOSED;
+        goto Error;
+    }
+
+    //
+    // Argument validation complete.  Remove the file from the directory.
+    //
+
+    List = Directory->FilesList;
+    List->Vtbl->RemoveEntry(List, &File->ListEntry);
+
+    File->Vtbl->Release(File);
+    RELEASE(File->ParentDirectory);
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    ReleasePerfectHashDirectoryLockShared(Directory);
+
+    return Result;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

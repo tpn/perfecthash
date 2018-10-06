@@ -135,7 +135,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(TablePath)) {
+    if (!IsValidUnicodeString(TablePath)) {
         return E_INVALIDARG;
     }
 
@@ -216,6 +216,7 @@ Return Value:
         InfoStreamPath,
         Path,                   // ExistingPath
         NULL,                   // NewDirectory
+        NULL,                   // DirectorySuffix
         NULL,                   // NewBaseName
         NULL,                   // BaseNameSuffix
         NULL,                   // NewExtension

@@ -770,7 +770,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(Source)) {
+    if (!IsValidUnicodeString(Source)) {
         return E_INVALIDARG;
     }
 
@@ -894,6 +894,7 @@ PerfectHashPathCreate(
     PPERFECT_HASH_PATH Path,
     PPERFECT_HASH_PATH ExistingPath,
     PCUNICODE_STRING NewDirectory,
+    PCUNICODE_STRING DirectorySuffix,
     PCUNICODE_STRING NewBaseName,
     PCUNICODE_STRING BaseNameSuffix,
     PCUNICODE_STRING NewExtension,
@@ -917,15 +918,21 @@ Arguments:
 
     NewDirectory - Optionally supplies a new directory.
 
-    NewBaseName - Optionally supplies a new base name.
+    DirectorySuffix - Optionally supplies additional directory parts to be
+        appended to the new directory.  Can contain one or more path separators.
+
+    NewBaseName - Optionally supplies a new base name.  Must not contain any
+        path separators (L'\\').
 
     BaseNameSuffix - Optionally supplies a new base name suffix to append to
         NewBaseName (if non-NULL), otherwise the existing path's base name.
+        Must not contain any path separators.
 
     NewExtension - Optionally supplies a new extension to use for the file.
+        Must not contain any path separators.
 
     NewStreamName - Optionally supplies a new NTFS stream name to use for the
-        file.
+        file.  Must not contain any path separators.
 
     Parts - Optionally receives a pointer to the individual path parts
         structure if the routine was successful.
@@ -963,12 +970,13 @@ Return Value:
     PRTL Rtl;
     USHORT Count;
     USHORT Index;
-    USHORT DirectoryLength;
+    USHORT FullPathLength;
     USHORT BaseNameLength;
-    USHORT BaseNameSuffixLength;
+    USHORT DirectoryLength;
     USHORT ExtensionLength;
     USHORT StreamNameLength;
-    USHORT FullPathLength;
+    USHORT BaseNameSuffixLength;
+    USHORT DirectorySuffixLength;
     USHORT FullPathMaximumLength;
     PWSTR Dest;
     WCHAR Wide;
@@ -981,16 +989,18 @@ Return Value:
     BOOLEAN HasExtension = FALSE;
     PALLOCATOR Allocator;
     PCUNICODE_STRING Source;
-    PCUNICODE_STRING Directory;
     PCUNICODE_STRING BaseName;
-    PCUNICODE_STRING NewBaseNameSuffix;
+    PCUNICODE_STRING Directory;
     PCUNICODE_STRING Extension;
     PCUNICODE_STRING StreamName;
+    PCUNICODE_STRING NewBaseNameSuffix;
+    PCUNICODE_STRING NewDirectorySuffix;
     UNICODE_STRING EmptyString = { 0 };
     ULONG_INTEGER AllocSize = { 0 };
     ULONG_INTEGER AlignedAllocSize;
     ULONG_INTEGER BaseNameALength;
     ULONG_INTEGER BaseNameAMaximumLength;
+    const USHORT SpareBytes = 64;
 
     UNREFERENCED_PARAMETER(Reserved);
 
@@ -1032,10 +1042,14 @@ Return Value:
         goto Error;
     }
 
+    //
+    // NewDirectory.
+    //
+
     if (!ARGUMENT_PRESENT(NewDirectory)) {
         Directory = &ExistingPath->Directory;
     } else {
-        if (!IsValidMinimumDirectoryNullTerminatedUnicodeString(NewDirectory)) {
+        if (!IsValidUnicodeString(NewDirectory)) {
             Result = E_INVALIDARG;
             PH_ERROR(PerfectHashPathCreate_NewDirectory, Result);
             goto Error;
@@ -1057,6 +1071,41 @@ Return Value:
 
     DirectoryLength = Directory->Length;
 
+    //
+    // DirectorySuffix.
+    //
+
+    if (ARGUMENT_PRESENT(DirectorySuffix)) {
+        if (!IsValidUnicodeString(DirectorySuffix)) {
+            Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_DirectorySuffix, Result);
+            goto Error;
+        }
+
+        //
+        // Verify the directory suffix does not end with a slash.
+        //
+
+        Wide = DirectorySuffix->Buffer[(DirectorySuffix->Length >> 1) - 1];
+        if (Wide == L'\\') {
+            Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_DirectorySuffixEndSlash, Result);
+            goto Error;
+        }
+
+        NewDirectorySuffix = DirectorySuffix;
+
+    } else {
+
+        NewDirectorySuffix = &EmptyString;
+    }
+
+    DirectorySuffixLength = NewDirectorySuffix->Length;
+
+    //
+    // NewBaseName
+    //
+
     if (ARGUMENT_PRESENT(NewBaseName)) {
         if (!IsValidUnicodeString(NewBaseName)) {
             Result = E_INVALIDARG;
@@ -1064,12 +1113,37 @@ Return Value:
             goto Error;
         }
         BaseName = NewBaseName;
+
+        if (!VerifyNoSlashInUnicodeString(NewBaseName)) {
+            Result = E_INVALIDARG;
+            PH_ERROR(PerfectHashPathCreate_NewBaseNameSlash, Result);
+            goto Error;
+        }
+
     } else {
+
         BaseName = &ExistingPath->BaseName;
+
+        if (!VerifyNoSlashInUnicodeString(BaseName)) {
+
+            //
+            // If the existing path's basename contains a slash, we've got
+            // a bug somewhere else in our code (assuming the caller hasn't
+            // tampered with the underlying buffers).
+            //
+
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashPathCreate_ExistingPathBaseNameSlash, Result);
+            goto Error;
+        }
     }
 
     BaseNameLength = BaseName->Length;
     BaseNameALength.LongPart = BaseNameLength >> 1;
+
+    //
+    // BaseNameSuffix
+    //
 
     if (ARGUMENT_PRESENT(BaseNameSuffix)) {
         if (!IsValidUnicodeString(BaseNameSuffix)) {
@@ -1085,6 +1159,10 @@ Return Value:
 
     BaseNameSuffixLength = NewBaseNameSuffix->Length;
     BaseNameALength.LongPart += BaseNameSuffixLength >> 1;
+
+    //
+    // NewExtension
+    //
 
     if (ARGUMENT_PRESENT(NewExtension)) {
         if (!IsValidOrEmptyUnicodeString(NewExtension)) {
@@ -1102,6 +1180,10 @@ Return Value:
     if (ExtensionLength > 0) {
         HasExtension = TRUE;
     }
+
+    //
+    // NewStreamName
+    //
 
     if (ARGUMENT_PRESENT(NewStreamName)) {
         if (!IsValidOrEmptyUnicodeString(NewStreamName)) {
@@ -1134,6 +1216,11 @@ Return Value:
     AllocSize.LongPart = DirectoryLength;
     AllocSize.LongPart += sizeof(L'\\');
 
+    if (DirectorySuffixLength) {
+        AllocSize.LongPart += DirectorySuffixLength;
+        AllocSize.LongPart += sizeof(L'\\');
+    }
+
     AllocSize.LongPart += BaseNameLength;
     AllocSize.LongPart += BaseNameSuffixLength;
 
@@ -1146,6 +1233,13 @@ Return Value:
         AllocSize.LongPart += sizeof(L':');
         AllocSize.LongPart += StreamName->Length;
     }
+
+    //
+    // Add the spare bytes in, which provides some flexibility with regards
+    // to extra buffer space if needed.
+    //
+
+    AllocSize.LongPart += SpareBytes;
 
     //
     // Account for the trailing NULL and verify we haven't overflowed USHORT.
@@ -1179,7 +1273,7 @@ Return Value:
     // N.B. FullPathLength does *not* include the trailing NULL.
     //
 
-    FullPathLength = AllocSize.LowPart - sizeof(WCHAR);
+    FullPathLength = AllocSize.LowPart - SpareBytes - sizeof(WCHAR);
     FullPathMaximumLength = AllocSize.LowPart;
 
     //
@@ -1252,6 +1346,29 @@ Return Value:
     *Dest++ = L'\\';
 
     //
+    // Copy the directory suffix, if applicable.
+    //
+
+    if (DirectorySuffixLength) {
+        Source = NewDirectorySuffix;
+        Count = Source->Length >> 1;
+        CopyInline(Dest, Source->Buffer, Source->Length);
+        Dest += Count;
+        ExpectedDest = (PWSTR)(
+            RtlOffsetToPointer(
+                BaseAddress,
+                (
+                    DirectoryLength +
+                    sizeof(L'\\') +
+                    DirectorySuffixLength
+                )
+            )
+        );
+        CHECK_DEST();
+        *Dest++ = L'\\';
+    }
+
+    //
     // Copy the base name, replacing any chars as necessary with underscores.
     //
 
@@ -1275,6 +1392,11 @@ Return Value:
             (
                 DirectoryLength +
                 sizeof(L'\\') +
+                (
+                    DirectorySuffixLength ?
+                    DirectorySuffixLength + sizeof(L'\\') :
+                    0
+                ) +
                 BaseNameLength
             )
         )
@@ -1341,18 +1463,19 @@ Return Value:
     ExpectedDest = (PWSTR)(
         RtlOffsetToPointer(
             BaseAddress,
-            AllocSize.LowPart
+            AllocSize.LowPart - SpareBytes
         )
     );
 
     CHECK_DEST();
 
     //
-    // Align the destination pointer up to an 8-byte boundary and verify it
-    // matches the expected aligned alloc size.
+    // Add the spare bytes to the destination pointer, then align it up to
+    // an 8-byte boundary and verify it matches the expected aligned alloc
+    // size.
     //
 
-    Dest = (PWSTR)ALIGN_UP(Dest, 8);
+    Dest = (PWSTR)ALIGN_UP(Dest + (SpareBytes >> 1), 8);
     ExpectedDest = (PWSTR)(
         RtlOffsetToPointer(
             BaseAddress,

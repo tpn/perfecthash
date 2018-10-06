@@ -710,8 +710,10 @@ const PERFECT_HASH_DIRECTORY_VTBL PerfectHashDirectoryInterface = {
     &PerfectHashDirectoryClose,
     &PerfectHashDirectoryScheduleRename,
     &PerfectHashDirectoryDoRename,
+    &PerfectHashDirectoryAddFile,
+    &PerfectHashDirectoryRemoveFile,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_DIRECTORY, 4 + 3);
+VERIFY_VTBL_SIZE(PERFECT_HASH_DIRECTORY, 4 + 5);
 
 //
 // GuardedList
@@ -732,8 +734,9 @@ const GUARDED_LIST_VTBL GuardedListInterface = {
     &GuardedListRemoveHead,
     &GuardedListRemoveTail,
     &GuardedListRemoveEntry,
+    &GuardedListRemoveHeadEx,
 };
-VERIFY_VTBL_SIZE(GUARDED_LIST, 9);
+VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
 
 //
 // TSX versions of the GuardedList interface.  See dllmain.c for more info.
@@ -754,8 +757,9 @@ const GUARDED_LIST_VTBL GuardedListTsxInterface = {
     &GuardedListRemoveHeadTsx,
     &GuardedListRemoveTailTsx,
     &GuardedListRemoveEntryTsx,
+    &GuardedListRemoveHeadExTsx,
 };
-VERIFY_VTBL_SIZE(GUARDED_LIST, 9);
+VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
 
 //
 // Interface array.

@@ -323,6 +323,31 @@ GuardedListRemoveEntry(
 }
 
 
+GUARDED_LIST_REMOVE_HEAD_EX GuardedListRemoveHeadEx;
+
+_Use_decl_annotations_
+BOOLEAN
+GuardedListRemoveHeadEx(
+    PGUARDED_LIST List,
+    PLIST_ENTRY *EntryPointer
+    )
+{
+    BOOLEAN NotEmpty;
+    PLIST_ENTRY Entry = NULL;
+
+    AcquireGuardedListLockExclusive(List);
+    NotEmpty = (List->NumberOfEntries > 0 ? TRUE : FALSE);
+    if (NotEmpty) {
+        Entry = RemoveHeadList(&List->ListHead);
+        InterlockedDecrementULongPtr(&List->NumberOfEntries);
+    }
+    ReleaseGuardedListLockExclusive(List);
+
+    *EntryPointer = Entry;
+    return NotEmpty;
+}
+
+
 //
 // TSX versions of the above.
 //
@@ -501,6 +526,31 @@ GuardedListRemoveEntryTsx(
     END_TSX();
 
     return IsEmpty;
+}
+
+
+GUARDED_LIST_REMOVE_HEAD_EX GuardedListRemoveHeadExTsx;
+
+_Use_decl_annotations_
+BOOLEAN
+GuardedListRemoveHeadExTsx(
+    PGUARDED_LIST List,
+    PLIST_ENTRY *EntryPointer
+    )
+{
+    BOOLEAN NotEmpty = FALSE;
+    PLIST_ENTRY Entry = NULL;
+
+    BEGIN_TSX(GuardedListRemoveHeadEx(List, EntryPointer));
+    NotEmpty = (List->NumberOfEntries > 0 ? TRUE : FALSE);
+    if (NotEmpty) {
+        Entry = RemoveHeadList(&List->ListHead);
+        List->NumberOfEntries--;
+    }
+    END_TSX();
+
+    *EntryPointer = Entry;
+    return NotEmpty;
 }
 
 #endif

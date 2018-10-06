@@ -1019,3 +1019,43 @@ Language=English
 Directory is not closed.
 .
 
+MessageId=0x27c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_ALREADY_ADDED_TO_A_DIRECTORY
+Language=English
+The file has already been added to a directory.
+.
+
+MessageId=0x27d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_ADDED_TO_DIFFERENT_DIRECTORY
+Language=English
+The file was added to a different directory.
+.
+
+MessageId=0x27e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_RENAME_ALREADY_SCHEDULED
+Language=English
+Directory rename already scheduled.
+.
+
+MessageId=0x27f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_NOT_ADDED_TO_DIRECTORY
+Language=English
+The file has not been added to a directory.
+.
+
+MessageId=0x280
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DIRECTORY_CLOSED
+Language=English
+Directory is closed.
+.
+

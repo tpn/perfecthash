@@ -635,6 +635,7 @@ Return Value:
     Result = Path->Vtbl->Create(Path,
                                 ExistingPath,
                                 NewDirectory,
+                                NULL,           // DirectorySuffix
                                 NewBaseName,
                                 &TableSuffix,
                                 NewExtension,

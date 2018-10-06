@@ -1178,3 +1178,48 @@ Abstract:
 //
 #define PH_E_DIRECTORY_NOT_CLOSED        ((HRESULT)0xE004027BL)
 
+//
+// MessageId: PH_E_FILE_ALREADY_ADDED_TO_A_DIRECTORY
+//
+// MessageText:
+//
+// The file has already been added to a directory.
+//
+#define PH_E_FILE_ALREADY_ADDED_TO_A_DIRECTORY ((HRESULT)0xE004027CL)
+
+//
+// MessageId: PH_E_FILE_ADDED_TO_DIFFERENT_DIRECTORY
+//
+// MessageText:
+//
+// The file was added to a different directory.
+//
+#define PH_E_FILE_ADDED_TO_DIFFERENT_DIRECTORY ((HRESULT)0xE004027DL)
+
+//
+// MessageId: PH_E_DIRECTORY_RENAME_ALREADY_SCHEDULED
+//
+// MessageText:
+//
+// Directory rename already scheduled.
+//
+#define PH_E_DIRECTORY_RENAME_ALREADY_SCHEDULED ((HRESULT)0xE004027EL)
+
+//
+// MessageId: PH_E_FILE_NOT_ADDED_TO_DIRECTORY
+//
+// MessageText:
+//
+// The file has not been added to a directory.
+//
+#define PH_E_FILE_NOT_ADDED_TO_DIRECTORY ((HRESULT)0xE004027FL)
+
+//
+// MessageId: PH_E_DIRECTORY_CLOSED
+//
+// MessageText:
+//
+// Directory is closed.
+//
+#define PH_E_DIRECTORY_CLOSED            ((HRESULT)0xE0040280L)
+

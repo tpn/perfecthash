@@ -195,6 +195,9 @@ CreateComponent(
     Component->SizeOfStruct = (ULONG)AllocSize;
     Component->OuterUnknown = OuterUnknown;
 
+    InitializeSRWLock(&Component->Lock);
+    InitializeListHead(&Component->ListEntry);
+
     //
     // Wire up the vtable.
     //

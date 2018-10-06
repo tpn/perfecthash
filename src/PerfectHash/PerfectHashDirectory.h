@@ -63,6 +63,33 @@ HRESULT
     );
 typedef PERFECT_HASH_DIRECTORY_DO_RENAME *PPERFECT_HASH_DIRECTORY_DO_RENAME;
 
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_lock_not_held_(Directory->Lock)
+_Requires_exclusive_lock_held_(File->Lock)
+_Pre_satisfies_(File->ParentDirectory == NULL)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_DIRECTORY_ADD_FILE)(
+    _In_ PPERFECT_HASH_DIRECTORY Directory,
+    _In_ PPERFECT_HASH_FILE File
+    );
+typedef PERFECT_HASH_DIRECTORY_ADD_FILE *PPERFECT_HASH_DIRECTORY_ADD_FILE;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_lock_not_held_(Directory->Lock)
+_Requires_exclusive_lock_held_(File->Lock)
+_Pre_satisfies_(File->ParentDirectory != NULL)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_DIRECTORY_REMOVE_FILE)(
+    _In_ PPERFECT_HASH_DIRECTORY Directory,
+    _In_ PPERFECT_HASH_FILE File
+    );
+typedef PERFECT_HASH_DIRECTORY_REMOVE_FILE
+      *PPERFECT_HASH_DIRECTORY_REMOVE_FILE;
+
 //
 // Define our private PERFECT_HASH_DIRECTORY_VTBL structure.
 //
@@ -81,6 +108,8 @@ typedef struct _PERFECT_HASH_DIRECTORY_VTBL {
     PPERFECT_HASH_DIRECTORY_CLOSE Close;
     PPERFECT_HASH_DIRECTORY_SCHEDULE_RENAME ScheduleRename;
     PPERFECT_HASH_DIRECTORY_DO_RENAME DoRename;
+    PPERFECT_HASH_DIRECTORY_ADD_FILE AddFile;
+    PPERFECT_HASH_DIRECTORY_REMOVE_FILE RemoveFile;
 } PERFECT_HASH_DIRECTORY_VTBL;
 typedef PERFECT_HASH_DIRECTORY_VTBL *PPERFECT_HASH_DIRECTORY_VTBL;
 
@@ -199,6 +228,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_DIRECTORY {
     volatile PPERFECT_HASH_PATH RenamePath;
 
     //
+    // Pointer to the guarded list used to track files that need renaming.
+    //
+
+    PGUARDED_LIST FilesList;
+
+    //
     // Backing interface.
     //
 
@@ -234,16 +269,14 @@ HRESULT
 (NTAPI PERFECT_HASH_DIRECTORY_INITIALIZE)(
     _In_ PPERFECT_HASH_DIRECTORY Directory
     );
-typedef PERFECT_HASH_DIRECTORY_INITIALIZE
-      *PPERFECT_HASH_DIRECTORY_INITIALIZE;
+typedef PERFECT_HASH_DIRECTORY_INITIALIZE *PPERFECT_HASH_DIRECTORY_INITIALIZE;
 
 typedef
 VOID
 (NTAPI PERFECT_HASH_DIRECTORY_RUNDOWN)(
     _In_ _Post_ptr_invalid_ PPERFECT_HASH_DIRECTORY Directory
     );
-typedef PERFECT_HASH_DIRECTORY_RUNDOWN
-      *PPERFECT_HASH_DIRECTORY_RUNDOWN;
+typedef PERFECT_HASH_DIRECTORY_RUNDOWN *PPERFECT_HASH_DIRECTORY_RUNDOWN;
 
 extern PERFECT_HASH_DIRECTORY_INITIALIZE PerfectHashDirectoryInitialize;
 extern PERFECT_HASH_DIRECTORY_RUNDOWN PerfectHashDirectoryRundown;
@@ -255,5 +288,7 @@ extern PERFECT_HASH_DIRECTORY_CLOSE PerfectHashDirectoryClose;
 extern PERFECT_HASH_DIRECTORY_SCHEDULE_RENAME
     PerfectHashDirectoryScheduleRename;
 extern PERFECT_HASH_DIRECTORY_DO_RENAME PerfectHashDirectoryDoRename;
+extern PERFECT_HASH_DIRECTORY_ADD_FILE PerfectHashDirectoryAddFile;
+extern PERFECT_HASH_DIRECTORY_REMOVE_FILE PerfectHashDirectoryRemoveFile;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
