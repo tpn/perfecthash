@@ -9,8 +9,8 @@ Module Name:
 Abstract:
 
     This module implements the save file work callback routine for the C source
-    table data file as part of the CHM v1 algorithm implementation for the perfect
-    hash library.
+    table data file as part of the CHM v1 algorithm implementation for the
+    perfect hash library.
 
     The C source table data file (extension _TableData.c) is simply a C array of
     the "assigned" array that is obtained during the graph solving step (i.e. it
