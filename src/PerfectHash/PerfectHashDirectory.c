@@ -809,8 +809,7 @@ Routine Description:
     Schedules the renaming of the underlying directory once it has been closed.
     If this routine is called after a previous rename request has been scheduled
     but not issued, the previous path is released.  That is, it is safe to call
-    this routine multiple times prior to the underlying directory being unmapped
-    and closed.
+    this routine multiple times prior to the underlying directory being closed.
 
 Arguments:
 
