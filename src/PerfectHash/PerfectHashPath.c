@@ -1472,7 +1472,7 @@ Return Value:
     //
     // Add the spare bytes to the destination pointer, then align it up to
     // an 8-byte boundary and verify it matches the expected aligned alloc
-    // size.
+    // size for the full path (captured in FullPath.MaximumLength).
     //
 
     Dest = (PWSTR)ALIGN_UP(Dest + (SpareBytes >> 1), 8);
