@@ -213,16 +213,19 @@ Return Value:
 
             case FileWorkSaveTableFileId:
                 Impl = SaveTableFileChm01;
+                File = &Table->TableFile;
                 DependentEvent = Context->PreparedTableFileEvent;
                 break;
 
             case FileWorkSaveTableInfoStreamId:
                 Impl = SaveTableInfoStreamChm01;
+                File = &Table->InfoStream;
                 DependentEvent = Context->PreparedTableInfoStreamEvent;
                 break;
 
             case FileWorkSaveCHeaderFileId:
                 Impl = SaveCHeaderFileChm01;
+                File = &Table->CHeaderFile;
                 DependentEvent = Context->PreparedCHeaderFileEvent;
                 break;
 
@@ -238,6 +241,7 @@ Return Value:
 
             case FileWorkSaveCSourceTableDataFileId:
                 Impl = SaveCSourceTableDataFileChm01;
+                File = &Table->CSourceTableDataFile;
                 DependentEvent = Context->PreparedCSourceTableDataFileEvent;
                 break;
 
@@ -246,17 +250,31 @@ Return Value:
                 break;
         }
 
-        if (DependentEvent) {
-            WaitResult = WaitForSingleObject(DependentEvent, INFINITE);
-            if (WaitResult != WAIT_OBJECT_0) {
-                SYS_ERROR(WaitForSingleObject);
-                Result = PH_E_SYSTEM_CALL_FAILED;
-                goto End;
-            }
+        ASSERT(File);
+        ASSERT(DependentEvent);
+
+        WaitResult = WaitForSingleObject(DependentEvent, INFINITE);
+        if (WaitResult != WAIT_OBJECT_0) {
+            SYS_ERROR(WaitForSingleObject);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto End;
+        }
+
+        //
+        // If the file hasn't been set at this point, the prepare routine
+        // was not successful.  We use E_UNEXPECTED as the error code here
+        // as we just need *something* to be set when End: is jumped to in
+        // order for the interlocked increment of the error count to occur.
+        // The parent Chm01.c routine will adjust this to the proper error
+        // code as necessary.
+        //
+
+        if (!*File) {
+            Result = E_UNEXPECTED;
+            goto End;
         }
 
         if (!Impl) {
-            ASSERT(File);
             Result = SaveFileChm01(Table, *File);
             if (FAILED(Result)) {
 
@@ -267,8 +285,6 @@ Return Value:
 
                 NOTHING;
             }
-        } else {
-            ASSERT(!File);
         }
     }
 

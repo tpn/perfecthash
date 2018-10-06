@@ -40,13 +40,13 @@ Abstract:
 #define CHECK_PREPARE_ERRORS(Name, Upper)                               \
     if (Prepare##Name##.NumberOfErrors > 0) {                           \
         Result = Prepare##Name##.LastResult;                            \
-        if (Result == S_OK) {                                           \
+        if (Result == S_OK || Result == E_UNEXPECTED) {                 \
             Result = PH_E_ERROR_PREPARING_##Upper##;                    \
         }                                                               \
-            PH_ERROR(                                                   \
-                CreatePerfectHashTableImplChm01_ErrorPreparing##Name##, \
-                Result                                                  \
-            );                                                          \
+        PH_ERROR(                                                       \
+            CreatePerfectHashTableImplChm01_ErrorPreparing##Name##,     \
+            Result                                                      \
+        );                                                              \
         goto Error;                                                     \
     }
 
@@ -61,7 +61,7 @@ Abstract:
 #define CHECK_SAVE_ERRORS(Name, Upper)                           \
     if (Save##Name##.NumberOfErrors > 0) {                       \
         Result = Save##Name##.LastResult;                        \
-        if (Result == S_OK) {                                    \
+        if (Result == S_OK || Result == E_UNEXPECTED) {          \
             Result = PH_E_ERROR_SAVING_##Upper##;                \
         }                                                        \
         PH_ERROR(                                                \
@@ -1383,6 +1383,10 @@ Error:
     if (Result == S_OK) {
         Result = E_UNEXPECTED;
     }
+
+    SetEvent(Context->ShutdownEvent);
+    WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
 
     //
     // Intentional follow-on to End.
