@@ -312,7 +312,7 @@ Return Value:
     End = (PWSTR)RtlOffsetToPointer(Start, Path->FullPath.Length);
 
     //
-    // Reverse through the string and find the first dot.
+    // Reverse through the string and find the first dot or slash.
     //
 
     Count = Path->FullPath.Length >> 1;
