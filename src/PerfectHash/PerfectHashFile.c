@@ -826,10 +826,10 @@ Return Value:
             if (!DeleteFileW(File->Path->FullPath.Buffer)) {
 
                 //
-                // DeleteFileW() will fail with ERROR_ACCESS_DENIED if this was an
-                // NTFS stream (e.g. the :Info stream) and the parent file has been
-                // deleted.  Check for this condition now and suppress the error if
-                // applicable.
+                // DeleteFileW() will fail with ERROR_ACCESS_DENIED if this was
+                // an NTFS stream (e.g. the :Info stream) and the parent file
+                // has been deleted.  Check for this condition now and suppress
+                // the error if applicable.
                 //
 
                 LastError = GetLastError();
