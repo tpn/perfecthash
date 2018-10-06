@@ -12,6 +12,10 @@ Abstract:
     into process and thread attach and detach messages in order to provide TLS
     glue (see PerfectHashTls.c for more information).
 
+    It also attempts a TSX transaction on process attach (if we're x64), and,
+    if that succeeds, replaces the guarded list component interface with the
+    TSX-enlightened version of the same interface.
+
 --*/
 
 #include "stdafx.h"
@@ -33,24 +37,27 @@ BOOLEAN
 CanWeUseTsx(VOID)
 {
     ULONG Status;
-    BOOLEAN UseTsx = TRUE;
+    BOOLEAN UseTsx = FALSE;
 
-    TRY_TSX {
+    TsxScratch = NULL;
+
 Retry:
-        Status = _xbegin();
-        if (Status & _XABORT_RETRY) {
-            goto Retry;
-        } else if (Status != _XBEGIN_STARTED) {
-            goto End;
-        }
-
-        TsxScratch = _AddressOfReturnAddress();
-        _xend();
-    } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION {
-        UseTsx = FALSE;
+    Status = _xbegin();
+    if (Status & _XABORT_RETRY) {
+        goto Retry;
+    } else if (Status != _XBEGIN_STARTED) {
+        goto End;
     }
 
+    TsxScratch = _AddressOfReturnAddress();
+    _xend();
+
 End:
+
+    if (TsxScratch == _AddressOfReturnAddress()) {
+        UseTsx = TRUE;
+    }
+
     TsxScratch = NULL;
     return UseTsx;
 }
@@ -71,13 +78,22 @@ _DllMainCRTStartup(
             __security_init_cookie();
             PerfectHashModule = Module;
             IsTsxAvailable = FALSE;
+
 #ifdef _M_AMD64
-            if (CanWeUseTsx()) {
-                PERFECT_HASH_INTERFACE_ID Id;
-                IsTsxAvailable = TRUE;
-                Id = PerfectHashGuardedListInterfaceId;
-                ComponentInterfaces[Id] = &GuardedListTsxInterface;
+
+            TRY_TSX {
+
+                if (CanWeUseTsx()) {
+                    PERFECT_HASH_INTERFACE_ID Id;
+                    IsTsxAvailable = TRUE;
+                    Id = PerfectHashGuardedListInterfaceId;
+                    ComponentInterfaces[Id] = &GuardedListTsxInterface;
+                }
+
+            } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION {
+                IsTsxAvailable = FALSE;
             }
+
 #endif
             if (!PerfectHashTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;
