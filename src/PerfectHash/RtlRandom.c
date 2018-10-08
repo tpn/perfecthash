@@ -362,7 +362,8 @@ Return Value:
         }
 
         if (CharsRemaining <= 0) {
-            __debugbreak();
+            Result = PH_E_CREATE_RANDOM_OBJECT_NAMES_LENGTH_OF_NAME_TOO_SHORT;
+            PH_ERROR(RtlCreateRandomObjectNames_CharsRemaining, Result);
             goto Error;
         }
 
@@ -380,7 +381,8 @@ Return Value:
         );
 
         if (FinalCharCount != LengthOfNameInChars) {
-            __debugbreak();
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(RtlCreateRandomObjectNames_FinalCharCount, Result);
             goto Error;
         }
 

@@ -1059,3 +1059,11 @@ Language=English
 Directory is closed.
 .
 
+MessageId=0x281
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CREATE_RANDOM_OBJECT_NAMES_LENGTH_OF_NAME_TOO_SHORT
+Language=English
+LengthOfNameInChars parameter too short.
+.
+

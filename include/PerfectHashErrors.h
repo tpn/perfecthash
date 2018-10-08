@@ -1223,3 +1223,12 @@ Abstract:
 //
 #define PH_E_DIRECTORY_CLOSED            ((HRESULT)0xE0040280L)
 
+//
+// MessageId: PH_E_CREATE_RANDOM_OBJECT_NAMES_LENGTH_OF_NAME_TOO_SHORT
+//
+// MessageText:
+//
+// LengthOfNameInChars parameter too short.
+//
+#define PH_E_CREATE_RANDOM_OBJECT_NAMES_LENGTH_OF_NAME_TOO_SHORT ((HRESULT)0xE0040281L)
+
