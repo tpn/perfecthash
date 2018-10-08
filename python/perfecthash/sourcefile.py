@@ -331,17 +331,26 @@ class SourceFile(InvariantAwareObject):
                 continue
 
             name = line.replace('#define ', '')
-            name = name[:name.find(' ')]
+            ix = name.find('(')
+            if ix == -1:
+                ix = name.find(' ')
+            name = name[:ix]
+
             first_lineno = lineno
             lines.append(line)
 
             lineno += 1
             line = self.lines[lineno]
 
+            num_lines = 0
             while line.endswith('\\'):
                 lines.append(line)
                 lineno += 1
                 line = self.lines[lineno]
+                num_lines += 1
+
+            if num_lines == 0:
+                continue
 
             last_lineno = lineno
             lines.append(line)
