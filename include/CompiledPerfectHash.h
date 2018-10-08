@@ -22,6 +22,12 @@ extern "C" {
 
 #include <sal.h>
 
+#ifndef COMPILED_PERFECT_HASH_DLL_BUILD
+#define CPHAPI __declspec(dllimport)
+#else
+#define CPHAPI __declspec(dllexport)
+#endif
+
 //
 // Define start/end markers for IACA.
 //
@@ -33,20 +39,32 @@ extern "C" {
 // Define basic NT types and macros used by this header file.
 //
 
-#define CPHAPI __stdcall
+#define CPHCALLTYPE __stdcall
 #define FORCEINLINE __forceinline
 
 typedef char BOOLEAN;
+typedef long LONG;
+typedef long long LONGLONG;
 typedef unsigned long ULONG;
 typedef unsigned long *PULONG;
 typedef unsigned long long ULONGLONG;
 typedef void *PVOID;
+
 //
 // Disable the anonymous union/struct warning.
 //
 
 #pragma warning(push)
 #pragma warning(disable: 4201 4094)
+
+typedef union _LARGE_INTEGER {
+    struct {
+        ULONG LowPart;
+        LONG HighPart;
+    };
+    LONGLONG QuadPart;
+} LARGE_INTEGER;
+typedef LARGE_INTEGER *PLARGE_INTEGER;
 
 typedef union _ULARGE_INTEGER {
     struct {
@@ -55,6 +73,7 @@ typedef union _ULARGE_INTEGER {
     };
     ULONGLONG QuadPart;
 } ULARGE_INTEGER;
+typedef ULARGE_INTEGER *PULARGE_INTEGER;
 
 //
 // Define the main functions exposed by a compiled perfect hash table: index,
@@ -62,8 +81,9 @@ typedef union _ULARGE_INTEGER {
 //
 
 typedef
+CPHAPI
 ULONG
-(CPHAPI COMPILED_PERFECT_HASH_TABLE_INDEX)(
+(CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_INDEX)(
     _In_ ULONG Key
     );
 /*++
@@ -90,8 +110,9 @@ typedef COMPILED_PERFECT_HASH_TABLE_INDEX *PCOMPILED_PERFECT_HASH_TABLE_INDEX;
 
 
 typedef
+CPHAPI
 ULONG
-(CPHAPI COMPILED_PERFECT_HASH_TABLE_LOOKUP)(
+(CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_LOOKUP)(
     _In_ ULONG Key
     );
 /*++
@@ -121,8 +142,9 @@ typedef COMPILED_PERFECT_HASH_TABLE_LOOKUP *PCOMPILED_PERFECT_HASH_TABLE_LOOKUP;
 
 
 typedef
+CPHAPI
 ULONG
-(CPHAPI COMPILED_PERFECT_HASH_TABLE_INSERT)(
+(CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_INSERT)(
     _In_ ULONG Key,
     _In_ ULONG Value
     );
@@ -154,8 +176,9 @@ typedef COMPILED_PERFECT_HASH_TABLE_INSERT *PCOMPILED_PERFECT_HASH_TABLE_INSERT;
 
 
 typedef
+CPHAPI
 ULONG
-(CPHAPI COMPILED_PERFECT_HASH_TABLE_DELETE)(
+(CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_DELETE)(
     _In_ ULONG Key
     );
 /*++
@@ -312,7 +335,7 @@ typedef COMPILED_PERFECT_HASH_TABLE *PCOMPILED_PERFECT_HASH_TABLE;
 typedef
 _Success_(return != 0)
 BOOLEAN
-(CPHAPI GET_COMPILED_PERFECT_HASH_TABLE)(
+(CPHCALLTYPE GET_COMPILED_PERFECT_HASH_TABLE)(
     _In_ _Field_range_(==, sizeof(Table)) ULONG SizeOfTable,
     _Out_writes_bytes_(SizeOfTable) PCOMPILED_PERFECT_HASH_TABLE Table
     );
@@ -342,16 +365,16 @@ typedef GET_COMPILED_PERFECT_HASH_TABLE *PGET_COMPILED_PERFECT_HASH_TABLE;
 //
 
 #define DEFINE_COMPILED_PERFECT_HASH_ROUTINES(TableName) \
-extern COMPILED_PERFECT_HASH_TABLE_INDEX                 \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_INDEX                 \
     CompiledPerfectHash_##TableName##_Index;             \
                                                          \
-extern COMPILED_PERFECT_HASH_TABLE_LOOKUP                \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_LOOKUP                \
     CompiledPerfectHash_##TableName##_Lookup;            \
                                                          \
-extern COMPILED_PERFECT_HASH_TABLE_INSERT                \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_INSERT                \
     CompiledPerfectHash_##TableName##_Insert;            \
                                                          \
-extern COMPILED_PERFECT_HASH_TABLE_DELETE                \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_DELETE                \
     CompiledPerfectHash_##TableName##_Delete
 
 //
@@ -360,7 +383,7 @@ extern COMPILED_PERFECT_HASH_TABLE_DELETE                \
 //
 
 #define DECLARE_COMPILED_PERFECT_HASH_ROUTINES(TableName) \
-COMPILED_PERFECT_HASH_TABLE_LOOKUP                        \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_LOOKUP                 \
     CompiledPerfectHash_##TableName##_Lookup;             \
                                                           \
 _Use_decl_annotations_                                    \
@@ -375,7 +398,7 @@ CompiledPerfectHash_##TableName##_Lookup(                 \
     return TableName##_TableValues[Index];                \
 }                                                         \
                                                           \
-COMPILED_PERFECT_HASH_TABLE_INSERT                        \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_INSERT                 \
     CompiledPerfectHash_##TableName##_Insert;             \
                                                           \
 _Use_decl_annotations_                                    \
@@ -394,7 +417,7 @@ CompiledPerfectHash_##TableName##_Insert(                 \
     return Previous;                                      \
 }                                                         \
                                                           \
-COMPILED_PERFECT_HASH_TABLE_DELETE                        \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_DELETE                 \
     CompiledPerfectHash_##TableName##_Delete;             \
                                                           \
 _Use_decl_annotations_                                    \
@@ -467,6 +490,7 @@ CompiledPerfectHash_##TableName##_DeleteInline(                  \
 #define DECLARE_CHM01_CRC32ROTATE_AND_INDEX_ROUTINE(    \
     TableName, Seed1, Seed2, HashMask, IndexMask        \
     )                                                   \
+CPHAPI                                                  \
 ULONG                                                   \
 CompiledPerfectHash_##TableName##_Index(                \
     ULONG Key                                           \
