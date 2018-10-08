@@ -336,7 +336,7 @@ SaveCHeaderFileChm01(
 Error:
 
     if (Result == S_OK) {
-        Result = PH_E_ERROR_SAVING_C_HEADER_FILE;
+        Result = E_UNEXPECTED;
     }
 
     //

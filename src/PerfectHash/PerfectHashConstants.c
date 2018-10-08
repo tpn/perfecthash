@@ -312,6 +312,7 @@ const UNICODE_STRING CSourceExtension = RTL_CONSTANT_STRING(L"c");
 const UNICODE_STRING CSourceKeysSuffix = RTL_CONSTANT_STRING(L"Keys");
 const UNICODE_STRING CSourceTableDataSuffix =
     RTL_CONSTANT_STRING(L"TableData");
+const UNICODE_STRING CSourceTestFileSuffix = RTL_CONSTANT_STRING(L"Test");
 
 
 //

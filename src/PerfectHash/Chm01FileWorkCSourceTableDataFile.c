@@ -219,7 +219,7 @@ SaveCSourceTableDataFileChm01(
 Error:
 
     if (Result == S_OK) {
-        Result = PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE;
+        Result = E_UNEXPECTED;
     }
 
     //

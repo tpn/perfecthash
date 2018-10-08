@@ -37,48 +37,24 @@ Abstract:
 // Define helper macros for checking prepare and save file work errors.
 //
 
-#define CHECK_PREPARE_ERRORS(Name, Upper)                               \
-    if (Prepare##Name##.NumberOfErrors > 0) {                           \
-        Result = Prepare##Name##.LastResult;                            \
-        if (Result == S_OK || Result == E_UNEXPECTED) {                 \
-            Result = PH_E_ERROR_PREPARING_##Upper##;                    \
-        }                                                               \
-        PH_ERROR(                                                       \
-            CreatePerfectHashTableImplChm01_ErrorPreparing##Name##,     \
-            Result                                                      \
-        );                                                              \
-        goto Error;                                                     \
+#define EXPAND_AS_CHECK_ERRORS(Verb, VUpper, Name, Upper)                \
+    if (Verb####Name##.NumberOfErrors > 0) {                             \
+        Result = Verb####Name##.LastResult;                              \
+        if (Result == S_OK || Result == E_UNEXPECTED) {                  \
+            Result = PH_E_ERROR_DURING_##VUpper##_##Upper##;             \
+        }                                                                \
+        PH_ERROR(                                                        \
+            CreatePerfectHashTableImplChm01_ErrorDuring##Verb####Name##, \
+            Result                                                       \
+        );                                                               \
+        goto Error;                                                      \
     }
 
-#define CHECK_ALL_PREPARE_ERRORS()                                       \
-    CHECK_PREPARE_ERRORS(TableFile, TABLE_FILE);                         \
-    CHECK_PREPARE_ERRORS(TableInfoStream, TABLE_INFO_STREAM);            \
-    CHECK_PREPARE_ERRORS(CHeaderFile, C_HEADER_FILE);                    \
-    CHECK_PREPARE_ERRORS(CSourceFile, C_SOURCE_FILE);                    \
-    CHECK_PREPARE_ERRORS(CSourceKeysFile, C_SOURCE_KEYS_FILE);           \
-    CHECK_PREPARE_ERRORS(CSourceTableDataFile, C_SOURCE_TABLE_DATA_FILE)
+#define CHECK_ALL_PREPARE_ERRORS() \
+    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CHECK_ERRORS)
 
-#define CHECK_SAVE_ERRORS(Name, Upper)                           \
-    if (Save##Name##.NumberOfErrors > 0) {                       \
-        Result = Save##Name##.LastResult;                        \
-        if (Result == S_OK || Result == E_UNEXPECTED) {          \
-            Result = PH_E_ERROR_SAVING_##Upper##;                \
-        }                                                        \
-        PH_ERROR(                                                \
-            CreatePerfectHashTableImplChm01_ErrorSaving##Name##, \
-            Result                                               \
-        );                                                       \
-        goto Error;                                              \
-    }
-
-#define CHECK_ALL_SAVE_ERRORS()                                       \
-    CHECK_SAVE_ERRORS(TableFile, TABLE_FILE);                         \
-    CHECK_SAVE_ERRORS(TableInfoStream, TABLE_INFO_STREAM);            \
-    CHECK_SAVE_ERRORS(CHeaderFile, C_HEADER_FILE);                    \
-    CHECK_SAVE_ERRORS(CSourceFile, C_SOURCE_FILE);                    \
-    CHECK_SAVE_ERRORS(CSourceKeysFile, C_SOURCE_KEYS_FILE);           \
-    CHECK_SAVE_ERRORS(CSourceTableDataFile, C_SOURCE_TABLE_DATA_FILE)
-
+#define CHECK_ALL_SAVE_ERRORS() \
+    SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CHECK_ERRORS)
 
 _Use_decl_annotations_
 HRESULT
@@ -164,18 +140,6 @@ Return Value:
     SYSTEM_INFO SystemInfo;
     ULONG NumberOfSeedsRequired;
     ULONG NumberOfSeedsAvailable;
-    FILE_WORK_ITEM PrepareTableFile;
-    FILE_WORK_ITEM PrepareTableInfoStream;
-    FILE_WORK_ITEM PrepareCHeaderFile;
-    FILE_WORK_ITEM PrepareCSourceFile;
-    FILE_WORK_ITEM PrepareCSourceKeysFile;
-    FILE_WORK_ITEM PrepareCSourceTableDataFile;
-    FILE_WORK_ITEM SaveTableFile;
-    FILE_WORK_ITEM SaveTableInfoStream;
-    FILE_WORK_ITEM SaveCHeaderFile;
-    FILE_WORK_ITEM SaveCSourceFile;
-    FILE_WORK_ITEM SaveCSourceKeysFile;
-    FILE_WORK_ITEM SaveCSourceTableDataFile;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
@@ -210,8 +174,16 @@ Return Value:
     BOOL WaitForAllEvents = TRUE;
 
     HANDLE Events[5];
-    HANDLE SaveEvents[6];
-    HANDLE PrepareEvents[6];
+    HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];
+    HANDLE PrepareEvents[NUMBER_OF_PREPARE_FILE_EVENTS];
+    PHANDLE SaveEvent = SaveEvents;
+    PHANDLE PrepareEvent = PrepareEvents;
+
+#define EXPAND_AS_STACK_VAR(Verb, VUpper, Name, Upper) \
+    FILE_WORK_ITEM Verb##Name;
+
+    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
+    SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
 
     //
     // Initialize event arrays.
@@ -223,19 +195,11 @@ Return Value:
     Events[3] = Context->FailedEvent;
     Events[4] = Context->TryLargerTableSizeEvent;
 
-    SaveEvents[0] = Context->SavedTableFileEvent;
-    SaveEvents[1] = Context->SavedTableInfoStreamEvent;
-    SaveEvents[2] = Context->SavedCHeaderFileEvent;
-    SaveEvents[3] = Context->SavedCSourceFileEvent;
-    SaveEvents[4] = Context->SavedCSourceKeysFileEvent;
-    SaveEvents[5] = Context->SavedCSourceTableDataFileEvent;
+#define EXPAND_AS_ASSIGN_EVENT(Verb, VUpper, Name, Upper) \
+    *##Verb##Event++ = Context->##Verb##d##Name##Event;
 
-    PrepareEvents[0] = Context->PreparedTableFileEvent;
-    PrepareEvents[1] = Context->PreparedTableInfoStreamEvent;
-    PrepareEvents[2] = Context->PreparedCHeaderFileEvent;
-    PrepareEvents[3] = Context->PreparedCSourceFileEvent;
-    PrepareEvents[4] = Context->PreparedCSourceKeysFileEvent;
-    PrepareEvents[5] = Context->PreparedCSourceTableDataFileEvent;
+    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
+    SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
 
     //
     // Initialize aliases.
@@ -959,25 +923,25 @@ RetryWithLargerTableSize:
 
     }
 
-
     //
     // Submit all of the file preparation work items.
     //
 
-#define SUBMIT_FILE_WORK(Verb, Name)                      \
-    ZeroStruct(##Verb####Name##);                         \
-    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
-    Verb##Name##.Event = Context->##Verb##d##Name##Event; \
-    InterlockedPushEntrySList(&Context->FileWorkListHead, \
-                              &Verb##Name##.ListEntry);   \
-    SubmitThreadpoolWork(Context->FileWork)
+#define EXPAND_AS_SUBMIT_FILE_WORK(Verb, VUpper, Name, Upper) \
+    ZeroStruct(##Verb####Name##);                             \
+    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;       \
+    Verb##Name##.Event = Context->##Verb##d##Name##Event;     \
+    InterlockedPushEntrySList(&Context->FileWorkListHead,     \
+                              &Verb##Name##.ListEntry);       \
+    SubmitThreadpoolWork(Context->FileWork);
 
-    SUBMIT_FILE_WORK(Prepare, TableInfoStream);
-    SUBMIT_FILE_WORK(Prepare, CSourceKeysFile);
-    SUBMIT_FILE_WORK(Prepare, CSourceFile);
-    SUBMIT_FILE_WORK(Prepare, CHeaderFile);
-    SUBMIT_FILE_WORK(Prepare, CSourceTableDataFile);
-    SUBMIT_FILE_WORK(Prepare, TableFile);
+#define SUBMIT_PREPARE_FILE_WORK() \
+    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_FILE_WORK)
+
+#define SUBMIT_SAVE_FILE_WORK() \
+    SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_FILE_WORK)
+
+    SUBMIT_PREPARE_FILE_WORK();
 
     //
     // Capture initial cycles as reported by __rdtsc() and the performance
@@ -1316,12 +1280,7 @@ FinishedSolution:
     // Dispatch save file work for the table data.
     //
 
-    SUBMIT_FILE_WORK(Save, CHeaderFile);
-    SUBMIT_FILE_WORK(Save, CSourceFile);
-    SUBMIT_FILE_WORK(Save, CSourceKeysFile);
-    SUBMIT_FILE_WORK(Save, CSourceTableDataFile);
-    SUBMIT_FILE_WORK(Save, TableInfoStream);
-    SUBMIT_FILE_WORK(Save, TableFile);
+    SUBMIT_SAVE_FILE_WORK();
 
     //
     // Capture another round of cycles and performance counter values, then

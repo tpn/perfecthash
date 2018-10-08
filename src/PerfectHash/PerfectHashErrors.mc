@@ -367,7 +367,7 @@ The requested number of table elements was too large.
 MessageId=0x22b
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_TABLE_FILE
+SymbolicName=PH_E_ERROR_DURING_PREPARE_TABLE_FILE
 Language=English
 Error preparing perfect hash table file.
 .
@@ -375,7 +375,7 @@ Error preparing perfect hash table file.
 MessageId=0x22c
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_TABLE_FILE
+SymbolicName=PH_E_ERROR_DURING_SAVE_TABLE_FILE
 Language=English
 Error saving perfect hash table file.
 .
@@ -438,7 +438,7 @@ Keys file base name is not a valid C identifier.
 MessageId=0x233
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_C_HEADER_FILE
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_HEADER_FILE
 Language=English
 Error preparing C header file.
 .
@@ -446,7 +446,7 @@ Error preparing C header file.
 MessageId=0x234
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_C_HEADER_FILE
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_FILE
 Language=English
 Error saving C header file.
 .
@@ -526,7 +526,7 @@ Paths have already been initialized for this table instance.
 MessageId=0x23e
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_TABLE_INFO_STREAM
+SymbolicName=PH_E_ERROR_DURING_PREPARE_TABLE_INFO_STREAM
 Language=English
 Error preparing :Info stream.
 .
@@ -534,7 +534,7 @@ Error preparing :Info stream.
 MessageId=0x23f
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_TABLE_INFO_STREAM
+SymbolicName=PH_E_ERROR_DURING_SAVE_TABLE_INFO_STREAM
 Language=English
 Error saving :Info stream.
 .
@@ -542,7 +542,7 @@ Error saving :Info stream.
 MessageId=0x240
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_FILE
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_FILE
 Language=English
 Error saving C source file.
 .
@@ -550,7 +550,7 @@ Error saving C source file.
 MessageId=0x241
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_KEYS_FILE
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_KEYS_FILE
 Language=English
 Error saving C source keys file.
 .
@@ -558,7 +558,7 @@ Error saving C source keys file.
 MessageId=0x242
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_TABLE_DATA_FILE
 Language=English
 Error saving C source table data file.
 .
@@ -774,7 +774,7 @@ Invalid table create flags.
 MessageId=0x25d
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_FILE
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_FILE
 Language=English
 Error preparing C source file.
 .
@@ -782,7 +782,7 @@ Error preparing C source file.
 MessageId=0x25e
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_KEYS_FILE
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_KEYS_FILE
 Language=English
 Error preparing C source keys file.
 .
@@ -790,7 +790,7 @@ Error preparing C source keys file.
 MessageId=0x25f
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_TABLE_DATA_FILE
 Language=English
 Error preparing C source table data file..
 .
@@ -1065,5 +1065,233 @@ Facility=ITF
 SymbolicName=PH_E_CREATE_RANDOM_OBJECT_NAMES_LENGTH_OF_NAME_TOO_SHORT
 Language=English
 LengthOfNameInChars parameter too short.
+.
+
+MessageId=0x282
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_VCPROJECT_DLL_FILE
+Language=English
+Error preparing Dll.vcxproj file.
+.
+
+MessageId=0x283
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_SUPPORT_FILE
+Language=English
+Error preparing C source support file.
+.
+
+MessageId=0x284
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_TEST_FILE
+Language=English
+Error preparing C source test file.
+.
+
+MessageId=0x285
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_TEST_EXE_FILE
+Language=English
+Error preparing C source test exe file.
+.
+
+MessageId=0x286
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_VCPROJECT_TEST_EXE_FILE
+Language=English
+Error preparing TestExe.vcxproj file.
+.
+
+MessageId=0x287
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_FULL_FILE
+Language=English
+Error preparing C source benchmark full file.
+.
+
+MessageId=0x288
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_FULL_EXE_FILE
+Language=English
+Error preparing C source benchmark full exe file.
+.
+
+MessageId=0x289
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_VCPROJECT_BENCHMARK_FULL_EXE_FILE
+Language=English
+Error preparing BenchmarkFullExe.vcxproj file.
+.
+
+MessageId=0x28a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_INDEX_FILE
+Language=English
+Error preparing C source benchmark index file.
+.
+
+MessageId=0x28b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE
+Language=English
+Error preparing C source benchmark index exe file.
+.
+
+MessageId=0x28c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE
+Language=English
+Error preparing BenchmarkIndexExe.vcxproj file.
+.
+
+MessageId=0x28d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_TABLE_STATS_TEXT_FILE
+Language=English
+Error preparing table stats text file.
+.
+
+MessageId=0x28e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_HEADER_COMPILED_PERFECT_HASH_FILE
+Language=English
+Error preparing C header CompiledPerfectHash.h file.
+.
+
+MessageId=0x28f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_VCPROPS_COMPILED_PERFECT_HASH_FILE
+Language=English
+Error preparing CompiledPerfectHash.props file.
+.
+
+;//
+;// Spare IDs: 0x290, 0x291.
+;//
+
+MessageId=0x292
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_VCPROJECT_DLL_FILE
+Language=English
+Error saving Dll.vcxproj file.
+.
+
+MessageId=0x293
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_SUPPORT_FILE
+Language=English
+Error saving C source support file.
+.
+
+MessageId=0x294
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_TEST_FILE
+Language=English
+Error saving C source test file.
+.
+
+MessageId=0x295
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_TEST_EXE_FILE
+Language=English
+Error saving C source test exe file.
+.
+
+MessageId=0x296
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_VCPROJECT_TEST_EXE_FILE
+Language=English
+Error saving TestExe.vcxproj file.
+.
+
+MessageId=0x297
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_FULL_FILE
+Language=English
+Error saving C source benchmark full file.
+.
+
+MessageId=0x298
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_FULL_EXE_FILE
+Language=English
+Error saving C source benchmark full exe file.
+.
+
+MessageId=0x299
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_VCPROJECT_BENCHMARK_FULL_EXE_FILE
+Language=English
+Error saving BenchmarkFullExe.vcxproj file.
+.
+
+MessageId=0x29a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_INDEX_FILE
+Language=English
+Error saving C source benchmark index file.
+.
+
+MessageId=0x29b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE
+Language=English
+Error saving C source benchmark index exe file.
+.
+
+MessageId=0x29c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE
+Language=English
+Error saving BenchmarkIndexExe.vcxproj file.
+.
+
+MessageId=0x29d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_TABLE_STATS_TEXT_FILE
+Language=English
+Error saving table stats text file.
+.
+
+MessageId=0x29e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_FILE
+Language=English
+Error saving C header CompiledPerfectHash.h file.
+.
+
+MessageId=0x29f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_VCPROPS_COMPILED_PERFECT_HASH_FILE
+Language=English
+Error saving CompiledPerfectHash.props file.
 .
 

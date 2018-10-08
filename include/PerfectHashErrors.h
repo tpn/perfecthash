@@ -444,22 +444,22 @@ Abstract:
 #define PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE ((HRESULT)0xE004022AL)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_TABLE_FILE
+// MessageId: PH_E_ERROR_DURING_PREPARE_TABLE_FILE
 //
 // MessageText:
 //
 // Error preparing perfect hash table file.
 //
-#define PH_E_ERROR_PREPARING_TABLE_FILE  ((HRESULT)0xE004022BL)
+#define PH_E_ERROR_DURING_PREPARE_TABLE_FILE ((HRESULT)0xE004022BL)
 
 //
-// MessageId: PH_E_ERROR_SAVING_TABLE_FILE
+// MessageId: PH_E_ERROR_DURING_SAVE_TABLE_FILE
 //
 // MessageText:
 //
 // Error saving perfect hash table file.
 //
-#define PH_E_ERROR_SAVING_TABLE_FILE     ((HRESULT)0xE004022CL)
+#define PH_E_ERROR_DURING_SAVE_TABLE_FILE ((HRESULT)0xE004022CL)
 
 //
 // A perfect hash table solution was found, however, it did not
@@ -522,22 +522,22 @@ Abstract:
 #define PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER ((HRESULT)0xE0040232L)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_C_HEADER_FILE
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_HEADER_FILE
 //
 // MessageText:
 //
 // Error preparing C header file.
 //
-#define PH_E_ERROR_PREPARING_C_HEADER_FILE ((HRESULT)0xE0040233L)
+#define PH_E_ERROR_DURING_PREPARE_C_HEADER_FILE ((HRESULT)0xE0040233L)
 
 //
-// MessageId: PH_E_ERROR_SAVING_C_HEADER_FILE
+// MessageId: PH_E_ERROR_DURING_SAVE_C_HEADER_FILE
 //
 // MessageText:
 //
 // Error saving C header file.
 //
-#define PH_E_ERROR_SAVING_C_HEADER_FILE  ((HRESULT)0xE0040234L)
+#define PH_E_ERROR_DURING_SAVE_C_HEADER_FILE ((HRESULT)0xE0040234L)
 
 //
 // MessageId: PH_E_UNREACHABLE_CODE
@@ -621,49 +621,49 @@ Abstract:
 #define PH_E_TABLE_PATHS_ALREADY_INITIALIZED ((HRESULT)0xE004023DL)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_TABLE_INFO_STREAM
+// MessageId: PH_E_ERROR_DURING_PREPARE_TABLE_INFO_STREAM
 //
 // MessageText:
 //
 // Error preparing :Info stream.
 //
-#define PH_E_ERROR_PREPARING_TABLE_INFO_STREAM ((HRESULT)0xE004023EL)
+#define PH_E_ERROR_DURING_PREPARE_TABLE_INFO_STREAM ((HRESULT)0xE004023EL)
 
 //
-// MessageId: PH_E_ERROR_SAVING_TABLE_INFO_STREAM
+// MessageId: PH_E_ERROR_DURING_SAVE_TABLE_INFO_STREAM
 //
 // MessageText:
 //
 // Error saving :Info stream.
 //
-#define PH_E_ERROR_SAVING_TABLE_INFO_STREAM ((HRESULT)0xE004023FL)
+#define PH_E_ERROR_DURING_SAVE_TABLE_INFO_STREAM ((HRESULT)0xE004023FL)
 
 //
-// MessageId: PH_E_ERROR_SAVING_C_SOURCE_FILE
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_FILE
 //
 // MessageText:
 //
 // Error saving C source file.
 //
-#define PH_E_ERROR_SAVING_C_SOURCE_FILE  ((HRESULT)0xE0040240L)
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_FILE ((HRESULT)0xE0040240L)
 
 //
-// MessageId: PH_E_ERROR_SAVING_C_SOURCE_KEYS_FILE
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_KEYS_FILE
 //
 // MessageText:
 //
 // Error saving C source keys file.
 //
-#define PH_E_ERROR_SAVING_C_SOURCE_KEYS_FILE ((HRESULT)0xE0040241L)
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_KEYS_FILE ((HRESULT)0xE0040241L)
 
 //
-// MessageId: PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_TABLE_DATA_FILE
 //
 // MessageText:
 //
 // Error saving C source table data file.
 //
-#define PH_E_ERROR_SAVING_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE0040242L)
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE0040242L)
 
 //
 // MessageId: PH_E_FILE_CLOSED
@@ -900,31 +900,31 @@ Abstract:
 #define PH_E_INVALID_TABLE_CREATE_FLAGS  ((HRESULT)0xE004025CL)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_C_SOURCE_FILE
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_FILE
 //
 // MessageText:
 //
 // Error preparing C source file.
 //
-#define PH_E_ERROR_PREPARING_C_SOURCE_FILE ((HRESULT)0xE004025DL)
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_FILE ((HRESULT)0xE004025DL)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_C_SOURCE_KEYS_FILE
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_KEYS_FILE
 //
 // MessageText:
 //
 // Error preparing C source keys file.
 //
-#define PH_E_ERROR_PREPARING_C_SOURCE_KEYS_FILE ((HRESULT)0xE004025EL)
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_KEYS_FILE ((HRESULT)0xE004025EL)
 
 //
-// MessageId: PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_TABLE_DATA_FILE
 //
 // MessageText:
 //
 // Error preparing C source table data file..
 //
-#define PH_E_ERROR_PREPARING_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE004025FL)
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE004025FL)
 
 //
 // MessageId: PH_E_FILE_NEVER_OPENED
@@ -1231,4 +1231,259 @@ Abstract:
 // LengthOfNameInChars parameter too short.
 //
 #define PH_E_CREATE_RANDOM_OBJECT_NAMES_LENGTH_OF_NAME_TOO_SHORT ((HRESULT)0xE0040281L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_VCPROJECT_DLL_FILE
+//
+// MessageText:
+//
+// Error preparing Dll.vcxproj file.
+//
+#define PH_E_ERROR_DURING_PREPARE_VCPROJECT_DLL_FILE ((HRESULT)0xE0040282L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_SUPPORT_FILE
+//
+// MessageText:
+//
+// Error preparing C source support file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_SUPPORT_FILE ((HRESULT)0xE0040283L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_TEST_FILE
+//
+// MessageText:
+//
+// Error preparing C source test file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_TEST_FILE ((HRESULT)0xE0040284L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_TEST_EXE_FILE
+//
+// MessageText:
+//
+// Error preparing C source test exe file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_TEST_EXE_FILE ((HRESULT)0xE0040285L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_VCPROJECT_TEST_EXE_FILE
+//
+// MessageText:
+//
+// Error preparing TestExe.vcxproj file.
+//
+#define PH_E_ERROR_DURING_PREPARE_VCPROJECT_TEST_EXE_FILE ((HRESULT)0xE0040286L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_FULL_FILE
+//
+// MessageText:
+//
+// Error preparing C source benchmark full file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_FULL_FILE ((HRESULT)0xE0040287L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_FULL_EXE_FILE
+//
+// MessageText:
+//
+// Error preparing C source benchmark full exe file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_FULL_EXE_FILE ((HRESULT)0xE0040288L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_VCPROJECT_BENCHMARK_FULL_EXE_FILE
+//
+// MessageText:
+//
+// Error preparing BenchmarkFullExe.vcxproj file.
+//
+#define PH_E_ERROR_DURING_PREPARE_VCPROJECT_BENCHMARK_FULL_EXE_FILE ((HRESULT)0xE0040289L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_INDEX_FILE
+//
+// MessageText:
+//
+// Error preparing C source benchmark index file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_INDEX_FILE ((HRESULT)0xE004028AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE
+//
+// MessageText:
+//
+// Error preparing C source benchmark index exe file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE ((HRESULT)0xE004028BL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE
+//
+// MessageText:
+//
+// Error preparing BenchmarkIndexExe.vcxproj file.
+//
+#define PH_E_ERROR_DURING_PREPARE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE ((HRESULT)0xE004028CL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_TABLE_STATS_TEXT_FILE
+//
+// MessageText:
+//
+// Error preparing table stats text file.
+//
+#define PH_E_ERROR_DURING_PREPARE_TABLE_STATS_TEXT_FILE ((HRESULT)0xE004028DL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_HEADER_COMPILED_PERFECT_HASH_FILE
+//
+// MessageText:
+//
+// Error preparing C header CompiledPerfectHash.h file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_HEADER_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004028EL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_VCPROPS_COMPILED_PERFECT_HASH_FILE
+//
+// MessageText:
+//
+// Error preparing CompiledPerfectHash.props file.
+//
+#define PH_E_ERROR_DURING_PREPARE_VCPROPS_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004028FL)
+
+//
+// Spare IDs: 0x290, 0x291.
+//
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_VCPROJECT_DLL_FILE
+//
+// MessageText:
+//
+// Error saving Dll.vcxproj file.
+//
+#define PH_E_ERROR_DURING_SAVE_VCPROJECT_DLL_FILE ((HRESULT)0xE0040292L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_SUPPORT_FILE
+//
+// MessageText:
+//
+// Error saving C source support file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_SUPPORT_FILE ((HRESULT)0xE0040293L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_TEST_FILE
+//
+// MessageText:
+//
+// Error saving C source test file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_TEST_FILE ((HRESULT)0xE0040294L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_TEST_EXE_FILE
+//
+// MessageText:
+//
+// Error saving C source test exe file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_TEST_EXE_FILE ((HRESULT)0xE0040295L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_VCPROJECT_TEST_EXE_FILE
+//
+// MessageText:
+//
+// Error saving TestExe.vcxproj file.
+//
+#define PH_E_ERROR_DURING_SAVE_VCPROJECT_TEST_EXE_FILE ((HRESULT)0xE0040296L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_FULL_FILE
+//
+// MessageText:
+//
+// Error saving C source benchmark full file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_FULL_FILE ((HRESULT)0xE0040297L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_FULL_EXE_FILE
+//
+// MessageText:
+//
+// Error saving C source benchmark full exe file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_FULL_EXE_FILE ((HRESULT)0xE0040298L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_VCPROJECT_BENCHMARK_FULL_EXE_FILE
+//
+// MessageText:
+//
+// Error saving BenchmarkFullExe.vcxproj file.
+//
+#define PH_E_ERROR_DURING_SAVE_VCPROJECT_BENCHMARK_FULL_EXE_FILE ((HRESULT)0xE0040299L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_INDEX_FILE
+//
+// MessageText:
+//
+// Error saving C source benchmark index file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_INDEX_FILE ((HRESULT)0xE004029AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE
+//
+// MessageText:
+//
+// Error saving C source benchmark index exe file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE ((HRESULT)0xE004029BL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE
+//
+// MessageText:
+//
+// Error saving BenchmarkIndexExe.vcxproj file.
+//
+#define PH_E_ERROR_DURING_SAVE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE ((HRESULT)0xE004029CL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_TABLE_STATS_TEXT_FILE
+//
+// MessageText:
+//
+// Error saving table stats text file.
+//
+#define PH_E_ERROR_DURING_SAVE_TABLE_STATS_TEXT_FILE ((HRESULT)0xE004029DL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_FILE
+//
+// MessageText:
+//
+// Error saving C header CompiledPerfectHash.h file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004029EL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_VCPROPS_COMPILED_PERFECT_HASH_FILE
+//
+// MessageText:
+//
+// Error saving CompiledPerfectHash.props file.
+//
+#define PH_E_ERROR_DURING_SAVE_VCPROPS_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004029FL)
 
