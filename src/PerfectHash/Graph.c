@@ -29,7 +29,7 @@ Routine Description:
     Initialize a graph structure given the provided information.  This routine
     is called at the top of each worker thread's infinite loop around the solve
     graph function.  It is responsible for resetting the block of memory for the
-    graph back to its initial state, including generation of two new random seed
+    graph back to its initial state, including generation of new random seed
     values that can be used by the hash function when generating vertices.
 
 Arguments:
