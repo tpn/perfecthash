@@ -261,41 +261,17 @@ const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
 const UNICODE_STRING ContextVerifiedTableEventPrefix =
     RTL_CONSTANT_STRING(L"PerfectHashContext_VerifiedTableEvent_");
 
-const UNICODE_STRING ContextPreparedTableFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedTableFileEvent_");
+#define EXPAND_AS_EVENT_NAME(Verb, VUpper, Name, Upper)         \
+    const UNICODE_STRING Context##Verb##d##Name##EventPrefix =  \
+        RTL_CONSTANT_STRING(L"PerfectHashContext_"              \
+                            L#Verb L"d" L#Name L"EventPrefix_");
 
-const UNICODE_STRING ContextSavedTableFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedTableFileEvent_");
+PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
 
-const UNICODE_STRING ContextPreparedCSourceTableDataFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCSourceTableDataEvent_");
+SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
 
-const UNICODE_STRING ContextSavedCSourceTableDataFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCSourceTableDataFileEvent_");
-
-const UNICODE_STRING ContextPreparedTableInfoStreamEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedTableInfoStreamEvent_");
-
-const UNICODE_STRING ContextSavedTableInfoStreamEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedTableInfoStreamEvent_");
-
-const UNICODE_STRING ContextPreparedCHeaderFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCHeaderFileEvent_");
-
-const UNICODE_STRING ContextSavedCHeaderFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCHeaderFileEvent_");
-
-const UNICODE_STRING ContextPreparedCSourceFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCSourceFileEvent_");
-
-const UNICODE_STRING ContextSavedCSourceFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCSourceFileEvent_");
-
-const UNICODE_STRING ContextPreparedCSourceKeysFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_PreparedCSourceKeysFileEvent_");
-
-const UNICODE_STRING ContextSavedCSourceKeysFileEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SavedCSourceKeysFileEvent_");
+#define EXPAND_AS_EVENT_NAME_ADDRESS(Verb, VUpper, Name, Upper) \
+    &Context##Verb##d##Name##EventPrefix,
 
 const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextShutdownEventPrefix,
@@ -304,18 +280,9 @@ const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextCompletedEventPrefix,
     &ContextTryLargerTableSizeEventPrefix,
     &ContextVerifiedTableEventPrefix,
-    &ContextPreparedTableFileEventPrefix,
-    &ContextSavedTableFileEventPrefix,
-    &ContextPreparedCSourceTableDataFileEventPrefix,
-    &ContextSavedCSourceTableDataFileEventPrefix,
-    &ContextPreparedTableInfoStreamEventPrefix,
-    &ContextSavedTableInfoStreamEventPrefix,
-    &ContextPreparedCHeaderFileEventPrefix,
-    &ContextSavedCHeaderFileEventPrefix,
-    &ContextPreparedCSourceFileEventPrefix,
-    &ContextSavedCSourceFileEventPrefix,
-    &ContextPreparedCSourceKeysFileEventPrefix,
-    &ContextSavedCSourceKeysFileEventPrefix,
+
+    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME_ADDRESS)
+    SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME_ADDRESS)
 };
 
 //

@@ -8,9 +8,9 @@ Module Name:
 
 Abstract:
 
-    This is the private header file for the PERFECT_HASH_CONTEXT
-    component of the perfect hash table library.  It defines the structure,
-    and function pointer typedefs for the initialize and rundown functions.
+    This is the private header file for the PERFECT_HASH_CONTEXT component of
+    the perfect hash library.  It defines the structure, and function pointer
+    typedefs for private non-vtbl members.
 
 --*/
 
@@ -225,83 +225,33 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     HANDLE VerifiedTableEvent;
 
     //
-    // The following event is set when a worker thread has completed preparing
-    // the underlying backing table file in order for the solved graph to be
-    // persisted to disk.
+    // The following events are related to file work.  Each file work ID has
+    // both a prepared and saved event, which is used to synchronize with the
+    // main solving thread.
     //
 
-    HANDLE PreparedTableFileEvent;
+#define EXPAND_AS_EVENTS(Verb, VUpper, Name, Upper) \
+    HANDLE Verb##d##Name##Event;
 
-    //
-    // The following event is set when a worker thread has completed saving the
-    // solved graph to disk.
-    //
-
-    HANDLE SavedTableFileEvent;
-
-    //
-    // The following event is set when a worker thread has completed preparing
-    // the C source file containing table data.
-    //
-
-    HANDLE PreparedCSourceTableDataFileEvent;
-
-    //
-    // The following event is set when a worker thread has completed saving
-    // the C source file containing table data.
-    //
-
-    HANDLE SavedCSourceTableDataFileEvent;
-
-    //
-    // The following event is set when a worker thread has completed preparing
-    // the table's :Info stream.
-    //
-
-    HANDLE PreparedTableInfoStreamEvent;
-
-    //
-    // The following event is set when a worker thread has completed saving the
-    // table's :Info stream to disk.
-    //
-
-    HANDLE SavedTableInfoStreamEvent;
-
-    //
-    // The following event is set when a worker thread has completed preparing
-    // the C header file for the perfect hash table.
-    //
-
-    HANDLE PreparedCHeaderFileEvent;
-
-    //
-    // The following events are set when a worker thread has completed
-    // preparing the relevant C source file for the perfect hash table.
-    //
-
-    HANDLE PreparedCSourceFileEvent;
-    HANDLE PreparedCSourceKeysFileEvent;
-
-    //
-    // The following event is set when a worker thread has completed writing
-    // the contents of the C header file once a perfect hash table solution has
-    // been found.
-    //
-
-    HANDLE SavedCHeaderFileEvent;
-
-    //
-    // The following events are set when a worker thread has completed writing
-    // the contents of the C source files once a perfect hash table solution
-    // has been found.
-    //
-
-    HANDLE SavedCSourceFileEvent;
-
-    union {
-        HANDLE SavedCSourceKeysFileEvent;
-        PVOID LastEvent;
+#define EXPAND_AS_FIRST_EVENT(Verb, VUpper, Name, Upper) \
+    union {                                              \
+        HANDLE Verb##d##Name##Event;                     \
+        PVOID First##Verb##d##Event;                     \
     };
+
+#define EXPAND_AS_LAST_EVENT(Verb, VUpper, Name, Upper) \
+    union {                                             \
+        HANDLE Verb##d##Name##Event;                    \
+        PVOID Last##Verb##d##Event;                     \
+    };
+
+    PREPARE_FILE_WORK_TABLE(EXPAND_AS_FIRST_EVENT,
+                            EXPAND_AS_EVENTS,
+                            EXPAND_AS_LAST_EVENT)
+
+    SAVE_FILE_WORK_TABLE(EXPAND_AS_FIRST_EVENT,
+                         EXPAND_AS_EVENTS,
+                         EXPAND_AS_LAST_EVENT)
 
     //
     // N.B. All events are created as named events, using the random object

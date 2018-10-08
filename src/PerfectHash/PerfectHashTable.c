@@ -166,13 +166,11 @@ Return Value:
     // Release applicable COM references.
     //
 
+#define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Table->##Name##);
+
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
+
     RELEASE(Table->OutputDirectory);
-    RELEASE(Table->TableFile);
-    RELEASE(Table->InfoStream);
-    RELEASE(Table->CHeaderFile);
-    RELEASE(Table->CSourceFile);
-    RELEASE(Table->CSourceKeysFile);
-    RELEASE(Table->CSourceTableDataFile);
     RELEASE(Table->Context);
     RELEASE(Table->Keys);
     RELEASE(Table->Rtl);

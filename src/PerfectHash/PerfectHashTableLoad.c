@@ -165,7 +165,7 @@ Return Value:
         return Result;
     }
 
-    if (Table->InfoStream) {
+    if (Table->TableInfoStream) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashTableLoad, Result);
         ReleasePerfectHashTableLockExclusive(Table);
@@ -262,7 +262,7 @@ Return Value:
         goto Error;
     }
 
-    Table->InfoStream = InfoStream;
+    Table->TableInfoStream = InfoStream;
 
     if (EndOfFile.QuadPart < sizeof(*TableInfoOnDisk)) {
 
@@ -521,7 +521,7 @@ Error:
     //
 
     RELEASE(Table->TableFile);
-    RELEASE(Table->InfoStream);
+    RELEASE(Table->TableInfoStream);
 
     //
     // Intentional follow-on to End.

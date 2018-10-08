@@ -94,6 +94,7 @@
     <ClInclude Include="PerfectHashDirectory.h" />
     <ClInclude Include="PerfectHashErrorHandling.h" />
     <ClInclude Include="PerfectHashFile.h" />
+    <ClInclude Include="PerfectHashFileWork.h" />
     <ClInclude Include="PerfectHashKeys.h" />
     <ClInclude Include="PerfectHashPath.h" />
     <ClInclude Include="PerfectHashPrimes.h" />

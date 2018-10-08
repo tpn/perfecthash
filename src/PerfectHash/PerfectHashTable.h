@@ -82,12 +82,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
 
     //
-    // Pointer to the output directory for this table.
-    //
-
-    PPERFECT_HASH_DIRECTORY OutputDirectory;
-
-    //
     // If a table is loaded or created successfully, an array will be allocated
     // for storing values (as part of the Insert()/Lookup() API), the base
     // address for which is captured by the next field.
@@ -187,6 +181,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG Padding3;
 
     //
+    // Pointer to the output directory for this table.
+    //
+
+    PPERFECT_HASH_DIRECTORY OutputDirectory;
+
+    //
     // Pointer to the keys corresponding to this perfect hash table.  May be
     // NULL.
     //
@@ -203,12 +203,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // Pointers to files associated with the table.
     //
 
-    PPERFECT_HASH_FILE TableFile;
-    PPERFECT_HASH_FILE InfoStream;
-    PPERFECT_HASH_FILE CHeaderFile;
-    PPERFECT_HASH_FILE CSourceFile;
-    PPERFECT_HASH_FILE CSourceKeysFile;
-    PPERFECT_HASH_FILE CSourceTableDataFile;
+#define EXPAND_AS_FILE(Verb, VUpper, Name, Upper) PPERFECT_HASH_FILE Name;
+
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_FILE)
 
     //
     // Backing vtbl.

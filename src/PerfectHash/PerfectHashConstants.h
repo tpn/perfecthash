@@ -218,7 +218,7 @@ GetNumberOfContextEvents(
             sizeof(HANDLE) +
 
             RtlOffsetFromPointer(
-                &Context->LastEvent,
+                &Context->LastSavedEvent,
                 &Context->FirstEvent
             )
 

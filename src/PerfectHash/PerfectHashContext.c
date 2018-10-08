@@ -243,7 +243,7 @@ Return Value:
         Allocator,
         Allocator,
         NumberOfContextObjectPrefixes,
-        64,
+        128,
         NULL,
         Context->ObjectNamesPointerArray,
         Prefixes,

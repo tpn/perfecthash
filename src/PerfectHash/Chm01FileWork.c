@@ -115,7 +115,7 @@ Return Value:
                 break;
 
             case FileWorkPrepareTableInfoStreamId:
-                File = &Table->InfoStream;
+                File = &Table->TableInfoStream;
 
                 if (*File) {
 
@@ -219,7 +219,7 @@ Return Value:
 
             case FileWorkSaveTableInfoStreamId:
                 Impl = SaveTableInfoStreamChm01;
-                File = &Table->InfoStream;
+                File = &Table->TableInfoStream;
                 DependentEvent = Context->PreparedTableInfoStreamEvent;
                 break;
 

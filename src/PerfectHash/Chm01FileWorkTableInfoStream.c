@@ -53,7 +53,7 @@ SaveTableInfoStreamChm01(
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    File = Table->InfoStream;
+    File = Table->TableInfoStream;
     Dest = (PULONG)File->BaseAddress;
     Graph = (PGRAPH)Context->SolvedContext;
     GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)File->BaseAddress;

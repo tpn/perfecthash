@@ -88,6 +88,7 @@ Abstract:
 #include "Rtl.h"
 #include "RtlOutput.h"
 #include "GuardedList.h"
+#include "PerfectHashFileWork.h"
 #include "PerfectHashTls.h"
 #include "PerfectHashPath.h"
 #include "PerfectHashFile.h"
