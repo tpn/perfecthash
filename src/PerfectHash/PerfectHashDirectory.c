@@ -185,8 +185,8 @@ Arguments:
 
     SourcePath - Supplies a pointer to the path instance to open.
 
-    DirectoryOpenFlags - Optionally supplies a pointer to directory open flags that can
-        be used to customize open behavior.
+    DirectoryOpenFlags - Optionally supplies a pointer to directory open flags
+        that can be used to customize open behavior.
 
 Return Value:
 
