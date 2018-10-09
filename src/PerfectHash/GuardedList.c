@@ -78,6 +78,7 @@ Return Value:
 
     AcquireGuardedListLockExclusive(List);
     InitializeListHead(&List->ListHead);
+    List->NumberOfEntries = 0;
     ReleaseGuardedListLockExclusive(List);
 
     //

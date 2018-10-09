@@ -216,6 +216,10 @@ Return Value:
     BaseOutputDirectory = Context->BaseOutputDirectory;
     BaseOutputDirectoryPath = &BaseOutputDirectory->Path->FullPath;
 
+    ASSERT(
+        Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList)
+    );
+
     //
     // If no threshold has been set, use the default.
     //
@@ -939,6 +943,8 @@ RetryWithLargerTableSize:
 #define SUBMIT_SAVE_FILE_WORK() \
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_FILE_WORK)
 
+    ASSERT(Context->FileWorkList->Vtbl->IsEmpty(Context->FileWorkList));
+
     SUBMIT_PREPARE_FILE_WORK();
 
     //
@@ -958,6 +964,8 @@ RetryWithLargerTableSize:
 
     Buffer = (PBYTE)BaseAddress;
     Unusable = Buffer;
+
+    ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {
 
@@ -1021,6 +1029,7 @@ RetryWithLargerTableSize:
         // main work list tail and submit the corresponding threadpool work.
         //
 
+        InitializeListHead(&Graph->ListEntry);
         InsertTailMainWork(Context, &Graph->ListEntry);
         SubmitThreadpoolWork(Context->MainWork);
 
@@ -1183,6 +1192,14 @@ RetryWithLargerTableSize:
             Result = PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
             goto Error;
         }
+
+        //
+        // Reset the lists.
+        //
+
+        ResetMainWorkList(Context);
+        ResetFileWorkList(Context);
+        ResetFinishedWorkList(Context);
 
         //
         // Jump back to the start and try again with a larger vertex count.

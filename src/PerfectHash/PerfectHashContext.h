@@ -511,6 +511,10 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 // Define helper macros for appending items to the tail of a guarded list.
 //
 
+//
+// Main work.
+//
+
 #define InsertTailMainWork(Context, ListEntry) \
     Context->MainWorkList->Vtbl->InsertTail(   \
         Context->MainWorkList,                 \
@@ -522,6 +526,13 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
         Context->MainWorkList,                 \
         ListEntry                              \
     )
+
+#define ResetMainWorkList(Context) \
+    Context->MainWorkList->Vtbl->Reset(Context->MainWorkList)
+
+//
+// File work.
+//
 
 #define InsertTailFileWork(Context, ListEntry) \
     Context->FileWorkList->Vtbl->InsertTail(   \
@@ -535,6 +546,13 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
         ListEntry                              \
     )
 
+#define ResetFileWorkList(Context) \
+    Context->FileWorkList->Vtbl->Reset(Context->FileWorkList)
+
+//
+// Finished work.
+//
+
 #define InsertTailFinishedWork(Context, ListEntry) \
     Context->FinishedWorkList->Vtbl->InsertTail(   \
         Context->FinishedWorkList,                 \
@@ -546,6 +564,9 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
         Context->FinishedWorkList,                 \
         ListEntry                                  \
     )
+
+#define ResetFinishedWorkList(Context) \
+    Context->FinishedWorkList->Vtbl->Reset(Context->FinishedWorkList)
 
 //
 // Define helper macros for marking start/end points for the context's
