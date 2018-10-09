@@ -88,6 +88,7 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    PACL Acl = NULL;
     BYTE Index;
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
@@ -109,6 +110,10 @@ Return Value:
     PPUNICODE_STRING Names;
     PPUNICODE_STRING Prefixes;
     SYSTEM_INFO SystemInfo;
+    EXPLICIT_ACCESS_W ExplicitAccess;
+    SECURITY_ATTRIBUTES SecurityAttributes;
+    SECURITY_DESCRIPTOR SecurityDescriptor;
+    PSECURITY_ATTRIBUTES Attributes;
 
     //
     // Validate arguments.
@@ -184,6 +189,23 @@ Return Value:
 
     GetSystemInfo(&SystemInfo);
     Context->SystemAllocationGranularity = SystemInfo.dwAllocationGranularity;
+
+    //
+    // Create an exclusive DACL for use with our events.
+    //
+
+    Result = CreateExclusiveDaclForCurrentUser(Rtl,
+                                               &SecurityAttributes,
+                                               &SecurityDescriptor,
+                                               &ExplicitAccess,
+                                               &Acl);
+
+    if (FAILED(Result)) {
+        PH_ERROR(CreateExclusiveDaclForCurrentUser, Result);
+        goto Error;
+    }
+
+    Attributes = &SecurityAttributes;
 
     //
     // Calculate the size required by the array of UNICODE_STRING structures
@@ -321,7 +343,7 @@ Return Value:
 
         BOOLEAN ManualReset = TRUE;
 
-        *Event = CreateEventW(NULL,
+        *Event = CreateEventW(Attributes,
                               ManualReset,
                               FALSE,
                               Name->Buffer);
@@ -337,6 +359,7 @@ Return Value:
             //
 
             SYS_ERROR(CreateEventW);
+            Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
     }
@@ -360,11 +383,13 @@ Return Value:
     Threadpool = Context->MainThreadpool = CreateThreadpool(NULL);
     if (!Threadpool) {
         SYS_ERROR(CreateThreadpool);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
     if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -388,6 +413,7 @@ Return Value:
     Context->MainCleanupGroup = CreateThreadpoolCleanupGroup();
     if (!Context->MainCleanupGroup) {
         SYS_ERROR(CreateThreadpoolCleanupGroup);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -405,6 +431,7 @@ Return Value:
 
     if (!Context->MainWork) {
         SYS_ERROR(CreateThreadpoolWork);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -416,6 +443,7 @@ Return Value:
     Threadpool = Context->FileThreadpool = CreateThreadpool(NULL);
     if (!Threadpool) {
         SYS_ERROR(CreateThreadpool);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -423,6 +451,7 @@ Return Value:
 
     if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -444,6 +473,7 @@ Return Value:
     Context->FileCleanupGroup = CreateThreadpoolCleanupGroup();
     if (!Context->FileCleanupGroup) {
         SYS_ERROR(CreateThreadpoolCleanupGroup);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -461,6 +491,7 @@ Return Value:
 
     if (!Context->FileWork) {
         SYS_ERROR(CreateThreadpoolWork);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -473,11 +504,13 @@ Return Value:
     Context->FinishedThreadpool = CreateThreadpool(NULL);
     if (!Context->FinishedThreadpool) {
         SYS_ERROR(CreateThreadpool);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
     if (!SetThreadpoolThreadMinimum(Context->FinishedThreadpool, 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -488,6 +521,7 @@ Return Value:
                                                  &Context->FinishedCallbackEnv);
     if (!Context->FinishedWork) {
         SYS_ERROR(CreateThreadpoolWork);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -498,11 +532,13 @@ Return Value:
     Context->ErrorThreadpool = CreateThreadpool(NULL);
     if (!Context->ErrorThreadpool) {
         SYS_ERROR(CreateThreadpool);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
     if (!SetThreadpoolThreadMinimum(Context->ErrorThreadpool, 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -513,6 +549,7 @@ Return Value:
                                               &Context->ErrorCallbackEnv);
     if (!Context->ErrorWork) {
         SYS_ERROR(CreateThreadpoolWork);
+        Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
@@ -534,6 +571,11 @@ Error:
     //
 
 End:
+
+    if (Acl) {
+        LocalFree(Acl);
+        Acl = NULL;
+    }
 
     return Result;
 }

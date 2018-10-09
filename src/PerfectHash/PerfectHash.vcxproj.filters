@@ -154,6 +154,9 @@
     <ClCompile Include="GuardedList.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Security.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -229,6 +232,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Chm01FileWork.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Security.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
