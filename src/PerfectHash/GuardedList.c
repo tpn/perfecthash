@@ -166,25 +166,6 @@ Return Value:
 }
 
 
-GUARDED_LIST_SET_CALLBACKS GuardedListSetCallbacks;
-
-_Use_decl_annotations_
-HRESULT
-GuardedListSetCallbacks(
-    PGUARDED_LIST List,
-    PGUARDED_LIST_CALLBACK AddEntryCallback,
-    PGUARDED_LIST_CALLBACK RemoveEntryCallback,
-    PVOID CallbackContext
-    )
-{
-    UNREFERENCED_PARAMETER(List);
-    UNREFERENCED_PARAMETER(AddEntryCallback);
-    UNREFERENCED_PARAMETER(RemoveEntryCallback);
-    UNREFERENCED_PARAMETER(CallbackContext);
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-
 GUARDED_LIST_IS_EMPTY GuardedListIsEmpty;
 
 _Use_decl_annotations_

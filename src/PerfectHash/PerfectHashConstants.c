@@ -845,7 +845,6 @@ const GUARDED_LIST_VTBL GuardedListInterface = {
     (PGUARDED_LIST_RELEASE)&ComponentRelease,
     (PGUARDED_LIST_CREATE_INSTANCE)&ComponentCreateInstance,
     (PGUARDED_LIST_LOCK_SERVER)&ComponentLockServer,
-    &GuardedListSetCallbacks,
     &GuardedListIsEmpty,
     &GuardedListQueryDepth,
     &GuardedListInsertHead,
@@ -857,7 +856,7 @@ const GUARDED_LIST_VTBL GuardedListInterface = {
     &GuardedListRemoveHeadEx,
     &GuardedListReset,
 };
-VERIFY_VTBL_SIZE(GUARDED_LIST, 11);
+VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
 
 //
 // TSX versions of the GuardedList interface.  See dllmain.c for more info.
@@ -869,7 +868,6 @@ const GUARDED_LIST_VTBL GuardedListTsxInterface = {
     (PGUARDED_LIST_RELEASE)&ComponentRelease,
     (PGUARDED_LIST_CREATE_INSTANCE)&ComponentCreateInstance,
     (PGUARDED_LIST_LOCK_SERVER)&ComponentLockServer,
-    &GuardedListSetCallbacks,
     &GuardedListIsEmptyTsx,
     &GuardedListQueryDepthTsx,
     &GuardedListInsertHeadTsx,
@@ -879,9 +877,15 @@ const GUARDED_LIST_VTBL GuardedListTsxInterface = {
     &GuardedListRemoveTailTsx,
     &GuardedListRemoveEntryTsx,
     &GuardedListRemoveHeadExTsx,
+
+    //
+    // N.B. We don't have a TSX version for Reset() as it's not really
+    //      necessary (because it shouldn't be called in contention).
+    //
+
     &GuardedListReset,
 };
-VERIFY_VTBL_SIZE(GUARDED_LIST, 11);
+VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
 
 //
 // Interface array.
