@@ -44,9 +44,7 @@ typedef GRAPH_ITERATOR *PGRAPH_ITERATOR;
 //
 
 #define EMPTY ((ULONG)-1)
-#define IsEmpty(Value) ((ULONG)Value == EMPTY)
 #define GRAPH_NO_NEIGHBOR ((ULONG)-1)
-#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
 
 //
 // Define graph flags.

@@ -14,6 +14,9 @@ Abstract:
 
 #include "stdafx.h"
 
+#define IsEmpty(Value) ((ULONG)Value == EMPTY)
+#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
+
 INITIALIZE_GRAPH InitializeGraph;
 
 _Use_decl_annotations_
@@ -1655,4 +1658,4 @@ End:
     return Result;
 }
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     : 
+// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
