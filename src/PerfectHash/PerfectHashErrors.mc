@@ -1295,3 +1295,27 @@ Language=English
 Error saving CompiledPerfectHash.props file.
 .
 
+MessageId=0x300
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_MAIN_WORK_LIST_EMPTY
+Language=English
+SubmitThreadpoolWork() was called against the main work pool, but no corresponding work item was present on the main work list.
+.
+
+MessageId=0x301
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_FILE_WORK_LIST_EMPTY
+Language=English
+SubmitThreadpoolWork() was called against the file work pool, but no corresponding work item was present on the file work list.
+.
+
+MessageId=0x302
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_GUARDED_LIST_EMPTY
+Language=English
+The guarded list is empty.
+.
+

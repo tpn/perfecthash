@@ -347,6 +347,19 @@ GuardedListRemoveHeadEx(
     return NotEmpty;
 }
 
+GUARDED_LIST_RESET GuardedListReset;
+
+_Use_decl_annotations_
+VOID
+GuardedListReset(
+    PGUARDED_LIST List
+    )
+{
+    AcquireGuardedListLockExclusive(List);
+    InitializeListHead(&List->ListHead);
+    List->NumberOfEntries = 0;
+    ReleaseGuardedListLockExclusive(List);
+}
 
 //
 // TSX versions of the above.

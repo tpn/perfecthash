@@ -1426,8 +1426,7 @@ Return Value:
     // Push this graph onto the finished list head.
     //
 
-    InterlockedPushEntrySList(&Context->FinishedWorkListHead,
-                              &Graph->ListEntry);
+    InsertTailFinishedWork(Context, &Graph->ListEntry);
 
     //
     // Submit the finished work item to the finished threadpool, such that the

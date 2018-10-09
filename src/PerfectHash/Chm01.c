@@ -136,7 +136,7 @@ Return Value:
     ULONG TotalNumberOfPages;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
-    PSLIST_ENTRY ListEntry;
+    PLIST_ENTRY ListEntry;
     SYSTEM_INFO SystemInfo;
     ULONG NumberOfSeedsRequired;
     ULONG NumberOfSeedsAvailable;
@@ -930,9 +930,7 @@ RetryWithLargerTableSize:
 #define EXPAND_AS_SUBMIT_FILE_WORK(Verb, VUpper, Name, Upper) \
     ZeroStruct(##Verb####Name##);                             \
     Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;       \
-    Verb##Name##.Event = Context->##Verb##d##Name##Event;     \
-    InterlockedPushEntrySList(&Context->FileWorkListHead,     \
-                              &Verb##Name##.ListEntry);       \
+    InsertTailFileWork(Context, &Verb##Name##.ListEntry);     \
     SubmitThreadpoolWork(Context->FileWork);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
@@ -1019,12 +1017,11 @@ RetryWithLargerTableSize:
         }
 
         //
-        // Guard page is working properly.  Push the graph onto the context's
-        // main work list head and submit the corresponding threadpool work.
+        // Guard page is working properly.  Insert the graph onto the context's
+        // main work list tail and submit the corresponding threadpool work.
         //
 
-        InterlockedPushEntrySList(&Context->MainWorkListHead,
-                                  &Graph->ListEntry);
+        InsertTailMainWork(Context, &Graph->ListEntry);
         SubmitThreadpoolWork(Context->MainWork);
 
         //
@@ -1256,9 +1253,15 @@ RetryWithLargerTableSize:
 
 FinishedSolution:
 
-    ListEntry = InterlockedPopEntrySList(&Context->FinishedWorkListHead);
-    ASSERT(ListEntry);
+    ListEntry = NULL;
 
+    if (!RemoveHeadFinishedWork(Context, &ListEntry)) {
+        Result = PH_E_GUARDED_LIST_EMPTY;
+        PH_ERROR(PerfectHashCreateChm01Callback_RemoveFinishedWork, Result);
+        goto Error;
+    }
+
+    ASSERT(ListEntry);
     Graph = CONTAINING_RECORD(ListEntry, GRAPH, ListEntry);
 
     //
@@ -1452,7 +1455,7 @@ VOID
 ProcessGraphCallbackChm01(
     PTP_CALLBACK_INSTANCE Instance,
     PPERFECT_HASH_CONTEXT Context,
-    PSLIST_ENTRY ListEntry
+    PLIST_ENTRY ListEntry
     )
 /*++
 
@@ -1468,10 +1471,10 @@ Arguments:
 
     Context - Supplies a pointer to the active context for the graph solving.
 
-    ListEntry - Supplies a pointer to the list entry that was popped off the
-        context's main work interlocked singly-linked list head.  The list
-        entry will be the address of Graph->ListEntry, and thus, the Graph
-        address can be obtained via the following CONTAINING_RECORD() construct:
+    ListEntry - Supplies a pointer to the list entry that was removed from the
+        context's main work list head.  The list entry will be the address of
+        Graph->ListEntry, and thus, the Graph address can be obtained via the
+        following CONTAINING_RECORD() construct:
 
             Graph = CONTAINING_RECORD(ListEntry, GRAPH, ListEntry);
 

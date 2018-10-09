@@ -30,7 +30,7 @@ VOID
 (CALLBACK PERFECT_HASH_MAIN_WORK_CALLBACK)(
     _In_ PTP_CALLBACK_INSTANCE Instance,
     _In_ struct _PERFECT_HASH_CONTEXT *Context,
-    _In_ PSLIST_ENTRY ListEntry
+    _In_ PLIST_ENTRY ListEntry
     );
 typedef PERFECT_HASH_MAIN_WORK_CALLBACK
       *PPERFECT_HASH_MAIN_WORK_CALLBACK;
@@ -46,7 +46,7 @@ VOID
 (CALLBACK PERFECT_HASH_FILE_WORK_CALLBACK)(
     _In_ PTP_CALLBACK_INSTANCE Instance,
     _In_ struct _PERFECT_HASH_CONTEXT *Context,
-    _In_ PSLIST_ENTRY ListEntry
+    _In_ PLIST_ENTRY ListEntry
     );
 typedef PERFECT_HASH_FILE_WORK_CALLBACK
       *PPERFECT_HASH_FILE_WORK_CALLBACK;
@@ -104,10 +104,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Capture the system allocation granularity.
     //
 
-    ULONG Padding;
+    ULONG SystemAllocationGranularity;
 
     //
     // Pointer to the path instance of the base output directory set via
@@ -236,13 +236,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 #define EXPAND_AS_FIRST_EVENT(Verb, VUpper, Name, Upper) \
     union {                                              \
         HANDLE Verb##d##Name##Event;                     \
-        PVOID First##Verb##d##Event;                     \
+        HANDLE First##Verb##d##Event;                    \
     };
 
 #define EXPAND_AS_LAST_EVENT(Verb, VUpper, Name, Upper) \
     union {                                             \
         HANDLE Verb##d##Name##Event;                    \
-        PVOID Last##Verb##d##Event;                     \
+        HANDLE Last##Verb##d##Event;                    \
     };
 
     PREPARE_FILE_WORK_TABLE(EXPAND_AS_FIRST_EVENT,
@@ -370,9 +370,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // solutions in parallel.
     //
 
+    PGUARDED_LIST MainWorkList;
     TP_CALLBACK_ENVIRON MainCallbackEnv;
     PTP_CLEANUP_GROUP MainCleanupGroup;
-    SLIST_HEADER MainWorkListHead;
     PTP_POOL MainThreadpool;
     PTP_WORK MainWork;
     ULONG MinimumConcurrency;
@@ -389,9 +389,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // A threadpool for offloading file operations.
     //
 
+    PGUARDED_LIST FileWorkList;
     TP_CALLBACK_ENVIRON FileCallbackEnv;
     PTP_CLEANUP_GROUP FileCleanupGroup;
-    SLIST_HEADER FileWorkListHead;
     PTP_POOL FileThreadpool;
     PTP_WORK FileWork;
 
@@ -416,8 +416,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      algorithm's creation routine (e.g. CreatePerfectHashImplChm01).
     //
 
+    PGUARDED_LIST FinishedWorkList;
     TP_CALLBACK_ENVIRON FinishedCallbackEnv;
-    SLIST_HEADER FinishedWorkListHead;
     PTP_POOL FinishedThreadpool;
     PTP_WORK FinishedWork;
 
@@ -506,6 +506,46 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 
 #define ReleasePerfectHashContextLockExclusive(Context) \
     ReleaseSRWLockExclusive(&Context->Lock)
+
+//
+// Define helper macros for appending items to the tail of a guarded list.
+//
+
+#define InsertTailMainWork(Context, ListEntry) \
+    Context->MainWorkList->Vtbl->InsertTail(   \
+        Context->MainWorkList,                 \
+        ListEntry                              \
+    )
+
+#define RemoveHeadMainWork(Context, ListEntry) \
+    Context->MainWorkList->Vtbl->RemoveHeadEx( \
+        Context->MainWorkList,                 \
+        ListEntry                              \
+    )
+
+#define InsertTailFileWork(Context, ListEntry) \
+    Context->FileWorkList->Vtbl->InsertTail(   \
+        Context->FileWorkList,                 \
+        ListEntry                              \
+    )
+
+#define RemoveHeadFileWork(Context, ListEntry) \
+    Context->FileWorkList->Vtbl->RemoveHeadEx( \
+        Context->FileWorkList,                 \
+        ListEntry                              \
+    )
+
+#define InsertTailFinishedWork(Context, ListEntry) \
+    Context->FinishedWorkList->Vtbl->InsertTail(   \
+        Context->FinishedWorkList,                 \
+        ListEntry                                  \
+    )
+
+#define RemoveHeadFinishedWork(Context, ListEntry) \
+    Context->FinishedWorkList->Vtbl->RemoveHeadEx( \
+        Context->FinishedWorkList,                 \
+        ListEntry                                  \
+    )
 
 //
 // Define helper macros for marking start/end points for the context's

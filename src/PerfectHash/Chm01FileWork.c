@@ -23,20 +23,36 @@ Abstract:
 #include "stdafx.h"
 
 //
-// Forward decls of routines in this file.
+// File work callback array.
+//
+
+#define EXPAND_AS_CALLBACK(Verb, VUpper, Name, Upper) Verb##Name##Chm01,
+
+FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
+    NULL,
+    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK)
+    SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK)
+    NULL
+};
+
+//
+// Forward decls of routines and arrays in this file.
 //
 
 PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 PREPARE_FILE PrepareFileChm01;
 SAVE_FILE SaveFileChm01;
 
+//
+// Begin method implementations.
+//
 
 _Use_decl_annotations_
 VOID
 FileWorkCallbackChm01(
     PTP_CALLBACK_INSTANCE Instance,
     PPERFECT_HASH_CONTEXT Context,
-    PSLIST_ENTRY ListEntry
+    PLIST_ENTRY ListEntry
     )
 /*++
 
@@ -51,8 +67,8 @@ Arguments:
 
     Context - Supplies a pointer to the active context for the graph solving.
 
-    ListEntry - Supplies a pointer to the list entry that was popped off the
-        context's file work interlocked singly-linked list head.
+    ListEntry - Supplies a pointer to the list entry that was removed from the
+        context's file work list head.
 
 Return Value:
 
@@ -61,12 +77,17 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    ULONG FileIndex;
+    ULONG EventIndex;
+    ULONG DependentEventIndex;
     HRESULT Result = S_OK;
     PGRAPH_INFO Info;
+    FILE_WORK_ID FileWorkId;
     PFILE_WORK_ITEM Item;
     PFILE_WORK_CALLBACK_IMPL Impl = NULL;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_KEYS Keys;
+    HANDLE Event;
     HANDLE DependentEvent = NULL;
     PPERFECT_HASH_PATH Path = NULL;
     PTABLE_INFO_ON_DISK TableInfo;
@@ -88,95 +109,136 @@ Return Value:
 
     Item = CONTAINING_RECORD(ListEntry, FILE_WORK_ITEM, ListEntry);
 
-    ASSERT(IsValidFileWorkId(Item->FileWorkId));
+    FileWorkId = Item->FileWorkId;
 
-    if (IsPrepareFileWorkId(Item->FileWorkId)) {
+    ASSERT(IsValidFileWorkId(FileWorkId));
 
-        PCUNICODE_STRING NewBaseName = NULL;
-        PCUNICODE_STRING NewExtension = NULL;
-        PCUNICODE_STRING NewStreamName = NULL;
-        PCUNICODE_STRING AdditionalSuffix = NULL;
-        PCUNICODE_STRING NewDirectory;
+    EventIndex = FileWorkIdToEventIndex(FileWorkId);
+    Event = *(&Context->FirstPreparedEvent + EventIndex);
+
+    FileIndex = FileWorkIdToFileIndex(FileWorkId);
+    File = &Table->FirstFile + FileIndex;
+
+    Impl = FileCallbacks[FileWorkId];
+
+    if (IsPrepareFileWorkId(FileWorkId)) {
+
+        PCEOF_INIT Eof;
         LARGE_INTEGER EndOfFile;
-        ULARGE_INTEGER NumTableElements;
-        SYSTEM_INFO SystemInfo;
+        ULARGE_INTEGER NumberOfTableElements;
+        PCUNICODE_STRING NewExtension;
+        PCUNICODE_STRING NewDirectory;
+        PCUNICODE_STRING NewStreamName = NULL;
+        PCUNICODE_STRING AdditionalSuffix;
 
-        GetSystemInfo(&SystemInfo);
-        EndOfFile.QuadPart = SystemInfo.dwAllocationGranularity;
-        NumTableElements.QuadPart = TableInfo->NumberOfTableElements.QuadPart;
+        //
+        // All output files are rooted within in the table's output directory.
+        //
+
         NewDirectory = &Table->OutputDirectory->Path->FullPath;
 
-        switch (Item->FileWorkId) {
+        //
+        // Initialize variables specific to the file work ID.
+        //
 
-            case FileWorkPrepareTableFileId:
-                File = &Table->TableFile;
-                NewExtension = &TableExtension;
+        NewExtension = FileWorkItemExtensions[FileWorkId];
+        AdditionalSuffix = FileWorkItemSuffixes[FileWorkId];
+
+        NewStreamName = FileWorkItemStreamNames[FileWorkId];
+
+        if (NewStreamName) {
+
+
+            //
+            // Streams don't need more than one prepare call, as their path
+            // hangs off their owning file's path (and thus, will automatically
+            // inherit its scheduled rename), and their size never changes.  If
+            // *File is non-NULL, it means the stream has already been prepared,
+            // in which case, we can jump straight to the end.
+            //
+
+            if (*File) {
+                goto End;
+            }
+
+            //
+            // Streams are dependent upon their "owning" file, which always
+            // reside before them.
+            //
+
+            DependentEvent = *(&Context->FirstPreparedEvent + (EventIndex - 1));
+        }
+
+        NumberOfTableElements.QuadPart = (
+            TableInfo->NumberOfTableElements.QuadPart
+        );
+
+        //
+        // Default size for end-of-file is the system allocation granularity.
+        //
+
+        EndOfFile.QuadPart = Context->SystemAllocationGranularity;
+
+        //
+        // Initialize the end-of-file based on the relevant file work ID's
+        // EOF_INIT structure.
+        //
+
+        Eof = &EofInits[FileWorkId];
+
+        switch (Eof->Type) {
+
+            case EofInitTypeDefault:
+                break;
+
+            case EofInitTypeZero:
+                EndOfFile.QuadPart = 1;
+                break;
+
+            case EofInitTypeAssignedSize:
                 EndOfFile.QuadPart = Info->AssignedSizeInBytes;
                 break;
 
-            case FileWorkPrepareTableInfoStreamId:
-                File = &Table->TableInfoStream;
-
-                if (*File) {
-
-                    //
-                    // :Info streams don't need more than one prepare call, as
-                    // their path hangs off the main table path (and thus, will
-                    // automatically inherit its scheduled rename), and their
-                    // size never changes.
-                    //
-
-                    goto End;
-                }
-
-                NewExtension = &TableExtension;
-                NewStreamName = &TableInfoStreamName;
-                DependentEvent = Context->PreparedTableFileEvent;
-                EndOfFile.QuadPart = sizeof(GRAPH_INFO_ON_DISK);
+            case EofInitTypeFixed:
+                EndOfFile.QuadPart = Eof->FixedValue;
                 break;
 
-            case FileWorkPrepareCHeaderFileId:
-                File = &Table->CHeaderFile;
-                NewExtension = &CHeaderExtension;
-                Impl = PrepareCHeaderFileChm01;
+            case EofInitTypeNumberOfKeysMultiplier:
+                EndOfFile.QuadPart += (
+                    (LONGLONG)Keys->NumberOfElements.QuadPart *
+                    Eof->Multiplier
+                );
                 break;
 
-            case FileWorkPrepareCSourceFileId:
-                File = &Table->CSourceFile;
-                NewExtension = &CSourceExtension;
-                Impl = PrepareCSourceFileChm01;
+            case EofInitTypeNumberOfTableElementsMultiplier:
+                EndOfFile.QuadPart += (
+                    NumberOfTableElements.QuadPart *
+                    Eof->Multiplier
+                );
                 break;
 
-            case FileWorkPrepareCSourceKeysFileId:
-                File = &Table->CSourceKeysFile;
-                NewExtension = &CSourceExtension;
-                AdditionalSuffix = &CSourceKeysSuffix;
-                EndOfFile.QuadPart += Keys->NumberOfElements.QuadPart * 16;
-                Impl = PrepareCSourceKeysFileChm01;
+            case EofInitTypeNumberOfPages:
+                EndOfFile.QuadPart = (
+                    (ULONG_PTR)PAGE_SIZE *
+                    (ULONG_PTR)Eof->NumberOfPages
+                );
                 break;
 
-            case FileWorkPrepareCSourceTableDataFileId:
-                File = &Table->CSourceTableDataFile;
-                NewExtension = &CSourceExtension;
-                AdditionalSuffix = &CSourceTableDataSuffix;
-                EndOfFile.QuadPart += NumTableElements.QuadPart * 16;
-                break;
-
+            case EofInitTypeNull:
+            case EofInitTypeInvalid:
             default:
-                ASSERT(FALSE);
-                Result = PH_E_INVALID_FILE_WORK_ID;
-                PH_ERROR(FileWorkCallbackChm01, Result);
-                goto End;
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+                return;
         }
 
         Result = PerfectHashTableCreatePath(Table,
                                             Table->Keys->File->Path,
-                                            &NumTableElements,
+                                            &NumberOfTableElements,
                                             Table->AlgorithmId,
                                             Table->MaskFunctionId,
                                             Table->HashFunctionId,
                                             NewDirectory,
-                                            NewBaseName,
+                                            NULL, // NewBaseName
                                             AdditionalSuffix,
                                             NewExtension,
                                             NewStreamName,
@@ -203,55 +265,18 @@ Return Value:
 
         ULONG WaitResult;
 
-        if (!IsSaveFileWorkId(Item->FileWorkId)) {
+        if (!IsSaveFileWorkId(FileWorkId)) {
             ASSERT(FALSE);
             Result = PH_E_INVARIANT_CHECK_FAILED;
             goto End;
         }
 
-        switch (Item->FileWorkId) {
+        //
+        // All save events are dependent on their previous prepare events.
+        //
 
-            case FileWorkSaveTableFileId:
-                Impl = SaveTableFileChm01;
-                File = &Table->TableFile;
-                DependentEvent = Context->PreparedTableFileEvent;
-                break;
-
-            case FileWorkSaveTableInfoStreamId:
-                Impl = SaveTableInfoStreamChm01;
-                File = &Table->TableInfoStream;
-                DependentEvent = Context->PreparedTableInfoStreamEvent;
-                break;
-
-            case FileWorkSaveCHeaderFileId:
-                Impl = SaveCHeaderFileChm01;
-                File = &Table->CHeaderFile;
-                DependentEvent = Context->PreparedCHeaderFileEvent;
-                break;
-
-            case FileWorkSaveCSourceFileId:
-                File = &Table->CSourceFile;
-                DependentEvent = Context->PreparedCSourceFileEvent;
-                break;
-
-            case FileWorkSaveCSourceKeysFileId:
-                File = &Table->CSourceKeysFile;
-                DependentEvent = Context->PreparedCSourceKeysFileEvent;
-                break;
-
-            case FileWorkSaveCSourceTableDataFileId:
-                Impl = SaveCSourceTableDataFileChm01;
-                File = &Table->CSourceTableDataFile;
-                DependentEvent = Context->PreparedCSourceTableDataFileEvent;
-                break;
-
-            default:
-                PH_RAISE(PH_E_UNREACHABLE_CODE);
-                break;
-        }
-
-        ASSERT(File);
-        ASSERT(DependentEvent);
+        DependentEventIndex = FileWorkIdToDependentEventIndex(FileWorkId);
+        DependentEvent = *(&Context->FirstPreparedEvent + DependentEventIndex);
 
         WaitResult = WaitForSingleObject(DependentEvent, INFINITE);
         if (WaitResult != WAIT_OBJECT_0) {
@@ -315,7 +340,7 @@ End:
     // returns, then return.
     //
 
-    SetEventWhenCallbackReturns(Instance, Item->Event);
+    SetEventWhenCallbackReturns(Instance, Event);
 
     return;
 }

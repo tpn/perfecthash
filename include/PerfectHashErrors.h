@@ -1487,3 +1487,30 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_SAVE_VCPROPS_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004029FL)
 
+//
+// MessageId: PH_E_CONTEXT_MAIN_WORK_LIST_EMPTY
+//
+// MessageText:
+//
+// SubmitThreadpoolWork() was called against the main work pool, but no corresponding work item was present on the main work list.
+//
+#define PH_E_CONTEXT_MAIN_WORK_LIST_EMPTY ((HRESULT)0xE0040300L)
+
+//
+// MessageId: PH_E_CONTEXT_FILE_WORK_LIST_EMPTY
+//
+// MessageText:
+//
+// SubmitThreadpoolWork() was called against the file work pool, but no corresponding work item was present on the file work list.
+//
+#define PH_E_CONTEXT_FILE_WORK_LIST_EMPTY ((HRESULT)0xE0040301L)
+
+//
+// MessageId: PH_E_GUARDED_LIST_EMPTY
+//
+// MessageText:
+//
+// The guarded list is empty.
+//
+#define PH_E_GUARDED_LIST_EMPTY          ((HRESULT)0xE0040302L)
+

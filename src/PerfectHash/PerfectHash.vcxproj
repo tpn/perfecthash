@@ -86,6 +86,7 @@
     <ClInclude Include="..\..\include\PerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHashErrors.h" />
     <ClInclude Include="Chm01.h" />
+    <ClInclude Include="Chm01FileWork.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Graph.h" />
     <ClInclude Include="GuardedList.h" />

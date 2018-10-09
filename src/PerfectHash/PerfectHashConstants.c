@@ -297,23 +297,175 @@ const BYTE NumberOfContextObjectPrefixes = ARRAYSIZE(ContextObjectPrefixes);
 // Miscellaneous string constants.
 //
 
-const UNICODE_STRING No = RTL_CONSTANT_STRING(L"No.\n");
-const UNICODE_STRING Yes = RTL_CONSTANT_STRING(L"Yes.\n");
-const UNICODE_STRING KeysExtension = RTL_CONSTANT_STRING(L"keys");
-const UNICODE_STRING CHeaderExtension = RTL_CONSTANT_STRING(L"h");
-const UNICODE_STRING TableExtension = RTL_CONSTANT_STRING(L"pht1");
-const UNICODE_STRING TableInfoStreamName = RTL_CONSTANT_STRING(L"Info");
-const UNICODE_STRING DotKeysSuffix = RTL_CONSTANT_STRING(L".keys");
-const UNICODE_STRING DotTableSuffix = RTL_CONSTANT_STRING(L".pht1");
-const UNICODE_STRING DotCHeaderSuffix = RTL_CONSTANT_STRING(L".h");
-const UNICODE_STRING DotCSourceSuffix = RTL_CONSTANT_STRING(L".c");
-const UNICODE_STRING KeysWildcardSuffix = RTL_CONSTANT_STRING(L"*.keys");
-const UNICODE_STRING CSourceExtension = RTL_CONSTANT_STRING(L"c");
-const UNICODE_STRING CSourceKeysSuffix = RTL_CONSTANT_STRING(L"Keys");
-const UNICODE_STRING CSourceTableDataSuffix =
-    RTL_CONSTANT_STRING(L"TableData");
-const UNICODE_STRING CSourceTestFileSuffix = RTL_CONSTANT_STRING(L"Test");
+#define RCS RTL_CONSTANT_STRING
 
+const UNICODE_STRING No = RCS(L"No.\n");
+const UNICODE_STRING Yes = RCS(L"Yes.\n");
+const UNICODE_STRING KeysExtension = RCS(L"keys");
+const UNICODE_STRING DotKeysSuffix = RCS(L".keys");
+const UNICODE_STRING DotTableSuffix = RCS(L".pht1");
+const UNICODE_STRING DotCHeaderSuffix = RCS(L".h");
+const UNICODE_STRING DotCSourceSuffix = RCS(L".c");
+const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
+
+//
+// Stream names.
+//
+
+const UNICODE_STRING TableInfoStreamName = RCS(L"Info");
+
+//
+// Extensions.
+//
+
+const UNICODE_STRING TextFileExtension = RCS(L"txt");
+const UNICODE_STRING CSourceFileExtension = RCS(L"c");
+const UNICODE_STRING CHeaderFileExtension = RCS(L"h");
+const UNICODE_STRING TableFileExtension = RCS(L"pht1");
+const UNICODE_STRING VCPropsExtension = RCS(L"props");
+const UNICODE_STRING VCProjectExtension = RCS(L"vcxproj");
+
+#define VERIFY_FILE_WORK_ARRAY_SIZE(Name) \
+    C_ASSERT(ARRAYSIZE(Name) == NUMBER_OF_FILES + 2)
+
+const PCUNICODE_STRING FileWorkItemExtensions[] = {
+    NULL,
+
+    &TableFileExtension,            // TableFile
+    &TableFileExtension,            // TableInfoStream
+    &CHeaderFileExtension,          // CHeaderFile
+    &CSourceFileExtension,          // CSourceFile
+    &CSourceFileExtension,          // CSourceKeysFile
+    &CSourceFileExtension,          // CSourceTableDataFile
+    &VCProjectExtension,            // VCProjectDllFile
+    &CSourceFileExtension,          // CSourceSupportFile
+    &CSourceFileExtension,          // CSourceTestFile
+    &CSourceFileExtension,          // CSourceTestExeFile
+    &VCProjectExtension,            // VCProjectTestExeFile
+    &CSourceFileExtension,          // CSourceBenchmarkFullFile
+    &CSourceFileExtension,          // CSourceBenchmarkFullExeFile
+    &VCProjectExtension,            // VCProjectBenchmarkFullExeFile
+    &CSourceFileExtension,          // CSourceBenchmarkIndexFile
+    &CSourceFileExtension,          // CSourceBenchmarkIndexExeFile
+    &VCProjectExtension,            // VCProjectBenchmarkIndexExeFile
+    &CHeaderFileExtension,          // CHeaderCompiledPerfectHashFile
+    &VCPropsExtension,              // VCPropsCompiledPerfectHashFile
+    &TextFileExtension,             // TableStatsTextFile
+
+    NULL,
+};
+VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemExtensions);
+
+//
+// Suffixes.
+//
+
+const UNICODE_STRING CSourceKeysFileSuffix = RCS(L"Keys");
+const UNICODE_STRING CSourceSupportFileSuffix = RCS(L"Support");
+const UNICODE_STRING CSourceTableDataFileSuffix = RCS(L"TableData");
+const UNICODE_STRING CSourceTestFileSuffix = RCS(L"Test");
+const UNICODE_STRING CSourceTestExeFileSuffix = RCS(L"TestExe");
+const UNICODE_STRING CSourceBenchmarkFullFileSuffix = RCS(L"BenchmarkFull");
+const UNICODE_STRING CSourceBenchmarkFullExeFileSuffix = RCS(L"BenchmarkFullExe");
+const UNICODE_STRING CSourceBenchmarkIndexFileSuffix = RCS(L"BenchmarkIndex");
+const UNICODE_STRING CSourceBenchmarkIndexExeFileSuffix = RCS(L"BenchmarkIndexExe");
+const UNICODE_STRING VCProjectDllFileSuffix = RCS(L"Dll");
+const UNICODE_STRING VCProjectTestExeFileSuffix = RCS(L"TestExe");
+const UNICODE_STRING VCProjectBenchmarkFullExeFileSuffix = RCS(L"BenchmarkFullExe");
+const UNICODE_STRING VCProjectBenchmarkIndexExeFileSuffix = RCS(L"BenchmarkIndexExe");
+const UNICODE_STRING CHeaderCompiledPerfectHashFileSuffix = RCS(L"CompiledPerfectHash");
+const UNICODE_STRING VCPropsCompiledPerfectHashFileSuffix = RCS(L"CompiledPerfectHash");
+const UNICODE_STRING TableStatsTextFileSuffix = RCS(L"Stats");
+
+const PCUNICODE_STRING FileWorkItemSuffixes[] = {
+    NULL,
+
+    NULL,                                   // TableFile
+    NULL,                                   // TableInfoStream
+    NULL,                                   // CHeaderFile
+    NULL,                                   // CSourceFile
+    &CSourceKeysFileSuffix,                 // CSourceKeysFile
+    &CSourceTableDataFileSuffix,            // CSourceTableDataFile
+    &VCProjectDllFileSuffix,                // VCProjectDllFile
+    &CSourceSupportFileSuffix,              // CSourceSupportFile
+    &CSourceTestFileSuffix,                 // CSourceTestFile
+    &CSourceTestExeFileSuffix,              // CSourceTestExeFile
+    &VCProjectTestExeFileSuffix,            // VCProjectTestExeFile
+    &CSourceBenchmarkFullFileSuffix,        // CSourceBenchmarkFullFile
+    &CSourceBenchmarkFullExeFileSuffix,     // CSourceBenchmarkFullExeFile
+    &VCProjectBenchmarkFullExeFileSuffix,   // VCProjectBenchmarkFullExeFile
+    &CSourceBenchmarkIndexFileSuffix,       // CSourceBenchmarkIndexFile
+    &CSourceBenchmarkIndexExeFileSuffix,    // CSourceBenchmarkIndexExeFile
+    &VCProjectBenchmarkIndexExeFileSuffix,  // VCProjectBenchmarkIndexExeFile
+    &CHeaderCompiledPerfectHashFileSuffix,  // CHeaderCompiledPerfectHashFile
+    &VCPropsCompiledPerfectHashFileSuffix,  // VCPropsCompiledPerfectHashFile
+    &TableStatsTextFileSuffix,              // TableStatsTextFile
+
+    NULL,
+};
+VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemSuffixes);
+
+//
+// Stream names.
+//
+
+const PCUNICODE_STRING FileWorkItemStreamNames[] = {
+    NULL,
+
+    NULL,                           // TableFile
+    &TableInfoStreamName,           // TableInfoStream
+    NULL,                           // CHeaderFile
+    NULL,                           // CSourceFile
+    NULL,                           // CSourceKeysFile
+    NULL,                           // CSourceTableDataFile
+    NULL,                           // VCProjectDllFile
+    NULL,                           // CSourceSupportFile
+    NULL,                           // CSourceTestFile
+    NULL,                           // CSourceTestExeFile
+    NULL,                           // VCProjectTestExeFile
+    NULL,                           // CSourceBenchmarkFullFile
+    NULL,                           // CSourceBenchmarkFullExeFile
+    NULL,                           // VCProjectBenchmarkFullExeFile
+    NULL,                           // CSourceBenchmarkIndexFile
+    NULL,                           // CSourceBenchmarkIndexExeFile
+    NULL,                           // VCProjectBenchmarkIndexExeFile
+    NULL,                           // CHeaderCompiledPerfectHashFile
+    NULL,                           // VCPropsCompiledPerfectHashFile
+    NULL,                           // TableStatsTextFile
+
+    NULL,
+};
+VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemStreamNames);
+
+//
+// End-of-file initializers.
+//
+
+const EOF_INIT EofInits[] = {
+    { EofInitTypeNull, },           // Null
+    { EofInitTypeAssignedSize, },   // TableFile
+    { EofInitTypeFixed, sizeof(GRAPH_INFO_ON_DISK) },   // TableInfoStream
+    { EofInitTypeDefault, },        // CHeaderFile
+    { EofInitTypeDefault, },        // CSourceFile
+    { EofInitTypeNumberOfKeysMultiplier, 16 },          // CSourceKeysFile
+    { EofInitTypeNumberOfTableElementsMultiplier, 16 }, // CSourceTableDataFile
+    { EofInitTypeDefault, },        // VCProjectDllFile
+    { EofInitTypeZero, },           // CSourceSupportFile
+    { EofInitTypeZero, },           // CSourceTestFile
+    { EofInitTypeZero, },           // CSourceTestExeFile
+    { EofInitTypeZero, },           // VCProjectTestExeFile
+    { EofInitTypeZero, },           // CSourceBenchmarkFullFile
+    { EofInitTypeZero, },           // CSourceBenchmarkFullExeFile
+    { EofInitTypeZero, },           // VCProjectBenchmarkFullExeFile
+    { EofInitTypeZero, },           // CSourceBenchmarkIndexFile
+    { EofInitTypeZero, },           // CSourceBenchmarkIndexExeFile
+    { EofInitTypeZero, },           // VCProjectBenchmarkIndexExeFile
+    { EofInitTypeZero, },           // CHeaderCompiledPerfectHashFile
+    { EofInitTypeZero, },           // VCPropsCompiledPerfectHashFile
+    { EofInitTypeZero, },           // TableStatsTextFile
+    { EofInitTypeInvalid, },        // Invalid
+};
+VERIFY_FILE_WORK_ARRAY_SIZE(EofInits);
 
 //
 // Placeholders for values we patch in the FastIndexEx() instruction streams.
@@ -703,8 +855,9 @@ const GUARDED_LIST_VTBL GuardedListInterface = {
     &GuardedListRemoveTail,
     &GuardedListRemoveEntry,
     &GuardedListRemoveHeadEx,
+    &GuardedListReset,
 };
-VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
+VERIFY_VTBL_SIZE(GUARDED_LIST, 11);
 
 //
 // TSX versions of the GuardedList interface.  See dllmain.c for more info.
@@ -726,8 +879,9 @@ const GUARDED_LIST_VTBL GuardedListTsxInterface = {
     &GuardedListRemoveTailTsx,
     &GuardedListRemoveEntryTsx,
     &GuardedListRemoveHeadExTsx,
+    &GuardedListReset,
 };
-VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
+VERIFY_VTBL_SIZE(GUARDED_LIST, 11);
 
 //
 // Interface array.

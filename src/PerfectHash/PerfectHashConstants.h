@@ -241,16 +241,20 @@ GetNumberOfContextEvents(
 extern const UNICODE_STRING No;
 extern const UNICODE_STRING Yes;
 extern const UNICODE_STRING KeysExtension;
-extern const UNICODE_STRING TableExtension;
-extern const UNICODE_STRING TableInfoStreamName;
 extern const UNICODE_STRING DotKeysSuffix;
 extern const UNICODE_STRING DotTableSuffix;
 extern const UNICODE_STRING DotHeaderSuffix;
 extern const UNICODE_STRING KeysWildcardSuffix;
-extern const UNICODE_STRING CHeaderExtension;
-extern const UNICODE_STRING CSourceExtension;
-extern const UNICODE_STRING CSourceKeysSuffix;
-extern const UNICODE_STRING CSourceTableDataSuffix;
+extern const UNICODE_STRING TableInfoStreamName;
+
+//
+// Arrays indexed by the FILE_WORK_ID enum.
+//
+
+extern const PCUNICODE_STRING FileWorkItemExtensions[];
+extern const PCUNICODE_STRING FileWorkItemSuffixes[];
+extern const PCUNICODE_STRING FileWorkItemStreamNames[];
+extern const EOF_INIT EofInits[];
 
 //
 // Declare placeholders for values we patch in the FastIndexEx() instruction

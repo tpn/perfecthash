@@ -293,7 +293,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // List entry used to push the graph onto the context's work list.
     //
 
-    SLIST_ENTRY ListEntry;
+    LIST_ENTRY ListEntry;
 
     //
     // Edge and vertex masks that can be used when non-modulus masking is in

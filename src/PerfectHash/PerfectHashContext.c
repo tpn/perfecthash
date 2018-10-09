@@ -108,6 +108,7 @@ Return Value:
     PUNICODE_STRING Name;
     PPUNICODE_STRING Names;
     PPUNICODE_STRING Prefixes;
+    SYSTEM_INFO SystemInfo;
 
     //
     // Validate arguments.
@@ -140,11 +141,49 @@ Return Value:
     }
 
     //
+    // Create guarded lists.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_GUARDED_LIST,
+                                           &Context->MainWorkList);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_GUARDED_LIST,
+                                           &Context->FileWorkList);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_GUARDED_LIST,
+                                           &Context->FinishedWorkList);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
     // Initialize aliases.
     //
 
     Rtl = Context->Rtl;
     Allocator = Context->Allocator;
+
+    //
+    // Initialize system allocation granularity.
+    //
+
+    GetSystemInfo(&SystemInfo);
+    Context->SystemAllocationGranularity = SystemInfo.dwAllocationGranularity;
 
     //
     // Calculate the size required by the array of UNICODE_STRING structures
@@ -370,19 +409,8 @@ Return Value:
     }
 
     //
-    // Initialize the main work list head.
-    //
-
-    InitializeSListHead(&Context->MainWorkListHead);
-
-    //
-    // Create the File threadpool structures.  We currently use the default
-    // number of system threads for this threadpool.  We don't have to clamp
-    // it at the moment as we don't bulk-enqueue work items (that can cause
-    // the threadpool machinery to think more threads need to be created).
-    //
-    // That being said, it can be useful during debugging to clamp to a single
-    // thread, hence the #if 0 block.
+    // Create the File threadpool structures.  Automatically clamp the min/max
+    // threads for this threadpool to the number of system processors.
     //
 
     Threadpool = Context->FileThreadpool = CreateThreadpool(NULL);
@@ -391,9 +419,14 @@ Return Value:
         goto Error;
     }
 
-#if 0
-    SetThreadpoolThreadMaximum(Context->FileThreadpool, 2);
-#endif
+    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
+
+    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
+        SYS_ERROR(SetThreadpoolThreadMinimum);
+        goto Error;
+    }
+
+    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
 
     //
     // Initialize the File threadpool environment and associate it with the
@@ -432,12 +465,6 @@ Return Value:
     }
 
     //
-    // Initialize the file work list head.
-    //
-
-    InitializeSListHead(&Context->FileWorkListHead);
-
-    //
     // Create the Finished and Error threadpools and associated resources.
     // These are slightly easier as we only have 1 thread maximum for each
     // pool and no cleanup group is necessary.
@@ -463,12 +490,6 @@ Return Value:
         SYS_ERROR(CreateThreadpoolWork);
         goto Error;
     }
-
-    //
-    // Initialize the finished list head.
-    //
-
-    InitializeSListHead(&Context->FinishedWorkListHead);
 
     //
     // Create the Error threadpool.
@@ -642,6 +663,9 @@ Return Value:
                                      &Context->ObjectNames);
     }
 
+    RELEASE(Context->MainWorkList);
+    RELEASE(Context->FileWorkList);
+    RELEASE(Context->FinishedWorkList);
     RELEASE(Context->BaseOutputDirectory);
     RELEASE(Context->Allocator);
     RELEASE(Context->Rtl);
@@ -714,6 +738,10 @@ Return Value:
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;
 
+    Context->MainWorkList->Vtbl->Reset(Context->MainWorkList);
+    Context->FileWorkList->Vtbl->Reset(Context->FileWorkList);
+    Context->FinishedWorkList->Vtbl->Reset(Context->FinishedWorkList);
+
     return S_OK;
 }
 
@@ -733,12 +761,12 @@ MainWorkCallback(
 Routine Description:
 
     This is the callback routine for the Main threadpool's work.  It will be
-    invoked by a thread in the Main group whenever SubmitThreadpoolWork()
-    is called against Context->MainWork.  The caller is responsible for pushing
-    a work item to Context->MainWorkListHead prior to submission.
+    invoked by a thread in the Main group whenever SubmitThreadpoolWork() is
+    called against Context->MainWork.  The caller is responsible for appending
+    a work item to Context->MainWorkList prior to submission.
 
-    This routine pops an item off Context->MainWorkListHead, then calls the
-    worker routine that was registered with the context.
+    This routine removes the head item from the Context->MainWorkList, then
+    calls the worker routine that was registered with the context.
 
 Arguments:
 
@@ -755,32 +783,36 @@ Return Value:
 
 --*/
 {
-    PSLIST_ENTRY ListEntry;
+    HRESULT Result;
+    PGUARDED_LIST List;
+    PLIST_ENTRY ListEntry = NULL;
     PPERFECT_HASH_CONTEXT Context;
 
     UNREFERENCED_PARAMETER(Work);
 
     if (!ARGUMENT_PRESENT(Ctx)) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
         return;
     }
 
     //
-    // Cast the Ctx variable into a suitable type, then pop a list entry off
-    // the main work list head.
+    // Cast the Ctx variable into a suitable type, then remove the head item
+    // off the list.
     //
 
     Context = (PPERFECT_HASH_CONTEXT)Ctx;
-    ListEntry = InterlockedPopEntrySList(&Context->MainWorkListHead);
+    List = Context->MainWorkList;
 
-    if (!ListEntry) {
+    if (!RemoveHeadMainWork(Context, &ListEntry)) {
 
         //
         // A spurious work item was requested but no corresponding element was
         // pushed to the list.  This typically indicates API misuse.  We could
-        // terminate here, however, that's pretty drastic, so let's just ignore
-        // it.
+        // terminate here, however, that's pretty drastic, so let's just log it.
         //
 
+        Result = PH_E_CONTEXT_MAIN_WORK_LIST_EMPTY;
+        PH_ERROR(PerfectHashContextMainWorkCallback, Result);
         return;
     }
 
@@ -806,11 +838,11 @@ Routine Description:
 
     This is the callback routine for the Main threadpool's file work.  It will
     be invoked by a thread in the Main group whenever SubmitThreadpoolWork()
-    is called against Context->FileWork.  The caller is responsible for pushing
-    a work item to Context->FileWorkListHead prior to submission.
+    is called against Context->FileWork.  The caller is responsible for
+    appending a work item to Context->FileWorkList prior to submission.
 
-    This routine pops an item off Context->FileWorkListHead, then calls the
-    worker routine that was registered with the context.
+    This routine removes the head item off Context->FileWorkList, then calls
+    the worker routine that was registered with the context.
 
 Arguments:
 
@@ -827,12 +859,15 @@ Return Value:
 
 --*/
 {
-    PSLIST_ENTRY ListEntry;
+    HRESULT Result;
+    PGUARDED_LIST List;
+    PLIST_ENTRY ListEntry = NULL;
     PPERFECT_HASH_CONTEXT Context;
 
     UNREFERENCED_PARAMETER(Work);
 
     if (!ARGUMENT_PRESENT(Ctx)) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
         return;
     }
 
@@ -842,17 +877,11 @@ Return Value:
     //
 
     Context = (PPERFECT_HASH_CONTEXT)Ctx;
-    ListEntry = InterlockedPopEntrySList(&Context->FileWorkListHead);
+    List = Context->FileWorkList;
 
-    if (!ListEntry) {
-
-        //
-        // A spurious work item was requested but no corresponding element was
-        // pushed to the list.  This typically indicates API misuse.  We could
-        // terminate here, however, that's pretty drastic, so let's just ignore
-        // it.
-        //
-
+    if (!RemoveHeadFileWork(Context, &ListEntry)) {
+        Result = PH_E_CONTEXT_FILE_WORK_LIST_EMPTY;
+        PH_ERROR(PerfectHashContextFileWorkCallback, Result);
         return;
     }
 
