@@ -28,7 +28,7 @@ Abstract:
     ENTRY(Verb, VUpper, TableInfoStream,                TABLE_INFO_STREAM)                   \
     ENTRY(Verb, VUpper, CHeaderFile,                    C_HEADER_FILE)                       \
     ENTRY(Verb, VUpper, CSourceFile,                    C_SOURCE_FILE)                       \
-    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                       \
+    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                \
     ENTRY(Verb, VUpper, CSourceStdAfxFile,              C_SOURCE_STDAFX_FILE)                \
     ENTRY(Verb, VUpper, CSourceKeysFile,                C_SOURCE_KEYS_FILE)                  \
     ENTRY(Verb, VUpper, CSourceTableDataFile,           C_SOURCE_TABLE_DATA_FILE)            \
