@@ -247,12 +247,18 @@ extern const UNICODE_STRING DotHeaderSuffix;
 extern const UNICODE_STRING KeysWildcardSuffix;
 extern const UNICODE_STRING TableInfoStreamName;
 
+extern const STRING DotExeSuffixA;
+extern const STRING DotDllSuffixA;
+extern const STRING DotLibSuffixA;
+extern const STRING DynamicLibraryConfigurationTypeA;
+extern const STRING ApplicationConfigurationTypeA;
+
 //
 // Arrays indexed by the FILE_WORK_ID enum.
 //
 
-extern const PCUNICODE_STRING FileWorkItemExtensions[];
 extern const PCUNICODE_STRING FileWorkItemSuffixes[];
+extern const PCUNICODE_STRING FileWorkItemExtensions[];
 extern const PCUNICODE_STRING FileWorkItemStreamNames[];
 extern const EOF_INIT EofInits[];
 

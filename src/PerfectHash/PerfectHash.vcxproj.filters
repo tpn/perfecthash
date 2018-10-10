@@ -157,6 +157,21 @@
     <ClCompile Include="Security.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkVCProjectDllFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chunk.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCHeaderStdAfxFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCSourceStdAfxFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VCProjectFileChunks.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -235,6 +250,12 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Security.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Chunk.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VCProjectFileChunks.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

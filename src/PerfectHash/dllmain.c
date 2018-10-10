@@ -77,6 +77,30 @@ _DllMainCRTStartup(
         case DLL_PROCESS_ATTACH:
             __security_init_cookie();
             PerfectHashModule = Module;
+
+            IsTsxAvailable = TRUE;
+
+#ifdef _M_AMD64
+
+            TRY_TSX {
+
+                if (CanWeUseTsx()) {
+                    NOTHING;
+                }
+
+            } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION {
+                IsTsxAvailable = FALSE;
+            }
+
+            if (IsTsxAvailable) {
+                PERFECT_HASH_INTERFACE_ID Id;
+                Id = PerfectHashGuardedListInterfaceId;
+                ComponentInterfaces[Id] = &GuardedListTsxInterface;
+            }
+
+#endif
+
+#if 0
             IsTsxAvailable = FALSE;
 
 #ifdef _M_AMD64
@@ -94,6 +118,7 @@ _DllMainCRTStartup(
                 IsTsxAvailable = FALSE;
             }
 
+#endif
 #endif
             if (!PerfectHashTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;

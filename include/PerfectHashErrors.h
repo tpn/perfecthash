@@ -1514,3 +1514,57 @@ Abstract:
 //
 #define PH_E_GUARDED_LIST_EMPTY          ((HRESULT)0xE0040302L)
 
+//
+// MessageId: PH_E_INVALID_CHUNK_OP
+//
+// MessageText:
+//
+// Invalid chunk op.
+//
+#define PH_E_INVALID_CHUNK_OP            ((HRESULT)0xE0040303L)
+
+//
+// MessageId: PH_E_INVALID_CHUNK_STRING
+//
+// MessageText:
+//
+// Invalid chunk string.
+//
+#define PH_E_INVALID_CHUNK_STRING        ((HRESULT)0xE0040304L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_HEADER_STDAFX_FILE
+//
+// MessageText:
+//
+// Error preparing C header stdafx.h file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_HEADER_STDAFX_FILE ((HRESULT)0xE0040305L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_HEADER_STDAFX_FILE
+//
+// MessageText:
+//
+// Error saving C header stdafx.h file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_HEADER_STDAFX_FILE ((HRESULT)0xE0040306L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_STDAFX_FILE
+//
+// MessageText:
+//
+// Error preparing C source stdafx.c file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_STDAFX_FILE ((HRESULT)0xE0040307L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_STDAFX_FILE
+//
+// MessageText:
+//
+// Error saving C source stdafx.c file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_STDAFX_FILE ((HRESULT)0xE0040308L)
+

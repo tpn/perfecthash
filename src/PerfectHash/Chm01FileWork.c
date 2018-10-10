@@ -119,6 +119,8 @@ Return Value:
     FileIndex = FileWorkIdToFileIndex(FileWorkId);
     File = &Table->FirstFile + FileIndex;
 
+    Item->FilePointer = File;
+
     Impl = FileCallbacks[FileWorkId];
 
     if (IsPrepareFileWorkId(FileWorkId)) {
@@ -129,6 +131,7 @@ Return Value:
         PCUNICODE_STRING NewExtension;
         PCUNICODE_STRING NewDirectory;
         PCUNICODE_STRING NewStreamName = NULL;
+        PCUNICODE_STRING NewBaseName = NULL;
         PCUNICODE_STRING AdditionalSuffix;
 
         //
@@ -238,7 +241,7 @@ Return Value:
                                             Table->MaskFunctionId,
                                             Table->HashFunctionId,
                                             NewDirectory,
-                                            NULL, // NewBaseName
+                                            NewBaseName,
                                             AdditionalSuffix,
                                             NewExtension,
                                             NewStreamName,

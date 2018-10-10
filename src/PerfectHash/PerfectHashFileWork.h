@@ -28,6 +28,8 @@ Abstract:
     ENTRY(Verb, VUpper, TableInfoStream,                TABLE_INFO_STREAM)                   \
     ENTRY(Verb, VUpper, CHeaderFile,                    C_HEADER_FILE)                       \
     ENTRY(Verb, VUpper, CSourceFile,                    C_SOURCE_FILE)                       \
+    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                       \
+    ENTRY(Verb, VUpper, CSourceStdAfxFile,              C_SOURCE_STDAFX_FILE)                \
     ENTRY(Verb, VUpper, CSourceKeysFile,                C_SOURCE_KEYS_FILE)                  \
     ENTRY(Verb, VUpper, CSourceTableDataFile,           C_SOURCE_TABLE_DATA_FILE)            \
     ENTRY(Verb, VUpper, VCProjectDllFile,               VCPROJECT_DLL_FILE)                  \
@@ -41,8 +43,6 @@ Abstract:
     ENTRY(Verb, VUpper, CSourceBenchmarkIndexFile,      C_SOURCE_BENCHMARK_INDEX_FILE)       \
     ENTRY(Verb, VUpper, CSourceBenchmarkIndexExeFile,   C_SOURCE_BENCHMARK_INDEX_EXE_FILE)   \
     ENTRY(Verb, VUpper, VCProjectBenchmarkIndexExeFile, VCPROJECT_BENCHMARK_INDEX_EXE_FILE)  \
-    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE) \
-    ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)  \
     LAST_ENTRY(Verb, VUpper, TableStatsTextFile,        TABLE_STATS_TEXT_FILE)
 
 #define PREPARE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
@@ -309,6 +309,8 @@ typedef struct _FILE_WORK_ITEM {
     volatile LONG LastError;
 
     volatile HRESULT LastResult;
+
+    struct _PERFECT_HASH_FILE **FilePointer;
 
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;

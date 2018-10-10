@@ -1467,6 +1467,48 @@ IsValidOrEmptyUnicodeString(
 
 FORCEINLINE
 BOOLEAN
+IsValidString(
+    _In_ PCSTRING String
+    )
+{
+    return (
+        String != NULL &&
+        String->Buffer != NULL &&
+        String->Length >= 1 &&
+        String->MaximumLength >= String->Length
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+IsEmptyString(
+    _In_ PCSTRING String
+    )
+{
+    return (
+        String != NULL &&
+        String->Buffer == NULL &&
+        String->Length == 0 &&
+        String->MaximumLength == 0
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+IsValidOrEmptyString(
+    _In_ PCSTRING String
+    )
+{
+    return IsEmptyString(String) || (
+        String != NULL &&
+        String->Buffer != NULL &&
+        String->Length >= 1 &&
+        String->MaximumLength >= String->Length
+    );
+}
+
+FORCEINLINE
+BOOLEAN
 FindCharInUnicodeString(
     _In_ PCUNICODE_STRING String,
     _In_ WCHAR Char,

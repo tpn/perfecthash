@@ -56,6 +56,9 @@ Abstract:
 #include <Windows.h>
 #include <Strsafe.h>
 
+#include <sddl.h>
+#include <AclAPI.h>
+
 //
 // Include intrinsic headers if we're x64.
 //
@@ -87,6 +90,8 @@ Abstract:
 #include "Component.h"
 #include "Rtl.h"
 #include "RtlOutput.h"
+#include "Chunk.h"
+#include "Security.h"
 #include "GuardedList.h"
 #include "PerfectHashFileWork.h"
 #include "PerfectHashTls.h"
@@ -104,6 +109,7 @@ Abstract:
 #include "Graph.h"
 #include "Chm01.h"
 #include "Chm01FileWork.h"
+#include "VCProjectFileChunks.h"
 
 //
 // warning C4820: '<unnamed-tag>': '4' bytes padding added after

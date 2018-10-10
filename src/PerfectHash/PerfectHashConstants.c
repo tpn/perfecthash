@@ -308,6 +308,12 @@ const UNICODE_STRING DotCHeaderSuffix = RCS(L".h");
 const UNICODE_STRING DotCSourceSuffix = RCS(L".c");
 const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
 
+const STRING DotExeSuffixA = RCS(".exe");
+const STRING DotDllSuffixA = RCS(".dll");
+const STRING DotLibSuffixA = RCS(".lib");
+extern const STRING DynamicLibraryConfigurationTypeA = RCS("DynamicLibrary");
+extern const STRING ApplicationConfigurationTypeA = RCS("Application");
+
 //
 // Stream names.
 //
@@ -335,6 +341,8 @@ const PCUNICODE_STRING FileWorkItemExtensions[] = {
     &TableFileExtension,            // TableInfoStream
     &CHeaderFileExtension,          // CHeaderFile
     &CSourceFileExtension,          // CSourceFile
+    &CHeaderFileExtension,          // CHeaderStdAfxFile
+    &CSourceFileExtension,          // CSourceStdAfxFile
     &CSourceFileExtension,          // CSourceKeysFile
     &CSourceFileExtension,          // CSourceTableDataFile
     &VCProjectExtension,            // VCProjectDllFile
@@ -348,8 +356,6 @@ const PCUNICODE_STRING FileWorkItemExtensions[] = {
     &CSourceFileExtension,          // CSourceBenchmarkIndexFile
     &CSourceFileExtension,          // CSourceBenchmarkIndexExeFile
     &VCProjectExtension,            // VCProjectBenchmarkIndexExeFile
-    &CHeaderFileExtension,          // CHeaderCompiledPerfectHashFile
-    &VCPropsExtension,              // VCPropsCompiledPerfectHashFile
     &TextFileExtension,             // TableStatsTextFile
 
     NULL,
@@ -360,6 +366,8 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemExtensions);
 // Suffixes.
 //
 
+const UNICODE_STRING CHeaderStdAfxFileSuffix = RCS(L"StdAfx");
+const UNICODE_STRING CSourceStdAfxFileSuffix = RCS(L"StdAfx");
 const UNICODE_STRING CSourceKeysFileSuffix = RCS(L"Keys");
 const UNICODE_STRING CSourceSupportFileSuffix = RCS(L"Support");
 const UNICODE_STRING CSourceTableDataFileSuffix = RCS(L"TableData");
@@ -384,6 +392,8 @@ const PCUNICODE_STRING FileWorkItemSuffixes[] = {
     NULL,                                   // TableInfoStream
     NULL,                                   // CHeaderFile
     NULL,                                   // CSourceFile
+    &CHeaderStdAfxFileSuffix,               // CHeaderStdAfxFile
+    &CSourceStdAfxFileSuffix,               // CSourceStdAfxFile
     &CSourceKeysFileSuffix,                 // CSourceKeysFile
     &CSourceTableDataFileSuffix,            // CSourceTableDataFile
     &VCProjectDllFileSuffix,                // VCProjectDllFile
@@ -397,8 +407,6 @@ const PCUNICODE_STRING FileWorkItemSuffixes[] = {
     &CSourceBenchmarkIndexFileSuffix,       // CSourceBenchmarkIndexFile
     &CSourceBenchmarkIndexExeFileSuffix,    // CSourceBenchmarkIndexExeFile
     &VCProjectBenchmarkIndexExeFileSuffix,  // VCProjectBenchmarkIndexExeFile
-    &CHeaderCompiledPerfectHashFileSuffix,  // CHeaderCompiledPerfectHashFile
-    &VCPropsCompiledPerfectHashFileSuffix,  // VCPropsCompiledPerfectHashFile
     &TableStatsTextFileSuffix,              // TableStatsTextFile
 
     NULL,
@@ -416,6 +424,8 @@ const PCUNICODE_STRING FileWorkItemStreamNames[] = {
     &TableInfoStreamName,           // TableInfoStream
     NULL,                           // CHeaderFile
     NULL,                           // CSourceFile
+    NULL,                           // CHeaderStdAfxFile
+    NULL,                           // CSourceStdAfxFile
     NULL,                           // CSourceKeysFile
     NULL,                           // CSourceTableDataFile
     NULL,                           // VCProjectDllFile
@@ -429,8 +439,6 @@ const PCUNICODE_STRING FileWorkItemStreamNames[] = {
     NULL,                           // CSourceBenchmarkIndexFile
     NULL,                           // CSourceBenchmarkIndexExeFile
     NULL,                           // VCProjectBenchmarkIndexExeFile
-    NULL,                           // CHeaderCompiledPerfectHashFile
-    NULL,                           // VCPropsCompiledPerfectHashFile
     NULL,                           // TableStatsTextFile
 
     NULL,
@@ -442,28 +450,28 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemStreamNames);
 //
 
 const EOF_INIT EofInits[] = {
-    { EofInitTypeNull, },           // Null
-    { EofInitTypeAssignedSize, },   // TableFile
+    { EofInitTypeNull, },               // Null
+    { EofInitTypeAssignedSize, },       // TableFile
     { EofInitTypeFixed, sizeof(GRAPH_INFO_ON_DISK) },   // TableInfoStream
-    { EofInitTypeDefault, },        // CHeaderFile
-    { EofInitTypeDefault, },        // CSourceFile
+    { EofInitTypeDefault, },            // CHeaderFile
+    { EofInitTypeDefault, },            // CSourceFile
+    { EofInitTypeNumberOfPages, 1 },    // CHeaderStdAfxFile
+    { EofInitTypeNumberOfPages, 1 },    // CSourceStdAfxFile
     { EofInitTypeNumberOfKeysMultiplier, 16 },          // CSourceKeysFile
     { EofInitTypeNumberOfTableElementsMultiplier, 16 }, // CSourceTableDataFile
-    { EofInitTypeDefault, },        // VCProjectDllFile
-    { EofInitTypeZero, },           // CSourceSupportFile
-    { EofInitTypeZero, },           // CSourceTestFile
-    { EofInitTypeZero, },           // CSourceTestExeFile
-    { EofInitTypeZero, },           // VCProjectTestExeFile
-    { EofInitTypeZero, },           // CSourceBenchmarkFullFile
-    { EofInitTypeZero, },           // CSourceBenchmarkFullExeFile
-    { EofInitTypeZero, },           // VCProjectBenchmarkFullExeFile
-    { EofInitTypeZero, },           // CSourceBenchmarkIndexFile
-    { EofInitTypeZero, },           // CSourceBenchmarkIndexExeFile
-    { EofInitTypeZero, },           // VCProjectBenchmarkIndexExeFile
-    { EofInitTypeZero, },           // CHeaderCompiledPerfectHashFile
-    { EofInitTypeZero, },           // VCPropsCompiledPerfectHashFile
-    { EofInitTypeZero, },           // TableStatsTextFile
-    { EofInitTypeInvalid, },        // Invalid
+    { EofInitTypeDefault, },            // VCProjectDllFile
+    { EofInitTypeZero, },               // CSourceSupportFile
+    { EofInitTypeZero, },               // CSourceTestFile
+    { EofInitTypeZero, },               // CSourceTestExeFile
+    { EofInitTypeZero, },               // VCProjectTestExeFile
+    { EofInitTypeZero, },               // CSourceBenchmarkFullFile
+    { EofInitTypeZero, },               // CSourceBenchmarkFullExeFile
+    { EofInitTypeZero, },               // VCProjectBenchmarkFullExeFile
+    { EofInitTypeZero, },               // CSourceBenchmarkIndexFile
+    { EofInitTypeZero, },               // CSourceBenchmarkIndexExeFile
+    { EofInitTypeZero, },               // VCProjectBenchmarkIndexExeFile
+    { EofInitTypeZero, },               // TableStatsTextFile
+    { EofInitTypeInvalid, },            // Invalid
 };
 VERIFY_FILE_WORK_ARRAY_SIZE(EofInits);
 

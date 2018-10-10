@@ -46,8 +46,6 @@ PrepareCSourceKeysFileChm01(
     PPERFECT_HASH_TABLE Table;
     const ULONG Indent = 0x20202020;
 
-    UNREFERENCED_PARAMETER(Item);
-
     //
     // Initialize aliases.
     //
@@ -55,7 +53,7 @@ PrepareCSourceKeysFileChm01(
     Rtl = Context->Rtl;
     Table = Context->Table;
     Keys = Table->Keys;
-    File = Table->CSourceKeysFile;
+    File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
     NumberOfKeys = Keys->NumberOfElements.QuadPart;
@@ -65,12 +63,19 @@ PrepareCSourceKeysFileChm01(
     Output = Base;
 
     //
-    // Write the keys.
+    // Write the header.
     //
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table Keys File.  "
                "Auto-generated.\n//\n\n"
-               "#include <CompiledPerfectHash.h>\n\n");
+               "#include \"");
+
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_StdAfx.h\"\n\n");
+
+    //
+    // Write the keys.
+    //
 
     OUTPUT_RAW("#pragma const_seg(\".phkeys\")\n");
     OUTPUT_RAW("const ULONG ");

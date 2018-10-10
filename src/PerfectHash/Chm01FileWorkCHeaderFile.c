@@ -36,8 +36,6 @@ PrepareCHeaderFileChm01(
     PPERFECT_HASH_TABLE Table;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
 
-    UNREFERENCED_PARAMETER(Item);
-
     //
     // Initialize aliases.
     //
@@ -45,7 +43,7 @@ PrepareCHeaderFileChm01(
     Rtl = Context->Rtl;
     Table = Context->Table;
     Keys = Table->Keys;
-    File = Table->CHeaderFile;
+    File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
     TableInfoOnDisk = Table->TableInfoOnDisk;
@@ -60,8 +58,11 @@ PrepareCHeaderFileChm01(
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Header File.  "
                "Auto-generated.\n//\n\n"
-               "#pragma once\n\n"
-               "#include <CompiledPerfectHash.h>\n\n"
+               "#pragma once\n\n#include \"");
+
+    OUTPUT_STRING(Name);
+
+    OUTPUT_RAW("_StdAfx.h\"\n\n"
                "#ifdef __cplusplus\n"
                "extern \"C\" {\n"
                "#endif\n\n");
@@ -98,6 +99,11 @@ PrepareCHeaderFileChm01(
     OUTPUT_STRING(Name);
     OUTPUT_RAW("\n);\n\n");
 
+    OUTPUT_RAW("DEFINE_TEST_AND_BENCHMARK_"
+               "COMPILED_PERFECT_HASH_TABLE_ROUTINES(\n    ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n);\n\n");
+
     //
     // Data macros.
     //
@@ -116,20 +122,20 @@ PrepareCHeaderFileChm01(
     // C function macros.
     //
 
-    OUTPUT_RAW("#ifndef PhTableIndex\n"
-               "#define PhTableIndex CompiledPerfectHash_");
+    OUTPUT_RAW("#ifndef CphTableIndex\n"
+               "#define CphTableIndex CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Index\n#endif\n\n"
-               "#ifndef PhTableLookup\n"
-               "#define PhTableLookup CompiledPerfectHash_");
+               "#ifndef CphTableLookup\n"
+               "#define CphTableLookup CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Lookup\n#endif\n\n"
-               "#ifndef PhTableInsert\n"
-               "#define PhTableInsert CompiledPerfectHash_");
+               "#ifndef CphTableInsert\n"
+               "#define CphTableInsert CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Insert\n#endif\n\n"
-               "#ifndef PhTableDelete\n"
-               "#define PhTableDelete CompiledPerfectHash_");
+               "#ifndef CphTableDelete\n"
+               "#define CphTableDelete CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Delete\n#endif\n\n");
 
@@ -137,22 +143,41 @@ PrepareCHeaderFileChm01(
     // Inline C function macros.
     //
 
-    OUTPUT_RAW("#ifndef PhTableIndexInline\n"
-               "#define PhTableIndexInline CompiledPerfectHash_");
+    OUTPUT_RAW("#ifndef CphTableIndexInline\n"
+               "#define CphTableIndexInline CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_IndexInline\n#endif\n\n"
-               "#ifndef PhTableLookupInline\n"
-               "#define PhTableLookupInline CompiledPerfectHash_");
+               "#ifndef CphTableLookupInline\n"
+               "#define CphTableLookupInline CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_LookupInline\n#endif\n\n"
-               "#ifndef PhTableInsertInline\n"
-               "#define PhTableInsertInline CompiledPerfectHash_");
+               "#ifndef CphTableInsertInline\n"
+               "#define CphTableInsertInline CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_InsertInline\n#endif\n\n"
-               "#ifndef PhTableDeleteInline\n"
-               "#define PhTableDeleteInline CompiledPerfectHash_");
+               "#ifndef CphTableDeleteInline\n"
+               "#define CphTableDeleteInline CompiledPerfectHash_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_DeleteInline\n#endif\n\n");
+
+    //
+    // Testing and benchmarking.
+    //
+
+    OUTPUT_RAW("#ifndef TestCphTable\n"
+               "#define TestPhTable TestCompiledPerfectHashTable_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n#endif\n\n"
+               "#ifndef BenchmarkIndexCphTable\n"
+               "#define BenchmarkIndexPhTable "
+                       "BenchmarkIndexCompiledPerfectHashTable_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n#endif\n\n"
+               "#ifndef BenchmarkFullCphTable\n"
+               "#define BenchmarkFullPhTable "
+                       "BenchmarkFullCompiledPerfectHashTable_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n#endif\n\n");
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 
@@ -186,15 +211,13 @@ SaveCHeaderFileChm01(
     ULONGLONG TotalNumberOfElements;
     LARGE_INTEGER EndOfFile;
 
-    UNREFERENCED_PARAMETER(Item);
-
     //
     // Initialize aliases.
     //
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    File = Table->CHeaderFile;
+    File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
     Upper = &Path->TableNameUpperA;

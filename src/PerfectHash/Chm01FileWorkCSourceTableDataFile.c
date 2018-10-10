@@ -54,15 +54,13 @@ SaveCSourceTableDataFileChm01(
     LARGE_INTEGER EndOfFile;
     const ULONG Indent = 0x20202020;
 
-    UNREFERENCED_PARAMETER(Item);
-
     //
     // Initialize aliases.
     //
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    File = Table->CSourceTableDataFile;
+    File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
     Upper = &Path->TableNameUpperA;
@@ -75,12 +73,19 @@ SaveCSourceTableDataFileChm01(
     Output = Base = (PCHAR)File->BaseAddress;
 
     //
-    // Write seed and mask data.
+    // Write header.
     //
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Source Table Data File.  "
                "Auto-generated.\n//\n\n"
-               "#include <CompiledPerfectHash.h>\n\n");
+               "#include \"");
+
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_StdAfx.h\"\n\n");
+
+    //
+    // Write seed and mask data.
+    //
 
     OUTPUT_RAW("#pragma const_seg(\".phsm\")\n");
     OUTPUT_RAW("const ULONG ");

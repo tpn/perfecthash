@@ -25,9 +25,11 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareTableInfoStreamChm01 NULL
 //#define PrepareCHeaderFileChm01 NULL
 //#define PrepareCSourceFileChm01 NULL
+//#define PrepareCHeaderStdAfxFileChm01 NULL
+//#define PrepareCSourceStdAfxFileChm01 NULL
 //#define PrepareCSourceKeysFileChm01 NULL
 #define PrepareCSourceTableDataFileChm01 NULL
-#define PrepareVCProjectDllFileChm01 NULL
+//#define PrepareVCProjectDllFileChm01 NULL
 #define PrepareCSourceSupportFileChm01 NULL
 #define PrepareCSourceTestFileChm01 NULL
 #define PrepareCSourceTestExeFileChm01 NULL
@@ -46,6 +48,8 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 //#define SaveTableInfoStreamChm01 NULL
 //#define SaveCHeaderFileChm01 NULL
 #define SaveCSourceFileChm01 NULL
+#define SaveCHeaderStdAfxFileChm01 NULL
+#define SaveCSourceStdAfxFileChm01 NULL
 #define SaveCSourceKeysFileChm01 NULL
 //#define SaveCSourceTableDataFileChm01 NULL
 #define SaveVCProjectDllFileChm01 NULL

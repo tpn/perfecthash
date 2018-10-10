@@ -551,6 +551,45 @@ CompiledPerfectHash_##TableName##_IndexInline(              \
     return Index;                                           \
 }
 
+//
+// Typedefs of methods for testing and benchmarking.
+//
+
+typedef
+_Success_(return == 0)
+ULONG
+(CPHCALLTYPE TEST_COMPILED_PERFECT_HASH_TABLE)(
+    _In_opt_ BOOLEAN DebugBreakOnFailure
+    );
+typedef TEST_COMPILED_PERFECT_HASH_TABLE
+      *PTEST_COMPILED_PERFECT_HASH_TABLE;
+
+typedef
+ULONG
+(CPHCALLTYPE BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE)(
+    _In_ ULONG Seconds
+    );
+typedef BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE
+      *PBENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE;
+
+typedef
+ULONG
+(CPHCALLTYPE BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE)(
+    _In_ ULONG Seconds
+    );
+typedef BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE
+      *PBENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE;
+
+#define DEFINE_TEST_AND_BENCHMARK_COMPILED_PERFECT_HASH_TABLE_ROUTINES(Tbl) \
+extern TEST_COMPILED_PERFECT_HASH_TABLE                                     \
+    TestCompiledPerfectHashTable_##Tbl;                                     \
+                                                                            \
+extern BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE                          \
+    BenchmarkIndexCompiledPerfectHashTable_##Tbl;                           \
+                                                                            \
+extern BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLEE                          \
+    BenchmarkFullCompiledPerfectHashTable_##Tbl
+
 #pragma warning(pop)
 
 #ifdef __cplusplus

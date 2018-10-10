@@ -36,18 +36,13 @@ PrepareCSourceFileChm01(
     ULONG NumberOfSeeds;
     PCSTRING Name;
     PCSTRING Upper;
+    PCSTRING BaseName;
     STRING Algo = { 0 };
-    HANDLE Event;
-    ULONG WaitResult;
     HRESULT Result = S_OK;
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
-    PPERFECT_HASH_PATH HeaderPath;
-    PPERFECT_HASH_FILE HeaderFile;
     PPERFECT_HASH_TABLE Table;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
-
-    UNREFERENCED_PARAMETER(Item);
 
     //
     // Initialize aliases.
@@ -55,8 +50,9 @@ PrepareCSourceFileChm01(
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    File = Table->CSourceFile;
+    File = *Item->FilePointer;
     Path = GetActivePath(File);
+    BaseName = &Path->BaseNameA;
     Name = &Path->TableNameA;
     Upper = &Path->TableNameUpperA;
     TableInfoOnDisk = Table->TableInfoOnDisk;
@@ -79,21 +75,6 @@ PrepareCSourceFileChm01(
     Output = Base;
 
     //
-    // Wait for the header file to be prepared before referencing the file
-    // instance.
-    //
-
-    Event = Context->PreparedCHeaderFileEvent;
-    WaitResult = WaitForSingleObject(Event, INFINITE);
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForSingleObject);
-        goto Error;
-    }
-
-    HeaderFile = Table->CHeaderFile;
-    HeaderPath = GetActivePath(HeaderFile);
-
-    //
     // Write the keys.
     //
 
@@ -101,9 +82,9 @@ PrepareCSourceFileChm01(
                "Auto-generated.\n//\n\n");
 
     OUTPUT_RAW("#include \"");
-    OUTPUT_STRING(&HeaderPath->BaseNameA);
+    OUTPUT_STRING(BaseName);
+    OUTPUT_RAW("_StdAfx.h\"\n\nDECLARE_");
 
-    OUTPUT_RAW(".h\"\n\nDECLARE_");
     OUTPUT_STRING(&Algo);
     OUTPUT_RAW("_INDEX_ROUTINE(\n    ");
 
@@ -151,24 +132,6 @@ PrepareCSourceFileChm01(
     OUTPUT_RAW("\n);\n#pragma warning(pop)\n\n");
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
-
-    //
-    // We're done, finish up.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
 
     return Result;
 }

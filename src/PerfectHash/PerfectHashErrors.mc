@@ -1319,3 +1319,51 @@ Language=English
 The guarded list is empty.
 .
 
+MessageId=0x303
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CHUNK_OP
+Language=English
+Invalid chunk op.
+.
+
+MessageId=0x304
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CHUNK_STRING
+Language=English
+Invalid chunk string.
+.
+
+MessageId=0x305
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_HEADER_STDAFX_FILE
+Language=English
+Error preparing C header stdafx.h file.
+.
+
+MessageId=0x306
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_STDAFX_FILE
+Language=English
+Error saving C header stdafx.h file.
+.
+
+MessageId=0x307
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_STDAFX_FILE
+Language=English
+Error preparing C source stdafx.c file.
+.
+
+MessageId=0x308
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_STDAFX_FILE
+Language=English
+Error saving C source stdafx.c file.
+.
+

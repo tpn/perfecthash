@@ -43,15 +43,13 @@ SaveTableFileChm01(
     BOOLEAN LargePagesForTableData;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
 
-    UNREFERENCED_PARAMETER(Item);
-
     //
     // Initialize aliases.
     //
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    File = Table->TableFile;
+    File = *Item->FilePointer;
     Dest = (PULONG)File->BaseAddress;
     Graph = (PGRAPH)Context->SolvedContext;
     Source = Graph->Assigned;

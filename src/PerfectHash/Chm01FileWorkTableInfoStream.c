@@ -45,15 +45,13 @@ SaveTableInfoStreamChm01(
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PGRAPH_INFO_ON_DISK NewGraphInfoOnDisk;
 
-    UNREFERENCED_PARAMETER(Item);
-
     //
     // Initialize aliases.
     //
 
     Rtl = Context->Rtl;
     Table = Context->Table;
-    File = Table->TableInfoStream;
+    File = *Item->FilePointer;
     Dest = (PULONG)File->BaseAddress;
     Graph = (PGRAPH)Context->SolvedContext;
     GraphInfoOnDisk = (PGRAPH_INFO_ON_DISK)File->BaseAddress;
