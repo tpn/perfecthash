@@ -496,28 +496,29 @@ Return Value:
     } else {
 
         //
-        // Check for UNC format (\\?\C:\Temp).
+        // Check for device path format where the drive is explicit,
+        // e.g. \\?\C:\Temp.
         //
 
-        BOOLEAN IsUnc = FALSE;
+        BOOLEAN IsDrivePath = FALSE;
 
         Char = Start;
 
         ASSERT((ULONG_PTR)(Char+4) < (ULONG_PTR)End);
 
-        IsUnc = (
+        IsDrivePath = (
             *Char++ == L'\\' &&
             *Char++ == L'\\' &&
             *Char++ == L'?'  &&
             *Char++ == L'\\'
         );
 
-        if (IsUnc) {
+        if (IsDrivePath) {
 
             //
-            // Path is in the UNC format, e.g. \\?\C:\Temp.  Scan forward from
-            // the current position to the start of the file name buffer and
-            // look for a colon.
+            // Path is in the drive path format, e.g. \\?\C:\Temp.  Scan
+            // forward from the current position to the start of the file
+            // name buffer and look for a colon.
             //
 
             Found = FALSE;
