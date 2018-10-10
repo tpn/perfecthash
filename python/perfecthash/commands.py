@@ -16,6 +16,7 @@ from .invariant import (
     BoolInvariant,
     PathInvariant,
     StringInvariant,
+    OutPathInvariant,
     DirectoryInvariant,
     PositiveIntegerInvariant,
 )
@@ -282,6 +283,91 @@ class TrailingSlashesAlign(InvariantAwareCommand):
             text = text.encode('utf-8')
             with open(path, 'wb') as f:
                 f.write(text)
+
+class UpdateRawCStringFile(InvariantAwareCommand):
+    """
+    Converts a file into a C char * format that can be #included by other C
+    files.
+    """
+    _shortname_ = 'uf'
+
+    input_path = None
+    _input_path = None
+    class InputPathArg(PathInvariant):
+        _help = "path of input file"
+
+    def run(self):
+        out = self._out
+        options = self.options
+        verbose = self._verbose
+
+        input_path = self._input_path
+
+        from os.path import basename, dirname
+        from .path import join_path
+
+        base = basename(input_path)
+        ix = base.rfind('.')
+        assert ix != -1
+        name = base[:ix]
+
+        output_dir = dirname(input_path).replace('CompiledPerfectHashTable',
+                                                 'PerfectHash')
+
+        new_name = '%s_RawCString.h' % name
+
+        output_path = join_path(output_dir, new_name)
+
+        from .sourcefile import SourceFile
+
+        input_source = SourceFile(input_path)
+
+        source_lines = input_source.lines
+
+        decl_lines = [
+            '//',
+            '// Auto-generated from ../CompiledPerfectHashTable/%s.' % base,
+            '//',
+            '',
+            'DECLSPEC_ALIGN(16)',
+            'const CHAR %sRawCStr[] =' % name,
+        ]
+
+        cstr_lines = [ '    %s' % l for l in input_source.lines_as_cstr() ]
+
+        end_lines = [
+            ';',
+            '',
+            'const STRING %sRawString = {' % name,
+            '    sizeof(%sRawCStr) - sizeof(CHAR),' % name,
+            '    sizeof(%sRawCStr),' % name,
+            '#ifdef _WIN64',
+            '    0,',
+            '#endif',
+            '    (PCHAR)&%sRawCStr,' % name,
+            '};',
+            '',
+        ]
+
+        lines = decl_lines + cstr_lines + end_lines
+
+        text = '\n'.join(lines).encode('utf-8')
+
+        actual = None
+
+        try:
+            with open(output_path, 'rb') as f:
+                actual = f.read()
+        except:
+            pass
+
+        if actual and actual == text:
+            return
+
+        with open(output_path, 'wb') as f:
+            f.write(text)
+
+        out("Updated ..\\PerfectHash\\%s." % basename(output_path))
 
 class ReplaceUuid(InvariantAwareCommand):
     """
