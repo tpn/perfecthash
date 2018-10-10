@@ -223,6 +223,16 @@ CHUNK VCProjectDllFileChunks[] = {
             "  <ItemDefinitionGroup>\r\n"
             "    <ClCompile>\r\n"
             "      <AdditionalIncludeDirectories>$(ProjectDir)\\..</AdditionalIncludeDirectories>\r\n"
+            "      <PrecompiledHeaderFile>"
+        ),
+    },
+
+    { ChunkOpInsertBaseName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
+                   "_StdAfx.h</PrecompiledHeaderFile>\r\n"
             "    </ClCompile>\r\n"
             "    <Link>\r\n"
             "      <NoEntryPoint>true</NoEntryPoint>\r\n"
