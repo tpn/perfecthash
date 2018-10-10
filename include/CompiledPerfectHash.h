@@ -590,6 +590,35 @@ extern BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE                          \
 extern BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE                           \
     BenchmarkFullCompiledPerfectHashTable_##Tbl
 
+//
+// The following macros are intended to be used by the Test.c, BenchmarkFull.c
+// and BenchmarkIndex.c files such that they can generate the proper function
+// header without having to have the table name hardcoded.  They all assume
+// the macro CPH_TABLENAME is in scope (which will be defined in the relevant
+// table's header file).
+//
+
+#define DECLARE_TEST_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER() \
+_Use_decl_annotations_                                            \
+ULONG                                                             \
+TestCompiledPerfectHashTable_##CPH_TABLENAME##(                   \
+    BOOLEAN DebugBreakOnFailure                                   \
+    )
+
+#define DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER() \
+_Use_decl_annotations_                                                      \
+ULONG                                                                       \
+BenchmarkFullCompiledPerfectHashTable_##CPH_TABLENAME##(                    \
+    ULONG Seconds                                                           \
+    )
+
+#define DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER() \
+_Use_decl_annotations_                                                       \
+ULONG                                                                        \
+BenchmarkIndexCompiledPerfectHashTable_##CPH_TABLENAME##(                    \
+    ULONG Seconds                                                            \
+    )
+
 #pragma warning(pop)
 
 #ifdef __cplusplus
