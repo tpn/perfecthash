@@ -4,21 +4,23 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm01FileWorkCSourceStdAfxFile.c
+    Chm01FileWorkCSourceTestFile.c
 
 Abstract:
 
     This module implements the prepare file work callback routine for the
-    stdafx.c C source file as part of the CHM v1 algorithm implementation
-    for the perfect hash library.
+    test C source file as part of the CHM v1 algorithm implementation for
+    the perfect hash library.
 
 --*/
 
 #include "stdafx.h"
 
+#include "CompiledPerfectHashTableTest_RawCString.h"
+
 _Use_decl_annotations_
 HRESULT
-PrepareCSourceStdAfxFileChm01(
+PrepareCSourceTestFileChm01(
     PPERFECT_HASH_CONTEXT Context,
     PFILE_WORK_ITEM Item
     )
@@ -38,10 +40,11 @@ PrepareCSourceStdAfxFileChm01(
     Output = Base;
 
     //
-    // Write the include line and finish up.
+    // Write the text and finish up.
     //
 
     OUTPUT_INCLUDE_STDAFX_H();
+    OUTPUT_STRING(&CompiledPerfectHashTableTestRawString);
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

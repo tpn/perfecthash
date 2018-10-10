@@ -89,6 +89,12 @@
     <ClInclude Include="Chm01.h" />
     <ClInclude Include="Chm01FileWork.h" />
     <ClInclude Include="Chunk.h" />
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkFullExe_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkFull_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndexExe_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndex_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableTestExe_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableTest_RawCString.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Graph.h" />
     <ClInclude Include="GuardedList.h" />
@@ -120,6 +126,7 @@
     <ClCompile Include="Chm01FileWorkCSourceKeysFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceStdAfxFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTableDataFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceTestFile.c" />
     <ClCompile Include="Chm01FileWorkTableFile.c" />
     <ClCompile Include="Chm01FileWorkTableInfoStream.c" />
     <ClCompile Include="Chm01FileWorkVCProjectDllFile.c" />

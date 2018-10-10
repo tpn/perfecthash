@@ -311,8 +311,8 @@ const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
 const STRING DotExeSuffixA = RCS(".exe");
 const STRING DotDllSuffixA = RCS(".dll");
 const STRING DotLibSuffixA = RCS(".lib");
-extern const STRING DynamicLibraryConfigurationTypeA = RCS("DynamicLibrary");
-extern const STRING ApplicationConfigurationTypeA = RCS("Application");
+const STRING DynamicLibraryConfigurationTypeA = RCS("DynamicLibrary");
+const STRING ApplicationConfigurationTypeA = RCS("Application");
 
 //
 // Stream names.

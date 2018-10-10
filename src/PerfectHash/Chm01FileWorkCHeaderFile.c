@@ -58,16 +58,18 @@ PrepareCHeaderFileChm01(
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Header File.  "
                "Auto-generated.\n//\n\n"
-               "#pragma once\n\n#include \"");
-
-    OUTPUT_STRING(Name);
-
-    OUTPUT_RAW("_StdAfx.h\"\n\n"
+               "#pragma once\n\n"
                "#ifdef __cplusplus\n"
                "extern \"C\" {\n"
                "#endif\n\n");
 
-    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_INCLUDE_STDAFX_H();
+
+    OUTPUT_RAW("#ifndef CPH_TABLENAME\n\n"
+               "#define CPH_TABLENAME ");
+    OUTPUT_STRING(Name);
+
+    OUTPUT_RAW("\n#endif\n\nextern const ULONG ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Seeds[");
     OUTPUT_INT(NumberOfSeeds);
@@ -108,13 +110,13 @@ PrepareCHeaderFileChm01(
     // Data macros.
     //
 
-    OUTPUT_RAW("#ifndef PhTableKeys\n#define PhTableKeys ");
+    OUTPUT_RAW("#ifndef CphTableKeys\n#define CphTableKeys ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys\n#endif\n\n"
-               "#ifndef PhTableData\n#define PhTableData ");
+               "#ifndef CphTableData\n#define CphTableData ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableData\n#endif\n\n"
-               "#ifndef PhTableValues\n#define PhTableValues ");
+               "#ifndef CphTableValues\n#define CphTableValues ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues\n#endif\n\n");
 
@@ -178,6 +180,10 @@ PrepareCHeaderFileChm01(
                        "BenchmarkFullCompiledPerfectHashTable_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("\n#endif\n\n");
+
+    OUTPUT_RAW("#ifdef __cplusplus\n"
+               "} // extern \"C\"\n"
+               "#endif\n\n");
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 
@@ -337,8 +343,7 @@ SaveCHeaderFileChm01(
     // Close the extern "C" scope.
     //
 
-    OUTPUT_RAW("\n\n"
-               "#ifdef __cplusplus\n"
+    OUTPUT_RAW("#ifdef __cplusplus\n"
                "} // extern C\n"
                "#endif\n\n");
 

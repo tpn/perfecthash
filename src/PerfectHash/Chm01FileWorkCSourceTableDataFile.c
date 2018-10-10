@@ -77,17 +77,15 @@ SaveCSourceTableDataFileChm01(
     //
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Source Table Data File.  "
-               "Auto-generated.\n//\n\n"
-               "#include \"");
+               "Auto-generated.\n//\n\n");
 
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_StdAfx.h\"\n\n");
+    OUTPUT_INCLUDE_STDAFX_H();
 
     //
     // Write seed and mask data.
     //
 
-    OUTPUT_RAW("#pragma const_seg(\".phsm\")\n");
+    OUTPUT_RAW("#pragma const_seg(\".cphsm\")\n");
     OUTPUT_RAW("const ULONG ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Seeds[");
@@ -152,19 +150,19 @@ SaveCSourceTableDataFileChm01(
     // Write a table values array.
     //
 
-    OUTPUT_RAW("#pragma data_seg(\".phvalues\")\nULONG ");
+    OUTPUT_RAW("#pragma data_seg(\".cphval\")\nULONG ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues[");
     OUTPUT_INT(NumberOfElements);
     OUTPUT_RAW("] = { 0, };\n#pragma data_seg()\n"
                "#pragma comment(linker, "
-               "\"/section:.phvalues,rws\")\n\n");
+               "\"/section:.cphval,rw\")\n\n");
 
     //
     // Write the table data.
     //
 
-    OUTPUT_RAW("#pragma const_seg(\".phdata\")\n");
+    OUTPUT_RAW("#pragma const_seg(\".cphdata\")\n");
 
     OUTPUT_RAW("const ULONG ");
     OUTPUT_STRING(Name);

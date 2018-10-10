@@ -67,17 +67,15 @@ PrepareCSourceKeysFileChm01(
     //
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table Keys File.  "
-               "Auto-generated.\n//\n\n"
-               "#include \"");
+               "Auto-generated.\n//\n\n");
 
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_StdAfx.h\"\n\n");
+    OUTPUT_INCLUDE_STDAFX_H();
 
     //
     // Write the keys.
     //
 
-    OUTPUT_RAW("#pragma const_seg(\".phkeys\")\n");
+    OUTPUT_RAW("#pragma const_seg(\".cphkeys\")\n");
     OUTPUT_RAW("const ULONG ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[");

@@ -31,7 +31,7 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareCSourceTableDataFileChm01 NULL
 //#define PrepareVCProjectDllFileChm01 NULL
 #define PrepareCSourceSupportFileChm01 NULL
-#define PrepareCSourceTestFileChm01 NULL
+//#define PrepareCSourceTestFileChm01 NULL
 #define PrepareCSourceTestExeFileChm01 NULL
 #define PrepareVCProjectTestExeFileChm01 NULL
 #define PrepareCSourceBenchmarkFullFileChm01 NULL

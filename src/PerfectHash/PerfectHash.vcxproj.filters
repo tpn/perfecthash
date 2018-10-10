@@ -14,6 +14,9 @@
     <Filter Include="Public Header Files">
       <UniqueIdentifier>{f54d8165-140c-47c4-8d6d-fe7fcce97b78}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Private Header Files %28Auto-Generated%29">
+      <UniqueIdentifier>{fb2c29f6-b661-4b15-b61e-b8a88bec1ea7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="PerfectHashConstants.c">
@@ -172,6 +175,9 @@
     <ClCompile Include="VCProjectFileChunks.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkCSourceTestFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -257,6 +263,24 @@
     </ClInclude>
     <ClInclude Include="VCProjectFileChunks.h">
       <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkFull_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkFullExe_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndex_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndexExe_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableTest_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableTestExe_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

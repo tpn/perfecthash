@@ -81,10 +81,9 @@ PrepareCSourceFileChm01(
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Source File.  "
                "Auto-generated.\n//\n\n");
 
-    OUTPUT_RAW("#include \"");
-    OUTPUT_STRING(BaseName);
-    OUTPUT_RAW("_StdAfx.h\"\n\nDECLARE_");
+    OUTPUT_INCLUDE_STDAFX_H();
 
+    OUTPUT_RAW("DECLARE_");
     OUTPUT_STRING(&Algo);
     OUTPUT_RAW("_INDEX_ROUTINE(\n    ");
 

@@ -329,5 +329,15 @@ HRESULT
     );
 typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
 
+//
+// Define a helper macro for writing the '#include "<tablename>_StdAfx.h"' line
+// to the output file.  Assumes Output and Item variables are in scope.  For an
+// example, see Chm01FileWorkCSourceTestFile.c.
+//
+
+#define OUTPUT_INCLUDE_STDAFX_H()                                      \
+    OUTPUT_RAW("#include \"");                                         \
+    OUTPUT_STRING(&(GetActivePath((*Item->FilePointer))->TableNameA)); \
+    OUTPUT_RAW("_StdAfx.h\"\n\n");
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
