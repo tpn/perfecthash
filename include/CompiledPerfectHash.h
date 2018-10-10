@@ -587,7 +587,7 @@ extern TEST_COMPILED_PERFECT_HASH_TABLE                                     \
 extern BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE                          \
     BenchmarkIndexCompiledPerfectHashTable_##Tbl;                           \
                                                                             \
-extern BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLEE                          \
+extern BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE                           \
     BenchmarkFullCompiledPerfectHashTable_##Tbl
 
 #pragma warning(pop)
