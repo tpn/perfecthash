@@ -36,16 +36,17 @@ FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
 };
 
 //
-// Forward decls of routines and arrays in this file.
+// Forward decls of prepare and save routines.
 //
 
-PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 PREPARE_FILE PrepareFileChm01;
 SAVE_FILE SaveFileChm01;
 
 //
 // Begin method implementations.
 //
+
+PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
 _Use_decl_annotations_
 VOID
