@@ -8,8 +8,7 @@ Module Name:
 
 Abstract:
 
-    This module implements COM-related routines for the perfect hash
-    table library.
+    This module implements COM-related routines for the perfect hash library.
 
 --*/
 
