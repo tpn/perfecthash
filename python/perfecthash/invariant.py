@@ -496,7 +496,7 @@ class OutPathInvariant(StringInvariant):
         except:
             return False
         else:
-            return self._try_save(path)
+            return self._try_save(abspath(path))
 
 class MultiplePathsInvariant(StringInvariant):
     expected = "one or more valid path names"
