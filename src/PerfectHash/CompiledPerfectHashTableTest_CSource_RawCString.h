@@ -1,9 +1,9 @@
 //
-// Auto-generated from ../CompiledPerfectHashTable/CompiledPerfectHashTableTest.c.
+// Auto-generated.
 //
 
 DECLSPEC_ALIGN(16)
-const CHAR CompiledPerfectHashTableTestRawCStr[] =
+const CHAR CompiledPerfectHashTableTestCSourceRawCStr[] =
     "//\n"
     "// Disable global optimizations, even in release builds.  Without this, the\n"
     "// compiler does clever things with regards to optimizing our __debugbreak()\n"
@@ -166,11 +166,11 @@ const CHAR CompiledPerfectHashTableTestRawCStr[] =
     "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
 ;
 
-const STRING CompiledPerfectHashTableTestRawString = {
-    sizeof(CompiledPerfectHashTableTestRawCStr) - sizeof(CHAR),
-    sizeof(CompiledPerfectHashTableTestRawCStr),
+const STRING CompiledPerfectHashTableTestCSourceRawString = {
+    sizeof(CompiledPerfectHashTableTestCSourceRawCStr) - sizeof(CHAR),
+    sizeof(CompiledPerfectHashTableTestCSourceRawCStr),
 #ifdef _WIN64
     0,
 #endif
-    (PCHAR)&CompiledPerfectHashTableTestRawCStr,
+    (PCHAR)&CompiledPerfectHashTableTestCSourceRawCStr,
 };

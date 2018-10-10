@@ -1,9 +1,9 @@
 //
-// Auto-generated from ../CompiledPerfectHashTable/CompiledPerfectHashTableTestExe.c.
+// Auto-generated.
 //
 
 DECLSPEC_ALIGN(16)
-const CHAR CompiledPerfectHashTableTestExeRawCStr[] =
+const CHAR CompiledPerfectHashTableTestExeCSourceRawCStr[] =
     "extern void ExitProcess(ULONG);\n"
     "\n"
     "void\n"
@@ -23,11 +23,11 @@ const CHAR CompiledPerfectHashTableTestExeRawCStr[] =
     "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
 ;
 
-const STRING CompiledPerfectHashTableTestExeRawString = {
-    sizeof(CompiledPerfectHashTableTestExeRawCStr) - sizeof(CHAR),
-    sizeof(CompiledPerfectHashTableTestExeRawCStr),
+const STRING CompiledPerfectHashTableTestExeCSourceRawString = {
+    sizeof(CompiledPerfectHashTableTestExeCSourceRawCStr) - sizeof(CHAR),
+    sizeof(CompiledPerfectHashTableTestExeCSourceRawCStr),
 #ifdef _WIN64
     0,
 #endif
-    (PCHAR)&CompiledPerfectHashTableTestExeRawCStr,
+    (PCHAR)&CompiledPerfectHashTableTestExeCSourceRawCStr,
 };

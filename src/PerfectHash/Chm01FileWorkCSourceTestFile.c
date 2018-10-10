@@ -16,7 +16,7 @@ Abstract:
 
 #include "stdafx.h"
 
-#include "CompiledPerfectHashTableTest_RawCString.h"
+#include "CompiledPerfectHashTableTest_CSource_RawCString.h"
 
 _Use_decl_annotations_
 HRESULT
@@ -44,7 +44,7 @@ PrepareCSourceTestFileChm01(
     //
 
     OUTPUT_INCLUDE_STDAFX_H();
-    OUTPUT_STRING(&CompiledPerfectHashTableTestRawString);
+    OUTPUT_STRING(&CompiledPerfectHashTableTestCSourceRawString);
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

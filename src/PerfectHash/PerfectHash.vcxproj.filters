@@ -264,22 +264,28 @@
     <ClInclude Include="VCProjectFileChunks.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableBenchmarkFull_RawCString.h">
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkFull_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableBenchmarkFullExe_RawCString.h">
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkFullExe_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndex_RawCString.h">
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndex_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndexExe_RawCString.h">
+    <ClInclude Include="CompiledPerfectHashTableBenchmarkIndexExe_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableTest_RawCString.h">
+    <ClInclude Include="CompiledPerfectHashTableTest_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableTestExe_RawCString.h">
+    <ClInclude Include="CompiledPerfectHashTableTestExe_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHash_CHeader_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHash_VCProps_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
   </ItemGroup>

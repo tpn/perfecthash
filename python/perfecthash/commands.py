@@ -303,34 +303,49 @@ class UpdateRawCStringFile(InvariantAwareCommand):
 
         input_path = self._input_path
 
-        from os.path import basename, dirname
-        from .path import join_path
+        from .config import SRC_DIR as src_dir
+        from .sourcefile import SourceFile
+        from .path import (
+            abspath,
+            dirname,
+            basename,
+            join_path,
+        )
 
         base = basename(input_path)
         ix = base.rfind('.')
         assert ix != -1
         name = base[:ix]
 
-        output_dir = dirname(input_path).replace('CompiledPerfectHashTable',
-                                                 'PerfectHash')
+        extension = base[ix:]
 
-        new_name = '%s_RawCString.h' % name
+        if extension == '.c':
+            category = 'CSource'
+        elif extension == '.h':
+            category = 'CHeader'
+        elif extension == '.props':
+            category = 'VCProps'
+        else:
+            raise RuntimeError("Unknown extension: %s." % extension)
 
+        #import ipdb; ipdb.set_trace()
+
+        output_dir = join_path(src_dir, 'PerfectHash')
+        new_name = '%s_%s_RawCString.h' % (name, category)
         output_path = join_path(output_dir, new_name)
 
-        from .sourcefile import SourceFile
-
         input_source = SourceFile(input_path)
-
         source_lines = input_source.lines
+
+        name_category = '%s%s' % (name, category)
 
         decl_lines = [
             '//',
-            '// Auto-generated from ../CompiledPerfectHashTable/%s.' % base,
+            '// Auto-generated.',
             '//',
             '',
             'DECLSPEC_ALIGN(16)',
-            'const CHAR %sRawCStr[] =' % name,
+            'const CHAR %sRawCStr[] =' % name_category,
         ]
 
         cstr_lines = [ '    %s' % l for l in input_source.lines_as_cstr() ]
@@ -338,13 +353,13 @@ class UpdateRawCStringFile(InvariantAwareCommand):
         end_lines = [
             ';',
             '',
-            'const STRING %sRawString = {' % name,
-            '    sizeof(%sRawCStr) - sizeof(CHAR),' % name,
-            '    sizeof(%sRawCStr),' % name,
+            'const STRING %sRawString = {' % name_category,
+            '    sizeof(%sRawCStr) - sizeof(CHAR),' % name_category,
+            '    sizeof(%sRawCStr),' % name_category,
             '#ifdef _WIN64',
             '    0,',
             '#endif',
-            '    (PCHAR)&%sRawCStr,' % name,
+            '    (PCHAR)&%sRawCStr,' % name_category,
             '};',
             '',
         ]
@@ -367,7 +382,7 @@ class UpdateRawCStringFile(InvariantAwareCommand):
         with open(output_path, 'wb') as f:
             f.write(text)
 
-        out("Updated ..\\PerfectHash\\%s." % basename(output_path))
+        out("Updated %s." % basename(output_path))
 
 class ReplaceUuid(InvariantAwareCommand):
     """

@@ -1,9 +1,9 @@
 //
-// Auto-generated from ../CompiledPerfectHashTable/CompiledPerfectHashTableBenchmarkFullExe.c.
+// Auto-generated.
 //
 
 DECLSPEC_ALIGN(16)
-const CHAR CompiledPerfectHashTableBenchmarkFullExeRawCStr[] =
+const CHAR CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr[] =
     "#pragma optimize(\"\", off)\n"
     "\n"
     "extern void ExitProcess(ULONG);\n"
@@ -19,7 +19,7 @@ const CHAR CompiledPerfectHashTableBenchmarkFullExeRawCStr[] =
     "    ULONG Cycles;\n"
     "    ULONG Seconds = 0;\n"
     "\n"
-    "    Cycles = BenchmarkFullCphTable(Seconds);\n"
+    "    Cycles = BenchmarkIndexCphTable(Seconds);\n"
     "\n"
     "    ExitProcess(Cycles);\n"
     "}\n"
@@ -27,11 +27,11 @@ const CHAR CompiledPerfectHashTableBenchmarkFullExeRawCStr[] =
     "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
 ;
 
-const STRING CompiledPerfectHashTableBenchmarkFullExeRawString = {
-    sizeof(CompiledPerfectHashTableBenchmarkFullExeRawCStr) - sizeof(CHAR),
-    sizeof(CompiledPerfectHashTableBenchmarkFullExeRawCStr),
+const STRING CompiledPerfectHashTableBenchmarkIndexExeCSourceRawString = {
+    sizeof(CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr) - sizeof(CHAR),
+    sizeof(CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr),
 #ifdef _WIN64
     0,
 #endif
-    (PCHAR)&CompiledPerfectHashTableBenchmarkFullExeRawCStr,
+    (PCHAR)&CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr,
 };

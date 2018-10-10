@@ -1,9 +1,9 @@
 //
-// Auto-generated from ../CompiledPerfectHashTable/CompiledPerfectHashTableBenchmarkFull.c.
+// Auto-generated.
 //
 
 DECLSPEC_ALIGN(16)
-const CHAR CompiledPerfectHashTableBenchmarkFullRawCStr[] =
+const CHAR CompiledPerfectHashTableBenchmarkFullCSourceRawCStr[] =
     "extern\n"
     "BOOLEAN\n"
     "QueryPerformanceCounter(\n"
@@ -187,11 +187,11 @@ const CHAR CompiledPerfectHashTableBenchmarkFullRawCStr[] =
     "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
 ;
 
-const STRING CompiledPerfectHashTableBenchmarkFullRawString = {
-    sizeof(CompiledPerfectHashTableBenchmarkFullRawCStr) - sizeof(CHAR),
-    sizeof(CompiledPerfectHashTableBenchmarkFullRawCStr),
+const STRING CompiledPerfectHashTableBenchmarkFullCSourceRawString = {
+    sizeof(CompiledPerfectHashTableBenchmarkFullCSourceRawCStr) - sizeof(CHAR),
+    sizeof(CompiledPerfectHashTableBenchmarkFullCSourceRawCStr),
 #ifdef _WIN64
     0,
 #endif
-    (PCHAR)&CompiledPerfectHashTableBenchmarkFullRawCStr,
+    (PCHAR)&CompiledPerfectHashTableBenchmarkFullCSourceRawCStr,
 };
