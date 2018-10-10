@@ -292,6 +292,16 @@ class SourceFile(InvariantAwareObject):
     def lines(self):
         return self.data.splitlines()
 
+    @memoize
+    def lines_as_cstr(self):
+        def process(line):
+            line = line.replace('\\', '\\\\')
+            line = line.replace('"', '\\"')
+            line = '"%s\\n"' % line
+            return line
+
+        return [ process(line) for line in self.lines ]
+
     @property
     @memoize
     def defines(self):
