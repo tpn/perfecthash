@@ -353,7 +353,7 @@ class UpdateRawCStringFile(InvariantAwareCommand):
         end_lines = [
             ';',
             '',
-            'const STRING %sRawString = {' % name_category,
+            'const STRING %sRawCString = {' % name_category,
             '    sizeof(%sRawCStr) - sizeof(CHAR),' % name_category,
             '    sizeof(%sRawCStr),' % name_category,
             '#ifdef _WIN64',
@@ -361,6 +361,10 @@ class UpdateRawCStringFile(InvariantAwareCommand):
             '#endif',
             '    (PCHAR)&%sRawCStr,' % name_category,
             '};',
+            '',
+            '#ifndef RawCString',
+            '#define RawCString (&%sRawCString)' % name_category,
+            '#endif',
             '',
         ]
 

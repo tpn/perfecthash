@@ -1568,3 +1568,12 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_SAVE_C_SOURCE_STDAFX_FILE ((HRESULT)0xE0040308L)
 
+//
+// MessageId: PH_E_CONTEXT_FILE_ALREADY_PREPARED
+//
+// MessageText:
+//
+// Context file already prepared.
+//
+#define PH_E_CONTEXT_FILE_ALREADY_PREPARED ((HRESULT)0xE0040309L)
+

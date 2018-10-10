@@ -260,6 +260,7 @@ extern const STRING ApplicationConfigurationTypeA;
 extern const PCUNICODE_STRING FileWorkItemSuffixes[];
 extern const PCUNICODE_STRING FileWorkItemExtensions[];
 extern const PCUNICODE_STRING FileWorkItemStreamNames[];
+extern const PCUNICODE_STRING FileWorkItemBaseNames[];
 extern const EOF_INIT EofInits[];
 
 //

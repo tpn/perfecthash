@@ -43,6 +43,8 @@ Abstract:
     ENTRY(Verb, VUpper, CSourceBenchmarkIndexFile,      C_SOURCE_BENCHMARK_INDEX_FILE)       \
     ENTRY(Verb, VUpper, CSourceBenchmarkIndexExeFile,   C_SOURCE_BENCHMARK_INDEX_EXE_FILE)   \
     ENTRY(Verb, VUpper, VCProjectBenchmarkIndexExeFile, VCPROJECT_BENCHMARK_INDEX_EXE_FILE)  \
+    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE) \
+    ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)  \
     LAST_ENTRY(Verb, VUpper, TableStatsTextFile,        TABLE_STATS_TEXT_FILE)
 
 #define PREPARE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
@@ -63,6 +65,35 @@ Abstract:
 #define FILE_WORK_TABLE_ENTRY(ENTRY) FILE_WORK_TABLE(ENTRY, ENTRY, ENTRY)
 
 //
+// Some files are only generated once per context lifetime (and are written
+// to the base output directory (owned by the context), instead of the output
+// directory (owned by the table)).  We refer to this as CONTEXT_FILE_WORK.
+// As above, define another X-macro for this type of file work.  Entries in
+// the list below must match their corresponding entry in the list above.
+//
+
+#define VERB_CONTEXT_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                 \
+    FIRST_ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE) \
+    LAST_ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)
+
+#define PREPARE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_CONTEXT_FILE_WORK_TABLE(Prepare, PREPARE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
+#define SAVE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_CONTEXT_FILE_WORK_TABLE(Save, SAVE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
+#define PREPARE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_CONTEXT_FILE_WORK_TABLE(Prepare, PREPARE, ENTRY, ENTRY, ENTRY)
+
+#define SAVE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_CONTEXT_FILE_WORK_TABLE(Save, SAVE, ENTRY, ENTRY, ENTRY)
+
+#define CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_CONTEXT_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
+#define CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) CONTEXT_FILE_WORK_TABLE(ENTRY, ENTRY, ENTRY)
+
+//
 // Define an enum for individual file IDs.
 //
 
@@ -74,23 +105,19 @@ typedef enum _FILE_ID {
 
     FileNullId = 0,
 
-#define EXPAND_AS_ENUMS(Verb, VUpper, Name, Upper) File##Name##Id,
+#define EXPAND_AS_FILE_ENUMS(Verb, VUpper, Name, Upper) File##Name##Id,
 
-#define EXPAND_AS_FIRST_ENUM(Verb, VUpper, Name, Upper)   \
-    File##Name##Id,                           \
+#define EXPAND_AS_FIRST_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    File##Name##Id,                                          \
     FileFirstId = File##Name##Id,
 
-#define EXPAND_AS_LAST_ENUM(Verb, VUpper, Name, Upper)   \
-    File##Name##Id,                          \
+#define EXPAND_AS_LAST_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    File##Name##Id,                                         \
     FileLastId = File##Name##Id,
 
-    FILE_WORK_TABLE(EXPAND_AS_FIRST_ENUM,
-                    EXPAND_AS_ENUMS,
-                    EXPAND_AS_LAST_ENUM)
-
-#undef EXPAND_AS_ENUMS
-#undef EXPAND_AS_FIRST_ENUM
-#undef EXPAND_AS_LAST_ENUM
+    FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_ENUM,
+                    EXPAND_AS_FILE_ENUMS,
+                    EXPAND_AS_LAST_FILE_ENUM)
 
     //
     // Invalid ID, this must come last.
@@ -100,6 +127,70 @@ typedef enum _FILE_ID {
 
 } FILE_ID;
 typedef FILE_ID *PFILE_ID;
+
+FORCEINLINE
+BOOLEAN
+IsValidFileId(
+    _In_ FILE_ID FileId
+    )
+{
+    return (
+        FileId >= FileFirstId &&
+        FileId <= FileLastId
+    );
+}
+
+#define NUMBER_OF_FILES ((FileLastId - FileFirstId) + 1)
+
+//
+// Define an enum for individual context file IDs.
+//
+
+typedef enum _CONTEXT_FILE_ID {
+
+    //
+    // Null ID.
+    //
+
+    ContextFileNullId = 0,
+
+#define EXPAND_AS_CONTEXT_FILE_ENUMS(Verb, VUpper, Name, Upper) \
+    ContextFile##Name##Id = File##Name##Id,
+
+#define EXPAND_AS_FIRST_CONTEXT_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    ContextFile##Name##Id = File##Name##Id,                          \
+    ContextFileFirstId = ContextFile##Name##Id,
+
+#define EXPAND_AS_LAST_CONTEXT_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    ContextFile##Name##Id = File##Name##Id,                         \
+    ContextFileLastId = ContextFile##Name##Id,
+
+    CONTEXT_FILE_WORK_TABLE(EXPAND_AS_FIRST_CONTEXT_FILE_ENUM,
+                            EXPAND_AS_CONTEXT_FILE_ENUMS,
+                            EXPAND_AS_LAST_CONTEXT_FILE_ENUM)
+
+    //
+    // Invalid ID, this must come last.
+    //
+
+    ContextFileInvalidId,
+
+} CONTEXT_FILE_ID;
+typedef CONTEXT_FILE_ID *PCONTEXT_FILE_ID;
+
+#define NUMBER_OF_CONTEXT_FILES ((ContextFileLastId - ContextFileFirstId) + 1)
+
+FORCEINLINE
+BOOLEAN
+IsValidContextFileId(
+    _In_ CONTEXT_FILE_ID ContextFileId
+    )
+{
+    return (
+        ContextFileId >= ContextFileFirstId &&
+        ContextFileId <= ContextFileLastId
+    );
+}
 
 //
 // Define an enumeration to capture the type of file work operations we want
@@ -114,27 +205,23 @@ typedef enum _FILE_WORK_ID {
 
     FileWorkNullId = 0,
 
-    //
-    // Initial file preparation work.
-    //
+#define EXPAND_AS_FILE_WORK_ENUMS(Verb, VUpper, Name, Upper) FileWork##Verb####Name##Id,
 
-#define EXPAND_AS_ENUMS(Verb, VUpper, Name, Upper) FileWork##Verb####Name##Id,
-
-#define EXPAND_AS_FIRST_ENUM(Verb, VUpper, Name, Upper)   \
-    FileWork##Verb####Name##Id,                           \
+#define EXPAND_AS_FIRST_FILE_WORK_ENUM(Verb, VUpper, Name, Upper) \
+    FileWork##Verb####Name##Id,                                   \
     FileWork##Verb##FirstId = FileWork##Verb####Name##Id,
 
-#define EXPAND_AS_LAST_ENUM(Verb, VUpper, Name, Upper)   \
-    FileWork##Verb####Name##Id,                          \
+#define EXPAND_AS_LAST_FILE_WORK_ENUM(Verb, VUpper, Name, Upper) \
+    FileWork##Verb####Name##Id,                                  \
     FileWork##Verb##LastId = FileWork##Verb####Name##Id,
 
-    PREPARE_FILE_WORK_TABLE(EXPAND_AS_FIRST_ENUM,
-                            EXPAND_AS_ENUMS,
-                            EXPAND_AS_LAST_ENUM)
+    PREPARE_FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_WORK_ENUM,
+                            EXPAND_AS_FILE_WORK_ENUMS,
+                            EXPAND_AS_LAST_FILE_WORK_ENUM)
 
-    SAVE_FILE_WORK_TABLE(EXPAND_AS_FIRST_ENUM,
-                         EXPAND_AS_ENUMS,
-                         EXPAND_AS_LAST_ENUM)
+    SAVE_FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_WORK_ENUM,
+                         EXPAND_AS_FILE_WORK_ENUMS,
+                         EXPAND_AS_LAST_FILE_WORK_ENUM)
 
     //
     // Invalid ID, this must come last.
@@ -148,14 +235,12 @@ typedef FILE_WORK_ID *PFILE_WORK_ID;
 #define NUMBER_OF_PREPARE_FILE_EVENTS (                  \
     (FileWorkPrepareLastId - FileWorkPrepareFirstId) + 1 \
 )
+C_ASSERT(NUMBER_OF_PREPARE_FILE_EVENTS == NUMBER_OF_FILES);
 
 #define NUMBER_OF_SAVE_FILE_EVENTS (               \
     (FileWorkSaveLastId - FileWorkSaveFirstId) + 1 \
 )
-
-C_ASSERT(NUMBER_OF_PREPARE_FILE_EVENTS == NUMBER_OF_SAVE_FILE_EVENTS);
-
-#define NUMBER_OF_FILES NUMBER_OF_PREPARE_FILE_EVENTS
+C_ASSERT(NUMBER_OF_SAVE_FILE_EVENTS == NUMBER_OF_FILES);
 
 #define TOTAL_NUMBER_OF_FILE_EVENTS ( \
     NUMBER_OF_PREPARE_FILE_EVENTS +   \
@@ -199,6 +284,25 @@ IsSaveFileWorkId(
 }
 
 FORCEINLINE
+FILE_ID
+FileWorkIdToFileId(
+    _In_ FILE_WORK_ID FileWorkId
+    )
+{
+    FILE_ID Id;
+
+    Id = FileWorkId;
+
+    if (IsSaveFileWorkId(FileWorkId)) {
+        Id -= FileWorkSaveFirstId;
+    }
+
+    ASSERT(IsValidFileId(Id));
+
+    return Id;
+}
+
+FORCEINLINE
 ULONG
 FileWorkIdToFileIndex(
     _In_ FILE_WORK_ID FileWorkId
@@ -213,6 +317,21 @@ FileWorkIdToFileIndex(
     }
 
     ASSERT(Index >= 0);
+
+    return Index;
+}
+
+FORCEINLINE
+ULONG
+ContextFileIdToContextFileIndex(
+    _In_ FILE_ID FileId
+    )
+{
+    LONG Index;
+
+    Index = FileId - ContextFileFirstId - 1;
+
+    ASSERT(Index >= 0 && Index <= NUMBER_OF_CONTEXT_FILES-1);
 
     return Index;
 }
@@ -257,7 +376,6 @@ FileWorkIdToDependentEventIndex(
 typedef enum _EOF_INIT_TYPE {
     EofInitTypeNull = 0,
     EofInitTypeDefault,
-    EofInitTypeZero,
     EofInitTypeAssignedSize,
     EofInitTypeFixed,
     EofInitTypeNumberOfPages,
@@ -286,6 +404,37 @@ typedef struct _EOF_INIT {
 typedef EOF_INIT *PEOF_INIT;
 typedef const EOF_INIT *PCEOF_INIT;
 
+typedef union _FILE_WORK_ITEM_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the file can only be prepared once, e.g. for
+        // streams and context files.  Checked against the underlying file
+        // pointer (*FilePointer); ensures prepare routines aren't ever called
+        // when an existing file instance exists.
+        //
+
+        ULONG PrepareOnce:1;
+
+        //
+        // When set, indicates this is a context file.
+        //
+
+        ULONG IsContextFile:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:30;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} FILE_WORK_ITEM_FLAGS;
+C_ASSERT(sizeof(FILE_WORK_ITEM_FLAGS) == sizeof(ULONG));
+typedef FILE_WORK_ITEM_FLAGS *PFILE_WORK_ITEM_FLAGS;
+
 //
 // Define a file work item structure that will be pushed to the context's
 // file work list head.
@@ -299,9 +448,12 @@ typedef struct _FILE_WORK_ITEM {
 
     LIST_ENTRY ListEntry;
 
-    //
-    // Type of work requested.
-    //
+    FILE_WORK_ITEM_FLAGS Flags;
+
+    union {
+        FILE_ID FileId;
+        CONTEXT_FILE_ID ContextFileId;
+    };
 
     FILE_WORK_ID FileWorkId;
 
@@ -314,6 +466,15 @@ typedef struct _FILE_WORK_ITEM {
 
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;
+
+FORCEINLINE
+BOOLEAN
+IsContextFileWorkItem(
+    _In_ PFILE_WORK_ITEM Item
+    )
+{
+    return Item->Flags.IsContextFile == TRUE;
+}
 
 //
 // Define specific file work functions.

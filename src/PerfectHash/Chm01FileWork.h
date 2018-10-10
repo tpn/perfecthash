@@ -40,8 +40,8 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareCSourceBenchmarkIndexFileChm01 NULL
 #define PrepareCSourceBenchmarkIndexExeFileChm01 NULL
 #define PrepareVCProjectBenchmarkIndexExeFileChm01 NULL
-#define PrepareCHeaderCompiledPerfectHashFileChm01 NULL
-#define PrepareVCPropsCompiledPerfectHashFileChm01 NULL
+//#define PrepareCHeaderCompiledPerfectHashFileChm01 NULL
+//#define PrepareVCPropsCompiledPerfectHashFileChm01 NULL
 #define PrepareTableStatsTextFileChm01 NULL
 
 //#define SaveTableFileChm01 NULL

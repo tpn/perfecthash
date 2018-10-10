@@ -484,6 +484,29 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG ClosestWeCameToSolvingGraphWithSmallerTableSizes;
 
     //
+    // Pointers to the context file instances.
+    //
+
+#define EXPAND_AS_FIRST_CONTEXT_FILE(Verb, VUpper, Name, Upper) \
+    union {                                                     \
+        PPERFECT_HASH_FILE Name;                                \
+        PPERFECT_HASH_FILE FirstFile;                           \
+    };
+
+#define EXPAND_AS_LAST_CONTEXT_FILE(Verb, VUpper, Name, Upper) \
+    union {                                                    \
+        PPERFECT_HASH_FILE Name;                               \
+        PPERFECT_HASH_FILE LastFile;                           \
+    };
+
+#define EXPAND_AS_CONTEXT_FILE(Verb, VUpper, Name, Upper) \
+    PPERFECT_HASH_FILE Name;
+
+    CONTEXT_FILE_WORK_TABLE(EXPAND_AS_FIRST_CONTEXT_FILE,
+                            EXPAND_AS_CONTEXT_FILE,
+                            EXPAND_AS_LAST_CONTEXT_FILE)
+
+    //
     // Backing vtbl.
     //
 

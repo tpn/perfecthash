@@ -29,10 +29,14 @@ extern SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
 typedef
 _Check_return_
 _Success_(return >= 0)
+_When_(
+    Item->Flags.PrepareOnce == TRUE,
+    _Pre_satisfies_(*Item->FilePointer == NULL)
+)
 HRESULT
 (NTAPI PREPARE_FILE)(
     _In_ PPERFECT_HASH_TABLE Table,
-    _In_ PPERFECT_HASH_FILE *FilePointer,
+    _In_ PFILE_WORK_ITEM Item,
     _In_ PPERFECT_HASH_PATH Path,
     _In_ PLARGE_INTEGER EndOfFile,
     _In_opt_ HANDLE DependentEvent
@@ -45,7 +49,7 @@ _Success_(return >= 0)
 HRESULT
 (NTAPI SAVE_FILE)(
     _In_ PPERFECT_HASH_TABLE Table,
-    _In_ PPERFECT_HASH_FILE File
+    _In_ PFILE_WORK_ITEM Item
     );
 typedef SAVE_FILE *PSAVE_FILE;
 

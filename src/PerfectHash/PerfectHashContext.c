@@ -705,6 +705,10 @@ Return Value:
                                      &Context->ObjectNames);
     }
 
+#define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Context->##Name##);
+
+    CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
+
     RELEASE(Context->MainWorkList);
     RELEASE(Context->FileWorkList);
     RELEASE(Context->FinishedWorkList);
@@ -1328,6 +1332,11 @@ Return Value:
         PH_ERROR(PerfectHashDirectoryCreate, Result);
         goto Error;
     }
+
+    //
+    // Copy the CompiledPerfectHash.h and CompiledPerfectHash.props files
+    // into the output directory.
+    //
 
     //
     // We're done, finish up.

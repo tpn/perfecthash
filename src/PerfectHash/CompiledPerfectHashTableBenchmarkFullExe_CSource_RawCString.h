@@ -27,7 +27,7 @@ const CHAR CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr[] =
     "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
 ;
 
-const STRING CompiledPerfectHashTableBenchmarkFullExeCSourceRawString = {
+const STRING CompiledPerfectHashTableBenchmarkFullExeCSourceRawCString = {
     sizeof(CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr) - sizeof(CHAR),
     sizeof(CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr),
 #ifdef _WIN64
@@ -35,3 +35,7 @@ const STRING CompiledPerfectHashTableBenchmarkFullExeCSourceRawString = {
 #endif
     (PCHAR)&CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr,
 };
+
+#ifndef RawCString
+#define RawCString (&CompiledPerfectHashTableBenchmarkFullExeCSourceRawCString)
+#endif

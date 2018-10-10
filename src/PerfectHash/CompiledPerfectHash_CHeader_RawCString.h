@@ -634,7 +634,7 @@ const CHAR CompiledPerfectHashCHeaderRawCStr[] =
     "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
 ;
 
-const STRING CompiledPerfectHashCHeaderRawString = {
+const STRING CompiledPerfectHashCHeaderRawCString = {
     sizeof(CompiledPerfectHashCHeaderRawCStr) - sizeof(CHAR),
     sizeof(CompiledPerfectHashCHeaderRawCStr),
 #ifdef _WIN64
@@ -642,3 +642,7 @@ const STRING CompiledPerfectHashCHeaderRawString = {
 #endif
     (PCHAR)&CompiledPerfectHashCHeaderRawCStr,
 };
+
+#ifndef RawCString
+#define RawCString (&CompiledPerfectHashCHeaderRawCString)
+#endif

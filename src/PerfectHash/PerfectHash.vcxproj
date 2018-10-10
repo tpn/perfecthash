@@ -122,6 +122,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Chm01FileWork.c" />
+    <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderStdAfxFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceFile.c" />
@@ -132,6 +133,7 @@
     <ClCompile Include="Chm01FileWorkTableFile.c" />
     <ClCompile Include="Chm01FileWorkTableInfoStream.c" />
     <ClCompile Include="Chm01FileWorkVCProjectDllFile.c" />
+    <ClCompile Include="Chm01FileWorkVCPropsCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chunk.c" />

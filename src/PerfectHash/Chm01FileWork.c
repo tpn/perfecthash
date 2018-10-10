@@ -80,10 +80,13 @@ Return Value:
     PRTL Rtl;
     ULONG FileIndex;
     ULONG EventIndex;
+    ULONG ContextFileIndex;
     ULONG DependentEventIndex;
     HRESULT Result = S_OK;
     PGRAPH_INFO Info;
+    FILE_ID FileId;
     FILE_WORK_ID FileWorkId;
+    CONTEXT_FILE_ID ContextFileId;
     PFILE_WORK_ITEM Item;
     PFILE_WORK_CALLBACK_IMPL Impl = NULL;
     PPERFECT_HASH_TABLE Table;
@@ -93,6 +96,8 @@ Return Value:
     PPERFECT_HASH_PATH Path = NULL;
     PTABLE_INFO_ON_DISK TableInfo;
     PPERFECT_HASH_FILE *File = NULL;
+    PPERFECT_HASH_FILE ContextFile = NULL;
+    BOOLEAN IsContextFile = FALSE;
 
     //
     // Initialize aliases.
@@ -114,11 +119,47 @@ Return Value:
 
     ASSERT(IsValidFileWorkId(FileWorkId));
 
+    FileIndex = FileWorkIdToFileIndex(FileWorkId);
+    File = &Table->FirstFile + FileIndex;
+
     EventIndex = FileWorkIdToEventIndex(FileWorkId);
     Event = *(&Context->FirstPreparedEvent + EventIndex);
 
-    FileIndex = FileWorkIdToFileIndex(FileWorkId);
-    File = &Table->FirstFile + FileIndex;
+    Item->FileId = FileId = FileWorkIdToFileId(FileWorkId);
+    ContextFileId = (CONTEXT_FILE_ID)FileId;
+
+    if (!IsValidContextFileId(ContextFileId)) {
+
+        ContextFileId = ContextFileNullId;
+
+    } else {
+
+        Item->Flags.IsContextFile = IsContextFile = TRUE;
+
+        //
+        // Override the table's file pointer with the context's one.
+        //
+
+        ContextFileIndex = ContextFileIdToContextFileIndex(ContextFileId);
+        File = &Context->FirstFile + ContextFileIndex;
+
+        if (IsPrepareFileWorkId(FileWorkId)) {
+
+            Item->Flags.PrepareOnce = TRUE;
+
+            ContextFile = *File;
+
+            //
+            // Context files only get one prepare call.  If ContextFile is not
+            // NULL here, it means the file has already been prepared once, so
+            // we can jump straight to the end.
+            //
+
+            if (ContextFile) {
+                goto End;
+            }
+        }
+    }
 
     Item->FilePointer = File;
 
@@ -129,48 +170,62 @@ Return Value:
         PCEOF_INIT Eof;
         LARGE_INTEGER EndOfFile;
         ULARGE_INTEGER NumberOfTableElements;
-        PCUNICODE_STRING NewExtension;
-        PCUNICODE_STRING NewDirectory;
-        PCUNICODE_STRING NewStreamName = NULL;
+        PCUNICODE_STRING NewExtension = NULL;
+        PCUNICODE_STRING NewDirectory = NULL;
         PCUNICODE_STRING NewBaseName = NULL;
-        PCUNICODE_STRING AdditionalSuffix;
-
-        //
-        // All output files are rooted within in the table's output directory.
-        //
-
-        NewDirectory = &Table->OutputDirectory->Path->FullPath;
-
-        //
-        // Initialize variables specific to the file work ID.
-        //
+        PCUNICODE_STRING NewStreamName = NULL;
+        PCUNICODE_STRING AdditionalSuffix = NULL;
 
         NewExtension = FileWorkItemExtensions[FileWorkId];
-        AdditionalSuffix = FileWorkItemSuffixes[FileWorkId];
 
-        NewStreamName = FileWorkItemStreamNames[FileWorkId];
+        if (IsContextFile) {
 
-        if (NewStreamName) {
+            NewBaseName = FileWorkItemBaseNames[FileWorkId];
 
+        } else {
 
             //
-            // Streams don't need more than one prepare call, as their path
-            // hangs off their owning file's path (and thus, will automatically
-            // inherit its scheduled rename), and their size never changes.  If
-            // *File is non-NULL, it means the stream has already been prepared,
-            // in which case, we can jump straight to the end.
+            // All table output files are rooted within in the table's output
+            // directory.
             //
 
-            if (*File) {
-                goto End;
+            NewDirectory = &Table->OutputDirectory->Path->FullPath;
+
+            //
+            // Initialize variables specific to the file work ID.
+            //
+
+            AdditionalSuffix = FileWorkItemSuffixes[FileWorkId];
+
+            NewStreamName = FileWorkItemStreamNames[FileWorkId];
+
+            if (NewStreamName) {
+
+                Item->Flags.PrepareOnce = TRUE;
+
+                //
+                // Streams don't need more than one prepare call, as their path
+                // hangs off their owning file's path (and thus, will inherit
+                // its scheduled rename), and their size never changes.  If we
+                // dereference *File and it's non-NULL, it means the stream has
+                // already been prepared, in which case, we can jump straight to
+                // the end.
+                //
+
+                if (*File) {
+                    goto End;
+                }
+
+                //
+                // Streams are dependent upon their "owning" file, which always
+                // reside before them.
+                //
+
+                DependentEvent = *(
+                    &Context->FirstPreparedEvent +
+                    (EventIndex - 1)
+                );
             }
-
-            //
-            // Streams are dependent upon their "owning" file, which always
-            // reside before them.
-            //
-
-            DependentEvent = *(&Context->FirstPreparedEvent + (EventIndex - 1));
         }
 
         NumberOfTableElements.QuadPart = (
@@ -193,10 +248,6 @@ Return Value:
         switch (Eof->Type) {
 
             case EofInitTypeDefault:
-                break;
-
-            case EofInitTypeZero:
-                EndOfFile.QuadPart = 1;
                 break;
 
             case EofInitTypeAssignedSize:
@@ -235,27 +286,76 @@ Return Value:
                 return;
         }
 
-        Result = PerfectHashTableCreatePath(Table,
-                                            Table->Keys->File->Path,
-                                            &NumberOfTableElements,
-                                            Table->AlgorithmId,
-                                            Table->MaskFunctionId,
-                                            Table->HashFunctionId,
-                                            NewDirectory,
-                                            NewBaseName,
-                                            AdditionalSuffix,
-                                            NewExtension,
-                                            NewStreamName,
-                                            &Path,
-                                            NULL);
+        //
+        // We create the path differently depending on whether or not it's
+        // a context file (rooted in the context's base output directory) or
+        // a table file (rooted in the table's output directory).
+        //
 
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashTableCreatePath, Result);
-            goto End;
+        if (IsContextFile) {
+
+            //
+            // Create a new path instance.
+            //
+
+            Result = Context->Vtbl->CreateInstance(Context,
+                                                   NULL,
+                                                   &IID_PERFECT_HASH_FILE,
+                                                   &Path);
+
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashTableCreateInstance, Result);
+                goto End;
+            }
+
+            //
+            // Create the underlying path.
+            //
+
+            Result = Path->Vtbl->Create(Path,
+                                        Context->BaseOutputDirectory->Path,
+                                        NULL,           // NewDirectory
+                                        NULL,           // DirectorySuffix
+                                        NewBaseName,    // NewBaseName
+                                        NULL,           // BaseNameSuffix
+                                        NewExtension,   // NewExtension
+                                        NULL,           // NewStreamName
+                                        NULL,           // Parts
+                                        NULL);          // Reserved
+
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashPathCreate, Result);
+                goto End;
+            }
+
+        } else {
+
+            Result = PerfectHashTableCreatePath(Table,
+                                                Table->Keys->File->Path,
+                                                &NumberOfTableElements,
+                                                Table->AlgorithmId,
+                                                Table->MaskFunctionId,
+                                                Table->HashFunctionId,
+                                                NewDirectory,
+                                                NewBaseName,
+                                                AdditionalSuffix,
+                                                NewExtension,
+                                                NewStreamName,
+                                                &Path,
+                                                NULL);
+
+
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashTableCreatePath, Result);
+                goto End;
+            }
+
         }
 
+        ASSERT(SUCCEEDED(Result));
+
         Result = PrepareFileChm01(Table,
-                                  File,
+                                  Item,
                                   Path,
                                   &EndOfFile,
                                   DependentEvent);
@@ -304,7 +404,7 @@ Return Value:
         }
 
         if (!Impl) {
-            Result = SaveFileChm01(Table, *File);
+            Result = SaveFileChm01(Table, Item);
             if (FAILED(Result)) {
 
                 //
@@ -356,7 +456,7 @@ _Use_decl_annotations_
 HRESULT
 PrepareFileChm01(
     PPERFECT_HASH_TABLE Table,
-    PPERFECT_HASH_FILE *FilePointer,
+    PFILE_WORK_ITEM Item,
     PPERFECT_HASH_PATH Path,
     PLARGE_INTEGER EndOfFile,
     HANDLE DependentEvent
@@ -379,13 +479,7 @@ Arguments:
 
     Table - Supplies a pointer to the table owning the file to be prepared.
 
-    FilePointer - Supplies the address of a variable that contains a pointer
-        to the relevant PERFECT_HASH_FILE instance for this file within the
-        PERFECT_HASH_TABLE structure.  If this value points to a NULL, it is
-        assumed this is the first time the routine is being called.  Otherwise,
-        it is assumed that a resize event has occurred and a new preparation
-        request is being furnished.  In the case of the former, a new file
-        instance is created and saved to the address specified by this param.
+    Item - Supplies a pointer to the active file work item to prepare.
 
     Path - Supplies a pointer to the path to use for the file.  If the file
         has already been prepared at least once, this path is scheduled for
@@ -407,6 +501,7 @@ Return Value:
 {
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File = NULL;
+    PPERFECT_HASH_DIRECTORY Directory = NULL;
 
     //
     // If a dependent event has been provided, wait for this object to become
@@ -433,7 +528,7 @@ Return Value:
     // larger files are required to capture table data).
     //
 
-    File = *FilePointer;
+    File = *Item->FilePointer;
 
     if (!File) {
 
@@ -453,10 +548,21 @@ Return Value:
             goto Error;
         }
 
+        if (!IsContextFileWorkItem(Item)) {
+
+            //
+            // Table files always get associated with the table's output
+            // directory (i.e. the Create() call coming up will call the
+            // directory's AddFile() method if Directory is not NULL).
+            //
+
+            Directory = Table->OutputDirectory;
+        }
+
         Result = File->Vtbl->Create(File,
                                     Path,
                                     EndOfFile,
-                                    Table->OutputDirectory,
+                                    Directory,
                                     NULL);
 
         if (FAILED(Result)) {
@@ -467,12 +573,22 @@ Return Value:
         }
 
         //
-        // Update the table's pointer to this file instance.
+        // Update the file pointer.
         //
 
-        *FilePointer = File;
+        *Item->FilePointer = File;
 
     } else {
+
+        //
+        // Invariant check: context files should only be prepared once.
+        //
+
+        if (IsContextFileWorkItem(Item)) {
+            Result = PH_E_CONTEXT_FILE_ALREADY_PREPARED;
+            PH_ERROR(PrepareFileChm01, Result);
+            goto Error;
+        }
 
         //
         // File already exists.  Schedule a rename and then extend the file
@@ -524,7 +640,7 @@ _Use_decl_annotations_
 HRESULT
 SaveFileChm01(
     PPERFECT_HASH_TABLE Table,
-    PPERFECT_HASH_FILE File
+    PFILE_WORK_ITEM Item
     )
 /*++
 
@@ -545,7 +661,7 @@ Arguments:
 
     Table - Supplies a pointer to the table owning the file to be saved.
 
-    File - Supplies a pointer to the file to save.
+    Item - Supplies a pointer to the file work item for this save action.
 
 Return Value:
 
@@ -553,13 +669,23 @@ Return Value:
 
 --*/
 {
-    HRESULT Result;
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_FILE File;
 
     UNREFERENCED_PARAMETER(Table);
 
-    Result = File->Vtbl->Close(File, NULL);
-    if (FAILED(Result)) {
-        PH_ERROR(SaveFileChm01_CloseFile, Result);
+    File = *Item->FilePointer;
+
+    //
+    // Close the file if it's either a) not a context file, or b) if it is a
+    // file, only if it hasn't already been closed.
+    //
+
+    if (!IsContextFileWorkItem(Item) || !IsFileClosed(File)) {
+        Result = File->Vtbl->Close(File, NULL);
+        if (FAILED(Result)) {
+            PH_ERROR(SaveFileChm01_CloseFile, Result);
+        }
     }
 
     return Result;

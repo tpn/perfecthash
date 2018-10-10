@@ -220,7 +220,7 @@ const CHAR CompiledPerfectHashVCPropsRawCStr[] =
     "</Project>\n"
 ;
 
-const STRING CompiledPerfectHashVCPropsRawString = {
+const STRING CompiledPerfectHashVCPropsRawCString = {
     sizeof(CompiledPerfectHashVCPropsRawCStr) - sizeof(CHAR),
     sizeof(CompiledPerfectHashVCPropsRawCStr),
 #ifdef _WIN64
@@ -228,3 +228,7 @@ const STRING CompiledPerfectHashVCPropsRawString = {
 #endif
     (PCHAR)&CompiledPerfectHashVCPropsRawCStr,
 };
+
+#ifndef RawCString
+#define RawCString (&CompiledPerfectHashVCPropsRawCString)
+#endif

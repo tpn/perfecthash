@@ -239,10 +239,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     ULONG AllocationGranularity;
 
     //
-    // Align up to an 8-byte boundary.
+    // Optionally capture the file ID associated with this file.
     //
 
-    ULONG Padding;
+    FILE_ID FileId;
 
     //
     // Pointer to the path instance from which we were loaded or created.

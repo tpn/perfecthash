@@ -1367,3 +1367,11 @@ Language=English
 Error saving C source stdafx.c file.
 .
 
+MessageId=0x309
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_FILE_ALREADY_PREPARED
+Language=English
+Context file already prepared.
+.
+

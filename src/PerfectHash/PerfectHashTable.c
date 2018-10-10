@@ -163,6 +163,15 @@ Return Value:
     }
 
     //
+    // Invariant check: the context files should always be NULL.
+    //
+
+#define EXPAND_AS_ASSERT_NULL(Verb, VUpper, Name, Upper) \
+    ASSERT(Table->##Name == NULL);
+
+    CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSERT_NULL);
+
+    //
     // Release applicable COM references.
     //
 
