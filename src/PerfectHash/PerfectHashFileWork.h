@@ -294,7 +294,7 @@ FileWorkIdToFileId(
     Id = FileWorkId;
 
     if (IsSaveFileWorkId(FileWorkId)) {
-        Id -= FileWorkSaveFirstId;
+        Id -= (FileWorkSaveFirstId - 1);
     }
 
     ASSERT(IsValidFileId(Id));
@@ -329,7 +329,7 @@ ContextFileIdToContextFileIndex(
 {
     LONG Index;
 
-    Index = FileId - ContextFileFirstId - 1;
+    Index = FileId - ContextFileFirstId;
 
     ASSERT(Index >= 0 && Index <= NUMBER_OF_CONTEXT_FILES-1);
 
