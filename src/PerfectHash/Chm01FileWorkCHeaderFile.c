@@ -65,7 +65,7 @@ PrepareCHeaderFileChm01(
 
     OUTPUT_INCLUDE_STDAFX_H();
 
-    OUTPUT_RAW("#ifndef CPH_TABLENAME\n\n"
+    OUTPUT_RAW("#ifndef CPH_TABLENAME\n"
                "#define CPH_TABLENAME ");
     OUTPUT_STRING(Name);
 
