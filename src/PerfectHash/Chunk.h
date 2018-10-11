@@ -28,10 +28,13 @@ typedef enum _CHUNK_OP {
     ChunkOpInsertRootNamespace,
     ChunkOpInsertProjectName,
     ChunkOpInsertBaseName,
+    ChunkOpInsertTableName,
     ChunkOpInsertTargetName,
     ChunkOpInsertTargetExt,
     ChunkOpInsertConfigurationType,
     ChunkOpInsertFileSuffix,
+    ChunkOpInsertTargetPrefix,
+    ChunkOpInsertTargetSuffix,
     ChunkOpInsertDllProjectGuid,
     ChunkOpInvalid,
     ChunkOpLast = ChunkOpInvalid - 1,
@@ -77,10 +80,13 @@ typedef struct _CHUNK_VALUES {
     PCSTRING RootNamespace;
     PCSTRING ProjectName;
     PCSTRING BaseName;
+    PCSTRING TableName;
     PCSTRING TargetName;
     PCSTRING TargetExt;
     PCSTRING ConfigurationType;
     PCSTRING FileSuffix;
+    PCSTRING TargetPrefix;
+    PCSTRING TargetSuffix;
     PCSTRING DllProjectGuid;
 } CHUNK_VALUES;
 typedef CHUNK_VALUES *PCHUNK_VALUES;
