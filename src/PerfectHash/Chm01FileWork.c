@@ -180,6 +180,12 @@ Return Value:
 
         if (IsContextFile) {
 
+            //
+            // All context files are rooted within in the context's base
+            // output directory.
+            //
+
+            NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
             NewBaseName = FileWorkItemBaseNames[FileWorkId];
 
         } else {
@@ -300,7 +306,7 @@ Return Value:
 
             Result = Context->Vtbl->CreateInstance(Context,
                                                    NULL,
-                                                   &IID_PERFECT_HASH_FILE,
+                                                   &IID_PERFECT_HASH_PATH,
                                                    &Path);
 
             if (FAILED(Result)) {
@@ -314,7 +320,7 @@ Return Value:
 
             Result = Path->Vtbl->Create(Path,
                                         Context->BaseOutputDirectory->Path,
-                                        NULL,           // NewDirectory
+                                        NewDirectory,   // NewDirectory
                                         NULL,           // DirectorySuffix
                                         NewBaseName,    // NewBaseName
                                         NULL,           // BaseNameSuffix
