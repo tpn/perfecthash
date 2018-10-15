@@ -35,7 +35,6 @@ typedef enum _CHUNK_OP {
     ChunkOpInsertFileSuffix,
     ChunkOpInsertTargetPrefix,
     ChunkOpInsertTargetSuffix,
-    ChunkOpInsertDllProjectGuid,
     ChunkOpInvalid,
     ChunkOpLast = ChunkOpInvalid - 1,
 } CHUNK_OP;
@@ -87,7 +86,6 @@ typedef struct _CHUNK_VALUES {
     PCSTRING FileSuffix;
     PCSTRING TargetPrefix;
     PCSTRING TargetSuffix;
-    PCSTRING DllProjectGuid;
 } CHUNK_VALUES;
 typedef CHUNK_VALUES *PCHUNK_VALUES;
 typedef const CHUNK_VALUES *PCCHUNK_VALUES;

@@ -15,11 +15,8 @@ Abstract:
 
 #include "stdafx.h"
 
-#include <rpc.h>
-
 extern const ULONG VCProjectTestExeFileNumberOfChunks;
 extern CHUNK VCProjectTestExeFileChunks[];
-#define UUID_STRING_LENGTH 36
 
 _Use_decl_annotations_
 HRESULT
@@ -31,9 +28,7 @@ PrepareVCProjectTestExeFileChm01(
     PRTL Rtl;
     PCHAR Base;
     PCHAR Output;
-    GUID Guid;
-    RPC_CSTR GuidCStr = NULL;
-    STRING GuidString;
+    PCSTRING Guid;
     PCSTRING BaseName;
     PCSTRING TableName;
     CHUNK_VALUES Values;
@@ -47,29 +42,6 @@ PrepareVCProjectTestExeFileChm01(
     STRING TestExeFileSuffix = RTL_CONSTANT_STRING("TestExe");
 
     //
-    // Create a new UUID and then convert it into a string representation.  We
-    // will use this for the ProjectGuid field.
-    //
-
-    Result = UuidCreate(&Guid);
-    if (FAILED(Result)) {
-        SYS_ERROR(UuidCreate);
-        goto Error;
-    }
-
-    Result = UuidToStringA(&Guid, &GuidCStr);
-    if (FAILED(Result)) {
-        SYS_ERROR(UuidCreate);
-        goto Error;
-    }
-
-    GuidString.Buffer = (PCHAR)GuidCStr;
-    GuidString.Length = (USHORT)strlen(GuidString.Buffer);
-    GuidString.MaximumLength = GuidString.Length + 1;
-    ASSERT(GuidString.Length == UUID_STRING_LENGTH);
-    ASSERT(GuidString.Buffer[GuidString.Length] == '\0');
-
-    //
     // Initialize aliases.
     //
 
@@ -79,6 +51,9 @@ PrepareVCProjectTestExeFileChm01(
     Path = GetActivePath(File);
     BaseName = &Path->BaseNameA;
     TableName = &Path->TableNameA;
+    Guid = &File->Uuid;
+
+    ASSERT(IsValidUuidString(Guid));
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
@@ -89,7 +64,7 @@ PrepareVCProjectTestExeFileChm01(
 
     ZeroStruct(Values);
 
-    Values.ProjectGuid = &GuidString;
+    Values.ProjectGuid = Guid;
     Values.RootNamespace = TableName;
     Values.ProjectName = BaseName;
     Values.BaseName = TableName;
@@ -122,13 +97,6 @@ Error:
     //
 
 End:
-
-    if (GuidCStr) {
-        Result = RpcStringFreeA(&GuidCStr);
-        if (FAILED(Result)) {
-            SYS_ERROR(RpcStringFreeA);
-        }
-    }
 
     return Result;
 }
@@ -230,6 +198,18 @@ CHUNK VCProjectTestExeFileChunks[] = {
         RCS(
                    "_StdAfx.h</PrecompiledHeaderFile>\r\n"
             "    </ClCompile>\r\n"
+            "    <Link>\r\n"
+            "      <AdditionalDependencies>$(OutDir)"
+        ),
+    },
+
+    { ChunkOpInsertTableName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
+            ".lib;%(AdditionalDependencies)</AdditionalDependencies>\r\n"
+            "    </Link>\r\n"
             "  </ItemDefinitionGroup>\r\n"
             "  <ItemGroup>\r\n"
             "    <ClInclude Include=\""

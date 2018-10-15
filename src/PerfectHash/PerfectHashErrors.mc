@@ -1375,3 +1375,27 @@ Language=English
 Context file already prepared.
 .
 
+MessageId=0x30a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_VSSOLUTION_FILE
+Language=English
+Error preparing VS Solution .sln file.
+.
+
+MessageId=0x30b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_VSSOLUTION_FILE
+Language=English
+Error saving VS Solution .sln file.
+.
+
+MessageId=0x30c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_UUID_STRING
+Language=English
+Invalid UUID string.
+.
+

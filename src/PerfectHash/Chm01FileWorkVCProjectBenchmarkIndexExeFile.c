@@ -4,23 +4,23 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm01FileWorkVCProjectDllFile.c
+    Chm01FileWorkVCProjectBenchmarkIndexExeFile.c
 
 Abstract:
 
     This module implements the prepare and save file work callback routines for
-    a compiled perfect hash table's Dll.vcxproj file.
+    a compiled perfect hash table's BenchmarkIndexExe.vcxproj file.
 
 --*/
 
 #include "stdafx.h"
 
-extern const ULONG VCProjectDllFileNumberOfChunks;
-extern CHUNK VCProjectDllFileChunks[];
+extern const ULONG VCProjectBenchmarkIndexExeFileNumberOfChunks;
+extern CHUNK VCProjectBenchmarkIndexExeFileChunks[];
 
 _Use_decl_annotations_
 HRESULT
-PrepareVCProjectDllFileChm01(
+PrepareVCProjectBenchmarkIndexExeFileChm01(
     PPERFECT_HASH_CONTEXT Context,
     PFILE_WORK_ITEM Item
     )
@@ -36,9 +36,10 @@ PrepareVCProjectDllFileChm01(
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
-    PCCHUNK Chunks = VCProjectDllFileChunks;
-    const ULONG NumberOfChunks = VCProjectDllFileNumberOfChunks;
-    STRING DllFileSuffix = RTL_CONSTANT_STRING("Dll");
+    PCCHUNK Chunks = VCProjectBenchmarkIndexExeFileChunks;
+    const ULONG NumberOfChunks = VCProjectBenchmarkIndexExeFileNumberOfChunks;
+    STRING TargetPrefix = RTL_CONSTANT_STRING("BenchmarkIndex_");
+    STRING BenchmarkIndexExeFileSuffix = RTL_CONSTANT_STRING("BenchmarkIndexExe");
 
     //
     // Initialize aliases.
@@ -52,7 +53,7 @@ PrepareVCProjectDllFileChm01(
     TableName = &Path->TableNameA;
     Guid = &File->Uuid;
 
-    ASSERT(IsValidString(Guid));
+    ASSERT(IsValidUuidString(Guid));
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
@@ -67,10 +68,12 @@ PrepareVCProjectDllFileChm01(
     Values.RootNamespace = TableName;
     Values.ProjectName = BaseName;
     Values.BaseName = TableName;
-    Values.TargetName = TableName;
-    Values.TargetExt = &DotDllSuffixA;
-    Values.FileSuffix = &DllFileSuffix;
-    Values.ConfigurationType = &DynamicLibraryConfigurationTypeA;
+    Values.TableName = TableName;
+    Values.TargetName = BaseName;
+    Values.TargetExt = &DotExeSuffixA;
+    Values.FileSuffix = &BenchmarkIndexExeFileSuffix;
+    Values.TargetPrefix = &TargetPrefix;
+    Values.ConfigurationType = &ApplicationConfigurationTypeA;
 
     Result = ProcessChunks(Rtl, Chunks, NumberOfChunks, &Values, &Output);
 
@@ -102,7 +105,7 @@ End:
 #define RCS RTL_CONSTANT_STRING
 #endif
 
-CHUNK VCProjectDllFileChunks[] = {
+CHUNK VCProjectBenchmarkIndexExeFileChunks[] = {
 
     { ChunkOpStringPointer, .StringPointer = &VCProjectFileHeaderChunk, },
 
@@ -136,7 +139,9 @@ CHUNK VCProjectDllFileChunks[] = {
         ),
     },
 
-    { ChunkOpInsertTargetName, },
+    { ChunkOpInsertTargetPrefix, },
+
+    { ChunkOpInsertTableName, },
 
     {
         ChunkOpRaw,
@@ -181,36 +186,25 @@ CHUNK VCProjectDllFileChunks[] = {
             "  <PropertyGroup Label=\"UserMacros\" />\r\n"
             "  <ItemDefinitionGroup>\r\n"
             "    <ClCompile>\r\n"
-            "      <PreprocessorDefinitions>COMPILED_PERFECT_HASH_DLL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>\r\n"
-            "    </ClCompile>\r\n"
-            "    <Bscmake>\r\n"
-            "      <PreserveSbr>false</PreserveSbr>\r\n"
-            "    </Bscmake>\r\n"
-            "  </ItemDefinitionGroup>\r\n"
-            "  <ItemDefinitionGroup>\r\n"
-            "    <ClCompile>\r\n"
             "      <AdditionalIncludeDirectories>$(ProjectDir)\\..</AdditionalIncludeDirectories>\r\n"
             "      <PrecompiledHeaderFile>"
         ),
     },
 
-    { ChunkOpInsertBaseName, },
+    { ChunkOpInsertTableName, },
 
     {
         ChunkOpRaw,
         RCS(
                    "_StdAfx.h</PrecompiledHeaderFile>\r\n"
             "    </ClCompile>\r\n"
-            "    <Link>\r\n"
-            "      <NoEntryPoint>true</NoEntryPoint>\r\n"
-            "    </Link>\r\n"
             "  </ItemDefinitionGroup>\r\n"
             "  <ItemGroup>\r\n"
             "    <ClInclude Include=\""
         ),
     },
 
-    { ChunkOpInsertBaseName, },
+    { ChunkOpInsertTableName, },
 
     {
         ChunkOpRaw,
@@ -220,7 +214,7 @@ CHUNK VCProjectDllFileChunks[] = {
         ),
     },
 
-    { ChunkOpInsertBaseName, },
+    { ChunkOpInsertTableName, },
 
     {
         ChunkOpRaw,
@@ -232,7 +226,7 @@ CHUNK VCProjectDllFileChunks[] = {
         ),
     },
 
-    { ChunkOpInsertBaseName, },
+    { ChunkOpInsertTableName, },
 
     {
         ChunkOpRaw,
@@ -244,22 +238,32 @@ CHUNK VCProjectDllFileChunks[] = {
         ),
     },
 
-    { ChunkOpInsertBaseName, },
+    { ChunkOpInsertTableName, },
 
     {
         ChunkOpRaw,
         RCS(
-            ".c\" />\r\n"
+            "_BenchmarkIndex.c\" />\r\n"
             "    <ClCompile Include=\""
         ),
     },
 
-    { ChunkOpInsertBaseName, },
+    { ChunkOpInsertTableName, },
 
     {
         ChunkOpRaw,
         RCS(
-            "_TableData.c\" />\r\n"
+            "_BenchmarkIndexExe.c\" />\r\n"
+            "    <ClCompile Include=\""
+        ),
+    },
+
+    { ChunkOpInsertTableName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
+            "_Keys.c\" />\r\n"
             "  </ItemGroup>\r\n"
             "  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\r\n"
             "</Project>\r\n"
@@ -267,6 +271,7 @@ CHUNK VCProjectDllFileChunks[] = {
     },
 };
 
-const ULONG VCProjectDllFileNumberOfChunks = ARRAYSIZE(VCProjectDllFileChunks);
+const ULONG VCProjectBenchmarkIndexExeFileNumberOfChunks =
+    ARRAYSIZE(VCProjectBenchmarkIndexExeFileChunks);
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

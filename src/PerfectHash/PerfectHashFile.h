@@ -215,7 +215,9 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 #define NumberOfPagesForPendingEndOfFile(File) \
     (ULONG)BYTES_TO_PAGES(File->PendingEndOfFile.QuadPart)
 
-#define GetActivePath(File) (File->RenamePath ? File->RenamePath : File->Path)
+#define GetActivePath(File) (                              \
+    (File)->RenamePath ? (File)->RenamePath : (File)->Path \
+)
 
 //
 // Define the PERFECT_HASH_FILE structure.
@@ -311,6 +313,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     //
 
     LARGE_INTEGER PendingEndOfFile;
+
+    //
+    // Certain files, such as VC Project (.vcxproj) files, have UUIDs associated
+    // with them, which will be captured in the following field.
+    //
+
+    STRING Uuid;
 
     //
     // Backing interface.

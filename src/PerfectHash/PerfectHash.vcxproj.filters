@@ -190,6 +190,30 @@
     <ClCompile Include="Chm01FileWorkVCProjectTestExeFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkVSSolutionFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkVCProjectBenchmarkIndexExeFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkVCProjectBenchmarkFullExeFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RtlUuid.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexExeFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullExeFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">

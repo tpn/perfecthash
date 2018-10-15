@@ -593,30 +593,38 @@ extern BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE                           \
 //
 // The following macros are intended to be used by the Test.c, BenchmarkFull.c
 // and BenchmarkIndex.c files such that they can generate the proper function
-// header without having to have the table name hardcoded.  They all assume
-// the macro CPH_TABLENAME is in scope (which will be defined in the relevant
-// table's header file).
+// header (with a bit of macro glue) without having to have the table name
+// hardcoded.
 //
 
-#define DECLARE_TEST_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER() \
-_Use_decl_annotations_                                            \
-ULONG                                                             \
-TestCompiledPerfectHashTable_##CPH_TABLENAME##(                   \
-    BOOLEAN DebugBreakOnFailure                                   \
+#define DECLARE_TEST_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER(T) \
+TEST_COMPILED_PERFECT_HASH_TABLE                                   \
+    TestCompiledPerfectHashTable_##T;                              \
+                                                                   \
+_Use_decl_annotations_                                             \
+ULONG                                                              \
+TestCompiledPerfectHashTable_##T##(                                \
+    BOOLEAN DebugBreakOnFailure                                    \
     )
 
-#define DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER() \
-_Use_decl_annotations_                                                      \
-ULONG                                                                       \
-BenchmarkFullCompiledPerfectHashTable_##CPH_TABLENAME##(                    \
-    ULONG Seconds                                                           \
-    )
-
-#define DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER() \
+#define DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER(T) \
+BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE                                   \
+    BenchmarkFullCompiledPerfectHashTable_##T;                               \
+                                                                             \
 _Use_decl_annotations_                                                       \
 ULONG                                                                        \
-BenchmarkIndexCompiledPerfectHashTable_##CPH_TABLENAME##(                    \
+BenchmarkFullCompiledPerfectHashTable_##T##(                                 \
     ULONG Seconds                                                            \
+    )
+
+#define DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER(T) \
+BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE                                   \
+    BenchmarkIndexCompiledPerfectHashTable_##T;                               \
+                                                                              \
+_Use_decl_annotations_                                                        \
+ULONG                                                                         \
+BenchmarkIndexCompiledPerfectHashTable_##T##(                                 \
+    ULONG Seconds                                                             \
     )
 
 #pragma warning(pop)

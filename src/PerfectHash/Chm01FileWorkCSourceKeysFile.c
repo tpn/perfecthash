@@ -76,6 +76,13 @@ PrepareCSourceKeysFileChm01(
     //
 
     OUTPUT_RAW("#pragma const_seg(\".cphkeys\")\n");
+
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_NumberOfKeys = ");
+    OUTPUT_INT(NumberOfKeys);
+    OUTPUT_RAW(";\n");
+
     OUTPUT_RAW("const ULONG ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[");

@@ -1577,3 +1577,30 @@ Abstract:
 //
 #define PH_E_CONTEXT_FILE_ALREADY_PREPARED ((HRESULT)0xE0040309L)
 
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_VSSOLUTION_FILE
+//
+// MessageText:
+//
+// Error preparing VS Solution .sln file.
+//
+#define PH_E_ERROR_DURING_PREPARE_VSSOLUTION_FILE ((HRESULT)0xE004030AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_VSSOLUTION_FILE
+//
+// MessageText:
+//
+// Error saving VS Solution .sln file.
+//
+#define PH_E_ERROR_DURING_SAVE_VSSOLUTION_FILE ((HRESULT)0xE004030BL)
+
+//
+// MessageId: PH_E_INVALID_UUID_STRING
+//
+// MessageText:
+//
+// Invalid UUID string.
+//
+#define PH_E_INVALID_UUID_STRING         ((HRESULT)0xE004030CL)
+

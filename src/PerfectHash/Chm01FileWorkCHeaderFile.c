@@ -30,6 +30,7 @@ PrepareCHeaderFileChm01(
     ULONG NumberOfSeeds;
     ULONGLONG Index;
     PCSTRING Name;
+    PCSTRING Upper;
     PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
@@ -46,6 +47,7 @@ PrepareCHeaderFileChm01(
     File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
+    Upper = &Path->TableNameUpperA;
     TableInfoOnDisk = Table->TableInfoOnDisk;
     NumberOfSeeds = TableInfoOnDisk->NumberOfSeeds;
 
@@ -69,7 +71,12 @@ PrepareCHeaderFileChm01(
                "#define CPH_TABLENAME ");
     OUTPUT_STRING(Name);
 
-    OUTPUT_RAW("\n#endif\n\nextern const ULONG ");
+    OUTPUT_RAW("\n#endif\n\n#define ");
+    OUTPUT_STRING(Upper);
+    OUTPUT_RAW("_NUMBER_OF_KEYS ");
+    OUTPUT_INT(Keys->NumberOfElements.QuadPart);
+
+    OUTPUT_RAW("\n\nextern const ULONG ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Seeds[");
     OUTPUT_INT(NumberOfSeeds);
@@ -95,7 +102,10 @@ PrepareCHeaderFileChm01(
 
     OUTPUT_RAW("extern const ULONG ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_Keys[];\n\n");
+    OUTPUT_RAW("_Keys[];\n");
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_NumberOfKeys;\n\n");
 
     OUTPUT_RAW("DEFINE_COMPILED_PERFECT_HASH_ROUTINES(\n    ");
     OUTPUT_STRING(Name);
@@ -113,6 +123,9 @@ PrepareCHeaderFileChm01(
     OUTPUT_RAW("#ifndef CphTableKeys\n#define CphTableKeys ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys\n#endif\n\n"
+               "#ifndef CphTableNumberOfKeys\n#define CphTableNumberOfKeys ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_NumberOfKeys\n#endif\n\n"
                "#ifndef CphTableData\n#define CphTableData ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableData\n#endif\n\n"
@@ -167,23 +180,19 @@ PrepareCHeaderFileChm01(
     //
 
     OUTPUT_RAW("#ifndef TestCphTable\n"
-               "#define TestPhTable TestCompiledPerfectHashTable_");
+               "#define TestCphTable TestCompiledPerfectHashTable_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("\n#endif\n\n"
                "#ifndef BenchmarkIndexCphTable\n"
-               "#define BenchmarkIndexPhTable "
+               "#define BenchmarkIndexCphTable "
                        "BenchmarkIndexCompiledPerfectHashTable_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("\n#endif\n\n"
                "#ifndef BenchmarkFullCphTable\n"
-               "#define BenchmarkFullPhTable "
+               "#define BenchmarkFullCphTable "
                        "BenchmarkFullCompiledPerfectHashTable_");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("\n#endif\n\n");
-
-    OUTPUT_RAW("#ifdef __cplusplus\n"
-               "} // extern \"C\"\n"
-               "#endif\n\n");
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

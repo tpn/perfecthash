@@ -187,6 +187,28 @@ Return Value:
     }
 
     //
+    // Release the UUID string if applicable.
+    //
+
+    if (!IsValidUuidString(&File->Uuid)) {
+        ASSERT(!File->Uuid.Buffer);
+    } else {
+        PRTL Rtl = File->Rtl;
+        Result = RtlFreeUuidString(Rtl, &File->Uuid);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileRundown, Result);
+
+            //
+            // The FreeUuidString() routine will have reported an appropriate
+            // error via PH_ERROR()/SYS_ERROR(), so there's nothing more we can
+            // do at this point.
+            //
+
+            NOTHING;
+        }
+    }
+
+    //
     // Release COM references.
     //
 

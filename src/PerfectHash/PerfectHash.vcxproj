@@ -125,6 +125,10 @@
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderStdAfxFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullExeFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexExeFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceKeysFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceStdAfxFile.c" />
@@ -133,9 +137,12 @@
     <ClCompile Include="Chm01FileWorkCSourceTestFile.c" />
     <ClCompile Include="Chm01FileWorkTableFile.c" />
     <ClCompile Include="Chm01FileWorkTableInfoStream.c" />
+    <ClCompile Include="Chm01FileWorkVCProjectBenchmarkFullExeFile.c" />
+    <ClCompile Include="Chm01FileWorkVCProjectBenchmarkIndexExeFile.c" />
     <ClCompile Include="Chm01FileWorkVCProjectDllFile.c" />
     <ClCompile Include="Chm01FileWorkVCProjectTestExeFile.c" />
     <ClCompile Include="Chm01FileWorkVCPropsCompiledPerfectHashFile.c" />
+    <ClCompile Include="Chm01FileWorkVSSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chunk.c" />
@@ -174,6 +181,7 @@
     <ClCompile Include="RtlOutput.c" />
     <ClCompile Include="RtlPrivilege.c" />
     <ClCompile Include="RtlRandom.c" />
+    <ClCompile Include="RtlUuid.c" />
     <ClCompile Include="Security.c" />
     <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="stdafx.c">

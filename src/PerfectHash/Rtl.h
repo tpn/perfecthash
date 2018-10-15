@@ -1870,6 +1870,48 @@ typedef RTL_CREATE_SINGLE_RANDOM_OBJECT_NAME
       *PRTL_CREATE_SINGLE_RANDOM_OBJECT_NAME;
 
 //
+// UUID String Helpers.
+//
+
+#define UUID_STRING_LENGTH 36
+
+FORCEINLINE
+BOOLEAN
+IsValidUuidString(
+    _In_ PCSTRING String
+    )
+{
+    return (
+        String &&
+        String->Buffer != NULL &&
+        String->Length == UUID_STRING_LENGTH &&
+        String->MaximumLength >= UUID_STRING_LENGTH+1
+    );
+}
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI RTL_CREATE_UUID_STRING)(
+    _In_ PRTL Rtl,
+    _In_ PSTRING String
+    );
+typedef RTL_CREATE_UUID_STRING *PRTL_CREATE_UUID_STRING;
+extern RTL_CREATE_UUID_STRING RtlCreateUuidString;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI RTL_FREE_UUID_STRING)(
+    _In_ PRTL Rtl,
+    _In_ PSTRING String
+    );
+typedef RTL_FREE_UUID_STRING *PRTL_FREE_UUID_STRING;
+extern RTL_FREE_UUID_STRING RtlFreeUuidString;
+
+//
 // COM-specific glue for the Rtl component.
 //
 

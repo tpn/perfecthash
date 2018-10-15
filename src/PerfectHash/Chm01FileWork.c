@@ -119,13 +119,28 @@ Return Value:
 
     ASSERT(IsValidFileWorkId(FileWorkId));
 
+    //
+    // Resolve the relevant file and event indices and associated pointers.
+    //
+
     FileIndex = FileWorkIdToFileIndex(FileWorkId);
     File = &Table->FirstFile + FileIndex;
 
     EventIndex = FileWorkIdToEventIndex(FileWorkId);
     Event = *(&Context->FirstPreparedEvent + EventIndex);
 
+    //
+    // Set the file ID.
+    //
+
     Item->FileId = FileId = FileWorkIdToFileId(FileWorkId);
+
+    //
+    // Determine if this is a context file.  Context files get treated
+    // differently to normal table output files in that they are only prepared
+    // and saved once per context instance.
+    //
+
     ContextFileId = (CONTEXT_FILE_ID)FileId;
 
     if (!IsValidContextFileId(ContextFileId)) {
@@ -231,6 +246,19 @@ Return Value:
                     &Context->FirstPreparedEvent +
                     (EventIndex - 1)
                 );
+
+            } else if (FileRequiresUuid(FileId) && !*File) {
+
+                //
+                // Generate a UUID the first time we prepare a VC Project file
+                // or VS Solution file.
+                //
+
+                Result = RtlCreateUuidString(Rtl, &Item->Uuid);
+                if (FAILED(Result)) {
+                    goto End;
+                }
+
             }
         }
 
@@ -295,7 +323,15 @@ Return Value:
         //
         // We create the path differently depending on whether or not it's
         // a context file (rooted in the context's base output directory) or
-        // a table file (rooted in the table's output directory).
+        // a table file (rooted in the table's output directory).  E.g.
+        //
+        //  Context's base output directory:
+        //
+        //      C:\Temp\output
+        //
+        //  Table's base output directory:
+        //
+        //      C:\Temp\output\KernelBase_2415_8192_Chm01_Crc32Rotate_And
         //
 
         if (IsContextFile) {
@@ -335,6 +371,10 @@ Return Value:
             }
 
         } else {
+
+            //
+            // This is a normal table file.
+            //
 
             Result = PerfectHashTableCreatePath(Table,
                                                 Table->Keys->File->Path,
@@ -438,6 +478,20 @@ End:
         Path = NULL;
     }
 
+    //
+    // If the item's UUID string buffer is non-NULL here, the downstream routine
+    // did not successfully take ownership of it, and thus, we're responsbile
+    // for freeing it.
+    //
+
+    if (Item->Uuid.Buffer) {
+        ASSERT(FileRequiresUuid(FileId));
+        if (File && *File) {
+            ASSERT((*File)->Uuid.Buffer == NULL);
+        }
+        Result = RtlFreeUuidString(Rtl, &Item->Uuid);
+    }
+
     Item->LastResult = Result;
 
     if (FAILED(Result)) {
@@ -505,6 +559,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File = NULL;
     PPERFECT_HASH_DIRECTORY Directory = NULL;
@@ -584,6 +639,38 @@ Return Value:
 
         *Item->FilePointer = File;
 
+        if (!FileRequiresUuid(Item->FileId)) {
+
+            //
+            // No UUID string buffer should be set if the file hasn't been
+            // marked as requiring a UUID.
+            //
+
+            ASSERT(Item->Uuid.Buffer == NULL);
+
+        } else {
+
+            //
+            // Verify the Item->Uuid string has been filled out.
+            //
+
+            if (!IsValidUuidString(&Item->Uuid)) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(PrepareFileChm01_VCProjectItemMissingUuid, Result);
+                goto Error;
+            }
+
+            //
+            // Copy the details over to the file instance, which will now "own"
+            // the underlying UUID string buffer (this is freed in the file's
+            // rundown routine), and zero the Item->Uuid representation.
+            //
+
+            Rtl = File->Rtl;
+            CopyMemory(&File->Uuid, &Item->Uuid, sizeof(File->Uuid));
+            ZeroStruct(Item->Uuid);
+        }
+
     } else {
 
         //
@@ -593,6 +680,16 @@ Return Value:
         if (IsContextFileWorkItem(Item)) {
             Result = PH_E_CONTEXT_FILE_ALREADY_PREPARED;
             PH_ERROR(PrepareFileChm01, Result);
+            goto Error;
+        }
+
+        //
+        // Invariant check: no UUID should be set.
+        //
+
+        if (Item->Uuid.Buffer) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PrepareFileChm01_ItemUuidBufferNotNull, Result);
             goto Error;
         }
 

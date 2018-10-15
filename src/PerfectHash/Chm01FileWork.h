@@ -34,12 +34,13 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 //#define PrepareCSourceTestFileChm01 NULL
 //#define PrepareCSourceTestExeFileChm01 NULL
 //#define PrepareVCProjectTestExeFileChm01 NULL
-#define PrepareCSourceBenchmarkFullFileChm01 NULL
-#define PrepareCSourceBenchmarkFullExeFileChm01 NULL
-#define PrepareVCProjectBenchmarkFullExeFileChm01 NULL
-#define PrepareCSourceBenchmarkIndexFileChm01 NULL
-#define PrepareCSourceBenchmarkIndexExeFileChm01 NULL
-#define PrepareVCProjectBenchmarkIndexExeFileChm01 NULL
+//#define PrepareCSourceBenchmarkFullFileChm01 NULL
+//#define PrepareCSourceBenchmarkFullExeFileChm01 NULL
+//#define PrepareVCProjectBenchmarkFullExeFileChm01 NULL
+//#define PrepareCSourceBenchmarkIndexFileChm01 NULL
+//#define PrepareCSourceBenchmarkIndexExeFileChm01 NULL
+//#define PrepareVCProjectBenchmarkIndexExeFileChm01 NULL
+//#define PrepareVSSolutionFileChm01 NULL
 //#define PrepareCHeaderCompiledPerfectHashFileChm01 NULL
 //#define PrepareVCPropsCompiledPerfectHashFileChm01 NULL
 #define PrepareTableStatsTextFileChm01 NULL
@@ -63,6 +64,7 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define SaveCSourceBenchmarkIndexFileChm01 NULL
 #define SaveCSourceBenchmarkIndexExeFileChm01 NULL
 #define SaveVCProjectBenchmarkIndexExeFileChm01 NULL
+#define SaveVSSolutionFileChm01 NULL
 #define SaveCHeaderCompiledPerfectHashFileChm01 NULL
 #define SaveVCPropsCompiledPerfectHashFileChm01 NULL
 #define SaveTableStatsTextFileChm01 NULL

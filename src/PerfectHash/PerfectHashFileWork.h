@@ -23,28 +23,29 @@ Abstract:
 // work items.
 //
 
-#define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                   \
-    FIRST_ENTRY(Verb, VUpper, TableFile,                TABLE_FILE)                          \
-    ENTRY(Verb, VUpper, TableInfoStream,                TABLE_INFO_STREAM)                   \
-    ENTRY(Verb, VUpper, CHeaderFile,                    C_HEADER_FILE)                       \
-    ENTRY(Verb, VUpper, CSourceFile,                    C_SOURCE_FILE)                       \
-    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                \
-    ENTRY(Verb, VUpper, CSourceStdAfxFile,              C_SOURCE_STDAFX_FILE)                \
-    ENTRY(Verb, VUpper, CSourceKeysFile,                C_SOURCE_KEYS_FILE)                  \
-    ENTRY(Verb, VUpper, CSourceTableDataFile,           C_SOURCE_TABLE_DATA_FILE)            \
-    ENTRY(Verb, VUpper, VCProjectDllFile,               VCPROJECT_DLL_FILE)                  \
-    ENTRY(Verb, VUpper, CSourceSupportFile,             C_SOURCE_SUPPORT_FILE)               \
-    ENTRY(Verb, VUpper, CSourceTestFile,                C_SOURCE_TEST_FILE)                  \
-    ENTRY(Verb, VUpper, CSourceTestExeFile,             C_SOURCE_TEST_EXE_FILE)              \
-    ENTRY(Verb, VUpper, VCProjectTestExeFile,           VCPROJECT_TEST_EXE_FILE)             \
-    ENTRY(Verb, VUpper, CSourceBenchmarkFullFile,       C_SOURCE_BENCHMARK_FULL_FILE)        \
-    ENTRY(Verb, VUpper, CSourceBenchmarkFullExeFile,    C_SOURCE_BENCHMARK_FULL_EXE_FILE)    \
-    ENTRY(Verb, VUpper, VCProjectBenchmarkFullExeFile,  VCPROJECT_BENCHMARK_FULL_EXE_FILE)   \
-    ENTRY(Verb, VUpper, CSourceBenchmarkIndexFile,      C_SOURCE_BENCHMARK_INDEX_FILE)       \
-    ENTRY(Verb, VUpper, CSourceBenchmarkIndexExeFile,   C_SOURCE_BENCHMARK_INDEX_EXE_FILE)   \
-    ENTRY(Verb, VUpper, VCProjectBenchmarkIndexExeFile, VCPROJECT_BENCHMARK_INDEX_EXE_FILE)  \
-    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE) \
-    ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)  \
+#define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                     \
+    FIRST_ENTRY(Verb, VUpper, TableFile,                TABLE_FILE)                            \
+    ENTRY(Verb, VUpper, TableInfoStream,                TABLE_INFO_STREAM)                     \
+    ENTRY(Verb, VUpper, CHeaderFile,                    C_HEADER_FILE)                         \
+    ENTRY(Verb, VUpper, CSourceFile,                    C_SOURCE_FILE)                         \
+    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                  \
+    ENTRY(Verb, VUpper, CSourceStdAfxFile,              C_SOURCE_STDAFX_FILE)                  \
+    ENTRY(Verb, VUpper, CSourceKeysFile,                C_SOURCE_KEYS_FILE)                    \
+    ENTRY(Verb, VUpper, CSourceTableDataFile,           C_SOURCE_TABLE_DATA_FILE)              \
+    ENTRY(Verb, VUpper, CSourceSupportFile,             C_SOURCE_SUPPORT_FILE)                 \
+    ENTRY(Verb, VUpper, CSourceTestFile,                C_SOURCE_TEST_FILE)                    \
+    ENTRY(Verb, VUpper, CSourceTestExeFile,             C_SOURCE_TEST_EXE_FILE)                \
+    ENTRY(Verb, VUpper, CSourceBenchmarkFullFile,       C_SOURCE_BENCHMARK_FULL_FILE)          \
+    ENTRY(Verb, VUpper, CSourceBenchmarkFullExeFile,    C_SOURCE_BENCHMARK_FULL_EXE_FILE)      \
+    ENTRY(Verb, VUpper, CSourceBenchmarkIndexFile,      C_SOURCE_BENCHMARK_INDEX_FILE)         \
+    ENTRY(Verb, VUpper, CSourceBenchmarkIndexExeFile,   C_SOURCE_BENCHMARK_INDEX_EXE_FILE)     \
+    ENTRY(Verb, VUpper, VCProjectDllFile,               VCPROJECT_DLL_FILE)                    \
+    ENTRY(Verb, VUpper, VCProjectTestExeFile,           VCPROJECT_TEST_EXE_FILE)               \
+    ENTRY(Verb, VUpper, VCProjectBenchmarkFullExeFile,  VCPROJECT_BENCHMARK_FULL_EXE_FILE)     \
+    ENTRY(Verb, VUpper, VCProjectBenchmarkIndexExeFile, VCPROJECT_BENCHMARK_INDEX_EXE_FILE)    \
+    ENTRY(Verb, VUpper, VSSolutionFile,                 VSSOLUTION_FILE)                       \
+    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE)   \
+    ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)    \
     LAST_ENTRY(Verb, VUpper, TableStatsTextFile,        TABLE_STATS_TEXT_FILE)
 
 #define PREPARE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
@@ -92,6 +93,33 @@ Abstract:
     VERB_CONTEXT_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
 
 #define CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) CONTEXT_FILE_WORK_TABLE(ENTRY, ENTRY, ENTRY)
+
+//
+// Define an X-macro for VC project files.
+//
+
+#define VERB_VCPROJECT_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)              \
+    FIRST_ENTRY(Verb, VUpper, VCProjectDllFile,               VC_PROJECT_DLL_FILE)                \
+    ENTRY(Verb, VUpper,       VCProjectTestExeFile,           VC_PROJECT_TEST_EXE_FILE)           \
+    ENTRY(Verb, VUpper,       VCProjectBenchmarkFullExeFile,  VC_PROJECT_BENCHMARK_FULL_EXE_FILE) \
+    LAST_ENTRY(Verb, VUpper,  VCProjectBenchmarkIndexExeFile, VC_PROJECT_TEST_EXE_FILE)
+
+#define PREPARE_VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_VCPROJECT_FILE_WORK_TABLE(Prepare, PREPARE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
+#define SAVE_VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_VCPROJECT_FILE_WORK_TABLE(Save, SAVE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
+#define PREPARE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_VCPROJECT_FILE_WORK_TABLE(Prepare, PREPARE, ENTRY, ENTRY, ENTRY)
+
+#define SAVE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_VCPROJECT_FILE_WORK_TABLE(Save, SAVE, ENTRY, ENTRY, ENTRY)
+
+#define VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_VCPROJECT_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
+#define VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) VCPROJECT_FILE_WORK_TABLE(ENTRY, ENTRY, ENTRY)
 
 //
 // Define an enum for individual file IDs.
@@ -189,6 +217,70 @@ IsValidContextFileId(
     return (
         ContextFileId >= ContextFileFirstId &&
         ContextFileId <= ContextFileLastId
+    );
+}
+
+//
+// Define an enum for individual VC Project file IDs.
+//
+
+typedef enum _VCPROJECT_FILE_ID {
+
+    //
+    // Null ID.
+    //
+
+    VCProjectFileNullId = 0,
+
+#define EXPAND_AS_VCPROJECT_FILE_ENUMS(Verb, VUpper, Name, Upper) \
+    VCProjectFile##Name##Id = File##Name##Id,
+
+#define EXPAND_AS_FIRST_VCPROJECT_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    VCProjectFile##Name##Id = File##Name##Id,                          \
+    VCProjectFileFirstId = VCProjectFile##Name##Id,
+
+#define EXPAND_AS_LAST_VCPROJECT_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    VCProjectFile##Name##Id = File##Name##Id,                         \
+    VCProjectFileLastId = VCProjectFile##Name##Id,
+
+    VCPROJECT_FILE_WORK_TABLE(EXPAND_AS_FIRST_VCPROJECT_FILE_ENUM,
+                              EXPAND_AS_VCPROJECT_FILE_ENUMS,
+                              EXPAND_AS_LAST_VCPROJECT_FILE_ENUM)
+
+    //
+    // Invalid ID, this must come last.
+    //
+
+    VCProjectFileInvalidId,
+
+} VCPROJECT_FILE_ID;
+typedef VCPROJECT_FILE_ID *PVCPROJECT_FILE_ID;
+
+#define NUMBER_OF_VCPROJECT_FILES ( \
+    (VCProjectFileLastId - VCProjectFileFirstId) + 1 \
+)
+
+FORCEINLINE
+BOOLEAN
+IsValidVCProjectFileId(
+    _In_ VCPROJECT_FILE_ID VCProjectFileId
+    )
+{
+    return (
+        VCProjectFileId >= VCProjectFileFirstId &&
+        VCProjectFileId <= VCProjectFileLastId
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+FileRequiresUuid(
+    _In_ FILE_ID Id
+    )
+{
+    return (
+        IsValidVCProjectFileId((FILE_ID)Id) ||
+        Id == FileVSSolutionFileId
     );
 }
 
@@ -453,6 +545,7 @@ typedef struct _FILE_WORK_ITEM {
     union {
         FILE_ID FileId;
         CONTEXT_FILE_ID ContextFileId;
+        VCPROJECT_FILE_ID VCProjectFileId;
     };
 
     FILE_WORK_ID FileWorkId;
@@ -461,6 +554,8 @@ typedef struct _FILE_WORK_ITEM {
     volatile LONG LastError;
 
     volatile HRESULT LastResult;
+
+    STRING Uuid;
 
     struct _PERFECT_HASH_FILE **FilePointer;
 
