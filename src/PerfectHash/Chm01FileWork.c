@@ -634,12 +634,13 @@ Return Value:
         }
 
         //
-        // Update the file pointer.
+        // Set the file ID and then update the file pointer.
         //
 
+        File->FileId = Item->FileId;
         *Item->FilePointer = File;
 
-        if (!FileRequiresUuid(Item->FileId)) {
+        if (!FileRequiresUuid(File->FileId)) {
 
             //
             // No UUID string buffer should be set if the file hasn't been
@@ -690,6 +691,23 @@ Return Value:
         if (Item->Uuid.Buffer) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
             PH_ERROR(PrepareFileChm01_ItemUuidBufferNotNull, Result);
+            goto Error;
+        }
+
+        //
+        // Invariant check: File->FileId should already be set, and it should
+        // match the file ID specified in Item.
+        //
+
+        if (!IsValidFileId(File->FileId)) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PrepareFileChm01_SaveFile_InvalidFileId, Result);
+            goto Error;
+        }
+
+        if (File->FileId != Item->FileId) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PrepareFileChm01_SaveFile_FileIdMismatch, Result);
             goto Error;
         }
 
