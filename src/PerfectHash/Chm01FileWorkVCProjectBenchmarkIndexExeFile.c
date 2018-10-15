@@ -198,6 +198,18 @@ CHUNK VCProjectBenchmarkIndexExeFileChunks[] = {
         RCS(
                    "_StdAfx.h</PrecompiledHeaderFile>\r\n"
             "    </ClCompile>\r\n"
+            "    <Link>\r\n"
+            "      <AdditionalDependencies>$(OutDir)"
+        ),
+    },
+
+    { ChunkOpInsertTableName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
+            ".lib;%(AdditionalDependencies)</AdditionalDependencies>\r\n"
+            "    </Link>\r\n"
             "  </ItemDefinitionGroup>\r\n"
             "  <ItemGroup>\r\n"
             "    <ClInclude Include=\""
