@@ -24,6 +24,11 @@ RtlCreateUuidString(
     PSTRING String
     )
 {
+    USHORT Index;
+    USHORT Count;
+    PCHAR Buffer;
+    CHAR Char;
+    CHAR Upper;
     GUID Guid;
     HRESULT Result;
     RPC_CSTR GuidCStr = NULL;
@@ -47,6 +52,23 @@ RtlCreateUuidString(
     String->MaximumLength = String->Length + 1;
     ASSERT(String->Length == UUID_STRING_LENGTH);
     ASSERT(String->Buffer[String->Length] == '\0');
+
+    //
+    // Convert the UUID into uppercase.
+    //
+
+    Buffer = (PCHAR)GuidCStr;
+    Count = UUID_STRING_LENGTH;
+
+    for (Index = 0; Index < Count; Index++, Buffer++) {
+        Upper = Char = *Buffer;
+
+        if (Char >= 'a' && Char <= 'f') {
+            Upper -= 0x20;
+            *Buffer = Upper;
+        }
+
+    }
 
 End:
     return Result;
