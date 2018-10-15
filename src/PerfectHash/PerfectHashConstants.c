@@ -58,7 +58,7 @@ const SHORT HashRoutineNumberOfSeeds[] = {
     -1,
 
     2, // Crc32Rotate
-    3, // Jenkins
+    2, // Jenkins
     3, // RotateXor
     2, // AddSub
     2, // Xor
