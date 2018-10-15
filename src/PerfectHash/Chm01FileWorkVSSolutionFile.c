@@ -27,26 +27,28 @@ Abstract:
 #endif
 
 const STRING Configurations[] = {
-    RCS("Debug|x86"),
-    RCS("Release|x86"),
-    RCS("PGInstrument|x86"),
-    RCS("PGUpdate|x86"),
-    RCS("PGOptimize|x86"),
-    RCS("Debug|x64"),
     RCS("Release|x64"),
+    RCS("Debug|x64"),
     RCS("PGInstrument|x64"),
     RCS("PGUpdate|x64"),
     RCS("PGOptimize|x64"),
-    RCS("Debug|ARM"),
+    RCS("Release|Win32"),
+    RCS("Debug|Win32"),
+    RCS("PGInstrument|Win32"),
+    RCS("PGUpdate|Win32"),
+    RCS("PGOptimize|Win32"),
+#if 0
     RCS("Release|ARM"),
+    RCS("Debug|ARM"),
     RCS("PGInstrument|ARM"),
     RCS("PGUpdate|ARM"),
     RCS("PGOptimize|ARM"),
-    RCS("Debug|ARM64"),
     RCS("Release|ARM64"),
+    RCS("Debug|ARM64"),
     RCS("PGInstrument|ARM64"),
     RCS("PGUpdate|ARM64"),
     RCS("PGOptimize|ARM64"),
+#endif
 };
 
 const BYTE NumberOfConfigurations = ARRAYSIZE(Configurations);
@@ -62,23 +64,29 @@ PrepareVSSolutionFileChm01(
     PCHAR Base;
     PCHAR Output;
     ULONG WaitResult;
-    BYTE Index;
+    BYTE Index = 0;
     BYTE ConfigIndex;
     PCSTRING Config;
     PCSTRING BaseName;
     PCSTRING TableName;
     PCSTRING ProjectGuid;
     PCSTRING SolutionGuid;
+    PCSTRING DllProjectGuid;
+    PCSTRING TestExeProjectGuid;
     HRESULT Result = S_OK;
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_PATH ProjectPath;
+    PPERFECT_HASH_PATH DllProjectPath;
+    PPERFECT_HASH_PATH TestExeProjectPath;
     const BOOL WaitForAllEvents = TRUE;
     const BYTE NumberOfEvents = NUMBER_OF_VCPROJECT_FILES;
     const BYTE NumberOfVCProjects = NUMBER_OF_VCPROJECT_FILES;
     PPERFECT_HASH_FILE VCProjects[NUMBER_OF_VCPROJECT_FILES];
-    PPERFECT_HASH_FILE *VCProject = VCProjects;
+    PPERFECT_HASH_FILE ProjectFile;
+    PPERFECT_HASH_FILE DllProjectFile;
+    PPERFECT_HASH_FILE TestExeProjectFile;
     HANDLE PrepareEvents[NUMBER_OF_VCPROJECT_FILES];
     PHANDLE PrepareEvent = PrepareEvents;
 
@@ -138,9 +146,35 @@ PrepareVSSolutionFileChm01(
     if (!IsValidUuidString(&Table->##Name##->Uuid)) {            \
         goto Error;                                              \
     }                                                            \
-    *VCProject++ = Table->##Name##;
+    VCProjects[Index++] = Table->##Name##;
 
     VCPROJECT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_FILE_POINTER);
+
+    //
+    // The Dll project should always come first, and the TestExe project second.
+    // Verify this now.
+    //
+
+    DllProjectFile = VCProjects[0];
+    ASSERT(DllProjectFile->FileId == FileVCProjectDllFileId);
+
+    DllProjectPath = GetActivePath(DllProjectFile);
+    DllProjectGuid = &DllProjectFile->Uuid;
+
+    TestExeProjectFile = VCProjects[1];
+    ASSERT(TestExeProjectFile->FileId == FileVCProjectTestExeFileId);
+
+    TestExeProjectPath = GetActivePath(TestExeProjectFile);
+    TestExeProjectGuid = &TestExeProjectFile->Uuid;
+
+    //
+    // Switch the pointers around so that TestExe comes first and the Dll
+    // project comes second.  This will result in the TestExe becoming the
+    // default startup project.
+    //
+
+    VCProjects[0] = TestExeProjectFile;
+    VCProjects[1] = DllProjectFile;
 
     //
     // Write the solution header.
@@ -153,24 +187,14 @@ PrepareVSSolutionFileChm01(
                "MinimumVisualStudioVersion = " MIN_VS_VERSION "\r\n");
 
     //
-    // Write the project references.
+    // Write the project definitions.
     //
 
-#define FOR_EACH_PROJECT                          \
-    for (Index = 0,                               \
-         VCProject = VCProjects,                  \
-         ProjectGuid = &(*VCProject)->Uuid,       \
-         ProjectPath = GetActivePath(*VCProject); \
-                                                  \
-         Index < NumberOfVCProjects;              \
-                                                  \
-         Index++,                                 \
-         VCProject++,                             \
-         ProjectGuid = &(*VCProject)->Uuid,       \
-         ProjectPath = GetActivePath(*VCProject))
+    for (Index = 0; Index < NumberOfVCProjects; Index++) {
 
-
-    FOR_EACH_PROJECT {
+        ProjectFile = VCProjects[Index];
+        ProjectGuid = &ProjectFile->Uuid;
+        ProjectPath = GetActivePath(ProjectFile);
 
         OUTPUT_RAW("Project(\"{" VCPP_GUID "}\") = \"");
         OUTPUT_STRING(&ProjectPath->BaseNameA);
@@ -178,7 +202,34 @@ PrepareVSSolutionFileChm01(
         OUTPUT_STRING(&ProjectPath->BaseNameA);
         OUTPUT_RAW(".vcxproj\", \"{");
         OUTPUT_STRING(ProjectGuid);
-        OUTPUT_RAW("}\"\r\nEndProject\r\n");
+        OUTPUT_RAW("}\"\r\n");
+
+        if (Index == 0) {
+            ASSERT(ProjectFile->FileId == FileVCProjectTestExeFileId);
+        } else if (Index == 1) {
+            ASSERT(ProjectFile->FileId == FileVCProjectDllFileId);
+        }
+
+        if (ProjectFile->FileId != FileVCProjectDllFileId) {
+
+            //
+            // All other projects have a dependency on the Dll project.  That
+            // is, they require the .dll's .lib import library to be available
+            // at link time.  We add a project dependency section to tell VS
+            // to effectively build the Dll project first before kicking off
+            // builds for other components.
+            //
+
+            OUTPUT_RAW("\tProjectSection(ProjectDependencies) = "
+                       "postProject\r\n\t\t{");
+            OUTPUT_STRING(DllProjectGuid);
+            OUTPUT_RAW("} = {");
+            OUTPUT_STRING(DllProjectGuid);
+            OUTPUT_RAW("}\r\n\tEndProjectSection\r\n");
+
+        }
+
+        OUTPUT_RAW("EndProject\r\n");
 
     }
 
@@ -215,11 +266,14 @@ PrepareVSSolutionFileChm01(
     // Write the project configurations.
     //
 
-    FOR_EACH_PROJECT {
+    for (Index = 0; Index < NumberOfVCProjects; Index++) {
+
+        ProjectFile = VCProjects[Index];
+        ProjectGuid = &ProjectFile->Uuid;
 
         FOR_EACH_CONFIGURATION {
 
-            OUTPUT_RAW("\t\t\t{");
+            OUTPUT_RAW("\t\t{");
             OUTPUT_STRING(ProjectGuid);
             OUTPUT_RAW("}.");
             OUTPUT_STRING(Config);
@@ -227,7 +281,7 @@ PrepareVSSolutionFileChm01(
             OUTPUT_STRING(Config);
             OUTPUT_RAW("\r\n");
 
-            OUTPUT_RAW("\t\t\t{");
+            OUTPUT_RAW("\t\t{");
             OUTPUT_STRING(ProjectGuid);
             OUTPUT_RAW("}.");
             OUTPUT_STRING(Config);
@@ -275,43 +329,5 @@ End:
 
     return Result;
 }
-
-//
-// Define various string constants.
-//
-
-DECLSPEC_ALIGN(16)
-const CHAR VSSolutionGlobalSectionCStr[] =
-    "\\tGlobalSection(SolutionConfigurationPlatforms) = preSolution\r\n"
-        "\t\tDebug|x86 = Debug|x86\r\n"
-        "\t\tRelease|x86 = Release|x86\r\n"
-        "\t\tPGInstrument|x86 = PGInstrument|x86\r\n"
-        "\t\tPGUpdate|x86 = PGUpdate|x86\r\n"
-        "\t\tPGOptimize|x86 = PGOptimize|x86\r\n"
-        "\t\tDebug|x64 = Debug|x64\r\n"
-        "\t\tRelease|x64 = Release|x64\r\n"
-        "\t\tPGInstrument|x64 = PGInstrument|x64\r\n"
-        "\t\tPGUpdate|x64 = PGUpdate|x64\r\n"
-        "\t\tPGOptimize|x64 = PGOptimize|x64\r\n"
-        "\t\tDebug|ARM = Debug|ARM\r\n"
-        "\t\tRelease|ARM = Release|ARM\r\n"
-        "\t\tPGInstrument|ARM = PGInstrument|ARM\r\n"
-        "\t\tPGUpdate|ARM = PGUpdate|ARM\r\n"
-        "\t\tPGOptimize|ARM = PGOptimize|ARM\r\n"
-        "\t\tDebug|ARM64 = Debug|ARM64\r\n"
-        "\t\tRelease|ARM64 = Release|ARM64\r\n"
-        "\t\tPGInstrument|ARM64 = PGInstrument|ARM64\r\n"
-        "\t\tPGUpdate|ARM64 = PGUpdate|ARM64\r\n"
-        "\t\tPGOptimize|ARM64 = PGOptimize|ARM64\r\n"
-    "\\tEndGlobalSection\r\n";
-
-const STRING VSSolutionGlobalSection = {
-    sizeof(VSSolutionGlobalSectionCStr) - sizeof(CHAR),
-    sizeof(VSSolutionGlobalSectionCStr),
-#ifdef _WIN64
-    0,
-#endif
-    (PCHAR)&VSSolutionGlobalSectionCStr,
-};
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
