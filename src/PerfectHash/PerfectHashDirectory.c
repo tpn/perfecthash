@@ -1364,6 +1364,15 @@ InvariantFailed:
 
 FinishFile:
 
+        //
+        // Release references.  Note that we need to effectively do two
+        // releases against the directory; one to account for the AddRef()
+        // performed against Dictionary in PerfectHashDictionaryAddFile(),
+        // and one performed against File->ParentDictionary after AddFile()
+        // is called in PerfectHashFileCreate().
+        //
+
+        Directory->Vtbl->Release(Directory);
         RELEASE(File->ParentDirectory);
         File->Vtbl->Release(File);
 
@@ -1391,6 +1400,14 @@ Error:
     //
 
 End:
+
+    //
+    // Invariant check: the directory's reference count should be 1 here.
+    //
+
+    if (Directory->ReferenceCount != 1) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
 
     return Result;
 }
@@ -1621,6 +1638,7 @@ Return Value:
 
     File->Vtbl->Release(File);
     RELEASE(File->ParentDirectory);
+    Directory->Vtbl->Release(Directory);
 
     goto End;
 
