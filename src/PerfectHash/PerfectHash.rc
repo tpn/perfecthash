@@ -1,1 +1,6 @@
+//
+// TODO: Add VERSIONINFO etc.  See:
+// https://docs.microsoft.com/en-us/windows/desktop/menurc/versioninfo-resource
+//
+
 #include "PerfectHashErrors.rc"
