@@ -22,6 +22,22 @@ Abstract:
 // Define an "X-Macro"-style macro for capturing the ordered definition of file
 // work items.
 //
+// Invariants regarding order:
+//
+//      - NTFS streams must be preceeded by their containing file.
+//
+//      - All VC Projects must be contiguous.
+//
+//      - All context files must be contigous.
+//
+// These invariants are particularly critical as we don't explicitly verify
+// them; so, if you add new items to this list, make sure you uphold them.
+//
+// N.B. New entries will need to be paired with corresponding entries in the
+//      Constants.c file.  (Those *are* protected by compile time asserts, so
+//      you'll get an immediate warning if there's an array you've forgotten
+//      to add a member to, for example (e.g. FileWorkItemExtensions[]).)
+//
 
 #define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                     \
     FIRST_ENTRY(Verb, VUpper, TableFile,                TABLE_FILE)                            \
