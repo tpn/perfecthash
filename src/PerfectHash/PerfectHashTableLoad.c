@@ -250,7 +250,7 @@ Return Value:
     //
 
     InfoStreamLoadFlags.AsULong = 0;
-    InfoStreamLoadFlags.DisableTryLargePagesForFileData = TRUE;
+    InfoStreamLoadFlags.TryLargePagesForFileData = FALSE;
 
     Result = InfoStream->Vtbl->Load(InfoStream,
                                     InfoStreamPath,
@@ -407,8 +407,8 @@ Return Value:
     EndOfFile.QuadPart = 0;
     FileLoadFlags.AsULong = 0;
 
-    if (TableLoadFlags.DisableTryLargePagesForTableData) {
-        FileLoadFlags.DisableTryLargePagesForFileData = TRUE;
+    if (TableLoadFlags.TryLargePagesForTableData) {
+        FileLoadFlags.TryLargePagesForFileData = TRUE;
     }
 
     Result = File->Vtbl->Load(File, Path, &EndOfFile, &FileLoadFlags);
