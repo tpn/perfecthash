@@ -43,6 +43,8 @@ extern "C" {
 #define FORCEINLINE __forceinline
 
 typedef char BOOLEAN;
+typedef unsigned char BYTE;
+typedef BYTE *PBYTE;
 typedef long LONG;
 typedef long long LONGLONG;
 typedef unsigned long ULONG;
@@ -487,6 +489,10 @@ CompiledPerfectHash_##TableName##_DeleteInline(                  \
 // Helper macros for declaring C hash functions.
 //
 
+//
+// CRC32Rotate
+//
+
 #define DECLARE_CHM01_CRC32ROTATE_AND_INDEX_ROUTINE(    \
     TableName, Seed1, Seed2, HashMask, IndexMask        \
     )                                                   \
@@ -549,6 +555,172 @@ CompiledPerfectHash_##TableName##_IndexInline(              \
     Index = Combined & IndexMask;                           \
                                                             \
     return Index;                                           \
+}
+
+//
+// Jenkins
+//
+
+#define DECLARE_CHM01_JENKINS_AND_INDEX_ROUTINE( \
+    TableName, Seed1, Seed2, HashMask, IndexMask \
+    )                                            \
+CPHAPI                                           \
+ULONG                                            \
+CompiledPerfectHash_##TableName##_Index(         \
+    ULONG Key                                    \
+    )                                            \
+{                                                \
+    ULONG A;                                     \
+    ULONG B;                                     \
+    ULONG C;                                     \
+    ULONG D;                                     \
+    ULONG E;                                     \
+    ULONG F;                                     \
+    PBYTE Byte;                                  \
+    ULONG Index;                                 \
+    ULONG Vertex1;                               \
+    ULONG Vertex2;                               \
+    ULONG MaskedLow;                             \
+    ULONG MaskedHigh;                            \
+    ULONGLONG Combined;                          \
+                                                 \
+    Byte = (PBYTE)&Key;                          \
+                                                 \
+    A = B = 0x9e3779b9;                          \
+    C = Seed1;                                   \
+                                                 \
+    A += (((ULONG)Byte[3]) << 24);               \
+    A += (((ULONG)Byte[2]) << 16);               \
+    A += (((ULONG)Byte[1]) <<  8);               \
+    A += ((ULONG)Byte[0]);                       \
+                                                 \
+    A -= B; A -= C; A ^= (C >> 13);              \
+    B -= C; B -= A; B ^= (A <<  8);              \
+    C -= A; C -= B; C ^= (B >> 13);              \
+    A -= B; A -= C; A ^= (C >> 12);              \
+    B -= C; B -= A; B ^= (A << 16);              \
+    C -= A; C -= B; C ^= (B >>  5);              \
+    A -= B; A -= C; A ^= (C >>  3);              \
+    B -= C; B -= A; B ^= (A << 10);              \
+    C -= A; C -= B; C ^= (B >> 15);              \
+                                                 \
+    Vertex1 = C;                                 \
+                                                 \
+    D = E = 0x9e3779b9;                          \
+    F = Seed2;                                   \
+                                                 \
+    D += (((ULONG)Byte[3]) << 24);               \
+    D += (((ULONG)Byte[2]) << 16);               \
+    D += (((ULONG)Byte[1]) <<  8);               \
+    D += ((ULONG)Byte[0]);                       \
+                                                 \
+    D -= E; D -= F; D ^= (F >> 13);              \
+    E -= F; E -= D; E ^= (D <<  8);              \
+    F -= D; F -= E; F ^= (E >> 13);              \
+    D -= E; D -= F; D ^= (F >> 12);              \
+    E -= F; E -= D; E ^= (D << 16);              \
+    F -= D; F -= E; F ^= (E >>  5);              \
+    D -= E; D -= F; D ^= (F >>  3);              \
+    E -= F; E -= D; E ^= (D << 10);              \
+    F -= D; F -= E; F ^= (E >> 15);              \
+                                                 \
+    Vertex2 = F;                                 \
+                                                 \
+    MaskedLow = Vertex1 & HashMask;              \
+    MaskedHigh = Vertex2 & HashMask;             \
+                                                 \
+    Vertex1 = TableName##_TableData[MaskedLow];  \
+    Vertex2 = TableName##_TableData[MaskedHigh]; \
+                                                 \
+    Combined = (                                 \
+        (ULONGLONG)Vertex1 +                     \
+        (ULONGLONG)Vertex2                       \
+    );                                           \
+                                                 \
+    Index = Combined & IndexMask;                \
+                                                 \
+    return Index;                                \
+}
+
+#define DECLARE_CHM01_JENKINS_AND_INDEX_ROUTINE_INLINE( \
+    TableName, Seed1, Seed2, HashMask, IndexMask        \
+    )                                                   \
+FORCEINLINE                                             \
+ULONG                                                   \
+CompiledPerfectHash_##TableName##_IndexInline(          \
+    ULONG Key                                           \
+    )                                                   \
+{                                                       \
+    ULONG A;                                            \
+    ULONG B;                                            \
+    ULONG C;                                            \
+    ULONG D;                                            \
+    ULONG E;                                            \
+    ULONG F;                                            \
+    PBYTE Byte;                                         \
+    ULONG Index;                                        \
+    ULONG Vertex1;                                      \
+    ULONG Vertex2;                                      \
+    ULONG MaskedLow;                                    \
+    ULONG MaskedHigh;                                   \
+    ULONGLONG Combined;                                 \
+                                                        \
+    Byte = (PBYTE)&Key;                                 \
+                                                        \
+    A = B = 0x9e3779b9;                                 \
+    C = Seed1;                                          \
+                                                        \
+    A += (((ULONG)Byte[3]) << 24);                      \
+    A += (((ULONG)Byte[2]) << 16);                      \
+    A += (((ULONG)Byte[1]) <<  8);                      \
+    A += ((ULONG)Byte[0]);                              \
+                                                        \
+    A -= B; A -= C; A ^= (C >> 13);                     \
+    B -= C; B -= A; B ^= (A <<  8);                     \
+    C -= A; C -= B; C ^= (B >> 13);                     \
+    A -= B; A -= C; A ^= (C >> 12);                     \
+    B -= C; B -= A; B ^= (A << 16);                     \
+    C -= A; C -= B; C ^= (B >>  5);                     \
+    A -= B; A -= C; A ^= (C >>  3);                     \
+    B -= C; B -= A; B ^= (A << 10);                     \
+    C -= A; C -= B; C ^= (B >> 15);                     \
+                                                        \
+    Vertex1 = C;                                        \
+                                                        \
+    D = E = 0x9e3779b9;                                 \
+    F = Seed2;                                          \
+                                                        \
+    D += (((ULONG)Byte[3]) << 24);                      \
+    D += (((ULONG)Byte[2]) << 16);                      \
+    D += (((ULONG)Byte[1]) <<  8);                      \
+    D += ((ULONG)Byte[0]);                              \
+                                                        \
+    D -= E; D -= F; D ^= (F >> 13);                     \
+    E -= F; E -= D; E ^= (D <<  8);                     \
+    F -= D; F -= E; F ^= (E >> 13);                     \
+    D -= E; D -= F; D ^= (F >> 12);                     \
+    E -= F; E -= D; E ^= (D << 16);                     \
+    F -= D; F -= E; F ^= (E >>  5);                     \
+    D -= E; D -= F; D ^= (F >>  3);                     \
+    E -= F; E -= D; E ^= (D << 10);                     \
+    F -= D; F -= E; F ^= (E >> 15);                     \
+                                                        \
+    Vertex2 = F;                                        \
+                                                        \
+    MaskedLow = Vertex1 & HashMask;                     \
+    MaskedHigh = Vertex2 & HashMask;                    \
+                                                        \
+    Vertex1 = TableName##_TableData[MaskedLow];         \
+    Vertex2 = TableName##_TableData[MaskedHigh];        \
+                                                        \
+    Combined = (                                        \
+        (ULONGLONG)Vertex1 +                            \
+        (ULONGLONG)Vertex2                              \
+    );                                                  \
+                                                        \
+    Index = Combined & IndexMask;                       \
+                                                        \
+    return Index;                                       \
 }
 
 //
