@@ -167,9 +167,9 @@ Return Value:
 
     FileLoadFlags.AsULong = 0;
 
-    if (KeysLoadFlags.DisableTryLargePagesForKeysData) {
-        FileLoadFlags.DisableTryLargePagesForFileData = TRUE;
-    }
+    FileLoadFlags.TryLargePagesForFileData = (
+        KeysLoadFlags.TryLargePagesForKeysData
+    );
 
     Result = File->Vtbl->Load(File, Path, &EndOfFile, &FileLoadFlags);
 

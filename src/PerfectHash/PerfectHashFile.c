@@ -351,7 +351,7 @@ Return Value:
     Rtl = File->Rtl;
     Allocator = File->Allocator;
 
-    if (FileLoadFlags.DisableTryLargePagesForFileData) {
+    if (!FileLoadFlags.TryLargePagesForFileData) {
         File->Flags.DoesNotWantLargePages = TRUE;
     }
 
@@ -617,7 +617,7 @@ Return Value:
 
     Rtl = File->Rtl;
 
-    if (FileCreateFlags.DisableTryLargePagesForFileData) {
+    if (!FileCreateFlags.TryLargePagesForFileData) {
         File->Flags.DoesNotWantLargePages = TRUE;
     }
 

@@ -1009,7 +1009,7 @@ typedef union _PERFECT_HASH_FILE_LOAD_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When clear, tries to allocate the file buffer using large pages.  The
+        // When set, tries to allocate the file buffer using large pages.  The
         // caller is responsible for ensuring the process can create large pages
         // first by enabling the lock memory privilege.  If large pages can't be
         // allocated (because the lock memory privilege hasn't been enabled, or
@@ -1022,7 +1022,7 @@ typedef union _PERFECT_HASH_FILE_LOAD_FLAGS {
         // enum (the flags can be obtained via the GetFlags() vtbl function).
         //
 
-        ULONG DisableTryLargePagesForFileData:1;
+        ULONG TryLargePagesForFileData:1;
 
         //
         // Unused bits.
@@ -1076,7 +1076,7 @@ typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When clear, tries to allocate the file buffer using large pages.  The
+        // When set, tries to allocate the file buffer using large pages.  The
         // caller is responsible for ensuring the process can create large pages
         // first by enabling the lock memory privilege.  If large pages can't be
         // allocated (because the lock memory privilege hasn't been enabled, or
@@ -1089,7 +1089,7 @@ typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
         // enum (the flags can be obtained via the GetFlags() vtbl function).
         //
 
-        ULONG DisableTryLargePagesForFileData:1;
+        ULONG TryLargePagesForFileData:1;
 
         //
         // Unused bits.
@@ -1165,8 +1165,8 @@ typedef union _PERFECT_HASH_FILE_FLAGS {
         ULONG Created:1;
 
         //
-        // When set, indicates the caller disabled large pages at creation or
-        // load time via the DisableTryLargePagesForFileData flag.
+        // When set, indicates the caller did not set the relevant bit for
+        // trying large pages in the create or load flags.
         //
 
         ULONG DoesNotWantLargePages:1;
@@ -1302,7 +1302,7 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When clear, tries to allocate the keys buffer using large pages.  The
+        // When set, tries to allocate the keys buffer using large pages.  The
         // caller is responsible for ensuring the process can create large pages
         // first by enabling the lock memory privilege.  If large pages can't be
         // allocated (because the lock memory privilege hasn't been enabled, or
@@ -1316,7 +1316,7 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         // function).
         //
 
-        ULONG DisableTryLargePagesForKeysData:1;
+        ULONG TryLargePagesForKeysData:1;
 
         //
         // Unused bits.
@@ -1883,7 +1883,7 @@ typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When clear, tries to allocate the table data using large pages.  The
+        // When set, tries to allocate the table data using large pages.  The
         // caller is responsible for ensuring the process can create large pages
         // first by enabling the lock memory privilege.  If large pages can't be
         // allocated (because the lock memory privilege hasn't been enabled, or
@@ -1897,7 +1897,7 @@ typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
         // function).
         //
 
-        ULONG DisableTryLargePagesForTableData:1;
+        ULONG TryLargePagesForTableData:1;
 
         //
         // As above, but for the values array (i.e. the memory used to save the
@@ -1905,7 +1905,7 @@ typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
         // ValuesArrayUsesLargePages bit of PERFECT_HASH_TABLE_FLAGS.
         //
 
-        ULONG DisableTryLargePagesForValuesArray:1;
+        ULONG TryLargePagesForValuesArray:1;
 
         //
         // Unused bits.
