@@ -71,6 +71,11 @@ PrepareCHeaderFileChm01(
                "#define CPH_TABLENAME ");
     OUTPUT_STRING(Name);
 
+    OUTPUT_RAW("\n#endif\n\n"
+               "#ifndef CPH_TABLENAME_UPPER\n"
+               "#define CPH_TABLENAME_UPPER ");
+    OUTPUT_STRING(Upper);
+
     OUTPUT_RAW("\n#endif\n\n#define ");
     OUTPUT_STRING(Upper);
     OUTPUT_RAW("_NUMBER_OF_KEYS ");
