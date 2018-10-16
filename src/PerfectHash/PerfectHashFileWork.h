@@ -26,17 +26,44 @@ Abstract:
 //
 //      - NTFS streams must be preceeded by their containing file.
 //
-//      - All VC Projects must be contiguous.
+//          Streams will wait on their containing file's prepare event to be
+//          set before they continue with creating the file.  In order to get
+//          the handle for this event, they rely on being able to look at the
+//          event that proceeds them, e.g. (in FileWorkCallbackChm01()):
 //
+//              DependentEvent = *(
+//                  &Context->FirstPreparedEvent +
+//                  (EventIndex - 1)
+//              );
+//
+//      - All VC Projects must be contiguous.
 //      - All context files must be contigous.
 //
-// These invariants are particularly critical as we don't explicitly verify
-// them; so, if you add new items to this list, make sure you uphold them.
+//          This ensures the corresponding enum's first and last members are
+//          contiguous (e.g. VCPROJECT_FILE_ID), which is required in order
+//          for the "is valid ID" inline functions to work properly, e.g.:
+//
+//              FORCEINLINE
+//              BOOLEAN
+//              IsValidVCProjectFileId(
+//                  _In_ VCPROJECT_FILE_ID VCProjectFileId
+//                  )
+//              {
+//                  return (
+//                      VCProjectFileId >= VCProjectFileFirstId &&
+//                      VCProjectFileId <= VCProjectFileLastId
+//                  );
+//              }
+//
+// Unlike the array size variants we explicitly verify in the Constants.c file
+// (i.e. by trailing each array with VERIFY_ARRAY_SIZE(...)), these invariants
+// aren't verified with compile-time (or run-time) assertions, so extra care
+// needs to be paid to ensure they're not violated when adding new members.
 //
 // N.B. New entries will need to be paired with corresponding entries in the
 //      Constants.c file.  (Those *are* protected by compile time asserts, so
-//      you'll get an immediate warning if there's an array you've forgotten
-//      to add a member to, for example (e.g. FileWorkItemExtensions[]).)
+//      you'll get an immediate warning if, for example, there's an array you
+//      have forgotten to add a member to (e.g. FileWorkItemExtensions[]).)
 //
 
 #define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                     \
