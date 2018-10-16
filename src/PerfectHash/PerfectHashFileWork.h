@@ -639,4 +639,36 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
     OUTPUT_STRING(&(GetActivePath((*Item->FilePointer))->TableNameA)); \
     OUTPUT_RAW("_StdAfx.h\"\n\n");
 
+//
+// Helper macros for common constructs written from multiple places.
+//
+
+#define OUTPUT_OPEN_EXTERN_C_SCOPE()  \
+    OUTPUT_RAW("#ifdef __cplusplus\n" \
+               "extern \"C\" {\n"     \
+               "#endif\n\n")
+
+#define OUTPUT_CLOSE_EXTERN_C_SCOPE() \
+    OUTPUT_RAW("#ifdef __cplusplus\n" \
+               "} // extern C\n"      \
+               "#endif\n\n")
+
+#define OUTPUT_PRAGMA_WARNING_DISABLE_UNREFERENCED_INLINE()              \
+    OUTPUT_RAW("//\n// Disable \"unreferenced inline function has been " \
+                      "removed\" warning.\n//\n\n"                       \
+               "#pragma warning(push)\n"                                 \
+               "#pragma warning(disable: 4514)\n\n")
+
+#define OUTPUT_PRAGMA_WARNING_POP() OUTPUT_RAW("#pragma warning(pop)\n")
+
+#define OUTPUT_PRAGMA_WARNING_DISABLE_FUNC_SELECTED_FOR_INLINE_EXP_WARNING() \
+    OUTPUT_RAW("//\n"                                                        \
+               "// Disable \"function ... selected for "                     \
+                   "inline expansion\" warning.\n "                          \
+               "//\n\n"                                                      \
+               "#pragma warning(push)\n"                                     \
+               "#pragma warning(disable: 4711)\n")
+
+
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
