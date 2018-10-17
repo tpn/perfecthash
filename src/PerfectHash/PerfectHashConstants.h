@@ -25,6 +25,23 @@ Abstract:
 #define TABLE_INFO_ON_DISK_MAGIC_HIGHPART 0x17071953
 
 //
+// Define the size, in characters, of the stack-allocated buffer used to
+// construct the table suffix in PerfectHashTableCreatePath().
+//
+
+#define TABLE_SUFFIX_BUFFER_SIZE_IN_CHARS 256
+
+//
+// Define the size, in characters, of the stack-allocated buffer used to
+// construct the command line string used to compile the table via msbuild.exe
+// in PerfectHashTableCompile().  We make this a multiple of the table suffix
+// buffer size (above) to ensure there is ample space to construct the string.
+//
+
+#define COMPILE_COMMANDLINE_BUFFER_SIZE_IN_CHARS \
+    TABLE_SUFFIX_BUFFER_SIZE_IN_CHARS * 3
+
+//
 // Declare an array of creation routines.  This is intended to be indexed by
 // the PERFECT_HASH_TABLE_ALGORITHM_ID enumeration.
 //

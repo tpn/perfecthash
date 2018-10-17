@@ -568,7 +568,7 @@ Return Value:
     PPERFECT_HASH_PATH Path = NULL;
     PPERFECT_HASH_PATH_PARTS Parts = NULL;
     UNICODE_STRING TableSuffix;
-    WCHAR TableSuffixBuffer[256];
+    WCHAR TableSuffixBuffer[TABLE_SUFFIX_BUFFER_SIZE_IN_CHARS];
 
     if (!ARGUMENT_PRESENT(PathPointer)) {
         return E_POINTER;
