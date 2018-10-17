@@ -1520,9 +1520,15 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     //
     // N.B. The following three hash functions are purposefully terrible from
     //      the perspective of generating a good distribution of hash values.
-    //      They all have very simple operations and are intended to test the
+    //      They all have very simple operations and were intended to test the
     //      theory that even with a poor hash function, once we find the right
     //      seed, the hash quality is unimportant.
+    //
+    //      In practice, that hypothesis appears to be wrong.  Either we find
+    //      a solution on average in sqrt(3) attempts (99.9% probability of
+    //      having found the solution by attempt 18); or we never find one at
+    //      that given table size (and thus, a larger table size needs to be
+    //      attempted).
     //
 
     PerfectHashHashRotateXorFunctionId          = 3,
@@ -1530,18 +1536,19 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     PerfectHashHashXorFunctionId                = 5,
 
     //
-    // Experimental hash functions.
-    //
-
-    PerfectHashHashCrc32RotateXorFunctionId     = 6,
-
-    //
     // A scratch hash function to use for quickly iterating on new hash
     // functionality without the overhead of having to define a new
     // implementation.
     //
 
-    PerfectHashHashScratchId                    = 7,
+    PerfectHashHashScratchId                    = 6,
+
+    //
+    // Additional functions currently in development or otherwise provided
+    // without commentary.
+    //
+
+    PerfectHashHashCrc32RotateXorFunctionId     = 7,
 
     //
     // End valid hash functions.

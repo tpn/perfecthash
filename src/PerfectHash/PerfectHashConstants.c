@@ -56,8 +56,8 @@ const PPERFECT_HASH_TABLE_HASH HashRoutines[] = {
     PerfectHashTableHashRotateXor,
     PerfectHashTableHashAddSubXor,
     PerfectHashTableHashXor,
-    PerfectHashTableHashCrc32RotateXor,
     PerfectHashTableHashScratch,
+    PerfectHashTableHashCrc32RotateXor,
     NULL
 };
 VERIFY_HASH_ARRAY_SIZE(HashRoutines);
@@ -74,8 +74,8 @@ const SHORT HashRoutineNumberOfSeeds[] = {
     3, // RotateXor
     2, // AddSub
     2, // Xor
-    3, // Crc32RotateXor
     2, // Scratch
+    3, // Crc32RotateXor
 
     -1,
 };
@@ -92,8 +92,8 @@ const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[] = {
     PerfectHashTableSeededHashRotateXor,
     PerfectHashTableSeededHashAddSubXor,
     PerfectHashTableSeededHashXor,
-    PerfectHashTableSeededHashCrc32RotateXor,
     PerfectHashTableSeededHashScratch,
+    PerfectHashTableSeededHashCrc32RotateXor,
     NULL
 };
 VERIFY_HASH_ARRAY_SIZE(SeededHashRoutines);
@@ -241,8 +241,8 @@ const PCUNICODE_STRING HashFunctionNames[] = {
     &PerfectHashHashRotateXorFunctionName,
     &PerfectHashHashAddSubXorFunctionName,
     &PerfectHashHashXorFunctionName,
-    &PerfectHashHashCrc32RotateXorFunctionName,
     &PerfectHashHashScratchFunctionName,
+    &PerfectHashHashCrc32RotateXorFunctionName,
     NULL,
 };
 VERIFY_HASH_ARRAY_SIZE(HashFunctionNames);
