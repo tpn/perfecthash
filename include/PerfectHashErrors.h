@@ -1604,3 +1604,48 @@ Abstract:
 //
 #define PH_E_INVALID_UUID_STRING         ((HRESULT)0xE004030CL)
 
+//
+// MessageId: PH_E_NO_INDEX_IMPL_C_STRING_FOUND
+//
+// MessageText:
+//
+// No Index() routine raw C string found for the current algorithm, hash function and masking type..
+//
+#define PH_E_NO_INDEX_IMPL_C_STRING_FOUND ((HRESULT)0xE004030DL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_HEADER_SUPPORT_FILE
+//
+// MessageText:
+//
+// Error preparing C header support file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_HEADER_SUPPORT_FILE ((HRESULT)0xE004030EL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_HEADER_SUPPORT_FILE
+//
+// MessageText:
+//
+// Error saving C header support file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_HEADER_SUPPORT_FILE ((HRESULT)0xE004030FL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE
+//
+// MessageText:
+//
+// Error preparing C header CompiledPerfectHashMacroGlue.h file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE ((HRESULT)0xE0040310L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE
+//
+// MessageText:
+//
+// Error saving C header CompiledPerfectHashMacroGlue.h file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE ((HRESULT)0xE0040311L)
+

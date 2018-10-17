@@ -4,11 +4,12 @@
 
 DECLSPEC_ALIGN(16)
 const CHAR CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr[] =
+    "\n"
+    "//\n"
+    "// Begin CompiledPerfectHashTableBenchmarkIndexExe.c.\n"
+    "//\n"
+    "\n"
     "#pragma optimize(\"\", off)\n"
-    "\n"
-    "extern void ExitProcess(ULONG);\n"
-    "\n"
-    "volatile ULONG CtrlCPressed = 0;\n"
     "\n"
     "void\n"
     "__stdcall\n"
@@ -19,7 +20,7 @@ const CHAR CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr[] =
     "    ULONG Cycles;\n"
     "    ULONG Seconds = 0;\n"
     "\n"
-    "    Cycles = BenchmarkIndexCphTable(Seconds);\n"
+    "    Cycles = BENCHMARK_INDEX_CPH_ROUTINE(Seconds);\n"
     "\n"
     "    ExitProcess(Cycles);\n"
     "}\n"

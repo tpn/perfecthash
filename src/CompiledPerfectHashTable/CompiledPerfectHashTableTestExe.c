@@ -1,4 +1,7 @@
-extern void ExitProcess(ULONG);
+
+//
+// Begin CompiledPerfectHashTableTestExe.c.
+//
 
 void
 __stdcall
@@ -9,9 +12,11 @@ mainCRTStartup(
     ULONG NumberOfErrors;
     BOOLEAN DebugBreakOnFailure = 0;
 
-    NumberOfErrors = TestCphTable(DebugBreakOnFailure);
+    NumberOfErrors = TEST_CPH_ROUTINE(DebugBreakOnFailure);
 
     ExitProcess(NumberOfErrors);
 }
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+//
+// End CompiledPerfectHashTableTestExe.c.
+//

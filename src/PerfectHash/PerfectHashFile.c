@@ -895,12 +895,21 @@ Return Value:
         Directory = File->ParentDirectory;
 
         if (Directory) {
+
             Result = Directory->Vtbl->RemoveFile(Directory, File);
+
             if (FAILED(Result)) {
                 PH_ERROR(PerfectHashFileClose_DirectoryRemoveFile, Result);
             }
-            Directory->Vtbl->Release(Directory);
-            Directory = File->ParentDirectory = NULL;
+
+            //
+            // Invariant check: RemoveFile() should have cleared our
+            // File->ParentDirectory reference.
+            //
+
+            ASSERT(!File->ParentDirectory);
+
+            Directory = NULL;
         }
 
     }

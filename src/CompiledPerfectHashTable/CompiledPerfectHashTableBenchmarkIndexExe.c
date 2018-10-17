@@ -1,8 +1,9 @@
+
+//
+// Begin CompiledPerfectHashTableBenchmarkIndexExe.c.
+//
+
 #pragma optimize("", off)
-
-extern void ExitProcess(ULONG);
-
-volatile ULONG CtrlCPressed = 0;
 
 void
 __stdcall
@@ -13,7 +14,7 @@ mainCRTStartup(
     ULONG Cycles;
     ULONG Seconds = 0;
 
-    Cycles = BenchmarkIndexCphTable(Seconds);
+    Cycles = BENCHMARK_INDEX_CPH_ROUTINE(Seconds);
 
     ExitProcess(Cycles);
 }

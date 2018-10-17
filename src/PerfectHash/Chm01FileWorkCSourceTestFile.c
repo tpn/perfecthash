@@ -43,7 +43,7 @@ PrepareCSourceTestFileChm01(
     // Write the text and finish up.
     //
 
-    OUTPUT_INCLUDE_STDAFX_H();
+    OUTPUT_INCLUDE_STDAFX_AND_SUPPORT_H();
     OUTPUT_STRING(RawCString);
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);

@@ -1258,6 +1258,8 @@ Return Value:
     List = Directory->FilesList;
     NewDirectory = &Directory->Path->FullPath;
 
+    ASSERT(Directory->ReferenceCount >= 1);
+
     while (List->Vtbl->RemoveHeadEx(List, &Entry)) {
 
         //

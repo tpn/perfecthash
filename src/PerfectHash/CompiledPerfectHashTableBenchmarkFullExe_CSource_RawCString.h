@@ -4,11 +4,12 @@
 
 DECLSPEC_ALIGN(16)
 const CHAR CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr[] =
+    "\n"
+    "//\n"
+    "// Begin CompiledPerfectHashTableBenchmarkFullExe.c.\n"
+    "//\n"
+    "\n"
     "#pragma optimize(\"\", off)\n"
-    "\n"
-    "extern void ExitProcess(ULONG);\n"
-    "\n"
-    "volatile ULONG CtrlCPressed = 0;\n"
     "\n"
     "void\n"
     "__stdcall\n"
@@ -19,12 +20,14 @@ const CHAR CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr[] =
     "    ULONG Cycles;\n"
     "    ULONG Seconds = 0;\n"
     "\n"
-    "    Cycles = BenchmarkFullCphTable(Seconds);\n"
+    "    Cycles = BENCHMARK_FULL_CPH_ROUTINE(Seconds);\n"
     "\n"
     "    ExitProcess(Cycles);\n"
     "}\n"
     "\n"
-    "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
+    "//\n"
+    "// End CompiledPerfectHashTableBenchmarkFullExe.c.\n"
+    "//\n"
 ;
 
 const STRING CompiledPerfectHashTableBenchmarkFullExeCSourceRawCString = {

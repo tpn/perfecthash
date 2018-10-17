@@ -4,22 +4,22 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm01FileWorkCSourceBenchmarkFullFile.c
+    Chm01FileWorkCHeaderSupportFile.c
 
 Abstract:
 
     This module implements the prepare file work callback routine for the
-    benchmark full C source file as part of the CHM v1 algorithm implementation
+    support C header file as part of the CHM v1 algorithm implementation
     for the perfect hash library.
 
 --*/
 
 #include "stdafx.h"
-#include "CompiledPerfectHashTableBenchmarkFull_CSource_RawCString.h"
+#include "CompiledPerfectHashTableSupport_CHeader_RawCString.h"
 
 _Use_decl_annotations_
 HRESULT
-PrepareCSourceBenchmarkFullFileChm01(
+PrepareCHeaderSupportFileChm01(
     PPERFECT_HASH_CONTEXT Context,
     PFILE_WORK_ITEM Item
     )
@@ -42,7 +42,7 @@ PrepareCSourceBenchmarkFullFileChm01(
     // Write the text and finish up.
     //
 
-    OUTPUT_INCLUDE_STDAFX_AND_SUPPORT_H();
+    OUTPUT_INCLUDE_STDAFX_H();
     OUTPUT_STRING(RawCString);
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);

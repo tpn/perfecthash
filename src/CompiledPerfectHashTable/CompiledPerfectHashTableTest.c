@@ -1,3 +1,8 @@
+
+//
+// Begin CompiledPerfectHashTableTest.c.
+//
+
 //
 // Disable global optimizations, even in release builds.  Without this, the
 // compiler does clever things with regards to optimizing our __debugbreak()
@@ -20,14 +25,7 @@
         NumberOfErrors++;          \
     }
 
-
-#define DECLARE_HEADER(T) \
-    DECLARE_TEST_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER(T)
-
-#define DECLARE_TEST_COMPILED_PERFECT_HASH_TABLE_ROUTINE() \
-    DECLARE_HEADER(CPH_TABLENAME)
-
-DECLARE_TEST_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
+DECLARE_TEST_CPH_ROUTINE()
 /*++
 
 Routine Description:
@@ -50,13 +48,10 @@ Return Value:
     ULONG Value;
     ULONG Rotated;
     ULONG Previous;
-    ULONG NumberOfKeys;
     ULONG NumberOfErrors = 0;
     const ULONG *Source;
 
-    NumberOfKeys = CphTableNumberOfKeys;
-
-    Key = *CphTableKeys;
+    Key = *KEYS;
 
     //
     // Rotate the key such that it differs from the original value, but in a
@@ -70,47 +65,47 @@ Return Value:
     // Verify looking up a key that hasn't been inserted returns 0 as the value.
     //
 
-    Value = CphTableLookup(Key);
+    Value = LOOKUP_ROUTINE(Key);
     ASSERT(Value == 0);
 
     //
     // Verify insertion.
     //
 
-    Previous = CphTableInsert(Key, Rotated);
+    Previous = INSERT_ROUTINE(Key, Rotated);
     ASSERT(Previous == 0);
 
     //
     // Lookup the inserted key.
     //
 
-    Value = CphTableLookup(Key);
+    Value = LOOKUP_ROUTINE(Key);
     ASSERT(Value == Rotated);
 
     //
     // Delete the inserted key.  Returned value should be Rotated.
     //
 
-    Value = CphTableDelete(Key);
+    Value = DELETE_ROUTINE(Key);
     ASSERT(Value == Rotated);
 
     //
     // Verify a subsequent lookup returns 0.
     //
 
-    Value = CphTableLookup(Key);
+    Value = LOOKUP_ROUTINE(Key);
     ASSERT(Value == 0);
 
     //
     // Loop through the entire key set and insert a rotated version of the key.
     //
 
-    for (Index = 0, Source = CphTableKeys; Index < NumberOfKeys; Index++) {
+    FOR_EACH_KEY {
 
         Key = *Source++;
         Rotated = _rotl(Key, 15);
 
-        Previous = CphTableInsert(Key, Rotated);
+        Previous = INSERT_ROUTINE(Key, Rotated);
         ASSERT(Previous == 0);
 
     }
@@ -120,12 +115,12 @@ Return Value:
     // rotated version.
     //
 
-    for (Index = 0, Source = CphTableKeys; Index < NumberOfKeys; Index++) {
+    FOR_EACH_KEY {
 
         Key = *Source++;
         Rotated = _rotl(Key, 15);
 
-        Value = CphTableLookup(Key);
+        Value = LOOKUP_ROUTINE(Key);
         ASSERT(Value == Rotated);
 
     }
@@ -134,12 +129,12 @@ Return Value:
     // Loop through again and delete everything.
     //
 
-    for (Index = 0, Source = CphTableKeys; Index < NumberOfKeys; Index++) {
+    FOR_EACH_KEY {
 
         Key = *Source++;
         Rotated = _rotl(Key, 15);
 
-        Previous = CphTableDelete(Key);
+        Previous = DELETE_ROUTINE(Key);
         ASSERT(Previous == Rotated);
 
     }
@@ -148,11 +143,11 @@ Return Value:
     // And a final loop through to confirm all lookups now return 0.
     //
 
-    for (Index = 0, Source = CphTableKeys; Index < NumberOfKeys; Index++) {
+    FOR_EACH_KEY {
 
         Key = *Source++;
 
-        Value = CphTableLookup(Key);
+        Value = LOOKUP_ROUTINE(Key);
         ASSERT(Value == 0);
 
     }
@@ -164,4 +159,6 @@ Return Value:
     return NumberOfErrors;
 }
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+//
+// End CompiledPerfectHashTableTest.c.
+//

@@ -82,6 +82,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
 
     //
+    // Optional pointer to a string representation of the Index() routine's
+    // implementation in C, if one is available.
+    //
+
+    PCSTRING IndexImplString;
+
+    //
     // If a table is loaded or created successfully, an array will be allocated
     // for storing values (as part of the Insert()/Lookup() API), the base
     // address for which is captured by the next field.

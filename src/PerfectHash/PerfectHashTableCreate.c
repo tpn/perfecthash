@@ -94,6 +94,10 @@ Return Value:
     PH_E_CONTEXT_BASE_OUTPUT_DIRECTORY_NOT_SET - The base output directory
         has not been set for the context.
 
+    PH_E_NO_INDEX_IMPL_C_STRING_FOUND - No C representation of the Index()
+        implementation routine was found for the given algorithm, hash function
+        and masking type.
+
 --*/
 {
     PRTL Rtl;
@@ -200,11 +204,16 @@ Return Value:
     Table->HashFunctionId = Context->HashFunctionId = HashFunctionId;
 
     //
-    // Complete initialization of the table's vtbl now that the hash/mask IDs
+    // Complete initialization of the table's now that the algo/hash/mask IDs
     // have been set.
     //
 
-    CompletePerfectHashTableVtblInitialization(Table);
+    CompletePerfectHashTableInitialization(Table);
+
+    if (!Table->IndexImplString) {
+        Result = PH_E_NO_INDEX_IMPL_C_STRING_FOUND;
+        goto Error;
+    }
 
     //
     // Dispatch remaining creation work to the algorithm-specific routine.

@@ -481,11 +481,11 @@ Return Value:
     Table->HashFunctionId = TableInfoOnDisk->HashFunctionId;
 
     //
-    // Complete initialization of the table's vtbl now that the hash/mask IDs
+    // Complete initialization of the table now that the algo/hash/mask IDs
     // have been set.
     //
 
-    CompletePerfectHashTableVtblInitialization(Table);
+    CompletePerfectHashTableInitialization(Table);
 
     //
     // We've completed loading the :Info structure and corresponding data array.

@@ -1,18 +1,9 @@
-extern
-BOOLEAN
-QueryPerformanceCounter(
-    _Out_ PLARGE_INTEGER Count
-    );
 
-extern volatile ULONG CtrlCPressed;
+//
+// Begin CompiledPerfectHashTableBenchmarkFull.c.
+//
 
-#define DECLARE_HEADER(T) \
-    DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER(T)
-
-#define DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE() \
-    DECLARE_HEADER(CPH_TABLENAME)
-
-DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
+DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
 {
     ULONG Key;
     ULONG Count;
@@ -20,7 +11,6 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
     ULONG Value = 0;
     ULONG Rotated;
     ULONG Previous;
-    ULONG NumberOfKeys;
     ULONG Best = (ULONG)-1;
     ULONG Attempts = 100;
     const ULONG Iterations = 1000;
@@ -28,13 +18,6 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
     LARGE_INTEGER Delta;
-
-    NumberOfKeys = CphTableNumberOfKeys;
-
-#define FOR_EACH_KEY                      \
-    for (Index = 0, Source = CphTableKeys; \
-         Index < NumberOfKeys;            \
-         Index++)
 
     if (Seconds) {
 
@@ -53,7 +36,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
                     Key = *Source++;
                     Rotated = _rotl(Key, 15);
 
-                    Previous = CphTableInsert(Key, Rotated);
+                    Previous = INSERT_ROUTINE(Key, Rotated);
 
                 }
 
@@ -67,7 +50,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
                     Key = *Source++;
                     Rotated = _rotl(Key, 15);
 
-                    Value = CphTableLookup(Key);
+                    Value = LOOKUP_ROUTINE(Key);
 
                 }
 
@@ -80,7 +63,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
                     Key = *Source++;
                     Rotated = _rotl(Key, 15);
 
-                    Previous = CphTableDelete(Key);
+                    Previous = DELETE_ROUTINE(Key);
 
                 }
 
@@ -92,7 +75,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
 
                     Key = *Source++;
 
-                    Value = CphTableLookup(Key);
+                    Value = LOOKUP_ROUTINE(Key);
 
                 }
 
@@ -124,7 +107,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
                     Key = *Source++;
                     Rotated = _rotl(Key, 15);
 
-                    Previous = CphTableInsert(Key, Rotated);
+                    Previous = INSERT_ROUTINE(Key, Rotated);
 
                 }
 
@@ -138,7 +121,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
                     Key = *Source++;
                     Rotated = _rotl(Key, 15);
 
-                    Value = CphTableLookup(Key);
+                    Value = LOOKUP_ROUTINE(Key);
 
                 }
 
@@ -151,7 +134,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
                     Key = *Source++;
                     Rotated = _rotl(Key, 15);
 
-                    Previous = CphTableDelete(Key);
+                    Previous = DELETE_ROUTINE(Key);
 
                 }
 
@@ -163,7 +146,7 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
 
                     Key = *Source++;
 
-                    Value = CphTableLookup(Key);
+                    Value = LOOKUP_ROUTINE(Key);
 
                 }
 
@@ -184,4 +167,6 @@ DECLARE_BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
     return Best;
 }
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+//
+// End CompiledPerfectHashTableBenchmarkFull.c.
+//

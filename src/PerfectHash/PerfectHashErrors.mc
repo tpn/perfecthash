@@ -1399,3 +1399,42 @@ Language=English
 Invalid UUID string.
 .
 
+MessageId=0x30d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_INDEX_IMPL_C_STRING_FOUND
+Language=English
+No Index() routine raw C string found for the current algorithm, hash function and masking type..
+.
+
+MessageId=0x30e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_HEADER_SUPPORT_FILE
+Language=English
+Error preparing C header support file.
+.
+
+MessageId=0x30f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_SUPPORT_FILE
+Language=English
+Error saving C header support file.
+.
+
+MessageId=0x310
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE
+Language=English
+Error preparing C header CompiledPerfectHashMacroGlue.h file.
+.
+
+MessageId=0x311
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE
+Language=English
+Error saving C header CompiledPerfectHashMacroGlue.h file.
+.

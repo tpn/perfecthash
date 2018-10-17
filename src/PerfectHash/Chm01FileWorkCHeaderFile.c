@@ -12,9 +12,52 @@ Abstract:
     the C header file as part of the CHM v1 algorithm implementation for the
     perfect hash library.
 
+    Example C header file (e.g. KernelBase_2415_8196_Chm01_Crc32Rotate_And.h),
+    where T## -> table name, U## -> uppercase table name:
+
+    Prepare step:
+
+        - Table-specific macros and constants:
+            - CPH_TABLENAME
+            - CPH_TABLENAME_UPPER
+            - U##_NUMBER_OF_KEYS
+            - U##_SEEDS
+            - T##_Seeds[]
+            - T##_Seed1 .. SeedN
+            - T##_HashMask
+            - T##_IndexMask
+            - T##_TableData
+            - T##_TableValues
+            - T##_NumberOfKeys
+
+        - #include <CompiledPerfectHashMacroGlue.h>
+
+    Save step:
+
+        - Table-specific values (e.g. literal hash mask, index mask etc).
+
+        - #define CPH_INLINE_ROUTINES
+
+        - Contents of ../CompiledPerfectHashTableRoutinesPre.c
+
+        - Contents of specific Index() implementation for the given algo,
+          hash and mask (as specified by Table->IndexImplString). E.g. the
+          contents of ../CompiledPerfectHashTableChm01IndexCrc32RotateAnd.c.
+
+        - Contents of ../CompiledPerfectHashTableRoutines.c
+
+        - Contents of ../CompiledPerfectHashTableRoutinesPost.c
+
+        - DEFINE_TABLE_ROUTINES();
+          DEFINE_TEST_AND_BENCHMARK_ROUTINES();
+
 --*/
 
 #include "stdafx.h"
+
+extern const STRING CompiledPerfectHashTableRoutinesPreCSourceRawCString;
+extern const STRING CompiledPerfectHashTableRoutinesCSourceRawCString;
+extern const STRING CompiledPerfectHashTableRoutinesPostCSourceRawCString;
 
 _Use_decl_annotations_
 HRESULT
@@ -60,10 +103,9 @@ PrepareCHeaderFileChm01(
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Header File.  "
                "Auto-generated.\n//\n\n"
-               "#pragma once\n\n"
-               "#ifdef __cplusplus\n"
-               "extern \"C\" {\n"
-               "#endif\n\n");
+               "#pragma once\n\n");
+
+    OUTPUT_OPEN_EXTERN_C_SCOPE();
 
     OUTPUT_INCLUDE_STDAFX_H();
 
@@ -112,92 +154,9 @@ PrepareCHeaderFileChm01(
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_NumberOfKeys;\n\n");
 
-    OUTPUT_RAW("DEFINE_COMPILED_PERFECT_HASH_ROUTINES(\n    ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("\n);\n\n");
+    OUTPUT_RAW("#include <CompiledPerfectHashMacroGlue.h>\n");
 
-    OUTPUT_RAW("DEFINE_TEST_AND_BENCHMARK_"
-               "COMPILED_PERFECT_HASH_TABLE_ROUTINES(\n    ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("\n);\n\n");
-
-    //
-    // Data macros.
-    //
-
-    OUTPUT_RAW("#ifndef CphTableKeys\n#define CphTableKeys ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_Keys\n#endif\n\n"
-               "#ifndef CphTableNumberOfKeys\n#define CphTableNumberOfKeys ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_NumberOfKeys\n#endif\n\n"
-               "#ifndef CphTableData\n#define CphTableData ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_TableData\n#endif\n\n"
-               "#ifndef CphTableValues\n#define CphTableValues ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_TableValues\n#endif\n\n");
-
-    //
-    // C function macros.
-    //
-
-    OUTPUT_RAW("#ifndef CphTableIndex\n"
-               "#define CphTableIndex CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_Index\n#endif\n\n"
-               "#ifndef CphTableLookup\n"
-               "#define CphTableLookup CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_Lookup\n#endif\n\n"
-               "#ifndef CphTableInsert\n"
-               "#define CphTableInsert CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_Insert\n#endif\n\n"
-               "#ifndef CphTableDelete\n"
-               "#define CphTableDelete CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_Delete\n#endif\n\n");
-
-    //
-    // Inline C function macros.
-    //
-
-    OUTPUT_RAW("#ifndef CphTableIndexInline\n"
-               "#define CphTableIndexInline CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_IndexInline\n#endif\n\n"
-               "#ifndef CphTableLookupInline\n"
-               "#define CphTableLookupInline CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_LookupInline\n#endif\n\n"
-               "#ifndef CphTableInsertInline\n"
-               "#define CphTableInsertInline CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_InsertInline\n#endif\n\n"
-               "#ifndef CphTableDeleteInline\n"
-               "#define CphTableDeleteInline CompiledPerfectHash_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_DeleteInline\n#endif\n\n");
-
-    //
-    // Testing and benchmarking.
-    //
-
-    OUTPUT_RAW("#ifndef TestCphTable\n"
-               "#define TestCphTable TestCompiledPerfectHashTable_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("\n#endif\n\n"
-               "#ifndef BenchmarkIndexCphTable\n"
-               "#define BenchmarkIndexCphTable "
-                       "BenchmarkIndexCompiledPerfectHashTable_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("\n#endif\n\n"
-               "#ifndef BenchmarkFullCphTable\n"
-               "#define BenchmarkFullCphTable "
-                       "BenchmarkFullCompiledPerfectHashTable_");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("\n#endif\n\n");
+    OUTPUT_RAW("\n\n//\n// (End of preparation phase.)\n//\n\n");
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 
@@ -304,62 +263,33 @@ SaveCHeaderFileChm01(
     OUTPUT_HEX(TableInfo->IndexMask);
     OUTPUT_RAW("\n\n");
 
-    OUTPUT_RAW("//\n// Disable \"unreferenced inline function has been "
-               "removed\" warning.\n"
-               "//\n\n#pragma warning(push)\n#pragma warning(disable: 4514)\n");
-
-    OUTPUT_RAW("DECLARE_");
-    OUTPUT_STRING(&Algo);
-    OUTPUT_RAW("_INDEX_ROUTINE_INLINE(\n    ");
-
     //
-    // TableName
+    // Write inline routines.
     //
 
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW(",\n    ");
+    OUTPUT_PRAGMA_WARNING_DISABLE_UNREFERENCED_INLINE();
+
+    OUTPUT_RAW("#define CPH_INLINE_ROUTINES\n");
+
+    OUTPUT_STRING(&CompiledPerfectHashTableRoutinesPreCSourceRawCString);
+
+    OUTPUT_STRING(Table->IndexImplString);
+
+    OUTPUT_STRING(&CompiledPerfectHashTableRoutinesCSourceRawCString);
+
+    OUTPUT_PRAGMA_WARNING_POP();
+
+    OUTPUT_STRING(&CompiledPerfectHashTableRoutinesPostCSourceRawCString);
+
+    OUTPUT_RAW("\nDEFINE_TABLE_ROUTINES();\n"
+               "\nDEFINE_TEST_AND_BENCHMARKING_ROUTINES();\n\n");
 
     //
-    // Seed1 .. Seed[n]
+    // Close the extern C scope opened up during the prepare phase, then close
+    // the underlying file.
     //
 
-    for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
-        OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_SEED");
-        OUTPUT_INT(Count);
-        OUTPUT_RAW(",\n    ");
-    }
-
-    //
-    // HashMask
-    //
-
-    OUTPUT_STRING(Upper);
-    OUTPUT_RAW("_HASH_MASK,\n    ");
-
-    //
-    // IndexMask
-    //
-
-    OUTPUT_STRING(Upper);
-    OUTPUT_RAW("_INDEX_MASK\n);\n\n");
-
-    //
-    // Inline functions.
-    //
-
-    OUTPUT_RAW("DECLARE_COMPILED_PERFECT_HASH_ROUTINES_INLINE(\n    ");
-    OUTPUT_STRING(Name);
-
-    OUTPUT_RAW("\n);\n#pragma warning(pop)\n\n");
-
-    //
-    // Close the extern "C" scope.
-    //
-
-    OUTPUT_RAW("#ifdef __cplusplus\n"
-               "} // extern C\n"
-               "#endif\n\n");
+    OUTPUT_CLOSE_EXTERN_C_SCOPE();
 
     EndOfFile.QuadPart = RtlPointerToOffset(File->BaseAddress, Output);
 

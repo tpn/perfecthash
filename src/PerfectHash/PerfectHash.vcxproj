@@ -89,10 +89,19 @@
     <ClInclude Include="Chm01.h" />
     <ClInclude Include="Chm01FileWork.h" />
     <ClInclude Include="Chunk.h" />
+    <ClInclude Include="CompiledPerfectHashMacroGlue_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableBenchmarkFullExe_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableBenchmarkFull_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableBenchmarkIndexExe_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableBenchmarkIndex_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexJenkinsAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableMacroGlue_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableRoutinesPost_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableRoutinesPre_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableRoutines_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableSupport_CHeader_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableSupport_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableTestExe_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableTest_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHash_CHeader_RawCString.h" />
@@ -123,8 +132,10 @@
   <ItemGroup>
     <ClCompile Include="Chm01FileWork.c" />
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashFile.c" />
+    <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashMacroGlueFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderStdAfxFile.c" />
+    <ClCompile Include="Chm01FileWorkCHeaderSupportFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexExeFile.c" />
@@ -132,6 +143,7 @@
     <ClCompile Include="Chm01FileWorkCSourceFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceKeysFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceStdAfxFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceSupportFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTableDataFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestFile.c" />

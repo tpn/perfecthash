@@ -21,6 +21,10 @@ Abstract:
 
 #include "stdafx.h"
 
+extern const STRING CompiledPerfectHashTableRoutinesPreCSourceRawCString;
+extern const STRING CompiledPerfectHashTableRoutinesCSourceRawCString;
+extern const STRING CompiledPerfectHashTableRoutinesPostCSourceRawCString;
+
 _Use_decl_annotations_
 HRESULT
 PrepareCSourceFileChm01(
@@ -31,8 +35,6 @@ PrepareCSourceFileChm01(
     PRTL Rtl;
     PCHAR Base;
     PCHAR Output;
-    ULONG Count;
-    ULONGLONG Index;
     ULONG NumberOfSeeds;
     PCSTRING Name;
     PCSTRING Upper;
@@ -75,7 +77,7 @@ PrepareCSourceFileChm01(
     Output = Base;
 
     //
-    // Write the keys.
+    // Write the header.
     //
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Source File.  "
@@ -83,52 +85,21 @@ PrepareCSourceFileChm01(
 
     OUTPUT_INCLUDE_STDAFX_H();
 
-    OUTPUT_RAW("DECLARE_");
-    OUTPUT_STRING(&Algo);
-    OUTPUT_RAW("_INDEX_ROUTINE(\n    ");
+    OUTPUT_PRAGMA_WARNING_DISABLE_FUNC_SELECTED_FOR_INLINE_EXP_WARNING();
 
     //
-    // TableName
+    // Write the Index() implementation.
     //
 
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW(",\n    ");
+    OUTPUT_STRING(Table->IndexImplString);
 
     //
-    // Seed1 .. Seed[n]
+    // Write the routines.
     //
 
-    for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
-        OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_SEED");
-        OUTPUT_INT(Count);
-        OUTPUT_RAW(",\n    ");
-    }
+    OUTPUT_STRING(&CompiledPerfectHashTableRoutinesCSourceRawCString);
 
-    //
-    // HashMask
-    //
-
-    OUTPUT_STRING(Upper);
-    OUTPUT_RAW("_HASH_MASK,\n    ");
-
-    //
-    // IndexMask
-    //
-
-    OUTPUT_STRING(Upper);
-    OUTPUT_RAW("_INDEX_MASK\n);\n\n");
-
-    //
-    // C functions.
-    //
-
-    OUTPUT_RAW("//\n// Disable \"function ... selected for inline expansion\" "
-               "warning.\n"
-               "//\n\n#pragma warning(push)\n#pragma warning(disable: 4711)\n"
-               "DECLARE_COMPILED_PERFECT_HASH_ROUTINES(\n    ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("\n);\n#pragma warning(pop)\n\n");
+    OUTPUT_PRAGMA_WARNING_POP();
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

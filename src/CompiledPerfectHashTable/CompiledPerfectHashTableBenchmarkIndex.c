@@ -1,18 +1,9 @@
-extern
-BOOLEAN
-QueryPerformanceCounter(
-    _Out_ PLARGE_INTEGER Count
-    );
 
-extern volatile ULONG CtrlCPressed;
+//
+// Begin CompiledPerfectHashTableBenchmarkIndex.c.
+//
 
-#define DECLARE_HEADER(T) \
-    DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE_HEADER(T)
-
-#define DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE() \
-    DECLARE_HEADER(CPH_TABLENAME)
-
-DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
+DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
 {
     ULONG Key;
     ULONG Index;
@@ -24,7 +15,7 @@ DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
     LARGE_INTEGER Delta;
     ULONG Best = (ULONG)-1;
 
-    Key = *CphTableKeys;
+    Key = *KEYS;
 
     if (Seconds) {
 
@@ -33,7 +24,7 @@ DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
             QueryPerformanceCounter(&Start);
 
             for (Count = Iterations; Count != 0; Count--) {
-                Index = CphTableIndex(Key);
+                Index = INDEX_ROUTINE(Key);
             }
 
             QueryPerformanceCounter(&End);
@@ -53,7 +44,7 @@ DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
             QueryPerformanceCounter(&Start);
 
             for (Count = Iterations; Count != 0; Count--) {
-                Index = CphTableIndex(Key);
+                Index = INDEX_ROUTINE(Key);
             }
 
             QueryPerformanceCounter(&End);
@@ -71,4 +62,6 @@ DECLARE_BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE_ROUTINE()
     return Best;
 }
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+//
+// End CompiledPerfectHashTableBenchmarkIndex.c.
+//

@@ -49,7 +49,7 @@ extern const PPERFECT_HASH_TABLE_INDEX IndexRoutines[];
 // Declare an array of fast-index routines.  Unlike our other arrays that are
 // all indexed by enumeration IDs, this array captures <algorith, hash, mask,
 // func> tuples of supporting fast index routines.  The inline method below
-// (CompletePerfectHashTableVtblInitialization()) is responsible for walking the
+// (CompletePerfectHashTableInitialization()) is responsible for walking the
 // array and determining if there is an entry present for the requested IDs.
 // This approach has been selected over a 3-dimensional array as there will only
 // typically be a small number of fast-index routines and maintaining a 3D array
@@ -58,6 +58,13 @@ extern const PPERFECT_HASH_TABLE_INDEX IndexRoutines[];
 
 extern const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[];
 extern const BYTE NumberOfFastIndexRoutines;
+
+//
+// As above, but for raw C string representations of Index() routines.
+//
+
+extern const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[];
+extern const BYTE NumberOfIndexImplStrings;
 
 //
 // Declare an array of hash routines.  This is intended to be indexed by
@@ -95,20 +102,23 @@ extern const PPERFECT_HASH_TABLE_MASK_INDEX MaskIndexRoutines[];
 extern const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[];
 
 //
-// Helper inline routine for initializing the extended vtbl interface.
+// Helper inline routine for initializing the extended vtbl interface and any
+// other dynamic values.
 //
 
 FORCEINLINE
 VOID
-CompletePerfectHashTableVtblInitialization(
+CompletePerfectHashTableInitialization(
     _In_ PPERFECT_HASH_TABLE Table
     )
 {
     BYTE Index;
+    BOOLEAN IsMatch;
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
-    PCPERFECT_HASH_TABLE_FAST_INDEX_TUPLE Tuple;
+    PCPERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexTuple;
+    PCPERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE StringTuple;
     PPERFECT_HASH_TABLE_VTBL Vtbl;
 
     //
@@ -143,24 +153,45 @@ CompletePerfectHashTableVtblInitialization(
     Vtbl->FastIndex = NULL;
 
     for (Index = 0; Index < NumberOfFastIndexRoutines; Index++) {
-        BOOLEAN IsMatch;
 
-        Tuple = &FastIndexRoutines[Index];
+        FastIndexTuple = &FastIndexRoutines[Index];
 
         IsMatch = (
-            AlgorithmId == Tuple->AlgorithmId &&
-            HashFunctionId == Tuple->HashFunctionId &&
-            MaskFunctionId == Tuple->MaskFunctionId
+            AlgorithmId == FastIndexTuple->AlgorithmId &&
+            HashFunctionId == FastIndexTuple->HashFunctionId &&
+            MaskFunctionId == FastIndexTuple->MaskFunctionId
         );
 
         if (IsMatch) {
-            Vtbl->FastIndex = Tuple->FastIndex;
+            Vtbl->FastIndex = FastIndexTuple->FastIndex;
             break;
         }
 
     }
 
     Vtbl->Index = (Vtbl->FastIndex ? Vtbl->FastIndex : Vtbl->SlowIndex);
+
+    //
+    // Walk the C impl string tuples and try find a match.
+    //
+
+    Table->IndexImplString = NULL;
+
+    for (Index = 0; Index < NumberOfIndexImplStrings; Index++) {
+
+        StringTuple = &IndexImplStringTuples[Index];
+
+        IsMatch = (
+            AlgorithmId == StringTuple->AlgorithmId &&
+            HashFunctionId == StringTuple->HashFunctionId &&
+            MaskFunctionId == StringTuple->MaskFunctionId
+        );
+
+        if (IsMatch) {
+            Table->IndexImplString = StringTuple->RawCString;
+            break;
+        }
+    }
 }
 
 //

@@ -4,7 +4,10 @@
 
 DECLSPEC_ALIGN(16)
 const CHAR CompiledPerfectHashTableTestExeCSourceRawCStr[] =
-    "extern void ExitProcess(ULONG);\n"
+    "\n"
+    "//\n"
+    "// Begin CompiledPerfectHashTableTestExe.c.\n"
+    "//\n"
     "\n"
     "void\n"
     "__stdcall\n"
@@ -15,12 +18,14 @@ const CHAR CompiledPerfectHashTableTestExeCSourceRawCStr[] =
     "    ULONG NumberOfErrors;\n"
     "    BOOLEAN DebugBreakOnFailure = 0;\n"
     "\n"
-    "    NumberOfErrors = TestCphTable(DebugBreakOnFailure);\n"
+    "    NumberOfErrors = TEST_CPH_ROUTINE(DebugBreakOnFailure);\n"
     "\n"
     "    ExitProcess(NumberOfErrors);\n"
     "}\n"
     "\n"
-    "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
+    "//\n"
+    "// End CompiledPerfectHashTableTestExe.c.\n"
+    "//\n"
 ;
 
 const STRING CompiledPerfectHashTableTestExeCSourceRawCString = {

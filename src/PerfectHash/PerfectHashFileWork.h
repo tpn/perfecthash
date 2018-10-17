@@ -66,29 +66,31 @@ Abstract:
 //      have forgotten to add a member to (e.g. FileWorkItemExtensions[]).)
 //
 
-#define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                     \
-    FIRST_ENTRY(Verb, VUpper, TableFile,                TABLE_FILE)                            \
-    ENTRY(Verb, VUpper, TableInfoStream,                TABLE_INFO_STREAM)                     \
-    ENTRY(Verb, VUpper, CHeaderFile,                    C_HEADER_FILE)                         \
-    ENTRY(Verb, VUpper, CSourceFile,                    C_SOURCE_FILE)                         \
-    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                  \
-    ENTRY(Verb, VUpper, CSourceStdAfxFile,              C_SOURCE_STDAFX_FILE)                  \
-    ENTRY(Verb, VUpper, CSourceKeysFile,                C_SOURCE_KEYS_FILE)                    \
-    ENTRY(Verb, VUpper, CSourceTableDataFile,           C_SOURCE_TABLE_DATA_FILE)              \
-    ENTRY(Verb, VUpper, CSourceSupportFile,             C_SOURCE_SUPPORT_FILE)                 \
-    ENTRY(Verb, VUpper, CSourceTestFile,                C_SOURCE_TEST_FILE)                    \
-    ENTRY(Verb, VUpper, CSourceTestExeFile,             C_SOURCE_TEST_EXE_FILE)                \
-    ENTRY(Verb, VUpper, CSourceBenchmarkFullFile,       C_SOURCE_BENCHMARK_FULL_FILE)          \
-    ENTRY(Verb, VUpper, CSourceBenchmarkFullExeFile,    C_SOURCE_BENCHMARK_FULL_EXE_FILE)      \
-    ENTRY(Verb, VUpper, CSourceBenchmarkIndexFile,      C_SOURCE_BENCHMARK_INDEX_FILE)         \
-    ENTRY(Verb, VUpper, CSourceBenchmarkIndexExeFile,   C_SOURCE_BENCHMARK_INDEX_EXE_FILE)     \
-    ENTRY(Verb, VUpper, VCProjectDllFile,               VCPROJECT_DLL_FILE)                    \
-    ENTRY(Verb, VUpper, VCProjectTestExeFile,           VCPROJECT_TEST_EXE_FILE)               \
-    ENTRY(Verb, VUpper, VCProjectBenchmarkFullExeFile,  VCPROJECT_BENCHMARK_FULL_EXE_FILE)     \
-    ENTRY(Verb, VUpper, VCProjectBenchmarkIndexExeFile, VCPROJECT_BENCHMARK_INDEX_EXE_FILE)    \
-    ENTRY(Verb, VUpper, VSSolutionFile,                 VSSOLUTION_FILE)                       \
-    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE)   \
-    ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)    \
+#define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                                       \
+    FIRST_ENTRY(Verb, VUpper, TableFile,                TABLE_FILE)                                              \
+    ENTRY(Verb, VUpper, TableInfoStream,                TABLE_INFO_STREAM)                                       \
+    ENTRY(Verb, VUpper, CHeaderFile,                    C_HEADER_FILE)                                           \
+    ENTRY(Verb, VUpper, CSourceFile,                    C_SOURCE_FILE)                                           \
+    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                                    \
+    ENTRY(Verb, VUpper, CSourceStdAfxFile,              C_SOURCE_STDAFX_FILE)                                    \
+    ENTRY(Verb, VUpper, CSourceKeysFile,                C_SOURCE_KEYS_FILE)                                      \
+    ENTRY(Verb, VUpper, CSourceTableDataFile,           C_SOURCE_TABLE_DATA_FILE)                                \
+    ENTRY(Verb, VUpper, CHeaderSupportFile,             C_HEADER_SUPPORT_FILE)                                   \
+    ENTRY(Verb, VUpper, CSourceSupportFile,             C_SOURCE_SUPPORT_FILE)                                   \
+    ENTRY(Verb, VUpper, CSourceTestFile,                C_SOURCE_TEST_FILE)                                      \
+    ENTRY(Verb, VUpper, CSourceTestExeFile,             C_SOURCE_TEST_EXE_FILE)                                  \
+    ENTRY(Verb, VUpper, CSourceBenchmarkFullFile,       C_SOURCE_BENCHMARK_FULL_FILE)                            \
+    ENTRY(Verb, VUpper, CSourceBenchmarkFullExeFile,    C_SOURCE_BENCHMARK_FULL_EXE_FILE)                        \
+    ENTRY(Verb, VUpper, CSourceBenchmarkIndexFile,      C_SOURCE_BENCHMARK_INDEX_FILE)                           \
+    ENTRY(Verb, VUpper, CSourceBenchmarkIndexExeFile,   C_SOURCE_BENCHMARK_INDEX_EXE_FILE)                       \
+    ENTRY(Verb, VUpper, VCProjectDllFile,               VCPROJECT_DLL_FILE)                                      \
+    ENTRY(Verb, VUpper, VCProjectTestExeFile,           VCPROJECT_TEST_EXE_FILE)                                 \
+    ENTRY(Verb, VUpper, VCProjectBenchmarkFullExeFile,  VCPROJECT_BENCHMARK_FULL_EXE_FILE)                       \
+    ENTRY(Verb, VUpper, VCProjectBenchmarkIndexExeFile, VCPROJECT_BENCHMARK_INDEX_EXE_FILE)                      \
+    ENTRY(Verb, VUpper, VSSolutionFile,                 VSSOLUTION_FILE)                                         \
+    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE)                     \
+    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashMacroGlueFile, C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE) \
+    ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)                      \
     LAST_ENTRY(Verb, VUpper, TableStatsTextFile,        TABLE_STATS_TEXT_FILE)
 
 #define PREPARE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
@@ -118,6 +120,7 @@ Abstract:
 
 #define VERB_CONTEXT_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                 \
     FIRST_ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE) \
+    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashMacroGlueFile, C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE) \
     LAST_ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)
 
 #define PREPARE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
@@ -299,7 +302,7 @@ typedef enum _VCPROJECT_FILE_ID {
 } VCPROJECT_FILE_ID;
 typedef VCPROJECT_FILE_ID *PVCPROJECT_FILE_ID;
 
-#define NUMBER_OF_VCPROJECT_FILES ( \
+#define NUMBER_OF_VCPROJECT_FILES (                  \
     (VCProjectFileLastId - VCProjectFileFirstId) + 1 \
 )
 
@@ -640,6 +643,19 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
     OUTPUT_RAW("_StdAfx.h\"\n\n");
 
 //
+// As above, but for _Support.h.
+//
+
+#define OUTPUT_INCLUDE_SUPPORT_H()                                     \
+    OUTPUT_RAW("#include \"");                                         \
+    OUTPUT_STRING(&(GetActivePath((*Item->FilePointer))->TableNameA)); \
+    OUTPUT_RAW("_Support.h\"\n\n");
+
+#define OUTPUT_INCLUDE_STDAFX_AND_SUPPORT_H() \
+    OUTPUT_INCLUDE_STDAFX_H();                \
+    OUTPUT_INCLUDE_SUPPORT_H()                \
+
+//
 // Helper macros for common constructs written from multiple places.
 //
 
@@ -659,7 +675,7 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
                "#pragma warning(push)\n"                                 \
                "#pragma warning(disable: 4514)\n\n")
 
-#define OUTPUT_PRAGMA_WARNING_POP() OUTPUT_RAW("#pragma warning(pop)\n")
+#define OUTPUT_PRAGMA_WARNING_POP() OUTPUT_RAW("\n#pragma warning(pop)\n\n")
 
 #define OUTPUT_PRAGMA_WARNING_DISABLE_FUNC_SELECTED_FOR_INLINE_EXP_WARNING() \
     OUTPUT_RAW("//\n"                                                        \
@@ -667,8 +683,6 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
                    "inline expansion\" warning.\n "                          \
                "//\n\n"                                                      \
                "#pragma warning(push)\n"                                     \
-               "#pragma warning(disable: 4711)\n")
-
-
+               "#pragma warning(disable: 4711)\n\n")
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

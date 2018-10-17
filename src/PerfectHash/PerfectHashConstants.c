@@ -14,6 +14,15 @@ Abstract:
 
 #include "stdafx.h"
 
+#define VERIFY_ALGORITHM_ARRAY_SIZE(Name) \
+    C_ASSERT(ARRAYSIZE(Name) == PerfectHashInvalidAlgorithmId + 1)
+
+#define VERIFY_HASH_ARRAY_SIZE(Name) \
+    C_ASSERT(ARRAYSIZE(Name) == PerfectHashInvalidHashFunctionId + 1)
+
+#define VERIFY_MASK_ARRAY_SIZE(Name) \
+    C_ASSERT(ARRAYSIZE(Name) == PerfectHashInvalidMaskFunctionId + 1)
+
 //
 // Declare the array of creation routines.
 //
@@ -23,6 +32,7 @@ const PCREATE_PERFECT_HASH_TABLE_IMPL CreationRoutines[] = {
     CreatePerfectHashTableImplChm01,
     NULL
 };
+VERIFY_ALGORITHM_ARRAY_SIZE(CreationRoutines);
 
 //
 // Define the array of loader routines.
@@ -33,6 +43,7 @@ const PLOAD_PERFECT_HASH_TABLE_IMPL LoaderRoutines[] = {
     LoadPerfectHashTableImplChm01,
     NULL
 };
+VERIFY_ALGORITHM_ARRAY_SIZE(LoaderRoutines);
 
 //
 // Define the array of hash routines.
@@ -49,6 +60,7 @@ const PPERFECT_HASH_TABLE_HASH HashRoutines[] = {
     PerfectHashTableHashScratch,
     NULL
 };
+VERIFY_HASH_ARRAY_SIZE(HashRoutines);
 
 //
 // Define the array of number of seeds required per hash routine.
@@ -67,6 +79,7 @@ const SHORT HashRoutineNumberOfSeeds[] = {
 
     -1,
 };
+VERIFY_HASH_ARRAY_SIZE(HashRoutineNumberOfSeeds);
 
 //
 // Define the array of seeded hash routines.
@@ -83,6 +96,7 @@ const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[] = {
     PerfectHashTableSeededHashScratch,
     NULL
 };
+VERIFY_HASH_ARRAY_SIZE(SeededHashRoutines);
 
 //
 // Define the array of hash mask routines.
@@ -94,6 +108,7 @@ const PPERFECT_HASH_TABLE_MASK_HASH MaskHashRoutines[] = {
     PerfectHashTableMaskHashAnd,
     NULL
 };
+VERIFY_MASK_ARRAY_SIZE(MaskHashRoutines);
 
 //
 // Define the array of index mask routines.
@@ -105,6 +120,7 @@ const PPERFECT_HASH_TABLE_MASK_INDEX MaskIndexRoutines[] = {
     PerfectHashTableMaskIndexAnd,
     NULL
 };
+VERIFY_MASK_ARRAY_SIZE(MaskIndexRoutines);
 
 //
 // Define the array of index routines.
@@ -115,6 +131,7 @@ const PPERFECT_HASH_TABLE_INDEX IndexRoutines[] = {
     PerfectHashTableIndexImplChm01,
     NULL
 };
+VERIFY_ALGORITHM_ARRAY_SIZE(IndexRoutines);
 
 //
 // Define the array of fast-index routines.
@@ -126,7 +143,6 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
         PerfectHashChm01AlgorithmId,
         PerfectHashHashCrc32RotateFunctionId,
         PerfectHashAndMaskFunctionId,
-        0,
         PerfectHashTableFastIndexImplChm01Crc32RotateHashAndMask,
     },
 
@@ -134,13 +150,40 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
         PerfectHashChm01AlgorithmId,
         PerfectHashHashJenkinsFunctionId,
         PerfectHashAndMaskFunctionId,
-        0,
         PerfectHashTableFastIndexImplChm01JenkinsHashAndMask,
     },
 
 };
 
 const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
+
+//
+// Define the array of raw C string Index() implementations.
+//
+
+#include "CompiledPerfectHashTableChm01IndexCrc32RotateAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexJenkinsAnd_CSource_RawCString.h"
+#undef RawCString
+
+const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[] = {
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashCrc32RotateFunctionId,
+        PerfectHashAndMaskFunctionId,
+        &CompiledPerfectHashTableChm01IndexCrc32RotateAndCSourceRawCString,
+    },
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashJenkinsFunctionId,
+        PerfectHashAndMaskFunctionId,
+        &CompiledPerfectHashTableChm01IndexJenkinsAndCSourceRawCString,
+    },
+
+};
+
+const BYTE NumberOfIndexImplStrings = ARRAYSIZE(IndexImplStringTuples);
 
 //
 // Define UNICODE_STRING structures for each algorithm name.
@@ -159,6 +202,7 @@ const PCUNICODE_STRING AlgorithmNames[] = {
     &PerfectHashChm01AlgorithmName,
     NULL,
 };
+VERIFY_ALGORITHM_ARRAY_SIZE(AlgorithmNames);
 
 //
 // Define UNICODE_STRING structures for each hash function name.
@@ -201,6 +245,7 @@ const PCUNICODE_STRING HashFunctionNames[] = {
     &PerfectHashHashScratchFunctionName,
     NULL,
 };
+VERIFY_HASH_ARRAY_SIZE(HashFunctionNames);
 
 //
 // Define UNICODE_STRING structures for each mask function name.
@@ -238,6 +283,7 @@ const PCUNICODE_STRING MaskFunctionNames[] = {
     &PerfectHashAndMaskFunctionName,
     NULL,
 };
+VERIFY_MASK_ARRAY_SIZE(MaskFunctionNames);
 
 //
 // Array of UNICODE_STRING event prefix names used by the runtime context.
@@ -349,6 +395,7 @@ const PCUNICODE_STRING FileWorkItemExtensions[] = {
     &CSourceFileExtension,          // CSourceStdAfxFile
     &CSourceFileExtension,          // CSourceKeysFile
     &CSourceFileExtension,          // CSourceTableDataFile
+    &CHeaderFileExtension,          // CHeaderSupportFile
     &CSourceFileExtension,          // CSourceSupportFile
     &CSourceFileExtension,          // CSourceTestFile
     &CSourceFileExtension,          // CSourceTestExeFile
@@ -362,6 +409,7 @@ const PCUNICODE_STRING FileWorkItemExtensions[] = {
     &VCProjectExtension,            // VCProjectBenchmarkIndexExeFile
     &VSSolutionExtension,           // VSSolutionFile
     &CHeaderFileExtension,          // CHeaderCompiledPerfectHashFile
+    &CHeaderFileExtension,          // CHeaderCompiledPerfectHashMacroGlueFile
     &VCPropsExtension,              // VCPropsCompiledPerfectHashFile
     &TextFileExtension,             // TableStatsTextFile
 
@@ -376,6 +424,7 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemExtensions);
 const UNICODE_STRING CHeaderStdAfxFileSuffix = RCS(L"StdAfx");
 const UNICODE_STRING CSourceStdAfxFileSuffix = RCS(L"StdAfx");
 const UNICODE_STRING CSourceKeysFileSuffix = RCS(L"Keys");
+const UNICODE_STRING CHeaderSupportFileSuffix = RCS(L"Support");
 const UNICODE_STRING CSourceSupportFileSuffix = RCS(L"Support");
 const UNICODE_STRING CSourceTableDataFileSuffix = RCS(L"TableData");
 const UNICODE_STRING CSourceTestFileSuffix = RCS(L"Test");
@@ -403,6 +452,7 @@ const PCUNICODE_STRING FileWorkItemSuffixes[] = {
     &CSourceStdAfxFileSuffix,               // CSourceStdAfxFile
     &CSourceKeysFileSuffix,                 // CSourceKeysFile
     &CSourceTableDataFileSuffix,            // CSourceTableDataFile
+    &CHeaderSupportFileSuffix,              // CHeaderSupportFile
     &CSourceSupportFileSuffix,              // CSourceSupportFile
     &CSourceTestFileSuffix,                 // CSourceTestFile
     &CSourceTestExeFileSuffix,              // CSourceTestExeFile
@@ -416,6 +466,7 @@ const PCUNICODE_STRING FileWorkItemSuffixes[] = {
     &VCProjectBenchmarkIndexExeFileSuffix,  // VCProjectBenchmarkIndexExeFile
     NULL,                                   // VSSolutionFile
     NULL,                                   // CHeaderCompiledPerfectHashFile
+    NULL,                                   // CHeaderCompiledPerfectHashMacroGlueFile
     NULL,                                   // VCPropsCompiledPerfectHashFile
     &TableStatsTextFileSuffix,              // TableStatsTextFile
 
@@ -438,6 +489,7 @@ const PCUNICODE_STRING FileWorkItemStreamNames[] = {
     NULL,                           // CSourceStdAfxFile
     NULL,                           // CSourceKeysFile
     NULL,                           // CSourceTableDataFile
+    NULL,                           // CHeaderSupportFile
     NULL,                           // CSourceSupportFile
     NULL,                           // CSourceTestFile
     NULL,                           // CSourceTestExeFile
@@ -451,6 +503,7 @@ const PCUNICODE_STRING FileWorkItemStreamNames[] = {
     NULL,                           // VCProjectBenchmarkIndexExeFile
     NULL,                           // VSSolutionFile
     NULL,                           // CHeaderCompiledPerfectHashFile
+    NULL,                           // CHeaderCompiledPerfectHashMacroGlueFile
     NULL,                           // VCPropsCompiledPerfectHashFile
     NULL,                           // TableStatsTextFile
 
@@ -465,6 +518,7 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemStreamNames);
 //
 
 const UNICODE_STRING CHeaderCompiledPerfectHashFileBaseName = RCS(L"CompiledPerfectHash");
+const UNICODE_STRING CHeaderCompiledPerfectHashMacroGlueFileBaseName = RCS(L"CompiledPerfectHashMacroGlue");
 const UNICODE_STRING VCPropsCompiledPerfectHashFileBaseName = RCS(L"CompiledPerfectHash");
 
 const PCUNICODE_STRING FileWorkItemBaseNames[] = {
@@ -478,6 +532,7 @@ const PCUNICODE_STRING FileWorkItemBaseNames[] = {
     NULL,                           // CSourceStdAfxFile
     NULL,                           // CSourceKeysFile
     NULL,                           // CSourceTableDataFile
+    NULL,                           // CHeaderSupportFile
     NULL,                           // CSourceSupportFile
     NULL,                           // CSourceTestFile
     NULL,                           // CSourceTestExeFile
@@ -490,8 +545,9 @@ const PCUNICODE_STRING FileWorkItemBaseNames[] = {
     NULL,                           // VCProjectBenchmarkFullExeFile
     NULL,                           // VCProjectBenchmarkIndexExeFile
     NULL,                           // VSSolutionFile
-    &CHeaderCompiledPerfectHashFileBaseName, // CHeaderCompiledPerfectHashFile
-    &VCPropsCompiledPerfectHashFileBaseName, // VCPropsCompiledPerfectHashFile
+    &CHeaderCompiledPerfectHashFileBaseName,
+    &CHeaderCompiledPerfectHashMacroGlueFileBaseName,
+    &VCPropsCompiledPerfectHashFileBaseName,
     NULL,                           // TableStatsTextFile
 
     NULL,
@@ -512,6 +568,7 @@ const EOF_INIT EofInits[] = {
     { EofInitTypeNumberOfPages, 1 },    // CSourceStdAfxFile
     { EofInitTypeNumberOfKeysMultiplier, 16 },          // CSourceKeysFile
     { EofInitTypeNumberOfTableElementsMultiplier, 16 }, // CSourceTableDataFile
+    { EofInitTypeDefault, },            // CHeaderSupportFile
     { EofInitTypeDefault, },            // CSourceSupportFile
     { EofInitTypeDefault, },            // CSourceTestFile
     { EofInitTypeDefault, },            // CSourceTestExeFile
@@ -525,6 +582,7 @@ const EOF_INIT EofInits[] = {
     { EofInitTypeDefault, },            // VCProjectBenchmarkIndexExeFile
     { EofInitTypeDefault, },            // VSSolutionFile
     { EofInitTypeDefault, },            // CHeaderCompiledPerfectHashFile
+    { EofInitTypeDefault, },            // CHeaderCompiledPerfectHashMacroGlueFile
     { EofInitTypeDefault, },            // VCPropsCompiledPerfectHashFile
     { EofInitTypeDefault, },            // TableStatsTextFile
     { EofInitTypeInvalid, },            // Invalid
@@ -1013,5 +1071,14 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     NULL,
 };
 VERIFY_ARRAY_SIZE(ComponentRundownRoutines);
+
+//
+// Include source files for any strings that are referenced in more than one
+// compilation unit.
+//
+
+#include "CompiledPerfectHashTableRoutinesPre_CSource_RawCString.h"
+#include "CompiledPerfectHashTableRoutines_CSource_RawCString.h"
+#include "CompiledPerfectHashTableRoutinesPost_CSource_RawCString.h"
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab nowrap                              :

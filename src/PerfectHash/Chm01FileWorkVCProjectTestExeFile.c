@@ -221,6 +221,16 @@ CHUNK VCProjectTestExeFileChunks[] = {
     {
         ChunkOpRaw,
         RCS(
+            "_Support.h\" />\r\n"
+            "    <ClInclude Include=\""
+        ),
+    },
+
+    { ChunkOpInsertTableName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
             "_StdAfx.h\" />\r\n"
             "    <ClInclude Include=\""
         ),
@@ -246,6 +256,16 @@ CHUNK VCProjectTestExeFileChunks[] = {
             "_StdAfx.c\">\r\n"
             "      <PrecompiledHeader>Create</PrecompiledHeader>\r\n"
             "    </ClCompile>\r\n"
+            "    <ClCompile Include=\""
+        ),
+    },
+
+    { ChunkOpInsertTableName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
+            "_Support.c\" />\r\n"
             "    <ClCompile Include=\""
         ),
     },

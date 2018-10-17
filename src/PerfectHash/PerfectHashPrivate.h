@@ -416,17 +416,40 @@ PERFECT_HASH_TABLE_INDEX PerfectHashTableFastIndexImplChm01JenkinsHashAndMask;
 // This is used by our constants module.
 //
 
+//
+// Disable warning C4820:
+//      '<anonymous-tag>': '4' bytes padding added after data member ...
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4820)
 typedef struct _PERFECT_HASH_TABLE_FAST_INDEX_TUPLE {
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
-    ULONG Unused;
     PPERFECT_HASH_TABLE_INDEX FastIndex;
 } PERFECT_HASH_TABLE_FAST_INDEX_TUPLE;
 typedef PERFECT_HASH_TABLE_FAST_INDEX_TUPLE
       *PPERFECT_HASH_TABLE_FAST_INDEX_TUPLE;
 typedef const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE
            *PCPERFECT_HASH_TABLE_FAST_INDEX_TUPLE;
+
+//
+// As above, but for raw C strings of the Index() implementation.
+//
+
+typedef struct _PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE {
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
+    PCSTRING RawCString;
+} PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE;
+typedef PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE
+      *PPERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE;
+typedef const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE
+           *PCPERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE;
+
+#pragma warning(pop)
 
 //
 // Symbol loader helpers.

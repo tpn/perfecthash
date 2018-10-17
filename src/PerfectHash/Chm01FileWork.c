@@ -137,8 +137,8 @@ Return Value:
 
     //
     // Determine if this is a context file.  Context files get treated
-    // differently to normal table output files in that they are only prepared
-    // and saved once per context instance.
+    // differently to normal table output files in that they are only
+    // prepared and saved once per context instance.
     //
 
     ContextFileId = (CONTEXT_FILE_ID)FileId;
