@@ -1649,3 +1649,21 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE ((HRESULT)0xE0040311L)
 
+//
+// MessageId: PH_E_TABLE_COMPILATION_FAILED
+//
+// MessageText:
+//
+// Table compilation failed.
+//
+#define PH_E_TABLE_COMPILATION_FAILED    ((HRESULT)0xE0040312L)
+
+//
+// MessageId: PH_E_TABLE_NOT_CREATED
+//
+// MessageText:
+//
+// Table not created.
+//
+#define PH_E_TABLE_NOT_CREATED           ((HRESULT)0xE0040313L)
+

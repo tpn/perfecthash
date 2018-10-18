@@ -742,6 +742,29 @@ Return Value:
         }
 
         //
+        // Compile the table.
+        //
+
+        Result = Table->Vtbl->Compile(Table,
+                                      &TableCompileFlags,
+                                      CpuArchId);
+
+        if (FAILED(Result)) {
+
+            WIDE_OUTPUT_RAW(WideOutput, L"Failed to compile table: ");
+            WIDE_OUTPUT_UNICODE_STRING(WideOutput, TableFullPath);
+            WIDE_OUTPUT_RAW(WideOutput, L".\n");
+            WIDE_OUTPUT_FLUSH();
+
+            Failures++;
+            Failed = TRUE;
+            goto ReleaseTable;
+        }
+
+        WIDE_OUTPUT_RAW(WideOutput, L"Compiled table successfully.\n");
+        WIDE_OUTPUT_FLUSH();
+
+        //
         // Release the table.
         //
 
@@ -1002,14 +1025,26 @@ Return Value:
         WIDE_OUTPUT_FLUSH();
 
         //
-        // Attempt to compile the table.  WIP.
+        // Verify compiling a loaded table fails.
         //
 
         Result = Table->Vtbl->Compile(Table,
                                       &TableCompileFlags,
                                       CpuArchId);
 
-        ASSERT(Result == PH_E_WORK_IN_PROGRESS);
+        if (Result != PH_E_TABLE_NOT_CREATED) {
+            WIDE_OUTPUT_RAW(WideOutput, L"Invariant failed; attempting to "
+                                        L"compile a loaded table did not "
+                                        L"return PH_E_TABLE_NOT_CREATED.\n");
+            WIDE_OUTPUT_FLUSH();
+            Failures++;
+            Terminate = TRUE;
+
+            //
+            // Intentional follow-on to ReleaseTable.
+            //
+
+        }
 
         //
         // Release the table and keys.

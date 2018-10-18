@@ -1438,3 +1438,20 @@ SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FI
 Language=English
 Error saving C header CompiledPerfectHashMacroGlue.h file.
 .
+
+MessageId=0x312
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_COMPILATION_FAILED
+Language=English
+Table compilation failed.
+.
+
+MessageId=0x313
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_NOT_CREATED
+Language=English
+Table not created.
+.
+

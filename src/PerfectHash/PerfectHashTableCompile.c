@@ -61,21 +61,42 @@ Return Value:
 
     PH_E_TABLE_LOCKED - The table is locked.
 
-    PH_E_TABLE_NOT_LOADED - The table has not been loaded.
+    PH_E_TABLE_NOT_CREATED - The table has not been created.
 
     PH_E_INVALID_CPU_ARCH_ID - Invalid CPU architecture ID.
 
-    PH_E_TABLE_COMPILATION_NOT_AVAILABLE - Table compilation is not available
-        for the current configuration, which is composed of: architecture (e.g.
-        x64), algorithm ID, hash function and masking type.
-
-    PH_E_TABLE_CROSS_COMPILATION_NOT_AVAILABLE - Table cross-compilation is not
-        available for this combination of CPU architecture or
+    PH_E_TABLE_COMPILATION_FAILED - Table compilation failed.
 
 --*/
 {
+    PRTL Rtl;
+    PACL Acl = NULL;
+    BOOL Success;
+    BOOL InheritHandles;
+    ULONG ExitCode;
+    ULONG WaitResult;
+    ULONG CreationFlags;
     HRESULT Result = S_OK;
+    NTSTATUS Status;
+    PWSTR Environment;
+    PWSTR ApplicationName;
+    PWSTR CurrentDirectory;
+    EXPLICIT_ACCESS_W ExplicitAccess;
+    PSECURITY_ATTRIBUTES ThreadAttributes;
+    PSECURITY_ATTRIBUTES ProcessAttributes;
+    SECURITY_ATTRIBUTES SecurityAttributes;
+    SECURITY_DESCRIPTOR SecurityDescriptor;
+    STARTUPINFOW StartupInfo;
+    PROCESS_INFORMATION ProcessInfo;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
+    WCHAR CommandBuffer[COMPILE_COMMANDLINE_BUFFER_SIZE_IN_CHARS];
+    PCUNICODE_STRING Source;
+    UNICODE_STRING Command;
+    const UNICODE_STRING Null = RTL_CONSTANT_STRING(L"\0");
+    const UNICODE_STRING Prefix = RTL_CONSTANT_STRING(
+        L"msbuild /nologo /noconlog /m /t:Rebuild "
+        L"/p:Configuration=Release;Platform=x64 "
+    );
 
     //
     // Validate arguments.
@@ -95,23 +116,136 @@ Return Value:
         return PH_E_TABLE_LOCKED;
     }
 
-    if (!Table->Flags.Loaded) {
+    if (!Table->Flags.Created) {
         ReleasePerfectHashTableLockExclusive(Table);
-        return PH_E_TABLE_NOT_LOADED;
+        return PH_E_TABLE_NOT_CREATED;
     }
 
     //
     // Argument validation complete.
     //
 
+    Rtl = Table->Rtl;
+    ZeroStruct(ProcessInfo);
+    ZeroStruct(StartupInfo);
+
     //
-    // WIP.
+    // Initialize the command buffer and corresponding UNICODE_STRING struct.
     //
 
-    Result = PH_E_WORK_IN_PROGRESS;
+    ZeroArray(CommandBuffer);
+
+    Command.Length = 0;
+    Command.MaximumLength = sizeof(CommandBuffer);
+    Command.Buffer = (PWSTR)CommandBuffer;
+
+    //
+    // Construct the command line for compiling the table.
+    //
+
+    Source = &Prefix;
+    Status = Rtl->RtlAppendUnicodeStringToString(&Command, Source);
+    if (FAILED(Status)) {
+        Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(PerfectHashTableCompile_AppendPrefix, Result);
+        goto Error;
+    }
+
+    Source = &Table->VSSolutionFile->Path->FileName;
+    Status = Rtl->RtlAppendUnicodeStringToString(&Command, Source);
+    if (FAILED(Status)) {
+        Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(PerfectHashTableCompile_AppendSolutionFile, Result);
+        goto Error;
+    }
+
+    Source = &Null;
+    Status = Rtl->RtlAppendUnicodeStringToString(&Command, Source);
+    if (FAILED(Status)) {
+        Result = PH_E_STRING_BUFFER_OVERFLOW;
+        PH_ERROR(PerfectHashTableCompile_AppendNull, Result);
+        goto Error;
+    }
+
+    //
+    // Create an exclusive DACL for the process and thread.
+    //
+
+    Result = CreateExclusiveDaclForCurrentUser(Rtl,
+                                               &SecurityAttributes,
+                                               &SecurityDescriptor,
+                                               &ExplicitAccess,
+                                               &Acl);
+
+    if (FAILED(Result)) {
+        PH_ERROR(CreateExclusiveDaclForCurrentUser, Result);
+        goto Error;
+    }
+
+    ProcessAttributes = ThreadAttributes = &SecurityAttributes;
+
+    //
+    // Create the process.
+    //
+
+    ApplicationName = NULL;
+    InheritHandles = FALSE;
+    CreationFlags = DETACHED_PROCESS;
+    Environment = NULL;
+    CurrentDirectory = Table->OutputDirectory->Path->FullPath.Buffer;
+    StartupInfo.cb = sizeof(StartupInfo);
+
+    Success = CreateProcessW(ApplicationName,
+                             Command.Buffer,
+                             ProcessAttributes,
+                             ThreadAttributes,
+                             InheritHandles,
+                             CreationFlags,
+                             Environment,
+                             CurrentDirectory,
+                             &StartupInfo,
+                             &ProcessInfo);
+
+    if (!Success) {
+        SYS_ERROR(CreateProcessW);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Process was created successfully.  Wait for it to finish.
+    //
+
+    WaitResult = WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
+    if (WaitResult != WAIT_OBJECT_0) {
+        SYS_ERROR(WaitForSingleObject);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Get the exit code.
+    //
+
+    ExitCode = (ULONG)-1;
+    Success = GetExitCodeProcess(ProcessInfo.hProcess, &ExitCode);
+    if (!Success) {
+        SYS_ERROR(GetExitCodeProcess);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (ExitCode != 0) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
     goto End;
 
-#if 0
 Error:
 
     if (Result == S_OK) {
@@ -122,9 +256,39 @@ Error:
     // Intentional follow-on to End.
     //
 
-#endif
-
 End:
+
+    //
+    // Free the Acl structure (allocated by CreateExclusiveDaclForCurrentUser)
+    // if applicable.
+    //
+
+    if (Acl) {
+        LocalFree(Acl);
+        Acl = NULL;
+    }
+
+    //
+    // Close the process and thread handles if applicable.
+    //
+
+    if (ProcessInfo.hProcess) {
+        if (!CloseHandle(ProcessInfo.hProcess)) {
+            SYS_ERROR(CloseHandle);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+    }
+
+    if (ProcessInfo.hThread) {
+        if (!CloseHandle(ProcessInfo.hThread)) {
+            SYS_ERROR(CloseHandle);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+    }
+
+    //
+    // Release the table lock and return.
+    //
 
     ReleasePerfectHashTableLockExclusive(Table);
 
