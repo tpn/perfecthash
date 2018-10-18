@@ -53,7 +53,6 @@ Abstract:
 #include <sal.h>
 #include <concurrencysal.h>
 
-#include <Windows.h>
 #include <Strsafe.h>
 
 #include <sddl.h>
