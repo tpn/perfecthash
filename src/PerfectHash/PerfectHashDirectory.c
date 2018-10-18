@@ -1249,7 +1249,8 @@ Return Value:
     Directory->RenamePath = NULL;
 
     //
-    // Release the old path's lock and COM reference count.
+    // Release the old path, then proceed with processing files that have been
+    // added to us, if applicable.
     //
 
     OldPath->Vtbl->Release(OldPath);
