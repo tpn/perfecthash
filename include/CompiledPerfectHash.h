@@ -45,12 +45,39 @@ extern "C" {
 typedef char BOOLEAN;
 typedef unsigned char BYTE;
 typedef BYTE *PBYTE;
+typedef short SHORT;
+typedef unsigned short USHORT;
 typedef long LONG;
 typedef long long LONGLONG;
 typedef unsigned long ULONG;
 typedef unsigned long *PULONG;
 typedef unsigned long long ULONGLONG;
 typedef void *PVOID;
+
+//
+// Disable nameless struct/union warning.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4201)
+typedef union ULONG_BYTES {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        BYTE Byte1;
+        BYTE Byte2;
+        BYTE Byte3;
+        BYTE Byte4;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        USHORT Word1;
+        USHORT Word2;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} ULONG_BYTES;
+typedef ULONG_BYTES *PULONG_BYTES;
+#pragma warning(pop)
 
 //
 // Define the main functions exposed by a compiled perfect hash table: index,

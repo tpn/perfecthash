@@ -1405,10 +1405,11 @@ Error:
 End:
 
     //
-    // Invariant check: the directory's reference count should be 1 here.
+    // Invariant check: the directory's reference count should be 1 here
+    // if we did not encounter any failures.
     //
 
-    if (Directory->ReferenceCount != 1) {
+    if (SUCCEEDED(Result) && Directory->ReferenceCount != 1) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
 

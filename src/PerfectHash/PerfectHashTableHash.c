@@ -717,5 +717,437 @@ PerfectHashTableHashScratch(
                                              Hash);
 }
 
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashCrc32(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This hash routine uses two CRC32 instructions.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Input - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 2);
+
+    //
+    // Initialize aliases.
+    //
+
+    //IACA_VC_START();
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = _mm_crc32_u32(Seed1, Input);
+    Vertex2 = _mm_crc32_u32(Seed2, Input);
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashCrc32(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashCrc32(Table,
+                                           Input,
+                                           TableInfo->NumberOfSeeds,
+                                           &TableInfo->FirstSeed,
+                                           Hash);
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashDjb(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This hash is based on the Daniel Bernstein hash.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Input - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG A;
+    ULONG B;
+    BYTE Byte1;
+    BYTE Byte2;
+    BYTE Byte3;
+    BYTE Byte4;
+    PBYTE Byte;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG_BYTES Bytes;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 2);
+
+    //
+    // Initialize aliases.
+    //
+
+    //IACA_VC_START();
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Byte = (PBYTE)&Input;
+    Bytes.AsULong = Input;
+
+    Byte1 = (BYTE)((ULONG)Byte[0]);
+    Byte2 = (BYTE)((ULONG)Byte[1]);
+    Byte3 = (BYTE)((ULONG)Byte[2]);
+    Byte4 = (BYTE)((ULONG)Byte[3]);
+
+    A = Seed1;
+    A = 33 * A + Byte1;
+    A = 33 * A + Byte2;
+    A = 33 * A + Byte3;
+    A = 33 * A + Byte4;
+
+    Vertex1 = A;
+
+    B = Seed2;
+    B = 33 * B + Bytes.Byte1;
+    B = 33 * B + Bytes.Byte2;
+    B = 33 * B + Bytes.Byte3;
+    B = 33 * B + Bytes.Byte4;
+
+    Vertex2 = B;
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashDjb(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashDjb(Table,
+                                         Input,
+                                         TableInfo->NumberOfSeeds,
+                                         &TableInfo->FirstSeed,
+                                         Hash);
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashDjbXor(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This hash is based on the Daniel Bernstein hash but uses XOR instead of
+    add.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Input - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG A;
+    ULONG B;
+    BYTE Byte1;
+    BYTE Byte2;
+    BYTE Byte3;
+    BYTE Byte4;
+    PBYTE Byte;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 2);
+
+    //
+    // Initialize aliases.
+    //
+
+    //IACA_VC_START();
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Byte = (PBYTE)&Input;
+
+    Byte1 = (BYTE)((ULONG)Byte[0]);
+    Byte2 = (BYTE)((ULONG)Byte[1]);
+    Byte3 = (BYTE)((ULONG)Byte[2]);
+    Byte4 = (BYTE)((ULONG)Byte[3]);
+
+    A = Seed1;
+    A = 33 * A ^ Byte1;
+    A = 33 * A ^ Byte2;
+    A = 33 * A ^ Byte3;
+    A = 33 * A ^ Byte4;
+
+    Vertex1 = A;
+
+    B = Seed2;
+    B = 33 * B ^ Byte1;
+    B = 33 * B ^ Byte2;
+    B = 33 * B ^ Byte3;
+    B = 33 * B ^ Byte4;
+
+    Vertex2 = B;
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashDjbXor(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashDjbXor(Table,
+                                            Input,
+                                            TableInfo->NumberOfSeeds,
+                                            &TableInfo->FirstSeed,
+                                            Hash);
+}
+
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashFnv(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This hash is based on the FNV (Fowler/Noll/Vo) hash.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Input - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG A;
+    ULONG B;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG_BYTES Bytes;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 2);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Bytes.AsULong = Input;
+
+    //IACA_VC_START();
+
+    A = Seed1 ^ 2166136261;
+    A = 16777619 * A ^ Bytes.Byte1;
+    A = 16777619 * A ^ Bytes.Byte2;
+    A = 16777619 * A ^ Bytes.Byte3;
+    A = 16777619 * A ^ Bytes.Byte4;
+
+    Vertex1 = A;
+
+    B = Seed2 ^ 2166136261;
+    B = 16777619 * B ^ Bytes.Byte1;
+    B = 16777619 * B ^ Bytes.Byte2;
+    B = 16777619 * B ^ Bytes.Byte3;
+    B = 16777619 * B ^ Bytes.Byte4;
+
+    Vertex2 = B;
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashFnv(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashFnv(Table,
+                                         Input,
+                                         TableInfo->NumberOfSeeds,
+                                         &TableInfo->FirstSeed,
+                                         Hash);
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -58,6 +58,10 @@ const PPERFECT_HASH_TABLE_HASH HashRoutines[] = {
     PerfectHashTableHashXor,
     PerfectHashTableHashScratch,
     PerfectHashTableHashCrc32RotateXor,
+    PerfectHashTableHashCrc32,
+    PerfectHashTableHashDjb,
+    PerfectHashTableHashDjbXor,
+    PerfectHashTableHashFnv,
     NULL
 };
 VERIFY_HASH_ARRAY_SIZE(HashRoutines);
@@ -76,6 +80,10 @@ const SHORT HashRoutineNumberOfSeeds[] = {
     2, // Xor
     2, // Scratch
     3, // Crc32RotateXor
+    2, // Crc32
+    2, // Djb
+    2, // DjbXor
+    2, // Fnv
 
     -1,
 };
@@ -94,6 +102,10 @@ const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[] = {
     PerfectHashTableSeededHashXor,
     PerfectHashTableSeededHashScratch,
     PerfectHashTableSeededHashCrc32RotateXor,
+    PerfectHashTableSeededHashCrc32,
+    PerfectHashTableSeededHashDjb,
+    PerfectHashTableSeededHashDjbXor,
+    PerfectHashTableSeededHashFnv,
     NULL
 };
 VERIFY_HASH_ARRAY_SIZE(SeededHashRoutines);
@@ -162,7 +174,11 @@ const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
 //
 
 #include "CompiledPerfectHashTableChm01IndexCrc32RotateAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexCrc32And_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexJenkinsAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexDjbAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexDjbXorAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexFnvAnd_CSource_RawCString.h"
 #undef RawCString
 
 const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[] = {
@@ -179,6 +195,34 @@ const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[] = {
         PerfectHashHashJenkinsFunctionId,
         PerfectHashAndMaskFunctionId,
         &CompiledPerfectHashTableChm01IndexJenkinsAndCSourceRawCString,
+    },
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashCrc32FunctionId,
+        PerfectHashAndMaskFunctionId,
+        &CompiledPerfectHashTableChm01IndexCrc32AndCSourceRawCString,
+    },
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashDjbFunctionId,
+        PerfectHashAndMaskFunctionId,
+        &CompiledPerfectHashTableChm01IndexDjbAndCSourceRawCString,
+    },
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashDjbXorFunctionId,
+        PerfectHashAndMaskFunctionId,
+        &CompiledPerfectHashTableChm01IndexDjbXorAndCSourceRawCString,
+    },
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashFnvFunctionId,
+        PerfectHashAndMaskFunctionId,
+        &CompiledPerfectHashTableChm01IndexFnvAndCSourceRawCString,
     },
 
 };
@@ -229,6 +273,18 @@ const UNICODE_STRING PerfectHashHashCrc32RotateXorFunctionName =
 const UNICODE_STRING PerfectHashHashScratchFunctionName =
     RTL_CONSTANT_STRING(L"Scratch");
 
+const UNICODE_STRING PerfectHashHashCrc32FunctionName =
+    RTL_CONSTANT_STRING(L"Crc32");
+
+const UNICODE_STRING PerfectHashHashDjbFunctionName =
+    RTL_CONSTANT_STRING(L"Djb");
+
+const UNICODE_STRING PerfectHashHashDjbXorFunctionName =
+    RTL_CONSTANT_STRING(L"DjbXor");
+
+const UNICODE_STRING PerfectHashHashFnvFunctionName =
+    RTL_CONSTANT_STRING(L"Fnv");
+
 //
 // Define the array of hash function names.  This is intended to be indexed by
 // the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enum.
@@ -243,6 +299,10 @@ const PCUNICODE_STRING HashFunctionNames[] = {
     &PerfectHashHashXorFunctionName,
     &PerfectHashHashScratchFunctionName,
     &PerfectHashHashCrc32RotateXorFunctionName,
+    &PerfectHashHashCrc32FunctionName,
+    &PerfectHashHashDjbFunctionName,
+    &PerfectHashHashDjbXorFunctionName,
+    &PerfectHashHashFnvFunctionName,
     NULL,
 };
 VERIFY_HASH_ARRAY_SIZE(HashFunctionNames);

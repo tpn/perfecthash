@@ -360,6 +360,18 @@
     <ClInclude Include="CompiledPerfectHashMacroGlue_CHeader_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexFnvAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32And_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbXorAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

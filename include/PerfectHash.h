@@ -97,6 +97,25 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 
 typedef _Null_terminated_ CONST CHAR *PCSZ;
 
+typedef union ULONG_BYTES {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        BYTE Byte1;
+        BYTE Byte2;
+        BYTE Byte3;
+        BYTE Byte4;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        USHORT Word1;
+        USHORT Word2;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} ULONG_BYTES;
+C_ASSERT(sizeof(ULONG_BYTES) == sizeof(ULONG));
+typedef ULONG_BYTES *PULONG_BYTES;
+
 #ifndef ARGUMENT_PRESENT
 #define ARGUMENT_PRESENT(ArgumentPointer) (                  \
     (CHAR *)((ULONG_PTR)(ArgumentPointer)) != (CHAR *)(NULL) \
@@ -1549,6 +1568,10 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     //
 
     PerfectHashHashCrc32RotateXorFunctionId     = 7,
+    PerfectHashHashCrc32FunctionId              = 8,
+    PerfectHashHashDjbFunctionId                = 9,
+    PerfectHashHashDjbXorFunctionId             = 10,
+    PerfectHashHashFnvFunctionId                = 11,
 
     //
     // End valid hash functions.
