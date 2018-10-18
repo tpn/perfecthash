@@ -769,7 +769,7 @@ Routine Description:
 
     Performs common file save work for a given file instance associated with a
     table.  This routine is typically called for files that are not dependent
-    upon table data (e.g. a C header file).  They are written in their entirety
+    upon table data (e.g. the C keys file).  They are written in their entirety
     in the prepare callback, however, we don't Close() the file at that point,
     as it prevents our rundown logic kicking in whereby we delete the file if
     an error occurred.
