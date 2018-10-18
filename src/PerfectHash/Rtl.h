@@ -104,6 +104,10 @@ typedef const CHAR *PCCHAR;
 typedef _Null_terminated_ const WCHAR *PCWSZ;
 typedef const WCHAR *PCWCHAR;
 
+typedef __m128i DECLSPEC_ALIGN(16) XMMWORD, *PXMMWORD, **PPXMMWORD;
+typedef __m256i DECLSPEC_ALIGN(32) YMMWORD, *PYMMWORD, **PPYMMWORD;
+typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
+
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -181,6 +185,14 @@ typedef const WCHAR *PCWCHAR;
 #ifndef ALIGN_UP_USHORT_TO_POINTER_SIZE
 #define ALIGN_UP_USHORT_TO_POINTER_SIZE(Value)                   \
     (USHORT)(ALIGN_UP((USHORT)Value, (USHORT)sizeof(ULONG_PTR)))
+#endif
+
+#ifndef ALIGN_UP_XMMWORD
+#define ALIGN_UP_XMMWORD(Address) (ALIGN_UP(Address, sizeof(XMMWORD)))
+#endif
+
+#ifndef ALIGN_UP_YMMWORD
+#define ALIGN_UP_YMMWORD(Address) (ALIGN_UP(Address, sizeof(YMMWORD)))
 #endif
 
 #ifndef ASSERT

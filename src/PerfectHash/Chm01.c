@@ -230,6 +230,12 @@ Return Value:
     }
 
     //
+    // Set the "first graph wins" flag.
+    //
+
+    SetFirstSolvedGraphWins(Context);
+
+    //
     // Verify we have sufficient seeds available in our on-disk structure
     // for the given hash function.
     //
@@ -463,23 +469,23 @@ RetryWithLargerTableSize:
     //
 
     EdgesSizeInBytes = (
-        ALIGN_UP_POINTER(sizeof(*Graph->Edges) * TotalNumberOfEdges.QuadPart)
+        ALIGN_UP_YMMWORD(sizeof(*Graph->Edges) * TotalNumberOfEdges.QuadPart)
     );
 
     NextSizeInBytes = (
-        ALIGN_UP_POINTER(sizeof(*Graph->Next) * TotalNumberOfEdges.QuadPart)
+        ALIGN_UP_YMMWORD(sizeof(*Graph->Next) * TotalNumberOfEdges.QuadPart)
     );
 
     FirstSizeInBytes = (
-        ALIGN_UP_POINTER(sizeof(*Graph->First) * NumberOfVertices.QuadPart)
+        ALIGN_UP_YMMWORD(sizeof(*Graph->First) * NumberOfVertices.QuadPart)
     );
 
     PrevSizeInBytes = (
-        ALIGN_UP_POINTER(sizeof(*Graph->Prev) * TotalNumberOfEdges.QuadPart)
+        ALIGN_UP_YMMWORD(sizeof(*Graph->Prev) * TotalNumberOfEdges.QuadPart)
     );
 
     AssignedSizeInBytes = (
-        ALIGN_UP_POINTER(sizeof(*Graph->Assigned) * NumberOfVertices.QuadPart)
+        ALIGN_UP_YMMWORD(sizeof(*Graph->Assigned) * NumberOfVertices.QuadPart)
     );
 
     //
@@ -491,7 +497,7 @@ RetryWithLargerTableSize:
     //
 
     ValuesSizeInBytes = (
-        ALIGN_UP_POINTER(sizeof(*Graph->Values) * NumberOfVertices.QuadPart)
+        ALIGN_UP_YMMWORD(sizeof(*Graph->Values) * NumberOfVertices.QuadPart)
     );
 
     //
@@ -499,13 +505,13 @@ RetryWithLargerTableSize:
     // we can allocate memory via a single call to the allocator.
     //
 
-    AllocSize.QuadPart = ALIGN_UP_POINTER(
+    AllocSize.QuadPart = ALIGN_UP_YMMWORD(
 
         //
         // Account for the size of the graph structure.
         //
 
-        sizeof(GRAPH) +
+        ALIGN_UP_YMMWORD(sizeof(GRAPH)) +
 
         //
         // Account for the size of the Graph->Edges array, which is double

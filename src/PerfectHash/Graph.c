@@ -14,6 +14,29 @@ Abstract:
 
 #include "stdafx.h"
 
+//
+// Temporary typedefs for new memory coverage logic.
+//
+
+typedef
+VOID
+(NTAPI GRAPH_CALCULATE_MEMORY_COVERAGE)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_CALCULATE_MEMORY_COVERAGE *PGRAPH_CALCULATE_MEMORY_COVERAGE;
+
+extern GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverage;
+
+typedef
+VOID
+(NTAPI GRAPH_REGISTER_SOLVED)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_REGISTER_SOLVED *PGRAPH_REGISTER_SOLVED;
+
+extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
+
+
 #define IsEmpty(Value) ((ULONG)Value == EMPTY)
 #define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
 
@@ -102,7 +125,7 @@ Return Value:
     //
 
     ASSERT(sizeof(*Graph) == Info->SizeOfGraphStruct);
-    Buffer = RtlOffsetToPointer(Graph, sizeof(*Graph));
+    Buffer = RtlOffsetToPointer(Graph, ALIGN_UP_YMMWORD(sizeof(*Graph)));
 
     //
     // Carve out the Graph->Edges array.
@@ -1319,6 +1342,7 @@ Return Value:
     ULONG Iterations;
     ULONG NumberOfKeys;
     ULARGE_INTEGER Hash;
+    LONGLONG FinishedCount;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
     const ULONG CheckForTerminationAfterIterations = 1024;
@@ -1366,20 +1390,24 @@ Return Value:
         GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
 
         //
-        // Every 1024 iterations, check to see if someone else has already
-        // solved the graph, and if so, do a fast-path exit.
+        // If we're in "first graph wins" mode, every 1024 iterations, check
+        // to see if someone else has already solved the graph, and if so, do
+        // a fast-path exit.
         //
 
-        if (!--Iterations) {
-            if (Context->FinishedCount > 0) {
-                return FALSE;
+        if (FirstSolvedGraphWins(Context)) {
+
+            if (!--Iterations) {
+                if (Context->FinishedCount > 0) {
+                    return FALSE;
+                }
+
+                //
+                // Reset the iteration counter.
+                //
+
+                Iterations = CheckForTerminationAfterIterations;
             }
-
-            //
-            // Reset the iteration counter.
-            //
-
-            Iterations = CheckForTerminationAfterIterations;
         }
     }
 
@@ -1398,26 +1426,45 @@ Return Value:
     }
 
     //
-    // We created an acyclic graph.  Increment the finished count; if the value
-    // is 1, we're the winning thread.  Continue with graph assignment.
-    // Otherwise, just return TRUE immediately and let the other thread finish
-    // up (i.e. perform the assignment step and then persist the result).
+    // We created an acyclic graph.
     //
 
-    if (InterlockedIncrement64(&Context->FinishedCount) != 1) {
+    //
+    // Increment the finished count.  If the context indicates "first solved
+    // graph wins", and the value is 1, we're the winning thread, so continue
+    // with graph assignment.  Otherwise, just return TRUE immediately and let
+    // the other thread finish up (i.e. perform the assignment step and then
+    // persist the result).
+    //
+    // If the context does not indicate "first solved graph wins", perform
+    // the assignment step regardless.
+    //
 
-        //
-        // Some other thread beat us.  Nothing left to do.
-        //
+    FinishedCount = InterlockedIncrement64(&Context->FinishedCount);
 
-        return TRUE;
+    if (FirstSolvedGraphWins(Context)) {
+
+        if (FinishedCount != 1) {
+
+            //
+            // Some other thread beat us.  Nothing left to do.
+            //
+
+            return TRUE;
+        }
     }
 
     //
-    // We created an acyclic graph.  Perform the assignment step.
+    // Perform the assignment step.
     //
 
     GraphAssign(Graph);
+
+    //
+    // Calculate memory coverage information.
+    //
+
+    GraphCalculateMemoryCoverage(Graph);
 
     //
     // Stop the solve timers here.
@@ -1426,20 +1473,27 @@ Return Value:
     CONTEXT_END_TIMERS(Solve);
 
     //
-    // Push this graph onto the finished list head.
+    // If we're in "first graph wins" mode and we reach this point, we're the
+    // winning thread, so, push the graph onto the finished list head, then
+    // submit the relevant finished threadpool work item and return TRUE.
     //
 
-    InsertTailFinishedWork(Context, &Graph->ListEntry);
+    if (FirstSolvedGraphWins(Context)) {
+        InsertTailFinishedWork(Context, &Graph->ListEntry);
+        SubmitThreadpoolWork(Context->FinishedWork);
+        return TRUE;
+    }
 
     //
-    // Submit the finished work item to the finished threadpool, such that the
-    // necessary cleanups can take place once all our worker threads have
-    // completed.
+    // If we reach this mode, we're in "find best memory coverage" mode, so,
+    // register the solved graph and return FALSE in order to kick off another
+    // attempt.
     //
 
-    SubmitThreadpoolWork(Context->FinishedWork);
+    ASSERT(FindBestMemoryCoverage(Context));
 
-    return TRUE;
+    GraphRegisterSolved(Graph);
+    return FALSE;
 
 Failed:
 
@@ -1656,6 +1710,259 @@ Error:
 End:
 
     return Result;
+}
+
+//
+// Work-in-progress memory coverage routines.
+//
+
+typedef struct _MEMORY_COVERAGE {
+    ULONG NumberOfEmptyCacheLines;
+    ULONG NumberOfEmptyPages;
+    ULONG NumberOfEmptyLargePages;
+    ULONG Unused;
+} MEMORY_COVERAGE;
+
+typedef ULONG ASSIGNED_CACHE_LINE[16];
+typedef ASSIGNED_CACHE_LINE  *PASSIGNED_CACHE_LINE;
+
+GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverage;
+
+_Use_decl_annotations_
+VOID
+GraphCalculateMemoryCoverage(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Calculate the memory coverage of a solved, assigned graph.
+
+    Work in progress.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which memory coverage is to
+        be calculated.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PRTL Rtl;
+    ULONG Index;
+    ULONG Trailing;
+    ULONG NumberOfCacheLines;
+    ULONG AssignedLowHighSizeInBytes;
+    ULONG PageSizeBytesProcessed;
+    ULONG LargePageSizeBytesProcessed;
+    ULONG TotalBytesProcessed;
+    ULONG Low1Mask;
+    ULONG Low2Mask;
+    ULONG High1Mask;
+    ULONG High2Mask;
+    ULONG Low1Count;
+    ULONG Low2Count;
+    ULONG High1Count;
+    ULONG High2Count;
+    ULONG LowCount;
+    ULONG HighCount;
+    ULONG LowEmptyCacheLinesThisPage;
+    ULONG LowEmptyCacheLinesThisLargePage;
+    ULONG HighEmptyCacheLinesThisPage;
+    ULONG HighEmptyCacheLinesThisLargePage;
+    ULONG LowUsedCacheLinesThisPage;
+    ULONG LowUsedCacheLinesThisLargePage;
+    ULONG HighUsedCacheLinesThisPage;
+    ULONG HighUsedCacheLinesThisLargePage;
+    const ULONG PageSize = PAGE_SIZE;
+    const ULONG LargePageSize = (ULONG)GetLargePageMinimum();
+    const YMMWORD AllZeros = _mm256_set1_epi8(0);
+    YMMWORD Low1;
+    YMMWORD Low2;
+    YMMWORD High1;
+    YMMWORD High2;
+    YMMWORD Low1Zeros;
+    YMMWORD Low2Zeros;
+    YMMWORD High1Zeros;
+    YMMWORD High2Zeros;
+    ULONG Alignment;
+    PVERTEX AssignedLow;
+    PVERTEX AssignedHigh;
+    PBYTE AssignedLowBuffer;
+    PBYTE AssignedHighBuffer;
+    MEMORY_COVERAGE CoverageLow;
+    MEMORY_COVERAGE CoverageHigh;
+    PASSIGNED_CACHE_LINE LowLine;
+    PASSIGNED_CACHE_LINE HighLine;
+
+    Rtl = Graph->Context->Rtl;
+
+    AssignedLow = Graph->Assigned;
+    AssignedHigh = (PVERTEX)(
+        RtlOffsetToPointer(
+            AssignedLow,
+            Graph->NumberOfVertices
+        )
+    );
+
+    AssignedLowHighSizeInBytes = Graph->NumberOfVertices * sizeof(VERTEX);
+    NumberOfCacheLines = AssignedLowHighSizeInBytes >> 6;
+    Trailing = AssignedLowHighSizeInBytes - (NumberOfCacheLines << 6);
+
+    if (Trailing != 0) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    AssignedLowBuffer = (PBYTE)AssignedLow;
+    AssignedHighBuffer = (PBYTE)AssignedHigh;
+
+    TotalBytesProcessed = 0;
+    PageSizeBytesProcessed = 0;
+    LargePageSizeBytesProcessed = 0;
+
+    LowEmptyCacheLinesThisPage = 0;
+    LowEmptyCacheLinesThisLargePage = 0;
+    HighEmptyCacheLinesThisPage = 0;
+    HighEmptyCacheLinesThisLargePage = 0;
+
+    LowUsedCacheLinesThisPage = 0;
+    LowUsedCacheLinesThisLargePage = 0;
+    HighUsedCacheLinesThisPage = 0;
+    HighUsedCacheLinesThisLargePage = 0;
+
+    ZeroStruct(CoverageLow);
+    ZeroStruct(CoverageHigh);
+
+    Alignment = (ULONG)GetAddressAlignment((ULONG_PTR)AssignedLow);
+    AssertAligned32(Alignment);
+
+    for (Index = 0; Index < NumberOfCacheLines; Index++) {
+
+        LowLine = (PASSIGNED_CACHE_LINE)AssignedLowBuffer;
+
+        Low1 = _mm256_stream_load_si256((PYMMWORD)AssignedLowBuffer);
+        AssignedLowBuffer += 32;
+        Low2 = _mm256_stream_load_si256((PYMMWORD)AssignedLowBuffer);
+        AssignedLowBuffer += 32;
+
+        Low1Zeros = _mm256_cmpgt_epi32(Low1, AllZeros);
+        Low2Zeros = _mm256_cmpgt_epi32(Low2, AllZeros);
+
+        Low1Mask = _mm256_movemask_epi8(Low1Zeros);
+        Low2Mask = _mm256_movemask_epi8(Low2Zeros);
+
+        Low1Count = PopulationCount32(Low1Mask);
+        Low2Count = PopulationCount32(Low2Mask);
+
+        LowCount = Low1Count + Low2Count;
+
+        if (LowCount == 0) {
+            CoverageLow.NumberOfEmptyCacheLines++;
+            LowEmptyCacheLinesThisPage++;
+            LowEmptyCacheLinesThisLargePage++;
+        } else {
+            LowUsedCacheLinesThisPage += LowCount;
+            LowUsedCacheLinesThisLargePage += LowCount;
+        }
+
+        HighLine = (PASSIGNED_CACHE_LINE)AssignedHighBuffer;
+
+        High1 = _mm256_stream_load_si256((PYMMWORD)AssignedHighBuffer);
+        AssignedHighBuffer += 32;
+        High2 = _mm256_stream_load_si256((PYMMWORD)AssignedHighBuffer);
+        AssignedHighBuffer += 32;
+
+        High1Zeros = _mm256_cmpgt_epi32(High1, AllZeros);
+        High2Zeros = _mm256_cmpgt_epi32(High2, AllZeros);
+
+        High1Mask = _mm256_movemask_epi8(High1Zeros);
+        High2Mask = _mm256_movemask_epi8(High2Zeros);
+
+        High1Count = PopulationCount32(High1Mask);
+        High2Count = PopulationCount32(High2Mask);
+
+        HighCount = High1Count + High2Count;
+
+        if (HighCount == 0) {
+            CoverageHigh.NumberOfEmptyCacheLines++;
+            HighEmptyCacheLinesThisPage++;
+            HighEmptyCacheLinesThisLargePage++;
+        } else {
+            HighUsedCacheLinesThisPage += HighCount;
+            HighUsedCacheLinesThisLargePage += HighCount;
+        }
+
+        TotalBytesProcessed += 64;
+
+        PageSizeBytesProcessed += 64;
+
+        if (PageSizeBytesProcessed == PageSize) {
+
+            if (LowEmptyCacheLinesThisPage == 0) {
+                CoverageLow.NumberOfEmptyPages++;
+            } else {
+                LowEmptyCacheLinesThisPage = 0;
+            }
+
+            if (HighEmptyCacheLinesThisPage == 0) {
+                CoverageHigh.NumberOfEmptyPages++;
+            } else {
+                HighEmptyCacheLinesThisPage = 0;
+            }
+
+            PageSizeBytesProcessed = 0;
+        }
+
+        if (LargePageSizeBytesProcessed == LargePageSize) {
+
+            if (LowEmptyCacheLinesThisLargePage == 0) {
+                CoverageLow.NumberOfEmptyLargePages++;
+            } else {
+                LowEmptyCacheLinesThisLargePage = 0;
+            }
+
+            if (HighEmptyCacheLinesThisLargePage == 0) {
+                CoverageHigh.NumberOfEmptyLargePages++;
+            } else {
+                HighEmptyCacheLinesThisLargePage = 0;
+            }
+
+            LargePageSizeBytesProcessed = 0;
+        }
+
+    }
+
+}
+
+GRAPH_REGISTER_SOLVED GraphRegisterSolved;
+
+_Use_decl_annotations_
+VOID
+GraphRegisterSolved(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Attempts to register a solved graph with a context if the graph's memory
+    coverage is the best that's been encountered so far.
+
+Arguments:
+
+    Graph - Supplies a pointer to the solved graph to register.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    UNREFERENCED_PARAMETER(Graph);
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

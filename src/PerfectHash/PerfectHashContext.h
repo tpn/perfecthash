@@ -69,10 +69,25 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG NeedsReset:1;
 
         //
+        // When set, indicates that the first graph to be solved, "wins".  If
+        // a graph is solved but another thread has already beaten us to the
+        // solution, we skip the graph assign step if this bit is set.
+        //
+
+        ULONG FirstSolvedGraphWins:1;
+
+        //
+        // When set, indicates multiple graph solutions will be found, and the
+        // one with the best memory coverage will win.
+        //
+
+        ULONG FindBestMemoryCoverage:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:29;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -80,7 +95,19 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
 C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
+#define FirstSolvedGraphWins(Context) Context->State.FirstSolvedGraphWins
+#define FindBestMemoryCoverage(Context) Context->State.FindBestMemoryCoverage
+
+#define SetFirstSolvedGraphWins(Context)          \
+    Context->State.FirstSolvedGraphWins = TRUE;   \
+    Context->State.FindBestMemoryCoverage = FALSE
+
+#define SetFindBestMemoryCoverage(Context)       \
+    Context->State.FirstSolvedGraphWins = FALSE; \
+    Context->State.FindBestMemoryCoverage = TRUE
+
 DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
+
 typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     COMMON_COMPONENT_HEADER(PERFECT_HASH_CONTEXT);
