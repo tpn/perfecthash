@@ -382,6 +382,15 @@ BOOLEAN
 typedef RTL_EQUAL_UNICODE_STRING *PRTL_EQUAL_UNICODE_STRING;
 
 typedef
+NTSTATUS
+(NTAPI RTL_APPEND_UNICODE_STRING_TO_STRING)(
+    _Inout_ PUNICODE_STRING  Destination,
+    _In_    PCUNICODE_STRING Source
+    );
+typedef RTL_APPEND_UNICODE_STRING_TO_STRING
+      *PRTL_APPEND_UNICODE_STRING_TO_STRING;
+
+typedef
 VOID
 (NTAPI RTL_COPY_MEMORY)(
     _Out_writes_bytes_all_(Length) PVOID Destination,
@@ -1985,82 +1994,84 @@ typedef RTL_VTBL *PRTL_VTBL;
 //      be identical in order for LoadSymbols() to work.
 //
 
-#define _RTL_FUNCTION_NAMES_HEAD   \
-    "RtlInitializeBitMap",         \
-    "RtlClearBit",                 \
-    "RtlSetBit",                   \
-    "RtlTestBit",                  \
-    "RtlClearAllBits",             \
-    "RtlSetAllBits",               \
-    "RtlFindClearBits",            \
-    "RtlFindSetBits",              \
-    "RtlFindClearBitsAndSet",      \
-    "RtlFindSetBitsAndClear",      \
-    "RtlClearBits",                \
-    "RtlSetBits",                  \
-    "RtlFindClearRuns",            \
-    "RtlFindLongestRunClear",      \
-    "RtlNumberOfClearBits",        \
-    "RtlNumberOfSetBits",          \
-    "RtlAreBitsClear",             \
-    "RtlAreBitsSet",               \
-    "RtlFindNextForwardRunClear",  \
-    "RtlFindLastBackwardRunClear", \
-    "RtlCopyMemory",               \
-    "RtlMoveMemory",               \
-    "RtlFillMemory",               \
-    "RtlCompareMemory",            \
-    "RtlFirstEntrySList",          \
-    "RtlCharToInteger",            \
-    "RtlIntegerToChar",            \
-    "RtlUnicodeStringToInteger",   \
-    "RtlEqualUnicodeString",       \
-    "CryptBinaryToStringA",        \
-    "CryptBinaryToStringW",        \
-    "__C_specific_handler",        \
-    "_wsplitpath_s",               \
-    "sprintf_s",                   \
-    "swprintf_s",                  \
-    "vsprintf_s",                  \
+#define _RTL_FUNCTION_NAMES_HEAD      \
+    "RtlInitializeBitMap",            \
+    "RtlClearBit",                    \
+    "RtlSetBit",                      \
+    "RtlTestBit",                     \
+    "RtlClearAllBits",                \
+    "RtlSetAllBits",                  \
+    "RtlFindClearBits",               \
+    "RtlFindSetBits",                 \
+    "RtlFindClearBitsAndSet",         \
+    "RtlFindSetBitsAndClear",         \
+    "RtlClearBits",                   \
+    "RtlSetBits",                     \
+    "RtlFindClearRuns",               \
+    "RtlFindLongestRunClear",         \
+    "RtlNumberOfClearBits",           \
+    "RtlNumberOfSetBits",             \
+    "RtlAreBitsClear",                \
+    "RtlAreBitsSet",                  \
+    "RtlFindNextForwardRunClear",     \
+    "RtlFindLastBackwardRunClear",    \
+    "RtlCopyMemory",                  \
+    "RtlMoveMemory",                  \
+    "RtlFillMemory",                  \
+    "RtlCompareMemory",               \
+    "RtlFirstEntrySList",             \
+    "RtlCharToInteger",               \
+    "RtlIntegerToChar",               \
+    "RtlUnicodeStringToInteger",      \
+    "RtlEqualUnicodeString",          \
+    "RtlAppendUnicodeStringToString", \
+    "CryptBinaryToStringA",           \
+    "CryptBinaryToStringW",           \
+    "__C_specific_handler",           \
+    "_wsplitpath_s",                  \
+    "sprintf_s",                      \
+    "swprintf_s",                     \
+    "vsprintf_s",                     \
     "vswprintf_s"
 
-#define _RTL_FUNCTIONS_HEAD                                        \
-    PRTL_INITIALIZE_BITMAP RtlInitializeBitMap;                    \
-    PRTL_CLEAR_BIT RtlClearBit;                                    \
-    PRTL_SET_BIT RtlSetBit;                                        \
-    PRTL_TEST_BIT RtlTestBit;                                      \
-    PRTL_CLEAR_ALL_BITS RtlClearAllBits;                           \
-    PRTL_SET_ALL_BITS RtlSetAllBits;                               \
-    PRTL_FIND_CLEAR_BITS RtlFindClearBits;                         \
-    PRTL_FIND_SET_BITS RtlFindSetBits;                             \
-    PRTL_FIND_CLEAR_BITS_AND_SET RtlFindClearBitsAndSet;           \
-    PRTL_FIND_SET_BITS_AND_CLEAR RtlFindSetBitsAndClear;           \
-    PRTL_CLEAR_BITS RtlClearBits;                                  \
-    PRTL_SET_BITS RtlSetBits;                                      \
-    PRTL_FIND_CLEAR_RUNS RtlFindClearRuns;                         \
-    PRTL_FIND_LONGEST_RUN_CLEAR RtlFindLongestRunClear;            \
-    PRTL_NUMBER_OF_CLEAR_BITS RtlNumberOfClearBits;                \
-    PRTL_NUMBER_OF_SET_BITS RtlNumberOfSetBits;                    \
-    PRTL_ARE_BITS_CLEAR RtlAreBitsClear;                           \
-    PRTL_ARE_BITS_SET RtlAreBitsSet;                               \
-    PRTL_FIND_NEXT_FORWARD_RUN_CLEAR RtlFindNextForwardRunClear;   \
-    PRTL_FIND_LAST_BACKWARD_RUN_CLEAR RtlFindLastBackwardRunClear; \
-    PRTL_COPY_MEMORY RtlCopyMemory;                                \
-    PRTL_MOVE_MEMORY RtlMoveMemory;                                \
-    PRTL_FILL_MEMORY RtlFillMemory;                                \
-    PRTL_COMPARE_MEMORY RtlCompareMemory;                          \
-    PRTL_FIRST_ENTRY_SLIST RtlFirstEntrySList;                     \
-    PRTL_CHAR_TO_INTEGER RtlCharToInteger;                         \
-    PRTL_INTEGER_TO_CHAR RtlIntegerToChar;                         \
-    PRTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;      \
-    PRTL_EQUAL_UNICODE_STRING RtlEqualUnicodeString;               \
-    PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                \
-    PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                \
-    P__C_SPECIFIC_HANDLER __C_specific_handler;                    \
-    P_WSPLITPATH_S _wsplitpath_s;                                  \
-    PSPRINTF_S sprintf_s;                                          \
-    PSWPRINTF_S swprintf_s;                                        \
-    PVSPRINTF_S vsprintf_s;                                        \
+#define _RTL_FUNCTIONS_HEAD                                              \
+    PRTL_INITIALIZE_BITMAP RtlInitializeBitMap;                          \
+    PRTL_CLEAR_BIT RtlClearBit;                                          \
+    PRTL_SET_BIT RtlSetBit;                                              \
+    PRTL_TEST_BIT RtlTestBit;                                            \
+    PRTL_CLEAR_ALL_BITS RtlClearAllBits;                                 \
+    PRTL_SET_ALL_BITS RtlSetAllBits;                                     \
+    PRTL_FIND_CLEAR_BITS RtlFindClearBits;                               \
+    PRTL_FIND_SET_BITS RtlFindSetBits;                                   \
+    PRTL_FIND_CLEAR_BITS_AND_SET RtlFindClearBitsAndSet;                 \
+    PRTL_FIND_SET_BITS_AND_CLEAR RtlFindSetBitsAndClear;                 \
+    PRTL_CLEAR_BITS RtlClearBits;                                        \
+    PRTL_SET_BITS RtlSetBits;                                            \
+    PRTL_FIND_CLEAR_RUNS RtlFindClearRuns;                               \
+    PRTL_FIND_LONGEST_RUN_CLEAR RtlFindLongestRunClear;                  \
+    PRTL_NUMBER_OF_CLEAR_BITS RtlNumberOfClearBits;                      \
+    PRTL_NUMBER_OF_SET_BITS RtlNumberOfSetBits;                          \
+    PRTL_ARE_BITS_CLEAR RtlAreBitsClear;                                 \
+    PRTL_ARE_BITS_SET RtlAreBitsSet;                                     \
+    PRTL_FIND_NEXT_FORWARD_RUN_CLEAR RtlFindNextForwardRunClear;         \
+    PRTL_FIND_LAST_BACKWARD_RUN_CLEAR RtlFindLastBackwardRunClear;       \
+    PRTL_COPY_MEMORY RtlCopyMemory;                                      \
+    PRTL_MOVE_MEMORY RtlMoveMemory;                                      \
+    PRTL_FILL_MEMORY RtlFillMemory;                                      \
+    PRTL_COMPARE_MEMORY RtlCompareMemory;                                \
+    PRTL_FIRST_ENTRY_SLIST RtlFirstEntrySList;                           \
+    PRTL_CHAR_TO_INTEGER RtlCharToInteger;                               \
+    PRTL_INTEGER_TO_CHAR RtlIntegerToChar;                               \
+    PRTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;            \
+    PRTL_EQUAL_UNICODE_STRING RtlEqualUnicodeString;                     \
+    PRTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString; \
+    PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                      \
+    PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                      \
+    P__C_SPECIFIC_HANDLER __C_specific_handler;                          \
+    P_WSPLITPATH_S _wsplitpath_s;                                        \
+    PSPRINTF_S sprintf_s;                                                \
+    PSWPRINTF_S swprintf_s;                                              \
+    PVSPRINTF_S vsprintf_s;                                              \
     PVSWPRINTF_S vswprintf_s
 
 typedef struct _RTL_FUNCTIONS {
