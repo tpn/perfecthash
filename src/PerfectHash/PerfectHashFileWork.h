@@ -118,8 +118,8 @@ Abstract:
 // the list below must match their corresponding entry in the list above.
 //
 
-#define VERB_CONTEXT_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                 \
-    FIRST_ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE) \
+#define VERB_CONTEXT_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                               \
+    FIRST_ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE)               \
     ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashMacroGlueFile, C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE) \
     LAST_ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)
 
