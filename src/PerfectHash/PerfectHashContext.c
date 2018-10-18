@@ -953,7 +953,7 @@ Routine Description:
 
     This routine will be called when a Main thread successfully finds a perfect
     hash table solution.  It is responsible for signaling the ShutdownEvent and
-    FinishedEvent.  It will also call CloseThreadpoolCleanupGroupMembers() to
+    FinishedEvent.  It will also call WaitForThreadpoolWorkCallbacks() to
     cancel pending callbacks.
 
 Arguments:
