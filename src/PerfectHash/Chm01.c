@@ -257,8 +257,14 @@ Return Value:
         goto Error;
     }
 
+    //
+    // XXX TODO: Pick up here.  Create graph instances.
+    //
+
     NumberOfGraphs = 0;
-    for (Index = 0; Index < NumberOfGraphs
+    for (Index = 0; Index < NumberOfGraphs; Index++) {
+        PH_RAISE(PH_E_WORK_IN_PROGRESS);
+    }
 
     //
     // The following label is jumped to by code later in this routine when we
