@@ -162,6 +162,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     };
 
     //
+    // Guarded list for capturing GRAPH instances.
+    //
+
+    PGUARDED_LIST GraphList;
+
+    //
     // The highest number of deleted edges count encountered by a worker thread.
     // This is useful when debugging a poorly performing hash/mask combo that is
     // failing to find a solution.

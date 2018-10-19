@@ -78,6 +78,8 @@ typedef union _GRAPH_FLAGS {
 } GRAPH_FLAGS;
 typedef GRAPH_FLAGS *PGRAPH_FLAGS;
 
+DEFINE_UNUSED_STATE(GRAPH);
+
 //
 // Define the primary dimensions governing the graph size.
 //
@@ -279,6 +281,26 @@ typedef struct _GRAPH_INFO {
 typedef GRAPH_INFO *PGRAPH_INFO;
 
 //
+// Declare graph component and define vtbl methods.
+//
+
+DECLARE_COMPONENT(Graph, GRAPH);
+
+typedef
+HRESULT
+(NTAPI GRAPH_SET_INFO)(
+    _In_ PGRAPH Graph,
+    _In_ PGRAPH_INFO Info
+    );
+typedef GRAPH_SET_INFO *PGRAPH_SET_INFO;
+
+typedef struct _GRAPH_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
+    PGRAPH_SET_INFO SetInfo;
+} GRAPH_VTBL;
+typedef GRAPH_VTBL *PGRAPH_VTBL;
+
+//
 // Define the graph structure.  This represents an r-graph, or a hypergraph,
 // or an r-partite 2-uniform graph, or any other seemingly unlimited number
 // of names floating around in academia for what appears to be exactly the
@@ -286,6 +308,7 @@ typedef GRAPH_INFO *PGRAPH_INFO;
 //
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
+    COMMON_COMPONENT_HEADER(GRAPH);
 
     //
     // List entry used to push the graph onto the context's work list.
@@ -509,6 +532,45 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
 } GRAPH;
 typedef GRAPH *PGRAPH;
+
+#define TryAcquireGraphLockExclusive(Graph) \
+    TryAcquireSRWLockExclusive(&Graph->Lock)
+
+#define AcquireGraphLockExclusive(Graph) \
+    AcquireSRWLockExclusive(&Graph->Lock)
+
+#define ReleaseGraphLockExclusive(Graph) \
+    ReleaseSRWLockExclusive(&Graph->Lock)
+
+#define TryAcquireGraphLockShared(Graph) \
+    TryAcquireSRWLockShared(&Graph->Lock)
+
+#define AcquireGraphLockShared(Graph) \
+    AcquireSRWLockShared(&Graph->Lock)
+
+#define ReleaseGraphLockShared(Graph) \
+    ReleaseSRWLockShared(&Graph->Lock)
+
+//
+// Private non-vtbl methods.
+//
+
+typedef
+HRESULT
+(NTAPI GRAPH_INITIALIZE)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_INITIALIZE *PGRAPH_INITIALIZE;
+
+typedef
+VOID
+(NTAPI GRAPH_RUNDOWN)(
+    _In_ _Post_ptr_invalid_ PGRAPH Path
+    );
+typedef GRAPH_RUNDOWN *PGRAPH_RUNDOWN;
+
+extern GRAPH_INITIALIZE GraphInitialize;
+extern GRAPH_RUNDOWN GraphRundown;
 
 //
 // Define a helper macro for hashing keys during graph creation.  Assumes a

@@ -1455,3 +1455,43 @@ Language=English
 Table not created.
 .
 
+MessageId=0x314
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_EDGES
+Language=English
+Too many edges.
+.
+
+MessageId=0x315
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_VERTICES
+Language=English
+Too many vertices.
+.
+
+MessageId=0x316
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_BITS_FOR_BITMAP
+Language=English
+Too many bits for bitmap.
+.
+
+MessageId=0x317
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_TOTAL_EDGES
+Language=English
+Too many total edges.
+.
+
+MessageId=0x318
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES
+Language=English
+Number of vertices is less than or equal to the number of edges.
+.
+

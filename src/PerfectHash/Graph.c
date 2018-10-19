@@ -1965,4 +1965,20 @@ Return Value:
     UNREFERENCED_PARAMETER(Graph);
 }
 
+
+GRAPH_SET_INFO GraphSetInfo;
+
+_Use_decl_annotations_
+HRESULT
+GraphSetInfo(
+    PGRAPH Graph,
+    PGRAPH_INFO Info
+    )
+{
+    UNREFERENCED_PARAMETER(Graph);
+    UNREFERENCED_PARAMETER(Info);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

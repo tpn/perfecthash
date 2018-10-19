@@ -245,8 +245,9 @@ typedef enum _PERFECT_HASH_INTERFACE_ID {
     PerfectHashPathInterfaceId             =  9,
     PerfectHashDirectoryInterfaceId        = 10,
     PerfectHashGuardedListInterfaceId      = 11,
+    PerfectHashGraphInterfaceId            = 12,
 
-    PerfectHashLastInterfaceId             = PerfectHashGuardedListInterfaceId,
+    PerfectHashLastInterfaceId             = PerfectHashGraphInterfaceId,
 
     //
     // End valid interfaces.
@@ -403,6 +404,14 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_GUARDED_LIST,
                0x8c, 0x76, 0xa7, 0xa9, 0x1e, 0xc8, 0x8c, 0x2a);
 
 //
+// IID_PERFECT_HASH_GRAPH: {B906F824-CB59-4696-8477-44D4BA09DA94}
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_GRAPH,
+               0xb906f824, 0xcb59, 0x4696,
+               0x84, 0x77, 0x44, 0xd4, 0xba, 0x9, 0xda, 0x94);
+
+//
 // GUID array.
 //
 
@@ -421,6 +430,7 @@ static const PCGUID PerfectHashInterfaceGuids[] = {
     &IID_PERFECT_HASH_PATH,
     &IID_PERFECT_HASH_DIRECTORY,
     &IID_PERFECT_HASH_GUARDED_LIST,
+    &IID_PERFECT_HASH_GRAPH,
 
     NULL
 };
