@@ -262,7 +262,7 @@ Return Value:
         Allocator->Vtbl->Calloc(
             Allocator,
             NumberOfGraphs,
-            sizeof(*Graph)
+            sizeof(Graph)
         )
     );
 
