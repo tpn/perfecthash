@@ -473,12 +473,6 @@ RetryWithLargerTableSize:
         CHECK_ALL_PREPARE_ERRORS();
 
         //
-        // N.B. We don't need to wait for the C header, source or source keys
-        //      file preparation to complete here as the size of those files
-        //      isn't dependent upon the underlying table size.
-        //
-
-        //
         // There are no more threadpool callbacks running.  However, a thread
         // could have finished a solution between the time the try larger table
         // size event was set, and this point.  So, check the finished count
