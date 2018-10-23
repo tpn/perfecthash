@@ -126,7 +126,19 @@ AllocatorInitialize(
     PALLOCATOR Allocator
     )
 {
-    Allocator->HeapHandle = HeapCreate(0, 0, 0);
+    ULONG Flags = 0;
+    ULONG_PTR MinimumSize = 0;
+    ULONG_PTR MaximumSize = 0;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+
+    TlsContext = PerfectHashTlsGetContext();
+
+    if (TlsContextCustomAllocatorDetailsPresent(TlsContext)) {
+        Flags = TlsContext->HeapCreateFlags;
+        MinimumSize = TlsContext->HeapMinimumSize;
+    }
+
+    Allocator->HeapHandle = HeapCreate(Flags, MinimumSize, MaximumSize);
 
     if (!Allocator->HeapHandle) {
         return PH_E_HEAP_CREATE_FAILED;

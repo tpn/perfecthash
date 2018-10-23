@@ -160,6 +160,8 @@ Return Value:
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
     PPERFECT_HASH_CONTEXT Context;
     BOOL WaitForAllEvents = TRUE;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
 
     HANDLE Events[5];
     HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];
@@ -272,6 +274,43 @@ Return Value:
     }
 
     //
+    // We want each graph instance to have its own isolated Allocator instance
+    // rather than a reference to the global (singleton) instance that is shared
+    // amongst all components by default.
+    //
+    // We communicate this desire to the COM component creation scaffolding by
+    // way of the TLS context, which allows us to toggle a flag that disables
+    // the global component override functionality, as well as specify custom
+    // flags and a minimum size to HeapCreate().
+    //
+    // So, we now obtain the active TLS context, using our local stack-allocated
+    // one if need be, toggle the disable global component flag, and fill out
+    // the heap create flags and minimum size (based off the total allocation
+    // size calculated by the PrepareGraphInfoChm01() routine above).
+    //
+
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+
+    ASSERT(!TlsContext->Flags.DisableGlobalComponents);
+    ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
+    ASSERT(!TlsContext->HeapCreateFlags);
+    ASSERT(!TlsContext->HeapMinimumSize);
+
+    TlsContext->Flags.DisableGlobalComponents = TRUE;
+    TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
+    TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;
+    TlsContext->HeapMinimumSize = (ULONG_PTR)Info.AllocSize;
+
+    //
+    // Make sure we haven't overflowed MAX_ULONG.  This should be caught
+    // earlier when preparing the graph info.
+    //
+
+    if ((ULONGLONG)TlsContext->HeapMinimumSize != Info.AllocSize) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    //
     // Create graph instances and capture the resulting pointer in the array
     // we just allocated above.
     //
@@ -284,11 +323,43 @@ Return Value:
                                              &Graph);
 
         if (FAILED(Result)) {
+
             PH_ERROR(CreatePerfectHashTableImplChm01_CreateGraph, Result);
-            goto Error;
+
+            //
+            // N.B. We 'break' instead of 'goto Error' here like we normally
+            //      do in order for the TLS context cleanup logic following
+            //      this routine to run.
+            //
+
+            break;
         }
 
+        //
+        // Verify the uniqueness of our graph allocator and underlying handle.
+        //
+
+        ASSERT(Graph->Allocator != Table->Allocator);
+        ASSERT(Graph->Allocator->HeapHandle != Table->Allocator->HeapHandle);
+
         Graphs[Index] = Graph;
+    }
+
+    //
+    // Restore all the values we mutated, then potentially clear the TLS context
+    // if our local stack-allocated version was used.  Then, check the result
+    // and jump to our error handling block if it indicates failure.
+    //
+
+    TlsContext->Flags.DisableGlobalComponents = FALSE;
+    TlsContext->Flags.CustomAllocatorDetailsPresent = FALSE;
+    TlsContext->HeapCreateFlags = 0;
+    TlsContext->HeapMinimumSize = 0;
+
+    PerfectHashTlsClearContextIfActive(&LocalTlsContext);
+
+    if (FAILED(Result)) {
+        goto Error;
     }
 
     //

@@ -105,6 +105,12 @@ Return Value:
     }
 
     //
+    // Verify we've obtained the sole instance of the allocator.
+    //
+
+    ASSERT(Graph->Allocator->ReferenceCount == 1);
+
+    //
     // We're done!  Indicate success and finish up.
     //
 
