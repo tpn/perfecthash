@@ -25,7 +25,12 @@ VOID
     );
 typedef GRAPH_CALCULATE_MEMORY_COVERAGE *PGRAPH_CALCULATE_MEMORY_COVERAGE;
 
-extern GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverage;
+#ifdef _M_X64
+extern GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverageAvx2;
+#define GraphCalculateMemoryCoverage GraphCalculateMemoryCoverageAvx2
+#else
+#error Non-AVX2 GraphCalculateMemoryCoverage not yet implemented.
+#endif
 
 typedef
 VOID
@@ -1859,11 +1864,11 @@ typedef struct _MEMORY_COVERAGE {
 typedef ULONG ASSIGNED_CACHE_LINE[16];
 typedef ASSIGNED_CACHE_LINE  *PASSIGNED_CACHE_LINE;
 
-GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverage;
+GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverageAvx2;
 
 _Use_decl_annotations_
 VOID
-GraphCalculateMemoryCoverage(
+GraphCalculateMemoryCoverageAvx2(
     PGRAPH Graph
     )
 /*++
