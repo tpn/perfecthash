@@ -36,6 +36,139 @@ typedef GRAPH_REGISTER_SOLVED *PGRAPH_REGISTER_SOLVED;
 
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
+//
+// COM scaffolding routines for initialization and rundown.
+//
+
+GRAPH_INITIALIZE GraphInitialize;
+
+_Use_decl_annotations_
+HRESULT
+GraphInitialize(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Initializes a graph structure.  This is a relatively simple method that
+    just primes the COM scaffolding.
+
+Arguments:
+
+    Graph - Supplies a pointer to a GRAPH structure for which initialization
+        is to be performed.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph is NULL.
+
+    E_UNEXPECTED - All other errors.
+
+--*/
+{
+    HRESULT Result = S_OK;
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    Graph->SizeOfStruct = sizeof(*Graph);
+
+    //
+    // Create Rtl and Allocator components.
+    //
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                        NULL,
+                                        &IID_PERFECT_HASH_RTL,
+                                        &Graph->Rtl);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                        NULL,
+                                        &IID_PERFECT_HASH_ALLOCATOR,
+                                        &Graph->Allocator);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // We're done!  Indicate success and finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+GRAPH_RUNDOWN GraphRundown;
+
+_Use_decl_annotations_
+VOID
+GraphRundown(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Release all resources associated with a graph.
+
+Arguments:
+
+    Graph - Supplies a pointer to a GRAPH structure for which rundown is to
+        be performed.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    //
+    // Sanity check structure size.
+    //
+
+    ASSERT(Graph->SizeOfStruct == sizeof(*Graph));
+
+
+    //
+    // Todo: release individual buffers.
+    //
+
+    //
+    // Release applicable COM references.
+    //
+
+    RELEASE(Graph->Rtl);
+    RELEASE(Graph->Allocator);
+
+    return;
+}
+
+//
+// Private methods.
+//
 
 #define IsEmpty(Value) ((ULONG)Value == EMPTY)
 #define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)

@@ -1495,3 +1495,11 @@ Language=English
 Number of vertices is less than or equal to the number of edges.
 .
 
+MessageId=0x319
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+Language=English
+Create table routine received shutdown event.
+.
+

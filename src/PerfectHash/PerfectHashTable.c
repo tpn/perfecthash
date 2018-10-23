@@ -179,6 +179,7 @@ Return Value:
 
     FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
 
+    RELEASE(Table->OutputPath);
     RELEASE(Table->OutputDirectory);
     RELEASE(Table->Context);
     RELEASE(Table->Keys);

@@ -301,6 +301,12 @@ typedef struct _GRAPH_VTBL {
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
 //
+// Public vtbl externs.
+//
+
+extern GRAPH_SET_INFO GraphSetInfo;
+
+//
 // Define the graph structure.  This represents an r-graph, or a hypergraph,
 // or an r-partite 2-uniform graph, or any other seemingly unlimited number
 // of names floating around in academia for what appears to be exactly the
@@ -309,12 +315,6 @@ typedef GRAPH_VTBL *PGRAPH_VTBL;
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     COMMON_COMPONENT_HEADER(GRAPH);
-
-    //
-    // List entry used to push the graph onto the context's work list.
-    //
-
-    LIST_ENTRY ListEntry;
 
     //
     // Edge and vertex masks that can be used when non-modulus masking is in
@@ -338,18 +338,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     ULONG NumberOfKeys;
-
-    //
-    // Structure size, in bytes.
-    //
-
-    _Field_range_(== , sizeof(struct _GRAPH)) ULONG SizeOfStruct;
-
-    //
-    // Graph flags.
-    //
-
-    GRAPH_FLAGS Flags;
 
     //
     // Pointer to the info structure describing various sizes.
@@ -498,6 +486,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     RTL_BITMAP IndexBitmap;
+
+    //
+    // The graph interface.
+    //
+
+    GRAPH_VTBL Interface;
 
     //
     // Capture the seeds used for each hash function employed by the graph.

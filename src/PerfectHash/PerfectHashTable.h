@@ -188,6 +188,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG Padding3;
 
     //
+    // Pointer to the path for the output directory (below).
+    //
+
+    PPERFECT_HASH_PATH OutputPath;
+
+    //
     // Pointer to the output directory for this table.
     //
 

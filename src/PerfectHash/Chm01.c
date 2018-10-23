@@ -18,9 +18,10 @@ Abstract:
 typedef
 _Check_return_
 _Success_(return >= 0)
+HRESULT
 (NTAPI PREPARE_GRAPH_INFO)(
     _In_ PPERFECT_HASH_TABLE Table,
-    _In_ PGRAPH_INFO Info
+    _Out_ PGRAPH_INFO Info
     );
 typedef PREPARE_GRAPH_INFO *PPREPARE_GRAPH_INFO;
 
@@ -29,6 +30,7 @@ extern PREPARE_GRAPH_INFO PrepareGraphInfoChm01;
 typedef
 _Check_return_
 _Success_(return >= 0)
+HRESULT
 (NTAPI PREPARE_TABLE_OUTPUT_DIRECTORY)(
     _In_ PPERFECT_HASH_TABLE Table
     );
@@ -111,6 +113,9 @@ Return Value:
 
     PH_E_SYSTEM_CALL_FAILED - A system call failed.
 
+    PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT - The shutdown event
+        explicitly set.
+
     PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE - The requested number
         of table elements exceeded limits.  If a table resize event occurrs,
         the number of requested table elements is doubled.  If this number
@@ -132,39 +137,27 @@ Return Value:
     PRTL Rtl;
     USHORT Index;
     PULONG Keys;
-    PGRAPH Graphs;
+    PGRAPH *Graphs = NULL;
     PGRAPH Graph;
-    PBYTE Buffer;
     BOOLEAN Success;
-    USHORT PageSize;
-    USHORT PageShift;
-    ULONG_PTR LastPage;
-    ULONG_PTR ThisPage;
+    ULONG Attempt = 0;
+    ULONG ReferenceCount;
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
-    HRESULT SecondResult;
-    PVOID BaseAddress = NULL;
     ULONG WaitResult;
     GRAPH_INFO Info;
-    PBYTE Unusable;
-    ULONG NumberOfKeys;
-    BOOLEAN CaughtException;
     PALLOCATOR Allocator;
-    HANDLE ProcessHandle = NULL;
     PHANDLE Event;
-    USHORT NumberOfGraphs;
+    ULONG NumberOfGraphs;
     PLIST_ENTRY ListEntry;
-    SYSTEM_INFO SystemInfo;
     ULONG NumberOfSeedsRequired;
     ULONG NumberOfSeedsAvailable;
-    BOOLEAN FirstAttempt = TRUE;
+    ULONGLONG Closest;
+    ULONGLONG LastClosest;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
-    ULARGE_INTEGER NumberOfEdges;
-    ULARGE_INTEGER NumberOfVertices;
-    ULARGE_INTEGER TotalNumberOfEdges;
     PPERFECT_HASH_CONTEXT Context;
     BOOL WaitForAllEvents = TRUE;
 
@@ -186,6 +179,12 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(Table)) {
         return E_POINTER;
+    } else {
+        Context = Table->Context;
+        NumberOfGraphs = Context->MaximumConcurrency;
+        if (NumberOfGraphs == 0) {
+            return E_INVALIDARG;
+        }
     }
 
     //
@@ -211,9 +210,7 @@ Return Value:
     Rtl = Table->Rtl;
     Keys = (PULONG)Table->Keys->File->BaseAddress;
     Allocator = Table->Allocator;
-    Context = Table->Context;
     MaskFunctionId = Table->MaskFunctionId;
-    ProcessHandle = GetCurrentProcess();
     GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
     TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
 
@@ -258,12 +255,40 @@ Return Value:
     }
 
     //
-    // XXX TODO: Pick up here.  Create graph instances.
+    // Allocate space for an array of pointers to graph instances.
     //
 
-    NumberOfGraphs = 0;
+    Graphs = (PGRAPH *)(
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            NumberOfGraphs,
+            sizeof(*Graph)
+        )
+    );
+
+    if (!Graphs) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    //
+    // Create graph instances and capture the resulting pointer in the array
+    // we just allocated above.
+    //
+
     for (Index = 0; Index < NumberOfGraphs; Index++) {
-        PH_RAISE(PH_E_WORK_IN_PROGRESS);
+
+        Result = Table->Vtbl->CreateInstance(Table,
+                                             NULL,
+                                             &IID_PERFECT_HASH_GRAPH,
+                                             &Graph);
+
+        if (FAILED(Result)) {
+            PH_ERROR(CreatePerfectHashTableImplChm01_CreateGraph, Result);
+            goto Error;
+        }
+
+        Graphs[Index] = Graph;
     }
 
     //
@@ -296,7 +321,9 @@ RetryWithLargerTableSize:
     }
 
     //
-    // If this isn't the first attempt, prepare the graph info again.
+    // If this isn't the first attempt, prepare the graph info again.  This
+    // updates the various allocation sizes based on the new table size being
+    // requested.
     //
 
     if (++Attempt > 1) {
@@ -365,88 +392,26 @@ RetryWithLargerTableSize:
     CONTEXT_START_TIMERS(Solve);
 
     //
-    // We're ready to create threadpool work for the graph.
+    // For each graph instance, set the graph info, then submit threadpool work
+    // against the context's main work threadpool.
     //
-
-    Buffer = (PBYTE)BaseAddress;
-    Unusable = Buffer;
 
     ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {
 
-        //
-        // Invariant check: at the top of the loop, Buffer and Unusable should
-        // point to the same address (which will be the base of the current
-        // graph being processed).  Assert this invariant now.
-        //
+        Graph = Graphs[Index];
 
-        ASSERT(Buffer == Unusable);
+        Result = Graph->Vtbl->SetInfo(Graph, &Info);
 
-        //
-        // Carve out the graph pointer, and bump the unusable pointer past the
-        // graph's pages, such that it points to the first byte of the guard
-        // page.
-        //
-
-        Graph = (PGRAPH)Buffer;
-        Unusable = Buffer + UsableBufferSizeInBytesPerBuffer;
-
-        //
-        // Sanity check the page alignment logic.  If we subtract 1 byte from
-        // Unusable, it should reside on a different page.  Additionally, the
-        // two pages should be separated by at most a single page size.
-        //
-
-        ThisPage = ALIGN_DOWN(Unusable,   PageSize);
-        LastPage = ALIGN_DOWN(Unusable-1, PageSize);
-        ASSERT(LastPage < ThisPage);
-        ASSERT((ThisPage - LastPage) == PageSize);
-
-        //
-        // Verify the guard page is working properly by wrapping an attempt to
-        // write to it in a structured exception handler that will catch the
-        // access violation trap.
-        //
-        // N.B. We only do this if we're not actively being debugged, as the
-        //      traps get dispatched to the debugger engine first as part of
-        //      the "first-pass" handling logic of the kernel.
-        //
-
-        if (!IsDebuggerPresent()) {
-
-            CaughtException = FALSE;
-
-            TRY_PROBE_MEMORY {
-
-                *Unusable = 1;
-
-            } CATCH_EXCEPTION_ACCESS_VIOLATION{
-
-                CaughtException = TRUE;
-
-            }
-
-            ASSERT(CaughtException);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphSetInfo, Result);
+            goto Error;
         }
-
-        //
-        // Guard page is working properly.  Insert the graph onto the context's
-        // main work list tail and submit the corresponding threadpool work.
-        //
 
         InitializeListHead(&Graph->ListEntry);
         InsertTailMainWork(Context, &Graph->ListEntry);
         SubmitThreadpoolWork(Context->MainWork);
-
-        //
-        // Advance the buffer past the graph size and guard page.  Copy the
-        // same address to the Unusable variable as well, such that our top
-        // of the loop invariants hold true.
-        //
-
-        Buffer += GraphSizeInBytesIncludingGuardPage;
-        Unusable = Buffer;
 
         //
         // If our key set size is small and our maximum concurrency is large,
@@ -534,18 +499,6 @@ RetryWithLargerTableSize:
         }
 
         //
-        // Destroy the existing buffer we allocated for this attempt.  We'll
-        // need a new, larger one to accommodate the resize.
-        //
-
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl, ProcessHandle, &BaseAddress);
-        if (FAILED(Result)) {
-            SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-
-        //
         // Increment the resize counter and update the total number of attempts
         // in the header.  Then, determine how close we came to solving the
         // graph, and store that in the header as well if it's the best so far
@@ -557,7 +510,9 @@ RetryWithLargerTableSize:
             Context->Attempts
         );
 
-        Closest = NumberOfEdges.LowPart - Context->HighestDeletedEdgesCount;
+        Closest = (
+            Info.Dimensions.NumberOfEdges - Context->HighestDeletedEdgesCount
+        );
         LastClosest = (
             Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes
         );
@@ -573,7 +528,7 @@ RetryWithLargerTableSize:
         //
 
         if (!Context->InitialTableSize) {
-            Context->InitialTableSize = NumberOfVertices.QuadPart;
+            Context->InitialTableSize = Info.Dimensions.NumberOfVertices;
         }
 
         //
@@ -589,7 +544,7 @@ RetryWithLargerTableSize:
         //
 
         Table->RequestedNumberOfTableElements.QuadPart = (
-            NumberOfVertices.QuadPart
+            Info.Dimensions.NumberOfVertices
         );
 
         Table->RequestedNumberOfTableElements.QuadPart <<= 1ULL;
@@ -628,10 +583,12 @@ RetryWithLargerTableSize:
         BOOL CancelPending = TRUE;
 
         //
-        // Invariant check: if no worker thread registered a solved graph (i.e.
-        // Context->FinishedCount > 0), then verify that the shutdown event was
-        // set.  If our WaitResult above indicates WAIT_OBJECT_2, we're done.
-        // If not, verify explicitly.
+        // Invariant check: if no worker thread registered a solved graph
+        // (indicated by Context->FinishedCount having a value greater than
+        // 0), then verify that the shutdown event was set.
+        //
+        // If our WaitResult above indicates WAIT_OBJECT_2, we're done.  If
+        // not, verify explicitly.
         //
 
         if (WaitResult != WAIT_OBJECT_0+2) {
@@ -643,26 +600,28 @@ RetryWithLargerTableSize:
             WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
 
             if (WaitResult != WAIT_OBJECT_0) {
-                SYS_ERROR(WaitForSingleObject);
-                Result = PH_E_SYSTEM_CALL_FAILED;
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(CreatePerfectHashTableImplChm01_ShutdownEvent, Result);
                 goto Error;
             }
         }
 
+        Result = PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
+
         //
         // Wait for the main thread work group members.  This will block until
         // all the worker threads have returned.  We need to put this in place
-        // prior to jumping to the End: label as that step will destroy the
-        // buffer we allocated earlier for the parallel graphs, which we mustn't
-        // do if any threads are still working.
+        // prior to jumping to the End: label as that step will release all the
+        // graph references and verify the resulting reference count for each
+        // one is 0.  This won't be the case if any threads are still working.
         //
 
         WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
 
         //
         // Perform the same operation for the file work threadpool.  Note that
-        // the only work we've dispatched to this pool at this point is the
-        // initial table and header file preparation work.
+        // the only work item type we've dispatched to this pool at this point
+        // is file preparation work.
         //
 
         WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
@@ -671,10 +630,15 @@ RetryWithLargerTableSize:
     }
 
     //
-    // Pop the winning graph off the finished list head.
+    // Intentional follow-on to FinishedSolution.
     //
 
 FinishedSolution:
+
+    //
+    // Pop the winning graph off the finished list head.
+    //
+
 
     ListEntry = NULL;
 
@@ -779,26 +743,30 @@ Error:
 
 End:
 
-    //
-    // Destroy the buffer we created earlier.
-    //
-    // N.B. Although we used Rtl->CreateMultipleBuffers(), we can still free
-    //      the underlying buffer via Rtl->DestroyBuffer(), as only a single
-    //      VirtualAllocEx() call was dispatched for the entire buffer.
-    //
+    if (Graphs) {
 
-    if (BaseAddress && ProcessHandle) {
-        SecondResult = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                                ProcessHandle,
-                                                &BaseAddress);
-        if (FAILED(SecondResult)) {
-            SYS_ERROR(VirtualFree);
-            PH_ERROR(CreatePerfectHashTableImplChm01_DestroyBuffer,
-                     SecondResult);
-            if (Result == S_OK) {
-                Result = SecondResult;
+        //
+        // Walk the array of graph instances and release each one, then free
+        // the array buffer.
+        //
+
+        for (Index = 0; Index < NumberOfGraphs; Index++) {
+
+            Graph = Graphs[Index];
+            ReferenceCount = Graph->Vtbl->Release(Graph);
+
+            //
+            // Invariant check: reference count should always be 0 here.
+            //
+
+            if (ReferenceCount != 0) {
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
             }
+
+            Graphs[Index] = NULL;
         }
+
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Graphs);
     }
 
     //
@@ -865,9 +833,9 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    USHORT PageSize;
-    USHORT PageShift;
+    PGRAPH Graph;
     HRESULT Result = S_OK;
+    ULONG NumberOfKeys;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
     SYSTEM_INFO SystemInfo;
@@ -910,7 +878,7 @@ Return Value:
     Context = Table->Context;
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk;
-    TableInfoOnDisk = GraphInfoOnDisk->TableInfoOnDisk;
+    TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
 
     //
     // Ensure the number of keys are under MAX_ULONG, then take a local copy.
@@ -920,7 +888,7 @@ Return Value:
         return PH_E_TOO_MANY_KEYS;
     }
 
-    NumberOfKeys = NumberOfEdges.LowPart;
+    NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
 
     //
     // The number of edges in our graph is equal to the number of keys in the
@@ -1127,6 +1095,11 @@ Return Value:
     //
     // Calculate the sizes required for each of the arrays.
     //
+    // N.B. Use a dummy NULL pointer for Graph so that we can use the
+    //      sizeof(*Graph->Edges)-type construct for array element sizing.
+    //
+
+    Graph = NULL;
 
     EdgesSizeInBytes = (
         ALIGN_UP_YMMWORD(sizeof(*Graph->Edges) * TotalNumberOfEdges.QuadPart)
@@ -1218,8 +1191,7 @@ Return Value:
     Info->PageSize = PAGE_SIZE;
     Info->AllocSize = AllocSize.QuadPart;
     Info->Context = Context;
-    Info->BaseAddress = BaseAddress;
-    Info->NumberOfPagesPerGraph = BYTES_TO_PAGES(AllocSize.QuadPart);
+    Info->NumberOfPagesPerGraph = (ULONG)BYTES_TO_PAGES(AllocSize.QuadPart);
     Info->NumberOfBitmaps = NumberOfBitmaps;
     Info->SizeOfGraphStruct = ALIGN_UP_YMMWORD(sizeof(GRAPH));
     Info->EdgesSizeInBytes = EdgesSizeInBytes;
@@ -1251,7 +1223,7 @@ Return Value:
     //
 
     GetSystemInfo(&SystemInfo);
-    Info->AllocationGranularity = SystemInfo->dwAllocationGranularity;
+    Info->AllocationGranularity = SystemInfo.dwAllocationGranularity;
 
     //
     // Copy the dimensions over.
@@ -1352,7 +1324,9 @@ Return Value:
     TableInfoOnDisk->NumberOfKeys.QuadPart = (
         Table->Keys->NumberOfElements.QuadPart
     );
-    TableInfoOnDisk->NumberOfSeeds = NumberOfSeedsRequired;
+    TableInfoOnDisk->NumberOfSeeds = (
+        HashRoutineNumberOfSeeds[Table->HashFunctionId]
+    );
 
     //
     // This will change based on masking type and whether or not the caller
@@ -1678,7 +1652,8 @@ Return Value:
         // graph and then try again with new seed data.
         //
 
-        FillPages(Rtl, (PCHAR)Graph, 0, Info->NumberOfPagesPerGraph);
+        PH_RAISE(PH_E_WORK_IN_PROGRESS);
+        //FillPages(Rtl, (PCHAR)Graph, 0, Info->NumberOfPagesPerGraph);
 
     }
 
@@ -1708,15 +1683,10 @@ ShouldWeContinueTryingToSolveGraphChm01(
     // solved the solution, and we don't need to wait on any of the events.
     //
 
+    PH_RAISE(PH_E_WORK_IN_PROGRESS);
     if (Context->FinishedCount > 0) {
         return FALSE;
     }
-
-    //
-    // N.B. We should probably switch this to simply use volatile field of the
-    //      context structure to indicate whether or not the context is active.
-    //      WaitForMultipleObjects() on four events seems a bit... excessive.
-    //
 
     WaitResult = WaitForMultipleObjects(NumberOfEvents,
                                         Events,

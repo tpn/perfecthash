@@ -1667,3 +1667,57 @@ Abstract:
 //
 #define PH_E_TABLE_NOT_CREATED           ((HRESULT)0xE0040313L)
 
+//
+// MessageId: PH_E_TOO_MANY_EDGES
+//
+// MessageText:
+//
+// Too many edges.
+//
+#define PH_E_TOO_MANY_EDGES              ((HRESULT)0xE0040314L)
+
+//
+// MessageId: PH_E_TOO_MANY_VERTICES
+//
+// MessageText:
+//
+// Too many vertices.
+//
+#define PH_E_TOO_MANY_VERTICES           ((HRESULT)0xE0040315L)
+
+//
+// MessageId: PH_E_TOO_MANY_BITS_FOR_BITMAP
+//
+// MessageText:
+//
+// Too many bits for bitmap.
+//
+#define PH_E_TOO_MANY_BITS_FOR_BITMAP    ((HRESULT)0xE0040316L)
+
+//
+// MessageId: PH_E_TOO_MANY_TOTAL_EDGES
+//
+// MessageText:
+//
+// Too many total edges.
+//
+#define PH_E_TOO_MANY_TOTAL_EDGES        ((HRESULT)0xE0040317L)
+
+//
+// MessageId: PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES
+//
+// MessageText:
+//
+// Number of vertices is less than or equal to the number of edges.
+//
+#define PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES ((HRESULT)0xE0040318L)
+
+//
+// MessageId: PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+//
+// MessageText:
+//
+// Create table routine received shutdown event.
+//
+#define PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT ((HRESULT)0xE0040319L)
+
