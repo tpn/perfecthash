@@ -162,17 +162,13 @@ Return Value:
 
     ASSERT(Graph->SizeOfStruct == sizeof(*Graph));
 
-
-    //
-    // Todo: release individual buffers.
-    //
-
     //
     // Release applicable COM references.
     //
 
-    RELEASE(Graph->Rtl);
+    ASSERT(Graph->Allocator->ReferenceCount == 1);
     RELEASE(Graph->Allocator);
+    RELEASE(Graph->Rtl);
 
     return;
 }
