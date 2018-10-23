@@ -833,7 +833,6 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    PGRAPH Graph;
     HRESULT Result = S_OK;
     ULONG NumberOfKeys;
     USHORT NumberOfBitmaps;
@@ -1095,30 +1094,29 @@ Return Value:
     //
     // Calculate the sizes required for each of the arrays.
     //
-    // N.B. Use a dummy NULL pointer for Graph so that we can use the
-    //      sizeof(*Graph->Edges)-type construct for array element sizing.
-    //
 
-    Graph = NULL;
-
-    EdgesSizeInBytes = (
-        ALIGN_UP_YMMWORD(sizeof(*Graph->Edges) * TotalNumberOfEdges.QuadPart)
+    EdgesSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Edges) * TotalNumberOfEdges.QuadPart
     );
 
-    NextSizeInBytes = (
-        ALIGN_UP_YMMWORD(sizeof(*Graph->Next) * TotalNumberOfEdges.QuadPart)
+    NextSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
     );
 
-    FirstSizeInBytes = (
-        ALIGN_UP_YMMWORD(sizeof(*Graph->First) * NumberOfVertices.QuadPart)
+    NextSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
     );
 
-    PrevSizeInBytes = (
-        ALIGN_UP_YMMWORD(sizeof(*Graph->Prev) * TotalNumberOfEdges.QuadPart)
+    FirstSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, First) * NumberOfVertices.QuadPart
     );
 
-    AssignedSizeInBytes = (
-        ALIGN_UP_YMMWORD(sizeof(*Graph->Assigned) * NumberOfVertices.QuadPart)
+    PrevSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Prev) * TotalNumberOfEdges.QuadPart
+    );
+
+    AssignedSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Assigned) * NumberOfVertices.QuadPart
     );
 
     //
@@ -1129,8 +1127,8 @@ Return Value:
     // that mapped to the same index.
     //
 
-    ValuesSizeInBytes = (
-        ALIGN_UP_YMMWORD(sizeof(*Graph->Values) * NumberOfVertices.QuadPart)
+    ValuesSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Values) * NumberOfVertices.QuadPart
     );
 
     //
