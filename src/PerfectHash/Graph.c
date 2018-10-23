@@ -2100,7 +2100,7 @@ Return Value:
 
 --*/
 {
-    UNREFERENCED_PARAMETER(Graph);
+    DBG_UNREFERENCED_PARAMETER(Graph);
 }
 
 
@@ -2112,9 +2112,34 @@ GraphSetInfo(
     PGRAPH Graph,
     PGRAPH_INFO Info
     )
+/*++
+
+Routine Description:
+
+    Registers information about a graph with an individual graph instance.
+    This routine is called once per unique graph info (that is, if a table
+    resize event occurs it will be called again with the new graph info).
+    It is responsible for allocating (or reallocating) the necessary buffers
+    required for graph solving.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance.
+
+    Info - Supplies a pointer to the graph info instance.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph or Info were NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+--*/
 {
-    UNREFERENCED_PARAMETER(Graph);
-    UNREFERENCED_PARAMETER(Info);
+    DBG_UNREFERENCED_PARAMETER(Graph);
+    DBG_UNREFERENCED_PARAMETER(Info);
 
     return PH_E_NOT_IMPLEMENTED;
 }
