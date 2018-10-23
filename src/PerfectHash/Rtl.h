@@ -228,6 +228,17 @@ typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
 )
 #endif
 
+#ifndef RTL_FIELD_SIZE
+#define RTL_FIELD_SIZE(Type, Field) (sizeof(((Type *)0)->Field))
+#endif
+
+//
+// Similar to RTL_FIELD_SIZE, but captures the size of the pointed-to
+// Field in type Type.
+//
+
+#define RTL_ELEMENT_SIZE(Type, Field) (sizeof(*((Type *)0)->Field))
+
 #ifndef LARGE_INTEGER_TO_SIZE_T
 #ifdef _WIN32
 #define LARGE_INTEGER_TO_SIZE_T(Name) ((SIZE_T)Name.LowPart)
