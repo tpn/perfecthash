@@ -1723,7 +1723,6 @@ ShouldWeContinueTryingToSolveGraphChm01(
     // solved the solution, and we don't need to wait on any of the events.
     //
 
-    PH_RAISE(PH_E_WORK_IN_PROGRESS);
     if (Context->FinishedCount > 0) {
         return FALSE;
     }
