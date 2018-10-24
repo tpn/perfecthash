@@ -24,6 +24,52 @@ SeverityNames=(Success=0x0:PH_SEVERITY_SUCCESS
 FacilityNames=(ITF=0x4:PH_FACILITY_ITF)
 LanguageNames=(English=0x409:English)
 
+MessageId=0x001
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_GRAPH_SOLVED
+Language=English
+Graph solved.
+.
+
+MessageId=0x002
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_GRAPH_NOT_SOLVED
+Language=English
+Graph not solved.
+.
+
+MessageId=0x003
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_CONTINUE_GRAPH_SOLVING
+Language=English
+Continue graph solving.
+.
+
+MessageId=0x004
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_STOP_GRAPH_SOLVING
+Language=English
+Stop graph solving.
+.
+
+MessageId=0x005
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_GRAPH_VERIFICATION_SKIPPED
+Language=English
+Graph verification skipped.
+.
+
+;
+;////////////////////////////////////////////////////////////////////////////////
+;// PH_SEVERITY_FAIL
+;////////////////////////////////////////////////////////////////////////////////
+;
+
 MessageId=0x201
 Severity=Fail
 Facility=ITF
@@ -902,17 +948,17 @@ A file extension operation is already in progress.
 MessageId=0x26d
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION
+SymbolicName=PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION
 Language=English
-Collisions encountered during graph validation.
+Collisions encountered during graph verification.
 .
 
 MessageId=0x26e
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
+SymbolicName=PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION
 Language=English
-The number of value assignments did not equal the number of keys during graph validation.
+The number of value assignments did not equal the number of keys during graph verification.
 .
 
 MessageId=0x26f
@@ -1453,5 +1499,77 @@ Facility=ITF
 SymbolicName=PH_E_TABLE_NOT_CREATED
 Language=English
 Table not created.
+.
+
+MessageId=0x314
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_EDGES
+Language=English
+Too many edges.
+.
+
+MessageId=0x315
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_VERTICES
+Language=English
+Too many vertices.
+.
+
+MessageId=0x316
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_BITS_FOR_BITMAP
+Language=English
+Too many bits for bitmap.
+.
+
+MessageId=0x317
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TOO_MANY_TOTAL_EDGES
+Language=English
+Too many total edges.
+.
+
+MessageId=0x318
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES
+Language=English
+Number of vertices is less than or equal to the number of edges.
+.
+
+MessageId=0x319
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+Language=English
+Create table routine received shutdown event.
+.
+
+MessageId=0x31a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_MORE_SEEDS
+Language=English
+No more seed data available.
+.
+
+MessageId=0x31b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_GRAPH_NO_INFO_SET
+Language=English
+No graph information has been set for graph.
+.
+
+MessageId=0x31c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_RESIZE_IMMINENT
+Language=English
+Table resize imminent.
 .
 

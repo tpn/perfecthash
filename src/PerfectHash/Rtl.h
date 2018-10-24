@@ -104,9 +104,11 @@ typedef const CHAR *PCCHAR;
 typedef _Null_terminated_ const WCHAR *PCWSZ;
 typedef const WCHAR *PCWCHAR;
 
+#ifdef _M_X64
 typedef __m128i DECLSPEC_ALIGN(16) XMMWORD, *PXMMWORD, **PPXMMWORD;
 typedef __m256i DECLSPEC_ALIGN(32) YMMWORD, *PYMMWORD, **PPYMMWORD;
 typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
+#endif
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
@@ -187,12 +189,30 @@ typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
     (USHORT)(ALIGN_UP((USHORT)Value, (USHORT)sizeof(ULONG_PTR)))
 #endif
 
+#ifdef _M_X64
 #ifndef ALIGN_UP_XMMWORD
 #define ALIGN_UP_XMMWORD(Address) (ALIGN_UP(Address, sizeof(XMMWORD)))
 #endif
 
 #ifndef ALIGN_UP_YMMWORD
 #define ALIGN_UP_YMMWORD(Address) (ALIGN_UP(Address, sizeof(YMMWORD)))
+#endif
+
+#ifndef ALIGN_UP_ZMMWORD
+#define ALIGN_UP_ZMMWORD(Address) (ALIGN_UP(Address, sizeof(ZMMWORD)))
+#endif
+#else _M_X64
+#ifndef ALIGN_UP_XMMWORD
+#define ALIGN_UP_XMMWORD(Address) (ALIGN_UP(Address, 16))
+#endif
+
+#ifndef ALIGN_UP_YMMWORD
+#define ALIGN_UP_YMMWORD(Address) (ALIGN_UP(Address, 32))
+#endif
+
+#ifndef ALIGN_UP_ZMMWORD
+#define ALIGN_UP_ZMMWORD(Address) (ALIGN_UP(Address, 64))
+#endif
 #endif
 
 #ifndef ASSERT
@@ -207,6 +227,17 @@ typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
     (CHAR *)((ULONG_PTR)(ArgumentPointer)) != (CHAR *)(NULL) \
 )
 #endif
+
+#ifndef RTL_FIELD_SIZE
+#define RTL_FIELD_SIZE(Type, Field) (sizeof(((Type *)0)->Field))
+#endif
+
+//
+// Similar to RTL_FIELD_SIZE, but captures the size of the pointed-to
+// Field in type Type.
+//
+
+#define RTL_ELEMENT_SIZE(Type, Field) (sizeof(*((Type *)0)->Field))
 
 #ifndef LARGE_INTEGER_TO_SIZE_T
 #ifdef _WIN32

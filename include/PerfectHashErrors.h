@@ -64,6 +64,56 @@ Abstract:
 
 
 //
+// MessageId: PH_S_GRAPH_SOLVED
+//
+// MessageText:
+//
+// Graph solved.
+//
+#define PH_S_GRAPH_SOLVED                ((HRESULT)0x20040001L)
+
+//
+// MessageId: PH_S_GRAPH_NOT_SOLVED
+//
+// MessageText:
+//
+// Graph not solved.
+//
+#define PH_S_GRAPH_NOT_SOLVED            ((HRESULT)0x20040002L)
+
+//
+// MessageId: PH_S_CONTINUE_GRAPH_SOLVING
+//
+// MessageText:
+//
+// Continue graph solving.
+//
+#define PH_S_CONTINUE_GRAPH_SOLVING      ((HRESULT)0x20040003L)
+
+//
+// MessageId: PH_S_STOP_GRAPH_SOLVING
+//
+// MessageText:
+//
+// Stop graph solving.
+//
+#define PH_S_STOP_GRAPH_SOLVING          ((HRESULT)0x20040004L)
+
+//
+// MessageId: PH_S_GRAPH_VERIFICATION_SKIPPED
+//
+// MessageText:
+//
+// Graph verification skipped.
+//
+#define PH_S_GRAPH_VERIFICATION_SKIPPED  ((HRESULT)0x20040005L)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// PH_SEVERITY_FAIL
+////////////////////////////////////////////////////////////////////////////////
+
+//
 // MessageId: PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS
 //
 // MessageText:
@@ -1044,22 +1094,22 @@ Abstract:
 #define PH_E_FILE_ALREADY_BEING_EXTENDED ((HRESULT)0xE004026CL)
 
 //
-// MessageId: PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION
+// MessageId: PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION
 //
 // MessageText:
 //
-// Collisions encountered during graph validation.
+// Collisions encountered during graph verification.
 //
-#define PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION ((HRESULT)0xE004026DL)
+#define PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION ((HRESULT)0xE004026DL)
 
 //
-// MessageId: PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
+// MessageId: PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION
 //
 // MessageText:
 //
-// The number of value assignments did not equal the number of keys during graph validation.
+// The number of value assignments did not equal the number of keys during graph verification.
 //
-#define PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION ((HRESULT)0xE004026EL)
+#define PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION ((HRESULT)0xE004026EL)
 
 //
 // MessageId: PH_E_INVALID_NUMBER_OF_SEEDS
@@ -1666,4 +1716,85 @@ Abstract:
 // Table not created.
 //
 #define PH_E_TABLE_NOT_CREATED           ((HRESULT)0xE0040313L)
+
+//
+// MessageId: PH_E_TOO_MANY_EDGES
+//
+// MessageText:
+//
+// Too many edges.
+//
+#define PH_E_TOO_MANY_EDGES              ((HRESULT)0xE0040314L)
+
+//
+// MessageId: PH_E_TOO_MANY_VERTICES
+//
+// MessageText:
+//
+// Too many vertices.
+//
+#define PH_E_TOO_MANY_VERTICES           ((HRESULT)0xE0040315L)
+
+//
+// MessageId: PH_E_TOO_MANY_BITS_FOR_BITMAP
+//
+// MessageText:
+//
+// Too many bits for bitmap.
+//
+#define PH_E_TOO_MANY_BITS_FOR_BITMAP    ((HRESULT)0xE0040316L)
+
+//
+// MessageId: PH_E_TOO_MANY_TOTAL_EDGES
+//
+// MessageText:
+//
+// Too many total edges.
+//
+#define PH_E_TOO_MANY_TOTAL_EDGES        ((HRESULT)0xE0040317L)
+
+//
+// MessageId: PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES
+//
+// MessageText:
+//
+// Number of vertices is less than or equal to the number of edges.
+//
+#define PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES ((HRESULT)0xE0040318L)
+
+//
+// MessageId: PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+//
+// MessageText:
+//
+// Create table routine received shutdown event.
+//
+#define PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT ((HRESULT)0xE0040319L)
+
+//
+// MessageId: PH_E_NO_MORE_SEEDS
+//
+// MessageText:
+//
+// No more seed data available.
+//
+#define PH_E_NO_MORE_SEEDS               ((HRESULT)0xE004031AL)
+
+//
+// MessageId: PH_E_GRAPH_NO_INFO_SET
+//
+// MessageText:
+//
+// No graph information has been set for graph.
+//
+#define PH_E_GRAPH_NO_INFO_SET           ((HRESULT)0xE004031BL)
+
+//
+// MessageId: PH_E_TABLE_RESIZE_IMMINENT
+//
+// MessageText:
+//
+// Table resize imminent.
+//
+#define PH_E_TABLE_RESIZE_IMMINENT       ((HRESULT)0xE004031CL)
 

@@ -10,6 +10,11 @@ Abstract:
 
     This is the header file for the Graph module of the perfect hash library.
 
+    N.B. This module is actively undergoing disruptive refactoring.  (It is
+         one of the oldest modules yet to receive any attention and thus, it
+         lags behind other modules with regards to common design patterns,
+         especially regarding exposing the functionality via a COM interface.)
+
 --*/
 
 #include "stdafx.h"
@@ -43,8 +48,8 @@ typedef GRAPH_ITERATOR *PGRAPH_ITERATOR;
 //      initialization, which seems inefficient and unnecessary.
 //
 
-#define EMPTY ((ULONG)-1)
-#define GRAPH_NO_NEIGHBOR ((ULONG)-1)
+#define EMPTY ((VERTEX)-1)
+#define GRAPH_NO_NEIGHBOR ((VERTEX)-1)
 
 //
 // Define graph flags.
@@ -68,15 +73,34 @@ typedef union _GRAPH_FLAGS {
         ULONG IsAcyclic:1;
 
         //
+        // When set, indicates graph information has been set via the SetInfo()
+        // call.
+        //
+
+        ULONG IsInfoSet:1;
+
+        //
+        // When set, turns the Graph->Vtbl->Verify() step into a no-op.
+        //
+
+        ULONG SkipVerification:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:28;
     };
     LONG AsLong;
     ULONG AsULong;
 } GRAPH_FLAGS;
 typedef GRAPH_FLAGS *PGRAPH_FLAGS;
+C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
+
+#define IsGraphInfoSet(Graph) (Graph->Flags.IsInfoSet)
+#define SkipGraphVerification(Graph) (Graph->Flags.SkipVerification)
+
+DEFINE_UNUSED_STATE(GRAPH);
 
 //
 // Define the primary dimensions governing the graph size.
@@ -150,18 +174,6 @@ typedef GRAPH_DIMENSIONS *PGRAPH_DIMENSIONS;
 typedef struct _GRAPH_INFO {
 
     //
-    // Number of pages consumed by the entire graph and all backing arrays.
-    //
-
-    ULONG NumberOfPagesPerGraph;
-
-    //
-    // Page size (e.g. 4096, 2MB).
-    //
-
-    ULONG PageSize;
-
-    //
     // Total number of graphs created.  This will match the maximum concurrency
     // level of the upstream context.
     //
@@ -203,6 +215,8 @@ typedef struct _GRAPH_INFO {
 
     ULONG VertexMask;
 
+    ULONG Padding;
+
     //
     // Graph dimensions.  This information is duplicated in the graph due to
     // it being accessed frequently.
@@ -210,22 +224,11 @@ typedef struct _GRAPH_INFO {
 
     GRAPH_DIMENSIONS Dimensions;
 
-    ULONG Padding;
-
     //
     // Pointer to the owning context.
     //
 
     struct _PERFECT_HASH_CONTEXT *Context;
-
-    //
-    // Base address of the entire graph allocation.
-    //
-
-    union {
-        PVOID BaseAddress;
-        struct _GRAPH *FirstGraph;
-    };
 
     //
     // Array sizes.
@@ -239,44 +242,112 @@ typedef struct _GRAPH_INFO {
     ULONGLONG ValuesSizeInBytes;
 
     //
-    // Deleted edges bitmap buffer size.
+    // Bitmap buffer sizes.
     //
 
     ULONGLONG DeletedEdgesBitmapBufferSizeInBytes;
-
-    //
-    // Visited vertices bitmap buffer size.
-    //
-
     ULONGLONG VisitedVerticesBitmapBufferSizeInBytes;
-
-    //
-    // Assigned bitmap buffer size.
-    //
-
     ULONGLONG AssignedBitmapBufferSizeInBytes;
-
-    //
-    // Index bitmap buffer size.
-    //
-
     ULONGLONG IndexBitmapBufferSizeInBytes;
 
     //
-    // The allocation size of the graph, including structure size and all
-    // array and bitmap buffer sizes.
+    // The allocation size of all the arrays and bitmap buffers, rounded up to
+    // the nearest page size.
     //
 
     ULONGLONG AllocSize;
 
-    //
-    // Allocation size rounded up to the nearest page size multiple.
-    //
-
-    ULONGLONG FinalSize;
-
 } GRAPH_INFO;
 typedef GRAPH_INFO *PGRAPH_INFO;
+
+//
+// Declare graph component and define vtbl methods.
+//
+
+DECLARE_COMPONENT(Graph, GRAPH);
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(&Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_SET_INFO)(
+    _In_ PGRAPH Graph,
+    _In_ PGRAPH_INFO Info
+    );
+typedef GRAPH_SET_INFO *PGRAPH_SET_INFO;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_lock_not_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_ENTER_SOLVING_LOOP)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_ENTER_SOLVING_LOOP *PGRAPH_ENTER_SOLVING_LOOP;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_SOLVE)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_SOLVE *PGRAPH_SOLVE;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_LOAD_INFO)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_LOAD_INFO *PGRAPH_LOAD_INFO;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_RESET)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_RESET *PGRAPH_RESET;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_LOAD_NEW_SEEDS)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_LOAD_NEW_SEEDS *PGRAPH_LOAD_NEW_SEEDS;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_VERIFY)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_VERIFY *PGRAPH_VERIFY;
+
+typedef struct _GRAPH_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
+    PGRAPH_SET_INFO SetInfo;
+    PGRAPH_ENTER_SOLVING_LOOP EnterSolvingLoop;
+    PGRAPH_LOAD_INFO LoadInfo;
+    PGRAPH_RESET Reset;
+    PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
+    PGRAPH_SOLVE Solve;
+    PGRAPH_VERIFY Verify;
+} GRAPH_VTBL;
+typedef GRAPH_VTBL *PGRAPH_VTBL;
 
 //
 // Define the graph structure.  This represents an r-graph, or a hypergraph,
@@ -286,12 +357,7 @@ typedef GRAPH_INFO *PGRAPH_INFO;
 //
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
-
-    //
-    // List entry used to push the graph onto the context's work list.
-    //
-
-    LIST_ENTRY ListEntry;
+    COMMON_COMPONENT_HEADER(GRAPH);
 
     //
     // Edge and vertex masks that can be used when non-modulus masking is in
@@ -315,18 +381,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     ULONG NumberOfKeys;
-
-    //
-    // Structure size, in bytes.
-    //
-
-    _Field_range_(== , sizeof(struct _GRAPH)) ULONG SizeOfStruct;
-
-    //
-    // Graph flags.
-    //
-
-    GRAPH_FLAGS Flags;
 
     //
     // Pointer to the info structure describing various sizes.
@@ -455,14 +509,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // stage.  The SizeOfBitMap will reflect TotalNumberOfEdges.
     //
 
-    RTL_BITMAP DeletedEdges;
+    RTL_BITMAP DeletedEdgesBitmap;
 
     //
     // Bitmap used to capture vertices visited as part of the assignment stage.
     // The SizeOfBitMap will reflect NumberOfVertices.
     //
 
-    RTL_BITMAP VisitedVertices;
+    RTL_BITMAP VisitedVerticesBitmap;
 
     //
     // Bitmap used to test the correctness of the Assigned array.
@@ -475,6 +529,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     RTL_BITMAP IndexBitmap;
+
+    //
+    // The graph interface.
+    //
+
+    GRAPH_VTBL Interface;
 
     //
     // Capture the seeds used for each hash function employed by the graph.
@@ -509,6 +569,60 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
 } GRAPH;
 typedef GRAPH *PGRAPH;
+
+#define TryAcquireGraphLockExclusive(Graph) \
+    TryAcquireSRWLockExclusive(&Graph->Lock)
+
+#define AcquireGraphLockExclusive(Graph) \
+    AcquireSRWLockExclusive(&Graph->Lock)
+
+#define ReleaseGraphLockExclusive(Graph) \
+    ReleaseSRWLockExclusive(&Graph->Lock)
+
+#define TryAcquireGraphLockShared(Graph) \
+    TryAcquireSRWLockShared(&Graph->Lock)
+
+#define AcquireGraphLockShared(Graph) \
+    AcquireSRWLockShared(&Graph->Lock)
+
+#define ReleaseGraphLockShared(Graph) \
+    ReleaseSRWLockShared(&Graph->Lock)
+
+//
+// Private non-vtbl methods.
+//
+
+typedef
+HRESULT
+(NTAPI GRAPH_INITIALIZE)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_INITIALIZE *PGRAPH_INITIALIZE;
+
+typedef
+VOID
+(NTAPI GRAPH_RUNDOWN)(
+    _In_ _Post_ptr_invalid_ PGRAPH Path
+    );
+typedef GRAPH_RUNDOWN *PGRAPH_RUNDOWN;
+
+extern GRAPH_INITIALIZE GraphInitialize;
+extern GRAPH_RUNDOWN GraphRundown;
+
+//
+// Private vtbl methods.
+//
+// N.B. These need to come after the GRAPH structure definition in order for
+//      the SAL concurrency annotations to work (i.e. _Requires_lock_not_held_).
+//
+
+extern GRAPH_SET_INFO GraphSetInfo;
+extern GRAPH_ENTER_SOLVING_LOOP GraphEnterSolvingLoop;
+extern GRAPH_LOAD_INFO GraphLoadInfo;
+extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
+extern GRAPH_RESET GraphReset;
+extern GRAPH_SOLVE GraphSolve;
+extern GRAPH_VERIFY GraphVerify;
 
 //
 // Define a helper macro for hashing keys during graph creation.  Assumes a
@@ -575,38 +689,6 @@ typedef struct _Struct_size_bytes_(Header.SizeOfStruct) _GRAPH_INFO_ON_DISK {
 } GRAPH_INFO_ON_DISK;
 C_ASSERT(sizeof(GRAPH_INFO_ON_DISK) <= PAGE_SIZE);
 typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
-
-//
-// Function pointer typedefs.
-//
-
-typedef
-VOID
-(NTAPI INITIALIZE_GRAPH)(
-    _In_ PGRAPH_INFO Info,
-    _In_ PGRAPH Graph
-    );
-typedef INITIALIZE_GRAPH *PINITIALIZE_GRAPH;
-
-typedef
-BOOLEAN
-(NTAPI SOLVE_GRAPH)(
-    _In_ PGRAPH Graph
-    );
-typedef SOLVE_GRAPH *PSOLVE_GRAPH;
-
-typedef
-_Must_inspect_result_
-_Success_(return >= 0)
-HRESULT
-(NTAPI VERIFY_SOLVED_GRAPH)(
-    _In_ PGRAPH Graph
-    );
-typedef VERIFY_SOLVED_GRAPH *PVERIFY_SOLVED_GRAPH;
-
-extern SOLVE_GRAPH SolveGraph;
-extern VERIFY_SOLVED_GRAPH VerifySolvedGraph;
-extern INITIALIZE_GRAPH InitializeGraph;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Algorithm Implementation Typedefs
@@ -762,7 +844,7 @@ IsDeletedEdge(
     _In_ EDGE Edge
     )
 {
-    return TestGraphBit(DeletedEdges, Edge + 1);
+    return TestGraphBit(DeletedEdgesBitmap, Edge + 1);
 }
 
 FORCEINLINE
@@ -772,7 +854,7 @@ IsVisitedVertex(
     _In_ VERTEX Vertex
     )
 {
-    return TestGraphBit(VisitedVertices, Vertex + 1);
+    return TestGraphBit(VisitedVerticesBitmap, Vertex + 1);
 }
 
 #define SetGraphBit(Name, BitNumber) \
@@ -790,7 +872,7 @@ RegisterEdgeDeletion(
     // the bitmaps are 1-based.
     //
 
-    SetGraphBit(DeletedEdges, Edge + 1);
+    SetGraphBit(DeletedEdgesBitmap, Edge + 1);
     Graph->DeletedEdgeCount++;
     ASSERT(Graph->DeletedEdgeCount <= Graph->TotalNumberOfEdges);
 }
@@ -807,7 +889,7 @@ RegisterVertexVisit(
     // the bitmaps are 1-based.
     //
 
-    SetGraphBit(VisitedVertices, Vertex + 1);
+    SetGraphBit(VisitedVerticesBitmap, Vertex + 1);
     Graph->VisitedVerticesCount++;
     ASSERT(Graph->VisitedVerticesCount <= Graph->NumberOfVertices);
 }

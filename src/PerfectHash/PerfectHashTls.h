@@ -21,7 +21,47 @@ Abstract:
 // TLS-related structures and functions.
 //
 
+typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
+    struct {
+
+        //
+        // When set, prevents the global component logic from running when a
+        // new component is being created.  This is used to explicitly create
+        // a new component for an interface that is classed as global (i.e.
+        // Rtl and Allocator), and thus, would otherwise be satisified by
+        // returning a reference to a previously created global (singleton)
+        // component.
+        //
+
+        ULONG DisableGlobalComponents:1;
+
+        //
+        // When set, indicates custom allocator details are available.
+        //
+
+        ULONG CustomAllocatorDetailsPresent:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:30;
+    };
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TLS_CONTEXT_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TLS_CONTEXT_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TLS_CONTEXT_FLAGS *PPERFECT_HASH_TLS_CONTEXT_FLAGS;
+
+#define TlsContextDisableGlobalComponents(TlsContext) \
+    (TlsContext && TlsContext->Flags.DisableGlobalComponents)
+
+#define TlsContextCustomAllocatorDetailsPresent(TlsContext) \
+    (TlsContext && TlsContext->Flags.CustomAllocatorDetailsPresent)
+
 typedef struct _PERFECT_HASH_TLS_CONTEXT {
+    PERFECT_HASH_TLS_CONTEXT_FLAGS Flags;
+    ULONG Padding;
     ULONG LastError;
     HRESULT LastResult;
     PPERFECT_HASH_KEYS Keys;
@@ -32,6 +72,22 @@ typedef struct _PERFECT_HASH_TLS_CONTEXT {
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_DIRECTORY Directory;
+    struct _GRAPH *Graph;
+
+    //
+    // Per-component custom areas.
+    //
+
+    //
+    // Allocator
+    //
+
+    struct {
+        ULONG_PTR HeapMinimumSize;
+        ULONG HeapCreateFlags;
+        ULONG Padding2;
+    };
+
 } PERFECT_HASH_TLS_CONTEXT;
 typedef PERFECT_HASH_TLS_CONTEXT *PPERFECT_HASH_TLS_CONTEXT;
 

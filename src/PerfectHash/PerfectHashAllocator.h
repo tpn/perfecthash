@@ -46,6 +46,7 @@ extern ALLOCATOR_INITIALIZE AllocatorInitialize;
 extern ALLOCATOR_RUNDOWN AllocatorRundown;
 extern ALLOCATOR_MALLOC AllocatorMalloc;
 extern ALLOCATOR_CALLOC AllocatorCalloc;
+extern ALLOCATOR_REALLOC AllocatorReAlloc;
 extern ALLOCATOR_FREE AllocatorFree;
 extern ALLOCATOR_FREE_POINTER AllocatorFreePointer;
 extern ALLOCATOR_FREE_STRING_BUFFER AllocatorFreeStringBuffer;

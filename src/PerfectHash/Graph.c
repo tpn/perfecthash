@@ -14,6 +14,9 @@ Abstract:
 
 #include "stdafx.h"
 
+#define IsEmpty(Value) ((ULONG)Value == EMPTY)
+#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
+
 //
 // Temporary typedefs for new memory coverage logic.
 //
@@ -25,7 +28,13 @@ VOID
     );
 typedef GRAPH_CALCULATE_MEMORY_COVERAGE *PGRAPH_CALCULATE_MEMORY_COVERAGE;
 
-extern GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverage;
+#ifdef _M_X64
+extern GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverageAvx2;
+#define GraphCalculateMemoryCoverage GraphCalculateMemoryCoverageAvx2
+#else
+#error Non-AVX2 GraphCalculateMemoryCoverage not yet implemented.
+#endif
+
 
 typedef
 VOID
@@ -36,33 +45,109 @@ typedef GRAPH_REGISTER_SOLVED *PGRAPH_REGISTER_SOLVED;
 
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
+//
+// COM scaffolding routines for initialization and rundown.
+//
 
-#define IsEmpty(Value) ((ULONG)Value == EMPTY)
-#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
-
-INITIALIZE_GRAPH InitializeGraph;
+GRAPH_INITIALIZE GraphInitialize;
 
 _Use_decl_annotations_
-VOID
-InitializeGraph(
-    PGRAPH_INFO Info,
+HRESULT
+GraphInitialize(
     PGRAPH Graph
     )
 /*++
 
 Routine Description:
 
-    Initialize a graph structure given the provided information.  This routine
-    is called at the top of each worker thread's infinite loop around the solve
-    graph function.  It is responsible for resetting the block of memory for the
-    graph back to its initial state, including generation of new random seed
-    values that can be used by the hash function when generating vertices.
+    Initializes a graph structure.  This is a relatively simple method that
+    just primes the COM scaffolding.
 
 Arguments:
 
-    Info - Supplies a pointer to the graph info to use for initialization.
+    Graph - Supplies a pointer to a GRAPH structure for which initialization
+        is to be performed.
 
-    Graph - Supplies a pointer to the graph to be initialized.
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph is NULL.
+
+    E_UNEXPECTED - All other errors.
+
+--*/
+{
+    HRESULT Result = S_OK;
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    Graph->SizeOfStruct = sizeof(*Graph);
+
+    //
+    // Create Rtl and Allocator components.
+    //
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                        NULL,
+                                        &IID_PERFECT_HASH_RTL,
+                                        &Graph->Rtl);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                        NULL,
+                                        &IID_PERFECT_HASH_ALLOCATOR,
+                                        &Graph->Allocator);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // We're done!  Indicate success and finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+
+GRAPH_RUNDOWN GraphRundown;
+
+_Use_decl_annotations_
+VOID
+GraphRundown(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Release all resources associated with a graph.
+
+Arguments:
+
+    Graph - Supplies a pointer to a GRAPH structure for which rundown is to
+        be performed.
 
 Return Value:
 
@@ -70,213 +155,22 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
-    ULONG Index;
-    PCHAR Buffer;
-    PCHAR ExpectedBuffer;
-    USHORT BitmapCount = 0;
-    PPERFECT_HASH_TABLE Table;
-    PTABLE_INFO_ON_DISK TableInfoOnDisk;
-    PPERFECT_HASH_CONTEXT Context;
-
     //
-    // Initialize aliases.
+    // Sanity check structure size.
     //
 
-    Context = Info->Context;
-    Table = Context->Table;
-    TableInfoOnDisk = Table->TableInfoOnDisk;
-    Rtl = Context->Rtl;
-
-    Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
+    ASSERT(Graph->SizeOfStruct == sizeof(*Graph));
 
     //
-    // If this attempt has exceeded our threshold, inform our parent.
+    // Release applicable COM references.
     //
 
-    if (Graph->Attempt == Context->ResizeTableThreshold) {
-
-        if (!SetEvent(Context->TryLargerTableSizeEvent)) {
-            SYS_ERROR(SetEvent);
-        }
-
-    }
-
-    //
-    // Obtain new seed data for the first two seeds and initialize the number
-    // of seeds.
-    //
-
-    GetRandomSeedsBlocking(&Graph->Seeds12);
-    Graph->NumberOfSeeds = Table->TableInfoOnDisk->NumberOfSeeds;
-
-    //
-    // Initialize the number of keys.
-    //
-
-    Graph->NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
-
-    //
-    // Carve out the backing memory structures for arrays and bitmap buffers.
-    // Use the PBYTE Buffer here to make pointer arithmetic a tad easier.  We
-    // initialize it to the start of the memory immediately following the graph
-    // structure, and then bump it each time we carve out an array or bitmap
-    // buffer.
-    //
-
-    ASSERT(sizeof(*Graph) == Info->SizeOfGraphStruct);
-    Buffer = RtlOffsetToPointer(Graph, ALIGN_UP_YMMWORD(sizeof(*Graph)));
-
-    //
-    // Carve out the Graph->Edges array.
-    //
-
-    Graph->Edges = (PEDGE)Buffer;
-    Buffer += Info->EdgesSizeInBytes;
-
-    //
-    // Carve out the Graph->Next array.
-    //
-
-    Graph->Next = (PEDGE)Buffer;
-    Buffer += Info->NextSizeInBytes;
-
-    //
-    // Carve out the Graph->First array.
-    //
-
-    Graph->First = (PVERTEX)Buffer;
-    Buffer += Info->FirstSizeInBytes;
-
-    //
-    // Carve out the Graph->Prev array.
-    //
-
-    Graph->Prev = (PVERTEX)Buffer;
-    Buffer += Info->PrevSizeInBytes;
-
-    //
-    // Carve out the Graph->Assigned array.
-    //
-
-    Graph->Assigned = (PVERTEX)Buffer;
-    Buffer += Info->AssignedSizeInBytes;
-
-    //
-    // Carve out the Graph->Values array.
-    //
-
-    Graph->Values = (PVERTEX)Buffer;
-    Buffer += Info->ValuesSizeInBytes;
-
-    //
-    // Replicate the graph dimensions.
-    //
-
-    CopyMemory(&Graph->Dimensions,
-               &Info->Dimensions,
-               sizeof(Graph->Dimensions));
-
-    //
-    // Carve out the bitmap buffer for Graph->DeletedEdges.
-    //
-
-    Graph->DeletedEdges.Buffer = (PULONG)Buffer;
-    Graph->DeletedEdges.SizeOfBitMap = Graph->TotalNumberOfEdges + 1;
-    Buffer += Info->DeletedEdgesBitmapBufferSizeInBytes;
-    BitmapCount++;
-
-    //
-    // Carve out the bitmap buffer for Graph->VisitedEdges.
-    //
-
-    Graph->VisitedVertices.Buffer = (PULONG)Buffer;
-    Graph->VisitedVertices.SizeOfBitMap = Graph->NumberOfVertices + 1;
-    Buffer += Info->VisitedVerticesBitmapBufferSizeInBytes;
-    BitmapCount++;
-
-    //
-    // Carve out the bitmap buffer for Graph->AssignedBitmap.
-    //
-
-    Graph->AssignedBitmap.Buffer = (PULONG)Buffer;
-    Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
-    Buffer += Info->AssignedBitmapBufferSizeInBytes;
-    BitmapCount++;
-
-    //
-    // Carve out the bitmap buffer for Graph->IndexBitmap.
-    //
-
-    Graph->IndexBitmap.Buffer = (PULONG)Buffer;
-    Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
-    Buffer += Info->IndexBitmapBufferSizeInBytes;
-    BitmapCount++;
-
-    //
-    // Verify we visited the number of bitmaps we were expecting to visit.
-    //
-
-    ASSERT(Info->NumberOfBitmaps == BitmapCount);
-
-    //
-    // If our pointer arithmetic was correct, Buffer should match the base
-    // address of the graph plus the total allocation size at this point.
-    // Assert this invariant now.
-    //
-
-    ExpectedBuffer = RtlOffsetToPointer(Graph, Info->AllocSize);
-    ASSERT(Buffer == ExpectedBuffer);
-
-    //
-    // Set the current thread ID and capture an attempt number from context.
-    // Save the info address.
-    //
-
-    Graph->Info = Info;
-    Graph->ThreadId = GetCurrentThreadId();
-
-    //
-    // Copy the edge and vertex masks, and the masking type.
-    //
-
-    Graph->EdgeMask = Table->IndexMask;
-    Graph->VertexMask = Table->HashMask;
-    Graph->MaskFunctionId = Info->Context->MaskFunctionId;
-
-    //
-    // Set the context.
-    //
-
-    Graph->Context = Info->Context;
-
-    //
-    // "Empty" all of the nodes; which they've chosen to mean setting them
-    // all to -1.  (Can't we use 0 here?  This seems unnecessarily inefficient.)
-    //
-
-    for (Index = 0; Index < Graph->NumberOfVertices; Index++) {
-        Graph->First[Index] = EMPTY;
-    }
-
-    for (Index = 0; Index < Graph->TotalNumberOfEdges; Index++) {
-        Graph->Prev[Index] = EMPTY;
-        Graph->Next[Index] = EMPTY;
-        Graph->Edges[Index] = EMPTY;
-    }
-
-    //
-    // Obtain seed data for the last two seeds.
-    //
-
-    GetRandomSeedsBlocking(&Graph->Seeds34);
-
-    //
-    // Initialization complete!
-    //
+    RELEASE(Graph->Rtl);
+    RELEASE(Graph->Allocator);
 
     return;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Algorithm Implementation
@@ -782,7 +676,7 @@ Return Value:
     // if they do match, the graph is acyclic.
     //
 
-    NumberOfEdgesDeleted = RtlNumberOfSetBits(&Graph->DeletedEdges);
+    NumberOfEdgesDeleted = RtlNumberOfSetBits(&Graph->DeletedEdgesBitmap);
 
     //
     // Temporary assert to determine if the number of edges deleted will always
@@ -918,7 +812,7 @@ Return Value:
     }
 
     Rtl = Graph->Context->Rtl;
-    NumberOfSetBits = Rtl->RtlNumberOfSetBits(&Graph->VisitedVertices);
+    NumberOfSetBits = Rtl->RtlNumberOfSetBits(&Graph->VisitedVerticesBitmap);
 
     ASSERT(Graph->VisitedVerticesCount == NumberOfSetBits);
     ASSERT(Graph->VisitedVerticesCount == Graph->NumberOfVertices);
@@ -1258,9 +1152,14 @@ Return Value:
         ASSERT(MaskedFinalId <= Graph->NumberOfVertices);
 
         Bit = MaskedFinalId + 1;
+
         if (Bit >= Graph->NumberOfVertices) {
-            __debugbreak();
-            Bit = 0;
+
+            //
+            // Invariant check: this should never be hit.
+            //
+
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
         }
 
         if (TestGraphBit(IndexBitmap, Bit)) {
@@ -1295,7 +1194,7 @@ Error:
     // We shouldn't ever reach here.
     //
 
-    ASSERT(FALSE);
+    PH_RAISE(PH_E_UNREACHABLE_CODE);
 
 End:
 
@@ -1306,11 +1205,11 @@ End:
     *Depth -= 1;
 }
 
-SOLVE_GRAPH SolveGraph;
+GRAPH_SOLVE GraphSolve;
 
 _Use_decl_annotations_
-BOOLEAN
-SolveGraph(
+HRESULT
+GraphSolve(
     _In_ PGRAPH Graph
     )
 /*++
@@ -1319,8 +1218,7 @@ Routine Description:
 
     Add all keys to the hypergraph using the unique seeds to hash each key into
     two vertex values, connected by a "hyper-edge".  Determine if the graph is
-    acyclic, if it is, we've "solved" the graph.  If not, we haven't, return
-    FALSE such that another attempt can be made with new random unique seeds.
+    acyclic, if it is, we've "solved" the graph.  If not, we haven't.
 
 Arguments:
 
@@ -1328,7 +1226,10 @@ Arguments:
 
 Return Value:
 
-    TRUE if the graph was solved successfully, FALSE otherwise.
+    PH_S_STOP_GRAPH_SOLVING - Stop graph solving.
+
+    PH_S_CONTINUE_GRAPH_SOLVING - Continue graph solving.
+
 
 --*/
 {
@@ -1399,7 +1300,7 @@ Return Value:
 
             if (!--Iterations) {
                 if (Context->FinishedCount > 0) {
-                    return FALSE;
+                    return PH_S_STOP_GRAPH_SOLVING;
                 }
 
                 //
@@ -1450,7 +1351,7 @@ Return Value:
             // Some other thread beat us.  Nothing left to do.
             //
 
-            return TRUE;
+            return PH_S_STOP_GRAPH_SOLVING;
         }
     }
 
@@ -1481,7 +1382,7 @@ Return Value:
     if (FirstSolvedGraphWins(Context)) {
         InsertTailFinishedWork(Context, &Graph->ListEntry);
         SubmitThreadpoolWork(Context->FinishedWork);
-        return TRUE;
+        return PH_S_STOP_GRAPH_SOLVING;
     }
 
     //
@@ -1493,7 +1394,8 @@ Return Value:
     ASSERT(FindBestMemoryCoverage(Context));
 
     GraphRegisterSolved(Graph);
-    return FALSE;
+
+    return PH_S_CONTINUE_GRAPH_SOLVING;
 
 Failed:
 
@@ -1513,12 +1415,12 @@ Error:
     // If any of the HASH/MASK macros fail, they'll jump to this Error: label.
     //
 
-    return FALSE;
+    return PH_S_CONTINUE_GRAPH_SOLVING;
 }
 
 _Use_decl_annotations_
 HRESULT
-VerifySolvedGraph(
+GraphVerify(
     _In_ PGRAPH Graph
     )
 /*++
@@ -1544,12 +1446,18 @@ Return Value:
 
     S_OK - Graph was solved successfully.
 
-    E_UNEXPECTED - Internal error during graph validation.
+    PH_S_GRAPH_VERIFICATION_SKIPPED - The verification step was skipped.
 
-    PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION - Collisions were
+    E_POINTER - Graph was NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    E_UNEXPECTED - Internal error.
+
+    PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION - Collisions were
         detected during graph validation.
 
-    PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION -
+    PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION -
         The number of value assignments did not equal the number of keys
         during graph validation.
 
@@ -1564,7 +1472,7 @@ Return Value:
     ULONG Bit;
     ULONG Index;
     ULONG PrevIndex;
-    PULONG Values;
+    PULONG Values = NULL;
     VERTEX Vertex1;
     VERTEX Vertex2;
     VERTEX MaskedLow;
@@ -1583,21 +1491,61 @@ Return Value:
     ULARGE_INTEGER Hash;
     ULARGE_INTEGER PrevHash;
     HRESULT Result = S_OK;
+    PALLOCATOR Allocator;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (SkipGraphVerification(Graph)) {
+        return PH_S_GRAPH_VERIFICATION_SKIPPED;
+    }
+
+    //
+    // Initialize aliases.
+    //
 
     Info = Graph->Info;
     Context = Info->Context;
     Rtl = Context->Rtl;
     Table = Context->Table;
+    Allocator = Graph->Allocator;
     NumberOfKeys = Graph->NumberOfKeys;
     Edges = Keys = (PKEY)Table->Keys->File->BaseAddress;
     Assigned = Graph->Assigned;
 
+    //
+    // Sanity check our assigned bitmap is clear.
+    //
+
     NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
     ASSERT(NumberOfAssignments == 0);
 
+    //
+    // Allocate a values array if one is not present.
+    //
+
     Values = Graph->Values;
+
+    if (!Values) {
+        Values = Graph->Values = (PULONG)(
+            Allocator->Vtbl->Calloc(
+                Allocator,
+                Info->ValuesSizeInBytes,
+                sizeof(*Graph->Values)
+            )
+        );
+    }
+
+    if (!Values) {
+        return E_OUTOFMEMORY;
+    }
 
     //
     // Enumerate all keys in the input set and verify they can be resolved
@@ -1679,7 +1627,7 @@ Return Value:
     }
 
     if (Collisions) {
-        Result = PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION;
+        Result = PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION;
         goto Error;
     }
 
@@ -1687,7 +1635,7 @@ Return Value:
 
     if (NumberOfAssignments != NumberOfKeys) {
         Result =
-            PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION;
+           PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION;
         goto Error;
     }
 
@@ -1709,6 +1657,10 @@ Error:
 
 End:
 
+    if (Graph->Values) {
+        Allocator->Vtbl->FreePointer(Allocator, &Graph->Values);
+    }
+
     return Result;
 }
 
@@ -1726,11 +1678,11 @@ typedef struct _MEMORY_COVERAGE {
 typedef ULONG ASSIGNED_CACHE_LINE[16];
 typedef ASSIGNED_CACHE_LINE  *PASSIGNED_CACHE_LINE;
 
-GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverage;
+GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverageAvx2;
 
 _Use_decl_annotations_
 VOID
-GraphCalculateMemoryCoverage(
+GraphCalculateMemoryCoverageAvx2(
     PGRAPH Graph
     )
 /*++
@@ -1962,7 +1914,561 @@ Return Value:
 
 --*/
 {
-    UNREFERENCED_PARAMETER(Graph);
+    DBG_UNREFERENCED_PARAMETER(Graph);
+}
+
+
+GRAPH_SET_INFO GraphSetInfo;
+
+_Use_decl_annotations_
+HRESULT
+GraphSetInfo(
+    PGRAPH Graph,
+    PGRAPH_INFO Info
+    )
+/*++
+
+Routine Description:
+
+    Registers information about a graph with an individual graph instance.
+    This routine is called once per unique graph info (that is, if a table
+    resize event occurs it will be called again with the new graph info).
+    The LoadInfo() routine will use the provided info for allocating or
+    reallocating the necessary buffers required for graph solving.
+
+    N.B. This routine is intended to be called from the "main" thread, whereas
+         LoadInfo() is intended to be called as the first operation by graph
+         solving worker threads.  Thus, this routine is pretty simple.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance.
+
+    Info - Supplies a pointer to the graph info instance.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph or Info were NULL.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Info)) {
+        return E_POINTER;
+    }
+
+    Graph->Info = Info;
+    Graph->Flags.IsInfoSet = TRUE;
+
+    return S_OK;
+}
+
+
+GRAPH_ENTER_SOLVING_LOOP GraphEnterSolvingLoop;
+
+_Use_decl_annotations_
+HRESULT
+GraphEnterSolvingLoop(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Enters the graph solving loop.
+
+Arguments:
+
+    Graph - Supplies a pointer to a graph instance.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph was NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    Non-exhaustive list of additional errors that may be returned:
+
+    PH_E_GRAPH_NO_INFO_SET - No graph information was set.
+
+    PH_E_NO_MORE_SEEDS - No more seed data is available.
+
+--*/
+{
+    HRESULT Result = S_OK;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    //
+    // Acquire the exclusive graph lock for the duration of the routine.
+    //
+
+    AcquireGraphLockExclusive(Graph);
+
+    //
+    // Load the graph info.
+    //
+
+    Result = Graph->Vtbl->LoadInfo(Graph);
+
+    if (FAILED(Result)) {
+        PH_ERROR(GraphLoadInfo, Result);
+        goto End;
+    }
+
+    //
+    // Begin the solving loop.
+    //
+
+    while (ShouldWeContinueTryingToSolveGraphChm01(Graph->Context)) {
+
+        Result = Graph->Vtbl->LoadNewSeeds(Graph);
+        if (FAILED(Result)) {
+            if (Result != PH_E_NO_MORE_SEEDS) {
+                PH_ERROR(GraphLoadNewSeeds, Result);
+            }
+            break;
+        }
+
+        Result = Graph->Vtbl->Reset(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphReset, Result);
+            break;
+        }
+
+        Result = Graph->Vtbl->Solve(Graph);
+        if (FAILED(Result)) {
+
+            //
+            // If the error code indicates anything other than an imminent
+            // table resize, log it.
+            //
+
+            if (Result != PH_E_TABLE_RESIZE_IMMINENT) {
+                PH_ERROR(GraphSolve, Result);
+            }
+
+            break;
+
+        }
+
+        if (Result == PH_S_STOP_GRAPH_SOLVING) {
+            break;
+        }
+
+        //
+        // Invariant check: result should always be PH_S_CONTINUE_GRAPH_SOLVING
+        // at this point.
+        //
+
+        ASSERT(Result == PH_S_CONTINUE_GRAPH_SOLVING);
+
+        //
+        // Continue the loop and attempt another solve.
+        //
+
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (SUCCEEDED(Result)) {
+
+        //
+        // Normalize the success error codes (e.g. PH_S_STOP_GRAPH_SOLVING)
+        // into a single S_OK return value.
+        //
+
+        Result = S_OK;
+    }
+
+    ReleaseGraphLockExclusive(Graph);
+
+    return Result;
+}
+
+
+GRAPH_LOAD_INFO GraphLoadInfo;
+
+_Use_decl_annotations_
+HRESULT
+GraphLoadInfo(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine is called by graph solving worker threads prior to attempting
+    any solving; it is responsible for initializing the graph structure and
+    allocating (or reallocating) the necessary buffers required for graph
+    solving, using the sizes indicated by the info structure previously set
+    by the main thread via SetInfo().
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph was NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    PH_E_GRAPH_NO_INFO_SET - No graph information has been set for this graph.
+
+--*/
+{
+    PRTL Rtl;
+    HRESULT Result = S_OK;
+    BOOLEAN ZeroMemory;
+    PGRAPH_INFO Info;
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_TABLE Table;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
+    PPERFECT_HASH_CONTEXT Context;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (!IsGraphInfoSet(Graph)) {
+        return PH_E_GRAPH_NO_INFO_SET;
+    } else {
+        Info = Graph->Info;
+    }
+
+    //
+    // Sanity check the graph size is correct.
+    //
+
+    ASSERT(sizeof(*Graph) == Info->SizeOfGraphStruct);
+
+    //
+    // Initialize aliases.
+    //
+
+    Context = Info->Context;
+    Rtl = Context->Rtl;
+    Allocator = Graph->Allocator;
+    Table = Context->Table;
+    TableInfoOnDisk = Table->TableInfoOnDisk;
+
+    //
+    // Set the relevant graph fields based on the provided info.
+    //
+
+    Graph->Context = Context;
+    Graph->NumberOfSeeds = Table->TableInfoOnDisk->NumberOfSeeds;
+    Graph->NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+
+    Graph->ThreadId = GetCurrentThreadId();
+    Graph->ThreadAttempt = 0;
+
+    Graph->EdgeMask = Table->IndexMask;
+    Graph->VertexMask = Table->HashMask;
+    Graph->MaskFunctionId = Info->Context->MaskFunctionId;
+
+    CopyInline(&Graph->Dimensions,
+               &Info->Dimensions,
+               sizeof(Graph->Dimensions));
+
+    //
+    // We don't need zerod memory as the Reset() call will be responsible for
+    // getting all of the arrays and bitmap buffers into an appropriate state.
+    //
+
+    ZeroMemory = FALSE;
+
+    //
+    // Allocate (or reallocate) arrays.
+    //
+
+#define ALLOC_ARRAY(Name, Type)                      \
+    if (!Graph->##Name) {                            \
+        Graph->##Name = (Type)(                      \
+            Allocator->Vtbl->Malloc(                 \
+                Allocator,                           \
+                (ULONG_PTR)Info->##Name##SizeInBytes \
+            )                                        \
+        );                                           \
+    } else {                                         \
+        Graph->##Name## = (Type)(                    \
+            Allocator->Vtbl->ReAlloc(                \
+                Allocator,                           \
+                ZeroMemory,                          \
+                Graph->##Name,                       \
+                (ULONG_PTR)Info->##Name##SizeInBytes \
+            )                                        \
+        );                                           \
+    }                                                \
+    if (!Graph->##Name) {                            \
+        Result = E_OUTOFMEMORY;                      \
+        goto Error;                                  \
+    }
+
+    ALLOC_ARRAY(Edges, PEDGE);
+    ALLOC_ARRAY(Next, PEDGE);
+    ALLOC_ARRAY(First, PVERTEX);
+    ALLOC_ARRAY(Prev, PVERTEX);
+    ALLOC_ARRAY(Assigned, PVERTEX);
+
+    //
+    // Set the bitmap sizes and then allocate (or reallocate) the bitmap
+    // buffers.
+    //
+
+    Graph->DeletedEdgesBitmap.SizeOfBitMap = Graph->TotalNumberOfEdges + 1;
+    Graph->VisitedVerticesBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
+    Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
+    Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
+
+#define ALLOC_BITMAP_BUFFER(Name)                          \
+    if (!Graph->##Name##.Buffer) {                         \
+        Graph->##Name##.Buffer = (PULONG)(                 \
+            Allocator->Vtbl->Malloc(                       \
+                Allocator,                                 \
+                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
+            )                                              \
+        );                                                 \
+    } else {                                               \
+        Graph->##Name##.Buffer = (PULONG)(                 \
+            Allocator->Vtbl->ReAlloc(                      \
+                Allocator,                                 \
+                ZeroMemory,                                \
+                Graph->##Name##.Buffer,                    \
+                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
+            )                                              \
+        );                                                 \
+    }                                                      \
+    if (!Graph->##Name##.Buffer) {                         \
+        Result = E_OUTOFMEMORY;                            \
+        goto Error;                                        \
+    }
+
+    ALLOC_BITMAP_BUFFER(DeletedEdgesBitmap);
+    ALLOC_BITMAP_BUFFER(VisitedVerticesBitmap);
+    ALLOC_BITMAP_BUFFER(AssignedBitmap);
+    ALLOC_BITMAP_BUFFER(IndexBitmap);
+
+    //
+    // We're done, finish up.
+    //
+
+    Graph->Flags.IsInfoSet = TRUE;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+
+GRAPH_RESET GraphReset;
+
+_Use_decl_annotations_
+HRESULT
+GraphReset(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Resets the state of a graph instance after a solving attempt, such that it
+    can be used for a subsequent attempt.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance to reset.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_TABLE_RESIZE_IMMINENT - The reset was not performed as a table resize
+        is imminent (and thus, attempts at solving this current graph can be
+        stopped).
+
+    PH_E_SYSTEM_CALL_FAILED - A system call failed.
+
+--*/
+{
+    ULONG Index;
+    HRESULT Result = S_OK;
+    PGRAPH_INFO Info;
+    PPERFECT_HASH_CONTEXT Context;
+
+    //
+    // Initialize aliases.
+    //
+
+    Context = Graph->Context;
+    Info = Graph->Info;
+
+    //
+    // Increment the thread attempt counter, and interlocked-increment the
+    // global context counter.  If the global attempt is equal to the resize
+    // table threshold, signal the event to try a larger table size.
+    //
+
+    ++Graph->ThreadAttempt;
+
+    Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
+
+    if (Graph->Attempt == Context->ResizeTableThreshold) {
+        if (!SetEvent(Context->TryLargerTableSizeEvent)) {
+            SYS_ERROR(SetEvent);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+        return PH_E_TABLE_RESIZE_IMMINENT;
+    }
+
+#ifdef _M_X64
+#define ZeroInline(Dest, Size) __stosq((PDWORD64)Dest, 0, (Size >> 3))
+#else
+#define ZeroInline(Dest, Size) ZeroMemory(Dest, Size)
+#endif
+
+#define ZERO_BITMAP_BUFFER(Name) \
+    ZeroInline(Graph->##Name##.Buffer, Info->##Name##BufferSizeInBytes)
+
+    //
+    // Clear the bitmap buffers.
+    //
+
+    ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
+    ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
+    ZERO_BITMAP_BUFFER(AssignedBitmap);
+    ZERO_BITMAP_BUFFER(IndexBitmap);
+
+    //
+    // "Empty" all of the nodes.
+    //
+
+    for (Index = 0; Index < Graph->NumberOfVertices; Index++) {
+        Graph->First[Index] = EMPTY;
+    }
+
+    for (Index = 0; Index < Graph->TotalNumberOfEdges; Index++) {
+        Graph->Prev[Index] = EMPTY;
+        Graph->Next[Index] = EMPTY;
+        Graph->Edges[Index] = EMPTY;
+    }
+
+    //
+    // Clear any remaining values.
+    //
+
+    Graph->Collisions = 0;
+    Graph->DeletedEdgeCount = 0;
+    Graph->VisitedVerticesCount = 0;
+
+    Graph->Flags.Shrinking = FALSE;
+    Graph->Flags.IsAcyclic = FALSE;
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+
+GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
+
+_Use_decl_annotations_
+HRESULT
+GraphLoadNewSeeds(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Loads new seed data for a graph instance.  This is called prior to each
+    solving attempt.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance for which the new seed
+        data will be loaded.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph was NULL.
+
+    PH_E_NO_MORE_SEEDS - No more seed data is available.  (Not currently
+        returned for this implementation.)
+
+--*/
+{
+    PRTL Rtl;
+    HRESULT Result;
+    ULONG SizeInBytes;
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    SizeInBytes = Graph->NumberOfSeeds * sizeof(Graph->FirstSeed);
+
+    Rtl = Graph->Rtl;
+
+    Result = Rtl->Vtbl->GenerateRandomBytes(Rtl,
+                                            SizeInBytes,
+                                            (PBYTE)&Graph->FirstSeed);
+
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
