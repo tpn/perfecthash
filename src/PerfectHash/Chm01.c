@@ -278,6 +278,12 @@ Return Value:
     // rather than a reference to the global (singleton) instance that is shared
     // amongst all components by default.
     //
+    // There are three reasons for this.  First, it allows us to request memory
+    // with the flag HEAP_NO_SERIALIZE, which avoids a small synchronization
+    // penalty.  Second, it improves the usability of heap debugging tools (like
+    // gflags).  Third, it allows us to release all allocations by destroying
+    // the underlying heap handle (versus having to free each one individually).
+    //
     // We communicate this desire to the COM component creation scaffolding by
     // way of the TLS context, which allows us to toggle a flag that disables
     // the global component override functionality, as well as specify custom
