@@ -594,6 +594,9 @@ extern GRAPH_RUNDOWN GraphRundown;
 //
 // Private vtbl methods.
 //
+// N.B. These need to come after the GRAPH structure definition in order for
+//      the SAL concurrency annotations to work (i.e. _Requires_lock_not_held_).
+//
 
 extern GRAPH_SET_INFO GraphSetInfo;
 extern GRAPH_ENTER_SOLVING_LOOP GraphEnterSolvingLoop;
