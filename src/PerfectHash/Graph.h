@@ -43,8 +43,8 @@ typedef GRAPH_ITERATOR *PGRAPH_ITERATOR;
 //      initialization, which seems inefficient and unnecessary.
 //
 
-#define EMPTY ((ULONG)-1)
-#define GRAPH_NO_NEIGHBOR ((ULONG)-1)
+#define EMPTY ((VERTEX)-1)
+#define GRAPH_NO_NEIGHBOR ((VERTEX)-1)
 
 //
 // Define graph flags.
