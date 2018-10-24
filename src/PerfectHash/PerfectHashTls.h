@@ -142,12 +142,19 @@ PPERFECT_HASH_TLS_CONTEXT
     );
 typedef PERFECT_HASH_TLS_ENSURE_CONTEXT *PPERFECT_HASH_TLS_ENSURE_CONTEXT;
 
+//
+// N.B. We don't have an annotation on the TlsContext parameter (i.e. _In_)
+//      for the following routine as it's valid to pass an uninitialized
+//      struct pointer (as we call ZeroStructPointerInline() on it if we
+//      end up using it), and I don't know how to express this in SAL.
+//
+
 typedef
 _Check_return_
 _Success_(return != 0)
 PPERFECT_HASH_TLS_CONTEXT
 (NTAPI PERFECT_HASH_TLS_GET_OR_SET_CONTEXT)(
-    _In_ PPERFECT_HASH_TLS_CONTEXT TlsContext
+    PPERFECT_HASH_TLS_CONTEXT TlsContext
     );
 typedef PERFECT_HASH_TLS_GET_OR_SET_CONTEXT
       *PPERFECT_HASH_TLS_GET_OR_SET_CONTEXT;

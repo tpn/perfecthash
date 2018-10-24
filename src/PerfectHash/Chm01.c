@@ -161,7 +161,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     BOOL WaitForAllEvents = TRUE;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
-    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
 
     HANDLE Events[5];
     HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];

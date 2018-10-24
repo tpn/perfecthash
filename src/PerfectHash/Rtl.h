@@ -482,6 +482,76 @@ CopyMemoryInline(
 
 #define CopyInline CopyMemoryInline
 
+//
+// Ditto for ZeroMemory.
+//
+
+FORCEINLINE
+VOID
+ZeroMemoryInline(
+    _Out_writes_bytes_all_(SizeInBytes) PVOID Dst,
+    _In_ SIZE_T SizeInBytes,
+    _In_ BOOLEAN AllOnes
+    )
+{
+    PDWORD64 Dest = (PDWORD64)Dst;
+    DWORD64 FillQuad;
+    BYTE Fill;
+    PCHAR TrailingDest;
+    SIZE_T TrailingBytes;
+    SIZE_T NumberOfQuadwords;
+
+    NumberOfQuadwords = SizeInBytes >> 3;
+    TrailingBytes = SizeInBytes - (NumberOfQuadwords << 3);
+
+    if (AllOnes) {
+        FillQuad = ~0ULL;
+        Fill = (BYTE)~0;
+    } else {
+        FillQuad = 0;
+        Fill = 0;
+    }
+
+#ifdef _M_X64
+    __stosq(Dest, FillQuad, NumberOfQuadwords);
+#else
+    while (NumberOfQuadwords) {
+        *Dest++ = (DWORD64)FillQuad;
+        NumberOfQuadwords--;
+    }
+#endif
+
+    TrailingDest = (PCHAR)Dest;
+
+    while (TrailingBytes) {
+        *TrailingDest++ = Fill;
+        TrailingBytes--;
+    }
+}
+
+#define ZeroInline(Dest, Size) ZeroMemoryInline(Dest, Size, FALSE)
+#define ZeroArrayInline(Name) ZeroInline(Name, sizeof(Name))
+
+#define AllOnesInline(Dest, Size) ZeroMemoryInline(Dest, Size, TRUE)
+
+//
+// Structures are guaranteed to be aligned to an 8 byte boundary on x64, so
+// just use __stosq().
+//
+
+#ifdef _M_X64
+
+#define ZeroStructInline(Name) \
+    __stosq((PDWORD64)&Name, 0, (sizeof(Name) >> 3))
+
+#define ZeroStructPointerInline(Name) \
+    __stosq((PDWORD64)Name, 0, (sizeof(*Name) >> 3))
+
+#else
+#define ZeroStructInline(Name) ZeroInline(&Name, sizeof(Name))
+#define ZeroStructPointer(Name) ZeroInline(Name, sizeof(*Name))
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // Crypto
 ////////////////////////////////////////////////////////////////////////////////

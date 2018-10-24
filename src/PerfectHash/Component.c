@@ -406,7 +406,7 @@ ComponentCreateInstance(
     PERFECT_HASH_INTERFACE_ID Id;
     PCOMPONENT NewComponent = NULL;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
-    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
 
     //
     // Validate parameters.
@@ -570,7 +570,7 @@ PerfectHashDllGetClassObject(
     PICLASSFACTORY ClassFactory;
     PERFECT_HASH_INTERFACE_ID Id;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
-    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
 
     if (!ARGUMENT_PRESENT(Interface)) {
         return E_POINTER;

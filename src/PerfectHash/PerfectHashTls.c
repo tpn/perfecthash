@@ -148,6 +148,7 @@ PerfectHashTlsGetOrSetContext(
     Value = TlsGetValue(PerfectHashTlsIndex);
 
     if (!Value) {
+        ZeroStructPointerInline(Context);
         TlsSetValue(PerfectHashTlsIndex, Context);
         Value = Context;
     }

@@ -2326,7 +2326,6 @@ Return Value:
 
 --*/
 {
-    ULONG Index;
     HRESULT Result = S_OK;
     PGRAPH_INFO Info;
     PPERFECT_HASH_CONTEXT Context;
@@ -2357,12 +2356,6 @@ Return Value:
         return PH_E_TABLE_RESIZE_IMMINENT;
     }
 
-#ifdef _M_X64
-#define ZeroInline(Dest, Size) __stosq((PDWORD64)Dest, 0, (Size >> 3))
-#else
-#define ZeroInline(Dest, Size) ZeroMemory(Dest, Size)
-#endif
-
 #define ZERO_BITMAP_BUFFER(Name) \
     ZeroInline(Graph->##Name##.Buffer, Info->##Name##BufferSizeInBytes)
 
@@ -2379,15 +2372,13 @@ Return Value:
     // "Empty" all of the nodes.
     //
 
-    for (Index = 0; Index < Graph->NumberOfVertices; Index++) {
-        Graph->First[Index] = EMPTY;
-    }
+#define EMPTY_ARRAY(Name) \
+    AllOnesInline(Graph->##Name, Info->##Name##SizeInBytes)
 
-    for (Index = 0; Index < Graph->TotalNumberOfEdges; Index++) {
-        Graph->Prev[Index] = EMPTY;
-        Graph->Next[Index] = EMPTY;
-        Graph->Edges[Index] = EMPTY;
-    }
+    EMPTY_ARRAY(First);
+    EMPTY_ARRAY(Prev);
+    EMPTY_ARRAY(Next);
+    EMPTY_ARRAY(Edges);
 
     //
     // Clear any remaining values.
