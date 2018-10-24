@@ -741,12 +741,12 @@ FinishedSolution:
 
     //
     // Capture another round of cycles and performance counter values, then
-    // continue with verification of the solution.
+    // continue with verification of the graph.
     //
 
     CONTEXT_START_TIMERS(Verify);
 
-    Result = VerifySolvedGraph(Graph);
+    Result = Graph->Vtbl->Verify(Graph);
 
     CONTEXT_END_TIMERS(Verify);
 
@@ -1257,7 +1257,7 @@ Return Value:
     Info->Context = Context;
     Info->AllocSize = AllocSize.QuadPart;
     Info->NumberOfBitmaps = NumberOfBitmaps;
-    Info->SizeOfGraphStruct = ALIGN_UP_YMMWORD(sizeof(GRAPH));
+    Info->SizeOfGraphStruct = sizeof(GRAPH);
     Info->EdgesSizeInBytes = EdgesSizeInBytes;
     Info->NextSizeInBytes = NextSizeInBytes;
     Info->FirstSizeInBytes = FirstSizeInBytes;

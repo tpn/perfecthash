@@ -24,6 +24,52 @@ SeverityNames=(Success=0x0:PH_SEVERITY_SUCCESS
 FacilityNames=(ITF=0x4:PH_FACILITY_ITF)
 LanguageNames=(English=0x409:English)
 
+MessageId=0x001
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_GRAPH_SOLVED
+Language=English
+Graph solved.
+.
+
+MessageId=0x002
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_GRAPH_NOT_SOLVED
+Language=English
+Graph not solved.
+.
+
+MessageId=0x003
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_CONTINUE_GRAPH_SOLVING
+Language=English
+Continue graph solving.
+.
+
+MessageId=0x004
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_STOP_GRAPH_SOLVING
+Language=English
+Stop graph solving.
+.
+
+MessageId=0x005
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_GRAPH_VERIFICATION_SKIPPED
+Language=English
+Graph verification skipped.
+.
+
+;
+;////////////////////////////////////////////////////////////////////////////////
+;// PH_SEVERITY_FAIL
+;////////////////////////////////////////////////////////////////////////////////
+;
+
 MessageId=0x201
 Severity=Fail
 Facility=ITF
@@ -902,17 +948,17 @@ A file extension operation is already in progress.
 MessageId=0x26d
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION
+SymbolicName=PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION
 Language=English
-Collisions encountered during graph validation.
+Collisions encountered during graph verification.
 .
 
 MessageId=0x26e
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
+SymbolicName=PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION
 Language=English
-The number of value assignments did not equal the number of keys during graph validation.
+The number of value assignments did not equal the number of keys during graph verification.
 .
 
 MessageId=0x26f

@@ -80,10 +80,16 @@ typedef union _GRAPH_FLAGS {
         ULONG IsInfoSet:1;
 
         //
+        // When set, turns the Graph->Vtbl->Verify() step into a no-op.
+        //
+
+        ULONG SkipVerification:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -92,6 +98,7 @@ typedef GRAPH_FLAGS *PGRAPH_FLAGS;
 C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 
 #define IsGraphInfoSet(Graph) (Graph->Flags.IsInfoSet)
+#define SkipGraphVerification(Graph) (Graph->Flags.SkipVerification)
 
 DEFINE_UNUSED_STATE(GRAPH);
 
@@ -320,14 +327,25 @@ HRESULT
     );
 typedef GRAPH_LOAD_NEW_SEEDS *PGRAPH_LOAD_NEW_SEEDS;
 
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_VERIFY)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_VERIFY *PGRAPH_VERIFY;
+
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
     PGRAPH_SET_INFO SetInfo;
     PGRAPH_ENTER_SOLVING_LOOP EnterSolvingLoop;
-    PGRAPH_SOLVE Solve;
     PGRAPH_LOAD_INFO LoadInfo;
     PGRAPH_RESET Reset;
     PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
+    PGRAPH_SOLVE Solve;
+    PGRAPH_VERIFY Verify;
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
@@ -604,6 +622,7 @@ extern GRAPH_LOAD_INFO GraphLoadInfo;
 extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
 extern GRAPH_RESET GraphReset;
 extern GRAPH_SOLVE GraphSolve;
+extern GRAPH_VERIFY GraphVerify;
 
 //
 // Define a helper macro for hashing keys during graph creation.  Assumes a
@@ -670,38 +689,6 @@ typedef struct _Struct_size_bytes_(Header.SizeOfStruct) _GRAPH_INFO_ON_DISK {
 } GRAPH_INFO_ON_DISK;
 C_ASSERT(sizeof(GRAPH_INFO_ON_DISK) <= PAGE_SIZE);
 typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
-
-//
-// Function pointer typedefs.
-//
-
-typedef
-VOID
-(NTAPI INITIALIZE_GRAPH)(
-    _In_ PGRAPH_INFO Info,
-    _In_ PGRAPH Graph
-    );
-typedef INITIALIZE_GRAPH *PINITIALIZE_GRAPH;
-extern INITIALIZE_GRAPH InitializeGraph;
-
-typedef
-BOOLEAN
-(NTAPI SOLVE_GRAPH)(
-    _In_ PGRAPH Graph
-    );
-typedef SOLVE_GRAPH *PSOLVE_GRAPH;
-extern SOLVE_GRAPH SolveGraph;
-
-typedef
-_Must_inspect_result_
-_Success_(return >= 0)
-HRESULT
-(NTAPI VERIFY_SOLVED_GRAPH)(
-    _In_ PGRAPH Graph
-    );
-typedef VERIFY_SOLVED_GRAPH *PVERIFY_SOLVED_GRAPH;
-extern VERIFY_SOLVED_GRAPH VerifySolvedGraph;
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Algorithm Implementation Typedefs

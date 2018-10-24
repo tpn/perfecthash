@@ -1087,12 +1087,13 @@ const GRAPH_VTBL GraphInterface = {
     (PGRAPH_LOCK_SERVER)&ComponentLockServer,
     &GraphSetInfo,
     &GraphEnterSolvingLoop,
-    &GraphSolve,
     &GraphLoadInfo,
     &GraphReset,
     &GraphLoadNewSeeds,
+    &GraphSolve,
+    &GraphVerify,
 };
-VERIFY_VTBL_SIZE(GRAPH, 6);
+VERIFY_VTBL_SIZE(GRAPH, 7);
 
 //
 // Interface array.

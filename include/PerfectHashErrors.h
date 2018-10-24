@@ -64,6 +64,56 @@ Abstract:
 
 
 //
+// MessageId: PH_S_GRAPH_SOLVED
+//
+// MessageText:
+//
+// Graph solved.
+//
+#define PH_S_GRAPH_SOLVED                ((HRESULT)0x20040001L)
+
+//
+// MessageId: PH_S_GRAPH_NOT_SOLVED
+//
+// MessageText:
+//
+// Graph not solved.
+//
+#define PH_S_GRAPH_NOT_SOLVED            ((HRESULT)0x20040002L)
+
+//
+// MessageId: PH_S_CONTINUE_GRAPH_SOLVING
+//
+// MessageText:
+//
+// Continue graph solving.
+//
+#define PH_S_CONTINUE_GRAPH_SOLVING      ((HRESULT)0x20040003L)
+
+//
+// MessageId: PH_S_STOP_GRAPH_SOLVING
+//
+// MessageText:
+//
+// Stop graph solving.
+//
+#define PH_S_STOP_GRAPH_SOLVING          ((HRESULT)0x20040004L)
+
+//
+// MessageId: PH_S_GRAPH_VERIFICATION_SKIPPED
+//
+// MessageText:
+//
+// Graph verification skipped.
+//
+#define PH_S_GRAPH_VERIFICATION_SKIPPED  ((HRESULT)0x20040005L)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// PH_SEVERITY_FAIL
+////////////////////////////////////////////////////////////////////////////////
+
+//
 // MessageId: PH_E_CREATE_TABLE_ALREADY_IN_PROGRESS
 //
 // MessageText:
@@ -1044,22 +1094,22 @@ Abstract:
 #define PH_E_FILE_ALREADY_BEING_EXTENDED ((HRESULT)0xE004026CL)
 
 //
-// MessageId: PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION
+// MessageId: PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION
 //
 // MessageText:
 //
-// Collisions encountered during graph validation.
+// Collisions encountered during graph verification.
 //
-#define PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VALIDATION ((HRESULT)0xE004026DL)
+#define PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION ((HRESULT)0xE004026DL)
 
 //
-// MessageId: PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION
+// MessageId: PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION
 //
 // MessageText:
 //
-// The number of value assignments did not equal the number of keys during graph validation.
+// The number of value assignments did not equal the number of keys during graph verification.
 //
-#define PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VALIDATION ((HRESULT)0xE004026EL)
+#define PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION ((HRESULT)0xE004026EL)
 
 //
 // MessageId: PH_E_INVALID_NUMBER_OF_SEEDS
