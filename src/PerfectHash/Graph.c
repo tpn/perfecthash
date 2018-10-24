@@ -2474,6 +2474,7 @@ Return Value:
     // We're done, finish up.
     //
 
+    Graph->Flags.IsInfoSet = TRUE;
     goto End;
 
 Error:
