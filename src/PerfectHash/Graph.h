@@ -10,6 +10,11 @@ Abstract:
 
     This is the header file for the Graph module of the perfect hash library.
 
+    N.B. This module is actively undergoing disruptive refactoring.  (It is
+         one of the oldest modules yet to receive any attention and thus, it
+         lags behind other modules with regards to common design patterns,
+         especially regarding exposing the functionality via a COM interface.)
+
 --*/
 
 #include "stdafx.h"
