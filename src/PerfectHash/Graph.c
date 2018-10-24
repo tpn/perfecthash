@@ -2592,6 +2592,12 @@ Return Value:
     }
 
     //
+    // Clear any remaining values.
+    //
+
+    Graph->Collisions = 0;
+
+    //
     // We're done, finish up.
     //
 
