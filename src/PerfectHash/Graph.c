@@ -1414,9 +1414,14 @@ Return Value:
         ASSERT(MaskedFinalId <= Graph->NumberOfVertices);
 
         Bit = MaskedFinalId + 1;
+
         if (Bit >= Graph->NumberOfVertices) {
-            __debugbreak();
-            Bit = 0;
+
+            //
+            // Invariant check: this should never be hit.
+            //
+
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
         }
 
         if (TestGraphBit(IndexBitmap, Bit)) {
@@ -1451,7 +1456,7 @@ Error:
     // We shouldn't ever reach here.
     //
 
-    ASSERT(FALSE);
+    PH_RAISE(PH_E_UNREACHABLE_CODE);
 
 End:
 
