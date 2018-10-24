@@ -1,0 +1,15 @@
+version:
+    0.14.{build}
+
+image:
+    - Visual Studio 2017
+
+configuration:
+    Release
+
+platform:
+    x64
+
+build:
+    project:
+        src/PerfectHash.sln
