@@ -1503,3 +1503,27 @@ Language=English
 Create table routine received shutdown event.
 .
 
+MessageId=0x31a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_MORE_SEEDS
+Language=English
+No more seed data available.
+.
+
+MessageId=0x31b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_GRAPH_NO_INFO_SET
+Language=English
+No graph information has been set for graph.
+.
+
+MessageId=0x31c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_RESIZE_IMMINENT
+Language=English
+Table resize imminent.
+.
+

@@ -50,8 +50,8 @@ typedef PERFECT_HASH_FILE_EXTEND *PPERFECT_HASH_FILE_EXTEND;
 typedef
 _Check_return_
 _Success_(return >= 0)
-HRESULT
 _Requires_exclusive_lock_held_(File->Lock)
+HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_TRUNCATE)(
     _In_ PPERFECT_HASH_FILE File,
     _In_opt_ PLARGE_INTEGER NewEndOfFile

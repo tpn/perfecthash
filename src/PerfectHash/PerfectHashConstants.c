@@ -935,12 +935,13 @@ const ALLOCATOR_VTBL AllocatorInterface = {
     (PALLOCATOR_LOCK_SERVER)&ComponentLockServer,
     &AllocatorMalloc,
     &AllocatorCalloc,
+    &AllocatorReAlloc,
     &AllocatorFree,
     &AllocatorFreePointer,
     &AllocatorFreeStringBuffer,
     &AllocatorFreeUnicodeStringBuffer,
 };
-VERIFY_VTBL_SIZE(ALLOCATOR, 6);
+VERIFY_VTBL_SIZE(ALLOCATOR, 7);
 
 //
 // PerfectHashFile
@@ -1085,8 +1086,13 @@ const GRAPH_VTBL GraphInterface = {
     (PGRAPH_CREATE_INSTANCE)&ComponentCreateInstance,
     (PGRAPH_LOCK_SERVER)&ComponentLockServer,
     &GraphSetInfo,
+    &GraphEnterSolvingLoop,
+    &GraphSolve,
+    &GraphLoadInfo,
+    &GraphReset,
+    &GraphLoadNewSeeds,
 };
-VERIFY_VTBL_SIZE(GRAPH, 1);
+VERIFY_VTBL_SIZE(GRAPH, 6);
 
 //
 // Interface array.

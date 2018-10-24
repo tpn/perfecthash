@@ -51,6 +51,7 @@ extern "C" {
 #pragma warning(pop)
 
 #include <sal.h>
+#include <specstrings.h>
 
 //
 // Disable the anonymous union/struct warning.
@@ -612,10 +613,22 @@ PVOID
 typedef ALLOCATOR_CALLOC *PALLOCATOR_CALLOC;
 
 typedef
+_Check_return_
+_Ret_reallocated_bytes_(Address, Size)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_REALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _In_ BOOLEAN ZeroMemory,
+    _Frees_ptr_opt_ PVOID Address,
+    _In_ SIZE_T Size
+    );
+typedef ALLOCATOR_REALLOC *PALLOCATOR_REALLOC;
+
+typedef
 VOID
 (STDAPICALLTYPE ALLOCATOR_FREE)(
     _In_ PALLOCATOR Allocator,
-    _Pre_maybenull_ _Post_invalid_ PVOID Address
+    _Frees_ptr_opt_ PVOID Address
     );
 typedef ALLOCATOR_FREE *PALLOCATOR_FREE;
 
@@ -649,6 +662,7 @@ typedef struct _ALLOCATOR_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(ALLOCATOR);
     PALLOCATOR_MALLOC Malloc;
     PALLOCATOR_CALLOC Calloc;
+    PALLOCATOR_REALLOC ReAlloc;
     PALLOCATOR_FREE Free;
     PALLOCATOR_FREE_POINTER FreePointer;
     PALLOCATOR_FREE_STRING_BUFFER FreeStringBuffer;

@@ -1721,3 +1721,30 @@ Abstract:
 //
 #define PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT ((HRESULT)0xE0040319L)
 
+//
+// MessageId: PH_E_NO_MORE_SEEDS
+//
+// MessageText:
+//
+// No more seed data available.
+//
+#define PH_E_NO_MORE_SEEDS               ((HRESULT)0xE004031AL)
+
+//
+// MessageId: PH_E_GRAPH_NO_INFO_SET
+//
+// MessageText:
+//
+// No graph information has been set for graph.
+//
+#define PH_E_GRAPH_NO_INFO_SET           ((HRESULT)0xE004031BL)
+
+//
+// MessageId: PH_E_TABLE_RESIZE_IMMINENT
+//
+// MessageText:
+//
+// Table resize imminent.
+//
+#define PH_E_TABLE_RESIZE_IMMINENT       ((HRESULT)0xE004031CL)
+

@@ -45,6 +45,33 @@ AllocatorCalloc(
 }
 
 
+ALLOCATOR_REALLOC AllocatorReAlloc;
+
+_Use_decl_annotations_
+PVOID
+AllocatorReAlloc(
+    PALLOCATOR Allocator,
+    BOOLEAN ZeroMemory,
+    PVOID Address,
+    SIZE_T Size
+    )
+{
+    ULONG Flags = 0;
+    PVOID NewAddress;
+
+    if (ZeroMemory) {
+        Flags = HEAP_ZERO_MEMORY;
+    }
+
+    NewAddress = HeapReAlloc(Allocator->HeapHandle,
+                             Flags,
+                             Address,
+                             Size);
+
+    return NewAddress;
+}
+
+
 ALLOCATOR_FREE AllocatorFree;
 
 _Use_decl_annotations_
@@ -82,6 +109,7 @@ AllocatorFreePointer(
     return;
 }
 
+
 ALLOCATOR_FREE_STRING_BUFFER AllocatorFreeStringBuffer;
 
 _Use_decl_annotations_
@@ -100,6 +128,7 @@ AllocatorFreeStringBuffer(
     String->MaximumLength = 0;
 }
 
+
 ALLOCATOR_FREE_UNICODE_STRING_BUFFER AllocatorFreeUnicodeStringBuffer;
 
 _Use_decl_annotations_
@@ -117,6 +146,7 @@ AllocatorFreeUnicodeStringBuffer(
     String->Length = 0;
     String->MaximumLength = 0;
 }
+
 
 ALLOCATOR_INITIALIZE AllocatorInitialize;
 

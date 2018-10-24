@@ -473,7 +473,9 @@ RetryWithLargerTableSize:
 
         Graph = Graphs[Index];
 
+        AcquireGraphLockExclusive(Graph);
         Result = Graph->Vtbl->SetInfo(Graph, &Info);
+        ReleaseGraphLockExclusive(Graph);
 
         if (FAILED(Result)) {
             PH_ERROR(GraphSetInfo, Result);
@@ -1197,10 +1199,11 @@ Return Value:
     );
 
     //
-    // Calculate the total size required for the underlying graph.
+    // Calculate the total size required for the underlying graph, rounded up
+    // to the nearest page size.
     //
 
-    AllocSize.QuadPart = ALIGN_UP_YMMWORD(
+    AllocSize.QuadPart = ROUND_TO_PAGES(
         EdgesSizeInBytes +
         NextSizeInBytes +
         FirstSizeInBytes +
@@ -1251,10 +1254,8 @@ Return Value:
 
     ZeroStructPointer(Info);
 
-    Info->PageSize = PAGE_SIZE;
-    Info->AllocSize = AllocSize.QuadPart;
     Info->Context = Context;
-    Info->NumberOfPagesPerGraph = (ULONG)BYTES_TO_PAGES(AllocSize.QuadPart);
+    Info->AllocSize = AllocSize.QuadPart;
     Info->NumberOfBitmaps = NumberOfBitmaps;
     Info->SizeOfGraphStruct = ALIGN_UP_YMMWORD(sizeof(GRAPH));
     Info->EdgesSizeInBytes = EdgesSizeInBytes;
@@ -1662,65 +1663,41 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     PGRAPH Graph;
-    ULONG Attempt = 0;
-    PGRAPH_INFO Info;
-    PRTL_FILL_PAGES FillPages;
+    HRESULT Result;
 
     UNREFERENCED_PARAMETER(Instance);
+    UNREFERENCED_PARAMETER(Context);
 
     //
-    // Resolve the graph base address from the list entry.  Nothing will be
-    // filled in initially.
+    // Resolve the graph from the list entry then enter the solving loop.
     //
 
     Graph = CONTAINING_RECORD(ListEntry, GRAPH, ListEntry);
 
-    //
-    // Resolve aliases.
-    //
+    Result = Graph->Vtbl->EnterSolvingLoop(Graph);
 
-    Rtl = Context->Rtl;
-    FillPages = Rtl->Vtbl->FillPages;
+    if (FAILED(Result)) {
 
-    //
-    // The graph info structure will be stashed in the algo context field.
-    //
+        BOOLEAN PermissibleErrorCode;
 
-    Info = (PGRAPH_INFO)Context->AlgorithmContext;
+        //
+        // There are only a few permissible errors at this point.  If a
+        // different error is encountered, raise a runtime exception.
+        // (We can't return an error code as we're running in a threadpool
+        // callback with a void return signature.)
+        //
 
-    //
-    // Begin the solving loop.  InitializeGraph() generates new seed data,
-    // so each loop iteration will be attempting to solve the graph uniquely.
-    //
+        PermissibleErrorCode = (
+            Result == E_OUTOFMEMORY              ||
+            Result == PH_E_NO_MORE_SEEDS         ||
+            Result == PH_E_TABLE_RESIZE_IMMINENT
+        );
 
-    while (ShouldWeContinueTryingToSolveGraphChm01(Context)) {
-
-        InitializeGraph(Info, Graph);
-
-        Graph->ThreadAttempt = ++Attempt;
-
-        if (SolveGraph(Graph)) {
-
-            //
-            // Hey, we were the ones to solve it, great!
-            //
-
-            break;
+        if (!PermissibleErrorCode) {
+            PH_RAISE(Result);
         }
-
-        //
-        // Our attempt at solving failed.  Zero all pages associated with the
-        // graph and then try again with new seed data.
-        //
-
-        PH_RAISE(PH_E_WORK_IN_PROGRESS);
-        //FillPages(Rtl, (PCHAR)Graph, 0, Info->NumberOfPagesPerGraph);
-
     }
-
-    return;
 }
 
 SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
