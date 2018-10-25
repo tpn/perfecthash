@@ -2049,12 +2049,6 @@ Return Value:
 
         Result = Graph->Vtbl->Reset(Graph);
         if (FAILED(Result)) {
-            PH_ERROR(GraphReset, Result);
-            break;
-        }
-
-        Result = Graph->Vtbl->Solve(Graph);
-        if (FAILED(Result)) {
 
             //
             // If the error code indicates anything other than an imminent
@@ -2062,11 +2056,18 @@ Return Value:
             //
 
             if (Result != PH_E_TABLE_RESIZE_IMMINENT) {
-                PH_ERROR(GraphSolve, Result);
+                PH_ERROR(GraphReset, Result);
+            } else {
+                Result = S_OK;
             }
 
             break;
+        }
 
+        Result = Graph->Vtbl->Solve(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphSolve, Result);
+            break;
         }
 
         if (Result == PH_S_STOP_GRAPH_SOLVING) {
