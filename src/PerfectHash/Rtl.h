@@ -104,12 +104,6 @@ typedef const CHAR *PCCHAR;
 typedef _Null_terminated_ const WCHAR *PCWSZ;
 typedef const WCHAR *PCWCHAR;
 
-#ifdef _M_X64
-typedef __m128i DECLSPEC_ALIGN(16) XMMWORD, *PXMMWORD, **PPXMMWORD;
-typedef __m256i DECLSPEC_ALIGN(32) YMMWORD, *PYMMWORD, **PPYMMWORD;
-typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
-#endif
-
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -189,30 +183,30 @@ typedef __m512i DECLSPEC_ALIGN(64) ZMMWORD, *PZMMWORD, **PPZMMWORD;
     (USHORT)(ALIGN_UP((USHORT)Value, (USHORT)sizeof(ULONG_PTR)))
 #endif
 
+#define XMMWORD_ALIGNMENT 16
+#define YMMWORD_ALIGNMENT 32
+#define ZMMWORD_ALIGNMENT 64
+
 #ifdef _M_X64
+typedef __m128i DECLSPEC_ALIGN(XMMWORD_ALIGNMENT) XMMWORD, *PXMMWORD;
+typedef __m256i DECLSPEC_ALIGN(YMMWORD_ALIGNMENT) YMMWORD, *PYMMWORD;
+typedef __m512i DECLSPEC_ALIGN(ZMMWORD_ALIGNMENT) ZMMWORD, *PZMMWORD;
+
+C_ASSERT(sizeof(XMMWORD) == XMMWORD_ALIGNMENT);
+C_ASSERT(sizeof(YMMWORD) == YMMWORD_ALIGNMENT);
+C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
+#endif
+
 #ifndef ALIGN_UP_XMMWORD
-#define ALIGN_UP_XMMWORD(Address) (ALIGN_UP(Address, sizeof(XMMWORD)))
+#define ALIGN_UP_XMMWORD(Address) (ALIGN_UP(Address, XMMWORD_ALIGNMENT))
 #endif
 
 #ifndef ALIGN_UP_YMMWORD
-#define ALIGN_UP_YMMWORD(Address) (ALIGN_UP(Address, sizeof(YMMWORD)))
+#define ALIGN_UP_YMMWORD(Address) (ALIGN_UP(Address, YMMWORD_ALIGNMENT))
 #endif
 
 #ifndef ALIGN_UP_ZMMWORD
-#define ALIGN_UP_ZMMWORD(Address) (ALIGN_UP(Address, sizeof(ZMMWORD)))
-#endif
-#else _M_X64
-#ifndef ALIGN_UP_XMMWORD
-#define ALIGN_UP_XMMWORD(Address) (ALIGN_UP(Address, 16))
-#endif
-
-#ifndef ALIGN_UP_YMMWORD
-#define ALIGN_UP_YMMWORD(Address) (ALIGN_UP(Address, 32))
-#endif
-
-#ifndef ALIGN_UP_ZMMWORD
-#define ALIGN_UP_ZMMWORD(Address) (ALIGN_UP(Address, 64))
-#endif
+#define ALIGN_UP_ZMMWORD(Address) (ALIGN_UP(Address, ZMMWORD_ALIGNMENT))
 #endif
 
 #ifndef ASSERT

@@ -592,6 +592,7 @@ DECLARE_COMPONENT(Allocator, ALLOCATOR);
 typedef
 _Check_return_
 _Ret_maybenull_
+_Success_(return != 0)
 _Post_writable_byte_size_(Size)
 PVOID
 (STDAPICALLTYPE ALLOCATOR_MALLOC)(
@@ -603,6 +604,7 @@ typedef ALLOCATOR_MALLOC *PALLOCATOR_MALLOC;
 typedef
 _Check_return_
 _Ret_maybenull_
+_Success_(return != 0)
 _Post_writable_byte_size_(NumberOfElements * ElementSize)
 PVOID
 (STDAPICALLTYPE ALLOCATOR_CALLOC)(
@@ -618,11 +620,22 @@ _Ret_reallocated_bytes_(Address, Size)
 PVOID
 (STDAPICALLTYPE ALLOCATOR_REALLOC)(
     _In_ PALLOCATOR Allocator,
-    _In_ BOOLEAN ZeroMemory,
     _Frees_ptr_opt_ PVOID Address,
     _In_ SIZE_T Size
     );
 typedef ALLOCATOR_REALLOC *PALLOCATOR_REALLOC;
+
+typedef
+_Check_return_
+_Ret_reallocated_bytes_(Address, NumberOfElements * ElementSize)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_RECALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _Frees_ptr_opt_ PVOID Address,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T ElementSize
+    );
+typedef ALLOCATOR_RECALLOC *PALLOCATOR_RECALLOC;
 
 typedef
 VOID
@@ -658,15 +671,154 @@ VOID
 typedef ALLOCATOR_FREE_UNICODE_STRING_BUFFER
       *PALLOCATOR_FREE_UNICODE_STRING_BUFFER;
 
+typedef
+_Check_return_
+_Success_(return != 0)
+_Ret_maybenull_
+_Post_writable_byte_size_(Size)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_MALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _In_ SIZE_T Size,
+    _In_ SIZE_T Alignment
+    );
+typedef ALLOCATOR_ALIGNED_MALLOC *PALLOCATOR_ALIGNED_MALLOC;
+
+typedef
+_Check_return_
+_Success_(return != 0)
+_Ret_maybenull_
+_Post_writable_byte_size_(NumberOfElements * ElementSize)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_CALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T ElementSize,
+    _In_ SIZE_T Alignment
+    );
+typedef ALLOCATOR_ALIGNED_CALLOC *PALLOCATOR_ALIGNED_CALLOC;
+
+typedef
+_Check_return_
+_Ret_maybenull_
+_Ret_reallocated_bytes_(Address, Size)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_REALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _Frees_ptr_opt_ PVOID Address,
+    _In_ SIZE_T Size,
+    _In_ SIZE_T Alignment
+    );
+typedef ALLOCATOR_ALIGNED_REALLOC *PALLOCATOR_ALIGNED_REALLOC;
+
+typedef
+_Check_return_
+_Ret_maybenull_
+_Ret_reallocated_bytes_(Address, NumberOfElements * ElementSize)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_RECALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _Frees_ptr_opt_ PVOID Address,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T ElementSize,
+    _In_ SIZE_T Alignment
+    );
+typedef ALLOCATOR_ALIGNED_RECALLOC *PALLOCATOR_ALIGNED_RECALLOC;
+
+typedef
+VOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_FREE)(
+    _In_ PALLOCATOR Allocator,
+    _Frees_ptr_opt_ PVOID Address
+    );
+typedef ALLOCATOR_ALIGNED_FREE *PALLOCATOR_ALIGNED_FREE;
+
+typedef
+VOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_FREE_POINTER)(
+    _In_ PALLOCATOR Allocator,
+    _Inout_ PVOID *AddressPointer
+    );
+typedef ALLOCATOR_ALIGNED_FREE_POINTER *PALLOCATOR_ALIGNED_FREE_POINTER;
+
+typedef
+_Check_return_
+_Success_(return != 0)
+_Ret_maybenull_
+_Post_writable_byte_size_(Size)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_OFFSET_MALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _In_ SIZE_T Size,
+    _In_ SIZE_T Alignment,
+    _In_opt_ SIZE_T Offset
+    );
+typedef ALLOCATOR_ALIGNED_OFFSET_MALLOC *PALLOCATOR_ALIGNED_OFFSET_MALLOC;
+
+typedef
+_Check_return_
+_Success_(return != 0)
+_Ret_maybenull_
+_Post_writable_byte_size_(NumberOfElements * ElementSize)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_OFFSET_CALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T ElementSize,
+    _In_ SIZE_T Alignment,
+    _In_opt_ SIZE_T Offset
+    );
+typedef ALLOCATOR_ALIGNED_OFFSET_CALLOC *PALLOCATOR_ALIGNED_OFFSET_CALLOC;
+
+typedef
+_Check_return_
+_Ret_maybenull_
+_Ret_reallocated_bytes_(Address, Size)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_OFFSET_REALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _Frees_ptr_opt_ PVOID Address,
+    _In_ SIZE_T Size,
+    _In_ SIZE_T Alignment,
+    _In_opt_ SIZE_T Offset
+    );
+typedef ALLOCATOR_ALIGNED_OFFSET_REALLOC *PALLOCATOR_ALIGNED_OFFSET_REALLOC;
+
+typedef
+_Check_return_
+_Ret_maybenull_
+_Ret_reallocated_bytes_(Address, NumberOfElements * ElementSize)
+PVOID
+(STDAPICALLTYPE ALLOCATOR_ALIGNED_OFFSET_RECALLOC)(
+    _In_ PALLOCATOR Allocator,
+    _Frees_ptr_opt_ PVOID Address,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T ElementSize,
+    _In_ SIZE_T Alignment,
+    _In_opt_ SIZE_T Offset
+    );
+typedef ALLOCATOR_ALIGNED_OFFSET_RECALLOC *PALLOCATOR_ALIGNED_OFFSET_RECALLOC;
+
 typedef struct _ALLOCATOR_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(ALLOCATOR);
     PALLOCATOR_MALLOC Malloc;
     PALLOCATOR_CALLOC Calloc;
     PALLOCATOR_REALLOC ReAlloc;
+    PALLOCATOR_RECALLOC ReCalloc;
     PALLOCATOR_FREE Free;
     PALLOCATOR_FREE_POINTER FreePointer;
     PALLOCATOR_FREE_STRING_BUFFER FreeStringBuffer;
     PALLOCATOR_FREE_UNICODE_STRING_BUFFER FreeUnicodeStringBuffer;
+    PALLOCATOR_ALIGNED_MALLOC AlignedMalloc;
+    PALLOCATOR_ALIGNED_CALLOC AlignedCalloc;
+    PALLOCATOR_ALIGNED_REALLOC AlignedReAlloc;
+    PALLOCATOR_ALIGNED_RECALLOC AlignedReCalloc;
+    PALLOCATOR_ALIGNED_FREE AlignedFree;
+    PALLOCATOR_ALIGNED_FREE_POINTER AlignedFreePointer;
+    PALLOCATOR_ALIGNED_OFFSET_MALLOC AlignedOffsetMalloc;
+    PALLOCATOR_ALIGNED_OFFSET_CALLOC AlignedOffsetCalloc;
+    PALLOCATOR_ALIGNED_OFFSET_REALLOC AlignedOffsetReAlloc;
+    PALLOCATOR_ALIGNED_OFFSET_RECALLOC AlignedOffsetReCalloc;
 } ALLOCATOR_VTBL;
 typedef ALLOCATOR_VTBL *PALLOCATOR_VTBL;
 

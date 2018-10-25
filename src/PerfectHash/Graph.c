@@ -1730,6 +1730,7 @@ Return Value:
     ULONG LowUsedCacheLinesThisLargePage;
     ULONG HighUsedCacheLinesThisPage;
     ULONG HighUsedCacheLinesThisLargePage;
+    ULONG HighOffset;
     const ULONG PageSize = PAGE_SIZE;
     const ULONG LargePageSize = (ULONG)GetLargePageMinimum();
     const YMMWORD AllZeros = _mm256_set1_epi8(0);
@@ -1753,15 +1754,18 @@ Return Value:
 
     Rtl = Graph->Context->Rtl;
 
+    HighOffset = (Graph->NumberOfVertices * sizeof(VERTEX)) >> 1;
+    ASSERT(Graph->Info->AssignedSizeInBytes >> 1 == HighOffset);
+
     AssignedLow = Graph->Assigned;
     AssignedHigh = (PVERTEX)(
         RtlOffsetToPointer(
             AssignedLow,
-            Graph->NumberOfVertices
+            HighOffset
         )
     );
 
-    AssignedLowHighSizeInBytes = Graph->NumberOfVertices * sizeof(VERTEX);
+    AssignedLowHighSizeInBytes = HighOffset;
     NumberOfCacheLines = AssignedLowHighSizeInBytes >> 6;
     Trailing = AssignedLowHighSizeInBytes - (NumberOfCacheLines << 6);
 
@@ -2139,7 +2143,6 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result = S_OK;
-    BOOLEAN ZeroMemory;
     PGRAPH_INFO Info;
     PALLOCATOR Allocator;
     PPERFECT_HASH_TABLE Table;
@@ -2196,37 +2199,31 @@ Return Value:
                sizeof(Graph->Dimensions));
 
     //
-    // We don't need zerod memory as the Reset() call will be responsible for
-    // getting all of the arrays and bitmap buffers into an appropriate state.
-    //
-
-    ZeroMemory = FALSE;
-
-    //
     // Allocate (or reallocate) arrays.
     //
 
-#define ALLOC_ARRAY(Name, Type)                      \
-    if (!Graph->##Name) {                            \
-        Graph->##Name = (Type)(                      \
-            Allocator->Vtbl->Malloc(                 \
-                Allocator,                           \
-                (ULONG_PTR)Info->##Name##SizeInBytes \
-            )                                        \
-        );                                           \
-    } else {                                         \
-        Graph->##Name## = (Type)(                    \
-            Allocator->Vtbl->ReAlloc(                \
-                Allocator,                           \
-                ZeroMemory,                          \
-                Graph->##Name,                       \
-                (ULONG_PTR)Info->##Name##SizeInBytes \
-            )                                        \
-        );                                           \
-    }                                                \
-    if (!Graph->##Name) {                            \
-        Result = E_OUTOFMEMORY;                      \
-        goto Error;                                  \
+#define ALLOC_ARRAY(Name, Type)                       \
+    if (!Graph->##Name) {                             \
+        Graph->##Name = (Type)(                       \
+            Allocator->Vtbl->AlignedMalloc(           \
+                Allocator,                            \
+                (ULONG_PTR)Info->##Name##SizeInBytes, \
+                YMMWORD_ALIGNMENT                     \
+            )                                         \
+        );                                            \
+    } else {                                          \
+        Graph->##Name## = (Type)(                     \
+            Allocator->Vtbl->AlignedReAlloc(          \
+                Allocator,                            \
+                Graph->##Name,                        \
+                (ULONG_PTR)Info->##Name##SizeInBytes, \
+                YMMWORD_ALIGNMENT                     \
+            )                                         \
+        );                                            \
+    }                                                 \
+    if (!Graph->##Name) {                             \
+        Result = E_OUTOFMEMORY;                       \
+        goto Error;                                   \
     }
 
     ALLOC_ARRAY(Edges, PEDGE);
@@ -2257,7 +2254,6 @@ Return Value:
         Graph->##Name##.Buffer = (PULONG)(                 \
             Allocator->Vtbl->ReAlloc(                      \
                 Allocator,                                 \
-                ZeroMemory,                                \
                 Graph->##Name##.Buffer,                    \
                 (ULONG_PTR)Info->##Name##BufferSizeInBytes \
             )                                              \

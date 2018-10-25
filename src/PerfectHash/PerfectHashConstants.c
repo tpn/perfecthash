@@ -936,12 +936,23 @@ const ALLOCATOR_VTBL AllocatorInterface = {
     &AllocatorMalloc,
     &AllocatorCalloc,
     &AllocatorReAlloc,
+    &AllocatorReCalloc,
     &AllocatorFree,
     &AllocatorFreePointer,
     &AllocatorFreeStringBuffer,
     &AllocatorFreeUnicodeStringBuffer,
+    &AllocatorAlignedMalloc,
+    &AllocatorAlignedCalloc,
+    &AllocatorAlignedReAlloc,
+    &AllocatorAlignedReCalloc,
+    &AllocatorAlignedFree,
+    &AllocatorAlignedFreePointer,
+    &AllocatorAlignedOffsetMalloc,
+    &AllocatorAlignedOffsetCalloc,
+    &AllocatorAlignedOffsetReAlloc,
+    &AllocatorAlignedOffsetReCalloc,
 };
-VERIFY_VTBL_SIZE(ALLOCATOR, 7);
+VERIFY_VTBL_SIZE(ALLOCATOR, 18);
 
 //
 // PerfectHashFile
