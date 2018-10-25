@@ -82,7 +82,7 @@ SaveTableFileChm01(
     // this is necessary.
     //
 
-    LargePagesForTableData = TRUE;
+    LargePagesForTableData = FALSE;
 
     BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
                                                       NULL,
