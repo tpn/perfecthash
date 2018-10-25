@@ -263,7 +263,7 @@ End:
     Context->State.NeedsReset = TRUE;
 
     ReleasePerfectHashContextLockExclusive(Context);
-    ReleasePerfectHashContextLockExclusive(Table);
+    ReleasePerfectHashTableLockExclusive(Table);
 
     return Result;
 }
