@@ -61,9 +61,7 @@ SaveTableFileChm01(
     );
 
     if (SizeInBytes != File->FileInfo.EndOfFile.QuadPart) {
-        ASSERT(FALSE);
-        Result = PH_E_INVARIANT_CHECK_FAILED;
-        goto Error;
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
 
     //
