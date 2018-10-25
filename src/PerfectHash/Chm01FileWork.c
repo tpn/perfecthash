@@ -212,6 +212,8 @@ Return Value:
 
             NewDirectory = &Table->OutputDirectory->Path->FullPath;
 
+            ASSERT(IsValidUnicodeString(NewDirectory));
+
             //
             // Initialize variables specific to the file work ID.
             //

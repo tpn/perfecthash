@@ -859,6 +859,12 @@ End:
         }
     }
 
+    //
+    // Release the table's output path if applicable.
+    //
+
+    RELEASE(Table->OutputPath);
+
     return Result;
 }
 
@@ -1469,14 +1475,6 @@ PrepareTableOutputDirectory(
     );
 
     //
-    // Release the existing output path, if applicable.  (This will already
-    // have a value if we're being called for the second or more time due to
-    // a resize event.)
-    //
-
-    RELEASE(Table->OutputPath);
-
-    //
     // Create an output directory path name.
     //
 
@@ -1496,8 +1494,19 @@ PrepareTableOutputDirectory(
                                         NULL);
 
     if (FAILED(Result)) {
+        PH_ERROR(PrepareTableOutputDirectory_CreatePath, Result);
         goto Error;
     }
+
+    ASSERT(IsValidUnicodeString(&OutputPath->FullPath));
+
+    //
+    // Release the existing output path, if applicable.  (This will already
+    // have a value if we're being called for the second or more time due to
+    // a resize event.)
+    //
+
+    RELEASE(Table->OutputPath);
 
     Table->OutputPath = OutputPath;
 
@@ -1536,13 +1545,10 @@ PrepareTableOutputDirectory(
         }
 
         //
-        // Directory creation was successful.  AddRef() against the instance
-        // to capture the table's ownership of it.  (We release the local
-        // OutputDir at the end of this routine.)
+        // Directory creation was successful.
         //
 
         Table->OutputDirectory = OutputDir;
-        OutputDir->Vtbl->AddRef(OutputDir);
 
     } else {
 
@@ -1578,13 +1584,6 @@ Error:
     //
 
 End:
-
-    //
-    // Release applicable COM references.
-    //
-
-    RELEASE(OutputPath);
-    RELEASE(OutputDir);
 
     return Result;
 }
