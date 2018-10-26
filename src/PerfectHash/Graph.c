@@ -18,34 +18,6 @@ Abstract:
 #define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
 
 //
-// Temporary typedefs for new memory coverage logic.
-//
-
-typedef
-VOID
-(NTAPI GRAPH_CALCULATE_MEMORY_COVERAGE)(
-    _In_ PGRAPH Graph
-    );
-typedef GRAPH_CALCULATE_MEMORY_COVERAGE *PGRAPH_CALCULATE_MEMORY_COVERAGE;
-
-#ifdef _M_X64
-extern GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverageAvx2;
-#define GraphCalculateMemoryCoverage GraphCalculateMemoryCoverageAvx2
-#else
-#error Non-AVX2 GraphCalculateMemoryCoverage not yet implemented.
-#endif
-
-
-typedef
-VOID
-(NTAPI GRAPH_REGISTER_SOLVED)(
-    _In_ PGRAPH Graph
-    );
-typedef GRAPH_REGISTER_SOLVED *PGRAPH_REGISTER_SOLVED;
-
-extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
-
-//
 // COM scaffolding routines for initialization and rundown.
 //
 
@@ -1243,6 +1215,7 @@ Return Value:
     ULONG Iterations;
     ULONG NumberOfKeys;
     ULARGE_INTEGER Hash;
+    HRESULT Result = S_OK;
     LONGLONG FinishedCount;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
@@ -1362,10 +1335,14 @@ Return Value:
     GraphAssign(Graph);
 
     //
-    // Calculate memory coverage information.
+    // Calculate memory coverage information.  This routine should never fail,
+    // so issue a PH_RAISE() if it does.
     //
 
-    GraphCalculateMemoryCoverage(Graph);
+    Result = Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
+    if (FAILED(Result)) {
+        PH_RAISE(Result);
+    }
 
     //
     // Stop the solve timers here.
@@ -1393,7 +1370,14 @@ Return Value:
 
     ASSERT(FindBestMemoryCoverage(Context));
 
-    GraphRegisterSolved(Graph);
+    //
+    // Register the solved graph.  (Not yet implemented.)
+    //
+
+    Result = Graph->Vtbl->RegisterSolved(Graph);
+    if (Result != PH_E_NOT_IMPLEMENTED) {
+        PH_RAISE(Result);
+    }
 
     return PH_S_CONTINUE_GRAPH_SOLVING;
 
@@ -1668,21 +1652,11 @@ End:
 // Work-in-progress memory coverage routines.
 //
 
-typedef struct _MEMORY_COVERAGE {
-    ULONG NumberOfEmptyCacheLines;
-    ULONG NumberOfEmptyPages;
-    ULONG NumberOfEmptyLargePages;
-    ULONG Unused;
-} MEMORY_COVERAGE;
-
-typedef ULONG ASSIGNED_CACHE_LINE[16];
-typedef ASSIGNED_CACHE_LINE  *PASSIGNED_CACHE_LINE;
-
-GRAPH_CALCULATE_MEMORY_COVERAGE GraphCalculateMemoryCoverageAvx2;
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE GraphCalculateAssignedMemoryCoverage;
 
 _Use_decl_annotations_
-VOID
-GraphCalculateMemoryCoverageAvx2(
+HRESULT
+GraphCalculateAssignedMemoryCoverage(
     PGRAPH Graph
     )
 /*++
@@ -1695,209 +1669,208 @@ Routine Description:
 
 Arguments:
 
-    Graph - Supplies a pointer to the graph for which memory coverage is to
-        be calculated.
+    Graph - Supplies a pointer to the graph for which memory coverage of the
+        assigned array is to be calculated.
 
 Return Value:
 
-    None.
+    S_OK - Success.
 
 --*/
 {
-    PRTL Rtl;
-    ULONG Index;
-    ULONG Trailing;
+    BYTE Count;
+    ULONG PageIndex;
+    ULONG CacheLineIndex;
+    ULONG LargePageIndex;
     ULONG NumberOfCacheLines;
-    ULONG AssignedLowHighSizeInBytes;
+    ULONG TotalBytesProcessed;
     ULONG PageSizeBytesProcessed;
     ULONG LargePageSizeBytesProcessed;
-    ULONG TotalBytesProcessed;
-    ULONG Low1Mask;
-    ULONG Low2Mask;
-    ULONG High1Mask;
-    ULONG High2Mask;
-    ULONG Low1Count;
-    ULONG Low2Count;
-    ULONG High1Count;
-    ULONG High2Count;
-    ULONG LowCount;
-    ULONG HighCount;
-    ULONG LowEmptyCacheLinesThisPage;
-    ULONG LowEmptyCacheLinesThisLargePage;
-    ULONG HighEmptyCacheLinesThisPage;
-    ULONG HighEmptyCacheLinesThisLargePage;
-    ULONG LowUsedCacheLinesThisPage;
-    ULONG LowUsedCacheLinesThisLargePage;
-    ULONG HighUsedCacheLinesThisPage;
-    ULONG HighUsedCacheLinesThisLargePage;
-    ULONG HighOffset;
-    const ULONG PageSize = PAGE_SIZE;
-    const ULONG LargePageSize = (ULONG)GetLargePageMinimum();
+    BOOLEAN FoundFirst = FALSE;
+    BOOLEAN IsLastCacheLine = FALSE;
+    PASSIGNED_CACHE_LINE AssignedCacheLine;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+
+#ifndef __AVX2__
+    ULONG Index;
+    PASSIGNED Assigned;
+#else
+    ULONG Mask;
+    YMMWORD ZerosYmm;
+    YMMWORD AssignedYmm;
     const YMMWORD AllZeros = _mm256_set1_epi8(0);
-    YMMWORD Low1;
-    YMMWORD Low2;
-    YMMWORD High1;
-    YMMWORD High2;
-    YMMWORD Low1Zeros;
-    YMMWORD Low2Zeros;
-    YMMWORD High1Zeros;
-    YMMWORD High2Zeros;
-    ULONG Alignment;
-    PVERTEX AssignedLow;
-    PVERTEX AssignedHigh;
-    PBYTE AssignedLowBuffer;
-    PBYTE AssignedHighBuffer;
-    MEMORY_COVERAGE CoverageLow;
-    MEMORY_COVERAGE CoverageHigh;
-    PASSIGNED_CACHE_LINE LowLine;
-    PASSIGNED_CACHE_LINE HighLine;
+#endif
 
-    Rtl = Graph->Context->Rtl;
+    Coverage = &Graph->AssignedMemoryCoverage;
+    NumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+    AssignedCacheLine = (PASSIGNED_CACHE_LINE)Graph->Assigned;
 
-    HighOffset = (Graph->NumberOfVertices * sizeof(VERTEX)) >> 1;
-    ASSERT(Graph->Info->AssignedSizeInBytes >> 1 == HighOffset);
-
-    AssignedLow = Graph->Assigned;
-    AssignedHigh = (PVERTEX)(
-        RtlOffsetToPointer(
-            AssignedLow,
-            HighOffset
-        )
-    );
-
-    AssignedLowHighSizeInBytes = HighOffset;
-    NumberOfCacheLines = AssignedLowHighSizeInBytes >> 6;
-    Trailing = AssignedLowHighSizeInBytes - (NumberOfCacheLines << 6);
-
-    if (Trailing != 0) {
-        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
-    }
-
-    AssignedLowBuffer = (PBYTE)AssignedLow;
-    AssignedHighBuffer = (PBYTE)AssignedHigh;
-
+    PageIndex = 0;
+    LargePageIndex = 0;
     TotalBytesProcessed = 0;
     PageSizeBytesProcessed = 0;
     LargePageSizeBytesProcessed = 0;
 
-    LowEmptyCacheLinesThisPage = 0;
-    LowEmptyCacheLinesThisLargePage = 0;
-    HighEmptyCacheLinesThisPage = 0;
-    HighEmptyCacheLinesThisLargePage = 0;
+    for (CacheLineIndex = 0;
+         CacheLineIndex < NumberOfCacheLines;
+         CacheLineIndex++) {
 
-    LowUsedCacheLinesThisPage = 0;
-    LowUsedCacheLinesThisLargePage = 0;
-    HighUsedCacheLinesThisPage = 0;
-    HighUsedCacheLinesThisLargePage = 0;
+        Count = 0;
+        IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
 
-    ZeroStruct(CoverageLow);
-    ZeroStruct(CoverageHigh);
-
-    Alignment = (ULONG)GetAddressAlignment((ULONG_PTR)AssignedLow);
-    AssertAligned32(Alignment);
-
-    for (Index = 0; Index < NumberOfCacheLines; Index++) {
-
-        LowLine = (PASSIGNED_CACHE_LINE)AssignedLowBuffer;
-
-        Low1 = _mm256_stream_load_si256((PYMMWORD)AssignedLowBuffer);
-        AssignedLowBuffer += 32;
-        Low2 = _mm256_stream_load_si256((PYMMWORD)AssignedLowBuffer);
-        AssignedLowBuffer += 32;
-
-        Low1Zeros = _mm256_cmpgt_epi32(Low1, AllZeros);
-        Low2Zeros = _mm256_cmpgt_epi32(Low2, AllZeros);
-
-        Low1Mask = _mm256_movemask_epi8(Low1Zeros);
-        Low2Mask = _mm256_movemask_epi8(Low2Zeros);
-
-        Low1Count = PopulationCount32(Low1Mask);
-        Low2Count = PopulationCount32(Low2Mask);
-
-        LowCount = Low1Count + Low2Count;
-
-        if (LowCount == 0) {
-            CoverageLow.NumberOfEmptyCacheLines++;
-            LowEmptyCacheLinesThisPage++;
-            LowEmptyCacheLinesThisLargePage++;
-        } else {
-            LowUsedCacheLinesThisPage += LowCount;
-            LowUsedCacheLinesThisLargePage += LowCount;
+#ifndef __AVX2__
+        for (Index = 0; Index < NUM_ASSIGNED_PER_CACHE_LINE; Index++) {
+            Assigned = AssignedCacheLine[Index];
+            if (*Assigned) {
+                Count++;
+                Coverage->TotalNumberOfAssigned++;
+            }
         }
+#else
+        //
+        // First 32 bytes of the cache line.
+        //
 
-        HighLine = (PASSIGNED_CACHE_LINE)AssignedHighBuffer;
+        AssignedYmm = _mm256_stream_load_si256((PYMMWORD)AssignedCacheLine);
+        ZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
+        Mask = _mm256_movemask_epi8(ZerosYmm);
+        Count = (BYTE)PopulationCount32(Mask);
 
-        High1 = _mm256_stream_load_si256((PYMMWORD)AssignedHighBuffer);
-        AssignedHighBuffer += 32;
-        High2 = _mm256_stream_load_si256((PYMMWORD)AssignedHighBuffer);
-        AssignedHighBuffer += 32;
+        //
+        // Second 32 bytes of the cache line.
+        //
 
-        High1Zeros = _mm256_cmpgt_epi32(High1, AllZeros);
-        High2Zeros = _mm256_cmpgt_epi32(High2, AllZeros);
+        AssignedYmm = _mm256_stream_load_si256((PYMMWORD)AssignedCacheLine+32);
+        ZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
+        Mask = _mm256_movemask_epi8(ZerosYmm);
+        Count += (BYTE)PopulationCount32(Mask);
 
-        High1Mask = _mm256_movemask_epi8(High1Zeros);
-        High2Mask = _mm256_movemask_epi8(High2Zeros);
+#endif
 
-        High1Count = PopulationCount32(High1Mask);
-        High2Count = PopulationCount32(High2Mask);
+        AssignedCacheLine++;
 
-        HighCount = High1Count + High2Count;
+        if (!Count) {
 
-        if (HighCount == 0) {
-            CoverageHigh.NumberOfEmptyCacheLines++;
-            HighEmptyCacheLinesThisPage++;
-            HighEmptyCacheLinesThisLargePage++;
+            Coverage->NumberOfEmptyCacheLines++;
+
         } else {
-            HighUsedCacheLinesThisPage += HighCount;
-            HighUsedCacheLinesThisLargePage += HighCount;
-        }
 
-        TotalBytesProcessed += 64;
+            Coverage->NumberOfUsedCacheLines++;
 
-        PageSizeBytesProcessed += 64;
-
-        if (PageSizeBytesProcessed == PageSize) {
-
-            if (LowEmptyCacheLinesThisPage == 0) {
-                CoverageLow.NumberOfEmptyPages++;
+            if (!FoundFirst) {
+                FoundFirst = TRUE;
+                Coverage->FirstCacheLineUsed = CacheLineIndex;
+                Coverage->FirstPageUsed = PageIndex;
+                Coverage->FirstLargePageUsed = LargePageIndex;
             } else {
-                LowEmptyCacheLinesThisPage = 0;
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
             }
 
-            if (HighEmptyCacheLinesThisPage == 0) {
-                CoverageHigh.NumberOfEmptyPages++;
-            } else {
-                HighEmptyCacheLinesThisPage = 0;
-            }
+        }
+
+        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex] = Count;
+        Coverage->NumberOfAssignedPerLargePage[LargePageIndex] += Count;
+        Coverage->NumberOfAssignedPerPage[PageIndex] += Count;
+
+        TotalBytesProcessed += CACHE_LINE_SIZE;
+        PageSizeBytesProcessed += CACHE_LINE_SIZE;
+        LargePageSizeBytesProcessed += CACHE_LINE_SIZE;
+
+        if (PageSizeBytesProcessed == PAGE_SIZE || IsLastCacheLine) {
 
             PageSizeBytesProcessed = 0;
-        }
 
-        if (LargePageSizeBytesProcessed == LargePageSize) {
-
-            if (LowEmptyCacheLinesThisLargePage == 0) {
-                CoverageLow.NumberOfEmptyLargePages++;
+            if (Coverage->NumberOfAssignedPerPage[PageIndex]) {
+                Coverage->NumberOfUsedPages++;
             } else {
-                LowEmptyCacheLinesThisLargePage = 0;
+                Coverage->NumberOfEmptyPages++;
             }
 
-            if (HighEmptyCacheLinesThisLargePage == 0) {
-                CoverageHigh.NumberOfEmptyLargePages++;
-            } else {
-                HighEmptyCacheLinesThisLargePage = 0;
+            PageIndex++;
+
+            if (LargePageSizeBytesProcessed == LARGE_PAGE_SIZE ||
+                IsLastCacheLine) {
+
+                LargePageSizeBytesProcessed = 0;
+
+                if (Coverage->NumberOfAssignedPerLargePage[LargePageIndex]) {
+                    Coverage->NumberOfUsedLargePages++;
+                } else {
+                    Coverage->NumberOfEmptyLargePages++;
+                }
+
+                LargePageIndex++;
             }
-
-            LargePageSizeBytesProcessed = 0;
         }
-
     }
 
+    //
+    // N.B. Sometimes, the number of keys is less than the total number of
+    //      assigned, such that the number of shared assigned will be less
+    //      than 0.  I haven't thought long enough about the implication of
+    //      this yet, but it seems like an interesting observation.
+    //
+
+    Coverage->NumberOfSharedAssigned = (
+        Graph->NumberOfKeys - Coverage->TotalNumberOfAssigned
+    );
+
+    //
+    // Invariant check: the total number of assigned elements we observed
+    // should be less than or equal to the number of edges.
+    //
+
+    if (Coverage->TotalNumberOfAssigned > Graph->NumberOfEdges) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    //
+    // Invariant check: the number of used plus number of empty should equal
+    // the total for each element type.
+    //
+
+    if (Coverage->NumberOfUsedPages + Coverage->NumberOfEmptyPages !=
+        Coverage->TotalNumberOfPages) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->NumberOfUsedLargePages + Coverage->NumberOfEmptyLargePages !=
+        Coverage->TotalNumberOfLargePages) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->NumberOfUsedCacheLines + Coverage->NumberOfEmptyCacheLines !=
+        Coverage->TotalNumberOfCacheLines) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    //
+    // Invariant check: the last used element should be greater than or equal
+    // to the first used element.
+    //
+
+    if (Coverage->LastPageUsed < Coverage->FirstPageUsed) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->LastLargePageUsed < Coverage->FirstLargePageUsed) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->LastCacheLineUsed < Coverage->FirstCacheLineUsed) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    return S_OK;
 }
+
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
 _Use_decl_annotations_
-VOID
+HRESULT
 GraphRegisterSolved(
     PGRAPH Graph
     )
@@ -1919,6 +1892,8 @@ Return Value:
 --*/
 {
     DBG_UNREFERENCED_PARAMETER(Graph);
+
+    return PH_E_NOT_IMPLEMENTED;
 }
 
 
@@ -2145,10 +2120,12 @@ Return Value:
     PRTL Rtl;
     HRESULT Result = S_OK;
     PGRAPH_INFO Info;
+    PGRAPH_INFO PrevInfo;
     PALLOCATOR Allocator;
     PPERFECT_HASH_TABLE Table;
-    PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
 
     //
     // Validate arguments.
@@ -2176,6 +2153,7 @@ Return Value:
 
     Context = Info->Context;
     Rtl = Context->Rtl;
+    PrevInfo = Info->PrevInfo;
     Allocator = Graph->Allocator;
     Table = Context->Table;
     TableInfoOnDisk = Table->TableInfoOnDisk;
@@ -2271,6 +2249,52 @@ Return Value:
     ALLOC_BITMAP_BUFFER(IndexBitmap);
 
     //
+    // Fill out the assigned memory coverage structure and allocate buffers.
+    //
+
+    Coverage = &Graph->AssignedMemoryCoverage;
+
+    Coverage->TotalNumberOfPages = Info->AssignedArrayNumberOfPages;
+    Coverage->TotalNumberOfLargePages = Info->AssignedArrayNumberOfLargePages;
+    Coverage->TotalNumberOfCacheLines = Info->AssignedArrayNumberOfCacheLines;
+
+#define ALLOC_ASSIGNED_ARRAY(Name, Type)                                      \
+    if (!Coverage->##Name) {                                                  \
+        Coverage->##Name = (PASSIGNED_##Type##_COUNT)(                        \
+            Allocator->Vtbl->AlignedMalloc(                                   \
+                Allocator,                                                    \
+                (ULONG_PTR)Info->##Name##SizeInBytes,                         \
+                YMMWORD_ALIGNMENT                                             \
+            )                                                                 \
+        );                                                                    \
+    } else {                                                                  \
+        BOOLEAN DoReAlloc = TRUE;                                             \
+        if (PrevInfo) {                                                       \
+            if (PrevInfo->##Name##SizeInBytes == Info->##Name##SizeInBytes) { \
+                DoReAlloc = FALSE;                                            \
+            }                                                                 \
+        }                                                                     \
+        if (DoReAlloc) {                                                      \
+            Coverage->##Name = (PASSIGNED_##Type##_COUNT)(                    \
+                Allocator->Vtbl->AlignedReAlloc(                              \
+                    Allocator,                                                \
+                    Coverage->##Name,                                         \
+                    (ULONG_PTR)Info->##Name##SizeInBytes,                     \
+                    YMMWORD_ALIGNMENT                                         \
+                )                                                             \
+            );                                                                \
+        }                                                                     \
+    }                                                                         \
+    if (!Coverage->##Name) {                                                  \
+        Result = E_OUTOFMEMORY;                                               \
+        goto Error;                                                           \
+    }
+
+    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerPage, PAGE);
+    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage, LARGE_PAGE);
+    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine, CACHE_LINE);
+
+    //
     // We're done, finish up.
     //
 
@@ -2323,9 +2347,10 @@ Return Value:
 
 --*/
 {
-    HRESULT Result = S_OK;
     PGRAPH_INFO Info;
+    HRESULT Result = S_OK;
     PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
 
     //
     // Initialize aliases.
@@ -2337,7 +2362,8 @@ Return Value:
     //
     // Increment the thread attempt counter, and interlocked-increment the
     // global context counter.  If the global attempt is equal to the resize
-    // table threshold, signal the event to try a larger table size.
+    // table threshold, signal the event to try a larger table size and return
+    // with the error code indicating a table resize is imminent.
     //
 
     ++Graph->ThreadAttempt;
@@ -2376,6 +2402,39 @@ Return Value:
     EMPTY_ARRAY(Prev);
     EMPTY_ARRAY(Next);
     EMPTY_ARRAY(Edges);
+
+    //
+    // Clear the assigned memory coverage counts and arrays.
+    //
+
+    Coverage = &Graph->AssignedMemoryCoverage;
+
+    Coverage->Padding = 0;
+    Coverage->TotalNumberOfAssigned = 0;
+    Coverage->NumberOfSharedAssigned = 0;
+
+    Coverage->NumberOfUsedPages = 0;
+    Coverage->NumberOfUsedLargePages = 0;
+    Coverage->NumberOfUsedCacheLines = 0;
+
+    Coverage->NumberOfEmptyPages = 0;
+    Coverage->NumberOfEmptyLargePages = 0;
+    Coverage->NumberOfEmptyCacheLines = 0;
+
+    Coverage->FirstPageUsed = 0;
+    Coverage->FirstLargePageUsed = 0;
+    Coverage->FirstCacheLineUsed = 0;
+
+    Coverage->LastPageUsed = 0;
+    Coverage->LastLargePageUsed = 0;
+    Coverage->LastCacheLineUsed = 0;
+
+#define ZERO_ASSIGNED_ARRAY(Name) \
+    ZeroInline(Coverage->##Name, Info->##Name##SizeInBytes)
+
+    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
+    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
+    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
 
     //
     // Clear any remaining values.

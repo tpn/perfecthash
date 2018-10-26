@@ -15,9 +15,21 @@ Abstract:
          lags behind other modules with regards to common design patterns,
          especially regarding exposing the functionality via a COM interface.)
 
+         It will likely be broken into two modules down the track.  Graph.c
+         will contain the common "component" scaffolding (i.e. the COM vtbl
+         methods), and a GraphImpl.c file will contain the implementation
+         specific routines (adding edges, determining if it's acyclic, etc.)
+
 --*/
 
 #include "stdafx.h"
+
+//
+// Define helper macros for EMPTY and GRAPH_NO_NEIGHBOR constants.
+//
+
+#define EMPTY ((VERTEX)-1)
+#define GRAPH_NO_NEIGHBOR ((VERTEX)-1)
 
 //
 // Define the primitive key, edge and vertex types and pointers to said types.
@@ -31,6 +43,184 @@ typedef EDGE *PEDGE;
 typedef VERTEX *PVERTEX;
 
 //
+// A core concept of the 2-part hypergraph algorithm for generating a perfect
+// hash solution is the "assigned" array.  The size of this array is equal to
+// the number of vertices in the graph.  The number of vertices in the graph is
+// equal to the number of edges in the graph, rounded up to the next power of
+// 2.  The number of edges in the graph is equal to the number of keys in the
+// input set, rounded up to the next power of 2.  That is:
+//
+//  a) Number of keys in the input set.
+//  b) Number of edges = number of keys, rounded up to a power of 2.
+//  c) Number of vertices = number of edges, rounded up to the next power of 2.
+//  d) Number of assigned elements = number of vertices.
+//
+// For example, KernelBase-2415.keys has 2415 keys, 4096 edges, and 8192
+// vertices.  Thus, the assigned array will feature 8192 elements of the given
+// underlying type (currently an unsigned 32-bit integer; ULONG).
+//
+// If, after a certain number of attempts, no graph solution has been found,
+// the edges and vertices (and thus, assigned array) get doubled, and more
+// attempts are made.  This is referred to as a table resize event.
+//
+// Poorly performing hash functions will often require numerous table resize
+// events before finding a solution.  On the opposite side of the spectrum,
+// good hash functions will often require no table resize events.  (We've yet
+// to observe the Jenkins hash function resulting in a table resize event;
+// however, its latency is 10x that of our best performing routines based on
+// the crc32 hardware instruction.)
+//
+// Typically, the more complex the hash function, the better it performs, and
+// vice versa.  Complexity in this case usually correlates directly to the
+// number of CPU instructions required to calculate the hash, and thus, the
+// latency of the routine.  Less instructions, lower latency, and vice versa.
+// (Ignoring outlier instructions like idiv which can take upward of 90 cycles
+//  to execute.)
+//
+// Hash routines with more instructions usually have long dependency chains,
+// too, which further inhibits the performance.  That is, each calculation is
+// dependent upon the results of the previous calculation, limiting the out-of-
+// order and speculative execution capabilities of the CPU.
+//
+// Evaluating the latency of a given hash function is straight forward: you just
+// measure the latency to perform the Index() routine for a given table (which
+// results in two executions of the hash function (generating two hash codes),
+// each with a different seed, and then two memory lookups into the assigned
+// array, using the masked version of each hash code as the index).
+//
+// The performance of the memory lookups, however, can be highly variable, as
+// they are at the mercy of the CPU cache.  The best scenario we can hope for is
+// if the containing cache lines for both indices are in the L1 cache.  If we're
+// benchmarking a single Index() call (with a constant key), we're guaranteed to
+// get L1 cache hits after the first call.  So, the measured latency will tell
+// us the best possible performance we can expect; micro-benchmarking at its
+// finest.
+//
+// From a macro-benchmarking perspective, though, the size of the assigned array
+// plays a large role.  In fact, it is not the size of the array per se, but the
+// distribution of values throughout the array that will ultimately govern the
+// likelihood of a cache hit or miss for a given key, assuming the keys being
+// looked up are essentially random during the lifetime of the table (i.e. no
+// key is any more probable of being looked up than another key).
+//
+// Are truly random key lookups a good measure of what happens in the real world
+// though?  One could argue that a common use case would be hash tables where
+// 90% of the lookups are performed against 10% of the keys, for example.  This
+// may mean that under realistic workloads, the number of cache lines used by
+// those 10% of keys is the critical factor; the remaining 90% of the keys are
+// looked up so infrequently that the cost of a cache miss at all levels and
+// subsequent memory fetch (so hundreds of cycles instead of 10-20 cycles) is
+// ultimately irrelevant.  So, a table with 65536 elements may perform just as
+// good, perhaps even better, than a table with 8192 elements, depending upon
+// the actual real world workload.
+//
+// In order to quantify the impact of memory coverage of the assigned array,
+// we need to be able to measure it.  That is the role of the following types
+// being defined.
+//
+// N.B. Memory coverage is an active work-in-progress.
+//
+
+typedef VERTEX ASSIGNED;
+typedef ASSIGNED *PASSIGNED;
+
+#define ASSIGNED_SHIFT 2
+
+#ifndef PAGE_SHIFT
+#define PAGE_SHIFT 12
+#endif
+
+#ifndef PAGE_SIZE
+#define PAGE_SIZE (1 << PAGE_SHIFT) // 4096
+#endif
+
+#ifndef LARGE_PAGE_SHIFT
+#define LARGE_PAGE_SHIFT 21
+#endif
+
+#ifndef LARGE_PAGE_SIZE
+#define LARGE_PAGE_SIZE (1 << LARGE_PAGE_SHIFT) // 2097152, or 2MB.
+#endif
+
+#ifndef CACHE_LINE_SHIFT
+#define CACHE_LINE_SHIFT 6
+#endif
+
+#ifndef CACHE_LINE_SIZE
+#define CACHE_LINE_SIZE (1 << CACHE_LINE_SHIFT) // 64
+#endif
+
+#define NUM_ASSIGNED_PER_PAGE       (PAGE_SIZE       / sizeof(ASSIGNED))
+#define NUM_ASSIGNED_PER_LARGE_PAGE (LARGE_PAGE_SIZE / sizeof(ASSIGNED))
+#define NUM_ASSIGNED_PER_CACHE_LINE (CACHE_LINE_SIZE / sizeof(ASSIGNED))
+
+//
+// For the human readers that don't like doing C preprocessor mental math,
+// some C_ASSERTs to clarify the sizes above:
+//
+
+C_ASSERT(NUM_ASSIGNED_PER_PAGE       == 1024);      // Fits within USHORT.
+C_ASSERT(NUM_ASSIGNED_PER_LARGE_PAGE == 524288);    // Fits within ULONG.
+C_ASSERT(NUM_ASSIGNED_PER_CACHE_LINE == 16);        // Fits within BYTE.
+
+typedef ASSIGNED ASSIGNED_PAGE[NUM_ASSIGNED_PER_PAGE];
+typedef ASSIGNED_PAGE *PASSIGNED_PAGE;
+
+typedef ASSIGNED ASSIGNED_LARGE_PAGE[NUM_ASSIGNED_PER_LARGE_PAGE];
+typedef ASSIGNED_LARGE_PAGE *PASSIGNED_LARGE_PAGE;
+
+typedef ASSIGNED ASSIGNED_CACHE_LINE[NUM_ASSIGNED_PER_CACHE_LINE];
+typedef ASSIGNED_CACHE_LINE *PASSIGNED_CACHE_LINE;
+
+typedef USHORT ASSIGNED_PAGE_COUNT;
+typedef ASSIGNED_PAGE_COUNT *PASSIGNED_PAGE_COUNT;
+
+typedef ULONG ASSIGNED_LARGE_PAGE_COUNT;
+typedef ASSIGNED_LARGE_PAGE_COUNT *PASSIGNED_LARGE_PAGE_COUNT;
+
+typedef BYTE ASSIGNED_CACHE_LINE_COUNT;
+typedef ASSIGNED_CACHE_LINE_COUNT *PASSIGNED_CACHE_LINE_COUNT;
+
+typedef struct _ASSIGNED_MEMORY_COVERAGE {
+
+    ULONG TotalNumberOfPages;
+    ULONG TotalNumberOfLargePages;
+    ULONG TotalNumberOfCacheLines;
+
+    ULONG NumberOfUsedPages;
+    ULONG NumberOfUsedLargePages;
+    ULONG NumberOfUsedCacheLines;
+
+    ULONG NumberOfEmptyPages;
+    ULONG NumberOfEmptyLargePages;
+    ULONG NumberOfEmptyCacheLines;
+
+    ULONG FirstPageUsed;
+    ULONG FirstLargePageUsed;
+    ULONG FirstCacheLineUsed;
+
+    ULONG LastPageUsed;
+    ULONG LastLargePageUsed;
+    ULONG LastCacheLineUsed;
+
+    ULONG TotalNumberOfAssigned;
+    LONG NumberOfSharedAssigned;
+
+    ULONG Padding;
+
+    _Writable_elements_(TotalNumberOfPages)
+    PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
+
+    _Writable_elements_(TotalNumberOfLargePages)
+    PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
+
+    _Writable_elements_(TotalNumberOfCacheLines)
+    PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
+
+} ASSIGNED_MEMORY_COVERAGE;
+typedef ASSIGNED_MEMORY_COVERAGE *PASSIGNED_MEMORY_COVERAGE;
+
+//
 // Define a graph iterator structure use to facilitate graph traversal.
 //
 
@@ -39,17 +229,6 @@ typedef struct _GRAPH_ITERATOR {
     EDGE Edge;
 } GRAPH_ITERATOR;
 typedef GRAPH_ITERATOR *PGRAPH_ITERATOR;
-
-//
-// Define helper macros for EMPTY and GRAPH_NO_NEIGHBOR constants.
-//
-// N.B. I'm not sure why they don't use NULL/0 for the empty edge case.  Using
-//      -1 means the edge array needs to be filled with -1s as part of graph
-//      initialization, which seems inefficient and unnecessary.
-//
-
-#define EMPTY ((VERTEX)-1)
-#define GRAPH_NO_NEIGHBOR ((VERTEX)-1)
 
 //
 // Define graph flags.
@@ -215,7 +394,14 @@ typedef struct _GRAPH_INFO {
 
     ULONG VertexMask;
 
-    ULONG Padding;
+    //
+    // Number of pages, large pages and cache lines covered by the assigned
+    // array.
+    //
+
+    ULONG AssignedArrayNumberOfPages;
+    ULONG AssignedArrayNumberOfLargePages;
+    ULONG AssignedArrayNumberOfCacheLines;
 
     //
     // Graph dimensions.  This information is duplicated in the graph due to
@@ -229,6 +415,12 @@ typedef struct _GRAPH_INFO {
     //
 
     struct _PERFECT_HASH_CONTEXT *Context;
+
+    //
+    // Pointer to the previous Info, if applicable.
+    //
+
+    struct _GRAPH_INFO *PrevInfo;
 
     //
     // Array sizes.
@@ -251,8 +443,16 @@ typedef struct _GRAPH_INFO {
     ULONGLONG IndexBitmapBufferSizeInBytes;
 
     //
-    // The allocation size of all the arrays and bitmap buffers, rounded up to
-    // the nearest page size.
+    // Assigned memory coverage buffer sizes for counts.
+    //
+
+    ULONGLONG NumberOfAssignedPerCacheLineSizeInBytes;
+    ULONGLONG NumberOfAssignedPerPageSizeInBytes;
+    ULONGLONG NumberOfAssignedPerLargePageSizeInBytes;
+
+    //
+    // The allocation size of all the arrays, bitmap buffers, and memory
+    // coverage arrays, rounded up to the nearest page size.
     //
 
     ULONGLONG AllocSize;
@@ -337,6 +537,27 @@ HRESULT
     );
 typedef GRAPH_VERIFY *PGRAPH_VERIFY;
 
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
+      *PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_REGISTER_SOLVED)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_REGISTER_SOLVED *PGRAPH_REGISTER_SOLVED;
+
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
     PGRAPH_SET_INFO SetInfo;
@@ -346,6 +567,8 @@ typedef struct _GRAPH_VTBL {
     PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
     PGRAPH_SOLVE Solve;
     PGRAPH_VERIFY Verify;
+    PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE CalculateAssignedMemoryCoverage;
+    PGRAPH_REGISTER_SOLVED RegisterSolved;
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
@@ -531,6 +754,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     RTL_BITMAP IndexBitmap;
 
     //
+    // Memory coverage information for the assigned array.
+    //
+
+    ASSIGNED_MEMORY_COVERAGE AssignedMemoryCoverage;
+
+    //
     // The graph interface.
     //
 
@@ -623,6 +852,8 @@ extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
 extern GRAPH_RESET GraphReset;
 extern GRAPH_SOLVE GraphSolve;
 extern GRAPH_VERIFY GraphVerify;
+extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE GraphCalculateAssignedMemoryCoverage;
+extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
 //
 // Define a helper macro for hashing keys during graph creation.  Assumes a

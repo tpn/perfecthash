@@ -21,7 +21,10 @@ _Success_(return >= 0)
 HRESULT
 (NTAPI PREPARE_GRAPH_INFO)(
     _In_ PPERFECT_HASH_TABLE Table,
-    _Out_ PGRAPH_INFO Info
+    _When_(PrevInfo == NULL, _Out_)
+    _When_(PrevInfo != NULL, _Inout_)
+        PGRAPH_INFO Info,
+    _Out_opt_ PGRAPH_INFO PrevInfo
     );
 typedef PREPARE_GRAPH_INFO *PPREPARE_GRAPH_INFO;
 
@@ -145,6 +148,7 @@ Return Value:
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
     ULONG WaitResult;
+    GRAPH_INFO PrevInfo;
     GRAPH_INFO Info;
     PALLOCATOR Allocator;
     PHANDLE Event;
@@ -250,7 +254,7 @@ Return Value:
         return PH_E_INVALID_NUMBER_OF_SEEDS;
     }
 
-    Result = PrepareGraphInfoChm01(Table, &Info);
+    Result = PrepareGraphInfoChm01(Table, &Info, NULL);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashTableImplChm01_PrepareFirstGraphInfo, Result);
         goto Error;
@@ -405,7 +409,7 @@ RetryWithLargerTableSize:
 
     if (++Attempt > 1) {
 
-        Result = PrepareGraphInfoChm01(Table, &Info);
+        Result = PrepareGraphInfoChm01(Table, &Info, &PrevInfo);
         if (FAILED(Result)) {
             PH_ERROR(CreatePerfectHashTableImplChm01_PrepareGraphInfo, Result);
             goto Error;
@@ -875,7 +879,8 @@ _Use_decl_annotations_
 HRESULT
 PrepareGraphInfoChm01(
     PPERFECT_HASH_TABLE Table,
-    PGRAPH_INFO Info
+    PGRAPH_INFO Info,
+    PGRAPH_INFO PrevInfo
     )
 /*++
 
@@ -883,11 +888,19 @@ Routine Description:
 
     Prepares the GRAPH_INFO structure for a given table.
 
+    N.B. This routine was created by lifting all of the logic from the body of
+         the CreatePerfectHashTableImplChm01() routine, which is where it was
+         originally based.  It could do with an overhaul; it uses way too many
+         local variables unnecessarily, for example.
+
 Arguments:
 
     Table - Supplies a pointer to the table.
 
     Info - Supplies a pointer to the graph info structure to prepare.
+
+    PrevInfo - Optionally supplies a pointer to the previous info structure
+        if this is not the first time the routine is being called.
 
 Return Value:
 
@@ -957,6 +970,23 @@ Return Value:
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk;
     TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
+
+    //
+    // If a previous Info struct pointer has been passed, copy the current
+    // Info contents into it.
+    //
+
+    if (ARGUMENT_PRESENT(PrevInfo)) {
+        CopyInline(PrevInfo, Info, sizeof(*PrevInfo));
+    }
+
+    //
+    // Clear our Info struct and wire up the PrevInfo pointer (which may be
+    // NULL).
+    //
+
+    ZeroStructPointerInline(Info);
+    Info->PrevInfo = PrevInfo;
 
     //
     // Ensure the number of keys are under MAX_ULONG, then take a local copy.
@@ -1211,8 +1241,53 @@ Return Value:
     );
 
     //
-    // Calculate the total size required for the underlying graph, rounded up
-    // to the nearest page size.
+    // Calculate the number of cache lines, pages and large pages covered by
+    // the assigned array, plus the respective buffer sizes for each array in
+    // the ASSIGNED_MEMORY_COVERAGE structure that captures counts.
+    //
+    // N.B. We don't use AssignedSizeInBytes here as it is subject to being
+    //      aligned up to a YMMWORD boundary, and thus, may not represent the
+    //      exact number of cache lines used strictly for vertices.
+    //
+
+    //
+    // Element counts.
+    //
+
+    Info->AssignedArrayNumberOfPages = (ULONG)(
+        BYTES_TO_PAGES(NumberOfVertices.QuadPart << ASSIGNED_SHIFT)
+    );
+
+    Info->AssignedArrayNumberOfLargePages = (ULONG)(
+        BYTES_TO_LARGE_PAGES(NumberOfVertices.QuadPart << ASSIGNED_SHIFT)
+    );
+
+    Info->AssignedArrayNumberOfCacheLines = (ULONG)(
+        BYTES_TO_CACHE_LINES(NumberOfVertices.QuadPart << ASSIGNED_SHIFT)
+    );
+
+    //
+    // Array sizes.
+    //
+
+    Info->NumberOfAssignedPerPageSizeInBytes = (
+        Info->AssignedArrayNumberOfPages *
+        RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE, NumberOfAssignedPerPage)
+    );
+
+    Info->NumberOfAssignedPerLargePageSizeInBytes = (
+        Info->AssignedArrayNumberOfLargePages *
+        RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE, NumberOfAssignedPerLargePage)
+    );
+
+    Info->NumberOfAssignedPerCacheLineSizeInBytes = (
+        Info->AssignedArrayNumberOfCacheLines *
+        RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE, NumberOfAssignedPerCacheLine)
+    );
+
+    //
+    // Calculate the total size required for the underlying arrays, bitmap
+    // buffers and assigned array counts, rounded up to the nearest page size.
     //
 
     AllocSize.QuadPart = ROUND_TO_PAGES(
@@ -1222,6 +1297,10 @@ Return Value:
         PrevSizeInBytes +
         AssignedSizeInBytes +
         ValuesSizeInBytes +
+
+        Info->NumberOfAssignedPerPageSizeInBytes +
+        Info->NumberOfAssignedPerLargePageSizeInBytes +
+        Info->NumberOfAssignedPerCacheLineSizeInBytes +
 
         //
         // Begin bitmaps.
@@ -1263,8 +1342,6 @@ Return Value:
     // Initialize the GRAPH_INFO structure with all the sizes captured earlier.
     // (We zero it first just to ensure any of the padding fields are cleared.)
     //
-
-    ZeroStructPointer(Info);
 
     Info->Context = Context;
     Info->AllocSize = AllocSize.QuadPart;

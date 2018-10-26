@@ -104,16 +104,40 @@ typedef const CHAR *PCCHAR;
 typedef _Null_terminated_ const WCHAR *PCWSZ;
 typedef const WCHAR *PCWCHAR;
 
-#ifndef PAGE_SIZE
-#define PAGE_SIZE 4096
+#ifndef PAGE_SHIFT
+#define PAGE_SHIFT 12
 #endif
 
-#ifndef PAGE_SHIFT
-#define PAGE_SHIFT 12L
+#ifndef PAGE_SIZE
+#define PAGE_SIZE (1 << PAGE_SHIFT) // 4096
+#endif
+
+#ifndef LARGE_PAGE_SHIFT
+#define LARGE_PAGE_SHIFT 21
+#endif
+
+#ifndef LARGE_PAGE_SIZE
+#define LARGE_PAGE_SIZE (1 << LARGE_PAGE_SHIFT) // 2097152, or 2MB.
+#endif
+
+#ifndef CACHE_LINE_SHIFT
+#define CACHE_LINE_SHIFT 6
+#endif
+
+#ifndef CACHE_LINE_SIZE
+#define CACHE_LINE_SIZE (1 << CACHE_LINE_SHIFT) // 64
 #endif
 
 #ifndef PAGE_ALIGN
-#define PAGE_ALIGN(Va) ((PVOID)((ULONG_PTR)(Va) & ~(PAGE_SIZE - 1)))
+#define PAGE_ALIGN(A) ((PVOID)((ULONG_PTR)(A) & ~(PAGE_SIZE - 1)))
+#endif
+
+#ifndef LARGE_PAGE_ALIGN
+#define LARGE_PAGE_ALIGN(A) ((PVOID)((ULONG_PTR)(A) & ~(LARGE_PAGE_SIZE - 1)))
+#endif
+
+#ifndef CACHE_LINE_ALIGN
+#define CACHE_LINE_ALIGN(A) ((PVOID)((ULONG_PTR)(A) & ~(CACHE_LINE_SIZE - 1)))
 #endif
 
 #ifndef ROUND_TO_PAGES
@@ -122,9 +146,33 @@ typedef const WCHAR *PCWCHAR;
 )
 #endif
 
+#ifndef ROUND_TO_LARGE_PAGES
+#define ROUND_TO_LARGE_PAGES(Size) (                                   \
+    ((ULONG_PTR)(Size) + LARGE_PAGE_SIZE - 1) & ~(LARGE_PAGE_SIZE - 1) \
+)
+#endif
+
+#ifndef ROUND_TO_CACHE_LINES
+#define ROUND_TO_CACHE_LINES(Size) (                                   \
+    ((ULONG_PTR)(Size) + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1) \
+)
+#endif
+
 #ifndef BYTES_TO_PAGES
 #define BYTES_TO_PAGES(Size) (                                   \
     (((Size) >> PAGE_SHIFT) + (((Size) & (PAGE_SIZE - 1)) != 0)) \
+)
+#endif
+
+#ifndef BYTES_TO_LARGE_PAGES
+#define BYTES_TO_LARGE_PAGES(Size) (                                         \
+    (((Size) >> LARGE_PAGE_SHIFT) + (((Size) & (LARGE_PAGE_SIZE - 1)) != 0)) \
+)
+#endif
+
+#ifndef BYTES_TO_CACHE_LINES
+#define BYTES_TO_CACHE_LINES(Size) (                                         \
+    (((Size) >> CACHE_LINE_SHIFT) + (((Size) & (CACHE_LINE_SIZE - 1)) != 0)) \
 )
 #endif
 
@@ -160,8 +208,8 @@ typedef const WCHAR *PCWCHAR;
 #endif
 
 #ifndef ALIGN_UP_LARGE_PAGE
-#define ALIGN_UP_LARGE_PAGE(Address) (       \
-    ALIGN_UP(Address, GetLargePageMinimum()) \
+#define ALIGN_UP_LARGE_PAGE(Address) ( \
+    ALIGN_UP(Address, LARGE_PAGE_SIZE) \
 )
 #endif
 
