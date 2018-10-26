@@ -1745,6 +1745,8 @@ Return Value:
         Mask = _mm256_movemask_epi8(ZerosYmm);
         Count += (BYTE)PopulationCount32(Mask);
 
+        Coverage->TotalNumberOfAssigned += Count;
+
 #endif
 
         AssignedCacheLine++;
