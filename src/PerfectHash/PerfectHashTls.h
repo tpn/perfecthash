@@ -146,7 +146,8 @@ typedef PERFECT_HASH_TLS_ENSURE_CONTEXT *PPERFECT_HASH_TLS_ENSURE_CONTEXT;
 // N.B. We don't have an annotation on the TlsContext parameter (i.e. _In_)
 //      for the following routine as it's valid to pass an uninitialized
 //      struct pointer (as we call ZeroStructPointerInline() on it if we
-//      end up using it), and I don't know how to express this in SAL.
+//      end up using it), and I don't know how to express this in SAL as it
+//      is dependent upon the value returned by TlsGetValue().
 //
 
 typedef
