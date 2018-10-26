@@ -742,6 +742,13 @@ Return Value:
         }
 
         //
+        // Disable compilation at the moment as it adds an extra ~6-10 seconds
+        // per iteration.
+        //
+
+#if 0
+
+        //
         // Compile the table.
         //
 
@@ -763,6 +770,8 @@ Return Value:
 
         WIDE_OUTPUT_RAW(WideOutput, L"Compiled table successfully.\n");
         WIDE_OUTPUT_FLUSH();
+
+#endif
 
         //
         // Release the table.
