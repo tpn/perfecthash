@@ -80,7 +80,6 @@ Return Value:
     ULONG Previous;
     ULONG NumberOfKeys;
     ULONG ValueIndex;
-    ULONG Bit;
     ULONG NumberOfBitsSet;
     PKEY Source;
     PKEY SourceKeys;
@@ -132,24 +131,20 @@ Return Value:
 
     //
     // Calculate the space required for a bitmap buffer that allows us to set
-    // a bit for each unique key index.  We add 1 to the size to account for
-    // the fact that we have to add 1 to every index value returned by the
-    // table's Index() method in order to account for the fact that 0 may be
-    // returned as an index.
+    // a bit for each unique key index.
     //
 
-    NumberOfBits.QuadPart = (ULONGLONG)NumberOfKeys + 1ULL;
+    NumberOfBits.QuadPart = (ULONGLONG)NumberOfKeys;
     ASSERT(!NumberOfBits.HighPart);
 
     Indices.SizeOfBitMap = NumberOfBits.LowPart;
 
     //
-    // Divide by 8 (>> 3) to convert number of bits to bytes required, then
-    // round up to a 16 byte boundary.
+    // Align the bitmap up to an 8 byte boundary then divide by 8.
     //
 
     BitmapBufferSize.QuadPart = (
-        ALIGN_UP(NumberOfBits.QuadPart >> 3ULL, 16)
+        ALIGN_UP(NumberOfBits.QuadPart, 8) >> 3ULL
     );
 
     //
@@ -260,16 +255,10 @@ Return Value:
         ASSERT(!FAILED(Result));
 
         //
-        // Account for the fact that the value index may be 0 by adding 1.
-        //
-
-        Bit = ValueIndex + 1;
-
-        //
         // Verify bit isn't already set and set it.
         //
 
-        ASSERT(!BitTestAndSet(BitmapBuffer, Bit));
+        ASSERT(!BitTestAndSet(BitmapBuffer, ValueIndex));
 
     }
 
