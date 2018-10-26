@@ -1123,7 +1123,7 @@ Return Value:
 
         ASSERT(MaskedFinalId <= Graph->NumberOfVertices);
 
-        Bit = MaskedFinalId + 1;
+        Bit = MaskedFinalId;
 
         if (Bit >= Graph->NumberOfVertices) {
 
@@ -1570,7 +1570,7 @@ Return Value:
 
         MASK_INDEX(Combined, &Index);
 
-        Bit = Index + 1;
+        Bit = Index;
 
         //
         // Make sure we haven't seen this bit before.
@@ -2238,10 +2238,10 @@ Return Value:
     // buffers.
     //
 
-    Graph->DeletedEdgesBitmap.SizeOfBitMap = Graph->TotalNumberOfEdges + 1;
-    Graph->VisitedVerticesBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
-    Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
-    Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices + 1;
+    Graph->DeletedEdgesBitmap.SizeOfBitMap = Graph->TotalNumberOfEdges;
+    Graph->VisitedVerticesBitmap.SizeOfBitMap = Graph->NumberOfVertices;
+    Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices;
+    Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices;
 
 #define ALLOC_BITMAP_BUFFER(Name)                          \
     if (!Graph->##Name##.Buffer) {                         \

@@ -1132,32 +1132,21 @@ Return Value:
     }
 
     //
-    // Calculate the size required for the DeletedEdgesBitmap buffer.  One bit
-    // is used per TotalNumberOfEdges.  Convert the bits into bytes by shifting
-    // right 3 (dividing by 8) then align it up to a 16 byte boundary.  We add 1
-    // before shifting to account 1-based bitmaps vs 0-based indices.
+    // Calculate the size required for our bitmap buffers.
     //
 
     DeletedEdgesBitmapBufferSizeInBytes.QuadPart = (
-        ALIGN_UP(((ALIGN_UP(TotalNumberOfEdges.QuadPart + 1, 8)) >> 3), 16)
+        ALIGN_UP(TotalNumberOfEdges.QuadPart, 8) >> 3
     );
 
     if (DeletedEdgesBitmapBufferSizeInBytes.HighPart) {
         Result = PH_E_TOO_MANY_BITS_FOR_BITMAP;
         PH_ERROR(PrepareGraphInfoChm01_DeletedEdgesBitmap, Result);
         goto Error;
-
     }
 
-    //
-    // Calculate the size required for the VisitedVerticesBitmap buffer.  One
-    // bit is used per NumberOfVertices.  Convert the bits into bytes by
-    // shifting right 3 (dividing by 8) then align it up to a 16 byte boundary.
-    // We add 1 before shifting to account 1-based bitmaps vs 0-based indices.
-    //
-
     VisitedVerticesBitmapBufferSizeInBytes.QuadPart = (
-        ALIGN_UP(((ALIGN_UP(NumberOfVertices.QuadPart + 1, 8)) >> 3), 16)
+        ALIGN_UP(NumberOfVertices.QuadPart, 8) >> 3
     );
 
     if (VisitedVerticesBitmapBufferSizeInBytes.HighPart) {
@@ -1166,15 +1155,8 @@ Return Value:
         goto Error;
     }
 
-    //
-    // Calculate the size required for the AssignedBitmap buffer.  One bit is
-    // used per NumberOfVertices.  Convert the bits into bytes by shifting right
-    // 3 (dividing by 8) then align it up to a 16 byte boundary.  We add 1
-    // before shifting to account 1-based bitmaps vs 0-based indices.
-    //
-
     AssignedBitmapBufferSizeInBytes.QuadPart = (
-        ALIGN_UP(((ALIGN_UP(NumberOfVertices.QuadPart + 1, 8)) >> 3), 16)
+        ALIGN_UP(NumberOfVertices.QuadPart, 8) >> 3
     );
 
     if (AssignedBitmapBufferSizeInBytes.HighPart) {
@@ -1183,15 +1165,8 @@ Return Value:
         goto Error;
     }
 
-    //
-    // Calculate the size required for the IndexBitmap buffer.  One bit is used
-    // per NumberOfVertices.  Convert the bits into bytes by shifting right 3
-    // (dividing by 8) then align it up to a 16 byte boundary.  We add 1 before
-    // shifting to account 1-based bitmaps vs 0-based indices.
-    //
-
     IndexBitmapBufferSizeInBytes.QuadPart = (
-        ALIGN_UP(((ALIGN_UP(NumberOfVertices.QuadPart + 1, 8)) >> 3), 16)
+        ALIGN_UP(NumberOfVertices.QuadPart, 8) >> 3
     );
 
     if (IndexBitmapBufferSizeInBytes.HighPart) {

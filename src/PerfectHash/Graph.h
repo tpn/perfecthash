@@ -1097,7 +1097,7 @@ IsDeletedEdge(
     _In_ EDGE Edge
     )
 {
-    return TestGraphBit(DeletedEdgesBitmap, Edge + 1);
+    return TestGraphBit(DeletedEdgesBitmap, Edge);
 }
 
 FORCEINLINE
@@ -1107,7 +1107,7 @@ IsVisitedVertex(
     _In_ VERTEX Vertex
     )
 {
-    return TestGraphBit(VisitedVerticesBitmap, Vertex + 1);
+    return TestGraphBit(VisitedVerticesBitmap, Vertex);
 }
 
 #define SetGraphBit(Name, BitNumber) \
@@ -1120,12 +1120,7 @@ RegisterEdgeDeletion(
     _In_ EDGE Edge
     )
 {
-    //
-    // We add 1 to the edge to account for the fact that they're 0-based, but
-    // the bitmaps are 1-based.
-    //
-
-    SetGraphBit(DeletedEdgesBitmap, Edge + 1);
+    SetGraphBit(DeletedEdgesBitmap, Edge);
     Graph->DeletedEdgeCount++;
     ASSERT(Graph->DeletedEdgeCount <= Graph->TotalNumberOfEdges);
 }
@@ -1137,12 +1132,7 @@ RegisterVertexVisit(
     _In_ VERTEX Vertex
     )
 {
-    //
-    // We add 1 to the vertex to account for the fact that they're 0-based, but
-    // the bitmaps are 1-based.
-    //
-
-    SetGraphBit(VisitedVerticesBitmap, Vertex + 1);
+    SetGraphBit(VisitedVerticesBitmap, Vertex);
     Graph->VisitedVerticesCount++;
     ASSERT(Graph->VisitedVerticesCount <= Graph->NumberOfVertices);
 }
