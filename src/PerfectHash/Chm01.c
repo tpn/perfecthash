@@ -1102,10 +1102,10 @@ Return Value:
     }
 
     //
-    // Calculate the size required for the DeletedEdges bitmap buffer.  One
-    // bit is used per TotalNumberOfEdges.  Convert the bits into bytes by
-    // shifting right 3 (dividing by 8) then align it up to a 16 byte boundary.
-    // We add 1 before shifting to account 1-based bitmaps vs 0-based indices.
+    // Calculate the size required for the DeletedEdgesBitmap buffer.  One bit
+    // is used per TotalNumberOfEdges.  Convert the bits into bytes by shifting
+    // right 3 (dividing by 8) then align it up to a 16 byte boundary.  We add 1
+    // before shifting to account 1-based bitmaps vs 0-based indices.
     //
 
     DeletedEdgesBitmapBufferSizeInBytes.QuadPart = (
@@ -1120,7 +1120,7 @@ Return Value:
     }
 
     //
-    // Calculate the size required for the VisitedVertices bitmap buffer.  One
+    // Calculate the size required for the VisitedVerticesBitmap buffer.  One
     // bit is used per NumberOfVertices.  Convert the bits into bytes by
     // shifting right 3 (dividing by 8) then align it up to a 16 byte boundary.
     // We add 1 before shifting to account 1-based bitmaps vs 0-based indices.
@@ -1137,10 +1137,10 @@ Return Value:
     }
 
     //
-    // Calculate the size required for the AssignedBitmap bitmap buffer.  One
-    // bit is used per NumberOfVertices.  Convert the bits into bytes by shifting
-    // right 3 (dividing by 8) then align it up to a 16 byte boundary.
-    // We add 1 before shifting to account 1-based bitmaps vs 0-based indices.
+    // Calculate the size required for the AssignedBitmap buffer.  One bit is
+    // used per NumberOfVertices.  Convert the bits into bytes by shifting right
+    // 3 (dividing by 8) then align it up to a 16 byte boundary.  We add 1
+    // before shifting to account 1-based bitmaps vs 0-based indices.
     //
 
     AssignedBitmapBufferSizeInBytes.QuadPart = (
@@ -1154,10 +1154,10 @@ Return Value:
     }
 
     //
-    // Calculate the size required for the IndexBitmap bitmap buffer.  One
-    // bit is used per NumberOfVertices.  Convert the bits into bytes by shifting
-    // right 3 (dividing by 8) then align it up to a 16 byte boundary.
-    // We add 1 before shifting to account 1-based bitmaps vs 0-based indices.
+    // Calculate the size required for the IndexBitmap buffer.  One bit is used
+    // per NumberOfVertices.  Convert the bits into bytes by shifting right 3
+    // (dividing by 8) then align it up to a 16 byte boundary.  We add 1 before
+    // shifting to account 1-based bitmaps vs 0-based indices.
     //
 
     IndexBitmapBufferSizeInBytes.QuadPart = (
