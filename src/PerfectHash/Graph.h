@@ -217,6 +217,16 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     _Writable_elements_(TotalNumberOfCacheLines)
     PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
 
+    //
+    // Histogram of cache line counts.  The +1 accounts for the fact that we
+    // want to count the number of times 0 occurs, as well, so we need 17 array
+    // elements, not 16.
+    //
+
+    ULONG NumberOfAssignedPerCacheLineCounts[NUM_ASSIGNED_PER_CACHE_LINE + 1];
+
+    ULONG Padding2;
+
 } ASSIGNED_MEMORY_COVERAGE;
 typedef ASSIGNED_MEMORY_COVERAGE *PASSIGNED_MEMORY_COVERAGE;
 
@@ -366,10 +376,16 @@ typedef struct _GRAPH_INFO {
     USHORT NumberOfBitmaps;
 
     //
+    // Pad out to a 4 byte boundary.
+    //
+
+    USHORT Padding;
+
+    //
     // Size of the GRAPH structure.
     //
 
-    USHORT SizeOfGraphStruct;
+    ULONG SizeOfGraphStruct;
 
     //
     // System allocation granularity.  We align the memory map for the on-disk
@@ -409,6 +425,12 @@ typedef struct _GRAPH_INFO {
     //
 
     GRAPH_DIMENSIONS Dimensions;
+
+    //
+    // Pad out to an 8 byte boundary.
+    //
+
+    ULONG Padding2;
 
     //
     // Pointer to the owning context.

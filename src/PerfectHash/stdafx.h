@@ -21,6 +21,25 @@ Abstract:
 #include "targetver.h"
 
 //
+// When the target platform is x64, our ../PerfectHash.props file specifies:
+//
+//      <EnableEnhancedInstructionSet>
+//          AdvancedVectorExtensions2
+//      </EnableEnhancedInstructionSet>
+//
+// This will implicitly set the __AVX2__ pre-defined macro.  However, Visual
+// Studio doesn't appear to recognize this, so, we explicitly define it here
+// to forcibly hint that the AVX2 code is active if applicable (i.e. so it
+// is not shaded as unused with code highlighting).
+//
+
+#ifdef _M_X64
+#ifndef __AVX2__
+#define __AVX2__
+#endif
+#endif
+
+//
 // N.B. The warning disable glue is necessary to get the system headers to
 //      include with all errors enabled (/Wall).
 //

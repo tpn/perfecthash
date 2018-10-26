@@ -1679,6 +1679,10 @@ Return Value:
 --*/
 {
     BYTE Count;
+    BYTE FirstCount;
+    BYTE SecondCount;
+    USHORT PageCount;
+    ULONG LargePageCount;
     ULONG PageIndex;
     ULONG CacheLineIndex;
     ULONG LargePageIndex;
@@ -1696,8 +1700,10 @@ Return Value:
     PASSIGNED Assigned;
 #else
     ULONG Mask;
-    YMMWORD ZerosYmm;
+    PBYTE Assigned;
+    YMMWORD NotZerosYmm;
     YMMWORD AssignedYmm;
+    YMMWORD ShiftedYmm;
     const YMMWORD AllZeros = _mm256_set1_epi8(0);
 #endif
 
@@ -1731,23 +1737,33 @@ Return Value:
         // First 32 bytes of the cache line.
         //
 
-        AssignedYmm = _mm256_stream_load_si256((PYMMWORD)AssignedCacheLine);
-        ZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
-        Mask = _mm256_movemask_epi8(ZerosYmm);
-        Count = (BYTE)PopulationCount32(Mask);
+        Assigned = (PBYTE)AssignedCacheLine;
+        AssignedYmm = _mm256_stream_load_si256((PYMMWORD)Assigned);
+        NotZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
+        ShiftedYmm = _mm256_srli_epi32(NotZerosYmm, 24);
+        Mask = _mm256_movemask_epi8(ShiftedYmm);
+        FirstCount = (BYTE)PopulationCount32(Mask);
+        ASSERT(FirstCount >= 0 && FirstCount <= 8);
 
         //
         // Second 32 bytes of the cache line.
         //
 
-        AssignedYmm = _mm256_stream_load_si256((PYMMWORD)AssignedCacheLine+32);
-        ZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
-        Mask = _mm256_movemask_epi8(ZerosYmm);
-        Count += (BYTE)PopulationCount32(Mask);
+        Assigned += 32;
+        AssignedYmm = _mm256_stream_load_si256((PYMMWORD)Assigned);
+        NotZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
+        ShiftedYmm = _mm256_srli_epi32(NotZerosYmm, 24);
+        Mask = _mm256_movemask_epi8(ShiftedYmm);
+        SecondCount = (BYTE)PopulationCount32(Mask);
+        ASSERT(SecondCount >= 0 && SecondCount <= 8);
 
+        Count = FirstCount + SecondCount;
         Coverage->TotalNumberOfAssigned += Count;
 
 #endif
+
+        ASSERT(Count >= 0 && Count <= 16);
+        Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
 
         AssignedCacheLine++;
 
@@ -1784,7 +1800,9 @@ Return Value:
 
             PageSizeBytesProcessed = 0;
 
-            if (Coverage->NumberOfAssignedPerPage[PageIndex]) {
+            PageCount = Coverage->NumberOfAssignedPerPage[PageIndex];
+
+            if (PageCount) {
                 Coverage->NumberOfUsedPages++;
             } else {
                 Coverage->NumberOfEmptyPages++;
@@ -1797,7 +1815,10 @@ Return Value:
 
                 LargePageSizeBytesProcessed = 0;
 
-                if (Coverage->NumberOfAssignedPerLargePage[LargePageIndex]) {
+                LargePageCount =
+                    Coverage->NumberOfAssignedPerLargePage[LargePageIndex];
+
+                if (LargePageCount) {
                     Coverage->NumberOfUsedLargePages++;
                 } else {
                     Coverage->NumberOfEmptyLargePages++;
@@ -1821,10 +1842,10 @@ Return Value:
 
     //
     // Invariant check: the total number of assigned elements we observed
-    // should be less than or equal to the number of edges.
+    // should be less than or equal to the number of vertices.
     //
 
-    if (Coverage->TotalNumberOfAssigned > Graph->NumberOfEdges) {
+    if (Coverage->TotalNumberOfAssigned > Graph->NumberOfVertices) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
 
@@ -1867,7 +1888,6 @@ Return Value:
 
     return S_OK;
 }
-
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
@@ -2260,9 +2280,42 @@ Return Value:
     Coverage->TotalNumberOfLargePages = Info->AssignedArrayNumberOfLargePages;
     Coverage->TotalNumberOfCacheLines = Info->AssignedArrayNumberOfCacheLines;
 
-#define ALLOC_ASSIGNED_ARRAY(Name, Type)                                      \
+#define ALLOC_ASSIGNED_ARRAY(Name, Type)               \
+    if (!Coverage->##Name) {                           \
+        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedMalloc(            \
+                Allocator,                             \
+                (ULONG_PTR)Info->##Name##SizeInBytes,  \
+                YMMWORD_ALIGNMENT                      \
+            )                                          \
+        );                                             \
+    } else {                                           \
+        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedReAlloc(           \
+                Allocator,                             \
+                Coverage->##Name,                      \
+                (ULONG_PTR)Info->##Name##SizeInBytes,  \
+                YMMWORD_ALIGNMENT                      \
+            )                                          \
+        );                                             \
+    }                                                  \
+    if (!Coverage->##Name) {                           \
+        Result = E_OUTOFMEMORY;                        \
+        goto Error;                                    \
+    }
+
+    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerPage, PAGE);
+    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine, CACHE_LINE);
+
+    //
+    // The number of large pages consumed may not change between resize events;
+    // avoid a realloc if unnecessary by checking the previous info's number of
+    // large pages if applicable.
+    //
+
+#define ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Name)                                 \
     if (!Coverage->##Name) {                                                  \
-        Coverage->##Name = (PASSIGNED_##Type##_COUNT)(                        \
+        Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                      \
             Allocator->Vtbl->AlignedMalloc(                                   \
                 Allocator,                                                    \
                 (ULONG_PTR)Info->##Name##SizeInBytes,                         \
@@ -2277,7 +2330,7 @@ Return Value:
             }                                                                 \
         }                                                                     \
         if (DoReAlloc) {                                                      \
-            Coverage->##Name = (PASSIGNED_##Type##_COUNT)(                    \
+            Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                  \
                 Allocator->Vtbl->AlignedReAlloc(                              \
                     Allocator,                                                \
                     Coverage->##Name,                                         \
@@ -2292,9 +2345,7 @@ Return Value:
         goto Error;                                                           \
     }
 
-    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerPage, PAGE);
-    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage, LARGE_PAGE);
-    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine, CACHE_LINE);
+    ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(NumberOfAssignedPerLargePage);
 
     //
     // We're done, finish up.
@@ -2437,6 +2488,11 @@ Return Value:
     ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
     ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
     ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+
+#define ZERO_ASSIGNED_COUNTS(Name) \
+    ZeroInline(Coverage->##Name, sizeof(Coverage->##Name))
+
+    ZERO_ASSIGNED_COUNTS(NumberOfAssignedPerCacheLineCounts);
 
     //
     // Clear any remaining values.
