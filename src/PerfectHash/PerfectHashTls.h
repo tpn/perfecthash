@@ -27,10 +27,10 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         //
         // When set, prevents the global component logic from running when a
         // new component is being created.  This is used to explicitly create
-        // a new component for an interface that is classed as global (i.e.
-        // Rtl and Allocator), and thus, would otherwise be satisified by
-        // returning a reference to a previously created global (singleton)
-        // component.
+        // a new component for an interface that is classed as global, and thus,
+        // would normally be satisified by returning a reference to a previously
+        // created global (singleton) component.  This is used for Allocators,
+        // in particular.
         //
 
         ULONG DisableGlobalComponents:1;
