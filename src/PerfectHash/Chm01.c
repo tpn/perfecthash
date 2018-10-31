@@ -715,7 +715,7 @@ RetryWithLargerTableSize:
             } else {
 
                 //
-                // If the shutdown event hasn't been signaled, check the failed
+                // If the failed event hasn't been signaled, check the shutdown
                 // event.
                 //
 
