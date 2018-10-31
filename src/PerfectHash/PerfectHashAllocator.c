@@ -517,6 +517,7 @@ AllocatorInitialize(
     Allocator->HeapHandle = HeapCreate(Flags, MinimumSize, MaximumSize);
 
     if (!Allocator->HeapHandle) {
+        SYS_ERROR(HeapCreate);
         return PH_E_HEAP_CREATE_FAILED;
     }
 
