@@ -3,6 +3,10 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
+# Toggle to true to enable writing .png and .txt files.
+write_png = False
+write_txt = False
+
 # Turn off interactive mode to disable plots being displayed
 # prior to saving them to disk.
 plt.ioff()
@@ -27,12 +31,14 @@ def save_array_to_binary_file(filename, a):
 
 def save_array(prefix, a):
     l = len(a)
-    png_filename = '%s-%d.png' % (prefix, l)
-    text_filename = '%s-%d.txt' % (prefix, l)
     binary_filename = '%s-%d.keys' % (prefix, l)
-    save_array_plot_to_png_file(png_filename, a)
-    save_array_to_text_file(text_filename, a)
     save_array_to_binary_file(binary_filename, a)
+    if write_png:
+        png_filename = '%s-%d.png' % (prefix, l)
+        save_array_plot_to_png_file(png_filename, a)
+    if write_txt:
+        text_filename = '%s-%d.txt' % (prefix, l)
+        save_array_to_text_file(text_filename, a)
 
 def gen_random_unique_array(size):
     a = np.random.randint(0, (1 << 32)-1, size * 2, dtype='uint32')
@@ -69,7 +75,7 @@ def gen_spiked_unique_array(size):
     a = u[:size]
     return a if len(a) == size else None
 
-sizes = (
+normal_sizes = (
     2000,
     4000,
     4050,
@@ -96,6 +102,29 @@ sizes = (
     389161,
     472374,
 )
+
+large_sizes = (
+    618201,
+    789291,
+    976562,
+   1038181,
+   1893815,
+   2000000,
+   3000000,
+   4000000,
+)
+
+even_larger_sizes = (
+   5910810,
+   6182344,
+   7742919,
+   10000000,
+)
+
+# Toggle this depending on which sizes you want.
+sizes = normal_sizes
+#sizes = large_sizes
+#sizes = even_larger_sizes
 
 functions = (
     ('linear', gen_linear_array),
