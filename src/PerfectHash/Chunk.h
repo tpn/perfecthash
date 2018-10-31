@@ -92,7 +92,7 @@ typedef const CHUNK_VALUES *PCCHUNK_VALUES;
 
 //
 // Disable warning C4820:
-//      '<anonymous-tag>': '4' bytes padding added after data member 'Type'
+//      '<anonymous-tag>': '4' bytes padding added after data member ...
 //
 
 #pragma warning(push)
