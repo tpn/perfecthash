@@ -187,7 +187,15 @@ Return Value:
         return E_POINTER;
     } else {
         Context = Table->Context;
-        NumberOfGraphs = Context->MaximumConcurrency;
+
+        //
+        // We add 1 to the maximum concurrency in order to account for a spare
+        // graph that doesn't actively participate in solving, but can be used
+        // by a worker thread when it discovers a graph that is classed as the
+        // "best" by the RegisterSolvedGraph() routine.
+        //
+
+        NumberOfGraphs = Context->MaximumConcurrency + 1;
         if (NumberOfGraphs == 0) {
             return E_INVALIDARG;
         }
@@ -225,19 +233,16 @@ Return Value:
     );
 
     //
-    // If no threshold has been set, use the default.
+    // If no threshold has been set or limit has been set, use the defaults.
     //
 
     if (!Context->ResizeTableThreshold) {
         Context->ResizeTableThreshold = GRAPH_SOLVING_ATTEMPTS_THRESHOLD;
-        Context->ResizeLimit = GRAPH_SOLVING_RESIZE_TABLE_LIMIT;
     }
 
-    //
-    // Set the "first graph wins" flag.
-    //
-
-    SetFirstSolvedGraphWins(Context);
+    if (!Context->ResizeLimit) {
+        Context->ResizeLimit = GRAPH_SOLVING_RESIZE_TABLE_LIMIT;
+    }
 
     //
     // Verify we have sufficient seeds available in our on-disk structure
@@ -473,11 +478,13 @@ RetryWithLargerTableSize:
     CONTEXT_START_TIMERS(Solve);
 
     //
-    // For each graph instance, set the graph info, then submit threadpool work
-    // against the context's main work threadpool.
+    // For each graph instance, set the graph info, and, if we haven't reached
+    // the concurrency limit, append the graph to the context work list and
+    // submit threadpool work for it (to begin graph solving).
     //
 
     ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
+    ASSERT(NumberOfGraphs - 1 == Context->MaximumConcurrency);
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {
 
@@ -492,9 +499,35 @@ RetryWithLargerTableSize:
             goto Error;
         }
 
-        InitializeListHead(&Graph->ListEntry);
-        InsertTailMainWork(Context, &Graph->ListEntry);
-        SubmitThreadpoolWork(Context->MainWork);
+        Graph->Flags.IsInfoLoaded = FALSE;
+
+        if (Index == 0) {
+
+            //
+            // This is our first graph, which is marked as the "spare" graph.
+            // If a worker thread finds the best graph, it will swap its graph
+            // for this spare one, such that it can continue looking for new
+            // solutions.
+            //
+
+            Graph->Flags.IsSpare = TRUE;
+
+            //
+            // Context->SpareGraph is _Guarded_by_(BestGraphCriticalSection).
+            // We know that no worker threads will be running at this point;
+            // inform SAL accordingly by suppressing the concurrency warnings.
+            //
+
+            _Benign_race_begin_
+            Context->SpareGraph = Graph;
+            _Benign_race_end_
+
+        } else {
+            Graph->Flags.IsSpare = FALSE;
+            InitializeListHead(&Graph->ListEntry);
+            InsertTailMainWork(Context, &Graph->ListEntry);
+            SubmitThreadpoolWork(Context->MainWork);
+        }
 
         //
         // If our key set size is small and our maximum concurrency is large,
@@ -662,28 +695,56 @@ RetryWithLargerTableSize:
         //
         // Invariant check: if no worker thread registered a solved graph
         // (indicated by Context->FinishedCount having a value greater than
-        // 0), then verify that the shutdown event was set.
+        // 0), then verify that either the failed or shutdown event was set.
         //
-        // If our WaitResult above indicates WAIT_OBJECT_2, we're done.  If
-        // not, verify explicitly.
+        // If our WaitResult above indicates WAIT_OBJECT_0+3 (failed), or
+        // WAIT_OBJECT_0+2 (shutdown), we're done.  If not, verify explicitly.
         //
 
-        if (WaitResult != WAIT_OBJECT_0+2) {
+        if (WaitResult != WAIT_OBJECT_0+3 && WaitResult != WAIT_OBJECT_0+2) {
 
             //
-            // Manually test that the shutdown event has been signaled.
+            // Manually test that the failed event has been signaled.
             //
 
-            WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
+            WaitResult = WaitForSingleObject(Context->FailedEvent, 0);
 
-            if (WaitResult != WAIT_OBJECT_0) {
-                Result = PH_E_INVARIANT_CHECK_FAILED;
-                PH_ERROR(CreatePerfectHashTableImplChm01_ShutdownEvent, Result);
-                goto Error;
+            if (WaitResult == WAIT_OBJECT_0) {
+                Result = PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
+
+            } else {
+
+                //
+                // If the shutdown event hasn't been signaled, check the failed
+                // event.
+                //
+
+                WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
+
+                if (WaitResult == WAIT_OBJECT_0) {
+                    Result = PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
+
+                } else {
+
+                    //
+                    // Invariant check has failed; either failed or shutdown
+                    // should have been set.
+                    //
+
+                    Result = PH_E_INVARIANT_CHECK_FAILED;
+                    PH_ERROR(CreatePerfectHashTableImplChm01_ShutdownOrFailed,
+                             Result);
+                    goto Error;
+                }
             }
         }
 
-        Result = PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
+        //
+        // Explicitly set the stop solving flag.  (It won't be set if the
+        // shutdown event was signaled externally.)
+        //
+
+        SetStopSolving(Context);
 
         //
         // Wait for the main thread work group members.  This will block until
@@ -704,6 +765,7 @@ RetryWithLargerTableSize:
         WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
 
         goto End;
+
     }
 
     //
@@ -715,7 +777,6 @@ FinishedSolution:
     //
     // Pop the winning graph off the finished list head.
     //
-
 
     ListEntry = NULL;
 
@@ -1746,9 +1807,8 @@ Return Value:
         //
 
         PermissibleErrorCode = (
-            Result == E_OUTOFMEMORY              ||
-            Result == PH_E_NO_MORE_SEEDS         ||
-            Result == PH_E_TABLE_RESIZE_IMMINENT
+            Result == E_OUTOFMEMORY      ||
+            Result == PH_E_NO_MORE_SEEDS
         );
 
         if (!PermissibleErrorCode) {
@@ -1770,19 +1830,28 @@ ShouldWeContinueTryingToSolveGraphChm01(
     HANDLE Events[4];
     USHORT NumberOfEvents = ARRAYSIZE(Events);
 
-    Events[0] = Context->ShutdownEvent;
-    Events[1] = Context->SucceededEvent;
-    Events[2] = Context->FailedEvent;
-    Events[3] = Context->CompletedEvent;
-
     //
-    // Fast-path exit: if the finished count is not 0, then someone has already
-    // solved the solution, and we don't need to wait on any of the events.
+    // We can avoid the WaitForMultipleObjects() call if either a) stop solving
+    // is indicated, or b) we're in "first graph wins" mode, and the finished
+    // count is greater than 0.
     //
 
-    if (Context->FinishedCount > 0) {
+    if (StopSolving(Context)) {
         return FALSE;
+    } else if (FirstSolvedGraphWins(Context)) {
+        if (Context->FinishedCount > 0) {
+            return FALSE;
+        }
     }
+
+    //
+    // Wire up our event array, then test if any of the events are signaled.
+    //
+
+    Events[0] = Context->SucceededEvent;
+    Events[1] = Context->CompletedEvent;
+    Events[2] = Context->ShutdownEvent;
+    Events[3] = Context->FailedEvent;
 
     WaitResult = WaitForMultipleObjects(NumberOfEvents,
                                         Events,

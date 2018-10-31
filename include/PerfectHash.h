@@ -2049,10 +2049,32 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
+        // When set, disables the default "first solved graph wins" behavior
+        // and enables the "find best memory coverage" behavior.  This must
+        // be used in conjunction with create table parameters that specify
+        // the number of attempts at finding a best solution, as well as a
+        // predicate for evaluating what constitutes "best" (e.g. highest
+        // number of empty cache lines in the final assigned array).  This
+        // option is considerably more CPU intensive than the "first graph
+        // wins" behavior, as the create table routine will not return until
+        // it has attempted the requested number of solutions.
+        //
+        // N.B. "Best" is being used in the relative sense here, i.e. there
+        //      are no guarantees that the resulting table *is* actually the
+        //      best (best what?  best performing?); only that it was the
+        //      table with the highest/lowest value for a given predicate.
+        //
+        // N.B. See ../src/PerfectHash/Graph.h for some more information about
+        //      the best memory coverage behavior.
+        //
+
+        ULONG FindBestGraph:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:32;
+        ULONG Unused:31;
     };
 
     LONG AsLong;
@@ -2191,6 +2213,64 @@ IsValidTableCompileFlags(
     return S_OK;
 }
 
+//
+// N.B. The table create parameters are still a work-in-progress.
+//
+
+typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
+    PerfectHashTableCreateParameterNullId = 0,
+
+    PerfectHashTableCreateParameterChm01AttemptsBeforeTableResizeId,
+    PerfectHashTableCreateParameterChm01MaxNumberOfTableResizesId,
+    PerfectHashTableCreateParameterChm01BestCoverageNumAttemptsId,
+    PerfectHashTableCreateParameterChm01BestCoverageTypeId,
+
+    PerfectHashTableCreateParameterInvalidId,
+} PERFECT_HASH_TABLE_CREATE_PARAMETER_ID;
+
+typedef enum _PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID {
+    BestCoverageTypeNullId = 0,
+    BestCoverageTypeHighestNumberOfEmptyCacheLines,
+    BestCoverageTypeInvalidId,
+} PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE;
+
+FORCEINLINE
+BOOLEAN
+IsValidBestCoverageType(
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType
+    )
+{
+    return (
+        CoverageType > BestCoverageTypeNullId &&
+        CoverageType < BestCoverageTypeInvalidId
+    );
+}
+
+//
+// Disable warning C4820:
+//      '<anonymous-tag>': '4' bytes padding added after data member 'Id'.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4820)
+typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
+    PERFECT_HASH_TABLE_CREATE_PARAMETER_ID Id;
+    union {
+        PVOID AsVoid;
+        LONG AsLong;
+        ULONG AsULong;
+        LONGLONG AsLongLong;
+        ULONGLONG AsULongLong;
+        LARGE_INTEGER AsLargeInteger;
+        ULARGE_INTEGER AsULargeInteger;
+        PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE AsBestCoverageType;
+    };
+} PERFECT_HASH_TABLE_CREATE_PARAMETER;
+typedef PERFECT_HASH_TABLE_CREATE_PARAMETER
+      *PPERFECT_HASH_TABLE_CREATE_PARAMETER;
+#pragma warning(pop)
+
+
 typedef
 _Success_(return >= 0)
 HRESULT
@@ -2205,7 +2285,9 @@ HRESULT
     _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
     _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
+    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _In_opt_ ULONG NumberOfTableCreateParameters,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
     );
 typedef PERFECT_HASH_CONTEXT_SELF_TEST *PPERFECT_HASH_CONTEXT_SELF_TEST;
 
@@ -2237,7 +2319,9 @@ HRESULT
     _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
     _Inout_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     _Inout_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
-    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
+    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _Inout_ PULONG NumberOfTableCreateParameters,
+    _Inout_ PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParameters
     );
 typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
       *PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
@@ -2282,7 +2366,9 @@ HRESULT
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PPERFECT_HASH_KEYS Keys,
-    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_opt_ ULONG NumberOfTableCreateParameters,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
     );
 typedef PERFECT_HASH_TABLE_CREATE *PPERFECT_HASH_TABLE_CREATE;
 

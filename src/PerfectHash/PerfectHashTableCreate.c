@@ -15,6 +15,27 @@ Abstract:
 
 #include "stdafx.h"
 
+//
+// Forward decls.
+//
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_VALIDATE_CREATE_PARAMETERS)(
+    _In_ PPERFECT_HASH_TABLE Table
+    );
+typedef PERFECT_HASH_TABLE_VALIDATE_CREATE_PARAMETERS
+      *PPERFECT_HASH_TABLE_VALIDATE_CREATE_PARAMETERS;
+
+PERFECT_HASH_TABLE_VALIDATE_CREATE_PARAMETERS
+    PerfectHashTableValidateCreateParameters;
+
+//
+// Begin method implementations.
+//
+
 PERFECT_HASH_TABLE_CREATE PerfectHashTableCreate;
 
 _Use_decl_annotations_
@@ -26,7 +47,9 @@ PerfectHashTableCreate(
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_KEYS Keys,
-    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer
+    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
+    ULONG NumberOfTableCreateParameters,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
     )
 /*++
 
@@ -56,6 +79,13 @@ Arguments:
 
     TableCreateFlags - Optionally supplies a pointer to a context create
         table flags structure that can be used to customize table creation.
+
+    NumberOfTableCreateParameters - Optionally supplies the number of elements
+        in the TableCreateParameters array.
+
+    TableCreateParameters - Optionally supplies an array of additional
+        parameters that can be used to further customize table creation
+        behavior.
 
 Return Value:
 
@@ -97,6 +127,9 @@ Return Value:
     PH_E_NO_INDEX_IMPL_C_STRING_FOUND - No C representation of the Index()
         implementation routine was found for the given algorithm, hash function
         and masking type.
+
+    PH_E_NUM_TABLE_CREATE_PARMS_IS_ZERO_BUT_PARAM_POINTER_NOT_NULL - The number
+        of table create params is zero but the parameters pointer is not null.
 
 --*/
 {
@@ -160,8 +193,8 @@ Return Value:
     }
 
     //
-    // No table should be associated with the context at this point and vice
-    // versa, and no keys should be set.
+    // Invariant checks: no table should be associated with the context at this
+    // point and vice versa, and no keys should be set.
     //
 
     if (Context->Table) {
@@ -181,6 +214,12 @@ Return Value:
         PH_ERROR(PerfectHashTableCreate, Result);
         goto Error;
     }
+
+
+    //
+    // Argument validation and invariant checks complete, continue with table
+    // creation.  Take references to the relevant context and keys instances.
+    //
 
     Context->Vtbl->AddRef(Context);
     Table->Context = Context;
@@ -212,6 +251,19 @@ Return Value:
 
     if (!Table->IndexImplString) {
         Result = PH_E_NO_INDEX_IMPL_C_STRING_FOUND;
+        goto Error;
+    }
+
+    //
+    // Validate the table create parameters.
+    //
+
+    Table->NumberOfTableCreateParameters = NumberOfTableCreateParameters;
+    Table->TableCreateParameters = TableCreateParameters;
+
+    Result = PerfectHashTableValidateCreateParameters(Table);
+    if (FAILED(Result)) {
+        PH_ERROR(ValidateTableCreateParameters, Result);
         goto Error;
     }
 
@@ -268,5 +320,137 @@ End:
     return Result;
 }
 
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableValidateCreateParameters(
+    PPERFECT_HASH_TABLE Table
+    )
+/*++
+
+Routine Description:
+
+    Validates the table creation parameters for a given table.
+
+Arguments:
+
+    Table - Supplies a pointer to the table.
+
+Return Value:
+
+    S_OK - Parameters validated successfully.
+
+    Otherwise, an appropriate error code.
+
+--*/
+{
+    ULONG Index;
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    Context = Table->Context;
+
+    if (Table->NumberOfTableCreateParameters == 0) {
+        if (Table->TableCreateParameters != NULL) {
+            return PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL;
+        }
+    }
+
+
+    for (Index = 0, Param = Table->TableCreateParameters;
+         Index < Table->NumberOfTableCreateParameters;
+         Index++, Param++) {
+
+        switch (Param->Id) {
+
+            case PerfectHashTableCreateParameterChm01AttemptsBeforeTableResizeId:
+                Context->ResizeTableThreshold = Param->AsULong;
+                break;
+
+            case PerfectHashTableCreateParameterChm01MaxNumberOfTableResizesId:
+                Context->ResizeLimit = Param->AsULong;
+                break;
+
+            case PerfectHashTableCreateParameterChm01BestCoverageNumAttemptsId:
+                Context->BestCoverageAttempts = Param->AsULongLong;
+                break;
+
+            case PerfectHashTableCreateParameterChm01BestCoverageTypeId:
+                Context->BestCoverageType = Param->AsBestCoverageType;
+                break;
+
+            default:
+                Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
+                goto Error;
+
+        }
+    }
+
+    //
+    // If find best graph is indicated in the table create flags, make sure
+    // we saw appropriate table create parameters.  Otherwise, set the default
+    // "first graph wins" mode.
+    //
+
+    //
+    // N.B. There's a bit of an impedance mismatch (or leaky abstraction
+    //      depending on which way you look at it) at the moment with the
+    //      notion of "find best graph" (which is a publicly exposed flag)
+    //      and the corresponding "find best memory coverage" behavior,
+    //      which is an internal implementation detail.
+    //
+
+    if (Table->TableCreateFlags.FindBestGraph) {
+
+        if (!Context->BestCoverageAttempts ||
+            !Context->BestCoverageType ||
+            !IsValidBestCoverageType(Context->BestCoverageType)) {
+
+            Result = PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH;
+            goto Error;
+        }
+
+        SetFindBestMemoryCoverage(Context);
+
+    } else {
+
+        //
+        // Set the default solving mode.
+        //
+
+        SetFirstSolvedGraphWins(Context);
+
+    }
+
+    //
+    // Validation complete, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = PH_E_TABLE_CREATE_PARAMETER_VALIDATION_FAILED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
-// # vim:set ts=8 sw=4 sts=4 tw=78 et:

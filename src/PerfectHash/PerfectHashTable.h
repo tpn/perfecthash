@@ -63,15 +63,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // compilation.
     //
 
-    PERFECT_HASH_TABLE_FLAGS TableCreateFlags;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Optional table creation parameters specified to Create().
     //
 
-    ULONG Padding;
+    ULONG NumberOfTableCreateParameters;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters;
 
     //
     // Pointer to the active on-disk structure describing the table.  This may

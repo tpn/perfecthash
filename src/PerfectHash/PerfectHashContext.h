@@ -84,10 +84,16 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG FindBestMemoryCoverage:1;
 
         //
+        // When set, indicates all solving activities should be stopped.
+        //
+
+        ULONG StopSolving:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -105,6 +111,11 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define SetFindBestMemoryCoverage(Context)       \
     Context->State.FirstSolvedGraphWins = FALSE; \
     Context->State.FindBestMemoryCoverage = TRUE
+
+#define StopSolving(Context) (Context->State.StopSolving == TRUE)
+
+#define SetStopSolving(Context) (Context->State.StopSolving = TRUE)
+#define ClearStopSolving(Context) (Context->State.StopSolving = FALSE)
 
 DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
 
@@ -188,7 +199,26 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     ULONG ResizeLimit;
 
-    ULONG Padding2;
+    //
+    // If we're attempting to find the best memory coverage, the following
+    // fields capture the type of "best" coverage we're looking for, and the
+    // number of attempts to make.
+    //
+
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE BestCoverageType;
+    ULONGLONG BestCoverageAttempts;
+
+    //
+    // Best and spare graphs.
+    //
+
+    CRITICAL_SECTION BestGraphCriticalSection;
+
+    _Guarded_by_(BestGraphCriticalSection)
+    struct _GRAPH *BestGraph;
+
+    _Guarded_by_(BestGraphCriticalSection)
+    struct _GRAPH *SpareGraph;
 
     //
     // Define the events used to communicate various internal state changes
@@ -552,7 +582,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding3;
+    PVOID Padding4;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
@@ -608,6 +638,12 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 //
 // Finished work.
 //
+
+#define InsertHeadFinishedWork(Context, ListEntry) \
+    Context->FinishedWorkList->Vtbl->InsertHead(   \
+        Context->FinishedWorkList,                 \
+        ListEntry                                  \
+    )
 
 #define InsertTailFinishedWork(Context, ListEntry) \
     Context->FinishedWorkList->Vtbl->InsertTail(   \

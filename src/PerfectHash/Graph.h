@@ -204,9 +204,6 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     ULONG LastCacheLineUsed;
 
     ULONG TotalNumberOfAssigned;
-    LONG NumberOfSharedAssigned;
-
-    ULONG Padding;
 
     _Writable_elements_(TotalNumberOfPages)
     PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
@@ -269,16 +266,33 @@ typedef union _GRAPH_FLAGS {
         ULONG IsInfoSet:1;
 
         //
+        // When set, indicates graph information has been loaded (at least once)
+        // via a call to LoadInfo().
+        //
+
+        ULONG IsInfoLoaded:1;
+
+        //
         // When set, turns the Graph->Vtbl->Verify() step into a no-op.
         //
 
         ULONG SkipVerification:1;
 
         //
+        // When set, indicates this graph is the "spare graph" for the context.
+        // When attempting to find the best graph solution, a worker thread may
+        // register its graph as the current best solution, then use the spare
+        // graph (or previous best graph) to continue solving attempts.
+        //
+
+        ULONG IsSpare:1;
+
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:26;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -286,8 +300,12 @@ typedef union _GRAPH_FLAGS {
 typedef GRAPH_FLAGS *PGRAPH_FLAGS;
 C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 
-#define IsGraphInfoSet(Graph) (Graph->Flags.IsInfoSet)
-#define SkipGraphVerification(Graph) (Graph->Flags.SkipVerification)
+#define IsGraphInfoSet(Graph) (Graph->Flags.IsInfoSet == TRUE)
+#define IsGraphInfoLoaded(Graph) (Graph->Flags.IsInfoLoaded == TRUE)
+#define IsSpareGraph(Graph) (Graph->Flags.IsSpare == TRUE)
+#define SkipGraphVerification(Graph) Graph->Flags.SkipVerification
+
+#define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 
 DEFINE_UNUSED_STATE(GRAPH);
 
@@ -515,7 +533,8 @@ _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
 (STDAPICALLTYPE GRAPH_SOLVE)(
-    _In_ PGRAPH Graph
+    _In_ PGRAPH Graph,
+    _Inout_ PGRAPH *NewGraphPointer
     );
 typedef GRAPH_SOLVE *PGRAPH_SOLVE;
 
@@ -576,7 +595,8 @@ _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
 (STDAPICALLTYPE GRAPH_REGISTER_SOLVED)(
-    _In_ PGRAPH Graph
+    _In_ PGRAPH Graph,
+    _Inout_ PGRAPH *NewGraphPointer
     );
 typedef GRAPH_REGISTER_SOLVED *PGRAPH_REGISTER_SOLVED;
 
@@ -697,7 +717,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         GRAPH_DIMENSIONS Dimensions;
     };
 
-    ULONG Padding;
+    //
+    // The number of vertices when LoadInfo() was last called.
+    //
+
+    ULONG LastLoadedNumberOfVertices;
 
     //
     // Duplicate the context pointer.  (This is also available from Info.)
@@ -793,7 +817,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     ULONG NumberOfSeeds;
 
-    ULONG Padding2;
+    ULONG Padding3;
 
     struct {
         union {

@@ -58,6 +58,12 @@ TP_WORK_CALLBACK ErrorWorkCallback;
 TP_WORK_CALLBACK FinishedWorkCallback;
 TP_CLEANUP_GROUP_CANCEL_CALLBACK CleanupCallback;
 
+//
+// Spin count for the best graph critical section.
+//
+
+#define BEST_GRAPH_CS_SPINCOUNT 4000
+
 PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
 
 //
@@ -261,6 +267,17 @@ Return Value:
     Context->Flags.AsULong = 0;
 
     InitializeSRWLock(&Context->Lock);
+
+    if (!InitializeCriticalSectionAndSpinCount(
+        &Context->BestGraphCriticalSection,
+        BEST_GRAPH_CS_SPINCOUNT)) {
+
+        //
+        // This should never fail from Vista onward.
+        //
+
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
 
     //
     // Carve the buffer we just allocated up into an array of UNICODE_STRING
@@ -709,6 +726,8 @@ Return Value:
 
     CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
 
+    DeleteCriticalSection(&Context->BestGraphCriticalSection);
+
     RELEASE(Context->MainWorkList);
     RELEASE(Context->FileWorkList);
     RELEASE(Context->FinishedWorkList);
@@ -787,6 +806,15 @@ Return Value:
     Context->MainWorkList->Vtbl->Reset(Context->MainWorkList);
     Context->FileWorkList->Vtbl->Reset(Context->FileWorkList);
     Context->FinishedWorkList->Vtbl->Reset(Context->FinishedWorkList);
+
+    //
+    // Suppress concurrency warnings.
+    //
+
+    _Benign_race_begin_
+    Context->SpareGraph = NULL;
+    Context->BestGraph = NULL;
+    _Benign_race_end_
 
     return S_OK;
 }
@@ -951,10 +979,10 @@ FinishedWorkCallback(
 
 Routine Description:
 
-    This routine will be called when a Main thread successfully finds a perfect
-    hash table solution.  It is responsible for signaling the ShutdownEvent and
-    FinishedEvent.  It will also call WaitForThreadpoolWorkCallbacks() to
-    cancel pending callbacks.
+    This routine will be called when a graph solving attempt has finished.
+    This will be triggered by either finding a satisfactory solution, or
+    hitting solving limits (max number of attempts, max number of retries,
+    etc).
 
 Arguments:
 
@@ -995,11 +1023,21 @@ Return Value:
     WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
 
     //
-    // Signal the shutdown, succeeded and completed events.
+    // If a solution has been found, signal the success event; otherwise,
+    // signal the failed event.
+    //
+
+    if (Context->FinishedCount > 0) {
+        SetEvent(Context->SucceededEvent);
+    } else {
+        SetEvent(Context->FailedEvent);
+    }
+
+    //
+    // Signal the shutdown and completed events.
     //
 
     SetEvent(Context->ShutdownEvent);
-    SetEvent(Context->SucceededEvent);
     SetEvent(Context->CompletedEvent);
 
     return;

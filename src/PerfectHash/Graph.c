@@ -1182,7 +1182,8 @@ GRAPH_SOLVE GraphSolve;
 _Use_decl_annotations_
 HRESULT
 GraphSolve(
-    _In_ PGRAPH Graph
+    PGRAPH Graph,
+    PGRAPH *NewGraphPointer
     )
 /*++
 
@@ -1196,12 +1197,18 @@ Arguments:
 
     Graph - Supplies a pointer to the graph to be solved.
 
+    NewGraphPointer - Supplies the address of a variable which will receive the
+        address of a new graph instance to be used for solving if the routine
+        returns PH_S_USE_NEW_GRAPH_FOR_SOLVING.
+
 Return Value:
 
     PH_S_STOP_GRAPH_SOLVING - Stop graph solving.
 
     PH_S_CONTINUE_GRAPH_SOLVING - Continue graph solving.
 
+    PH_S_USE_NEW_GRAPH_FOR_SOLVING - Continue graph solving but use the graph
+        returned via the NewGraphPointer parameter.
 
 --*/
 {
@@ -1264,24 +1271,28 @@ Return Value:
         GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
 
         //
-        // If we're in "first graph wins" mode, every 1024 iterations, check
-        // to see if someone else has already solved the graph, and if so, do
-        // a fast-path exit.
+        // Every 1024 iterations, check whether the context is indicating to
+        // stop solving, either because a solution has been found and we're in
+        // "first graph wins" mode, or the explicit state flag to stop solving
+        // has been set.
         //
 
-        if (FirstSolvedGraphWins(Context)) {
+        if (!--Iterations) {
 
-            if (!--Iterations) {
+            if (FirstSolvedGraphWins(Context)) {
                 if (Context->FinishedCount > 0) {
                     return PH_S_STOP_GRAPH_SOLVING;
                 }
-
-                //
-                // Reset the iteration counter.
-                //
-
-                Iterations = CheckForTerminationAfterIterations;
+            } else if (StopSolving(Context)) {
+                return PH_S_STOP_GRAPH_SOLVING;
             }
+
+            //
+            // Reset the iteration counter.
+            //
+
+            Iterations = CheckForTerminationAfterIterations;
+
         }
     }
 
@@ -1306,9 +1317,9 @@ Return Value:
     //
     // Increment the finished count.  If the context indicates "first solved
     // graph wins", and the value is 1, we're the winning thread, so continue
-    // with graph assignment.  Otherwise, just return TRUE immediately and let
-    // the other thread finish up (i.e. perform the assignment step and then
-    // persist the result).
+    // with graph assignment.  Otherwise, just return with the stop graph
+    // solving code and let the other thread finish up (i.e. perform the
+    // assignment step and then persist the result).
     //
     // If the context does not indicate "first solved graph wins", perform
     // the assignment step regardless.
@@ -1357,29 +1368,24 @@ Return Value:
     //
 
     if (FirstSolvedGraphWins(Context)) {
-        InsertTailFinishedWork(Context, &Graph->ListEntry);
+        InsertHeadFinishedWork(Context, &Graph->ListEntry);
         SubmitThreadpoolWork(Context->FinishedWork);
         return PH_S_STOP_GRAPH_SOLVING;
     }
 
     //
     // If we reach this mode, we're in "find best memory coverage" mode, so,
-    // register the solved graph and return FALSE in order to kick off another
-    // attempt.
+    // register the solved graph then continue solving.
     //
 
     ASSERT(FindBestMemoryCoverage(Context));
 
     //
-    // Register the solved graph.  (Not yet implemented.)
+    // Register the solved graph.  We can return this result directly.
     //
 
-    Result = Graph->Vtbl->RegisterSolved(Graph);
-    if (Result != PH_E_NOT_IMPLEMENTED) {
-        PH_RAISE(Result);
-    }
-
-    return PH_S_CONTINUE_GRAPH_SOLVING;
+    Result = Graph->Vtbl->RegisterSolved(Graph, NewGraphPointer);
+    return Result;
 
 Failed:
 
@@ -1405,7 +1411,7 @@ Error:
 _Use_decl_annotations_
 HRESULT
 GraphVerify(
-    _In_ PGRAPH Graph
+    PGRAPH Graph
     )
 /*++
 
@@ -1663,9 +1669,11 @@ GraphCalculateAssignedMemoryCoverage(
 
 Routine Description:
 
-    Calculate the memory coverage of a solved, assigned graph.
-
-    Work in progress.
+    Calculate the memory coverage of a solved, assigned graph.  This routine
+    walks the entire assigned array (see comments at the start of Graph.h for
+    more info about the role of the assigned array) and calculates how many
+    cache lines, pages and large pages are empty vs used.  ("Used" means one
+    or more assigned values were found.)
 
 Arguments:
 
@@ -1690,6 +1698,7 @@ Return Value:
     ULONG TotalBytesProcessed;
     ULONG PageSizeBytesProcessed;
     ULONG LargePageSizeBytesProcessed;
+    LONG KeyCountMinusTotalNumAssigned;
     BOOLEAN FoundFirst = FALSE;
     BOOLEAN IsLastCacheLine = FALSE;
     PASSIGNED_CACHE_LINE AssignedCacheLine;
@@ -1717,6 +1726,10 @@ Return Value:
     PageSizeBytesProcessed = 0;
     LargePageSizeBytesProcessed = 0;
 
+    //
+    // Enumerate the assigned array in cache-line-sized strides.
+    //
+
     for (CacheLineIndex = 0;
          CacheLineIndex < NumberOfCacheLines;
          CacheLineIndex++) {
@@ -1725,6 +1738,12 @@ Return Value:
         IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
 
 #ifndef __AVX2__
+
+        //
+        // For each cache line, enumerate over each individual element, and,
+        // if it is not NULL, increment the local count and total count.
+        //
+
         for (Index = 0; Index < NUM_ASSIGNED_PER_CACHE_LINE; Index++) {
             Assigned = AssignedCacheLine[Index];
             if (*Assigned) {
@@ -1733,6 +1752,18 @@ Return Value:
             }
         }
 #else
+
+        //
+        // An AVX2 version of the logic above.  Load 32 bytes into a YMM
+        // register and compare it against a YMM register that is all zeros.
+        // Shift the resulting comparison result right 24 bits, then generate
+        // a ULONG mask (we need the shift because we have to use the intrinsic
+        // _mm256_movemask_epi8() as there's no _mm256_movemask_epi32()).  The
+        // population count of the resulting mask provides us with the number
+        // of non-zero ULONG elements within that 32 byte chunk.  Update the
+        // counts and then repeat for the second 32 byte chunk.
+        //
+
         //
         // First 32 bytes of the cache line.
         //
@@ -1765,7 +1796,16 @@ Return Value:
         ASSERT(Count >= 0 && Count <= 16);
         Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
 
+        //
+        // Advance the cache line pointer.
+        //
+
         AssignedCacheLine++;
+
+        //
+        // Increment the empty or used counters depending on whether or not
+        // any assigned elements were detected.
+        //
 
         if (!Count) {
 
@@ -1788,6 +1828,10 @@ Return Value:
 
         }
 
+        //
+        // Update histograms based on the count we just observed.
+        //
+
         Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex] = Count;
         Coverage->NumberOfAssignedPerLargePage[LargePageIndex] += Count;
         Coverage->NumberOfAssignedPerPage[PageIndex] += Count;
@@ -1796,10 +1840,15 @@ Return Value:
         PageSizeBytesProcessed += CACHE_LINE_SIZE;
         LargePageSizeBytesProcessed += CACHE_LINE_SIZE;
 
+        //
+        // If we've hit a page boundary, or this is the last cache line we'll
+        // be processing, finalize counts for this page.  Likewise for large
+        // pages.
+        //
+
         if (PageSizeBytesProcessed == PAGE_SIZE || IsLastCacheLine) {
 
             PageSizeBytesProcessed = 0;
-
             PageCount = Coverage->NumberOfAssignedPerPage[PageIndex];
 
             if (PageCount) {
@@ -1814,7 +1863,6 @@ Return Value:
                 IsLastCacheLine) {
 
                 LargePageSizeBytesProcessed = 0;
-
                 LargePageCount =
                     Coverage->NumberOfAssignedPerLargePage[LargePageIndex];
 
@@ -1830,15 +1878,25 @@ Return Value:
     }
 
     //
-    // N.B. Sometimes, the number of keys is less than the total number of
-    //      assigned, such that the number of shared assigned will be less
-    //      than 0.  I haven't thought long enough about the implication of
-    //      this yet, but it seems like an interesting observation.
+    // Enumeration of the assigned array complete.  Verify invariants then
+    // finish up.
     //
 
-    Coverage->NumberOfSharedAssigned = (
+    //
+    // Invariant check: subtracting the number of keys from the total number
+    // of assigned should result in a value between 0-2.  (The discrepancy
+    // arises due to the fact that our logic above looks for non-NULL assigned
+    // array elems, but 0 is actually a valid assigned value.)
+    //
+
+    KeyCountMinusTotalNumAssigned = (
         Graph->NumberOfKeys - Coverage->TotalNumberOfAssigned
     );
+
+    if (KeyCountMinusTotalNumAssigned < 0 ||
+        KeyCountMinusTotalNumAssigned > 2) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
 
     //
     // Invariant check: the total number of assigned elements we observed
@@ -1894,7 +1952,8 @@ GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 _Use_decl_annotations_
 HRESULT
 GraphRegisterSolved(
-    PGRAPH Graph
+    PGRAPH Graph,
+    PGRAPH *NewGraphPointer
     )
 /*++
 
@@ -1907,15 +1966,132 @@ Arguments:
 
     Graph - Supplies a pointer to the solved graph to register.
 
+    NewGraphPointer - Supplies the address of a variable which will receive the
+        address of a new graph instance to be used for solving if the routine
+        returns PH_S_USE_NEW_GRAPH_FOR_SOLVING.
+
 Return Value:
 
-    None.
+    PH_S_CONTINUE_GRAPH_SOLVING - Continue graph solving with the current graph.
+
+    PH_S_USE_NEW_GRAPH_FOR_SOLVING - Continue graph solving but use the graph
+        returned via the NewGraphPointer parameter.
+
+    PH_S_GRAPH_SOLVING_STOPPED - The context indicated that graph solving was
+        to stop (due to a best solution already being found, or a limit being
+        hit, for example).  No graph registration is performed in this instance.
 
 --*/
 {
-    DBG_UNREFERENCED_PARAMETER(Graph);
+    HRESULT Result = PH_S_CONTINUE_GRAPH_SOLVING;
+    PGRAPH SpareGraph;
+    PGRAPH PreviousBestGraph;
+    PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED_MEMORY_COVERAGE PreviousBestCoverage;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType;
 
-    return PH_E_NOT_IMPLEMENTED;
+    //
+    // Initialize aliases.
+    //
+
+    Context = Graph->Context;
+    Coverage = &Graph->AssignedMemoryCoverage;
+    CoverageType = Context->BestCoverageType;
+
+    //
+    // Fast-path exit: if the context is indicating to stop solving, return.
+    //
+
+    if (StopSolving(Context)) {
+        return PH_S_GRAPH_SOLVING_STOPPED;
+    }
+
+    //
+    // Enter the best graph critical section.  Check the stop solving indicator
+    // again, as it may have been set between our last check above, and when we
+    // enter the critical section.
+    //
+
+    EnterCriticalSection(&Context->BestGraphCriticalSection);
+
+    if (StopSolving(Context)) {
+        Result = PH_S_GRAPH_SOLVING_STOPPED;
+        goto End;
+    }
+
+    //
+    // If there is no best graph currently set, proceed with setting it to
+    // our current graph, then use the spare graph to continue solving.
+    //
+
+    if (!Context->BestGraph) {
+        SpareGraph = Context->SpareGraph;
+        ASSERT(SpareGraph != NULL);
+        ASSERT(IsSpareGraph(SpareGraph));
+        SpareGraph->Flags.IsSpare = FALSE;
+        Context->SpareGraph = NULL;
+        Context->BestGraph = Graph;
+        *NewGraphPointer = SpareGraph;
+        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        goto End;
+    }
+
+    //
+    // There's an existing best graph set.  Verify spare graph is NULL, then
+    // initialize aliases to the previous best.
+    //
+
+    ASSERT(Context->SpareGraph == NULL);
+    PreviousBestGraph = Context->BestGraph;
+    PreviousBestCoverage = &PreviousBestGraph->AssignedMemoryCoverage;
+
+    //
+    // Determine if this graph has the "best" memory coverage and update the
+    // best graph accordingly if so.
+    //
+
+    switch (CoverageType) {
+
+        case BestCoverageTypeHighestNumberOfEmptyCacheLines:
+
+            if (Coverage->NumberOfEmptyCacheLines >
+                PreviousBestCoverage->NumberOfEmptyCacheLines) {
+
+                Context->BestGraph = Graph;
+                *NewGraphPointer = PreviousBestGraph;
+                Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+            }
+
+            break;
+
+        default:
+
+            Result = PH_E_INVALID_BEST_COVERAGE_TYPE;
+            break;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    //
+    // Leave the critical section and return.
+    //
+
+    LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+    //
+    // Any failure code at this point is a critical internal invariant failure.
+    //
+
+    if (FAILED(Result)) {
+        PH_RAISE(Result);
+    }
+
+    return Result;
 }
 
 
@@ -2003,6 +2179,7 @@ Return Value:
 
 --*/
 {
+    PGRAPH NewGraph;
     HRESULT Result = S_OK;
 
     //
@@ -2038,37 +2215,53 @@ Return Value:
 
         Result = Graph->Vtbl->LoadNewSeeds(Graph);
         if (FAILED(Result)) {
-            if (Result != PH_E_NO_MORE_SEEDS) {
-                PH_ERROR(GraphLoadNewSeeds, Result);
-            }
+
+            //
+            // N.B. This will need to be adjusted when we support the notion
+            //      of no more seed data (PH_E_NO_MORE_SEEDS).
+            //
+
+            PH_ERROR(GraphLoadNewSeeds, Result);
             break;
         }
 
         Result = Graph->Vtbl->Reset(Graph);
         if (FAILED(Result)) {
-
-            //
-            // If the error code indicates anything other than an imminent
-            // table resize, log it.
-            //
-
-            if (Result != PH_E_TABLE_RESIZE_IMMINENT) {
-                PH_ERROR(GraphReset, Result);
-            } else {
-                Result = S_OK;
-            }
-
+            PH_ERROR(GraphReset, Result);
+            break;
+        } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {
             break;
         }
 
-        Result = Graph->Vtbl->Solve(Graph);
+        NewGraph = NULL;
+        Result = Graph->Vtbl->Solve(Graph, &NewGraph);
         if (FAILED(Result)) {
             PH_ERROR(GraphSolve, Result);
             break;
         }
 
-        if (Result == PH_S_STOP_GRAPH_SOLVING) {
+        if (Result == PH_S_STOP_GRAPH_SOLVING ||
+            Result == PH_S_GRAPH_SOLVING_STOPPED) {
+            ASSERT(NewGraph == NULL);
             break;
+        }
+
+        if (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING) {
+            ASSERT(NewGraph != NULL);
+
+            if (!IsGraphInfoLoaded(NewGraph) ||
+                NewGraph->LastLoadedNumberOfVertices <
+                Graph->NumberOfVertices) {
+
+                Result = NewGraph->Vtbl->LoadInfo(NewGraph);
+                if (FAILED(Result)) {
+                    PH_ERROR(GraphLoadInfo_NewGraph, Result);
+                    goto End;
+                }
+            }
+
+            Graph = NewGraph;
+            continue;
         }
 
         //
@@ -2137,6 +2330,9 @@ Return Value:
 
     PH_E_GRAPH_NO_INFO_SET - No graph information has been set for this graph.
 
+    PH_E_GRAPH_INFO_ALREADY_LOADED - Graph information has already been loaded
+        for this graph.
+
 --*/
 {
     PRTL Rtl;
@@ -2159,6 +2355,8 @@ Return Value:
 
     if (!IsGraphInfoSet(Graph)) {
         return PH_E_GRAPH_NO_INFO_SET;
+    } else if (IsGraphInfoLoaded(Graph)) {
+        return PH_E_GRAPH_INFO_ALREADY_LOADED;
     } else {
         Info = Graph->Info;
     }
@@ -2351,7 +2549,8 @@ Return Value:
     // We're done, finish up.
     //
 
-    Graph->Flags.IsInfoSet = TRUE;
+    Graph->Flags.IsInfoLoaded = TRUE;
+    Graph->LastLoadedNumberOfVertices = Graph->NumberOfVertices;
     goto End;
 
 Error:
@@ -2390,9 +2589,13 @@ Arguments:
 
 Return Value:
 
-    S_OK - Success.
+    PH_S_CONTINUE_GRAPH_SOLVING - Graph was successfully reset and graph solving
+        should continue.
 
-    PH_E_TABLE_RESIZE_IMMINENT - The reset was not performed as a table resize
+    PH_S_GRAPH_SOLVING_STOPPED - Graph solving has been stopped.  The graph is
+        not reset and solving should not continue.
+
+    PH_S_TABLE_RESIZE_IMMINENT - The reset was not performed as a table resize
         is imminent (and thus, attempts at solving this current graph can be
         stopped).
 
@@ -2401,7 +2604,7 @@ Return Value:
 --*/
 {
     PGRAPH_INFO Info;
-    HRESULT Result = S_OK;
+    HRESULT Result = PH_S_CONTINUE_GRAPH_SOLVING;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
 
@@ -2411,6 +2614,14 @@ Return Value:
 
     Context = Graph->Context;
     Info = Graph->Info;
+
+    //
+    // Fast-path exit: if the context is indicating to stop solving, return.
+    //
+
+    if (StopSolving(Context)) {
+        return PH_S_GRAPH_SOLVING_STOPPED;
+    }
 
     //
     // Increment the thread attempt counter, and interlocked-increment the
@@ -2423,13 +2634,101 @@ Return Value:
 
     Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
 
-    if (Graph->Attempt == Context->ResizeTableThreshold) {
+    if (!Context->FinishedCount &&
+        Graph->Attempt == Context->ResizeTableThreshold) {
+
         if (!SetEvent(Context->TryLargerTableSizeEvent)) {
             SYS_ERROR(SetEvent);
             Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
-        return PH_E_TABLE_RESIZE_IMMINENT;
+        return PH_S_TABLE_RESIZE_IMMINENT;
+    }
+
+    //
+    // If find best memory coverage mode is active, determine if we've hit the
+    // target number of attempts, and if so, whether or not a best graph has
+    // been found.
+    //
+
+    if (FindBestMemoryCoverage(Context)) {
+        if (Graph->Attempt == Context->BestCoverageAttempts) {
+
+            //
+            // Toggle the stop solving flag.
+            //
+
+            SetStopSolving(Context);
+
+            //
+            // Acquire the best graph critical section then determine if best
+            // graph is non-NULL.  If so, a solution has been found; verify
+            // the finished count is greater than 0, then clear the context's
+            // best graph field and push it onto the context's finished list.
+            //
+
+            EnterCriticalSection(&Context->BestGraphCriticalSection);
+
+            if (Context->BestGraph) {
+
+                PGRAPH BestGraph;
+
+                //
+                // If finished count is 0 at this point, a critical invariant
+                // has been violated, so raise a runtime exception.
+                //
+
+                if (Context->FinishedCount == 0) {
+                    PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+                }
+
+                //
+                // Insert the graph to the head of the finished work list.
+                //
+
+                BestGraph = Context->BestGraph;
+                Context->BestGraph = NULL;
+
+                InsertHeadFinishedWork(Context, &BestGraph->ListEntry);
+
+            } else {
+
+                //
+                // Verify our finished count is 0.
+                //
+                // N.B. This invariant is less critical than the one above,
+                //      and may need reviewing down the track, if we ever
+                //      support the notion of finding solutions but none of
+                //      them meet our criteria for "best" (i.e. they didn't
+                //      hit a target number of empty free cache lines, for
+                //      example).
+                //
+
+                if (Context->FinishedCount != 0) {
+                    PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+                }
+            }
+
+            ASSERT(Context->BestGraph == NULL);
+
+            LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+            //
+            // Submit the finished threadpool work regardless of whether or
+            // not a graph was found.  The finished callback will set the
+            // appropriate success or failure events after waiting for all
+            // the graph contexts to finish and then assessing the context.
+            //
+
+            SubmitThreadpoolWork(Context->FinishedWork);
+
+            //
+            // Return graph solving stopped.
+            //
+
+            Result = PH_S_GRAPH_SOLVING_STOPPED;
+            return Result;
+        }
     }
 
 #define ZERO_BITMAP_BUFFER(Name) \
@@ -2462,10 +2761,6 @@ Return Value:
 
     Coverage = &Graph->AssignedMemoryCoverage;
 
-    Coverage->Padding = 0;
-    Coverage->TotalNumberOfAssigned = 0;
-    Coverage->NumberOfSharedAssigned = 0;
-
     Coverage->NumberOfUsedPages = 0;
     Coverage->NumberOfUsedLargePages = 0;
     Coverage->NumberOfUsedCacheLines = 0;
@@ -2481,6 +2776,8 @@ Return Value:
     Coverage->LastPageUsed = 0;
     Coverage->LastLargePageUsed = 0;
     Coverage->LastCacheLineUsed = 0;
+
+    Coverage->TotalNumberOfAssigned = 0;
 
 #define ZERO_ASSIGNED_ARRAY(Name) \
     ZeroInline(Coverage->##Name, Info->##Name##SizeInBytes)
@@ -2555,6 +2852,8 @@ Return Value:
     PH_E_NO_MORE_SEEDS - No more seed data is available.  (Not currently
         returned for this implementation.)
 
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+
 --*/
 {
     PRTL Rtl;
@@ -2563,6 +2862,10 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
+    }
+
+    if (IsSpareGraph(Graph)) {
+        return PH_E_SPARE_GRAPH;
     }
 
     SizeInBytes = Graph->NumberOfSeeds * sizeof(Graph->FirstSeed);

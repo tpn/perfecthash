@@ -64,6 +64,30 @@ Language=English
 Graph verification skipped.
 .
 
+MessageId=0x006
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_GRAPH_SOLVING_STOPPED
+Language=English
+Graph solving has been stopped.
+.
+
+MessageId=0x007
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_TABLE_RESIZE_IMMINENT
+Language=English
+Table resize imminent.
+.
+
+MessageId=0x008
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_USE_NEW_GRAPH_FOR_SOLVING
+Language=English
+Use new graph for solving.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_FAIL
@@ -1565,11 +1589,77 @@ Language=English
 No graph information has been set for graph.
 .
 
-MessageId=0x31c
+;//
+;// Disabled 30th Oct 2018: changed to PH_S_TABLE_RESIZE_IMMINENT.
+;// MessageId=0x31c
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_TABLE_RESIZE_IMMINENT
+;// Language=English
+;// Table resize imminent.
+;// .
+
+MessageId=0x31d
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_TABLE_RESIZE_IMMINENT
+SymbolicName=PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL
 Language=English
-Table resize imminent.
+The number of table create parameters is zero, but table create parameters pointer is not null.
+.
+
+MessageId=0x31e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TABLE_CREATE_PARAMETER_VALIDATION_FAILED
+Language=English
+Failed to validate one or more table create parameters.
+.
+
+MessageId=0x31f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE_CREATE_PARAMETER_ID
+Language=English
+Invalid table create parameter ID.
+.
+
+MessageId=0x320
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_BEST_COVERAGE_TYPE
+Language=English
+Invalid best coverage type.
+.
+
+MessageId=0x321
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SPARE_GRAPH
+Language=English
+Operation invalid on spare graph.
+.
+
+MessageId=0x322
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_GRAPH_INFO_ALREADY_LOADED
+Language=English
+Graph information already loaded.
+.
+
+MessageId=0x323
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+Language=English
+Create table routine failed to find perfect hash solution.
+.
+
+MessageId=0x324
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH
+Language=English
+Find best graph was requested but one or more mandatory table create parameters were missing or invalid.
 .
 

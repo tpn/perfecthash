@@ -108,6 +108,33 @@ Abstract:
 //
 #define PH_S_GRAPH_VERIFICATION_SKIPPED  ((HRESULT)0x20040005L)
 
+//
+// MessageId: PH_S_GRAPH_SOLVING_STOPPED
+//
+// MessageText:
+//
+// Graph solving has been stopped.
+//
+#define PH_S_GRAPH_SOLVING_STOPPED       ((HRESULT)0x20040006L)
+
+//
+// MessageId: PH_S_TABLE_RESIZE_IMMINENT
+//
+// MessageText:
+//
+// Table resize imminent.
+//
+#define PH_S_TABLE_RESIZE_IMMINENT       ((HRESULT)0x20040007L)
+
+//
+// MessageId: PH_S_USE_NEW_GRAPH_FOR_SOLVING
+//
+// MessageText:
+//
+// Use new graph for solving.
+//
+#define PH_S_USE_NEW_GRAPH_FOR_SOLVING   ((HRESULT)0x20040008L)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_FAIL
@@ -1790,11 +1817,83 @@ Abstract:
 #define PH_E_GRAPH_NO_INFO_SET           ((HRESULT)0xE004031BL)
 
 //
-// MessageId: PH_E_TABLE_RESIZE_IMMINENT
+// Disabled 30th Oct 2018: changed to PH_S_TABLE_RESIZE_IMMINENT.
+// MessageId=0x31c
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_TABLE_RESIZE_IMMINENT
+// Language=English
+// Table resize imminent.
+// .
+//
+// MessageId: PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL
 //
 // MessageText:
 //
-// Table resize imminent.
+// The number of table create parameters is zero, but table create parameters pointer is not null.
 //
-#define PH_E_TABLE_RESIZE_IMMINENT       ((HRESULT)0xE004031CL)
+#define PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL ((HRESULT)0xE004031DL)
+
+//
+// MessageId: PH_E_TABLE_CREATE_PARAMETER_VALIDATION_FAILED
+//
+// MessageText:
+//
+// Failed to validate one or more table create parameters.
+//
+#define PH_E_TABLE_CREATE_PARAMETER_VALIDATION_FAILED ((HRESULT)0xE004031EL)
+
+//
+// MessageId: PH_E_INVALID_TABLE_CREATE_PARAMETER_ID
+//
+// MessageText:
+//
+// Invalid table create parameter ID.
+//
+#define PH_E_INVALID_TABLE_CREATE_PARAMETER_ID ((HRESULT)0xE004031FL)
+
+//
+// MessageId: PH_E_INVALID_BEST_COVERAGE_TYPE
+//
+// MessageText:
+//
+// Invalid best coverage type.
+//
+#define PH_E_INVALID_BEST_COVERAGE_TYPE  ((HRESULT)0xE0040320L)
+
+//
+// MessageId: PH_E_SPARE_GRAPH
+//
+// MessageText:
+//
+// Operation invalid on spare graph.
+//
+#define PH_E_SPARE_GRAPH                 ((HRESULT)0xE0040321L)
+
+//
+// MessageId: PH_E_GRAPH_INFO_ALREADY_LOADED
+//
+// MessageText:
+//
+// Graph information already loaded.
+//
+#define PH_E_GRAPH_INFO_ALREADY_LOADED   ((HRESULT)0xE0040322L)
+
+//
+// MessageId: PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+//
+// MessageText:
+//
+// Create table routine failed to find perfect hash solution.
+//
+#define PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION ((HRESULT)0xE0040323L)
+
+//
+// MessageId: PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH
+//
+// MessageText:
+//
+// Find best graph was requested but one or more mandatory table create parameters were missing or invalid.
+//
+#define PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH ((HRESULT)0xE0040324L)
 

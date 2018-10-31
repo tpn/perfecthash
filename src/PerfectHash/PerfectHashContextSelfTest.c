@@ -31,7 +31,9 @@ PerfectHashContextSelfTest(
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
     PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer,
+    ULONG NumberOfTableCreateParameters,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
     )
 /*++
 
@@ -70,6 +72,13 @@ Arguments:
 
     TableCompileFlags - Optionally supplies a pointer to a compile table flags
         structure that can be used to customize table compilation behavior.
+
+    NumberOfTableCreateParameters - Optionally supplies the number of elements
+        in the TableCreateParameters array.
+
+    TableCreateParameters - Optionally supplies an array of additional
+        parameters that can be used to further customize table creation
+        behavior.
 
 Return Value:
 
@@ -640,7 +649,9 @@ Return Value:
                                      MaskFunctionId,
                                      HashFunctionId,
                                      Keys,
-                                     &TableCreateFlags);
+                                     &TableCreateFlags,
+                                     NumberOfTableCreateParameters,
+                                     TableCreateParameters);
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashTableCreate, Result);
@@ -1198,7 +1209,9 @@ PerfectHashContextExtractSelfTestArgsFromArgvW(
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    PULONG NumberOfTableCreateParameters,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParameters
     )
 /*++
 
@@ -1251,6 +1264,14 @@ Arguments:
 
     TableCompileFlags - Supplies the address of a variable that will receive
         the table compile flags.
+
+    NumberOfTableCreateParameters - Supplies the address of a variable that will
+        receive the number of elements in the TableCreateParameters array.
+
+    TableCreateParameters - Supplies the address of a variable that will receive
+        a pointer to an array of table create parameters.  If this is not NULL,
+        the memory will be allocated via the context's allocator and the caller
+        is responsible for freeing it.
 
 Return Value:
 
@@ -1331,6 +1352,14 @@ Return Value:
     }
 
     if (!ARGUMENT_PRESENT(TableCompileFlags)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(NumberOfTableCreateParameters)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(TableCreateParameters)) {
         return E_POINTER;
     }
 
@@ -1454,6 +1483,13 @@ Return Value:
     TableLoadFlags->AsULong = 0;
     TableCompileFlags->AsULong = 0;
 
+    //
+    // Work in progress: table create parameters.
+    //
+
+    *NumberOfTableCreateParameters = 0;
+    *TableCreateParameters = NULL;
+
     return S_OK;
 }
 
@@ -1523,6 +1559,8 @@ Return Value:
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags = { 0 };
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
     PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW ExtractSelfTestArgs;
+    ULONG NumberOfTableCreateParameters = 0;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters = 0;
 
     Rtl = Context->Rtl;
 
@@ -1540,7 +1578,9 @@ Return Value:
                                  &KeysLoadFlags,
                                  &TableCreateFlags,
                                  &TableLoadFlags,
-                                 &TableCompileFlags);
+                                 &TableCompileFlags,
+                                 &NumberOfTableCreateParameters,
+                                 &TableCreateParameters);
 
     if (FAILED(Result)) {
         return Result;
@@ -1566,10 +1606,22 @@ Return Value:
                                      &KeysLoadFlags,
                                      &TableCreateFlags,
                                      &TableLoadFlags,
-                                     &TableCompileFlags);
+                                     &TableCompileFlags,
+                                     NumberOfTableCreateParameters,
+                                     TableCreateParameters);
 
     if (FAILED(Result)) {
-        return Result;
+
+        //
+        // We don't take any action here, there's not much we can do.
+        //
+
+        NOTHING;
+    }
+
+    if (TableCreateParameters) {
+        Context->Allocator->Vtbl->FreePointer(Context->Allocator,
+                                              (PVOID *)&TableCreateParameters);
     }
 
     return Result;
