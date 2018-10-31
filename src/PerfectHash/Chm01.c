@@ -884,24 +884,28 @@ End:
     if (Graphs) {
 
         //
-        // Walk the array of graph instances and release each one, then free
-        // the array buffer.
+        // Walk the array of graph instances and release each one (assuming it
+        // is not NULL), then free the array buffer.
         //
 
         for (Index = 0; Index < NumberOfGraphs; Index++) {
 
             Graph = Graphs[Index];
-            ReferenceCount = Graph->Vtbl->Release(Graph);
 
-            //
-            // Invariant check: reference count should always be 0 here.
-            //
+            if (Graph) {
 
-            if (ReferenceCount != 0) {
-                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+                ReferenceCount = Graph->Vtbl->Release(Graph);
+
+                //
+                // Invariant check: reference count should always be 0 here.
+                //
+
+                if (ReferenceCount != 0) {
+                    PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+                }
+
+                Graphs[Index] = NULL;
             }
-
-            Graphs[Index] = NULL;
         }
 
         Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Graphs);
