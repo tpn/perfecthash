@@ -35,13 +35,6 @@ Abstract:
 extern HMODULE PerfectHashModule;
 
 //
-//
-// Cap the maximum key set size we're willing to process.
-//
-
-#define MAXIMUM_NUMBER_OF_KEYS 500000
-
-//
 // Define a helper macro for validating flags passed as parameters to routines.
 //
 

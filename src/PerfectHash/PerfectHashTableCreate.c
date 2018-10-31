@@ -16,6 +16,12 @@ Abstract:
 #include "stdafx.h"
 
 //
+// Cap the maximum key set size we're willing to process to 10 million.
+//
+
+#define MAXIMUM_NUMBER_OF_KEYS 10000000
+
+//
 // Forward decls.
 //
 
