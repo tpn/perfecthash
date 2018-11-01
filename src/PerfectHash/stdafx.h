@@ -125,6 +125,7 @@ Abstract:
 #include "PerfectHashConstants.h"
 #include "PerfectHashErrorHandling.h"
 #include "Graph.h"
+#include "GraphImpl.h"
 #include "Chm01.h"
 #include "Chm01FileWork.h"
 #include "VCProjectFileChunks.h"

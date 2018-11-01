@@ -223,6 +223,9 @@
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashMacroGlueFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphImpl1.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -371,6 +374,9 @@
     </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbXorAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphImpl.h">
+      <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

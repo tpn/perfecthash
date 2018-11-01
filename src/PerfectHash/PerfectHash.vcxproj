@@ -112,6 +112,7 @@
     <ClInclude Include="CompiledPerfectHash_VCProps_RawCString.h" />
     <ClInclude Include="Component.h" />
     <ClInclude Include="Graph.h" />
+    <ClInclude Include="GraphImpl.h" />
     <ClInclude Include="GuardedList.h" />
     <ClInclude Include="PerfectHashAllocator.h" />
     <ClInclude Include="PerfectHashContext.h" />
@@ -165,6 +166,7 @@
     <ClCompile Include="Component.c" />
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="Graph.c" />
+    <ClCompile Include="GraphImpl1.c" />
     <ClCompile Include="GuardedList.c" />
     <ClCompile Include="PerfectHashContextSelfTest.c" />
     <ClCompile Include="PerfectHashDirectory.c" />
