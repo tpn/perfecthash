@@ -2719,8 +2719,12 @@ typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
 // Helper macro for raising non-continuable exceptions.
 //
 
+#ifdef _DEBUG
+#define PH_RAISE(Result) __debugbreak()
+#else
 #define PH_RAISE(Result) \
     RaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
+#endif
 
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 FORCEINLINE
