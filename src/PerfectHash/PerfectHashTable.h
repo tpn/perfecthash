@@ -285,6 +285,7 @@ HRESULT
 (NTAPI PERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ PUNICODE_STRING Suffix,
+    _In_opt_ PULONG NumberOfResizeEvents,
     _In_opt_ PULARGE_INTEGER NumberOfTableElements,
     _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
@@ -302,6 +303,7 @@ HRESULT
 (NTAPI PERFECT_HASH_TABLE_CREATE_PATH)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ PPERFECT_HASH_PATH ExistingPath,
+    _In_opt_ PULONG NumberOfResizeEvents,
     _In_opt_ PULARGE_INTEGER NumberOfTableElements,
     _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,

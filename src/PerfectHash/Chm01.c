@@ -1626,6 +1626,7 @@ PrepareTableOutputDirectory(
     )
 {
     HRESULT Result = S_OK;
+    ULONG NumberOfResizeEvents;
     ULARGE_INTEGER NumberOfTableElements;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_PATH OutputPath = NULL;
@@ -1649,6 +1650,7 @@ PrepareTableOutputDirectory(
     Context = Table->Context;
     BaseOutputDirectory = Context->BaseOutputDirectory;
     BaseOutputDirectoryPath = &BaseOutputDirectory->Path->FullPath;
+    NumberOfResizeEvents = (ULONG)Context->NumberOfTableResizeEvents;
     NumberOfTableElements.QuadPart = (
         Table->TableInfoOnDisk->NumberOfTableElements.QuadPart
     );
@@ -1660,6 +1662,7 @@ PrepareTableOutputDirectory(
 
     Result = PerfectHashTableCreatePath(Table,
                                         Table->Keys->File->Path,
+                                        &NumberOfResizeEvents,
                                         &NumberOfTableElements,
                                         Table->AlgorithmId,
                                         Table->MaskFunctionId,

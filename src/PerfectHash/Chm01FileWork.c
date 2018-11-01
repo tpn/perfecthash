@@ -195,6 +195,7 @@ Return Value:
 
         PCEOF_INIT Eof;
         LARGE_INTEGER EndOfFile;
+        ULONG NumberOfResizeEvents;
         ULARGE_INTEGER NumberOfTableElements;
         PCUNICODE_STRING NewExtension = NULL;
         PCUNICODE_STRING NewDirectory = NULL;
@@ -275,6 +276,7 @@ Return Value:
             }
         }
 
+        NumberOfResizeEvents = (ULONG)Context->NumberOfTableResizeEvents;
         NumberOfTableElements.QuadPart = (
             TableInfo->NumberOfTableElements.QuadPart
         );
@@ -391,6 +393,7 @@ Return Value:
 
             Result = PerfectHashTableCreatePath(Table,
                                                 Table->Keys->File->Path,
+                                                &NumberOfResizeEvents,
                                                 &NumberOfTableElements,
                                                 Table->AlgorithmId,
                                                 Table->MaskFunctionId,

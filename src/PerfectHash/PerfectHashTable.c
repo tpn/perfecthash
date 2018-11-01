@@ -265,6 +265,7 @@ HRESULT
 PerfectHashTableInitializeTableSuffix(
     PPERFECT_HASH_TABLE Table,
     PUNICODE_STRING Suffix,
+    PULONG NumberOfResizeEvents,
     PULARGE_INTEGER NumberOfTableElements,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
@@ -290,6 +291,9 @@ Arguments:
         0, MaximumLength must reflect the total size in bytes of the Buffer, and
         Buffer must not be NULL.  If the routine is successful, Length will be
         updated and Buffer will be written to.
+
+    NumberOfResizeEvents - Optionally supplies the number of table resize
+        events that have occurred for this table.
 
     NumberOfTableElements - Optionally supplies the number of table elements.
         This value will be converted into a base-10 string representation if
@@ -328,7 +332,8 @@ Return Value:
     BOOLEAN Success;
     HRESULT Result = S_OK;
     ULONG_PTR ExpectedDest;
-    BYTE NumberOfDigits = 0;
+    BYTE NumberOfResizeDigits = 0;
+    BYTE NumberOfElementsDigits = 0;
     LONG_INTEGER TableSuffixLength = { 0 };
     PUNICODE_STRING AlgorithmName = NULL;
     PUNICODE_STRING HashFunctionName = NULL;
@@ -336,13 +341,23 @@ Return Value:
 
     Rtl = Table->Rtl;
 
+    if (ARGUMENT_PRESENT(NumberOfResizeEvents)) {
+        NumberOfResizeDigits = (
+            CountNumberOfDigitsInline(*NumberOfResizeEvents)
+        );
+        TableSuffixLength.LongPart += (
+            sizeof(L'_') +
+            (NumberOfResizeDigits * sizeof(WCHAR))
+        );
+    }
+
     if (ARGUMENT_PRESENT(NumberOfTableElements)) {
-        NumberOfDigits = (
+        NumberOfElementsDigits = (
             CountNumberOfLongLongDigitsInline(NumberOfTableElements->QuadPart)
         );
         TableSuffixLength.LongPart += (
             sizeof(L'_') +
-            (NumberOfDigits * sizeof(WCHAR))
+            (NumberOfElementsDigits * sizeof(WCHAR))
         );
     }
 
@@ -397,54 +412,76 @@ Return Value:
 
     Dest = Suffix->Buffer;
 
-    if (NumberOfDigits) {
+    if (NumberOfResizeDigits) {
         *Dest++ = L'_';
         Suffix->Length = sizeof(L'_');
 
         Success = (
-            AppendLongLongIntegerToUnicodeString(
+            AppendIntegerToUnicodeString(
                 Suffix,
-                NumberOfTableElements->QuadPart,
-                NumberOfDigits,
+                *NumberOfResizeEvents,
+                NumberOfResizeDigits,
                 L'\0'
             )
         );
 
         if (!Success) {
             Result = PH_E_STRING_BUFFER_OVERFLOW;
-            PH_ERROR(InitializeTableSuffix_AppendInteger, Result);
+            PH_ERROR(InitializeTableSuffix_AppendIntegerResize, Result);
             goto Error;
         }
 
-        Dest += NumberOfDigits;
+        Dest += NumberOfResizeDigits;
+    }
+
+    if (NumberOfElementsDigits) {
+        *Dest++ = L'_';
+        Suffix->Length += sizeof(L'_');
+
+        Success = (
+            AppendLongLongIntegerToUnicodeString(
+                Suffix,
+                NumberOfTableElements->QuadPart,
+                NumberOfElementsDigits,
+                L'\0'
+            )
+        );
+
+        if (!Success) {
+            Result = PH_E_STRING_BUFFER_OVERFLOW;
+            PH_ERROR(InitializeTableSuffix_AppendIntegerElements, Result);
+            goto Error;
+        }
+
+        Dest += NumberOfElementsDigits;
     }
 
     if (AlgorithmName) {
         *Dest++ = L'_';
         Offset = (USHORT)RtlPointerToOffset(Suffix->Buffer, Dest);
         Count = AlgorithmName->Length >> 1;
-        CopyMemory(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
+        CopyInline(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
         Dest += Count;
     }
 
     if (HashFunctionName) {
         *Dest++ = L'_';
         Count = HashFunctionName->Length >> 1;
-        CopyMemory(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
+        CopyInline(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
         Dest += Count;
     }
 
     if (MaskFunctionName) {
         *Dest++ = L'_';
         Count = MaskFunctionName->Length >> 1;
-        CopyMemory(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
+        CopyInline(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
         Dest += Count;
     }
 
     if (AdditionalSuffix) {
         *Dest++ = L'_';
         Count = AdditionalSuffix->Length >> 1;
-        CopyMemory(Dest, AdditionalSuffix->Buffer, AdditionalSuffix->Length);
+        CopyInline(Dest, AdditionalSuffix->Buffer, AdditionalSuffix->Length);
         Dest += Count;
     }
 
@@ -495,6 +532,7 @@ HRESULT
 PerfectHashTableCreatePath(
     PPERFECT_HASH_TABLE Table,
     PPERFECT_HASH_PATH ExistingPath,
+    PULONG NumberOfResizeEvents,
     PULARGE_INTEGER NumberOfTableElements,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
@@ -516,6 +554,9 @@ Routine Description:
 Arguments:
 
     Table - Supplies a pointer to the table instance.
+
+    NumberOfResizeEvents - Optionally supplies the number of table resize
+        events that have occurred for this table.
 
     NumberOfTableElements - Optionally supplies the number of table elements.
         This value will be converted into a base-10 string representation if
@@ -608,6 +649,7 @@ Return Value:
         PerfectHashTableInitializeTableSuffix(
             Table,
             &TableSuffix,
+            NumberOfResizeEvents,
             NumberOfTableElements,
             AlgorithmId,
             MaskFunctionId,
