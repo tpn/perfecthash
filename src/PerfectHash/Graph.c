@@ -1698,7 +1698,6 @@ Return Value:
     ULONG TotalBytesProcessed;
     ULONG PageSizeBytesProcessed;
     ULONG LargePageSizeBytesProcessed;
-    LONG KeyCountMinusTotalNumAssigned;
     BOOLEAN FoundFirst = FALSE;
     BOOLEAN IsLastCacheLine = FALSE;
     PASSIGNED_CACHE_LINE AssignedCacheLine;
@@ -1881,22 +1880,6 @@ Return Value:
     // Enumeration of the assigned array complete.  Verify invariants then
     // finish up.
     //
-
-    //
-    // Invariant check: subtracting the number of keys from the total number
-    // of assigned should result in a value between 0-2.  (The discrepancy
-    // arises due to the fact that our logic above looks for non-NULL assigned
-    // array elems, but 0 is actually a valid assigned value.)
-    //
-
-    KeyCountMinusTotalNumAssigned = (
-        Graph->NumberOfKeys - Coverage->TotalNumberOfAssigned
-    );
-
-    if (KeyCountMinusTotalNumAssigned < 0 ||
-        KeyCountMinusTotalNumAssigned > 2) {
-        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
-    }
 
     //
     // Invariant check: the total number of assigned elements we observed
