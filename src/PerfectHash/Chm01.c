@@ -599,9 +599,13 @@ RetryWithLargerTableSize:
         // size event was set, and this point.  So, check the finished count
         // first.  If it indicates a solution, jump to that handler code.
         //
+        // N.B. This only applies when in "first graph wins" mode.
+        //
 
-        if (Context->FinishedCount > 0) {
-            goto FinishedSolution;
+        if (FirstSolvedGraphWins(Context)) {
+            if (Context->FinishedCount > 0) {
+                goto FinishedSolution;
+            }
         }
 
         //
