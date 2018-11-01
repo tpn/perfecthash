@@ -15,6 +15,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashSelfTestExe", "P
 		{14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8} = {14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DGML", "DGML", "{09D12683-B8BD-4B77-8970-6C35A0137613}"
+	ProjectSection(SolutionItems) = preProject
+		..\dgml\Graph Solving Callback Callstack.dgml = ..\dgml\Graph Solving Callback Callstack.dgml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
