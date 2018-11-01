@@ -1,0 +1,499 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<DirectedGraph DataVirtualized="True" Layout="Sugiyama" ZoomLevel="1" xmlns="http://schemas.microsoft.com/vs/2009/dgml">
+  <Nodes>
+    <Node Id="(Name=AbsoluteEdge @8 @18 OverloadingParameters=[@11,(@18 Name=Edge),(@18 Name=Index)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="958.488333333333,573.680142857143,109.436666666667,25.96" Label="AbsoluteEdge" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.h StartLineNumber=1098 StartCharacterOffset=0 EndLineNumber=1098 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=AllocatorAlignedMalloc @8 Type=&quot;void *&quot; OverloadingParameters=[(Type=&quot;_ALLOCATOR *&quot; Name=Allocator),(Type=&quot;unsigned __int64&quot; Name=Size),(Type=&quot;unsigned __int64&quot; Name=Alignment)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1097.69499999822,279.8,159.526666666667,25.96" Label="AllocatorAlignedMalloc" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/perfecthashallocator.c StartLineNumber=273 StartCharacterOffset=0 EndLineNumber=273 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=GraphAddEdge @8 @6 OverloadingParameters=[@11,(@18 Name=Edge),(@18 Name=Vertex1),(@18 Name=Vertex2)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1102.85166666667,405.799842857143,116.71,25.96" Label="GraphAddEdge" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=144 StartCharacterOffset=0 EndLineNumber=144 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=GraphCalculateAssignedMemoryCoverage @8 @10 @12 @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1527.69,381.8,259.03,25.96" Label="GraphCalculateAssignedMemoryCoverage" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=1690 StartCharacterOffset=0 EndLineNumber=1690 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=GraphCheckEdge @8 @9 OverloadingParameters=[@11,(@18 Name=Edge),(@18 Name=Vertex1),(@18 Name=Vertex2)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="2042.78666666667,573.68,126.84,25.96" Label="GraphCheckEdge" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.h StartLineNumber=1179 StartCharacterOffset=0 EndLineNumber=1179 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=GraphNeighborsIterator @8 Type=_GRAPH_ITERATOR @21 @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1695.80166666667,517.72,162.81,25.96" Label="GraphNeighborsIterator" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=827 StartCharacterOffset=0 EndLineNumber=827 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=GraphNextNeighbor @8 @18 OverloadingParameters=[@11,(Type=&quot;_GRAPH_ITERATOR *&quot; Name=Iterator)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1889.47833333333,517.72,143.456666666667,25.96" Label="GraphNextNeighbor" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=857 StartCharacterOffset=0 EndLineNumber=857 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=GraphReset @8 @10 @12 @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1469.75833333333,223.84,96.8966666666668,25.96" Label="GraphReset" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=2590 StartCharacterOffset=0 EndLineNumber=2590 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=GuardedListInsertHeadTsx @8 @6 OverloadingParameters=[(Type=&quot;_GUARDED_LIST *&quot; Name=List),(Type=&quot;_LIST_ENTRY *&quot; Name=Entry)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1816.72,405.8,172.976666666667,25.96" Label="GuardedListInsertHeadTsx" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/guardedlist.c StartLineNumber=424 StartCharacterOffset=0 EndLineNumber=424 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=RegisterEdgeDeletion @8 @6 OverloadingParameters=[@11,(@18 Name=Edge)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1125.29,517.720042857143,149.833333333333,25.9599999999999" Label="RegisterEdgeDeletion" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.h StartLineNumber=1146 StartCharacterOffset=0 EndLineNumber=1146 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=RegisterVertexVisit @8 @6 @21 @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1531.155,517.72,134.103333333333,25.9599999999999" Label="RegisterVertexVisit" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.h StartLineNumber=1161 StartCharacterOffset=0 EndLineNumber=1161 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=RtlGenerateRandomBytes @8 @10 OverloadingParameters=[(Type=&quot;_RTL *&quot; Name=Rtl),(@18 Name=SizeOfBufferInBytes),(Type=&quot;unsigned char *&quot; Name=Buffer)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1287.22166666489,279.800037792969,170.98,25.96" Label="RtlGenerateRandomBytes">
+      <Category Ref="CallStackEntry" />
+    </Node>
+    <Node Id="(Name=ShouldWeContinueTryingToSolveGraphChm01 @8 @9 OverloadingParameters=[(Type=&quot;_PERFECT_HASH_CONTEXT *&quot; Name=Context)] @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="979.02,223.84,280.373333333333,25.96" Label="ShouldWeContinueTryingToSolveGraphChm01" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/chm01.c StartLineNumber=1897 StartCharacterOffset=0 EndLineNumber=1897 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="(Name=TppWorkpExecuteCallback @4 @6 @2)" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1710.77833333333,-213.16,174.856666666667,25.96" CodeSchemaProperty_IsExternal="True" Label="TppWorkpExecuteCallback" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="ExternalCallStackEntry" />
+    </Node>
+    <Node Id="@13" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1283.54833333333,167.88,161.316666666667,25.96" Label="GraphEnterSolvingLoop" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=2182 StartCharacterOffset=0 EndLineNumber=2182 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@14" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="833.716666666667,223.84,114.98,25.96" Label="GraphLoadInfo" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=2427 StartCharacterOffset=0 EndLineNumber=2427 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@15" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1289.595,223.84,149.223333333333,25.96" Label="GraphLoadNewSeeds" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=2865 StartCharacterOffset=0 EndLineNumber=2865 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@16" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1249.89,405.799842857143,112.633333333333,25.96" Label="IsGraphAcyclic" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=641 StartCharacterOffset=0 EndLineNumber=641 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@17" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1392.68333333333,405.8,103.046666666667,25.96" Label="GraphAssign" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=782 StartCharacterOffset=0 EndLineNumber=782 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@19" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1250.18166666667,573.680142857143,112.05,25.96" Label="IsDeletedEdge" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.h StartLineNumber=1112 StartCharacterOffset=0 EndLineNumber=1112 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@20" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1607.86166666667,224.84,96.6899999999998,25.96" Label="GraphSolve" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=1178 StartCharacterOffset=0 EndLineNumber=1178 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@22" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1387.68333333333,517.72,113.046666666667,25.9599999999999" Label="IsVisitedVertex" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.h StartLineNumber=1133 StartCharacterOffset=0 EndLineNumber=1133 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@23" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1115.61166666667,461.759942857143,159.19,25.96" Label="GraphCyclicDeleteEdge" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=509 StartCharacterOffset=0 EndLineNumber=509 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@24" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="932,517.720042857143,162.413333333333,25.9599999999999" Label="GraphFindDegree1Edge" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=379 StartCharacterOffset=0 EndLineNumber=379 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@25" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1390.30666666667,111.92,189.8,25.96" Label="ProcessGraphCallbackChm01" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/chm01.c StartLineNumber=1863 StartCharacterOffset=0 EndLineNumber=1863 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@26" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="2062.93499999907,517.719996948242,105.096666666666,25.96" Label="GraphEdgeId" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=941 StartCharacterOffset=0 EndLineNumber=941 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@27" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1451.955,55.96,134.503333333333,25.96" Label="MainWorkCallback" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/perfecthashcontext.c StartLineNumber=897 StartCharacterOffset=0 EndLineNumber=897 EndCharacterOffset=0)">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@28" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1561.48333333333,460.76,111.446666666667,25.96" Label="GraphTraverse" SourceLocation="(Assembly=file:///c:/users/trent/home/src/perfecthash/src/perfecthash/graph.c StartLineNumber=1106 StartCharacterOffset=0 EndLineNumber=1106 EndCharacterOffset=0)" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="CodeSchema_SourceLocation" />
+    </Node>
+    <Node Id="@3" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1660.8899983724,-96.0400499237061,146.633333333333,25.96" CodeSchemaProperty_IsExternal="True" Label="BaseThreadInitThunk" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="ExternalCallStackEntry" />
+    </Node>
+    <Node Id="@5" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1605.68833170573,-40.0799499237061,135.036666666667,25.96" CodeSchemaProperty_IsExternal="True" Label="RtlUserThreadStart" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="ExternalCallStackEntry" />
+    </Node>
+    <Node Id="@7" Category="CodeSchema_CallStackUnresolvedMethod" Bounds="1691.00327067057,-152.000149923706,130.406666666667,25.96" CodeSchemaProperty_IsExternal="True" Label="TppWorkerThread" UseManualLocation="True">
+      <Category Ref="CallStackEntry" />
+      <Category Ref="ExternalCallStackEntry" />
+    </Node>
+    <Node Id="ExternalCodeRootNode" Category="ExternalCallStackEntry" Bounds="1637.71339274089,15.8801500762939,92.9866666666667,25.96" Label="External Code">
+      <Category Ref="CallStackEntry" />
+    </Node>
+  </Nodes>
+  <Links>
+    <Link Source="@13" Target="(Name=GraphReset @8 @10 @12 @2)" Category="CallStackDirectCall" Bounds="1399.92716406327,193.839972965495,74.1001594557547,26.9262787428908" />
+    <Link Source="@13" Target="(Name=ShouldWeContinueTryingToSolveGraphChm01 @8 @9 OverloadingParameters=[(Type=&quot;_PERFECT_HASH_CONTEXT *&quot; Name=Context)] @2)" Category="CallStackDirectCall" Bounds="1184.80869345617,193.839972965495,122.569983267659,27.9960347781903" />
+    <Link Source="@13" Target="@14" Category="CallStackDirectCall" Bounds="945.568481445313,188.967437744141,337.979858398438,33.9724426269531" />
+    <Link Source="@13" Target="@15" Category="CallStackDirectCall" Bounds="1364.20666666666,193.839972965495,1.13686837721616E-12,21.0000270345051" />
+    <Link Source="@13" Target="@20" Category="CallStackDirectCall" Bounds="1430.74736542202,193.839972965495,168.280797320305,32.8262971395632" />
+    <Link Source="@14" Target="(Name=AllocatorAlignedMalloc @8 Type=&quot;void *&quot; OverloadingParameters=[(Type=&quot;_ALLOCATOR *&quot; Name=Allocator),(Type=&quot;unsigned __int64&quot; Name=Size),(Type=&quot;unsigned __int64&quot; Name=Alignment)] @2)" Category="CallStackDirectCall" Bounds="948.442204030464,248.009142085942,153.787062582497,30.0642812747247" />
+    <Link Source="@15" Target="(Name=RtlGenerateRandomBytes @8 @10 OverloadingParameters=[(Type=&quot;_RTL *&quot; Name=Rtl),(@18 Name=SizeOfBufferInBytes),(Type=&quot;unsigned char *&quot; Name=Buffer)] @2)" Category="CallStackDirectCall" Bounds="1366.17940717347,249.8,3.20720051723674,21.1023510543303" />
+    <Link Source="@16" Target="@19" Category="CallStackDirectCall" Bounds="1306.20666666667,431.759842857143,2.72848410531878E-12,132.9203" />
+    <Link Source="@16" Target="@23" Category="CallStackDirectCall" Bounds="1228.98970136081,431.759842857143,51.4704065970627,25.948550452364" />
+    <Link Source="@17" Target="@22" Category="CallStackDirectCall" Bounds="1444.20666666666,431.76,2.27373675443232E-13,76.96" />
+    <Link Source="@17" Target="@28" Category="CallStackDirectCall" Bounds="1485.06438136826,431.76,82.7070152573488,26.275014789271" />
+    <Link Source="@20" Target="(Name=GraphAddEdge @8 @6 OverloadingParameters=[@11,(@18 Name=Edge),(@18 Name=Vertex1),(@18 Name=Vertex2)] @2)" Category="CallStackDirectCall" Bounds="1205.16519834424,250.8,415.535800885081,151.909683292286" />
+    <Link Source="@20" Target="(Name=GraphCalculateAssignedMemoryCoverage @8 @10 @12 @2)" Category="CallStackDirectCall" Bounds="1656.28922506796,250.8,0.775973804824162,122.000182042378" />
+    <Link Source="@20" Target="(Name=GuardedListInsertHeadTsx @8 @6 OverloadingParameters=[(Type=&quot;_GUARDED_LIST *&quot; Name=List),(Type=&quot;_LIST_ENTRY *&quot; Name=Entry)] @2)" Category="CallStackDirectCall" Bounds="1673.92374023726,250.8,204.307428612933,149.681064021687" />
+    <Link Source="@20" Target="@16" Category="CallStackDirectCall" Bounds="1339.30633844229,250.8,291.795310844442,150.866381705317" />
+    <Link Source="@20" Target="@17" Category="CallStackDirectCall" Bounds="1466.25845053733,250.8,174.741761664269,149.156930145119" />
+    <Link Source="@23" Target="(Name=RegisterEdgeDeletion @8 @6 OverloadingParameters=[@11,(@18 Name=Edge)] @2)" Category="CallStackDirectCall" Bounds="1196.36642156346,487.719942857143,1.87953660023595,21.0358112205847" />
+    <Link Source="@23" Target="@24" Category="CallStackDirectCall" Bounds="1064.02428591841,487.719942857143,88.9673025050074,27.3550502467602" />
+    <Link Source="@24" Target="(Name=AbsoluteEdge @8 @18 OverloadingParameters=[@11,(@18 Name=Edge),(@18 Name=Index)] @2)" Category="CallStackDirectCall" Bounds="1013.20666666667,543.680042857143,0,21.0001" />
+    <Link Source="@24" Target="@19" Category="CallStackDirectCall" Bounds="1081.16830361871,543.680042857143,160.256975353223,30.6074961312758" />
+    <Link Source="@25" Target="@13" Category="CallStackDirectCall" Bounds="1400.4414402663,137.879872965495,56.6991578979846,26.2222359164202" />
+    <Link Source="@26" Target="(Name=GraphCheckEdge @8 @9 OverloadingParameters=[@11,(@18 Name=Edge),(@18 Name=Vertex1),(@18 Name=Vertex2)] @2)" Category="CallStackDirectCall" Bounds="2109.83027057711,543.679996948242,3.50132903177609,21.1212244041918" />
+    <Link Source="@27" Target="@25" Category="CallStackDirectCall" Bounds="1497.7662358095,81.9197729654948,13.5540975589734,22.3084898473524" />
+    <Link Source="@28" Target="(Name=GraphNeighborsIterator @8 Type=_GRAPH_ITERATOR @21 @2)" Category="CallStackDirectCall" Bounds="1653.66734082397,486.72,78.5999096099667,27.9815678211471" />
+    <Link Source="@28" Target="(Name=GraphNextNeighbor @8 @18 OverloadingParameters=[@11,(Type=&quot;_GRAPH_ITERATOR *&quot; Name=Iterator)] @2)" Category="CallStackDirectCall" Bounds="1672.93,482.9667391875,208.267575903883,34.4852055526349" />
+    <Link Source="@28" Target="(Name=RegisterVertexVisit @8 @6 @21 @2)" Category="CallStackDirectCall" Bounds="1605.38422019499,486.72,7.49274141549745,22.4624500540422" />
+    <Link Source="@28" Target="@22" Category="CallStackDirectCall" Bounds="1492.17833814455,486.72,85.6052245895289,28.1853964891304" />
+    <Link Source="@28" Target="@26" Category="CallStackDirectCall" Bounds="1672.93005371094,479.158325195313,387.620727539063,37.690673828125" />
+    <Link Source="@28" Target="@28" Category="CallStackDirectCall" Bounds="1589.34497070313,430.760009765625,55.7197265625,30" />
+    <Link Source="@3" Target="@7" Category="CallStackDirectCall" Bounds="1739.30957242779,-117.664182102253,8.50122834118588,21.6241321785465" />
+    <Link Source="@5" Target="@3" Category="CallStackDirectCall" Bounds="1687.35567477993,-63.9959627214823,26.069945919761,23.9160127977762" />
+    <Link Source="@7" Target="(Name=TppWorkpExecuteCallback @4 @6 @2)" Category="CallStackDirectCall" Bounds="1765.12030821807,-179.78094312424,19.0777945627415,27.7807932005341" />
+    <Link Source="ExternalCodeRootNode" Target="@27" Category="CallStackIndirectCall" Bounds="1581.38850132186,40.0876957257106,56.5965897764979,13.7476918687276" />
+    <Link Source="ExternalCodeRootNode" Target="@5" Category="CallStackIndirectCall" Bounds="1677.49404784192,-5.28894636480412,4.16120330219678,21.169096441098" />
+  </Links>
+  <Categories>
+    <Category Id="CallStackDirectCall" Label="Call Stack direct call" CanBeDataDriven="True" CanLinkedNodesBeDataDriven="True" IncomingActionLabel="Call Stack direct call" OutgoingActionLabel="Call Stack direct call" />
+    <Category Id="CallStackEntry" Label="Call Stack Entry" CanBeDataDriven="True" IsProviderRoot="False" NavigationActionLabel="Call Stack Entry" />
+    <Category Id="CallStackIndirectCall" Label="Call Stack indirect call" CanBeDataDriven="True" CanLinkedNodesBeDataDriven="True" IncomingActionLabel="Call Stack indirect call" OutgoingActionLabel="Call Stack indirect call" />
+    <Category Id="CodeSchema_CallStackUnresolvedMethod" Label="Unresolved Method" CanBeDataDriven="True" DefaultAction="Microsoft.AllOutBoundLinks" IsProviderRoot="False" NavigationActionLabel="Unresolved Method" />
+    <Category Id="CodeSchema_SourceLocation" Label="Source Location" Icon="File" />
+    <Category Id="ExternalCallStackEntry" Label="External Call Stack Entry" CanBeDataDriven="True" IsProviderRoot="False" NavigationActionLabel="External Call Stack Entry" />
+  </Categories>
+  <Properties>
+    <Property Id="Bounds" DataType="System.Windows.Rect" />
+    <Property Id="CanBeDataDriven" Label="CanBeDataDriven" Description="CanBeDataDriven" DataType="System.Boolean" />
+    <Property Id="CanLinkedNodesBeDataDriven" Label="CanLinkedNodesBeDataDriven" Description="CanLinkedNodesBeDataDriven" DataType="System.Boolean" />
+    <Property Id="CodeSchemaProperty_IsExternal" Label="Is External" Description="Flag indicating whether this node is considered external" DataType="System.Boolean" />
+    <Property Id="DataVirtualized" Label="Data Virtualized" Description="If true, the graph can contain nodes and links that represent data for virtualized nodes/links (i.e. not actually created in the graph)." DataType="System.Boolean" />
+    <Property Id="DefaultAction" Label="DefaultAction" Description="DefaultAction" DataType="System.String" />
+    <Property Id="Expression" DataType="System.String" />
+    <Property Id="GroupLabel" DataType="System.String" />
+    <Property Id="Icon" Label="Icon" Description="Icon" DataType="System.String" />
+    <Property Id="IncomingActionLabel" Label="IncomingActionLabel" Description="IncomingActionLabel" DataType="System.String" />
+    <Property Id="IsEnabled" DataType="System.Boolean" />
+    <Property Id="IsProviderRoot" Label="IsProviderRoot" Description="IsProviderRoot" DataType="System.Boolean" />
+    <Property Id="Label" Label="Label" Description="Displayable label of an Annotatable object" DataType="System.String" />
+    <Property Id="Layout" DataType="System.String" />
+    <Property Id="NavigationActionLabel" Label="NavigationActionLabel" Description="NavigationActionLabel" DataType="System.String" />
+    <Property Id="OutgoingActionLabel" Label="OutgoingActionLabel" Description="OutgoingActionLabel" DataType="System.String" />
+    <Property Id="SourceLocation" Label="Start Line Number" DataType="Microsoft.VisualStudio.GraphModel.CodeSchema.SourceLocation" />
+    <Property Id="TargetType" DataType="System.Type" />
+    <Property Id="UseManualLocation" DataType="System.Boolean" />
+    <Property Id="Value" DataType="System.String" />
+    <Property Id="ValueLabel" DataType="System.String" />
+    <Property Id="Visibility" Label="Visibility" Description="Defines whether a node in the graph is visible or not" DataType="System.Windows.Visibility" />
+    <Property Id="ZoomLevel" DataType="System.String" />
+  </Properties>
+  <QualifiedNames>
+    <Name Id="Assembly" Label="Assembly" ValueType="Uri" />
+    <Name Id="IsUnresolved" Label="Is Unresolved" ValueType="System.String" />
+    <Name Id="Name" Label="Name" ValueType="System.String" />
+    <Name Id="OverloadingParameters" Label="Parameter" ValueType="Microsoft.VisualStudio.GraphModel.GraphNodeIdCollection" Formatter="NameValueNoEscape" />
+    <Name Id="Type" Label="Type" ValueType="System.Object" />
+  </QualifiedNames>
+  <IdentifierAliases>
+    <Alias n="1" Uri="Assembly=kernel32.dll" />
+    <Alias n="2" Id="IsUnresolved=True" />
+    <Alias n="3" Id="(Name=BaseThreadInitThunk @1 @2)" />
+    <Alias n="4" Uri="Assembly=ntdll.dll" />
+    <Alias n="5" Id="(Name=RtlUserThreadStart @4 @2)" />
+    <Alias n="6" Id="Type=void" />
+    <Alias n="7" Id="(Name=TppWorkerThread @4 @6 @2)" />
+    <Alias n="8" Uri="Assembly=PerfectHash.dll" />
+    <Alias n="9" Id="Type=&quot;unsigned char&quot;" />
+    <Alias n="10" Id="Type=HRESULT" />
+    <Alias n="11" Id="(Type=&quot;_GRAPH *&quot; Name=Graph)" />
+    <Alias n="12" Id="OverloadingParameters=[@11]" />
+    <Alias n="13" Id="(Name=GraphEnterSolvingLoop @8 @10 @12 @2)" />
+    <Alias n="14" Id="(Name=GraphLoadInfo @8 @10 @12 @2)" />
+    <Alias n="15" Id="(Name=GraphLoadNewSeeds @8 @10 @12 @2)" />
+    <Alias n="16" Id="(Name=IsGraphAcyclic @8 @9 @12 @2)" />
+    <Alias n="17" Id="(Name=GraphAssign @8 @6 @12 @2)" />
+    <Alias n="18" Id="Type=&quot;unsigned long&quot;" />
+    <Alias n="19" Id="(Name=IsDeletedEdge @8 @9 OverloadingParameters=[@11,(@18 Name=Edge)] @2)" />
+    <Alias n="20" Id="(Name=GraphSolve @8 @10 OverloadingParameters=[@11,(Type=&quot;_GRAPH * *&quot; Name=NewGraphPointer)] @2)" />
+    <Alias n="21" Id="OverloadingParameters=[@11,(@18 Name=Vertex)]" />
+    <Alias n="22" Id="(Name=IsVisitedVertex @8 @9 @21 @2)" />
+    <Alias n="23" Id="(Name=GraphCyclicDeleteEdge @8 @6 @21 @2)" />
+    <Alias n="24" Id="(Name=GraphFindDegree1Edge @8 @9 OverloadingParameters=[@11,(@18 Name=Vertex),(Type=&quot;unsigned long *&quot; Name=EdgePointer)] @2)" />
+    <Alias n="25" Id="(Name=ProcessGraphCallbackChm01 @8 @6 OverloadingParameters=[(Type=&quot;_TP_CALLBACK_INSTANCE *&quot; Name=Instance),(Type=&quot;_PERFECT_HASH_CONTEXT *&quot; Name=Context),(Type=&quot;_LIST_ENTRY *&quot; Name=ListEntry)] @2)" />
+    <Alias n="26" Id="(Name=GraphEdgeId @8 @18 OverloadingParameters=[@11,(@18 Name=Vertex1),(@18 Name=Vertex2)] @2)" />
+    <Alias n="27" Id="(Name=MainWorkCallback @8 @6 OverloadingParameters=[(Type=&quot;_TP_CALLBACK_INSTANCE *&quot; Name=Instance),(Type=&quot;void *&quot; Name=Ctx),(Type=&quot;_TP_WORK *&quot; Name=Work)] @2)" />
+    <Alias n="28" Id="(Name=GraphTraverse @8 @6 OverloadingParameters=[@11,(@18 Name=Vertex),(Type=&quot;unsigned long *&quot; Name=Depth),(Type=&quot;unsigned long *&quot; Name=MaximumDepth)] @2)" />
+  </IdentifierAliases>
+  <Styles>
+    <Style TargetType="Link" GroupLabel="Current Call Stack Link" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('CurrentCallStackCall')" />
+      <Setter Property="Stroke" Value="#FFD93701" />
+      <Setter Property="Weight" Value="1" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Call Stack Indirect Link" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('CallStackIndirectCall')" />
+      <Setter Property="Stroke" Value="#FFB8B8B8" />
+      <Setter Property="StrokeDashArray" Value="4 1" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Call Stack Direct Link" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('CallStackDirectCall')" />
+      <Setter Property="Stroke" Value="#FFB8B8B8" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Current Call Stack (no source)" ValueLabel="True">
+      <Condition Expression="HasCategory('CurrentCallStackEntry') And !HasCategory('CodeSchema_SourceLocation')" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#FFA5A5A5" />
+      <Setter Property="Stroke" Value="#FF0072C6" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="External And Current" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('ExternalCallStackEntry') And HasCategory('CurrentCallStackEntry')" />
+      <Setter Property="Background" Value="#FFFFF8F0" />
+      <Setter Property="Stroke" Value="#FFCE5100" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Current Call Stack (source)" ValueLabel="True">
+      <Condition Expression="HasCategory('CurrentCallStackEntry') And !HasCategory('QueryResult')" />
+      <Setter Property="Background" Value="#FFFFE3C6" />
+      <Setter Property="Stroke" Value="#FFD93701" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="External Call Stack" ValueLabel="True">
+      <Condition Expression="HasCategory('ExternalCallStackEntry')" />
+      <Setter Property="Background" Value="#FFF7F7F7" />
+      <Setter Property="StrokeDashArray" Value="1 3" />
+      <Setter Property="Foreground" Value="#FF717171" />
+      <Setter Property="Stroke" Value="#FFA5A5A5" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Results" ValueLabel="True">
+      <Condition Expression="HasCategory('QueryResult')" />
+      <Setter Property="Background" Value="#FFBCFFBE" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Test Project" ValueLabel="Test Project">
+      <Condition Expression="HasCategory('CodeMap_TestProject')" />
+      <Setter Property="Icon" Value="CodeMap_TestProject" />
+      <Setter Property="Background" Value="#FF307A69" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Web Project" ValueLabel="Web Project">
+      <Condition Expression="HasCategory('CodeMap_WebProject')" />
+      <Setter Property="Icon" Value="CodeMap_WebProject" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Windows Store Project" ValueLabel="Windows Store Project">
+      <Condition Expression="HasCategory('CodeMap_WindowsStoreProject')" />
+      <Setter Property="Icon" Value="CodeMap_WindowsStoreProject" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Phone Project" ValueLabel="Phone Project">
+      <Condition Expression="HasCategory('CodeMap_PhoneProject')" />
+      <Setter Property="Icon" Value="CodeMap_PhoneProject" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Portable Library" ValueLabel="Portable Library">
+      <Condition Expression="HasCategory('CodeMap_PortableLibraryProject')" />
+      <Setter Property="Icon" Value="CodeMap_PortableLibraryProject" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="WPF Project" ValueLabel="WPF Project">
+      <Condition Expression="HasCategory('CodeMap_WpfProject')" />
+      <Setter Property="Icon" Value="CodeMap_WpfProject" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="VSIX Project" ValueLabel="VSIX Project">
+      <Condition Expression="HasCategory('CodeMap_VsixProject')" />
+      <Setter Property="Icon" Value="CodeMap_VsixProject" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Modeling Project" ValueLabel="Modeling Project">
+      <Condition Expression="HasCategory('CodeMap_ModelingProject')" />
+      <Setter Property="Icon" Value="CodeMap_ModelingProject" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Assembly" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Assembly')" />
+      <Setter Property="Background" Value="#FF094167" />
+      <Setter Property="Stroke" Value="#FF094167" />
+      <Setter Property="Icon" Value="CodeSchema_Assembly" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Namespace" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Namespace')" />
+      <Setter Property="Background" Value="#FF0E619A" />
+      <Setter Property="Stroke" Value="#FF0E619A" />
+      <Setter Property="Icon" Value="CodeSchema_Namespace" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Interface" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Interface')" />
+      <Setter Property="Background" Value="#FF1382CE" />
+      <Setter Property="Stroke" Value="#FF1382CE" />
+      <Setter Property="Icon" Value="CodeSchema_Interface" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Struct" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Struct')" />
+      <Setter Property="Background" Value="#FF1382CE" />
+      <Setter Property="Stroke" Value="#FF1382CE" />
+      <Setter Property="Icon" Value="CodeSchema_Struct" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Enumeration" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Enum')" />
+      <Setter Property="Background" Value="#FF1382CE" />
+      <Setter Property="Stroke" Value="#FF1382CE" />
+      <Setter Property="Icon" Value="CodeSchema_Enum" />
+      <Setter Property="LayoutSettings" Value="List" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Delegate" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Delegate')" />
+      <Setter Property="Background" Value="#FF1382CE" />
+      <Setter Property="Stroke" Value="#FF1382CE" />
+      <Setter Property="Icon" Value="CodeSchema_Delegate" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Class" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Type')" />
+      <Setter Property="Background" Value="#FF0E70C0" />
+      <Setter Property="Stroke" Value="#FF0E70C0" />
+      <Setter Property="Icon" Value="CodeSchema_Class" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Property" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Property')" />
+      <Setter Property="Background" Value="#FFE0E0E0" />
+      <Setter Property="Stroke" Value="#FFE0E0E0" />
+      <Setter Property="Icon" Value="CodeSchema_Property" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Method" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Method') Or HasCategory('CodeSchema_CallStackUnresolvedMethod')" />
+      <Setter Property="Background" Value="#FFE0E0E0" />
+      <Setter Property="Stroke" Value="#FFE0E0E0" />
+      <Setter Property="Icon" Value="CodeSchema_Method" />
+      <Setter Property="LayoutSettings" Value="List" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Event" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Event')" />
+      <Setter Property="Background" Value="#FFE0E0E0" />
+      <Setter Property="Stroke" Value="#FFE0E0E0" />
+      <Setter Property="Icon" Value="CodeSchema_Event" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Field" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Field')" />
+      <Setter Property="Background" Value="#FFE0E0E0" />
+      <Setter Property="Stroke" Value="#FFE0E0E0" />
+      <Setter Property="Icon" Value="CodeSchema_Field" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Out Parameter" ValueLabel="Has category">
+      <Condition Expression="CodeSchemaProperty_IsOut = 'True'" />
+      <Setter Property="Icon" Value="CodeSchema_OutParameter" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Parameter" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_Parameter')" />
+      <Setter Property="Icon" Value="CodeSchema_Parameter" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Local Variable" ValueLabel="Has category">
+      <Condition Expression="HasCategory('CodeSchema_LocalExpression')" />
+      <Setter Property="Icon" Value="CodeSchema_LocalExpression" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Externals" ValueLabel="Has category">
+      <Condition Expression="HasCategory('Externals')" />
+      <Setter Property="Background" Value="#FF424242" />
+      <Setter Property="Stroke" Value="#FF424242" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Inherits From" ValueLabel="True">
+      <Condition Expression="HasCategory('InheritsFrom')" />
+      <Setter Property="Stroke" Value="#FF00A600" />
+      <Setter Property="StrokeDashArray" Value="2 0" />
+      <Setter Property="DrawArrow" Value="true" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Implements" ValueLabel="True">
+      <Condition Expression="HasCategory('Implements')" />
+      <Setter Property="Stroke" Value="#8000A600" />
+      <Setter Property="StrokeDashArray" Value="2 2" />
+      <Setter Property="DrawArrow" Value="true" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Calls" ValueLabel="True">
+      <Condition Expression="HasCategory('CodeSchema_Calls')" />
+      <Setter Property="Stroke" Value="#FFFF00FF" />
+      <Setter Property="StrokeDashArray" Value="2 0" />
+      <Setter Property="DrawArrow" Value="true" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Function Pointer" ValueLabel="True">
+      <Condition Expression="HasCategory('CodeSchema_FunctionPointer')" />
+      <Setter Property="Stroke" Value="#FFFF00FF" />
+      <Setter Property="StrokeDashArray" Value="2 2" />
+      <Setter Property="DrawArrow" Value="true" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Field Read" ValueLabel="True">
+      <Condition Expression="HasCategory('CodeSchema_FieldRead')" />
+      <Setter Property="Stroke" Value="#FF00AEEF" />
+      <Setter Property="StrokeDashArray" Value="2 2" />
+      <Setter Property="DrawArrow" Value="true" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Field Write" ValueLabel="True">
+      <Condition Expression="HasCategory('CodeSchema_FieldWrite')" />
+      <Setter Property="Stroke" Value="#FF00AEEF" />
+      <Setter Property="DrawArrow" Value="true" />
+      <Setter Property="IsHidden" Value="false" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Inherits From" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('InheritsFrom') And Target.HasCategory('CodeSchema_Class')" />
+      <Setter Property="TargetDecorator" Value="OpenArrow" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Implements" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('Implements') And Target.HasCategory('CodeSchema_Interface')" />
+      <Setter Property="TargetDecorator" Value="OpenArrow" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Comment Link" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="Source.HasCategory('Comment')" />
+      <Setter Property="Stroke" Value="#FFE5C365" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Cursor Location Changed" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="IsCursorLocation" />
+      <Setter Property="IndicatorWest" Value="WestIndicator" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Disabled Breakpoint Location Changed" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="DisabledBreakpointCount" />
+      <Setter Property="IndicatorWest" Value="WestIndicator" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Enabled Breakpoint Location Changed" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="EnabledBreakpointCount" />
+      <Setter Property="IndicatorWest" Value="WestIndicator" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Instruction Pointer Location Changed" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="IsInstructionPointerLocation" />
+      <Setter Property="IndicatorWest" Value="WestIndicator" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Current Callstack Changed" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="IsCurrentCallstackFrame" />
+      <Setter Property="IndicatorWest" Value="WestIndicator" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Return" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('CodeSchema_ReturnTypeLink')" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="References" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('References')" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Uses Attribute" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('CodeSchema_AttributeUse')" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Solution Folder" ValueLabel="True" Visibility="Hidden">
+      <Condition Expression="HasCategory('CodeMap_SolutionFolder')" />
+      <Setter Property="Background" Value="#FFDEBA83" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="Project Reference" ValueLabel="Project Reference">
+      <Condition Expression="HasCategory('CodeMap_ProjectReference')" />
+      <Setter Property="Stroke" Value="#9A9A9A" />
+      <Setter Property="StrokeDashArray" Value="2 2" />
+      <Setter Property="DrawArrow" Value="true" />
+    </Style>
+    <Style TargetType="Link" GroupLabel="External Reference" ValueLabel="External Reference">
+      <Condition Expression="HasCategory('CodeMap_ExternalReference')" />
+      <Setter Property="Stroke" Value="#9A9A9A" />
+      <Setter Property="StrokeDashArray" Value="2 2" />
+      <Setter Property="DrawArrow" Value="true" />
+    </Style>
+    <Style TargetType="Node" GroupLabel="Comment" ValueLabel="Has comment">
+      <Condition Expression="HasCategory('Comment')" />
+      <Setter Property="Background" Value="#FFFFFACD" />
+      <Setter Property="Stroke" Value="#FFE5C365" />
+      <Setter Property="StrokeThickness" Value="1" />
+      <Setter Property="NodeRadius" Value="2" />
+      <Setter Property="MaxWidth" Value="250" />
+    </Style>
+  </Styles>
+</DirectedGraph>

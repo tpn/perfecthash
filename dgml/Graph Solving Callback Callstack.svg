@@ -1,0 +1,172 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg stroke-linecap="round" font-size="12" font-family="AvenirNextCondensed-Regular,Segoe UI,GillSans-Light" width="1415.910000000003" height="892.800142857143" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <image id="CodeSchema_Method" width="11" height="12" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAMCAYAAAC0qUeeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA6cAfpM6f8AAAFeSURBVChTY2RAAvv372eRlJQsYWRkrAbiGb9+/WrU0dH5ApVmgCu+du2aBTMz8+z751/rHFt1h8HIW55B00bqwd+/f3O1tLS2gNQw3r9/XwBoQvvXDz8z9s+/zvDlww8GuzhVhnObHzH8+PKHwS1dh4FPlHMN0KZCxps3bz6/sPOhxMl1dxmc0zQZpDT5Gf7//w+27f2T7ww7Jl9l0HWWYTALUPrABBST2D3rKgNQBQMTCxNcIQgwsTAygHiHltxkAJosAFIMBtF9FgyPLr9j2Np3leHb+98MB+ffYbiw/QlDZJsJVAUDAwuUBupkYDANlAMrXJB/jCG6y5yBX4IDKgsBcJP//4XQXIKsYBqmEMlVYMUvXNO0GRYWnmB4evUjyG0QGSB4ff8rw6K84wx2Meogv3zACLpPb74xPL3xgUHJWITh/z9G1KCDGkJcpIBVQgFSdKcD8RrU6GZgAADuLKNrlhx+dwAAAABJRU5ErkJggg==" />
+  </defs>
+  <rect width="1395.910000000003" height="850.800142857143" fill="#1E1E1E" />
+  <g transform="translate(-813.716666666667,233.16)">
+    <path d="M 1399.92716406327,193.839972965495 L 1474.02732351902,220.766251708386" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1482.48616927006,223.84 L 1474.45356212074,216.665237119969 C 1474.4826936363,219.513089374899 1473.57195340175,222.019414041872 1471.72134141708,224.184211120888 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1307.37867672383,193.839972965495 L 1184.80869345617,221.836007743685" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1176.0346566095,223.840072965495 L 1186.67428209327,225.512905762004 C 1185.10559200755,223.135865054303 1184.51179490479,220.536150433067 1184.892890785,217.713761898297 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1283.54833333333,188.967441249192 L 945.568485284042,222.939887558793" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 936.613609651562,223.84 L 946.963521439299,226.819819790872 C 945.701835275332,224.266535800642 945.435135292753,221.613239316944 946.163421491559,218.859930339779 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1364.20666666666,193.839972965495 L 1364.20666666667,214.84" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1364.20666666667,223.84 L 1368.20666666667,213.84 C 1365.54,214.84 1362.87333333333,214.84 1360.20666666667,213.84 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1430.74736542202,193.839972965495 L 1599.02816274233,226.666270105058" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1607.86166666667,228.389409222661 L 1598.81250191411,222.54880845895 C 1599.2834426116,225.357602857007 1598.77288287305,227.974937353109 1597.28082269847,230.400811947255 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 948.442204030464,248.009142085942 L 1102.22926661296,278.073423360667" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1111.06206547868,279.800172965495 L 1102.01528878558,273.9558739087 C 1102.48508136923,276.764860565746 1101.97345185669,279.381986155588 1100.48040024796,281.807250678227 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1366.17940717347,249.8 L 1369.38660769071,270.90235105433" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1370.73892615808,279.800172965495 L 1373.1909375993,269.312673745368 C 1370.7048035294,270.702007577682 1368.06841185202,271.102694530978 1365.28176256715,270.514734605256 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1306.20666666667,431.759842857143 L 1306.20666666667,564.680142857143" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1306.20666666667,573.680142857143 L 1310.20666666667,563.680142857143 C 1307.54,564.680142857143 1304.87333333334,564.680142857143 1302.20666666667,563.680142857143 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1280.46010795787,431.759842857143 L 1228.98970136081,457.708393309507" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1220.95322537546,461.759942857143 L 1231.6833318248,460.829988242146 C 1229.58993092342,458.898982344373 1228.3894717982,456.517804274641 1228.08195444912,453.686454032949 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1444.20666666666,431.76 L 1444.20666666666,508.72" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1444.20666666666,517.72 L 1448.20666666666,507.72 C 1445.54,508.72 1442.87333333333,508.72 1440.20666666666,507.72 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1485.06438136826,431.76 L 1567.77139662561,458.035014789271" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1576.34895196506,460.76 L 1568.02943945933,453.919991837213 C 1568.17509813831,456.764265850093 1567.36769511291,459.305763728449 1565.60723038313,461.544485472278 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1620.70099922932,250.8 L 1205.16519834424,402.709683292286" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1196.71233410402,405.799842857143 L 1207.47780973309,406.123160780736 C 1205.62299976126,403.961959476023 1204.70739692723,401.457407108548 1204.731001231,398.609503678311 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1656.28922506796,250.8 L 1657.06519887279,372.800182042378" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1657.12244159871,381.8 L 1661.05875766218,371.774761057788 C 1658.39850523688,372.791701638538 1655.73189250869,372.808662446219 1653.05891947763,371.825643480831 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1673.92374023726,250.8 L 1878.23116885019,400.481064021687" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1885.49125976275,405.8 L 1879.78846362804,396.66336406296 C 1879.01915936549,399.405494997604 1877.44317833488,401.55663304577 1875.06052053621,403.116778207456 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1631.10164928673,250.8 L 1339.30633844229,401.666381705317" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1331.31168404661,405.799842857143 L 1342.0317272204,404.760287975416 C 1339.91870305737,402.850774949121 1338.6939738272,400.481988461513 1338.35753952988,397.65392851259 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1641.00021220159,250.8 L 1466.25845053733,399.956930145119" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1459.41312113174,405.8 L 1469.615962629,402.350068785948 C 1467.12409051583,400.97105302002 1465.39281055882,398.942807270217 1464.422122758,396.265331536538 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1196.36642156346,487.719942857143 L 1198.2459581637,508.755754077728" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1199.04691176987,517.720042857143 L 1202.14109166497,507.403742610603 C 1199.57400094583,508.63709428422 1196.91791538156,508.874413871235 1194.17283497216,508.115701371649 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1152.99158842342,487.719942857143 L 1064.02428591841,515.074993103903" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1055.42174490992,517.720042857143 L 1066.15570147635,518.604450246209 C 1064.41614514112,516.349443623681 1063.63242669571,513.800542584126 1063.80454614014,510.957747127544 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1013.20666666667,543.680042857143 L 1013.20666666667,564.680142857143" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1013.20666666667,573.680142857143 L 1017.20666666667,563.680142857143 C 1014.54,564.680142857143 1011.87333333333,564.680142857143 1009.20666666667,563.680142857143 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1081.16830361871,543.680042857143 L 1241.42527897193,574.287538988419" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1250.26548992908,575.975931784266 L 1241.19343010818,570.170957141258 C 1241.67541123798,572.977878105878 1241.17514670588,575.59719987096 1239.69263651187,578.028922436503 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1457.14059816429,137.879872965495 L 1400.4414402663,164.102108881915" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1392.27273516904,167.879972965495 L 1403.02812486981,167.312881804744 C 1401.00112383424,165.312287414842 1399.88175669837,162.891930348988 1399.67002346219,160.05181060718 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 2113.33159960889,543.679996948242 L 2109.83027057711,564.801221352434" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 2108.35840039019,573.68005 L 2113.93995777458,564.46884936356 C 2111.14565259897,565.019276194941 2108.51488855525,564.583166509927 2106.04766564341,563.160520308515 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1511.32033336848,81.9197729654948 L 1497.7662358095,104.228262812847" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1493.09299996486,111.919872965495 L 1501.70397763786,105.450633171285 C 1498.9057336099,104.920594049091 1496.62673800911,103.535931576603 1494.86699083551,101.296645753821 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1653.66734082397,486.72 L 1732.26725043394,514.701567821147" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1740.74599250936,517.72 L 1732.66669339393,510.597856656639 C 1732.71442557154,513.445457884046 1731.82007529633,515.957677758248 1729.98364256829,518.134516279243 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1672.93,482.9667391875 L 1881.19757590388,517.451944740135" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1890.07667910819,518.922157747583 L 1880.86443688449,513.342319648504 C 1881.41538523832,516.136522043201 1880.97976656944,518.767367437069 1879.55758087787,521.23485583011 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1612.87696161048,486.72 L 1605.38422019499,509.182450054042" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1602.53637172285,517.72 L 1609.49511444565,509.499543825443 C 1606.6490424092,509.604353531397 1604.11939798077,508.760546576688 1601.90618116035,506.968122961318 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1577.78356273408,486.72 L 1492.17833814455,514.90539648913" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1483.62977059925,517.72 L 1494.37911387664,518.392026119168 C 1492.59531644246,516.171850940286 1491.76135984664,513.638942037975 1491.8772440892,510.793299412233 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1672.93,479.158311002226 L 2060.55075293398,516.848981403256" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 2069.50850554947,517.719996948242 L 2059.9425651078,512.770978513594 C 2060.67979227397,515.521906941702 2060.42171359398,518.176055864811 2059.16832906782,520.733425282922 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1589.345,460.76 L 1589.345,452.25 C 1589.345,437.923333333333 1598.63222222222,430.76 1617.20666666666,430.76 C 1635.5681296033,430.76 1644.85413076282,437.760000248499 1645.06467014522,451.760000745497" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1645.06833333333,460.76 L 1649.06426279299,450.758372744727 C 1646.39800336811,451.759458050963 1643.73133692233,451.760543440032 1641.06426345565,450.761628911934 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1739.30957242779,-96.0400499237061 L 1747.81080076897,-117.664182102253" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1751.10369661518,-126.040149923706 L 1743.72227108764,-118.197028275962 C 1746.56991664728,-118.152018523913 1749.05168489067,-117.176345680592 1751.16757581782,-115.270009745998 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1687.35567477993,-40.0799499237061 L 1713.42562069969,-63.9959627214823" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1720.0576552982,-70.0800499237061 L 1709.98468920998,-66.2675239650142 C 1712.52427444751,-64.9784863657049 1714.32696695188,-63.0134390772596 1715.39276672307,-60.3723820996785 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1765.12030821807,-152.000149923706 L 1784.19810278081,-179.78094312424" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1789.2929624525,-187.2 L 1780.33464865028,-181.220985547686 C 1783.09898324366,-180.535737149676 1785.29722231796,-179.026149098804 1786.92936587318,-176.69222139507 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1637.98509109836,40.0876957257106 L 1581.38850132186,53.8353875944383" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1572.64281742664,55.9597729654948 L 1583.30441525291,57.4863153955331 C 1581.70322508054,55.1310444678053 1581.07377756319,52.5397307210712 1581.41607270086,49.7123741553309 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <path d="M 1681.65525114411,15.8801500762939 L 1677.49404784192,-5.28894636480412" fill="none" stroke="#B8B8B8" stroke-width="1" />
+    <path d="M 1675.75813996917,-14.1199499237061 L 1673.76203602382,-3.53620913703911 C 1676.18575101838,-5.03177482810103 1678.80234466546,-5.54611790150722 1681.61181696507,-5.07923835725767 z" fill="#B8B8B8" stroke="#B8B8B8" stroke-width="1" stroke-linejoin="round" />
+    <rect x="958.488333333333" y="573.680142857143" rx="3" ry="3" width="109.436666666667" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="968.488333333333" y="579.680142857143" xlink:href="#CodeSchema_Method" />
+    <text x="984.488333333333" y="591.630142857143" fill="#000000">AbsoluteEdge</text>
+    <rect x="1097.69499999822" y="279.8" rx="3" ry="3" width="159.526666666667" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1107.69499999822" y="285.8" xlink:href="#CodeSchema_Method" />
+    <text x="1123.69499999822" y="297.75" fill="#000000">AllocatorAlignedMalloc</text>
+    <rect x="1102.85166666667" y="405.799842857143" rx="3" ry="3" width="116.71" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1112.85166666667" y="411.799842857143" xlink:href="#CodeSchema_Method" />
+    <text x="1128.85166666667" y="423.749842857143" fill="#000000">GraphAddEdge</text>
+    <rect x="1527.69" y="381.8" rx="3" ry="3" width="259.03" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1537.69" y="387.8" xlink:href="#CodeSchema_Method" />
+    <text x="1553.69" y="399.75" fill="#000000">GraphCalculateAssignedMemoryCoverage</text>
+    <rect x="2042.78666666667" y="573.68" rx="3" ry="3" width="126.84" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="2052.78666666667" y="579.68" xlink:href="#CodeSchema_Method" />
+    <text x="2068.78666666667" y="591.63" fill="#000000">GraphCheckEdge</text>
+    <rect x="1695.80166666667" y="517.72" rx="3" ry="3" width="162.81" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1705.80166666667" y="523.72" xlink:href="#CodeSchema_Method" />
+    <text x="1721.80166666667" y="535.67000000000007" fill="#000000">GraphNeighborsIterator</text>
+    <rect x="1889.47833333333" y="517.72" rx="3" ry="3" width="143.456666666667" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1899.47833333333" y="523.72" xlink:href="#CodeSchema_Method" />
+    <text x="1915.47833333333" y="535.67000000000007" fill="#000000">GraphNextNeighbor</text>
+    <rect x="1469.75833333333" y="223.84" rx="3" ry="3" width="96.8966666666668" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1479.75833333333" y="229.84" xlink:href="#CodeSchema_Method" />
+    <text x="1495.75833333333" y="241.79" fill="#000000">GraphReset</text>
+    <rect x="1816.72" y="405.8" rx="3" ry="3" width="172.976666666667" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1826.72" y="411.8" xlink:href="#CodeSchema_Method" />
+    <text x="1842.72" y="423.75" fill="#000000">GuardedListInsertHeadTsx</text>
+    <rect x="1125.29" y="517.720042857143" rx="3" ry="3" width="149.833333333333" height="25.9599999999999" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1135.29" y="523.720042857143" xlink:href="#CodeSchema_Method" />
+    <text x="1151.29" y="535.670042857143" fill="#000000">RegisterEdgeDeletion</text>
+    <rect x="1531.155" y="517.72" rx="3" ry="3" width="134.103333333333" height="25.9599999999999" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1541.155" y="523.72" xlink:href="#CodeSchema_Method" />
+    <text x="1557.155" y="535.67000000000007" fill="#000000">RegisterVertexVisit</text>
+    <rect x="1287.22166666489" y="279.800037792969" rx="3" ry="3" width="170.98" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1297.22166666489" y="285.800037792969" xlink:href="#CodeSchema_Method" />
+    <text x="1313.22166666489" y="297.750037792969" fill="#000000">RtlGenerateRandomBytes</text>
+    <rect x="979.02" y="223.84" rx="3" ry="3" width="280.373333333333" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="989.02" y="229.84" xlink:href="#CodeSchema_Method" />
+    <text x="1005.02" y="241.79" fill="#000000">ShouldWeContinueTryingToSolveGraphChm01</text>
+    <rect x="1710.77833333333" y="-213.16" rx="3" ry="3" width="174.856666666667" height="25.96" fill="#F7F7F7" stroke="#A5A5A5" stroke-width="1" />
+    <use x="1720.77833333333" y="-207.16" xlink:href="#CodeSchema_Method" />
+    <text x="1736.77833333333" y="-195.21" fill="#717171">TppWorkpExecuteCallback</text>
+    <rect x="1283.54833333333" y="167.88" rx="3" ry="3" width="161.316666666667" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1293.54833333333" y="173.88" xlink:href="#CodeSchema_Method" />
+    <text x="1309.54833333333" y="185.82999999999998" fill="#000000">GraphEnterSolvingLoop</text>
+    <rect x="833.716666666667" y="223.84" rx="3" ry="3" width="114.98" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="843.716666666667" y="229.84" xlink:href="#CodeSchema_Method" />
+    <text x="859.716666666667" y="241.79" fill="#000000">GraphLoadInfo</text>
+    <rect x="1289.595" y="223.84" rx="3" ry="3" width="149.223333333333" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1299.595" y="229.84" xlink:href="#CodeSchema_Method" />
+    <text x="1315.595" y="241.79" fill="#000000">GraphLoadNewSeeds</text>
+    <rect x="1249.89" y="405.799842857143" rx="3" ry="3" width="112.633333333333" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1259.89" y="411.799842857143" xlink:href="#CodeSchema_Method" />
+    <text x="1275.89" y="423.749842857143" fill="#000000">IsGraphAcyclic</text>
+    <rect x="1392.68333333333" y="405.8" rx="3" ry="3" width="103.046666666667" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1402.68333333333" y="411.8" xlink:href="#CodeSchema_Method" />
+    <text x="1418.68333333333" y="423.75" fill="#000000">GraphAssign</text>
+    <rect x="1250.18166666667" y="573.680142857143" rx="3" ry="3" width="112.05" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1260.18166666667" y="579.680142857143" xlink:href="#CodeSchema_Method" />
+    <text x="1276.18166666667" y="591.630142857143" fill="#000000">IsDeletedEdge</text>
+    <rect x="1607.86166666667" y="224.84" rx="3" ry="3" width="96.6899999999998" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1617.86166666667" y="230.84" xlink:href="#CodeSchema_Method" />
+    <text x="1633.86166666667" y="242.79" fill="#000000">GraphSolve</text>
+    <rect x="1387.68333333333" y="517.72" rx="3" ry="3" width="113.046666666667" height="25.9599999999999" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1397.68333333333" y="523.72" xlink:href="#CodeSchema_Method" />
+    <text x="1413.68333333333" y="535.67000000000007" fill="#000000">IsVisitedVertex</text>
+    <rect x="1115.61166666667" y="461.759942857143" rx="3" ry="3" width="159.19" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1125.61166666667" y="467.759942857143" xlink:href="#CodeSchema_Method" />
+    <text x="1141.61166666667" y="479.709942857143" fill="#000000">GraphCyclicDeleteEdge</text>
+    <rect x="932" y="517.720042857143" rx="3" ry="3" width="162.413333333333" height="25.9599999999999" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="942" y="523.720042857143" xlink:href="#CodeSchema_Method" />
+    <text x="958" y="535.670042857143" fill="#000000">GraphFindDegree1Edge</text>
+    <rect x="1390.30666666667" y="111.92" rx="3" ry="3" width="189.8" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1400.30666666667" y="117.92" xlink:href="#CodeSchema_Method" />
+    <text x="1416.30666666667" y="129.87" fill="#000000">ProcessGraphCallbackChm01</text>
+    <rect x="2062.93499999907" y="517.719996948242" rx="3" ry="3" width="105.096666666666" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="2072.93499999907" y="523.719996948242" xlink:href="#CodeSchema_Method" />
+    <text x="2088.93499999907" y="535.6699969482421" fill="#000000">GraphEdgeId</text>
+    <rect x="1451.955" y="55.96" rx="3" ry="3" width="134.503333333333" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1461.955" y="61.96" xlink:href="#CodeSchema_Method" />
+    <text x="1477.955" y="73.91" fill="#000000">MainWorkCallback</text>
+    <rect x="1561.48333333333" y="460.76" rx="3" ry="3" width="111.446666666667" height="25.96" fill="#E0E0E0" stroke="#E0E0E0" stroke-width="1" />
+    <use x="1571.48333333333" y="466.76" xlink:href="#CodeSchema_Method" />
+    <text x="1587.48333333333" y="478.71" fill="#000000">GraphTraverse</text>
+    <rect x="1660.8899983724" y="-96.0400499237061" rx="3" ry="3" width="146.633333333333" height="25.96" fill="#F7F7F7" stroke="#A5A5A5" stroke-width="1" />
+    <use x="1670.8899983724" y="-90.0400499237061" xlink:href="#CodeSchema_Method" />
+    <text x="1686.8899983724" y="-78.0900499237061" fill="#717171">BaseThreadInitThunk</text>
+    <rect x="1605.68833170573" y="-40.0799499237061" rx="3" ry="3" width="135.036666666667" height="25.96" fill="#F7F7F7" stroke="#A5A5A5" stroke-width="1" />
+    <use x="1615.68833170573" y="-34.0799499237061" xlink:href="#CodeSchema_Method" />
+    <text x="1631.68833170573" y="-22.1299499237061" fill="#717171">RtlUserThreadStart</text>
+    <rect x="1691.00327067057" y="-152.000149923706" rx="3" ry="3" width="130.406666666667" height="25.96" fill="#F7F7F7" stroke="#A5A5A5" stroke-width="1" />
+    <use x="1701.00327067057" y="-146.000149923706" xlink:href="#CodeSchema_Method" />
+    <text x="1717.00327067057" y="-134.05014992370602" fill="#717171">TppWorkerThread</text>
+    <rect x="1637.71339274089" y="15.8801500762939" rx="3" ry="3" width="92.9866666666667" height="25.96" fill="#F7F7F7" stroke="#A5A5A5" stroke-width="1" />
+    <text x="1647.71339274089" y="33.830150076293904" fill="#717171">External Code</text>
+  </g>
+</svg>
