@@ -1346,6 +1346,14 @@ Return Value:
     GraphAssign(Graph);
 
     //
+    // Stop the solve timers here if we're in "first graph wins" mode.
+    //
+
+    if (FirstSolvedGraphWins(Context)) {
+        CONTEXT_END_TIMERS(Solve);
+    }
+
+    //
     // Calculate memory coverage information.  This routine should never fail,
     // so issue a PH_RAISE() if it does.
     //
@@ -1354,12 +1362,6 @@ Return Value:
     if (FAILED(Result)) {
         PH_RAISE(Result);
     }
-
-    //
-    // Stop the solve timers here.
-    //
-
-    CONTEXT_END_TIMERS(Solve);
 
     //
     // If we're in "first graph wins" mode and we reach this point, we're the
@@ -2695,6 +2697,13 @@ Return Value:
             ASSERT(Context->BestGraph == NULL);
 
             LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+            //
+            // Stop the solve timers here.  (These are less useful when not in
+            // "first graph wins" mode.)
+            //
+
+            CONTEXT_END_TIMERS(Solve);
 
             //
             // Submit the finished threadpool work regardless of whether or
