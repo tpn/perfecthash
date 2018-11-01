@@ -1056,6 +1056,10 @@ Return Value:
 
     } else {
 
+        //
+        // N.B. This should probably be moved into its own subroutine.
+        //
+
         HANDLE Handle;
         ULONG Value;
         ULONG ShareMode;
