@@ -927,10 +927,10 @@ Return Value:
     //
 
     //
-    // N.B. Default to true for large pages for the value array for now.
+    // N.B. Default to false for large pages for the value array for now.
     //
 
-    LargePagesForValues = TRUE;
+    LargePagesForValues = FALSE;
 
     ArrayAllocSize = (
         Table->TableInfoOnDisk->NumberOfTableElements.QuadPart *
