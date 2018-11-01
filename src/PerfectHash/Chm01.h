@@ -8,7 +8,7 @@ Module Name:
 
 Abstract:
 
-    This is the header file for the Chm_01.c module, which is our first pass
+    This is the header file for the Chm01.c module, which is our first pass
     at the CHM perfect hash table algorithm.  It defines types related to the
     implementation of the CHM algorithm.
 
@@ -47,14 +47,25 @@ typedef
 _Check_return_
 _Success_(return >= 0)
 HRESULT
-(NTAPI SAVE_FILE)(
+(NTAPI UNMAP_FILE)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_ PFILE_WORK_ITEM Item
     );
-typedef SAVE_FILE *PSAVE_FILE;
+typedef UNMAP_FILE *PUNMAP_FILE;
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI CLOSE_FILE)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PFILE_WORK_ITEM Item
+    );
+typedef CLOSE_FILE *PCLOSE_FILE;
 
 extern PREPARE_FILE PrepareFileChm01;
-extern SAVE_FILE SaveFileChm01;
+extern UNMAP_FILE UnmapFileChm01;
+extern CLOSE_FILE CloseFileChm01;
 
 //
 // Helper macro for adding a 4-space indent to the output stream.

@@ -1897,3 +1897,255 @@ Abstract:
 //
 #define PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH ((HRESULT)0xE0040324L)
 
+//
+// MessageId: PH_E_FILE_ALREADY_MAPPED
+//
+// MessageText:
+//
+// File is already mapped.
+//
+#define PH_E_FILE_ALREADY_MAPPED         ((HRESULT)0xE0040325L)
+
+//
+// MessageId: PH_E_FILE_ALREADY_UNMAPPED
+//
+// MessageText:
+//
+// File is already unmapped.
+//
+#define PH_E_FILE_ALREADY_UNMAPPED       ((HRESULT)0xE0040326L)
+
+//
+// MessageId: PH_E_FILE_NOT_MAPPED
+//
+// MessageText:
+//
+// File not mapped.
+//
+#define PH_E_FILE_NOT_MAPPED             ((HRESULT)0xE0040327L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_TABLE_FILE
+//
+// MessageText:
+//
+// Error closing table file.
+//
+#define PH_E_ERROR_DURING_CLOSE_TABLE_FILE ((HRESULT)0xE0040328L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_TABLE_INFO_STREAM
+//
+// MessageText:
+//
+// Error closing table info stream.
+//
+#define PH_E_ERROR_DURING_CLOSE_TABLE_INFO_STREAM ((HRESULT)0xE0040329L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_HEADER_FILE
+//
+// MessageText:
+//
+// Error closing C header file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_HEADER_FILE ((HRESULT)0xE004032AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_FILE
+//
+// MessageText:
+//
+// Error closing C source file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_FILE ((HRESULT)0xE004032BL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_HEADER_STDAFX_FILE
+//
+// MessageText:
+//
+// Error closing C header stdafx file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_HEADER_STDAFX_FILE ((HRESULT)0xE004032CL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_STDAFX_FILE
+//
+// MessageText:
+//
+// Error closing C source stdafx file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_STDAFX_FILE ((HRESULT)0xE004032DL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_KEYS_FILE
+//
+// MessageText:
+//
+// Error closing C source keys file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_KEYS_FILE ((HRESULT)0xE004032EL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_TABLE_DATA_FILE
+//
+// MessageText:
+//
+// Error closing C source table data file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_TABLE_DATA_FILE ((HRESULT)0xE004032FL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_HEADER_SUPPORT_FILE
+//
+// MessageText:
+//
+// Error closing C header support file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_HEADER_SUPPORT_FILE ((HRESULT)0xE0040330L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_SUPPORT_FILE
+//
+// MessageText:
+//
+// Error closing C source support file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_SUPPORT_FILE ((HRESULT)0xE0040331L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_TEST_FILE
+//
+// MessageText:
+//
+// Error closing C source test file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_TEST_FILE ((HRESULT)0xE0040332L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_TEST_EXE_FILE
+//
+// MessageText:
+//
+// Error closing C source test exe file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_TEST_EXE_FILE ((HRESULT)0xE0040333L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_FULL_FILE
+//
+// MessageText:
+//
+// Error closing C source benchmark full file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_FULL_FILE ((HRESULT)0xE0040334L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_FULL_EXE_FILE
+//
+// MessageText:
+//
+// Error closing C source benchmark full exe file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_FULL_EXE_FILE ((HRESULT)0xE0040335L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_INDEX_FILE
+//
+// MessageText:
+//
+// Error closing C source benchmark index file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_INDEX_FILE ((HRESULT)0xE0040336L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE
+//
+// MessageText:
+//
+// Error closing C source benchmark index exe file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE ((HRESULT)0xE0040337L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_VCPROJECT_DLL_FILE
+//
+// MessageText:
+//
+// Error closing VC project dll file.
+//
+#define PH_E_ERROR_DURING_CLOSE_VCPROJECT_DLL_FILE ((HRESULT)0xE0040338L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_VCPROJECT_TEST_EXE_FILE
+//
+// MessageText:
+//
+// Error closing VC project test exe file.
+//
+#define PH_E_ERROR_DURING_CLOSE_VCPROJECT_TEST_EXE_FILE ((HRESULT)0xE0040339L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_VCPROJECT_BENCHMARK_FULL_EXE_FILE
+//
+// MessageText:
+//
+// Error closing VC project benchmark full exe file.
+//
+#define PH_E_ERROR_DURING_CLOSE_VCPROJECT_BENCHMARK_FULL_EXE_FILE ((HRESULT)0xE004033AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE
+//
+// MessageText:
+//
+// Error closing VC project benchmark index exe file.
+//
+#define PH_E_ERROR_DURING_CLOSE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE ((HRESULT)0xE004033BL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_VSSOLUTION_FILE
+//
+// MessageText:
+//
+// Error closing VS solution file.
+//
+#define PH_E_ERROR_DURING_CLOSE_VSSOLUTION_FILE ((HRESULT)0xE004033CL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_HEADER_COMPILED_PERFECT_HASH_FILE
+//
+// MessageText:
+//
+// Error closing C header compiled perfect hash file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_HEADER_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004033DL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE
+//
+// MessageText:
+//
+// Error closing C header compiled perfect hash macro glue file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE ((HRESULT)0xE004033EL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_VCPROPS_COMPILED_PERFECT_HASH_FILE
+//
+// MessageText:
+//
+// Error closing vcprops compiled perfect hash file.
+//
+#define PH_E_ERROR_DURING_CLOSE_VCPROPS_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004033FL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_TABLE_STATS_TEXT_FILE
+//
+// MessageText:
+//
+// Error closing table stats text file.
+//
+#define PH_E_ERROR_DURING_CLOSE_TABLE_STATS_TEXT_FILE ((HRESULT)0xE0040340L)
+

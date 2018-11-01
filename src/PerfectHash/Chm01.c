@@ -147,6 +147,7 @@ Return Value:
     ULONG ReferenceCount;
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
+    HRESULT CloseResult = S_OK;
     ULONG WaitResult;
     GRAPH_INFO PrevInfo;
     GRAPH_INFO Info;
@@ -154,6 +155,7 @@ Return Value:
     PHANDLE Event;
     ULONG NumberOfGraphs;
     PLIST_ENTRY ListEntry;
+    ULONG CloseFileErrorCount = 0;
     ULONG NumberOfSeedsRequired;
     ULONG NumberOfSeedsAvailable;
     ULONGLONG Closest;
@@ -166,6 +168,8 @@ Return Value:
     BOOL WaitForAllEvents = TRUE;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
     PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
+    LARGE_INTEGER EmptyEndOfFile = { 0 };
+    PLARGE_INTEGER EndOfFile;
 
     HANDLE Events[5];
     HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];
@@ -178,6 +182,7 @@ Return Value:
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
+    CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
 
     //
     // Validate arguments.
@@ -451,7 +456,7 @@ RetryWithLargerTableSize:
     //
 
 #define EXPAND_AS_SUBMIT_FILE_WORK(Verb, VUpper, Name, Upper) \
-    ZeroStruct(##Verb####Name##);                             \
+    ZeroStructInline(##Verb####Name##);                       \
     Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;       \
     InsertTailFileWork(Context, &Verb##Name##.ListEntry);     \
     SubmitThreadpoolWork(Context->FileWork);
@@ -880,6 +885,59 @@ Error:
     //
 
 End:
+
+    //
+    // Close all files.  If we weren't successful in finding a solution, pass
+    // an end-of-file value of 0 to each Close() call, which will delete the
+    // file.
+    //
+
+    if (FAILED(Result)) {
+        EndOfFile = &EmptyEndOfFile;
+    } else {
+        EndOfFile = NULL;
+    }
+
+#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(Verb, VUpper, Name, Upper) \
+    ZeroStructInline(##Verb####Name##);                             \
+    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;             \
+    Verb##Name##.EndOfFile = EndOfFile;                             \
+    InsertTailFileWork(Context, &Verb##Name##.ListEntry);           \
+    SubmitThreadpoolWork(Context->FileWork);
+
+#define SUBMIT_CLOSE_FILE_WORK() \
+    CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_CLOSE_FILE_WORK)
+
+    SUBMIT_CLOSE_FILE_WORK();
+
+    WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+
+#define EXPAND_AS_CHECK_CLOSE_ERRORS(Verb, VUpper, Name, Upper)          \
+    if (Verb####Name##.NumberOfErrors > 0) {                             \
+        CloseResult = Verb####Name##.LastResult;                         \
+        if (CloseResult == S_OK || CloseResult == E_UNEXPECTED) {        \
+            CloseResult = PH_E_ERROR_DURING_##VUpper##_##Upper##;        \
+        }                                                                \
+        PH_ERROR(                                                        \
+            CreatePerfectHashTableImplChm01_ErrorDuring##Verb####Name##, \
+            Result                                                       \
+        );                                                               \
+        CloseFileErrorCount++;                                           \
+    }
+
+#define CHECK_ALL_CLOSE_ERRORS() \
+    CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CHECK_CLOSE_ERRORS)
+
+    CHECK_ALL_CLOSE_ERRORS();
+
+    //
+    // Just use whatever the last close file error was for our return value if
+    // we encountered any errors.
+    //
+
+    if (CloseFileErrorCount > 0) {
+        Result = CloseResult;
+    }
 
     if (Graphs) {
 
@@ -1494,7 +1552,7 @@ Return Value:
     // written into the NTFS stream :Info.
     //
 
-    ZeroStructPointer(GraphInfoOnDisk);
+    ZeroStructPointerInline(GraphInfoOnDisk);
     TableInfoOnDisk->Magic.LowPart = TABLE_INFO_ON_DISK_MAGIC_LOWPART;
     TableInfoOnDisk->Magic.HighPart = TABLE_INFO_ON_DISK_MAGIC_HIGHPART;
     TableInfoOnDisk->SizeOfStruct = sizeof(*GraphInfoOnDisk);

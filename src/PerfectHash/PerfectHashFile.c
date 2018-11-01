@@ -786,7 +786,7 @@ Return Value:
 
 --*/
 {
-    HRESULT Result;
+    HRESULT Result = S_OK;
     ULONG LastError;
     LARGE_INTEGER EndOfFile = { 0 };
     PPERFECT_HASH_DIRECTORY Directory;
@@ -827,12 +827,14 @@ Return Value:
     File->PendingEndOfFile.QuadPart = EndOfFile.QuadPart;
 
     //
-    // Unmap the file.
+    // Unmap the file if it's still mapped.
     //
 
-    Result = File->Vtbl->Unmap(File);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileUnmap, Result);
+    if (IsFileMapped(File)) {
+        Result = File->Vtbl->Unmap(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileUnmap, Result);
+        }
     }
 
     //
@@ -968,9 +970,7 @@ Return Value:
 
     PH_E_FILE_NOT_OPEN - File is not open.
 
-    PH_E_FILE_VIEW_CREATED - A view has already been created.
-
-    PH_E_FILE_VIEW_MAPPED - A view has already been mapped.
+    PH_E_FILE_ALREADY_MAPPED - File has already been mapped.
 
     PH_E_SYSTEM_CALL_FAILED - A system call failed; the file may be in an
         inconsistent state.
@@ -994,12 +994,22 @@ Return Value:
         return PH_E_FILE_NOT_OPEN;
     }
 
+    if (IsFileMapped(File)) {
+        return PH_E_FILE_ALREADY_MAPPED;
+    }
+
+    //
+    // Invariant checks: view should not be created nor mapped. If we hit these
+    // invariants we're not setting file state variables correctly (as the call
+    // to IsFileMapped() above indicated the file was *not* mapped already).
+    //
+
     if (IsViewCreated(File)) {
-        return PH_E_FILE_VIEW_CREATED;
+        PH_RAISE(PH_E_FILE_VIEW_CREATED);
     }
 
     if (IsViewMapped(File)) {
-        return PH_E_FILE_VIEW_MAPPED;
+        PH_RAISE(PH_E_FILE_VIEW_MAPPED);
     }
 
     EndOfFile.QuadPart = File->FileInfo.EndOfFile.QuadPart;
@@ -1042,6 +1052,10 @@ Return Value:
     if (!File->BaseAddress) {
         SYS_ERROR(MapViewOfFile);
         Result = PH_E_SYSTEM_CALL_FAILED;
+        if (!CloseHandle(File->MappingHandle)) {
+            SYS_ERROR(CloseHandle);
+        }
+        File->MappingHandle = NULL;
         goto Error;
     }
 
@@ -1123,6 +1137,10 @@ Error:
 
 End:
 
+    if (SUCCEEDED(Result)) {
+        SetFileMapped(File);
+    }
+
     return Result;
 }
 
@@ -1145,11 +1163,15 @@ Arguments:
 
 Return Value:
 
-    S_OK - File was unmapped successfully, if applicable.
+    S_OK - File was unmapped successfully.
 
     E_POINTER - File parameter was NULL.
 
     PH_E_FILE_NOT_OPEN - File is not open.
+
+    PH_E_FILE_NOT_MAPPED - File not mapped.
+
+    PH_E_FILE_ALREADY_UNMAPPED - File already unmapped.
 
     PH_E_SYSTEM_CALL_FAILED - A system call failed; the file may be in an
         inconsistent state.
@@ -1169,6 +1191,14 @@ Return Value:
 
     if (!IsFileOpen(File)) {
         return PH_E_FILE_NOT_OPEN;
+    }
+
+    if (IsFileUnmapped(File)) {
+        return PH_E_FILE_ALREADY_UNMAPPED;
+    }
+
+    if (!IsFileMapped(File)) {
+        return PH_E_FILE_NOT_MAPPED;
     }
 
     //
@@ -1228,13 +1258,6 @@ Return Value:
         File->MappedAddress = NULL;
     }
 
-    if (File->FileHandle && !IsFileReadOnly(File)) {
-        if (!FlushFileBuffers(File->FileHandle)) {
-            SYS_ERROR(FlushFileBuffers);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-    }
-
     if (File->BaseAddress) {
         if (!UnmapViewOfFile(File->BaseAddress)) {
             SYS_ERROR(UnmapViewOfFile);
@@ -1249,6 +1272,10 @@ Return Value:
             Result = PH_E_SYSTEM_CALL_FAILED;
         }
         File->MappingHandle = NULL;
+    }
+
+    if (SUCCEEDED(Result)) {
+        SetFileUnmapped(File);
     }
 
     return Result;

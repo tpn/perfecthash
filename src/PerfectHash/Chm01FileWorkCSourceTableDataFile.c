@@ -51,7 +51,6 @@ SaveCSourceTableDataFileChm01(
     PTABLE_INFO_ON_DISK TableInfo;
     ULONGLONG NumberOfElements;
     ULONGLONG TotalNumberOfElements;
-    LARGE_INTEGER EndOfFile;
     const ULONG Indent = 0x20202020;
 
     //
@@ -205,31 +204,11 @@ SaveCSourceTableDataFileChm01(
 
     OUTPUT_RAW("};\n");
 
-    EndOfFile.QuadPart = RtlPointerToOffset(Base, Output);
-
-    Result = File->Vtbl->Close(File, &EndOfFile);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileClose, Result);
-        goto Error;
-    }
-
     //
-    // We're done, finish up.
+    // Update the number of bytes written.
     //
 
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
+    File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 
     return Result;
 }

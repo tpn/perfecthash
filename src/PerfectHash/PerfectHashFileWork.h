@@ -99,11 +99,17 @@ Abstract:
 #define SAVE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_FILE_WORK_TABLE(Save, SAVE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
 
+#define CLOSE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_FILE_WORK_TABLE(Close, CLOSE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
 #define PREPARE_FILE_WORK_TABLE_ENTRY(ENTRY) \
     VERB_FILE_WORK_TABLE(Prepare, PREPARE, ENTRY, ENTRY, ENTRY)
 
 #define SAVE_FILE_WORK_TABLE_ENTRY(ENTRY) \
     VERB_FILE_WORK_TABLE(Save, SAVE, ENTRY, ENTRY, ENTRY)
+
+#define CLOSE_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_FILE_WORK_TABLE(Close, CLOSE, ENTRY, ENTRY, ENTRY)
 
 #define FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
@@ -129,11 +135,17 @@ Abstract:
 #define SAVE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_CONTEXT_FILE_WORK_TABLE(Save, SAVE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
 
+#define CLOSE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_CONTEXT_FILE_WORK_TABLE(Close, CLOSE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
 #define PREPARE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
     VERB_CONTEXT_FILE_WORK_TABLE(Prepare, PREPARE, ENTRY, ENTRY, ENTRY)
 
 #define SAVE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
     VERB_CONTEXT_FILE_WORK_TABLE(Save, SAVE, ENTRY, ENTRY, ENTRY)
+
+#define CLOSE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_CONTEXT_FILE_WORK_TABLE(Close, CLOSE, ENTRY, ENTRY, ENTRY)
 
 #define CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_CONTEXT_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
@@ -156,11 +168,17 @@ Abstract:
 #define SAVE_VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_VCPROJECT_FILE_WORK_TABLE(Save, SAVE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
 
+#define CLOSE_VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_VCPROJECT_FILE_WORK_TABLE(Close, CLOSE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+
 #define PREPARE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
     VERB_VCPROJECT_FILE_WORK_TABLE(Prepare, PREPARE, ENTRY, ENTRY, ENTRY)
 
 #define SAVE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
     VERB_VCPROJECT_FILE_WORK_TABLE(Save, SAVE, ENTRY, ENTRY, ENTRY)
+
+#define CLOSE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_VCPROJECT_FILE_WORK_TABLE(Close, CLOSE, ENTRY, ENTRY, ENTRY)
 
 #define VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_VCPROJECT_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
@@ -361,6 +379,10 @@ typedef enum _FILE_WORK_ID {
                          EXPAND_AS_FILE_WORK_ENUMS,
                          EXPAND_AS_LAST_FILE_WORK_ENUM)
 
+    CLOSE_FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_WORK_ENUM,
+                          EXPAND_AS_FILE_WORK_ENUMS,
+                          EXPAND_AS_LAST_FILE_WORK_ENUM)
+
     //
     // Invalid ID, this must come last.
     //
@@ -379,6 +401,10 @@ C_ASSERT(NUMBER_OF_PREPARE_FILE_EVENTS == NUMBER_OF_FILES);
     (FileWorkSaveLastId - FileWorkSaveFirstId) + 1 \
 )
 C_ASSERT(NUMBER_OF_SAVE_FILE_EVENTS == NUMBER_OF_FILES);
+
+//
+// N.B. Close file work type does not use events.
+//
 
 #define TOTAL_NUMBER_OF_FILE_EVENTS ( \
     NUMBER_OF_PREPARE_FILE_EVENTS +   \
@@ -422,6 +448,18 @@ IsSaveFileWorkId(
 }
 
 FORCEINLINE
+BOOLEAN
+IsCloseFileWorkId(
+    _In_ FILE_WORK_ID FileWorkId
+    )
+{
+    return (
+        FileWorkId >= FileWorkCloseFirstId &&
+        FileWorkId <= FileWorkCloseLastId
+    );
+}
+
+FORCEINLINE
 FILE_ID
 FileWorkIdToFileId(
     _In_ FILE_WORK_ID FileWorkId
@@ -433,6 +471,8 @@ FileWorkIdToFileId(
 
     if (IsSaveFileWorkId(FileWorkId)) {
         Id -= (FileWorkSaveFirstId - 1);
+    } else if (IsCloseFileWorkId(FileWorkId)) {
+        Id -= (FileWorkCloseFirstId - 1);
     }
 
     ASSERT(IsValidFileId(Id));
@@ -452,6 +492,8 @@ FileWorkIdToFileIndex(
 
     if (IsSaveFileWorkId(FileWorkId)) {
         Index -= (FileWorkSaveFirstId - 1);
+    } else if (IsCloseFileWorkId(FileWorkId)) {
+        Index -= (FileWorkCloseFirstId - 1);
     }
 
     ASSERT(Index >= 0);
@@ -489,15 +531,19 @@ FileWorkIdToDependentId(
     _In_ FILE_WORK_ID FileWorkId
     )
 {
-    LONG Id;
+    LONG Id = 0;
 
     if (IsPrepareFileWorkId(FileWorkId)) {
         Id = FileWorkId + FileWorkSaveFirstId;
-    } else {
+    } else if (IsSaveFileWorkId(FileWorkId)) {
         Id = FileWorkId - (FileWorkSaveFirstId - 1);
+    } else if (IsCloseFileWorkId(FileWorkId)) {
+        Id = FileWorkId - (FileWorkCloseFirstId - 1);
+    } else {
+        PH_RAISE(PH_E_UNREACHABLE_CODE);
     }
 
-    ASSERT(Id >= FileWorkPrepareFirstId && Id <= FileWorkSaveLastId);
+    ASSERT(Id >= FileWorkPrepareFirstId && Id <= FileWorkCloseLastId);
 
     return Id;
 }
@@ -602,6 +648,8 @@ typedef struct _FILE_WORK_ITEM {
     volatile HRESULT LastResult;
 
     STRING Uuid;
+
+    PLARGE_INTEGER EndOfFile;
 
     struct _PERFECT_HASH_FILE **FilePointer;
 

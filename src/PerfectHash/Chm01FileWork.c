@@ -15,8 +15,8 @@ Abstract:
     that has been requested via FILE_WORK_ITEM structs and submitted via the
     PERFECT_HASH_CONTEXT's "file work" threadpool (in Chm01.c).
 
-    Generic preparation and saving functionality is also implemented by way of
-    PrepareFileChm01 and SaveFileChm01 routines.
+    Generic preparation, unmapping and closing functionality is also implemented
+    by way of PrepareFileChm01, UnmapFileChm01 and CloseFileChm01 routines.
 
 --*/
 
@@ -36,11 +36,12 @@ FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
 };
 
 //
-// Forward decls of prepare and save routines.
+// Forward decls of prepare, unmap and close routines.
 //
 
 PREPARE_FILE PrepareFileChm01;
-SAVE_FILE SaveFileChm01;
+UNMAP_FILE UnmapFileChm01;
+CLOSE_FILE CloseFileChm01;
 
 //
 // Begin method implementations.
@@ -121,13 +122,19 @@ Return Value:
 
     //
     // Resolve the relevant file and event indices and associated pointers.
+    // (Note that the close file work type does not use events.)
     //
 
     FileIndex = FileWorkIdToFileIndex(FileWorkId);
     File = &Table->FirstFile + FileIndex;
 
-    EventIndex = FileWorkIdToEventIndex(FileWorkId);
-    Event = *(&Context->FirstPreparedEvent + EventIndex);
+    if (!IsCloseFileWorkId(FileWorkId)) {
+        EventIndex = FileWorkIdToEventIndex(FileWorkId);
+        Event = *(&Context->FirstPreparedEvent + EventIndex);
+    } else {
+        EventIndex = (ULONG)-1;
+        Event = NULL;
+    }
 
     //
     // Set the file ID.
@@ -178,7 +185,11 @@ Return Value:
 
     Item->FilePointer = File;
 
-    Impl = FileCallbacks[FileWorkId];
+    if (!IsCloseFileWorkId(FileWorkId)) {
+        Impl = FileCallbacks[FileWorkId];
+    } else {
+        Impl = NULL;
+    }
 
     if (IsPrepareFileWorkId(FileWorkId)) {
 
@@ -413,15 +424,13 @@ Return Value:
             goto End;
         }
 
-    } else {
+        if (Impl) {
+            Result = Impl(Context, Item);
+        }
+
+    } else if (IsSaveFileWorkId(FileWorkId)) {
 
         ULONG WaitResult;
-
-        if (!IsSaveFileWorkId(FileWorkId)) {
-            ASSERT(FALSE);
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            goto End;
-        }
 
         //
         // All save events are dependent on their previous prepare events.
@@ -451,22 +460,62 @@ Return Value:
             goto End;
         }
 
-        if (!Impl) {
-            Result = SaveFileChm01(Table, Item);
+        if (Impl) {
+            Result = Impl(Context, Item);
             if (FAILED(Result)) {
-
-                //
-                // Nothing needs doing here.  The Result will bubble back up
-                // via the normal mechanisms.
-                //
-
-                NOTHING;
+                goto End;
             }
         }
-    }
 
-    if (Impl) {
-        Result = Impl(Context, Item);
+        //
+        // Unmap the file (which has the effect of flushing the file buffers),
+        // but don't close it.  We do this here, as part of the save file work,
+        // in order to reduce the amount of work each file's Close() routine
+        // has to do when the close work items are submitted in parallel.
+        //
+
+        Result = UnmapFileChm01(Table, Item);
+        if (FAILED(Result)) {
+
+            //
+            // Nothing needs doing here.  The Result will bubble back up
+            // via the normal mechanisms.
+            //
+
+            NOTHING;
+        }
+
+    } else {
+
+        //
+        // Invariant check: our file work ID should be of type 'Close' here.
+        //
+
+        if (!IsCloseFileWorkId(FileWorkId)) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
+
+        //
+        // As above (in the save logic), if *File is NULL, use E_UNEXPECTED
+        // as our Result.
+        //
+
+        if (!*File) {
+            Result = E_UNEXPECTED;
+            goto End;
+        }
+
+        Result = CloseFileChm01(Table, Item);
+        if (FAILED(Result)) {
+
+            //
+            // Nothing needs doing here.  The Result will bubble back up
+            // via the normal mechanisms.
+            //
+
+            NOTHING;
+        }
+
     }
 
     //
@@ -506,7 +555,9 @@ End:
     // returns, then return.
     //
 
-    SetEventWhenCallbackReturns(Instance, Event);
+    if (Event) {
+        SetEventWhenCallbackReturns(Instance, Event);
+    }
 
     return;
 }
@@ -561,7 +612,6 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File = NULL;
     PPERFECT_HASH_DIRECTORY Directory = NULL;
@@ -669,9 +719,8 @@ Return Value:
             // rundown routine), and zero the Item->Uuid representation.
             //
 
-            Rtl = File->Rtl;
-            CopyMemory(&File->Uuid, &Item->Uuid, sizeof(File->Uuid));
-            ZeroStruct(Item->Uuid);
+            CopyInline(&File->Uuid, &Item->Uuid, sizeof(File->Uuid));
+            ZeroStructInline(Item->Uuid);
         }
 
     } else {
@@ -757,11 +806,11 @@ End:
     return Result;
 }
 
-SAVE_FILE SaveFileChm01;
+UNMAP_FILE UnmapFileChm01;
 
 _Use_decl_annotations_
 HRESULT
-SaveFileChm01(
+UnmapFileChm01(
     PPERFECT_HASH_TABLE Table,
     PFILE_WORK_ITEM Item
     )
@@ -769,26 +818,70 @@ SaveFileChm01(
 
 Routine Description:
 
-    Performs common file save work for a given file instance associated with a
-    table.  This routine is typically called for files that are not dependent
-    upon table data (e.g. the C keys file).  They are written in their entirety
-    in the prepare callback, however, we don't Close() the file at that point,
-    as it prevents our rundown logic kicking in whereby we delete the file if
-    an error occurred.
-
-    Each file preparation routine should update File->NumberOfBytesWritten with
-    the number of bytes they wrote in order to ensure the file is successfully
-    truncated to this size during Close().
+    Unmaps a file instance associated with a table.
 
 Arguments:
 
-    Table - Supplies a pointer to the table owning the file to be saved.
+    Table - Supplies a pointer to the table owning the file to be unmapped.
 
-    Item - Supplies a pointer to the file work item for this save action.
+    Item - Supplies a pointer to the file work item for this unmap action.
 
 Return Value:
 
-    S_OK - File saved successfully.  Otherwise, an appropriate error code.
+    S_OK - File unmapped successfully.  Otherwise, an appropriate error code.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_FILE File;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    File = *Item->FilePointer;
+
+    //
+    // Unmap the file if it's either a) not a context file, or b) if it is a
+    // context file, only if it hasn't already been unmapped.
+    //
+
+    if (!IsContextFileWorkItem(Item) || !IsFileUnmapped(File)) {
+        Result = File->Vtbl->Unmap(File);
+        if (FAILED(Result)) {
+            PH_ERROR(UnmapFileChm01, Result);
+        }
+    }
+
+    return Result;
+}
+
+CLOSE_FILE CloseFileChm01;
+
+_Use_decl_annotations_
+HRESULT
+CloseFileChm01(
+    PPERFECT_HASH_TABLE Table,
+    PFILE_WORK_ITEM Item
+    )
+/*++
+
+Routine Description:
+
+    Closes a file instance associated with a table.
+
+    N.B.  If an error has occurred, Item->EndOfFile will point to a
+          LARGE_INTEGER with value 0, which informs the file's Close()
+          machinery to delete the file.  (Otherwise, the file will be
+          truncated based on the value of File->NumberOfBytesWritten.)
+
+Arguments:
+
+    Table - Supplies a pointer to the table owning the file to be closed.
+
+    Item - Supplies a pointer to the file work item for this close action.
+
+Return Value:
+
+    S_OK - File closed successfully.  Otherwise, an appropriate error code.
 
 --*/
 {
@@ -801,17 +894,18 @@ Return Value:
 
     //
     // Close the file if it's either a) not a context file, or b) if it is a
-    // file, only if it hasn't already been closed.
+    // context file, only if it hasn't already been closed.
     //
 
     if (!IsContextFileWorkItem(Item) || !IsFileClosed(File)) {
-        Result = File->Vtbl->Close(File, NULL);
+        Result = File->Vtbl->Close(File, Item->EndOfFile);
         if (FAILED(Result)) {
-            PH_ERROR(SaveFileChm01_CloseFile, Result);
+            PH_ERROR(CloseFileChm01, Result);
         }
     }
 
     return Result;
 }
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

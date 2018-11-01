@@ -166,10 +166,24 @@ typedef union _PERFECT_HASH_FILE_STATE {
         ULONG IsBeingExtended:1;
 
         //
+        // The file is mapped (Map() was successful and there have been no
+        // subsequent Unmap() calls.)
+        //
+
+        ULONG IsMapped:1;
+
+        //
+        // The file is unmapped (Unmap() was successfully called against a file
+        // that was previously successfully mapped via Map().)
+        //
+
+        ULONG IsUnmapped:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:26;
     };
 
     LONG AsLong;
@@ -184,6 +198,8 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 
 #define IsFileOpen(File) (File->State.IsOpen)
 #define IsFileClosed(File) (File->State.IsClosed)
+#define IsFileMapped(File) (File->State.IsMapped)
+#define IsFileUnmapped(File) (File->State.IsUnmapped)
 #define FileNeverOpened(File) (!IsFileOpen(File) && !IsFileClosed(File))
 #define IsFileReadOnly(File) (File->State.IsReadOnly)
 #define IsFileBeingExtended(File) (File->State.IsBeingExtended)
@@ -208,6 +224,14 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 #define SetFileCreated(File)    \
     File->Flags.Loaded = FALSE; \
     File->Flags.Created = TRUE
+
+#define SetFileMapped(File)        \
+    File->State.IsMapped = TRUE;   \
+    File->State.IsUnmapped = FALSE
+
+#define SetFileUnmapped(File)     \
+    File->State.IsMapped = FALSE; \
+    File->State.IsUnmapped = TRUE
 
 #define NumberOfPagesForFile(File) \
     (ULONG)BYTES_TO_PAGES(File->FileInfo.AllocationSize.QuadPart)

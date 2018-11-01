@@ -171,6 +171,7 @@ SaveCHeaderFileChm01(
     )
 {
     PRTL Rtl;
+    PCHAR Base;
     PCHAR Output;
     ULONG Count;
     PULONG Seed;
@@ -188,7 +189,6 @@ SaveCHeaderFileChm01(
     PTABLE_INFO_ON_DISK TableInfo;
     ULONGLONG NumberOfElements;
     ULONGLONG TotalNumberOfElements;
-    LARGE_INTEGER EndOfFile;
 
     //
     // Initialize aliases.
@@ -291,31 +291,12 @@ SaveCHeaderFileChm01(
 
     OUTPUT_CLOSE_EXTERN_C_SCOPE();
 
-    EndOfFile.QuadPart = RtlPointerToOffset(File->BaseAddress, Output);
-
-    Result = File->Vtbl->Close(File, &EndOfFile);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileClose, Result);
-        goto Error;
-    }
-
     //
-    // We're done, finish up.
+    // Update number of bytes written.
     //
 
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
+    Base = (PCHAR)File->BaseAddress;
+    File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 
     return Result;
 }

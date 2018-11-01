@@ -115,15 +115,10 @@ SaveTableFileChm01(
     CopyMemory(Table->TableDataBaseAddress, Source, SizeInBytes);
 
     //
-    // Proceed with closing the file.
+    // Update the number of bytes written.
     //
 
-    Result = File->Vtbl->Close(File, &EndOfFile);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileClose, Result);
-        goto Error;
-    }
+    File->NumberOfBytesWritten.QuadPart = EndOfFile.QuadPart;
 
     //
     // We're done, finish up.

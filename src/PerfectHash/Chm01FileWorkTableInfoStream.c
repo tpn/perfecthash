@@ -38,7 +38,6 @@ SaveTableInfoStreamChm01(
     ULONG WaitResult;
     PALLOCATOR Allocator;
     HRESULT Result = S_OK;
-    LARGE_INTEGER EndOfFile;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
@@ -155,17 +154,10 @@ SaveTableInfoStreamChm01(
     Table->TableInfoOnDisk = &NewGraphInfoOnDisk->TableInfoOnDisk;
 
     //
-    // Update the number of bytes written and close the file.
+    // Update the number of bytes written.
     //
 
-    EndOfFile.QuadPart = sizeof(*GraphInfoOnDisk);
-
-    Result = File->Vtbl->Close(File, &EndOfFile);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileClose, Result);
-        goto Error;
-    }
+    File->NumberOfBytesWritten.QuadPart = sizeof(*GraphInfoOnDisk);
 
     //
     // We're done, jump to the end.

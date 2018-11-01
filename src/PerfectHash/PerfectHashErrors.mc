@@ -1663,3 +1663,227 @@ Language=English
 Find best graph was requested but one or more mandatory table create parameters were missing or invalid.
 .
 
+MessageId=0x325
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_ALREADY_MAPPED
+Language=English
+File is already mapped.
+.
+
+MessageId=0x326
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_ALREADY_UNMAPPED
+Language=English
+File is already unmapped.
+.
+
+MessageId=0x327
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FILE_NOT_MAPPED
+Language=English
+File not mapped.
+.
+
+MessageId=0x328
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_TABLE_FILE
+Language=English
+Error closing table file.
+.
+
+MessageId=0x329
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_TABLE_INFO_STREAM
+Language=English
+Error closing table info stream.
+.
+
+MessageId=0x32a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_FILE
+Language=English
+Error closing C header file.
+.
+
+MessageId=0x32b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_FILE
+Language=English
+Error closing C source file.
+.
+
+MessageId=0x32c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_STDAFX_FILE
+Language=English
+Error closing C header stdafx file.
+.
+
+MessageId=0x32d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_STDAFX_FILE
+Language=English
+Error closing C source stdafx file.
+.
+
+MessageId=0x32e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_KEYS_FILE
+Language=English
+Error closing C source keys file.
+.
+
+MessageId=0x32f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_TABLE_DATA_FILE
+Language=English
+Error closing C source table data file.
+.
+
+MessageId=0x330
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_SUPPORT_FILE
+Language=English
+Error closing C header support file.
+.
+
+MessageId=0x331
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_SUPPORT_FILE
+Language=English
+Error closing C source support file.
+.
+
+MessageId=0x332
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_TEST_FILE
+Language=English
+Error closing C source test file.
+.
+
+MessageId=0x333
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_TEST_EXE_FILE
+Language=English
+Error closing C source test exe file.
+.
+
+MessageId=0x334
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_FULL_FILE
+Language=English
+Error closing C source benchmark full file.
+.
+
+MessageId=0x335
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_FULL_EXE_FILE
+Language=English
+Error closing C source benchmark full exe file.
+.
+
+MessageId=0x336
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_INDEX_FILE
+Language=English
+Error closing C source benchmark index file.
+.
+
+MessageId=0x337
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_BENCHMARK_INDEX_EXE_FILE
+Language=English
+Error closing C source benchmark index exe file.
+.
+
+MessageId=0x338
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_VCPROJECT_DLL_FILE
+Language=English
+Error closing VC project dll file.
+.
+
+MessageId=0x339
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_VCPROJECT_TEST_EXE_FILE
+Language=English
+Error closing VC project test exe file.
+.
+
+MessageId=0x33a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_VCPROJECT_BENCHMARK_FULL_EXE_FILE
+Language=English
+Error closing VC project benchmark full exe file.
+.
+
+MessageId=0x33b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_VCPROJECT_BENCHMARK_INDEX_EXE_FILE
+Language=English
+Error closing VC project benchmark index exe file.
+.
+
+MessageId=0x33c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_VSSOLUTION_FILE
+Language=English
+Error closing VS solution file.
+.
+
+MessageId=0x33d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_COMPILED_PERFECT_HASH_FILE
+Language=English
+Error closing C header compiled perfect hash file.
+.
+
+MessageId=0x33e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE
+Language=English
+Error closing C header compiled perfect hash macro glue file.
+.
+
+MessageId=0x33f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_VCPROPS_COMPILED_PERFECT_HASH_FILE
+Language=English
+Error closing vcprops compiled perfect hash file.
+.
+
+MessageId=0x340
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_TABLE_STATS_TEXT_FILE
+Language=English
+Error closing table stats text file.
+.
+
