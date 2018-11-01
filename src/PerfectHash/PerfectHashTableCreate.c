@@ -316,7 +316,9 @@ Error:
 
 End:
 
-    Table->Context = NULL;
+    RELEASE(Table->Context);
+    RELEASE(Table->Keys);
+
     Context->Table = NULL;
     Context->State.NeedsReset = TRUE;
 
