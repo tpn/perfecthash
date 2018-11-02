@@ -31,7 +31,7 @@ const CHAR CompiledPerfectHashTableChm01IndexFnvAndCSourceRawCStr[] =
     "\n"
     "    Vertex1 = A;\n"
     "\n"
-    "    B = SEED2;\n"
+    "    B = SEED2 ^ 2166136261;\n"
     "    B = 16777619 * B ^ Bytes.Byte1;\n"
     "    B = 16777619 * B ^ Bytes.Byte2;\n"
     "    B = 16777619 * B ^ Bytes.Byte3;\n"

@@ -25,7 +25,7 @@ DECLARE_INDEX_ROUTINE()
 
     Vertex1 = A;
 
-    B = SEED2;
+    B = SEED2 ^ 2166136261;
     B = 16777619 * B ^ Bytes.Byte1;
     B = 16777619 * B ^ Bytes.Byte2;
     B = 16777619 * B ^ Bytes.Byte3;
