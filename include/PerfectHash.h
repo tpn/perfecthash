@@ -1736,7 +1736,7 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     // implementation.
     //
 
-    PerfectHashHashScratchId                    = 6,
+    PerfectHashHashScratchFunctionId            = 6,
 
     //
     // Additional functions currently in development or otherwise provided
@@ -1748,6 +1748,7 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     PerfectHashHashDjbFunctionId                = 9,
     PerfectHashHashDjbXorFunctionId             = 10,
     PerfectHashHashFnvFunctionId                = 11,
+    PerfectHashHashCrc32NotFunctionId           = 12,
 
     //
     // End valid hash functions.

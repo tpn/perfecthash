@@ -686,8 +686,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = Seed1 ^ Input;
-    Vertex2 = Seed2 ^ _rotl(Input, 15);
+    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Input, 9));
+    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Input, 15));
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -1149,5 +1149,93 @@ PerfectHashTableHashFnv(
                                          Hash);
 }
 
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashCrc32Not(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This hash routine uses two CRC32 instructions.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Input - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 2);
+
+    //
+    // Initialize aliases.
+    //
+
+    //IACA_VC_START();
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = _mm_crc32_u32(Seed1, Input);
+    Vertex2 = _mm_crc32_u32(Seed2, ~Input);
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashCrc32Not(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Input,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashCrc32Not(Table,
+                                              Input,
+                                              TableInfo->NumberOfSeeds,
+                                              &TableInfo->FirstSeed,
+                                              Hash);
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
