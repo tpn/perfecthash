@@ -1158,7 +1158,7 @@ End:
 // Commandline support.
 //
 
-const STRING Usage = RTL_CONSTANT_STRING(
+static const STRING Usage = RTL_CONSTANT_STRING(
     "Usage: PerfectHashSelfTest.exe "
     "<TestDataDirectory (must be fully-qualified)> "
     "<BaseOutputDirectory (must be fully-qualified)> "
@@ -1166,9 +1166,9 @@ const STRING Usage = RTL_CONSTANT_STRING(
     "<HashFunctionId> "
     "<MaskFunctionId> "
     "<MaximumConcurrency (0-ncpu)> "
-    "[PauseBeforeExit (can be any character)]\n"
     "E.g.: PerfectHashSelfTest.exe "
     "C:\\Users\\Trent\\Home\\src\\perfecthash\\data "
+    "C:\\Temp\\output "
     "1 1 2 0\n"
 );
 
@@ -1395,8 +1395,7 @@ Return Value:
     BaseOutputDirectory->Length = GET_LENGTH(BaseOutputDirectory);
 
     ValidNumberOfArguments = (
-        NumberOfArguments == 7 ||
-        NumberOfArguments == 8
+        NumberOfArguments == 7
     );
 
     if (!ValidNumberOfArguments) {
@@ -1468,10 +1467,6 @@ Return Value:
     }
 
     ContextSelfTestFlags->AsULong = 0;
-
-    if (NumberOfArguments == 8) {
-        ContextSelfTestFlags->PauseBeforeExit = TRUE;
-    }
 
     //
     // We haven't implemented support for parsing flags from the command line,

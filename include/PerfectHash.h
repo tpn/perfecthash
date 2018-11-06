@@ -1993,7 +1993,7 @@ typedef PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY
       *PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY;
 
 //
-// Define the self-test flags and associated function pointer.
+// Define the self-test flags.
 //
 
 typedef union _PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS {
@@ -2001,19 +2001,10 @@ typedef union _PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // Indicates that the self-test routine should pause (i.e. wait for a
-        // keypress) before exiting.  This is useful when debugging with an
-        // IDE as it allows for the console output to be reviewed before the
-        // containing window is closed.
-        //
-
-        ULONG PauseBeforeExit:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:32;
     };
 
     LONG AsLong;
