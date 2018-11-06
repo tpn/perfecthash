@@ -964,7 +964,7 @@ typedef PERFECT_HASH_PATH_RESET *PPERFECT_HASH_PATH_RESET;
 typedef
 _Check_return_
 _Success_(return >= 0)
-_Requires_exclusive_lock_held_(Path->Lock)
+_Requires_lock_not_held_(Path->Lock)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_PATH_GET_PARTS)(
     _In_ PPERFECT_HASH_PATH Path,
