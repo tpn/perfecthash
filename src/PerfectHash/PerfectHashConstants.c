@@ -894,8 +894,11 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextSelfTest,
     &PerfectHashContextSelfTestArgvW,
     &PerfectHashContextExtractSelfTestArgsFromArgvW,
+    &PerfectHashContextBulkCreate,
+    &PerfectHashContextBulkCreateArgvW,
+    &PerfectHashContextExtractBulkCreateArgsFromArgvW,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 7);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 10);
 
 //
 // PerfectHashTable

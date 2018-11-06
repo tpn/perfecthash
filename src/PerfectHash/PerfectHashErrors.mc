@@ -1887,3 +1887,19 @@ Language=English
 Error closing table stats text file.
 .
 
+MessageId=0x341
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CONTEXT_BULK_CREATE_FLAGS
+Language=English
+Invalid context bulk create flags.
+.
+
+MessageId=0x342
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS
+Language=English
+Invalid number of arguments for context bulk-create.
+.
+

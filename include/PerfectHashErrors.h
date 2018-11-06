@@ -2149,3 +2149,21 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_CLOSE_TABLE_STATS_TEXT_FILE ((HRESULT)0xE0040340L)
 
+//
+// MessageId: PH_E_INVALID_CONTEXT_BULK_CREATE_FLAGS
+//
+// MessageText:
+//
+// Invalid context bulk create flags.
+//
+#define PH_E_INVALID_CONTEXT_BULK_CREATE_FLAGS ((HRESULT)0xE0040341L)
+
+//
+// MessageId: PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS
+//
+// MessageText:
+//
+// Invalid number of arguments for context bulk-create.
+//
+#define PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS ((HRESULT)0xE0040342L)
+

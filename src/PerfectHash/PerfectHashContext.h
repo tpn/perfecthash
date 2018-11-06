@@ -742,5 +742,10 @@ extern PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
     PerfectHashContextSelfTestArgvW;
 extern PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
     PerfectHashContextExtractSelfTestArgsFromArgvW;
+extern PERFECT_HASH_CONTEXT_BULK_CREATE PerfectHashContextBulkCreate;
+extern PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW
+    PerfectHashContextBulkCreateArgvW;
+extern PERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
+    PerfectHashContextExtractBulkCreateArgsFromArgvW;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
