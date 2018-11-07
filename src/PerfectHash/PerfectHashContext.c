@@ -1385,11 +1385,6 @@ Return Value:
     }
 
     //
-    // Copy the CompiledPerfectHash.h and CompiledPerfectHash.props files
-    // into the output directory.
-    //
-
-    //
     // We're done, finish up.
     //
 
