@@ -79,7 +79,7 @@ Arguments:
 
 Return Value:
 
-    S_OK - Self test performed successfully.
+    S_OK - Success.
 
     The following error codes may also be returned.  Note that this list is not
     guaranteed to be exhaustive; that is, error codes other than the ones listed
@@ -297,7 +297,7 @@ Return Value:
     }
 
     //
-    // Copy incoming test data directory name.
+    // Copy incoming keys directory name.
     //
 
     Length = KeysDirectory->Length;
@@ -343,7 +343,7 @@ Return Value:
     //OUTPUT_HEADER();
 
     //
-    // Create a find handle for the <test data>\*.keys search pattern we
+    // Create a find handle for the <keys dir>\*.keys search pattern we
     // created.
     //
 
