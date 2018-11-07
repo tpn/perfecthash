@@ -215,10 +215,7 @@ Error:
 
 End:
 
-    if (Path) {
-        Path->Vtbl->Release(Path);
-        Path = NULL;
-    }
+    RELEASE(Path);
 
     ReleasePerfectHashKeysLockExclusive(Keys);
 
