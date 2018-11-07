@@ -194,7 +194,6 @@ Return Value:
     USHORT BytesRequired;
     USHORT BytesRemaining;
     USHORT NumberOfZerosToPad;
-    const ULONGLONG Base = 10;
     ULONGLONG Digit;
     ULONGLONG Value;
     ULONGLONG Count;
@@ -259,8 +258,8 @@ Return Value:
     do {
         Count++;
         Bytes += 2;
-        Digit = Value % Base;
-        Value = Value / Base;
+        Digit = Value % 10;
+        Value = Value / 10;
         Char = IntegerToWCharTable[Digit];
         *Dest-- = Char;
     } while (Value != 0);
