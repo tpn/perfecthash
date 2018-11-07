@@ -113,6 +113,8 @@ TryExtractArgTableCreateFlags(
 
     //
     // FirstGraphWins isn't actually a flag as it's the default behavior.
+    // However, it's explicitly referenced in the usage string, so, add a
+    // test for it that simply returns S_OK.
     //
 
     if (IS_EQUAL(FirstGraphWins)) {
