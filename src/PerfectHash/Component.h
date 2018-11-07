@@ -23,12 +23,40 @@ Abstract:
 //
 
 typedef struct _GLOBAL_COMPONENTS {
-    INIT_ONCE Rtl;
-    INIT_ONCE Allocator;
+    SRWLOCK Lock;
+    struct _Guarded_by_(Lock) {
+        union _COMPONENT *FirstComponent;
+        INIT_ONCE Rtl;
+        INIT_ONCE Allocator;
+    };
 } GLOBAL_COMPONENTS;
 typedef GLOBAL_COMPONENTS *PGLOBAL_COMPONENTS;
 
 extern GLOBAL_COMPONENTS GlobalComponents;
+
+//
+// Define helper macros for acquiring and releasing the global components lock
+// in shared and exclusive mode.
+//
+
+#define TryAcquireGlobalComponentsLockExclusive() \
+    TryAcquireSRWLockExclusive(&GlobalComponents.Lock)
+
+#define AcquireGlobalComponentsLockExclusive() \
+    AcquireSRWLockExclusive(&GlobalComponents.Lock)
+
+#define ReleaseGlobalComponentsLockExclusive() \
+    ReleaseSRWLockExclusive(&GlobalComponents.Lock)
+
+#define TryAcquireGlobalComponentsLockShared() \
+    TryAcquireSRWLockShared(&GlobalComponents.Lock)
+
+#define AcquireGlobalComponentsLockShared() \
+    AcquireSRWLockShared(&GlobalComponents.Lock)
+
+#define ReleaseGlobalComponentsLockShared() \
+    ReleaseSRWLockShared(&GlobalComponents.Lock)
+
 
 typedef struct _CREATE_COMPONENT_PARAMS {
     PERFECT_HASH_INTERFACE_ID Id;

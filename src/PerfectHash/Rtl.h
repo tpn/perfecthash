@@ -374,6 +374,10 @@ C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
 #define RtlPointerToOffset(B,P)    ((ULONG_PTR)(((PCHAR)(P)) - ((PCHAR)(B))))
 #endif
 
+#define RtlInitOnceToPointer(A) (                                           \
+    ((ULONG_PTR)(A) & ~(ULONG_PTR)((1 << INIT_ONCE_CTX_RESERVED_BITS) - 1)) \
+)
+
 #ifndef BitTestAndSet
 #define BitTestAndSet _bittestandset
 #endif

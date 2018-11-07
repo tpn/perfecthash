@@ -39,6 +39,7 @@ volatile LONG ServerLockCount = 0;
 
 GLOBAL_COMPONENTS GlobalComponents = { 0 };
 
+_Requires_exclusive_lock_held_(GlobalComponents.Lock)
 FORCEINLINE
 PINIT_ONCE
 GetGlobalComponentInitOnce(
@@ -63,8 +64,8 @@ GetGlobalComponentInitOnce(
 }
 
 
-
 _Success_(return != 0)
+_Requires_exclusive_lock_held_(GlobalComponents.Lock)
 BOOL
 CALLBACK
 CreateGlobalComponentCallback(
@@ -123,6 +124,8 @@ CreateGlobalComponent(
 
     TlsContext = PerfectHashTlsEnsureContext();
 
+    AcquireGlobalComponentsLockExclusive();
+
     InitOnce = GetGlobalComponentInitOnce(Id);
 
     Params.Id = Id;
@@ -132,6 +135,8 @@ CreateGlobalComponent(
                                   CreateGlobalComponentCallback,
                                   &Params,
                                   &Component);
+
+    ReleaseGlobalComponentsLockExclusive();
 
     if (!Success) {
         SYS_ERROR(InitOnceExecuteOnce);
@@ -234,7 +239,19 @@ CreateComponent(
 
     Unknown = &Component->Unknown;
     Unknown->Vtbl->AddRef(Unknown);
-    InterlockedIncrement(&ComponentCount);
+
+    if (InterlockedIncrement(&ComponentCount) == 1) {
+
+        AcquireGlobalComponentsLockExclusive();
+
+        if (GlobalComponents.FirstComponent != NULL) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
+
+        GlobalComponents.FirstComponent = Component;
+
+        ReleaseGlobalComponentsLockExclusive();
+    }
 
     //
     // Call the component's custom initializer if applicable.
@@ -247,6 +264,11 @@ CreateComponent(
             PH_ERROR(PerfectHashComponentInitialize, Result);
             TlsContext->LastResult = Result;
             Unknown->Vtbl->Release(Unknown);
+            AcquireGlobalComponentsLockExclusive();
+            if (GlobalComponents.FirstComponent == Component) {
+                GlobalComponents.FirstComponent = NULL;
+            }
+            ReleaseGlobalComponentsLockExclusive();
             Component = NULL;
         }
     }
@@ -369,6 +391,30 @@ ComponentRelease(
     }
 
     ASSERT(InterlockedDecrement(&ComponentCount) >= 0);
+
+    AcquireGlobalComponentsLockExclusive();
+
+    if (GlobalComponents.FirstComponent != Component) {
+        ReleaseGlobalComponentsLockExclusive();
+    } else {
+
+        PRTL Rtl;
+        PALLOCATOR Allocator;
+
+        Rtl = (PRTL)RtlInitOnceToPointer(GlobalComponents.Rtl.Ptr);
+        Allocator = (PALLOCATOR)(
+            RtlInitOnceToPointer(GlobalComponents.Allocator.Ptr)
+        );
+
+        GlobalComponents.Rtl.Ptr = NULL;
+        GlobalComponents.Allocator.Ptr = NULL;
+        GlobalComponents.FirstComponent = NULL;
+
+        ReleaseGlobalComponentsLockExclusive();
+
+        RELEASE(Rtl);
+        RELEASE(Allocator);
+    }
 
     //
     // Call the component's custom rundown routine if applicable.
