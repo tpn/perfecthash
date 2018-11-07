@@ -1418,7 +1418,7 @@ Return Value:
     TestDataDirectory->MaximumLength = GET_MAX_LENGTH(TestDataDirectory);
 
     //
-    // Extract test data directory.
+    // Extract base output directory.
     //
 
     BaseOutputDirectory->Buffer = *ArgW++;
