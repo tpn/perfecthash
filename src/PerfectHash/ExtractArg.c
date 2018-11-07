@@ -268,8 +268,8 @@ TryExtractArgTableCreateParameters(
         ValueIsInteger = TRUE;
     }
 
-#define SET_PARAM_ID(Name)                                         \
-    LocalParam.Id = PerfectHashTableCreateParameterChm01##Name##Id
+#define SET_PARAM_ID(Name)                         \
+    LocalParam.Id = TableCreateParameter##Name##Id
 
 #define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(Name) \
     if (IS_PREFIX(Name) && ValueIsInteger) {           \

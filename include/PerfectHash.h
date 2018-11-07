@@ -2250,14 +2250,14 @@ IsValidTableCompileFlags(
 //
 
 typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
-    PerfectHashTableCreateParameterNullId = 0,
+    TableCreateParameterNullId = 0,
 
-    PerfectHashTableCreateParameterChm01AttemptsBeforeTableResizeId,
-    PerfectHashTableCreateParameterChm01MaxNumberOfTableResizesId,
-    PerfectHashTableCreateParameterChm01BestCoverageNumAttemptsId,
-    PerfectHashTableCreateParameterChm01BestCoverageTypeId,
+    TableCreateParameterAttemptsBeforeTableResizeId,
+    TableCreateParameterMaxNumberOfTableResizesId,
+    TableCreateParameterBestCoverageNumAttemptsId,
+    TableCreateParameterBestCoverageTypeId,
 
-    PerfectHashTableCreateParameterInvalidId,
+    TableCreateParameterInvalidId,
 } PERFECT_HASH_TABLE_CREATE_PARAMETER_ID;
 
 typedef enum _PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID {

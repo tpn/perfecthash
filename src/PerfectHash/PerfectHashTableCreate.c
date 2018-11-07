@@ -400,21 +400,21 @@ Return Value:
 
         switch (Param->Id) {
 
-            case PerfectHashTableCreateParameterChm01AttemptsBeforeTableResizeId:
+            case TableCreateParameterAttemptsBeforeTableResizeId:
                 Context->ResizeTableThreshold = Param->AsULong;
                 SawResizeThreshold = TRUE;
                 break;
 
-            case PerfectHashTableCreateParameterChm01MaxNumberOfTableResizesId:
+            case TableCreateParameterMaxNumberOfTableResizesId:
                 Context->ResizeLimit = Param->AsULong;
                 SawResizeLimit = TRUE;
                 break;
 
-            case PerfectHashTableCreateParameterChm01BestCoverageNumAttemptsId:
+            case TableCreateParameterBestCoverageNumAttemptsId:
                 Context->BestCoverageAttempts = Param->AsULongLong;
                 break;
 
-            case PerfectHashTableCreateParameterChm01BestCoverageTypeId:
+            case TableCreateParameterBestCoverageTypeId:
                 Context->BestCoverageType = Param->AsBestCoverageType;
                 break;
 
