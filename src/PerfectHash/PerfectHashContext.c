@@ -625,6 +625,7 @@ Return Value:
     BYTE NumberOfEvents;
     PALLOCATOR Allocator;
     PHANDLE Event;
+    HRESULT Result;
 
     //
     // Validate arguments.
@@ -646,6 +647,18 @@ Return Value:
     //
 
     ASSERT(Context->SizeOfStruct == sizeof(*Context));
+
+    //
+    // If the context needs a reset, do it now.  This ensures the guarded
+    // lists are cleared prior to rundown below.
+    //
+
+    if (Context->State.NeedsReset) {
+        Result = PerfectHashContextReset(Context);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextReset, Result);
+        }
+    }
 
     //
     // Loop through all the events associated with the context and check if
