@@ -13,6 +13,13 @@ Keys Load Flags:
 
         Tries to allocate the keys buffer using large pages.
 
+    --SkipKeysVerification
+
+        Skips the logic that enumerates all keys after loading and a) ensures
+        they are sorted, and b) constructs a keys bitmap.  If you can be certain
+        the keys are sorted, specifying this flag can provide a speedup when
+        loading large key sets.
+
 Table Create Flags:
 
     --FirstGraphWins | --FindBestGraph

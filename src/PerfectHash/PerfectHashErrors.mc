@@ -1903,3 +1903,11 @@ Language=English
 Invalid number of arguments for context bulk-create.
 .
 
+MessageId=0x343
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_VERIFICATION_SKIPPED
+Language=English
+Keys verification skipped.
+.
+

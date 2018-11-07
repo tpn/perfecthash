@@ -44,7 +44,9 @@ typedef union _PERFECT_HASH_KEYS_STATE {
 C_ASSERT(sizeof(PERFECT_HASH_KEYS_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_KEYS_STATE *PPERFECT_HASH_KEYS_STATE;
 
-#define IsLoadedKeys(Keys) (Keys->State.Loaded == TRUE)
+#define IsLoadedKeys(Keys) ((Keys)->State.Loaded == TRUE)
+#define SkipKeysVerification(Keys) \
+    ((Keys)->LoadFlags.SkipKeysVerification == TRUE)
 
 //
 // Define the PERFECT_HASH_KEYS_STATS structure.

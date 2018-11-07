@@ -183,10 +183,12 @@ Return Value:
         KeySizeInBytes
     );
 
-    Result = PerfectHashKeysLoadStats(Keys);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashKeysLoadStats, Result);
-        goto Error;
+    if (!SkipKeysVerification(Keys)) {
+        Result = PerfectHashKeysLoadStats(Keys);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashKeysLoadStats, Result);
+            goto Error;
+        }
     }
 
     //
@@ -289,6 +291,8 @@ Return Value:
     if (Keys->NumberOfElements.HighPart) {
         return PH_E_TOO_MANY_KEYS;
     }
+
+    ASSERT(!SkipKeysVerification(Keys));
 
     //
     // Zero the stats struct, initialize local variables, then loop through

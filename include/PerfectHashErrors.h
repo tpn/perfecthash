@@ -2167,3 +2167,12 @@ Abstract:
 //
 #define PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS ((HRESULT)0xE0040342L)
 
+//
+// MessageId: PH_E_KEYS_VERIFICATION_SKIPPED
+//
+// MessageText:
+//
+// Keys verification skipped.
+//
+#define PH_E_KEYS_VERIFICATION_SKIPPED   ((HRESULT)0xE0040343L)
+

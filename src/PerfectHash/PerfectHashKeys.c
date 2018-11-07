@@ -322,6 +322,8 @@ Return Value:
 
     PH_E_KEYS_LOCKED - The keys are locked.
 
+    PH_E_KEYS_VERIFICATION_SKIPPED - Keys verification was skipped.
+
 --*/
 {
     PRTL Rtl;
@@ -345,6 +347,11 @@ Return Value:
     if (!Keys->State.Loaded) {
         ReleasePerfectHashKeysLockExclusive(Keys);
         return PH_E_KEYS_NOT_LOADED;
+    }
+
+    if (SkipKeysVerification(Keys)) {
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return PH_E_KEYS_VERIFICATION_SKIPPED;
     }
 
     Rtl = Keys->Rtl;

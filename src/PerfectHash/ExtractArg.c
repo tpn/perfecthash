@@ -86,10 +86,12 @@ TryExtractArgKeysLoadFlags(
     )
 {
     DECL_ARG(TryLargePagesForKeysData);
+    DECL_ARG(SkipKeysVerification);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForKeysData);
+    SET_FLAG_AND_RETURN_IF_EQUAL(SkipKeysVerification);
 
     return S_FALSE;
 }

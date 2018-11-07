@@ -1514,10 +1514,18 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         ULONG TryLargePagesForKeysData:1;
 
         //
+        // When set, skips the verification of keys during loading.
+        // Specifically, skips enumerating all keys and verifying that the
+        // keys are sorted, as well as constructing the keys bitmap.
+        //
+
+        ULONG SkipKeysVerification:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
