@@ -108,6 +108,7 @@ TryExtractArgTableCreateFlags(
 {
     DECL_ARG(FirstGraphWins);
     DECL_ARG(FindBestGraph);
+    DECL_ARG(SkipGraphVerification);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -121,7 +122,12 @@ TryExtractArgTableCreateFlags(
         return S_OK;
     }
 
+    //
+    // Continue with additional flag extraction.
+    //
+
     SET_FLAG_AND_RETURN_IF_EQUAL(FindBestGraph);
+    SET_FLAG_AND_RETURN_IF_EQUAL(SkipGraphVerification);
 
     return S_FALSE;
 }

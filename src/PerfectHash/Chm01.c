@@ -150,6 +150,7 @@ Return Value:
     BOOL WaitForAllEvents = TRUE;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
     PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
 
@@ -214,6 +215,7 @@ Return Value:
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
     TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
+    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
 
     ASSERT(
         Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList)
@@ -331,6 +333,12 @@ Return Value:
 
         ASSERT(Graph->Allocator != Table->Allocator);
         ASSERT(Graph->Allocator->HeapHandle != Table->Allocator->HeapHandle);
+
+        //
+        // Copy relevant flags over, then save the graph instance in the array.
+        //
+
+        Graph->Flags.SkipVerification = TableCreateFlags.SkipGraphVerification;
 
         Graphs[Index] = Graph;
     }

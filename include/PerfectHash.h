@@ -2103,10 +2103,29 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG FindBestGraph:1;
 
         //
+        // When set, skips the internal graph verfication check that ensures a
+        // valid perfect hash solution has been found (i.e. with no collisions
+        // across the entire key set).  This means that perfect hash tables
+        // could be created that subsequently fail their self-test via the
+        // Table->Vtbl->Test() routine, or their compiled perfect hash table
+        // test .exe file fails.
+        //
+        // N.B. Once a given algorithm, hash function, and masking type have
+        //      been observed to generate valid solutions, it is safe to assume
+        //      all future solutions found will be valid, assuming no changes to
+        //      the parameters or underlying implementations.
+        //
+        // N.B. When modulus masking is being used, the graph verification logic
+        //      correctly detects that invalid solutions are being generated.
+        //
+
+        ULONG SkipGraphVerification:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;

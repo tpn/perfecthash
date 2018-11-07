@@ -15,30 +15,36 @@ Keys Load Flags:
 
 Table Create Flags:
 
-    --FirstGraphWins [default]
+    --FirstGraphWins | --FindBestGraph
 
-        The first graph that is found is the one used.  This is the default
-        behavior.
+        --FirstGraphWins [default]
 
-    --FindBestGraph
+            This is the default behavior.  When searching for solutions in
+            parallel, the first graph to be found, "wins".  i.e. it's the
+            solution that is subsequently written to disk.
 
-        Requires the following two table create parameters to be present:
+        --FindBestGraph
 
-            --BestCoverageNumAttempts=N
+            Requires the following two table create parameters to be present:
 
-                Where N is a positive integer, and represents the number of
-                attempts that will be made at finding a "best" graph (based
-                on the best coverage type requested below) before the create
-                table routine returns.
+                --BestCoverageNumAttempts=N
+                --BestCoverageType=<CoverageType>
 
-            --BestCoverageType=<CoverageType>
+            The table create routine will then run until it finds the number of
+            best coverage attempts specified.  At that point, the graph that was
+            found to be the "best" based on the coverage type predicate "wins",
+            and is subsequently saved to disk.
 
-                Indicates the predicate to determine what constitutes the best
-                graph.
+            N.B. This option is significantly more CPU intensive than the
+                 --FirstGraphWins mode, however, it is highly probable that it
+                 will find a graph that is better (based on the predicate) than
+                 when in first graph wins mode.
 
-                Valid coverage types:
+    --SkipGraphVerification
 
-                    HighestNumberOfEmptyCacheLines
+        When set, skips the internal graph verification check that ensures a
+        valid perfect hash solution has been found (i.e. with no collisions
+        across the entire key set).
 
 Table Compile Flags:
 
@@ -56,6 +62,18 @@ Table Create Parameters:
 
         Maximum number of table resizes that will be permitted before giving up.
 
-    See also the --BestCoverage* parameters listed above in the table create
-    flag's --FindBestGraph section.
+    --BestCoverageNumAttempts=N
 
+        Where N is a positive integer, and represents the number of
+        attempts that will be made at finding a "best" graph (based
+        on the best coverage type requested below) before the create
+        table routine returns.
+
+    --BestCoverageType=<CoverageType>
+
+        Indicates the predicate to determine what constitutes the best
+        graph.
+
+        Valid coverage types:
+
+            HighestNumberOfEmptyCacheLines
