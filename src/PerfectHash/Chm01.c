@@ -42,24 +42,6 @@ typedef PREPARE_TABLE_OUTPUT_DIRECTORY *PPREPARE_TABLE_OUTPUT_DIRECTORY;
 extern PREPARE_TABLE_OUTPUT_DIRECTORY PrepareTableOutputDirectory;
 
 //
-// Define the threshold for how many attempts need to be made at finding a
-// perfect hash solution before we double our number of vertices and try again.
-//
-// With a 2-part hypergraph, solutions are found on average in sqrt(3) attempts.
-// By attempt 18, there's a 99.9% chance we will have found a solution.
-//
-
-#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 18
-
-//
-// Define a limit for how many times the table resizing will be attempted before
-// giving up.  For large table sizes and large concurrency values, note that we
-// may hit memory limits before we hit this resize limit.
-//
-
-#define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 5
-
-//
 // Define helper macros for checking prepare and save file work errors.
 //
 
@@ -238,18 +220,6 @@ Return Value:
     );
 
     //
-    // If no threshold has been set or limit has been set, use the defaults.
-    //
-
-    if (!Context->ResizeTableThreshold) {
-        Context->ResizeTableThreshold = GRAPH_SOLVING_ATTEMPTS_THRESHOLD;
-    }
-
-    if (!Context->ResizeLimit) {
-        Context->ResizeLimit = GRAPH_SOLVING_RESIZE_TABLE_LIMIT;
-    }
-
-    //
     // Verify we have sufficient seeds available in our on-disk structure
     // for the given hash function.
     //
@@ -419,6 +389,7 @@ RetryWithLargerTableSize:
 
     if (++Attempt > 1) {
 
+        ASSERT(Context->ResizeLimit > 0);
         Result = PrepareGraphInfoChm01(Table, &Info, &PrevInfo);
         if (FAILED(Result)) {
             PH_ERROR(CreatePerfectHashTableImplChm01_PrepareGraphInfo, Result);

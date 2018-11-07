@@ -2262,7 +2262,7 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
 
 typedef enum _PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID {
     BestCoverageTypeNullId = 0,
-    BestCoverageTypeHighestNumberOfEmptyCacheLines,
+    BestCoverageTypeHighestNumberOfEmptyCacheLinesId,
     BestCoverageTypeInvalidId,
 } PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE;
 

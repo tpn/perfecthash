@@ -22,6 +22,24 @@ Abstract:
 #define MAXIMUM_NUMBER_OF_KEYS 10000000
 
 //
+// Define the threshold for how many attempts need to be made at finding a
+// perfect hash solution before we double our number of vertices and try again.
+//
+// With a 2-part hypergraph, solutions are found on average in sqrt(3) attempts.
+// By attempt 18, there's a 99.9% chance we will have found a solution.
+//
+
+#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 18
+
+//
+// Define a limit for how many times the table resizing will be attempted before
+// giving up.  For large table sizes and large concurrency values, note that we
+// may hit memory limits before we hit this resize limit.
+//
+
+#define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 5
+
+//
 // Forward decls.
 //
 
@@ -354,6 +372,8 @@ Return Value:
 {
     ULONG Index;
     HRESULT Result = S_OK;
+    BOOLEAN SawResizeLimit = FALSE;
+    BOOLEAN SawResizeThreshold = FALSE;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
 
@@ -382,10 +402,12 @@ Return Value:
 
             case PerfectHashTableCreateParameterChm01AttemptsBeforeTableResizeId:
                 Context->ResizeTableThreshold = Param->AsULong;
+                SawResizeThreshold = TRUE;
                 break;
 
             case PerfectHashTableCreateParameterChm01MaxNumberOfTableResizesId:
                 Context->ResizeLimit = Param->AsULong;
+                SawResizeLimit = TRUE;
                 break;
 
             case PerfectHashTableCreateParameterChm01BestCoverageNumAttemptsId:
@@ -438,6 +460,19 @@ Return Value:
         SetFirstSolvedGraphWins(Context);
 
     }
+
+    //
+    // If no resize threshold or resize limit has been set, use the defaults.
+    //
+
+    if (!SawResizeThreshold) {
+        Context->ResizeTableThreshold = GRAPH_SOLVING_ATTEMPTS_THRESHOLD;
+    }
+
+    if (!SawResizeLimit) {
+        Context->ResizeLimit = GRAPH_SOLVING_RESIZE_TABLE_LIMIT;
+    }
+
 
     //
     // Validation complete, finish up.

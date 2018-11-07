@@ -1009,7 +1009,7 @@ Return Value:
 
     switch (CoverageType) {
 
-        case BestCoverageTypeHighestNumberOfEmptyCacheLines:
+        case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
 
             if (Coverage->NumberOfEmptyCacheLines >
                 PreviousBestCoverage->NumberOfEmptyCacheLines) {

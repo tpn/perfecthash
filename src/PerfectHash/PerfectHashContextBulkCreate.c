@@ -17,6 +17,7 @@ Abstract:
 
 #include "stdafx.h"
 
+
 PERFECT_HASH_CONTEXT_BULK_CREATE PerfectHashContextBulkCreate;
 
 _Use_decl_annotations_
@@ -434,8 +435,6 @@ Return Value:
     Table = NULL;
     KeysBaseAddress = NULL;
     NumberOfKeys.QuadPart = 0;
-    KeysFlags.AsULong = 0;
-    TableCreateFlags.AsULong = 0;
     CpuArchId = PerfectHashGetCurrentCpuArch();
 
     ASSERT(IsValidPerfectHashCpuArchId(CpuArchId));
@@ -792,7 +791,7 @@ Return Value:
 #define GET_NAME(Desc)                                               \
         Result = Table->Vtbl->Get##Desc##Name(Table, &##Desc##Name); \
         if (FAILED(Result)) {                                        \
-            WIDE_OUTPUT_RAW(Output,                              \
+            WIDE_OUTPUT_RAW(Output,                                  \
                             L"Get" L#Desc "Name() failed.\n");       \
             Terminate = TRUE;                                        \
             goto ReleaseTable;                                       \
@@ -876,12 +875,12 @@ Return Value:
         // Define some helper macros here for dumping stats.
         //
 
-#define STATS_INT(String, Name)                                        \
+#define STATS_INT(String, Name)                                    \
         WIDE_OUTPUT_RAW(Output, String);                           \
         WIDE_OUTPUT_INT(Output, Table->TableInfoOnDisk->##Name##); \
         WIDE_OUTPUT_RAW(Output, L".\n")
 
-#define STATS_QUAD(String, Name)                                                \
+#define STATS_QUAD(String, Name)                                            \
         WIDE_OUTPUT_RAW(Output, String);                                    \
         WIDE_OUTPUT_INT(Output, Table->TableInfoOnDisk->##Name##.QuadPart); \
         WIDE_OUTPUT_RAW(Output, L".\n")
@@ -1028,19 +1027,7 @@ End:
 // Commandline support.
 //
 
-static const STRING Usage = RTL_CONSTANT_STRING(
-    "Usage: PerfectHashBulkCreate.exe "
-    "<KeysDirectory (must be fully-qualified)> "
-    "<BaseOutputDirectory (must be fully-qualified)> "
-    "<AlgorithmId> "
-    "<HashFunctionId> "
-    "<MaskFunctionId> "
-    "<MaximumConcurrency (0-ncpu)> "
-    "E.g.: PerfectHashBulkCreate.exe "
-    "C:\\Users\\Trent\\Home\\src\\perfecthash\\data "
-    "C:\\Temp\\output "
-    "1 1 2 0\n"
-);
+#include "PerfectHashBulkCreateExeUsage_Text_RawCString.h"
 
 //
 // Helper macros for argument extraction.
@@ -1159,6 +1146,10 @@ Return Value:
 {
     PRTL Rtl;
     LPWSTR *ArgW;
+    LPWSTR Arg;
+    HRESULT Result = S_OK;
+    ULONG CurrentArg = 1;
+    PALLOCATOR Allocator;
     UNICODE_STRING Temp;
     PUNICODE_STRING String;
     BOOLEAN ValidNumberOfArguments;
@@ -1239,41 +1230,22 @@ Return Value:
 
     ArgW = &ArgvW[1];
     Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
 
     //
     // Extract keys directory.
     //
 
+    CurrentArg++;
     KeysDirectory->Buffer = *ArgW++;
     KeysDirectory->Length = GET_LENGTH(KeysDirectory);
     KeysDirectory->MaximumLength = GET_MAX_LENGTH(KeysDirectory);
 
     //
-    // Extract test data directory.
+    // Extract base output directory.
     //
 
-    BaseOutputDirectory->Buffer = *ArgW++;
-    BaseOutputDirectory->Length = GET_LENGTH(BaseOutputDirectory);
-
-    //
-    // Argument validation complete, continue.
-    //
-
-    ArgW = &ArgvW[1];
-    Rtl = Context->Rtl;
-
-    //
-    // Extract keys directory.
-    //
-
-    KeysDirectory->Buffer = *ArgW++;
-    KeysDirectory->Length = GET_LENGTH(KeysDirectory);
-    KeysDirectory->MaximumLength = GET_MAX_LENGTH(KeysDirectory);
-
-    //
-    // Extract test data directory.
-    //
-
+    CurrentArg++;
     BaseOutputDirectory->Buffer = *ArgW++;
     BaseOutputDirectory->Length = GET_LENGTH(BaseOutputDirectory);
     BaseOutputDirectory->MaximumLength = GET_MAX_LENGTH(BaseOutputDirectory);
@@ -1282,6 +1254,7 @@ Return Value:
     // Extract algorithm ID.
     //
 
+    CurrentArg++;
     String->Buffer = *ArgW++;
     String->Length = GET_LENGTH(String);
     String->MaximumLength = GET_MAX_LENGTH(String);
@@ -1291,6 +1264,7 @@ Return Value:
     // Extract hash function ID.
     //
 
+    CurrentArg++;
     String->Buffer = *ArgW++;
     String->Length = GET_LENGTH(String);
     String->MaximumLength = GET_MAX_LENGTH(String);
@@ -1300,6 +1274,7 @@ Return Value:
     // Extract mask function ID.
     //
 
+    CurrentArg++;
     String->Buffer = *ArgW++;
     String->Length = GET_LENGTH(String);
     String->MaximumLength = GET_MAX_LENGTH(String);
@@ -1309,6 +1284,7 @@ Return Value:
     // Extract maximum concurrency.
     //
 
+    CurrentArg++;
     String->Buffer = *ArgW++;
     String->Length = GET_LENGTH(String);
     String->MaximumLength = GET_MAX_LENGTH(String);
@@ -1319,25 +1295,108 @@ Return Value:
         return PH_E_INVALID_MAXIMUM_CONCURRENCY;
     }
 
+    //
+    // Zero all flags and table create parameters.
+    //
+
     ContextBulkCreateFlags->AsULong = 0;
-
-    //
-    // We haven't implemented support for parsing flags from the command line,
-    // so zero everything for now.
-    //
-
     KeysLoadFlags->AsULong = 0;
     TableCreateFlags->AsULong = 0;
     TableCompileFlags->AsULong = 0;
-
-    //
-    // Work in progress: table create parameters.
-    //
-
     *NumberOfTableCreateParameters = 0;
     *TableCreateParameters = NULL;
 
-    return S_OK;
+    for (; CurrentArg < NumberOfArguments; CurrentArg++, ArgW++) {
+
+        String->Buffer = Arg = *ArgW;
+        String->Length = GET_LENGTH(String);
+        String->MaximumLength = GET_MAX_LENGTH(String);
+
+        //
+        // If the argument doesn't start with two dashes, ignore it.
+        //
+
+        if (String->Length <= (sizeof(L'-') + sizeof(L'-'))) {
+            continue;
+        }
+
+        if (!(*Arg++ == L'-' && *Arg++ == L'-')) {
+            continue;
+        }
+
+        //
+        // Advance the buffer past the two dashes and update lengths
+        // accordingly.
+        //
+
+        String->Buffer += 2;
+        String->Length -= 4;
+        String->MaximumLength -= 4;
+
+        //
+        // Try each argument extraction routine for this argument; if it
+        // indicates an error, report it and break out of the loop.  If it
+        // indicates it successfully extracted the argument (Result == S_OK),
+        // continue onto the next argument.  Otherwise, verify it indicates
+        // that no argument was extracted (S_FALSE), then try the next routine.
+        //
+
+#define TRY_EXTRACT_ARG(Name)                                                 \
+    Result = TryExtractArg##Name##Flags(Rtl, Allocator, String, Name##Flags); \
+    if (FAILED(Result)) {                                                     \
+        PH_ERROR(ExtractBulkCreateArgs_TryExtractArg##Name##Flags, Result);   \
+        break;                                                                \
+    } else if (Result == S_OK) {                                              \
+        continue;                                                             \
+    } else {                                                                  \
+        ASSERT(Result == S_FALSE);                                            \
+    }
+
+        TRY_EXTRACT_ARG(ContextBulkCreate);
+        TRY_EXTRACT_ARG(KeysLoad);
+        TRY_EXTRACT_ARG(TableCreate);
+        TRY_EXTRACT_ARG(TableCompile);
+
+        //
+        // If we get here, none of the previous extraction routines claimed the
+        // argument, so, provide the table create parameters extraction routine
+        // an opportunity to run.
+        //
+
+        Result =
+            TryExtractArgTableCreateParameters(Rtl,
+                                               Allocator,
+                                               String,
+                                               NumberOfTableCreateParameters,
+                                               TableCreateParameters);
+
+        if (FAILED(Result)) {
+
+            PH_ERROR(ExtractBulkCreateArgs_TryExtractTableCreateParams, Result);
+            break;
+
+        } else {
+
+            //
+            // Ignore anything not recognized for now.
+            //
+
+            continue;
+        }
+    }
+
+    //
+    // If we failed, free the table create parameters if they are non-null and
+    // clear the corresponding number-of variable.
+    //
+
+    if (FAILED(Result) && TableCreateParameters) {
+        Context->Allocator->Vtbl->FreePointer(Context->Allocator,
+                                              (PVOID *)&TableCreateParameters);
+        *NumberOfTableCreateParameters = 0;
+    }
+
+    return Result;
 }
 
 PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW PerfectHashContextBulkCreateArgvW;
@@ -1404,7 +1463,8 @@ Return Value:
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags = { 0 };
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags = { 0 };
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
-    PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW ExtractBulkCreateArgs;
+    PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
+        ExtractBulkCreateArgs;
     ULONG NumberOfTableCreateParameters = 0;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters = 0;
 
@@ -1412,22 +1472,27 @@ Return Value:
 
     ExtractBulkCreateArgs = Context->Vtbl->ExtractBulkCreateArgsFromArgvW;
     Result = ExtractBulkCreateArgs(Context,
-                                 NumberOfArguments,
-                                 ArgvW,
-                                 &KeysDirectory,
-                                 &BaseOutputDirectory,
-                                 &AlgorithmId,
-                                 &HashFunctionId,
-                                 &MaskFunctionId,
-                                 &MaximumConcurrency,
-                                 &ContextBulkCreateFlags,
-                                 &KeysLoadFlags,
-                                 &TableCreateFlags,
-                                 &TableCompileFlags,
-                                 &NumberOfTableCreateParameters,
-                                 &TableCreateParameters);
+                                   NumberOfArguments,
+                                   ArgvW,
+                                   &KeysDirectory,
+                                   &BaseOutputDirectory,
+                                   &AlgorithmId,
+                                   &HashFunctionId,
+                                   &MaskFunctionId,
+                                   &MaximumConcurrency,
+                                   &ContextBulkCreateFlags,
+                                   &KeysLoadFlags,
+                                   &TableCreateFlags,
+                                   &TableCompileFlags,
+                                   &NumberOfTableCreateParameters,
+                                   &TableCreateParameters);
 
     if (FAILED(Result)) {
+
+        //
+        // Todo: write the usage string.
+        //
+
         return Result;
     }
 
@@ -1442,22 +1507,24 @@ Return Value:
     }
 
     Result = Context->Vtbl->BulkCreate(Context,
-                                     &KeysDirectory,
-                                     &BaseOutputDirectory,
-                                     AlgorithmId,
-                                     HashFunctionId,
-                                     MaskFunctionId,
-                                     &ContextBulkCreateFlags,
-                                     &KeysLoadFlags,
-                                     &TableCreateFlags,
-                                     &TableCompileFlags,
-                                     NumberOfTableCreateParameters,
-                                     TableCreateParameters);
+                                       &KeysDirectory,
+                                       &BaseOutputDirectory,
+                                       AlgorithmId,
+                                       HashFunctionId,
+                                       MaskFunctionId,
+                                       &ContextBulkCreateFlags,
+                                       &KeysLoadFlags,
+                                       &TableCreateFlags,
+                                       &TableCompileFlags,
+                                       NumberOfTableCreateParameters,
+                                       TableCreateParameters);
 
     if (FAILED(Result)) {
 
         //
-        // We don't take any action here, there's not much we can do.
+        // There's is nothing we can do here.  We don't PH_ERROR() the return
+        // code as BulkCreate() will have done that multiple times each time
+        // the error bubbled back up the stack.
         //
 
         NOTHING;

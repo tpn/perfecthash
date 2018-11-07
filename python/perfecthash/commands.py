@@ -325,6 +325,8 @@ class UpdateRawCStringFile(InvariantAwareCommand):
             category = 'CHeader'
         elif extension == '.props':
             category = 'VCProps'
+        elif extension == '.txt':
+            category = 'Text'
         else:
             raise RuntimeError("Unknown extension: %s." % extension)
 

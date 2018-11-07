@@ -128,6 +128,7 @@ Abstract:
 #include "GraphImpl.h"
 #include "Chm01.h"
 #include "Chm01FileWork.h"
+#include "ExtractArg.h"
 #include "VCProjectFileChunks.h"
 
 //

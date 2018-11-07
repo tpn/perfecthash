@@ -1,0 +1,61 @@
+Usage: PerfectHashBulkCreate.exe <KeysDirectory> <OutputDirectory> <Algorithm>
+    <HashFunction> <MaskFunction> <MaximumConcurrency>
+    [BulkCreateFlags] [KeysLoadFlags] [TableCreateFlags]
+    [TableCompileFlags] [TableCreateParameters]
+
+Bulk Create Flags:
+
+    N/A
+
+Keys Load Flags:
+
+    --TryLargePagesForKeysData
+
+        Tries to allocate the keys buffer using large pages.
+
+Table Create Flags:
+
+    --FirstGraphWins [default]
+
+        The first graph that is found is the one used.  This is the default
+        behavior.
+
+    --FindBestGraph
+
+        Requires the following two table create parameters to be present:
+
+            --BestCoverageNumAttempts=N
+
+                Where N is a positive integer, and represents the number of
+                attempts that will be made at finding a "best" graph (based
+                on the best coverage type requested below) before the create
+                table routine returns.
+
+            --BestCoverageType=<CoverageType>
+
+                Indicates the predicate to determine what constitutes the best
+                graph.
+
+                Valid coverage types:
+
+                    HighestNumberOfEmptyCacheLines
+
+Table Compile Flags:
+
+    N/A
+
+Table Create Parameters:
+
+    --AttemptsBeforeTableResize=N [default = 18]
+
+        Specifies the number of attempts at solving the graph that will be made
+        before a table resize event will occur (assuming that resize events are
+        permitted, as per the following flag).
+
+    --MaxNumberOfTableResizes=N [default = 5]
+
+        Maximum number of table resizes that will be permitted before giving up.
+
+    See also the --BestCoverage* parameters listed above in the table create
+    flag's --FindBestGraph section.
+

@@ -229,6 +229,9 @@
     <ClCompile Include="PerfectHashContextBulkCreate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ExtractArg.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -388,6 +391,12 @@
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32NotAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="ExtractArg.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashBulkCreateExeUsage_Text_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
   </ItemGroup>

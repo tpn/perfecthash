@@ -467,6 +467,15 @@ BOOLEAN
 typedef RTL_EQUAL_UNICODE_STRING *PRTL_EQUAL_UNICODE_STRING;
 
 typedef
+BOOLEAN
+(NTAPI RTL_PREFIX_UNICODE_STRING)(
+    _In_ PCUNICODE_STRING String1,
+    _In_ PCUNICODE_STRING String2,
+    _In_ BOOLEAN CaseInSensitive
+    );
+typedef RTL_PREFIX_UNICODE_STRING *PRTL_PREFIX_UNICODE_STRING;
+
+typedef
 NTSTATUS
 (NTAPI RTL_APPEND_UNICODE_STRING_TO_STRING)(
     _Inout_ PUNICODE_STRING  Destination,
@@ -2148,6 +2157,9 @@ typedef RTL_VTBL *PRTL_VTBL;
 // N.B. Keep the function names and function pointers in sync; they need to
 //      be identical in order for LoadSymbols() to work.
 //
+//      (We should probably convert this to use the X-macro style we've started
+//       employing elsewhere.)
+//
 
 #define _RTL_FUNCTION_NAMES_HEAD      \
     "RtlInitializeBitMap",            \
@@ -2179,6 +2191,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     "RtlIntegerToChar",               \
     "RtlUnicodeStringToInteger",      \
     "RtlEqualUnicodeString",          \
+    "RtlPrefixUnicodeString",         \
     "RtlAppendUnicodeStringToString", \
     "CryptBinaryToStringA",           \
     "CryptBinaryToStringW",           \
@@ -2219,6 +2232,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     PRTL_INTEGER_TO_CHAR RtlIntegerToChar;                               \
     PRTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;            \
     PRTL_EQUAL_UNICODE_STRING RtlEqualUnicodeString;                     \
+    PRTL_PREFIX_UNICODE_STRING RtlPrefixUnicodeString;                   \
     PRTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString; \
     PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                      \
     PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                      \
