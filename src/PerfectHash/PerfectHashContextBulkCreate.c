@@ -1241,7 +1241,7 @@ Return Value:
     Rtl = Context->Rtl;
 
     //
-    // Extract test data directory.
+    // Extract keys directory.
     //
 
     KeysDirectory->Buffer = *ArgW++;
