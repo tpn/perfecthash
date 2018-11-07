@@ -1402,10 +1402,11 @@ Error:
 
 End:
 
-    if (Path) {
-        Path->Vtbl->Release(Path);
-        Path = NULL;
-    }
+    //
+    // Release Path reference if applicable, unlock the context, and return.
+    //
+
+    RELEASE(Path);
 
     ReleasePerfectHashContextLockExclusive(Context);
 
