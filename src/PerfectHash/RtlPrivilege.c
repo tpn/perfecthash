@@ -121,7 +121,15 @@ Return Value:
         goto End;
     }
 
-    SYS_ERROR(AdjustTokenPrivileges);
+    //
+    // If the error indicates anything other than the call failing because the
+    // user does not have the required privileges (ERROR_NOT_ALL_ASSIGNED), then
+    // report it.
+    //
+
+    if (LastError != ERROR_NOT_ALL_ASSIGNED) {
+        SYS_ERROR(AdjustTokenPrivileges);
+    }
 
     //
     // Intentional follow-on to Error.
