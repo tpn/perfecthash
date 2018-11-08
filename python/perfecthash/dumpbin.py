@@ -124,7 +124,8 @@ class Dumpbin(InvariantAwareObject):
         ]
 
         from subprocess import check_output
-        text = check_output(cmd).decode(sys.stdout.encoding)
+        raw = check_output(cmd)
+        text = raw.decode(sys.stdout.encoding)
 
         # Add a dummy line at the start of the array so that we can index
         # lines directly by line number instead of having to subtract one
