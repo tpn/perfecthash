@@ -1034,12 +1034,6 @@ End:
 }
 
 //
-// Commandline support.
-//
-
-#include "PerfectHashBulkCreateExeUsage_Text_RawCString.h"
-
-//
 // Helper macros for argument extraction.
 //
 
