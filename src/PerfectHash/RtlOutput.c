@@ -366,8 +366,12 @@ AppendIntegerToCharBufferAsHex(
 Routine Description:
 
     This is a helper routine that appends an integer to a character buffer
-    in the hexadecimal format 0x00000000 (i.e. zeros are added as padding where
-    necessary and the 0x prefix is included).
+    in hexadecimal format, left-padding the string with spaces as necessary
+    such that 10 bytes are always consumed, e.g.:
+
+        "    0x1207"
+        "  0x251081"
+        "0x20180823"
 
 Arguments:
 
@@ -409,14 +413,16 @@ Return Value:
         *Dest-- = Char;
     } while (Value != 0);
 
-    Pad = 8 - Count;
-    while (Pad) {
-        *Dest-- = '0';
-        Pad--;
-    }
-
     *Dest-- = 'x';
     *Dest-- = '0';
+
+    Count += 2;
+
+    Pad = 10 - Count;
+    while (Pad) {
+        *Dest-- = ' ';
+        Pad--;
+    }
 
     *BufferPointer = End + 1;
 

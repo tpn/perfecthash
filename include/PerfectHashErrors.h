@@ -14,12 +14,6 @@ Abstract:
     src/PerfectHash/build-message-tables.bat (which must be run whenever the
     .mc file changes).
 
-    Success codes currently start at MessageId=0x001.
-
-    Informational codes currently start at MessageId=0x101.
-
-    Error codes currently start at MessageId=0x201.
-
 --*/
 //
 //  Values are 32 bit values laid out as follows:
@@ -144,6 +138,47 @@ Abstract:
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
+////////////////////////////////////////////////////////////////////////////////
+
+//
+// MessageId: PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+//
+// MessageText:
+//
+// Create table routine received shutdown event.
+//
+#define PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT ((HRESULT)0x60040080L)
+
+//
+// MessageId: PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+//
+// MessageText:
+//
+// Create table routine failed to find perfect hash solution.
+//
+#define PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION ((HRESULT)0x60040081L)
+
+//
+// MessageId: PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+//
+// MessageText:
+//
+// The maximum number of table resize events was reached before a perfect hash table solution could be found.
+//
+#define PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED ((HRESULT)0x60040082L)
+
+//
+// MessageId: PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+//
+// MessageText:
+//
+// The requested number of table elements was too large.
+//
+#define PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE ((HRESULT)0x60040083L)
+
+
+////////////////////////////////////////////////////////////////////////////////
+// PH_SEVERITY_INFORMATIONAL -- Usage Messages
 ////////////////////////////////////////////////////////////////////////////////
 
 //
@@ -622,23 +657,23 @@ Abstract:
 #define PH_E_TABLE_COMPILATION_NOT_AVAILABLE ((HRESULT)0xE0040228L)
 
 //
-// MessageId: PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
-//
-// MessageText:
-//
+// Disabled 8th Nov 2018: changed to PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+// MessageId=0x229
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+// Language=English
 // The maximum number of table resize events was reached before a perfect hash table solution could be found.
+// .
 //
-#define PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED ((HRESULT)0xE0040229L)
-
-//
-// MessageId: PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
-//
-// MessageText:
-//
+// Disabled 8th Nov 2018: changed to PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+// MessageId=0x22a
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+// Language=English
 // The requested number of table elements was too large.
-//
-#define PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE ((HRESULT)0xE004022AL)
-
+// .
 //
 // MessageId: PH_E_ERROR_DURING_PREPARE_TABLE_FILE
 //
@@ -1909,14 +1944,14 @@ Abstract:
 #define PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES ((HRESULT)0xE0040318L)
 
 //
-// MessageId: PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
-//
-// MessageText:
-//
+// Disabled 8th Nov 2018: changed to PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT.
+// MessageId=0x319
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+// Language=English
 // Create table routine received shutdown event.
-//
-#define PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT ((HRESULT)0xE0040319L)
-
+// .
 //
 // MessageId: PH_E_NO_MORE_SEEDS
 //
@@ -1999,14 +2034,14 @@ Abstract:
 #define PH_E_GRAPH_INFO_ALREADY_LOADED   ((HRESULT)0xE0040322L)
 
 //
-// MessageId: PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
-//
-// MessageText:
-//
+// Disabled 8th Nov 2018: changed to PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+// MessageId=0x323
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+// Language=English
 // Create table routine failed to find perfect hash solution.
-//
-#define PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION ((HRESULT)0xE0040323L)
-
+// .
 //
 // MessageId: PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH
 //
@@ -2294,4 +2329,22 @@ Abstract:
 // Keys verification skipped.
 //
 #define PH_E_KEYS_VERIFICATION_SKIPPED   ((HRESULT)0xE0040343L)
+
+//
+// MessageId: PH_E_NO_KEYS_FOUND_IN_DIRECTORY
+//
+// MessageText:
+//
+// No keys found in directory.
+//
+#define PH_E_NO_KEYS_FOUND_IN_DIRECTORY  ((HRESULT)0xE0040344L)
+
+//
+// MessageId: PH_E_NOT_ALL_BYTES_WRITTEN
+//
+// MessageText:
+//
+// Not all bytes written.
+//
+#define PH_E_NOT_ALL_BYTES_WRITTEN       ((HRESULT)0xE0040345L)
 

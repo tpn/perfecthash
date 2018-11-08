@@ -1552,6 +1552,8 @@ IsValidKeysLoadFlags(
 }
 
 typedef
+_Check_return_
+_Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_KEYS_LOAD)(
     _In_ PPERFECT_HASH_KEYS Keys,

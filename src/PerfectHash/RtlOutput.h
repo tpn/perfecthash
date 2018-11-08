@@ -224,6 +224,37 @@ extern APPEND_INTEGER_TO_WIDE_CHAR_BUFFER AppendIntegerToWideCharBuffer;
 // Output helpers.
 //
 
+static PCSZ Dot = ".";
+static PCSZ Dash = "-";
+static PCSZ Cross = "x";
+static PCSZ Newline = "\n";
+
+#define DO_OUTPUT(Buffer, Size)                                        \
+    if (!WriteFile(OutputHandle, Buffer, Size, &BytesWritten, NULL)) { \
+        Result = PH_E_SYSTEM_CALL_FAILED;                              \
+        SYS_ERROR(WriteFile);                                          \
+        goto Error;                                                    \
+    } else if (BytesWritten != Size) {                                 \
+        Result = PH_E_NOT_ALL_BYTES_WRITTEN;                           \
+        PH_ERROR(__FUNCTION__, Result);                                \
+        goto Error;                                                    \
+    }
+
+#define MAYBE_OUTPUT(Buffer, Size) \
+    if (OutputHandle) {            \
+        DO_OUTPUT(Buffer, Size);   \
+    }
+
+#define DOT() DO_OUTPUT(Dot, 1)
+#define DASH() DO_OUTPUT(Dash, 1)
+#define CROSS() DO_OUTPUT(Cross, 1)
+#define NEWLINE() DO_OUTPUT(Newline, 1)
+
+#define MAYBE_DOT() MAYBE_OUTPUT(Dot, 1)
+#define MAYBE_DASH() MAYBE_OUTPUT(Dash, 1)
+#define MAYBE_CROSS() MAYBE_OUTPUT(Cross, 1)
+#define MAYBE_NEWLINE() MAYBE_OUTPUT(Newline, 1)
+
 #define OUTPUT_RAW(String)                                          \
     AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
 

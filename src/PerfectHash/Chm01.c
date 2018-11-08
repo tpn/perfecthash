@@ -85,6 +85,31 @@ Return Value:
 
     S_OK - Table created successfully.
 
+    The following informational codes will be returned when no internal error
+    has occurred, but the table was otherwise unable to be created.  These are
+    kept separate to error codes in order to easily discern the difference
+    between "this table create failed, but I can proceed with creating a new
+    one for a different set of keys" (informational), versus "this table create
+    failed due to an internal error and the program should terminate now" (error
+    codes).
+
+    PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED - The maximum number
+        of table resize events was reached before a solution could be found.
+
+    PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT - The shutdown event
+        explicitly set.
+
+    PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE - The requested number
+        of table elements exceeded limits.  If a table resize event occurrs,
+        the number of requested table elements is doubled.  If this number
+        exceeds MAX_ULONG, this error will be returned.
+
+    PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION - No solution was found
+        that met a given criteria.  Not currently used.
+
+    N.B. Result should explicitly be tested against S_OK to verify that a table
+         was created successfully.  i.e. `if (SUCCEEDED(Result)) {` won't work
+         because the informational codes above are not classed as errors.
 
     The following error codes may also be returned.  Note that this list is not
     guaranteed to be exhaustive; that is, error codes other than the ones listed
@@ -98,14 +123,6 @@ Return Value:
 
     PH_E_SYSTEM_CALL_FAILED - A system call failed.
 
-    PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT - The shutdown event
-        explicitly set.
-
-    PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE - The requested number
-        of table elements exceeded limits.  If a table resize event occurrs,
-        the number of requested table elements is doubled.  If this number
-        exceeds MAX_ULONG, this error will be returned.
-
     PH_E_TABLE_VERIFICATION_FAILED - The winning perfect hash table solution
         failed internal verification.  The primary cause of this is typically
         when collisions are detected during verification.
@@ -113,9 +130,6 @@ Return Value:
     PH_E_INVALID_NUMBER_OF_SEEDS - The number of seeds required for the given
         hash function exceeds the number of seeds available in the on-disk
         table info structure.
-
-    PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED - The maximum number
-        of table resize events was reached before a solution could be found.
 
 --*/
 {
@@ -131,9 +145,11 @@ Return Value:
     HRESULT Result = S_OK;
     HRESULT CloseResult = S_OK;
     ULONG WaitResult;
+    ULONG BytesWritten;
     GRAPH_INFO PrevInfo;
     GRAPH_INFO Info;
     PALLOCATOR Allocator;
+    HANDLE OutputHandle = NULL;
     PHANDLE Event;
     ULONG NumberOfGraphs;
     PLIST_ENTRY ListEntry;
@@ -220,6 +236,15 @@ Return Value:
     ASSERT(
         Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList)
     );
+
+    //
+    // Initialize output handle if we're in bulk create mode.
+    //
+
+    if (IsContextBulkCreate(Context)) {
+        OutputHandle = Context->OutputHandle;
+        ASSERT(IsValidHandle(OutputHandle));
+    }
 
     //
     // Verify we have sufficient seeds available in our on-disk structure
@@ -592,7 +617,7 @@ RetryWithLargerTableSize:
         //
 
         if (Context->NumberOfTableResizeEvents >= Context->ResizeLimit) {
-            Result = PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED;
+            Result = PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED;
             goto Error;
         }
 
@@ -648,7 +673,7 @@ RetryWithLargerTableSize:
         Table->RequestedNumberOfTableElements.QuadPart <<= 1ULL;
 
         if (Table->RequestedNumberOfTableElements.HighPart) {
-            Result = PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
+            Result = PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
             goto Error;
         }
 
@@ -659,6 +684,13 @@ RetryWithLargerTableSize:
         ResetMainWorkList(Context);
         ResetFileWorkList(Context);
         ResetFinishedWorkList(Context);
+
+        //
+        // Print a dash if we're in bulk create mode to indicate a table resize
+        // event has occurred.
+        //
+
+        MAYBE_DASH();
 
         //
         // Jump back to the start and try again with a larger vertex count.
@@ -698,7 +730,7 @@ RetryWithLargerTableSize:
             WaitResult = WaitForSingleObject(Context->FailedEvent, 0);
 
             if (WaitResult == WAIT_OBJECT_0) {
-                Result = PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
+                Result = PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
 
             } else {
 
@@ -710,7 +742,7 @@ RetryWithLargerTableSize:
                 WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
 
                 if (WaitResult == WAIT_OBJECT_0) {
-                    Result = PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
+                    Result = PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
 
                 } else {
 
@@ -875,7 +907,7 @@ End:
     // file.
     //
 
-    if (FAILED(Result)) {
+    if (Result != S_OK) {
         EndOfFile = &EmptyEndOfFile;
     } else {
         EndOfFile = NULL;

@@ -14,12 +14,6 @@
 ;    src/PerfectHash/build-message-tables.bat (which must be run whenever the
 ;    .mc file changes).
 ;
-;    Success codes currently start at MessageId=0x001.
-;
-;    Informational codes currently start at MessageId=0x101.
-;
-;    Error codes currently start at MessageId=0x201.
-;
 ;--*/
 
 MessageIdTypedef=HRESULT
@@ -97,6 +91,44 @@ Use new graph for solving.
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL
+;////////////////////////////////////////////////////////////////////////////////
+;
+
+MessageId=0x080
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+Language=English
+Create table routine received shutdown event.
+.
+
+MessageId=0x081
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+Language=English
+Create table routine failed to find perfect hash solution.
+.
+
+MessageId=0x082
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+Language=English
+The maximum number of table resize events was reached before a perfect hash table solution could be found.
+.
+
+MessageId=0x083
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+Language=English
+The requested number of table elements was too large.
+.
+
+;
+;////////////////////////////////////////////////////////////////////////////////
+;// PH_SEVERITY_INFORMATIONAL -- Usage Messages
 ;////////////////////////////////////////////////////////////////////////////////
 ;
 
@@ -536,21 +568,25 @@ Language=English
 Table compilation is not available for the current combination of architecture, algorithm ID, hash function and masking type.
 .
 
-MessageId=0x229
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
-Language=English
-The maximum number of table resize events was reached before a perfect hash table solution could be found.
-.
+;//
+;// Disabled 8th Nov 2018: changed to PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+;// MessageId=0x229
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED
+;// Language=English
+;// The maximum number of table resize events was reached before a perfect hash table solution could be found.
+;// .
 
-MessageId=0x22a
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
-Language=English
-The requested number of table elements was too large.
-.
+;//
+;// Disabled 8th Nov 2018: changed to PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+;// MessageId=0x22a
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE
+;// Language=English
+;// The requested number of table elements was too large.
+;// .
 
 MessageId=0x22b
 Severity=Fail
@@ -1683,13 +1719,15 @@ Language=English
 Number of vertices is less than or equal to the number of edges.
 .
 
-MessageId=0x319
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
-Language=English
-Create table routine received shutdown event.
-.
+;//
+;// Disabled 8th Nov 2018: changed to PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT.
+;// MessageId=0x319
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT
+;// Language=English
+;// Create table routine received shutdown event.
+;// .
 
 MessageId=0x31a
 Severity=Fail
@@ -1765,13 +1803,15 @@ Language=English
 Graph information already loaded.
 .
 
-MessageId=0x323
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
-Language=English
-Create table routine failed to find perfect hash solution.
-.
+;//
+;// Disabled 8th Nov 2018: changed to PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+;// MessageId=0x323
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION
+;// Language=English
+;// Create table routine failed to find perfect hash solution.
+;// .
 
 MessageId=0x324
 Severity=Fail
@@ -2027,5 +2067,21 @@ Facility=ITF
 SymbolicName=PH_E_KEYS_VERIFICATION_SKIPPED
 Language=English
 Keys verification skipped.
+.
+
+MessageId=0x344
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_KEYS_FOUND_IN_DIRECTORY
+Language=English
+No keys found in directory.
+.
+
+MessageId=0x345
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NOT_ALL_BYTES_WRITTEN
+Language=English
+Not all bytes written.
 .
 

@@ -301,7 +301,7 @@ Return Value:
         Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);
     }
 
-    if (FAILED(Result)) {
+    if (Result != S_OK) {
         goto Error;
     }
 

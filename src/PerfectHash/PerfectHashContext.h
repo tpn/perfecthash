@@ -90,10 +90,17 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG StopSolving:1;
 
         //
+        // When set, indicates a bulk create operation is active.  This can be
+        // used to alter console output and logging operations.
+        //
+
+        ULONG IsBulkCreate:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:27;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -116,6 +123,10 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
 #define SetStopSolving(Context) (Context->State.StopSolving = TRUE)
 #define ClearStopSolving(Context) (Context->State.StopSolving = FALSE)
+
+#define IsContextBulkCreate(Context) ((Context)->State.IsBulkCreate == TRUE)
+#define SetContextBulkCreate(Context) ((Context)->State.IsBulkCreate = TRUE)
+#define ClearContextBulkCreate(Context) ((Context)->State.IsBulkCreate = FALSE)
 
 DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
 
@@ -153,6 +164,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     PPERFECT_HASH_DIRECTORY BaseOutputDirectory;
+
+    //
+    // Optional output handle (e.g. to stdout).
+    //
+
+    HANDLE OutputHandle;
 
     //
     // Pointer to the active perfect hash table.
