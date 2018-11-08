@@ -396,9 +396,6 @@
     <ClInclude Include="ExtractArg.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PerfectHashBulkCreateExeUsage_Text_RawCString.h">
-      <Filter>Private Header Files %28Auto-Generated%29</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

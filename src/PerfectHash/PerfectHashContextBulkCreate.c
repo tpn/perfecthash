@@ -17,6 +17,9 @@ Abstract:
 
 #include "stdafx.h"
 
+//
+// Method implementations.
+//
 
 PERFECT_HASH_CONTEXT_BULK_CREATE PerfectHashContextBulkCreate;
 

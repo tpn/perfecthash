@@ -119,7 +119,6 @@
     <ClInclude Include="GraphImpl.h" />
     <ClInclude Include="GuardedList.h" />
     <ClInclude Include="PerfectHashAllocator.h" />
-    <ClInclude Include="PerfectHashBulkCreateExeUsage_Text_RawCString.h" />
     <ClInclude Include="PerfectHashContext.h" />
     <ClInclude Include="PerfectHashDirectory.h" />
     <ClInclude Include="PerfectHashErrorHandling.h" />

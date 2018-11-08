@@ -35,6 +35,7 @@ mainCRTStartup(
     PICLASSFACTORY ClassFactory;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
+    PPERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
     PICLASSFACTORY_CREATE_INSTANCE CreateInstance;
     INT NumberOfArguments = 0;
 
@@ -43,7 +44,9 @@ mainCRTStartup(
 
     Result = PerfectHashBootstrap(&ClassFactory,
                                   &PerfectHashPrintError,
+                                  &PerfectHashPrintMessage,
                                   &Module);
+
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashBootstrap, Result);
         goto Error;
@@ -66,7 +69,10 @@ mainCRTStartup(
                                             ArgvW);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextBulkCreateArgvW, Result);
+        PH_MESSAGE(Result);
+        if (Result == PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS) {
+            PH_MESSAGE(PH_MSG_PERFECT_HASH_BULK_CREATE_EXE_USAGE);
+        }
     }
 
     Context->Vtbl->Release(Context);

@@ -9,7 +9,7 @@ Module Name:
 Abstract:
 
     This module is responsible for error handling related to the perfect hash
-    library.
+    library.  Routines are provided for printing errors and messages.
 
 --*/
 
@@ -151,6 +151,99 @@ Error:
     //
 
 End:
+
+    return Result;
+}
+
+PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashPrintMessage(
+    ULONG Code
+    )
+{
+    BOOL Success;
+    ULONG Flags;
+    ULONG Count;
+    PSTR Buffer;
+    ULONG LanguageId;
+    ULONG BytesWritten;
+    HRESULT Result = S_OK;
+    LONG_PTR SizeOfBufferInBytes;
+
+    LanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
+
+    Flags = (
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_HMODULE    |
+        FORMAT_MESSAGE_FROM_SYSTEM     |
+        FORMAT_MESSAGE_IGNORE_INSERTS
+    );
+
+    Count = FormatMessageA(Flags,
+                           PerfectHashModule,
+                           Code,
+                           LanguageId,
+                           (PSTR)&Buffer,
+                           0,
+                           NULL);
+
+    if (!Count) {
+        SYS_ERROR(FormatMessageA);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // The following is unnecessary when dealing with bytes, but will allow
+    // easy conversion into a WCHAR version at a later date.
+    //
+
+    SizeOfBufferInBytes = Count * sizeof(*Buffer);
+
+    Success = WriteFile(GetStdHandle(STD_ERROR_HANDLE),
+                        Buffer,
+                        (ULONG)SizeOfBufferInBytes,
+                        &BytesWritten,
+                        NULL);
+
+    if (!Success) {
+        SYS_ERROR(FormatMessageA);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (BytesWritten != (ULONG)SizeOfBufferInBytes) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    //
+    // We're done, finish up and return.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (Buffer) {
+        if (LocalFree(Buffer)) {
+            SYS_ERROR(LocalFree);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+        Buffer = NULL;
+    }
 
     return Result;
 }

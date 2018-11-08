@@ -2821,6 +2821,16 @@ HRESULT
     );
 typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
 
+typedef
+_Success_(return >= 0)
+_Check_return_opt_
+HRESULT
+(NTAPI PERFECT_HASH_PRINT_MESSAGE)(
+    _In_opt_ ULONG Code
+    );
+typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
+
+
 //
 // Define helper macros for printing errors to stdout.  Requires the symbol
 // PerfectHashPrintError to be in scope.
@@ -2831,6 +2841,9 @@ typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
 
 #define PH_ERROR(Name, Result) \
     PerfectHashPrintError(#Name, __FILE__, __LINE__, (ULONG)Result)
+
+#define PH_MESSAGE(Result) \
+    PerfectHashPrintMessage((ULONG)Result)
 
 //
 // Helper macro for raising non-continuable exceptions.
@@ -2850,6 +2863,7 @@ HRESULT
 PerfectHashBootstrap(
     _Out_ PICLASSFACTORY *ClassFactoryPointer,
     _Out_ PPERFECT_HASH_PRINT_ERROR *PrintErrorPointer,
+    _Out_ PPERFECT_HASH_PRINT_MESSAGE *PrintMessagePointer,
     _Out_ HMODULE *ModulePointer
     )
 /*++
@@ -2870,6 +2884,9 @@ Arguments:
 
     PrintErrorPointer - Supplies the address of a variable that will receive the
         function pointer to the PerfectHashPrintError error handling routine.
+
+    PrintMessagePointer - Supplies the address of a variable that will receive
+        the function pointer to the PerfectHashPrintMessage routine.
 
     ModulePointer - Supplies the address of a variable that will receive the
         handle of the loaded module.  Callers can call FreeLibrary() against
@@ -2892,6 +2909,7 @@ Return Value:
     HRESULT Result;
     HMODULE Module;
     PPERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
+    PPERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
     PDLL_GET_CLASS_OBJECT PhDllGetClassObject;
     PICLASSFACTORY ClassFactory;
 
@@ -2911,6 +2929,14 @@ Return Value:
     }
 
     PerfectHashPrintError = (PPERFECT_HASH_PRINT_ERROR)Proc;
+
+    Proc = GetProcAddress(Module, "PerfectHashPrintMessage");
+    if (!Proc) {
+        FreeLibrary(Module);
+        return E_UNEXPECTED;
+    }
+
+    PerfectHashPrintMessage = (PPERFECT_HASH_PRINT_MESSAGE)Proc;
 
     Proc = GetProcAddress(Module, "PerfectHashDllGetClassObject");
     if (!Proc) {
@@ -2933,6 +2959,7 @@ Return Value:
 
     *ClassFactoryPointer = ClassFactory;
     *PrintErrorPointer = PerfectHashPrintError;
+    *PrintMessagePointer = PerfectHashPrintMessage;
     *ModulePointer = Module;
 
     return S_OK;
