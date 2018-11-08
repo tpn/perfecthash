@@ -74,13 +74,30 @@ SaveTableFileChm01(
     EndOfFile.QuadPart = (LONGLONG)SizeInBytes;
 
     //
+    // Update the number of bytes written.
+    //
+
+    File->NumberOfBytesWritten.QuadPart = EndOfFile.QuadPart;
+
+    if (IsTableCreateOnly(Table)) {
+
+        //
+        // Nothing left to do, finish up.
+        //
+
+        goto End;
+    }
+
+    //
     // Allocate and copy the table data to an in-memory copy so that the table
     // can be used after Create() completes successfully.  See the comment in
     // the SaveTableInfoStreamChm01() routine for more information about why
     // this is necessary.
     //
 
-    LargePagesForTableData = FALSE;
+    LargePagesForTableData = (
+        Table->TableCreateFlags.TryLargePagesForTableData == TRUE
+    );
 
     BaseAddress = Rtl->Vtbl->TryLargePageVirtualAlloc(Rtl,
                                                       NULL,
@@ -113,12 +130,6 @@ SaveTableFileChm01(
     //
 
     CopyMemory(Table->TableDataBaseAddress, Source, SizeInBytes);
-
-    //
-    // Update the number of bytes written.
-    //
-
-    File->NumberOfBytesWritten.QuadPart = EndOfFile.QuadPart;
 
     //
     // We're done, finish up.

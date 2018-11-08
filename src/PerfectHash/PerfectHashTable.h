@@ -48,7 +48,8 @@ typedef union _PERFECT_HASH_TABLE_STATE {
 C_ASSERT(sizeof(PERFECT_HASH_TABLE_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 
-#define IsValidTable(Table) (Table->State.Valid == TRUE)
+#define IsValidTable(Table) ((Table)->State.Valid == TRUE)
+#define IsTableCreateOnly(Table) ((Table)->TableCreateFlags.CreateOnly == TRUE)
 
 //
 // Define the PERFECT_HASH_TABLE structure.

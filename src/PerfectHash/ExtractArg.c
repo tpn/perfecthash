@@ -111,6 +111,9 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(FirstGraphWins);
     DECL_ARG(FindBestGraph);
     DECL_ARG(SkipGraphVerification);
+    DECL_ARG(CreateOnly);
+    DECL_ARG(TryLargePagesForTableData);
+    DECL_ARG(TryLargePagesForValuesArray);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -130,6 +133,9 @@ TryExtractArgTableCreateFlags(
 
     SET_FLAG_AND_RETURN_IF_EQUAL(FindBestGraph);
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipGraphVerification);
+    SET_FLAG_AND_RETURN_IF_EQUAL(CreateOnly);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForTableData);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForValuesArray);
 
     return S_FALSE;
 }
@@ -146,10 +152,13 @@ TryExtractArgTableLoadFlags(
     PPERFECT_HASH_TABLE_LOAD_FLAGS Flags
     )
 {
-    UNREFERENCED_PARAMETER(Rtl);
+    DECL_ARG(TryLargePagesForTableData);
+    DECL_ARG(TryLargePagesForValuesArray);
+
     UNREFERENCED_PARAMETER(Allocator);
-    DBG_UNREFERENCED_PARAMETER(Argument);
-    DBG_UNREFERENCED_PARAMETER(Flags);
+
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForTableData);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForValuesArray);
 
     return S_FALSE;
 }

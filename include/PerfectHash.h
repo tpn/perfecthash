@@ -2130,10 +2130,46 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG SkipGraphVerification:1;
 
         //
+        // When set, indicates that the resulting table will not be used after
+        // creation.  That is, none of the table's hash methods (e.g. Index(),
+        // Lookup(), Insert() etc) will be used after the table's Create()
+        // method returns.
+        //
+        // Setting this flag allows the table creation routine to omit various
+        // buffer allocations and memory copies in order to get the table into
+        // a state where it can be used as if Load() were called on it.
+        //
+        // If this flag is set, any attempts at calling the hash vtbl methods
+        // like Index() etc will result in an access violation.
+        //
+
+        ULONG CreateOnly:1;
+
+        //
+        // When set, tries to allocate the table data using large pages.  This
+        // only applies to the post-create instance of the table, assuming the
+        // CreateOnly flag is not set.
+        //
+        // Analogous to TryLargePagesForTableData flag in table load flags.
+        //
+
+        ULONG TryLargePagesForTableData:1;
+
+        //
+        // When set, tries to allocate the values array using large pages.
+        // This only applies to the post-create instance of the table, assuming
+        // the CreateOnly flag is not set.
+        //
+        // Analogous to TryLargePagesForValuesArray flag in table load flags.
+        //
+
+        ULONG TryLargePagesForValuesArray:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:27;
     };
 
     LONG AsLong;

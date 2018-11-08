@@ -306,14 +306,16 @@ Return Value:
     }
 
     //
-    // Successfully created the table.  Create the values array, then update
-    // flags and state.
+    // Successfully created the table.  Create the values array if applicable,
+    // then update flags and state.
     //
 
-    Result = PerfectHashTableCreateValuesArray(Table, 0);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashTableCreateValuesArray, Result);
-        goto Error;
+    if (!IsTableCreateOnly(Table)) {
+        Result = PerfectHashTableCreateValuesArray(Table, 0);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashTableCreateValuesArray, Result);
+            goto Error;
+        }
     }
 
     Table->Flags.Created = TRUE;
@@ -392,7 +394,6 @@ Return Value:
             return PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL;
         }
     }
-
 
     for (Index = 0, Param = Table->TableCreateParameters;
          Index < Table->NumberOfTableCreateParameters;

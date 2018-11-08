@@ -8,13 +8,15 @@ Module Name:
 
 Abstract:
 
-    This is the public header file for success and error codes used by the
-    perfect hash library.  It is automatically generated from the messages
-    messages defined in src/PerfectHash/PerfectHashErrors.mc by the helper
-    script src/PerfectHash/build-message-tables.bat (which must be run
-    whenever the .mc file changes).
+    This is the public header file for status codes used by the perfect hash
+    library.  It is automatically generated from the messages defined in the
+    file src/PerfectHash/PerfectHashErrors.mc by the helper batch script named
+    src/PerfectHash/build-message-tables.bat (which must be run whenever the
+    .mc file changes).
 
     Success codes currently start at MessageId=0x001.
+
+    Informational codes currently start at MessageId=0x101.
 
     Error codes currently start at MessageId=0x201.
 
@@ -143,8 +145,6 @@ Abstract:
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
 ////////////////////////////////////////////////////////////////////////////////
-
-#define PerfectHashIsMessageCode(Id) (Id >= 0x101 && Id <= 0x1ff)
 
 //
 // MessageId: PH_MSG_PERFECT_HASH_BULK_CREATE_EXE_USAGE
@@ -2282,7 +2282,7 @@ Abstract:
 //
 // MessageText:
 //
-// Invalid number of arguments for context bulk-create.
+// Invalid number of arguments for context bulk create.
 //
 #define PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS ((HRESULT)0xE0040342L)
 

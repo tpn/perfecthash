@@ -116,6 +116,21 @@ SaveTableInfoStreamChm01(
     CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Verify);
 
     //
+    // Update the number of bytes written.
+    //
+
+    File->NumberOfBytesWritten.QuadPart = sizeof(*GraphInfoOnDisk);
+
+    if (IsTableCreateOnly(Table)) {
+
+        //
+        // Nothing left to do, finish up.
+        //
+
+        goto End;
+    }
+
+    //
     // This next part is a bit hacky.  Originally, this library provided no
     // facility for obtaining a table after creation -- you would have to
     // explicitly create a table instance and call Load() on the desired path.
@@ -152,12 +167,6 @@ SaveTableInfoStreamChm01(
     //
 
     Table->TableInfoOnDisk = &NewGraphInfoOnDisk->TableInfoOnDisk;
-
-    //
-    // Update the number of bytes written.
-    //
-
-    File->NumberOfBytesWritten.QuadPart = sizeof(*GraphInfoOnDisk);
 
     //
     // We're done, jump to the end.

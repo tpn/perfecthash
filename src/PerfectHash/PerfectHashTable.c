@@ -149,7 +149,7 @@ Return Value:
     // data, if applicable.
     //
 
-    if (Table->Flags.Created) {
+    if (Table->Flags.Created && !IsTableCreateOnly(Table)) {
         if (Table->TableInfoOnDisk) {
             PALLOCATOR Allocator = Table->Allocator;
             Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
@@ -895,6 +895,10 @@ Return Value:
         return E_POINTER;
     }
 
+    if (IsTableCreateOnly(Table)) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
     if (ValueSizeInBytes != 0) {
         if (ValueSizeInBytes != sizeof(ULONG)) {
             return PH_E_INVALID_VALUE_SIZE;
@@ -926,11 +930,9 @@ Return Value:
     // by the result of the Index() routine.
     //
 
-    //
-    // N.B. Default to false for large pages for the value array for now.
-    //
-
-    LargePagesForValues = FALSE;
+    LargePagesForValues = (
+        Table->TableCreateFlags.TryLargePagesForValuesArray == TRUE
+    );
 
     ArrayAllocSize = (
         Table->TableInfoOnDisk->NumberOfTableElements.QuadPart *

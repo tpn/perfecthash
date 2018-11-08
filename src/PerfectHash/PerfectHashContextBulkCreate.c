@@ -440,6 +440,13 @@ Return Value:
     NumberOfKeys.QuadPart = 0;
     CpuArchId = PerfectHashGetCurrentCpuArch();
 
+    //
+    // We're not using the tables after we create them, so toggle the relevant
+    // table create flag explicitly.
+    //
+
+    TableCreateFlags.CreateOnly = TRUE;
+
     ASSERT(IsValidPerfectHashCpuArchId(CpuArchId));
 
     do {
