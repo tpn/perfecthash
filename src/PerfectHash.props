@@ -11,6 +11,11 @@
     <DefaultPlatformToolset>v141</DefaultPlatformToolset>
   </PropertyGroup>
 
+  <!--
+    Todo: investigate better ways to set WindowsTargetPlatformVersion, e.g.:
+    https://github.com/Microsoft/ChakraCore/blob/master/Build/Chakra.Build.Default.props
+  -->
+
   <PropertyGroup>
     <PGDDirectory>$(SolutionDir)$(Platform)\</PGDDirectory>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
