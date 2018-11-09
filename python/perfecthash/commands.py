@@ -125,20 +125,21 @@ class ExtractAllCfgTargets(InvariantAwareCommand):
 
         from tqdm import tqdm
 
-        unicode_decode_errors = []
+        errors = []
         for path in tqdm(paths):
             try:
                 db = Dumpbin(path)
-            except UnicodeDecodeError:
-                unicode_decode_errors.append(path)
+                if not db.is_cf_instrumented:
+                    continue
+                db.save(output_dir)
+            except Exception as e:
+                errors.append((e, path))
                 continue
-            if not db.is_cf_instrumented:
-                continue
-            db.save(output_dir)
 
-        if unicode_decode_errors:
-            self._err("Unicode decode errors processing: %s" %
-                      '\n'.join(unicode_decode_errors))
+        if errors:
+            fmt = "Errors processing the following files:\n%s"
+            msg = fmt % '\n'.join(e[1] for e in errors)
+            self._err(msg)
 
 class ExtractSingleCfgTarget(InvariantAwareCommand):
     """
