@@ -519,6 +519,12 @@ ComponentCreateInstance(
             }
         }
 
+        //
+        // If we get here, a TLS component was provided, or we created a new
+        // global component.  Either way, we need to increment the reference
+        // count to reflect the new reference being obtained by the caller.
+        //
+
         Unknown = &NewComponent->Unknown;
         Unknown->Vtbl->AddRef(Unknown);
 
