@@ -280,7 +280,6 @@ typedef union _GRAPH_FLAGS {
 
         ULONG IsSpare:1;
 
-
         //
         // Unused bits.
         //
