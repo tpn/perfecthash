@@ -630,6 +630,12 @@ End:
 }
 
 
+VOID
+VerifyMemoryCoverageInvariants(
+    _In_ PGRAPH Graph,
+    _In_ PASSIGNED_MEMORY_COVERAGE Coverage
+    );
+
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE GraphCalculateAssignedMemoryCoverage;
 
 _Use_decl_annotations_
@@ -791,6 +797,9 @@ Return Value:
                 Coverage->FirstCacheLineUsed = CacheLineIndex;
                 Coverage->FirstPageUsed = PageIndex;
                 Coverage->FirstLargePageUsed = LargePageIndex;
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
             } else {
                 Coverage->LastCacheLineUsed = CacheLineIndex;
                 Coverage->LastPageUsed = PageIndex;
@@ -853,6 +862,28 @@ Return Value:
     // finish up.
     //
 
+    VerifyMemoryCoverageInvariants(Graph, Coverage);
+
+    return S_OK;
+}
+
+//
+// Disable optimization for this routine to prevent grouping of the PH_RAISE()
+// statements (i.e. such that you can't tell exactly what line triggered the
+// exception).
+//
+// N.B. This would be better addressed by individual error codes for each
+//      invariant failure.
+//
+
+#pragma optimize("", off)
+VOID
+VerifyMemoryCoverageInvariants(
+    _In_ PGRAPH Graph,
+    _In_ PASSIGNED_MEMORY_COVERAGE Coverage
+    )
+{
+
     //
     // Invariant check: the total number of assigned elements we observed
     // should be less than or equal to the number of vertices.
@@ -898,10 +929,8 @@ Return Value:
     if (Coverage->LastCacheLineUsed < Coverage->FirstCacheLineUsed) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
-
-    return S_OK;
 }
-
+#pragma optimize("", on)
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 

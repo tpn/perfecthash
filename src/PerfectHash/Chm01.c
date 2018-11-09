@@ -1151,6 +1151,17 @@ Return Value:
     NumberOfEdges.QuadPart = NumberOfKeys;
 
     //
+    // Make sure we have at least 8 edges; this ensures the assigned array will
+    // consume at least one cache line, which is required for our memory coverage
+    // routine (see Graph.c) to work correctly, as it operates on cache line
+    // sized strides.
+    //
+
+    if (NumberOfEdges.QuadPart < 8) {
+        NumberOfEdges.QuadPart = 8;
+    }
+
+    //
     // Determine the number of vertices.  If we've reached here due to a resize
     // event, Table->RequestedNumberOfTableElements will be non-zero, and takes
     // precedence.  Otherwise, determine the vertices heuristically.
