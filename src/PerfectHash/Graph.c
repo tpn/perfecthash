@@ -63,18 +63,18 @@ Return Value:
     //
 
     Result = Graph->Vtbl->CreateInstance(Graph,
-                                        NULL,
-                                        &IID_PERFECT_HASH_RTL,
-                                        &Graph->Rtl);
+                                         NULL,
+                                         &IID_PERFECT_HASH_RTL,
+                                         &Graph->Rtl);
 
     if (FAILED(Result)) {
         goto Error;
     }
 
     Result = Graph->Vtbl->CreateInstance(Graph,
-                                        NULL,
-                                        &IID_PERFECT_HASH_ALLOCATOR,
-                                        &Graph->Allocator);
+                                         NULL,
+                                         &IID_PERFECT_HASH_ALLOCATOR,
+                                         &Graph->Allocator);
 
     if (FAILED(Result)) {
         goto Error;
