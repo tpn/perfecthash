@@ -17,7 +17,8 @@ Abstract:
 
 #include "stdafx.h"
 
-#define WINDOWS_TARGET_PLATFORM_VERSION "8.1"
+//#define WINDOWS_TARGET_PLATFORM_VERSION "8.1"
+#define WINDOWS_TARGET_PLATFORM_VERSION "10.0.16299.0"
 #define PLATFORM_TOOLSET "v141"
 
 extern const CHAR VCProjectFileHeaderChunkCStr[];
