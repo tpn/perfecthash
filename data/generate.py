@@ -1,15 +1,19 @@
 from __future__ import print_function
 
 import numpy as np
-import matplotlib.pyplot as plt
+
+try:
+    import matplotlib.pyplot as plt
+
+    # Turn off interactive mode to disable plots being displayed
+    # prior to saving them to disk.
+    plt.ioff()
+except ImportError:
+    pass
 
 # Toggle to true to enable writing .png and .txt files.
 write_png = False
 write_txt = False
-
-# Turn off interactive mode to disable plots being displayed
-# prior to saving them to disk.
-plt.ioff()
 
 def save_array_plot_to_png_file(filename, a):
     plt.plot(a)
@@ -121,10 +125,17 @@ even_larger_sizes = (
    10000000,
 )
 
+all_sizes = (
+    list(normal_sizes) +
+    list(large_sizes) +
+    list(even_larger_sizes)
+)
+
 # Toggle this depending on which sizes you want.
-sizes = normal_sizes
+#sizes = normal_sizes
 #sizes = large_sizes
 #sizes = even_larger_sizes
+sizes = all_sizes
 
 functions = (
     ('linear', gen_linear_array),
