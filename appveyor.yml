@@ -1,5 +1,5 @@
 version:
-    0.17.{build}
+    0.18.{build}
 
 image:
     - Visual Studio 2017
