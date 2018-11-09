@@ -239,58 +239,6 @@ Return Value:
 
     SetContextBulkCreate(Context);
 
-#if 0
-
-    //
-    // Create a path instance for the keys directory.
-    //
-
-    Result = Context->Vtbl->CreateInstance(Context,
-                                           NULL,
-                                           &IID_PERFECT_HASH_PATH,
-                                           &KeysDirPath);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashPathCreateInstance, Result);
-        return Result;
-    }
-
-    Result = KeysDirPath->Vtbl->Copy(KeysDirPath, KeysDirectory, NULL, NULL);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashPathCopy, Result);
-        goto Error;
-    }
-
-    //
-    // Create a directory instance for the keys directory, using the path we
-    // just created.
-    //
-
-    Result = Context->Vtbl->CreateInstance(Context,
-                                           NULL,
-                                           &IID_PERFECT_HASH_DIRECTORY,
-                                           &KeysDir);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashDirectoryCreateInstance, Result);
-        goto Error;
-    }
-
-    Result = KeysDir->Vtbl->Open(KeysDir, KeysDirPath, NULL);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashDirectoryOpen, Result);
-        goto Error;
-    }
-
-#if 0
-    Result = KeysDir->Vtbl->FindFiles(KeysDir, &KeysWildcardSuffix, &FindData);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashDirectoryFindFiles, Result);
-        goto Error;
-    }
-#endif
-#endif
-
     //
     // Create a buffer we can use for stdout, using a very generous buffer size.
     //
@@ -734,9 +682,6 @@ End:
         }
         FindHandle = NULL;
     }
-
-    //RELEASE(KeysDirPath);
-    //RELEASE(KeysDir);
 
     ClearContextBulkCreate(Context);
 
