@@ -493,8 +493,7 @@ ComponentCreateInstance(
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
 
-    if (IsGlobalComponentInterfaceId(Id) &&
-        !TlsContext->Flags.DisableGlobalComponents) {
+    if (TlsContextTryCreateGlobalComponent(TlsContext, Id)) {
 
         SHORT Offset;
 

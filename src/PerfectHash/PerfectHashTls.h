@@ -25,27 +25,56 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
     struct {
 
         //
-        // When set, prevents the global component logic from running when a
-        // new component is being created.  This is used to explicitly create
-        // a new component for an interface that is classed as global, and thus,
-        // would normally be satisified by returning a reference to a previously
-        // created global (singleton) component.  This is used for Allocators,
-        // in particular.
-        //
-
-        ULONG DisableGlobalComponents:1;
-
-        //
         // When set, indicates custom allocator details are available.
         //
 
         ULONG CustomAllocatorDetailsPresent:1;
 
         //
-        // Unused bits.
+        // Unused bits.  (Consume these before the Unused2 bits.)
         //
 
-        ULONG Unused:30;
+        ULONG Unused1:5;
+
+        //
+        // The following bits, when set, prevent the global component logic
+        // from running when a new component is being created.  This is used
+        // to explicitly create a new component for an interface classed as
+        // global.  (Recap of current behavior: a request to create an instance
+        // of a global interface ID will be satisfied by returning a reference
+        // to a previously created global (i.e. singleton) instance.)
+        //
+        // This is currently used by CreatePerfectHashTableImplChm01(), for
+        // example, to disable the global allocator component before creating
+        // the graph instances that will be used for parallel solution finding.
+        // This ensures each graph gets its own allocator, which means its own
+        // independent heap that can be destroyed in one fell swoop with a
+        // HeapDestroy() call in rundown.
+        //
+        // N.B. The positions of these bits must match the interface ID of the
+        //      relevant component, plus 1 to accomodate bit test instructions
+        //      being 0-based.  E.g. the Rtl interface ID is 6, and thus, the
+        //      DisableGlobalRtlComponent is bit 7 in this structure.  Given
+        //      an interface ID, this allows us to test if the appropriate bit
+        //      is set via:
+        //
+        //      #define TlsContextIsGlobalComponentDisabled(TlsContext, Id) \
+        //          BitTest(&TlsContext->Flags.AsLong, Id)
+        //
+        //      If you add new global components, take special care to ensure
+        //      the relevant interface bit position is used.  (This will lead
+        //      to more UnusedN-type gaps in bit positions, which is fine.)
+        //
+
+        ULONG DisableGlobalRtlComponent:1;
+        ULONG DisableGlobalAllocatorComponent:1;
+
+        //
+        // Remaining unused bits.  (Consume Unused1 before using these.)
+        //
+
+        ULONG Unused2:24;
+
     };
     LONG AsLong;
     ULONG AsULong;
@@ -53,8 +82,30 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
 C_ASSERT(sizeof(PERFECT_HASH_TLS_CONTEXT_FLAGS) == sizeof(ULONG));
 typedef PERFECT_HASH_TLS_CONTEXT_FLAGS *PPERFECT_HASH_TLS_CONTEXT_FLAGS;
 
-#define TlsContextDisableGlobalComponents(TlsContext) \
-    (TlsContext && TlsContext->Flags.DisableGlobalComponents)
+#define TlsContextIsGlobalComponentDisabled(TlsContext, Id) \
+    BitTest(&(TlsContext)->Flags.AsLong, (LONG)Id)
+
+#define TlsContextDisableGlobalAllocator(TlsContext)          \
+    TlsContext->Flags.DisableGlobalAllocatorComponent = TRUE; \
+    ASSERT(                                                   \
+        TlsContextIsGlobalComponentDisabled(                  \
+            TlsContext,                                       \
+            PerfectHashAllocatorInterfaceId                   \
+        )                                                     \
+    )
+
+#define TlsContextEnableGlobalAllocator(TlsContext)            \
+    TlsContext->Flags.DisableGlobalAllocatorComponent = FALSE; \
+    ASSERT(                                                    \
+        !TlsContextIsGlobalComponentDisabled(                  \
+            TlsContext,                                        \
+            PerfectHashAllocatorInterfaceId                    \
+        )                                                      \
+    )
+
+#define TlsContextTryCreateGlobalComponent(TlsContext, Id) \
+    IsGlobalComponentInterfaceId(Id) &&                    \
+    !TlsContextIsGlobalComponentDisabled(TlsContext, Id)
 
 #define TlsContextCustomAllocatorDetailsPresent(TlsContext) \
     (TlsContext && TlsContext->Flags.CustomAllocatorDetailsPresent)

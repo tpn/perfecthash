@@ -297,23 +297,23 @@ Return Value:
     //
     // We communicate this desire to the COM component creation scaffolding by
     // way of the TLS context, which allows us to toggle a flag that disables
-    // the global component override functionality, as well as specify custom
-    // flags and a minimum size to HeapCreate().
+    // the global component override functionality for the Allocator interface,
+    // as well as specify custom flags and a minimum size to HeapCreate().
     //
     // So, we now obtain the active TLS context, using our local stack-allocated
-    // one if need be, toggle the disable global component flag, and fill out
-    // the heap create flags and minimum size (based off the total allocation
-    // size calculated by the PrepareGraphInfoChm01() routine above).
+    // one if need be, toggle the disable global allocator component flag, and
+    // fill out the heap create flags and minimum size (based off the total
+    // allocation size calculated by the PrepareGraphInfoChm01() routine above).
     //
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
 
-    ASSERT(!TlsContext->Flags.DisableGlobalComponents);
+    ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
     ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
     ASSERT(!TlsContext->HeapCreateFlags);
     ASSERT(!TlsContext->HeapMinimumSize);
 
-    TlsContext->Flags.DisableGlobalComponents = TRUE;
+    TlsContextDisableGlobalAllocator(TlsContext);
     TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
     TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;
     TlsContext->HeapMinimumSize = (ULONG_PTR)Info.AllocSize;
@@ -360,6 +360,12 @@ Return Value:
         ASSERT(Graph->Allocator->HeapHandle != Table->Allocator->HeapHandle);
 
         //
+        // Verify the Rtl instance was global.
+        //
+
+        ASSERT(Graph->Rtl == Table->Rtl);
+
+        //
         // Copy relevant flags over, then save the graph instance in the array.
         //
 
@@ -374,7 +380,7 @@ Return Value:
     // and jump to our error handling block if it indicates failure.
     //
 
-    TlsContext->Flags.DisableGlobalComponents = FALSE;
+    TlsContextEnableGlobalAllocator(TlsContext);
     TlsContext->Flags.CustomAllocatorDetailsPresent = FALSE;
     TlsContext->HeapCreateFlags = 0;
     TlsContext->HeapMinimumSize = 0;
