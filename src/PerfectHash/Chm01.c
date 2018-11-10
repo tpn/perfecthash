@@ -239,7 +239,8 @@ Return Value:
     );
 
     //
-    // Initialize output handle if we're in bulk create mode.
+    // Initialize output handle if we're in bulk create mode.  We print a dash
+    // every time a table resize event occurs to the output handle.
     //
 
     if (IsContextBulkCreate(Context)) {
