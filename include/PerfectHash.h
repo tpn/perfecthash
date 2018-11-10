@@ -1300,7 +1300,7 @@ typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
         // Used in conjunction with NoTruncate, when set, indicates that the
         // EndOfFile parameter should be treated as the number of bytes to
         // extend the file if it already exists (aligned up to allocation
-        // granularity boundaries and necessary).  Ignored if NoTruncate is
+        // granularity boundaries as necessary).  Ignored if NoTruncate is
         // not also set.
         //
 
