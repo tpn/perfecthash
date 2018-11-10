@@ -13,8 +13,6 @@ Abstract:
 
 --*/
 
-#include "stdafx.h"
-
 //
 // Define an "X-Macro"-style macro for capturing the ordered definition of
 // columns in a row of bulk create .csv output.
@@ -22,41 +20,69 @@ Abstract:
 // The ENTRY macros receive (Name, Value, OutputMacro) as their parameters.
 //
 
-#define BULK_CREATE_CSV_ROW_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    FIRST_ENTRY(KeysName,                                         \
-                &Table->Keys->File->Path->BaseNameA,              \
-                OUTPUT_STRING)                                    \
-                                                                  \
-    ENTRY(Algorithm,                                              \
-          AlgorithmNames[Context->AlgorithmId],                   \
-          OUTPUT_UNICODE_STRING_FAST)                             \
-                                                                  \
-    ENTRY(HashFunction,                                           \
-          HashFunctionNames[Context->HashFunctionId],             \
-          OUTPUT_UNICODE_STRING_FAST)                             \
-                                                                  \
-    ENTRY(MaskFunction,                                           \
-          MaskFunctionNames[Context->MaskFunctionId],             \
-          OUTPUT_UNICODE_STRING_FAST)                             \
-                                                                  \
-    ENTRY(SolutionFound,                                          \
-          (Result == S_OK ? 'Y' : 'N'),                           \
-          OUTPUT_CHR)                                             \
-                                                                  \
-    ENTRY(NumberOfTableResizeEvents,                              \
-          Context->NumberOfTableResizeEvents,                     \
-          OUTPUT_INT)                                             \
-                                                                  \
-    ENTRY(KeysMinValue,                                           \
-          Table->Keys->Stats.MinValue,                            \
-          OUTPUT_INT)                                             \
-                                                                  \
-    ENTRY(KeysMaxValue,                                           \
-          Table->Keys->Stats.MaxValue,                            \
-          OUTPUT_INT)                                             \
-                                                                  \
-    LAST_ENTRY(KeysBitmapString,                                  \
-               Table->Keys->Stats.KeysBitmap.String,              \
+#define BULK_CREATE_CSV_ROW_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)    \
+    FIRST_ENTRY(KeysName,                                            \
+                &Table->Keys->File->Path->BaseNameA,                 \
+                OUTPUT_STRING)                                       \
+                                                                     \
+    ENTRY(NumberOfKeys,                                              \
+          Table->Keys->NumberOfElements.QuadPart,                    \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(Algorithm,                                                 \
+          AlgorithmNames[Context->AlgorithmId],                      \
+          OUTPUT_UNICODE_STRING_FAST)                                \
+                                                                     \
+    ENTRY(HashFunction,                                              \
+          HashFunctionNames[Context->HashFunctionId],                \
+          OUTPUT_UNICODE_STRING_FAST)                                \
+                                                                     \
+    ENTRY(MaskFunction,                                              \
+          MaskFunctionNames[Context->MaskFunctionId],                \
+          OUTPUT_UNICODE_STRING_FAST)                                \
+                                                                     \
+    ENTRY(SolutionFound,                                             \
+          (Result == S_OK ? 'Y' : 'N'),                              \
+          OUTPUT_CHR)                                                \
+                                                                     \
+    ENTRY(NumberOfSolutionsFound,                                    \
+          Context->FinishedCount,                                    \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(FailedAttempts,                                            \
+          Context->FailedAttempts,                                   \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(NumberOfTableResizeEvents,                                 \
+          Context->NumberOfTableResizeEvents,                        \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(HighestDeletedEdgesCount,                                  \
+          Context->HighestDeletedEdgesCount,                         \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(ClosestWeCameToSolvingGraphWithSmallerTableSizes,          \
+          Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes, \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(SolveMicroseconds,                                         \
+          Context->SolveElapsedMicroseconds.QuadPart,                \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(VerifyMicroseconds,                                        \
+          Context->VerifyElapsedMicroseconds.QuadPart,               \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(KeysMinValue,                                              \
+          Table->Keys->Stats.MinValue,                               \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(KeysMaxValue,                                              \
+          Table->Keys->Stats.MaxValue,                               \
+          OUTPUT_INT)                                                \
+                                                                     \
+    LAST_ENTRY(KeysBitmapString,                                     \
+               Table->Keys->Stats.KeysBitmap.String,                 \
                OUTPUT_RAW)
 
 

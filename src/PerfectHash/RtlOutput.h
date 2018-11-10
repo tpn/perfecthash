@@ -341,6 +341,11 @@ static PCSZ Newline = "\n";
 #define OUTPUT_HEX_RAW(Integer)                         \
     AppendIntegerToCharBufferAsHexRaw(&Output, Integer)
 
+#define OUTPUT_HEX_RAW_0x(Integer)                       \
+    *Output++ = 'x';                                     \
+    *Output++ = '0';                                     \
+    AppendIntegerToCharBufferAsHexRaw(&Output, Integer)
+
 #define OUTPUT_STRING(String) AppendStringToCharBuffer(&Output, String)
 
 #define OUTPUT_UNICODE_STRING_FAST(String) \
@@ -351,8 +356,8 @@ static PCSZ Newline = "\n";
 #define OUTPUT_SEP() AppendCharToCharBuffer(&Output, ',')
 #define OUTPUT_LF() AppendCharToCharBuffer(&Output, '\n')
 
-#define OUTPUT_INT(Value)                      \
-    AppendIntegerToCharBuffer(&Output, Value);
+#define OUTPUT_INT(Value)                     \
+    AppendIntegerToCharBuffer(&Output, Value)
 
 #define OUTPUT_FLUSH_CONSOLE()                                               \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
