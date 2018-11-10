@@ -2085,3 +2085,11 @@ Language=English
 Not all bytes written.
 .
 
+MessageId=0x346
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_BULK_CREATE_CSV_HEADER_MISMATCH
+Language=English
+Bulk create CSV header mismatch.
+.
+

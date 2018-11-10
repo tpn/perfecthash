@@ -208,6 +208,8 @@ typedef PERFECT_HASH_FILE_STATE *PPERFECT_HASH_FILE_STATE;
 #define WantsLargePages(File) (!File->Flags.DoesNotWantLargePages)
 #define IsFileRenameScheduled(File) (File->RenamePath)
 #define IsFileStream(File) (File->Path->StreamName.Buffer != NULL)
+#define WasFileLoaded(File) (File->Flags.Loaded == TRUE)
+#define WasFileCreated(File) (File->Flags.Created == TRUE)
 
 #define SetFileOpened(File)      \
     File->State.IsOpen = TRUE;   \
@@ -328,6 +330,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     //
 
     LARGE_INTEGER NumberOfBytesWritten;
+
+    //
+    // If the file was opened via Create(), and the NoTruncate flag was
+    // specified, this field represents the initial file size of the file
+    // when first opened.  This takes precedence during Close() if a 0 value
+    // is passed in (indicating an error).
+    //
+
+    LARGE_INTEGER InitialEndOfFile;
 
     //
     // If there's a pending end-of-file change that needs to be made, that is

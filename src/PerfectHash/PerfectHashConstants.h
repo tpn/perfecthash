@@ -288,12 +288,15 @@ GetNumberOfContextEvents(
 
 extern const UNICODE_STRING No;
 extern const UNICODE_STRING Yes;
+extern const UNICODE_STRING CsvSuffix;
+extern const UNICODE_STRING CsvExtension;
 extern const UNICODE_STRING KeysExtension;
 extern const UNICODE_STRING DotKeysSuffix;
 extern const UNICODE_STRING DotTableSuffix;
 extern const UNICODE_STRING DotHeaderSuffix;
 extern const UNICODE_STRING KeysWildcardSuffix;
 extern const UNICODE_STRING TableInfoStreamName;
+extern const UNICODE_STRING PerfectHashBulkCreateCsvBaseName;
 
 extern const STRING DotExeSuffixA;
 extern const STRING DotDllSuffixA;

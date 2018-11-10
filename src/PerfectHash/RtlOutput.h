@@ -55,6 +55,20 @@ CountNumberOfLongLongDigitsInline(_In_ ULONGLONG Value)
     return Count;
 }
 
+FORCEINLINE
+BYTE
+CountNumberOfHexCharsInline(_In_ ULONG Value)
+{
+    BYTE Count = 0;
+
+    do {
+        Count++;
+        Value >>= 4;
+    } while (Value != 0);
+
+    return Count;
+}
+
 //
 // Helper string routines for buffer manipulation.
 //
@@ -97,6 +111,19 @@ VOID
 typedef APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX
       *PAPPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX;
 
+//
+// As above, but no leading spaces or 0x padding.
+//
+
+typedef
+VOID
+(NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_opt_ ULONG Integer
+    );
+typedef APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
+      *PAPPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW;
+
 typedef
 VOID
 (NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_EX)(
@@ -115,6 +142,35 @@ VOID
     _In_ PCSTRING String
     );
 typedef APPEND_STRING_TO_CHAR_BUFFER *PAPPEND_STRING_TO_CHAR_BUFFER;
+
+//
+// N.B. "FAST" in this context means that we don't do a wide character to
+//      multibyte conversion; we just cast each word as a byte, and use that.
+//      It should only be used when the input unicode string is guaranteed to
+//      be ASCII.
+//
+
+typedef
+VOID
+(NTAPI APPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_ PCUNICODE_STRING String
+    );
+typedef APPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST
+      *PAPPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST;
+
+//
+// N.B. As above, but vice versa.  Cast each byte into a word.
+//
+
+typedef
+VOID
+(NTAPI APPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST)(
+    _Inout_ PWCHAR *BufferPointer,
+    _In_ PCSTRING String
+    );
+typedef APPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST
+      *PAPPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST;
 
 typedef
 VOID
@@ -202,13 +258,35 @@ VOID
 typedef APPEND_WIDE_CSTR_TO_WIDE_CHAR_BUFFER
       *PAPPEND_WIDE_CSTR_TO_WIDE_CHAR_BUFFER;
 
+//
+// Hash glue.
+//
+
+typedef
+VOID
+(NTAPI HASH_STRING)(
+    _Inout_ PSTRING String
+    );
+typedef HASH_STRING *PHASH_STRING;
+extern HASH_STRING Crc32HashString;
+#define HashString Crc32HashString
+
+//
+// Decls.
+//
+
 extern APPEND_INTEGER_TO_UNICODE_STRING AppendIntegerToUnicodeString;
 extern APPEND_LONGLONG_INTEGER_TO_UNICODE_STRING
     AppendLongLongIntegerToUnicodeString;
 extern APPEND_INTEGER_TO_CHAR_BUFFER AppendIntegerToCharBuffer;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
+extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
+    AppendIntegerToCharBufferAsHexRaw;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_EX AppendIntegerToCharBufferEx;
 extern APPEND_STRING_TO_CHAR_BUFFER AppendStringToCharBuffer;
+extern APPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST
+    AppendUnicodeStringToCharBufferFast;
+extern APPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST AppendStringToWideCharBufferFast;
 extern APPEND_CHAR_BUFFER_TO_CHAR_BUFFER AppendCharBufferToCharBuffer;
 extern APPEND_CSTR_TO_CHAR_BUFFER AppendCStrToCharBuffer;
 extern APPEND_CHAR_TO_CHAR_BUFFER AppendCharToCharBuffer;
@@ -260,7 +338,13 @@ static PCSZ Newline = "\n";
 
 #define OUTPUT_HEX(Integer) AppendIntegerToCharBufferAsHex(&Output, Integer)
 
+#define OUTPUT_HEX_RAW(Integer)                         \
+    AppendIntegerToCharBufferAsHexRaw(&Output, Integer)
+
 #define OUTPUT_STRING(String) AppendStringToCharBuffer(&Output, String)
+
+#define OUTPUT_UNICODE_STRING_FAST(String) \
+    AppendUnicodeStringToCharBufferFast(&Output, String)
 
 #define OUTPUT_CSTR(Str) AppendCStrToCharBuffer(&Output, Str)
 #define OUTPUT_CHR(Char) AppendCharToCharBuffer(&Output, Char)

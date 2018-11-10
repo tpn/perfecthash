@@ -744,6 +744,7 @@ Return Value:
     RELEASE(Context->MainWorkList);
     RELEASE(Context->FileWorkList);
     RELEASE(Context->FinishedWorkList);
+    RELEASE(Context->BulkCreateCsvFile);
     RELEASE(Context->BaseOutputDirectory);
     RELEASE(Context->Allocator);
     RELEASE(Context->Rtl);

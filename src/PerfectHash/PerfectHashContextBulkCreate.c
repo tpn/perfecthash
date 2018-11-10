@@ -16,6 +16,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "TableCreateCsv.h"
 
 
 #define PH_ERROR_EX(Name, Result, ...) \
@@ -36,6 +37,20 @@ Abstract:
                             (ULONG)Result, \
                             __VA_ARGS__)
 #endif
+
+//
+// Forward decls.
+//
+
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PREPARE_BULK_CREATE_CSV_FILE)(
+    _In_ PPERFECT_HASH_CONTEXT Context
+    );
+typedef PREPARE_BULK_CREATE_CSV_FILE *PPREPARE_BULK_CREATE_CSV_FILE;
+extern PREPARE_BULK_CREATE_CSV_FILE PrepareBulkCreateCsvFile;
 
 //
 // Method implementations.
@@ -151,6 +166,7 @@ Return Value:
     PCHAR BaseBuffer = NULL;
     PCHAR Output;
     PCHAR OutputBuffer = NULL;
+    PCHAR RowBuffer = NULL;
     PALLOCATOR Allocator;
     PVOID KeysBaseAddress;
     ULARGE_INTEGER NumberOfKeys;
@@ -159,14 +175,18 @@ Return Value:
     HANDLE ProcessHandle = NULL;
     ULONG Failures;
     ULONGLONG BufferSize;
+    ULONGLONG RowBufferSize;
     ULONGLONG OutputBufferSize;
     LONG_INTEGER AllocSize;
     ULONG BytesWritten = 0;
     WIN32_FIND_DATAW FindData;
     UNICODE_STRING WildcardPath;
     UNICODE_STRING KeysPathString;
+    LARGE_INTEGER EmptyEndOfFile = { 0 };
+    PLARGE_INTEGER EndOfFile;
     PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_FILE CsvFile = NULL;
     PPERFECT_HASH_FILE TableFile = NULL;
     PPERFECT_HASH_PATH TablePath = NULL;
     PPERFECT_HASH_DIRECTORY BaseOutputDir = NULL;
@@ -276,18 +296,34 @@ Return Value:
                                      &BaseBuffer);
 
     if (FAILED(Result)) {
-        HRESULT Result2;
         SYS_ERROR(VirtualAlloc);
-        Result2 = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &OutputBuffer);
-        if (FAILED(Result2)) {
-            SYS_ERROR(VirtualFree);
-        }
+        Result = E_OUTOFMEMORY;
         goto Error;
     }
 
     Buffer = BaseBuffer;
+
+    //
+    // Create a "row buffer" we can use for the CSV file.
+    //
+
+    NumberOfPages = 2;
+
+    Result = Rtl->Vtbl->CreateBuffer(Rtl,
+                                     &ProcessHandle,
+                                     NumberOfPages,
+                                     NULL,
+                                     &RowBufferSize,
+                                     &RowBuffer);
+
+    if (FAILED(Result)) {
+        SYS_ERROR(VirtualAlloc);
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    Context->RowBuffer = Context->BaseRowBuffer = RowBuffer;
+    Context->RowBufferSize = RowBufferSize;
 
     //
     // Get a reference to the stdout handle.
@@ -302,6 +338,18 @@ Return Value:
     }
 
     OutputHandle = Context->OutputHandle;
+
+    //
+    // Prepare the <BaseOutputDir>\PerfectHashBulkCreate_<HeaderHash>.csv file.
+    //
+
+    Result = PrepareBulkCreateCsvFile(Context);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
+        return Result;
+    }
+
+    CsvFile = Context->BulkCreateCsvFile;
 
     //
     // Calculate the size required for a new concatenated wide string buffer
@@ -448,13 +496,6 @@ Return Value:
         //
 
         Failed = FALSE;
-
-#if 0
-        WIDE_OUTPUT_RAW(Output, L"Processing key file: ");
-        WIDE_OUTPUT_WCSTR(Output, (PCWSZ)FindData.cFileName);
-        WIDE_OUTPUT_LF(Output);
-        WIDE_OUTPUT_FLUSH();
-#endif
 
         //
         // Copy the filename over to the fully-qualified keys path.
@@ -653,6 +694,18 @@ Error:
 
 End:
 
+    if (RowBuffer) {
+        ASSERT(Context->RowBuffer);
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          ProcessHandle,
+                                          &RowBuffer);
+        if (FAILED(Result)) {
+            SYS_ERROR(VirtualFree);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+        Context->RowBuffer = RowBuffer = NULL;
+    }
+
     if (OutputBuffer) {
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
@@ -684,6 +737,288 @@ End:
     }
 
     ClearContextBulkCreate(Context);
+
+    //
+    // Close the .csv file.  If we encountered an error, use 0 as end-of-file,
+    // which will delete it.
+    //
+
+    if (Result != S_OK) {
+        EndOfFile = &EmptyEndOfFile;
+    } else {
+        EndOfFile = NULL;
+    }
+
+    if (CsvFile) {
+        Result = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashBulkCreate_CloseCsvFile, Result);
+        }
+    }
+
+    RELEASE(Context->BulkCreateCsvFile);
+
+    return Result;
+}
+
+
+PREPARE_BULK_CREATE_CSV_FILE PrepareBulkCreateCsvFile;
+
+_Use_decl_annotations_
+HRESULT
+PrepareBulkCreateCsvFile(
+    PPERFECT_HASH_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    Prepares the <BaseOutputDir>\PerfectHashBulkCreate_<HeaderHash>.csv file.
+    This involves determining the header hash, constructing a path instance,
+    creating a file instance, and opening it for append.
+
+Arguments:
+
+    Context - Supplies the context for which the .csv file is to be prepared.
+
+Return Value:
+
+    S_OK on success, an appropriate error code otherwise.
+
+--*/
+{
+    PRTL Rtl;
+    PCHAR Base;
+    PCHAR Output;
+    PWCHAR WideOutput;
+    STRING Header;
+    STRING HexHash;
+    UNICODE_STRING Suffix;
+    HRESULT Result = S_OK;
+    ULONG_PTR BufferBytesConsumed;
+    PPERFECT_HASH_PATH ExistingPath;
+    PPERFECT_HASH_PATH Path = NULL;
+    PPERFECT_HASH_FILE File = NULL;
+    LARGE_INTEGER EndOfFile;
+    PCUNICODE_STRING BaseName;
+    PCUNICODE_STRING NewDirectory;
+    PERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags = { 0 };
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Header.Buffer = Base = Output = Context->BaseRowBuffer;
+
+    //
+    // Construct an ASCII representation of all column names concatenated
+    // together, wire up a STRING structure, then generate a hash.
+    //
+
+#define EXPAND_AS_COLUMN_NAME_THEN_COMMA(Name, Value, OutputMacro) \
+    OUTPUT_RAW(#Name);                                             \
+    OUTPUT_CHR(',');
+
+#define EXPAND_AS_COLUMN_NAME_THEN_NEWLINE(Name, Value, OutputMacro) \
+    OUTPUT_RAW(#Name);                                               \
+    OUTPUT_CHR('\n');
+
+    BULK_CREATE_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                              EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                              EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+
+    Header.Length = (USHORT)RtlPointerToOffset(Base, Output);
+    Header.MaximumLength = Header.Length;
+
+    HashString(&Header);
+
+    //
+    // Convert the hash into an ASCII hex representation, then wire it up into
+    // a STRING structure.
+    //
+
+    Output = (PSTR)ALIGN_UP(Output, 8);
+    HexHash.Buffer = Base = Output;
+
+    *Output++ = '_';
+
+    AppendIntegerToCharBufferAsHexRaw(&Output, Header.Hash);
+
+    HexHash.Length = (USHORT)RtlPointerToOffset(Base, Output);
+    HexHash.MaximumLength = HexHash.Length;
+
+    //
+    // Convert the ASCII hex representation into a wide character version.
+    //
+
+    Base = Output = (PSTR)ALIGN_UP(Output, 8);
+    Suffix.Buffer = WideOutput = (PWSTR)Output;
+
+    AppendStringToWideCharBufferFast(&WideOutput, &HexHash);
+
+    Output = (PSTR)WideOutput;
+
+    Suffix.Length = (USHORT)RtlPointerToOffset(Base, Output);
+    Suffix.MaximumLength = Suffix.Length;
+
+    //
+    // Capture the total number of bytes of the row buffer we consumed at this
+    // point such that we can zero the memory at the end of this routine.
+    //
+
+    BufferBytesConsumed = RtlPointerToOffset(Context->BaseRowBuffer, Output);
+
+    //
+    // Create a path instance.
+    //
+
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_PATH,
+                                           &Path);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreateInstance, Result);
+        goto Error;
+    }
+
+    //
+    // Create the .csv file's path name.
+    //
+
+    BaseName = &PerfectHashBulkCreateCsvBaseName;
+    ExistingPath = Context->BaseOutputDirectory->Path;
+    NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
+
+    Result = Path->Vtbl->Create(Path,
+                                ExistingPath,
+                                NewDirectory,   // NewDirectory
+                                NULL,           // DirectorySuffix
+                                BaseName,       // NewBaseName
+                                &Suffix,        // BaseNameSuffix
+                                &CsvExtension,  // NewExtension
+                                NULL,           // NewStreamName
+                                NULL,           // Parts
+                                NULL);          // Reserved
+
+    if (FAILED(Result)) {
+        PH_ERROR(PrepareBulkCreateCsvFile_PathCreate, Result);
+        goto Error;
+    }
+
+    //
+    // Create a file instance.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_FILE,
+                                           &File);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileCreateInstance, Result);
+        goto Error;
+    }
+
+    //
+    // Create the .csv file.
+    //
+
+    EndOfFile.QuadPart = Context->SystemAllocationGranularity;
+    FileCreateFlags.NoTruncate = TRUE;
+    FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists = TRUE;
+
+    Result = File->Vtbl->Create(File,
+                                Path,
+                                &EndOfFile,
+                                NULL,
+                                &FileCreateFlags);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PrepareBulkCreateCsvFile_FileCreate, Result);
+        goto Error;
+    }
+
+    if (File->NumberOfBytesWritten.QuadPart > 0) {
+        SIZE_T BytesMatched;
+        BOOLEAN HeaderMatches;
+
+        //
+        // Compare the on-disk CSV header to the header we just constructed.
+        // This should always match unless there's a hash collision between
+        // two header strings, which will hopefully be very unlikely.
+        //
+
+        BytesMatched = Rtl->RtlCompareMemory(Header.Buffer,
+                                             File->BaseAddress,
+                                             Header.Length);
+
+        HeaderMatches = (BytesMatched == Header.Length);
+
+        if (!HeaderMatches) {
+            Result = PH_E_BULK_CREATE_CSV_HEADER_MISMATCH;
+            goto Error;
+        }
+
+    } else {
+
+        //
+        // Write the header to the newly created file and update the number of
+        // bytes written.
+        //
+
+        CopyMemory(File->BaseAddress,
+                   Header.Buffer,
+                   Header.Length);
+
+        File->NumberOfBytesWritten.QuadPart += Header.Length;
+
+    }
+
+    //
+    // Capture the file pointer in the context and add a reference to offset
+    // the RELEASE(File) at the end of the routine.
+    //
+
+    Context->BulkCreateCsvFile = File;
+    File->Vtbl->AddRef(File);
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    //
+    // Clear the bytes we wrote, release the path if applicable, then return.
+    //
+
+    ZeroMemory(Context->BaseRowBuffer, BufferBytesConsumed);
+
+    RELEASE(Path);
+    RELEASE(File);
 
     return Result;
 }

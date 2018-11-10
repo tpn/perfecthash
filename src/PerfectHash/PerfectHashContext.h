@@ -172,6 +172,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     HANDLE OutputHandle;
 
     //
+    // If a bulk create operation is in progress, a pointer to a file instance
+    // for the <BaseOutputDir>\PerfectHashBulkCreate_<HeaderHash>.csv file.
+    //
+
+    struct _PERFECT_HASH_FILE *BulkCreateCsvFile;
+
+    //
+    // Pointer to a base buffer and current buffer and size for .csv rows, if
+    // applicable (i.e. if in bulk create mode).
+    //
+
+    PCHAR BaseRowBuffer;
+    PCHAR RowBuffer;
+    ULONGLONG RowBufferSize;
+
+    //
     // Pointer to the active perfect hash table.
     //
 

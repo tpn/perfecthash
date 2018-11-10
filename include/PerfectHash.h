@@ -1287,10 +1287,30 @@ typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
         ULONG TryLargePagesForFileData:1;
 
         //
+        // Normally, when files are opened via Create(), the file will be
+        // truncated if it already exists.  When this bit is set, no truncation
+        // will be performed.  Unless EndOfFileIsExtensionSizeIfFileExists bit
+        // is set, the EndOfFile parameter passed to Create() will be ignored
+        // on input (it will still receive the final mapping size used).
+        //
+
+        ULONG NoTruncate:1;
+
+        //
+        // Used in conjunction with NoTruncate, when set, indicates that the
+        // EndOfFile parameter should be treated as the number of bytes to
+        // extend the file if it already exists (aligned up to allocation
+        // granularity boundaries and necessary).  Ignored if NoTruncate is
+        // not also set.
+        //
+
+        ULONG EndOfFileIsExtensionSizeIfFileExists:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:29;
     };
 
     LONG AsLong;
@@ -1324,7 +1344,7 @@ HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_CREATE)(
     _In_ PPERFECT_HASH_FILE File,
     _In_ PPERFECT_HASH_PATH SourcePath,
-    _In_ PLARGE_INTEGER EndOfFile,
+    _Inout_ PLARGE_INTEGER EndOfFile,
     _In_opt_ PPERFECT_HASH_DIRECTORY ParentDirectory,
     _In_opt_ PPERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags
     );

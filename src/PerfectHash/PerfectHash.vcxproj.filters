@@ -396,6 +396,9 @@
     <ClInclude Include="ExtractArg.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TableCreateCsv.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

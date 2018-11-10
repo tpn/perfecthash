@@ -14,6 +14,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "Chm01.h"
+#include "TableCreateCsv.h"
 
 typedef
 _Check_return_
@@ -906,6 +907,38 @@ Error:
     //
 
 End:
+
+    if (IsContextBulkCreate(Context)) {
+
+        //
+        // Initialize local variables required by BULK_CREATE_CSV_ROW_TABLE().
+        //
+
+        BULK_CREATE_CSV_PRE_ROW();
+
+#define EXPAND_AS_WRITE_ROW_NOT_LAST_COLUMN(Name, Value, OutputMacro) \
+    OutputMacro(Value);                                               \
+    OUTPUT_CHR(',');
+
+#define EXPAND_AS_WRITE_ROW_LAST_COLUMN(Name, Value, OutputMacro) \
+    OutputMacro(Value);                                           \
+    OUTPUT_CHR('\n');
+
+        //
+        // Write all values for the row.
+        //
+
+        BULK_CREATE_CSV_ROW_TABLE(EXPAND_AS_WRITE_ROW_NOT_LAST_COLUMN,
+                                  EXPAND_AS_WRITE_ROW_NOT_LAST_COLUMN,
+                                  EXPAND_AS_WRITE_ROW_LAST_COLUMN);
+
+        //
+        // Adjust the number of bytes written post-row write.
+        //
+
+        BULK_CREATE_CSV_POST_ROW();
+
+    }
 
     //
     // Close all files.  If we weren't successful in finding a solution, pass

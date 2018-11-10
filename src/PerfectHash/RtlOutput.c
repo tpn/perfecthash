@@ -429,6 +429,66 @@ Return Value:
     return;
 }
 
+APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW AppendIntegerToCharBufferAsHexRaw;
+
+_Use_decl_annotations_
+VOID
+AppendIntegerToCharBufferAsHexRaw(
+    PCHAR *BufferPointer,
+    ULONG Integer
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that appends an integer to a character buffer
+    in hexadecimal format.  No 0x or additional padding is added to the string.
+
+Arguments:
+
+    BufferPointer - Supplies a pointer to a variable that contains the address
+        of a character buffer to which the hex string representation of the
+        integer will be written.
+
+    Integer - Supplies the integer value to be appended to the string.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    CHAR Char;
+    ULONG Count;
+    ULONG Digit;
+    ULONG Value;
+    PCHAR End;
+    PCHAR Dest;
+    PCHAR Buffer;
+    BYTE NumberOfHexChars;
+
+    Buffer = *BufferPointer;
+
+    NumberOfHexChars = CountNumberOfHexCharsInline(Integer);
+
+    End = Dest = RtlOffsetToPointer(Buffer, NumberOfHexChars - 1);
+
+    Count = 0;
+    Value = Integer;
+
+    do {
+        Count++;
+        Digit = Value & 0xf;
+        Value >>= 4;
+        Char = IntegerToCharTable[Digit];
+        *Dest-- = Char;
+    } while (Value != 0);
+
+    *BufferPointer = End + 1;
+
+    return;
+}
+
 _Use_decl_annotations_
 VOID
 AppendIntegerToCharBufferEx(
@@ -561,6 +621,69 @@ AppendStringToCharBuffer(
     Buffer = *BufferPointer;
     CopyMemoryInline(Buffer, String->Buffer, String->Length);
     *BufferPointer = RtlOffsetToPointer(Buffer, String->Length);
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
+AppendUnicodeStringToCharBufferFast(
+    PCHAR *BufferPointer,
+    PCUNICODE_STRING String
+    )
+{
+    CHAR Char;
+    WCHAR Wide;
+    PWSTR Source;
+    PSTR Dest;
+    USHORT Count;
+    USHORT Index;
+
+    Count = String->Length >> 1;
+    Source = String->Buffer;
+    Dest = *BufferPointer;
+
+    for (Index = 0; Index < Count; Index++) {
+        Wide = Source[Index];
+        Char = (CHAR)Wide;
+        Dest[Index] = Char;
+    }
+
+    *BufferPointer = RtlOffsetToPointer(Dest, Count);
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
+AppendStringToWideCharBufferFast(
+    PWCHAR *BufferPointer,
+    PCSTRING String
+    )
+{
+    CHAR Char;
+    WCHAR Wide;
+    PSTR Source;
+    PWSTR Dest;
+    USHORT Count;
+    USHORT Index;
+
+    Count = String->Length;
+    Source = String->Buffer;
+    Dest = *BufferPointer;
+
+    for (Index = 0; Index < Count; Index++) {
+        Char = Source[Index];
+        Wide = (WCHAR)Char;
+        Dest[Index] = Wide;
+    }
+
+    *BufferPointer = (PWCHAR)(
+        RtlOffsetToPointer(
+            Dest,
+            (ULONG_PTR)Count << 1
+        )
+    );
 
     return;
 }
@@ -856,6 +979,84 @@ AppendWideCStrToWideCharBuffer(
     }
 
     *BufferPointer = Dest;
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
+Crc32HashString(
+    PSTRING String
+    )
+{
+    BYTE TrailingBytes;
+    ULONG Hash;
+    ULONG Index;
+    PULONG DoubleWord;
+    ULONG NumberOfDoubleWords;
+
+    //
+    // Calculate the string hash.
+    //
+
+    Hash = String->Length;
+    DoubleWord = (PULONG)String->Buffer;
+    NumberOfDoubleWords = String->Length >> 2;
+    TrailingBytes = (BYTE)(String->Length - (NumberOfDoubleWords << 2));
+
+    if (NumberOfDoubleWords) {
+
+        //
+        // Process as many 4 byte chunks as we can.
+        //
+
+        for (Index = 0; Index < NumberOfDoubleWords; Index++) {
+            Hash = _mm_crc32_u32(Hash, *DoubleWord++);
+        }
+    }
+
+    if (TrailingBytes) {
+
+        //
+        // There are between 1 and 3 bytes remaining at the end of the string.
+        // We can't use _mm_crc32_u32() here directly on the last ULONG as we
+        // will include the bytes past the end of the string, which will be
+        // random and will affect our hash value.  So, we load the last ULONG
+        // then zero out the high bits that we want to ignore via _bzhi_u32().
+        // This ensures that only the bytes that are part of the input string
+        // participate in the hash value calculation.
+        //
+
+        ULONG Last = 0;
+        ULONG HighBits;
+
+        //
+        // (Sanity check we can math.)
+        //
+
+        ASSERT(TrailingBytes >= 1 && TrailingBytes <= 3);
+
+        //
+        // Initialize our HighBits to the number of bits in a ULONG (32),
+        // then subtract the number of bits represented by TrailingBytes.
+        //
+
+        HighBits = sizeof(ULONG) << 3;
+        HighBits -= (TrailingBytes << 3);
+
+        //
+        // Load the last ULONG, zero out the high bits, then hash.
+        //
+
+        Last = _bzhi_u32(*DoubleWord, HighBits);
+        Hash = _mm_crc32_u32(Hash, Last);
+    }
+
+    //
+    // Save the hash and return.
+    //
+
+    String->Hash = Hash;
 
     return;
 }

@@ -493,6 +493,10 @@ Arguments:
     EndOfFile - Supplies a pointer to a LARGE_INTEGER structure that contains
         the desired size of the file being created.  Once created (and truncated
         if necessary), a memory map will be created for the entire file size.
+        If the NoTruncate flag is set in the FileCreateFlags parameter, this
+        parameter will receive the final size used for the memory mapping, which
+        is derived from the existing file size if applicable, aligned up to an
+        appropriate boundary.
 
     ParentDirectory - Optionally supplies a pointer to the parent directory
         for this file.
@@ -533,6 +537,7 @@ Return Value:
     ULONG FlagsAndAttributes;
     HRESULT Result = S_OK;
     BOOLEAN Opened = FALSE;
+    BOOLEAN DoTruncate = TRUE;
     LARGE_INTEGER EndOfFile;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PERFECT_HASH_FILE_CREATE_FLAGS FileCreateFlags = { 0 };
@@ -549,16 +554,18 @@ Return Value:
         return E_POINTER;
     }
 
+    VALIDATE_FLAGS(FileCreate, FILE_CREATE);
+
     if (!ARGUMENT_PRESENT(EndOfFilePointer)) {
         return E_POINTER;
     } else {
         EndOfFile.QuadPart = EndOfFilePointer->QuadPart;
         if (EndOfFile.QuadPart <= 0) {
-            return PH_E_INVALID_END_OF_FILE;
+            if (!FileCreateFlags.NoTruncate) {
+                return PH_E_INVALID_END_OF_FILE;
+            }
         }
     }
-
-    VALIDATE_FLAGS(FileCreate, FILE_CREATE);
 
     if (!TryAcquirePerfectHashPathLockShared(SourcePath)) {
         return PH_E_SOURCE_PATH_LOCKED;
@@ -665,6 +672,19 @@ Return Value:
         goto Error;
     }
 
+    //
+    // Get the initial file size, which may be 0.
+    //
+
+    Result = PerfectHashFileUpdateFileInfo(File);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashFileUpdateFileInfo, Result);
+        goto Error;
+    }
+
+    File->InitialEndOfFile.QuadPart = File->FileInfo.EndOfFile.QuadPart;
+    File->NumberOfBytesWritten.QuadPart = File->InitialEndOfFile.QuadPart;
+
     Opened = TRUE;
     SetFileOpened(File);
     SetFileCreated(File);
@@ -675,21 +695,65 @@ Return Value:
     //
 
     if (LastError == ERROR_ALREADY_EXISTS) {
-        Result = File->Vtbl->Truncate(File, &EmptyEndOfFile);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashFileTruncate, Result);
-            goto Error;
+
+        if (FileCreateFlags.NoTruncate) {
+
+            EndOfFile.QuadPart = File->FileInfo.EndOfFile.QuadPart;
+
+            if (!FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists) {
+
+                DoTruncate = FALSE;
+
+            } else {
+
+                //
+                // Take the existing size, round it up to a system allocation
+                // boundary, then add the caller's end-of-file to it to produce
+                // a new extension size.
+                //
+
+                EndOfFile.QuadPart = ALIGN_UP(EndOfFile.QuadPart,
+                                              File->AllocationGranularity);
+
+                EndOfFile.QuadPart += EndOfFilePointer->QuadPart;
+
+            }
+
+        } else {
+
+            //
+            // We haven't been told to *not* Truncate() the file, so, truncate
+            // it to empty first.  This ensures the contents are cleared before
+            // we extend it below.
+            //
+
+            Result = File->Vtbl->Truncate(File, &EmptyEndOfFile);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashFileTruncate, Result);
+                goto Error;
+            }
         }
     }
 
     //
-    // Extend the file to the desired size.
+    // Extend the file to the desired size, if applicable.
+    //
+    // N.B. The function name Truncate() can be a little misleading here if one
+    //      normally assumes it means to reduce the file size.  In our case, it
+    //      is responsible for adjusting a file's end-of-file pointer, which
+    //      may result in an extension if the requested size is greater than
+    //      the existing size.
+    //
+    //      That is, Truncate() doubles as a file truncation *and* file
+    //      extension routine.
     //
 
-    Result = File->Vtbl->Truncate(File, &EndOfFile);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileTruncate, Result);
-        goto Error;
+    if (DoTruncate) {
+        Result = File->Vtbl->Truncate(File, &EndOfFile);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileTruncate, Result);
+            goto Error;
+        }
     }
 
     //
@@ -803,8 +867,22 @@ Return Value:
         EndOfFile.QuadPart = EndOfFilePointer->QuadPart;
         if (EndOfFile.QuadPart < 0) {
             return E_INVALIDARG;
+        } else if (EndOfFile.QuadPart == 0) {
+
+            //
+            // If the end-of-file indicates 0, it means an error has occurred
+            // and we should reset the file back to the way we found it when
+            // opening it.  If the initial end-of-file was not 0, this means
+            // we should truncate the file size back to this amount.
+            //
+
+            if (File->InitialEndOfFile.QuadPart != 0) {
+                EndOfFile.QuadPart = File->InitialEndOfFile.QuadPart;
+            }
         }
+
     } else {
+
         EndOfFile.QuadPart = File->NumberOfBytesWritten.QuadPart;
     }
 
@@ -1564,6 +1642,18 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(NewEndOfFile)) {
         return E_POINTER;
+    }
+
+    //
+    // We don't currently permit a file created with the NoTruncate flag set
+    // to TRUE to be extended via this routine; we may review this down the
+    // track.
+    //
+
+    if (WasFileCreated(File) && File->FileCreateFlags.NoTruncate) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashFileExtend_NoTruncate, Result);
+        return Result;
     }
 
     EndOfFile.QuadPart = NewEndOfFile->QuadPart;

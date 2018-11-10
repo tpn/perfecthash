@@ -245,7 +245,9 @@ SaveCHeaderFileChm01(
         OUTPUT_RAW("_SEED");
         OUTPUT_INT(Count);
         *Output++ = ' ';
-        OUTPUT_HEX(*Seed++);
+        *Output++ = '0';
+        *Output++ = 'x';
+        OUTPUT_HEX_RAW(*Seed++);
         *Output++ = '\n';
     }
 
@@ -255,12 +257,12 @@ SaveCHeaderFileChm01(
 
     OUTPUT_RAW("\n#define ");
     OUTPUT_STRING(Upper);
-    OUTPUT_RAW("_HASH_MASK ");
-    OUTPUT_HEX(TableInfo->HashMask);
+    OUTPUT_RAW("_HASH_MASK 0x");
+    OUTPUT_HEX_RAW(TableInfo->HashMask);
     OUTPUT_RAW("\n#define ");
     OUTPUT_STRING(Upper);
-    OUTPUT_RAW("_INDEX_MASK ");
-    OUTPUT_HEX(TableInfo->IndexMask);
+    OUTPUT_RAW("_INDEX_MASK 0x");
+    OUTPUT_HEX_RAW(TableInfo->IndexMask);
     OUTPUT_RAW("\n\n");
 
     //

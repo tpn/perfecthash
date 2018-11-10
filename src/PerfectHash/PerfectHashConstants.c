@@ -438,12 +438,16 @@ const BYTE NumberOfContextObjectPrefixes = ARRAYSIZE(ContextObjectPrefixes);
 
 const UNICODE_STRING No = RCS(L"No.\n");
 const UNICODE_STRING Yes = RCS(L"Yes.\n");
+const UNICODE_STRING CsvSuffix = RCS(L".csv");
+const UNICODE_STRING CsvExtension = RCS(L"csv");
 const UNICODE_STRING KeysExtension = RCS(L"keys");
 const UNICODE_STRING DotKeysSuffix = RCS(L".keys");
 const UNICODE_STRING DotTableSuffix = RCS(L".pht1");
 const UNICODE_STRING DotCHeaderSuffix = RCS(L".h");
 const UNICODE_STRING DotCSourceSuffix = RCS(L".c");
 const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
+const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
+    RCS(L"PerfectHashBulkCreate");
 
 const STRING DotExeSuffixA = RCS(".exe");
 const STRING DotDllSuffixA = RCS(".dll");

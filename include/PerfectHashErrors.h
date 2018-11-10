@@ -2348,3 +2348,12 @@ Abstract:
 //
 #define PH_E_NOT_ALL_BYTES_WRITTEN       ((HRESULT)0xE0040345L)
 
+//
+// MessageId: PH_E_BULK_CREATE_CSV_HEADER_MISMATCH
+//
+// MessageText:
+//
+// Bulk create CSV header mismatch.
+//
+#define PH_E_BULK_CREATE_CSV_HEADER_MISMATCH ((HRESULT)0xE0040346L)
+
