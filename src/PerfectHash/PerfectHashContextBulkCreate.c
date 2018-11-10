@@ -933,8 +933,14 @@ Return Value:
     //
     // Create the .csv file.
     //
+    // N.B. The << 4 is a temp placeholder until we come up with better
+    //      sizing logic (i.e. driving the extension size by the number
+    //      of directory entries, the same way we do with table files).
+    //
 
-    EndOfFile.QuadPart = Context->SystemAllocationGranularity;
+    EndOfFile.QuadPart = (
+        (ULONG_PTR)Context->SystemAllocationGranularity << 4
+    );
     FileCreateFlags.NoTruncate = TRUE;
     FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists = TRUE;
 
