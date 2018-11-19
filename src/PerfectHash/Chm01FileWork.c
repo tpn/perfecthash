@@ -595,7 +595,8 @@ Arguments:
 
     Table - Supplies a pointer to the table owning the file to be prepared.
 
-    Item - Supplies a pointer to the active file work item to prepare.
+    Item - Supplies a pointer to the active file work item associated with
+        the preparation.
 
     Path - Supplies a pointer to the path to use for the file.  If the file
         has already been prepared at least once, this path is scheduled for
