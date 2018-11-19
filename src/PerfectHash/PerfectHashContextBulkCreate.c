@@ -740,7 +740,7 @@ End:
 
     //
     // Close the .csv file.  If we encountered an error, use 0 as end-of-file,
-    // which will delete it.
+    // which will cause the Close() call to delete it.
     //
 
     if (Result != S_OK) {
