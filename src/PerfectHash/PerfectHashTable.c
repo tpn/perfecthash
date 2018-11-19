@@ -268,8 +268,8 @@ PerfectHashTableInitializeTableSuffix(
     PULONG NumberOfResizeEvents,
     PULARGE_INTEGER NumberOfTableElements,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PCUNICODE_STRING AdditionalSuffix,
     PUSHORT AlgorithmOffset
     )
@@ -301,9 +301,9 @@ Arguments:
 
     AlgorithmId - Optionally supplies the algorithm to use.
 
-    MaskFunctionId - Optionally supplies the type of masking to use.
-
     HashFunctionId - Optionally supplies the hash function to use.
+
+    MaskFunctionId - Optionally supplies the type of masking to use.
 
     AdditionalSuffix - Optionally supplies an additional suffix to append to
         the buffer.
@@ -652,8 +652,8 @@ Return Value:
             NumberOfResizeEvents,
             NumberOfTableElements,
             AlgorithmId,
-            MaskFunctionId,
             HashFunctionId,
+            MaskFunctionId,
             AdditionalSuffix,
             &AlgorithmOffset
         )
