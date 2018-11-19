@@ -47,7 +47,8 @@ _Check_return_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PREPARE_BULK_CREATE_CSV_FILE)(
-    _In_ PPERFECT_HASH_CONTEXT Context
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG NumberOfKeysFiles
     );
 typedef PREPARE_BULK_CREATE_CSV_FILE *PPREPARE_BULK_CREATE_CSV_FILE;
 extern PREPARE_BULK_CREATE_CSV_FILE PrepareBulkCreateCsvFile;
@@ -159,6 +160,7 @@ Return Value:
     USHORT NumberOfPages;
     ULONG Count = 0;
     ULONG ReferenceCount;
+    ULONG NumberOfKeysFiles = 0;
     BOOLEAN Failed;
     BOOLEAN Terminate;
     HRESULT Result;
@@ -340,18 +342,6 @@ Return Value:
     OutputHandle = Context->OutputHandle;
 
     //
-    // Prepare the <BaseOutputDir>\PerfectHashBulkCreate_<HeaderHash>.csv file.
-    //
-
-    Result = PrepareBulkCreateCsvFile(Context);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
-        return Result;
-    }
-
-    CsvFile = Context->BulkCreateCsvFile;
-
-    //
     // Calculate the size required for a new concatenated wide string buffer
     // that combines the test data directory with the "*.keys" suffix.  The
     // 2 * sizeof(*Dest) accounts for the joining slash and trailing NULL.
@@ -418,7 +408,10 @@ Return Value:
 
     //
     // Create a find handle for the <keys dir>\*.keys search pattern we
-    // created.
+    // created.  Note that we actually do this twice; the first time, below,
+    // is used to count the number of *.keys file in the target directory,
+    // which allows us to size our .csv file relative to the number rows we'll
+    // be appending to it.
     //
 
     FindHandle = FindFirstFileW(WildcardPath.Buffer, &FindData);
@@ -429,6 +422,77 @@ Return Value:
         // Check to see if we failed because there were no files matching the
         // wildcard *.keys in the test directory.  In this case, GetLastError()
         // will report ERROR_FILE_NOT_FOUND.
+        //
+
+        FindHandle = NULL;
+        LastError = GetLastError();
+
+        if (LastError == ERROR_FILE_NOT_FOUND) {
+            Result = PH_E_NO_KEYS_FOUND_IN_DIRECTORY;
+            PH_MESSAGE(Result);
+        } else {
+            SYS_ERROR(FindFirstFileW);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+
+        goto Error;
+    }
+
+    //
+    // Count the number of keys files in the directory.
+    //
+
+    NumberOfKeysFiles = 0;
+
+    do {
+        NumberOfKeysFiles++;
+    } while (FindNextFile(FindHandle, &FindData));
+
+    //
+    // Sanity check we saw at least one *.keys file.
+    //
+
+    if (NumberOfKeysFiles == 0) {
+        Result = PH_E_NO_KEYS_FOUND_IN_DIRECTORY;
+        PH_MESSAGE(Result);
+        goto Error;
+    }
+
+    //
+    // Close the find handle, then create a new one.
+    //
+
+    if (!FindClose(FindHandle)) {
+        SYS_ERROR(FindClose);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Now that we know how many *.keys files to expect in the target directory,
+    // ignoring the unlikely case where keys are being added/deleted from the
+    // directory whilst this routine is running, we can prepare our .csv file.
+    //
+
+    Result = PrepareBulkCreateCsvFile(Context, NumberOfKeysFiles);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
+        return Result;
+    }
+
+    CsvFile = Context->BulkCreateCsvFile;
+
+    //
+    // Create a new file handle.  This is the one we'll use to drive the
+    // table create operations.
+    //
+
+    FindHandle = FindFirstFileW(WildcardPath.Buffer, &FindData);
+
+    if (!IsValidHandle(FindHandle)) {
+
+        //
+        // Duplicate the error handling logic from above.
         //
 
         FindHandle = NULL;
@@ -767,7 +831,8 @@ PREPARE_BULK_CREATE_CSV_FILE PrepareBulkCreateCsvFile;
 _Use_decl_annotations_
 HRESULT
 PrepareBulkCreateCsvFile(
-    PPERFECT_HASH_CONTEXT Context
+    PPERFECT_HASH_CONTEXT Context,
+    ULONG NumberOfKeysFiles
     )
 /*++
 
@@ -780,6 +845,10 @@ Routine Description:
 Arguments:
 
     Context - Supplies the context for which the .csv file is to be prepared.
+
+    NumberOfKeysFiles - Supplies the number of keys files anticipated to be
+        processed during the bulk create operation.  This is used to derive
+        an appropriate file size to use for the .csv file.
 
 Return Value:
 
@@ -881,7 +950,6 @@ Return Value:
     // Create a path instance.
     //
 
-
     Result = Context->Vtbl->CreateInstance(Context,
                                            NULL,
                                            &IID_PERFECT_HASH_PATH,
@@ -931,16 +999,28 @@ Return Value:
     }
 
     //
-    // Create the .csv file.
+    // Heuristically derive an appropriate file size (EndOfFile) to use based
+    // on the length of the header, plus 32 bytes, aligned up to a 32-byte
+    // boundary, then multiplied by the number of keys files.  We then add the
+    // system allocation size, then align the final amount up to this boundary.
     //
-    // N.B. The << 4 is a temp placeholder until we come up with better
-    //      sizing logic (i.e. driving the extension size by the number
-    //      of directory entries, the same way we do with table files).
+    // N.B. The resulting file size is very generous; we shouldn't ever come
+    //      close to hitting it in normal operating conditions.  If a large
+    //      number of keys were added to the directory after we did our initial
+    //      count, worst case scenario is that we'll eventually trap when
+    //      writing rows to the .csv file.  The solution to this is: don't
+    //      add large numbers of keys files to the directory when running a
+    //      bulk create operation.
     //
 
     EndOfFile.QuadPart = (
-        (ULONG_PTR)Context->SystemAllocationGranularity << 4
+        ALIGN_UP((ULONG_PTR)Header.Length + 32, 32) *
+        (ULONG_PTR)NumberOfKeysFiles
     );
+    EndOfFile.QuadPart += Context->SystemAllocationGranularity;
+    EndOfFile.QuadPart = ALIGN_UP(EndOfFile.QuadPart,
+                                  Context->SystemAllocationGranularity);
+
     FileCreateFlags.NoTruncate = TRUE;
     FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists = TRUE;
 
