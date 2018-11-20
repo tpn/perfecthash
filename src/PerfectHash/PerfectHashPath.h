@@ -102,10 +102,16 @@ typedef union _PERFECT_HASH_PATH_FLAGS {
         ULONG BaseNameIsValidCIdentifier:1;
 
         //
+        // When set, disables any char replacement logic.
+        //
+
+        ULONG DisableCharReplacement:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -115,10 +121,12 @@ C_ASSERT(sizeof(PERFECT_HASH_PATH_FLAGS) == sizeof(ULONG));
 typedef PERFECT_HASH_PATH_FLAGS *PPERFECT_HASH_PATH_FLAGS;
 
 #define IsBaseNameValidCIdentifier(Path) \
-    (Path->Flags.BaseNameIsValidCIdentifier)
+    ((Path)->Flags.BaseNameIsValidCIdentifier)
 
-#define ClearPathState(Path) (Path->State.AsULong = 0)
-#define ClearPathFlags(Path) (Path->Flags.AsULong = 0)
+#define IsCharReplacementDisabled(Path) ((Path)->Flags.DisableCharReplacement)
+
+#define ClearPathState(Path) ((Path)->State.AsULong = 0)
+#define ClearPathFlags(Path) ((Path)->Flags.AsULong = 0)
 
 FORCEINLINE
 BOOLEAN

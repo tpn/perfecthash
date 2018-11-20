@@ -269,7 +269,17 @@ VOID
     );
 typedef HASH_STRING *PHASH_STRING;
 extern HASH_STRING Crc32HashString;
+
+typedef
+VOID
+(NTAPI HASH_UNICODE_STRING)(
+    _Inout_ PUNICODE_STRING String
+    );
+typedef HASH_UNICODE_STRING *PHASH_UNICODE_STRING;
+extern HASH_UNICODE_STRING Crc32HashUnicodeString;
+
 #define HashString Crc32HashString
+#define HashUnicodeString Crc32HashUnicodeString
 
 //
 // Decls.

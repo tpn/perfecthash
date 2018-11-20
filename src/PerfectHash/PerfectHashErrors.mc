@@ -194,6 +194,16 @@ Table Create Flags:
         valid perfect hash solution has been found (i.e. with no collisions
         across the entire key set).
 
+    --IgnoreKeysTableSize
+
+        When set, ignores any previously-recorded table sizes associated with
+        the keys file for the given algorithm, hash function and masking type.
+
+        N.B. To forcibly delete all previously-recorded table sizes from all
+             keys in a directory, the following PowerShell snippet can be used:
+
+             PS C:\Temp\Keys> Get-Item -Path *.keys -Stream *.TableSize | Remove-Item
+
 Table Compile Flags:
 
     N/A
@@ -2091,5 +2101,13 @@ Facility=ITF
 SymbolicName=PH_E_BULK_CREATE_CSV_HEADER_MISMATCH
 Language=English
 Bulk create CSV header mismatch.
+.
+
+MessageId=0x347
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_PATH_CREATE_FLAGS
+Language=English
+Invalid path create flags.
 .
 

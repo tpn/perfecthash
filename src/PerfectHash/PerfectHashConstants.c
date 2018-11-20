@@ -446,6 +446,7 @@ const UNICODE_STRING DotTableSuffix = RCS(L".pht1");
 const UNICODE_STRING DotCHeaderSuffix = RCS(L".h");
 const UNICODE_STRING DotCSourceSuffix = RCS(L".c");
 const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
+const UNICODE_STRING KeysTableSizeSuffix = RCS(L".TableSize");
 const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
     RCS(L"PerfectHashBulkCreate");
 

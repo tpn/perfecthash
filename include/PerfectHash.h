@@ -932,6 +932,48 @@ typedef PERFECT_HASH_PATH_COPY *PPERFECT_HASH_PATH_COPY;
 // Define path creation method and supporting flags.
 //
 
+typedef union _PERFECT_HASH_PATH_CREATE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, disables the logic that automatically replaces characters
+        // like whitespace, comma, hyphen etc with underscores.
+        //
+
+        ULONG DisableCharReplacement:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_PATH_CREATE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_PATH_CREATE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_PATH_CREATE_FLAGS *PPERFECT_HASH_PATH_CREATE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidPathCreateFlags(
+    _In_ PPERFECT_HASH_PATH_CREATE_FLAGS PathCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(PathCreateFlags)) {
+        return E_POINTER;
+    }
+
+    if (PathCreateFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
 typedef
 _Check_return_
 _Success_(return >= 0)
@@ -947,7 +989,7 @@ HRESULT
     _In_opt_ PCUNICODE_STRING NewExtension,
     _In_opt_ PCUNICODE_STRING NewStreamName,
     _Out_opt_ PCPERFECT_HASH_PATH_PARTS *Parts,
-    _Reserved_ PVOID Reserved
+    _In_opt_ PPERFECT_HASH_PATH_CREATE_FLAGS PathCreateFlags
     );
 typedef PERFECT_HASH_PATH_CREATE *PPERFECT_HASH_PATH_CREATE;
 
@@ -2188,10 +2230,18 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG TryLargePagesForValuesArray:1;
 
         //
+        // When set, ignores any table size information associated with the
+        // keys file for the given combination of algorithm, hash function
+        // and masking type.
+        //
+
+        ULONG IgnoreKeysTableSize:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:27;
+        ULONG Unused:26;
     };
 
     LONG AsLong;

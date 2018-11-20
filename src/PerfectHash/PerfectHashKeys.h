@@ -154,10 +154,24 @@ HRESULT
 typedef PERFECT_HASH_KEYS_LOAD_STATS
       *PPERFECT_HASH_KEYS_LOAD_STATS;
 
+typedef
+_Check_return_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PERFECT_HASH_KEYS_LOAD_TABLE_SIZE)(
+    _In_ PPERFECT_HASH_KEYS Keys,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _Inout_ PPERFECT_HASH_FILE *File,
+    _Out_ PULARGE_INTEGER RequestedNumberOfTableElements
+    );
+typedef PERFECT_HASH_KEYS_LOAD_TABLE_SIZE *PPERFECT_HASH_KEYS_LOAD_TABLE_SIZE;
 
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats;
+extern PERFECT_HASH_KEYS_LOAD_TABLE_SIZE PerfectHashKeysLoadTableSize;
 extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
 extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
 extern PERFECT_HASH_KEYS_GET_ADDRESS PerfectHashKeysGetAddress;

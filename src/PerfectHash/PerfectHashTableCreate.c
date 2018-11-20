@@ -94,10 +94,10 @@ Arguments:
 
     AlgorithmId - Supplies the algorithm to use.
 
+    HashFunctionId - Supplies the hash function to use.
+
     MaskFunctionId - Supplies the type of masking to use.  The algorithm and
         hash function must both support the requested masking type.
-
-    HashFunctionId - Supplies the hash function to use.
 
     Keys - Supplies a pointer to a PERFECT_HASH_KEYS interface.
 
@@ -160,7 +160,12 @@ Return Value:
     PRTL Rtl;
     PALLOCATOR Allocator;
     HRESULT Result = S_OK;
+    HRESULT CloseResult;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    PPERFECT_HASH_FILE TableSizeFile = NULL;
+    PULARGE_INTEGER RequestedNumberOfTableElements;
+    LARGE_INTEGER EmptyEndOfFile = { 0 };
+    PLARGE_INTEGER EndOfFile;
 
     //
     // Validate arguments.
@@ -292,6 +297,32 @@ Return Value:
     }
 
     //
+    // Attempt to load previous table size.
+    //
+
+    RequestedNumberOfTableElements = &Table->RequestedNumberOfTableElements;
+    Result = PerfectHashKeysLoadTableSize(Keys,
+                                          AlgorithmId,
+                                          HashFunctionId,
+                                          MaskFunctionId,
+                                          &TableSizeFile,
+                                          RequestedNumberOfTableElements);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashKeysLoadTableSize, Result);
+        goto Error;
+    }
+
+    //
+    // If we've been asked to ignore the keys table size, reset the table's
+    // requested number of elements back to 0.
+    //
+
+    if (TableCreateFlags.IgnoreKeysTableSize) {
+        Table->RequestedNumberOfTableElements.QuadPart = 0;
+    }
+
+    //
     // Dispatch remaining creation work to the algorithm-specific routine.
     //
 
@@ -299,6 +330,61 @@ Return Value:
 
     if (Table->OutputDirectory) {
         Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);
+    }
+
+    //
+    // Use an empty (0) end of file if we're ignoring keys table size, or the
+    // table creation was not successful.  This will result in the underlying
+    // file being deleted by the Close() call below.  Otherwise, write the size
+    // back to the file.
+    //
+
+    if (TableCreateFlags.IgnoreKeysTableSize || Result != S_OK) {
+
+        EndOfFile = &EmptyEndOfFile;
+
+    } else {
+
+        EndOfFile = NULL;
+
+        RequestedNumberOfTableElements =
+            (PULARGE_INTEGER)TableSizeFile->BaseAddress;
+
+        //
+        // We can't use Table->TableInfoOnDisk->NumberOfTableElements.QuadPart
+        // here, as that won't be valid if the table was created with the flag
+        // 'CreateOnly'.  Use Table->HashSize instead, as that is always filled
+        // out.  (As a side note, this highlights some of the less-than-ideal
+        // quirks regarding our internal structure design and field naming.)
+        //
+
+        RequestedNumberOfTableElements->QuadPart = Table->HashSize;
+
+        //
+        // Invariant checks: the number of table elements should be greater than
+        // zero, and, if non-modulus masking is active, should be a power of 2.
+        //
+
+        if (RequestedNumberOfTableElements->QuadPart == 0) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashTableCreate_NumTableElemsIsZero, Result);
+            goto Error;
+        }
+
+        if (!IsModulusMasking(MaskFunctionId) &&
+            !IsPowerOf2(RequestedNumberOfTableElements->QuadPart)) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashTableCreate_NumTableElemsNotPow2, Result);
+            goto Error;
+        }
+
+        TableSizeFile->NumberOfBytesWritten.QuadPart = sizeof(ULARGE_INTEGER);
+    }
+
+    CloseResult = TableSizeFile->Vtbl->Close(TableSizeFile, EndOfFile);
+    if (FAILED(CloseResult)) {
+        PH_ERROR(PerfectHashTableCreate_TableSizeFileClose, CloseResult);
+        goto Error;
     }
 
     if (Result != S_OK) {
@@ -336,6 +422,7 @@ Error:
 
 End:
 
+    RELEASE(TableSizeFile);
     RELEASE(Table->Context);
     RELEASE(Table->Keys);
 

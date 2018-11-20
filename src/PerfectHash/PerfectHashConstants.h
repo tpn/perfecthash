@@ -29,7 +29,7 @@ Abstract:
 // construct the table suffix in PerfectHashTableCreatePath().
 //
 
-#define TABLE_SUFFIX_BUFFER_SIZE_IN_CHARS 256
+#define TABLE_SUFFIX_BUFFER_SIZE_IN_CHARS 512
 
 //
 // Define the size, in characters, of the stack-allocated buffer used to
@@ -40,6 +40,13 @@ Abstract:
 
 #define COMPILE_COMMANDLINE_BUFFER_SIZE_IN_CHARS \
     TABLE_SUFFIX_BUFFER_SIZE_IN_CHARS * 3
+
+//
+// Define the size, in characters, of the stack-allocated buffer used to
+// construct the table size suffix in PerfectHashKeysTableSizeCreatePath().
+//
+
+#define KEYS_TABLE_SIZE_SUFFIX_BUFFER_SIZE_IN_CHARS 512
 
 //
 // Declare an array of creation routines.  This is intended to be indexed by
@@ -296,6 +303,7 @@ extern const UNICODE_STRING DotTableSuffix;
 extern const UNICODE_STRING DotHeaderSuffix;
 extern const UNICODE_STRING KeysWildcardSuffix;
 extern const UNICODE_STRING TableInfoStreamName;
+extern const UNICODE_STRING KeysTableSizeSuffix;
 extern const UNICODE_STRING PerfectHashBulkCreateCsvBaseName;
 
 extern const STRING DotExeSuffixA;

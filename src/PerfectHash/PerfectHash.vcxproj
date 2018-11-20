@@ -182,6 +182,7 @@
     <ClCompile Include="PerfectHashFile.c" />
     <ClCompile Include="PerfectHashKeys.c" />
     <ClCompile Include="PerfectHashKeysLoad.c" />
+    <ClCompile Include="PerfectHashKeysLoadTableSize.c" />
     <ClCompile Include="PerfectHashPath.c" />
     <ClCompile Include="PerfectHashPrimes.c" />
     <ClCompile Include="PerfectHashAllocator.c" />

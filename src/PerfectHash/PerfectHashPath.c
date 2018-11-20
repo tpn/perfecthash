@@ -572,10 +572,12 @@ Return Value:
             Wide = *Char++;
 
             //
-            // Replace things like hyphens, and spaces etc with underscores.
+            // Replace things like hyphens, and spaces etc with underscores
+            // if applicable.
             //
 
-            if (IsReplaceableBaseNameChar(Wide)) {
+            if (!IsCharReplacementDisabled(Path) &&
+                IsReplaceableBaseNameChar(Wide)) {
                 Wide = L'_';
             }
 
@@ -888,7 +890,7 @@ PerfectHashPathCreate(
     PCUNICODE_STRING NewExtension,
     PCUNICODE_STRING NewStreamName,
     PCPERFECT_HASH_PATH_PARTS *Parts,
-    PVOID Reserved
+    PPERFECT_HASH_PATH_CREATE_FLAGS PathCreateFlagsPointer
     )
 /*++
 
@@ -924,6 +926,9 @@ Arguments:
 
     Parts - Optionally receives a pointer to the individual path parts
         structure if the routine was successful.
+
+    PathCreateFlagsPointer - Optionally supplies a pointer to a flags structure
+        that allows for customization of path creation behavior.
 
 Return Value:
 
@@ -989,9 +994,8 @@ Return Value:
     ULONG_INTEGER AlignedAllocSize;
     ULONG_INTEGER BaseNameALength;
     ULONG_INTEGER BaseNameAMaximumLength;
+    PERFECT_HASH_PATH_CREATE_FLAGS PathCreateFlags;
     const USHORT SpareBytes = 64;
-
-    UNREFERENCED_PARAMETER(Reserved);
 
     //
     // Validate arguments and calculate the string buffer allocation size where
@@ -1005,6 +1009,8 @@ Return Value:
     if (!ARGUMENT_PRESENT(ExistingPath)) {
         return E_POINTER;
     }
+
+    VALIDATE_FLAGS(PathCreate, PATH_CREATE);
 
     if (!TryAcquirePerfectHashPathLockShared(ExistingPath)) {
         return PH_E_EXISTING_PATH_LOCKED;
@@ -1030,6 +1036,12 @@ Return Value:
         Result = PH_E_PATH_ALREADY_SET;
         goto Error;
     }
+
+    //
+    // Copy the disable char replacement flag.
+    //
+
+    Path->Flags.DisableCharReplacement = PathCreateFlags.DisableCharReplacement;
 
     //
     // NewDirectory.
@@ -1388,21 +1400,31 @@ Return Value:
     }
 
     //
-    // Copy the base name, replacing any chars as necessary with underscores.
+    // Copy the base name, replacing any chars as necessary with underscores
+    // if applicable.
     //
 
     Source = BaseName;
     Count = Source->Length >> 1;
 
-    for (Index = 0; Index < Count; Index++) {
+    if (IsCharReplacementDisabled(Path)) {
 
-        Wide = Source->Buffer[Index];
+        CopyInline(Dest, Source->Buffer, Source->Length);
+        Dest += Count;
 
-        if (IsReplaceableBaseNameChar(Wide)) {
-            Wide = L'_';
+    } else {
+
+        for (Index = 0; Index < Count; Index++) {
+
+            Wide = Source->Buffer[Index];
+
+            if (IsReplaceableBaseNameChar(Wide)) {
+                Wide = L'_';
+            }
+
+            *Dest++ = (CHAR)Wide;
         }
 
-        *Dest++ = (CHAR)Wide;
     }
 
     ExpectedDest = (PWSTR)(
@@ -1554,6 +1576,16 @@ Return Value:
     if (ARGUMENT_PRESENT(Parts)) {
         *Parts = &Path->Parts;
     }
+
+    //
+    // Hash the full path and file name.  This is useful when debugging things
+    // like a bulk create on a large set of keys where only one is causing a
+    // problem; i.e. you can set various conditional breakpoints based on the
+    // underlying full path or file name hash values.
+    //
+
+    HashUnicodeString(&Path->FullPath);
+    HashUnicodeString(&Path->FileName);
 
     //
     // We're done, finish up.
