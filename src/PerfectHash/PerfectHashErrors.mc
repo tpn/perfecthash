@@ -244,15 +244,13 @@ Table Create Parameters:
 
     --BestCoverageNumAttempts=N
 
-        Where N is a positive integer, and represents the number of
-        attempts that will be made at finding a "best" graph (based
-        on the best coverage type requested below) before the create
-        table routine returns.
+        Where N is a positive integer, and represents the number of attempts
+        that will be made at finding a "best" graph (based on the best coverage
+        type requested below) before the create table routine returns.
 
     --BestCoverageType=<CoverageType>
 
-        Indicates the predicate to determine what constitutes the best
-        graph.
+        Indicates the predicate to determine what constitutes the best graph.
 
         Valid coverage types:
 
