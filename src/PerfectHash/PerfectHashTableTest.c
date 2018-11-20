@@ -103,7 +103,7 @@ Return Value:
     }
 
     if (!Keys) {
-        return E_UNEXPECTED;
+        return PH_E_KEYS_REQUIRED_FOR_TABLE_TEST;
     }
 
     //

@@ -2113,10 +2113,17 @@ typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
+        // When set, tests each successfully-created table as part of the
+        // bulk create operation (i.e. invokes the table's Test() method).
+        //
+
+        ULONG TestAfterCreate:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:32;
+        ULONG Unused:31;
     };
 
     LONG AsLong;

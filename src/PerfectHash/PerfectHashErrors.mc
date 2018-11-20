@@ -146,7 +146,9 @@ Usage: PerfectHashBulkCreate.exe
 
 Bulk Create Flags:
 
-    N/A
+    --TestAfterCreate
+
+        Tests the perfect hash table after creation.
 
 Keys Load Flags:
 
@@ -2129,5 +2131,13 @@ Facility=ITF
 SymbolicName=PH_E_INVALID_PATH_CREATE_FLAGS
 Language=English
 Invalid path create flags.
+.
+
+MessageId=0x348
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_REQUIRED_FOR_TABLE_TEST
+Language=English
+Keys required for table test.
 .
 

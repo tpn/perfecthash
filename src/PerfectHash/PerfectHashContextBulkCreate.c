@@ -545,11 +545,14 @@ Return Value:
     NumberOfKeys.QuadPart = 0;
 
     //
-    // We're not using the tables after we create them, so toggle the relevant
-    // table create flag explicitly.
+    // If we haven't been asked to test the tables after creation, toggle the
+    // relevant table create flag to indicate we're only performing creation;
+    // this avoids some additional memory allocation and copying overhead.
     //
 
-    TableCreateFlags.CreateOnly = TRUE;
+    if (!ContextBulkCreateFlags.TestAfterCreate) {
+        TableCreateFlags.CreateOnly = TRUE;
+    }
 
     do {
 
@@ -658,18 +661,25 @@ Return Value:
             Failures++;
             goto ReleaseTable;
         } else if (Result != S_OK) {
-
-            //
-            // Todo.
-            //
-
             CROSS();
             goto ReleaseTable;
-
         } else {
             DOT();
         }
 
+        //
+        // Test the table, if applicable.
+        //
+
+        if (ContextBulkCreateFlags.TestAfterCreate) {
+            Result = Table->Vtbl->Test(Table, Keys, FALSE);
+            if (FAILED(Result)) {
+                PH_KEYS_ERROR(PerfectHashTableTest, Result);
+                Failed = TRUE;
+                Failures++;
+                goto ReleaseTable;
+            }
+        }
 
         //
         // Disable compilation at the moment as it adds an extra ~6-10 seconds
@@ -722,8 +732,6 @@ Return Value:
     ReleaseKeys:
 
         RELEASE(Keys);
-
-        DOT();
 
         if (Terminate) {
             break;

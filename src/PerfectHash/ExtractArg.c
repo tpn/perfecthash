@@ -65,10 +65,11 @@ TryExtractArgContextBulkCreateFlags(
     PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS Flags
     )
 {
-    UNREFERENCED_PARAMETER(Rtl);
+    DECL_ARG(TestAfterCreate);
+
     UNREFERENCED_PARAMETER(Allocator);
-    DBG_UNREFERENCED_PARAMETER(Argument);
-    DBG_UNREFERENCED_PARAMETER(Flags);
+
+    SET_FLAG_AND_RETURN_IF_EQUAL(TestAfterCreate);
 
     return S_FALSE;
 }

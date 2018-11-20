@@ -195,7 +195,9 @@ Abstract:
 // 
 // Bulk Create Flags:
 // 
-//     N/A
+//     --TestAfterCreate
+// 
+//         Tests the perfect hash table after creation.
 // 
 // Keys Load Flags:
 // 
@@ -2395,4 +2397,13 @@ Abstract:
 // Invalid path create flags.
 //
 #define PH_E_INVALID_PATH_CREATE_FLAGS   ((HRESULT)0xE0040347L)
+
+//
+// MessageId: PH_E_KEYS_REQUIRED_FOR_TABLE_TEST
+//
+// MessageText:
+//
+// Keys required for table test.
+//
+#define PH_E_KEYS_REQUIRED_FOR_TABLE_TEST ((HRESULT)0xE0040348L)
 
