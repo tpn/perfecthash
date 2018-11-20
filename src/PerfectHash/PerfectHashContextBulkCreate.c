@@ -199,6 +199,7 @@ Return Value:
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
+    PERFECT_HASH_CPU_ARCH_ID CpuArchId;
 
     //
     // Validate arguments.
@@ -543,6 +544,7 @@ Return Value:
     Table = NULL;
     KeysBaseAddress = NULL;
     NumberOfKeys.QuadPart = 0;
+    CpuArchId = PerfectHashGetCurrentCpuArch();
 
     //
     // If we haven't been asked to test the tables after creation, toggle the
@@ -672,9 +674,11 @@ Return Value:
         //
 
         if (ContextBulkCreateFlags.TestAfterCreate) {
+
             Result = Table->Vtbl->Test(Table, Keys, FALSE);
+
             if (FAILED(Result)) {
-                PH_KEYS_ERROR(PerfectHashTableTest, Result);
+                PH_TABLE_ERROR(PerfectHashTableTest, Result);
                 Failed = TRUE;
                 Failures++;
                 goto ReleaseTable;
@@ -682,28 +686,22 @@ Return Value:
         }
 
         //
-        // Disable compilation at the moment as it adds an extra ~6-10 seconds
-        // per iteration.
-        //
-
-#if 0
-
-        //
         // Compile the table.
         //
 
-        Result = Table->Vtbl->Compile(Table,
-                                      &TableCompileFlags,
-                                      CpuArchId);
+        if (ContextBulkCreateFlags.Compile) {
 
-        if (FAILED(Result)) {
-            PH_TABLE_ERROR(PerfectHashTableCompile, Result);
-            Failures++;
-            Failed = TRUE;
-            goto ReleaseTable;
+            Result = Table->Vtbl->Compile(Table,
+                                          &TableCompileFlags,
+                                          CpuArchId);
+
+            if (FAILED(Result)) {
+                PH_TABLE_ERROR(PerfectHashTableCompile, Result);
+                Failures++;
+                Failed = TRUE;
+                goto ReleaseTable;
+            }
         }
-
-#endif
 
     ReleaseTable:
 

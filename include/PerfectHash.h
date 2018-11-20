@@ -2120,10 +2120,20 @@ typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
         ULONG TestAfterCreate:1;
 
         //
+        // When set, compiles each successfully-created table as part of the
+        // bulk create operation (i.e. invokes the table's Compile() method).
+        //
+        // N.B. Requires msbuild.exe on the PATH; currently generates a cryptic
+        //      error when this is not the case.
+        //
+
+        ULONG Compile:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;

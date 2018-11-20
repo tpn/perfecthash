@@ -150,6 +150,14 @@ Bulk Create Flags:
 
         Tests the perfect hash table after creation.
 
+    --Compile
+
+        Compiles the table after creation.
+
+        N.B. msbuild.exe must be on the PATH environment variable for this
+             to work.  (The current error message if this isn't the case is
+             quite cryptic.)
+
 Keys Load Flags:
 
     --TryLargePagesForKeysData

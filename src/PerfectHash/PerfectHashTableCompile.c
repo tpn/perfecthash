@@ -192,8 +192,15 @@ Return Value:
     InheritHandles = FALSE;
     CreationFlags = DETACHED_PROCESS;
     Environment = NULL;
-    CurrentDirectory = Table->OutputDirectory->Path->FullPath.Buffer;
     StartupInfo.cb = sizeof(StartupInfo);
+
+    //
+    // N.B. We need to advance past the \\?\ for the current directory,
+    //      hence the += 4.
+    //
+
+    CurrentDirectory = Table->OutputDirectory->Path->FullPath.Buffer;
+    CurrentDirectory += 4;
 
     Success = CreateProcessW(ApplicationName,
                              Command.Buffer,

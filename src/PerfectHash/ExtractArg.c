@@ -66,10 +66,12 @@ TryExtractArgContextBulkCreateFlags(
     )
 {
     DECL_ARG(TestAfterCreate);
+    DECL_ARG(Compile);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(TestAfterCreate);
+    SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
 
     return S_FALSE;
 }
