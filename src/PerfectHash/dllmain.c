@@ -100,26 +100,6 @@ _DllMainCRTStartup(
 
 #endif
 
-#if 0
-            IsTsxAvailable = FALSE;
-
-#ifdef _M_AMD64
-
-            TRY_TSX {
-
-                if (CanWeUseTsx()) {
-                    PERFECT_HASH_INTERFACE_ID Id;
-                    IsTsxAvailable = TRUE;
-                    Id = PerfectHashGuardedListInterfaceId;
-                    ComponentInterfaces[Id] = &GuardedListTsxInterface;
-                }
-
-            } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION {
-                IsTsxAvailable = FALSE;
-            }
-
-#endif
-#endif
             if (!PerfectHashTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;
             }
