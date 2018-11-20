@@ -2020,10 +2020,10 @@ IsValidPerfectHashBenchmarkType(
 }
 
 //
-// Define the PERFECT_HASH_CONTEXT interface.  This interface is
-// responsible for encapsulating threadpool resources and allows perfect hash
-// table solutions to be found in parallel.  An instance of this interface must
-// be provided to the PERFECT_HASH_TABLE interface's creation routine.
+// Define the PERFECT_HASH_CONTEXT interface.  This interface is responsible for
+// encapsulating threadpool resources and allows perfect hash table solutions to
+// be found in parallel.  An instance of this interface must be provided to the
+// PERFECT_HASH_TABLE interface's creation routine.
 //
 
 DECLARE_COMPONENT(Context, PERFECT_HASH_CONTEXT);
