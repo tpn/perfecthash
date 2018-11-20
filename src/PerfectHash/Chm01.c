@@ -454,13 +454,17 @@ RetryWithLargerTableSize:
     Context->FileWorkCallback = FileWorkCallbackChm01;
 
     //
-    // Prepare the table output directory.
+    // Prepare the table output directory.  If the table indicates resize events
+    // require a rename, we need to call this every loop invocation.  Otherwise,
+    // just call it on the first invocation (Attempt == 1).
     //
 
-    Result = PrepareTableOutputDirectory(Table);
-    if (FAILED(Result)) {
-        PH_ERROR(PrepareTableOutputDirectory, Result);
-        goto Error;
+    if (Attempt == 1 || TableResizeRequiresRename(Table)) {
+        Result = PrepareTableOutputDirectory(Table);
+        if (FAILED(Result)) {
+            PH_ERROR(PrepareTableOutputDirectory, Result);
+            goto Error;
+        }
     }
 
     //
@@ -1703,6 +1707,19 @@ PrepareTableOutputDirectory(
 
     if (!ARGUMENT_PRESENT(Table)) {
         return E_POINTER;
+    }
+
+    //
+    // Invariant check: if Table->OutputDirectory is set, ensure the table
+    // requires renames after table resize events.
+    //
+
+    if (Table->OutputDirectory) {
+        if (!TableResizeRequiresRename(Table)) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PrepareTableOutputDirectory_NoRenameRequired, Result);
+            goto Error;
+        }
     }
 
     //

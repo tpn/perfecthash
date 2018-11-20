@@ -730,6 +730,10 @@ Return Value:
     } else {
 
         //
+        // The file already exists.
+        //
+
+        //
         // Invariant check: context files should only be prepared once.
         //
 
@@ -767,15 +771,21 @@ Return Value:
         }
 
         //
-        // File already exists.  Schedule a rename and then extend the file
-        // according to the requested mapping size, assuming they differ.
+        // If the table indicates a table resize requires rename, schedule one.
         //
 
-        Result = File->Vtbl->ScheduleRename(File, Path);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashFileScheduleRename, Result);
-            goto Error;
+        if (TableResizeRequiresRename(Table)) {
+            Result = File->Vtbl->ScheduleRename(File, Path);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashFileScheduleRename, Result);
+                goto Error;
+            }
         }
+
+        //
+        // If the existing mapping size differs from the desired size, extend
+        // the file accordingly.
+        //
 
         if (File->FileInfo.EndOfFile.QuadPart < EndOfFile->QuadPart) {
             AcquirePerfectHashFileLockExclusive(File);

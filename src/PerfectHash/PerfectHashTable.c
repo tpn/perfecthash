@@ -335,13 +335,20 @@ Return Value:
     BYTE NumberOfResizeDigits = 0;
     BYTE NumberOfElementsDigits = 0;
     LONG_INTEGER TableSuffixLength = { 0 };
+    BOOLEAN IncludeNumberOfResizes;
+    BOOLEAN IncludeNumberOfElements;
     PUNICODE_STRING AlgorithmName = NULL;
     PUNICODE_STRING HashFunctionName = NULL;
     PUNICODE_STRING MaskFunctionName = NULL;
 
     Rtl = Table->Rtl;
 
-    if (ARGUMENT_PRESENT(NumberOfResizeEvents)) {
+    IncludeNumberOfResizes = (
+        IncludeNumberOfTableResizeEventsInOutputPath(Table) &&
+        ARGUMENT_PRESENT(NumberOfResizeEvents)
+    );
+
+    if (IncludeNumberOfResizes) {
         NumberOfResizeDigits = (
             CountNumberOfDigitsInline(*NumberOfResizeEvents)
         );
@@ -351,7 +358,12 @@ Return Value:
         );
     }
 
-    if (ARGUMENT_PRESENT(NumberOfTableElements)) {
+    IncludeNumberOfElements = (
+        IncludeNumberOfTableElementsInOutputPath(Table) &&
+        ARGUMENT_PRESENT(NumberOfTableElements)
+    );
+
+    if (IncludeNumberOfElements) {
         NumberOfElementsDigits = (
             CountNumberOfLongLongDigitsInline(NumberOfTableElements->QuadPart)
         );

@@ -51,6 +51,21 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 #define IsValidTable(Table) ((Table)->State.Valid == TRUE)
 #define IsTableCreateOnly(Table) ((Table)->TableCreateFlags.CreateOnly == TRUE)
 
+#define IncludeNumberOfTableResizeEventsInOutputPath(Table) (                  \
+    ((Table)->TableCreateFlags.IncludeNumberOfTableResizeEventsInOutputPath == \
+     TRUE)                                                                     \
+)
+
+#define IncludeNumberOfTableElementsInOutputPath(Table) (                  \
+    ((Table)->TableCreateFlags.IncludeNumberOfTableElementsInOutputPath == \
+     TRUE)                                                                 \
+)
+
+#define TableResizeRequiresRename(Table) (                 \
+    IncludeNumberOfTableResizeEventsInOutputPath(Table) || \
+    IncludeNumberOfTableElementsInOutputPath(Table)        \
+)
+
 //
 // Define the PERFECT_HASH_TABLE structure.
 //

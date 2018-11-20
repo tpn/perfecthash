@@ -115,6 +115,8 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(TryLargePagesForTableData);
     DECL_ARG(TryLargePagesForValuesArray);
     DECL_ARG(IgnoreKeysTableSize);
+    DECL_ARG(IncludeNumberOfTableResizeEventsInOutputPath);
+    DECL_ARG(IncludeNumberOfTableElementsInOutputPath);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -138,6 +140,8 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForTableData);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForValuesArray);
     SET_FLAG_AND_RETURN_IF_EQUAL(IgnoreKeysTableSize);
+    SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableResizeEventsInOutputPath);
+    SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableElementsInOutputPath);
 
     return S_FALSE;
 }

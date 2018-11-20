@@ -253,6 +253,28 @@ Abstract:
 // 
 //              PS C:\Temp\Keys> Get-Item -Path *.keys -Stream *.TableSize | Remove-Item
 // 
+//     --IncludeNumberOfTableResizeEventsInOutputPath
+// 
+//         When set, incorporates the number of table resize events encountered
+//         whilst searching for a perfect hash solution into the final output
+//         names, e.g.:
+// 
+//             C:\Temp\output\KernelBase_2485_2_Chm01_Crc32Rotate_And\...
+//                                            ^
+//                                            Number of resize events.
+// 
+//     --IncludeNumberOfTableElementsInOutputPath
+// 
+//         When set, incorporates the number of table elements (i.e. the final
+//         table size) into the output path, e.g.:
+// 
+//             C:\Temp\output\KernelBase_2485_8192_Chm01_Crc32Rotate_And\...
+//                                            ^
+//                                            Number of table elements.
+// 
+//         Can be combined with --IncludeNumberOfTableResizeEventsInOutputPath.
+// 
+// 
 // Table Compile Flags:
 // 
 //     N/A

@@ -2238,10 +2238,25 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG IgnoreKeysTableSize:1;
 
         //
+        // When set, incorporates the number of table resize events encountered
+        // whilst searching for a perfect hash solution into the final output
+        // name.
+        //
+
+        ULONG IncludeNumberOfTableResizeEventsInOutputPath:1;
+
+        //
+        // When set, incorporates the number of table elements (i.e. the size)
+        // of the winning perfect hash solution into the final output name.
+        //
+
+        ULONG IncludeNumberOfTableElementsInOutputPath:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:26;
+        ULONG Unused:24;
     };
 
     LONG AsLong;
