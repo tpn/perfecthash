@@ -1721,14 +1721,13 @@ PrepareTableOutputDirectory(
     // Create an output directory path name.
     //
 
-
     Result = PerfectHashTableCreatePath(Table,
                                         Table->Keys->File->Path,
                                         &NumberOfResizeEvents,
                                         &NumberOfTableElements,
                                         Table->AlgorithmId,
-                                        Table->MaskFunctionId,
                                         Table->HashFunctionId,
+                                        Table->MaskFunctionId,
                                         BaseOutputDirectoryPath,
                                         NULL,           // NewBaseName
                                         NULL,           // AdditionalSuffix

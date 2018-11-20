@@ -535,8 +535,8 @@ PerfectHashTableCreatePath(
     PULONG NumberOfResizeEvents,
     PULARGE_INTEGER NumberOfTableElements,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PCUNICODE_STRING NewDirectory,
     PCUNICODE_STRING NewBaseName,
     PCUNICODE_STRING AdditionalSuffix,
@@ -564,9 +564,9 @@ Arguments:
 
     AlgorithmId - Optionally supplies the algorithm to use.
 
-    MaskFunctionId - Optionally supplies the type of masking to use.
-
     HashFunctionId - Optionally supplies the hash function to use.
+
+    MaskFunctionId - Optionally supplies the type of masking to use.
 
     NewDirectory - Optionally supplies a fully-qualified path to use as the
         directory.
