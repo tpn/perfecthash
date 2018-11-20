@@ -500,20 +500,7 @@ Return Value:
         // e.g. \\?\C:\Temp.
         //
 
-        BOOLEAN IsDrivePath = FALSE;
-
-        Char = Start;
-
-        ASSERT((ULONG_PTR)(Char+4) < (ULONG_PTR)End);
-
-        IsDrivePath = (
-            *Char++ == L'\\' &&
-            *Char++ == L'\\' &&
-            *Char++ == L'?'  &&
-            *Char++ == L'\\'
-        );
-
-        if (IsDrivePath) {
+        if (IsDevicePathInDrivePathFormat(Start, End)) {
 
             //
             // Path is in the drive path format, e.g. \\?\C:\Temp.  Scan
@@ -988,6 +975,7 @@ Return Value:
     HRESULT Result = S_OK;
     BOOLEAN HasStream = FALSE;
     BOOLEAN HasExtension = FALSE;
+    BOOLEAN HasDrivePath = FALSE;
     PALLOCATOR Allocator;
     PCUNICODE_STRING Source;
     PCUNICODE_STRING BaseName;
@@ -1071,6 +1059,24 @@ Return Value:
     }
 
     DirectoryLength = Directory->Length;
+
+    HasDrivePath = (
+        IsDevicePathInDrivePathFormat(
+            Directory->Buffer,
+            (PCWSZ)RtlOffsetToPointer(
+                Directory->Buffer,
+                Directory->Length
+            )
+        )
+    );
+
+    //
+    // If there isn't already a drive path prefix (\\?\), account for it.
+    //
+
+    if (!HasDrivePath) {
+        DirectoryLength += ((USHORT)strlen("\\\\?\\") << 1);
+    }
 
     //
     // DirectorySuffix.
@@ -1328,6 +1334,18 @@ Return Value:
     Path->FullPath.MaximumLength = FullPathMaximumLength;
 
     Dest = Path->FullPath.Buffer;
+
+    //
+    // If no drive path (\\?\) was present on the source directory, manually
+    // copy one into the dest buffer.
+    //
+
+    if (!HasDrivePath) {
+        *Dest++ = L'\\';
+        *Dest++ = L'\\';
+        *Dest++ = L'?';
+        *Dest++ = L'\\';
+    }
 
     //
     // Copy the directory.

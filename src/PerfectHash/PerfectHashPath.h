@@ -146,6 +146,41 @@ IsReplaceableBaseNameChar(
 }
 
 //
+// Helper routine for determining if a wide string starts with \\?\.
+//
+
+FORCEINLINE
+BOOLEAN
+IsDevicePathInDrivePathFormat(
+    _In_ PCWSZ Start,
+    _In_ PCWSZ End
+    )
+{
+    PCWSZ Char;
+    BOOLEAN IsDrivePath;
+
+    //
+    // Check for device path format where the drive is explicit,
+    // e.g. \\?\C:\Temp.
+    //
+
+    Char = Start;
+
+    if ((ULONG_PTR)(Char+4) > (ULONG_PTR)End) {
+        return FALSE;
+    }
+
+    IsDrivePath = (
+        *Char++ == L'\\' &&
+        *Char++ == L'\\' &&
+        *Char++ == L'?'  &&
+        *Char++ == L'\\'
+    );
+
+    return IsDrivePath;
+}
+
+//
 // Define the PERFECT_HASH_PATH structure.
 //
 
