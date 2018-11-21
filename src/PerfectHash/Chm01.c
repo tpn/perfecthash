@@ -598,10 +598,20 @@ RetryWithLargerTableSize:
         //
         // If our key set size is small and our maximum concurrency is large,
         // we may have already solved the graph, in which case, we can stop
-        // submitting new solver attempts and just break out of the loop here.
+        // submitting new solver attempts.  We wait on both the main work and
+        // finished work threadpool callbacks to ensure the proper finish logic
+        // has had a chance to run (i.e. the graph assign step, then subsequent
+        // registration of the winning graph to the finished work list head).
+        // Without these wait calls in, we'll hit a race condition where the
+        // finished count indicates greater than zero, but the finished work
+        // list head is empty.
         //
 
         if (!ShouldWeContinueTryingToSolveGraphChm01(Context)) {
+            if (Context->FinishedCount > 0) {
+                WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+                WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+            }
             goto CheckFinishedCount;
         }
     }
@@ -877,6 +887,8 @@ FinishedSolution:
     //
     // Pop the winning graph off the finished list head.
     //
+
+    ASSERT(Context->FinishedCount > 0);
 
     ListEntry = NULL;
 
