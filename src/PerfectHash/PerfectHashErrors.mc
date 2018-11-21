@@ -267,9 +267,10 @@ Table Create Flags:
                 C:\Temp\output\old\KernelBase_1_16384_Chm01_Crc32Rotate_And_2018-11-19-011023-512\...
 
              The timestamp appended to the directory name is derived from the
-             existing directory's creation time (and thus, making it highly
-             probable that there isn't already a directory there with the same
-             name).
+             existing directory's creation time, which should ensure uniqueness.
+             (In the unlikely situation the target directory already exists in
+             the old subdirectory, the whole operation is aborted and the table
+             create routine returns a failure.)
 
              The point of mentioning all of this is the following: when one or
              both of these flags are routinely specified, the number of output
