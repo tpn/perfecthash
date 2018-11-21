@@ -602,8 +602,18 @@ RetryWithLargerTableSize:
                                         INFINITE);
 
     //
+    // Handle the low-memory state first.
+    //
+
+    if (WaitResult == WAIT_OBJECT_0+5) {
+        Context->State.LowMemoryObserved = TRUE;
+        Result = PH_I_LOW_MEMORY;
+        goto Error;
+    }
+
+    //
     // If the wait result indicates the try larger table size event was set,
-    // deal with that, first.
+    // deal with that, next.
     //
 
     if (WaitResult == WAIT_OBJECT_0+4) {
@@ -768,10 +778,12 @@ RetryWithLargerTableSize:
         //
         // If neither the failed or the shutdown event was set, assume the
         // low-memory event was signaled.  We don't explicitly test for this
-        // as its a transient state that may not exist anymore.
+        // (via WaitForSingleObject()) as its a transient state that may not
+        // exist anymore.
         //
 
-        if (!FailedEventSet && !ShutdownEventSet) {
+        if ((!FailedEventSet && !ShutdownEventSet) ||
+            Context->State.LowMemoryObserved == TRUE) {
             LowMemoryEventSet = TRUE;
         }
 
@@ -2069,6 +2081,14 @@ ShouldWeContinueTryingToSolveGraphChm01(
                                         Events,
                                         FALSE,
                                         0);
+
+    //
+    // Set the low-memory flag if appropriate.
+    //
+
+    if (WaitResult == WAIT_OBJECT_0+4) {
+        Context->State.LowMemoryObserved = TRUE;
+    }
 
     //
     // The only situation where we continue attempting to solve the graph is

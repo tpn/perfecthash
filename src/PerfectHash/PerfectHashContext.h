@@ -106,10 +106,16 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG AllGraphsFailedMemoryAllocation:1;
 
         //
+        // When set, indicates a low-memory event was observed.
+        //
+
+        ULONG LowMemoryObserved:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:26;
+        ULONG Unused:25;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -195,6 +201,31 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PCHAR BaseRowBuffer;
     PCHAR RowBuffer;
     ULONGLONG RowBufferSize;
+
+    //
+    // Count of active graph solving loops (worker threads).
+    //
+
+    volatile LONG ActiveSolvingLoops;
+
+    //
+    // Prior to submitting graph solving work, the following field is
+    // initialized to the number of threads that will be participating in the
+    // solving attempt.  It is decremented each time the initial graph's
+    // LoadInfo() call fails due to an out-of-memory condition.  If it hits
+    // zero, it indicates no threads were able to allocate sufficient memory
+    // to attempt solving, and the FailedEvent is set, which unwaits the main
+    // thread.
+    //
+    // N.B. Although the name of the field implies a count of graph memory
+    //      failures, it is actually used in the reverse direction, i.e. it
+    //      gets decremented for each failure and then tested against 0.  If
+    //      we incremented each failure, we'd need to check against an expected
+    //      failure count to determine if all graphs failed, which involves more
+    //      moving parts.
+    //
+
+    volatile LONG GraphMemoryFailures;
 
     //
     // Pointer to the active perfect hash table.
@@ -597,25 +628,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG NumberOfTableResizeEvents;
     ULONGLONG TotalNumberOfAttemptsWithSmallerTableSizes;
     ULONGLONG ClosestWeCameToSolvingGraphWithSmallerTableSizes;
-
-    //
-    // Prior to submitting graph solving work, the following field is
-    // initialized to the number of threads that will be participating in the
-    // solving attempt.  It is decremented each time the initial graph's
-    // LoadInfo() call fails due to an out-of-memory condition.  If it hits
-    // zero, it indicates no threads were able to allocate sufficient memory
-    // to attempt solving, and the FailedEvent is set, which unwaits the main
-    // thread.
-    //
-    // N.B. Although the name of the field implies a count of graph memory
-    //      failures, it is actually used in the reverse direction, i.e. it
-    //      gets decremented for each failure and then tested against 0.  If
-    //      we incremented each failure, we'd need to check against an expected
-    //      failure count to determine if all graphs failed, which involves more
-    //      moving parts.
-    //
-
-    volatile LONGLONG GraphMemoryFailures;
 
     //
     // Pointers to the context file instances.

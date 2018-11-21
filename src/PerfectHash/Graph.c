@@ -1187,6 +1187,8 @@ Return Value:
 
     Result = Graph->Vtbl->LoadInfo(Graph);
 
+    InterlockedIncrement(&Graph->Context->ActiveSolvingLoops);
+
     if (FAILED(Result)) {
 
         if (Result != E_OUTOFMEMORY) {
@@ -1207,10 +1209,11 @@ Return Value:
         // context state flag and FailedEvent accordingly.
         //
 
-        if (InterlockedDecrement64(&Graph->Context->GraphMemoryFailures) == 0) {
+        if (InterlockedDecrement(&Graph->Context->GraphMemoryFailures) == 0) {
             Graph->Context->State.AllGraphsFailedMemoryAllocation = TRUE;
             if (!SetEvent(Graph->Context->FailedEvent)) {
                 SYS_ERROR(SetEvent);
+                Result = PH_E_SYSTEM_CALL_FAILED;
             }
         }
 
@@ -1301,6 +1304,36 @@ End:
         //
 
         Result = S_OK;
+    }
+
+    if (InterlockedDecrement(&Graph->Context->ActiveSolvingLoops) == 0) {
+
+        PHANDLE Event;
+
+        //
+        // We're the last graph; if the finished count indicates no solutions
+        // were found, signal FailedEvent.  Otherwise, signal SucceededEvent.
+        // This ensures we always unwait our parent thread's solving loop.
+        //
+        // N.B. There are numerous scenarios where this is a superfluous call,
+        //      as a terminating event (i.e. shutdown, low-memory etc) may have
+        //      already been set.  The effort required to distinguish this
+        //      situation and avoid setting the event is not warranted
+        //      (especially considering setting the event superfluously is
+        //      harmless).
+        //
+
+        if (Graph->Context->FinishedCount == 0) {
+            Event = &Graph->Context->FailedEvent;
+        } else {
+            Event = &Graph->Context->SucceededEvent;
+        }
+
+        if (!SetEvent(*Event)) {
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            SYS_ERROR(SetEvent);
+        }
+
     }
 
     ReleaseGraphLockExclusive(Graph);
