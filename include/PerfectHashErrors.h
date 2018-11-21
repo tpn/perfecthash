@@ -261,7 +261,7 @@ Abstract:
 //         N.B. To forcibly delete all previously-recorded table sizes from all
 //              keys in a directory, the following PowerShell snippet can be used:
 // 
-//              PS C:\Temp\Keys> Get-Item -Path *.keys -Stream *.TableSize | Remove-Item
+//              PS C:\Temp\keys> Get-Item -Path *.keys -Stream *.TableSize | Remove-Item
 // 
 //     --IncludeNumberOfTableResizeEventsInOutputPath
 // 
@@ -269,7 +269,7 @@ Abstract:
 //         whilst searching for a perfect hash solution into the final output
 //         names, e.g.:
 // 
-//             C:\Temp\output\KernelBase_2485_2_Chm01_Crc32Rotate_And\...
+//             C:\Temp\output\KernelBase_2485_1_Chm01_Crc32Rotate_And\...
 //                                            ^
 //                                            Number of resize events.
 // 
@@ -278,12 +278,53 @@ Abstract:
 //         When set, incorporates the number of table elements (i.e. the final
 //         table size) into the output path, e.g.:
 // 
-//             C:\Temp\output\KernelBase_2485_8192_Chm01_Crc32Rotate_And\...
+//             C:\Temp\output\KernelBase_2485_16384_Chm01_Crc32Rotate_And\...
 //                                            ^
 //                                            Number of table elements.
 // 
-//         Can be combined with --IncludeNumberOfTableResizeEventsInOutputPath.
+//         N.B. These two flags can be combined, yielding a path as follows:
 // 
+//             C:\Temp\output\KernelBase_2485_1_16384_Chm01_Crc32Rotate_And\...
+// 
+//         N.B. It is important to understand how table resize events impact the
+//              behavior of this program if one or both of these flags are present.
+//              Using the example above, the initial path that will be used for
+//              the solution will be:
+// 
+//                 C:\Temp\output\KernelBase_2485_0_8192_Chm01_Crc32Rotate_And\...
+// 
+//              After the maximum number of attempts are reached, a table resize
+//              event occurs; the new path component will be:
+// 
+//                 C:\Temp\output\KernelBase_2485_1_16384_Chm01_Crc32Rotate_And\...
+// 
+//              However, the actual renaming of the directory is not done until
+//              a solution has been found and all files have been written.  If
+//              this program is being run repeatedly, then the target directory
+//              will already exist.  This complicates things, as, unlike files,
+//              we can't just replace an existing directory with a new one.
+// 
+//              There are two ways this could be handled: a) delete all the
+//              existing files under the target path, then delete the directory,
+//              then perform the rename, or b) move the target directory somewhere
+//              else first, preserving the existing contents, then proceed with
+//              the rename.
+// 
+//              This program takes the latter approach.  The existing directory
+//              will be moved to:
+// 
+//                 C:\Temp\output\old\KernelBase_1_16384_Chm01_Crc32Rotate_And_2018-11-19-011023-512\...
+// 
+//              The timestamp appended to the directory name is derived from the
+//              existing directory's creation time (and thus, making it highly
+//              probable that there isn't already a directory there with the same
+//              name).
+// 
+//              The point of mentioning all of this is the following: when one or
+//              both of these flags are routinely specified, the number of output
+//              files rooted in the output directory's 'old' subdirectory will grow
+//              rapidly, consuming a lot of disk space.  Thus, if the old files are
+//              not required, it is recommended to regularly delete them manually.
 // 
 // Table Compile Flags:
 // 
@@ -314,6 +355,13 @@ Abstract:
 //         Valid coverage types:
 // 
 //             HighestNumberOfEmptyCacheLines
+// 
+//                 This predicate is based on the notion that a high number of
+//                 empty cache lines implies a lower number of cache lines are
+//                 required for the table data, which means better clustering of
+//                 table data, which could result in fewer cache misses, which
+//                 would yield greater performance.
+// 
 //
 #define PH_MSG_PERFECT_HASH_BULK_CREATE_EXE_USAGE ((HRESULT)0x60040101L)
 
