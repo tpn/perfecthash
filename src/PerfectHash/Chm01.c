@@ -171,8 +171,7 @@ Return Value:
     ULONGLONG LastClosest;
     BOOLEAN FailedEventSet;
     BOOLEAN ShutdownEventSet;
-    BOOLEAN LowMemoryEventSet;
-    BOOLEAN ValidErrorEventSet;
+    BOOLEAN LowMemoryEventSet = FALSE;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
@@ -753,9 +752,7 @@ RetryWithLargerTableSize:
     Success = (Context->FinishedCount > 0);
 
     //
-    // Obtain the wait results for the failed, shutdown and low-memory events
-    // explicitly.  We use these to verify invariants and potentially our return
-    // code.
+    // Obtain the wait results for the failed and shutdown events.
     //
 
     WaitResult = WaitForSingleObject(Context->FailedEvent, 0);
@@ -764,30 +761,18 @@ RetryWithLargerTableSize:
     WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
     ShutdownEventSet = (WaitResult == WAIT_OBJECT_0);
 
-    WaitResult = WaitForSingleObject(Context->LowMemoryEvent, 0);
-    LowMemoryEventSet = (WaitResult == WAIT_OBJECT_0);
-
-    ValidErrorEventSet = (
-        FailedEventSet    ||
-        ShutdownEventSet  ||
-        LowMemoryEventSet
-    );
-
     if (!Success) {
 
         BOOL CancelPending = TRUE;
 
         //
-        // Invariant check: if no worker thread registered a solved graph
-        // (indicated by Context->FinishedCount having a value greater than
-        // 0), then verify an appropriate error event was set.
+        // If neither the failed or the shutdown event was set, assume the
+        // low-memory event was signaled.  We don't explicitly test for this
+        // as its a transient state that may not exist anymore.
         //
 
-        if (!ValidErrorEventSet) {
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(CreatePerfectHashTableImplChm01_NoValidErrorEventSet,
-                     Result);
-            PH_RAISE(Result);
+        if (!FailedEventSet && !ShutdownEventSet) {
+            LowMemoryEventSet = TRUE;
         }
 
         //
