@@ -329,7 +329,17 @@ Return Value:
     Result = CreationRoutines[AlgorithmId](Table);
 
     if (Table->OutputDirectory) {
-        Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);
+        Result = Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);
+        if (FAILED(Result)) {
+
+            //
+            // N.B. We don't 'goto Error' here at the end of this block like
+            //      we normally do as we want the table size file close logic
+            //      below to also run.
+            //
+
+            PH_ERROR(PerfectHashDirectoryClose, Result);
+        }
     }
 
     //
@@ -384,6 +394,7 @@ Return Value:
     CloseResult = TableSizeFile->Vtbl->Close(TableSizeFile, EndOfFile);
     if (FAILED(CloseResult)) {
         PH_ERROR(PerfectHashTableCreate_TableSizeFileClose, CloseResult);
+        Result = CloseResult;
         goto Error;
     }
 

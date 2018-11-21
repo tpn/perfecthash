@@ -26,7 +26,7 @@ Abstract:
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Directory->Lock)
 HRESULT
