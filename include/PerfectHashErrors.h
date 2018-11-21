@@ -203,6 +203,15 @@ Abstract:
 //
 #define PH_I_OUT_OF_MEMORY               ((HRESULT)0x60040086L)
 
+//
+// MessageId: PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED
+//
+// MessageText:
+//
+// The table was created successfully, however, the values array could not be allocated.  The table cannot be used.
+//
+#define PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED ((HRESULT)0x60040087L)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL -- Usage Messages

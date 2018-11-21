@@ -667,6 +667,9 @@ Return Value:
                 EXCLAMATION();
             } else if (Result == PH_I_LOW_MEMORY) {
                 CARET();
+            } else if (Result ==
+                       PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
+                PERCENT();
             } else {
                 CROSS();
             }

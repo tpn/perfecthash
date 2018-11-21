@@ -536,11 +536,12 @@ RetryWithLargerTableSize:
 
     //
     // Initialize the number of remaining solver loops and clear the active
-    // graph solving loops counter.
+    // graph solving loops counter and stop-solving flag.
     //
 
     Context->RemainingSolverLoops = Context->MaximumConcurrency;
     Context->ActiveSolvingLoops = 0;
+    ClearStopSolving(Context);
 
     //
     // For each graph instance, set the graph info, and, if we haven't reached
@@ -601,7 +602,7 @@ RetryWithLargerTableSize:
         //
 
         if (!ShouldWeContinueTryingToSolveGraphChm01(Context)) {
-            break;
+            goto CheckFinishedCount;
         }
     }
 
@@ -771,6 +772,8 @@ RetryWithLargerTableSize:
     // finished count of the context.  We'll corroborate that with whatever
     // events have been signaled shortly.
     //
+
+CheckFinishedCount:
 
     Success = (Context->FinishedCount > 0);
 
@@ -2136,12 +2139,16 @@ ShouldWeContinueTryingToSolveGraphChm01(
                                         0);
 
     //
-    // Set the low-memory flag if appropriate.
+    // Check for the low-memory event; if set, increment our count and
+    // explicitly set the failed event.
     //
 
     if (WaitResult == WAIT_OBJECT_0+4) {
         InterlockedIncrement(&Context->LowMemoryObserved);
         SetStopSolving(Context);
+        if (!SetEvent(Context->FailedEvent)) {
+            SYS_ERROR(SetEvent);
+        }
         return FALSE;
     }
 

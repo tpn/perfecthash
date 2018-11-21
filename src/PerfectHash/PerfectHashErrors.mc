@@ -150,6 +150,14 @@ Language=English
 The system is out of memory.
 .
 
+MessageId=0x087
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED
+Language=English
+The table was created successfully, however, the values array could not be allocated.  The table cannot be used.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL -- Usage Messages

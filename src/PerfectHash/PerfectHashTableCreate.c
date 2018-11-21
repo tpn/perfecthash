@@ -161,6 +161,7 @@ Return Value:
     PALLOCATOR Allocator;
     HRESULT Result = S_OK;
     HRESULT CloseResult;
+    HRESULT CreateValuesResult;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PPERFECT_HASH_FILE TableSizeFile = NULL;
     PULARGE_INTEGER RequestedNumberOfTableElements;
@@ -329,8 +330,8 @@ Return Value:
     Result = CreationRoutines[AlgorithmId](Table);
 
     if (Table->OutputDirectory) {
-        Result = Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);
-        if (FAILED(Result)) {
+        CloseResult = Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);
+        if (FAILED(CloseResult)) {
 
             //
             // N.B. We don't 'goto Error' here at the end of this block like
@@ -338,7 +339,8 @@ Return Value:
             //      below to also run.
             //
 
-            PH_ERROR(PerfectHashDirectoryClose, Result);
+            PH_ERROR(PerfectHashDirectoryClose, CloseResult);
+            Result = CloseResult;
         }
     }
 
@@ -408,10 +410,13 @@ Return Value:
     //
 
     if (!IsTableCreateOnly(Table)) {
-        Result = PerfectHashTableCreateValuesArray(Table, 0);
-        if (FAILED(Result)) {
-            if (Result != E_OUTOFMEMORY) {
-                PH_ERROR(PerfectHashTableCreateValuesArray, Result);
+        CreateValuesResult = PerfectHashTableCreateValuesArray(Table, 0);
+        if (FAILED(CreateValuesResult)) {
+            if (CreateValuesResult != E_OUTOFMEMORY) {
+                PH_ERROR(PerfectHashTableCreateValuesArray, CreateValuesResult);
+                Result = CreateValuesResult;
+            } else {
+                Result = PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED;
             }
             goto Error;
         }

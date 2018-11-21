@@ -316,6 +316,7 @@ static PCSZ Dot = ".";
 static PCSZ Dash = "-";
 static PCSZ Caret = "^";
 static PCSZ Cross = "x";
+static PCSZ Percent = "%";
 static PCSZ Newline = "\n";
 static PCSZ Asterisk = "*";
 static PCSZ Exclamation = "!";
@@ -340,6 +341,7 @@ static PCSZ Exclamation = "!";
 #define DASH() DO_OUTPUT(Dash, 1)
 #define CARET() DO_OUTPUT(Caret, 1)
 #define CROSS() DO_OUTPUT(Cross, 1)
+#define PERCENT() DO_OUTPUT(Percent, 1)
 #define NEWLINE() DO_OUTPUT(Newline, 1)
 #define ASTERISK() DO_OUTPUT(Asterisk, 1)
 #define EXCLAMATION() DO_OUTPUT(Exclamation, 1)
@@ -348,6 +350,7 @@ static PCSZ Exclamation = "!";
 #define MAYBE_DASH() MAYBE_OUTPUT(Dash, 1)
 #define MAYBE_CARET() MAYBE_OUTPUT(Caret, 1)
 #define MAYBE_CROSS() MAYBE_OUTPUT(Cross, 1)
+#define MAYBE_PERCENT() MAYBE_OUTPUT(Percent, 1)
 #define MAYBE_NEWLINE() MAYBE_OUTPUT(Newline, 1)
 #define MAYBE_ASTERISK() MAYBE_OUTPUT(Asterisk, 1)
 #define MAYBE_EXCLAMATION() MAYBE_OUTPUT(Exclamation, 1)
