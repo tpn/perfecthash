@@ -893,7 +893,6 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    ULONG LastError;
     PVOID BaseAddress;
     HRESULT Result = S_OK;
     ULONGLONG ArrayAllocSize;

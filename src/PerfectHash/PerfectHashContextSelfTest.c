@@ -264,12 +264,11 @@ Return Value:
                                      &BaseBuffer);
 
     if (FAILED(Result)) {
-        SYS_ERROR(VirtualAlloc);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
                                           &WideOutputBuffer);
         if (FAILED(Result)) {
-            SYS_ERROR(VirtualFree);
+            PH_ERROR(RtlDestroyBuffer, Result);
         }
         return Result;
     }

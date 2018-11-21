@@ -797,7 +797,6 @@ Return Value:
     BaseAddress = Allocator->Vtbl->Calloc(Allocator, 1, AllocSize);
 
     if (!BaseAddress) {
-        SYS_ERROR(VirtualAlloc);
         Result = E_OUTOFMEMORY;
         goto Error;
     }
@@ -1331,7 +1330,6 @@ Return Value:
                                           AlignedAllocSize.LongPart);
 
     if (!BaseAddress) {
-        SYS_ERROR(VirtualAlloc);
         Result = E_OUTOFMEMORY;
         goto Error;
     }

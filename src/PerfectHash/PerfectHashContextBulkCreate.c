@@ -299,7 +299,6 @@ Return Value:
                                      &BaseBuffer);
 
     if (FAILED(Result)) {
-        SYS_ERROR(VirtualAlloc);
         Result = E_OUTOFMEMORY;
         goto Error;
     }
@@ -320,7 +319,6 @@ Return Value:
                                      &RowBuffer);
 
     if (FAILED(Result)) {
-        SYS_ERROR(VirtualAlloc);
         Result = E_OUTOFMEMORY;
         goto Error;
     }

@@ -33,7 +33,6 @@ SaveTableFileChm01(
     PULONG Dest;
     PGRAPH Graph;
     PULONG Source;
-    ULONG LastError;
     PVOID BaseAddress;
     HRESULT Result = S_OK;
     LONGLONG SizeInBytes;
@@ -109,13 +108,7 @@ SaveTableFileChm01(
     Table->TableDataBaseAddress = BaseAddress;
 
     if (!BaseAddress) {
-        LastError = GetLastError();
-        SYS_ERROR(VirtualAlloc);
-        if (LastError == ERROR_OUTOFMEMORY) {
-            Result = E_OUTOFMEMORY;
-        } else {
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
+        Result = E_OUTOFMEMORY;
         goto Error;
     }
 

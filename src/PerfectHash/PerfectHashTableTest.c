@@ -166,7 +166,6 @@ Return Value:
     );
 
     if (!BitmapBuffer) {
-        SYS_ERROR(VirtualAlloc);
         Result = E_OUTOFMEMORY;
         goto Error;
     }
