@@ -506,6 +506,8 @@ AllocatorInitialize(
     )
 {
     ULONG Flags = 0;
+    ULONG LastError;
+    HRESULT Result = S_OK;
     ULONG_PTR MinimumSize = 0;
     ULONG_PTR MaximumSize = 0;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
@@ -520,11 +522,16 @@ AllocatorInitialize(
     Allocator->HeapHandle = HeapCreate(Flags, MinimumSize, MaximumSize);
 
     if (!Allocator->HeapHandle) {
-        SYS_ERROR(HeapCreate);
-        return PH_E_HEAP_CREATE_FAILED;
+        LastError = GetLastError();
+        if (LastError != ERROR_NOT_ENOUGH_MEMORY) {
+            SYS_ERROR(HeapCreate);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        } else {
+            Result = E_OUTOFMEMORY;
+        }
     }
 
-    return S_OK;
+    return Result;
 }
 
 

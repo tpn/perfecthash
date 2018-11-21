@@ -99,6 +99,7 @@ Return Value:
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
     ULONG LastError;
+    HANDLE Handle;
     PHANDLE Event;
     PCHAR Buffer;
     PCHAR BaseBuffer;
@@ -212,6 +213,18 @@ Return Value:
     }
 
     Attributes = &SecurityAttributes;
+
+    //
+    // Create a low-memory notification handle.
+    //
+
+    Handle = CreateMemoryResourceNotification(LowMemoryResourceNotification);
+    if (!IsValidHandle(Handle)) {
+        SYS_ERROR(CreateMemoryResourceNotification);
+        goto Error;
+    }
+
+    Context->LowMemoryEvent = Handle;
 
     //
     // Calculate the size required by the array of UNICODE_STRING structures
@@ -661,6 +674,17 @@ Return Value:
     }
 
     //
+    // Close the low-memory resource notification handle.
+    //
+
+    if (Context->LowMemoryEvent) {
+        if (!CloseHandle(Context->LowMemoryEvent)) {
+            SYS_ERROR(CloseHandle);
+        }
+        Context->LowMemoryEvent = NULL;
+    }
+
+    //
     // Loop through all the events associated with the context and check if
     // they need to be closed.  (We do this instead of explicit calls to each
     // named event (e.g. CloseHandle(Context->ShutdownEvent)) as it means we
@@ -816,6 +840,9 @@ Return Value:
 
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;
+
+    Context->GraphMemoryFailures = 0;
+    Context->State.AllGraphsFailedMemoryAllocation = FALSE;
 
     Context->MainWorkList->Vtbl->Reset(Context->MainWorkList);
     Context->FileWorkList->Vtbl->Reset(Context->FileWorkList);

@@ -94,6 +94,11 @@ Return Value:
     failed due to an internal error and the program should terminate now" (error
     codes).
 
+    PH_I_LOW_MEMORY - The system is indicating a low-memory state (which we
+        may have caused).
+
+    PH_I_OUT_OF_MEMORY - The system is out of memory.
+
     PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED - The maximum number
         of table resize events was reached before a solution could be found.
 
@@ -104,6 +109,13 @@ Return Value:
         of table elements exceeded limits.  If a table resize event occurrs,
         the number of requested table elements is doubled.  If this number
         exceeds MAX_ULONG, this error will be returned.
+
+    PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS - Every worker thread was
+        unable to allocate sufficient memory to attempt graph solving.  This
+        is usually triggered by extremely large key sets and poorly performing
+        hash functions that result in numerous table resize events (and thus,
+        significant memory consumption).  Overall system memory pressure will
+        influence this situation, too.
 
     PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION - No solution was found
         that met a given criteria.  Not currently used.
@@ -119,8 +131,6 @@ Return Value:
     E_POINTER - Table was NULL.
 
     E_UNEXPECTED - Catastrophic internal error.
-
-    E_OUTOFMEMORY - Out of memory.
 
     PH_E_SYSTEM_CALL_FAILED - A system call failed.
 
@@ -159,6 +169,10 @@ Return Value:
     ULONG NumberOfSeedsAvailable;
     ULONGLONG Closest;
     ULONGLONG LastClosest;
+    BOOLEAN FailedEventSet;
+    BOOLEAN ShutdownEventSet;
+    BOOLEAN LowMemoryEventSet;
+    BOOLEAN ValidErrorEventSet;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
@@ -171,7 +185,7 @@ Return Value:
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
 
-    HANDLE Events[5];
+    HANDLE Events[6];
     HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];
     HANDLE PrepareEvents[NUMBER_OF_PREPARE_FILE_EVENTS];
     PHANDLE SaveEvent = SaveEvents;
@@ -215,6 +229,7 @@ Return Value:
     Events[2] = Context->ShutdownEvent;
     Events[3] = Context->FailedEvent;
     Events[4] = Context->TryLargerTableSizeEvent;
+    Events[5] = Context->LowMemoryEvent;
 
 #define EXPAND_AS_ASSIGN_EVENT(Verb, VUpper, Name, Upper) \
     *##Verb##Event++ = Context->##Verb##d##Name##Event;
@@ -282,7 +297,7 @@ Return Value:
     );
 
     if (!Graphs) {
-        Result = E_OUTOFMEMORY;
+        Result = PH_I_OUT_OF_MEMORY;
         goto Error;
     }
 
@@ -344,7 +359,14 @@ Return Value:
 
         if (FAILED(Result)) {
 
-            PH_ERROR(CreatePerfectHashTableImplChm01_CreateGraph, Result);
+            //
+            // Suppress logging for out-of-memory errors (as we communicate
+            // memory issues back to the caller via informational return codes).
+            //
+
+            if (Result != E_OUTOFMEMORY) {
+                PH_ERROR(CreatePerfectHashTableImplChm01_CreateGraph, Result);
+            }
 
             //
             // N.B. We 'break' instead of 'goto Error' here like we normally
@@ -498,6 +520,15 @@ RetryWithLargerTableSize:
     QueryPerformanceFrequency(&Context->Frequency);
 
     CONTEXT_START_TIMERS(Solve);
+
+    //
+    // Initialize the graph memory failures counter.  If a graph encounters
+    // a memory failure, it performs an interlocked decrement on this counter.
+    // If the counter hits zero, FailedEvent is signaled and the context state
+    // flag AllGraphsFailedMemoryAllocation is set.
+    //
+
+    Context->GraphMemoryFailures = Context->MaximumConcurrency;
 
     //
     // For each graph instance, set the graph info, and, if we haven't reached
@@ -721,6 +752,27 @@ RetryWithLargerTableSize:
 
     Success = (Context->FinishedCount > 0);
 
+    //
+    // Obtain the wait results for the failed, shutdown and low-memory events
+    // explicitly.  We use these to verify invariants and potentially our return
+    // code.
+    //
+
+    WaitResult = WaitForSingleObject(Context->FailedEvent, 0);
+    FailedEventSet = (WaitResult == WAIT_OBJECT_0);
+
+    WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
+    ShutdownEventSet = (WaitResult == WAIT_OBJECT_0);
+
+    WaitResult = WaitForSingleObject(Context->LowMemoryEvent, 0);
+    LowMemoryEventSet = (WaitResult == WAIT_OBJECT_0);
+
+    ValidErrorEventSet = (
+        FailedEventSet    ||
+        ShutdownEventSet  ||
+        LowMemoryEventSet
+    );
+
     if (!Success) {
 
         BOOL CancelPending = TRUE;
@@ -728,53 +780,40 @@ RetryWithLargerTableSize:
         //
         // Invariant check: if no worker thread registered a solved graph
         // (indicated by Context->FinishedCount having a value greater than
-        // 0), then verify that either the failed or shutdown event was set.
-        //
-        // If our WaitResult above indicates WAIT_OBJECT_0+3 (failed), or
-        // WAIT_OBJECT_0+2 (shutdown), we're done.  If not, verify explicitly.
+        // 0), then verify an appropriate error event was set.
         //
 
-        if (WaitResult != WAIT_OBJECT_0+3 && WaitResult != WAIT_OBJECT_0+2) {
+        if (!ValidErrorEventSet) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(CreatePerfectHashTableImplChm01_NoValidErrorEventSet,
+                     Result);
+            PH_RAISE(Result);
+        }
 
-            //
-            // Manually test that the failed event has been signaled.
-            //
+        //
+        // Set an appropriate error code based on which event was set.
+        //
 
-            WaitResult = WaitForSingleObject(Context->FailedEvent, 0);
+        if (LowMemoryEventSet) {
 
-            if (WaitResult == WAIT_OBJECT_0) {
-                Result = PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
+            Result = PH_I_LOW_MEMORY;
 
+        } else if (FailedEventSet) {
+
+            if (Context->State.AllGraphsFailedMemoryAllocation == TRUE) {
+                Result = PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS;
             } else {
-
-                //
-                // If the failed event hasn't been signaled, check the shutdown
-                // event.
-                //
-
-                WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
-
-                if (WaitResult == WAIT_OBJECT_0) {
-                    Result = PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
-
-                } else {
-
-                    //
-                    // Invariant check has failed; either failed or shutdown
-                    // should have been set.
-                    //
-
-                    Result = PH_E_INVARIANT_CHECK_FAILED;
-                    PH_ERROR(CreatePerfectHashTableImplChm01_ShutdownOrFailed,
-                             Result);
-                    goto Error;
-                }
+                Result = PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
             }
+
+        } else if (ShutdownEventSet) {
+
+            Result = PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
         }
 
         //
         // Explicitly set the stop solving flag.  (It won't be set if the
-        // shutdown event was signaled externally.)
+        // shutdown event was signaled externally, for example.)
         //
 
         SetStopSolving(Context);
@@ -797,8 +836,20 @@ RetryWithLargerTableSize:
 
         WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
 
-        goto End;
+        //
+        // Sanity check we're not indicating successful table creation.
+        //
 
+        ASSERT(Result != S_OK);
+
+        //
+        // N.B. Although we're in an erroneous state, we don't jump to Error
+        //      here as that sets the shutdown event and waits for the callbacks
+        //      to complete; we've just done that, so jump to the End to finish
+        //      up processing.
+        //
+
+        goto End;
     }
 
     //
@@ -914,6 +965,20 @@ Error:
 
 End:
 
+    if (Result == E_OUTOFMEMORY) {
+
+        //
+        // Convert the out-of-memory error code into our equivalent info code.
+        //
+
+        Result = PH_I_OUT_OF_MEMORY;
+    }
+
+    //
+    // N.B. The following block should really be moved into the BulkCreate
+    //      routine.
+    //
+
     if (IsContextBulkCreate(Context)) {
 
         //
@@ -944,6 +1009,15 @@ End:
 
         BULK_CREATE_CSV_POST_ROW();
 
+    }
+
+    //
+    // If no attempts were made, no file work was submitted, which means we
+    // can skip the close logic below and jump straight to releasing graphs.
+    //
+
+    if (Attempt == 0) {
+        goto ReleaseGraphs;
     }
 
     //
@@ -999,6 +1073,8 @@ End:
         Result = CloseResult;
     }
 
+ReleaseGraphs:
+
     if (Graphs) {
 
         //
@@ -1019,7 +1095,9 @@ End:
                 //
 
                 if (ReferenceCount != 0) {
-                    PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+                    Result = PH_E_INVARIANT_CHECK_FAILED;
+                    PH_ERROR(GraphReferenceCountNotZero, Result);
+                    PH_RAISE(Result);
                 }
 
                 Graphs[Index] = NULL;
@@ -1975,7 +2053,7 @@ ShouldWeContinueTryingToSolveGraphChm01(
     )
 {
     ULONG WaitResult;
-    HANDLE Events[4];
+    HANDLE Events[5];
     USHORT NumberOfEvents = ARRAYSIZE(Events);
 
     //
@@ -2000,6 +2078,7 @@ ShouldWeContinueTryingToSolveGraphChm01(
     Events[1] = Context->CompletedEvent;
     Events[2] = Context->ShutdownEvent;
     Events[3] = Context->FailedEvent;
+    Events[4] = Context->LowMemoryEvent;
 
     WaitResult = WaitForMultipleObjects(NumberOfEvents,
                                         Events,

@@ -261,7 +261,9 @@ CreateComponent(
     if (Initialize) {
         Result = Initialize(Component);
         if (FAILED(Result)) {
-            PH_ERROR(PerfectHashComponentInitialize, Result);
+            if (Result != E_OUTOFMEMORY) {
+                PH_ERROR(PerfectHashComponentInitialize, Result);
+            }
             TlsContext->LastResult = Result;
             Unknown->Vtbl->Release(Unknown);
             AcquireGlobalComponentsLockExclusive();
@@ -538,7 +540,9 @@ ComponentCreateInstance(
 
         if (!NewComponent) {
             Result = TlsContext->LastResult;
-            PH_ERROR(CreateComponent, Result);
+            if (Result != E_OUTOFMEMORY) {
+                PH_ERROR(CreateComponent, Result);
+            }
             goto Error;
         }
 

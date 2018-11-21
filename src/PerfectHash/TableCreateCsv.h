@@ -29,6 +29,14 @@ Abstract:
           Table->Keys->NumberOfElements.QuadPart,                    \
           OUTPUT_INT)                                                \
                                                                      \
+    ENTRY(NumberOfEdges,                                             \
+          Table->IndexSize,                                          \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(NumberOfVertices,                                          \
+          Table->HashSize,                                           \
+          OUTPUT_INT)                                                \
+                                                                     \
     ENTRY(Algorithm,                                                 \
           AlgorithmNames[Context->AlgorithmId],                      \
           OUTPUT_UNICODE_STRING_FAST)                                \
@@ -45,8 +53,27 @@ Abstract:
           (Result == S_OK ? 'Y' : 'N'),                              \
           OUTPUT_CHR)                                                \
                                                                      \
+    ENTRY(LowMemory,                                                 \
+          (Result == PH_I_LOW_MEMORY ? 'Y' : 'N'),                   \
+          OUTPUT_CHR)                                                \
+                                                                     \
+    ENTRY(OutOfMemory,                                               \
+          (Result == PH_I_OUT_OF_MEMORY ? 'Y' : 'N'),                \
+          OUTPUT_CHR)                                                \
+                                                                     \
+    ENTRY(OtherMemoryIssue,                                          \
+          (Result == PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS   \
+            ? 'Y' : 'N'),                                            \
+          OUTPUT_CHR)                                                \
+                                                                     \
+    ENTRY(TableCreateResult, Result, OUTPUT_HEX_RAW_0x)              \
+                                                                     \
     ENTRY(NumberOfSolutionsFound,                                    \
           Context->FinishedCount,                                    \
+          OUTPUT_INT)                                                \
+                                                                     \
+    ENTRY(Attempts,                                                  \
+          Context->Attempts,                                         \
           OUTPUT_INT)                                                \
                                                                      \
     ENTRY(FailedAttempts,                                            \

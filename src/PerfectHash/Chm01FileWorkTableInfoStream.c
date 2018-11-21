@@ -169,6 +169,12 @@ SaveTableInfoStreamChm01(
     Table->TableInfoOnDisk = &NewGraphInfoOnDisk->TableInfoOnDisk;
 
     //
+    // Update state indicating table info has been heap-allocated.
+    //
+
+    Table->State.TableInfoOnDiskWasHeapAllocated = TRUE;
+
+    //
     // We're done, jump to the end.
     //
 

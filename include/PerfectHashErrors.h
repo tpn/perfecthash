@@ -176,6 +176,33 @@ Abstract:
 //
 #define PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE ((HRESULT)0x60040083L)
 
+//
+// MessageId: PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS
+//
+// MessageText:
+//
+// Failed to allocate memory for all graphs.
+//
+#define PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS ((HRESULT)0x60040084L)
+
+//
+// MessageId: PH_I_LOW_MEMORY
+//
+// MessageText:
+//
+// The system is running low on free memory.
+//
+#define PH_I_LOW_MEMORY                  ((HRESULT)0x60040085L)
+
+//
+// MessageId: PH_I_OUT_OF_MEMORY
+//
+// MessageText:
+//
+// The system is out of memory.
+//
+#define PH_I_OUT_OF_MEMORY               ((HRESULT)0x60040086L)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL -- Usage Messages
@@ -537,14 +564,14 @@ Abstract:
 #define PH_E_DUPLICATE_KEYS_DETECTED     ((HRESULT)0xE0040211L)
 
 //
-// MessageId: PH_E_HEAP_CREATE_FAILED
-//
-// MessageText:
-//
+// Disabled 21st Nov 2018: deprecated in favor of E_OUTOFMEMORY and PH_I_OUT_OF_MEMORY.
+// MessageId=0x212
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_HEAP_CREATE_FAILED
+// Language=English
 // A call to HeapCreate() failed.
-//
-#define PH_E_HEAP_CREATE_FAILED          ((HRESULT)0xE0040212L)
-
+// .
 //
 // MessageId: PH_E_RTL_LOAD_SYMBOLS_FROM_MULTIPLE_MODULES_FAILED
 //

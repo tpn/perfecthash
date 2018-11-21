@@ -37,10 +37,24 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         ULONG Valid:1;
 
         //
+        // When set, indicates the Table->TableInfoOnDisk structure is backed
+        // by heap-allocated memory obtained from the allocator, and thus, must
+        // be free'd by the allocator during rundown.
+        //
+
+        ULONG TableInfoOnDiskWasHeapAllocated:1;
+
+        //
+        // As above, but for the Assigned/TableDataBaseAddress pointer.
+        //
+
+        ULONG TableDataWasHeapAllocated:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:29;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -50,6 +64,12 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 
 #define IsValidTable(Table) ((Table)->State.Valid == TRUE)
 #define IsTableCreateOnly(Table) ((Table)->TableCreateFlags.CreateOnly == TRUE)
+
+#define WasTableInfoOnDiskHeapAllocated(Table) \
+    ((Table)->State.TableInfoOnDiskWasHeapAllocated == TRUE)
+
+#define WasTableDataHeapAllocated(Table) \
+    ((Table)->State.TableDataWasHeapAllocated == TRUE)
 
 #define IncludeNumberOfTableResizeEventsInOutputPath(Table) (                  \
     ((Table)->TableCreateFlags.IncludeNumberOfTableResizeEventsInOutputPath == \

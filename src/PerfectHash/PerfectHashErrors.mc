@@ -126,6 +126,30 @@ Language=English
 The requested number of table elements was too large.
 .
 
+MessageId=0x084
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS
+Language=English
+Failed to allocate memory for all graphs.
+.
+
+MessageId=0x085
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_LOW_MEMORY
+Language=English
+The system is running low on free memory.
+.
+
+MessageId=0x086
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_OUT_OF_MEMORY
+Language=English
+The system is out of memory.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL -- Usage Messages
@@ -469,13 +493,15 @@ Language=English
 Duplicate keys detected.  Key files must not contain duplicate keys.
 .
 
-MessageId=0x212
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_HEAP_CREATE_FAILED
-Language=English
-A call to HeapCreate() failed.
-.
+;//
+;// Disabled 21st Nov 2018: deprecated in favor of E_OUTOFMEMORY and PH_I_OUT_OF_MEMORY.
+;// MessageId=0x212
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_HEAP_CREATE_FAILED
+;// Language=English
+;// A call to HeapCreate() failed.
+;// .
 
 MessageId=0x213
 Severity=Fail

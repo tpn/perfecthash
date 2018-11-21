@@ -661,7 +661,15 @@ Return Value:
             Failures++;
             goto ReleaseTable;
         } else if (Result != S_OK) {
-            CROSS();
+            if (Result == PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS) {
+                ASTERISK();
+            } else if (Result == PH_I_OUT_OF_MEMORY) {
+                EXCLAMATION();
+            } else if (Result == PH_I_LOW_MEMORY) {
+                CARET();
+            } else {
+                CROSS();
+            }
             goto ReleaseTable;
         } else {
             DOT();

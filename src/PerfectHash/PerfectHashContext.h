@@ -97,10 +97,19 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG IsBulkCreate:1;
 
         //
+        // When set, indicates the graph solving failed because every worker
+        // thread failed to allocate sufficient memory to even attempt solving
+        // the graph (specifically, the every graph's LoadInfo() call returned
+        // E_OUTOFMEMORY).
+        //
+
+        ULONG AllGraphsFailedMemoryAllocation:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:27;
+        ULONG Unused:26;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -252,6 +261,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     _Guarded_by_(BestGraphCriticalSection)
     struct _GRAPH *SpareGraph;
+
+    //
+    // Handle to a low-memory resource notification event.
+    //
+    // N.B. This event handle differs from the ones below in that it is obtained
+    //      from CreateMemoryResourceNotification(), and thus, doesn't have a
+    //      random object name generated for it.
+    //
+
+    HANDLE LowMemoryEvent;
 
     //
     // Define the events used to communicate various internal state changes
@@ -578,6 +597,25 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG NumberOfTableResizeEvents;
     ULONGLONG TotalNumberOfAttemptsWithSmallerTableSizes;
     ULONGLONG ClosestWeCameToSolvingGraphWithSmallerTableSizes;
+
+    //
+    // Prior to submitting graph solving work, the following field is
+    // initialized to the number of threads that will be participating in the
+    // solving attempt.  It is decremented each time the initial graph's
+    // LoadInfo() call fails due to an out-of-memory condition.  If it hits
+    // zero, it indicates no threads were able to allocate sufficient memory
+    // to attempt solving, and the FailedEvent is set, which unwaits the main
+    // thread.
+    //
+    // N.B. Although the name of the field implies a count of graph memory
+    //      failures, it is actually used in the reverse direction, i.e. it
+    //      gets decremented for each failure and then tested against 0.  If
+    //      we incremented each failure, we'd need to check against an expected
+    //      failure count to determine if all graphs failed, which involves more
+    //      moving parts.
+    //
+
+    volatile LONGLONG GraphMemoryFailures;
 
     //
     // Pointers to the context file instances.

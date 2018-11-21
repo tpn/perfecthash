@@ -410,7 +410,9 @@ Return Value:
     if (!IsTableCreateOnly(Table)) {
         Result = PerfectHashTableCreateValuesArray(Table, 0);
         if (FAILED(Result)) {
-            PH_ERROR(PerfectHashTableCreateValuesArray, Result);
+            if (Result != E_OUTOFMEMORY) {
+                PH_ERROR(PerfectHashTableCreateValuesArray, Result);
+            }
             goto Error;
         }
     }
@@ -439,6 +441,15 @@ End:
 
     Context->Table = NULL;
     Context->State.NeedsReset = TRUE;
+
+    if (Result == E_OUTOFMEMORY) {
+
+        //
+        // Convert the out-of-memory error code into our equivalent info code.
+        //
+
+        Result = PH_I_OUT_OF_MEMORY;
+    }
 
     ReleasePerfectHashContextLockExclusive(Context);
     ReleasePerfectHashTableLockExclusive(Table);

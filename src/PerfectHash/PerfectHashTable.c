@@ -151,15 +151,15 @@ Return Value:
     //
 
     if (Table->Flags.Created && !IsTableCreateOnly(Table)) {
-        if (Table->TableInfoOnDisk) {
+        if (Table->TableInfoOnDisk && WasTableInfoOnDiskHeapAllocated(Table)) {
             PALLOCATOR Allocator = Table->Allocator;
             Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
         }
-        if (Table->Assigned) {
+        if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {
             if (!VirtualFree(Table->Assigned, 0, MEM_RELEASE)) {
                 SYS_ERROR(VirtualFree);
             }
-            Table->Assigned = NULL;
+            Table->TableDataBaseAddress = NULL;
         }
     }
 

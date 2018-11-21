@@ -1188,7 +1188,32 @@ Return Value:
     Result = Graph->Vtbl->LoadInfo(Graph);
 
     if (FAILED(Result)) {
-        PH_ERROR(GraphLoadInfo, Result);
+
+        if (Result != E_OUTOFMEMORY) {
+
+            //
+            // Anything other than an out-of-memory indication from LoadInfo()
+            // indicates an internal error somewhere; log the error, then raise.
+            //
+
+            PH_ERROR(GraphLoadInfo, Result);
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+
+        }
+
+        //
+        // We failed to allocate sufficient memory for the graph.  Check for the
+        // edge case where *all* threads failed to allocate memory, and set the
+        // context state flag and FailedEvent accordingly.
+        //
+
+        if (InterlockedDecrement64(&Graph->Context->GraphMemoryFailures) == 0) {
+            Graph->Context->State.AllGraphsFailedMemoryAllocation = TRUE;
+            if (!SetEvent(Graph->Context->FailedEvent)) {
+                SYS_ERROR(SetEvent);
+            }
+        }
+
         goto End;
     }
 
