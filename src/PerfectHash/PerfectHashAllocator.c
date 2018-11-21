@@ -104,7 +104,10 @@ AllocatorFree(
     PVOID Address
     )
 {
-    HeapFree(Allocator->HeapHandle, 0, Address);
+    if (!HeapFree(Allocator->HeapHandle, 0, Address)) {
+        SYS_ERROR(HeapFree);
+        PH_RAISE(E_UNEXPECTED);
+    }
     return;
 }
 

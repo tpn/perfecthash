@@ -140,6 +140,7 @@ Return Value:
     if (Table->ValuesBaseAddress) {
         if (!VirtualFree(Table->ValuesBaseAddress, 0, MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
+            PH_RAISE(E_UNEXPECTED);
         }
         Table->ValuesBaseAddress = NULL;
     }
