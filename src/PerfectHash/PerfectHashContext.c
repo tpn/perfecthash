@@ -841,6 +841,8 @@ Return Value:
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;
 
+    Context->ActiveSolvingLoops = 0;
+    Context->RemainingSolverLoops = 0;
     Context->GraphMemoryFailures = 0;
     Context->LowMemoryObserved = 0;
     Context->State.AllGraphsFailedMemoryAllocation = FALSE;

@@ -203,10 +203,19 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     volatile LONG LowMemoryObserved;
 
     //
-    // Count of active graph solving loops (worker threads).
+    // Count of active graph solving loops (worker threads).  This is
+    // incremented on solving loop entry and decremented on solving loop exit.
     //
 
     volatile LONG ActiveSolvingLoops;
+
+    //
+    // Count of remaining solving loops.  This is initialized to the maximum
+    // concurrency value prior to starting solver threads and decremented every
+    // time one finishes.
+    //
+
+    volatile LONG RemainingSolverLoops;
 
     //
     // Prior to submitting graph solving work, the following field is
@@ -226,12 +235,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     volatile LONG GraphMemoryFailures;
-
-    //
-    // Pad out to an 8-byte boundary.
-    //
-
-    ULONG Padding;
 
     //
     // Pointer to the active perfect hash table.

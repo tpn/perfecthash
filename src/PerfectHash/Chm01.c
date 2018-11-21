@@ -535,10 +535,12 @@ RetryWithLargerTableSize:
     Context->GraphMemoryFailures = Context->MaximumConcurrency;
 
     //
-    // Initialize the number of active graph solving loops.
+    // Initialize the number of remaining solver loops and clear the active
+    // graph solving loops counter.
     //
 
-    Context->ActiveSolvingLoops = Context->MaximumConcurrency;
+    Context->RemainingSolverLoops = Context->MaximumConcurrency;
+    Context->ActiveSolvingLoops = 0;
 
     //
     // For each graph instance, set the graph info, and, if we haven't reached
@@ -2023,6 +2025,8 @@ Return Value:
 
     UNREFERENCED_PARAMETER(Instance);
 
+    InterlockedIncrement(&Context->ActiveSolvingLoops);
+
     //
     // Resolve the graph from the list entry then enter the solving loop.
     //
@@ -2048,11 +2052,15 @@ Return Value:
         );
 
         if (!PermissibleErrorCode) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(ProcessGraphCallbackChm01_InvalidErrorCode, Result);
             PH_RAISE(Result);
         }
     }
 
-    if (InterlockedDecrement(&Context->ActiveSolvingLoops) == 0) {
+    InterlockedDecrement(&Context->ActiveSolvingLoops);
+
+    if (InterlockedDecrement(&Context->RemainingSolverLoops) == 0) {
 
         PHANDLE Event;
 
