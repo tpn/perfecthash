@@ -429,6 +429,15 @@ Return Value:
 
         if (Impl) {
             Result = Impl(Context, Item);
+            if (FAILED(Result)) {
+
+                //
+                // Nothing needs doing here.  The Result will bubble back up
+                // via the normal mechanisms.
+                //
+
+                NOTHING;
+            }
         }
 
     } else if (IsSaveFileWorkId(FileWorkId)) {

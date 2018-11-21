@@ -1355,6 +1355,10 @@ Return Value:
     }
 
     Result = Path->Vtbl->Copy(Path, BaseOutputDirectory, &Parts, NULL);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCopy, Result);
+        goto Error;
+    }
 
     //
     // Create a directory instance.

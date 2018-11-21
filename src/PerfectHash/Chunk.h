@@ -109,7 +109,7 @@ typedef const CHUNK *PCCHUNK;
 #pragma warning(pop)
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI PROCESS_CHUNKS)(

@@ -44,7 +44,7 @@ Abstract:
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_VALIDATE_CREATE_PARAMETERS)(

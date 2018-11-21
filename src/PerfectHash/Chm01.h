@@ -27,7 +27,7 @@ extern SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
     ShouldWeContinueTryingToSolveGraphChm01;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _When_(
     Item->Flags.PrepareOnce == TRUE,
@@ -44,7 +44,7 @@ HRESULT
 typedef PREPARE_FILE *PPREPARE_FILE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI UNMAP_FILE)(
@@ -54,7 +54,7 @@ HRESULT
 typedef UNMAP_FILE *PUNMAP_FILE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI CLOSE_FILE)(

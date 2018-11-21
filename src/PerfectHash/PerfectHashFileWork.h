@@ -670,7 +670,7 @@ IsContextFileWorkItem(
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI FILE_WORK_CALLBACK_IMPL)(

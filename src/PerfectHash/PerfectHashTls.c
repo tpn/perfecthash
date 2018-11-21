@@ -149,7 +149,10 @@ PerfectHashTlsGetOrSetContext(
 
     if (!Value) {
         ZeroStructPointerInline(Context);
-        TlsSetValue(PerfectHashTlsIndex, Context);
+        if (!TlsSetValue(PerfectHashTlsIndex, Context)) {
+            SYS_ERROR(TlsSetValue);
+            PH_RAISE(E_UNEXPECTED);
+        }
         Value = Context;
     }
 
@@ -169,7 +172,10 @@ PerfectHashTlsClearContextIfActive(
     Active = PerfectHashTlsEnsureContext();
 
     if (Active == Context) {
-        TlsSetValue(PerfectHashTlsIndex, NULL);
+        if (!TlsSetValue(PerfectHashTlsIndex, NULL)) {
+            SYS_ERROR(TlsSetValue);
+            PH_RAISE(E_UNEXPECTED);
+        }
     }
 }
 

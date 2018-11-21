@@ -24,7 +24,7 @@ Abstract:
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI PERFECT_HASH_KEYS_TABLE_SIZE_INITIALIZE_SUFFIX)(

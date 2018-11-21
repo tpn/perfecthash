@@ -26,7 +26,7 @@ Abstract:
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(File->Lock)
 HRESULT
@@ -37,7 +37,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_CLOSE *PPERFECT_HASH_FILE_CLOSE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(File->Lock)
 HRESULT
@@ -48,7 +48,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_EXTEND *PPERFECT_HASH_FILE_EXTEND;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(File->Lock)
 HRESULT
@@ -59,7 +59,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_TRUNCATE *PPERFECT_HASH_FILE_TRUNCATE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(File->Lock)
 HRESULT
@@ -69,7 +69,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_MAP *PPERFECT_HASH_FILE_MAP;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(File->Lock)
 HRESULT
@@ -79,7 +79,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_UNMAP *PPERFECT_HASH_FILE_UNMAP;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(File->Lock)
 _Requires_lock_not_held_(NewPath->Lock)
@@ -91,7 +91,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_SCHEDULE_RENAME *PPERFECT_HASH_FILE_SCHEDULE_RENAME;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(File->Lock)
 _Pre_satisfies_(

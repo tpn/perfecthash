@@ -295,7 +295,7 @@ HRESULT
 typedef PERFECT_HASH_TABLE_INITIALIZE *PPERFECT_HASH_TABLE_INITIALIZE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI PERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX)(
@@ -313,7 +313,7 @@ typedef PERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX
       *PPERFECT_HASH_TABLE_INITIALIZE_TABLE_SUFFIX;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI PERFECT_HASH_TABLE_CREATE_PATH)(
@@ -335,7 +335,7 @@ HRESULT
 typedef PERFECT_HASH_TABLE_CREATE_PATH *PPERFECT_HASH_TABLE_CREATE_PATH;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Table->Lock)
 HRESULT

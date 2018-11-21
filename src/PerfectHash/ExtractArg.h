@@ -24,7 +24,7 @@ Abstract:
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI TRY_EXTRACT_ARG_CONTEXT_BULK_CREATE_FLAGS)(
@@ -37,7 +37,7 @@ typedef TRY_EXTRACT_ARG_CONTEXT_BULK_CREATE_FLAGS
       *PTRY_EXTRACT_ARG_CONTEXT_BULK_CREATE_FLAGS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI TRY_EXTRACT_ARG_KEYS_LOAD_FLAGS)(
@@ -49,7 +49,7 @@ HRESULT
 typedef TRY_EXTRACT_ARG_KEYS_LOAD_FLAGS *PTRY_EXTRACT_ARG_KEYS_LOAD_FLAGS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI TRY_EXTRACT_ARG_TABLE_CREATE_FLAGS)(
@@ -61,7 +61,7 @@ HRESULT
 typedef TRY_EXTRACT_ARG_TABLE_CREATE_FLAGS *PTRY_EXTRACT_ARG_TABLE_CREATE_FLAGS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI TRY_EXTRACT_ARG_TABLE_LOAD_FLAGS)(
@@ -73,7 +73,7 @@ HRESULT
 typedef TRY_EXTRACT_ARG_TABLE_LOAD_FLAGS *PTRY_EXTRACT_ARG_TABLE_LOAD_FLAGS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI TRY_EXTRACT_ARG_TABLE_COMPILE_FLAGS)(
@@ -86,7 +86,7 @@ typedef TRY_EXTRACT_ARG_TABLE_COMPILE_FLAGS
       *PTRY_EXTRACT_ARG_TABLE_COMPILE_FLAGS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS)(

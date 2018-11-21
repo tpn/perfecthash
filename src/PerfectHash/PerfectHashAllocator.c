@@ -174,7 +174,7 @@ AllocatorFreeUnicodeStringBuffer(
 // Base aligned offset allocation routine.
 //
 
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 _Ret_maybenull_
 _Post_writable_byte_size_(Size)
@@ -219,7 +219,7 @@ AlignedOffsetAllocBase(
 }
 
 
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Ret_reallocated_bytes_(Previous, Size)
 PVOID

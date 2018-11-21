@@ -149,7 +149,7 @@ extern ULONG PerfectHashTlsIndex;
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 BOOLEAN
 (PERFECT_HASH_TLS_FUNCTION)(
@@ -167,7 +167,7 @@ PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessDetach;
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 BOOL
 (NTAPI PERFECT_HASH_TLS_SET_CONTEXT)(
@@ -176,7 +176,7 @@ BOOL
 typedef PERFECT_HASH_TLS_SET_CONTEXT *PPERFECT_HASH_TLS_SET_CONTEXT;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 PPERFECT_HASH_TLS_CONTEXT
 (NTAPI PERFECT_HASH_TLS_GET_CONTEXT)(
@@ -185,8 +185,7 @@ PPERFECT_HASH_TLS_CONTEXT
 typedef PERFECT_HASH_TLS_GET_CONTEXT *PPERFECT_HASH_TLS_GET_CONTEXT;
 
 typedef
-_Check_return_
-_Success_(return != 0)
+_Ret_notnull_
 PPERFECT_HASH_TLS_CONTEXT
 (NTAPI PERFECT_HASH_TLS_ENSURE_CONTEXT)(
     VOID
@@ -202,8 +201,7 @@ typedef PERFECT_HASH_TLS_ENSURE_CONTEXT *PPERFECT_HASH_TLS_ENSURE_CONTEXT;
 //
 
 typedef
-_Check_return_
-_Success_(return != 0)
+_Ret_notnull_
 PPERFECT_HASH_TLS_CONTEXT
 (NTAPI PERFECT_HASH_TLS_GET_OR_SET_CONTEXT)(
     PPERFECT_HASH_TLS_CONTEXT TlsContext
@@ -219,11 +217,13 @@ VOID
 typedef PERFECT_HASH_TLS_CLEAR_CONTEXT_IF_ACTIVE
       *PPERFECT_HASH_TLS_CLEAR_CONTEXT_IF_ACTIVE;
 
+#ifndef __INTELLISENSE__
 extern PERFECT_HASH_TLS_SET_CONTEXT PerfectHashTlsSetContext;
 extern PERFECT_HASH_TLS_GET_CONTEXT PerfectHashTlsGetContext;
 extern PERFECT_HASH_TLS_GET_OR_SET_CONTEXT PerfectHashTlsGetOrSetContext;
 extern PERFECT_HASH_TLS_ENSURE_CONTEXT PerfectHashTlsEnsureContext;
 extern PERFECT_HASH_TLS_CLEAR_CONTEXT_IF_ACTIVE
     PerfectHashTlsClearContextIfActive;
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

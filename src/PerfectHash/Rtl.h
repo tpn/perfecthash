@@ -1964,7 +1964,7 @@ HRESULT
 typedef RTL_INITIALIZE_LARGE_PAGES *PRTL_INITIALIZE_LARGE_PAGES;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Post_writable_byte_size_(dwSize)
 LPVOID
@@ -1980,7 +1980,7 @@ typedef RTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC
       *PRTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Post_writable_byte_size_(dwSize)
 LPVOID
@@ -2067,7 +2067,7 @@ IsValidUuidString(
 }
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI RTL_CREATE_UUID_STRING)(
@@ -2078,7 +2078,7 @@ typedef RTL_CREATE_UUID_STRING *PRTL_CREATE_UUID_STRING;
 extern RTL_CREATE_UUID_STRING RtlCreateUuidString;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI RTL_FREE_UUID_STRING)(

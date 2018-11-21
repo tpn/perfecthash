@@ -291,7 +291,7 @@ HRESULT
 typedef CO_INITIALIZE_EX *PCO_INITIALIZE_EX;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 HRESULT
 (STDAPICALLTYPE DLL_GET_CLASS_OBJECT)(
     _In_ REFCLSID ClassId,
@@ -590,7 +590,7 @@ typedef ICLASSFACTORY *PICLASSFACTORY;
 DECLARE_COMPONENT(Allocator, ALLOCATOR);
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Success_(return != 0)
 _Post_writable_byte_size_(Size)
@@ -602,7 +602,7 @@ PVOID
 typedef ALLOCATOR_MALLOC *PALLOCATOR_MALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Success_(return != 0)
 _Post_writable_byte_size_(NumberOfElements * ElementSize)
@@ -615,7 +615,7 @@ PVOID
 typedef ALLOCATOR_CALLOC *PALLOCATOR_CALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_reallocated_bytes_(Address, Size)
 PVOID
 (STDAPICALLTYPE ALLOCATOR_REALLOC)(
@@ -626,7 +626,7 @@ PVOID
 typedef ALLOCATOR_REALLOC *PALLOCATOR_REALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_reallocated_bytes_(Address, NumberOfElements * ElementSize)
 PVOID
 (STDAPICALLTYPE ALLOCATOR_RECALLOC)(
@@ -672,7 +672,7 @@ typedef ALLOCATOR_FREE_UNICODE_STRING_BUFFER
       *PALLOCATOR_FREE_UNICODE_STRING_BUFFER;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 _Ret_maybenull_
 _Post_writable_byte_size_(Size)
@@ -685,7 +685,7 @@ PVOID
 typedef ALLOCATOR_ALIGNED_MALLOC *PALLOCATOR_ALIGNED_MALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 _Ret_maybenull_
 _Post_writable_byte_size_(NumberOfElements * ElementSize)
@@ -699,7 +699,7 @@ PVOID
 typedef ALLOCATOR_ALIGNED_CALLOC *PALLOCATOR_ALIGNED_CALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Ret_reallocated_bytes_(Address, Size)
 PVOID
@@ -712,7 +712,7 @@ PVOID
 typedef ALLOCATOR_ALIGNED_REALLOC *PALLOCATOR_ALIGNED_REALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Ret_reallocated_bytes_(Address, NumberOfElements * ElementSize)
 PVOID
@@ -742,7 +742,7 @@ VOID
 typedef ALLOCATOR_ALIGNED_FREE_POINTER *PALLOCATOR_ALIGNED_FREE_POINTER;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 _Ret_maybenull_
 _Post_writable_byte_size_(Size)
@@ -756,7 +756,7 @@ PVOID
 typedef ALLOCATOR_ALIGNED_OFFSET_MALLOC *PALLOCATOR_ALIGNED_OFFSET_MALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 _Ret_maybenull_
 _Post_writable_byte_size_(NumberOfElements * ElementSize)
@@ -771,7 +771,7 @@ PVOID
 typedef ALLOCATOR_ALIGNED_OFFSET_CALLOC *PALLOCATOR_ALIGNED_OFFSET_CALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Ret_reallocated_bytes_(Address, Size)
 PVOID
@@ -785,7 +785,7 @@ PVOID
 typedef ALLOCATOR_ALIGNED_OFFSET_REALLOC *PALLOCATOR_ALIGNED_OFFSET_REALLOC;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Ret_maybenull_
 _Ret_reallocated_bytes_(Address, NumberOfElements * ElementSize)
 PVOID
@@ -916,7 +916,7 @@ typedef PERFECT_HASH_PATH_PARTS *PPERFECT_HASH_PATH_PARTS;
 typedef const PERFECT_HASH_PATH_PARTS *PCPERFECT_HASH_PATH_PARTS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Path->Lock)
 HRESULT
@@ -975,7 +975,7 @@ IsValidPathCreateFlags(
 }
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Path->Lock)
 HRESULT
@@ -994,7 +994,7 @@ HRESULT
 typedef PERFECT_HASH_PATH_CREATE *PPERFECT_HASH_PATH_CREATE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Path->Lock)
 HRESULT
@@ -1004,7 +1004,7 @@ HRESULT
 typedef PERFECT_HASH_PATH_RESET *PPERFECT_HASH_PATH_RESET;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Path->Lock)
 HRESULT
@@ -1096,7 +1096,7 @@ IsValidDirectoryOpenFlags(
 }
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_DIRECTORY_OPEN)(
@@ -1147,7 +1147,7 @@ IsValidDirectoryCreateFlags(
 }
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_DIRECTORY_CREATE)(
@@ -1210,7 +1210,7 @@ HRESULT
 typedef PERFECT_HASH_DIRECTORY_GET_FLAGS *PPERFECT_HASH_DIRECTORY_GET_FLAGS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_DIRECTORY_GET_PATH)(
@@ -1293,7 +1293,7 @@ IsValidFileLoadFlags(
 }
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_LOAD)(
@@ -1380,7 +1380,7 @@ IsValidFileCreateFlags(
 }
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_CREATE)(
@@ -1461,7 +1461,7 @@ HRESULT
 typedef PERFECT_HASH_FILE_GET_FLAGS *PPERFECT_HASH_FILE_GET_FLAGS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_FILE_GET_PATH)(
@@ -1614,7 +1614,7 @@ IsValidKeysLoadFlags(
 }
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_KEYS_LOAD)(
@@ -1686,7 +1686,7 @@ HRESULT
 typedef PERFECT_HASH_KEYS_GET_BITMAP *PPERFECT_HASH_KEYS_GET_BITMAP;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_KEYS_GET_FILE)(
@@ -2613,7 +2613,7 @@ typedef struct _PERFECT_HASH_TABLE PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_CREATE)(

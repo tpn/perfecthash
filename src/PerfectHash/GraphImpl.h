@@ -38,7 +38,7 @@ typedef GRAPH_ADD_EDGE *PGRAPH_ADD_EDGE;
 extern GRAPH_ADD_EDGE GraphAddEdge;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 BOOLEAN
 (NTAPI IS_GRAPH_ACYCLIC)(
     _In_ PGRAPH Graph

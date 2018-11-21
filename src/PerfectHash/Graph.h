@@ -499,7 +499,7 @@ typedef GRAPH_INFO *PGRAPH_INFO;
 DECLARE_COMPONENT(Graph, GRAPH);
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(&Graph->Lock)
 HRESULT
@@ -510,7 +510,7 @@ HRESULT
 typedef GRAPH_SET_INFO *PGRAPH_SET_INFO;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Graph->Lock)
 HRESULT
@@ -520,7 +520,7 @@ HRESULT
 typedef GRAPH_ENTER_SOLVING_LOOP *PGRAPH_ENTER_SOLVING_LOOP;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
@@ -531,7 +531,7 @@ HRESULT
 typedef GRAPH_SOLVE *PGRAPH_SOLVE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
@@ -541,7 +541,7 @@ HRESULT
 typedef GRAPH_LOAD_INFO *PGRAPH_LOAD_INFO;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
@@ -551,7 +551,7 @@ HRESULT
 typedef GRAPH_RESET *PGRAPH_RESET;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
@@ -561,7 +561,7 @@ HRESULT
 typedef GRAPH_LOAD_NEW_SEEDS *PGRAPH_LOAD_NEW_SEEDS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
@@ -571,7 +571,7 @@ HRESULT
 typedef GRAPH_VERIFY *PGRAPH_VERIFY;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
@@ -582,7 +582,7 @@ typedef GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
       *PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT

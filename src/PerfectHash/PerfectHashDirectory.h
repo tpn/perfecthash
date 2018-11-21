@@ -36,7 +36,7 @@ HRESULT
 typedef PERFECT_HASH_DIRECTORY_CLOSE *PPERFECT_HASH_DIRECTORY_CLOSE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Directory->Lock)
 _Requires_lock_not_held_(NewPath->Lock)
@@ -48,7 +48,7 @@ HRESULT
 typedef PERFECT_HASH_DIRECTORY_SCHEDULE_RENAME *PPERFECT_HASH_DIRECTORY_SCHEDULE_RENAME;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Directory->Lock)
 _Pre_satisfies_(
@@ -64,7 +64,7 @@ HRESULT
 typedef PERFECT_HASH_DIRECTORY_DO_RENAME *PPERFECT_HASH_DIRECTORY_DO_RENAME;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Directory->Lock)
 _Requires_exclusive_lock_held_(File->Lock)
@@ -77,7 +77,7 @@ HRESULT
 typedef PERFECT_HASH_DIRECTORY_ADD_FILE *PPERFECT_HASH_DIRECTORY_ADD_FILE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 _Requires_lock_not_held_(Directory->Lock)
 _Requires_exclusive_lock_held_(File->Lock)

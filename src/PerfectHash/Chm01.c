@@ -17,7 +17,7 @@ Abstract:
 #include "TableCreateCsv.h"
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI PREPARE_GRAPH_INFO)(
@@ -32,7 +32,7 @@ typedef PREPARE_GRAPH_INFO *PPREPARE_GRAPH_INFO;
 extern PREPARE_GRAPH_INFO PrepareGraphInfoChm01;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI PREPARE_TABLE_OUTPUT_DIRECTORY)(
@@ -310,6 +310,7 @@ Return Value:
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
 
+    _Analysis_assume_(TlsContext != NULL);
     ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
     ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
     ASSERT(!TlsContext->HeapCreateFlags);

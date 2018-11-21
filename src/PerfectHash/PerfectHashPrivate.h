@@ -345,7 +345,7 @@ typedef SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI CREATE_PERFECT_HASH_TABLE_IMPL)(
@@ -369,7 +369,7 @@ CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm01;
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
 (NTAPI LOAD_PERFECT_HASH_TABLE_IMPL)(
@@ -449,7 +449,7 @@ typedef const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE
 //
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 BOOLEAN
 (LOAD_SYMBOLS)(
@@ -464,7 +464,7 @@ BOOLEAN
 typedef LOAD_SYMBOLS *PLOAD_SYMBOLS;
 
 typedef
-_Check_return_
+_Must_inspect_result_
 _Success_(return != 0)
 BOOLEAN
 (LOAD_SYMBOLS_FROM_MULTIPLE_MODULES)(
