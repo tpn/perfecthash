@@ -961,13 +961,7 @@ Return Value:
     Table->ValuesBaseAddress = BaseAddress;
 
     if (!BaseAddress) {
-        LastError = GetLastError();
-        SYS_ERROR(VirtualAlloc);
-        if (LastError == ERROR_OUTOFMEMORY) {
-            Result = E_OUTOFMEMORY;
-        } else {
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
+        Result = E_OUTOFMEMORY;
         goto Error;
     }
 
