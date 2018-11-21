@@ -106,16 +106,10 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG AllGraphsFailedMemoryAllocation:1;
 
         //
-        // When set, indicates a low-memory event was observed.
-        //
-
-        ULONG LowMemoryObserved:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:25;
+        ULONG Unused:26;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -203,6 +197,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG RowBufferSize;
 
     //
+    // This counter is incremented every time a low-memory event is observed.
+    //
+
+    volatile LONG LowMemoryObserved;
+
+    //
     // Count of active graph solving loops (worker threads).
     //
 
@@ -226,6 +226,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     volatile LONG GraphMemoryFailures;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
 
     //
     // Pointer to the active perfect hash table.

@@ -842,7 +842,7 @@ Return Value:
     Context->FinishedCount = 0;
 
     Context->GraphMemoryFailures = 0;
-    Context->State.LowMemoryObserved = FALSE;
+    Context->LowMemoryObserved = 0;
     Context->State.AllGraphsFailedMemoryAllocation = FALSE;
 
     Context->MainWorkList->Vtbl->Reset(Context->MainWorkList);

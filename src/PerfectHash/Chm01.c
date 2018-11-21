@@ -169,9 +169,6 @@ Return Value:
     ULONG NumberOfSeedsAvailable;
     ULONGLONG Closest;
     ULONGLONG LastClosest;
-    BOOLEAN FailedEventSet;
-    BOOLEAN ShutdownEventSet;
-    BOOLEAN LowMemoryEventSet = FALSE;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
@@ -445,6 +442,14 @@ RetryWithLargerTableSize:
     }
 
     //
+    // Clear the counter of low-memory events observed.  (An interlocked
+    // increment is performed against this counter in various locations
+    // each time a wait is satisfied against the low-memory event.)
+    //
+
+    Context->LowMemoryObserved = 0;
+
+    //
     // If this isn't the first attempt, prepare the graph info again.  This
     // updates the various allocation sizes based on the new table size being
     // requested.
@@ -530,6 +535,12 @@ RetryWithLargerTableSize:
     Context->GraphMemoryFailures = Context->MaximumConcurrency;
 
     //
+    // Initialize the number of active graph solving loops.
+    //
+
+    Context->ActiveSolvingLoops = Context->MaximumConcurrency;
+
+    //
     // For each graph instance, set the graph info, and, if we haven't reached
     // the concurrency limit, append the graph to the context work list and
     // submit threadpool work for it (to begin graph solving).
@@ -606,7 +617,7 @@ RetryWithLargerTableSize:
     //
 
     if (WaitResult == WAIT_OBJECT_0+5) {
-        Context->State.LowMemoryObserved = TRUE;
+        InterlockedIncrement(&Context->LowMemoryObserved);
         Result = PH_I_LOW_MEMORY;
         goto Error;
     }
@@ -761,19 +772,22 @@ RetryWithLargerTableSize:
 
     Success = (Context->FinishedCount > 0);
 
-    //
-    // Obtain the wait results for the failed and shutdown events.
-    //
-
-    WaitResult = WaitForSingleObject(Context->FailedEvent, 0);
-    FailedEventSet = (WaitResult == WAIT_OBJECT_0);
-
-    WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
-    ShutdownEventSet = (WaitResult == WAIT_OBJECT_0);
-
     if (!Success) {
 
         BOOL CancelPending = TRUE;
+        BOOLEAN FailedEventSet;
+        BOOLEAN ShutdownEventSet;
+        BOOLEAN LowMemoryEventSet = FALSE;
+
+        //
+        // Obtain the wait results for the failed and shutdown events.
+        //
+
+        WaitResult = WaitForSingleObject(Context->FailedEvent, 0);
+        FailedEventSet = (WaitResult == WAIT_OBJECT_0);
+
+        WaitResult = WaitForSingleObject(Context->ShutdownEvent, 0);
+        ShutdownEventSet = (WaitResult == WAIT_OBJECT_0);
 
         //
         // If neither the failed or the shutdown event was set, assume the
@@ -783,7 +797,7 @@ RetryWithLargerTableSize:
         //
 
         if ((!FailedEventSet && !ShutdownEventSet) ||
-            Context->State.LowMemoryObserved == TRUE) {
+            Context->LowMemoryObserved > 0) {
             LowMemoryEventSet = TRUE;
         }
 
@@ -2008,7 +2022,6 @@ Return Value:
     HRESULT Result;
 
     UNREFERENCED_PARAMETER(Instance);
-    UNREFERENCED_PARAMETER(Context);
 
     //
     // Resolve the graph from the list entry then enter the solving loop.
@@ -2038,6 +2051,38 @@ Return Value:
             PH_RAISE(Result);
         }
     }
+
+    if (InterlockedDecrement(&Context->ActiveSolvingLoops) == 0) {
+
+        PHANDLE Event;
+
+        //
+        // We're the last graph; if the finished count indicates no solutions
+        // were found, signal FailedEvent.  Otherwise, signal SucceededEvent.
+        // This ensures we always unwait our parent thread's solving loop.
+        //
+        // N.B. There are numerous scenarios where this is a superfluous call,
+        //      as a terminating event (i.e. shutdown, low-memory etc) may have
+        //      already been set.  The effort required to distinguish this
+        //      situation and avoid setting the event is not warranted
+        //      (especially considering setting the event superfluously is
+        //      harmless).
+        //
+
+        if (Context->FinishedCount == 0) {
+            Event = &Context->FailedEvent;
+        } else {
+            Event = &Context->SucceededEvent;
+        }
+
+        if (!SetEvent(*Event)) {
+            SYS_ERROR(SetEvent);
+        }
+
+        SetStopSolving(Context);
+
+    }
+
 }
 
 SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
@@ -2087,7 +2132,9 @@ ShouldWeContinueTryingToSolveGraphChm01(
     //
 
     if (WaitResult == WAIT_OBJECT_0+4) {
-        Context->State.LowMemoryObserved = TRUE;
+        InterlockedIncrement(&Context->LowMemoryObserved);
+        SetStopSolving(Context);
+        return FALSE;
     }
 
     //
