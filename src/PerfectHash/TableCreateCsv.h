@@ -14,7 +14,7 @@ Abstract:
 
 //
 // Define an "X-Macro"-style macro for capturing the ordered definition of
-// columns in a row of bulk create .csv output.
+// columns in a row of table create .csv output.
 //
 // The ENTRY macros receive (Name, Value, OutputMacro) as their parameters.
 //
@@ -47,6 +47,10 @@ Abstract:
     ENTRY(MaskFunction,                                                \
           MaskFunctionNames[Context->MaskFunctionId],                  \
           OUTPUT_UNICODE_STRING_FAST)                                  \
+                                                                       \
+    ENTRY(MaximumConcurrency,                                          \
+          Context->MaximumConcurrency,                                 \
+          OUTPUT_INT)                                                  \
                                                                        \
     ENTRY(SolutionFound,                                               \
           (TableCreateResult == S_OK ? 'Y' : 'N'),                     \

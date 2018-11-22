@@ -164,10 +164,9 @@ Return Value:
     BOOLEAN Failed;
     BOOLEAN Terminate;
     HRESULT Result;
+    HRESULT TableCreateResult;
     PCHAR Buffer;
     PCHAR BaseBuffer = NULL;
-    PCHAR Output;
-    PCHAR OutputBuffer = NULL;
     PCHAR RowBuffer = NULL;
     PALLOCATOR Allocator;
     PVOID KeysBaseAddress;
@@ -178,7 +177,6 @@ Return Value:
     ULONG Failures;
     ULONGLONG BufferSize;
     ULONGLONG RowBufferSize;
-    ULONGLONG OutputBufferSize;
     LONG_INTEGER AllocSize;
     ULONG BytesWritten = 0;
     WIN32_FIND_DATAW FindData;
@@ -260,29 +258,6 @@ Return Value:
     // Arguments have been validated, proceed.
     //
 
-    SetContextBulkCreate(Context);
-
-    //
-    // Create a buffer we can use for stdout, using a very generous buffer size.
-    //
-
-    NumberOfPages = 10;
-    ProcessHandle = GetCurrentProcess();
-
-    Result = Rtl->Vtbl->CreateBuffer(Rtl,
-                                     &ProcessHandle,
-                                     NumberOfPages,
-                                     NULL,
-                                     &OutputBufferSize,
-                                     &OutputBuffer);
-
-    if (FAILED(Result)) {
-        Result = E_OUTOFMEMORY;
-        goto Error;
-    }
-
-    Output = OutputBuffer;
-
     //
     // Create a buffer we can use for temporary path construction.  We want it
     // to be MAX_USHORT in size, so (1 << 16) >> PAGE_SHIFT converts this into
@@ -322,6 +297,8 @@ Return Value:
         Result = E_OUTOFMEMORY;
         goto Error;
     }
+
+    SetContextBulkCreate(Context);
 
     Context->RowBuffer = Context->BaseRowBuffer = RowBuffer;
     Context->RowBufferSize = RowBufferSize;
@@ -655,6 +632,8 @@ Return Value:
                                      NumberOfTableCreateParameters,
                                      TableCreateParameters);
 
+        TableCreateResult = Result;
+
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashTableCreate, Result);
             Failed = TRUE;
@@ -711,6 +690,12 @@ Return Value:
                 goto ReleaseTable;
             }
         }
+
+        //
+        // Write the .csv row.
+        //
+
+        WRITE_BULK_CREATE_CSV_ROW();
 
     ReleaseTable:
 
@@ -783,17 +768,6 @@ End:
             Result = PH_E_SYSTEM_CALL_FAILED;
         }
         Context->RowBuffer = RowBuffer = NULL;
-    }
-
-    if (OutputBuffer) {
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &OutputBuffer);
-        if (FAILED(Result)) {
-            SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-        Output = NULL;
     }
 
     if (BaseBuffer) {

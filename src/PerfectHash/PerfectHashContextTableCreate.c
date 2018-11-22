@@ -234,8 +234,6 @@ Return Value:
     // Arguments have been validated, proceed.
     //
 
-    SetContextTableCreate(Context);
-
     //
     // Create a "row buffer" we can use for the CSV file.
     //
@@ -253,6 +251,8 @@ Return Value:
         Result = E_OUTOFMEMORY;
         return Result;
     }
+
+    SetContextTableCreate(Context);
 
     Context->RowBuffer = Context->BaseRowBuffer = RowBuffer;
     Context->RowBufferSize = RowBufferSize;
