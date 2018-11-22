@@ -21,6 +21,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DGML", "DGML", "{09D12683-B
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashBulkCreateExe", "PerfectHashBulkCreateExe\PerfectHashBulkCreateExe.vcxproj", "{657E2B26-19CD-4B71-A70E-8B037B815F87}"
+	ProjectSection(ProjectDependencies) = postProject
+		{14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8} = {14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashCreateExe", "PerfectHashCreateExe\PerfectHashCreateExe.vcxproj", "{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8} = {14D9F1FD-1EC4-47FF-BF73-3868ED05FEB8}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -96,6 +104,26 @@ Global
 		{657E2B26-19CD-4B71-A70E-8B037B815F87}.Release|x64.Build.0 = Release|x64
 		{657E2B26-19CD-4B71-A70E-8B037B815F87}.Release|x86.ActiveCfg = Release|Win32
 		{657E2B26-19CD-4B71-A70E-8B037B815F87}.Release|x86.Build.0 = Release|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Debug|x64.ActiveCfg = Debug|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Debug|x64.Build.0 = Debug|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Debug|x86.ActiveCfg = Debug|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Debug|x86.Build.0 = Debug|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGInstrument|x64.ActiveCfg = PGInstrument|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGInstrument|x64.Build.0 = PGInstrument|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGInstrument|x86.ActiveCfg = PGInstrument|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGInstrument|x86.Build.0 = PGInstrument|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGOptimize|x64.ActiveCfg = PGOptimize|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGOptimize|x64.Build.0 = PGOptimize|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGOptimize|x86.ActiveCfg = PGOptimize|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGOptimize|x86.Build.0 = PGOptimize|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGUpdate|x64.ActiveCfg = PGUpdate|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGUpdate|x64.Build.0 = PGUpdate|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGUpdate|x86.ActiveCfg = PGUpdate|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.PGUpdate|x86.Build.0 = PGUpdate|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Release|x64.ActiveCfg = Release|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Release|x64.Build.0 = Release|x64
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Release|x86.ActiveCfg = Release|Win32
+		{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

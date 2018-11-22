@@ -40,6 +40,19 @@ typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
+(NTAPI TRY_EXTRACT_ARG_CONTEXT_TABLE_CREATE_FLAGS)(
+    _In_ PRTL Rtl,
+    _In_ PALLOCATOR Allocator,
+    _In_ PCUNICODE_STRING Argument,
+    _Inout_ PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS Flags
+    );
+typedef TRY_EXTRACT_ARG_CONTEXT_TABLE_CREATE_FLAGS
+      *PTRY_EXTRACT_ARG_CONTEXT_TABLE_CREATE_FLAGS;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
 (NTAPI TRY_EXTRACT_ARG_KEYS_LOAD_FLAGS)(
     _In_ PRTL Rtl,
     _In_ PALLOCATOR Allocator,
@@ -103,10 +116,13 @@ typedef TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS
 // Declare functions.
 //
 
+#ifndef __INTELLISENSE__
 extern TRY_EXTRACT_ARG_CONTEXT_BULK_CREATE_FLAGS TryExtractArgContextBulkCreateFlags;
+extern TRY_EXTRACT_ARG_CONTEXT_TABLE_CREATE_FLAGS TryExtractArgContextTableCreateFlags;
 extern TRY_EXTRACT_ARG_KEYS_LOAD_FLAGS TryExtractArgKeysLoadFlags;
 extern TRY_EXTRACT_ARG_TABLE_CREATE_FLAGS TryExtractArgTableCreateFlags;
 extern TRY_EXTRACT_ARG_TABLE_COMPILE_FLAGS TryExtractArgTableCompileFlags;
 extern TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS TryExtractArgTableCreateParameters;
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -4,19 +4,18 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHashContextBulkCreate.c
+    PerfectHashContextTableCreate.c
 
 Abstract:
 
-    This module implements the bulk-create routine for the perfect hash library.
-
-    N.B. This component is a work in progress.  It is based off the self-test
-         component.
+    This module implements the context's table create routine for the perfect
+    hash library.  It is analogous to the bulk create functionality, except it
+    operates on a single keys file instead of a directory of keys.
 
 --*/
 
 #include "stdafx.h"
-#include "BulkCreateCsv.h"
+#include "TableCreateCsv.h"
 
 
 #define PH_ERROR_EX(Name, Result, ...) \
@@ -46,29 +45,29 @@ typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PREPARE_BULK_CREATE_CSV_FILE)(
+(STDAPICALLTYPE PREPARE_TABLE_CREATE_CSV_FILE)(
     _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG NumberOfKeysFiles
+    _In_ ULONG NumberOfRows
     );
-typedef PREPARE_BULK_CREATE_CSV_FILE *PPREPARE_BULK_CREATE_CSV_FILE;
-extern PREPARE_BULK_CREATE_CSV_FILE PrepareBulkCreateCsvFile;
+typedef PREPARE_TABLE_CREATE_CSV_FILE *PPREPARE_TABLE_CREATE_CSV_FILE;
+extern PREPARE_TABLE_CREATE_CSV_FILE PrepareTableCreateCsvFile;
 
 //
 // Method implementations.
 //
 
-PERFECT_HASH_CONTEXT_BULK_CREATE PerfectHashContextBulkCreate;
+PERFECT_HASH_CONTEXT_TABLE_CREATE PerfectHashContextTableCreate;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashContextBulkCreate(
+PerfectHashContextTableCreate(
     PPERFECT_HASH_CONTEXT Context,
-    PCUNICODE_STRING KeysDirectory,
+    PCUNICODE_STRING KeysPath,
     PCUNICODE_STRING BaseOutputDirectory,
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlagsPointer,
+    PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlagsPointer,
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
     PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer,
@@ -79,14 +78,14 @@ PerfectHashContextBulkCreate(
 
 Routine Description:
 
-    Attempts to create perfect hash tables for all key files in a directory.
+    Attempts to create perfect hash table for the given keys file.
 
 Arguments:
 
     Context - Supplies an instance of PERFECT_HASH_CONTEXT.
 
-    KeysDirectory - Supplies a pointer to a UNICODE_STRING structure that
-        represents a fully-qualified path of the keys directory.
+    KeysPath - Supplies a pointer to a UNICODE_STRING structure that represents
+        a fully-qualified path of the keys directory.
 
     BaseOutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
         represents a fully-qualified path of the directory where the perfect
@@ -98,8 +97,8 @@ Arguments:
 
     MaskFunctionId - Supplies the type of masking to use.
 
-    ContextBulkCreateFlags - Optionally supplies a pointer to a bulk-create flags
-        structure that can be used to customize bulk-create behavior.
+    ContextTableCreateFlags - Optionally supplies a pointer to a context
+        table create flags structure that can be used to customize behavior.
 
     KeysLoadFlags - Optionally supplies a pointer to a key loading flags
         structure that can be used to customize key loading behavior.
@@ -127,7 +126,7 @@ Return Value:
 
     E_POINTER - One or more mandatory parameters were NULL pointers.
 
-    E_INVALIDARG - KeysDirectory or BaseOutputDirectory were invalid.
+    E_INVALIDARG - KeysPath or BaseOutputDirectory were invalid.
 
     PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID.
 
@@ -145,24 +144,11 @@ Return Value:
 
     PH_E_INVALID_TABLE_COMPILE_FLAGS - Invalid table compile flags.
 
-    PH_E_INVALID_CONTEXT_BULK_CREATE_FLAGS - Invalid context bulk create flags.
-
-    PH_E_NO_KEYS_FOUND_IN_DIRECTORY - No keys found in directory.
-
 --*/
 {
     PRTL Rtl;
-    PWSTR Dest;
-    PWSTR Source;
-    ULONG LastError;
-    USHORT Length;
-    USHORT BaseLength;
     USHORT NumberOfPages;
-    ULONG Count = 0;
-    ULONG ReferenceCount;
-    ULONG NumberOfKeysFiles = 0;
-    BOOLEAN Failed;
-    BOOLEAN Terminate;
+    ULONG NumberOfRows = 0;
     HRESULT Result;
     PCHAR Buffer;
     PCHAR BaseBuffer = NULL;
@@ -175,27 +161,21 @@ Return Value:
     HANDLE FindHandle = NULL;
     HANDLE OutputHandle = NULL;
     HANDLE ProcessHandle = NULL;
-    ULONG Failures;
     ULONGLONG BufferSize;
     ULONGLONG RowBufferSize;
     ULONGLONG OutputBufferSize;
-    LONG_INTEGER AllocSize;
     ULONG BytesWritten = 0;
-    WIN32_FIND_DATAW FindData;
-    UNICODE_STRING WildcardPath;
-    UNICODE_STRING KeysPathString;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
-    PPERFECT_HASH_KEYS Keys;
-    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_KEYS Keys = NULL;
+    PPERFECT_HASH_TABLE Table = NULL;
     PPERFECT_HASH_FILE CsvFile = NULL;
     PPERFECT_HASH_FILE TableFile = NULL;
     PPERFECT_HASH_PATH TablePath = NULL;
     PPERFECT_HASH_DIRECTORY BaseOutputDir = NULL;
     PERFECT_HASH_KEYS_FLAGS KeysFlags;
     PERFECT_HASH_KEYS_BITMAP KeysBitmap;
-    PCUNICODE_STRING Suffix = &KeysWildcardSuffix;
-    PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlags;
+    PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags;
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
@@ -212,14 +192,14 @@ Return Value:
         Allocator = Context->Allocator;
     }
 
-    VALIDATE_FLAGS(ContextBulkCreate, CONTEXT_BULK_CREATE);
+    VALIDATE_FLAGS(ContextTableCreate, CONTEXT_TABLE_CREATE);
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
     VALIDATE_FLAGS(TableCreate, TABLE_CREATE);
     VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
 
-    if (!ARGUMENT_PRESENT(KeysDirectory)) {
+    if (!ARGUMENT_PRESENT(KeysPath)) {
         return E_POINTER;
-    } else if (!IsValidMinimumDirectoryUnicodeString(KeysDirectory)) {
+    } else if (!IsValidMinimumDirectoryUnicodeString(KeysPath)) {
         return E_INVALIDARG;
     }
 
@@ -260,7 +240,7 @@ Return Value:
     // Arguments have been validated, proceed.
     //
 
-    SetContextBulkCreate(Context);
+    SetContextTableCreate(Context);
 
     //
     // Create a buffer we can use for stdout, using a very generous buffer size.
@@ -341,202 +321,18 @@ Return Value:
     OutputHandle = Context->OutputHandle;
 
     //
-    // Calculate the size required for a new concatenated wide string buffer
-    // that combines the test data directory with the "*.keys" suffix.  The
-    // 2 * sizeof(*Dest) accounts for the joining slash and trailing NULL.
+    // Prepare the table create .csv file.
     //
 
-    AllocSize.LongPart = KeysDirectory->Length;
-    AllocSize.LongPart += Suffix->Length + (2 * sizeof(*Dest));
-
-    //
-    // Sanity check we haven't overflowed.
-    //
-
-    if (AllocSize.HighPart) {
-        Result = PH_E_STRING_BUFFER_OVERFLOW;
-        PH_ERROR(PerfectHashContextBulkCreate_AllocSize, Result);
-        goto Error;
-    }
-
-    WildcardPath.Buffer = (PWSTR)Buffer;
-
-    if (!WildcardPath.Buffer) {
-        goto Error;
-    }
-
-    //
-    // Copy incoming keys directory name.
-    //
-
-    Length = KeysDirectory->Length;
-    CopyInline(WildcardPath.Buffer,
-               KeysDirectory->Buffer,
-               Length);
-
-    //
-    // Advance our Dest pointer to the end of the directory name, write a
-    // slash, then copy the suffix over.
-    //
-
-    Dest = (PWSTR)RtlOffsetToPointer(WildcardPath.Buffer, Length);
-    *Dest++ = L'\\';
-    CopyInline(Dest, Suffix->Buffer, Suffix->Length);
-
-    //
-    // Wire up the search path length and maximum length variables.  The max
-    // length will be our AllocSize, length will be this value minus 2 to
-    // account for the trailing NULL.
-    //
-
-    WildcardPath.MaximumLength = AllocSize.LowPart;
-    WildcardPath.Length = AllocSize.LowPart - sizeof(*Dest);
-    ASSERT(WildcardPath.Buffer[WildcardPath.Length] == L'\0');
-
-    //
-    // Advance the buffer past this string allocation, up to the next 16-byte
-    // boundary.
-    //
-
-    Buffer = (PSTR)(
-        RtlOffsetToPointer(
-            Buffer,
-            ALIGN_UP(WildcardPath.MaximumLength, 16)
-        )
-    );
-
-    //
-    // Create a find handle for the <keys dir>\*.keys search pattern we
-    // created.  Note that we actually do this twice; the first time, below,
-    // is used to count the number of *.keys file in the target directory,
-    // which allows us to size our .csv file relative to the number rows we'll
-    // be appending to it.
-    //
-
-    FindHandle = FindFirstFileW(WildcardPath.Buffer, &FindData);
-
-    if (!IsValidHandle(FindHandle)) {
-
-        //
-        // Check to see if we failed because there were no files matching the
-        // wildcard *.keys in the test directory.  In this case, GetLastError()
-        // will report ERROR_FILE_NOT_FOUND.
-        //
-
-        FindHandle = NULL;
-        LastError = GetLastError();
-
-        if (LastError == ERROR_FILE_NOT_FOUND) {
-            Result = PH_E_NO_KEYS_FOUND_IN_DIRECTORY;
-            PH_MESSAGE(Result);
-        } else {
-            SYS_ERROR(FindFirstFileW);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-
-        goto Error;
-    }
-
-    //
-    // Count the number of keys files in the directory.
-    //
-
-    NumberOfKeysFiles = 0;
-
-    do {
-        NumberOfKeysFiles++;
-    } while (FindNextFile(FindHandle, &FindData));
-
-    //
-    // Sanity check we saw at least one *.keys file.
-    //
-
-    if (NumberOfKeysFiles == 0) {
-        Result = PH_E_NO_KEYS_FOUND_IN_DIRECTORY;
-        PH_MESSAGE(Result);
-        goto Error;
-    }
-
-    //
-    // Close the find handle, then create a new one.
-    //
-
-    if (!FindClose(FindHandle)) {
-        SYS_ERROR(FindClose);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
-
-    //
-    // Now that we know how many *.keys files to expect in the target directory,
-    // ignoring the unlikely case where keys are being added/deleted from the
-    // directory whilst this routine is running, we can prepare our .csv file.
-    //
-
-    Result = PrepareBulkCreateCsvFile(Context, NumberOfKeysFiles);
+    NumberOfRows = 1;
+    Result = PrepareTableCreateCsvFile(Context, NumberOfRows);
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
-        return Result;
-    }
-
-    CsvFile = Context->BulkCreateCsvFile;
-
-    //
-    // Create a new file handle.  This is the one we'll use to drive the
-    // table create operations.
-    //
-
-    FindHandle = FindFirstFileW(WildcardPath.Buffer, &FindData);
-
-    if (!IsValidHandle(FindHandle)) {
-
-        //
-        // Duplicate the error handling logic from above.
-        //
-
-        FindHandle = NULL;
-        LastError = GetLastError();
-
-        if (LastError == ERROR_FILE_NOT_FOUND) {
-            Result = PH_E_NO_KEYS_FOUND_IN_DIRECTORY;
-            PH_MESSAGE(Result);
-        } else {
-            SYS_ERROR(FindFirstFileW);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-
+        PH_ERROR(PerfectHashContextTableCreate_PrepareCsvFile, Result);
         goto Error;
     }
 
-    //
-    // Initialize the fully-qualified keys path.
-    //
+    CsvFile = Context->TableCreateCsvFile;
 
-    KeysPathString.Buffer = (PWSTR)Buffer;
-    CopyInline(KeysPathString.Buffer, KeysDirectory->Buffer, Length);
-
-    //
-    // Advance our Dest pointer to the end of the directory name, then write
-    // a slash.
-    //
-
-    Dest = (PWSTR)RtlOffsetToPointer(KeysPathString.Buffer, Length);
-    *Dest++ = L'\\';
-
-    //
-    // Update the length to account for the slash we just wrote, then make a
-    // copy of it in the variable BaseLength.
-    //
-
-    Length += sizeof(*Dest);
-    BaseLength = Length;
-
-    //
-    // Initialize local variables and then begin the main loop.
-    //
-
-    Failures = 0;
-    Terminate = FALSE;
     ZeroStruct(KeysBitmap);
 
     Table = NULL;
@@ -550,216 +346,139 @@ Return Value:
     // this avoids some additional memory allocation and copying overhead.
     //
 
-    if (!ContextBulkCreateFlags.TestAfterCreate) {
+    if (!ContextTableCreateFlags.TestAfterCreate) {
         TableCreateFlags.CreateOnly = TRUE;
     }
 
-    do {
-
-        Count++;
-
-        //
-        // Clear the failure flag at the top of every loop invocation.
-        //
-
-        Failed = FALSE;
-
-        //
-        // Copy the filename over to the fully-qualified keys path.
-        //
-
-        Dest = (PWSTR)RtlOffsetToPointer(KeysPathString.Buffer, BaseLength);
-        Source = (PWSTR)FindData.cFileName;
-
-        while (*Source) {
-            *Dest++ = *Source++;
-        }
-        *Dest = L'\0';
-
-        Length = (USHORT)RtlPointerToOffset(KeysPathString.Buffer, Dest);
-        KeysPathString.Length = Length;
-        KeysPathString.MaximumLength = Length + sizeof(*Dest);
-        ASSERT(KeysPathString.Buffer[KeysPathString.Length >> 1] == L'\0');
-        ASSERT(&KeysPathString.Buffer[KeysPathString.Length >> 1] == Dest);
-
-        Result = Context->Vtbl->CreateInstance(Context,
-                                               NULL,
-                                               &IID_PERFECT_HASH_KEYS,
-                                               &Keys);
-
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashKeysCreateInstance, Result);
-            Failures++;
-            break;
-        }
-
-        Result = Keys->Vtbl->Load(Keys,
-                                  &KeysLoadFlags,
-                                  &KeysPathString,
-                                  sizeof(ULONG));
-
-        if (FAILED(Result)) {
-            PH_KEYS_ERROR(PerfectHashKeysLoad, Result);
-            Failures++;
-            Terminate = TRUE;
-            goto ReleaseKeys;
-        }
-
-        Result = Keys->Vtbl->GetFlags(Keys,
-                                      sizeof(KeysFlags),
-                                      &KeysFlags);
-
-        if (FAILED(Result)) {
-            PH_KEYS_ERROR(PerfectHashKeysGetFlags, Result);
-            Failures++;
-            Terminate = TRUE;
-            goto ReleaseKeys;
-        }
-
-        Result = Keys->Vtbl->GetAddress(Keys,
-                                        &KeysBaseAddress,
-                                        &NumberOfKeys);
-
-        if (FAILED(Result)) {
-            PH_KEYS_ERROR(PerfectHashKeysGetAddress, Result);
-            Failures++;
-            Terminate = TRUE;
-            goto ReleaseKeys;
-        }
-
-        //
-        // Keys were loaded successfully.  Proceed with table creation.
-        //
-
-        ASSERT(Table == NULL);
-
-        Result = Context->Vtbl->CreateInstance(Context,
-                                               NULL,
-                                               &IID_PERFECT_HASH_TABLE,
-                                               &Table);
-
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashTableCreateInstance, Result);
-            Failures++;
-            Terminate = TRUE;
-            goto ReleaseKeys;
-        }
-
-        Result = Table->Vtbl->Create(Table,
-                                     Context,
-                                     AlgorithmId,
-                                     HashFunctionId,
-                                     MaskFunctionId,
-                                     Keys,
-                                     &TableCreateFlags,
-                                     NumberOfTableCreateParameters,
-                                     TableCreateParameters);
-
-        if (FAILED(Result)) {
-            PH_KEYS_ERROR(PerfectHashTableCreate, Result);
-            Failed = TRUE;
-            Failures++;
-            goto ReleaseTable;
-        } else if (Result != S_OK) {
-            if (Result == PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS) {
-                ASTERISK();
-            } else if (Result == PH_I_OUT_OF_MEMORY) {
-                EXCLAMATION();
-            } else if (Result == PH_I_LOW_MEMORY) {
-                CARET();
-            } else if (Result ==
-                       PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
-                PERCENT();
-            } else {
-                CROSS();
-            }
-            goto ReleaseTable;
-        } else {
-            DOT();
-        }
-
-        //
-        // Test the table, if applicable.
-        //
-
-        if (ContextBulkCreateFlags.TestAfterCreate) {
-
-            Result = Table->Vtbl->Test(Table, Keys, FALSE);
-
-            if (FAILED(Result)) {
-                PH_TABLE_ERROR(PerfectHashTableTest, Result);
-                Failed = TRUE;
-                Failures++;
-                goto ReleaseTable;
-            }
-        }
-
-        //
-        // Compile the table.
-        //
-
-        if (ContextBulkCreateFlags.Compile) {
-
-            Result = Table->Vtbl->Compile(Table,
-                                          &TableCompileFlags,
-                                          CpuArchId);
-
-            if (FAILED(Result)) {
-                PH_TABLE_ERROR(PerfectHashTableCompile, Result);
-                Failures++;
-                Failed = TRUE;
-                goto ReleaseTable;
-            }
-        }
-
-    ReleaseTable:
-
-        //
-        // Release the table.
-        //
-
-        ReferenceCount = Table->Vtbl->Release(Table);
-        Table = NULL;
-
-        if (ReferenceCount != 0) {
-            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
-        }
-
-        //
-        // Release the table path and file.
-        //
-
-        RELEASE(TablePath);
-        RELEASE(TableFile);
-
-        //
-        // Intentional follow-on to ReleaseKeys.
-        //
-
-    ReleaseKeys:
-
-        RELEASE(Keys);
-
-        if (Terminate) {
-            break;
-        }
-
-    } while (FindNextFile(FindHandle, &FindData));
 
     //
-    // Bulk create complete!
+    // Create a keys instance.
     //
 
-    NEWLINE();
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_KEYS,
+                                           &Keys);
 
-    if (!Failures && !Terminate) {
-        Result = S_OK;
-        goto End;
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashKeysCreateInstance, Result);
+        goto Error;
     }
 
     //
-    // Intentional follow-on to Error.
+    // Load the keys.
     //
+
+    Result = Keys->Vtbl->Load(Keys,
+                              &KeysLoadFlags,
+                              KeysPath,
+                              sizeof(ULONG));
+
+    if (FAILED(Result)) {
+        PH_KEYS_ERROR(PerfectHashKeysLoad, Result);
+        goto Error;
+    }
+
+    Result = Keys->Vtbl->GetFlags(Keys,
+                                  sizeof(KeysFlags),
+                                  &KeysFlags);
+
+    if (FAILED(Result)) {
+        PH_KEYS_ERROR(PerfectHashKeysGetFlags, Result);
+        goto Error;
+    }
+
+    Result = Keys->Vtbl->GetAddress(Keys,
+                                    &KeysBaseAddress,
+                                    &NumberOfKeys);
+
+    if (FAILED(Result)) {
+        PH_KEYS_ERROR(PerfectHashKeysGetAddress, Result);
+        goto Error;
+    }
+
+    //
+    // Keys were loaded successfully.  Proceed with table creation.
+    //
+
+    ASSERT(Table == NULL);
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_TABLE,
+                                           &Table);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableCreateInstance, Result);
+        goto Error;
+    }
+
+    Result = Table->Vtbl->Create(Table,
+                                 Context,
+                                 AlgorithmId,
+                                 HashFunctionId,
+                                 MaskFunctionId,
+                                 Keys,
+                                 &TableCreateFlags,
+                                 NumberOfTableCreateParameters,
+                                 TableCreateParameters);
+
+    if (FAILED(Result)) {
+        PH_KEYS_ERROR(PerfectHashTableCreate, Result);
+        goto Error;
+    } else if (Result != S_OK) {
+        if (Result == PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS) {
+            ASTERISK();
+        } else if (Result == PH_I_OUT_OF_MEMORY) {
+            EXCLAMATION();
+        } else if (Result == PH_I_LOW_MEMORY) {
+            CARET();
+        } else if (Result ==
+                   PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
+            PERCENT();
+        } else {
+            CROSS();
+        }
+        goto Error;
+    } else {
+        DOT();
+    }
+
+    //
+    // Test the table, if applicable.
+    //
+
+    if (ContextTableCreateFlags.TestAfterCreate) {
+
+        Result = Table->Vtbl->Test(Table, Keys, FALSE);
+
+        if (FAILED(Result)) {
+            PH_TABLE_ERROR(PerfectHashTableTest, Result);
+            goto Error;
+        }
+    }
+
+    //
+    // Compile the table.
+    //
+
+    if (ContextTableCreateFlags.Compile) {
+
+        Result = Table->Vtbl->Compile(Table,
+                                      &TableCompileFlags,
+                                      CpuArchId);
+
+        if (FAILED(Result)) {
+            PH_TABLE_ERROR(PerfectHashTableCompile, Result);
+            goto Error;
+        }
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
 
 Error:
 
@@ -772,6 +491,15 @@ Error:
     //
 
 End:
+
+    //
+    // Release all references.
+    //
+
+    RELEASE(Keys);
+    RELEASE(Table);
+    RELEASE(TablePath);
+    RELEASE(TableFile);
 
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
@@ -815,11 +543,11 @@ End:
         FindHandle = NULL;
     }
 
-    ClearContextBulkCreate(Context);
+    ClearContextTableCreate(Context);
 
     //
     // Close the .csv file.  If we encountered an error, use 0 as end-of-file,
-    // which will cause the Close() call to delete it.
+    // which will cause the Close() call to reset it to its original state.
     //
 
     if (Result != S_OK) {
@@ -831,29 +559,29 @@ End:
     if (CsvFile) {
         Result = CsvFile->Vtbl->Close(CsvFile, EndOfFile);
         if (FAILED(Result)) {
-            PH_ERROR(PerfectHashBulkCreate_CloseCsvFile, Result);
+            PH_ERROR(PerfectHashTableCreate_CloseCsvFile, Result);
         }
     }
 
-    RELEASE(Context->BulkCreateCsvFile);
+    RELEASE(Context->TableCreateCsvFile);
 
     return Result;
 }
 
 
-PREPARE_BULK_CREATE_CSV_FILE PrepareBulkCreateCsvFile;
+PREPARE_TABLE_CREATE_CSV_FILE PrepareTableCreateCsvFile;
 
 _Use_decl_annotations_
 HRESULT
-PrepareBulkCreateCsvFile(
+PrepareTableCreateCsvFile(
     PPERFECT_HASH_CONTEXT Context,
-    ULONG NumberOfKeysFiles
+    ULONG NumberOfRows
     )
 /*++
 
 Routine Description:
 
-    Prepares the <BaseOutputDir>\PerfectHashBulkCreate_<HeaderHash>.csv file.
+    Prepares the <BaseOutputDir>\PerfectHashTableCreate_<HeaderHash>.csv file.
     This involves determining the header hash, constructing a path instance,
     creating a file instance, and opening it for append.
 
@@ -861,9 +589,9 @@ Arguments:
 
     Context - Supplies the context for which the .csv file is to be prepared.
 
-    NumberOfKeysFiles - Supplies the number of keys files anticipated to be
-        processed during the bulk create operation.  This is used to derive
-        an appropriate file size to use for the .csv file.
+    NumberOfRows - Supplies the number of rows anticipated to be written during
+        processing.  This is used to derive an appropriate file and memory map
+        size to use for the .csv file.
 
 Return Value:
 
@@ -916,9 +644,9 @@ Return Value:
     OUTPUT_RAW(#Name);                                               \
     OUTPUT_CHR('\n');
 
-    BULK_CREATE_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
-                              EXPAND_AS_COLUMN_NAME_THEN_COMMA,
-                              EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+    TABLE_CREATE_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                               EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                               EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
 
     Header.Length = (USHORT)RtlPointerToOffset(Base, Output);
     Header.MaximumLength = Header.Length;
@@ -979,7 +707,7 @@ Return Value:
     // Create the .csv file's path name.
     //
 
-    BaseName = &PerfectHashBulkCreateCsvBaseName;
+    BaseName = &PerfectHashTableCreateCsvBaseName;
     ExistingPath = Context->BaseOutputDirectory->Path;
     NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
 
@@ -995,7 +723,7 @@ Return Value:
                                 NULL);          // Reserved
 
     if (FAILED(Result)) {
-        PH_ERROR(PrepareBulkCreateCsvFile_PathCreate, Result);
+        PH_ERROR(PrepareTableCreateCsvFile_PathCreate, Result);
         goto Error;
     }
 
@@ -1016,21 +744,16 @@ Return Value:
     //
     // Heuristically derive an appropriate file size (EndOfFile) to use based
     // on the length of the header, plus 32 bytes, aligned up to a 32-byte
-    // boundary, then multiplied by the number of keys files.  We then add the
-    // system allocation size, then align the final amount up to this boundary.
+    // boundary, then multiplied by the number of rows.  We then add the system
+    // allocation size, then align the final amount up to this boundary.
     //
     // N.B. The resulting file size is very generous; we shouldn't ever come
-    //      close to hitting it in normal operating conditions.  If a large
-    //      number of keys were added to the directory after we did our initial
-    //      count, worst case scenario is that we'll eventually trap when
-    //      writing rows to the .csv file.  The solution to this is: don't
-    //      add large numbers of keys files to the directory when running a
-    //      bulk create operation.
+    //      close to hitting it in normal operating conditions.
     //
 
     EndOfFile.QuadPart = (
         ALIGN_UP((ULONG_PTR)Header.Length + 32, 32) *
-        (ULONG_PTR)NumberOfKeysFiles
+        (ULONG_PTR)NumberOfRows
     );
     EndOfFile.QuadPart += Context->SystemAllocationGranularity;
     EndOfFile.QuadPart = ALIGN_UP(EndOfFile.QuadPart,
@@ -1046,7 +769,7 @@ Return Value:
                                 &FileCreateFlags);
 
     if (FAILED(Result)) {
-        PH_ERROR(PrepareBulkCreateCsvFile_FileCreate, Result);
+        PH_ERROR(PrepareTableCreateCsvFile_FileCreate, Result);
         goto Error;
     }
 
@@ -1067,7 +790,7 @@ Return Value:
         HeaderMatches = (BytesMatched == Header.Length);
 
         if (!HeaderMatches) {
-            Result = PH_E_BULK_CREATE_CSV_HEADER_MISMATCH;
+            Result = PH_E_TABLE_CREATE_CSV_HEADER_MISMATCH;
             goto Error;
         }
 
@@ -1091,7 +814,7 @@ Return Value:
     // the RELEASE(File) at the end of the routine.
     //
 
-    Context->BulkCreateCsvFile = File;
+    Context->TableCreateCsvFile = File;
     File->Vtbl->AddRef(File);
 
     //
@@ -1141,23 +864,22 @@ End:
     }
 
 
-
-PERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
-    PerfectHashContextExtractBulkCreateArgsFromArgvW;
+PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
+    PerfectHashContextExtractTableCreateArgsFromArgvW;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashContextExtractBulkCreateArgsFromArgvW(
+PerfectHashContextExtractTableCreateArgsFromArgvW(
     PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
     LPWSTR *ArgvW,
-    PUNICODE_STRING KeysDirectory,
+    PUNICODE_STRING KeysPath,
     PUNICODE_STRING BaseOutputDirectory,
     PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PULONG MaximumConcurrency,
-    PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlags,
+    PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags,
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
@@ -1168,8 +890,8 @@ PerfectHashContextExtractBulkCreateArgsFromArgvW(
 
 Routine Description:
 
-    Extracts arguments for the bulk-create functionality from an argument vector
-    array, typically obtained from a commandline invocation.
+    Extracts arguments for the table create functionality from an argument
+    vector array, typically obtained from a commandline invocation.
 
 Arguments:
 
@@ -1180,8 +902,8 @@ Arguments:
 
     ArgvW - Supplies a pointer to an array of wide C string arguments.
 
-    KeysDirectory - Supplies a pointer to a UNICODE_STRING structure that
-        will be filled out with the keys directory.
+    KeysPath - Supplies a pointer to a UNICODE_STRING structure that will be
+        filled out with the keys path.
 
     BaseOutputDirectory - Supplies a pointer to a UNICODE_STRING structure that
         will be filled out with the output directory.
@@ -1198,8 +920,11 @@ Arguments:
     MaximumConcurrency - Supplies the address of a variable that will receive
         the maximum concurrency.
 
-    ContextBulkCreateFlags - Supplies the address of a variable that will
-        receive the bulk-create flags.
+    ContextTableCreateFlags - Supplies the address of a variable that will
+        receive the context table-create flags.
+
+    TableCreateFlags - Supplies the address of a variable that will receive the
+        bulk-create flags.
 
     KeysLoadFlags - Supplies the address of a variable that will receive
         the keys load flags.
@@ -1227,7 +952,7 @@ Return Value:
 
     E_POINTER - One or more mandatory parameters were NULL pointers.
 
-    PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS - Invalid number of arguments.
+    PH_E_CONTEXT_TABLE_CREATE_INVALID_NUM_ARGS - Invalid number of arguments.
 
     PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID.
 
@@ -1263,7 +988,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(KeysDirectory)) {
+    if (!ARGUMENT_PRESENT(KeysPath)) {
         return E_POINTER;
     }
 
@@ -1287,7 +1012,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(ContextBulkCreateFlags)) {
+    if (!ARGUMENT_PRESENT(ContextTableCreateFlags)) {
         return E_POINTER;
     }
 
@@ -1311,12 +1036,10 @@ Return Value:
         return E_POINTER;
     }
 
-    ValidNumberOfArguments = (
-        NumberOfArguments >= 7
-    );
+    ValidNumberOfArguments = (NumberOfArguments >= 7);
 
     if (!ValidNumberOfArguments) {
-        return PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS;
+        return PH_E_CONTEXT_TABLE_CREATE_INVALID_NUM_ARGS;
     }
 
     //
@@ -1328,13 +1051,13 @@ Return Value:
     Allocator = Context->Allocator;
 
     //
-    // Extract keys directory.
+    // Extract keys path.
     //
 
     CurrentArg++;
-    KeysDirectory->Buffer = *ArgW++;
-    KeysDirectory->Length = GET_LENGTH(KeysDirectory);
-    KeysDirectory->MaximumLength = GET_MAX_LENGTH(KeysDirectory);
+    KeysPath->Buffer = *ArgW++;
+    KeysPath->Length = GET_LENGTH(KeysPath);
+    KeysPath->MaximumLength = GET_MAX_LENGTH(KeysPath);
 
     //
     // Extract base output directory.
@@ -1394,7 +1117,6 @@ Return Value:
     // Zero all flags and table create parameters.
     //
 
-    ContextBulkCreateFlags->AsULong = 0;
     KeysLoadFlags->AsULong = 0;
     TableCreateFlags->AsULong = 0;
     TableCompileFlags->AsULong = 0;
@@ -1439,7 +1161,7 @@ Return Value:
 #define TRY_EXTRACT_ARG(Name)                                                 \
     Result = TryExtractArg##Name##Flags(Rtl, Allocator, String, Name##Flags); \
     if (FAILED(Result)) {                                                     \
-        PH_ERROR(ExtractBulkCreateArgs_TryExtractArg##Name##Flags, Result);   \
+        PH_ERROR(ExtractTableCreateArgs_TryExtractArg##Name##Flags, Result);   \
         break;                                                                \
     } else if (Result == S_OK) {                                              \
         continue;                                                             \
@@ -1447,7 +1169,7 @@ Return Value:
         ASSERT(Result == S_FALSE);                                            \
     }
 
-        TRY_EXTRACT_ARG(ContextBulkCreate);
+        TRY_EXTRACT_ARG(ContextTableCreate);
         TRY_EXTRACT_ARG(KeysLoad);
         TRY_EXTRACT_ARG(TableCreate);
         TRY_EXTRACT_ARG(TableCompile);
@@ -1467,7 +1189,9 @@ Return Value:
 
         if (FAILED(Result)) {
 
-            PH_ERROR(ExtractBulkCreateArgs_TryExtractTableCreateParams, Result);
+            PH_ERROR(ExtractTableCreateArgs_TryExtractTableCreateParams,
+                     Result);
+
             break;
 
         } else {
@@ -1494,11 +1218,12 @@ Return Value:
     return Result;
 }
 
-PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW PerfectHashContextBulkCreateArgvW;
+
+PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW PerfectHashContextTableCreateArgvW;
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashContextBulkCreateArgvW(
+PerfectHashContextTableCreateArgvW(
     PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
     LPWSTR *ArgvW
@@ -1507,8 +1232,8 @@ PerfectHashContextBulkCreateArgvW(
 
 Routine Description:
 
-    Extracts arguments for the bulk-create functionality from an argument vector
-    array and then invokes the context bulk-create functionality.
+    Extracts arguments for the table create functionality from an argument
+    vector array and then invokes the context table create functionality.
 
 Arguments:
 
@@ -1525,7 +1250,7 @@ Return Value:
 
     E_POINTER - One or more mandatory parameters were NULL pointers.
 
-    PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS - Invalid number of arguments.
+    PH_E_CONTEXT_TABLE_CREATE_INVALID_NUM_ARGS - Invalid number of arguments.
 
     PH_E_INVALID_ALGORITHM_ID - Invalid algorithm ID.
 
@@ -1535,7 +1260,7 @@ Return Value:
 
     PH_E_INVALID_MAXIMUM_CONCURRENCY - Invalid maximum concurrency.
 
-    PH_E_INVALID_CONTEXT_BULK_CREATE_FLAGS - Invalid bulk create flags.
+    PH_E_INVALID_CONTEXT_TABLE_CREATE_FLAGS - Invalid table create flags.
 
     PH_E_INVALID_KEYS_LOAD_FLAGS - Invalid keys load flags.
 
@@ -1547,34 +1272,34 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result;
-    UNICODE_STRING KeysDirectory = { 0 };
+    ULONG MaximumConcurrency = 0;
+    UNICODE_STRING KeysPath = { 0 };
     UNICODE_STRING BaseOutputDirectory = { 0 };
     PERFECT_HASH_ALGORITHM_ID AlgorithmId = 0;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId = 0;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId = 0;
-    ULONG MaximumConcurrency = 0;
-    PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlags = { 0 };
+    PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags = { 0 };
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags = { 0 };
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags = { 0 };
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
-    PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
-        ExtractBulkCreateArgs;
+    PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
+        ExtractTableCreateArgs;
     ULONG NumberOfTableCreateParameters = 0;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters = 0;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters = NULL;
 
     Rtl = Context->Rtl;
 
-    ExtractBulkCreateArgs = Context->Vtbl->ExtractBulkCreateArgsFromArgvW;
-    Result = ExtractBulkCreateArgs(Context,
+    ExtractTableCreateArgs = Context->Vtbl->ExtractTableCreateArgsFromArgvW;
+    Result = ExtractTableCreateArgs(Context,
                                    NumberOfArguments,
                                    ArgvW,
-                                   &KeysDirectory,
+                                   &KeysPath,
                                    &BaseOutputDirectory,
                                    &AlgorithmId,
                                    &HashFunctionId,
                                    &MaskFunctionId,
                                    &MaximumConcurrency,
-                                   &ContextBulkCreateFlags,
+                                   &ContextTableCreateFlags,
                                    &KeysLoadFlags,
                                    &TableCreateFlags,
                                    &TableCompileFlags,
@@ -1595,29 +1320,29 @@ Return Value:
                                                       MaximumConcurrency);
         if (FAILED(Result)) {
             Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
-            PH_ERROR(PerfectHashContextContextBulkCreateArgvW, Result);
+            PH_ERROR(PerfectHashContextTableCreateArgvW, Result);
             return Result;
         }
     }
 
-    Result = Context->Vtbl->BulkCreate(Context,
-                                       &KeysDirectory,
-                                       &BaseOutputDirectory,
-                                       AlgorithmId,
-                                       HashFunctionId,
-                                       MaskFunctionId,
-                                       &ContextBulkCreateFlags,
-                                       &KeysLoadFlags,
-                                       &TableCreateFlags,
-                                       &TableCompileFlags,
-                                       NumberOfTableCreateParameters,
-                                       TableCreateParameters);
+    Result = Context->Vtbl->TableCreate(Context,
+                                        &KeysPath,
+                                        &BaseOutputDirectory,
+                                        AlgorithmId,
+                                        HashFunctionId,
+                                        MaskFunctionId,
+                                        &ContextTableCreateFlags,
+                                        &KeysLoadFlags,
+                                        &TableCreateFlags,
+                                        &TableCompileFlags,
+                                        NumberOfTableCreateParameters,
+                                        TableCreateParameters);
 
     if (FAILED(Result)) {
 
         //
         // There's is nothing we can do here.  We don't PH_ERROR() the return
-        // code as BulkCreate() will have done that multiple times each time
+        // code as TableCreate() will have done that multiple times each time
         // the error bubbled back up the stack.
         //
 

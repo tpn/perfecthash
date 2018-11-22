@@ -235,6 +235,9 @@
     <ClCompile Include="PerfectHashKeysLoadTableSize.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashContextTableCreate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -400,6 +403,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BulkCreateCsv.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TableCreateCsv.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

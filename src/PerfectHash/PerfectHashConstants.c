@@ -449,6 +449,8 @@ const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
 const UNICODE_STRING KeysTableSizeSuffix = RCS(L".TableSize");
 const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
     RCS(L"PerfectHashBulkCreate");
+const UNICODE_STRING PerfectHashTableCreateCsvBaseName =
+    RCS(L"PerfectHashTableCreate");
 
 const STRING DotExeSuffixA = RCS(".exe");
 const STRING DotDllSuffixA = RCS(".dll");
@@ -902,8 +904,11 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextBulkCreate,
     &PerfectHashContextBulkCreateArgvW,
     &PerfectHashContextExtractBulkCreateArgsFromArgvW,
+    &PerfectHashContextTableCreate,
+    &PerfectHashContextTableCreateArgvW,
+    &PerfectHashContextExtractTableCreateArgsFromArgvW,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 10);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 13);
 
 //
 // PerfectHashTable

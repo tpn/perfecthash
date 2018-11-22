@@ -4,12 +4,12 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    BulkCreateCsv.h
+    TableCreateCsv.h
 
 Abstract:
 
-    Private header file for bulk creation CSV glue.  Shared by Chm01.c and
-    PerfectHashContextBulkCreate.c.
+    Private header file for table creation CSV glue.  Shared by Chm01.c and
+    PerfectHashContextTableCreate.c.
 
 --*/
 
@@ -20,7 +20,7 @@ Abstract:
 // The ENTRY macros receive (Name, Value, OutputMacro) as their parameters.
 //
 
-#define BULK_CREATE_CSV_ROW_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)    \
+#define TABLE_CREATE_CSV_ROW_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)   \
     FIRST_ENTRY(KeysName,                                            \
                 &Table->Keys->File->Path->BaseNameA,                 \
                 OUTPUT_STRING)                                       \
@@ -118,12 +118,12 @@ Abstract:
 // writing a row.
 //
 
-#define BULK_CREATE_CSV_PRE_ROW()                                              \
+#define TABLE_CREATE_CSV_PRE_ROW()                                             \
         PCHAR Base;                                                            \
         PCHAR Output;                                                          \
         PPERFECT_HASH_FILE File;                                               \
                                                                                \
-        File = Context->BulkCreateCsvFile;                                     \
+        File = Context->TableCreateCsvFile;                                    \
         Base = (PCHAR)File->BaseAddress;                                       \
         Output = RtlOffsetToPointer(Base, File->NumberOfBytesWritten.QuadPart)
 
@@ -131,7 +131,7 @@ Abstract:
 // And one for post-row writing.
 //
 
-#define BULK_CREATE_CSV_POST_ROW()                                             \
+#define TABLE_CREATE_CSV_POST_ROW() \
         File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

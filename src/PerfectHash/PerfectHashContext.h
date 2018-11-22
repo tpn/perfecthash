@@ -106,10 +106,17 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG AllGraphsFailedMemoryAllocation:1;
 
         //
+        // When set, indicates a table create operation is active.  This can be
+        // used to alter console output and logging operations.
+        //
+
+        ULONG IsTableCreate:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:26;
+        ULONG Unused:25;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -136,6 +143,11 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define IsContextBulkCreate(Context) ((Context)->State.IsBulkCreate == TRUE)
 #define SetContextBulkCreate(Context) ((Context)->State.IsBulkCreate = TRUE)
 #define ClearContextBulkCreate(Context) ((Context)->State.IsBulkCreate = FALSE)
+
+#define IsContextTableCreate(Context) ((Context)->State.IsTableCreate == TRUE)
+#define SetContextTableCreate(Context) ((Context)->State.IsTableCreate = TRUE)
+#define ClearContextTableCreate(Context) \
+    ((Context)->State.IsTableCreate = FALSE)
 
 DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
 
@@ -186,6 +198,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     struct _PERFECT_HASH_FILE *BulkCreateCsvFile;
+
+    //
+    // If a table create operation is in progress, a pointer to a file instance
+    // for the <BaseOutputDir>\PerfectHashTableCreate_<HeaderHash>.csv file.
+    //
+
+    struct _PERFECT_HASH_FILE *TableCreateCsvFile;
 
     //
     // Pointer to a base buffer and current buffer and size for .csv rows, if
@@ -818,6 +837,7 @@ typedef PERFECT_HASH_CONTEXT_RESET *PPERFECT_HASH_CONTEXT_RESET;
 // Public vtbl function decls.
 //
 
+#ifndef __INTELLISENSE__
 extern PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
 extern PERFECT_HASH_CONTEXT_RUNDOWN PerfectHashContextRundown;
 extern PERFECT_HASH_CONTEXT_RESET PerfectHashContextReset;
@@ -839,5 +859,11 @@ extern PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW
     PerfectHashContextBulkCreateArgvW;
 extern PERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
     PerfectHashContextExtractBulkCreateArgsFromArgvW;
+extern PERFECT_HASH_CONTEXT_TABLE_CREATE PerfectHashContextTableCreate;
+extern PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW
+    PerfectHashContextTableCreateArgvW;
+extern PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
+    PerfectHashContextExtractTableCreateArgsFromArgvW;
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -77,6 +77,29 @@ TryExtractArgContextBulkCreateFlags(
 }
 
 
+TRY_EXTRACT_ARG_CONTEXT_TABLE_CREATE_FLAGS TryExtractArgContextTableCreateFlags;
+
+_Use_decl_annotations_
+HRESULT
+TryExtractArgContextTableCreateFlags(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    PCUNICODE_STRING Argument,
+    PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS Flags
+    )
+{
+    DECL_ARG(TestAfterCreate);
+    DECL_ARG(Compile);
+
+    UNREFERENCED_PARAMETER(Allocator);
+
+    SET_FLAG_AND_RETURN_IF_EQUAL(TestAfterCreate);
+    SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
+
+    return S_FALSE;
+}
+
+
 TRY_EXTRACT_ARG_KEYS_LOAD_FLAGS TryExtractArgKeysLoadFlags;
 
 _Use_decl_annotations_

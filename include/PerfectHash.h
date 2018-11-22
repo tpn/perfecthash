@@ -2105,7 +2105,7 @@ IsValidContextSelfTestFlags(
 }
 
 //
-// Define the bulk-create flags.
+// Define the context bulk-create flags.
 //
 
 typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
@@ -2155,6 +2155,63 @@ IsValidContextBulkCreateFlags(
     }
 
     if (BulkCreateFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+//
+// Define the context table-create flags.
+//
+
+typedef union _PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, tests the table after successful creation (i.e. invokes
+        // the table's Test() method).
+        //
+
+        ULONG TestAfterCreate:1;
+
+        //
+        // When set, compiles the table after successful creation (i.e. invokes
+        // the table's Compile() method).
+        //
+        // N.B. Requires msbuild.exe on the PATH; currently generates a cryptic
+        //      error when this is not the case.
+        //
+
+        ULONG Compile:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:30;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS
+      *PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidContextTableCreateFlags(
+    _In_ PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(ContextTableCreateFlags)) {
+        return E_POINTER;
+    }
+
+    if (ContextTableCreateFlags->Unused != 0) {
         return E_FAIL;
     }
 
@@ -2525,6 +2582,10 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
       *PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
 
+//
+// Bulk Create
+//
+
 typedef
 _Success_(return >= 0)
 HRESULT
@@ -2578,21 +2639,86 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
       *PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW;
 
+//
+// Table Create
+//
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_TABLE_CREATE)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PCUNICODE_STRING KeysPath,
+    _In_ PCUNICODE_STRING BaseOutputDirectory,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _In_opt_ ULONG NumberOfTableCreateParameters,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_TABLE_CREATE *PPERFECT_HASH_CONTEXT_TABLE_CREATE;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW
+    );
+typedef PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW
+      *PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW,
+    _In_ PUNICODE_STRING KeysPath,
+    _In_ PUNICODE_STRING BaseOutputDirectory,
+    _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _Inout_ PULONG MaximumConcurrency,
+    _Inout_ PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags,
+    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _Inout_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _Inout_ PULONG NumberOfTableCreateParameters,
+    _Inout_ PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
+      *PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW;
 
 typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
+
     PPERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY SetBaseOutputDirectory;
     PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY GetBaseOutputDirectory;
+
     PPERFECT_HASH_CONTEXT_SELF_TEST SelfTest;
     PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
     PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
         ExtractSelfTestArgsFromArgvW;
+
     PPERFECT_HASH_CONTEXT_BULK_CREATE BulkCreate;
     PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW BulkCreateArgvW;
     PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
         ExtractBulkCreateArgsFromArgvW;
+
+    PPERFECT_HASH_CONTEXT_TABLE_CREATE TableCreate;
+    PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW TableCreateArgvW;
+    PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
+        ExtractTableCreateArgsFromArgvW;
+
 } PERFECT_HASH_CONTEXT_VTBL;
 typedef PERFECT_HASH_CONTEXT_VTBL *PPERFECT_HASH_CONTEXT_VTBL;
 
