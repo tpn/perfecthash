@@ -131,14 +131,4 @@ Abstract:
 #include "ExtractArg.h"
 #include "VCProjectFileChunks.h"
 
-//
-// warning C4820: '<unnamed-tag>': '4' bytes padding added after
-//      data member 'MessageId'
-//
-
-#pragma warning(push)
-#pragma warning(disable: 4820)
-#include "PerfectHashErrors.dbg"
-#pragma warning(pop)
-
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

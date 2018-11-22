@@ -197,6 +197,16 @@ VOID
     );
 typedef APPEND_CSTR_TO_CHAR_BUFFER *PAPPEND_CSTR_TO_CHAR_BUFFER;
 
+typedef
+VOID
+(NTAPI APPEND_ERROR_CODE_CSTR_TO_CHAR_BUFFER)(
+    _In_ PRTL Rtl,
+    _Inout_ PCHAR *BufferPointer,
+    _In_ HRESULT Code
+    );
+typedef APPEND_ERROR_CODE_CSTR_TO_CHAR_BUFFER
+      *PAPPEND_ERROR_CODE_CSTR_TO_CHAR_BUFFER;
+
 //
 // Wide character versions.
 //
@@ -299,6 +309,7 @@ extern APPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST
 extern APPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST AppendStringToWideCharBufferFast;
 extern APPEND_CHAR_BUFFER_TO_CHAR_BUFFER AppendCharBufferToCharBuffer;
 extern APPEND_CSTR_TO_CHAR_BUFFER AppendCStrToCharBuffer;
+extern APPEND_ERROR_CODE_CSTR_TO_CHAR_BUFFER AppendErrorCodeCStrToCharBuffer;
 extern APPEND_CHAR_TO_CHAR_BUFFER AppendCharToCharBuffer;
 extern APPEND_UNICODE_STRING_TO_WIDE_CHAR_BUFFER
     AppendUnicodeStringToWideCharBuffer;
@@ -372,6 +383,9 @@ static PCSZ Exclamation = "!";
 
 #define OUTPUT_UNICODE_STRING_FAST(String) \
     AppendUnicodeStringToCharBufferFast(&Output, String)
+
+#define OUTPUT_ERROR_CODE_STRING(Code) \
+    AppendErrorCodeCStrToCharBuffer(Rtl, &Output, Code)
 
 #define OUTPUT_CSTR(Str) AppendCStrToCharBuffer(&Output, Str)
 #define OUTPUT_CHR(Char) AppendCharToCharBuffer(&Output, Char)

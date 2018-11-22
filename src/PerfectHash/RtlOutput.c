@@ -740,6 +740,33 @@ AppendCStrToCharBuffer(
 
 _Use_decl_annotations_
 VOID
+AppendErrorCodeCStrToCharBuffer(
+    PRTL Rtl,
+    PCHAR *BufferPointer,
+    HRESULT Code
+    )
+{
+    PCHAR Dest = *BufferPointer;
+    PCHAR Source;
+    HRESULT Result;
+
+    Result = PerfectHashGetErrorCodeString(Rtl, Code, &Source);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashGetErrorCodeString, Result);
+        PH_RAISE(Result);
+    }
+
+    while (*Source) {
+        *Dest++ = *Source++;
+    }
+
+    *BufferPointer = Dest;
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
 AppendIntegerToWideCharBuffer(
     PWCHAR *BufferPointer,
     ULONGLONG Integer

@@ -250,11 +250,12 @@ Return Value:
     );
 
     //
-    // Initialize output handle if we're in bulk create mode.  We print a dash
-    // every time a table resize event occurs to the output handle.
+    // Initialize output handle if we're in context table/bulk create mode.
+    // We print a dash every time a table resize event occurs to the output
+    // handle.
     //
 
-    if (IsContextBulkCreate(Context)) {
+    if (IsContextBulkCreate(Context) || IsContextTableCreate(Context)) {
         OutputHandle = Context->OutputHandle;
         ASSERT(IsValidHandle(OutputHandle));
     }
@@ -763,8 +764,8 @@ RetryWithLargerTableSize:
         ResetFinishedWorkList(Context);
 
         //
-        // Print a dash if we're in bulk create mode to indicate a table resize
-        // event has occurred.
+        // Print a dash if we're in context table/bulk create mode to indicate
+        // a table resize event has occurred.
         //
 
         MAYBE_DASH();

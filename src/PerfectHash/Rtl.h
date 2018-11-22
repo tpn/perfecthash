@@ -636,6 +636,29 @@ BOOL
 typedef CRYPT_BINARY_TO_STRING_W *PCRYPT_BINARY_TO_STRING_W;
 
 ////////////////////////////////////////////////////////////////////////////////
+// Searching
+////////////////////////////////////////////////////////////////////////////////
+
+typedef
+INT
+(__cdecl CRTCOMPARE)(
+    _In_ CONST PVOID Key,
+    _In_ CONST PVOID Datum
+    );
+typedef CRTCOMPARE *PCRTCOMPARE;
+
+typedef
+PVOID
+(BSEARCH)(
+    _In_ CONST PVOID Key,
+    _In_ CONST PVOID Base,
+    _In_ SIZE_T      NumberOfElements,
+    _In_ SIZE_T      WidthOfElement,
+    _In_ PCRTCOMPARE Compare
+    );
+typedef BSEARCH *PBSEARCH;
+
+////////////////////////////////////////////////////////////////////////////////
 // Stdio
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1742,7 +1765,7 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE RTL_CREATE_BUFFER)(
     _In_ PRTL Rtl,
-    _In_opt_ PHANDLE TargetProcessHandle,
+    _Inout_opt_ PHANDLE TargetProcessHandle,
     _In_ ULONG NumberOfPages,
     _In_opt_ PULONG AdditionalProtectionFlags,
     _Out_ PULONGLONG UsableBufferSizeInBytes,
@@ -1755,7 +1778,7 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE RTL_CREATE_MULTIPLE_BUFFERS)(
     _In_ PRTL Rtl,
-    _In_opt_ PHANDLE TargetProcessHandle,
+    _Inout_opt_ PHANDLE TargetProcessHandle,
     _In_ ULONG PageSize,
     _In_ ULONG NumberOfBuffers,
     _In_ ULONG NumberOfPagesPerBuffer,
@@ -2199,6 +2222,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     "RtlAppendUnicodeStringToString", \
     "CryptBinaryToStringA",           \
     "CryptBinaryToStringW",           \
+    "bsearch",                        \
     "__C_specific_handler",           \
     "_wsplitpath_s",                  \
     "sprintf_s",                      \
@@ -2240,6 +2264,7 @@ typedef RTL_VTBL *PRTL_VTBL;
     PRTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString; \
     PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                      \
     PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                      \
+    PBSEARCH bsearch;                                                    \
     P__C_SPECIFIC_HANDLER __C_specific_handler;                          \
     P_WSPLITPATH_S _wsplitpath_s;                                        \
     PSPRINTF_S sprintf_s;                                                \

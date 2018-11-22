@@ -9,7 +9,8 @@ Module Name:
 Abstract:
 
     This module is responsible for error handling related to the perfect hash
-    library.  Routines are provided for printing errors and messages.
+    library.  Routines are provided for printing errors and messages, and
+    getting string representations of error codes.
 
 --*/
 
@@ -246,6 +247,125 @@ End:
     }
 
     return Result;
+}
+
+
+static const ERROR_CODE_SYMBOL_NAME CommonErrorCodes[] = {
+    (HRESULT) S_OK, "S_OK",
+    (HRESULT) S_FALSE, "S_FALSE",
+    (HRESULT) E_OUTOFMEMORY, "E_OUTOFMEMORY",
+    (HRESULT) E_UNEXPECTED, "E_UNEXPECTED",
+    (HRESULT) E_POINTER, "E_POINTER",
+    (HRESULT) E_INVALIDARG, "E_INVALIDARG",
+    (HRESULT) E_FAIL, "E_FAIL",
+    (HRESULT) 0xFFFFFFFF, NULL
+};
+
+//
+// warning C4820: '<unnamed-tag>': '4' bytes padding added after
+//      data member 'MessageId'
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4820)
+#include "PerfectHashErrors.dbg"
+#pragma warning(pop)
+
+static const PCSZ UnknownErrorCode = "Unknown";
+
+PERFECT_HASH_GET_ERROR_CODE_STRING PerfectHashGetErrorCodeString;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashGetErrorCodeString(
+    PRTL Rtl,
+    HRESULT Code,
+    PCSZ *StringPointer
+    )
+/*++
+
+Routine Description:
+
+    Gets the ASCII representation of an error code.
+
+Arguments:
+
+    Rtl - Supplies a pointer to an Rtl instance.
+
+    Code - Supplies the error code for which the string representation is to
+        be obtained.
+
+    StringPointer - Receives the string representation of the error code.
+
+Return Value:
+
+    S_OK - Found error code.
+
+    S_FALSE - Could not find error code.  *StringPointer will be set to a
+        string "Unknown".
+
+    E_POINTER - Rtl or StringPointer were NULL.
+
+--*/
+{
+    ULONG Index;
+    ULONG Count;
+    PCERROR_CODE_SYMBOL_NAME Entry;
+
+    //
+    // Rtl isn't currently used, however, we may use it down the track if we
+    // want to do a binary search via Rtl->bsearch() instead of the linear scan
+    // on the larger PerfectHashErrors.dbg array.
+    //
+
+    UNREFERENCED_PARAMETER(Rtl);
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Rtl)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(StringPointer)) {
+        return E_POINTER;
+    }
+
+    //
+    // Linear scan through the common error codes first.
+    //
+
+    Entry = CommonErrorCodes;
+    Count = ARRAYSIZE(CommonErrorCodes);
+
+    for (Index = 0; Index < Count; Index++, Entry++) {
+        if (Entry->MessageId == Code) {
+            *StringPointer = Entry->SymbolicName;
+            return S_OK;
+        }
+    }
+
+    //
+    // Linear scan through the PerfectHashErrors.dbg array.
+    //
+
+    Entry = (PCERROR_CODE_SYMBOL_NAME)PerfectHashErrorsSymbolicNames;
+    Count = ARRAYSIZE(PerfectHashErrorsSymbolicNames);
+
+    for (Index = 0; Index < Count; Index++, Entry++) {
+        if (Entry->MessageId == Code) {
+            *StringPointer = Entry->SymbolicName;
+            return S_OK;
+        }
+    }
+
+    //
+    // If we get here, we haven't found a match, so return the unknown string.
+    //
+
+    *StringPointer = UnknownErrorCode;
+    return S_FALSE;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

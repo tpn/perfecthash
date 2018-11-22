@@ -149,21 +149,15 @@ Return Value:
     PRTL Rtl;
     USHORT NumberOfPages;
     ULONG NumberOfRows = 0;
-    HRESULT Result;
-    PCHAR Buffer;
-    PCHAR BaseBuffer = NULL;
-    PCHAR Output;
-    PCHAR OutputBuffer = NULL;
+    HRESULT Result = S_OK;
+    HRESULT TableCreateResult;
     PCHAR RowBuffer = NULL;
     PALLOCATOR Allocator;
     PVOID KeysBaseAddress;
     ULARGE_INTEGER NumberOfKeys;
-    HANDLE FindHandle = NULL;
     HANDLE OutputHandle = NULL;
     HANDLE ProcessHandle = NULL;
-    ULONGLONG BufferSize;
     ULONGLONG RowBufferSize;
-    ULONGLONG OutputBufferSize;
     ULONG BytesWritten = 0;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
@@ -243,49 +237,6 @@ Return Value:
     SetContextTableCreate(Context);
 
     //
-    // Create a buffer we can use for stdout, using a very generous buffer size.
-    //
-
-    NumberOfPages = 10;
-    ProcessHandle = GetCurrentProcess();
-
-    Result = Rtl->Vtbl->CreateBuffer(Rtl,
-                                     &ProcessHandle,
-                                     NumberOfPages,
-                                     NULL,
-                                     &OutputBufferSize,
-                                     &OutputBuffer);
-
-    if (FAILED(Result)) {
-        Result = E_OUTOFMEMORY;
-        goto Error;
-    }
-
-    Output = OutputBuffer;
-
-    //
-    // Create a buffer we can use for temporary path construction.  We want it
-    // to be MAX_USHORT in size, so (1 << 16) >> PAGE_SHIFT converts this into
-    // the number of pages we need.
-    //
-
-    NumberOfPages = (1 << 16) >> PAGE_SHIFT;
-
-    Result = Rtl->Vtbl->CreateBuffer(Rtl,
-                                     &ProcessHandle,
-                                     NumberOfPages,
-                                     NULL,
-                                     &BufferSize,
-                                     &BaseBuffer);
-
-    if (FAILED(Result)) {
-        Result = E_OUTOFMEMORY;
-        goto Error;
-    }
-
-    Buffer = BaseBuffer;
-
-    //
     // Create a "row buffer" we can use for the CSV file.
     //
 
@@ -300,7 +251,7 @@ Return Value:
 
     if (FAILED(Result)) {
         Result = E_OUTOFMEMORY;
-        goto Error;
+        return Result;
     }
 
     Context->RowBuffer = Context->BaseRowBuffer = RowBuffer;
@@ -423,6 +374,8 @@ Return Value:
                                  NumberOfTableCreateParameters,
                                  TableCreateParameters);
 
+    TableCreateResult = Result;
+
     if (FAILED(Result)) {
         PH_KEYS_ERROR(PerfectHashTableCreate, Result);
         goto Error;
@@ -475,6 +428,12 @@ Return Value:
     }
 
     //
+    // Write the .csv row.
+    //
+
+    WRITE_TABLE_CREATE_CSV_ROW();
+
+    //
     // We're done, finish up.
     //
 
@@ -511,36 +470,6 @@ End:
             Result = PH_E_SYSTEM_CALL_FAILED;
         }
         Context->RowBuffer = RowBuffer = NULL;
-    }
-
-    if (OutputBuffer) {
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &OutputBuffer);
-        if (FAILED(Result)) {
-            SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-        Output = NULL;
-    }
-
-    if (BaseBuffer) {
-        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
-                                          ProcessHandle,
-                                          &BaseBuffer);
-        if (FAILED(Result)) {
-            SYS_ERROR(VirtualFree);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-        BaseBuffer = NULL;
-    }
-
-    if (FindHandle) {
-        if (!FindClose(FindHandle)) {
-            SYS_ERROR(FindClose);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-        }
-        FindHandle = NULL;
     }
 
     ClearContextTableCreate(Context);
