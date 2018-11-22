@@ -2162,7 +2162,7 @@ IsValidContextBulkCreateFlags(
 }
 
 //
-// Define the table create flags here as they're needed for SelfTest().
+// Define the table create flags.
 //
 
 typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
@@ -2302,7 +2302,7 @@ IsValidTableCreateFlags(
 }
 
 //
-// Define the table load flags here as they're needed for SelfTest().
+// Define the table load flags.
 //
 
 typedef union _PERFECT_HASH_TABLE_LOAD_FLAGS {
@@ -2365,7 +2365,7 @@ IsValidTableLoadFlags(
 }
 
 //
-// Define table compilation flags here as they're needed for SelfTest().
+// Define table compilation flags.
 //
 
 typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
