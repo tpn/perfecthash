@@ -399,7 +399,7 @@
     <ClInclude Include="ExtractArg.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TableCreateCsv.h">
+    <ClInclude Include="BulkCreateCsv.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
