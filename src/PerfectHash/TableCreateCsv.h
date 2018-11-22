@@ -8,8 +8,7 @@ Module Name:
 
 Abstract:
 
-    Private header file for table creation CSV glue.  Shared by Chm01.c and
-    PerfectHashContextTableCreate.c.
+    Private header file for table creation CSV glue.
 
 --*/
 
