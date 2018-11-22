@@ -215,6 +215,193 @@ TryExtractArgTableCompileFlags(
     return S_FALSE;
 }
 
+typedef enum _EXTRACT_VALUE_ARRAY_STATE {
+    LookingForValue,
+    LookingForComma,
+} EXTRACT_VALUE_ARRAY_STATE;
+
+TRY_EXTRACT_VALUE_ARRAY TryExtractValueArray;
+
+_Use_decl_annotations_
+HRESULT
+TryExtractValueArray(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    PCUNICODE_STRING InputString,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param,
+    BOOLEAN EnsureSortedAndUnique
+    )
+{
+    USHORT Index;
+    USHORT NumberOfInputStringChars;
+    ULONG Commas = 0;
+    ULONG NumberOfValues;
+    ULONG NumberOfValidValues;
+    PWCHAR Wide;
+    PWCHAR ValueStart = NULL;
+    PULONG Value;
+    PULONG Values = NULL;
+    UNICODE_STRING ValueString;
+    EXTRACT_VALUE_ARRAY_STATE State;
+    BOOLEAN IsLastChar;
+    NTSTATUS Status;
+    HRESULT Result = S_OK;
+    PVALUE_ARRAY ValueArray;
+    PRTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;
+
+    //
+    // Initialize aliases.
+    //
+
+    RtlUnicodeStringToInteger = Rtl->RtlUnicodeStringToInteger;
+
+    //
+    // Loop through the string and count the number of commas we see.
+    //
+
+    Wide = InputString->Buffer;
+    NumberOfInputStringChars = InputString->Length >> 1;
+
+    for (Index = 0; Index < NumberOfInputStringChars; Index++, Wide++) {
+        if (*Wide == L',') {
+            Commas++;
+        }
+    }
+
+    if (Commas == 0) {
+        return S_FALSE;
+    }
+
+    //
+    // Allocate memory to contain an array of ULONGs whose length matches the
+    // number of commas we saw, plus 1.
+    //
+
+    NumberOfValues = Commas + 1;
+    Value = Values = Allocator->Vtbl->Calloc(Allocator,
+                                             NumberOfValues,
+                                             sizeof(ULONG));
+    if (!Values) {
+        return E_OUTOFMEMORY;
+    }
+
+    State = LookingForValue;
+    NumberOfValidValues = 0;
+    ValueStart = NULL;
+
+    Wide = InputString->Buffer;
+
+    for (Index = 0; Index < NumberOfInputStringChars; Index++, Wide++) {
+
+        IsLastChar = (Index == (NumberOfInputStringChars - 1));
+
+        if (IsLastChar && State == LookingForComma &&
+            *Wide != L',' && ValueStart != NULL) {
+            Wide++;
+            goto ProcessValue;
+        }
+
+        if (State == LookingForValue) {
+
+            ASSERT(ValueStart == NULL);
+
+            if (*Wide != L',') {
+                ValueStart = Wide;
+                State = LookingForComma;
+            }
+
+            continue;
+
+        } else {
+
+            ASSERT(State == LookingForComma);
+            ASSERT(ValueStart != NULL);
+
+            if (*Wide != L',') {
+                continue;
+            }
+
+ProcessValue:
+
+            ValueString.Buffer = ValueStart;
+            ValueString.Length = (USHORT)RtlPointerToOffset(ValueStart, Wide);
+            ValueString.MaximumLength = ValueString.Length;
+
+            Status = RtlUnicodeStringToInteger(&ValueString, 0, Value);
+            if (!SUCCEEDED(Status)) {
+                Result = E_FAIL;
+                goto Error;
+            }
+
+            if (EnsureSortedAndUnique && Value != Values) {
+                ULONG Previous;
+                ULONG This;
+
+                Previous = *(Value - 1);
+                This = *Value;
+
+                if (Previous > This) {
+                    Result = PH_E_NOT_SORTED;
+                    goto Error;
+                } else if (Previous == This) {
+                    Result = PH_E_DUPLICATE_DETECTED;
+                    goto Error;
+                }
+            }
+
+            Value++;
+            ValueStart = NULL;
+            NumberOfValidValues++;
+            State = LookingForValue;
+
+            continue;
+        }
+    }
+
+    if (NumberOfValidValues == 0) {
+        Result = E_FAIL;
+        goto Error;
+    } else if (NumberOfValidValues != NumberOfValues) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(TryExtractValueArray_NumValidValuesMismatch, Result);
+        goto Error;
+    }
+
+    //
+    // We've successfully extracted the array.  Update the parameter and return
+    // success.
+    //
+
+    ValueArray = &Param->AsValueArray;
+    ValueArray->Values = Values;
+    ValueArray->NumberOfValues = NumberOfValidValues;
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    if (Values) {
+        Allocator->Vtbl->FreePointer(Allocator, &Values);
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+#define MAYBE_DEALLOCATE_PARAM(Param)                                \
+    if (DoesTableCreateParameterRequireDeallocation(Param->Id)) {    \
+        Allocator->Vtbl->FreePointer(Allocator,                      \
+                                     (PVOID *)Param->AsVoidPointer); \
+    }
 
 //
 // Processing table create parameters is more involved than the flag-oriented
@@ -254,6 +441,8 @@ TryExtractArgTableCreateParameters(
     DECL_ARG(BestCoverageNumAttempts);
     DECL_ARG(BestCoverageType);
     DECL_ARG(HighestNumberOfEmptyCacheLines);
+    DECL_ARG(LowestNumberOfCacheLinesUsedByKeysSubset);
+    DECL_ARG(KeysSubset);
 
     ZeroStructInline(LocalParam);
 
@@ -348,6 +537,38 @@ TryExtractArgTableCreateParameters(
     ADD_PARAM_IF_PREFIX_AND_VALUE_EQUAL(BestCoverageType,
                                         HighestNumberOfEmptyCacheLines);
 
+    ADD_PARAM_IF_PREFIX_AND_VALUE_EQUAL(
+        BestCoverageType,
+        LowestNumberOfCacheLinesUsedByKeysSubset
+    );
+
+#define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(Name,  \
+                                                                   Upper) \
+    if (IS_PREFIX(Name)) {                                                \
+        Result = TryExtractValueArray(Rtl,                                \
+                                      Allocator,                          \
+                                      ValueString,                        \
+                                      &LocalParam,                        \
+                                      TRUE);                              \
+                                                                          \
+        if (Result == S_OK) {                                             \
+            SET_PARAM_ID(Name);                                           \
+            goto AddParam;                                                \
+        } else {                                                          \
+            if (Result == PH_E_NOT_SORTED) {                              \
+                Result = PH_E_##Upper##_NOT_SORTED;                       \
+            } else if (Result == PH_E_DUPLICATE_DETECTED) {               \
+                Result = PH_E_DUPLICATE_VALUE_DETECTED_IN_##Upper;        \
+            } else if (Result != E_OUTOFMEMORY) {                         \
+                Result = PH_E_INVALID_##Upper;                            \
+            }                                                             \
+            goto Error;                                                   \
+        }                                                                 \
+    }
+
+    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(KeysSubset,
+                                                               KEYS_SUBSET);
+
     //
     // No more table create parameters to look for, finish up.
     //
@@ -366,6 +587,14 @@ AddParam:
     Param = TableCreateParameters;
     for (Index = 0; Index < NumberOfTableCreateParameters; Index++) {
         if (Param->Id == LocalParam.Id) {
+
+            //
+            // Make sure we potentially deallocate the existing param if
+            // applicable.
+            //
+
+            MAYBE_DEALLOCATE_PARAM(Param);
+
             Param->AsULongLong = LocalParam.AsULongLong;
             return S_OK;
         }
@@ -404,8 +633,7 @@ AddParam:
     //
 
     Param = &NewTableCreateParameters[NumberOfTableCreateParameters];
-    Param->Id = LocalParam.Id;
-    Param->AsULongLong = LocalParam.AsULongLong;
+    CopyMemory(Param, &LocalParam, sizeof(*Param));
 
     //
     // Update the caller's pointers and finish up.
@@ -430,6 +658,32 @@ Error:
 End:
 
     return Result;
+}
+
+
+DESTROY_TABLE_CREATE_PARAMETERS DestroyTableCreateParameters;
+
+_Use_decl_annotations_
+HRESULT
+DestroyTableCreateParameters(
+    PALLOCATOR Allocator,
+    ULONG NumberOfTableCreateParameters,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParametersPointer
+    )
+{
+    ULONG Index;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Params;
+
+    Param = Params = *TableCreateParametersPointer;
+
+    for (Index = 0; Index < NumberOfTableCreateParameters; Index++, Param++) {
+        MAYBE_DEALLOCATE_PARAM(Param);
+    }
+
+    Allocator->Vtbl->FreePointer(Allocator, TableCreateParametersPointer);
+
+    return S_OK;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

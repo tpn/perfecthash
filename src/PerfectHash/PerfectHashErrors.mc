@@ -527,6 +527,23 @@ Table Create Parameters:
                 table data, which could result in fewer cache misses, which
                 would yield greater performance.
 
+            LowestNumberOfCacheLinesUsedByKeysSubset
+
+                This predicate is used to to search for solutions where the
+                most frequent keys consume the lowest number of cache lines.
+                It is useful in scenarios where the frequency of individual
+                keys being looked up is heavily skewed toward a small subset.
+                For example, if 90% of the lookups occur for 10% of the keys,
+                the fewer cache lines occupied by those keys, the better.
+
+                This option needs to be combined with the --KeysSubset table
+                create parameter.
+
+    --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,601,600)
+
+        Supplies a comma-separated list of keys in ascending key-value order.
+        Must contain two or more elements.
+
 .
 
 ;
@@ -2424,5 +2441,53 @@ Facility=ITF
 SymbolicName=PH_E_INVALID_CONTEXT_TABLE_CREATE_FLAGS
 Language=English
 Invalid context table create flags.
+.
+
+MessageId=0x34c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_BEST_COVERAGE_TYPE_REQUIRES_KEYS_SUBSET
+Language=English
+Best coverage type requires keys subset, but none was provided.
+.
+
+MessageId=0x34d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_SUBSET_NOT_SORTED
+Language=English
+Keys subset not sorted.
+.
+
+MessageId=0x34e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_KEYS_SUBSET
+Language=English
+Invalid keys subset.
+.
+
+MessageId=0x34f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NOT_SORTED
+Language=English
+Not ordered.
+.
+
+MessageId=0x350
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DUPLICATE_DETECTED
+Language=English
+Duplicate detected.
+.
+
+MessageId=0x351
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DUPLICATE_VALUE_DETECTED_IN_KEYS_SUBSET
+Language=English
+Duplicate value detected in keys subset.
 .
 

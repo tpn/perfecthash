@@ -533,6 +533,10 @@ Return Value:
                 Context->BestCoverageType = Param->AsBestCoverageType;
                 break;
 
+            case TableCreateParameterKeysSubsetId:
+                Context->KeysSubset = &Param->AsKeysSubset;
+                break;
+
             default:
                 Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
                 goto Error;
@@ -562,6 +566,13 @@ Return Value:
 
             Result = PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH;
             goto Error;
+        }
+
+        if (DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) {
+            if (!Context->KeysSubset) {
+                Result = PH_E_BEST_COVERAGE_TYPE_REQUIRES_KEYS_SUBSET;
+                goto Error;
+            }
         }
 
         SetFindBestMemoryCoverage(Context);

@@ -310,6 +310,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG BestCoverageAttempts;
 
     //
+    // Pointer to a keys subset structure, if applicable (e.g. if the best
+    // coverage type is one that uses a keys subset, such as lowest number of
+    // used cache lines by subset of keys.
+    //
+
+    PKEYS_SUBSET KeysSubset;
+
+    //
     // Best and spare graphs.
     //
 

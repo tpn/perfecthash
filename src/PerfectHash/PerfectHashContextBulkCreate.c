@@ -1460,8 +1460,12 @@ Return Value:
     //
 
     if (FAILED(Result) && TableCreateParameters) {
-        Context->Allocator->Vtbl->FreePointer(Context->Allocator,
-                                              (PVOID *)&TableCreateParameters);
+        Result = DestroyTableCreateParameters(Context->Allocator,
+                                              *NumberOfTableCreateParameters,
+                                              TableCreateParameters);
+        if (FAILED(Result)) {
+            PH_ERROR(DestroyTableCreateParameters, Result);
+        }
         *NumberOfTableCreateParameters = 0;
     }
 
@@ -1599,8 +1603,12 @@ Return Value:
     }
 
     if (TableCreateParameters) {
-        Context->Allocator->Vtbl->FreePointer(Context->Allocator,
-                                              (PVOID *)&TableCreateParameters);
+        Result = DestroyTableCreateParameters(Context->Allocator,
+                                              NumberOfTableCreateParameters,
+                                              &TableCreateParameters);
+        if (FAILED(Result)) {
+            PH_ERROR(DestroyTableCreateParameters, Result);
+        }
     }
 
     return Result;

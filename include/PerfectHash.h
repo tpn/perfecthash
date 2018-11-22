@@ -2480,6 +2480,7 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
     TableCreateParameterMaxNumberOfTableResizesId,
     TableCreateParameterBestCoverageNumAttemptsId,
     TableCreateParameterBestCoverageTypeId,
+    TableCreateParameterKeysSubsetId,
 
     TableCreateParameterInvalidId,
 } PERFECT_HASH_TABLE_CREATE_PARAMETER_ID;
@@ -2487,6 +2488,7 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
 typedef enum _PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID {
     BestCoverageTypeNullId = 0,
     BestCoverageTypeHighestNumberOfEmptyCacheLinesId,
+    BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId,
     BestCoverageTypeInvalidId,
 } PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE;
 
@@ -2502,17 +2504,57 @@ IsValidBestCoverageType(
     );
 }
 
-//
-// Disable warning C4820:
-//      '<anonymous-tag>': '4' bytes padding added after data member 'Id'.
-//
+FORCEINLINE
+BOOLEAN
+DoesBestCoverageTypeRequireKeysSubset(
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType
+    )
+{
+    return (
+        CoverageType ==
+            BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId
+    );
+}
 
-#pragma warning(push)
-#pragma warning(disable: 4820)
+FORCEINLINE
+BOOLEAN
+DoesTableCreateParameterRequireDeallocation(
+    _In_ PERFECT_HASH_TABLE_CREATE_PARAMETER_ID Id
+    )
+{
+    return (
+        Id == TableCreateParameterKeysSubsetId
+    );
+}
+
+typedef struct _VALUE_ARRAY {
+    PULONG Values;
+    ULONG NumberOfValues;
+    ULONG Padding;
+} VALUE_ARRAY;
+typedef VALUE_ARRAY *PVALUE_ARRAY;
+typedef const VALUE_ARRAY *PCVALUE_ARRAY;
+
+typedef VALUE_ARRAY KEYS_SUBSET;
+typedef KEYS_SUBSET *PKEYS_SUBSET;
+typedef const KEYS_SUBSET *PCKEYS_SUBSET;
+
+FORCEINLINE
+BOOLEAN
+DoesBestCoverageTypeUseValueArray(
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType
+    )
+{
+    return (
+        DoesBestCoverageTypeRequireKeysSubset(CoverageType)
+    );
+}
+
 typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
     PERFECT_HASH_TABLE_CREATE_PARAMETER_ID Id;
+    ULONG Padding;
     union {
-        PVOID AsVoid;
+        PVOID AsVoidPointer;
         LONG AsLong;
         ULONG AsULong;
         LONGLONG AsLongLong;
@@ -2520,12 +2562,12 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE AsBestCoverageType;
+        VALUE_ARRAY AsValueArray;
+        KEYS_SUBSET AsKeysSubset;
     };
 } PERFECT_HASH_TABLE_CREATE_PARAMETER;
 typedef PERFECT_HASH_TABLE_CREATE_PARAMETER
       *PPERFECT_HASH_TABLE_CREATE_PARAMETER;
-#pragma warning(pop)
-
 
 typedef
 _Success_(return >= 0)

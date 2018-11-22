@@ -112,17 +112,45 @@ HRESULT
 typedef TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS
        *PTRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS;
 
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI TRY_EXTRACT_VALUE_ARRAY)(
+    _In_ PRTL Rtl,
+    _In_ PALLOCATOR Allocator,
+    _In_ PCUNICODE_STRING InputString,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETER Param,
+    _In_opt_ BOOLEAN EnsureSortedAndUnique
+    );
+typedef TRY_EXTRACT_VALUE_ARRAY *PTRY_EXTRACT_VALUE_ARRAY;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI DESTROY_TABLE_CREATE_PARAMETERS)(
+    _In_ PALLOCATOR Allocator,
+    _In_ ULONG NumberOfTableCreateParametersPointer,
+    _Inout_ _Post_invalid_ PPERFECT_HASH_TABLE_CREATE_PARAMETER
+        *TableCreateParametersPointer
+    );
+typedef DESTROY_TABLE_CREATE_PARAMETERS *PDESTROY_TABLE_CREATE_PARAMETERS;
+
+
 //
 // Declare functions.
 //
 
 #ifndef __INTELLISENSE__
+extern TRY_EXTRACT_VALUE_ARRAY TryExtractValueArray;
 extern TRY_EXTRACT_ARG_CONTEXT_BULK_CREATE_FLAGS TryExtractArgContextBulkCreateFlags;
 extern TRY_EXTRACT_ARG_CONTEXT_TABLE_CREATE_FLAGS TryExtractArgContextTableCreateFlags;
 extern TRY_EXTRACT_ARG_KEYS_LOAD_FLAGS TryExtractArgKeysLoadFlags;
 extern TRY_EXTRACT_ARG_TABLE_CREATE_FLAGS TryExtractArgTableCreateFlags;
 extern TRY_EXTRACT_ARG_TABLE_COMPILE_FLAGS TryExtractArgTableCompileFlags;
 extern TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS TryExtractArgTableCreateParameters;
+extern DESTROY_TABLE_CREATE_PARAMETERS DestroyTableCreateParameters;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
