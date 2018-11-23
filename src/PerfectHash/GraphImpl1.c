@@ -332,6 +332,12 @@ Return Value:
 
     for (Vertex = 0; Vertex < Graph->NumberOfVertices; Vertex++) {
 
+        if (!IsGraphParanoid(Graph)) {
+            if (IsEmpty(Graph->First[Vertex])) {
+                continue;
+            }
+        }
+
         if (!IsVisitedVertex(Graph, Vertex)) {
 
             //
@@ -343,11 +349,13 @@ Return Value:
         }
     }
 
-    Rtl = Graph->Context->Rtl;
-    NumberOfSetBits = Rtl->RtlNumberOfSetBits(&Graph->VisitedVerticesBitmap);
+    if (IsGraphParanoid(Graph)) {
+        Rtl = Graph->Context->Rtl;
+        NumberOfSetBits = Rtl->RtlNumberOfSetBits(&Graph->VisitedVerticesBitmap);
 
-    ASSERT(Graph->VisitedVerticesCount == NumberOfSetBits);
-    ASSERT(Graph->VisitedVerticesCount == Graph->NumberOfVertices);
+        ASSERT(Graph->VisitedVerticesCount == NumberOfSetBits);
+        ASSERT(Graph->VisitedVerticesCount == Graph->NumberOfVertices);
+    }
 
     return;
 }
