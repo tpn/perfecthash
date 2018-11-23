@@ -322,7 +322,6 @@ Return Value:
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
 
-    _Analysis_assume_(TlsContext != NULL);
     ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
     ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
     ASSERT(!TlsContext->HeapCreateFlags);
