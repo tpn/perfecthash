@@ -374,9 +374,9 @@ static PCSZ Exclamation = "!";
 #define OUTPUT_HEX_RAW(Integer)                         \
     AppendIntegerToCharBufferAsHexRaw(&Output, Integer)
 
-#define OUTPUT_HEX_RAW_0x(Integer)                       \
-    *Output++ = 'x';                                     \
-    *Output++ = '0';                                     \
+#define OUTPUT_HEX_RAW_0x(Integer)                      \
+    *Output++ = 'x';                                    \
+    *Output++ = '0';                                    \
     AppendIntegerToCharBufferAsHexRaw(&Output, Integer)
 
 #define OUTPUT_STRING(String) AppendStringToCharBuffer(&Output, String)
