@@ -363,6 +363,35 @@ Table Create Parameters:
                 table data, which could result in fewer cache misses, which
                 would yield greater performance.
 
+Console Output Character Legend
+
+ Char | Meaning
+
+    .   Table created successfully.
+
+    -   Table resize event occured.
+
+    x   Failed to create a table.  The maximum number of attempts at trying to
+        solve the table at a given size was reached, and no more resize attempts
+        were possible (due to the maximum resize limit also being hit).
+
+N.B. The following characters are related to memory-related issues.
+
+    *   None of the worker threads were able to allocate sufficient memory to
+        attempt solving the graph.
+
+    !   The system is out of memory.
+
+    ^   The system is running low on memory (a low memory event is triggered
+        at about 90% RAM usage).  In certain situations we can detect this
+        situation prior to actually running out of memory; in these cases,
+        we abort the current table creation attempt (which will instantly
+        relieve system memory pressure).
+
+    %   The graph was created successfully, however, we weren't able to allocate
+        enough memory for the table values array in order for the array to be
+        used after creation.  This can be avoided by omitting --TestAfterCreate.
+
 .
 
 MessageId=0x102
