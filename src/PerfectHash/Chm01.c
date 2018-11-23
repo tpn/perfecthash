@@ -200,11 +200,15 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(Table)) {
         return E_POINTER;
+    }
 
     Silent = (Table->TableCreateFlags.Silent == TRUE);
 
+    Context = Table->Context;
+
+    if (FirstSolvedGraphWins(Context)) {
+        NumberOfGraphs = Context->MaximumConcurrency;
     } else {
-        Context = Table->Context;
 
         //
         // We add 1 to the maximum concurrency in order to account for a spare
@@ -553,7 +557,12 @@ RetryWithLargerTableSize:
     //
 
     ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
-    ASSERT(NumberOfGraphs - 1 == Context->MaximumConcurrency);
+
+    if (FirstSolvedGraphWins(Context)) {
+        ASSERT(NumberOfGraphs == Context->MaximumConcurrency);
+    } else {
+        ASSERT(NumberOfGraphs - 1 == Context->MaximumConcurrency);
+    }
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {
 
@@ -570,7 +579,7 @@ RetryWithLargerTableSize:
 
         Graph->Flags.IsInfoLoaded = FALSE;
 
-        if (Index == 0) {
+        if (!FirstSolvedGraphWins(Context) && Index == 0) {
 
             //
             // This is our first graph, which is marked as the "spare" graph.
