@@ -168,6 +168,7 @@ HRESULT
     );
 typedef PERFECT_HASH_KEYS_LOAD_TABLE_SIZE *PPERFECT_HASH_KEYS_LOAD_TABLE_SIZE;
 
+#ifndef __INTELLISENSE__
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats;
@@ -177,5 +178,6 @@ extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
 extern PERFECT_HASH_KEYS_GET_ADDRESS PerfectHashKeysGetAddress;
 extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
 extern PERFECT_HASH_KEYS_GET_FILE PerfectHashKeysGetFile;
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
