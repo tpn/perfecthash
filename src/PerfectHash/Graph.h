@@ -223,7 +223,7 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
 
     ULONG NumberOfAssignedPerCacheLineCounts[NUM_ASSIGNED_PER_CACHE_LINE + 1];
 
-    ULONG Padding2;
+    ULONG Padding;
 
 } ASSIGNED_MEMORY_COVERAGE;
 typedef ASSIGNED_MEMORY_COVERAGE *PASSIGNED_MEMORY_COVERAGE;
@@ -243,7 +243,7 @@ typedef GRAPH_ITERATOR *PGRAPH_ITERATOR;
 //
 
 typedef union _GRAPH_FLAGS {
-    struct {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
         // Indicates we've started deletion of edges from the graph.
