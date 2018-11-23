@@ -258,6 +258,11 @@ Abstract:
 // 
 // Table Create Flags:
 // 
+//     --Silent
+// 
+//         Disables console printing of the dots, dashes and other characters used
+//         to (crudely) visualize the result of individual table create operations.
+// 
 //     --FirstGraphWins | --FindBestGraph
 // 
 //         --FirstGraphWins [default]
@@ -440,6 +445,11 @@ Abstract:
 //         loading large key sets.
 // 
 // Table Create Flags:
+// 
+//     --Silent
+// 
+//         Disables console printing of the dots, dashes and other characters used
+//         to (crudely) visualize the result of individual table create operations.
 // 
 //     --FirstGraphWins | --FindBestGraph
 // 
