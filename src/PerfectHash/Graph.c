@@ -660,7 +660,7 @@ Arguments:
 
 Return Value:
 
-    S_OK - Success.
+    None.
 
 --*/
 {
@@ -889,12 +889,12 @@ Arguments:
 
 Return Value:
 
-    PH_E_NOT_IMPLEMENTED - Not yet implemented.
+    None.
 
 --*/
 {
     DBG_UNREFERENCED_PARAMETER(Graph);
-    return PH_E_NOT_IMPLEMENTED;
+    PH_RAISE(PH_E_NOT_IMPLEMENTED);
 }
 
 
