@@ -343,21 +343,13 @@ Return Value:
     ASSERT(FindBestMemoryCoverage(Context));
 
     //
-    // Calculate memory coverage information if applicable.  (These routines
-    // should never fail, so issue a PH_RAISE() if they do.)
+    // Calculate memory coverage information if applicable.
     //
 
     if (WantsAssignedMemoryCoverage(Graph)) {
-        Result = Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
-        if (FAILED(Result)) {
-            PH_RAISE(Result);
-        }
+        Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
     } else if (WantsAssignedMemoryCoverageForKeysSubset(Graph)) {
-        Result =
-            Graph->Vtbl->CalculateAssignedMemoryCoverageForKeysSubset(Graph);
-        if (FAILED(Result)) {
-            PH_RAISE(Result);
-        }
+        Graph->Vtbl->CalculateAssignedMemoryCoverageForKeysSubset(Graph);
     }
 
     //
@@ -647,7 +639,7 @@ VerifyMemoryCoverageInvariants(
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE GraphCalculateAssignedMemoryCoverage;
 
 _Use_decl_annotations_
-HRESULT
+VOID
 GraphCalculateAssignedMemoryCoverage(
     PGRAPH Graph
     )
@@ -866,14 +858,45 @@ Return Value:
     }
 
     //
-    // Enumeration of the assigned array complete.  Verify invariants then
-    // finish up.
+    // Enumeration of the assigned array complete; verify invariants.
     //
 
     VerifyMemoryCoverageInvariants(Graph, Coverage);
 
-    return S_OK;
+    return;
 }
+
+
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
+    GraphCalculateAssignedMemoryCoverageForKeysSubset;
+
+_Use_decl_annotations_
+VOID
+GraphCalculateAssignedMemoryCoverageForKeysSubset(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Calculate the memory coverage of a solved, assigned graph for a subset of
+    keys (accessible via Graph->Context->KeysSubset).
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which memory coverage of the
+        assigned array for a subset of keys is to be calculated.
+
+Return Value:
+
+    PH_E_NOT_IMPLEMENTED - Not yet implemented.
+
+--*/
+{
+    DBG_UNREFERENCED_PARAMETER(Graph);
+    return PH_E_NOT_IMPLEMENTED;
+}
+
 
 //
 // Disable optimization for this routine to prevent grouping of the PH_RAISE()
@@ -939,35 +962,6 @@ VerifyMemoryCoverageInvariants(
     }
 }
 #pragma optimize("", on)
-
-GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
-    GraphCalculateAssignedMemoryCoverageForKeysSubset;
-
-_Use_decl_annotations_
-HRESULT
-GraphCalculateAssignedMemoryCoverageForKeysSubset(
-    PGRAPH Graph
-    )
-/*++
-
-Routine Description:
-
-    Calculate the memory coverage of a solved, assigned graph for a subset of
-    keys (accessible via Graph->Context->KeysSubset).
-
-Arguments:
-
-    Graph - Supplies a pointer to the graph for which memory coverage of the
-        assigned array for a subset of keys is to be calculated.
-
-Return Value:
-
-    PH_E_NOT_IMPLEMENTED - Not yet implemented.
-
---*/
-{
-    return PH_E_NOT_IMPLEMENTED;
-}
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 

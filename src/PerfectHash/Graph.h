@@ -605,10 +605,8 @@ HRESULT
 typedef GRAPH_VERIFY *PGRAPH_VERIFY;
 
 typedef
-_Must_inspect_result_
-_Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
-HRESULT
+VOID
 (STDAPICALLTYPE GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE)(
     _In_ PGRAPH Graph
     );
@@ -616,10 +614,8 @@ typedef GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
       *PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE;
 
 typedef
-_Must_inspect_result_
-_Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
-HRESULT
+VOID
 (STDAPICALLTYPE GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET)(
     _In_ PGRAPH Graph
     );
