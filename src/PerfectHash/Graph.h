@@ -20,6 +20,14 @@ Abstract:
          methods), and a GraphImpl.c file will contain the implementation
          specific routines (adding edges, determining if it's acyclic, etc.)
 
+    N.B. The bulk of this work has been done.  Graph.h (this file) now contains
+         the COM-related and generic graph functionality (as cared about by
+         consumers of the graph component, i.e. Chm01.c and PerfectHashContext).
+
+         The specifics of the hypergraph logic are abstracted into GraphImpl.h,
+         and the original implementation, based on the chmd project, live in
+         GraphImpl1.[ch].
+
 --*/
 
 #include "stdafx.h"
