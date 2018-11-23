@@ -927,6 +927,12 @@ FinishedSolution:
     Graph = CONTAINING_RECORD(ListEntry, GRAPH, ListEntry);
 
     //
+    // Capture the maximum traversal depth in the table.
+    //
+
+    Table->MaximumGraphTraversalDepth = Graph->MaximumTraversalDepth;
+
+    //
     // Note this graph as the one solved to the context.  This is used by the
     // save file work callback we dispatch below.
     //

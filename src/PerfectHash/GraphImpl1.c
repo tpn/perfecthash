@@ -29,6 +29,13 @@ Abstract:
 #define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
 
 //
+// When a solution has been found and the assignment step begins, the initial
+// value assigned to a vertex is govered by the following macro.
+//
+
+#define INITIAL_ASSIGNMENT_VALUE 0
+
+//
 // The algorithm is as follows:
 //
 //  For each key:
@@ -308,8 +315,7 @@ Return Value:
 {
     PRTL Rtl;
     VERTEX Vertex;
-    ULONG Depth;
-    ULONG MaximumDepth;
+    ULONG Depth = 0;
     ULONG NumberOfSetBits;
 
     //
@@ -321,13 +327,6 @@ Return Value:
     ASSERT(Graph->Flags.IsAcyclic);
 
     //
-    // Initialize the depth and maximum depth counters.
-    //
-
-    Depth = 0;
-    MaximumDepth = 0;
-
-    //
     // Walk the graph and assign values.
     //
 
@@ -336,11 +335,11 @@ Return Value:
         if (!IsVisitedVertex(Graph, Vertex)) {
 
             //
-            // Assign an initial value of 0, then walk the subgraph.
+            // Assign an initial value, then walk the subgraph.
             //
 
-            Graph->Assigned[Vertex] = 0;
-            GraphTraverse(Graph, Vertex, &Depth, &MaximumDepth);
+            Graph->Assigned[Vertex] = INITIAL_ASSIGNMENT_VALUE;
+            GraphTraverse(Graph, Vertex, &Depth, &Graph->MaximumTraversalDepth);
         }
     }
 

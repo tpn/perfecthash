@@ -89,6 +89,10 @@ Abstract:
           Context->NumberOfTableResizeEvents,                          \
           OUTPUT_INT)                                                  \
                                                                        \
+    ENTRY(MaximumGraphTraversalDepth,                                  \
+          Table->MaximumGraphTraversalDepth,                           \
+          OUTPUT_INT)                                                  \
+                                                                       \
     ENTRY(HighestDeletedEdgesCount,                                    \
           Context->HighestDeletedEdgesCount,                           \
           OUTPUT_INT)                                                  \

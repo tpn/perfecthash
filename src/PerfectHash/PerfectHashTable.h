@@ -225,7 +225,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
 
-    ULONG Padding3;
+    //
+    // Maximum recursion depth observed by the graph traversal function.
+    //
+
+    ULONG MaximumGraphTraversalDepth;
 
     //
     // Pointer to the path for the output directory (below).

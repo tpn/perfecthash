@@ -847,12 +847,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     GRAPH_VTBL Interface;
 
     //
+    // Maximum recursive traversal depth observed during assignment.
+    //
+
+    ULONG MaximumTraversalDepth;
+
+    //
     // Capture the seeds used for each hash function employed by the graph.
     //
 
     ULONG NumberOfSeeds;
-
-    ULONG Padding3;
 
     struct {
         union {
