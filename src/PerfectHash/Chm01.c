@@ -200,6 +200,9 @@ Return Value:
 
     if (!ARGUMENT_PRESENT(Table)) {
         return E_POINTER;
+
+    Silent = (Table->TableCreateFlags.Silent == TRUE);
+
     } else {
         Context = Table->Context;
 
