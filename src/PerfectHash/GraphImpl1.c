@@ -1014,23 +1014,17 @@ Return Value:
         //
 
         EdgeId = GraphEdgeId(Graph, Vertex, Neighbor);
-
         MASK_INDEX(EdgeId, &MaskedEdgeId);
 
         OriginalExistingId = ExistingId = Graph->Assigned[Vertex];
-
         ASSERT(ExistingId >= 0);
 
         ThisId = EdgeId - ExistingId;
-
         MASK_INDEX(ThisId, &MaskedThisId);
-
         ASSERT(MaskedThisId <= Graph->NumberOfVertices);
 
         FinalId = EdgeId + ExistingId;
-
         MASK_INDEX(FinalId, &MaskedFinalId);
-
         ASSERT(MaskedFinalId <= Graph->NumberOfVertices);
 
         Bit = MaskedFinalId;
