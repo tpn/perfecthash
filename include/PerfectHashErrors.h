@@ -606,7 +606,7 @@ Abstract:
 //                 table data, which could result in fewer cache misses, which
 //                 would yield greater performance.
 // 
-//             LowestNumberOfCacheLinesUsedBySubsetOfKeys
+//             LowestNumberOfCacheLinesUsedByKeysSubset
 // 
 //                 This predicate is used to to search for solutions where the
 //                 most frequent keys consume the lowest number of cache lines.
