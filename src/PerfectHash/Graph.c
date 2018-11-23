@@ -1406,6 +1406,8 @@ Return Value:
     Graph->VertexMask = Table->HashMask;
     Graph->MaskFunctionId = Info->Context->MaskFunctionId;
 
+    Graph->Flags.Paranoid = IsParanoid(Table);
+
     CopyInline(&Graph->Dimensions,
                &Info->Dimensions,
                sizeof(Graph->Dimensions));

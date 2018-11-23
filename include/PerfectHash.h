@@ -2355,10 +2355,19 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG Silent:1;
 
         //
+        // Enables redundant checks in the routine that determines whether or
+        // not a generated graph is acyclic.  This shouldn't be necessary in
+        // normal operation.  It may help identify bugs during development of
+        // the graph solving logic, though.
+        //
+
+        ULONG Paranoid:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:22;
+        ULONG Unused:21;
     };
 
     LONG AsLong;

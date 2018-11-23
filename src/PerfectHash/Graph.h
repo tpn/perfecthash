@@ -289,10 +289,18 @@ typedef union _GRAPH_FLAGS {
         ULONG IsSpare:1;
 
         //
+        // When set, enables additional redundant checks in IsGraphAcyclic()
+        // with regards to counting deleted edges.
+        //
+
+        ULONG Paranoid:1;
+
+        //
         // Unused bits.
         //
 
         ULONG Unused:26;
+        ULONG Unused:23;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -304,6 +312,7 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define IsGraphInfoLoaded(Graph) (Graph->Flags.IsInfoLoaded == TRUE)
 #define IsSpareGraph(Graph) (Graph->Flags.IsSpare == TRUE)
 #define SkipGraphVerification(Graph) Graph->Flags.SkipVerification
+#define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 

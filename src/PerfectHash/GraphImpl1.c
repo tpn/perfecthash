@@ -168,13 +168,14 @@ Return Value:
     NumberOfKeys = Graph->NumberOfKeys;
     NumberOfEdges = Graph->NumberOfEdges;
     NumberOfVertices = Graph->NumberOfVertices;
-    RtlNumberOfSetBits = Graph->Context->Rtl->RtlNumberOfSetBits;
 
     //
-    // Invariant check: we should not be shrinking prior to this point.
+    // Invariant check: we should not be shrinking prior to this point, and our
+    // deleted edge count should be 0.
     //
 
     ASSERT(!Graph->Flags.Shrinking);
+    ASSERT(Graph->DeletedEdgeCount == 0);
 
     //
     // Toggle the shrinking bit to indicate we've started edge deletion.
@@ -191,41 +192,49 @@ Return Value:
         GraphCyclicDeleteEdge(Graph, Vertex);
     }
 
-    //
-    // As each edge of degree 1 is deleted, a bit is set in the deleted bitmap,
-    // indicating the edge at that bit offset was deleted.  Thus, we can simply
-    // count the number of set bits in the bitmap and compare that to the number
-    // of edges in the graph.  If the values do not match, the graph is cyclic;
-    // if they do match, the graph is acyclic.
-    //
+    if (!IsGraphParanoid(Graph)) {
 
-    NumberOfEdgesDeleted = RtlNumberOfSetBits(&Graph->DeletedEdgesBitmap);
+        NumberOfEdgesDeleted = Graph->DeletedEdgeCount;
+        IsAcyclic = (NumberOfKeys == NumberOfEdgesDeleted);
 
-    //
-    // Temporary assert to determine if the number of edges deleted will always
-    // meet our deleted edge count.  (If so, we can just test this value,
-    // instead of having to count the bitmap bits.)
-    //
+    } else {
 
-    ASSERT(NumberOfEdgesDeleted == Graph->DeletedEdgeCount);
+        RtlNumberOfSetBits = Graph->Context->Rtl->RtlNumberOfSetBits;
 
-    IsAcyclic = (NumberOfKeys == NumberOfEdgesDeleted);
+        //
+        // As each edge of degree 1 is deleted, a bit is set in the deleted
+        // bitmap, indicating the edge at that bit offset was deleted.  Thus,
+        // we can simply count the number of set bits in the bitmap and compare
+        // that to the number of edges in the graph.  If the values do not
+        // match, the graph is cyclic; if they do match, the graph is acyclic.
+        //
 
-    //
-    // Temporary slow version to verify our assumption about counting bits is
-    // correct.
-    //
+        NumberOfEdgesDeleted = RtlNumberOfSetBits(&Graph->DeletedEdgesBitmap);
 
-    IsAcyclicSlow = TRUE;
+        //
+        // Ensure number of bits set matches the graph deleted edge count.
+        //
 
-    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
-        if (!IsDeletedEdge(Graph, Edge)) {
-            IsAcyclicSlow = FALSE;
-            break;
+        ASSERT(NumberOfEdgesDeleted == Graph->DeletedEdgeCount);
+
+        IsAcyclic = (NumberOfKeys == NumberOfEdgesDeleted);
+
+        //
+        // Verify our assumption about counting bits is correct.
+        //
+
+        IsAcyclicSlow = TRUE;
+
+        for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+            if (!IsDeletedEdge(Graph, Edge)) {
+                IsAcyclicSlow = FALSE;
+                break;
+            }
         }
-    }
 
-    ASSERT(IsAcyclic == IsAcyclicSlow);
+        ASSERT(IsAcyclic == IsAcyclicSlow);
+
+    }
 
     //
     // Make a note that we're acyclic if applicable in the graph's flags.
@@ -844,8 +853,8 @@ Return Value:
         //
         // XXX: in the chm.c implementation, they call abs_edge() here.
         // However, if I do that, I trigger endless collisions during the
-        // verification stage.  Reverting to just returning the edge at least
-        // allows the CRC32 hash + AND mask combo to work satisfactorily.
+        // verification stage.  Reverting to just returning the edge appears
+        // to work, though.
         //
 
         //

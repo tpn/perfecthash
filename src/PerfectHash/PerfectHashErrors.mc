@@ -217,6 +217,11 @@ Table Create Flags:
         application is to observe the performance of table creation without
         performing any file I/O operations.
 
+    --Paranoid
+
+        Enables redundant checks in the routine that determines whether or not
+        a generated graph is acyclic.
+
     --FirstGraphWins | --FindBestGraph
 
         --FirstGraphWins [default]
@@ -409,6 +414,11 @@ Table Create Flags:
         found.  The only time you would use this flag from the console
         application is to observe the performance of table creation without
         performing any file I/O operations.
+
+    --Paranoid
+
+        Enables redundant checks in the routine that determines whether or not
+        a generated graph is acyclic.
 
     --FirstGraphWins | --FindBestGraph
 
