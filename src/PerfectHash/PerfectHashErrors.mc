@@ -210,6 +210,13 @@ Table Create Flags:
         Disables console printing of the dots, dashes and other characters used
         to (crudely) visualize the result of individual table create operations.
 
+    --NoFileIo
+
+        Disables writing of all files when a perfect hash solution has been
+        found.  The only time you would use this flag from the console
+        application is to observe the performance of table creation without
+        performing any file I/O operations.
+
     --FirstGraphWins | --FindBestGraph
 
         --FirstGraphWins [default]
@@ -395,6 +402,13 @@ Table Create Flags:
 
         Disables console printing of the dots, dashes and other characters used
         to (crudely) visualize the result of individual table create operations.
+
+    --NoFileIo
+
+        Disables writing of all files when a perfect hash solution has been
+        found.  The only time you would use this flag from the console
+        application is to observe the performance of table creation without
+        performing any file I/O operations.
 
     --FirstGraphWins | --FindBestGraph
 

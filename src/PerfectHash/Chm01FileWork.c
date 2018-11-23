@@ -110,6 +110,8 @@ Return Value:
     TableInfo = Table->TableInfoOnDisk;
     Keys = Table->Keys;
 
+    ASSERT(!NoFileIo(Table));
+
     //
     // Resolve the work item base address from the list entry.
     //

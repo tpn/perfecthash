@@ -2327,6 +2327,14 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG IncludeNumberOfTableElementsInOutputPath:1;
 
         //
+        // When set, disables all file work (I/O).  This will prevent generation
+        // of the .pht1 file that can later be Load()'d, as well as all the
+        // supporting source files for the compiled perfect hash table.
+        //
+
+        ULONG NoFileIo:1;
+
+        //
         // When set, does not print any console output related to table creation
         // (i.e. the normal dots, dashes etc).
         //
@@ -2337,8 +2345,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:24;
-        ULONG Unused:23;
+        ULONG Unused:22;
     };
 
     LONG AsLong;

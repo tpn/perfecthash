@@ -64,6 +64,7 @@ extern PREPARE_TABLE_OUTPUT_DIRECTORY PrepareTableOutputDirectory;
 #define CHECK_ALL_SAVE_ERRORS() \
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CHECK_ERRORS)
 
+
 _Use_decl_annotations_
 HRESULT
 CreatePerfectHashTableImplChm01(
@@ -188,7 +189,7 @@ Return Value:
     PHANDLE PrepareEvent = PrepareEvents;
 
 #define EXPAND_AS_STACK_VAR(Verb, VUpper, Name, Upper) \
-    FILE_WORK_ITEM Verb##Name;
+    FILE_WORK_ITEM Verb##Name = { 0 };
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
@@ -493,7 +494,9 @@ RetryWithLargerTableSize:
     // just call it on the first invocation (Attempt == 1).
     //
 
-    if (Attempt == 1 || TableResizeRequiresRename(Table)) {
+    if (!NoFileIo(Table) &&
+        (Attempt == 1 || TableResizeRequiresRename(Table))) {
+
         Result = PrepareTableOutputDirectory(Table);
         if (FAILED(Result)) {
             PH_ERROR(PrepareTableOutputDirectory, Result);
@@ -506,6 +509,7 @@ RetryWithLargerTableSize:
     //
 
 #define EXPAND_AS_SUBMIT_FILE_WORK(Verb, VUpper, Name, Upper) \
+    ASSERT(!NoFileIo(Table));                                 \
     ZeroStructInline(##Verb####Name##);                       \
     Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;       \
     InsertTailFileWork(Context, &Verb##Name##.ListEntry);     \
@@ -519,7 +523,9 @@ RetryWithLargerTableSize:
 
     ASSERT(Context->FileWorkList->Vtbl->IsEmpty(Context->FileWorkList));
 
-    SUBMIT_PREPARE_FILE_WORK();
+    if (!NoFileIo(Table)) {
+        SUBMIT_PREPARE_FILE_WORK();
+    }
 
     //
     // Capture initial cycles as reported by __rdtsc() and the performance
@@ -664,27 +670,30 @@ RetryWithLargerTableSize:
         SetEvent(Context->ShutdownEvent);
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
 
-        //
-        // Perform a blocking wait for the prepare work to complete.
-        //
+        if (!NoFileIo(Table)) {
 
-        WaitResult = WaitForMultipleObjects(ARRAYSIZE(PrepareEvents),
-                                            PrepareEvents,
-                                            WaitForAllEvents,
-                                            INFINITE);
+            //
+            // Perform a blocking wait for the prepare work to complete.
+            //
 
-        if (WaitResult != WAIT_OBJECT_0) {
-            SYS_ERROR(WaitForSingleObject);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
+            WaitResult = WaitForMultipleObjects(ARRAYSIZE(PrepareEvents),
+                                                PrepareEvents,
+                                                WaitForAllEvents,
+                                                INFINITE);
+
+            if (WaitResult != WAIT_OBJECT_0) {
+                SYS_ERROR(WaitForSingleObject);
+                Result = PH_E_SYSTEM_CALL_FAILED;
+                goto Error;
+            }
+
+            //
+            // Verify none of the file work callbacks reported an error during
+            // preparation.
+            //
+
+            CHECK_ALL_PREPARE_ERRORS();
         }
-
-        //
-        // Verify none of the file work callbacks reported an error during
-        // preparation.
-        //
-
-        CHECK_ALL_PREPARE_ERRORS();
 
         //
         // There are no more threadpool callbacks running.  However, a thread
@@ -771,8 +780,10 @@ RetryWithLargerTableSize:
         //
 
         ResetMainWorkList(Context);
-        ResetFileWorkList(Context);
         ResetFinishedWorkList(Context);
+        if (!NoFileIo(Table)) {
+            ResetFileWorkList(Context);
+        }
 
         //
         // Print a dash if we're in context table/bulk create mode to indicate
@@ -872,7 +883,9 @@ CheckFinishedCount:
         // is file preparation work.
         //
 
-        WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
+        if (!NoFileIo(Table)) {
+            WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
+        }
 
         //
         // Sanity check we're not indicating successful table creation.
@@ -932,7 +945,9 @@ FinishedSolution:
     // Dispatch save file work for the table data.
     //
 
-    SUBMIT_SAVE_FILE_WORK();
+    if (!NoFileIo(Table)) {
+        SUBMIT_SAVE_FILE_WORK();
+    }
 
     //
     // Capture another round of cycles and performance counter values, then
@@ -960,6 +975,10 @@ FinishedSolution:
     if (FAILED(Result)) {
         Result = PH_E_TABLE_VERIFICATION_FAILED;
         goto Error;
+    }
+
+    if (NoFileIo(Table)) {
+        goto End;
     }
 
     //
@@ -997,7 +1016,9 @@ Error:
 
     SetEvent(Context->ShutdownEvent);
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
-    WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
+    if (!NoFileIo(Table)) {
+        WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
+    }
 
     //
     // Intentional follow-on to End.
@@ -1017,9 +1038,10 @@ End:
     //
     // If no attempts were made, no file work was submitted, which means we
     // can skip the close logic below and jump straight to releasing graphs.
+    // Likewise for no file I/O.
     //
 
-    if (Attempt == 0) {
+    if (Attempt == 0 || NoFileIo(Table)) {
         goto ReleaseGraphs;
     }
 
@@ -1036,6 +1058,7 @@ End:
     }
 
 #define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(Verb, VUpper, Name, Upper) \
+    ASSERT(!NoFileIo(Table));                                       \
     ZeroStructInline(##Verb####Name##);                             \
     Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;             \
     Verb##Name##.EndOfFile = EndOfFile;                             \
