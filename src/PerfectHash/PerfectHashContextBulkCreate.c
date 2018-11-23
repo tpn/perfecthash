@@ -161,6 +161,7 @@ Return Value:
     ULONG Count = 0;
     ULONG ReferenceCount;
     ULONG NumberOfKeysFiles = 0;
+    BOOLEAN Silent;
     BOOLEAN Failed;
     BOOLEAN Terminate;
     HRESULT Result;
@@ -257,6 +258,8 @@ Return Value:
     //
     // Arguments have been validated, proceed.
     //
+
+    Silent = (TableCreateFlags.Silent == TRUE);
 
     //
     // Create a buffer we can use for temporary path construction.  We want it

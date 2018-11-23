@@ -147,6 +147,7 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    BOOLEAN Silent;
     USHORT NumberOfPages;
     ULONG NumberOfRows = 0;
     HRESULT Result = S_OK;
@@ -233,6 +234,8 @@ Return Value:
     //
     // Arguments have been validated, proceed.
     //
+
+    Silent = (TableCreateFlags.Silent == TRUE);
 
     //
     // Create a "row buffer" we can use for the CSV file.

@@ -316,6 +316,11 @@ Table Compile Flags:
 
 Table Create Parameters:
 
+    --Silent
+
+        Disables console printing of the dots, dashes and other characters used
+        to (crudely) visualize the result of individual table create operations.
+
     --AttemptsBeforeTableResize=N [default = 18]
 
         Specifies the number of attempts at solving the graph that will be made
@@ -496,6 +501,11 @@ Table Compile Flags:
     N/A
 
 Table Create Parameters:
+
+    --Silent
+
+        Disables console printing of the dots, dashes and other characters used
+        to (crudely) visualize the result of individual table create operations.
 
     --AttemptsBeforeTableResize=N [default = 18]
 

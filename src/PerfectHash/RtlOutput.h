@@ -332,15 +332,17 @@ static PCSZ Newline = "\n";
 static PCSZ Asterisk = "*";
 static PCSZ Exclamation = "!";
 
-#define DO_OUTPUT(Buffer, Size)                                        \
-    if (!WriteFile(OutputHandle, Buffer, Size, &BytesWritten, NULL)) { \
-        Result = PH_E_SYSTEM_CALL_FAILED;                              \
-        SYS_ERROR(WriteFile);                                          \
-        goto Error;                                                    \
-    } else if (BytesWritten != Size) {                                 \
-        Result = PH_E_NOT_ALL_BYTES_WRITTEN;                           \
-        PH_ERROR(__FUNCTION__, Result);                                \
-        goto Error;                                                    \
+#define DO_OUTPUT(Buffer, Size)                                            \
+    if (!Silent) {                                                         \
+        if (!WriteFile(OutputHandle, Buffer, Size, &BytesWritten, NULL)) { \
+            Result = PH_E_SYSTEM_CALL_FAILED;                              \
+            SYS_ERROR(WriteFile);                                          \
+            goto Error;                                                    \
+        } else if (BytesWritten != Size) {                                 \
+            Result = PH_E_NOT_ALL_BYTES_WRITTEN;                           \
+            PH_ERROR(__FUNCTION__, Result);                                \
+            goto Error;                                                    \
+        }                                                                  \
     }
 
 #define MAYBE_OUTPUT(Buffer, Size) \

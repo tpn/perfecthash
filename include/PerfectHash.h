@@ -2327,10 +2327,18 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG IncludeNumberOfTableElementsInOutputPath:1;
 
         //
+        // When set, does not print any console output related to table creation
+        // (i.e. the normal dots, dashes etc).
+        //
+
+        ULONG Silent:1;
+
+        //
         // Unused bits.
         //
 
         ULONG Unused:24;
+        ULONG Unused:23;
     };
 
     LONG AsLong;

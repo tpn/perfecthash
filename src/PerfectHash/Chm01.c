@@ -148,6 +148,7 @@ Return Value:
     PULONG Keys;
     PGRAPH *Graphs = NULL;
     PGRAPH Graph;
+    BOOLEAN Silent;
     BOOLEAN Success;
     ULONG Attempt = 0;
     ULONG ReferenceCount;

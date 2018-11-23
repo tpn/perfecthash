@@ -143,6 +143,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(IgnoreKeysTableSize);
     DECL_ARG(IncludeNumberOfTableResizeEventsInOutputPath);
     DECL_ARG(IncludeNumberOfTableElementsInOutputPath);
+    DECL_ARG(Silent);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -168,6 +169,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(IgnoreKeysTableSize);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableResizeEventsInOutputPath);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableElementsInOutputPath);
+    SET_FLAG_AND_RETURN_IF_EQUAL(Silent);
 
     return S_FALSE;
 }
