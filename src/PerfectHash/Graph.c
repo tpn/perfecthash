@@ -324,16 +324,6 @@ Return Value:
     }
 
     //
-    // Calculate memory coverage information.  This routine should never fail,
-    // so issue a PH_RAISE() if it does.
-    //
-
-    Result = Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
-    if (FAILED(Result)) {
-        PH_RAISE(Result);
-    }
-
-    //
     // If we're in "first graph wins" mode and we reach this point, we're the
     // winning thread, so, push the graph onto the finished list head, then
     // submit the relevant finished threadpool work item and return TRUE.
@@ -351,6 +341,24 @@ Return Value:
     //
 
     ASSERT(FindBestMemoryCoverage(Context));
+
+    //
+    // Calculate memory coverage information if applicable.  (These routines
+    // should never fail, so issue a PH_RAISE() if they do.)
+    //
+
+    if (WantsAssignedMemoryCoverage(Graph)) {
+        Result = Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
+        if (FAILED(Result)) {
+            PH_RAISE(Result);
+        }
+    } else if (WantsAssignedMemoryCoverageForKeysSubset(Graph)) {
+        Result =
+            Graph->Vtbl->CalculateAssignedMemoryCoverageForKeysSubset(Graph);
+        if (FAILED(Result)) {
+            PH_RAISE(Result);
+        }
+    }
 
     //
     // Register the solved graph.  We can return this result directly.
@@ -932,6 +940,35 @@ VerifyMemoryCoverageInvariants(
 }
 #pragma optimize("", on)
 
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
+    GraphCalculateAssignedMemoryCoverageForKeysSubset;
+
+_Use_decl_annotations_
+HRESULT
+GraphCalculateAssignedMemoryCoverageForKeysSubset(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Calculate the memory coverage of a solved, assigned graph for a subset of
+    keys (accessible via Graph->Context->KeysSubset).
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which memory coverage of the
+        assigned array for a subset of keys is to be calculated.
+
+Return Value:
+
+    PH_E_NOT_IMPLEMENTED - Not yet implemented.
+
+--*/
+{
+    return PH_E_NOT_IMPLEMENTED;
+}
+
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
 _Use_decl_annotations_
@@ -1042,6 +1079,18 @@ Return Value:
 
             if (Coverage->NumberOfEmptyCacheLines >
                 PreviousBestCoverage->NumberOfEmptyCacheLines) {
+
+                Context->BestGraph = Graph;
+                *NewGraphPointer = PreviousBestGraph;
+                Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+            }
+
+            break;
+
+        case BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId:
+
+            if (Coverage->NumberOfUsedCacheLines <
+                PreviousBestCoverage->NumberOfUsedCacheLines) {
 
                 Context->BestGraph = Graph;
                 *NewGraphPointer = PreviousBestGraph;
@@ -1484,6 +1533,34 @@ Return Value:
     ALLOC_BITMAP_BUFFER(IndexBitmap);
 
     //
+    // If we're in "first graph wins" mode, we don't need to prep any of the
+    // memory coverage information.
+    //
+
+    if (FirstSolvedGraphWins(Context)) {
+        goto End;
+    }
+
+    ASSERT(FindBestMemoryCoverage(Context));
+
+    switch (Context->BestCoverageType) {
+
+        case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
+            Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
+            break;
+
+        case BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId:
+            Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
+            break;
+
+        default:
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(GraphLoadInfo_InvalidBestCoverageType, Result);
+            PH_RAISE(Result);
+
+    }
+
+    //
     // Fill out the assigned memory coverage structure and allocate buffers.
     //
 
@@ -1564,8 +1641,6 @@ Return Value:
     // We're done, finish up.
     //
 
-    Graph->Flags.IsInfoLoaded = TRUE;
-    Graph->LastLoadedNumberOfVertices = Graph->NumberOfVertices;
     goto End;
 
 Error:
@@ -1579,6 +1654,11 @@ Error:
     //
 
 End:
+
+    if (SUCCEEDED(Result)) {
+        Graph->Flags.IsInfoLoaded = TRUE;
+        Graph->LastLoadedNumberOfVertices = Graph->NumberOfVertices;
+    }
 
     return Result;
 }
@@ -1778,6 +1858,25 @@ Return Value:
     EMPTY_ARRAY(Edges);
 
     //
+    // Clear any remaining values.
+    //
+
+    Graph->Collisions = 0;
+    Graph->DeletedEdgeCount = 0;
+    Graph->VisitedVerticesCount = 0;
+
+    Graph->Flags.Shrinking = FALSE;
+    Graph->Flags.IsAcyclic = FALSE;
+
+    //
+    // Skip the memory coverage reset if we're in "first graph wins" mode.
+    //
+
+    if (FirstSolvedGraphWins(Context)) {
+        goto End;
+    }
+
+    //
     // Clear the assigned memory coverage counts and arrays.
     //
 
@@ -1812,17 +1911,6 @@ Return Value:
     ZeroInline(Coverage->##Name, sizeof(Coverage->##Name))
 
     ZERO_ASSIGNED_COUNTS(NumberOfAssignedPerCacheLineCounts);
-
-    //
-    // Clear any remaining values.
-    //
-
-    Graph->Collisions = 0;
-    Graph->DeletedEdgeCount = 0;
-    Graph->VisitedVerticesCount = 0;
-
-    Graph->Flags.Shrinking = FALSE;
-    Graph->Flags.IsAcyclic = FALSE;
 
     //
     // We're done, finish up.

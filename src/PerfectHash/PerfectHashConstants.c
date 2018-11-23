@@ -1148,9 +1148,10 @@ const GRAPH_VTBL GraphInterface = {
     &GraphSolve,
     &GraphVerify,
     &GraphCalculateAssignedMemoryCoverage,
+    &GraphCalculateAssignedMemoryCoverageForKeysSubset,
     &GraphRegisterSolved,
 };
-VERIFY_VTBL_SIZE(GRAPH, 9);
+VERIFY_VTBL_SIZE(GRAPH, 10);
 
 //
 // Interface array.

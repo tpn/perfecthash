@@ -289,6 +289,20 @@ typedef union _GRAPH_FLAGS {
         ULONG IsSpare:1;
 
         //
+        // When set, indicates the graph should calculate assigned memory
+        // coverage after a solution has been found.
+        //
+
+        ULONG WantsAssignedMemoryCoverage:1;
+
+        //
+        // When set, indicates the graph wants assigned memory coverage
+        // information for a subset of keys (Graph->Context->KeysSubset).
+        //
+
+        ULONG WantsAssignedMemoryCoverageForKeysSubset:1;
+
+        //
         // When set, enables additional redundant checks in IsGraphAcyclic()
         // with regards to counting deleted edges.
         //
@@ -299,7 +313,6 @@ typedef union _GRAPH_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:26;
         ULONG Unused:23;
     };
     LONG AsLong;
@@ -308,10 +321,14 @@ typedef union _GRAPH_FLAGS {
 typedef GRAPH_FLAGS *PGRAPH_FLAGS;
 C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 
-#define IsGraphInfoSet(Graph) (Graph->Flags.IsInfoSet == TRUE)
-#define IsGraphInfoLoaded(Graph) (Graph->Flags.IsInfoLoaded == TRUE)
-#define IsSpareGraph(Graph) (Graph->Flags.IsSpare == TRUE)
-#define SkipGraphVerification(Graph) Graph->Flags.SkipVerification
+#define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet == TRUE)
+#define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded == TRUE)
+#define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare == TRUE)
+#define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification == TRUE)
+#define WantsAssignedMemoryCoverage(Graph) \
+    ((Graph)->Flags.WantsAssignedMemoryCoverage)
+#define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
+    ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
@@ -603,6 +620,17 @@ _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
+(STDAPICALLTYPE GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
+      *PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
 (STDAPICALLTYPE GRAPH_REGISTER_SOLVED)(
     _In_ PGRAPH Graph,
     _Inout_ PGRAPH *NewGraphPointer
@@ -619,6 +647,8 @@ typedef struct _GRAPH_VTBL {
     PGRAPH_SOLVE Solve;
     PGRAPH_VERIFY Verify;
     PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE CalculateAssignedMemoryCoverage;
+    PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
+        CalculateAssignedMemoryCoverageForKeysSubset;
     PGRAPH_REGISTER_SOLVED RegisterSolved;
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
@@ -904,6 +934,7 @@ VOID
     );
 typedef GRAPH_RUNDOWN *PGRAPH_RUNDOWN;
 
+#ifndef __INTELLISENSE__
 extern GRAPH_INITIALIZE GraphInitialize;
 extern GRAPH_RUNDOWN GraphRundown;
 
@@ -922,7 +953,10 @@ extern GRAPH_RESET GraphReset;
 extern GRAPH_SOLVE GraphSolve;
 extern GRAPH_VERIFY GraphVerify;
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE GraphCalculateAssignedMemoryCoverage;
+extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
+    GraphCalculateAssignedMemoryCoverageForKeysSubset;
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
+#endif
 
 //
 // Define a helper macro for hashing keys during graph creation.  Assumes a
