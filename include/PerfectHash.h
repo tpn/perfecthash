@@ -1503,8 +1503,21 @@ typedef PERFECT_HASH_FILE *PPERFECT_HASH_FILE;
 
 
 //
-// Define the PERFECT_HASH_KEYS interface.
+// Define the PERFECT_HASH_KEYS interface and supporting structures.
 //
+
+typedef struct _VALUE_ARRAY {
+    _Writable_elements_(NumberOfValues)
+    PULONG Values;
+    ULONG NumberOfValues;
+    ULONG ValueSizeInBytes;
+} VALUE_ARRAY;
+typedef VALUE_ARRAY *PVALUE_ARRAY;
+typedef const VALUE_ARRAY *PCVALUE_ARRAY;
+
+typedef VALUE_ARRAY KEYS_SUBSET;
+typedef KEYS_SUBSET *PKEYS_SUBSET;
+typedef const KEYS_SUBSET *PCKEYS_SUBSET;
 
 typedef union _PERFECT_HASH_KEYS_BITMAP_FLAGS {
 
@@ -2541,18 +2554,6 @@ DoesTableCreateParameterRequireDeallocation(
         Id == TableCreateParameterKeysSubsetId
     );
 }
-
-typedef struct _VALUE_ARRAY {
-    PULONG Values;
-    ULONG NumberOfValues;
-    ULONG Padding;
-} VALUE_ARRAY;
-typedef VALUE_ARRAY *PVALUE_ARRAY;
-typedef const VALUE_ARRAY *PCVALUE_ARRAY;
-
-typedef VALUE_ARRAY KEYS_SUBSET;
-typedef KEYS_SUBSET *PKEYS_SUBSET;
-typedef const KEYS_SUBSET *PCKEYS_SUBSET;
 
 FORCEINLINE
 BOOLEAN
