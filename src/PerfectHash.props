@@ -31,6 +31,7 @@
       <ExceptionHandling></ExceptionHandling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError Condition="$(Configuration) == 'PGInstrument'">false</TreatWarningAsError>
       <WarningLevel>EnableAllWarnings</WarningLevel>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>

@@ -189,11 +189,18 @@ Return Value:
     PHANDLE PrepareEvent = PrepareEvents;
 
 #define EXPAND_AS_STACK_VAR(Verb, VUpper, Name, Upper) \
-    FILE_WORK_ITEM Verb##Name = { 0 };
+    FILE_WORK_ITEM Verb##Name;
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
+
+#define EXPAND_AS_ZERO_STACK_VAR(Verb, VUpper, Name, Upper) \
+    ZeroStructInline(Verb##Name);
+
+    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ZERO_STACK_VAR);
+    SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ZERO_STACK_VAR);
+    CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ZERO_STACK_VAR);
 
     //
     // Validate arguments.
@@ -1439,7 +1446,7 @@ Return Value:
     // Calculate the size required for our bitmap buffers.
     //
 
-    DeletedEdgesBitmapBufferSizeInBytes.QuadPart = (
+    DeletedEdgesBitmapBufferSizeInBytes.QuadPart = ALIGN_UP_POINTER(
         ALIGN_UP(TotalNumberOfEdges.QuadPart, 8) >> 3
     );
 
@@ -1449,7 +1456,7 @@ Return Value:
         goto Error;
     }
 
-    VisitedVerticesBitmapBufferSizeInBytes.QuadPart = (
+    VisitedVerticesBitmapBufferSizeInBytes.QuadPart = ALIGN_UP_POINTER(
         ALIGN_UP(NumberOfVertices.QuadPart, 8) >> 3
     );
 
@@ -1459,7 +1466,7 @@ Return Value:
         goto Error;
     }
 
-    AssignedBitmapBufferSizeInBytes.QuadPart = (
+    AssignedBitmapBufferSizeInBytes.QuadPart = ALIGN_UP_POINTER(
         ALIGN_UP(NumberOfVertices.QuadPart, 8) >> 3
     );
 
@@ -1469,7 +1476,7 @@ Return Value:
         goto Error;
     }
 
-    IndexBitmapBufferSizeInBytes.QuadPart = (
+    IndexBitmapBufferSizeInBytes.QuadPart = ALIGN_UP_POINTER(
         ALIGN_UP(NumberOfVertices.QuadPart, 8) >> 3
     );
 

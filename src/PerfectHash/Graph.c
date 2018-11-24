@@ -1832,10 +1832,14 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     PGRAPH_INFO Info;
     HRESULT Result = PH_S_CONTINUE_GRAPH_SOLVING;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
+    PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
+    PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
 
     //
     // Initialize aliases.
@@ -1843,6 +1847,7 @@ Return Value:
 
     Context = Graph->Context;
     Info = Graph->Info;
+    Rtl = Context->Rtl;
 
     //
     // Fast-path exit: if the context is indicating to stop solving, return.
@@ -1972,12 +1977,18 @@ Return Value:
         }
     }
 
-#define ZERO_BITMAP_BUFFER(Name) \
-    ZeroInline(Graph->##Name##.Buffer, Info->##Name##BufferSizeInBytes)
-
     //
     // Clear the bitmap buffers.
     //
+    // N.B. We use __stosq() to prevent the PGO builds trying to call memset.
+    //
+
+#define ZERO_BITMAP_BUFFER(Name)                           \
+    ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
+           ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
+    __stosq((PDWORD64)Graph->##Name##.Buffer,              \
+            0,                                             \
+            Info->##Name##BufferSizeInBytes >> 3)
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
     ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
@@ -1987,9 +1998,15 @@ Return Value:
     //
     // "Empty" all of the nodes.
     //
+    // N.B. We use __stosq() to prevent the PGO builds trying to call memset.
+    //
 
-#define EMPTY_ARRAY(Name) \
-    AllOnesInline(Graph->##Name, Info->##Name##SizeInBytes)
+#define EMPTY_ARRAY(Name)                            \
+    ASSERT(0 == Info->##Name##SizeInBytes -          \
+           ((Info->##Name##SizeInBytes >> 3) << 3)); \
+    __stosq((PDWORD64)Graph->##Name,                 \
+            ~0ULL,                                   \
+            Info->##Name##SizeInBytes >> 3)
 
     EMPTY_ARRAY(First);
     EMPTY_ARRAY(Prev);
@@ -2021,43 +2038,30 @@ Return Value:
 
     Coverage = &Graph->AssignedMemoryCoverage;
 
-    Coverage->NumberOfUsedPages = 0;
-    Coverage->NumberOfUsedLargePages = 0;
-    Coverage->NumberOfUsedCacheLines = 0;
+    //
+    // Capture the pointers prior to zeroing the struct.
+    //
 
-    Coverage->NumberOfEmptyPages = 0;
-    Coverage->NumberOfEmptyLargePages = 0;
-    Coverage->NumberOfEmptyCacheLines = 0;
+    NumberOfAssignedPerPage = Coverage->NumberOfAssignedPerPage;
+    NumberOfAssignedPerLargePage = Coverage->NumberOfAssignedPerLargePage;
+    NumberOfAssignedPerCacheLine = Coverage->NumberOfAssignedPerCacheLine;
 
-    Coverage->FirstPageUsed = 0;
-    Coverage->FirstLargePageUsed = 0;
-    Coverage->FirstCacheLineUsed = 0;
+    ZeroStructPointer(Coverage);
 
-    Coverage->LastPageUsed = 0;
-    Coverage->LastLargePageUsed = 0;
-    Coverage->LastCacheLineUsed = 0;
+    //
+    // Restore the pointers.
+    //
 
-    Coverage->TotalNumberOfAssigned = 0;
+    Coverage->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
+    Coverage->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
+    Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
 
 #define ZERO_ASSIGNED_ARRAY(Name) \
-    ZeroInline(Coverage->##Name, Info->##Name##SizeInBytes)
+    ZeroMemory(Coverage->##Name, Info->##Name##SizeInBytes)
 
     ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
     ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
     ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
-
-#define ZERO_ASSIGNED_COUNTS(Name) \
-    ZeroInline(Coverage->##Name, sizeof(Coverage->##Name))
-
-    ZERO_ASSIGNED_COUNTS(NumberOfAssignedPerCacheLineCounts);
-
-    Coverage->NumberOfKeysWithVerticesMappingToSamePage = 0;
-    Coverage->NumberOfKeysWithVerticesMappingToSameLargePage = 0;
-    Coverage->NumberOfKeysWithVerticesMappingToSameCacheLine = 0;
-
-    Coverage->NumberOfPagesUsedByKeysSubset = 0;
-    Coverage->NumberOfLargePagesUsedByKeysSubset = 0;
-    Coverage->NumberOfCacheLinesUsedByKeysSubset = 0;
 
     //
     // We're done, finish up.
