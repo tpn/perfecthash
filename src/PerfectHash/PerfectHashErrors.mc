@@ -380,22 +380,28 @@ Console Output Character Legend
         solve the table at a given size was reached, and no more resize attempts
         were possible (due to the maximum resize limit also being hit).
 
-N.B. The following characters are related to memory issues.
+    F   Failed to create a table due to a target not being reached by a specific
+        number of attempts or time duration.  Not yet implemented.
 
     *   None of the worker threads were able to allocate sufficient memory to
         attempt solving the graph.
 
     !   The system is out of memory.
 
-    ^   The system is running low on memory (a low memory event is triggered
+    L   The system is running low on memory (a low memory event is triggered
         at about 90% RAM usage).  In certain situations we can detect this
         situation prior to actually running out of memory; in these cases,
         we abort the current table creation attempt (which will instantly
         relieve system memory pressure).
 
-    %   The graph was created successfully, however, we weren't able to allocate
+    V   The graph was created successfully, however, we weren't able to allocate
         enough memory for the table values array in order for the array to be
         used after creation.  This can be avoided by omitting --TestAfterCreate.
+
+    T   The requested number of table elements was too large (exceeded 32 bits).
+
+    S   A shutdown event was received.  This shouldn't be seen unless externally
+        signaling the named shutdown event associated with a context.
 
 .
 
@@ -408,6 +414,9 @@ Usage: PerfectHashSelfTest.exe
     <TestDataDirectory> <OutputDirectory>
     <Algorithm> <HashFunction> <MaskFunction>
     <MaximumConcurrency>
+
+N.B. This utility has been deprecated in favor of PerfectHashBulkCreate.exe.
+
 .
 
 MessageId=0x103

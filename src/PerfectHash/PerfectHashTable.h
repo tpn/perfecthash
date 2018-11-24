@@ -318,6 +318,58 @@ typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
     &Table->TableFile->Path->BaseNameA
 
 //
+// Helper macro for representing a table create return code as a single char.
+//
+
+#define PRINT_CHAR_FOR_TABLE_CREATE_RESULT(Result)               \
+                                                                 \
+    UnknownTableCreateResult = FALSE;                            \
+                                                                 \
+    switch (Result) {                                            \
+                                                                 \
+        case S_OK:                                               \
+            DOT();                                               \
+            break;                                               \
+                                                                 \
+        case PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS:      \
+            ASTERISK();                                          \
+            break;                                               \
+                                                                 \
+        case PH_I_OUT_OF_MEMORY:                                 \
+            EXCLAMATION();                                       \
+            break;                                               \
+                                                                 \
+        case PH_I_LOW_MEMORY:                                    \
+            BIGL();                                              \
+            break;                                               \
+                                                                 \
+        case PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED:   \
+            BIGV();                                              \
+            break;                                               \
+                                                                 \
+        case PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED: \
+            CROSS();                                             \
+            break;                                               \
+                                                                 \
+        case PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE:  \
+            BIGT();                                              \
+            break;                                               \
+                                                                 \
+        case PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION:  \
+            BIGF();                                              \
+            break;                                               \
+                                                                 \
+        case PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT:  \
+            BIGS();                                              \
+            break;                                               \
+                                                                 \
+        default:                                                 \
+            QUESTION();                                          \
+            UnknownTableCreateResult = TRUE;                     \
+            break;                                               \
+    }
+
+//
 // Internal method typedefs.
 //
 

@@ -199,6 +199,7 @@ Return Value:
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
     PERFECT_HASH_CPU_ARCH_ID CpuArchId;
+    BOOLEAN UnknownTableCreateResult = FALSE;
 
     //
     // Validate arguments.
@@ -536,6 +537,18 @@ Return Value:
 
     do {
 
+        //
+        // Helper macro for testing if Ctrl-C has been pressed.
+        //
+
+#define CHECK_CTRL_C()                \
+    if (CtrlCPressed) {               \
+        Failures++;                   \
+        Terminate = TRUE;             \
+        Result = PH_E_CTRL_C_PRESSED; \
+        goto ReleaseTable;            \
+    }
+
         Count++;
 
         //
@@ -637,41 +650,29 @@ Return Value:
 
         TableCreateResult = Result;
 
+        CHECK_CTRL_C();
+
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashTableCreate, Result);
             Failed = TRUE;
             Failures++;
             goto ReleaseTable;
-        } else if (Result != S_OK) {
-            if (Result == PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS) {
-                ASTERISK();
-            } else if (Result == PH_I_OUT_OF_MEMORY) {
-                EXCLAMATION();
-            } else if (Result == PH_I_LOW_MEMORY) {
-                CARET();
-            } else if (Result ==
-                       PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
-                PERCENT();
-            } else if (Result == PH_E_CTRL_C_PRESSED) {
-
-                //
-                // We don't print anything for Ctrl-C.
-                //
-
-                Failures++;
-                Terminate = TRUE;
-
-            } else {
-                CROSS();
-            }
-            goto ReleaseTable;
-        } else {
-            DOT();
         }
 
-        if (CtrlCPressed) {
-            Failures++;
-            Terminate = TRUE;
+        PRINT_CHAR_FOR_TABLE_CREATE_RESULT(Result);
+
+        //
+        // Enable thsi block to figure out which result code is generating
+        // question marks.
+        //
+
+#if 0
+        if (UnknownTableCreateResult) {
+            __debugbreak();
+        }
+#endif
+
+        if (Result != S_OK) {
             goto ReleaseTable;
         }
 
@@ -691,11 +692,7 @@ Return Value:
             }
         }
 
-        if (CtrlCPressed) {
-            Failures++;
-            Terminate = TRUE;
-            goto ReleaseTable;
-        }
+        CHECK_CTRL_C();
 
         //
         // Compile the table.
@@ -715,11 +712,7 @@ Return Value:
             }
         }
 
-        if (CtrlCPressed) {
-            Failures++;
-            Terminate = TRUE;
-            goto ReleaseTable;
-        }
+        CHECK_CTRL_C();
 
         //
         // Write the .csv row.

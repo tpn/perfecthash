@@ -324,11 +324,17 @@ extern APPEND_INTEGER_TO_WIDE_CHAR_BUFFER AppendIntegerToWideCharBuffer;
 //
 
 static PCSZ Dot = ".";
+static PCSZ BigF = "F";
+static PCSZ BigL = "L";
+static PCSZ BigS = "S";
+static PCSZ BigT = "T";
+static PCSZ BigV = "V";
 static PCSZ Dash = "-";
 static PCSZ Caret = "^";
 static PCSZ Cross = "x";
 static PCSZ Percent = "%";
 static PCSZ Newline = "\n";
+static PCSZ Question = "?";
 static PCSZ Asterisk = "*";
 static PCSZ Exclamation = "!";
 
@@ -351,11 +357,17 @@ static PCSZ Exclamation = "!";
     }
 
 #define DOT() DO_OUTPUT(Dot, 1)
+#define BIGF() DO_OUTPUT(BigF, 1)
+#define BIGL() DO_OUTPUT(BigL, 1)
+#define BIGS() DO_OUTPUT(BigS, 1)
+#define BIGT() DO_OUTPUT(BigT, 1)
+#define BIGV() DO_OUTPUT(BigV, 1)
 #define DASH() DO_OUTPUT(Dash, 1)
 #define CARET() DO_OUTPUT(Caret, 1)
 #define CROSS() DO_OUTPUT(Cross, 1)
 #define PERCENT() DO_OUTPUT(Percent, 1)
 #define NEWLINE() DO_OUTPUT(Newline, 1)
+#define QUESTION() DO_OUTPUT(Question, 1)
 #define ASTERISK() DO_OUTPUT(Asterisk, 1)
 #define EXCLAMATION() DO_OUTPUT(Exclamation, 1)
 

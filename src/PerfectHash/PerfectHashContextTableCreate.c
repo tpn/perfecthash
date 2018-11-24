@@ -177,6 +177,7 @@ Return Value:
     PERFECT_HASH_CPU_ARCH_ID CpuArchId;
     ASSIGNED_MEMORY_COVERAGE EmptyCoverage;
     PASSIGNED_MEMORY_COVERAGE Coverage;
+    BOOLEAN UnknownTableCreateResult = FALSE;
 
     //
     // Validate arguments.
@@ -382,30 +383,23 @@ Return Value:
 
     TableCreateResult = Result;
 
+    if (CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
+        goto Error;
+    }
+
     if (FAILED(Result)) {
         PH_KEYS_ERROR(PerfectHashTableCreate, Result);
         goto Error;
-    } else if (Result != S_OK) {
-        if (Result == PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS) {
-            ASTERISK();
-        } else if (Result == PH_I_OUT_OF_MEMORY) {
-            EXCLAMATION();
-        } else if (Result == PH_I_LOW_MEMORY) {
-            CARET();
-        } else if (Result ==
-                   PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
-            PERCENT();
-        } else if (Result == PH_E_CTRL_C_PRESSED) {
-            goto Error;
-        } else {
-            CROSS();
-        }
+    }
+
+    PRINT_CHAR_FOR_TABLE_CREATE_RESULT(Result);
+
+    if (Result != S_OK) {
 
         Coverage = &EmptyCoverage;
 
     } else {
-
-        DOT();
 
         Coverage = Table->Coverage;
 
