@@ -223,10 +223,43 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
 
     ULONG NumberOfAssignedPerCacheLineCounts[NUM_ASSIGNED_PER_CACHE_LINE + 1];
 
+    //
+    // If we're calculating memory coverage for a subset of keys, the following
+    // counts will reflect the situation where the two vertices for a given key
+    // are co-located within the same page, large page and cache line.
+    //
+
+    ULONG NumberOfKeysWithVerticesMappingToSamePage;
+    ULONG NumberOfKeysWithVerticesMappingToSameLargePage;
+    ULONG NumberOfKeysWithVerticesMappingToSameCacheLine;
+
+    ULONG NumberOfPagesUsedByKeysSubset;
+    ULONG NumberOfLargePagesUsedByKeysSubset;
+    ULONG NumberOfCacheLinesUsedByKeysSubset;
+
     ULONG Padding;
 
 } ASSIGNED_MEMORY_COVERAGE;
 typedef ASSIGNED_MEMORY_COVERAGE *PASSIGNED_MEMORY_COVERAGE;
+typedef const ASSIGNED_MEMORY_COVERAGE *PCASSIGNED_MEMORY_COVERAGE;
+
+FORCEINLINE
+VOID
+CopyCoverage(
+    _Out_writes_bytes_all_(sizeof(*Dest)) PASSIGNED_MEMORY_COVERAGE Dest,
+    _In_reads_(sizeof(*Source)) PCASSIGNED_MEMORY_COVERAGE Source
+    )
+{
+    //
+    // Copy the structure, then clear the pointers.
+    //
+
+    CopyInline(Dest, Source, sizeof(*Dest));
+
+    Dest->NumberOfAssignedPerPage = NULL;
+    Dest->NumberOfAssignedPerLargePage = NULL;
+    Dest->NumberOfAssignedPerCacheLine = NULL;
+}
 
 //
 // Define a graph iterator structure use to facilitate graph traversal.
@@ -765,24 +798,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _PERFECT_HASH_CONTEXT *Context;
 
     //
-    // Edges array.  The number of elements in this array is governed by the
-    // TotalNumberOfEdges field, and will be twice the number of edges.
+    // Edges array.
     //
 
+    _Writable_elements_(TotalNumberOfEdges)
     PEDGE Edges;
 
     //
-    // Array of the "next" edge array, as per the referenced papers.  The number
-    // of elements in this array is also governed by TotalNumberOfEdges.
+    // Array of the "next" edge array, as per the referenced papers.
     //
 
+    _Writable_elements_(TotalNumberOfEdges)
     PEDGE Next;
 
     //
-    // Array of vertices.  Number of elements is governed by the
-    // NumberOfVertices field.
+    // Array of vertices.
     //
 
+    _Writable_elements_(NumberOfVertices)
     PVERTEX First;
 
     //
@@ -791,13 +824,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // using bitmaps.  Let's reserve a slot for the "prev" array anyway.
     //
 
+    _Writable_elements_(NumberOfVertices)
     PVERTEX Prev;
 
     //
-    // Array of assigned vertices.  Number of elements is governed by the
-    // NumberOfVertices field.
+    // Array of assigned vertices.
     //
 
+    _Writable_elements_(NumberOfVertices)
     PVERTEX Assigned;
 
     //

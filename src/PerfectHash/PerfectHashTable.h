@@ -122,6 +122,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
 
     //
+    // If we're in "find best coverage" mode, a pointer to an assigned memory
+    // coverage structure that reflects the coverage of the winning graph.
+    //
+
+    struct _ASSIGNED_MEMORY_COVERAGE *Coverage;
+
+    //
     // Optional pointer to a string representation of the Index() routine's
     // implementation in C, if one is available.
     //

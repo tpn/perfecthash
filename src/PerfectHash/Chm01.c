@@ -1546,7 +1546,8 @@ Return Value:
     );
 
     //
-    // Array sizes.
+    // Array sizes for the number of assigned per page, large page and cache
+    // line.
     //
 
     Info->NumberOfAssignedPerPageSizeInBytes = (

@@ -175,6 +175,8 @@ Return Value:
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
     PERFECT_HASH_CPU_ARCH_ID CpuArchId;
+    ASSIGNED_MEMORY_COVERAGE EmptyCoverage;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
 
     //
     // Validate arguments.
@@ -236,6 +238,7 @@ Return Value:
     //
 
     Silent = (TableCreateFlags.Silent == TRUE);
+    ZeroStruct(EmptyCoverage);
 
     //
     // Create a "row buffer" we can use for the CSV file.
@@ -395,38 +398,43 @@ Return Value:
         } else {
             CROSS();
         }
-        goto Error;
+
+        Coverage = &EmptyCoverage;
+
     } else {
+
         DOT();
-    }
 
-    //
-    // Test the table, if applicable.
-    //
+        Coverage = Table->Coverage;
 
-    if (ContextTableCreateFlags.TestAfterCreate) {
+        //
+        // Test the table, if applicable.
+        //
 
-        Result = Table->Vtbl->Test(Table, Keys, FALSE);
+        if (ContextTableCreateFlags.TestAfterCreate) {
 
-        if (FAILED(Result)) {
-            PH_TABLE_ERROR(PerfectHashTableTest, Result);
-            goto Error;
+            Result = Table->Vtbl->Test(Table, Keys, FALSE);
+
+            if (FAILED(Result)) {
+                PH_TABLE_ERROR(PerfectHashTableTest, Result);
+                goto Error;
+            }
         }
-    }
 
-    //
-    // Compile the table.
-    //
+        //
+        // Compile the table.
+        //
 
-    if (ContextTableCreateFlags.Compile) {
+        if (ContextTableCreateFlags.Compile) {
 
-        Result = Table->Vtbl->Compile(Table,
-                                      &TableCompileFlags,
-                                      CpuArchId);
+            Result = Table->Vtbl->Compile(Table,
+                                          &TableCompileFlags,
+                                          CpuArchId);
 
-        if (FAILED(Result)) {
-            PH_TABLE_ERROR(PerfectHashTableCompile, Result);
-            goto Error;
+            if (FAILED(Result)) {
+                PH_TABLE_ERROR(PerfectHashTableCompile, Result);
+                goto Error;
+            }
         }
     }
 

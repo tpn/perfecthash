@@ -458,6 +458,15 @@ const STRING DotLibSuffixA = RCS(".lib");
 const STRING DynamicLibraryConfigurationTypeA = RCS("DynamicLibrary");
 const STRING ApplicationConfigurationTypeA = RCS("Application");
 
+#define EXPAND_AS_DECL_BEST_COVERAGE_TYPE_STRING(Name, Comparison, Comparator) \
+    RCS(#Comparison#Name),
+
+const STRING BestCoverageTypeNames[] = {
+    RCS("N/A"),
+    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DECL_BEST_COVERAGE_TYPE_STRING)
+    RCS("N/A"),
+};
+
 //
 // Stream names.
 //

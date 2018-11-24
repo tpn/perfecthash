@@ -206,27 +206,27 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='PGInstrument'">
     <ClCompile>
-      <PreprocessorDefinitions>_BUILD_CONFIG_PGI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PERFECT_HASH_BUILD_CONFIG_PGI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='PGUpdate'">
     <ClCompile>
-      <PreprocessorDefinitions>_BUILD_CONFIG_PGU;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PERFECT_HASH_BUILD_CONFIG_PGU;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='PGOptimize'">
     <ClCompile>
-      <PreprocessorDefinitions>_BUILD_CONFIG_PGO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PERFECT_HASH_BUILD_CONFIG_PGO;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
-      <PreprocessorDefinitions>_BUILD_CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PERFECT_HASH_BUILD_CONFIG_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
-      <PreprocessorDefinitions>_BUILD_CONFIG_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PERFECT_HASH_BUILD_CONFIG_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>

@@ -880,7 +880,13 @@ GraphCalculateAssignedMemoryCoverageForKeysSubset(
 Routine Description:
 
     Calculate the memory coverage of a solved, assigned graph for a subset of
-    keys (accessible via Graph->Context->KeysSubset).
+    keys.  This routine enumerates each key (edge) in the subset, recalculates
+    the two hash values (vertices), then increments the relevant counts for
+    where each vertex resides based on cache line, page and large page.  Then,
+    these counts are enumerated and for those where a count greater than zero
+    is observed, the coverage's NumberOfUsedPages, NumberOfUsedLargePages and
+    NumberOfUsedCacheLines counts are incremented.  A histogram is also kept
+    of cache line counts (NumberOfAssignedPerCacheLineCounts).
 
 Arguments:
 
@@ -893,8 +899,156 @@ Return Value:
 
 --*/
 {
-    DBG_UNREFERENCED_PARAMETER(Graph);
-    PH_RAISE(PH_E_NOT_IMPLEMENTED);
+    KEY Key;
+    ULONG Index;
+    ULONG Count;
+    PULONG Value;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    ULONG_PTR Offset1;
+    ULONG_PTR Offset2;
+    ULONG PageIndex1;
+    ULONG PageIndex2;
+    ULONG LargePageIndex1;
+    ULONG LargePageIndex2;
+    ULONG CacheLineIndex1;
+    ULONG CacheLineIndex2;
+    PKEYS_SUBSET Subset;
+    ULARGE_INTEGER Hash;
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED_PAGE_COUNT PageCount;
+    PASSIGNED_LARGE_PAGE_COUNT LargePageCount;
+    PASSIGNED_CACHE_LINE_COUNT CacheLineCount;
+
+    //
+    // Initialize aliases.
+    //
+
+    Context = Graph->Context;
+    Table = Context->Table;
+    Subset = Context->KeysSubset;
+    Value = Subset->Values;
+    Coverage = &Graph->AssignedMemoryCoverage;
+
+    //
+    // Walk the key subset, hash each key, identify the assigned array location,
+    // increment the relevant counters.
+    //
+
+    for (Index = 0; Index < Subset->NumberOfValues; Index++) {
+        Key = *Value++;
+
+        //
+        // Generate both hashes for the key.
+        //
+
+        SEEDED_HASH(Key, &Hash.QuadPart);
+
+        //
+        // Mask the individual vertices.
+        //
+
+        MASK_HASH(Hash.LowPart, &Vertex1);
+        MASK_HASH(Hash.HighPart, &Vertex2);
+
+        //
+        // Invariant check: the vertices must differ by this point (see the
+        // check in GraphSolve()).
+        //
+
+        ASSERT(Vertex1 != Vertex2);
+
+        //
+        // Process the first vertex.
+        //
+
+        Offset1 = ((ULONG_PTR)Vertex1) << ASSIGNED_SHIFT;
+
+        PageIndex1 = (ULONG)(Offset1 >> PAGE_SHIFT);
+        LargePageIndex1 = (ULONG)(Offset1 >> LARGE_PAGE_SHIFT);
+        CacheLineIndex1 = (ULONG)(Offset1 >> CACHE_LINE_SHIFT);
+
+        Coverage->NumberOfAssignedPerPage[PageIndex1]++;
+        Coverage->NumberOfAssignedPerLargePage[LargePageIndex1]++;
+        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex1]++;
+
+        //
+        // Process the second vertex.
+        //
+
+        Offset2 = ((ULONG_PTR)Vertex2) << ASSIGNED_SHIFT;
+
+        PageIndex2 = (ULONG)(Offset2 >> PAGE_SHIFT);
+        LargePageIndex2 = (ULONG)(Offset2 >> LARGE_PAGE_SHIFT);
+        CacheLineIndex2 = (ULONG)(Offset2 >> CACHE_LINE_SHIFT);
+
+        Coverage->NumberOfAssignedPerPage[PageIndex2]++;
+        Coverage->NumberOfAssignedPerLargePage[LargePageIndex2]++;
+        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex2]++;
+
+        //
+        // Increment relevant counters if the same large page, page or cache
+        // line is shared between the vertices.
+        //
+
+        if (LargePageIndex1 == LargePageIndex2) {
+            Coverage->NumberOfKeysWithVerticesMappingToSameLargePage++;
+            if (PageIndex1 == PageIndex2) {
+                Coverage->NumberOfKeysWithVerticesMappingToSamePage++;
+                if (CacheLineIndex1 == CacheLineIndex2) {
+                    Coverage->NumberOfKeysWithVerticesMappingToSameCacheLine++;
+                }
+            }
+        }
+    }
+
+    //
+    // Sum the counts captured above.
+    //
+
+    PageCount = Coverage->NumberOfAssignedPerPage;
+    for (Index = 0; Index < Coverage->TotalNumberOfPages; Index++) {
+        Count = *PageCount++;
+        if (Count > 0) {
+            Coverage->NumberOfUsedPages++;
+        }
+    }
+
+    LargePageCount = Coverage->NumberOfAssignedPerLargePage;
+    for (Index = 0; Index < Coverage->TotalNumberOfLargePages; Index++) {
+        Count = *LargePageCount++;
+        if (Count > 0) {
+            Coverage->NumberOfUsedLargePages++;
+        }
+    }
+
+    CacheLineCount = Coverage->NumberOfAssignedPerCacheLine;
+    for (Index = 0; Index < Coverage->TotalNumberOfCacheLines; Index++) {
+        Count = *CacheLineCount++;
+        if (Count > 0) {
+            Coverage->NumberOfUsedCacheLines++;
+        }
+        Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
+    }
+
+    return;
+
+    //
+    // We need the following Error: label in order to use the SEEDED_HASH()
+    // and MASK_HASH() macros above.  As we've already solved the graph at
+    // this point (and thus, all generated vertices were usable), we shouldn't
+    // hit this point, so, PH_RAISE() if we do.
+    //
+
+Error:
+
+    Result = PH_E_UNREACHABLE_CODE;
+    PH_ERROR(GraphCalculateAssignedMemoryCoverageForKeysSubset_Error, Result);
+    PH_RAISE(Result);
+
 }
 
 
@@ -1067,34 +1221,20 @@ Return Value:
     // best graph accordingly if so.
     //
 
+#define EXPAND_AS_DETERMINE_IF_BEST_GRAPH(Name, Comparison, Comparator) \
+    case BestCoverageType##Comparison##Name##Id:                        \
+        if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
+            Context->BestGraph = Graph;                                 \
+            *NewGraphPointer = PreviousBestGraph;                       \
+            Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;                    \
+        }                                                               \
+        break;
+
     switch (CoverageType) {
 
-        case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
-
-            if (Coverage->NumberOfEmptyCacheLines >
-                PreviousBestCoverage->NumberOfEmptyCacheLines) {
-
-                Context->BestGraph = Graph;
-                *NewGraphPointer = PreviousBestGraph;
-                Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
-            }
-
-            break;
-
-        case BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId:
-
-            if (Coverage->NumberOfUsedCacheLines <
-                PreviousBestCoverage->NumberOfUsedCacheLines) {
-
-                Context->BestGraph = Graph;
-                *NewGraphPointer = PreviousBestGraph;
-                Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
-            }
-
-            break;
+        BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_BEST_GRAPH)
 
         default:
-
             Result = PH_E_INVALID_BEST_COVERAGE_TYPE;
             break;
     }
@@ -1761,6 +1901,7 @@ Return Value:
             if (Context->BestGraph) {
 
                 PGRAPH BestGraph;
+                PASSIGNED_MEMORY_COVERAGE BestCoverage;
 
                 //
                 // If finished count is 0 at this point, a critical invariant
@@ -1772,11 +1913,15 @@ Return Value:
                 }
 
                 //
-                // Insert the graph to the head of the finished work list.
+                // Copy the best graph's coverage information to the table,
+                // then insert the graph to the head of the finished work list.
                 //
 
                 BestGraph = Context->BestGraph;
                 Context->BestGraph = NULL;
+
+                BestCoverage = &BestGraph->AssignedMemoryCoverage;
+                CopyCoverage(Context->Table->Coverage, BestCoverage);
 
                 InsertHeadFinishedWork(Context, &BestGraph->ListEntry);
 
@@ -1905,6 +2050,14 @@ Return Value:
     ZeroInline(Coverage->##Name, sizeof(Coverage->##Name))
 
     ZERO_ASSIGNED_COUNTS(NumberOfAssignedPerCacheLineCounts);
+
+    Coverage->NumberOfKeysWithVerticesMappingToSamePage = 0;
+    Coverage->NumberOfKeysWithVerticesMappingToSameLargePage = 0;
+    Coverage->NumberOfKeysWithVerticesMappingToSameCacheLine = 0;
+
+    Coverage->NumberOfPagesUsedByKeysSubset = 0;
+    Coverage->NumberOfLargePagesUsedByKeysSubset = 0;
+    Coverage->NumberOfCacheLinesUsedByKeysSubset = 0;
 
     //
     // We're done, finish up.

@@ -84,6 +84,13 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG FindBestMemoryCoverage:1;
 
         //
+        // In conjunction with the bit above being set, indicates that the
+        // best memory coverage mode we're looking for uses a subset of keys.
+        //
+
+        ULONG BestMemoryCoverageForKeysSubset:1;
+
+        //
         // When set, indicates all solving activities should be stopped.
         //
 
@@ -116,7 +123,7 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         // Unused bits.
         //
 
-        ULONG Unused:25;
+        ULONG Unused:24;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -126,6 +133,8 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
 #define FirstSolvedGraphWins(Context) Context->State.FirstSolvedGraphWins
 #define FindBestMemoryCoverage(Context) Context->State.FindBestMemoryCoverage
+#define BestMemoryCoverageForKeysSubset(Context) \
+    ((Context)->State.BestMemoryCoverageForKeysSubset == TRUE)
 
 #define SetFirstSolvedGraphWins(Context)          \
     Context->State.FirstSolvedGraphWins = TRUE;   \

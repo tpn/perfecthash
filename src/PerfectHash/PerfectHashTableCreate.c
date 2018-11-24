@@ -245,6 +245,18 @@ Return Value:
         goto Error;
     }
 
+    //
+    // Allocate sufficient space for the assigned memory coverage structure.
+    //
+
+    Table->Coverage = Allocator->Vtbl->Calloc(Allocator,
+                                              1,
+                                              sizeof(*Table->Coverage));
+
+    if (!Table->Coverage) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
 
     //
     // Argument validation and invariant checks complete, continue with table
@@ -315,11 +327,11 @@ Return Value:
     }
 
     //
-    // If we've been asked to ignore the keys table size, reset the table's
+    // If we've been asked to ignore the previous table size, reset the table's
     // requested number of elements back to 0.
     //
 
-    if (TableCreateFlags.IgnoreKeysTableSize) {
+    if (TableCreateFlags.IgnorePreviousTableSize) {
         Table->RequestedNumberOfTableElements.QuadPart = 0;
     }
 
@@ -345,13 +357,13 @@ Return Value:
     }
 
     //
-    // Use an empty (0) end of file if we're ignoring keys table size, or the
-    // table creation was not successful.  This will result in the underlying
-    // file being deleted by the Close() call below.  Otherwise, write the size
-    // back to the file.
+    // Use an empty (0) end of file if we're ignoring previous table size, or
+    // the table creation was not successful.  This will result in the
+    // underlying file being deleted by the Close() call below.  Otherwise,
+    // write the size back to the file.
     //
 
-    if (TableCreateFlags.IgnoreKeysTableSize || Result != S_OK) {
+    if (TableCreateFlags.IgnorePreviousTableSize || Result != S_OK) {
 
         EndOfFile = &EmptyEndOfFile;
 
@@ -568,14 +580,15 @@ Return Value:
             goto Error;
         }
 
+        SetFindBestMemoryCoverage(Context);
+
         if (DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) {
             if (!Context->KeysSubset) {
                 Result = PH_E_BEST_COVERAGE_TYPE_REQUIRES_KEYS_SUBSET;
                 goto Error;
             }
+            Context->State.BestMemoryCoverageForKeysSubset = TRUE;
         }
-
-        SetFindBestMemoryCoverage(Context);
 
     } else {
 

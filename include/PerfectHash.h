@@ -2322,7 +2322,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // and masking type.
         //
 
-        ULONG IgnoreKeysTableSize:1;
+        ULONG IgnorePreviousTableSize:1;
 
         //
         // When set, incorporates the number of table resize events encountered
@@ -2522,10 +2522,33 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
     TableCreateParameterInvalidId,
 } PERFECT_HASH_TABLE_CREATE_PARAMETER_ID;
 
+//
+// Define an X-macro for the best coverage types.  The ENTRY macros receive
+// (Name, Comparison, Comparator) as their arguments, e.g.:
+//
+//      (NumberOfEmptyPages,            Highest, >)
+//      (NumberOfPagesUsedByKeysSubset, Lowest,  <)
+//
+
+#define BEST_COVERAGE_TYPE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(NumberOfEmptyPages, Highest, >)                  \
+    ENTRY(NumberOfEmptyLargePages, Highest, >)                   \
+    ENTRY(NumberOfEmptyCacheLines, Highest, >)                   \
+    ENTRY(NumberOfPagesUsedByKeysSubset, Lowest, <)              \
+    ENTRY(NumberOfLargePagesUsedByKeysSubset, Lowest, <)         \
+    LAST_ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)
+
+#define BEST_COVERAGE_TYPE_TABLE_ENTRY(ENTRY) \
+    BEST_COVERAGE_TYPE_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_BEST_COVERAGE_TYPE_ENUM(Name, Comparison, Comparator) \
+    BestCoverageType##Comparison##Name##Id,
+
 typedef enum _PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID {
     BestCoverageTypeNullId = 0,
-    BestCoverageTypeHighestNumberOfEmptyCacheLinesId,
-    BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId,
+
+    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_ENUM)
+
     BestCoverageTypeInvalidId,
 } PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE;
 
@@ -2544,12 +2567,13 @@ IsValidBestCoverageType(
 FORCEINLINE
 BOOLEAN
 DoesBestCoverageTypeRequireKeysSubset(
-    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE Type
     )
 {
     return (
-        CoverageType ==
-            BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId
+        Type == BestCoverageTypeLowestNumberOfPagesUsedByKeysSubsetId       ||
+        Type == BestCoverageTypeLowestNumberOfLargePagesUsedByKeysSubsetId  ||
+        Type == BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId
     );
 }
 
@@ -3188,6 +3212,25 @@ typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
 #define PH_RAISE(Result) \
     RaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #endif
+
+//
+// Build type static strings.
+//
+
+#ifdef PERFECT_HASH_BUILD_CONFIG_PGI
+static const char PerfectHashBuildConfigString[] = "PGI";
+#elif defined(PERFECT_HASH_BUILD_CONFIG_PGU)
+static const char PerfectHashBuildConfigString[] = "PGU";
+#elif defined(PERFECT_HASH_BUILD_CONFIG_PGO)
+static const char PerfectHashBuildConfigString[] = "PGO";
+#elif defined(PERFECT_HASH_BUILD_CONFIG_RELEASE)
+static const char PerfectHashBuildConfigString[] = "Release";
+#elif defined(PERFECT_HASH_BUILD_CONFIG_DEBUG)
+static const char PerfectHashBuildConfigString[] = "Debug";
+#else
+#error Unknown build config type.
+#endif
+
 
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 FORCEINLINE

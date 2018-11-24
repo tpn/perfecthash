@@ -253,7 +253,7 @@ Table Create Flags:
         valid perfect hash solution has been found (i.e. with no collisions
         across the entire key set).
 
-    --IgnoreKeysTableSize
+    --IgnorePreviousTableSize
 
         When set, ignores any previously-recorded table sizes associated with
         the keys file for the given algorithm, hash function and masking type.
@@ -363,6 +363,11 @@ Table Create Parameters:
                 table data, which could result in fewer cache misses, which
                 would yield greater performance.
 
+            HighestNumberOfEmptyPages
+            HighestNumberOfEmptyLargePages
+
+                As above, but for pages and large pages, respectively.
+
 Console Output Character Legend
 
  Char | Meaning
@@ -375,7 +380,7 @@ Console Output Character Legend
         solve the table at a given size was reached, and no more resize attempts
         were possible (due to the maximum resize limit also being hit).
 
-N.B. The following characters are related to memory-related issues.
+N.B. The following characters are related to memory issues.
 
     *   None of the worker threads were able to allocate sufficient memory to
         attempt solving the graph.
@@ -480,7 +485,7 @@ Table Create Flags:
         valid perfect hash solution has been found (i.e. with no collisions
         across the entire key set).
 
-    --IgnoreKeysTableSize
+    --IgnorePreviousTableSize
 
         When set, ignores any previously-recorded table sizes associated with
         the keys file for the given algorithm, hash function and masking type.
@@ -590,6 +595,14 @@ Table Create Parameters:
                 table data, which could result in fewer cache misses, which
                 would yield greater performance.
 
+            HighestNumberOfEmptyPages
+            HighestNumberOfEmptyLargePages
+
+                As above, but for pages and large pages, respectively.
+
+                N.B. The following predicates must be used in conjunction with
+                     --KeysSubset.
+
             LowestNumberOfCacheLinesUsedByKeysSubset
 
                 This predicate is used to to search for solutions where the
@@ -602,7 +615,13 @@ Table Create Parameters:
                 This option needs to be combined with the --KeysSubset table
                 create parameter.
 
-    --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,601,600)
+            LowestNumberOfPagesUsedByKeysSubset
+            LowestNumberOfLargePagesUsedByKeysSubset
+
+                As above, but for pages and large pages, respectively.
+
+
+    --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
 
         Supplies a comma-separated list of keys in ascending key-value order.
         Must contain two or more elements.

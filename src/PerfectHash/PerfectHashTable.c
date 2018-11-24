@@ -119,6 +119,8 @@ Return Value:
 
 --*/
 {
+    PALLOCATOR Allocator;
+
     //
     // Validate arguments.
     //
@@ -133,6 +135,8 @@ Return Value:
 
     ASSERT(Table->SizeOfStruct == sizeof(*Table));
 
+    Allocator = Table->Allocator;
+
     //
     // Free the memory used for the values array, if applicable.
     //
@@ -146,13 +150,21 @@ Return Value:
     }
 
     //
+    // Free the copy of the coverage information from the best graph, if
+    // applicable.
+    //
+
+    if (Table->Coverage) {
+        Allocator->Vtbl->FreePointer(Allocator, &Table->Coverage);
+    }
+
+    //
     // Free the post-create in-memory allocation for the table info and table
     // data, if applicable.
     //
 
     if (Table->Flags.Created && !IsTableCreateOnly(Table)) {
         if (Table->TableInfoOnDisk && WasTableInfoOnDiskHeapAllocated(Table)) {
-            PALLOCATOR Allocator = Table->Allocator;
             Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
         }
         if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {

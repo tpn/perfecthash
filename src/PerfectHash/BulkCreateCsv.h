@@ -48,6 +48,10 @@ Abstract:
           MaskFunctionNames[Context->MaskFunctionId],                  \
           OUTPUT_UNICODE_STRING_FAST)                                  \
                                                                        \
+    ENTRY(BuildType,                                                   \
+          PerfectHashBuildConfigString,                                \
+          OUTPUT_CSTR)                                                 \
+                                                                       \
     ENTRY(MaximumConcurrency,                                          \
           Context->MaximumConcurrency,                                 \
           OUTPUT_INT)                                                  \
@@ -84,6 +88,11 @@ Abstract:
     ENTRY(FailedAttempts,                                              \
           Context->FailedAttempts,                                     \
           OUTPUT_INT)                                                  \
+                                                                       \
+    ENTRY(IgnorePreviousTableSize,                                     \
+          (TableCreateFlags.IgnorePreviousTableSize == TRUE ?          \
+           'Y' : 'N'),                                                 \
+          OUTPUT_CHR)                                                  \
                                                                        \
     ENTRY(NumberOfTableResizeEvents,                                   \
           Context->NumberOfTableResizeEvents,                          \

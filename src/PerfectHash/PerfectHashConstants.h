@@ -313,6 +313,8 @@ extern const STRING DotLibSuffixA;
 extern const STRING DynamicLibraryConfigurationTypeA;
 extern const STRING ApplicationConfigurationTypeA;
 
+extern const STRING BestCoverageTypeNames[];
+
 //
 // Arrays indexed by the FILE_WORK_ID enum.
 //

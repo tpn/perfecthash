@@ -140,7 +140,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(CreateOnly);
     DECL_ARG(TryLargePagesForTableData);
     DECL_ARG(TryLargePagesForValuesArray);
-    DECL_ARG(IgnoreKeysTableSize);
+    DECL_ARG(IgnorePreviousTableSize);
     DECL_ARG(IncludeNumberOfTableResizeEventsInOutputPath);
     DECL_ARG(IncludeNumberOfTableElementsInOutputPath);
     DECL_ARG(NoFileIo);
@@ -168,7 +168,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(CreateOnly);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForTableData);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForValuesArray);
-    SET_FLAG_AND_RETURN_IF_EQUAL(IgnoreKeysTableSize);
+    SET_FLAG_AND_RETURN_IF_EQUAL(IgnorePreviousTableSize);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableResizeEventsInOutputPath);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableElementsInOutputPath);
     SET_FLAG_AND_RETURN_IF_EQUAL(NoFileIo);
@@ -446,9 +446,12 @@ TryExtractArgTableCreateParameters(
     DECL_ARG(MaxNumberOfTableResizes);
     DECL_ARG(BestCoverageNumAttempts);
     DECL_ARG(BestCoverageType);
-    DECL_ARG(HighestNumberOfEmptyCacheLines);
-    DECL_ARG(LowestNumberOfCacheLinesUsedByKeysSubset);
     DECL_ARG(KeysSubset);
+
+#define EXPAND_AS_DECL_ARG(Name, Comparison, Comparator) \
+    DECL_ARG(Comparison##Name);
+
+    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DECL_ARG)
 
     ZeroStructInline(LocalParam);
 
@@ -540,13 +543,11 @@ TryExtractArgTableCreateParameters(
         goto AddParam;                                       \
     }
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_EQUAL(BestCoverageType,
-                                        HighestNumberOfEmptyCacheLines);
+#define EXPAND_AS_ADD_PARAM(Name, Comparison, Comparator)  \
+    ADD_PARAM_IF_PREFIX_AND_VALUE_EQUAL(BestCoverageType,  \
+                                        Comparison##Name);
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_EQUAL(
-        BestCoverageType,
-        LowestNumberOfCacheLinesUsedByKeysSubset
-    );
+    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_ADD_PARAM);
 
 #define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(Name,  \
                                                                    Upper) \
