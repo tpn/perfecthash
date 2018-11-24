@@ -1852,6 +1852,9 @@ Return Value:
     PGRAPH_INFO Info;
     HRESULT Result = PH_S_CONTINUE_GRAPH_SOLVING;
     PPERFECT_HASH_CONTEXT Context;
+    ULONG TotalNumberOfPages;
+    ULONG TotalNumberOfLargePages;
+    ULONG TotalNumberOfCacheLines;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
     PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
@@ -2041,10 +2044,11 @@ Return Value:
     Graph->Flags.IsAcyclic = FALSE;
 
     //
-    // Skip the memory coverage reset if we're in "first graph wins" mode.
+    // Skip the memory coverage reset if we're in "first graph wins" mode and
+    // have been requested to skip memory coverage.
     //
 
-    if (FirstSolvedGraphWins(Context)) {
+    if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
         goto End;
     }
 
@@ -2055,8 +2059,12 @@ Return Value:
     Coverage = &Graph->AssignedMemoryCoverage;
 
     //
-    // Capture the pointers prior to zeroing the struct.
+    // Capture the totals and pointers prior to zeroing the struct.
     //
+
+    TotalNumberOfPages = Coverage->TotalNumberOfPages;
+    TotalNumberOfLargePages = Coverage->TotalNumberOfLargePages;
+    TotalNumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
 
     NumberOfAssignedPerPage = Coverage->NumberOfAssignedPerPage;
     NumberOfAssignedPerLargePage = Coverage->NumberOfAssignedPerLargePage;
@@ -2065,8 +2073,12 @@ Return Value:
     ZeroStructPointer(Coverage);
 
     //
-    // Restore the pointers.
+    // Restore the totals and pointers.
     //
+
+    Coverage->TotalNumberOfPages = TotalNumberOfPages;
+    Coverage->TotalNumberOfLargePages = TotalNumberOfLargePages;
+    Coverage->TotalNumberOfCacheLines = TotalNumberOfCacheLines;
 
     Coverage->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
     Coverage->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
