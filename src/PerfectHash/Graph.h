@@ -239,6 +239,12 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
 
     ULONG Padding;
 
+    //
+    // Stores Graph->Attempt at the time the memory coverage was captured.
+    //
+
+    LONGLONG Attempt;
+
 } ASSIGNED_MEMORY_COVERAGE;
 typedef ASSIGNED_MEMORY_COVERAGE *PASSIGNED_MEMORY_COVERAGE;
 typedef const ASSIGNED_MEMORY_COVERAGE *PCASSIGNED_MEMORY_COVERAGE;

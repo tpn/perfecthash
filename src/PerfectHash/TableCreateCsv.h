@@ -134,6 +134,10 @@ Abstract:
           &BestCoverageTypeNames[Context->BestCoverageType],               \
           OUTPUT_STRING)                                                   \
                                                                            \
+    ENTRY(AttemptThatFoundBestGraph,                                       \
+          Coverage->Attempt,                                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(NumberOfKeysInSubset,                                            \
           (Context->KeysSubset ? Context->KeysSubset->NumberOfValues : 0), \
           OUTPUT_INT)                                                      \

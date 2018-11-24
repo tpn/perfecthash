@@ -694,6 +694,7 @@ Return Value:
 #endif
 
     Coverage = &Graph->AssignedMemoryCoverage;
+    Coverage->Attempt = Graph->Attempt;
     NumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
     AssignedCacheLine = (PASSIGNED_CACHE_LINE)Graph->Assigned;
 
@@ -932,6 +933,7 @@ Return Value:
     Subset = Context->KeysSubset;
     Value = Subset->Values;
     Coverage = &Graph->AssignedMemoryCoverage;
+    Coverage->Attempt = Graph->Attempt;
 
     //
     // Walk the key subset, hash each key, identify the assigned array location,
