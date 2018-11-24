@@ -57,6 +57,7 @@ Return Value:
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     ASSERT(NumberOfSeeds >= 2);
 
@@ -155,6 +156,7 @@ Return Value:
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     ASSERT(NumberOfSeeds >= 3);
 
@@ -249,6 +251,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 2);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //
     // Initialize aliases.
@@ -337,6 +340,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 2);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //IACA_VC_START();
 
@@ -435,6 +439,7 @@ Return Value:
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     ASSERT(NumberOfSeeds >= 2);
 
@@ -573,6 +578,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 3);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //
     // Initialize aliases.
@@ -672,6 +678,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 2);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //
     // Initialize aliases.
@@ -759,6 +766,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 2);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //
     // Initialize aliases.
@@ -854,6 +862,7 @@ Return Value:
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     ASSERT(NumberOfSeeds >= 2);
 
@@ -972,6 +981,7 @@ Return Value:
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     ASSERT(NumberOfSeeds >= 2);
 
@@ -1087,6 +1097,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Table);
 
     ASSERT(NumberOfSeeds >= 2);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //
     // Initialize aliases.
@@ -1189,6 +1200,7 @@ Return Value:
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     ASSERT(NumberOfSeeds >= 2);
 

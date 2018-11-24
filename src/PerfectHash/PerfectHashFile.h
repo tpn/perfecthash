@@ -97,7 +97,8 @@ _Requires_exclusive_lock_held_(File->Lock)
 _Pre_satisfies_(
     File->RenamePath != NULL &&
     File->State.IsOpen == FALSE &&
-    File->State.IsClosed == TRUE
+    File->State.IsClosed == TRUE &&
+    File->State.IsReadOnly != TRUE
 )
 _Post_satisfies_(File->RenamePath == NULL)
 HRESULT

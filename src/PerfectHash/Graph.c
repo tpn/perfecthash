@@ -1443,7 +1443,9 @@ Return Value:
         }
 
         if (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING) {
-            ASSERT(NewGraph != NULL);
+            if (NewGraph == NULL) {
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            }
 
             if (!IsGraphInfoLoaded(NewGraph) ||
                 NewGraph->LastLoadedNumberOfVertices <

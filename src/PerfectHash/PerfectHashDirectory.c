@@ -647,7 +647,9 @@ Return Value:
     //
 
     if (IsDirectoryRenameScheduled(Directory)) {
-        ASSERT(!IsDirectoryReadOnly(Directory));
+        if (IsDirectoryReadOnly(Directory)) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
         Result = Directory->Vtbl->DoRename(Directory);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashDirectoryDoRename, Result);

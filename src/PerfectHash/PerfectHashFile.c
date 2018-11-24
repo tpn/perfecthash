@@ -1009,7 +1009,9 @@ Return Value:
     //
 
     if (IsFileRenameScheduled(File)) {
-        ASSERT(!IsFileReadOnly(File));
+        if (IsFileReadOnly(File)) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
         Result = File->Vtbl->DoRename(File);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileDoRename, Result);

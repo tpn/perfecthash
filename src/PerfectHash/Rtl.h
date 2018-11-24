@@ -257,11 +257,29 @@ C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
 #define ALIGN_UP_ZMMWORD(Address) (ALIGN_UP(Address, ZMMWORD_ALIGNMENT))
 #endif
 
-#ifndef ASSERT
+//
+// The performance impact of keeping ASSERT() in non-debug builds is nil,
+// so keep it.
+//
+
+#if 1
 #define ASSERT(Condition) \
     if (!(Condition)) {   \
         __debugbreak();   \
     }
+#else
+#ifdef ASSERT
+#undef ASSERT
+#endif
+
+#ifdef _DEBUG
+#define ASSERT(Condition) \
+    if (!(Condition)) {   \
+        __debugbreak();   \
+    }
+#else
+#define ASSERT(Condition)
+#endif
 #endif
 
 #ifndef ARGUMENT_PRESENT
@@ -1373,8 +1391,11 @@ AssertAligned(
     _In_ USHORT Alignment
     )
 {
-    ULONG_PTR CurrentAlignment = GetAddressAlignment(Address);
-    ULONG_PTR ExpectedAlignment = ALIGN_UP(CurrentAlignment, Alignment);
+    ULONG_PTR CurrentAlignment;
+    ULONG_PTR ExpectedAlignment;
+
+    CurrentAlignment = GetAddressAlignment(Address);
+    ExpectedAlignment = ALIGN_UP(CurrentAlignment, Alignment);
 
     ASSERT(CurrentAlignment == ExpectedAlignment);
 }
