@@ -54,9 +54,9 @@ Arguments:
 
     AlgorithmId - Supplies the algorithm to use.
 
-    MaskFunctionId - Supplies the type of masking to use.
-
     HashFunctionId - Supplies the hash function to use.
+
+    MaskFunctionId - Supplies the type of masking to use.
 
     ContextSelfTestFlags - Optionally supplies a pointer to a self-test flags
         structure that can be used to customize self-test behavior.
@@ -645,8 +645,8 @@ Return Value:
         Result = Table->Vtbl->Create(Table,
                                      Context,
                                      AlgorithmId,
-                                     MaskFunctionId,
                                      HashFunctionId,
+                                     MaskFunctionId,
                                      Keys,
                                      &TableCreateFlags,
                                      NumberOfTableCreateParameters,
