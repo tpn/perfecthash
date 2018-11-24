@@ -494,51 +494,28 @@ extern PERFECT_HASH_TABLE_GET_FILE PerfectHashTableGetFile;
         goto Error;                                            \
     }
 
+//
+// Declare the functions.
+//
 
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32Rotate;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashJenkins;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashRotateXor;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashAddSubXor;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashXor;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32RotateXor;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashScratch;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashDjb;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashDjbXor;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashFnv;
-PERFECT_HASH_TABLE_HASH PerfectHashTableHashCrc32Not;
+#ifndef __INTELLISENSE__
 
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashCrc32Rotate;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashJenkins;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashRotateXor;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashAddSubXor;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashXor;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashCrc32RotateXor;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashScratch;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashCrc32;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashDjb;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashDjbXor;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashFnv;
-PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashCrc32Not;
+#define EXPAND_AS_HASH_FUNC_DECL(Name, NumberOfSeeds) \
+    extern PERFECT_HASH_TABLE_HASH PerfectHashTableHash##Name;
+
+PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNC_DECL);
+
+#define EXPAND_AS_SEEDED_HASH_FUNC_DECL(Name, NumberOfSeeds) \
+    extern PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHash##Name;
+
+PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH_FUNC_DECL);
 
 PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashModulus;
 PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashAnd;
-PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashXorAnd;
-PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashFoldOnce;
-PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashFoldTwice;
-PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashFoldThrice;
 
 PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexModulus;
 PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexAnd;
-PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexXorAnd;
-PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexFoldOnce;
-PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexFoldTwice;
-PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexFoldThrice;
 
-//
-// Helper method for initializing a table suffix from a given algorithm, mask
-// and hash function.
-//
-
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

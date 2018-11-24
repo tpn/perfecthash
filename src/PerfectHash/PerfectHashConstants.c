@@ -14,6 +14,8 @@ Abstract:
 
 #include "stdafx.h"
 
+#define RCS RTL_CONSTANT_STRING
+
 #define VERIFY_ALGORITHM_ARRAY_SIZE(Name) \
     C_ASSERT(ARRAYSIZE(Name) == PerfectHashInvalidAlgorithmId + 1)
 
@@ -49,20 +51,12 @@ VERIFY_ALGORITHM_ARRAY_SIZE(LoaderRoutines);
 // Define the array of hash routines.
 //
 
+#define EXPAND_AS_HASH_ROUTINE(Name, NumberOfSeeds) \
+    PerfectHashTableHash##Name,
+
 const PPERFECT_HASH_TABLE_HASH HashRoutines[] = {
     NULL,
-    PerfectHashTableHashCrc32Rotate,
-    PerfectHashTableHashJenkins,
-    PerfectHashTableHashRotateXor,
-    PerfectHashTableHashAddSubXor,
-    PerfectHashTableHashXor,
-    PerfectHashTableHashScratch,
-    PerfectHashTableHashCrc32RotateXor,
-    PerfectHashTableHashCrc32,
-    PerfectHashTableHashDjb,
-    PerfectHashTableHashDjbXor,
-    PerfectHashTableHashFnv,
-    PerfectHashTableHashCrc32Not,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_ROUTINE)
     NULL
 };
 VERIFY_HASH_ARRAY_SIZE(HashRoutines);
@@ -71,22 +65,10 @@ VERIFY_HASH_ARRAY_SIZE(HashRoutines);
 // Define the array of number of seeds required per hash routine.
 //
 
+#define EXPAND_AS_HASH_NUMBER_OF_SEEDS(Name, NumberOfSeeds) NumberOfSeeds,
 const SHORT HashRoutineNumberOfSeeds[] = {
     -1,
-
-    2, // Crc32Rotate
-    2, // Jenkins
-    3, // RotateXor
-    2, // AddSub
-    2, // Xor
-    4, // Scratch
-    3, // Crc32RotateXor
-    2, // Crc32
-    2, // Djb
-    2, // DjbXor
-    2, // Fnv
-    2, // Crc32Not
-
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_NUMBER_OF_SEEDS)
     -1,
 };
 VERIFY_HASH_ARRAY_SIZE(HashRoutineNumberOfSeeds);
@@ -95,20 +77,12 @@ VERIFY_HASH_ARRAY_SIZE(HashRoutineNumberOfSeeds);
 // Define the array of seeded hash routines.
 //
 
+#define EXPAND_AS_SEEDED_HASH_ROUTINE(Name, NumberOfSeeds) \
+    PerfectHashTableSeededHash##Name,
+
 const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[] = {
     NULL,
-    PerfectHashTableSeededHashCrc32Rotate,
-    PerfectHashTableSeededHashJenkins,
-    PerfectHashTableSeededHashRotateXor,
-    PerfectHashTableSeededHashAddSubXor,
-    PerfectHashTableSeededHashXor,
-    PerfectHashTableSeededHashScratch,
-    PerfectHashTableSeededHashCrc32RotateXor,
-    PerfectHashTableSeededHashCrc32,
-    PerfectHashTableSeededHashDjb,
-    PerfectHashTableSeededHashDjbXor,
-    PerfectHashTableSeededHashFnv,
-    PerfectHashTableSeededHashCrc32Not,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH_ROUTINE)
     NULL
 };
 VERIFY_HASH_ARRAY_SIZE(SeededHashRoutines);
@@ -176,15 +150,7 @@ const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
 // Define the array of raw C string Index() implementations.
 //
 
-#include "CompiledPerfectHashTableChm01IndexCrc32RotateAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexJenkinsAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexScratchAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexCrc32RotateXorAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexCrc32And_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexDjbAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexDjbXorAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexFnvAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexCrc32NotAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableIndexRoutines.h"
 #undef RawCString
 
 const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[] = {
@@ -261,7 +227,7 @@ const BYTE NumberOfIndexImplStrings = ARRAYSIZE(IndexImplStringTuples);
 //
 
 const UNICODE_STRING PerfectHashChm01AlgorithmName =
-    RTL_CONSTANT_STRING(L"Chm01");
+    RCS(L"Chm01");
 
 //
 // Define the array of algorithm names.  This is intended to be indexed by the
@@ -279,61 +245,22 @@ VERIFY_ALGORITHM_ARRAY_SIZE(AlgorithmNames);
 // Define UNICODE_STRING structures for each hash function name.
 //
 
-const UNICODE_STRING PerfectHashHashCrc32RotateFunctionName =
-    RTL_CONSTANT_STRING(L"Crc32Rotate");
+#define EXPAND_AS_HASH_FUNCTION_NAME(Name, NumberOfSeeds) \
+    const UNICODE_STRING PerfectHashHash##Name##FunctionName = RCS(L#Name);
 
-const UNICODE_STRING PerfectHashHashJenkinsFunctionName =
-    RTL_CONSTANT_STRING(L"Jenkins");
-
-const UNICODE_STRING PerfectHashHashRotateXorFunctionName =
-    RTL_CONSTANT_STRING(L"RotateXor");
-
-const UNICODE_STRING PerfectHashHashAddSubXorFunctionName =
-    RTL_CONSTANT_STRING(L"AddSubXor");
-
-const UNICODE_STRING PerfectHashHashXorFunctionName =
-    RTL_CONSTANT_STRING(L"Xor");
-
-const UNICODE_STRING PerfectHashHashCrc32RotateXorFunctionName =
-    RTL_CONSTANT_STRING(L"Crc32RotateXor");
-
-const UNICODE_STRING PerfectHashHashScratchFunctionName =
-    RTL_CONSTANT_STRING(L"Scratch");
-
-const UNICODE_STRING PerfectHashHashCrc32FunctionName =
-    RTL_CONSTANT_STRING(L"Crc32");
-
-const UNICODE_STRING PerfectHashHashDjbFunctionName =
-    RTL_CONSTANT_STRING(L"Djb");
-
-const UNICODE_STRING PerfectHashHashDjbXorFunctionName =
-    RTL_CONSTANT_STRING(L"DjbXor");
-
-const UNICODE_STRING PerfectHashHashFnvFunctionName =
-    RTL_CONSTANT_STRING(L"Fnv");
-
-const UNICODE_STRING PerfectHashHashCrc32NotFunctionName =
-    RTL_CONSTANT_STRING(L"Crc32Not");
+PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNCTION_NAME)
 
 //
 // Define the array of hash function names.  This is intended to be indexed by
 // the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enum.
 //
 
+#define EXPAND_AS_HASH_FUNCTION_NAME_PTR(Name, NumberOfSeeds) \
+    &PerfectHashHash##Name##FunctionName,
+
 const PCUNICODE_STRING HashFunctionNames[] = {
     NULL,
-    &PerfectHashHashCrc32RotateFunctionName,
-    &PerfectHashHashJenkinsFunctionName,
-    &PerfectHashHashRotateXorFunctionName,
-    &PerfectHashHashAddSubXorFunctionName,
-    &PerfectHashHashXorFunctionName,
-    &PerfectHashHashScratchFunctionName,
-    &PerfectHashHashCrc32RotateXorFunctionName,
-    &PerfectHashHashCrc32FunctionName,
-    &PerfectHashHashDjbFunctionName,
-    &PerfectHashHashDjbXorFunctionName,
-    &PerfectHashHashFnvFunctionName,
-    &PerfectHashHashCrc32NotFunctionName,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNCTION_NAME_PTR)
     NULL,
 };
 VERIFY_HASH_ARRAY_SIZE(HashFunctionNames);
@@ -343,25 +270,25 @@ VERIFY_HASH_ARRAY_SIZE(HashFunctionNames);
 //
 
 const UNICODE_STRING PerfectHashModulusMaskFunctionName =
-    RTL_CONSTANT_STRING(L"Modulus");
+    RCS(L"Modulus");
 
 const UNICODE_STRING PerfectHashAndMaskFunctionName =
-    RTL_CONSTANT_STRING(L"And");
+    RCS(L"And");
 
 const UNICODE_STRING PerfectHashXorAndMaskFunctionName =
-    RTL_CONSTANT_STRING(L"XorAnd");
+    RCS(L"XorAnd");
 
 const UNICODE_STRING PerfectHashFoldAutoHashFunctionName =
-    RTL_CONSTANT_STRING(L"FoldAuto");
+    RCS(L"FoldAuto");
 
 const UNICODE_STRING PerfectHashFoldOnceHashFunctionName =
-    RTL_CONSTANT_STRING(L"FoldOnce");
+    RCS(L"FoldOnce");
 
 const UNICODE_STRING PerfectHashFoldTwiceHashFunctionName =
-    RTL_CONSTANT_STRING(L"FoldTwice");
+    RCS(L"FoldTwice");
 
 const UNICODE_STRING PerfectHashFoldThriceHashFunctionName =
-    RTL_CONSTANT_STRING(L"FoldThrice");
+    RCS(L"FoldThrice");
 
 //
 // Define the array of mask function names.  This is intended to be indexed by
@@ -381,27 +308,26 @@ VERIFY_MASK_ARRAY_SIZE(MaskFunctionNames);
 //
 
 const UNICODE_STRING ContextShutdownEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_ShutdownEvent_");
+    RCS(L"PerfectHashContext_ShutdownEvent_");
 
 const UNICODE_STRING ContextSucceededEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_SucceededEvent_");
+    RCS(L"PerfectHashContext_SucceededEvent_");
 
 const UNICODE_STRING ContextFailedEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_FailedEvent_");
+    RCS(L"PerfectHashContext_FailedEvent_");
 
 const UNICODE_STRING ContextCompletedEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_CompletedEvent_");
+    RCS(L"PerfectHashContext_CompletedEvent_");
 
 const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_TryLargerTableSizeEvent_");
+    RCS(L"PerfectHashContext_TryLargerTableSizeEvent_");
 
 const UNICODE_STRING ContextVerifiedTableEventPrefix =
-    RTL_CONSTANT_STRING(L"PerfectHashContext_VerifiedTableEvent_");
+    RCS(L"PerfectHashContext_VerifiedTableEvent_");
 
 #define EXPAND_AS_EVENT_NAME(Verb, VUpper, Name, Upper)         \
     const UNICODE_STRING Context##Verb##d##Name##EventPrefix =  \
-        RTL_CONSTANT_STRING(L"PerfectHashContext_"              \
-                            L#Verb L"d" L#Name L"EventPrefix_");
+        RCS(L"PerfectHashContext_" L#Verb L"d" L#Name L"EventPrefix_");
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
 
@@ -433,8 +359,6 @@ const BYTE NumberOfContextObjectPrefixes = ARRAYSIZE(ContextObjectPrefixes);
 //
 // Miscellaneous string constants.
 //
-
-#define RCS RTL_CONSTANT_STRING
 
 const UNICODE_STRING No = RCS(L"No.\n");
 const UNICODE_STRING Yes = RCS(L"Yes.\n");

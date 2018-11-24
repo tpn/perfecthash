@@ -1776,6 +1776,31 @@ IsValidPerfectHashAlgorithmId(
 }
 
 //
+// Define an X-macro for hash functions.  The ENTRY macros receive the following
+// parameters: (Name, NumberOfSeeds).
+//
+
+#define PERFECT_HASH_HASH_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(Crc32Rotate, 2)                                          \
+    ENTRY(Jenkins, 2)                                                    \
+    ENTRY(RotateXor, 3)                                                  \
+    ENTRY(AddSubXor, 2)                                                  \
+    ENTRY(Xor, 2)                                                        \
+    ENTRY(Scratch, 4)                                                    \
+    ENTRY(Crc32RotateXor, 3)                                             \
+    ENTRY(Crc32, 2)                                                      \
+    ENTRY(Djb, 2)                                                        \
+    ENTRY(DjbXor, 2)                                                     \
+    ENTRY(Fnv, 2)                                                        \
+    LAST_ENTRY(Crc32Not, 2)
+
+#define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_HASH_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_HASH_FUNCTION_ENUM(Name, NumberOfSeeds) \
+    PerfectHashHash##Name##FunctionId,
+
+//
 // Define an enumeration for identifying which hash function variant to use.
 //
 
@@ -1792,48 +1817,7 @@ typedef enum _PERFECT_HASH_HASH_FUNCTION_ID {
     // Begin valid hash functions.
     //
 
-    PerfectHashHashCrc32RotateFunctionId        = 1,
-    PerfectHashDefaultHashFunctionId            = 1,
-
-    PerfectHashHashJenkinsFunctionId            = 2,
-
-    //
-    // N.B. The following three hash functions are purposefully terrible from
-    //      the perspective of generating a good distribution of hash values.
-    //      They all have very simple operations and were intended to test the
-    //      theory that even with a poor hash function, once we find the right
-    //      seed, the hash quality is unimportant.
-    //
-    //      In practice, that hypothesis appears to be wrong.  Either we find
-    //      a solution on average in sqrt(3) attempts (99.9% probability of
-    //      having found the solution by attempt 18); or we never find one at
-    //      that given table size (and thus, a larger table size needs to be
-    //      attempted).
-    //
-
-    PerfectHashHashRotateXorFunctionId          = 3,
-    PerfectHashHashAddSubXorFunctionId          = 4,
-    PerfectHashHashXorFunctionId                = 5,
-
-    //
-    // A scratch hash function to use for quickly iterating on new hash
-    // functionality without the overhead of having to define a new
-    // implementation.
-    //
-
-    PerfectHashHashScratchFunctionId            = 6,
-
-    //
-    // Additional functions currently in development or otherwise provided
-    // without commentary.
-    //
-
-    PerfectHashHashCrc32RotateXorFunctionId     = 7,
-    PerfectHashHashCrc32FunctionId              = 8,
-    PerfectHashHashDjbFunctionId                = 9,
-    PerfectHashHashDjbXorFunctionId             = 10,
-    PerfectHashHashFnvFunctionId                = 11,
-    PerfectHashHashCrc32NotFunctionId           = 12,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNCTION_ENUM)
 
     //
     // End valid hash functions.

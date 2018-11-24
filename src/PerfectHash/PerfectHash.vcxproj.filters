@@ -408,6 +408,9 @@
     <ClInclude Include="TableCreateCsv.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableIndexRoutines.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

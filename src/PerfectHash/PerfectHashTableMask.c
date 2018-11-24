@@ -159,6 +159,8 @@ Return Value:
     return S_OK;
 }
 
+PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashXorAnd;
+
 _Use_decl_annotations_
 HRESULT
 PerfectHashTableMaskHashXorAnd(
@@ -197,6 +199,8 @@ Return Value:
     *Masked = Mask.LowPart;
     return S_OK;
 }
+
+PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexXorAnd;
 
 _Use_decl_annotations_
 HRESULT
