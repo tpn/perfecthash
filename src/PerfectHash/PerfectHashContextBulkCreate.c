@@ -185,8 +185,8 @@ Return Value:
     UNICODE_STRING KeysPathString;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
-    PPERFECT_HASH_KEYS Keys;
-    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_KEYS Keys = NULL;
+    PPERFECT_HASH_TABLE Table = NULL;
     PPERFECT_HASH_FILE CsvFile = NULL;
     PPERFECT_HASH_FILE TableFile = NULL;
     PPERFECT_HASH_PATH TablePath = NULL;
@@ -199,6 +199,8 @@ Return Value:
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
     PERFECT_HASH_CPU_ARCH_ID CpuArchId;
+    ASSIGNED_MEMORY_COVERAGE EmptyCoverage;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
     BOOLEAN UnknownTableCreateResult = FALSE;
 
     //
@@ -261,6 +263,7 @@ Return Value:
     //
 
     Silent = (TableCreateFlags.Silent == TRUE);
+    ZeroStruct(EmptyCoverage);
 
     //
     // Create a buffer we can use for temporary path construction.  We want it
@@ -661,58 +664,53 @@ Return Value:
 
         PRINT_CHAR_FOR_TABLE_CREATE_RESULT(Result);
 
-        //
-        // Enable thsi block to figure out which result code is generating
-        // question marks.
-        //
-
-#if 0
-        if (UnknownTableCreateResult) {
-            __debugbreak();
-        }
-#endif
-
         if (Result != S_OK) {
-            goto ReleaseTable;
-        }
 
-        //
-        // Test the table, if applicable.
-        //
+            Coverage = &EmptyCoverage;
 
-        if (ContextBulkCreateFlags.TestAfterCreate) {
+        } else {
 
-            Result = Table->Vtbl->Test(Table, Keys, FALSE);
+            Coverage = Table->Coverage;
 
-            if (FAILED(Result)) {
-                PH_TABLE_ERROR(PerfectHashTableTest, Result);
-                Failed = TRUE;
-                Failures++;
-                goto ReleaseTable;
+            //
+            // Test the table, if applicable.
+            //
+
+            if (ContextBulkCreateFlags.TestAfterCreate) {
+
+                Result = Table->Vtbl->Test(Table, Keys, FALSE);
+
+                if (FAILED(Result)) {
+                    PH_TABLE_ERROR(PerfectHashTableTest, Result);
+                    Failed = TRUE;
+                    Failures++;
+                    goto ReleaseTable;
+                }
             }
-        }
 
-        CHECK_CTRL_C();
+            CHECK_CTRL_C();
 
-        //
-        // Compile the table.
-        //
+            //
+            // Compile the table.
+            //
 
-        if (ContextBulkCreateFlags.Compile) {
+            if (ContextBulkCreateFlags.Compile) {
 
-            Result = Table->Vtbl->Compile(Table,
-                                          &TableCompileFlags,
-                                          CpuArchId);
+                Result = Table->Vtbl->Compile(Table,
+                                              &TableCompileFlags,
+                                              CpuArchId);
 
-            if (FAILED(Result)) {
-                PH_TABLE_ERROR(PerfectHashTableCompile, Result);
-                Failures++;
-                Failed = TRUE;
-                goto ReleaseTable;
+                if (FAILED(Result)) {
+                    PH_TABLE_ERROR(PerfectHashTableCompile, Result);
+                    Failures++;
+                    Failed = TRUE;
+                    goto ReleaseTable;
+                }
             }
-        }
 
-        CHECK_CTRL_C();
+            CHECK_CTRL_C();
+
+        }
 
         //
         // Write the .csv row.
@@ -781,6 +779,16 @@ Error:
 
 End:
 
+    //
+    // Release any references we still hold.
+    //
+
+    RELEASE(Keys);
+    RELEASE(Table);
+    RELEASE(TablePath);
+    RELEASE(TableFile);
+
+
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
@@ -816,7 +824,8 @@ End:
 
     //
     // Close the .csv file.  If we encountered an error, use 0 as end-of-file,
-    // which will cause the Close() call to delete it.
+    // which will cause the Close() call to restore it to its original state
+    // (including potentially deleting it if it didn't exist when we opened it).
     //
 
     if (Result != S_OK && !CtrlCPressed) {
