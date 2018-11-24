@@ -652,12 +652,27 @@ Return Value:
             } else if (Result ==
                        PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
                 PERCENT();
+            } else if (Result == PH_E_CTRL_C_PRESSED) {
+
+                //
+                // We don't print anything for Ctrl-C.
+                //
+
+                Failures++;
+                Terminate = TRUE;
+
             } else {
                 CROSS();
             }
             goto ReleaseTable;
         } else {
             DOT();
+        }
+
+        if (CtrlCPressed) {
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseTable;
         }
 
         //
@@ -676,6 +691,12 @@ Return Value:
             }
         }
 
+        if (CtrlCPressed) {
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseTable;
+        }
+
         //
         // Compile the table.
         //
@@ -692,6 +713,12 @@ Return Value:
                 Failed = TRUE;
                 goto ReleaseTable;
             }
+        }
+
+        if (CtrlCPressed) {
+            Failures++;
+            Terminate = TRUE;
+            goto ReleaseTable;
         }
 
         //
@@ -728,7 +755,7 @@ Return Value:
 
         RELEASE(Keys);
 
-        if (Terminate) {
+        if (Terminate || CtrlCPressed) {
             break;
         }
 
@@ -740,7 +767,7 @@ Return Value:
 
     NEWLINE();
 
-    if (!Failures && !Terminate) {
+    if ((!Failures && !Terminate) || CtrlCPressed) {
         Result = S_OK;
         goto End;
     }
@@ -799,7 +826,7 @@ End:
     // which will cause the Close() call to delete it.
     //
 
-    if (Result != S_OK) {
+    if (Result != S_OK && !CtrlCPressed) {
         EndOfFile = &EmptyEndOfFile;
     } else {
         EndOfFile = NULL;

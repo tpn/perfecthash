@@ -2851,3 +2851,12 @@ Abstract:
 //
 #define PH_E_DUPLICATE_VALUE_DETECTED_IN_KEYS_SUBSET ((HRESULT)0xE0040351L)
 
+//
+// MessageId: PH_E_CTRL_C_PRESSED
+//
+// MessageText:
+//
+// Ctrl-C pressed.
+//
+#define PH_E_CTRL_C_PRESSED              ((HRESULT)0xE0040352L)
+

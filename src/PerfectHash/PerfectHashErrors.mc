@@ -2573,3 +2573,11 @@ Language=English
 Duplicate value detected in keys subset.
 .
 
+MessageId=0x352
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CTRL_C_PRESSED
+Language=English
+Ctrl-C pressed.
+.
+

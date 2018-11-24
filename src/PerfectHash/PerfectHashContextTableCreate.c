@@ -395,6 +395,8 @@ Return Value:
         } else if (Result ==
                    PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED) {
             PERCENT();
+        } else if (Result == PH_E_CTRL_C_PRESSED) {
+            goto Error;
         } else {
             CROSS();
         }
@@ -484,6 +486,10 @@ End:
     }
 
     ClearContextTableCreate(Context);
+
+    if (CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
+    }
 
     //
     // Close the .csv file.  If we encountered an error, use 0 as end-of-file,

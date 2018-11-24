@@ -16,11 +16,50 @@ Abstract:
     if that succeeds, replaces the guarded list component interface with the
     TSX-enlightened version of the same interface.
 
+    And finally, we've also got some Ctrl-C interception glue stashed here.
+
 --*/
 
 #include "stdafx.h"
 
 HMODULE PerfectHashModule;
+
+//
+// Ctrl-C glue.
+//
+
+volatile ULONG CtrlCPressed = 0;
+
+BOOL
+RunSingleFunctionCtrlCHandler(
+    ULONG ControlType
+    )
+{
+    //
+    // N.B. We consider all the signals as if Ctrl-C was pressed as it
+    //      simplifies the downstream detection logic (and the behavior is
+    //      the same for all signals; shutdown cleanly and earliest possible
+    //      opportunity).
+    //
+
+    BOOLEAN IsCtrlC = (
+        ControlType == CTRL_C_EVENT         ||
+        ControlType == CTRL_BREAK_EVENT     ||
+        ControlType == CTRL_CLOSE_EVENT     ||
+        ControlType == CTRL_LOGOFF_EVENT    ||
+        ControlType == CTRL_SHUTDOWN_EVENT
+    );
+
+    if (IsCtrlC) {
+        CtrlCPressed = 1;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+//
+// TSX detection glue.
+//
 
 BOOLEAN IsTsxAvailable;
 
@@ -103,6 +142,11 @@ _DllMainCRTStartup(
             if (!PerfectHashTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;
             }
+
+            if (!SetConsoleCtrlHandler(RunSingleFunctionCtrlCHandler, TRUE)) {
+                return FALSE;
+            }
+
             break;
         case DLL_THREAD_ATTACH:
             break;

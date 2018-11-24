@@ -650,6 +650,11 @@ RetryWithLargerTableSize:
                                         FALSE,
                                         INFINITE);
 
+    if (CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
+        goto Error;
+    }
+
     //
     // Handle the low-memory state first.
     //
@@ -817,7 +822,7 @@ CheckFinishedCount:
 
     Success = (Context->FinishedCount > 0);
 
-    if (!Success) {
+    if (!Success && !CtrlCPressed) {
 
         BOOL CancelPending = TRUE;
         BOOLEAN FailedEventSet;
@@ -916,6 +921,11 @@ CheckFinishedCount:
 
 FinishedSolution:
 
+    if (CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
+        goto Error;
+    }
+
     //
     // Pop the winning graph off the finished list head.
     //
@@ -1006,6 +1016,11 @@ FinishedSolution:
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForSingleObject);
         Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
         goto Error;
     }
 
@@ -2161,6 +2176,10 @@ ShouldWeContinueTryingToSolveGraphChm01(
                                         Events,
                                         FALSE,
                                         0);
+
+    if (CtrlCPressed) {
+        return FALSE;
+    }
 
     //
     // Check for the low-memory event; if set, increment our count and

@@ -35,6 +35,12 @@ Abstract:
 extern HMODULE PerfectHashModule;
 
 //
+// Components can check this variable to determine if Ctrl-C has been pressed.
+//
+
+extern volatile ULONG CtrlCPressed;
+
+//
 // Define a helper macro for validating flags passed as parameters to routines.
 //
 
