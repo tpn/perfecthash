@@ -2348,10 +2348,17 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG Paranoid:1;
 
         //
+        // Skips calculating assigned memory coverage when in "first graph wins"
+        // mode.
+        //
+
+        ULONG SkipMemoryCoverageInFirstGraphWinsMode:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:21;
+        ULONG Unused:20;
     };
 
     LONG AsLong;

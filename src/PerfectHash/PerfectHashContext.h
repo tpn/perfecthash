@@ -136,6 +136,12 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define BestMemoryCoverageForKeysSubset(Context) \
     ((Context)->State.BestMemoryCoverageForKeysSubset == TRUE)
 
+#define FirstSolvedGraphWinsAndSkipMemoryCoverage(Context) (                  \
+    (Context)->State.FirstSolvedGraphWins == TRUE &&                          \
+    (Context)->Table->TableCreateFlags.SkipMemoryCoverageInFirstGraphWinsMode \
+        == TRUE \
+)
+
 #define SetFirstSolvedGraphWins(Context)          \
     Context->State.FirstSolvedGraphWins = TRUE;   \
     Context->State.FindBestMemoryCoverage = FALSE

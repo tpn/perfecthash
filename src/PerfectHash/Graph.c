@@ -326,10 +326,16 @@ Return Value:
     //
     // If we're in "first graph wins" mode and we reach this point, we're the
     // winning thread, so, push the graph onto the finished list head, then
-    // submit the relevant finished threadpool work item and return TRUE.
+    // submit the relevant finished threadpool work item and return stop graph
+    // solving.
     //
 
     if (FirstSolvedGraphWins(Context)) {
+        if (WantsAssignedMemoryCoverage(Graph)) {
+            Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
+            CopyCoverage(Context->Table->Coverage,
+                         &Graph->AssignedMemoryCoverage);
+        }
         InsertHeadFinishedWork(Context, &Graph->ListEntry);
         SubmitThreadpoolWork(Context->FinishedWork);
         return PH_S_STOP_GRAPH_SOLVING;
@@ -1675,27 +1681,33 @@ Return Value:
     // memory coverage information.
     //
 
-    if (FirstSolvedGraphWins(Context)) {
+    if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
+        Graph->Flags.WantsAssignedMemoryCoverage = FALSE;
         goto End;
     }
 
-    ASSERT(FindBestMemoryCoverage(Context));
+    if (FirstSolvedGraphWins(Context)) {
 
-    switch (Context->BestCoverageType) {
+        Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
 
-        case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
-            Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-            break;
+    } else {
 
-        case BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId:
-            Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
-            break;
+        switch (Context->BestCoverageType) {
 
-        default:
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(GraphLoadInfo_InvalidBestCoverageType, Result);
-            PH_RAISE(Result);
+            case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
+                Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
+                break;
 
+            case BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId:
+                Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
+                break;
+
+            default:
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(GraphLoadInfo_InvalidBestCoverageType, Result);
+                PH_RAISE(Result);
+
+        }
     }
 
     //

@@ -146,6 +146,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(NoFileIo);
     DECL_ARG(Silent);
     DECL_ARG(Paranoid);
+    DECL_ARG(SkipMemoryCoverageInFirstGraphWinsMode);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -174,6 +175,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(NoFileIo);
     SET_FLAG_AND_RETURN_IF_EQUAL(Silent);
     SET_FLAG_AND_RETURN_IF_EQUAL(Paranoid);
+    SET_FLAG_AND_RETURN_IF_EQUAL(SkipMemoryCoverageInFirstGraphWinsMode);
 
     return S_FALSE;
 }

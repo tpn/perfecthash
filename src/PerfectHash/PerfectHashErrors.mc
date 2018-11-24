@@ -247,6 +247,12 @@ Table Create Flags:
                  will find a graph that is better (based on the predicate) than
                  when in first graph wins mode.
 
+    --SkipMemoryCoverageInFirstGraphWinsMode
+
+        Skips calculating memory coverage information when in "first graph wins"
+        mode.  This will result in the corresponding fields in the .csv output
+        indicating 0.
+
     --SkipGraphVerification
 
         When set, skips the internal graph verification check that ensures a
@@ -487,6 +493,12 @@ Table Create Flags:
                  --FirstGraphWins mode, however, it is highly probable that it
                  will find a graph that is better (based on the predicate) than
                  when in first graph wins mode.
+
+    --SkipMemoryCoverageInFirstGraphWinsMode
+
+        Skips calculating memory coverage information when in "first graph wins"
+        mode.  This will result in the corresponding fields in the .csv output
+        indicating 0.
 
     --SkipGraphVerification
 
