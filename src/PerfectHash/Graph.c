@@ -291,9 +291,6 @@ Return Value:
     // solving code and let the other thread finish up (i.e. perform the
     // assignment step and then persist the result).
     //
-    // If the context does not indicate "first solved graph wins", perform
-    // the assignment step regardless.
-    //
 
     FinishedCount = InterlockedIncrement64(&Context->FinishedCount);
 
