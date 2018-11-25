@@ -1378,8 +1378,6 @@ Return Value:
 
     Result = Graph->Vtbl->LoadInfo(Graph);
 
-    InterlockedIncrement(&Graph->Context->ActiveSolvingLoops);
-
     if (FAILED(Result)) {
 
         if (Result != E_OUTOFMEMORY) {
