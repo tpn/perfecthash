@@ -689,10 +689,7 @@ typedef struct _GRAPH_VTBL {
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
 //
-// Define the graph structure.  This represents an r-graph, or a hypergraph,
-// or an r-partite 2-uniform graph, or any other seemingly unlimited number
-// of names floating around in academia for what appears to be exactly the
-// same thing.
+// Define the graph structure.
 //
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
