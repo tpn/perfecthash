@@ -1455,6 +1455,8 @@ Return Value:
                 PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
             }
 
+            AcquireGraphLockExclusive(NewGraph);
+
             if (!IsGraphInfoLoaded(NewGraph) ||
                 NewGraph->LastLoadedNumberOfVertices <
                 Graph->NumberOfVertices) {
@@ -1465,6 +1467,8 @@ Return Value:
                     goto End;
                 }
             }
+
+            ReleaseGraphLockExclusive(Graph);
 
             Graph = NewGraph;
             continue;
