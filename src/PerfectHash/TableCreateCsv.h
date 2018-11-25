@@ -138,6 +138,14 @@ Abstract:
           Coverage->Attempt,                                               \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(NewBestGraphCount,                                               \
+          Context->NewBestGraphCount,                                      \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(EqualBestGraphCount,                                             \
+          Context->EqualBestGraphCount,                                    \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(NumberOfKeysInSubset,                                            \
           (Context->KeysSubset ? Context->KeysSubset->NumberOfValues : 0), \
           OUTPUT_INT)                                                      \

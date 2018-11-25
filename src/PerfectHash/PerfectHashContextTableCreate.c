@@ -438,7 +438,16 @@ Return Value:
     // Write the .csv row.
     //
 
+    //
+    // N.B. The SAL annotations are required to suppress the concurrency
+    //      warnings for accessing the Context->NewBestGraphCount and
+    //      Context->EqualBestGraphCount members outside of the best graph
+    //      critical section.
+    //
+
+    _No_competing_thread_begin_
     WRITE_TABLE_CREATE_CSV_ROW();
+    _No_competing_thread_end_
 
     //
     // We're done, finish up.
