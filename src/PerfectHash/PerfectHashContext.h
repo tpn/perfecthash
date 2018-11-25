@@ -345,6 +345,23 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     struct _GRAPH *SpareGraph;
 
     //
+    // The following counter is incremented every time a new "best graph" is
+    // registered.  It can be helpful during debugging.
+    //
+
+    _Guarded_by_(BestGraphCriticalSection)
+    volatile LONG NewBestGraphCount;
+
+    //
+    // The following counter is incremented every time a graph is found whose
+    // coverage matches the existing best graph's coverage (for the given
+    // predicate when in "find best graph" mode).
+    //
+
+    _Guarded_by_(BestGraphCriticalSection)
+    volatile LONG EqualBestGraphCount;
+
+    //
     // Handle to a low-memory resource notification event.
     //
     // N.B. This event handle differs from the ones below in that it is obtained

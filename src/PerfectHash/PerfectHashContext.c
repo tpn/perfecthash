@@ -856,6 +856,8 @@ Return Value:
     //
 
     _Benign_race_begin_
+    Context->NewBestGraphCount = 0;
+    Context->EqualBestGraphCount = 0;
     Context->SpareGraph = NULL;
     Context->BestGraph = NULL;
     _Benign_race_end_
@@ -1043,6 +1045,7 @@ Return Value:
 
 --*/
 {
+    HRESULT Result;
     BOOL CancelPending = TRUE;
     PPERFECT_HASH_CONTEXT Context;
 
@@ -1060,11 +1063,83 @@ Return Value:
     Context = (PPERFECT_HASH_CONTEXT)Ctx;
 
     //
+    // Toggle the stop solving flag.
+    //
+
+    SetStopSolving(Context);
+
+    //
     // Wait for the main work group members.  This should block until all
     // the workers have returned.
     //
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
+
+    if (FindBestMemoryCoverage(Context)) {
+
+        //
+        // Acquire the best graph critical section then determine if best
+        // graph is non-NULL.  If so, a solution has been found; verify
+        // the finished count is greater than 0, then clear the context's
+        // best graph field and push it onto the context's finished list.
+        //
+
+        EnterCriticalSection(&Context->BestGraphCriticalSection);
+
+        if (Context->BestGraph) {
+
+            PGRAPH BestGraph;
+            PASSIGNED_MEMORY_COVERAGE BestCoverage;
+
+            //
+            // Invariant checks: finished count and new best graph count should
+            // both be greater than 0.  If they're not, raise an exception.
+            //
+
+            if (Context->FinishedCount == 0) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(Graph_BestGraphButFinishedCountIsZero, Result);
+                LeaveCriticalSection(&Context->BestGraphCriticalSection);
+                PH_RAISE(Result);
+            } else if (Context->NewBestGraphCount <= 0) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(Graph_BestGraphButNewBestGraphCountIsZero, Result);
+                LeaveCriticalSection(&Context->BestGraphCriticalSection);
+                PH_RAISE(Result);
+            }
+
+            //
+            // Copy the best graph's coverage information to the table.
+            //
+
+            BestGraph = Context->BestGraph;
+            BestCoverage = &BestGraph->AssignedMemoryCoverage;
+            CopyCoverage(Context->Table->Coverage, BestCoverage);
+
+        } else {
+
+            //
+            // Verify our finished count is 0.
+            //
+            // N.B. This invariant is less critical than the one above,
+            //      and may need reviewing down the track, if we ever
+            //      support the notion of finding solutions but none of
+            //      them meet our criteria for "best" (i.e. they didn't
+            //      hit a target number of empty free cache lines, for
+            //      example).
+            //
+
+            if (Context->FinishedCount != 0) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(FinishWork_NoBestGraphButFinishedCountIsNotZero,
+                         Result);
+                LeaveCriticalSection(&Context->BestGraphCriticalSection);
+                PH_RAISE(Result);
+            }
+        }
+
+        LeaveCriticalSection(&Context->BestGraphCriticalSection);
+    }
 
     //
     // If a solution has been found, signal the success event; otherwise,

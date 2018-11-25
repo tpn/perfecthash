@@ -1125,6 +1125,7 @@ VerifyMemoryCoverageInvariants(
 }
 #pragma optimize("", on)
 
+
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
 _Use_decl_annotations_
@@ -1177,6 +1178,7 @@ Return Value:
     Coverage = &Graph->AssignedMemoryCoverage;
     CoverageType = Context->BestCoverageType;
 
+#if 0
     //
     // Fast-path exit: if the context is indicating to stop solving, return.
     //
@@ -1184,6 +1186,7 @@ Return Value:
     if (StopSolving(Context)) {
         return PH_S_GRAPH_SOLVING_STOPPED;
     }
+#endif
 
     //
     // Enter the best graph critical section.  Check the stop solving indicator
@@ -1193,17 +1196,22 @@ Return Value:
 
     EnterCriticalSection(&Context->BestGraphCriticalSection);
 
+#if 0
     if (StopSolving(Context)) {
         Result = PH_S_GRAPH_SOLVING_STOPPED;
         goto End;
     }
+#endif
 
     //
     // If there is no best graph currently set, proceed with setting it to
     // our current graph, then use the spare graph to continue solving.
     //
 
-    if (!Context->BestGraph) {
+    if (Context->BestGraph) {
+        ASSERT(Context->NewBestGraphCount > 0);
+    } else {
+        ASSERT(Context->NewBestGraphCount == 0);
         SpareGraph = Context->SpareGraph;
         ASSERT(SpareGraph != NULL);
         ASSERT(IsSpareGraph(SpareGraph));
@@ -1211,6 +1219,7 @@ Return Value:
         Context->SpareGraph = NULL;
         Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
+        Context->NewBestGraphCount++;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
         goto End;
     }
@@ -1234,7 +1243,10 @@ Return Value:
         if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
             Context->BestGraph = Graph;                                 \
             *NewGraphPointer = PreviousBestGraph;                       \
+            Context->NewBestGraphCount++;                               \
             Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;                    \
+        } else if (Coverage->##Name == PreviousBestCoverage->##Name) {  \
+            Context->EqualBestGraphCount++;                             \
         }                                                               \
         break;
 
@@ -1367,10 +1379,16 @@ Return Value:
     }
 
     //
-    // Acquire the exclusive graph lock for the duration of the routine.
+    // Acquire the exclusive graph lock for the duration of the routine.  The
+    // graph should never be locked at this point; if it is, consider it a
+    // fatal error.
     //
 
-    AcquireGraphLockExclusive(Graph);
+    if (!TryAcquireGraphLockExclusive(Graph)) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(GraphEnterSolvingLoop_GraphLocked, Result);
+        PH_RAISE(Result);
+    }
 
     //
     // Load the graph info.
@@ -1444,16 +1462,17 @@ Return Value:
 
         if (Result == PH_S_STOP_GRAPH_SOLVING ||
             Result == PH_S_GRAPH_SOLVING_STOPPED) {
-            ASSERT(NewGraph == NULL);
+            if (NewGraph != NULL) {
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            }
             break;
         }
 
         if (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING) {
+
             if (NewGraph == NULL) {
                 PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
             }
-
-            AcquireGraphLockExclusive(NewGraph);
 
             if (!IsGraphInfoLoaded(NewGraph) ||
                 NewGraph->LastLoadedNumberOfVertices <
@@ -1465,8 +1484,6 @@ Return Value:
                     goto End;
                 }
             }
-
-            ReleaseGraphLockExclusive(Graph);
 
             Graph = NewGraph;
             continue;
@@ -1679,8 +1696,9 @@ Return Value:
     ALLOC_BITMAP_BUFFER(IndexBitmap);
 
     //
-    // If we're in "first graph wins" mode, we don't need to prep any of the
-    // memory coverage information.
+    // Check to see if we're in "first graph wins" mode, and have also been
+    // asked to skip memory coverage information.  If so, we can jump straight
+    // to the end and finish up.
     //
 
     if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
@@ -1902,76 +1920,20 @@ Return Value:
 
     //
     // If find best memory coverage mode is active, determine if we've hit the
-    // target number of attempts, and if so, whether or not a best graph has
-    // been found.
+    // target number of attempts, and if so, submit the 'finish' work.
     //
 
     if (FindBestMemoryCoverage(Context)) {
         if (Graph->Attempt == Context->BestCoverageAttempts) {
 
-            //
-            // Toggle the stop solving flag.
-            //
-
-            SetStopSolving(Context);
-
-            //
-            // Acquire the best graph critical section then determine if best
-            // graph is non-NULL.  If so, a solution has been found; verify
-            // the finished count is greater than 0, then clear the context's
-            // best graph field and push it onto the context's finished list.
-            //
-
-            EnterCriticalSection(&Context->BestGraphCriticalSection);
-
-            if (Context->BestGraph) {
-
-                PGRAPH BestGraph;
-                PASSIGNED_MEMORY_COVERAGE BestCoverage;
-
-                //
-                // If finished count is 0 at this point, a critical invariant
-                // has been violated, so raise a runtime exception.
-                //
-
-                if (Context->FinishedCount == 0) {
-                    PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            if (Context->FinishedCount == 0) {
+                if (!SetEvent(Context->TryLargerTableSizeEvent)) {
+                    SYS_ERROR(SetEvent);
+                    Result = PH_E_SYSTEM_CALL_FAILED;
+                    goto Error;
                 }
-
-                //
-                // Copy the best graph's coverage information to the table,
-                // then insert the graph to the head of the finished work list.
-                //
-
-                BestGraph = Context->BestGraph;
-                Context->BestGraph = NULL;
-
-                BestCoverage = &BestGraph->AssignedMemoryCoverage;
-                CopyCoverage(Context->Table->Coverage, BestCoverage);
-
-                InsertHeadFinishedWork(Context, &BestGraph->ListEntry);
-
-            } else {
-
-                //
-                // Verify our finished count is 0.
-                //
-                // N.B. This invariant is less critical than the one above,
-                //      and may need reviewing down the track, if we ever
-                //      support the notion of finding solutions but none of
-                //      them meet our criteria for "best" (i.e. they didn't
-                //      hit a target number of empty free cache lines, for
-                //      example).
-                //
-
-                if (Context->FinishedCount != 0) {
-                    PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
-                }
+                return PH_S_TABLE_RESIZE_IMMINENT;
             }
-
-            ASSERT(Context->BestGraph == NULL);
-
-            LeaveCriticalSection(&Context->BestGraphCriticalSection);
 
             //
             // Stop the solve timers here.  (These are less useful when not in

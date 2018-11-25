@@ -170,6 +170,7 @@ Return Value:
     ULONG NumberOfSeedsAvailable;
     ULONGLONG Closest;
     ULONGLONG LastClosest;
+    BOOLEAN TryLargerTableSize;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
@@ -407,6 +408,7 @@ Return Value:
 
         Graph->Flags.SkipVerification = TableCreateFlags.SkipGraphVerification;
 
+        Graph->Index = Index;
         Graphs[Index] = Graph;
     }
 
@@ -570,6 +572,7 @@ RetryWithLargerTableSize:
     //
 
     ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
+    ASSERT(Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList));
 
     if (FirstSolvedGraphWins(Context)) {
         ASSERT(NumberOfGraphs == Context->MaximumConcurrency);
@@ -580,6 +583,16 @@ RetryWithLargerTableSize:
     for (Index = 0; Index < NumberOfGraphs; Index++) {
 
         Graph = Graphs[Index];
+
+        //
+        // Explicitly reset the graph's lock.  We know there is no contention
+        // at this point of execution, however, in certain situations where a
+        // table resize event has occurred and we're in "find best graph" mode,
+        // a graph's lock may still be set, which obviously causes our attempt
+        // to acquire it to hang.
+        //
+
+        Graph->Lock.Ptr = NULL;
 
         AcquireGraphLockExclusive(Graph);
         Result = Graph->Vtbl->SetInfo(Graph, &Info);
@@ -620,25 +633,6 @@ RetryWithLargerTableSize:
             SubmitThreadpoolWork(Context->MainWork);
         }
 
-        //
-        // If our key set size is small and our maximum concurrency is large,
-        // we may have already solved the graph, in which case, we can stop
-        // submitting new solver attempts.  We wait on both the main work and
-        // finished work threadpool callbacks to ensure the proper finish logic
-        // has had a chance to run (i.e. the graph assign step, then subsequent
-        // registration of the winning graph to the finished work list head).
-        // Without these wait calls in, we'll hit a race condition where the
-        // finished count indicates greater than zero, but the finished work
-        // list head is empty.
-        //
-
-        if (!ShouldWeContinueTryingToSolveGraphChm01(Context)) {
-            if (Context->FinishedCount > 0) {
-                WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
-                WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
-            }
-            goto CheckFinishedCount;
-        }
     }
 
     //
@@ -670,17 +664,25 @@ RetryWithLargerTableSize:
     // deal with that, next.
     //
 
-    if (WaitResult == WAIT_OBJECT_0+4) {
+    TryLargerTableSize = (
+        WaitResult == WAIT_OBJECT_0+4 || (
+            WaitForSingleObject(Context->TryLargerTableSizeEvent, 0) ==
+            WAIT_OBJECT_0
+        )
+    );
+
+    if (TryLargerTableSize) {
 
         //
         // The number of attempts at solving this graph have exceeded the
         // threshold.  Set the shutdown event in order to trigger all worker
         // threads to abort their current attempts and wait on the main thread
-        // work to complete.
+        // work, then finish work, to complete.
         //
 
         SetEvent(Context->ShutdownEvent);
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+        WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
         if (!NoFileIo(Table)) {
 
@@ -713,13 +715,9 @@ RetryWithLargerTableSize:
         // size event was set, and this point.  So, check the finished count
         // first.  If it indicates a solution, jump to that handler code.
         //
-        // N.B. This only applies when in "first graph wins" mode.
-        //
 
-        if (FirstSolvedGraphWins(Context)) {
-            if (Context->FinishedCount > 0) {
-                goto FinishedSolution;
-            }
+        if (Context->FinishedCount > 0) {
+            goto FinishedSolution;
         }
 
         //
@@ -818,7 +816,8 @@ RetryWithLargerTableSize:
     // events have been signaled shortly.
     //
 
-CheckFinishedCount:
+    WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
     Success = (Context->FinishedCount > 0);
 
@@ -921,27 +920,44 @@ CheckFinishedCount:
 
 FinishedSolution:
 
+    WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+
     if (CtrlCPressed) {
         Result = PH_E_CTRL_C_PRESSED;
         goto Error;
     }
 
-    //
-    // Pop the winning graph off the finished list head.
-    //
-
     ASSERT(Context->FinishedCount > 0);
 
-    ListEntry = NULL;
+    if (FirstSolvedGraphWins(Context)) {
 
-    if (!RemoveHeadFinishedWork(Context, &ListEntry)) {
-        Result = PH_E_GUARDED_LIST_EMPTY;
-        PH_ERROR(PerfectHashCreateChm01Callback_RemoveFinishedWork, Result);
-        goto Error;
+        //
+        // Pop the winning graph off the finished list head.
+        //
+
+        ListEntry = NULL;
+
+        if (!RemoveHeadFinishedWork(Context, &ListEntry)) {
+            Result = PH_E_GUARDED_LIST_EMPTY;
+            PH_ERROR(PerfectHashCreateChm01Callback_RemoveFinishedWork, Result);
+            goto Error;
+        }
+
+        ASSERT(ListEntry);
+        Graph = CONTAINING_RECORD(ListEntry, GRAPH, ListEntry);
+
+    } else {
+
+        EnterCriticalSection(&Context->BestGraphCriticalSection);
+        Graph = Context->BestGraph;
+        Context->BestGraph = NULL;
+        LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+        if (!Graph) {
+            goto Error;
+        }
     }
-
-    ASSERT(ListEntry);
-    Graph = CONTAINING_RECORD(ListEntry, GRAPH, ListEntry);
 
     //
     // Capture the maximum traversal depth in the table.
@@ -2130,6 +2146,8 @@ Return Value:
 {
     PGRAPH Graph;
     HRESULT Result;
+    PHANDLE Event;
+    ULONG WaitResult;
 
     UNREFERENCED_PARAMETER(Instance);
 
@@ -2170,12 +2188,11 @@ Return Value:
 
     if (InterlockedDecrement(&Context->RemainingSolverLoops) == 0) {
 
-        PHANDLE Event;
-
         //
         // We're the last graph; if the finished count indicates no solutions
-        // were found, signal FailedEvent.  Otherwise, signal SucceededEvent.
-        // This ensures we always unwait our parent thread's solving loop.
+        // were found, and the try larger table size event is not set, signal
+        // FailedEvent.  Otherwise, signal SucceededEvent.  This ensures we
+        // always unwait our parent thread's solving loop.
         //
         // N.B. There are numerous scenarios where this is a superfluous call,
         //      as a terminating event (i.e. shutdown, low-memory etc) may have
@@ -2185,17 +2202,22 @@ Return Value:
         //      harmless).
         //
 
-        if (Context->FinishedCount == 0) {
-            Event = &Context->FailedEvent;
-        } else {
-            Event = &Context->SucceededEvent;
-        }
+        WaitResult = WaitForSingleObject(Context->TryLargerTableSizeEvent, 0);
 
-        if (!SetEvent(*Event)) {
-            SYS_ERROR(SetEvent);
-        }
+        if (WaitResult != WAIT_OBJECT_0) {
 
-        SetStopSolving(Context);
+            if (Context->FinishedCount == 0) {
+                Event = &Context->FailedEvent;
+            } else {
+                Event = &Context->SucceededEvent;
+            }
+
+            if (!SetEvent(*Event)) {
+                SYS_ERROR(SetEvent);
+            }
+
+            SetStopSolving(Context);
+        }
 
     }
 

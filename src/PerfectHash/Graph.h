@@ -795,6 +795,19 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG LastLoadedNumberOfVertices;
 
     //
+    // Captures the 0-based index of this graph in the graphs array allocated
+    // by the parent table creation thread.
+    //
+
+    ULONG Index;
+
+    //
+    // Pad out to an 8 byte boundary.
+    //
+
+    ULONG Padding;
+
+    //
     // Duplicate the context pointer.  (This is also available from Info.)
     //
 

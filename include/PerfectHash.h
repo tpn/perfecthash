@@ -3193,6 +3193,8 @@ typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
 #define PH_MESSAGE(Result) \
     PerfectHashPrintMessage((ULONG)Result)
 
+#define PH_BREAK() __debugbreak()
+
 //
 // Helper macro for raising non-continuable exceptions.
 //
