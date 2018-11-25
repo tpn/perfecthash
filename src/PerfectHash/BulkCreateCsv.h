@@ -118,6 +118,30 @@ Abstract:
           Context->VerifyElapsedMicroseconds.QuadPart,                     \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(NumberOfSeeds,                                                   \
+          Table->TableInfoOnDisk->NumberOfSeeds,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed1,                                                           \
+          (Table->TableInfoOnDisk->NumberOfSeeds >= 1 ?                    \
+           Table->TableInfoOnDisk->Seed1 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed2,                                                           \
+          (Table->TableInfoOnDisk->NumberOfSeeds >= 2 ?                    \
+           Table->TableInfoOnDisk->Seed2 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed3,                                                           \
+          (Table->TableInfoOnDisk->NumberOfSeeds >= 3 ?                    \
+           Table->TableInfoOnDisk->Seed3 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed4,                                                           \
+          (Table->TableInfoOnDisk->NumberOfSeeds >= 4 ?                    \
+           Table->TableInfoOnDisk->Seed4 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(FirstGraphWins,                                                  \
           (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \
           OUTPUT_CHR)                                                      \

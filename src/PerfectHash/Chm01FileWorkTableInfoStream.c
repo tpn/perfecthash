@@ -121,15 +121,6 @@ SaveTableInfoStreamChm01(
 
     File->NumberOfBytesWritten.QuadPart = sizeof(*GraphInfoOnDisk);
 
-    if (IsTableCreateOnly(Table)) {
-
-        //
-        // Nothing left to do, finish up.
-        //
-
-        goto End;
-    }
-
     //
     // This next part is a bit hacky.  Originally, this library provided no
     // facility for obtaining a table after creation -- you would have to

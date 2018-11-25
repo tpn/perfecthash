@@ -964,12 +964,78 @@ FinishedSolution:
     // solved correctly.
     //
 
-    //
-    // Dispatch save file work for the table data.
-    //
-
     if (!NoFileIo(Table)) {
+
+        //
+        // Dispatch save file work for the table data.
+        //
+
         SUBMIT_SAVE_FILE_WORK();
+
+    } else {
+
+        PGRAPH_INFO_ON_DISK NewGraphInfoOnDisk;
+
+        //
+        // Normally, when we're performing file I/O, the save file work callback
+        // for the info stream (SaveTableInfoStreamChm01()) is responsible for
+        // writing the contents of Table->TableInfoOnDisk (which is currently
+        // pointing to our local stack-allocated GraphInfoOnDisk structure) to
+        // the info stream's base address, then allocating a new heap-backed
+        // structure and copying everything over.  As we're not doing any file
+        // I/O, we need to do this manually ourselves at this point.
+        //
+        // N.B. It might just be easier to allocate the structure from the heap
+        //      up-front; something to investigate later perhaps.
+        //
+
+        NewGraphInfoOnDisk = (
+            Allocator->Vtbl->Calloc(
+                Allocator,
+                1,
+                sizeof(*NewGraphInfoOnDisk)
+            )
+        );
+
+        if (!NewGraphInfoOnDisk) {
+            Result = E_OUTOFMEMORY;
+            goto Error;
+        }
+
+        CopyMemory(NewGraphInfoOnDisk,
+                   Table->TableInfoOnDisk,
+                   sizeof(*NewGraphInfoOnDisk));
+
+        //
+        // Sanity check the first seed is not 0.
+        //
+
+        if (Graph->FirstSeed == 0) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(CreatePerfectHashTableImplChm01_GraphFirstSeedIs0, Result);
+            PH_RAISE(Result);
+        }
+
+        //
+        // Copy the seed data from the winning graph.
+        //
+
+        CopyMemory(&NewGraphInfoOnDisk->TableInfoOnDisk.FirstSeed,
+                   &Graph->FirstSeed,
+                   Graph->NumberOfSeeds * sizeof(Graph->FirstSeed));
+
+        //
+        // Switch the pointers.
+        //
+
+        Table->TableInfoOnDisk = &NewGraphInfoOnDisk->TableInfoOnDisk;
+
+        //
+        // Update state indicating table info has been heap-allocated.
+        //
+
+        Table->State.TableInfoOnDiskWasHeapAllocated = TRUE;
+
     }
 
     //
