@@ -14,7 +14,8 @@ Abstract:
 
     It also attempts a TSX transaction on process attach (if we're x64), and,
     if that succeeds, replaces the guarded list component interface with the
-    TSX-enlightened version of the same interface.
+    TSX-enlightened version of the same interface.  And the RegisterSolved()
+    vtbl entry of the GRAPH component.
 
     And finally, we've also got some Ctrl-C interception glue stashed here.
 
@@ -68,6 +69,8 @@ BOOLEAN IsTsxAvailable;
 
 extern const VOID *ComponentInterfaces[];
 extern PVOID GuardedListTsxInterface;
+
+extern GRAPH_VTBL GraphInterface;
 
 PVOID TsxScratch;
 static
@@ -132,9 +135,17 @@ _DllMainCRTStartup(
             }
 
             if (IsTsxAvailable) {
+
+                //
+                // Use the TSX-enlightened version of the guarded list interface
+                // and graph RegisterSolved() method.
+                //
+
                 PERFECT_HASH_INTERFACE_ID Id;
                 Id = PerfectHashGuardedListInterfaceId;
                 ComponentInterfaces[Id] = &GuardedListTsxInterface;
+
+                GraphInterface.RegisterSolved = GraphRegisterSolvedTsx;
             }
 
 #endif

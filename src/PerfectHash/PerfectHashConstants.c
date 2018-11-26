@@ -1067,7 +1067,7 @@ VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
 // Graph
 //
 
-const GRAPH_VTBL GraphInterface = {
+GRAPH_VTBL GraphInterface = {
     (PGRAPH_QUERY_INTERFACE)&ComponentQueryInterface,
     (PGRAPH_ADD_REF)&ComponentAddRef,
     (PGRAPH_RELEASE)&ComponentRelease,

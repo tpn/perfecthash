@@ -97,6 +97,22 @@ Abstract:
           Context->FailedAttempts,                                         \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(GraphRegisterSolvedTsxSuccessCount,                              \
+          Context->GraphRegisterSolvedTsxSuccess,                          \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(GraphRegisterSolvedTsxStartedCount,                              \
+          Context->GraphRegisterSolvedTsxStarted,                          \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(GraphRegisterSolvedTsxRetryCount,                                \
+          Context->GraphRegisterSolvedTsxRetry,                            \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(GraphRegisterSolvedTsxFailedCount,                               \
+          Context->GraphRegisterSolvedTsxFailed,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(IgnorePreviousTableSize,                                         \
           (TableCreateFlags.IgnorePreviousTableSize == TRUE ?              \
            'Y' : 'N'),                                                     \
@@ -108,14 +124,6 @@ Abstract:
                                                                            \
     ENTRY(MaximumGraphTraversalDepth,                                      \
           Table->MaximumGraphTraversalDepth,                               \
-          OUTPUT_INT)                                                      \
-                                                                           \
-    ENTRY(HighestDeletedEdgesCount,                                        \
-          Context->HighestDeletedEdgesCount,                               \
-          OUTPUT_INT)                                                      \
-                                                                           \
-    ENTRY(ClosestWeCameToSolvingGraphWithSmallerTableSizes,                \
-          Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes,       \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(SolveMicroseconds,                                               \
@@ -149,6 +157,10 @@ Abstract:
           (Table->TableInfoOnDisk->NumberOfSeeds >= 4 ?                    \
            Table->TableInfoOnDisk->Seed4 : 0),                             \
           OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(FirstGraphWins,                                                  \
+          (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \
+          OUTPUT_CHR)                                                      \
                                                                            \
     ENTRY(FirstGraphWins,                                                  \
           (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \
@@ -326,6 +338,24 @@ Abstract:
     LAST_ENTRY(KeysBitmapString,                                           \
                Keys->Stats.KeysBitmap.String,                              \
                OUTPUT_RAW)
+
+//
+// Sometimes, whilst playing around with output, you may be on the fence about
+// whether or not a particular field adds value and should be included.  For
+// those that don't make the cut, you can append them to this excluded macro
+// instead of deleting them entirely (this macro isn't used or referenced
+// anywhere).
+//
+
+#define BULK_CREATE_CSV_ROW_TABLE_EXCLUDED(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    ENTRY(HighestDeletedEdgesCount,                                        \
+          Context->HighestDeletedEdgesCount,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(ClosestWeCameToSolvingGraphWithSmallerTableSizes,                \
+          Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes,       \
+          OUTPUT_INT)                                                      \
+                                                                           \
 
 //
 // Define a macro for initializing the local variables prior to writing a row.

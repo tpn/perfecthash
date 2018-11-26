@@ -850,6 +850,11 @@ Return Value:
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;
 
+    Context->GraphRegisterSolvedTsxStarted = 0;
+    Context->GraphRegisterSolvedTsxSuccess = 0;
+    Context->GraphRegisterSolvedTsxFailed = 0;
+    Context->GraphRegisterSolvedTsxRetry = 0;
+
     Context->ActiveSolvingLoops = 0;
     Context->RemainingSolverLoops = 0;
     Context->GraphMemoryFailures = 0;

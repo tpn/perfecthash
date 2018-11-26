@@ -467,6 +467,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
                          EXPAND_AS_EVENTS,
                          EXPAND_AS_LAST_EVENT)
 
+
+    volatile LONG GraphRegisterSolvedTsxStarted;
+    ULONG Padding;
+
     //
     // N.B. All events are created as named events, using the random object
     //      name generation helper Rtl->CreateRandomObjectNames().  This will
@@ -609,6 +613,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_POOL FileThreadpool;
     PTP_WORK FileWork;
 
+    volatile LONG GraphRegisterSolvedTsxSuccess;
+    LONG Padding1;
+
     //
     // The algorithm is responsible for registering an appropriate callback
     // for file work threadpool work items in this next field.
@@ -687,6 +694,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     PVOID SolvedContext;
 
+    volatile LONG GraphRegisterSolvedTsxRetry;
+    ULONG Padding2;
+
     //
     // Timestamp of instance creation.  The STRING structure's Buffer is wired
     // up to the address of the TimestampBuffer variable.
@@ -727,6 +737,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     CONTEXT_FILE_WORK_TABLE(EXPAND_AS_FIRST_CONTEXT_FILE,
                             EXPAND_AS_CONTEXT_FILE,
                             EXPAND_AS_LAST_CONTEXT_FILE)
+
+    volatile LONG GraphRegisterSolvedTsxFailed;
+    ULONG Padding3;
 
     //
     // Backing vtbl.
