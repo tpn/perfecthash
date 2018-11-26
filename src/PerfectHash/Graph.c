@@ -1175,16 +1175,6 @@ Return Value:
     Coverage = &Graph->AssignedMemoryCoverage;
     CoverageType = Context->BestCoverageType;
 
-#if 0
-    //
-    // Fast-path exit: if the context is indicating to stop solving, return.
-    //
-
-    if (StopSolving(Context)) {
-        return PH_S_GRAPH_SOLVING_STOPPED;
-    }
-#endif
-
     //
     // Enter the best graph critical section.  Check the stop solving indicator
     // again, as it may have been set between our last check above, and when we
@@ -1192,13 +1182,6 @@ Return Value:
     //
 
     EnterCriticalSection(&Context->BestGraphCriticalSection);
-
-#if 0
-    if (StopSolving(Context)) {
-        Result = PH_S_GRAPH_SOLVING_STOPPED;
-        goto End;
-    }
-#endif
 
     //
     // If there is no best graph currently set, proceed with setting it to
