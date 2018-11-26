@@ -2531,7 +2531,7 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
     FIRST_ENTRY(NumberOfEmptyPages, Highest, >)                  \
     ENTRY(NumberOfEmptyLargePages, Highest, >)                   \
     ENTRY(NumberOfEmptyCacheLines, Highest, >)                   \
-    ENTRY(GraphTraversalDepth, Highest, >)                       \
+    ENTRY(MaxGraphTraversalDepth, Highest, >)                    \
     ENTRY(MaxAssignedPerCacheLineCount, Highest, >)              \
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
     ENTRY(NumberOfPagesUsedByKeysSubset, Lowest, <)              \

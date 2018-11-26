@@ -640,7 +640,7 @@ Table Create Parameters:
                 cache line; this predicate selects the graph with the highest
                 histogram count (cache line occupancy) for a given graph.
 
-            HighestGraphTraversalDepth
+            HighestMaxGraphTraversalDepth
 
                 This predicate selects the graph with the highest recursive
                 traversal depth encountered during the graph assignment stage.
