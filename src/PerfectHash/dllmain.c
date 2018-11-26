@@ -78,23 +78,27 @@ NOINLINE
 BOOLEAN
 CanWeUseTsx(VOID)
 {
+    ULONG Started = 0;
+    ULONG Retried = 0;
     ULONG Status;
     BOOLEAN UseTsx = FALSE;
 
     TsxScratch = NULL;
 
 Retry:
+
     Status = _xbegin();
-    if (Status & _XABORT_RETRY) {
-        goto Retry;
-    } else if (Status != _XBEGIN_STARTED) {
-        goto End;
+
+    if (Status != _XBEGIN_STARTED) {
+        if (Status & _XABORT_RETRY) {
+            Retried++;
+            goto Retry;
+        }
+    } else {
+        Started++;
+        TsxScratch = _AddressOfReturnAddress();
+        _xend();
     }
-
-    TsxScratch = _AddressOfReturnAddress();
-    _xend();
-
-End:
 
     if (TsxScratch == _AddressOfReturnAddress()) {
         UseTsx = TRUE;
@@ -120,18 +124,18 @@ _DllMainCRTStartup(
             __security_init_cookie();
             PerfectHashModule = Module;
 
-            IsTsxAvailable = TRUE;
+            IsTsxAvailable = FALSE;
 
 #ifdef _M_AMD64
 
             TRY_TSX {
 
                 if (CanWeUseTsx()) {
-                    NOTHING;
+                    IsTsxAvailable = TRUE;
                 }
 
             } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION {
-                IsTsxAvailable = FALSE;
+                NOTHING;
             }
 
             if (IsTsxAvailable) {
