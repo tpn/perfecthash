@@ -95,6 +95,27 @@ typedef APPEND_LONGLONG_INTEGER_TO_UNICODE_STRING
       *PAPPEND_LONGLONG_INTEGER_TO_UNICODE_STRING;
 
 typedef
+BOOLEAN
+(NTAPI APPEND_INTEGER_TO_STRING)(
+    _In_ PSTRING String,
+    _In_ ULONG Integer,
+    _In_ USHORT NumberOfDigits,
+    _In_opt_ CHAR Trailer
+    );
+typedef APPEND_INTEGER_TO_STRING *PAPPEND_INTEGER_TO_STRING;
+
+typedef
+BOOLEAN
+(NTAPI APPEND_LONGLONG_INTEGER_TO_STRING)(
+    _In_ PSTRING String,
+    _In_ ULONGLONG Integer,
+    _In_ USHORT NumberOfDigits,
+    _In_opt_ CHAR Trailer
+    );
+typedef APPEND_LONGLONG_INTEGER_TO_STRING
+      *PAPPEND_LONGLONG_INTEGER_TO_STRING;
+
+typedef
 VOID
 (NTAPI APPEND_INTEGER_TO_CHAR_BUFFER)(
     _Inout_ PCHAR *BufferPointer,
@@ -295,9 +316,12 @@ extern HASH_UNICODE_STRING Crc32HashUnicodeString;
 // Decls.
 //
 
+#ifndef __INTELLISENSE__
 extern APPEND_INTEGER_TO_UNICODE_STRING AppendIntegerToUnicodeString;
 extern APPEND_LONGLONG_INTEGER_TO_UNICODE_STRING
     AppendLongLongIntegerToUnicodeString;
+extern APPEND_INTEGER_TO_STRING AppendIntegerToString;
+extern APPEND_LONGLONG_INTEGER_TO_STRING AppendLongLongIntegerToString;
 extern APPEND_INTEGER_TO_CHAR_BUFFER AppendIntegerToCharBuffer;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
@@ -318,6 +342,63 @@ extern APPEND_WIDE_CHAR_BUFFER_TO_WIDE_CHAR_BUFFER
     AppendWideCharBufferToWideCharBuffer;
 extern APPEND_WIDE_CHAR_TO_WIDE_CHAR_BUFFER AppendWideCharToWideCharBuffer;
 extern APPEND_INTEGER_TO_WIDE_CHAR_BUFFER AppendIntegerToWideCharBuffer;
+#endif
+
+//
+// Some timestamp helpers.
+//
+
+#define RTL_TIMESTAMP_FORMAT "yyyy-MM-dd HH:mm:ss.000"
+#define RTL_TIMESTAMP_FORMAT_LENGTH 24
+C_ASSERT(sizeof(RTL_TIMESTAMP_FORMAT) == RTL_TIMESTAMP_FORMAT_LENGTH);
+
+FORCEINLINE
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+InitializeTimestampString(
+    _Inout_ PCHAR Buffer,
+    _In_ ULONG SizeOfBufferInBytes,
+    _Inout_ PSTRING String
+    )
+{
+    ULONG Value;
+    HRESULT Result = S_OK;
+    SYSTEMTIME LocalTime;
+
+    //
+    // Validate arguments.
+    //
+
+    if (SizeOfBufferInBytes != RTL_TIMESTAMP_FORMAT_LENGTH) {
+        return E_INVALIDARG;
+    }
+
+    String->Buffer = Buffer;
+    String->Length = 0;
+    String->MaximumLength = (USHORT)RTL_TIMESTAMP_FORMAT_LENGTH;
+
+    GetLocalTime(&LocalTime);
+
+#define RTL_APPEND_TIME_FIELD(Field, Digits, Trailer)             \
+    Value = LocalTime.Field;                                      \
+    if (!AppendIntegerToString(String, Value, Digits, Trailer)) { \
+        Result = PH_E_STRING_BUFFER_OVERFLOW;                     \
+        goto End;                                                 \
+    }
+
+    RTL_APPEND_TIME_FIELD(wYear,          4, '-');
+    RTL_APPEND_TIME_FIELD(wMonth,         2, '-');
+    RTL_APPEND_TIME_FIELD(wDay,           2, ' ');
+    RTL_APPEND_TIME_FIELD(wHour,          2, ':');
+    RTL_APPEND_TIME_FIELD(wMinute,        2, ':');
+    RTL_APPEND_TIME_FIELD(wSecond,        2, '.');
+    RTL_APPEND_TIME_FIELD(wMilliseconds,  3,   0);
+
+End:
+
+    return Result;
+}
 
 //
 // Output helpers.

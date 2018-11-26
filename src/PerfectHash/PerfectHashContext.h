@@ -688,6 +688,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PVOID SolvedContext;
 
     //
+    // Timestamp of instance creation.  The STRING structure's Buffer is wired
+    // up to the address of the TimestampBuffer variable.
+    //
+
+    CHAR TimestampBuffer[RTL_TIMESTAMP_FORMAT_LENGTH];
+    STRING TimestampString;
+
+    //
     // N.B. These fields are commented in the definition of the structure
     //      TABLE_INFO_ON_DISK.
     //

@@ -74,6 +74,18 @@ Return Value:
     }
 
     //
+    // Initialize the timestamp string.
+    //
+
+    Result = InitializeTimestampString((PCHAR)&Table->TimestampBuffer,
+                                       sizeof(Table->TimestampBuffer),
+                                       &Table->TimestampString);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashTableInitialize_InitTimestampString, Result);
+        goto Error;
+    }
+
+    //
     // We're done!  Indicate success and finish up.
     //
 

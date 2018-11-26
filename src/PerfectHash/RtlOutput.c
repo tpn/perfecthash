@@ -296,6 +296,284 @@ Return Value:
     return TRUE;
 }
 
+
+APPEND_INTEGER_TO_STRING AppendIntegerToString;
+
+_Use_decl_annotations_
+BOOLEAN
+AppendIntegerToString(
+    PSTRING String,
+    ULONG Integer,
+    USHORT NumberOfDigits,
+    CHAR Trailer
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that allows construction of STRING structures out
+    of integer values.
+
+Arguments:
+
+    String - Supplies a pointer to a STRING that will be appended to.
+        Sufficient buffer space must exist for the entire string to
+        be written.
+
+    Integer - The integer value to be appended to the string.
+
+    NumberOfDigits - The expected number of digits for the value.  If Integer
+        has less digits than this number, it will be left-padded with zeros.
+
+    Trailer - An optional trailing character to append.
+
+Return Value:
+
+    TRUE on success, FALSE on failure.
+
+--*/
+{
+    USHORT ActualNumberOfDigits;
+    USHORT BytesRequired;
+    USHORT BytesRemaining;
+    USHORT NumberOfZerosToPad;
+    ULONG Digit;
+    ULONG Value;
+    ULONG Bytes;
+    CHAR Char;
+    PCHAR Dest;
+
+    //
+    // Verify the unicode string has sufficient space.
+    //
+
+    BytesRequired = NumberOfDigits * sizeof(CHAR);
+
+    if (Trailer) {
+        BytesRequired += (1 * sizeof(Trailer));
+    }
+
+    BytesRemaining = (
+        String->MaximumLength -
+        String->Length
+    );
+
+    if (BytesRemaining < BytesRequired) {
+        return FALSE;
+    }
+
+    //
+    // Make sure the integer value doesn't have more digits than
+    // specified.
+    //
+
+    ActualNumberOfDigits = CountNumberOfDigitsInline(Integer);
+
+    if (ActualNumberOfDigits > NumberOfDigits) {
+        return FALSE;
+    }
+
+    //
+    // Initialize our destination pointer to the last digit.  (We write
+    // back-to-front.)
+    //
+
+    Dest = (PCHAR)(
+        RtlOffsetToPointer(
+            String->Buffer,
+            String->Length + (
+                (NumberOfDigits - 1) *
+                sizeof(CHAR)
+            )
+        )
+    );
+    Bytes = 0;
+
+    //
+    // Convert each digit into the corresponding character and copy to the
+    // string buffer, retreating the pointer as we go.
+    //
+
+    Value = Integer;
+
+    do {
+        Bytes++;
+        Digit = Value % 10;
+        Value = Value / 10;
+        Char = IntegerToCharTable[Digit];
+        *Dest-- = Char;
+    } while (Value != 0);
+
+    //
+    // Pad the string with zeros if necessary.
+    //
+
+    NumberOfZerosToPad = NumberOfDigits - ActualNumberOfDigits;
+
+    if (NumberOfZerosToPad) {
+        do {
+            Bytes++;
+            *Dest-- = '0';
+        } while (--NumberOfZerosToPad);
+    }
+
+    //
+    // Update the string with the new length.
+    //
+
+    String->Length += (USHORT)Bytes;
+
+    //
+    // Add the trailer if applicable.
+    //
+
+    if (Trailer) {
+        String->Length += sizeof(CHAR);
+        String->Buffer[String->Length - 1] = Trailer;
+    }
+
+    return TRUE;
+}
+
+
+APPEND_LONGLONG_INTEGER_TO_STRING AppendLongLongIntegerToString;
+
+_Use_decl_annotations_
+BOOLEAN
+AppendLongLongIntegerToString(
+    PSTRING String,
+    ULONGLONG Integer,
+    USHORT NumberOfDigits,
+    CHAR Trailer
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that allows construction of STRING structures out
+    of integer values.
+
+Arguments:
+
+    String - Supplies a pointer to a STRING that will be appended to.
+        Sufficient buffer space must exist for the entire string to be
+        written.
+
+    Integer - Supplies the long long integer value to be appended to the string.
+
+    NumberOfDigits - The expected number of digits for the value.  If Integer
+        has less digits than this number, it will be left-padded with zeros.
+
+    Trailer - An optional trailing character to append.
+
+Return Value:
+
+    TRUE on success, FALSE on failure.
+
+--*/
+{
+    USHORT ActualNumberOfDigits;
+    USHORT BytesRequired;
+    USHORT BytesRemaining;
+    USHORT NumberOfZerosToPad;
+    ULONGLONG Digit;
+    ULONGLONG Value;
+    ULONGLONG Bytes;
+    CHAR Char;
+    PCHAR Dest;
+
+    //
+    // Verify the unicode string has sufficient space.
+    //
+
+    BytesRequired = NumberOfDigits * sizeof(CHAR);
+
+    if (Trailer) {
+        BytesRequired += (1 * sizeof(Trailer));
+    }
+
+    BytesRemaining = (
+        String->MaximumLength -
+        String->Length
+    );
+
+    if (BytesRemaining < BytesRequired) {
+        return FALSE;
+    }
+
+    //
+    // Make sure the integer value doesn't have more digits than
+    // specified.
+    //
+
+    ActualNumberOfDigits = CountNumberOfLongLongDigitsInline(Integer);
+
+    if (ActualNumberOfDigits > NumberOfDigits) {
+        return FALSE;
+    }
+
+    //
+    // Initialize our destination pointer to the last digit.  (We write
+    // back-to-front.)
+    //
+
+    Dest = (PCHAR)(
+        RtlOffsetToPointer(
+            String->Buffer,
+            String->Length + (
+                (NumberOfDigits - 1) *
+                sizeof(CHAR)
+            )
+        )
+    );
+    Bytes = 0;
+
+    //
+    // Convert each digit into the corresponding character and copy to the
+    // string buffer, retreating the pointer as we go.
+    //
+
+    Value = Integer;
+
+    do {
+        Bytes++;
+        Digit = Value % 10;
+        Value = Value / 10;
+        Char = IntegerToCharTable[Digit];
+        *Dest-- = Char;
+    } while (Value != 0);
+
+    //
+    // Pad the string with zeros if necessary.
+    //
+
+    NumberOfZerosToPad = NumberOfDigits - ActualNumberOfDigits;
+
+    if (NumberOfZerosToPad) {
+        do {
+            Bytes++;
+            *Dest-- = '0';
+        } while (--NumberOfZerosToPad);
+    }
+
+    //
+    // Update the string with the new length.
+    //
+
+    String->Length += (USHORT)Bytes;
+
+    //
+    // Add the trailer if applicable.
+    //
+
+    if (Trailer) {
+        String->Length += sizeof(CHAR);
+        String->Buffer[String->Length - 1] = Trailer;
+    }
+
+    return TRUE;
+}
+
 _Use_decl_annotations_
 VOID
 AppendIntegerToCharBuffer(
@@ -352,6 +630,7 @@ AppendIntegerToCharBuffer(
 
     return;
 }
+
 
 APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
 

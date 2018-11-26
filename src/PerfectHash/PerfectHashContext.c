@@ -584,6 +584,18 @@ Return Value:
     }
 
     //
+    // Initialize the timestamp string.
+    //
+
+    Result = InitializeTimestampString((PCHAR)&Context->TimestampBuffer,
+                                       sizeof(Context->TimestampBuffer),
+                                       &Context->TimestampString);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextInitialize_InitTimestampString, Result);
+        goto Error;
+    }
+
+    //
     // We're done!  Indicate success and finish up.
     //
 

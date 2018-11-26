@@ -20,9 +20,17 @@ Abstract:
 //
 
 #define BULK_CREATE_CSV_ROW_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)          \
-    FIRST_ENTRY(KeysName,                                                  \
-                &Keys->File->Path->BaseNameA,                              \
+    FIRST_ENTRY(ContextTimestamp,                                          \
+                &Context->TimestampString,                                 \
                 OUTPUT_STRING)                                             \
+                                                                           \
+    ENTRY(TableTimestamp,                                                  \
+          &Table->TimestampString,                                         \
+          OUTPUT_STRING)                                                   \
+                                                                           \
+    ENTRY(KeysName,                                                        \
+          &Keys->File->Path->BaseNameA,                                    \
+          OUTPUT_STRING)                                                   \
                                                                            \
     ENTRY(NumberOfKeys,                                                    \
           Keys->NumberOfElements.QuadPart,                                 \
