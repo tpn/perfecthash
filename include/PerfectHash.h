@@ -2522,11 +2522,18 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
 //      (NumberOfEmptyPages,            Highest, >)
 //      (NumberOfPagesUsedByKeysSubset, Lowest,  <)
 //
+// N.B. See GraphRegisterSolved() for how these predicates are used in
+//      registering the best graph, which should give more clarity to the
+//      role of the X-macro.
+//
 
 #define BEST_COVERAGE_TYPE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(NumberOfEmptyPages, Highest, >)                  \
     ENTRY(NumberOfEmptyLargePages, Highest, >)                   \
     ENTRY(NumberOfEmptyCacheLines, Highest, >)                   \
+    ENTRY(GraphTraversalDepth, Highest, >)                       \
+    ENTRY(MaxAssignedPerCacheLineCount, Highest, >)              \
+    ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
     ENTRY(NumberOfPagesUsedByKeysSubset, Lowest, <)              \
     ENTRY(NumberOfLargePagesUsedByKeysSubset, Lowest, <)         \
     LAST_ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)
@@ -2564,8 +2571,10 @@ DoesBestCoverageTypeRequireKeysSubset(
     )
 {
     return (
-        Type == BestCoverageTypeLowestNumberOfPagesUsedByKeysSubsetId       ||
-        Type == BestCoverageTypeLowestNumberOfLargePagesUsedByKeysSubsetId  ||
+        Type ==
+          BestCoverageTypeHighestMaxAssignedPerCacheLineCountForKeysSubsetId ||
+        Type == BestCoverageTypeLowestNumberOfPagesUsedByKeysSubsetId        ||
+        Type == BestCoverageTypeLowestNumberOfLargePagesUsedByKeysSubsetId   ||
         Type == BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId
     );
 }

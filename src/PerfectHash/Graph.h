@@ -188,9 +188,20 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     ULONG TotalNumberOfLargePages;
     ULONG TotalNumberOfCacheLines;
 
-    ULONG NumberOfUsedPages;
-    ULONG NumberOfUsedLargePages;
-    ULONG NumberOfUsedCacheLines;
+    union {
+        ULONG NumberOfUsedPages;
+        ULONG NumberOfPagesUsedByKeysSubset;
+    };
+
+    union {
+        ULONG NumberOfUsedLargePages;
+        ULONG NumberOfLargePagesUsedByKeysSubset;
+    };
+
+    union {
+        ULONG NumberOfUsedCacheLines;
+        ULONG NumberOfCacheLinesUsedByKeysSubset;
+    };
 
     ULONG NumberOfEmptyPages;
     ULONG NumberOfEmptyLargePages;
@@ -222,6 +233,10 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     //
 
     ULONG NumberOfAssignedPerCacheLineCounts[NUM_ASSIGNED_PER_CACHE_LINE + 1];
+    union {
+        ULONG MaxAssignedPerCacheLineCount;
+        ULONG MaxAssignedPerCacheLineCountForKeysSubset;
+    };
 
     //
     // If we're calculating memory coverage for a subset of keys, the following
@@ -233,11 +248,7 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     ULONG NumberOfKeysWithVerticesMappingToSameLargePage;
     ULONG NumberOfKeysWithVerticesMappingToSameCacheLine;
 
-    ULONG NumberOfPagesUsedByKeysSubset;
-    ULONG NumberOfLargePagesUsedByKeysSubset;
-    ULONG NumberOfCacheLinesUsedByKeysSubset;
-
-    ULONG Padding;
+    ULONG GraphTraversalDepth;
 
     //
     // Stores Graph->Attempt at the time the memory coverage was captured.

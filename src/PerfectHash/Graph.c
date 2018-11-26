@@ -313,14 +313,6 @@ Return Value:
     GraphAssign(Graph);
 
     //
-    // Stop the solve timers here if we're in "first graph wins" mode.
-    //
-
-    if (FirstSolvedGraphWins(Context)) {
-        CONTEXT_END_TIMERS(Solve);
-    }
-
-    //
     // If we're in "first graph wins" mode and we reach this point, we're the
     // winning thread, so, push the graph onto the finished list head, then
     // submit the relevant finished threadpool work item and return stop graph
@@ -328,6 +320,7 @@ Return Value:
     //
 
     if (FirstSolvedGraphWins(Context)) {
+        CONTEXT_END_TIMERS(Solve);
         if (WantsAssignedMemoryCoverage(Graph)) {
             Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
             CopyCoverage(Context->Table->Coverage,
@@ -354,6 +347,18 @@ Return Value:
     } else if (WantsAssignedMemoryCoverageForKeysSubset(Graph)) {
         Graph->Vtbl->CalculateAssignedMemoryCoverageForKeysSubset(Graph);
     }
+
+    //
+    // This is a bit hacky; the graph traversal depth is proving to be more
+    // interesting than initially thought, such that we've recently added a
+    // best coverage type predicate aimed at maximizing it, which means we
+    // need to make the value available from the coverage struct in order for
+    // the X-macro to work, which means we're unnecessarily duplicating the
+    // value at the table and coverage level.  Not particularly elegant.
+    //
+
+    Graph->AssignedMemoryCoverage.MaxGraphTraversalDepth =
+        Graph->MaximumTraversalDepth;
 
     //
     // Register the solved graph.  We can return this result directly.
@@ -804,10 +809,14 @@ Return Value:
                 Coverage->LastCacheLineUsed = CacheLineIndex;
                 Coverage->LastPageUsed = PageIndex;
                 Coverage->LastLargePageUsed = LargePageIndex;
+                Coverage->MaxAssignedPerCacheLineCount = Count;
             } else {
                 Coverage->LastCacheLineUsed = CacheLineIndex;
                 Coverage->LastPageUsed = PageIndex;
                 Coverage->LastLargePageUsed = LargePageIndex;
+                if (Coverage->MaxAssignedPerCacheLineCount < Count) {
+                    Coverage->MaxAssignedPerCacheLineCount = Count;
+                }
             }
 
         }
@@ -1035,6 +1044,9 @@ Return Value:
         Count = *CacheLineCount++;
         if (Count > 0) {
             Coverage->NumberOfUsedCacheLines++;
+            if (Coverage->MaxAssignedPerCacheLineCount < Count) {
+                Coverage->MaxAssignedPerCacheLineCount = Count;
+            }
         }
         Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
     }
@@ -1833,22 +1845,12 @@ Return Value:
 
     } else {
 
-        switch (Context->BestCoverageType) {
-
-            case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
-                Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
-                break;
-
-            case BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId:
-                Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
-                break;
-
-            default:
-                Result = PH_E_INVARIANT_CHECK_FAILED;
-                PH_ERROR(GraphLoadInfo_InvalidBestCoverageType, Result);
-                PH_RAISE(Result);
-
+        if (DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) {
+            Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
+        } else {
+            Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
         }
+
     }
 
     //

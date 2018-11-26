@@ -689,8 +689,22 @@ Abstract:
 // 
 //                 As above, but for pages and large pages, respectively.
 // 
-//                 N.B. The following predicates must be used in conjunction with
-//                      --KeysSubset.
+//             HighestMaxAssignedPerCacheLineCount
+// 
+//                 A histogram is maintained of the number of assigned values per
+//                 cache line; this predicate selects the graph with the highest
+//                 histogram count (cache line occupancy) for a given graph.
+// 
+//             HighestGraphTraversalDepth
+// 
+//                 This predicate selects the graph with the highest recursive
+//                 traversal depth encountered during the graph assignment stage.
+//                 A high value for this metric is indicative of clustering of
+//                 vertices for one half of an assigned table lookup (and thus,
+//                 may result in a solution with better cache behavior).
+// 
+//         N.B. The following predicates must be used in conjunction with
+//              --KeysSubset.
 // 
 //             LowestNumberOfCacheLinesUsedByKeysSubset
 // 
@@ -701,14 +715,15 @@ Abstract:
 //                 For example, if 90% of the lookups occur for 10% of the keys,
 //                 the fewer cache lines occupied by those keys, the better.
 // 
-//                 This option needs to be combined with the --KeysSubset table
-//                 create parameter.
-// 
 //             LowestNumberOfPagesUsedByKeysSubset
 //             LowestNumberOfLargePagesUsedByKeysSubset
 // 
 //                 As above, but for pages and large pages, respectively.
 // 
+//             HighestMaxAssignedPerCacheLineCountForKeysSubset
+// 
+//                 Like HighestMaxAssignedPerCacheLineCount, but for a subset of
+//                 keys.
 // 
 //     --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
 // 
