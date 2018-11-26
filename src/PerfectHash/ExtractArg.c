@@ -405,11 +405,18 @@ End:
     return Result;
 }
 
-#define MAYBE_DEALLOCATE_PARAM(Param)                                \
-    if (DoesTableCreateParameterRequireDeallocation(Param->Id)) {    \
-        Allocator->Vtbl->FreePointer(Allocator,                      \
-                                     (PVOID *)Param->AsVoidPointer); \
+FORCEINLINE
+VOID
+MaybeDeallocateTableCreateParameter(
+    _In_ PALLOCATOR Allocator,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETER Param
+    )
+{
+    if (DoesTableCreateParameterRequireDeallocation(Param->Id)) {
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     (PVOID *)Param->AsVoidPointer);
     }
+}
 
 //
 // Processing table create parameters is more involved than the flag-oriented
@@ -602,7 +609,7 @@ AddParam:
             // applicable.
             //
 
-            MAYBE_DEALLOCATE_PARAM(Param);
+            MaybeDeallocateTableCreateParameter(Allocator, Param);
 
             Param->AsULongLong = LocalParam.AsULongLong;
             return S_OK;
@@ -687,7 +694,7 @@ DestroyTableCreateParameters(
     Param = Params = *TableCreateParametersPointer;
 
     for (Index = 0; Index < NumberOfTableCreateParameters; Index++, Param++) {
-        MAYBE_DEALLOCATE_PARAM(Param);
+        MaybeDeallocateTableCreateParameter(Allocator, Param);
     }
 
     Allocator->Vtbl->FreePointer(Allocator, TableCreateParametersPointer);
