@@ -426,13 +426,10 @@ Return Value:
     SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
 
     //
-    // Initialize the Main threadpool environment, set its priority to
-    // low, then associate it with the Main threadpool.
+    // Initialize the Main threadpool and environment.
     //
 
     InitializeThreadpoolEnvironment(&Context->MainCallbackEnv);
-    SetThreadpoolCallbackPriority(&Context->MainCallbackEnv,
-                                  TP_CALLBACK_PRIORITY_LOW);
     SetThreadpoolCallbackPool(&Context->MainCallbackEnv,
                               Context->MainThreadpool);
 
@@ -1608,6 +1605,66 @@ Return Value:
     ReleasePerfectHashContextLockExclusive(Context);
 
     return S_OK;
+}
+
+
+PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
+    PerfectHashContextApplyThreadpoolPriorities;
+
+_Use_decl_annotations_
+VOID
+PerfectHashContextApplyThreadpoolPriorities(
+    PPERFECT_HASH_CONTEXT Context,
+    ULONG NumberOfTableCreateParameters,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
+    )
+/*++
+
+Routine Description:
+
+    Enumerates the given table create parameters and applies any threadpool
+    priorities found to the main work and file work threadpools.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
+        for which the threadpool priorities are to be applied.
+
+    NumberOfTableCreateParameters - Supplies the number of table create params.
+
+    TableCreateParameters - Supplies an array of table create params.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    ULONG Index;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Params;
+
+    Params = TableCreateParameters;
+    for (Index = 0; Index < NumberOfTableCreateParameters; Index++) {
+        Param = Params++;
+        switch (Param->Id) {
+
+            case TableCreateParameterMainWorkThreadpoolPriorityId:
+                SetThreadpoolCallbackPriority(&Context->MainCallbackEnv,
+                                              Param->AsTpCallbackPriority);
+                break;
+
+            case TableCreateParameterFileWorkThreadpoolPriorityId:
+                SetThreadpoolCallbackPriority(&Context->FileCallbackEnv,
+                                              Param->AsTpCallbackPriority);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    return;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -881,8 +881,19 @@ HRESULT
     );
 typedef PERFECT_HASH_CONTEXT_RESET *PPERFECT_HASH_CONTEXT_RESET;
 
+typedef
+VOID
+(NTAPI PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_opt_ ULONG NumberOfTableCreateParameters,
+    _In_reads_(NumberOfTableCreateParameters)
+        PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
+      *PPERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES;
+
 //
-// Public vtbl function decls.
+// Function decls.
 //
 
 #ifndef __INTELLISENSE__
@@ -912,6 +923,8 @@ extern PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW
     PerfectHashContextTableCreateArgvW;
 extern PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
     PerfectHashContextExtractTableCreateArgsFromArgvW;
+extern PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
+    PerfectHashContextApplyThreadpoolPriorities;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

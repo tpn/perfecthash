@@ -392,6 +392,13 @@ Abstract:
 // 
 // Table Create Parameters:
 // 
+//     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+//     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+// 
+//         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
+//         priority, or the file work threadpool priority, to the given value.
+// 
+// 
 //     --AttemptsBeforeTableResize=N [default = 18]
 // 
 //         Specifies the number of attempts at solving the graph that will be made
@@ -640,6 +647,12 @@ Abstract:
 //     N/A
 // 
 // Table Create Parameters:
+// 
+//     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+//     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+// 
+//         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
+//         priority, or the file work threadpool priority, to the given value.
 // 
 //     --AttemptsBeforeTableResize=N [default = 18]
 // 
@@ -2880,4 +2893,22 @@ Abstract:
 // Ctrl-C pressed.
 //
 #define PH_E_CTRL_C_PRESSED              ((HRESULT)0xE0040352L)
+
+//
+// MessageId: PH_E_INVALID_MAIN_WORK_THREADPOOL_PRIORITY
+//
+// MessageText:
+//
+// Invalid main work threadpool priority.
+//
+#define PH_E_INVALID_MAIN_WORK_THREADPOOL_PRIORITY ((HRESULT)0xE0040353L)
+
+//
+// MessageId: PH_E_INVALID_FILE_WORK_THREADPOOL_PRIORITY
+//
+// MessageText:
+//
+// Invalid file work threadpool priority.
+//
+#define PH_E_INVALID_FILE_WORK_THREADPOOL_PRIORITY ((HRESULT)0xE0040354L)
 

@@ -339,6 +339,13 @@ Table Compile Flags:
 
 Table Create Parameters:
 
+    --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+    --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+
+        Sets the main work (i.e. the CPU-intensive graph solving) threadpool
+        priority, or the file work threadpool priority, to the given value.
+
+
     --AttemptsBeforeTableResize=N [default = 18]
 
         Specifies the number of attempts at solving the graph that will be made
@@ -585,6 +592,12 @@ Table Compile Flags:
     N/A
 
 Table Create Parameters:
+
+    --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+    --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+
+        Sets the main work (i.e. the CPU-intensive graph solving) threadpool
+        priority, or the file work threadpool priority, to the given value.
 
     --AttemptsBeforeTableResize=N [default = 18]
 
@@ -2600,5 +2613,21 @@ Facility=ITF
 SymbolicName=PH_E_CTRL_C_PRESSED
 Language=English
 Ctrl-C pressed.
+.
+
+MessageId=0x353
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_MAIN_WORK_THREADPOOL_PRIORITY
+Language=English
+Invalid main work threadpool priority.
+.
+
+MessageId=0x354
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_FILE_WORK_THREADPOOL_PRIORITY
+Language=English
+Invalid file work threadpool priority.
 .
 

@@ -456,6 +456,11 @@ TryExtractArgTableCreateParameters(
     DECL_ARG(BestCoverageNumAttempts);
     DECL_ARG(BestCoverageType);
     DECL_ARG(KeysSubset);
+    DECL_ARG(MainWorkThreadpoolPriority);
+    DECL_ARG(FileWorkThreadpoolPriority);
+    DECL_ARG(High);
+    DECL_ARG(Normal);
+    DECL_ARG(Low);
 
 #define EXPAND_AS_DECL_ARG(Name, Comparison, Comparator) \
     DECL_ARG(Comparison##Name);
@@ -584,6 +589,29 @@ TryExtractArgTableCreateParameters(
 
     ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(KeysSubset,
                                                                KEYS_SUBSET);
+
+#define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(Name, Upper)          \
+    if (IS_PREFIX(Name##ThreadpoolPriority)) {                             \
+        if (IS_VALUE_EQUAL(High)) {                                        \
+            SET_PARAM_ID(Name##ThreadpoolPriority);                        \
+            LocalParam.AsTpCallbackPriority = TP_CALLBACK_PRIORITY_HIGH;   \
+            goto AddParam;                                                 \
+        } else if (IS_VALUE_EQUAL(Normal)) {                               \
+            SET_PARAM_ID(Name##ThreadpoolPriority);                        \
+            LocalParam.AsTpCallbackPriority = TP_CALLBACK_PRIORITY_NORMAL; \
+            goto AddParam;                                                 \
+        } else if (IS_VALUE_EQUAL(Low)) {                                  \
+            SET_PARAM_ID(Name##ThreadpoolPriority);                        \
+            LocalParam.AsTpCallbackPriority = TP_CALLBACK_PRIORITY_LOW;    \
+            goto AddParam;                                                 \
+        } else {                                                           \
+            Result = PH_E_INVALID_##Upper##_THREADPOOL_PRIORITY;           \
+            goto Error;                                                    \
+        }                                                                  \
+    }
+
+    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(MainWork, MAIN_WORK);
+    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(FileWork, FILE_WORK);
 
     //
     // No more table create parameters to look for, finish up.

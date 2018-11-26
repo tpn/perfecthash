@@ -549,6 +549,16 @@ Return Value:
                 Context->KeysSubset = &Param->AsKeysSubset;
                 break;
 
+            case TableCreateParameterMainWorkThreadpoolPriorityId:
+            case TableCreateParameterFileWorkThreadpoolPriorityId:
+
+                //
+                // These two parameters are handled earlier by the context
+                // (see PerfectHashContextApplyThreadpoolPriorities()).
+                //
+
+                break;
+
             default:
                 Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
                 goto Error;

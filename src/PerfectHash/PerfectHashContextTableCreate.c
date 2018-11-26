@@ -1274,6 +1274,10 @@ Return Value:
         }
     }
 
+    PerfectHashContextApplyThreadpoolPriorities(Context,
+                                                NumberOfTableCreateParameters,
+                                                TableCreateParameters);
+
     Result = Context->Vtbl->TableCreate(Context,
                                         &KeysPath,
                                         &BaseOutputDirectory,

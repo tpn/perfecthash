@@ -2509,6 +2509,8 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
     TableCreateParameterBestCoverageNumAttemptsId,
     TableCreateParameterBestCoverageTypeId,
     TableCreateParameterKeysSubsetId,
+    TableCreateParameterMainWorkThreadpoolPriorityId,
+    TableCreateParameterFileWorkThreadpoolPriorityId,
 
     TableCreateParameterInvalidId,
 } PERFECT_HASH_TABLE_CREATE_PARAMETER_ID;
@@ -2601,6 +2603,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         ULONGLONG AsULongLong;
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
+        TP_CALLBACK_PRIORITY AsTpCallbackPriority;
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE AsBestCoverageType;
         VALUE_ARRAY AsValueArray;
         KEYS_SUBSET AsKeysSubset;
