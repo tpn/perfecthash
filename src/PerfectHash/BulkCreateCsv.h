@@ -162,10 +162,6 @@ Abstract:
           (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \
           OUTPUT_CHR)                                                      \
                                                                            \
-    ENTRY(FirstGraphWins,                                                  \
-          (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \
-          OUTPUT_CHR)                                                      \
-                                                                           \
     ENTRY(FindBestMemoryCoverage,                                          \
           ((FindBestMemoryCoverage(Context) &&                             \
            !BestMemoryCoverageForKeysSubset(Context)) ? 'Y' : 'N'),        \
