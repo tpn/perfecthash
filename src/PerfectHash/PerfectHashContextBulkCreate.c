@@ -1601,11 +1601,6 @@ Return Value:
                                    &TableCreateParameters);
 
     if (FAILED(Result)) {
-
-        //
-        // Todo: write the usage string.
-        //
-
         return Result;
     }
 
