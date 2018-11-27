@@ -414,7 +414,7 @@ MaybeDeallocateTableCreateParameter(
 {
     if (DoesTableCreateParameterRequireDeallocation(Param->Id)) {
         Allocator->Vtbl->FreePointer(Allocator,
-                                     (PVOID *)Param->AsVoidPointer);
+                                     (PVOID *)&Param->AsVoidPointer);
     }
 }
 
