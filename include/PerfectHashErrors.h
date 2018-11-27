@@ -231,9 +231,13 @@ Abstract:
 // 
 // Bulk Create Flags:
 // 
-//     --TestAfterCreate
+//     --SkipTestAfterCreate
 // 
-//         Tests the perfect hash table after creation.
+//         Normally, after a table has been successfully created, it is tested.
+//         Setting this flag disables this behavior.
+// 
+//         N.B. This will also disable benchmarking, so no performance information
+//              will be present in the .csv output file.
 // 
 //     --Compile
 // 
@@ -514,6 +518,14 @@ Abstract:
 // 
 // Table Create Flags:
 // 
+//     --SkipTestAfterCreate
+// 
+//         Normally, after a table has been successfully created, it is tested.
+//         Setting this flag disables this behavior.
+// 
+//         N.B. This will also disable benchmarking, so no performance information
+//              will be present in the .csv output file.
+// 
 //     --Silent
 // 
 //         Disables console printing of the dots, dashes and other characters used
@@ -695,7 +707,7 @@ Abstract:
 //                 cache line; this predicate selects the graph with the highest
 //                 histogram count (cache line occupancy) for a given graph.
 // 
-//             HighestGraphTraversalDepth
+//             HighestMaxGraphTraversalDepth
 // 
 //                 This predicate selects the graph with the highest recursive
 //                 traversal depth encountered during the graph assignment stage.

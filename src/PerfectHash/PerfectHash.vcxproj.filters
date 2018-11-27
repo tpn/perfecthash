@@ -423,6 +423,9 @@
     <ClInclude Include="CompiledPerfectHashTableIndexRoutines.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
+    <ClInclude Include="PerfectHashTimestamp.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

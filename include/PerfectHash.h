@@ -2111,11 +2111,12 @@ typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When set, tests each successfully-created table as part of the
-        // bulk create operation (i.e. invokes the table's Test() method).
+        // Normally, after a table has been successfully created, it is tested
+        // (i.e. the table's Test() method is invoked).  When this bit is set,
+        // testing is not performed.
         //
 
-        ULONG TestAfterCreate:1;
+        ULONG SkipTestAfterCreate:1;
 
         //
         // When set, compiles each successfully-created table as part of the
@@ -2168,11 +2169,12 @@ typedef union _PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
-        // When set, tests the table after successful creation (i.e. invokes
-        // the table's Test() method).
+        // Normally, after a table has been successfully created, it is tested
+        // (i.e. the table's Test() method is invoked).  When this bit is set,
+        // testing is not performed.
         //
 
-        ULONG TestAfterCreate:1;
+        ULONG SkipTestAfterCreate:1;
 
         //
         // When set, compiles the table after successful creation (i.e. invokes
@@ -2180,6 +2182,8 @@ typedef union _PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS {
         //
         // N.B. Requires msbuild.exe on the PATH; currently generates a cryptic
         //      error when this is not the case.
+        //
+        // N.B. Compilation can take anywhere from 5-15 seconds per table.
         //
 
         ULONG Compile:1;

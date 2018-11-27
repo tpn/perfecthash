@@ -299,12 +299,12 @@ Return Value:
     CpuArchId = PerfectHashGetCurrentCpuArch();
 
     //
-    // If we haven't been asked to test the tables after creation, toggle the
-    // relevant table create flag to indicate we're only performing creation;
-    // this avoids some additional memory allocation and copying overhead.
+    // If we've been asked to skip testing after creation, we can toggle the
+    // CreateOnly flag in order to avoid some additional memory allocation
+    // and copying overhead.
     //
 
-    if (!ContextTableCreateFlags.TestAfterCreate) {
+    if (ContextTableCreateFlags.SkipTestAfterCreate) {
         TableCreateFlags.CreateOnly = TRUE;
     }
 
@@ -407,7 +407,7 @@ Return Value:
         // Test the table, if applicable.
         //
 
-        if (ContextTableCreateFlags.TestAfterCreate) {
+        if (!ContextTableCreateFlags.SkipTestAfterCreate) {
 
             Result = Table->Vtbl->Test(Table, Keys, FALSE);
 

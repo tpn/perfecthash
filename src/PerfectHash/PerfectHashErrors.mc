@@ -178,9 +178,13 @@ Usage: PerfectHashBulkCreate.exe
 
 Bulk Create Flags:
 
-    --TestAfterCreate
+    --SkipTestAfterCreate
 
-        Tests the perfect hash table after creation.
+        Normally, after a table has been successfully created, it is tested.
+        Setting this flag disables this behavior.
+
+        N.B. This will also disable benchmarking, so no performance information
+             will be present in the .csv output file.
 
     --Compile
 
@@ -458,6 +462,14 @@ Keys Load Flags:
         loading large key sets.
 
 Table Create Flags:
+
+    --SkipTestAfterCreate
+
+        Normally, after a table has been successfully created, it is tested.
+        Setting this flag disables this behavior.
+
+        N.B. This will also disable benchmarking, so no performance information
+             will be present in the .csv output file.
 
     --Silent
 

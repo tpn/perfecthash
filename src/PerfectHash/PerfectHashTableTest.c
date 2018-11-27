@@ -17,6 +17,20 @@ Abstract:
 #include "stdafx.h"
 
 //
+// Forward decls.
+//
+
+typedef
+VOID
+(NTAPI PERFECT_HASH_TABLE_BENCHMARK)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_ PKEY Key
+    );
+typedef PERFECT_HASH_TABLE_BENCHMARK *PPERFECT_HASH_TABLE_BENCHMARK;
+
+extern PERFECT_HASH_TABLE_BENCHMARK PerfectHashTableBenchmark;
+
+//
 // Disable global optimizations, even in release builds.  Without this, the
 // compiler does clever things with regards to optimizing our __debugbreak()
 // logic below, such that it's impossible to tell which ASSERT() triggered it.
@@ -73,7 +87,6 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    ULONG Key;
     ULONG Index;
     ULONG Value;
     ULONG Rotated;
@@ -81,6 +94,8 @@ Return Value:
     ULONG NumberOfKeys;
     ULONG ValueIndex;
     ULONG NumberOfBitsSet;
+    KEY Key;
+    KEY FirstKey;
     PKEY Source;
     PKEY SourceKeys;
     HRESULT Result = S_OK;
@@ -185,7 +200,7 @@ Return Value:
 
 
     SourceKeys = (PKEY)Keys->File->BaseAddress;
-    Key = *SourceKeys;
+    FirstKey = Key = *SourceKeys;
 
     //
     // Rotate the key such that it differs from the original value, but in a
@@ -329,6 +344,12 @@ Return Value:
     }
 
     //
+    // All of the tests completed, so capture some rudimentary benchmarks.
+    //
+
+    PerfectHashTableBenchmark(Table, &FirstKey);
+
+    //
     // We're finished!  Indicate success and finish up.
     //
 
@@ -347,7 +368,164 @@ Error:
 
 End:
 
+    if (BitmapBuffer) {
+        Allocator->Vtbl->FreePointer(Allocator, &BitmapBuffer);
+    }
+
     return Result;
 }
+
+#if 0
+#define END_TIMESTAMP END_TIMESTAMP_RDTSC
+#define START_TIMESTAMP START_TIMESTAMP_RDTSC
+#endif
+
+#if 1
+#define END_TIMESTAMP END_TIMESTAMP_RDTSCP
+#define START_TIMESTAMP START_TIMESTAMP_RDTSCP
+#endif
+
+#define DEFAULT_WARMUPS 10
+#define DEFAULT_ATTEMPTS 10
+#define DEFAULT_ITERATIONS 100
+
+extern PERFECT_HASH_TABLE_HASH PerfectHashTableHashNull;
+extern PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHashNull;
+
+PERFECT_HASH_TABLE_BENCHMARK PerfectHashTableBenchmark;
+
+_Use_decl_annotations_
+VOID
+PerfectHashTableBenchmark(
+    PPERFECT_HASH_TABLE Table,
+    PKEY KeyPointer
+    )
+/*++
+
+Routine Description:
+
+    Benchmarks an instance of a perfect hash table.
+
+Arguments:
+
+    Table - Supplies a pointer to an initialized PERFECT_HASH_TABLE structure
+        for which the benchmarking will be undertaken.
+
+    KeyPointer - Supplies a pointer to a valid key to use for routines being
+        benchmarked.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    KEY Key;
+    PRTL Rtl;
+    ULONG Inner;
+    ULONG Outer;
+    ULONG Warmups;
+    ULONG Attempts;
+    ULONG Iterations;
+    ULONG NumberOfSeeds;
+    PULONG FirstSeed;
+    HRESULT Result;
+    LARGE_INTEGER Frequency;
+    ULARGE_INTEGER Hash;
+    PTIMESTAMP SeededHash;
+    PTIMESTAMP NullSeededHash;
+    PTABLE_INFO_ON_DISK TableInfo;
+    PPERFECT_HASH_TABLE_SEEDED_HASH OriginalSeededHashFunc;
+
+    //
+    // Initialize aliases and variables.
+    //
+
+    Rtl = Table->Rtl;
+    Key = *KeyPointer;
+    Hash.QuadPart = 0;
+    Warmups = Table->BenchmarkWarmups;
+    Attempts = Table->BenchmarkAttempts;
+    TableInfo = Table->TableInfoOnDisk;
+    Iterations = Table->BenchmarkIterations;
+    SeededHash = &Table->SeededHashTimestamp;
+    NullSeededHash = &Table->NullSeededHashTimestamp;
+
+    Warmups = (Warmups ? Warmups : DEFAULT_WARMUPS);
+    Attempts = (Attempts ? Attempts : DEFAULT_ATTEMPTS);
+    Iterations = (Iterations ? Iterations : DEFAULT_ITERATIONS);
+
+    NumberOfSeeds = TableInfo->NumberOfSeeds;
+    FirstSeed = &TableInfo->FirstSeed;
+
+    QueryPerformanceFrequency(&Frequency);
+
+    //
+    // Perform the seeded hash warmup, then benchmark.
+    //
+
+    INIT_TIMESTAMP(SeededHash);
+
+    for (Outer = 0; Outer < Warmups; Outer++) {
+        Result = Table->Vtbl->SeededHash(Table,
+                                         Key,
+                                         NumberOfSeeds,
+                                         FirstSeed,
+                                         &Hash.QuadPart);
+    }
+
+    for (Outer = 0; Outer < Attempts; Outer++) {
+        START_TIMESTAMP(SeededHash);
+        for (Inner = 0; Inner < Iterations; Inner++) {
+            Result = Table->Vtbl->SeededHash(Table,
+                                             Key,
+                                             NumberOfSeeds,
+                                             FirstSeed,
+                                             &Hash.QuadPart);
+        }
+        END_TIMESTAMP(SeededHash);
+    }
+
+    //
+    // Capture the seeded hash routine and replace it with the null one.
+    //
+
+    OriginalSeededHashFunc = Table->Vtbl->SeededHash;
+    Table->Vtbl->SeededHash = PerfectHashTableSeededHashNull;
+
+    //
+    // Repeat the warmup and benchmark.
+    //
+
+    INIT_TIMESTAMP(NullSeededHash);
+
+    for (Outer = 0; Outer < Warmups; Outer++) {
+        Result = Table->Vtbl->SeededHash(Table,
+                                         Key,
+                                         NumberOfSeeds,
+                                         FirstSeed,
+                                         &Hash.QuadPart);
+    }
+
+    for (Outer = 0; Outer < Attempts; Outer++) {
+        START_TIMESTAMP(NullSeededHash);
+        for (Inner = 0; Inner < Iterations; Inner++) {
+            Result = Table->Vtbl->SeededHash(Table,
+                                             Key,
+                                             NumberOfSeeds,
+                                             FirstSeed,
+                                             &Hash.QuadPart);
+        }
+        END_TIMESTAMP(NullSeededHash);
+    }
+
+    //
+    // Restore the seeded hash vtbl routine.
+    //
+
+    Table->Vtbl->SeededHash = OriginalSeededHashFunc;
+
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

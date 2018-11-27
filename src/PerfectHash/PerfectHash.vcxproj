@@ -135,6 +135,7 @@
     <ClInclude Include="PerfectHashPrivate.h" />
     <ClInclude Include="PerfectHashTable.h" />
     <ClInclude Include="PerfectHashConstants.h" />
+    <ClInclude Include="PerfectHashTimestamp.h" />
     <ClInclude Include="PerfectHashTls.h" />
     <ClInclude Include="Rtl.h" />
     <ClInclude Include="RtlOutput.h" />

@@ -65,12 +65,12 @@ TryExtractArgContextBulkCreateFlags(
     PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS Flags
     )
 {
-    DECL_ARG(TestAfterCreate);
+    DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
 
     UNREFERENCED_PARAMETER(Allocator);
 
-    SET_FLAG_AND_RETURN_IF_EQUAL(TestAfterCreate);
+    SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
 
     return S_FALSE;
@@ -88,12 +88,12 @@ TryExtractArgContextTableCreateFlags(
     PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS Flags
     )
 {
-    DECL_ARG(TestAfterCreate);
+    DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
 
     UNREFERENCED_PARAMETER(Allocator);
 
-    SET_FLAG_AND_RETURN_IF_EQUAL(TestAfterCreate);
+    SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
 
     return S_FALSE;

@@ -294,6 +294,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
                     EXPAND_AS_LAST_FILE)
 
     //
+    // Benchmarking timestamps.
+    //
+
+    ULONG BenchmarkWarmups;
+    ULONG BenchmarkAttempts;
+    ULONG BenchmarkIterations;
+    ULONG Padding4;
+
+    TIMESTAMP SeededHashTimestamp;
+    TIMESTAMP NullSeededHashTimestamp;
+
+    //
     // Backing vtbl.
     //
 

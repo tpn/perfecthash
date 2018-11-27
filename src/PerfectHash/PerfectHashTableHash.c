@@ -16,6 +16,64 @@ Abstract:
 
 #include "stdafx.h"
 
+NOINLINE
+HRESULT
+PerfectHashTableSeededHashNull(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This is a dummy seeded hash implementation that simply returns S_OK without
+    actually doing anything.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Key - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK.
+
+--*/
+{
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(Key);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+    UNREFERENCED_PARAMETER(Seeds);
+    UNREFERENCED_PARAMETER(Hash);
+    return S_OK;
+}
+
+NOINLINE
+HRESULT
+PerfectHashTableHashNull(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashNull(Table,
+                                          Key,
+                                          TableInfo->NumberOfSeeds,
+                                          &TableInfo->FirstSeed,
+                                          Hash);
+}
+
 _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashCrc32Rotate(

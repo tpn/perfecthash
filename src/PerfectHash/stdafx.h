@@ -111,6 +111,7 @@ Abstract:
 #include "Chunk.h"
 #include "Security.h"
 #include "GuardedList.h"
+#include "PerfectHashTimestamp.h"
 #include "PerfectHashFileWork.h"
 #include "PerfectHashTls.h"
 #include "PerfectHashPath.h"

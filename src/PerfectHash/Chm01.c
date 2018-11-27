@@ -1052,6 +1052,72 @@ FinishedSolution:
 
         Table->State.TableInfoOnDiskWasHeapAllocated = TRUE;
 
+        if (!IsTableCreateOnly(Table)) {
+
+            //
+            // Perform the same logic for the table data.  Note that this is
+            // a copy-and-paste directly from Chm01FileWorkTableFile.c; the
+            // common logic should be abstracted out somewhere.
+            //
+
+            PVOID BaseAddress;
+            LONGLONG SizeInBytes;
+            BOOLEAN LargePagesForTableData;
+            PRTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC TryLargePageVirtualAlloc;
+
+            //
+            // Allocate and copy the table data to an in-memory copy so that the table
+            // can be used after Create() completes successfully.  See the comment in
+            // the SaveTableInfoStreamChm01() routine for more information about why
+            // this is necessary.
+            //
+
+            LargePagesForTableData = (
+                Table->TableCreateFlags.TryLargePagesForTableData == TRUE
+            );
+
+            SizeInBytes = (
+                TableInfoOnDisk->NumberOfTableElements.QuadPart *
+                TableInfoOnDisk->KeySizeInBytes
+            );
+
+            TryLargePageVirtualAlloc = Rtl->Vtbl->TryLargePageVirtualAlloc;
+            BaseAddress = TryLargePageVirtualAlloc(Rtl,
+                                                   NULL,
+                                                   SizeInBytes,
+                                                   MEM_RESERVE | MEM_COMMIT,
+                                                   PAGE_READWRITE,
+                                                   &LargePagesForTableData);
+
+            Table->TableDataBaseAddress = BaseAddress;
+
+            if (!BaseAddress) {
+                Result = E_OUTOFMEMORY;
+                goto Error;
+            }
+
+            //
+            // Update state indicating table data has been heap-allocated.
+            //
+
+            Table->State.TableDataWasHeapAllocated = TRUE;
+
+            //
+            // Update flags with large page result for values array.
+            //
+
+            Table->Flags.TableDataUsesLargePages = LargePagesForTableData;
+
+            //
+            // Copy the table data over to the newly allocated buffer.
+            //
+
+            CopyMemory(Table->TableDataBaseAddress,
+                       Graph->Assigned,
+                       SizeInBytes);
+
+        }
+
     }
 
     //

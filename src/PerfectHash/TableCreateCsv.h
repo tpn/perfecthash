@@ -125,6 +125,14 @@ Abstract:
           Context->VerifyElapsedMicroseconds.QuadPart,                     \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(SeededHashMinimumCycles,                                         \
+          Table->SeededHashTimestamp.MinimumCycles.QuadPart,               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(SeededHashMinimumNanoseconds,                                    \
+          Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart,          \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(FirstGraphWins,                                                  \
           (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \
           OUTPUT_CHR)                                                      \
