@@ -20,7 +20,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashCrc32Rotate(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -36,7 +36,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -74,8 +74,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Input);
-    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Input, 15));
+    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, 15));
 
     //IACA_VC_END();
 
@@ -95,13 +95,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashCrc32Rotate(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashCrc32Rotate(Table,
-                                                 Input,
+                                                 Key,
                                                  TableInfo->NumberOfSeeds,
                                                  &TableInfo->FirstSeed,
                                                  Hash);
@@ -111,7 +111,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashRotateXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -129,7 +129,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -173,10 +173,10 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    A = _rotl(Input ^ Seed1, 15);
-    B = _rotl(Input + Seed2, 7);
-    C = _rotr(Input - Seed3, 11);
-    D = _rotr(Input ^ Seed4, 20);
+    A = _rotl(Key ^ Seed1, 15);
+    B = _rotl(Key + Seed2, 7);
+    C = _rotr(Key - Seed3, 11);
+    D = _rotr(Key ^ Seed4, 20);
 
     Vertex1 = A ^ C;
     Vertex2 = B ^ D;
@@ -196,13 +196,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashRotateXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashRotateXor(Table,
-                                               Input,
+                                               Key,
                                                TableInfo->NumberOfSeeds,
                                                &TableInfo->FirstSeed,
                                                Hash);
@@ -212,7 +212,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashAddSubXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -228,7 +228,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -264,8 +264,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = Input + Seed1;
-    Vertex2 = Input - Seed2;
+    Vertex1 = Key + Seed1;
+    Vertex2 = Key - Seed2;
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -282,13 +282,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashAddSubXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashAddSubXor(Table,
-                                               Input,
+                                               Key,
                                                TableInfo->NumberOfSeeds,
                                                &TableInfo->FirstSeed,
                                                Hash);
@@ -298,7 +298,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -314,7 +314,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -355,8 +355,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Long1.LongPart = Vertex1 = Input ^ Seed1;
-    Long2.LongPart = Vertex2 = _rotl(Input, 15) ^ Seed2;
+    Long1.LongPart = Vertex1 = Key ^ Seed1;
+    Long2.LongPart = Vertex2 = _rotl(Key, 15) ^ Seed2;
 
     Long1.LowPart ^= Long1.HighPart;
     Long1.HighPart = 0;
@@ -382,13 +382,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashXor(Table,
-                                         Input,
+                                         Key,
                                          TableInfo->NumberOfSeeds,
                                          &TableInfo->FirstSeed,
                                          Hash);
@@ -398,7 +398,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashJenkins(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -413,7 +413,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -449,7 +449,7 @@ Return Value:
 
     //IACA_VC_START();
 
-    Byte = (PBYTE)&Input;
+    Byte = (PBYTE)&Key;
 
     //
     // Generate the first hash.
@@ -516,13 +516,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashJenkins(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashJenkins(Table,
-                                             Input,
+                                             Key,
                                              TableInfo->NumberOfSeeds,
                                              &TableInfo->FirstSeed,
                                              Hash);
@@ -534,7 +534,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashCrc32RotateXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -550,7 +550,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -594,9 +594,9 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    A = _mm_crc32_u32(Seed1, Input);
-    B = _mm_crc32_u32(Seed2, _rotl(Input, 15));
-    C = Seed3 ^ Input;
+    A = _mm_crc32_u32(Seed1, Key);
+    B = _mm_crc32_u32(Seed2, _rotl(Key, 15));
+    C = Seed3 ^ Key;
     D = _mm_crc32_u32(B, C);
 
     //IACA_VC_END();
@@ -622,14 +622,14 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashCrc32RotateXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashCrc32RotateXor(
         Table,
-        Input,
+        Key,
         TableInfo->NumberOfSeeds,
         &TableInfo->FirstSeed,
         Hash
@@ -640,7 +640,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashScratch(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -655,7 +655,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -693,8 +693,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Input, 9));
-    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Input, 15));
+    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Key, 9));
+    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, 15));
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -712,13 +712,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashScratch(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashScratch(Table,
-                                             Input,
+                                             Key,
                                              TableInfo->NumberOfSeeds,
                                              &TableInfo->FirstSeed,
                                              Hash);
@@ -728,7 +728,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashCrc32(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -743,7 +743,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -781,8 +781,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Input);
-    Vertex2 = _mm_crc32_u32(Seed2, Input);
+    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Vertex2 = _mm_crc32_u32(Seed2, Key);
 
     //IACA_VC_END();
 
@@ -802,13 +802,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashCrc32(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashCrc32(Table,
-                                           Input,
+                                           Key,
                                            TableInfo->NumberOfSeeds,
                                            &TableInfo->FirstSeed,
                                            Hash);
@@ -818,7 +818,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashDjb(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -833,7 +833,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -879,8 +879,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Byte = (PBYTE)&Input;
-    Bytes.AsULong = Input;
+    Byte = (PBYTE)&Key;
+    Bytes.AsULong = Key;
 
     Byte1 = (BYTE)((ULONG)Byte[0]);
     Byte2 = (BYTE)((ULONG)Byte[1]);
@@ -921,13 +921,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashDjb(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashDjb(Table,
-                                         Input,
+                                         Key,
                                          TableInfo->NumberOfSeeds,
                                          &TableInfo->FirstSeed,
                                          Hash);
@@ -937,7 +937,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashDjbXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -953,7 +953,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -998,7 +998,7 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Byte = (PBYTE)&Input;
+    Byte = (PBYTE)&Key;
 
     Byte1 = (BYTE)((ULONG)Byte[0]);
     Byte2 = (BYTE)((ULONG)Byte[1]);
@@ -1039,13 +1039,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashDjbXor(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashDjbXor(Table,
-                                            Input,
+                                            Key,
                                             TableInfo->NumberOfSeeds,
                                             &TableInfo->FirstSeed,
                                             Hash);
@@ -1056,7 +1056,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashFnv(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -1071,7 +1071,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -1110,7 +1110,7 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Bytes.AsULong = Input;
+    Bytes.AsULong = Key;
 
     //IACA_VC_START();
 
@@ -1148,13 +1148,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashFnv(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashFnv(Table,
-                                         Input,
+                                         Key,
                                          TableInfo->NumberOfSeeds,
                                          &TableInfo->FirstSeed,
                                          Hash);
@@ -1164,7 +1164,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableSeededHashCrc32Not(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     ULONG NumberOfSeeds,
     PULONG Seeds,
     PULONGLONG Hash
@@ -1179,7 +1179,7 @@ Arguments:
 
     Table - Supplies a pointer to the table for which the hash is being created.
 
-    Input - Supplies the input value to hash.
+    Key - Supplies the input value to hash.
 
     NumberOfSeeds - Supplies the number of elements in the Seeds array.
 
@@ -1217,8 +1217,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Input);
-    Vertex2 = _mm_crc32_u32(Seed2, ~Input);
+    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Vertex2 = _mm_crc32_u32(Seed2, ~Key);
 
     //IACA_VC_END();
 
@@ -1238,13 +1238,13 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashTableHashCrc32Not(
     PPERFECT_HASH_TABLE Table,
-    ULONG Input,
+    ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
     return PerfectHashTableSeededHashCrc32Not(Table,
-                                              Input,
+                                              Key,
                                               TableInfo->NumberOfSeeds,
                                               &TableInfo->FirstSeed,
                                               Hash);
