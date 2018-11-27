@@ -548,9 +548,14 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemStreamNames);
 // N.B. These are only used for context files (i.e. CONTEXT_FILE_ID).
 //
 
-const UNICODE_STRING CHeaderCompiledPerfectHashFileBaseName = RCS(L"CompiledPerfectHash");
-const UNICODE_STRING CHeaderCompiledPerfectHashMacroGlueFileBaseName = RCS(L"CompiledPerfectHashMacroGlue");
-const UNICODE_STRING VCPropsCompiledPerfectHashFileBaseName = RCS(L"CompiledPerfectHash");
+const UNICODE_STRING CHeaderCompiledPerfectHashFileBaseName =
+    RCS(L"CompiledPerfectHash");
+
+const UNICODE_STRING CHeaderCompiledPerfectHashMacroGlueFileBaseName =
+    RCS(L"CompiledPerfectHashMacroGlue");
+
+const UNICODE_STRING VCPropsCompiledPerfectHashFileBaseName =
+    RCS(L"CompiledPerfectHash");
 
 const PCUNICODE_STRING FileWorkItemBaseNames[] = {
     NULL,
