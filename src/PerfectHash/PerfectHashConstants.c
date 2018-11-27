@@ -275,8 +275,8 @@ const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
 const UNICODE_STRING ContextVerifiedTableEventPrefix =
     RCS(L"PerfectHashContext_VerifiedTableEvent_");
 
-#define EXPAND_AS_EVENT_NAME(Verb, VUpper, Name, Upper)         \
-    const UNICODE_STRING Context##Verb##d##Name##EventPrefix =  \
+#define EXPAND_AS_EVENT_NAME(Verb, VUpper, Name, Upper)                 \
+    const UNICODE_STRING Context##Verb##d##Name##EventPrefix =          \
         RCS(L"PerfectHashContext_" L#Verb L"d" L#Name L"EventPrefix_");
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
