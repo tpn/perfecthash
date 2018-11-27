@@ -2364,14 +2364,14 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // during solving using large pages.
         //
 
-        ULONG TryLargePagesForGraphEdgeAndVertexArrays;
+        ULONG TryLargePagesForGraphEdgeAndVertexArrays:1;
 
         //
         // When set, tries to allocate the table data used by graphs during
         // solving using large pages.
         //
 
-        ULONG TryLargePagesForGraphTableData;
+        ULONG TryLargePagesForGraphTableData:1;
 
         //
         // Unused bits.
