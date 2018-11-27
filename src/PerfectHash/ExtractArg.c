@@ -147,6 +147,8 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(Silent);
     DECL_ARG(Paranoid);
     DECL_ARG(SkipMemoryCoverageInFirstGraphWinsMode);
+    DECL_ARG(TryLargePagesForGraphTableData);
+    DECL_ARG(TryLargePagesForGraphEdgeAndVertexArrays);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -176,6 +178,8 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(Silent);
     SET_FLAG_AND_RETURN_IF_EQUAL(Paranoid);
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipMemoryCoverageInFirstGraphWinsMode);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForGraphTableData);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForGraphEdgeAndVertexArrays);
 
     return S_FALSE;
 }

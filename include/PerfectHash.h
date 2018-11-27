@@ -2360,10 +2360,24 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG SkipMemoryCoverageInFirstGraphWinsMode:1;
 
         //
+        // When set, tries to allocate the edge and vertex arrays used by graphs
+        // during solving using large pages.
+        //
+
+        ULONG TryLargePagesForGraphEdgeAndVertexArrays;
+
+        //
+        // When set, tries to allocate the table data used by graphs during
+        // solving using large pages.
+        //
+
+        ULONG TryLargePagesForGraphTableData;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:20;
+        ULONG Unused:18;
     };
 
     LONG AsLong;
