@@ -102,7 +102,11 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbXorAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexFnvAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexJenkinsAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexJenkinsModAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexScratchAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexRotateXorAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexAddSubXorAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexXorAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableIndexRoutines.h" />
     <ClInclude Include="CompiledPerfectHashTableMacroGlue_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableRoutinesPost_CSource_RawCString.h" />

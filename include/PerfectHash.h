@@ -1783,8 +1783,9 @@ IsValidPerfectHashAlgorithmId(
 #define PERFECT_HASH_HASH_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(Crc32Rotate, 2)                                          \
     ENTRY(Jenkins, 2)                                                    \
-    ENTRY(RotateXor, 3)                                                  \
-    ENTRY(AddSubXor, 2)                                                  \
+    ENTRY(JenkinsMod, 2)                                                 \
+    ENTRY(RotateXor, 4)                                                  \
+    ENTRY(AddSubXor, 4)                                                  \
     ENTRY(Xor, 2)                                                        \
     ENTRY(Scratch, 4)                                                    \
     ENTRY(Crc32RotateXor, 3)                                             \

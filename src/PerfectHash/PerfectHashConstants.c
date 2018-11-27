@@ -153,70 +153,20 @@ const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
 #include "CompiledPerfectHashTableIndexRoutines.h"
 #undef RawCString
 
+#define EXPAND_AS_CHM01_AND_INDEX_IMPL_TUPLE(Name, NumberOfSeeds)        \
+    {                                                                    \
+        PerfectHashChm01AlgorithmId,                                     \
+        PerfectHashHash##Name##FunctionId,                               \
+        PerfectHashAndMaskFunctionId,                                    \
+        &CompiledPerfectHashTableChm01Index##Name##AndCSourceRawCString, \
+    },
+
+
 const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[] = {
 
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashCrc32RotateFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexCrc32RotateAndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashJenkinsFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexJenkinsAndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashScratchFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexScratchAndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashCrc32RotateXorFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexCrc32RotateXorAndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashCrc32FunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexCrc32AndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashDjbFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexDjbAndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashDjbXorFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexDjbXorAndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashFnvFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexFnvAndCSourceRawCString,
-    },
-
-    {
-        PerfectHashChm01AlgorithmId,
-        PerfectHashHashCrc32NotFunctionId,
-        PerfectHashAndMaskFunctionId,
-        &CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCString,
-    },
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(
+        EXPAND_AS_CHM01_AND_INDEX_IMPL_TUPLE
+    )
 
 };
 
