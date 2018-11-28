@@ -319,11 +319,86 @@ extern const STRING BestCoverageTypeNames[];
 // Arrays indexed by the FILE_WORK_ID enum.
 //
 
-extern const PCUNICODE_STRING FileWorkItemSuffixes[];
+extern const UNICODE_STRING FileWorkItemSuffixes[];
+extern const UNICODE_STRING FileWorkItemStreamNames[];
+extern const UNICODE_STRING FileWorkItemBaseNames[];
 extern const PCUNICODE_STRING FileWorkItemExtensions[];
-extern const PCUNICODE_STRING FileWorkItemStreamNames[];
-extern const PCUNICODE_STRING FileWorkItemBaseNames[];
 extern const EOF_INIT EofInits[];
+
+//
+// Define inline helper functions for obtaining various string pointers.
+//
+
+FORCEINLINE
+_Must_inspect_result_
+_Success_(return != 0)
+PCUNICODE_STRING
+GetFileWorkItemString(
+    _In_ FILE_WORK_ID Id,
+    _In_ const UNICODE_STRING *Array
+    )
+{
+    PCUNICODE_STRING String;
+
+    String = &Array[Id];
+    return (IsValidUnicodeString(String) ? String : NULL);
+}
+
+FORCEINLINE
+_Must_inspect_result_
+_Success_(return != 0)
+PCUNICODE_STRING
+GetFileWorkItemSuffix(
+    _In_ FILE_WORK_ID Id
+    )
+{
+    PCUNICODE_STRING String;
+
+    String = &FileWorkItemSuffixes[Id];
+    return (IsValidUnicodeString(String) ? String : NULL);
+}
+
+FORCEINLINE
+_Must_inspect_result_
+_Success_(return != 0)
+PCUNICODE_STRING
+GetFileWorkItemStreamName(
+    _In_ FILE_WORK_ID Id
+    )
+{
+    PCUNICODE_STRING String;
+
+    String = &FileWorkItemStreamNames[Id];
+    return (IsValidUnicodeString(String) ? String : NULL);
+}
+
+FORCEINLINE
+_Must_inspect_result_
+_Success_(return != 0)
+PCUNICODE_STRING
+GetFileWorkItemBaseName(
+    _In_ FILE_WORK_ID Id
+    )
+{
+    PCUNICODE_STRING String;
+
+    String = &FileWorkItemBaseNames[Id];
+    return (IsValidUnicodeString(String) ? String : NULL);
+}
+
+FORCEINLINE
+_Must_inspect_result_
+_Success_(return != 0)
+PCUNICODE_STRING
+GetFileWorkItemExtension(
+    _In_ FILE_WORK_ID Id
+    )
+{
+    PCUNICODE_STRING String;
+
+    String = FileWorkItemExtensions[Id];
+    return (IsValidUnicodeString(String) ? String : NULL);
+}
 
 //
 // Declare placeholders for values we patch in the FastIndexEx() instruction

@@ -65,33 +65,353 @@ Abstract:
 //      you'll get an immediate warning if, for example, there's an array you
 //      have forgotten to add a member to (e.g. FileWorkItemExtensions[]).)
 //
+// ENTRY(Verb, VUpper, Name, Upper,
+//       EofType, EofValue,
+//       Suffix, Extension, Stream, Base)
+//
 
-#define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                                       \
-    FIRST_ENTRY(Verb, VUpper, TableFile,                TABLE_FILE)                                              \
-    ENTRY(Verb, VUpper, TableInfoStream,                TABLE_INFO_STREAM)                                       \
-    ENTRY(Verb, VUpper, CHeaderFile,                    C_HEADER_FILE)                                           \
-    ENTRY(Verb, VUpper, CSourceFile,                    C_SOURCE_FILE)                                           \
-    ENTRY(Verb, VUpper, CHeaderStdAfxFile,              C_HEADER_STDAFX_FILE)                                    \
-    ENTRY(Verb, VUpper, CSourceStdAfxFile,              C_SOURCE_STDAFX_FILE)                                    \
-    ENTRY(Verb, VUpper, CSourceKeysFile,                C_SOURCE_KEYS_FILE)                                      \
-    ENTRY(Verb, VUpper, CSourceTableDataFile,           C_SOURCE_TABLE_DATA_FILE)                                \
-    ENTRY(Verb, VUpper, CHeaderSupportFile,             C_HEADER_SUPPORT_FILE)                                   \
-    ENTRY(Verb, VUpper, CSourceSupportFile,             C_SOURCE_SUPPORT_FILE)                                   \
-    ENTRY(Verb, VUpper, CSourceTestFile,                C_SOURCE_TEST_FILE)                                      \
-    ENTRY(Verb, VUpper, CSourceTestExeFile,             C_SOURCE_TEST_EXE_FILE)                                  \
-    ENTRY(Verb, VUpper, CSourceBenchmarkFullFile,       C_SOURCE_BENCHMARK_FULL_FILE)                            \
-    ENTRY(Verb, VUpper, CSourceBenchmarkFullExeFile,    C_SOURCE_BENCHMARK_FULL_EXE_FILE)                        \
-    ENTRY(Verb, VUpper, CSourceBenchmarkIndexFile,      C_SOURCE_BENCHMARK_INDEX_FILE)                           \
-    ENTRY(Verb, VUpper, CSourceBenchmarkIndexExeFile,   C_SOURCE_BENCHMARK_INDEX_EXE_FILE)                       \
-    ENTRY(Verb, VUpper, VCProjectDllFile,               VCPROJECT_DLL_FILE)                                      \
-    ENTRY(Verb, VUpper, VCProjectTestExeFile,           VCPROJECT_TEST_EXE_FILE)                                 \
-    ENTRY(Verb, VUpper, VCProjectBenchmarkFullExeFile,  VCPROJECT_BENCHMARK_FULL_EXE_FILE)                       \
-    ENTRY(Verb, VUpper, VCProjectBenchmarkIndexExeFile, VCPROJECT_BENCHMARK_INDEX_EXE_FILE)                      \
-    ENTRY(Verb, VUpper, VSSolutionFile,                 VSSOLUTION_FILE)                                         \
-    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE)                     \
-    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashMacroGlueFile, C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE) \
-    ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)                      \
-    LAST_ENTRY(Verb, VUpper, TableStatsTextFile,        TABLE_STATS_TEXT_FILE)
+#define NO_EOF_VALUE 0
+#define NO_SUFFIX L""
+#define NO_BASE_NAME L""
+#define NO_STREAM_NAME L""
+
+#define SUFFIX(N)       L#N
+#define BASE_NAME(N)    L#N
+#define STREAM_NAME(N)  L#N
+
+#define EXPAND_AS_EXAMPLE(          \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)
+
+#define VERB_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                                           \
+    FIRST_ENTRY(                                                           \
+        Verb,                                                              \
+        VUpper,                                                            \
+        TableFile,                                                         \
+        TABLE_FILE,                                                        \
+        EofInitTypeAssignedSize,                                           \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &TableFileExtension,                                               \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        TableInfoStream,                                                   \
+        TABLE_INFO_STREAM,                                                 \
+        EofInitTypeFixed,                                                  \
+        sizeof(GRAPH_INFO_ON_DISK),                                        \
+        NO_SUFFIX,                                                         \
+        &TableFileExtension,                                               \
+        STREAM_NAME(Info),                                                 \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CHeaderFile,                                                       \
+        C_HEADER_FILE,                                                     \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceFile,                                                       \
+        C_SOURCE_FILE,                                                     \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CHeaderStdAfxFile,                                                 \
+        C_HEADER_STDAFX_FILE,                                              \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(StdAfx),                                                    \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceStdAfxFile,                                                 \
+        C_SOURCE_STDAFX_FILE,                                              \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(StdAfx),                                                    \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceKeysFile,                                                   \
+        C_SOURCE_KEYS_FILE,                                                \
+        EofInitTypeNumberOfKeysMultiplier,                                 \
+        16,                                                                \
+        SUFFIX(Keys),                                                      \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceTableDataFile,                                              \
+        C_SOURCE_TABLE_DATA_FILE,                                          \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        16,                                                                \
+        SUFFIX(TableData),                                                 \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CHeaderSupportFile,                                                \
+        C_HEADER_SUPPORT_FILE,                                             \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(Support),                                                   \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceSupportFile,                                                \
+        C_SOURCE_SUPPORT_FILE,                                             \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(Support),                                                   \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceTestFile,                                                   \
+        C_SOURCE_TEST_FILE,                                                \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(Test),                                                      \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceTestExeFile,                                                \
+        C_SOURCE_TEST_EXE_FILE,                                            \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(TestExe),                                                   \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceBenchmarkFullFile,                                          \
+        C_SOURCE_BENCHMARK_FULL_FILE,                                      \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(BenchmarkFull),                                             \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceBenchmarkFullExeFile,                                       \
+        C_SOURCE_BENCHMARK_FULL_EXE_FILE,                                  \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(BenchmarkFullExe),                                          \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceBenchmarkIndexFile,                                         \
+        C_SOURCE_BENCHMARK_INDEX_FILE,                                     \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(BenchmarkIndex),                                            \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CSourceBenchmarkIndexExeFile,                                      \
+        C_SOURCE_BENCHMARK_INDEX_EXE_FILE,                                 \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(BenchmarkIndexExe),                                         \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        TableStatsTextFile,                                                \
+        TABLE_STATS_TEXT_FILE,                                             \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(TableStats),                                                \
+        &TextFileExtension,                                                \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        VCProjectDllFile,                                                  \
+        VCPROJECT_DLL_FILE,                                                \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(Dll),                                                       \
+        &VCProjectFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        VCProjectTestExeFile,                                              \
+        VCPROJECT_TEST_EXE_FILE,                                           \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(TestExe),                                                   \
+        &VCProjectFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        VCProjectBenchmarkFullExeFile,                                     \
+        VCPROJECT_BENCHMARK_FULL_EXE_FILE,                                 \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(BenchmarkFullExe),                                          \
+        &VCProjectFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        VCProjectBenchmarkIndexExeFile,                                    \
+        VCPROJECT_BENCHMARK_INDEX_EXE_FILE,                                \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(BenchmarkIndexExe),                                         \
+        &VCProjectFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        VSSolutionFile,                                                    \
+        VSSOLUTION_FILE,                                                   \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &VSSolutionFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CHeaderCompiledPerfectHashFile,                                    \
+        C_HEADER_COMPILED_PERFECT_HASH_FILE,                               \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(CompiledPerfectHash)                                     \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CHeaderCompiledPerfectHashMacroGlueFile,                           \
+        C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE,                    \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(CompiledPerfectHashMacroGlue)                            \
+    )                                                                      \
+                                                                           \
+    LAST_ENTRY(                                                            \
+        Verb,                                                              \
+        VUpper,                                                            \
+        VCPropsCompiledPerfectHashFile,                                    \
+        VCPROPS_COMPILED_PERFECT_HASH_FILE,                                \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(CompiledPerfectHash)                                     \
+    )
+
 
 #define PREPARE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_FILE_WORK_TABLE(Prepare, PREPARE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
@@ -124,66 +444,195 @@ Abstract:
 // the list below must match their corresponding entry in the list above.
 //
 
-#define VERB_CONTEXT_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)                               \
-    FIRST_ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashFile, C_HEADER_COMPILED_PERFECT_HASH_FILE)               \
-    ENTRY(Verb, VUpper, CHeaderCompiledPerfectHashMacroGlueFile, C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE) \
-    LAST_ENTRY(Verb, VUpper, VCPropsCompiledPerfectHashFile, VCPROPS_COMPILED_PERFECT_HASH_FILE)
+#define VERB_CONTEXT_FILE_WORK_TABLE(Verb,             \
+                                     VUpper,           \
+                                     FIRST_ENTRY,      \
+                                     ENTRY,            \
+                                     LAST_ENTRY)       \
+                                                       \
+    FIRST_ENTRY(                                       \
+        Verb,                                          \
+        VUpper,                                        \
+        CHeaderCompiledPerfectHashFile,                \
+        C_HEADER_COMPILED_PERFECT_HASH_FILE            \
+    )                                                  \
+                                                       \
+    ENTRY(                                             \
+        Verb,                                          \
+        VUpper,                                        \
+        CHeaderCompiledPerfectHashMacroGlueFile,       \
+        C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE \
+    )                                                  \
+                                                       \
+    LAST_ENTRY(                                        \
+        Verb,                                          \
+        VUpper,                                        \
+        VCPropsCompiledPerfectHashFile,                \
+        VCPROPS_COMPILED_PERFECT_HASH_FILE             \
+    )
+
 
 #define PREPARE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_CONTEXT_FILE_WORK_TABLE(Prepare, PREPARE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_CONTEXT_FILE_WORK_TABLE(Prepare,                               \
+                                 PREPARE,                               \
+                                 FIRST_ENTRY,                           \
+                                 ENTRY,                                 \
+                                 LAST_ENTRY)
+
 
 #define SAVE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_CONTEXT_FILE_WORK_TABLE(Save, SAVE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_CONTEXT_FILE_WORK_TABLE(Save,                               \
+                                 SAVE,                               \
+                                 FIRST_ENTRY,                        \
+                                 ENTRY,                              \
+                                 LAST_ENTRY)
+
 
 #define CLOSE_CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_CONTEXT_FILE_WORK_TABLE(Close, CLOSE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_CONTEXT_FILE_WORK_TABLE(Close,                               \
+                                 CLOSE,                               \
+                                 FIRST_ENTRY,                         \
+                                 ENTRY,                               \
+                                 LAST_ENTRY)
+
 
 #define PREPARE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
-    VERB_CONTEXT_FILE_WORK_TABLE(Prepare, PREPARE, ENTRY, ENTRY, ENTRY)
+    VERB_CONTEXT_FILE_WORK_TABLE(Prepare,            \
+                                 PREPARE,            \
+                                 ENTRY,              \
+                                 ENTRY,              \
+                                 ENTRY)
+
 
 #define SAVE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
-    VERB_CONTEXT_FILE_WORK_TABLE(Save, SAVE, ENTRY, ENTRY, ENTRY)
+    VERB_CONTEXT_FILE_WORK_TABLE(Save,            \
+                                 SAVE,            \
+                                 ENTRY,           \
+                                 ENTRY,           \
+                                 ENTRY)
+
 
 #define CLOSE_CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
-    VERB_CONTEXT_FILE_WORK_TABLE(Close, CLOSE, ENTRY, ENTRY, ENTRY)
+    VERB_CONTEXT_FILE_WORK_TABLE(Close,            \
+                                 CLOSE,            \
+                                 ENTRY,            \
+                                 ENTRY,            \
+                                 ENTRY)
+
 
 #define CONTEXT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_CONTEXT_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_CONTEXT_FILE_WORK_TABLE(Nothing,                       \
+                                 NOTHING,                       \
+                                 FIRST_ENTRY,                   \
+                                 ENTRY,                         \
+                                 LAST_ENTRY)
 
-#define CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) CONTEXT_FILE_WORK_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define CONTEXT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    CONTEXT_FILE_WORK_TABLE(ENTRY,           \
+                            ENTRY,           \
+                            ENTRY)
 
 //
 // Define an X-macro for VC project files.
 //
 
-#define VERB_VCPROJECT_FILE_WORK_TABLE(Verb, VUpper, FIRST_ENTRY, ENTRY, LAST_ENTRY)              \
-    FIRST_ENTRY(Verb, VUpper, VCProjectDllFile,               VC_PROJECT_DLL_FILE)                \
-    ENTRY(Verb, VUpper,       VCProjectTestExeFile,           VC_PROJECT_TEST_EXE_FILE)           \
-    ENTRY(Verb, VUpper,       VCProjectBenchmarkFullExeFile,  VC_PROJECT_BENCHMARK_FULL_EXE_FILE) \
-    LAST_ENTRY(Verb, VUpper,  VCProjectBenchmarkIndexExeFile, VC_PROJECT_TEST_EXE_FILE)
+#define VERB_VCPROJECT_FILE_WORK_TABLE(Verb,        \
+                                       VUpper,      \
+                                       FIRST_ENTRY, \
+                                       ENTRY,       \
+                                       LAST_ENTRY)  \
+                                                    \
+    FIRST_ENTRY(                                    \
+        Verb,                                       \
+        VUpper,                                     \
+        VCProjectDllFile,                           \
+        VC_PROJECT_DLL_FILE                         \
+    )                                               \
+                                                    \
+    ENTRY(                                          \
+        Verb,                                       \
+        VUpper,                                     \
+        VCProjectTestExeFile,                       \
+        VC_PROJECT_TEST_EXE_FILE                    \
+    )                                               \
+                                                    \
+    ENTRY(                                          \
+        Verb,                                       \
+        VUpper,                                     \
+        VCProjectBenchmarkFullExeFile,              \
+        VC_PROJECT_BENCHMARK_FULL_EXE_FILE          \
+    )                                               \
+                                                    \
+    LAST_ENTRY(                                     \
+        Verb,                                       \
+        VUpper,                                     \
+        VCProjectBenchmarkIndexExeFile,             \
+        VC_PROJECT_TEST_EXE_FILE                    \
+    )
+
 
 #define PREPARE_VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_VCPROJECT_FILE_WORK_TABLE(Prepare, PREPARE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_VCPROJECT_FILE_WORK_TABLE(Prepare,                               \
+                                   PREPARE,                               \
+                                   FIRST_ENTRY,                           \
+                                   ENTRY,                                 \
+                                   LAST_ENTRY)
+
 
 #define SAVE_VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_VCPROJECT_FILE_WORK_TABLE(Save, SAVE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_VCPROJECT_FILE_WORK_TABLE(Save,                               \
+                                   SAVE,                               \
+                                   FIRST_ENTRY,                        \
+                                   ENTRY,                              \
+                                   LAST_ENTRY)
+
 
 #define CLOSE_VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_VCPROJECT_FILE_WORK_TABLE(Close, CLOSE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_VCPROJECT_FILE_WORK_TABLE(Close,                               \
+                                   CLOSE,                               \
+                                   FIRST_ENTRY,                         \
+                                   ENTRY,                               \
+                                   LAST_ENTRY)
+
 
 #define PREPARE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
-    VERB_VCPROJECT_FILE_WORK_TABLE(Prepare, PREPARE, ENTRY, ENTRY, ENTRY)
+    VERB_VCPROJECT_FILE_WORK_TABLE(Prepare,            \
+                                   PREPARE,            \
+                                   ENTRY,              \
+                                   ENTRY,              \
+                                   ENTRY)
+
 
 #define SAVE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
-    VERB_VCPROJECT_FILE_WORK_TABLE(Save, SAVE, ENTRY, ENTRY, ENTRY)
+    VERB_VCPROJECT_FILE_WORK_TABLE(Save,            \
+                                   SAVE,            \
+                                   ENTRY,           \
+                                   ENTRY,           \
+                                   ENTRY)
+
 
 #define CLOSE_VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
-    VERB_VCPROJECT_FILE_WORK_TABLE(Close, CLOSE, ENTRY, ENTRY, ENTRY)
+    VERB_VCPROJECT_FILE_WORK_TABLE(Close,            \
+                                   CLOSE,            \
+                                   ENTRY,            \
+                                   ENTRY,            \
+                                   ENTRY)
+
 
 #define VCPROJECT_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    VERB_VCPROJECT_FILE_WORK_TABLE(Nothing, NOTHING, FIRST_ENTRY, ENTRY, LAST_ENTRY)
+    VERB_VCPROJECT_FILE_WORK_TABLE(Nothing,                       \
+                                   NOTHING,                       \
+                                   FIRST_ENTRY,                   \
+                                   ENTRY,                         \
+                                   LAST_ENTRY)
 
-#define VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) VCPROJECT_FILE_WORK_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define VCPROJECT_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VCPROJECT_FILE_WORK_TABLE(ENTRY,           \
+                              ENTRY,           \
+                              ENTRY)
+
 
 //
 // Define an enum for individual file IDs.
@@ -197,18 +646,31 @@ typedef enum _FILE_ID {
 
     FileNullId = 0,
 
-#define EXPAND_AS_FILE_ENUMS(Verb, VUpper, Name, Upper) File##Name##Id,
+#define EXPAND_AS_FILE_ENUM(        \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
+    File##Name##Id,
 
-#define EXPAND_AS_FIRST_FILE_ENUM(Verb, VUpper, Name, Upper) \
-    File##Name##Id,                                          \
+#define EXPAND_AS_FIRST_FILE_ENUM(  \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
+    File##Name##Id,                 \
     FileFirstId = File##Name##Id,
 
-#define EXPAND_AS_LAST_FILE_ENUM(Verb, VUpper, Name, Upper) \
-    File##Name##Id,                                         \
+#define EXPAND_AS_LAST_FILE_ENUM(   \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
+    File##Name##Id,                 \
     FileLastId = File##Name##Id,
 
     FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_ENUM,
-                    EXPAND_AS_FILE_ENUMS,
+                    EXPAND_AS_FILE_ENUM,
                     EXPAND_AS_LAST_FILE_ENUM)
 
     //
@@ -246,7 +708,7 @@ typedef enum _CONTEXT_FILE_ID {
 
     ContextFileNullId = 0,
 
-#define EXPAND_AS_CONTEXT_FILE_ENUMS(Verb, VUpper, Name, Upper) \
+#define EXPAND_AS_CONTEXT_FILE_ENUM(Verb, VUpper, Name, Upper) \
     ContextFile##Name##Id = File##Name##Id,
 
 #define EXPAND_AS_FIRST_CONTEXT_FILE_ENUM(Verb, VUpper, Name, Upper) \
@@ -258,7 +720,7 @@ typedef enum _CONTEXT_FILE_ID {
     ContextFileLastId = ContextFile##Name##Id,
 
     CONTEXT_FILE_WORK_TABLE(EXPAND_AS_FIRST_CONTEXT_FILE_ENUM,
-                            EXPAND_AS_CONTEXT_FILE_ENUMS,
+                            EXPAND_AS_CONTEXT_FILE_ENUM,
                             EXPAND_AS_LAST_CONTEXT_FILE_ENUM)
 
     //
@@ -361,26 +823,39 @@ typedef enum _FILE_WORK_ID {
 
     FileWorkNullId = 0,
 
-#define EXPAND_AS_FILE_WORK_ENUMS(Verb, VUpper, Name, Upper) FileWork##Verb####Name##Id,
+#define EXPAND_AS_FILE_WORK_ENUM(   \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
+    FileWork##Verb##Name##Id,
 
-#define EXPAND_AS_FIRST_FILE_WORK_ENUM(Verb, VUpper, Name, Upper) \
-    FileWork##Verb####Name##Id,                                   \
-    FileWork##Verb##FirstId = FileWork##Verb####Name##Id,
+#define EXPAND_AS_FIRST_FILE_WORK_ENUM(                 \
+    Verb, VUpper, Name, Upper,                          \
+    EofType, EofValue,                                  \
+    Suffix, Extension, Stream, Base                     \
+)                                                       \
+    FileWork##Verb##Name##Id,                           \
+    FileWork##Verb##FirstId = FileWork##Verb##Name##Id,
 
-#define EXPAND_AS_LAST_FILE_WORK_ENUM(Verb, VUpper, Name, Upper) \
-    FileWork##Verb####Name##Id,                                  \
-    FileWork##Verb##LastId = FileWork##Verb####Name##Id,
+#define EXPAND_AS_LAST_FILE_WORK_ENUM(                 \
+    Verb, VUpper, Name, Upper,                         \
+    EofType, EofValue,                                 \
+    Suffix, Extension, Stream, Base                    \
+)                                                      \
+    FileWork##Verb##Name##Id,                          \
+    FileWork##Verb##LastId = FileWork##Verb##Name##Id,
 
     PREPARE_FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_WORK_ENUM,
-                            EXPAND_AS_FILE_WORK_ENUMS,
+                            EXPAND_AS_FILE_WORK_ENUM,
                             EXPAND_AS_LAST_FILE_WORK_ENUM)
 
     SAVE_FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_WORK_ENUM,
-                         EXPAND_AS_FILE_WORK_ENUMS,
+                         EXPAND_AS_FILE_WORK_ENUM,
                          EXPAND_AS_LAST_FILE_WORK_ENUM)
 
     CLOSE_FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE_WORK_ENUM,
-                          EXPAND_AS_FILE_WORK_ENUMS,
+                          EXPAND_AS_FILE_WORK_ENUM,
                           EXPAND_AS_LAST_FILE_WORK_ENUM)
 
     //

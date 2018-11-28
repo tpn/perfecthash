@@ -15,46 +15,40 @@ Abstract:
 
 #include "stdafx.h"
 
-#define EXPAND_AS_CALLBACK_DECL(Verb, VUpper, Name, Upper) \
+#define EXPAND_AS_CALLBACK_DECL(      \
+    Verb, VUpper, Name, Upper,        \
+    EofType, EofValue,                \
+    Suffix, Extension, Stream, Base   \
+)                                     \
     extern FILE_WORK_CALLBACK_IMPL Verb####Name##Chm01;
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 
+//
+// Add defines for files that don't have a prepare callback.  Corresponds to
+// NO_PREPARE_CALLBACK for the 'Prepare' X-macro parameter in the file work
+// macro.  Absense of a prepare callback indicates the file can not be written
+// with any useful content until a solved graph is available.
+//
+
 #define PrepareTableFileChm01 NULL
 #define PrepareTableInfoStreamChm01 NULL
-//#define PrepareCHeaderFileChm01 NULL
-//#define PrepareCSourceFileChm01 NULL
-//#define PrepareCHeaderStdAfxFileChm01 NULL
-//#define PrepareCSourceStdAfxFileChm01 NULL
-//#define PrepareCSourceKeysFileChm01 NULL
 #define PrepareCSourceTableDataFileChm01 NULL
-//#define PrepareVCProjectDllFileChm01 NULL
-//#define PrepareCHeaderSupportFileChm01 NULL
-//#define PrepareCSourceSupportFileChm01 NULL
-//#define PrepareCSourceTestFileChm01 NULL
-//#define PrepareCSourceTestExeFileChm01 NULL
-//#define PrepareVCProjectTestExeFileChm01 NULL
-//#define PrepareCSourceBenchmarkFullFileChm01 NULL
-//#define PrepareCSourceBenchmarkFullExeFileChm01 NULL
-//#define PrepareVCProjectBenchmarkFullExeFileChm01 NULL
-//#define PrepareCSourceBenchmarkIndexFileChm01 NULL
-//#define PrepareCSourceBenchmarkIndexExeFileChm01 NULL
-//#define PrepareVCProjectBenchmarkIndexExeFileChm01 NULL
-//#define PrepareVSSolutionFileChm01 NULL
-//#define PrepareCHeaderCompiledPerfectHashFileChm01 NULL
-//#define PrepareCHeaderCompiledPerfectHashMacroGlueFileChm01 NULL
-//#define PrepareVCPropsCompiledPerfectHashFileChm01 NULL
 #define PrepareTableStatsTextFileChm01 NULL
 
-//#define SaveTableFileChm01 NULL
-//#define SaveTableInfoStreamChm01 NULL
-//#define SaveCHeaderFileChm01 NULL
+//
+// Add defines for files that don't have a save callback.  Corresponds to
+// NO_SAVE_CALLBACK for the 'Save' X-macro parameter in the file work macro.
+// Absense of a save callback means that the file does not need to do any more
+// processing once the solve graph is available (i.e. it wrote everything it
+// needed to in the prepare stage).
+//
+
 #define SaveCSourceFileChm01 NULL
 #define SaveCHeaderStdAfxFileChm01 NULL
 #define SaveCSourceStdAfxFileChm01 NULL
 #define SaveCSourceKeysFileChm01 NULL
-//#define SaveCSourceTableDataFileChm01 NULL
 #define SaveVCProjectDllFileChm01 NULL
 #define SaveCHeaderSupportFileChm01 NULL
 #define SaveCSourceSupportFileChm01 NULL

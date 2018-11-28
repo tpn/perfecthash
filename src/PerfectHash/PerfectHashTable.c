@@ -200,7 +200,12 @@ Return Value:
     // Release applicable COM references.
     //
 
-#define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Table->##Name##);
+#define EXPAND_AS_RELEASE(          \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
+    RELEASE(Table->##Name##);
 
     FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
 
