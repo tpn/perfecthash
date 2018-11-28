@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm_01.c
+    Chm01.c
 
 Abstract:
 
