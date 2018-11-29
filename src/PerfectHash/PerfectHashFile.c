@@ -1970,10 +1970,7 @@ Return Value:
     // Release the old path if one was present and add ref on the new path.
     //
 
-    if (OldPath) {
-        OldPath->Vtbl->Release(OldPath);
-        OldPath = NULL;
-    }
+    RELEASE(OldPath);
 
     NewPath->Vtbl->AddRef(NewPath);
 

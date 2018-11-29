@@ -275,19 +275,32 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // Pointers to files associated with the table.
     //
 
-#define EXPAND_AS_FIRST_FILE(Verb, VUpper, Name, Upper) \
-    union {                                             \
-        PPERFECT_HASH_FILE Name;                        \
-        PPERFECT_HASH_FILE FirstFile;                   \
+#define EXPAND_AS_FILE(               \
+    Verb, VUpper, Name, Upper,        \
+    EofType, EofValue,                \
+    Suffix, Extension, Stream, Base   \
+)                                     \
+    PPERFECT_HASH_FILE Name;
+
+#define EXPAND_AS_FIRST_FILE(         \
+    Verb, VUpper, Name, Upper,        \
+    EofType, EofValue,                \
+    Suffix, Extension, Stream, Base   \
+)                                     \
+    union {                           \
+        PPERFECT_HASH_FILE Name;      \
+        PPERFECT_HASH_FILE FirstFile; \
     };
 
-#define EXPAND_AS_LAST_FILE(Verb, VUpper, Name, Upper) \
-    union {                                            \
-        PPERFECT_HASH_FILE Name;                       \
-        PPERFECT_HASH_FILE LastFile;                   \
+#define EXPAND_AS_LAST_FILE(          \
+    Verb, VUpper, Name, Upper,        \
+    EofType, EofValue,                \
+    Suffix, Extension, Stream, Base   \
+)                                     \
+    union {                           \
+        PPERFECT_HASH_FILE Name;      \
+        PPERFECT_HASH_FILE LastFile;  \
     };
-
-#define EXPAND_AS_FILE(Verb, VUpper, Name, Upper) PPERFECT_HASH_FILE Name;
 
     FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE,
                     EXPAND_AS_FILE,

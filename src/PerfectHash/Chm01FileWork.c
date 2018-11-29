@@ -26,7 +26,12 @@ Abstract:
 // File work callback array.
 //
 
-#define EXPAND_AS_CALLBACK(Verb, VUpper, Name, Upper) Verb##Name##Chm01,
+#define EXPAND_AS_CALLBACK(          \
+    Verb, VUpper, Name, Upper,       \
+    EofType, EofValue,               \
+    Suffix, Extension, Stream, Base  \
+)                                    \
+    Verb##Name##Chm01,
 
 FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
     NULL,
@@ -205,7 +210,8 @@ Return Value:
         PCUNICODE_STRING NewStreamName = NULL;
         PCUNICODE_STRING AdditionalSuffix = NULL;
 
-        NewExtension = FileWorkItemExtensions[FileWorkId];
+        Eof = &EofInits[FileWorkId];
+        NewExtension = GetFileWorkItemExtension(FileWorkId);
 
         if (IsContextFile) {
 
@@ -215,7 +221,7 @@ Return Value:
             //
 
             NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
-            NewBaseName = FileWorkItemBaseNames[FileWorkId];
+            NewBaseName = GetFileWorkItemBaseName(FileWorkId);
 
         } else {
 
@@ -232,9 +238,8 @@ Return Value:
             // Initialize variables specific to the file work ID.
             //
 
-            AdditionalSuffix = FileWorkItemSuffixes[FileWorkId];
-
-            NewStreamName = FileWorkItemStreamNames[FileWorkId];
+            AdditionalSuffix = GetFileWorkItemSuffix(FileWorkId);
+            NewStreamName = GetFileWorkItemStreamName(FileWorkId);
 
             if (NewStreamName) {
 
@@ -248,6 +253,8 @@ Return Value:
                 // already been prepared, in which case, we can jump straight to
                 // the end.
                 //
+
+                ASSERT(Eof->Type == EofInitTypeFixed);
 
                 if (*File) {
                     goto End;
@@ -293,8 +300,6 @@ Return Value:
         // Initialize the end-of-file based on the relevant file work ID's
         // EOF_INIT structure.
         //
-
-        Eof = &EofInits[FileWorkId];
 
         switch (Eof->Type) {
 
@@ -416,7 +421,13 @@ Return Value:
 
         }
 
-        ASSERT(SUCCEEDED(Result));
+        //
+        // Sanity check we're indicating success at this point.
+        //
+
+        if (FAILED(Result)) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
 
         Result = PrepareFileChm01(Table,
                                   Item,
@@ -538,10 +549,7 @@ Return Value:
 
 End:
 
-    if (Path) {
-        Path->Vtbl->Release(Path);
-        Path = NULL;
-    }
+    RELEASE(Path);
 
     //
     // If the item's UUID string buffer is non-NULL here, the downstream routine

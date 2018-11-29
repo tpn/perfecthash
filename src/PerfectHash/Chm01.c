@@ -45,7 +45,11 @@ extern PREPARE_TABLE_OUTPUT_DIRECTORY PrepareTableOutputDirectory;
 // Define helper macros for checking prepare and save file work errors.
 //
 
-#define EXPAND_AS_CHECK_ERRORS(Verb, VUpper, Name, Upper)                \
+#define EXPAND_AS_CHECK_ERRORS(                                          \
+    Verb, VUpper, Name, Upper,                                           \
+    EofType, EofValue,                                                   \
+    Suffix, Extension, Stream, Base                                      \
+)                                                                        \
     if (Verb####Name##.NumberOfErrors > 0) {                             \
         Result = Verb####Name##.LastResult;                              \
         if (Result == S_OK || Result == E_UNEXPECTED) {                  \
@@ -189,14 +193,22 @@ Return Value:
     PHANDLE SaveEvent = SaveEvents;
     PHANDLE PrepareEvent = PrepareEvents;
 
-#define EXPAND_AS_STACK_VAR(Verb, VUpper, Name, Upper) \
+#define EXPAND_AS_STACK_VAR(        \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
     FILE_WORK_ITEM Verb##Name;
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
 
-#define EXPAND_AS_ZERO_STACK_VAR(Verb, VUpper, Name, Upper) \
+#define EXPAND_AS_ZERO_STACK_VAR(   \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
     ZeroStructInline(Verb##Name);
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ZERO_STACK_VAR);
@@ -243,7 +255,11 @@ Return Value:
     Events[4] = Context->TryLargerTableSizeEvent;
     Events[5] = Context->LowMemoryEvent;
 
-#define EXPAND_AS_ASSIGN_EVENT(Verb, VUpper, Name, Upper) \
+#define EXPAND_AS_ASSIGN_EVENT(                         \
+    Verb, VUpper, Name, Upper,                          \
+    EofType, EofValue,                                  \
+    Suffix, Extension, Stream, Base                     \
+)                                                       \
     *##Verb##Event++ = Context->##Verb##d##Name##Event;
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
@@ -517,11 +533,15 @@ RetryWithLargerTableSize:
     // Submit all of the file preparation work items.
     //
 
-#define EXPAND_AS_SUBMIT_FILE_WORK(Verb, VUpper, Name, Upper) \
-    ASSERT(!NoFileIo(Table));                                 \
-    ZeroStructInline(##Verb####Name##);                       \
-    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;       \
-    InsertTailFileWork(Context, &Verb##Name##.ListEntry);     \
+#define EXPAND_AS_SUBMIT_FILE_WORK(                       \
+    Verb, VUpper, Name, Upper,                            \
+    EofType, EofValue,                                    \
+    Suffix, Extension, Stream, Base                       \
+)                                                         \
+    ASSERT(!NoFileIo(Table));                             \
+    ZeroStructInline(##Verb####Name##);                   \
+    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
+    InsertTailFileWork(Context, &Verb##Name##.ListEntry); \
     SubmitThreadpoolWork(Context->FileWork);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
@@ -1233,12 +1253,16 @@ End:
         EndOfFile = NULL;
     }
 
-#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(Verb, VUpper, Name, Upper) \
-    ASSERT(!NoFileIo(Table));                                       \
-    ZeroStructInline(##Verb####Name##);                             \
-    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;             \
-    Verb##Name##.EndOfFile = EndOfFile;                             \
-    InsertTailFileWork(Context, &Verb##Name##.ListEntry);           \
+#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(                 \
+    Verb, VUpper, Name, Upper,                            \
+    EofType, EofValue,                                    \
+    Suffix, Extension, Stream, Base                       \
+)                                                         \
+    ASSERT(!NoFileIo(Table));                             \
+    ZeroStructInline(##Verb####Name##);                   \
+    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
+    Verb##Name##.EndOfFile = EndOfFile;                   \
+    InsertTailFileWork(Context, &Verb##Name##.ListEntry); \
     SubmitThreadpoolWork(Context->FileWork);
 
 #define SUBMIT_CLOSE_FILE_WORK() \
@@ -1248,7 +1272,11 @@ End:
 
     WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
 
-#define EXPAND_AS_CHECK_CLOSE_ERRORS(Verb, VUpper, Name, Upper)          \
+#define EXPAND_AS_CHECK_CLOSE_ERRORS(                                    \
+    Verb, VUpper, Name, Upper,                                           \
+    EofType, EofValue,                                                   \
+    Suffix, Extension, Stream, Base                                      \
+)                                                                        \
     if (Verb####Name##.NumberOfErrors > 0) {                             \
         CloseResult = Verb####Name##.LastResult;                         \
         if (CloseResult == S_OK || CloseResult == E_UNEXPECTED) {        \

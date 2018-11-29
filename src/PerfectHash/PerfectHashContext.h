@@ -139,7 +139,7 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define FirstSolvedGraphWinsAndSkipMemoryCoverage(Context) (                  \
     (Context)->State.FirstSolvedGraphWins == TRUE &&                          \
     (Context)->Table->TableCreateFlags.SkipMemoryCoverageInFirstGraphWinsMode \
-        == TRUE \
+        == TRUE                                                               \
 )
 
 #define SetFirstSolvedGraphWins(Context)          \
@@ -444,27 +444,39 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // main solving thread.
     //
 
-#define EXPAND_AS_EVENTS(Verb, VUpper, Name, Upper) \
+#define EXPAND_AS_EVENT(              \
+    Verb, VUpper, Name, Upper,        \
+    EofType, EofValue,                \
+    Suffix, Extension, Stream, Base   \
+)                                     \
     HANDLE Verb##d##Name##Event;
 
-#define EXPAND_AS_FIRST_EVENT(Verb, VUpper, Name, Upper) \
-    union {                                              \
-        HANDLE Verb##d##Name##Event;                     \
-        HANDLE First##Verb##d##Event;                    \
+#define EXPAND_AS_FIRST_EVENT(        \
+    Verb, VUpper, Name, Upper,        \
+    EofType, EofValue,                \
+    Suffix, Extension, Stream, Base   \
+)                                     \
+    union {                           \
+        HANDLE Verb##d##Name##Event;  \
+        HANDLE First##Verb##d##Event; \
     };
 
-#define EXPAND_AS_LAST_EVENT(Verb, VUpper, Name, Upper) \
-    union {                                             \
-        HANDLE Verb##d##Name##Event;                    \
-        HANDLE Last##Verb##d##Event;                    \
+#define EXPAND_AS_LAST_EVENT(         \
+    Verb, VUpper, Name, Upper,        \
+    EofType, EofValue,                \
+    Suffix, Extension, Stream, Base   \
+)                                     \
+    union {                           \
+        HANDLE Verb##d##Name##Event;  \
+        HANDLE Last##Verb##d##Event;  \
     };
 
     PREPARE_FILE_WORK_TABLE(EXPAND_AS_FIRST_EVENT,
-                            EXPAND_AS_EVENTS,
+                            EXPAND_AS_EVENT,
                             EXPAND_AS_LAST_EVENT)
 
     SAVE_FILE_WORK_TABLE(EXPAND_AS_FIRST_EVENT,
-                         EXPAND_AS_EVENTS,
+                         EXPAND_AS_EVENT,
                          EXPAND_AS_LAST_EVENT)
 
 

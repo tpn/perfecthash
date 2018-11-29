@@ -15,6 +15,8 @@ Abstract:
 #include "stdafx.h"
 
 #define RCS RTL_CONSTANT_STRING
+#define NULL_STRING RCS("")
+#define NULL_UNICODE_STRING RCS(L"")
 
 #define VERIFY_ALGORITHM_ARRAY_SIZE(Name) \
     C_ASSERT(ARRAYSIZE(Name) == PerfectHashInvalidAlgorithmId + 1)
@@ -225,21 +227,6 @@ const UNICODE_STRING PerfectHashModulusMaskFunctionName =
 const UNICODE_STRING PerfectHashAndMaskFunctionName =
     RCS(L"And");
 
-const UNICODE_STRING PerfectHashXorAndMaskFunctionName =
-    RCS(L"XorAnd");
-
-const UNICODE_STRING PerfectHashFoldAutoHashFunctionName =
-    RCS(L"FoldAuto");
-
-const UNICODE_STRING PerfectHashFoldOnceHashFunctionName =
-    RCS(L"FoldOnce");
-
-const UNICODE_STRING PerfectHashFoldTwiceHashFunctionName =
-    RCS(L"FoldTwice");
-
-const UNICODE_STRING PerfectHashFoldThriceHashFunctionName =
-    RCS(L"FoldThrice");
-
 //
 // Define the array of mask function names.  This is intended to be indexed by
 // the PERFECT_HASH_MASK_FUNCTION_ID enum.
@@ -275,15 +262,22 @@ const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
 const UNICODE_STRING ContextVerifiedTableEventPrefix =
     RCS(L"PerfectHashContext_VerifiedTableEvent_");
 
-#define EXPAND_AS_EVENT_NAME(Verb, VUpper, Name, Upper)                 \
+#define EXPAND_AS_EVENT_NAME(                                           \
+    Verb, VUpper, Name, Upper,                                          \
+    EofType, EofValue,                                                  \
+    Suffix, Extension, Stream, Base                                     \
+)                                                                       \
     const UNICODE_STRING Context##Verb##d##Name##EventPrefix =          \
         RCS(L"PerfectHashContext_" L#Verb L"d" L#Name L"EventPrefix_");
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
-
 SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
 
-#define EXPAND_AS_EVENT_NAME_ADDRESS(Verb, VUpper, Name, Upper) \
+#define EXPAND_AS_EVENT_NAME_ADDRESS(     \
+    Verb, VUpper, Name, Upper,            \
+    EofType, EofValue,                    \
+    Suffix, Extension, Stream, Base       \
+)                                         \
     &Context##Verb##d##Name##EventPrefix,
 
 const PCUNICODE_STRING ContextObjectPrefixes[] = {
@@ -355,9 +349,9 @@ const UNICODE_STRING TextFileExtension = RCS(L"txt");
 const UNICODE_STRING CSourceFileExtension = RCS(L"c");
 const UNICODE_STRING CHeaderFileExtension = RCS(L"h");
 const UNICODE_STRING TableFileExtension = RCS(L"pht1");
-const UNICODE_STRING VCPropsExtension = RCS(L"props");
-const UNICODE_STRING VCProjectExtension = RCS(L"vcxproj");
-const UNICODE_STRING VSSolutionExtension = RCS(L"sln");
+const UNICODE_STRING VCPropsFileExtension = RCS(L"props");
+const UNICODE_STRING VCProjectFileExtension = RCS(L"vcxproj");
+const UNICODE_STRING VSSolutionFileExtension = RCS(L"sln");
 
 #define VERIFY_FILE_WORK_ARRAY_SIZE(Name) \
     C_ASSERT(ARRAYSIZE(Name) == NUMBER_OF_FILES + 2)
@@ -365,35 +359,16 @@ const UNICODE_STRING VSSolutionExtension = RCS(L"sln");
 #define VERIFY_CONTEXT_FILE_WORK_ARRAY_SIZE(Name) \
     C_ASSERT(ARRAYSIZE(Name) == NUMBER_OF_CONTEXT_FILES + 2)
 
+#define EXPAND_AS_FILE_WORK_ITEM_EXTENSION( \
+    Verb, VUpper, Name, Upper,              \
+    EofType, EofValue,                      \
+    Suffix, Extension, Stream, Base         \
+)                                           \
+    Extension,
+
 const PCUNICODE_STRING FileWorkItemExtensions[] = {
     NULL,
-
-    &TableFileExtension,            // TableFile
-    &TableFileExtension,            // TableInfoStream
-    &CHeaderFileExtension,          // CHeaderFile
-    &CSourceFileExtension,          // CSourceFile
-    &CHeaderFileExtension,          // CHeaderStdAfxFile
-    &CSourceFileExtension,          // CSourceStdAfxFile
-    &CSourceFileExtension,          // CSourceKeysFile
-    &CSourceFileExtension,          // CSourceTableDataFile
-    &CHeaderFileExtension,          // CHeaderSupportFile
-    &CSourceFileExtension,          // CSourceSupportFile
-    &CSourceFileExtension,          // CSourceTestFile
-    &CSourceFileExtension,          // CSourceTestExeFile
-    &CSourceFileExtension,          // CSourceBenchmarkFullFile
-    &CSourceFileExtension,          // CSourceBenchmarkFullExeFile
-    &CSourceFileExtension,          // CSourceBenchmarkIndexFile
-    &CSourceFileExtension,          // CSourceBenchmarkIndexExeFile
-    &VCProjectExtension,            // VCProjectDllFile
-    &VCProjectExtension,            // VCProjectTestExeFile
-    &VCProjectExtension,            // VCProjectBenchmarkFullExeFile
-    &VCProjectExtension,            // VCProjectBenchmarkIndexExeFile
-    &VSSolutionExtension,           // VSSolutionFile
-    &CHeaderFileExtension,          // CHeaderCompiledPerfectHashFile
-    &CHeaderFileExtension,          // CHeaderCompiledPerfectHashMacroGlueFile
-    &VCPropsExtension,              // VCPropsCompiledPerfectHashFile
-    &TextFileExtension,             // TableStatsTextFile
-
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_FILE_WORK_ITEM_EXTENSION)
     NULL,
 };
 VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemExtensions);
@@ -402,56 +377,17 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemExtensions);
 // Suffixes.
 //
 
-const UNICODE_STRING CHeaderStdAfxFileSuffix = RCS(L"StdAfx");
-const UNICODE_STRING CSourceStdAfxFileSuffix = RCS(L"StdAfx");
-const UNICODE_STRING CSourceKeysFileSuffix = RCS(L"Keys");
-const UNICODE_STRING CHeaderSupportFileSuffix = RCS(L"Support");
-const UNICODE_STRING CSourceSupportFileSuffix = RCS(L"Support");
-const UNICODE_STRING CSourceTableDataFileSuffix = RCS(L"TableData");
-const UNICODE_STRING CSourceTestFileSuffix = RCS(L"Test");
-const UNICODE_STRING CSourceTestExeFileSuffix = RCS(L"TestExe");
-const UNICODE_STRING CSourceBenchmarkFullFileSuffix = RCS(L"BenchmarkFull");
-const UNICODE_STRING CSourceBenchmarkFullExeFileSuffix = RCS(L"BenchmarkFullExe");
-const UNICODE_STRING CSourceBenchmarkIndexFileSuffix = RCS(L"BenchmarkIndex");
-const UNICODE_STRING CSourceBenchmarkIndexExeFileSuffix = RCS(L"BenchmarkIndexExe");
-const UNICODE_STRING VCProjectDllFileSuffix = RCS(L"Dll");
-const UNICODE_STRING VCProjectTestExeFileSuffix = RCS(L"TestExe");
-const UNICODE_STRING VCProjectBenchmarkFullExeFileSuffix = RCS(L"BenchmarkFullExe");
-const UNICODE_STRING VCProjectBenchmarkIndexExeFileSuffix = RCS(L"BenchmarkIndexExe");
-const UNICODE_STRING CHeaderCompiledPerfectHashFileSuffix = RCS(L"CompiledPerfectHash");
-const UNICODE_STRING VCPropsCompiledPerfectHashFileSuffix = RCS(L"CompiledPerfectHash");
-const UNICODE_STRING TableStatsTextFileSuffix = RCS(L"Stats");
+#define EXPAND_AS_FILE_WORK_ITEM_SUFFIX( \
+    Verb, VUpper, Name, Upper,           \
+    EofType, EofValue,                   \
+    Suffix, Extension, Stream, Base      \
+)                                        \
+    RCS(Suffix),
 
-const PCUNICODE_STRING FileWorkItemSuffixes[] = {
-    NULL,
-
-    NULL,                                   // TableFile
-    NULL,                                   // TableInfoStream
-    NULL,                                   // CHeaderFile
-    NULL,                                   // CSourceFile
-    &CHeaderStdAfxFileSuffix,               // CHeaderStdAfxFile
-    &CSourceStdAfxFileSuffix,               // CSourceStdAfxFile
-    &CSourceKeysFileSuffix,                 // CSourceKeysFile
-    &CSourceTableDataFileSuffix,            // CSourceTableDataFile
-    &CHeaderSupportFileSuffix,              // CHeaderSupportFile
-    &CSourceSupportFileSuffix,              // CSourceSupportFile
-    &CSourceTestFileSuffix,                 // CSourceTestFile
-    &CSourceTestExeFileSuffix,              // CSourceTestExeFile
-    &CSourceBenchmarkFullFileSuffix,        // CSourceBenchmarkFullFile
-    &CSourceBenchmarkFullExeFileSuffix,     // CSourceBenchmarkFullExeFile
-    &CSourceBenchmarkIndexFileSuffix,       // CSourceBenchmarkIndexFile
-    &CSourceBenchmarkIndexExeFileSuffix,    // CSourceBenchmarkIndexExeFile
-    &VCProjectDllFileSuffix,                // VCProjectDllFile
-    &VCProjectTestExeFileSuffix,            // VCProjectTestExeFile
-    &VCProjectBenchmarkFullExeFileSuffix,   // VCProjectBenchmarkFullExeFile
-    &VCProjectBenchmarkIndexExeFileSuffix,  // VCProjectBenchmarkIndexExeFile
-    NULL,                                   // VSSolutionFile
-    NULL,                                   // CHeaderCompiledPerfectHashFile
-    NULL,                                   // CHeaderCompiledPerfectHashMacroGlueFile
-    NULL,                                   // VCPropsCompiledPerfectHashFile
-    &TableStatsTextFileSuffix,              // TableStatsTextFile
-
-    NULL,
+const UNICODE_STRING FileWorkItemSuffixes[] = {
+    NULL_UNICODE_STRING,
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_FILE_WORK_ITEM_SUFFIX)
+    NULL_UNICODE_STRING,
 };
 VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemSuffixes);
 
@@ -459,36 +395,17 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemSuffixes);
 // Stream names.
 //
 
-const PCUNICODE_STRING FileWorkItemStreamNames[] = {
-    NULL,
+#define EXPAND_AS_FILE_WORK_ITEM_STREAM_NAME( \
+    Verb, VUpper, Name, Upper,                \
+    EofType, EofValue,                        \
+    Suffix, Extension, Stream, Base           \
+)                                             \
+    RCS(Stream),
 
-    NULL,                           // TableFile
-    &TableInfoStreamName,           // TableInfoStream
-    NULL,                           // CHeaderFile
-    NULL,                           // CSourceFile
-    NULL,                           // CHeaderStdAfxFile
-    NULL,                           // CSourceStdAfxFile
-    NULL,                           // CSourceKeysFile
-    NULL,                           // CSourceTableDataFile
-    NULL,                           // CHeaderSupportFile
-    NULL,                           // CSourceSupportFile
-    NULL,                           // CSourceTestFile
-    NULL,                           // CSourceTestExeFile
-    NULL,                           // CSourceBenchmarkFullFile
-    NULL,                           // CSourceBenchmarkFullExeFile
-    NULL,                           // CSourceBenchmarkIndexFile
-    NULL,                           // CSourceBenchmarkIndexExeFile
-    NULL,                           // VCProjectDllFile
-    NULL,                           // VCProjectTestExeFile
-    NULL,                           // VCProjectBenchmarkFullExeFile
-    NULL,                           // VCProjectBenchmarkIndexExeFile
-    NULL,                           // VSSolutionFile
-    NULL,                           // CHeaderCompiledPerfectHashFile
-    NULL,                           // CHeaderCompiledPerfectHashMacroGlueFile
-    NULL,                           // VCPropsCompiledPerfectHashFile
-    NULL,                           // TableStatsTextFile
-
-    NULL,
+const UNICODE_STRING FileWorkItemStreamNames[] = {
+    NULL_UNICODE_STRING,
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_FILE_WORK_ITEM_STREAM_NAME)
+    NULL_UNICODE_STRING,
 };
 VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemStreamNames);
 
@@ -498,45 +415,17 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemStreamNames);
 // N.B. These are only used for context files (i.e. CONTEXT_FILE_ID).
 //
 
-const UNICODE_STRING CHeaderCompiledPerfectHashFileBaseName =
-    RCS(L"CompiledPerfectHash");
+#define EXPAND_AS_FILE_WORK_BASE_NAME( \
+    Verb, VUpper, Name, Upper,         \
+    EofType, EofValue,                 \
+    Suffix, Extension, Stream, Base    \
+)                                      \
+    RCS(Base),
 
-const UNICODE_STRING CHeaderCompiledPerfectHashMacroGlueFileBaseName =
-    RCS(L"CompiledPerfectHashMacroGlue");
-
-const UNICODE_STRING VCPropsCompiledPerfectHashFileBaseName =
-    RCS(L"CompiledPerfectHash");
-
-const PCUNICODE_STRING FileWorkItemBaseNames[] = {
-    NULL,
-
-    NULL,                           // TableFile
-    NULL,                           // TableInfoStream
-    NULL,                           // CHeaderFile
-    NULL,                           // CSourceFile
-    NULL,                           // CHeaderStdAfxFile
-    NULL,                           // CSourceStdAfxFile
-    NULL,                           // CSourceKeysFile
-    NULL,                           // CSourceTableDataFile
-    NULL,                           // CHeaderSupportFile
-    NULL,                           // CSourceSupportFile
-    NULL,                           // CSourceTestFile
-    NULL,                           // CSourceTestExeFile
-    NULL,                           // CSourceBenchmarkFullFile
-    NULL,                           // CSourceBenchmarkFullExeFile
-    NULL,                           // CSourceBenchmarkIndexFile
-    NULL,                           // CSourceBenchmarkIndexExeFile
-    NULL,                           // VCProjectDllFile
-    NULL,                           // VCProjectTestExeFile
-    NULL,                           // VCProjectBenchmarkFullExeFile
-    NULL,                           // VCProjectBenchmarkIndexExeFile
-    NULL,                           // VSSolutionFile
-    &CHeaderCompiledPerfectHashFileBaseName,
-    &CHeaderCompiledPerfectHashMacroGlueFileBaseName,
-    &VCPropsCompiledPerfectHashFileBaseName,
-    NULL,                           // TableStatsTextFile
-
-    NULL,
+const UNICODE_STRING FileWorkItemBaseNames[] = {
+    NULL_UNICODE_STRING,
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_FILE_WORK_BASE_NAME)
+    NULL_UNICODE_STRING,
 };
 VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemBaseNames);
 
@@ -544,34 +433,18 @@ VERIFY_FILE_WORK_ARRAY_SIZE(FileWorkItemBaseNames);
 // End-of-file initializers.
 //
 
+#define EXPAND_AS_FILE_WORK_ITEM_EOF_INIT( \
+    Verb, VUpper, Name, Upper,             \
+    EofType, EofValue,                     \
+    Suffix, Extension, Stream, Base        \
+)                                          \
+    { EofType, EofValue },
+
+
 const EOF_INIT EofInits[] = {
-    { EofInitTypeNull, },               // Null
-    { EofInitTypeAssignedSize, },       // TableFile
-    { EofInitTypeFixed, sizeof(GRAPH_INFO_ON_DISK) },   // TableInfoStream
-    { EofInitTypeDefault, },            // CHeaderFile
-    { EofInitTypeDefault, },            // CSourceFile
-    { EofInitTypeNumberOfPages, 1 },    // CHeaderStdAfxFile
-    { EofInitTypeNumberOfPages, 1 },    // CSourceStdAfxFile
-    { EofInitTypeNumberOfKeysMultiplier, 16 },          // CSourceKeysFile
-    { EofInitTypeNumberOfTableElementsMultiplier, 16 }, // CSourceTableDataFile
-    { EofInitTypeDefault, },            // CHeaderSupportFile
-    { EofInitTypeDefault, },            // CSourceSupportFile
-    { EofInitTypeDefault, },            // CSourceTestFile
-    { EofInitTypeDefault, },            // CSourceTestExeFile
-    { EofInitTypeDefault, },            // CSourceBenchmarkFullFile
-    { EofInitTypeDefault, },            // CSourceBenchmarkFullExeFile
-    { EofInitTypeDefault, },            // CSourceBenchmarkIndexFile
-    { EofInitTypeDefault, },            // CSourceBenchmarkIndexExeFile
-    { EofInitTypeDefault, },            // VCProjectDllFile
-    { EofInitTypeDefault, },            // VCProjectTestExeFile
-    { EofInitTypeDefault, },            // VCProjectBenchmarkFullExeFile
-    { EofInitTypeDefault, },            // VCProjectBenchmarkIndexExeFile
-    { EofInitTypeDefault, },            // VSSolutionFile
-    { EofInitTypeDefault, },            // CHeaderCompiledPerfectHashFile
-    { EofInitTypeDefault, },            // CHeaderCompiledPerfectHashMacroGlueFile
-    { EofInitTypeDefault, },            // VCPropsCompiledPerfectHashFile
-    { EofInitTypeDefault, },            // TableStatsTextFile
-    { EofInitTypeInvalid, },            // Invalid
+    { EofInitTypeNull, },
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_FILE_WORK_ITEM_EOF_INIT)
+    { EofInitTypeInvalid, },
 };
 VERIFY_FILE_WORK_ARRAY_SIZE(EofInits);
 
