@@ -1086,10 +1086,10 @@ FinishedSolution:
             PRTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC TryLargePageVirtualAlloc;
 
             //
-            // Allocate and copy the table data to an in-memory copy so that the table
-            // can be used after Create() completes successfully.  See the comment in
-            // the SaveTableInfoStreamChm01() routine for more information about why
-            // this is necessary.
+            // Allocate and copy the table data to an in-memory copy so that the
+            // table can be used after Create() completes successfully.  See the
+            // comment in the SaveTableInfoStreamChm01() routine for more
+            // information about why this is necessary.
             //
 
             LargePagesForTableData = (
