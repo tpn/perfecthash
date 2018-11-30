@@ -1835,9 +1835,9 @@ Error preparing BenchmarkIndexExe.vcxproj file.
 MessageId=0x28d
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_DURING_PREPARE_TABLE_STATS_TEXT_FILE
+SymbolicName=PH_E_ERROR_DURING_PREPARE_BUILD_SOLUTION_BATCH_FILE
 Language=English
-Error preparing table stats text file.
+Error preparing build solution batch file.
 .
 
 MessageId=0x28e
@@ -1951,9 +1951,9 @@ Error saving BenchmarkIndexExe.vcxproj file.
 MessageId=0x29d
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_DURING_SAVE_TABLE_STATS_TEXT_FILE
+SymbolicName=PH_E_ERROR_DURING_SAVE_BUILD_SOLUTION_BATCH_FILE
 Language=English
-Error saving table stats text file.
+Error saving build solution batch file.
 .
 
 MessageId=0x29e
@@ -2493,9 +2493,9 @@ Error closing vcprops compiled perfect hash file.
 MessageId=0x340
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_ERROR_DURING_CLOSE_TABLE_STATS_TEXT_FILE
+SymbolicName=PH_E_ERROR_DURING_CLOSE_BUILD_SOLUTION_BATCH_FILE
 Language=English
-Error closing table stats text file.
+Error closing build solution batch file.
 .
 
 MessageId=0x341

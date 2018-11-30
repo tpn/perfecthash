@@ -346,6 +346,7 @@ const UNICODE_STRING TableInfoStreamName = RCS(L"Info");
 //
 
 const UNICODE_STRING TextFileExtension = RCS(L"txt");
+const UNICODE_STRING BatchFileExtension = RCS(L"bat");
 const UNICODE_STRING CSourceFileExtension = RCS(L"c");
 const UNICODE_STRING CHeaderFileExtension = RCS(L"h");
 const UNICODE_STRING TableFileExtension = RCS(L"pht1");

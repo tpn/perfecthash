@@ -35,7 +35,6 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareTableFileChm01 NULL
 #define PrepareTableInfoStreamChm01 NULL
 #define PrepareCSourceTableDataFileChm01 NULL
-#define PrepareTableStatsTextFileChm01 NULL
 
 //
 // Add defines for files that don't have a save callback.  Corresponds to
@@ -65,7 +64,7 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define SaveCHeaderCompiledPerfectHashFileChm01 NULL
 #define SaveCHeaderCompiledPerfectHashMacroGlueFileChm01 NULL
 #define SaveVCPropsCompiledPerfectHashFileChm01 NULL
-#define SaveTableStatsTextFileChm01 NULL
+#define SaveBatchBuildSolutionFileChm01 NULL
 
 extern FILE_WORK_CALLBACK_IMPL *FileCallbacks[];
 

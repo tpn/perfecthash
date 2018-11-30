@@ -289,12 +289,12 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
-        TableStatsTextFile,                                                \
-        TABLE_STATS_TEXT_FILE,                                             \
-        EofInitTypeDefault,                                                \
-        NO_EOF_VALUE,                                                      \
-        SUFFIX(TableStats),                                                \
-        &TextFileExtension,                                                \
+        BatchBuildSolutionFile,                                            \
+        BUILD_SOLUTION_BATCH_FILE,                                         \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(Build),                                                     \
+        &BatchFileExtension,                                               \
         NO_STREAM_NAME,                                                    \
         NO_BASE_NAME                                                       \
     )                                                                      \

@@ -172,6 +172,7 @@
     <ClCompile Include="Chm01FileWorkVCProjectTestExeFile.c" />
     <ClCompile Include="Chm01FileWorkVCPropsCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01FileWorkVSSolutionFile.c" />
+    <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chunk.c" />
