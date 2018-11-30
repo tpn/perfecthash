@@ -14,9 +14,6 @@ Abstract:
 
 #include "stdafx.h"
 
-#define IsEmpty(Value) ((ULONG)Value == EMPTY)
-#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
-
 //
 // COM scaffolding routines for initialization and rundown.
 //
