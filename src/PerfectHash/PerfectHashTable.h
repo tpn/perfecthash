@@ -315,6 +315,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG BenchmarkIterations;
     ULONG Padding4;
 
+    TIMESTAMP SlowIndexTimestamp;
     TIMESTAMP SeededHashTimestamp;
     TIMESTAMP NullSeededHashTimestamp;
 

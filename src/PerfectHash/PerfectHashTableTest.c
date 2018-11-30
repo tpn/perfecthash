@@ -422,6 +422,7 @@ Return Value:
 {
     KEY Key;
     PRTL Rtl;
+    ULONG Index;
     ULONG Inner;
     ULONG Outer;
     ULONG Warmups;
@@ -432,6 +433,7 @@ Return Value:
     HRESULT Result;
     LARGE_INTEGER Frequency;
     ULARGE_INTEGER Hash;
+    PTIMESTAMP SlowIndex;
     PTIMESTAMP SeededHash;
     PTIMESTAMP NullSeededHash;
     PTABLE_INFO_ON_DISK TableInfo;
@@ -448,6 +450,7 @@ Return Value:
     Attempts = Table->BenchmarkAttempts;
     TableInfo = Table->TableInfoOnDisk;
     Iterations = Table->BenchmarkIterations;
+    SlowIndex = &Table->SlowIndexTimestamp;
     SeededHash = &Table->SeededHashTimestamp;
     NullSeededHash = &Table->NullSeededHashTimestamp;
 
@@ -525,6 +528,23 @@ Return Value:
 
     Table->Vtbl->SeededHash = OriginalSeededHashFunc;
 
+    //
+    // Perform the slow index warmup, then benchmark.
+    //
+
+    INIT_TIMESTAMP(SlowIndex);
+
+    for (Outer = 0; Outer < Warmups; Outer++) {
+        Result = Table->Vtbl->SlowIndex(Table, Key, &Index);
+    }
+
+    for (Outer = 0; Outer < Attempts; Outer++) {
+        START_TIMESTAMP(SlowIndex);
+        for (Inner = 0; Inner < Iterations; Inner++) {
+            Result = Table->Vtbl->SlowIndex(Table, Key, &Index);
+        }
+        END_TIMESTAMP(SlowIndex);
+    }
 }
 
 

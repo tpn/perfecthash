@@ -133,6 +133,14 @@ Abstract:
           Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart,          \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(SlowIndexMinimumCycles,                                          \
+          Table->SlowIndexTimestamp.MinimumCycles.QuadPart,                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(SlowIndexMinimumNanoseconds,                                     \
+          Table->SlowIndexTimestamp.MinimumNanoseconds.QuadPart,           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(FirstGraphWins,                                                  \
           (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \
           OUTPUT_CHR)                                                      \
