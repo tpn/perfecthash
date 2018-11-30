@@ -25,7 +25,6 @@ PrepareBatchBuildSolutionFileChm01(
 {
     PCHAR Base;
     PCHAR Output;
-    PPERFECT_HASH_FILE File;
 
     UNREFERENCED_PARAMETER(Context);
 
@@ -33,7 +32,6 @@ PrepareBatchBuildSolutionFileChm01(
     // Initialize aliases.
     //
 
-    File = *Item->FilePointer;
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
 
