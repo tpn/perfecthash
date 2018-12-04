@@ -164,6 +164,41 @@ The table was created successfully, however, the values array could not be alloc
 ;////////////////////////////////////////////////////////////////////////////////
 ;
 
+MessageId=0x100
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_MSG_PERFECT_HASH_ALGO_HASH_MASK_NAMES
+Language=English
+Algorithms:
+
+   ID | Name
+    1   Chm01
+
+Hash Functions:
+
+   ID | Name (Number of Seeds)
+    1   Crc32Rotate (2)
+    2   Jenkins (2)
+    3   JenkinsMod (2)
+    4   RotateXor (4)
+    5   AddSubXor (4)
+    6   Xor (2)
+    7   Scratch (4)
+    8   Crc32RotateXor (3)
+    9   Crc32 (2)
+   10   Djb (2)
+   11   DjbXor (2)
+   12   Fnv (2)
+   13   Crc32Not (2)
+
+Mask Functions:
+
+  ID | Name
+   1   Modulus (does not work!)
+   2   And
+
+.
+
 MessageId=0x101
 Severity=Informational
 Facility=ITF

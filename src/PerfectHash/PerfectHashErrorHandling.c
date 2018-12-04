@@ -156,6 +156,29 @@ End:
     return Result;
 }
 
+FORCEINLINE
+BOOLEAN
+DoesErrorCodeWantAlgoHashMaskTableAppended(
+    _In_ ULONG ErrorCode
+    )
+{
+    HRESULT Code;
+    BOOLEAN Result;
+
+    Code = (HRESULT)ErrorCode;
+
+    //
+    // We append the algo/hash/mask table text for usage strings, currently.
+    //
+
+    Result = (
+        Code == PH_MSG_PERFECT_HASH_BULK_CREATE_EXE_USAGE ||
+        Code == PH_MSG_PERFECT_HASH_CREATE_EXE_USAGE
+    );
+
+    return Result;
+}
+
 PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
 
 _Use_decl_annotations_
@@ -217,6 +240,21 @@ PerfectHashPrintMessage(
 
     if (BytesWritten != (ULONG)SizeOfBufferInBytes) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    //
+    // If the incoming error code was a usage string, print the table of
+    // algorithms, hash functions and masking types.
+    //
+
+    if (DoesErrorCodeWantAlgoHashMaskTableAppended(Code)) {
+        ULONG NewCode;
+
+        NewCode = PH_MSG_PERFECT_HASH_ALGO_HASH_MASK_NAMES;
+        Result = PerfectHashPrintMessage(NewCode);
+        if (FAILED(Result)) {
+            goto Error;
+        }
     }
 
     //
