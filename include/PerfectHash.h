@@ -3210,18 +3210,35 @@ HRESULT
 typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
 
 //
+// Define an X-macro for the enum types used by the library.  The ENTRY macros
+// receive (Name, Suffix, Upper) as their arguments, e.g.:
+//
+//      (CpuArch, Id, CPU_ARCH_ID)
+//
+
+#define PERFECT_HASH_ENUM_TYPE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(CpuArch, Id, CPU_ARCH_ID)                            \
+    ENTRY(Interface, Id, INTERFACE_ID)                               \
+    ENTRY(Algorithm, Id, ALGORITHM_ID)                               \
+    ENTRY(HashFunction, Id, HASH_FUNCTION_ID)                        \
+    ENTRY(MaskFunction, Id, MASK_FUNCTION_ID)                        \
+    ENTRY(BestCoverage, Type, BEST_COVERAGE_TYPE)                    \
+    LAST_ENTRY(TableCreateParameter, Id, TABLE_CREATE_PARAMETER_ID)
+
+#define PERFECT_HASH_ENUM_TYPE_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_ENUM_TYPE_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_ENUM_TYPE_ENUM(Name, Suffix, Upper) \
+    PerfectHash##Name##Suffix,
+
+//
 // Define an enum of all enum types used by the library.
 //
 
 typedef enum _PERFECT_HASH_ENUM_TYPE {
     PerfectHashNullEnumType = 0,
-    PerfectHashCpuArchId,
-    PerfectHashInterfaceId,
-    PerfectHashAlgorithmId,
-    PerfectHashHashFunctionId,
-    PerfectHashMaskFunctionId,
-    PerfectHashBestCoverageType,
-    PerfectHashTableCreateParameterId,
+
+    PERFECT_HASH_ENUM_TYPE_TABLE_ENTRY(EXPAND_AS_ENUM_TYPE_ENUM)
 
     //
     // N.B. Keep the next value last.
@@ -3238,7 +3255,7 @@ typedef PERFECT_HASH_ENUM_TYPE *PPERFECT_HASH_ENUM_TYPE;
 FORCEINLINE
 BOOLEAN
 IsValidPerfectHashEnumType(
-    _In_ PERFECT_HASH_ENUM_TYPE Type
+    _In_ PERFECT_HASH_ENUM_TYPE EnumType
     )
 {
     return (
