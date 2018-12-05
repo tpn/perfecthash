@@ -2693,3 +2693,11 @@ Language=English
 Invalid file work threadpool priority.
 .
 
+MessageId=0x355
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_ENUM_TYPE
+Language=English
+Invalid perfect hash enum type.
+.
+

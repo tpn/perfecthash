@@ -2975,3 +2975,12 @@ Abstract:
 //
 #define PH_E_INVALID_FILE_WORK_THREADPOOL_PRIORITY ((HRESULT)0xE0040354L)
 
+//
+// MessageId: PH_E_INVALID_ENUM_TYPE
+//
+// MessageText:
+//
+// Invalid perfect hash enum type.
+//
+#define PH_E_INVALID_ENUM_TYPE           ((HRESULT)0xE0040355L)
+

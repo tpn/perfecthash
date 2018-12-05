@@ -3209,6 +3209,43 @@ HRESULT
     );
 typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
 
+//
+// Define an enum of all enum types used by the library.
+//
+
+typedef enum _PERFECT_HASH_ENUM_TYPE {
+    PerfectHashNullEnumType = 0,
+    PerfectHashCpuArchId,
+    PerfectHashInterfaceId,
+    PerfectHashAlgorithmId,
+    PerfectHashHashFunctionId,
+    PerfectHashMaskFunctionId,
+    PerfectHashBestCoverageType,
+    PerfectHashTableCreateParameterId,
+
+    //
+    // N.B. Keep the next value last.
+    //
+
+    PerfectHashInvalidEnumType
+} PERFECT_HASH_ENUM_TYPE;
+typedef PERFECT_HASH_ENUM_TYPE *PPERFECT_HASH_ENUM_TYPE;
+
+//
+// Provide a simple inline CPU architecture enum validation routine.
+//
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashEnumType(
+    _In_ PERFECT_HASH_ENUM_TYPE Type
+    )
+{
+    return (
+        EnumType > PerfectHashNullEnumType &&
+        EnumType < PerfectHashInvalidEnumType
+    );
+}
 
 //
 // Define helper macros for printing errors to stdout.  Requires the symbol
