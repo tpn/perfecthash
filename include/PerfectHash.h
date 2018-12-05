@@ -161,10 +161,10 @@ typedef enum _Enum_is_bitflag_ _PERFECT_HASH_CPU_ARCH_ID {
     // Begin valid CPU architectures.
     //
 
-    PerfectHashx86CpuArchId                 = 1,
-    PerfectHashx64CpuArchId                 = 2,
-    PerfectHashArmCpuArchId                 = 3,
-    PerfectHashArm64CpuArchId               = 4,
+    PerfectHashx86CpuArchId                 = (     1),
+    PerfectHashx64CpuArchId                 = (1 << 2),
+    PerfectHashArmCpuArchId                 = (1 << 3),
+    PerfectHashArm64CpuArchId               = (1 << 4),
 
     //
     // End valid CPU architectures.
