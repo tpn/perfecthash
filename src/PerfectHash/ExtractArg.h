@@ -27,6 +27,19 @@ typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
+(NTAPI TRY_EXTRACT_ARG_KEYS_DIRECTORY)(
+    _In_ PRTL Rtl,
+    _In_ PALLOCATOR Allocator,
+    _In_ PCUNICODE_STRING Argument,
+    _Inout_ PUNICODE_STRING KeysDirectory
+    );
+typedef TRY_EXTRACT_ARG_KEYS_DIRECTORY
+      *PTRY_EXTRACT_ARG_KEYS_DIRECTORY;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
 (NTAPI TRY_EXTRACT_ARG_CONTEXT_BULK_CREATE_FLAGS)(
     _In_ PRTL Rtl,
     _In_ PALLOCATOR Allocator,
@@ -143,6 +156,7 @@ typedef DESTROY_TABLE_CREATE_PARAMETERS *PDESTROY_TABLE_CREATE_PARAMETERS;
 //
 
 #ifndef __INTELLISENSE__
+extern TRY_EXTRACT_ARG_KEYS_DIRECTORY TryExtractArgKeysDirectory;
 extern TRY_EXTRACT_VALUE_ARRAY TryExtractValueArray;
 extern TRY_EXTRACT_ARG_CONTEXT_BULK_CREATE_FLAGS TryExtractArgContextBulkCreateFlags;
 extern TRY_EXTRACT_ARG_CONTEXT_TABLE_CREATE_FLAGS TryExtractArgContextTableCreateFlags;

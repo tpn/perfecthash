@@ -148,23 +148,32 @@ typedef ULONG_BYTES *PULONG_BYTES;
 // Define an enumeration for identifying CPU architectures.
 //
 
-typedef enum _Enum_is_bitflag_ _PERFECT_HASH_CPU_ARCH_ID {
+#define PERFECT_HASH_CPU_ARCH_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(x86, X86)                                           \
+    ENTRY(x64, X64)                                                 \
+    ENTRY(Arm, ARM)                                                 \
+    LAST_ENTRY(Arm64, ARM64)
+
+#define PERFECT_HASH_CPU_ARCH_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_CPU_ARCH_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_CPU_ARCH_ID_ENUM(Name, Upper) \
+    PerfectHash##Name##CpuArchId,
+
+typedef enum PERFECT_HASH_CPU_ARCH_ID {
 
     //
     // Explicitly define a null ID to take the 0-index slot.  This makes enum
     // validation easier.
     //
 
-    PerfectHashNullCpuArchId                = 0,
+    PerfectHashNullCpuArchId = 0,
 
     //
     // Begin valid CPU architectures.
     //
 
-    PerfectHashx86CpuArchId                 = (     1),
-    PerfectHashx64CpuArchId                 = (1 << 2),
-    PerfectHashArmCpuArchId                 = (1 << 3),
-    PerfectHashArm64CpuArchId               = (1 << 4),
+    PERFECT_HASH_CPU_ARCH_TABLE_ENTRY(EXPAND_AS_CPU_ARCH_ID_ENUM)
 
     //
     // End valid CPU architectures.
@@ -219,8 +228,136 @@ PerfectHashGetCurrentCpuArch(
 }
 
 //
-// Define an enumeration for identifying COM interfaces.
+// Define an X-macro for COM interfaces.  The ENTRY macros receive the following
+// parameters: (Name, Upper, Guid).
 //
+
+#define GUID_EX(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+    { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+
+#define PERFECT_HASH_INTERFACE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                                     \
+    FIRST_ENTRY(                                                     \
+        IUnknown,                                                    \
+        IUNKNOWN,                                                    \
+        GUID_EX(                                                     \
+            0x00000000, 0x0000, 0x0000,                              \
+            0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        IClassFactory,                                               \
+        ICLASSFACTORY,                                               \
+        GUID_EX(                                                     \
+            0x00000001, 0x0000, 0x0000,                              \
+            0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Keys,                                                        \
+        KEYS,                                                        \
+        GUID_EX(                                                     \
+            0x7e43ebea, 0x8671, 0x47ba,                              \
+            0xb8, 0x44, 0x76, 0xb, 0x7a, 0x9e, 0xa9, 0x21            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Context,                                                     \
+        CONTEXT,                                                     \
+        GUID_EX(                                                     \
+            0xd4b24571, 0x99d7, 0x44ba,                              \
+            0x8a, 0x27, 0x63, 0xd8, 0x73, 0x9f, 0x9b, 0x81           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Table,                                                       \
+        TABLE,                                                       \
+        GUID_EX(                                                     \
+            0xc265816f, 0xc6a9, 0x4b44,                              \
+            0xbc, 0xee, 0xec, 0x5a, 0x12, 0xab, 0xe1, 0xef           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Rtl,                                                         \
+        RTL,                                                         \
+        GUID_EX(                                                     \
+            0x9c05a3d6, 0xbc30, 0x45e6,                              \
+            0xbe, 0xa6, 0x50, 0x4f, 0xcc, 0x92, 0x43, 0xa8           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Allocator,                                                   \
+        ALLOCATOR,                                                   \
+        GUID_EX(                                                     \
+            0xf87564d2, 0xb3c7, 0x4cca,                              \
+            0x90, 0x13, 0xeb, 0x59, 0xc1, 0xe2, 0x53, 0xb7           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        File,                                                        \
+        FILE,                                                        \
+        GUID_EX(                                                     \
+            0x27549274, 0x968a, 0x499a,                              \
+            0x83, 0x49, 0x31, 0x33, 0xe3, 0xd5, 0xe6, 0x49           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Path,                                                        \
+        PATH,                                                        \
+        GUID_EX(                                                     \
+            0x267623b1, 0xc5d, 0x47b1,                               \
+            0xa2, 0x97, 0xdf, 0xe, 0x54, 0x67, 0xaf, 0xd1            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Directory,                                                   \
+        DIRECTORY,                                                   \
+        GUID_EX(                                                     \
+            0x5d673839, 0x1686, 0x411e,                              \
+            0x99, 0x2, 0x46, 0xc6, 0xe9, 0x7c, 0xa5, 0x67            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        GuardedList,                                                 \
+        GUARDED_LIST,                                                \
+        GUID_EX(                                                     \
+            0x14a25ba2, 0x3c18, 0x413f,                              \
+            0x8c, 0x76, 0xa7, 0xa9, 0x1e, 0xc8, 0x8c, 0x2a           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    LAST_ENTRY(                                                      \
+        Graph,                                                       \
+        GRAPH,                                                       \
+        GUID_EX(                                                     \
+            0xb906f824, 0xcb59, 0x4696,                              \
+            0x84, 0x77, 0x44, 0xd4, 0xba, 0x9, 0xda, 0x94            \
+        )                                                            \
+    )
+
+#define PERFECT_HASH_INTERFACE_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_INTERFACE_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_INTERFACE_ENUM_FIRST(Name, Upper, Guid)         \
+    PerfectHash##Name##InterfaceId,                               \
+    PerfectHashFirstInterfaceId = PerfectHash##Name##InterfaceId,
+
+#define EXPAND_AS_INTERFACE_ENUM(Name, Upper, Guid) \
+    PerfectHash##Name##InterfaceId,
+
+#define EXPAND_AS_INTERFACE_ENUM_LAST(Name, Upper, Guid)         \
+    PerfectHash##Name##InterfaceId,                              \
+    PerfectHashLastInterfaceId = PerfectHash##Name##InterfaceId,
 
 typedef enum _PERFECT_HASH_INTERFACE_ID {
 
@@ -229,26 +366,15 @@ typedef enum _PERFECT_HASH_INTERFACE_ID {
     // validation easier.
     //
 
-    PerfectHashNullInterfaceId             = 0,
+    PerfectHashNullInterfaceId = 0,
 
     //
     // Begin valid interfaces.
     //
 
-    PerfectHashUnknownInterfaceId          =  1,
-    PerfectHashClassFactoryInterfaceId     =  2,
-    PerfectHashKeysInterfaceId             =  3,
-    PerfectHashContextInterfaceId          =  4,
-    PerfectHashTableInterfaceId            =  5,
-    PerfectHashRtlInterfaceId              =  6,
-    PerfectHashAllocatorInterfaceId        =  7,
-    PerfectHashFileInterfaceId             =  8,
-    PerfectHashPathInterfaceId             =  9,
-    PerfectHashDirectoryInterfaceId        = 10,
-    PerfectHashGuardedListInterfaceId      = 11,
-    PerfectHashGraphInterfaceId            = 12,
-
-    PerfectHashLastInterfaceId             = PerfectHashGraphInterfaceId,
+    PERFECT_HASH_INTERFACE_TABLE(EXPAND_AS_INTERFACE_ENUM_FIRST,
+                                 EXPAND_AS_INTERFACE_ENUM,
+                                 EXPAND_AS_INTERFACE_ENUM_LAST)
 
     //
     // End valid interfaces.
@@ -278,35 +404,6 @@ IsValidPerfectHashInterfaceId(
     );
 }
 
-//
-// COM-related typedefs.
-//
-
-typedef
-HRESULT
-(CO_INITIALIZE_EX)(
-    _In_opt_ LPVOID Reserved,
-    _In_ DWORD CoInit
-    );
-typedef CO_INITIALIZE_EX *PCO_INITIALIZE_EX;
-
-typedef
-_Must_inspect_result_
-HRESULT
-(STDAPICALLTYPE DLL_GET_CLASS_OBJECT)(
-    _In_ REFCLSID ClassId,
-    _In_ REFIID InterfaceId,
-    _COM_Outptr_ LPVOID *Interface
-    );
-typedef DLL_GET_CLASS_OBJECT *PDLL_GET_CLASS_OBJECT;
-
-typedef
-HRESULT
-(STDAPICALLTYPE DLL_CAN_UNLOAD_NOW)(
-    VOID
-    );
-typedef DLL_CAN_UNLOAD_NOW *PDLL_CAN_UNLOAD_NOW;
-
 #define DEFINE_GUID_EX(Name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
     static const GUID Name                                              \
         = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
@@ -316,18 +413,9 @@ typedef const GUID CGUID;
 typedef GUID const *PCGUID;
 
 //
-// IID_IUNKNOWN: 00000000-0000-0000-C000-000000000046
+// Define static const GUIDs for the perfect hash library's class ID, then all
+// interface IDs.
 //
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_IUNKNOWN, 0x00000000, 0x0000, 0x0000,
-               0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
-
-//
-// IID_ICLASSFACTORY: 00000001-0000-0000-C000-000000000046
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_ICLASSFACTORY, 0x00000001, 0x0000, 0x0000,
-               0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
 
 //
 // CLSID_PERFECT_HASH: 402045FD-72F4-4A05-902E-D22B7C1877B4
@@ -336,103 +424,20 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_ICLASSFACTORY, 0x00000001, 0x0000, 0x0000,
 DEFINE_GUID_EX(CLSID_PERFECT_HASH, 0x402045fd, 0x72f4, 0x4a05,
                0x90, 0x2e, 0xd2, 0x2b, 0x7c, 0x18, 0x77, 0xb4);
 
-//
-// IID_PERFECT_HASH_KEYS: 7E43EBEA-8671-47BA-B844-760B7A9EA921
-//
+#define EXPAND_AS_DEFINE_GUID_EX(Name, Upper, Guid) \
+    static const GUID IID_PERFECT_HASH_##Upper## = Guid;
 
-DEFINE_GUID_EX(IID_PERFECT_HASH_KEYS, 0x7e43ebea, 0x8671, 0x47ba,
-               0xb8, 0x44, 0x76, 0xb, 0x7a, 0x9e, 0xa9, 0x21);
-
-//
-// IID_PERFECT_HASH_CONTEXT: D4B24571-99D7-44BA-8A27-63D8739F9B81
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_CONTEXT, 0xd4b24571, 0x99d7, 0x44ba,
-               0x8a, 0x27, 0x63, 0xd8, 0x73, 0x9f, 0x9b, 0x81);
-
-//
-// IID_PERFECT_HASH_TABLE: C265816F-C6A9-4B44-BCEE-EC5A12ABE1EF
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE, 0xc265816f, 0xc6a9, 0x4b44,
-               0xbc, 0xee, 0xec, 0x5a, 0x12, 0xab, 0xe1, 0xef);
-
-//
-// IID_PERFECT_HASH_RTL: 9C05A3D6-BC30-45E6-BEA6-504FCC9243A8
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_RTL, 0x9c05a3d6, 0xbc30, 0x45e6,
-               0xbe, 0xa6, 0x50, 0x4f, 0xcc, 0x92, 0x43, 0xa8);
-
-//
-// IID_PERFECT_HASH_ALLOCATOR: F87564D2-B3C7-4CCA-9013-EB59C1E253B7
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_ALLOCATOR,
-               0xf87564d2, 0xb3c7, 0x4cca,
-               0x90, 0x13, 0xeb, 0x59, 0xc1, 0xe2, 0x53, 0xb7);
-
-//
-// IID_PERFECT_HASH_FILE 27549274-968A-499A-8349-3133E3D5E649
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_FILE,
-               0x27549274, 0x968a, 0x499a,
-               0x83, 0x49, 0x31, 0x33, 0xe3, 0xd5, 0xe6, 0x49);
-
-//
-// IID_PERFECT_HASH_PATH: 267623B1-0C5D-47B1-A297-DF0E5467AFD1
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_PATH,
-               0x267623b1, 0xc5d, 0x47b1,
-               0xa2, 0x97, 0xdf, 0xe, 0x54, 0x67, 0xaf, 0xd1);
-
-//
-// IID_PERFECT_HASH_DIRECTORY: {5D673839-1686-411E-9902-46C6E97CA567}
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_DIRECTORY,
-               0x5d673839, 0x1686, 0x411e,
-               0x99, 0x2, 0x46, 0xc6, 0xe9, 0x7c, 0xa5, 0x67);
-
-//
-// IID_PERFECT_HASH_GUARDED_LIST: {14A25BA2-3C18-413F-8C76-A7A91EC88C2A}
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_GUARDED_LIST,
-               0x14a25ba2, 0x3c18, 0x413f,
-               0x8c, 0x76, 0xa7, 0xa9, 0x1e, 0xc8, 0x8c, 0x2a);
-
-//
-// IID_PERFECT_HASH_GRAPH: {B906F824-CB59-4696-8477-44D4BA09DA94}
-//
-
-DEFINE_GUID_EX(IID_PERFECT_HASH_GRAPH,
-               0xb906f824, 0xcb59, 0x4696,
-               0x84, 0x77, 0x44, 0xd4, 0xba, 0x9, 0xda, 0x94);
+PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_DEFINE_GUID_EX);
 
 //
 // GUID array.
 //
 
+#define EXPAND_AS_IID_ADDRESS(Name, Upper, Guid) &IID_PERFECT_HASH_##Upper##,
+
 static const PCGUID PerfectHashInterfaceGuids[] = {
-
     NULL,
-
-    &IID_PERFECT_HASH_IUNKNOWN,
-    &IID_PERFECT_HASH_ICLASSFACTORY,
-    &IID_PERFECT_HASH_KEYS,
-    &IID_PERFECT_HASH_CONTEXT,
-    &IID_PERFECT_HASH_TABLE,
-    &IID_PERFECT_HASH_RTL,
-    &IID_PERFECT_HASH_ALLOCATOR,
-    &IID_PERFECT_HASH_FILE,
-    &IID_PERFECT_HASH_PATH,
-    &IID_PERFECT_HASH_DIRECTORY,
-    &IID_PERFECT_HASH_GUARDED_LIST,
-    &IID_PERFECT_HASH_GRAPH,
-
+    PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_IID_ADDRESS)
     NULL
 };
 
@@ -472,6 +477,36 @@ PerfectHashInterfaceGuidToId(
 
     return Id;
 }
+
+//
+// COM-related funtion pointer typedefs.
+//
+
+typedef
+HRESULT
+(CO_INITIALIZE_EX)(
+    _In_opt_ LPVOID Reserved,
+    _In_ DWORD CoInit
+    );
+typedef CO_INITIALIZE_EX *PCO_INITIALIZE_EX;
+
+typedef
+_Must_inspect_result_
+HRESULT
+(STDAPICALLTYPE DLL_GET_CLASS_OBJECT)(
+    _In_ REFCLSID ClassId,
+    _In_ REFIID InterfaceId,
+    _COM_Outptr_ LPVOID *Interface
+    );
+typedef DLL_GET_CLASS_OBJECT *PDLL_GET_CLASS_OBJECT;
+
+typedef
+HRESULT
+(STDAPICALLTYPE DLL_CAN_UNLOAD_NOW)(
+    VOID
+    );
+typedef DLL_CAN_UNLOAD_NOW *PDLL_CAN_UNLOAD_NOW;
+
 
 //
 //
@@ -1726,9 +1761,18 @@ typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
 #endif
 
 //
-// Define an enumeration for identifying which backend algorithm variant to
-// use for creating the perfect hash table.
+// Define an X-macro for algorithm IDs.  The ENTRY macro receives the following
+// parameters: (Name, Upper).
 //
+
+#define PERFECT_HASH_ALGORITHM_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(Chm01, CHM01)
+
+#define PERFECT_HASH_ALGORITHM_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_ALGORITHM_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_ALGORITHM_ENUM(Name, Upper) \
+    PerfectHash##Name##AlgorithmId,
 
 typedef enum _PERFECT_HASH_ALGORITHM_ID {
 
@@ -1739,16 +1783,7 @@ typedef enum _PERFECT_HASH_ALGORITHM_ID {
 
     PerfectHashNullAlgorithmId         = 0,
 
-    //
-    // Begin valid algorithms.
-    //
-
-    PerfectHashChm01AlgorithmId        = 1,
-    PerfectHashDefaultAlgorithmId      = 1,
-
-    //
-    // End valid algorithms.
-    //
+    PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_ALGORITHM_ENUM)
 
     //
     // N.B. Keep the next value last.
@@ -1857,6 +1892,18 @@ IsValidPerfectHashHashFunctionId(
 // tables, which will be larger, but the resulting mask function can be done
 // by logical AND instructions, which are fast.
 //
+// N.B. Modulus masking does not work.
+//
+
+#define PERFECT_HASH_MASK_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(Modulus, MODULUS)                                        \
+    LAST_ENTRY(And, AND)
+
+#define PERFECT_HASH_MASK_FUNCTION_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_MASK_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_MASK_FUNCTION_ENUM(Name, NumberOfSeeds) \
+    PerfectHash##Name##MaskFunctionId,
 
 typedef enum _PERFECT_HASH_MASK_FUNCTION_ID {
 
@@ -1866,18 +1913,7 @@ typedef enum _PERFECT_HASH_MASK_FUNCTION_ID {
 
     PerfectHashNullMaskFunctionId          = 0,
 
-    //
-    // Being valid masking types.
-    //
-
-    PerfectHashModulusMaskFunctionId       = 1,
-
-    PerfectHashAndMaskFunctionId           = 2,
-    PerfectHashDefaultMaskFunctionId       = 2,
-
-    //
-    // End valid masking types.
-    //
+    PERFECT_HASH_MASK_FUNCTION_TABLE_ENTRY(EXPAND_AS_MASK_FUNCTION_ENUM)
 
     //
     // N.B. Keep the next value last.
@@ -1919,102 +1955,6 @@ IsModulusMasking(
     )
 {
     return MaskFunctionId == PerfectHashModulusMaskFunctionId;
-}
-
-//
-// Define an enumeration for identifying benchmark routines.
-//
-
-typedef enum _PERFECT_HASH_BENCHMARK_FUNCTION_ID {
-
-    //
-    // Explicitly define a null algorithm to take the 0-index slot.
-    // This makes enum validation easier.
-    //
-
-    PerfectHashNullBenchmarkFunctionId          = 0,
-
-    //
-    // Begin valid benchmarks.
-    //
-
-    PerfectHashFastIndexBenchmarkFunctionId     = 1,
-
-    //
-    // End valid benchmarks.
-    //
-
-    //
-    // N.B. Keep the next value last.
-    //
-
-    PerfectHashInvalidBenchmarkFunctionId,
-
-} PERFECT_HASH_BENCHMARK_FUNCTION_ID;
-
-//
-// Provide a simple inline benchmark validation routine.
-//
-
-FORCEINLINE
-BOOLEAN
-IsValidPerfectHashBenchmarkFunctionId(
-    _In_ PERFECT_HASH_BENCHMARK_FUNCTION_ID BenchmarkFunctionId
-    )
-{
-    return (
-        BenchmarkFunctionId > PerfectHashNullBenchmarkFunctionId &&
-        BenchmarkFunctionId < PerfectHashInvalidBenchmarkFunctionId
-    );
-}
-
-//
-// Define an enumeration for identifying benchmark types.
-//
-
-typedef enum _PERFECT_HASH_BENCHMARK_TYPE {
-
-    //
-    // Explicitly define a null benchmark type to take the 0-index slot.
-    // This makes enum validation easier.
-    //
-
-    PerfectHashNullBenchmarkType        = 0,
-
-    //
-    // Begin valid benchmark typess.
-    //
-
-    PerfectHashSingleBenchmarkType      = 1,
-    PerfectHashAllBenchmarkType         = 2,
-
-    //
-    // End valid benchmark typess.
-    //
-
-    //
-    // N.B. Keep the next value last.
-    //
-
-    PerfectHashInvalidBenchmarkType,
-
-} PERFECT_HASH_BENCHMARK_TYPE;
-typedef PERFECT_HASH_BENCHMARK_TYPE *PPERFECT_HASH_BENCHMARK_TYPE;
-
-//
-// Provide a simple inline benchmark type validation routine.
-//
-
-FORCEINLINE
-BOOLEAN
-IsValidPerfectHashBenchmarkType(
-    _In_ PERFECT_HASH_BENCHMARK_TYPE BenchmarkType
-    )
-{
-    return (
-        BenchmarkType > PerfectHashNullBenchmarkType &&
-        BenchmarkType < PerfectHashInvalidBenchmarkType
-    );
 }
 
 //
@@ -2520,19 +2460,50 @@ IsValidTableCompileFlags(
 // N.B. The table create parameters are still a work-in-progress.
 //
 
+#define TABLE_CREATE_PARAMETER_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(AttemptsBeforeTableResize)                           \
+    ENTRY(MaxNumberOfTableResizes)                                   \
+    ENTRY(BestCoverageAttempts)                                      \
+    ENTRY(BestCoverageType)                                          \
+    ENTRY(KeysSubset)                                                \
+    ENTRY(MainWorkThreadpoolPriority)                                \
+    LAST_ENTRY(FileWorkThreadpoolPriority)
+
+#define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
+    TABLE_CREATE_PARAMETER_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_TABLE_CREATE_PARAMETER_ENUM(Name) \
+    TableCreateParameter##Name##Id,                 \
+    PerfectHashTableCreateParameter##Name##Id =     \
+        TableCreateParameter##Name##Id,
+
+//
+// N.B. We need the PerfectHashTable prefix in order for certain X-macro
+//      consumers to work, however, the final name is inconveniently long,
+//      so we also export identical enum names with the prefix removed.
+//
+
 typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
     TableCreateParameterNullId = 0,
+    PerfectHashNullTableCreateParameterId = TableCreateParameterNullId,
 
-    TableCreateParameterAttemptsBeforeTableResizeId,
-    TableCreateParameterMaxNumberOfTableResizesId,
-    TableCreateParameterBestCoverageNumAttemptsId,
-    TableCreateParameterBestCoverageTypeId,
-    TableCreateParameterKeysSubsetId,
-    TableCreateParameterMainWorkThreadpoolPriorityId,
-    TableCreateParameterFileWorkThreadpoolPriorityId,
+    TABLE_CREATE_PARAMETER_TABLE_ENTRY(EXPAND_AS_TABLE_CREATE_PARAMETER_ENUM)
 
     TableCreateParameterInvalidId,
+    PerfectHashInvalidTableCreateParameterId = TableCreateParameterInvalidId,
 } PERFECT_HASH_TABLE_CREATE_PARAMETER_ID;
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashTableCreateParameterId(
+    _In_ PERFECT_HASH_TABLE_CREATE_PARAMETER_ID TableCreateParameter
+    )
+{
+    return (
+        TableCreateParameter > TableCreateParameterNullId &&
+        TableCreateParameter < TableCreateParameterInvalidId
+    );
+}
 
 //
 // Define an X-macro for the best coverage types.  The ENTRY macros receive
@@ -2561,20 +2532,30 @@ typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
     BEST_COVERAGE_TYPE_TABLE(ENTRY, ENTRY, ENTRY)
 
 #define EXPAND_AS_BEST_COVERAGE_TYPE_ENUM(Name, Comparison, Comparator) \
-    BestCoverageType##Comparison##Name##Id,
+    BestCoverageType##Comparison##Name##Id,                             \
+    PerfectHashTableBestCoverageType##Comparison##Name##Id =            \
+        BestCoverageType##Comparison##Name##Id,
+
+//
+// N.B. We need the PerfectHashTable prefix in order for certain X-macro
+//      consumers to work, however, the final name is inconveniently long,
+//      so we also export identical enum names with the prefix removed.
+//
 
 typedef enum _PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID {
     BestCoverageTypeNullId = 0,
+    PerfectHashNullBestCoverageTypeId = BestCoverageTypeNullId,
 
     BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_ENUM)
 
     BestCoverageTypeInvalidId,
-} PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE;
+    PerfectHashInvalidBestCoverageTypeId = BestCoverageTypeInvalidId,
+} PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID;
 
 FORCEINLINE
 BOOLEAN
-IsValidBestCoverageType(
-    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType
+IsValidPerfectHashBestCoverageTypeId(
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType
     )
 {
     return (
@@ -2586,7 +2567,7 @@ IsValidBestCoverageType(
 FORCEINLINE
 BOOLEAN
 DoesBestCoverageTypeRequireKeysSubset(
-    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE Type
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID Type
     )
 {
     return (
@@ -2612,7 +2593,7 @@ DoesTableCreateParameterRequireDeallocation(
 FORCEINLINE
 BOOLEAN
 DoesBestCoverageTypeUseValueArray(
-    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType
     )
 {
     return (
@@ -2632,7 +2613,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
-        PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE AsBestCoverageType;
+        PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID AsBestCoverageType;
         VALUE_ARRAY AsValueArray;
         KEYS_SUBSET AsKeysSubset;
     };
@@ -3211,42 +3192,34 @@ typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
 
 //
 // Define an X-macro for the enum types used by the library.  The ENTRY macros
-// receive (Name, Suffix, Upper) as their arguments, e.g.:
-//
-//      (CpuArch, Id, CPU_ARCH_ID)
+// receive (Name, Upper) as their arguments, e.g.: (CpuArch, CPU_ARCH)
 //
 
-#define PERFECT_HASH_ENUM_TYPE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    FIRST_ENTRY(CpuArch, Id, CPU_ARCH_ID)                            \
-    ENTRY(Interface, Id, INTERFACE_ID)                               \
-    ENTRY(Algorithm, Id, ALGORITHM_ID)                               \
-    ENTRY(HashFunction, Id, HASH_FUNCTION_ID)                        \
-    ENTRY(MaskFunction, Id, MASK_FUNCTION_ID)                        \
-    ENTRY(BestCoverage, Type, BEST_COVERAGE_TYPE)                    \
-    LAST_ENTRY(TableCreateParameter, Id, TABLE_CREATE_PARAMETER_ID)
+#define PERFECT_HASH_ENUM_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(CpuArch, CPU_ARCH)                              \
+    ENTRY(Interface, INTERFACE)                                 \
+    ENTRY(Algorithm, ALGORITHM)                                 \
+    ENTRY(HashFunction, HASH_FUNCTION)                          \
+    ENTRY(MaskFunction, MASK_FUNCTION)                          \
+    ENTRY(BestCoverageType, BEST_COVERAGE_TYPE)                 \
+    LAST_ENTRY(TableCreateParameter, TABLE_CREATE_PARAMETER)
 
-#define PERFECT_HASH_ENUM_TYPE_TABLE_ENTRY(ENTRY) \
-    PERFECT_HASH_ENUM_TYPE_TABLE(ENTRY, ENTRY, ENTRY)
+#define PERFECT_HASH_ENUM_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_ENUM_TABLE(ENTRY, ENTRY, ENTRY)
 
-#define EXPAND_AS_ENUM_TYPE_ENUM(Name, Suffix, Upper) \
-    PerfectHash##Name##Suffix,
+#define EXPAND_AS_ENUM_ID_ENUM(Name, Upper) \
+    PerfectHash##Name##EnumId,
 
 //
 // Define an enum of all enum types used by the library.
 //
 
-typedef enum _PERFECT_HASH_ENUM_TYPE {
-    PerfectHashNullEnumType = 0,
-
-    PERFECT_HASH_ENUM_TYPE_TABLE_ENTRY(EXPAND_AS_ENUM_TYPE_ENUM)
-
-    //
-    // N.B. Keep the next value last.
-    //
-
-    PerfectHashInvalidEnumType
-} PERFECT_HASH_ENUM_TYPE;
-typedef PERFECT_HASH_ENUM_TYPE *PPERFECT_HASH_ENUM_TYPE;
+typedef enum _PERFECT_HASH_ENUM_ID {
+    PerfectHashNullEnumId = 0,
+    PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_ENUM_ID_ENUM)
+    PerfectHashInvalidEnumId
+} PERFECT_HASH_ENUM_ID;
+typedef PERFECT_HASH_ENUM_ID *PPERFECT_HASH_ENUM_ID;
 
 //
 // Provide a simple inline CPU architecture enum validation routine.
@@ -3254,13 +3227,13 @@ typedef PERFECT_HASH_ENUM_TYPE *PPERFECT_HASH_ENUM_TYPE;
 
 FORCEINLINE
 BOOLEAN
-IsValidPerfectHashEnumType(
-    _In_ PERFECT_HASH_ENUM_TYPE EnumType
+IsValidPerfectHashEnumId(
+    _In_ PERFECT_HASH_ENUM_ID EnumId
     )
 {
     return (
-        EnumType > PerfectHashNullEnumType &&
-        EnumType < PerfectHashInvalidEnumType
+        EnumId > PerfectHashNullEnumId &&
+        EnumId < PerfectHashInvalidEnumId
     );
 }
 

@@ -321,7 +321,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // number of attempts to make.
     //
 
-    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE BestCoverageType;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID BestCoverageType;
     ULONGLONG BestCoverageAttempts;
 
     //

@@ -2499,13 +2499,13 @@ Abstract:
 #define PH_E_INVALID_TABLE_CREATE_PARAMETER_ID ((HRESULT)0xE004031FL)
 
 //
-// MessageId: PH_E_INVALID_BEST_COVERAGE_TYPE
+// MessageId: PH_E_INVALID_BEST_COVERAGE_TYPE_ID
 //
 // MessageText:
 //
-// Invalid best coverage type.
+// Invalid best coverage type ID.
 //
-#define PH_E_INVALID_BEST_COVERAGE_TYPE  ((HRESULT)0xE0040320L)
+#define PH_E_INVALID_BEST_COVERAGE_TYPE_ID ((HRESULT)0xE0040320L)
 
 //
 // MessageId: PH_E_SPARE_GRAPH
@@ -2976,11 +2976,83 @@ Abstract:
 #define PH_E_INVALID_FILE_WORK_THREADPOOL_PRIORITY ((HRESULT)0xE0040354L)
 
 //
-// MessageId: PH_E_INVALID_ENUM_TYPE
+// MessageId: PH_E_INVALID_ENUM_ID
 //
 // MessageText:
 //
-// Invalid perfect hash enum type.
+// Invalid perfect hash enum ID.
 //
-#define PH_E_INVALID_ENUM_TYPE           ((HRESULT)0xE0040355L)
+#define PH_E_INVALID_ENUM_ID             ((HRESULT)0xE0040355L)
+
+//
+// MessageId: PH_E_INVALID_ENUM_TYPE_NAME
+//
+// MessageText:
+//
+// Invalid perfect hash enum type name.
+//
+#define PH_E_INVALID_ENUM_TYPE_NAME      ((HRESULT)0xE0040356L)
+
+//
+// MessageId: PH_E_INVALID_CPU_ARCH_NAME
+//
+// MessageText:
+//
+// Invalid CPU architecture name.
+//
+#define PH_E_INVALID_CPU_ARCH_NAME       ((HRESULT)0xE0040357L)
+
+//
+// MessageId: PH_E_INVALID_INTERFACE_NAME
+//
+// MessageText:
+//
+// Invalid interface name.
+//
+#define PH_E_INVALID_INTERFACE_NAME      ((HRESULT)0xE0040358L)
+
+//
+// MessageId: PH_E_INVALID_ALGORITHM_NAME
+//
+// MessageText:
+//
+// Invalid algorithm name.
+//
+#define PH_E_INVALID_ALGORITHM_NAME      ((HRESULT)0xE0040359L)
+
+//
+// MessageId: PH_E_INVALID_HASH_FUNCTION_NAME
+//
+// MessageText:
+//
+// Invalid hash function name.
+//
+#define PH_E_INVALID_HASH_FUNCTION_NAME  ((HRESULT)0xE004035AL)
+
+//
+// MessageId: PH_E_INVALID_MASK_FUNCTION_NAME
+//
+// MessageText:
+//
+// Invalid mask function name.
+//
+#define PH_E_INVALID_MASK_FUNCTION_NAME  ((HRESULT)0xE004035BL)
+
+//
+// MessageId: PH_E_INVALID_BEST_COVERAGE_TYPE_NAME
+//
+// MessageText:
+//
+// Invalid best coverage type name.
+//
+#define PH_E_INVALID_BEST_COVERAGE_TYPE_NAME ((HRESULT)0xE004035CL)
+
+//
+// MessageId: PH_E_INVALID_TABLE_CREATE_PARAMETER_NAME
+//
+// MessageText:
+//
+// Invalid table create parameter name.
+//
+#define PH_E_INVALID_TABLE_CREATE_PARAMETER_NAME ((HRESULT)0xE004035DL)
 

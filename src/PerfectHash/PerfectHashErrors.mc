@@ -2270,9 +2270,9 @@ Invalid table create parameter ID.
 MessageId=0x320
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_INVALID_BEST_COVERAGE_TYPE
+SymbolicName=PH_E_INVALID_BEST_COVERAGE_TYPE_ID
 Language=English
-Invalid best coverage type.
+Invalid best coverage type ID.
 .
 
 MessageId=0x321
@@ -2696,8 +2696,72 @@ Invalid file work threadpool priority.
 MessageId=0x355
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_INVALID_ENUM_TYPE
+SymbolicName=PH_E_INVALID_ENUM_ID
 Language=English
-Invalid perfect hash enum type.
+Invalid perfect hash enum ID.
+.
+
+MessageId=0x356
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_ENUM_TYPE_NAME
+Language=English
+Invalid perfect hash enum type name.
+.
+
+MessageId=0x357
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CPU_ARCH_NAME
+Language=English
+Invalid CPU architecture name.
+.
+
+MessageId=0x358
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_INTERFACE_NAME
+Language=English
+Invalid interface name.
+.
+
+MessageId=0x359
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_ALGORITHM_NAME
+Language=English
+Invalid algorithm name.
+.
+
+MessageId=0x35a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_HASH_FUNCTION_NAME
+Language=English
+Invalid hash function name.
+.
+
+MessageId=0x35b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_MASK_FUNCTION_NAME
+Language=English
+Invalid mask function name.
+.
+
+MessageId=0x35c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_BEST_COVERAGE_TYPE_NAME
+Language=English
+Invalid best coverage type name.
+.
+
+MessageId=0x35d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE_CREATE_PARAMETER_NAME
+Language=English
+Invalid table create parameter name.
 .
 

@@ -323,9 +323,9 @@ ComponentQueryInterface(
     //
 
     Match = (
-        Id == Component->Id                        ||
-        Id == PerfectHashUnknownInterfaceId        ||
-        Id == PerfectHashClassFactoryInterfaceId
+        Id == Component->Id                         ||
+        Id == PerfectHashIUnknownInterfaceId        ||
+        Id == PerfectHashIClassFactoryInterfaceId
     );
 
     if (Match) {
@@ -647,7 +647,7 @@ PerfectHashDllGetClassObject(
     // Class ID was valid, proceed with class factory creation.
     //
 
-    Id = PerfectHashClassFactoryInterfaceId;
+    Id = PerfectHashIClassFactoryInterfaceId;
     ClassFactory = (PICLASSFACTORY)CreateComponent(Id, NULL);
     if (!ClassFactory) {
         Result = TlsContext->LastResult;

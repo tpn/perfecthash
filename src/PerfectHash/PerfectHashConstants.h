@@ -219,22 +219,65 @@ CompletePerfectHashTableInitialization(
 }
 
 //
-// Declare the array of algorithm names.
+// Declare the arrays for enum type names.
 //
 
+extern const PCUNICODE_STRING CpuArchNames[];
+extern const PCUNICODE_STRING InterfaceNames[];
 extern const PCUNICODE_STRING AlgorithmNames[];
-
-//
-// Declare the array of hash function names.
-//
-
 extern const PCUNICODE_STRING HashFunctionNames[];
-
-//
-// Declare the array of mask function names.
-//
-
 extern const PCUNICODE_STRING MaskFunctionNames[];
+extern const PCUNICODE_STRING BestCoverageTypeNames[];
+extern const PCUNICODE_STRING TableCreateParameterNames[];
+
+//
+// Declare a generic function pointer for validating enum IDs.
+//
+
+typedef
+BOOLEAN
+(NTAPI IS_VALID_ID)(
+    _In_ ULONG Id
+    );
+typedef IS_VALID_ID *PIS_VALID_ID;
+
+//
+// Define an array of these function pointers, indexed by enum type.
+//
+
+extern const PIS_VALID_ID IsValidIdFunctions[];
+
+//
+// Define an array of invalid enum ID HRESULTs, indexed by enum type.
+//
+
+extern const HRESULT InvalidEnumIdHResults[];
+
+//
+// Define an array of invalid enum ID and name HRESULTs, indexed by enum type.
+//
+
+extern const HRESULT InvalidEnumIdHResults[];
+extern const HRESULT InvalidEnumNameHResults[];
+
+//
+// Define an array of { NullId, InvalidId } tuples that capture the bounds of
+// the given enum type.
+//
+
+typedef struct _ENUM_ID_BOUNDS_TUPLE {
+    ULONG NullId;
+    ULONG InvalidId;
+} ENUM_ID_BOUNDS_TUPLE;
+typedef ENUM_ID_BOUNDS_TUPLE *PENUM_ID_BOUNDS_TUPLE;
+
+extern const ENUM_ID_BOUNDS_TUPLE EnumIdBoundsTuples[];
+
+//
+// Define an array of pointers to array of enum names.
+//
+
+extern const PCUNICODE_STRING *EnumIdNames[];
 
 //
 // Object (e.g. events, shared memory sections) name prefixes for the runtime
@@ -313,7 +356,7 @@ extern const STRING DotLibSuffixA;
 extern const STRING DynamicLibraryConfigurationTypeA;
 extern const STRING ApplicationConfigurationTypeA;
 
-extern const STRING BestCoverageTypeNames[];
+extern const STRING BestCoverageTypeNamesA[];
 
 //
 // Arrays indexed by the FILE_WORK_ID enum.

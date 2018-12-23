@@ -119,6 +119,7 @@ Abstract:
 #include "PerfectHashDirectory.h"
 #include "PerfectHashKeys.h"
 #include "PerfectHashTable.h"
+#include "PerfectHashNames.h"
 #include "PerfectHashPrimes.h"
 #include "PerfectHashContext.h"
 #include "PerfectHashPrivate.h"

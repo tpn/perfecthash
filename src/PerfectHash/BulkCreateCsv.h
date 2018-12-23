@@ -172,7 +172,7 @@ Abstract:
           OUTPUT_CHR)                                                      \
                                                                            \
     ENTRY(BestCoverageType,                                                \
-          &BestCoverageTypeNames[Context->BestCoverageType],               \
+          &BestCoverageTypeNamesA[Context->BestCoverageType],              \
           OUTPUT_STRING)                                                   \
                                                                            \
     ENTRY(AttemptThatFoundBestGraph,                                       \

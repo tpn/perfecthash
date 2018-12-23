@@ -457,7 +457,7 @@ TryExtractArgTableCreateParameters(
 
     DECL_ARG(AttemptsBeforeTableResize);
     DECL_ARG(MaxNumberOfTableResizes);
-    DECL_ARG(BestCoverageNumAttempts);
+    DECL_ARG(BestCoverageAttempts);
     DECL_ARG(BestCoverageType);
     DECL_ARG(KeysSubset);
     DECL_ARG(MainWorkThreadpoolPriority);
@@ -549,7 +549,7 @@ TryExtractArgTableCreateParameters(
 
     ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(MaxNumberOfTableResizes);
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(BestCoverageNumAttempts);
+    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(BestCoverageAttempts);
 
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)

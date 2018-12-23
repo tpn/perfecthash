@@ -288,6 +288,9 @@
     <ClInclude Include="PerfectHashTable.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PerfectHashNames.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="PerfectHashPrimes.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>

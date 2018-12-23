@@ -1146,16 +1146,30 @@ End:
 #define GET_LENGTH(Name) (USHORT)wcslen(Name->Buffer) << (USHORT)1
 #define GET_MAX_LENGTH(Name) Name->Length + 2
 
-#define VALIDATE_ID(Name, Upper)                                      \
-    if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                 \
-                                              10,                     \
-                                              (PULONG)##Name##Id))) { \
-        return PH_E_INVALID_##Upper##_ID;                             \
-    } else if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {          \
-        return PH_E_INVALID_##Upper##_ID;                             \
+#define VALIDATE_ID(Name, Upper)                                       \
+    if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                  \
+                                              10,                      \
+                                              (PULONG)##Name##Id))) {  \
+        return PH_E_INVALID_##Upper##_ID;                              \
+    } else if (*##Name##Id == 0) {                                     \
+        Result = PerfectHashLookupIdForName(Rtl,                       \
+                                            PerfectHash##Name##EnumId, \
+                                            String,                    \
+                                            (PULONG)##Name##Id);       \
+        if (FAILED(Result)) {                                          \
+            return PH_E_INVALID_##Upper##_ID;                          \
+        }                                                              \
+    }                                                                  \
+    if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {                  \
+        return PH_E_INVALID_##Upper##_ID;                              \
     }
 
-
+#define EXTRACT_ID(Name, Upper)                     \
+    CurrentArg++;                                   \
+    String->Buffer = *ArgW++;                       \
+    String->Length = GET_LENGTH(String);            \
+    String->MaximumLength = GET_MAX_LENGTH(String); \
+    VALIDATE_ID(Name, Upper)
 
 PERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
     PerfectHashContextExtractBulkCreateArgsFromArgvW;
@@ -1343,6 +1357,13 @@ Return Value:
     Allocator = Context->Allocator;
 
     //
+    // The first six arguments (keys directory, base output directory, algo ID,
+    // hash function ID, mask function ID and maximum concurrency) are special
+    // in that they're mandatory and expected to appear sequentially, prior to
+    // any additional arguments (i.e. table create parameters) appearing.
+    //
+
+    //
     // Extract keys directory.
     //
 
@@ -1361,34 +1382,15 @@ Return Value:
     BaseOutputDirectory->MaximumLength = GET_MAX_LENGTH(BaseOutputDirectory);
 
     //
-    // Extract algorithm ID.
+    // Originally, the numerical value for algo, hash function and masking type
+    // was required.  We've since relaxed that to support both the numerical
+    // value (i.e. for hash function, you can supply either 1 or Crc32Rotate).
+    // Extract these values now.
     //
 
-    CurrentArg++;
-    String->Buffer = *ArgW++;
-    String->Length = GET_LENGTH(String);
-    String->MaximumLength = GET_MAX_LENGTH(String);
-    VALIDATE_ID(Algorithm, ALGORITHM);
-
-    //
-    // Extract hash function ID.
-    //
-
-    CurrentArg++;
-    String->Buffer = *ArgW++;
-    String->Length = GET_LENGTH(String);
-    String->MaximumLength = GET_MAX_LENGTH(String);
-    VALIDATE_ID(HashFunction, HASH_FUNCTION);
-
-    //
-    // Extract mask function ID.
-    //
-
-    CurrentArg++;
-    String->Buffer = *ArgW++;
-    String->Length = GET_LENGTH(String);
-    String->MaximumLength = GET_MAX_LENGTH(String);
-    VALIDATE_ID(MaskFunction, MASK_FUNCTION);
+    EXTRACT_ID(Algorithm, ALGORITHM);
+    EXTRACT_ID(HashFunction, HASH_FUNCTION);
+    EXTRACT_ID(MaskFunction, MASK_FUNCTION);
 
     //
     // Extract maximum concurrency.

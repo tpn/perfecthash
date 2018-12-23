@@ -130,6 +130,7 @@
     <ClInclude Include="PerfectHashFile.h" />
     <ClInclude Include="PerfectHashFileWork.h" />
     <ClInclude Include="PerfectHashKeys.h" />
+    <ClInclude Include="PerfectHashNames.h" />
     <ClInclude Include="PerfectHashPath.h" />
     <ClInclude Include="PerfectHashPrimes.h" />
     <ClInclude Include="PerfectHashPrivate.h" />

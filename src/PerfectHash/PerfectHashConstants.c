@@ -28,12 +28,99 @@ Abstract:
     C_ASSERT(ARRAYSIZE(Name) == PerfectHashInvalidMaskFunctionId + 1)
 
 //
+// Implement the IsValidId() routines for each enum type.
+//
+
+#define EXPAND_AS_IS_VALID_ID_FUNC(Name, Upper)                             \
+    IS_VALID_ID IsValid##Name##Id;                                          \
+                                                                            \
+    _Use_decl_annotations_                                                  \
+    BOOLEAN                                                                 \
+    IsValid##Name##Id(                                                      \
+        ULONG Id                                                            \
+        )                                                                   \
+    {                                                                       \
+        return IsValidPerfectHash##Name##Id((PERFECT_HASH_##Upper##_ID)Id); \
+    }
+
+//
+// N.B. We need the following define to use the X-macro with the best coverage
+//      type as the enum type name differs slightly (has _TABLE_ in it).
+//
+
+#define PERFECT_HASH_BEST_COVERAGE_TYPE_ID \
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID
+
+PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_IS_VALID_ID_FUNC);
+
+//
+// Capture the routines above into the array of IsValidId() functions.
+//
+
+#define EXPAND_AS_IS_VALID_ID_FUNC_NAME(Name, Upper) \
+    IsValid##Name##Id,
+
+const PIS_VALID_ID IsValidIdFunctions[] = {
+    NULL,
+    PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_IS_VALID_ID_FUNC_NAME)
+    NULL,
+};
+
+//
+// Declare the array of invalid enum ID HRESULT error codes.
+//
+
+#define EXPAND_AS_INVALID_ENUM_ID_HRESULT(Name, Upper) \
+    PH_E_INVALID_##Upper##_ID,
+
+const HRESULT InvalidEnumIdHResults[] = {
+    E_UNEXPECTED,
+    PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_INVALID_ENUM_ID_HRESULT)
+    E_UNEXPECTED,
+};
+
+//
+// Declare the array of invalid enum name HRESULT error codes.
+//
+
+#define EXPAND_AS_INVALID_ENUM_NAME_HRESULT(Name, Upper) \
+    PH_E_INVALID_##Upper##_NAME,
+
+const HRESULT InvalidEnumNameHResults[] = {
+    E_UNEXPECTED,
+    PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_INVALID_ENUM_NAME_HRESULT)
+    E_UNEXPECTED,
+};
+
+//
+// Declare the array of enum ID bounds for each type.
+//
+
+//
+// N.B. Work around some naming quirks with some dummy defines.
+//
+
+#define PerfectHashNullBe
+
+#define EXPAND_AS_ENUM_ID_BOUNDS(Name, Upper) \
+    { PerfectHashNull##Name##Id, PerfectHashInvalid##Name##Id },
+
+const ENUM_ID_BOUNDS_TUPLE EnumIdBoundsTuples[] = {
+    { (ULONG)-1, 0 },
+    PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_ENUM_ID_BOUNDS)
+    { (ULONG)-1, 0 },
+};
+
+//
 // Declare the array of creation routines.
 //
 
+#define EXPAND_AS_CREATE_TABLE_IMPL_FUNC(Name, Upper) \
+    CreatePerfectHashTableImpl##Name,
+
 const PCREATE_PERFECT_HASH_TABLE_IMPL CreationRoutines[] = {
     NULL,
-    CreatePerfectHashTableImplChm01,
+    PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_CREATE_TABLE_IMPL_FUNC)
     NULL
 };
 VERIFY_ALGORITHM_ARRAY_SIZE(CreationRoutines);
@@ -42,9 +129,12 @@ VERIFY_ALGORITHM_ARRAY_SIZE(CreationRoutines);
 // Define the array of loader routines.
 //
 
+#define EXPAND_AS_LOAD_TABLE_IMPL_FUNC(Name, Upper) \
+    LoadPerfectHashTableImpl##Name,
+
 const PLOAD_PERFECT_HASH_TABLE_IMPL LoaderRoutines[] = {
     NULL,
-    LoadPerfectHashTableImplChm01,
+    PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_LOAD_TABLE_IMPL_FUNC)
     NULL
 };
 VERIFY_ALGORITHM_ARRAY_SIZE(LoaderRoutines);
@@ -175,37 +265,73 @@ const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[] = {
 const BYTE NumberOfIndexImplStrings = ARRAYSIZE(IndexImplStringTuples);
 
 //
-// Define UNICODE_STRING structures for each algorithm name.
+// The next section defines the UNICODE_STRING representations and supporting
+// arrays of enum types.
 //
 
-const UNICODE_STRING PerfectHashChm01AlgorithmName =
-    RCS(L"Chm01");
+//
+// CPU arch
+//
+
+#define EXPAND_AS_CPU_ARCH_NAME(Name, Upper) \
+    const UNICODE_STRING PerfectHash##Name##CpuArchName = RCS(L#Name);
+
+PERFECT_HASH_CPU_ARCH_TABLE_ENTRY(EXPAND_AS_CPU_ARCH_NAME);
+
+#define EXPAND_AS_CPU_ARCH_NAME_PTR(Name, Upper) \
+    &PerfectHash##Name##CpuArchName,
+
+const PCUNICODE_STRING CpuArchNames[] = {
+    NULL,
+    PERFECT_HASH_CPU_ARCH_TABLE_ENTRY(EXPAND_AS_CPU_ARCH_NAME_PTR)
+    NULL,
+};
 
 //
-// Define the array of algorithm names.  This is intended to be indexed by the
-// PERFECT_HASH_ALGORITHM_ID enum.
+// Interface
 //
+
+#define EXPAND_AS_INTERFACE_NAME(Name, Upper, Guid) \
+    const UNICODE_STRING PerfectHash##Name##InterfaceName = RCS(L#Name);
+
+PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_INTERFACE_NAME);
+
+#define EXPAND_AS_INTERFACE_NAME_PTR(Name, Upper, Guid) \
+    &PerfectHash##Name##InterfaceName,
+
+const PCUNICODE_STRING InterfaceNames[] = {
+    NULL,
+    PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_INTERFACE_NAME_PTR)
+    NULL,
+};
+
+//
+// Algorithm
+//
+
+#define EXPAND_AS_ALGORITHM_NAME(Name, Upper) \
+    const UNICODE_STRING PerfectHash##Name##AlgorithmName = RCS(L#Name);
+
+PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_ALGORITHM_NAME);
+
+#define EXPAND_AS_ALGORITHM_NAME_PTR(Name, Upper) \
+    &PerfectHash##Name##AlgorithmName,
 
 const PCUNICODE_STRING AlgorithmNames[] = {
     NULL,
-    &PerfectHashChm01AlgorithmName,
+    PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_ALGORITHM_NAME_PTR)
     NULL,
 };
 VERIFY_ALGORITHM_ARRAY_SIZE(AlgorithmNames);
 
 //
-// Define UNICODE_STRING structures for each hash function name.
+// Hash Function
 //
 
 #define EXPAND_AS_HASH_FUNCTION_NAME(Name, NumberOfSeeds) \
     const UNICODE_STRING PerfectHashHash##Name##FunctionName = RCS(L#Name);
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNCTION_NAME)
-
-//
-// Define the array of hash function names.  This is intended to be indexed by
-// the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enum.
-//
 
 #define EXPAND_AS_HASH_FUNCTION_NAME_PTR(Name, NumberOfSeeds) \
     &PerfectHashHash##Name##FunctionName,
@@ -218,27 +344,84 @@ const PCUNICODE_STRING HashFunctionNames[] = {
 VERIFY_HASH_ARRAY_SIZE(HashFunctionNames);
 
 //
-// Define UNICODE_STRING structures for each mask function name.
+// Mask Function
 //
 
-const UNICODE_STRING PerfectHashModulusMaskFunctionName =
-    RCS(L"Modulus");
+#define EXPAND_AS_MASK_FUNCTION_NAME(Name, Upper) \
+    const UNICODE_STRING PerfectHash##Name##MaskFunctionName = RCS(L#Name);
 
-const UNICODE_STRING PerfectHashAndMaskFunctionName =
-    RCS(L"And");
+PERFECT_HASH_MASK_FUNCTION_TABLE_ENTRY(EXPAND_AS_MASK_FUNCTION_NAME);
 
-//
-// Define the array of mask function names.  This is intended to be indexed by
-// the PERFECT_HASH_MASK_FUNCTION_ID enum.
-//
+#define EXPAND_AS_MASK_FUNCTION_NAME_PTR(Name, Upper) \
+    &PerfectHash##Name##MaskFunctionName,
 
 const PCUNICODE_STRING MaskFunctionNames[] = {
     NULL,
-    &PerfectHashModulusMaskFunctionName,
-    &PerfectHashAndMaskFunctionName,
+    PERFECT_HASH_MASK_FUNCTION_TABLE_ENTRY(EXPAND_AS_MASK_FUNCTION_NAME_PTR)
     NULL,
 };
 VERIFY_MASK_ARRAY_SIZE(MaskFunctionNames);
+
+//
+// Best Coverage Type
+//
+
+#define EXPAND_AS_BEST_COVERAGE_TYPE_NAME(Name, Comparison, Comparator)             \
+    const UNICODE_STRING \
+        PerfectHash##Comparison##Name##BestCoverageTypeName = RCS(L#Name);
+
+BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_NAME);
+
+#define EXPAND_AS_BEST_COVERAGE_TYPE_NAME_PTR(Name, Comparison, Comparator) \
+    &PerfectHash##Comparison##Name##BestCoverageTypeName,
+
+const PCUNICODE_STRING BestCoverageTypeNames[] = {
+    NULL,
+    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_NAME_PTR)
+    NULL,
+};
+
+#define EXPAND_AS_BEST_COVERAGE_TYPE_NAMEA(Name, Comparison, Comparator) \
+    RCS(#Comparison#Name),
+
+const STRING BestCoverageTypeNamesA[] = {
+    RCS("N/A"),
+    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_NAMEA)
+    RCS("N/A"),
+};
+
+//
+// Table Create Parameter
+//
+
+#define EXPAND_AS_TABLE_CREATE_PARAMETER_NAME(Name)             \
+    const UNICODE_STRING PerfectHash##Name##TableCreateParameterName = \
+        RCS(L#Name);
+
+TABLE_CREATE_PARAMETER_TABLE_ENTRY(EXPAND_AS_TABLE_CREATE_PARAMETER_NAME);
+
+#define EXPAND_AS_TABLE_CREATE_PARAMETER_NAME_PTR(Name) \
+    &PerfectHash##Name##TableCreateParameterName,
+
+const PCUNICODE_STRING TableCreateParameterNames[] = {
+    NULL,
+    TABLE_CREATE_PARAMETER_TABLE_ENTRY(
+        EXPAND_AS_TABLE_CREATE_PARAMETER_NAME_PTR
+    )
+    NULL,
+};
+
+//
+// Define an array of enum ID names.
+//
+
+#define EXPAND_AS_ENUM_ID_NAMES(Name, Upper) Name##Names,
+
+const PCUNICODE_STRING *EnumIdNames[] = {
+    NULL,
+    PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_ENUM_ID_NAMES)
+    NULL,
+};
 
 //
 // Array of UNICODE_STRING event prefix names used by the runtime context.
@@ -325,15 +508,6 @@ const STRING DotDllSuffixA = RCS(".dll");
 const STRING DotLibSuffixA = RCS(".lib");
 const STRING DynamicLibraryConfigurationTypeA = RCS("DynamicLibrary");
 const STRING ApplicationConfigurationTypeA = RCS("Application");
-
-#define EXPAND_AS_DECL_BEST_COVERAGE_TYPE_STRING(Name, Comparison, Comparator) \
-    RCS(#Comparison#Name),
-
-const STRING BestCoverageTypeNames[] = {
-    RCS("N/A"),
-    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DECL_BEST_COVERAGE_TYPE_STRING)
-    RCS("N/A"),
-};
 
 //
 // Stream names.
@@ -480,42 +654,41 @@ C_ASSERT(EXPECTED_ARRAY_SIZE == PerfectHashInvalidInterfaceId+1);
 C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashLastInterfaceId);
 C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 
+//
+// Add dummy defines for components whose struct name isn't prefixed with
+// PERFECT_HASH_; this allows us to use the X-macro below properly.
+//
+
+#define PERFECT_HASH_IUNKNOWN IUNKNOWN
+#define PERFECT_HASH_ICLASSFACTORY ICLASSFACTORY
+#define PERFECT_HASH_RTL RTL
+#define PERFECT_HASH_ALLOCATOR ALLOCATOR
+#define PERFECT_HASH_GUARDED_LIST GUARDED_LIST
+#define PERFECT_HASH_GRAPH GRAPH
+
+#define PERFECT_HASH_IUNKNOWN_VTBL IUNKNOWN_VTBL
+#define PERFECT_HASH_ICLASSFACTORY_VTBL ICLASSFACTORY_VTBL
+#define PERFECT_HASH_RTL_VTBL RTL_VTBL
+#define PERFECT_HASH_ALLOCATOR_VTBL ALLOCATOR_VTBL
+#define PERFECT_HASH_GUARDED_LIST_VTBL GUARDED_LIST_VTBL
+#define PERFECT_HASH_GRAPH_VTBL GRAPH_VTBL
+
+#define EXPAND_AS_SIZEOF_COMPONENT(Name, Upper, Guid) \
+    sizeof(PERFECT_HASH_##Upper),
+
 const USHORT ComponentSizes[] = {
     0,
-
-    sizeof(IUNKNOWN),
-    sizeof(ICLASSFACTORY),
-    sizeof(PERFECT_HASH_KEYS),
-    sizeof(PERFECT_HASH_CONTEXT),
-    sizeof(PERFECT_HASH_TABLE),
-    sizeof(RTL),
-    sizeof(ALLOCATOR),
-    sizeof(PERFECT_HASH_FILE),
-    sizeof(PERFECT_HASH_PATH),
-    sizeof(PERFECT_HASH_DIRECTORY),
-    sizeof(GUARDED_LIST),
-    sizeof(GRAPH),
-
+    PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_SIZEOF_COMPONENT)
     0,
 };
 VERIFY_ARRAY_SIZE(ComponentSizes);
 
+#define EXPAND_AS_SIZEOF_VTBL(Name, Upper, Guid) \
+    sizeof(PERFECT_HASH_##Upper##_VTBL),
+
 const USHORT ComponentInterfaceSizes[] = {
     0,
-
-    sizeof(IUNKNOWN_VTBL),
-    sizeof(ICLASSFACTORY_VTBL),
-    sizeof(PERFECT_HASH_KEYS_VTBL),
-    sizeof(PERFECT_HASH_CONTEXT_VTBL),
-    sizeof(PERFECT_HASH_TABLE_VTBL),
-    sizeof(RTL_VTBL),
-    sizeof(ALLOCATOR_VTBL),
-    sizeof(PERFECT_HASH_FILE_VTBL),
-    sizeof(PERFECT_HASH_PATH_VTBL),
-    sizeof(PERFECT_HASH_DIRECTORY_VTBL),
-    sizeof(GUARDED_LIST_VTBL),
-    sizeof(GRAPH_VTBL),
-
+    PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_SIZEOF_VTBL)
     0,
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaceSizes);
@@ -525,25 +698,20 @@ VERIFY_ARRAY_SIZE(ComponentInterfaceSizes);
 // field offset if the member is the first element in the structure.
 //
 
+#define EXPAND_AS_COMPONENT_INTERFACE_OFFSET(Name, Upper, Guid) \
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_##Upper, Interface),
+
 const SHORT ComponentInterfaceOffsets[] = {
     -1,
-
-    (SHORT)FIELD_OFFSET(IUNKNOWN, Interface),
-    (SHORT)FIELD_OFFSET(ICLASSFACTORY, Interface),
-    (SHORT)FIELD_OFFSET(PERFECT_HASH_KEYS, Interface),
-    (SHORT)FIELD_OFFSET(PERFECT_HASH_CONTEXT, Interface),
-    (SHORT)FIELD_OFFSET(PERFECT_HASH_TABLE, Interface),
-    (SHORT)FIELD_OFFSET(RTL, Interface),
-    (SHORT)FIELD_OFFSET(ALLOCATOR, Interface),
-    (SHORT)FIELD_OFFSET(PERFECT_HASH_FILE, Interface),
-    (SHORT)FIELD_OFFSET(PERFECT_HASH_PATH, Interface),
-    (SHORT)FIELD_OFFSET(PERFECT_HASH_DIRECTORY, Interface),
-    (SHORT)FIELD_OFFSET(GUARDED_LIST, Interface),
-    (SHORT)FIELD_OFFSET(GRAPH, Interface),
-
+    PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_COMPONENT_INTERFACE_OFFSET)
     -1,
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaceOffsets);
+
+//
+// N.B. Not all components have a TLS context entry, so we don't use an X-macro
+//      expansion for the following array definition.
+//
 
 const SHORT ComponentInterfaceTlsContextOffsets[] = {
     -1,

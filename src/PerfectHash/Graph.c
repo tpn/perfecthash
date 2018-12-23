@@ -1174,7 +1174,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED_MEMORY_COVERAGE PreviousBestCoverage;
-    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
 
     //
     // Initialize aliases.
@@ -1244,7 +1244,7 @@ Return Value:
         BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_BEST_GRAPH)
 
         default:
-            Result = PH_E_INVALID_BEST_COVERAGE_TYPE;
+            Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
             break;
     }
 
@@ -1324,7 +1324,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED_MEMORY_COVERAGE PreviousBestCoverage;
-    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE CoverageType;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
 
     //
     // Initialize aliases.
@@ -1381,7 +1381,7 @@ Retry:
         BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_BEST_GRAPH)
 
         default:
-            Result = PH_E_INVALID_BEST_COVERAGE_TYPE;
+            Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
             break;
     }
 

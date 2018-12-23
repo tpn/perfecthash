@@ -537,7 +537,7 @@ Return Value:
                 SawResizeLimit = TRUE;
                 break;
 
-            case TableCreateParameterBestCoverageNumAttemptsId:
+            case TableCreateParameterBestCoverageAttemptsId:
                 Context->BestCoverageAttempts = Param->AsULongLong;
                 break;
 
@@ -584,7 +584,7 @@ Return Value:
 
         if (!Context->BestCoverageAttempts ||
             !Context->BestCoverageType ||
-            !IsValidBestCoverageType(Context->BestCoverageType)) {
+            !IsValidPerfectHashBestCoverageTypeId(Context->BestCoverageType)) {
 
             Result = PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH;
             goto Error;
