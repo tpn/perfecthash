@@ -96,12 +96,6 @@ const HRESULT InvalidEnumNameHResults[] = {
 // Declare the array of enum ID bounds for each type.
 //
 
-//
-// N.B. Work around some naming quirks with some dummy defines.
-//
-
-#define PerfectHashNullBe
-
 #define EXPAND_AS_ENUM_ID_BOUNDS(Name, Upper) \
     { PerfectHashNull##Name##Id, PerfectHashInvalid##Name##Id },
 
