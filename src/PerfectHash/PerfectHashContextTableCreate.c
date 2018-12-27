@@ -797,21 +797,37 @@ End:
 }
 
 //
-// Helper macros for argument extraction.
+// Helper macros for argument extraction.  Copy-and-pasted from the bulk
+// create implementation; we should look at cleaning this up down the track.
 //
 
 #define GET_LENGTH(Name) (USHORT)wcslen(Name->Buffer) << (USHORT)1
 #define GET_MAX_LENGTH(Name) Name->Length + 2
 
-#define VALIDATE_ID(Name, Upper)                                      \
-    if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                 \
-                                              10,                     \
-                                              (PULONG)##Name##Id))) { \
-        return PH_E_INVALID_##Upper##_ID;                             \
-    } else if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {          \
-        return PH_E_INVALID_##Upper##_ID;                             \
+#define VALIDATE_ID(Name, Upper)                                       \
+    if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                  \
+                                              10,                      \
+                                              (PULONG)##Name##Id))) {  \
+        return PH_E_INVALID_##Upper##_ID;                              \
+    } else if (*##Name##Id == 0) {                                     \
+        Result = PerfectHashLookupIdForName(Rtl,                       \
+                                            PerfectHash##Name##EnumId, \
+                                            String,                    \
+                                            (PULONG)##Name##Id);       \
+        if (FAILED(Result)) {                                          \
+            return PH_E_INVALID_##Upper##_ID;                          \
+        }                                                              \
+    }                                                                  \
+    if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {                  \
+        return PH_E_INVALID_##Upper##_ID;                              \
     }
 
+#define EXTRACT_ID(Name, Upper)                     \
+    CurrentArg++;                                   \
+    String->Buffer = *ArgW++;                       \
+    String->Length = GET_LENGTH(String);            \
+    String->MaximumLength = GET_MAX_LENGTH(String); \
+    VALIDATE_ID(Name, Upper)
 
 PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
     PerfectHashContextExtractTableCreateArgsFromArgvW;
@@ -1018,34 +1034,12 @@ Return Value:
     BaseOutputDirectory->MaximumLength = GET_MAX_LENGTH(BaseOutputDirectory);
 
     //
-    // Extract algorithm ID.
+    // Extract algorithm ID, hash function and mask function.
     //
 
-    CurrentArg++;
-    String->Buffer = *ArgW++;
-    String->Length = GET_LENGTH(String);
-    String->MaximumLength = GET_MAX_LENGTH(String);
-    VALIDATE_ID(Algorithm, ALGORITHM);
-
-    //
-    // Extract hash function ID.
-    //
-
-    CurrentArg++;
-    String->Buffer = *ArgW++;
-    String->Length = GET_LENGTH(String);
-    String->MaximumLength = GET_MAX_LENGTH(String);
-    VALIDATE_ID(HashFunction, HASH_FUNCTION);
-
-    //
-    // Extract mask function ID.
-    //
-
-    CurrentArg++;
-    String->Buffer = *ArgW++;
-    String->Length = GET_LENGTH(String);
-    String->MaximumLength = GET_MAX_LENGTH(String);
-    VALIDATE_ID(MaskFunction, MASK_FUNCTION);
+    EXTRACT_ID(Algorithm, ALGORITHM);
+    EXTRACT_ID(HashFunction, HASH_FUNCTION);
+    EXTRACT_ID(MaskFunction, MASK_FUNCTION);
 
     //
     // Extract maximum concurrency.
@@ -1110,7 +1104,7 @@ Return Value:
 #define TRY_EXTRACT_ARG(Name)                                                 \
     Result = TryExtractArg##Name##Flags(Rtl, Allocator, String, Name##Flags); \
     if (FAILED(Result)) {                                                     \
-        PH_ERROR(ExtractTableCreateArgs_TryExtractArg##Name##Flags, Result);   \
+        PH_ERROR(ExtractTableCreateArgs_TryExtractArg##Name##Flags, Result);  \
         break;                                                                \
     } else if (Result == S_OK) {                                              \
         continue;                                                             \
