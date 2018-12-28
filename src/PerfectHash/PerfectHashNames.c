@@ -162,7 +162,6 @@ Return Value:
 --*/
 {
     ULONG Index;
-    ULONG Count;
     HRESULT Result;
     PCUNICODE_STRING String;
 
@@ -191,10 +190,7 @@ Return Value:
     //
 
     Index = EnumIdBoundsTuples[EnumId].NullId + 1;
-    Count = EnumIdBoundsTuples[EnumId].InvalidId;
-
     ASSERT(Index > 0);
-    ASSERT(Count > Index);
 
     //
     // Loop through the strings for each ID in the target enum.  If the string
@@ -203,12 +199,16 @@ Return Value:
     // valid enum value) and return success.
     //
 
-    for (; Index < Count; Index++) {
+    while (TRUE) {
         String = EnumIdNames[EnumId][Index];
+        if (String == NULL) {
+            break;
+        }
         if (Rtl->RtlEqualUnicodeString(String, Name, TRUE) != FALSE) {
             *IdPointer = Index;
             return S_OK;
         }
+        Index++;
     }
 
     //
