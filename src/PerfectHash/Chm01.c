@@ -1941,7 +1941,7 @@ Return Value:
     TableInfoOnDisk->AlgorithmId = Context->AlgorithmId;
     TableInfoOnDisk->MaskFunctionId = Context->MaskFunctionId;
     TableInfoOnDisk->HashFunctionId = Context->HashFunctionId;
-    TableInfoOnDisk->KeySizeInBytes = sizeof(Table->Keys->SizeOfKeyInBytes);
+    TableInfoOnDisk->KeySizeInBytes = Table->Keys->SizeOfKeyInBytes;
     TableInfoOnDisk->HashSize = Table->HashSize;
     TableInfoOnDisk->IndexSize = Table->IndexSize;
     TableInfoOnDisk->HashShift = Table->HashShift;
