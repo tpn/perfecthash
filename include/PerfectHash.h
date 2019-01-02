@@ -3186,7 +3186,8 @@ _Success_(return >= 0)
 _Check_return_opt_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_MESSAGE)(
-    _In_opt_ ULONG Code
+    _In_opt_ ULONG Code,
+    ...
     );
 typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
 
@@ -3245,11 +3246,14 @@ IsValidPerfectHashEnumId(
 #define SYS_ERROR(Name) \
     PerfectHashPrintError(#Name, __FILE__, __LINE__, GetLastError())
 
-#define PH_ERROR(Name, Result) \
-    PerfectHashPrintError(#Name, __FILE__, __LINE__, (ULONG)Result)
+#define PH_ERROR(Name, Result)           \
+    PerfectHashPrintError(#Name,         \
+                          __FILE__,      \
+                          __LINE__,      \
+                          (ULONG)Result)
 
-#define PH_MESSAGE(Result) \
-    PerfectHashPrintMessage((ULONG)Result)
+#define PH_MESSAGE(Result, ...) \
+    PerfectHashPrintMessage((ULONG)Result, __VA_ARGS__)
 
 #define PH_BREAK() __debugbreak()
 

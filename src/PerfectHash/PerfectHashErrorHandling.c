@@ -184,7 +184,8 @@ PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
 _Use_decl_annotations_
 HRESULT
 PerfectHashPrintMessage(
-    ULONG Code
+    ULONG Code,
+    ...
     )
 {
     BOOL Success;
@@ -195,14 +196,16 @@ PerfectHashPrintMessage(
     ULONG BytesWritten;
     HRESULT Result = S_OK;
     LONG_PTR SizeOfBufferInBytes;
+    va_list Args;
+
+    va_start(Args, Code);
 
     LanguageId = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
 
     Flags = (
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_HMODULE    |
-        FORMAT_MESSAGE_FROM_SYSTEM     |
-        FORMAT_MESSAGE_IGNORE_INSERTS
+        FORMAT_MESSAGE_FROM_SYSTEM
     );
 
     Count = FormatMessageA(Flags,
@@ -211,7 +214,7 @@ PerfectHashPrintMessage(
                            LanguageId,
                            (PSTR)&Buffer,
                            0,
-                           NULL);
+                           &Args);
 
     if (!Count) {
         SYS_ERROR(FormatMessageA);
