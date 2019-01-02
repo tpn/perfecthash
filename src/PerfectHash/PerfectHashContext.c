@@ -865,6 +865,8 @@ Return Value:
     Context->FileWorkList->Vtbl->Reset(Context->FileWorkList);
     Context->FinishedWorkList->Vtbl->Reset(Context->FinishedWorkList);
 
+    Context->KeysSubset = NULL;
+
     //
     // Suppress concurrency warnings.
     //
