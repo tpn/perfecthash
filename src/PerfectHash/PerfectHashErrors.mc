@@ -2790,3 +2790,19 @@ Language=English
 Invalid table create parameters.
 .
 
+MessageId=0x361
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_SEEDS
+Language=English
+Invalid seeds.
+.
+
+MessageId=0x362
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE
+Language=English
+Invalid user seed element size.
+.
+

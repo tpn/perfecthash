@@ -2249,6 +2249,116 @@ Return Value:
                                             SizeInBytes,
                                             (PBYTE)&Graph->FirstSeed);
 
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    //
+    // Apply user seeds and return the result.
+    //
+
+    Result = GraphApplyUserSeeds(Graph);
+
+    return Result;
+}
+
+
+GRAPH_APPLY_USER_SEEDS GraphApplyUserSeeds;
+
+_Use_decl_annotations_
+HRESULT
+GraphApplyUserSeeds(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Applies user-provided seeds to the graph, if applicable.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance for which the user seed
+        data will be applied, if applicable.
+
+Return Value:
+
+    S_OK - User seeds were successfully applied.
+
+    S_FALSE - No user seeds present.
+
+    E_POINTER - Graph was NULL.
+
+    PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE - The individual value size indicated
+        by the user seed value array is invalid (i.e. not sizeof(ULONG)).
+
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    ULONG Index;
+    PULONG Value;
+    PULONG Seed;
+    PULONG Seeds;
+    PVALUE_ARRAY ValueArray;
+    PPERFECT_HASH_CONTEXT Context;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (IsSpareGraph(Graph)) {
+        return PH_E_SPARE_GRAPH;
+    }
+
+    Context = Graph->Context;
+    ValueArray = Context->UserSeeds;
+
+    if (!ValueArray) {
+
+        //
+        // No user seeds were provided (i.e. no --Seeds command line param).
+        //
+
+        return S_FALSE;
+    }
+
+    //
+    // Ensure the value array size matches our graph seed size.
+    //
+
+    if (ValueArray->ValueSizeInBytes != sizeof(Graph->FirstSeed)) {
+        return PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE;
+    }
+
+    //
+    // Validation complete.  The caller has provided valid seed data; loop
+    // through it and apply any non-zero members at the relative offset.
+    //
+
+    Seeds = &Graph->FirstSeed;
+
+    for (Index = 0, Value = ValueArray->Values;
+         Index < Graph->NumberOfSeeds && Index < ValueArray->NumberOfValues;
+         Index++, Value++) {
+
+        if (*Value != 0) {
+
+            //
+            // Non-zero seed value detected; overwrite the applicable seed
+            // slot with the caller-provided value.
+            //
+
+            Seed = Seeds + Index;
+            *Seed = *Value;
+        }
+    }
+
     return Result;
 }
 

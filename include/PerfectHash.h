@@ -2467,7 +2467,8 @@ IsValidTableCompileFlags(
     ENTRY(BestCoverageType)                                          \
     ENTRY(KeysSubset)                                                \
     ENTRY(MainWorkThreadpoolPriority)                                \
-    LAST_ENTRY(FileWorkThreadpoolPriority)
+    ENTRY(FileWorkThreadpoolPriority)                                \
+    LAST_ENTRY(Seeds)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
     TABLE_CREATE_PARAMETER_TABLE(ENTRY, ENTRY, ENTRY)
@@ -2586,7 +2587,8 @@ DoesTableCreateParameterRequireDeallocation(
     )
 {
     return (
-        Id == TableCreateParameterKeysSubsetId
+        Id == TableCreateParameterKeysSubsetId ||
+        Id == TableCreateParameterSeedsId
     );
 }
 

@@ -3082,3 +3082,21 @@ Abstract:
 //
 #define PH_E_INVALID_TABLE_CREATE_PARAMETERS ((HRESULT)0xE0040360L)
 
+//
+// MessageId: PH_E_INVALID_SEEDS
+//
+// MessageText:
+//
+// Invalid seeds.
+//
+#define PH_E_INVALID_SEEDS               ((HRESULT)0xE0040361L)
+
+//
+// MessageId: PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE
+//
+// MessageText:
+//
+// Invalid user seed element size.
+//
+#define PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE ((HRESULT)0xE0040362L)
+

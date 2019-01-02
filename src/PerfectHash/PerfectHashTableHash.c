@@ -872,15 +872,17 @@ Return Value:
 
 --*/
 {
+    ULONG Key2;
     ULONG Seed1;
     ULONG Seed2;
+    BYTE Seed3;
     ULONG Vertex1;
     ULONG Vertex2;
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
 
-    ASSERT(NumberOfSeeds >= 2);
+    ASSERT(NumberOfSeeds >= 3);
     UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //
@@ -891,13 +893,15 @@ Return Value:
 
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
+    Seed3 = (BYTE)(Seeds[2] & 0x1f);
 
     //
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Key, 9));
-    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, 15));
+    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Key2 = _rotl(Key, Seed3);
+    Vertex2 = _mm_crc32_u32(Seed2, Key2);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;

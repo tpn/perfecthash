@@ -333,6 +333,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PKEYS_SUBSET KeysSubset;
 
     //
+    // Pointer to user-provided seed data, if applicable.
+    //
+
+    PVALUE_ARRAY UserSeeds;
+
+    //
     // Best and spare graphs.
     //
 

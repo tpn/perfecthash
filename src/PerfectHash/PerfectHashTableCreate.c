@@ -562,6 +562,10 @@ Return Value:
 
                 break;
 
+            case TableCreateParameterSeedsId:
+                Context->UserSeeds = &Param->AsValueArray;
+                break;
+
             default:
                 Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
                 goto Error;

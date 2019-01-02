@@ -995,9 +995,19 @@ VOID
     );
 typedef GRAPH_RUNDOWN *PGRAPH_RUNDOWN;
 
+typedef
+_Success_(return >= 0)
+HRESULT
+(NTAPI GRAPH_APPLY_USER_SEEDS)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_APPLY_USER_SEEDS *PGRAPH_APPLY_USER_SEEDS;
+
+
 #ifndef __INTELLISENSE__
 extern GRAPH_INITIALIZE GraphInitialize;
 extern GRAPH_RUNDOWN GraphRundown;
+extern GRAPH_APPLY_USER_SEEDS GraphApplyUserSeeds;
 
 //
 // Private vtbl methods.
