@@ -392,6 +392,7 @@ ProcessValue:
     ValueArray = &Param->AsValueArray;
     ValueArray->Values = Values;
     ValueArray->NumberOfValues = NumberOfValidValues;
+    ValueArray->ValueSizeInBytes = sizeof(ULONG);
 
     goto End;
 
