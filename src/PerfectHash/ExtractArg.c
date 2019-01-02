@@ -307,8 +307,13 @@ TryExtractValueArray(
 
         IsLastChar = (Index == (NumberOfInputStringChars - 1));
 
-        if (IsLastChar && State == LookingForComma &&
-            *Wide != L',' && ValueStart != NULL) {
+        if (IsLastChar) {
+            if (*Wide == L',') {
+                break;
+            }
+            if (!ValueStart) {
+                ValueStart = Wide;
+            }
             Wide++;
             goto ProcessValue;
         }
