@@ -247,7 +247,8 @@ PerfectHashPrintMessage(
 
     //
     // If the incoming error code was a usage string, print the table of
-    // algorithms, hash functions and masking types.
+    // algorithms, hash functions and masking types.  This is pretty hacky,
+    // but it works for now.
     //
 
     if (DoesErrorCodeWantAlgoHashMaskTableAppended(Code)) {
