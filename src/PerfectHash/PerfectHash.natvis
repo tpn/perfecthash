@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- vim:set ft=xml: -->
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="_STRING">
+        <DisplayString>{Buffer,[Length]sb}</DisplayString>
+        <!--<StringView>Buffer,[Length]sb</StringView>-->
+    </Type>
+
+    <Type Name="_UNICODE_STRING">
+        <DisplayString>{Buffer,[Length / 2]su}</DisplayString>
+        <!--<StringView>Buffer,[Length / 2]su</StringView>-->
+    </Type>
+
+    <Type Name="_VALUE_ARRAY">
+        <AlternativeType Name="_KEYS_SUBSET"/>
+        <Expand>
+            <ArrayItems>
+                <Size>NumberOfValues</Size>
+                <ValuePointer>Values</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+
+    <Type Name="_PERFECT_HASH_KEYS">
+        <DisplayString Condition="File != nullptr &amp;&amp; File->Path != nullptr">{File->Path}</DisplayString>
+        <Expand>
+            <Item Name="&lt;Number of Keys&gt;">NumberOfElements.QuadPart</Item>
+            <Synthetic Name="&lt;Key Values&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfElements.QuadPart</Size>
+                        <ValuePointer Condition="SizeOfKeyInBytes == sizeof(ULONG)">(PULONG)File->BaseAddress</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
+    <Type Name="_PERFECT_HASH_PATH">
+        <DisplayString>File={FileName} Path={FullPath}</DisplayString>
+    </Type>
+
+    <Type Name="_PERFECT_HASH_FILE">
+        <DisplayString Condition="Path != nullptr">{Path}</DisplayString>
+    </Type>
+
+    <Type Name="_PERFECT_HASH_DIRECTORY">
+        <DisplayString Condition="Path != nullptr">{Path}</DisplayString>
+        <Expand>
+            <Item Name="RenamePath" Condition="RenamePath != nullptr">RenamePath</Item>
+            <!--
+            <LinkedListItems>
+                <Size>FilesList->NumberOfEntries</Size>
+                <HeadPointer>FilesList->ListHead</HeadPointer>
+                <NextPointer>FilesList->ListHead.Flink</NextPointer>
+                <ValueNode>CONTAINING_RECORD()</ValueNode>
+            </LinkedListItems>
+            -->
+        </Expand>
+    </Type>
+
+    <Type Name="_PERFECT_HASH_TABLE_CREATE_PARAMETER">
+        <DisplayString Condition="Id == TableCreateParameterAttemptsBeforeTableResizeId">{Id}={AsULong}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterMaxNumberOfTableResizesId">{Id}={AsULong}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterBestCoverageAttemptsId">{Id}={AsULong}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterBestCoverageTypeId">{Id}={AsBestCoverageType}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterKeysSubsetId">{Id}={AsKeysSubset}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterMainWorkThreadpoolPriorityId">{Id}={AsTpCallbackPriority}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterFileWorkThreadpoolPriorityId">{Id}={AsTpCallbackPriority}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterSeedsId">{Id}={AsValueArray}</DisplayString>
+    </Type>
+
+    <Type Name="_PERFECT_HASH_TABLE_CREATE_PARAMETERS">
+        <Expand>
+            <Item Name="&lt;Number of Params&gt;">NumberOfElements</Item>
+            <Synthetic Name="&lt;Parameters&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfElements</Size>
+                        <ValuePointer Condition="NumberOfElements &gt; 0 &amp;&amp; Params != nullptr">Params</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
+</AutoVisualizer>
