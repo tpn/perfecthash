@@ -32,8 +32,7 @@ PerfectHashContextSelfTest(
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
     PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
     PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer,
-    ULONG NumberOfTableCreateParameters,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
 /*++
 
@@ -73,10 +72,7 @@ Arguments:
     TableCompileFlags - Optionally supplies a pointer to a compile table flags
         structure that can be used to customize table compilation behavior.
 
-    NumberOfTableCreateParameters - Optionally supplies the number of elements
-        in the TableCreateParameters array.
-
-    TableCreateParameters - Optionally supplies an array of additional
+    TableCreateParameters - Supplies an array of additional
         parameters that can be used to further customize table creation
         behavior.
 
@@ -649,7 +645,6 @@ Return Value:
                                      MaskFunctionId,
                                      Keys,
                                      &TableCreateFlags,
-                                     NumberOfTableCreateParameters,
                                      TableCreateParameters);
 
         if (FAILED(Result)) {
@@ -1209,8 +1204,7 @@ PerfectHashContextExtractSelfTestArgsFromArgvW(
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
     PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    PULONG NumberOfTableCreateParameters,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParameters
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
 /*++
 
@@ -1264,13 +1258,8 @@ Arguments:
     TableCompileFlags - Supplies the address of a variable that will receive
         the table compile flags.
 
-    NumberOfTableCreateParameters - Supplies the address of a variable that will
-        receive the number of elements in the TableCreateParameters array.
-
-    TableCreateParameters - Supplies the address of a variable that will receive
-        a pointer to an array of table create parameters.  If this is not NULL,
-        the memory will be allocated via the context's allocator and the caller
-        is responsible for freeing it.
+    TableCreateParameters - Supplies a pointer to a table create params struct
+        that will be used to capture parameters.
 
 Return Value:
 
@@ -1351,10 +1340,6 @@ Return Value:
     }
 
     if (!ARGUMENT_PRESENT(TableCompileFlags)) {
-        return E_POINTER;
-    }
-
-    if (!ARGUMENT_PRESENT(NumberOfTableCreateParameters)) {
         return E_POINTER;
     }
 
@@ -1477,13 +1462,6 @@ Return Value:
     TableLoadFlags->AsULong = 0;
     TableCompileFlags->AsULong = 0;
 
-    //
-    // Work in progress: table create parameters.
-    //
-
-    *NumberOfTableCreateParameters = 0;
-    *TableCreateParameters = NULL;
-
     return S_OK;
 }
 
@@ -1539,8 +1517,8 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     HRESULT Result;
+    HRESULT CleanupResult;
     UNICODE_STRING TestDataDirectory = { 0 };
     UNICODE_STRING BaseOutputDirectory = { 0 };
     PERFECT_HASH_ALGORITHM_ID AlgorithmId = 0;
@@ -1553,10 +1531,12 @@ Return Value:
     PERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags = { 0 };
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
     PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW ExtractSelfTestArgs;
-    ULONG NumberOfTableCreateParameters = 0;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters = 0;
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters;
 
-    Rtl = Context->Rtl;
+    TableCreateParameters.SizeOfStruct = sizeof(TableCreateParameters);
+    TableCreateParameters.NumberOfElements = 0;
+    TableCreateParameters.Allocator = Context->Allocator;
+    TableCreateParameters.Params = NULL;
 
     ExtractSelfTestArgs = Context->Vtbl->ExtractSelfTestArgsFromArgvW;
     Result = ExtractSelfTestArgs(Context,
@@ -1573,7 +1553,6 @@ Return Value:
                                  &TableCreateFlags,
                                  &TableLoadFlags,
                                  &TableCompileFlags,
-                                 &NumberOfTableCreateParameters,
                                  &TableCreateParameters);
 
     if (FAILED(Result)) {
@@ -1590,6 +1569,9 @@ Return Value:
         }
     }
 
+    PerfectHashContextApplyThreadpoolPriorities(Context,
+                                                &TableCreateParameters);
+
     Result = Context->Vtbl->SelfTest(Context,
                                      &TestDataDirectory,
                                      &BaseOutputDirectory,
@@ -1601,8 +1583,7 @@ Return Value:
                                      &TableCreateFlags,
                                      &TableLoadFlags,
                                      &TableCompileFlags,
-                                     NumberOfTableCreateParameters,
-                                     TableCreateParameters);
+                                     &TableCreateParameters);
 
     if (FAILED(Result)) {
 
@@ -1613,9 +1594,10 @@ Return Value:
         NOTHING;
     }
 
-    if (TableCreateParameters) {
-        Context->Allocator->Vtbl->FreePointer(Context->Allocator,
-                                              (PVOID *)&TableCreateParameters);
+    CleanupResult = CleanupTableCreateParameters(&TableCreateParameters);
+    if (FAILED(CleanupResult)) {
+        PH_ERROR(BulkCreateArgvW_CleanupTableCreateParams, CleanupResult);
+        Result = CleanupResult;
     }
 
     return Result;

@@ -417,6 +417,7 @@ MaybeDeallocateTableCreateParameter(
     )
 {
     if (DoesTableCreateParameterRequireDeallocation(Param->Id)) {
+        Param->Id = PerfectHashNullTableCreateParameterId;
         Allocator->Vtbl->FreePointer(Allocator,
                                      (PVOID *)&Param->AsVoidPointer);
     }
@@ -434,62 +435,129 @@ _Use_decl_annotations_
 HRESULT
 TryExtractArgTableCreateParameters(
     PRTL Rtl,
-    PALLOCATOR Allocator,
     PCUNICODE_STRING Argument,
-    PULONG NumberOfTableCreateParametersPointer,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParametersPointer
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
+/*++
+
+Routine Description:
+
+    This routine tries to extract table create parameters from a given argument
+    string.
+
+    Table create parameters must adhere to the format "<Name>=<Value>"; i.e.
+    an equal sign must be present and a valid value must trail it.
+
+Arguments:
+
+    Rtl - Supplies a pointer to an Rtl instance.
+
+    Allocator - Supplies a pointer to an Allocator instance that will be used
+        for all memory allocations.
+
+        N.B. The same allocator should always be passed when parsing a command
+             line string, as previous allocations may need to be reallocated if
+             additional table create parameters are detected.
+
+    Argument - Supplies a pointer to a UNICODE_STRING structure capturing the
+        argument to process.  The string should *not* include leading dashes,
+        e.g. if the command line argument was "--Seeds=0,0,15" the Argument
+        parameter should be adjusted to point to "Seeds=0,0,15" by the time
+        this routine is called.
+
+    TableCreateParameters - Supplies a pointer to the table create parameters
+        structure to be used for capturing params.
+
+Return Value:
+
+    S_OK - A table create parameter was successfully extracted.
+
+    S_FALSE - No table create parameter was detected.
+
+    PH_E_COMMANDLINE_ARG_MISSING_VALUE - A table create parameter or best
+        coverage type was detected, however, no equal sign or value was
+        detected.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    PH_E_INVALID_TABLE_CREATE_PARAMETERS - Invalid table create parameters.
+
+    PH_E_KEYS_SUBSET_NOT_SORTED - The keys subset list of values was not sorted
+        in ascending order.
+
+    PH_E_DUPLICATE_VALUE_DETECTED_IN_KEYS_SUBSET - Duplicate value detected in
+        keys subset.
+
+    PH_E_INVALID_KEYS_SUBSET - Invalid keys subset value provided.
+
+    PH_E_INVALID_MAIN_WORK_THREADPOOL_PRIORITY - Invalid main work threadpool
+        priority.
+
+    PH_E_INVALID_FILE_WORK_THREADPOOL_PRIORITY - Invalid file work threadpool
+        priority.
+
+    PH_E_INVALID_SEEDS - Invalid seeds.
+
+--*/
 {
     USHORT Count;
     USHORT Index;
     ULONG Value = 0;
     PWSTR Source;
-    BOOLEAN Found = FALSE;
+    PALLOCATOR Allocator;
     BOOLEAN ValueIsInteger = FALSE;
+    BOOLEAN EqualSignFound = FALSE;
+    BOOLEAN TableParamFound = FALSE;
     HRESULT Result = S_FALSE;
     UNICODE_STRING Temp = { 0 };
     PUNICODE_STRING ValueString;
     ULONG NumberOfTableCreateParameters;
     PERFECT_HASH_TABLE_CREATE_PARAMETER LocalParam;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER NewTableCreateParameters;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER NewParams;
 
-    DECL_ARG(AttemptsBeforeTableResize);
-    DECL_ARG(MaxNumberOfTableResizes);
-    DECL_ARG(BestCoverageAttempts);
-    DECL_ARG(BestCoverageType);
-    DECL_ARG(KeysSubset);
-    DECL_ARG(MainWorkThreadpoolPriority);
-    DECL_ARG(FileWorkThreadpoolPriority);
+    //
+    // Use two X-macro expansions for declaring local variables for the table
+    // create parameters and best coverage types.
+    //
+
+#define EXPAND_AS_TABLE_PARAM_DECL_ARG(Name) \
+    DECL_ARG(Name);
+
+    TABLE_CREATE_PARAMETER_TABLE_ENTRY(EXPAND_AS_TABLE_PARAM_DECL_ARG);
+
+#define EXPAND_AS_BEST_COVERAGE_DECL_ARG(Name, Comparison, Comparator) \
+    DECL_ARG(Comparison##Name);
+
+    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_DECL_ARG)
+
+    //
+    // Declare local variables for the threadpool priority values.
+    //
+
     DECL_ARG(High);
     DECL_ARG(Normal);
     DECL_ARG(Low);
-
-#define EXPAND_AS_DECL_ARG(Name, Comparison, Comparator) \
-    DECL_ARG(Comparison##Name);
-
-    BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DECL_ARG)
-
-    ZeroStructInline(LocalParam);
-
-    NumberOfTableCreateParameters = *NumberOfTableCreateParametersPointer;
-    TableCreateParameters = *TableCreateParametersPointer;
 
     //
     // Invariant check: if number of table create parameters is 0, the array
     // pointer should be null, and vice versa.
     //
 
+    NumberOfTableCreateParameters = TableCreateParameters->NumberOfElements;
     if (NumberOfTableCreateParameters == 0) {
-        if (TableCreateParameters != NULL) {
-            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        if (TableCreateParameters->Params != NULL) {
+            return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
         }
     } else {
-        if (TableCreateParameters == NULL) {
-            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        if (TableCreateParameters->Params == NULL) {
+            return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
         }
     }
+
+    Allocator = TableCreateParameters->Allocator;
+
+    ZeroStructInline(LocalParam);
 
     //
     // Find where the equals sign occurs, if at all.
@@ -501,14 +569,56 @@ TryExtractArgTableCreateParameters(
     for (Index = 0; Index < Count; Index++) {
         if (*Source == L'=') {
             Source++;
-            Found = TRUE;
+            EqualSignFound = TRUE;
             break;
         }
         Source++;
     }
 
-    if (!Found) {
-        return S_FALSE;
+    //
+    // Initially, when this routine was first written, it didn't report an
+    // error if a table create parameter or best coverage type name was
+    // detected but no equal sign was present.  We've got a sloppy fix in
+    // place for now: we check the incoming argument string against known
+    // parameters and set a boolean flag if we find a match.  Then, if no
+    // equal sign is found but we've found a param match, we can report this
+    // error code back to the user in a more friendly manner.
+    //
+    // It's sloppy as we then repeat all the string comparisons later as part
+    // of the macros (e.g. ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER()).
+    //
+    // This routine is only called at the start of the program in order to
+    // parse command line arguments, so, eh, we can live with some sloppiness
+    // for now.
+    //
+
+    //
+    // Determine if the incoming argument matches any of our known parameters.
+    //
+
+#define EXPAND_AS_IS_TABLE_CREATE_PARAM(Name) \
+    if (IS_PREFIX(Name)) {                    \
+        TableParamFound = TRUE;               \
+        break;                                \
+    }
+
+    do {
+        TABLE_CREATE_PARAMETER_TABLE_ENTRY(EXPAND_AS_IS_TABLE_CREATE_PARAM)
+    } while (0);
+
+    if (!EqualSignFound) {
+
+        //
+        // No equal sign was found.  If a table create parameter *was* found,
+        // report an error, otherwise, return S_FALSE, indicating that no param
+        // was detected.
+        //
+
+        if (TableParamFound) {
+            return PH_E_COMMANDLINE_ARG_MISSING_VALUE;
+        } else {
+            return S_FALSE;
+        }
     }
 
     ASSERT(*(Source - 1) == L'=');
@@ -594,6 +704,27 @@ TryExtractArgTableCreateParameters(
     ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(KeysSubset,
                                                                KEYS_SUBSET);
 
+#define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV(Name, Upper) \
+    if (IS_PREFIX(Name)) {                                \
+        Result = TryExtractValueArray(Rtl,                \
+                                      Allocator,          \
+                                      ValueString,        \
+                                      &LocalParam,        \
+                                      FALSE);             \
+                                                          \
+        if (Result == S_OK) {                             \
+            SET_PARAM_ID(Name);                           \
+            goto AddParam;                                \
+        } else {                                          \
+            if (Result != E_OUTOFMEMORY) {                \
+                Result = PH_E_INVALID_##Upper;            \
+            }                                             \
+            goto Error;                                   \
+        }                                                 \
+    }
+
+    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV(Seeds, SEEDS);
+
 #define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(Name, Upper)          \
     if (IS_PREFIX(Name##ThreadpoolPriority)) {                             \
         if (IS_VALUE_EQUAL(High)) {                                        \
@@ -618,10 +749,13 @@ TryExtractArgTableCreateParameters(
     ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(FileWork, FILE_WORK);
 
     //
-    // No more table create parameters to look for, finish up.
+    // We shouldn't ever get here; we've already determined that a valid param
+    // was detected earlier in the routine.
     //
 
-    goto End;
+    Result = PH_E_UNREACHABLE_CODE;
+    PH_ERROR(TryExtractArgTableCreateParameters, Result);
+    PH_RAISE(Result);
 
 AddParam:
 
@@ -632,8 +766,9 @@ AddParam:
     // avoiding the allocation/reallocation logic altogether.
     //
 
-    Param = TableCreateParameters;
-    for (Index = 0; Index < NumberOfTableCreateParameters; Index++) {
+    Param = TableCreateParameters->Params;
+
+    for (Index = 0; Index < NumberOfTableCreateParameters; Index++, Param++) {
         if (Param->Id == LocalParam.Id) {
 
             //
@@ -648,30 +783,33 @@ AddParam:
         }
     }
 
+    //
+    // If no parameters have been allocated yet, allocate from scratch.
+    // Otherwise, reallocate.
+    //
+
     if (NumberOfTableCreateParameters == 0) {
 
-        NewTableCreateParameters = (
-            Allocator->Vtbl->Calloc(
-                Allocator,
-                1,
-                sizeof(*TableCreateParameters)
-            )
-        );
+        ASSERT(TableCreateParameters->Params == NULL);
+
+        NewParams = Allocator->Vtbl->Calloc(Allocator, 1, sizeof(*Param));
 
     } else {
 
-        NewTableCreateParameters = (
+        ASSERT(TableCreateParameters->Params != NULL);
+
+        NewParams = (
             Allocator->Vtbl->ReCalloc(
                 Allocator,
-                TableCreateParameters,
+                TableCreateParameters->Params,
                 (ULONG_PTR)NumberOfTableCreateParameters + 1,
-                sizeof(*TableCreateParameters)
+                sizeof(*Param)
             )
         );
 
     }
 
-    if (!NewTableCreateParameters) {
+    if (!NewParams) {
         Result = E_OUTOFMEMORY;
         goto Error;
     }
@@ -680,15 +818,15 @@ AddParam:
     // Write our new parameter to the end of the array.
     //
 
-    Param = &NewTableCreateParameters[NumberOfTableCreateParameters];
+    Param = &NewParams[NumberOfTableCreateParameters];
     CopyMemory(Param, &LocalParam, sizeof(*Param));
 
     //
-    // Update the caller's pointers and finish up.
+    // Update the structure and finish up.
     //
 
-    *NumberOfTableCreateParametersPointer = NumberOfTableCreateParameters + 1;
-    *TableCreateParametersPointer = NewTableCreateParameters;
+    TableCreateParameters->NumberOfElements++;
+    TableCreateParameters->Params = NewParams;
 
     Result = S_OK;
     goto End;
@@ -709,27 +847,100 @@ End:
 }
 
 
-DESTROY_TABLE_CREATE_PARAMETERS DestroyTableCreateParameters;
+CLEANUP_TABLE_CREATE_PARAMETERS CleanupTableCreateParameters;
 
 _Use_decl_annotations_
 HRESULT
-DestroyTableCreateParameters(
-    PALLOCATOR Allocator,
-    ULONG NumberOfTableCreateParameters,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParametersPointer
+CleanupTableCreateParameters(
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
+/*++
+
+Routine Description:
+
+    Walks the array of individual table create parameter pointers and, if
+    applicable for the given parameter type, releases any memory that was
+    allocated for the parameter.
+
+Arguments:
+
+    TableCreateParameters - Supplies a pointer to the table create parameters
+        structure for which the cleaup is to be performed.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - TableCreateParameters was NULL.
+
+    PH_E_INVALID_TABLE_CREATE_PARAMETERS - Invalid table create parameters.
+
+--*/
 {
     ULONG Index;
+    ULONG Count;
+    PALLOCATOR Allocator;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Params;
 
-    Param = Params = *TableCreateParametersPointer;
+    //
+    // Validate arguments.
+    //
 
-    for (Index = 0; Index < NumberOfTableCreateParameters; Index++, Param++) {
+    if (!ARGUMENT_PRESENT(TableCreateParameters)) {
+        return E_POINTER;
+    }
+
+    Count = TableCreateParameters->NumberOfElements;
+    Param = Params = TableCreateParameters->Params;
+
+    //
+    // Invariant checks: if count is 0, params should be NULL, and vice versa.
+    //
+
+    if (Count == 0) {
+
+        if (Params != NULL) {
+            return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
+        }
+
+        //
+        // There are no parameters, nothing to clean up.
+        //
+
+        goto End;
+    }
+
+    if (Params == NULL) {
+        return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
+    }
+
+    //
+    // Argument validation complete; there is at least one or more table create
+    // parameter that needs to be checked for potential deallocation.
+    //
+
+    Allocator = TableCreateParameters->Allocator;
+
+    for (Index = 0; Index < Count; Index++, Param++) {
         MaybeDeallocateTableCreateParameter(Allocator, Param);
     }
 
-    Allocator->Vtbl->FreePointer(Allocator, TableCreateParametersPointer);
+    Allocator->Vtbl->FreePointer(Allocator, &TableCreateParameters->Params);
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    //
+    // Explicitly clear the number of elements and params pointer before
+    // returning success to the caller.
+    //
+
+    TableCreateParameters->NumberOfElements = 0;
+    TableCreateParameters->Params = NULL;
 
     return S_OK;
 }

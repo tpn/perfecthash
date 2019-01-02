@@ -72,8 +72,7 @@ PerfectHashTableCreate(
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     PPERFECT_HASH_KEYS Keys,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
-    ULONG NumberOfTableCreateParameters,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
 /*++
 
@@ -104,12 +103,9 @@ Arguments:
     TableCreateFlags - Optionally supplies a pointer to a context create
         table flags structure that can be used to customize table creation.
 
-    NumberOfTableCreateParameters - Optionally supplies the number of elements
-        in the TableCreateParameters array.
-
-    TableCreateParameters - Optionally supplies an array of additional
-        parameters that can be used to further customize table creation
-        behavior.
+    TableCreateParameters - Optionally supplies a pointer to a table create
+        parameters structure that can be used to further customize table
+        creation behavior.
 
 Return Value:
 
@@ -300,7 +296,6 @@ Return Value:
     // Validate the table create parameters.
     //
 
-    Table->NumberOfTableCreateParameters = NumberOfTableCreateParameters;
     Table->TableCreateParameters = TableCreateParameters;
 
     Result = PerfectHashTableValidateCreateParameters(Table);
@@ -499,11 +494,13 @@ Return Value:
 --*/
 {
     ULONG Index;
+    ULONG Count;
     HRESULT Result = S_OK;
     BOOLEAN SawResizeLimit = FALSE;
     BOOLEAN SawResizeThreshold = FALSE;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParams;
 
     //
     // Validate arguments.
@@ -514,16 +511,22 @@ Return Value:
     }
 
     Context = Table->Context;
+    TableCreateParams = Table->TableCreateParameters;
 
-    if (Table->NumberOfTableCreateParameters == 0) {
-        if (Table->TableCreateParameters != NULL) {
-            return PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL;
+    Count = TableCreateParams->NumberOfElements;
+    Param = TableCreateParams->Params;
+
+    if (Count == 0) {
+        if (Param != NULL) {
+            return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
+        }
+    } else {
+        if (Param == NULL) {
+            return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
         }
     }
 
-    for (Index = 0, Param = Table->TableCreateParameters;
-         Index < Table->NumberOfTableCreateParameters;
-         Index++, Param++) {
+    for (Index = 0; Index < Count; Index++, Param++) {
 
         switch (Param->Id) {
 

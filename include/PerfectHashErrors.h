@@ -2472,14 +2472,13 @@ Abstract:
 // Table resize imminent.
 // .
 //
-// MessageId: PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL
-//
-// MessageText:
-//
+// Disabled 31st Dec 2018: obsolete after refactoring of table create params.  ;// MessageId=0x31d
+// Severity=Fail
+// Facility=ITF
+// SymbolicName=PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL
+// Language=English
 // The number of table create parameters is zero, but table create parameters pointer is not null.
-//
-#define PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL ((HRESULT)0xE004031DL)
-
+// .
 //
 // MessageId: PH_E_TABLE_CREATE_PARAMETER_VALIDATION_FAILED
 //
@@ -3055,4 +3054,31 @@ Abstract:
 // Invalid table create parameter name.
 //
 #define PH_E_INVALID_TABLE_CREATE_PARAMETER_NAME ((HRESULT)0xE004035DL)
+
+//
+// MessageId: PH_E_INVALID_COMMANDLINE_ARG
+//
+// MessageText:
+//
+// Invalid command line argument: %1!wZ!
+//
+#define PH_E_INVALID_COMMANDLINE_ARG     ((HRESULT)0xE004035EL)
+
+//
+// MessageId: PH_E_COMMANDLINE_ARG_MISSING_VALUE
+//
+// MessageText:
+//
+// Command line argument missing value: %1!wZ!
+//
+#define PH_E_COMMANDLINE_ARG_MISSING_VALUE ((HRESULT)0xE004035FL)
+
+//
+// MessageId: PH_E_INVALID_TABLE_CREATE_PARAMETERS
+//
+// MessageText:
+//
+// Invalid table create parameters.
+//
+#define PH_E_INVALID_TABLE_CREATE_PARAMETERS ((HRESULT)0xE0040360L)
 

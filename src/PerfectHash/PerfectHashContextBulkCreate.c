@@ -72,8 +72,7 @@ PerfectHashContextBulkCreate(
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
     PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer,
-    ULONG NumberOfTableCreateParameters,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
 /*++
 
@@ -110,11 +109,8 @@ Arguments:
     TableCompileFlags - Optionally supplies a pointer to a compile table flags
         structure that can be used to customize table compilation behavior.
 
-    NumberOfTableCreateParameters - Optionally supplies the number of elements
-        in the TableCreateParameters array.
-
-    TableCreateParameters - Optionally supplies an array of additional
-        parameters that can be used to further customize table creation
+    TableCreateParameters - Optionally supplies a pointer to a table create
+        parameters struct that can be used to further customize table creation
         behavior.
 
 Return Value:
@@ -648,7 +644,6 @@ Return Value:
                                      MaskFunctionId,
                                      Keys,
                                      &TableCreateFlags,
-                                     NumberOfTableCreateParameters,
                                      TableCreateParameters);
 
         TableCreateResult = Result;
@@ -1190,8 +1185,7 @@ PerfectHashContextExtractBulkCreateArgsFromArgvW(
     PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
     PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
     PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    PULONG NumberOfTableCreateParameters,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParameters
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
 /*++
 
@@ -1242,13 +1236,8 @@ Arguments:
     TableCompileFlags - Supplies the address of a variable that will receive
         the table compile flags.
 
-    NumberOfTableCreateParameters - Supplies the address of a variable that will
-        receive the number of elements in the TableCreateParameters array.
-
     TableCreateParameters - Supplies the address of a variable that will receive
-        a pointer to an array of table create parameters.  If this is not NULL,
-        the memory will be allocated via the context's allocator and the caller
-        is responsible for freeing it.
+        a pointer to a table create parameters structure.
 
 Return Value:
 
@@ -1272,10 +1261,12 @@ Return Value:
     LPWSTR *ArgW;
     LPWSTR Arg;
     HRESULT Result = S_OK;
+    HRESULT CleanupResult;
     ULONG CurrentArg = 1;
     PALLOCATOR Allocator;
     UNICODE_STRING Temp;
     PUNICODE_STRING String;
+    BOOLEAN InvalidPrefix;
     BOOLEAN ValidNumberOfArguments;
 
     String = &Temp;
@@ -1329,10 +1320,6 @@ Return Value:
     }
 
     if (!ARGUMENT_PRESENT(TableCompileFlags)) {
-        return E_POINTER;
-    }
-
-    if (!ARGUMENT_PRESENT(NumberOfTableCreateParameters)) {
         return E_POINTER;
     }
 
@@ -1415,8 +1402,6 @@ Return Value:
     KeysLoadFlags->AsULong = 0;
     TableCreateFlags->AsULong = 0;
     TableCompileFlags->AsULong = 0;
-    *NumberOfTableCreateParameters = 0;
-    *TableCreateParameters = NULL;
 
     for (; CurrentArg < NumberOfArguments; CurrentArg++, ArgW++) {
 
@@ -1425,15 +1410,16 @@ Return Value:
         String->MaximumLength = GET_MAX_LENGTH(String);
 
         //
-        // If the argument doesn't start with two dashes, ignore it.
+        // If the argument doesn't start with two dashes, report it.
         //
 
-        if (String->Length <= (sizeof(L'-') + sizeof(L'-'))) {
-            continue;
-        }
+        InvalidPrefix = (
+            (String->Length <= (sizeof(L'-') + sizeof(L'-'))) ||
+            (!(*Arg++ == L'-' && *Arg++ == L'-'))
+        );
 
-        if (!(*Arg++ == L'-' && *Arg++ == L'-')) {
-            continue;
+        if (InvalidPrefix) {
+            goto InvalidArg;
         }
 
         //
@@ -1475,41 +1461,55 @@ Return Value:
         // an opportunity to run.
         //
 
-        Result =
-            TryExtractArgTableCreateParameters(Rtl,
-                                               Allocator,
-                                               String,
-                                               NumberOfTableCreateParameters,
-                                               TableCreateParameters);
+        Result = TryExtractArgTableCreateParameters(Rtl,
+                                                    String,
+                                                    TableCreateParameters);
 
         if (FAILED(Result)) {
-
             PH_ERROR(ExtractBulkCreateArgs_TryExtractTableCreateParams, Result);
             break;
+        }
 
-        } else {
-
-            //
-            // Ignore anything not recognized for now.
-            //
-
+        if (Result == S_OK) {
             continue;
         }
+
+        if (Result == PH_E_COMMANDLINE_ARG_MISSING_VALUE) {
+            PH_MESSAGE(Result, String);
+            break;
+        }
+
+        if (FAILED(Result)) {
+            PH_ERROR(ExtractBulkCreateArgs_TryExtractTableCreateParams, Result);
+            break;
+        }
+
+        ASSERT(Result == S_FALSE);
+
+InvalidArg:
+
+        //
+        // If we get here, we don't recognize the argument.
+        //
+
+
+        Result = PH_E_INVALID_COMMANDLINE_ARG;
+        PH_MESSAGE(Result, String);
+        break;
     }
 
     //
-    // If we failed, free the table create parameters if they are non-null and
-    // clear the corresponding number-of variable.
+    // If we failed, clean up the table create parameters.  If that fails,
+    // report the error, then replace our return value error code with that
+    // error code.
     //
 
-    if (FAILED(Result) && TableCreateParameters) {
-        Result = DestroyTableCreateParameters(Context->Allocator,
-                                              *NumberOfTableCreateParameters,
-                                              TableCreateParameters);
-        if (FAILED(Result)) {
-            PH_ERROR(DestroyTableCreateParameters, Result);
+    if (FAILED(Result)) {
+        CleanupResult = CleanupTableCreateParameters(TableCreateParameters);
+        if (FAILED(CleanupResult)) {
+            PH_ERROR(CleanupTableCreateParameters, CleanupResult);
+            Result = CleanupResult;
         }
-        *NumberOfTableCreateParameters = 0;
     }
 
     return Result;
@@ -1566,8 +1566,8 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
     HRESULT Result;
+    HRESULT CleanupResult;
     UNICODE_STRING KeysDirectory = { 0 };
     UNICODE_STRING BaseOutputDirectory = { 0 };
     PERFECT_HASH_ALGORITHM_ID AlgorithmId = 0;
@@ -1580,10 +1580,12 @@ Return Value:
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
     PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
         ExtractBulkCreateArgs;
-    ULONG NumberOfTableCreateParameters = 0;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters = 0;
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters;
 
-    Rtl = Context->Rtl;
+    TableCreateParameters.SizeOfStruct = sizeof(TableCreateParameters);
+    TableCreateParameters.NumberOfElements = 0;
+    TableCreateParameters.Allocator = Context->Allocator;
+    TableCreateParameters.Params = NULL;
 
     ExtractBulkCreateArgs = Context->Vtbl->ExtractBulkCreateArgsFromArgvW;
     Result = ExtractBulkCreateArgs(Context,
@@ -1599,7 +1601,6 @@ Return Value:
                                    &KeysLoadFlags,
                                    &TableCreateFlags,
                                    &TableCompileFlags,
-                                   &NumberOfTableCreateParameters,
                                    &TableCreateParameters);
 
     if (FAILED(Result)) {
@@ -1617,8 +1618,7 @@ Return Value:
     }
 
     PerfectHashContextApplyThreadpoolPriorities(Context,
-                                                NumberOfTableCreateParameters,
-                                                TableCreateParameters);
+                                                &TableCreateParameters);
 
     Result = Context->Vtbl->BulkCreate(Context,
                                        &KeysDirectory,
@@ -1630,8 +1630,7 @@ Return Value:
                                        &KeysLoadFlags,
                                        &TableCreateFlags,
                                        &TableCompileFlags,
-                                       NumberOfTableCreateParameters,
-                                       TableCreateParameters);
+                                       &TableCreateParameters);
 
     if (FAILED(Result)) {
 
@@ -1644,13 +1643,10 @@ Return Value:
         NOTHING;
     }
 
-    if (TableCreateParameters) {
-        Result = DestroyTableCreateParameters(Context->Allocator,
-                                              NumberOfTableCreateParameters,
-                                              &TableCreateParameters);
-        if (FAILED(Result)) {
-            PH_ERROR(DestroyTableCreateParameters, Result);
-        }
+    CleanupResult = CleanupTableCreateParameters(&TableCreateParameters);
+    if (FAILED(CleanupResult)) {
+        PH_ERROR(BulkCreateArgvW_CleanupTableCreateParams, CleanupResult);
+        Result = CleanupResult;
     }
 
     return Result;

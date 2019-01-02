@@ -2243,13 +2243,14 @@ No graph information has been set for graph.
 ;// Table resize imminent.
 ;// .
 
-MessageId=0x31d
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL
-Language=English
-The number of table create parameters is zero, but table create parameters pointer is not null.
-.
+;//
+;// Disabled 31st Dec 2018: obsolete after refactoring of table create params.  ;// MessageId=0x31d
+;// Severity=Fail
+;// Facility=ITF
+;// SymbolicName=PH_E_NUM_TABLE_CREATE_PARAMS_IS_ZERO_BUT_PARAMS_POINTER_NOT_NULL
+;// Language=English
+;// The number of table create parameters is zero, but table create parameters pointer is not null.
+;// .
 
 MessageId=0x31e
 Severity=Fail
@@ -2763,5 +2764,29 @@ Facility=ITF
 SymbolicName=PH_E_INVALID_TABLE_CREATE_PARAMETER_NAME
 Language=English
 Invalid table create parameter name.
+.
+
+MessageId=0x35e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_COMMANDLINE_ARG
+Language=English
+Invalid command line argument: %1!wZ!
+.
+
+MessageId=0x35f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_COMMANDLINE_ARG_MISSING_VALUE
+Language=English
+Command line argument missing value: %1!wZ!
+.
+
+MessageId=0x360
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TABLE_CREATE_PARAMETERS
+Language=English
+Invalid table create parameters.
 .
 

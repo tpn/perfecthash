@@ -1620,8 +1620,7 @@ _Use_decl_annotations_
 VOID
 PerfectHashContextApplyThreadpoolPriorities(
     PPERFECT_HASH_CONTEXT Context,
-    ULONG NumberOfTableCreateParameters,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER TableCreateParameters
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     )
 /*++
 
@@ -1635,9 +1634,7 @@ Arguments:
     Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
         for which the threadpool priorities are to be applied.
 
-    NumberOfTableCreateParameters - Supplies the number of table create params.
-
-    TableCreateParameters - Supplies an array of table create params.
+    TableCreateParameters - Supplies a pointer to the table create params.
 
 Return Value:
 
@@ -1646,12 +1643,13 @@ Return Value:
 --*/
 {
     ULONG Index;
+    ULONG Count;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER Params;
 
-    Params = TableCreateParameters;
-    for (Index = 0; Index < NumberOfTableCreateParameters; Index++) {
-        Param = Params++;
+    Count = TableCreateParameters->NumberOfElements;
+    Param = TableCreateParameters->Params;
+
+    for (Index = 0; Index < Count; Index++, Param++) {
         switch (Param->Id) {
 
             case TableCreateParameterMainWorkThreadpoolPriorityId:

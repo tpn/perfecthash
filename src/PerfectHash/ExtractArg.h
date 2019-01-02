@@ -117,13 +117,11 @@ _Success_(return >= 0)
 HRESULT
 (NTAPI TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS)(
     _In_ PRTL Rtl,
-    _In_ PALLOCATOR Allocator,
     _In_ PCUNICODE_STRING Argument,
-    _Inout_ PULONG NumberOfTableCreateParameters,
-    _Inout_ PPERFECT_HASH_TABLE_CREATE_PARAMETER *TableCreateParameters
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     );
 typedef TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS
-       *PTRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS;
+      *PTRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS;
 
 typedef
 _Must_inspect_result_
@@ -141,15 +139,13 @@ typedef TRY_EXTRACT_VALUE_ARRAY *PTRY_EXTRACT_VALUE_ARRAY;
 typedef
 _Must_inspect_result_
 _Success_(return >= 0)
+_Post_satisfies_(TableCreateParameters->NumberOfElements == 0)
+_Post_satisfies_(TableCreateParameters->Params == NULL)
 HRESULT
-(NTAPI DESTROY_TABLE_CREATE_PARAMETERS)(
-    _In_ PALLOCATOR Allocator,
-    _In_ ULONG NumberOfTableCreateParametersPointer,
-    _Inout_ _Post_invalid_ PPERFECT_HASH_TABLE_CREATE_PARAMETER
-        *TableCreateParametersPointer
+(NTAPI CLEANUP_TABLE_CREATE_PARAMETERS)(
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     );
-typedef DESTROY_TABLE_CREATE_PARAMETERS *PDESTROY_TABLE_CREATE_PARAMETERS;
-
+typedef CLEANUP_TABLE_CREATE_PARAMETERS *PCLEANUP_TABLE_CREATE_PARAMETERS;
 
 //
 // Declare functions.
@@ -164,7 +160,7 @@ extern TRY_EXTRACT_ARG_KEYS_LOAD_FLAGS TryExtractArgKeysLoadFlags;
 extern TRY_EXTRACT_ARG_TABLE_CREATE_FLAGS TryExtractArgTableCreateFlags;
 extern TRY_EXTRACT_ARG_TABLE_COMPILE_FLAGS TryExtractArgTableCompileFlags;
 extern TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS TryExtractArgTableCreateParameters;
-extern DESTROY_TABLE_CREATE_PARAMETERS DestroyTableCreateParameters;
+extern CLEANUP_TABLE_CREATE_PARAMETERS CleanupTableCreateParameters;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
