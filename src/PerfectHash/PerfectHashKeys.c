@@ -79,6 +79,12 @@ Return Value:
     }
 
     //
+    // We only support ULONG (4 byte/32 bit) key size at the moment.
+    //
+
+    Keys->SizeOfKeyInBytes = sizeof(ULONG);
+
+    //
     // We're done!  Indicate success and finish up.
     //
 
