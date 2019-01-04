@@ -871,7 +871,7 @@ Routine Description:
 Arguments:
 
     TableCreateParameters - Supplies a pointer to the table create parameters
-        structure for which the cleaup is to be performed.
+        structure for which the cleanup is to be performed.
 
 Return Value:
 
