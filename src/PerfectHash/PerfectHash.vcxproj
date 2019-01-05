@@ -232,6 +232,7 @@
     <MASM Include="RtlFillPages_x64.asm" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="..\PerfectHashVersion.rc" />
     <ResourceCompile Include="PerfectHash.rc" />
   </ItemGroup>
   <ItemGroup>

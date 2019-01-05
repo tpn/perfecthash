@@ -456,6 +456,9 @@
     <ResourceCompile Include="PerfectHash.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+    <ResourceCompile Include="..\PerfectHashVersion.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm">

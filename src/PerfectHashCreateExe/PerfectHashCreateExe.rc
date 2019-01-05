@@ -4,20 +4,20 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    PerfectHash.rc
+    PerfectHashCreateExe.rc
 
 Abstract:
 
-    This is the main resource compiler for the perfect hash library.  It is
-    responsible for providing error codes and version information.
+    This is the main resource compiler for the perfect hash library's table
+    create executable.  It is responsible for providing version information.
 
 --*/
 
-#include "PerfectHashErrors.rc"
 #include "../PerfectHashVersion.rc"
 
-#define VER_FILEDESCRIPTION_STR "PerfectHash Library"
-#define VER_ORIGINALFILENAME_STR "PerfectHash.dll"
+#define VER_FILEDESCRIPTION_STR "Create Perfect Hash Tables Application"
+#define VER_ORIGINALFILENAME_STR "PerfectHashCreate.exe"
+#define VER_INTERNALNAME_STR VER_ORIGINALFILENAME_STR
 
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION     VER_FILEVERSION
@@ -25,7 +25,7 @@ PRODUCTVERSION  VER_PRODUCTVERSION
 FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
 FILEFLAGS       VER_FILEFLAGS
 FILEOS          VOS_NT
-FILETYPE        VFT_DLL
+FILETYPE        VFT_APP
 FILESUBTYPE     VFT2_UNKNOWN
 BEGIN
     BLOCK "StringFileInfo"
