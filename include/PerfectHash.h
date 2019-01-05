@@ -2314,10 +2314,24 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG TryLargePagesForGraphTableData:1;
 
         //
+        // When set, omits writing a row in the applicable .csv file if table
+        // creation failed.
+        //
+
+        ULONG OmitCsvRowIfTableCreateFailed:1;
+
+        //
+        // When set, omits writing a row in the applicable .csv file if table
+        // creation succeeded.
+        //
+
+        ULONG OmitCsvRowIfTableCreateSucceeded:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:18;
+        ULONG Unused:16;
     };
 
     LONG AsLong;

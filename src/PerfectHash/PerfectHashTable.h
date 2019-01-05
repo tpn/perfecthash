@@ -89,6 +89,19 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
     IncludeNumberOfTableElementsInOutputPath(Table)        \
 )
 
+FORCEINLINE
+BOOLEAN
+SkipWritingCsvRow(
+    _In_ PERFECT_HASH_TABLE_CREATE_FLAGS Flags,
+    _In_opt_ HRESULT TableCreateResult
+    )
+{
+    return (
+        (Flags.OmitCsvRowIfTableCreateFailed && TableCreateResult != S_OK) ||
+        (Flags.OmitCsvRowIfTableCreateSucceeded && TableCreateResult == S_OK)
+    );
+}
+
 //
 // Define the PERFECT_HASH_TABLE structure.
 //

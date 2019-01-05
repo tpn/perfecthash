@@ -708,8 +708,12 @@ Return Value:
         }
 
         //
-        // Write the .csv row.
+        // Write the .csv row if applicable.
         //
+
+        if (SkipWritingCsvRow(TableCreateFlags, TableCreateResult)) {
+            goto ReleaseTable;
+        }
 
         //
         // N.B. The SAL annotations are required to suppress the concurrency

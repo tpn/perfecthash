@@ -149,6 +149,8 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(SkipMemoryCoverageInFirstGraphWinsMode);
     DECL_ARG(TryLargePagesForGraphTableData);
     DECL_ARG(TryLargePagesForGraphEdgeAndVertexArrays);
+    DECL_ARG(OmitCsvRowIfTableCreateFailed);
+    DECL_ARG(OmitCsvRowIfTableCreateSucceeded);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -180,6 +182,8 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipMemoryCoverageInFirstGraphWinsMode);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForGraphTableData);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForGraphEdgeAndVertexArrays);
+    SET_FLAG_AND_RETURN_IF_EQUAL(OmitCsvRowIfTableCreateFailed);
+    SET_FLAG_AND_RETURN_IF_EQUAL(OmitCsvRowIfTableCreateSucceeded);
 
     return S_FALSE;
 }
