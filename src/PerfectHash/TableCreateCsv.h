@@ -142,27 +142,60 @@ Abstract:
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(NumberOfSeeds,                                                   \
-          Table->TableInfoOnDisk->NumberOfSeeds,                           \
+          HashRoutineNumberOfSeeds[Context->HashFunctionId],               \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(Seed1,                                                           \
-          (Table->TableInfoOnDisk->NumberOfSeeds >= 1 ?                    \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 1 ?                    \
            Table->TableInfoOnDisk->Seed1 : 0),                             \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(Seed2,                                                           \
-          (Table->TableInfoOnDisk->NumberOfSeeds >= 2 ?                    \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 2 ?                    \
            Table->TableInfoOnDisk->Seed2 : 0),                             \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(Seed3,                                                           \
-          (Table->TableInfoOnDisk->NumberOfSeeds >= 3 ?                    \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 3 ?                    \
            Table->TableInfoOnDisk->Seed3 : 0),                             \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(Seed4,                                                           \
-          (Table->TableInfoOnDisk->NumberOfSeeds >= 4 ?                    \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 4 ?                    \
            Table->TableInfoOnDisk->Seed4 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(NumberOfUserSeeds,                                               \
+          (Context->UserSeeds != NULL ?                                    \
+           Context->UserSeeds->NumberOfValues : 0),                        \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed1,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 1 ?                       \
+           Context->UserSeeds->Values[0] : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed2,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 2 ?                       \
+           Context->UserSeeds->Values[1] : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed3,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 3 ?                       \
+           Context->UserSeeds->Values[2] : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed4,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 4 ?                       \
+           Context->UserSeeds->Values[3] : 0),                             \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(FirstGraphWins,                                                  \
@@ -337,6 +370,10 @@ Abstract:
     ENTRY(KeysMaxValue,                                                    \
           Keys->Stats.MaxValue,                                            \
           OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(KeysFullPath,                                                    \
+          &Keys->File->Path->FullPath,                                     \
+          OUTPUT_UNICODE_STRING_FAST)                                      \
                                                                            \
     LAST_ENTRY(KeysBitmapString,                                           \
                Keys->Stats.KeysBitmap.String,                              \
