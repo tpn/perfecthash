@@ -86,7 +86,6 @@
     <ClCompile Include="PerfectHashCreateExe.c" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\PerfectHashVersion.rc" />
     <ResourceCompile Include="PerfectHashCreateExe.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

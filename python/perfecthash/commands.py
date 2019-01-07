@@ -365,7 +365,7 @@ class UpdateRawCStringFile(InvariantAwareCommand):
         input_lines = input_source.lines_as_cstr()
         cstr_lines = [ '    %s' % l for l in input_lines ]
 
-        if is_c and input_file.startswith('CompiledPerfectHashTable'):
+        if is_c and input_file.startswith('CompiledPerfectHash'):
             begin_banner = [ '', '//', '// Begin %s.' % input_file, '//', '' ]
             end_banner = [ '', '//', '// End %s.' % input_file, '//', '' ]
             cstr_lines = (

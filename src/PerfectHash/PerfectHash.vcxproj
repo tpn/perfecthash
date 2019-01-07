@@ -110,7 +110,6 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexAddSubXorAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexXorAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableIndexRoutines.h" />
-    <ClInclude Include="CompiledPerfectHashTableMacroGlue_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableRoutinesPost_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableRoutinesPre_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableRoutines_CSource_RawCString.h" />
@@ -234,7 +233,6 @@
     <MASM Include="RtlFillPages_x64.asm" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\PerfectHashVersion.rc" />
     <ResourceCompile Include="PerfectHash.rc" />
   </ItemGroup>
   <ItemGroup>

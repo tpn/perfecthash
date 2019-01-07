@@ -387,9 +387,6 @@
     <ClInclude Include="CompiledPerfectHashTableRoutines_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableMacroGlue_CSource_RawCString.h">
-      <Filter>Private Header Files %28Auto-Generated%29</Filter>
-    </ClInclude>
     <ClInclude Include="CompiledPerfectHashMacroGlue_CHeader_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
@@ -460,9 +457,6 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PerfectHash.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-    <ResourceCompile Include="..\PerfectHashVersion.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

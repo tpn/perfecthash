@@ -4,6 +4,11 @@
 
 DECLSPEC_ALIGN(16)
 const CHAR CompiledPerfectHashCHeaderRawCStr[] =
+    "\n"
+    "//\n"
+    "// Begin CompiledPerfectHash.h.\n"
+    "//\n"
+    "\n"
     "/*++\n"
     "\n"
     "Copyright (c) 2018 Trent Nelson <trent@trent.me>\n"
@@ -301,6 +306,11 @@ const CHAR CompiledPerfectHashCHeaderRawCStr[] =
     "#endif\n"
     "\n"
     "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
+    "\n"
+    "//\n"
+    "// End CompiledPerfectHash.h.\n"
+    "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashCHeaderRawCString = {

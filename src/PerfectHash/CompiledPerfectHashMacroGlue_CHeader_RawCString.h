@@ -6,8 +6,9 @@ DECLSPEC_ALIGN(16)
 const CHAR CompiledPerfectHashMacroGlueCHeaderRawCStr[] =
     "\n"
     "//\n"
-    "// Begin CompiledPerfectHashTableMacroGlue.c.\n"
+    "// Begin CompiledPerfectHashMacroGlue.h.\n"
     "//\n"
+    "\n"
     "\n"
     "#define CPH_SEED1(U) U##_SEED1\n"
     "#define CPH_SEED2(U) U##_SEED2\n"
@@ -302,9 +303,11 @@ const CHAR CompiledPerfectHashMacroGlueCHeaderRawCStr[] =
     "#define DEFINE_TABLE_ROUTINES() EXPAND_DEFINE_TABLE_ROUTINES(CPH_TABLENAME)\n"
     "#define DEFINE_TEST_AND_BENCHMARKING_ROUTINES() EXPAND_DEFINE_TEST_AND_BENCHMARKING_ROUTINES(CPH_TABLENAME)\n"
     "\n"
+    "\n"
     "//\n"
-    "// End CompiledPerfectHashTableMacroGlue.c.\n"
+    "// End CompiledPerfectHashMacroGlue.h.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashMacroGlueCHeaderRawCString = {
