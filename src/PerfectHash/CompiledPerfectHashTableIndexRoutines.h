@@ -12,3 +12,4 @@
 #include "CompiledPerfectHashTableChm01IndexFnvAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexCrc32NotAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexCrc32RotateXAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexCrc32RotateXYAnd_CSource_RawCString.h"

@@ -1843,10 +1843,15 @@ IsValidSeedMasks(
     ENTRY(DjbXor, 2, NO_SEED_MASKS)                                      \
     ENTRY(Fnv, 2, NO_SEED_MASKS)                                         \
     ENTRY(Crc32Not, 2, NO_SEED_MASKS)                                    \
-    LAST_ENTRY(                                                          \
+    ENTRY(                                                               \
         Crc32RotateX,                                                    \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x0000001f, 0)                             \
+        DECL_SEED_MASKS(0, 0, 0x1f, 0)                                   \
+    )                                                                    \
+    LAST_ENTRY(                                                          \
+        Crc32RotateXY,                                                   \
+        4,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f, 0x1f)                                \
     )
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \

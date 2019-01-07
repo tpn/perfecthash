@@ -269,7 +269,7 @@ Error:
 }
 
 
-PERFECT_HASH_TABLE_INDEX 
+PERFECT_HASH_TABLE_INDEX
     PerfectHashTableFastIndexImplChm01Crc32RotateXHashAndMask;
 
 _Use_decl_annotations_
@@ -347,6 +347,145 @@ Return Value:
 
     Vertex1 = _mm_crc32_u32(Seed1, Input);
     Vertex2 = _mm_crc32_u32(Seed2, _rotl(Input, Rotate));
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        goto Error;
+    }
+
+    //
+    // Mask each hash value such that it falls within the confines of the
+    // number of vertices.
+    //
+
+    MaskedLow = Vertex1 & Table->HashMask;
+    MaskedHigh = Vertex2 & Table->HashMask;
+
+    //
+    // Obtain the corresponding vertex values for the masked high and low hash
+    // values.  These are derived from the "assigned" array that we construct
+    // during the creation routine's assignment step (GraphAssign()).
+    //
+
+    Vertex1 = Assigned[MaskedLow];
+    Vertex2 = Assigned[MaskedHigh];
+
+    //
+    // Combine the two values, then perform the index masking operation, such
+    // that our final index into the array falls within the confines of the
+    // number of edges, or keys, in the table.  That is, make sure the index
+    // value is between 0 and Table->Keys->NumberOfElements-1.
+    //
+
+    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
+
+    Masked = Combined & Table->IndexMask;
+
+    //
+    // Update the caller's pointer and return success.  The resulting index
+    // value represents the array offset index for this given key in the
+    // underlying table, and is guaranteed to be unique amongst the original
+    // keys in the input set.
+    //
+
+    *Index = Masked;
+
+    //IACA_VC_END();
+
+    return S_OK;
+
+Error:
+
+    //
+    // Clear the caller's pointer and return failure.  We should only hit this
+    // point if the caller supplies a key that both: a) wasn't in the original
+    // input set, and b) happens to result in a hash value where both the high
+    // part and low part are identical, which is rare, but not impossible.
+    //
+
+    *Index = 0;
+    return E_FAIL;
+}
+
+PERFECT_HASH_TABLE_INDEX
+    PerfectHashTableFastIndexImplChm01Crc32RotateXYHashAndMask;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableFastIndexImplChm01Crc32RotateXYHashAndMask(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONG Index
+    )
+/*++
+
+Routine Description:
+
+    Looks up given key in a perfect hash table and returns its index.  This
+    is a fast version of the normal Index() routine that inlines Crc32RotateX
+    hash function and AND masking.
+
+    N.B. If Key did not appear in the original set the hash table was created
+         from, the behavior of this routine is undefined.  (In practice, the
+         key will hash to either an existing key's location or an empty slot,
+         so there is potential for returning a non-unique index.)
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the key lookup is to be
+        performed.
+
+    Key - Supplies the key to look up.
+
+    Index - Receives the index associated with this key.  The index will be
+        between 0 and Table->HashSize-1, and can be safely used to offset
+        directly into an appropriately sized array (e.g. Table->Values[]).
+
+Return Value:
+
+    S_OK on success, E_FAIL if the underlying hash function returned a failure.
+    This will happen if the two hash values for a key happen to be identical.
+    It shouldn't happen once a perfect graph has been created (i.e. it only
+    happens when attempting to solve the graph).  The Index parameter will
+    be cleared in the case of E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Seed3;
+    ULONG Seed4;
+    ULONG Input;
+    PULONG Seeds;
+    ULONG Masked;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    PULONG Assigned;
+    ULONG MaskedLow;
+    ULONG MaskedHigh;
+    ULONGLONG Combined;
+
+    //IACA_VC_START();
+
+    //
+    // Initialize aliases.
+    //
+
+    Seeds = &Table->TableInfoOnDisk->FirstSeed;
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3 = Seeds[2];
+    Seed4 = Seeds[3];
+    Input = Key;
+    Assigned = Table->Assigned;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Input, (BYTE)Seed3));
+    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Input, (BYTE)Seed4));
 
     //IACA_VC_END();
 

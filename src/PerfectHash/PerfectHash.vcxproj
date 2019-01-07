@@ -98,6 +98,7 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32NotAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32Rotate15And_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateXAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateXYAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateXorAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbXorAnd_CSource_RawCString.h" />
