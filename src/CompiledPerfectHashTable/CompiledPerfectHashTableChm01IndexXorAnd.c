@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableChm01IndexXorAnd.c.
-//
-
 DECLARE_INDEX_ROUTINE()
 {
     ULONG Vertex1;
@@ -38,6 +34,3 @@ DECLARE_INDEX_ROUTINE()
 
 }
 
-//
-// End CompiledPerfectHashTableChm01IndexXorAnd.c.
-//

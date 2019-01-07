@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableBenchmarkFullExe.c.
-//
-
 #pragma optimize("", off)
 
 void
@@ -19,6 +15,3 @@ mainCRTStartup(
     ExitProcess(Cycles);
 }
 
-//
-// End CompiledPerfectHashTableBenchmarkFullExe.c.
-//

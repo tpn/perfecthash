@@ -3,10 +3,10 @@
 //
 
 DECLSPEC_ALIGN(16)
-const CHAR CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCStr[] =
+const CHAR CompiledPerfectHashTableChm01IndexCrc32Rotate15AndCSourceRawCStr[] =
     "\n"
     "//\n"
-    "// Begin CompiledPerfectHashTableChm01IndexCrc32NotAnd.c.\n"
+    "// Begin CompiledPerfectHashTableChm01IndexCrc32Rotate15And.c.\n"
     "//\n"
     "\n"
     "\n"
@@ -20,7 +20,7 @@ const CHAR CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCStr[] =
     "    ULONGLONG Combined;\n"
     "\n"
     "    Vertex1 = _mm_crc32_u32(SEED1, Key);\n"
-    "    Vertex2 = _mm_crc32_u32(SEED2, ~Key);\n"
+    "    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, 15));\n"
     "\n"
     "    MaskedLow = Vertex1 & HASH_MASK;\n"
     "    MaskedHigh = Vertex2 & HASH_MASK;\n"
@@ -35,22 +35,21 @@ const CHAR CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCStr[] =
     "    return Index;\n"
     "}\n"
     "\n"
-    "\n"
     "//\n"
-    "// End CompiledPerfectHashTableChm01IndexCrc32NotAnd.c.\n"
+    "// End CompiledPerfectHashTableChm01IndexCrc32Rotate15And.c.\n"
     "//\n"
     "\n"
 ;
 
-const STRING CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCString = {
-    sizeof(CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCStr) - sizeof(CHAR),
-    sizeof(CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCStr),
+const STRING CompiledPerfectHashTableChm01IndexCrc32Rotate15AndCSourceRawCString = {
+    sizeof(CompiledPerfectHashTableChm01IndexCrc32Rotate15AndCSourceRawCStr) - sizeof(CHAR),
+    sizeof(CompiledPerfectHashTableChm01IndexCrc32Rotate15AndCSourceRawCStr),
 #ifdef _WIN64
     0,
 #endif
-    (PCHAR)&CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCStr,
+    (PCHAR)&CompiledPerfectHashTableChm01IndexCrc32Rotate15AndCSourceRawCStr,
 };
 
 #ifndef RawCString
-#define RawCString (&CompiledPerfectHashTableChm01IndexCrc32NotAndCSourceRawCString)
+#define RawCString (&CompiledPerfectHashTableChm01IndexCrc32Rotate15AndCSourceRawCString)
 #endif

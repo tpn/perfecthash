@@ -1,9 +1,5 @@
 
 //
-// Begin CompiledPerfectHashTableSupport.h.
-//
-
-//
 // Disable the anonymous union/struct warning.
 //
 
@@ -43,6 +39,3 @@ extern void ExitProcess(ULONG);
 #define FOR_EACH_KEY \
     for (Index = 0, Source = KEYS; Index < NUMBER_OF_KEYS; Index++)
 
-//
-// End CompiledPerfectHashTableSupport.h.
-//

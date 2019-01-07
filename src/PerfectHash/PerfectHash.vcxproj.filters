@@ -372,9 +372,6 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexXorAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-    <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateAnd_CSource_RawCString.h">
-      <Filter>Private Header Files %28Auto-Generated%29</Filter>
-    </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableSupport_CHeader_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
@@ -400,6 +397,12 @@
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32And_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32Rotate15And_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateXAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbAnd_CSource_RawCString.h">

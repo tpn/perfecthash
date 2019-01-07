@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableTestExeCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableTestExe.c.\n"
     "//\n"
     "\n"
+    "\n"
     "void\n"
     "__stdcall\n"
     "mainCRTStartup(\n"
@@ -23,9 +24,11 @@ const CHAR CompiledPerfectHashTableTestExeCSourceRawCStr[] =
     "    ExitProcess(NumberOfErrors);\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableTestExe.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableTestExeCSourceRawCString = {

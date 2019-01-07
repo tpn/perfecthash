@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableBenchmarkFull.c.
-//
-
 DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
 {
     ULONG Key;
@@ -167,6 +163,3 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
     return Best;
 }
 
-//
-// End CompiledPerfectHashTableBenchmarkFull.c.
-//

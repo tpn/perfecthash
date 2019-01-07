@@ -6,8 +6,9 @@ DECLSPEC_ALIGN(16)
 const CHAR CompiledPerfectHashTableChm01IndexJenkinsModAndCSourceRawCStr[] =
     "\n"
     "//\n"
-    "// Begin CompiledPerfectHashTableChm01IndexJenkinsAndMod.c.\n"
+    "// Begin CompiledPerfectHashTableChm01IndexJenkinsModAnd.c.\n"
     "//\n"
+    "\n"
     "\n"
     "DECLARE_INDEX_ROUTINE()\n"
     "{\n"
@@ -90,9 +91,11 @@ const CHAR CompiledPerfectHashTableChm01IndexJenkinsModAndCSourceRawCStr[] =
     "\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
-    "// End CompiledPerfectHashTableChm01IndexJenkinsAndMod.c.\n"
+    "// End CompiledPerfectHashTableChm01IndexJenkinsModAnd.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableChm01IndexJenkinsModAndCSourceRawCString = {

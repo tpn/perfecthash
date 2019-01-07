@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableChm01IndexCrc32RotateXorAndCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableChm01IndexCrc32RotateXorAnd.c.\n"
     "//\n"
     "\n"
+    "\n"
     "DECLARE_INDEX_ROUTINE()\n"
     "{\n"
     "    ULONG A;\n"
@@ -43,9 +44,11 @@ const CHAR CompiledPerfectHashTableChm01IndexCrc32RotateXorAndCSourceRawCStr[] =
     "    return Index;\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableChm01IndexCrc32RotateXorAnd.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableChm01IndexCrc32RotateXorAndCSourceRawCString = {

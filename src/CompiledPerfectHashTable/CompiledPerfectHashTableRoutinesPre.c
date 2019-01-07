@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableRoutinesPre.c.
-//
-
 #ifdef CPH_INLINE_ROUTINES
 
 #define INDEX_ROUTINE EXPAND_INDEX_INLINE_ROUTINE(CPH_TABLENAME)
@@ -29,6 +25,3 @@
 
 #endif
 
-//
-// End CompiledPerfectHashTableRoutinesPre.c.
-//

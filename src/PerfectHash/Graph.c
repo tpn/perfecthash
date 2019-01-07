@@ -2232,6 +2232,7 @@ Return Value:
     PRTL Rtl;
     HRESULT Result;
     ULONG SizeInBytes;
+    PPERFECT_HASH_CONTEXT Context;
 
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
@@ -2254,10 +2255,26 @@ Return Value:
     }
 
     //
-    // Apply user seeds and return the result.
+    // Apply user seeds and seed masks if applicable, then return.
     //
 
-    Result = GraphApplyUserSeeds(Graph);
+    Context = Graph->Context;
+
+    if (Context->UserSeeds) {
+        Result = GraphApplyUserSeeds(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphApplyUserSeeds, Result);
+            return Result;
+        }
+    }
+
+    if (Context->SeedMasks) {
+        Result = GraphApplySeedMasks(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphApplySeedMasks, Result);
+            return Result;
+        }
+    }
 
     return Result;
 }
@@ -2278,7 +2295,7 @@ Routine Description:
 
 Arguments:
 
-    Graph - Supplies a pointer to the graph instance for which the user seed
+    Graph - Supplies a pointer to the graph instance to which the user seed
         data will be applied, if applicable.
 
 Return Value:
@@ -2289,10 +2306,10 @@ Return Value:
 
     E_POINTER - Graph was NULL.
 
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+
     PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE - The individual value size indicated
         by the user seed value array is invalid (i.e. not sizeof(ULONG)).
-
-    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
 
 --*/
 {
@@ -2360,6 +2377,97 @@ Return Value:
     }
 
     return Result;
+}
+
+
+GRAPH_APPLY_SEED_MASKS GraphApplySeedMasks;
+
+_Use_decl_annotations_
+HRESULT
+GraphApplySeedMasks(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Applies masks to seeds, if applicable.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance to which the seed masks
+        will be applied, if applicable.
+
+Return Value:
+
+    S_OK - User seeds were successfully applied.
+
+    S_FALSE - No seed masks present.
+
+    E_POINTER - Graph was NULL.
+
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+
+--*/
+{
+    ULONG Index;
+    LONG Mask;
+    ULONG NewSeed;
+    PULONG Seed;
+    PULONG Seeds;
+    const LONG *Masks;
+    PCSEED_MASKS SeedMasks;
+    PPERFECT_HASH_CONTEXT Context;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (IsSpareGraph(Graph)) {
+        return PH_E_SPARE_GRAPH;
+    }
+
+    Context = Graph->Context;
+    SeedMasks = Context->SeedMasks;
+
+    if (!SeedMasks) {
+
+        //
+        // No seed masks are available for this hash routine.
+        //
+
+        return S_FALSE;
+    }
+
+    //
+    // Validation complete.  Loop through the masks and apply those with a value
+    // greater than zero to the seed at the corresponding offset.
+    //
+
+    Seeds = &Graph->FirstSeed;
+    Masks = &Context->SeedMasks->Mask1;
+
+    for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
+
+        Mask = *Masks++;
+
+        if (Mask != -1 && Mask != 0) {
+
+            //
+            // Valid mask found, apply it to the seed data at this slot.
+            //
+
+            Seed = Seeds + Index;
+            NewSeed = *Seed & Mask;
+            *Seed = NewSeed;
+        }
+    }
+
+    return S_OK;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

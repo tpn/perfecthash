@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableChm01IndexDjbXorAnd.c.
-//
-
 DECLARE_INDEX_ROUTINE()
 {
     ULONG A;
@@ -46,6 +42,3 @@ DECLARE_INDEX_ROUTINE()
     return Index;
 }
 
-//
-// End CompiledPerfectHashTableChm01IndexDjbXorAnd.c.
-//

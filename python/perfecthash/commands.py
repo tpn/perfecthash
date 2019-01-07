@@ -329,18 +329,19 @@ class UpdateRawCStringFile(InvariantAwareCommand):
 
         extension = base[ix:]
 
+        is_c = False
         if extension == '.c':
             category = 'CSource'
+            is_c = True
         elif extension == '.h':
             category = 'CHeader'
+            is_c = True
         elif extension == '.props':
             category = 'VCProps'
         elif extension == '.txt':
             category = 'Text'
         else:
             raise RuntimeError("Unknown extension: %s." % extension)
-
-        #import ipdb; ipdb.set_trace()
 
         output_dir = join_path(src_dir, 'PerfectHash')
         new_name = '%s_%s_RawCString.h' % (name, category)
@@ -360,7 +361,18 @@ class UpdateRawCStringFile(InvariantAwareCommand):
             'const CHAR %sRawCStr[] =' % name_category,
         ]
 
-        cstr_lines = [ '    %s' % l for l in input_source.lines_as_cstr() ]
+        input_file = basename(input_path)
+        input_lines = input_source.lines_as_cstr()
+        cstr_lines = [ '    %s' % l for l in input_lines ]
+
+        if is_c and input_file.startswith('CompiledPerfectHashTable'):
+            begin_banner = [ '', '//', '// Begin %s.' % input_file, '//', '' ]
+            end_banner = [ '', '//', '// End %s.' % input_file, '//', '' ]
+            cstr_lines = (
+                [ '    "%s\\n"' % l for l in begin_banner ] +
+                cstr_lines +
+                [ '    "%s\\n"' % l for l in end_banner ]
+            )
 
         end_lines = [
             ';',

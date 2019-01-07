@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableChm01IndexXorAndCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableChm01IndexXorAnd.c.\n"
     "//\n"
     "\n"
+    "\n"
     "DECLARE_INDEX_ROUTINE()\n"
     "{\n"
     "    ULONG Vertex1;\n"
@@ -44,9 +45,11 @@ const CHAR CompiledPerfectHashTableChm01IndexXorAndCSourceRawCStr[] =
     "\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableChm01IndexXorAnd.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableChm01IndexXorAndCSourceRawCString = {

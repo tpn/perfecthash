@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableRoutines.c.
-//
-
 DECLARE_LOOKUP_ROUTINE()
 {
     ULONG Index;
@@ -33,6 +29,3 @@ DECLARE_DELETE_ROUTINE()
     return Previous;
 }
 
-//
-// End CompiledPerfectHashTableRoutines.c.
-//

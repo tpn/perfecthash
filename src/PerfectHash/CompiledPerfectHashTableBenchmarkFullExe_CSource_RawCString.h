@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableBenchmarkFullExe.c.\n"
     "//\n"
     "\n"
+    "\n"
     "#pragma optimize(\"\", off)\n"
     "\n"
     "void\n"
@@ -25,9 +26,11 @@ const CHAR CompiledPerfectHashTableBenchmarkFullExeCSourceRawCStr[] =
     "    ExitProcess(Cycles);\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableBenchmarkFullExe.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableBenchmarkFullExeCSourceRawCString = {

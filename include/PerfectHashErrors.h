@@ -3120,3 +3120,12 @@ Abstract:
 //
 #define PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE ((HRESULT)0xE0040362L)
 
+//
+// MessageId: PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE
+//
+// MessageText:
+//
+// Invalid seed masks structure size.
+//
+#define PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE ((HRESULT)0xE0040363L)
+

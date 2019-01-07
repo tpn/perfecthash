@@ -404,7 +404,10 @@ PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexImplChm01;
 //
 
 PERFECT_HASH_TABLE_INDEX
-    PerfectHashTableFastIndexImplChm01Crc32RotateHashAndMask;
+    PerfectHashTableFastIndexImplChm01Crc32Rotate15HashAndMask;
+
+PERFECT_HASH_TABLE_INDEX
+    PerfectHashTableFastIndexImplChm01Crc32RotateXHashAndMask;
 
 PERFECT_HASH_TABLE_INDEX PerfectHashTableFastIndexImplChm01JenkinsHashAndMask;
 

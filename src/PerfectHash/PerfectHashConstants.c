@@ -137,7 +137,7 @@ VERIFY_ALGORITHM_ARRAY_SIZE(LoaderRoutines);
 // Define the array of hash routines.
 //
 
-#define EXPAND_AS_HASH_ROUTINE(Name, NumberOfSeeds) \
+#define EXPAND_AS_HASH_ROUTINE(Name, NumberOfSeeds, SeedMasks) \
     PerfectHashTableHash##Name,
 
 const PPERFECT_HASH_TABLE_HASH HashRoutines[] = {
@@ -151,7 +151,9 @@ VERIFY_HASH_ARRAY_SIZE(HashRoutines);
 // Define the array of number of seeds required per hash routine.
 //
 
-#define EXPAND_AS_HASH_NUMBER_OF_SEEDS(Name, NumberOfSeeds) NumberOfSeeds,
+#define EXPAND_AS_HASH_NUMBER_OF_SEEDS(Name, NumberOfSeeds, SeedMasks) \
+    NumberOfSeeds,
+
 const SHORT HashRoutineNumberOfSeeds[] = {
     -1,
     PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_NUMBER_OF_SEEDS)
@@ -160,10 +162,29 @@ const SHORT HashRoutineNumberOfSeeds[] = {
 VERIFY_HASH_ARRAY_SIZE(HashRoutineNumberOfSeeds);
 
 //
+// Define the array of SEED_MASKS for each hash routine.
+//
+
+#define EXPAND_AS_HASH_SEED_MASKS(Name, NumberOfSeeds, SeedMasksX) \
+    const SEED_MASKS PerfectHashTableHash##Name##SeedMasks = SeedMasksX;
+
+PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_SEED_MASKS)
+
+#define EXPAND_AS_SEED_MASKS_PTR(Name, NumberOfSeeds, SeedMasksX) \
+    &PerfectHashTableHash##Name##SeedMasks,
+
+const PCSEED_MASKS HashRoutineSeedMasks[] = {
+    NULL,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEED_MASKS_PTR)
+    NULL,
+};
+VERIFY_HASH_ARRAY_SIZE(HashRoutineSeedMasks);
+
+//
 // Define the array of seeded hash routines.
 //
 
-#define EXPAND_AS_SEEDED_HASH_ROUTINE(Name, NumberOfSeeds) \
+#define EXPAND_AS_SEEDED_HASH_ROUTINE(Name, NumberOfSeeds, SeedMasks) \
     PerfectHashTableSeededHash##Name,
 
 const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[] = {
@@ -216,9 +237,9 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
 
     {
         PerfectHashChm01AlgorithmId,
-        PerfectHashHashCrc32RotateFunctionId,
+        PerfectHashHashCrc32Rotate15FunctionId,
         PerfectHashAndMaskFunctionId,
-        PerfectHashTableFastIndexImplChm01Crc32RotateHashAndMask,
+        PerfectHashTableFastIndexImplChm01Crc32Rotate15HashAndMask,
     },
 
     {
@@ -228,6 +249,12 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
         PerfectHashTableFastIndexImplChm01JenkinsHashAndMask,
     },
 
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashCrc32RotateXFunctionId,
+        PerfectHashAndMaskFunctionId,
+        PerfectHashTableFastIndexImplChm01Crc32RotateXHashAndMask,
+    },
 };
 
 const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
@@ -239,12 +266,12 @@ const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);
 #include "CompiledPerfectHashTableIndexRoutines.h"
 #undef RawCString
 
-#define EXPAND_AS_CHM01_AND_INDEX_IMPL_TUPLE(Name, NumberOfSeeds)        \
-    {                                                                    \
-        PerfectHashChm01AlgorithmId,                                     \
-        PerfectHashHash##Name##FunctionId,                               \
-        PerfectHashAndMaskFunctionId,                                    \
-        &CompiledPerfectHashTableChm01Index##Name##AndCSourceRawCString, \
+#define EXPAND_AS_CHM01_AND_INDEX_IMPL_TUPLE(Name, NumberOfSeeds, SeedMasks) \
+    {                                                                        \
+        PerfectHashChm01AlgorithmId,                                         \
+        PerfectHashHash##Name##FunctionId,                                   \
+        PerfectHashAndMaskFunctionId,                                        \
+        &CompiledPerfectHashTableChm01Index##Name##AndCSourceRawCString,     \
     },
 
 
@@ -322,12 +349,12 @@ VERIFY_ALGORITHM_ARRAY_SIZE(AlgorithmNames);
 // Hash Function
 //
 
-#define EXPAND_AS_HASH_FUNCTION_NAME(Name, NumberOfSeeds) \
+#define EXPAND_AS_HASH_FUNCTION_NAME(Name, NumberOfSeeds, SeedMasks) \
     const UNICODE_STRING PerfectHashHash##Name##FunctionName = RCS(L#Name);
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNCTION_NAME)
 
-#define EXPAND_AS_HASH_FUNCTION_NAME_PTR(Name, NumberOfSeeds) \
+#define EXPAND_AS_HASH_FUNCTION_NAME_PTR(Name, NumberOfSeeds, SeedMasks) \
     &PerfectHashHash##Name##FunctionName,
 
 const PCUNICODE_STRING HashFunctionNames[] = {
@@ -360,8 +387,8 @@ VERIFY_MASK_ARRAY_SIZE(MaskFunctionNames);
 // Best Coverage Type
 //
 
-#define EXPAND_AS_BEST_COVERAGE_TYPE_NAME(Name, Comparison, Comparator)             \
-    const UNICODE_STRING \
+#define EXPAND_AS_BEST_COVERAGE_TYPE_NAME(Name, Comparison, Comparator)    \
+    const UNICODE_STRING                                                   \
         PerfectHash##Comparison##Name##BestCoverageTypeName = RCS(L#Name);
 
 BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_NAME);
@@ -388,7 +415,7 @@ const STRING BestCoverageTypeNamesA[] = {
 // Table Create Parameter
 //
 
-#define EXPAND_AS_TABLE_CREATE_PARAMETER_NAME(Name)             \
+#define EXPAND_AS_TABLE_CREATE_PARAMETER_NAME(Name)                    \
     const UNICODE_STRING PerfectHash##Name##TableCreateParameterName = \
         RCS(L#Name);
 

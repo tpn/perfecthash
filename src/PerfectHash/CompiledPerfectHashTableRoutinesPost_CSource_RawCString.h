@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableRoutinesPostCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableRoutinesPost.c.\n"
     "//\n"
     "\n"
+    "\n"
     "#ifdef CPH_INLINE_ROUTINES\n"
     "\n"
     "#undef CPH_INLINE_ROUTINES\n"
@@ -35,9 +36,11 @@ const CHAR CompiledPerfectHashTableRoutinesPostCSourceRawCStr[] =
     "\n"
     "#endif\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableRoutinesPost.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableRoutinesPostCSourceRawCString = {

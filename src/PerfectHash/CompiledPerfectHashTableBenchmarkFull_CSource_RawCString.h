@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableBenchmarkFullCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableBenchmarkFull.c.\n"
     "//\n"
     "\n"
+    "\n"
     "DECLARE_BENCHMARK_FULL_CPH_ROUTINE()\n"
     "{\n"
     "    ULONG Key;\n"
@@ -173,9 +174,11 @@ const CHAR CompiledPerfectHashTableBenchmarkFullCSourceRawCStr[] =
     "    return Best;\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableBenchmarkFull.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableBenchmarkFullCSourceRawCString = {

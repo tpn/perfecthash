@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableSupportCHeaderRawCStr[] =
     "// Begin CompiledPerfectHashTableSupport.h.\n"
     "//\n"
     "\n"
+    "\n"
     "//\n"
     "// Disable the anonymous union/struct warning.\n"
     "//\n"
@@ -49,9 +50,11 @@ const CHAR CompiledPerfectHashTableSupportCHeaderRawCStr[] =
     "#define FOR_EACH_KEY \\\n"
     "    for (Index = 0, Source = KEYS; Index < NUMBER_OF_KEYS; Index++)\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableSupport.h.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableSupportCHeaderRawCString = {

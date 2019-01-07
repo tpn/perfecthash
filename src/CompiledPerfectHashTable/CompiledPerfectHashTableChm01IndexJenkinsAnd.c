@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableChm01IndexJenkinsAnd.c.
-//
-
 DECLARE_INDEX_ROUTINE()
 {
     ULONG A;
@@ -74,6 +70,3 @@ DECLARE_INDEX_ROUTINE()
     return Index;
 }
 
-//
-// End CompiledPerfectHashTableChm01IndexJenkinsAnd.c.
-//

@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableRoutinesCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableRoutines.c.\n"
     "//\n"
     "\n"
+    "\n"
     "DECLARE_LOOKUP_ROUTINE()\n"
     "{\n"
     "    ULONG Index;\n"
@@ -39,9 +40,11 @@ const CHAR CompiledPerfectHashTableRoutinesCSourceRawCStr[] =
     "    return Previous;\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableRoutines.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableRoutinesCSourceRawCString = {

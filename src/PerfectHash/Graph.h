@@ -1003,11 +1003,20 @@ HRESULT
     );
 typedef GRAPH_APPLY_USER_SEEDS *PGRAPH_APPLY_USER_SEEDS;
 
+typedef
+_Success_(return >= 0)
+HRESULT
+(NTAPI GRAPH_APPLY_SEED_MASKS)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_APPLY_SEED_MASKS *PGRAPH_APPLY_SEED_MASKS;
+
 
 #ifndef __INTELLISENSE__
 extern GRAPH_INITIALIZE GraphInitialize;
 extern GRAPH_RUNDOWN GraphRundown;
 extern GRAPH_APPLY_USER_SEEDS GraphApplyUserSeeds;
+extern GRAPH_APPLY_SEED_MASKS GraphApplySeedMasks;
 
 //
 // Private vtbl methods.
@@ -1023,7 +1032,8 @@ extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
 extern GRAPH_RESET GraphReset;
 extern GRAPH_SOLVE GraphSolve;
 extern GRAPH_VERIFY GraphVerify;
-extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE GraphCalculateAssignedMemoryCoverage;
+extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
+    GraphCalculateAssignedMemoryCoverage;
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
     GraphCalculateAssignedMemoryCoverageForKeysSubset;
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;

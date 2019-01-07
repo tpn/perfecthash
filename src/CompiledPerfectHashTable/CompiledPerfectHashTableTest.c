@@ -1,9 +1,5 @@
 
 //
-// Begin CompiledPerfectHashTableTest.c.
-//
-
-//
 // Disable global optimizations, even in release builds.  Without this, the
 // compiler does clever things with regards to optimizing our __debugbreak()
 // logic below, such that it's impossible to tell which ASSERT() triggered it.
@@ -159,6 +155,3 @@ Return Value:
     return NumberOfErrors;
 }
 
-//
-// End CompiledPerfectHashTableTest.c.
-//

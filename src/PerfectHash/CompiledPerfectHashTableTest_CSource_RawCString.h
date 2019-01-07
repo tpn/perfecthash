@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableTestCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableTest.c.\n"
     "//\n"
     "\n"
+    "\n"
     "//\n"
     "// Disable global optimizations, even in release builds.  Without this, the\n"
     "// compiler does clever things with regards to optimizing our __debugbreak()\n"
@@ -165,9 +166,11 @@ const CHAR CompiledPerfectHashTableTestCSourceRawCStr[] =
     "    return NumberOfErrors;\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableTest.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableTestCSourceRawCString = {

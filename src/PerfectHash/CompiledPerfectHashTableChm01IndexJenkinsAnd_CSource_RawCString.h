@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableChm01IndexJenkinsAndCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableChm01IndexJenkinsAnd.c.\n"
     "//\n"
     "\n"
+    "\n"
     "DECLARE_INDEX_ROUTINE()\n"
     "{\n"
     "    ULONG A;\n"
@@ -80,9 +81,11 @@ const CHAR CompiledPerfectHashTableChm01IndexJenkinsAndCSourceRawCStr[] =
     "    return Index;\n"
     "}\n"
     "\n"
+    "\n"
     "//\n"
     "// End CompiledPerfectHashTableChm01IndexJenkinsAnd.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableChm01IndexJenkinsAndCSourceRawCString = {

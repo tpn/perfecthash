@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableRoutinesPost.c.
-//
-
 #ifdef CPH_INLINE_ROUTINES
 
 #undef CPH_INLINE_ROUTINES
@@ -29,6 +25,3 @@
 
 #endif
 
-//
-// End CompiledPerfectHashTableRoutinesPost.c.
-//

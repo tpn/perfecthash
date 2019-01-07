@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableChm01IndexRotateXorAnd.c.
-//
-
 DECLARE_INDEX_ROUTINE()
 {
     ULONG A;
@@ -34,6 +30,3 @@ DECLARE_INDEX_ROUTINE()
     return Index;
 }
 
-//
-// End CompiledPerfectHashTableChm01IndexRotateXorAnd.c.
-//

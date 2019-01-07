@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableTestExe.c.
-//
-
 void
 __stdcall
 mainCRTStartup(
@@ -17,6 +13,3 @@ mainCRTStartup(
     ExitProcess(NumberOfErrors);
 }
 
-//
-// End CompiledPerfectHashTableTestExe.c.
-//

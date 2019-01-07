@@ -9,6 +9,7 @@ const CHAR CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableBenchmarkIndexExe.c.\n"
     "//\n"
     "\n"
+    "\n"
     "#pragma optimize(\"\", off)\n"
     "\n"
     "void\n"
@@ -25,7 +26,11 @@ const CHAR CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCStr[] =
     "    ExitProcess(Cycles);\n"
     "}\n"
     "\n"
-    "// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :\n"
+    "\n"
+    "//\n"
+    "// End CompiledPerfectHashTableBenchmarkIndexExe.c.\n"
+    "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableBenchmarkIndexExeCSourceRawCString = {

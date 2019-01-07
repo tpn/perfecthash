@@ -1,33 +1,15 @@
 
 DECLARE_INDEX_ROUTINE()
 {
-    ULONG A;
-    ULONG B;
     ULONG Index;
     ULONG Vertex1;
     ULONG Vertex2;
     ULONG MaskedLow;
     ULONG MaskedHigh;
-    ULONG_BYTES Bytes;
     ULONGLONG Combined;
 
-    Bytes.AsULong = Key;
-
-    A = SEED1;
-    A = 33 * A + Bytes.Byte1;
-    A = 33 * A + Bytes.Byte2;
-    A = 33 * A + Bytes.Byte3;
-    A = 33 * A + Bytes.Byte4;
-
-    Vertex1 = A;
-
-    B = SEED2;
-    B = 33 * B + Bytes.Byte1;
-    B = 33 * B + Bytes.Byte2;
-    B = 33 * B + Bytes.Byte3;
-    B = 33 * B + Bytes.Byte4;
-
-    Vertex2 = B;
+    Vertex1 = _mm_crc32_u32(SEED1, Key);
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3));
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;

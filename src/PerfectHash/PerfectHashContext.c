@@ -867,6 +867,7 @@ Return Value:
 
     Context->KeysSubset = NULL;
     Context->UserSeeds = NULL;
+    Context->SeedMasks = NULL;
 
     //
     // Suppress concurrency warnings.

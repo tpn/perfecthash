@@ -1,8 +1,4 @@
 
-//
-// Begin CompiledPerfectHashTableChm01IndexScratchAnd.c.
-//
-
 DECLARE_INDEX_ROUTINE()
 {
     ULONG Index;
@@ -28,6 +24,3 @@ DECLARE_INDEX_ROUTINE()
     return Index;
 }
 
-//
-// End CompiledPerfectHashTableChm01IndexScratchAnd.c.
-//

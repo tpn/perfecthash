@@ -9,11 +9,14 @@ const CHAR CompiledPerfectHashTableSupportCSourceRawCStr[] =
     "// Begin CompiledPerfectHashTableSupport.c.\n"
     "//\n"
     "\n"
+    "\n"
     "volatile ULONG CtrlCPressed = 0;\n"
+    "\n"
     "\n"
     "//\n"
     "// End CompiledPerfectHashTableSupport.c.\n"
     "//\n"
+    "\n"
 ;
 
 const STRING CompiledPerfectHashTableSupportCSourceRawCString = {
