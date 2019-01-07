@@ -151,6 +151,11 @@ Return Value:
     PH_E_NUM_TABLE_CREATE_PARMS_IS_ZERO_BUT_PARAM_POINTER_NOT_NULL - The number
         of table create params is zero but the parameters pointer is not null.
 
+    PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE - The size of the seed masks
+        structure is too small (that is, the given graph indicates that it is
+        using more seeds than can be currently captured by the SEED_MASKS
+        structure).
+
 --*/
 {
     PRTL Rtl;
@@ -158,6 +163,9 @@ Return Value:
     HRESULT Result = S_OK;
     HRESULT CloseResult;
     HRESULT CreateValuesResult;
+    ULONG NumberOfSeeds;
+    ULONG NumberOfMasks;
+    PCSEED_MASKS SeedMasks;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PPERFECT_HASH_FILE TableSizeFile = NULL;
     PULARGE_INTEGER RequestedNumberOfTableElements;
@@ -279,6 +287,33 @@ Return Value:
     Table->AlgorithmId = Context->AlgorithmId = AlgorithmId;
     Table->MaskFunctionId = Context->MaskFunctionId = MaskFunctionId;
     Table->HashFunctionId = Context->HashFunctionId = HashFunctionId;
+
+    //
+    // If this routine uses seed masks, make the context aware.
+    //
+
+    SeedMasks = HashRoutineSeedMasks[HashFunctionId];
+
+    if (IsValidSeedMasks(SeedMasks)) {
+
+        //
+        // Verify the size of the masks structure is appropriate for the number
+        // of seeds required by this hash function.
+        //
+
+        NumberOfSeeds = HashRoutineNumberOfSeeds[HashFunctionId];
+        NumberOfMasks = sizeof(*SeedMasks) / sizeof(SeedMasks->Mask1);
+        if (NumberOfSeeds > NumberOfMasks) {
+            Result = PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE;
+            goto Error;
+        }
+
+        //
+        // Validation complete; set the seed masks for this run.
+        //
+
+        Context->SeedMasks = SeedMasks;
+    }
 
     //
     // Complete initialization of the table's now that the algo/hash/mask IDs

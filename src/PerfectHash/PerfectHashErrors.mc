@@ -2821,3 +2821,11 @@ Language=English
 Invalid user seed element size.
 .
 
+MessageId=0x363
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE
+Language=English
+Invalid seed masks structure size.
+.
+

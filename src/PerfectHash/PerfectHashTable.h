@@ -147,8 +147,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     struct _ASSIGNED_MEMORY_COVERAGE *Coverage;
 
     //
-    // Optional pointer to a string representation of the Index() routine's
-    // implementation in C, if one is available.
+    // Pointer to a string representation of the Index() routine's
+    // implementation in C.
     //
 
     PCSTRING IndexImplString;
@@ -552,12 +552,12 @@ extern PERFECT_HASH_TABLE_GET_FILE PerfectHashTableGetFile;
 
 #ifndef __INTELLISENSE__
 
-#define EXPAND_AS_HASH_FUNC_DECL(Name, NumberOfSeeds) \
+#define EXPAND_AS_HASH_FUNC_DECL(Name, NumberOfSeeds, SeedMasks) \
     extern PERFECT_HASH_TABLE_HASH PerfectHashTableHash##Name;
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNC_DECL);
 
-#define EXPAND_AS_SEEDED_HASH_FUNC_DECL(Name, NumberOfSeeds) \
+#define EXPAND_AS_SEEDED_HASH_FUNC_DECL(Name, NumberOfSeeds, SeedMasks) \
     extern PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHash##Name;
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH_FUNC_DECL);

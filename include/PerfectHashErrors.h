@@ -352,6 +352,11 @@ Abstract:
 //         valid perfect hash solution has been found (i.e. with no collisions
 //         across the entire key set).
 // 
+//     --OmitCsvRowIfTableCreateFailed
+// 
+//         When present, omits writing a row in the .csv output file if table
+//         creation fails for a given keys file.
+// 
 //     --IgnorePreviousTableSize
 // 
 //         When set, ignores any previously-recorded table sizes associated with
@@ -615,6 +620,16 @@ Abstract:
 //         When set, skips the internal graph verification check that ensures a
 //         valid perfect hash solution has been found (i.e. with no collisions
 //         across the entire key set).
+// 
+//     --OmitCsvRowIfTableCreateFailed
+// 
+//         When present, omits writing a row in the .csv output file if table
+//         creation fails for a given keys file.
+// 
+//     --OmitCsvRowIfTableCreateSucceeded
+// 
+//         When present, omits writing a row in the .csv output file if table
+//         creation succeeded for a given keys file.
 // 
 //     --IgnorePreviousTableSize
 // 
@@ -3099,4 +3114,13 @@ Abstract:
 // Invalid user seed element size.
 //
 #define PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE ((HRESULT)0xE0040362L)
+
+//
+// MessageId: PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE
+//
+// MessageText:
+//
+// Invalid seed masks structure size.
+//
+#define PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE ((HRESULT)0xE0040363L)
 

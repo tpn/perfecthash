@@ -76,7 +76,7 @@ PerfectHashTableHashNull(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableSeededHashCrc32Rotate(
+PerfectHashTableSeededHashCrc32Rotate15(
     PPERFECT_HASH_TABLE Table,
     ULONG Key,
     ULONG NumberOfSeeds,
@@ -151,19 +151,116 @@ Return Value:
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableHashCrc32Rotate(
+PerfectHashTableHashCrc32Rotate15(
     PPERFECT_HASH_TABLE Table,
     ULONG Key,
     PULONGLONG Hash
     )
 {
     PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
-    return PerfectHashTableSeededHashCrc32Rotate(Table,
-                                                 Key,
-                                                 TableInfo->NumberOfSeeds,
-                                                 &TableInfo->FirstSeed,
-                                                 Hash);
+    return PerfectHashTableSeededHashCrc32Rotate15(Table,
+                                                   Key,
+                                                   TableInfo->NumberOfSeeds,
+                                                   &TableInfo->FirstSeed,
+                                                   Hash);
 }
+
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashCrc32RotateX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This hash routine is based off Crc32Rotate15, but uses a random value for the
+    rotation amount (instead of a fixed 15).
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Key - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Seed3;
+    BYTE Rotate;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    ASSERT(NumberOfSeeds >= 3);
+
+    //
+    // Initialize aliases.
+    //
+
+    //IACA_VC_START();
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3 = Seeds[2];
+    Rotate = (BYTE)Seed3;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, Rotate));
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashCrc32RotateX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashCrc32RotateX(Table,
+                                                  Key,
+                                                  TableInfo->NumberOfSeeds,
+                                                  &TableInfo->FirstSeed,
+                                                  Hash);
+}
+
 
 _Use_decl_annotations_
 HRESULT

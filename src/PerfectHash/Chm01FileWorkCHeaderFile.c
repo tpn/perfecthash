@@ -22,6 +22,7 @@ Abstract:
             - CPH_TABLENAME_UPPER
             - U##_NUMBER_OF_KEYS
             - U##_SEEDS
+            - U##_SEED[1..N]_BYTE[1..4]
             - T##_Seeds[]
             - T##_Seed1 .. SeedN
             - T##_HashMask

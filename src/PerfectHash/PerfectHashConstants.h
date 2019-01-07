@@ -105,6 +105,13 @@ extern const PPERFECT_HASH_TABLE_HASH HashRoutines[];
 extern const SHORT HashRoutineNumberOfSeeds[];
 
 //
+// Declare an array of hash routine seed masks.  This is intended to be indexed
+// by the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enumeration.
+//
+
+extern const PCSEED_MASKS HashRoutineSeedMasks[];
+
+//
 // Declare an array of hash mask routines.  This is intended to be indexed by
 // the PERFECT_HASH_TABLE_HASH_FUNCTION_ID enumeration.
 //

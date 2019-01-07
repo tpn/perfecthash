@@ -1375,7 +1375,7 @@ Return Value:
     //
     // Originally, the numerical value for algo, hash function and masking type
     // was required.  We've since relaxed that to support both the numerical
-    // value (i.e. for hash function, you can supply either 1 or Crc32Rotate).
+    // value (i.e. for hash function, you can supply either 1 or Crc32Rotate15).
     // Extract these values now.
     //
 

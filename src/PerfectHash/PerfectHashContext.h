@@ -339,6 +339,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PVALUE_ARRAY UserSeeds;
 
     //
+    // Pointer to seed masks, if applicable.
+    //
+
+    PCSEED_MASKS SeedMasks;
+
+    //
     // Best and spare graphs.
     //
 

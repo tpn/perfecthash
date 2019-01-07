@@ -1775,22 +1775,9 @@ typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
     PerfectHash##Name##AlgorithmId,
 
 typedef enum _PERFECT_HASH_ALGORITHM_ID {
-
-    //
-    // Explicitly define a null algorithm to take the 0-index slot.
-    // This makes enum validation easier.
-    //
-
-    PerfectHashNullAlgorithmId         = 0,
-
+    PerfectHashNullAlgorithmId = 0,
     PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_ALGORITHM_ENUM)
-
-    //
-    // N.B. Keep the next value last.
-    //
-
     PerfectHashInvalidAlgorithmId,
-
 } PERFECT_HASH_ALGORITHM_ID;
 typedef PERFECT_HASH_ALGORITHM_ID *PPERFECT_HASH_ALGORITHM_ID;
 
@@ -1811,29 +1798,61 @@ IsValidPerfectHashAlgorithmId(
 }
 
 //
-// Define an X-macro for hash functions.  The ENTRY macros receive the following
-// parameters: (Name, NumberOfSeeds).
+// Define a seed masks structure.  The number of elements must match the maximum
+// number of seeds used by all hash functions (currently 4).
 //
 
+typedef struct _SEED_MASKS {
+    LONG Mask1;
+    LONG Mask2;
+    LONG Mask3;
+    LONG Mask4;
+} SEED_MASKS;
+typedef SEED_MASKS *PSEED_MASKS;
+typedef const SEED_MASKS *PCSEED_MASKS;
+
+FORCEINLINE
+BOOLEAN
+IsValidSeedMasks(
+    _In_ PCSEED_MASKS Masks
+    )
+{
+    return (Masks->Mask1 != -1);
+}
+
+//
+// Define an X-macro for hash functions.  The ENTRY macros receive the following
+// parameters: (Name, NumberOfSeeds, SeedMasks).
+//
+
+#define NO_SEED_MASKS { -1, }
+
+#define DECL_SEED_MASKS(m1, m2, m3, m4) { m1, m2, m3, m4 }
+
 #define PERFECT_HASH_HASH_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    FIRST_ENTRY(Crc32Rotate, 2)                                          \
-    ENTRY(Jenkins, 2)                                                    \
-    ENTRY(JenkinsMod, 2)                                                 \
-    ENTRY(RotateXor, 4)                                                  \
-    ENTRY(AddSubXor, 4)                                                  \
-    ENTRY(Xor, 2)                                                        \
-    ENTRY(Scratch, 4)                                                    \
-    ENTRY(Crc32RotateXor, 3)                                             \
-    ENTRY(Crc32, 2)                                                      \
-    ENTRY(Djb, 2)                                                        \
-    ENTRY(DjbXor, 2)                                                     \
-    ENTRY(Fnv, 2)                                                        \
-    LAST_ENTRY(Crc32Not, 2)
+    FIRST_ENTRY(Crc32Rotate15, 2, NO_SEED_MASKS)                         \
+    ENTRY(Jenkins, 2, NO_SEED_MASKS)                                     \
+    ENTRY(JenkinsMod, 2, NO_SEED_MASKS)                                  \
+    ENTRY(RotateXor, 4, NO_SEED_MASKS)                                   \
+    ENTRY(AddSubXor, 4, NO_SEED_MASKS)                                   \
+    ENTRY(Xor, 2, NO_SEED_MASKS)                                         \
+    ENTRY(Scratch, 4, NO_SEED_MASKS)                                     \
+    ENTRY(Crc32RotateXor, 3, NO_SEED_MASKS)                              \
+    ENTRY(Crc32, 2, NO_SEED_MASKS)                                       \
+    ENTRY(Djb, 2, NO_SEED_MASKS)                                         \
+    ENTRY(DjbXor, 2, NO_SEED_MASKS)                                      \
+    ENTRY(Fnv, 2, NO_SEED_MASKS)                                         \
+    ENTRY(Crc32Not, 2, NO_SEED_MASKS)                                    \
+    LAST_ENTRY(                                                          \
+        Crc32RotateX,                                                    \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x0000001f, 0)                             \
+    )
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_HASH_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)
 
-#define EXPAND_AS_HASH_FUNCTION_ENUM(Name, NumberOfSeeds) \
+#define EXPAND_AS_HASH_FUNCTION_ENUM(Name, NumberOfSeeds, SeedMasks) \
     PerfectHashHash##Name##FunctionId,
 
 //
