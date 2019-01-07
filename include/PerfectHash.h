@@ -1775,22 +1775,9 @@ typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
     PerfectHash##Name##AlgorithmId,
 
 typedef enum _PERFECT_HASH_ALGORITHM_ID {
-
-    //
-    // Explicitly define a null algorithm to take the 0-index slot.
-    // This makes enum validation easier.
-    //
-
-    PerfectHashNullAlgorithmId         = 0,
-
+    PerfectHashNullAlgorithmId = 0,
     PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_ALGORITHM_ENUM)
-
-    //
-    // N.B. Keep the next value last.
-    //
-
     PerfectHashInvalidAlgorithmId,
-
 } PERFECT_HASH_ALGORITHM_ID;
 typedef PERFECT_HASH_ALGORITHM_ID *PPERFECT_HASH_ALGORITHM_ID;
 
