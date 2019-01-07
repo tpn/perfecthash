@@ -303,6 +303,11 @@ Table Create Flags:
         When present, omits writing a row in the .csv output file if table
         creation fails for a given keys file.
 
+    --OmitCsvRowIfTableCreateSucceeded
+
+        When present, omits writing a row in the .csv output file if table
+        creation succeeded for a given keys file.
+
     --IgnorePreviousTableSize
 
         When set, ignores any previously-recorded table sizes associated with

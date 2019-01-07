@@ -352,6 +352,16 @@ Abstract:
 //         valid perfect hash solution has been found (i.e. with no collisions
 //         across the entire key set).
 // 
+//     --OmitCsvRowIfTableCreateFailed
+// 
+//         When present, omits writing a row in the .csv output file if table
+//         creation fails for a given keys file.
+// 
+//     --OmitCsvRowIfTableCreateSucceeded
+// 
+//         When present, omits writing a row in the .csv output file if table
+//         creation succeeded for a given keys file.
+// 
 //     --IgnorePreviousTableSize
 // 
 //         When set, ignores any previously-recorded table sizes associated with
@@ -615,6 +625,16 @@ Abstract:
 //         When set, skips the internal graph verification check that ensures a
 //         valid perfect hash solution has been found (i.e. with no collisions
 //         across the entire key set).
+// 
+//     --OmitCsvRowIfTableCreateFailed
+// 
+//         When present, omits writing a row in the .csv output file if table
+//         creation fails for a given keys file.
+// 
+//     --OmitCsvRowIfTableCreateSucceeded
+// 
+//         When present, omits writing a row in the .csv output file if table
+//         creation succeeded for a given keys file.
 // 
 //     --IgnorePreviousTableSize
 // 
