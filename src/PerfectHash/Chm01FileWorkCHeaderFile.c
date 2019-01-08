@@ -175,10 +175,11 @@ SaveCHeaderFileChm01(
     PCHAR Base;
     PCHAR Output;
     ULONG Count;
-    PULONG Seed;
+    PULONG Seeds;
     PGRAPH Graph;
     PULONG Source;
     ULONG NumberOfSeeds;
+    ULONG_BYTES Seed;
     PCSTRING Name;
     PCSTRING Upper;
     STRING Algo = { 0 };
@@ -238,9 +239,15 @@ SaveCHeaderFileChm01(
     // Write seeds.
     //
 
-    Seed = &Graph->FirstSeed;
+    Seeds = &Graph->FirstSeed;
 
     for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
+
+        //
+        // Resolve the seed, then write the value in full.
+        //
+
+        Seed.AsULong = *Seeds++;
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
         OUTPUT_RAW("_SEED");
@@ -248,8 +255,48 @@ SaveCHeaderFileChm01(
         *Output++ = ' ';
         *Output++ = '0';
         *Output++ = 'x';
-        OUTPUT_HEX_RAW(*Seed++);
+        OUTPUT_HEX_RAW(Seed.AsULong);
         *Output++ = '\n';
+
+        //
+        // Isolate each byte.
+        //
+
+#define WRITE_SEED_BYTE(ByteNumber)              \
+        OUTPUT_RAW("#define ");                  \
+        OUTPUT_STRING(Upper);                    \
+        OUTPUT_RAW("_SEED");                     \
+        OUTPUT_INT(Count);                       \
+        OUTPUT_RAW("_BYTE" # ByteNumber);        \
+        *Output++ = ' ';                         \
+        *Output++ = '0';                         \
+        *Output++ = 'x';                         \
+        OUTPUT_HEX_RAW(Seed.Byte ## ByteNumber); \
+        *Output++ = '\n';
+
+        WRITE_SEED_BYTE(1);
+        WRITE_SEED_BYTE(2);
+        WRITE_SEED_BYTE(3);
+        WRITE_SEED_BYTE(4);
+
+        //
+        // Isolate each word.
+        //
+
+#define WRITE_SEED_WORD(WordNumber)              \
+        OUTPUT_RAW("#define ");                  \
+        OUTPUT_STRING(Upper);                    \
+        OUTPUT_RAW("_SEED");                     \
+        OUTPUT_INT(Count);                       \
+        OUTPUT_RAW("_WORD" # WordNumber);        \
+        *Output++ = ' ';                         \
+        *Output++ = '0';                         \
+        *Output++ = 'x';                         \
+        OUTPUT_HEX_RAW(Seed.Word ## WordNumber); \
+        *Output++ = '\n';
+
+        WRITE_SEED_WORD(1);
+        WRITE_SEED_WORD(2);
     }
 
     //

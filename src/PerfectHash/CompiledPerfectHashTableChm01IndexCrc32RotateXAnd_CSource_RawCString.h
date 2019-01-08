@@ -20,7 +20,7 @@ const CHAR CompiledPerfectHashTableChm01IndexCrc32RotateXAndCSourceRawCStr[] =
     "    ULONGLONG Combined;\n"
     "\n"
     "    Vertex1 = _mm_crc32_u32(SEED1, Key);\n"
-    "    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3));\n"
+    "    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE1));\n"
     "\n"
     "    MaskedLow = Vertex1 & HASH_MASK;\n"
     "    MaskedHigh = Vertex2 & HASH_MASK;\n"

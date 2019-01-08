@@ -262,6 +262,13 @@ const PERFECT_HASH_TABLE_FAST_INDEX_TUPLE FastIndexRoutines[] = {
         PerfectHashAndMaskFunctionId,
         PerfectHashTableFastIndexImplChm01Crc32RotateXYHashAndMask,
     },
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashCrc32RotateWXYZFunctionId,
+        PerfectHashAndMaskFunctionId,
+        PerfectHashTableFastIndexImplChm01Crc32RotateWXYZHashAndMask,
+    },
 };
 
 const BYTE NumberOfFastIndexRoutines = ARRAYSIZE(FastIndexRoutines);

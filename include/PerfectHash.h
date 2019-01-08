@@ -1848,10 +1848,15 @@ IsValidSeedMasks(
         3,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f, 0)                                   \
     )                                                                    \
-    LAST_ENTRY(                                                          \
+    ENTRY(                                                               \
         Crc32RotateXY,                                                   \
         4,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f, 0x1f)                                \
+    )                                                                    \
+    LAST_ENTRY(                                                          \
+        Crc32RotateWXYZ,                                                 \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0)                             \
     )
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \

@@ -405,6 +405,9 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateXYAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexCrc32RotateWXYZAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexDjbAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>

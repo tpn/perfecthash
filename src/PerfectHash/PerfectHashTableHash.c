@@ -306,7 +306,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Table);
     UNREFERENCED_PARAMETER(NumberOfSeeds);
 
-    ASSERT(NumberOfSeeds >= 4);
+    ASSERT(NumberOfSeeds >= 3);
 
     //
     // Initialize aliases.
@@ -354,6 +354,102 @@ PerfectHashTableHashCrc32RotateXY(
                                                    TableInfo->NumberOfSeeds,
                                                    &TableInfo->FirstSeed,
                                                    Hash);
+}
+
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashCrc32RotateWXYZ(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    This hash routine is based off Crc32RotateXY with more rotates.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Key - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    ASSERT(NumberOfSeeds >= 3);
+
+    //
+    // Initialize aliases.
+    //
+
+    //IACA_VC_START();
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Key, Seed3.Byte1));
+    Vertex1 = _rotl(Vertex1, Seed3.Byte3);
+
+    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, Seed3.Byte2));
+    Vertex2 = _rotr(Vertex2, Seed3.Byte4);
+
+    //IACA_VC_END();
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashCrc32RotateWXYZ(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashCrc32RotateWXYZ(Table,
+                                                     Key,
+                                                     TableInfo->NumberOfSeeds,
+                                                     &TableInfo->FirstSeed,
+                                                     Hash);
 }
 
 

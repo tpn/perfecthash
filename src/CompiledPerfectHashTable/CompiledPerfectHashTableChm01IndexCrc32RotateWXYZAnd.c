@@ -8,8 +8,11 @@ DECLARE_INDEX_ROUTINE()
     ULONG MaskedHigh;
     ULONGLONG Combined;
 
-    Vertex1 = _mm_crc32_u32(SEED1, Key);
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE1));
+    Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
+    Vertex1 = _rotl(Vertex1, SEED3_BYTE3);
+
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE2));
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;
