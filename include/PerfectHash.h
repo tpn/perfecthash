@@ -1846,12 +1846,12 @@ IsValidSeedMasks(
     ENTRY(                                                               \
         Crc32RotateX,                                                    \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f, 0)                                   \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0)                             \
     )                                                                    \
     ENTRY(                                                               \
         Crc32RotateXY,                                                   \
-        4,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f, 0x1f)                                \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0)                             \
     )                                                                    \
     LAST_ENTRY(                                                          \
         Crc32RotateWXYZ,                                                 \
