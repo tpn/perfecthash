@@ -446,17 +446,31 @@ Return Value:
     Rtl = Table->Rtl;
     Key = *KeyPointer;
     Hash.QuadPart = 0;
-    Warmups = Table->BenchmarkWarmups;
-    Attempts = Table->BenchmarkAttempts;
     TableInfo = Table->TableInfoOnDisk;
-    Iterations = Table->BenchmarkIterations;
     SlowIndex = &Table->SlowIndexTimestamp;
     SeededHash = &Table->SeededHashTimestamp;
     NullSeededHash = &Table->NullSeededHashTimestamp;
 
-    Warmups = (Warmups ? Warmups : DEFAULT_WARMUPS);
-    Attempts = (Attempts ? Attempts : DEFAULT_ATTEMPTS);
-    Iterations = (Iterations ? Iterations : DEFAULT_ITERATIONS);
+    //
+    // If the number of warmups, attempts, or iterations indicate 0, use default
+    // values.  We update the corresponding value in the table structure such
+    // that the .csv row generation logic picks up whatever value was used.
+    //
+
+    Warmups = Table->BenchmarkWarmups;
+    if (!Warmups) {
+        Warmups = Table->BenchmarkWarmups = DEFAULT_WARMUPS;
+    }
+
+    Attempts = Table->BenchmarkAttempts;
+    if (!Attempts) {
+        Attempts = Table->BenchmarkAttempts = DEFAULT_ATTEMPTS;
+    }
+
+    Iterations = Table->BenchmarkIterations;
+    if (!Iterations) {
+        Iterations = Table->BenchmarkIterations = DEFAULT_ITERATIONS;
+    }
 
     NumberOfSeeds = TableInfo->NumberOfSeeds;
     FirstSeed = &TableInfo->FirstSeed;

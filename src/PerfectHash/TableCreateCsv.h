@@ -125,6 +125,18 @@ Abstract:
           Context->VerifyElapsedMicroseconds.QuadPart,                     \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BenchmarkWarmups,                                                \
+          Table->BenchmarkWarmups,                                         \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BenchmarkAttempts,                                               \
+          Table->BenchmarkAttempts,                                        \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BenchmarkIterationsPerAttempt,                                   \
+          Table->BenchmarkIterations,                                      \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(SeededHashMinimumCycles,                                         \
           Table->SeededHashTimestamp.MinimumCycles.QuadPart,               \
           OUTPUT_INT)                                                      \
@@ -133,12 +145,46 @@ Abstract:
           Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart,          \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(NullSeededHashMinimumCycles,                                     \
+          Table->NullSeededHashTimestamp.MinimumCycles.QuadPart,           \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(NullSeededHashMinimumNanoseconds,                                \
+          Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart,      \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(DeltaHashMinimumCycles,                                          \
+          Table->SeededHashTimestamp.MinimumCycles.QuadPart -              \
+          Table->NullSeededHashTimestamp.MinimumCycles.QuadPart,           \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(DeltaHashMinimumNanosecondsPerIteration,                         \
+          Table->BenchmarkIterations == 0 ? 0 : (                          \
+            (Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart -      \
+             Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart) / \
+             Table->BenchmarkIterations                                    \
+          ),                                                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(DeltaHashMinimumNanoseconds,                                     \
+          Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart -         \
+          Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart,      \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(SlowIndexMinimumCycles,                                          \
           Table->SlowIndexTimestamp.MinimumCycles.QuadPart,                \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(SlowIndexMinimumNanoseconds,                                     \
           Table->SlowIndexTimestamp.MinimumNanoseconds.QuadPart,           \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(SlowIndexMinimumNanosecondsPerIteration,                         \
+          Table->BenchmarkIterations == 0 ? 0 : (                          \
+            (Table->SlowIndexTimestamp.MinimumNanoseconds.QuadPart -       \
+             Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart) / \
+             Table->BenchmarkIterations                                    \
+          ),                                                               \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(NumberOfSeeds,                                                   \
