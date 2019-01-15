@@ -1319,18 +1319,8 @@ PopulationCount32(
     return __popcnt(Integer);
 }
 
-#if 0
 FORCEINLINE
-ULONGLONG
-PopulationCount64(
-    _In_ ULONGLONG Integer
-    )
-{
-    return __popcnt64(Integer);
-}
-
-FORCEINLINE
-ULONG
+ULONG_PTR
 PopulationCountPointer(
     _In_ ULONG_PTR Integer
     )
@@ -1341,7 +1331,6 @@ PopulationCountPointer(
     return PopulationCount(Integer);
 #endif
 }
-#endif
 
 FORCEINLINE
 ULONG_PTR
@@ -1506,6 +1495,35 @@ RoundUpNextPowerOf2(
 #define PrefaultNextPage(Address)                              \
     (*(volatile char *)(PCHAR)((ULONG_PTR)Address + PAGE_SIZE))
 
+//
+// Helper enum and function pointer for determining an appropriate C type for
+// a given power-of-2 value.
+//
+
+typedef enum _TYPE {
+    ByteType = 0,
+    ShortType = 1,
+    LongType = 2,
+    LongLongType = 3,
+    XmmType = 4,
+    YmmType = 5,
+    ZmmType = 6,
+} TYPE;
+typedef TYPE *PTYPE;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI GET_CONTAINING_TYPE)(
+    _In_ ULONG_PTR Value,
+    _Out_ PTYPE Type
+    );
+typedef GET_CONTAINING_TYPE *PGET_CONTAINING_TYPE;
+
+#ifndef __INTELLISENSE__
+extern GET_CONTAINING_TYPE GetContainingType;
+#endif
 
 //
 // String validation helpers.

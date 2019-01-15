@@ -353,4 +353,58 @@ RtlRundown(
     }
 }
 
+_Use_decl_annotations_
+HRESULT
+GetContainingType(
+    ULONG_PTR Value,
+    PTYPE TypePointer
+    )
+{
+    TYPE Type;
+    ULONG_PTR Bits;
+    ULONG_PTR Trailing;
+    ULONG_PTR Shifted;
+
+    if (Value == 0) {
+        *TypePointer = ByteType;
+        return S_OK;
+    }
+
+    Bits = PopulationCountPointer(Value);
+    if (Bits > 1) {
+        return E_INVALIDARG;
+    }
+
+    Trailing = TrailingZerosPointer(Value);
+    Shifted = Trailing >> 3;
+
+    switch (Shifted) {
+        case 0:
+            Type = ByteType;
+            break;
+
+        case 1:
+            Type = ShortType;
+            break;
+
+        case 2:
+        case 3:
+            Type = LongType;
+            break;
+
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            Type = LongLongType;
+            break;
+
+        default:
+            return E_UNEXPECTED;
+    }
+
+    *TypePointer = Type;
+    return S_OK;
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
