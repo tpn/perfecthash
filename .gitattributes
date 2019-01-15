@@ -1,9 +1,28 @@
 # Set the default behavior (used when a rule below doesn't match)
-* text=lf
+* -text
 
-# Some Windows-specific files should always be CRLF
-*.bat eol=crlf
-*.sln* eol=crlf
-*.vcxproj* eol=crlf
-*.pyproj* eol=crlf
-*.dgml eol=crlf
+# All code and text files are LF.
+*.py text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+*.asm text eol=lf
+*.txt text eol=lf
+*.natvis text eol=lf
+*.conf text eol=lf
+.* text eol=lf
+*.md text eol=lf
+*.props text eol=lf
+*.rc text eol=lf
+*.mc text eol=lf
+*.inc text eol=lf
+*.def text eol=lf
+*.ipynb text eol=lf
+LICENSE text eol=lf
+
+# text Some Windows-specific files should always be CRLF
+*.bat text eol=crlf
+*.sln* text eol=crlf
+*.vcxproj* text eol=crlf
+*.pyproj* text eol=crlf
+*.dgml text eol=crlf
+PerfectHashErrors.h text eol=crlf
