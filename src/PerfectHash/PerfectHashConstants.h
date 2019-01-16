@@ -133,6 +133,13 @@ extern const PPERFECT_HASH_TABLE_MASK_INDEX MaskIndexRoutines[];
 extern const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[];
 
 //
+// Declare an array of STRINGs representing C type names; intended to be
+// indexed by the TYPE enum.
+//
+
+extern const STRING CTypeNames[];
+
+//
 // Helper inline routine for initializing the extended vtbl interface and any
 // other dynamic values.
 //

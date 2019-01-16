@@ -415,23 +415,23 @@ Return Value:
     Shifted = Trailing >> 3;
 
     switch (Shifted) {
-        case 0:
+        case 1:
             Type = ByteType;
             break;
 
-        case 1:
+        case 2:
             Type = ShortType;
             break;
 
-        case 2:
         case 3:
+        case 4:
             Type = LongType;
             break;
 
-        case 4:
         case 5:
         case 6:
         case 7:
+        case 8:
             Type = LongLongType;
             break;
 

@@ -148,10 +148,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
     ULONG Concurrency;
 
     //
-    // Pad out to 8 bytes.
+    // C data type of the table data/assigned array.
     //
 
-    ULONG Padding;
+    TYPE TableDataArrayType;
 
     //
     // Number of keys in the input set.  This is used to size an appropriate

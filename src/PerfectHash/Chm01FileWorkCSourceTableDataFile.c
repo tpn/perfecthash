@@ -149,7 +149,9 @@ SaveCSourceTableDataFileChm01(
     // Write a table values array.
     //
 
-    OUTPUT_RAW("#pragma data_seg(\".cphval\")\nULONG ");
+    OUTPUT_RAW("#pragma data_seg(\".cphval\")\n");
+    OUTPUT_STRING(Table->TableValuesArrayTypeName);
+    OUTPUT_RAW(" ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues[");
     OUTPUT_INT(NumberOfElements);
@@ -163,7 +165,9 @@ SaveCSourceTableDataFileChm01(
 
     OUTPUT_RAW("#pragma const_seg(\".cphdata\")\n");
 
-    OUTPUT_RAW("const ULONG ");
+    OUTPUT_RAW("const ");
+    OUTPUT_STRING(Table->TableDataArrayTypeName);
+    OUTPUT_RAW(" ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableData[");
     OUTPUT_INT(TotalNumberOfElements);

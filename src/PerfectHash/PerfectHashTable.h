@@ -120,10 +120,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
 
     //
-    // Pad out to an 8 byte boundary.
+    // Type to use for the table data/assigned array when generating the C files
+    // for the compiled perfect hash table.
     //
 
-    ULONG Padding;
+    TYPE TableDataArrayType;
 
     //
     // Optional table creation parameters specified to Create().
@@ -288,6 +289,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     CHAR TimestampBuffer[RTL_TIMESTAMP_FORMAT_LENGTH];
     STRING TimestampString;
+
+    //
+    // Pointers to STRINGs representing the type names to use for the keys,
+    // table data and table values arrays (when generating C files).
+    //
+
+    PCSTRING KeysArrayTypeName;
+    PCSTRING TableDataArrayTypeName;
+    PCSTRING TableValuesArrayTypeName;
+
+    //
+    // Pointer to the array of C type names based on enum TYPE values.  Defaults
+    // to the global constant CTypeNames.
+    //
+
+    PCSTRING CTypeNames;
 
     //
     // Pointers to files associated with the table.

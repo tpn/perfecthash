@@ -664,6 +664,11 @@ Return Value:
         Context->ResizeLimit = GRAPH_SOLVING_RESIZE_TABLE_LIMIT;
     }
 
+    //
+    // Use our default global C type names array for now.
+    //
+
+    Table->CTypeNames = (PCSTRING)&CTypeNames;
 
     //
     // Validation complete, finish up.

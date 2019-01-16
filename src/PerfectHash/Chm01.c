@@ -1421,8 +1421,11 @@ Return Value:
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
     SYSTEM_INFO SystemInfo;
+    PCSTRING TypeNames;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
+    ULONG NumberOfEdgeMaskBits;
+    ULONG NumberOfVertexMaskBits;
     ULONGLONG NextSizeInBytes;
     ULONGLONG PrevSizeInBytes;
     ULONGLONG FirstSizeInBytes;
@@ -1461,6 +1464,7 @@ Return Value:
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk;
     TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
+    TypeNames = Table->CTypeNames;
 
     //
     // If a previous Info struct pointer has been passed, copy the current
@@ -1882,13 +1886,19 @@ Return Value:
     );
 
     //
-    // If non-modulus masking is active, initialize the edge and vertex masks.
+    // If non-modulus masking is active, initialize the edge and vertex masks
+    // and underlying table data type.
     //
 
     if (!IsModulusMasking(MaskFunctionId)) {
 
+        ULONG_PTR EdgeValue;
+
         Info->EdgeMask = NumberOfEdges.LowPart - 1;
         Info->VertexMask = NumberOfVertices.LowPart - 1;
+
+        NumberOfEdgeMaskBits = PopulationCount32(Info->EdgeMask);
+        NumberOfVertexMaskBits = PopulationCount32(Info->VertexMask);
 
         //
         // Sanity check our masks are correct: their popcnts should match the
@@ -1896,12 +1906,57 @@ Return Value:
         // structure.
         //
 
-        ASSERT(PopulationCount32(Info->EdgeMask) ==
-               Dim->NumberOfEdgesPowerOf2Exponent);
+        if (NumberOfEdgeMaskBits != Dim->NumberOfEdgesPowerOf2Exponent) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PrepareGraphInfoChm01_EdgeMaskPopcountMismatch, Result);
+            goto Error;
+        }
 
-        ASSERT(PopulationCount32(Info->VertexMask) ==
-               Dim->NumberOfVerticesPowerOf2Exponent);
+        if (NumberOfVertexMaskBits != Dim->NumberOfVerticesPowerOf2Exponent) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PrepareGraphInfoChm01_VertexMaskPopcountMismatch, Result);
+            goto Error;
+        }
 
+        //
+        // Use the number of bits set in the edge mask to derive an appropriate
+        // containing data type (i.e. USHORT if there are less than 65k keys,
+        // ULONG otherwise, etc).  The Table->TableDataArrayType field is used
+        // as the type for the TableData/Assigned array; if we have less than
+        // 65k keys, we know that the two values derived from this table will
+        // never exceed 65536, so the array can be USHORT, saving 2 bytes per
+        // entry vs keeping it at ULONG.  The 256->65536 USHORT sweet spot is
+        // common enough (based on the typical number of keys we're targeting)
+        // to warrant this logic.
+        //
+
+        EdgeValue = (ULONG_PTR)1 << NumberOfEdgeMaskBits;
+        Result = GetContainingType(EdgeValue, &Table->TableDataArrayType);
+        if (FAILED(Result)) {
+            PH_ERROR(PrepareGraphInfoChm01_GetContainingType, Result);
+            goto Error;
+        }
+
+        Table->TableDataArrayTypeName = &TypeNames[Table->TableDataArrayType];
+
+        //
+        // Default the table values type name to ULONG for now until we add
+        // more comprehensive support for varying the type name (i.e. wire up
+        // a command line parameter to it at the very least).  Ditto for keys.
+        //
+
+        Table->TableValuesArrayTypeName = &TypeNames[LongType];
+        Table->KeysArrayTypeName = &TypeNames[LongType];
+
+    } else {
+
+        //
+        // Default names to something sensible if modulus masking is active.
+        //
+
+        Table->TableDataArrayTypeName = &TypeNames[LongType];
+        Table->TableValuesArrayTypeName = &TypeNames[LongType];
+        Table->KeysArrayTypeName = &TypeNames[LongType];
     }
 
     //
@@ -1952,6 +2007,7 @@ Return Value:
     TableInfoOnDisk->IndexFold = Table->IndexFold;
     TableInfoOnDisk->HashModulus = Table->HashModulus;
     TableInfoOnDisk->IndexModulus = Table->IndexModulus;
+    TableInfoOnDisk->TableDataArrayType = Table->TableDataArrayType;
     TableInfoOnDisk->NumberOfKeys.QuadPart = (
         Table->Keys->NumberOfElements.QuadPart
     );

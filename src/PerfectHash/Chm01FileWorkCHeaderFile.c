@@ -142,13 +142,19 @@ PrepareCHeaderFileChm01(
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_HashMask;\nextern const ULONG ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_IndexMask;\n\nextern const ULONG ");
+    OUTPUT_RAW("_IndexMask;\n\nextern const ");
+    OUTPUT_STRING(Table->TableDataArrayTypeName);
+    OUTPUT_RAW(" ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_TableData[];\nextern ULONG ");
+    OUTPUT_RAW("_TableData[];\nextern ");
+    OUTPUT_STRING(Table->TableValuesArrayTypeName);
+    OUTPUT_RAW(" ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues[];\n\n");
 
-    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_RAW("extern const ");
+    OUTPUT_STRING(Table->KeysArrayTypeName);
+    OUTPUT_RAW(" ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[];\n");
     OUTPUT_RAW("extern const ULONG ");

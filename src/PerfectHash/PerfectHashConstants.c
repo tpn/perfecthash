@@ -659,6 +659,21 @@ const EOF_INIT EofInits[] = {
 VERIFY_FILE_WORK_ARRAY_SIZE(EofInits);
 
 //
+// C type names corresponding to TYPE enum values.
+//
+
+const STRING CTypeNames[] = {
+    RCS("BYTE"),
+    RCS("USHORT"),
+    RCS("ULONG"),
+    RCS("ULONGLONG"),
+    RCS("XMMWORD"),
+    RCS("YMMWORD"),
+    RCS("ZMMWORD"),
+    { 0, },
+};
+
+//
 // Placeholders for values we patch in the FastIndexEx() instruction streams.
 //
 
