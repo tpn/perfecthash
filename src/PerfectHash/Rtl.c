@@ -359,21 +359,57 @@ GetContainingType(
     ULONG_PTR Value,
     PTYPE TypePointer
     )
+/*++
+
+Routine Description:
+
+    Obtain the appropriate type for a given power-of-2 based value.
+
+Arguments:
+
+    Value - Supplies a power-of-2 value for which the type is to be obtained.
+
+    TypePointer - Receives the corresponding type on success.
+
+Return Value:
+
+    S_OK - Type was obtained successfully.
+
+    E_INVALIDARG - Value was not a power-of-2 (more than 1 bit was set).
+
+    E_UNEXPECTED - Internal error.
+
+--*/
 {
     TYPE Type;
     ULONG_PTR Bits;
     ULONG_PTR Trailing;
     ULONG_PTR Shifted;
 
+    //
+    // If no bits are set in the incoming value, default to ByteType.
+    //
+
     if (Value == 0) {
         *TypePointer = ByteType;
         return S_OK;
     }
 
+    //
+    // Count the number of bits in the value.  If more than one bit is present,
+    // error out; the value isn't a power-of-2.
+    //
+
     Bits = PopulationCountPointer(Value);
     if (Bits > 1) {
         return E_INVALIDARG;
     }
+
+    //
+    // Count the number of trailing zeros, then divide by 8 (shift right 3) to
+    // obtain the number of bytes required to store the value, minus 1.  (That
+    // is, Shifted is zero-based, not 1-based.)
+    //
 
     Trailing = TrailingZerosPointer(Value);
     Shifted = Trailing >> 3;
@@ -402,6 +438,10 @@ GetContainingType(
         default:
             return E_UNEXPECTED;
     }
+
+    //
+    // Update the caller's pointer and return success.
+    //
 
     *TypePointer = Type;
     return S_OK;
