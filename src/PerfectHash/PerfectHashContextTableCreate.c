@@ -156,6 +156,7 @@ Return Value:
     HANDLE ProcessHandle = NULL;
     ULONGLONG RowBufferSize;
     ULONG BytesWritten = 0;
+    ULONG KeySizeInBytes = 0;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
     PPERFECT_HASH_KEYS Keys = NULL;
@@ -174,6 +175,7 @@ Return Value:
     ASSIGNED_MEMORY_COVERAGE EmptyCoverage;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     BOOLEAN UnknownTableCreateResult = FALSE;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
 
     //
     // Validate arguments.
@@ -304,6 +306,35 @@ Return Value:
         TableCreateFlags.CreateOnly = TRUE;
     }
 
+    //
+    // Query the table create parameters for the key size in bytes parameter;
+    // if it's present, use it, otherwise, default to ULONG.
+    //
+
+    Param = NULL;
+    Result = GetTableCreateParameterForId(TableCreateParameters,
+                                          TableCreateParameterKeySizeInBytesId,
+                                          &Param);
+
+    if (FAILED(Result)) {
+        PH_ERROR(GetTableCreateParameterForId, Result);
+        goto Error;
+    }
+
+    if (Result == S_OK) {
+
+        KeySizeInBytes = Param->AsULong;
+
+    } else {
+
+        //
+        // No such parameter found; default to 4 bytes.
+        //
+
+        ASSERT(Result == S_FALSE);
+        KeySizeInBytes = sizeof(ULONG);
+
+    }
 
     //
     // Create a keys instance.
@@ -326,7 +357,7 @@ Return Value:
     Result = Keys->Vtbl->Load(Keys,
                               &KeysLoadFlags,
                               KeysPath,
-                              sizeof(ULONG));
+                              KeySizeInBytes);
 
     if (FAILED(Result)) {
         PH_KEYS_ERROR(PerfectHashKeysLoad, Result);

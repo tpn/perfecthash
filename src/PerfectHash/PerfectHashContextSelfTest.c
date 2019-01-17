@@ -126,7 +126,7 @@ Return Value:
     PALLOCATOR Allocator;
     PVOID KeysBaseAddress;
     ULARGE_INTEGER NumberOfKeys;
-    WCHAR WideBitmapString[33];
+    WCHAR WideBitmapString[65];
     UNICODE_STRING UnicodeBitmapString;
     HANDLE FindHandle = NULL;
     HANDLE WideOutputHandle;

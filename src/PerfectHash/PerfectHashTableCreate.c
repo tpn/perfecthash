@@ -601,6 +601,15 @@ Return Value:
                 Context->UserSeeds = &Param->AsValueArray;
                 break;
 
+            case TableCreateParameterKeySizeInBytesId:
+
+                //
+                // We don't need to do anything for this parameter; it will have
+                // been consumed much earlier in the pipeline.
+                //
+
+                break;
+
             default:
                 Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
                 goto Error;

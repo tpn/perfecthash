@@ -671,6 +671,8 @@ Return Value:
 
     ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(BestCoverageAttempts);
 
+    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(KeySizeInBytes);
+
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)
 

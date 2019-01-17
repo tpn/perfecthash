@@ -1586,16 +1586,15 @@ typedef struct _PERFECT_HASH_KEYS_BITMAP {
 
     PERFECT_HASH_KEYS_BITMAP_FLAGS Flags;
 
-    ULONG Bitmap;
-
     BYTE LongestRunLength;
     BYTE LongestRunStart;
     BYTE TrailingZeros;
     BYTE LeadingZeros;
 
-    ULONG ShiftedMask;
+    ULONGLONG Bitmap;
+    ULONGLONG ShiftedMask;
 
-    CHAR String[32];
+    CHAR String[64];
 
 } PERFECT_HASH_KEYS_BITMAP;
 typedef PERFECT_HASH_KEYS_BITMAP *PPERFECT_HASH_KEYS_BITMAP;
@@ -2511,7 +2510,8 @@ IsValidTableCompileFlags(
     ENTRY(KeysSubset)                                                \
     ENTRY(MainWorkThreadpoolPriority)                                \
     ENTRY(FileWorkThreadpoolPriority)                                \
-    LAST_ENTRY(Seeds)
+    ENTRY(Seeds)                                                     \
+    LAST_ENTRY(KeySizeInBytes)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
     TABLE_CREATE_PARAMETER_TABLE(ENTRY, ENTRY, ENTRY)

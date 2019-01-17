@@ -1248,7 +1248,7 @@ typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
 
 FORCEINLINE
 ULONG
-TrailingZeros(
+TrailingZeros32(
     _In_ ULONG Integer
     )
 {
@@ -1257,7 +1257,7 @@ TrailingZeros(
 
 FORCEINLINE
 ULONG
-LeadingZeros(
+LeadingZeros32(
     _In_ ULONG Integer
     )
 {
@@ -1470,7 +1470,7 @@ RoundUpPowerOf2(
         return Input;
     }
 
-    return 1ULL << (32 - LeadingZeros(Input - 1));
+    return 1ULL << (32 - LeadingZeros32(Input - 1));
 }
 
 FORCEINLINE
@@ -1487,7 +1487,7 @@ RoundUpNextPowerOf2(
         Input += 1;
     }
 
-    return 1ULL << (32 - LeadingZeros(Input - 1));
+    return 1ULL << (32 - LeadingZeros32(Input - 1));
 }
 
 #define PrefaultPage(Address) (*((volatile char *)(PCHAR)(Address)))

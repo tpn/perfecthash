@@ -56,11 +56,11 @@ typedef struct _PERFECT_HASH_KEYS_STATS {
 
     PERFECT_HASH_KEYS_BITMAP KeysBitmap;
 
-    ULONG MinValue;
-    ULONG MaxValue;
+    ULONGLONG MinValue;
+    ULONGLONG MaxValue;
 
-    ULONG BitCount[32];
-    ULONG PopCount[32];
+    BYTE BitCount[64];
+    BYTE PopCount[64];
 
 } PERFECT_HASH_KEYS_STATS;
 typedef PERFECT_HASH_KEYS_STATS *PPERFECT_HASH_KEYS_STATS;
@@ -171,7 +171,8 @@ typedef PERFECT_HASH_KEYS_LOAD_TABLE_SIZE *PPERFECT_HASH_KEYS_LOAD_TABLE_SIZE;
 #ifndef __INTELLISENSE__
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
-extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats;
+extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats32;
+extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats64;
 extern PERFECT_HASH_KEYS_LOAD_TABLE_SIZE PerfectHashKeysLoadTableSize;
 extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
 extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;

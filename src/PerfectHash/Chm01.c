@@ -1973,8 +1973,8 @@ Return Value:
     Table->IndexModulus = NumberOfEdges.LowPart;
     Table->HashSize = NumberOfVertices.LowPart;
     Table->IndexSize = NumberOfEdges.LowPart;
-    Table->HashShift = TrailingZeros(Table->HashSize);
-    Table->IndexShift = TrailingZeros(Table->IndexSize);
+    Table->HashShift = TrailingZeros32(Table->HashSize);
+    Table->IndexShift = TrailingZeros32(Table->IndexSize);
     Table->HashMask = (Table->HashSize - 1);
     Table->IndexMask = (Table->IndexSize - 1);
     Table->HashFold = Table->HashShift >> 3;
