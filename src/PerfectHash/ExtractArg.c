@@ -955,4 +955,99 @@ End:
     return S_OK;
 }
 
+GET_TABLE_CREATE_PARAMETER_FOR_ID GetTableCreateParameterForId;
+
+_Use_decl_annotations_
+HRESULT
+GetTableCreateParameterForId(
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters,
+    PERFECT_HASH_TABLE_CREATE_PARAMETER_ID ParameterId,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER *Parameter
+    )
+/*++
+
+Routine Description:
+
+    Returns the table create parameter for the given ID if one is present.
+
+Arguments:
+
+    TableCreateParameters - Supplies a pointer to the table create parameters
+        structure for which the cleanup is to be performed.
+
+Return Value:
+
+    S_OK - Successfully found parametr.
+
+    S_FALSE - No parameter found matching ID.
+
+    E_POINTER - TableCreateParameters was NULL.
+
+    PH_E_INVALID_TABLE_CREATE_PARAMETERS - Invalid table create parameters.
+
+--*/
+{
+    ULONG Index;
+    ULONG Count;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Params;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(TableCreateParameters)) {
+        return E_POINTER;
+    }
+
+    Count = TableCreateParameters->NumberOfElements;
+    Param = Params = TableCreateParameters->Params;
+
+    //
+    // Invariant checks: if count is 0, params should be NULL, and vice versa.
+    //
+
+    if (Count == 0) {
+
+        if (Params != NULL) {
+            return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
+        }
+
+        //
+        // There are no parameters, nothing to search.
+        //
+
+        return S_FALSE;
+    }
+
+    if (Params == NULL) {
+        return PH_E_INVALID_TABLE_CREATE_PARAMETERS;
+    }
+
+    //
+    // Argument validation complete.  Try and find the parameter.
+    //
+
+    for (Index = 0; Index < Count; Index++, Param++) {
+        if (Param->Id == ParameterId) {
+
+            //
+            // We found the parameter we were looking for.  Update the caller's
+            // pointer and return success.
+            //
+
+            *Parameter = Param;
+            return S_OK;
+        }
+    }
+
+    //
+    // No parameter found.
+    //
+
+    return S_FALSE;
+
+}
+
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

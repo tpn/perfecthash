@@ -147,6 +147,16 @@ HRESULT
     );
 typedef CLEANUP_TABLE_CREATE_PARAMETERS *PCLEANUP_TABLE_CREATE_PARAMETERS;
 
+typedef
+_Success_(return == 0)
+HRESULT
+(NTAPI GET_TABLE_CREATE_PARAMETER_FOR_ID)(
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters,
+    _In_ PERFECT_HASH_TABLE_CREATE_PARAMETER_ID ParameterId,
+    _Out_ PPERFECT_HASH_TABLE_CREATE_PARAMETER *Parameter
+    );
+typedef GET_TABLE_CREATE_PARAMETER_FOR_ID *PGET_TABLE_CREATE_PARAMETER_FOR_ID;
+
 //
 // Declare functions.
 //
@@ -161,6 +171,7 @@ extern TRY_EXTRACT_ARG_TABLE_CREATE_FLAGS TryExtractArgTableCreateFlags;
 extern TRY_EXTRACT_ARG_TABLE_COMPILE_FLAGS TryExtractArgTableCompileFlags;
 extern TRY_EXTRACT_ARG_TABLE_CREATE_PARAMETERS TryExtractArgTableCreateParameters;
 extern CLEANUP_TABLE_CREATE_PARAMETERS CleanupTableCreateParameters;
+extern GET_TABLE_CREATE_PARAMETER_FOR_ID GetTableCreateParameterForId;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
