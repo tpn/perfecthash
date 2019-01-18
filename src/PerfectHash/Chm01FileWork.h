@@ -48,6 +48,7 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define SaveCHeaderStdAfxFileChm01 NULL
 #define SaveCSourceStdAfxFileChm01 NULL
 #define SaveCSourceKeysFileChm01 NULL
+#define SaveCSourceDownsizedKeysFileChm01 NULL
 #define SaveVCProjectDllFileChm01 NULL
 #define SaveCHeaderSupportFileChm01 NULL
 #define SaveCSourceSupportFileChm01 NULL

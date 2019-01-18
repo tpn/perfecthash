@@ -139,7 +139,7 @@ Return Value:
     // of keys is within MAX_ULONG.
     //
 
-    ASSERT(Keys && Keys->File && Keys->File->BaseAddress);
+    ASSERT(Keys && Keys->File && Keys->KeyArrayBaseAddress);
     ASSERT(!Keys->NumberOfElements.HighPart);
 
     NumberOfKeys = Keys->NumberOfElements.LowPart;

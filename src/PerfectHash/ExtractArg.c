@@ -113,11 +113,13 @@ TryExtractArgKeysLoadFlags(
 {
     DECL_ARG(TryLargePagesForKeysData);
     DECL_ARG(SkipKeysVerification);
+    DECL_ARG(DisableImplicitKeyDownsizing);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForKeysData);
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipKeysVerification);
+    SET_FLAG_AND_RETURN_IF_EQUAL(DisableImplicitKeyDownsizing);
 
     return S_FALSE;
 }

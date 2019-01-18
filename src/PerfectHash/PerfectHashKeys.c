@@ -79,10 +79,11 @@ Return Value:
     }
 
     //
-    // We only support ULONG (4 byte/32 bit) key size at the moment.
+    // Default to 4 byte/32-bit key size.  This can be overridden via the table
+    // create parameter --KeySizeInBytes=N.
     //
 
-    Keys->SizeOfKeyInBytes = sizeof(ULONG);
+    Keys->OriginalKeySizeInBytes = Keys->KeySizeInBytes = sizeof(ULONG);
 
     //
     // We're done!  Indicate success and finish up.
@@ -130,6 +131,9 @@ Return Value:
 
 --*/
 {
+    HRESULT Result;
+    PALLOCATOR Allocator;
+
     //
     // Validate arguments.
     //
@@ -143,6 +147,66 @@ Return Value:
     //
 
     ASSERT(Keys->SizeOfStruct == sizeof(*Keys));
+
+    if (Keys->File && Keys->File->BaseAddress) {
+
+        Allocator = Keys->Allocator;
+
+        //
+        // Invariant check: if downsizing has occurred, the file's base address
+        // should not match Keys->KeyArrayBaseAddress.  If no downsizing has
+        // occurred, the addresses should match.
+        //
+
+        if (KeysWereDownsized(Keys)) {
+
+            //
+            // Downsizing occurred; addresses should differ.
+            //
+
+            if (Keys->File->BaseAddress == Keys->KeyArrayBaseAddress) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(KeysRelease_EqualBaseAddressesAfterDownsizing, Result);
+                PH_RAISE(Result);
+            }
+
+            //
+            // Release the heap-allocated key array.
+            //
+
+            Allocator->Vtbl->FreePointer(Allocator,
+                                         &Keys->KeyArrayBaseAddress);
+
+        } else {
+
+            //
+            // No downsizing occurred; addresses should be the same.
+            //
+
+            if (Keys->File->BaseAddress != Keys->KeyArrayBaseAddress) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(KeysRelease_UnequalBaseAddressesNoDownsizing, Result);
+                PH_RAISE(Result);
+            }
+
+            //
+            // Clear the key array pointer; we don't have to explicitly free
+            // the memory as in the downsizing case above.
+            //
+
+            Keys->KeyArrayBaseAddress = NULL;
+        }
+    }
+
+    //
+    // Invariant check: Keys->KeyArrayBaseAddress should be NULL here.
+    //
+
+    if (Keys->KeyArrayBaseAddress != NULL) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(KeysRelease_KeyArrayBaseAddressNotNull, Result);
+        PH_RAISE(Result);
+    }
 
     //
     // Release COM references, if applicable.
@@ -282,13 +346,14 @@ Return Value:
         return PH_E_KEYS_NOT_LOADED;
     }
 
-    *BaseAddress = Keys->File->BaseAddress;
+    *BaseAddress = Keys->KeyArrayBaseAddress;
     NumberOfElements->QuadPart = Keys->NumberOfElements.QuadPart;
 
     ReleasePerfectHashKeysLockExclusive(Keys);
 
     return S_OK;
 }
+
 
 PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
 
@@ -370,6 +435,7 @@ Return Value:
 
     return S_OK;
 }
+
 
 PERFECT_HASH_KEYS_GET_FILE PerfectHashKeysGetFile;
 

@@ -48,6 +48,12 @@ typedef PERFECT_HASH_KEYS_STATE *PPERFECT_HASH_KEYS_STATE;
 #define SkipKeysVerification(Keys) \
     ((Keys)->LoadFlags.SkipKeysVerification == TRUE)
 
+#define DisableImplicitKeyDownsizing(Keys) \
+    ((Keys)->LoadFlags.DisableImplicitKeyDownsizing == TRUE)
+
+#define KeysWereDownsized(Keys) \
+    ((Keys)->Flags.DownsizingOccurred == TRUE)
+
 //
 // Define the PERFECT_HASH_KEYS_STATS structure.
 //
@@ -59,8 +65,13 @@ typedef struct _PERFECT_HASH_KEYS_STATS {
     ULONGLONG MinValue;
     ULONGLONG MaxValue;
 
-    BYTE BitCount[64];
-    BYTE PopCount[64];
+    //
+    // Histograms for capturing the count of each bit in the key set, and count
+    // of popcounts (number of set bits) for each key in the set.
+    //
+
+    ULONG BitCount[64];
+    ULONG PopCount[64];
 
 } PERFECT_HASH_KEYS_STATS;
 typedef PERFECT_HASH_KEYS_STATS *PPERFECT_HASH_KEYS_STATS;
@@ -74,16 +85,31 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     COMMON_COMPONENT_HEADER(PERFECT_HASH_KEYS);
 
     //
-    // Size of each key element, in bytes.
+    // Size of each key element, in bytes.  If downsizing has occurred, this
+    // will reflect the downsized key size.
     //
 
-    ULONG SizeOfKeyInBytes;
+    ULONG KeySizeInBytes;
+
+    //
+    // Original size of each key element, in bytes.  If downsizing has occurred,
+    // this will reflect the original key size specified during Load(); if not,
+    // it will be identical to SizeOfKeyInBytes.
+    //
+
+    ULONG OriginalKeySizeInBytes;
 
     //
     // Load flags provided to the Load() routine.
     //
 
     PERFECT_HASH_KEYS_LOAD_FLAGS LoadFlags;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
 
     //
     // Number of keys in the mapping.
@@ -96,6 +122,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     //
 
     PPERFECT_HASH_FILE File;
+
+    //
+    // Pointer to the base address of the key array.  If no downsizing has
+    // occurred, this will be equivalent to File->BaseAddress.  Otherwise,
+    // it will be heap-allocated chunk of memory.
+    //
+
+    PVOID KeyArrayBaseAddress;
 
     //
     // Capture simple statistics about the keys that were loaded.

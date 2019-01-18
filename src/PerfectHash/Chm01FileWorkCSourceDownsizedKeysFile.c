@@ -4,7 +4,7 @@ Copyright (c) 2018 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm01FileWorkCSourceKeysFile.c
+    Chm01FileWorkCSourceDownsizedKeysFile.c
 
 Abstract:
 
@@ -12,11 +12,8 @@ Abstract:
     source keys file as part of the CHM v1 algorithm implementation for the
     perfect hash library.
 
-    As the C source keys file is simply a C array representation of the keys
-    array, and thus contains no references to solution-specific information
-    (e.g. what seed values were used, what the index or hash masks were, etc),
-    everything can be prepared in the initial prepare routine; no separate save
-    file routine is required.
+    This module is identical to Chm01FileWorkCSourceKeysFile.c, except that it
+    works against downsized keys.
 
 --*/
 
@@ -24,7 +21,7 @@ Abstract:
 
 _Use_decl_annotations_
 HRESULT
-PrepareCSourceKeysFileChm01(
+PrepareCSourceDownsizedKeysFileChm01(
     PPERFECT_HASH_CONTEXT Context,
     PFILE_WORK_ITEM Item
     )
@@ -47,12 +44,21 @@ PrepareCSourceKeysFileChm01(
     const ULONG Indent = 0x20202020;
 
     //
+    // If the keys were not downsized, there's nothing to do.
+    //
+
+    Table = Context->Table;
+    Keys = Table->Keys;
+
+    if (!KeysWereDownsized(Keys)) {
+        return S_OK;
+    }
+
+    //
     // Initialize aliases.
     //
 
     Rtl = Context->Rtl;
-    Table = Context->Table;
-    Keys = Table->Keys;
     File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
@@ -75,17 +81,17 @@ PrepareCSourceKeysFileChm01(
     // Write the keys.
     //
 
-    OUTPUT_RAW("#pragma const_seg(\".cphkeys\")\n");
+    OUTPUT_RAW("#pragma const_seg(\".cphdkeys\")\n");
 
     OUTPUT_RAW("const ULONG ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_NumberOfKeys = ");
+    OUTPUT_RAW("_NumberOfDownsizedKeys = ");
     OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW(";\n");
 
     OUTPUT_RAW("const ULONG ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_Keys[");
+    OUTPUT_RAW("_DownsizedKeys[");
     OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW("] = {\n");
 

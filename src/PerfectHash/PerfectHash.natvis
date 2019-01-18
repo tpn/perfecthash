@@ -30,7 +30,7 @@
                 <Expand>
                     <ArrayItems>
                         <Size>NumberOfElements.QuadPart</Size>
-                        <ValuePointer Condition="SizeOfKeyInBytes == sizeof(ULONG)">(PULONG)File->BaseAddress</ValuePointer>
+                        <ValuePointer Condition="KeySizeInBytes == sizeof(ULONG)">(PULONG)KeyArrayBaseAddress</ValuePointer>
                     </ArrayItems>
                 </Expand>
             </Synthetic>

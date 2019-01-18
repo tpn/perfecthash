@@ -384,7 +384,6 @@ Return Value:
     TYPE Type;
     ULONG_PTR Bits;
     ULONG_PTR Trailing;
-    ULONG_PTR Shifted;
 
     //
     // If no bits are set in the incoming value, default to ByteType.
@@ -406,37 +405,57 @@ Return Value:
     }
 
     //
-    // Count the number of trailing zeros, then divide by 8 (shift right 3) to
-    // obtain the number of bytes required to store the value, minus 1.  (That
-    // is, Shifted is zero-based, not 1-based.)
+    // Count the number of trailing zeros.
     //
 
     Trailing = TrailingZerosPointer(Value);
-    Shifted = Trailing >> 3;
 
-    switch (Shifted) {
+    switch (Trailing) {
+        case 0:
         case 1:
-            Type = ByteType;
-            break;
-
         case 2:
-            Type = ShortType;
-            break;
-
         case 3:
         case 4:
-            Type = LongType;
-            break;
-
         case 5:
         case 6:
         case 7:
+            Type = ByteType;
+            break;
+
         case 8:
-            Type = LongLongType;
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+        case 13:
+        case 14:
+        case 15:
+        case 16:
+            Type = ShortType;
+            break;
+
+        case 17:
+        case 18:
+        case 19:
+        case 20:
+        case 21:
+        case 22:
+        case 23:
+        case 24:
+        case 25:
+        case 26:
+        case 27:
+        case 28:
+        case 29:
+        case 30:
+        case 31:
+            Type = LongType;
             break;
 
         default:
-            return E_UNEXPECTED;
+            Type = LongLongType;
+            break;
+
     }
 
     //

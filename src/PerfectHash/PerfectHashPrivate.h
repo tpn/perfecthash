@@ -142,6 +142,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
     ULONG KeySizeInBytes;
 
     //
+    // If downsizing occurred, original size of a key in bytes.
+    //
+
+    ULONG OriginalKeySizeInBytes;
+
+    //
     // The concurrency level used to generate the hash.
     //
 
@@ -152,6 +158,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
     //
 
     TYPE TableDataArrayType;
+
+    //
+    // C data type of the table values array.  Currently unused.
+    //
+
+    TYPE TableValuesArrayType;
 
     //
     // Number of keys in the input set.  This is used to size an appropriate

@@ -3129,3 +3129,30 @@ Abstract:
 //
 #define PH_E_INVALID_SEED_MASKS_STRUCTURE_SIZE ((HRESULT)0xE0040363L)
 
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_DOWNSIZED_KEYS_FILE
+//
+// MessageText:
+//
+// Error preparing C source downsized keys file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_DOWNSIZED_KEYS_FILE ((HRESULT)0xE0040364L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_DOWNSIZED_KEYS_FILE
+//
+// MessageText:
+//
+// Error saving C source downsized keys file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_DOWNSIZED_KEYS_FILE ((HRESULT)0xE0040365L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_DOWNSIZED_KEYS_FILE
+//
+// MessageText:
+//
+// Error closing C source downsized keys file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_DOWNSIZED_KEYS_FILE ((HRESULT)0xE0040366L)
+

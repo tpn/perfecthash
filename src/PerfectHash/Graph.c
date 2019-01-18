@@ -199,7 +199,7 @@ Return Value:
     Context = Info->Context;
     Table = Context->Table;
     NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
-    Edges = Keys = (PKEY)Table->Keys->File->BaseAddress;
+    Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
 
     //
     // Enumerate all keys in the input set, hash them into two unique vertices,
@@ -487,7 +487,7 @@ Return Value:
     Table = Context->Table;
     Allocator = Graph->Allocator;
     NumberOfKeys = Graph->NumberOfKeys;
-    Edges = Keys = (PKEY)Table->Keys->File->BaseAddress;
+    Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
     Assigned = Graph->Assigned;
 
     //

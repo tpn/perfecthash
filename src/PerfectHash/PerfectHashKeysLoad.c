@@ -183,10 +183,23 @@ Return Value:
         goto Error;
     }
 
+    //
+    // Update the key size and initialize the key array base address to point
+    // at the memory-mapped base address of the file.  Initialize the number
+    // of elements (key count).
+    //
+
+    Keys->KeySizeInBytes = KeySizeInBytes;
+    Keys->KeyArrayBaseAddress = Keys->File->BaseAddress;
+
     Keys->NumberOfElements.QuadPart = (
         File->FileInfo.EndOfFile.QuadPart /
         KeySizeInBytes
     );
+
+    //
+    // Dispatch to the relevant LoadStats() routine.
+    //
 
     if (!SkipKeysVerification(Keys)) {
         if (Is32Bit) {
@@ -314,7 +327,7 @@ Return Value:
     ZeroStruct(Stats);
     Bitmap = 0;
     Prev = (ULONG)-1;
-    KeyArray = (PULONG)Keys->File->BaseAddress;
+    KeyArray = (PULONG)Keys->KeyArrayBaseAddress;
     NumberOfKeys = Keys->NumberOfElements.LowPart;
     KeysBitmap = &Stats.KeysBitmap;
 
@@ -479,12 +492,10 @@ Return Value:
     BYTE NumberOfClearBits;
     ULONG Longest;
     ULONG Start;
-    ULONG NumberOfClearRuns;
-    ULONG NumberOfClearRunsUnsorted;
-    ULONG NumberOfBitmapRuns;
     PULONGLONG Values;
     PULONGLONG KeyArray;
     PCHAR String;
+    HRESULT Result = S_OK;
     const ULONG_PTR One = 1;
     ULONG_PTR Bit;
     ULONG_PTR Mask;
@@ -495,12 +506,11 @@ Return Value:
     ULONG_PTR Trailing;
     ULONGLONG NumberOfKeys;
     ULONGLONG InvertedBitmap;
+    PALLOCATOR Allocator;
+    PULONG DownsizedKeyArray = NULL;
     RTL_BITMAP RtlBitmap;
     PERFECT_HASH_KEYS_STATS Stats;
     PPERFECT_HASH_KEYS_BITMAP KeysBitmap;
-    RTL_BITMAP_RUN BitmapRunsSorted[32];
-    RTL_BITMAP_RUN BitmapRunsUnsorted[32];
-    PRTL_BITMAP_RUN BitmapRuns;
 
     //
     // Validate arguments.
@@ -523,6 +533,7 @@ Return Value:
     //
 
     Rtl = Keys->Rtl;
+    Allocator = Keys->Allocator;
     ZeroStruct(Stats);
     Bitmap = 0;
     Prev = (ULONGLONG)-1;
@@ -626,33 +637,88 @@ Return Value:
     // intrinsic _pext_u64().
     //
 
-    if (NumberOfClearBits >= 32) {
+    if (NumberOfClearBits >= 32 && !DisableImplicitKeyDownsizing(Keys)) {
+
+        const ULONG DownsizedKeySizeInBytes = sizeof(ULONG);
+        ULONGLONG DownsizedKey;
 
         //
-        // N.B. The following is a work-in-progress.  The bitmap runs are not
-        //      currently used anywhere.
+        // Allocate a new array for the downsized keys.
         //
 
-        RtlBitmap.Buffer = (PULONG)&Bitmap;
-        RtlBitmap.SizeOfBitMap = 64;
+        DownsizedKeyArray = Allocator->Vtbl->Calloc(Allocator,
+                                                    NumberOfKeys,
+                                                    DownsizedKeySizeInBytes);
 
-        ZeroArray(BitmapRunsSorted);
-        BitmapRuns = (PRTL_BITMAP_RUN)&BitmapRunsSorted;
-        NumberOfBitmapRuns = ARRAYSIZE(BitmapRunsSorted);
+        if (!DownsizedKeyArray) {
+            Result = E_OUTOFMEMORY;
+            goto Error;
+        }
 
-        NumberOfClearRuns = Rtl->RtlFindClearRuns(&RtlBitmap,
-                                                  BitmapRuns,
-                                                  NumberOfBitmapRuns,
-                                                  TRUE);
+        //
+        // Loop through all of the keys again and downsize each one into its
+        // corresponding location in the newly-allocated array.
+        //
 
-        ZeroArray(BitmapRunsUnsorted);
-        BitmapRuns = (PRTL_BITMAP_RUN)&BitmapRunsUnsorted;
+        Values = KeyArray;
 
-        NumberOfClearRunsUnsorted = Rtl->RtlFindClearRuns(&RtlBitmap,
-                                                          BitmapRuns,
-                                                          NumberOfClearRuns,
-                                                          FALSE);
+        for (Index = 0; Index < NumberOfKeys; Index++) {
+            Key = *Values++;
+
+            DownsizedKey = _pext_u64(Key, Bitmap);
+            ASSERT(LeadingZeros64(DownsizedKey) >= 32);
+
+            DownsizedKeyArray[Index] = (ULONG)DownsizedKey;
+        }
+
+        //
+        // Keys have been downsized successfully.  Update the key size and set
+        // the "downsizing occurred" flag.
+        //
+
+        Keys->KeySizeInBytes = DownsizedKeySizeInBytes;
+        Keys->Flags.DownsizingOccurred = TRUE;
+
+        //
+        // Invariant check: our key array base address should always match the
+        // file's base address at this point.
+        //
+
+        ASSERT(Keys->KeyArrayBaseAddress == Keys->File->BaseAddress);
+
+        //
+        // Update the array address to point at our new downsized array and
+        // clear the local pointer.
+        //
+
+        Keys->KeyArrayBaseAddress = DownsizedKeyArray;
+        DownsizedKeyArray = NULL;
+
+        //
+        // Now that we've got 32-bit keys active, run the equivalent load stats
+        // routine to ensure the main invariants are still being complied with.
+        //
+
+        Result = PerfectHashKeysLoadStats32(Keys);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashKeysLoadStats32_Downsized, Result);
+            goto Error;
+        }
+
+        //
+        // Skip the final bitmap representation and copying of stats; the
+        // 32-bit load stats routine above takes precedence now that we've
+        // downsized our keys.
+        //
+
+        goto End;
     }
+
+    //
+    // If we get to this point, no key downsizing has been performed.  That is,
+    // the bitmap of all key bit values has less than 32 zeros present in it.
+    // Continue with the normal stats finalization.
+    //
 
     //
     // Construct a string representation of the bitmap.  All bit positions are
@@ -672,13 +738,35 @@ Return Value:
     }
 
     //
-    // Copy the local stack structure back to the keys instance and return
-    // success.
+    // Copy the local stack structure back to the keys instance then finish
+    // up.
     //
 
     CopyMemory(&Keys->Stats, &Stats, sizeof(Keys->Stats));
 
-    return S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    //
+    // Free the downsized array if non-null.
+    //
+
+    if (DownsizedKeyArray) {
+        Allocator->Vtbl->FreePointer(Allocator, &DownsizedKeyArray);
+    }
+
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

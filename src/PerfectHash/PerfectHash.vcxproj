@@ -160,6 +160,7 @@
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceDownsizedKeysFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceKeysFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceStdAfxFile.c" />

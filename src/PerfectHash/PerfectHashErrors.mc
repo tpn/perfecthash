@@ -2834,3 +2834,27 @@ Language=English
 Invalid seed masks structure size.
 .
 
+MessageId=0x364
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_SOURCE_DOWNSIZED_KEYS_FILE
+Language=English
+Error preparing C source downsized keys file.
+.
+
+MessageId=0x365
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_SOURCE_DOWNSIZED_KEYS_FILE
+Language=English
+Error saving C source downsized keys file.
+.
+
+MessageId=0x366
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_DOWNSIZED_KEYS_FILE
+Language=English
+Error closing C source downsized keys file.
+.
+

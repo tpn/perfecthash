@@ -1573,7 +1573,7 @@ typedef union _PERFECT_HASH_KEYS_BITMAP_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -1631,10 +1631,25 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         ULONG SkipKeysVerification:1;
 
         //
+        // When loading keys that are 64-bit (8 bytes), a bitmap is kept that
+        // tracks whether or not a given bit was seen across the entire key set.
+        // After enumerating the set, the number of zeros (bit not set) in the
+        // bitmap are counted; if this number is less than or equal to 32, it
+        // means that the entire key set can be compressed into 32-bit values
+        // with some parallel bit extraction logic (i.e. _pext_u64()).  As this
+        // has beneficial size and performance implications, when detected, the
+        // key load operation will implicitly heap-allocate another array and
+        // convert all the 64-bit keys into their unique 32-bit equivalent.
+        // When set, this flag disables that behavior.
+        //
+
+        ULONG DisableImplicitKeyDownsizing:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
 
     LONG AsLong;
@@ -1693,10 +1708,18 @@ typedef union _PERFECT_HASH_KEYS_FLAGS {
         ULONG Linear:1;
 
         //
+        // When set, indicates that key downsizing has occurred.  See the
+        // DisableImplicitKeyDownsizing comment in the key load flags for more
+        // information.
+        //
+
+        ULONG DownsizingOccurred:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
 
     LONG AsLong;

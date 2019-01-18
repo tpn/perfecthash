@@ -270,7 +270,7 @@ Return Value:
     //
 
     Rtl = Table->Rtl;
-    Keys = (PULONG)Table->Keys->File->BaseAddress;
+    Keys = (PULONG)Table->Keys->KeyArrayBaseAddress;
     Allocator = Table->Allocator;
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
@@ -1996,7 +1996,10 @@ Return Value:
     TableInfoOnDisk->AlgorithmId = Context->AlgorithmId;
     TableInfoOnDisk->MaskFunctionId = Context->MaskFunctionId;
     TableInfoOnDisk->HashFunctionId = Context->HashFunctionId;
-    TableInfoOnDisk->KeySizeInBytes = Table->Keys->SizeOfKeyInBytes;
+    TableInfoOnDisk->KeySizeInBytes = Table->Keys->KeySizeInBytes;
+    TableInfoOnDisk->OriginalKeySizeInBytes = (
+        Table->Keys->OriginalKeySizeInBytes
+    );
     TableInfoOnDisk->HashSize = Table->HashSize;
     TableInfoOnDisk->IndexSize = Table->IndexSize;
     TableInfoOnDisk->HashShift = Table->HashShift;

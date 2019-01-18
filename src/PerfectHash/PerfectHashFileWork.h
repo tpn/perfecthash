@@ -172,6 +172,19 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        CSourceDownsizedKeysFile,                                          \
+        C_SOURCE_DOWNSIZED_KEYS_FILE,                                      \
+        EofInitTypeNumberOfKeysMultiplier,                                 \
+        16,                                                                \
+        SUFFIX(DownsizedKeys),                                             \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         CSourceTableDataFile,                                              \
         C_SOURCE_TABLE_DATA_FILE,                                          \
         EofInitTypeNumberOfTableElementsMultiplier,                        \
