@@ -672,11 +672,12 @@ Return Value:
         }
 
         //
-        // Keys have been downsized successfully.  Update the key size and set
-        // the "downsizing occurred" flag.
+        // Keys have been downsized successfully.  Update the key size, capture
+        // the downsize bitmap we used, and set the "downsizing occurred" flag.
         //
 
         Keys->KeySizeInBytes = DownsizedKeySizeInBytes;
+        Keys->DownsizeBitmap = Bitmap;
         Keys->Flags.DownsizingOccurred = TRUE;
 
         //

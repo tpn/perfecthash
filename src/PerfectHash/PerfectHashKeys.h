@@ -112,6 +112,17 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     ULONG Padding;
 
     //
+    // The bitmap used to perform key downsizing, if applicable.  This is used
+    // to extract up to 32 bits from a 64 bit value via _pext_u64().
+    //
+    // Invariant:
+    //
+    //      PopulationCount64(DownsizeBitmap) <= 32
+    //
+
+    ULONGLONG DownsizeBitmap;
+
+    //
     // Number of keys in the mapping.
     //
 
