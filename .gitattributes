@@ -25,4 +25,4 @@ LICENSE text eol=lf
 *.mc text eol=crlf
 *.rc text eol=lf
 *.asm text eol=crlf
-#PerfectHashErrors.h text eol=crlf
+PerfectHashErrors.h text eol=crlf
