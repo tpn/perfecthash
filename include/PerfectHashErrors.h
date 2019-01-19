@@ -296,6 +296,19 @@ Abstract:
 //         the keys are sorted, specifying this flag can provide a speedup when
 //         loading large key sets.
 // 
+//     --DisableImplicitKeyDownsizing
+// 
+//         When loading keys that are 64-bit (8 bytes), a bitmap is kept that
+//         tracks whether or not a given bit was seen across the entire key set.
+//         After enumerating the set, the number of zeros in the bitmap are
+//         counted; if this number is less than or equal to 32, it means that the
+//         entire key set can be compressed into 32-bit values with some parallel
+//         bit extraction logic (i.e. _pext_u64()).  As this has beneficial size
+//         and performance implications, when detected, the key load operation will
+//         implicitly heap-allocate another array and convert all the 64-bit keys
+//         into their unique 32-bit equivalent.  Specifying this flag will disable
+//         this behavior.
+// 
 // Table Create Flags:
 // 
 //     --Silent
@@ -561,6 +574,19 @@ Abstract:
 //         they are sorted, and b) constructs a keys bitmap.  If you can be certain
 //         the keys are sorted, specifying this flag can provide a speedup when
 //         loading large key sets.
+// 
+//     --DisableImplicitKeyDownsizing
+// 
+//         When loading keys that are 64-bit (8 bytes), a bitmap is kept that
+//         tracks whether or not a given bit was seen across the entire key set.
+//         After enumerating the set, the number of zeros in the bitmap are
+//         counted; if this number is less than or equal to 32, it means that the
+//         entire key set can be compressed into 32-bit values with some parallel
+//         bit extraction logic (i.e. _pext_u64()).  As this has beneficial size
+//         and performance implications, when detected, the key load operation will
+//         implicitly heap-allocate another array and convert all the 64-bit keys
+//         into their unique 32-bit equivalent.  Specifying this flag will disable
+//         this behavior.
 // 
 // Table Create Flags:
 // 
