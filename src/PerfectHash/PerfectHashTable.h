@@ -295,6 +295,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // table data and table values arrays (when generating C files).
     //
 
+    PCSTRING KeySizeTypeName;
+    PCSTRING OriginalKeySizeTypeName;
     PCSTRING KeysArrayTypeName;
     PCSTRING TableDataArrayTypeName;
     PCSTRING TableValuesArrayTypeName;

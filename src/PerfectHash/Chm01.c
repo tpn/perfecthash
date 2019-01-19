@@ -1959,6 +1959,10 @@ Return Value:
         Table->KeysArrayTypeName = &TypeNames[LongType];
     }
 
+    Table->KeySizeTypeName = &TypeNames[Table->Keys->KeySizeType];
+    Table->OriginalKeySizeTypeName =
+        &TypeNames[Table->Keys->OriginalKeySizeType];
+
     //
     // Set the Modulus, Size, Shift, Mask and Fold fields of the table, such
     // that the Hash and Mask vtbl functions operate correctly.

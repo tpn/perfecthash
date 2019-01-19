@@ -162,7 +162,7 @@ Abstract:
         CSourceKeysFile,                                                   \
         C_SOURCE_KEYS_FILE,                                                \
         EofInitTypeNumberOfKeysMultiplier,                                 \
-        16,                                                                \
+        32,                                                                \
         SUFFIX(Keys),                                                      \
         &CSourceFileExtension,                                             \
         NO_STREAM_NAME,                                                    \

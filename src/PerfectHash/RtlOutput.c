@@ -708,6 +708,79 @@ Return Value:
     return;
 }
 
+
+APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX
+    AppendLongLongIntegerToCharBufferAsHex;
+
+_Use_decl_annotations_
+VOID
+AppendLongLongIntegerToCharBufferAsHex(
+    PCHAR *BufferPointer,
+    ULONGLONG Integer
+    )
+/*++
+
+Routine Description:
+
+    A 64-bit version of AppendIntegerToCharBufferAsHex().
+
+Arguments:
+
+    BufferPointer - Supplies a pointer to a variable that contains the address
+        of a character buffer to which the hex string representation of the
+        integer will be written.  The pointer is adjusted to point after the
+        length of the written bytes prior to returning.  This will always be
+        20 characters/bytes.
+
+    Integer - Supplies the integer value to be appended to the string.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    CHAR Char;
+    ULONG Pad;
+    ULONG Count;
+    ULONG Digit;
+    ULONGLONG Value;
+    PCHAR End;
+    PCHAR Dest;
+    PCHAR Buffer;
+
+    Buffer = *BufferPointer;
+
+    End = Dest = RtlOffsetToPointer(Buffer, 19);
+
+    Count = 0;
+    Value = Integer;
+
+    do {
+        Count++;
+        Digit = (ULONG)(Value & 0xf);
+        Value >>= 4;
+        Char = IntegerToCharTable[Digit];
+        *Dest-- = Char;
+    } while (Value != 0);
+
+    *Dest-- = 'x';
+    *Dest-- = '0';
+
+    Count += 2;
+
+    Pad = 20 - Count;
+    while (Pad) {
+        *Dest-- = ' ';
+        Pad--;
+    }
+
+    *BufferPointer = End + 1;
+
+    return;
+}
+
+
 APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW AppendIntegerToCharBufferAsHexRaw;
 
 _Use_decl_annotations_
@@ -758,6 +831,68 @@ Return Value:
     do {
         Count++;
         Digit = Value & 0xf;
+        Value >>= 4;
+        Char = IntegerToCharTable[Digit];
+        *Dest-- = Char;
+    } while (Value != 0);
+
+    *BufferPointer = End + 1;
+
+    return;
+}
+
+
+APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
+    AppendLongLongIntegerToCharBufferAsHexRaw;
+
+_Use_decl_annotations_
+VOID
+AppendLongLongIntegerToCharBufferAsHexRaw(
+    PCHAR *BufferPointer,
+    ULONGLONG Integer
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that appends 64-bit integer to a character buffer
+    in hexadecimal format.  No 0x or additional padding is added to the string.
+
+Arguments:
+
+    BufferPointer - Supplies a pointer to a variable that contains the address
+        of a character buffer to which the hex string representation of the
+        integer will be written.
+
+    Integer - Supplies the 64-bit integer value to be appended to the string.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    CHAR Char;
+    ULONG Count;
+    ULONG Digit;
+    ULONGLONG Value;
+    PCHAR End;
+    PCHAR Dest;
+    PCHAR Buffer;
+    BYTE NumberOfHexChars;
+
+    Buffer = *BufferPointer;
+
+    NumberOfHexChars = CountNumberOfHex64CharsInline(Integer);
+
+    End = Dest = RtlOffsetToPointer(Buffer, NumberOfHexChars - 1);
+
+    Count = 0;
+    Value = Integer;
+
+    do {
+        Count++;
+        Digit = (ULONG)(Value & 0xf);
         Value >>= 4;
         Char = IntegerToCharTable[Digit];
         *Dest-- = Char;

@@ -189,7 +189,10 @@ Return Value:
     // of elements (key count).
     //
 
-    Keys->KeySizeInBytes = KeySizeInBytes;
+    Keys->OriginalKeySizeInBytes = Keys->KeySizeInBytes = KeySizeInBytes;
+    Keys->OriginalKeySizeType = Keys->KeySizeType = (
+        Is32Bit ? LongType : LongLongType
+    );
     Keys->KeyArrayBaseAddress = Keys->File->BaseAddress;
 
     Keys->NumberOfElements.QuadPart = (
@@ -677,6 +680,7 @@ Return Value:
         //
 
         Keys->KeySizeInBytes = DownsizedKeySizeInBytes;
+        Keys->KeySizeType = LongType;
         Keys->DownsizeBitmap = Bitmap;
         Keys->Flags.DownsizingOccurred = TRUE;
 

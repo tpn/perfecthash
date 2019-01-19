@@ -69,6 +69,20 @@ CountNumberOfHexCharsInline(_In_ ULONG Value)
     return Count;
 }
 
+FORCEINLINE
+BYTE
+CountNumberOfHex64CharsInline(_In_ ULONGLONG Value)
+{
+    BYTE Count = 0;
+
+    do {
+        Count++;
+        Value >>= 4;
+    } while (Value != 0);
+
+    return Count;
+}
+
 //
 // Helper string routines for buffer manipulation.
 //
@@ -132,6 +146,15 @@ VOID
 typedef APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX
       *PAPPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX;
 
+typedef
+VOID
+(NTAPI APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_opt_ ULONGLONG Integer
+    );
+typedef APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX
+      *PAPPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX;
+
 //
 // As above, but no leading spaces or 0x padding.
 //
@@ -147,6 +170,15 @@ typedef APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
 
 typedef
 VOID
+(NTAPI APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_opt_ ULONGLONG Integer
+    );
+typedef APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
+      *PAPPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW;
+
+typedef
+VOID
 (NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_EX)(
     _Inout_ PCHAR *BufferPointer,
     _In_ ULONGLONG Integer,
@@ -155,6 +187,15 @@ VOID
     _In_opt_ CHAR Trailer
     );
 typedef APPEND_INTEGER_TO_CHAR_BUFFER_EX *PAPPEND_INTEGER_TO_CHAR_BUFFER_EX;
+
+typedef
+VOID
+(NTAPI APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_opt_ ULONGLONG Integer
+    );
+typedef APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
+      *PAPPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW;
 
 typedef
 VOID
@@ -324,8 +365,12 @@ extern APPEND_INTEGER_TO_STRING AppendIntegerToString;
 extern APPEND_LONGLONG_INTEGER_TO_STRING AppendLongLongIntegerToString;
 extern APPEND_INTEGER_TO_CHAR_BUFFER AppendIntegerToCharBuffer;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
+extern APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX
+    AppendLongLongIntegerToCharBufferAsHex;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
     AppendIntegerToCharBufferAsHexRaw;
+extern APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
+    AppendLongLongIntegerToCharBufferAsHexRaw;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_EX AppendIntegerToCharBufferEx;
 extern APPEND_STRING_TO_CHAR_BUFFER AppendStringToCharBuffer;
 extern APPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST
@@ -465,9 +510,15 @@ static PCSZ Exclamation = "!";
     AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
 
 #define OUTPUT_HEX(Integer) AppendIntegerToCharBufferAsHex(&Output, Integer)
+#define OUTPUT_HEX64(Integer) \
+    AppendLongLongIntegerToCharBufferAsHex(&Output, Integer)
 
 #define OUTPUT_HEX_RAW(Integer)                         \
     AppendIntegerToCharBufferAsHexRaw(&Output, Integer)
+
+#define OUTPUT_HEX64_RAW(LongLongInteger)                      \
+    AppendLongLongIntegerToCharBufferAsHexRaw(&Output,         \
+                                              LongLongInteger)
 
 #define OUTPUT_HEX_RAW_0x(Integer)                      \
     *Output++ = 'x';                                    \

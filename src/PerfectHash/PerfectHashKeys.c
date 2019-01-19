@@ -84,6 +84,7 @@ Return Value:
     //
 
     Keys->OriginalKeySizeInBytes = Keys->KeySizeInBytes = sizeof(ULONG);
+    Keys->OriginalKeySizeType = Keys->KeySizeType = LongType;
 
     //
     // We're done!  Indicate success and finish up.

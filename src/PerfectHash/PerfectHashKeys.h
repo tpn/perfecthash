@@ -90,6 +90,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     //
 
     ULONG KeySizeInBytes;
+    TYPE KeySizeType;
 
     //
     // Original size of each key element, in bytes.  If downsizing has occurred,
@@ -98,6 +99,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     //
 
     ULONG OriginalKeySizeInBytes;
+    TYPE OriginalKeySizeType;
 
     //
     // Load flags provided to the Load() routine.

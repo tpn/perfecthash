@@ -161,6 +161,35 @@ PrepareCHeaderFileChm01(
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_NumberOfKeys;\n\n");
 
+    //
+    // If key downsizing has occurred, output the bitmap that was used.
+    //
+
+    if (KeysWereDownsized(Keys)) {
+
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_KEY_DOWNSIZE_BITMAP 0x");
+        OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
+        OUTPUT_RAW("\n#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_DOWNSIZE_KEY(Key) _pext_u64(Key, 0x");
+        OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
+        OUTPUT_RAW(")\n\n");
+
+    } else {
+
+        //
+        // No downsizing occurred; output a dummy key downsize macro.
+        //
+
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_DOWNSIZE_KEY(Key) (Key)\n");
+        OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
+        OUTPUT_RAW("\n\n");
+    }
+
     OUTPUT_RAW("#include <CompiledPerfectHashMacroGlue.h>\n");
 
     OUTPUT_RAW("\n\n//\n// (End of preparation phase.)\n//\n\n");

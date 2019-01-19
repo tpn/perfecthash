@@ -34,8 +34,6 @@ PrepareCSourceKeysFileChm01(
     PCHAR Output;
     ULONG Count;
     PULONG Long;
-    ULONG Key;
-    PULONG SourceKeys;
     ULONGLONG Index;
     ULONGLONG NumberOfKeys;
     PCSTRING Name;
@@ -57,7 +55,6 @@ PrepareCSourceKeysFileChm01(
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
     NumberOfKeys = Keys->NumberOfElements.QuadPart;
-    SourceKeys = (PULONG)Keys->KeyArrayBaseAddress;
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
@@ -83,30 +80,74 @@ PrepareCSourceKeysFileChm01(
     OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW(";\n");
 
-    OUTPUT_RAW("const ULONG ");
+    OUTPUT_RAW("const ");
+    OUTPUT_STRING(Table->OriginalKeySizeTypeName);
+    *Output++ = ' ';
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[");
     OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW("] = {\n");
 
-    for (Index = 0, Count = 0; Index < NumberOfKeys; Index++) {
+    if (Keys->OriginalKeySizeType == LongType) {
 
-        if (Count == 0) {
-            INDENT();
+        ULONG Key;
+        PULONG SourceKeys;
+
+        SourceKeys = (PULONG)Keys->KeyArrayBaseAddress;
+
+        for (Index = 0, Count = 0; Index < NumberOfKeys; Index++) {
+
+            if (Count == 0) {
+                INDENT();
+            }
+
+            Key = *SourceKeys++;
+
+            OUTPUT_HEX(Key);
+
+            *Output++ = ',';
+
+            if (++Count == 4) {
+                Count = 0;
+                *Output++ = '\n';
+            } else {
+                *Output++ = ' ';
+            }
         }
 
-        Key = *SourceKeys++;
+    } else if (Keys->OriginalKeySizeType == LongLongType) {
 
-        OUTPUT_HEX(Key);
+        ULONGLONG Key;
+        PULONGLONG SourceKeys;
 
-        *Output++ = ',';
+        SourceKeys = (PULONGLONG)Keys->File->BaseAddress;
 
-        if (++Count == 4) {
-            Count = 0;
-            *Output++ = '\n';
-        } else {
-            *Output++ = ' ';
+        for (Index = 0, Count = 0; Index < NumberOfKeys; Index++) {
+
+            if (Count == 0) {
+                INDENT();
+            }
+
+            Key = *SourceKeys++;
+
+            OUTPUT_HEX64(Key);
+
+            *Output++ = ',';
+
+            if (++Count == 4) {
+                Count = 0;
+                *Output++ = '\n';
+            } else {
+                *Output++ = ' ';
+            }
         }
+
+    } else {
+
+        Result = PH_E_UNREACHABLE_CODE;
+        PH_ERROR(PrepareCSourceKeysFileChm01_UnknownKeyType, Result);
+        PH_RAISE(Result);
+
     }
 
     //
