@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -608,6 +608,18 @@ Return Value:
                 // been consumed much earlier in the pipeline.
                 //
 
+                break;
+
+            case TableCreateParameterValueSizeInBytesId:
+                Table->ValueSizeInBytes = (ULONG)RoundUpPowerOf2(Param->AsULong);
+                if (Table->ValueSizeInBytes == 4) {
+                    Table->ValueType = LongType;
+                } else if (Table->ValueSizeInBytes == 8) {
+                    Table->ValueType = LongLongType;
+                } else {
+                    Result = PH_E_INVALID_VALUE_SIZE_IN_BYTES_PARAMETER;
+                    goto Error;
+                }
                 break;
 
             default:

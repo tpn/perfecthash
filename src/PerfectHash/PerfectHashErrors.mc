@@ -1,6 +1,6 @@
 ;/*++
 ;
-;Copyright (c) 2018 Trent Nelson <trent@trent.me>
+;Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 ;
 ;Module Name:
 ;
@@ -401,12 +401,16 @@ Table Compile Flags:
 
 Table Create Parameters:
 
+    --ValueSizeInBytes=4|8
+
+        Sets the size, in bytes, of the value element that will be stored in the
+        compiled perfect hash table via Insert().  Defaults to 4 bytes (ULONG).
+
     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
 
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
-
 
     --AttemptsBeforeTableResize=N [default = 18]
 
@@ -685,6 +689,11 @@ Table Compile Flags:
     N/A
 
 Table Create Parameters:
+
+    --ValueSizeInBytes=4|8
+
+        Sets the size, in bytes, of the value element that will be stored in the
+        compiled perfect hash table via Insert().  Defaults to 4 bytes (ULONG).
 
     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
@@ -2906,5 +2915,13 @@ Facility=ITF
 SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_TYPES_FILE
 Language=English
 Error closing C header types file.
+.
+
+MessageId=0x36a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_VALUE_SIZE_IN_BYTES_PARAMETER
+Language=English
+Invalid value size in bytes parameter.
 .
 

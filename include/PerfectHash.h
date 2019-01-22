@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -2534,6 +2534,7 @@ IsValidTableCompileFlags(
     ENTRY(MainWorkThreadpoolPriority)                                \
     ENTRY(FileWorkThreadpoolPriority)                                \
     ENTRY(Seeds)                                                     \
+    ENTRY(ValueSizeInBytes)                                          \
     LAST_ENTRY(KeySizeInBytes)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \

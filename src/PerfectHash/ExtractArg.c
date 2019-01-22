@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -674,6 +674,8 @@ Return Value:
     ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(BestCoverageAttempts);
 
     ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(KeySizeInBytes);
+
+    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(ValueSizeInBytes);
 
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -125,6 +125,20 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     TYPE TableDataArrayType;
+
+    //
+    // Type to use for the table values when generating the C files for the
+    // compiled perfect hash table.
+    //
+
+    TYPE ValueType;
+
+    //
+    // Size of an individual value in the hash table, in bytes.  (Must be
+    // either 4 or 8 bytes.)
+    //
+
+    ULONG ValueSizeInBytes;
 
     //
     // Optional table creation parameters specified to Create().
@@ -291,8 +305,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     STRING TimestampString;
 
     //
-    // Pointers to STRINGs representing the type names to use for the keys,
-    // table data and table values arrays (when generating C files).
+    // Pointers to STRINGs representing the type names to use for primitive
+    // variables (index, keys, seeds, values etc).
     //
 
     PCSTRING IndexTypeName;

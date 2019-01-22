@@ -455,12 +455,16 @@ Abstract:
 // 
 // Table Create Parameters:
 // 
+//     --ValueSizeInBytes=4|8
+// 
+//         Sets the size, in bytes, of the value element that will be stored in the
+//         compiled perfect hash table via Insert().  Defaults to 4 bytes (ULONG).
+// 
 //     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
 //     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
 // 
 //         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
 //         priority, or the file work threadpool priority, to the given value.
-// 
 // 
 //     --AttemptsBeforeTableResize=N [default = 18]
 // 
@@ -741,6 +745,11 @@ Abstract:
 //     N/A
 // 
 // Table Create Parameters:
+// 
+//     --ValueSizeInBytes=4|8
+// 
+//         Sets the size, in bytes, of the value element that will be stored in the
+//         compiled perfect hash table via Insert().  Defaults to 4 bytes (ULONG).
 // 
 //     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
 //     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
@@ -3208,4 +3217,13 @@ Abstract:
 // Error closing C header types file.
 //
 #define PH_E_ERROR_DURING_CLOSE_C_HEADER_TYPES_FILE ((HRESULT)0xE0040369L)
+
+//
+// MessageId: PH_E_INVALID_VALUE_SIZE_IN_BYTES_PARAMETER
+//
+// MessageText:
+//
+// Invalid value size in bytes parameter.
+//
+#define PH_E_INVALID_VALUE_SIZE_IN_BYTES_PARAMETER ((HRESULT)0xE004036AL)
 
