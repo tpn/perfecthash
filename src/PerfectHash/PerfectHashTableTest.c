@@ -199,7 +199,7 @@ Return Value:
     //
 
 
-    SourceKeys = (PKEY)Keys->File->BaseAddress;
+    SourceKeys = (PKEY)Keys->KeyArrayBaseAddress;
     FirstKey = Key = *SourceKeys;
 
     //
