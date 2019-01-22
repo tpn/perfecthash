@@ -225,6 +225,16 @@ CHUNK VCProjectDllFileChunks[] = {
     {
         ChunkOpRaw,
         RCS(
+            "_Types.h\" />\r\n"
+            "    <ClInclude Include=\""
+        ),
+    },
+
+    { ChunkOpInsertBaseName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
             ".h\" />\r\n"
             "  </ItemGroup>\r\n"
             "  <ItemGroup>\r\n"

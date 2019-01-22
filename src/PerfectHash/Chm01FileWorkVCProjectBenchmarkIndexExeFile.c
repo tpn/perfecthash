@@ -236,6 +236,16 @@ CHUNK VCProjectBenchmarkIndexExeFileChunks[] = {
         ),
     },
 
+    { ChunkOpInsertBaseName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
+            "_Types.h\" />\r\n"
+            "    <ClInclude Include=\""
+        ),
+    },
+
     { ChunkOpInsertTableName, },
 
     {
