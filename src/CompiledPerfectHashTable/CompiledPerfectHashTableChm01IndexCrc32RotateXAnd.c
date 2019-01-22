@@ -6,8 +6,8 @@ DECLARE_INDEX_ROUTINE()
     CPHDKEY Vertex2;
     CPHDKEY MaskedLow;
     CPHDKEY MaskedHigh;
-    ULONGLONG Combined;
     CPHDKEY DownsizedKey;
+    ULONGLONG Combined;
 
     DownsizedKey = DOWNSIZE_KEY(Key);
     Vertex1 = _mm_crc32_u32(SEED1, DownsizedKey);
