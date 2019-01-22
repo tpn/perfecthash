@@ -1959,7 +1959,9 @@ Return Value:
         Table->KeysArrayTypeName = &TypeNames[LongType];
     }
 
+    Table->SeedTypeName = &TypeNames[LongType];
     Table->IndexTypeName = &TypeNames[LongType];
+    Table->ValueTypeName = &TypeNames[Table->ValueType];
     Table->KeySizeTypeName = &TypeNames[Table->Keys->KeySizeType];
     Table->OriginalKeySizeTypeName =
         &TypeNames[Table->Keys->OriginalKeySizeType];

@@ -124,23 +124,23 @@ PrepareCHeaderFileChm01(
     OUTPUT_RAW("_NUMBER_OF_KEYS ");
     OUTPUT_INT(Keys->NumberOfElements.QuadPart);
 
-    OUTPUT_RAW("\n\nextern const ULONG ");
+    OUTPUT_RAW("\n\nextern const CPHSEED ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Seeds[");
     OUTPUT_INT(NumberOfSeeds);
     OUTPUT_RAW("];\n");
 
     for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
-        OUTPUT_RAW("extern const ULONG ");
+        OUTPUT_RAW("extern const CPHSEED ");
         OUTPUT_STRING(Name);
         OUTPUT_RAW("_Seed");
         OUTPUT_INT(Count);
         OUTPUT_RAW(";\n");
     }
 
-    OUTPUT_RAW("\nextern const ULONG ");
+    OUTPUT_RAW("\nextern const CPHDKEY ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_HashMask;\nextern const ULONG ");
+    OUTPUT_RAW("_HashMask;\nextern const CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_IndexMask;\n\nextern const ");
     OUTPUT_STRING(Table->TableDataArrayTypeName);
@@ -153,7 +153,10 @@ PrepareCHeaderFileChm01(
     OUTPUT_RAW("extern const CPHKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[];\n");
-    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_RAW("extern const CPHDKEY ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_DownsizedKeys[];\n");
+    OUTPUT_RAW("extern const CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_NumberOfKeys;\n\n");
 

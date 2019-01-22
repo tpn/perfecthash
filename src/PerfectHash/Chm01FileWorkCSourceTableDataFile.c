@@ -85,7 +85,7 @@ SaveCSourceTableDataFileChm01(
     //
 
     OUTPUT_RAW("#pragma const_seg(\".cphsm\")\n");
-    OUTPUT_RAW("const ULONG ");
+    OUTPUT_RAW("const CPHSEED ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Seeds[");
     OUTPUT_INT(NumberOfSeeds);
@@ -125,7 +125,7 @@ SaveCSourceTableDataFileChm01(
     Seed = &Graph->FirstSeed;
 
     for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
-        OUTPUT_RAW("const ULONG ");
+        OUTPUT_RAW("const CPHSEED ");
         OUTPUT_STRING(Name);
         OUTPUT_RAW("_Seed");
         OUTPUT_INT(Count);
@@ -134,11 +134,11 @@ SaveCSourceTableDataFileChm01(
         OUTPUT_RAW(";\n");
     }
 
-    OUTPUT_RAW("\nconst ULONG ");
+    OUTPUT_RAW("\nconst CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_HashMask = ");
     OUTPUT_HEX(TableInfo->HashMask);
-    OUTPUT_RAW(";\nconst ULONG ");
+    OUTPUT_RAW(";\nconst CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_IndexMask = ");
     OUTPUT_HEX(TableInfo->IndexMask);

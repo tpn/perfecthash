@@ -83,13 +83,13 @@ PrepareCSourceDownsizedKeysFileChm01(
 
     OUTPUT_RAW("#pragma const_seg(\".cphdkeys\")\n");
 
-    OUTPUT_RAW("const ULONG ");
+    OUTPUT_RAW("const CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_NumberOfDownsizedKeys = ");
     OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW(";\n");
 
-    OUTPUT_RAW("const ULONG ");
+    OUTPUT_RAW("const CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_DownsizedKeys[");
     OUTPUT_INT(NumberOfKeys);

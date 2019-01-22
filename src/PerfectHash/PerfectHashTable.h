@@ -309,6 +309,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // variables (index, keys, seeds, values etc).
     //
 
+    PCSTRING SeedTypeName;
     PCSTRING IndexTypeName;
     PCSTRING KeySizeTypeName;
     PCSTRING KeysArrayTypeName;

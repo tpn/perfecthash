@@ -74,15 +74,13 @@ PrepareCSourceKeysFileChm01(
 
     OUTPUT_RAW("#pragma const_seg(\".cphkeys\")\n");
 
-    OUTPUT_RAW("const ULONG ");
+    OUTPUT_RAW("const CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_NumberOfKeys = ");
     OUTPUT_INT(NumberOfKeys);
     OUTPUT_RAW(";\n");
 
-    OUTPUT_RAW("const ");
-    OUTPUT_STRING(Table->OriginalKeySizeTypeName);
-    *Output++ = ' ';
+    OUTPUT_RAW("const CPHKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[");
     OUTPUT_INT(NumberOfKeys);

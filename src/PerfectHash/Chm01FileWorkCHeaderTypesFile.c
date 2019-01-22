@@ -80,6 +80,10 @@ PrepareCHeaderTypesFileChm01(
     OUTPUT_RAW(" CPHVALUE;\n");
 
     OUTPUT_RAW("typedef ");
+    OUTPUT_STRING(Table->SeedTypeName);
+    OUTPUT_RAW(" CPHSEED;\n");
+
+    OUTPUT_RAW("typedef ");
     OUTPUT_STRING(Table->IndexTypeName);
     OUTPUT_RAW(" CPHINDEX;\n\n");
 
