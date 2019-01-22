@@ -28,8 +28,7 @@ PrepareCHeaderStdAfxFileChm01(
     PCSTRING Name;
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
-
-    UNREFERENCED_PARAMETER(Context);
+    PPERFECT_HASH_TABLE Table;
 
     //
     // Initialize aliases.
@@ -38,6 +37,7 @@ PrepareCHeaderStdAfxFileChm01(
     File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
+    Table = Context->Table;
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
@@ -49,11 +49,20 @@ PrepareCHeaderStdAfxFileChm01(
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Header StdAfx File.  "
                "Auto-generated.\n//\n\n"
                "#pragma once\n\n"
-               "#include <CompiledPerfectHash.h>\n\n"
+               "#include \"");
+
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_Types.h\"\n");
+
+    OUTPUT_RAW("#include <CompiledPerfectHash.h>\n"
                "#include \"");
 
     OUTPUT_STRING(Name);
     OUTPUT_RAW(".h\"\n\n");
+
+    //
+    // Finish up.
+    //
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

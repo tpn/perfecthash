@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1959,6 +1959,7 @@ Return Value:
         Table->KeysArrayTypeName = &TypeNames[LongType];
     }
 
+    Table->IndexTypeName = &TypeNames[LongType];
     Table->KeySizeTypeName = &TypeNames[Table->Keys->KeySizeType];
     Table->OriginalKeySizeTypeName =
         &TypeNames[Table->Keys->OriginalKeySizeType];

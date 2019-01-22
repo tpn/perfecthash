@@ -1,7 +1,7 @@
 
 DECLARE_LOOKUP_ROUTINE()
 {
-    ULONG Index;
+    CPHINDEX Index;
 
     Index = INDEX_ROUTINE(Key);
     return TABLE_VALUES[Index];
@@ -9,8 +9,8 @@ DECLARE_LOOKUP_ROUTINE()
 
 DECLARE_INSERT_ROUTINE()
 {
-    ULONG Index;
-    ULONG Previous;
+    CPHINDEX Index;
+    CPHVALUE Previous;
 
     Index = INDEX_ROUTINE(Key);
     Previous = TABLE_VALUES[Index];
@@ -20,8 +20,8 @@ DECLARE_INSERT_ROUTINE()
 
 DECLARE_DELETE_ROUTINE()
 {
-    ULONG Index;
-    ULONG Previous;
+    CPHINDEX Index;
+    CPHVALUE Previous;
 
     Index = INDEX_ROUTINE(Key);
     Previous = TABLE_VALUES[Index];

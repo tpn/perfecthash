@@ -1,8 +1,8 @@
 
 DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
 {
-    ULONG Key;
-    ULONG Index;
+    CPHKEY Key;
+    CPHINDEX Index;
     ULONG Count;
     ULONG Attempt = 1000;
     const ULONG Iterations = 100000;

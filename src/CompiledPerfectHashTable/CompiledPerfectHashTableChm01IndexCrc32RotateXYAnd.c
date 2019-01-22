@@ -1,15 +1,17 @@
 
 DECLARE_INDEX_ROUTINE()
 {
-    ULONG Index;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    ULONG MaskedLow;
-    ULONG MaskedHigh;
+    CPHINDEX Index;
+    CPHDKEY Vertex1;
+    CPHDKEY Vertex2;
+    CPHDKEY MaskedLow;
+    CPHDKEY MaskedHigh;
+    CPHDKEY DownsizedKey;
     ULONGLONG Combined;
 
-    Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE2));
+    DownsizedKey = DOWNSIZE_KEY(Key);
+    Vertex1 = _mm_crc32_u32(SEED1, _rotr(DownsizedKey, SEED3_BYTE1));
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, SEED3_BYTE2));
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;

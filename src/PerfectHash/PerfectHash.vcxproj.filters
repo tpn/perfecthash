@@ -247,6 +247,9 @@
     <ClCompile Include="Chm01FileWorkCSourceDownsizedKeysFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkCHeaderTypesFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -443,6 +446,12 @@
     </ClInclude>
     <ClInclude Include="PerfectHashTimestamp.h">
       <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableTypesPre_CHeader_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableTypesPost_CHeader_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

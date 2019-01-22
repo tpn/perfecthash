@@ -1,12 +1,15 @@
 
 DECLARE_INDEX_ROUTINE()
 {
-    ULONG Vertex1;
-    ULONG Vertex2;
-    ULARGE_INTEGER Result;
+    CPHINDEX Index;
+    CPHDKEY Vertex1;
+    CPHDKEY Vertex2;
+    ULONGLONG Combined;
+    CPHDKEY DownsizedKey;
 
-    Vertex1 = (Key + Seed1) ^ Seed3;
-    Vertex2 = (Key - Seed2) ^ Seed4;
+    DownsizedKey = DOWNSIZE_KEY(Key);
+    Vertex1 = (DownsizedKey + Seed1) ^ Seed3;
+    Vertex2 = (DownsizedKey - Seed2) ^ Seed4;
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;

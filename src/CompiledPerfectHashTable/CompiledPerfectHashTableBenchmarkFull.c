@@ -1,16 +1,16 @@
 
 DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
 {
-    ULONG Key;
     ULONG Count;
-    ULONG Index;
-    ULONG Value = 0;
-    ULONG Rotated;
-    ULONG Previous;
+    CPHKEY Key;
+    CPHKEY Rotated;
+    CPHINDEX Index;
+    CPHVALUE Value = 0;
+    CPHVALUE Previous;
     ULONG Best = (ULONG)-1;
     ULONG Attempts = 100;
-    const ULONG Iterations = 1000;
-    const ULONG *Source;
+    const ULONG Iterations = 10;
+    const CPHKEY *Source;
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
     LARGE_INTEGER Delta;
@@ -28,12 +28,9 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 //
 
                 FOR_EACH_KEY {
-
                     Key = *Source++;
-                    Rotated = _rotl(Key, 15);
-
-                    Previous = INSERT_ROUTINE(Key, Rotated);
-
+                    Rotated = ROTATE_KEY_LEFT(Key, 15);
+                    Previous = INSERT_ROUTINE(Key, (CPHVALUE)Rotated);
                 }
 
                 //
@@ -42,12 +39,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 //
 
                 FOR_EACH_KEY {
-
                     Key = *Source++;
-                    Rotated = _rotl(Key, 15);
-
                     Value = LOOKUP_ROUTINE(Key);
-
                 }
 
                 //
@@ -55,24 +48,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 //
 
                 FOR_EACH_KEY {
-
                     Key = *Source++;
-                    Rotated = _rotl(Key, 15);
-
                     Previous = DELETE_ROUTINE(Key);
-
-                }
-
-                //
-                // And a final loop through to confirm all lookups now return 0.
-                //
-
-                FOR_EACH_KEY {
-
-                    Key = *Source++;
-
-                    Value = LOOKUP_ROUTINE(Key);
-
                 }
 
             }
@@ -99,12 +76,9 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 //
 
                 FOR_EACH_KEY {
-
                     Key = *Source++;
-                    Rotated = _rotl(Key, 15);
-
-                    Previous = INSERT_ROUTINE(Key, Rotated);
-
+                    Rotated = ROTATE_KEY_LEFT(Key, 15);
+                    Previous = INSERT_ROUTINE(Key, (CPHVALUE)Rotated);
                 }
 
                 //
@@ -113,12 +87,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 //
 
                 FOR_EACH_KEY {
-
                     Key = *Source++;
-                    Rotated = _rotl(Key, 15);
-
                     Value = LOOKUP_ROUTINE(Key);
-
                 }
 
                 //
@@ -126,26 +96,9 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 //
 
                 FOR_EACH_KEY {
-
                     Key = *Source++;
-                    Rotated = _rotl(Key, 15);
-
                     Previous = DELETE_ROUTINE(Key);
-
                 }
-
-                //
-                // And a final loop through to confirm all lookups now return 0.
-                //
-
-                FOR_EACH_KEY {
-
-                    Key = *Source++;
-
-                    Value = LOOKUP_ROUTINE(Key);
-
-                }
-
             }
 
             QueryPerformanceCounter(&End);

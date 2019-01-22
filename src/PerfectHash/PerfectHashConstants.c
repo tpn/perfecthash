@@ -663,6 +663,21 @@ VERIFY_FILE_WORK_ARRAY_SIZE(EofInits);
 //
 
 const STRING CTypeNames[] = {
+    RCS("unsigned char"),
+    RCS("unsigned short"),
+    RCS("unsigned int"),
+    RCS("unsigned __int64"),
+    RCS("__m128i"),
+    RCS("__m256i"),
+    RCS("__m512i"),
+    { 0, },
+};
+
+//
+// NT-style C type names corresponding to TYPE enum values.
+//
+
+const STRING NtTypeNames[] = {
     RCS("BYTE"),
     RCS("USHORT"),
     RCS("ULONG"),
@@ -1207,5 +1222,7 @@ VERIFY_ARRAY_SIZE(ComponentRundownRoutines);
 #include "CompiledPerfectHashTableRoutinesPre_CSource_RawCString.h"
 #include "CompiledPerfectHashTableRoutines_CSource_RawCString.h"
 #include "CompiledPerfectHashTableRoutinesPost_CSource_RawCString.h"
+#include "CompiledPerfectHashTableTypesPre_CHeader_RawCString.h"
+#include "CompiledPerfectHashTableTypesPost_CHeader_RawCString.h"
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab nowrap                              :

@@ -16,7 +16,9 @@ DECLARE_INDEX_ROUTINE()
     ULONG MaskedLow;
     ULONG MaskedHigh;
     ULONGLONG Combined;
+    CPHDKEY DownsizedKey;
 
+    DownsizedKey = DOWNSIZE_KEY(Key);
     Byte = (PBYTE)&Key;
 
     A = B = 0x9e3779b9;

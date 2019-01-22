@@ -295,11 +295,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // table data and table values arrays (when generating C files).
     //
 
+    PCSTRING IndexTypeName;
     PCSTRING KeySizeTypeName;
-    PCSTRING OriginalKeySizeTypeName;
     PCSTRING KeysArrayTypeName;
     PCSTRING TableDataArrayTypeName;
-    PCSTRING TableValuesArrayTypeName;
+    PCSTRING OriginalKeySizeTypeName;
+    union {
+        PCSTRING ValueTypeName;
+        PCSTRING TableValuesArrayTypeName;
+    };
 
     //
     // Pointer to the array of C type names based on enum TYPE values.  Defaults

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -150,8 +150,7 @@ SaveCSourceTableDataFileChm01(
     //
 
     OUTPUT_RAW("#pragma data_seg(\".cphval\")\n");
-    OUTPUT_STRING(Table->TableValuesArrayTypeName);
-    OUTPUT_RAW(" ");
+    OUTPUT_RAW("CPHVALUE ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues[");
     OUTPUT_INT(NumberOfElements);

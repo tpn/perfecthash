@@ -1,18 +1,20 @@
 
 DECLARE_INDEX_ROUTINE()
 {
-    ULONG A;
-    ULONG B;
-    ULONG C;
-    ULONG D;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    ULARGE_INTEGER Result;
+    CPHINDEX Index;
+    CPHDKEY A;
+    CPHDKEY B;
+    CPHDKEY C;
+    CPHDKEY D;
+    CPHDKEY Vertex1;
+    CPHDKEY Vertex2;
+    CPHDKEY DownsizedKey;
 
-    A = _rotl(Key ^ SEED1, 15);
-    B = _rotl(Key + SEED2, 7);
-    C = _rotr(Key - SEED3, 11);
-    D = _rotr(Key ^ SEED4, 20);
+    DownsizedKey = DOWNSIZE_KEY(Key);
+    A = _rotl(DownsizedKey ^ SEED1, 15);
+    B = _rotl(DownsizedKey + SEED2, 7);
+    C = _rotr(DownsizedKey - SEED3, 11);
+    D = _rotr(DownsizedKey ^ SEED4, 20);
 
     Vertex1 = A ^ C;
     Vertex2 = B ^ D;

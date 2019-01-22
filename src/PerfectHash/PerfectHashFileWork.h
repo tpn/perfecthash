@@ -120,6 +120,19 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        CHeaderTypesFile,                                                  \
+        C_HEADER_TYPES_FILE,                                               \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(Types),                                                     \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         CSourceFile,                                                       \
         C_SOURCE_FILE,                                                     \
         EofInitTypeDefault,                                                \

@@ -1,17 +1,19 @@
 
 DECLARE_INDEX_ROUTINE()
 {
-    ULONG A;
-    ULONG B;
-    ULONG Index;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    ULONG MaskedLow;
-    ULONG MaskedHigh;
+    CPHDKEY A;
+    CPHDKEY B;
+    CPHINDEX Index;
+    CPHDKEY Vertex1;
+    CPHDKEY Vertex2;
+    CPHDKEY MaskedLow;
+    CPHDKEY MaskedHigh;
+    CPHDKEY DownsizedKey;
     ULONG_BYTES Bytes;
     ULONGLONG Combined;
 
-    Bytes.AsULong = Key;
+    DownsizedKey = DOWNSIZE_KEY(Key);
+    Bytes.AsULong = DownsizedKey;
 
     A = SEED1 ^ 2166136261;
     A = 16777619 * A ^ Bytes.Byte1;

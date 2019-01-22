@@ -1,21 +1,23 @@
 
 DECLARE_INDEX_ROUTINE()
 {
-    ULONG A;
-    ULONG B;
-    ULONG C;
-    ULONG D;
-    ULONG E;
-    ULONG F;
+    CPHDKEY A;
+    CPHDKEY B;
+    CPHDKEY C;
+    CPHDKEY D;
+    CPHDKEY E;
+    CPHDKEY F;
     PBYTE Byte;
-    ULONG Index;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    ULONG MaskedLow;
-    ULONG MaskedHigh;
+    CPHINDEX Index;
+    CPHDKEY Vertex1;
+    CPHDKEY Vertex2;
+    CPHDKEY MaskedLow;
+    CPHDKEY MaskedHigh;
+    CPHDKEY DownsizedKey;
     ULONGLONG Combined;
 
-    Byte = (PBYTE)&Key;
+    DownsizedKey = DOWNSIZE_KEY(Key);
+    Byte = (PBYTE)&DownsizedKey;
 
     A = B = 0x9e3779b9;
     C = SEED1;

@@ -2884,3 +2884,27 @@ Language=English
 Error closing C source downsized keys file.
 .
 
+MessageId=0x367
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_HEADER_TYPES_FILE
+Language=English
+Error preparing C header types file.
+.
+
+MessageId=0x368
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_TYPES_FILE
+Language=English
+Error saving C header types file.
+.
+
+MessageId=0x369
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_TYPES_FILE
+Language=English
+Error closing C header types file.
+.
+

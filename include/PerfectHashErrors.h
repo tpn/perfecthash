@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -3181,4 +3181,31 @@ Abstract:
 // Error closing C source downsized keys file.
 //
 #define PH_E_ERROR_DURING_CLOSE_C_SOURCE_DOWNSIZED_KEYS_FILE ((HRESULT)0xE0040366L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_HEADER_TYPES_FILE
+//
+// MessageText:
+//
+// Error preparing C header types file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_HEADER_TYPES_FILE ((HRESULT)0xE0040367L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_HEADER_TYPES_FILE
+//
+// MessageText:
+//
+// Error saving C header types file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_HEADER_TYPES_FILE ((HRESULT)0xE0040368L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_HEADER_TYPES_FILE
+//
+// MessageText:
+//
+// Error closing C header types file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_HEADER_TYPES_FILE ((HRESULT)0xE0040369L)
 

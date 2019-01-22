@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -29,66 +29,15 @@ extern "C" {
 #endif
 
 //
-// Define start/end markers for IACA.
-//
-
-#define IACA_VC_START() __writegsbyte(111, 111)
-#define IACA_VC_END()   __writegsbyte(222, 222)
-
-//
-// Define basic NT types and macros used by this header file.
-//
-
-#define CPHCALLTYPE __stdcall
-#define FORCEINLINE __forceinline
-
-typedef char BOOLEAN;
-typedef unsigned char BYTE;
-typedef BYTE *PBYTE;
-typedef short SHORT;
-typedef unsigned short USHORT;
-typedef long LONG;
-typedef long long LONGLONG;
-typedef unsigned long ULONG;
-typedef unsigned long *PULONG;
-typedef unsigned long long ULONGLONG;
-typedef void *PVOID;
-
-//
-// Disable nameless struct/union warning.
-//
-
-#pragma warning(push)
-#pragma warning(disable: 4201)
-typedef union ULONG_BYTES {
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-        BYTE Byte1;
-        BYTE Byte2;
-        BYTE Byte3;
-        BYTE Byte4;
-    };
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-        USHORT Word1;
-        USHORT Word2;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} ULONG_BYTES;
-typedef ULONG_BYTES *PULONG_BYTES;
-#pragma warning(pop)
-
-//
 // Define the main functions exposed by a compiled perfect hash table: index,
 // lookup, insert and delete.
 //
 
 typedef
 CPHAPI
-ULONG
+CPHINDEX
 (CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_INDEX)(
-    _In_ ULONG Key
+    _In_ CPHKEY Key
     );
 /*++
 
@@ -115,9 +64,9 @@ typedef COMPILED_PERFECT_HASH_TABLE_INDEX *PCOMPILED_PERFECT_HASH_TABLE_INDEX;
 
 typedef
 CPHAPI
-ULONG
+CPHVALUE
 (CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_LOOKUP)(
-    _In_ ULONG Key
+    _In_ CPHKEY Key
     );
 /*++
 
@@ -147,10 +96,10 @@ typedef COMPILED_PERFECT_HASH_TABLE_LOOKUP *PCOMPILED_PERFECT_HASH_TABLE_LOOKUP;
 
 typedef
 CPHAPI
-ULONG
+CPHVALUE
 (CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_INSERT)(
-    _In_ ULONG Key,
-    _In_ ULONG Value
+    _In_ CPHKEY Key,
+    _In_ CPHVALUE Value
     );
 /*++
 
@@ -181,9 +130,9 @@ typedef COMPILED_PERFECT_HASH_TABLE_INSERT *PCOMPILED_PERFECT_HASH_TABLE_INSERT;
 
 typedef
 CPHAPI
-ULONG
+CPHVALUE
 (CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_DELETE)(
-    _In_ ULONG Key
+    _In_ CPHKEY Key
     );
 /*++
 

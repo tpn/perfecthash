@@ -39,13 +39,13 @@ Return Value:
 
 --*/
 {
-    ULONG Key;
-    ULONG Index;
-    ULONG Value;
-    ULONG Rotated;
-    ULONG Previous;
+    CPHINDEX Index;
+    CPHKEY Key;
+    CPHKEY Rotated;
+    CPHVALUE Value;
+    CPHVALUE Previous;
     ULONG NumberOfErrors = 0;
-    const ULONG *Source;
+    const CPHKEY *Source;
 
     Key = *KEYS;
 
@@ -54,8 +54,8 @@ Return Value:
     // way that can be easily reversed.
     //
 
-    Rotated = _rotl(Key, 15);
-    ASSERT(Key == _rotr(Rotated, 15));
+    Rotated = ROTATE_KEY_LEFT(Key, 15);
+    ASSERT(Key == ROTATE_KEY_RIGHT(Rotated, 15));
 
     //
     // Verify looking up a key that hasn't been inserted returns 0 as the value.
@@ -68,7 +68,7 @@ Return Value:
     // Verify insertion.
     //
 
-    Previous = INSERT_ROUTINE(Key, Rotated);
+    Previous = INSERT_ROUTINE(Key, (CPHVALUE)Rotated);
     ASSERT(Previous == 0);
 
     //
@@ -76,14 +76,14 @@ Return Value:
     //
 
     Value = LOOKUP_ROUTINE(Key);
-    ASSERT(Value == Rotated);
+    ASSERT(Value == (CPHVALUE)Rotated);
 
     //
     // Delete the inserted key.  Returned value should be Rotated.
     //
 
     Value = DELETE_ROUTINE(Key);
-    ASSERT(Value == Rotated);
+    ASSERT(Value == (CPHVALUE)Rotated);
 
     //
     // Verify a subsequent lookup returns 0.
@@ -99,9 +99,9 @@ Return Value:
     FOR_EACH_KEY {
 
         Key = *Source++;
-        Rotated = _rotl(Key, 15);
+        Rotated = ROTATE_KEY_LEFT(Key, 15);
 
-        Previous = INSERT_ROUTINE(Key, Rotated);
+        Previous = INSERT_ROUTINE(Key, (CPHVALUE)Rotated);
         ASSERT(Previous == 0);
 
     }
@@ -114,10 +114,10 @@ Return Value:
     FOR_EACH_KEY {
 
         Key = *Source++;
-        Rotated = _rotl(Key, 15);
+        Rotated = ROTATE_KEY_LEFT(Key, 15);
 
         Value = LOOKUP_ROUTINE(Key);
-        ASSERT(Value == Rotated);
+        ASSERT(Value == (CPHVALUE)Rotated);
 
     }
 
@@ -128,10 +128,10 @@ Return Value:
     FOR_EACH_KEY {
 
         Key = *Source++;
-        Rotated = _rotl(Key, 15);
+        Rotated = ROTATE_KEY_LEFT(Key, 15);
 
         Previous = DELETE_ROUTINE(Key);
-        ASSERT(Previous == Rotated);
+        ASSERT(Previous == (CPHVALUE)Rotated);
 
     }
 

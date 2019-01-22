@@ -48,6 +48,8 @@
 #define CPH_NUMBER_OF_KEYS(U) U##_NUMBER_OF_KEYS
 
 #define CPH_DOWNSIZE_KEY(U) U##_DOWNSIZE_KEY
+#define CPH_ROTATE_KEY_LEFT(U) U##_ROTATE_KEY_LEFT
+#define CPH_ROTATE_KEY_RIGHT(U) U##_ROTATE_KEY_RIGHT
 
 #define CPH_INDEX_ROUTINE_NAME(T) CompiledPerfectHash_##T##_Index
 #define CPH_LOOKUP_ROUTINE_NAME(T) CompiledPerfectHash_##T##_Lookup
@@ -72,9 +74,9 @@ CPHAPI COMPILED_PERFECT_HASH_TABLE_INDEX \
     CompiledPerfectHash_##T##_Index;     \
                                          \
 _Use_decl_annotations_                   \
-ULONG                                    \
+CPHINDEX                                 \
 CompiledPerfectHash_##T##_Index(         \
-    ULONG Key                            \
+    CPHKEY Key                           \
     )
 
 //
@@ -83,9 +85,9 @@ CompiledPerfectHash_##T##_Index(         \
 
 #define CPH_INDEX_INLINE_ROUTINE_HEADER(T) \
 FORCEINLINE                                \
-ULONG                                      \
+CPHINDEX                                   \
 CompiledPerfectHash_##T##_IndexInline(     \
-    ULONG Key                              \
+    CPHKEY Key                             \
     )
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,9 +103,9 @@ CPHAPI COMPILED_PERFECT_HASH_TABLE_LOOKUP \
     CompiledPerfectHash_##T##_Lookup;     \
                                           \
 _Use_decl_annotations_                    \
-ULONG                                     \
+CPHVALUE                                  \
 CompiledPerfectHash_##T##_Lookup(         \
-    ULONG Key                             \
+    CPHKEY Key                            \
     )
 
 //
@@ -112,9 +114,9 @@ CompiledPerfectHash_##T##_Lookup(         \
 
 #define CPH_LOOKUP_INLINE_ROUTINE_HEADER(T) \
 FORCEINLINE                                 \
-ULONG                                       \
+CPHVALUE                                    \
 CompiledPerfectHash_##T##_LookupInline(     \
-    ULONG Key                               \
+    CPHKEY Key                              \
     )
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,10 +132,10 @@ CPHAPI COMPILED_PERFECT_HASH_TABLE_INSERT \
     CompiledPerfectHash_##T##_Insert;     \
                                           \
 _Use_decl_annotations_                    \
-ULONG                                     \
+CPHVALUE                                  \
 CompiledPerfectHash_##T##_Insert(         \
-    ULONG Key,                            \
-    ULONG Value                           \
+    CPHKEY Key,                           \
+    CPHVALUE Value                        \
     )
 
 //
@@ -142,10 +144,10 @@ CompiledPerfectHash_##T##_Insert(         \
 
 #define CPH_INSERT_INLINE_ROUTINE_HEADER(T) \
 FORCEINLINE                                 \
-ULONG                                       \
+CPHVALUE                                    \
 CompiledPerfectHash_##T##_InsertInline(     \
-    ULONG Key,                              \
-    ULONG Value                             \
+    CPHKEY Key,                             \
+    CPHVALUE Value                          \
     )
 
 
@@ -162,9 +164,9 @@ CPHAPI COMPILED_PERFECT_HASH_TABLE_DELETE \
     CompiledPerfectHash_##T##_Delete;     \
                                           \
 _Use_decl_annotations_                    \
-ULONG                                     \
+CPHVALUE                                  \
 CompiledPerfectHash_##T##_Delete(         \
-    ULONG Key                             \
+    CPHKEY Key                            \
     )
 
 //
@@ -173,9 +175,9 @@ CompiledPerfectHash_##T##_Delete(         \
 
 #define CPH_DELETE_INLINE_ROUTINE_HEADER(T) \
 FORCEINLINE                                 \
-ULONG                                       \
+CPHVALUE                                    \
 CompiledPerfectHash_##T##_DeleteInline(     \
-    ULONG Key                               \
+    CPHKEY Key                              \
     )
 
 
@@ -289,6 +291,8 @@ extern BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE   \
 #define EXPAND_NUMBER_OF_KEYS(U) CPH_NUMBER_OF_KEYS(U)
 
 #define EXPAND_DOWNSIZE_KEY(U) CPH_DOWNSIZE_KEY(U)
+#define EXPAND_ROTATE_KEY_LEFT(U) CPH_ROTATE_KEY_LEFT(U)
+#define EXPAND_ROTATE_KEY_RIGHT(U) CPH_ROTATE_KEY_RIGHT(U)
 
 #define EXPAND_INDEX_ROUTINE(T) CPH_INDEX_ROUTINE(T)
 #define EXPAND_LOOKUP_ROUTINE(T) CPH_LOOKUP_ROUTINE(T)
@@ -361,6 +365,8 @@ extern BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE   \
 #define KEYS EXPAND_KEYS(CPH_TABLENAME)
 #define NUMBER_OF_KEYS EXPAND_NUMBER_OF_KEYS(CPH_TABLENAME_UPPER)
 #define DOWNSIZE_KEY(K) EXPAND_DOWNSIZE_KEY(CPH_TABLENAME_UPPER)(K)
+#define ROTATE_KEY_LEFT EXPAND_ROTATE_KEY_LEFT(CPH_TABLENAME_UPPER)
+#define ROTATE_KEY_RIGHT EXPAND_ROTATE_KEY_RIGHT(CPH_TABLENAME_UPPER)
 
 #define DECLARE_INDEX_ROUTINE_HEADER() EXPAND_INDEX_ROUTINE_HEADER(CPH_TABLENAME)
 #define DECLARE_LOOKUP_ROUTINE_HEADER() EXPAND_LOOKUP_ROUTINE_HEADER(CPH_TABLENAME)

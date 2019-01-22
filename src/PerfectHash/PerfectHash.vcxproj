@@ -118,6 +118,8 @@
     <ClInclude Include="CompiledPerfectHashTableSupport_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableTestExe_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableTest_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableTypesPost_CHeader_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableTypesPre_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHash_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHash_VCProps_RawCString.h" />
     <ClInclude Include="Component.h" />
@@ -156,6 +158,7 @@
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderStdAfxFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderSupportFile.c" />
+    <ClCompile Include="Chm01FileWorkCHeaderTypesFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexExeFile.c" />

@@ -674,10 +674,10 @@ Return Value:
     }
 
     //
-    // Use our default global C type names array for now.
+    // Use our default global NT-style C type names array for now.
     //
 
-    Table->CTypeNames = (PCSTRING)&CTypeNames;
+    Table->CTypeNames = (PCSTRING)&NtTypeNames;
 
     //
     // Validation complete, finish up.

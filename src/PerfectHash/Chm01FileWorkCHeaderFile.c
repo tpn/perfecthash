@@ -146,15 +146,11 @@ PrepareCHeaderFileChm01(
     OUTPUT_STRING(Table->TableDataArrayTypeName);
     OUTPUT_RAW(" ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_TableData[];\nextern ");
-    OUTPUT_STRING(Table->TableValuesArrayTypeName);
-    OUTPUT_RAW(" ");
+    OUTPUT_RAW("_TableData[];\nextern CPHVALUE ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues[];\n\n");
 
-    OUTPUT_RAW("extern const ");
-    OUTPUT_STRING(Table->KeysArrayTypeName);
-    OUTPUT_RAW(" ");
+    OUTPUT_RAW("extern const CPHKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[];\n");
     OUTPUT_RAW("extern const ULONG ");
@@ -173,9 +169,21 @@ PrepareCHeaderFileChm01(
         OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
         OUTPUT_RAW("\n#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_DOWNSIZE_KEY(Key) _pext_u64(Key, 0x");
+        OUTPUT_RAW("_DOWNSIZE_KEY(Key) ((CPHDKEY)_pext_u64(Key, 0x");
         OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
-        OUTPUT_RAW(")\n\n");
+        OUTPUT_RAW("))\n");
+
+        //
+        // Write the left and right key rotation macros.
+        //
+
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_ROTATE_KEY_LEFT _rotl64\n");
+
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr64\n");
 
     } else {
 
@@ -188,6 +196,18 @@ PrepareCHeaderFileChm01(
         OUTPUT_RAW("_DOWNSIZE_KEY(Key) (Key)\n");
         OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
         OUTPUT_RAW("\n\n");
+
+        //
+        // Write the left and right key rotation macros.
+        //
+
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_ROTATE_KEY_LEFT _rotl\n");
+
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr\n");
     }
 
     OUTPUT_RAW("#include <CompiledPerfectHashMacroGlue.h>\n");
