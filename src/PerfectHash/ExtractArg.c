@@ -25,19 +25,10 @@ Abstract:
 #define DECL_ARG(Name) const UNICODE_STRING Name = RCS(L#Name)
 
 //
-// Helper macro for just the Rtl->RtlEqualUnicodeString() comparison.
+// Helper macro for Rtl->RtlEqualUnicodeString() comparison.
 //
 
-#define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Argument, &Name, TRUE)
-
-//
-// Helper macro for Rtl->RtlPrefixUnicodeString().  This is used instead of the
-// IS_EQUAL() macro above when the argument may contain an equal sign, e.g.
-//
-//      --TryLargePagesForKeysData vs --AttemptsBeforeTableResize=100
-//
-
-#define IS_PREFIX(Name) Rtl->RtlPrefixUnicodeString(&Name, Argument, TRUE)
+#define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, TRUE)
 
 //
 // Helper macro for toggling the given flag if the current argument matches
@@ -65,6 +56,7 @@ TryExtractArgContextBulkCreateFlags(
     PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS Flags
     )
 {
+    PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
 
@@ -88,6 +80,7 @@ TryExtractArgContextTableCreateFlags(
     PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS Flags
     )
 {
+    PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
 
@@ -111,6 +104,7 @@ TryExtractArgKeysLoadFlags(
     PPERFECT_HASH_KEYS_LOAD_FLAGS Flags
     )
 {
+    PCUNICODE_STRING Arg = Argument;
     DECL_ARG(TryLargePagesForKeysData);
     DECL_ARG(SkipKeysVerification);
     DECL_ARG(DisableImplicitKeyDownsizing);
@@ -136,6 +130,7 @@ TryExtractArgTableCreateFlags(
     PPERFECT_HASH_TABLE_CREATE_FLAGS Flags
     )
 {
+    PCUNICODE_STRING Arg = Argument;
     DECL_ARG(FirstGraphWins);
     DECL_ARG(FindBestGraph);
     DECL_ARG(SkipGraphVerification);
@@ -202,6 +197,7 @@ TryExtractArgTableLoadFlags(
     PPERFECT_HASH_TABLE_LOAD_FLAGS Flags
     )
 {
+    PCUNICODE_STRING Arg = Argument;
     DECL_ARG(TryLargePagesForTableData);
     DECL_ARG(TryLargePagesForValuesArray);
 
@@ -521,6 +517,8 @@ Return Value:
     BOOLEAN EqualSignFound = FALSE;
     BOOLEAN TableParamFound = FALSE;
     HRESULT Result = S_FALSE;
+    PUNICODE_STRING Arg;
+    UNICODE_STRING LocalArg = { 0 };
     UNICODE_STRING Temp = { 0 };
     PUNICODE_STRING ValueString;
     ULONG NumberOfTableCreateParameters;
@@ -588,6 +586,22 @@ Return Value:
     }
 
     //
+    // Wire up LocalArg to Argument, and point the Arg pointer at it.
+    // This allows us to fiddle with the length if we see an equal sign.
+    //
+
+    LocalArg.Length = Argument->Length;
+    LocalArg.MaximumLength = Argument->MaximumLength;
+    LocalArg.Buffer = Argument->Buffer;
+    Arg = &LocalArg;
+
+    if (EqualSignFound) {
+        LocalArg.Length = (USHORT)RtlPointerToOffset(LocalArg.Buffer, Source-1);
+        LocalArg.MaximumLength = LocalArg.Length;
+        ASSERT(LocalArg.Buffer[LocalArg.Length >> 1] == L'=');
+    }
+
+    //
     // Initially, when this routine was first written, it didn't report an
     // error if a table create parameter or best coverage type name was
     // detected but no equal sign was present.  We've got a sloppy fix in
@@ -597,7 +611,7 @@ Return Value:
     // error code back to the user in a more friendly manner.
     //
     // It's sloppy as we then repeat all the string comparisons later as part
-    // of the macros (e.g. ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER()).
+    // of the macros (e.g. ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER()).
     //
     // This routine is only called at the start of the program in order to
     // parse command line arguments, so, eh, we can live with some sloppiness
@@ -609,7 +623,7 @@ Return Value:
     //
 
 #define EXPAND_AS_IS_TABLE_CREATE_PARAM(Name) \
-    if (IS_PREFIX(Name)) {                    \
+    if (IS_EQUAL(Name)) {                     \
         TableParamFound = TRUE;               \
         break;                                \
     }
@@ -632,6 +646,19 @@ Return Value:
             return S_FALSE;
         }
     }
+
+    //
+    // If no table parameter was found, return.
+    //
+
+    if (!TableParamFound) {
+        return S_FALSE;
+    }
+
+    //
+    // Verify our equal sign is in the right spot based on our
+    // pointer arithmetic.
+    //
 
     ASSERT(*(Source - 1) == L'=');
     ASSERT(Argument->Buffer[Index] == L'=');
@@ -660,89 +687,89 @@ Return Value:
 #define SET_PARAM_ID(Name)                         \
     LocalParam.Id = TableCreateParameter##Name##Id
 
-#define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(Name) \
-    if (IS_PREFIX(Name) && ValueIsInteger) {           \
-        SET_PARAM_ID(Name);                            \
-        LocalParam.AsULong = Value;                    \
-        goto AddParam;                                 \
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(Name) \
+    if (IS_EQUAL(Name) && ValueIsInteger) {           \
+        SET_PARAM_ID(Name);                           \
+        LocalParam.AsULong = Value;                   \
+        goto AddParam;                                \
     }
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(AttemptsBeforeTableResize);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(AttemptsBeforeTableResize);
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(MaxNumberOfTableResizes);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(MaxNumberOfTableResizes);
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(BestCoverageAttempts);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(BestCoverageAttempts);
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(KeySizeInBytes);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(KeySizeInBytes);
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_INTEGER(ValueSizeInBytes);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(ValueSizeInBytes);
 
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)
 
-#define ADD_PARAM_IF_PREFIX_AND_VALUE_EQUAL(Name, ValueName) \
-    if (IS_PREFIX(Name) && IS_VALUE_EQUAL(ValueName)) {      \
-        SET_PARAM_ID(Name);                                  \
-        LocalParam.AsULongLong = Name##ValueName##Id;        \
-        goto AddParam;                                       \
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_EQUAL(Name, ValueName) \
+    if (IS_EQUAL(Name) && IS_VALUE_EQUAL(ValueName)) {      \
+        SET_PARAM_ID(Name);                                 \
+        LocalParam.AsULongLong = Name##ValueName##Id;       \
+        goto AddParam;                                      \
     }
 
-#define EXPAND_AS_ADD_PARAM(Name, Comparison, Comparator)  \
-    ADD_PARAM_IF_PREFIX_AND_VALUE_EQUAL(BestCoverageType,  \
-                                        Comparison##Name);
+#define EXPAND_AS_ADD_PARAM(Name, Comparison, Comparator) \
+    ADD_PARAM_IF_EQUAL_AND_VALUE_EQUAL(BestCoverageType,  \
+                                       Comparison##Name);
 
     BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_ADD_PARAM);
 
-#define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(Name,  \
-                                                                   Upper) \
-    if (IS_PREFIX(Name)) {                                                \
-        Result = TryExtractValueArray(Rtl,                                \
-                                      Allocator,                          \
-                                      ValueString,                        \
-                                      &LocalParam,                        \
-                                      TRUE);                              \
-                                                                          \
-        if (Result == S_OK) {                                             \
-            SET_PARAM_ID(Name);                                           \
-            goto AddParam;                                                \
-        } else {                                                          \
-            if (Result == PH_E_NOT_SORTED) {                              \
-                Result = PH_E_##Upper##_NOT_SORTED;                       \
-            } else if (Result == PH_E_DUPLICATE_DETECTED) {               \
-                Result = PH_E_DUPLICATE_VALUE_DETECTED_IN_##Upper;        \
-            } else if (Result != E_OUTOFMEMORY) {                         \
-                Result = PH_E_INVALID_##Upper;                            \
-            }                                                             \
-            goto Error;                                                   \
-        }                                                                 \
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(Name,  \
+                                                                  Upper) \
+    if (IS_EQUAL(Name)) {                                                \
+        Result = TryExtractValueArray(Rtl,                               \
+                                      Allocator,                         \
+                                      ValueString,                       \
+                                      &LocalParam,                       \
+                                      TRUE);                             \
+                                                                         \
+        if (Result == S_OK) {                                            \
+            SET_PARAM_ID(Name);                                          \
+            goto AddParam;                                               \
+        } else {                                                         \
+            if (Result == PH_E_NOT_SORTED) {                             \
+                Result = PH_E_##Upper##_NOT_SORTED;                      \
+            } else if (Result == PH_E_DUPLICATE_DETECTED) {              \
+                Result = PH_E_DUPLICATE_VALUE_DETECTED_IN_##Upper;       \
+            } else if (Result != E_OUTOFMEMORY) {                        \
+                Result = PH_E_INVALID_##Upper;                           \
+            }                                                            \
+            goto Error;                                                  \
+        }                                                                \
     }
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(KeysSubset,
-                                                               KEYS_SUBSET);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(KeysSubset,
+                                                              KEYS_SUBSET);
 
-#define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV(Name, Upper) \
-    if (IS_PREFIX(Name)) {                                \
-        Result = TryExtractValueArray(Rtl,                \
-                                      Allocator,          \
-                                      ValueString,        \
-                                      &LocalParam,        \
-                                      FALSE);             \
-                                                          \
-        if (Result == S_OK) {                             \
-            SET_PARAM_ID(Name);                           \
-            goto AddParam;                                \
-        } else {                                          \
-            if (Result != E_OUTOFMEMORY) {                \
-                Result = PH_E_INVALID_##Upper;            \
-            }                                             \
-            goto Error;                                   \
-        }                                                 \
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(Name, Upper) \
+    if (IS_EQUAL(Name)) {                                \
+        Result = TryExtractValueArray(Rtl,               \
+                                      Allocator,         \
+                                      ValueString,       \
+                                      &LocalParam,       \
+                                      FALSE);            \
+                                                         \
+        if (Result == S_OK) {                            \
+            SET_PARAM_ID(Name);                          \
+            goto AddParam;                               \
+        } else {                                         \
+            if (Result != E_OUTOFMEMORY) {               \
+                Result = PH_E_INVALID_##Upper;           \
+            }                                            \
+            goto Error;                                  \
+        }                                                \
     }
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_CSV(Seeds, SEEDS);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(Seeds, SEEDS);
 
-#define ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(Name, Upper)          \
-    if (IS_PREFIX(Name##ThreadpoolPriority)) {                             \
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(Name, Upper)           \
+    if (IS_EQUAL(Name##ThreadpoolPriority)) {                              \
         if (IS_VALUE_EQUAL(High)) {                                        \
             SET_PARAM_ID(Name##ThreadpoolPriority);                        \
             LocalParam.AsTpCallbackPriority = TP_CALLBACK_PRIORITY_HIGH;   \
@@ -761,8 +788,8 @@ Return Value:
         }                                                                  \
     }
 
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(MainWork, MAIN_WORK);
-    ADD_PARAM_IF_PREFIX_AND_VALUE_IS_TP_PRIORITY(FileWork, FILE_WORK);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(MainWork, MAIN_WORK);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(FileWork, FILE_WORK);
 
     //
     // We shouldn't ever get here; we've already determined that a valid param
