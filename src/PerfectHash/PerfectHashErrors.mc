@@ -286,7 +286,7 @@ Table Create Flags:
 
             Requires the following two table create parameters to be present:
 
-                --BestCoverageNumAttempts=N
+                --BestCoverageAttempts=N
                 --BestCoverageType=<CoverageType>
 
             The table create routine will then run until it finds the number of
@@ -422,7 +422,7 @@ Table Create Parameters:
 
         Maximum number of table resizes that will be permitted before giving up.
 
-    --BestCoverageNumAttempts=N
+    --BestCoverageAttempts=N
 
         Where N is a positive integer, and represents the number of attempts
         that will be made at finding a "best" graph (based on the best coverage
@@ -575,7 +575,7 @@ Table Create Flags:
 
             Requires the following two table create parameters to be present:
 
-                --BestCoverageNumAttempts=N
+                --BestCoverageAttempts=N
                 --BestCoverageType=<CoverageType>
 
             The table create routine will then run until it finds the number of
@@ -711,7 +711,7 @@ Table Create Parameters:
 
         Maximum number of table resizes that will be permitted before giving up.
 
-    --BestCoverageNumAttempts=N
+    --BestCoverageAttempts=N
 
         Where N is a positive integer, and represents the number of attempts
         that will be made at finding a "best" graph (based on the best coverage
