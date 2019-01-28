@@ -2028,7 +2028,7 @@ Return Value:
     Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
 
     if (!Context->FinishedCount &&
-        Graph->Attempt == Context->ResizeTableThreshold) {
+        Graph->Attempt - 1 == Context->ResizeTableThreshold) {
 
         if (!SetEvent(Context->TryLargerTableSizeEvent)) {
             SYS_ERROR(SetEvent);
@@ -2044,7 +2044,7 @@ Return Value:
     //
 
     if (FindBestMemoryCoverage(Context)) {
-        if (Graph->Attempt == Context->BestCoverageAttempts) {
+        if (Graph->Attempt - 1 == Context->BestCoverageAttempts) {
 
             if (Context->FinishedCount == 0) {
                 if (!SetEvent(Context->TryLargerTableSizeEvent)) {
