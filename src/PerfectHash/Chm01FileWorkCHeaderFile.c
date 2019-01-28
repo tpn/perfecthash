@@ -186,7 +186,7 @@ PrepareCHeaderFileChm01(
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr64\n");
+        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr64\n\n");
 
     } else {
 
@@ -197,8 +197,6 @@ PrepareCHeaderFileChm01(
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
         OUTPUT_RAW("_DOWNSIZE_KEY(Key) (Key)\n");
-        OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
-        OUTPUT_RAW("\n\n");
 
         //
         // Write the left and right key rotation macros.
@@ -210,7 +208,7 @@ PrepareCHeaderFileChm01(
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr\n");
+        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr\n\n");
     }
 
     OUTPUT_RAW("#include <CompiledPerfectHashMacroGlue.h>\n");
