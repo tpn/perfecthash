@@ -169,6 +169,7 @@
     <ClCompile Include="Chm01FileWorkCSourceStdAfxFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceSupportFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTableDataFile.c" />
+    <ClCompile Include="Chm01FileWorkCSourceTableValuesFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestFile.c" />
     <ClCompile Include="Chm01FileWorkTableFile.c" />

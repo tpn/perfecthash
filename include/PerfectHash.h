@@ -2379,10 +2379,33 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG OmitCsvRowIfTableCreateSucceeded:1;
 
         //
+        // When set, causes the C preprocessor macro CPH_INDEX_ONLY to be
+        // defined, which has the effect of omitting the compiled perfect hash
+        // routines that deal with the underlying table values array (i.e. any
+        // routine other than Index(); Insert(), Lookup(), Delete(), etc), as
+        // well as the array itself.  This will result in a size reduction of
+        // the final compiled perfect hash binary.  It is intended to be used
+        // if you only need the Index() routine and will be managing your own
+        // table values independently.
+        //
+
+        ULONG IndexOnly:1;
+
+        //
+        // When set, uses a shared read-write section for the table values
+        // array in the compiled perfect hash table C files.  This will result
+        // in the values array being visible across multiple processes.
+        //
+        // N.B. Has no effect if --IndexOnly is also specified.
+        //
+
+        ULONG UseRwsSectionForTableValues:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:16;
+        ULONG Unused:14;
     };
 
     LONG AsLong;

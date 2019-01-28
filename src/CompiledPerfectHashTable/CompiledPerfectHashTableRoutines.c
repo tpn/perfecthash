@@ -1,4 +1,6 @@
 
+#ifndef CPH_INDEX_ONLY
+
 DECLARE_LOOKUP_ROUTINE()
 {
     CPHINDEX Index;
@@ -29,3 +31,4 @@ DECLARE_DELETE_ROUTINE()
     return Previous;
 }
 
+#endif

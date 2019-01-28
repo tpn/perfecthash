@@ -146,19 +146,6 @@ SaveCSourceTableDataFileChm01(
     OUTPUT_RAW(";\n#pragma const_seg()\n\n");
 
     //
-    // Write a table values array.
-    //
-
-    OUTPUT_RAW("#pragma data_seg(\".cphval\")\n");
-    OUTPUT_RAW("CPHVALUE ");
-    OUTPUT_STRING(Name);
-    OUTPUT_RAW("_TableValues[");
-    OUTPUT_INT(NumberOfElements);
-    OUTPUT_RAW("] = { 0, };\n#pragma data_seg()\n"
-               "#pragma comment(linker, "
-               "\"/section:.cphval,rw\")\n\n");
-
-    //
     // Write the table data.
     //
 

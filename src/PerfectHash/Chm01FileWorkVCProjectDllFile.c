@@ -269,6 +269,16 @@ CHUNK VCProjectDllFileChunks[] = {
     {
         ChunkOpRaw,
         RCS(
+            "_TableValues.c\" />\r\n"
+            "    <ClCompile Include=\""
+        ),
+    },
+
+    { ChunkOpInsertBaseName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
             "_TableData.c\" />\r\n"
             "  </ItemGroup>\r\n"
             "  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\r\n"

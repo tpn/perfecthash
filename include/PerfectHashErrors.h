@@ -375,6 +375,27 @@ Abstract:
 //         When present, omits writing a row in the .csv output file if table
 //         creation succeeded for a given keys file.
 // 
+//     --IndexOnly
+// 
+//         When set, affects the generated C files by defining the C preprocessor
+//         macro CPH_INDEX_ONLY, which results in omitting the compiled perfect
+//         hash routines that deal with the underlying table values array (i.e.
+//         any routine other than Index(); e.g. Insert(), Lookup(), Delete() etc),
+//         as well as the array itself.  This results in a size reduction of the
+//         final compiled perfect hash binary.  Additionally, only the .dll and
+//         BenchmarkIndex projects will be built, as the BenchmarkFull and Test
+//         projects require access to a table values array.  This flag is intended
+//         to be used if you only need the Index() routine and will be managing the
+//         table values array independently.
+// 
+//     --UseRwsSectionForTableValues
+// 
+//         When set, tells the linker to use a shared read-write section for the
+//         table values array, e.g.: #pragma comment(linker,"/section:.cphval,rws")
+//         This will result in the table values array being accessible across
+//         multiple processes.  Thus, the array will persist as long as one process
+//         maintains an open section (mapping); i.e. keeps the .dll loaded.
+// 
 //     --IgnorePreviousTableSize
 // 
 //         When set, ignores any previously-recorded table sizes associated with
@@ -665,6 +686,28 @@ Abstract:
 // 
 //         When present, omits writing a row in the .csv output file if table
 //         creation succeeded for a given keys file.
+// 
+//     --IndexOnly
+// 
+//         When set, affects the generated C files by defining the C preprocessor
+//         macro CPH_INDEX_ONLY, which results in omitting the compiled perfect
+//         hash routines that deal with the underlying table values array (i.e.
+//         any routine other than Index(); e.g. Insert(), Lookup(), Delete() etc),
+//         as well as the array itself.  This results in a size reduction of the
+//         final compiled perfect hash binary.  Additionally, only the .dll and
+//         BenchmarkIndex projects will be built, as the BenchmarkFull and Test
+//         projects require access to a table values array.  This flag is intended
+//         to be used if you only need the Index() routine and will be managing the
+//         table values array independently.
+// 
+//     --UseRwsSectionForTableValues
+// 
+//         When set, tells the linker to use a shared read-write section for the
+//         table values array, e.g.: #pragma comment(linker,"/section:.cphval,rws")
+//         This will result in the table values array being accessible across
+//         multiple processes.  Thus, the array will persist as long as one process
+//         maintains an open section (mapping); i.e. keeps the .dll loaded.
+// 
 // 
 //     --IgnorePreviousTableSize
 // 
@@ -3196,7 +3239,7 @@ Abstract:
 //
 // MessageText:
 //
-// Error preparing C header types file.
+// Error preparing C source table values file.
 //
 #define PH_E_ERROR_DURING_PREPARE_C_HEADER_TYPES_FILE ((HRESULT)0xE0040367L)
 
@@ -3205,7 +3248,7 @@ Abstract:
 //
 // MessageText:
 //
-// Error saving C header types file.
+// Error saving C source table values file.
 //
 #define PH_E_ERROR_DURING_SAVE_C_HEADER_TYPES_FILE ((HRESULT)0xE0040368L)
 
@@ -3214,7 +3257,7 @@ Abstract:
 //
 // MessageText:
 //
-// Error closing C header types file.
+// Error closing C source table values file.
 //
 #define PH_E_ERROR_DURING_CLOSE_C_HEADER_TYPES_FILE ((HRESULT)0xE0040369L)
 
@@ -3226,4 +3269,31 @@ Abstract:
 // Invalid value size in bytes parameter.
 //
 #define PH_E_INVALID_VALUE_SIZE_IN_BYTES_PARAMETER ((HRESULT)0xE004036AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_C_SOURCE_TABLE_VALUES_FILE
+//
+// MessageText:
+//
+// Error preparing C source table values file.
+//
+#define PH_E_ERROR_DURING_PREPARE_C_SOURCE_TABLE_VALUES_FILE ((HRESULT)0xE004036BL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_C_SOURCE_TABLE_VALUES_FILE
+//
+// MessageText:
+//
+// Error saving C source table values file.
+//
+#define PH_E_ERROR_DURING_SAVE_C_SOURCE_TABLE_VALUES_FILE ((HRESULT)0xE004036CL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_C_SOURCE_TABLE_VALUES_FILE
+//
+// MessageText:
+//
+// Error closing C source table values file.
+//
+#define PH_E_ERROR_DURING_CLOSE_C_SOURCE_TABLE_VALUES_FILE ((HRESULT)0xE004036DL)
 

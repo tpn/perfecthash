@@ -57,6 +57,10 @@ PrepareCHeaderTypesFileChm01(
                "Auto-generated.\n//\n\n"
                "#pragma once\n\n");
 
+    if (IsIndexOnly(Table)) {
+        OUTPUT_RAW("#define CPH_INDEX_ONLY 1\n\n");
+    }
+
     //
     // Write the pre glue.
     //

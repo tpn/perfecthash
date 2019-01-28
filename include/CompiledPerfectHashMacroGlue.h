@@ -224,6 +224,18 @@ BenchmarkIndexCompiledPerfectHashTable_##T##(   \
 // End of routine headers.
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef CPH_INDEX_ONLY
+#define CPH_DEFINE_TABLE_ROUTINES(T)                                     \
+CPHAPI COMPILED_PERFECT_HASH_TABLE_INDEX CompiledPerfectHash_##T##_Index
+
+#define CPH_INDEX_ROUTINE(T) CPH_INDEX_ROUTINE_NAME(T)
+#define CPH_INDEX_INLINE_ROUTINE(T) CPH_INDEX_INLINE_ROUTINE_NAME(T)
+
+#define CPH_DEFINE_TEST_AND_BENCHMARKING_ROUTINES(T) \
+extern BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE   \
+    BenchmarkIndexCompiledPerfectHashTable_##T
+
+#else
 #define CPH_DEFINE_TABLE_ROUTINES(T)                                        \
 CPHAPI COMPILED_PERFECT_HASH_TABLE_INDEX CompiledPerfectHash_##T##_Index;   \
 CPHAPI COMPILED_PERFECT_HASH_TABLE_LOOKUP CompiledPerfectHash_##T##_Lookup; \
@@ -249,6 +261,7 @@ extern BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE   \
 #define CPH_LOOKUP_INLINE_ROUTINE(T) CPH_LOOKUP_INLINE_ROUTINE_NAME(T)
 #define CPH_INSERT_INLINE_ROUTINE(T) CPH_INSERT_INLINE_ROUTINE_NAME(T)
 #define CPH_DELETE_INLINE_ROUTINE(T) CPH_DELETE_INLINE_ROUTINE_NAME(T)
+#endif
 
 #define EXPAND_SEED1(U) CPH_SEED1(U)
 #define EXPAND_SEED2(U) CPH_SEED2(U)

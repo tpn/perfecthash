@@ -211,6 +211,19 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        CSourceTableValuesFile,                                            \
+        C_SOURCE_TABLE_VALUES_FILE,                                        \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        SUFFIX(TableValues),                                               \
+        &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         CHeaderSupportFile,                                                \
         C_HEADER_SUPPORT_FILE,                                             \
         EofInitTypeDefault,                                                \

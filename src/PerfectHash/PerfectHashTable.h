@@ -67,6 +67,9 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 
 #define NoFileIo(Table) ((Table)->TableCreateFlags.NoFileIo == TRUE)
 #define IsParanoid(Table) ((Table)->TableCreateFlags.Paranoid == TRUE)
+#define IsIndexOnly(Table) ((Table)->TableCreateFlags.IndexOnly != FALSE)
+#define UseRwsSectionForTableValues(Table) \
+    ((Table)->TableCreateFlags.UseRwsSectionForTableValues != FALSE)
 
 #define WasTableInfoOnDiskHeapAllocated(Table) \
     ((Table)->State.TableInfoOnDiskWasHeapAllocated == TRUE)

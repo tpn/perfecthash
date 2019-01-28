@@ -187,6 +187,20 @@ PrepareVSSolutionFileChm01(
                "MinimumVisualStudioVersion = " MIN_VS_VERSION "\r\n");
 
     //
+    // If we're in index-only mode, the only projects we write are the Dll and
+    // BenchmarkIndex.  (The others require TableValues[] and Insert, Lookup,
+    // and Delete routines.)  Define a helper macro to detect this condition.
+    //
+
+#define MAYBE_SKIP_PROJECT_FILE()                                          \
+    if (IsIndexOnly(Table)) {                                              \
+        if (ProjectFile->FileId != FileVCProjectDllFileId &&               \
+            ProjectFile->FileId != FileVCProjectBenchmarkIndexExeFileId) { \
+            continue;                                                      \
+        }                                                                  \
+    }
+
+    //
     // Write the project definitions.
     //
 
@@ -196,6 +210,18 @@ PrepareVSSolutionFileChm01(
         ProjectGuid = &ProjectFile->Uuid;
         ProjectPath = GetActivePath(ProjectFile);
 
+        //
+        // Sanity check the index/id ordering invariant.
+        //
+
+        if (Index == 0) {
+            ASSERT(ProjectFile->FileId == FileVCProjectTestExeFileId);
+        } else if (Index == 1) {
+            ASSERT(ProjectFile->FileId == FileVCProjectDllFileId);
+        }
+
+        MAYBE_SKIP_PROJECT_FILE();
+
         OUTPUT_RAW("Project(\"{" VCPP_GUID "}\") = \"");
         OUTPUT_STRING(&ProjectPath->BaseNameA);
         OUTPUT_RAW("\", \"");
@@ -203,12 +229,6 @@ PrepareVSSolutionFileChm01(
         OUTPUT_RAW(".vcxproj\", \"{");
         OUTPUT_STRING(ProjectGuid);
         OUTPUT_RAW("}\"\r\n");
-
-        if (Index == 0) {
-            ASSERT(ProjectFile->FileId == FileVCProjectTestExeFileId);
-        } else if (Index == 1) {
-            ASSERT(ProjectFile->FileId == FileVCProjectDllFileId);
-        }
 
         if (ProjectFile->FileId != FileVCProjectDllFileId) {
 
@@ -249,6 +269,10 @@ PrepareVSSolutionFileChm01(
 
     FOR_EACH_CONFIGURATION {
 
+        ProjectFile = VCProjects[Index];
+
+        MAYBE_SKIP_PROJECT_FILE();
+
         OUTPUT_RAW("\t\t");
         OUTPUT_STRING(Config);
         OUTPUT_RAW(" = ");
@@ -270,6 +294,8 @@ PrepareVSSolutionFileChm01(
 
         ProjectFile = VCProjects[Index];
         ProjectGuid = &ProjectFile->Uuid;
+
+        MAYBE_SKIP_PROJECT_FILE();
 
         FOR_EACH_CONFIGURATION {
 
