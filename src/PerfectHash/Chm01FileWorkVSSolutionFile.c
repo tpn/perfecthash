@@ -269,10 +269,6 @@ PrepareVSSolutionFileChm01(
 
     FOR_EACH_CONFIGURATION {
 
-        ProjectFile = VCProjects[Index];
-
-        MAYBE_SKIP_PROJECT_FILE();
-
         OUTPUT_RAW("\t\t");
         OUTPUT_STRING(Config);
         OUTPUT_RAW(" = ");
