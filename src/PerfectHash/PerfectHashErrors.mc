@@ -489,7 +489,7 @@ Console Output Character Legend
     !   The system is out of memory.
 
     L   The system is running low on memory (a low memory event is triggered
-        at about 90% RAM usage).  In certain situations we can detect this
+        at about 90%% RAM usage).  In certain situations we can detect this
         situation prior to actually running out of memory; in these cases,
         we abort the current table creation attempt (which will instantly
         relieve system memory pressure).
@@ -802,7 +802,7 @@ Table Create Parameters:
                 most frequent keys consume the lowest number of cache lines.
                 It is useful in scenarios where the frequency of individual
                 keys being looked up is heavily skewed toward a small subset.
-                For example, if 90% of the lookups occur for 10% of the keys,
+                For example, if 90%% of the lookups occur for 10% of the keys,
                 the fewer cache lines occupied by those keys, the better.
 
             LowestNumberOfPagesUsedByKeysSubset
