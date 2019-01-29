@@ -22,10 +22,29 @@ extern "C" {
 
 #include <sal.h>
 
-#ifndef COMPILED_PERFECT_HASH_DLL_BUILD
+#if defined(COMPILED_PERFECT_HASH_DLL_BUILD)
+#define CPHAPI __declspec(dllexport)
+#elif defined(COMPILED_PERFECT_HASH_EXE_BUILD)
 #define CPHAPI __declspec(dllimport)
 #else
-#define CPHAPI __declspec(dllexport)
+#define CPHAPI
+#endif
+
+#define CPHCALLTYPE __stdcall
+
+#ifdef _M_X64
+
+//
+// Define start/end markers for IACA.
+//
+
+#define IACA_VC_START() __writegsbyte(111, 111)
+#define IACA_VC_END()   __writegsbyte(222, 222)
+
+#endif
+
+#ifndef FORCEINLINE
+#define FORCEINLINE __forceinline
 #endif
 
 //

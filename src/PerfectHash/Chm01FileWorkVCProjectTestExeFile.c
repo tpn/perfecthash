@@ -187,6 +187,7 @@ CHUNK VCProjectTestExeFileChunks[] = {
             "  <ItemDefinitionGroup>\r\n"
             "    <ClCompile>\r\n"
             "      <AdditionalIncludeDirectories>$(ProjectDir)\\..</AdditionalIncludeDirectories>\r\n"
+            "      <PreprocessorDefinitions>COMPILED_PERFECT_HASH_EXE_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>\r\n"
             "      <PrecompiledHeaderFile>"
         ),
     },

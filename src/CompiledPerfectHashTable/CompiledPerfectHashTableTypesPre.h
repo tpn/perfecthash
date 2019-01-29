@@ -1,27 +1,27 @@
 
-//
-// Define start/end markers for IACA.
-//
-
-#define IACA_VC_START() __writegsbyte(111, 111)
-#define IACA_VC_END()   __writegsbyte(222, 222)
+#ifndef BASETYPES
 
 //
-// Define basic NT types and macros used by this header file.
+// Define basic NT types.
 //
-
-#define CPHCALLTYPE __stdcall
-#define FORCEINLINE __forceinline
 
 typedef char BOOLEAN;
 typedef unsigned char BYTE;
 typedef BYTE *PBYTE;
 typedef short SHORT;
+typedef short *PSHORT;
 typedef unsigned short USHORT;
+typedef unsigned short *PUSHORT;
 typedef long LONG;
+typedef long *PLONG;
 typedef long long LONGLONG;
+typedef long long *PLONGLONG;
 typedef unsigned long ULONG;
 typedef unsigned long *PULONG;
 typedef unsigned long long ULONGLONG;
+typedef unsigned long long *PULONGLONG;
 typedef void *PVOID;
 
+#define BASETYPES
+
+#endif
