@@ -15,7 +15,6 @@ DECLARE_INDEX_ROUTINE()
     ULONG Vertex2;
     ULONG MaskedLow;
     ULONG MaskedHigh;
-    ULONGLONG Combined;
     CPHDKEY DownsizedKey;
 
     DownsizedKey = DOWNSIZE_KEY(Key);
@@ -70,9 +69,7 @@ DECLARE_INDEX_ROUTINE()
     Vertex1 = TABLE_DATA[MaskedLow];
     Vertex2 = TABLE_DATA[MaskedHigh];
 
-    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
-
-    Index = Combined & INDEX_MASK;
+    Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
 
     if (((Y + Z) << 4) > Index) {
         return Index;

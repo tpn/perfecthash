@@ -10,7 +10,6 @@ DECLARE_INDEX_ROUTINE()
     CPHDKEY Vertex2;
     CPHDKEY MaskedLow;
     CPHDKEY MaskedHigh;
-    ULONGLONG Combined;
 
     DownsizedKey = DOWNSIZE_KEY(Key);
     A = _mm_crc32_u32(SEED1, DownsizedKey);
@@ -27,9 +26,7 @@ DECLARE_INDEX_ROUTINE()
     Vertex1 = TABLE_DATA[MaskedLow];
     Vertex2 = TABLE_DATA[MaskedHigh];
 
-    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
-
-    Index = Combined & INDEX_MASK;
+    Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
 
     return Index;
 }

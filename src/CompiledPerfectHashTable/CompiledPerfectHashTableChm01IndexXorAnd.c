@@ -24,9 +24,7 @@ DECLARE_INDEX_ROUTINE()
     Vertex1 = TABLE_DATA[MaskedLow];
     Vertex2 = TABLE_DATA[MaskedHigh];
 
-    Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
-
-    Index = Combined & INDEX_MASK;
+    Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
 
     return Index;
 }
