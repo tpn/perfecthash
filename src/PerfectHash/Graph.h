@@ -248,7 +248,10 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     ULONG NumberOfKeysWithVerticesMappingToSameLargePage;
     ULONG NumberOfKeysWithVerticesMappingToSameCacheLine;
 
-    ULONG MaxGraphTraversalDepth;
+    union {
+        ULONG MaxGraphTraversalDepth;
+        ULONG MaxGraphTraversalDepthForKeysSubset;
+    };
 
     //
     // Stores Graph->Attempt at the time the memory coverage was captured.

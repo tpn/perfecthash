@@ -2607,14 +2607,39 @@ IsValidPerfectHashTableCreateParameterId(
 //      registering the best graph, which should give more clarity to the
 //      role of the X-macro.
 //
+// N.B. The following coverage types are intended to generate worst-case hash
+//      tables compared to their best-case counterparts.  They can be useful
+//      during development and performance testing to assess the performance
+//      benefit, if any, of things like reduced cache lines, etc.  The types
+//      follow:
+//
+//          LowestMaxGraphTraversalDepth
+//          LowestMaxGraphTraversalDepthForKeysSubset
+//          LowestNumberOfEmptyPages
+//          LowestNumberOfEmptyLargePages
+//          LowestNumberOfEmptyCacheLines
+//          LowestNumberOfEmptyPagesUsedByKeysSubset
+//          LowestNumberOfEmptyLargePagesUsedByKeysSubset
+//          LowestNumberOfEmptyCacheLinesUsedByKeysSubset
+//          LowestMaxAssignedPerCacheLineCount
+//          LowestMaxAssignedPerCacheLineCountForKeysSubset
+//
 
 #define BEST_COVERAGE_TYPE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(NumberOfEmptyPages, Highest, >)                  \
     ENTRY(NumberOfEmptyLargePages, Highest, >)                   \
     ENTRY(NumberOfEmptyCacheLines, Highest, >)                   \
+    ENTRY(NumberOfEmptyPages, Lowest, <)                         \
+    ENTRY(NumberOfEmptyLargePages, Lowest, <)                    \
+    ENTRY(NumberOfEmptyCacheLines, Lowest, <)                    \
     ENTRY(MaxGraphTraversalDepth, Highest, >)                    \
+    ENTRY(MaxGraphTraversalDepth, Lowest, <)                     \
     ENTRY(MaxAssignedPerCacheLineCount, Highest, >)              \
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
+    ENTRY(MaxAssignedPerCacheLineCount, Lowest, <)               \
+    ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Lowest, <)  \
+    ENTRY(MaxGraphTraversalDepthForKeysSubset, Highest, >)       \
+    ENTRY(MaxGraphTraversalDepthForKeysSubset, Lowest, <)        \
     ENTRY(NumberOfPagesUsedByKeysSubset, Lowest, <)              \
     ENTRY(NumberOfLargePagesUsedByKeysSubset, Lowest, <)         \
     ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)         \
@@ -2667,6 +2692,10 @@ DoesBestCoverageTypeRequireKeysSubset(
     return (
         Type ==
           BestCoverageTypeHighestMaxAssignedPerCacheLineCountForKeysSubsetId ||
+        Type ==
+          BestCoverageTypeLowestMaxAssignedPerCacheLineCountForKeysSubsetId  ||
+        Type == BestCoverageTypeLowestMaxGraphTraversalDepthForKeysSubsetId  ||
+        Type == BestCoverageTypeHighestMaxGraphTraversalDepthForKeysSubsetId ||
         Type == BestCoverageTypeLowestNumberOfPagesUsedByKeysSubsetId        ||
         Type == BestCoverageTypeLowestNumberOfLargePagesUsedByKeysSubsetId   ||
         Type == BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId   ||
