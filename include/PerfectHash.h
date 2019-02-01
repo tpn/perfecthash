@@ -2617,7 +2617,10 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
     ENTRY(NumberOfPagesUsedByKeysSubset, Lowest, <)              \
     ENTRY(NumberOfLargePagesUsedByKeysSubset, Lowest, <)         \
-    LAST_ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)
+    ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)         \
+    ENTRY(NumberOfPagesUsedByKeysSubset, Highest, >)             \
+    ENTRY(NumberOfLargePagesUsedByKeysSubset, Highest, >)        \
+    LAST_ENTRY(NumberOfCacheLinesUsedByKeysSubset, Highest, >)
 
 #define BEST_COVERAGE_TYPE_TABLE_ENTRY(ENTRY) \
     BEST_COVERAGE_TYPE_TABLE(ENTRY, ENTRY, ENTRY)
@@ -2666,7 +2669,10 @@ DoesBestCoverageTypeRequireKeysSubset(
           BestCoverageTypeHighestMaxAssignedPerCacheLineCountForKeysSubsetId ||
         Type == BestCoverageTypeLowestNumberOfPagesUsedByKeysSubsetId        ||
         Type == BestCoverageTypeLowestNumberOfLargePagesUsedByKeysSubsetId   ||
-        Type == BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId
+        Type == BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId   ||
+        Type == BestCoverageTypeHighestNumberOfPagesUsedByKeysSubsetId       ||
+        Type == BestCoverageTypeHighestNumberOfLargePagesUsedByKeysSubsetId  ||
+        Type == BestCoverageTypeHighestNumberOfCacheLinesUsedByKeysSubsetId
     );
 }
 
