@@ -100,9 +100,7 @@ typedef
 VOID
 (NTAPI GRAPH_TRAVERSE)(
     _In_ PGRAPH Graph,
-    _In_ EDGE Edge,
-    _Inout_ PULONG Depth,
-    _Inout_ PULONG MaximumDepth
+    _In_ EDGE Edge
     );
 typedef GRAPH_TRAVERSE *PGRAPH_TRAVERSE;
 extern GRAPH_TRAVERSE GraphTraverse;

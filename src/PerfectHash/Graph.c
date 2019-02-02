@@ -358,6 +358,12 @@ Return Value:
         Graph->MaximumTraversalDepth;
 
     //
+    // Ditto for total traversals.
+    //
+
+    Graph->AssignedMemoryCoverage.TotalGraphTraversals = Graph->TotalTraversals;
+
+    //
     // Register the solved graph.  We can return this result directly.
     //
 
@@ -2123,6 +2129,10 @@ Return Value:
     Graph->Collisions = 0;
     Graph->DeletedEdgeCount = 0;
     Graph->VisitedVerticesCount = 0;
+
+    Graph->TraversalDepth = 0;
+    Graph->TotalTraversals = 0;
+    Graph->MaximumTraversalDepth = 0;
 
     Graph->Flags.Shrinking = FALSE;
     Graph->Flags.IsAcyclic = FALSE;

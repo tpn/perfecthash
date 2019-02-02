@@ -249,6 +249,13 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     ULONG NumberOfKeysWithVerticesMappingToSameCacheLine;
 
     ULONG MaxGraphTraversalDepth;
+    ULONG TotalGraphTraversals;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
 
     //
     // Stores Graph->Attempt at the time the memory coverage was captured.
@@ -908,10 +915,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     GRAPH_VTBL Interface;
 
     //
+    // The current recursive traversal depth during assignment.
+    //
+
+    ULONG TraversalDepth;
+
+    //
     // Maximum recursive traversal depth observed during assignment.
     //
 
     ULONG MaximumTraversalDepth;
+
+    //
+    // Total number of graph traversals performed during assignment.
+    //
+
+    ULONG TotalTraversals;
 
     //
     // Capture the seeds used for each hash function employed by the graph.

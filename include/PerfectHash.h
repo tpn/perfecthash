@@ -2614,6 +2614,7 @@ IsValidPerfectHashTableCreateParameterId(
 //      follow:
 //
 //          LowestMaxGraphTraversalDepth
+//          LowestTotalGraphTraversals
 //          LowestNumberOfEmptyPages
 //          LowestNumberOfEmptyLargePages
 //          LowestNumberOfEmptyCacheLines
@@ -2633,6 +2634,8 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(NumberOfEmptyCacheLines, Lowest, <)                    \
     ENTRY(MaxGraphTraversalDepth, Highest, >)                    \
     ENTRY(MaxGraphTraversalDepth, Lowest, <)                     \
+    ENTRY(TotalGraphTraversals, Highest, >)                      \
+    ENTRY(TotalGraphTraversals, Lowest, <)                       \
     ENTRY(MaxAssignedPerCacheLineCount, Highest, >)              \
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
     ENTRY(MaxAssignedPerCacheLineCount, Lowest, <)               \

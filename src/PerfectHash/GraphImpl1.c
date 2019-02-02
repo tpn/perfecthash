@@ -315,7 +315,6 @@ Return Value:
 {
     PRTL Rtl;
     VERTEX Vertex;
-    ULONG Depth = 0;
     ULONG NumberOfSetBits;
 
     //
@@ -345,7 +344,7 @@ Return Value:
             //
 
             Graph->Assigned[Vertex] = INITIAL_ASSIGNMENT_VALUE;
-            GraphTraverse(Graph, Vertex, &Depth, &Graph->MaximumTraversalDepth);
+            GraphTraverse(Graph, Vertex);
         }
     }
 
@@ -907,9 +906,7 @@ _Use_decl_annotations_
 VOID
 GraphTraverse(
     PGRAPH Graph,
-    VERTEX Vertex,
-    PULONG Depth,
-    PULONG MaximumDepth
+    VERTEX Vertex
     )
 /*++
 
@@ -924,13 +921,6 @@ Arguments:
     Graph - Supplies a pointer to the graph to operate on.
 
     Vertex - Supplies the vertex to traverse.
-
-    Depth - Supplies a pointer to a variable that is used to capture the call
-        stack depth of the recursive graph traversal.  This is incremented
-        on entry and decremented on exit.
-
-    MaximumDepth - Supplies a pointer to a variable that will be used to track
-        the maximum depth observed during recursive graph traversal.
 
 Return Value:
 
@@ -974,12 +964,14 @@ Return Value:
     Table = Graph->Context->Table;
 
     //
-    // Update the depth.
+    // Update the total traversals counter and current traversal depth.  If
+    // the current depth is the deepest we've seen so far, update the maximum.
     //
 
-    *Depth += 1;
-    if (*Depth > *MaximumDepth) {
-        *MaximumDepth = *Depth;
+    Graph->TotalTraversals++;
+    Graph->TraversalDepth++;
+    if (Graph->TraversalDepth > Graph->MaximumTraversalDepth) {
+        Graph->MaximumTraversalDepth = Graph->TraversalDepth;
     }
 
     //
@@ -1054,7 +1046,7 @@ Return Value:
         // Recursively traverse the neighbor.
         //
 
-        GraphTraverse(Graph, Neighbor, Depth, MaximumDepth);
+        GraphTraverse(Graph, Neighbor);
 
     }
 
@@ -1078,7 +1070,7 @@ End:
     // Decrement depth and return.
     //
 
-    *Depth -= 1;
+    Graph->TraversalDepth--;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
