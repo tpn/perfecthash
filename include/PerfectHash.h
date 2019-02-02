@@ -2614,7 +2614,6 @@ IsValidPerfectHashTableCreateParameterId(
 //      follow:
 //
 //          LowestMaxGraphTraversalDepth
-//          LowestMaxGraphTraversalDepthForKeysSubset
 //          LowestNumberOfEmptyPages
 //          LowestNumberOfEmptyLargePages
 //          LowestNumberOfEmptyCacheLines
@@ -2638,8 +2637,6 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
     ENTRY(MaxAssignedPerCacheLineCount, Lowest, <)               \
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Lowest, <)  \
-    ENTRY(MaxGraphTraversalDepthForKeysSubset, Highest, >)       \
-    ENTRY(MaxGraphTraversalDepthForKeysSubset, Lowest, <)        \
     ENTRY(NumberOfPagesUsedByKeysSubset, Lowest, <)              \
     ENTRY(NumberOfLargePagesUsedByKeysSubset, Lowest, <)         \
     ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)         \
@@ -2694,8 +2691,6 @@ DoesBestCoverageTypeRequireKeysSubset(
           BestCoverageTypeHighestMaxAssignedPerCacheLineCountForKeysSubsetId ||
         Type ==
           BestCoverageTypeLowestMaxAssignedPerCacheLineCountForKeysSubsetId  ||
-        Type == BestCoverageTypeLowestMaxGraphTraversalDepthForKeysSubsetId  ||
-        Type == BestCoverageTypeHighestMaxGraphTraversalDepthForKeysSubsetId ||
         Type == BestCoverageTypeLowestNumberOfPagesUsedByKeysSubsetId        ||
         Type == BestCoverageTypeLowestNumberOfLargePagesUsedByKeysSubsetId   ||
         Type == BestCoverageTypeLowestNumberOfCacheLinesUsedByKeysSubsetId   ||
