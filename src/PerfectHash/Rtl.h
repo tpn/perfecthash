@@ -2220,99 +2220,223 @@ typedef struct _RTL_VTBL {
 typedef RTL_VTBL *PRTL_VTBL;
 
 //
-// N.B. Keep the function names and function pointers in sync; they need to
-//      be identical in order for LoadSymbols() to work.
+// Define the RTL_FUNCTION_TABLE X-macro.  Each macro receives (Upper, Name)
+// as its parameters, where Upper represents the pointer type name (excluding
+// the leading 'P'), and name is the capitalized name of the function, e.g.:
 //
-//      (We should probably convert this to use the X-macro style we've started
-//       employing elsewhere.)
+//      (RTL_INITIALIZE_BITMAP, RtlInitializeBitmap)
 //
 
-#define _RTL_FUNCTION_NAMES_HEAD      \
-    "RtlInitializeBitMap",            \
-    "RtlClearBit",                    \
-    "RtlSetBit",                      \
-    "RtlTestBit",                     \
-    "RtlClearAllBits",                \
-    "RtlSetAllBits",                  \
-    "RtlFindClearBits",               \
-    "RtlFindSetBits",                 \
-    "RtlFindClearBitsAndSet",         \
-    "RtlFindSetBitsAndClear",         \
-    "RtlClearBits",                   \
-    "RtlSetBits",                     \
-    "RtlFindClearRuns",               \
-    "RtlFindLongestRunClear",         \
-    "RtlNumberOfClearBits",           \
-    "RtlNumberOfSetBits",             \
-    "RtlAreBitsClear",                \
-    "RtlAreBitsSet",                  \
-    "RtlFindNextForwardRunClear",     \
-    "RtlFindLastBackwardRunClear",    \
-    "RtlCopyMemory",                  \
-    "RtlMoveMemory",                  \
-    "RtlFillMemory",                  \
-    "RtlCompareMemory",               \
-    "RtlFirstEntrySList",             \
-    "RtlCharToInteger",               \
-    "RtlIntegerToChar",               \
-    "RtlUnicodeStringToInteger",      \
-    "RtlEqualUnicodeString",          \
-    "RtlPrefixUnicodeString",         \
-    "RtlAppendUnicodeStringToString", \
-    "CryptBinaryToStringA",           \
-    "CryptBinaryToStringW",           \
-    "bsearch",                        \
-    "__C_specific_handler",           \
-    "_wsplitpath_s",                  \
-    "sprintf_s",                      \
-    "swprintf_s",                     \
-    "vsprintf_s",                     \
-    "vswprintf_s"
+#define RTL_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                           \
+    FIRST_ENTRY(                                           \
+        RTL_INITIALIZE_BITMAP,                             \
+        RtlInitializeBitMap                                \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_CLEAR_BIT,                                     \
+        RtlClearBit                                        \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_SET_BIT,                                       \
+        RtlSetBit                                          \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_TEST_BIT,                                      \
+        RtlTestBit                                         \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_CLEAR_ALL_BITS,                                \
+        RtlClearAllBits                                    \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_SET_ALL_BITS,                                  \
+        RtlSetAllBits                                      \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_CLEAR_BITS,                               \
+        RtlFindClearBits                                   \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_SET_BITS,                                 \
+        RtlFindSetBits                                     \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_CLEAR_BITS_AND_SET,                       \
+        RtlFindClearBitsAndSet                             \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_SET_BITS_AND_CLEAR,                       \
+        RtlFindSetBitsAndClear                             \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_CLEAR_BITS,                                    \
+        RtlClearBits                                       \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_SET_BITS,                                      \
+        RtlSetBits                                         \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_CLEAR_RUNS,                               \
+        RtlFindClearRuns                                   \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_LONGEST_RUN_CLEAR,                        \
+        RtlFindLongestRunClear                             \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_NUMBER_OF_CLEAR_BITS,                          \
+        RtlNumberOfClearBits                               \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_NUMBER_OF_SET_BITS,                            \
+        RtlNumberOfSetBits                                 \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_ARE_BITS_CLEAR,                                \
+        RtlAreBitsClear                                    \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_ARE_BITS_SET,                                  \
+        RtlAreBitsSet                                      \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_NEXT_FORWARD_RUN_CLEAR,                   \
+        RtlFindNextForwardRunClear                         \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIND_LAST_BACKWARD_RUN_CLEAR,                  \
+        RtlFindLastBackwardRunClear                        \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_COPY_MEMORY,                                   \
+        RtlCopyMemory                                      \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_MOVE_MEMORY,                                   \
+        RtlMoveMemory                                      \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FILL_MEMORY,                                   \
+        RtlFillMemory                                      \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_COMPARE_MEMORY,                                \
+        RtlCompareMemory                                   \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_FIRST_ENTRY_SLIST,                             \
+        RtlFirstEntrySList                                 \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_CHAR_TO_INTEGER,                               \
+        RtlCharToInteger                                   \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_INTEGER_TO_CHAR,                               \
+        RtlIntegerToChar                                   \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_UNICODE_STRING_TO_INTEGER,                     \
+        RtlUnicodeStringToInteger                          \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_EQUAL_UNICODE_STRING,                          \
+        RtlEqualUnicodeString                              \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_PREFIX_UNICODE_STRING,                         \
+        RtlPrefixUnicodeString                             \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_APPEND_UNICODE_STRING_TO_STRING,               \
+        RtlAppendUnicodeStringToString                     \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        CRYPT_BINARY_TO_STRING_A,                          \
+        CryptBinaryToStringA                               \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        CRYPT_BINARY_TO_STRING_W,                          \
+        CryptBinaryToStringW                               \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        BSEARCH,                                           \
+        bsearch                                            \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        __C_SPECIFIC_HANDLER,                              \
+        __C_specific_handler                               \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        _WSPLITPATH_S,                                     \
+        _wsplitpath_s                                      \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        SPRINTF_S,                                         \
+        sprintf_s                                          \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        SWPRINTF_S,                                        \
+        swprintf_s                                         \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        VSPRINTF_S,                                        \
+        vsprintf_s                                         \
+    )                                                      \
+                                                           \
+    LAST_ENTRY(                                            \
+        VSWPRINTF_S,                                       \
+        vswprintf_s                                        \
+    )
 
-#define _RTL_FUNCTIONS_HEAD                                              \
-    PRTL_INITIALIZE_BITMAP RtlInitializeBitMap;                          \
-    PRTL_CLEAR_BIT RtlClearBit;                                          \
-    PRTL_SET_BIT RtlSetBit;                                              \
-    PRTL_TEST_BIT RtlTestBit;                                            \
-    PRTL_CLEAR_ALL_BITS RtlClearAllBits;                                 \
-    PRTL_SET_ALL_BITS RtlSetAllBits;                                     \
-    PRTL_FIND_CLEAR_BITS RtlFindClearBits;                               \
-    PRTL_FIND_SET_BITS RtlFindSetBits;                                   \
-    PRTL_FIND_CLEAR_BITS_AND_SET RtlFindClearBitsAndSet;                 \
-    PRTL_FIND_SET_BITS_AND_CLEAR RtlFindSetBitsAndClear;                 \
-    PRTL_CLEAR_BITS RtlClearBits;                                        \
-    PRTL_SET_BITS RtlSetBits;                                            \
-    PRTL_FIND_CLEAR_RUNS RtlFindClearRuns;                               \
-    PRTL_FIND_LONGEST_RUN_CLEAR RtlFindLongestRunClear;                  \
-    PRTL_NUMBER_OF_CLEAR_BITS RtlNumberOfClearBits;                      \
-    PRTL_NUMBER_OF_SET_BITS RtlNumberOfSetBits;                          \
-    PRTL_ARE_BITS_CLEAR RtlAreBitsClear;                                 \
-    PRTL_ARE_BITS_SET RtlAreBitsSet;                                     \
-    PRTL_FIND_NEXT_FORWARD_RUN_CLEAR RtlFindNextForwardRunClear;         \
-    PRTL_FIND_LAST_BACKWARD_RUN_CLEAR RtlFindLastBackwardRunClear;       \
-    PRTL_COPY_MEMORY RtlCopyMemory;                                      \
-    PRTL_MOVE_MEMORY RtlMoveMemory;                                      \
-    PRTL_FILL_MEMORY RtlFillMemory;                                      \
-    PRTL_COMPARE_MEMORY RtlCompareMemory;                                \
-    PRTL_FIRST_ENTRY_SLIST RtlFirstEntrySList;                           \
-    PRTL_CHAR_TO_INTEGER RtlCharToInteger;                               \
-    PRTL_INTEGER_TO_CHAR RtlIntegerToChar;                               \
-    PRTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;            \
-    PRTL_EQUAL_UNICODE_STRING RtlEqualUnicodeString;                     \
-    PRTL_PREFIX_UNICODE_STRING RtlPrefixUnicodeString;                   \
-    PRTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString; \
-    PCRYPT_BINARY_TO_STRING_A CryptBinaryToStringA;                      \
-    PCRYPT_BINARY_TO_STRING_W CryptBinaryToStringW;                      \
-    PBSEARCH bsearch;                                                    \
-    P__C_SPECIFIC_HANDLER __C_specific_handler;                          \
-    P_WSPLITPATH_S _wsplitpath_s;                                        \
-    PSPRINTF_S sprintf_s;                                                \
-    PSWPRINTF_S swprintf_s;                                              \
-    PVSPRINTF_S vsprintf_s;                                              \
-    PVSWPRINTF_S vswprintf_s
+#define RTL_FUNCTION_TABLE_ENTRY(ENTRY) \
+    RTL_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_RTL_FUNCTION_STRUCT(Upper, Name) \
+    P##Upper Name;
 
 typedef struct _RTL_FUNCTIONS {
-    _RTL_FUNCTIONS_HEAD;
+    RTL_FUNCTION_TABLE_ENTRY(EXPAND_AS_RTL_FUNCTION_STRUCT)
 } RTL_FUNCTIONS;
 
 DEFINE_UNUSED_STATE(RTL);
@@ -2377,9 +2501,15 @@ typedef struct _RTL {
     ULONG Padding2;
 
     union {
+
+        //
+        // Inline the Rtl functions for convenience.
+        //
+
         struct {
-            _RTL_FUNCTIONS_HEAD;
+            RTL_FUNCTION_TABLE_ENTRY(EXPAND_AS_RTL_FUNCTION_STRUCT)
         };
+
         RTL_FUNCTIONS RtlFunctions;
     };
 

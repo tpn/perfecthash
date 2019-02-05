@@ -22,8 +22,11 @@ Abstract:
 extern LOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
 extern SET_C_SPECIFIC_HANDLER SetCSpecificHandler;
 
+#define EXPAND_AS_RTL_FUNCTION_NAME(Upper, Name) \
+    #Name,
+
 const PCSTR RtlFunctionNames[] = {
-    _RTL_FUNCTION_NAMES_HEAD
+    RTL_FUNCTION_TABLE_ENTRY(EXPAND_AS_RTL_FUNCTION_NAME)
 };
 #define Names RtlFunctionNames
 
