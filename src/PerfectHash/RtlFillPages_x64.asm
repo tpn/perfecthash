@@ -2,7 +2,7 @@
 
 ;++
 ;
-; Copyright (c) 2017 Trent Nelson <trent@trent.me>
+; Copyright (c) 2017-2019 Trent Nelson <trent@trent.me>
 ;
 ; Module Name:
 ;
@@ -133,6 +133,124 @@ Fpx80:  sfence
 Fpx90:  ret
 
         LEAF_END RtlFillPagesNonTemporalAvx2_v1, _TEXT$00
+
+;++
+;
+; VOID
+; RtlFillPagesAvx2_v1(
+;     _In_ PRTL Rtl,
+;     _Out_writes_bytes_all_(NumberOfPages << PAGE_SHIFT) PCHAR Dest,
+;     _In_ BYTE Byte,
+;     _In_ ULONG NumberOfPages
+;     );
+;
+; Routine Description:
+;
+;   This routine fills one or more pages of memory with a given byte pattern.
+;   Non-temporal hints are not used.
+;
+; Arguments:
+;
+;   Rtl (rcx) - Supplies a pointer to an RTL instance.  Unused.
+;
+;   Destination (rdx) - Supplies the address of the target memory.
+;
+;   Byte (r8) - Supplies the byte to fill the pages of memory with.
+;
+;   NumberOfPages (r9) - Supplies the number of pages to copy.
+;
+; Return Value:
+;
+;   S_OK.
+;
+;--
+
+        LEAF_ENTRY RtlFillPagesAvx2_v1, _TEXT$00
+
+;
+; Verify the NumberOfPages is greater than zero.
+
+
+        test    r9, r9                      ; Test NumberOfPages against self.
+        jz      short Fpy05                 ; Number of pages is 0, return.
+        jmp     short Fpy06                 ; Number of pages >= 1, continue.
+
+Fpy05:  ret
+
+;
+; Broadcast the byte value in r8 to a YMM register (by way of an XMM reg).
+;
+
+Fpy06:  movd            xmm0, r8
+        vpbroadcastb    ymm1, xmm0
+
+;
+; This routine uses the following pattern for processing pages (inspired by
+; KeCopyPage()): initialize a counter to -PAGE_SIZE, add PAGE_SIZE to both
+; pointer targets, use [<base_reg> + <counter_reg> + constant * 0..3] for the
+; four successive prefetch/load/store instructions.
+;
+; Thus, we move -PAGE_SIZE (0xffffffff`fffff000) to r10 once, up front.  When
+; we advance the rdx destination pointer, we sub r10 from each value, and before
+; entering each loop, we reset rax to r10, then increment it until it hits zero.
+; Thus, the two instructions after the mov r10 line below can be seen at
+; multiple points in this routine.
+;
+; See also: CopyPages implementations.
+;
+
+Fpy07:  mov     r10, -PAGE_SIZE
+        sub     rdx, r10                    ; Add page size to Destination ptr.
+        mov     rax, r10                    ; Initialize counter register.
+
+;
+; Copy the YMM byte register into the destination memory a page at a time.
+;
+
+        align   16
+
+Fpy10:  vmovdqa ymmword ptr [rdx + rax + 32 * 0], ymm1     ; Fill   0 -  31.
+        vmovdqa ymmword ptr [rdx + rax + 32 * 1], ymm1     ; Fill  32 -  63.
+        vmovdqa ymmword ptr [rdx + rax + 32 * 2], ymm1     ; Fill  64 -  95.
+        vmovdqa ymmword ptr [rdx + rax + 32 * 3], ymm1     ; Fill  96 - 127.
+
+;
+; Increment the rax counter; multiply the number of registers in flight (4)
+; by the register size (32 bytes).  Jump back to the start of the copy loop
+; if we haven't filled 4096 bytes yet.
+;
+
+        add     rax, 32 * 4             ; Increment counter register.
+        jnz     short Fpy10             ; Repeat copy whilst bytes copied != 4k.
+
+;
+; Decrement our NumberOfPages counter (r9).  If zero, we've filled all pages,
+; and can jump to the end (Fpy80).
+;
+
+        sub     r9, 1                       ; --NumberOfPages.
+        jz      short Fpy80                 ; No more pages, finalize.
+
+;
+; There are pages remaining.  Update our destination pointer by a page size
+; again, and initialize rax to -PAGE_SIZE, then jump back to the start.
+;
+
+        sub     rdx, r10                    ; Add page size to Destination ptr.
+        mov     rax, r10                    ; Reinitialize counter register.
+        jmp     short Fpy10                 ; Jump back to start.
+
+;
+; Force a memory barrier and return.
+;
+
+Fpy80:  sfence
+
+        xor     rax, rax                    ; rax = S_OK
+Fpy90:  ret
+
+        LEAF_END RtlFillPagesAvx2_v1, _TEXT$00
+
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=masm fo=croql comments=\:;           :
 

@@ -2595,8 +2595,11 @@ extern RTL_COPY_PAGES RtlCopyPages;
 extern RTL_FILL_PAGES RtlFillPages;
 
 #if defined(_M_AMD64) || defined(_M_X64)
+extern BOOLEAN CanWeUseAvx2(VOID);
 extern RTL_COPY_PAGES RtlCopyPagesNonTemporalAvx2_v1;
 extern RTL_FILL_PAGES RtlFillPagesNonTemporalAvx2_v1;
+extern RTL_COPY_PAGES RtlCopyPagesAvx2_v1;
+extern RTL_FILL_PAGES RtlFillPagesAvx2_v1;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

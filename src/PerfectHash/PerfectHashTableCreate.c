@@ -281,6 +281,20 @@ Return Value:
     Table->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
 
     //
+    // Enable non-temporal AVX2 routines here if requested.  This is a bit
+    // hacky, as we're fiddling with vtbl pointers in Rtl which we really
+    // shouldn't have visibility into; but eh, it works and won't break
+    // anything.
+    //
+
+#if defined(_M_AMD64) || defined(_M_X64)
+    if (UseNonTemporalAvx2Routines(Table) && CanWeUseAvx2()) {
+        Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporalAvx2_v1;
+        Rtl->Vtbl->FillPages = RtlFillPagesNonTemporalAvx2_v1;
+    }
+#endif
+
+    //
     // Our main enumeration IDs get replicated in both structures.
     //
 

@@ -396,6 +396,11 @@ Abstract:
 //         multiple processes.  Thus, the array will persist as long as one process
 //         maintains an open section (mapping); i.e. keeps the .dll loaded.
 // 
+//     --UseNonTemporalAvx2Routines
+// 
+//         When set, uses implementations of RtlCopyPages and RtlFillPages that
+//         use non-temporal hints.
+// 
 //     --IgnorePreviousTableSize
 // 
 //         When set, ignores any previously-recorded table sizes associated with
@@ -708,6 +713,10 @@ Abstract:
 //         multiple processes.  Thus, the array will persist as long as one process
 //         maintains an open section (mapping); i.e. keeps the .dll loaded.
 // 
+//     --UseNonTemporalAvx2Routines
+// 
+//         When set, uses implementations of RtlCopyPages and RtlFillPages that
+//         use non-temporal hints.
 // 
 //     --IgnorePreviousTableSize
 // 

@@ -275,8 +275,8 @@ RtlInitialize(
 
 #if defined(_M_AMD64) || defined(_M_X64)
     if (CanWeUseAvx2()) {
-        Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporalAvx2_v1;
-        Rtl->Vtbl->FillPages = RtlFillPagesNonTemporalAvx2_v1;
+        Rtl->Vtbl->CopyPages = RtlCopyPagesAvx2_v1;
+        Rtl->Vtbl->FillPages = RtlFillPagesAvx2_v1;
     }
 #endif
 

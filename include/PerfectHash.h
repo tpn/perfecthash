@@ -2402,10 +2402,19 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG UseRwsSectionForTableValues:1;
 
         //
+        // When set, uses implementations of RtlCopyPages and RtlFillPages that
+        // use non-temporal hints.  Only applies when running on AMD64.  See
+        // ../src/PerfectHash/RtlCopyPages_x64.asm and RtlFillPages_x64.asm for
+        // more info.
+        //
+
+        ULONG UseNonTemporalAvx2Routines:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:14;
+        ULONG Unused:13;
     };
 
     LONG AsLong;

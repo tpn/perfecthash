@@ -2,7 +2,7 @@
 
 ;++
 ;
-; Copyright (c) 2017 Trent Nelson <trent@trent.me>
+; Copyright (c) 2017-2019 Trent Nelson <trent@trent.me>
 ;
 ; Module Name:
 ;
@@ -11,9 +11,7 @@
 ; Abstract:
 ;
 ;   This module implements various routines for copying pages of memory for
-;   AMD64/x64 architecture.  Currently, a single implementation is provided
-;   for AVX2.
-;
+;   AMD64/x64 architecture.
 ;
 ;--
 
@@ -157,6 +155,128 @@ Cpa80:  sfence
 Cpa90:  ret
 
         LEAF_END RtlCopyPagesNonTemporalAvx2_v1, _TEXT$00
+
+;++
+;
+; HRESULT
+; RtlCopyPagesAvx2_v1(
+;     _In_ PRTL Rtl,
+;     _In_ PCHAR Destination,
+;     _In_ PCHAR Source,
+;     _In_ ULONG NumberOfPages
+;     );
+;
+; Routine Description:
+;
+;   This routine copies one or more pages of memory using AVX2 instructions.
+;   It does not use non-temporal hints.
+;
+; Arguments:
+;
+;   Rtl (rcx) - Supplies a pointer to an RTL instance.  Unused.
+;
+;   Destination (rdx) - Supplies the address of the target memory.
+;
+;   Source (r8) - Supplies the address of the source memory.
+;
+;   NumberOfPages (r9) - Supplies the number of pages to copy.
+;
+; Return Value:
+;
+;   S_OK.
+;
+;--
+
+        LEAF_ENTRY RtlCopyPagesAvx2_v1, _TEXT$00
+
+;
+; Verify the NumberOfPages is greater than zero.
+;
+
+        test    r9, r9                      ; Test NumberOfPages against self.
+        jz      short Cpb05                 ; Number of pages is 0, return.
+        jmp     short Cpb07                 ; Number of pages >= 1, continue.
+
+Cpb05:  ret
+
+;
+; This routine uses the following pattern for processing pages (inspired by
+; KeCopyPage()): initialize a counter to -PAGE_SIZE, add PAGE_SIZE to both
+; pointer targets, use [<base_reg> + <counter_reg> + constant * 0..3] for the
+; four successive prefetch/load/store instructions.
+;
+; Thus, we move -PAGE_SIZE (0xffffffff`fffff000) to r10 once, up front.  When
+; we advance the rdx and r8 destination and source pointers, we sub r10 from
+; each value, and before entering each loop, we reset rax to r10, then increment
+; it until it hits zero.  Thus, the three instructions after the mov r10 line
+; below can be seen at multiple points in this routine.
+;
+
+Cpb07:  mov     r10, -PAGE_SIZE
+        mov     r11, 128
+        sub     rdx, r10                    ; Add page size to Destination ptr.
+        sub     r8, r10                     ; Add page size to Source ptr.
+        mov     rax, r10                    ; Initialize counter register.
+        jmp     Cpb10                       ; Jump over the nop.
+
+        align   16
+
+Cpb10:  prefetchnta [r8 + rax + 64 * 0]    ; Prefetch   0 -  63 bytes.
+        prefetchnta [r8 + rax + 64 * 1]    ; Prefetch  64 - 127 bytes.
+
+        vmovdqa   ymm0, ymmword ptr [r8 + rax + 32 * 0]  ; Load   0 -  31.
+        vmovdqa   ymm1, ymmword ptr [r8 + rax + 32 * 1]  ; Load  32 -  63.
+        vmovdqa   ymm2, ymmword ptr [r8 + rax + 32 * 2]  ; Load  64 -  95.
+        vmovdqa   ymm3, ymmword ptr [r8 + rax + 32 * 3]  ; Load  96 - 127.
+
+;
+; Copy the source data in YMM registers to the destination address.
+;
+
+        vmovdqa ymmword ptr [rdx + rax + 32 * 0], ymm0     ; Copy  0 -  31.
+        vmovdqa ymmword ptr [rdx + rax + 32 * 1], ymm1     ; Copy 32 -  63.
+        vmovdqa ymmword ptr [rdx + rax + 32 * 2], ymm2     ; Copy 64 -  95.
+        vmovdqa ymmword ptr [rdx + rax + 32 * 3], ymm3     ; Copy 96 - 127.
+
+;
+; Increment the rax counter; multiply the number of registers in flight (4)
+; by the register size (32 bytes).  Jump back to the start of the copy loop
+; if we haven't copied 4096 bytes yet.
+;
+
+        add     rax, r11                ; Increment counter register.
+        jnz     short Cpb10             ; Repeat copy whilst bytes copied != 4k.
+
+;
+; Decrement our NumberOfPages counter (r9).  If zero, we've copied all pages,
+; and can jump to the end (Cpb80).
+;
+
+        sub     r9, 1                       ; --NumberOfPages.
+        jz      short Cpb80                 ; No more pages, finalize.
+
+;
+; There are pages remaining.  Update our destination and source pointers by
+; a page size again, and initialize rax to -PAGE_SIZE, then jump back to the
+; start where we prefetch the next page.
+;
+
+        sub     rdx, r10                    ; Add page size to Destination ptr.
+        sub     r8, r10                     ; Add page size to Source ptr.
+        mov     rax, r10                    ; Reinitialize counter register.
+        jmp     short Cpb10                 ; Jump back to start.
+
+;
+; Force a memory barrier and return.
+;
+
+Cpb80:  sfence
+
+        xor     rax, rax                    ; rax = S_OK
+Cpb90:  ret
+
+        LEAF_END RtlCopyPagesAvx2_v1, _TEXT$00
+
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=masm fo=croql comments=\:;           :
 

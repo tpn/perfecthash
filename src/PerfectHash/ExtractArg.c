@@ -150,6 +150,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(OmitCsvRowIfTableCreateSucceeded);
     DECL_ARG(IndexOnly);
     DECL_ARG(UseRwsSectionForTableValues);
+    DECL_ARG(UseNonTemporalAvx2Routines);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -185,6 +186,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(OmitCsvRowIfTableCreateSucceeded);
     SET_FLAG_AND_RETURN_IF_EQUAL(IndexOnly);
     SET_FLAG_AND_RETURN_IF_EQUAL(UseRwsSectionForTableValues);
+    SET_FLAG_AND_RETURN_IF_EQUAL(UseNonTemporalAvx2Routines);
 
     return S_FALSE;
 }

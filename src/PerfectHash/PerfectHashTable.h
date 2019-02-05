@@ -71,6 +71,9 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 #define UseRwsSectionForTableValues(Table) \
     ((Table)->TableCreateFlags.UseRwsSectionForTableValues != FALSE)
 
+#define UseNonTemporalAvx2Routines(Table) \
+    ((Table)->TableCreateFlags.UseNonTemporalAvx2Routines != FALSE)
+
 #define WasTableInfoOnDiskHeapAllocated(Table) \
     ((Table)->State.TableInfoOnDiskWasHeapAllocated == TRUE)
 
