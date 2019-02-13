@@ -48,6 +48,26 @@ Keys Load Flags:
         the keys are sorted, specifying this flag can provide a speedup when
         loading large key sets.
 
+    --DisableImplicitKeyDownsizing
+
+        When loading keys that are 64-bit (8 bytes), a bitmap is kept that
+        tracks whether or not a given bit was seen across the entire key set.
+        After enumerating the set, the number of zeros in the bitmap are
+        counted; if this number is less than or equal to 32, it means that the
+        entire key set can be compressed into 32-bit values with some parallel
+        bit extraction logic (i.e. _pext_u64()).  As this has beneficial size
+        and performance implications, when detected, the key load operation will
+        implicitly heap-allocate another array and convert all the 64-bit keys
+        into their unique 32-bit equivalent.  Specifying this flag will disable
+        this behavior.
+
+    --TryInferKeySizeFromKeysFilename
+
+        The default key size is 32-bit (4 bytes).  When this flag is present,
+        if the keys file name ends with "64.keys" (e.g. "foo64.keys"), the key
+        size will be interpreted as 64-bit (8 bytes).  This flag takes
+        precedence over the table create parameter --KeySizeInBytes.
+
 Table Create Flags:
 
     --Silent
@@ -79,7 +99,7 @@ Table Create Flags:
 
             Requires the following two table create parameters to be present:
 
-                --BestCoverageNumAttempts=N
+                --BestCoverageAttempts=N
                 --BestCoverageType=<CoverageType>
 
             The table create routine will then run until it finds the number of
@@ -103,6 +123,42 @@ Table Create Flags:
         When set, skips the internal graph verification check that ensures a
         valid perfect hash solution has been found (i.e. with no collisions
         across the entire key set).
+
+    --OmitCsvRowIfTableCreateFailed
+
+        When present, omits writing a row in the .csv output file if table
+        creation fails for a given keys file.
+
+    --OmitCsvRowIfTableCreateSucceeded
+
+        When present, omits writing a row in the .csv output file if table
+        creation succeeded for a given keys file.
+
+    --IndexOnly
+
+        When set, affects the generated C files by defining the C preprocessor
+        macro CPH_INDEX_ONLY, which results in omitting the compiled perfect
+        hash routines that deal with the underlying table values array (i.e.
+        any routine other than Index(); e.g. Insert(), Lookup(), Delete() etc),
+        as well as the array itself.  This results in a size reduction of the
+        final compiled perfect hash binary.  Additionally, only the .dll and
+        BenchmarkIndex projects will be built, as the BenchmarkFull and Test
+        projects require access to a table values array.  This flag is intended
+        to be used if you only need the Index() routine and will be managing the
+        table values array independently.
+
+    --UseRwsSectionForTableValues
+
+        When set, tells the linker to use a shared read-write section for the
+        table values array, e.g.: #pragma comment(linker,"/section:.cphval,rws")
+        This will result in the table values array being accessible across
+        multiple processes.  Thus, the array will persist as long as one process
+        maintains an open section (mapping); i.e. keeps the .dll loaded.
+
+    --UseNonTemporalAvx2Routines
+
+        When set, uses implementations of RtlCopyPages and RtlFillPages that
+        use non-temporal hints.
 
     --IgnorePreviousTableSize
 
@@ -184,12 +240,16 @@ Table Compile Flags:
 
 Table Create Parameters:
 
+    --ValueSizeInBytes=4|8
+
+        Sets the size, in bytes, of the value element that will be stored in the
+        compiled perfect hash table via Insert().  Defaults to 4 bytes (ULONG).
+
     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
 
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
-
 
     --AttemptsBeforeTableResize=N [default = 18]
 
@@ -201,7 +261,7 @@ Table Create Parameters:
 
         Maximum number of table resizes that will be permitted before giving up.
 
-    --BestCoverageNumAttempts=N
+    --BestCoverageAttempts=N
 
         Where N is a positive integer, and represents the number of attempts
         that will be made at finding a "best" graph (based on the best coverage
@@ -261,6 +321,47 @@ Console Output Character Legend
     S   A shutdown event was received.  This shouldn't be seen unless externally
         signaling the named shutdown event associated with a context.
 
+Algorithms:
+
+   ID | Name
+    1   Chm01
+
+Hash Functions:
+
+   ID | Name (Number of Seeds)
+    1   Crc32Rotate15 (2)
+    2   Jenkins (2)
+    3   JenkinsMod (2)
+    4   RotateXor (4)
+    5   AddSubXor (4)
+    6   Xor (2)
+    7   Scratch (4)
+    8   Crc32RotateXor (3)
+    9   Crc32 (2)
+   10   Djb (2)
+   11   DjbXor (2)
+   12   Fnv (2)
+   13   Crc32Not (2)
+   14   Crc32RotateX (3)
+   15   Crc32RotateXY (3)
+   16   Crc32RotateWXYZ (3)
+
+N.B. The lowest latency hash functions with good solving ability, in order of
+     ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
+     You should try these hash functions first and see if a solution can be
+     found without a table resize occurring.  Failing that, the Jenkins routine
+     has been observed to be the least likely to require a table resize on a
+     given key set -- however, it does have the highest latency of all the
+     hash functions above (anywhere from 7x-10x the latency of Crc32RotateX).
+
+     (The difference in latency between the X, XY and WXYZ functions is minimal;
+      only a few cycles.)
+
+Mask Functions:
+
+  ID | Name
+   1   Modulus (does not work!)
+   2   And
 
 ```
 
@@ -289,6 +390,26 @@ Keys Load Flags:
         they are sorted, and b) constructs a keys bitmap.  If you can be certain
         the keys are sorted, specifying this flag can provide a speedup when
         loading large key sets.
+
+    --DisableImplicitKeyDownsizing
+
+        When loading keys that are 64-bit (8 bytes), a bitmap is kept that
+        tracks whether or not a given bit was seen across the entire key set.
+        After enumerating the set, the number of zeros in the bitmap are
+        counted; if this number is less than or equal to 32, it means that the
+        entire key set can be compressed into 32-bit values with some parallel
+        bit extraction logic (i.e. _pext_u64()).  As this has beneficial size
+        and performance implications, when detected, the key load operation will
+        implicitly heap-allocate another array and convert all the 64-bit keys
+        into their unique 32-bit equivalent.  Specifying this flag will disable
+        this behavior.
+
+    --TryInferKeySizeFromKeysFilename
+
+        The default key size is 32-bit (4 bytes).  When this flag is present,
+        if the keys file name ends with "64.keys" (e.g. "foo64.keys"), the key
+        size will be interpreted as 64-bit (8 bytes).  This flag takes
+        precedence over the table create parameter --KeySizeInBytes.
 
 Table Create Flags:
 
@@ -329,7 +450,7 @@ Table Create Flags:
 
             Requires the following two table create parameters to be present:
 
-                --BestCoverageNumAttempts=N
+                --BestCoverageAttempts=N
                 --BestCoverageType=<CoverageType>
 
             The table create routine will then run until it finds the number of
@@ -353,6 +474,42 @@ Table Create Flags:
         When set, skips the internal graph verification check that ensures a
         valid perfect hash solution has been found (i.e. with no collisions
         across the entire key set).
+
+    --OmitCsvRowIfTableCreateFailed
+
+        When present, omits writing a row in the .csv output file if table
+        creation fails for a given keys file.
+
+    --OmitCsvRowIfTableCreateSucceeded
+
+        When present, omits writing a row in the .csv output file if table
+        creation succeeded for a given keys file.
+
+    --IndexOnly
+
+        When set, affects the generated C files by defining the C preprocessor
+        macro CPH_INDEX_ONLY, which results in omitting the compiled perfect
+        hash routines that deal with the underlying table values array (i.e.
+        any routine other than Index(); e.g. Insert(), Lookup(), Delete() etc),
+        as well as the array itself.  This results in a size reduction of the
+        final compiled perfect hash binary.  Additionally, only the .dll and
+        BenchmarkIndex projects will be built, as the BenchmarkFull and Test
+        projects require access to a table values array.  This flag is intended
+        to be used if you only need the Index() routine and will be managing the
+        table values array independently.
+
+    --UseRwsSectionForTableValues
+
+        When set, tells the linker to use a shared read-write section for the
+        table values array, e.g.: #pragma comment(linker,"/section:.cphval,rws")
+        This will result in the table values array being accessible across
+        multiple processes.  Thus, the array will persist as long as one process
+        maintains an open section (mapping); i.e. keeps the .dll loaded.
+
+    --UseNonTemporalAvx2Routines
+
+        When set, uses implementations of RtlCopyPages and RtlFillPages that
+        use non-temporal hints.
 
     --IgnorePreviousTableSize
 
@@ -434,6 +591,11 @@ Table Compile Flags:
 
 Table Create Parameters:
 
+    --ValueSizeInBytes=4|8
+
+        Sets the size, in bytes, of the value element that will be stored in the
+        compiled perfect hash table via Insert().  Defaults to 4 bytes (ULONG).
+
     --MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
     --FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
 
@@ -450,7 +612,7 @@ Table Create Parameters:
 
         Maximum number of table resizes that will be permitted before giving up.
 
-    --BestCoverageNumAttempts=N
+    --BestCoverageAttempts=N
 
         Where N is a positive integer, and represents the number of attempts
         that will be made at finding a "best" graph (based on the best coverage
@@ -498,7 +660,7 @@ Table Create Parameters:
                 most frequent keys consume the lowest number of cache lines.
                 It is useful in scenarios where the frequency of individual
                 keys being looked up is heavily skewed toward a small subset.
-                For example, if 90% of the lookups occur for 10% of the keys,
+                For example, if 90% of the lookups occur for 10 of the keys,
                 the fewer cache lines occupied by those keys, the better.
 
             LowestNumberOfPagesUsedByKeysSubset
@@ -515,6 +677,48 @@ Table Create Parameters:
 
         Supplies a comma-separated list of keys in ascending key-value order.
         Must contain two or more elements.
+
+Algorithms:
+
+   ID | Name
+    1   Chm01
+
+Hash Functions:
+
+   ID | Name (Number of Seeds)
+    1   Crc32Rotate15 (2)
+    2   Jenkins (2)
+    3   JenkinsMod (2)
+    4   RotateXor (4)
+    5   AddSubXor (4)
+    6   Xor (2)
+    7   Scratch (4)
+    8   Crc32RotateXor (3)
+    9   Crc32 (2)
+   10   Djb (2)
+   11   DjbXor (2)
+   12   Fnv (2)
+   13   Crc32Not (2)
+   14   Crc32RotateX (3)
+   15   Crc32RotateXY (3)
+   16   Crc32RotateWXYZ (3)
+
+N.B. The lowest latency hash functions with good solving ability, in order of
+     ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
+     You should try these hash functions first and see if a solution can be
+     found without a table resize occurring.  Failing that, the Jenkins routine
+     has been observed to be the least likely to require a table resize on a
+     given key set -- however, it does have the highest latency of all the
+     hash functions above (anywhere from 7x-10x the latency of Crc32RotateX).
+
+     (The difference in latency between the X, XY and WXYZ functions is minimal;
+      only a few cycles.)
+
+Mask Functions:
+
+  ID | Name
+   1   Modulus (does not work!)
+   2   And
 
 
 ```
