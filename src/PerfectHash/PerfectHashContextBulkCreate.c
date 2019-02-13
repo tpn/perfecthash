@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -172,6 +172,7 @@ Return Value:
     HANDLE OutputHandle = NULL;
     HANDLE ProcessHandle = NULL;
     ULONG Failures;
+    ULONG KeySizeInBytes;
     ULONGLONG BufferSize;
     ULONGLONG RowBufferSize;
     LONG_INTEGER AllocSize;
@@ -512,6 +513,19 @@ Return Value:
     BaseLength = Length;
 
     //
+    // Initialize the key size based on keys load flags or table create params.
+    // We pass this value to Keys->Vtbl->Load().
+    //
+
+    Result = PerfectHashContextInitializeKeySize(&KeysLoadFlags,
+                                                 TableCreateParameters,
+                                                 &KeySizeInBytes);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextInitializeKeySize, Result);
+        goto Error;
+    }
+
+    //
     // Initialize local variables and then begin the main loop.
     //
 
@@ -588,7 +602,7 @@ Return Value:
         Result = Keys->Vtbl->Load(Keys,
                                   &KeysLoadFlags,
                                   &KeysPathString,
-                                  sizeof(ULONG));
+                                  KeySizeInBytes);
 
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashKeysLoad, Result);

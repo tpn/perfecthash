@@ -108,12 +108,14 @@ TryExtractArgKeysLoadFlags(
     DECL_ARG(TryLargePagesForKeysData);
     DECL_ARG(SkipKeysVerification);
     DECL_ARG(DisableImplicitKeyDownsizing);
+    DECL_ARG(TryInferKeySizeFromKeysFilename);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForKeysData);
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipKeysVerification);
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableImplicitKeyDownsizing);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryInferKeySizeFromKeysFilename);
 
     return S_FALSE;
 }

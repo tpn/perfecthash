@@ -1646,10 +1646,24 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         ULONG DisableImplicitKeyDownsizing:1;
 
         //
+        // When set, attempts to infer the key size, in bits, from the last
+        // digits in the .keys file name.  By default, the default key size is
+        // assumed to be 32-bit (4 bytes; ULONG); when this flag is present, if
+        // 64 appears prior to the final period preceding the file name (e.g.
+        // "foo64.keys"), it has the same effect as specifying the table create
+        // parameter --KeySizeInBytes=8.
+        //
+        // This flag is most useful when using the bulk-create command against
+        // a directory of key files that have differing key sizes.
+        //
+
+        ULONG TryInferKeySizeFromKeysFilename:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
 
     LONG AsLong;

@@ -88,6 +88,14 @@ Language=English
 Use new graph for solving.
 .
 
+MessageId=0x009
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME
+Language=English
+No key size extracted from file name.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL
@@ -177,7 +185,7 @@ Algorithms:
 Hash Functions:
 
    ID | Name (Number of Seeds)
-    1   Crc32Rotate (2)
+    1   Crc32Rotate15 (2)
     2   Jenkins (2)
     3   JenkinsMod (2)
     4   RotateXor (4)
@@ -190,6 +198,20 @@ Hash Functions:
    11   DjbXor (2)
    12   Fnv (2)
    13   Crc32Not (2)
+   14   Crc32RotateX (3)
+   15   Crc32RotateXY (3)
+   16   Crc32RotateWXYZ (3)
+
+N.B. The lowest latency hash functions with good solving ability, in order of
+     ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
+     You should try these hash functions first and see if a solution can be
+     found without a table resize occurring.  Failing that, the Jenkins routine
+     has been observed to be the least likely to require a table resize on a
+     given key set -- however, it does have the highest latency of all the
+     hash functions above (anywhere from 7x-10x the latency of Crc32RotateX).
+
+     (The difference in latency between the X, XY and WXYZ functions is minimal;
+      only a few cycles.)
 
 Mask Functions:
 
@@ -254,6 +276,13 @@ Keys Load Flags:
         implicitly heap-allocate another array and convert all the 64-bit keys
         into their unique 32-bit equivalent.  Specifying this flag will disable
         this behavior.
+
+    --TryInferKeySizeFromKeysFilename
+
+        The default key size is 32-bit (4 bytes).  When this flag is present,
+        if the keys file name ends with "64.keys" (e.g. "foo64.keys"), the key
+        size will be interpreted as 64-bit (8 bytes).  This flag takes
+        precedence over the table create parameter --KeySizeInBytes.
 
 Table Create Flags:
 
@@ -561,6 +590,13 @@ Keys Load Flags:
         implicitly heap-allocate another array and convert all the 64-bit keys
         into their unique 32-bit equivalent.  Specifying this flag will disable
         this behavior.
+
+    --TryInferKeySizeFromKeysFilename
+
+        The default key size is 32-bit (4 bytes).  When this flag is present,
+        if the keys file name ends with "64.keys" (e.g. "foo64.keys"), the key
+        size will be interpreted as 64-bit (8 bytes).  This flag takes
+        precedence over the table create parameter --KeySizeInBytes.
 
 Table Create Flags:
 
@@ -2999,5 +3035,13 @@ Facility=ITF
 SymbolicName=PH_E_ERROR_DURING_CLOSE_C_SOURCE_TABLE_VALUES_FILE
 Language=English
 Error closing C source table values file.
+.
+
+MessageId=0x36e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NO_PATH_EXTENSION_PRESENT
+Language=English
+No path extension present.
 .
 

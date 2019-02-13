@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -175,7 +175,6 @@ Return Value:
     ASSIGNED_MEMORY_COVERAGE EmptyCoverage;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     BOOLEAN UnknownTableCreateResult = FALSE;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
 
     //
     // Validate arguments.
@@ -307,33 +306,16 @@ Return Value:
     }
 
     //
-    // Query the table create parameters for the key size in bytes parameter;
-    // if it's present, use it, otherwise, default to ULONG.
+    // Initialize the key size based on keys load flags or table create params.
+    // We pass this value to Keys->Vtbl->Load().
     //
 
-    Param = NULL;
-    Result = GetTableCreateParameterForId(TableCreateParameters,
-                                          TableCreateParameterKeySizeInBytesId,
-                                          &Param);
-
+    Result = PerfectHashContextInitializeKeySize(&KeysLoadFlags,
+                                                 TableCreateParameters,
+                                                 &KeySizeInBytes);
     if (FAILED(Result)) {
-        PH_ERROR(GetTableCreateParameterForId, Result);
+        PH_ERROR(PerfectHashContextInitializeKeySize, Result);
         goto Error;
-    }
-
-    if (Result == S_OK) {
-
-        KeySizeInBytes = Param->AsULong;
-
-    } else {
-
-        //
-        // No such parameter found; default to 4 bytes.
-        //
-
-        ASSERT(Result == S_FALSE);
-        KeySizeInBytes = sizeof(ULONG);
-
     }
 
     //

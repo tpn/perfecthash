@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,8 +15,8 @@ Abstract:
 
     Routines are provided for context initialization and rundown, setting and
     getting the maximum concurrency associated with a context, setting and
-    getting the base output directory, and callback routines for the various
-    threadpool functions.
+    getting the base output directory, callback routines for the various
+    threadpool functions, and initializing key size.
 
 --*/
 
@@ -1672,6 +1672,92 @@ Return Value:
     }
 
     return;
+}
+
+
+PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE PerfectHashContextInitializeKeySize;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextInitializeKeySize(
+    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters,
+    PULONG KeySizeInBytes
+    )
+/*++
+
+Routine Description:
+
+    Initializes a key size based on either keys load flags or table create
+    parameters.  If the flag TryInferKeySizeFromKeysFilename is passed, the
+    KeySizeInBytes parameter will be set to 0.  Otherwise, an attempt will
+    be made to search for the KeySizeInBytes table create parameter.  If that
+    is not present, the default key size (4) will be used.
+
+    This is an internal routine that is used by the table create and bulk
+    create functions; it is assumed KeysLoadFlags and TableCreateParameters
+    are valid (no validation is done).
+
+Arguments:
+
+    KeysLoadFlags - Supplies the keys load flags.
+
+    TableCreateParameters - Optionally supplies a pointer to the table create
+        parameters, if applicable.
+
+    KeySizeInBytes - Receives a key size suitable for passing to the keys
+        Load() function.
+
+Return Value:
+
+    S_OK on success, otherwise, an appropriate error code.
+
+--*/
+{
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PERFECT_HASH_TABLE_CREATE_PARAMETER_ID ParamId;
+
+    if (KeysLoadFlags->TryInferKeySizeFromKeysFilename) {
+        *KeySizeInBytes = 0;
+        return Result;
+    }
+
+    if (TableCreateParameters == NULL) {
+        *KeySizeInBytes = DEFAULT_KEY_SIZE_IN_BYTES;
+        return Result;
+    }
+
+    //
+    // Query the table create parameters for the key size in bytes parameter;
+    // if it's present, use it, otherwise, default to ULONG.
+    //
+
+    Param = NULL;
+    ParamId = TableCreateParameterKeySizeInBytesId;
+    Result = GetTableCreateParameterForId(TableCreateParameters,
+                                          ParamId,
+                                          &Param);
+
+    if (FAILED(Result)) {
+        PH_ERROR(GetTableCreateParameterForId, Result);
+        return Result;
+    }
+
+    if (Result == S_OK) {
+        *KeySizeInBytes = Param->AsULong;
+    } else {
+
+        //
+        // No such parameter found; use the default.
+        //
+
+        ASSERT(Result == S_FALSE);
+        Result = S_OK;
+        *KeySizeInBytes = DEFAULT_KEY_SIZE_IN_BYTES;
+    }
+
+    return Result;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

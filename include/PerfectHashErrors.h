@@ -135,6 +135,15 @@ Abstract:
 //
 #define PH_S_USE_NEW_GRAPH_FOR_SOLVING   ((HRESULT)0x20040008L)
 
+//
+// MessageId: PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME
+//
+// MessageText:
+//
+// No key size extracted from file name.
+//
+#define PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME ((HRESULT)0x20040009L)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
@@ -322,6 +331,13 @@ Abstract:
 //         implicitly heap-allocate another array and convert all the 64-bit keys
 //         into their unique 32-bit equivalent.  Specifying this flag will disable
 //         this behavior.
+// 
+//     --TryInferKeySizeFromKeysFilename
+// 
+//         The default key size is 32-bit (4 bytes).  When this flag is present,
+//         if the keys file name ends with "64.keys" (e.g. "foo64.keys"), the key
+//         size will be interpreted as 64-bit (8 bytes).  This flag takes
+//         precedence over the table create parameter --KeySizeInBytes.
 // 
 // Table Create Flags:
 // 
@@ -631,6 +647,13 @@ Abstract:
 //         implicitly heap-allocate another array and convert all the 64-bit keys
 //         into their unique 32-bit equivalent.  Specifying this flag will disable
 //         this behavior.
+// 
+//     --TryInferKeySizeFromKeysFilename
+// 
+//         The default key size is 32-bit (4 bytes).  When this flag is present,
+//         if the keys file name ends with "64.keys" (e.g. "foo64.keys"), the key
+//         size will be interpreted as 64-bit (8 bytes).  This flag takes
+//         precedence over the table create parameter --KeySizeInBytes.
 // 
 // Table Create Flags:
 // 
@@ -3319,4 +3342,13 @@ Abstract:
 // Error closing C source table values file.
 //
 #define PH_E_ERROR_DURING_CLOSE_C_SOURCE_TABLE_VALUES_FILE ((HRESULT)0xE004036DL)
+
+//
+// MessageId: PH_E_NO_PATH_EXTENSION_PRESENT
+//
+// MessageText:
+//
+// No path extension present.
+//
+#define PH_E_NO_PATH_EXTENSION_PRESENT   ((HRESULT)0xE004036EL)
 

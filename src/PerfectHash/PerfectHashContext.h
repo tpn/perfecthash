@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -927,6 +927,17 @@ VOID
 typedef PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
       *PPERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES;
 
+typedef
+_Must_inspect_result_
+HRESULT
+(NTAPI PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE)(
+    _In_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters,
+    _Out_ PULONG KeySizeInBytes
+    );
+typedef PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE
+      *PPERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE;
+
 //
 // Function decls.
 //
@@ -935,6 +946,8 @@ typedef PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
 extern PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
 extern PERFECT_HASH_CONTEXT_RUNDOWN PerfectHashContextRundown;
 extern PERFECT_HASH_CONTEXT_RESET PerfectHashContextReset;
+extern PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE
+    PerfectHashContextInitializeKeySize;
 extern PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY
     PerfectHashContextSetMaximumConcurrency;
 extern PERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY

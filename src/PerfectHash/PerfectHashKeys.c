@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -83,8 +83,9 @@ Return Value:
     // create parameter --KeySizeInBytes=N.
     //
 
-    Keys->OriginalKeySizeInBytes = Keys->KeySizeInBytes = sizeof(ULONG);
-    Keys->OriginalKeySizeType = Keys->KeySizeType = LongType;
+    Keys->OriginalKeySizeInBytes = Keys->KeySizeInBytes =
+        DEFAULT_KEY_SIZE_IN_BYTES;
+    Keys->OriginalKeySizeType = Keys->KeySizeType = DEFAULT_KEY_TYPE;
 
     //
     // We're done!  Indicate success and finish up.
@@ -514,5 +515,155 @@ Return Value:
     return S_OK;
 }
 
+
+TRY_EXTRACT_KEY_SIZE_FROM_FILENAME TryExtractKeySizeFromFilename;
+
+_Use_decl_annotations_
+HRESULT
+TryExtractKeySizeFromFilename(
+    PPERFECT_HASH_PATH Path,
+    PULONG KeySizeInBytesPointer
+    )
+/*++
+
+Routine Description:
+
+    Attempts to extract a key size, in bits, from the given path.  Key sizes
+    currently detected: 8, 16, 32 and 64.
+
+    N.B. The key size is specified in bits in the file name as an aesthetic
+         preference, however, internally, the key size is always represented
+         as bytes, which is why the second (output) parameter receives the
+         value in bytes, not bits.
+
+Arguments:
+
+    Path - Supplies the path for which an attempt will be made to extract the
+        key size in bits.
+
+    KeySizeInBytesPointer - Receives the extracted key size, in *bytes*, if
+        the routine was successful.  If no key size could be extracted, or an
+        error occurred, 0 will be used.
+
+Return Value:
+
+    S_OK - Key size in bits successfully extracted.
+
+    PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME - No key size was extracted from
+        the file name (note that this is not an error condition).
+
+    E_POINTER - Path was NULL.
+
+    PH_E_NO_PATH_SET - Path has not been set.
+
+    PH_E_PATH_LOCKED - Path is locked.
+
+--*/
+{
+    PWCHAR Wide;
+    ULONG KeySizeInBytes = 0;
+    HRESULT Result = S_OK;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Path)) {
+        return E_POINTER;
+    }
+
+    if (!TryAcquirePerfectHashPathLockShared(Path)) {
+        return PH_E_PATH_LOCKED;
+    }
+
+    if (!IsPathSet(Path)) {
+        Result = PH_E_NO_PATH_SET;
+        goto Error;
+    }
+
+    if (!IsValidUnicodeString(&Path->Extension)) {
+        Result = PH_E_NO_PATH_EXTENSION_PRESENT;
+        goto Error;
+    }
+
+    //
+    // Argument validation complete.  Wire up our wide char pointer such that
+    // it's pointing at the character preceding the file extension period (i.e.
+    // if the file name is "foo64.keys", point at the '4').
+    //
+
+    Wide = Path->Extension.Buffer - 2;
+
+    ASSERT(*(Wide + 1) == L'.');
+    ASSERT((ULONG_PTR)Wide > (ULONG_PTR)Path->FileName.Buffer);
+
+    //
+    // Attempt to look for either 8, 16, 32 or 64 as the bit size.
+    //
+
+    if (Path->BaseName.Length >= sizeof(WCHAR)) {
+
+        //
+        // There is at least one character we can dereference; determine if it
+        // is 8.
+        //
+
+        if (*Wide == L'8') {
+            KeySizeInBytes = 1;
+            goto End;
+        }
+    }
+
+    if (Path->BaseName.Length >= (sizeof(WCHAR) * 2)) {
+
+        //
+        // There are at least two characters we can dereference; determine if
+        // they are 16, 32 or 64.
+        //
+
+        if (*Wide == L'6' && *(Wide - 1) == L'1') {
+            KeySizeInBytes = 2;
+            goto End;
+        }
+
+        if (*Wide == L'2' && *(Wide - 1) == L'3') {
+            KeySizeInBytes = 4;
+            goto End;
+        }
+
+        if (*Wide == L'4' && *(Wide - 1) == L'6') {
+            KeySizeInBytes = 8;
+            goto End;
+        }
+    }
+
+    //
+    // If we get here, we weren't able to extract a key size.
+    //
+
+    Result = PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    //
+    // Update the caller's pointer, release the path lock, and return.
+    //
+
+    *KeySizeInBytesPointer = KeySizeInBytes;
+    ReleasePerfectHashPathLockShared(Path);
+
+    return Result;
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

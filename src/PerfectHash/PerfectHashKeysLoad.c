@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -46,7 +46,9 @@ Arguments:
              UNICODE_STRING structures.  Howver, the underlying buffer is passed
              to CreateFileW(), which requires a NULL-terminated wstr.
 
-    KeySizeInBytes - Supplies the size of each key element, in bytes.
+    KeySizeInBytes - Supplies the size of each key element, in bytes.  If the
+        TryInferKeySizeFromKeysFilename flag is set in the KeysLoadFlags param,
+        this argument is ignored.
 
 Return Value:
 
@@ -100,14 +102,6 @@ Return Value:
         return E_INVALIDARG;
     }
 
-    if (KeySizeInBytes == sizeof(ULONG)) {
-        Is32Bit = TRUE;
-    } else if (KeySizeInBytes == sizeof(ULONGLONG)) {
-        Is32Bit = FALSE;
-    } else {
-        return PH_E_INVALID_KEY_SIZE;
-    }
-
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
 
     if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
@@ -147,6 +141,66 @@ Return Value:
     if (!IsBaseNameValidCIdentifier(Path)) {
         Result = PH_E_KEYS_FILE_BASENAME_NOT_VALID_C_IDENTIFIER;
         PH_ERROR(PerfectHashKeysLoad, Result);
+        goto Error;
+    }
+
+    //
+    // If we've been asked to try infer the key size from the .keys file name,
+    // attempt that now.
+    //
+
+    if (!KeysLoadFlags.TryInferKeySizeFromKeysFilename) {
+
+        //
+        // Don't try and infer key size; just use the size provided by the
+        // caller, it will be verified below.
+        //
+
+        NOTHING;
+
+    } else {
+
+        Result = TryExtractKeySizeFromFilename(Path, &KeySizeInBytes);
+
+        if (Result == S_OK) {
+
+            //
+            // Key size was successfully extracted.
+            //
+
+            NOTHING;
+
+        } else if (Result == PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME) {
+
+            //
+            // No key size was extracted; use the default.
+            //
+
+            KeySizeInBytes = DEFAULT_KEY_SIZE_IN_BYTES;
+
+        } else {
+
+            //
+            // Invariant check: Result should be indicating an error code here.
+            //
+
+            ASSERT(FAILED(Result));
+            PH_ERROR(PerfectHashKeysLoad_TryExtractKeySizeFromFilename, Result);
+            goto Error;
+
+        }
+    }
+
+    //
+    // Validate the key size; we only support ULONG and ULONGLONG at the moment.
+    //
+
+    if (KeySizeInBytes == sizeof(ULONG)) {
+        Is32Bit = TRUE;
+    } else if (KeySizeInBytes == sizeof(ULONGLONG)) {
+        Is32Bit = FALSE;
+    } else {
+        Result = PH_E_INVALID_KEY_SIZE;
         goto Error;
     }
 

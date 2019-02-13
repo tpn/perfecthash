@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -8,15 +8,23 @@ Module Name:
 
 Abstract:
 
-    This is the private header file for the PERFECT_HASH_KEYS
-    component of the perfect hash table library.  It defines the structure,
-    and function pointer typedefs for the initialize and rundown functions.
+    This is the private header file for the PERFECT_HASH_KEYS component of the
+    perfect hash table library.  It defines the structure, and function pointer
+    typedefs for the initialize and rundown functions.
 
 --*/
 
 #pragma once
 
 #include "stdafx.h"
+
+//
+// N.B. It is critical that these two macros are kept in sync; if you change
+//      one, change the other.
+//
+
+#define DEFAULT_KEY_SIZE_IN_BYTES sizeof(ULONG)
+#define DEFAULT_KEY_TYPE LongType
 
 //
 // Define the PERFECT_HASH_KEYS_FLAGS structure.
@@ -178,6 +186,7 @@ typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
     ReleaseSRWLockShared(&Keys->Lock)
 
 typedef
+_Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_KEYS_INITIALIZE)(
     _In_ PPERFECT_HASH_KEYS Keys
@@ -194,12 +203,22 @@ typedef PERFECT_HASH_KEYS_RUNDOWN
       *PPERFECT_HASH_KEYS_RUNDOWN;
 
 typedef
+_Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_KEYS_LOAD_STATS)(
     _In_ PPERFECT_HASH_KEYS Keys
     );
 typedef PERFECT_HASH_KEYS_LOAD_STATS
       *PPERFECT_HASH_KEYS_LOAD_STATS;
+
+typedef
+_Must_inspect_result_
+HRESULT
+(NTAPI TRY_EXTRACT_KEY_SIZE_FROM_FILENAME)(
+    _In_ PPERFECT_HASH_PATH KeysPath,
+    _Out_ PULONG KeySizeInBytes
+    );
+typedef TRY_EXTRACT_KEY_SIZE_FROM_FILENAME *PTRY_EXTRACT_KEY_SIZE_FROM_FILENAME;
 
 typedef
 _Must_inspect_result_
@@ -216,6 +235,7 @@ HRESULT
 typedef PERFECT_HASH_KEYS_LOAD_TABLE_SIZE *PPERFECT_HASH_KEYS_LOAD_TABLE_SIZE;
 
 #ifndef __INTELLISENSE__
+extern TRY_EXTRACT_KEY_SIZE_FROM_FILENAME TryExtractKeySizeFromFilename;
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats32;
