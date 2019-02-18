@@ -239,22 +239,14 @@ Abstract:
 // Hash Functions:
 // 
 //    ID | Name (Number of Seeds)
-//     1   Crc32Rotate15 (2)
 //     2   Jenkins (2)
-//     3   JenkinsMod (2)
-//     4   RotateXor (4)
-//     5   AddSubXor (4)
-//     6   Xor (2)
-//     7   Scratch (4)
-//     8   Crc32RotateXor (3)
-//     9   Crc32 (2)
-//    10   Djb (2)
-//    11   DjbXor (2)
 //    12   Fnv (2)
-//    13   Crc32Not (2)
 //    14   Crc32RotateX (3)
 //    15   Crc32RotateXY (3)
 //    16   Crc32RotateWXYZ (3)
+//    17   RotateMultiplyXorRotate (3)
+//    18   ShiftMultiplyXorShift (3)
+//    19   ShiftMultiplyXorShift2 (6)
 // 
 // N.B. The lowest latency hash functions with good solving ability, in order of
 //      ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
@@ -266,6 +258,16 @@ Abstract:
 // 
 //      (The difference in latency between the X, XY and WXYZ functions is minimal;
 //       only a few cycles.)
+// 
+// N.B. The three most recent hash functions are now exhibiting latency on-par with
+//      the Crc32Rotate functions, but with the added benefit of requiring no table
+//      resize events on the https://github.com/tpn/perfecthash-keys/sys32 input
+//      set of keys.  That is, these routines should be tried in this order and
+//      compared against the Crc32Rotate rouintes:
+// 
+//         ShiftMultiplyXorShift
+//         RotateMultiplyXorRotate
+//         ShiftMultiplyXorShift2
 // 
 // Mask Functions:
 // 

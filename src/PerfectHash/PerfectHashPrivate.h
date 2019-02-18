@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -216,9 +216,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
 
     ULONG Seed2;
     ULONG Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
+    ULONG Seed6;
+    ULONG Seed7;
 
     union {
-        ULONG Seed4;
+        ULONG Seed8;
         ULONG LastSeed;
     };
 

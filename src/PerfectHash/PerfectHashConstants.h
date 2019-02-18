@@ -473,6 +473,10 @@ extern const ULONG Seed1Placeholder;
 extern const ULONG Seed2Placeholder;
 extern const ULONG Seed3Placeholder;
 extern const ULONG Seed4Placeholder;
+extern const ULONG Seed5Placeholder;
+extern const ULONG Seed6Placeholder;
+extern const ULONG Seed7Placeholder;
+extern const ULONG Seed8Placeholder;
 extern const ULONG HashMaskPlaceholder;
 extern const ULONG IndexMaskPlaceholder;
 

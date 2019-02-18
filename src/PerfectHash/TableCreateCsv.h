@@ -215,6 +215,30 @@ Abstract:
            Table->TableInfoOnDisk->Seed4 : 0),                             \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(Seed5,                                                           \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 5 ?                    \
+           Table->TableInfoOnDisk->Seed5 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed6,                                                           \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 6 ?                    \
+           Table->TableInfoOnDisk->Seed6 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed7,                                                           \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 7 ?                    \
+           Table->TableInfoOnDisk->Seed7 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed8,                                                           \
+          (TableCreateResult == S_OK &&                                    \
+           Table->TableInfoOnDisk->NumberOfSeeds >= 8 ?                    \
+           Table->TableInfoOnDisk->Seed8 : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(NumberOfUserSeeds,                                               \
           (Context->UserSeeds != NULL ?                                    \
            Context->UserSeeds->NumberOfValues : 0),                        \
@@ -242,6 +266,30 @@ Abstract:
           (Context->UserSeeds != NULL &&                                   \
            Context->UserSeeds->NumberOfValues >= 4 ?                       \
            Context->UserSeeds->Values[3] : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed5,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 5 ?                       \
+           Context->UserSeeds->Values[4] : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed6,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 6 ?                       \
+           Context->UserSeeds->Values[5] : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed7,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 7 ?                       \
+           Context->UserSeeds->Values[6] : 0),                             \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(UserSeed8,                                                       \
+          (Context->UserSeeds != NULL &&                                   \
+           Context->UserSeeds->NumberOfValues >= 8 ?                       \
+           Context->UserSeeds->Values[7] : 0),                             \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(FirstGraphWins,                                                  \

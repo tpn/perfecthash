@@ -1835,7 +1835,7 @@ IsValidPerfectHashAlgorithmId(
 
 //
 // Define a seed masks structure.  The number of elements must match the maximum
-// number of seeds used by all hash functions (currently 4).
+// number of seeds used by all hash functions (currently 8).
 //
 
 typedef struct _SEED_MASKS {
@@ -1843,6 +1843,10 @@ typedef struct _SEED_MASKS {
     LONG Mask2;
     LONG Mask3;
     LONG Mask4;
+    LONG Mask5;
+    LONG Mask6;
+    LONG Mask7;
+    LONG Mask8;
 } SEED_MASKS;
 typedef SEED_MASKS *PSEED_MASKS;
 typedef const SEED_MASKS *PCSEED_MASKS;
@@ -1863,7 +1867,8 @@ IsValidSeedMasks(
 
 #define NO_SEED_MASKS { -1, }
 
-#define DECL_SEED_MASKS(m1, m2, m3, m4) { m1, m2, m3, m4 }
+#define DECL_SEED_MASKS(m1, m2, m3, m4, m5, m6, m7, m8) \
+    { m1, m2, m3, m4, m5, m6, m7, m8 }
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(Crc32Rotate15, 2, NO_SEED_MASKS)                         \
@@ -1872,7 +1877,7 @@ IsValidSeedMasks(
     ENTRY(RotateXor, 4, NO_SEED_MASKS)                                   \
     ENTRY(AddSubXor, 4, NO_SEED_MASKS)                                   \
     ENTRY(Xor, 2, NO_SEED_MASKS)                                         \
-    ENTRY(Scratch, 4, NO_SEED_MASKS)                                     \
+    ENTRY(Scratch, 3, NO_SEED_MASKS)                                     \
     ENTRY(Crc32RotateXor, 3, NO_SEED_MASKS)                              \
     ENTRY(Crc32, 2, NO_SEED_MASKS)                                       \
     ENTRY(Djb, 2, NO_SEED_MASKS)                                         \
@@ -1882,17 +1887,32 @@ IsValidSeedMasks(
     ENTRY(                                                               \
         Crc32RotateX,                                                    \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0)                             \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(                                                               \
         Crc32RotateXY,                                                   \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0)                             \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
-    LAST_ENTRY(                                                          \
+    ENTRY(                                                               \
         Crc32RotateWXYZ,                                                 \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0)                             \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        RotateMultiplyXorRotate,                                         \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        ShiftMultiplyXorShift,                                           \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    LAST_ENTRY(                                                          \
+        ShiftMultiplyXorShift2,                                          \
+        6,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0x1f1f1f1f, 0, 0)        \
     )
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
