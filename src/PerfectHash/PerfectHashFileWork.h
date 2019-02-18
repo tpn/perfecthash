@@ -1234,7 +1234,7 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
 #define OUTPUT_PRAGMA_WARNING_DISABLE_FUNC_SELECTED_FOR_INLINE_EXP_WARNING() \
     OUTPUT_RAW("//\n"                                                        \
                "// Disable \"function ... selected for "                     \
-                   "inline expansion\" warning.\n "                          \
+                   "inline expansion\" warning.\n"                           \
                "//\n\n"                                                      \
                "#pragma warning(push)\n"                                     \
                "#pragma warning(disable: 4711)\n\n")
