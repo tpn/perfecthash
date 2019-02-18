@@ -42,7 +42,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -100,7 +100,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -192,7 +192,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -287,7 +287,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -382,7 +382,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -481,7 +481,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -580,7 +580,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -666,7 +666,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -765,7 +765,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -901,7 +901,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -1047,7 +1047,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -1152,7 +1152,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -1244,7 +1244,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -1334,7 +1334,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -1454,7 +1454,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -1572,7 +1572,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
@@ -1680,7 +1680,7 @@ Arguments:
 
     Seeds - Supplies an array of ULONG seed values.
 
-    Masked - Receives two 32-bit hashes merged into a 64-bit value.
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
 
 Return Value:
 
