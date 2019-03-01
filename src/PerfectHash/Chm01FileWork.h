@@ -68,6 +68,14 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define SaveCHeaderCompiledPerfectHashMacroGlueFileChm01 NULL
 #define SaveVCPropsCompiledPerfectHashFileChm01 NULL
 #define SaveBatchBuildSolutionFileChm01 NULL
+#define SaveMakefileFileChm01 NULL
+#define SaveMakefileMainMkFileChm01 NULL
+#define SaveMakefileLibMkFileChm01 NULL
+#define SaveMakefileSoMkFileChm01 NULL
+#define SaveMakefileTestMkFileChm01 NULL
+#define SaveMakefileBenchmarkIndexMkFileChm01 NULL
+#define SaveMakefileBenchmarkFullMkFileChm01 NULL
+#define SaveCHeaderNoSal2FileChm01 NULL
 
 extern FILE_WORK_CALLBACK_IMPL *FileCallbacks[];
 

@@ -123,6 +123,8 @@
     <ClInclude Include="CompiledPerfectHashTableTest_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableTypesPost_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableTypesPre_CHeader_RawCString.h" />
+    <ClInclude Include="no_sal2_CHeader_RawCString.h" />
+    <ClInclude Include="Makefile_Makefile_RawCString.h" />
     <ClInclude Include="CompiledPerfectHash_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHash_VCProps_RawCString.h" />
     <ClInclude Include="Component.h" />
@@ -159,6 +161,7 @@
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashMacroGlueFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
+    <ClCompile Include="Chm01FileWorkCHeaderNoSal2File.c" />
     <ClCompile Include="Chm01FileWorkCHeaderStdAfxFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderSupportFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderTypesFile.c" />
@@ -175,6 +178,13 @@
     <ClCompile Include="Chm01FileWorkCSourceTableValuesFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestFile.c" />
+    <ClCompile Include="Chm01FileWorkMakefileBenchmarkFullMkFile.c" />
+    <ClCompile Include="Chm01FileWorkMakefileBenchmarkIndexMkFile.c" />
+    <ClCompile Include="Chm01FileWorkMakefileSoMkFile.c" />
+    <ClCompile Include="Chm01FileWorkMakefileFile.c" />
+    <ClCompile Include="Chm01FileWorkMakefileLibMkFile.c" />
+    <ClCompile Include="Chm01FileWorkMakefileMainMkFile.c" />
+    <ClCompile Include="Chm01FileWorkMakefileTestMkFile.c" />
     <ClCompile Include="Chm01FileWorkTableFile.c" />
     <ClCompile Include="Chm01FileWorkTableInfoStream.c" />
     <ClCompile Include="Chm01FileWorkVCProjectBenchmarkFullExeFile.c" />

@@ -38,8 +38,6 @@ PrepareVCProjectBenchmarkFullExeFileChm01(
     PPERFECT_HASH_TABLE Table;
     PCCHUNK Chunks = VCProjectBenchmarkFullExeFileChunks;
     const ULONG NumberOfChunks = VCProjectBenchmarkFullExeFileNumberOfChunks;
-    STRING TargetPrefix = RTL_CONSTANT_STRING("BenchmarkFull_");
-    STRING BenchmarkFullExeFileSuffix = RTL_CONSTANT_STRING("BenchmarkFullExe");
 
     //
     // Initialize aliases.
@@ -71,8 +69,8 @@ PrepareVCProjectBenchmarkFullExeFileChm01(
     Values.TableName = TableName;
     Values.TargetName = BaseName;
     Values.TargetExt = &DotExeSuffixA;
-    Values.FileSuffix = &BenchmarkFullExeFileSuffix;
-    Values.TargetPrefix = &TargetPrefix;
+    Values.FileSuffix = &BenchmarkFullFileSuffix;
+    Values.TargetPrefix = &BenchmarkFullTargetPrefix;
     Values.ConfigurationType = &ApplicationConfigurationTypeA;
 
     Result = ProcessChunks(Rtl, Chunks, NumberOfChunks, &Values, &Output);

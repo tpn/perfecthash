@@ -1,25 +1,25 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm01FileWorkCSourceSupportFile.c
+    Chm01FileWorkMakefileFile.c
 
 Abstract:
 
     This module implements the prepare file work callback routine for the
-    support C source file as part of the CHM v1 algorithm implementation
-    for the perfect hash library.
+    Makefile as part of the CHM v1 algorithm implementation for the perfect
+    hash library.
 
 --*/
 
 #include "stdafx.h"
-#include "CompiledPerfectHashTableSupport_CSource_RawCString.h"
+#include "Makefile_Makefile_RawCString.h"
 
 _Use_decl_annotations_
 HRESULT
-PrepareCSourceSupportFileChm01(
+PrepareMakefileFileChm01(
     PPERFECT_HASH_CONTEXT Context,
     PFILE_WORK_ITEM Item
     )
@@ -39,21 +39,10 @@ PrepareCSourceSupportFileChm01(
     Output = Base;
 
     //
-    // Write the includes.
-    //
-
-    OUTPUT_INCLUDE_STDAFX_H();
-    OUTPUT_INCLUDE_SUPPORT_H();
-
-    //
-    // Write the file content.
+    // Write the text and finish up.
     //
 
     OUTPUT_STRING(RawCString);
-
-    //
-    // Update bytes written and return success.
-    //
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

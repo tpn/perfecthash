@@ -1684,9 +1684,7 @@ IsEmptyUnicodeString(
 {
     return (
         String != NULL &&
-        String->Buffer == NULL &&
-        String->Length == 0 &&
-        String->MaximumLength == 0
+        String->Length == 0
     );
 }
 
@@ -1699,7 +1697,7 @@ IsValidOrEmptyUnicodeString(
     return IsEmptyUnicodeString(String) || (
         String != NULL &&
         String->Buffer != NULL &&
-        String->Length >= 1 &&
+        String->Length >= sizeof(*String->Buffer) &&
         String->MaximumLength >= String->Length
     );
 }

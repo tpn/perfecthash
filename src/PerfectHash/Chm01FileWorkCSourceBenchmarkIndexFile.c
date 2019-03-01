@@ -43,7 +43,12 @@ PrepareCSourceBenchmarkIndexFileChm01(
     //
 
     OUTPUT_INCLUDE_STDAFX_AND_SUPPORT_H();
+
+    OUTPUT_PRAGMA_WARNING_DISABLE_FUNC_SELECTED_FOR_INLINE_EXP_WARNING();
+
     OUTPUT_STRING(RawCString);
+
+    OUTPUT_PRAGMA_WARNING_POP();
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

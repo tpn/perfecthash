@@ -27,7 +27,7 @@ const CHAR CompiledPerfectHashTableTestCSourceRawCStr[] =
     "#define ASSERT(Condition)          \\\n"
     "    if (!(Condition)) {            \\\n"
     "        if (DebugBreakOnFailure) { \\\n"
-    "            __debugbreak();        \\\n"
+    "            DEBUGBREAK();          \\\n"
     "        };                         \\\n"
     "        NumberOfErrors++;          \\\n"
     "    }\n"
