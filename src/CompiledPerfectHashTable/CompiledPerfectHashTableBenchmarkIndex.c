@@ -5,7 +5,7 @@ DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
     CPHINDEX Index;
     ULONG Count;
     ULONG Attempt = 1000;
-    const ULONG Iterations = 100000;
+    const ULONG Iterations = 1000;
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
     LARGE_INTEGER Delta;
@@ -17,13 +17,13 @@ DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
 
         while (!CtrlCPressed) {
 
-            QueryPerformanceCounter(&Start);
+            CphQueryPerformanceCounter(&Start);
 
             for (Count = Iterations; Count != 0; Count--) {
                 Index = INDEX_ROUTINE(Key);
             }
 
-            QueryPerformanceCounter(&End);
+            CphQueryPerformanceCounter(&End);
 
             Delta.QuadPart = End.QuadPart - Start.QuadPart;
 
@@ -37,13 +37,13 @@ DECLARE_BENCHMARK_INDEX_CPH_ROUTINE()
 
         while (Attempt--) {
 
-            QueryPerformanceCounter(&Start);
+            CphQueryPerformanceCounter(&Start);
 
             for (Count = Iterations; Count != 0; Count--) {
                 Index = INDEX_ROUTINE(Key);
             }
 
-            QueryPerformanceCounter(&End);
+            CphQueryPerformanceCounter(&End);
 
             Delta.QuadPart = End.QuadPart - Start.QuadPart;
 

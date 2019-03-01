@@ -1,15 +1,11 @@
 
-void
-__stdcall
-mainCRTStartup(
-    void
-    )
+CPH_MAIN()
 {
     ULONG NumberOfErrors;
     BOOLEAN DebugBreakOnFailure = 0;
 
     NumberOfErrors = TEST_CPH_ROUTINE(DebugBreakOnFailure);
 
-    ExitProcess(NumberOfErrors);
+    CPH_EXIT(NumberOfErrors);
 }
 

@@ -597,6 +597,9 @@ Arguments:
 
     Table - Supplies a pointer to the table instance.
 
+    ExistingPath - Supplies a pointer to an existing path to use as a template
+        for path creation.
+
     NumberOfResizeEvents - Optionally supplies the number of table resize
         events that have occurred for this table.
 
@@ -622,9 +625,6 @@ Arguments:
     NewExtension - Optionally supplies a new file extension to use.
 
     NewStreamName - Optionally supplies a new stream name to use.
-
-    ExistingPath - Supplies a pointer to an existing path to use as a template
-        for path creation.
 
     Path - Receives a newly created path instance on success.  Caller is
         responsible for releasing the instance when finished with it.

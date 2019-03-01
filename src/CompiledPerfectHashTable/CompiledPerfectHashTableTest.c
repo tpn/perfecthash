@@ -16,7 +16,7 @@
 #define ASSERT(Condition)          \
     if (!(Condition)) {            \
         if (DebugBreakOnFailure) { \
-            __debugbreak();        \
+            DEBUGBREAK();          \
         };                         \
         NumberOfErrors++;          \
     }

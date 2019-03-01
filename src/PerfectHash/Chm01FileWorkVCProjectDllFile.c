@@ -15,6 +15,7 @@ Abstract:
 
 #include "stdafx.h"
 
+extern const STRING DllFileSuffix;
 extern const ULONG VCProjectDllFileNumberOfChunks;
 extern CHUNK VCProjectDllFileChunks[];
 
@@ -38,7 +39,6 @@ PrepareVCProjectDllFileChm01(
     PPERFECT_HASH_TABLE Table;
     PCCHUNK Chunks = VCProjectDllFileChunks;
     const ULONG NumberOfChunks = VCProjectDllFileNumberOfChunks;
-    STRING DllFileSuffix = RTL_CONSTANT_STRING("Dll");
 
     //
     // Initialize aliases.

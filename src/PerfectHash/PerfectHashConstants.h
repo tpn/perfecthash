@@ -365,12 +365,14 @@ extern const UNICODE_STRING KeysExtension;
 extern const UNICODE_STRING DotKeysSuffix;
 extern const UNICODE_STRING DotTableSuffix;
 extern const UNICODE_STRING DotHeaderSuffix;
+extern const UNICODE_STRING NullUnicodeString;
 extern const UNICODE_STRING KeysWildcardSuffix;
 extern const UNICODE_STRING TableInfoStreamName;
 extern const UNICODE_STRING KeysTableSizeSuffix;
 extern const UNICODE_STRING PerfectHashBulkCreateCsvBaseName;
 extern const UNICODE_STRING PerfectHashTableCreateCsvBaseName;
 
+extern const STRING NullString;
 extern const STRING DotExeSuffixA;
 extern const STRING DotDllSuffixA;
 extern const STRING DotLibSuffixA;
@@ -378,6 +380,22 @@ extern const STRING DynamicLibraryConfigurationTypeA;
 extern const STRING ApplicationConfigurationTypeA;
 
 extern const STRING BestCoverageTypeNamesA[];
+
+//
+// Declare VCProject and Makefile related strings.
+//
+
+extern const STRING LibTargetPrefix;
+extern const STRING TestTargetPrefix;
+extern const STRING BenchmarkFullTargetPrefix;
+extern const STRING BenchmarkIndexTargetPrefix;
+
+extern const STRING SoFileSuffix;
+extern const STRING LibFileSuffix;
+extern const STRING DllFileSuffix;
+extern const STRING TestFileSuffix;
+extern const STRING BenchmarkFullFileSuffix;
+extern const STRING BenchmarkIndexFileSuffix;
 
 //
 // Arrays indexed by the FILE_WORK_ID enum.
@@ -460,8 +478,21 @@ GetFileWorkItemExtension(
 {
     PCUNICODE_STRING String;
 
+    //
+    // N.B. Unlike the other methods, we don't use the following construct for
+    //      the return statement here:
+    //
+    //          return (IsValidUnicodeString(String) ? String : NULL);
+    //
+    //      This is because NullUnicodeString (i.e. a valid UNICODE_STRING
+    //      structure with Length == 0, MaximumLength == 2 and Buffer pointing
+    //      to nothing) is a valid return type for file extensions, as it is
+    //      needed in some circumstances (e.g. for creating the table's Makefile
+    //      file (with no table suffix info)).
+    //
+
     String = FileWorkItemExtensions[Id];
-    return (IsValidUnicodeString(String) ? String : NULL);
+    return String;
 }
 
 //

@@ -324,10 +324,13 @@ class UpdateRawCStringFile(InvariantAwareCommand):
 
         base = basename(input_path)
         ix = base.rfind('.')
-        assert ix != -1
-        name = base[:ix]
-
-        extension = base[ix:]
+        if ix == -1:
+            assert base == 'Makefile'
+            extension = None
+            name = base
+        else:
+            extension = base[ix:]
+            name = base[:ix]
 
         is_c = False
         if extension == '.c':
@@ -340,8 +343,11 @@ class UpdateRawCStringFile(InvariantAwareCommand):
             category = 'VCProps'
         elif extension == '.txt':
             category = 'Text'
-        else:
-            raise RuntimeError("Unknown extension: %s." % extension)
+        elif extension == '.mk':
+            category = 'Makefile'
+        elif not extension:
+            assert name == 'Makefile', name
+            category = 'Makefile'
 
         output_dir = join_path(src_dir, 'PerfectHash')
         new_name = '%s_%s_RawCString.h' % (name, category)

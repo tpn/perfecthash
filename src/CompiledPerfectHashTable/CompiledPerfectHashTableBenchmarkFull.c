@@ -19,7 +19,7 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
 
         while (!CtrlCPressed) {
 
-            QueryPerformanceCounter(&Start);
+            CphQueryPerformanceCounter(&Start);
 
             for (Count = Iterations; Count != 0; Count--) {
 
@@ -54,7 +54,7 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
 
             }
 
-            QueryPerformanceCounter(&End);
+            CphQueryPerformanceCounter(&End);
 
             Delta.QuadPart = End.QuadPart - Start.QuadPart;
 
@@ -67,7 +67,7 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
 
         while (Attempts--) {
 
-            QueryPerformanceCounter(&Start);
+            CphQueryPerformanceCounter(&Start);
 
             for (Count = Iterations; Count != 0; Count--) {
 
@@ -101,7 +101,7 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 }
             }
 
-            QueryPerformanceCounter(&End);
+            CphQueryPerformanceCounter(&End);
 
             Delta.QuadPart = End.QuadPart - Start.QuadPart;
 

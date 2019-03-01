@@ -3047,3 +3047,195 @@ Language=English
 No path extension present.
 .
 
+MessageId=0x36f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MAKEFILE_FILE
+Language=English
+Error preparing Makefile file.
+.
+
+MessageId=0x370
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MAKEFILE_MAIN_MK_FILE
+Language=English
+Error preparing Makefile main.mk file.
+.
+
+MessageId=0x371
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MAKEFILE_LIB_MK_FILE
+Language=English
+Error preparing Makefile Lib.mk file.
+.
+
+MessageId=0x372
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MAKEFILE_SO_MK_FILE
+Language=English
+Error preparing Makefile So.mk file.
+.
+
+MessageId=0x373
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MAKEFILE_TEST_MK_FILE
+Language=English
+Error preparing Makefile Test.mk file.
+.
+
+MessageId=0x374
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MAKEFILE_BENCHMARK_INDEX_MK_FILE
+Language=English
+Error preparing Makefile BenchmarkIndex.mk file.
+.
+
+MessageId=0x375
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MAKEFILE_BENCHMARK_FULL_MK_FILE
+Language=English
+Error preparing Makefile BenchmarkFull.mk file.
+.
+
+MessageId=0x376
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_C_HEADER_NO_SAL2_FILE
+Language=English
+Error preparing C header no_sal2.h file.
+.
+
+MessageId=0x377
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MAKEFILE_FILE
+Language=English
+Error saving Makefile file.
+.
+
+MessageId=0x378
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MAKEFILE_MAIN_MK_FILE
+Language=English
+Error saving Makefile main.mk file.
+.
+
+MessageId=0x379
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MAKEFILE_LIB_MK_FILE
+Language=English
+Error saving Makefile Lib.mk file.
+.
+
+MessageId=0x37a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MAKEFILE_SO_MK_FILE
+Language=English
+Error saving Makefile So.mk file.
+.
+
+MessageId=0x37b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MAKEFILE_TEST_MK_FILE
+Language=English
+Error saving Makefile Test.mk file.
+.
+
+MessageId=0x37c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MAKEFILE_BENCHMARK_INDEX_MK_FILE
+Language=English
+Error saving Makefile BenchmarkIndex.mk file.
+.
+
+MessageId=0x37d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MAKEFILE_BENCHMARK_FULL_MK_FILE
+Language=English
+Error saving Makefile BenchmarkFull.mk file.
+.
+
+MessageId=0x37e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_C_HEADER_NO_SAL2_FILE
+Language=English
+Error saving C header no_sal2.h file.
+.
+
+MessageId=0x37f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MAKEFILE_FILE
+Language=English
+Error closing Makefile file.
+.
+
+MessageId=0x380
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MAKEFILE_MAIN_MK_FILE
+Language=English
+Error closing Makefile main.mk file.
+.
+
+MessageId=0x381
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MAKEFILE_LIB_MK_FILE
+Language=English
+Error closing Makefile Lib.mk file.
+.
+
+MessageId=0x382
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MAKEFILE_SO_MK_FILE
+Language=English
+Error closing Makefile So.mk file.
+.
+
+MessageId=0x383
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MAKEFILE_TEST_MK_FILE
+Language=English
+Error closing Makefile Test.mk file.
+.
+
+MessageId=0x384
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MAKEFILE_BENCHMARK_INDEX_MK_FILE
+Language=English
+Error closing Makefile BenchmarkIndex.mk file.
+.
+
+MessageId=0x385
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MAKEFILE_BENCHMARK_FULL_MK_FILE
+Language=English
+Error closing Makefile BenchmarkFull.mk file.
+.
+
+MessageId=0x386
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_C_HEADER_NO_SAL2_FILE
+Language=English
+Error closing C header no_sal2.h file.
+.
+

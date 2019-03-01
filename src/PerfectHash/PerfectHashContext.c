@@ -474,6 +474,19 @@ Return Value:
         goto Error;
     }
 
+    //
+    // N.B. When debugging, it can be helpful to set the max concurrency here
+    //      to 1 so that only one thread will be hitting file work callbacks
+    //      at any given time.  Change the #if 0 to #if 1 to toggle this
+    //      behavior.
+    //
+
+#ifdef _DBG
+#if 0
+    MaximumConcurrency = 1;
+#endif
+#endif
+
     SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
 
     if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {

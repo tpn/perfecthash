@@ -104,6 +104,7 @@ Return Value:
     PPERFECT_HASH_FILE *File = NULL;
     PPERFECT_HASH_FILE ContextFile = NULL;
     BOOLEAN IsContextFile = FALSE;
+    BOOLEAN IsMakefileOrMainMkFile = FALSE;
 
     //
     // Initialize aliases.
@@ -159,7 +160,21 @@ Return Value:
 
     if (!IsValidContextFileId(ContextFileId)) {
 
+        //
+        // This is not a context file.
+        //
+
         ContextFileId = ContextFileNullId;
+
+        //
+        // Toggle a boolean if this is the Makefile or main.mk file; we need
+        // this later when creating the path.
+        //
+
+        IsMakefileOrMainMkFile = (
+            FileId == FileMakefileFileId ||
+            FileId == FileMakefileMainMkFileId
+        );
 
     } else {
 
@@ -204,6 +219,7 @@ Return Value:
         LARGE_INTEGER EndOfFile;
         ULONG NumberOfResizeEvents;
         ULARGE_INTEGER NumberOfTableElements;
+        PPERFECT_HASH_PATH ExistingPath = NULL;
         PCUNICODE_STRING NewExtension = NULL;
         PCUNICODE_STRING NewDirectory = NULL;
         PCUNICODE_STRING NewBaseName = NULL;
@@ -211,6 +227,7 @@ Return Value:
         PCUNICODE_STRING AdditionalSuffix = NULL;
 
         Eof = &EofInits[FileWorkId];
+        NewBaseName = GetFileWorkItemBaseName(FileWorkId);
         NewExtension = GetFileWorkItemExtension(FileWorkId);
 
         if (IsContextFile) {
@@ -221,7 +238,6 @@ Return Value:
             //
 
             NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
-            NewBaseName = GetFileWorkItemBaseName(FileWorkId);
 
         } else {
 
@@ -241,7 +257,7 @@ Return Value:
             AdditionalSuffix = GetFileWorkItemSuffix(FileWorkId);
             NewStreamName = GetFileWorkItemStreamName(FileWorkId);
 
-            if (NewStreamName) {
+            if (IsValidUnicodeString(NewStreamName)) {
 
                 Item->Flags.PrepareOnce = TRUE;
 
@@ -376,8 +392,66 @@ Return Value:
             // Create the underlying path.
             //
 
+            ExistingPath = Context->BaseOutputDirectory->Path;
+
             Result = Path->Vtbl->Create(Path,
-                                        Context->BaseOutputDirectory->Path,
+                                        ExistingPath,   // ExistingPath
+                                        NewDirectory,   // NewDirectory
+                                        NULL,           // DirectorySuffix
+                                        NewBaseName,    // NewBaseName
+                                        NULL,           // BaseNameSuffix
+                                        NewExtension,   // NewExtension
+                                        NULL,           // NewStreamName
+                                        NULL,           // Parts
+                                        NULL);          // Reserved
+
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashPathCreate, Result);
+                goto End;
+            }
+
+        } else if (IsMakefileOrMainMkFile) {
+
+            //
+            // The Makefile and main.mk files are special as they're the only
+            // files rooted in the table's output directory that don't have the
+            // usual algo/hash/mask suffix appended to them; they need to be
+            // named "Makefile" and "main.mk".  As with the context file logic
+            // above, we handle this requirement by creating the path manually
+            // instead of using PerfectHashTableCreatePath().
+            //
+
+            //
+            // Create a new path instance.
+            //
+
+            Result = Context->Vtbl->CreateInstance(Context,
+                                                   NULL,
+                                                   &IID_PERFECT_HASH_PATH,
+                                                   &Path);
+
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashTableCreateInstance, Result);
+                goto End;
+            }
+
+            //
+            // Create the underlying path.
+            //
+
+            //
+            // N.B. The ExistingPath parameter for PerfectHashPathCreate() is
+            //      mandatory (and must be a valid path).  We have two choices
+            //      here: we can use either the keys file path or the context's
+            //      base output directory.  It doesn't matter which one, as the
+            //      underlying path isn't used (because we supply overrides for
+            //      NewDirectory, NewBaseName and NewExtension).
+            //
+
+            ExistingPath = Context->BaseOutputDirectory->Path;
+
+            Result = Path->Vtbl->Create(Path,
+                                        ExistingPath,   // ExistingPath
                                         NewDirectory,   // NewDirectory
                                         NULL,           // DirectorySuffix
                                         NewBaseName,    // NewBaseName
@@ -398,8 +472,10 @@ Return Value:
             // This is a normal table file.
             //
 
+            ExistingPath = Table->Keys->File->Path;
+
             Result = PerfectHashTableCreatePath(Table,
-                                                Table->Keys->File->Path,
+                                                ExistingPath,
                                                 &NumberOfResizeEvents,
                                                 &NumberOfTableElements,
                                                 Table->AlgorithmId,

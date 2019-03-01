@@ -64,6 +64,7 @@ Abstract:
 #define NO_EOF_VALUE 0
 #define NO_SUFFIX L""
 #define NO_BASE_NAME L""
+#define NO_EXTENSION &NullUnicodeString
 #define NO_STREAM_NAME L""
 
 #define SUFFIX(N)       L#N
@@ -341,6 +342,97 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        MakefileFile,                                                      \
+        MAKEFILE_FILE,                                                     \
+        EofInitTypeNumberOfPages,                                          \
+        4,                                                                 \
+        NO_SUFFIX,                                                         \
+        NO_EXTENSION,                                                      \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(Makefile)                                                \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        MakefileSoMkFile,                                                  \
+        MAKEFILE_SO_MK_FILE,                                               \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(So),                                                        \
+        &MakefileMkFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        MakefileLibMkFile,                                                 \
+        MAKEFILE_LIB_MK_FILE,                                              \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(Lib),                                                       \
+        &MakefileMkFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        MakefileTestMkFile,                                                \
+        MAKEFILE_TEST_MK_FILE,                                             \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(Test),                                                      \
+        &MakefileMkFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        MakefileBenchmarkFullMkFile,                                       \
+        MAKEFILE_BENCHMARK_FULL_MK_FILE,                                   \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(BenchmarkFull),                                             \
+        &MakefileMkFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        MakefileBenchmarkIndexMkFile,                                      \
+        MAKEFILE_BENCHMARK_INDEX_MK_FILE,                                  \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(BenchmarkIndex),                                            \
+        &MakefileMkFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        MakefileMainMkFile,                                                \
+        MAKEFILE_MAIN_MK_FILE,                                             \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        NO_SUFFIX,                                                         \
+        &MakefileMkFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(main)                                                    \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         VCProjectDllFile,                                                  \
         VCPROJECT_DLL_FILE,                                                \
         EofInitTypeDefault,                                                \
@@ -429,6 +521,19 @@ Abstract:
         BASE_NAME(CompiledPerfectHashMacroGlue)                            \
     )                                                                      \
                                                                            \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CHeaderNoSal2File,                                                 \
+        C_HEADER_NO_SAL2_FILE,                                             \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CHeaderFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(no_sal2)                                                 \
+    )                                                                      \
+                                                                           \
     LAST_ENTRY(                                                            \
         Verb,                                                              \
         VUpper,                                                            \
@@ -493,6 +598,13 @@ Abstract:
         VUpper,                                        \
         CHeaderCompiledPerfectHashMacroGlueFile,       \
         C_HEADER_COMPILED_PERFECT_HASH_MACRO_GLUE_FILE \
+    )                                                  \
+                                                       \
+    ENTRY(                                             \
+        Verb,                                          \
+        VUpper,                                        \
+        CHeaderNoSal2File,                             \
+        C_HEADER_NO_SAL2_FILE                          \
     )                                                  \
                                                        \
     LAST_ENTRY(                                        \
@@ -663,6 +775,114 @@ Abstract:
     VCPROJECT_FILE_WORK_TABLE(ENTRY,           \
                               ENTRY,           \
                               ENTRY)
+
+
+//
+// Define an X-macro for sub-Makefile files (e.g. those ending in .mk).
+//
+
+#define VERB_SUBMAKEFILE_FILE_WORK_TABLE(Verb,        \
+                                         VUpper,      \
+                                         FIRST_ENTRY, \
+                                         ENTRY,       \
+                                         LAST_ENTRY)  \
+                                                      \
+    FIRST_ENTRY(                                      \
+        Verb,                                         \
+        VUpper,                                       \
+        MakefileSoMkFile,                             \
+        MAKEFILE_SO_MK_FILE                           \
+    )                                                 \
+                                                      \
+    ENTRY(                                            \
+        Verb,                                         \
+        VUpper,                                       \
+        MakefileLibMkFile,                            \
+        MAKEFILE_LIB_MK_FILE                          \
+    )                                                 \
+                                                      \
+    ENTRY(                                            \
+        Verb,                                         \
+        VUpper,                                       \
+        MakefileTestMkFile,                           \
+        MAKEFILE_TEST_MK_FILE                         \
+    )                                                 \
+                                                      \
+    ENTRY(                                            \
+        Verb,                                         \
+        VUpper,                                       \
+        MakefileBenchmarkFullMkFile,                  \
+        MAKEFILE_BENCHMARK_FULL_MK_FILE               \
+    )                                                 \
+                                                      \
+    LAST_ENTRY(                                       \
+        Verb,                                         \
+        VUpper,                                       \
+        MakefileBenchmarkIndexMkFile,                 \
+        MAKEFILE_BENCHMARK_INDEX_MK_FILE              \
+    )
+
+
+#define PREPARE_SUBMAKEFILE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_SUBMAKEFILE_FILE_WORK_TABLE(Prepare,                               \
+                                     PREPARE,                               \
+                                     FIRST_ENTRY,                           \
+                                     ENTRY,                                 \
+                                     LAST_ENTRY)
+
+
+#define SAVE_SUBMAKEFILE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_SUBMAKEFILE_FILE_WORK_TABLE(Save,                               \
+                                     SAVE,                               \
+                                     FIRST_ENTRY,                        \
+                                     ENTRY,                              \
+                                     LAST_ENTRY)
+
+
+#define CLOSE_SUBMAKEFILE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_SUBMAKEFILE_FILE_WORK_TABLE(Close,                               \
+                                     CLOSE,                               \
+                                     FIRST_ENTRY,                         \
+                                     ENTRY,                               \
+                                     LAST_ENTRY)
+
+
+#define PREPARE_SUBMAKEFILE_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_SUBMAKEFILE_FILE_WORK_TABLE(Prepare,            \
+                                     PREPARE,            \
+                                     ENTRY,              \
+                                     ENTRY,              \
+                                     ENTRY)
+
+
+#define SAVE_SUBMAKEFILE_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_SUBMAKEFILE_FILE_WORK_TABLE(Save,            \
+                                     SAVE,            \
+                                     ENTRY,           \
+                                     ENTRY,           \
+                                     ENTRY)
+
+
+#define CLOSE_SUBMAKEFILE_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    VERB_SUBMAKEFILE_FILE_WORK_TABLE(Close,            \
+                                     CLOSE,            \
+                                     ENTRY,            \
+                                     ENTRY,            \
+                                     ENTRY)
+
+
+#define SUBMAKEFILE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    VERB_SUBMAKEFILE_FILE_WORK_TABLE(Nothing,                       \
+                                     NOTHING,                       \
+                                     FIRST_ENTRY,                   \
+                                     ENTRY,                         \
+                                     LAST_ENTRY)
+
+
+#define SUBMAKEFILE_FILE_WORK_TABLE_ENTRY(ENTRY) \
+    SUBMAKEFILE_FILE_WORK_TABLE(ENTRY,           \
+                                ENTRY,           \
+                                ENTRY)
 
 
 //
@@ -838,6 +1058,58 @@ FileRequiresUuid(
     return (
         IsValidVCProjectFileId((FILE_ID)Id) ||
         Id == FileVSSolutionFileId
+    );
+}
+
+//
+// Define an enum for individual sub-Makefile file IDs.
+//
+
+typedef enum _SUBMAKEFILE_FILE_ID {
+
+    //
+    // Null ID.
+    //
+
+    SubMakefileFileNullId = 0,
+
+#define EXPAND_AS_SUBMAKEFILE_FILE_ENUMS(Verb, VUpper, Name, Upper) \
+    SubMakefileFile##Name##Id = File##Name##Id,
+
+#define EXPAND_AS_FIRST_SUBMAKEFILE_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    SubMakefileFile##Name##Id = File##Name##Id,                          \
+    SubMakefileFileFirstId = SubMakefileFile##Name##Id,
+
+#define EXPAND_AS_LAST_SUBMAKEFILE_FILE_ENUM(Verb, VUpper, Name, Upper) \
+    SubMakefileFile##Name##Id = File##Name##Id,                         \
+    SubMakefileFileLastId = SubMakefileFile##Name##Id,
+
+    SUBMAKEFILE_FILE_WORK_TABLE(EXPAND_AS_FIRST_SUBMAKEFILE_FILE_ENUM,
+                                EXPAND_AS_SUBMAKEFILE_FILE_ENUMS,
+                                EXPAND_AS_LAST_SUBMAKEFILE_FILE_ENUM)
+
+    //
+    // Invalid ID, this must come last.
+    //
+
+    SubMakefileFileInvalidId,
+
+} SUBMAKEFILE_FILE_ID;
+typedef SUBMAKEFILE_FILE_ID *PSUBMAKEFILE_FILE_ID;
+
+#define NUMBER_OF_SUBMAKEFILE_FILES (                    \
+    (SubMakefileFileLastId - SubMakefileFileFirstId) + 1 \
+)
+
+FORCEINLINE
+BOOLEAN
+IsValidSubMakefileFileId(
+    _In_ SUBMAKEFILE_FILE_ID SubMakefileFileId
+    )
+{
+    return (
+        SubMakefileFileId >= SubMakefileFileFirstId &&
+        SubMakefileFileId <= SubMakefileFileLastId
     );
 }
 
@@ -1144,6 +1416,7 @@ typedef struct _FILE_WORK_ITEM {
         FILE_ID FileId;
         CONTEXT_FILE_ID ContextFileId;
         VCPROJECT_FILE_ID VCProjectFileId;
+        SUBMAKEFILE_FILE_ID SubMakefileFileId;
     };
 
     FILE_WORK_ID FileWorkId;
@@ -1238,5 +1511,63 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
                "//\n\n"                                                      \
                "#pragma warning(push)\n"                                     \
                "#pragma warning(disable: 4711)\n\n")
+
+#define OUTPUT_DOT_MK() \
+    *Output++ = '.';    \
+    *Output++ = 'm';    \
+    *Output++ = 'k'
+
+#define OUTPUT_DOT_C() \
+    *Output++ = '.';   \
+    *Output++ = 'c'
+
+#define OUTPUT_SPACE_SLASH_NEWLINE_TAB() \
+    *Output++ = ' ';                     \
+    *Output++ = '\\';                    \
+    *Output++ = '\n';                    \
+    *Output++ = '\t'
+
+#define MAYBE_OUTPUT_INCLUDE_TABLE_VALUES_DOT_C() \
+    if (!IsIndexOnly(Context->Table)) {           \
+        OUTPUT_STRING(Name);                      \
+        OUTPUT_RAW("_TableValues.c");             \
+        OUTPUT_SPACE_SLASH_NEWLINE_TAB();         \
+    }
+
+#define OUTPUT_MAKEFILE_SPLASH_COMMENT(N)             \
+    OUTPUT_RAW("# Compiled Perfect Hash Table " # N); \
+    OUTPUT_RAW(" Makefile.\n"                         \
+               "# Auto-generated.\n\n");
+
+#define OUTPUT_MAKEFILE_TARGET(Pfx)      \
+    OUTPUT_RAW("TARGET := ");            \
+    OUTPUT_STRING(&##Pfx##TargetPrefix); \
+    OUTPUT_STRING(Name);                 \
+    OUTPUT_RAW("\n\n")
+
+#define OUTPUT_MAKEFILE_TGT_VARS()                \
+    OUTPUT_RAW("TGT_LDFLAGS := -L${TARGET_DIR}\n" \
+               "TGT_LDLIBS := -l");               \
+    OUTPUT_STRING(Name);                          \
+    OUTPUT_RAW("\nTGT_PREREQS := lib");           \
+    OUTPUT_STRING(Name);                          \
+    OUTPUT_RAW(".so\n\n")
+
+#define OUTPUT_MAKEFILE_SOURCES(Suffix)            \
+    OUTPUT_RAW("SOURCES := \\\n\t");               \
+    OUTPUT_STRING(Name);                           \
+    OUTPUT_RAW("_Support.c \\\n\t");               \
+    OUTPUT_STRING(Name);                           \
+    OUTPUT_RAW("_Keys.c \\\n\t");                  \
+    if (KeysWereDownsized(Context->Table->Keys)) { \
+        OUTPUT_STRING(Name);                       \
+        OUTPUT_RAW("_DownsizedKeys.c \\\n\t");     \
+    }                                              \
+    OUTPUT_STRING(Name);                           \
+    OUTPUT_RAW("_" # Suffix);                      \
+    OUTPUT_RAW(".c \\\n\t");                       \
+    OUTPUT_STRING(Name);                           \
+    OUTPUT_RAW("_" # Suffix);                      \
+    OUTPUT_RAW("Exe.c\n")
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

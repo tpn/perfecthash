@@ -20,7 +20,39 @@ Abstract:
 extern "C" {
 #endif
 
+//
+// Platform-dependent defines.
+//
+
+#ifdef _WIN32
 #include <sal.h>
+
+//
+// The intrinsics headers trigger a lot of warnings when /Wall is on.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4255 4514 4668 4820 28251)
+#include <intrin.h>
+#include <mmintrin.h>
+#pragma warning(pop)
+
+#define DEBUGBREAK __debugbreak
+#define CPHCALLTYPE __stdcall
+#ifndef FORCEINLINE
+#define FORCEINLINE __forceinline
+#endif
+#elif defined(__linux__)
+#define CPHCALLTYPE
+#include <x86intrin.h>
+#include <no_sal2.h>
+#ifndef FORCEINLINE
+#define FORCEINLINE inline __attribute__((always_inline))
+#define DEBUGBREAK __builtin_trap
+#endif
+#else
+#error Unsupported platform.
+#endif
 
 #if defined(COMPILED_PERFECT_HASH_DLL_BUILD)
 #define CPHAPI __declspec(dllexport)
@@ -30,7 +62,13 @@ extern "C" {
 #define CPHAPI
 #endif
 
-#define CPHCALLTYPE __stdcall
+#if defined(COMPILED_PERFECT_HASH_DLL_BUILD)
+#define CPHAPI __declspec(dllexport)
+#elif defined(COMPILED_PERFECT_HASH_EXE_BUILD)
+#define CPHAPI __declspec(dllimport)
+#else
+#define CPHAPI
+#endif
 
 #ifdef _M_X64
 
@@ -41,10 +79,6 @@ extern "C" {
 #define IACA_VC_START() __writegsbyte(111, 111)
 #define IACA_VC_END()   __writegsbyte(222, 222)
 
-#endif
-
-#ifndef FORCEINLINE
-#define FORCEINLINE __forceinline
 #endif
 
 //

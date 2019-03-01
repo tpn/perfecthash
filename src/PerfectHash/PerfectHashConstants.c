@@ -531,6 +531,7 @@ const UNICODE_STRING DotKeysSuffix = RCS(L".keys");
 const UNICODE_STRING DotTableSuffix = RCS(L".pht1");
 const UNICODE_STRING DotCHeaderSuffix = RCS(L".h");
 const UNICODE_STRING DotCSourceSuffix = RCS(L".c");
+const UNICODE_STRING NullUnicodeString = RCS(L"");
 const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
 const UNICODE_STRING KeysTableSizeSuffix = RCS(L".TableSize");
 const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
@@ -538,11 +539,33 @@ const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
 const UNICODE_STRING PerfectHashTableCreateCsvBaseName =
     RCS(L"PerfectHashTableCreate");
 
+const STRING NullString = RCS("");
 const STRING DotExeSuffixA = RCS(".exe");
 const STRING DotDllSuffixA = RCS(".dll");
 const STRING DotLibSuffixA = RCS(".lib");
 const STRING DynamicLibraryConfigurationTypeA = RCS("DynamicLibrary");
 const STRING ApplicationConfigurationTypeA = RCS("Application");
+
+//
+// VCProject and Makefile string constants.  Consumed by the file work callback
+// routines (e.g. Chm01FileWorkVCProjectDllFile.c).
+//
+// N.B. These are STRING, not UNICODE_STRING, as they're written to ASCII text
+//      files (not used as UTF-16 path names).
+//
+
+const STRING LibTargetPrefix = RCS("lib");
+const STRING TestTargetPrefix = RCS("Test_");
+const STRING BenchmarkFullTargetPrefix = RCS("BenchmarkFull_");
+const STRING BenchmarkIndexTargetPrefix = RCS("BenchmarkIndex_");
+
+const STRING SoFileSuffix = RCS("So");
+const STRING LibFileSuffix = RCS("Lib");
+const STRING DllFileSuffix = RCS("Dll");
+const STRING TestFileSuffix = RCS("Test");
+const STRING TestExeFileSuffix = RCS("TestExe");
+const STRING BenchmarkFullFileSuffix = RCS("BenchmarkFullExe");
+const STRING BenchmarkIndexFileSuffix = RCS("BenchmarkIndexExe");
 
 //
 // Stream names.
@@ -560,6 +583,7 @@ const UNICODE_STRING CSourceFileExtension = RCS(L"c");
 const UNICODE_STRING CHeaderFileExtension = RCS(L"h");
 const UNICODE_STRING TableFileExtension = RCS(L"pht1");
 const UNICODE_STRING VCPropsFileExtension = RCS(L"props");
+const UNICODE_STRING MakefileMkFileExtension = RCS(L"mk");
 const UNICODE_STRING VCProjectFileExtension = RCS(L"vcxproj");
 const UNICODE_STRING VSSolutionFileExtension = RCS(L"sln");
 

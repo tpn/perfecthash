@@ -38,8 +38,6 @@ PrepareVCProjectTestExeFileChm01(
     PPERFECT_HASH_TABLE Table;
     PCCHUNK Chunks = VCProjectTestExeFileChunks;
     const ULONG NumberOfChunks = VCProjectTestExeFileNumberOfChunks;
-    STRING TargetPrefix = RTL_CONSTANT_STRING("Test_");
-    STRING TestExeFileSuffix = RTL_CONSTANT_STRING("TestExe");
 
     //
     // Initialize aliases.
@@ -71,8 +69,8 @@ PrepareVCProjectTestExeFileChm01(
     Values.TableName = TableName;
     Values.TargetName = BaseName;
     Values.TargetExt = &DotExeSuffixA;
-    Values.FileSuffix = &TestExeFileSuffix;
-    Values.TargetPrefix = &TargetPrefix;
+    Values.FileSuffix = &TestFileSuffix;
+    Values.TargetPrefix = &TestTargetPrefix;
     Values.ConfigurationType = &ApplicationConfigurationTypeA;
 
     Result = ProcessChunks(Rtl, Chunks, NumberOfChunks, &Values, &Output);
