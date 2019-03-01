@@ -220,7 +220,7 @@ TEST_COMPILED_PERFECT_HASH_TABLE      \
                                       \
 _Use_decl_annotations_                \
 ULONG                                 \
-TestCompiledPerfectHashTable_##T##(   \
+TestCompiledPerfectHashTable_##T(     \
     BOOLEAN DebugBreakOnFailure       \
     )
 
@@ -230,7 +230,7 @@ BENCHMARK_FULL_COMPILED_PERFECT_HASH_TABLE     \
                                                \
 _Use_decl_annotations_                         \
 ULONG                                          \
-BenchmarkFullCompiledPerfectHashTable_##T##(   \
+BenchmarkFullCompiledPerfectHashTable_##T(     \
     ULONG Seconds                              \
     )
 
@@ -240,7 +240,7 @@ BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE     \
                                                 \
 _Use_decl_annotations_                          \
 ULONG                                           \
-BenchmarkIndexCompiledPerfectHashTable_##T##(   \
+BenchmarkIndexCompiledPerfectHashTable_##T(     \
     ULONG Seconds                               \
     )
 
