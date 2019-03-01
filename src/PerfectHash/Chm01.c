@@ -1945,6 +1945,7 @@ Return Value:
         // a command line parameter to it at the very least).  Ditto for keys.
         //
 
+        Table->ValueType = LongType;
         Table->TableValuesArrayTypeName = &TypeNames[LongType];
         Table->KeysArrayTypeName = &TypeNames[LongType];
 
@@ -1954,6 +1955,7 @@ Return Value:
         // Default names to something sensible if modulus masking is active.
         //
 
+        Table->ValueType = LongType;
         Table->TableDataArrayTypeName = &TypeNames[LongType];
         Table->TableValuesArrayTypeName = &TypeNames[LongType];
         Table->KeysArrayTypeName = &TypeNames[LongType];
