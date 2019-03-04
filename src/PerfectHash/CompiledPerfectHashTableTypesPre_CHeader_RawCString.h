@@ -37,7 +37,7 @@ const CHAR CompiledPerfectHashTableTypesPreCHeaderRawCStr[] =
     "typedef long *PLONG;\n"
     "typedef unsigned long ULONG;\n"
     "typedef unsigned long *PULONG;\n"
-    "#elif __linux__\n"
+    "#elif defined(__linux__) || defined(__APPLE__)\n"
     "typedef int LONG;\n"
     "typedef int *PLONG;\n"
     "typedef unsigned int ULONG;\n"

@@ -66,7 +66,7 @@ const CHAR CompiledPerfectHashTableSupportCHeaderRawCStr[] =
     "extern void ExitProcess(ULONG);\n"
     "#define CPH_EXIT(Code) ExitProcess(Code)\n"
     "\n"
-    "#elif __linux__\n"
+    "#elif defined(__linux__) || defined(__APPLE__)\n"
     "\n"
     "#include <stdio.h>\n"
     "\n"

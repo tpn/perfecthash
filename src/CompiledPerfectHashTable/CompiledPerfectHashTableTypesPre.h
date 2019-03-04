@@ -26,7 +26,7 @@ typedef long LONG;
 typedef long *PLONG;
 typedef unsigned long ULONG;
 typedef unsigned long *PULONG;
-#elif __linux__
+#elif defined(__linux__) || defined(__APPLE__)
 typedef int LONG;
 typedef int *PLONG;
 typedef unsigned int ULONG;

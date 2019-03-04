@@ -42,9 +42,43 @@ extern "C" {
 #ifndef FORCEINLINE
 #define FORCEINLINE __forceinline
 #endif
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
 #define CPHCALLTYPE
+#if defined(__clang__)
 #include <x86intrin.h>
+
+//
+// Clang doesn't appear to support the rotate intrinsics _rotr and _rotl,
+// so, define some static inline versions here.
+//
+
+static inline
+unsigned int
+_rotl(
+    unsigned int a,
+    unsigned int b
+    )
+{
+    b &= 31;
+    return (a << b) | (a >> (32 - b));
+}
+
+static inline
+unsigned int
+_rotr(
+    unsigned int a,
+    unsigned int b
+    )
+{
+    b &= 31;
+    return (a >> b) | (a << (32 - b));
+}
+
+#elif defined(__GNUC__)
+#include <x86intrin.h>
+#else
+#error Unrecognized compiler.
+#endif
 #include <no_sal2.h>
 #ifndef FORCEINLINE
 #define FORCEINLINE static inline __attribute__((always_inline))

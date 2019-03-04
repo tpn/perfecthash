@@ -55,7 +55,7 @@ mainCRTStartup(    \
 extern void ExitProcess(ULONG);
 #define CPH_EXIT(Code) ExitProcess(Code)
 
-#elif __linux__
+#elif defined(__linux__) || defined(__APPLE__)
 
 #include <stdio.h>
 
