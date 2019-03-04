@@ -58,7 +58,7 @@ const CHAR CompiledPerfectHashCHeaderRawCStr[] =
     "#include <x86intrin.h>\n"
     "#include <no_sal2.h>\n"
     "#ifndef FORCEINLINE\n"
-    "#define FORCEINLINE inline __attribute__((always_inline))\n"
+    "#define FORCEINLINE static inline __attribute__((always_inline))\n"
     "#define DEBUGBREAK __builtin_trap\n"
     "#endif\n"
     "#else\n"

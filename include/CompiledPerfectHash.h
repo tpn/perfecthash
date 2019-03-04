@@ -47,7 +47,7 @@ extern "C" {
 #include <x86intrin.h>
 #include <no_sal2.h>
 #ifndef FORCEINLINE
-#define FORCEINLINE inline __attribute__((always_inline))
+#define FORCEINLINE static inline __attribute__((always_inline))
 #define DEBUGBREAK __builtin_trap
 #endif
 #else
