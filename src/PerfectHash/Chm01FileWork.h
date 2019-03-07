@@ -15,11 +15,11 @@ Abstract:
 
 #include "stdafx.h"
 
-#define EXPAND_AS_CALLBACK_DECL(      \
-    Verb, VUpper, Name, Upper,        \
-    EofType, EofValue,                \
-    Suffix, Extension, Stream, Base   \
-)                                     \
+#define EXPAND_AS_CALLBACK_DECL(                        \
+    Verb, VUpper, Name, Upper,                          \
+    EofType, EofValue,                                  \
+    Suffix, Extension, Stream, Base                     \
+)                                                       \
     extern FILE_WORK_CALLBACK_IMPL Verb####Name##Chm01;
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
