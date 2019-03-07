@@ -1,4 +1,6 @@
 
+#ifdef _WIN32
+
 //
 // Disable global optimizations, even in release builds.  Without this, the
 // compiler does clever things with regards to optimizing our __debugbreak()
@@ -6,6 +8,8 @@
 //
 
 #pragma optimize("", off)
+
+#endif
 
 //
 // Use a custom ASSERT() macro that optionally issues a __debugbreak() based

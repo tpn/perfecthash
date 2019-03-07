@@ -84,7 +84,7 @@ SaveCSourceTableDataFileChm01(
     // Write seed and mask data.
     //
 
-    OUTPUT_RAW("#pragma const_seg(\".cphsm\")\n");
+    OUTPUT_RAW("#ifdef _WIN32\n#pragma const_seg(\".cphsm\")\n#endif\n");
     OUTPUT_RAW("const CPHSEED ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Seeds[");
@@ -143,13 +143,13 @@ SaveCSourceTableDataFileChm01(
     OUTPUT_RAW("_IndexMask = ");
     OUTPUT_HEX(TableInfo->IndexMask);
 
-    OUTPUT_RAW(";\n#pragma const_seg()\n\n");
+    OUTPUT_RAW(";\n#ifdef _WIN32\n#pragma const_seg()\n#endif\n\n");
 
     //
     // Write the table data.
     //
 
-    OUTPUT_RAW("#pragma const_seg(\".cphdata\")\n");
+    OUTPUT_RAW("#ifdef _WIN32\n#pragma const_seg(\".cphdata\")\n#endif\n");
 
     OUTPUT_RAW("const ");
     OUTPUT_STRING(Table->TableDataArrayTypeName);

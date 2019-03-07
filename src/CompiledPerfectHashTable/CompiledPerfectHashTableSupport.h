@@ -3,8 +3,10 @@
 // Disable the anonymous union/struct warning.
 //
 
+#ifdef _WIN32
 #pragma warning(push)
 #pragma warning(disable: 4201 4094)
+#endif
 
 typedef union _LARGE_INTEGER {
     struct {
@@ -24,7 +26,9 @@ typedef union _ULARGE_INTEGER {
 } ULARGE_INTEGER;
 typedef ULARGE_INTEGER *PULARGE_INTEGER;
 
+#ifdef _WIN32
 #pragma warning(pop)
+#endif
 
 extern
 void

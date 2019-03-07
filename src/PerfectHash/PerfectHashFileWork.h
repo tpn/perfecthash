@@ -1497,20 +1497,27 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
                "#endif\n\n")
 
 #define OUTPUT_PRAGMA_WARNING_DISABLE_UNREFERENCED_INLINE()              \
-    OUTPUT_RAW("//\n// Disable \"unreferenced inline function has been " \
+    OUTPUT_RAW("#ifdef _WIN32\n\n"                                       \
+               "//\n// Disable \"unreferenced inline function has been " \
                       "removed\" warning.\n//\n\n"                       \
                "#pragma warning(push)\n"                                 \
-               "#pragma warning(disable: 4514)\n\n")
+               "#pragma warning(disable: 4514)\n\n"                      \
+               "#endif\n\n")
 
-#define OUTPUT_PRAGMA_WARNING_POP() OUTPUT_RAW("\n#pragma warning(pop)\n\n")
+#define OUTPUT_PRAGMA_WARNING_POP()   \
+    OUTPUT_RAW("\n#ifdef _WIN32\n"    \
+               "#pragma warning(pop)" \
+               "\n#endif\n")
 
 #define OUTPUT_PRAGMA_WARNING_DISABLE_FUNC_SELECTED_FOR_INLINE_EXP_WARNING() \
-    OUTPUT_RAW("//\n"                                                        \
+    OUTPUT_RAW("#ifdef _WIN32\n\n"                                           \
+               "//\n"                                                        \
                "// Disable \"function ... selected for "                     \
                    "inline expansion\" warning.\n"                           \
                "//\n\n"                                                      \
                "#pragma warning(push)\n"                                     \
-               "#pragma warning(disable: 4711)\n\n")
+               "#pragma warning(disable: 4711)\n\n"                          \
+               "#endif\n\n")
 
 #define OUTPUT_DOT_MK() \
     *Output++ = '.';    \

@@ -83,7 +83,6 @@ PrepareMakefileMainMkFileChm01(
 
     OUTPUT_RAW("CFLAGS := -O3 -pipe "
                          "-Wall "
-                         "-Wno-unknown-pragmas "
                          "-Wno-unused-but-set-variable"
                          "\n\n");
 

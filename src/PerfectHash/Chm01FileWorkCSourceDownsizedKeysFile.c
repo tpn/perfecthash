@@ -81,7 +81,7 @@ PrepareCSourceDownsizedKeysFileChm01(
     // Write the keys.
     //
 
-    OUTPUT_RAW("#pragma const_seg(\".cphdkeys\")\n");
+    OUTPUT_RAW("#ifdef _WIN32\n#pragma const_seg(\".cphdkeys\")\n#endif\n");
 
     OUTPUT_RAW("const CPHDKEY ");
     OUTPUT_STRING(Name);
@@ -124,7 +124,7 @@ PrepareCSourceDownsizedKeysFileChm01(
         *(Output - 1) = '\n';
     }
 
-    OUTPUT_RAW("};\n#pragma const_seg()\n");
+    OUTPUT_RAW("};\n#ifdef _WIN32\n#pragma const_seg()\n#endif\n");
 
     File->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output);
 

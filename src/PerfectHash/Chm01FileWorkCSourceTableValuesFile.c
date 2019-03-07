@@ -66,19 +66,22 @@ PrepareCSourceTableValuesFileChm01(
     //
 
     OUTPUT_RAW("#ifndef CPH_INDEX_ONLY\n\n"
+               "#ifdef _WIN32\n"
                "#pragma data_seg(\".cphval\")\n"
+               "#endif\n"
                "CPHVALUE ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues[");
     OUTPUT_INT(NumberOfElements);
     OUTPUT_RAW("] = { 0, };\n"
+               "#ifdef _WIN32\n"
                "#pragma data_seg()\n"
                "#pragma comment(linker, "
                "\"/section:.cphval,rw");
     if (UseRwsSectionForTableValues(Table)) {
         *Output++ = 's';
     }
-    OUTPUT_RAW("\")\n\n#endif");
+    OUTPUT_RAW("\")\n#endif\n#endif");
 
     //
     // Update the number of bytes written.
