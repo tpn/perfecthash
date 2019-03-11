@@ -1570,10 +1570,16 @@ typedef union _PERFECT_HASH_KEYS_BITMAP_FLAGS {
         ULONG Contiguous:1;
 
         //
+        // When set, indicates that the key set contains a zero.
+        //
+
+        ULONG HasZero:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
 
     LONG AsLong;

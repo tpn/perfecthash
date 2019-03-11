@@ -393,6 +393,14 @@ Return Value:
 
     Values = KeyArray;
 
+    //
+    // If the first value is zero, toggle the relevant bitmap flag.
+    //
+
+    if (*Values == 0) {
+        KeysBitmap->Flags.HasZero = TRUE;
+    }
+
     for (Index = 0; Index < NumberOfKeys; Index++) {
         Key = *Values++;
 
@@ -602,6 +610,14 @@ Return Value:
     Stats.MaxValue = 0;
 
     Values = KeyArray;
+
+    //
+    // If the first value is zero, toggle the relevant bitmap flag.
+    //
+
+    if (*Values == 0) {
+        KeysBitmap->Flags.HasZero = TRUE;
+    }
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
         Key = *Values++;
