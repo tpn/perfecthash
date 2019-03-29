@@ -1302,11 +1302,21 @@ CU_RESULT
 typedef CU_LAUNCH_KERNEL *PCU_LAUNCH_KERNEL;
 
 //
-// Define function pointer head macro.
+// Define the CU_FUNCTION_TABLE X-macro.  Each macro receives (Upper, Name) as
+// as its parameters, where Upper represents the pointer type name (excluding
+// the leading 'PCU'), and name is the capitalized name of the function, e.g.:
+//
+//      (INIT, Init)
+//      (GET_ERROR_NAME, GetErrorName)
 //
 
-#define CU_FUNCTIONS_HEAD                                        \
-    PCU_INIT Init;                                               \
+#define CU_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)        \
+                                                                 \
+    FIRST_ENTRY(                                                 \
+        INIT,                                                    \
+        Init,                                                    \
+    )                                                            \
+                                                                 \
     PCU_GET_ERROR_NAME GetErrorName;                             \
     PCU_GET_ERROR_STRING GetErrorString;                         \
     PCU_DEVICE_GET DeviceGet;                                    \
