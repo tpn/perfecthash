@@ -277,6 +277,9 @@
     <ClCompile Include="Chm01FileWorkCHeaderNoSal2File.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Cu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -494,6 +497,9 @@
     </ClInclude>
     <ClInclude Include="Makefile_Makefile_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Cu.h">
+      <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
