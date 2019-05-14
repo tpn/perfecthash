@@ -20,6 +20,7 @@ Abstract:
 
 #include "targetver.h"
 
+#if 0
 //
 // When the target platform is x64, our ../PerfectHash.props file specifies:
 //
@@ -36,6 +37,7 @@ Abstract:
 #ifdef _M_X64
 #ifndef __AVX2__
 #define __AVX2__
+#endif
 #endif
 #endif
 
@@ -106,6 +108,7 @@ Abstract:
 #include <PerfectHashErrors.h>
 
 #include "Component.h"
+#include "BitManipulation.h"
 #include "Rtl.h"
 #include "RtlOutput.h"
 #include "Chunk.h"

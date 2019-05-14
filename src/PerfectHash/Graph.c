@@ -676,8 +676,6 @@ Return Value:
 --*/
 {
     BYTE Count;
-    BYTE FirstCount;
-    BYTE SecondCount;
     USHORT PageCount;
     ULONG LargePageCount;
     ULONG PageIndex;
@@ -692,17 +690,8 @@ Return Value:
     PASSIGNED_CACHE_LINE AssignedCacheLine;
     PASSIGNED_MEMORY_COVERAGE Coverage;
 
-#ifndef __AVX2__
     ULONG Index;
     PASSIGNED Assigned;
-#else
-    ULONG Mask;
-    PBYTE Assigned;
-    YMMWORD NotZerosYmm;
-    YMMWORD AssignedYmm;
-    YMMWORD ShiftedYmm;
-    const YMMWORD AllZeros = _mm256_set1_epi8(0);
-#endif
 
     Coverage = &Graph->AssignedMemoryCoverage;
     Coverage->Attempt = Graph->Attempt;
@@ -726,8 +715,6 @@ Return Value:
         Count = 0;
         IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
 
-#ifndef __AVX2__
-
         //
         // For each cache line, enumerate over each individual element, and,
         // if it is not NULL, increment the local count and total count.
@@ -740,17 +727,187 @@ Return Value:
                 Coverage->TotalNumberOfAssigned++;
             }
         }
-#else
+
+        ASSERT(Count >= 0 && Count <= 16);
+        Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
 
         //
-        // An AVX2 version of the logic above.  Load 32 bytes into a YMM
-        // register and compare it against a YMM register that is all zeros.
-        // Shift the resulting comparison result right 24 bits, then generate
-        // a ULONG mask (we need the shift because we have to use the intrinsic
-        // _mm256_movemask_epi8() as there's no _mm256_movemask_epi32()).  The
-        // population count of the resulting mask provides us with the number
-        // of non-zero ULONG elements within that 32 byte chunk.  Update the
-        // counts and then repeat for the second 32 byte chunk.
+        // Advance the cache line pointer.
+        //
+
+        AssignedCacheLine++;
+
+        //
+        // Increment the empty or used counters depending on whether or not
+        // any assigned elements were detected.
+        //
+
+        if (!Count) {
+
+            Coverage->NumberOfEmptyCacheLines++;
+
+        } else {
+
+            Coverage->NumberOfUsedCacheLines++;
+
+            if (!FoundFirst) {
+                FoundFirst = TRUE;
+                Coverage->FirstCacheLineUsed = CacheLineIndex;
+                Coverage->FirstPageUsed = PageIndex;
+                Coverage->FirstLargePageUsed = LargePageIndex;
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
+                Coverage->MaxAssignedPerCacheLineCount = Count;
+            } else {
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
+                if (Coverage->MaxAssignedPerCacheLineCount < Count) {
+                    Coverage->MaxAssignedPerCacheLineCount = Count;
+                }
+            }
+
+        }
+
+        //
+        // Update histograms based on the count we just observed.
+        //
+
+        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex] = Count;
+        Coverage->NumberOfAssignedPerLargePage[LargePageIndex] += Count;
+        Coverage->NumberOfAssignedPerPage[PageIndex] += Count;
+
+        TotalBytesProcessed += CACHE_LINE_SIZE;
+        PageSizeBytesProcessed += CACHE_LINE_SIZE;
+        LargePageSizeBytesProcessed += CACHE_LINE_SIZE;
+
+        //
+        // If we've hit a page boundary, or this is the last cache line we'll
+        // be processing, finalize counts for this page.  Likewise for large
+        // pages.
+        //
+
+        if (PageSizeBytesProcessed == PAGE_SIZE || IsLastCacheLine) {
+
+            PageSizeBytesProcessed = 0;
+            PageCount = Coverage->NumberOfAssignedPerPage[PageIndex];
+
+            if (PageCount) {
+                Coverage->NumberOfUsedPages++;
+            } else {
+                Coverage->NumberOfEmptyPages++;
+            }
+
+            PageIndex++;
+
+            if (LargePageSizeBytesProcessed == LARGE_PAGE_SIZE ||
+                IsLastCacheLine) {
+
+                LargePageSizeBytesProcessed = 0;
+                LargePageCount =
+                    Coverage->NumberOfAssignedPerLargePage[LargePageIndex];
+
+                if (LargePageCount) {
+                    Coverage->NumberOfUsedLargePages++;
+                } else {
+                    Coverage->NumberOfEmptyLargePages++;
+                }
+
+                LargePageIndex++;
+            }
+        }
+    }
+
+    //
+    // Enumeration of the assigned array complete; verify invariants.
+    //
+
+    VerifyMemoryCoverageInvariants(Graph, Coverage);
+
+    return;
+}
+
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
+    GraphCalculateAssignedMemoryCoverageAvx2;
+
+_Use_decl_annotations_
+VOID
+GraphCalculateAssignedMemoryCoverageAvx2(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    AVX2 implementation of GraphCalculateAssignedMemoryCoverage().
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which memory coverage of the
+        assigned array is to be calculated.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    BYTE Count;
+    BYTE FirstCount;
+    BYTE SecondCount;
+    USHORT PageCount;
+    ULONG LargePageCount;
+    ULONG PageIndex;
+    ULONG CacheLineIndex;
+    ULONG LargePageIndex;
+    ULONG NumberOfCacheLines;
+    ULONG TotalBytesProcessed;
+    ULONG PageSizeBytesProcessed;
+    ULONG LargePageSizeBytesProcessed;
+    BOOLEAN FoundFirst = FALSE;
+    BOOLEAN IsLastCacheLine = FALSE;
+    PASSIGNED_CACHE_LINE AssignedCacheLine;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+
+    ULONG Mask;
+    PBYTE Assigned;
+    YMMWORD NotZerosYmm;
+    YMMWORD AssignedYmm;
+    YMMWORD ShiftedYmm;
+    const YMMWORD AllZeros = _mm256_set1_epi8(0);
+
+    Coverage = &Graph->AssignedMemoryCoverage;
+    Coverage->Attempt = Graph->Attempt;
+    NumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+    AssignedCacheLine = (PASSIGNED_CACHE_LINE)Graph->Assigned;
+
+    PageIndex = 0;
+    LargePageIndex = 0;
+    TotalBytesProcessed = 0;
+    PageSizeBytesProcessed = 0;
+    LargePageSizeBytesProcessed = 0;
+
+    //
+    // Enumerate the assigned array in cache-line-sized strides.
+    //
+
+    for (CacheLineIndex = 0;
+         CacheLineIndex < NumberOfCacheLines;
+         CacheLineIndex++) {
+
+        Count = 0;
+        IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
+
+        //
+        // Load 32 bytes into a YMM register and compare it against a YMM
+        // register that is all zeros.  Shift the resulting comparison result
+        // right 24 bits, then generate a ULONG mask (we need the shift because
+        // we have to use the intrinsic _mm256_movemask_epi8() as there's no
+        // _mm256_movemask_epi32()).  The population count of the resulting
+        // mask provides us with the number of non-zero ULONG elements within
+        // that 32 byte chunk.  Update the counts and then repeat for the
+        // second 32 byte chunk.
         //
 
         //
@@ -779,8 +936,6 @@ Return Value:
 
         Count = FirstCount + SecondCount;
         Coverage->TotalNumberOfAssigned += Count;
-
-#endif
 
         ASSERT(Count >= 0 && Count <= 16);
         Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
@@ -1278,7 +1433,7 @@ End:
 }
 
 
-#ifdef _M_X64
+#ifdef PERFECTHASH_X64_TSX
 
 //
 // TSX version of above.
@@ -1416,7 +1571,7 @@ Retry:
 
 _No_competing_thread_end_
 
-#endif // _M_X64
+#endif // PERFECTHASH_X64_TSX
 
 
 GRAPH_SET_INFO GraphSetInfo;

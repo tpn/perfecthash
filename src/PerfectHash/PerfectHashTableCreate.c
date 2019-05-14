@@ -440,7 +440,7 @@ Return Value:
         }
 
         if (!IsModulusMasking(MaskFunctionId) &&
-            !IsPowerOf2(RequestedNumberOfTableElements->QuadPart)) {
+            !IsPowerOfTwo(RequestedNumberOfTableElements->QuadPart)) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
             PH_ERROR(PerfectHashTableCreate_NumTableElemsNotPow2, Result);
             goto Error;
@@ -625,7 +625,8 @@ Return Value:
                 break;
 
             case TableCreateParameterValueSizeInBytesId:
-                Table->ValueSizeInBytes = (ULONG)RoundUpPowerOf2(Param->AsULong);
+                Table->ValueSizeInBytes =
+                    (ULONG)RoundUpPowerOfTwo32(Param->AsULong);
                 if (Table->ValueSizeInBytes == 4) {
                     Table->ValueType = LongType;
                 } else if (Table->ValueSizeInBytes == 8) {

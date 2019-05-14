@@ -149,6 +149,7 @@
     <ClInclude Include="PerfectHashTimestamp.h" />
     <ClInclude Include="PerfectHashTls.h" />
     <ClInclude Include="Rtl.h" />
+    <ClInclude Include="BitManipulation.h" />
     <ClInclude Include="RtlOutput.h" />
     <ClInclude Include="Security.h" />
     <ClInclude Include="stdafx.h" />
@@ -158,6 +159,7 @@
     <ClInclude Include="VCProjectFileChunks.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BitManipulation.c" />
     <ClCompile Include="Chm01FileWork.c" />
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashMacroGlueFile.c" />

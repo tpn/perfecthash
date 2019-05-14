@@ -61,9 +61,11 @@
       -->
     </ClCompile>
 
+    <!--
     <ClCompile Condition="$(Platform) == 'x64'">
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
+    -->
 
     <ClCompile Condition="$(Configuration) == 'Debug'">
       <Optimization>Disabled</Optimization>
