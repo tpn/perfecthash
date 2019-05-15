@@ -426,6 +426,14 @@ C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
 
 typedef
 VOID
+(NTAPI RTL_ZERO_MEMORY)(
+    _Out_writes_bytes_all_(Length) PVOID Destination,
+    _In_ ULONG_PTR Length
+    );
+typedef RTL_ZERO_MEMORY *PRTL_ZERO_MEMORY;
+
+typedef
+VOID
 (NTAPI RTL_FILL_MEMORY)(
     _Out_writes_bytes_all_(Length) PVOID Destination,
     _In_ ULONG_PTR Length,
@@ -2198,6 +2206,11 @@ typedef RTL_VTBL *PRTL_VTBL;
     ENTRY(                                                 \
         RTL_MOVE_MEMORY,                                   \
         RtlMoveMemory                                      \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_ZERO_MEMORY,                                   \
+        RtlZeroMemory                                      \
     )                                                      \
                                                            \
     ENTRY(                                                 \

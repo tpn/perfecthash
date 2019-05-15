@@ -2247,12 +2247,21 @@ Return Value:
     // N.B. We use __stosq() to prevent the PGO builds trying to call memset.
     //
 
+#if 0
 #define ZERO_BITMAP_BUFFER(Name)                           \
     ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
            ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
     __stosq((PDWORD64)Graph->##Name##.Buffer,              \
             0,                                             \
             Info->##Name##BufferSizeInBytes >> 3)
+#endif
+
+#define ZERO_BITMAP_BUFFER(Name)                             \
+    ASSERT(0 == Info->##Name##BufferSizeInBytes -            \
+           ((Info->##Name##BufferSizeInBytes >> 3) << 3));   \
+    Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##.Buffer,     \
+                       Info->##Name##BufferSizeInBytes)
+
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
     ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
@@ -2265,12 +2274,22 @@ Return Value:
     // N.B. We use __stosq() to prevent the PGO builds trying to call memset.
     //
 
+#if 0
 #define EMPTY_ARRAY(Name)                            \
     ASSERT(0 == Info->##Name##SizeInBytes -          \
            ((Info->##Name##SizeInBytes >> 3) << 3)); \
     __stosq((PDWORD64)Graph->##Name,                 \
             ~0ULL,                                   \
             Info->##Name##SizeInBytes >> 3)
+#endif
+
+#define EMPTY_ARRAY(Name)                              \
+    ASSERT(0 == Info->##Name##SizeInBytes -            \
+           ((Info->##Name##SizeInBytes >> 3) << 3));   \
+    Rtl->RtlFillMemory((PDWORD64)Graph->##Name,        \
+                       Info->##Name##SizeInBytes, \
+                       (BYTE)~0)
+
 
     EMPTY_ARRAY(First);
     EMPTY_ARRAY(Prev);
