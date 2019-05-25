@@ -829,11 +829,11 @@ Return Value:
 }
 
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
-    GraphCalculateAssignedMemoryCoverageAvx2;
+    GraphCalculateAssignedMemoryCoverage_AVX2;
 
 _Use_decl_annotations_
 VOID
-GraphCalculateAssignedMemoryCoverageAvx2(
+GraphCalculateAssignedMemoryCoverage_AVX2(
     PGRAPH Graph
     )
 /*++
@@ -919,7 +919,7 @@ Return Value:
         NotZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
         ShiftedYmm = _mm256_srli_epi32(NotZerosYmm, 24);
         Mask = _mm256_movemask_epi8(ShiftedYmm);
-        FirstCount = (BYTE)PopulationCount32(Mask);
+        FirstCount = (BYTE)__popcnt(Mask);
         ASSERT(FirstCount >= 0 && FirstCount <= 8);
 
         //
@@ -931,7 +931,7 @@ Return Value:
         NotZerosYmm = _mm256_cmpgt_epi32(AssignedYmm, AllZeros);
         ShiftedYmm = _mm256_srli_epi32(NotZerosYmm, 24);
         Mask = _mm256_movemask_epi8(ShiftedYmm);
-        SecondCount = (BYTE)PopulationCount32(Mask);
+        SecondCount = (BYTE)__popcnt(Mask);
         ASSERT(SecondCount >= 0 && SecondCount <= 8);
 
         Count = FirstCount + SecondCount;

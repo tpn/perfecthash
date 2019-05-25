@@ -1931,7 +1931,7 @@ Return Value:
         //
 
         EdgeValue = (ULONG_PTR)1 << NumberOfEdgeMaskBits;
-        Result = GetContainingType(EdgeValue, &Table->TableDataArrayType);
+        Result = GetContainingType(Rtl, EdgeValue, &Table->TableDataArrayType);
         if (FAILED(Result)) {
             PH_ERROR(PrepareGraphInfoChm01_GetContainingType, Result);
             goto Error;

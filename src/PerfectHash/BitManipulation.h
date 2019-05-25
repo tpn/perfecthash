@@ -19,6 +19,12 @@ Abstract:
 #include "stdafx.h"
 
 //
+// PopulationCount64 is defined as a macro in winnt.h.  Undefine it now.
+//
+
+#undef PopulationCount64
+
+//
 // Function pointer typedefs.
 //
 
@@ -115,87 +121,189 @@ typedef ROUND_UP_NEXT_POWER_OF_TWO_64 *PROUND_UP_NEXT_POWER_OF_TWO_64;
 
 typedef
 ULONG_PTR
+(ROUND_UP_POWER_OF_TWO_POINTER)(
+    _In_ ULONG_PTR Input
+    );
+typedef ROUND_UP_POWER_OF_TWO_POINTER *PROUND_UP_POWER_OF_TWO_POINTER;
+
+typedef
+ULONG_PTR
 (ROUND_UP_NEXT_POWER_OF_TWO_POINTER)(
     _In_ ULONG_PTR Input
     );
 typedef ROUND_UP_NEXT_POWER_OF_TWO_POINTER *PROUND_UP_NEXT_POWER_OF_TWO_POINTER;
 
 //
-// Forward decls.
+// Structure of function pointers.
 //
-
-#ifndef __INTELLISENSE__
-extern LEADING_ZEROS_32 LeadingZeros32_C;
-extern TRAILING_ZEROS_32 TrailingZeros32_C;
-extern POPULATION_COUNT_32 PopulationCount32_C;
-extern LEADING_ZEROS_64 LeadingZeros64_C;
-extern TRAILING_ZEROS_64 TrailingZeros64_C;
-extern POPULATION_COUNT_64 PopulationCount64_C;
-extern LEADING_ZEROS_POINTER LeadingZerosPointer_C;;
-extern TRAILING_ZEROS_POINTER TrailingZerosPointer_C;;
-extern POPULATION_COUNT_POINTER PopulationCountPointer_C;
-extern ROUND_UP_POWER_OF_TWO_32 RoundUpPowerOfTwo32_C;
-extern ROUND_UP_NEXT_POWER_OF_TWO_32 RoundUpNextPowerOfTwo32_C;
-
-extern LEADING_ZEROS_32 LeadingZeros32_LZCNT;
-extern TRAILING_ZEROS_32 TrailingZeros32_BMI1;
-extern POPULATION_COUNT_32 PopulationCount32_POPCNT;
-extern LEADING_ZEROS_64 LeadingZeros64_LZCNT;
-extern TRAILING_ZEROS_64 TrailingZeros64_BMI1;
-extern POPULATION_COUNT_64 PopulationCount64_POPCNT;
-extern LEADING_ZEROS_POINTER LeadingZerosPointer_POPCNT;
-extern TRAILING_ZEROS_POINTER TrailingZerosPointer_POPCNT;
-extern POPULATION_COUNT_POINTER PopulationCountPointer_POPCNT;
-extern ROUND_UP_POWER_OF_TWO_32 RoundUpPowerOfTwo32_LZCNT;
-extern ROUND_UP_NEXT_POWER_OF_TWO_32 RoundUpNextPowerOfTwo32_LZCNT;
-#endif
-
-
-#ifdef PERFECTHASH_CPU_LZCNT
-#define LeadingZeros32 LeadingZeros32_LZCNT
-#define LeadingZeros64 LeadingZeros64_LZCNT
-#define LeadingZerosPointer LeadingZerosPointer_LZCNT
-#define RoundUpPowerOfTwo32 RoundUpPowerOfTwo32_LZCNT
-#define RoundUpNextPowerOfTwo32 RoundUpNextPowerOfTwo32_LZCNT
-#else
-#define LeadingZeros32 LeadingZeros32_C
-#define LeadingZeros64 LeadingZeros64_C
-#define LeadingZerosPointer LeadingZerosPointer_C
-#define RoundUpPowerOfTwo32 RoundUpPowerOfTwo32_C
-#define RoundUpNextPowerOfTwo32 RoundUpNextPowerOfTwo32_C
-#endif
-
-#ifdef PERFECTHASH_CPU_BMI1
-#define TrailingZeros32 TrailingZeros32_BMI1
-#define TrailingZeros64 TrailingZeros64_BMI1
-#define TrailingZerosPointer TrailingZerosPointer_BMI1
-#else
-#define TrailingZeros32 TrailingZeros32_C
-#define TrailingZeros64 TrailingZeros64_C
-#define TrailingZerosPointer TrailingZerosPointer_C
-#endif
 
 
 //
-// PopulationCount64 is defined as a macro in winnt.h.  Undefine it now.
+// Define the X-macro.
 //
 
-#undef PopulationCount64
+#define RTL_BIT_MANIPULATION_FUNCTION_TABLE(FIRST_ENTRY, \
+                                            ENTRY,       \
+                                            LAST_ENTRY)  \
+                                                         \
+    FIRST_ENTRY(                                         \
+        LEADING_ZEROS_32,                                \
+        LeadingZeros32,                                  \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        TRAILING_ZEROS_32,                               \
+        TrailingZeros32,                                 \
+        BMI1,                                            \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        POPULATION_COUNT_32,                             \
+        PopulationCount32,                               \
+        POPCNT,                                          \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        LEADING_ZEROS_64,                                \
+        LeadingZeros64,                                  \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        TRAILING_ZEROS_64,                               \
+        TrailingZeros64,                                 \
+        BMI1,                                            \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        POPULATION_COUNT_64,                             \
+        PopulationCount64,                               \
+        POPCNT,                                          \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        LEADING_ZEROS_POINTER,                           \
+        LeadingZerosPointer,                             \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        TRAILING_ZEROS_POINTER,                          \
+        TrailingZerosPointer,                            \
+        BMI1,                                            \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        POPULATION_COUNT_POINTER,                        \
+        PopulationCountPointer,                          \
+        POPCNT,                                          \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        ROUND_UP_POWER_OF_TWO_32,                        \
+        RoundUpPowerOfTwo32,                             \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        ROUND_UP_NEXT_POWER_OF_TWO_32,                   \
+        RoundUpNextPowerOfTwo32,                         \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        ROUND_UP_POWER_OF_TWO_64,                        \
+        RoundUpPowerOfTwo64,                             \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        ROUND_UP_NEXT_POWER_OF_TWO_64,                   \
+        RoundUpNextPowerOfTwo64,                         \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    ENTRY(                                               \
+        ROUND_UP_POWER_OF_TWO_POINTER,                   \
+        RoundUpPowerOfTwoPointer,                        \
+        LZCNT,                                           \
+        ABM                                              \
+    )                                                    \
+                                                         \
+    LAST_ENTRY(                                          \
+        ROUND_UP_NEXT_POWER_OF_TWO_POINTER,              \
+        RoundUpNextPowerOfTwoPointer,                    \
+        LZCNT,                                           \
+        ABM                                              \
+    )
 
-#ifdef PERFECTHASH_CPU_POPCNT
-#define PopulationCount32 PopulationCount32_POPCNT
-#define PopulationCount64 PopulationCount64_POPCNT
-#define PopulationCountPointer PopulationCountPointer_POPCNT
-#else
-#define PopulationCount32 PopulationCount32_C
-#define PopulationCount64 PopulationCount64_C
-#define PopulationCountPointer PopulationCountPointer_C
-#endif
+#define RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(ENTRY) \
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE(ENTRY,           \
+                                        ENTRY,           \
+                                        ENTRY)
 
-//
-// Helper functions for power-of-2 alignment.
-//
+#define EXPAND_AS_FUNCTION_POINTER(Upper, Name, Unused3, Unused4) \
+    P##Upper Name;
+typedef struct _RTL_BIT_MANIPULATION_FUNCTIONS {
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_FUNCTION_POINTER)
+} RTL_BIT_MANIPULATION_FUNCTIONS;
+typedef RTL_BIT_MANIPULATION_FUNCTIONS *PRTL_BIT_MANIPULATION_FUNCTIONS;
+#undef EXPAND_AS_FUNCTION_POINTER
 
+#define EXPAND_AS_FUNCTION_POINTER_C(Upper, Name, Unused3, Unused4) \
+    P##Upper Name##_C;
+typedef struct _RTL_BIT_MANIPULATION_FUNCTIONS_C {
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_FUNCTION_POINTER_C)
+} RTL_BIT_MANIPULATION_FUNCTIONS_C;
+typedef RTL_BIT_MANIPULATION_FUNCTIONS_C *PRTL_BIT_MANIPULATION_FUNCTIONS_C;
+#undef EXPAND_AS_FUNCTION_POINTER_C
+
+#define EXPAND_AS_FUNCTION_POINTER_INTEL(Upper, Name, IntelFeature, Unused4) \
+    P##Upper Name##_##IntelFeature;
+typedef struct _RTL_BIT_MANIPULATION_FUNCTIONS_INTEL {
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_FUNCTION_POINTER_INTEL)
+} RTL_BIT_MANIPULATION_FUNCTIONS_INTEL;
+typedef RTL_BIT_MANIPULATION_FUNCTIONS_INTEL
+      *PRTL_BIT_MANIPULATION_FUNCTIONS_INTEL;
+#undef EXPAND_AS_FUNCTION_POINTER_INTEL
+
+#define EXPAND_AS_FUNCTION_POINTER_AMD(Upper, Name, Unused3, AmdFeature) \
+    P##Upper Name##_##AmdFeature;
+typedef struct _RTL_BIT_MANIPULATION_FUNCTIONS_AMD {
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_FUNCTION_POINTER_AMD)
+} RTL_BIT_MANIPULATION_FUNCTIONS_AMD;
+typedef RTL_BIT_MANIPULATION_FUNCTIONS_AMD
+      *PRTL_BIT_MANIPULATION_FUNCTIONS_AMD;
+#undef EXPAND_AS_FUNCTION_POINTER_AMD
+
+#define EXPAND_AS_FUNCTION_DECL_C(Upper, Name, Unused3, Unused4) \
+    Upper Name##_C;
+RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_FUNCTION_DECL_C)
+#undef EXPAND_AS_FUNCTION_DECL_C
+
+#define EXPAND_AS_FUNCTION_DECL_INTEL(Upper, Name, IntelFeature, Unused4) \
+    Upper Name##_##IntelFeature;
+RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_FUNCTION_DECL_INTEL)
+#undef EXPAND_AS_FUNCTION_DECL_INTEL
+
+#define EXPAND_AS_FUNCTION_DECL_AMD(Upper, Name, Unused3, AmdFeature) \
+    Upper Name##_##AmdFeature;
+RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_FUNCTION_DECL_AMD)
+#undef EXPAND_AS_FUNCTION_DECL_AMD
 
 //
 // Inline helper for determing if a value is a power of 2.

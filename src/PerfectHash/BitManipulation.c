@@ -134,7 +134,7 @@ TrailingZeros32_C(
     return Count;
 }
 
-TRAILING_ZEROS_64 TrailingZeros64;
+TRAILING_ZEROS_64 TrailingZeros64_C;
 
 _Use_decl_annotations_
 ULONGLONG
@@ -159,10 +159,10 @@ TrailingZeros64_C(
 
 TRAILING_ZEROS_POINTER TrailingZerosPointer_C;
 
-FORCEINLINE
+_Use_decl_annotations_
 ULONG_PTR
 TrailingZerosPointer_C(
-    _In_ ULONG_PTR Integer
+    ULONG_PTR Integer
     )
 {
 #ifdef _WIN64
@@ -178,6 +178,7 @@ TrailingZerosPointer_C(
 
 POPULATION_COUNT_32 PopulationCount32_C;
 
+_Use_decl_annotations_
 ULONG
 PopulationCount32_C(
     ULONG Input
@@ -225,7 +226,7 @@ POPULATION_COUNT_POINTER PopulationCountPointer_C;
 _Use_decl_annotations_
 ULONG_PTR
 PopulationCountPointer_C(
-    _In_ ULONG_PTR Integer
+    ULONG_PTR Integer
     )
 {
 #ifdef _WIN64
@@ -244,7 +245,7 @@ ROUND_UP_POWER_OF_TWO_32 RoundUpPowerOfTwo32_C;
 _Use_decl_annotations_
 ULONGLONG
 RoundUpPowerOfTwo32_C(
-    _In_ ULONG Input
+    ULONG Input
     )
 {
     if (Input <= 1) {
@@ -317,7 +318,7 @@ LEADING_ZEROS_POINTER LeadingZerosPointer_LZCNT;
 _Use_decl_annotations_
 ULONG_PTR
 LeadingZerosPointer_LZCNT(
-    _In_ ULONG_PTR Integer
+    ULONG_PTR Integer
     )
 {
 #ifdef _WIN64

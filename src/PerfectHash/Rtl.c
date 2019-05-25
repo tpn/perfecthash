@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -104,45 +104,6 @@ SetCSpecificHandler(
 
     ASSERT(Status);
 }
-
-//
-// Helper routine for determining if we can use AVX2.
-//
-
-#if defined(_M_AMD64) || defined(_M_X64)
-
-//
-// The intrinsics headers trigger a lot of warnings when /Wall is on.
-//
-
-#pragma warning(push)
-#pragma warning(disable: 4255 4514 4668 4820 28251)
-#include <intrin.h>
-#include <mmintrin.h>
-#pragma warning(pop)
-
-typedef __m128i DECLSPEC_ALIGN(16) XMMWORD, *PXMMWORD, **PPXMMWORD;
-typedef __m256i DECLSPEC_ALIGN(32) YMMWORD, *PYMMWORD, **PPYMMWORD;
-
-#pragma optimize("", off)
-NOINLINE
-BOOLEAN
-CanWeUseAvx2(
-    VOID
-    )
-{
-    BOOLEAN Success = TRUE;
-    TRY_AVX2 {
-        YMMWORD Test1 = _mm256_set1_epi8(1);
-        YMMWORD Test2 = _mm256_add_epi8(Test1, Test1);
-        Test2 = _mm256_add_epi8(Test2, Test2);
-    } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION{
-        Success = FALSE;
-    }
-    return Success;
-}
-#pragma optimize("", on)
-#endif
 
 //
 // Initialize and rundown functions.
@@ -267,6 +228,16 @@ RtlInitialize(
         goto Error;
     }
 
+    Result = RtlInitializeCpuFeatures(Rtl);
+    if (FAILED(Result)) {
+        PH_ERROR(RtlInitializeCpuFeatures, Result);
+        goto Error;
+    }
+
+    //
+    // XXX TODO: initialize the bit manipulation function pointers.
+    //
+
     Result = RtlInitializeLargePages(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeLargePages, Result);
@@ -274,9 +245,9 @@ RtlInitialize(
     }
 
 #if defined(_M_AMD64) || defined(_M_X64)
-    if (CanWeUseAvx2()) {
-        Rtl->Vtbl->CopyPages = RtlCopyPagesAvx2_v1;
-        Rtl->Vtbl->FillPages = RtlFillPagesAvx2_v1;
+    if (Rtl->CpuFeatures.AVX2 != FALSE) {
+        Rtl->Vtbl->CopyPages = RtlCopyPages_AVX2;
+        Rtl->Vtbl->FillPages = RtlFillPages_AVX2;
     }
 #endif
 
@@ -359,6 +330,7 @@ RtlRundown(
 _Use_decl_annotations_
 HRESULT
 GetContainingType(
+    PRTL Rtl,
     ULONG_PTR Value,
     PTYPE TypePointer
     )
@@ -369,6 +341,8 @@ Routine Description:
     Obtain the appropriate type for a given power-of-2 based value.
 
 Arguments:
+
+    Rtl - Supplies a pointer to an RTL instance.
 
     Value - Supplies a power-of-2 value for which the type is to be obtained.
 
@@ -468,5 +442,129 @@ Return Value:
     *TypePointer = Type;
     return S_OK;
 }
+
+
+#if defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
+_Use_decl_annotations_
+HRESULT
+RtlInitializeCpuFeatures(
+    PRTL Rtl
+    )
+/*++
+
+Routine Description:
+
+    This routine calls the x86/x64 CPUID function and initializes CPU-specific
+    features of the provided Rtl instance.
+
+Arguments:
+
+    Rtl - Supplies a pointer to an RTL instance.
+
+Return Value:
+
+    S_OK - CPU features were initialized successfully.
+
+--*/
+{
+    HRESULT Result;
+    CPU_INFO CpuInfo;
+    RTL_CPU_FEATURES Features;
+    const LONG BaseExtendedId = 0x80000000;
+    LONG ExtendedId;
+    LONG HighestId;
+    LONG HighestExtendedId;
+
+    ZeroStruct(CpuInfo);
+    ZeroStruct(Features);
+
+    __cpuid((PINT)&CpuInfo.AsIntArray, 0);
+
+    HighestId = CpuInfo.Eax;
+
+    Features.Vendor.IsIntel = (
+        CpuInfo.Ebx == (LONG)'uneG' &&
+        CpuInfo.Ecx == (LONG)'letn' &&
+        CpuInfo.Edx == (LONG)'Ieni'
+    );
+
+    if (!Features.Vendor.IsIntel) {
+        Features.Vendor.IsAMD = (
+            CpuInfo.Ebx == (LONG)'htuA' &&
+            CpuInfo.Ecx == (LONG)'DMAc' &&
+            CpuInfo.Edx == (LONG)'itne'
+        );
+
+        if (!Features.Vendor.IsAMD) {
+            Features.Vendor.Unknown = TRUE;
+        }
+    }
+
+    if (HighestId >= 1) {
+        ZeroStruct(CpuInfo);
+        __cpuidex((PINT)&CpuInfo.AsIntArray, 1, 0);
+
+        Features.F1Ecx.AsLong = CpuInfo.Ecx;
+        Features.F1Edx.AsLong = CpuInfo.Edx;
+    }
+
+    if (HighestId >= 7) {
+        ZeroStruct(CpuInfo);
+        __cpuidex((PINT)&CpuInfo.AsIntArray, 7, 0);
+
+        Features.F7Ebx.AsLong = CpuInfo.Ebx;
+        Features.F7Ecx.AsLong = CpuInfo.Ecx;
+    }
+
+    ZeroStruct(CpuInfo);
+    __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId);
+    HighestExtendedId = CpuInfo.Eax;
+
+    ExtendedId = BaseExtendedId + 1;
+    if (HighestExtendedId >= ExtendedId) {
+        ZeroStruct(CpuInfo);
+        __cpuidex((PINT)&CpuInfo.AsIntArray, ExtendedId, 0);
+
+        Features.F81Ecx.AsLong = CpuInfo.Ecx;
+        Features.F81Edx.AsLong = CpuInfo.Edx;
+    }
+
+    Features.HighestFeatureId = HighestId;
+    Features.HighestExtendedFeatureId = HighestExtendedId;
+
+    if (Features.Vendor.IsIntel) {
+        Features.Intel.HLE = Features.HLE;
+        Features.Intel.RTM = Features.RTM;
+        Features.Intel.LZCNT = Features.LZCNT;
+        Features.Intel.SYSCALL = Features.SYSCALLSYSRET;
+        Features.Intel.RDTSCP = Features.RDTSCP_IA32_TSC_AUX;
+    } else if (Features.Vendor.IsAMD) {
+        LONG F81Ecx;
+        LONG F81Edx;
+
+        F81Ecx = Features.F81Ecx.AsLong;
+        F81Edx = Features.F81Edx.AsLong;
+
+        Features.AMD.ABM = BooleanFlagOn(F81Ecx, 1 << 5);
+        Features.AMD.SSE4A = BooleanFlagOn(F81Ecx, 1 << 6);
+        Features.AMD.XOP = BooleanFlagOn(F81Ecx, 1 << 11);
+        Features.AMD.TBM = BooleanFlagOn(F81Ecx, 1 << 21);
+        Features.AMD.SVM = BooleanFlagOn(F81Ecx, 1 << 2);
+        Features.AMD.IBS = BooleanFlagOn(F81Ecx, 1 << 10);
+        Features.AMD.LWP = BooleanFlagOn(F81Ecx, 1 << 15);
+        Features.AMD.MMXEXT = BooleanFlagOn(F81Edx, 1 << 22);
+        Features.AMD.THREEDNOW = BooleanFlagOn(F81Edx, 1 << 31);
+        Features.AMD.THREEDNOWEXT = BooleanFlagOn(F81Edx, 1 << 30);
+    }
+
+    CopyMemory(&Rtl->CpuFeatures,
+               &Features,
+               sizeof(Rtl->CpuFeatures));
+
+    Result = S_OK;
+
+    return Result;
+}
+#endif // defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

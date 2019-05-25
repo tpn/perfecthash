@@ -288,9 +288,11 @@ Return Value:
     //
 
 #if defined(_M_AMD64) || defined(_M_X64)
-    if (UseNonTemporalAvx2Routines(Table) && CanWeUseAvx2()) {
-        Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporalAvx2_v1;
-        Rtl->Vtbl->FillPages = RtlFillPagesNonTemporalAvx2_v1;
+    if (UseNonTemporalAvx2Routines(Table) &&
+        Rtl->CpuFeatures.AVX2 != FALSE) {
+
+        Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporal_AVX2;
+        Rtl->Vtbl->FillPages = RtlFillPagesNonTemporal_AVX2;
     }
 #endif
 
@@ -542,6 +544,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     ULONG Index;
     ULONG Count;
     HRESULT Result = S_OK;
@@ -559,6 +562,7 @@ Return Value:
         return E_POINTER;
     }
 
+    Rtl = Table->Rtl;
     Context = Table->Context;
     TableCreateParams = Table->TableCreateParameters;
 
