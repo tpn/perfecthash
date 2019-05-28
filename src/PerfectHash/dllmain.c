@@ -58,6 +58,8 @@ RunSingleFunctionCtrlCHandler(
     return FALSE;
 }
 
+#if 0
+
 //
 // TSX detection glue.
 //
@@ -109,6 +111,7 @@ Retry:
 }
 #pragma optimize("", on)
 #endif
+#endif
 
 BOOL
 APIENTRY
@@ -124,6 +127,7 @@ _DllMainCRTStartup(
             __security_init_cookie();
             PerfectHashModule = Module;
 
+#if 0
             IsTsxAvailable = FALSE;
 
 #ifdef _M_AMD64
@@ -151,6 +155,8 @@ _DllMainCRTStartup(
 
                 GraphInterface.RegisterSolved = GraphRegisterSolvedTsx;
             }
+
+#endif
 
 #endif
 

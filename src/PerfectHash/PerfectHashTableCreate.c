@@ -288,9 +288,11 @@ Return Value:
     //
 
 #if defined(_M_AMD64) || defined(_M_X64)
-    if (UseNonTemporalAvx2Routines(Table) && CanWeUseAvx2()) {
-        Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporalAvx2_v1;
-        Rtl->Vtbl->FillPages = RtlFillPagesNonTemporalAvx2_v1;
+    if (UseNonTemporalAvx2Routines(Table) &&
+        Rtl->CpuFeatures.AVX2 != FALSE) {
+
+        Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporal_AVX2;
+        Rtl->Vtbl->FillPages = RtlFillPagesNonTemporal_AVX2;
     }
 #endif
 
@@ -440,7 +442,7 @@ Return Value:
         }
 
         if (!IsModulusMasking(MaskFunctionId) &&
-            !IsPowerOf2(RequestedNumberOfTableElements->QuadPart)) {
+            !IsPowerOfTwo(RequestedNumberOfTableElements->QuadPart)) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
             PH_ERROR(PerfectHashTableCreate_NumTableElemsNotPow2, Result);
             goto Error;
@@ -542,6 +544,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     ULONG Index;
     ULONG Count;
     HRESULT Result = S_OK;
@@ -559,6 +562,7 @@ Return Value:
         return E_POINTER;
     }
 
+    Rtl = Table->Rtl;
     Context = Table->Context;
     TableCreateParams = Table->TableCreateParameters;
 
@@ -625,7 +629,8 @@ Return Value:
                 break;
 
             case TableCreateParameterValueSizeInBytesId:
-                Table->ValueSizeInBytes = (ULONG)RoundUpPowerOf2(Param->AsULong);
+                Table->ValueSizeInBytes =
+                    (ULONG)Rtl->RoundUpPowerOfTwo32(Param->AsULong);
                 if (Table->ValueSizeInBytes == 4) {
                     Table->ValueType = LongType;
                 } else if (Table->ValueSizeInBytes == 8) {

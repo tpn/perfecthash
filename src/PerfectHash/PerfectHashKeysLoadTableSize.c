@@ -275,7 +275,7 @@ Return Value:
 
     if (RequestedNumberOfTableElements->QuadPart > 0 &&
         !IsModulusMasking(MaskFunctionId) &&
-        !IsPowerOf2(RequestedNumberOfTableElements->QuadPart)) {
+        !IsPowerOfTwo(RequestedNumberOfTableElements->QuadPart)) {
 
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashKeysLoadTableSize_NumTableElemsNotPow2, Result);

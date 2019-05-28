@@ -280,6 +280,9 @@
     <ClCompile Include="Cu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BitManipulation.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -499,6 +502,9 @@
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
     <ClInclude Include="Cu.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BitManipulation.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

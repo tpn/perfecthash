@@ -20,7 +20,7 @@ include ksamd64.inc
 ;++
 ;
 ; HRESULT
-; RtlCopyPagesNonTemporalAvx2_v1(
+; RtlCopyPagesNonTemporal_AVX2(
 ;     _In_ PRTL Rtl,
 ;     _In_ PCHAR Destination,
 ;     _In_ PCHAR Source,
@@ -66,7 +66,7 @@ include ksamd64.inc
 ;
 ;--
 
-        LEAF_ENTRY RtlCopyPagesNonTemporalAvx2_v1, _TEXT$00
+        LEAF_ENTRY RtlCopyPagesNonTemporal_AVX2, _TEXT$00
 
 ;
 ; Verify the NumberOfPages is greater than zero.
@@ -154,12 +154,12 @@ Cpa80:  sfence
         xor     rax, rax                    ; rax = S_OK
 Cpa90:  ret
 
-        LEAF_END RtlCopyPagesNonTemporalAvx2_v1, _TEXT$00
+        LEAF_END RtlCopyPagesNonTemporal_AVX2, _TEXT$00
 
 ;++
 ;
 ; HRESULT
-; RtlCopyPagesAvx2_v1(
+; RtlCopyPages_AVX2(
 ;     _In_ PRTL Rtl,
 ;     _In_ PCHAR Destination,
 ;     _In_ PCHAR Source,
@@ -187,7 +187,7 @@ Cpa90:  ret
 ;
 ;--
 
-        LEAF_ENTRY RtlCopyPagesAvx2_v1, _TEXT$00
+        LEAF_ENTRY RtlCopyPages_AVX2, _TEXT$00
 
 ;
 ; Verify the NumberOfPages is greater than zero.
@@ -275,7 +275,7 @@ Cpb80:  sfence
         xor     rax, rax                    ; rax = S_OK
 Cpb90:  ret
 
-        LEAF_END RtlCopyPagesAvx2_v1, _TEXT$00
+        LEAF_END RtlCopyPages_AVX2, _TEXT$00
 
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=masm fo=croql comments=\:;           :

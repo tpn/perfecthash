@@ -20,7 +20,7 @@ include ksamd64.inc
 ;++
 ;
 ; VOID
-; RtlFillPagesNonTemporalAvx2_v1(
+; RtlFillPagesNonTemporal_AVX2(
 ;     _In_ PRTL Rtl,
 ;     _Out_writes_bytes_all_(NumberOfPages << PAGE_SHIFT) PCHAR Dest,
 ;     _In_ BYTE Byte,
@@ -48,7 +48,7 @@ include ksamd64.inc
 ;
 ;--
 
-        LEAF_ENTRY RtlFillPagesNonTemporalAvx2_v1, _TEXT$00
+        LEAF_ENTRY RtlFillPagesNonTemporal_AVX2, _TEXT$00
 
 ;
 ; Verify the NumberOfPages is greater than zero.
@@ -132,12 +132,12 @@ Fpx80:  sfence
         xor     rax, rax                    ; rax = S_OK
 Fpx90:  ret
 
-        LEAF_END RtlFillPagesNonTemporalAvx2_v1, _TEXT$00
+        LEAF_END RtlFillPagesNonTemporal_AVX2, _TEXT$00
 
 ;++
 ;
 ; VOID
-; RtlFillPagesAvx2_v1(
+; RtlFillPages_AVX2(
 ;     _In_ PRTL Rtl,
 ;     _Out_writes_bytes_all_(NumberOfPages << PAGE_SHIFT) PCHAR Dest,
 ;     _In_ BYTE Byte,
@@ -165,7 +165,7 @@ Fpx90:  ret
 ;
 ;--
 
-        LEAF_ENTRY RtlFillPagesAvx2_v1, _TEXT$00
+        LEAF_ENTRY RtlFillPages_AVX2, _TEXT$00
 
 ;
 ; Verify the NumberOfPages is greater than zero.
@@ -249,7 +249,7 @@ Fpy80:  sfence
         xor     rax, rax                    ; rax = S_OK
 Fpy90:  ret
 
-        LEAF_END RtlFillPagesAvx2_v1, _TEXT$00
+        LEAF_END RtlFillPages_AVX2, _TEXT$00
 
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=masm fo=croql comments=\:;           :

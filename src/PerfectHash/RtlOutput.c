@@ -1458,6 +1458,8 @@ Crc32HashString(
 
     if (TrailingBytes) {
 
+#ifdef PERFECTHASH_CPU_BMI2
+
         //
         // There are between 1 and 3 bytes remaining at the end of the string.
         // We can't use _mm_crc32_u32() here directly on the last ULONG as we
@@ -1491,6 +1493,18 @@ Crc32HashString(
 
         Last = _bzhi_u32(*DoubleWord, HighBits);
         Hash = _mm_crc32_u32(Hash, Last);
+
+#else
+        PBYTE Byte;
+
+        Byte = (PBYTE)DoubleWord;
+        while (TrailingBytes) {
+            Hash = _mm_crc32_u8(Hash, *Byte);
+            Byte++;
+            TrailingBytes--;
+        }
+
+#endif
     }
 
     //
