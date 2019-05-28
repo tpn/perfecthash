@@ -906,15 +906,14 @@ typedef struct _RTL_CPU_FEATURES {
     //
     // Intel-specific features that we set manually.
     //
-    // N.B. These all have counterparts in the unions below, however, we
-    //      separate them out here in order to discern Intel-specific flags
-    //      that have no AMD counterpart.
-    //
 
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         ULONG HLE:1;
         ULONG RTM:1;
+        ULONG BMI1:1;
+        ULONG BMI2:1;
         ULONG LZCNT:1;
+        ULONG POPCNT:1;
         ULONG SYSCALL:1;
         ULONG RDTSCP:1;
     } Intel;
@@ -3059,8 +3058,18 @@ HRESULT
     );
 typedef RTL_INITIALIZE_CPU_FEATURES *PRTL_INITIALIZE_CPU_FEATURES;
 
+typedef
+HRESULT
+(NTAPI RTL_INITIALIZE_BIT_MANIPULATION_FUNCTION_POINTERS)(
+    _In_ PRTL Rtl
+    );
+typedef RTL_INITIALIZE_BIT_MANIPULATION_FUNCTION_POINTERS
+      *PRTL_INITIALIZE_BIT_MANIPULATION_FUNCTION_POINTERS;
+
 extern RTL_INITIALIZE RtlInitialize;
 extern RTL_INITIALIZE_CPU_FEATURES RtlInitializeCpuFeatures;
+extern RTL_INITIALIZE_BIT_MANIPULATION_FUNCTION_POINTERS
+    RtlInitializeBitManipulationFunctionPointers;
 extern RTL_RUNDOWN RtlRundown;
 extern RTL_GENERATE_RANDOM_BYTES RtlGenerateRandomBytes;
 extern RTL_PRINT_SYS_ERROR RtlPrintSysError;
@@ -3083,26 +3092,5 @@ extern RTL_FILL_PAGES RtlFillPagesNonTemporal_AVX2;
 extern RTL_COPY_PAGES RtlCopyPages_AVX2;
 extern RTL_FILL_PAGES RtlFillPages_AVX2;
 #endif
-
-//
-// Define the Rtl redirections.
-//
-
-#define LeadingZeros32 Rtl->LeadingZeros32
-#define LeadingZeros64 Rtl->LeadingZeros64
-#define LeadingZerosPointer Rtl->LeadingZerosPointer
-#define TrailingZeros32 Rtl->TrailingZeros32
-#define TrailingZeros64 Rtl->TrailingZeros64
-#define TrailingZerosPointer Rtl->TrailingZerosPointer
-#define PopulationCount32 Rtl->PopulationCount32
-#define PopulationCount64 Rtl->PopulationCount64
-#define PopulationCountPointer Rtl->PopulationCountPointer
-#define RoundUpPowerOfTwo32 Rtl->RoundUpPowerOfTwo32
-#define RoundUpPowerOfTwo64 Rtl->RoundUpPowerOfTwo64
-#define RoundUpPowerOfTwoPointer Rtl->RoundUpPowerOfTwoPointer
-#define RoundUpNextPowerOfTwo32 Rtl->RoundUpNextPowerOfTwo32
-#define RoundUpNextPowerOfTwo64 Rtl->RoundUpNextPowerOfTwo64
-#define RoundUpNextPowerOfTwoPointer Rtl->RoundUpNextPowerOfTwoPointer
-
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

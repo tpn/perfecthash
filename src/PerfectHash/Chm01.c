@@ -1442,6 +1442,11 @@ Return Value:
     ULARGE_INTEGER AssignedBitmapBufferSizeInBytes;
     ULARGE_INTEGER IndexBitmapBufferSizeInBytes;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
+    PTRAILING_ZEROS_32 TrailingZeros32;
+    PTRAILING_ZEROS_64 TrailingZeros64;
+    PPOPULATION_COUNT_32 PopulationCount32;
+    PROUND_UP_POWER_OF_TWO_32 RoundUpPowerOfTwo32;
+    PROUND_UP_NEXT_POWER_OF_TWO_32 RoundUpNextPowerOfTwo32;
 
     //
     // Validate arguments.
@@ -1465,6 +1470,11 @@ Return Value:
     GraphInfoOnDisk = Context->GraphInfoOnDisk;
     TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
     TypeNames = Table->CTypeNames;
+    TrailingZeros32 = Rtl->TrailingZeros32;
+    TrailingZeros64 = Rtl->TrailingZeros64;
+    PopulationCount32 = Rtl->PopulationCount32;
+    RoundUpPowerOfTwo32 = Rtl->RoundUpPowerOfTwo32;
+    RoundUpNextPowerOfTwo32 = Rtl->RoundUpNextPowerOfTwo32;
 
     //
     // If a previous Info struct pointer has been passed, copy the current
@@ -1545,7 +1555,7 @@ Return Value:
                 RoundUpPowerOfTwo32(NumberOfVertices.LowPart)
             );
 
-            NumberOfEdges.QuadPart = RoundUpPowerOfTwo32(NumberOfKeys);
+            NumberOfEdges.QuadPart = Rtl->RoundUpPowerOfTwo32(NumberOfKeys);
 
         }
 
@@ -1982,8 +1992,8 @@ Return Value:
     Table->IndexModulus = NumberOfEdges.LowPart;
     Table->HashSize = NumberOfVertices.LowPart;
     Table->IndexSize = NumberOfEdges.LowPart;
-    Table->HashShift = TrailingZeros32(Table->HashSize);
-    Table->IndexShift = TrailingZeros32(Table->IndexSize);
+    Table->HashShift = Rtl->TrailingZeros32(Table->HashSize);
+    Table->IndexShift = Rtl->TrailingZeros32(Table->IndexSize);
     Table->HashMask = (Table->HashSize - 1);
     Table->IndexMask = (Table->IndexSize - 1);
     Table->HashFold = Table->HashShift >> 3;

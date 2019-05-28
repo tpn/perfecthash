@@ -234,9 +234,11 @@ RtlInitialize(
         goto Error;
     }
 
-    //
-    // XXX TODO: initialize the bit manipulation function pointers.
-    //
+    Result = RtlInitializeBitManipulationFunctionPointers(Rtl);
+    if (FAILED(Result)) {
+        PH_ERROR(RtlInitializeBitManipulationFunctionPointers, Result);
+        goto Error;
+    }
 
     Result = RtlInitializeLargePages(Rtl);
     if (FAILED(Result)) {
@@ -376,7 +378,7 @@ Return Value:
     // error out; the value isn't a power-of-2.
     //
 
-    Bits = PopulationCountPointer(Value);
+    Bits = Rtl->PopulationCountPointer(Value);
     if (Bits > 1) {
         return E_INVALIDARG;
     }
@@ -385,7 +387,7 @@ Return Value:
     // Count the number of trailing zeros.
     //
 
-    Trailing = TrailingZerosPointer(Value);
+    Trailing = Rtl->TrailingZerosPointer(Value);
 
     switch (Trailing) {
         case 0:
@@ -454,8 +456,8 @@ RtlInitializeCpuFeatures(
 
 Routine Description:
 
-    This routine calls the x86/x64 CPUID function and initializes CPU-specific
-    features of the provided Rtl instance.
+    This routine calls the x86/x64 CPUID function and initializes the CPU
+    features structure in the provided Rtl instance.
 
 Arguments:
 
@@ -463,7 +465,7 @@ Arguments:
 
 Return Value:
 
-    S_OK - CPU features were initialized successfully.
+    S_OK - Success.
 
 --*/
 {
@@ -535,7 +537,10 @@ Return Value:
     if (Features.Vendor.IsIntel) {
         Features.Intel.HLE = Features.HLE;
         Features.Intel.RTM = Features.RTM;
+        Features.Intel.BMI1 = Features.BMI1;
+        Features.Intel.BMI2 = Features.BMI2;
         Features.Intel.LZCNT = Features.LZCNT;
+        Features.Intel.POPCNT = Features.POPCNT;
         Features.Intel.SYSCALL = Features.SYSCALLSYSRET;
         Features.Intel.RDTSCP = Features.RDTSCP_IA32_TSC_AUX;
     } else if (Features.Vendor.IsAMD) {
@@ -564,6 +569,84 @@ Return Value:
     Result = S_OK;
 
     return Result;
+}
+
+
+_Use_decl_annotations_
+HRESULT
+RtlInitializeBitManipulationFunctionPointers(
+    PRTL Rtl
+    )
+/*++
+
+Routine Description:
+
+    This routine initializes the bit mainpulation function pointers in the
+    provided Rtl instance based on the CPU features.
+
+Arguments:
+
+    Rtl - Supplies a pointer to an RTL instance.
+
+Return Value:
+
+    S_OK - Success.
+
+--*/
+{
+    PRTL_CPU_FEATURES Features;
+    PRTL_BIT_MANIPULATION_FUNCTIONS Functions;
+
+    Features = &Rtl->CpuFeatures;
+    Functions = &Rtl->RtlBitManipulationFunctions;
+
+    if (Features->Vendor.IsIntel != FALSE) {
+
+#define EXPAND_AS_INTEL_FUNCTION_ASSIGNMENT(Upper,        \
+                                            Name,         \
+                                            IntelFeature, \
+                                            Unused4)      \
+    if (Features->Intel.IntelFeature != FALSE) {          \
+        Functions->Name = Name##_##IntelFeature;          \
+    } else {                                              \
+        Functions->Name = Name##_C;                       \
+    }
+
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(
+        EXPAND_AS_INTEL_FUNCTION_ASSIGNMENT
+    )
+
+#undef EXPAND_AS_INTEL_FUNCTION_ASSIGNMENT
+
+    } else if (Features->Vendor.IsAMD != FALSE) {
+
+#define EXPAND_AS_AMD_FUNCTION_ASSIGNMENT(Upper,        \
+                                          Name,         \
+                                          IntelFeature, \
+                                          AmdFeature)   \
+    if (Features->AMD.AmdFeature != FALSE) {            \
+        Functions->Name = Name##_##IntelFeature;        \
+    } else {                                            \
+        Functions->Name = Name##_C;                     \
+    }
+
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_AMD_FUNCTION_ASSIGNMENT)
+
+#undef EXPAND_AS_AMD_FUNCTION_ASSIGNMENT
+
+    } else {
+
+#define EXPAND_AS_C_FUNCTION_ASSIGNMENT(Upper, Name, Unused3, Unused4) \
+    Functions->Name = Name##_C;
+
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_C_FUNCTION_ASSIGNMENT);
+
+#undef EXPAND_AS_C_FUNCTION_ASSIGNMENT
+
+    }
+
+    return S_OK;
+
 }
 #endif // defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
 

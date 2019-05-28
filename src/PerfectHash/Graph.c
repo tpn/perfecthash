@@ -15,6 +15,13 @@ Abstract:
 #include "stdafx.h"
 
 //
+// Forward decl.
+//
+
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
+    GraphCalculateAssignedMemoryCoverage_AVX2;
+
+//
 // COM scaffolding routines for initialization and rundown.
 //
 
@@ -47,6 +54,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     HRESULT Result = S_OK;
 
     if (!ARGUMENT_PRESENT(Graph)) {
@@ -75,6 +83,17 @@ Return Value:
 
     if (FAILED(Result)) {
         goto Error;
+    }
+
+    //
+    // Use the optimized AVX2 routine for calculating assigned memory coverage
+    // if the CPU supports the instruction set.
+    //
+
+    Rtl = Graph->Rtl;
+    if (Rtl->CpuFeatures.AVX2 != FALSE) {
+        Graph->Vtbl->CalculateAssignedMemoryCoverage =
+            GraphCalculateAssignedMemoryCoverage_AVX2;
     }
 
     //
@@ -828,8 +847,6 @@ Return Value:
     return;
 }
 
-GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
-    GraphCalculateAssignedMemoryCoverage_AVX2;
 
 _Use_decl_annotations_
 VOID
@@ -2244,22 +2261,11 @@ Return Value:
     //
     // Clear the bitmap buffers.
     //
-    // N.B. We use __stosq() to prevent the PGO builds trying to call memset.
-    //
 
-#if 0
 #define ZERO_BITMAP_BUFFER(Name)                           \
     ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
            ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
-    __stosq((PDWORD64)Graph->##Name##.Buffer,              \
-            0,                                             \
-            Info->##Name##BufferSizeInBytes >> 3)
-#endif
-
-#define ZERO_BITMAP_BUFFER(Name)                             \
-    ASSERT(0 == Info->##Name##BufferSizeInBytes -            \
-           ((Info->##Name##BufferSizeInBytes >> 3) << 3));   \
-    Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##.Buffer,     \
+    Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##.Buffer,   \
                        Info->##Name##BufferSizeInBytes)
 
 
@@ -2271,25 +2277,13 @@ Return Value:
     //
     // "Empty" all of the nodes.
     //
-    // N.B. We use __stosq() to prevent the PGO builds trying to call memset.
-    //
 
-#if 0
 #define EMPTY_ARRAY(Name)                            \
     ASSERT(0 == Info->##Name##SizeInBytes -          \
            ((Info->##Name##SizeInBytes >> 3) << 3)); \
-    __stosq((PDWORD64)Graph->##Name,                 \
-            ~0ULL,                                   \
-            Info->##Name##SizeInBytes >> 3)
-#endif
-
-#define EMPTY_ARRAY(Name)                              \
-    ASSERT(0 == Info->##Name##SizeInBytes -            \
-           ((Info->##Name##SizeInBytes >> 3) << 3));   \
-    Rtl->RtlFillMemory((PDWORD64)Graph->##Name,        \
-                       Info->##Name##SizeInBytes, \
+    Rtl->RtlFillMemory((PDWORD64)Graph->##Name,      \
+                       Info->##Name##SizeInBytes,    \
                        (BYTE)~0)
-
 
     EMPTY_ARRAY(First);
     EMPTY_ARRAY(Prev);

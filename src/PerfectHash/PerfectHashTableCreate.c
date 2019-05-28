@@ -630,7 +630,7 @@ Return Value:
 
             case TableCreateParameterValueSizeInBytesId:
                 Table->ValueSizeInBytes =
-                    (ULONG)RoundUpPowerOfTwo32(Param->AsULong);
+                    (ULONG)Rtl->RoundUpPowerOfTwo32(Param->AsULong);
                 if (Table->ValueSizeInBytes == 4) {
                     Table->ValueType = LongType;
                 } else if (Table->ValueSizeInBytes == 8) {

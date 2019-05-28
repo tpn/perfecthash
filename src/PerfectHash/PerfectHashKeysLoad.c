@@ -414,11 +414,11 @@ Return Value:
 
         Prev = Key;
 
-        PopCount = (BYTE)PopulationCount32(Key);
+        PopCount = (BYTE)Rtl->PopulationCount32(Key);
         Stats.PopCount[PopCount] += 1;
 
         while (Key) {
-            Bit = TrailingZeros32(Key);
+            Bit = Rtl->TrailingZeros32(Key);
             Key &= Key - 1;
             Bitmap |= (1 << Bit);
             Stats.BitCount[Bit] += 1;
@@ -448,9 +448,9 @@ Return Value:
 
     KeysBitmap->Bitmap = Bitmap;
 
-    Leading = LeadingZeros32(Bitmap);
-    Trailing = TrailingZeros32(Bitmap);
-    PopCount = (BYTE)PopulationCount32(Bitmap);
+    Leading = Rtl->LeadingZeros32(Bitmap);
+    Trailing = Rtl->TrailingZeros32(Bitmap);
+    PopCount = (BYTE)Rtl->PopulationCount32(Bitmap);
     Mask = (One << (32 - Leading - Trailing)) - One;
 
     KeysBitmap->LeadingZeros = (BYTE)Leading;
@@ -495,7 +495,7 @@ Return Value:
     FillMemory(String, sizeof(KeysBitmap->String), '0');
 
     while (Key) {
-        Bit = TrailingZeros32(Key);
+        Bit = Rtl->TrailingZeros32(Key);
         Offset = (31 - Bit);
         Key &= Key - 1;
         String[Offset] = '1';
@@ -632,11 +632,11 @@ Return Value:
 
         Prev = Key;
 
-        PopCount = (BYTE)PopulationCount64(Key);
+        PopCount = (BYTE)Rtl->PopulationCount64(Key);
         Stats.PopCount[PopCount] += 1;
 
         while (Key) {
-            Bit = TrailingZeros64(Key);
+            Bit = Rtl->TrailingZeros64(Key);
             Key &= Key - 1ULL;
             Bitmap |= (1ULL << Bit);
             Stats.BitCount[Bit] += 1;
@@ -666,9 +666,9 @@ Return Value:
 
     KeysBitmap->Bitmap = Bitmap;
 
-    Leading = LeadingZeros64(Bitmap);
-    Trailing = TrailingZeros64(Bitmap);
-    PopCount = (BYTE)PopulationCount64(Bitmap);
+    Leading = Rtl->LeadingZeros64(Bitmap);
+    Trailing = Rtl->TrailingZeros64(Bitmap);
+    PopCount = (BYTE)Rtl->PopulationCount64(Bitmap);
     Mask = (One << (64 - Leading - Trailing)) - One;
 
     KeysBitmap->LeadingZeros = (BYTE)Leading;
@@ -694,7 +694,7 @@ Return Value:
     //
 
     InvertedBitmap = ~Bitmap;
-    NumberOfClearBits = (BYTE)PopulationCount64(InvertedBitmap);
+    NumberOfClearBits = (BYTE)Rtl->PopulationCount64(InvertedBitmap);
 
     RtlBitmap.Buffer = (PULONG)&InvertedBitmap;
     RtlBitmap.SizeOfBitMap = 64;
@@ -739,7 +739,7 @@ Return Value:
             Key = *Values++;
 
             DownsizedKey = _pext_u64(Key, Bitmap);
-            ASSERT(LeadingZeros64(DownsizedKey) >= 32);
+            ASSERT(Rtl->LeadingZeros64(DownsizedKey) >= 32);
 
             DownsizedKeyArray[Index] = (ULONG)DownsizedKey;
         }
@@ -806,7 +806,7 @@ Return Value:
     FillMemory(String, sizeof(KeysBitmap->String), '0');
 
     while (Key) {
-        Bit = TrailingZeros64(Key);
+        Bit = Rtl->TrailingZeros64(Key);
         Offset = (63 - Bit);
         Key &= Key - 1;
         String[Offset] = '1';

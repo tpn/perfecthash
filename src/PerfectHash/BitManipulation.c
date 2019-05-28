@@ -66,6 +66,7 @@ LeadingZeros32_C(
     return Count;
 }
 
+
 LEADING_ZEROS_64 LeadingZeros64_C;
 
 _Use_decl_annotations_
@@ -237,7 +238,8 @@ PopulationCountPointer_C(
 }
 
 //
-// RoundUpPowerOfTwo32 and RoundUpNextPowerOfTwo32.
+// RoundUpPowerOfTwo and RoundUpNextPowerOfTwo; 32, 64 and pointer-sized
+// variants of C implementations.
 //
 
 ROUND_UP_POWER_OF_TWO_32 RoundUpPowerOfTwo32_C;
@@ -277,6 +279,90 @@ RoundUpNextPowerOfTwo32_C(
     }
 
     return 1ULL << (32 - LeadingZeros32_C(Input - 1));
+}
+
+
+ROUND_UP_POWER_OF_TWO_64 RoundUpPowerOfTwo64_C;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpPowerOfTwo64_C(
+    ULONGLONG Input
+    )
+{
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        return Input;
+    }
+
+    return 1ULL << (64 - LeadingZeros64_C(Input - 1));
+}
+
+
+ROUND_UP_NEXT_POWER_OF_TWO_64 RoundUpNextPowerOfTwo64_C;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpNextPowerOfTwo64_C(
+    ULONGLONG Input
+    )
+{
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        Input += 1;
+    }
+
+    return 1ULL << (64 - LeadingZeros64_C(Input - 1));
+}
+
+
+ROUND_UP_POWER_OF_TWO_POINTER RoundUpPowerOfTwoPointer_C;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpPowerOfTwoPointer_C(
+    ULONG_PTR Input
+    )
+{
+    const ULONG_PTR Bits = sizeof(ULONG_PTR) << 3;
+
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        return Input;
+    }
+
+    return 1ULL << (Bits - LeadingZerosPointer_C(Input - 1));
+}
+
+
+ROUND_UP_NEXT_POWER_OF_TWO_POINTER RoundUpNextPowerOfTwoPointer_C;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpNextPowerOfTwoPointer_C(
+    ULONG_PTR Input
+    )
+{
+    const ULONG_PTR Bits = sizeof(ULONG_PTR) << 3;
+
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        Input += 1;
+    }
+
+    return 1ULL << (Bits - LeadingZerosPointer_C(Input - 1));
 }
 
 //
@@ -457,6 +543,96 @@ RoundUpNextPowerOfTwo32_LZCNT(
     }
 
     return 1ULL << (32 - LeadingZeros32_LZCNT(Input - 1));
+}
+
+//
+// RoundUpPowerOfTwo64 and RoundUpNextPowerOfTwo64.
+//
+
+ROUND_UP_POWER_OF_TWO_64 RoundUpPowerOfTwo64_LZCNT;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpPowerOfTwo64_LZCNT(
+    ULONGLONG Input
+    )
+{
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        return Input;
+    }
+
+    return 1ULL << (64 - LeadingZeros64_LZCNT(Input - 1));
+}
+
+
+ROUND_UP_NEXT_POWER_OF_TWO_64 RoundUpNextPowerOfTwo64_LZCNT;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpNextPowerOfTwo64_LZCNT(
+    ULONGLONG Input
+    )
+{
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        Input += 1;
+    }
+
+    return 1ULL << (64 - LeadingZeros64_LZCNT(Input - 1));
+}
+
+//
+// RoundUpPowerOfTwoPointer and RoundUpNextPowerOfTwoPointer.
+//
+
+ROUND_UP_POWER_OF_TWO_POINTER RoundUpPowerOfTwoPointer_LZCNT;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpPowerOfTwoPointer_LZCNT(
+    ULONG_PTR Input
+    )
+{
+    const ULONG_PTR Bits = sizeof(ULONG_PTR) << 3;
+
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        return Input;
+    }
+
+    return 1ULL << (Bits - LeadingZerosPointer_LZCNT(Input - 1));
+}
+
+
+ROUND_UP_NEXT_POWER_OF_TWO_POINTER RoundUpNextPowerOfTwoPointer_LZCNT;
+
+_Use_decl_annotations_
+ULONGLONG
+RoundUpNextPowerOfTwoPointer_LZCNT(
+    ULONG_PTR Input
+    )
+{
+    const ULONG_PTR Bits = sizeof(ULONG_PTR) << 3;
+
+    if (Input <= 1) {
+        return 2;
+    }
+
+    if (IsPowerOfTwo(Input)) {
+        Input += 1;
+    }
+
+    return 1ULL << (Bits - LeadingZerosPointer_LZCNT(Input - 1));
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
