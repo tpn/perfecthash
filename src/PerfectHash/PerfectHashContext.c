@@ -712,7 +712,6 @@ Return Value:
     // named event (e.g. CloseHandle(Context->ShutdownEvent)) as it means we
     // don't have to add new destructor code here every time we add an event.)
     //
-    //
 
     Event = (PHANDLE)&Context->FirstEvent;
     NumberOfEvents = GetNumberOfContextEvents(Context);
