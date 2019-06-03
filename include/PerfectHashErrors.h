@@ -393,19 +393,27 @@ Abstract:
 // 
 //     --SkipGraphVerification
 // 
-//         When set, skips the internal graph verification check that ensures a
-//         valid perfect hash solution has been found (i.e. with no collisions
+//         When present, skips the internal graph verification check that ensures
+//         a valid perfect hash solution has been found (i.e. with no collisions
 //         across the entire key set).
+// 
+//     --DisableCsvOutputFile
+// 
+//         When present, disables writing the .csv output file.  This is required
+//         when running multiple instances of the tool against the same output
+//         directory in parallel.
 // 
 //     --OmitCsvRowIfTableCreateFailed
 // 
 //         When present, omits writing a row in the .csv output file if table
-//         creation fails for a given keys file.
+//         creation fails for a given keys file.  Ignored if --DisableCsvOutputFile
+//         is speficied.
 // 
 //     --OmitCsvRowIfTableCreateSucceeded
 // 
 //         When present, omits writing a row in the .csv output file if table
-//         creation succeeded for a given keys file.
+//         creation succeeded for a given keys file.  Ignored if
+//         --DisableCsvOutputFile is specified.
 // 
 //     --IndexOnly
 // 
@@ -717,19 +725,27 @@ Abstract:
 // 
 //     --SkipGraphVerification
 // 
-//         When set, skips the internal graph verification check that ensures a
-//         valid perfect hash solution has been found (i.e. with no collisions
+//         When present, skips the internal graph verification check that ensures
+//         a valid perfect hash solution has been found (i.e. with no collisions
 //         across the entire key set).
+// 
+//     --DisableCsvOutputFile
+// 
+//         When present, disables writing the .csv output file.  This is required
+//         when running multiple instances of the tool against the same output
+//         directory in parallel.
 // 
 //     --OmitCsvRowIfTableCreateFailed
 // 
 //         When present, omits writing a row in the .csv output file if table
-//         creation fails for a given keys file.
+//         creation fails for a given keys file.  Ignored if --DisableCsvOutputFile
+//         is speficied.
 // 
 //     --OmitCsvRowIfTableCreateSucceeded
 // 
 //         When present, omits writing a row in the .csv output file if table
-//         creation succeeded for a given keys file.
+//         creation succeeded for a given keys file.  Ignored if
+//         --DisableCsvOutputFile is specified.
 // 
 //     --IndexOnly
 // 

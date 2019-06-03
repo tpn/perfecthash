@@ -2451,10 +2451,16 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG UseNonTemporalAvx2Routines:1;
 
         //
+        // When set, disables writing the output .csv file.
+        //
+
+        ULONG DisableCsvOutputFile:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:13;
+        ULONG Unused:12;
     };
 
     LONG AsLong;

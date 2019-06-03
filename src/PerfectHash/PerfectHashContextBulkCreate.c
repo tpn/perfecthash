@@ -451,16 +451,18 @@ Return Value:
     //
     // Now that we know how many *.keys files to expect in the target directory,
     // ignoring the unlikely case where keys are being added/deleted from the
-    // directory whilst this routine is running, we can prepare our .csv file.
+    // directory whilst this routine is running, we can prepare our .csv file,
+    // if applicable.
     //
 
-    Result = PrepareBulkCreateCsvFile(Context, NumberOfKeysFiles);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
-        return Result;
+    if (!TableCreateFlags.DisableCsvOutputFile) {
+        Result = PrepareBulkCreateCsvFile(Context, NumberOfKeysFiles);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
+            return Result;
+        }
+        CsvFile = Context->BulkCreateCsvFile;
     }
-
-    CsvFile = Context->BulkCreateCsvFile;
 
     //
     // Create a new file handle.  This is the one we'll use to drive the
@@ -724,6 +726,10 @@ Return Value:
         //
         // Write the .csv row if applicable.
         //
+
+        if (TableCreateFlags.DisableCsvOutputFile) {
+            goto ReleaseTable;
+        }
 
         if (SkipWritingCsvRow(TableCreateFlags, TableCreateResult)) {
             goto ReleaseTable;

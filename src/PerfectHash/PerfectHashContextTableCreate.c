@@ -276,17 +276,18 @@ Return Value:
     OutputHandle = Context->OutputHandle;
 
     //
-    // Prepare the table create .csv file.
+    // Prepare the .csv file if applicable.
     //
 
-    NumberOfRows = 1;
-    Result = PrepareTableCreateCsvFile(Context, NumberOfRows);
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextTableCreate_PrepareCsvFile, Result);
-        goto Error;
+    if (!TableCreateFlags.DisableCsvOutputFile) {
+        NumberOfRows = 1;
+        Result = PrepareTableCreateCsvFile(Context, NumberOfRows);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextTableCreate_PrepareCsvFile, Result);
+            goto Error;
+        }
+        CsvFile = Context->TableCreateCsvFile;
     }
-
-    CsvFile = Context->TableCreateCsvFile;
 
     ZeroStruct(KeysBitmap);
 
@@ -445,6 +446,10 @@ Return Value:
     //
     // Write the .csv row if applicable.
     //
+
+    if (TableCreateFlags.DisableCsvOutputFile) {
+        goto End;
+    }
 
     if (SkipWritingCsvRow(TableCreateFlags, TableCreateResult)) {
         goto End;
