@@ -279,7 +279,7 @@ Return Value:
     // Prepare the .csv file if applicable.
     //
 
-    if (!TableCreateFlags.DisableCsvOutputFile) {
+    if (TableCreateFlags.DisableCsvOutputFile == FALSE) {
         NumberOfRows = 1;
         Result = PrepareTableCreateCsvFile(Context, NumberOfRows);
         if (FAILED(Result)) {
@@ -447,13 +447,15 @@ Return Value:
     // Write the .csv row if applicable.
     //
 
-    if (TableCreateFlags.DisableCsvOutputFile) {
+    if (TableCreateFlags.DisableCsvOutputFile != FALSE) {
         goto End;
     }
 
     if (SkipWritingCsvRow(TableCreateFlags, TableCreateResult)) {
         goto End;
     }
+
+    _Analysis_assume_(CsvFile != NULL);
 
     //
     // N.B. The SAL annotations are required to suppress the concurrency

@@ -455,11 +455,11 @@ Return Value:
     // if applicable.
     //
 
-    if (!TableCreateFlags.DisableCsvOutputFile) {
+    if (TableCreateFlags.DisableCsvOutputFile == FALSE) {
         Result = PrepareBulkCreateCsvFile(Context, NumberOfKeysFiles);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
-            return Result;
+            goto Error;
         }
         CsvFile = Context->BulkCreateCsvFile;
     }
@@ -727,13 +727,15 @@ Return Value:
         // Write the .csv row if applicable.
         //
 
-        if (TableCreateFlags.DisableCsvOutputFile) {
+        if (TableCreateFlags.DisableCsvOutputFile != FALSE) {
             goto ReleaseTable;
         }
 
         if (SkipWritingCsvRow(TableCreateFlags, TableCreateResult)) {
             goto ReleaseTable;
         }
+
+        _Analysis_assume_(CsvFile != NULL);
 
         //
         // N.B. The SAL annotations are required to suppress the concurrency
