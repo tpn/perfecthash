@@ -392,13 +392,13 @@ Return Value:
 
     TableCreateResult = Result;
 
-    if (CtrlCPressed) {
-        Result = PH_E_CTRL_C_PRESSED;
+    if (FAILED(Result)) {
+        PH_KEYS_ERROR(PerfectHashTableCreate, Result);
         goto Error;
     }
 
-    if (FAILED(Result)) {
-        PH_KEYS_ERROR(PerfectHashTableCreate, Result);
+    if (CtrlCPressed) {
+        Result = PH_E_CTRL_C_PRESSED;
         goto Error;
     }
 
