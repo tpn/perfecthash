@@ -735,13 +735,18 @@ Return Value:
         IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
 
         //
+        // Point at the first element in this cache line.
+        //
+
+        Assigned = (PASSIGNED)(AssignedCacheLine[CacheLineIndex]);
+
+        //
         // For each cache line, enumerate over each individual element, and,
         // if it is not NULL, increment the local count and total count.
         //
 
         for (Index = 0; Index < NUM_ASSIGNED_PER_CACHE_LINE; Index++) {
-            Assigned = AssignedCacheLine[Index];
-            if (*Assigned) {
+            if (*Assigned++) {
                 Count++;
                 Coverage->TotalNumberOfAssigned++;
             }
@@ -749,12 +754,6 @@ Return Value:
 
         ASSERT(Count >= 0 && Count <= 16);
         Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
-
-        //
-        // Advance the cache line pointer.
-        //
-
-        AssignedCacheLine++;
 
         //
         // Increment the empty or used counters depending on whether or not
