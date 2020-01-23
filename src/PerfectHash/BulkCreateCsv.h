@@ -471,6 +471,390 @@ Abstract:
           Coverage->NumberOfAssignedPerCacheLineCounts[16],                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph1_Attempt,                                              \
+          Context->BestGraphInfo[0].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph1_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[0].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph1_Value,                                                \
+          Context->BestGraphInfo[0].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph2_Attempt,                                              \
+          Context->BestGraphInfo[1].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph2_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[1].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph2_Value,                                                \
+          Context->BestGraphInfo[1].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph3_Attempt,                                              \
+          Context->BestGraphInfo[2].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph3_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[2].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph3_Value,                                                \
+          Context->BestGraphInfo[2].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph4_Attempt,                                              \
+          Context->BestGraphInfo[3].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph4_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[3].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph4_Value,                                                \
+          Context->BestGraphInfo[3].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph5_Attempt,                                              \
+          Context->BestGraphInfo[4].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph5_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[4].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph5_Value,                                                \
+          Context->BestGraphInfo[4].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph6_Attempt,                                              \
+          Context->BestGraphInfo[5].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph6_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[5].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph6_Value,                                                \
+          Context->BestGraphInfo[5].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph7_Attempt,                                              \
+          Context->BestGraphInfo[6].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph7_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[6].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph7_Value,                                                \
+          Context->BestGraphInfo[6].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph8_Attempt,                                              \
+          Context->BestGraphInfo[7].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph8_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[7].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph8_Value,                                                \
+          Context->BestGraphInfo[7].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph9_Attempt,                                              \
+          Context->BestGraphInfo[8].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph9_ElapsedMilliseconds,                                  \
+          Context->BestGraphInfo[8].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph9_Value,                                                \
+          Context->BestGraphInfo[8].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph10_Attempt,                                             \
+          Context->BestGraphInfo[9].Attempt,                               \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph10_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[9].ElapsedMilliseconds,                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph10_Value,                                               \
+          Context->BestGraphInfo[9].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph11_Attempt,                                             \
+          Context->BestGraphInfo[10].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph11_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[10].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph11_Value,                                               \
+          Context->BestGraphInfo[10].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph12_Attempt,                                             \
+          Context->BestGraphInfo[11].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph12_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[11].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph12_Value,                                               \
+          Context->BestGraphInfo[11].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph13_Attempt,                                             \
+          Context->BestGraphInfo[12].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph13_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[12].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph13_Value,                                               \
+          Context->BestGraphInfo[12].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph14_Attempt,                                             \
+          Context->BestGraphInfo[13].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph14_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[13].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph14_Value,                                               \
+          Context->BestGraphInfo[13].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph15_Attempt,                                             \
+          Context->BestGraphInfo[14].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph15_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[14].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph15_Value,                                               \
+          Context->BestGraphInfo[14].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph16_Attempt,                                             \
+          Context->BestGraphInfo[15].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph16_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[15].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph16_Value,                                               \
+          Context->BestGraphInfo[15].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph17_Attempt,                                             \
+          Context->BestGraphInfo[16].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph17_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[16].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph17_Value,                                               \
+          Context->BestGraphInfo[16].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph18_Attempt,                                             \
+          Context->BestGraphInfo[17].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph18_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[17].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph18_Value,                                               \
+          Context->BestGraphInfo[17].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph19_Attempt,                                             \
+          Context->BestGraphInfo[18].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph19_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[18].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph19_Value,                                               \
+          Context->BestGraphInfo[18].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph20_Attempt,                                             \
+          Context->BestGraphInfo[19].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph20_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[19].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph20_Value,                                               \
+          Context->BestGraphInfo[19].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph21_Attempt,                                             \
+          Context->BestGraphInfo[20].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph21_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[20].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph21_Value,                                               \
+          Context->BestGraphInfo[20].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph22_Attempt,                                             \
+          Context->BestGraphInfo[21].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph22_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[21].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph22_Value,                                               \
+          Context->BestGraphInfo[21].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph23_Attempt,                                             \
+          Context->BestGraphInfo[22].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph23_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[22].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph23_Value,                                               \
+          Context->BestGraphInfo[22].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph24_Attempt,                                             \
+          Context->BestGraphInfo[23].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph24_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[23].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph24_Value,                                               \
+          Context->BestGraphInfo[23].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph25_Attempt,                                             \
+          Context->BestGraphInfo[24].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph25_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[24].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph25_Value,                                               \
+          Context->BestGraphInfo[24].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph26_Attempt,                                             \
+          Context->BestGraphInfo[25].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph26_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[25].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph26_Value,                                               \
+          Context->BestGraphInfo[25].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph27_Attempt,                                             \
+          Context->BestGraphInfo[26].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph27_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[26].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph27_Value,                                               \
+          Context->BestGraphInfo[26].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph28_Attempt,                                             \
+          Context->BestGraphInfo[27].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph28_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[27].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph28_Value,                                               \
+          Context->BestGraphInfo[27].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph29_Attempt,                                             \
+          Context->BestGraphInfo[28].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph29_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[28].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph29_Value,                                               \
+          Context->BestGraphInfo[28].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph30_Attempt,                                             \
+          Context->BestGraphInfo[29].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph30_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[29].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph30_Value,                                               \
+          Context->BestGraphInfo[29].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph31_Attempt,                                             \
+          Context->BestGraphInfo[30].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph31_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[30].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph31_Value,                                               \
+          Context->BestGraphInfo[30].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph32_Attempt,                                             \
+          Context->BestGraphInfo[31].Attempt,                              \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph32_ElapsedMilliseconds,                                 \
+          Context->BestGraphInfo[31].ElapsedMilliseconds,                  \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph32_Value,                                               \
+          Context->BestGraphInfo[31].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(KeysMinValue,                                                    \
           Keys->Stats.MinValue,                                            \
           OUTPUT_INT)                                                      \

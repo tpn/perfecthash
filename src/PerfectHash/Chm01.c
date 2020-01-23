@@ -568,6 +568,14 @@ RetryWithLargerTableSize:
     CONTEXT_START_TIMERS(Solve);
 
     //
+    // Capture the number of milliseconds since boot; this is used to derive
+    // elapsed millisecond representations of when best graphs were found when
+    // in FindBestGraph mode.
+    //
+
+    Context->StartMilliseconds = GetTickCount64();
+
+    //
     // Initialize the graph memory failures counter.  If a graph encounters
     // a memory failure, it performs an interlocked decrement on this counter.
     // If the counter hits zero, FailedEvent is signaled and the context state

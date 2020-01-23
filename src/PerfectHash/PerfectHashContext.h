@@ -166,6 +166,36 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
 DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
 
+typedef struct _BEST_GRAPH_INFO {
+
+    //
+    // The attempt that found this best graph.
+    //
+
+    LONGLONG Attempt;
+
+    //
+    // Number of elapsed milliseconds for this best graph to be found.
+    //
+
+    ULONGLONG ElapsedMilliseconds;
+
+    //
+    // The value used in the predicate comparison to determine if this was
+    // the best graph (e.g. HighestMaxGraphTraversalDepth).
+    //
+
+    ULONG Value;
+
+    //
+    // Pad out to 8 bytes.
+    //
+
+    ULONG Padding;
+
+} BEST_GRAPH_INFO, *PBEST_GRAPH_INFO;
+#define MAX_BEST_GRAPH_INFO 32
+
 typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     COMMON_COMPONENT_HEADER(PERFECT_HASH_CONTEXT);
@@ -379,6 +409,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     _Guarded_by_(BestGraphCriticalSection)
     volatile LONG EqualBestGraphCount;
+
+    //
+    // Milliseconds returned by GetTickCount64() when solving starts; this is
+    // use to derive the value for ElapsedMilliseconds in the following array
+    // of BEST_GRAPH_INFO elements.
+    //
+
+    ULONGLONG StartMilliseconds;
+
+    //
+    // Array of best graph info structs that capture the attempt and time when
+    // a new best graph was found (when in FindBestGraph solving mode).
+    //
+
+    _Guarded_by_(BestGraphCriticalSection)
+    BEST_GRAPH_INFO BestGraphInfo[MAX_BEST_GRAPH_INFO];
 
     //
     // Handle to a low-memory resource notification event.

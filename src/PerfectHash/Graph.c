@@ -1345,9 +1345,12 @@ Return Value:
 
 --*/
 {
-    HRESULT Result = PH_S_CONTINUE_GRAPH_SOLVING;
+    HRESULT Result;
+    BOOLEAN FoundBestGraph;
+    ULONG BestGraphIndex = 0;
     PGRAPH SpareGraph;
     PGRAPH PreviousBestGraph;
+    PBEST_GRAPH_INFO BestGraphInfo;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED_MEMORY_COVERAGE PreviousBestCoverage;
@@ -1360,6 +1363,12 @@ Return Value:
     Context = Graph->Context;
     Coverage = &Graph->AssignedMemoryCoverage;
     CoverageType = Context->BestCoverageType;
+
+    //
+    // Indicate continue graph solving unless we find a best graph.
+    //
+
+    Result = PH_S_CONTINUE_GRAPH_SOLVING;
 
     //
     // Enter the best graph critical section.  Check the stop solving indicator
@@ -1385,7 +1394,7 @@ Return Value:
         Context->SpareGraph = NULL;
         Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
-        Context->NewBestGraphCount++;
+        BestGraphIndex = Context->NewBestGraphCount++;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
         goto End;
     }
@@ -1409,7 +1418,7 @@ Return Value:
         if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
             Context->BestGraph = Graph;                                 \
             *NewGraphPointer = PreviousBestGraph;                       \
-            Context->NewBestGraphCount++;                               \
+            BestGraphIndex = Context->NewBestGraphCount++;              \
             Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;                    \
         } else if (Coverage->##Name == PreviousBestCoverage->##Name) {  \
             Context->EqualBestGraphCount++;                             \
@@ -1430,6 +1439,58 @@ Return Value:
     //
 
 End:
+
+    FoundBestGraph = (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
+    if (FoundBestGraph) {
+
+        //
+        // If this best graph is within limits, capture the attempt and time
+        // in the context.  This provides a useful data point when analyzing
+        // solving behavior (i.e. first 8 best graphs were found within the
+        // first minute, 9th and final best graph took an hour to find).
+        //
+
+        if (BestGraphIndex < MAX_BEST_GRAPH_INFO) {
+
+            BestGraphInfo = &Context->BestGraphInfo[BestGraphIndex];
+
+            //
+            // Invariant check: address of BestGraphInfo element in the array
+            // should be less than the address of next element in the struct
+            // (the LowMemoryEvent handle).
+            //
+
+            ASSERT((ULONG_PTR)(BestGraphInfo) <
+                   (ULONG_PTR)(&Context->LowMemoryEvent));
+
+            //
+            // Fill in the attempt number and elapsed milliseconds.
+            //
+
+            BestGraphInfo->Attempt = Coverage->Attempt;
+            BestGraphInfo->ElapsedMilliseconds = (
+                GetTickCount64() - Context->StartMilliseconds
+            );
+
+            //
+            // Capture the value used to determine that this graph was the best.
+            //
+
+#define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
+    case BestCoverageType##Comparison##Name##Id:                      \
+        BestGraphInfo->Value = Coverage->##Name;                      \
+        break;
+
+            switch (CoverageType) {
+
+                BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
+
+                default:
+                    Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+                    break;
+            }
+        }
+    }
 
     //
     // Leave the critical section and return.
