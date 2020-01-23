@@ -3445,7 +3445,9 @@ IsValidPerfectHashEnumId(
 //
 
 #ifdef _DEBUG
-#define PH_RAISE(Result) __debugbreak()
+#define PH_RAISE(Result)                                             \
+    __debugbreak();                                                  \
+    RaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #else
 #define PH_RAISE(Result) \
     RaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
