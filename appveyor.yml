@@ -1,8 +1,8 @@
 version:
-    0.33.{build}
+    0.34.{build}
 
 image:
-    - Visual Studio 2017
+    - Visual Studio 2019
 
 configuration:
     Release
