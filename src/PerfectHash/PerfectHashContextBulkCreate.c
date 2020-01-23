@@ -739,9 +739,9 @@ Return Value:
 
         //
         // N.B. The SAL annotations are required to suppress the concurrency
-        //      warnings for accessing the Context->NewBestGraphCount and
-        //      Context->EqualBestGraphCount members outside of the best graph
-        //      critical section.
+        //      warnings for accessing various best graph members outside of
+        //      the critical section (e.g. Context->NewBestGraphCount,
+        //      Context->EqualBestGraphCount, etc).
         //
 
         _No_competing_thread_begin_
