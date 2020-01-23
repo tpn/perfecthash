@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1129,6 +1129,21 @@ Return Value:
 
     Context->BulkCreateCsvFile = File;
     File->Vtbl->AddRef(File);
+
+    //
+    // Capture the header hash in the context.
+    //
+
+    Context->HexHeaderHash.Length = sizeof(Context->HexHeaderHashBuffer);
+    Context->HexHeaderHash.MaximumLength = Context->HexHeaderHash.Length;
+    ASSERT(Context->HexHeaderHash.Length >= HexHash.Length - 1);
+
+    ZeroMemory(&Context->HexHeaderHashBuffer, Context->HexHeaderHash.Length);
+    CopyMemory(Context->HexHeaderHashBuffer,
+               HexHash.Buffer + 1,
+               HexHash.Length - 1);
+
+    Context->HexHeaderHash.Buffer = (PCHAR)&Context->HexHeaderHashBuffer;
 
     //
     // We're done, finish up.

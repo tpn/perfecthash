@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -26,6 +26,10 @@ Abstract:
                                                                            \
     ENTRY(TableTimestamp,                                                  \
           &Table->TimestampString,                                         \
+          OUTPUT_STRING)                                                   \
+                                                                           \
+    ENTRY(HeaderHash,                                                      \
+          &Context->HexHeaderHash,                                         \
           OUTPUT_STRING)                                                   \
                                                                            \
     ENTRY(KeysName,                                                        \

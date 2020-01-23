@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -343,6 +343,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     PCSEED_MASKS SeedMasks;
+
+    //
+    // Hex string representation of the CSV header hash.
+    //
+
+    STRING HexHeaderHash;
+    CHAR HexHeaderHashBuffer[16];
 
     //
     // Best and spare graphs.
