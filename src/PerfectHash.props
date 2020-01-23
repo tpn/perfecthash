@@ -7,8 +7,8 @@
     <LinkIncremental>false</LinkIncremental>
     <LinkIncremental Condition="'$(Configuration)'=='Debug'">true</LinkIncremental>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
-    <DefaultPlatformToolset>v141</DefaultPlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
+    <DefaultPlatformToolset>v142</DefaultPlatformToolset>
   </PropertyGroup>
 
   <!--

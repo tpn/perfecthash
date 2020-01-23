@@ -45,8 +45,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{244D25EC-A8AA-4AAD-A66C-D64AFA836CAE}</ProjectGuid>
     <RootNamespace>PerfectHashCreateExe</RootNamespace>
-    <PlatformToolset>v141</PlatformToolset>
-    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>PerfectHashCreateExe</ProjectName>
   </PropertyGroup>
   <PropertyGroup>

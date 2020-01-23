@@ -66,6 +66,20 @@ extern "C" {
 #pragma warning(disable: 4214)
 
 //
+// Disable the (plethora!) of spectre warnings that get reported when compiling
+// with Visual Studio 2019 (v142) toolset.
+//
+
+#pragma warning(disable: 5045)
+
+//
+// Disable (temporarily, hopefully) concurrency warnings being flagged after
+// upgrading to Visual Studio 2019 (v142) toolset.
+//
+
+#pragma warning(disable: 26110 26165 26167)
+
+//
 // NT DDK types.
 //
 
