@@ -886,9 +886,6 @@ Return Value:
     Context->UserSeeds = NULL;
     Context->SeedMasks = NULL;
 
-    ZeroStruct(Context->HexHeaderHash);
-    ZeroArray(Context->HexHeaderHashBuffer);
-
     //
     // Suppress concurrency warnings.
     //
