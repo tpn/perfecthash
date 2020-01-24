@@ -76,6 +76,15 @@ extern "C" {
 // Disable (temporarily, hopefully) concurrency warnings being flagged after
 // upgrading to Visual Studio 2019 (v142) toolset.
 //
+//      warning C26110: Caller failing to hold lock 'Graph->Lock' before
+//                      calling function 'ReleaseSRWLockExclusive'.
+//
+//      warning C26167: Possibly releasing unheld lock 'Graph->Lock' in
+//                      function 'CreatePerfectHashTableImplChm01'.
+//
+//      warning C26165: Possibly failing to release lock 'Graph->Lock' in
+//                      function 'CreatePerfectHashTableImplChm01'.
+//
 
 #pragma warning(disable: 26110 26165 26167)
 
