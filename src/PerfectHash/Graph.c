@@ -1347,7 +1347,9 @@ Return Value:
 {
     HRESULT Result;
     BOOLEAN FoundBestGraph;
+    BOOLEAN FoundEqualBestGraph = FALSE;
     ULONG BestGraphIndex = 0;
+    LONG EqualBestGraphIndex = 0;
     PGRAPH SpareGraph;
     PGRAPH PreviousBestGraph;
     PBEST_GRAPH_INFO BestGraphInfo;
@@ -1422,6 +1424,8 @@ Return Value:
             Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;                    \
         } else if (Coverage->##Name == PreviousBestCoverage->##Name) {  \
             Context->EqualBestGraphCount++;                             \
+            FoundEqualBestGraph = TRUE;                                 \
+            EqualBestGraphIndex = Context->NewBestGraphCount - 1;       \
         }                                                               \
         break;
 
@@ -1441,13 +1445,28 @@ Return Value:
 End:
 
     FoundBestGraph = (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
-    if (FoundBestGraph) {
+
+    if (FoundEqualBestGraph) {
 
         //
-        // If this best graph is within limits, capture the attempt and time
-        // in the context.  This provides a useful data point when analyzing
-        // solving behavior (i.e. first 8 best graphs were found within the
-        // first minute, 9th and final best graph took an hour to find).
+        // If this graph was found to be equal to the current best graph, update
+        // the existing best graph info's equal count.
+        //
+
+        ASSERT(!FoundBestGraph);
+        ASSERT(EqualBestGraphIndex >= 0);
+
+        BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
+        BestGraphInfo->EqualCount++;
+
+    } else if (FoundBestGraph) {
+
+        //
+        // If this is the first best graph for this value, capture the attempt
+        // and time in the context.  This provides a useful data point when
+        // analyzing solving behavior (i.e. first 8 best graphs were found
+        // within the first minute, 9th and final best graph took an hour to
+        // find).
         //
 
         if (BestGraphIndex < MAX_BEST_GRAPH_INFO) {

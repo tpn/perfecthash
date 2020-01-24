@@ -188,10 +188,12 @@ typedef struct _BEST_GRAPH_INFO {
     ULONG Value;
 
     //
-    // Pad out to 8 bytes.
+    // Number of times a best graph was found that was equal to this existing
+    // best graph.  (This is useful for depicting how many best graphs were
+    // found for a given value before the next best level was found.)
     //
 
-    ULONG Padding;
+    ULONG EqualCount;
 
 } BEST_GRAPH_INFO, *PBEST_GRAPH_INFO;
 #define MAX_BEST_GRAPH_INFO 32

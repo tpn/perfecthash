@@ -493,6 +493,10 @@ Abstract:
           Context->BestGraphInfo[0].Value,                                 \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph1_EqualCount,                                           \
+          Context->BestGraphInfo[0].EqualCount,                            \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph2_Attempt,                                              \
           Context->BestGraphInfo[1].Attempt,                               \
           OUTPUT_INT)                                                      \
@@ -503,6 +507,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph2_Value,                                                \
           Context->BestGraphInfo[1].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph2_EqualCount,                                           \
+          Context->BestGraphInfo[1].EqualCount,                            \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph3_Attempt,                                              \
@@ -517,6 +525,10 @@ Abstract:
           Context->BestGraphInfo[2].Value,                                 \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph3_EqualCount,                                           \
+          Context->BestGraphInfo[2].EqualCount,                            \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph4_Attempt,                                              \
           Context->BestGraphInfo[3].Attempt,                               \
           OUTPUT_INT)                                                      \
@@ -527,6 +539,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph4_Value,                                                \
           Context->BestGraphInfo[3].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph4_EqualCount,                                           \
+          Context->BestGraphInfo[3].EqualCount,                            \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph5_Attempt,                                              \
@@ -541,6 +557,10 @@ Abstract:
           Context->BestGraphInfo[4].Value,                                 \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph5_EqualCount,                                           \
+          Context->BestGraphInfo[4].EqualCount,                            \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph6_Attempt,                                              \
           Context->BestGraphInfo[5].Attempt,                               \
           OUTPUT_INT)                                                      \
@@ -551,6 +571,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph6_Value,                                                \
           Context->BestGraphInfo[5].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph6_EqualCount,                                           \
+          Context->BestGraphInfo[5].EqualCount,                            \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph7_Attempt,                                              \
@@ -565,6 +589,10 @@ Abstract:
           Context->BestGraphInfo[6].Value,                                 \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph7_EqualCount,                                           \
+          Context->BestGraphInfo[6].EqualCount,                            \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph8_Attempt,                                              \
           Context->BestGraphInfo[7].Attempt,                               \
           OUTPUT_INT)                                                      \
@@ -575,6 +603,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph8_Value,                                                \
           Context->BestGraphInfo[7].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph8_EqualCount,                                           \
+          Context->BestGraphInfo[7].EqualCount,                            \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph9_Attempt,                                              \
@@ -589,6 +621,10 @@ Abstract:
           Context->BestGraphInfo[8].Value,                                 \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph9_EqualCount,                                           \
+          Context->BestGraphInfo[8].EqualCount,                            \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph10_Attempt,                                             \
           Context->BestGraphInfo[9].Attempt,                               \
           OUTPUT_INT)                                                      \
@@ -599,6 +635,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph10_Value,                                               \
           Context->BestGraphInfo[9].Value,                                 \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph10_EqualCount,                                          \
+          Context->BestGraphInfo[9].EqualCount,                            \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph11_Attempt,                                             \
@@ -613,6 +653,10 @@ Abstract:
           Context->BestGraphInfo[10].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph11_EqualCount,                                          \
+          Context->BestGraphInfo[10].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph12_Attempt,                                             \
           Context->BestGraphInfo[11].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -623,6 +667,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph12_Value,                                               \
           Context->BestGraphInfo[11].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph12_EqualCount,                                          \
+          Context->BestGraphInfo[11].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph13_Attempt,                                             \
@@ -637,6 +685,10 @@ Abstract:
           Context->BestGraphInfo[12].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph13_EqualCount,                                          \
+          Context->BestGraphInfo[12].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph14_Attempt,                                             \
           Context->BestGraphInfo[13].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -647,6 +699,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph14_Value,                                               \
           Context->BestGraphInfo[13].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph14_EqualCount,                                          \
+          Context->BestGraphInfo[13].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph15_Attempt,                                             \
@@ -661,6 +717,10 @@ Abstract:
           Context->BestGraphInfo[14].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph15_EqualCount,                                          \
+          Context->BestGraphInfo[14].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph16_Attempt,                                             \
           Context->BestGraphInfo[15].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -671,6 +731,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph16_Value,                                               \
           Context->BestGraphInfo[15].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph16_EqualCount,                                          \
+          Context->BestGraphInfo[15].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph17_Attempt,                                             \
@@ -685,6 +749,10 @@ Abstract:
           Context->BestGraphInfo[16].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph17_EqualCount,                                          \
+          Context->BestGraphInfo[16].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph18_Attempt,                                             \
           Context->BestGraphInfo[17].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -695,6 +763,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph18_Value,                                               \
           Context->BestGraphInfo[17].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph18_EqualCount,                                          \
+          Context->BestGraphInfo[17].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph19_Attempt,                                             \
@@ -709,6 +781,10 @@ Abstract:
           Context->BestGraphInfo[18].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph19_EqualCount,                                          \
+          Context->BestGraphInfo[18].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph20_Attempt,                                             \
           Context->BestGraphInfo[19].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -719,6 +795,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph20_Value,                                               \
           Context->BestGraphInfo[19].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph20_EqualCount,                                          \
+          Context->BestGraphInfo[19].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph21_Attempt,                                             \
@@ -733,6 +813,10 @@ Abstract:
           Context->BestGraphInfo[20].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph21_EqualCount,                                          \
+          Context->BestGraphInfo[20].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph22_Attempt,                                             \
           Context->BestGraphInfo[21].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -743,6 +827,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph22_Value,                                               \
           Context->BestGraphInfo[21].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph22_EqualCount,                                          \
+          Context->BestGraphInfo[21].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph23_Attempt,                                             \
@@ -757,6 +845,10 @@ Abstract:
           Context->BestGraphInfo[22].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph23_EqualCount,                                          \
+          Context->BestGraphInfo[22].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph24_Attempt,                                             \
           Context->BestGraphInfo[23].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -767,6 +859,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph24_Value,                                               \
           Context->BestGraphInfo[23].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph24_EqualCount,                                          \
+          Context->BestGraphInfo[23].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph25_Attempt,                                             \
@@ -781,6 +877,10 @@ Abstract:
           Context->BestGraphInfo[24].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph25_EqualCount,                                          \
+          Context->BestGraphInfo[24].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph26_Attempt,                                             \
           Context->BestGraphInfo[25].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -791,6 +891,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph26_Value,                                               \
           Context->BestGraphInfo[25].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph26_EqualCount,                                          \
+          Context->BestGraphInfo[25].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph27_Attempt,                                             \
@@ -805,6 +909,10 @@ Abstract:
           Context->BestGraphInfo[26].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph27_EqualCount,                                          \
+          Context->BestGraphInfo[26].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph28_Attempt,                                             \
           Context->BestGraphInfo[27].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -815,6 +923,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph28_Value,                                               \
           Context->BestGraphInfo[27].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph28_EqualCount,                                          \
+          Context->BestGraphInfo[27].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph29_Attempt,                                             \
@@ -829,6 +941,10 @@ Abstract:
           Context->BestGraphInfo[28].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph29_EqualCount,                                          \
+          Context->BestGraphInfo[28].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph30_Attempt,                                             \
           Context->BestGraphInfo[29].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -839,6 +955,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph30_Value,                                               \
           Context->BestGraphInfo[29].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph30_EqualCount,                                          \
+          Context->BestGraphInfo[29].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(BestGraph31_Attempt,                                             \
@@ -853,6 +973,10 @@ Abstract:
           Context->BestGraphInfo[30].Value,                                \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestGraph31_EqualCount,                                          \
+          Context->BestGraphInfo[30].EqualCount,                           \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestGraph32_Attempt,                                             \
           Context->BestGraphInfo[31].Attempt,                              \
           OUTPUT_INT)                                                      \
@@ -863,6 +987,10 @@ Abstract:
                                                                            \
     ENTRY(BestGraph32_Value,                                               \
           Context->BestGraphInfo[31].Value,                                \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(BestGraph32_EqualCount,                                          \
+          Context->BestGraphInfo[31].EqualCount,                           \
           OUTPUT_INT)                                                      \
                                                                            \
     ENTRY(KeysMinValue,                                                    \
