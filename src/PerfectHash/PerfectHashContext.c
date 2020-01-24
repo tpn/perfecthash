@@ -843,6 +843,7 @@ Return Value:
     Context->Attempts = 0;
     Context->ResizeLimit = 0;
     Context->InitialTableSize = 0;
+    Context->StartMilliseconds = 0;
     Context->ResizeTableThreshold = 0;
     Context->HighestDeletedEdgesCount = 0;
     Context->NumberOfTableResizeEvents = 0;
@@ -887,7 +888,6 @@ Return Value:
 
     ZeroStruct(Context->HexHeaderHash);
     ZeroArray(Context->HexHeaderHashBuffer);
-    ZeroArray(Context->BestGraphInfo);
 
     //
     // Suppress concurrency warnings.
@@ -898,6 +898,7 @@ Return Value:
     Context->EqualBestGraphCount = 0;
     Context->SpareGraph = NULL;
     Context->BestGraph = NULL;
+    ZeroArray(Context->BestGraphInfo);
     _Benign_race_end_
 
     return S_OK;
