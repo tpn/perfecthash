@@ -1842,6 +1842,14 @@ Return Value:
                 PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
             }
 
+            //
+            // Acquire the new graph's lock and release the existing
+            // graph's lock.
+            //
+
+            AcquireGraphLockExclusive(NewGraph);
+            ReleaseGraphLockExclusive(Graph);
+
             if (!IsGraphInfoLoaded(NewGraph) ||
                 NewGraph->LastLoadedNumberOfVertices <
                 Graph->NumberOfVertices) {
