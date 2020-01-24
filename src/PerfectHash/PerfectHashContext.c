@@ -824,9 +824,13 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
+
     if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
     }
+
+    Rtl = Context->Rtl;
 
     Context->AlgorithmId = PerfectHashNullAlgorithmId;
     Context->HashFunctionId = PerfectHashNullHashFunctionId;
@@ -880,6 +884,10 @@ Return Value:
     Context->KeysSubset = NULL;
     Context->UserSeeds = NULL;
     Context->SeedMasks = NULL;
+
+    ZeroStruct(Context->HexHeaderHash);
+    ZeroArray(Context->HexHeaderHashBuffer);
+    ZeroArray(Context->BestGraphInfo);
 
     //
     // Suppress concurrency warnings.
