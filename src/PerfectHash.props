@@ -51,7 +51,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <CallingConvention>StdCall</CallingConvention>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\include;$(VC_IncludePath)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\include;$(SolutionDir);$(VC_IncludePath)</AdditionalIncludeDirectories>
       <SubSystem>Console</SubSystem>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WholeProgramOptimization>true</WholeProgramOptimization>

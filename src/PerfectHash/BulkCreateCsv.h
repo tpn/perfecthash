@@ -13,6 +13,12 @@ Abstract:
 --*/
 
 //
+// For VER_PRODUCTVERSION_STR.
+//
+
+#include <PerfectHashVersion.rc>
+
+//
 // Define an "X-Macro"-style macro for capturing the ordered definition of
 // columns in a row of bulk create .csv output.
 //
@@ -62,6 +68,10 @@ Abstract:
                                                                            \
     ENTRY(BuildType,                                                       \
           PerfectHashBuildConfigString,                                    \
+          OUTPUT_CSTR)                                                     \
+                                                                           \
+    ENTRY(Version,                                                         \
+          VER_PRODUCTVERSION_STR,                                          \
           OUTPUT_CSTR)                                                     \
                                                                            \
     ENTRY(MaximumConcurrency,                                              \
