@@ -392,12 +392,6 @@ Return Value:
 Failed:
 
     //
-    // Increment the failed attempts counter.
-    //
-
-    InterlockedIncrement64(&Context->FailedAttempts);
-
-    //
     // Intentional follow-on to Error.
     //
 
@@ -405,7 +399,11 @@ Error:
 
     //
     // If any of the HASH/MASK macros fail, they'll jump to this Error: label.
+    // Increment the failed attempts counter, and indicate that we want to
+    // continue graph solving.
     //
+
+    InterlockedIncrement64(&Context->FailedAttempts);
 
     return PH_S_CONTINUE_GRAPH_SOLVING;
 }
