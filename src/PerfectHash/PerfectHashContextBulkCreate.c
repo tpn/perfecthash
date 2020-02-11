@@ -1144,6 +1144,8 @@ Return Value:
                HexHash.Length - 1);
 
     Context->HexHeaderHash.Buffer = (PCHAR)&Context->HexHeaderHashBuffer;
+    Context->HexHeaderHash.Length =
+        (USHORT)strlen(Context->HexHeaderHash.Buffer);
 
     //
     // We're done, finish up.
