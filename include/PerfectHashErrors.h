@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -247,6 +247,7 @@ Abstract:
 //    17   RotateMultiplyXorRotate (3)
 //    18   ShiftMultiplyXorShift (3)
 //    19   ShiftMultiplyXorShift2 (6)
+//    20   RotateMultiplyXorRotate2 (6)
 // 
 // N.B. The lowest latency hash functions with good solving ability, in order of
 //      ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
@@ -268,6 +269,7 @@ Abstract:
 //         ShiftMultiplyXorShift
 //         RotateMultiplyXorRotate
 //         ShiftMultiplyXorShift2
+//         RotateMultiplyXorRotate2
 // 
 // Mask Functions:
 // 

@@ -1938,8 +1938,13 @@ IsValidSeedMasks(
         3,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
-    LAST_ENTRY(                                                          \
+    ENTRY(                                                               \
         ShiftMultiplyXorShift2,                                          \
+        6,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0x1f1f1f1f, 0, 0)        \
+    )                                                                    \
+    LAST_ENTRY(                                                          \
+        RotateMultiplyXorRotate2,                                        \
         6,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0x1f1f1f1f, 0, 0)        \
     )
