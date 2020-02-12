@@ -195,6 +195,12 @@ typedef struct _BEST_GRAPH_INFO {
 
     ULONG EqualCount;
 
+    //
+    // Inline the entire coverage structure.
+    //
+
+    ASSIGNED_MEMORY_COVERAGE Coverage;
+
 } BEST_GRAPH_INFO, *PBEST_GRAPH_INFO;
 #define MAX_BEST_GRAPH_INFO 32
 

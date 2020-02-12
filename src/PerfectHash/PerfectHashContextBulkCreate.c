@@ -288,7 +288,7 @@ Return Value:
     // Create a "row buffer" we can use for the CSV file.
     //
 
-    NumberOfPages = 2;
+    NumberOfPages = 13;
 
     Result = Rtl->Vtbl->CreateBuffer(Rtl,
                                      &ProcessHandle,

@@ -1353,6 +1353,7 @@ Return Value:
     PBEST_GRAPH_INFO BestGraphInfo;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED_MEMORY_COVERAGE BestCoverage = NULL;
     PASSIGNED_MEMORY_COVERAGE PreviousBestCoverage;
     PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
 
@@ -1490,6 +1491,14 @@ End:
             );
 
             //
+            // Initialize the pointer to the best graph info's copy of the
+            // coverage structure; we can copy this over outside the critical
+            // section.
+            //
+
+            BestCoverage = &BestGraphInfo->Coverage;
+
+            //
             // Capture the value used to determine that this graph was the best.
             //
 
@@ -1521,6 +1530,14 @@ End:
 
     if (FAILED(Result)) {
         PH_RAISE(Result);
+    }
+
+    //
+    // Copy coverage if applicable.
+    //
+
+    if (BestCoverage != NULL) {
+        CopyCoverage(BestCoverage, Coverage);
     }
 
     return Result;
