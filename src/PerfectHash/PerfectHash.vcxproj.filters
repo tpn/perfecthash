@@ -456,6 +456,9 @@
     <ClInclude Include="GraphImpl.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexDummyAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexScratchAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>

@@ -1250,6 +1250,98 @@ PerfectHashTableHashScratch(
 
 _Use_decl_annotations_
 HRESULT
+PerfectHashTableSeededHashDummy(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    A dummy routine used as a placeholder.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Key - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Key2;
+    ULONG Seed1;
+    ULONG Seed2;
+    BYTE Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 3);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    //IACA_VC_START();
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3 = (BYTE)(Seeds[2] & 0x1f);
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Key2 = _rotl(Key, Seed3);
+    Vertex2 = _mm_crc32_u32(Seed2, Key2);
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashDummy(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+    return PerfectHashTableSeededHashDummy(Table,
+                                             Key,
+                                             TableInfo->NumberOfSeeds,
+                                             &TableInfo->FirstSeed,
+                                             Hash);
+}
+
+_Use_decl_annotations_
+HRESULT
 PerfectHashTableSeededHashCrc32(
     PPERFECT_HASH_TABLE Table,
     ULONG Key,

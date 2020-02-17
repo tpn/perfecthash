@@ -1906,7 +1906,7 @@ IsValidSeedMasks(
     ENTRY(RotateXor, 4, NO_SEED_MASKS)                                   \
     ENTRY(AddSubXor, 4, NO_SEED_MASKS)                                   \
     ENTRY(Xor, 2, NO_SEED_MASKS)                                         \
-    ENTRY(Scratch, 3, NO_SEED_MASKS)                                     \
+    ENTRY(Dummy, 3, NO_SEED_MASKS)                                       \
     ENTRY(Crc32RotateXor, 3, NO_SEED_MASKS)                              \
     ENTRY(Crc32, 2, NO_SEED_MASKS)                                       \
     ENTRY(Djb, 2, NO_SEED_MASKS)                                         \
@@ -1943,11 +1943,12 @@ IsValidSeedMasks(
         6,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0x1f1f1f1f, 0, 0)        \
     )                                                                    \
-    LAST_ENTRY(                                                          \
+    ENTRY(                                                               \
         RotateMultiplyXorRotate2,                                        \
         6,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0x1f1f1f1f, 0, 0)        \
-    )
+    )                                                                    \
+    LAST_ENTRY(Scratch, 3, NO_SEED_MASKS)
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_HASH_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)

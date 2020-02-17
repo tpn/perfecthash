@@ -4,7 +4,7 @@
 #include "CompiledPerfectHashTableChm01IndexRotateXorAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexAddSubXorAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexXorAnd_CSource_RawCString.h"
-#include "CompiledPerfectHashTableChm01IndexScratchAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexDummyAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexCrc32RotateXorAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexCrc32And_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexDjbAnd_CSource_RawCString.h"
@@ -18,3 +18,8 @@
 #include "CompiledPerfectHashTableChm01IndexShiftMultiplyXorShiftAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexShiftMultiplyXorShift2And_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexRotateMultiplyXorRotate2And_CSource_RawCString.h"
+
+//
+// Keep this last.
+//
+#include "CompiledPerfectHashTableChm01IndexScratchAnd_CSource_RawCString.h"
