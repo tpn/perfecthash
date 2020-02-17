@@ -125,10 +125,19 @@ even_larger_sizes = (
    10000000,
 )
 
+even_larger_sizes_2 = (
+   10983181,
+   13910515,
+   17829914,
+   24810562,
+)
+
+
 all_sizes = (
-    list(normal_sizes) +
-    list(large_sizes) +
-    list(even_larger_sizes)
+    #list(normal_sizes) +
+    #list(large_sizes) +
+    #list(even_larger_sizes)
+    list(even_larger_sizes_2)
 )
 
 # Toggle this depending on which sizes you want.
@@ -138,7 +147,7 @@ all_sizes = (
 sizes = all_sizes
 
 functions = (
-    ('linear', gen_linear_array),
+    ##('linear', gen_linear_array),
     ('random', gen_random_unique_array),
     #('curved', gen_curved_unique_array),
     #('spiked', gen_spiked_unique_array),
