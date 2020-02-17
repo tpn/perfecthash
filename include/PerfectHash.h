@@ -1953,6 +1953,21 @@ IsValidSeedMasks(
         3,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
     )                                                                    \
+    ENTRY(                                                               \
+        MultiplyRotateLR,                                                \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+    )                                                                    \
+    ENTRY(                                                               \
+        MultiplyShiftR,                                                  \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+    )                                                                    \
+    ENTRY(                                                               \
+        MultiplyShiftLR,                                                 \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+    )                                                                    \
     LAST_ENTRY(Scratch, 3, NO_SEED_MASKS)
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
