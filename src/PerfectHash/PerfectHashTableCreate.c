@@ -16,10 +16,10 @@ Abstract:
 #include "stdafx.h"
 
 //
-// Cap the maximum key set size we're willing to process to 10 million.
+// Cap the maximum key set size we're willing to process to 2 billion.
 //
 
-#define MAXIMUM_NUMBER_OF_KEYS 10000000
+#define MAXIMUM_NUMBER_OF_KEYS 2000000000
 
 //
 // Define the threshold for how many attempts need to be made at finding a
