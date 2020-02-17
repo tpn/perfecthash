@@ -536,6 +536,8 @@ const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
 const UNICODE_STRING KeysTableSizeSuffix = RCS(L".TableSize");
 const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
     RCS(L"PerfectHashBulkCreate");
+const UNICODE_STRING PerfectHashBulkCreateBestCsvBaseName =
+    RCS(L"PerfectHashBulkCreateBest");
 const UNICODE_STRING PerfectHashTableCreateCsvBaseName =
     RCS(L"PerfectHashTableCreate");
 

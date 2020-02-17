@@ -525,6 +525,9 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexRotateMultiplyXorRotate2And_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
+    <ClInclude Include="BulkCreateBestCsv.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

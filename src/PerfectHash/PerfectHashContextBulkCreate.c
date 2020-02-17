@@ -17,6 +17,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "BulkCreateCsv.h"
+#include "BulkCreateBestCsv.h"
 
 
 #define PH_ERROR_EX(Name, Result, ...) \
@@ -48,7 +49,8 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PREPARE_BULK_CREATE_CSV_FILE)(
     _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG NumberOfKeysFiles
+    _In_ ULONG NumberOfKeysFiles,
+    _In_ BOOLEAN FindBestGraph
     );
 typedef PREPARE_BULK_CREATE_CSV_FILE *PPREPARE_BULK_CREATE_CSV_FILE;
 extern PREPARE_BULK_CREATE_CSV_FILE PrepareBulkCreateCsvFile;
@@ -160,6 +162,7 @@ Return Value:
     BOOLEAN Silent;
     BOOLEAN Failed;
     BOOLEAN Terminate;
+    BOOLEAN FindBestGraph;
     HRESULT Result;
     HRESULT TableCreateResult;
     PCHAR Buffer;
@@ -259,7 +262,8 @@ Return Value:
     // Arguments have been validated, proceed.
     //
 
-    Silent = (TableCreateFlags.Silent == TRUE);
+    Silent = (TableCreateFlags.Silent != FALSE);
+    FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
 
     //
@@ -288,7 +292,12 @@ Return Value:
     // Create a "row buffer" we can use for the CSV file.
     //
 
-    NumberOfPages = 13;
+    if (FindBestGraph) {
+        NumberOfPages = BULK_CREATE_BEST_CSV_ROW_BUFFER_NUMBER_OF_PAGES;
+    } else {
+        NumberOfPages = BULK_CREATE_CSV_ROW_BUFFER_NUMBER_OF_PAGES;
+
+    }
 
     Result = Rtl->Vtbl->CreateBuffer(Rtl,
                                      &ProcessHandle,
@@ -456,7 +465,9 @@ Return Value:
     //
 
     if (TableCreateFlags.DisableCsvOutputFile == FALSE) {
-        Result = PrepareBulkCreateCsvFile(Context, NumberOfKeysFiles);
+        Result = PrepareBulkCreateCsvFile(Context,
+                                          NumberOfKeysFiles,
+                                          FindBestGraph);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextBulkCreate_PrepareCsvFile, Result);
             goto Error;
@@ -745,7 +756,11 @@ Return Value:
         //
 
         _No_competing_thread_begin_
-        WRITE_BULK_CREATE_CSV_ROW();
+        if (FindBestGraph) {
+            WRITE_BULK_CREATE_BEST_CSV_ROW();
+        } else {
+            WRITE_BULK_CREATE_CSV_ROW();
+        }
         _No_competing_thread_end_
 
     ReleaseTable:
@@ -883,15 +898,16 @@ _Use_decl_annotations_
 HRESULT
 PrepareBulkCreateCsvFile(
     PPERFECT_HASH_CONTEXT Context,
-    ULONG NumberOfKeysFiles
+    ULONG NumberOfKeysFiles,
+    BOOLEAN FindBestGraph
     )
 /*++
 
 Routine Description:
 
-    Prepares the <BaseOutputDir>\PerfectHashBulkCreate_<HeaderHash>.csv file.
-    This involves determining the header hash, constructing a path instance,
-    creating a file instance, and opening it for append.
+    Prepares the <BaseOutputDir>\PerfectHashBulkCreate(Best)?_<HeaderHash>.csv
+    file.  This involves determining the header hash, constructing a path
+    instance, creating a file instance, and opening it for append.
 
 Arguments:
 
@@ -900,6 +916,10 @@ Arguments:
     NumberOfKeysFiles - Supplies the number of keys files anticipated to be
         processed during the bulk create operation.  This is used to derive
         an appropriate file size to use for the .csv file.
+
+    FindBestGraph - Supplies a boolean indicating whether or not the "find
+        best graph" solving mode is active.  This is used to select the base
+        file name used for the .csv file, as well as the header used.
 
 Return Value:
 
@@ -952,9 +972,15 @@ Return Value:
     OUTPUT_RAW(#Name);                                               \
     OUTPUT_CHR('\n');
 
-    BULK_CREATE_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
-                              EXPAND_AS_COLUMN_NAME_THEN_COMMA,
-                              EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+    if (FindBestGraph) {
+        BULK_CREATE_BEST_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                       EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                       EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+    } else {
+        BULK_CREATE_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                  EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                  EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+    }
 
     Header.Length = (USHORT)RtlPointerToOffset(Base, Output);
     Header.MaximumLength = Header.Length;
@@ -1015,7 +1041,12 @@ Return Value:
     // Create the .csv file's path name.
     //
 
-    BaseName = &PerfectHashBulkCreateCsvBaseName;
+    if (FindBestGraph) {
+        BaseName = &PerfectHashBulkCreateBestCsvBaseName;
+    } else {
+        BaseName = &PerfectHashBulkCreateCsvBaseName;
+    }
+
     ExistingPath = Context->BaseOutputDirectory->Path;
     NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
 

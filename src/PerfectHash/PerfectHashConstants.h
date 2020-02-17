@@ -370,6 +370,7 @@ extern const UNICODE_STRING KeysWildcardSuffix;
 extern const UNICODE_STRING TableInfoStreamName;
 extern const UNICODE_STRING KeysTableSizeSuffix;
 extern const UNICODE_STRING PerfectHashBulkCreateCsvBaseName;
+extern const UNICODE_STRING PerfectHashBulkCreateBestCsvBaseName;
 extern const UNICODE_STRING PerfectHashTableCreateCsvBaseName;
 
 extern const STRING NullString;
