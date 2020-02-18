@@ -2066,7 +2066,7 @@ Return Value:
     ALLOC_ARRAY(Next, PEDGE);
     ALLOC_ARRAY(First, PVERTEX);
     ALLOC_ARRAY(Prev, PVERTEX);
-    ALLOC_ARRAY(Assigned, PVERTEX);
+    ALLOC_ARRAY(Assigned, PASSIGNED);
 
     //
     // Set the bitmap sizes and then allocate (or reallocate) the bitmap
