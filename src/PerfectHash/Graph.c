@@ -212,7 +212,7 @@ Return Value:
     LONGLONG FinishedCount;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
-    const ULONG CheckForTerminationAfterIterations = 1024;
+    const ULONG CheckForTerminationAfterIterations = 16384;
 
     Info = Graph->Info;
     Context = Info->Context;
@@ -257,7 +257,7 @@ Return Value:
         GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
 
         //
-        // Every 1024 iterations, check whether the context is indicating to
+        // Every N iterations, check whether the context is indicating to
         // stop solving, either because a solution has been found and we're in
         // "first graph wins" mode, or the explicit state flag to stop solving
         // has been set.
