@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1346,11 +1346,12 @@ Return Value:
     HRESULT Result;
     BOOLEAN FoundBestGraph;
     BOOLEAN FoundEqualBestGraph = FALSE;
+    ULONG Index;
     ULONG BestGraphIndex = 0;
     LONG EqualBestGraphIndex = 0;
     PGRAPH SpareGraph;
     PGRAPH PreviousBestGraph;
-    PBEST_GRAPH_INFO BestGraphInfo;
+    PBEST_GRAPH_INFO BestGraphInfo = NULL;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED_MEMORY_COVERAGE BestCoverage = NULL;
@@ -1533,11 +1534,19 @@ End:
     }
 
     //
-    // Copy coverage if applicable.
+    // Copy coverage and seeds if applicable.
     //
 
     if (BestCoverage != NULL) {
         CopyCoverage(BestCoverage, Coverage);
+
+        C_ASSERT(sizeof(BestGraphInfo->Seeds) == sizeof(Graph->Seeds));
+
+        ASSERT(BestGraphInfo != NULL);
+
+        for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
+            BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
+        }
     }
 
     return Result;

@@ -196,6 +196,12 @@ typedef struct _BEST_GRAPH_INFO {
     ULONG EqualCount;
 
     //
+    // Seed values used for this best graph.
+    //
+
+    ULONG Seeds[MAX_NUMBER_OF_SEEDS];
+
+    //
     // Inline the entire coverage structure.
     //
 

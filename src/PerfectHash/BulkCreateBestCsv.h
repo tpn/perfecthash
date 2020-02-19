@@ -24,7 +24,7 @@ Abstract:
 // constructing the CSV file.
 //
 
-#define BULK_CREATE_BEST_CSV_ROW_BUFFER_NUMBER_OF_PAGES 13
+#define BULK_CREATE_BEST_CSV_ROW_BUFFER_NUMBER_OF_PAGES 14
 
 //
 // Define an "X-Macro"-style macro for capturing the ordered definition of
@@ -321,6 +321,46 @@ Abstract:
           (Context->UserSeeds != NULL &&                                              \
            Context->UserSeeds->NumberOfValues >= 8 ?                                  \
            Context->UserSeeds->Values[7] : 0),                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask1,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask1 : 0),                                            \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask2,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask2 : 0),                                            \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask3,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask3 : 0),                                            \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask4,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask4 : 0),                                            \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask5,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask5 : 0),                                            \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask6,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask6 : 0),                                            \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask7,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask7 : 0),                                            \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(SeedMask8,                                                                  \
+          (Context->SeedMasks != NULL ?                                               \
+           Context->SeedMasks->Mask8 : 0),                                            \
           OUTPUT_INT)                                                                 \
                                                                                       \
     ENTRY(FirstGraphWins,                                                             \
@@ -5222,6 +5262,1030 @@ Abstract:
                                                                                       \
     ENTRY(BestGraph32_CountOfCacheLinesWithNumberOfAssigned_16,                       \
           Context->BestGraphInfo[31].Coverage.NumberOfAssignedPerCacheLineCounts[16], \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed1,                                                           \
+          Context->BestGraphInfo[0].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed2,                                                           \
+          Context->BestGraphInfo[0].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed3,                                                           \
+          Context->BestGraphInfo[0].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed4,                                                           \
+          Context->BestGraphInfo[0].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed5,                                                           \
+          Context->BestGraphInfo[0].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed6,                                                           \
+          Context->BestGraphInfo[0].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed7,                                                           \
+          Context->BestGraphInfo[0].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph1_Seed8,                                                           \
+          Context->BestGraphInfo[0].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed1,                                                           \
+          Context->BestGraphInfo[1].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed2,                                                           \
+          Context->BestGraphInfo[1].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed3,                                                           \
+          Context->BestGraphInfo[1].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed4,                                                           \
+          Context->BestGraphInfo[1].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed5,                                                           \
+          Context->BestGraphInfo[1].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed6,                                                           \
+          Context->BestGraphInfo[1].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed7,                                                           \
+          Context->BestGraphInfo[1].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph2_Seed8,                                                           \
+          Context->BestGraphInfo[1].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed1,                                                           \
+          Context->BestGraphInfo[2].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed2,                                                           \
+          Context->BestGraphInfo[2].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed3,                                                           \
+          Context->BestGraphInfo[2].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed4,                                                           \
+          Context->BestGraphInfo[2].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed5,                                                           \
+          Context->BestGraphInfo[2].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed6,                                                           \
+          Context->BestGraphInfo[2].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed7,                                                           \
+          Context->BestGraphInfo[2].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph3_Seed8,                                                           \
+          Context->BestGraphInfo[2].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed1,                                                           \
+          Context->BestGraphInfo[3].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed2,                                                           \
+          Context->BestGraphInfo[3].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed3,                                                           \
+          Context->BestGraphInfo[3].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed4,                                                           \
+          Context->BestGraphInfo[3].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed5,                                                           \
+          Context->BestGraphInfo[3].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed6,                                                           \
+          Context->BestGraphInfo[3].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed7,                                                           \
+          Context->BestGraphInfo[3].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph4_Seed8,                                                           \
+          Context->BestGraphInfo[3].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed1,                                                           \
+          Context->BestGraphInfo[4].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed2,                                                           \
+          Context->BestGraphInfo[4].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed3,                                                           \
+          Context->BestGraphInfo[4].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed4,                                                           \
+          Context->BestGraphInfo[4].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed5,                                                           \
+          Context->BestGraphInfo[4].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed6,                                                           \
+          Context->BestGraphInfo[4].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed7,                                                           \
+          Context->BestGraphInfo[4].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph5_Seed8,                                                           \
+          Context->BestGraphInfo[4].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed1,                                                           \
+          Context->BestGraphInfo[5].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed2,                                                           \
+          Context->BestGraphInfo[5].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed3,                                                           \
+          Context->BestGraphInfo[5].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed4,                                                           \
+          Context->BestGraphInfo[5].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed5,                                                           \
+          Context->BestGraphInfo[5].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed6,                                                           \
+          Context->BestGraphInfo[5].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed7,                                                           \
+          Context->BestGraphInfo[5].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph6_Seed8,                                                           \
+          Context->BestGraphInfo[5].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed1,                                                           \
+          Context->BestGraphInfo[6].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed2,                                                           \
+          Context->BestGraphInfo[6].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed3,                                                           \
+          Context->BestGraphInfo[6].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed4,                                                           \
+          Context->BestGraphInfo[6].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed5,                                                           \
+          Context->BestGraphInfo[6].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed6,                                                           \
+          Context->BestGraphInfo[6].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed7,                                                           \
+          Context->BestGraphInfo[6].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph7_Seed8,                                                           \
+          Context->BestGraphInfo[6].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed1,                                                           \
+          Context->BestGraphInfo[7].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed2,                                                           \
+          Context->BestGraphInfo[7].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed3,                                                           \
+          Context->BestGraphInfo[7].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed4,                                                           \
+          Context->BestGraphInfo[7].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed5,                                                           \
+          Context->BestGraphInfo[7].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed6,                                                           \
+          Context->BestGraphInfo[7].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed7,                                                           \
+          Context->BestGraphInfo[7].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph8_Seed8,                                                           \
+          Context->BestGraphInfo[7].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed1,                                                           \
+          Context->BestGraphInfo[8].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed2,                                                           \
+          Context->BestGraphInfo[8].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed3,                                                           \
+          Context->BestGraphInfo[8].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed4,                                                           \
+          Context->BestGraphInfo[8].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed5,                                                           \
+          Context->BestGraphInfo[8].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed6,                                                           \
+          Context->BestGraphInfo[8].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed7,                                                           \
+          Context->BestGraphInfo[8].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph9_Seed8,                                                           \
+          Context->BestGraphInfo[8].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed1,                                                          \
+          Context->BestGraphInfo[9].Seeds[0],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed2,                                                          \
+          Context->BestGraphInfo[9].Seeds[1],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed3,                                                          \
+          Context->BestGraphInfo[9].Seeds[2],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed4,                                                          \
+          Context->BestGraphInfo[9].Seeds[3],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed5,                                                          \
+          Context->BestGraphInfo[9].Seeds[4],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed6,                                                          \
+          Context->BestGraphInfo[9].Seeds[5],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed7,                                                          \
+          Context->BestGraphInfo[9].Seeds[6],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph10_Seed8,                                                          \
+          Context->BestGraphInfo[9].Seeds[7],                                         \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed1,                                                          \
+          Context->BestGraphInfo[10].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed2,                                                          \
+          Context->BestGraphInfo[10].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed3,                                                          \
+          Context->BestGraphInfo[10].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed4,                                                          \
+          Context->BestGraphInfo[10].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed5,                                                          \
+          Context->BestGraphInfo[10].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed6,                                                          \
+          Context->BestGraphInfo[10].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed7,                                                          \
+          Context->BestGraphInfo[10].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph11_Seed8,                                                          \
+          Context->BestGraphInfo[10].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed1,                                                          \
+          Context->BestGraphInfo[11].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed2,                                                          \
+          Context->BestGraphInfo[11].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed3,                                                          \
+          Context->BestGraphInfo[11].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed4,                                                          \
+          Context->BestGraphInfo[11].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed5,                                                          \
+          Context->BestGraphInfo[11].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed6,                                                          \
+          Context->BestGraphInfo[11].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed7,                                                          \
+          Context->BestGraphInfo[11].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph12_Seed8,                                                          \
+          Context->BestGraphInfo[11].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed1,                                                          \
+          Context->BestGraphInfo[12].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed2,                                                          \
+          Context->BestGraphInfo[12].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed3,                                                          \
+          Context->BestGraphInfo[12].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed4,                                                          \
+          Context->BestGraphInfo[12].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed5,                                                          \
+          Context->BestGraphInfo[12].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed6,                                                          \
+          Context->BestGraphInfo[12].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed7,                                                          \
+          Context->BestGraphInfo[12].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph13_Seed8,                                                          \
+          Context->BestGraphInfo[12].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed1,                                                          \
+          Context->BestGraphInfo[13].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed2,                                                          \
+          Context->BestGraphInfo[13].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed3,                                                          \
+          Context->BestGraphInfo[13].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed4,                                                          \
+          Context->BestGraphInfo[13].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed5,                                                          \
+          Context->BestGraphInfo[13].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed6,                                                          \
+          Context->BestGraphInfo[13].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed7,                                                          \
+          Context->BestGraphInfo[13].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph14_Seed8,                                                          \
+          Context->BestGraphInfo[13].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed1,                                                          \
+          Context->BestGraphInfo[14].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed2,                                                          \
+          Context->BestGraphInfo[14].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed3,                                                          \
+          Context->BestGraphInfo[14].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed4,                                                          \
+          Context->BestGraphInfo[14].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed5,                                                          \
+          Context->BestGraphInfo[14].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed6,                                                          \
+          Context->BestGraphInfo[14].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed7,                                                          \
+          Context->BestGraphInfo[14].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph15_Seed8,                                                          \
+          Context->BestGraphInfo[14].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed1,                                                          \
+          Context->BestGraphInfo[15].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed2,                                                          \
+          Context->BestGraphInfo[15].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed3,                                                          \
+          Context->BestGraphInfo[15].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed4,                                                          \
+          Context->BestGraphInfo[15].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed5,                                                          \
+          Context->BestGraphInfo[15].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed6,                                                          \
+          Context->BestGraphInfo[15].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed7,                                                          \
+          Context->BestGraphInfo[15].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph16_Seed8,                                                          \
+          Context->BestGraphInfo[15].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed1,                                                          \
+          Context->BestGraphInfo[16].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed2,                                                          \
+          Context->BestGraphInfo[16].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed3,                                                          \
+          Context->BestGraphInfo[16].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed4,                                                          \
+          Context->BestGraphInfo[16].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed5,                                                          \
+          Context->BestGraphInfo[16].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed6,                                                          \
+          Context->BestGraphInfo[16].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed7,                                                          \
+          Context->BestGraphInfo[16].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph17_Seed8,                                                          \
+          Context->BestGraphInfo[16].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed1,                                                          \
+          Context->BestGraphInfo[17].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed2,                                                          \
+          Context->BestGraphInfo[17].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed3,                                                          \
+          Context->BestGraphInfo[17].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed4,                                                          \
+          Context->BestGraphInfo[17].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed5,                                                          \
+          Context->BestGraphInfo[17].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed6,                                                          \
+          Context->BestGraphInfo[17].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed7,                                                          \
+          Context->BestGraphInfo[17].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph18_Seed8,                                                          \
+          Context->BestGraphInfo[17].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed1,                                                          \
+          Context->BestGraphInfo[18].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed2,                                                          \
+          Context->BestGraphInfo[18].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed3,                                                          \
+          Context->BestGraphInfo[18].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed4,                                                          \
+          Context->BestGraphInfo[18].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed5,                                                          \
+          Context->BestGraphInfo[18].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed6,                                                          \
+          Context->BestGraphInfo[18].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed7,                                                          \
+          Context->BestGraphInfo[18].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph19_Seed8,                                                          \
+          Context->BestGraphInfo[18].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed1,                                                          \
+          Context->BestGraphInfo[19].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed2,                                                          \
+          Context->BestGraphInfo[19].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed3,                                                          \
+          Context->BestGraphInfo[19].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed4,                                                          \
+          Context->BestGraphInfo[19].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed5,                                                          \
+          Context->BestGraphInfo[19].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed6,                                                          \
+          Context->BestGraphInfo[19].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed7,                                                          \
+          Context->BestGraphInfo[19].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph20_Seed8,                                                          \
+          Context->BestGraphInfo[19].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed1,                                                          \
+          Context->BestGraphInfo[20].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed2,                                                          \
+          Context->BestGraphInfo[20].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed3,                                                          \
+          Context->BestGraphInfo[20].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed4,                                                          \
+          Context->BestGraphInfo[20].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed5,                                                          \
+          Context->BestGraphInfo[20].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed6,                                                          \
+          Context->BestGraphInfo[20].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed7,                                                          \
+          Context->BestGraphInfo[20].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph21_Seed8,                                                          \
+          Context->BestGraphInfo[20].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed1,                                                          \
+          Context->BestGraphInfo[21].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed2,                                                          \
+          Context->BestGraphInfo[21].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed3,                                                          \
+          Context->BestGraphInfo[21].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed4,                                                          \
+          Context->BestGraphInfo[21].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed5,                                                          \
+          Context->BestGraphInfo[21].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed6,                                                          \
+          Context->BestGraphInfo[21].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed7,                                                          \
+          Context->BestGraphInfo[21].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph22_Seed8,                                                          \
+          Context->BestGraphInfo[21].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed1,                                                          \
+          Context->BestGraphInfo[22].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed2,                                                          \
+          Context->BestGraphInfo[22].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed3,                                                          \
+          Context->BestGraphInfo[22].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed4,                                                          \
+          Context->BestGraphInfo[22].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed5,                                                          \
+          Context->BestGraphInfo[22].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed6,                                                          \
+          Context->BestGraphInfo[22].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed7,                                                          \
+          Context->BestGraphInfo[22].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph23_Seed8,                                                          \
+          Context->BestGraphInfo[22].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed1,                                                          \
+          Context->BestGraphInfo[23].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed2,                                                          \
+          Context->BestGraphInfo[23].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed3,                                                          \
+          Context->BestGraphInfo[23].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed4,                                                          \
+          Context->BestGraphInfo[23].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed5,                                                          \
+          Context->BestGraphInfo[23].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed6,                                                          \
+          Context->BestGraphInfo[23].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed7,                                                          \
+          Context->BestGraphInfo[23].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph24_Seed8,                                                          \
+          Context->BestGraphInfo[23].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed1,                                                          \
+          Context->BestGraphInfo[24].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed2,                                                          \
+          Context->BestGraphInfo[24].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed3,                                                          \
+          Context->BestGraphInfo[24].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed4,                                                          \
+          Context->BestGraphInfo[24].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed5,                                                          \
+          Context->BestGraphInfo[24].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed6,                                                          \
+          Context->BestGraphInfo[24].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed7,                                                          \
+          Context->BestGraphInfo[24].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph25_Seed8,                                                          \
+          Context->BestGraphInfo[24].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed1,                                                          \
+          Context->BestGraphInfo[25].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed2,                                                          \
+          Context->BestGraphInfo[25].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed3,                                                          \
+          Context->BestGraphInfo[25].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed4,                                                          \
+          Context->BestGraphInfo[25].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed5,                                                          \
+          Context->BestGraphInfo[25].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed6,                                                          \
+          Context->BestGraphInfo[25].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed7,                                                          \
+          Context->BestGraphInfo[25].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph26_Seed8,                                                          \
+          Context->BestGraphInfo[25].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed1,                                                          \
+          Context->BestGraphInfo[26].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed2,                                                          \
+          Context->BestGraphInfo[26].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed3,                                                          \
+          Context->BestGraphInfo[26].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed4,                                                          \
+          Context->BestGraphInfo[26].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed5,                                                          \
+          Context->BestGraphInfo[26].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed6,                                                          \
+          Context->BestGraphInfo[26].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed7,                                                          \
+          Context->BestGraphInfo[26].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph27_Seed8,                                                          \
+          Context->BestGraphInfo[26].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed1,                                                          \
+          Context->BestGraphInfo[27].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed2,                                                          \
+          Context->BestGraphInfo[27].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed3,                                                          \
+          Context->BestGraphInfo[27].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed4,                                                          \
+          Context->BestGraphInfo[27].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed5,                                                          \
+          Context->BestGraphInfo[27].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed6,                                                          \
+          Context->BestGraphInfo[27].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed7,                                                          \
+          Context->BestGraphInfo[27].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph28_Seed8,                                                          \
+          Context->BestGraphInfo[27].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed1,                                                          \
+          Context->BestGraphInfo[28].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed2,                                                          \
+          Context->BestGraphInfo[28].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed3,                                                          \
+          Context->BestGraphInfo[28].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed4,                                                          \
+          Context->BestGraphInfo[28].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed5,                                                          \
+          Context->BestGraphInfo[28].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed6,                                                          \
+          Context->BestGraphInfo[28].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed7,                                                          \
+          Context->BestGraphInfo[28].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph29_Seed8,                                                          \
+          Context->BestGraphInfo[28].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed1,                                                          \
+          Context->BestGraphInfo[29].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed2,                                                          \
+          Context->BestGraphInfo[29].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed3,                                                          \
+          Context->BestGraphInfo[29].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed4,                                                          \
+          Context->BestGraphInfo[29].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed5,                                                          \
+          Context->BestGraphInfo[29].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed6,                                                          \
+          Context->BestGraphInfo[29].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed7,                                                          \
+          Context->BestGraphInfo[29].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph30_Seed8,                                                          \
+          Context->BestGraphInfo[29].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed1,                                                          \
+          Context->BestGraphInfo[30].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed2,                                                          \
+          Context->BestGraphInfo[30].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed3,                                                          \
+          Context->BestGraphInfo[30].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed4,                                                          \
+          Context->BestGraphInfo[30].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed5,                                                          \
+          Context->BestGraphInfo[30].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed6,                                                          \
+          Context->BestGraphInfo[30].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed7,                                                          \
+          Context->BestGraphInfo[30].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph31_Seed8,                                                          \
+          Context->BestGraphInfo[30].Seeds[7],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed1,                                                          \
+          Context->BestGraphInfo[31].Seeds[0],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed2,                                                          \
+          Context->BestGraphInfo[31].Seeds[1],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed3,                                                          \
+          Context->BestGraphInfo[31].Seeds[2],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed4,                                                          \
+          Context->BestGraphInfo[31].Seeds[3],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed5,                                                          \
+          Context->BestGraphInfo[31].Seeds[4],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed6,                                                          \
+          Context->BestGraphInfo[31].Seeds[5],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed7,                                                          \
+          Context->BestGraphInfo[31].Seeds[6],                                        \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
+    ENTRY(BestGraph32_Seed8,                                                          \
+          Context->BestGraphInfo[31].Seeds[7],                                        \
           OUTPUT_INT)                                                                 \
                                                                                       \
     ENTRY(KeysMinValue,                                                               \

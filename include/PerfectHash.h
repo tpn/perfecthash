@@ -1867,6 +1867,8 @@ IsValidPerfectHashAlgorithmId(
 // number of seeds used by all hash functions (currently 8).
 //
 
+#define MAX_NUMBER_OF_SEEDS 8
+
 typedef struct _SEED_MASKS {
     LONG Mask1;
     LONG Mask2;

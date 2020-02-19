@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -938,40 +938,43 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     ULONG NumberOfSeeds;
 
-    struct {
-        union {
-            struct {
-                union {
-                    ULONG Seed1;
-                    ULONG FirstSeed;
+    union {
+        ULONG Seeds[MAX_NUMBER_OF_SEEDS];
+        struct {
+            union {
+                struct {
+                    union {
+                        ULONG Seed1;
+                        ULONG FirstSeed;
+                    };
+                    ULONG Seed2;
                 };
-                ULONG Seed2;
+                ULARGE_INTEGER Seeds12;
             };
-            ULARGE_INTEGER Seeds12;
-        };
-        union {
-            struct {
-                ULONG Seed3;
-                ULONG Seed4;
-            };
-            ULARGE_INTEGER Seeds34;
-        };
-        union {
-            struct {
-                ULONG Seed5;
-                ULONG Seed6;
-            };
-            ULARGE_INTEGER Seeds56;
-        };
-        union {
-            struct {
-                ULONG Seed7;
-                union {
-                    ULONG Seed8;
-                    ULONG LastSeed;
+            union {
+                struct {
+                    ULONG Seed3;
+                    ULONG Seed4;
                 };
+                ULARGE_INTEGER Seeds34;
             };
-            ULARGE_INTEGER Seeds78;
+            union {
+                struct {
+                    ULONG Seed5;
+                    ULONG Seed6;
+                };
+                ULARGE_INTEGER Seeds56;
+            };
+            union {
+                struct {
+                    ULONG Seed7;
+                    union {
+                        ULONG Seed8;
+                        ULONG LastSeed;
+                    };
+                };
+                ULARGE_INTEGER Seeds78;
+            };
         };
     };
 
