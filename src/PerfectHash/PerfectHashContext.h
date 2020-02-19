@@ -389,6 +389,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PCSEED_MASKS SeedMasks;
 
     //
+    // Computer name.
+    //
+
+    STRING ComputerName;
+    CHAR ComputerNameBuffer[MAX_COMPUTERNAME_LENGTH+1];
+
+    //
     // Hex string representation of the CSV header hash.
     //
 

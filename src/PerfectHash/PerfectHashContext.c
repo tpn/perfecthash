@@ -97,6 +97,7 @@ Return Value:
     PACL Acl = NULL;
     BYTE Index;
     BYTE NumberOfEvents;
+    BOOL Success;
     HRESULT Result = S_OK;
     ULONG LastError;
     HANDLE Handle;
@@ -108,6 +109,8 @@ Return Value:
     ULONG NumberOfProcessors;
     ULONG SizeOfNamesWideBuffer = 0;
     PWSTR NamesWideBuffer;
+    PSTRING ComputerName;
+    DWORD ComputerNameLength;
     PTP_POOL Threadpool;
     PALLOCATOR Allocator;
     ULARGE_INTEGER AllocSize;
@@ -604,6 +607,26 @@ Return Value:
         PH_ERROR(PerfectHashContextInitialize_InitTimestampString, Result);
         goto Error;
     }
+
+    //
+    // Wire up the ComputerName string and buffer, then get the computer name.
+    //
+
+    ComputerName = &Context->ComputerName;
+    ComputerName->Length = 0;
+    ComputerName->MaximumLength = sizeof(Context->ComputerNameBuffer);
+    ComputerNameLength = (DWORD)ComputerName->MaximumLength;
+    ComputerName->Buffer = (PCHAR)&Context->ComputerNameBuffer;
+
+    Success = GetComputerNameA((PCHAR)ComputerName->Buffer,
+                               &ComputerNameLength);
+    if (!Success) {
+        SYS_ERROR(GetComputerNameA);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+    ASSERT(ComputerName->Length < MAX_COMPUTERNAME_LENGTH);
+    ComputerName->Length = (USHORT)ComputerNameLength;
 
     //
     // We're done!  Indicate success and finish up.

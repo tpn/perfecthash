@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -435,6 +435,7 @@ typedef union _CPU_INFO {
     INT AsIntArray[4];
     LONG AsLongArray[4];
     ULONG AsULongArray[4];
+    CHAR AsCharArray[16];
 } CPU_INFO;
 typedef CPU_INFO *PCPU_INFO;
 
@@ -987,6 +988,13 @@ typedef struct _RTL_CPU_FEATURES {
         ULONG AsULongArray[6];
     };
 
+    //
+    // CPU Brand String.
+    //
+
+    STRING Brand;
+    CHAR BrandBuffer[48];
+
 } RTL_CPU_FEATURES;
 typedef RTL_CPU_FEATURES *PRTL_CPU_FEATURES;
 #endif // defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
@@ -1119,6 +1127,15 @@ CopyMemoryInline(
     TrailingBytes = SizeInBytes - (NumberOfQuadwords << 3);
 
     while (NumberOfQuadwords) {
+
+        //
+        // N.B. If you hit an exception on this next line, and the call stack
+        //      contains PrepareBulkCreateCsvFile(), you probably need to adjust
+        //      the number of pages used for the temporary row buffer in either
+        //      the BulkCreateBestCsv.h or BulkCreateCsv.h header (e.g. bump
+        //      BULK_CREATE_BEST_CSV_ROW_BUFFER_NUMBER_OF_PAGES by one).
+        //
+
         *Dest++ = *Source++;
         NumberOfQuadwords--;
     }

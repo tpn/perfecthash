@@ -46,6 +46,14 @@ Abstract:
           &Context->HexHeaderHash,                                                    \
           OUTPUT_STRING)                                                              \
                                                                                       \
+    ENTRY(ComputerName,                                                               \
+          &Context->ComputerName,                                                     \
+          OUTPUT_STRING)                                                              \
+                                                                                      \
+    ENTRY(CpuBrand,                                                                   \
+          &Context->Rtl->CpuFeatures.Brand,                                           \
+          OUTPUT_STRING)                                                              \
+                                                                                      \
     ENTRY(KeysName,                                                                   \
           &Keys->File->Path->BaseNameA,                                               \
           OUTPUT_STRING)                                                              \
