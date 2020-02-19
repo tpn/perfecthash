@@ -252,6 +252,8 @@ Abstract:
 //    22   MultiplyRotateLR (3)
 //    23   MultiplyShiftR (3)
 //    24   MultiplyShiftLR (3)
+//    25   Multiply (2)
+//    26   MultiplyXor (4)
 // 
 // N.B. The lowest latency hash functions with good solving ability, in order of
 //      ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.

@@ -2670,5 +2670,195 @@ PerfectHashTableHashMultiplyShiftLR(
     );
 }
 
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashMultiply(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    Performs a single multiply on each vertex.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Key - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 2);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * Seed1;
+
+    Vertex2 = DownsizedKey * Seed2;
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashMultiply(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+
+    return PerfectHashTableSeededHashMultiply(
+        Table,
+        Key,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
+        Hash
+    );
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashMultiplyXor(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    Performs a multiply then xor on each vertex.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Key - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG Seed3;
+    ULONG Seed4;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 4);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3 = Seeds[2];
+    Seed4 = Seeds[3];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * Seed1;
+    Vertex1 ^= Seed2;
+
+    Vertex2 = DownsizedKey * Seed3;
+    Vertex2 ^= Seed4;
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashMultiplyXor(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+
+    return PerfectHashTableSeededHashMultiplyXor(
+        Table,
+        Key,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
+        Hash
+    );
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
