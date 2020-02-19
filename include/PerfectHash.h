@@ -2713,23 +2713,6 @@ IsValidPerfectHashTableCreateParameterId(
 //      registering the best graph, which should give more clarity to the
 //      role of the X-macro.
 //
-// N.B. The following coverage types are intended to generate worst-case hash
-//      tables compared to their best-case counterparts.  They can be useful
-//      during development and performance testing to assess the performance
-//      benefit, if any, of things like reduced cache lines, etc.  The types
-//      follow:
-//
-//          LowestMaxGraphTraversalDepth
-//          LowestTotalGraphTraversals
-//          LowestNumberOfEmptyPages
-//          LowestNumberOfEmptyLargePages
-//          LowestNumberOfEmptyCacheLines
-//          LowestNumberOfEmptyPagesUsedByKeysSubset
-//          LowestNumberOfEmptyLargePagesUsedByKeysSubset
-//          LowestNumberOfEmptyCacheLinesUsedByKeysSubset
-//          LowestMaxAssignedPerCacheLineCount
-//          LowestMaxAssignedPerCacheLineCountForKeysSubset
-//
 
 #define BEST_COVERAGE_TYPE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(NumberOfEmptyPages, Highest, >)                  \

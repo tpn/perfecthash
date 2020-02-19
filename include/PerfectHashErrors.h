@@ -255,28 +255,6 @@ Abstract:
 //    25   Multiply (2)
 //    26   MultiplyXor (4)
 // 
-// N.B. The lowest latency hash functions with good solving ability, in order of
-//      ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
-//      You should try these hash functions first and see if a solution can be
-//      found without a table resize occurring.  Failing that, the Jenkins routine
-//      has been observed to be the least likely to require a table resize on a
-//      given key set -- however, it does have the highest latency of all the
-//      hash functions above (anywhere from 7x-10x the latency of Crc32RotateX).
-// 
-//      (The difference in latency between the X, XY and WXYZ functions is minimal;
-//       only a few cycles.)
-// 
-// N.B. The three most recent hash functions are now exhibiting latency on-par with
-//      the Crc32Rotate functions, but with the added benefit of requiring no table
-//      resize events on the https://github.com/tpn/perfecthash-keys/sys32 input
-//      set of keys.  That is, these routines should be tried in this order and
-//      compared against the Crc32Rotate rouintes:
-// 
-//         ShiftMultiplyXorShift
-//         RotateMultiplyXorRotate
-//         ShiftMultiplyXorShift2
-//         RotateMultiplyXorRotate2
-// 
 // Mask Functions:
 // 
 //   ID | Name
@@ -562,18 +540,31 @@ Abstract:
 // 
 //         Valid coverage types:
 // 
-//             HighestNumberOfEmptyCacheLines
-// 
-//                 This predicate is based on the notion that a high number of
-//                 empty cache lines implies a lower number of cache lines are
-//                 required for the table data, which means better clustering of
-//                 table data, which could result in fewer cache misses, which
-//                 would yield greater performance.
-// 
 //             HighestNumberOfEmptyPages
 //             HighestNumberOfEmptyLargePages
+//             HighestNumberOfEmptyCacheLines
+//             HighestMaxGraphTraversalDepth
+//             HighestTotalGraphTraversals
+//             HighestMaxAssignedPerCacheLineCount
 // 
-//                 As above, but for pages and large pages, respectively.
+//             LowestNumberOfEmptyPages
+//             LowestNumberOfEmptyLargePages
+//             LowestNumberOfEmptyCacheLines
+//             LowestMaxGraphTraversalDepth
+//             LowestTotalGraphTraversals
+//             LowestMaxAssignedPerCacheLineCount
+// 
+//         The following predicates must be used in conjunction with --KeysSubset:
+// 
+//             HighestMaxAssignedPerCacheLineCountForKeysSubset
+//             HighestNumberOfPagesUsedByKeysSubset
+//             HighestNumberOfLargePagesUsedByKeysSubset
+//             HighestNumberOfCacheLinesUsedByKeysSubset
+// 
+//             LowestMaxAssignedPerCacheLineCountForKeysSubset
+//             LowestNumberOfPagesUsedByKeysSubset
+//             LowestNumberOfLargePagesUsedByKeysSubset
+//             LowestNumberOfCacheLinesUsedByKeysSubset
 // 
 // Console Output Character Legend
 // 
@@ -894,54 +885,31 @@ Abstract:
 // 
 //         Valid coverage types:
 // 
-//             HighestNumberOfEmptyCacheLines
-// 
-//                 This predicate is based on the notion that a high number of
-//                 empty cache lines implies a lower number of cache lines are
-//                 required for the table data, which means better clustering of
-//                 table data, which could result in fewer cache misses, which
-//                 would yield greater performance.
-// 
 //             HighestNumberOfEmptyPages
 //             HighestNumberOfEmptyLargePages
-// 
-//                 As above, but for pages and large pages, respectively.
-// 
+//             HighestNumberOfEmptyCacheLines
+//             HighestMaxGraphTraversalDepth
+//             HighestTotalGraphTraversals
 //             HighestMaxAssignedPerCacheLineCount
 // 
-//                 A histogram is maintained of the number of assigned values per
-//                 cache line; this predicate selects the graph with the highest
-//                 histogram count (cache line occupancy) for a given graph.
+//             LowestNumberOfEmptyPages
+//             LowestNumberOfEmptyLargePages
+//             LowestNumberOfEmptyCacheLines
+//             LowestMaxGraphTraversalDepth
+//             LowestTotalGraphTraversals
+//             LowestMaxAssignedPerCacheLineCount
 // 
-//             HighestMaxGraphTraversalDepth
-// 
-//                 This predicate selects the graph with the highest recursive
-//                 traversal depth encountered during the graph assignment stage.
-//                 A high value for this metric is indicative of clustering of
-//                 vertices for one half of an assigned table lookup (and thus,
-//                 may result in a solution with better cache behavior).
-// 
-//         N.B. The following predicates must be used in conjunction with
-//              --KeysSubset.
-// 
-//             LowestNumberOfCacheLinesUsedByKeysSubset
-// 
-//                 This predicate is used to to search for solutions where the
-//                 most frequent keys consume the lowest number of cache lines.
-//                 It is useful in scenarios where the frequency of individual
-//                 keys being looked up is heavily skewed toward a small subset.
-//                 For example, if 90%% of the lookups occur for 10% of the keys,
-//                 the fewer cache lines occupied by those keys, the better.
-// 
-//             LowestNumberOfPagesUsedByKeysSubset
-//             LowestNumberOfLargePagesUsedByKeysSubset
-// 
-//                 As above, but for pages and large pages, respectively.
+//         The following predicates must be used in conjunction with --KeysSubset:
 // 
 //             HighestMaxAssignedPerCacheLineCountForKeysSubset
+//             HighestNumberOfPagesUsedByKeysSubset
+//             HighestNumberOfLargePagesUsedByKeysSubset
+//             HighestNumberOfCacheLinesUsedByKeysSubset
 // 
-//                 Like HighestMaxAssignedPerCacheLineCount, but for a subset of
-//                 keys.
+//             LowestMaxAssignedPerCacheLineCountForKeysSubset
+//             LowestNumberOfPagesUsedByKeysSubset
+//             LowestNumberOfLargePagesUsedByKeysSubset
+//             LowestNumberOfCacheLinesUsedByKeysSubset
 // 
 //     --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
 // 
