@@ -120,19 +120,27 @@ Table Create Flags:
 
     --SkipGraphVerification
 
-        When set, skips the internal graph verification check that ensures a
-        valid perfect hash solution has been found (i.e. with no collisions
+        When present, skips the internal graph verification check that ensures
+        a valid perfect hash solution has been found (i.e. with no collisions
         across the entire key set).
+
+    --DisableCsvOutputFile
+
+        When present, disables writing the .csv output file.  This is required
+        when running multiple instances of the tool against the same output
+        directory in parallel.
 
     --OmitCsvRowIfTableCreateFailed
 
         When present, omits writing a row in the .csv output file if table
-        creation fails for a given keys file.
+        creation fails for a given keys file.  Ignored if --DisableCsvOutputFile
+        is speficied.
 
     --OmitCsvRowIfTableCreateSucceeded
 
         When present, omits writing a row in the .csv output file if table
-        creation succeeded for a given keys file.
+        creation succeeded for a given keys file.  Ignored if
+        --DisableCsvOutputFile is specified.
 
     --IndexOnly
 
@@ -160,9 +168,9 @@ Table Create Flags:
         When set, uses implementations of RtlCopyPages and RtlFillPages that
         use non-temporal hints.
 
-    --IgnorePreviousTableSize
+    --UsePreviousTableSize
 
-        When set, ignores any previously-recorded table sizes associated with
+        When set, uses any previously-recorded table sizes associated with
         the keys file for the given algorithm, hash function and masking type.
 
         N.B. To forcibly delete all previously-recorded table sizes from all
@@ -251,7 +259,7 @@ Table Create Parameters:
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
 
-    --AttemptsBeforeTableResize=N [default = 18]
+    --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
 
         Specifies the number of attempts at solving the graph that will be made
         before a table resize event will occur (assuming that resize events are
@@ -273,18 +281,31 @@ Table Create Parameters:
 
         Valid coverage types:
 
-            HighestNumberOfEmptyCacheLines
-
-                This predicate is based on the notion that a high number of
-                empty cache lines implies a lower number of cache lines are
-                required for the table data, which means better clustering of
-                table data, which could result in fewer cache misses, which
-                would yield greater performance.
-
             HighestNumberOfEmptyPages
             HighestNumberOfEmptyLargePages
+            HighestNumberOfEmptyCacheLines
+            HighestMaxGraphTraversalDepth
+            HighestTotalGraphTraversals
+            HighestMaxAssignedPerCacheLineCount
 
-                As above, but for pages and large pages, respectively.
+            LowestNumberOfEmptyPages
+            LowestNumberOfEmptyLargePages
+            LowestNumberOfEmptyCacheLines
+            LowestMaxGraphTraversalDepth
+            LowestTotalGraphTraversals
+            LowestMaxAssignedPerCacheLineCount
+
+        The following predicates must be used in conjunction with --KeysSubset:
+
+            HighestMaxAssignedPerCacheLineCountForKeysSubset
+            HighestNumberOfPagesUsedByKeysSubset
+            HighestNumberOfLargePagesUsedByKeysSubset
+            HighestNumberOfCacheLinesUsedByKeysSubset
+
+            LowestMaxAssignedPerCacheLineCountForKeysSubset
+            LowestNumberOfPagesUsedByKeysSubset
+            LowestNumberOfLargePagesUsedByKeysSubset
+            LowestNumberOfCacheLinesUsedByKeysSubset
 
 Console Output Character Legend
 
@@ -292,7 +313,7 @@ Console Output Character Legend
 
     .   Table created successfully.
 
-    -   Table resize event occured.
+    +   Table resize event occured.
 
     x   Failed to create a table.  The maximum number of attempts at trying to
         solve the table at a given size was reached, and no more resize attempts
@@ -307,7 +328,7 @@ Console Output Character Legend
     !   The system is out of memory.
 
     L   The system is running low on memory (a low memory event is triggered
-        at about 90% RAM usage).  In certain situations we can detect this
+        at about 90%% RAM usage).  In certain situations we can detect this
         situation prior to actually running out of memory; in these cases,
         we abort the current table creation attempt (which will instantly
         relieve system memory pressure).
@@ -329,33 +350,21 @@ Algorithms:
 Hash Functions:
 
    ID | Name (Number of Seeds)
-    1   Crc32Rotate15 (2)
     2   Jenkins (2)
-    3   JenkinsMod (2)
-    4   RotateXor (4)
-    5   AddSubXor (4)
-    6   Xor (2)
-    7   Scratch (4)
-    8   Crc32RotateXor (3)
-    9   Crc32 (2)
-   10   Djb (2)
-   11   DjbXor (2)
    12   Fnv (2)
-   13   Crc32Not (2)
    14   Crc32RotateX (3)
    15   Crc32RotateXY (3)
    16   Crc32RotateWXYZ (3)
-
-N.B. The lowest latency hash functions with good solving ability, in order of
-     ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
-     You should try these hash functions first and see if a solution can be
-     found without a table resize occurring.  Failing that, the Jenkins routine
-     has been observed to be the least likely to require a table resize on a
-     given key set -- however, it does have the highest latency of all the
-     hash functions above (anywhere from 7x-10x the latency of Crc32RotateX).
-
-     (The difference in latency between the X, XY and WXYZ functions is minimal;
-      only a few cycles.)
+   17   RotateMultiplyXorRotate (3)
+   18   ShiftMultiplyXorShift (3)
+   19   ShiftMultiplyXorShift2 (6)
+   20   RotateMultiplyXorRotate2 (6)
+   21   MultiplyRotateR (3)
+   22   MultiplyRotateLR (3)
+   23   MultiplyShiftR (3)
+   24   MultiplyShiftLR (3)
+   25   Multiply (2)
+   26   MultiplyXor (4)
 
 Mask Functions:
 
@@ -471,19 +480,27 @@ Table Create Flags:
 
     --SkipGraphVerification
 
-        When set, skips the internal graph verification check that ensures a
-        valid perfect hash solution has been found (i.e. with no collisions
+        When present, skips the internal graph verification check that ensures
+        a valid perfect hash solution has been found (i.e. with no collisions
         across the entire key set).
+
+    --DisableCsvOutputFile
+
+        When present, disables writing the .csv output file.  This is required
+        when running multiple instances of the tool against the same output
+        directory in parallel.
 
     --OmitCsvRowIfTableCreateFailed
 
         When present, omits writing a row in the .csv output file if table
-        creation fails for a given keys file.
+        creation fails for a given keys file.  Ignored if --DisableCsvOutputFile
+        is speficied.
 
     --OmitCsvRowIfTableCreateSucceeded
 
         When present, omits writing a row in the .csv output file if table
-        creation succeeded for a given keys file.
+        creation succeeded for a given keys file.  Ignored if
+        --DisableCsvOutputFile is specified.
 
     --IndexOnly
 
@@ -511,9 +528,9 @@ Table Create Flags:
         When set, uses implementations of RtlCopyPages and RtlFillPages that
         use non-temporal hints.
 
-    --IgnorePreviousTableSize
+    --UsePreviousTableSize
 
-        When set, ignores any previously-recorded table sizes associated with
+        When set, uses any previously-recorded table sizes associated with
         the keys file for the given algorithm, hash function and masking type.
 
         N.B. To forcibly delete all previously-recorded table sizes from all
@@ -602,7 +619,7 @@ Table Create Parameters:
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
 
-    --AttemptsBeforeTableResize=N [default = 18]
+    --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
 
         Specifies the number of attempts at solving the graph that will be made
         before a table resize event will occur (assuming that resize events are
@@ -624,59 +641,37 @@ Table Create Parameters:
 
         Valid coverage types:
 
-            HighestNumberOfEmptyCacheLines
-
-                This predicate is based on the notion that a high number of
-                empty cache lines implies a lower number of cache lines are
-                required for the table data, which means better clustering of
-                table data, which could result in fewer cache misses, which
-                would yield greater performance.
-
             HighestNumberOfEmptyPages
             HighestNumberOfEmptyLargePages
-
-                As above, but for pages and large pages, respectively.
-
+            HighestNumberOfEmptyCacheLines
+            HighestMaxGraphTraversalDepth
+            HighestTotalGraphTraversals
             HighestMaxAssignedPerCacheLineCount
 
-                A histogram is maintained of the number of assigned values per
-                cache line; this predicate selects the graph with the highest
-                histogram count (cache line occupancy) for a given graph.
+            LowestNumberOfEmptyPages
+            LowestNumberOfEmptyLargePages
+            LowestNumberOfEmptyCacheLines
+            LowestMaxGraphTraversalDepth
+            LowestTotalGraphTraversals
+            LowestMaxAssignedPerCacheLineCount
 
-            HighestMaxGraphTraversalDepth
-
-                This predicate selects the graph with the highest recursive
-                traversal depth encountered during the graph assignment stage.
-                A high value for this metric is indicative of clustering of
-                vertices for one half of an assigned table lookup (and thus,
-                may result in a solution with better cache behavior).
-
-        N.B. The following predicates must be used in conjunction with
-             --KeysSubset.
-
-            LowestNumberOfCacheLinesUsedByKeysSubset
-
-                This predicate is used to to search for solutions where the
-                most frequent keys consume the lowest number of cache lines.
-                It is useful in scenarios where the frequency of individual
-                keys being looked up is heavily skewed toward a small subset.
-                For example, if 90% of the lookups occur for 10 of the keys,
-                the fewer cache lines occupied by those keys, the better.
-
-            LowestNumberOfPagesUsedByKeysSubset
-            LowestNumberOfLargePagesUsedByKeysSubset
-
-                As above, but for pages and large pages, respectively.
+        The following predicates must be used in conjunction with --KeysSubset:
 
             HighestMaxAssignedPerCacheLineCountForKeysSubset
+            HighestNumberOfPagesUsedByKeysSubset
+            HighestNumberOfLargePagesUsedByKeysSubset
+            HighestNumberOfCacheLinesUsedByKeysSubset
 
-                Like HighestMaxAssignedPerCacheLineCount, but for a subset of
-                keys.
+            LowestMaxAssignedPerCacheLineCountForKeysSubset
+            LowestNumberOfPagesUsedByKeysSubset
+            LowestNumberOfLargePagesUsedByKeysSubset
+            LowestNumberOfCacheLinesUsedByKeysSubset
 
     --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
 
         Supplies a comma-separated list of keys in ascending key-value order.
         Must contain two or more elements.
+
 
 Algorithms:
 
@@ -686,39 +681,26 @@ Algorithms:
 Hash Functions:
 
    ID | Name (Number of Seeds)
-    1   Crc32Rotate15 (2)
     2   Jenkins (2)
-    3   JenkinsMod (2)
-    4   RotateXor (4)
-    5   AddSubXor (4)
-    6   Xor (2)
-    7   Scratch (4)
-    8   Crc32RotateXor (3)
-    9   Crc32 (2)
-   10   Djb (2)
-   11   DjbXor (2)
    12   Fnv (2)
-   13   Crc32Not (2)
    14   Crc32RotateX (3)
    15   Crc32RotateXY (3)
    16   Crc32RotateWXYZ (3)
-
-N.B. The lowest latency hash functions with good solving ability, in order of
-     ascending latency, are: Crc32RotateX, Crc32RotateXY, Crc32RotateWXYZ.
-     You should try these hash functions first and see if a solution can be
-     found without a table resize occurring.  Failing that, the Jenkins routine
-     has been observed to be the least likely to require a table resize on a
-     given key set -- however, it does have the highest latency of all the
-     hash functions above (anywhere from 7x-10x the latency of Crc32RotateX).
-
-     (The difference in latency between the X, XY and WXYZ functions is minimal;
-      only a few cycles.)
+   17   RotateMultiplyXorRotate (3)
+   18   ShiftMultiplyXorShift (3)
+   19   ShiftMultiplyXorShift2 (6)
+   20   RotateMultiplyXorRotate2 (6)
+   21   MultiplyRotateR (3)
+   22   MultiplyRotateLR (3)
+   23   MultiplyShiftR (3)
+   24   MultiplyShiftLR (3)
+   25   Multiply (2)
+   26   MultiplyXor (4)
 
 Mask Functions:
 
   ID | Name
    1   Modulus (does not work!)
    2   And
-
 
 ```
