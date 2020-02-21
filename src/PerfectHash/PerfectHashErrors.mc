@@ -463,7 +463,7 @@ Table Create Parameters:
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
 
-    --AttemptsBeforeTableResize=N [default = 18]
+    --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
 
         Specifies the number of attempts at solving the graph that will be made
         before a table resize event will occur (assuming that resize events are
@@ -806,7 +806,7 @@ Table Create Parameters:
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
 
-    --AttemptsBeforeTableResize=N [default = 18]
+    --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
 
         Specifies the number of attempts at solving the graph that will be made
         before a table resize event will occur (assuming that resize events are

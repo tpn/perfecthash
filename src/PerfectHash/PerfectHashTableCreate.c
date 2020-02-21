@@ -26,7 +26,7 @@ Abstract:
 // perfect hash solution before we double our number of vertices and try again.
 //
 
-#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 1000000000
+#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 100000000000
 
 //
 // Define a limit for how many times the table resizing will be attempted before
