@@ -238,6 +238,12 @@ Return Value:
     }
 
     //
+    // Capture the large page status from the file flags.
+    //
+
+    Keys->Flags.KeysDataUsesLargePages = File->Flags.UsesLargePages;
+
+    //
     // Update the key size and initialize the key array base address to point
     // at the memory-mapped base address of the file.  Initialize the number
     // of elements (key count).
