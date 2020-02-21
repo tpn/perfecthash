@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -672,6 +672,13 @@ RetryWithLargerTableSize:
                                         FALSE,
                                         INFINITE);
 
+    //
+    // Regardless of the specific event that was signalled, we want to stop
+    // solving across all graphs.
+    //
+
+    SetStopSolving(Context);
+
     if (CtrlCPressed) {
         Result = PH_E_CTRL_C_PRESSED;
         goto Error;
@@ -708,7 +715,6 @@ RetryWithLargerTableSize:
         // work, then finish work, to complete.
         //
 
-        SetEvent(Context->ShutdownEvent);
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
         WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
 
@@ -899,12 +905,7 @@ RetryWithLargerTableSize:
             Result = PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT;
         }
 
-        //
-        // Explicitly set the stop solving flag.  (It won't be set if the
-        // shutdown event was signaled externally, for example.)
-        //
-
-        SetStopSolving(Context);
+        ASSERT(StopSolving(Context));
 
         //
         // Wait for the main thread work group members.  This will block until
@@ -2401,76 +2402,6 @@ Return Value:
 
     }
 
-}
-
-SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
-    ShouldWeContinueTryingToSolveGraphChm01;
-
-_Use_decl_annotations_
-BOOLEAN
-ShouldWeContinueTryingToSolveGraphChm01(
-    PPERFECT_HASH_CONTEXT Context
-    )
-{
-    ULONG WaitResult;
-    HANDLE Events[5];
-    USHORT NumberOfEvents = ARRAYSIZE(Events);
-
-    //
-    // We can avoid the WaitForMultipleObjects() call if either a) stop solving
-    // is indicated, or b) we're in "first graph wins" mode, and the finished
-    // count is greater than 0.
-    //
-
-    if (StopSolving(Context)) {
-        return FALSE;
-    } else if (FirstSolvedGraphWins(Context)) {
-        if (Context->FinishedCount > 0) {
-            return FALSE;
-        }
-    }
-
-    //
-    // Wire up our event array, then test if any of the events are signaled.
-    //
-
-    Events[0] = Context->SucceededEvent;
-    Events[1] = Context->CompletedEvent;
-    Events[2] = Context->ShutdownEvent;
-    Events[3] = Context->FailedEvent;
-    Events[4] = Context->LowMemoryEvent;
-
-    WaitResult = WaitForMultipleObjects(NumberOfEvents,
-                                        Events,
-                                        FALSE,
-                                        0);
-
-    if (CtrlCPressed) {
-        return FALSE;
-    }
-
-    //
-    // Check for the low-memory event; if set, increment our count and
-    // explicitly set the failed event.
-    //
-
-    if (WaitResult == WAIT_OBJECT_0+4) {
-        InterlockedIncrement(&Context->LowMemoryObserved);
-        SetStopSolving(Context);
-        if (!SetEvent(Context->FailedEvent)) {
-            SYS_ERROR(SetEvent);
-        }
-        return FALSE;
-    }
-
-    //
-    // The only situation where we continue attempting to solve the graph is
-    // if the result from the wait is WAIT_TIMEOUT, which indicates none of
-    // the events have been set.  We treat any other situation as an indication
-    // to stop processing.  (This includes wait failures and abandonment.)
-    //
-
-    return (WaitResult == WAIT_TIMEOUT ? TRUE : FALSE);
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

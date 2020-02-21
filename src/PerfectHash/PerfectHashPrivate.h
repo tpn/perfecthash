@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -338,22 +338,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
 
 } TABLE_INFO_ON_DISK;
 typedef TABLE_INFO_ON_DISK *PTABLE_INFO_ON_DISK;
-
-//
-// Define function pointer for function that determines whether graph solving
-// should continue.  This provides a means for the graph solving threads to
-// break out of their infinite loops once a certain condition is satisified
-// (such as when the graph has been solved, or the maximum number of attempts
-//  has been reached).
-//
-
-typedef
-BOOLEAN
-(NTAPI SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH)(
-    _In_ struct _PERFECT_HASH_CONTEXT *Context
-    );
-typedef SHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH
-      *PSHOULD_WE_CONTINUE_TRYING_TO_SOLVE_GRAPH;
 
 //
 // Function typedefs for private functions.

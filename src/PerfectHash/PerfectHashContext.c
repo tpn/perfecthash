@@ -1122,12 +1122,6 @@ Return Value:
     Context = (PPERFECT_HASH_CONTEXT)Ctx;
 
     //
-    // Toggle the stop solving flag.
-    //
-
-    SetStopSolving(Context);
-
-    //
     // Wait for the main work group members.  This should block until all
     // the workers have returned.
     //

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1171,8 +1171,9 @@ GRAPH_VTBL GraphInterface = {
     &GraphCalculateAssignedMemoryCoverage,
     &GraphCalculateAssignedMemoryCoverageForKeysSubset,
     &GraphRegisterSolved,
+    &GraphShouldWeContinueTryingToSolve,
 };
-VERIFY_VTBL_SIZE(GRAPH, 10);
+VERIFY_VTBL_SIZE(GRAPH, 11);
 
 //
 // Interface array.

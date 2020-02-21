@@ -191,6 +191,8 @@ Return Value:
 
     PH_S_STOP_GRAPH_SOLVING - Stop graph solving.
 
+    PH_S_GRAPH_SOLVING_STOPPED - Graph solving has been stopped.
+
     PH_S_CONTINUE_GRAPH_SOLVING - Continue graph solving.
 
     PH_S_USE_NEW_GRAPH_FOR_SOLVING - Continue graph solving but use the graph
@@ -205,14 +207,12 @@ Return Value:
     VERTEX Vertex1;
     VERTEX Vertex2;
     PGRAPH_INFO Info;
-    ULONG Iterations;
     ULONG NumberOfKeys;
     ULARGE_INTEGER Hash;
     HRESULT Result = S_OK;
     LONGLONG FinishedCount;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
-    const ULONG CheckForTerminationAfterIterations = 16384;
 
     Info = Graph->Info;
     Context = Info->Context;
@@ -224,8 +224,6 @@ Return Value:
     // Enumerate all keys in the input set, hash them into two unique vertices,
     // then add them to the hypergraph.
     //
-
-    Iterations = CheckForTerminationAfterIterations;
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
@@ -256,31 +254,9 @@ Return Value:
 
         GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
 
-        //
-        // Every N iterations, check whether the context is indicating to
-        // stop solving, either because a solution has been found and we're in
-        // "first graph wins" mode, or the explicit state flag to stop solving
-        // has been set.
-        //
-
-        if (!--Iterations) {
-
-            if (FirstSolvedGraphWins(Context)) {
-                if (Context->FinishedCount > 0) {
-                    return PH_S_STOP_GRAPH_SOLVING;
-                }
-            } else if (StopSolving(Context)) {
-                return PH_S_STOP_GRAPH_SOLVING;
-            }
-
-            //
-            // Reset the iteration counter.
-            //
-
-            Iterations = CheckForTerminationAfterIterations;
-
-        }
     }
+
+    MAYBE_STOP_GRAPH_SOLVING(Graph);
 
     //
     // We've added all of the vertices to the graph.  Determine if the graph
@@ -318,7 +294,7 @@ Return Value:
             // Some other thread beat us.  Nothing left to do.
             //
 
-            return PH_S_STOP_GRAPH_SOLVING;
+            return PH_S_GRAPH_SOLVING_STOPPED;
         }
     }
 
@@ -337,6 +313,7 @@ Return Value:
 
     if (FirstSolvedGraphWins(Context)) {
         CONTEXT_END_TIMERS(Solve);
+        SetStopSolving(Context);
         if (WantsAssignedMemoryCoverage(Graph)) {
             Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
             CopyCoverage(Context->Table->Coverage,
@@ -1829,6 +1806,7 @@ Return Value:
 
         if (InterlockedDecrement(&Graph->Context->GraphMemoryFailures) == 0) {
             Graph->Context->State.AllGraphsFailedMemoryAllocation = TRUE;
+            SetStopSolving(Graph->Context);
             if (!SetEvent(Graph->Context->FailedEvent)) {
                 SYS_ERROR(SetEvent);
                 Result = PH_E_SYSTEM_CALL_FAILED;
@@ -1842,7 +1820,7 @@ Return Value:
     // Begin the solving loop.
     //
 
-    while (ShouldWeContinueTryingToSolveGraphChm01(Graph->Context)) {
+    while (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph)) {
 
         Result = Graph->Vtbl->LoadNewSeeds(Graph);
         if (FAILED(Result)) {
@@ -2297,13 +2275,7 @@ Return Value:
     Info = Graph->Info;
     Rtl = Context->Rtl;
 
-    //
-    // Fast-path exit: if the context is indicating to stop solving, return.
-    //
-
-    if (StopSolving(Context)) {
-        return PH_S_GRAPH_SOLVING_STOPPED;
-    }
+    MAYBE_STOP_GRAPH_SOLVING(Graph);
 
     //
     // Increment the thread attempt counter, and interlocked-increment the
@@ -2324,6 +2296,7 @@ Return Value:
             Result = PH_E_SYSTEM_CALL_FAILED;
             goto Error;
         }
+        SetStopSolving(Context);
         return PH_S_TABLE_RESIZE_IMMINENT;
     }
 
@@ -2334,6 +2307,8 @@ Return Value:
 
     if (FindBestMemoryCoverage(Context)) {
         if (Graph->Attempt - 1 == Context->BestCoverageAttempts) {
+
+            SetStopSolving(Context);
 
             if (Context->FinishedCount == 0) {
                 if (!SetEvent(Context->TryLargerTableSizeEvent)) {
@@ -2757,6 +2732,49 @@ Return Value:
     }
 
     return S_OK;
+}
+
+GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE GraphShouldWeContinueTryingToSolve;
+
+_Use_decl_annotations_
+BOOLEAN
+GraphShouldWeContinueTryingToSolve(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Determines if graph solving should continue.  This routine is intended to
+    be called periodically by the graph solving loop, particularly before and
+    after large pieces of work are completed (such as graph assignment).  If
+    this routine returns FALSE, the caller should stop what they're doing and
+    return the PH_S_STOP_GRAPH_SOLVING return code.
+
+Arguments:
+
+    Graph - Supplies a pointer to a graph instance.
+
+Return Value:
+
+    TRUE if solving should continue, FALSE otherwise.
+
+--*/
+{
+    PPERFECT_HASH_CONTEXT Context;
+
+    Context = Graph->Context;
+
+    //
+    // If ctrl-C has been pressed, set stop solving.  Continue solving unless
+    // stop solving indicates otherwise.
+    //
+
+    if (CtrlCPressed) {
+        SetStopSolving(Context);
+    }
+
+    return (StopSolving(Context) != FALSE ? FALSE : TRUE);
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

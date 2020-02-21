@@ -150,7 +150,7 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
     Context->State.FirstSolvedGraphWins = FALSE; \
     Context->State.FindBestMemoryCoverage = TRUE
 
-#define StopSolving(Context) (Context->State.StopSolving == TRUE)
+#define StopSolving(Context) (Context->State.StopSolving != FALSE)
 
 #define SetStopSolving(Context) (Context->State.StopSolving = TRUE)
 #define ClearStopSolving(Context) (Context->State.StopSolving = FALSE)

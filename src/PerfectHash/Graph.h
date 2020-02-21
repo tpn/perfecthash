@@ -690,6 +690,16 @@ HRESULT
     );
 typedef GRAPH_REGISTER_SOLVED *PGRAPH_REGISTER_SOLVED;
 
+typedef
+_Must_inspect_result_
+_Requires_exclusive_lock_held_(Graph->Lock)
+BOOLEAN
+(STDAPICALLTYPE GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE)(
+    _In_ struct _GRAPH *Graph
+    );
+typedef GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
+      *PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE;
+
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
     PGRAPH_SET_INFO SetInfo;
@@ -703,6 +713,7 @@ typedef struct _GRAPH_VTBL {
     PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
         CalculateAssignedMemoryCoverageForKeysSubset;
     PGRAPH_REGISTER_SOLVED RegisterSolved;
+    PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE ShouldWeContinueTryingToSolve;
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
@@ -1076,6 +1087,8 @@ extern GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 #ifdef _M_X64
 extern GRAPH_REGISTER_SOLVED GraphRegisterSolvedTsx;
 #endif
+extern GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
+    GraphShouldWeContinueTryingToSolve;
 #endif
 
 //
@@ -1143,5 +1156,14 @@ typedef struct _Struct_size_bytes_(Header.SizeOfStruct) _GRAPH_INFO_ON_DISK {
 } GRAPH_INFO_ON_DISK;
 C_ASSERT(sizeof(GRAPH_INFO_ON_DISK) <= PAGE_SIZE);
 typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
+
+//
+// Define a helper macro for checking whether or not graph solving should stop.
+//
+
+#define MAYBE_STOP_GRAPH_SOLVING(Graph)                               \
+    if (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph) == FALSE) { \
+        return PH_S_GRAPH_SOLVING_STOPPED;                            \
+    }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
