@@ -118,6 +118,18 @@ Abstract:
           Context->FailedAttempts,                                         \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(TableDataUsesLargePages,                                         \
+          (Table->Flags.TableDataUsesLargePages != FALSE ? 'Y' : 'N'),     \
+          OUTPUT_CHR)                                                      \
+                                                                           \
+    ENTRY(ValuesArrayUsesLargePages,                                       \
+          (Table->Flags.ValuesArrayUsesLargePages != FALSE ? 'Y' : 'N'),   \
+          OUTPUT_CHR)                                                      \
+                                                                           \
+    ENTRY(KeysDataUsesLargePages,                                          \
+          (Keys->Flags.KeysDataUsesLargePages != FALSE ? 'Y' : 'N'),       \
+          OUTPUT_CHR)                                                      \
+                                                                           \
     ENTRY(GraphRegisterSolvedTsxSuccessCount,                              \
           Context->GraphRegisterSolvedTsxSuccess,                          \
           OUTPUT_INT)                                                      \
