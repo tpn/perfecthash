@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -456,6 +456,7 @@ static PCSZ BigS = "S";
 static PCSZ BigT = "T";
 static PCSZ BigV = "V";
 static PCSZ Dash = "-";
+static PCSZ Plus = "+";
 static PCSZ Caret = "^";
 static PCSZ Cross = "x";
 static PCSZ Percent = "%";
@@ -499,6 +500,7 @@ static PCSZ Exclamation = "!";
 
 #define MAYBE_DOT() MAYBE_OUTPUT(Dot, 1)
 #define MAYBE_DASH() MAYBE_OUTPUT(Dash, 1)
+#define MAYBE_PLUS() MAYBE_OUTPUT(Plus, 1)
 #define MAYBE_CARET() MAYBE_OUTPUT(Caret, 1)
 #define MAYBE_CROSS() MAYBE_OUTPUT(Cross, 1)
 #define MAYBE_PERCENT() MAYBE_OUTPUT(Percent, 1)

@@ -830,11 +830,11 @@ RetryWithLargerTableSize:
         }
 
         //
-        // Print a dash if we're in context table/bulk create mode to indicate
+        // Print a plus if we're in context table/bulk create mode to indicate
         // a table resize event has occurred.
         //
 
-        MAYBE_DASH();
+        MAYBE_PLUS();
 
         //
         // Jump back to the start and try again with a larger vertex count.

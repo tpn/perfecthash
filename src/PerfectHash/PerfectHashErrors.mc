@@ -517,7 +517,7 @@ Console Output Character Legend
 
     .   Table created successfully.
 
-    -   Table resize event occured.
+    +   Table resize event occured.
 
     x   Failed to create a table.  The maximum number of attempts at trying to
         solve the table at a given size was reached, and no more resize attempts
