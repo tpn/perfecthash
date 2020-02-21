@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -139,7 +139,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(CreateOnly);
     DECL_ARG(TryLargePagesForTableData);
     DECL_ARG(TryLargePagesForValuesArray);
-    DECL_ARG(IgnorePreviousTableSize);
+    DECL_ARG(UsePreviousTableSize);
     DECL_ARG(IncludeNumberOfTableResizeEventsInOutputPath);
     DECL_ARG(IncludeNumberOfTableElementsInOutputPath);
     DECL_ARG(NoFileIo);
@@ -176,7 +176,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(CreateOnly);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForTableData);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForValuesArray);
-    SET_FLAG_AND_RETURN_IF_EQUAL(IgnorePreviousTableSize);
+    SET_FLAG_AND_RETURN_IF_EQUAL(UsePreviousTableSize);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableResizeEventsInOutputPath);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeNumberOfTableElementsInOutputPath);
     SET_FLAG_AND_RETURN_IF_EQUAL(NoFileIo);

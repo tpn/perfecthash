@@ -97,8 +97,9 @@ Abstract:
           Context->FailedAttempts,                                         \
           OUTPUT_INT)                                                      \
                                                                            \
-    ENTRY(IgnorePreviousTableSize,                                         \
-          (TableCreateFlags.IgnorePreviousTableSize == TRUE ? 'Y' : 'N'),  \
+    ENTRY(UsePreviousTableSize,                                            \
+          (TableCreateFlags.UsePreviousTableSize == TRUE ?                 \
+           'Y' : 'N'),                                                     \
           OUTPUT_CHR)                                                      \
                                                                            \
     ENTRY(NumberOfTableResizeEvents,                                       \

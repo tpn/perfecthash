@@ -2390,12 +2390,12 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG TryLargePagesForValuesArray:1;
 
         //
-        // When set, ignores any table size information associated with the
-        // keys file for the given combination of algorithm, hash function
+        // When set, uses any previous table size information associated with
+        // the keys file for the given combination of algorithm, hash function
         // and masking type.
         //
 
-        ULONG IgnorePreviousTableSize:1;
+        ULONG UsePreviousTableSize:1;
 
         //
         // When set, incorporates the number of table resize events encountered

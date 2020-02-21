@@ -427,9 +427,9 @@ Abstract:
 //         When set, uses implementations of RtlCopyPages and RtlFillPages that
 //         use non-temporal hints.
 // 
-//     --IgnorePreviousTableSize
+//     --UsePreviousTableSize
 // 
-//         When set, ignores any previously-recorded table sizes associated with
+//         When set, uses any previously-recorded table sizes associated with
 //         the keys file for the given algorithm, hash function and masking type.
 // 
 //         N.B. To forcibly delete all previously-recorded table sizes from all
@@ -772,9 +772,9 @@ Abstract:
 //         When set, uses implementations of RtlCopyPages and RtlFillPages that
 //         use non-temporal hints.
 // 
-//     --IgnorePreviousTableSize
+//     --UsePreviousTableSize
 // 
-//         When set, ignores any previously-recorded table sizes associated with
+//         When set, uses any previously-recorded table sizes associated with
 //         the keys file for the given algorithm, hash function and masking type.
 // 
 //         N.B. To forcibly delete all previously-recorded table sizes from all

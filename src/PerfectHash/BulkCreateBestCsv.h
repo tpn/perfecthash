@@ -155,8 +155,8 @@ Abstract:
           Context->GraphRegisterSolvedTsxFailed,                                      \
           OUTPUT_INT)                                                                 \
                                                                                       \
-    ENTRY(IgnorePreviousTableSize,                                                    \
-          (TableCreateFlags.IgnorePreviousTableSize == TRUE ?                         \
+    ENTRY(UsePreviousTableSize,                                                       \
+          (TableCreateFlags.UsePreviousTableSize == TRUE ?                            \
            'Y' : 'N'),                                                                \
           OUTPUT_CHR)                                                                 \
                                                                                       \

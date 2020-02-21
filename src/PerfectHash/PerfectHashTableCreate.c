@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -373,11 +373,11 @@ Return Value:
     }
 
     //
-    // If we've been asked to ignore the previous table size, reset the table's
-    // requested number of elements back to 0.
+    // If we haven't been asked to use the previous table size, reset the
+    // table's requested number of elements back to 0.
     //
 
-    if (TableCreateFlags.IgnorePreviousTableSize) {
+    if (TableCreateFlags.UsePreviousTableSize == FALSE) {
         Table->RequestedNumberOfTableElements.QuadPart = 0;
     }
 
@@ -409,7 +409,7 @@ Return Value:
     // write the size back to the file.
     //
 
-    if (TableCreateFlags.IgnorePreviousTableSize || Result != S_OK) {
+    if ((!TableCreateFlags.UsePreviousTableSize) || Result != S_OK) {
 
         EndOfFile = &EmptyEndOfFile;
 
