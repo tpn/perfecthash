@@ -25,11 +25,8 @@ Abstract:
 // Define the threshold for how many attempts need to be made at finding a
 // perfect hash solution before we double our number of vertices and try again.
 //
-// With a 2-part hypergraph, solutions are found on average in sqrt(3) attempts.
-// By attempt 18, there's a 99.9% chance we will have found a solution.
-//
 
-#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 18
+#define GRAPH_SOLVING_ATTEMPTS_THRESHOLD 1000000000
 
 //
 // Define a limit for how many times the table resizing will be attempted before
