@@ -61,6 +61,6 @@ const ULONGLONG Primes[] = {
     11493228998133068689ULL, 14480561146010017169ULL, 18446744073709551557ULL,
 };
 
-const USHORT NumberOfPrimes = ARRAYSIZE(Primes);
+const SHORT NumberOfPrimes = ARRAYSIZE(Primes);
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

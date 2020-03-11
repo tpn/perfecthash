@@ -21,6 +21,27 @@ Abstract:
 //
 
 extern const ULONGLONG Primes[];
-extern const USHORT NumberOfPrimes;
+extern const SHORT NumberOfPrimes;
+
+//
+// Helper for returning an index into the primes array.
+//
+
+FORCEINLINE
+SHORT
+FindIndexForFirstPrimeGreaterThanOrEqual(
+    _In_ ULONGLONG Value
+    )
+{
+    SHORT Index;
+
+    for (Index = 0; Index < NumberOfPrimes; Index++) {
+        if (Value < Primes[Index]) {
+            return Index;
+        }
+    }
+
+    return -1;
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
