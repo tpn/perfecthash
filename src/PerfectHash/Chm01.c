@@ -1585,11 +1585,43 @@ Return Value:
         // of vertices used.  For other types of masking, we need the edges size
         // to be a power of 2, and the vertices size to be the next power of 2.
         //
+        // Update: attempt to use primes for modulus masking.  Still doesn't
+        //         work.
+        //
 
         if (IsModulusMasking(MaskFunctionId)) {
+            SHORT PrimeIndex;
+            ULONGLONG Value;
+            ULONGLONG Prime;
 
-            NumberOfVertices.QuadPart = NumberOfEdges.QuadPart << 1ULL;
-            NumberOfVertices.QuadPart += NumberOfEdges.QuadPart >> 2ULL;
+            //
+            // Find a prime greater than or equal to the number of edges.
+            //
+
+            Value = NumberOfEdges.QuadPart;
+
+            PrimeIndex = FindIndexForFirstPrimeGreaterThanOrEqual(Value);
+            if (PrimeIndex == -1) {
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            }
+
+            Prime = Primes[PrimeIndex];
+            NumberOfEdges.QuadPart = Prime;
+
+            //
+            // Double the number of edges, then find a prime greater than or
+            // equal to this new value.
+            //
+
+            Value <<= 1;
+
+            PrimeIndex = FindIndexForFirstPrimeGreaterThanOrEqual(Value);
+            if (PrimeIndex == -1) {
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            }
+
+            Prime = Primes[PrimeIndex];
+            NumberOfVertices.QuadPart = Prime;
 
         } else {
 

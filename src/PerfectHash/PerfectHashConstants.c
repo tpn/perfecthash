@@ -295,6 +295,18 @@ const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE IndexImplStringTuples[] = {
         EXPAND_AS_CHM01_AND_INDEX_IMPL_TUPLE
     )
 
+    //
+    // Manually add our Jenkins modulus masking implementation; we only have
+    // one of these as modulus masking just flat out doesn't work (and the
+    // only reason this one exists is to try and aid debugging).
+    //
+
+    {
+        PerfectHashChm01AlgorithmId,
+        PerfectHashHashJenkinsFunctionId,
+        PerfectHashModulusMaskFunctionId,
+        &CompiledPerfectHashTableChm01IndexJenkinsModulusCSourceRawCString,
+    },
 };
 
 const BYTE NumberOfIndexImplStrings = ARRAYSIZE(IndexImplStringTuples);

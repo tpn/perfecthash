@@ -735,6 +735,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG VertexMask;
 
     //
+    // Ditto for modulus-masking equivalents.
+    //
+
+    ULONG EdgeModulus;
+    ULONG VertexModulus;
+
+    //
     // Duplicate the mask type, as well, as this directs AbsoluteEdge()'s
     // decision to use the two masks above.
     //

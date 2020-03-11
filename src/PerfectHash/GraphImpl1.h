@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -119,18 +119,11 @@ AbsoluteEdge(
 {
     ULONG AbsEdge;
     ULONG MaskedEdge;
-    ULONG NumberOfEdges;
-
-    NumberOfEdges = Graph->NumberOfEdges;
 
     if (IsModulusMasking(Graph->MaskFunctionId)) {
-
-        MaskedEdge = Edge % NumberOfEdges;
-
+        MaskedEdge = Edge % Graph->EdgeModulus;
     } else {
-
         MaskedEdge = Edge & Graph->EdgeMask;
-
     }
 
     AbsEdge = (MaskedEdge + (Index * Graph->NumberOfEdges));

@@ -24,6 +24,7 @@
 #include "CompiledPerfectHashTableChm01IndexMultiplyShiftLRAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexMultiplyAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexMultiplyXorAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexJenkinsModulus_CSource_RawCString.h"
 
 //
 // Keep this last.

@@ -2013,6 +2013,8 @@ Return Value:
 
     Graph->EdgeMask = Table->IndexMask;
     Graph->VertexMask = Table->HashMask;
+    Graph->EdgeModulus = Table->IndexModulus;
+    Graph->VertexModulus = Table->HashModulus;
     Graph->MaskFunctionId = Info->Context->MaskFunctionId;
 
     Graph->Flags.Paranoid = IsParanoid(Table);
