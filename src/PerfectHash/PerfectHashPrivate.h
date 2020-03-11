@@ -57,7 +57,8 @@ extern volatile ULONG CtrlCPressed;
 
 //
 // Define a helper macro for releasing references to COM objects and clearing
-// the associated pointer.  Typically used in Rundown() routines.
+// the associated pointer.  Typically used in Rundown() routines.  Eliminates
+// use-after-free class of bugs.
 //
 
 #define RELEASE(Name)              \
