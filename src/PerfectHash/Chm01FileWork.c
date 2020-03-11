@@ -779,8 +779,7 @@ Return Value:
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileCreate, Result);
-            File->Vtbl->Release(File);
-            File = NULL;
+            RELEASE(File);
             goto Error;
         }
 
