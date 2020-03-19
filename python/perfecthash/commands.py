@@ -19,6 +19,7 @@ from .invariant import (
     OutPathInvariant,
     DirectoryInvariant,
     PositiveIntegerInvariant,
+    ExistingDirectoryInvariant,
 )
 
 from .commandinvariant import (
@@ -455,5 +456,65 @@ class ReplaceUuid(InvariantAwareCommand):
 
         with open(path, 'w') as f:
             f.write(text)
+
+class ConvertCsvToParquetAndFeather(InvariantAwareCommand):
+    """
+    Converts PerfectHashBulkCreateBest_*.csv files to parquet and feather files.
+    """
+
+    path = None
+    _path = None
+    class PathArg(PathInvariant):
+        _help = "path of .csv file to convert"
+        _endswith = '.csv'
+
+    def run(self):
+        out = self._out
+        path = self._path
+
+        from .analysis import convert_csv
+        convert_csv(self._path, self._out)
+
+class ConvertAllCsv(InvariantAwareCommand):
+    """
+    Prints all PerfectHashBulkCreate*.csv files recursively found in a given
+    directory.
+    """
+
+    path = None
+    _path = None
+    class PathArg(ExistingDirectoryInvariant):
+        _help = "directory to recurse"
+
+    def run(self):
+        out = self._out
+
+        from .analysis import (
+            get_csv_files,
+            convert_csv,
+        )
+        paths = get_csv_files(self._path)
+
+        for path in paths:
+            if 'failed' in path:
+                continue
+            convert_csv(path, out)
+
+class PrintBulkCreateCsvFiles(InvariantAwareCommand):
+    """
+    Prints all PerfectHashBulkCreate*.csv files recursively found in a given
+    directory.
+    """
+
+    path = None
+    _path = None
+    class PathArg(ExistingDirectoryInvariant):
+        _help = "directory to recurse"
+
+    def run(self):
+        from .analysis import get_csv_files
+        paths = get_csv_files(self._path)
+        self._out('\n'.join(paths))
+
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
