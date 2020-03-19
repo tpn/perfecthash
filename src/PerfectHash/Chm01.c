@@ -307,6 +307,82 @@ Return Value:
         return PH_E_INVALID_NUMBER_OF_SEEDS;
     }
 
+    if (Context->InitialResizes > 0) {
+        ULONG InitialResizes;
+        ULARGE_INTEGER NumberOfEdges;
+        ULARGE_INTEGER NumberOfVertices;
+
+        //
+        // We've been asked to simulate a number of table resizes prior to graph
+        // solving (which is done to yield better keys-to-vertices ratios, which
+        // improves solving probability).
+        //
+
+        //
+        // N.B. We have to duplicate some of the sizing logic for edges and
+        //      vertices from PrepareGraphInfoChm01() here.  Note that this
+        //      initial resize functionality isn't supported for modulus
+        //      masking.
+        //
+
+        //
+        // Initialize number of edges to number of keys, then round up the
+        // edges to a power of 2.
+        //
+
+        NumberOfEdges.QuadPart = Table->Keys->NumberOfElements.QuadPart;
+        ASSERT(NumberOfEdges.HighPart == 0);
+
+        NumberOfEdges.QuadPart = (
+            Rtl->RoundUpPowerOfTwo32(
+                NumberOfEdges.LowPart
+            )
+        );
+
+        if (NumberOfEdges.QuadPart < 8) {
+            NumberOfEdges.QuadPart = 8;
+        }
+
+        //
+        // Make sure we haven't overflowed.
+        //
+
+        if (NumberOfEdges.HighPart) {
+            Result = PH_E_TOO_MANY_EDGES;
+            goto Error;
+        }
+
+        //
+        // For the number of vertices, round the number of edges up to the
+        // next power of 2.
+        //
+
+        NumberOfVertices.QuadPart = (
+            Rtl->RoundUpNextPowerOfTwo32(NumberOfEdges.LowPart)
+        );
+
+        Table->RequestedNumberOfTableElements.QuadPart = (
+            NumberOfVertices.QuadPart
+        );
+
+        //
+        // Keep doubling the number of vertices for each requested resize,
+        // or until we exceed MAX_ULONG, whatever comes first.
+        //
+
+        for (InitialResizes = Context->InitialResizes;
+             InitialResizes > 0;
+             InitialResizes--) {
+
+            Table->RequestedNumberOfTableElements.QuadPart <<= 1ULL;
+
+            if (Table->RequestedNumberOfTableElements.HighPart) {
+                Result = PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
+                goto Error;
+            }
+        }
+    }
+
     Result = PrepareGraphInfoChm01(Table, &Info, NULL);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashTableImplChm01_PrepareFirstGraphInfo, Result);

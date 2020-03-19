@@ -2653,12 +2653,13 @@ IsValidTableCompileFlags(
 }
 
 //
-// N.B. The table create parameters are still a work-in-progress.
+// Define the X-macro for table create parameters.
 //
 
 #define TABLE_CREATE_PARAMETER_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(AttemptsBeforeTableResize)                           \
     ENTRY(MaxNumberOfTableResizes)                                   \
+    ENTRY(InitialNumberOfTableResizes)                               \
     ENTRY(BestCoverageAttempts)                                      \
     ENTRY(BestCoverageType)                                          \
     ENTRY(KeysSubset)                                                \

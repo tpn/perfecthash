@@ -360,6 +360,20 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG ResizeLimit;
 
     //
+    // Initial number of table resizes to simulate before graph solving.  This
+    // is used to reduce the keys-to-vertices ratio (which improves the graph
+    // solving probability).
+    //
+
+    ULONG InitialResizes;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding1;
+
+    //
     // If we're attempting to find the best memory coverage, the following
     // fields capture the type of "best" coverage we're looking for, and the
     // number of attempts to make.
@@ -567,7 +581,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
 
     volatile LONG GraphRegisterSolvedTsxStarted;
-    ULONG Padding;
+    ULONG Padding2;
 
     //
     // N.B. All events are created as named events, using the random object
@@ -712,7 +726,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_WORK FileWork;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;
-    LONG Padding1;
+    ULONG Padding3;
 
     //
     // The algorithm is responsible for registering an appropriate callback
@@ -793,7 +807,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PVOID SolvedContext;
 
     volatile LONG GraphRegisterSolvedTsxRetry;
-    ULONG Padding2;
+    ULONG Padding4;
 
     //
     // Timestamp of instance creation.  The STRING structure's Buffer is wired
@@ -837,7 +851,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
                             EXPAND_AS_LAST_CONTEXT_FILE)
 
     volatile LONG GraphRegisterSolvedTsxFailed;
-    ULONG Padding3;
+    ULONG Padding5;
 
     //
     // Backing vtbl.
@@ -852,7 +866,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding4;
+    PVOID Padding6;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;

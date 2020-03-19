@@ -518,7 +518,7 @@ Abstract:
 //         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
 //         priority, or the file work threadpool priority, to the given value.
 // 
-//     --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
+//     --AttemptsBeforeTableResize=N [default = 4,294,967,295 ]
 // 
 //         Specifies the number of attempts at solving the graph that will be made
 //         before a table resize event will occur (assuming that resize events are
@@ -527,6 +527,15 @@ Abstract:
 //     --MaxNumberOfTableResizes=N [default = 5]
 // 
 //         Maximum number of table resizes that will be permitted before giving up.
+// 
+//     --InitialNumberOfTableResizes=N [default = 0]
+// 
+//         Initial number of table resizes to simulate before attempting graph
+//         solving.  Each table resize doubles the number of vertices used to
+//         solve the graph, which lowers the keys-to-vertices ratio, which will
+//         improve graph solving probability.
+// 
+//         N.B. This parameter is only valid for And masking, not Modulus masking.
 // 
 //     --BestCoverageAttempts=N
 // 
@@ -863,7 +872,7 @@ Abstract:
 //         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
 //         priority, or the file work threadpool priority, to the given value.
 // 
-//     --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
+//     --AttemptsBeforeTableResize=N [default = 4,294,967,295 ]
 // 
 //         Specifies the number of attempts at solving the graph that will be made
 //         before a table resize event will occur (assuming that resize events are
@@ -872,6 +881,15 @@ Abstract:
 //     --MaxNumberOfTableResizes=N [default = 5]
 // 
 //         Maximum number of table resizes that will be permitted before giving up.
+// 
+//     --InitialNumberOfTableResizes=N [default = 0]
+// 
+//         Initial number of table resizes to simulate before attempting graph
+//         solving.  Each table resize doubles the number of vertices used to
+//         solve the graph, which lowers the keys-to-vertices ratio, which will
+//         improve graph solving probability.
+// 
+//         N.B. This parameter is only valid for And masking, not Modulus masking.
 // 
 //     --BestCoverageAttempts=N
 // 
@@ -3561,4 +3579,22 @@ Abstract:
 // Error closing C header no_sal2.h file.
 //
 #define PH_E_ERROR_DURING_CLOSE_C_HEADER_NO_SAL2_FILE ((HRESULT)0xE0040386L)
+
+//
+// MessageId: PH_E_INITIAL_RESIZES_EXCEEDS_MAX_RESIZES
+//
+// MessageText:
+//
+// Initial number of table resizes exceeds maximum table resizes limit.
+//
+#define PH_E_INITIAL_RESIZES_EXCEEDS_MAX_RESIZES ((HRESULT)0xE0040387L)
+
+//
+// MessageId: PH_E_INITIAL_RESIZES_NOT_SUPPORTED_FOR_MODULUS_MASKING
+//
+// MessageText:
+//
+// Initial number of table resizes not supported for modulus masking.
+//
+#define PH_E_INITIAL_RESIZES_NOT_SUPPORTED_FOR_MODULUS_MASKING ((HRESULT)0xE0040388L)
 

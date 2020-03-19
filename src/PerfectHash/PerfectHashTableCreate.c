@@ -546,6 +546,7 @@ Return Value:
     ULONG Count;
     HRESULT Result = S_OK;
     BOOLEAN SawResizeLimit = FALSE;
+    BOOLEAN SawInitialResizes = FALSE;
     BOOLEAN SawResizeThreshold = FALSE;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
@@ -588,6 +589,16 @@ Return Value:
             case TableCreateParameterMaxNumberOfTableResizesId:
                 Context->ResizeLimit = Param->AsULong;
                 SawResizeLimit = TRUE;
+                break;
+
+            case TableCreateParameterInitialNumberOfTableResizesId:
+                if (IsModulusMasking(Table->MaskFunctionId)) {
+                    Result =
+                        PH_E_INITIAL_RESIZES_NOT_SUPPORTED_FOR_MODULUS_MASKING;
+                    goto Error;
+                }
+                Context->InitialResizes = Param->AsULong;
+                SawInitialResizes = TRUE;
                 break;
 
             case TableCreateParameterBestCoverageAttemptsId:
@@ -699,6 +710,18 @@ Return Value:
 
     if (!SawResizeLimit) {
         Context->ResizeLimit = GRAPH_SOLVING_RESIZE_TABLE_LIMIT;
+    } else if (SawInitialResizes) {
+
+        //
+        // If we get here we saw the arguments --MaxNumberOfTableResizes=X and
+        // --InitialNumberOfTableResizes=Y.  Make sure Y <= X.
+        //
+
+        if (Context->InitialResizes > Context->ResizeLimit) {
+            Result = PH_E_INITIAL_RESIZES_EXCEEDS_MAX_RESIZES;
+            goto Error;
+        }
+
     }
 
     //
