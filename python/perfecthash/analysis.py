@@ -176,6 +176,7 @@ def update_df(df):
     df['BestCoveragePositiveSlopeNumber'] = np.int(0)
     df['BestCoveragePositiveSlopeAttempt'] = np.int(0)
     df['KeysToEdgesRatio'] = df.NumberOfKeys / df.NumberOfEdges
+    df['KeysToVerticesRatio'] = df.NumberOfKeys / df.NumberOfVertices
     df['SolutionsFoundRatio'] = df.NumberOfSolutionsFound / df.Attempts
     x = np.array(list(range(0, 17)))[:, np.newaxis]
     x_flat = np.array(list(range(0, 17)))
@@ -241,6 +242,7 @@ def linregress_hash_func_by_number_of_edges(df):
         'HashFunction',
         'NumberOfEdges',
         'KeysToEdgesRatio',
+        'KeysToVerticesRatio',
         'SolutionsFoundRatio',
     ]
 
@@ -317,6 +319,110 @@ def linregress_hash_func_by_number_of_edges(df):
 
     return pd.DataFrame(results, columns=columns)
 
+def linregress_hash_func_by_number_of_vertices(df):
+    import numpy as np
+    import pandas as pd
+    from tqdm import tqdm
+    from itertools import product
+    from scipy.stats import linregress
+
+    hash_funcs = (
+        df.HashFunction
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    num_vertices = (
+        df.NumberOfVertices
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    keys_subset = [
+        'HashFunction',
+        'NumberOfVertices',
+        'KeysToVerticesRatio',
+        'KeysToVerticesRatio',
+        'SolutionsFoundRatio',
+    ]
+
+    dfa = df[keys_subset]
+
+    targets = [ (hf, ne) for (hf, ne) in product(hash_funcs, num_vertices) ]
+
+    results = []
+
+    np.seterr('raise')
+
+    for (hash_func, num_vertices) in tqdm(targets):
+
+        query = (
+            f'HashFunction == "{hash_func}" and '
+            f'NumberOfVertices == {num_vertices}'
+        )
+        df = dfa.query(query)
+
+        # Skip empties.
+        if df.empty:
+            continue
+
+        keys_to_vertices_ratio = df.KeysToVerticesRatio.values
+        solutions_found_ratio = df.SolutionsFoundRatio.values
+
+        count = len(keys_to_vertices_ratio)
+
+        # linregress won't work if all the x values are the same.
+        if len(np.unique(keys_to_vertices_ratio)) == 1:
+            continue
+
+        lr = linregress(keys_to_vertices_ratio, solutions_found_ratio)
+
+        #cycles = df.DeltaHashMinimumCycles.describe(percentiles=[0.95])['95%']
+        #cycles = int(cycles)
+
+        label = (
+            f'{hash_func} ({count}): '
+            f'y={lr.slope:.2f}x + {lr.intercept:.02f} '
+            f'[r: {lr.rvalue:.3f}, p: {lr.pvalue:.3f}, '
+            f'stderr: {lr.stderr:.3f}]'
+        )
+
+        result = (
+            hash_func,
+            num_vertices,
+            lr.slope,
+            lr.intercept,
+            lr.rvalue,
+            lr.pvalue,
+            lr.stderr,
+            count,
+            label,
+            keys_to_vertices_ratio,
+            solutions_found_ratio,
+        )
+
+        results.append(result)
+
+    columns = [
+        'HashFunction',
+        'NumberOfVertices',
+        'Slope',
+        'Intercept',
+        'RValue',
+        'PValue',
+        'StdErr',
+        'Count',
+        'Label',
+        'KeysToVerticesRatio',
+        'SolutionsFoundRatio',
+    ]
+
+    return pd.DataFrame(results, columns=columns)
+
 def find_non_identical_solving_ratios_per_hash_func_and_keys(df):
 
     import numpy as np
@@ -377,7 +483,7 @@ def find_non_identical_solving_ratios_per_hash_func_and_keys(df):
 
     return results
 
-def extract_mean_solving_data_by_hash_func_and_keys_name(df):
+def extract_mean_solving_data_by_hash_func_and_keys_name_for_num_edges(df):
 
     import numpy as np
     import pandas as pd
@@ -476,6 +582,114 @@ def extract_mean_solving_data_by_hash_func_and_keys_name(df):
     new_df = pd.DataFrame(results, columns=columns)
     return new_df
 
+def extract_mean_solving_data_by_hash_func_and_keys_name2(df):
+    """
+    As above, but includes vertices.
+    """
+
+    import numpy as np
+    import pandas as pd
+    from tqdm import tqdm
+    from itertools import product
+    from scipy.stats import linregress
+
+    hash_funcs = (
+        df.HashFunction
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    keys_names = (
+        df.KeysName
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    num_vertices = (
+        df.NumberOfVertices
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    keys_subset = [
+        'KeysName',
+        'HashFunction',
+        'NumberOfKeys',
+        'NumberOfEdges',
+        'NumberOfVertices',
+        'KeysToEdgesRatio',
+        'KeysToVerticesRatio',
+        'SolutionsFoundRatio',
+    ]
+
+    dfa = df[keys_subset]
+
+    targets = [ (hf, kn) for (hf, kn) in product(hash_funcs, keys_names) ]
+
+    results = []
+
+    np.seterr('raise')
+
+    for (hash_func, keys_name) in tqdm(targets):
+
+        query = (
+            f'HashFunction == "{hash_func}" and '
+            f'KeysName == "{keys_name}"'
+        )
+        df = dfa.query(query)
+
+        # Skip empties.
+        if df.empty:
+            continue
+
+        result = [
+            keys_name,
+            hash_func,
+            df.NumberOfKeys.values[0],
+            df.NumberOfEdges.values[0],
+            df.NumberOfVertices.values[0],
+            df.KeysToEdgesRatio.values[0],
+            df.KeysToVerticesRatio.values[0],
+        ]
+
+        result += list(df.SolutionsFoundRatio.describe().values)
+
+        results.append(result)
+
+    suffixes = [
+        '_Count',
+        '', # Mean
+        '_StdDev',
+        '_Min',
+        '_25%',
+        '_50%',
+        '_75%',
+        '_Max',
+    ]
+
+    columns = [
+        'KeysName',
+        'HashFunction',
+        'NumberOfKeys',
+        'NumberOfEdges',
+        'NumberOfVertices',
+        'KeysToEdgesRatio',
+        'KeysToVerticesRatio',
+    ]
+
+    columns += [
+        f'SolutionsFoundRatio{suffix}' for suffix in suffixes
+    ]
+
+    new_df = pd.DataFrame(results, columns=columns)
+    return new_df
+
 def perf_details_by_hash_func(df):
     import pandas as pd
     from tqdm import tqdm
@@ -561,7 +775,7 @@ def perf_details_by_hash_func(df):
 # Format Conversion
 #===============================================================================
 
-def df_to_arrow(df, path):
+def df_to_parquet(df, path):
     import pyarrow as pa
     import pyarrow.parquet as pq
     table = pa.Table.from_pandas(df)
@@ -611,7 +825,7 @@ def concat_subdir(base, subdir):
     dfs = [ df_from_parquet(n) for n in tqdm(names) ]
     df = pd.concat(dfs, sort=False, ignore_index=True)
     results_path = f'{path}\\results.parquet'
-    df_to_arrow(df, results_path)
+    df_to_parquet(df, results_path)
 
 def concat_subdirs(base, subdirs):
     for subdir in subdirs:
@@ -621,24 +835,65 @@ def convert_csv(path, out=None):
     if not out:
         out = lambda _: None
 
-    import os.path
+    from os.path import exists
     import pandas as pd
 
+    df = None
+    sdf = None
+
     parquet_path = path.replace('.csv', '.parquet')
-    if os.path.exists(parquet_path):
-        return
+    if not exists(parquet_path):
+        out(f'Processing {path} -> {parquet_path}...')
 
-    out(f'Processing {path}...')
+        df = pd.read_csv(path)
+        update_df(df)
 
-    df = pd.read_csv(path)
-    update_df(df)
+        df_to_parquet(df, parquet_path)
+        out(f'Wrote {parquet_path}.')
 
-    df_to_arrow(df, parquet_path)
-    out(f'Wrote {parquet_path}.')
+def convert_results_parquet(path, out=None):
+    if not out:
+        out = lambda _: None
 
-    #feather_path = path.replace('.csv', '.feather')
-    #df_to_feather(df, feather_path)
-    #out(f'Wrote {feather_path}.')
+    from os.path import exists
+    import pandas as pd
+
+    df = None
+    sdf = None
+
+    parquet_path = path.replace('.csv', '.parquet')
+    if not exists(parquet_path):
+        out(f'Processing {path} -> {parquet_path}...')
+
+        df = pd.read_csv(path)
+        update_df(df)
+
+        df_to_parquet(df, parquet_path)
+        out(f'Wrote {parquet_path}.')
+
+    # Solutions found ratio.
+    sfr_path = path.replace('.csv', '-sfr.parquet')
+    if not exists(sfr_path):
+        out(f'Processing {path} -> {sfr_path}...')
+
+        if not df:
+            df = df_from_parquet(parquet_path)
+
+        sdf = extract_mean_solving_data_by_hash_func_and_keys_name2(df)
+        df_to_parquet(sdf, sfr_path)
+        out(f'Wrote {sfr_path}.')
+
+    # Linear regressions.
+    lr_path = path.replace('.csv', '-lr.parquet')
+    if not exists(sfr_path):
+        out(f'Processing {path} -> {lr_path}...')
+
+        if not sdf:
+            sdf = df_from_parquet(sfr_path)
+
+        ldf = linregress_hash_func_by_number_of_vertices(sdf)
+        df_to_parquet(ldf, lr_path)
+        out(f'Wrote {lr_path}.')
 
 #===============================================================================
 # Plotting
@@ -1741,6 +1996,212 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
 
     figures.insert(1, None)
     grid = gridplot(figures, ncols=4)
+
+    if show_plot:
+        show(grid)
+
+    return p
+
+def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
+          show_plot=True, figure_kwds=None, circle_kwds=None,
+          color_category=None, ncols=None):
+
+    import numpy as np
+    import pandas as pd
+
+    from bokeh.io import (
+        show,
+    )
+
+    from bokeh.models import (
+        Tabs,
+        Panel,
+        Select,
+        TapTool,
+        Range1d,
+        ColorBar,
+        CustomJS,
+        RangeSlider,
+        MultiSelect,
+        ColumnDataSource,
+        RadioButtonGroup,
+    )
+
+    from bokeh.plotting import (
+        figure,
+    )
+
+    from bokeh.layouts import (
+        gridplot,
+    )
+
+    import bokeh.palettes as bp
+    import bokeh.transform as bt
+
+    tooltips = [
+        ("Index", "@index"),
+        ("Keys", "@KeysName"),
+        ("Number of Keys", "@NumberOfKeys"),
+        ("Number of Vertices", "@NumberOfVertices"),
+        ("Keys to Edges Ratio", "@KeysToEdgesRatio"),
+        ("Keys to Vertices Ratio", "@KeysToVerticesRatio"),
+        ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.000)}"),
+    ]
+
+    if figure_kwds is None:
+        figure_kwds = {}
+
+    if 'tooltips' not in figure_kwds:
+        figure_kwds['tooltips'] = tooltips
+
+    if circle_kwds is None:
+        circle_kwds = {}
+
+    if min_num_vertices is None:
+        min_num_vertices = 256
+
+    if max_num_vertices is None:
+        max_num_vertices = df.NumberOfVertices.max()
+
+    if color_category is None:
+        color_category = bp.Category20
+
+    hash_funcs = (
+        df.HashFunction
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    figures = []
+
+    source_df = df
+
+    y_range = Range1d(0, 1.0)
+
+    for hash_func in hash_funcs:
+
+        df = source_df.query(f'NumberOfVertices >= {min_num_vertices} and '
+                             f'NumberOfVertices <= {max_num_vertices} and '
+                             f'HashFunction == "{hash_func}"').copy()
+
+        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(np.str)
+
+        num_vertices = (
+            df.NumberOfVertices
+                .value_counts()
+                .sort_index()
+                .index
+                .values
+        )
+        num_vertices_str = [ str(e) for e in num_vertices ]
+
+        if isinstance(color_category, dict):
+            cat = color_category[len(num_vertices)]
+        else:
+            cat = color_category
+
+        colors_map = { e: cat[i] for (i, e) in enumerate(num_vertices_str) }
+
+        df['Color'] = [ colors_map[e] for e in df.NumberOfVerticesStr.values ]
+
+        df['KeysToVerticesRatio'] = np.around(df.KeysToVerticesRatio.values, 3)
+        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 3)
+
+        sdf = (
+            df.groupby(['KeysToVerticesRatio', 'SolutionsFoundRatio'])
+              .size()
+              .reset_index()
+              .rename(columns={0: 'Size'})
+        )
+
+        sdf['LogSize'] = np.log(sdf['Size'].values * 2)
+
+        size_map = {}
+
+        for (i, row) in sdf.iterrows():
+            k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
+            v = (row.Size, row.LogSize)
+
+            size_map[k] = v
+
+        df['Size'] = np.float(0)
+        df['LogSize'] = np.float(0)
+
+        for (i, row) in df.iterrows():
+            k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
+            (size, log_size) = size_map[k]
+            df.at[i, 'Size'] = size * 3
+            df.at[i, 'LogSize'] = log_size
+
+        df.sort_values(by=['NumberOfVertices'])
+
+        source = ColumnDataSource(df)
+
+        p = figure(
+            plot_width=500,
+            plot_height=500,
+            tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
+            **figure_kwds,
+        )
+
+        p.title.text = hash_func
+        p.y_range = y_range
+        p.xaxis.axis_label = 'Keys to Vertices Ratio'
+        p.yaxis.axis_label = 'Probability of Finding Solution'
+
+        cr = p.circle(
+            'KeysToVerticesRatio',
+            'SolutionsFoundRatio',
+            color='Color',
+            size='Size',
+            fill_alpha=0.5,
+            line_alpha=1.0,
+            source=source,
+            legend_field='NumberOfVerticesStr',
+            **circle_kwds,
+        )
+
+        p.background_fill_color = "#eeeeee"
+        p.grid.grid_line_color = "white"
+
+        code = """
+            const d = s.data;
+            const selected_index = s.selected.indices[0];
+            const selected_num_vertices = d['NumberOfVertices'][selected_index];
+            var num_vertices;
+            var new_selection = [];
+
+            for (var i = 0; i < d['index'].length; i++) {
+                num_vertices = d['NumberOfVertices'][i];
+                if (num_vertices == selected_num_vertices) {
+                    new_selection.push(i);
+                }
+            }
+
+            s.selected.indices = new_selection;
+
+            s.change.emit();
+        """
+
+        args = {
+            's': source,
+            'colors_map': colors_map,
+        }
+
+        callback = CustomJS(args=args, code=code)
+
+        taptool = p.select(type=TapTool)
+        taptool.callback = callback
+
+        figures.append(p)
+
+    if not ncols:
+        ncols = 2
+
+    #figures.insert(1, None)
+    grid = gridplot(figures, ncols=ncols)
 
     if show_plot:
         show(grid)
