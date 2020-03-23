@@ -1634,15 +1634,15 @@ Return Value:
 
             //
             // For non-modulus masking, make sure the number of vertices are
-            // rounded up to a power of 2.  The number of edges will be rounded
-            // up to a power of 2 from the number of keys.
+            // rounded up to a power of 2.  The number of edges will be shifted
+            // right once from this value.
             //
 
             NumberOfVertices.QuadPart = (
                 RoundUpPowerOfTwo32(NumberOfVertices.LowPart)
             );
 
-            NumberOfEdges.QuadPart = Rtl->RoundUpPowerOfTwo32(NumberOfKeys);
+            NumberOfEdges.QuadPart = NumberOfVertices.QuadPart >> 1;
 
         }
 
@@ -1764,6 +1764,14 @@ Return Value:
     if (NumberOfVertices.QuadPart <= NumberOfEdges.QuadPart) {
         Result = PH_E_NUM_VERTICES_LESS_THAN_OR_EQUAL_NUM_EDGES;
         goto Error;
+    }
+
+    //
+    // Invariant check: sure vertices shifted right once == edges.
+    //
+
+    if ((NumberOfVertices.QuadPart >> 1) != NumberOfEdges.QuadPart) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
 
     //
