@@ -102,6 +102,10 @@ Abstract:
            'Y' : 'N'),                                                     \
           OUTPUT_CHR)                                                      \
                                                                            \
+    ENTRY(InitialNumberOfTableResizes,                                     \
+          Context->InitialResizes,                                         \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(NumberOfTableResizeEvents,                                       \
           Context->NumberOfTableResizeEvents,                              \
           OUTPUT_INT)                                                      \
