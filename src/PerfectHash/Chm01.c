@@ -381,6 +381,8 @@ Return Value:
                 goto Error;
             }
         }
+
+        Context->NumberOfTableResizeEvents = Context->InitialResizes;
     }
 
     Result = PrepareGraphInfoChm01(Table, &Info, NULL);
