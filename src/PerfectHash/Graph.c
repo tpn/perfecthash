@@ -2304,22 +2304,13 @@ Return Value:
 
     //
     // If find best memory coverage mode is active, determine if we've hit the
-    // target number of attempts, and if so, submit the 'finish' work.
+    // target number of solutions, and if so, submit the 'finish' work.
     //
 
     if (FindBestMemoryCoverage(Context)) {
-        if (Graph->Attempt - 1 == Context->BestCoverageAttempts) {
+        if ((ULONGLONG)Context->FinishedCount >= Context->BestCoverageAttempts) {
 
             SetStopSolving(Context);
-
-            if (Context->FinishedCount == 0) {
-                if (!SetEvent(Context->TryLargerTableSizeEvent)) {
-                    SYS_ERROR(SetEvent);
-                    Result = PH_E_SYSTEM_CALL_FAILED;
-                    goto Error;
-                }
-                return PH_S_TABLE_RESIZE_IMMINENT;
-            }
 
             //
             // Stop the solve timers here.  (These are less useful when not in
