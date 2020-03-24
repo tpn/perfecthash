@@ -1648,9 +1648,7 @@ Return Value:
             //
 
             if (Table->TableCreateFlags.ClampNumberOfEdges) {
-                NumberOfEdges.QuadPart = RoundUpPowerOfTwo32(
-                    NumberOfKeys.QuadPart
-                );
+                NumberOfEdges.QuadPart = RoundUpPowerOfTwo32(NumberOfKeys);
             } else {
                 NumberOfEdges.QuadPart = NumberOfVertices.QuadPart >> 1ULL;
             }
