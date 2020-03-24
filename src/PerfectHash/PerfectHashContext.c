@@ -901,6 +901,10 @@ Return Value:
     Context->LowMemoryObserved = 0;
     Context->State.AllGraphsFailedMemoryAllocation = FALSE;
 
+    Context->PreMaskedVertexCollisionFailures = 0;
+    Context->PostMaskedVertexCollisionFailures = 0;
+    Context->CyclicGraphFailures = 0;
+
     Context->MainWorkList->Vtbl->Reset(Context->MainWorkList);
     Context->FileWorkList->Vtbl->Reset(Context->FileWorkList);
     Context->FinishedWorkList->Vtbl->Reset(Context->FinishedWorkList);

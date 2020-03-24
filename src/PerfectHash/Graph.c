@@ -230,6 +230,15 @@ Return Value:
 
         SEEDED_HASH(Key, &Hash.QuadPart);
 
+        if (FAILED(Table->Vtbl->SeededHash(Table,
+                                           Key,
+                                           Graph->NumberOfSeeds,
+                                           &Graph->FirstSeed,
+                                           &Hash.QuadPart))) {
+            InterlockedIncrement64(&Context->PreMaskedVertexCollisionFailures);
+            goto Error;
+        }
+
         ASSERT(Hash.HighPart != Hash.LowPart);
 
         //
@@ -245,6 +254,7 @@ Return Value:
         //
 
         if (Vertex1 == Vertex2) {
+            InterlockedIncrement64(&Context->PostMaskedVertexCollisionFailures);
             goto Failed;
         }
 
@@ -269,6 +279,7 @@ Return Value:
         // Failed to create an acyclic graph.
         //
 
+        InterlockedIncrement64(&Context->CyclicGraphFailures);
         goto Failed;
     }
 

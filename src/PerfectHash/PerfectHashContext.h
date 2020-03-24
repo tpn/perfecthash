@@ -403,6 +403,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PCSEED_MASKS SeedMasks;
 
     //
+    // Captures the number of failures due to vertices colliding prior to being
+    // masked.
+    //
+
+    volatile LONGLONG PreMaskedVertexCollisionFailures;
+
+    //
     // Computer name.
     //
 
@@ -579,6 +586,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
                          EXPAND_AS_EVENT,
                          EXPAND_AS_LAST_EVENT)
 
+
+    //
+    // Captures the number of failures due to vertices colliding after being
+    // masked.
+    //
+
+    volatile LONGLONG PostMaskedVertexCollisionFailures;
 
     volatile LONG GraphRegisterSolvedTsxStarted;
     ULONG Padding2;
@@ -826,6 +840,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG NumberOfTableResizeEvents;
     ULONGLONG TotalNumberOfAttemptsWithSmallerTableSizes;
     ULONGLONG ClosestWeCameToSolvingGraphWithSmallerTableSizes;
+
+    //
+    // Captures the number of failures due to the graph being cyclic.
+    //
+
+    volatile LONGLONG CyclicGraphFailures;
 
     //
     // Pointers to the context file instances.

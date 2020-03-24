@@ -97,6 +97,18 @@ Abstract:
           Context->FailedAttempts,                                         \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(PreMaskedVertexCollisionFailures,                                \
+          Context->PreMaskedVertexCollisionFailures,                       \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(PostMaskedVertexCollisionFailures,                               \
+          Context->PostMaskedVertexCollisionFailures,                      \
+          OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(CyclicGraphFailures,                                             \
+          Context->CyclicGraphFailures,                                    \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(BestCoverageAttempts,                                            \
           Context->BestCoverageAttempts,                                   \
           OUTPUT_INT)                                                      \
