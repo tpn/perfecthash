@@ -127,6 +127,10 @@ Abstract:
           Context->FailedAttempts,                                                    \
           OUTPUT_INT)                                                                 \
                                                                                       \
+    ENTRY(BestCoverageAttempts,                                                       \
+          Context->BestCoverageAttempts,                                              \
+          OUTPUT_INT)                                                                 \
+                                                                                      \
     ENTRY(TableDataUsesLargePages,                                                    \
           (Table->Flags.TableDataUsesLargePages != FALSE ? 'Y' : 'N'),                \
           OUTPUT_CHR)                                                                 \
