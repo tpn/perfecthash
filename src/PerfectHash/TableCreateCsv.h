@@ -97,6 +97,10 @@ Abstract:
           Context->FailedAttempts,                                         \
           OUTPUT_INT)                                                      \
                                                                            \
+    ENTRY(BestCoverageAttempts,                                            \
+          Context->BestCoverageAttempts,                                   \
+          OUTPUT_INT)                                                      \
+                                                                           \
     ENTRY(UsePreviousTableSize,                                            \
           (TableCreateFlags.UsePreviousTableSize == TRUE ?                 \
            'Y' : 'N'),                                                     \
