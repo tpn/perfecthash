@@ -154,6 +154,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(UseRwsSectionForTableValues);
     DECL_ARG(UseNonTemporalAvx2Routines);
     DECL_ARG(DisableCsvOutputFile);
+    DECL_ARG(ClampNumberOfEdges);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -191,6 +192,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(UseRwsSectionForTableValues);
     SET_FLAG_AND_RETURN_IF_EQUAL(UseNonTemporalAvx2Routines);
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableCsvOutputFile);
+    SET_FLAG_AND_RETURN_IF_EQUAL(ClampNumberOfEdges);
 
     return S_FALSE;
 }

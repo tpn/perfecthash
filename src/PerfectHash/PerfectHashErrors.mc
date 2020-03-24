@@ -372,6 +372,20 @@ Table Create Flags:
         When set, uses implementations of RtlCopyPages and RtlFillPages that
         use non-temporal hints.
 
+    --ClampNumberOfEdges
+
+        When present, clamps the number of edges to always be equal to the
+        number of keys, rounded up to a power of two, regardless of the
+        number of table resizes currently in effect.  Normally, when a table
+        is resized, the number of vertices are doubled, and the number of
+        edges are set to the number of vertices shifted right once (divided
+        by two).  When this flag is set, the vertex doubling stays the same,
+        however, the number of edges is always clamped to be equal to the
+        number of keys rounded up to a power of two.  This is a research
+        option used to evaluate the impact of the number of edges on the
+        graph solving probability for a given key set.  Only applies to
+        And masking (i.e. not modulus masking).
+
     --UsePreviousTableSize
 
         When set, uses any previously-recorded table sizes associated with
@@ -723,6 +737,20 @@ Table Create Flags:
 
         When set, uses implementations of RtlCopyPages and RtlFillPages that
         use non-temporal hints.
+
+    --ClampNumberOfEdges
+
+        When present, clamps the number of edges to always be equal to the
+        number of keys, rounded up to a power of two, regardless of the
+        number of table resizes currently in effect.  Normally, when a table
+        is resized, the number of vertices are doubled, and the number of
+        edges are set to the number of vertices shifted right once (divided
+        by two).  When this flag is set, the vertex doubling stays the same,
+        however, the number of edges is always clamped to be equal to the
+        number of keys rounded up to a power of two.  This is a research
+        option used to evaluate the impact of the number of edges on the
+        graph solving probability for a given key set.  Only applies to
+        And masking (i.e. not modulus masking).
 
     --UsePreviousTableSize
 

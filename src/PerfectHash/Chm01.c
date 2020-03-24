@@ -1634,15 +1634,26 @@ Return Value:
 
             //
             // For non-modulus masking, make sure the number of vertices are
-            // rounded up to a power of 2.  The number of edges will be shifted
-            // right once from this value.
+            // rounded up to a power of 2.
             //
 
             NumberOfVertices.QuadPart = (
                 RoundUpPowerOfTwo32(NumberOfVertices.LowPart)
             );
 
-            NumberOfEdges.QuadPart = NumberOfVertices.QuadPart >> 1;
+            //
+            // If we're clamping number of edges, use number of keys rounded up
+            // to a power of two.  Otherwise, use the number of vertices shifted
+            // right by one (divided by two).
+            //
+
+            if (Table->TableCreateFlags.ClampNumberOfEdges) {
+                NumberOfEdges.QuadPart = RoundUpPowerOfTwo32(
+                    NumberOfKeys.QuadPart
+                );
+            } else {
+                NumberOfEdges.QuadPart = NumberOfVertices.QuadPart >> 1ULL;
+            }
 
         }
 
