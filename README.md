@@ -168,6 +168,20 @@ Table Create Flags:
         When set, uses implementations of RtlCopyPages and RtlFillPages that
         use non-temporal hints.
 
+    --ClampNumberOfEdges
+
+        When present, clamps the number of edges to always be equal to the
+        number of keys, rounded up to a power of two, regardless of the
+        number of table resizes currently in effect.  Normally, when a table
+        is resized, the number of vertices are doubled, and the number of
+        edges are set to the number of vertices shifted right once (divided
+        by two).  When this flag is set, the vertex doubling stays the same,
+        however, the number of edges is always clamped to be equal to the
+        number of keys rounded up to a power of two.  This is a research
+        option used to evaluate the impact of the number of edges on the
+        graph solving probability for a given key set.  Only applies to
+        And masking (i.e. not modulus masking).
+
     --UsePreviousTableSize
 
         When set, uses any previously-recorded table sizes associated with
@@ -259,7 +273,7 @@ Table Create Parameters:
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
 
-    --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
+    --AttemptsBeforeTableResize=N [default = 4,294,967,295 ]
 
         Specifies the number of attempts at solving the graph that will be made
         before a table resize event will occur (assuming that resize events are
@@ -268,6 +282,15 @@ Table Create Parameters:
     --MaxNumberOfTableResizes=N [default = 5]
 
         Maximum number of table resizes that will be permitted before giving up.
+
+    --InitialNumberOfTableResizes=N [default = 0]
+
+        Initial number of table resizes to simulate before attempting graph
+        solving.  Each table resize doubles the number of vertices used to
+        solve the graph, which lowers the keys-to-vertices ratio, which will
+        improve graph solving probability.
+
+        N.B. This parameter is only valid for And masking, not Modulus masking.
 
     --BestCoverageAttempts=N
 
@@ -328,7 +351,7 @@ Console Output Character Legend
     !   The system is out of memory.
 
     L   The system is running low on memory (a low memory event is triggered
-        at about 90%% RAM usage).  In certain situations we can detect this
+        at about 90% RAM usage).  In certain situations we can detect this
         situation prior to actually running out of memory; in these cases,
         we abort the current table creation attempt (which will instantly
         relieve system memory pressure).
@@ -371,7 +394,6 @@ Mask Functions:
   ID | Name
    1   Modulus (does not work!)
    2   And
-
 ```
 
 ### PerfectHashCreate.exe
@@ -528,6 +550,20 @@ Table Create Flags:
         When set, uses implementations of RtlCopyPages and RtlFillPages that
         use non-temporal hints.
 
+    --ClampNumberOfEdges
+
+        When present, clamps the number of edges to always be equal to the
+        number of keys, rounded up to a power of two, regardless of the
+        number of table resizes currently in effect.  Normally, when a table
+        is resized, the number of vertices are doubled, and the number of
+        edges are set to the number of vertices shifted right once (divided
+        by two).  When this flag is set, the vertex doubling stays the same,
+        however, the number of edges is always clamped to be equal to the
+        number of keys rounded up to a power of two.  This is a research
+        option used to evaluate the impact of the number of edges on the
+        graph solving probability for a given key set.  Only applies to
+        And masking (i.e. not modulus masking).
+
     --UsePreviousTableSize
 
         When set, uses any previously-recorded table sizes associated with
@@ -619,7 +655,7 @@ Table Create Parameters:
         Sets the main work (i.e. the CPU-intensive graph solving) threadpool
         priority, or the file work threadpool priority, to the given value.
 
-    --AttemptsBeforeTableResize=N [default = 100,000,000,000 ]
+    --AttemptsBeforeTableResize=N [default = 4,294,967,295 ]
 
         Specifies the number of attempts at solving the graph that will be made
         before a table resize event will occur (assuming that resize events are
@@ -628,6 +664,15 @@ Table Create Parameters:
     --MaxNumberOfTableResizes=N [default = 5]
 
         Maximum number of table resizes that will be permitted before giving up.
+
+    --InitialNumberOfTableResizes=N [default = 0]
+
+        Initial number of table resizes to simulate before attempting graph
+        solving.  Each table resize doubles the number of vertices used to
+        solve the graph, which lowers the keys-to-vertices ratio, which will
+        improve graph solving probability.
+
+        N.B. This parameter is only valid for And masking, not Modulus masking.
 
     --BestCoverageAttempts=N
 
@@ -671,7 +716,6 @@ Table Create Parameters:
 
         Supplies a comma-separated list of keys in ascending key-value order.
         Must contain two or more elements.
-
 
 Algorithms:
 
