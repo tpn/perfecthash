@@ -1780,7 +1780,7 @@ Return Value:
     //
 
     if ((!IsModulusMasking(MaskFunctionId)) &&
-        (Table->TableCreateFlags.ClampNumberOfEdges != FALSE)) {
+        (Table->TableCreateFlags.ClampNumberOfEdges == FALSE)) {
 
         if ((NumberOfVertices.QuadPart >> 1) != NumberOfEdges.QuadPart) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
