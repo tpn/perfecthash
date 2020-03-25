@@ -1779,8 +1779,10 @@ Return Value:
     // Invariant check: sure vertices shifted right once == edges.
     //
 
-    if ((NumberOfVertices.QuadPart >> 1) != NumberOfEdges.QuadPart) {
-        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    if (!IsModulusMasking(MaskFunctionId)) {
+        if ((NumberOfVertices.QuadPart >> 1) != NumberOfEdges.QuadPart) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
     }
 
     //
