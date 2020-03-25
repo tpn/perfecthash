@@ -391,4 +391,10 @@ class Config(RawConfigParser):
     def base_output_dir(self):
         return self._absdir('base_output_dir', section='perfecthash')
 
+    @property
+    @memoize
+    def research_base_dir(self):
+        return self._absdir('research_base_dir', section='perfecthash')
+
+
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
