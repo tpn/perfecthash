@@ -1776,12 +1776,16 @@ Return Value:
     }
 
     //
-    // Invariant check: sure vertices shifted right once == edges.
+    // Invariant check: sure vertices shifted right once == edges if applicable.
     //
 
-    if (!IsModulusMasking(MaskFunctionId)) {
+    if ((!IsModulusMasking(MaskFunctionId)) &&
+        (Table->TableCreateFlags.ClampNumberOfEdges != FALSE)) {
+
         if ((NumberOfVertices.QuadPart >> 1) != NumberOfEdges.QuadPart) {
-            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PrepareGraphInfoChm01_NumEdgesNotNumVerticesDiv2, Result);
+            goto Error;
         }
     }
 
