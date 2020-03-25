@@ -1953,44 +1953,54 @@ IsValidSeedMasks(
     ENTRY(                                                               \
         MultiplyRotateR,                                                 \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(                                                               \
         MultiplyRotateLR,                                                \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(                                                               \
         MultiplyShiftR,                                                  \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(                                                               \
         MultiplyShiftLR,                                                 \
         3,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(Multiply, 2, NO_SEED_MASKS)                                    \
     ENTRY(MultiplyXor, 4, NO_SEED_MASKS)                                 \
     ENTRY(                                                               \
         MultiplyRotateRMultiply,                                         \
         5,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(                                                               \
         MultiplyRotateR2,                                                \
         5,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(                                                               \
         MultiplyShiftRMultiply,                                          \
         5,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     ENTRY(                                                               \
         MultiplyShiftR2,                                                 \
         5,                                                               \
-        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        RotateRMultiply,                                                 \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        RotateRMultiplyRotateR,                                          \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
     )                                                                    \
     LAST_ENTRY(Scratch, 3, NO_SEED_MASKS)
 

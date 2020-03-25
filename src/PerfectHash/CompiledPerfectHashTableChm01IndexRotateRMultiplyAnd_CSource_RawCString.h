@@ -3,10 +3,10 @@
 //
 
 DECLSPEC_ALIGN(16)
-const CHAR CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRawCStr[] =
+const CHAR CompiledPerfectHashTableChm01IndexRotateRMultiplyAndCSourceRawCStr[] =
     "\n"
     "//\n"
-    "// Begin CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAnd.c.\n"
+    "// Begin CompiledPerfectHashTableChm01IndexRotateRMultiplyAnd.c.\n"
     "//\n"
     "\n"
     "\n"
@@ -21,13 +21,13 @@ const CHAR CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRa
     "\n"
     "    DownsizedKey = DOWNSIZE_KEY(Key);\n"
     "\n"
-    "    Vertex1 = DownsizedKey * SEED1;\n"
+    "    Vertex1 = DownsizedKey;\n"
     "    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);\n"
-    "    Vertex1 *= SEED2;\n"
+    "    Vertex1 *= SEED1;\n"
     "\n"
-    "    Vertex2 = DownsizedKey * SEED4;\n"
+    "    Vertex2 = DownsizedKey;\n"
     "    Vertex2 = _rotr(Vertex2, SEED3_BYTE2);\n"
-    "    Vertex2 *= SEED5;\n"
+    "    Vertex2 *= SEED2;\n"
     "\n"
     "    MaskedLow = Vertex1 & HASH_MASK;\n"
     "    MaskedHigh = Vertex2 & HASH_MASK;\n"
@@ -42,20 +42,20 @@ const CHAR CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRa
     "\n"
     "\n"
     "//\n"
-    "// End CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAnd.c.\n"
+    "// End CompiledPerfectHashTableChm01IndexRotateRMultiplyAnd.c.\n"
     "//\n"
     "\n"
 ;
 
-const STRING CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRawCString = {
-    sizeof(CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRawCStr) - sizeof(CHAR),
-    sizeof(CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRawCStr),
+const STRING CompiledPerfectHashTableChm01IndexRotateRMultiplyAndCSourceRawCString = {
+    sizeof(CompiledPerfectHashTableChm01IndexRotateRMultiplyAndCSourceRawCStr) - sizeof(CHAR),
+    sizeof(CompiledPerfectHashTableChm01IndexRotateRMultiplyAndCSourceRawCStr),
 #ifdef _WIN64
     0,
 #endif
-    (PCHAR)&CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRawCStr,
+    (PCHAR)&CompiledPerfectHashTableChm01IndexRotateRMultiplyAndCSourceRawCStr,
 };
 
 #ifndef RawCString
-#define RawCString (&CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAndCSourceRawCString)
+#define RawCString (&CompiledPerfectHashTableChm01IndexRotateRMultiplyAndCSourceRawCString)
 #endif

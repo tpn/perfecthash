@@ -392,6 +392,8 @@ Hash Functions:
    28   MultiplyRotateR2 (5)
    29   MultiplyShiftRMultiply (5)
    30   MultiplyShiftR2 (5)
+   31   RotateRMultiply (3)
+   32   RotateRMultiplyRotateR (3)
 
 Mask Functions:
 
@@ -748,6 +750,8 @@ Hash Functions:
    28   MultiplyRotateR2 (5)
    29   MultiplyShiftRMultiply (5)
    30   MultiplyShiftR2 (5)
+   31   RotateRMultiply (3)
+   32   RotateRMultiplyRotateR (3)
 
 Mask Functions:
 

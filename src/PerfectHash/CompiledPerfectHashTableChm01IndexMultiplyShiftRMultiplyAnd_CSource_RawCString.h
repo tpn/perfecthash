@@ -26,7 +26,7 @@ const CHAR CompiledPerfectHashTableChm01IndexMultiplyShiftRMultiplyAndCSourceRaw
     "    Vertex1 *= SEED2;\n"
     "\n"
     "    Vertex2 = DownsizedKey * SEED4;\n"
-    "    Vertex2 >>= SEED3_BYTE3;\n"
+    "    Vertex2 >>= SEED3_BYTE2;\n"
     "    Vertex2 *= SEED5;\n"
     "\n"
     "    MaskedLow = Vertex1 & HASH_MASK;\n"

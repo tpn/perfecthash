@@ -15,7 +15,7 @@ DECLARE_INDEX_ROUTINE()
     Vertex1 *= SEED2;
 
     Vertex2 = DownsizedKey * SEED4;
-    Vertex2 >>= SEED3_BYTE3;
+    Vertex2 >>= SEED3_BYTE2;
     Vertex2 *= SEED5;
 
     MaskedLow = Vertex1 & HASH_MASK;
