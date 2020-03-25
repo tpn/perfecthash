@@ -25,6 +25,10 @@
 #include "CompiledPerfectHashTableChm01IndexMultiplyAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexMultiplyXorAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexJenkinsModulus_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMultiplyRotateR2And_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMultiplyShiftRMultiplyAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMultiplyShiftR2And_CSource_RawCString.h"
 
 //
 // Keep this last.

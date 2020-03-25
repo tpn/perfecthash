@@ -501,6 +501,18 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiplyXorAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiplyRotateRMultiplyAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiplyRotateR2And_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiplyShiftRMultiplyAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiplyShiftR2And_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
     <ClInclude Include="ExtractArg.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
