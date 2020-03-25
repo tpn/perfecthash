@@ -160,10 +160,11 @@ def update_df_old(df):
             df[i, 'BestCoveragePositiveSlopeNumber'] = 0
             df[i, 'BestCoveragePositiveSlopeAttempt'] = 0
 
-def update_df(df):
+def update_df(df, source_csv_file):
     from tqdm import tqdm
     import numpy as np
     from scipy.stats import linregress
+    df['SourceCsvFile'] = source_csv_file
     df['BestCoverageValue'] = np.int(0)
     df['BestCoverageEqualCount'] = np.int(0)
     df['BestCoverageSlope'] = np.float(0)
@@ -184,6 +185,8 @@ def update_df(df):
         f'CountOfCacheLinesWithNumberOfAssigned_{n}'
             for n in range(0, 17)
     ]
+    if 'InitialNumberOfTableResizes' not in df.columns:
+        df['InitialNumberOfTableResizes'] = np.int(0)
     for (i, row) in tqdm(df.iterrows(), total=len(df)):
         best_count = row['NewBestGraphCount']
         if best_count == 0:
@@ -346,7 +349,6 @@ def linregress_hash_func_by_number_of_vertices(df):
         'HashFunction',
         'NumberOfVertices',
         'KeysToVerticesRatio',
-        'KeysToVerticesRatio',
         'SolutionsFoundRatio',
     ]
 
@@ -380,9 +382,6 @@ def linregress_hash_func_by_number_of_vertices(df):
             continue
 
         lr = linregress(keys_to_vertices_ratio, solutions_found_ratio)
-
-        #cycles = df.DeltaHashMinimumCycles.describe(percentiles=[0.95])['95%']
-        #cycles = int(cycles)
 
         label = (
             f'{hash_func} ({count}): '
@@ -483,7 +482,7 @@ def find_non_identical_solving_ratios_per_hash_func_and_keys(df):
 
     return results
 
-def extract_mean_solving_data_by_hash_func_and_keys_name_for_num_edges(df):
+def extract_mean_solving_data(df):
 
     import numpy as np
     import pandas as pd
@@ -515,102 +514,8 @@ def extract_mean_solving_data_by_hash_func_and_keys_name_for_num_edges(df):
             .values
     )
 
-    keys_subset = [
-        'KeysName',
-        'HashFunction',
-        'NumberOfKeys',
-        'NumberOfEdges',
-        'KeysToEdgesRatio',
-        'SolutionsFoundRatio',
-    ]
-
-    dfa = df[keys_subset]
-
-    targets = [ (hf, kn) for (hf, kn) in product(hash_funcs, keys_names) ]
-
-    results = []
-
-    np.seterr('raise')
-
-    for (hash_func, keys_name) in tqdm(targets):
-
-        query = (
-            f'HashFunction == "{hash_func}" and '
-            f'KeysName == "{keys_name}"'
-        )
-        df = dfa.query(query)
-
-        # Skip empties.
-        if df.empty:
-            continue
-
-        result = [
-            keys_name,
-            hash_func,
-            df.NumberOfKeys.values[0],
-            df.NumberOfEdges.values[0],
-            df.KeysToEdgesRatio.values[0],
-        ]
-
-        result += list(df.SolutionsFoundRatio.describe().values)
-
-        results.append(result)
-
-    suffixes = [
-        '_Count',
-        '', # Mean
-        '_StdDev',
-        '_Min',
-        '_25%',
-        '_50%',
-        '_75%',
-        '_Max',
-    ]
-
-    columns = [
-        'KeysName',
-        'HashFunction',
-        'NumberOfKeys',
-        'NumberOfEdges',
-        'KeysToEdgesRatio',
-    ]
-
-    columns += [
-        f'SolutionsFoundRatio{suffix}' for suffix in suffixes
-    ]
-
-    new_df = pd.DataFrame(results, columns=columns)
-    return new_df
-
-def extract_mean_solving_data_by_hash_func_and_keys_name2(df):
-    """
-    As above, but includes vertices.
-    """
-
-    import numpy as np
-    import pandas as pd
-    from tqdm import tqdm
-    from itertools import product
-    from scipy.stats import linregress
-
-    hash_funcs = (
-        df.HashFunction
-            .value_counts()
-            .sort_index()
-            .index
-            .values
-    )
-
-    keys_names = (
-        df.KeysName
-            .value_counts()
-            .sort_index()
-            .index
-            .values
-    )
-
-    num_vertices = (
-        df.NumberOfVertices
+    num_resizes = (
+        df.NumberOfTableResizeEvents
             .value_counts()
             .sort_index()
             .index
@@ -620,6 +525,7 @@ def extract_mean_solving_data_by_hash_func_and_keys_name2(df):
     keys_subset = [
         'KeysName',
         'HashFunction',
+        'NumberOfTableResizeEvents',
         'NumberOfKeys',
         'NumberOfEdges',
         'NumberOfVertices',
@@ -630,17 +536,23 @@ def extract_mean_solving_data_by_hash_func_and_keys_name2(df):
 
     dfa = df[keys_subset]
 
-    targets = [ (hf, kn) for (hf, kn) in product(hash_funcs, keys_names) ]
+    targets = [
+        (hf, kn, ne, nr) for (hf, kn, ne, nr) in (
+            product(hash_funcs, keys_names, num_edges, num_resizes)
+        )
+    ]
 
     results = []
 
     np.seterr('raise')
 
-    for (hash_func, keys_name) in tqdm(targets):
+    for (hash_func, keys_name, num_edges, num_resizes) in tqdm(targets):
 
         query = (
             f'HashFunction == "{hash_func}" and '
-            f'KeysName == "{keys_name}"'
+            f'KeysName == "{keys_name}" and '
+            f'NumberOfEdges == {num_edges} and '
+            f'NumberOfTableResizeEvents == {num_resizes}'
         )
         df = dfa.query(query)
 
@@ -651,6 +563,7 @@ def extract_mean_solving_data_by_hash_func_and_keys_name2(df):
         result = [
             keys_name,
             hash_func,
+            df.NumberOfTableResizeEvents.values[0],
             df.NumberOfKeys.values[0],
             df.NumberOfEdges.values[0],
             df.NumberOfVertices.values[0],
@@ -676,6 +589,7 @@ def extract_mean_solving_data_by_hash_func_and_keys_name2(df):
     columns = [
         'KeysName',
         'HashFunction',
+        'NumberOfTableResizeEvents',
         'NumberOfKeys',
         'NumberOfEdges',
         'NumberOfVertices',
@@ -790,6 +704,19 @@ def df_from_parquet(path):
     import pyarrow.parquet as pq
     return pq.read_table(path).to_pandas()
 
+def get_yyyy_mm_dd_subdirs(dirname):
+    import re
+    import glob
+    from os.path import isdir
+    pattern = re.compile(r'\d{4}[-/]\d{2}[-/]\d{2}')
+    subdirs = [
+        subdir for subdir in glob.iglob('*') if (
+            isdir(subdir) and
+            pattern.match(subdir)
+        )
+    ]
+    return subdirs
+
 def get_csv_files(directory):
     import glob
     return [
@@ -805,7 +732,7 @@ def get_all_bulk_create_parquet_files(directory):
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreate*.parquet',
             recursive=True
-        )
+        ) if 'failed' not in f
     ]
 
 def get_best_bulk_create_parquet_files(directory):
@@ -814,24 +741,91 @@ def get_best_bulk_create_parquet_files(directory):
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreateBest*.parquet',
             recursive=True
-        )
+        ) if 'failed' not in f
     ]
 
-def concat_subdir(base, subdir):
+def convert_csv_to_parquet(path, base_research_dir, out=None):
+    if not out:
+        out = lambda _: None
+
+    from os.path import exists
+    import pandas as pd
+
+    df = None
+    sdf = None
+
+    parquet_path = path.replace('.csv', '.parquet')
+    if 'failed' in parquet_path:
+        return
+
+    if not exists(parquet_path):
+        out(f'Processing {path} -> {parquet_path}...')
+
+        df = pd.read_csv(path)
+        source_csv_file = path.replace(base_research_dir + '\\', '')
+        update_df(df, source_csv_file)
+
+        df_to_parquet(df, parquet_path)
+        out(f'Wrote {parquet_path}.')
+
+def concat_subdir_parquets(base, subdir, out=None):
+    if not out:
+        out = lambda _: None
+
+    from os.path import exists
     import pandas as pd
     from tqdm import tqdm
-    path = f'{base}\\{subdir}'
-    names = get_all_bulk_create_parquet_files(path)
-    dfs = [ df_from_parquet(n) for n in tqdm(names) ]
+
+    subdir_path = f'{base}\\{subdir}'
+    results_path = f'{base}\\{subdir}\\results.parquet'
+    if not exists(results_path):
+        names = get_all_bulk_create_parquet_files(subdir_path)
+        if not names:
+            out('No .parquet files found to concatenate.')
+            return
+        out(f'Processing all {len(names)} file(s) in {subdir}:')
+        out('\n'.join(f'    {name}' for name in names))
+        dfs = [ df_from_parquet(n) for n in tqdm(names) ]
+        df = pd.concat(dfs, sort=False, ignore_index=True)
+        df_to_parquet(df, results_path)
+        out(f'Wrote {results_path}.')
+        return
+
+    df = df_from_parquet(results_path)
+    processed_source_csv_files = set(
+        df.SourceCsvFile
+            .value_counts()
+            .index
+            .values
+    )
+
+    files = get_best_bulk_create_parquet_files(subdir_path)
+
+    found_source_csv_files = set(
+        f.replace(base + '\\', '')
+         .replace('.parquet', '.csv') for f in files
+    )
+
+    missing = found_source_csv_files - processed_source_csv_files
+
+    if not missing:
+        out(f'Up-to-date: {subdir_path}.')
+        return
+
+    out(f'Adding {len(missing)} new file(s) to {results_path}:')
+    out('\n'.join(f'    {m}' for m in missing))
+
+    names = [ f'{base}\\{subpath}' for subpath in missing ]
+
+    dfs = [ df, ] + [ df_from_parquet(n) for n in tqdm(names) ]
+
     df = pd.concat(dfs, sort=False, ignore_index=True)
-    results_path = f'{path}\\results.parquet'
     df_to_parquet(df, results_path)
+    out(f'Wrote {results_path}.')
+    return
 
-def concat_subdirs(base, subdirs):
-    for subdir in subdirs:
-        concat_subdir(base, subdir)
 
-def convert_csv(path, out=None):
+def post_process_results_parquet(base, subdir, out=None):
     if not out:
         out = lambda _: None
 
@@ -841,54 +835,30 @@ def convert_csv(path, out=None):
     df = None
     sdf = None
 
-    parquet_path = path.replace('.csv', '.parquet')
+    parquet_path = f'{base}\\{subdir}\\results.parquet'
     if not exists(parquet_path):
-        out(f'Processing {path} -> {parquet_path}...')
-
-        df = pd.read_csv(path)
-        update_df(df)
-
-        df_to_parquet(df, parquet_path)
-        out(f'Wrote {parquet_path}.')
-
-def convert_results_parquet(path, out=None):
-    if not out:
-        out = lambda _: None
-
-    from os.path import exists
-    import pandas as pd
-
-    df = None
-    sdf = None
-
-    parquet_path = path.replace('.csv', '.parquet')
-    if not exists(parquet_path):
-        out(f'Processing {path} -> {parquet_path}...')
-
-        df = pd.read_csv(path)
-        update_df(df)
-
-        df_to_parquet(df, parquet_path)
-        out(f'Wrote {parquet_path}.')
+        out(f'{parquet_path} does not exist, run concat-parquet-to-results-'
+            f'parquet command first.')
+        return
 
     # Solutions found ratio.
-    sfr_path = path.replace('.csv', '-sfr.parquet')
+    sfr_path = parquet_path.replace('.parquet', '-sfr.parquet')
     if not exists(sfr_path):
-        out(f'Processing {path} -> {sfr_path}...')
+        out(f'Processing {parquet_path} -> {sfr_path}...')
 
-        if not df:
+        if df is None:
             df = df_from_parquet(parquet_path)
 
-        sdf = extract_mean_solving_data_by_hash_func_and_keys_name2(df)
+        sdf = extract_mean_solving_data(df)
         df_to_parquet(sdf, sfr_path)
         out(f'Wrote {sfr_path}.')
 
     # Linear regressions.
-    lr_path = path.replace('.csv', '-lr.parquet')
-    if not exists(sfr_path):
-        out(f'Processing {path} -> {lr_path}...')
+    lr_path = parquet_path.replace('.parquet', '-lr.parquet')
+    if not exists(lr_path):
+        out(f'Processing {sfr_path} -> {lr_path}...')
 
-        if not sdf:
+        if sdf is None:
             sdf = df_from_parquet(sfr_path)
 
         ldf = linregress_hash_func_by_number_of_vertices(sdf)
@@ -2159,7 +2129,7 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
             fill_alpha=0.5,
             line_alpha=1.0,
             source=source,
-            legend_field='NumberOfVerticesStr',
+            legend_group='NumberOfVertices',
             **circle_kwds,
         )
 
@@ -2176,6 +2146,214 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
             for (var i = 0; i < d['index'].length; i++) {
                 num_vertices = d['NumberOfVertices'][i];
                 if (num_vertices == selected_num_vertices) {
+                    new_selection.push(i);
+                }
+            }
+
+            s.selected.indices = new_selection;
+
+            s.change.emit();
+        """
+
+        args = {
+            's': source,
+            'colors_map': colors_map,
+        }
+
+        callback = CustomJS(args=args, code=code)
+
+        taptool = p.select(type=TapTool)
+        taptool.callback = callback
+
+        figures.append(p)
+
+    if not ncols:
+        ncols = 2
+
+    #figures.insert(1, None)
+    grid = gridplot(figures, ncols=ncols)
+
+    if show_plot:
+        show(grid)
+
+    return p
+
+def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
+          show_plot=True, figure_kwds=None, circle_kwds=None,
+          color_category=None, ncols=None):
+
+    import numpy as np
+    import pandas as pd
+
+    from bokeh.io import (
+        show,
+    )
+
+    from bokeh.models import (
+        Tabs,
+        Panel,
+        Select,
+        TapTool,
+        Range1d,
+        ColorBar,
+        CustomJS,
+        RangeSlider,
+        MultiSelect,
+        ColumnDataSource,
+        RadioButtonGroup,
+    )
+
+    from bokeh.plotting import (
+        figure,
+    )
+
+    from bokeh.layouts import (
+        gridplot,
+    )
+
+    import bokeh.palettes as bp
+    import bokeh.transform as bt
+
+    tooltips = [
+        ("Index", "@index"),
+        ("Keys", "@KeysName"),
+        ("Number of Keys", "@NumberOfKeys"),
+        ("Number of Edges", "@NumberOfEdges"),
+        ("Number of Vertices", "@NumberOfVertices"),
+        ("Number Of Resizes", "@NumberOfTableResizeEvents"),
+        ("Keys to Edges Ratio", "@KeysToEdgesRatio"),
+        ("Keys to Vertices Ratio", "@KeysToVerticesRatio"),
+        ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.000)}"),
+    ]
+
+    if figure_kwds is None:
+        figure_kwds = {}
+
+    if 'tooltips' not in figure_kwds:
+        figure_kwds['tooltips'] = tooltips
+
+    if circle_kwds is None:
+        circle_kwds = {}
+
+    if min_num_edges is None:
+        min_num_edges = 256
+
+    if max_num_edges is None:
+        max_num_edges = df.NumberOfEdges.max()
+
+    if color_category is None:
+        color_category = bp.Spectral11
+
+    hash_funcs = (
+        df.HashFunction
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    figures = []
+
+    source_df = df
+
+    y_range = Range1d(0, 1.0)
+
+    for hash_func in hash_funcs:
+
+        df = source_df.query(f'NumberOfEdges >= {min_num_edges} and '
+                             f'NumberOfEdges <= {max_num_edges} and '
+                             f'HashFunction == "{hash_func}"').copy()
+
+        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(np.str)
+
+        num_edges = (
+            df.NumberOfEdges
+                .value_counts()
+                .sort_index()
+                .index
+                .values
+        )
+        num_edges_str = [ str(e) for e in num_edges ]
+
+        if isinstance(color_category, dict):
+            cat = color_category[len(num_edges)]
+        else:
+            cat = color_category
+
+        colors_map = { e: cat[i] for (i, e) in enumerate(num_edges_str) }
+
+        df['Color'] = [ colors_map[e] for e in df.NumberOfEdgesStr.values ]
+
+        df['KeysToEdgesRatio'] = np.around(df.KeysToEdgesRatio.values, 3)
+        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 3)
+
+        sdf = (
+            df.groupby(['KeysToEdgesRatio', 'SolutionsFoundRatio'])
+              .size()
+              .reset_index()
+              .rename(columns={0: 'Size'})
+        )
+
+        sdf['LogSize'] = np.log(sdf['Size'].values * 2)
+
+        size_map = {}
+
+        for (i, row) in sdf.iterrows():
+            k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
+            v = (row.Size, row.LogSize)
+
+            size_map[k] = v
+
+        df['Size'] = np.float(0)
+        df['LogSize'] = np.float(0)
+
+        for (i, row) in df.iterrows():
+            k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
+            (size, log_size) = size_map[k]
+            df.at[i, 'Size'] = size * 3
+            df.at[i, 'LogSize'] = log_size
+
+        df.sort_values(by=['NumberOfEdges'])
+
+        p = figure(
+            plot_width=500,
+            plot_height=500,
+            tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
+            **figure_kwds,
+        )
+
+        p.title.text = hash_func
+        p.y_range = y_range
+        p.xaxis.axis_label = 'Keys to Edges Ratio'
+        p.yaxis.axis_label = 'Probability of Finding Solution'
+
+        source = ColumnDataSource(df)
+
+        cr = p.circle(
+            'KeysToEdgesRatio',
+            'SolutionsFoundRatio',
+            color='Color',
+            size='Size',
+            fill_alpha=0.5,
+            line_alpha=1.0,
+            source=source,
+            legend_group='NumberOfEdges',
+            **circle_kwds,
+        )
+
+        p.background_fill_color = "#eeeeee"
+        p.grid.grid_line_color = "white"
+
+        code = """
+            const d = s.data;
+            const selected_index = s.selected.indices[0];
+            const selected_num_edges = d['NumberOfEdges'][selected_index];
+            var num_edges;
+            var new_selection = [];
+
+            for (var i = 0; i < d['index'].length; i++) {
+                num_edges = d['NumberOfEdges'][i];
+                if (num_edges == selected_num_edges) {
                     new_selection.push(i);
                 }
             }

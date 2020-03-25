@@ -457,9 +457,9 @@ class ReplaceUuid(InvariantAwareCommand):
         with open(path, 'w') as f:
             f.write(text)
 
-class ConvertCsvToParquetAndFeather(InvariantAwareCommand):
+class ConvertCsvToParquet(InvariantAwareCommand):
     """
-    Converts PerfectHashBulkCreateBest_*.csv files to parquet and feather files.
+    Converts PerfectHashBulkCreateBest_*.csv files to parquet files.
     """
 
     path = None
@@ -469,36 +469,42 @@ class ConvertCsvToParquetAndFeather(InvariantAwareCommand):
         _endswith = '.csv'
 
     def run(self):
-        out = self._out
-        path = self._path
 
-        from .analysis import convert_csv
-        convert_csv(self._path, self._out)
+        from .analysis import convert_csv_to_parquet
+        convert_csv_to_parquet(self._path, self._out)
 
-class ConvertAllCsv(InvariantAwareCommand):
+class ConvertAllCsvToParquet(InvariantAwareCommand):
     """
-    Prints all PerfectHashBulkCreate*.csv files recursively found in a given
-    directory.
+    Converts all PerfectHashBulkCreate*.csv files recursively found in a given
+    directory to .parquet files.
     """
 
     path = None
     _path = None
     class PathArg(ExistingDirectoryInvariant):
-        _help = "directory to recurse"
+        _help = "directory to recurse [default: base research dir]"
+        _mandatory = False
 
     def run(self):
         out = self._out
+        path = self._path
 
         from .analysis import (
             get_csv_files,
-            convert_csv,
+            convert_csv_to_parquet,
         )
-        paths = get_csv_files(self._path)
 
-        for path in paths:
-            if 'failed' in path:
+        base = self.conf.research_base_dir
+
+        if not path:
+            path = base
+
+        paths = get_csv_files(path)
+
+        for p in paths:
+            if 'failed' in p:
                 continue
-            convert_csv(path, out)
+            convert_csv_to_parquet(p, base, out)
 
 class PrintBulkCreateCsvFiles(InvariantAwareCommand):
     """
@@ -516,5 +522,45 @@ class PrintBulkCreateCsvFiles(InvariantAwareCommand):
         paths = get_csv_files(self._path)
         self._out('\n'.join(paths))
 
+class PrintDateSubdirs(InvariantAwareCommand):
+    """
+    Prints out a list of subdirectories for a given path that match the format
+    YYYY-MM-DD.
+    """
+
+    path = None
+    _path = None
+    class PathArg(ExistingDirectoryInvariant):
+        _help = "target directory"
+
+    def run(self):
+        from .analysis import get_yyyy_mm_dd_subdirs
+        subdirs = get_yyyy_mm_dd_subdirs(self._path)
+        self._out('\n'.join(subdirs))
+
+class ConcatParquetToResultsParquet(InvariantAwareCommand):
+    """
+    Finds all .parquet files in a given YYYY-MM-DD subdirectory and concats
+    them into a single results.parquet file rooted in the same directory.
+    """
+
+    def run(self):
+        out = self._out
+
+        conf = self.conf
+        base_dir = conf.research_base_dir
+
+        from .analysis import (
+            concat_subdir_parquets,
+            get_yyyy_mm_dd_subdirs,
+            post_process_results_parquet,
+        )
+
+        subdirs = get_yyyy_mm_dd_subdirs(base_dir)
+        subdirs = ['2020-03-23']
+
+        for subdir in subdirs:
+            concat_subdir_parquets(base_dir, subdir, out)
+            post_process_results_parquet(base_dir, subdir, out)
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
