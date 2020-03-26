@@ -557,7 +557,6 @@ class ConcatParquetToResultsParquet(InvariantAwareCommand):
         )
 
         subdirs = get_yyyy_mm_dd_subdirs(base_dir)
-        subdirs = ['2020-03-23']
 
         for subdir in subdirs:
             concat_subdir_parquets(base_dir, subdir, out)
