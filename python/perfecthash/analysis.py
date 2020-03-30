@@ -815,7 +815,10 @@ def concat_subdir_parquets(base, subdir, out=None):
     out(f'Adding {len(missing)} new file(s) to {results_path}:')
     out('\n'.join(f'    {m}' for m in missing))
 
-    names = [ f'{base}\\{subpath}' for subpath in missing ]
+    names = [
+        f'{base}\\{subpath}'.replace('.csv', '.parquet')
+            for subpath in missing
+    ]
 
     dfs = [ df, ] + [ df_from_parquet(n) for n in tqdm(names) ]
 
