@@ -562,4 +562,30 @@ class ConcatParquetToResultsParquet(InvariantAwareCommand):
             concat_subdir_parquets(base_dir, subdir, out)
             post_process_results_parquet(base_dir, subdir, out)
 
+
+class NewHashFunction(InvariantAwareCommand):
+    """
+    Adds a new hash function based on two vertex operations that are obtained
+    from the current clipboard contents.
+    """
+
+    description = None
+    class DescriptionArg(StringInvariant):
+        _help = (
+            'Short one-liner description of the hash function, e.g.: "Multiply'
+            ' then right-shift twice."  (This will be added as the `Routine '
+            'Description` in the C source docstring.)'
+        )
+
+    def run(self):
+        raise NotImplementedError()
+
+class NewExperiment(InvariantAwareCommand):
+    """
+    Primes a new experiment.
+    """
+
+    def run(self):
+        raise NotImplementedError()
+
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
