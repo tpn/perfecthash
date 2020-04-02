@@ -2962,7 +2962,8 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
           show_plot=True, figure_kwds=None, circle_kwds=None,
           color_category=None, ncols=None, hash_funcs=None,
-          clamp_edges=None, min_num_resizes=None, max_num_resizes=None):
+          clamp_edges=None, min_num_resizes=None, max_num_resizes=None,
+          sample_frac=None, use_tooltips=False):
 
     from tqdm import tqdm
     from itertools import product
@@ -3005,23 +3006,22 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     import bokeh.palettes as bp
     import bokeh.transform as bt
 
-    tooltips = [
-        ("Index", "@index"),
-        ("Keys", "@KeysName"),
-        ("Number of Keys", "@NumberOfKeys"),
-        ("Number of Edges", "@NumberOfEdges"),
-        ("Number of Vertices", "@NumberOfVertices"),
-        ("Number Of Resizes", "@NumberOfTableResizeEvents"),
-        ("Keys to Edges Ratio", "@KeysToEdgesRatio{(0.000)}"),
-        ("Keys to Vertices Ratio", "@KeysToVerticesRatio{(0.000)}"),
-        ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.000)}"),
-        ("Clamp Edges?", "@ClampNumberOfEdges"),
-    ]
-
     if figure_kwds is None:
         figure_kwds = {}
 
-    if 'tooltips' not in figure_kwds:
+    if use_tooltips and 'tooltips' not in figure_kwds:
+        tooltips = [
+            ("Index", "@index"),
+            ("Keys", "@KeysName"),
+            ("Number of Keys", "@NumberOfKeys"),
+            ("Number of Edges", "@NumberOfEdges"),
+            ("Number of Vertices", "@NumberOfVertices"),
+            ("Number Of Resizes", "@NumberOfTableResizeEvents"),
+            ("Keys to Edges Ratio", "@KeysToEdgesRatio{(0.000)}"),
+            ("Keys to Vertices Ratio", "@KeysToVerticesRatio{(0.000)}"),
+            ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.000)}"),
+            ("Clamp Edges?", "@ClampNumberOfEdges"),
+        ]
         figure_kwds['tooltips'] = tooltips
 
     if circle_kwds is None:
@@ -3068,13 +3068,17 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     if max_num_resizes is None:
         max_num_resizes = num_resizes.max()
 
+    if sample_frac is None:
+        sample_frac = 0.1
+
     targets = [
         (hf, ce) for (hf, ce) in product(hash_funcs, clamp_edges)
     ]
 
     for (hash_func, clamp) in targets:
 
-        df = source_df.query(
+        sample = source_df.sample(frac=sample_frac, replace=False)
+        df = sample.query(
             f'NumberOfEdges >= {min_num_edges} and '
             f'NumberOfEdges <= {max_num_edges} and '
             f'NumberOfTableResizeEvents >= {min_num_resizes} and '
@@ -3253,5 +3257,279 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
         show(grid)
 
     return p
+
+def grid8(df, lrdf=None, min_num_edges=None, max_num_edges=None,
+          show_plot=True, figure_kwds=None, circle_kwds=None,
+          color_category=None, ncols=None, hash_funcs=None,
+          clamp_edges=None, min_num_resizes=None, max_num_resizes=None,
+          sample_frac=None, use_tooltips=False):
+    """
+    Like grid7() but colors are by number of table resizes instead of number
+    of edges.
+    """
+
+    from tqdm import tqdm
+    from itertools import product
+
+    import numpy as np
+    import pandas as pd
+
+    from bokeh.io import (
+        show,
+    )
+
+    from bokeh.models import (
+        Tabs,
+        Panel,
+        Legend,
+        Select,
+        TapTool,
+        Range1d,
+        ColorBar,
+        CustomJS,
+        LegendItem,
+        RangeSlider,
+        MultiSelect,
+        ColumnDataSource,
+        RadioButtonGroup,
+    )
+
+    from bokeh.core.enums import (
+        LegendLocation,
+    )
+
+    from bokeh.plotting import (
+        figure,
+    )
+
+    from bokeh.layouts import (
+        gridplot,
+    )
+
+    import bokeh.palettes as bp
+    import bokeh.transform as bt
+
+    if figure_kwds is None:
+        figure_kwds = {}
+
+    if use_tooltips and 'tooltips' not in figure_kwds:
+        tooltips = [
+            ("Index", "@index"),
+            ("Keys", "@KeysName"),
+            ("Number of Keys", "@NumberOfKeys"),
+            ("Number of Edges", "@NumberOfEdges"),
+            ("Number of Vertices", "@NumberOfVertices"),
+            ("Number Of Resizes", "@NumberOfTableResizeEvents"),
+            ("Keys to Edges Ratio", "@KeysToEdgesRatio{(0.000)}"),
+            ("Keys to Vertices Ratio", "@KeysToVerticesRatio{(0.000)}"),
+            ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.000)}"),
+            ("Clamp Edges?", "@ClampNumberOfEdges"),
+        ]
+        figure_kwds['tooltips'] = tooltips
+
+    if circle_kwds is None:
+        circle_kwds = {}
+
+    if min_num_edges is None:
+        min_num_edges = 256
+
+    if max_num_edges is None:
+        max_num_edges = df.NumberOfEdges.max()
+
+    if color_category is None:
+        color_category = list(bp.Spectral11) + list(bp.Category20[20])
+
+    figures = []
+
+    source_df = df
+
+    y_range = Range1d(0, 1.0)
+
+    if clamp_edges is None:
+        clamp_edges = ('Y', 'N')
+
+    if hash_funcs is None:
+        hash_funcs = (
+            df.HashFunction
+                .value_counts()
+                .sort_index()
+                .index
+                .values
+        )
+
+    num_resizes = (
+        df.NumberOfTableResizeEvents
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    if min_num_resizes is None:
+        min_num_resizes = num_resizes.min()
+
+    if max_num_resizes is None:
+        max_num_resizes = num_resizes.max()
+
+    if sample_frac is None:
+        sample_frac = 0.2
+
+    targets = [
+        (hf, ce) for (hf, ce) in product(hash_funcs, clamp_edges)
+    ]
+
+    for (hash_func, clamp) in targets:
+
+        sample = source_df.sample(frac=sample_frac, replace=False)
+        df = sample.query(
+            f'NumberOfEdges >= {min_num_edges} and '
+            f'NumberOfEdges <= {max_num_edges} and '
+            f'NumberOfTableResizeEvents >= {min_num_resizes} and '
+            f'NumberOfTableResizeEvents <= {max_num_resizes} and '
+            f'HashFunction == "{hash_func}" and '
+            f'ClampNumberOfEdges == "{clamp}"'
+        ).copy()
+
+        df['NumberOfTableResizeEventsStr'] = (
+            df.NumberOfTableResizeEvents.values.astype(np.str)
+        )
+
+        num_resizes = (
+            df.NumberOfTableResizeEvents
+                .value_counts()
+                .sort_index()
+                .index
+                .values
+        )
+        num_resizes_str = [ str(e) for e in num_resizes ]
+
+        if isinstance(color_category, dict):
+            cat = color_category[len(num_resizes)]
+        else:
+            cat = color_category
+
+        colors_map = { e: cat[i] for (i, e) in enumerate(num_resizes_str) }
+
+        df['Color'] = [
+            colors_map[e] for e in df.NumberOfTableResizeEventsStr.values
+        ]
+
+        df['KeysToVerticesRatio'] = np.around(df.KeysToVerticesRatio.values, 3)
+        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 3)
+
+        sdf = (
+            df.groupby(['KeysToVerticesRatio', 'SolutionsFoundRatio'])
+              .size()
+              .reset_index()
+              .rename(columns={0: 'Size'})
+        )
+
+        sdf['LogSize'] = np.log(sdf['Size'].values * 2)
+
+        size_map = {}
+
+        for (i, row) in sdf.iterrows():
+            k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
+            v = (row.Size, row.LogSize)
+
+            size_map[k] = v
+
+        df['Size'] = np.float(0)
+        df['LogSize'] = np.float(0)
+
+        for (i, row) in df.iterrows():
+            k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
+            (size, log_size) = size_map[k]
+            df.at[i, 'Size'] = size * 3
+            df.at[i, 'LogSize'] = log_size
+
+        df.sort_values(by=['NumberOfTableResizeEvents'])
+
+        p = figure(
+            plot_width=900,
+            plot_height=900,
+            tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
+            **figure_kwds,
+        )
+
+        p.title.text = f'{hash_func}, Clamp: {clamp}'
+        p.xaxis.axis_label = 'Keys to Vertices Ratio'
+        p.yaxis.axis_label = 'Probability of Finding Solution'
+        p.y_range = y_range
+        p.x_range = Range1d(0, 0.6)
+        if None:
+            p.x_range = Range1d(
+                df.KeysToVerticesRatio.min(),
+                df.KeysToVerticesRatio.max()
+            )
+
+        renderers = []
+        resize_legend_items = []
+
+        target_df = df
+        source = ColumnDataSource(target_df)
+        #glyph = getattr(p, BOKEH_GLYPHS[resize])
+        glyph = getattr(p, 'circle')
+        g = glyph(
+            'KeysToVerticesRatio',
+            'SolutionsFoundRatio',
+            color='Color',
+            size='Size',
+            fill_alpha=0.5,
+            line_alpha=1.0,
+            source=source,
+            legend_group='NumberOfTableResizeEvents',
+            **circle_kwds,
+        )
+
+        p.background_fill_color = "#eeeeee"
+        p.grid.grid_line_color = "white"
+
+        code = """
+            const d = s.data;
+            const selected_index = s.selected.indices[0];
+            const selected_num_resizes =
+                d['NumberOfTableResizeEvents'][selected_index];
+            var num_resizes;
+            var new_selection = [];
+
+            for (var i = 0; i < d['index'].length; i++) {
+                num_resizes = d['NumberOfTableResizeEvents'][i];
+                if (num_resizes == selected_num_resizes) {
+                    new_selection.push(i);
+                }
+            }
+
+            s.selected.indices = new_selection;
+
+            s.change.emit();
+        """
+
+        args = {
+            's': source,
+            'colors_map': colors_map,
+        }
+
+        callback = CustomJS(args=args, code=code)
+
+        taptool = p.select(type=TapTool)
+        taptool.callback = callback
+
+        figures.append(p)
+
+    if not ncols:
+        ncols = 2
+
+    #figures.insert(1, None)
+    grid = gridplot(figures, ncols=ncols)
+
+    if 'sizing_mode' in figure_kwds:
+        setattr(p, 'sizing_mode', figure_kwds['sizing_mode'])
+
+    if show_plot:
+        show(grid)
+
+    return p
+
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
