@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2017 Trent Nelson <trent@trent.me>
+Copyright (c) 2017-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -63,6 +63,7 @@ typedef ULONG64 *PULONG64;
 #define HOST __host__
 #define GLOBAL __global__
 #define DEVICE __device__
+#define SHARED __shared__
 #define GridDim gridDim
 #define BlockDim blockDim
 #define BlockIndex blockIdx
