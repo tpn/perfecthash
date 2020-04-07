@@ -33,14 +33,25 @@ KEYS_SLIM_1 = [
     'HashFunction',
     'BestCoverageType',
     'KeysToEdgesRatio',
+    'KeysToVerticesRatio',
     'SolutionsFoundRatio',
     'NumberOfKeys',
     'NumberOfEdges',
+    'NumberOfVertices',
+    'NumberOfTableResizeEvents',
     'Attempts',
+    'FailedAttempts',
+    'PreMaskedVertexCollisionFailures',
+    'PostMaskedVertexCollisionFailures',
+    'CyclicGraphFailures',
+    'BestCoverageAttempts',
+    'ClampNumberOfEdges',
+    'SolutionFound',
     'NumberOfSolutionsFound',
     'NewBestGraphCount',
     'AttemptThatFoundBestGraph',
     'ComputerName',
+    'CpuBrand',
     'ContextTimestamp',
     'TableTimestamp',
     'Version',
@@ -431,6 +442,135 @@ def linregress_hash_func_by_number_of_vertices(df):
 
     return pd.DataFrame(results, columns=columns)
 
+def linregress_2020_03_25(df):
+    import numpy as np
+    import pandas as pd
+    from tqdm import tqdm
+    from itertools import product
+    from scipy.stats import linregress
+
+    hash_funcs = (
+        df.HashFunction
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    num_vertices = (
+        df.NumberOfVertices
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    num_resizes = (
+        df.NumberOfTableResizeEvents
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    clamp_edges = ('Y', 'N')
+
+    keys_subset = [
+        'HashFunction',
+        'NumberOfVertices',
+        'NumberOfTableResizeEvents',
+        'ClampNumberOfEdges',
+        'KeysToVerticesRatio',
+        'SolutionsFoundRatio',
+    ]
+
+    dfa = df[keys_subset]
+
+    targets = list(
+        product(
+            hash_funcs,
+            num_vertices,
+            num_resizes,
+            clamp_edges,
+        )
+    )
+
+    results = []
+
+    np.seterr('raise')
+
+    for target in tqdm(targets):
+
+        (hash_func, num_vertex, num_resize, clamp) = target
+
+        query = (
+            f'HashFunction == "{hash_func}" and '
+            f'NumberOfVertices == {num_vertex} and '
+            f'NumberOfTableResizeEvents == {num_resize} and '
+            f'ClampNumberOfEdges == "{clamp}"'
+        )
+        df = dfa.query(query)
+
+        # Skip empties.
+        if df.empty:
+            continue
+
+        keys_to_vertices_ratio = df.KeysToVerticesRatio.values
+        solutions_found_ratio = df.SolutionsFoundRatio.values
+
+        count = len(keys_to_vertices_ratio)
+
+        # linregress won't work if all the x values are the same.
+        if len(np.unique(keys_to_vertices_ratio)) == 1:
+            print(f'No unique keys-to-vertices for query: {query}')
+            continue
+
+        lr = linregress(keys_to_vertices_ratio, solutions_found_ratio)
+
+        label = (
+            f'{hash_func}/{num_vertex}/{num_resize}/{clamp} ({count}): '
+            f'y={lr.slope:.2f}x + {lr.intercept:.02f} '
+            f'[r: {lr.rvalue:.3f}, p: {lr.pvalue:.3f}, '
+            f'stderr: {lr.stderr:.3f}]'
+        )
+
+        result = (
+            hash_func,
+            num_vertex,
+            num_resize,
+            clamp,
+            lr.slope,
+            lr.intercept,
+            lr.rvalue,
+            lr.pvalue,
+            lr.stderr,
+            count,
+            label,
+            keys_to_vertices_ratio,
+            solutions_found_ratio,
+        )
+
+        results.append(result)
+
+    columns = [
+        'HashFunction',
+        'NumberOfVertices',
+        'NumberOfTableResizeEvents',
+        'ClampNumberOfEdges',
+        'Slope',
+        'Intercept',
+        'RValue',
+        'PValue',
+        'StdErr',
+        'Count',
+        'Label',
+        'KeysToVerticesRatio',
+        'SolutionsFoundRatio',
+    ]
+
+    return pd.DataFrame(results, columns=columns)
+
+
 def find_non_identical_solving_ratios_per_hash_func_and_keys(df):
 
     import numpy as np
@@ -702,7 +842,7 @@ def df_to_parquet(df, path):
     import pyarrow as pa
     import pyarrow.parquet as pq
     table = pa.Table.from_pandas(df)
-    pq.write_table(table, path, compression='snappy')
+    pq.write_table(table, path, compression='gzip')
     return table
 
 def df_to_feather(df, path):
@@ -3258,7 +3398,7 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     return p
 
-def grid8(df, lrdf=None, min_num_edges=None, max_num_edges=None,
+def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
           show_plot=True, figure_kwds=None, circle_kwds=None,
           color_category=None, ncols=None, hash_funcs=None,
           clamp_edges=None, min_num_resizes=None, max_num_resizes=None,
@@ -3445,10 +3585,14 @@ def grid8(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
         df.sort_values(by=['NumberOfTableResizeEvents'])
 
+        tools = 'pan,wheel_zoom,box_select,lasso_select,reset,tap'
+        if use_tooltips:
+            tools += ',hover'
+
         p = figure(
             plot_width=900,
             plot_height=900,
-            tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
+            tools=tools,
             **figure_kwds,
         )
 
@@ -3519,6 +3663,361 @@ def grid8(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     if not ncols:
         ncols = 2
+
+    #figures.insert(1, None)
+    grid = gridplot(figures, ncols=ncols)
+
+    if 'sizing_mode' in figure_kwds:
+        setattr(p, 'sizing_mode', figure_kwds['sizing_mode'])
+
+    if show_plot:
+        show(grid)
+
+    return p
+
+def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
+          show_plot=True, figure_kwds=None, circle_kwds=None,
+          color_category=None, ncols=None, hash_funcs=None,
+          clamp_edges=None, min_num_resizes=None, max_num_resizes=None,
+          sample_frac=None, use_tooltips=False):
+    """
+    Like grid7() but with slopes.
+    """
+
+    import textwrap
+    from itertools import product
+    from tqdm import tqdm
+
+    import numpy as np
+    import pandas as pd
+
+    from bokeh.io import (
+        show,
+    )
+
+    from bokeh.models import (
+        Tabs,
+        Panel,
+        Slope,
+        Legend,
+        Select,
+        TapTool,
+        Range1d,
+        ColorBar,
+        CustomJS,
+        LegendItem,
+        RangeSlider,
+        MultiSelect,
+        ColumnDataSource,
+        RadioButtonGroup,
+    )
+
+    from bokeh.core.enums import (
+        LegendLocation,
+    )
+
+    from bokeh.plotting import (
+        figure,
+    )
+
+    from bokeh.layouts import (
+        gridplot,
+    )
+
+    import bokeh.palettes as bp
+    import bokeh.transform as bt
+
+    if figure_kwds is None:
+        figure_kwds = {}
+
+    if use_tooltips and 'tooltips' not in figure_kwds:
+        tooltips = [
+            ("Index", "@index"),
+            ("Keys", "@KeysName"),
+            ("Number of Keys", "@NumberOfKeys"),
+            ("Number of Edges", "@NumberOfEdges"),
+            ("Number of Vertices", "@NumberOfVertices"),
+            ("Number Of Resizes", "@NumberOfTableResizeEvents"),
+            ("Keys to Edges Ratio", "@KeysToEdgesRatio{(0.000)}"),
+            ("Keys to Vertices Ratio", "@KeysToVerticesRatio{(0.000)}"),
+            ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.000)}"),
+            ("Clamp Edges?", "@ClampNumberOfEdges"),
+        ]
+        figure_kwds['tooltips'] = tooltips
+
+    if circle_kwds is None:
+        circle_kwds = {}
+
+    if min_num_edges is None:
+        min_num_edges = 256
+
+    if max_num_edges is None:
+        max_num_edges = df.NumberOfEdges.max()
+
+    if color_category is None:
+        color_category = list(bp.Spectral11) + list(bp.Category20[20])
+
+    if clamp_edges is None:
+        clamp_edges = False
+
+    figures = []
+
+    source_df = df
+
+    y_range = Range1d(0, 1.0)
+
+    if hash_funcs is None:
+        hash_funcs = (
+            df.HashFunction
+                .value_counts()
+                .sort_index()
+                .index
+                .values
+        )
+
+    num_resizes = (
+        df.NumberOfTableResizeEvents
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    if min_num_resizes is None:
+        min_num_resizes = num_resizes.min()
+
+    if max_num_resizes is None:
+        max_num_resizes = num_resizes.max()
+
+    if sample_frac is None:
+        sample_frac = 0.1
+
+    resize_range = list(range(min_num_resizes, max_num_resizes+1))
+    targets = list(product(hash_funcs, resize_range))
+
+    clamp = 'N' if not clamp_edges else 'Y'
+
+    for target in tqdm(targets):
+
+        (hash_func, num_resize) = target
+
+        sample = source_df.sample(frac=sample_frac, replace=False)
+        query = (
+            f'HashFunction == "{hash_func}" and '
+            f'NumberOfEdges >= {min_num_edges} and '
+            f'NumberOfEdges <= {max_num_edges} and '
+            f'NumberOfTableResizeEvents == {num_resize} and '
+            f'ClampNumberOfEdges == "{clamp}"'
+        )
+        df = sample.query(query).copy()
+
+        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(np.str)
+
+        num_vertices = (
+            df.NumberOfVertices
+                .value_counts()
+                .sort_index()
+                .index
+                .values
+        )
+        num_vertices_str = [ str(e) for e in num_vertices ]
+
+        if isinstance(color_category, dict):
+            cat = color_category[len(num_vertices)]
+        else:
+            cat = color_category
+
+        colors_map = { e: cat[i] for (i, e) in enumerate(num_vertices_str) }
+
+        df['Color'] = [ colors_map[e] for e in df.NumberOfVerticesStr.values ]
+
+        df['KeysToVerticesRatio'] = np.around(df.KeysToVerticesRatio.values, 3)
+        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 3)
+
+        if None:
+            sdf = (
+                df.groupby(['KeysToVerticesRatio', 'SolutionsFoundRatio'])
+                  .size()
+                  .reset_index()
+                  .rename(columns={0: 'Size'})
+            )
+
+            sdf['LogSize'] = np.log(sdf['Size'].values * 2)
+
+            size_map = {}
+
+            for (i, row) in sdf.iterrows():
+                k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
+                v = (row.Size, row.LogSize)
+
+                size_map[k] = v
+
+            df['Size'] = np.float(0)
+            df['LogSize'] = np.float(0)
+
+            for (i, row) in df.iterrows():
+                k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
+                (size, log_size) = size_map[k]
+                df.at[i, 'Size'] = size * 3
+                df.at[i, 'LogSize'] = log_size
+
+        df.sort_values(by=['NumberOfVertices'])
+
+        tools = 'pan,wheel_zoom,box_select,lasso_select,reset,tap'
+        if use_tooltips:
+            tools += ',hover'
+
+        p = figure(
+            plot_width=500,
+            plot_height=500,
+            tools=tools,
+            **figure_kwds,
+        )
+
+        failed = df.FailedAttempts.values.sum()
+        pre_fail = df.PreMaskedVertexCollisionFailures.values.sum()
+        post_fail = df.PostMaskedVertexCollisionFailures.values.sum()
+        cyclic_fail = df.CyclicGraphFailures.values.sum()
+        p.title.text = (
+            f'{hash_func}/R:{num_resize}/C:{clamp}/F:{failed} '
+            f'({pre_fail}/{post_fail}/{cyclic_fail})'
+        )
+        p.xaxis.axis_label = 'Keys to Vertices Ratio'
+        p.yaxis.axis_label = 'Probability of Finding Solution'
+        p.y_range = y_range
+        #p.x_range = Range1d(0, 0.6)
+        if True:
+            p.x_range = Range1d(
+                df.KeysToVerticesRatio.min(),
+                df.KeysToVerticesRatio.max()
+            )
+
+        target_df = df
+        source = ColumnDataSource(target_df)
+        #glyph = getattr(p, BOKEH_GLYPHS[resize])
+        glyph = getattr(p, 'circle')
+        g = glyph(
+            'KeysToVerticesRatio',
+            'SolutionsFoundRatio',
+            color='Color',
+            #size='Size',
+            fill_alpha=0.5,
+            line_alpha=1.0,
+            source=source,
+            legend_group='NumberOfVertices',
+            **circle_kwds,
+        )
+
+        legend_items = []
+        make_legend = False
+
+        for (i, num_vertices) in enumerate(df.NumberOfVertices.values):
+            lr_query = (
+                f'HashFunction == "{hash_func}" and '
+                f'ClampNumberOfEdges == "{clamp}" and '
+                f'NumberOfVertices == {num_vertices} and '
+                f'NumberOfTableResizeEvents == {num_resize}'
+            )
+            lr = lrdf.query(lr_query)
+            slope = Slope(
+                gradient=lr.Slope.values[0],
+                y_intercept=lr.Intercept.values[0],
+                line_color=colors_map[str(num_vertices)],
+                line_width=2.0,
+            )
+            p.add_layout(slope)
+            if make_legend:
+                legend_items.append(
+                    LegendItem(
+                        label=lr.Label.values[0],
+                        renderers=[g],
+                        index=i,
+                    )
+                )
+
+        if make_legend:
+            legend = Legend(
+                title='Linear Regression Details',
+                location=LegendLocation.top_left,
+                items=legend_items,
+            )
+            p.add_layout(legend)
+
+        if 0:
+            main_legend_items = []
+            for (i, num_vert) in enumerate(num_vertices_str):
+                main_legend_items.append(
+                    LegendItem(
+                        label=num_vert,
+                        renderers=renderers,
+                        index=i,
+                    )
+                )
+
+            legend = Legend(
+                title='Number of Vertices',
+                location=LegendLocation.top_right,
+                items=main_legend_items,
+            )
+
+        if None:
+            legend = Legend(
+                title='Clamp Number of Edges?',
+                location=LegendLocation.top_left,
+                items=legend_items,
+            )
+
+            p.add_layout(legend)
+        elif 0:
+            legend = Legend(
+                title='Number Of Table Resizes',
+                location=LegendLocation.top_left,
+                items=resize_legend_items,
+            )
+
+            p.add_layout(legend)
+
+
+        p.legend.title = 'Number of Vertices'
+        p.background_fill_color = "#eeeeee"
+        p.grid.grid_line_color = "white"
+
+        if use_tooltips:
+
+            code = textwrap.dedent("""
+                const d = s.data;
+                const selected_index = s.selected.indices[0];
+                const selected_num_vertices =
+                    d['NumberOfVertices'][selected_index];
+                var num_vertices;
+                var new_selection = [];
+
+                for (var i = 0; i < d['index'].length; i++) {
+                    num_vertices = d['NumberOfVertices'][i];
+                    if (num_vertices == selected_num_vertices) {
+                        new_selection.push(i);
+                    }
+                }
+
+                s.selected.indices = new_selection;
+
+                s.change.emit();
+            """)
+
+            args = {
+                's': source,
+                'colors_map': colors_map,
+            }
+
+            callback = CustomJS(args=args, code=code)
+
+            taptool = p.select(type=TapTool)
+            taptool.callback = callback
+
+        figures.append(p)
+
+    if not ncols:
+        ncols = len(resize_range)
 
     #figures.insert(1, None)
     grid = gridplot(figures, ncols=ncols)
