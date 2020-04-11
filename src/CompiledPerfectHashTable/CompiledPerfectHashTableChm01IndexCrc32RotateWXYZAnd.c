@@ -10,9 +10,9 @@ DECLARE_INDEX_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
     Vertex1 = _mm_crc32_u32(SEED1, _rotr(DownsizedKey, SEED3_BYTE1));
-    Vertex1 = _rotl(Vertex1, SEED3_BYTE3);
+    Vertex1 = _rotl(Vertex1, SEED3_BYTE2);
 
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, SEED3_BYTE2));
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, SEED3_BYTE3));
     Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
 
     MaskedLow = Vertex1 & HASH_MASK;

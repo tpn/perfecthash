@@ -161,8 +161,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Key);
-    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, 15));
+    Vertex1 = _mm_crc32_u32(SEED1, Key);
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, 15));
 
     //IACA_VC_END();
 
@@ -231,8 +231,7 @@ Return Value:
 {
     ULONG Seed1;
     ULONG Seed2;
-    ULONG Seed3;
-    BYTE Rotate;
+    ULONG_BYTES Seed3;
     ULONG Vertex1;
     ULONG Vertex2;
     ULARGE_INTEGER Result;
@@ -250,15 +249,14 @@ Return Value:
 
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
-    Seed3 = Seeds[2];
-    Rotate = (BYTE)Seed3;
+    Seed3.AsULong = Seeds[2];
 
     //
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Key);
-    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, Rotate));
+    Vertex1 = _mm_crc32_u32(SEED1, Key);
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE1));
 
     //IACA_VC_END();
 
@@ -326,8 +324,7 @@ Return Value:
 {
     ULONG Seed1;
     ULONG Seed2;
-    ULONG Seed3;
-    ULONG Seed4;
+    ULONG_BYTES Seed3;
     ULONG Vertex1;
     ULONG Vertex2;
     ULARGE_INTEGER Result;
@@ -345,15 +342,14 @@ Return Value:
 
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
-    Seed3 = Seeds[2];
-    Seed4 = Seeds[3];
+    Seed3.AsULong = Seeds[2];
 
     //
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Key, (BYTE)Seed3));
-    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, (BYTE)Seed4));
+    Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE2));
 
     //IACA_VC_END();
 
@@ -445,11 +441,11 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, _rotr(Key, Seed3.Byte1));
-    Vertex1 = _rotl(Vertex1, Seed3.Byte3);
+    Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
+    Vertex1 = _rotl(Vertex1, SEED3_BYTE2);
 
-    Vertex2 = _mm_crc32_u32(Seed2, _rotl(Key, Seed3.Byte2));
-    Vertex2 = _rotr(Vertex2, Seed3.Byte4);
+    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE3));
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
 
     //IACA_VC_END();
 
@@ -1114,8 +1110,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    A = _mm_crc32_u32(Seed1, Key);
-    B = _mm_crc32_u32(Seed2, _rotl(Key, 15));
+    A = _mm_crc32_u32(SEED1, Key);
+    B = _mm_crc32_u32(SEED2, _rotl(Key, 15));
     C = Seed3 ^ Key;
     D = _mm_crc32_u32(B, C);
 
@@ -1216,9 +1212,9 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Vertex1 = _mm_crc32_u32(SEED1, Key);
     Key2 = _rotl(Key, Seed3);
-    Vertex2 = _mm_crc32_u32(Seed2, Key2);
+    Vertex2 = _mm_crc32_u32(SEED2, Key2);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -1308,9 +1304,9 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Key);
+    Vertex1 = _mm_crc32_u32(SEED1, Key);
     Key2 = _rotl(Key, Seed3);
-    Vertex2 = _mm_crc32_u32(Seed2, Key2);
+    Vertex2 = _mm_crc32_u32(SEED2, Key2);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -1397,8 +1393,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Key);
-    Vertex2 = _mm_crc32_u32(Seed2, Key);
+    Vertex1 = _mm_crc32_u32(SEED1, Key);
+    Vertex2 = _mm_crc32_u32(SEED2, Key);
 
     //IACA_VC_END();
 
@@ -1833,8 +1829,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(Seed1, Key);
-    Vertex2 = _mm_crc32_u32(Seed2, ~Key);
+    Vertex1 = _mm_crc32_u32(SEED1, Key);
+    Vertex2 = _mm_crc32_u32(SEED2, ~Key);
 
     //IACA_VC_END();
 
@@ -3134,7 +3130,7 @@ Return Value:
     Vertex1 *= SEED2;
 
     Vertex2 = DownsizedKey * SEED4;
-    Vertex2 >>= SEED3_BYTE3;
+    Vertex2 >>= SEED3_BYTE2;
     Vertex2 *= SEED5;
 
     if (Vertex1 == Vertex2) {
@@ -3432,10 +3428,10 @@ Return Value:
     Vertex1 = DownsizedKey;
     Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
     Vertex1 *= SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE3);
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
 
     Vertex2 = DownsizedKey;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE2);
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
     Vertex2 *= SEED2;
     Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
 
