@@ -496,7 +496,10 @@ class ConvertAllCsvToParquet(InvariantAwareCommand):
 
         base = self.conf.research_base_dir
 
-        if not path:
+        if path:
+            from os.path import basename
+            path = basename(path)
+        else:
             path = base
 
         paths = get_csv_files(path)
@@ -544,6 +547,12 @@ class ConcatParquetToResultsParquet(InvariantAwareCommand):
     them into a single results.parquet file rooted in the same directory.
     """
 
+    subdir = None
+    _subdir = None
+    class SubdirArg(ExistingDirectoryInvariant):
+        _help = "directory to recurse [default: base research dir]"
+        _mandatory = False
+
     def run(self):
         out = self._out
 
@@ -556,7 +565,11 @@ class ConcatParquetToResultsParquet(InvariantAwareCommand):
             post_process_results_parquet,
         )
 
-        subdirs = get_yyyy_mm_dd_subdirs(base_dir)
+        if self._subdir:
+            from os.path import basename
+            subdirs = (basename(self._subdir),)
+        else:
+            subdirs = get_yyyy_mm_dd_subdirs(base_dir)
 
         for subdir in subdirs:
             concat_subdir_parquets(base_dir, subdir, out)

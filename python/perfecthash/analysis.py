@@ -8,13 +8,23 @@
 
 HASH_FUNCTIONS = (
     'Jenkins',
+    'MultiplyRotateLR',
+    'MultiplyRotateR',
+    'RotateRMultiply',
+    'MultiplyRotateR2',
+    'MultiplyRotateRMultiply',
     'RotateMultiplyXorRotate',
     'RotateMultiplyXorRotate2',
+    'RotateRMultiplyRotateR',
+    'MultiplyShiftR',
+    'MultiplyShiftR2',
+    'MultiplyShiftRMultiply',
     'ShiftMultiplyXorShift',
     'ShiftMultiplyXorShift2',
-    'MultiplyRotateR',
-    'MultiplyRotateLR',
-    'MultiplyShiftR',
+    'Crc32RotateX',
+    'Crc32RotateXY',
+    'Crc32RotateWXYZ',
+    'Fnv',
 )
 
 BEST_COVERAGE_TYPES = (
@@ -46,6 +56,7 @@ KEYS_SLIM_1 = [
     'CyclicGraphFailures',
     'BestCoverageAttempts',
     'ClampNumberOfEdges',
+    'HasSeedMaskCounts',
     'SolutionFound',
     'NumberOfSolutionsFound',
     'NewBestGraphCount',
@@ -55,6 +66,7 @@ KEYS_SLIM_1 = [
     'ContextTimestamp',
     'TableTimestamp',
     'Version',
+    'SolveMicroseconds',
     'VerifyMicroseconds',
     'DeltaHashMinimumCycles',
 ]
@@ -68,6 +80,86 @@ KEYS_BEST_COVERAGE_1 = [
     'BestCoverageSlope',
     'BestCoverageValue',
     'BestCoverageEqualCount',
+]
+
+KEYS_SEEDS = [
+    'NumberOfSeeds',
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed3_Byte1',
+    'Seed3_Byte2',
+    'Seed3_Byte3',
+    'Seed3_Byte4',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed6_Byte1',
+    'Seed6_Byte2',
+    'Seed6_Byte3',
+    'Seed6_Byte4',
+    'Seed7',
+    'Seed8',
+    'NumberOfUserSeeds',
+    'UserSeed1',
+    'UserSeed2',
+    'UserSeed3',
+    'UserSeed4',
+    'UserSeed5',
+    'UserSeed6',
+    'UserSeed7',
+    'UserSeed8',
+    'SeedMask1',
+    'SeedMask2',
+    'SeedMask3',
+    'SeedMask4',
+    'SeedMask5',
+    'SeedMask6',
+    'SeedMask7',
+    'SeedMask8',
+    'Seed3Byte1MaskCounts',
+    'Seed3Byte2MaskCounts',
+]
+
+KEYS_SEED_N = [
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed3_Byte1',
+    'Seed3_Byte2',
+    'Seed3_Byte3',
+    'Seed3_Byte4',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed6_Byte1',
+    'Seed6_Byte2',
+    'Seed6_Byte3',
+    'Seed6_Byte4',
+    'Seed7',
+    'Seed8',
+]
+
+KEYS_USER_SEED_N = [
+    'UserSeed1',
+    'UserSeed2',
+    'UserSeed3',
+    'UserSeed4',
+    'UserSeed5',
+    'UserSeed6',
+    'UserSeed7',
+    'UserSeed8',
+]
+
+KEYS_SEED_MASK_N = [
+    'SeedMask1',
+    'SeedMask2',
+    'SeedMask3',
+    'SeedMask4',
+    'SeedMask5',
+    'SeedMask6',
+    'SeedMask7',
+    'SeedMask8',
 ]
 
 BOKEH_GLYPHS = [
@@ -180,6 +272,27 @@ def update_df_old(df):
             df[i, 'BestCoveragePositiveSlopeNumber'] = 0
             df[i, 'BestCoveragePositiveSlopeAttempt'] = 0
 
+def update_df_with_seed_bytes(df):
+
+    import numpy as np
+
+    # Only seeds 3 and 6 are used for masking currently.  Assume that if the
+    # first byte isn't present as a column name, none of them will be.
+
+    if 'Seed3_Byte1' not in df.columns:
+        df['Seed3_Byte1'] = (df.Seed3 & 0x0000001f)
+        df['Seed3_Byte2'] = np.right_shift((df.Seed3 & 0x00001f00), 8)
+        df['Seed3_Byte3'] = np.right_shift((df.Seed3 & 0x001f0000), 16)
+        df['Seed3_Byte4'] = np.right_shift((df.Seed3 & 0x1f000000), 24)
+
+    if 'Seed6_Byte1' not in df.columns:
+        df['Seed6_Byte1'] = (df.Seed6 & 0x0000001f)
+        df['Seed6_Byte2'] = np.right_shift((df.Seed6 & 0x00001f00), 8)
+        df['Seed6_Byte3'] = np.right_shift((df.Seed6 & 0x001f0000), 16)
+        df['Seed6_Byte4'] = np.right_shift((df.Seed6 & 0x1f000000), 24)
+
+    return df
+
 def update_df(df, source_csv_file):
     from tqdm import tqdm
     import numpy as np
@@ -207,6 +320,19 @@ def update_df(df, source_csv_file):
     ]
     if 'InitialNumberOfTableResizes' not in df.columns:
         df['InitialNumberOfTableResizes'] = np.int(0)
+
+    # Only seeds 3 and 6 are used for masking currently.  Isolate the four bytes
+    # being used for each ULONG mask.
+    df['Seed3_Byte1'] = (df.Seed3 & 0x0000001f)
+    df['Seed3_Byte2'] = np.right_shift((df.Seed3 & 0x00001f00), 8)
+    df['Seed3_Byte3'] = np.right_shift((df.Seed3 & 0x001f0000), 16)
+    df['Seed3_Byte4'] = np.right_shift((df.Seed3 & 0x1f000000), 24)
+
+    df['Seed6_Byte1'] = (df.Seed6 & 0x0000001f)
+    df['Seed6_Byte2'] = np.right_shift((df.Seed6 & 0x00001f00), 8)
+    df['Seed6_Byte3'] = np.right_shift((df.Seed6 & 0x001f0000), 16)
+    df['Seed6_Byte4'] = np.right_shift((df.Seed6 & 0x1f000000), 24)
+
     for (i, row) in tqdm(df.iterrows(), total=len(df)):
         best_count = row['NewBestGraphCount']
         if best_count == 0:
@@ -681,6 +807,7 @@ def extract_mean_solving_data(df):
         'KeysToEdgesRatio',
         'KeysToVerticesRatio',
         'SolutionsFoundRatio',
+        'ClampNumberOfEdges',
     ]
 
     dfa = df[keys_subset]
@@ -718,6 +845,7 @@ def extract_mean_solving_data(df):
             df.NumberOfVertices.values[0],
             df.KeysToEdgesRatio.values[0],
             df.KeysToVerticesRatio.values[0],
+            df.ClampNumberOfEdges.values[0],
         ]
 
         result += list(df.SolutionsFoundRatio.describe().values)
@@ -744,6 +872,7 @@ def extract_mean_solving_data(df):
         'NumberOfVertices',
         'KeysToEdgesRatio',
         'KeysToVerticesRatio',
+        'ClampNumberOfEdges',
     ]
 
     columns += [
@@ -834,6 +963,63 @@ def perf_details_by_hash_func(df):
 
     return pd.DataFrame(results, columns=columns)
 
+def extract_seed_mask_byte_counts(source_df, seed_number, which_bytes):
+    assert seed_number in range(1, 9), seed_number
+    assert num_bytes in (1, 2, 3, 4), num_bytes
+    mask_byte_range = tuple(range(0, 0x1f+1))
+
+    key = f'Seed{seed_number}_Byte{byte_number}'
+    return (
+        source_df.groupby([key])
+            .size()
+            .reset_index()
+            .rename(columns={ 0: 'Count'})
+    )
+
+def extract_solutions_found_count(df, hash_funcs):
+
+    import pandas as pd
+
+    num_resizes = range(0, df.NumberOfTableResizeEvents.max() + 1)
+    clamps = ('N', 'Y')
+    solutions_found = ('N', 'Y')
+
+    keys = [
+        'HashFunction',
+        'NumberOfTableResizeEvents',
+        'ClampNumberOfEdges',
+        'SolutionFound',
+    ]
+
+    multi = (
+        hash_funcs,
+        num_resizes,
+        clamps,
+        solution_found,
+    )
+
+    # The .reindex() zero-fills missing rows of count 0 for hash functions that
+    # had no failures (that is, solution found == 'N').
+    return (
+        df.groupby(keys)
+            .size()
+            .reindex(
+                pd.MultiIndex.from_product(multi),
+                fill_value=0,
+            )
+            .reset_index()
+            .rename(
+                columns={
+                    'level_0': 'HashFunction',
+                    'level_1': 'NumberOfTableResizeEvents',
+                    'level_2': 'ClampNumberOfEdges',
+                    'level_3': 'SolutionFound',
+                    0: 'Count',
+                }
+            )
+    )
+
+
 #===============================================================================
 # Format Conversion
 #===============================================================================
@@ -881,6 +1067,11 @@ def get_all_bulk_create_parquet_files(directory):
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreate*.parquet',
             recursive=True
+        ) if 'failed' not in f
+    ] + [
+        f for f in glob.iglob(
+            f'{directory}/PerfectHashBulkCreate*.parquet',
+            recursive=False
         ) if 'failed' not in f
     ]
 
@@ -1013,7 +1204,8 @@ def post_process_results_parquet(base, subdir, out=None):
         if sdf is None:
             sdf = df_from_parquet(sfr_path)
 
-        ldf = linregress_hash_func_by_number_of_vertices(sdf)
+        #ldf = linregress_hash_func_by_number_of_vertices(sdf)
+        ldf = linregress_2020_03_25(sdf)
         df_to_parquet(ldf, lr_path)
         out(f'Wrote {lr_path}.')
 
@@ -4029,6 +4221,297 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
         show(grid)
 
     return p
+
+def gridplot_hashfunc_seed_byte_count(
+        source_df, hash_func, seed_num, which_bytes,
+        num_resizes=0, clamp='N',
+        plot_width=None, plot_height=None,
+        min_num_vertices=None, max_num_vertices=None,
+        show_plot=True, figure_kwds=None, sizing_mode=None,
+        separate_num_vertices=None, persist_dfs=None):
+
+    assert seed_num in (3, 6), seed_num
+    assert num_resizes >= 0 and num_resizes <= 5, num_resizes
+
+    from itertools import product
+
+    import numpy as np
+
+    from bokeh.io import (
+        show,
+    )
+
+    from bokeh.models import (
+        FactorRange,
+        ColumnDataSource,
+    )
+
+    from bokeh.plotting import (
+        figure,
+    )
+
+    from bokeh.layouts import (
+        gridplot,
+    )
+
+    import bokeh.palettes as bp
+
+    if plot_width is None:
+        plot_width = 500
+
+    if plot_height is None:
+        plot_height = 300
+
+    if figure_kwds is None:
+        figure_kwds = {}
+
+    if separate_num_vertices is None:
+        separate_num_vertices = False
+
+    if min_num_vertices is None:
+        min_num_vertices = max(source_df.NumberOfVertices.min(), 512)
+
+    if max_num_vertices is None:
+        max_num_vertices = source_df.NumberOfVertices.max()
+
+    figures = []
+
+    tools = 'pan,wheel_zoom,box_select,lasso_select,reset,tap,hover'
+
+    tooltips = [
+        ("Byte Value", "@index"),
+        ("Count", "@Count"),
+        ("Probability", "@Probability{(0.0000)}"),
+    ]
+
+    source_df = source_df.copy()
+    source_df = update_df_with_seed_bytes(source_df)
+
+    if 'ClampNumberOfEdges' not in source_df.columns:
+        source_df['ClampNumberOfEdges'] = 'N'
+
+    if 'NumberOfTableResizeEvents' not in source_df.columns:
+        source_df['NumberOfTableResizeEvents'] = 0
+
+    query = (
+        f'HashFunction == "{hash_func}" and '
+        f'NumberOfVertices >= {min_num_vertices} and '
+        f'NumberOfVertices <= {max_num_vertices} and '
+        f'NumberOfTableResizeEvents == {num_resizes} and '
+        f'ClampNumberOfEdges == "{clamp}"'
+    )
+    dfq = source_df.query(query)
+
+    assert not dfq.empty
+
+    num_vertices = dfq.NumberOfVertices.value_counts().sort_index().index
+
+    mask_byte_range = tuple(range(0, 0x1f+1))
+
+    if separate_num_vertices:
+        targets = product(num_vertices, which_bytes)
+    else:
+        targets = which_bytes
+
+    for target in targets:
+
+        if separate_num_vertices:
+            (num_vertex, byte_num) = target
+        else:
+            byte_num = target
+
+        key = f'Seed{seed_num}_Byte{byte_num}'
+
+        if separate_num_vertices:
+            df = dfq[dfq.NumberOfVertices == num_vertex]
+        else:
+            df = dfq
+
+        df = (
+            df.groupby(key)
+                .size()
+                .reindex(mask_byte_range, fill_value=0)
+                .reset_index()
+                .rename(columns={ 0: 'Count' })
+        )
+
+        total = np.float(df.Count.sum())
+        df['Probability'] = df.Count / total
+        df['Color'] = bp.viridis(len(df))
+        df['ByteValue'] = df[key].apply(str)
+
+        if separate_num_vertices:
+            title = f'{hash_func}, {key}, NumberOfVertices: {num_vertex}'
+            persist_key = f'Seed{seed_num}_Byte{byte_num}_Vertices{num_vertex}'
+        else:
+            title = f'{hash_func}, {key}'
+            persist_key = key
+
+        if persist_dfs is not None:
+            persist_dfs[persist_key] = df
+
+        p = figure(
+            x_range=FactorRange(*tuple(str(i) for i in mask_byte_range)),
+            y_range=(df.Count.min(), df.Count.max()),
+            plot_width=plot_width,
+            plot_height=plot_height,
+            tools=tools,
+            title=title,
+            tooltips=tooltips,
+            **figure_kwds
+        )
+
+        p.background_fill_color = "#eeeeee"
+        p.grid.grid_line_color = "white"
+        p.xaxis.axis_label = 'Byte Value'
+        #p.yaxis.axis_label = 'Probability'
+        p.yaxis.axis_label = 'Count'
+
+        source = ColumnDataSource(df)
+
+        b = p.vbar(
+            x='ByteValue',
+            #top='Probability',
+            top='Count',
+            fill_color='Color',
+            width=1,
+            line_color='white',
+            fill_alpha=0.8,
+            source=source,
+        )
+
+        figures.append(p)
+
+    ncols = len(which_bytes)
+    grid = gridplot(figures, ncols=ncols)
+
+    if 'sizing_mode' in figure_kwds:
+        setattr(p, 'sizing_mode', figure_kwds['sizing_mode'])
+
+    if show_plot:
+        show(grid)
+
+    return grid
+
+#===============================================================================
+# Bar Plots
+#===============================================================================
+
+def bar1(df, lrdf, min_num_edges=None, max_num_edges=None,
+         show_plot=True, figure_kwds=None, circle_kwds=None,
+         color_category=None, ncols=None, hash_funcs=None,
+         clamp_edges=None, min_num_resizes=None, max_num_resizes=None):
+
+    import textwrap
+    from itertools import product
+    from tqdm import tqdm
+
+    import numpy as np
+    import pandas as pd
+
+    from bokeh.io import (
+        show,
+    )
+
+    from bokeh.models import (
+        Tabs,
+        Panel,
+        Slope,
+        Legend,
+        Select,
+        TapTool,
+        Range1d,
+        ColorBar,
+        CustomJS,
+        LegendItem,
+        RangeSlider,
+        MultiSelect,
+        ColumnDataSource,
+        RadioButtonGroup,
+    )
+
+    from bokeh.core.enums import (
+        LegendLocation,
+    )
+
+    from bokeh.plotting import (
+        figure,
+    )
+
+    from bokeh.layouts import (
+        gridplot,
+    )
+
+    import bokeh.palettes as bp
+    import bokeh.transform as bt
+
+    if figure_kwds is None:
+        figure_kwds = {}
+
+    if use_tooltips and 'tooltips' not in figure_kwds:
+        tooltips = [
+            ("Index", "@index"),
+            ("Keys", "@KeysName"),
+            ("Number of Keys", "@NumberOfKeys"),
+            ("Number of Edges", "@NumberOfEdges"),
+            ("Number of Vertices", "@NumberOfVertices"),
+            ("Number Of Resizes", "@NumberOfTableResizeEvents"),
+            ("Keys to Edges Ratio", "@KeysToEdgesRatio{(0.000)}"),
+            ("Keys to Vertices Ratio", "@KeysToVerticesRatio{(0.000)}"),
+            ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.000)}"),
+            ("Clamp Edges?", "@ClampNumberOfEdges"),
+        ]
+        figure_kwds['tooltips'] = tooltips
+
+    if circle_kwds is None:
+        circle_kwds = {}
+
+    if min_num_edges is None:
+        min_num_edges = 256
+
+    if max_num_edges is None:
+        max_num_edges = df.NumberOfEdges.max()
+
+    if color_category is None:
+        color_category = list(bp.Spectral11) + list(bp.Category20[20])
+
+    if clamp_edges is None:
+        clamp_edges = False
+
+    figures = []
+
+    source_df = df
+
+    y_range = Range1d(0, 1.0)
+
+    if hash_funcs is None:
+        hash_funcs = (
+            df.HashFunction
+                .value_counts()
+                .sort_index()
+                .index
+                .values
+        )
+
+    num_resizes = (
+        df.NumberOfTableResizeEvents
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    if min_num_resizes is None:
+        min_num_resizes = num_resizes.min()
+
+    if max_num_resizes is None:
+        max_num_resizes = num_resizes.max()
+
+    resize_range = list(range(min_num_resizes, max_num_resizes+1))
+    targets = list(product(hash_funcs, resize_range))
+
+    clamp = 'N' if not clamp_edges else 'Y'
+
 
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
