@@ -236,7 +236,7 @@ Return Value:
                                            &Graph->FirstSeed,
                                            &Hash.QuadPart))) {
             InterlockedIncrement64(&Context->PreMaskedVertexCollisionFailures);
-            goto Error;
+            goto Failed;
         }
 
         ASSERT(Hash.HighPart != Hash.LowPart);
@@ -263,7 +263,6 @@ Return Value:
         //
 
         GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
-
     }
 
     MAYBE_STOP_GRAPH_SOLVING(Graph);
