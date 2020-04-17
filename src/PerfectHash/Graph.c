@@ -228,8 +228,6 @@ Return Value:
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
 
-        SEEDED_HASH(Key, &Hash.QuadPart);
-
         if (FAILED(Table->Vtbl->SeededHash(Table,
                                            Key,
                                            Graph->NumberOfSeeds,
