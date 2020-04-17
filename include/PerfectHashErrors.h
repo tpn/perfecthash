@@ -595,6 +595,12 @@ Abstract:
 //             LowestNumberOfLargePagesUsedByKeysSubset
 //             LowestNumberOfCacheLinesUsedByKeysSubset
 // 
+//     --Seed3Byte1MaskCounts=<n1,...n31>
+//     --Seed3Byte2MaskCounts=<n1,...n31>
+// 
+//         Supplies a comma-separated list of 32 integers that represent weighted
+//         counts of seed mask's byte values.  (Experimental.)
+// 
 // Console Output Character Legend
 // 
 //  Char | Meaning
@@ -967,6 +973,12 @@ Abstract:
 // 
 //         Supplies a comma-separated list of keys in ascending key-value order.
 //         Must contain two or more elements.
+// 
+//     --Seed3Byte1MaskCounts=<n1,...n31>
+//     --Seed3Byte2MaskCounts=<n1,...n31>
+// 
+//         Supplies a comma-separated list of 32 integers that represent weighted
+//         counts of seed mask's byte values.  (Experimental.)
 // 
 //
 #define PH_MSG_PERFECT_HASH_CREATE_EXE_USAGE ((HRESULT)0x60040103L)
@@ -3631,4 +3643,58 @@ Abstract:
 // Initial number of table resizes not supported for modulus masking.
 //
 #define PH_E_INITIAL_RESIZES_NOT_SUPPORTED_FOR_MODULUS_MASKING ((HRESULT)0xE0040388L)
+
+//
+// MessageId: PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNT_ELEMENTS
+//
+// MessageText:
+//
+// Invalid number of seed mask count elements.
+//
+#define PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNT_ELEMENTS ((HRESULT)0xE0040389L)
+
+//
+// MessageId: PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNTS
+//
+// MessageText:
+//
+// Invalid number of seed mask counts.
+//
+#define PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNTS ((HRESULT)0xE004038AL)
+
+//
+// MessageId: PH_E_INVALID_SEED3_BYTE1_MASK_COUNTS
+//
+// MessageText:
+//
+// Invalid counts for seed 3 byte 1 mask.
+//
+#define PH_E_INVALID_SEED3_BYTE1_MASK_COUNTS ((HRESULT)0xE004038BL)
+
+//
+// MessageId: PH_E_INVALID_SEED3_BYTE2_MASK_COUNTS
+//
+// MessageText:
+//
+// Invalid counts for seed 3 byte 2 mask.
+//
+#define PH_E_INVALID_SEED3_BYTE2_MASK_COUNTS ((HRESULT)0xE004038CL)
+
+//
+// MessageId: PH_E_SEED_MASK_COUNT_TOTAL_IS_ZERO
+//
+// MessageText:
+//
+// Seed mask count total is zero.
+//
+#define PH_E_SEED_MASK_COUNT_TOTAL_IS_ZERO ((HRESULT)0xE004038DL)
+
+//
+// MessageId: PH_E_SEED_MASK_COUNT_TOTAL_EXCEEDS_MAX_ULONG
+//
+// MessageText:
+//
+// Seed mask count total exceeds 32 bits.
+//
+#define PH_E_SEED_MASK_COUNT_TOTAL_EXCEEDS_MAX_ULONG ((HRESULT)0xE004038EL)
 

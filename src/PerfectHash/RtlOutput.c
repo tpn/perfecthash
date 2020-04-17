@@ -1053,6 +1053,10 @@ AppendUnicodeStringToCharBufferFast(
     USHORT Count;
     USHORT Index;
 
+    if (String == NULL || String->Buffer == NULL || String->Length == 0) {
+        return;
+    }
+
     Count = String->Length >> 1;
     Source = String->Buffer;
     Dest = *BufferPointer;

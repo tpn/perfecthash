@@ -1065,12 +1065,22 @@ HRESULT
     );
 typedef GRAPH_APPLY_SEED_MASKS *PGRAPH_APPLY_SEED_MASKS;
 
+typedef
+_Success_(return >= 0)
+HRESULT
+(NTAPI GRAPH_APPLY_WEIGHTED_SEED_MASKS)(
+    _In_ PGRAPH Graph,
+    _In_opt_ PCSEED_MASK_COUNTS SeedMaskCounts
+    );
+typedef GRAPH_APPLY_WEIGHTED_SEED_MASKS *PGRAPH_APPLY_WEIGHTED_SEED_MASKS;
+
 
 #ifndef __INTELLISENSE__
 extern GRAPH_INITIALIZE GraphInitialize;
 extern GRAPH_RUNDOWN GraphRundown;
 extern GRAPH_APPLY_USER_SEEDS GraphApplyUserSeeds;
 extern GRAPH_APPLY_SEED_MASKS GraphApplySeedMasks;
+extern GRAPH_APPLY_WEIGHTED_SEED_MASKS GraphApplyWeightedSeedMasks;
 
 //
 // Private vtbl methods.

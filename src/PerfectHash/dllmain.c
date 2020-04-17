@@ -26,6 +26,15 @@ Abstract:
 HMODULE PerfectHashModule;
 
 //
+// We need to define a _fltused ULONG symbol as we're working with floats and
+// doubles but not linking to the CRT.  Without this, we'll get a missing
+// symbol error during linking.  (It is used by the kernel to know if a given
+// routine is using floating point state during trap handling.)
+//
+
+ULONG _fltused;
+
+//
 // Ctrl-C glue.
 //
 

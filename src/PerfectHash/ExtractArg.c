@@ -429,6 +429,179 @@ End:
     return Result;
 }
 
+TRY_EXTRACT_SEED_MASK_COUNTS TryExtractSeedMaskCounts;
+
+_Use_decl_annotations_
+HRESULT
+TryExtractSeedMaskCounts(
+    PRTL Rtl,
+    PALLOCATOR Allocator,
+    PCUNICODE_STRING InputString,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param,
+    BYTE SeedNumber,
+    BYTE ByteNumber,
+    BYTE NumberOfCounts
+    )
+{
+    HRESULT Result;
+    USHORT Index;
+    ULONG Count;
+    ULONG Cumulative;
+    ULONGLONG Total;
+    ULARGE_INTEGER Large;
+    PSEED_MASK_COUNTS SeedMaskCounts = NULL;
+    USHORT NumberOfInputStringChars;
+    WCHAR Wide;
+    PWCHAR Source;
+    PWCHAR Dest;
+    PVOID Buffer;
+
+    if (NumberOfCounts != 32) {
+
+        //
+        // All our seed masks are 0x1f (31), so the only permitted value for
+        // counts at the moment is 32.
+        //
+
+        return PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNTS;
+    }
+
+    //
+    // Try and extract the raw VALUE_ARRAY first.
+    //
+
+    Result = TryExtractValueArray(Rtl,
+                                  Allocator,
+                                  InputString,
+                                  Param,
+                                  FALSE);
+
+    if (FAILED(Result)) {
+
+        //
+        // If we failed, nothing more to do, go straight to the end.
+        //
+
+        goto Error;
+    }
+
+    //
+    // We extracted a VALUE_ARRAY successfully.  Ensure the correct number of
+    // elements are present.
+    //
+
+    SeedMaskCounts = &Param->AsSeedMaskCounts;
+
+    if (SeedMaskCounts->NumberOfValues != NumberOfCounts) {
+        Result = PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNT_ELEMENTS;
+        goto Error;
+    }
+
+    //
+    // We found the required number of elements.  Fill out the seed number and
+    // byte number as per the function parameters, then loop over the provided
+    // value array and calculate the total.
+    //
+
+    SeedMaskCounts->SeedNumber = SeedNumber;
+    SeedMaskCounts->ByteNumber = ByteNumber;
+    Total = 0;
+    Cumulative = 0;
+
+    for (Index = 0; Index < NumberOfCounts; Index++) {
+        Count = SeedMaskCounts->Values[Index];
+        Total += Count;
+        if (Index == 0) {
+            Cumulative = Count;
+        } else {
+            Cumulative += Count;
+        }
+
+        SeedMaskCounts->Cumulative[Index] = Cumulative;
+    }
+
+    //
+    // Verify total is greater than 0 and less than MAX_ULONG.
+    //
+
+    if (Total == 0) {
+        Result = PH_E_SEED_MASK_COUNT_TOTAL_IS_ZERO;
+        goto Error;
+    }
+
+    Large.QuadPart = Total;
+    if (Large.HighPart != 0) {
+        Result = PH_E_SEED_MASK_COUNT_TOTAL_EXCEEDS_MAX_ULONG;
+        goto Error;
+    }
+
+    SeedMaskCounts->Total = Large.LowPart;
+    ASSERT(SeedMaskCounts->Cumulative[Index-1] == SeedMaskCounts->Total);
+
+    //
+    // Copy the input string, which will be comma separated, and convert all
+    // the commas to spaces.  This allows us to dump it directly in CSV output
+    // without botching up all the columns.
+    //
+
+    Buffer = Allocator->Vtbl->Calloc(Allocator,
+                                     1,
+                                     InputString->MaximumLength);
+    if (Buffer == NULL) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    Source = InputString->Buffer;
+    Dest = (PWCHAR)Buffer;
+    NumberOfInputStringChars = InputString->Length >> 1;
+
+    for (Index = 0; Index < NumberOfInputStringChars; Index++) {
+        Wide = Source[Index];
+        if (Wide == L',') {
+            Wide = L' ';
+        }
+        Dest[Index] = Wide;
+    }
+
+    SeedMaskCounts->CountsString.Length = InputString->Length;
+    SeedMaskCounts->CountsString.MaximumLength = InputString->MaximumLength;
+    SeedMaskCounts->CountsString.Buffer = Dest;
+
+    //
+    // We're done, finish up.
+    //
+
+    ASSERT(Result == S_OK);
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Free the underlying pointers if applicable.
+    //
+
+    if (SeedMaskCounts != NULL) {
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     &SeedMaskCounts->Values);
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     &SeedMaskCounts->CountsString.Buffer);
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+
+}
+
 FORCEINLINE
 VOID
 MaybeDeallocateTableCreateParameter(
@@ -437,6 +610,12 @@ MaybeDeallocateTableCreateParameter(
     )
 {
     if (DoesTableCreateParameterRequireDeallocation(Param->Id)) {
+        if (IsSeedMaskCountParameter(Param->Id)) {
+            Allocator->Vtbl->FreePointer(
+                Allocator,
+                &Param->AsSeedMaskCounts.CountsString.Buffer
+            );
+        }
         Param->Id = PerfectHashNullTableCreateParameterId;
         Allocator->Vtbl->FreePointer(Allocator,
                                      (PVOID *)&Param->AsVoidPointer);
@@ -781,6 +960,49 @@ Return Value:
     }
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(Seeds, SEEDS);
+
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_SEED_MASK_COUNTS(Name,           \
+                                                             Upper,          \
+                                                             SeedNumber,     \
+                                                             ByteNumber,     \
+                                                             NumberOfCounts) \
+    if (IS_EQUAL(Name)) {                                                    \
+        Result = TryExtractSeedMaskCounts(Rtl,                               \
+                                          Allocator,                         \
+                                          ValueString,                       \
+                                          &LocalParam,                       \
+                                          SeedNumber,                        \
+                                          ByteNumber,                        \
+                                          NumberOfCounts);                   \
+                                                                             \
+        if (Result == S_OK) {                                                \
+            SET_PARAM_ID(Name);                                              \
+            TableCreateParameters->Flags.HasSeedMaskCounts = TRUE;           \
+            goto AddParam;                                                   \
+        } else {                                                             \
+            if (Result != E_OUTOFMEMORY) {                                   \
+                Result = PH_E_INVALID_##Upper;                               \
+            }                                                                \
+            goto Error;                                                      \
+        }                                                                    \
+    }
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_SEED_MASK_COUNTS(
+        Seed3Byte1MaskCounts,
+        SEED3_BYTE1_MASK_COUNTS,
+        3,
+        1,
+        32
+    );
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_SEED_MASK_COUNTS(
+        Seed3Byte2MaskCounts,
+        SEED3_BYTE2_MASK_COUNTS,
+        3,
+        2,
+        32
+    );
+
 
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(Name, Upper)           \
     if (IS_EQUAL(Name##ThreadpoolPriority)) {                              \

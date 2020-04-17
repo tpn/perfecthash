@@ -540,6 +540,12 @@ Table Create Parameters:
             LowestNumberOfLargePagesUsedByKeysSubset
             LowestNumberOfCacheLinesUsedByKeysSubset
 
+    --Seed3Byte1MaskCounts=<n1,...n31>
+    --Seed3Byte2MaskCounts=<n1,...n31>
+
+        Supplies a comma-separated list of 32 integers that represent weighted
+        counts of seed mask's byte values.  (Experimental.)
+
 Console Output Character Legend
 
  Char | Meaning
@@ -910,6 +916,12 @@ Table Create Parameters:
 
         Supplies a comma-separated list of keys in ascending key-value order.
         Must contain two or more elements.
+
+    --Seed3Byte1MaskCounts=<n1,...n31>
+    --Seed3Byte2MaskCounts=<n1,...n31>
+
+        Supplies a comma-separated list of 32 integers that represent weighted
+        counts of seed mask's byte values.  (Experimental.)
 
 .
 
@@ -3297,5 +3309,53 @@ Facility=ITF
 SymbolicName=PH_E_INITIAL_RESIZES_NOT_SUPPORTED_FOR_MODULUS_MASKING
 Language=English
 Initial number of table resizes not supported for modulus masking.
+.
+
+MessageId=0x389
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNT_ELEMENTS
+Language=English
+Invalid number of seed mask count elements.
+.
+
+MessageId=0x38a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_NUMBER_OF_SEED_MASK_COUNTS
+Language=English
+Invalid number of seed mask counts.
+.
+
+MessageId=0x38b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_SEED3_BYTE1_MASK_COUNTS
+Language=English
+Invalid counts for seed 3 byte 1 mask.
+.
+
+MessageId=0x38c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_SEED3_BYTE2_MASK_COUNTS
+Language=English
+Invalid counts for seed 3 byte 2 mask.
+.
+
+MessageId=0x38d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SEED_MASK_COUNT_TOTAL_IS_ZERO
+Language=English
+Seed mask count total is zero.
+.
+
+MessageId=0x38e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SEED_MASK_COUNT_TOTAL_EXCEEDS_MAX_ULONG
+Language=English
+Seed mask count total exceeds 32 bits.
 .
 

@@ -2059,6 +2059,54 @@ IsValidPerfectHashHashFunctionId(
 }
 
 //
+// Define the seed mask counts structure, which inherits from VALUE_ARRAY.
+//
+
+typedef struct _SEED_MASK_COUNTS {
+
+    //
+    // Begin VALUE_ARRAY.
+    //
+
+    _Writable_elements_(NumberOfValues)
+    PULONG Values;
+    ULONG NumberOfValues;
+    ULONG ValueSizeInBytes;
+
+    //
+    // End VALUE_ARRAY.  SEED_MASK_COUNTS-specific fields start here.
+    //
+
+    _Field_range_(1, 8) BYTE SeedNumber;
+    _Field_range_(1, 4) BYTE ByteNumber;
+
+    USHORT Padding1;
+
+    //
+    // Total sum of all counts in the values array.
+    //
+
+    ULONG Total;
+
+    //
+    // Cumulative sum of counts in the values array.
+    //
+
+    ULONG Cumulative[32];
+
+    //
+    // String representation of the counts with spaces instead of commas.  The
+    // struct owns the underlying Buffer pointer and must free it during param
+    // deallocation.
+    //
+
+    UNICODE_STRING CountsString;
+
+} SEED_MASK_COUNTS;
+typedef SEED_MASK_COUNTS *PSEED_MASK_COUNTS;
+typedef const SEED_MASK_COUNTS *PCSEED_MASK_COUNTS;
+
+//
 // Define an enumeration for identifying the type of table masking used by the
 // underlying perfect hash table.  This has performance and size implications.
 // Modulus masking typically results in smaller tables at the expenses of slower
@@ -2713,7 +2761,9 @@ IsValidTableCompileFlags(
     ENTRY(FileWorkThreadpoolPriority)                                \
     ENTRY(Seeds)                                                     \
     ENTRY(ValueSizeInBytes)                                          \
-    LAST_ENTRY(KeySizeInBytes)
+    ENTRY(KeySizeInBytes)                                            \
+    ENTRY(Seed3Byte1MaskCounts)                                      \
+    LAST_ENTRY(Seed3Byte2MaskCounts)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
     TABLE_CREATE_PARAMETER_TABLE(ENTRY, ENTRY, ENTRY)
@@ -2843,13 +2893,26 @@ DoesBestCoverageTypeRequireKeysSubset(
 
 FORCEINLINE
 BOOLEAN
+IsSeedMaskCountParameter(
+    _In_ PERFECT_HASH_TABLE_CREATE_PARAMETER_ID Id
+    )
+{
+    return (
+        Id == TableCreateParameterSeed3Byte1MaskCountsId ||
+        Id == TableCreateParameterSeed3Byte2MaskCountsId
+    );
+}
+
+FORCEINLINE
+BOOLEAN
 DoesTableCreateParameterRequireDeallocation(
     _In_ PERFECT_HASH_TABLE_CREATE_PARAMETER_ID Id
     )
 {
     return (
         Id == TableCreateParameterKeysSubsetId ||
-        Id == TableCreateParameterSeedsId
+        Id == TableCreateParameterSeedsId ||
+        IsSeedMaskCountParameter(Id)
     );
 }
 
@@ -2879,10 +2942,59 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID AsBestCoverageType;
         VALUE_ARRAY AsValueArray;
         KEYS_SUBSET AsKeysSubset;
+        SEED_MASK_COUNTS AsSeedMaskCounts;
     };
 } PERFECT_HASH_TABLE_CREATE_PARAMETER;
 typedef PERFECT_HASH_TABLE_CREATE_PARAMETER
       *PPERFECT_HASH_TABLE_CREATE_PARAMETER;
+
+
+//
+// Define table create parameter flags.
+//
+
+typedef union _PERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates at least one seed mask count parameter is
+        // present.
+        //
+
+        ULONG HasSeedMaskCounts:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS
+      *PPERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidTableCreateParametersFlags(
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS Flags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(Flags)) {
+        return E_POINTER;
+    }
+
+    if (Flags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
 
 typedef
 struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CREATE_PARAMETERS {
@@ -2890,6 +3002,8 @@ struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CREATE_PARAMETERS {
     ULONG NumberOfElements;
     PALLOCATOR Allocator;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Params;
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS Flags;
+    ULONG Padding1;
 } PERFECT_HASH_TABLE_CREATE_PARAMETERS;
 typedef PERFECT_HASH_TABLE_CREATE_PARAMETERS
       *PPERFECT_HASH_TABLE_CREATE_PARAMETERS;

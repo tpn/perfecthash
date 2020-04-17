@@ -403,6 +403,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PCSEED_MASKS SeedMasks;
 
     //
+    // Pointer to relevant seed mask byte counts, if applicable.
+    //
+
+    PCSEED_MASK_COUNTS Seed3Byte1MaskCounts;
+    PCSEED_MASK_COUNTS Seed3Byte2MaskCounts;
+
+    //
     // Captures the number of failures due to vertices colliding prior to being
     // masked.
     //

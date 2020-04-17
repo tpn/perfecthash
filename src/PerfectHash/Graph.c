@@ -2501,6 +2501,7 @@ Return Value:
     HRESULT Result;
     ULONG SizeInBytes;
     PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS Params;
 
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
@@ -2522,27 +2523,58 @@ Return Value:
         return Result;
     }
 
-    //
-    // Apply user seeds and seed masks if applicable, then return.
-    //
-
     Context = Graph->Context;
+    Params = Context->Table->TableCreateParameters;
 
-    if (Context->UserSeeds) {
-        Result = GraphApplyUserSeeds(Graph);
+    //
+    // Determine if we have seed masks counts first.
+    //
+
+    if (Params->Flags.HasSeedMaskCounts != FALSE) {
+
+        Result = GraphApplyWeightedSeedMasks(Graph,
+                                             Context->Seed3Byte1MaskCounts);
         if (FAILED(Result)) {
-            PH_ERROR(GraphApplyUserSeeds, Result);
-            return Result;
+            PH_ERROR(GraphApplyWeightedSeedMasks_Seed3Byte1, Result);
+            goto End;
         }
+
+        Result = GraphApplyWeightedSeedMasks(Graph,
+                                             Context->Seed3Byte2MaskCounts);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphApplyWeightedSeedMasks_Seed3Byte2, Result);
+            goto End;
+        }
+
+    } else {
+
+        //
+        // Apply user seeds and seed masks if applicable, then return.
+        //
+
+        if (Context->UserSeeds) {
+            Result = GraphApplyUserSeeds(Graph);
+            if (FAILED(Result)) {
+                PH_ERROR(GraphApplyUserSeeds, Result);
+                goto End;
+            }
+        }
+
+        if (Context->SeedMasks) {
+            Result = GraphApplySeedMasks(Graph);
+            if (FAILED(Result)) {
+                PH_ERROR(GraphApplySeedMasks, Result);
+                goto End;
+            }
+        }
+
     }
 
-    if (Context->SeedMasks) {
-        Result = GraphApplySeedMasks(Graph);
-        if (FAILED(Result)) {
-            PH_ERROR(GraphApplySeedMasks, Result);
-            return Result;
-        }
-    }
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
 
     return Result;
 }
@@ -2734,6 +2766,164 @@ Return Value:
             *Seed = NewSeed;
         }
     }
+
+    return S_OK;
+}
+
+GRAPH_APPLY_WEIGHTED_SEED_MASKS GraphApplyWeightedSeedMasks;
+
+_Use_decl_annotations_
+HRESULT
+GraphApplyWeightedSeedMasks(
+    PGRAPH Graph,
+    PCSEED_MASK_COUNTS SeedMaskCounts
+    )
+/*++
+
+Routine Description:
+
+    Generates seed data based on weighted mask counts.  The SeedMaskCounts
+    parameter indicates the target seed number and byte number.  This routine
+    generates a random float between the interval [0.0, 1.0), then bisects the
+    array of cumulative weight counts, identifying an insertion point to the
+    right.  The insertion point value is written to the target seed's byte.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance.
+
+    SeedMaskCounts - Optionally supplies a pointer to a seed mask count struct.
+
+Return Value:
+
+    S_OK - Weighted seed mask successfully applied.
+
+    S_FALSE - No seed mask counts present.
+
+    E_POINTER - Graph was NULL.
+
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+
+--*/
+{
+    PRTL Rtl;
+    PULONG Seed;
+    PBYTE Byte;
+    HRESULT Result;
+    BYTE Low;
+    BYTE High;
+    BYTE Middle;
+    ULONG Target;
+    ULONG Cumulative;
+    DOUBLE Random;
+    DOUBLE TargetDouble;
+    ULARGE_INTEGER Large;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (IsSpareGraph(Graph)) {
+        return PH_E_SPARE_GRAPH;
+    }
+
+    if (!SeedMaskCounts) {
+
+        //
+        // No seed mask counts were provided.
+        //
+
+        return S_FALSE;
+    }
+
+    //
+    // Validation complete.  Generate two 32-bit random ULONGs, then normalize
+    // into a [0,1) interval.
+    //
+
+    Rtl = Graph->Rtl;
+    Large.QuadPart = 0;
+    Result = Rtl->Vtbl->GenerateRandomBytes(Rtl,
+                                            sizeof(Large),
+                                            (PBYTE)&Large);
+
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    //
+    // Derived from:
+    // http://www.math.sci.hiroshima-u.ac.jp/~m-mat/MT/MT2002/CODES/mt19937ar.c
+    //
+
+    Large.HighPart >>= 5;
+    Large.LowPart >>= 6;
+
+    Random = (
+        ((DOUBLE)Large.HighPart * (DOUBLE)67108864.0 + (DOUBLE)Large.LowPart) *
+        ((DOUBLE)1.0/(DOUBLE)9007199254740992.0)
+    );
+    TargetDouble = Random * (DOUBLE)SeedMaskCounts->Total;
+    Target = (ULONG)TargetDouble;
+
+    //
+    // Bisect the cumulative counts to find an appropriate insertion point to
+    // the right.
+    //
+
+    Low = 0;
+    High = 32;
+
+    while (Low < High) {
+
+        Middle = (Low + High) / 2;
+
+        Cumulative = SeedMaskCounts->Cumulative[Middle];
+
+        if (Target < Cumulative) {
+
+            //
+            // Our random value is less than the current middle point of the
+            // cumulative counts.  Adjust the high marker to be the current
+            // middle.
+            //
+
+            High = Middle;
+
+        } else {
+
+            //
+            // Our random value is greater than or equal to the current middle
+            // point of the cumulative counts.  Adjust the low marker to middle
+            // plus 1.
+            //
+
+            Low = Middle + 1;
+        }
+    }
+
+    //
+    // Low now represents the 0-based insertion point into the cumulative
+    // counts array.  This can be used directly as the seed's byte value.
+    // The seed number and byte number fields in the seed mask counts struct
+    // are all 1-based, which is why we subtract 1 from each below (for the
+    // 0-based array offsets).
+    //
+
+    Seed = &Graph->FirstSeed;
+    Seed += (SeedMaskCounts->SeedNumber - 1);
+    Byte = (PBYTE)Seed;
+    Byte += (SeedMaskCounts->ByteNumber - 1);
+
+    //
+    // Write the byte value and return success.
+    //
+
+    *Byte = Low;
 
     return S_OK;
 }

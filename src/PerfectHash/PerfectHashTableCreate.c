@@ -649,6 +649,16 @@ Return Value:
                 }
                 break;
 
+            case TableCreateParameterSeed3Byte1MaskCountsId:
+                ASSERT(TableCreateParams->Flags.HasSeedMaskCounts != FALSE);
+                Context->Seed3Byte1MaskCounts = &Param->AsSeedMaskCounts;
+                break;
+
+            case TableCreateParameterSeed3Byte2MaskCountsId:
+                ASSERT(TableCreateParams->Flags.HasSeedMaskCounts != FALSE);
+                Context->Seed3Byte2MaskCounts = &Param->AsSeedMaskCounts;
+                break;
+
             default:
                 Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
                 goto Error;

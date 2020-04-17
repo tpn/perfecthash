@@ -172,6 +172,13 @@ Abstract:
            'Y' : 'N'),                                                     \
           OUTPUT_CHR)                                                      \
                                                                            \
+    ENTRY(HasSeedMaskCounts,                                               \
+          (((Table->TableCreateParameters != NULL) &&                      \
+            (Table->TableCreateParameters->Flags.HasSeedMaskCounts         \
+             != FALSE)) ?                                                  \
+           'Y' : 'N'),                                                     \
+          OUTPUT_CHR)                                                      \
+                                                                           \
     ENTRY(InitialNumberOfTableResizes,                                     \
           Context->InitialResizes,                                         \
           OUTPUT_INT)                                                      \
@@ -358,6 +365,16 @@ Abstract:
            Context->UserSeeds->NumberOfValues >= 8 ?                       \
            Context->UserSeeds->Values[7] : 0),                             \
           OUTPUT_INT)                                                      \
+                                                                           \
+    ENTRY(Seed3Byte1MaskCounts,                                            \
+          (Context->Seed3Byte1MaskCounts != NULL ?                         \
+           &Context->Seed3Byte1MaskCounts->CountsString : 0),              \
+          OUTPUT_UNICODE_STRING_FAST)                                      \
+                                                                           \
+    ENTRY(Seed3Byte2MaskCount,                                             \
+          (Context->Seed3Byte2MaskCounts != NULL ?                         \
+           &Context->Seed3Byte2MaskCounts->CountsString : 0),              \
+          OUTPUT_UNICODE_STRING_FAST)                                      \
                                                                            \
     ENTRY(FirstGraphWins,                                                  \
           (FirstSolvedGraphWins(Context) ? 'Y' : 'N'),                     \

@@ -139,6 +139,21 @@ typedef TRY_EXTRACT_VALUE_ARRAY *PTRY_EXTRACT_VALUE_ARRAY;
 typedef
 _Must_inspect_result_
 _Success_(return >= 0)
+HRESULT
+(NTAPI TRY_EXTRACT_SEED_MASK_COUNTS)(
+    _In_ PRTL Rtl,
+    _In_ PALLOCATOR Allocator,
+    _In_ PCUNICODE_STRING InputString,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETER Param,
+    _In_range_(1, 8) BYTE SeedNumber,
+    _In_range_(1, 4) BYTE ByteNumber,
+    _In_range_(32, 32) BYTE NumberOfCounts
+    );
+typedef TRY_EXTRACT_SEED_MASK_COUNTS *PTRY_EXTRACT_SEED_MASK_COUNTS;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
 _Post_satisfies_(TableCreateParameters->NumberOfElements == 0)
 _Post_satisfies_(TableCreateParameters->Params == NULL)
 HRESULT
