@@ -175,12 +175,49 @@ BOKEH_GLYPHS = [
 # Helper Functions
 #===============================================================================
 
-def df_from_csv(path):
+def get_num_zeros_fraction(p):
+    # I'm sure there's a more efficient way of doing this.
+    p = f'{p:.9f}'
+    ix = p.find('.') + 1
+    zeros = (len(p) - ix) - len(p[ix:].lstrip('0'))
+    return zeros
+
+def predict_attempts(probability, target=0.5):
+    import numpy as np
+    from scipy.stats import geom
+    zeros = get_num_zeros_fraction(probability) or 1
+    max_attempts = 10 ** (zeros + 1)
+    try:
+        while True:
+            x = np.arange(0, max_attempts)
+            y = geom.cdf(x, probability)
+            i = y.searchsorted(target)
+            if i == max_attempts:
+                max_attempts *= max_attempts
+            else:
+                return i
+    except FloatingPointError:
+        return np.inf
+    except MemoryError:
+        return np.inf
+
+def predict_targets(probability, targets=(0.5, 0.75, 0.99, 0.999)):
+    return {
+        target: predict_attempts(probability, target=target)
+            for target in targets
+    }
+
+def df_from_csv_with_sys_and_group(path):
     d = dirname(path)
     (sys, group) = d.split('/')
     df = pd.read_csv(path)
     df['System'] = sys
     df['Group'] = group
+    return df
+
+def df_from_csv(path):
+    df = pd.read_csv(path)
+    update_df(df)
     return df
 
 def update_df_old(df):
@@ -293,6 +330,17 @@ def update_df_with_seed_bytes(df):
 
     return df
 
+def update_df_with_solve_duration(df):
+    import pandas as pd
+
+    df['SolveDuration'] = (
+        df['SolveMicroseconds'].apply(
+            lambda v: pd.Timedelta(v, unit='micro')
+        )
+    )
+
+    return df
+
 def update_df(df, source_csv_file):
     from tqdm import tqdm
     import numpy as np
@@ -312,6 +360,11 @@ def update_df(df, source_csv_file):
     df['KeysToEdgesRatio'] = df.NumberOfKeys / df.NumberOfEdges
     df['KeysToVerticesRatio'] = df.NumberOfKeys / df.NumberOfVertices
     df['SolutionsFoundRatio'] = df.NumberOfSolutionsFound / df.Attempts
+    df['SolveDuration'] = (
+        df['SolveMicroseconds'].apply(
+            lambda v: pd.Timedelta(v, unit='micro')
+        )
+    )
     x = np.array(list(range(0, 17)))[:, np.newaxis]
     x_flat = np.array(list(range(0, 17)))
     count_keys = [
