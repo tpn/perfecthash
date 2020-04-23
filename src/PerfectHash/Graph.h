@@ -552,7 +552,6 @@ typedef struct _GRAPH_INFO {
     ULONGLONG EdgesSizeInBytes;
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
-    ULONGLONG PrevSizeInBytes;
     ULONGLONG AssignedSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
 
@@ -871,13 +870,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PVERTEX First;
 
     //
-    // The original CHM paper in 1996 references a "prev" array to "facilitate
-    // fast deletion".  However, the chmp project appears to have switched to
-    // using bitmaps.  Let's reserve a slot for the "prev" array anyway.
+    // Array of assigned vertices.
     //
 
     _Writable_elements_(NumberOfVertices)
-    PVERTEX Prev;
+    PVERTEX Assigned;
 
     //
     // Array of assigned vertices.

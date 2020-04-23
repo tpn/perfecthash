@@ -101,34 +101,22 @@ Return Value:
     ASSERT(!Graph->Flags.Shrinking);
 
     //
-    // Insert the first edge.  If we've already seen this edge value, insert it
-    // into the previous edges array.
+    // Insert the first edge.
     //
 
     First1 = Graph->First[Vertex1];
-    if (!IsEmpty(First1)) {
-        Graph->Prev[First1] = Edge1;
-    }
-
     Graph->Next[Edge1] = First1;
     Graph->First[Vertex1] = Edge1;
     Graph->Edges[Edge1] = Vertex2;
-    Graph->Prev[Edge1] = EMPTY;
 
     //
-    // Insert the second edge.  If we've already seen this edge value, insert it
-    // into the previous edges array.
+    // Insert the second edge.
     //
 
     First2 = Graph->First[Vertex2];
-    if (!IsEmpty(First2)) {
-        Graph->Prev[First2] = Edge2;
-    }
-
     Graph->Next[Edge2] = First2;
     Graph->First[Vertex2] = Edge2;
     Graph->Edges[Edge2] = Vertex1;
-    Graph->Prev[Edge2] = EMPTY;
 
 }
 
@@ -362,72 +350,6 @@ Return Value:
 //
 // The following methods are internal methods specific to this implementation.
 //
-
-
-GRAPH_DELETE_EDGE GraphDeleteEdge;
-
-_Use_decl_annotations_
-VOID
-GraphDeleteEdge(
-    PGRAPH Graph,
-    EDGE Edge
-    )
-/*++
-
-Routine Description:
-
-    This routine deletes an edge from the hypergraph.
-
-Arguments:
-
-    Graph - Supplies a pointer to the graph for which the edge is to be deleted.
-
-    Edge - Supplies the edge to delete from the graph.
-
-Return Value:
-
-    None.
-
---*/
-{
-    EDGE Prev;
-    EDGE Next;
-    VERTEX Vertex;
-
-    Vertex = Graph->Edges[Edge];
-
-    Prev = Graph->Prev[Vertex];
-
-    if (IsEmpty(Prev)) {
-
-        //
-        // This is the initial edge.
-        //
-
-        Graph->First[Vertex] = Graph->Next[Edge];
-
-    } else {
-
-        //
-        // Not the initial edge.
-        //
-
-        Graph->Next[Prev] = Graph->Next[Edge];
-
-    }
-
-    Next = Graph->Next[Edge];
-
-    if (!IsEmpty(Next)) {
-
-        //
-        // Not at the end.
-        //
-
-        Graph->Prev[Next] = Prev;
-    }
-}
-
 
 GRAPH_FIND_DEGREE1_EDGE GraphFindDegree1Edge;
 

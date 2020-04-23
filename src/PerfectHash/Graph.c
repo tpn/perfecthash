@@ -2062,7 +2062,6 @@ Return Value:
     ALLOC_ARRAY(Edges, PEDGE);
     ALLOC_ARRAY(Next, PEDGE);
     ALLOC_ARRAY(First, PVERTEX);
-    ALLOC_ARRAY(Prev, PVERTEX);
     ALLOC_ARRAY(Assigned, PASSIGNED);
 
     //
@@ -2373,7 +2372,6 @@ Return Value:
                        (BYTE)~0)
 
     EMPTY_ARRAY(First);
-    EMPTY_ARRAY(Prev);
     EMPTY_ARRAY(Next);
     EMPTY_ARRAY(Edges);
 
