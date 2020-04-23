@@ -195,6 +195,34 @@ const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[] = {
 VERIFY_HASH_ARRAY_SIZE(SeededHashRoutines);
 
 //
+// Define the array of hash "Ex" routines.
+//
+
+#define EXPAND_AS_HASH_EX_ROUTINE(Name, NumberOfSeeds, SeedMasks) \
+    PerfectHashTableHashEx##Name,
+
+const PPERFECT_HASH_TABLE_HASH_EX HashExRoutines[] = {
+    NULL,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_EX_ROUTINE)
+    NULL
+};
+VERIFY_HASH_ARRAY_SIZE(HashExRoutines);
+
+//
+// Define the array of seeded hash "Ex" routines.
+//
+
+#define EXPAND_AS_SEEDED_HASH_EX_ROUTINE(Name, NumberOfSeeds, SeedMasks) \
+    PerfectHashTableSeededHashEx##Name,
+
+const PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashExRoutines[] = {
+    NULL,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH_EX_ROUTINE)
+    NULL
+};
+VERIFY_HASH_ARRAY_SIZE(SeededHashExRoutines);
+
+//
 // Define the array of hash mask routines.
 //
 
@@ -972,8 +1000,10 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableGetHashFunctionName,
     &PerfectHashTableGetMaskFunctionName,
     &PerfectHashTableGetFile,
+    NULL,   // HashEx
+    NULL,   // SeededHashEx
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 19);
+VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 21);
 
 //
 // Rtl

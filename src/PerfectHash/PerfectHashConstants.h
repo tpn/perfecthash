@@ -133,6 +133,14 @@ extern const PPERFECT_HASH_TABLE_MASK_INDEX MaskIndexRoutines[];
 extern const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[];
 
 //
+// Define hash and seeded hash "Ex" versions of the hash routines.  Both are
+// intended to by indexed by PERFECT_HASH_TABLE_HASH_FUNCTION_ID enumeration.
+//
+
+extern const PPERFECT_HASH_TABLE_HASH_EX HashExRoutines[];
+extern const PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashExRoutines[];
+
+//
 // Declare an array of STRINGs representing C type names (e.g. 'unsigned short',
 // 'int', 'long long', etc); intended to be indexed by the TYPE enum.
 //
@@ -183,6 +191,8 @@ CompletePerfectHashTableInitialization(
     Vtbl->MaskHash = MaskHashRoutines[MaskFunctionId];
     Vtbl->MaskIndex = MaskIndexRoutines[MaskFunctionId];
     Vtbl->SeededHash = SeededHashRoutines[HashFunctionId];
+    Vtbl->HashEx = HashExRoutines[HashFunctionId];
+    Vtbl->SeededHashEx = SeededHashExRoutines[HashFunctionId];
 
     //
     // Default the slow index to the normal index routine.
