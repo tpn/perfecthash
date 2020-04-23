@@ -432,6 +432,12 @@ typedef union _CPU_INFO {
         LONG Ecx;
         LONG Edx;
     };
+    struct {
+        ULONG_BYTES EaxBytes;
+        ULONG_BYTES EbxBytes;
+        ULONG_BYTES EcxBytes;
+        ULONG_BYTES EdxBytes;
+    };
     INT AsIntArray[4];
     LONG AsLongArray[4];
     ULONG AsULongArray[4];
