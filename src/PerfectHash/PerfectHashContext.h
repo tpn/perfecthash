@@ -410,11 +410,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PCSEED_MASK_COUNTS Seed3Byte2MaskCounts;
 
     //
-    // Captures the number of failures due to vertices colliding prior to being
-    // masked.
+    // Captures the number of failures due to the generation of two
+    // identical vertices.
     //
 
-    volatile LONGLONG PreMaskedVertexCollisionFailures;
+    volatile LONGLONG VertexCollisionFailures;
 
     //
     // Computer name.
@@ -593,13 +593,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
                          EXPAND_AS_EVENT,
                          EXPAND_AS_LAST_EVENT)
 
-
-    //
-    // Captures the number of failures due to vertices colliding after being
-    // masked.
-    //
-
-    volatile LONGLONG PostMaskedVertexCollisionFailures;
 
     volatile LONG GraphRegisterSolvedTsxStarted;
     ULONG Padding2;

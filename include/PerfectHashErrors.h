@@ -3698,3 +3698,21 @@ Abstract:
 //
 #define PH_E_SEED_MASK_COUNT_TOTAL_EXCEEDS_MAX_ULONG ((HRESULT)0xE004038EL)
 
+//
+// MessageId: PH_E_GRAPH_VERTEX_COLLISION_FAILURE
+//
+// MessageText:
+//
+// Graph vertex collision failure.
+//
+#define PH_E_GRAPH_VERTEX_COLLISION_FAILURE ((HRESULT)0xE004038FL)
+
+//
+// MessageId: PH_E_GRAPH_CYCLIC_FAILURE
+//
+// MessageText:
+//
+// Cyclic graph failure.
+//
+#define PH_E_GRAPH_CYCLIC_FAILURE        ((HRESULT)0xE0040390L)
+

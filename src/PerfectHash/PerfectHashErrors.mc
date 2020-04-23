@@ -3359,3 +3359,19 @@ Language=English
 Seed mask count total exceeds 32 bits.
 .
 
+MessageId=0x38f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_GRAPH_VERTEX_COLLISION_FAILURE
+Language=English
+Graph vertex collision failure.
+.
+
+MessageId=0x390
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_GRAPH_CYCLIC_FAILURE
+Language=English
+Cyclic graph failure.
+.
+
