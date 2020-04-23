@@ -130,8 +130,20 @@ typedef union ULONG_BYTES {
     };
 
     struct _Struct_size_bytes_(sizeof(ULONG)) {
-        USHORT Word1;
-        USHORT Word2;
+        CHAR Char1;
+        CHAR Char2;
+        CHAR Char3;
+        CHAR Char4;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        SHORT Word1;
+        SHORT Word2;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        USHORT UWord1;
+        USHORT UWord2;
     };
 
     LONG AsLong;
