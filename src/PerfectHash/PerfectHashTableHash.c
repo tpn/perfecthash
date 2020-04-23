@@ -152,8 +152,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
 
@@ -163,8 +161,6 @@ Return Value:
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
     Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, 15));
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -245,8 +241,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Seed3.AsULong = Seeds[2];
@@ -257,8 +251,6 @@ Return Value:
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
     Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE1));
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -338,8 +330,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Seed3.AsULong = Seeds[2];
@@ -350,8 +340,6 @@ Return Value:
 
     Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
     Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE2));
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -431,8 +419,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Seed3.AsULong = Seeds[2];
@@ -446,8 +432,6 @@ Return Value:
 
     Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE3));
     Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -713,8 +697,6 @@ Return Value:
     ASSERT(NumberOfSeeds >= 2);
     UNREFERENCED_PARAMETER(NumberOfSeeds);
 
-    //IACA_VC_START();
-
     //
     // Initialize aliases.
     //
@@ -743,9 +725,6 @@ Return Value:
     Result.HighPart = Long2.LowPart;
 
     *Hash = Result.QuadPart;
-
-    //IACA_VC_END();
-
     return S_OK;
 }
 
@@ -818,8 +797,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Byte = (PBYTE)&Key;
 
     //
@@ -865,8 +842,6 @@ Return Value:
     D -= E; D -= F; D ^= (F >>  3);
     E -= F; E -= D; E ^= (D << 10);
     F -= D; F -= E; F ^= (E >> 15);
-
-    //IACA_VC_END();
 
     Vertex1 = C;
     Vertex2 = F;
@@ -956,8 +931,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Byte = (PBYTE)&Key;
 
     //
@@ -1003,8 +976,6 @@ Return Value:
     D -= E; D -= F; D ^= (F >>  3);
     E -= F; E -= D; E ^= (D << 10);
     F -= D; F -= E; F ^= (E >> 15);
-
-    //IACA_VC_END();
 
     Y = C % ((C >> 7) + 3);
     Z = F % ((F >> 5) + 9);
@@ -1100,8 +1071,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Seed3 = Seeds[2];
@@ -1114,8 +1083,6 @@ Return Value:
     B = _mm_crc32_u32(SEED2, _rotl(Key, 15));
     C = Seed3 ^ Key;
     D = _mm_crc32_u32(B, C);
-
-    //IACA_VC_END();
 
     Vertex1 = A;
     Vertex2 = D;
@@ -1201,8 +1168,6 @@ Return Value:
     //
     // Initialize aliases.
     //
-
-    //IACA_VC_START();
 
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
@@ -1294,8 +1259,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Seed3 = (BYTE)(Seeds[2] & 0x1f);
@@ -1384,8 +1347,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
 
@@ -1395,8 +1356,6 @@ Return Value:
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
     Vertex2 = _mm_crc32_u32(SEED2, Key);
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -1482,8 +1441,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
 
@@ -1514,8 +1471,6 @@ Return Value:
     B = 33 * B + Bytes.Byte4;
 
     Vertex2 = B;
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -1601,8 +1556,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
 
@@ -1632,8 +1585,6 @@ Return Value:
     B = 33 * B ^ Byte4;
 
     Vertex2 = B;
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -1724,8 +1675,6 @@ Return Value:
 
     Bytes.AsULong = Key;
 
-    //IACA_VC_START();
-
     A = Seed1 ^ 2166136261;
     A = 16777619 * A ^ Bytes.Byte1;
     A = 16777619 * A ^ Bytes.Byte2;
@@ -1741,8 +1690,6 @@ Return Value:
     B = 16777619 * B ^ Bytes.Byte4;
 
     Vertex2 = B;
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -1820,8 +1767,6 @@ Return Value:
     // Initialize aliases.
     //
 
-    //IACA_VC_START();
-
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
 
@@ -1831,8 +1776,6 @@ Return Value:
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
     Vertex2 = _mm_crc32_u32(SEED2, ~Key);
-
-    //IACA_VC_END();
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
