@@ -877,13 +877,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PVERTEX Assigned;
 
     //
-    // Array of assigned vertices.
-    //
-
-    _Writable_elements_(NumberOfVertices)
-    PVERTEX Assigned;
-
-    //
     // Array of values indexed by the offsets in the Assigned array.  This
     // essentially allows us to simulate a loaded table that supports the
     // Insert(), Index() and Lookup() routines as part of graph validation.
