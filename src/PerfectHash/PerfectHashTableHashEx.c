@@ -54,6 +54,21 @@ Abstract:
           (This also provides a speed improvement versus using the `PULONGLONG
           Hash` output parameter, as the hash can be returned via rax.)
 
+        - The `NumberOfSeeds` parameter provided little value given all of our
+          hash functions are managed by an X-macro which ensures the correct
+          number of seed values are fed to each routine.  Thus, this parameter
+          can be omitted.
+
+        - Although the COM spec requires us to pass the table as the first
+          parameter, it's not used by the hash routines.  As we're already
+          violating the COM spec by returning a ULONGLONG instead of a HRESULT,
+          we can drop this parameter too.
+
+        - Modulus masking has never worked; the old approach of calling out to
+          a separate C function to mask each vertex is an unnecessary overhead.
+          Instead, we assume 'and' masking is active, and simply provide the
+          mask as one of the function parameters.
+
     The new style "Ex" routines are faster than their original counterparts.
 
 --*/
