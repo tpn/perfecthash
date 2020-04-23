@@ -94,7 +94,6 @@ Abstract:
 //
 // 28251: inconsistent SAL annotations
 //
-//
 
 #pragma warning(push)
 #pragma warning(disable: 4255 4668 4820 28251)
@@ -103,6 +102,10 @@ Abstract:
 #pragma warning(pop)
 
 #endif
+
+//
+// PerfectHash-related headers.
+//
 
 #include <PerfectHash.h>
 #include <PerfectHashErrors.h>
