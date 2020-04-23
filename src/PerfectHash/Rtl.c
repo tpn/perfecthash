@@ -589,6 +589,7 @@ Return Value:
 
         //
         // Disable the following warning:
+        //
         //  warning C6385: Reading invalid data from 'Brand->Buffer':
         //      the readable size is '_Old_13`16' bytes, but
         //      'Brand->Length' bytes may be read.
