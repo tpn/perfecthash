@@ -2616,10 +2616,60 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG ClampNumberOfEdges:1;
 
         //
+        // When set, uses the original (slower) seeded hash routines (the ones
+        // that return an HRESULT return code and write the hash value to an
+        // output parameter) -- as opposed to using the newer, faster, "Ex"
+        // version of the hash routines.
+        //
+        // N.B. This flag is incompatible with HashAllKeysFirst.
+        //
+
+        ULONG UseOriginalSeededHashRoutines:1;
+
+        //
+        // When set, changes the graph solving logic such that vertices (i.e.
+        // hash values) are generated for all keys up-front, prior to graph
+        // construction.  (Experimental.)
+        //
+        // N.B. This flag is incompatible with UseOriginalSeededHashRoutines.
+        //
+
+        ULONG HashAllKeysFirst:1;
+
+        //
+        // When set, disables the attempt to allocate the array for vertex pairs
+        // with write-combined memory.
+        //
+        // N.B. Only applies when HashAllKeysFirst is set.
+        //
+
+        ULONG DisableWriteCombineForVertexPairs:1;
+
+        //
+        // When set, disables the logic that automatically changes the page
+        // protection of the write-combined vertex pairs array to PAGE_READONLY
+        // after all keys were successfully hashed.
+        //
+        // N.B. Only applies when HashAllKeysFirst is set and
+        //      DisableWriteCombineForVertexPairs is not set.
+        //
+
+        ULONG DisableWriteCombineRemovalAfterSuccessfulHashKeys:1;
+
+        //
+        // When set, tries to allocate the array for vertex pairs using large
+        // pages.
+        //
+        // N.B. Only applies when HashAllKeysFirst is set.
+        //
+
+        ULONG TryLargePagesForVertexPairs:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:11;
+        ULONG Unused:6;
     };
 
     LONG AsLong;
@@ -2642,6 +2692,20 @@ IsValidTableCreateFlags(
 
     if (TableCreateFlags->Unused != 0) {
         return E_FAIL;
+    }
+
+    if (TableCreateFlags->UseOriginalSeededHashRoutines &&
+        TableCreateFlags->HashAllKeysFirst) {
+        return E_INVALIDARG;
+    }
+
+    if (!TableCreateFlags->HashAllKeysFirst) {
+        if (TableCreateFlags->TryLargePagesForVertexPairs ||
+            TableCreateFlags->DisableWriteCombineForVertexPairs ||
+            TableCreateFlags->DisableWriteCombineRemovalAfterSuccessfulHashKeys)
+        {
+            return E_INVALIDARG;
+        }
     }
 
     return S_OK;
@@ -3299,10 +3363,19 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG ValuesArrayUsesLargePages:1;
 
         //
+        // When set, indicates the vertex pairs array was allocated with large
+        // pages (at the individual graph level).  Only applies when the table
+        // create flags --HashAllKeysFirst and --TryLargePagesForVertexPairs
+        // are present.
+        //
+
+        ULONG VertexPairsArrayUsesLargePages:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:27;
     };
 
     LONG AsLong;

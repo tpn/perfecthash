@@ -392,6 +392,23 @@ Table Create Flags:
         graph solving probability for a given key set.  Only applies to
         And masking (i.e. not modulus masking).
 
+    --UseOriginalSeededHashRoutines
+
+        When set, uses the original (slower) seeded hash routines (the ones
+        that return an HRESULT return code and write the hash value to an
+        output parameter) -- as opposed to using the newer, faster, "Ex"
+        version of the hash routines.
+
+        N.B. This flag is incompatible with --HashAllKeysFirst.
+
+    --HashAllKeysFirst
+
+        When set, changes the graph solving logic such that vertices (i.e.
+        hash values) are generated for all keys up-front, prior to graph
+        construction.  (Experimental.)
+
+        N.B. This flag is incompatible with UseOriginalSeededHashRoutines.
+
     --UsePreviousTableSize
 
         When set, uses any previously-recorded table sizes associated with
@@ -763,6 +780,23 @@ Table Create Flags:
         option used to evaluate the impact of the number of edges on the
         graph solving probability for a given key set.  Only applies to
         And masking (i.e. not modulus masking).
+
+    --UseOriginalSeededHashRoutines
+
+        When set, uses the original (slower) seeded hash routines (the ones
+        that return an HRESULT return code and write the hash value to an
+        output parameter) -- as opposed to using the newer, faster, "Ex"
+        version of the hash routines.
+
+        N.B. This flag is incompatible with --HashAllKeysFirst.
+
+    --HashAllKeysFirst
+
+        When set, changes the graph solving logic such that vertices (i.e.
+        hash values) are generated for all keys up-front, prior to graph
+        construction.  (Experimental.)
+
+        N.B. This flag is incompatible with UseOriginalSeededHashRoutines.
 
     --UsePreviousTableSize
 
@@ -3373,5 +3407,13 @@ Facility=ITF
 SymbolicName=PH_E_GRAPH_CYCLIC_FAILURE
 Language=English
 Cyclic graph failure.
+.
+
+MessageId=0x391
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INCOMPATIBLE_TABLE_CREATE_FLAGS
+Language=English
+Two or more table create flags were incompatible with each other.
 .
 

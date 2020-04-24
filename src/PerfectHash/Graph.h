@@ -42,6 +42,14 @@ typedef ULONG VERTEX;
 typedef KEY *PKEY;
 typedef EDGE *PEDGE;
 typedef VERTEX *PVERTEX;
+typedef union _VERTEX_PAIR {
+    struct {
+        VERTEX Vertex1;
+        VERTEX Vertex2;
+    };
+    ULONGLONG AsULongLong;
+    ULARGE_INTEGER AsULargeInteger;
+} VERTEX_PAIR, *PVERTEX_PAIR;
 
 //
 // A core concept of the 2-part hypergraph algorithm for generating a perfect
@@ -367,10 +375,40 @@ typedef union _GRAPH_FLAGS {
         ULONG Paranoid:1;
 
         //
+        // When set, indicates the VertexPairs array was successfully allocated
+        // with large pages.  (Only applies when the --HashAllKeysFirst table
+        // create flag is present.)
+        //
+
+        ULONG VertexPairsArrayUsesLargePages:1;
+
+        //
+        // When set, indicates the vertex pairs array wants write-combined
+        // memory, when applicable.
+        //
+
+        ULONG WantsWriteCombiningForVertexPairsArray:1;
+
+        //
+        // When set, indicates the vertex pairs array is currently allocated
+        // with write-combined page protection.
+        //
+
+        ULONG VertexPairsArrayIsWriteCombined:1;
+
+        //
+        // When set, indicates that the vertex pairs array wants to have the
+        // write-combine page protection removed after all keys have been hashed
+        // and prior to adding the vertices to the graph.
+        //
+
+        ULONG WantsWriteCombiningRemovedAfterSuccessfulHashKeys:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:23;
+        ULONG Unused:19;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -553,6 +591,7 @@ typedef struct _GRAPH_INFO {
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
     ULONGLONG AssignedSizeInBytes;
+    ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
 
     //
@@ -699,6 +738,42 @@ BOOLEAN
 typedef GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
       *PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE;
 
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_ADD_KEYS)(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PKEY Keys
+    );
+typedef GRAPH_ADD_KEYS *PGRAPH_ADD_KEYS;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_HASH_KEYS)(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PKEY Keys
+    );
+typedef GRAPH_HASH_KEYS *PGRAPH_HASH_KEYS;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_ADD_HASHED_KEYS)(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PVERTEX_PAIR VertexPairs
+    );
+typedef GRAPH_ADD_HASHED_KEYS *PGRAPH_ADD_HASHED_KEYS;
+
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
     PGRAPH_SET_INFO SetInfo;
@@ -713,6 +788,9 @@ typedef struct _GRAPH_VTBL {
         CalculateAssignedMemoryCoverageForKeysSubset;
     PGRAPH_REGISTER_SOLVED RegisterSolved;
     PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE ShouldWeContinueTryingToSolve;
+    PGRAPH_ADD_KEYS AddKeys;
+    PGRAPH_HASH_KEYS HashKeys;
+    PGRAPH_ADD_HASHED_KEYS AddHashedKeys;
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
@@ -877,6 +955,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PVERTEX Assigned;
 
     //
+    // Optional array of vertex pairs, indexed by number of keys.
+    //
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX_PAIR VertexPairs;
+
+    //
     // Array of values indexed by the offsets in the Assigned array.  This
     // essentially allows us to simulate a loaded table that supports the
     // Insert(), Index() and Lookup() routines as part of graph validation.
@@ -915,6 +1000,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     ASSIGNED_MEMORY_COVERAGE AssignedMemoryCoverage;
+
+    //
+    // Elapsed cycles of the GraphAddKeys() routine.
+    //
+
+    LARGE_INTEGER AddKeysElapsedCycles;
+
+    //
+    // Elapsed cycles of the GraphHashKeys() routine, if used.
+    //
+
+    LARGE_INTEGER HashKeysElapsedCycles;
+
+    //
+    // Elapsed cycles of the GraphAddHashedKeys() routine, if used.
+    //
+
+    LARGE_INTEGER AddHashedKeysElapsedCycles;
 
     //
     // The graph interface.
@@ -1096,6 +1199,9 @@ extern GRAPH_REGISTER_SOLVED GraphRegisterSolvedTsx;
 #endif
 extern GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
     GraphShouldWeContinueTryingToSolve;
+extern GRAPH_ADD_KEYS GraphAddKeys;
+extern GRAPH_HASH_KEYS GraphHashKeys;
+extern GRAPH_ADD_HASHED_KEYS GraphAddHashedKeys;
 #endif
 
 //

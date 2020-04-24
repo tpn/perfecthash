@@ -18,6 +18,9 @@ Abstract:
 // Forward decl.
 //
 
+GRAPH_ADD_KEYS GraphHashKeysThenAdd;
+GRAPH_ADD_KEYS GraphAddKeysOriginalSeededHashRoutines;
+GRAPH_VERIFY GraphVerifyOriginalSeededHashRoutines;
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage_AVX2;
 
@@ -56,6 +59,8 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result = S_OK;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
 
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
@@ -83,6 +88,34 @@ Return Value:
 
     if (FAILED(Result)) {
         goto Error;
+    }
+
+    //
+    // Load the table create flags from the TLS context.
+    //
+
+    TlsContext = PerfectHashTlsEnsureContext();
+    TableCreateFlags.AsULong = TlsContext->TableCreateFlags.AsULong;
+
+    //
+    // Override vtbl methods based on table create flags.
+    //
+
+    if (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE) {
+
+        ASSERT(TableCreateFlags.HashAllKeysFirst == FALSE);
+        Graph->Vtbl->AddKeys = GraphAddKeysOriginalSeededHashRoutines;
+        Graph->Vtbl->Verify = GraphVerifyOriginalSeededHashRoutines;
+
+    } else {
+
+        ASSERT(Graph->Vtbl->AddKeys == GraphAddKeys);
+        ASSERT(Graph->Vtbl->Verify == GraphVerify);
+
+        if (TableCreateFlags.HashAllKeysFirst != FALSE) {
+            Graph->Vtbl->AddKeys = GraphHashKeysThenAdd;
+        }
+
     }
 
     //
@@ -156,6 +189,16 @@ Return Value:
     RELEASE(Graph->Rtl);
     RELEASE(Graph->Allocator);
 
+    //
+    // Free the vertex pairs array if applicable.
+    //
+
+    if (Graph->VertexPairs != NULL) {
+        if (!VirtualFree(Graph->VertexPairs, 0, MEM_RELEASE)) {
+            SYS_ERROR(VirtualFree);
+        }
+    }
+
     return;
 }
 
@@ -200,19 +243,18 @@ Return Value:
 
 --*/
 {
-    KEY Key;
     PKEY Keys;
-    EDGE Edge;
     PEDGE Edges;
-    VERTEX Vertex1;
-    VERTEX Vertex2;
     PGRAPH_INFO Info;
     ULONG NumberOfKeys;
-    ULARGE_INTEGER Hash;
-    HRESULT Result = S_OK;
+    HRESULT Result;
     LONGLONG FinishedCount;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+
+    //
+    // Initialize aliases.
+    //
 
     Info = Graph->Info;
     Context = Info->Context;
@@ -221,46 +263,30 @@ Return Value:
     Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
 
     //
-    // Enumerate all keys in the input set, hash them into two unique vertices,
-    // then add them to the hypergraph.
+    // Attempt to add all the keys to the graph.
     //
 
-    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
-        Key = *Edges++;
+    Result = Graph->Vtbl->AddKeys(Graph, NumberOfKeys, Keys);
 
-        if (FAILED(Table->Vtbl->SeededHash(Table,
-                                           Key,
-                                           Graph->NumberOfSeeds,
-                                           &Graph->FirstSeed,
-                                           &Hash.QuadPart))) {
-            InterlockedIncrement64(&Context->PreMaskedVertexCollisionFailures);
+    if (FAILED(Result)) {
+
+        //
+        // If the failure was due to a vertex collision, increment the counter
+        // and jump to the failure handler (which results in the status code
+        // PH_S_CONTINUE_GRAPH_SOLVING ultimately being returned).
+        //
+        // For any other reason, the error is considered fatal and graph solving
+        // should stop.
+        //
+
+        if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
+            InterlockedIncrement64(&Context->VertexCollisionFailures);
             goto Failed;
         }
 
-        ASSERT(Hash.HighPart != Hash.LowPart);
-
-        //
-        // Mask the individual vertices.
-        //
-
-        MASK_HASH(Hash.LowPart, &Vertex1);
-        MASK_HASH(Hash.HighPart, &Vertex2);
-
-        //
-        // We can't have two vertices point to the same location.
-        // Abort this graph attempt.
-        //
-
-        if (Vertex1 == Vertex2) {
-            InterlockedIncrement64(&Context->PostMaskedVertexCollisionFailures);
-            goto Failed;
-        }
-
-        //
-        // Add the edge to the graph connecting these two vertices.
-        //
-
-        GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
+        PH_ERROR(GraphSolve_AddKeys, Result);
+        Result = PH_S_STOP_GRAPH_SOLVING;
+        goto End;
     }
 
     MAYBE_STOP_GRAPH_SOLVING(Graph);
@@ -372,33 +398,435 @@ Return Value:
     //
 
     Result = Graph->Vtbl->RegisterSolved(Graph, NewGraphPointer);
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
     return Result;
 
 Failed:
-
-    //
-    // Intentional follow-on to Error.
-    //
-
-Error:
-
-    //
-    // If any of the HASH/MASK macros fail, they'll jump to this Error: label.
-    // Increment the failed attempts counter, and indicate that we want to
-    // continue graph solving.
-    //
 
     InterlockedIncrement64(&Context->FailedAttempts);
 
     return PH_S_CONTINUE_GRAPH_SOLVING;
 }
 
-
-GRAPH_VERIFY GraphVerify;
+GRAPH_ADD_KEYS GraphAddKeys;
 
 _Use_decl_annotations_
 HRESULT
-GraphVerify(
+GraphAddKeys(
+    PGRAPH Graph,
+    ULONG NumberOfKeys,
+    PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    Add all keys to the hypergraph using the unique seeds to hash each key into
+    two vertex values, connected by a "hyper-edge".  This implementation uses
+    the newer "Ex" version of the seeded hash routines.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the keys will be added.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+--*/
+{
+    KEY Key;
+    EDGE Edge;
+    PEDGE Edges;
+    ULONG Mask;
+    LONGLONG Cycles;
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
+    ULARGE_INTEGER Hash;
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    Table = Graph->Context->Table;
+    Mask = Table->HashMask;
+    SeededHashEx = SeededHashExRoutines[Table->HashFunctionId];
+    Edges = (PEDGE)Keys;
+
+    //
+    // Enumerate all keys in the input set, hash them into two unique vertices,
+    // then add them to the hypergraph.
+    //
+
+    Result = S_OK;
+    QueryPerformanceCounter(&Start);
+
+    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+        Key = *Edges++;
+
+        Hash.QuadPart = SeededHashEx(Key, &Graph->FirstSeed, Mask);
+
+        if (Hash.HighPart == Hash.LowPart) {
+            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            break;
+        }
+
+        //
+        // Add the edge to the graph connecting these two vertices.
+        //
+
+        GraphAddEdge(Graph, Edge, Hash.LowPart, Hash.HighPart);
+    }
+
+    QueryPerformanceCounter(&End);
+    Graph->AddKeysElapsedCycles.QuadPart = Cycles = (
+        End.QuadPart - Start.QuadPart
+    );
+
+    return Result;
+}
+
+GRAPH_HASH_KEYS GraphHashKeys;
+
+_Use_decl_annotations_
+HRESULT
+GraphHashKeys(
+    PGRAPH Graph,
+    ULONG NumberOfKeys,
+    PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    This routine hashes all keys into vertices without adding the resulting
+    vertices to the graph.  It is used by GraphHashKeysThenAdd().
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the hash values will be
+        created.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+--*/
+{
+    KEY Key;
+    EDGE Edge;
+    ULONG Mask;
+    PEDGE Edges;
+    BOOL Success;
+    HRESULT Result;
+    LONGLONG Cycles;
+    VERTEX_PAIR Hash;
+    GRAPH_FLAGS Flags;
+    LARGE_INTEGER End;
+    LARGE_INTEGER Start;
+    ULONG OldProtection;
+    PULONGLONG VertexPairs;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    //
+    // Initialize aliases.
+    //
+
+    Result = S_OK;
+    Table = Graph->Context->Table;
+    Mask = Table->HashMask;
+    SeededHashEx = SeededHashExRoutines[Table->HashFunctionId];
+    Edges = (PEDGE)Keys;
+
+    //
+    // Sanity check we can enumerate over the vertex pair elements via a
+    // ULONGLONG pointer.
+    //
+
+    C_ASSERT(sizeof(*VertexPairs) == sizeof(Graph->VertexPairs));
+    VertexPairs = (PULONGLONG)Graph->VertexPairs;
+
+    //
+    // Enumerate all keys in the input set, hash them into two unique vertices,
+    // then add them to the hypergraph.
+    //
+
+    QueryPerformanceCounter(&Start);
+
+    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+        Key = *Edges++;
+
+        Hash.AsULongLong = SeededHashEx(Key, &Graph->FirstSeed, Mask);
+
+        if (Hash.Vertex1 == Hash.Vertex2) {
+            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            break;
+        }
+
+        *VertexPairs++ = Hash.AsULongLong;
+    }
+
+    QueryPerformanceCounter(&End);
+    Graph->HashKeysElapsedCycles.QuadPart = Cycles = (
+        End.QuadPart - Start.QuadPart
+    );
+
+    if (SUCCEEDED(Result)) {
+
+        Flags.AsULong = Graph->Flags.AsULong;
+
+        if (Flags.VertexPairsArrayIsWriteCombined) {
+
+            //
+            // Determine if write-combining needs to be removed from the vertex
+            // pairs array.  If not, issue a memory barrier to ensure we've
+            // got consistency before we start reading the vertices and adding
+            // them to the graph.  (We don't do this when removing the page
+            // protection as that'll implicitly have a memory barrier.)
+            //
+
+            if (!Flags.WantsWriteCombiningRemovedAfterSuccessfulHashKeys) {
+
+                MemoryBarrier();
+
+            } else {
+
+                Success = VirtualProtect(Graph->VertexPairs,
+                                         Graph->Info->VertexPairsSizeInBytes,
+                                         PAGE_READONLY,
+                                         &OldProtection);
+
+                //
+                // If the call was successful, clear the write-combine flag,
+                // otherwise, error out.
+                //
+
+                if (Success) {
+                    Graph->Flags.VertexPairsArrayIsWriteCombined = FALSE;
+                } else {
+                    SYS_ERROR(VirtualProtect);
+                    Result = PH_E_SYSTEM_CALL_FAILED;
+                }
+            }
+        }
+    }
+
+    return Result;
+}
+
+GRAPH_ADD_KEYS GraphHashKeysThenAdd;
+
+_Use_decl_annotations_
+HRESULT
+GraphHashKeysThenAdd(
+    PGRAPH Graph,
+    ULONG NumberOfKeys,
+    PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    This routine is a drop-in replacement for Graph->Vtbl->AddKeys (handled by
+    GraphInitialize()), and is responsible for hashing all keys into vertices
+    first, then adding all resulting vertices to the graph.  This differs from
+    the normal GraphAddKeys() behavior, which hashes a key into two vertices
+    and immediately adds them to the graph via GraphAddEdge().  (This routine
+    loops over the keys twice; once to construct all the vertices, then again
+    to add them all to the graph.)
+
+    The motivation behind this routine is to separate out the action of hashing
+    keys versus adding them to the graph to better analyze performance.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the keys will be added.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+        N.B. Unlike GraphAddKeys(), when this code is returned, none of the
+             vertices will have been added to the graph at this point (versus
+             having the graph in a partially-constructed state).  This has no
+             impact on the behavior of the graph solving, other than potentially
+             being faster overall for graphs encountering a lot of collisions
+             (because the overhead of writing to all the graph's First/Next
+             arrays will have been avoided).
+
+--*/
+{
+    EDGE Edge;
+    LONGLONG Cycles;
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
+    HRESULT Result;
+    VERTEX_PAIR VertexPair;
+    PVERTEX_PAIR VertexPairs;
+
+    //
+    // Attempt to hash the keys first.
+    //
+
+    Result = GraphHashKeys(Graph, NumberOfKeys, Keys);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    //
+    // No vertex collisions were encountered.  All the vertex pairs have been
+    // written to Graph->VertexPairs, indexed by Edge.  Loop through the number
+    // of edges and add the vertices to the graph.
+    //
+
+    VertexPairs = Graph->VertexPairs;
+    QueryPerformanceCounter(&Start);
+
+    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+        VertexPair = *(VertexPairs++);
+        GraphAddEdge(Graph, Edge, VertexPair.Vertex1, VertexPair.Vertex2);
+    }
+
+    QueryPerformanceCounter(&End);
+    Graph->AddHashedKeysElapsedCycles.QuadPart = Cycles = (
+        End.QuadPart - Start.QuadPart
+    );
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+GraphAddKeysOriginalSeededHashRoutines(
+    PGRAPH Graph,
+    ULONG NumberOfKeys,
+    PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    Add all keys to the hypergraph using the unique seeds to hash each key into
+    two vertex values, connected by a "hyper-edge".
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the keys will be added.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+--*/
+{
+    KEY Key;
+    EDGE Edge;
+    PEDGE Edges;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    LONGLONG Cycles;
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
+    ULARGE_INTEGER Hash;
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+
+    Table = Graph->Context->Table;
+    Edges = (PEDGE)Keys;
+
+    //
+    // Enumerate all keys in the input set, hash them into two unique vertices,
+    // then add them to the hypergraph.
+    //
+
+    Result = S_OK;
+    QueryPerformanceCounter(&Start);
+
+    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+        Key = *Edges++;
+
+        if (FAILED(Table->Vtbl->SeededHash(Table,
+                                           Key,
+                                           Graph->NumberOfSeeds,
+                                           &Graph->FirstSeed,
+                                           &Hash.QuadPart))) {
+            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            break;
+        }
+
+        ASSERT(Hash.HighPart != Hash.LowPart);
+
+        //
+        // Mask the individual vertices.
+        //
+
+        MASK_HASH(Hash.LowPart, &Vertex1);
+        MASK_HASH(Hash.HighPart, &Vertex2);
+
+        //
+        // We can't have two vertices point to the same location.
+        // Abort this graph attempt.
+        //
+
+        if (Vertex1 == Vertex2) {
+            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            break;
+        }
+
+        //
+        // Add the edge to the graph connecting these two vertices.
+        //
+
+        GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
+    }
+
+    QueryPerformanceCounter(&End);
+    Graph->AddKeysElapsedCycles.QuadPart = Cycles = (
+        End.QuadPart - Start.QuadPart
+    );
+
+Error:
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+GraphVerifyOriginalSeededHashRoutines(
     PGRAPH Graph
     )
 /*++
@@ -590,6 +1018,229 @@ Return Value:
             PrevCombined = (LONGLONG)PrevVertex1 + (LONGLONG)PrevVertex2;
 
             MASK_INDEX(PrevCombined, &PrevIndex);
+
+            Collisions++;
+
+        }
+
+        //
+        // Set the bit and store this key in the underlying values array.
+        //
+
+        SetGraphBit(AssignedBitmap, Bit);
+        Values[Index] = Key;
+
+    }
+
+    if (Collisions) {
+        Result = PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION;
+        goto Error;
+    }
+
+    NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
+
+    if (NumberOfAssignments != NumberOfKeys) {
+        Result =
+           PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION;
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (Graph->Values) {
+        Allocator->Vtbl->FreePointer(Allocator, &Graph->Values);
+    }
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+GraphVerify(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Verify a solved graph is working correctly using the new "Ex" hash routines.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph to be verified.
+
+Return Value:
+
+    S_OK - Graph was solved successfully.
+
+    PH_S_GRAPH_VERIFICATION_SKIPPED - The verification step was skipped.
+
+    E_POINTER - Graph was NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    E_UNEXPECTED - Internal error.
+
+    PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION - Collisions were
+        detected during graph validation.
+
+    PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION -
+        The number of value assignments did not equal the number of keys
+        during graph validation.
+
+--*/
+{
+    PRTL Rtl;
+    KEY Key;
+    KEY PreviousKey;
+    PKEY Keys;
+    EDGE Edge;
+    PEDGE Edges;
+    ULONG Bit;
+    ULONG Index;
+    ULONG PrevIndex;
+    ULONG HashMask;
+    ULONG IndexMask;
+    PULONG Values = NULL;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    VERTEX PrevVertex1;
+    VERTEX PrevVertex2;
+    PVERTEX Assigned;
+    PGRAPH_INFO Info;
+    ULONG NumberOfKeys;
+    ULONG NumberOfAssignments;
+    ULONG Collisions = 0;
+    ULARGE_INTEGER Hash;
+    ULARGE_INTEGER PrevHash;
+    HRESULT Result = S_OK;
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (SkipGraphVerification(Graph)) {
+        return PH_S_GRAPH_VERIFICATION_SKIPPED;
+    }
+
+    //
+    // Initialize aliases.
+    //
+
+    Info = Graph->Info;
+    Context = Info->Context;
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    HashMask = Table->HashMask;
+    IndexMask = Table->IndexMask;
+    Allocator = Graph->Allocator;
+    NumberOfKeys = Graph->NumberOfKeys;
+    Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
+    Assigned = Graph->Assigned;
+    SeededHashEx = SeededHashExRoutines[Table->HashFunctionId];
+
+    //
+    // Sanity check our assigned bitmap is clear.
+    //
+
+    NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
+    ASSERT(NumberOfAssignments == 0);
+
+    //
+    // Allocate a values array if one is not present.
+    //
+
+    Values = Graph->Values;
+
+    if (!Values) {
+        Values = Graph->Values = (PULONG)(
+            Allocator->Vtbl->Calloc(
+                Allocator,
+                Info->ValuesSizeInBytes,
+                sizeof(*Graph->Values)
+            )
+        );
+    }
+
+    if (!Values) {
+        return E_OUTOFMEMORY;
+    }
+
+    //
+    // Enumerate all keys in the input set and verify they can be resolved
+    // correctly from the assigned vertex array.
+    //
+
+    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+        Key = *Edges++;
+
+        //
+        // Hash the key.
+        //
+
+        Hash.QuadPart = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+
+        ASSERT(Hash.QuadPart);
+        ASSERT(Hash.HighPart != Hash.LowPart);
+
+        //
+        // Extract the individual vertices.
+        //
+
+        Vertex1 = Assigned[Hash.LowPart];
+        Vertex2 = Assigned[Hash.HighPart];
+
+        //
+        // Calculate the index by adding the assigned values together.
+        //
+
+        Index = (ULONG)((Vertex1 + Vertex2) & IndexMask);
+
+        Bit = Index;
+
+        //
+        // Make sure we haven't seen this bit before.
+        //
+
+        if (TestGraphBit(AssignedBitmap, Bit)) {
+
+            //
+            // We've seen this index before!  Get the key that previously
+            // mapped to it.
+            //
+
+            PreviousKey = Values[Index];
+
+            PrevHash.QuadPart = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+
+            PrevVertex1 = Assigned[PrevHash.LowPart];
+            PrevVertex2 = Assigned[PrevHash.HighPart];
+
+            PrevIndex = (ULONG)((PrevVertex1 + PrevVertex2) & IndexMask);
 
             Collisions++;
 
@@ -1966,14 +2617,19 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    HRESULT Result = S_OK;
+    HRESULT Result;
     PGRAPH_INFO Info;
     PGRAPH_INFO PrevInfo;
     PALLOCATOR Allocator;
+    ULONG ProtectionFlags;
     PPERFECT_HASH_TABLE Table;
+    SIZE_T VertexPairsSizeInBytes;
     PPERFECT_HASH_CONTEXT Context;
+    BOOLEAN LargePagesForVertexPairs;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
+    PRTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC Alloc;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
 
     //
     // Validate arguments.
@@ -2007,6 +2663,7 @@ Return Value:
     Allocator = Graph->Allocator;
     Table = Context->Table;
     TableInfoOnDisk = Table->TableInfoOnDisk;
+    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
 
     //
     // Set the relevant graph fields based on the provided info.
@@ -2030,6 +2687,8 @@ Return Value:
     CopyInline(&Graph->Dimensions,
                &Info->Dimensions,
                sizeof(Graph->Dimensions));
+
+    Result = S_OK;
 
     //
     // Allocate (or reallocate) arrays.
@@ -2063,6 +2722,62 @@ Return Value:
     ALLOC_ARRAY(Next, PEDGE);
     ALLOC_ARRAY(First, PVERTEX);
     ALLOC_ARRAY(Assigned, PASSIGNED);
+
+    //
+    // If we're hashing all keys first, prepare the vertex pairs array if it
+    // hasn't already been prepared.  (This array is sized off the number of
+    // keys, which never changes upon subsequent table resize events, so it
+    // never needs to be reallocated to a larger size (unlike the other arrays
+    // above, which grow larger upon each resize event).)
+    //
+
+    if (TableCreateFlags.HashAllKeysFirst) {
+
+        ASSERT(Info->VertexPairsSizeInBytes != 0);
+        VertexPairsSizeInBytes = (SIZE_T)Info->VertexPairsSizeInBytes;
+
+        if (Graph->VertexPairs == NULL) {
+
+            //
+            // The array hasn't yet been allocated, so, do that now.
+            //
+
+            ProtectionFlags = PAGE_READWRITE;
+
+            if (Graph->Flags.WantsWriteCombiningForVertexPairsArray) {
+                ProtectionFlags |= PAGE_WRITECOMBINE;
+            }
+
+            LargePagesForVertexPairs = (BOOLEAN)(
+                TableCreateFlags.TryLargePagesForVertexPairs != FALSE
+            );
+
+            Alloc = Rtl->Vtbl->TryLargePageVirtualAlloc;
+            Graph->VertexPairs = Alloc(Rtl,
+                                       NULL,
+                                       VertexPairsSizeInBytes,
+                                       MEM_RESERVE | MEM_COMMIT,
+                                       ProtectionFlags,
+                                       &LargePagesForVertexPairs);
+
+            if (Graph->VertexPairs == NULL) {
+                Result = E_OUTOFMEMORY;
+                goto Error;
+            }
+
+            //
+            // Update the graph flags indicating whether or not large pages
+            // were used, and if write-combining is active.
+            //
+
+            Graph->Flags.VertexPairsArrayUsesLargePages =
+                LargePagesForVertexPairs;
+
+            Graph->Flags.VertexPairsArrayIsWriteCombined =
+                Graph->Flags.WantsWriteCombiningForVertexPairsArray;
+
+        }
+    }
 
     //
     // Set the bitmap sizes and then allocate (or reallocate) the bitmap
@@ -2265,12 +2980,17 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    BOOL Success;
     PGRAPH_INFO Info;
     HRESULT Result = PH_S_CONTINUE_GRAPH_SOLVING;
-    PPERFECT_HASH_CONTEXT Context;
+    ULONG OldProtection;
+    ULONG ProtectionFlags;
     ULONG TotalNumberOfPages;
     ULONG TotalNumberOfLargePages;
     ULONG TotalNumberOfCacheLines;
+    PPERFECT_HASH_CONTEXT Context;
+    SIZE_T VertexPairsSizeInBytes;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
     PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
@@ -2283,6 +3003,7 @@ Return Value:
     Context = Graph->Context;
     Info = Graph->Info;
     Rtl = Context->Rtl;
+    TableCreateFlags.AsULong = Context->Table->TableCreateFlags.AsULong;
 
     MAYBE_STOP_GRAPH_SOLVING(Graph);
 
@@ -2375,6 +3096,58 @@ Return Value:
     EMPTY_ARRAY(Next);
     EMPTY_ARRAY(Edges);
 
+    if (TableCreateFlags.HashAllKeysFirst) {
+
+        ASSERT(Graph->VertexPairs != NULL);
+
+        //
+        // If this is not the first time Reset() has been called for this graph
+        // instance, the vertex pairs array's page protection may be set to
+        // PAGE_READONLY.  This will occur if the previous graph attempt was
+        // able to hash all keys without collision, but detected a cyclic graph,
+        // and thus, wasn't a successful solve.  Or it was a successful solve,
+        // became the best graph for a while, but then was beaten by another,
+        // better graph solving attempt, and thus, was thrown back into the
+        // solving mix (when in find best graph mode).
+        //
+        // We can detect this situation by determining if the write-combining
+        // behavior is requested but the array is not currently indicating as
+        // write-combined.
+        //
+        // N.B. We don't need to clear the individual vertex pair array elements
+        //      like we do with the first/next/edge arrays as they have no state
+        //      associated with the notion of being visited or not.  (Whereas we
+        //      need to set the first/next/edge arrays to -1 before solving.)
+        //
+
+        if (Graph->Flags.WantsWriteCombiningForVertexPairsArray &&
+            !Graph->Flags.VertexPairsArrayIsWriteCombined) {
+
+            //
+            // Restore the write-combine (and read/write) page protection so
+            // that the vertex pairs can be subsequently written to without
+            // trapping.
+            //
+
+            ASSERT(Info->VertexPairsSizeInBytes != 0);
+            VertexPairsSizeInBytes = (SIZE_T)Info->VertexPairsSizeInBytes;
+            ProtectionFlags = PAGE_READWRITE | PAGE_WRITECOMBINE;
+
+            Success = VirtualProtect(Graph->VertexPairs,
+                                     VertexPairsSizeInBytes,
+                                     ProtectionFlags,
+                                     &OldProtection);
+
+            if (Success) {
+                Graph->Flags.VertexPairsArrayIsWriteCombined = TRUE;
+            } else {
+                SYS_ERROR(VirtualProtect);
+                Result = PH_E_SYSTEM_CALL_FAILED;
+                goto End;
+            }
+        }
+    }
+
     //
     // Clear any remaining values.
     //
@@ -2389,6 +3162,10 @@ Return Value:
 
     Graph->Flags.Shrinking = FALSE;
     Graph->Flags.IsAcyclic = FALSE;
+
+    Graph->AddKeysElapsedCycles.QuadPart = 0;
+    Graph->HashKeysElapsedCycles.QuadPart = 0;
+    Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
 
     //
     // Skip the memory coverage reset if we're in "first graph wins" mode and
