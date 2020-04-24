@@ -1248,12 +1248,10 @@ Return Value:
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
     PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
         ExtractTableCreateArgs;
-    PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters;
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters = { 0 };
 
     TableCreateParameters.SizeOfStruct = sizeof(TableCreateParameters);
-    TableCreateParameters.NumberOfElements = 0;
     TableCreateParameters.Allocator = Context->Allocator;
-    TableCreateParameters.Params = NULL;
 
     ExtractTableCreateArgs = Context->Vtbl->ExtractTableCreateArgsFromArgvW;
     Result = ExtractTableCreateArgs(Context,
