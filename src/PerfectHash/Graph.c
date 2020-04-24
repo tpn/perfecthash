@@ -2541,6 +2541,13 @@ Return Value:
             goto End;
         }
 
+        //
+        // Normalize the return code back to S_OK.
+        //
+
+        ASSERT(Result == S_OK || Result == S_FALSE);
+        Result = S_OK;
+
     } else {
 
         //
