@@ -86,6 +86,7 @@ Return Value:
     Edge1 = Edge;
     Edge2 = Edge1 + Graph->NumberOfEdges;
 
+#ifdef _DEBUG
     //
     // Invariant checks:
     //
@@ -99,6 +100,7 @@ Return Value:
     ASSERT(Vertex2 < Graph->NumberOfVertices);
     ASSERT(Edge1 < Graph->NumberOfEdges);
     ASSERT(!Graph->Flags.Shrinking);
+#endif
 
     //
     // Insert the first edge.

@@ -594,15 +594,13 @@ extern PERFECT_HASH_TABLE_GET_FILE PerfectHashTableGetFile;
 // Declare the functions.
 //
 
-#ifndef __INTELLISENSE__
-
 #define EXPAND_AS_HASH_FUNC_DECL(Name, NumberOfSeeds, SeedMasks) \
-    extern PERFECT_HASH_TABLE_HASH PerfectHashTableHash##Name;
+    PERFECT_HASH_TABLE_HASH PerfectHashTableHash##Name;
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNC_DECL);
 
 #define EXPAND_AS_SEEDED_HASH_FUNC_DECL(Name, NumberOfSeeds, SeedMasks) \
-    extern PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHash##Name;
+    PERFECT_HASH_TABLE_SEEDED_HASH PerfectHashTableSeededHash##Name;
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH_FUNC_DECL);
 
@@ -612,6 +610,18 @@ PERFECT_HASH_TABLE_MASK_HASH PerfectHashTableMaskHashAnd;
 PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexModulus;
 PERFECT_HASH_TABLE_MASK_INDEX PerfectHashTableMaskIndexAnd;
 
-#endif
+//
+// "Ex" versions of hash and seeded hash routines.
+//
+
+#define EXPAND_AS_HASH_EX_FUNC_DECL(Name, NumberOfSeeds, SeedMasks) \
+    PERFECT_HASH_TABLE_HASH_EX PerfectHashTableHashEx##Name;
+
+PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_EX_FUNC_DECL);
+
+#define EXPAND_AS_SEEDED_HASH_EX_FUNC_DECL(Name, NumberOfSeeds, SeedMasks) \
+    PERFECT_HASH_TABLE_SEEDED_HASH_EX PerfectHashTableSeededHashEx##Name;
+
+PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH_EX_FUNC_DECL);
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

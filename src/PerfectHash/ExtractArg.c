@@ -155,6 +155,11 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(UseNonTemporalAvx2Routines);
     DECL_ARG(DisableCsvOutputFile);
     DECL_ARG(ClampNumberOfEdges);
+    DECL_ARG(UseOriginalSeededHashRoutines);
+    DECL_ARG(HashAllKeysFirst);
+    DECL_ARG(EnableWriteCombineForVertexPairs);
+    DECL_ARG(RemoveWriteCombineAfterSuccessfulHashKeys);
+    DECL_ARG(TryLargePagesForVertexPairs);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -193,6 +198,11 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(UseNonTemporalAvx2Routines);
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableCsvOutputFile);
     SET_FLAG_AND_RETURN_IF_EQUAL(ClampNumberOfEdges);
+    SET_FLAG_AND_RETURN_IF_EQUAL(UseOriginalSeededHashRoutines);
+    SET_FLAG_AND_RETURN_IF_EQUAL(HashAllKeysFirst);
+    SET_FLAG_AND_RETURN_IF_EQUAL(EnableWriteCombineForVertexPairs);
+    SET_FLAG_AND_RETURN_IF_EQUAL(RemoveWriteCombineAfterSuccessfulHashKeys);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForVertexPairs);
 
     return S_FALSE;
 }

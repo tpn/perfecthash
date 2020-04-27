@@ -452,6 +452,13 @@ Return Value:
     }
 
     //
+    // Copy the table create flags into the TLS context as well; they are now
+    // used by GraphInitialize() to tweak vtbl construction.
+    //
+
+    TlsContext->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
+
+    //
     // Create graph instances and capture the resulting pointer in the array
     // we just allocated above.
     //
@@ -501,6 +508,12 @@ Return Value:
         //
 
         Graph->Flags.SkipVerification = TableCreateFlags.SkipGraphVerification;
+
+        Graph->Flags.WantsWriteCombiningForVertexPairsArray =
+            TableCreateFlags.EnableWriteCombineForVertexPairs;
+
+        Graph->Flags.RemoveWriteCombineAfterSuccessfulHashKeys =
+            TableCreateFlags.RemoveWriteCombineAfterSuccessfulHashKeys;
 
         Graph->Index = Index;
         Graphs[Index] = Graph;
@@ -1073,6 +1086,14 @@ FinishedSolution:
     Table->MaximumGraphTraversalDepth = Graph->MaximumTraversalDepth;
 
     //
+    // Capture whether large pages were used for the vertex pairs array.
+    //
+
+    Table->Flags.VertexPairsArrayUsesLargePages = (
+        Graph->Flags.VertexPairsArrayUsesLargePages
+    );
+
+    //
     // Note this graph as the one solved to the context.  This is used by the
     // save file work callback we dispatch below.
     //
@@ -1518,6 +1539,7 @@ Return Value:
     ULONGLONG EdgesSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
     ULONGLONG AssignedSizeInBytes;
+    ULONGLONG VertexPairsSizeInBytes;
     PPERFECT_HASH_CONTEXT Context;
     ULARGE_INTEGER AllocSize;
     ULARGE_INTEGER NumberOfEdges;
@@ -1527,6 +1549,7 @@ Return Value:
     ULARGE_INTEGER VisitedVerticesBitmapBufferSizeInBytes;
     ULARGE_INTEGER AssignedBitmapBufferSizeInBytes;
     ULARGE_INTEGER IndexBitmapBufferSizeInBytes;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
     PTRAILING_ZEROS_32 TrailingZeros32;
     PTRAILING_ZEROS_64 TrailingZeros64;
@@ -1561,6 +1584,7 @@ Return Value:
     PopulationCount32 = Rtl->PopulationCount32;
     RoundUpPowerOfTwo32 = Rtl->RoundUpPowerOfTwo32;
     RoundUpNextPowerOfTwo32 = Rtl->RoundUpNextPowerOfTwo32;
+    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
 
     //
     // If a previous Info struct pointer has been passed, copy the current
@@ -1856,6 +1880,14 @@ Return Value:
         RTL_ELEMENT_SIZE(GRAPH, Assigned) * NumberOfVertices.QuadPart
     );
 
+    if (TableCreateFlags.HashAllKeysFirst == FALSE) {
+        VertexPairsSizeInBytes = 0;
+    } else {
+        VertexPairsSizeInBytes = ALIGN_UP_ZMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, VertexPairs) * (ULONGLONG)NumberOfKeys
+        );
+    }
+
     //
     // Calculate the size required for the values array.  This is used as part
     // of verification, where we essentially do Insert(Key, Key) in combination
@@ -1924,6 +1956,7 @@ Return Value:
         NextSizeInBytes +
         FirstSizeInBytes +
         AssignedSizeInBytes +
+        VertexPairsSizeInBytes +
         ValuesSizeInBytes +
 
         Info->NumberOfAssignedPerPageSizeInBytes +
@@ -1979,6 +2012,7 @@ Return Value:
     Info->NextSizeInBytes = NextSizeInBytes;
     Info->FirstSizeInBytes = FirstSizeInBytes;
     Info->AssignedSizeInBytes = AssignedSizeInBytes;
+    Info->VertexPairsSizeInBytes = VertexPairsSizeInBytes;
     Info->ValuesSizeInBytes = ValuesSizeInBytes;
 
     Info->DeletedEdgesBitmapBufferSizeInBytes = (

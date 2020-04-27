@@ -447,6 +447,50 @@ Abstract:
 //         graph solving probability for a given key set.  Only applies to
 //         And masking (i.e. not modulus masking).
 // 
+//     --UseOriginalSeededHashRoutines
+// 
+//         When set, uses the original (slower) seeded hash routines (the ones
+//         that return an HRESULT return code and write the hash value to an
+//         output parameter) -- as opposed to using the newer, faster, "Ex"
+//         version of the hash routines.
+// 
+//         N.B. This flag is incompatible with --HashAllKeysFirst.
+// 
+//     --HashAllKeysFirst
+// 
+//         When set, changes the graph solving logic such that vertices (i.e.
+//         hash values) are generated for all keys up-front, prior to graph
+//         construction.  The hashed keys are stored in a "vertex pair" array.
+//         The page table type and page protection applied to this array can be
+//         further refined by the following flags.
+// 
+//         N.B. This flag is incompatible with --UseOriginalSeededHashRoutines.
+// 
+//     --EnableWriteCombineForVertexPairs
+// 
+//         When set, allocates the memory for the vertex pairs array with
+//         write-combine page protection.
+// 
+//         N.B. Only applies when --HashAllKeysFirst is set.  Incompatible with
+//              --TryLargePagesForVertexPairs.
+// 
+//     --RemoveWriteCombineAfterSuccessfulHashKeys
+// 
+//         When set, automatically changes the page protection of the vertex
+//         pairs array (after successful hashing of all keys without any vertex
+//         collisions) from PAGE_READWRITE|PAGE_WRITECOMBINE to PAGE_READONLY.
+// 
+//         N.B. Only applies when the flags --EnableWriteCombineForVertexPairs
+//              and --HashAllKeysFirst is set.
+// 
+//     --TryLargePagesForVertexPairs
+// 
+//         When set, tries to allocate the array for vertex pairs using large
+//         pages.
+// 
+//         N.B. Only applies when HashAllKeysFirst is set.  Incompatible with
+//              EnableWriteCombineForVertexPairs.
+// 
 //     --UsePreviousTableSize
 // 
 //         When set, uses any previously-recorded table sizes associated with
@@ -820,6 +864,50 @@ Abstract:
 //         option used to evaluate the impact of the number of edges on the
 //         graph solving probability for a given key set.  Only applies to
 //         And masking (i.e. not modulus masking).
+// 
+//     --UseOriginalSeededHashRoutines
+// 
+//         When set, uses the original (slower) seeded hash routines (the ones
+//         that return an HRESULT return code and write the hash value to an
+//         output parameter) -- as opposed to using the newer, faster, "Ex"
+//         version of the hash routines.
+// 
+//         N.B. This flag is incompatible with --HashAllKeysFirst.
+// 
+//     --HashAllKeysFirst
+// 
+//         When set, changes the graph solving logic such that vertices (i.e.
+//         hash values) are generated for all keys up-front, prior to graph
+//         construction.  The hashed keys are stored in a "vertex pair" array.
+//         The page table type and page protection applied to this array can be
+//         further refined by the following flags.
+// 
+//         N.B. This flag is incompatible with --UseOriginalSeededHashRoutines.
+// 
+//     --EnableWriteCombineForVertexPairs
+// 
+//         When set, allocates the memory for the vertex pairs array with
+//         write-combine page protection.
+// 
+//         N.B. Only applies when --HashAllKeysFirst is set.  Incompatible with
+//              --TryLargePagesForVertexPairs.
+// 
+//     --RemoveWriteCombineAfterSuccessfulHashKeys
+// 
+//         When set, automatically changes the page protection of the vertex
+//         pairs array (after successful hashing of all keys without any vertex
+//         collisions) from PAGE_READWRITE|PAGE_WRITECOMBINE to PAGE_READONLY.
+// 
+//         N.B. Only applies when the flags --EnableWriteCombineForVertexPairs
+//              and --HashAllKeysFirst is set.
+// 
+//     --TryLargePagesForVertexPairs
+// 
+//         When set, tries to allocate the array for vertex pairs using large
+//         pages.
+// 
+//         N.B. Only applies when HashAllKeysFirst is set.  Incompatible with
+//              EnableWriteCombineForVertexPairs.
 // 
 //     --UsePreviousTableSize
 // 

@@ -1214,8 +1214,9 @@ GRAPH_VTBL GraphInterface = {
     &GraphCalculateAssignedMemoryCoverageForKeysSubset,
     &GraphRegisterSolved,
     &GraphShouldWeContinueTryingToSolve,
+    &GraphAddKeys,
 };
-VERIFY_VTBL_SIZE(GRAPH, 11);
+VERIFY_VTBL_SIZE(GRAPH, 12);
 
 //
 // Interface array.

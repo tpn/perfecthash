@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -120,6 +120,12 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 #define UNICODE_NULL ((WCHAR)0)
 
 typedef _Null_terminated_ CONST CHAR *PCSZ;
+
+//
+// Define a helper union that allows easy access to the bytes and shorts
+// making up a ULONG.  This is predominantly used by the hash routines that
+// have randomized shift/rotate instructions.
+//
 
 typedef union ULONG_BYTES {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
@@ -2616,10 +2622,62 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG ClampNumberOfEdges:1;
 
         //
+        // When set, uses the original (slower) seeded hash routines (the ones
+        // that return an HRESULT return code and write the hash value to an
+        // output parameter) -- as opposed to using the newer, faster, "Ex"
+        // version of the hash routines.
+        //
+        // N.B. This flag is incompatible with HashAllKeysFirst.
+        //
+
+        ULONG UseOriginalSeededHashRoutines:1;
+
+        //
+        // When set, changes the graph solving logic such that vertices (i.e.
+        // hash values) are generated for all keys up-front, prior to graph
+        // construction.  (Experimental.)
+        //
+        // N.B. This flag is incompatible with UseOriginalSeededHashRoutines.
+        //
+
+        ULONG HashAllKeysFirst:1;
+
+        //
+        // When set, allocates the memory for the vertex pairs array with
+        // write-combine page protection.
+        //
+        // N.B. Only applies when HashAllKeysFirst is set.  Incompatible with
+        //      TryLargePagesForVertexPairs.
+        //
+
+        ULONG EnableWriteCombineForVertexPairs:1;
+
+        //
+        // When set, automatically changes the page protection of the vertex
+        // pairs array (after successful hashing of all keys without any vertex
+        // collisions) from PAGE_READWRITE|PAGE_WRITECOMBINE to PAGE_READONLY.
+        //
+        // N.B. Only applies when the flags EnableWriteCombineForVertexPairs
+        //      and HashAllKeysFirst is set.
+        //
+
+        ULONG RemoveWriteCombineAfterSuccessfulHashKeys:1;
+
+        //
+        // When set, tries to allocate the array for vertex pairs using large
+        // pages.
+        //
+        // N.B. Only applies when HashAllKeysFirst is set.  Incompatible with
+        //      EnableWriteCombineForVertexPairs.
+        //
+
+        ULONG TryLargePagesForVertexPairs:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:11;
+        ULONG Unused:6;
     };
 
     LONG AsLong;
@@ -2642,6 +2700,49 @@ IsValidTableCreateFlags(
 
     if (TableCreateFlags->Unused != 0) {
         return E_FAIL;
+    }
+
+    if (TableCreateFlags->UseOriginalSeededHashRoutines &&
+        TableCreateFlags->HashAllKeysFirst) {
+        return E_INVALIDARG;
+    }
+
+    if (!TableCreateFlags->HashAllKeysFirst) {
+
+        //
+        // The flags related to vertex pairs are not applicable when we're not
+        // hashing all keys up-front (as that's the only time when we use a
+        // vertex pair array).
+        //
+
+        if (TableCreateFlags->TryLargePagesForVertexPairs ||
+            TableCreateFlags->EnableWriteCombineForVertexPairs ||
+            TableCreateFlags->RemoveWriteCombineAfterSuccessfulHashKeys) {
+            return E_INVALIDARG;
+        }
+
+    } else if (TableCreateFlags->TryLargePagesForVertexPairs) {
+
+        //
+        // We can't use write-combine page protection on vertex pairs if they're
+        // backed by large pages.
+        //
+
+        if (TableCreateFlags->EnableWriteCombineForVertexPairs) {
+            return E_INVALIDARG;
+        }
+
+    } else if (TableCreateFlags->RemoveWriteCombineAfterSuccessfulHashKeys) {
+
+        //
+        // If write-combining hasn't been requested for vertex pairs, it makes
+        // no sense to request automatic write-combine removal.
+        //
+
+        if (!TableCreateFlags->EnableWriteCombineForVertexPairs) {
+            return E_INVALIDARG;
+        }
+
     }
 
     return S_OK;
@@ -3299,10 +3400,19 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG ValuesArrayUsesLargePages:1;
 
         //
+        // When set, indicates the vertex pairs array was allocated with large
+        // pages (at the individual graph level).  Only applies when the table
+        // create flags --HashAllKeysFirst and --TryLargePagesForVertexPairs
+        // are present.
+        //
+
+        ULONG VertexPairsArrayUsesLargePages:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:27;
     };
 
     LONG AsLong;
