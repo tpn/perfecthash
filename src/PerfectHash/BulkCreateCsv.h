@@ -207,6 +207,18 @@ Abstract:
           Table->MaximumGraphTraversalDepth,                                                 \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(AddKeysElapsedCycles,                                                              \
+          Table->AddKeysElapsedCycles.QuadPart,                                              \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(HashKeysElapsedCycles,                                                             \
+          Table->HashKeysElapsedCycles.QuadPart,                                             \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(AddHashedKeysElapsedCycles,                                                        \
+          Table->AddHashedKeysElapsedCycles.QuadPart,                                        \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(SolveMicroseconds,                                                                 \
           Context->SolveElapsedMicroseconds.QuadPart,                                        \
           OUTPUT_INT)                                                                        \

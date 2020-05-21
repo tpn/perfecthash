@@ -1094,6 +1094,19 @@ FinishedSolution:
     );
 
     //
+    // Copy the cycle counters from the winning graph.
+    //
+
+    Table->AddKeysElapsedCycles.QuadPart =
+        Graph->AddKeysElapsedCycles.QuadPart;
+
+    Table->HashKeysElapsedCycles.QuadPart =
+        Graph->HashKeysElapsedCycles.QuadPart;
+
+    Table->AddHashedKeysElapsedCycles.QuadPart =
+        Graph->AddHashedKeysElapsedCycles.QuadPart;
+
+    //
     // Note this graph as the one solved to the context.  This is used by the
     // save file work callback we dispatch below.
     //
