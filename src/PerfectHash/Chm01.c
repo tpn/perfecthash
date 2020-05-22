@@ -1094,7 +1094,7 @@ FinishedSolution:
     );
 
     //
-    // Copy the cycle counters from the winning graph.
+    // Copy the cycle counters and elapsed microseconds from the winning graph.
     //
 
     Table->AddKeysElapsedCycles.QuadPart =
@@ -1105,6 +1105,15 @@ FinishedSolution:
 
     Table->AddHashedKeysElapsedCycles.QuadPart =
         Graph->AddHashedKeysElapsedCycles.QuadPart;
+
+    Table->AddKeysElapsedMicroseconds.QuadPart =
+        Graph->AddKeysElapsedMicroseconds.QuadPart;
+
+    Table->HashKeysElapsedMicroseconds.QuadPart =
+        Graph->HashKeysElapsedMicroseconds.QuadPart;
+
+    Table->AddHashedKeysElapsedMicroseconds.QuadPart =
+        Graph->AddHashedKeysElapsedMicroseconds.QuadPart;
 
     //
     // Note this graph as the one solved to the context.  This is used by the

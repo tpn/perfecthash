@@ -219,6 +219,18 @@ Abstract:
           Table->AddHashedKeysElapsedCycles.QuadPart,                                        \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(AddKeysElapsedMicroseconds,                                                        \
+          Table->AddKeysElapsedMicroseconds.QuadPart,                                        \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(HashKeysElapsedMicroseconds,                                                       \
+          Table->HashKeysElapsedMicroseconds.QuadPart,                                       \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(AddHashedKeysElapsedMicroseconds,                                                  \
+          Table->AddHashedKeysElapsedMicroseconds.QuadPart,                                  \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(SolveMicroseconds,                                                                 \
           Context->SolveElapsedMicroseconds.QuadPart,                                        \
           OUTPUT_INT)                                                                        \

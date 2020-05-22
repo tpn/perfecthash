@@ -85,6 +85,7 @@
     <ClInclude Include="..\..\include\CompiledPerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHashErrors.h" />
+    <ClInclude Include="..\..\include\PerfectHashEvents.h" />
     <ClInclude Include="BulkCreateBestCsv.h" />
     <ClInclude Include="Chm01.h" />
     <ClInclude Include="Chm01FileWork.h" />
@@ -152,6 +153,7 @@
     <ClInclude Include="PerfectHashContext.h" />
     <ClInclude Include="PerfectHashDirectory.h" />
     <ClInclude Include="PerfectHashErrorHandling.h" />
+    <ClInclude Include="PerfectHashEventsPrivate.h" />
     <ClInclude Include="PerfectHashFile.h" />
     <ClInclude Include="PerfectHashFileWork.h" />
     <ClInclude Include="PerfectHashKeys.h" />
@@ -261,10 +263,11 @@
     <ClCompile Include="RtlUuid.c" />
     <ClCompile Include="Security.c" />
     <ClCompile Include="SymbolLoader.c" />
+    <ClCompile Include="VCProjectFileChunks.c" />
+    <ClCompile Include="memset.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="VCProjectFileChunks.c" />
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x64'">
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm" />

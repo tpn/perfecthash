@@ -1,2 +1,3 @@
 LANGUAGE 0x9,0x1
 1 11 "PerfectHashErrors_English.bin"
+1 WEVT_TEMPLATE "PerfectHashErrorsTEMP.BIN"

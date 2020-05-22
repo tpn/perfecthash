@@ -297,6 +297,15 @@
     <ClInclude Include="..\..\include\PerfectHash.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\PerfectHashEvents.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\PerfectHashErrors.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\CompiledPerfectHash.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Rtl.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
@@ -317,9 +326,6 @@
     </ClInclude>
     <ClInclude Include="PerfectHashTls.h">
       <Filter>Private Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\PerfectHashErrors.h">
-      <Filter>Public Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashErrorHandling.h">
       <Filter>Private Header Files</Filter>
@@ -350,9 +356,6 @@
     </ClInclude>
     <ClInclude Include="Chm01.h">
       <Filter>Private Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\CompiledPerfectHash.h">
-      <Filter>Public Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashDirectory.h">
       <Filter>Private Header Files</Filter>
@@ -556,6 +559,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BulkCreateBestCsv.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashEventsPrivate.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -13,6 +13,28 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashEventsPrivate.h"
+
+//
+// Helper macro for graph event writing.
+//
+
+#define EVENT_WRITE_GRAPH(Name)   \
+    EventWriteGraph##Name##Event( \
+        Edge,                     \
+        NumberOfKeys,             \
+        Result,                   \
+        Cycles,                   \
+        Microseconds,             \
+        Graph->Seed1,             \
+        Graph->Seed2,             \
+        Graph->Seed3,             \
+        Graph->Seed4,             \
+        Graph->Seed5,             \
+        Graph->Seed6,             \
+        Graph->Seed7,             \
+        Graph->Seed8              \
+    )
 
 //
 // Forward decl.
@@ -453,6 +475,7 @@ Return Value:
     PEDGE Edges;
     ULONG Mask;
     LONGLONG Cycles;
+    LONGLONG Microseconds;
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
     ULARGE_INTEGER Hash;
@@ -494,6 +517,10 @@ Return Value:
     Graph->AddKeysElapsedCycles.QuadPart = Cycles = (
         End.QuadPart - Start.QuadPart
     );
+    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
+    Graph->AddKeysElapsedMicroseconds.QuadPart = Microseconds;
+
+    EVENT_WRITE_GRAPH(AddKeys);
 
     return Result;
 }
@@ -539,6 +566,7 @@ Return Value:
     BOOL Success;
     HRESULT Result;
     LONGLONG Cycles;
+    LONGLONG Microseconds;
     VERTEX_PAIR Hash;
     GRAPH_FLAGS Flags;
     LARGE_INTEGER End;
@@ -567,8 +595,7 @@ Return Value:
     VertexPairs = (PULONGLONG)Graph->VertexPairs;
 
     //
-    // Enumerate all keys in the input set, hash them into two unique vertices,
-    // then add them to the hypergraph.
+    // Enumerate all keys in the input set and hash them into the vertex arrays.
     //
 
     QueryPerformanceCounter(&Start);
@@ -590,6 +617,10 @@ Return Value:
     Graph->HashKeysElapsedCycles.QuadPart = Cycles = (
         End.QuadPart - Start.QuadPart
     );
+    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
+    Graph->HashKeysElapsedMicroseconds.QuadPart = Microseconds;
+
+    EVENT_WRITE_GRAPH(HashKeys);
 
     if (SUCCEEDED(Result)) {
 
@@ -685,6 +716,7 @@ Return Value:
 {
     EDGE Edge;
     LONGLONG Cycles;
+    LONGLONG Microseconds;
     LARGE_INTEGER Start;
     LARGE_INTEGER End;
     HRESULT Result;
@@ -718,6 +750,11 @@ Return Value:
     Graph->AddHashedKeysElapsedCycles.QuadPart = Cycles = (
         End.QuadPart - Start.QuadPart
     );
+
+    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
+    Graph->AddHashedKeysElapsedMicroseconds.QuadPart = Microseconds;
+
+    EventWriteGraphAddHashedKeysEvent(NumberOfKeys, Cycles, Microseconds);
 
     return S_OK;
 }

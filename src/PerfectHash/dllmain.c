@@ -22,6 +22,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashEventsPrivate.h"
 
 HMODULE PerfectHashModule;
 
@@ -177,6 +178,10 @@ _DllMainCRTStartup(
                 return FALSE;
             }
 
+            if (EventRegisterPerfectHash() != ERROR_SUCCESS) {
+                return FALSE;
+            }
+
             break;
         case DLL_THREAD_ATTACH:
             break;
@@ -184,6 +189,10 @@ _DllMainCRTStartup(
             break;
         case DLL_PROCESS_DETACH:
             if (!PerfectHashTlsProcessDetach(Module, Reason, Reserved)) {
+                NOTHING;
+            }
+
+            if (EventUnregisterPerfectHash() != ERROR_SUCCESS) {
                 NOTHING;
             }
             break;

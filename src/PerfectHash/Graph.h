@@ -1018,6 +1018,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     LARGE_INTEGER AddHashedKeysElapsedCycles;
 
     //
+    // Elapsed microseconds of the GraphAddKeys() routine.
+    //
+
+    LARGE_INTEGER AddKeysElapsedMicroseconds;
+
+    //
+    // Elapsed microseconds of the GraphHashKeys() routine, if used.
+    //
+
+    LARGE_INTEGER HashKeysElapsedMicroseconds;
+
+    //
+    // Elapsed microseconds of the GraphAddHashedKeys() routine, if used.
+    //
+
+    LARGE_INTEGER AddHashedKeysElapsedMicroseconds;
+
+    //
     // The graph interface.
     //
 
