@@ -139,6 +139,48 @@ def bytes_to_human(b):
         i += 1
     return bytes_conv_table[i](b)
 
+def milliseconds_to_microseconds(ms):
+    return ms * 1000
+
+def milliseconds_to_ticks(ms, frequency):
+    nanos_per_tick = 1.0 / float(frequency)
+    nanos = ms * 1e-9
+    ticks = nanos / nanos_per_tick
+    return ticks
+
+def filetime_utc_to_datetime_utc(ft):
+    micro = ft / 10
+    (seconds, micro) = divmod(micro, 1000000)
+    (days, seconds) = divmod(seconds, 86400)
+    base = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc)
+    delta = timedelta(days, seconds, micro)
+    dt = base + delta
+    return dt
+
+def datetime_utc_to_local_tz(dt):
+    return dt.replace(tzinfo=datetime.timezone.utc).astimezone(tz=None)
+
+def filetime_utc_to_local_tz(ft):
+    return datetime_utc_to_local_tz(filetime_utc_to_datetime_utc(ft))
+
+def datetime_to_perfecthash_time(dt):
+    return dt.strftime('%Y-%m-%d %H:%M:%S.%f')
+
+def filetime_utc_to_local_tz_perfecthash_time(ft):
+    dt = filetime_utc_to_local_tz(ft)
+    return datetime_to_perfecthash_time(dt)
+
+def nanos_per_frame(fps):
+    return (1.0 / float(fps)) * 1e9
+
+def frames_per_second_to_ticks(fps, frequency=None):
+    return ((1.0 / float(fps)) / (1.0 / float(frequency)))
+
+def round_to_pages(size, page_size=4096):
+    return (
+        (size + page_size - 1) & ~(page_size -1)
+    )
+
 def hex_zfill(h, bits=64):
     s = str(hex(h | (1 << bits+4)))[3:]
     div = (bits >> 3)
@@ -152,6 +194,108 @@ def bin_zfill(h, bits=64):
     high = s[:div]
     low = s[div:]
     return '0b%s`%s' % (high, low)
+
+def percent_change(old, new):
+    diff = float(old) - float(new)
+    return (diff / old) * 100.0
+
+def align_down(address, alignment):
+    """
+    >>> hex(align_down(0x00007ffd11483294, 2)).replace('L', '')
+    '0x7ffd11483294'
+
+    >>> hex(align_down(0x00007ffd11483294, 4)).replace('L', '')
+    '0x7ffd11483294'
+
+    >>> hex(align_down(0x00007ffd11483294, 8)).replace('L', '')
+    '0x7ffd11483290'
+
+    >>> hex(align_down(0x00007ffd11483294, 16)).replace('L', '')
+    '0x7ffd11483290'
+
+    >>> hex(align_down(0x00007ffd11483294, 256)).replace('L', '')
+    '0x7ffd11483200'
+
+    >>> hex(align_down(0x00007ffd11483294, 512)).replace('L', '')
+    '0x7ffd11483200'
+
+    """
+    return address & ~(alignment-1)
+
+def test_align_down():
+    return [
+        hex(align_down(0x00007ffd11483294, 2)).replace('L', ''),
+        hex(align_down(0x00007ffd11483294, 4)).replace('L', ''),
+        hex(align_down(0x00007ffd11483294, 8)).replace('L', ''),
+        hex(align_down(0x00007ffd11483294, 16)).replace('L', ''),
+        hex(align_down(0x00007ffd11483294, 256)).replace('L', ''),
+        hex(align_down(0x00007ffd11483294, 512)).replace('L', ''),
+    ]
+
+def align_up(address, alignment):
+    """
+    >>> hex(align_up(0x00007ffd11483294, 2)).replace('L', '')
+    '0x7ffd11483294'
+
+    >>> hex(align_up(0x00007ffd11483294, 4)).replace('L', '')
+    '0x7ffd11483294'
+
+    >>> hex(align_up(0x00007ffd11483294, 8)).replace('L', '')
+    '0x7ffd11483298'
+
+    >>> hex(align_up(0x00007ffd11483294, 16)).replace('L', '')
+    '0x7ffd114832a0'
+
+    >>> hex(align_up(0x00007ffd11483294, 256)).replace('L', '')
+    '0x7ffd11483300'
+
+    >>> hex(align_up(0x00007ffd11483294, 512)).replace('L', '')
+    '0x7ffd11483400'
+    """
+    return (address + (alignment-1)) & ~(alignment-1)
+
+def test_align_up():
+    return [
+        hex(align_up(0x00007ffd11483294, 2)).replace('L', ''),
+        hex(align_up(0x00007ffd11483294, 4)).replace('L', ''),
+        hex(align_up(0x00007ffd11483294, 8)).replace('L', ''),
+        hex(align_up(0x00007ffd11483294, 16)).replace('L', ''),
+        hex(align_up(0x00007ffd11483294, 256)).replace('L', ''),
+        hex(align_up(0x00007ffd11483294, 512)).replace('L', ''),
+    ]
+
+def trailing_zeros(address):
+    count = 0
+    addr = bin(address)
+    for c in reversed(addr):
+        if c != '0':
+            break
+        count += 1
+    return count
+
+def get_address_alignment(address):
+    """
+    >>> get_address_alignment(0x00007ffd11483294)
+    4
+    >>> get_address_alignment(0x00007ffd114832c1)
+    1
+    >>> get_address_alignment(0x00007ffd11483298)
+    8
+    >>> get_address_alignment(0x00007ffd11483200)
+    512
+    """
+    return 1 << trailing_zeros(address)
+
+def is_power_of_2(x):
+    return (x & (x - 1)) == 0
+
+def round_up_power_of_2(x):
+    return 1<<(x-1).bit_length()
+
+def round_up_next_power_of_2(x):
+    if is_power_of_2(x):
+        x += 1
+    return round_up_power_of_2(x)
 
 def lower(l):
     return [ s.lower() for s in l ]

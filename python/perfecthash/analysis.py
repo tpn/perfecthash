@@ -1,6 +1,10 @@
 #===============================================================================
 # Imports
 #===============================================================================
+from .util import (
+    filetime_utc_to_local_tz,
+    datetime_to_perfecthash_time,
+)
 
 #===============================================================================
 # Globals
@@ -51,8 +55,7 @@ KEYS_SLIM_1 = [
     'NumberOfTableResizeEvents',
     'Attempts',
     'FailedAttempts',
-    'PreMaskedVertexCollisionFailures',
-    'PostMaskedVertexCollisionFailures',
+    'VertexCollisionFailures',
     'CyclicGraphFailures',
     'BestCoverageAttempts',
     'ClampNumberOfEdges',
@@ -69,6 +72,12 @@ KEYS_SLIM_1 = [
     'SolveMicroseconds',
     'VerifyMicroseconds',
     'DeltaHashMinimumCycles',
+    'AddKeysElapsedCycles',
+    'HashKeysElapsedCycles',
+    'AddHashedKeysElapsedCycles',
+    'AddKeysElapsedMicroseconds',
+    'HashKeysElapsedMicroseconds',
+    'AddHashedKeysElapsedMicroseconds',
 ]
 
 KEYS_BEST_COVERAGE_1 = [
@@ -170,6 +179,218 @@ BOKEH_GLYPHS = [
     'triangle',
     'x',
 ]
+
+
+#===============================================================================
+# ETW-related Globals
+#===============================================================================
+
+ADD_KEYS = 'PerfectHash/AddKeys/win:Info'
+HASH_KEYS = 'PerfectHash/HashKeys/win:Info'
+ADD_HASHED_KEYS = 'PerfectHash/AddHashedKeys/win:Info'
+
+ADD_KEYS_ETW_HEADER = (
+    'PerfectHash/AddKeys/win:Info,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' KeysProcessed,'
+    ' NumberOfKeys,'
+    ' LastKey,'
+    ' Result,'
+    ' Cycles,'
+    ' Microseconds,'
+    ' Seed1,'
+    ' Seed2,'
+    ' Seed3,'
+    ' Seed4,'
+    ' Seed5,'
+    ' Seed6,'
+    ' Seed7,'
+    ' Seed8'
+)
+
+ADD_KEYS_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessName',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'KeysProcessed',
+    'NumberOfKeys',
+    'LastKey',
+    'Result',
+    'Cycles',
+    'Microseconds',
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed7',
+    'Seed8',
+)
+ADD_KEYS_CSV_HEADER_SLIM = (
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'KeysProcessed',
+    'NumberOfKeys',
+    'LastKey',
+    'Success',
+    'Cycles',
+    'Microseconds',
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed7',
+    'Seed8',
+)
+
+HASH_KEYS_ETW_HEADER = (
+    'PerfectHash/HashKeys/win:Info,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' KeysProcessed,'
+    ' NumberOfKeys,'
+    ' LastKey,'
+    ' Result,'
+    ' Cycles,'
+    ' Microseconds,'
+    ' Seed1,'
+    ' Seed2,'
+    ' Seed3,'
+    ' Seed4,'
+    ' Seed5,'
+    ' Seed6,'
+    ' Seed7,'
+    ' Seed8'
+)
+
+HASH_KEYS_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'KeysProcessed',
+    'NumberOfKeys',
+    'LastKey',
+    'Result',
+    'Cycles',
+    'Microseconds',
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed7',
+    'Seed8',
+)
+
+HASH_KEYS_CSV_HEADER_SLIM = (
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'KeysProcessed',
+    'NumberOfKeys',
+    'LastKey',
+    'Success',
+    'Cycles',
+    'Microseconds',
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed7',
+    'Seed8',
+)
+
+ADD_HASHED_KEYS_ETW_HEADER = (
+    'PerfectHash/AddHashedKeys/win:Info,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' NumberOfKeys,'
+    ' Cycles,'
+    ' Microseconds'
+)
+
+ADD_HASHED_KEYS_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'NumberOfKeys',
+    'Cycles',
+    'Microseconds',
+)
+
+ADD_HASHED_KEYS_CSV_HEADER_SLIM = (
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'NumberOfKeys',
+    'Cycles',
+    'Microseconds',
+)
+
+EVENT_NAME_TO_ETW_HEADER = {
+    ADD_KEYS: ADD_KEYS_ETW_HEADER,
+    HASH_KEYS: HASH_KEYS_ETW_HEADER,
+    ADD_HASHED_KEYS: ADD_HASHED_KEYS_ETW_HEADER,
+}
+
+EVENT_NAME_TO_CSV_HEADER = {
+    ADD_KEYS: ADD_KEYS_CSV_HEADER,
+    HASH_KEYS: HASH_KEYS_CSV_HEADER,
+    ADD_HASHED_KEYS: ADD_HASHED_KEYS_CSV_HEADER,
+}
+
+EVENT_NAME_TO_CSV_HEADER_SLIM = {
+    ADD_KEYS: ADD_KEYS_CSV_HEADER_SLIM,
+    HASH_KEYS: HASH_KEYS_CSV_HEADER_SLIM,
+    ADD_HASHED_KEYS: ADD_HASHED_KEYS_CSV_HEADER_SLIM,
+}
 
 #===============================================================================
 # Helper Functions
@@ -344,6 +565,7 @@ def update_df_with_solve_duration(df):
 def update_df(df, source_csv_file):
     from tqdm import tqdm
     import numpy as np
+    import pandas as pd
     from scipy.stats import linregress
     df['SourceCsvFile'] = source_csv_file
     df['BestCoverageValue'] = np.int(0)
@@ -360,11 +582,19 @@ def update_df(df, source_csv_file):
     df['KeysToEdgesRatio'] = df.NumberOfKeys / df.NumberOfEdges
     df['KeysToVerticesRatio'] = df.NumberOfKeys / df.NumberOfVertices
     df['SolutionsFoundRatio'] = df.NumberOfSolutionsFound / df.Attempts
-    df['SolveDuration'] = (
-        df['SolveMicroseconds'].apply(
-            lambda v: pd.Timedelta(v, unit='micro')
+
+    if 0:
+        # This currently causes pyarrow to bomb out downstream when attempting
+        # to convert into a parquet file:
+        #   pyarrow.lib.ArrowNotImplementedError:
+        #       Unhandled type for Arrow to Parquet schema conversion:
+        #       duration[ns]
+        df['SolveDuration'] = (
+            df['SolveMicroseconds'].apply(
+                lambda v: pd.Timedelta(v, unit='micro')
+            )
         )
-    )
+
     x = np.array(list(range(0, 17)))[:, np.newaxis]
     x_flat = np.array(list(range(0, 17)))
     count_keys = [
@@ -1261,6 +1491,161 @@ def post_process_results_parquet(base, subdir, out=None):
         ldf = linregress_2020_03_25(sdf)
         df_to_parquet(ldf, lr_path)
         out(f'Wrote {lr_path}.')
+
+def process_xperf_perfecthash_csv(path, out=None):
+    if not out:
+        out = lambda _: None
+
+    import io
+    import json
+    import numpy as np
+    import pandas as pd
+    from tqdm import tqdm
+    from os.path import splitext
+    from datetime import timedelta
+
+    (prefix, ext) = splitext(path)
+    assert ext == '.csv'
+
+    add_keys_io = io.StringIO()
+    hash_keys_io = io.StringIO()
+    add_hashed_keys_io = io.StringIO()
+
+    etw_headers = EVENT_NAME_TO_ETW_HEADER
+    csv_headers = EVENT_NAME_TO_CSV_HEADER
+    slim_csv_headers = EVENT_NAME_TO_CSV_HEADER_SLIM
+
+    add_keys = ADD_KEYS
+    hash_keys = HASH_KEYS
+    add_hashed_keys = ADD_HASHED_KEYS
+
+    io = {
+        add_keys: add_keys_io,
+        hash_keys: hash_keys_io,
+        add_hashed_keys: add_hashed_keys_io,
+    }
+
+    paths = {
+        add_keys: f'{prefix}_AddKeys.csv',
+        hash_keys: f'{prefix}_HashKeys.csv',
+        add_hashed_keys: f'{prefix}_AddHashedKeys.csv',
+    }
+
+    counts = {
+        add_keys: 0,
+        hash_keys: 0,
+        add_hashed_keys: 0,
+    }
+
+    names = set(counts.keys())
+
+    with open(path, 'r') as f:
+        text = f.read()
+
+    lines = text.splitlines()
+
+    assert lines[0] == 'BeginHeader', lines[0]
+
+    end_header = None
+    for (i, line) in enumerate(lines):
+        if line == 'EndHeader':
+            end_header = i
+            break
+        ix = line.find(',')
+        if ix == -1:
+            continue
+        name = line[:ix]
+        expected = etw_headers.get(name)
+        if expected:
+            assert line == expected, (line, expected)
+
+    assert end_header
+    trace_info_line = lines[end_header+1]
+    assert 'Trace Start: ' in trace_info_line
+    trace_info = dict([ p.split(': ') for p in trace_info_line.split(', ') ])
+    json_path = f'{prefix}_TraceInfo.json'
+    with open(json_path, 'w') as f:
+        json.dump(trace_info, f)
+    out(f'Wrote {json_path}.')
+
+    start_dt = filetime_utc_to_local_tz(int(trace_info['Trace Start']))
+
+    # Write the CSV headers to all StringIO buffers.
+    for (k, v) in slim_csv_headers.items():
+        io[k].write(','.join(v))
+        io[k].write('\n')
+
+    for line in tqdm(lines[end_header:]):
+        ix = line.find(',')
+        if ix == -1:
+            continue
+        name = line[:ix]
+
+        if name not in names:
+            continue
+
+        counts[name] += 1
+
+        header = csv_headers[name]
+        slim_header = slim_csv_headers[name]
+
+        l = { k: v for (k, v) in zip(header, line.replace(' ', '').split(',')) }
+
+        ts = start_dt + timedelta(microseconds=int(l['TimeStamp']))
+        l['TimeStamp'] = datetime_to_perfecthash_time(ts)
+
+        if 'Result' in l:
+            l['Success'] = 'Y' if l['Result'] == '0x00000000' else 'N'
+
+        pid = l['ProcessID']
+        ix = pid.find('(')
+        assert ix != -1
+        l['ProcessID'] = pid[ix+1:pid.find(')')]
+
+        f = io[name]
+        new_line = ','.join(l[k] for k in slim_header)
+        f.write(new_line)
+        f.write('\n')
+
+    from_hex = lambda x: int(x, 16)
+    for (name, count) in counts.items():
+        if count == 0:
+            continue
+
+        f = io[name]
+        f.seek(0)
+
+        if 'AddHashedKeys' in name:
+            df = pd.read_csv(f)
+            path = paths[name]
+            df.to_csv(path)
+            out(f'Wrote {count} records to {path}.')
+            continue
+
+        df = pd.read_csv(f, converters={
+            'Seed1': from_hex,
+            'Seed2': from_hex,
+            'Seed3': from_hex,
+            'Seed4': from_hex,
+            'Seed5': from_hex,
+            'Seed6': from_hex,
+            'Seed7': from_hex,
+            'Seed8': from_hex,
+        })
+
+        df['Seed3_Byte1'] = (df.Seed3 & 0x0000001f)
+        df['Seed3_Byte2'] = np.right_shift((df.Seed3 & 0x00001f00), 8)
+        df['Seed3_Byte3'] = np.right_shift((df.Seed3 & 0x001f0000), 16)
+        df['Seed3_Byte4'] = np.right_shift((df.Seed3 & 0x1f000000), 24)
+
+        df['Seed6_Byte1'] = (df.Seed6 & 0x0000001f)
+        df['Seed6_Byte2'] = np.right_shift((df.Seed6 & 0x00001f00), 8)
+        df['Seed6_Byte3'] = np.right_shift((df.Seed6 & 0x001f0000), 16)
+        df['Seed6_Byte4'] = np.right_shift((df.Seed6 & 0x1f000000), 24)
+
+        path = paths[name]
+        df.to_csv(path)
+        out(f'Wrote {count} records to {path}.')
 
 #===============================================================================
 # Plotting

@@ -575,6 +575,19 @@ class ConcatParquetToResultsParquet(InvariantAwareCommand):
             concat_subdir_parquets(base_dir, subdir, out)
             post_process_results_parquet(base_dir, subdir, out)
 
+class ProcessXperf(InvariantAwareCommand):
+    """
+    Processes the events.csv output from `xperf -i trace.etl -o events.csv`.
+    """
+
+    path = None
+    _path = None
+    class PathArg(PathInvariant):
+        _help = ".csv file to process"
+
+    def run(self):
+        from .analysis import process_xperf_perfecthash_csv
+        process_xperf_perfecthash_csv(self._path, self._out)
 
 class NewHashFunction(InvariantAwareCommand):
     """
