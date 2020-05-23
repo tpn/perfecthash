@@ -558,13 +558,26 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #endif // PerfectHashEvents_Traits
 
 //
+// Tasks
+//
+#define PerfectHashEvents_TASK_AddKeys 0x1
+#define PerfectHashEvents_TASK_HashKeys 0x2
+#define PerfectHashEvents_TASK_AddHashedKeys 0x3
+
+//
+// Keyword
+//
+#define PH_ETW_GRAPH 0x1
+#define PH_ETW_FILEIO 0x2
+
+//
 // Event Descriptors
 //
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAddKeysEvent = {0x0, 0x1, 0x0, 0x4, 0x0, 0x0, 0x0};
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAddKeysEvent = {0x0, 0x1, 0x0, 0x4, 0x0, 0x1, 0x1};
 #define GraphAddKeysEvent_value 0x0
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphHashKeysEvent = {0x1, 0x1, 0x0, 0x4, 0x0, 0x0, 0x0};
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphHashKeysEvent = {0x1, 0x1, 0x0, 0x4, 0x0, 0x2, 0x0};
 #define GraphHashKeysEvent_value 0x1
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAddHashedKeysEvent = {0x2, 0x1, 0x0, 0x4, 0x0, 0x0, 0x0};
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAddHashedKeysEvent = {0x2, 0x1, 0x0, 0x4, 0x0, 0x3, 0x0};
 #define GraphAddHashedKeysEvent_value 0x2
 
 //
@@ -578,13 +591,13 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAddHashedKeysEvent = 
 // Event Enablement Bits
 //
 EXTERN_C __declspec(selectany) DECLSPEC_CACHEALIGN ULONG PerfectHashEnableBits[1];
-EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[1] = {0x0};
-EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[1] = {4};
+EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[2] = {0x1, 0x0};
+EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[2] = {4, 4};
 
 //
 // Provider context
 //
-EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 1, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
+EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 2, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
 
 //
 // Provider REGHANDLE
@@ -638,30 +651,30 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
 //
 // Event write macros for GraphAddKeysEvent
 //
-#define EventWriteGraphAddKeysEvent(KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
+#define EventWriteGraphAddKeysEvent(KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
         MCGEN_EVENT_ENABLED(GraphAddKeysEvent) \
-        ? McTemplateU0qqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphAddKeysEvent, KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) : 0
-#define EventWriteGraphAddKeysEvent_AssumeEnabled(KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
-        McTemplateU0qqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphAddKeysEvent, KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8)
+        ? McTemplateU0qqqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphAddKeysEvent, KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) : 0
+#define EventWriteGraphAddKeysEvent_AssumeEnabled(KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
+        McTemplateU0qqqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphAddKeysEvent, KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8)
 
 //
 // Enablement check macro for GraphHashKeysEvent
 //
-#define EventEnabledGraphHashKeysEvent() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 0)
+#define EventEnabledGraphHashKeysEvent() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 1)
 
 //
 // Event write macros for GraphHashKeysEvent
 //
-#define EventWriteGraphHashKeysEvent(KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
+#define EventWriteGraphHashKeysEvent(KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
         MCGEN_EVENT_ENABLED(GraphHashKeysEvent) \
-        ? McTemplateU0qqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphHashKeysEvent, KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) : 0
-#define EventWriteGraphHashKeysEvent_AssumeEnabled(KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
-        McTemplateU0qqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphHashKeysEvent, KeysProcessed, NumberOfKeys, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8)
+        ? McTemplateU0qqqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphHashKeysEvent, KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) : 0
+#define EventWriteGraphHashKeysEvent_AssumeEnabled(KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8) \
+        McTemplateU0qqqqiiqqqqqqqq(&PerfectHashEvents_Context, &GraphHashKeysEvent, KeysProcessed, NumberOfKeys, LastKey, Result, Cycles, Microseconds, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8)
 
 //
 // Enablement check macro for GraphAddHashedKeysEvent
 //
-#define EventEnabledGraphAddHashedKeysEvent() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 0)
+#define EventEnabledGraphAddHashedKeysEvent() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 1)
 
 //
 // Event write macros for GraphAddHashedKeysEvent
@@ -716,31 +729,32 @@ McTemplateU0qii(
 //
 //Template from manifest : GraphAddKeysTemplate
 //
-#ifndef McTemplateU0qqqiiqqqqqqqq_def
-#define McTemplateU0qqqiiqqqqqqqq_def
+#ifndef McTemplateU0qqqqiiqqqqqqqq_def
+#define McTemplateU0qqqqiiqqqqqqqq_def
 ETW_INLINE
 ULONG
-McTemplateU0qqqiiqqqqqqqq(
+McTemplateU0qqqqiiqqqqqqqq(
     _In_ PMCGEN_TRACE_CONTEXT Context,
     _In_ PCEVENT_DESCRIPTOR Descriptor,
     _In_ const unsigned int  _Arg0,
     _In_ const unsigned int  _Arg1,
     _In_ const unsigned int  _Arg2,
-    _In_ const signed __int64  _Arg3,
+    _In_ const unsigned int  _Arg3,
     _In_ const signed __int64  _Arg4,
-    _In_ const unsigned int  _Arg5,
+    _In_ const signed __int64  _Arg5,
     _In_ const unsigned int  _Arg6,
     _In_ const unsigned int  _Arg7,
     _In_ const unsigned int  _Arg8,
     _In_ const unsigned int  _Arg9,
     _In_ const unsigned int  _Arg10,
     _In_ const unsigned int  _Arg11,
-    _In_ const unsigned int  _Arg12
+    _In_ const unsigned int  _Arg12,
+    _In_ const unsigned int  _Arg13
     )
 {
-#define McTemplateU0qqqiiqqqqqqqq_ARGCOUNT 13
+#define McTemplateU0qqqqiiqqqqqqqq_ARGCOUNT 14
 
-    EVENT_DATA_DESCRIPTOR EventData[McTemplateU0qqqiiqqqqqqqq_ARGCOUNT + 1];
+    EVENT_DATA_DESCRIPTOR EventData[McTemplateU0qqqqiiqqqqqqqq_ARGCOUNT + 1];
 
     EventDataDescCreate(&EventData[1],&_Arg0, sizeof(const unsigned int)  );
 
@@ -748,11 +762,11 @@ McTemplateU0qqqiiqqqqqqqq(
 
     EventDataDescCreate(&EventData[3],&_Arg2, sizeof(const unsigned int)  );
 
-    EventDataDescCreate(&EventData[4],&_Arg3, sizeof(const signed __int64)  );
+    EventDataDescCreate(&EventData[4],&_Arg3, sizeof(const unsigned int)  );
 
     EventDataDescCreate(&EventData[5],&_Arg4, sizeof(const signed __int64)  );
 
-    EventDataDescCreate(&EventData[6],&_Arg5, sizeof(const unsigned int)  );
+    EventDataDescCreate(&EventData[6],&_Arg5, sizeof(const signed __int64)  );
 
     EventDataDescCreate(&EventData[7],&_Arg6, sizeof(const unsigned int)  );
 
@@ -768,9 +782,11 @@ McTemplateU0qqqiiqqqqqqqq(
 
     EventDataDescCreate(&EventData[13],&_Arg12, sizeof(const unsigned int)  );
 
-    return McGenEventWrite(Context, Descriptor, NULL, McTemplateU0qqqiiqqqqqqqq_ARGCOUNT + 1, EventData);
+    EventDataDescCreate(&EventData[14],&_Arg13, sizeof(const unsigned int)  );
+
+    return McGenEventWrite(Context, Descriptor, NULL, McTemplateU0qqqqiiqqqqqqqq_ARGCOUNT + 1, EventData);
 }
-#endif // McTemplateU0qqqiiqqqqqqqq_def
+#endif // McTemplateU0qqqqiiqqqqqqqq_def
 
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 

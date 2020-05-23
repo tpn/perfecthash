@@ -23,6 +23,7 @@ Abstract:
     EventWriteGraph##Name##Event( \
         Edge,                     \
         NumberOfKeys,             \
+        Key,                      \
         Result,                   \
         Cycles,                   \
         Microseconds,             \
@@ -470,7 +471,7 @@ Return Value:
 
 --*/
 {
-    KEY Key;
+    KEY Key = 0;
     EDGE Edge;
     PEDGE Edges;
     ULONG Mask;
@@ -559,7 +560,7 @@ Return Value:
 
 --*/
 {
-    KEY Key;
+    KEY Key = 0;
     EDGE Edge;
     ULONG Mask;
     PEDGE Edges;
