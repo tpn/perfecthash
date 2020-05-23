@@ -2019,6 +2019,7 @@ Return Value:
 {
     HRESULT Result;
     BOOLEAN FoundBestGraph;
+    BOOLEAN StopGraphSolving = FALSE;
     BOOLEAN FoundEqualBestGraph = FALSE;
     ULONG Index;
     ULONG BestGraphIndex = 0;
@@ -2194,7 +2195,15 @@ End:
     }
 
     //
-    // Leave the critical section and return.
+    // Determine if we've found sufficient "best" graphs whilst we still have
+    // the critical section acquired (as NewBestGraphCount is protected by it).
+    //
+
+    StopGraphSolving =
+        (ULONGLONG)Context->NewBestGraphCount >= Context->BestCoverageAttempts;
+
+    //
+    // Leave the critical section and complete processing.
     //
 
     LeaveCriticalSection(&Context->BestGraphCriticalSection);
@@ -2221,6 +2230,44 @@ End:
         for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
             BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
         }
+    }
+
+    //
+    // Communicate back to the context that solving can stop if indicated.
+    //
+
+    if (StopGraphSolving) {
+
+        SetStopSolving(Context);
+
+        //
+        // Stop the solve timers here.  (These are less useful when not in
+        // "first graph wins" mode.)
+        //
+
+        CONTEXT_END_TIMERS(Solve);
+
+        //
+        // Submit the finished threadpool work regardless of whether or
+        // not a graph was found.  The finished callback will set the
+        // appropriate success or failure events after waiting for all
+        // the graph contexts to finish and then assessing the context.
+        //
+
+        SubmitThreadpoolWork(Context->FinishedWork);
+
+        //
+        // Clear the caller's NewGraphPointer, as we're not going to be doing
+        // any more graph solving.
+        //
+
+        *NewGraphPointer = NULL;
+
+        //
+        // Return graph solving stopped.
+        //
+
+        Result = PH_S_GRAPH_SOLVING_STOPPED;
     }
 
     return Result;
@@ -3075,41 +3122,6 @@ Return Value:
         }
         SetStopSolving(Context);
         return PH_S_TABLE_RESIZE_IMMINENT;
-    }
-
-    //
-    // If find best memory coverage mode is active, determine if we've hit the
-    // target number of solutions, and if so, submit the 'finish' work.
-    //
-
-    if (FindBestMemoryCoverage(Context)) {
-        if ((ULONGLONG)Context->FinishedCount >= Context->BestCoverageAttempts) {
-
-            SetStopSolving(Context);
-
-            //
-            // Stop the solve timers here.  (These are less useful when not in
-            // "first graph wins" mode.)
-            //
-
-            CONTEXT_END_TIMERS(Solve);
-
-            //
-            // Submit the finished threadpool work regardless of whether or
-            // not a graph was found.  The finished callback will set the
-            // appropriate success or failure events after waiting for all
-            // the graph contexts to finish and then assessing the context.
-            //
-
-            SubmitThreadpoolWork(Context->FinishedWork);
-
-            //
-            // Return graph solving stopped.
-            //
-
-            Result = PH_S_GRAPH_SOLVING_STOPPED;
-            return Result;
-        }
     }
 
     //
