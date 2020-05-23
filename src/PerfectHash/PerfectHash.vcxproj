@@ -80,6 +80,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="PerfectHash.def" />
+    <None Include="PerfectHashEvents.man" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\CompiledPerfectHash.h" />
@@ -264,7 +265,7 @@
     <ClCompile Include="Security.c" />
     <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="VCProjectFileChunks.c" />
-    <ClCompile Include="memset.c" />
+    <ClCompile Include="_memset.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -279,6 +280,9 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="PerfectHash.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="memset_x64.asm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

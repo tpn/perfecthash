@@ -37,8 +37,10 @@ void *_memset(void* dest, int c, size_t count);
 #pragma warning(push)
 #pragma warning(disable: 4514 4710 4820 5045 26451)
 #define RtlZeroMemory(Destination,Length) _memset((Destination),0,(Length))
+#define memset _memset
 #include <PerfectHashEvents.h>
 #undef RtlZeroMemory
+#undef memset
 #pragma warning(pop)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+<!-- vim:set ts=2 sw=2 tw=0 syntax=xml: -->
 <instrumentationManifest xsi:schemaLocation="http://schemas.microsoft.com/win/2004/08/events eventman.xsd" xmlns="http://schemas.microsoft.com/win/2004/08/events" xmlns:win="http://manifests.microsoft.com/win/2004/08/windows/events" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:trace="http://schemas.microsoft.com/win/2004/08/events/trace">
   <instrumentation>
     <events>
@@ -18,26 +19,78 @@
             <data name="Result" inType="win:UInt32" outType="win:HexInt32"></data>
             <data name="Cycles" inType="win:Int64" outType="xs:long"></data>
             <data name="Microseconds" inType="win:Int64" outType="xs:long"></data>
-            <data name="Seed1" inType="win:UInt32" outType="win:HexInt32"></data>
-            <data name="Seed2" inType="win:UInt32" outType="win:HexInt32"></data>
-            <data name="Seed3" inType="win:UInt32" outType="win:HexInt32"></data>
-            <data name="Seed4" inType="win:UInt32" outType="win:HexInt32"></data>
-            <data name="Seed5" inType="win:UInt32" outType="win:HexInt32"></data>
-            <data name="Seed6" inType="win:UInt32" outType="win:HexInt32"></data>
-            <data name="Seed7" inType="win:UInt32" outType="win:HexInt32"></data>
-            <data name="Seed8" inType="win:UInt32" outType="win:HexInt32"></data>
+            <data name="Seed1" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed2" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed3" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed4" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed5" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed6" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed7" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed8" inType="win:UInt32" outType="xs:unsignedInt"></data>
+          </template>
+          <template tid="GraphFoundNewBestGraphTemplate">
+            <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
+            <data name="ElapsedMilliseconds" inType="win:UInt64" outType="xs:unsignedLong"></data>
+            <data name="CoverageType" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Value" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="TotalNumberOfPages" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="TotalNumberOfLargePages" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="TotalNumberOfCacheLines" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfUsedPages" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfUsedLargePages" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfUsedCacheLines" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfEmptyPages" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfEmptyLargePages" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfEmptyCacheLines" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="FirstPageUsed" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="FirstLargePageUsed" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="FirstCacheLineUsed" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="LastPageUsed" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="LastLargePageUsed" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="LastCacheLineUsed" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="TotalNumberOfAssigned" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfKeysWithVerticesMappingToSamePage" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfKeysWithVerticesMappingToSameLargePage" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfKeysWithVerticesMappingToSameCacheLine" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="MaxGraphTraversalDepth" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="TotalGraphTraversals" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed1" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed2" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed3" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed4" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed5" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed6" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed7" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Seed8" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_0" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_1" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_2" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_3" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_4" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_5" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_6" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_7" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_8" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_9" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_10" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_11" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_12" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_13" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_14" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_15" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfAssignedPerCacheLineCounts_16" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
         </templates>
         <channels>
         </channels>
         <keywords>
           <keyword name="GRAPH" symbol="PH_ETW_GRAPH" mask="0x1"></keyword>
-          <keyword name="FILEIO" symbol="PH_ETW_FILEIO" mask="0x2"></keyword>
         </keywords>
         <tasks>
           <task name="AddKeys" value="1"/>
           <task name="HashKeys" value="2"/>
           <task name="AddHashedKeys" value="3"/>
+          <task name="FoundNewBestGraph" value="4"/>
         </tasks>
         <events>
           <event
@@ -71,6 +124,17 @@
             template="GraphAddHashedKeysTemplate"
             message="$(string.PerfectHash.event.2.message)">
           </event>
+          <event
+            symbol="GraphFoundNewBestGraph"
+            value="3"
+            version="0"
+            level="win:Informational"
+            opcode="win:Info"
+            task="FoundNewBestGraph"
+            template="GraphFoundNewBestGraphTemplate"
+            keywords="GRAPH"
+            message="$(string.PerfectHash.event.3.message)">
+          </event>
         </events>
       </provider>
     </events>
@@ -88,6 +152,7 @@
         <string id="PerfectHash.event.0.message" value="Result of adding keys to a graph."></string>
         <string id="PerfectHash.event.1.message" value="Result of hashing keys into two vertex arrays."></string>
         <string id="PerfectHash.event.2.message" value="Result of hashing keys into two vertex arrays, then adding to a graph."></string>
+        <string id="PerfectHash.event.3.message" value="New best graph was found."></string>
       </stringTable>
     </resources>
   </localization>

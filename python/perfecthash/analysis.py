@@ -185,9 +185,8 @@ BOKEH_GLYPHS = [
 # ETW-related Globals
 #===============================================================================
 
+# AddKeys
 ADD_KEYS = 'PerfectHash/AddKeys/win:Info'
-HASH_KEYS = 'PerfectHash/HashKeys/win:Info'
-ADD_HASHED_KEYS = 'PerfectHash/AddHashedKeys/win:Info'
 
 ADD_KEYS_ETW_HEADER = (
     'PerfectHash/AddKeys/win:Info,'
@@ -218,7 +217,7 @@ ADD_KEYS_ETW_HEADER = (
 ADD_KEYS_CSV_HEADER = (
     'EventName',
     'TimeStamp',
-    'ProcessName',
+    'ProcessID',
     'ThreadID',
     'CPU',
     'ActivityId',
@@ -240,6 +239,7 @@ ADD_KEYS_CSV_HEADER = (
     'Seed7',
     'Seed8',
 )
+
 ADD_KEYS_CSV_HEADER_SLIM = (
     'TimeStamp',
     'ProcessID',
@@ -260,6 +260,10 @@ ADD_KEYS_CSV_HEADER_SLIM = (
     'Seed7',
     'Seed8',
 )
+
+# HashKeys
+
+HASH_KEYS = 'PerfectHash/HashKeys/win:Info'
 
 HASH_KEYS_ETW_HEADER = (
     'PerfectHash/HashKeys/win:Info,'
@@ -334,6 +338,10 @@ HASH_KEYS_CSV_HEADER_SLIM = (
     'Seed8',
 )
 
+# AddHashedKeys
+
+ADD_HASHED_KEYS = 'PerfectHash/AddHashedKeys/win:Info'
+
 ADD_HASHED_KEYS_ETW_HEADER = (
     'PerfectHash/AddHashedKeys/win:Info,'
     '  TimeStamp,'
@@ -374,22 +382,218 @@ ADD_HASHED_KEYS_CSV_HEADER_SLIM = (
     'Microseconds',
 )
 
+# FoundNewBestGraph
+
+FOUND_NEW_BEST_GRAPH = 'PerfectHash/FoundNewBestGraph/win:Info'
+
+FOUND_NEW_BEST_GRAPH_ETW_HEADER = (
+    'PerfectHash/FoundNewBestGraph/win:Info,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' Attempt,'
+    ' ElapsedMilliseconds,'
+    ' CoverageType,'
+    ' Value,'
+    ' TotalNumberOfPages,'
+    ' TotalNumberOfLargePages,'
+    ' TotalNumberOfCacheLines,'
+    ' NumberOfUsedPages,'
+    ' NumberOfUsedLargePages,'
+    ' NumberOfUsedCacheLines,'
+    ' NumberOfEmptyPages,'
+    ' NumberOfEmptyLargePages,'
+    ' NumberOfEmptyCacheLines,'
+    ' FirstPageUsed,'
+    ' FirstLargePageUsed,'
+    ' FirstCacheLineUsed,'
+    ' LastPageUsed,'
+    ' LastLargePageUsed,'
+    ' LastCacheLineUsed,'
+    ' TotalNumberOfAssigned,'
+    ' NumberOfKeysWithVerticesMappingToSamePage,'
+    ' NumberOfKeysWithVerticesMappingToSameLargePage,'
+    ' NumberOfKeysWithVerticesMappingToSameCacheLine,'
+    ' MaxGraphTraversalDepth,'
+    ' TotalGraphTraversals,'
+    ' Seed1,'
+    ' Seed2,'
+    ' Seed3,'
+    ' Seed4,'
+    ' Seed5,'
+    ' Seed6,'
+    ' Seed7,'
+    ' Seed8,'
+    ' NumberOfAssignedPerCacheLineCounts_0,'
+    ' NumberOfAssignedPerCacheLineCounts_1,'
+    ' NumberOfAssignedPerCacheLineCounts_2,'
+    ' NumberOfAssignedPerCacheLineCounts_3,'
+    ' NumberOfAssignedPerCacheLineCounts_4,'
+    ' NumberOfAssignedPerCacheLineCounts_5,'
+    ' NumberOfAssignedPerCacheLineCounts_6,'
+    ' NumberOfAssignedPerCacheLineCounts_7,'
+    ' NumberOfAssignedPerCacheLineCounts_8,'
+    ' NumberOfAssignedPerCacheLineCounts_9,'
+    ' NumberOfAssignedPerCacheLineCounts_10,'
+    ' NumberOfAssignedPerCacheLineCounts_11,'
+    ' NumberOfAssignedPerCacheLineCounts_12,'
+    ' NumberOfAssignedPerCacheLineCounts_13,'
+    ' NumberOfAssignedPerCacheLineCounts_14,'
+    ' NumberOfAssignedPerCacheLineCounts_15,'
+    ' NumberOfAssignedPerCacheLineCounts_16'
+)
+
+FOUND_NEW_BEST_GRAPH_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'Attempt',
+    'ElapsedMilliseconds',
+    'CoverageType',
+    'Value',
+    'TotalNumberOfPages',
+    'TotalNumberOfLargePages',
+    'TotalNumberOfCacheLines',
+    'NumberOfUsedPages',
+    'NumberOfUsedLargePages',
+    'NumberOfUsedCacheLines',
+    'NumberOfEmptyPages',
+    'NumberOfEmptyLargePages',
+    'NumberOfEmptyCacheLines',
+    'FirstPageUsed',
+    'FirstLargePageUsed',
+    'FirstCacheLineUsed',
+    'LastPageUsed',
+    'LastLargePageUsed',
+    'LastCacheLineUsed',
+    'TotalNumberOfAssigned',
+    'NumberOfKeysWithVerticesMappingToSamePage',
+    'NumberOfKeysWithVerticesMappingToSameLargePage',
+    'NumberOfKeysWithVerticesMappingToSameCacheLine',
+    'MaxGraphTraversalDepth',
+    'TotalGraphTraversals',
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed7',
+    'Seed8',
+    'NumberOfAssignedPerCacheLineCounts_0',
+    'NumberOfAssignedPerCacheLineCounts_1',
+    'NumberOfAssignedPerCacheLineCounts_2',
+    'NumberOfAssignedPerCacheLineCounts_3',
+    'NumberOfAssignedPerCacheLineCounts_4',
+    'NumberOfAssignedPerCacheLineCounts_5',
+    'NumberOfAssignedPerCacheLineCounts_6',
+    'NumberOfAssignedPerCacheLineCounts_7',
+    'NumberOfAssignedPerCacheLineCounts_8',
+    'NumberOfAssignedPerCacheLineCounts_9',
+    'NumberOfAssignedPerCacheLineCounts_10',
+    'NumberOfAssignedPerCacheLineCounts_11',
+    'NumberOfAssignedPerCacheLineCounts_12',
+    'NumberOfAssignedPerCacheLineCounts_13',
+    'NumberOfAssignedPerCacheLineCounts_14',
+    'NumberOfAssignedPerCacheLineCounts_15',
+    'NumberOfAssignedPerCacheLineCounts_16',
+)
+
+FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM = (
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'Attempt',
+    'ElapsedMilliseconds',
+    'CoverageType',
+    'Value',
+    'TotalNumberOfPages',
+    'TotalNumberOfLargePages',
+    'TotalNumberOfCacheLines',
+    'NumberOfUsedPages',
+    'NumberOfUsedLargePages',
+    'NumberOfUsedCacheLines',
+    'NumberOfEmptyPages',
+    'NumberOfEmptyLargePages',
+    'NumberOfEmptyCacheLines',
+    'FirstPageUsed',
+    'FirstLargePageUsed',
+    'FirstCacheLineUsed',
+    'LastPageUsed',
+    'LastLargePageUsed',
+    'LastCacheLineUsed',
+    'TotalNumberOfAssigned',
+    'NumberOfKeysWithVerticesMappingToSamePage',
+    'NumberOfKeysWithVerticesMappingToSameLargePage',
+    'NumberOfKeysWithVerticesMappingToSameCacheLine',
+    'MaxGraphTraversalDepth',
+    'TotalGraphTraversals',
+    'Seed1',
+    'Seed2',
+    'Seed3',
+    'Seed4',
+    'Seed5',
+    'Seed6',
+    'Seed7',
+    'Seed8',
+    'NumberOfAssignedPerCacheLineCounts_0',
+    'NumberOfAssignedPerCacheLineCounts_1',
+    'NumberOfAssignedPerCacheLineCounts_2',
+    'NumberOfAssignedPerCacheLineCounts_3',
+    'NumberOfAssignedPerCacheLineCounts_4',
+    'NumberOfAssignedPerCacheLineCounts_5',
+    'NumberOfAssignedPerCacheLineCounts_6',
+    'NumberOfAssignedPerCacheLineCounts_7',
+    'NumberOfAssignedPerCacheLineCounts_8',
+    'NumberOfAssignedPerCacheLineCounts_9',
+    'NumberOfAssignedPerCacheLineCounts_10',
+    'NumberOfAssignedPerCacheLineCounts_11',
+    'NumberOfAssignedPerCacheLineCounts_12',
+    'NumberOfAssignedPerCacheLineCounts_13',
+    'NumberOfAssignedPerCacheLineCounts_14',
+    'NumberOfAssignedPerCacheLineCounts_15',
+    'NumberOfAssignedPerCacheLineCounts_16',
+)
+
+# Maps
+
 EVENT_NAME_TO_ETW_HEADER = {
     ADD_KEYS: ADD_KEYS_ETW_HEADER,
     HASH_KEYS: HASH_KEYS_ETW_HEADER,
     ADD_HASHED_KEYS: ADD_HASHED_KEYS_ETW_HEADER,
+    FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_ETW_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER = {
     ADD_KEYS: ADD_KEYS_CSV_HEADER,
     HASH_KEYS: HASH_KEYS_CSV_HEADER,
     ADD_HASHED_KEYS: ADD_HASHED_KEYS_CSV_HEADER,
+    FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER_SLIM = {
     ADD_KEYS: ADD_KEYS_CSV_HEADER_SLIM,
     HASH_KEYS: HASH_KEYS_CSV_HEADER_SLIM,
     ADD_HASHED_KEYS: ADD_HASHED_KEYS_CSV_HEADER_SLIM,
+    FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM,
+}
+
+HAS_SEED_DATA = {
+    ADD_KEYS,
+    HASH_KEYS,
+    FOUND_NEW_BEST_GRAPH,
 }
 
 #===============================================================================
@@ -1507,10 +1711,6 @@ def process_xperf_perfecthash_csv(path, out=None):
     (prefix, ext) = splitext(path)
     assert ext == '.csv'
 
-    add_keys_io = io.StringIO()
-    hash_keys_io = io.StringIO()
-    add_hashed_keys_io = io.StringIO()
-
     etw_headers = EVENT_NAME_TO_ETW_HEADER
     csv_headers = EVENT_NAME_TO_CSV_HEADER
     slim_csv_headers = EVENT_NAME_TO_CSV_HEADER_SLIM
@@ -1518,23 +1718,27 @@ def process_xperf_perfecthash_csv(path, out=None):
     add_keys = ADD_KEYS
     hash_keys = HASH_KEYS
     add_hashed_keys = ADD_HASHED_KEYS
+    found_new_best_graph = FOUND_NEW_BEST_GRAPH
 
     io = {
-        add_keys: add_keys_io,
-        hash_keys: hash_keys_io,
-        add_hashed_keys: add_hashed_keys_io,
+        add_keys: io.StringIO(),
+        hash_keys: io.StringIO(),
+        add_hashed_keys: io.StringIO(),
+        found_new_best_graph: io.StringIO(),
     }
 
     paths = {
         add_keys: f'{prefix}_AddKeys.csv',
         hash_keys: f'{prefix}_HashKeys.csv',
         add_hashed_keys: f'{prefix}_AddHashedKeys.csv',
+        found_new_best_graph: f'{prefix}_FoundNewBestGraph.csv',
     }
 
     counts = {
         add_keys: 0,
         hash_keys: 0,
         add_hashed_keys: 0,
+        found_new_best_graph: 0,
     }
 
     names = set(counts.keys())
@@ -1589,25 +1793,28 @@ def process_xperf_perfecthash_csv(path, out=None):
         header = csv_headers[name]
         slim_header = slim_csv_headers[name]
 
-        l = { k: v for (k, v) in zip(header, line.replace(' ', '').split(',')) }
+        ld = {
+            k: v for (k, v) in zip(header, line.replace(' ', '').split(','))
+        }
 
-        ts = start_dt + timedelta(microseconds=int(l['TimeStamp']))
-        l['TimeStamp'] = datetime_to_perfecthash_time(ts)
+        ts = start_dt + timedelta(microseconds=int(ld['TimeStamp']))
+        ld['TimeStamp'] = datetime_to_perfecthash_time(ts)
 
-        if 'Result' in l:
-            l['Success'] = 'Y' if l['Result'] == '0x00000000' else 'N'
+        if 'Result' in ld:
+            ld['Success'] = 'Y' if ld['Result'] == '0x00000000' else 'N'
 
-        pid = l['ProcessID']
+        pid = ld['ProcessID']
         ix = pid.find('(')
         assert ix != -1
-        l['ProcessID'] = pid[ix+1:pid.find(')')]
+        ld['ProcessID'] = pid[ix+1:pid.find(')')]
 
         f = io[name]
-        new_line = ','.join(l[k] for k in slim_header)
+        new_line = ','.join(ld[k] for k in slim_header)
         f.write(new_line)
         f.write('\n')
 
-    from_hex = lambda x: int(x, 16)
+    out('Post-processing results.')
+
     for (name, count) in counts.items():
         if count == 0:
             continue
@@ -1615,33 +1822,18 @@ def process_xperf_perfecthash_csv(path, out=None):
         f = io[name]
         f.seek(0)
 
-        if 'AddHashedKeys' in name:
-            df = pd.read_csv(f)
-            path = paths[name]
-            df.to_csv(path)
-            out(f'Wrote {count} records to {path}.')
-            continue
+        df = pd.read_csv(f)
 
-        df = pd.read_csv(f, converters={
-            'Seed1': from_hex,
-            'Seed2': from_hex,
-            'Seed3': from_hex,
-            'Seed4': from_hex,
-            'Seed5': from_hex,
-            'Seed6': from_hex,
-            'Seed7': from_hex,
-            'Seed8': from_hex,
-        })
+        if name in HAS_SEED_DATA:
+            df['Seed3_Byte1'] = (df.Seed3 & 0x0000001f)
+            df['Seed3_Byte2'] = np.right_shift((df.Seed3 & 0x00001f00), 8)
+            df['Seed3_Byte3'] = np.right_shift((df.Seed3 & 0x001f0000), 16)
+            df['Seed3_Byte4'] = np.right_shift((df.Seed3 & 0x1f000000), 24)
 
-        df['Seed3_Byte1'] = (df.Seed3 & 0x0000001f)
-        df['Seed3_Byte2'] = np.right_shift((df.Seed3 & 0x00001f00), 8)
-        df['Seed3_Byte3'] = np.right_shift((df.Seed3 & 0x001f0000), 16)
-        df['Seed3_Byte4'] = np.right_shift((df.Seed3 & 0x1f000000), 24)
-
-        df['Seed6_Byte1'] = (df.Seed6 & 0x0000001f)
-        df['Seed6_Byte2'] = np.right_shift((df.Seed6 & 0x00001f00), 8)
-        df['Seed6_Byte3'] = np.right_shift((df.Seed6 & 0x001f0000), 16)
-        df['Seed6_Byte4'] = np.right_shift((df.Seed6 & 0x1f000000), 24)
+            df['Seed6_Byte1'] = (df.Seed6 & 0x0000001f)
+            df['Seed6_Byte2'] = np.right_shift((df.Seed6 & 0x00001f00), 8)
+            df['Seed6_Byte3'] = np.right_shift((df.Seed6 & 0x001f0000), 16)
+            df['Seed6_Byte4'] = np.right_shift((df.Seed6 & 0x1f000000), 24)
 
         path = paths[name]
         df.to_csv(path)

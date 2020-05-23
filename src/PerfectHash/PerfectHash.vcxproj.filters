@@ -286,6 +286,9 @@
     <ClCompile Include="PerfectHashTableHashEx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="_memset.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -569,6 +572,9 @@
     <None Include="PerfectHash.def">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="PerfectHashEvents.man">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x64'">
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm">
@@ -594,6 +600,9 @@
       <Filter>Source Files</Filter>
     </MASM>
     <MASM Include="RtlFillPages_x64.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
+    <MASM Include="memset_x64.asm">
       <Filter>Source Files</Filter>
     </MASM>
   </ItemGroup>

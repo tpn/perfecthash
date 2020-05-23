@@ -2026,6 +2026,7 @@ Return Value:
     LONG EqualBestGraphIndex = 0;
     PGRAPH SpareGraph;
     PGRAPH PreviousBestGraph;
+    BEST_GRAPH_INFO LocalBestGraphInfo = { 0 };
     PBEST_GRAPH_INFO BestGraphInfo = NULL;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
@@ -2144,6 +2145,15 @@ End:
         // find).
         //
 
+        //
+        // If we're still within the limits for the maximum number of best
+        // graphs (captured within our context), then use the relevant element
+        // from that array.  Otherwise, just use the local, stack-backed struct.
+        // (This ensures BestGraphInfo always has valid values even if we've
+        // surpassed the context limits, enabling us to emit an ETW event at the
+        // end of this routine.)
+        //
+
         if (BestGraphIndex < MAX_BEST_GRAPH_INFO) {
 
             BestGraphInfo = &Context->BestGraphInfo[BestGraphIndex];
@@ -2157,40 +2167,43 @@ End:
             ASSERT((ULONG_PTR)(BestGraphInfo) <
                    (ULONG_PTR)(&Context->LowMemoryEvent));
 
-            //
-            // Fill in the attempt number and elapsed milliseconds.
-            //
+        } else {
+            BestGraphInfo = &LocalBestGraphInfo;
+        }
 
-            BestGraphInfo->Attempt = Coverage->Attempt;
-            BestGraphInfo->ElapsedMilliseconds = (
-                GetTickCount64() - Context->StartMilliseconds
-            );
+        //
+        // Fill in the attempt number and elapsed milliseconds.
+        //
 
-            //
-            // Initialize the pointer to the best graph info's copy of the
-            // coverage structure; we can copy this over outside the critical
-            // section.
-            //
+        BestGraphInfo->Attempt = Coverage->Attempt;
+        BestGraphInfo->ElapsedMilliseconds = (
+            GetTickCount64() - Context->StartMilliseconds
+        );
 
-            BestCoverage = &BestGraphInfo->Coverage;
+        //
+        // Initialize the pointer to the best graph info's copy of the
+        // coverage structure; we can copy this over outside the critical
+        // section.
+        //
 
-            //
-            // Capture the value used to determine that this graph was the best.
-            //
+        BestCoverage = &BestGraphInfo->Coverage;
+
+        //
+        // Capture the value used to determine that this graph was the best.
+        //
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                      \
         BestGraphInfo->Value = Coverage->##Name;                      \
         break;
 
-            switch (CoverageType) {
+        switch (CoverageType) {
 
-                BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
+            BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
 
-                default:
-                    Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
-                    break;
-            }
+            default:
+                Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+                break;
         }
     }
 
@@ -2217,7 +2230,8 @@ End:
     }
 
     //
-    // Copy coverage and seeds if applicable.
+    // If we found a new best graph, BestCoverage will be non-NULL.  Copy the
+    // coverage information, seeds, and emit an ETW event.
     //
 
     if (BestCoverage != NULL) {
@@ -2230,6 +2244,59 @@ End:
         for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
             BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
         }
+
+        EventWriteGraphFoundNewBestGraph(
+            BestGraphInfo->Attempt,
+            BestGraphInfo->ElapsedMilliseconds,
+            (ULONG)CoverageType,
+            BestGraphInfo->Value,
+            Coverage->TotalNumberOfPages,
+            Coverage->TotalNumberOfLargePages,
+            Coverage->TotalNumberOfCacheLines,
+            Coverage->NumberOfUsedPages,
+            Coverage->NumberOfUsedLargePages,
+            Coverage->NumberOfUsedCacheLines,
+            Coverage->NumberOfEmptyPages,
+            Coverage->NumberOfEmptyLargePages,
+            Coverage->NumberOfEmptyCacheLines,
+            Coverage->FirstPageUsed,
+            Coverage->FirstLargePageUsed,
+            Coverage->FirstCacheLineUsed,
+            Coverage->LastPageUsed,
+            Coverage->LastLargePageUsed,
+            Coverage->LastCacheLineUsed,
+            Coverage->TotalNumberOfAssigned,
+            Coverage->NumberOfKeysWithVerticesMappingToSamePage,
+            Coverage->NumberOfKeysWithVerticesMappingToSameLargePage,
+            Coverage->NumberOfKeysWithVerticesMappingToSameCacheLine,
+            Coverage->MaxGraphTraversalDepth,
+            Coverage->TotalGraphTraversals,
+            BestGraphInfo->Seeds[0],
+            BestGraphInfo->Seeds[1],
+            BestGraphInfo->Seeds[2],
+            BestGraphInfo->Seeds[3],
+            BestGraphInfo->Seeds[4],
+            BestGraphInfo->Seeds[5],
+            BestGraphInfo->Seeds[6],
+            BestGraphInfo->Seeds[7],
+            Coverage->NumberOfAssignedPerCacheLineCounts[0],
+            Coverage->NumberOfAssignedPerCacheLineCounts[1],
+            Coverage->NumberOfAssignedPerCacheLineCounts[2],
+            Coverage->NumberOfAssignedPerCacheLineCounts[3],
+            Coverage->NumberOfAssignedPerCacheLineCounts[4],
+            Coverage->NumberOfAssignedPerCacheLineCounts[5],
+            Coverage->NumberOfAssignedPerCacheLineCounts[6],
+            Coverage->NumberOfAssignedPerCacheLineCounts[7],
+            Coverage->NumberOfAssignedPerCacheLineCounts[8],
+            Coverage->NumberOfAssignedPerCacheLineCounts[9],
+            Coverage->NumberOfAssignedPerCacheLineCounts[10],
+            Coverage->NumberOfAssignedPerCacheLineCounts[11],
+            Coverage->NumberOfAssignedPerCacheLineCounts[12],
+            Coverage->NumberOfAssignedPerCacheLineCounts[13],
+            Coverage->NumberOfAssignedPerCacheLineCounts[14],
+            Coverage->NumberOfAssignedPerCacheLineCounts[15],
+            Coverage->NumberOfAssignedPerCacheLineCounts[16]
+        );
     }
 
     //
