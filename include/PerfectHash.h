@@ -20,6 +20,8 @@ Abstract:
 extern "C" {
 #endif
 
+#include <PerfectHashErrors.h>
+
 //
 // N.B. The warning disable glue is necessary to get the system headers to
 //      include with all errors enabled (/Wall).
@@ -2695,16 +2697,16 @@ IsValidTableCreateFlags(
 {
 
     if (!ARGUMENT_PRESENT(TableCreateFlags)) {
-        return E_POINTER;
+        return PH_E_INVALID_TABLE_CREATE_FLAGS;
     }
 
     if (TableCreateFlags->Unused != 0) {
-        return E_FAIL;
+        return PH_E_INVALID_TABLE_CREATE_FLAGS;
     }
 
     if (TableCreateFlags->UseOriginalSeededHashRoutines &&
         TableCreateFlags->HashAllKeysFirst) {
-        return E_INVALIDARG;
+        return PH_E_HASH_ALL_KEYS_FIRST_INCOMPAT_WITH_ORIG_SEEDED_HASH_ROUTINES;
     }
 
     if (!TableCreateFlags->HashAllKeysFirst) {
@@ -2718,7 +2720,7 @@ IsValidTableCreateFlags(
         if (TableCreateFlags->TryLargePagesForVertexPairs ||
             TableCreateFlags->EnableWriteCombineForVertexPairs ||
             TableCreateFlags->RemoveWriteCombineAfterSuccessfulHashKeys) {
-            return E_INVALIDARG;
+            return PH_E_VERTEX_PAIR_FLAGS_REQUIRE_HASH_ALL_KEYS_FIRST;
         }
 
     } else if (TableCreateFlags->TryLargePagesForVertexPairs) {
@@ -2729,7 +2731,7 @@ IsValidTableCreateFlags(
         //
 
         if (TableCreateFlags->EnableWriteCombineForVertexPairs) {
-            return E_INVALIDARG;
+            return PH_E_CANT_WRITE_COMBINE_VERTEX_PAIRS_WHEN_LARGE_PAGES;
         }
 
     } else if (TableCreateFlags->RemoveWriteCombineAfterSuccessfulHashKeys) {
@@ -2740,7 +2742,7 @@ IsValidTableCreateFlags(
         //
 
         if (!TableCreateFlags->EnableWriteCombineForVertexPairs) {
-            return E_INVALIDARG;
+            return PH_E_REMOVE_WRITE_COMBINE_REQUIRES_ENABLE_WRITE_COMBINE;
         }
 
     }

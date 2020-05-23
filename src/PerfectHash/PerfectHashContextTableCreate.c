@@ -189,8 +189,24 @@ Return Value:
 
     VALIDATE_FLAGS(ContextTableCreate, CONTEXT_TABLE_CREATE);
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
-    VALIDATE_FLAGS(TableCreate, TABLE_CREATE);
     VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
+
+    //
+    // IsValidTableCreateFlags() returns a more specific error code than the
+    // other validation routines invoked above (which would be converted into
+    // PH_E_INVALID_TABLE_CREATE_FLAGS if we used the VALIDATE_FLAGS macro).
+    //
+
+    if (ARGUMENT_PRESENT(TableCreateFlagsPointer)) {
+        Result = IsValidTableCreateFlags(TableCreateFlagsPointer);
+        if (FAILED(Result)) {
+            return Result;
+        } else {
+            TableCreateFlags.AsULong = TableCreateFlagsPointer->AsULong;
+        }
+    } else {
+        TableCreateFlags.AsULong = 0;
+    }
 
     if (!ARGUMENT_PRESENT(KeysPath)) {
         return E_POINTER;

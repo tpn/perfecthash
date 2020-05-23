@@ -3804,3 +3804,39 @@ Abstract:
 //
 #define PH_E_GRAPH_CYCLIC_FAILURE        ((HRESULT)0xE0040390L)
 
+//
+// MessageId: PH_E_HASH_ALL_KEYS_FIRST_INCOMPAT_WITH_ORIG_SEEDED_HASH_ROUTINES
+//
+// MessageText:
+//
+// --HashAllKeysFirst is incompatible with --UseOriginalSeededHashRoutines.
+//
+#define PH_E_HASH_ALL_KEYS_FIRST_INCOMPAT_WITH_ORIG_SEEDED_HASH_ROUTINES ((HRESULT)0xE0040391L)
+
+//
+// MessageId: PH_E_VERTEX_PAIR_FLAGS_REQUIRE_HASH_ALL_KEYS_FIRST
+//
+// MessageText:
+//
+// ---HashAllKeysFirst is required when specifying --TryLargePagesForVertexPairs, --EnableWriteCombineForVertexPairs or --RemoveWriteCombineAfterSuccessfulHashKeys.
+//
+#define PH_E_VERTEX_PAIR_FLAGS_REQUIRE_HASH_ALL_KEYS_FIRST ((HRESULT)0xE0040392L)
+
+//
+// MessageId: PH_E_CANT_WRITE_COMBINE_VERTEX_PAIRS_WHEN_LARGE_PAGES
+//
+// MessageText:
+//
+// --EnableWriteCombineForVertexPairs conflicts with --TryLargePagesForVertexPairs (write-combining is not supported for memory backed by large pages).
+//
+#define PH_E_CANT_WRITE_COMBINE_VERTEX_PAIRS_WHEN_LARGE_PAGES ((HRESULT)0xE0040393L)
+
+//
+// MessageId: PH_E_REMOVE_WRITE_COMBINE_REQUIRES_ENABLE_WRITE_COMBINE
+//
+// MessageText:
+//
+// --RemoveWriteCombineAfterSuccessfulHashKeys requires --EnableWriteCombineForVertexPairs to be specified.
+//
+#define PH_E_REMOVE_WRITE_COMBINE_REQUIRES_ENABLE_WRITE_COMBINE ((HRESULT)0xE0040394L)
+

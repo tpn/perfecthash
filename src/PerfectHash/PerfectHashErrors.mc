@@ -3463,3 +3463,35 @@ Language=English
 Cyclic graph failure.
 .
 
+MessageId=0x391
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_HASH_ALL_KEYS_FIRST_INCOMPAT_WITH_ORIG_SEEDED_HASH_ROUTINES
+Language=English
+--HashAllKeysFirst is incompatible with --UseOriginalSeededHashRoutines.
+.
+
+MessageId=0x392
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_VERTEX_PAIR_FLAGS_REQUIRE_HASH_ALL_KEYS_FIRST
+Language=English
+---HashAllKeysFirst is required when specifying --TryLargePagesForVertexPairs, --EnableWriteCombineForVertexPairs or --RemoveWriteCombineAfterSuccessfulHashKeys.
+.
+
+MessageId=0x393
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CANT_WRITE_COMBINE_VERTEX_PAIRS_WHEN_LARGE_PAGES
+Language=English
+--EnableWriteCombineForVertexPairs conflicts with --TryLargePagesForVertexPairs (write-combining is not supported for memory backed by large pages).
+.
+
+MessageId=0x394
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_REMOVE_WRITE_COMBINE_REQUIRES_ENABLE_WRITE_COMBINE
+Language=English
+--RemoveWriteCombineAfterSuccessfulHashKeys requires --EnableWriteCombineForVertexPairs to be specified.
+.
+
