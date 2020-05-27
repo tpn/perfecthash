@@ -24,6 +24,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "GraphImpl1.h"
+#include "PerfectHashEventsPrivate.h"
 
 #define IsEmpty(Value) ((ULONG)Value == EMPTY)
 #define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
@@ -315,6 +316,13 @@ Return Value:
 
     ASSERT(Graph->Flags.IsAcyclic);
 
+    EventWriteGraphAssignStart(
+        NULL,
+        Graph->Attempt,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices
+    );
+
     //
     // Walk the graph and assign values.
     //
@@ -323,6 +331,7 @@ Return Value:
 
         if (!IsGraphParanoid(Graph)) {
             if (IsEmpty(Graph->First[Vertex])) {
+                Graph->NumberOfEmptyVertices++;
                 continue;
             }
         }
@@ -334,7 +343,7 @@ Return Value:
             //
 
             Graph->Assigned[Vertex] = INITIAL_ASSIGNMENT_VALUE;
-            GraphTraverse(Graph, Vertex);
+            GraphTraverseRecursive(Graph, Vertex);
         }
     }
 
@@ -345,6 +354,16 @@ Return Value:
         ASSERT(Graph->VisitedVerticesCount == NumberOfSetBits);
         ASSERT(Graph->VisitedVerticesCount == Graph->NumberOfVertices);
     }
+
+    EventWriteGraphAssignStop(
+        NULL,
+        Graph->Attempt,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices,
+        Graph->NumberOfEmptyVertices,
+        Graph->MaximumTraversalDepth,
+        Graph->TotalTraversals
+    );
 
     return;
 }
@@ -824,11 +843,11 @@ Return Value:
 }
 
 
-GRAPH_TRAVERSE GraphTraverse;
+GRAPH_TRAVERSE GraphTraverseRecursive;
 
 _Use_decl_annotations_
 VOID
-GraphTraverse(
+GraphTraverseRecursive(
     PGRAPH Graph,
     VERTEX Vertex
     )
@@ -970,7 +989,7 @@ Return Value:
         // Recursively traverse the neighbor.
         //
 
-        GraphTraverse(Graph, Neighbor);
+        GraphTraverseRecursive(Graph, Neighbor);
 
     }
 

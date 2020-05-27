@@ -564,6 +564,7 @@ Table Create Parameters:
             HighestMaxGraphTraversalDepth
             HighestTotalGraphTraversals
             HighestMaxAssignedPerCacheLineCount
+            HighestNumberOfEmptyVertices
 
             LowestNumberOfEmptyPages
             LowestNumberOfEmptyLargePages
@@ -571,6 +572,7 @@ Table Create Parameters:
             LowestMaxGraphTraversalDepth
             LowestTotalGraphTraversals
             LowestMaxAssignedPerCacheLineCount
+            LowestNumberOfEmptyVertices
 
         The following predicates must be used in conjunction with --KeysSubset:
 
@@ -980,6 +982,7 @@ Table Create Parameters:
             HighestMaxGraphTraversalDepth
             HighestTotalGraphTraversals
             HighestMaxAssignedPerCacheLineCount
+            HighestNumberOfEmptyVertices
 
             LowestNumberOfEmptyPages
             LowestNumberOfEmptyLargePages
@@ -987,6 +990,7 @@ Table Create Parameters:
             LowestMaxGraphTraversalDepth
             LowestTotalGraphTraversals
             LowestMaxAssignedPerCacheLineCount
+            LowestNumberOfEmptyVertices
 
         The following predicates must be used in conjunction with --KeysSubset:
 

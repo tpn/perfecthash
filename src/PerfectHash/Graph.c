@@ -21,6 +21,7 @@ Abstract:
 
 #define EVENT_WRITE_GRAPH(Name)   \
     EventWriteGraph##Name##Event( \
+        NULL,                     \
         Edge,                     \
         NumberOfKeys,             \
         Key,                      \
@@ -411,10 +412,12 @@ Return Value:
         Graph->MaximumTraversalDepth;
 
     //
-    // Ditto for total traversals.
+    // Ditto for total traversals and empty vertices.
     //
 
     Graph->AssignedMemoryCoverage.TotalGraphTraversals = Graph->TotalTraversals;
+    Graph->AssignedMemoryCoverage.NumberOfEmptyVertices =
+        Graph->NumberOfEmptyVertices;
 
     //
     // Register the solved graph.  We can return this result directly.
@@ -755,7 +758,7 @@ Return Value:
     Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
     Graph->AddHashedKeysElapsedMicroseconds.QuadPart = Microseconds;
 
-    EventWriteGraphAddHashedKeysEvent(NumberOfKeys, Cycles, Microseconds);
+    EventWriteGraphAddHashedKeysEvent(NULL, NumberOfKeys, Cycles, Microseconds);
 
     return S_OK;
 }
@@ -2246,6 +2249,7 @@ End:
         }
 
         EventWriteGraphFoundNewBestGraph(
+            NULL,
             BestGraphInfo->Attempt,
             BestGraphInfo->ElapsedMilliseconds,
             (ULONG)CoverageType,
@@ -3279,6 +3283,7 @@ Return Value:
     //
 
     Graph->Collisions = 0;
+    Graph->NumberOfEmptyVertices = 0;
     Graph->DeletedEdgeCount = 0;
     Graph->VisitedVerticesCount = 0;
 

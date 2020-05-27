@@ -37,6 +37,15 @@ typedef GRAPH_CYCLIC_DELETE_EDGE *PGRAPH_CYCLIC_DELETE_EDGE;
 extern GRAPH_CYCLIC_DELETE_EDGE GraphCyclicDeleteEdge;
 
 typedef
+BOOLEAN
+(NTAPI GRAPH_CYCLIC_DELETE_EDGE2)(
+    _In_ PGRAPH Graph,
+    _In_ VERTEX Vertex
+    );
+typedef GRAPH_CYCLIC_DELETE_EDGE2 *PGRAPH_CYCLIC_DELETE_EDGE2;
+extern GRAPH_CYCLIC_DELETE_EDGE2 GraphCyclicDeleteEdge2;
+
+typedef
 _Success_(return != 0)
 BOOLEAN
 (NTAPI GRAPH_FIND_DEGREE1_EDGE)(
@@ -103,7 +112,7 @@ VOID
     _In_ EDGE Edge
     );
 typedef GRAPH_TRAVERSE *PGRAPH_TRAVERSE;
-extern GRAPH_TRAVERSE GraphTraverse;
+extern GRAPH_TRAVERSE GraphTraverseRecursive;
 
 //
 // Inline function helpers.
@@ -120,11 +129,18 @@ AbsoluteEdge(
     ULONG AbsEdge;
     ULONG MaskedEdge;
 
+    //
+    // Re-enable this if modulus ever works again.
+    //
+#if 0
     if (IsModulusMasking(Graph->MaskFunctionId)) {
         MaskedEdge = Edge % Graph->EdgeModulus;
     } else {
         MaskedEdge = Edge & Graph->EdgeMask;
     }
+#else
+    MaskedEdge = Edge & Graph->EdgeMask;
+#endif
 
     AbsEdge = (MaskedEdge + (Index * Graph->NumberOfEdges));
     return AbsEdge;

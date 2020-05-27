@@ -4,6 +4,14 @@
   <instrumentation>
     <events>
       <provider name="PerfectHash" guid="{D0B3028E-70A7-410F-AF7E-4D495B4A3C8B}" symbol="PerfectHashEvents" resourceFileName="C:\src\perfecthash\src\x64\Release\PerfectHash.dll" messageFileName="C:\src\perfecthash\src\x64\Release\PerfectHash.dll">
+        <channels>
+          <channel name="PerfectHash/Analytic"
+                   chid="PerfectHash/Analytic"
+                   symbol="PerfectHashAnalytic"
+                   type="Analytic"
+                   enabled="false">
+          </channel>
+        </channels>
         <levels></levels>
         <opcodes></opcodes>
         <templates>
@@ -80,60 +88,106 @@
             <data name="NumberOfAssignedPerCacheLineCounts_15" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfAssignedPerCacheLineCounts_16" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
+          <template tid="GraphAssignStartTemplate">
+            <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
+            <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
+          </template>
+          <template tid="GraphAssignStopTemplate">
+            <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
+            <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfEmptyVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="MaxTraversalDepth" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="TotalTraversals" inType="win:UInt32" outType="xs:unsignedInt"></data>
+          </template>
         </templates>
         <channels>
         </channels>
         <keywords>
-          <keyword name="GRAPH" symbol="PH_ETW_GRAPH" mask="0x1"></keyword>
+          <keyword name="GRAPH_HASH" symbol="PH_ETW_GRAPH_HASH" mask="0x1"></keyword>
+          <keyword name="GRAPH_BEST" symbol="PH_ETW_GRAPH_BEST" mask="0x2"></keyword>
+          <keyword name="GRAPH_ASSIGN" symbol="PH_ETW_GRAPH_ASSIGN" mask="0x4"></keyword>
         </keywords>
         <tasks>
           <task name="AddKeys" value="1"/>
           <task name="HashKeys" value="2"/>
           <task name="AddHashedKeys" value="3"/>
           <task name="FoundNewBestGraph" value="4"/>
+          <task name="Assign" value="5"/>
         </tasks>
         <events>
           <event
             symbol="GraphAddKeysEvent"
             value="0"
             version="1"
+            channel="PerfectHash/Analytic"
             level="win:Informational"
             opcode="win:Info"
             task="AddKeys"
             template="GraphAddKeysTemplate"
-            keywords="GRAPH"
+            keywords="GRAPH_HASH"
             message="$(string.PerfectHash.event.0.message)">
           </event>
           <event
             symbol="GraphHashKeysEvent"
             value="1"
             version="1"
+            channel="PerfectHash/Analytic"
             level="win:Informational"
             opcode="win:Info"
             task="HashKeys"
             template="GraphAddKeysTemplate"
+            keywords="GRAPH_HASH"
             message="$(string.PerfectHash.event.1.message)">
           </event>
           <event
             symbol="GraphAddHashedKeysEvent"
             value="2"
             version="1"
+            channel="PerfectHash/Analytic"
             level="win:Informational"
             opcode="win:Info"
             task="AddHashedKeys"
             template="GraphAddHashedKeysTemplate"
+            keywords="GRAPH_HASH"
             message="$(string.PerfectHash.event.2.message)">
           </event>
           <event
             symbol="GraphFoundNewBestGraph"
             value="3"
             version="0"
+            channel="PerfectHash/Analytic"
             level="win:Informational"
             opcode="win:Info"
             task="FoundNewBestGraph"
             template="GraphFoundNewBestGraphTemplate"
-            keywords="GRAPH"
+            keywords="GRAPH_BEST"
             message="$(string.PerfectHash.event.3.message)">
+          </event>
+          <event
+            symbol="GraphAssignStart"
+            value="4"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Start"
+            task="Assign"
+            template="GraphAssignStartTemplate"
+            keywords="GRAPH_ASSIGN"
+            message="$(string.PerfectHash.event.4.message)">
+          </event>
+          <event
+            symbol="GraphAssignStop"
+            value="5"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Stop"
+            task="Assign"
+            template="GraphAssignStopTemplate"
+            keywords="GRAPH_ASSIGN"
+            message="$(string.PerfectHash.event.5.message)">
           </event>
         </events>
       </provider>
@@ -153,6 +207,8 @@
         <string id="PerfectHash.event.1.message" value="Result of hashing keys into two vertex arrays."></string>
         <string id="PerfectHash.event.2.message" value="Result of hashing keys into two vertex arrays, then adding to a graph."></string>
         <string id="PerfectHash.event.3.message" value="New best graph was found."></string>
+        <string id="PerfectHash.event.4.message" value="Started graph assignment."></string>
+        <string id="PerfectHash.event.5.message" value="Stopped graph assignment."></string>
       </stringTable>
     </resources>
   </localization>

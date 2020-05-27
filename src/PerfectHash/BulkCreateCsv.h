@@ -118,6 +118,10 @@ Abstract:
           Context->FailedAttempts,                                                           \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(SuccessfulAttempts,                                                                \
+          Context->FinishedCount,                                                            \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(VertexCollisionFailures,                                                           \
           Context->VertexCollisionFailures,                                                  \
           OUTPUT_INT)                                                                        \
@@ -205,6 +209,10 @@ Abstract:
                                                                                              \
     ENTRY(MaximumGraphTraversalDepth,                                                        \
           Table->MaximumGraphTraversalDepth,                                                 \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(NumberOfEmptyVertices,                                                             \
+          Table->NumberOfEmptyVertices,                                                      \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(AddKeysElapsedCycles,                                                              \

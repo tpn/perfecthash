@@ -186,6 +186,7 @@ BOKEH_GLYPHS = [
 #===============================================================================
 
 # AddKeys
+
 ADD_KEYS = 'PerfectHash/AddKeys/win:Info'
 
 ADD_KEYS_ETW_HEADER = (
@@ -567,6 +568,105 @@ FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM = (
     'NumberOfAssignedPerCacheLineCounts_16',
 )
 
+# GraphAssignStart
+
+ASSIGN_START = 'PerfectHash/Assign/win:Start'
+
+ASSIGN_START_ETW_HEADER = (
+    'PerfectHash/Assign/win:Start,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' Attempt,'
+    ' NumberOfKeys,'
+    ' NumberOfVertices'
+)
+
+ASSIGN_START_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'Attempt',
+    'NumberOfKeys',
+    'NumberOfVertices',
+)
+
+ASSIGN_START_CSV_HEADER_SLIM = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'Attempt',
+    'NumberOfKeys',
+    'NumberOfVertices',
+)
+
+# GraphAssignStop
+
+ASSIGN_STOP = 'PerfectHash/Assign/win:Stop'
+
+ASSIGN_STOP_ETW_HEADER = (
+    'PerfectHash/Assign/win:Start,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' Attempt,'
+    ' NumberOfKeys,'
+    ' NumberOfVertices,'
+    ' NumberOfEmptyVertices,'
+    ' MaxTraversalDepth,'
+    ' TotalTraversals'
+)
+
+ASSIGN_STOP_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'Attempt',
+    'NumberOfKeys',
+    'NumberOfVertices',
+    'NumberOfEmptyVertices',
+    'MaxTraversalDepth',
+    'TotalTraversals',
+)
+
+ASSIGN_STOP_CSV_HEADER_SLIM = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'Attempt',
+    'NumberOfKeys',
+    'NumberOfVertices',
+    'NumberOfEmptyVertices',
+    'MaxTraversalDepth',
+    'TotalTraversals',
+)
+
 # Maps
 
 EVENT_NAME_TO_ETW_HEADER = {
@@ -581,6 +681,8 @@ EVENT_NAME_TO_CSV_HEADER = {
     HASH_KEYS: HASH_KEYS_CSV_HEADER,
     ADD_HASHED_KEYS: ADD_HASHED_KEYS_CSV_HEADER,
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER,
+    ASSIGN_START: ASSIGN_START_CSV_HEADER,
+    ASSIGN_STOP: ASSIGN_STOP_CSV_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER_SLIM = {
@@ -588,6 +690,8 @@ EVENT_NAME_TO_CSV_HEADER_SLIM = {
     HASH_KEYS: HASH_KEYS_CSV_HEADER_SLIM,
     ADD_HASHED_KEYS: ADD_HASHED_KEYS_CSV_HEADER_SLIM,
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM,
+    ASSIGN_START: ASSIGN_START_CSV_HEADER_SLIM,
+    ASSIGN_STOP: ASSIGN_STOP_CSV_HEADER_SLIM,
 }
 
 HAS_SEED_DATA = {
@@ -1719,12 +1823,18 @@ def process_xperf_perfecthash_csv(path, out=None):
     hash_keys = HASH_KEYS
     add_hashed_keys = ADD_HASHED_KEYS
     found_new_best_graph = FOUND_NEW_BEST_GRAPH
+    assign_start = ASSIGN_START
+    assign_stop = ASSIGN_STOP
+
+    assign_io = io.StringIO()
 
     io = {
         add_keys: io.StringIO(),
         hash_keys: io.StringIO(),
         add_hashed_keys: io.StringIO(),
         found_new_best_graph: io.StringIO(),
+        assign_start: assign_io,
+        assign_stop: assign_io,
     }
 
     paths = {
@@ -1732,6 +1842,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         hash_keys: f'{prefix}_HashKeys.csv',
         add_hashed_keys: f'{prefix}_AddHashedKeys.csv',
         found_new_best_graph: f'{prefix}_FoundNewBestGraph.csv',
+        assign_start: f'{prefix}_AssignRaw.csv',
+        assign_stop: f'{prefix}_Assign.csv',
     }
 
     counts = {
@@ -1739,6 +1851,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         hash_keys: 0,
         add_hashed_keys: 0,
         found_new_best_graph: 0,
+        assign_start: 0,
+        assign_stop: 0,
     }
 
     names = set(counts.keys())
@@ -1774,10 +1888,12 @@ def process_xperf_perfecthash_csv(path, out=None):
 
     start_dt = filetime_utc_to_local_tz(int(trace_info['Trace Start']))
 
-    # Write the CSV headers to all StringIO buffers.
+    # Write the CSV headers to all StringIO buffers, excluding the ones used for
+    # 'Start' events (as they share the 'Stop' event buffer).
     for (k, v) in slim_csv_headers.items():
-        io[k].write(','.join(v))
-        io[k].write('\n')
+        if not k.endswith('Start'):
+            io[k].write(','.join(v))
+            io[k].write('\n')
 
     for line in tqdm(lines[end_header:]):
         ix = line.find(',')
@@ -1797,6 +1913,13 @@ def process_xperf_perfecthash_csv(path, out=None):
             k: v for (k, v) in zip(header, line.replace(' ', '').split(','))
         }
 
+        if name == ASSIGN_START:
+            ld['NumberOfEmptyVertices'] = '0'
+            ld['MaxTraversalDepth'] = '0'
+            ld['TotalTraversals'] = '0'
+            ld['Attempt'] = '0'
+            slim_header = slim_csv_headers[ASSIGN_STOP]
+
         ts = start_dt + timedelta(microseconds=int(ld['TimeStamp']))
         ld['TimeStamp'] = datetime_to_perfecthash_time(ts)
 
@@ -1809,7 +1932,11 @@ def process_xperf_perfecthash_csv(path, out=None):
         ld['ProcessID'] = pid[ix+1:pid.find(')')]
 
         f = io[name]
-        new_line = ','.join(ld[k] for k in slim_header)
+        try:
+            new_line = ','.join(ld[k] for k in slim_header)
+        except KeyError:
+            import ipdb
+            ipdb.set_trace()
         f.write(new_line)
         f.write('\n')
 
@@ -1819,8 +1946,19 @@ def process_xperf_perfecthash_csv(path, out=None):
         if count == 0:
             continue
 
+        path = paths[name]
+        if not path:
+            continue
+
         f = io[name]
         f.seek(0)
+
+        if name == ASSIGN_START:
+            with open(path, 'w') as raw_f:
+                raw_f.write(f.getvalue())
+            f.seek(0)
+            out(f'Wrote {count} records to {path}.')
+            continue
 
         df = pd.read_csv(f)
 
@@ -1835,7 +1973,27 @@ def process_xperf_perfecthash_csv(path, out=None):
             df['Seed6_Byte3'] = np.right_shift((df.Seed6 & 0x001f0000), 16)
             df['Seed6_Byte4'] = np.right_shift((df.Seed6 & 0x1f000000), 24)
 
-        path = paths[name]
+        if name == ASSIGN_STOP:
+            df['TimeStamp'] = df.TimeStamp.astype(np.datetime64)
+            df = df.sort_values([
+                'ThreadID',
+                'TimeStamp',
+                'Attempt',
+            ], ignore_index=True)
+            df['Elapsed'] = df.TimeStamp - df.TimeStamp.shift(1)
+            df = df[df.EventName == ASSIGN_STOP][[
+                'Elapsed',
+                'TimeStamp',
+                'ProcessID',
+                'ThreadID',
+                'CPU',
+                'NumberOfKeys',
+                'NumberOfVertices',
+                'NumberOfEmptyVertices',
+                'MaxTraversalDepth',
+                'TotalTraversals',
+            ]]
+
         df.to_csv(path)
         out(f'Wrote {count} records to {path}.')
 

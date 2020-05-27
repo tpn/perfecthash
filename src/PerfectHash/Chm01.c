@@ -1080,10 +1080,12 @@ FinishedSolution:
     }
 
     //
-    // Capture the maximum traversal depth in the table.
+    // Capture the maximum traversal depth and number of empty vertices in the
+    // table.
     //
 
     Table->MaximumGraphTraversalDepth = Graph->MaximumTraversalDepth;
+    Table->NumberOfEmptyVertices = Graph->NumberOfEmptyVertices;
 
     //
     // Capture whether large pages were used for the vertex pairs array.

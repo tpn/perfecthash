@@ -258,12 +258,7 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
 
     ULONG MaxGraphTraversalDepth;
     ULONG TotalGraphTraversals;
-
-    //
-    // Pad out to an 8-byte boundary.
-    //
-
-    ULONG Padding;
+    ULONG NumberOfEmptyVertices;
 
     //
     // Stores Graph->Attempt at the time the memory coverage was captured.
@@ -913,10 +908,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG Index;
 
     //
-    // Pad out to an 8 byte boundary.
+    // Number of empty vertices encountered during the assignment step.
     //
 
-    ULONG Padding;
+    ULONG NumberOfEmptyVertices;
 
     //
     // Duplicate the context pointer.  (This is also available from Info.)
