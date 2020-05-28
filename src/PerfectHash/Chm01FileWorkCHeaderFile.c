@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -339,16 +339,16 @@ SaveCHeaderFileChm01(
         // Isolate each word.
         //
 
-#define WRITE_SEED_WORD(WordNumber)              \
-        OUTPUT_RAW("#define ");                  \
-        OUTPUT_STRING(Upper);                    \
-        OUTPUT_RAW("_SEED");                     \
-        OUTPUT_INT(Count);                       \
-        OUTPUT_RAW("_WORD" # WordNumber);        \
-        *Output++ = ' ';                         \
-        *Output++ = '0';                         \
-        *Output++ = 'x';                         \
-        OUTPUT_HEX_RAW(Seed.Word ## WordNumber); \
+#define WRITE_SEED_WORD(WordNumber)               \
+        OUTPUT_RAW("#define ");                   \
+        OUTPUT_STRING(Upper);                     \
+        OUTPUT_RAW("_SEED");                      \
+        OUTPUT_INT(Count);                        \
+        OUTPUT_RAW("_WORD" # WordNumber);         \
+        *Output++ = ' ';                          \
+        *Output++ = '0';                          \
+        *Output++ = 'x';                          \
+        OUTPUT_HEX_RAW(Seed.UWord ## WordNumber); \
         *Output++ = '\n';
 
         WRITE_SEED_WORD(1);
