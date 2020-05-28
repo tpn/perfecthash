@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -18,7 +18,8 @@ Abstract:
     These three functions collectively call the following implementation
     specific functions also defined in this file: GraphCyclicDeleteEdge(),
     GraphFindDegree1Edge(), GraphNeighborsIterator(), GraphNextNeighbor(),
-    GraphEdgeId(), GraphDeleteEdge(), GraphCheckEdge() and GraphTraverse().
+    GraphEdgeId(), GraphDeleteEdge(), GraphCheckEdge(), and
+    GraphTraverseRecursive().
 
 --*/
 
