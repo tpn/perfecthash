@@ -586,6 +586,15 @@ Table Create Parameters:
             LowestNumberOfLargePagesUsedByKeysSubset
             LowestNumberOfCacheLinesUsedByKeysSubset
 
+    --Seeds=<n1,...n8>
+
+        Supplies an optional comma-separated list of up to 8 integers that
+        represent the seed values to use for every graph solving attempt.
+
+        N.B. This is rarely useful for PerfectHashBulkCreate.exe.  It is more
+             useful for PerfectHashCreate.exe when you want to re-run against
+             a set of known-good seeds.
+
     --Seed3Byte1MaskCounts=<n1,...n31>
     --Seed3Byte2MaskCounts=<n1,...n31>
 
@@ -1008,6 +1017,11 @@ Table Create Parameters:
 
         Supplies a comma-separated list of keys in ascending key-value order.
         Must contain two or more elements.
+
+    --Seeds=<n1,...n8>
+
+        Supplies an optional comma-separated list of up to 8 integers that
+        represent the seed values to use for every graph solving attempt.
 
     --Seed3Byte1MaskCounts=<n1,...n31>
     --Seed3Byte2MaskCounts=<n1,...n31>
