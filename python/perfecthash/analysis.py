@@ -182,7 +182,97 @@ BOKEH_GLYPHS = [
 
 
 #===============================================================================
-# ETW-related Globals
+# ETW-related Globals (System Events)
+#===============================================================================
+
+# Context Switch
+
+CSWITCH = '                CSwitch'
+CSWITCH_ETW_HEADER = (
+    '                CSwitch,'
+    '  TimeStamp,'
+    ' New Process Name ( PID),'
+    '    New TID,'
+    ' NPri,'
+    ' NQnt,'
+    ' TmSinceLast,'
+    ' WaitTime,'
+    ' Old Process Name ( PID),'
+    '    Old TID,'
+    ' OPri,'
+    ' OQnt,'
+    '        OldState,'
+    '      Wait Reason,'
+    ' Swapable,'
+    ' InSwitchTime,'
+    ' CPU,'
+    ' IdealProc,'
+    '  OldRemQnt,'
+    ' NewPriDecr,'
+    ' PrevCState,'
+    ' OldThrdBamQosLevel,'
+    ' NewThrdBamQosLevel'
+)
+
+CSWITCH_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'NewProcessName(PID)',
+    'NewTID',
+    'NPri',
+    'NQnt',
+    'TmSinceLast',
+    'WaitTime',
+    'OldProcessName(PID)',
+    'OldTID',
+    'OPri',
+    'OQnt',
+    'OldState',
+    'WaitReason',
+    'Swapable',
+    'InSwitchTime',
+    'CPU',
+    'IdealProc',
+    'OldRemQnt',
+    'NewPriDecr',
+    'PrevCState',
+    'OldThrdBamQosLevel',
+    'NewThrdBamQosLevel',
+)
+
+CSWITCH_CSV_HEADER_SLIM = (
+    'LineNumber',
+    'TimeStamp',
+    'NewProcessName(PID)',
+    'NewTID',
+    'NPri',
+    'NQnt',
+    'TmSinceLast',
+    'WaitTime',
+    'OldProcessName(PID)',
+    'OldTID',
+    'OPri',
+    'OQnt',
+    'OldState',
+    'WaitReason',
+    'Swapable',
+    'InSwitchTime',
+    'CPU',
+    'IdealProc',
+    'OldRemQnt',
+    'NewPriDecr',
+    'PrevCState',
+    'OldThrdBamQosLevel',
+    'NewThrdBamQosLevel',
+)
+
+# Performance Counters
+
+PMC = '                    Pmc'
+PMC_ETW_HEADER_STARTSWITH = '                    Pmc,  TimeStamp,   ThreadID,'
+
+#===============================================================================
+# ETW-related Globals (Our Events)
 #===============================================================================
 
 # AddKeys
@@ -242,6 +332,7 @@ ADD_KEYS_CSV_HEADER = (
 )
 
 ADD_KEYS_CSV_HEADER_SLIM = (
+    'LineNumber',
     'TimeStamp',
     'ProcessID',
     'ThreadID',
@@ -319,6 +410,7 @@ HASH_KEYS_CSV_HEADER = (
 )
 
 HASH_KEYS_CSV_HEADER_SLIM = (
+    'LineNumber',
     'TimeStamp',
     'ProcessID',
     'ThreadID',
@@ -374,6 +466,7 @@ ADD_HASHED_KEYS_CSV_HEADER = (
 )
 
 ADD_HASHED_KEYS_CSV_HEADER_SLIM = (
+    'LineNumber',
     'TimeStamp',
     'ProcessID',
     'ThreadID',
@@ -512,6 +605,7 @@ FOUND_NEW_BEST_GRAPH_CSV_HEADER = (
 )
 
 FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM = (
+    'LineNumber',
     'TimeStamp',
     'ProcessID',
     'ThreadID',
@@ -604,6 +698,7 @@ ASSIGN_START_CSV_HEADER = (
 
 ASSIGN_START_CSV_HEADER_SLIM = (
     'EventName',
+    'LineNumber',
     'TimeStamp',
     'ProcessID',
     'ThreadID',
@@ -655,6 +750,7 @@ ASSIGN_STOP_CSV_HEADER = (
 
 ASSIGN_STOP_CSV_HEADER_SLIM = (
     'EventName',
+    'LineNumber',
     'TimeStamp',
     'ProcessID',
     'ThreadID',
@@ -674,6 +770,8 @@ EVENT_NAME_TO_ETW_HEADER = {
     HASH_KEYS: HASH_KEYS_ETW_HEADER,
     ADD_HASHED_KEYS: ADD_HASHED_KEYS_ETW_HEADER,
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_ETW_HEADER,
+    CSWITCH: CSWITCH_ETW_HEADER,
+    PMC: None,
 }
 
 EVENT_NAME_TO_CSV_HEADER = {
@@ -683,6 +781,8 @@ EVENT_NAME_TO_CSV_HEADER = {
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER,
     ASSIGN_START: ASSIGN_START_CSV_HEADER,
     ASSIGN_STOP: ASSIGN_STOP_CSV_HEADER,
+    CSWITCH: CSWITCH_CSV_HEADER,
+    PMC: None,
 }
 
 EVENT_NAME_TO_CSV_HEADER_SLIM = {
@@ -692,6 +792,8 @@ EVENT_NAME_TO_CSV_HEADER_SLIM = {
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM,
     ASSIGN_START: ASSIGN_START_CSV_HEADER_SLIM,
     ASSIGN_STOP: ASSIGN_STOP_CSV_HEADER_SLIM,
+    CSWITCH: CSWITCH_CSV_HEADER_SLIM,
+    PMC: None,
 }
 
 HAS_SEED_DATA = {
@@ -1825,6 +1927,8 @@ def process_xperf_perfecthash_csv(path, out=None):
     found_new_best_graph = FOUND_NEW_BEST_GRAPH
     assign_start = ASSIGN_START
     assign_stop = ASSIGN_STOP
+    cswitch = CSWITCH
+    pmc = PMC
 
     assign_io = io.StringIO()
 
@@ -1835,6 +1939,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         found_new_best_graph: io.StringIO(),
         assign_start: assign_io,
         assign_stop: assign_io,
+        cswitch: io.StringIO(),
+        pmc: io.StringIO(),
     }
 
     paths = {
@@ -1844,6 +1950,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         found_new_best_graph: f'{prefix}_FoundNewBestGraph.csv',
         assign_start: f'{prefix}_AssignRaw.csv',
         assign_stop: f'{prefix}_Assign.csv',
+        cswitch: f'{prefix}_ContextSwitch.csv',
+        pmc: f'{prefix}_Pmc.csv',
     }
 
     counts = {
@@ -1853,6 +1961,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         found_new_best_graph: 0,
         assign_start: 0,
         assign_stop: 0,
+        cswitch: 0,
+        pmc: 0,
     }
 
     names = set(counts.keys())
@@ -1865,6 +1975,7 @@ def process_xperf_perfecthash_csv(path, out=None):
     assert lines[0] == 'BeginHeader', lines[0]
 
     end_header = None
+    pmc_header = None
     for (i, line) in enumerate(lines):
         if line == 'EndHeader':
             end_header = i
@@ -1873,9 +1984,18 @@ def process_xperf_perfecthash_csv(path, out=None):
         if ix == -1:
             continue
         name = line[:ix]
-        expected = etw_headers.get(name)
-        if expected:
-            assert line == expected, (line, expected)
+        if name.startswith(PMC):
+            assert line.startswith(PMC_ETW_HEADER_STARTSWITH), line
+            pmc_etw_header = line
+            pmc_csv_header = line.replace(' ', '').split(',')
+            pmc_csv_header_slim = [ 'LineNumber' ] + pmc_csv_header[1:]
+            etw_headers[PMC] = pmc_etw_header
+            csv_headers[PMC] = pmc_csv_header
+            slim_csv_headers[PMC] = pmc_csv_header_slim
+        else:
+            expected = etw_headers.get(name)
+            if expected:
+                assert line == expected, (line, expected)
 
     assert end_header
     trace_info_line = lines[end_header+1]
@@ -1895,7 +2015,7 @@ def process_xperf_perfecthash_csv(path, out=None):
             io[k].write(','.join(v))
             io[k].write('\n')
 
-    for line in tqdm(lines[end_header:]):
+    for (lineno, line) in enumerate(tqdm(lines[end_header:])):
         ix = line.find(',')
         if ix == -1:
             continue
@@ -1913,6 +2033,8 @@ def process_xperf_perfecthash_csv(path, out=None):
             k: v for (k, v) in zip(header, line.replace(' ', '').split(','))
         }
 
+        ld['LineNumber'] = str(lineno)
+
         if name == ASSIGN_START:
             ld['NumberOfEmptyVertices'] = '0'
             ld['MaxTraversalDepth'] = '0'
@@ -1926,10 +2048,11 @@ def process_xperf_perfecthash_csv(path, out=None):
         if 'Result' in ld:
             ld['Success'] = 'Y' if ld['Result'] == '0x00000000' else 'N'
 
-        pid = ld['ProcessID']
-        ix = pid.find('(')
-        assert ix != -1
-        ld['ProcessID'] = pid[ix+1:pid.find(')')]
+        if 'ProcessID' in ld:
+            pid = ld['ProcessID']
+            ix = pid.find('(')
+            assert ix != -1
+            ld['ProcessID'] = pid[ix+1:pid.find(')')]
 
         f = io[name]
         try:
@@ -1983,6 +2106,7 @@ def process_xperf_perfecthash_csv(path, out=None):
             df['Elapsed'] = df.TimeStamp - df.TimeStamp.shift(1)
             df = df[df.EventName == ASSIGN_STOP][[
                 'Elapsed',
+                'LineNumber',
                 'TimeStamp',
                 'ProcessID',
                 'ThreadID',
