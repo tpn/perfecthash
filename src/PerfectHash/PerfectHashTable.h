@@ -284,10 +284,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG NumberOfEmptyVertices;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Number of collisions encountered during graph assignment step.
     //
 
-    ULONG Padding1;
+    ULONG NumberOfCollisionsDuringAssignment;
 
     //
     // Pointer to the path for the output directory (below).

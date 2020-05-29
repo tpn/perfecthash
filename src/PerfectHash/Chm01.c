@@ -1080,12 +1080,14 @@ FinishedSolution:
     }
 
     //
-    // Capture the maximum traversal depth and number of empty vertices in the
-    // table.
+    // Capture the maximum traversal depth, number of empty vertices, and graph
+    // collisions during assignment.  (These are used in the .csv output, hence
+    // the duplication between the table and graph structs.)
     //
 
     Table->MaximumGraphTraversalDepth = Graph->MaximumTraversalDepth;
     Table->NumberOfEmptyVertices = Graph->NumberOfEmptyVertices;
+    Table->NumberOfCollisionsDuringAssignment = Graph->Collisions;
 
     //
     // Capture whether large pages were used for the vertex pairs array.

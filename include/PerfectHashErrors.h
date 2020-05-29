@@ -620,6 +620,7 @@ Abstract:
 //             HighestTotalGraphTraversals
 //             HighestMaxAssignedPerCacheLineCount
 //             HighestNumberOfEmptyVertices
+//             HighestNumberOfCollisionsDuringAssignment
 // 
 //             LowestNumberOfEmptyPages
 //             LowestNumberOfEmptyLargePages
@@ -628,6 +629,7 @@ Abstract:
 //             LowestTotalGraphTraversals
 //             LowestMaxAssignedPerCacheLineCount
 //             LowestNumberOfEmptyVertices
+//             LowestNumberOfCollisionsDuringAssignment
 // 
 //         The following predicates must be used in conjunction with --KeysSubset:
 // 
@@ -1049,6 +1051,7 @@ Abstract:
 //             HighestTotalGraphTraversals
 //             HighestMaxAssignedPerCacheLineCount
 //             HighestNumberOfEmptyVertices
+//             HighestNumberOfCollisionsDuringAssignment
 // 
 //             LowestNumberOfEmptyPages
 //             LowestNumberOfEmptyLargePages
@@ -1057,6 +1060,7 @@ Abstract:
 //             LowestTotalGraphTraversals
 //             LowestMaxAssignedPerCacheLineCount
 //             LowestNumberOfEmptyVertices
+//             LowestNumberOfCollisionsDuringAssignment
 // 
 //         The following predicates must be used in conjunction with --KeysSubset:
 // 

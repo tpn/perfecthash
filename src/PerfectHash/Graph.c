@@ -275,6 +275,7 @@ Return Value:
     LONGLONG FinishedCount;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
 
     //
     // Initialize aliases.
@@ -408,16 +409,16 @@ Return Value:
     // value at the table and coverage level.  Not particularly elegant.
     //
 
-    Graph->AssignedMemoryCoverage.MaxGraphTraversalDepth =
-        Graph->MaximumTraversalDepth;
+    Coverage = &Graph->AssignedMemoryCoverage;
+    Coverage->MaxGraphTraversalDepth = Graph->MaximumTraversalDepth;
 
     //
-    // Ditto for total traversals and empty vertices.
+    // Ditto for total traversals, empty vertices and collisions.
     //
 
-    Graph->AssignedMemoryCoverage.TotalGraphTraversals = Graph->TotalTraversals;
-    Graph->AssignedMemoryCoverage.NumberOfEmptyVertices =
-        Graph->NumberOfEmptyVertices;
+    Coverage->TotalGraphTraversals = Graph->TotalTraversals;
+    Coverage->NumberOfEmptyVertices = Graph->NumberOfEmptyVertices;
+    Coverage->NumberOfCollisionsDuringAssignment = Graph->Collisions;
 
     //
     // Register the solved graph.  We can return this result directly.

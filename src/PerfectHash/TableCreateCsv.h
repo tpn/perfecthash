@@ -178,6 +178,10 @@ Abstract:
           Table->NumberOfEmptyVertices,                                                      \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(NumberOfCollisionsDuringAssignment,                                                \
+          Table->NumberOfCollisionsDuringAssignment,                                         \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(HighestDeletedEdgesCount,                                                          \
           Context->HighestDeletedEdgesCount,                                                 \
           OUTPUT_INT)                                                                        \

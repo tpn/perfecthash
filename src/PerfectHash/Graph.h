@@ -259,6 +259,13 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     ULONG MaxGraphTraversalDepth;
     ULONG TotalGraphTraversals;
     ULONG NumberOfEmptyVertices;
+    ULONG NumberOfCollisionsDuringAssignment;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
 
     //
     // Stores Graph->Attempt at the time the memory coverage was captured.

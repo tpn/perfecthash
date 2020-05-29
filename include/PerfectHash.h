@@ -2941,6 +2941,8 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(TotalGraphTraversals, Lowest, <)                       \
     ENTRY(NumberOfEmptyVertices, Highest, >)                     \
     ENTRY(NumberOfEmptyVertices, Lowest, <)                      \
+    ENTRY(NumberOfCollisionsDuringAssignment, Highest, >)        \
+    ENTRY(NumberOfCollisionsDuringAssignment, Lowest, >)         \
     ENTRY(MaxAssignedPerCacheLineCount, Highest, >)              \
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
     ENTRY(MaxAssignedPerCacheLineCount, Lowest, <)               \
