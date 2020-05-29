@@ -877,6 +877,7 @@ Return Value:
     LONG EdgeId;
     LONG ThisId;
     LONG FinalId;
+    ULONG IndexMask;
     ULONG MaskedEdgeId;
     ULONG MaskedThisId;
     ULONG MaskedFinalId;
@@ -885,6 +886,18 @@ Return Value:
     VERTEX Neighbor;
     GRAPH_ITERATOR Iterator;
     PPERFECT_HASH_TABLE Table;
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Graph->Context->Rtl;
+    Table = Graph->Context->Table;
+    IndexMask = Table->IndexMask;
+
+    //
+    // Invariant check: vertex should not be empty.
+    //
 
     ASSERT(!IsEmpty(Vertex));
 
@@ -899,13 +912,6 @@ Return Value:
     //
 
     Iterator = GraphNeighborsIterator(Graph, Vertex);
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Graph->Context->Rtl;
-    Table = Graph->Context->Table;
 
     //
     // Update the total traversals counter and current traversal depth.  If
@@ -950,17 +956,17 @@ Return Value:
         //
 
         EdgeId = GraphEdgeId(Graph, Vertex, Neighbor);
-        MASK_INDEX(EdgeId, &MaskedEdgeId);
+        MaskedEdgeId = EdgeId & IndexMask;
 
         OriginalExistingId = ExistingId = Graph->Assigned[Vertex];
         ASSERT(ExistingId >= 0);
 
         ThisId = EdgeId - ExistingId;
-        MASK_INDEX(ThisId, &MaskedThisId);
+        MaskedThisId = ThisId & IndexMask;
         ASSERT(MaskedThisId <= Graph->NumberOfVertices);
 
         FinalId = EdgeId + ExistingId;
-        MASK_INDEX(FinalId, &MaskedFinalId);
+        MaskedFinalId = FinalId & IndexMask;
         ASSERT(MaskedFinalId <= Graph->NumberOfVertices);
 
         Bit = MaskedFinalId;
@@ -993,22 +999,6 @@ Return Value:
         GraphTraverseRecursive(Graph, Neighbor);
 
     }
-
-    //
-    // We need an Error: label for the MASK_INDEX() et al macros.
-    //
-
-    goto End;
-
-Error:
-
-    //
-    // We shouldn't ever reach here.
-    //
-
-    PH_RAISE(PH_E_UNREACHABLE_CODE);
-
-End:
 
     //
     // Decrement depth and return.
