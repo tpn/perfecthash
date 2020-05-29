@@ -13,14 +13,9 @@ Abstract:
     including the <PerfectHashEvents.h> header that ships in the ../../include
     directory).
 
-    It's sole job at the moment is to provide glue for the memset hack (see
-    comment in memset.c.)
-
 --*/
 
 #pragma once
-
-void *_memset(void* dest, int c, size_t count);
 
 //
 // 4514: unreferenced inline function removed
@@ -36,11 +31,9 @@ void *_memset(void* dest, int c, size_t count);
 
 #pragma warning(push)
 #pragma warning(disable: 4514 4710 4820 5045 26451)
-#define RtlZeroMemory(Destination,Length) _memset((Destination),0,(Length))
-#define memset _memset
+#define RtlZeroMemory(Destination,Length) memset((Destination),0,(Length))
 #include <PerfectHashEvents.h>
 #undef RtlZeroMemory
-#undef memset
 #pragma warning(pop)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
