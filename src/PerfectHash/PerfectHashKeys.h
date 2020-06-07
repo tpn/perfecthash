@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -40,10 +40,17 @@ typedef union _PERFECT_HASH_KEYS_STATE {
         ULONG Loaded:1;
 
         //
+        // When set, indicates a keys file's base address has been registered
+        // with CUDA.
+        //
+
+        ULONG RegisteredWithCuda:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -153,6 +160,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     PVOID KeyArrayBaseAddress;
 
     //
+    // The CUDA device address of the keys array, if applicable.
+    //
+
+    LONG_PTR DeviceKeyArrayBaseAddress;
+
+    //
+    // Pointer to the active CU instance if applicable.
+    //
+
+    struct _CU *Cu;
+
+    //
     // Capture simple statistics about the keys that were loaded.
     //
 
@@ -234,8 +253,27 @@ HRESULT
     );
 typedef PERFECT_HASH_KEYS_LOAD_TABLE_SIZE *PPERFECT_HASH_KEYS_LOAD_TABLE_SIZE;
 
+//
+// Forward decl for CUDA.
+//
+
+struct _PH_CU_DEVICE;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI COPY_KEYS_TO_CU_DEVICE)(
+    _In_ PPERFECT_HASH_KEYS Keys,
+    _In_ struct _CU *Cu,
+    _In_ struct _PH_CU_DEVICE *Device
+    );
+typedef COPY_KEYS_TO_CU_DEVICE *PCOPY_KEYS_TO_CU_DEVICE;
+
+
 #ifndef __INTELLISENSE__
 extern TRY_EXTRACT_KEY_SIZE_FROM_FILENAME TryExtractKeySizeFromFilename;
+extern COPY_KEYS_TO_CU_DEVICE CopyKeysToCuDevice;
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats32;

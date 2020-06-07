@@ -59,11 +59,13 @@ TryExtractArgContextBulkCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
+    DECL_ARG(TryCuda);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryCuda);
 
     return S_FALSE;
 }
@@ -83,11 +85,13 @@ TryExtractArgContextTableCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
+    DECL_ARG(TryCuda);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryCuda);
 
     return S_FALSE;
 }
@@ -947,8 +951,17 @@ Return Value:
         }                                                                \
     }
 
-    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(KeysSubset,
-                                                              KEYS_SUBSET);
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(
+        KeysSubset,
+        KEYS_SUBSET
+    );
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(
+        CuDeviceOrdinals,
+        CU_DEVICE_ORDINALS
+    );
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuDeviceOrdinal);
 
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(Name, Upper) \
     if (IS_EQUAL(Name)) {                                \

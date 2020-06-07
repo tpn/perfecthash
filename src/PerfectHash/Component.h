@@ -28,6 +28,7 @@ typedef struct _GLOBAL_COMPONENTS {
         union _COMPONENT *FirstComponent;
         INIT_ONCE Rtl;
         INIT_ONCE Allocator;
+        INIT_ONCE Cu;
     };
 } GLOBAL_COMPONENTS;
 typedef GLOBAL_COMPONENTS *PGLOBAL_COMPONENTS;
@@ -73,7 +74,8 @@ IsGlobalComponentInterfaceId(
 {
     return (
         Id == PerfectHashRtlInterfaceId ||
-        Id == PerfectHashAllocatorInterfaceId
+        Id == PerfectHashAllocatorInterfaceId ||
+        Id == PerfectHashCuInterfaceId
     );
 }
 

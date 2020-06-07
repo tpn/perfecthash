@@ -3863,6 +3863,78 @@ Abstract:
 #define PH_E_REMOVE_WRITE_COMBINE_REQUIRES_ENABLE_WRITE_COMBINE ((HRESULT)0xE0040394L)
 
 //
+// MessageId: PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED
+//
+// MessageText:
+//
+// LoadSymbols failed for nvcuda.dll.
+//
+#define PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED ((HRESULT)0xE0040395L)
+
+//
+// MessageId: PH_E_NVCUDA_DLL_LOAD_LIBRARY_FAILED
+//
+// MessageText:
+//
+// LoadLibrary failed for nvcuda.dll.  Make sure it is in your PATH environment variable.
+//
+#define PH_E_NVCUDA_DLL_LOAD_LIBRARY_FAILED ((HRESULT)0xE0040396L)
+
+//
+// MessageId: PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS
+//
+// MessageText:
+//
+// Failed to load all expected symbols from nvcuda.dll.
+//
+#define PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS ((HRESULT)0xE0040397L)
+
+//
+// MessageId: PH_E_CUDA_DRIVER_API_CALL_FAILED
+//
+// MessageText:
+//
+// CUDA Driver API call failed.
+//
+#define PH_E_CUDA_DRIVER_API_CALL_FAILED ((HRESULT)0xE0040398L)
+
+//
+// MessageId: PH_E_CU_DEVICE_ORDINALS_NOT_SORTED
+//
+// MessageText:
+//
+// CuDeviceOrdinals not sorted.
+//
+#define PH_E_CU_DEVICE_ORDINALS_NOT_SORTED ((HRESULT)0xE0040399L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICE_ORDINALS
+//
+// MessageText:
+//
+// Invalid CuDeviceOrdinals.
+//
+#define PH_E_INVALID_CU_DEVICE_ORDINALS  ((HRESULT)0xE004039AL)
+
+//
+// MessageId: PH_E_DUPLICATE_VALUE_DETECTED_IN_CU_DEVICE_ORDINALS
+//
+// MessageText:
+//
+// Duplicate value detected in CuDeviceOrdinals.
+//
+#define PH_E_DUPLICATE_VALUE_DETECTED_IN_CU_DEVICE_ORDINALS ((HRESULT)0xE004039BL)
+
+//
+// MessageId: PH_E_KEYS_ALREADY_COPIED_TO_A_DIFFERENT_CU_DEVICE
+//
+// MessageText:
+//
+// Keys were already copied to a different device.
+//
+#define PH_E_KEYS_ALREADY_COPIED_TO_A_DIFFERENT_CU_DEVICE ((HRESULT)0xE004039CL)
+
+//
 // MessageId: PH_E_FAILED_TO_GENERATE_RANDOM_BYTES
 //
 // MessageText:

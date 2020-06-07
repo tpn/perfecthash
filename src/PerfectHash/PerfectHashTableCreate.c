@@ -659,6 +659,15 @@ Return Value:
                 Context->Seed3Byte2MaskCounts = &Param->AsSeedMaskCounts;
                 break;
 
+            case TableCreateParameterCuDeviceOrdinalId:
+            case TableCreateParameterCuDeviceOrdinalsId:
+
+                //
+                // These are handled in the context.
+                //
+
+                break;
+
             default:
                 Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
                 goto Error;

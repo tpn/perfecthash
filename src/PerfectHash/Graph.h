@@ -1156,7 +1156,7 @@ typedef GRAPH_INITIALIZE *PGRAPH_INITIALIZE;
 typedef
 VOID
 (NTAPI GRAPH_RUNDOWN)(
-    _In_ _Post_ptr_invalid_ PGRAPH Path
+    _In_ _Post_ptr_invalid_ PGRAPH Graph
     );
 typedef GRAPH_RUNDOWN *PGRAPH_RUNDOWN;
 

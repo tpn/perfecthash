@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -133,7 +133,9 @@ Return Value:
 
 --*/
 {
+    PCU Cu;
     HRESULT Result;
+    CU_RESULT CuResult;
     PALLOCATOR Allocator;
 
     //
@@ -149,6 +151,15 @@ Return Value:
     //
 
     ASSERT(Keys->SizeOfStruct == sizeof(*Keys));
+
+    if (Keys->State.RegisteredWithCuda != FALSE) {
+        Cu = Keys->Cu;
+        CuResult = Cu->MemHostUnregister(Keys->KeyArrayBaseAddress);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CuMemHostUnregister, CuResult);
+        }
+        Keys->DeviceKeyArrayBaseAddress = 0;
+    }
 
     if (Keys->File && Keys->File->BaseAddress) {
 
@@ -214,6 +225,7 @@ Return Value:
     // Release COM references, if applicable.
     //
 
+    RELEASE(Keys->Cu);
     RELEASE(Keys->File);
     RELEASE(Keys->Allocator);
     RELEASE(Keys->Rtl);
@@ -664,6 +676,177 @@ End:
     ReleasePerfectHashPathLockShared(Path);
 
     return Result;
+}
+
+COPY_KEYS_TO_CU_DEVICE CopyKeysToCuDevice;
+
+_Use_decl_annotations_
+HRESULT
+CopyKeysToCuDevice(
+    PPERFECT_HASH_KEYS Keys,
+    PCU Cu,
+    PPH_CU_DEVICE Device
+    )
+/*++
+
+Routine Description:
+
+    Attempt to copy keys to the given CUDA device.
+
+Arguments:
+
+    Keys - Supplies the keys instance.
+
+    Cu - Supplies the CU instance.
+
+    Device - Supplies the target device.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_CUDA_DRIVER_API_CALL_FAILED - CUDA call failed.
+
+    PH_E_KEYS_ALREADY_COPIED_TO_DIFFERENT_CU_INSTANCE - Keys were already copied
+        to a different CU instance.
+
+--*/
+{
+    PRTL Rtl;
+    HRESULT Result;
+    PCU_CONTEXT Ctx;
+    PVOID HostAddress;
+    SIZE_T SizeInBytes;
+    CU_RESULT CuResult;
+    CU_DEVICE_POINTER DeviceAddress;
+    CU_CTX_CREATE_FLAGS CtxFlags;
+    CU_MEM_HOST_ALLOC_FLAGS AllocFlags;
+    CU_MEM_HOST_REGISTER_FLAGS RegisterFlags;
+
+    CtxFlags = CU_CTX_SCHED_SPIN | CU_CTX_MAP_HOST;
+
+    if (Keys->Cu) {
+        Result = PH_E_KEYS_ALREADY_COPIED_TO_A_DIFFERENT_CU_DEVICE;
+        goto Error;
+    }
+
+    Rtl = Keys->Rtl;
+
+    CuResult = Cu->CtxCreate(&Ctx, CtxFlags, Device->Ordinal);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuCtxCreate, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    SizeInBytes = Keys->NumberOfElements.QuadPart * sizeof(KEY);
+
+    //
+    // If the device supports registration of host pointers, try that.
+    //
+
+    if (Device->Attributes.CanUseHostPointerForRegisteredMem != 0) {
+
+        RegisterFlags.AsULong = 0;
+        RegisterFlags.DeviceMap = TRUE;
+
+        CuResult = Cu->MemHostRegister(Keys->KeyArrayBaseAddress,
+                                       SizeInBytes,
+                                       RegisterFlags);
+
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CopyKeysToCuDevice_MemHostRegister, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        Keys->State.RegisteredWithCuda = TRUE;
+
+        ASSERT(Keys->Cu == NULL);
+        Keys->Cu = Cu;
+        Cu->Vtbl->AddRef(Cu);
+
+        CuResult = Cu->MemHostGetDevicePointer(&DeviceAddress,
+                                               Keys->KeyArrayBaseAddress,
+                                               0);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(MemHostGetDevicePointer, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        Keys->DeviceKeyArrayBaseAddress = DeviceAddress;
+
+    } else {
+
+        //
+        // Host registration isn't supported; need to alloc manually.
+        //
+
+        AllocFlags.AsULong = 0;
+        AllocFlags.Portable = TRUE;
+        AllocFlags.DeviceMap = TRUE;
+        AllocFlags.WriteCombined = TRUE;
+
+        CuResult = Cu->MemHostAlloc(&HostAddress,
+                                    SizeInBytes,
+                                    AllocFlags);
+
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CopyKeysToCuDevice_CuMemHostAlloc, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Copy the keys over.
+        //
+
+        CopyMemory(HostAddress, Keys->KeyArrayBaseAddress, SizeInBytes);
+
+        //
+        // Get the device pointer for this address.
+        //
+
+        CuResult = Cu->MemHostGetDevicePointer(&DeviceAddress,
+                                               HostAddress,
+                                               0);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(MemHostGetDevicePointer, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        Keys->DeviceKeyArrayBaseAddress = DeviceAddress;
+
+        //
+        // Copy to the device.
+        //
+
+        CuResult = Cu->MemcpyHtoDAsync(DeviceAddress,
+                                       HostAddress,
+                                       SizeInBytes,
+                                       0);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CopyKeysToCuDevice_CuMemcpyHtoDAsync, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+    }
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

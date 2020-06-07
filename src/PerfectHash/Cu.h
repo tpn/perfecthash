@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2017-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2017-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -620,6 +620,20 @@ typedef enum _CU_DEVICE_ATTRIBUTE {
     CU_DEVICE_ATTRIBUTE_CONCURRENT_MANAGED_ACCESS = 89,
     CU_DEVICE_ATTRIBUTE_COMPUTE_PREEMPTION_SUPPORTED = 90,
     CU_DEVICE_ATTRIBUTE_CAN_USE_HOST_POINTER_FOR_REGISTERED_MEM = 91,
+    CU_DEVICE_ATTRIBUTE_CAN_USE_STREAM_MEM_OPS = 92,
+    CU_DEVICE_ATTRIBUTE_CAN_USE_64_BIT_STREAM_MEM_OPS = 93,
+    CU_DEVICE_ATTRIBUTE_CAN_USE_STREAM_WAIT_VALUE_NOR = 94,
+    CU_DEVICE_ATTRIBUTE_COOPERATIVE_LAUNCH = 95,
+    CU_DEVICE_ATTRIBUTE_COOPERATIVE_MULTI_DEVICE_LAUNCH = 96,
+    CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN = 97,
+    CU_DEVICE_ATTRIBUTE_CAN_FLUSH_REMOTE_WRITES = 98,
+    CU_DEVICE_ATTRIBUTE_HOST_REGISTER_SUPPORTED = 99,
+    CU_DEVICE_ATTRIBUTE_PAGEABLE_MEMORY_ACCESS_USES_HOST_PAGE_TABLES = 100,
+    CU_DEVICE_ATTRIBUTE_DIRECT_MANAGED_MEM_ACCESS_FROM_HOST = 101,
+    CU_DEVICE_ATTRIBUTE_VIRTUAL_ADDRESS_MANAGEMENT_SUPPORTED = 102,
+    CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_POSIX_FILE_DESCRIPTOR_SUPPORTED = 103,
+    CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_WIN32_HANDLE_SUPPORTED = 104,
+    CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_WIN32_KMT_HANDLE_SUPPORTED = 105,
     CU_DEVICE_ATTRIBUTE_MAX
 } CU_DEVICE_ATTRIBUTE;
 typedef CU_DEVICE_ATTRIBUTE *PCU_DEVICE_ATTRIBUTE;
@@ -716,6 +730,20 @@ typedef struct _CU_DEVICE_ATTRIBUTES {
     ULONG ConcurrentManagedAccess;
     ULONG ComputePreemptionSupported;
     ULONG CanUseHostPointerForRegisteredMem;
+    ULONG CanUseStreamMemOps;
+    ULONG CanUse64BitStreamMemOps;
+    ULONG CanUseStreamWaitValueNor;
+    ULONG CooperativeLaunch;
+    ULONG CooperativeMultiDeviceLaunch;
+    ULONG MaxSharedMemoryPerBlockOptin;
+    ULONG CanFlushRemoteWrites;
+    ULONG HostRegisterSupported;
+    ULONG PageableMemoryAccessUsesHostPageTables;
+    ULONG DirectManagedMemAccessFromHost;
+    ULONG VirtualAddressManagementSupported;
+    ULONG HandleTypePosixFileDescriptorSupported;
+    ULONG HandleTypeWin32HandleSupported;
+    ULONG HandleTypeWin32KmtHandleSupported;
 } CU_DEVICE_ATTRIBUTES;
 typedef CU_DEVICE_ATTRIBUTES *PCU_DEVICE_ATTRIBUTES;
 
@@ -863,7 +891,7 @@ typedef
 _Check_return_
 CU_RESULT
 (CU_CTX_CREATE)(
-    _Out_ PPCU_CONTEXT ContextPointer,
+    _Out_ PCU_CONTEXT *ContextPointer,
     _In_opt_ CU_CTX_CREATE_FLAGS Flags,
     _In_ CU_DEVICE Device
     );
@@ -1188,10 +1216,11 @@ CU_RESULT
 typedef CU_MEM_FREE *PCU_MEM_FREE;
 
 typedef
-_Check_return_
+_Must_inspect_result_
+_Success_(return == 0)
 CU_RESULT
 (CU_MEM_HOST_ALLOC)(
-    _Outptr_result_maybenull_ PVOID *pHostPointer,
+    _Outptr_result_nullonfailure_ PVOID *pHostPointer,
     _In_ SIZE_T SizeInBytes,
     _In_opt_ CU_MEM_HOST_ALLOC_FLAGS Flags
     );
@@ -1212,7 +1241,7 @@ typedef
 _Check_return_
 CU_RESULT
 (CU_MEM_HOST_GET_DEVICE_POINTER)(
-    _Outptr_result_maybenull_ PPCU_DEVICE_POINTER pDevicePointer,
+    _Out_ PCU_DEVICE_POINTER DevicePointer,
     _In_ PVOID HostPointer,
     _In_ LONG Unused
     );
@@ -1252,7 +1281,7 @@ typedef
 _Check_return_
 CU_RESULT
 (CU_MEMCPY_HOST_TO_DEVICE)(
-    _In_ PCU_DEVICE_POINTER DestDevicePointer,
+    _In_ CU_DEVICE_POINTER DestDevicePointer,
     _In_reads_bytes_(ByteCount) PVOID SourceHostPointer,
     _In_ SIZE_T ByteCount
     );
@@ -1263,7 +1292,7 @@ _Check_return_
 CU_RESULT
 (CU_MEMCPY_DEVICE_TO_HOST)(
     _Out_writes_(ByteCount) PVOID DestHostPointer,
-    _In_ PCU_DEVICE_POINTER SourceDevicePointer,
+    _In_ CU_DEVICE_POINTER SourceDevicePointer,
     _In_ SIZE_T ByteCount
     );
 typedef CU_MEMCPY_DEVICE_TO_HOST *PCU_MEMCPY_DEVICE_TO_HOST;
@@ -1272,10 +1301,10 @@ typedef
 _Check_return_
 CU_RESULT
 (CU_MEMCPY_HOST_TO_DEVICE_ASYNC)(
-    _In_ PCU_DEVICE_POINTER DestDevicePointer,
+    _In_ CU_DEVICE_POINTER DestDevicePointer,
     _In_reads_bytes_(ByteCount) PVOID SourceHostPointer,
     _In_ SIZE_T ByteCount,
-    _In_ PCU_STREAM Stream
+    _In_opt_ PCU_STREAM Stream
     );
 typedef CU_MEMCPY_HOST_TO_DEVICE_ASYNC *PCU_MEMCPY_HOST_TO_DEVICE_ASYNC;
 
@@ -1284,9 +1313,9 @@ _Check_return_
 CU_RESULT
 (CU_MEMCPY_DEVICE_TO_HOST_ASYNC)(
     _Out_writes_bytes_(ByteCount) PVOID DestHostPointer,
-    _In_ PCU_DEVICE_POINTER SourceDevicePointer,
+    _In_ CU_DEVICE_POINTER SourceDevicePointer,
     _In_ SIZE_T ByteCount,
-    _In_ PCU_STREAM Stream
+    _In_opt_ PCU_STREAM Stream
     );
 typedef CU_MEMCPY_DEVICE_TO_HOST_ASYNC *PCU_MEMCPY_DEVICE_TO_HOST_ASYNC;
 
@@ -1599,33 +1628,65 @@ typedef struct _CU_FUNCTIONS {
 } CU_FUNCTIONS;
 typedef CU_FUNCTIONS *PCU_FUNCTIONS;
 
+
+//
+// Declare CU component and define vtbl methods.
+//
+
+DECLARE_COMPONENT(Cu, CU);
+
+//
+// Vtbl functions.
+//
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+CU_RESULT
+(STDAPICALLTYPE LOAD_CU_DEVICE_ATTRIBUTES)(
+    _In_ struct _CU *Cu,
+    _Inout_ PCU_DEVICE_ATTRIBUTES AttributesPointer,
+    _In_ CU_DEVICE Device
+    );
+typedef LOAD_CU_DEVICE_ATTRIBUTES *PLOAD_CU_DEVICE_ATTRIBUTES;
+
+//
+// CU vtbl.
+//
+
+typedef struct _CU_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(CU);
+    PLOAD_CU_DEVICE_ATTRIBUTES LoadCuDeviceAttributes;
+} CU_VTBL;
+typedef CU_VTBL *PCU_VTBL;
+
+//
+// Private non-vtbl methods.
+//
+
+typedef
+HRESULT
+(NTAPI CU_INITIALIZE)(
+    _In_ struct _CU *Cu
+    );
+typedef CU_INITIALIZE *PCU_INITIALIZE;
+
+typedef
+VOID
+(NTAPI CU_RUNDOWN)(
+    _In_ _Post_ptr_invalid_ struct _CU *Cu
+    );
+typedef CU_RUNDOWN *PCU_RUNDOWN;
+
 //
 // Define the CU structure that encapsulates all CUDA Driver functionality.
 //
 
-typedef union _CU_FLAGS {
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-        ULONG Unused:32;
-    };
-    LONG AsLong;
-    ULONG AsULong;
-} CU_FLAGS;
-C_ASSERT(sizeof(CU_FLAGS) == sizeof(ULONG));
-typedef CU_FLAGS *PCU_FLAGS;
+DEFINE_UNUSED_STATE(CU);
+DEFINE_UNUSED_FLAGS(CU);
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
-
-    //
-    // Size of the structure, in bytes.
-    //
-
-    _Field_range_(==, sizeof(struct _CU)) ULONG SizeOfStruct;
-
-    //
-    // Flags.
-    //
-
-    CU_FLAGS Flags;
+    COMMON_COMPONENT_HEADER(CU);
 
     //
     // Number of function pointers.
@@ -1638,6 +1699,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     //
 
     ULONG Unused;
+
+    //
+    // nvcuda.dll module.
+    //
+
+    HMODULE NvCudaModule;
 
     //
     // Function pointers.
@@ -1656,21 +1723,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
         CU_FUNCTIONS CuFunctions;
     };
 
+
+    //
+    // The Cu vtbl interface.
+    //
+
+    CU_VTBL Interface;
+
 } CU;
 typedef CU *PCU;
 
-HRESULT
-InitCu(
-    _In_ PRTL Rtl,
-    _In_ PCU Cu
-    );
+//
+// Decls
+//
 
-CU_RESULT
-LoadCuDeviceAttributes(
-    _In_ PRTL Rtl,
-    _In_ PCU Cu,
-    _Inout_ PCU_DEVICE_ATTRIBUTES AttributesPointer,
-    _In_ CU_DEVICE Device
-    );
+extern CU_INITIALIZE CuInitialize;
+extern CU_RUNDOWN CuRundown;
+extern LOAD_CU_DEVICE_ATTRIBUTES LoadCuDeviceAttributes;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

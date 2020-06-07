@@ -382,7 +382,18 @@ Return Value:
     }
 
     //
-    // Keys were loaded successfully.  Proceed with table creation.
+    // Keys were loaded successfully.  If CUDA is available, register the base
+    // address of the array.
+    //
+
+    if (Context->Cu) {
+        Result = CopyKeysToCuDevice(Keys,
+                                    Context->Cu,
+                                    ActiveCuDevice(Context));
+    }
+
+    //
+    // Proceed with table creation.
     //
 
     ASSERT(Table == NULL);
@@ -1301,6 +1312,15 @@ Return Value:
 
     PerfectHashContextApplyThreadpoolPriorities(Context,
                                                 &TableCreateParameters);
+
+    if (ContextTableCreateFlags.TryCuda != FALSE) {
+        Result = PerfectHashContextInitializeCuda(Context,
+                                                  &TableCreateParameters);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextTableCreateArgvW_InitializeCuda, Result);
+            return Result;
+        }
+    }
 
     Result = Context->Vtbl->TableCreate(Context,
                                         &KeysPath,
