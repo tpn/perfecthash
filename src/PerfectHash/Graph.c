@@ -2111,6 +2111,11 @@ Return Value:
 
     switch (CoverageType) {
 
+        case BestCoverageTypeNullId:
+        case BestCoverageTypeInvalidId:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+
         BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_BEST_GRAPH)
 
         default:
@@ -2202,6 +2207,11 @@ End:
         break;
 
         switch (CoverageType) {
+
+            case BestCoverageTypeNullId:
+            case BestCoverageTypeInvalidId:
+                PH_RAISE(PH_E_UNREACHABLE_CODE);
+                break;
 
             BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
 
