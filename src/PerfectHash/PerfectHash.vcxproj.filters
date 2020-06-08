@@ -286,6 +286,9 @@
     <ClCompile Include="PerfectHashTableHashEx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="_strtod.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">

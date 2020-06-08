@@ -263,6 +263,7 @@
     <ClCompile Include="RtlRandom.c" />
     <ClCompile Include="RtlUuid.c" />
     <ClCompile Include="Security.c" />
+    <ClCompile Include="_strtod.c" />
     <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="VCProjectFileChunks.c" />
     <ClCompile Include="stdafx.c">
