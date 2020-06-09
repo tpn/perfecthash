@@ -2053,9 +2053,7 @@ Return Value:
     Result = PH_S_CONTINUE_GRAPH_SOLVING;
 
     //
-    // Enter the best graph critical section.  Check the stop solving indicator
-    // again, as it may have been set between our last check above, and when we
-    // enter the critical section.
+    // Enter the best graph critical section.
     //
 
     EnterCriticalSection(&Context->BestGraphCriticalSection);
