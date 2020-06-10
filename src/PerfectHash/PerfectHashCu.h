@@ -30,7 +30,7 @@ HRESULT
     _In_ PCSZ FunctionName,
     _In_ PCSZ FileName,
     _In_opt_ ULONG LineNumber,
-    _In_opt_ ULONG Error
+    _In_opt_ CU_RESULT Error
     );
 typedef PERFECT_HASH_PRINT_CU_ERROR *PPERFECT_HASH_PRINT_CU_ERROR;
 extern PERFECT_HASH_PRINT_CU_ERROR PerfectHashPrintCuError;
