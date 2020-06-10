@@ -91,16 +91,6 @@ extern "C" {
 #pragma warning(disable: 26110 26165 26167)
 
 //
-// Disable "enum not handled in switch statement" warning.
-//
-//      warning C4061: enumerator 'TableCreateParameterNullId' in switch of
-//                     enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID' is not
-//                     explicitly handled by a case label
-//
-
-#pragma warning(disable: 4061)
-
-//
 // NT DDK types.
 //
 

@@ -668,6 +668,8 @@ Return Value:
 
                 break;
 
+            case TableCreateParameterNullId:
+            case TableCreateParameterInvalidId:
             default:
                 Result = PH_E_INVALID_TABLE_CREATE_PARAMETER_ID;
                 goto Error;

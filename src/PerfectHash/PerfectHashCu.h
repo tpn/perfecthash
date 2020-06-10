@@ -42,6 +42,13 @@ extern PERFECT_HASH_PRINT_CU_ERROR PerfectHashPrintCuError;
                             __LINE__,       \
                             (ULONG)CuResult)
 
+#define CU_CHECK(CuResult, Name) \
+    if (CU_FAILED(CuResult)) { \
+        CU_ERROR(__FUNCTION__##Name, CuResult); \
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
+        goto Error; \
+    }
+
 //
 // CUDA device information.
 //

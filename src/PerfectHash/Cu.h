@@ -1202,7 +1202,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_MEM_ALLOC)(
-    _Outptr_result_maybenull_ PPCU_DEVICE_POINTER pDevicePointer,
+    _Out_ PCU_DEVICE_POINTER DevicePointer,
     _In_ SIZE_T SizeInBytes
     );
 typedef CU_MEM_ALLOC *PCU_MEM_ALLOC;

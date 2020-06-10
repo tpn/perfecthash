@@ -1698,6 +1698,17 @@ Return Value:
     Count = TableCreateParameters->NumberOfElements;
     Param = TableCreateParameters->Params;
 
+    //
+    // Disable "enum not handled in switch statement" warning.
+    //
+    //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+    //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+    //                     is not explicitly handled by a case label
+    //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
     for (Index = 0; Index < Count; Index++, Param++) {
 
         switch (Param->Id) {
@@ -1715,6 +1726,9 @@ Return Value:
             default:
                 break;
         }
+
+#pragma warning(pop)
+
     }
 
     return;
@@ -1883,6 +1897,17 @@ Return Value:
     Count = TableCreateParameters->NumberOfElements;
     Param = TableCreateParameters->Params;
 
+    //
+    // Disable "enum not handled in switch statement" warning.
+    //
+    //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+    //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+    //                     is not explicitly handled by a case label
+    //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
     for (Index = 0; Index < Count; Index++, Param++) {
 
         switch (Param->Id) {
@@ -1896,6 +1921,8 @@ Return Value:
                 break;
         }
     }
+
+#pragma warning(pop)
 
     //
     // Validate any ordinals provided.
