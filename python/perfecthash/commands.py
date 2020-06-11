@@ -18,6 +18,7 @@ from .invariant import (
     StringInvariant,
     OutPathInvariant,
     DirectoryInvariant,
+    MkDirectoryInvariant,
     PositiveIntegerInvariant,
     ExistingDirectoryInvariant,
 )
@@ -82,7 +83,8 @@ class DumpCfgTargets(InvariantAwareCommand):
 
 class ExtractAllCfgTargets(InvariantAwareCommand):
     """
-    TBD.
+    Dumps CFG information where applicable for all .dll, .exe and .sys files
+    found recursively in the given input directory.
     """
     _verbose_ = True
 
@@ -97,18 +99,31 @@ class ExtractAllCfgTargets(InvariantAwareCommand):
 
     base_output_dir = None
     _base_output_dir = None
-    class BaseOutputDirArg(DirectoryInvariant):
+    class BaseOutputDirArg(MkDirectoryInvariant):
         _help = ("Base output directory.")
         _mandatory = False
+
+    raise_exceptions = None
+    class RaiseExceptionsArg(BoolInvariant):
+        _help = (
+            "Raises exceptions as soon as they occur (versus capturing all "
+            "exceptions and printing them upon completion) [default: %default]."
+        )
+        _mandatory = False
+        _default = False
 
     def run(self):
         InvariantAwareCommand.run(self)
         conf = self.conf
         out = self._out
 
-        from os import listdir
+        import glob
+        from tqdm import tqdm
+
         from .util import mkdir
         from .path import join
+
+        from .dumpbin import Dumpbin
 
         suffixes = ('.dll', '.exe', '.sys')
 
@@ -117,30 +132,43 @@ class ExtractAllCfgTargets(InvariantAwareCommand):
             mkdir(base)
             self.base_output_dir = base
 
-        base = self._input_dir
-        paths = [ join(base, p) for p in listdir(base) if p.endswith(suffixes) ]
-
         output_dir = self._base_output_dir
 
-        from .dumpbin import Dumpbin
+        input_dir = self._input_dir
+        if not input_dir.endswith('\\'):
+            input_dir = f'{input_dir}\\'
 
-        from tqdm import tqdm
+        base = f'{input_dir}**'
 
-        errors = []
-        for path in tqdm(paths):
-            try:
+        paths = []
+        out(f'Finding all files in {self._input_dir} ending with {suffixes}...')
+        for path in tqdm(glob.iglob(base, recursive=True)):
+            if path.endswith(suffixes):
+                paths.append(path)
+
+        out(f'Found {len(paths)} paths.  Processing...')
+        if not self.raise_exceptions:
+            errors = []
+            for path in tqdm(paths):
+                try:
+                    db = Dumpbin(path)
+                    if not db.is_cf_instrumented:
+                        continue
+                    db.save(output_dir)
+                except Exception as e:
+                    errors.append((e, path))
+                    continue
+
+            if errors:
+                fmt = "Errors processing the following files:\n%s"
+                msg = fmt % '\n'.join(e[1] for e in errors)
+                self._err(msg)
+        else:
+            for path in tqdm(paths):
                 db = Dumpbin(path)
                 if not db.is_cf_instrumented:
                     continue
                 db.save(output_dir)
-            except Exception as e:
-                errors.append((e, path))
-                continue
-
-        if errors:
-            fmt = "Errors processing the following files:\n%s"
-            msg = fmt % '\n'.join(e[1] for e in errors)
-            self._err(msg)
 
 class ExtractSingleCfgTarget(InvariantAwareCommand):
     """
