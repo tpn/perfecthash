@@ -215,6 +215,8 @@ class Dumpbin(InvariantAwareObject):
 
     def save(self, output_dir):
 
+        import numpy as np
+
         from .path import (
             basename,
             splitext,
@@ -224,21 +226,29 @@ class Dumpbin(InvariantAwareObject):
         filename = basename(self.path)
         name = splitext(filename)[0]
 
+        first_char = name[0]
+        if first_char >= '0' and first_char <= '9':
+            name = f'_{name}'
+
+        name = name.replace(' ', '').replace('(', '').replace(')', '')
+
         a = self.guard_cf_func_table_address_array_base0
+        a = np.sort(np.unique(np.array(a, dtype='uint32')))
+        # Skip keys of just 0.
+        if a[0] == 0:
+            a = a[1:]
+
+        if len(a) == 0:
+            return
 
         prefix = join_path(output_dir, '%s-%d.' % (name, len(a)))
 
-        text_path = ''.join((prefix, '.txt'))
         binary_path = ''.join((prefix, '.keys'))
-
-        with open(text_path, 'wb') as f:
-            f.write(b'\n'.join(self.guard_cf_func_table_addresses_base0))
 
         if self._save_plot:
             plot_path = ''.join((prefix, '.png'))
             save_array_plot_to_png_file(plot_path, a)
 
-        import numpy as np
         fp = np.memmap(binary_path, dtype='uint32', mode='w+', shape=a.shape)
         fp[:] = a[:]
         del fp
