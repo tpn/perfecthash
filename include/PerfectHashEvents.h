@@ -547,7 +547,7 @@ Remarks:
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Provider "PerfectHash" event count 6
+// Provider "PerfectHash" event count 8
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // Provider GUID = d0b3028e-70a7-410f-af7e-4d495b4a3c8b
@@ -570,6 +570,7 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #define PerfectHashEvents_TASK_AddHashedKeys 0x3
 #define PerfectHashEvents_TASK_FoundNewBestGraph 0x4
 #define PerfectHashEvents_TASK_Assign 0x5
+#define PerfectHashEvents_TASK_GenerateRandomBytes 0x6
 
 //
 // Keyword
@@ -577,6 +578,7 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #define PH_ETW_GRAPH_HASH 0x1
 #define PH_ETW_GRAPH_BEST 0x2
 #define PH_ETW_GRAPH_ASSIGN 0x4
+#define PH_ETW_RTL_RANDOM 0x8
 
 //
 // Event Descriptors
@@ -593,6 +595,10 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignStart = {0x4, 0
 #define GraphAssignStart_value 0x4
 EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignStop = {0x5, 0x0, 0x10, 0x4, 0x2, 0x5, 0x8000000000000004};
 #define GraphAssignStop_value 0x5
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStart = {0x6, 0x0, 0x10, 0x4, 0x1, 0x6, 0x8000000000000008};
+#define RtlGenerateRandomBytesStart_value 0x6
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStop = {0x7, 0x0, 0x10, 0x4, 0x2, 0x6, 0x8000000000000008};
+#define RtlGenerateRandomBytesStop_value 0x7
 
 //
 // MCGEN_DISABLE_PROVIDER_CODE_GENERATION macro:
@@ -605,13 +611,13 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignStop = {0x5, 0x
 // Event Enablement Bits
 //
 EXTERN_C __declspec(selectany) DECLSPEC_CACHEALIGN ULONG PerfectHashEnableBits[1];
-EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[3] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004};
-EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[3] = {4, 4, 4};
+EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[4] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004, 0x8000000000000008};
+EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[4] = {4, 4, 4, 4};
 
 //
 // Provider context
 //
-EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 3, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
+EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 4, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
 
 //
 // Provider REGHANDLE
@@ -740,6 +746,34 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
         ? McTemplateK0iqqqqq(&PerfectHashEvents_Context, &GraphAssignStop, Activity, Attempt, NumberOfKeys, NumberOfVertices, NumberOfEmptyVertices, MaxTraversalDepth, TotalTraversals) : 0
 #define EventWriteGraphAssignStop_AssumeEnabled(Attempt, NumberOfKeys, NumberOfVertices, NumberOfEmptyVertices, MaxTraversalDepth, TotalTraversals) \
         McTemplateK0iqqqqq(&PerfectHashEvents_Context, &GraphAssignStop, NULL, Attempt, NumberOfKeys, NumberOfVertices, NumberOfEmptyVertices, MaxTraversalDepth, TotalTraversals)
+
+//
+// Enablement check macro for RtlGenerateRandomBytesStart
+//
+#define EventEnabledRtlGenerateRandomBytesStart() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 3)
+
+//
+// Event write macros for RtlGenerateRandomBytesStart
+//
+#define EventWriteRtlGenerateRandomBytesStart(Activity, BytesRequested) \
+        MCGEN_EVENT_ENABLED(RtlGenerateRandomBytesStart) \
+        ? McTemplateK0q(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStart, Activity, BytesRequested) : 0
+#define EventWriteRtlGenerateRandomBytesStart_AssumeEnabled(BytesRequested) \
+        McTemplateK0q(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStart, NULL, BytesRequested)
+
+//
+// Enablement check macro for RtlGenerateRandomBytesStop
+//
+#define EventEnabledRtlGenerateRandomBytesStop() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 3)
+
+//
+// Event write macros for RtlGenerateRandomBytesStop
+//
+#define EventWriteRtlGenerateRandomBytesStop(Activity, Result) \
+        MCGEN_EVENT_ENABLED(RtlGenerateRandomBytesStop) \
+        ? McTemplateK0q(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStop, Activity, Result) : 0
+#define EventWriteRtlGenerateRandomBytesStop_AssumeEnabled(Result) \
+        McTemplateK0q(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStop, NULL, Result)
 
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
@@ -994,6 +1028,30 @@ McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(
 #endif // McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_def
 
 //
+//Template from manifest : GenerateRandomBytesStartTemplate
+//
+#ifndef McTemplateK0q_def
+#define McTemplateK0q_def
+ETW_INLINE
+ULONG
+McTemplateK0q(
+    _In_ PMCGEN_TRACE_CONTEXT Context,
+    _In_ PCEVENT_DESCRIPTOR Descriptor,
+    _In_opt_ const GUID* Activity,
+    _In_ const unsigned int  _Arg0
+    )
+{
+#define McTemplateK0q_ARGCOUNT 1
+
+    EVENT_DATA_DESCRIPTOR EventData[McTemplateK0q_ARGCOUNT + 1];
+
+    EventDataDescCreate(&EventData[1],&_Arg0, sizeof(const unsigned int)  );
+
+    return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0q_ARGCOUNT + 1, EventData);
+}
+#endif // McTemplateK0q_def
+
+//
 //Template from manifest : GraphAddHashedKeysTemplate
 //
 #ifndef McTemplateK0qii_def
@@ -1097,6 +1155,8 @@ McTemplateK0qqqqiiqqqqqqqq(
 #define MSG_PerfectHash_event_3_message      0xB0000003L
 #define MSG_PerfectHash_event_4_message      0xB0000004L
 #define MSG_PerfectHash_event_5_message      0xB0000005L
+#define MSG_PerfectHash_event_6_message      0xB0000006L
+#define MSG_PerfectHash_event_7_message      0xB0000007L
 #define MSG_PerfectHash_event_0_message      0xB0010000L
 #define MSG_PerfectHash_event_1_message      0xB0010001L
 #define MSG_PerfectHash_event_2_message      0xB0010002L

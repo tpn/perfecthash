@@ -3862,3 +3862,12 @@ Abstract:
 //
 #define PH_E_REMOVE_WRITE_COMBINE_REQUIRES_ENABLE_WRITE_COMBINE ((HRESULT)0xE0040394L)
 
+//
+// MessageId: PH_E_FAILED_TO_GENERATE_RANDOM_BYTES
+//
+// MessageText:
+//
+// Failed to generate random bytes.
+//
+#define PH_E_FAILED_TO_GENERATE_RANDOM_BYTES ((HRESULT)0xE004039DL)
+

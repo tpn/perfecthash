@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -14,6 +14,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashEventsPrivate.h"
 
 RTL_GENERATE_RANDOM_BYTES RtlGenerateRandomBytes;
 
@@ -41,16 +42,23 @@ Arguments:
 
 Return Value:
 
-    S_OK on success.
+    S_OK - Success.
 
-    E_POINTER if Rtl or Buffer is NULL.
+    E_POINTER - Rtl or Buffer is NULL.
 
-    E_INVALIDARG if SizeOfBufferInBytes is 0.
+    E_INVALIDARG - SizeOfBufferInBytes is 0.
 
-    E_UNEXPECTED if the system routine failed to generate random data.
+    PH_E_FAILED_TO_GENERATE_RANDOM_BYTES - System routine failed to generate
+        random bytes.
 
 --*/
 {
+    HRESULT Result;
+
+    //
+    // Validate arguments.
+    //
+
     if (!ARGUMENT_PRESENT(Rtl)) {
         return E_POINTER;
     }
@@ -67,12 +75,24 @@ Return Value:
         return E_UNEXPECTED;
     }
 
+    //
+    // Argument validation complete.  Continue.
+    //
+
+    EventWriteRtlGenerateRandomBytesStart(NULL, SizeOfBufferInBytes);
+
     if (!CryptGenRandom(Rtl->CryptProv, SizeOfBufferInBytes, Buffer)) {
         SYS_ERROR(CryptGenRandom);
-        return E_UNEXPECTED;
+        Result = PH_E_FAILED_TO_GENERATE_RANDOM_BYTES;
+    } else {
+        Result = S_OK;
     }
 
-    return S_OK;
+    EventWriteRtlGenerateRandomBytesStop(NULL, Result);
+
+End:
+
+    return Result;
 }
 
 

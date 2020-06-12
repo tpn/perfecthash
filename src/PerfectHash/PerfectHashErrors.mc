@@ -3517,3 +3517,10 @@ Language=English
 --RemoveWriteCombineAfterSuccessfulHashKeys requires --EnableWriteCombineForVertexPairs to be specified.
 .
 
+MessageId=0x39d
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_GENERATE_RANDOM_BYTES
+Language=English
+Failed to generate random bytes.
+.

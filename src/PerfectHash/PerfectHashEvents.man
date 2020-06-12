@@ -101,6 +101,12 @@
             <data name="MaxTraversalDepth" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalTraversals" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
+          <template tid="GenerateRandomBytesStartTemplate">
+            <data name="BytesRequested" inType="win:UInt32" outType="xs:unsignedInt"></data>
+          </template>
+          <template tid="GenerateRandomBytesStopTemplate">
+            <data name="Result" inType="win:UInt32" outType="win:HexInt32"></data>
+          </template>
         </templates>
         <channels>
         </channels>
@@ -108,6 +114,7 @@
           <keyword name="GRAPH_HASH" symbol="PH_ETW_GRAPH_HASH" mask="0x1"></keyword>
           <keyword name="GRAPH_BEST" symbol="PH_ETW_GRAPH_BEST" mask="0x2"></keyword>
           <keyword name="GRAPH_ASSIGN" symbol="PH_ETW_GRAPH_ASSIGN" mask="0x4"></keyword>
+          <keyword name="RTL_RANDOM" symbol="PH_ETW_RTL_RANDOM" mask="0x8"></keyword>
         </keywords>
         <tasks>
           <task name="AddKeys" value="1"/>
@@ -115,6 +122,7 @@
           <task name="AddHashedKeys" value="3"/>
           <task name="FoundNewBestGraph" value="4"/>
           <task name="Assign" value="5"/>
+          <task name="GenerateRandomBytes" value="6"/>
         </tasks>
         <events>
           <event
@@ -189,6 +197,30 @@
             keywords="GRAPH_ASSIGN"
             message="$(string.PerfectHash.event.5.message)">
           </event>
+          <event
+            symbol="RtlGenerateRandomBytesStart"
+            value="6"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Start"
+            task="GenerateRandomBytes"
+            template="GenerateRandomBytesStartTemplate"
+            keywords="RTL_RANDOM"
+            message="$(string.PerfectHash.event.6.message)">
+          </event>
+          <event
+            symbol="RtlGenerateRandomBytesStop"
+            value="7"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Stop"
+            task="GenerateRandomBytes"
+            template="GenerateRandomBytesStopTemplate"
+            keywords="RTL_RANDOM"
+            message="$(string.PerfectHash.event.7.message)">
+          </event>
         </events>
       </provider>
     </events>
@@ -209,6 +241,8 @@
         <string id="PerfectHash.event.3.message" value="New best graph was found."></string>
         <string id="PerfectHash.event.4.message" value="Started graph assignment."></string>
         <string id="PerfectHash.event.5.message" value="Stopped graph assignment."></string>
+        <string id="PerfectHash.event.6.message" value="Started getting random bytes."></string>
+        <string id="PerfectHash.event.7.message" value="Stopped getting random bytes."></string>
       </stringTable>
     </resources>
   </localization>
