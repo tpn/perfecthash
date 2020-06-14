@@ -71,16 +71,13 @@ Return Value:
         return E_INVALIDARG;
     }
 
-    if (!ARGUMENT_PRESENT(Rtl->CryptProv)) {
-        return E_UNEXPECTED;
-    }
-
     //
     // Argument validation complete.  Continue.
     //
 
     EventWriteRtlGenerateRandomBytesStart(NULL, SizeOfBufferInBytes);
 
+    ASSERT(Rtl->CryptProv != 0);
     if (!CryptGenRandom(Rtl->CryptProv, SizeOfBufferInBytes, Buffer)) {
         SYS_ERROR(CryptGenRandom);
         Result = PH_E_FAILED_TO_GENERATE_RANDOM_BYTES;
@@ -89,8 +86,6 @@ Return Value:
     }
 
     EventWriteRtlGenerateRandomBytesStop(NULL, SizeOfBufferInBytes, Result);
-
-End:
 
     return Result;
 }
