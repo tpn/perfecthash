@@ -105,6 +105,7 @@
             <data name="BytesRequested" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
           <template tid="GenerateRandomBytesStopTemplate">
+            <data name="BytesRequested" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="Result" inType="win:UInt32" outType="win:HexInt32"></data>
           </template>
         </templates>

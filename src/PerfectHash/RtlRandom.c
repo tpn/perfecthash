@@ -88,7 +88,7 @@ Return Value:
         Result = S_OK;
     }
 
-    EventWriteRtlGenerateRandomBytesStop(NULL, Result);
+    EventWriteRtlGenerateRandomBytesStop(NULL, SizeOfBufferInBytes, Result);
 
 End:
 

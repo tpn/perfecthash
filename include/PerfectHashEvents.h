@@ -769,11 +769,11 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
 //
 // Event write macros for RtlGenerateRandomBytesStop
 //
-#define EventWriteRtlGenerateRandomBytesStop(Activity, Result) \
+#define EventWriteRtlGenerateRandomBytesStop(Activity, BytesRequested, Result) \
         MCGEN_EVENT_ENABLED(RtlGenerateRandomBytesStop) \
-        ? McTemplateK0q(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStop, Activity, Result) : 0
-#define EventWriteRtlGenerateRandomBytesStop_AssumeEnabled(Result) \
-        McTemplateK0q(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStop, NULL, Result)
+        ? McTemplateK0qq(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStop, Activity, BytesRequested, Result) : 0
+#define EventWriteRtlGenerateRandomBytesStop_AssumeEnabled(BytesRequested, Result) \
+        McTemplateK0qq(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStop, NULL, BytesRequested, Result)
 
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
@@ -1080,6 +1080,33 @@ McTemplateK0qii(
     return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0qii_ARGCOUNT + 1, EventData);
 }
 #endif // McTemplateK0qii_def
+
+//
+//Template from manifest : GenerateRandomBytesStopTemplate
+//
+#ifndef McTemplateK0qq_def
+#define McTemplateK0qq_def
+ETW_INLINE
+ULONG
+McTemplateK0qq(
+    _In_ PMCGEN_TRACE_CONTEXT Context,
+    _In_ PCEVENT_DESCRIPTOR Descriptor,
+    _In_opt_ const GUID* Activity,
+    _In_ const unsigned int  _Arg0,
+    _In_ const unsigned int  _Arg1
+    )
+{
+#define McTemplateK0qq_ARGCOUNT 2
+
+    EVENT_DATA_DESCRIPTOR EventData[McTemplateK0qq_ARGCOUNT + 1];
+
+    EventDataDescCreate(&EventData[1],&_Arg0, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[2],&_Arg1, sizeof(const unsigned int)  );
+
+    return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0qq_ARGCOUNT + 1, EventData);
+}
+#endif // McTemplateK0qq_def
 
 //
 //Template from manifest : GraphAddKeysTemplate

@@ -763,6 +763,89 @@ ASSIGN_STOP_CSV_HEADER_SLIM = (
     'TotalTraversals',
 )
 
+# RandomBytesStart
+
+GENERATE_RANDOM_BYTES_START = 'PerfectHash/GenerateRandomBytes/win:Start'
+
+GENERATE_RANDOM_BYTES_START_ETW_HEADER = (
+    'PerfectHash/GenerateRandomBytes/win:Start,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' BytesRequested'
+)
+
+GENERATE_RANDOM_BYTES_START_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'BytesRequested',
+)
+
+GENERATE_RANDOM_BYTES_START_CSV_HEADER_SLIM = (
+    'EventName',
+    'LineNumber',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'BytesRequested',
+)
+
+# RandomBytesStop
+
+GENERATE_RANDOM_BYTES_STOP = 'PerfectHash/GenerateRandomBytes/win:Stop'
+
+GENERATE_RANDOM_BYTES_STOP_ETW_HEADER = (
+    'PerfectHash/GenerateRandomBytes/win:Stop,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' BytesRequested,'
+    ' Result'
+)
+
+GENERATE_RANDOM_BYTES_STOP_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'BytesRequested',
+    'Result',
+)
+
+GENERATE_RANDOM_BYTES_STOP_CSV_HEADER_SLIM = (
+    'EventName',
+    'LineNumber',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'BytesRequested',
+    'Result',
+)
+
 # Maps
 
 EVENT_NAME_TO_ETW_HEADER = {
@@ -782,6 +865,8 @@ EVENT_NAME_TO_CSV_HEADER = {
     ASSIGN_START: ASSIGN_START_CSV_HEADER,
     ASSIGN_STOP: ASSIGN_STOP_CSV_HEADER,
     CSWITCH: CSWITCH_CSV_HEADER,
+    GENERATE_RANDOM_BYTES_START: GENERATE_RANDOM_BYTES_START_CSV_HEADER,
+    GENERATE_RANDOM_BYTES_STOP: GENERATE_RANDOM_BYTES_STOP_CSV_HEADER,
     PMC: None,
 }
 
@@ -793,6 +878,8 @@ EVENT_NAME_TO_CSV_HEADER_SLIM = {
     ASSIGN_START: ASSIGN_START_CSV_HEADER_SLIM,
     ASSIGN_STOP: ASSIGN_STOP_CSV_HEADER_SLIM,
     CSWITCH: CSWITCH_CSV_HEADER_SLIM,
+    GENERATE_RANDOM_BYTES_START: GENERATE_RANDOM_BYTES_START_CSV_HEADER_SLIM,
+    GENERATE_RANDOM_BYTES_STOP: GENERATE_RANDOM_BYTES_STOP_CSV_HEADER_SLIM,
     PMC: None,
 }
 
@@ -1927,10 +2014,13 @@ def process_xperf_perfecthash_csv(path, out=None):
     found_new_best_graph = FOUND_NEW_BEST_GRAPH
     assign_start = ASSIGN_START
     assign_stop = ASSIGN_STOP
+    generate_random_bytes_start = GENERATE_RANDOM_BYTES_START
+    generate_random_bytes_stop = GENERATE_RANDOM_BYTES_STOP
     cswitch = CSWITCH
     pmc = PMC
 
     assign_io = io.StringIO()
+    generate_random_bytes_io = io.StringIO()
 
     io = {
         add_keys: io.StringIO(),
@@ -1939,6 +2029,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         found_new_best_graph: io.StringIO(),
         assign_start: assign_io,
         assign_stop: assign_io,
+        generate_random_bytes_start: generate_random_bytes_io,
         cswitch: io.StringIO(),
         pmc: io.StringIO(),
     }
@@ -1950,6 +2041,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         found_new_best_graph: f'{prefix}_FoundNewBestGraph.csv',
         assign_start: f'{prefix}_AssignRaw.csv',
         assign_stop: f'{prefix}_Assign.csv',
+        generate_random_bytes_start: f'{prefix}_GenerateRandomBytesRaw.csv',
+        generate_random_bytes_stop: f'{prefix}_GenerateRandomBytes.csv',
         cswitch: f'{prefix}_ContextSwitch.csv',
         pmc: f'{prefix}_Pmc.csv',
     }
@@ -1961,6 +2054,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         found_new_best_graph: 0,
         assign_start: 0,
         assign_stop: 0,
+        generate_random_bytes_start: 0,
+        generate_random_bytes_stop: 0,
         cswitch: 0,
         pmc: 0,
     }
@@ -2041,6 +2136,9 @@ def process_xperf_perfecthash_csv(path, out=None):
             ld['TotalTraversals'] = '0'
             ld['Attempt'] = '0'
             slim_header = slim_csv_headers[ASSIGN_STOP]
+        elif name == GENERATE_RANDOM_BYTES_START:
+            ld['Result'] = '0'
+            slim_header = slim_csv_headers[GENERATE_RANDOM_BYTES_STOP]
 
         ts = start_dt + timedelta(microseconds=int(ld['TimeStamp']))
         ld['TimeStamp'] = datetime_to_perfecthash_time(ts)
@@ -2065,6 +2163,11 @@ def process_xperf_perfecthash_csv(path, out=None):
 
     out('Post-processing results.')
 
+    start_names = (
+        ASSIGN_START,
+        GENERATE_RANDOM_BYTES_START,
+    )
+
     for (name, count) in counts.items():
         if count == 0:
             continue
@@ -2076,7 +2179,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         f = io[name]
         f.seek(0)
 
-        if name == ASSIGN_START:
+        if name in start_names:
             with open(path, 'w') as raw_f:
                 raw_f.write(f.getvalue())
             f.seek(0)
@@ -2116,6 +2219,24 @@ def process_xperf_perfecthash_csv(path, out=None):
                 'NumberOfEmptyVertices',
                 'MaxTraversalDepth',
                 'TotalTraversals',
+            ]]
+        elif name == GENERATE_RANDOM_BYTES_STOP:
+            df['TimeStamp'] = df.TimeStamp.astype(np.datetime64)
+            df = df.sort_values([
+                'ThreadID',
+                'TimeStamp',
+                'BytesRequested',
+            ], ignore_index=True)
+            df['Elapsed'] = df.TimeStamp - df.TimeStamp.shift(1)
+            df = df[df.EventName == GENERATE_RANDOM_BYTES_STOP][[
+                'Elapsed',
+                'LineNumber',
+                'TimeStamp',
+                'ProcessID',
+                'ThreadID',
+                'CPU',
+                'BytesRequested',
+                'Success',
             ]]
 
         df.to_csv(path)
