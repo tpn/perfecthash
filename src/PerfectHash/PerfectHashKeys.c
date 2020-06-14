@@ -152,13 +152,22 @@ Return Value:
 
     ASSERT(Keys->SizeOfStruct == sizeof(*Keys));
 
-    if (Keys->State.RegisteredWithCuda != FALSE) {
-        Cu = Keys->Cu;
-        CuResult = Cu->MemHostUnregister(Keys->KeyArrayBaseAddress);
+    Cu = Keys->Cu;
+
+    if (Keys->DeviceKeyArrayBaseAddress != 0) {
+        CuResult = Cu->MemFree((PVOID)Keys->DeviceKeyArrayBaseAddress);
         if (CU_FAILED(CuResult)) {
-            CU_ERROR(CuMemHostUnregister, CuResult);
+            CU_ERROR(KeysRelease_CuMemFree, CuResult);
         }
         Keys->DeviceKeyArrayBaseAddress = 0;
+    }
+
+    if (Keys->CuCtx != NULL) {
+        CuResult = Cu->CtxDestroy(Keys->CuCtx);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(KeysRelease_CuCtxDestroy, CuResult);
+        }
+        Keys->CuCtx = NULL;
     }
 
     if (Keys->File && Keys->File->BaseAddress) {
@@ -678,11 +687,11 @@ End:
     return Result;
 }
 
-COPY_KEYS_TO_CU_DEVICE CopyKeysToCuDevice;
+PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE PerfectHashKeysCopyToCuDevice;
 
 _Use_decl_annotations_
 HRESULT
-CopyKeysToCuDevice(
+PerfectHashKeysCopyToCuDevice(
     PPERFECT_HASH_KEYS Keys,
     PCU Cu,
     PPH_CU_DEVICE Device
@@ -712,20 +721,13 @@ Return Value:
 
 --*/
 {
-    //PRTL Rtl;
     HRESULT Result;
     PCU_CONTEXT Ctx;
-    //PVOID HostAddress;
     SIZE_T SizeInBytes;
     CU_RESULT CuResult;
     CU_DEVICE_POINTER DeviceAddress;
     CU_CTX_CREATE_FLAGS CtxFlags;
-    /*
-    CU_MEM_HOST_ALLOC_FLAGS AllocFlags;
-    CU_MEM_HOST_REGISTER_FLAGS RegisterFlags;
-    */
 
-    //CtxFlags = CU_CTX_SCHED_SPIN | CU_CTX_MAP_HOST;
     CtxFlags = CU_CTX_SCHED_SPIN;
 
     if (Keys->Cu) {
@@ -733,10 +735,12 @@ Return Value:
         goto Error;
     }
 
-    //Rtl = Keys->Rtl;
+    Keys->Cu = Cu;
 
     CuResult = Cu->CtxCreate(&Ctx, CtxFlags, Device->Ordinal);
     CU_CHECK(CuResult, CtxCreate);
+
+    Keys->CuCtx = Ctx;
 
     //
     // Allocate device memory.
@@ -758,100 +762,6 @@ Return Value:
                                    SizeInBytes,
                                    0);
     CU_CHECK(CuResult, MemcpyHtoDAsync);
-
-#if 0
-    //
-    // If the device supports registration of host pointers, try that.
-    //
-
-    if (Device->Attributes.CanUseHostPointerForRegisteredMem != 0) {
-
-        RegisterFlags.AsULong = 0;
-        RegisterFlags.Portable = TRUE;
-        //RegisterFlags.DeviceMap = TRUE;
-
-        CuResult = Cu->MemHostRegister(Keys->KeyArrayBaseAddress,
-                                       SizeInBytes,
-                                       RegisterFlags);
-
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CopyKeysToCuDevice_MemHostRegister, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
-
-        Keys->State.RegisteredWithCuda = TRUE;
-
-        ASSERT(Keys->Cu == NULL);
-        Keys->Cu = Cu;
-        Cu->Vtbl->AddRef(Cu);
-
-        CuResult = Cu->MemHostGetDevicePointer(&DeviceAddress,
-                                               Keys->KeyArrayBaseAddress,
-                                               0);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(MemHostGetDevicePointer, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
-
-        Keys->DeviceKeyArrayBaseAddress = DeviceAddress;
-
-    } else {
-
-        //
-        // Host registration isn't supported; need to alloc manually.
-        //
-
-        AllocFlags.AsULong = 0;
-        AllocFlags.Portable = TRUE;
-        AllocFlags.WriteCombined = TRUE;
-
-        CuResult = Cu->MemHostAlloc(&HostAddress,
-                                    SizeInBytes,
-                                    AllocFlags);
-
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CopyKeysToCuDevice_CuMemHostAlloc, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
-
-        //
-        // Copy the keys over.
-        //
-
-        CopyMemory(HostAddress, Keys->KeyArrayBaseAddress, SizeInBytes);
-
-        //
-        // Allocate device memory.
-        //
-
-        //CU_CALL(MemAlloc, &DeviceAddress, SizeInBytes);
-        CuResult = Cu->MemAlloc(&DeviceAddress, SizeInBytes);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CopyKeysToCuDevice_CuMemAlloc, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
-
-        Keys->DeviceKeyArrayBaseAddress = DeviceAddress;
-
-        //
-        // Copy to the device.
-        //
-
-        CuResult = Cu->MemcpyHtoDAsync(Keys->DeviceKeyArrayBaseAddress,
-                                       HostAddress,
-                                       SizeInBytes,
-                                       0);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CopyKeysToCuDevice_CuMemcpyHtoDAsync, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
-    }
-#endif
 
     Result = S_OK;
     goto End;

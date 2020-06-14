@@ -40,17 +40,10 @@ typedef union _PERFECT_HASH_KEYS_STATE {
         ULONG Loaded:1;
 
         //
-        // When set, indicates a keys file's base address has been registered
-        // with CUDA.
-        //
-
-        ULONG RegisteredWithCuda:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:31;
     };
 
     LONG AsLong;
@@ -172,6 +165,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     struct _CU *Cu;
 
     //
+    // Pointer to a CU context if applicable.
+    //
+
+    struct CU_CONTEXT *CuCtx;
+
+    //
     // Capture simple statistics about the keys that were loaded.
     //
 
@@ -257,23 +256,23 @@ typedef PERFECT_HASH_KEYS_LOAD_TABLE_SIZE *PPERFECT_HASH_KEYS_LOAD_TABLE_SIZE;
 // Forward decl for CUDA.
 //
 
+struct _CU;
 struct _PH_CU_DEVICE;
 
 typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
-(NTAPI COPY_KEYS_TO_CU_DEVICE)(
+(NTAPI PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE)(
     _In_ PPERFECT_HASH_KEYS Keys,
     _In_ struct _CU *Cu,
     _In_ struct _PH_CU_DEVICE *Device
     );
-typedef COPY_KEYS_TO_CU_DEVICE *PCOPY_KEYS_TO_CU_DEVICE;
-
+typedef PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE
+      *PPERFECT_HASH_KEYS_COPY_TO_CU_DEVICE;
 
 #ifndef __INTELLISENSE__
 extern TRY_EXTRACT_KEY_SIZE_FROM_FILENAME TryExtractKeySizeFromFilename;
-extern COPY_KEYS_TO_CU_DEVICE CopyKeysToCuDevice;
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
 extern PERFECT_HASH_KEYS_RUNDOWN PerfectHashKeysRundown;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats32;
@@ -284,6 +283,7 @@ extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
 extern PERFECT_HASH_KEYS_GET_ADDRESS PerfectHashKeysGetAddress;
 extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
 extern PERFECT_HASH_KEYS_GET_FILE PerfectHashKeysGetFile;
+extern PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE PerfectHashKeysCopyToCuDevice;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

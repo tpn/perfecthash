@@ -387,9 +387,13 @@ Return Value:
     //
 
     if (Context->Cu) {
-        Result = CopyKeysToCuDevice(Keys,
-                                    Context->Cu,
-                                    ActiveCuDevice(Context));
+        Result = PerfectHashKeysCopyToCuDevice(Keys,
+                                               Context->Cu,
+                                               ActiveCuDevice(Context));
+        if (FAILED(Result)) {
+            PH_KEYS_ERROR(PerfectHashKeysCopyToCuDevice, Result);
+            goto Error;
+        }
     }
 
     //
