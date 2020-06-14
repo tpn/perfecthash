@@ -3943,3 +3943,30 @@ Abstract:
 //
 #define PH_E_FAILED_TO_GENERATE_RANDOM_BYTES ((HRESULT)0xE004039DL)
 
+//
+// MessageId: PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED
+//
+// MessageText:
+//
+// LoadSymbols failed for curand64_NM.dll.
+//
+#define PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED ((HRESULT)0xE004039EL)
+
+//
+// MessageId: PH_E_CURAND_DLL_LOAD_LIBRARY_FAILED
+//
+// MessageText:
+//
+// LoadLibrary failed for curand64_NM.dll.  Make sure it is in your PATH environment variable.
+//
+#define PH_E_CURAND_DLL_LOAD_LIBRARY_FAILED ((HRESULT)0xE004039FL)
+
+//
+// MessageId: PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS
+//
+// MessageText:
+//
+// Failed to load all expected symbols from curand64_NM.dll.
+//
+#define PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS ((HRESULT)0xE00403A0L)
+

@@ -3588,3 +3588,28 @@ SymbolicName=PH_E_FAILED_TO_GENERATE_RANDOM_BYTES
 Language=English
 Failed to generate random bytes.
 .
+
+MessageId=0x39e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED
+Language=English
+LoadSymbols failed for curand64_NM.dll.
+.
+
+MessageId=0x39f
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CURAND_DLL_LOAD_LIBRARY_FAILED
+Language=English
+LoadLibrary failed for curand64_NM.dll.  Make sure it is in your PATH environment variable.
+.
+
+MessageId=0x3a0
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS
+Language=English
+Failed to load all expected symbols from curand64_NM.dll.
+.
+

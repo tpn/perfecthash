@@ -53,21 +53,34 @@ Return Value:
     HMODULE Module;
     BOOLEAN Success;
     CU_RESULT CuResult;
-    ULONG NumberOfNames;
-    ULONG NumberOfResolvedSymbols;
+    ULONG NumberOfCuNames;
+    ULONG NumberOfCuResolvedSymbols;
+    ULONG NumberOfCuRandNames;
+    ULONG NumberOfCuRandResolvedSymbols;
+    CHAR CuRandDll[] = "curand64_NM.dll";
+    const BYTE CuRandDllVersionOffset = 9;
 
 #define EXPAND_AS_CU_NAME(Upper, Name) "cu" # Name,
-    CONST PCSZ Names[] = {
+    CONST PCSZ CuNames[] = {
         CU_FUNCTION_TABLE_ENTRY(EXPAND_AS_CU_NAME)
     };
 
+#define EXPAND_AS_CURAND_NAME(Upper, Name) "curand" # Name,
+    CONST PCSZ CuRandNames[] = {
+        CURAND_FUNCTION_TABLE_ENTRY(EXPAND_AS_CURAND_NAME)
+    };
+
     //
-    // Define an appropriately sized bitmap we can passed to LoadSymbols().
+    // Define appropriately-sized bitmaps we can passed to LoadSymbols().
     //
 
-    ULONG BitmapBuffer[(ALIGN_UP(ARRAYSIZE(Names),
-                        sizeof(ULONG) << 3) >> 5)+1] = { 0 };
-    RTL_BITMAP FailedBitmap;
+    ULONG CuBitmapBuffer[(ALIGN_UP(ARRAYSIZE(CuNames),
+                         sizeof(ULONG) << 3) >> 5)+1] = { 0 };
+    RTL_BITMAP CuFailedBitmap;
+
+    ULONG CuRandBitmapBuffer[(ALIGN_UP(ARRAYSIZE(CuRandNames),
+                             sizeof(ULONG) << 3) >> 5)+1] = { 0 };
+    RTL_BITMAP CuRandFailedBitmap;
 
     //
     // Validate arguments.
@@ -83,13 +96,13 @@ Return Value:
     // Continue initialization.  Wire up the FailedBitmap.
     //
 
-    FailedBitmap.SizeOfBitMap = ARRAYSIZE(Names) + 1;
-    FailedBitmap.Buffer = (PULONG)&BitmapBuffer;
+    CuFailedBitmap.SizeOfBitMap = ARRAYSIZE(CuNames) + 1;
+    CuFailedBitmap.Buffer = (PULONG)&CuBitmapBuffer;
 
-    NumberOfNames = ARRAYSIZE(Names);
+    NumberOfCuNames = ARRAYSIZE(CuNames);
 
-    Cu->NumberOfFunctions = sizeof(Cu->CuFunctions) / sizeof(ULONG_PTR);
-    ASSERT(Cu->NumberOfFunctions == NumberOfNames);
+    Cu->NumberOfCuFunctions = sizeof(Cu->CuFunctions) / sizeof(ULONG_PTR);
+    ASSERT(Cu->NumberOfCuFunctions == NumberOfCuNames);
 
     Module = LoadLibraryA("nvcuda.dll");
     if (!IsValidHandle(Module)) {
@@ -97,20 +110,20 @@ Return Value:
         goto Error;
     }
 
-    Success = LoadSymbols(Names,
-                          NumberOfNames,
+    Success = LoadSymbols(CuNames,
+                          NumberOfCuNames,
                           (PULONG_PTR)&Cu->CuFunctions,
-                          Cu->NumberOfFunctions,
+                          Cu->NumberOfCuFunctions,
                           Module,
-                          &FailedBitmap,
-                          &NumberOfResolvedSymbols);
+                          &CuFailedBitmap,
+                          &NumberOfCuResolvedSymbols);
 
     if (!Success) {
         Result = PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED;
         goto Error;
     }
 
-    if (Cu->NumberOfFunctions != NumberOfResolvedSymbols) {
+    if (Cu->NumberOfCuFunctions != NumberOfCuResolvedSymbols) {
         Result = PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS;
         goto Error;
     }
@@ -123,6 +136,95 @@ Return Value:
     if (CU_FAILED(CuResult)) {
         CU_ERROR(CuInitialize_Init, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Get the driver version.
+    //
+
+    CuResult = Cu->DriverGetVersion(&Cu->DriverVersionRaw);
+    CU_CHECK(CuResult, DriverGetVersion);
+
+    //
+    // The returned driver version is constructed via `major * 1000 + minor *
+    // 10`; extract the major/minor parts now.
+    //
+
+    Cu->DriverMajor = (USHORT)(Cu->DriverVersionRaw / (LONG)1000);
+    Cu->DriverMinor = (USHORT)(
+        (Cu->DriverVersionRaw - (((LONG)Cu->DriverMajor * (LONG)1000))) /
+        (LONG)10
+    );
+
+    if (Cu->DriverMajor < 10) {
+        Cu->DriverSuffix[0] = '0' + (CHAR)Cu->DriverMajor;
+        Cu->DriverSuffix[1] = '0';
+    } else {
+        Cu->DriverSuffix[0] = '0' + (CHAR)(Cu->DriverMajor / (USHORT)10);
+        Cu->DriverSuffix[1] = '0' + (CHAR)(Cu->DriverMajor % (USHORT)10);
+    }
+
+    //
+    // Sanity check we've parsed the version properly.
+    //
+
+    ASSERT(
+        (Cu->DriverSuffix[0] == '8' && Cu->DriverSuffix[1] == '0') ||
+        (Cu->DriverSuffix[0] == '9' && Cu->DriverSuffix[1] == '0') ||
+        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '0') ||
+        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '1')
+    );
+
+    //
+    // Overlay the version into the curand dll name.
+    //
+
+    ASSERT(CuRandDll[CuRandDllVersionOffset] == 'N');
+    ASSERT(CuRandDll[CuRandDllVersionOffset+1] == 'M');
+
+    CuRandDll[CuRandDllVersionOffset]   = Cu->DriverSuffix[0];
+    CuRandDll[CuRandDllVersionOffset+1] = Cu->DriverSuffix[1];
+
+    Module = LoadLibraryA((PCSZ)CuRandDll);
+    if (!IsValidHandle(Module)) {
+        Result = PH_E_CURAND_DLL_LOAD_LIBRARY_FAILED;
+        goto Error;
+    }
+
+    Cu->CuRandModule = Module;
+
+    //
+    // Wire up the CuRandFailedBitmap.
+    //
+
+    CuRandFailedBitmap.SizeOfBitMap = ARRAYSIZE(CuRandNames) + 1;
+    CuRandFailedBitmap.Buffer = (PULONG)&CuRandBitmapBuffer;
+
+    NumberOfCuRandNames = ARRAYSIZE(CuRandNames);
+
+    Cu->NumberOfCuRandFunctions = (
+        sizeof(Cu->CuRandFunctions) /
+        sizeof(ULONG_PTR)
+    );
+
+    ASSERT(Cu->NumberOfCuRandFunctions == NumberOfCuRandNames);
+
+    Success = LoadSymbols(CuRandNames,
+                          NumberOfCuRandNames,
+                          (PULONG_PTR)&Cu->CuRandFunctions,
+                          Cu->NumberOfCuRandFunctions,
+                          Module,
+                          &CuRandFailedBitmap,
+                          &NumberOfCuRandResolvedSymbols);
+
+    if (!Success) {
+        Result = PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED;
+        goto Error;
+    }
+
+    if (Cu->NumberOfCuRandFunctions != NumberOfCuRandResolvedSymbols) {
+        Result = PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS;
         goto Error;
     }
 
@@ -177,6 +279,15 @@ Return Value:
     //
 
     ASSERT(Cu->SizeOfStruct == sizeof(*Cu));
+
+    //
+    // Release the curand module if applicable.
+    //
+
+    if (Cu->CuRandModule != NULL) {
+        FreeLibrary(Cu->CuRandModule);
+        Cu->CuRandModule = NULL;
+    }
 
     //
     // Release the nvcuda.dll module if applicable.

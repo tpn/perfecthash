@@ -1367,6 +1367,11 @@ typedef CU_LAUNCH_KERNEL *PCU_LAUNCH_KERNEL;
     )                                                     \
                                                           \
     ENTRY(                                                \
+        DRIVER_GET_VERSION,                               \
+        DriverGetVersion                                  \
+    )                                                     \
+                                                          \
+    ENTRY(                                                \
         DEVICE_GET,                                       \
         DeviceGet                                         \
     )                                                     \
@@ -1627,6 +1632,98 @@ typedef struct _CU_FUNCTIONS {
 } CU_FUNCTIONS;
 typedef CU_FUNCTIONS *PCU_FUNCTIONS;
 
+//
+// CuRand
+//
+
+typedef enum _Return_type_success_(return == 0) _CURAND_RESULT {
+    CURAND_STATUS_SUCCESS = 0, ///< No errors
+    CURAND_STATUS_VERSION_MISMATCH = 100, ///< Header file and linked library version do not match
+    CURAND_STATUS_NOT_INITIALIZED = 101, ///< Generator not initialized
+    CURAND_STATUS_ALLOCATION_FAILED = 102, ///< Memory allocation failed
+    CURAND_STATUS_TYPE_ERROR = 103, ///< Generator is wrong type
+    CURAND_STATUS_OUT_OF_RANGE = 104, ///< Argument out of range
+    CURAND_STATUS_LENGTH_NOT_MULTIPLE = 105, ///< Length requested is not a multple of dimension
+    CURAND_STATUS_DOUBLE_PRECISION_REQUIRED = 106, ///< GPU does not have double precision required by MRG32k3a
+    CURAND_STATUS_LAUNCH_FAILURE = 201, ///< Kernel launch failure
+    CURAND_STATUS_PREEXISTING_FAILURE = 202, ///< Preexisting failure on library entry
+    CURAND_STATUS_INITIALIZATION_FAILED = 203, ///< Initialization of CUDA failed
+    CURAND_STATUS_ARCH_MISMATCH = 204, ///< Architecture mismatch, GPU does not support requested feature
+    CURAND_STATUS_INTERNAL_ERROR = 999 ///< Internal library error
+} CURAND_RESULT;
+
+typedef enum _CURAND_RNG_TYPE {
+    CURAND_RNG_TEST = 0,
+    CURAND_RNG_PSEUDO_DEFAULT = 100, ///< Default pseudorandom generator
+    CURAND_RNG_PSEUDO_XORWOW = 101, ///< XORWOW pseudorandom generator
+    CURAND_RNG_PSEUDO_MRG32K3A = 121, ///< MRG32k3a pseudorandom generator
+    CURAND_RNG_PSEUDO_MTGP32 = 141, ///< Mersenne Twister MTGP32 pseudorandom generator
+    CURAND_RNG_PSEUDO_MT19937 = 142, ///< Mersenne Twister MT19937 pseudorandom generator
+    CURAND_RNG_PSEUDO_PHILOX4_32_10 = 161, ///< PHILOX-4x32-10 pseudorandom generator
+    CURAND_RNG_QUASI_DEFAULT = 200, ///< Default quasirandom generator
+    CURAND_RNG_QUASI_SOBOL32 = 201, ///< Sobol32 quasirandom generator
+    CURAND_RNG_QUASI_SCRAMBLED_SOBOL32 = 202,  ///< Scrambled Sobol32 quasirandom generator
+    CURAND_RNG_QUASI_SOBOL64 = 203, ///< Sobol64 quasirandom generator
+    CURAND_RNG_QUASI_SCRAMBLED_SOBOL64 = 204  ///< Scrambled Sobol64 quasirandom generator
+} CURAND_RNG_TYPE;
+
+struct CURAND_GENERATOR;
+typedef struct CURAND_GENERATOR *PCURAND_GENERATOR;
+
+typedef
+_Must_inspect_result_
+CURAND_RESULT
+(STDAPICALLTYPE CURAND_CREATE_GENERATOR)(
+    _Out_ PCURAND_GENERATOR *Generator,
+    _In_ CURAND_RNG_TYPE RngType
+    );
+typedef CURAND_CREATE_GENERATOR *PCURAND_CREATE_GENERATOR;
+
+typedef
+_Must_inspect_result_
+CURAND_RESULT
+(STDAPICALLTYPE CURAND_GENERATE)(
+    _In_ PCURAND_GENERATOR Generator,
+    _Out_writes_(NumberOfElements) PULONG Output,
+    _In_ SIZE_T NumberOfElements
+    );
+typedef CURAND_GENERATE *PCURAND_GENERATE;
+
+typedef
+_Must_inspect_result_
+CURAND_RESULT
+(STDAPICALLTYPE CURAND_DESTROY_GENERATOR)(
+    _In_ _Post_ptr_invalid_ PCURAND_GENERATOR Generator
+    );
+typedef CURAND_DESTROY_GENERATOR *PCURAND_DESTROY_GENERATOR;
+
+#define CURAND_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                              \
+    FIRST_ENTRY(                                              \
+        CREATE_GENERATOR,                                     \
+        CreateGenerator                                       \
+    )                                                         \
+                                                              \
+    ENTRY(                                                    \
+        GENERATE,                                             \
+        Generate                                              \
+    )                                                         \
+                                                              \
+    LAST_ENTRY(                                               \
+        DESTROY_GENERATOR,                                    \
+        DestroyGenerator                                      \
+    )
+
+#define CURAND_FUNCTION_TABLE_ENTRY(ENTRY) \
+    CURAND_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_CURAND_FUNCTION_STRUCT(Upper, Name) \
+    PCURAND_##Upper Name;
+
+typedef struct _CURAND_FUNCTIONS {
+    CURAND_FUNCTION_TABLE_ENTRY(EXPAND_AS_CURAND_FUNCTION_STRUCT)
+} CURAND_FUNCTIONS;
+typedef CURAND_FUNCTIONS *PCURAND_FUNCTIONS;
 
 //
 // Declare CU component and define vtbl methods.
@@ -1688,22 +1785,50 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     COMMON_COMPONENT_HEADER(CU);
 
     //
-    // Number of function pointers.
+    // Number of nvcuda function pointers.
     //
 
-    ULONG NumberOfFunctions;
+    ULONG NumberOfCuFunctions;
 
     //
-    // Pad out to 8 bytes.
+    // Number of curand function pointers.
     //
 
-    ULONG Unused;
+    ULONG NumberOfCuRandFunctions;
+
+    //
+    // Driver Version.
+    //
+
+    LONG DriverVersionRaw;
+    USHORT DriverMajor;
+    USHORT DriverMinor;
+
+    //
+    // Character suffix of driver version that can be used to replace <NN> in
+    // library names such as `curand64_<NN>.dll`.
+    //
+
+    CHAR DriverSuffix[2];
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    CHAR Padding1[2];
+    ULONG Padding2;
 
     //
     // nvcuda.dll module.
     //
 
     HMODULE NvCudaModule;
+
+    //
+    // curand64_[nn].dll module.
+    //
+
+    HMODULE CuRandModule;
 
     //
     // Function pointers.
@@ -1722,6 +1847,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
         CU_FUNCTIONS CuFunctions;
     };
 
+    union {
+
+        //
+        // Inline the CuRand functions for convenience.
+        //
+
+        struct {
+            CURAND_FUNCTION_TABLE_ENTRY(EXPAND_AS_CURAND_FUNCTION_STRUCT)
+        };
+
+        CURAND_FUNCTIONS CuRandFunctions;
+    };
 
     //
     // The Cu vtbl interface.
