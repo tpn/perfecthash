@@ -777,7 +777,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
-#define NUMBER_OF_INTERFACES 12
+#define NUMBER_OF_INTERFACES 13
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -796,6 +796,7 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_ALLOCATOR ALLOCATOR
 #define PERFECT_HASH_GUARDED_LIST GUARDED_LIST
 #define PERFECT_HASH_GRAPH GRAPH
+#define PERFECT_HASH_CU CU
 
 #define PERFECT_HASH_IUNKNOWN_VTBL IUNKNOWN_VTBL
 #define PERFECT_HASH_ICLASSFACTORY_VTBL ICLASSFACTORY_VTBL
@@ -803,6 +804,7 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_ALLOCATOR_VTBL ALLOCATOR_VTBL
 #define PERFECT_HASH_GUARDED_LIST_VTBL GUARDED_LIST_VTBL
 #define PERFECT_HASH_GRAPH_VTBL GRAPH_VTBL
+#define PERFECT_HASH_CU_VTBL CU_VTBL
 
 #define EXPAND_AS_SIZEOF_COMPONENT(Name, Upper, Guid) \
     sizeof(PERFECT_HASH_##Upper),
@@ -859,6 +861,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Directory),
     -1, // GuardedList
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Graph),
+    (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Cu),
 
     -1,
 };
@@ -879,6 +882,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // Directory
     -1, // GuardedList
     -1, // Graph
+    (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Cu),
 
     -1,
 };
@@ -1219,6 +1223,20 @@ GRAPH_VTBL GraphInterface = {
 VERIFY_VTBL_SIZE(GRAPH, 12);
 
 //
+// Cu
+//
+
+CU_VTBL CuInterface = {
+    (PCU_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PCU_ADD_REF)&ComponentAddRef,
+    (PCU_RELEASE)&ComponentRelease,
+    (PCU_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PCU_LOCK_SERVER)&ComponentLockServer,
+    &LoadCuDeviceAttributes,
+};
+VERIFY_VTBL_SIZE(CU, 1);
+
+//
 // Interface array.
 //
 
@@ -1237,6 +1255,7 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashDirectoryInterface,
     &GuardedListInterface,
     &GraphInterface,
+    &CuInterface,
 
     NULL,
 };
@@ -1258,6 +1277,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
+    (PCOMPONENT_INITIALIZE)&CuInitialize,
 
     NULL,
 };
@@ -1279,6 +1299,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
+    (PCOMPONENT_RUNDOWN)&CuRundown,
 
     NULL,
 };

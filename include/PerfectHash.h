@@ -379,12 +379,21 @@ PerfectHashGetCurrentCpuArch(
         )                                                            \
     )                                                                \
                                                                      \
-    LAST_ENTRY(                                                      \
+    ENTRY(                                                           \
         Graph,                                                       \
         GRAPH,                                                       \
         GUID_EX(                                                     \
             0xb906f824, 0xcb59, 0x4696,                              \
             0x84, 0x77, 0x44, 0xd4, 0xba, 0x9, 0xda, 0x94            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    LAST_ENTRY(                                                      \
+        Cu,                                                          \
+        CU,                                                          \
+        GUID_EX(                                                     \
+            0x8e124a55, 0xf609, 0x45be,                              \
+            0xa7, 0x2e, 0x96, 0x74, 0x2d, 0xbb, 0x1, 0xf5            \
         )                                                            \
     )
 
@@ -2311,10 +2320,16 @@ typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
+        // When set, tries to use CUDA where applicable (experimental).
+        //
+
+        ULONG TryCuda:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
 
     LONG AsLong;
@@ -2371,10 +2386,16 @@ typedef union _PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
+        // When set, tries to use CUDA where applicable (experimental).
+        //
+
+        ULONG TryCuda:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
 
     LONG AsLong;
@@ -2877,6 +2898,8 @@ IsValidTableCompileFlags(
     ENTRY(Seeds)                                                     \
     ENTRY(ValueSizeInBytes)                                          \
     ENTRY(KeySizeInBytes)                                            \
+    ENTRY(CuDeviceOrdinal)                                           \
+    ENTRY(CuDeviceOrdinals)                                          \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     LAST_ENTRY(Seed3Byte2MaskCounts)
 

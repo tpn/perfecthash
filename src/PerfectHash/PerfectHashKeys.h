@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -153,6 +153,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     PVOID KeyArrayBaseAddress;
 
     //
+    // The CUDA device address of the keys array, if applicable.
+    //
+
+    LONG_PTR DeviceKeyArrayBaseAddress;
+
+    //
+    // Pointer to the active CU instance if applicable.
+    //
+
+    struct _CU *Cu;
+
+    //
+    // Pointer to a CU context if applicable.
+    //
+
+    struct CU_CONTEXT *CuCtx;
+
+    //
     // Capture simple statistics about the keys that were loaded.
     //
 
@@ -234,6 +252,25 @@ HRESULT
     );
 typedef PERFECT_HASH_KEYS_LOAD_TABLE_SIZE *PPERFECT_HASH_KEYS_LOAD_TABLE_SIZE;
 
+//
+// Forward decl for CUDA.
+//
+
+struct _CU;
+struct _PH_CU_DEVICE;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE)(
+    _In_ PPERFECT_HASH_KEYS Keys,
+    _In_ struct _CU *Cu,
+    _In_ struct _PH_CU_DEVICE *Device
+    );
+typedef PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE
+      *PPERFECT_HASH_KEYS_COPY_TO_CU_DEVICE;
+
 #ifndef __INTELLISENSE__
 extern TRY_EXTRACT_KEY_SIZE_FROM_FILENAME TryExtractKeySizeFromFilename;
 extern PERFECT_HASH_KEYS_INITIALIZE PerfectHashKeysInitialize;
@@ -246,6 +283,7 @@ extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
 extern PERFECT_HASH_KEYS_GET_ADDRESS PerfectHashKeysGetAddress;
 extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;
 extern PERFECT_HASH_KEYS_GET_FILE PerfectHashKeysGetFile;
+extern PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE PerfectHashKeysCopyToCuDevice;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

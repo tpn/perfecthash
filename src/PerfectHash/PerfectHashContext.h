@@ -321,6 +321,36 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     struct _PERFECT_HASH_TABLE *Table;
 
     //
+    // Pointer to a CU instance, if applicable.
+    //
+
+    struct _CU *Cu;
+
+    //
+    // CUDA devices.
+    //
+
+    PH_CU_DEVICES CuDevices;
+
+    //
+    // Pointer to the array of CUDA device ordinals from the command line.
+    //
+
+    PVALUE_ARRAY CuDeviceOrdinals;
+
+    //
+    // CUDA device ordinal from the command line.
+    //
+
+    LONG CuDeviceOrdinal;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding1;
+
+    //
     // An in-memory union of all possible on-disk table info representations.
     // This is used to capture table info prior to the :Info stream being
     // available.  The backing memory is stack-allocated in the algorithm's
@@ -371,7 +401,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // Pad out to an 8-byte boundary.
     //
 
-    ULONG Padding1;
+    ULONG Padding2;
 
     //
     // If we're attempting to find the best memory coverage, the following
@@ -595,7 +625,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
 
     volatile LONG GraphRegisterSolvedTsxStarted;
-    ULONG Padding2;
+    ULONG Padding3;
 
     //
     // N.B. All events are created as named events, using the random object
@@ -740,7 +770,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_WORK FileWork;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;
-    ULONG Padding3;
+    ULONG Padding4;
 
     //
     // The algorithm is responsible for registering an appropriate callback
@@ -821,7 +851,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PVOID SolvedContext;
 
     volatile LONG GraphRegisterSolvedTsxRetry;
-    ULONG Padding4;
+    ULONG Padding5;
 
     //
     // Timestamp of instance creation.  The STRING structure's Buffer is wired
@@ -871,7 +901,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
                             EXPAND_AS_LAST_CONTEXT_FILE)
 
     volatile LONG GraphRegisterSolvedTsxFailed;
-    ULONG Padding5;
+    ULONG Padding6;
 
     //
     // Backing vtbl.
@@ -886,7 +916,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding6;
+    PVOID Padding7;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
@@ -896,6 +926,9 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 
 #define ReleasePerfectHashContextLockExclusive(Context) \
     ReleaseSRWLockExclusive(&Context->Lock)
+
+#define ActiveCuDevice(Context) \
+    &((Context)->CuDevices.Devices[(Context)->CuDeviceOrdinal])
 
 //
 // Define helper macros for appending items to the tail of a guarded list.
@@ -1036,6 +1069,15 @@ typedef PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
       *PPERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES;
 
 typedef
+HRESULT
+(NTAPI PERFECT_HASH_CONTEXT_INITIALIZE_CUDA)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_INITIALIZE_CUDA
+      *PPERFECT_HASH_CONTEXT_INITIALIZE_CUDA;
+
+typedef
 _Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE)(
@@ -1081,6 +1123,8 @@ extern PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
     PerfectHashContextExtractTableCreateArgsFromArgvW;
 extern PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
     PerfectHashContextApplyThreadpoolPriorities;
+extern PERFECT_HASH_CONTEXT_INITIALIZE_CUDA
+    PerfectHashContextInitializeCuda;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -133,7 +133,9 @@ Return Value:
 
 --*/
 {
+    PCU Cu;
     HRESULT Result;
+    CU_RESULT CuResult;
     PALLOCATOR Allocator;
 
     //
@@ -149,6 +151,24 @@ Return Value:
     //
 
     ASSERT(Keys->SizeOfStruct == sizeof(*Keys));
+
+    Cu = Keys->Cu;
+
+    if (Keys->DeviceKeyArrayBaseAddress != 0) {
+        CuResult = Cu->MemFree((PVOID)Keys->DeviceKeyArrayBaseAddress);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(KeysRelease_CuMemFree, CuResult);
+        }
+        Keys->DeviceKeyArrayBaseAddress = 0;
+    }
+
+    if (Keys->CuCtx != NULL) {
+        CuResult = Cu->CtxDestroy(Keys->CuCtx);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(KeysRelease_CuCtxDestroy, CuResult);
+        }
+        Keys->CuCtx = NULL;
+    }
 
     if (Keys->File && Keys->File->BaseAddress) {
 
@@ -214,6 +234,7 @@ Return Value:
     // Release COM references, if applicable.
     //
 
+    RELEASE(Keys->Cu);
     RELEASE(Keys->File);
     RELEASE(Keys->Allocator);
     RELEASE(Keys->Rtl);
@@ -664,6 +685,97 @@ End:
     ReleasePerfectHashPathLockShared(Path);
 
     return Result;
+}
+
+PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE PerfectHashKeysCopyToCuDevice;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysCopyToCuDevice(
+    PPERFECT_HASH_KEYS Keys,
+    PCU Cu,
+    PPH_CU_DEVICE Device
+    )
+/*++
+
+Routine Description:
+
+    Attempt to copy keys to the given CUDA device.
+
+Arguments:
+
+    Keys - Supplies the keys instance.
+
+    Cu - Supplies the CU instance.
+
+    Device - Supplies the target device.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_CUDA_DRIVER_API_CALL_FAILED - CUDA call failed.
+
+    PH_E_KEYS_ALREADY_COPIED_TO_DIFFERENT_CU_INSTANCE - Keys were already copied
+        to a different CU instance.
+
+--*/
+{
+    HRESULT Result;
+    PCU_CONTEXT Ctx;
+    SIZE_T SizeInBytes;
+    CU_RESULT CuResult;
+    CU_DEVICE_POINTER DeviceAddress;
+    CU_CTX_CREATE_FLAGS CtxFlags;
+
+    CtxFlags = CU_CTX_SCHED_SPIN;
+
+    if (Keys->Cu) {
+        Result = PH_E_KEYS_ALREADY_COPIED_TO_A_DIFFERENT_CU_DEVICE;
+        goto Error;
+    }
+
+    Keys->Cu = Cu;
+
+    CuResult = Cu->CtxCreate(&Ctx, CtxFlags, Device->Ordinal);
+    CU_CHECK(CuResult, CtxCreate);
+
+    Keys->CuCtx = Ctx;
+
+    //
+    // Allocate device memory.
+    //
+
+    SizeInBytes = Keys->NumberOfElements.QuadPart * sizeof(KEY);
+
+    CuResult = Cu->MemAlloc(&DeviceAddress, SizeInBytes);
+    CU_CHECK(CuResult, MemAlloc);
+
+    Keys->DeviceKeyArrayBaseAddress = DeviceAddress;
+
+    //
+    // Copy to the device.
+    //
+
+    CuResult = Cu->MemcpyHtoDAsync(DeviceAddress,
+                                   Keys->KeyArrayBaseAddress,
+                                   SizeInBytes,
+                                   0);
+    CU_CHECK(CuResult, MemcpyHtoDAsync);
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

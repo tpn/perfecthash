@@ -3517,6 +3517,70 @@ Language=English
 --RemoveWriteCombineAfterSuccessfulHashKeys requires --EnableWriteCombineForVertexPairs to be specified.
 .
 
+MessageId=0x395
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED
+Language=English
+LoadSymbols failed for nvcuda.dll.
+.
+
+MessageId=0x396
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NVCUDA_DLL_LOAD_LIBRARY_FAILED
+Language=English
+LoadLibrary failed for nvcuda.dll.  Make sure it is in your PATH environment variable.
+.
+
+MessageId=0x397
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NVCUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS
+Language=English
+Failed to load all expected symbols from nvcuda.dll.
+.
+
+MessageId=0x398
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CUDA_DRIVER_API_CALL_FAILED
+Language=English
+CUDA Driver API call failed.
+.
+
+MessageId=0x399
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_DEVICE_ORDINALS_NOT_SORTED
+Language=English
+CuDeviceOrdinals not sorted.
+.
+
+MessageId=0x39a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICE_ORDINALS
+Language=English
+Invalid CuDeviceOrdinals.
+.
+
+MessageId=0x39b
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DUPLICATE_VALUE_DETECTED_IN_CU_DEVICE_ORDINALS
+Language=English
+Duplicate value detected in CuDeviceOrdinals.
+.
+
+MessageId=0x39c
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_KEYS_ALREADY_COPIED_TO_A_DIFFERENT_CU_DEVICE
+Language=English
+Keys were already copied to a different device.
+.
+
 MessageId=0x39d
 Severity=Fail
 Facility=ITF

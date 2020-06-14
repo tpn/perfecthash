@@ -124,6 +124,7 @@ typedef struct _PERFECT_HASH_TLS_CONTEXT {
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_DIRECTORY Directory;
     struct _GRAPH *Graph;
+    struct _CU *Cu;
 
     //
     // Per-component custom areas.
