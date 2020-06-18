@@ -36,11 +36,15 @@
             <data name="Seed7" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="Seed8" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
-          <template tid="GraphFoundNewBestGraphTemplate">
+          <template tid="GraphFoundTemplate">
             <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
             <data name="ElapsedMilliseconds" inType="win:UInt64" outType="xs:unsignedLong"></data>
             <data name="CoverageType" inType="win:UInt32" outType="xs:unsignedInt"></data>
-            <data name="Value" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="CoverageValue" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="StopGraphSolving" inType="win:Boolean" outType="xs:boolean"></data>
+            <data name="IsBest" inType="win:Boolean" outType="xs:boolean"></data>
+            <data name="IsEqual" inType="win:Boolean" outType="xs:boolean"></data>
+            <data name="EqualCount" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalNumberOfPages" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalNumberOfLargePages" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalNumberOfCacheLines" inType="win:UInt32" outType="xs:unsignedInt"></data>
@@ -113,17 +117,21 @@
         </channels>
         <keywords>
           <keyword name="GRAPH_HASH" symbol="PH_ETW_GRAPH_HASH" mask="0x1"></keyword>
-          <keyword name="GRAPH_BEST" symbol="PH_ETW_GRAPH_BEST" mask="0x2"></keyword>
-          <keyword name="GRAPH_ASSIGN" symbol="PH_ETW_GRAPH_ASSIGN" mask="0x4"></keyword>
-          <keyword name="RTL_RANDOM" symbol="PH_ETW_RTL_RANDOM" mask="0x8"></keyword>
+          <keyword name="GRAPH_FOUND_BEST" symbol="PH_ETW_GRAPH_FOUND_BEST" mask="0x2"></keyword>
+          <keyword name="GRAPH_FOUND_EQUAL_BEST" symbol="PH_ETW_GRAPH_FOUND_EQUAL_BEST" mask="0x4"></keyword>
+          <keyword name="GRAPH_FOUND" symbol="PH_ETW_GRAPH_FOUND" mask="0x8"></keyword>
+          <keyword name="GRAPH_ASSIGN" symbol="PH_ETW_GRAPH_ASSIGN" mask="0x10"></keyword>
+          <keyword name="RTL_RANDOM" symbol="PH_ETW_RTL_RANDOM" mask="0x20"></keyword>
         </keywords>
         <tasks>
           <task name="AddKeys" value="1"/>
           <task name="HashKeys" value="2"/>
           <task name="AddHashedKeys" value="3"/>
           <task name="FoundNewBestGraph" value="4"/>
-          <task name="Assign" value="5"/>
-          <task name="GenerateRandomBytes" value="6"/>
+          <task name="FoundEqualBestGraph" value="5"/>
+          <task name="FoundGraph" value="6"/>
+          <task name="Assign" value="7"/>
+          <task name="GenerateRandomBytes" value="8"/>
         </tasks>
         <events>
           <event
@@ -163,20 +171,44 @@
             message="$(string.PerfectHash.event.2.message)">
           </event>
           <event
-            symbol="GraphFoundNewBestGraph"
+            symbol="GraphFoundNewBest"
             value="3"
             version="0"
             channel="PerfectHash/Analytic"
             level="win:Informational"
             opcode="win:Info"
             task="FoundNewBestGraph"
-            template="GraphFoundNewBestGraphTemplate"
-            keywords="GRAPH_BEST"
+            template="GraphFoundTemplate"
+            keywords="GRAPH_FOUND_BEST"
             message="$(string.PerfectHash.event.3.message)">
           </event>
           <event
-            symbol="GraphAssignStart"
+            symbol="GraphFoundEqualBest"
             value="4"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Info"
+            task="FoundEqualBestGraph"
+            template="GraphFoundTemplate"
+            keywords="GRAPH_FOUND_EQUAL_BEST"
+            message="$(string.PerfectHash.event.4.message)">
+          </event>
+          <event
+            symbol="GraphFound"
+            value="5"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Info"
+            task="FoundGraph"
+            template="GraphFoundTemplate"
+            keywords="GRAPH_FOUND"
+            message="$(string.PerfectHash.event.5.message)">
+          </event>
+          <event
+            symbol="GraphAssignStart"
+            value="6"
             version="0"
             channel="PerfectHash/Analytic"
             level="win:Informational"
@@ -184,11 +216,11 @@
             task="Assign"
             template="GraphAssignStartTemplate"
             keywords="GRAPH_ASSIGN"
-            message="$(string.PerfectHash.event.4.message)">
+            message="$(string.PerfectHash.event.6.message)">
           </event>
           <event
             symbol="GraphAssignStop"
-            value="5"
+            value="7"
             version="0"
             channel="PerfectHash/Analytic"
             level="win:Informational"
@@ -196,11 +228,11 @@
             task="Assign"
             template="GraphAssignStopTemplate"
             keywords="GRAPH_ASSIGN"
-            message="$(string.PerfectHash.event.5.message)">
+            message="$(string.PerfectHash.event.7.message)">
           </event>
           <event
             symbol="RtlGenerateRandomBytesStart"
-            value="6"
+            value="8"
             version="0"
             channel="PerfectHash/Analytic"
             level="win:Informational"
@@ -208,11 +240,11 @@
             task="GenerateRandomBytes"
             template="GenerateRandomBytesStartTemplate"
             keywords="RTL_RANDOM"
-            message="$(string.PerfectHash.event.6.message)">
+            message="$(string.PerfectHash.event.8.message)">
           </event>
           <event
             symbol="RtlGenerateRandomBytesStop"
-            value="7"
+            value="9"
             version="0"
             channel="PerfectHash/Analytic"
             level="win:Informational"
@@ -220,7 +252,7 @@
             task="GenerateRandomBytes"
             template="GenerateRandomBytesStopTemplate"
             keywords="RTL_RANDOM"
-            message="$(string.PerfectHash.event.7.message)">
+            message="$(string.PerfectHash.event.9.message)">
           </event>
         </events>
       </provider>
@@ -240,10 +272,12 @@
         <string id="PerfectHash.event.1.message" value="Result of hashing keys into two vertex arrays."></string>
         <string id="PerfectHash.event.2.message" value="Result of hashing keys into two vertex arrays, then adding to a graph."></string>
         <string id="PerfectHash.event.3.message" value="New best graph was found."></string>
-        <string id="PerfectHash.event.4.message" value="Started graph assignment."></string>
-        <string id="PerfectHash.event.5.message" value="Stopped graph assignment."></string>
-        <string id="PerfectHash.event.6.message" value="Started getting random bytes."></string>
-        <string id="PerfectHash.event.7.message" value="Stopped getting random bytes."></string>
+        <string id="PerfectHash.event.4.message" value="Equal best graph was found."></string>
+        <string id="PerfectHash.event.5.message" value="A graph was found."></string>
+        <string id="PerfectHash.event.6.message" value="Started graph assignment."></string>
+        <string id="PerfectHash.event.7.message" value="Stopped graph assignment."></string>
+        <string id="PerfectHash.event.8.message" value="Started getting random bytes."></string>
+        <string id="PerfectHash.event.9.message" value="Stopped getting random bytes."></string>
       </stringTable>
     </resources>
   </localization>

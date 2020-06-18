@@ -547,7 +547,7 @@ Remarks:
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Provider "PerfectHash" event count 8
+// Provider "PerfectHash" event count 10
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // Provider GUID = d0b3028e-70a7-410f-af7e-4d495b4a3c8b
@@ -569,16 +569,20 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #define PerfectHashEvents_TASK_HashKeys 0x2
 #define PerfectHashEvents_TASK_AddHashedKeys 0x3
 #define PerfectHashEvents_TASK_FoundNewBestGraph 0x4
-#define PerfectHashEvents_TASK_Assign 0x5
-#define PerfectHashEvents_TASK_GenerateRandomBytes 0x6
+#define PerfectHashEvents_TASK_FoundEqualBestGraph 0x5
+#define PerfectHashEvents_TASK_FoundGraph 0x6
+#define PerfectHashEvents_TASK_Assign 0x7
+#define PerfectHashEvents_TASK_GenerateRandomBytes 0x8
 
 //
 // Keyword
 //
 #define PH_ETW_GRAPH_HASH 0x1
-#define PH_ETW_GRAPH_BEST 0x2
-#define PH_ETW_GRAPH_ASSIGN 0x4
-#define PH_ETW_RTL_RANDOM 0x8
+#define PH_ETW_GRAPH_FOUND_BEST 0x2
+#define PH_ETW_GRAPH_FOUND_EQUAL_BEST 0x4
+#define PH_ETW_GRAPH_FOUND 0x8
+#define PH_ETW_GRAPH_ASSIGN 0x10
+#define PH_ETW_RTL_RANDOM 0x20
 
 //
 // Event Descriptors
@@ -589,16 +593,20 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphHashKeysEvent = {0x1,
 #define GraphHashKeysEvent_value 0x1
 EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAddHashedKeysEvent = {0x2, 0x1, 0x10, 0x4, 0x0, 0x3, 0x8000000000000001};
 #define GraphAddHashedKeysEvent_value 0x2
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphFoundNewBestGraph = {0x3, 0x0, 0x10, 0x4, 0x0, 0x4, 0x8000000000000002};
-#define GraphFoundNewBestGraph_value 0x3
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignStart = {0x4, 0x0, 0x10, 0x4, 0x1, 0x5, 0x8000000000000004};
-#define GraphAssignStart_value 0x4
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignStop = {0x5, 0x0, 0x10, 0x4, 0x2, 0x5, 0x8000000000000004};
-#define GraphAssignStop_value 0x5
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStart = {0x6, 0x0, 0x10, 0x4, 0x1, 0x6, 0x8000000000000008};
-#define RtlGenerateRandomBytesStart_value 0x6
-EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStop = {0x7, 0x0, 0x10, 0x4, 0x2, 0x6, 0x8000000000000008};
-#define RtlGenerateRandomBytesStop_value 0x7
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphFoundNewBest = {0x3, 0x0, 0x10, 0x4, 0x0, 0x4, 0x8000000000000002};
+#define GraphFoundNewBest_value 0x3
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphFoundEqualBest = {0x4, 0x0, 0x10, 0x4, 0x0, 0x5, 0x8000000000000004};
+#define GraphFoundEqualBest_value 0x4
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphFound = {0x5, 0x0, 0x10, 0x4, 0x0, 0x6, 0x8000000000000008};
+#define GraphFound_value 0x5
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignStart = {0x6, 0x0, 0x10, 0x4, 0x1, 0x7, 0x8000000000000010};
+#define GraphAssignStart_value 0x6
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignStop = {0x7, 0x0, 0x10, 0x4, 0x2, 0x7, 0x8000000000000010};
+#define GraphAssignStop_value 0x7
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStart = {0x8, 0x0, 0x10, 0x4, 0x1, 0x8, 0x8000000000000020};
+#define RtlGenerateRandomBytesStart_value 0x8
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStop = {0x9, 0x0, 0x10, 0x4, 0x2, 0x8, 0x8000000000000020};
+#define RtlGenerateRandomBytesStop_value 0x9
 
 //
 // MCGEN_DISABLE_PROVIDER_CODE_GENERATION macro:
@@ -611,13 +619,13 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStop
 // Event Enablement Bits
 //
 EXTERN_C __declspec(selectany) DECLSPEC_CACHEALIGN ULONG PerfectHashEnableBits[1];
-EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[4] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004, 0x8000000000000008};
-EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[4] = {4, 4, 4, 4};
+EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[6] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004, 0x8000000000000008, 0x8000000000000010, 0x8000000000000020};
+EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[6] = {4, 4, 4, 4, 4, 4};
 
 //
 // Provider context
 //
-EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 4, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
+EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 6, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
 
 //
 // Provider REGHANDLE
@@ -706,23 +714,51 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
         McTemplateK0qii(&PerfectHashEvents_Context, &GraphAddHashedKeysEvent, NULL, NumberOfKeys, Cycles, Microseconds)
 
 //
-// Enablement check macro for GraphFoundNewBestGraph
+// Enablement check macro for GraphFoundNewBest
 //
-#define EventEnabledGraphFoundNewBestGraph() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 1)
+#define EventEnabledGraphFoundNewBest() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 1)
 
 //
-// Event write macros for GraphFoundNewBestGraph
+// Event write macros for GraphFoundNewBest
 //
-#define EventWriteGraphFoundNewBestGraph(Activity, Attempt, ElapsedMilliseconds, CoverageType, Value, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
-        MCGEN_EVENT_ENABLED(GraphFoundNewBestGraph) \
-        ? McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFoundNewBestGraph, Activity, Attempt, ElapsedMilliseconds, CoverageType, Value, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) : 0
-#define EventWriteGraphFoundNewBestGraph_AssumeEnabled(Attempt, ElapsedMilliseconds, CoverageType, Value, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
-        McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFoundNewBestGraph, NULL, Attempt, ElapsedMilliseconds, CoverageType, Value, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16)
+#define EventWriteGraphFoundNewBest(Activity, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
+        MCGEN_EVENT_ENABLED(GraphFoundNewBest) \
+        ? McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFoundNewBest, Activity, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) : 0
+#define EventWriteGraphFoundNewBest_AssumeEnabled(Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
+        McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFoundNewBest, NULL, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16)
+
+//
+// Enablement check macro for GraphFoundEqualBest
+//
+#define EventEnabledGraphFoundEqualBest() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 2)
+
+//
+// Event write macros for GraphFoundEqualBest
+//
+#define EventWriteGraphFoundEqualBest(Activity, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
+        MCGEN_EVENT_ENABLED(GraphFoundEqualBest) \
+        ? McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFoundEqualBest, Activity, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) : 0
+#define EventWriteGraphFoundEqualBest_AssumeEnabled(Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
+        McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFoundEqualBest, NULL, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16)
+
+//
+// Enablement check macro for GraphFound
+//
+#define EventEnabledGraphFound() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 3)
+
+//
+// Event write macros for GraphFound
+//
+#define EventWriteGraphFound(Activity, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
+        MCGEN_EVENT_ENABLED(GraphFound) \
+        ? McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFound, Activity, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) : 0
+#define EventWriteGraphFound_AssumeEnabled(Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16) \
+        McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(&PerfectHashEvents_Context, &GraphFound, NULL, Attempt, ElapsedMilliseconds, CoverageType, CoverageValue, StopGraphSolving, IsBest, IsEqual, EqualCount, TotalNumberOfPages, TotalNumberOfLargePages, TotalNumberOfCacheLines, NumberOfUsedPages, NumberOfUsedLargePages, NumberOfUsedCacheLines, NumberOfEmptyPages, NumberOfEmptyLargePages, NumberOfEmptyCacheLines, FirstPageUsed, FirstLargePageUsed, FirstCacheLineUsed, LastPageUsed, LastLargePageUsed, LastCacheLineUsed, TotalNumberOfAssigned, NumberOfKeysWithVerticesMappingToSamePage, NumberOfKeysWithVerticesMappingToSameLargePage, NumberOfKeysWithVerticesMappingToSameCacheLine, MaxGraphTraversalDepth, TotalGraphTraversals, Seed1, Seed2, Seed3, Seed4, Seed5, Seed6, Seed7, Seed8, NumberOfAssignedPerCacheLineCounts_0, NumberOfAssignedPerCacheLineCounts_1, NumberOfAssignedPerCacheLineCounts_2, NumberOfAssignedPerCacheLineCounts_3, NumberOfAssignedPerCacheLineCounts_4, NumberOfAssignedPerCacheLineCounts_5, NumberOfAssignedPerCacheLineCounts_6, NumberOfAssignedPerCacheLineCounts_7, NumberOfAssignedPerCacheLineCounts_8, NumberOfAssignedPerCacheLineCounts_9, NumberOfAssignedPerCacheLineCounts_10, NumberOfAssignedPerCacheLineCounts_11, NumberOfAssignedPerCacheLineCounts_12, NumberOfAssignedPerCacheLineCounts_13, NumberOfAssignedPerCacheLineCounts_14, NumberOfAssignedPerCacheLineCounts_15, NumberOfAssignedPerCacheLineCounts_16)
 
 //
 // Enablement check macro for GraphAssignStart
 //
-#define EventEnabledGraphAssignStart() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 2)
+#define EventEnabledGraphAssignStart() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 4)
 
 //
 // Event write macros for GraphAssignStart
@@ -736,7 +772,7 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
 //
 // Enablement check macro for GraphAssignStop
 //
-#define EventEnabledGraphAssignStop() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 2)
+#define EventEnabledGraphAssignStop() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 4)
 
 //
 // Event write macros for GraphAssignStop
@@ -750,7 +786,7 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
 //
 // Enablement check macro for RtlGenerateRandomBytesStart
 //
-#define EventEnabledRtlGenerateRandomBytesStart() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 3)
+#define EventEnabledRtlGenerateRandomBytesStart() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 5)
 
 //
 // Event write macros for RtlGenerateRandomBytesStart
@@ -764,7 +800,7 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
 //
 // Enablement check macro for RtlGenerateRandomBytesStop
 //
-#define EventEnabledRtlGenerateRandomBytesStop() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 3)
+#define EventEnabledRtlGenerateRandomBytesStop() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 5)
 
 //
 // Event write macros for RtlGenerateRandomBytesStop
@@ -857,13 +893,13 @@ McTemplateK0iqqqqq(
 #endif // McTemplateK0iqqqqq_def
 
 //
-//Template from manifest : GraphFoundNewBestGraphTemplate
+//Template from manifest : GraphFoundTemplate
 //
-#ifndef McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_def
-#define McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_def
+#ifndef McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_def
+#define McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_def
 ETW_INLINE
 ULONG
-McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(
+McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(
     _In_ PMCGEN_TRACE_CONTEXT Context,
     _In_ PCEVENT_DESCRIPTOR Descriptor,
     _In_opt_ const GUID* Activity,
@@ -871,9 +907,9 @@ McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(
     _In_ const unsigned __int64  _Arg1,
     _In_ const unsigned int  _Arg2,
     _In_ const unsigned int  _Arg3,
-    _In_ const unsigned int  _Arg4,
-    _In_ const unsigned int  _Arg5,
-    _In_ const unsigned int  _Arg6,
+    _In_ const signed int  _Arg4,
+    _In_ const signed int  _Arg5,
+    _In_ const signed int  _Arg6,
     _In_ const unsigned int  _Arg7,
     _In_ const unsigned int  _Arg8,
     _In_ const unsigned int  _Arg9,
@@ -916,12 +952,16 @@ McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(
     _In_ const unsigned int  _Arg46,
     _In_ const unsigned int  _Arg47,
     _In_ const unsigned int  _Arg48,
-    _In_ const unsigned int  _Arg49
+    _In_ const unsigned int  _Arg49,
+    _In_ const unsigned int  _Arg50,
+    _In_ const unsigned int  _Arg51,
+    _In_ const unsigned int  _Arg52,
+    _In_ const unsigned int  _Arg53
     )
 {
-#define McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_ARGCOUNT 50
+#define McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_ARGCOUNT 54
 
-    EVENT_DATA_DESCRIPTOR EventData[McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_ARGCOUNT + 1];
+    EVENT_DATA_DESCRIPTOR EventData[McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_ARGCOUNT + 1];
 
     EventDataDescCreate(&EventData[1],&_Arg0, sizeof(const signed __int64)  );
 
@@ -931,11 +971,11 @@ McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(
 
     EventDataDescCreate(&EventData[4],&_Arg3, sizeof(const unsigned int)  );
 
-    EventDataDescCreate(&EventData[5],&_Arg4, sizeof(const unsigned int)  );
+    EventDataDescCreate(&EventData[5],&_Arg4, sizeof(const signed int)  );
 
-    EventDataDescCreate(&EventData[6],&_Arg5, sizeof(const unsigned int)  );
+    EventDataDescCreate(&EventData[6],&_Arg5, sizeof(const signed int)  );
 
-    EventDataDescCreate(&EventData[7],&_Arg6, sizeof(const unsigned int)  );
+    EventDataDescCreate(&EventData[7],&_Arg6, sizeof(const signed int)  );
 
     EventDataDescCreate(&EventData[8],&_Arg7, sizeof(const unsigned int)  );
 
@@ -1023,9 +1063,17 @@ McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq(
 
     EventDataDescCreate(&EventData[50],&_Arg49, sizeof(const unsigned int)  );
 
-    return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_ARGCOUNT + 1, EventData);
+    EventDataDescCreate(&EventData[51],&_Arg50, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[52],&_Arg51, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[53],&_Arg52, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[54],&_Arg53, sizeof(const unsigned int)  );
+
+    return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_ARGCOUNT + 1, EventData);
 }
-#endif // McTemplateK0ixqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_def
+#endif // McTemplateK0ixqqtttqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq_def
 
 //
 //Template from manifest : GenerateRandomBytesStartTemplate
@@ -1184,6 +1232,8 @@ McTemplateK0qqqqiiqqqqqqqq(
 #define MSG_PerfectHash_event_5_message      0xB0000005L
 #define MSG_PerfectHash_event_6_message      0xB0000006L
 #define MSG_PerfectHash_event_7_message      0xB0000007L
+#define MSG_PerfectHash_event_8_message      0xB0000008L
+#define MSG_PerfectHash_event_9_message      0xB0000009L
 #define MSG_PerfectHash_event_0_message      0xB0010000L
 #define MSG_PerfectHash_event_1_message      0xB0010001L
 #define MSG_PerfectHash_event_2_message      0xB0010002L

@@ -1984,6 +1984,69 @@ VerifyMemoryCoverageInvariants(
 }
 #pragma optimize("", on)
 
+//
+// Helper macro for emitting graph-found events.  Used exclusively by the
+// GraphRegisterSolved() routine.
+//
+
+#define EVENT_WRITE_GRAPH_FOUND(Name)                             \
+    EventWriteGraph##Name##(                                      \
+        NULL,                                                     \
+        Attempt,                                                  \
+        ElapsedMilliseconds,                                      \
+        (ULONG)CoverageType,                                      \
+        CoverageValue,                                            \
+        (StopGraphSolving != FALSE),                              \
+        (FoundBestGraph != FALSE),                                \
+        (FoundEqualBestGraph != FALSE),                           \
+        EqualCount,                                               \
+        Coverage->TotalNumberOfPages,                             \
+        Coverage->TotalNumberOfLargePages,                        \
+        Coverage->TotalNumberOfCacheLines,                        \
+        Coverage->NumberOfUsedPages,                              \
+        Coverage->NumberOfUsedLargePages,                         \
+        Coverage->NumberOfUsedCacheLines,                         \
+        Coverage->NumberOfEmptyPages,                             \
+        Coverage->NumberOfEmptyLargePages,                        \
+        Coverage->NumberOfEmptyCacheLines,                        \
+        Coverage->FirstPageUsed,                                  \
+        Coverage->FirstLargePageUsed,                             \
+        Coverage->FirstCacheLineUsed,                             \
+        Coverage->LastPageUsed,                                   \
+        Coverage->LastLargePageUsed,                              \
+        Coverage->LastCacheLineUsed,                              \
+        Coverage->TotalNumberOfAssigned,                          \
+        Coverage->NumberOfKeysWithVerticesMappingToSamePage,      \
+        Coverage->NumberOfKeysWithVerticesMappingToSameLargePage, \
+        Coverage->NumberOfKeysWithVerticesMappingToSameCacheLine, \
+        Coverage->MaxGraphTraversalDepth,                         \
+        Coverage->TotalGraphTraversals,                           \
+        Graph->Seeds[0],                                          \
+        Graph->Seeds[1],                                          \
+        Graph->Seeds[2],                                          \
+        Graph->Seeds[3],                                          \
+        Graph->Seeds[4],                                          \
+        Graph->Seeds[5],                                          \
+        Graph->Seeds[6],                                          \
+        Graph->Seeds[7],                                          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[0],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[1],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[2],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[3],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[4],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[5],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[6],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[7],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[8],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[9],          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[10],         \
+        Coverage->NumberOfAssignedPerCacheLineCounts[11],         \
+        Coverage->NumberOfAssignedPerCacheLineCounts[12],         \
+        Coverage->NumberOfAssignedPerCacheLineCounts[13],         \
+        Coverage->NumberOfAssignedPerCacheLineCounts[14],         \
+        Coverage->NumberOfAssignedPerCacheLineCounts[15],         \
+        Coverage->NumberOfAssignedPerCacheLineCounts[16]          \
+    )
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
@@ -2022,15 +2085,18 @@ Return Value:
 --*/
 {
     HRESULT Result;
-    BOOLEAN FoundBestGraph;
+    BOOLEAN FoundBestGraph = FALSE;
     BOOLEAN StopGraphSolving = FALSE;
     BOOLEAN FoundEqualBestGraph = FALSE;
     ULONG Index;
+    ULONG EqualCount = 0;
     ULONG BestGraphIndex = 0;
+    ULONG CoverageValue = 0;
     LONG EqualBestGraphIndex = 0;
+    LONGLONG Attempt;
     PGRAPH SpareGraph;
     PGRAPH PreviousBestGraph;
-    BEST_GRAPH_INFO LocalBestGraphInfo = { 0 };
+    ULONGLONG ElapsedMilliseconds;
     PBEST_GRAPH_INFO BestGraphInfo = NULL;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
@@ -2045,6 +2111,8 @@ Return Value:
     Context = Graph->Context;
     Coverage = &Graph->AssignedMemoryCoverage;
     CoverageType = Context->BestCoverageType;
+    Attempt = Coverage->Attempt;
+    ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
 
     //
     // Indicate continue graph solving unless we find a best graph.
@@ -2095,6 +2163,7 @@ Return Value:
 
 #define EXPAND_AS_DETERMINE_IF_BEST_GRAPH(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                        \
+        CoverageValue = Coverage->##Name;                               \
         if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
             Context->BestGraph = Graph;                                 \
             *NewGraphPointer = PreviousBestGraph;                       \
@@ -2140,25 +2209,14 @@ End:
         ASSERT(EqualBestGraphIndex >= 0);
 
         BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
-        BestGraphInfo->EqualCount++;
+        EqualCount = ++BestGraphInfo->EqualCount;
 
     } else if (FoundBestGraph) {
 
         //
-        // If this is the first best graph for this value, capture the attempt
-        // and time in the context.  This provides a useful data point when
-        // analyzing solving behavior (i.e. first 8 best graphs were found
-        // within the first minute, 9th and final best graph took an hour to
-        // find).
-        //
-
-        //
         // If we're still within the limits for the maximum number of best
         // graphs (captured within our context), then use the relevant element
-        // from that array.  Otherwise, just use the local, stack-backed struct.
-        // (This ensures BestGraphInfo always has valid values even if we've
-        // surpassed the context limits, enabling us to emit an ETW event at the
-        // end of this routine.)
+        // from that array.
         //
 
         if (BestGraphIndex < MAX_BEST_GRAPH_INFO) {
@@ -2174,26 +2232,24 @@ End:
             ASSERT((ULONG_PTR)(BestGraphInfo) <
                    (ULONG_PTR)(&Context->LowMemoryEvent));
 
+            //
+            // Initialize the pointer to the best graph info's copy of the
+            // coverage structure; we can copy this over outside the critical
+            // section.
+            //
+
+            BestCoverage = &BestGraphInfo->Coverage;
+
         } else {
-            BestGraphInfo = &LocalBestGraphInfo;
+
+            //
+            // Nothing to do if we've exceeded the number of best graphs we
+            // capture in the context.  (The information may still be emitted
+            // via an ETW event.)
+            //
+
+            ASSERT(BestCoverage == NULL);
         }
-
-        //
-        // Fill in the attempt number and elapsed milliseconds.
-        //
-
-        BestGraphInfo->Attempt = Coverage->Attempt;
-        BestGraphInfo->ElapsedMilliseconds = (
-            GetTickCount64() - Context->StartMilliseconds
-        );
-
-        //
-        // Initialize the pointer to the best graph info's copy of the
-        // coverage structure; we can copy this over outside the critical
-        // section.
-        //
-
-        BestCoverage = &BestGraphInfo->Coverage;
 
         //
         // Capture the value used to determine that this graph was the best.
@@ -2242,12 +2298,19 @@ End:
     }
 
     //
-    // If we found a new best graph, BestCoverage will be non-NULL.  Copy the
-    // coverage information, seeds, and emit an ETW event.
+    // If we found a new best graph, BestCoverage will be non-NULL.
     //
 
     if (BestCoverage != NULL) {
+
+        //
+        // Copy the coverage, attempt, elapsed milliseconds and seeds.
+        //
+
         CopyCoverage(BestCoverage, Coverage);
+
+        BestGraphInfo->Attempt = Attempt;
+        BestGraphInfo->ElapsedMilliseconds = ElapsedMilliseconds;
 
         C_ASSERT(sizeof(BestGraphInfo->Seeds) == sizeof(Graph->Seeds));
 
@@ -2256,60 +2319,6 @@ End:
         for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
             BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
         }
-
-        EventWriteGraphFoundNewBestGraph(
-            NULL,
-            BestGraphInfo->Attempt,
-            BestGraphInfo->ElapsedMilliseconds,
-            (ULONG)CoverageType,
-            BestGraphInfo->Value,
-            Coverage->TotalNumberOfPages,
-            Coverage->TotalNumberOfLargePages,
-            Coverage->TotalNumberOfCacheLines,
-            Coverage->NumberOfUsedPages,
-            Coverage->NumberOfUsedLargePages,
-            Coverage->NumberOfUsedCacheLines,
-            Coverage->NumberOfEmptyPages,
-            Coverage->NumberOfEmptyLargePages,
-            Coverage->NumberOfEmptyCacheLines,
-            Coverage->FirstPageUsed,
-            Coverage->FirstLargePageUsed,
-            Coverage->FirstCacheLineUsed,
-            Coverage->LastPageUsed,
-            Coverage->LastLargePageUsed,
-            Coverage->LastCacheLineUsed,
-            Coverage->TotalNumberOfAssigned,
-            Coverage->NumberOfKeysWithVerticesMappingToSamePage,
-            Coverage->NumberOfKeysWithVerticesMappingToSameLargePage,
-            Coverage->NumberOfKeysWithVerticesMappingToSameCacheLine,
-            Coverage->MaxGraphTraversalDepth,
-            Coverage->TotalGraphTraversals,
-            BestGraphInfo->Seeds[0],
-            BestGraphInfo->Seeds[1],
-            BestGraphInfo->Seeds[2],
-            BestGraphInfo->Seeds[3],
-            BestGraphInfo->Seeds[4],
-            BestGraphInfo->Seeds[5],
-            BestGraphInfo->Seeds[6],
-            BestGraphInfo->Seeds[7],
-            Coverage->NumberOfAssignedPerCacheLineCounts[0],
-            Coverage->NumberOfAssignedPerCacheLineCounts[1],
-            Coverage->NumberOfAssignedPerCacheLineCounts[2],
-            Coverage->NumberOfAssignedPerCacheLineCounts[3],
-            Coverage->NumberOfAssignedPerCacheLineCounts[4],
-            Coverage->NumberOfAssignedPerCacheLineCounts[5],
-            Coverage->NumberOfAssignedPerCacheLineCounts[6],
-            Coverage->NumberOfAssignedPerCacheLineCounts[7],
-            Coverage->NumberOfAssignedPerCacheLineCounts[8],
-            Coverage->NumberOfAssignedPerCacheLineCounts[9],
-            Coverage->NumberOfAssignedPerCacheLineCounts[10],
-            Coverage->NumberOfAssignedPerCacheLineCounts[11],
-            Coverage->NumberOfAssignedPerCacheLineCounts[12],
-            Coverage->NumberOfAssignedPerCacheLineCounts[13],
-            Coverage->NumberOfAssignedPerCacheLineCounts[14],
-            Coverage->NumberOfAssignedPerCacheLineCounts[15],
-            Coverage->NumberOfAssignedPerCacheLineCounts[16]
-        );
     }
 
     //
@@ -2349,6 +2358,21 @@ End:
 
         Result = PH_S_GRAPH_SOLVING_STOPPED;
     }
+
+    //
+    // Emit the relevant ETW event.  (We use different ETW events for graph
+    // found, found equal best, and found new best, because they occur at very
+    // different frequencies, and have separate ETW keywords (to facilitate
+    // isolation of just the specific event you're interested in).
+    //
+
+    if (FoundBestGraph != FALSE) {
+        EVENT_WRITE_GRAPH_FOUND(FoundNewBest);
+    } else if (FoundEqualBestGraph != FALSE) {
+        EVENT_WRITE_GRAPH_FOUND(FoundEqualBest);
+    }
+
+    EVENT_WRITE_GRAPH_FOUND(Found);
 
     return Result;
 }
