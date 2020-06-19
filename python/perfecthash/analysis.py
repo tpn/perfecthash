@@ -476,12 +476,10 @@ ADD_HASHED_KEYS_CSV_HEADER_SLIM = (
     'Microseconds',
 )
 
-# FoundNewBestGraph
+# FoundNewBestGraph, FoundEqualBestGraph, and FoundGraph all share the same
+# template.
 
-FOUND_NEW_BEST_GRAPH = 'PerfectHash/FoundNewBestGraph/win:Info'
-
-FOUND_NEW_BEST_GRAPH_ETW_HEADER = (
-    'PerfectHash/FoundNewBestGraph/win:Info,'
+FOUND_GRAPH_ETW_HEADER_SHARED = (
     '  TimeStamp,'
     '     Process Name ( PID),'
     '   ThreadID,'
@@ -493,7 +491,11 @@ FOUND_NEW_BEST_GRAPH_ETW_HEADER = (
     ' Attempt,'
     ' ElapsedMilliseconds,'
     ' CoverageType,'
-    ' Value,'
+    ' CoverageValue,'
+    ' StopGraphSolving,'
+    ' IsBest,'
+    ' IsEqual,'
+    ' EqualCount,'
     ' TotalNumberOfPages,'
     ' TotalNumberOfLargePages,'
     ' TotalNumberOfCacheLines,'
@@ -542,7 +544,7 @@ FOUND_NEW_BEST_GRAPH_ETW_HEADER = (
     ' NumberOfAssignedPerCacheLineCounts_16'
 )
 
-FOUND_NEW_BEST_GRAPH_CSV_HEADER = (
+FOUND_GRAPH_CSV_HEADER_SHARED = (
     'EventName',
     'TimeStamp',
     'ProcessID',
@@ -555,7 +557,11 @@ FOUND_NEW_BEST_GRAPH_CSV_HEADER = (
     'Attempt',
     'ElapsedMilliseconds',
     'CoverageType',
-    'Value',
+    'CoverageValue',
+    'StopGraphSolving',
+    'IsBest',
+    'IsEqual',
+    'EqualCount',
     'TotalNumberOfPages',
     'TotalNumberOfLargePages',
     'TotalNumberOfCacheLines',
@@ -604,7 +610,7 @@ FOUND_NEW_BEST_GRAPH_CSV_HEADER = (
     'NumberOfAssignedPerCacheLineCounts_16',
 )
 
-FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM = (
+FOUND_GRAPH_CSV_HEADER_SLIM_SHARED = (
     'LineNumber',
     'TimeStamp',
     'ProcessID',
@@ -613,7 +619,11 @@ FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM = (
     'Attempt',
     'ElapsedMilliseconds',
     'CoverageType',
-    'Value',
+    'CoverageValue',
+    'StopGraphSolving',
+    'IsBest',
+    'IsEqual',
+    'EqualCount',
     'TotalNumberOfPages',
     'TotalNumberOfLargePages',
     'TotalNumberOfCacheLines',
@@ -661,6 +671,42 @@ FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM = (
     'NumberOfAssignedPerCacheLineCounts_15',
     'NumberOfAssignedPerCacheLineCounts_16',
 )
+
+# FoundNewBestGraph
+
+FOUND_NEW_BEST_GRAPH = 'PerfectHash/FoundNewBestGraph/win:Info'
+
+FOUND_NEW_BEST_GRAPH_ETW_HEADER = (
+    'PerfectHash/FoundNewBestGraph/win:Info,' +
+    FOUND_GRAPH_ETW_HEADER_SHARED
+)
+
+FOUND_NEW_BEST_GRAPH_CSV_HEADER = FOUND_GRAPH_CSV_HEADER_SHARED
+FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM = FOUND_GRAPH_CSV_HEADER_SLIM_SHARED
+
+# FoundEqualBestGraph
+
+FOUND_EQUAL_BEST_GRAPH = 'PerfectHash/FoundEqualBestGraph/win:Info'
+
+FOUND_EQUAL_BEST_GRAPH_ETW_HEADER = (
+    'PerfectHash/FoundEqualBestGraph/win:Info,' +
+    FOUND_GRAPH_ETW_HEADER_SHARED
+)
+
+FOUND_EQUAL_BEST_GRAPH_CSV_HEADER = FOUND_GRAPH_CSV_HEADER_SHARED
+FOUND_EQUAL_BEST_GRAPH_CSV_HEADER_SLIM = FOUND_GRAPH_CSV_HEADER_SLIM_SHARED
+
+# FoundGraph
+
+FOUND_GRAPH = 'PerfectHash/FoundGraph/win:Info'
+
+FOUND_GRAPH_ETW_HEADER = (
+    'PerfectHash/FoundGraph/win:Info,' +
+    FOUND_GRAPH_ETW_HEADER_SHARED
+)
+
+FOUND_GRAPH_CSV_HEADER = FOUND_GRAPH_CSV_HEADER_SHARED
+FOUND_GRAPH_CSV_HEADER_SLIM = FOUND_GRAPH_CSV_HEADER_SLIM_SHARED
 
 # GraphAssignStart
 
@@ -852,9 +898,11 @@ EVENT_NAME_TO_ETW_HEADER = {
     ADD_KEYS: ADD_KEYS_ETW_HEADER,
     HASH_KEYS: HASH_KEYS_ETW_HEADER,
     ADD_HASHED_KEYS: ADD_HASHED_KEYS_ETW_HEADER,
-    FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_ETW_HEADER,
     CSWITCH: CSWITCH_ETW_HEADER,
     PMC: None,
+    FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_ETW_HEADER,
+    FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_ETW_HEADER,
+    FOUND_GRAPH: FOUND_GRAPH_ETW_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER = {
@@ -865,9 +913,12 @@ EVENT_NAME_TO_CSV_HEADER = {
     ASSIGN_START: ASSIGN_START_CSV_HEADER,
     ASSIGN_STOP: ASSIGN_STOP_CSV_HEADER,
     CSWITCH: CSWITCH_CSV_HEADER,
+    PMC: None,
     GENERATE_RANDOM_BYTES_START: GENERATE_RANDOM_BYTES_START_CSV_HEADER,
     GENERATE_RANDOM_BYTES_STOP: GENERATE_RANDOM_BYTES_STOP_CSV_HEADER,
-    PMC: None,
+    FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER,
+    FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_CSV_HEADER,
+    FOUND_GRAPH: FOUND_GRAPH_CSV_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER_SLIM = {
@@ -881,12 +932,17 @@ EVENT_NAME_TO_CSV_HEADER_SLIM = {
     GENERATE_RANDOM_BYTES_START: GENERATE_RANDOM_BYTES_START_CSV_HEADER_SLIM,
     GENERATE_RANDOM_BYTES_STOP: GENERATE_RANDOM_BYTES_STOP_CSV_HEADER_SLIM,
     PMC: None,
+    FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM,
+    FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_CSV_HEADER_SLIM,
+    FOUND_GRAPH: FOUND_GRAPH_CSV_HEADER_SLIM,
 }
 
 HAS_SEED_DATA = {
     ADD_KEYS,
     HASH_KEYS,
     FOUND_NEW_BEST_GRAPH,
+    FOUND_EQUAL_BEST_GRAPH,
+    FOUND_GRAPH,
 }
 
 #===============================================================================
@@ -2012,6 +2068,8 @@ def process_xperf_perfecthash_csv(path, out=None):
     hash_keys = HASH_KEYS
     add_hashed_keys = ADD_HASHED_KEYS
     found_new_best_graph = FOUND_NEW_BEST_GRAPH
+    found_equal_best_graph = FOUND_EQUAL_BEST_GRAPH
+    found_graph = FOUND_GRAPH
     assign_start = ASSIGN_START
     assign_stop = ASSIGN_STOP
     generate_random_bytes_start = GENERATE_RANDOM_BYTES_START
@@ -2027,9 +2085,12 @@ def process_xperf_perfecthash_csv(path, out=None):
         hash_keys: io.StringIO(),
         add_hashed_keys: io.StringIO(),
         found_new_best_graph: io.StringIO(),
+        found_equal_best_graph: io.StringIO(),
+        found_graph: io.StringIO(),
         assign_start: assign_io,
         assign_stop: assign_io,
         generate_random_bytes_start: generate_random_bytes_io,
+        generate_random_bytes_stop: generate_random_bytes_io,
         cswitch: io.StringIO(),
         pmc: io.StringIO(),
     }
@@ -2039,6 +2100,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         hash_keys: f'{prefix}_HashKeys.csv',
         add_hashed_keys: f'{prefix}_AddHashedKeys.csv',
         found_new_best_graph: f'{prefix}_FoundNewBestGraph.csv',
+        found_equal_best_graph: f'{prefix}_FoundEqualBestGraph.csv',
+        found_graph: f'{prefix}_FoundGraph.csv',
         assign_start: f'{prefix}_AssignRaw.csv',
         assign_stop: f'{prefix}_Assign.csv',
         generate_random_bytes_start: f'{prefix}_GenerateRandomBytesRaw.csv',
@@ -2052,6 +2115,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         hash_keys: 0,
         add_hashed_keys: 0,
         found_new_best_graph: 0,
+        found_equal_best_graph: 0,
+        found_graph: 0,
         assign_start: 0,
         assign_stop: 0,
         generate_random_bytes_start: 0,
@@ -2106,7 +2171,7 @@ def process_xperf_perfecthash_csv(path, out=None):
     # Write the CSV headers to all StringIO buffers, excluding the ones used for
     # 'Start' events (as they share the 'Stop' event buffer).
     for (k, v) in slim_csv_headers.items():
-        if not k.endswith('Start'):
+        if v and not k.endswith('Start'):
             io[k].write(','.join(v))
             io[k].write('\n')
 
