@@ -593,14 +593,12 @@ Return Value:
     // Capture the local solve time.
     //
 
-#ifdef PH_WINDOWS
     GetLocalTime(&SystemTime);
     if (!SystemTimeToFileTime(&SystemTime, &Graph->SolvedTime.AsFileTime)) {
         SYS_ERROR(SystemTimeToFileTime);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto End;
     }
-#endif
 
     //
     // If we're in "first graph wins" mode and we reach this point, we're the
@@ -2780,6 +2778,7 @@ End:
             StopGraphSolving = TRUE;
         }
 
+
     } else if (FoundBestGraph) {
 
         BestGraph = Graph;
@@ -2906,6 +2905,7 @@ End:
         for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
             BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
         }
+
     }
 
     //
@@ -4488,7 +4488,7 @@ Return Value:
 
 Error:
 
-    if (SUCCEEDED(Result) == S_OK) {
+    if (Result == S_OK) {
         Result = E_UNEXPECTED;
     }
 
@@ -4696,7 +4696,8 @@ Return Value:
 
     E_POINTER - Graph was NULL.
 
-    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph (and it's not a
+        CUDA graph).
 
     PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE - The individual value size indicated
         by the user seed value array is invalid (i.e. not sizeof(ULONG)).
@@ -4723,7 +4724,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (IsSpareGraph(Graph)) {
+    if (IsSpareGraph(Graph) && !IsCuGraph(Graph)) {
         return PH_E_SPARE_GRAPH;
     }
 

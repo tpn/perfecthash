@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2019-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,6 +15,15 @@ Abstract:
 #include "stdafx.h"
 
 extern LOAD_SYMBOLS LoadSymbols;
+
+//
+// Forward decl.
+//
+
+HRESULT
+CuLoadKernels(
+    _In_ PCU Cu
+    );
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -61,8 +70,11 @@ Return Value:
     const BYTE CuRandDllVersionOffset = 9;
 
 #define EXPAND_AS_CU_NAME(Upper, Name) "cu" # Name,
+#define EXPAND_AS_CU_V2_NAME(Upper, Name) "cu" # Name ## "_v2",
+
     CONST PCSZ CuNames[] = {
         CU_FUNCTION_TABLE_ENTRY(EXPAND_AS_CU_NAME)
+        CU_FUNCTION_V2_TABLE_ENTRY(EXPAND_AS_CU_V2_NAME)
     };
 
 #define EXPAND_AS_CURAND_NAME(Upper, Name) "curand" # Name,
@@ -140,6 +152,17 @@ Return Value:
     }
 
     //
+    // Get the number of devices.
+    //
+
+    CuResult = Cu->DeviceGetCount(&Cu->NumberOfDevices);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuInitialize_DeviceGetCount, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
     // Get the driver version.
     //
 
@@ -183,8 +206,17 @@ Return Value:
     ASSERT(CuRandDll[CuRandDllVersionOffset] == 'N');
     ASSERT(CuRandDll[CuRandDllVersionOffset+1] == 'M');
 
+    //
+    // Temp hack: we only support curand64_10.dll for now.
+    //
+
+#if 0
     CuRandDll[CuRandDllVersionOffset]   = Cu->DriverSuffix[0];
     CuRandDll[CuRandDllVersionOffset+1] = Cu->DriverSuffix[1];
+#else
+    CuRandDll[CuRandDllVersionOffset]   = '1';
+    CuRandDll[CuRandDllVersionOffset+1] = '0';
+#endif
 
     Module = LoadLibraryA((PCSZ)CuRandDll);
     if (!IsValidHandle(Module)) {
@@ -249,6 +281,169 @@ End:
 
     return Result;
 }
+
+#if 0
+HRESULT
+CuLoadKernels(
+    _In_ PCU Cu
+    )
+/*++
+
+Routine Description:
+
+    Loads kernels.
+
+Arguments:
+
+    Cu - Supplies a pointer to a CU structure for which initialization
+        is to be performed.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Cu is NULL.
+
+    E_UNEXPECTED - All other errors.
+
+--*/
+{
+    HRESULT Result;
+    CU_RESULT CuResult;
+    PCU_MODULE Module;
+    PCU_FUNCTION *Function;
+    PCU_OCCUPANCY Occupancy;
+    PCU_CONTEXT CuContext;
+    PCSZ FunctionName;
+    CU_DEVICE DeviceOrdinal;
+    PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+
+    PCSZ KernelFunctionNames[] = {
+        (PCSZ)"PerfectHashCudaSeededHashAllMultiplyShiftR2",
+    };
+
+    CU_JIT_OPTION JitOptions[] = {
+        CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
+        CU_JIT_INFO_LOG_BUFFER,
+        CU_JIT_MAX_REGISTERS,
+    };
+    PVOID JitOptionValues[3];
+    USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
+
+    //
+    // Load the TLS context and device ordinal.
+    //
+
+    TlsContext = PerfectHashTlsEnsureContext();
+    Context = TlsContext->Context;
+    DeviceOrdinal = 0;
+    //DeviceOrdinal = Context->CuDeviceOrdinal;
+
+    //
+    // Initialize the JIT options.
+    //
+
+    JitOptionValues[0] = (PVOID)sizeof(Cu->JitLogBuffer);
+    JitOptionValues[1] = (PVOID)Cu->JitLogBuffer;
+    //JitOptionValues[2] = (PVOID)Cu->JitMaxNumberOfRegisters;
+    JitOptionValues[2] = (PVOID)64LL;
+
+    //
+    // Create a CUDA context.
+    //
+
+    CuResult = Cu->CtxCreate(&CuContext, CU_CTX_SCHED_AUTO, DeviceOrdinal);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuCtxCreate, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Load the module from the embedded PTX.
+    //
+
+    CuResult = Cu->ModuleLoadDataEx(&Module,
+                                    (PCHAR)GraphPtxRawCStr,
+                                    NumberOfJitOptions,
+                                    JitOptions,
+                                    JitOptionValues);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuModuleLoadDataEx, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Module loaded successfully, resolve the kernel.
+    //
+
+    Function = &Cu->Functions[0];
+    FunctionName = KernelFunctionNames[0];
+    CuResult = Cu->ModuleGetFunction(Function, Module, FunctionName);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuModuleGetFunction, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Get occupancy stats for each function.
+    //
+
+    Occupancy = &Cu->Occupancy[0];
+
+    CuResult = Cu->OccupancyMaxPotentialBlockSizeWithFlags(
+        &Occupancy->MinimumGridSize,
+        &Occupancy->BlockSize,
+        *Function,
+        NULL,   // OccupancyBlockSizeToDynamicMemSize
+        0,      // DynamicSharedMemorySize
+        0,      // BlockSizeLimit
+        0       // Flags
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(OccupancyMaxPotentialBlockSizeWithFlags, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->OccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
+        &Occupancy->NumBlocks,
+        *Function,
+        Occupancy->BlockSize,
+        0, // DynamicSharedMemorySize
+        0  // Flags
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(OccupancyMaxActiveBlocksPerMultiprocessorWithFlags, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+#endif
 
 
 CU_RUNDOWN CuRundown;

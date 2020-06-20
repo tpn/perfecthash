@@ -20,6 +20,7 @@ Abstract:
 #error This file is Windows only.
 #endif
 
+
 _Use_decl_annotations_
 HRESULT
 CreatePerfectHashTableImplChm01(

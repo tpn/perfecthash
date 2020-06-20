@@ -1,4 +1,3 @@
-    
 /***
 *       no_sal2.h - renders the SAL annotations for documenting APIs harmless.
 *

@@ -99,26 +99,26 @@ IsGlobalComponentInterfaceId(
     Name##_FLAGS Flags;               \
     ULONG Reserved
 
-#define DEFINE_UNUSED_STATE(Name)                  \
-typedef union _##Name##_STATE {                    \
-    struct {                                       \
-        ULONG Unused:32;                           \
-    };                                             \
-    LONG AsLong;                                   \
-    ULONG AsULong;                                 \
-} Name##_STATE;                                    \
-C_ASSERT(sizeof(Name##_STATE) == sizeof(ULONG));   \
+#define DEFINE_UNUSED_STATE(Name)                \
+typedef union _##Name##_STATE {                  \
+    struct {                                     \
+        ULONG Unused:32;                         \
+    };                                           \
+    LONG AsLong;                                 \
+    ULONG AsULong;                               \
+} Name##_STATE;                                  \
+C_ASSERT(sizeof(Name##_STATE) == sizeof(ULONG)); \
 typedef Name##_STATE *P##Name##_STATE
 
-#define DEFINE_UNUSED_FLAGS(Name)                  \
-typedef union _##Name##_FLAGS {                    \
-    struct {                                       \
-        ULONG Unused:32;                           \
-    };                                             \
-    LONG AsLong;                                   \
-    ULONG AsULong;                                 \
-} Name##_FLAGS;                                    \
-C_ASSERT(sizeof(Name##_FLAGS) == sizeof(ULONG));   \
+#define DEFINE_UNUSED_FLAGS(Name)                \
+typedef union _##Name##_FLAGS {                  \
+    struct {                                     \
+        ULONG Unused:32;                         \
+    };                                           \
+    LONG AsLong;                                 \
+    ULONG AsULong;                               \
+} Name##_FLAGS;                                  \
+C_ASSERT(sizeof(Name##_FLAGS) == sizeof(ULONG)); \
 typedef Name##_FLAGS *P##Name##_FLAGS
 
 //

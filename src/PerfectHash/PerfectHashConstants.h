@@ -278,6 +278,7 @@ CompletePerfectHashTableInitialization(
 //
 
 extern const PCUNICODE_STRING RngNames[];
+extern const PCUNICODE_STRING CuRngNames[];
 extern const PCUNICODE_STRING CpuArchNames[];
 extern const PCUNICODE_STRING InterfaceNames[];
 extern const PCUNICODE_STRING AlgorithmNames[];

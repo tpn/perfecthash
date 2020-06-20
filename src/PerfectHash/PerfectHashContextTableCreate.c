@@ -17,7 +17,7 @@ Abstract:
 #include "stdafx.h"
 #include "TableCreateCsv.h"
 #include "TableCreateBestCsv.h"
-
+#include "PerfectHashTls.h"
 
 #define PH_ERROR_EX(Name, Result, ...) \
     PH_ERROR(Name, Result)
@@ -403,6 +403,7 @@ Return Value:
         goto Error;
     }
 
+#if 0
     //
     // Keys were loaded successfully.  If CUDA is available, register the base
     // address of the array.
@@ -418,6 +419,7 @@ Return Value:
             goto Error;
         }
     }
+#endif
 #endif
 
     //
@@ -1365,6 +1367,8 @@ Return Value:
     PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
         ExtractTableCreateArgs;
     PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters = { 0 };
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
 
     Result = LoadDefaultTableCreateFlags(&TableCreateFlags);
     if (FAILED(Result)) {
@@ -1432,16 +1436,12 @@ Return Value:
         return Result;
     }
 
-#ifdef PH_WINDOWS
-    if (ContextTableCreateFlags.TryCuda != FALSE) {
-        Result = PerfectHashContextInitializeCuda(Context,
-                                                  &TableCreateParameters);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashContextTableCreateArgvW_InitializeCuda, Result);
-            return Result;
-        }
-    }
-#endif
+    //
+    // Set the active context via TLS.
+    //
+
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+    TlsContext->Context = Context;
 
     Result = Context->Vtbl->TableCreate(Context,
                                         &KeysPath,
@@ -1465,6 +1465,8 @@ Return Value:
 
         NOTHING;
     }
+
+    PerfectHashTlsClearContextIfActive(&LocalTlsContext);
 
     CleanupResult = CleanupTableCreateParameters(&TableCreateParameters);
     if (FAILED(CleanupResult)) {

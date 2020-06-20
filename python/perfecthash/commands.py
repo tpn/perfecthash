@@ -377,6 +377,8 @@ class UpdateRawCStringFile(InvariantAwareCommand):
             category = 'Text'
         elif extension == '.mk':
             category = 'Makefile'
+        elif extension == '.ptx':
+            category = 'Ptx'
         elif not extension:
             assert name == 'Makefile', name
             category = 'Makefile'

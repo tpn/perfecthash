@@ -205,4 +205,18 @@
         </Expand>
     </Type>
 
+    <Type Name="_PH_CU_DEVICES">
+        <Expand>
+            <Item Name="&lt;Number of Devices&gt;">NumberOfDevices</Item>
+            <Synthetic Name="&lt;Devices&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfDevices</Size>
+                        <ValuePointer Condition="NumberOfDevices &gt; 0 &amp;&amp; Devices != nullptr">Devices</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
 </AutoVisualizer>

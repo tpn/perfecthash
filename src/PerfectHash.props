@@ -9,6 +9,7 @@
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
     <DefaultPlatformToolset>v143</DefaultPlatformToolset>
+    <AdditionalCudaDependencies>cudart_static.lib</AdditionalCudaDependencies>
   </PropertyGroup>
 
   <!--
@@ -61,6 +62,10 @@
       <BrowseInformationFile>$(IntDir)$(ProjectName).bsc</BrowseInformationFile>
       -->
     </ClCompile>
+
+    <CudaCompile>
+        <TargetMachinePlatform>64</TargetMachinePlatform>
+    </CudaCompile>
 
     <!--
     <ClCompile Condition="$(Platform) == 'x64'">

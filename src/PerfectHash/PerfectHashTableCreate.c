@@ -728,6 +728,18 @@ Return Value:
 
             case TableCreateParameterCuDeviceOrdinalId:
             case TableCreateParameterCuDeviceOrdinalsId:
+            case TableCreateParameterCuRngId:
+            case TableCreateParameterCuRngSeedId:
+            case TableCreateParameterCuRngSubsequenceId:
+            case TableCreateParameterCuRngOffsetId:
+            case TableCreateParameterCuDevicesId:
+            case TableCreateParameterCuPtxPathId:
+            case TableCreateParameterCuConcurrencyId:
+            case TableCreateParameterCuDevicesBlocksPerGridId:
+            case TableCreateParameterCuCudaDevRuntimeLibPathId:
+            case TableCreateParameterCuDevicesThreadsPerBlockId:
+            case TableCreateParameterCuNumberOfRandomHostSeedsId:
+            case TableCreateParameterCuDevicesKernelRuntimeTargetInMillisecondsId:
 
                 //
                 // These are handled in the context.
