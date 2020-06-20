@@ -576,6 +576,9 @@
     <ClInclude Include="PerfectHashEventsPrivate.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Graph_Ptx_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">
