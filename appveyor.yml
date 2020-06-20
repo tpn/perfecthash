@@ -5,7 +5,7 @@ image:
     - Visual Studio 2019
 
 configuration:
-    Release
+    ReleaseNoCuda
 
 platform:
     x64

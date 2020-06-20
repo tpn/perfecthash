@@ -13,8 +13,18 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "Graph_Ptx_RawCString.h"
 
 extern LOAD_SYMBOLS LoadSymbols;
+
+//
+// Forward decl.
+//
+
+HRESULT
+CuLoadKernels(
+    _In_ PCU Cu
+    );
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -229,6 +239,16 @@ Return Value:
     }
 
     //
+    // Load kernels.
+    //
+
+    Result = CuLoadKernels(Cu);
+    if (FAILED(Result)) {
+        PH_ERROR(CuLoadKernels, Result);
+        goto Error;
+    }
+
+    //
     // We're done!  Indicate success and finish up.
     //
 
@@ -246,6 +266,36 @@ Error:
     //
 
 End:
+
+    return Result;
+}
+
+HRESULT
+CuLoadKernels(
+    _In_ PCU Cu
+    )
+/*++
+
+Routine Description:
+
+    Loads kernels.
+
+Arguments:
+
+    Cu - Supplies a pointer to a CU structure for which initialization
+        is to be performed.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Cu is NULL.
+
+    E_UNEXPECTED - All other errors.
+
+--*/
+{
+    HRESULT Result;
 
     return Result;
 }
