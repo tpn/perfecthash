@@ -414,7 +414,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     struct _PERFECT_HASH_TABLE *Table;
 
-#ifdef PH_WINDOWS
     //
     // Pointer to a CU instance, if applicable.
     //
@@ -428,17 +427,26 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PH_CU_DEVICES CuDevices;
 
     //
-    // Pointer to the array of CUDA device ordinals from the command line.
+    // CUDA device contexts.
     //
 
-    PVALUE_ARRAY CuDeviceOrdinals;
+    PPH_CU_DEVICE_CONTEXTS CuDeviceContexts;
 
     //
-    // CUDA device ordinal from the command line.
+    // Per-thread CUDA solving contexts.
     //
 
-    LONG CuDeviceOrdinal;
-#endif
+    PPH_CU_SOLVE_CONTEXTS CuSolveContexts;
+
+    //
+    // Array of graphs.
+    //
+
+    union {
+        struct _GRAPH **GpuGraphs;
+        struct _GRAPH **Graphs;
+    };
+    struct _GRAPH **CpuGraphs;
 
     //
     // Minimum number of keys that need to be present in order to honor find
@@ -940,6 +948,36 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_TIMER SolveTimeout;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
+    union {
+        ULONG CuConcurrency;
+        ULONG NumberOfGpuThreads;
+    };
+
+    //
+    // CPU threads will be MaximumConcurrency minus NumberOfGpuThreads (which
+    // may result in it being zero, in which case, there will be no CPU solver
+    // threads).
+    //
+
+    ULONG NumberOfCpuThreads;
+
+    ULONG NumberOfCpuGraphs;
+    ULONG NumberOfGpuGraphs;
+
+    ULONG NumberOfCuContexts;
+
+    ULONG TotalNumberOfGraphs;
+
+    //
+    // CUDA RNG details.
+    //
+
+    PCUNICODE_STRING CuRngName;
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONG Padding8;
+    ULONGLONG CuRngSeed;
+    ULONGLONG CuRngSubsequence;
+    ULONGLONG CuRngOffset;
 
     //
     // RNG details.
@@ -1173,9 +1211,6 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 
 #define ReleasePerfectHashContextLockExclusive(Context) \
     ReleaseSRWLockExclusive(&Context->Lock)
-
-#define ActiveCuDevice(Context) \
-    &((Context)->CuDevices.Devices[(Context)->CuDeviceOrdinal])
 
 //
 // Define helper macros for appending items to the tail of a guarded list.

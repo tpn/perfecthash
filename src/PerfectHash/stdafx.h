@@ -12,13 +12,17 @@ Abstract:
 
 --*/
 
+#ifndef __CUDA_ARCH__
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 #error PerfectHash stdafx.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
+#endif
 #endif
 
 #pragma once
 
+#ifndef __CUDA_ARCH__
 #include "targetver.h"
+#endif
 
 #if 0
 //
@@ -59,6 +63,7 @@ Abstract:
 //
 //
 
+#ifndef __CUDA_ARCH__
 #pragma warning(push)
 #pragma warning(disable: 4255 4668)
 #include <Windows.h>
@@ -116,6 +121,9 @@ Abstract:
 #define OUT
 #include <pthread.h>
 #endif
+#else // ifndef __CUDA_ARCH__
+#include <no_sal2.h>
+#endif
 
 //
 // PerfectHash-related headers.
@@ -150,13 +158,12 @@ Abstract:
 #include "PerfectHashPrimes.h"
 #include "PerfectHashPrivate.h"
 #include "PerfectHashAllocator.h"
-#ifdef PH_WINDOWS
 #include "Cu.h"
-#include "PerfectHashCu.h"
-#endif
 #include "Graph.h"
+#include "PerfectHashCu.h"
 #include "Math.h"
 #include "Rng.h"
+#include "GraphCu.h"
 #include "PerfectHashContext.h"
 #include "PerfectHashConstants.h"
 #include "PerfectHashErrorHandling.h"

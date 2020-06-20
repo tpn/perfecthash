@@ -44,7 +44,7 @@ PerfectHashPrintCuError(
     CHAR LocalBuffer[1024];
     ULONG_PTR Args[7];
     const STRING Prefix = RTL_CONSTANT_STRING(
-        "%1: %2!lu!: %3 failed with error: %4!lu! (0x%4!lx!): %5: %6"
+        "%1: %2!lu!: %3 failed with error: %4!lu! (0x%4!lx!): %5: %6\n"
     );
 
     CuResult = Cu->GetErrorName(Error, &CuErrorName);
@@ -187,6 +187,7 @@ Return Value:
     CU_RESULT CuResult;
     PVOID Address = NULL;
     PSTRING Name;
+    PCHAR Buffer;
 
     //
     // Get the number of devices.
@@ -218,23 +219,35 @@ Return Value:
         Device->Ordinal = Index;
 
         //
+        // Obtain the device identifier.
+        //
+
+        CuResult = Cu->DeviceGet(&Device->Handle, Device->Ordinal);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CreatePerfectHashCuDevices_DeviceGet, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
         // Load the device name.
         //
 
         Name = &Device->Name;
-        Name->Buffer = (PCHAR)&Device->NameBuffer;
+        Buffer = (PCHAR)&Device->NameBuffer;
         Name->Length = 0;
         Name->MaximumLength = sizeof(Device->NameBuffer);
-        CuResult = Cu->DeviceGetName(Name->Buffer,
+        CuResult = Cu->DeviceGetName(Buffer,
                                      (LONG)Name->MaximumLength,
-                                     Device->Ordinal);
+                                     Device->Handle);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(CuDeviceGetName, CuResult);
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
             goto Error;
         }
 
-        Name->Length = (USHORT)strlen(Name->Buffer);
+        Name->Length = (USHORT)strlen(Buffer);
+        Name->Buffer = Buffer;
 
         //
         // Load device attributes.
@@ -242,7 +255,7 @@ Return Value:
 
         CuResult = Cu->Vtbl->LoadCuDeviceAttributes(Cu,
                                                     &Device->Attributes,
-                                                    Device->Ordinal);
+                                                    Device->Handle);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(CuDeviceGetAttribute, CuResult);
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;

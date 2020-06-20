@@ -30,6 +30,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerfectHashCreateExe", "Per
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FunctionHook", "FunctionHook\FunctionHook.vcxproj", "{B9EF04DA-0AD9-45C4-97B0-857A13AA4850}"
 EndProject
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

@@ -31,6 +31,7 @@ include PerfectHash.inc
 ;
 ; Begin epilogue.
 ;
+
         mov         rdi, qword ptr [rsp + 8]        ; Restore rdi.
         mov         rax, r9
         ret

@@ -473,8 +473,8 @@ VERIFY_MASK_ARRAY_SIZE(MaskFunctionNames);
 // Best Coverage Type
 //
 
-#define EXPAND_AS_BEST_COVERAGE_TYPE_NAME(Name, Comparison, Comparator)    \
-    const UNICODE_STRING                                                   \
+#define EXPAND_AS_BEST_COVERAGE_TYPE_NAME(Name, Comparison, Comparator)       \
+    const UNICODE_STRING                                                      \
         PerfectHash##Comparison##Name##BestCoverageTypeName = RCS(L"" #Name);
 
 BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_NAME);
@@ -555,12 +555,12 @@ const UNICODE_STRING ContextVerifiedTableEventPrefix =
 const UNICODE_STRING ContextNewBestGraphEventPrefix =
     RCS(L"PerfectHashContext_NewBestGraphEvent_");
 
-#define EXPAND_AS_EVENT_NAME(                                           \
-    Verb, VUpper, Name, Upper,                                          \
-    EofType, EofValue,                                                  \
-    Suffix, Extension, Stream, Base                                     \
-)                                                                       \
-    const UNICODE_STRING Context##Verb##d##Name##EventPrefix =          \
+#define EXPAND_AS_EVENT_NAME(                                                 \
+    Verb, VUpper, Name, Upper,                                                \
+    EofType, EofValue,                                                        \
+    Suffix, Extension, Stream, Base                                           \
+)                                                                             \
+    const UNICODE_STRING Context##Verb##d##Name##EventPrefix =                \
         RCS(L"PerfectHashContext_" L"" #Verb L"d" L"" #Name L"EventPrefix_");
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
@@ -824,17 +824,8 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
-#ifdef PH_WINDOWS
+
 #define NUMBER_OF_INTERFACES 14
-#else
-
-//
-// Account for no CU.
-//
-
-#define NUMBER_OF_INTERFACES 13
-#endif
-
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -852,8 +843,16 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_RTL RTL
 #define PERFECT_HASH_ALLOCATOR ALLOCATOR
 #define PERFECT_HASH_GUARDED_LIST GUARDED_LIST
-#define PERFECT_HASH_GRAPH GRAPH
 #define PERFECT_HASH_RNG RNG
+
+//
+// N.B. Defining PERFECT_HASH_GRAPH_CU as GRAPH below is intentional; we use
+//      the same struct between the original (CPU) implementation and the CUDA
+//      implementation.
+//
+
+#define PERFECT_HASH_GRAPH GRAPH
+#define PERFECT_HASH_GRAPH_CU GRAPH
 
 #define PERFECT_HASH_IUNKNOWN_VTBL IUNKNOWN_VTBL
 #define PERFECT_HASH_ICLASSFACTORY_VTBL ICLASSFACTORY_VTBL
@@ -863,10 +862,8 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_GRAPH_VTBL GRAPH_VTBL
 #define PERFECT_HASH_RNG_VTBL RNG_VTBL
 
-#ifdef PH_WINDOWS
 #define PERFECT_HASH_CU CU
 #define PERFECT_HASH_CU_VTBL CU_VTBL
-#endif
 
 #define EXPAND_AS_SIZEOF_COMPONENT(Name, Upper, Guid) \
     sizeof(PERFECT_HASH_##Upper),
@@ -923,9 +920,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Directory),
     -1, // GuardedList
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Graph),
-#ifdef PH_WINDOWS
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Cu),
-#endif
     -1, // Rng
 
     -1,
@@ -947,9 +942,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // Directory
     -1, // GuardedList
     -1, // Graph
-#ifdef PH_WINDOWS
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Cu),
-#endif
     -1, // Rng
 
     -1,
@@ -1364,11 +1357,9 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashDirectoryInterface,
     &GuardedListInterface,
     &GraphInterface,
-#ifdef PH_WINDOWS
     &CuInterface,
-#endif
     &RngInterface,
-
+    &GraphCuInterface,
     NULL,
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaces);
@@ -1389,9 +1380,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
-#ifdef PH_WINDOWS
     (PCOMPONENT_INITIALIZE)&CuInitialize,
-#endif
     (PCOMPONENT_INITIALIZE)&RngInitialize,
 
     NULL,
@@ -1414,9 +1403,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
-#ifdef PH_WINDOWS
     (PCOMPONENT_RUNDOWN)&CuRundown,
-#endif
     (PCOMPONENT_RUNDOWN)&RngRundown,
 
     NULL,

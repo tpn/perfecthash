@@ -643,17 +643,17 @@ RetryWithLargerTableSize:
     // Submit all of the file preparation work items.
     //
 
-#define EXPAND_AS_SUBMIT_FILE_WORK(                     \
-    Verb, VUpper, Name, Upper,                          \
-    EofType, EofValue,                                  \
-    Suffix, Extension, Stream, Base                     \
-)                                                       \
-    ASSERT(!NoFileIo(Table));                           \
-    ZeroStructInline(Verb##Name);                       \
-    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
-    Verb##Name.Context = Context;                       \
-    ThreadpoolAddWork(FileWorkThreadpool,               \
-                      FileWorkItemCallbackChm01,        \
+#define EXPAND_AS_SUBMIT_FILE_WORK(                   \
+    Verb, VUpper, Name, Upper,                        \
+    EofType, EofValue,                                \
+    Suffix, Extension, Stream, Base                   \
+)                                                     \
+    ASSERT(!NoFileIo(Table));                         \
+    ZeroStructInline(Verb##Name);                     \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id; \
+    Verb##Name.Context = Context;                     \
+    ThreadpoolAddWork(FileWorkThreadpool,             \
+                      FileWorkItemCallbackChm01,      \
                       &Verb##Name);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
@@ -1401,18 +1401,18 @@ End:
         EndOfFile = NULL;
     }
 
-#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(               \
-    Verb, VUpper, Name, Upper,                          \
-    EofType, EofValue,                                  \
-    Suffix, Extension, Stream, Base                     \
-)                                                       \
-    ASSERT(!NoFileIo(Table));                           \
-    ZeroStructInline(Verb##Name);                       \
-    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
-    Verb##Name.EndOfFile = EndOfFile;                   \
-    Verb##Name.Context = Context;                       \
-    ThreadpoolAddWork(FileWorkThreadpool,               \
-                      FileWorkItemCallbackChm01,        \
+#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(             \
+    Verb, VUpper, Name, Upper,                        \
+    EofType, EofValue,                                \
+    Suffix, Extension, Stream, Base                   \
+)                                                     \
+    ASSERT(!NoFileIo(Table));                         \
+    ZeroStructInline(Verb##Name);                     \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id; \
+    Verb##Name.EndOfFile = EndOfFile;                 \
+    Verb##Name.Context = Context;                     \
+    ThreadpoolAddWork(FileWorkThreadpool,             \
+                      FileWorkItemCallbackChm01,      \
                       &Verb##Name);
 
 #define SUBMIT_CLOSE_FILE_WORK() \

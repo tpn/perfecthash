@@ -128,6 +128,14 @@ Language=English
 No table create parameter could be found for the given Id.
 .
 
+MessageId=0x00e
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED
+Language=English
+CUDA kernel runtime target reached.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL
@@ -205,6 +213,13 @@ SymbolicName=PH_I_SOLVE_TIMEOUT_EXPIRED
 Language=English
 Solve timeout expired.
 .
+
+MessageId=0x089
+SymbolicName=PH_I_CUDA_OUT_OF_MEMORY
+Language=English
+The CUDA device is out of memory.
+.
+
 
 ;
 ;////////////////////////////////////////////////////////////////////////////////
@@ -3727,14 +3742,184 @@ Invalid SolutionsFoundRatio; must be a double less than 1.0 and greater than 0.0
 .
 
 ;//
-;// 0x3a2 -> 0x3bf is reserved for future merge of cuda-dev.
+;// 0x3a2 -> 0x3bf reserved for CUDA.
 ;//
 
+MessageId=0x3a2
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY
+Language=English
+CuConcurrency exceeds MaximumConcurrency.
+.
+
+MessageId=0x3a3
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CUDA_OUT_OF_MEMORY
+Language=English
+The CUDA device is out of memory.
+.
+
+MessageId=0x3a4
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES
+Language=English
+Invalid --CuDevices.
+.
+
+MessageId=0x3a5
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES_BLOCKS_PER_GRID
+Language=English
+Invalid --CuDevicesBlocksPerGrid.
+.
+
+MessageId=0x3a6
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES_THREADS_PER_BLOCK
+Language=English
+Invalid --CuDevicesThreadsPerBlock.
+.
+
+MessageId=0x3a7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
+Language=English
+Invalid --CuDevicesKernelRuntimeTargetInMilliseconds.
+.
+
+MessageId=0x3a8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_CONCURRENCY
+Language=English
+--CuConcurrency must be greater than 0 and less than or equal to maximum concurrency.
+.
+
+MessageId=0x3a9
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_CONCURRENCY_MANDATORY_FOR_SELECTED_ALGORITHM
+Language=English
+--CuConcurrency is mandatory for the selected algorithm.
+.
+
+MessageId=0x3aa
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES
+Language=English
+--CuDevicesBlocksPerGrid requires --CuDevices.
+.
+
+MessageId=0x3ab
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES
+Language=English
+--CuDevicesThreadsPerBlock requires --CuDevices.
+.
+
+MessageId=0x3ac
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES
+Language=English
+--CuDevicesKernelRuntimeTargetInMilliseconds requires --CuDevices.
+.
+
+MessageId=0x3ad
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+Language=English
+Number of values supplied to --CuDevicesBlocksPerGrid must match the number of values supplied to --CuDevices.
+.
+
+MessageId=0x3ae
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+Language=English
+Number of values supplied to --CuDevicesThreadsPerBlock must match the number of values supplied to --CuDevices.
+.
+
+MessageId=0x3af
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+Language=English
+Number of values supplied to --CuDevicesKernelRuntimeTargetInMilliseconds must match the number of values supplied to --CuDevices.
+.
+
+MessageId=0x3b0
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY
+Language=English
+Number of values supplied to --CuDevices must match the value supplied by --CuConcurrency.
+.
+
+MessageId=0x3b2
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_NUMBER_OF_RANDOM_HOST_SEEDS
+Language=English
+Invalid --CuNumberOfRandomHostSeeds.
+.
+
+MessageId=0x3b3
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY
+Language=English
+--CuCudaDevRuntimeLibPath is mandatory for this algorithm.
+.
+
+MessageId=0x3b4
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS
+Language=English
+Invalid launch dimensions for initial solving loop CUDA kernel.  This kernel must be launched with a single thread.
+.
+
+MessageId=0x3b5
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_RNG_ID
+Language=English
+Invalid CU RNG ID.
+.
+
+MessageId=0x3b6
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_UNIMPLEMENTED_CU_RNG_ID
+Language=English
+Unimplemented CU RNG ID.
+.
+
+MessageId=0x3b7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_RNG_NAME
+Language=English
+Invalid CU RNG name.
+.
+
 ;//
-;// 0x3a2
+;// 0x3bf end of CUDA.
+;//
+;// 0x3c0 next set of IDs.
 ;//
 
-MessageId=0x3b1
+MessageId=0x3c0
 Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED
@@ -3742,7 +3927,7 @@ Language=English
 Duplicate table create parameter detected.
 .
 
-MessageId=0x3b8
+MessageId=0x3c1
 Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_INVALID_GRAPH_IMPL
@@ -3750,11 +3935,7 @@ Language=English
 Invalid value for --GraphImpl.  Valid values: 1, 2, 3.  (Default: 3.)
 .
 
-;//
-;// 0x3bf
-;//
-
-MessageId=0x3c0
+MessageId=0x3c2
 Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_INVALID_RNG_ID
@@ -3762,7 +3943,7 @@ Language=English
 Invalid RNG ID.
 .
 
-MessageId=0x3c1
+MessageId=0x3c3
 Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_UNIMPLEMENTED_RNG_ID

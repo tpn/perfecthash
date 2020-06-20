@@ -41,7 +41,13 @@ Abstract:
 
 #pragma once
 
+#ifndef __CUDA_ARCH__
 #include "stdafx.h"
+#else
+#include "PerfectHashPrivate.h"
+#endif
+
+#include "GraphCounters.h"
 
 //
 // Define the primitive key, edge and vertex types and pointers to said types.
@@ -60,6 +66,7 @@ typedef union _VERTEX_PAIR {
         VERTEX Vertex1;
         VERTEX Vertex2;
     };
+    LONGLONG AsLongLong;
     ULONGLONG AsULongLong;
     ULARGE_INTEGER AsULargeInteger;
 } VERTEX_PAIR, *PVERTEX_PAIR;
@@ -854,10 +861,45 @@ typedef union _GRAPH_FLAGS {
         ULONG UsingAssigned16:1;
 
         //
+        // When set, indicates that this is a CUDA graph.
+        //
+
+        ULONG IsCuGraph:1;
+
+        //
+        // When set, always try to respect the kernel runtime limit (supplied
+        // via --CuDevicesKernelRuntimeTargetInMilliseconds), even if the device
+        // indicates it has no kernel runtime limit (i.e. is in TCC mode).
+        //
+
+        ULONG AlwaysRespectCuKernelRuntimeLimit:1;
+
+        //
+        // When set, indicates we're in "find best graph" solving mode.  When
+        // clear, indicates we're in "first graph wins" mode.
+        //
+
+        ULONG FindBestGraph:1;
+
+        //
+        // When set, indicates the current algorithm uses seed masks (which will
+        // be populated in Graph->SeedMasks).
+        //
+
+        ULONG HasSeedMasks:1;
+
+        //
+        // When set, indicates the user has supplied seeds (which will be
+        // populated in Graph->FirstSeed onward).
+        //
+
+        ULONG HasUserSeeds:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:15;
+        ULONG Unused:10;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -865,24 +907,32 @@ typedef union _GRAPH_FLAGS {
 typedef GRAPH_FLAGS *PGRAPH_FLAGS;
 C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 
-#define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet == TRUE)
-#define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded == TRUE)
-#define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare == TRUE)
-#define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification == TRUE)
+#define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet != FALSE)
+#define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded != FALSE)
+#define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare != FALSE)
+#define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
+#define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification != FALSE)
+#define HasSeedMasks(Graph) ((Graph)->Flags.HasSeedMasks != FALSE)
+#define HasUserSeeds(Graph) ((Graph)->Flags.HasUserSeeds != FALSE)
+#define AlwaysRespectCuKernelRuntimeLimit(Graph) \
+    ((Graph)->Flags.AlwaysRespectCuKernelRuntimeLimit != FALSE)
 #define WantsAssignedMemoryCoverage(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverage)
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
-#define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
+#define WantsCuRandomHostSeeds(Graph) \
+    ((Graph)->Flags.WantsCuRandomHostSeeds != FALSE)
+#define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
 #define IsUsingAssigned16(Graph) ((Graph)->Flags.UsingAssigned16 != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
+#define SetSpareCuGraph(Graph) (Graph->Flags.IsSpareCuGraph = TRUE)
 
 DEFINE_UNUSED_STATE(GRAPH);
 
 
 //
-// Default version of the graph implementation used (i.e. GraphImp1.c vs
+// Default version of the graph implementation used (i.e. GraphImp11.c vs
 // GraphImpl2.c vs GraphImpl3.c).
 //
 
@@ -1049,10 +1099,22 @@ typedef struct _GRAPH_INFO {
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
     ULONGLONG OrderSizeInBytes;
+    ULONGLONG CountsSizeInBytes;
+    ULONGLONG DeletedSizeInBytes;
     ULONGLONG Vertices3SizeInBytes;
-    ULONGLONG AssignedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
+
+    //
+    // We use a union for the Assigned size in order to work with macros in the
+    // CUDA GraphCuLoadInfo() routine.
+    //
+
+    union {
+        ULONGLONG AssignedSizeInBytes;
+        ULONGLONG AssignedHostSizeInBytes;
+        ULONGLONG AssignedDeviceSizeInBytes;
+    };
 
     //
     // Bitmap buffer sizes.
@@ -1266,6 +1328,76 @@ HRESULT
     _In_ PGRAPH Graph
     );
 typedef GRAPH_ASSIGN *PGRAPH_ASSIGN;
+
+//
+// Some CUDA-specific structs/glue.
+//
+
+typedef struct _PH_CU_RANDOM_HOST_SEEDS {
+    ULONG TotalNumberOfSeeds;
+    ULONG UsedNumberOfSeeds;
+
+    _Writable_elements_(TotalNumberOfSeeds)
+    PULONG Seeds;
+} PH_CU_RANDOM_HOST_SEEDS;
+typedef PH_CU_RANDOM_HOST_SEEDS *PPH_CU_RANDOM_HOST_SEEDS;
+
+typedef struct _GRAPH_SHARED {
+    HRESULT HashKeysResult;
+    ULONG Padding;
+    PHRESULT HashKeysBlockResults;
+} GRAPH_SHARED;
+typedef GRAPH_SHARED *PGRAPH_SHARED;
+
+#if 0
+//
+// cuRAND-specific glue.
+//
+
+#ifndef __CUDA_ARCH__
+#pragma pack(push, 1)
+typedef struct _CU_RNG_STATE_PHILOX4_32_10 {
+    DECLSPEC_ALIGN(16)
+    ULONG Counter[4];
+
+    DECLSPEC_ALIGN(16)
+    ULONG Output[4];
+
+    ULONG Key[4];
+    ULONG State;
+    ULONG BoxMullerFlag;
+    ULONG BoxMullerFlagDouble;
+    FLOAT BoxMullerExtra;
+    DOUBLE BoxMullerExtraDouble;
+} CU_RNG_STATE_PHILOX4_32_10;
+#pragma pack(pop)
+#else
+typedef struct _CU_RNG_STATE_PHILOX4_32_10 {
+    UINT4 Counter;
+    UINT4 Output;
+    UINT4 Key;
+    UINT State;
+    ULONG BoxMullerFlag;
+    ULONG BoxMullerFlagDouble;
+    FLOAT BoxMullerExtra;
+    DOUBLE BoxMullerExtraDouble;
+} CU_RNG_STATE_PHILOX4_32_10;
+#endif
+typedef CU_RNG_STATE_PHILOX4_32_10 *PCU_RNG_STATE_PHILOX4_32_10;
+
+typedef struct _CU_RNG_STATE {
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONG AllocSizeInBytes;
+    union {
+        CU_RNG_STATE_PHILOX4_32_10 AsPhilox43210;
+    };
+} CU_RNG_STATE;
+typedef CU_RNG_STATE *PCU_RNG_STATE;
+#endif
+
+//
+// Vtbl.
+//
 
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
@@ -1524,6 +1656,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     union {
         PASSIGNED Assigned;
         PASSIGNED16 Assigned16;
+        PASSIGNED AssignedHost;
+        PASSIGNED16 Assigned16Host;
     };
 
     //
@@ -1534,6 +1668,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     union {
         PVERTEX3 Vertices3;
         PVERTEX163 Vertices163;
+        PVERTEX3 Vertices3Host;
+        PVERTEX163 Vertices163Host;
     };
 
     //
@@ -1553,6 +1689,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         union {
             PVERTEX_PAIR VertexPairs;
             PEDGE3 Edges3;
+            PVERTEX_PAIR VertexPairsHost;
+            PEDGE3 Edges3Host;
         };
 
         //
@@ -1562,6 +1700,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         union {
             PVERTEX16_PAIR Vertex16Pairs;
             PEDGE163 Edges163;
+            PVERTEX16_PAIR Vertex16PairsHost;
+            PEDGE163 Edges163Host;
         };
     };
 
@@ -1611,10 +1751,222 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
     // Counters to track elapsed cycles and microseconds of graph activities.
     // Each name (typically) maps 1:1 with a corresponding Graph*() function,
-    // e.g. AddKeys -> GraphAddKeys().
+    // Elapsed microseconds of the GraphAddKeys() routine.
     //
 
     DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
+
+    //
+    // If this is a GPU solver graph, this points to the solve context.
+    //
+
+    struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
+
+    //
+    // Capture the device-side host and device graph and spare graph instances.
+    //
+
+    struct _GRAPH *CuHostGraph;
+    struct _GRAPH *CuHostSpareGraph;
+
+    struct _GRAPH *CuDeviceGraph;
+    struct _GRAPH *CuDeviceSpareGraph;
+
+    //
+    // Host and device pointers to keys array.
+    //
+
+    _Readable_elements_(NumberOfKeys)
+    PKEY HostKeys;
+    CU_DEVICE_POINTER DeviceKeys;
+
+    //
+    // Pointer to device memory view of GRAPH_INFO.
+    //
+
+    PGRAPH_INFO CuGraphInfo;
+
+    //
+    // Kernel launch parameters.
+    //
+
+    ULONG CuBlocksPerGrid;
+    ULONG CuThreadsPerBlock;
+    ULONG CuKernelRuntimeTargetInMilliseconds;
+    ULONG CuJitMaxNumberOfRegisters;
+    ULONG CuRandomNumberBatchSize;
+
+    //
+    // Used by CUDA kernels to communicate the result back to the host.
+    //
+
+    HRESULT CuKernelResult;
+
+    //
+    // Intermediate results communicated back between CUDA parent/child grids.
+    //
+
+    HRESULT CuHashKeysResult;
+    HRESULT CuIsAcyclicResult;
+
+    //
+    // Index of this graph relative to all graphs created for the targeted
+    // device.
+    //
+
+    LONG CuDeviceIndex;
+
+    //
+    // Current index into the Order array (used during assignment).
+    //
+
+    volatile LONG OrderIndex;
+
+    //
+    // Clock related fields.
+    //
+
+    ULONGLONG CuStartClock;
+    ULONGLONG CuEndClock;
+    ULONGLONG CuCycles;
+    ULONGLONG CuElapsedMilliseconds;
+
+    //
+    // Various counters.
+    //
+
+    ULONG CuNoVertexCollisionFailures;
+    ULONG CuVertexCollisionFailures;
+    ULONG CuCyclicGraphFailures;
+    ULONG CuFailedAttempts;
+    ULONG CuFinishedCount;
+
+    //
+    // CUDA RNG details.
+    //
+
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONGLONG CuRngSeed;
+    ULONGLONG CuRngSubsequence;
+    ULONGLONG CuRngOffset;
+    PVOID CuRngState;
+
+    //
+    // Pointer to device attributes in device memory.
+    //
+
+    CU_DEVICE_POINTER CuDeviceAttributes;
+
+    //
+    // Device addresses.
+    //
+
+    //
+    // Array of assigned vertices.
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    union {
+        PASSIGNED AssignedDevice;
+        PASSIGNED16 Assigned16Device;
+    };
+
+    //
+    // Array of VERTEX3 elements for the graph impl 3.
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    union {
+        PVERTEX3 Vertices3Device;
+        PVERTEX163 Vertices163Device;
+    };
+
+    //
+    // Graph implementations 1 & 2: this is an optional array of vertex pairs,
+    // indexed by the edge for the key (i.e. the 0-based offset of the key in
+    // the keys array).  For implementation 3, this will always contain the
+    // array of vertex pairs, indexed by edge for the key.
+    //
+
+    _Writable_elements_(NumberOfKeys)
+    union {
+
+        //
+        // For ASSIGNED_MEMORY_COVERAGE.
+        //
+
+        union {
+            PVERTEX_PAIR VertexPairsDevice;
+            PEDGE3 Edges3Device;
+        };
+
+        //
+        // For ASSIGNED16_MEMORY_COVERAGE && GraphImpl==3.
+        //
+
+        union {
+            PVERTEX16_PAIR Vertex16PairsDevice;
+            PEDGE163 Edges163Device;
+        };
+    };
+
+    //
+    // Optional array of vertex pairs, indexed by number of keys.
+    //
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX_PAIR VertexPairs;
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX_PAIR SortedVertexPairs;
+
+    _Writable_elements_(NumberOfKeys)
+    PULONG VertexPairsIndex;
+
+    //
+    // CUDA vertex arrays.
+    //
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX Vertices1;
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX Vertices2;
+
+    _Writable_elements_(NumberOfKeys)
+    PULONG Vertices1Index;
+
+    _Writable_elements_(NumberOfKeys)
+    PULONG Vertices2Index;
+
+    //
+    // CUDA arrays for capturing deleted edges and visited vertices.
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    volatile ULONG *Deleted;
+
+    _Writable_elements_(NumberOfKeys)
+    volatile ULONG *Visited;
+
+    //
+    // CUDA array for capturing count of vertices.
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    volatile ULONG *Counts;
+
+    //
+    // Seed masks for the current hash function.
+    //
+
+    SEED_MASKS SeedMasks;
+
+    //
+    // Opaque context for kernels.
+    //
+
+    struct _CU_KERNEL_CONTEXT *CuKernelContext;
 
     //
     // The graph interface.

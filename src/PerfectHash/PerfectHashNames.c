@@ -50,6 +50,8 @@ Return Value:
 
     PH_E_INVALID_ENUM_ID - Invalid enum ID.
 
+    PH_E_INVALID_CU_RNG_ID - Invalid CU RNG ID.
+
     PH_E_INVALID_CPU_ARCH_ID - Invalid CPU arch ID.
 
     PH_E_INVALID_INTERFACE_ID - Invalid interface ID.
@@ -151,6 +153,8 @@ Return Value:
     E_POINTER - Rtl or Name were NULL.
 
     PH_E_INVALID_ENUM_NAME - Invalid enum name.
+
+    PH_E_INVALID_CU_RNG_NAME - Invalid CU RNG name.
 
     PH_E_INVALID_CPU_ARCH_NAME - Invalid CPU arch name.
 

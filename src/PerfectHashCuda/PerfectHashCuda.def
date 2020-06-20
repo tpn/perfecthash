@@ -1,0 +1,4 @@
+LIBRARY PerfectHashCuda
+EXPORTS
+    MakeMTG32Constants
+    MakeMTG32KernelState

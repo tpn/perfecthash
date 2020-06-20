@@ -129,6 +129,9 @@
     <ClInclude Include="GraphImpl2.h" />
     <ClInclude Include="GraphImpl3.h" />
     <ClInclude Include="Math.h" />
+    <ClInclude Include="GraphImpl1.h" />
+    <ClInclude Include="GraphImpl2.h" />
+    <ClInclude Include="Graph_Ptx_RawCString.h" />
     <ClInclude Include="PerfectHashCu.h" />
     <ClInclude Include="no_sal2_CHeader_RawCString.h" />
     <ClInclude Include="Makefile_Makefile_RawCString.h" />
@@ -209,6 +212,7 @@
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
+    <ClCompile Include="Chm02.c" />
     <ClCompile Include="Chm01Shared.c" />
     <ClCompile Include="Chunk.c" />
     <ClCompile Include="Component.c" />
@@ -216,6 +220,7 @@
     <ClCompile Include="GraphImpl2.c" />
     <ClCompile Include="GraphImpl3.c" />
     <ClCompile Include="Math.c" />
+    <ClCompile Include="GraphCu.c" />
     <ClCompile Include="PerfectHashCu.c" />
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="ExtractArg.c" />

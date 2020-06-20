@@ -26,11 +26,11 @@ Abstract:
 // File work callback array.
 //
 
-#define EXPAND_AS_CALLBACK(          \
-    Verb, VUpper, Name, Upper,       \
-    EofType, EofValue,               \
-    Suffix, Extension, Stream, Base  \
-)                                    \
+#define EXPAND_AS_CALLBACK(         \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
     Verb##Name##Chm01,
 
 FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {

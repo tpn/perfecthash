@@ -298,7 +298,13 @@
     <ClCompile Include="_pow.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm02.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Rng.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphCu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RngPhilox4x32.c">
@@ -635,6 +641,9 @@
     </ClInclude>
     <ClInclude Include="TableCreateBestCsv.h">
       <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Graph_Ptx_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -48,14 +48,20 @@ extern "C" {
 //
 //
 
+#ifndef __CUDA_ARCH__
 #pragma warning(push)
 #pragma warning(disable: 4255)
 #pragma warning(disable: 4668)
 #include <Windows.h>
 #pragma warning(pop)
+#endif
 
+#ifndef __CUDA_ARCH__
 #include <sal.h>
 #include <specstrings.h>
+#else
+#include <PerfectHashCuda.h>
+#endif
 
 //
 // Disable the anonymous union/struct warning.
@@ -109,10 +115,16 @@ extern "C" {
 typedef struct _STRING {
     USHORT Length;
     USHORT MaximumLength;
+#ifndef __CUDA_ARCH__
+#ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
+#endif
+#else
+    ULONG Padding;
+#endif
     PCHAR Buffer;
 } STRING, ANSI_STRING, *PSTRING, *PANSI_STRING, **PPSTRING, **PPANSI_STRING;
 typedef const STRING *PCSTRING;
@@ -120,10 +132,16 @@ typedef const STRING *PCSTRING;
 typedef struct _UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
+#ifndef __CUDA_ARCH__
+#ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
+#endif
+#else
+    ULONG Padding;
+#endif
     PWSTR Buffer;
 } UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING, ***PPPUNICODE_STRING;
 typedef const UNICODE_STRING *PCUNICODE_STRING;
@@ -139,7 +157,7 @@ typedef DOUBLE *PDOUBLE;
 // have randomized shift/rotate instructions.
 //
 
-typedef union ULONG_BYTES {
+typedef union _ULONG_BYTES {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         BYTE Byte1;
         BYTE Byte2;
@@ -175,6 +193,8 @@ typedef ULONG_BYTES *PULONG_BYTES;
     (CHAR *)((ULONG_PTR)(ArgumentPointer)) != (CHAR *)(NULL) \
 )
 #endif
+
+typedef HRESULT *PHRESULT;
 
 #define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
 
@@ -221,7 +241,8 @@ typedef ULONG_BYTES *PULONG_BYTES;
     FIRST_ENTRY(x86, X86)                                           \
     ENTRY(x64, X64)                                                 \
     ENTRY(Arm, ARM)                                                 \
-    LAST_ENTRY(Arm64, ARM64)
+    ENTRY(Arm64, ARM64)                                             \
+    LAST_ENTRY(Cuda, CUDA)
 
 #define PERFECT_HASH_CPU_ARCH_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_CPU_ARCH_TABLE(ENTRY, ENTRY, ENTRY)
@@ -291,6 +312,8 @@ PerfectHashGetCurrentCpuArch(
     return PerfectHashArm64CpuArchId;
 #elif defined(_M_ARM)
     return PerfectHashArmCpuArchId;
+#elif defined(__CUDA_ARCH__)
+    return PerfectHashCudaArchId;
 #else
 #error Unknown CPU architecture.
 #endif
@@ -304,11 +327,6 @@ PerfectHashGetCurrentCpuArch(
 #define GUID_EX(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
     { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
 
-//
-// Windows has CU, Compat doesn't.
-//
-
-#ifdef PH_WINDOWS
 #define PERFECT_HASH_INTERFACE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
                                                                      \
     FIRST_ENTRY(                                                     \
@@ -416,6 +434,16 @@ PerfectHashGetCurrentCpuArch(
         GUID_EX(                                                     \
             0xb906f824, 0xcb59, 0x4696,                              \
             0x84, 0x77, 0x44, 0xd4, 0xba, 0x9, 0xda, 0x94            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        GraphCu,                                                     \
+        GRAPH_CU,                                                    \
+        GUID_EX(                                                     \
+            0x5067a808, 0xd72b, 0x4f7e,                              \
+            0xb3, 0xd0, 0xa3, 0xe8, 0xcf, 0x6f, 0x23, 0xc7           \
+                                                                     \
         )                                                            \
     )                                                                \
                                                                      \
@@ -436,126 +464,6 @@ PerfectHashGetCurrentCpuArch(
             0xa5, 0x14, 0x7a, 0xe4, 0x50, 0x32, 0x7d, 0x48           \
         )                                                            \
     )
-#else
-#define PERFECT_HASH_INTERFACE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-                                                                     \
-    FIRST_ENTRY(                                                     \
-        IUnknown,                                                    \
-        IUNKNOWN,                                                    \
-        GUID_EX(                                                     \
-            0x00000000, 0x0000, 0x0000,                              \
-            0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        IClassFactory,                                               \
-        ICLASSFACTORY,                                               \
-        GUID_EX(                                                     \
-            0x00000001, 0x0000, 0x0000,                              \
-            0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Keys,                                                        \
-        KEYS,                                                        \
-        GUID_EX(                                                     \
-            0x7e43ebea, 0x8671, 0x47ba,                              \
-            0xb8, 0x44, 0x76, 0xb, 0x7a, 0x9e, 0xa9, 0x21            \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Context,                                                     \
-        CONTEXT,                                                     \
-        GUID_EX(                                                     \
-            0xd4b24571, 0x99d7, 0x44ba,                              \
-            0x8a, 0x27, 0x63, 0xd8, 0x73, 0x9f, 0x9b, 0x81           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Table,                                                       \
-        TABLE,                                                       \
-        GUID_EX(                                                     \
-            0xc265816f, 0xc6a9, 0x4b44,                              \
-            0xbc, 0xee, 0xec, 0x5a, 0x12, 0xab, 0xe1, 0xef           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Rtl,                                                         \
-        RTL,                                                         \
-        GUID_EX(                                                     \
-            0x9c05a3d6, 0xbc30, 0x45e6,                              \
-            0xbe, 0xa6, 0x50, 0x4f, 0xcc, 0x92, 0x43, 0xa8           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Allocator,                                                   \
-        ALLOCATOR,                                                   \
-        GUID_EX(                                                     \
-            0xf87564d2, 0xb3c7, 0x4cca,                              \
-            0x90, 0x13, 0xeb, 0x59, 0xc1, 0xe2, 0x53, 0xb7           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        File,                                                        \
-        FILE,                                                        \
-        GUID_EX(                                                     \
-            0x27549274, 0x968a, 0x499a,                              \
-            0x83, 0x49, 0x31, 0x33, 0xe3, 0xd5, 0xe6, 0x49           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Path,                                                        \
-        PATH,                                                        \
-        GUID_EX(                                                     \
-            0x267623b1, 0xc5d, 0x47b1,                               \
-            0xa2, 0x97, 0xdf, 0xe, 0x54, 0x67, 0xaf, 0xd1            \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Directory,                                                   \
-        DIRECTORY,                                                   \
-        GUID_EX(                                                     \
-            0x5d673839, 0x1686, 0x411e,                              \
-            0x99, 0x2, 0x46, 0xc6, 0xe9, 0x7c, 0xa5, 0x67            \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        GuardedList,                                                 \
-        GUARDED_LIST,                                                \
-        GUID_EX(                                                     \
-            0x14a25ba2, 0x3c18, 0x413f,                              \
-            0x8c, 0x76, 0xa7, 0xa9, 0x1e, 0xc8, 0x8c, 0x2a           \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    ENTRY(                                                           \
-        Graph,                                                       \
-        GRAPH,                                                       \
-        GUID_EX(                                                     \
-            0xb906f824, 0xcb59, 0x4696,                              \
-            0x84, 0x77, 0x44, 0xd4, 0xba, 0x9, 0xda, 0x94            \
-        )                                                            \
-    )                                                                \
-                                                                     \
-    LAST_ENTRY(                                                      \
-        Rng,                                                         \
-        RNG,                                                         \
-        GUID_EX(                                                     \
-            0xfd84eebe, 0x2571, 0x4517,                              \
-            0xa5, 0x14, 0x7a, 0xe4, 0x50, 0x32, 0x7d, 0x48           \
-        )                                                            \
-    )
-#endif
 
 #define PERFECT_HASH_INTERFACE_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_INTERFACE_TABLE(ENTRY, ENTRY, ENTRY)
@@ -653,6 +561,7 @@ static const PCGUID PerfectHashInterfaceGuids[] = {
     NULL
 };
 
+#ifndef __CUDA_ARCH__
 static const BYTE NumberOfPerfectHashInterfaceGuids =
     ARRAYSIZE(PerfectHashInterfaceGuids);
 
@@ -689,6 +598,8 @@ PerfectHashInterfaceGuidToId(
 
     return Id;
 }
+
+#endif // __CUDA_ARCH__
 
 //
 // COM-related funtion pointer typedefs.
@@ -2020,7 +1931,8 @@ typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
 //
 
 #define PERFECT_HASH_ALGORITHM_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    FIRST_ENTRY(Chm01, CHM01)
+    FIRST_ENTRY(Chm01, CHM01)                                        \
+    LAST_ENTRY(Chm02, CHM02)
 
 #define PERFECT_HASH_ALGORITHM_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_ALGORITHM_TABLE(ENTRY, ENTRY, ENTRY)
@@ -2547,16 +2459,10 @@ typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
-        // When set, tries to use CUDA where applicable (experimental).
-        //
-
-        ULONG TryCuda:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -2613,16 +2519,10 @@ typedef union _PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
-        // When set, tries to use CUDA where applicable (experimental).
-        //
-
-        ULONG TryCuda:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -3002,10 +2902,19 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG DoNotTryUseHash16Impl:1;
 
         //
+        // When set, always try to respect the kernel runtime limit (supplied
+        // via --CuDevicesKernelRuntimeTargetInMilliseconds), even if the
+        // device indicates it has no kernel runtime limit (i.e. is in TCC
+        // mode).  Only applies to GPU solver graphs.
+        //
+
+        ULONGLONG AlwaysRespectCuKernelRuntimeLimit:1;
+
+        //
         // Unused bits.
         //
 
-        ULONGLONG Unused:29;
+        ULONGLONG Unused:28;
     };
 
     LONGLONG AsLongLong;
@@ -3399,12 +3308,81 @@ typedef struct _RNG_VTBL {
 typedef RNG_VTBL *PRNG_VTBL;
 
 //
+// Define an X-macro for CURAND random number generators.  The ENTRY macros
+// receive the following parameters: (Name, Upper, IsImplemented).
+//
+
+#define PERFECT_HASH_CU_RNG_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(Philox43210, PHILOX43210, TRUE)                   \
+    ENTRY(XorWow, XORWOW, FALSE)                                  \
+    ENTRY(MRG32k3a, MRG32K3A, FALSE)                              \
+    ENTRY(MTGP32, MTGP32, FALSE)                                  \
+    ENTRY(Sobol32, SOBOL32, FALSE)                                \
+    ENTRY(Sobol64, SOBOL64, FALSE)                                \
+    LAST_ENTRY(Scratch, SCRATCH, FALSE)
+
+#define PERFECT_HASH_CU_RNG_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_CU_RNG_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_CU_RNG_ENUM(Name, Upper, IsImplemented) \
+    PerfectHashCuRng##Name##Id,
+
+//
+// Define an enumeration for identifying which CUDA random number generator
+// to use.
+//
+
+typedef enum _PERFECT_HASH_CU_RNG_ID {
+
+    //
+    // Explicitly define a null ID to take the 0-index slot.
+    //
+
+    PerfectHashNullCuRngId = 0,
+
+    //
+    // Begin valid RNGs.
+    //
+
+    PERFECT_HASH_CU_RNG_TABLE_ENTRY(EXPAND_AS_CU_RNG_ENUM)
+
+    //
+    // End valid RNGs.
+    //
+
+    //
+    // N.B.  Keep the next value last.
+    //
+
+    PerfectHashInvalidCuRngId,
+
+} PERFECT_HASH_CU_RNG_ID;
+typedef PERFECT_HASH_CU_RNG_ID *PPERFECT_HASH_CU_RNG_ID;
+
+//
+// Provide a simple inline RNG validation routine.
+//
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashCuRngId(
+    _In_ PERFECT_HASH_CU_RNG_ID RngId
+    )
+{
+    return (
+        RngId > PerfectHashNullCuRngId &&
+        RngId < PerfectHashInvalidCuRngId
+    );
+}
+
+//
 // Define the X-macro for table create parameters.
 //
 
 #define TABLE_CREATE_PARAMETER_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(AttemptsBeforeTableResize)                           \
     ENTRY(MaxNumberOfTableResizes)                                   \
+    ENTRY(MaxNumberOfEqualBestGraphs)                                \
     ENTRY(InitialNumberOfTableResizes)                               \
     ENTRY(MinAttempts)                                               \
     ENTRY(MaxAttempts)                                               \
@@ -3420,8 +3398,6 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(Seeds)                                                     \
     ENTRY(ValueSizeInBytes)                                          \
     ENTRY(KeySizeInBytes)                                            \
-    ENTRY(CuDeviceOrdinal)                                           \
-    ENTRY(CuDeviceOrdinals)                                          \
     ENTRY(SolutionsFoundRatio)                                       \
     ENTRY(GraphImpl)                                                 \
     ENTRY(Rng)                                                       \
@@ -3436,6 +3412,14 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(FunctionHookCallbackFunctionName)                          \
     ENTRY(FunctionHookCallbackIgnoreRip)                             \
     ENTRY(BestCoverageTargetValue)                                   \
+    ENTRY(CuConcurrency)                                             \
+    ENTRY(CuPtxPath)                                                 \
+    ENTRY(CuDevices)                                                 \
+    ENTRY(CuDevicesBlocksPerGrid)                                    \
+    ENTRY(CuDevicesThreadsPerBlock)                                  \
+    ENTRY(CuDevicesKernelRuntimeTargetInMilliseconds)                \
+    ENTRY(CuCudaDevRuntimeLibPath)                                   \
+    ENTRY(CuNumberOfRandomHostSeeds)                                 \
     LAST_ENTRY(Remark)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
@@ -3600,9 +3584,18 @@ DoesTableCreateParameterRequireDeallocation(
     _In_ PERFECT_HASH_TABLE_CREATE_PARAMETER_ID Id
     )
 {
+
+    //
+    // All parameters that accept comma-separated lists require deallocation.
+    //
+
     return (
         Id == TableCreateParameterKeysSubsetId ||
         Id == TableCreateParameterSeedsId ||
+        Id == TableCreateParameterCuDevicesId ||
+        Id == TableCreateParameterCuDevicesBlocksPerGridId ||
+        Id == TableCreateParameterCuDevicesThreadsPerBlockId ||
+        Id == TableCreateParameterCuDevicesKernelRuntimeTargetInMillisecondsId ||
         IsSeedMaskCountParameter(Id)
     );
 }
@@ -3642,6 +3635,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         LONG AsLong;
         ULONG AsULong;
         DOUBLE AsDouble;
+        STRING AsString;
         LONGLONG AsLongLong;
         ULONGLONG AsULongLong;
         LARGE_INTEGER AsLargeInteger;
@@ -3650,6 +3644,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         UNICODE_STRING AsUnicodeString;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
         PERFECT_HASH_RNG_ID AsRngId;
+        PERFECT_HASH_CU_RNG_ID AsCuRngId;
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID AsBestCoverageType;
         VALUE_ARRAY AsValueArray;
         KEYS_SUBSET AsKeysSubset;
@@ -4253,6 +4248,8 @@ typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
 
 #ifdef PH_WINDOWS
 
+#ifndef __CUDA_ARCH__
+
 //
 // Scaffolding required to support structured exception handling via __try
 // blocks without having to link to the C runtime library.
@@ -4395,6 +4392,8 @@ HRESULT
     );
 typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
 
+#endif // ifndef __CUDA_ARCH__
+
 //
 // Define an X-macro for the enum types used by the library.  The ENTRY macros
 // receive (Name, Upper) as their arguments, e.g.: (CpuArch, CPU_ARCH)
@@ -4408,6 +4407,7 @@ typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
     ENTRY(MaskFunction, MASK_FUNCTION)                          \
     ENTRY(BestCoverageType, BEST_COVERAGE_TYPE)                 \
     ENTRY(TableCreateParameter, TABLE_CREATE_PARAMETER)         \
+    ENTRY(CuRng, CU_RNG)                                        \
     LAST_ENTRY(Rng, RNG)
 
 #define PERFECT_HASH_ENUM_TABLE_ENTRY(ENTRY) \
@@ -4448,6 +4448,7 @@ IsValidPerfectHashEnumId(
 // PerfectHashPrintError to be in scope.
 //
 
+#ifndef __CUDA_ARCH__
 #define SYS_ERROR(Name) \
     PerfectHashPrintError(#Name, __FILE__, __LINE__, GetLastError())
 
@@ -4473,6 +4474,7 @@ IsValidPerfectHashEnumId(
     PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
 
 #define PH_BREAK() __debugbreak()
+#endif // ifndef __CUDA_ARCH__
 
 //
 // Helper inline that decorates RaiseException() with _Analysis_noreturn_,
@@ -4509,7 +4511,7 @@ PhRaiseException(
     __debugbreak();                                                    \
     PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #else
-#define PH_RAISE(Result) \
+#define PH_RAISE(Result)                                               \
     __debugbreak();                                                    \
     PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #endif
@@ -4539,13 +4541,13 @@ static const char PerfectHashBuildConfigString[] = "PGOptimize";
 static const char PerfectHashBuildConfigString[] = "Release";
 #elif defined(PERFECT_HASH_BUILD_CONFIG_DEBUG)
 static const char PerfectHashBuildConfigString[] = "Debug";
+#elif defined(__CUDA_ARCH__)
+static const char PerfectHashBuildConfigString[] = "CUDA";
 #else
 #error Unknown build config type.
 #endif
 
-#endif
-
-
+#ifndef __CUDA_ARCH__
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 #ifdef PH_WINDOWS
 FORCEINLINE
@@ -4618,7 +4620,6 @@ Return Value:
         FreeLibrary(Module);
         return E_UNEXPECTED;
     }
-
     PerfectHashPrintError = (PPERFECT_HASH_PRINT_ERROR)Proc;
 
     Proc = (PVOID)GetProcAddress(Module, "PerfectHashPrintMessage");
@@ -4626,7 +4627,6 @@ Return Value:
         FreeLibrary(Module);
         return E_UNEXPECTED;
     }
-
     PerfectHashPrintMessage = (PPERFECT_HASH_PRINT_MESSAGE)Proc;
 
     Proc = (PVOID)GetProcAddress(Module, "PerfectHashDllGetClassObject");
@@ -4635,7 +4635,6 @@ Return Value:
         FreeLibrary(Module);
         return E_UNEXPECTED;
     }
-
     PhDllGetClassObject = (PDLL_GET_CLASS_OBJECT)Proc;
 
     Result = PhDllGetClassObject(&CLSID_PERFECT_HASH,
@@ -4643,7 +4642,6 @@ Return Value:
                                  &ClassFactory);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashDllGetClassObject, Result);
         FreeLibrary(Module);
         return Result;
     }
@@ -4655,7 +4653,7 @@ Return Value:
 
     return S_OK;
 }
-#else // PH_WINDOWS
+#else // ifdef PH_WINDOWS
 
 extern PERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
 extern PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
@@ -4730,6 +4728,7 @@ Return Value:
 }
 #endif // PH_WINDOWS
 #endif // _PERFECT_HASH_INTERNAL_BUILD
+#endif // __CUDA_ARCH__
 
 #ifdef __cplusplus
 } // extern "C"
