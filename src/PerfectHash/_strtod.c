@@ -256,3 +256,195 @@ done:
     }
     return fraction;
 }
+
+double
+wstrtod(wchar_t *string, wchar_t **endPtr)
+ /* wchar_t *string; */         /* A decimal wchar_t floating-point number,
+                                 * optionally preceded by white space.
+                                 * Must have form "-I.FE-X", where I is the
+                                 * integer part of the mantissa, F is the
+                                 * fractional part of the mantissa, and X
+                                 * is the exponent.  Either of the signs
+                                 * may be "+", "-", or omitted.  Either I
+                                 * or F may be omitted, or both.  The decimal
+                                 * point isn't necessary unless F is present.
+                                 * The "E" may actually be an "e".  E and X
+                                 * may both be omitted (but not just one).
+                                 */
+ /* wchar_t **endPtr; */        /* If non-NULL, store terminating character's
+                                 * address here. */
+{
+    int sign, expSign = FALSE;
+    double fraction, dblExp, *d;
+    register wchar_t *p, c;
+    int exp = 0;                /* Exponent read from "EX" field. */
+    int fracExp = 0;            /* Exponent that derives from the fractional
+                                 * part.  Under normal circumstatnces, it is
+                                 * the negative of the number of digits in F.
+                                 * However, if I is very long, the last digits
+                                 * of I get dropped (otherwise a long I with a
+                                 * large negative exponent could cause an
+                                 * unnecessary overflow on I alone).  In this
+                                 * case, fracExp is incremented one for each
+                                 * dropped digit.
+                                 */
+    int mantSize;               /* Number of digits in mantissa. */
+    int decPt;                  /* Number of mantissa digits BEFORE decimal
+                                 * point.
+                                 */
+    wchar_t *pExp;              /* Temporarily holds location of exponent
+                                 * in string.
+                                 */
+
+    /*
+     * Strip off leading blanks and check for a sign.
+     */
+
+    p = string;
+    while (*p == L' ') {
+        p += 1;
+    }
+    if (*p == L'-') {
+        sign = TRUE;
+        p += 1;
+    } else {
+        if (*p == L'+') {
+            p += 1;
+        }
+        sign = FALSE;
+    }
+
+    /*
+     * Count the number of digits in the mantissa (including the decimal
+     * point), and also locate the decimal point.
+     */
+
+    decPt = -1;
+    for (mantSize = 0; ; mantSize += 1)
+    {
+        c = *p;
+        if (!(c >= L'0' && c <= L'9')) {
+            if ((c != L'.') || (decPt >= 0)) {
+                break;
+            }
+            decPt = mantSize;
+        }
+        p += 1;
+    }
+
+    /*
+     * Now suck up the digits in the mantissa.  Use two integers to
+     * collect 9 digits each (this is faster than using floating-point).
+     * If the mantissa has more than 18 digits, ignore the extras, since
+     * they can't affect the value anyway.
+     */
+
+    pExp  = p;
+    p -= mantSize;
+    if (decPt < 0) {
+        decPt = mantSize;
+    } else {
+        mantSize -= 1;                  /* One of the digits was the point. */
+    }
+    if (mantSize > 18) {
+        fracExp = decPt - 18;
+        mantSize = 18;
+    } else {
+        fracExp = decPt - mantSize;
+    }
+    if (mantSize == 0) {
+        fraction = 0.0;
+        p = string;
+        goto done;
+    } else {
+        int frac1, frac2;
+        frac1 = 0;
+        for ( ; mantSize > 9; mantSize -= 1)
+        {
+            c = *p;
+            p += 1;
+            if (c == L'.') {
+                c = *p;
+                p += 1;
+            }
+            frac1 = 10*frac1 + (c - L'0');
+        }
+        frac2 = 0;
+        for (; mantSize > 0; mantSize -= 1)
+        {
+            c = *p;
+            p += 1;
+            if (c == L'.') {
+                c = *p;
+                p += 1;
+            }
+            frac2 = 10*frac2 + (c - L'0');
+        }
+        fraction = (1.0e9 * frac1) + frac2;
+    }
+
+    /*
+     * Skim off the exponent.
+     */
+
+    p = pExp;
+    if ((*p == L'E') || (*p == L'e')) {
+        p += 1;
+        if (*p == L'-') {
+            expSign = TRUE;
+            p += 1;
+        } else {
+            if (*p == L'+') {
+                p += 1;
+            }
+            expSign = FALSE;
+        }
+        while (*p >= L'0' && *p <= L'9') {
+            exp = exp * 10 + (*p - L'0');
+            p += 1;
+        }
+    }
+    if (expSign) {
+        exp = fracExp - exp;
+    } else {
+        exp = fracExp + exp;
+    }
+
+    /*
+     * Generate a floating-point number that represents the exponent.
+     * Do this by processing the exponent one bit at a time to combine
+     * many powers of 2 of 10. Then combine the exponent with the
+     * fraction.
+     */
+
+    if (exp < 0) {
+        expSign = TRUE;
+        exp = -exp;
+    } else {
+        expSign = FALSE;
+    }
+    if (exp > maxExponent) {
+        exp = maxExponent;
+    }
+    dblExp = 1.0;
+    for (d = powersOf10; exp != 0; exp >>= 1, d += 1) {
+        if (exp & 01) {
+            dblExp *= *d;
+        }
+    }
+    if (expSign) {
+        fraction /= dblExp;
+    } else {
+        fraction *= dblExp;
+    }
+
+done:
+    if (endPtr != NULL) {
+        *endPtr = p;
+    }
+
+    if (sign) {
+        return -fraction;
+    }
+    return fraction;
+}
