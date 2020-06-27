@@ -254,6 +254,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULARGE_INTEGER RequestedNumberOfTableElements;
 
     //
+    // The solutions found ratio obtained from prior runs.  This is essentially
+    // the probability of the graph being solved based on prior observations of
+    // how many attempts it took before a solution was found.
+    //
+
+    DOUBLE SolutionsFoundRatio;
+
+    //
+    // If SolutionsFoundRatio has been supplied, PredictedAttempts will capture
+    // the predicted number of attempts required before a successful graph will
+    // be obtained.
+    //
+
+    ULONG PredictedAttempts;
+
+    //
     // The algorithm in use.
     //
 
@@ -288,6 +304,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     ULONG NumberOfCollisionsDuringAssignment;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding1;
 
     //
     // Pointer to the path for the output directory (below).

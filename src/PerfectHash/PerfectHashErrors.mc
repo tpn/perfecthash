@@ -603,6 +603,20 @@ Table Create Parameters:
         Supplies a comma-separated list of 32 integers that represent weighted
         counts of seed mask's byte values.  (Experimental.)
 
+    --SolutionsFoundRatio=<double>
+    --TryUsePredictedAttemptsToLimitMaxConcurrency
+
+        Supplies a double (64-bit) floating point number indicating the ratio
+        of solutions found (obtained from a prior run).  This is then used to
+        calculate the predicted number of attempts required to solve a given
+        graph; when combined with --TryUsePredictedAttemptsToLimitMaxConcurrency
+        the maximum concurrency used when solving will be the minimum of the
+        predicted attempts and the maximum concurrency indicated on the command
+        line.
+
+        N.B. These parameters are typically less useful for bulk-create options
+             as each table will have different solving characteristics.
+
 Console Output Character Legend
 
  Char | Meaning
@@ -1032,6 +1046,17 @@ Table Create Parameters:
 
         Supplies a comma-separated list of 32 integers that represent weighted
         counts of seed mask's byte values.  (Experimental.)
+
+    --SolutionsFoundRatio=<double>
+    --TryUsePredictedAttemptsToLimitMaxConcurrency
+
+        Supplies a double (64-bit) floating point number indicating the ratio
+        of solutions found (obtained from a prior run).  This is then used to
+        calculate the predicted number of attempts required to solve a given
+        graph; when combined with --TryUsePredictedAttemptsToLimitMaxConcurrency
+        the maximum concurrency used when solving will be the minimum of the
+        predicted attempts and the maximum concurrency indicated on the command
+        line.
 
 .
 
@@ -3611,5 +3636,13 @@ Facility=ITF
 SymbolicName=PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS
 Language=English
 Failed to load all expected symbols from curand64_NM.dll.
+.
+
+MessageId=0x3a1
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_SOLUTIONS_FOUND_RATIO
+Language=English
+Invalid SolutionsFoundRatio; must be a double less than 1.0 and greater than 0.0.
 .
 

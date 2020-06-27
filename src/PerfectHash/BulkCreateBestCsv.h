@@ -131,6 +131,10 @@ Abstract:
           Context->FinishedCount,                                                            \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(PredictedAttempts,                                                                 \
+          Table->PredictedAttempts,                                                          \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(VertexCollisionFailures,                                                           \
           Context->VertexCollisionFailures,                                                  \
           OUTPUT_INT)                                                                        \

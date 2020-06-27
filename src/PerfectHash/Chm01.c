@@ -155,6 +155,7 @@ Return Value:
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
+    BOOLEAN LimitConcurrency;
     ULONG Attempt = 0;
     ULONG ReferenceCount;
     BYTE NumberOfEvents;
@@ -167,6 +168,7 @@ Return Value:
     PALLOCATOR Allocator;
     HANDLE OutputHandle = NULL;
     PHANDLE Event;
+    ULONG Concurrency;
     ULONG NumberOfGraphs;
     PLIST_ENTRY ListEntry;
     ULONG CloseFileErrorCount = 0;
@@ -223,12 +225,31 @@ Return Value:
         return E_POINTER;
     }
 
-    Silent = (Table->TableCreateFlags.Silent == TRUE);
+    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    Silent = (TableCreateFlags.Silent != FALSE);
 
     Context = Table->Context;
+    Concurrency = Context->MaximumConcurrency;
+
+    //
+    // If a non-zero value is supplied for predicted attempts, and the value is
+    // less than the maximum concurrency, and we've been asked to limit max
+    // concurrency, toggle the LimitConcurrency boolean.  This limits the number
+    // of concurrent graph launches such that it won't exceed the predicted
+    // number of attempts.
+    //
+
+    LimitConcurrency = (
+        Table->PredictedAttempts > 0 &&
+        TableCreateFlags.TryUsePredictedAttemptsToLimitMaxConcurrency != FALSE
+    );
+
+    if (LimitConcurrency) {
+        Concurrency = min(Concurrency, Table->PredictedAttempts);
+    }
 
     if (FirstSolvedGraphWins(Context)) {
-        NumberOfGraphs = Context->MaximumConcurrency;
+        NumberOfGraphs = Concurrency;
     } else {
 
         //
@@ -238,7 +259,7 @@ Return Value:
         // "best" by the RegisterSolvedGraph() routine.
         //
 
-        NumberOfGraphs = Context->MaximumConcurrency + 1;
+        NumberOfGraphs = Concurrency + 1;
         if (NumberOfGraphs == 0) {
             return E_INVALIDARG;
         }
@@ -275,7 +296,6 @@ Return Value:
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
     TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
-    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
 
     ASSERT(
         Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList)
@@ -673,14 +693,14 @@ RetryWithLargerTableSize:
     // flag AllGraphsFailedMemoryAllocation is set.
     //
 
-    Context->GraphMemoryFailures = Context->MaximumConcurrency;
+    Context->GraphMemoryFailures = Concurrency;
 
     //
     // Initialize the number of remaining solver loops and clear the active
     // graph solving loops counter and stop-solving flag.
     //
 
-    Context->RemainingSolverLoops = Context->MaximumConcurrency;
+    Context->RemainingSolverLoops = Concurrency;
     Context->ActiveSolvingLoops = 0;
     ClearStopSolving(Context);
 
@@ -694,9 +714,9 @@ RetryWithLargerTableSize:
     ASSERT(Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList));
 
     if (FirstSolvedGraphWins(Context)) {
-        ASSERT(NumberOfGraphs == Context->MaximumConcurrency);
+        ASSERT(NumberOfGraphs == Concurrency);
     } else {
-        ASSERT(NumberOfGraphs - 1 == Context->MaximumConcurrency);
+        ASSERT(NumberOfGraphs - 1 == Concurrency);
     }
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {

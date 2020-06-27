@@ -292,6 +292,9 @@
     <ClCompile Include="_strtod.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="_pow.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">

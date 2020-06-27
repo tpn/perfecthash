@@ -2697,10 +2697,19 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG TryLargePagesForVertexPairs:1;
 
         //
+        // When set, if a non-zero value is available in the table's predicted
+        // attempts field (which will be the case if a solutions-found ratio has
+        // been supplied), use it to limit the maximum concurrency used when
+        // dispatching parallel graph solving attempts.
+        //
+
+        ULONG TryUsePredictedAttemptsToLimitMaxConcurrency:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:6;
+        ULONG Unused:5;
     };
 
     LONG AsLong;
@@ -2900,6 +2909,7 @@ IsValidTableCompileFlags(
     ENTRY(KeySizeInBytes)                                            \
     ENTRY(CuDeviceOrdinal)                                           \
     ENTRY(CuDeviceOrdinals)                                          \
+    ENTRY(SolutionsFoundRatio)                                       \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     LAST_ENTRY(Seed3Byte2MaskCounts)
 
@@ -3076,6 +3086,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         PVOID AsVoidPointer;
         LONG AsLong;
         ULONG AsULong;
+        DOUBLE AsDouble;
         LONGLONG AsLongLong;
         ULONGLONG AsULongLong;
         LARGE_INTEGER AsLargeInteger;

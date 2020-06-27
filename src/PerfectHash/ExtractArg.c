@@ -15,6 +15,12 @@ Abstract:
 #include "stdafx.h"
 
 //
+// Forward decls.
+//
+
+double wstrtod(wchar_t *string, wchar_t **endPtr);
+
+//
 // Helper macro for defining local UNICODE_STRING structures.
 //
 
@@ -164,6 +170,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(EnableWriteCombineForVertexPairs);
     DECL_ARG(RemoveWriteCombineAfterSuccessfulHashKeys);
     DECL_ARG(TryLargePagesForVertexPairs);
+    DECL_ARG(TryUsePredictedAttemptsToLimitMaxConcurrency);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -207,6 +214,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(EnableWriteCombineForVertexPairs);
     SET_FLAG_AND_RETURN_IF_EQUAL(RemoveWriteCombineAfterSuccessfulHashKeys);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForVertexPairs);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryUsePredictedAttemptsToLimitMaxConcurrency);
 
     return S_FALSE;
 }
@@ -1049,6 +1057,20 @@ Return Value:
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(MainWork, MAIN_WORK);
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(FileWork, FILE_WORK);
+
+    if (IS_EQUAL(SolutionsFoundRatio)) {
+        double Double;
+        wchar_t *End = NULL;
+        wchar_t *Expected = ValueString->Buffer + (ValueString->Length >> 1);
+        Double = wstrtod(ValueString->Buffer, &End);
+        if (End == Expected) {
+            SET_PARAM_ID(SolutionsFoundRatio);
+            LocalParam.AsDouble = Double;
+            goto AddParam;
+        }
+        Result = PH_E_INVALID_SOLUTIONS_FOUND_RATIO;
+        goto Error;
+    }
 
     //
     // We shouldn't ever get here; we've already determined that a valid param
