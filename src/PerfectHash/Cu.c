@@ -242,6 +242,8 @@ Return Value:
     // Load kernels.
     //
 
+    Cu->JitMaxNumberOfRegisters = 32;
+
     Result = CuLoadKernels(Cu);
     if (FAILED(Result)) {
         PH_ERROR(CuLoadKernels, Result);
@@ -296,6 +298,82 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    CU_RESULT CuResult;
+    PCU_MODULE Module;
+    PCU_FUNCTION *Function;
+    PCU_CONTEXT CuContext;
+    PCSZ FunctionName;
+
+    PCSZ KernelFunctionNames[] = {
+        (PCSZ)"PerfectHashCudaSeededHashAllMultiplyShiftR2",
+    };
+
+    CU_JIT_OPTION JitOptions[] = {
+        CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
+        CU_JIT_INFO_LOG_BUFFER,
+        CU_JIT_MAX_REGISTERS,
+    };
+    PVOID JitOptionValues[3];
+    USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
+
+    JitOptionValues[0] = (PVOID)sizeof(Cu->JitLogBuffer);
+    JitOptionValues[1] = (PVOID)Cu->JitLogBuffer;
+    //JitOptionValues[2] = (PVOID)Cu->JitMaxNumberOfRegisters;
+    JitOptionValues[2] = (PVOID)64LL;
+
+    CuResult = Cu->CtxCreate(&CuContext, CU_CTX_SCHED_SPIN, 1);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuCtxCreate, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Load the module from the embedded PTX.
+    //
+
+    CuResult = Cu->ModuleLoadDataEx(&Module,
+                                    (PCHAR)GraphPtxRawCStr,
+                                    NumberOfJitOptions,
+                                    JitOptions,
+                                    JitOptionValues);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuModuleLoadDataEx, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Module loaded successfully, resolve the kernel.
+    //
+
+    Function = &Cu->Functions[0];
+    FunctionName = KernelFunctionNames[0];
+    CuResult = Cu->ModuleGetFunction(Function, Module, FunctionName);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuModuleGetFunction, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
 
     return Result;
 }

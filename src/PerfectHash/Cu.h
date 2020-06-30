@@ -987,7 +987,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_MODULE_LOAD_DATA_EX)(
-    _Outptr_result_maybenull_ PPCU_MODULE ModulePointer,
+    _Out_ PPCU_MODULE ModulePointer,
     _In_z_ PCHAR Image,
     _In_ LONG NumberOfOptions,
     _In_reads_(NumberOfOptions) PCU_JIT_OPTION Options,
@@ -999,7 +999,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_MODULE_GET_FUNCTION)(
-    _Outptr_result_maybenull_ PPCU_FUNCTION FunctionPointer,
+    _Out_ PPCU_FUNCTION FunctionPointer,
     _In_ PCU_MODULE Module,
     _In_ PCSZ FunctioName
     );
@@ -1781,6 +1781,8 @@ typedef CU_RUNDOWN *PCU_RUNDOWN;
 DEFINE_UNUSED_STATE(CU);
 DEFINE_UNUSED_FLAGS(CU);
 
+#define PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES 1024
+
 typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     COMMON_COMPONENT_HEADER(CU);
 
@@ -1865,6 +1867,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     //
 
     CU_VTBL Interface;
+
+    //
+    // Array of function pointers to kernels.
+    //
+
+    PCU_FUNCTION Functions[1];
+
+    //
+    // Max number of registers to use during JIT compilation.
+    //
+
+    ULONGLONG JitMaxNumberOfRegisters;
+
+    //
+    // Buffer for output of JIT compilation.
+    //
+
+    CHAR JitLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
 
 } CU;
 typedef CU *PCU;
