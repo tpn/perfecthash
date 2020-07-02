@@ -49,6 +49,8 @@ struct CU_FUNCTION;
 typedef struct CU_FUNCTION *PCU_FUNCTION;
 typedef struct CU_FUNCTION **PPCU_FUNCTION;
 
+#define CUDACBCALLTYPE __stdcall
+
 typedef enum _Return_type_success_(return == 0) _CU_RESULT {
 
     //
@@ -424,6 +426,16 @@ typedef enum _Return_type_success_(return == 0) _CU_RESULT {
 
 #define CU_SUCCEEDED(Result) (Result == CUDA_SUCCESS)
 #define CU_FAILED(Result) (Result != CUDA_SUCCESS)
+
+typedef enum _CU_LIMIT {
+    CU_LIMIT_STACK_SIZE                       = 0x00, /**< GPU thread stack size */
+    CU_LIMIT_PRINTF_FIFO_SIZE                 = 0x01, /**< GPU printf FIFO size */
+    CU_LIMIT_MALLOC_HEAP_SIZE                 = 0x02, /**< GPU malloc heap size */
+    CU_LIMIT_DEV_RUNTIME_SYNC_DEPTH           = 0x03, /**< GPU device runtime launch synchronize depth */
+    CU_LIMIT_DEV_RUNTIME_PENDING_LAUNCH_COUNT = 0x04, /**< GPU device runtime pending launch count */
+    CU_LIMIT_MAX_L2_FETCH_GRANULARITY         = 0x05, /**< A value between 0 and 128 that indicates the maximum fetch granularity of L2 (in Bytes). This is a hint */
+    CU_LIMIT_MAX
+} CU_LIMIT;
 
 typedef enum _Enum_is_bitflag_ _CU_CTX_CREATE_FLAGS {
     CU_CTX_SCHED_AUTO           = 0x00,
@@ -1341,6 +1353,76 @@ CU_RESULT
 typedef CU_LAUNCH_KERNEL *PCU_LAUNCH_KERNEL;
 
 //
+// Occupancy
+//
+
+typedef enum _Enum_is_bitflag_ _CU_OCCUPANCY_FLAGS {
+    CU_OCCUPANCY_DEFAULT                  = 0x0, /**< Default behavior */
+    CU_OCCUPANCY_DISABLE_CACHING_OVERRIDE = 0x1  /**< Assume global caching is enabled and cannot be automatically turned off */
+} CU_OCCUPANCY_FLAGS;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR)(
+    _Out_ LONG *NumBlocks,
+    _In_ PCU_FUNCTION Function,
+    _In_ LONG BlockSize,
+    _In_ SIZE_T DynamicSharedMemorySize
+    );
+typedef CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR
+      *PCU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR_WITH_FLAGS)(
+    _Out_ LONG *NumBlocks,
+    _In_ PCU_FUNCTION Function,
+    _In_ LONG BlockSize,
+    _In_ SIZE_T DynamicSharedMemorySize,
+    _In_opt_ CU_OCCUPANCY_FLAGS OccupancyFlags
+    );
+typedef CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR_WITH_FLAGS
+      *PCU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR_WITH_FLAGS;
+
+typedef
+SIZE_T
+(CUDACBCALLTYPE CU_OCCUPANCY_B2D_SIZE)(
+    _In_ LONG Blocksize
+    );
+typedef CU_OCCUPANCY_B2D_SIZE *PCU_OCCUPANCY_B2D_SIZE;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE)(
+    _Out_ LONG *MinimumGridSize,
+    _Out_ LONG *BlockSize,
+    _In_ PCU_FUNCTION Function,
+    _In_opt_ PCU_OCCUPANCY_B2D_SIZE OccupancyBlockSizeToDynamicMemSize,
+    _In_opt_ SIZE_T DynamicSharedMemorySize,
+    _In_opt_ LONG BlockSizeLimit
+    );
+typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE
+      *PCU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS)(
+    _Out_ LONG *MinimumGridSize,
+    _Out_ LONG *BlockSize,
+    _In_ PCU_FUNCTION Function,
+    _In_opt_ PCU_OCCUPANCY_B2D_SIZE OccupancyBlockSizeToDynamicMemSize,
+    _In_opt_ SIZE_T DynamicSharedMemorySize,
+    _In_opt_ LONG BlockSizeLimit,
+    _In_opt_ CU_OCCUPANCY_FLAGS OccupancyFlags
+    );
+typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
+      *PCU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS;
+
+//
 // Define the CU_FUNCTION_TABLE X-macro.  Each macro receives (Upper, Name) as
 // as its parameters, where Upper represents the pointer type name (excluding
 // the leading 'PCU'), and name is the capitalized name of the function, e.g.:
@@ -1349,276 +1431,296 @@ typedef CU_LAUNCH_KERNEL *PCU_LAUNCH_KERNEL;
 //      (GET_ERROR_NAME, GetErrorName)
 //
 
-#define CU_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-                                                          \
-    FIRST_ENTRY(                                          \
-        INIT,                                             \
-        Init                                              \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        GET_ERROR_NAME,                                   \
-        GetErrorName                                      \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        GET_ERROR_STRING,                                 \
-        GetErrorString                                    \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        DRIVER_GET_VERSION,                               \
-        DriverGetVersion                                  \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        DEVICE_GET,                                       \
-        DeviceGet                                         \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        DEVICE_GET_COUNT,                                 \
-        DeviceGetCount                                    \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        DEVICE_GET_NAME,                                  \
-        DeviceGetName                                     \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        DEVICE_TOTAL_MEMORY,                              \
-        DeviceTotalMem                                    \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        DEVICE_COMPUTE_CAPABILITY,                        \
-        DeviceComputeCapability                           \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        DEVICE_GET_ATTRIBUTE,                             \
-        DeviceGetAttribute                                \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_CREATE,                                       \
-        CtxCreate                                         \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_DESTROY,                                      \
-        CtxDestroy                                        \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_PUSH_CURRENT,                                 \
-        CtxPushCurrent                                    \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_POP_CURRENT,                                  \
-        CtxPopCurrent                                     \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_SET_CURRENT,                                  \
-        CtxSetCurrent                                     \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_GET_CURRENT,                                  \
-        CtxGetCurrent                                     \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_GET_DEVICE,                                   \
-        CtxGetDevice                                      \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_SYNCHRONIZE,                                  \
-        CtxSynchronize                                    \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        CTX_GET_STREAM_PRIORITY_RANGE,                    \
-        CtxGetStreamPriorityRange                         \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MODULE_LOAD,                                      \
-        ModuleLoad                                        \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MODULE_UNLOAD,                                    \
-        ModuleUnload                                      \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MODULE_LOAD_DATA_EX,                              \
-        ModuleLoadDataEx                                  \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MODULE_GET_FUNCTION,                              \
-        ModuleGetFunction                                 \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MODULE_GET_GLOBAL,                                \
-        ModuleGetGlobal                                   \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_CREATE,                                    \
-        StreamCreate                                      \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_CREATE_WITH_PRIORITY,                      \
-        StreamCreateWithPriority                          \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_DESTROY,                                   \
-        StreamDestroy                                     \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_QUERY,                                     \
-        StreamQuery                                       \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_SYNCHRONIZE,                               \
-        StreamSynchronize                                 \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_ADD_CALLBACK,                              \
-        StreamAddCallback                                 \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_ATTACH_MEM_ASYNC,                          \
-        StreamAttachMemAsync                              \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_WAIT_EVENT,                                \
-        StreamWaitEvent                                   \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_WAIT_VALUE_32,                             \
-        StreamWaitValue32                                 \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_WRITE_VALUE_32,                            \
-        StreamWriteValue32                                \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        STREAM_BATCH_MEM_OP,                              \
-        StreamBatchMemOp                                  \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        EVENT_CREATE,                                     \
-        EventCreate                                       \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        EVENT_DESTROY,                                    \
-        EventDestroy                                      \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        EVENT_ELAPSED_TIME,                               \
-        EventElapsedTime                                  \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        EVENT_QUERY,                                      \
-        EventQuery                                        \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        EVENT_RECORD,                                     \
-        EventRecord                                       \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        EVENT_SYNCHRONIZE,                                \
-        EventSynchronize                                  \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_ALLOC,                                        \
-        MemAlloc                                          \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_FREE,                                         \
-        MemFree                                           \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_HOST_ALLOC,                                   \
-        MemHostAlloc                                      \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_PREFETCH_ASYNC,                               \
-        MemPrefetchAsync                                  \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_HOST_GET_DEVICE_POINTER,                      \
-        MemHostGetDevicePointer                           \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_HOST_REGISTER,                                \
-        MemHostRegister                                   \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_HOST_UNREGISTER,                              \
-        MemHostUnregister                                 \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEM_FREE_HOST,                                    \
-        MemFreeHost                                       \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEMCPY_HOST_TO_DEVICE,                            \
-        MemcpyHtoD                                        \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEMCPY_DEVICE_TO_HOST,                            \
-        MemcpyDtoH                                        \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEMCPY_HOST_TO_DEVICE_ASYNC,                      \
-        MemcpyHtoDAsync                                   \
-    )                                                     \
-                                                          \
-    ENTRY(                                                \
-        MEMCPY_DEVICE_TO_HOST_ASYNC,                      \
-        MemcpyDtoHAsync                                   \
-    )                                                     \
-                                                          \
-    LAST_ENTRY(                                           \
-        LAUNCH_KERNEL,                                    \
-        LaunchKernel                                      \
+#define CU_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)          \
+                                                                   \
+    FIRST_ENTRY(                                                   \
+        INIT,                                                      \
+        Init                                                       \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        GET_ERROR_NAME,                                            \
+        GetErrorName                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        GET_ERROR_STRING,                                          \
+        GetErrorString                                             \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        DRIVER_GET_VERSION,                                        \
+        DriverGetVersion                                           \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        DEVICE_GET,                                                \
+        DeviceGet                                                  \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        DEVICE_GET_COUNT,                                          \
+        DeviceGetCount                                             \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        DEVICE_GET_NAME,                                           \
+        DeviceGetName                                              \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        DEVICE_TOTAL_MEMORY,                                       \
+        DeviceTotalMem                                             \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        DEVICE_COMPUTE_CAPABILITY,                                 \
+        DeviceComputeCapability                                    \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        DEVICE_GET_ATTRIBUTE,                                      \
+        DeviceGetAttribute                                         \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_CREATE,                                                \
+        CtxCreate                                                  \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_DESTROY,                                               \
+        CtxDestroy                                                 \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_PUSH_CURRENT,                                          \
+        CtxPushCurrent                                             \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_POP_CURRENT,                                           \
+        CtxPopCurrent                                              \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_SET_CURRENT,                                           \
+        CtxSetCurrent                                              \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_GET_CURRENT,                                           \
+        CtxGetCurrent                                              \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_GET_DEVICE,                                            \
+        CtxGetDevice                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_SYNCHRONIZE,                                           \
+        CtxSynchronize                                             \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        CTX_GET_STREAM_PRIORITY_RANGE,                             \
+        CtxGetStreamPriorityRange                                  \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MODULE_LOAD,                                               \
+        ModuleLoad                                                 \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MODULE_UNLOAD,                                             \
+        ModuleUnload                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MODULE_LOAD_DATA_EX,                                       \
+        ModuleLoadDataEx                                           \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MODULE_GET_FUNCTION,                                       \
+        ModuleGetFunction                                          \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MODULE_GET_GLOBAL,                                         \
+        ModuleGetGlobal                                            \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_CREATE,                                             \
+        StreamCreate                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_CREATE_WITH_PRIORITY,                               \
+        StreamCreateWithPriority                                   \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_DESTROY,                                            \
+        StreamDestroy                                              \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_QUERY,                                              \
+        StreamQuery                                                \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_SYNCHRONIZE,                                        \
+        StreamSynchronize                                          \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_ADD_CALLBACK,                                       \
+        StreamAddCallback                                          \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_ATTACH_MEM_ASYNC,                                   \
+        StreamAttachMemAsync                                       \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_WAIT_EVENT,                                         \
+        StreamWaitEvent                                            \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_WAIT_VALUE_32,                                      \
+        StreamWaitValue32                                          \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_WRITE_VALUE_32,                                     \
+        StreamWriteValue32                                         \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        STREAM_BATCH_MEM_OP,                                       \
+        StreamBatchMemOp                                           \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        EVENT_CREATE,                                              \
+        EventCreate                                                \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        EVENT_DESTROY,                                             \
+        EventDestroy                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        EVENT_ELAPSED_TIME,                                        \
+        EventElapsedTime                                           \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        EVENT_QUERY,                                               \
+        EventQuery                                                 \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        EVENT_RECORD,                                              \
+        EventRecord                                                \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        EVENT_SYNCHRONIZE,                                         \
+        EventSynchronize                                           \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_ALLOC,                                                 \
+        MemAlloc                                                   \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_FREE,                                                  \
+        MemFree                                                    \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_HOST_ALLOC,                                            \
+        MemHostAlloc                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_PREFETCH_ASYNC,                                        \
+        MemPrefetchAsync                                           \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_HOST_GET_DEVICE_POINTER,                               \
+        MemHostGetDevicePointer                                    \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_HOST_REGISTER,                                         \
+        MemHostRegister                                            \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_HOST_UNREGISTER,                                       \
+        MemHostUnregister                                          \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEM_FREE_HOST,                                             \
+        MemFreeHost                                                \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEMCPY_HOST_TO_DEVICE,                                     \
+        MemcpyHtoD                                                 \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEMCPY_DEVICE_TO_HOST,                                     \
+        MemcpyDtoH                                                 \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEMCPY_HOST_TO_DEVICE_ASYNC,                               \
+        MemcpyHtoDAsync                                            \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEMCPY_DEVICE_TO_HOST_ASYNC,                               \
+        MemcpyDtoHAsync                                            \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR,            \
+        OccupancyMaxActiveBlocksPerMultiprocessor                  \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR_WITH_FLAGS, \
+        OccupancyMaxActiveBlocksPerMultiprocessorWithFlags         \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE,                        \
+        OccupancyMaxPotentialBlockSize                             \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS,             \
+        OccupancyMaxPotentialBlockSizeWithFlags                    \
+    )                                                              \
+                                                                   \
+    LAST_ENTRY(                                                    \
+        LAUNCH_KERNEL,                                             \
+        LaunchKernel                                               \
     )
 
 #define CU_FUNCTION_TABLE_ENTRY(ENTRY) \
@@ -1775,6 +1877,33 @@ VOID
 typedef CU_RUNDOWN *PCU_RUNDOWN;
 
 //
+// Occupancy stats per function.
+//
+
+typedef struct _CU_OCCUPANCY {
+
+    //
+    // Obtained via Cu->OccupancyMaxActiveBlocksPerMultiprocessorWithFlags.
+    //
+
+    LONG NumBlocks;
+
+    //
+    // Obtained via Cu->OccupancyMaxPotentialBlockSizeWithFlags.
+    //
+
+    LONG MinimumGridSize;
+    LONG BlockSize;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
+} CU_OCCUPANCY;
+typedef CU_OCCUPANCY *PCU_OCCUPANCY;
+
+//
 // Define the CU structure that encapsulates all CUDA Driver functionality.
 //
 
@@ -1873,6 +2002,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     //
 
     PCU_FUNCTION Functions[1];
+
+    //
+    // Array of occupancy calculations for each function.
+    //
+
+    CU_OCCUPANCY Occupancy[1];
 
     //
     // Max number of registers to use during JIT compilation.

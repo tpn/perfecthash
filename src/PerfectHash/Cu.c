@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2019-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -301,6 +301,7 @@ Return Value:
     CU_RESULT CuResult;
     PCU_MODULE Module;
     PCU_FUNCTION *Function;
+    PCU_OCCUPANCY Occupancy;
     PCU_CONTEXT CuContext;
     PCSZ FunctionName;
 
@@ -321,7 +322,7 @@ Return Value:
     //JitOptionValues[2] = (PVOID)Cu->JitMaxNumberOfRegisters;
     JitOptionValues[2] = (PVOID)64LL;
 
-    CuResult = Cu->CtxCreate(&CuContext, CU_CTX_SCHED_SPIN, 1);
+    CuResult = Cu->CtxCreate(&CuContext, CU_CTX_SCHED_AUTO, 1);
     if (CU_FAILED(CuResult)) {
         CU_ERROR(CuCtxCreate, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
@@ -352,6 +353,40 @@ Return Value:
     CuResult = Cu->ModuleGetFunction(Function, Module, FunctionName);
     if (CU_FAILED(CuResult)) {
         CU_ERROR(CuModuleGetFunction, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Get occupancy stats for each function.
+    //
+
+    Occupancy = &Cu->Occupancy[0];
+
+    CuResult = Cu->OccupancyMaxPotentialBlockSizeWithFlags(
+        &Occupancy->MinimumGridSize,
+        &Occupancy->BlockSize,
+        *Function,
+        NULL,   // OccupancyBlockSizeToDynamicMemSize
+        0,      // DynamicSharedMemorySize
+        0,      // BlockSizeLimit
+        0       // Flags
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(OccupancyMaxPotentialBlockSizeWithFlags, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->OccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
+        &Occupancy->NumBlocks,
+        *Function,
+        Occupancy->BlockSize,
+        0, // DynamicSharedMemorySize
+        0  // Flags
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(OccupancyMaxActiveBlocksPerMultiprocessorWithFlags, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
         goto Error;
     }
