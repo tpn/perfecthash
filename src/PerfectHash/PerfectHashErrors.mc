@@ -3646,3 +3646,11 @@ Language=English
 Invalid SolutionsFoundRatio; must be a double less than 1.0 and greater than 0.0.
 .
 
+MessageId=0x3a2
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY
+Language=English
+CuConcurrency exceeds MaximumConcurrency.
+.
+

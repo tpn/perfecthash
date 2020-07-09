@@ -16,7 +16,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "TableCreateCsv.h"
-
+#include "PerfectHashTls.h"
 
 #define PH_ERROR_EX(Name, Result, ...) \
     PH_ERROR(Name, Result)
@@ -1280,6 +1280,8 @@ Return Value:
     PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
         ExtractTableCreateArgs;
     PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters = { 0 };
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
 
     TableCreateParameters.SizeOfStruct = sizeof(TableCreateParameters);
     TableCreateParameters.Allocator = Context->Allocator;
@@ -1318,6 +1320,15 @@ Return Value:
                                                 &TableCreateParameters);
 
     if (ContextTableCreateFlags.TryCuda != FALSE) {
+
+        //
+        // The Cu component needs to obtain the active Context, which we
+        // achieve via the TLS context.
+        //
+
+        TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+        TlsContext->Context = Context;
+
         Result = PerfectHashContextInitializeCuda(Context,
                                                   &TableCreateParameters);
         if (FAILED(Result)) {
@@ -1348,6 +1359,8 @@ Return Value:
 
         NOTHING;
     }
+
+    PerfectHashTlsClearContextIfActive(&LocalTlsContext);
 
     CleanupResult = CleanupTableCreateParameters(&TableCreateParameters);
     if (FAILED(CleanupResult)) {

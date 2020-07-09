@@ -253,6 +253,7 @@ VERIFY_MASK_ARRAY_SIZE(MaskIndexRoutines);
 const PPERFECT_HASH_TABLE_INDEX IndexRoutines[] = {
     NULL,
     PerfectHashTableIndexImplChm01,
+    PerfectHashTableIndexImplChm01, // Chm02 uses Chm01's Index impl.
     NULL
 };
 VERIFY_ALGORITHM_ARRAY_SIZE(IndexRoutines);

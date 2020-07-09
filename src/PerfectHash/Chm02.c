@@ -1,14 +1,15 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    Chm01.c
+    Chm02.c
 
 Abstract:
 
-    This module implements the CHM perfect hash table algorithm.
+    This module is a copy of the Chm01.c, modified to explore the viability of
+    CUDA support.  It is an experimental work-in-progress.
 
 --*/
 
@@ -17,7 +18,7 @@ Abstract:
 
 _Use_decl_annotations_
 HRESULT
-CreatePerfectHashTableImplChm01(
+CreatePerfectHashTableImplChm02(
     PPERFECT_HASH_TABLE Table
     )
 /*++
@@ -48,9 +49,6 @@ Return Value:
         may have caused).
 
     PH_I_OUT_OF_MEMORY - The system is out of memory.
-
-    PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED - The maximum number
-        of table resize events was reached before a solution could be found.
 
     PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT - The shutdown event
         explicitly set.
@@ -101,28 +99,24 @@ Return Value:
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
-    BOOLEAN LimitConcurrency;
     ULONG Attempt = 0;
     ULONG ReferenceCount;
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
     HRESULT CloseResult = S_OK;
     ULONG WaitResult;
-    ULONG BytesWritten;
-    GRAPH_INFO PrevInfo;
     GRAPH_INFO Info;
     PALLOCATOR Allocator;
     HANDLE OutputHandle = NULL;
     PHANDLE Event;
     ULONG Concurrency;
+    ULONG CuConcurrency;
+    ULONG CuGraphCount = 0;
     ULONG NumberOfGraphs;
     PLIST_ENTRY ListEntry;
     ULONG CloseFileErrorCount = 0;
     ULONG NumberOfSeedsRequired;
     ULONG NumberOfSeedsAvailable;
-    ULONGLONG Closest;
-    ULONGLONG LastClosest;
-    BOOLEAN TryLargerTableSize;
     GRAPH_INFO_ON_DISK GraphInfo;
     PGRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
@@ -135,7 +129,6 @@ Return Value:
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
 
-    HANDLE Events[6];
     HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];
     HANDLE PrepareEvents[NUMBER_OF_PREPARE_FILE_EVENTS];
     PHANDLE SaveEvent = SaveEvents;
@@ -151,6 +144,16 @@ Return Value:
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_STACK_VAR);
+
+#define SUCCEEDED_EVENT     WAIT_OBJECT_0+0
+#define COMPLETED_EVENT     WAIT_OBJECT_0+1
+#define SHUTDOWN_EVENT      WAIT_OBJECT_0+2
+#define FAILED_EVENT        WAIT_OBJECT_0+3
+#define LOW_MEMORY_EVENT    WAIT_OBJECT_0+4
+#define LAST_EVENT          LOW_MEMORY_EVENT
+#define NUMBER_OF_EVENTS    LAST_EVENT + 1
+
+    HANDLE Events[NUMBER_OF_EVENTS];
 
 #define EXPAND_AS_ZERO_STACK_VAR(   \
     Verb, VUpper, Name, Upper,      \
@@ -176,23 +179,9 @@ Return Value:
 
     Context = Table->Context;
     Concurrency = Context->MaximumConcurrency;
-
-    //
-    // If a non-zero value is supplied for predicted attempts, and the value is
-    // less than the maximum concurrency, and we've been asked to limit max
-    // concurrency, toggle the LimitConcurrency boolean.  This limits the number
-    // of concurrent graph launches such that it won't exceed the predicted
-    // number of attempts.
-    //
-
-    LimitConcurrency = (
-        Table->PredictedAttempts > 0 &&
-        TableCreateFlags.TryUsePredictedAttemptsToLimitMaxConcurrency != FALSE
-    );
-
-    if (LimitConcurrency) {
-        Concurrency = min(Concurrency, Table->PredictedAttempts);
-    }
+    CuConcurrency = Context->CuConcurrency;
+    ASSERT(CuConcurrency <= Concurrency);
+    ASSERT(CuConcurrency > 0);
 
     if (FirstSolvedGraphWins(Context)) {
         NumberOfGraphs = Concurrency;
@@ -215,12 +204,11 @@ Return Value:
     // Initialize event arrays.
     //
 
-    Events[0] = Context->SucceededEvent;
-    Events[1] = Context->CompletedEvent;
-    Events[2] = Context->ShutdownEvent;
-    Events[3] = Context->FailedEvent;
-    Events[4] = Context->TryLargerTableSizeEvent;
-    Events[5] = Context->LowMemoryEvent;
+    Events[SUCCEEDED_EVENT] = Context->SucceededEvent;
+    Events[COMPLETED_EVENT] = Context->CompletedEvent;
+    Events[SHUTDOWN_EVENT] = Context->ShutdownEvent;
+    Events[FAILED_EVENT] = Context->FailedEvent;
+    Events[LOW_MEMORY_EVENT] = Context->LowMemoryEvent;
 
 #define EXPAND_AS_ASSIGN_EVENT(                         \
     Verb, VUpper, Name, Upper,                          \
@@ -273,87 +261,9 @@ Return Value:
         return PH_E_INVALID_NUMBER_OF_SEEDS;
     }
 
-    if (Context->InitialResizes > 0) {
-        ULONG InitialResizes;
-        ULARGE_INTEGER NumberOfEdges;
-        ULARGE_INTEGER NumberOfVertices;
-
-        //
-        // We've been asked to simulate a number of table resizes prior to graph
-        // solving (which is done to yield better keys-to-vertices ratios, which
-        // improves solving probability).
-        //
-
-        //
-        // N.B. We have to duplicate some of the sizing logic for edges and
-        //      vertices from PrepareGraphInfoChm01() here.  Note that this
-        //      initial resize functionality isn't supported for modulus
-        //      masking.
-        //
-
-        //
-        // Initialize number of edges to number of keys, then round up the
-        // edges to a power of 2.
-        //
-
-        NumberOfEdges.QuadPart = Table->Keys->NumberOfElements.QuadPart;
-        ASSERT(NumberOfEdges.HighPart == 0);
-
-        NumberOfEdges.QuadPart = (
-            Rtl->RoundUpPowerOfTwo32(
-                NumberOfEdges.LowPart
-            )
-        );
-
-        if (NumberOfEdges.QuadPart < 8) {
-            NumberOfEdges.QuadPart = 8;
-        }
-
-        //
-        // Make sure we haven't overflowed.
-        //
-
-        if (NumberOfEdges.HighPart) {
-            Result = PH_E_TOO_MANY_EDGES;
-            goto Error;
-        }
-
-        //
-        // For the number of vertices, round the number of edges up to the
-        // next power of 2.
-        //
-
-        NumberOfVertices.QuadPart = (
-            Rtl->RoundUpNextPowerOfTwo32(NumberOfEdges.LowPart)
-        );
-
-        Table->RequestedNumberOfTableElements.QuadPart = (
-            NumberOfVertices.QuadPart
-        );
-
-        //
-        // Keep doubling the number of vertices for each requested resize,
-        // or until we exceed MAX_ULONG, whatever comes first.
-        //
-
-        for (InitialResizes = Context->InitialResizes;
-             InitialResizes > 0;
-             InitialResizes--) {
-
-            Table->RequestedNumberOfTableElements.QuadPart <<= 1ULL;
-
-            if (Table->RequestedNumberOfTableElements.HighPart) {
-                Result = PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
-                goto Error;
-            }
-        }
-
-        Context->NumberOfTableResizeEvents = Context->InitialResizes;
-    }
-
-    Result = PrepareGraphInfoChm01(Table, &Info, NULL);
+    Result = PrepareGraphInfoChm02(Table, &Info, NULL);
     if (FAILED(Result)) {
-        PH_ERROR(CreatePerfectHashTableImplChm01_PrepareFirstGraphInfo, Result);
+        PH_ERROR(CreatePerfectHashTableImplChm02_PrepareFirstGraphInfo, Result);
         goto Error;
     }
 
@@ -425,11 +335,32 @@ Return Value:
     TlsContext->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
 
     //
+    // Toggle the "create CUDA graph" flag in the TLS context, which is also
+    // used by GraphInitialize() to determine if a CUDA graph should be created.
+    // Initialize the count of CUDA graphs to 0.  We clear the bit once we've
+    // created the requested number of CUDA graphs.
+    //
+
+    TlsContext->Flags.CreateCuGraph = TRUE;
+    CuGraphCount = 0;
+
+    //
     // Create graph instances and capture the resulting pointer in the array
     // we just allocated above.
     //
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {
+
+        //
+        // If the number of CUDA graphs created equals the desired concurrency
+        // level, toggle the CUDA graph flag in the TLS context.
+        //
+
+        if (CuGraphCount == CuConcurrency) {
+            TlsContext->Flags.CreateCuGraph = FALSE;
+        } else if (TlsContext->Flags.CreateCuGraph != FALSE) {
+            CuGraphCount++;
+        }
 
         Result = Table->Vtbl->CreateInstance(Table,
                                              NULL,
@@ -444,7 +375,7 @@ Return Value:
             //
 
             if (Result != E_OUTOFMEMORY) {
-                PH_ERROR(CreatePerfectHashTableImplChm01_CreateGraph, Result);
+                PH_ERROR(CreatePerfectHashTableImplChm02_CreateGraph, Result);
             }
 
             //
@@ -468,6 +399,14 @@ Return Value:
         //
 
         ASSERT(Graph->Rtl == Table->Rtl);
+
+        //
+        // Verify the CUDA flag is set if applicable.
+        //
+
+        if (TlsContext->Flags.CreateCuGraph != FALSE) {
+            ASSERT(IsCuGraph(Graph));
+        }
 
         //
         // Copy relevant flags over, then save the graph instance in the array.
@@ -503,33 +442,10 @@ Return Value:
     }
 
     //
-    // The following label is jumped to by code later in this routine when we
-    // detect that we've exceeded a plausible number of attempts at finding a
-    // graph solution with the given number of vertices, and have bumped up
-    // the vertex count (by adjusting Table->RequestedNumberOfElements) and
-    // want to try again.
+    // N.B. We don't explicitly reset all events here like in Chm01 as we're
+    //      not supporting table resizes, so the events should always be reset
+    //      at this point.
     //
-
-RetryWithLargerTableSize:
-
-    //
-    // Explicitly reset all events.  This ensures everything is back in the
-    // starting state if we happen to be attempting to solve the graph after
-    // a resize event.
-    //
-
-    Event = (PHANDLE)&Context->FirstEvent;
-
-    NumberOfEvents = GetNumberOfContextEvents(Context);
-
-    for (Index = 0; Index < NumberOfEvents; Index++, Event++) {
-
-        if (!ResetEvent(*Event)) {
-            SYS_ERROR(ResetEvent);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-    }
 
     //
     // Clear the counter of low-memory events observed.  (An interlocked
@@ -540,28 +456,11 @@ RetryWithLargerTableSize:
     Context->LowMemoryObserved = 0;
 
     //
-    // If this isn't the first attempt, prepare the graph info again.  This
-    // updates the various allocation sizes based on the new table size being
-    // requested.
-    //
-
-    if (++Attempt > 1) {
-
-        ASSERT(Context->ResizeLimit > 0);
-        Result = PrepareGraphInfoChm01(Table, &Info, &PrevInfo);
-        if (FAILED(Result)) {
-            PH_ERROR(CreatePerfectHashTableImplChm01_PrepareGraphInfo, Result);
-            goto Error;
-        }
-
-    }
-
-    //
     // Set the context's main work callback to our worker routine, and the algo
     // context to our graph info structure.
     //
 
-    Context->MainWorkCallback = ProcessGraphCallbackChm01;
+    Context->MainWorkCallback = ProcessGraphCallbackChm02;
     Context->AlgorithmContext = &Info;
 
     //
@@ -571,14 +470,10 @@ RetryWithLargerTableSize:
     Context->FileWorkCallback = FileWorkCallbackChm01;
 
     //
-    // Prepare the table output directory.  If the table indicates resize events
-    // require a rename, we need to call this every loop invocation.  Otherwise,
-    // just call it on the first invocation (Attempt == 1).
+    // Prepare the table output directory if applicable.
     //
 
-    if (!NoFileIo(Table) &&
-        (Attempt == 1 || TableResizeRequiresRename(Table))) {
-
+    if (!NoFileIo(Table)) {
         Result = PrepareTableOutputDirectory(Table);
         if (FAILED(Result)) {
             PH_ERROR(PrepareTableOutputDirectory, Result);
@@ -745,166 +640,16 @@ RetryWithLargerTableSize:
     // Handle the low-memory state first.
     //
 
-    if (WaitResult == WAIT_OBJECT_0+5) {
+    if (WaitResult == LOW_MEMORY_EVENT) {
         InterlockedIncrement(&Context->LowMemoryObserved);
         Result = PH_I_LOW_MEMORY;
         goto Error;
     }
 
     //
-    // If the wait result indicates the try larger table size event was set,
-    // deal with that, next.
-    //
-
-    TryLargerTableSize = (
-        WaitResult == WAIT_OBJECT_0+4 || (
-            WaitForSingleObject(Context->TryLargerTableSizeEvent, 0) ==
-            WAIT_OBJECT_0
-        )
-    );
-
-    if (TryLargerTableSize) {
-
-        //
-        // The number of attempts at solving this graph have exceeded the
-        // threshold.  Set the shutdown event in order to trigger all worker
-        // threads to abort their current attempts and wait on the main thread
-        // work, then finish work, to complete.
-        //
-
-        WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
-        WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
-
-        if (!NoFileIo(Table)) {
-
-            //
-            // Perform a blocking wait for the prepare work to complete.
-            //
-
-            WaitResult = WaitForMultipleObjects(ARRAYSIZE(PrepareEvents),
-                                                PrepareEvents,
-                                                WaitForAllEvents,
-                                                INFINITE);
-
-            if (WaitResult != WAIT_OBJECT_0) {
-                SYS_ERROR(WaitForSingleObject);
-                Result = PH_E_SYSTEM_CALL_FAILED;
-                goto Error;
-            }
-
-            //
-            // Verify none of the file work callbacks reported an error during
-            // preparation.
-            //
-
-            CHECK_ALL_PREPARE_ERRORS();
-        }
-
-        //
-        // There are no more threadpool callbacks running.  However, a thread
-        // could have finished a solution between the time the try larger table
-        // size event was set, and this point.  So, check the finished count
-        // first.  If it indicates a solution, jump to that handler code.
-        //
-
-        if (Context->FinishedCount > 0) {
-            goto FinishedSolution;
-        }
-
-        //
-        // Check to see if we've exceeded the maximum number of resize events.
-        //
-
-        if (Context->NumberOfTableResizeEvents >= Context->ResizeLimit) {
-            Result = PH_I_MAXIMUM_NUMBER_OF_TABLE_RESIZE_EVENTS_REACHED;
-            goto Error;
-        }
-
-        //
-        // Increment the resize counter and update the total number of attempts
-        // in the header.  Then, determine how close we came to solving the
-        // graph, and store that in the header as well if it's the best so far
-        // (or no previous version is present).
-        //
-
-        Context->NumberOfTableResizeEvents++;
-        Context->TotalNumberOfAttemptsWithSmallerTableSizes += (
-            Context->Attempts
-        );
-
-        Closest = (
-            Info.Dimensions.NumberOfEdges - Context->HighestDeletedEdgesCount
-        );
-        LastClosest = (
-            Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes
-        );
-
-        if (!LastClosest || Closest < LastClosest) {
-            Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes = (
-                Closest
-            );
-        }
-
-        //
-        // If this is our first resize, capture the initial size we used.
-        //
-
-        if (!Context->InitialTableSize) {
-            Context->InitialTableSize = Info.Dimensions.NumberOfVertices;
-        }
-
-        //
-        // Reset the remaining counters.
-        //
-
-        Context->Attempts = 0;
-        Context->FailedAttempts = 0;
-        Context->HighestDeletedEdgesCount = 0;
-
-        //
-        // Double the vertex count.  If we have overflowed max ULONG, abort.
-        //
-
-        Table->RequestedNumberOfTableElements.QuadPart = (
-            Info.Dimensions.NumberOfVertices
-        );
-
-        Table->RequestedNumberOfTableElements.QuadPart <<= 1ULL;
-
-        if (Table->RequestedNumberOfTableElements.HighPart) {
-            Result = PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
-            goto Error;
-        }
-
-        //
-        // Reset the lists.
-        //
-
-        ResetMainWorkList(Context);
-        ResetFinishedWorkList(Context);
-        if (!NoFileIo(Table)) {
-            ResetFileWorkList(Context);
-        }
-
-        //
-        // Print a plus if we're in context table/bulk create mode to indicate
-        // a table resize event has occurred.
-        //
-
-        MAYBE_PLUS();
-
-        //
-        // Jump back to the start and try again with a larger vertex count.
-        //
-
-        goto RetryWithLargerTableSize;
-    }
-
-    //
-    // The wait result did not indicate a resize event.  Ignore the wait
-    // result for now; determine if the graph solving was successful by the
-    // finished count of the context.  We'll corroborate that with whatever
-    // events have been signaled shortly.
+    // Ignore the remaining results for now; determine if the graph solving was
+    // successful by the finished count of the context.  We'll corroborate that
+    // with whatever events have been signaled shortly.
     //
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
@@ -999,12 +744,6 @@ RetryWithLargerTableSize:
 
         goto End;
     }
-
-    //
-    // Intentional follow-on to FinishedSolution.
-    //
-
-FinishedSolution:
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
@@ -1148,7 +887,7 @@ FinishedSolution:
 
         if (Graph->FirstSeed == 0) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(CreatePerfectHashTableImplChm01_GraphFirstSeedIs0, Result);
+            PH_ERROR(CreatePerfectHashTableImplChm02_GraphFirstSeedIs0, Result);
             PH_RAISE(Result);
         }
 
@@ -1383,7 +1122,7 @@ End:
             CloseResult = PH_E_ERROR_DURING_##VUpper##_##Upper##;        \
         }                                                                \
         PH_ERROR(                                                        \
-            CreatePerfectHashTableImplChm01_ErrorDuring##Verb####Name##, \
+            CreatePerfectHashTableImplChm02_ErrorDuring##Verb####Name##, \
             Result                                                       \
         );                                                               \
         CloseFileErrorCount++;                                           \
@@ -1463,12 +1202,36 @@ ReleaseGraphs:
     return Result;
 }
 
+_Use_decl_annotations_
+HRESULT
+LoadPerfectHashTableImplChm02(
+    PPERFECT_HASH_TABLE Table
+    )
+/*++
 
-PREPARE_GRAPH_INFO PrepareGraphInfoChm01;
+Routine Description:
+
+    Loads a previously created perfect hash table.
+
+Arguments:
+
+    Table - Supplies a pointer to a partially-initialized PERFECT_HASH_TABLE
+        structure.
+
+Return Value:
+
+    S_OK - Table was loaded successfully.
+
+--*/
+{
+    return LoadPerfectHashTableImplChm01(Table);
+}
+
+PREPARE_GRAPH_INFO PrepareGraphInfoChm02;
 
 _Use_decl_annotations_
 HRESULT
-PrepareGraphInfoChm01(
+PrepareGraphInfoChm02(
     PPERFECT_HASH_TABLE Table,
     PGRAPH_INFO Info,
     PGRAPH_INFO PrevInfo
@@ -1799,7 +1562,7 @@ Return Value:
 
         if ((NumberOfVertices.QuadPart >> 1) != NumberOfEdges.QuadPart) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PrepareGraphInfoChm01_NumEdgesNotNumVerticesDiv2, Result);
+            PH_ERROR(PrepareGraphInfoChm02_NumEdgesNotNumVerticesDiv2, Result);
             goto Error;
         }
     }
@@ -1814,7 +1577,7 @@ Return Value:
 
     if (DeletedEdgesBitmapBufferSizeInBytes.HighPart) {
         Result = PH_E_TOO_MANY_BITS_FOR_BITMAP;
-        PH_ERROR(PrepareGraphInfoChm01_DeletedEdgesBitmap, Result);
+        PH_ERROR(PrepareGraphInfoChm02_DeletedEdgesBitmap, Result);
         goto Error;
     }
 
@@ -1824,7 +1587,7 @@ Return Value:
 
     if (VisitedVerticesBitmapBufferSizeInBytes.HighPart) {
         Result = PH_E_TOO_MANY_BITS_FOR_BITMAP;
-        PH_ERROR(PrepareGraphInfoChm01_VisitedVerticesBitmap, Result);
+        PH_ERROR(PrepareGraphInfoChm02_VisitedVerticesBitmap, Result);
         goto Error;
     }
 
@@ -1834,7 +1597,7 @@ Return Value:
 
     if (AssignedBitmapBufferSizeInBytes.HighPart) {
         Result = PH_E_TOO_MANY_BITS_FOR_BITMAP;
-        PH_ERROR(PrepareGraphInfoChm01_AssignedBitmap, Result);
+        PH_ERROR(PrepareGraphInfoChm02_AssignedBitmap, Result);
         goto Error;
     }
 
@@ -1844,7 +1607,7 @@ Return Value:
 
     if (IndexBitmapBufferSizeInBytes.HighPart) {
         Result = PH_E_TOO_MANY_BITS_FOR_BITMAP;
-        PH_ERROR(PrepareGraphInfoChm01_IndexBitmap, Result);
+        PH_ERROR(PrepareGraphInfoChm02_IndexBitmap, Result);
         goto Error;
     }
 
@@ -2079,13 +1842,13 @@ Return Value:
 
         if (NumberOfEdgeMaskBits != Dim->NumberOfEdgesPowerOf2Exponent) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PrepareGraphInfoChm01_EdgeMaskPopcountMismatch, Result);
+            PH_ERROR(PrepareGraphInfoChm02_EdgeMaskPopcountMismatch, Result);
             goto Error;
         }
 
         if (NumberOfVertexMaskBits != Dim->NumberOfVerticesPowerOf2Exponent) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PrepareGraphInfoChm01_VertexMaskPopcountMismatch, Result);
+            PH_ERROR(PrepareGraphInfoChm02_VertexMaskPopcountMismatch, Result);
             goto Error;
         }
 
@@ -2104,7 +1867,7 @@ Return Value:
         EdgeValue = (ULONG_PTR)1 << NumberOfEdgeMaskBits;
         Result = GetContainingType(Rtl, EdgeValue, &Table->TableDataArrayType);
         if (FAILED(Result)) {
-            PH_ERROR(PrepareGraphInfoChm01_GetContainingType, Result);
+            PH_ERROR(PrepareGraphInfoChm02_GetContainingType, Result);
             goto Error;
         }
 
@@ -2231,212 +1994,6 @@ End:
     return Result;
 }
 
-
-PREPARE_TABLE_OUTPUT_DIRECTORY PrepareTableOutputDirectory;
-
-_Use_decl_annotations_
-HRESULT
-PrepareTableOutputDirectory(
-    PPERFECT_HASH_TABLE Table
-    )
-{
-    HRESULT Result = S_OK;
-    ULONG NumberOfResizeEvents;
-    ULARGE_INTEGER NumberOfTableElements;
-    PPERFECT_HASH_CONTEXT Context;
-    PPERFECT_HASH_PATH OutputPath = NULL;
-    PPERFECT_HASH_DIRECTORY OutputDir = NULL;
-    PPERFECT_HASH_DIRECTORY BaseOutputDirectory;
-    PCUNICODE_STRING BaseOutputDirectoryPath;
-    const UNICODE_STRING EmptyString = { 0 };
-
-    //
-    // Validate arguments.
-    //
-
-    if (!ARGUMENT_PRESENT(Table)) {
-        return E_POINTER;
-    }
-
-    //
-    // Invariant check: if Table->OutputDirectory is set, ensure the table
-    // requires renames after table resize events.
-    //
-
-    if (Table->OutputDirectory) {
-        if (!TableResizeRequiresRename(Table)) {
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PrepareTableOutputDirectory_NoRenameRequired, Result);
-            goto Error;
-        }
-    }
-
-    //
-    // Initialize aliases.
-    //
-
-    Context = Table->Context;
-    BaseOutputDirectory = Context->BaseOutputDirectory;
-    BaseOutputDirectoryPath = &BaseOutputDirectory->Path->FullPath;
-    NumberOfResizeEvents = (ULONG)Context->NumberOfTableResizeEvents;
-    NumberOfTableElements.QuadPart = (
-        Table->TableInfoOnDisk->NumberOfTableElements.QuadPart
-    );
-
-    //
-    // Create an output directory path name.
-    //
-
-    Result = PerfectHashTableCreatePath(Table,
-                                        Table->Keys->File->Path,
-                                        &NumberOfResizeEvents,
-                                        &NumberOfTableElements,
-                                        Table->AlgorithmId,
-                                        Table->HashFunctionId,
-                                        Table->MaskFunctionId,
-                                        BaseOutputDirectoryPath,
-                                        NULL,           // NewBaseName
-                                        NULL,           // AdditionalSuffix
-                                        &EmptyString,   // NewExtension
-                                        NULL,           // NewStreamName
-                                        &OutputPath,
-                                        NULL);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PrepareTableOutputDirectory_CreatePath, Result);
-        goto Error;
-    }
-
-    ASSERT(IsValidUnicodeString(&OutputPath->FullPath));
-
-    //
-    // Release the existing output path, if applicable.  (This will already
-    // have a value if we're being called for the second or more time due to
-    // a resize event.)
-    //
-
-    RELEASE(Table->OutputPath);
-
-    Table->OutputPath = OutputPath;
-
-    //
-    // Either create a new directory instance if this is our first pass, or
-    // schedule a rename if not.
-    //
-
-    if (!Table->OutputDirectory) {
-
-        PERFECT_HASH_DIRECTORY_CREATE_FLAGS DirectoryCreateFlags = { 0 };
-
-        //
-        // No output directory has been set; this is the first attempt at
-        // trying to solve the graph.  Create a new directory instance, then
-        // issue a Create() call against the output path we constructed above.
-        //
-
-        Result = Table->Vtbl->CreateInstance(Table,
-                                             NULL,
-                                             &IID_PERFECT_HASH_DIRECTORY,
-                                             &OutputDir);
-
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashDirectoryCreateInstance, Result);
-            goto Error;
-        }
-
-        Result = OutputDir->Vtbl->Create(OutputDir,
-                                         OutputPath,
-                                         &DirectoryCreateFlags);
-
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashDirectoryCreate, Result);
-            goto Error;
-        }
-
-        //
-        // Directory creation was successful.
-        //
-
-        Table->OutputDirectory = OutputDir;
-
-    } else {
-
-        //
-        // Directory already exists; a resize event must have occurred.
-        // Schedule a rename of the directory to the output path constructed
-        // above.
-        //
-
-        OutputDir = Table->OutputDirectory;
-        Result = OutputDir->Vtbl->ScheduleRename(OutputDir, OutputPath);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashDirectoryScheduleRename, Result);
-            goto Error;
-        }
-
-    }
-
-    //
-    // We're done, finish up.
-    //
-
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    return Result;
-}
-
-_Use_decl_annotations_
-HRESULT
-LoadPerfectHashTableImplChm01(
-    PPERFECT_HASH_TABLE Table
-    )
-/*++
-
-Routine Description:
-
-    Loads a previously created perfect hash table.
-
-Arguments:
-
-    Table - Supplies a pointer to a partially-initialized PERFECT_HASH_TABLE
-        structure.
-
-Return Value:
-
-    S_OK - Table was loaded successfully.
-
---*/
-{
-    PTABLE_INFO_ON_DISK OnDisk;
-
-    OnDisk = Table->TableInfoOnDisk;
-
-    Table->HashSize = OnDisk->HashSize;
-    Table->IndexSize = OnDisk->IndexSize;
-    Table->HashShift = OnDisk->HashShift;
-    Table->IndexShift = OnDisk->IndexShift;
-    Table->HashMask = OnDisk->HashMask;
-    Table->IndexMask = OnDisk->IndexMask;
-    Table->HashFold = OnDisk->HashFold;
-    Table->IndexFold = OnDisk->IndexFold;
-    Table->HashModulus = OnDisk->HashModulus;
-    Table->IndexModulus = OnDisk->IndexModulus;
-
-    return S_OK;
-}
-
 //
 // The entry point into the actual per-thread solving attempts is the following
 // routine.
@@ -2444,7 +2001,7 @@ Return Value:
 
 _Use_decl_annotations_
 VOID
-ProcessGraphCallbackChm01(
+ProcessGraphCallbackChm02(
     PTP_CALLBACK_INSTANCE Instance,
     PPERFECT_HASH_CONTEXT Context,
     PLIST_ENTRY ListEntry
@@ -2480,7 +2037,6 @@ Return Value:
     PGRAPH Graph;
     HRESULT Result;
     PHANDLE Event;
-    ULONG WaitResult;
 
     UNREFERENCED_PARAMETER(Instance);
 
@@ -2512,7 +2068,7 @@ Return Value:
 
         if (!PermissibleErrorCode) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(ProcessGraphCallbackChm01_InvalidErrorCode, Result);
+            PH_ERROR(ProcessGraphCallbackChm02_InvalidErrorCode, Result);
             PH_RAISE(Result);
         }
     }
@@ -2523,9 +2079,8 @@ Return Value:
 
         //
         // We're the last graph; if the finished count indicates no solutions
-        // were found, and the try larger table size event is not set, signal
-        // FailedEvent.  Otherwise, signal SucceededEvent.  This ensures we
-        // always unwait our parent thread's solving loop.
+        // were found, signal FailedEvent.  Otherwise, signal SucceededEvent.
+        // This ensures we always unwait our parent thread's solving loop.
         //
         // N.B. There are numerous scenarios where this is a superfluous call,
         //      as a terminating event (i.e. shutdown, low-memory etc) may have
@@ -2535,25 +2090,14 @@ Return Value:
         //      harmless).
         //
 
-        WaitResult = WaitForSingleObject(Context->TryLargerTableSizeEvent, 0);
-
-        if (WaitResult != WAIT_OBJECT_0) {
-
-            if (Context->FinishedCount == 0) {
-                Event = &Context->FailedEvent;
-            } else {
-                Event = &Context->SucceededEvent;
-            }
-
-            if (!SetEvent(*Event)) {
-                SYS_ERROR(SetEvent);
-            }
-
-            SetStopSolving(Context);
+        if (Context->FinishedCount == 0) {
+            Event = &Context->FailedEvent;
+        } else {
+            Event = &Context->SucceededEvent;
         }
 
+        SetStopSolving(Context);
     }
-
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

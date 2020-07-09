@@ -1860,7 +1860,8 @@ typedef PERFECT_HASH_KEYS *PPERFECT_HASH_KEYS;
 //
 
 #define PERFECT_HASH_ALGORITHM_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
-    FIRST_ENTRY(Chm01, CHM01)
+    FIRST_ENTRY(Chm01, CHM01)                                        \
+    LAST_ENTRY(Chm02, CHM02)
 
 #define PERFECT_HASH_ALGORITHM_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_ALGORITHM_TABLE(ENTRY, ENTRY, ENTRY)
@@ -2910,6 +2911,7 @@ IsValidTableCompileFlags(
     ENTRY(CuDeviceOrdinal)                                           \
     ENTRY(CuDeviceOrdinals)                                          \
     ENTRY(SolutionsFoundRatio)                                       \
+    ENTRY(CuConcurrency)                                             \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     LAST_ENTRY(Seed3Byte2MaskCounts)
 

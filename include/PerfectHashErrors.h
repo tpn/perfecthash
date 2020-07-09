@@ -4004,3 +4004,12 @@ Abstract:
 //
 #define PH_E_INVALID_SOLUTIONS_FOUND_RATIO ((HRESULT)0xE00403A1L)
 
+//
+// MessageId: PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY
+//
+// MessageText:
+//
+// CuConcurrency exceeds MaximumConcurrency.
+//
+#define PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY ((HRESULT)0xE00403A2L)
+

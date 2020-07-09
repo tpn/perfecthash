@@ -751,6 +751,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_WORK MainWork;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
+    ULONG CuConcurrency;
+    ULONG Padding8;
 
     //
     // The algorithm is responsible for registering an appropriate callback

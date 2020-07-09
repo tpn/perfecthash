@@ -366,6 +366,7 @@ typedef CREATE_PERFECT_HASH_TABLE_IMPL *PCREATE_PERFECT_HASH_TABLE_IMPL;
 //
 
 CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm01;
+CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm02;
 
 //
 // Likewise, each algorithm implements a loader routine that matches the
@@ -390,6 +391,7 @@ typedef LOAD_PERFECT_HASH_TABLE_IMPL *PLOAD_PERFECT_HASH_TABLE_IMPL;
 //
 
 LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm01;
+LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm02;
 
 //
 // For each algorithm, declare the index impl routine.  These are gathered in an
@@ -397,6 +399,7 @@ LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm01;
 //
 
 PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexImplChm01;
+PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexImplChm02;
 
 //
 // For each algorithm, declare fast-index impl routines.  These differ from the

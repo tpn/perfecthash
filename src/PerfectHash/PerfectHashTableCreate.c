@@ -668,6 +668,7 @@ Return Value:
 
             case TableCreateParameterCuDeviceOrdinalId:
             case TableCreateParameterCuDeviceOrdinalsId:
+            case TableCreateParameterCuConcurrencyId:
 
                 //
                 // These are handled in the context.

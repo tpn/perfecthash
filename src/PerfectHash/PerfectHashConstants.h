@@ -232,6 +232,14 @@ CompletePerfectHashTableInitialization(
 
     Table->IndexImplString = NULL;
 
+    //
+    // Chm02 uses all of Chm01's resources, so switch the ID if applicable.
+    //
+
+    if (AlgorithmId == PerfectHashChm02AlgorithmId) {
+        AlgorithmId = PerfectHashChm01AlgorithmId;
+    }
+
     for (Index = 0; Index < NumberOfIndexImplStrings; Index++) {
 
         StringTuple = &IndexImplStringTuples[Index];

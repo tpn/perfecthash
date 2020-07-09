@@ -1836,7 +1836,7 @@ Routine Description:
 
 Arguments:
 
-    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which9
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which
         the routine will try and initialize CUDA.  If successful, the Context's
         Cu member will be non-NULL and point to an initialized CUDA instance.
 
@@ -1917,6 +1917,9 @@ Return Value:
             case TableCreateParameterCuDeviceOrdinalsId:
                 Context->CuDeviceOrdinals = &Param->AsValueArray;
                 break;
+            case TableCreateParameterCuConcurrencyId:
+                Context->CuConcurrency = Param->AsULong;
+                break;
             default:
                 break;
         }
@@ -1956,6 +1959,24 @@ Return Value:
         if (Context->CuDeviceOrdinal >= Context->CuDevices.NumberOfDevices) {
             PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
         }
+    }
+
+    //
+    // Validate requested concurrency.
+    //
+
+    if (Context->CuConcurrency > 0) {
+        if (Context->CuConcurrency > Context->MaximumConcurrency) {
+            Result = PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY;
+            goto Error;
+        }
+    } else {
+
+        //
+        // If CuConcurrency is 0, default it to maximum concurrency.
+        //
+
+        Context->CuConcurrency = Context->MaximumConcurrency;
     }
 
     //

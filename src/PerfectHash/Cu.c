@@ -304,6 +304,9 @@ Return Value:
     PCU_OCCUPANCY Occupancy;
     PCU_CONTEXT CuContext;
     PCSZ FunctionName;
+    CU_DEVICE DeviceOrdinal;
+    PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
 
     PCSZ KernelFunctionNames[] = {
         (PCSZ)"PerfectHashCudaSeededHashAllMultiplyShiftR2",
@@ -317,12 +320,28 @@ Return Value:
     PVOID JitOptionValues[3];
     USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
 
+    //
+    // Load the TLS context and device ordinal.
+    //
+
+    TlsContext = PerfectHashTlsEnsureContext();
+    Context = TlsContext->Context;
+    DeviceOrdinal = Context->CuDeviceOrdinal;
+
+    //
+    // Initialize the JIT options.
+    //
+
     JitOptionValues[0] = (PVOID)sizeof(Cu->JitLogBuffer);
     JitOptionValues[1] = (PVOID)Cu->JitLogBuffer;
     //JitOptionValues[2] = (PVOID)Cu->JitMaxNumberOfRegisters;
     JitOptionValues[2] = (PVOID)64LL;
 
-    CuResult = Cu->CtxCreate(&CuContext, CU_CTX_SCHED_AUTO, 1);
+    //
+    // Create a CUDA context.
+    //
+
+    CuResult = Cu->CtxCreate(&CuContext, CU_CTX_SCHED_AUTO, DeviceOrdinal);
     if (CU_FAILED(CuResult)) {
         CU_ERROR(CuCtxCreate, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;

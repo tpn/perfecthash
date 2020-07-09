@@ -407,10 +407,16 @@ typedef union _GRAPH_FLAGS {
         ULONG RemoveWriteCombineAfterSuccessfulHashKeys:1;
 
         //
+        // When set, indicates that this is a CUDA graph.
+        //
+
+        ULONG IsCuGraph:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:19;
+        ULONG Unused:18;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -427,6 +433,7 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
+#define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 
