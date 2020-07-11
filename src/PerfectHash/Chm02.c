@@ -99,6 +99,8 @@ Return Value:
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
+    BOOLEAN CreateCuGraph;
+    LPGUID InterfaceId;
     ULONG Attempt = 0;
     ULONG ReferenceCount;
     BYTE NumberOfEvents;
@@ -341,6 +343,7 @@ Return Value:
     // created the requested number of CUDA graphs.
     //
 
+    CreateCuGraph = TRUE;
     TlsContext->Flags.CreateCuGraph = TRUE;
     CuGraphCount = 0;
 
@@ -357,14 +360,22 @@ Return Value:
         //
 
         if (CuGraphCount == CuConcurrency) {
+            CreateCuGraph = FALSE;
             TlsContext->Flags.CreateCuGraph = FALSE;
-        } else if (TlsContext->Flags.CreateCuGraph != FALSE) {
+        } else if (CreateCuGraph != FALSE) {
+            ASSERT(TlsContext->Flags.CreateCuGraph != FALSE);
             CuGraphCount++;
+        }
+
+        if (CreateCuGraph != FALSE) {
+            InterfaceId = (LPGUID)&IID_PERFECT_HASH_GRAPH_CU;
+        } else {
+            InterfaceId = (LPGUID)&IID_PERFECT_HASH_GRAPH;
         }
 
         Result = Table->Vtbl->CreateInstance(Table,
                                              NULL,
-                                             &IID_PERFECT_HASH_GRAPH,
+                                             (REFIID)InterfaceId,
                                              &Graph);
 
         if (FAILED(Result)) {
@@ -400,11 +411,7 @@ Return Value:
 
         ASSERT(Graph->Rtl == Table->Rtl);
 
-        //
-        // Verify the CUDA flag is set if applicable.
-        //
-
-        if (TlsContext->Flags.CreateCuGraph != FALSE) {
+        if (CreateCuGraph != FALSE) {
             ASSERT(IsCuGraph(Graph));
         }
 

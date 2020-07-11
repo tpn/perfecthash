@@ -778,7 +778,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
-#define NUMBER_OF_INTERFACES 13
+#define NUMBER_OF_INTERFACES 14
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -796,7 +796,15 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_RTL RTL
 #define PERFECT_HASH_ALLOCATOR ALLOCATOR
 #define PERFECT_HASH_GUARDED_LIST GUARDED_LIST
+
 #define PERFECT_HASH_GRAPH GRAPH
+
+//
+// N.B. Defining GRAPH_CU as GRAPH below is intentional; we use the same struct
+//      between the original (CPU) implementation and the CUDA implementation.
+//
+
+#define PERFECT_HASH_GRAPH_CU GRAPH
 #define PERFECT_HASH_CU CU
 
 #define PERFECT_HASH_IUNKNOWN_VTBL IUNKNOWN_VTBL
@@ -805,6 +813,7 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_ALLOCATOR_VTBL ALLOCATOR_VTBL
 #define PERFECT_HASH_GUARDED_LIST_VTBL GUARDED_LIST_VTBL
 #define PERFECT_HASH_GRAPH_VTBL GRAPH_VTBL
+#define PERFECT_HASH_GRAPH_CU_VTBL GRAPH_CU_VTBL
 #define PERFECT_HASH_CU_VTBL CU_VTBL
 
 #define EXPAND_AS_SIZEOF_COMPONENT(Name, Upper, Guid) \
@@ -862,6 +871,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Directory),
     -1, // GuardedList
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Graph),
+    -1, // GraphCu
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Cu),
 
     -1,
@@ -883,6 +893,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // Directory
     -1, // GuardedList
     -1, // Graph
+    -1, // GraphCu
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Cu),
 
     -1,
@@ -1224,6 +1235,28 @@ GRAPH_VTBL GraphInterface = {
 VERIFY_VTBL_SIZE(GRAPH, 12);
 
 //
+// GraphCu
+//
+
+GRAPH_INITIALIZE GraphCuInitialize;
+GRAPH_RUNDOWN GraphCuRundown;
+GRAPH_SET_INFO GraphCuSetInfo;
+GRAPH_ENTER_SOLVING_LOOP GraphCuEnterSolvingLoop;
+GRAPH_VERIFY GraphCuVerify;
+
+GRAPH_CU_VTBL GraphCuInterface = {
+    (PGRAPH_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PGRAPH_ADD_REF)&ComponentAddRef,
+    (PGRAPH_RELEASE)&ComponentRelease,
+    (PGRAPH_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PGRAPH_LOCK_SERVER)&ComponentLockServer,
+    &GraphCuSetInfo,
+    &GraphCuEnterSolvingLoop,
+    &GraphCuVerify,
+};
+VERIFY_VTBL_SIZE(GRAPH_CU, 3);
+
+//
 // Cu
 //
 
@@ -1256,6 +1289,7 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashDirectoryInterface,
     &GuardedListInterface,
     &GraphInterface,
+    &GraphCuInterface,
     &CuInterface,
 
     NULL,
@@ -1278,6 +1312,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
+    (PCOMPONENT_INITIALIZE)&GraphCuInitialize,
     (PCOMPONENT_INITIALIZE)&CuInitialize,
 
     NULL,
@@ -1300,6 +1335,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
+    (PCOMPONENT_RUNDOWN)&GraphCuRundown,
     (PCOMPONENT_RUNDOWN)&CuRundown,
 
     NULL,

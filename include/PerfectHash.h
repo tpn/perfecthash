@@ -388,6 +388,16 @@ PerfectHashGetCurrentCpuArch(
         )                                                            \
     )                                                                \
                                                                      \
+    ENTRY(                                                           \
+        GraphCu,                                                     \
+        GRAPH_CU,                                                    \
+        GUID_EX(                                                     \
+            0x5067a808, 0xd72b, 0x4f7e,                              \
+            0xb3, 0xd0, 0xa3, 0xe8, 0xcf, 0x6f, 0x23, 0xc7           \
+                                                                     \
+        )                                                            \
+    )                                                                \
+                                                                     \
     LAST_ENTRY(                                                      \
         Cu,                                                          \
         CU,                                                          \

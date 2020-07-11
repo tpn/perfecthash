@@ -785,19 +785,46 @@ typedef GRAPH_ADD_HASHED_KEYS *PGRAPH_ADD_HASHED_KEYS;
 
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
+
+    //
+    // These methods are common to both CPU and GPU graph implementations.
+    //
+
     PGRAPH_SET_INFO SetInfo;
     PGRAPH_ENTER_SOLVING_LOOP EnterSolvingLoop;
     PGRAPH_VERIFY Verify;
-    PGRAPH_LOAD_INFO LoadInfo;
-    PGRAPH_RESET Reset;
-    PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
-    PGRAPH_SOLVE Solve;
-    PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE CalculateAssignedMemoryCoverage;
-    PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
-        CalculateAssignedMemoryCoverageForKeysSubset;
-    PGRAPH_REGISTER_SOLVED RegisterSolved;
-    PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE ShouldWeContinueTryingToSolve;
-    PGRAPH_ADD_KEYS AddKeys;
+
+    //
+    // The remaining methods are private to CPU and GPU graph implementations.
+    //
+
+    union {
+
+        //
+        // CPU methods.
+        //
+
+        struct {
+            PGRAPH_LOAD_INFO LoadInfo;
+            PGRAPH_RESET Reset;
+            PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
+            PGRAPH_SOLVE Solve;
+            PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
+                CalculateAssignedMemoryCoverage;
+            PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
+                CalculateAssignedMemoryCoverageForKeysSubset;
+            PGRAPH_REGISTER_SOLVED RegisterSolved;
+            PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
+                ShouldWeContinueTryingToSolve;
+            PGRAPH_ADD_KEYS AddKeys;
+        };
+
+        //
+        // CUDA methods.
+        //
+
+    };
+
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
@@ -1045,12 +1072,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     LARGE_INTEGER AddHashedKeysElapsedMicroseconds;
 
     //
-    // The graph interface.
-    //
-
-    GRAPH_VTBL Interface;
-
-    //
     // The current recursive traversal depth during assignment.
     //
 
@@ -1113,6 +1134,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
             };
         };
     };
+
+    //
+    // The graph interface.
+    //
+
+    GRAPH_VTBL Interface;
 
 } GRAPH;
 typedef GRAPH *PGRAPH;
