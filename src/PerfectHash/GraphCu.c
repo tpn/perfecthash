@@ -194,6 +194,381 @@ Return Value:
     return S_OK;
 }
 
+GRAPH_LOAD_INFO GraphCuLoadInfo;
+
+_Use_decl_annotations_
+HRESULT
+GraphCuLoadInfo(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine is called by graph solving worker threads prior to attempting
+    any solving; it is responsible for initializing the graph structure and
+    allocating the necessary buffers required for graph solving, using the sizes
+    indicated by the info structure previously set by the main thread via
+    SetInfo().
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph instance.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Graph was NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    PH_E_GRAPH_NO_INFO_SET - No graph information has been set for this graph.
+
+    PH_E_GRAPH_INFO_ALREADY_LOADED - Graph information has already been loaded
+        for this graph.
+
+--*/
+{
+    PCU Cu;
+    PRTL Rtl;
+    HRESULT Result;
+    PGRAPH_INFO Info;
+    PGRAPH_INFO PrevInfo;
+    PALLOCATOR Allocator;
+    ULONG ProtectionFlags;
+    PPERFECT_HASH_TABLE Table;
+    SIZE_T VertexPairsSizeInBytes;
+    PPERFECT_HASH_CONTEXT Context;
+    BOOLEAN LargePagesForVertexPairs;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PTABLE_INFO_ON_DISK TableInfoOnDisk;
+    PRTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC Alloc;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
+    }
+
+    if (!IsGraphInfoSet(Graph)) {
+        return PH_E_GRAPH_NO_INFO_SET;
+    } else if (IsGraphInfoLoaded(Graph)) {
+        return PH_E_GRAPH_INFO_ALREADY_LOADED;
+    } else {
+        Info = Graph->Info;
+    }
+
+    //
+    // Sanity check the graph size is correct.
+    //
+
+    ASSERT(sizeof(*Graph) == Info->SizeOfGraphStruct);
+
+    //
+    // Initialize aliases.
+    //
+
+    Context = Info->Context;
+    Rtl = Context->Rtl;
+    PrevInfo = Info->PrevInfo;
+    Allocator = Graph->Allocator;
+    Table = Context->Table;
+    TableInfoOnDisk = Table->TableInfoOnDisk;
+    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+
+    //
+    // Set the relevant graph fields based on the provided info.
+    //
+
+    Graph->Context = Context;
+    Graph->NumberOfSeeds = Table->TableInfoOnDisk->NumberOfSeeds;
+    Graph->NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+
+    Graph->ThreadId = GetCurrentThreadId();
+    Graph->ThreadAttempt = 0;
+
+    Graph->EdgeMask = Table->IndexMask;
+    Graph->VertexMask = Table->HashMask;
+    Graph->EdgeModulus = Table->IndexModulus;
+    Graph->VertexModulus = Table->HashModulus;
+    Graph->MaskFunctionId = Info->Context->MaskFunctionId;
+
+    Graph->Flags.Paranoid = IsParanoid(Table);
+
+    CopyInline(&Graph->Dimensions,
+               &Info->Dimensions,
+               sizeof(Graph->Dimensions));
+
+    Result = S_OK;
+
+    //
+    // Allocate (or reallocate) arrays.
+    //
+
+#define ALLOC_ARRAY(Name, Type)                       \
+    if (!Graph->##Name) {                             \
+        Graph->##Name = (Type)(                       \
+            Allocator->Vtbl->AlignedMalloc(           \
+                Allocator,                            \
+                (ULONG_PTR)Info->##Name##SizeInBytes, \
+                YMMWORD_ALIGNMENT                     \
+            )                                         \
+        );                                            \
+    } else {                                          \
+        Graph->##Name## = (Type)(                     \
+            Allocator->Vtbl->AlignedReAlloc(          \
+                Allocator,                            \
+                Graph->##Name,                        \
+                (ULONG_PTR)Info->##Name##SizeInBytes, \
+                YMMWORD_ALIGNMENT                     \
+            )                                         \
+        );                                            \
+    }                                                 \
+    if (!Graph->##Name) {                             \
+        Result = E_OUTOFMEMORY;                       \
+        goto Error;                                   \
+    }
+
+    ALLOC_ARRAY(Edges, PEDGE);
+    ALLOC_ARRAY(Next, PEDGE);
+    ALLOC_ARRAY(First, PVERTEX);
+    ALLOC_ARRAY(Assigned, PASSIGNED);
+
+    //
+    // If we're hashing all keys first, prepare the vertex pairs array if it
+    // hasn't already been prepared.  (This array is sized off the number of
+    // keys, which never changes upon subsequent table resize events, so it
+    // never needs to be reallocated to a larger size (unlike the other arrays
+    // above, which grow larger upon each resize event).)
+    //
+
+    if (TableCreateFlags.HashAllKeysFirst) {
+
+        ASSERT(Info->VertexPairsSizeInBytes != 0);
+        VertexPairsSizeInBytes = (SIZE_T)Info->VertexPairsSizeInBytes;
+
+        if (Graph->VertexPairs == NULL) {
+
+            LargePagesForVertexPairs = (BOOLEAN)(
+                TableCreateFlags.TryLargePagesForVertexPairs != FALSE
+            );
+
+            ProtectionFlags = PAGE_READWRITE;
+
+            if (Graph->Flags.WantsWriteCombiningForVertexPairsArray) {
+
+                //
+                // Large pages and write-combine are incompatible.  (This will
+                // have been weeded out by IsValidTableCreateFlags(), so we can
+                // just ASSERT() instead here.)
+                //
+
+                ASSERT(!LargePagesForVertexPairs);
+
+                ProtectionFlags |= PAGE_WRITECOMBINE;
+            }
+
+            //
+            // Proceed with allocation of the vertex pairs array.
+            //
+
+            Alloc = Rtl->Vtbl->TryLargePageVirtualAlloc;
+            Graph->VertexPairs = Alloc(Rtl,
+                                       NULL,
+                                       VertexPairsSizeInBytes,
+                                       MEM_RESERVE | MEM_COMMIT,
+                                       ProtectionFlags,
+                                       &LargePagesForVertexPairs);
+
+            if (Graph->VertexPairs == NULL) {
+                Result = E_OUTOFMEMORY;
+                goto Error;
+            }
+
+            //
+            // Update the graph flags indicating whether or not large pages
+            // were used, and if write-combining is active.
+            //
+
+            Graph->Flags.VertexPairsArrayUsesLargePages =
+                LargePagesForVertexPairs;
+
+            Graph->Flags.VertexPairsArrayIsWriteCombined =
+                Graph->Flags.WantsWriteCombiningForVertexPairsArray;
+
+        }
+    }
+
+    //
+    // Set the bitmap sizes and then allocate (or reallocate) the bitmap
+    // buffers.
+    //
+
+    Graph->DeletedEdgesBitmap.SizeOfBitMap = Graph->TotalNumberOfEdges;
+    Graph->VisitedVerticesBitmap.SizeOfBitMap = Graph->NumberOfVertices;
+    Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices;
+    Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices;
+
+#define ALLOC_BITMAP_BUFFER(Name)                          \
+    if (!Graph->##Name##.Buffer) {                         \
+        Graph->##Name##.Buffer = (PULONG)(                 \
+            Allocator->Vtbl->Malloc(                       \
+                Allocator,                                 \
+                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
+            )                                              \
+        );                                                 \
+    } else {                                               \
+        Graph->##Name##.Buffer = (PULONG)(                 \
+            Allocator->Vtbl->ReAlloc(                      \
+                Allocator,                                 \
+                Graph->##Name##.Buffer,                    \
+                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
+            )                                              \
+        );                                                 \
+    }                                                      \
+    if (!Graph->##Name##.Buffer) {                         \
+        Result = E_OUTOFMEMORY;                            \
+        goto Error;                                        \
+    }
+
+    ALLOC_BITMAP_BUFFER(DeletedEdgesBitmap);
+    ALLOC_BITMAP_BUFFER(VisitedVerticesBitmap);
+    ALLOC_BITMAP_BUFFER(AssignedBitmap);
+    ALLOC_BITMAP_BUFFER(IndexBitmap);
+
+    //
+    // Check to see if we're in "first graph wins" mode, and have also been
+    // asked to skip memory coverage information.  If so, we can jump straight
+    // to the end and finish up.
+    //
+
+    if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
+        Graph->Flags.WantsAssignedMemoryCoverage = FALSE;
+        goto End;
+    }
+
+    if (FirstSolvedGraphWins(Context)) {
+
+        Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
+
+    } else {
+
+        if (DoesBestCoverageTypeRequireKeysSubset(Context->BestCoverageType)) {
+            Graph->Flags.WantsAssignedMemoryCoverageForKeysSubset = TRUE;
+        } else {
+            Graph->Flags.WantsAssignedMemoryCoverage = TRUE;
+        }
+
+    }
+
+    //
+    // Fill out the assigned memory coverage structure and allocate buffers.
+    //
+
+    Coverage = &Graph->AssignedMemoryCoverage;
+
+    Coverage->TotalNumberOfPages = Info->AssignedArrayNumberOfPages;
+    Coverage->TotalNumberOfLargePages = Info->AssignedArrayNumberOfLargePages;
+    Coverage->TotalNumberOfCacheLines = Info->AssignedArrayNumberOfCacheLines;
+
+#define ALLOC_ASSIGNED_ARRAY(Name, Type)               \
+    if (!Coverage->##Name) {                           \
+        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedMalloc(            \
+                Allocator,                             \
+                (ULONG_PTR)Info->##Name##SizeInBytes,  \
+                YMMWORD_ALIGNMENT                      \
+            )                                          \
+        );                                             \
+    } else {                                           \
+        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedReAlloc(           \
+                Allocator,                             \
+                Coverage->##Name,                      \
+                (ULONG_PTR)Info->##Name##SizeInBytes,  \
+                YMMWORD_ALIGNMENT                      \
+            )                                          \
+        );                                             \
+    }                                                  \
+    if (!Coverage->##Name) {                           \
+        Result = E_OUTOFMEMORY;                        \
+        goto Error;                                    \
+    }
+
+    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerPage, PAGE);
+    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine, CACHE_LINE);
+
+    //
+    // The number of large pages consumed may not change between resize events;
+    // avoid a realloc if unnecessary by checking the previous info's number of
+    // large pages if applicable.
+    //
+
+#define ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Name)                                 \
+    if (!Coverage->##Name) {                                                  \
+        Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                      \
+            Allocator->Vtbl->AlignedMalloc(                                   \
+                Allocator,                                                    \
+                (ULONG_PTR)Info->##Name##SizeInBytes,                         \
+                YMMWORD_ALIGNMENT                                             \
+            )                                                                 \
+        );                                                                    \
+    } else {                                                                  \
+        BOOLEAN DoReAlloc = TRUE;                                             \
+        if (PrevInfo) {                                                       \
+            if (PrevInfo->##Name##SizeInBytes == Info->##Name##SizeInBytes) { \
+                DoReAlloc = FALSE;                                            \
+            }                                                                 \
+        }                                                                     \
+        if (DoReAlloc) {                                                      \
+            Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                  \
+                Allocator->Vtbl->AlignedReAlloc(                              \
+                    Allocator,                                                \
+                    Coverage->##Name,                                         \
+                    (ULONG_PTR)Info->##Name##SizeInBytes,                     \
+                    YMMWORD_ALIGNMENT                                         \
+                )                                                             \
+            );                                                                \
+        }                                                                     \
+    }                                                                         \
+    if (!Coverage->##Name) {                                                  \
+        Result = E_OUTOFMEMORY;                                               \
+        goto Error;                                                           \
+    }
+
+    ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(NumberOfAssignedPerLargePage);
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (SUCCEEDED(Result)) {
+        Graph->Flags.IsInfoLoaded = TRUE;
+        Graph->LastLoadedNumberOfVertices = Graph->NumberOfVertices;
+    }
+
+    return Result;
+
+}
+
 
 GRAPH_ENTER_SOLVING_LOOP GraphCuEnterSolvingLoop;
 
