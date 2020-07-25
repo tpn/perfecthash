@@ -150,6 +150,17 @@ Return Value:
     }
 
     //
+    // Get the number of devices.
+    //
+
+    CuResult = Cu->DeviceGetCount(&Cu->NumberOfDevices);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuInitialize_DeviceGetCount, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
     // Get the driver version.
     //
 
@@ -239,18 +250,6 @@ Return Value:
     }
 
     //
-    // Load kernels.
-    //
-
-    Cu->JitMaxNumberOfRegisters = 32;
-
-    Result = CuLoadKernels(Cu);
-    if (FAILED(Result)) {
-        PH_ERROR(CuLoadKernels, Result);
-        goto Error;
-    }
-
-    //
     // We're done!  Indicate success and finish up.
     //
 
@@ -326,7 +325,8 @@ Return Value:
 
     TlsContext = PerfectHashTlsEnsureContext();
     Context = TlsContext->Context;
-    DeviceOrdinal = Context->CuDeviceOrdinal;
+    DeviceOrdinal = 0;
+    //DeviceOrdinal = Context->CuDeviceOrdinal;
 
     //
     // Initialize the JIT options.

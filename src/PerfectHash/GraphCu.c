@@ -233,17 +233,16 @@ Return Value:
     PCU Cu;
     PRTL Rtl;
     HRESULT Result;
+    CU_RESULT CuResult;
+    PGRAPH CuDeviceGraph;
     PGRAPH_INFO Info;
     PGRAPH_INFO PrevInfo;
     PALLOCATOR Allocator;
-    ULONG ProtectionFlags;
     PPERFECT_HASH_TABLE Table;
-    SIZE_T VertexPairsSizeInBytes;
     PPERFECT_HASH_CONTEXT Context;
-    BOOLEAN LargePagesForVertexPairs;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
-    PRTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC Alloc;
+    CU_MEM_HOST_ALLOC_FLAGS CuMemHostAllocFlags;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
 
     //
@@ -273,12 +272,16 @@ Return Value:
     //
 
     Context = Info->Context;
+    Cu = Context->Cu;
     Rtl = Context->Rtl;
     PrevInfo = Info->PrevInfo;
     Allocator = Graph->Allocator;
     Table = Context->Table;
     TableInfoOnDisk = Table->TableInfoOnDisk;
     TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    CuDeviceGraph = Graph->CuDeviceGraph;
+
+    ASSERT(CuDeviceGraph != NULL);
 
     //
     // Set the relevant graph fields based on the provided info.
@@ -306,106 +309,57 @@ Return Value:
     Result = S_OK;
 
     //
-    // Allocate (or reallocate) arrays.
+    // Allocate arrays.  The VertexPairs, Edges, Next, and First arrays are all
+    // local to the device.  The Assigned array is allocated on both the device
+    // and the host.
     //
 
-#define ALLOC_ARRAY(Name, Type)                       \
-    if (!Graph->##Name) {                             \
-        Graph->##Name = (Type)(                       \
-            Allocator->Vtbl->AlignedMalloc(           \
-                Allocator,                            \
-                (ULONG_PTR)Info->##Name##SizeInBytes, \
-                YMMWORD_ALIGNMENT                     \
-            )                                         \
-        );                                            \
-    } else {                                          \
-        Graph->##Name## = (Type)(                     \
-            Allocator->Vtbl->AlignedReAlloc(          \
-                Allocator,                            \
-                Graph->##Name,                        \
-                (ULONG_PTR)Info->##Name##SizeInBytes, \
-                YMMWORD_ALIGNMENT                     \
-            )                                         \
-        );                                            \
-    }                                                 \
-    if (!Graph->##Name) {                             \
-        Result = E_OUTOFMEMORY;                       \
-        goto Error;                                   \
+    CuMemHostAllocFlags.AsULong = 0;
+
+#define ALLOC_DEVICE_ARRAY(Name)                                     \
+    ASSERT(Graph->##Name == NULL);                                   \
+    CuResult = Cu->MemAlloc(                                         \
+        (PCU_DEVICE_POINTER)&Graph->##Name,                          \
+        (SIZE_T)Info->##Name##SizeInBytes                            \
+    );                                                               \
+    if (CU_FAILED(CuResult)) {                                       \
+        CU_ERROR(GraphCuLoadInfo_MemAlloc_##Name##_Array, CuResult); \
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {                  \
+            Result = PH_E_CUDA_OUT_OF_MEMORY;                        \
+        } else {                                                     \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;               \
+        }                                                            \
+        goto Error;                                                  \
     }
 
-    ALLOC_ARRAY(Edges, PEDGE);
-    ALLOC_ARRAY(Next, PEDGE);
-    ALLOC_ARRAY(First, PVERTEX);
-    ALLOC_ARRAY(Assigned, PASSIGNED);
-
-    //
-    // If we're hashing all keys first, prepare the vertex pairs array if it
-    // hasn't already been prepared.  (This array is sized off the number of
-    // keys, which never changes upon subsequent table resize events, so it
-    // never needs to be reallocated to a larger size (unlike the other arrays
-    // above, which grow larger upon each resize event).)
-    //
-
-    if (TableCreateFlags.HashAllKeysFirst) {
-
-        ASSERT(Info->VertexPairsSizeInBytes != 0);
-        VertexPairsSizeInBytes = (SIZE_T)Info->VertexPairsSizeInBytes;
-
-        if (Graph->VertexPairs == NULL) {
-
-            LargePagesForVertexPairs = (BOOLEAN)(
-                TableCreateFlags.TryLargePagesForVertexPairs != FALSE
-            );
-
-            ProtectionFlags = PAGE_READWRITE;
-
-            if (Graph->Flags.WantsWriteCombiningForVertexPairsArray) {
-
-                //
-                // Large pages and write-combine are incompatible.  (This will
-                // have been weeded out by IsValidTableCreateFlags(), so we can
-                // just ASSERT() instead here.)
-                //
-
-                ASSERT(!LargePagesForVertexPairs);
-
-                ProtectionFlags |= PAGE_WRITECOMBINE;
-            }
-
-            //
-            // Proceed with allocation of the vertex pairs array.
-            //
-
-            Alloc = Rtl->Vtbl->TryLargePageVirtualAlloc;
-            Graph->VertexPairs = Alloc(Rtl,
-                                       NULL,
-                                       VertexPairsSizeInBytes,
-                                       MEM_RESERVE | MEM_COMMIT,
-                                       ProtectionFlags,
-                                       &LargePagesForVertexPairs);
-
-            if (Graph->VertexPairs == NULL) {
-                Result = E_OUTOFMEMORY;
-                goto Error;
-            }
-
-            //
-            // Update the graph flags indicating whether or not large pages
-            // were used, and if write-combining is active.
-            //
-
-            Graph->Flags.VertexPairsArrayUsesLargePages =
-                LargePagesForVertexPairs;
-
-            Graph->Flags.VertexPairsArrayIsWriteCombined =
-                Graph->Flags.WantsWriteCombiningForVertexPairsArray;
-
-        }
+#define ALLOC_HOST_ARRAY(Name)                                   \
+    ASSERT(Graph->##Name == NULL);                               \
+    CuResult = Cu->MemHostAlloc(                                 \
+        (PVOID *)&Graph->##Name,                                 \
+        (SIZE_T)Info->##Name##SizeInBytes,                       \
+        CuMemHostAllocFlags                                      \
+    );                                                           \
+    if (CU_FAILED(CuResult)) {                                   \
+        CU_ERROR(GraphCuLoadInfo_MemHostAlloc_##Name, CuResult); \
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {              \
+            Result = PH_E_CUDA_OUT_OF_MEMORY;                    \
+        } else {                                                 \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;           \
+        }                                                        \
+        goto Error;                                              \
     }
 
+    ALLOC_DEVICE_ARRAY(VertexPairs);
+    ALLOC_DEVICE_ARRAY(Edges);
+    ALLOC_DEVICE_ARRAY(Next);
+    ALLOC_DEVICE_ARRAY(First);
+    ALLOC_DEVICE_ARRAY(AssignedDevice);
+
+    ALLOC_HOST_ARRAY(AssignedHost);
+
     //
-    // Set the bitmap sizes and then allocate (or reallocate) the bitmap
-    // buffers.
+    // Set the bitmap sizes and then allocate the bitmap buffers (which all
+    // live on the device).
     //
 
     Graph->DeletedEdgesBitmap.SizeOfBitMap = Graph->TotalNumberOfEdges;
@@ -413,42 +367,36 @@ Return Value:
     Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices;
     Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices;
 
-#define ALLOC_BITMAP_BUFFER(Name)                          \
-    if (!Graph->##Name##.Buffer) {                         \
-        Graph->##Name##.Buffer = (PULONG)(                 \
-            Allocator->Vtbl->Malloc(                       \
-                Allocator,                                 \
-                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
-            )                                              \
-        );                                                 \
-    } else {                                               \
-        Graph->##Name##.Buffer = (PULONG)(                 \
-            Allocator->Vtbl->ReAlloc(                      \
-                Allocator,                                 \
-                Graph->##Name##.Buffer,                    \
-                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
-            )                                              \
-        );                                                 \
-    }                                                      \
-    if (!Graph->##Name##.Buffer) {                         \
-        Result = E_OUTOFMEMORY;                            \
-        goto Error;                                        \
+#define ALLOC_DEVICE_BITMAP_BUFFER(Name)                              \
+    ASSERT(Graph->##Name##.Buffer == NULL);                           \
+    CuResult = Cu->MemAlloc(                                          \
+        (PCU_DEVICE_POINTER)&Graph->##Name##.Buffer,                  \
+        (SIZE_T)Info->##Name##BufferSizeInBytes                       \
+    );                                                                \
+    if (CU_FAILED(CuResult)) {                                        \
+        CU_ERROR(GraphCuLoadInfo_MemAlloc_##Name##_Bitmap, CuResult); \
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {                   \
+            Result = PH_E_CUDA_OUT_OF_MEMORY;                         \
+        } else {                                                      \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                \
+        }                                                             \
+        goto Error;                                                   \
     }
 
-    ALLOC_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ALLOC_BITMAP_BUFFER(VisitedVerticesBitmap);
-    ALLOC_BITMAP_BUFFER(AssignedBitmap);
-    ALLOC_BITMAP_BUFFER(IndexBitmap);
+    ALLOC_DEVICE_BITMAP_BUFFER(DeletedEdgesBitmap);
+    ALLOC_DEVICE_BITMAP_BUFFER(VisitedVerticesBitmap);
+    ALLOC_DEVICE_BITMAP_BUFFER(AssignedBitmap);
+    ALLOC_DEVICE_BITMAP_BUFFER(IndexBitmap);
 
     //
     // Check to see if we're in "first graph wins" mode, and have also been
     // asked to skip memory coverage information.  If so, we can jump straight
-    // to the end and finish up.
+    // to the finalization step.
     //
 
     if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
         Graph->Flags.WantsAssignedMemoryCoverage = FALSE;
-        goto End;
+        goto Finalize;
     }
 
     if (FirstSolvedGraphWins(Context)) {
@@ -475,72 +423,48 @@ Return Value:
     Coverage->TotalNumberOfLargePages = Info->AssignedArrayNumberOfLargePages;
     Coverage->TotalNumberOfCacheLines = Info->AssignedArrayNumberOfCacheLines;
 
-#define ALLOC_ASSIGNED_ARRAY(Name, Type)               \
-    if (!Coverage->##Name) {                           \
-        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
-            Allocator->Vtbl->AlignedMalloc(            \
-                Allocator,                             \
-                (ULONG_PTR)Info->##Name##SizeInBytes,  \
-                YMMWORD_ALIGNMENT                      \
-            )                                          \
-        );                                             \
-    } else {                                           \
-        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
-            Allocator->Vtbl->AlignedReAlloc(           \
-                Allocator,                             \
-                Coverage->##Name,                      \
-                (ULONG_PTR)Info->##Name##SizeInBytes,  \
-                YMMWORD_ALIGNMENT                      \
-            )                                          \
-        );                                             \
-    }                                                  \
-    if (!Coverage->##Name) {                           \
-        Result = E_OUTOFMEMORY;                        \
-        goto Error;                                    \
+#define ALLOC_DEVICE_ASSIGNED_ARRAY(Name)                                    \
+    ASSERT(Coverage->##Name == NULL);                                        \
+    CuResult = Cu->MemAlloc(                                                 \
+        (PCU_DEVICE_POINTER)&Coverage->##Name,                               \
+        (SIZE_T)Info->##Name##SizeInBytes                                    \
+    );                                                                       \
+    if (CU_FAILED(CuResult)) {                                               \
+        CU_ERROR(GraphCuLoadInfo_MemAlloc_##Name##_AssignedArray, CuResult); \
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {                          \
+            Result = PH_E_CUDA_OUT_OF_MEMORY;                                \
+        } else {                                                             \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                       \
+        }                                                                    \
+        goto Error;                                                          \
     }
 
-    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerPage, PAGE);
-    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine, CACHE_LINE);
+    ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
+    ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+    ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
 
     //
-    // The number of large pages consumed may not change between resize events;
-    // avoid a realloc if unnecessary by checking the previous info's number of
-    // large pages if applicable.
+    // Intentional follow-on to Finalize.
     //
 
-#define ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Name)                                 \
-    if (!Coverage->##Name) {                                                  \
-        Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                      \
-            Allocator->Vtbl->AlignedMalloc(                                   \
-                Allocator,                                                    \
-                (ULONG_PTR)Info->##Name##SizeInBytes,                         \
-                YMMWORD_ALIGNMENT                                             \
-            )                                                                 \
-        );                                                                    \
-    } else {                                                                  \
-        BOOLEAN DoReAlloc = TRUE;                                             \
-        if (PrevInfo) {                                                       \
-            if (PrevInfo->##Name##SizeInBytes == Info->##Name##SizeInBytes) { \
-                DoReAlloc = FALSE;                                            \
-            }                                                                 \
-        }                                                                     \
-        if (DoReAlloc) {                                                      \
-            Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                  \
-                Allocator->Vtbl->AlignedReAlloc(                              \
-                    Allocator,                                                \
-                    Coverage->##Name,                                         \
-                    (ULONG_PTR)Info->##Name##SizeInBytes,                     \
-                    YMMWORD_ALIGNMENT                                         \
-                )                                                             \
-            );                                                                \
-        }                                                                     \
-    }                                                                         \
-    if (!Coverage->##Name) {                                                  \
-        Result = E_OUTOFMEMORY;                                               \
-        goto Error;                                                           \
+Finalize:
+
+    ASSERT(Result == S_OK);
+
+    Graph->Flags.IsInfoLoaded = TRUE;
+    Graph->LastLoadedNumberOfVertices = Graph->NumberOfVertices;
+
+    //
+    // At this point, we've prepared the host-backed Graph instance, and need to
+    // copy the entire structure over to the GPU device.
+    //
+
+    CuResult = Cu->StreamCreate(&Graph->Stream, CU_STREAM_NON_BLOCKING);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuLoadInfo_StreamCreate, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
     }
-
-    ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(NumberOfAssignedPerLargePage);
 
     //
     // We're done, finish up.
@@ -555,14 +479,21 @@ Error:
     }
 
     //
+    // Convert the CUDA out-of-memory error code to the corresponding HRESULT,
+    // if applicable.
+    //
+
+    if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
+        Result = E_OUTOFMEMORY;
+    }
+
+    //
     // Intentional follow-on to End.
     //
 
 End:
 
     if (SUCCEEDED(Result)) {
-        Graph->Flags.IsInfoLoaded = TRUE;
-        Graph->LastLoadedNumberOfVertices = Graph->NumberOfVertices;
     }
 
     return Result;

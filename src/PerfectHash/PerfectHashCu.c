@@ -187,6 +187,7 @@ Return Value:
     CU_RESULT CuResult;
     PVOID Address = NULL;
     PSTRING Name;
+    PCHAR Buffer;
 
     //
     // Get the number of devices.
@@ -218,14 +219,25 @@ Return Value:
         Device->Ordinal = Index;
 
         //
+        // Obtain the device identifier.
+        //
+
+        CuResult = Cu->DeviceGet(&Device->Id, Device->Ordinal);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CreatePerfectHashCuDevices_DeviceGet, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
         // Load the device name.
         //
 
         Name = &Device->Name;
-        Name->Buffer = (PCHAR)&Device->NameBuffer;
+        Buffer = (PCHAR)&Device->NameBuffer;
         Name->Length = 0;
         Name->MaximumLength = sizeof(Device->NameBuffer);
-        CuResult = Cu->DeviceGetName(Name->Buffer,
+        CuResult = Cu->DeviceGetName(Buffer,
                                      (LONG)Name->MaximumLength,
                                      Device->Ordinal);
         if (CU_FAILED(CuResult)) {
@@ -234,7 +246,8 @@ Return Value:
             goto Error;
         }
 
-        Name->Length = (USHORT)strlen(Name->Buffer);
+        Name->Length = (USHORT)strlen(Buffer);
+        Name->Buffer = Buffer;
 
         //
         // Load device attributes.

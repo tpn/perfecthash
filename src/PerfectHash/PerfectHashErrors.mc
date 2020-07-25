@@ -166,6 +166,14 @@ Language=English
 The table was created successfully, however, the values array could not be allocated.  The table cannot be used.
 .
 
+MessageId=0x088
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_CUDA_OUT_OF_MEMORY
+Language=English
+The CUDA device is out of memory.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL -- Usage Messages
@@ -3652,5 +3660,117 @@ Facility=ITF
 SymbolicName=PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY
 Language=English
 CuConcurrency exceeds MaximumConcurrency.
+.
+
+MessageId=0x3a3
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CUDA_OUT_OF_MEMORY
+Language=English
+The CUDA device is out of memory.
+.
+
+MessageId=0x3a4
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES
+Language=English
+Invalid --CuDevices.
+.
+
+MessageId=0x3a5
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES_BLOCKS_PER_GRID
+Language=English
+Invalid --CuDevicesBlocksPerGrid.
+.
+
+MessageId=0x3a6
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES_THREADS_PER_BLOCK
+Language=English
+Invalid --CuDevicesThreadsPerBlock.
+.
+
+MessageId=0x3a7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
+Language=English
+Invalid --CuDevicesKernelRuntimeTargetInMilliseconds.
+.
+
+MessageId=0x3a8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_CONCURRENCY
+Language=English
+--CuConcurrency must be greater than 0 and less than or equal to maximum concurrency.
+.
+
+MessageId=0x3a9
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_CONCURRENCY_MANDATORY_FOR_SELECTED_ALGORITHM
+Language=English
+--CuConcurrency is mandatory for the selected algorithm.
+.
+
+MessageId=0x3aa
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES
+Language=English
+--CuDevicesBlocksPerGrid requires --CuDevices.
+.
+
+MessageId=0x3ab
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES
+Language=English
+--CuDevicesThreadsPerBlock requires --CuDevices.
+.
+
+MessageId=0x3ac
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES
+Language=English
+--CuDevicesKernelRuntimeTargetInMilliseconds requires --CuDevices.
+.
+
+MessageId=0x3ad
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+Language=English
+Number of values supplied to --CuDevicesBlocksPerGrid must match the number of values supplied to --CuDevices.
+.
+
+MessageId=0x3ae
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+Language=English
+Number of values supplied to --CuDevicesThreadsPerBlock must match the number of values supplied to --CuDevices.
+.
+
+MessageId=0x3af
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+Language=English
+Number of values supplied to --CuDevicesKernelRuntimeTargetInMilliseconds must match the number of values supplied to --CuDevices.
+.
+
+MessageId=0x3b0
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY
+Language=English
+Number of values supplied to --CuDevices must match the value supplied by --CuConcurrency.
 .
 

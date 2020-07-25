@@ -333,22 +333,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PH_CU_DEVICES CuDevices;
 
     //
-    // Pointer to the array of CUDA device ordinals from the command line.
+    // CUDA device contexts.
     //
 
-    PVALUE_ARRAY CuDeviceOrdinals;
-
-    //
-    // CUDA device ordinal from the command line.
-    //
-
-    LONG CuDeviceOrdinal;
-
-    //
-    // Pad out to an 8-byte boundary.
-    //
-
-    ULONG Padding1;
+    PPH_CU_DEVICE_CONTEXTS CuDeviceContexts;
 
     //
     // An in-memory union of all possible on-disk table info representations.
@@ -471,6 +459,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     _Guarded_by_(BestGraphCriticalSection)
     struct _GRAPH *SpareGraph;
+
+    _Guarded_by_(BestGraphCriticalSection)
+    struct _GRAPH *SpareCuGraph;
 
     //
     // The following counter is incremented every time a new "best graph" is

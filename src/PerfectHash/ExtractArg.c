@@ -65,13 +65,11 @@ TryExtractArgContextBulkCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
-    DECL_ARG(TryCuda);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
-    SET_FLAG_AND_RETURN_IF_EQUAL(TryCuda);
 
     return S_FALSE;
 }
@@ -91,13 +89,11 @@ TryExtractArgContextTableCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
-    DECL_ARG(TryCuda);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
-    SET_FLAG_AND_RETURN_IF_EQUAL(TryCuda);
 
     return S_FALSE;
 }
@@ -314,10 +310,6 @@ TryExtractValueArray(
         if (*Wide == L',') {
             Commas++;
         }
-    }
-
-    if (Commas == 0) {
-        return S_FALSE;
     }
 
     //
@@ -919,8 +911,6 @@ Return Value:
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(ValueSizeInBytes);
 
-    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuConcurrency);
-
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)
 
@@ -965,13 +955,6 @@ Return Value:
         KeysSubset,
         KEYS_SUBSET
     );
-
-    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(
-        CuDeviceOrdinals,
-        CU_DEVICE_ORDINALS
-    );
-
-    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuDeviceOrdinal);
 
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(Name, Upper) \
     if (IS_EQUAL(Name)) {                                \
@@ -1036,6 +1019,20 @@ Return Value:
         32
     );
 
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuConcurrency);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(CuDevices, CU_DEVICES);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(CuDevicesBlocksPerGrid,
+                                        CU_DEVICES_BLOCKS_PER_GRID);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(CuDevicesThreadsPerBlock,
+                                        CU_DEVICES_THREADS_PER_BLOCK);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(
+        CuDevicesKernelRuntimeTargetInMilliseconds,
+        CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
+    );
 
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(Name, Upper)           \
     if (IS_EQUAL(Name##ThreadpoolPriority)) {                              \

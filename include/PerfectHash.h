@@ -2331,16 +2331,10 @@ typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
-        // When set, tries to use CUDA where applicable (experimental).
-        //
-
-        ULONG TryCuda:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -2397,16 +2391,10 @@ typedef union _PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
-        // When set, tries to use CUDA where applicable (experimental).
-        //
-
-        ULONG TryCuda:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -2918,10 +2906,12 @@ IsValidTableCompileFlags(
     ENTRY(Seeds)                                                     \
     ENTRY(ValueSizeInBytes)                                          \
     ENTRY(KeySizeInBytes)                                            \
-    ENTRY(CuDeviceOrdinal)                                           \
-    ENTRY(CuDeviceOrdinals)                                          \
     ENTRY(SolutionsFoundRatio)                                       \
     ENTRY(CuConcurrency)                                             \
+    ENTRY(CuDevices)                                                 \
+    ENTRY(CuDevicesBlocksPerGrid)                                    \
+    ENTRY(CuDevicesThreadsPerBlock)                                  \
+    ENTRY(CuDevicesKernelRuntimeTargetInMilliseconds)                \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     LAST_ENTRY(Seed3Byte2MaskCounts)
 
@@ -3073,9 +3063,18 @@ DoesTableCreateParameterRequireDeallocation(
     _In_ PERFECT_HASH_TABLE_CREATE_PARAMETER_ID Id
     )
 {
+
+    //
+    // All parameters that accept comma-separated lists require deallocation.
+    //
+
     return (
         Id == TableCreateParameterKeysSubsetId ||
         Id == TableCreateParameterSeedsId ||
+        Id == TableCreateParameterCuDevicesId ||
+        Id == TableCreateParameterCuDevicesBlocksPerGridId ||
+        Id == TableCreateParameterCuDevicesThreadsPerBlockId ||
+        Id == TableCreateParameterCuDevicesKernelRuntimeTargetInMillisecondsId ||
         IsSeedMaskCountParameter(Id)
     );
 }

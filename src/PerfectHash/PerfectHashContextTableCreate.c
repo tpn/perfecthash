@@ -381,6 +381,8 @@ Return Value:
         goto Error;
     }
 
+    // XXX TODO
+#if 0
     //
     // Keys were loaded successfully.  If CUDA is available, register the base
     // address of the array.
@@ -395,6 +397,7 @@ Return Value:
             goto Error;
         }
     }
+#endif
 
     //
     // Proceed with table creation.
@@ -1319,23 +1322,12 @@ Return Value:
     PerfectHashContextApplyThreadpoolPriorities(Context,
                                                 &TableCreateParameters);
 
-    if (ContextTableCreateFlags.TryCuda != FALSE) {
+    //
+    // Set the active context via TLS.
+    //
 
-        //
-        // The Cu component needs to obtain the active Context, which we
-        // achieve via the TLS context.
-        //
-
-        TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
-        TlsContext->Context = Context;
-
-        Result = PerfectHashContextInitializeCuda(Context,
-                                                  &TableCreateParameters);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashContextTableCreateArgvW_InitializeCuda, Result);
-            return Result;
-        }
-    }
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+    TlsContext->Context = Context;
 
     Result = Context->Vtbl->TableCreate(Context,
                                         &KeysPath,

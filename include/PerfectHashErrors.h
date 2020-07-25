@@ -221,6 +221,15 @@ Abstract:
 //
 #define PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED ((HRESULT)0x60040087L)
 
+//
+// MessageId: PH_I_CUDA_OUT_OF_MEMORY
+//
+// MessageText:
+//
+// The CUDA device is out of memory.
+//
+#define PH_I_CUDA_OUT_OF_MEMORY          ((HRESULT)0x60040088L)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL -- Usage Messages
@@ -4012,4 +4021,130 @@ Abstract:
 // CuConcurrency exceeds MaximumConcurrency.
 //
 #define PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY ((HRESULT)0xE00403A2L)
+
+//
+// MessageId: PH_E_CUDA_OUT_OF_MEMORY
+//
+// MessageText:
+//
+// The CUDA device is out of memory.
+//
+#define PH_E_CUDA_OUT_OF_MEMORY          ((HRESULT)0xE00403A3L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES
+//
+// MessageText:
+//
+// Invalid --CuDevices.
+//
+#define PH_E_INVALID_CU_DEVICES          ((HRESULT)0xE00403A4L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES_BLOCKS_PER_GRID
+//
+// MessageText:
+//
+// Invalid --CuDevicesBlocksPerGrid.
+//
+#define PH_E_INVALID_CU_DEVICES_BLOCKS_PER_GRID ((HRESULT)0xE00403A5L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES_THREADS_PER_BLOCK
+//
+// MessageText:
+//
+// Invalid --CuDevicesThreadsPerBlock.
+//
+#define PH_E_INVALID_CU_DEVICES_THREADS_PER_BLOCK ((HRESULT)0xE00403A6L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
+//
+// MessageText:
+//
+// Invalid --CuDevicesKernelRuntimeTargetInMilliseconds.
+//
+#define PH_E_INVALID_CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS ((HRESULT)0xE00403A7L)
+
+//
+// MessageId: PH_E_INVALID_CU_CONCURRENCY
+//
+// MessageText:
+//
+// --CuConcurrency must be greater than 0 and less than or equal to maximum concurrency.
+//
+#define PH_E_INVALID_CU_CONCURRENCY      ((HRESULT)0xE00403A8L)
+
+//
+// MessageId: PH_E_CU_CONCURRENCY_MANDATORY_FOR_SELECTED_ALGORITHM
+//
+// MessageText:
+//
+// --CuConcurrency is mandatory for the selected algorithm.
+//
+#define PH_E_CU_CONCURRENCY_MANDATORY_FOR_SELECTED_ALGORITHM ((HRESULT)0xE00403A9L)
+
+//
+// MessageId: PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES
+//
+// MessageText:
+//
+// --CuDevicesBlocksPerGrid requires --CuDevices.
+//
+#define PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES ((HRESULT)0xE00403AAL)
+
+//
+// MessageId: PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES
+//
+// MessageText:
+//
+// --CuDevicesThreadsPerBlock requires --CuDevices.
+//
+#define PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES ((HRESULT)0xE00403ABL)
+
+//
+// MessageId: PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES
+//
+// MessageText:
+//
+// --CuDevicesKernelRuntimeTargetInMilliseconds requires --CuDevices.
+//
+#define PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES ((HRESULT)0xE00403ACL)
+
+//
+// MessageId: PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevicesBlocksPerGrid must match the number of values supplied to --CuDevices.
+//
+#define PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT ((HRESULT)0xE00403ADL)
+
+//
+// MessageId: PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevicesThreadsPerBlock must match the number of values supplied to --CuDevices.
+//
+#define PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT ((HRESULT)0xE00403AEL)
+
+//
+// MessageId: PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevicesKernelRuntimeTargetInMilliseconds must match the number of values supplied to --CuDevices.
+//
+#define PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT ((HRESULT)0xE00403AFL)
+
+//
+// MessageId: PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevices must match the value supplied by --CuConcurrency.
+//
+#define PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY ((HRESULT)0xE00403B0L)
 

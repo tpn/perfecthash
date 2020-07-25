@@ -400,8 +400,8 @@ C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
 #define BitTestAndSet _bittestandset
 #endif
 
-#define FastSetBit(Bitmap, BitNumber) (             \
-    BitTestAndSet((PLONG)Bitmap->Buffer, BitNumber) \
+#define FastSetBit(Bitmap, BitNumber) (                 \
+    BitTestAndSet((PLONG)((Bitmap)->Buffer), BitNumber) \
 )
 
 #ifndef FlagOn
@@ -1068,7 +1068,7 @@ NTSTATUS
 (NTAPI RTL_UNICODE_STRING_TO_INTEGER)(
     _In_ PCUNICODE_STRING String,
     _In_opt_ ULONG Base,
-    _Out_ PULONG Value
+    _Out_writes_bytes_(sizeof(*Value)) PULONG Value
     );
 typedef RTL_UNICODE_STRING_TO_INTEGER *PRTL_UNICODE_STRING_TO_INTEGER;
 

@@ -92,13 +92,16 @@ Return Value:
 
 --*/
 {
+    PCU Cu;
     PRTL Rtl;
     USHORT Index;
     PULONG Keys;
     PGRAPH *Graphs = NULL;
+    PGRAPH *CuDeviceGraphs = NULL;
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
+    BOOLEAN IsSpare;
     BOOLEAN CreateCuGraph;
     LPGUID InterfaceId;
     ULONG Attempt = 0;
@@ -106,6 +109,7 @@ Return Value:
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
     HRESULT CloseResult = S_OK;
+    CU_RESULT CuResult;
     ULONG WaitResult;
     GRAPH_INFO Info;
     PALLOCATOR Allocator;
@@ -114,7 +118,9 @@ Return Value:
     ULONG Concurrency;
     ULONG CuConcurrency;
     ULONG CuGraphCount = 0;
-    ULONG NumberOfGraphs;
+    ULONG NumberOfCuGraphs;
+    ULONG NumberOfCpuGraphs;
+    ULONG TotalNumberOfGraphs;
     PLIST_ENTRY ListEntry;
     ULONG CloseFileErrorCount = 0;
     ULONG NumberOfSeedsRequired;
@@ -179,14 +185,36 @@ Return Value:
     TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
     Silent = (TableCreateFlags.Silent != FALSE);
 
+    //
+    // Initialize variables used if we jump to Error early-on.
+    //
+
     Context = Table->Context;
+    Allocator = Table->Allocator;
+    TotalNumberOfGraphs = 0;
+
+    //
+    // Perform the CUDA initialization.
+    //
+
+    Result = PerfectHashContextInitializeCuda(Context,
+                                              Table->TableCreateParameters);
+    if (FAILED(Result)) {
+        PH_ERROR(CreatePerfectHashTableImplChm02_InitializeCuda, Result);
+        goto Error;
+    }
+
+    Cu = Context->Cu;
+    ASSERT(Cu != NULL);
+
     Concurrency = Context->MaximumConcurrency;
     CuConcurrency = Context->CuConcurrency;
     ASSERT(CuConcurrency <= Concurrency);
     ASSERT(CuConcurrency > 0);
 
     if (FirstSolvedGraphWins(Context)) {
-        NumberOfGraphs = Concurrency;
+        NumberOfCpuGraphs = Concurrency;
+        NumberOfCuGraphs = CuConcurrency;
     } else {
 
         //
@@ -196,11 +224,18 @@ Return Value:
         // "best" by the RegisterSolvedGraph() routine.
         //
 
-        NumberOfGraphs = Concurrency + 1;
-        if (NumberOfGraphs == 0) {
+        NumberOfCpuGraphs = Concurrency + 1;
+        if (NumberOfCpuGraphs == 0) {
+            return E_INVALIDARG;
+        }
+
+        NumberOfCuGraphs = CuConcurrency + 1;
+        if (NumberOfCuGraphs == 0) {
             return E_INVALIDARG;
         }
     }
+
+    TotalNumberOfGraphs = NumberOfCuGraphs + NumberOfCpuGraphs;
 
     //
     // Initialize event arrays.
@@ -228,7 +263,6 @@ Return Value:
 
     Rtl = Table->Rtl;
     Keys = (PULONG)Table->Keys->KeyArrayBaseAddress;
-    Allocator = Table->Allocator;
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
     TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
@@ -270,13 +304,34 @@ Return Value:
     }
 
     //
-    // Allocate space for an array of pointers to graph instances.
+    // Allocate device memory for CUDA graphs.  We don't instantiate the device
+    // graphs via the normal COM component CreateInstance() glue (which would
+    // normally take care of allocating space for the component as part of the
+    // creation), so we have to allocate all of the space up-front.  (Versus
+    // allocating just an array of instance pointers, like we do for the CPU
+    // graph instances below.)
+    //
+
+    CuResult = Cu->MemAlloc((PCU_DEVICE_POINTER)&CuDeviceGraphs,
+                            sizeof(*Graph) * NumberOfCuGraphs);
+    if (CU_FAILED(CuResult)) {
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {
+            Result = PH_I_CUDA_OUT_OF_MEMORY;
+        } else {
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        }
+        goto Error;
+    }
+
+    //
+    // Allocate space for an array of pointers to host graph instances.  This
+    // includes both CPU graphs and CUDA graphs.
     //
 
     Graphs = (PGRAPH *)(
         Allocator->Vtbl->Calloc(
             Allocator,
-            NumberOfGraphs,
+            TotalNumberOfGraphs,
             sizeof(Graph)
         )
     );
@@ -352,7 +407,7 @@ Return Value:
     // we just allocated above.
     //
 
-    for (Index = 0; Index < NumberOfGraphs; Index++) {
+    for (Index = 0; Index < TotalNumberOfGraphs; Index++) {
 
         //
         // If the number of CUDA graphs created equals the desired concurrency
@@ -413,6 +468,12 @@ Return Value:
 
         if (CreateCuGraph != FALSE) {
             ASSERT(IsCuGraph(Graph));
+
+            //
+            // Wire up this graph with the corresponding device memory graph.
+            //
+
+            Graph->CuDeviceGraph = CuDeviceGraphs[Index];
         }
 
         //
@@ -562,24 +623,14 @@ Return Value:
     ASSERT(Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList));
 
     if (FirstSolvedGraphWins(Context)) {
-        ASSERT(NumberOfGraphs == Concurrency);
+        ASSERT(TotalNumberOfGraphs == Concurrency + CuConcurrency);
     } else {
-        ASSERT(NumberOfGraphs - 1 == Concurrency);
+        ASSERT(TotalNumberOfGraphs - 2 == Concurrency + CuConcurrency);
     }
 
-    for (Index = 0; Index < NumberOfGraphs; Index++) {
+    for (Index = 0; Index < TotalNumberOfGraphs; Index++) {
 
         Graph = Graphs[Index];
-
-        //
-        // Explicitly reset the graph's lock.  We know there is no contention
-        // at this point of execution, however, in certain situations where a
-        // table resize event has occurred and we're in "find best graph" mode,
-        // a graph's lock may still be set, which obviously causes our attempt
-        // to acquire it to hang.
-        //
-
-        Graph->Lock.Ptr = NULL;
 
         AcquireGraphLockExclusive(Graph);
         Result = Graph->Vtbl->SetInfo(Graph, &Info);
@@ -590,36 +641,61 @@ Return Value:
             goto Error;
         }
 
-        Graph->Flags.IsInfoLoaded = FALSE;
+        if (!FirstSolvedGraphWins(Context)) {
+            if (Index == 0) {
 
-        if (!FirstSolvedGraphWins(Context) && Index == 0) {
+                //
+                // The first CUDA graph becomes the spare CUDA graph.
+                //
 
-            //
-            // This is our first graph, which is marked as the "spare" graph.
-            // If a worker thread finds the best graph, it will swap its graph
-            // for this spare one, such that it can continue looking for new
-            // solutions.
-            //
+                Graph->Flags.IsCuSpare = TRUE;
+                IsSpare = TRUE;
 
-            Graph->Flags.IsSpare = TRUE;
+                //
+                // Context->SpareCuGraph is guarded by the best graph critical
+                // section.  We know that no worker threads will be running at
+                // this point; inform SAL accordingly by suppressing the
+                // concurrency warnings.
+                //
 
-            //
-            // Context->SpareGraph is _Guarded_by_(BestGraphCriticalSection).
-            // We know that no worker threads will be running at this point;
-            // inform SAL accordingly by suppressing the concurrency warnings.
-            //
+                _Benign_race_begin_
+                Context->SpareCuGraph = Graph;
+                _Benign_race_end_
 
-            _Benign_race_begin_
-            Context->SpareGraph = Graph;
-            _Benign_race_end_
+            } else if (Index == CuConcurrency) {
 
+                //
+                // The first CPU graph becomes our spare graph.  If a worker
+                // thread finds the best graph, it will swap its graph for this
+                // spare one, such that it can continue looking for new
+                // solutions.
+                //
+
+                Graph->Flags.IsSpare = TRUE;
+                IsSpare = TRUE;
+
+                //
+                // Context->SpareGraph is guarded by the best graph critical
+                // section.  We know that no worker threads will be running at
+                // this point; inform SAL accordingly by suppressing the
+                // concurrency warnings.
+                //
+
+                _Benign_race_begin_
+                Context->SpareGraph = Graph;
+                _Benign_race_end_
+            } else {
+                IsSpare = FALSE;
+            }
         } else {
-            Graph->Flags.IsSpare = FALSE;
+            IsSpare = FALSE;
+        }
+
+        if (!IsSpare) {
             InitializeListHead(&Graph->ListEntry);
             InsertTailMainWork(Context, &Graph->ListEntry);
             SubmitThreadpoolWork(Context->MainWork);
         }
-
     }
 
     //
@@ -1068,13 +1144,14 @@ Error:
 
 End:
 
+    //
+    // Convert the out-of-memory error codes into our equivalent info codes.
+    //
+
     if (Result == E_OUTOFMEMORY) {
-
-        //
-        // Convert the out-of-memory error code into our equivalent info code.
-        //
-
         Result = PH_I_OUT_OF_MEMORY;
+    } else if (Result == PH_E_CUDA_OUT_OF_MEMORY) {
+        Result = PH_I_CUDA_OUT_OF_MEMORY;
     }
 
     //
@@ -1151,6 +1228,21 @@ End:
 
 ReleaseGraphs:
 
+    //
+    // XXX TODO: should we have the device graphs addref/release the host ones
+    // and vice versa?
+    //
+
+    if (CuDeviceGraphs) {
+        Cu = Context->Cu;
+        CuResult = Context->Cu->MemFree((PCU_DEVICE_POINTER)CuDeviceGraphs);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CreatePerfectHashTableImplChm02_MemFree, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        }
+        CuDeviceGraphs = NULL;
+    }
+
     if (Graphs) {
 
         //
@@ -1158,7 +1250,7 @@ ReleaseGraphs:
         // is not NULL), then free the array buffer.
         //
 
-        for (Index = 0; Index < NumberOfGraphs; Index++) {
+        for (Index = 0; Index < TotalNumberOfGraphs; Index++) {
 
             Graph = Graphs[Index];
 

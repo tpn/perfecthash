@@ -413,10 +413,20 @@ typedef union _GRAPH_FLAGS {
         ULONG IsCuGraph:1;
 
         //
+        // When set, indicates this graph is the CUDA "spare graph" for the
+        // context.  When attempting to find the best graph solution, a worker
+        // thread may register its graph as the current best solution, then use
+        // the spare graph (or previous best graph) to continue solving
+        // attempts.
+        //
+
+        ULONG IsCuSpare:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:18;
+        ULONG Unused:17;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -424,18 +434,20 @@ typedef union _GRAPH_FLAGS {
 typedef GRAPH_FLAGS *PGRAPH_FLAGS;
 C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 
-#define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet == TRUE)
-#define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded == TRUE)
-#define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare == TRUE)
-#define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification == TRUE)
+#define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet != FALSE)
+#define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded != FALSE)
+#define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare != FALSE)
+#define IsSpareCuGraph(Graph) ((Graph)->Flags.IsCuSpare != FALSE)
+#define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification != FALSE)
 #define WantsAssignedMemoryCoverage(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverage)
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
-#define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
+#define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
 #define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
+#define SetSpareCuGraph(Graph) (Graph->Flags.IsSpareCuGraph = TRUE)
 
 DEFINE_UNUSED_STATE(GRAPH);
 
@@ -599,9 +611,19 @@ typedef struct _GRAPH_INFO {
     ULONGLONG EdgesSizeInBytes;
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
-    ULONGLONG AssignedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
+
+    //
+    // We use a union for the Assigned size in order to work with macros in the
+    // CUDA GraphCuLoadInfo() routine.
+    //
+
+    union {
+        ULONGLONG AssignedSizeInBytes;
+        ULONGLONG AssignedHostSizeInBytes;
+        ULONGLONG AssignedDeviceSizeInBytes;
+    };
 
     //
     // Bitmap buffer sizes.
@@ -961,6 +983,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _PERFECT_HASH_CONTEXT *Context;
 
     //
+    // If this is the host memory graph for a CUDA graph, this is the
+    // corresponding device memory address for the graph.
+    //
+
+    struct _GRAPH *CuDeviceGraph;
+
+    //
     // Edges array.
     //
 
@@ -985,8 +1014,20 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // Array of assigned vertices.
     //
 
+    union {
+        _Writable_elements_(NumberOfVertices)
+        PVERTEX Assigned;
+
+        _Writable_elements_(NumberOfVertices)
+        PVERTEX AssignedHost;
+    };
+
+    //
+    // Device address of assigned vertices.
+    //
+
     _Writable_elements_(NumberOfVertices)
-    PVERTEX Assigned;
+    PVERTEX AssignedDevice;
 
     //
     // Optional array of vertex pairs, indexed by number of keys.
@@ -1140,6 +1181,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     GRAPH_VTBL Interface;
+
+    //
+    // CUDA-specific elements.
+    //
+
+    //
+    // The stream used by the CUDA kernel launch.
+    //
+
+    PCU_STREAM Stream;
 
 } GRAPH;
 typedef GRAPH *PGRAPH;

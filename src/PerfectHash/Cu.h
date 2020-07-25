@@ -1036,7 +1036,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE)(
-    _Out_ PPCU_STREAM StreamPointer,
+    _Out_ PCU_STREAM *StreamPointer,
     _In_opt_ CU_STREAM_FLAGS Flags
     );
 typedef CU_STREAM_CREATE *PCU_STREAM_CREATE;
@@ -1045,7 +1045,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE_WITH_PRIORITY)(
-    _Outptr_result_maybenull_ PPCU_STREAM StreamPointer,
+    _Outptr_result_maybenull_ PCU_STREAM *StreamPointer,
     _In_opt_ CU_STREAM_FLAGS Flags,
     _In_opt_ ULONG Priority
     );
@@ -1943,11 +1943,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     CHAR DriverSuffix[2];
 
     //
-    // Pad out to an 8-byte boundary.
+    // Pad out to a 4-byte boundary.
     //
 
     CHAR Padding1[2];
-    ULONG Padding2;
+
+    //
+    // Number of CUDA devices present on the system.
+    //
+
+    LONG NumberOfDevices;
 
     //
     // nvcuda.dll module.
@@ -1996,30 +2001,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     //
 
     CU_VTBL Interface;
-
-    //
-    // Array of function pointers to kernels.
-    //
-
-    PCU_FUNCTION Functions[1];
-
-    //
-    // Array of occupancy calculations for each function.
-    //
-
-    CU_OCCUPANCY Occupancy[1];
-
-    //
-    // Max number of registers to use during JIT compilation.
-    //
-
-    ULONGLONG JitMaxNumberOfRegisters;
-
-    //
-    // Buffer for output of JIT compilation.
-    //
-
-    CHAR JitLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
 
 } CU;
 typedef CU *PCU;

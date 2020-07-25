@@ -18,6 +18,14 @@ Abstract:
 #include "stdafx.h"
 
 //
+// Defaults
+//
+
+#define PH_CU_BLOCKS_PER_GRID 32
+#define PH_CU_THREADS_PER_BLOCK 512
+#define PH_CU_WDDM_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS 1500
+
+//
 // Error handling function and helper macro.
 //
 
@@ -59,7 +67,13 @@ typedef struct _PH_CU_DEVICE {
     // Ordinal of the device.
     //
 
-    CU_DEVICE Ordinal;
+    LONG Ordinal;
+
+    //
+    // Device identifier (obtained via Cu->DeviceGet(&Device->Id, Ordinal)).
+    //
+
+    CU_DEVICE Id;
 
     //
     // Pad out to an 8-byte boundary.
@@ -102,5 +116,47 @@ CreatePerfectHashCuDevices(
     _In_ PALLOCATOR Allocator,
     _Inout_ PPH_CU_DEVICES Devices
     );
+
+//
+// Each unique device in the system that will be participating in graph solving
+// will have an instance of PH_CU_DEVICE_CONTEXT allocated.  This structure is
+// responsible for encapsulating a per-device CUDA context, plus references to
+// the CUDA module and graph solving kernel entry function.
+//
+
+typedef struct _PH_CU_DEVICE_CONTEXT {
+    PCU Cu;
+    CU_CONTEXT Context;
+    CU_MODULE Module;
+    CU_FUNCTION Function;
+    CU_OCCUPANCY Occupancy;
+    PPH_CU_DEVICE Device;
+
+    //
+    // Kernel launch parameters.
+    //
+
+    ULONG BlocksPerGrid;
+    ULONG ThreadsPerBlock;
+    ULONG KernelRuntimeTargetInMilliseconds;
+    ULONG JitMaxNumberOfRegisters;
+
+    //
+    // Buffer for output of JIT compilation.
+    //
+
+    CHAR JitLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
+
+} PH_CU_DEVICE_CONTEXT;
+typedef PH_CU_DEVICE_CONTEXT *PPH_CU_DEVICE_CONTEXT;
+
+typedef struct _PH_CU_DEVICE_CONTEXTS {
+    LONG NumberOfDeviceContexts;
+    LONG Padding;
+
+    PH_CU_DEVICE_CONTEXTS DeviceContexts[ANYSIZE_ARRAY];
+} PH_CU_DEVICES;
+typedef PH_CU_DEVICE_CONTEXTS *PPH_CU_DEVICE_CONTEXTS;
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

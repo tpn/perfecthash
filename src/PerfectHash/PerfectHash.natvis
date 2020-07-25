@@ -69,6 +69,10 @@
         <DisplayString Condition="Id == TableCreateParameterMainWorkThreadpoolPriorityId">{Id}={AsTpCallbackPriority}</DisplayString>
         <DisplayString Condition="Id == TableCreateParameterFileWorkThreadpoolPriorityId">{Id}={AsTpCallbackPriority}</DisplayString>
         <DisplayString Condition="Id == TableCreateParameterSeedsId">{Id}={AsValueArray}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterCuDevicesId">{Id}={AsValueArray}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterCuDevicesBlocksPerGridId">{Id}={AsValueArray}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterCuDevicesThreadsPerBlockId">{Id}={AsValueArray}</DisplayString>
+        <DisplayString Condition="Id == TableCreateParameterCuDevicesKernelRuntimeTargetInMillisecondsId">{Id}={AsValueArray}</DisplayString>
     </Type>
 
     <Type Name="_PERFECT_HASH_TABLE_CREATE_PARAMETERS">
@@ -79,6 +83,28 @@
                     <ArrayItems>
                         <Size>NumberOfElements</Size>
                         <ValuePointer Condition="NumberOfElements &gt; 0 &amp;&amp; Params != nullptr">Params</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
+    <Type Name="_PH_CU_DEVICE">
+        <DisplayString Condition="Name.Buffer != nullptr">{Name}</DisplayString>
+        <Expand>
+            <Item Name="Ordinal">Ordinal</Item>
+            <Item Name="Attributes">Attributes</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="_PH_CU_DEVICES">
+        <Expand>
+            <Item Name="&lt;Number of Devices&gt;">NumberOfDevices</Item>
+            <Synthetic Name="&lt;Devices&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfDevices</Size>
+                        <ValuePointer Condition="NumberOfDevices &gt; 0 &amp;&amp; Devices != nullptr">Devices</ValuePointer>
                     </ArrayItems>
                 </Expand>
             </Synthetic>

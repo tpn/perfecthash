@@ -693,8 +693,7 @@ _Use_decl_annotations_
 HRESULT
 PerfectHashKeysCopyToCuDevice(
     PPERFECT_HASH_KEYS Keys,
-    PCU Cu,
-    PPH_CU_DEVICE Device
+    PPH_CU_DEVICE_CONTEXT DeviceContext
     )
 /*++
 
@@ -706,7 +705,7 @@ Arguments:
 
     Keys - Supplies the keys instance.
 
-    Cu - Supplies the CU instance.
+    DeviceContext - Supplies the CU instance.
 
     Device - Supplies the target device.
 
@@ -721,6 +720,7 @@ Return Value:
 
 --*/
 {
+    PCU Cu;
     HRESULT Result;
     PCU_CONTEXT Ctx;
     SIZE_T SizeInBytes;
