@@ -3774,3 +3774,11 @@ Language=English
 Number of values supplied to --CuDevices must match the value supplied by --CuConcurrency.
 .
 
+MessageId=0x3b1
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED
+Language=English
+Duplicate table create parameter detected.
+.
+

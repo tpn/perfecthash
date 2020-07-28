@@ -1085,24 +1085,14 @@ AddParam:
     //
     // If there are already table create parameters, we may have already seen
     // a parameter with the same ID.  Loop through all the existing ones and
-    // see if we can find a match.  If so, update the value directly and return;
-    // avoiding the allocation/reallocation logic altogether.
+    // see if we can find a match.  If so, return a duplicate error.
     //
 
     Param = TableCreateParameters->Params;
 
     for (Index = 0; Index < NumberOfTableCreateParameters; Index++, Param++) {
         if (Param->Id == LocalParam.Id) {
-
-            //
-            // Make sure we potentially deallocate the existing param if
-            // applicable.
-            //
-
-            MaybeDeallocateTableCreateParameter(Allocator, Param);
-
-            Param->AsULongLong = LocalParam.AsULongLong;
-            return S_OK;
+            return PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED;
         }
     }
 
@@ -1168,7 +1158,6 @@ End:
 
     return Result;
 }
-
 
 CLEANUP_TABLE_CREATE_PARAMETERS CleanupTableCreateParameters;
 

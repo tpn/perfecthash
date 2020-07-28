@@ -222,7 +222,7 @@ Return Value:
         // Obtain the device identifier.
         //
 
-        CuResult = Cu->DeviceGet(&Device->Id, Device->Ordinal);
+        CuResult = Cu->DeviceGet(&Device->Handle, Device->Ordinal);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(CreatePerfectHashCuDevices_DeviceGet, CuResult);
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
@@ -239,7 +239,7 @@ Return Value:
         Name->MaximumLength = sizeof(Device->NameBuffer);
         CuResult = Cu->DeviceGetName(Buffer,
                                      (LONG)Name->MaximumLength,
-                                     Device->Ordinal);
+                                     Device->Handle);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(CuDeviceGetName, CuResult);
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
@@ -255,7 +255,7 @@ Return Value:
 
         CuResult = Cu->Vtbl->LoadCuDeviceAttributes(Cu,
                                                     &Device->Attributes,
-                                                    Device->Ordinal);
+                                                    Device->Handle);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(CuDeviceGetAttribute, CuResult);
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;

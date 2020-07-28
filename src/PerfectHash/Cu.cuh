@@ -12,6 +12,8 @@ Abstract:
 
 --*/
 
+#pragma once
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -52,8 +54,10 @@ typedef LONG *PLONG;
 
 typedef long long LONGLONG;
 typedef long long LONG64;
+typedef long long LONG_PTR;
 typedef unsigned long long ULONGLONG;
 typedef unsigned long long ULONG64;
+typedef unsigned long long ULONG_PTR;
 
 typedef LONG64 *PLONG64;
 typedef ULONG64 *PULONG64;
@@ -68,8 +72,9 @@ typedef INT2 *PINT2;
 typedef INT4 *PINT4;
 
 #define VOID void
+typedef void *PVOID;
 
-typedef union ULONG_BYTES {
+union _ULONG_BYTES {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         BYTE Byte1;
         BYTE Byte2;
@@ -96,11 +101,11 @@ typedef union ULONG_BYTES {
 
     LONG AsLong;
     ULONG AsULong;
-} ULONG_BYTES;
-//C_ASSERT(sizeof(ULONG_BYTES) == sizeof(ULONG));
+};
+typedef union _ULONG_BYTES ULONG_BYTES;
 typedef ULONG_BYTES *PULONG_BYTES;
 
-typedef union _LARGE_INTEGER {
+union _LARGE_INTEGER {
     struct {
         ULONG LowPart;
         LONG HighPart;
@@ -110,9 +115,10 @@ typedef union _LARGE_INTEGER {
         LONG HighPart;
     };
     LONGLONG QuadPart;
-} LARGE_INTEGER;
+};
+typedef union _LARGE_INTEGER LARGE_INTEGER;
 
-typedef union _ULARGE_INTEGER {
+union _ULARGE_INTEGER {
     struct {
         ULONG LowPart;
         ULONG HighPart;
@@ -122,9 +128,40 @@ typedef union _ULARGE_INTEGER {
         ULONG HighPart;
     };
     ULONGLONG QuadPart;
-} ULARGE_INTEGER;
+};
+typedef union _ULARGE_INTEGER ULARGE_INTEGER;
 
 typedef ULARGE_INTEGER *PULARGE_INTEGER;
+
+typedef struct _RTL_BITMAP {
+
+    //
+    // Number of bits in the bitmap.
+    //
+
+    ULONG SizeOfBitMap;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
+
+    //
+    // Pointer to bitmap buffer.
+    //
+
+    PULONG Buffer;
+
+} RTL_BITMAP;
+typedef RTL_BITMAP *PRTL_BITMAP;
+
+struct _LIST_ENTRY {
+   struct _LIST_ENTRY *Flink;
+   struct _LIST_ENTRY *Blink;
+};
+typedef struct _LIST_ENTRY LIST_ENTRY;
+typedef LIST_ENTRY *PLIST_ENTRY;
 
 //
 // Define CUDA macros and typedefs in NT style.
@@ -145,6 +182,52 @@ typedef ULARGE_INTEGER *PULARGE_INTEGER;
     for (Index = BlockIndex.x * BlockDim.x + ThreadIndex.x; \
          Index < Total;                                     \
          Index += BlockDim.x * GridDim.x)
+
+DEVICE
+static inline
+void
+ClockBlock(
+    _In_ LONGLONG ClockCount
+    )
+{
+    LONGLONG Start = clock64();
+    LONGLONG Offset = 0;
+    while (Offset < ClockCount) {
+        Offset = clock64() - Start;
+    }
+}
+
+//
+// Define CUDA Device API Typedefs.
+//
+
+typedef LONG CU_DEVICE;
+typedef ULONG_PTR CU_DEVICE_POINTER;
+typedef CU_DEVICE *PCU_DEVICE;
+typedef CU_DEVICE **PPCU_DEVICE;
+typedef CU_DEVICE_POINTER *PCU_DEVICE_POINTER;
+typedef CU_DEVICE_POINTER **PPCU_DEVICE_POINTER;
+
+struct CU_CONTEXT;
+typedef struct CU_CONTEXT *PCU_CONTEXT;
+typedef struct CU_CONTEXT **PPCU_CONTEXT;
+
+struct CU_MODULE;
+typedef struct CU_MODULE *PCU_MODULE;
+typedef struct CU_MODULE **PPCU_MODULE;
+
+struct CU_EVENT;
+typedef struct CU_EVENT *PCU_EVENT;
+typedef struct CU_EVENT **PPCU_EVENT;
+
+struct CU_STREAM;
+typedef struct CU_STREAM *PCU_STREAM;
+typedef struct CU_STREAM **PPCU_STREAM;
+
+struct CU_FUNCTION;
+typedef struct CU_FUNCTION *PCU_FUNCTION;
+typedef struct CU_FUNCTION **PPCU_FUNCTION;
+
 
 #ifdef __cplusplus
 }

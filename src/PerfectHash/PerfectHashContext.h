@@ -339,6 +339,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PPH_CU_DEVICE_CONTEXTS CuDeviceContexts;
 
     //
+    // Per-thread CUDA solving contexts.
+    //
+
+    PPH_CU_SOLVE_CONTEXTS CuSolveContexts;
+
+    //
     // An in-memory union of all possible on-disk table info representations.
     // This is used to capture table info prior to the :Info stream being
     // available.  The backing memory is stack-allocated in the algorithm's

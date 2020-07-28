@@ -82,6 +82,19 @@
       <ModuleDefinitionFile>PerfectHashCuda.def</ModuleDefinitionFile>
       -->
     </Link>
+    <CudaCompile>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+    <CudaCompile>
+      <NvccCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ptx</NvccCompilation>
+    </CudaCompile>
+    <CudaCompile>
+      <CudaRuntime Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Shared</CudaRuntime>
+    </CudaCompile>
+    <CudaCompile>
+      <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">64</TargetMachinePlatform>
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compute_35,sm_35</CodeGeneration>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <!--
   <ItemGroup>

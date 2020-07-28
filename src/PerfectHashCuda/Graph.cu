@@ -12,8 +12,10 @@ Abstract:
 
 --*/
 
+
 #include <no_sal2.h>
 #include "../PerfectHash/Cu.cuh"
+#include "Graph.cuh"
 
 extern "C" {
 
@@ -133,6 +135,15 @@ PerfectHashCudaSeededHashAllMultiplyShiftR2(
         Output[Index].x = Vertex1;
         Output[Index].y = Vertex2;
     }
+}
+
+GLOBAL
+VOID
+PerfectHashCudaEnterSolvingLoop(
+    _In_ PGRAPH Graph
+    )
+{
+    ClockBlock(1000);
 }
 
 }

@@ -16,7 +16,15 @@ Abstract:
 
 #pragma once
 
+//
+// We share this module with the PerfectHashCuda component, which doesn't use
+// the precompiled header infrastructure, so, we need to include stdafx.h within
+// this guard.
+//
+
+#ifdef _PERFECT_HASH_INTERNAL_BUILD
 #include "stdafx.h"
+#endif
 
 //
 // Define CUDA Device API Typedefs.
@@ -929,7 +937,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_CTX_POP_CURRENT)(
-    _Outptr_result_maybenull_ PPCU_CONTEXT ContextPointer
+    _Outptr_opt_result_maybenull_ PPCU_CONTEXT ContextPointer
     );
 typedef CU_CTX_POP_CURRENT *PCU_CTX_POP_CURRENT;
 
@@ -1911,6 +1919,9 @@ DEFINE_UNUSED_STATE(CU);
 DEFINE_UNUSED_FLAGS(CU);
 
 #define PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES 1024
+#define PERFECT_HASH_CU_DEFAULT_BLOCKS_PER_GRID 16
+#define PERFECT_HASH_CU_DEFAULT_THREADS_PER_BLOCK 128
+#define PERFECT_HASH_CU_DEFAULT_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS 1500
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     COMMON_COMPONENT_HEADER(CU);

@@ -103,10 +103,12 @@ Return Value:
     BOOLEAN Success;
     BOOLEAN IsSpare;
     BOOLEAN CreateCuGraph;
+    BOOLEAN KeysRegistered;
     LPGUID InterfaceId;
     ULONG Attempt = 0;
     ULONG ReferenceCount;
     BYTE NumberOfEvents;
+    SIZE_T KeysSizeInBytes;
     HRESULT Result = S_OK;
     HRESULT CloseResult = S_OK;
     CU_RESULT CuResult;
@@ -134,6 +136,12 @@ Return Value:
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
     PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    PPH_CU_DEVICE_CONTEXT DeviceContext;
+    PPH_CU_DEVICE_CONTEXTS DeviceContexts;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+    PPH_CU_SOLVE_CONTEXTS SolveContexts;
+    CU_MEM_HOST_REGISTER_FLAGS MemHostRegisterFlags;
+    PVOID KeysBaseAddress;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
 
@@ -184,6 +192,7 @@ Return Value:
 
     TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
     Silent = (TableCreateFlags.Silent != FALSE);
+    MemHostRegisterFlags.AsULong = 0;
 
     //
     // Initialize variables used if we jump to Error early-on.
@@ -212,6 +221,12 @@ Return Value:
     ASSERT(CuConcurrency <= Concurrency);
     ASSERT(CuConcurrency > 0);
 
+    DeviceContexts = Context->CuDeviceContexts;
+    ASSERT(DeviceContexts != NULL);
+
+    SolveContexts = Context->CuSolveContexts;
+    ASSERT(SolveContexts != NULL);
+
     if (FirstSolvedGraphWins(Context)) {
         NumberOfCpuGraphs = Concurrency;
         NumberOfCuGraphs = CuConcurrency;
@@ -236,6 +251,71 @@ Return Value:
     }
 
     TotalNumberOfGraphs = NumberOfCuGraphs + NumberOfCpuGraphs;
+
+    //
+    // Copy the keys over to each device participating in the solving.
+    //
+
+    KeysBaseAddress = Table->Keys->KeyArrayBaseAddress;
+    KeysSizeInBytes = Table->Keys->NumberOfElements.QuadPart * sizeof(KEY);
+
+    //
+    // Register the keys base address first.
+    //
+
+    MemHostRegisterFlags.Portable = TRUE;
+    KeysRegistered = FALSE;
+
+    for (Index = 0; Index < DeviceContexts->NumberOfDeviceContexts; Index++) {
+
+        //CU_DEVICE_POINTER DevicePointer;
+
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
+
+        //
+        // Active the context.
+        //
+
+        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CtxPushCurrent, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+#if 0
+        if (KeysRegistered == FALSE) {
+            CuResult = Cu->MemHostRegister(KeysBaseAddress,
+                                           KeysSizeInBytes,
+                                           MemHostRegisterFlags);
+            CU_CHECK(CuResult, MemHostRegister);
+            KeysRegistered = TRUE;
+        }
+
+        CuResult = Cu->MemHostGetDevicePointer(&DevicePointer,
+                                               KeysBaseAddress,
+                                               0);
+        CU_CHECK(CuResult, MemHostGetDevicePointer);
+#endif
+
+        //
+        // Allocate sufficient memory.
+        //
+
+        CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
+                                KeysSizeInBytes);
+        CU_CHECK(CuResult, MemAlloc);
+
+        //
+        // Copy the keys over.
+        //
+
+        CuResult = Cu->MemcpyHtoDAsync(DeviceContext->KeysBaseAddress,
+                                       KeysBaseAddress,
+                                       KeysSizeInBytes,
+                                       DeviceContext->Stream);
+        CU_CHECK(CuResult, MemcpyHtoDAsync);
+    }
 
     //
     // Initialize event arrays.
@@ -473,7 +553,12 @@ Return Value:
             // Wire up this graph with the corresponding device memory graph.
             //
 
+            SolveContext = &SolveContexts->SolveContexts[Index];
             Graph->CuDeviceGraph = CuDeviceGraphs[Index];
+            Graph->CuSolveContext = SolveContext;
+
+            SolveContext->HostGraph = Graph;
+            SolveContext->DeviceGraph = Graph->CuDeviceGraph;
         }
 
         //
@@ -1227,6 +1312,15 @@ End:
     }
 
 ReleaseGraphs:
+
+    if (MemHostRegisterFlags.AsULong != 0) {
+        Cu = Context->Cu;
+        KeysBaseAddress = Table->Keys->KeyArrayBaseAddress;
+        CuResult = Cu->MemHostUnregister(KeysBaseAddress);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(MemHostUnregister, CuResult);
+        }
+    }
 
     //
     // XXX TODO: should we have the device graphs addref/release the host ones

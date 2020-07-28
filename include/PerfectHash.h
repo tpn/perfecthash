@@ -129,7 +129,7 @@ typedef _Null_terminated_ CONST CHAR *PCSZ;
 // have randomized shift/rotate instructions.
 //
 
-typedef union ULONG_BYTES {
+typedef union _ULONG_BYTES {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         BYTE Byte1;
         BYTE Byte2;

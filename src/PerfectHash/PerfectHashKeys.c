@@ -133,9 +133,7 @@ Return Value:
 
 --*/
 {
-    PCU Cu;
     HRESULT Result;
-    CU_RESULT CuResult;
     PALLOCATOR Allocator;
 
     //
@@ -151,24 +149,6 @@ Return Value:
     //
 
     ASSERT(Keys->SizeOfStruct == sizeof(*Keys));
-
-    Cu = Keys->Cu;
-
-    if (Keys->DeviceKeyArrayBaseAddress != 0) {
-        CuResult = Cu->MemFree((PVOID)Keys->DeviceKeyArrayBaseAddress);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(KeysRelease_CuMemFree, CuResult);
-        }
-        Keys->DeviceKeyArrayBaseAddress = 0;
-    }
-
-    if (Keys->CuCtx != NULL) {
-        CuResult = Cu->CtxDestroy(Keys->CuCtx);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(KeysRelease_CuCtxDestroy, CuResult);
-        }
-        Keys->CuCtx = NULL;
-    }
 
     if (Keys->File && Keys->File->BaseAddress) {
 
@@ -234,7 +214,6 @@ Return Value:
     // Release COM references, if applicable.
     //
 
-    RELEASE(Keys->Cu);
     RELEASE(Keys->File);
     RELEASE(Keys->Allocator);
     RELEASE(Keys->Rtl);
@@ -687,6 +666,7 @@ End:
     return Result;
 }
 
+#if 0
 PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE PerfectHashKeysCopyToCuDevice;
 
 _Use_decl_annotations_
@@ -777,5 +757,6 @@ End:
     return Result;
 
 }
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

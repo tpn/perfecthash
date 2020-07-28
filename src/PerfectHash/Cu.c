@@ -13,7 +13,6 @@ Abstract:
 --*/
 
 #include "stdafx.h"
-#include "Graph_Ptx_RawCString.h"
 
 extern LOAD_SYMBOLS LoadSymbols;
 
@@ -271,6 +270,7 @@ End:
     return Result;
 }
 
+#if 0
 HRESULT
 CuLoadKernels(
     _In_ PCU Cu
@@ -431,6 +431,7 @@ End:
 
     return Result;
 }
+#endif
 
 
 CU_RUNDOWN CuRundown;

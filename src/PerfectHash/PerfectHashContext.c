@@ -21,6 +21,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "Graph_Ptx_RawCString.h"
 
 //
 // Forward definition of various callbacks we implement in this module.
@@ -723,6 +724,18 @@ Return Value:
     //
 
     Allocator->Vtbl->FreePointer(Allocator, &Context->CuDevices.Devices);
+
+    //
+    // Free the solving contexts.
+    //
+
+    Allocator->Vtbl->FreePointer(Allocator, &Context->CuSolveContexts);
+
+    //
+    // Free the device contexts.
+    //
+
+    Allocator->Vtbl->FreePointer(Allocator, &Context->CuDeviceContexts);
 
     //
     // Close the low-memory resource notification handle.
@@ -1857,27 +1870,42 @@ Return Value:
     PCU Cu;
     PRTL Rtl;
     ULONG Index;
+    ULONG Inner;
     ULONG Count;
     LONG Ordinal;
+    BOOLEAN Found;
     ULONG NumberOfDevices;
     ULONG NumberOfContexts;
     PULONG BitmapBuffer = NULL;
     RTL_BITMAP Bitmap;
     HRESULT Result;
-    CU_DEVICE Device;
     CU_RESULT CuResult;
-    CU_DEVICE MinDevice;
-    CU_DEVICE MaxDevice;
+    CU_DEVICE DeviceId;
+    CU_DEVICE MinDeviceId;
+    CU_DEVICE MaxDeviceId;
     PALLOCATOR Allocator;
+    PPH_CU_DEVICE Device;
+    PPH_CU_DEVICE PhCuDevice;
+    PCU_OCCUPANCY Occupancy;
     BOOLEAN SawCuConcurrency;
+    ULONG BlocksPerGridValue;
+    ULONG ThreadsPerBlockValue;
+    ULONG KernelRuntimeTargetValue;
     PVALUE_ARRAY Ordinals;
     PVALUE_ARRAY BlocksPerGrid;
     PVALUE_ARRAY ThreadsPerBlock;
     PVALUE_ARRAY KernelRuntimeTarget;
+    CU_STREAM_FLAGS StreamFlags;
+    ULARGE_INTEGER AllocSizeInBytes;
     ULARGE_INTEGER BitmapBufferSizeInBytes;
+    PPH_CU_DEVICE_CONTEXT DeviceContext;
+    PPH_CU_DEVICE_CONTEXTS DeviceContexts;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+    PPH_CU_SOLVE_CONTEXTS SolveContexts;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
 
-    RTL_STRING KernelFunctionName = RCS("PerfectHashCudaEnterSolvingLoop");
+    STRING KernelFunctionName =
+        RTL_CONSTANT_STRING("PerfectHashCudaEnterSolvingLoop");
 
     CU_JIT_OPTION JitOptions[] = {
         CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
@@ -1886,6 +1914,8 @@ Return Value:
     PVOID JitOptionValues[2];
     USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
 
+    CHAR JitLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
+
     //
     // If we've already got a CU instance, assume we're already initialized.
     //
@@ -1893,6 +1923,9 @@ Return Value:
     if (Context->Cu != NULL) {
         return S_FALSE;
     }
+
+    SolveContexts = NULL;
+    DeviceContexts = NULL;
 
     //
     // Try create a CU instance.
@@ -1915,7 +1948,7 @@ Return Value:
 
     Cu = Context->Cu;
 
-    Cu->Rtl = Context->Rtl;
+    Rtl = Cu->Rtl = Context->Rtl;
     Cu->Rtl->Vtbl->AddRef(Cu->Rtl);
 
     Cu->Allocator = Allocator = Context->Allocator;
@@ -2060,10 +2093,12 @@ Return Value:
         }
 
         //
-        // Default the number of contexts to 1 if not explicitly provided.
+        // We default the number of contexts and devices to 1 in the absence of any
+        // user-supplied values.
         //
 
         NumberOfContexts = 1;
+        NumberOfDevices = 1;
         goto FinishedOrdinalsProcessing;
 
     }
@@ -2101,27 +2136,27 @@ Return Value:
     }
 
     //
-    // Initialize the min and max device ordinals, then enumerate the supplied
+    // Initialize the min and max device IDs, then enumerate the supplied
     // ordinals, validating each one as we go and updating the min/max values
     // accordingly.
     //
 
-    MinDevice = 1 << 30;
-    MaxDevice = 0;
+    MinDeviceId = 1 << 30;
+    MaxDeviceId = 0;
 
     for (Index = 0; Index < Ordinals->NumberOfValues; Index++) {
         Ordinal = (LONG)Ordinals->Values[Index];
-        CuResult = Cu->DeviceGet(&Device, Ordinal);
+        CuResult = Cu->DeviceGet(&DeviceId, Ordinal);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(CuDeviceGet, CuResult);
             Result = PH_E_INVALID_CU_DEVICES;
             goto Error;
         }
-        if (Device > MaxDevice) {
-            MaxDevice = Device;
+        if (DeviceId > MaxDeviceId) {
+            MaxDeviceId = DeviceId;
         }
-        if (Device < MinDevice) {
-            MinDevice = Device;
+        if (DeviceId < MinDeviceId) {
+            MinDeviceId = DeviceId;
         }
     }
 
@@ -2131,7 +2166,7 @@ Return Value:
     //
 
     BitmapBufferSizeInBytes.QuadPart = ALIGN_UP_POINTER(
-        ALIGN_UP((MaxDevice + 1ULL), 8) >> 3
+        ALIGN_UP((MaxDeviceId + 1ULL), 8) >> 3
     );
 
     //
@@ -2162,7 +2197,7 @@ Return Value:
     //
 
     Bitmap.Buffer = BitmapBuffer;
-    Bitmap.SizeOfBitMap = (MaxDevice + 1);
+    Bitmap.SizeOfBitMap = (MaxDeviceId + 1);
 
     //
     // Enumerate the ordinals again, setting a corresponding bit for each
@@ -2212,7 +2247,7 @@ FinishedOrdinalsProcessing:
 
     if (NumberOfContexts > 1) {
         AllocSizeInBytes.QuadPart += (
-            NumberOfContexts *
+            (NumberOfContexts - 1) *
             sizeof(Context->CuDeviceContexts->DeviceContexts[0])
         );
     }
@@ -2223,8 +2258,9 @@ FinishedOrdinalsProcessing:
 
     if (AllocSizeInBytes.HighPart > 0) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
-        PH_ERROR(PerfectHashContextInitializeCuda_AllocSizeOverflow, Result);
-        goto Error;
+        PH_ERROR(PerfectHashContextInitializeCuda_DeviceContextAllocOverflow,
+                 Result);
+        PH_RAISE(Result);
     }
 
     DeviceContexts = Allocator->Vtbl->Calloc(Allocator,
@@ -2235,25 +2271,56 @@ FinishedOrdinalsProcessing:
         goto Error;
     }
 
-    Contexts->DeviceContexts = DeviceContexts;
+    Context->CuDeviceContexts = DeviceContexts;
     DeviceContexts->NumberOfDeviceContexts = NumberOfContexts;
 
     //
-    // First pass: wire up the device contexts to the relevant devices.
+    // First pass: set each device context's ordinal to the value obtained via
+    // the --CuDevices parameter.  (The logic we use to do this is a little
+    // different if we're dealing with one context versus more than one.)
     //
 
     if (NumberOfContexts == 1) {
 
+        DeviceContext = &DeviceContexts->DeviceContexts[0];
+
+        if (Ordinals != NULL) {
+            ASSERT(Ordinals->NumberOfValues == 1);
+            DeviceContext->Ordinal = (LONG)Ordinals->Values[0];
+        } else {
+
+            //
+            // If no --CuDevices parameter has been supplied, default to 0 for
+            // the device ordinal.
+            //
+
+            DeviceContext->Ordinal = 0;
+        }
+
     } else {
 
+        ULONG Bit = 0;
+        const ULONG NumberToFind = 1;
+
         for (Index = 0; Index < NumberOfContexts; Index++) {
-            DeviceContext = DeviceContexts->DeviceContexts[Index];
+            DeviceContext = &DeviceContexts->DeviceContexts[Index];
 
             //
             // Get the device ordinal from the first set/next set bit of the
             // bitmap.
             //
 
+            Bit = Rtl->RtlFindSetBits(&Bitmap, NumberToFind, Bit);
+
+            if (Bit == BITS_NOT_FOUND) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(PerfectHashContextInitializeCuda_BitsNotFound,
+                         Result);
+                PH_RAISE(Result);
+            }
+
+            DeviceContext->Ordinal = (LONG)Bit;
+            Bit += 1;
         }
     }
 
@@ -2261,17 +2328,46 @@ FinishedOrdinalsProcessing:
     // Initialize the JIT options.
     //
 
-    JitOptionValues[0] = (PVOID)sizeof(DeviceContext->JitLogBuffer);
+    JitOptionValues[0] = (PVOID)sizeof(JitLogBuffer);
+    JitOptionValues[1] = (PVOID)JitLogBuffer;
 
     //
-    // Second pass: create CUDA contexts for each device context, load the PTX
-    // module, get the solver entry function, calculate occupancy.
+    // Second pass: wire-up each device context (identified by ordinal, set
+    // in the first pass above) to the corresponding PH_CU_DEVICE instance
+    // for that device, create CUDA contexts for each device context, load
+    // the module, get the solver entry function, and calculate occupancy.
     //
+
+    Device = NULL;
+    StreamFlags = CU_STREAM_NON_BLOCKING;
 
     for (Index = 0; Index < NumberOfContexts; Index++) {
-        DeviceContext = DeviceContexts->DeviceContexts[Index];
-        Device = DeviceContext->Device;
-        Device->Cu = Cu;
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
+
+        //
+        // Find the PH_CU_DEVICE instance with the same ordinal.
+        //
+
+        Found = FALSE;
+        for (Inner = 0; Inner < NumberOfDevices; Inner++) {
+            PhCuDevice = &Context->CuDevices.Devices[Inner];
+            if (PhCuDevice->Ordinal == DeviceContext->Ordinal) {
+                Device = DeviceContext->Device = PhCuDevice;
+                Found = TRUE;
+                break;
+            }
+        }
+
+        if (!Found) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashContextInitializeCuda_OrdinalNotFound, Result);
+            PH_RAISE(Result);
+        }
+
+        ASSERT(Device != NULL);
+
+        DeviceContext->Handle = Device->Handle;
+        DeviceContext->Cu = Cu;
 
         //
         // Create the context for the device.
@@ -2279,14 +2375,12 @@ FinishedOrdinalsProcessing:
 
         CuResult = Cu->CtxCreate(&DeviceContext->Context,
                                  CU_CTX_SCHED_YIELD,
-                                 Device->Id);
+                                 Device->Handle);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(PerfectHashContextInitializeCuda_CuCtxCreate, CuResult);
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
             goto Error;
         }
-
-        JitOptionValues[1] = (PVOID)Device->JitLogBuffer;
 
         //
         // Load the module from the embedded PTX.
@@ -2301,7 +2395,6 @@ FinishedOrdinalsProcessing:
         if (CU_FAILED(CuResult)) {
             CU_ERROR(PerfectHashContextInitializeCuda_CuModuleLoadDataEx,
                      CuResult);
-
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
             goto Error;
         }
@@ -2312,7 +2405,7 @@ FinishedOrdinalsProcessing:
 
         CuResult = Cu->ModuleGetFunction(&DeviceContext->Function,
                                          DeviceContext->Module,
-                                         (PCSZ)KernelFunctionNane.Buffer);
+                                         (PCSZ)KernelFunctionName.Buffer);
         if (CU_FAILED(CuResult)) {
             CU_ERROR(PerfectHashContextInitializeCuda_CuModuleGetFunction,
                      CuResult);
@@ -2324,11 +2417,11 @@ FinishedOrdinalsProcessing:
         // Get the occupancy stats.
         //
 
-        Occupancy = &Device->Occupancy;
+        Occupancy = &DeviceContext->Occupancy;
         CuResult = Cu->OccupancyMaxPotentialBlockSizeWithFlags(
             &Occupancy->MinimumGridSize,
             &Occupancy->BlockSize,
-            *Function,
+            DeviceContext->Function,
             NULL,   // OccupancyBlockSizeToDynamicMemSize
             0,      // DynamicSharedMemorySize
             0,      // BlockSizeLimit
@@ -2342,7 +2435,7 @@ FinishedOrdinalsProcessing:
 
         CuResult = Cu->OccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
             &Occupancy->NumBlocks,
-            *Function,
+            DeviceContext->Function,
             Occupancy->BlockSize,
             0, // DynamicSharedMemorySize
             0  // Flags
@@ -2350,6 +2443,185 @@ FinishedOrdinalsProcessing:
         if (CU_FAILED(CuResult)) {
             CU_ERROR(OccupancyMaxActiveBlocksPerMultiprocessorWithFlags,
                      CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Create the stream to use for per-device activies (like copying keys).
+        //
+
+        CuResult = Cu->StreamCreate(&DeviceContext->Stream, StreamFlags);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(StreamCreate, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Pop the context off this thread (required before it can be used by
+        // other threads).
+        //
+
+        CuResult = Cu->CtxPopCurrent(NULL);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CtxPopCurrent, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+    }
+
+    //
+    // Allocate space for solver contexts; one per CUDA solving thread.
+    //
+
+    AllocSizeInBytes.QuadPart = sizeof(*Context->CuSolveContexts);
+
+    //
+    // Account for additional solve context structures if we're creating more
+    // than one.  (We get one for free via ANYSIZE_ARRAY.)
+    //
+
+    if (Context->CuConcurrency > 1) {
+        AllocSizeInBytes.QuadPart += (
+            (Context->CuConcurrency - 1) *
+            sizeof(Context->CuSolveContexts->SolveContexts[0])
+        );
+    }
+
+    //
+    // Sanity check we haven't overflowed.
+    //
+
+    if (AllocSizeInBytes.HighPart > 0) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashContextInitializeCuda_SolveContextAllocOverflow,
+                 Result);
+        PH_RAISE(Result);
+    }
+
+    SolveContexts = Allocator->Vtbl->Calloc(Allocator,
+                                            1,
+                                            AllocSizeInBytes.LowPart);
+    if (SolveContexts == NULL) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    Context->CuSolveContexts = SolveContexts;
+    SolveContexts->NumberOfSolveContexts = Context->CuConcurrency;
+
+    //
+    // Wire up the solve contexts to their respective device context.
+    //
+
+    for (Index = 0; Index < SolveContexts->NumberOfSolveContexts; Index++) {
+
+        SolveContext = &SolveContexts->SolveContexts[Index];
+
+        //
+        // Resolve the ordinal and kernel launch parameters.
+        //
+
+        if (Ordinals == NULL) {
+            Ordinal = 0;
+        } else {
+            Ordinal = (LONG)Ordinals->Values[Index];
+        }
+
+        if (BlocksPerGrid == NULL) {
+            BlocksPerGridValue = 0;
+        } else {
+            BlocksPerGridValue = BlocksPerGrid->Values[Index];
+        }
+        if (BlocksPerGridValue == 0) {
+            BlocksPerGridValue = PERFECT_HASH_CU_DEFAULT_BLOCKS_PER_GRID;
+        }
+
+        if (ThreadsPerBlock == NULL) {
+            ThreadsPerBlockValue = 0;
+        } else {
+            ThreadsPerBlockValue = ThreadsPerBlock->Values[Index];
+        }
+        if (ThreadsPerBlockValue == 0) {
+            ThreadsPerBlockValue = PERFECT_HASH_CU_DEFAULT_THREADS_PER_BLOCK;
+        }
+
+        if (KernelRuntimeTarget == NULL) {
+            KernelRuntimeTargetValue = 0;
+        } else {
+            KernelRuntimeTargetValue = KernelRuntimeTarget->Values[Index];
+        }
+        if (KernelRuntimeTargetValue == 0) {
+            KernelRuntimeTargetValue =
+                PERFECT_HASH_CU_DEFAULT_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS;
+        }
+
+        //
+        // Find the device context for this device ordinal.
+        //
+
+        Found = FALSE;
+        DeviceContext = NULL;
+        for (Inner = 0; Inner < NumberOfContexts; Inner++) {
+            DeviceContext = &DeviceContexts->DeviceContexts[Inner];
+            if (DeviceContext->Ordinal == Ordinal) {
+                Found = TRUE;
+                break;
+            }
+        }
+
+        if (!Found) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashContextInitializeCuda_ContextOrdinalNotFound,
+                     Result);
+            PH_RAISE(Result);
+        }
+
+        ASSERT(DeviceContext != NULL);
+
+        //
+        // Link this solve context to the corresponding device context, then
+        // fill in the kernel launch parameters.
+        //
+
+        SolveContext->DeviceContext = DeviceContext;
+
+        SolveContext->BlocksPerGrid = BlocksPerGridValue;
+        SolveContext->ThreadsPerBlock = ThreadsPerBlockValue;
+        SolveContext->KernelRuntimeTargetInMilliseconds =
+            KernelRuntimeTargetValue;
+
+        //
+        // Activate this context, create a stream, then deactivate it.
+        //
+
+        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CtxPushCurrent, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Create the stream for this solve context.
+        //
+
+        CuResult = Cu->StreamCreate(&SolveContext->Stream, StreamFlags);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(StreamCreate, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Pop the context off this thread.
+        //
+
+        CuResult = Cu->CtxPopCurrent(NULL);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CtxPopCurrent, CuResult);
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
             goto Error;
         }

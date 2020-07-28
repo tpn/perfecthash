@@ -70,16 +70,10 @@ typedef struct _PH_CU_DEVICE {
     LONG Ordinal;
 
     //
-    // Device identifier (obtained via Cu->DeviceGet(&Device->Id, Ordinal)).
+    // Device driver handle.
     //
 
-    CU_DEVICE Id;
-
-    //
-    // Pad out to an 8-byte boundary.
-    //
-
-    ULONG Padding1;
+    CU_DEVICE Handle;
 
     //
     // Name of the device.
@@ -125,12 +119,83 @@ CreatePerfectHashCuDevices(
 //
 
 typedef struct _PH_CU_DEVICE_CONTEXT {
-    PCU Cu;
-    CU_CONTEXT Context;
-    CU_MODULE Module;
-    CU_FUNCTION Function;
-    CU_OCCUPANCY Occupancy;
+
+    //
+    // Device ordinal and driver handle.  Invariant: these two fields will
+    // always match the corresponding fields in the Device member.
+    //
+
+    LONG Ordinal;
+    CU_DEVICE Handle;
+
+    //
+    // Parent device this context points at.
+    //
+
     PPH_CU_DEVICE Device;
+
+    //
+    // Pointer to the parent CU instance.
+    //
+
+    PCU Cu;
+
+    //
+    // CUDA context, module, solver function entry point, and occupancy helper.
+    //
+
+    PCU_CONTEXT Context;
+    PCU_MODULE Module;
+    PCU_FUNCTION Function;
+    CU_OCCUPANCY Occupancy;
+
+    //
+    // CUDA stream for per-device activities (like copying keys).
+    //
+
+    PCU_STREAM Stream;
+
+    //
+    // Base address of the keys currently copied to the device.
+    //
+
+    CU_DEVICE_POINTER KeysBaseAddress;
+
+} PH_CU_DEVICE_CONTEXT;
+typedef PH_CU_DEVICE_CONTEXT *PPH_CU_DEVICE_CONTEXT;
+
+typedef struct _PH_CU_DEVICE_CONTEXTS {
+    LONG NumberOfDeviceContexts;
+    LONG Padding;
+
+    PH_CU_DEVICE_CONTEXT DeviceContexts[ANYSIZE_ARRAY];
+} PH_CU_DEVICE_CONTEXTS;
+typedef PH_CU_DEVICE_CONTEXTS *PPH_CU_DEVICE_CONTEXTS;
+
+//
+// Each solver GPU thread gets an instance of PH_CU_SOLVE_CONTEXT.
+//
+
+typedef struct _PH_CU_SOLVE_CONTEXT {
+
+    //
+    // Pointer to the owning device context.
+    //
+
+    PPH_CU_DEVICE_CONTEXT DeviceContext;
+
+    //
+    // Kernel launch stream.
+    //
+
+    PCU_STREAM Stream;
+
+    //
+    // Host and device graph instances.
+    //
+
+    struct _GRAPH *HostGraph;
+    struct _GRAPH *DeviceGraph;
 
     //
     // Kernel launch parameters.
@@ -141,22 +206,17 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
     ULONG KernelRuntimeTargetInMilliseconds;
     ULONG JitMaxNumberOfRegisters;
 
-    //
-    // Buffer for output of JIT compilation.
-    //
+} PH_CU_SOLVE_CONTEXT;
+typedef PH_CU_SOLVE_CONTEXT *PPH_CU_SOLVE_CONTEXT;
 
-    CHAR JitLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
+typedef struct _PH_CU_SOLVE_CONTEXTS {
 
-} PH_CU_DEVICE_CONTEXT;
-typedef PH_CU_DEVICE_CONTEXT *PPH_CU_DEVICE_CONTEXT;
+    ULONG NumberOfSolveContexts;
+    ULONG Padding;
 
-typedef struct _PH_CU_DEVICE_CONTEXTS {
-    LONG NumberOfDeviceContexts;
-    LONG Padding;
-
-    PH_CU_DEVICE_CONTEXTS DeviceContexts[ANYSIZE_ARRAY];
-} PH_CU_DEVICES;
-typedef PH_CU_DEVICE_CONTEXTS *PPH_CU_DEVICE_CONTEXTS;
+    PH_CU_SOLVE_CONTEXT SolveContexts[ANYSIZE_ARRAY];
+} PH_CU_SOLVE_CONTEXTS;
+typedef PH_CU_SOLVE_CONTEXTS *PPH_CU_SOLVE_CONTEXTS;
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -153,24 +153,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     PVOID KeyArrayBaseAddress;
 
     //
-    // The CUDA device address of the keys array, if applicable.
-    //
-
-    LONG_PTR DeviceKeyArrayBaseAddress;
-
-    //
-    // Pointer to the active CU instance if applicable.
-    //
-
-    struct _CU *Cu;
-
-    //
-    // Pointer to a CU context if applicable.
-    //
-
-    struct CU_CONTEXT *CuCtx;
-
-    //
     // Capture simple statistics about the keys that were loaded.
     //
 
