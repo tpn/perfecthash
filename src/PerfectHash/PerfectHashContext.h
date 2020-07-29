@@ -132,6 +132,7 @@ C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
 #define FirstSolvedGraphWins(Context) Context->State.FirstSolvedGraphWins
+#define FindBestGraph(Context) Context->State.FindBestMemoryCoverage
 #define FindBestMemoryCoverage(Context) Context->State.FindBestMemoryCoverage
 #define BestMemoryCoverageForKeysSubset(Context) \
     ((Context)->State.BestMemoryCoverageForKeysSubset == TRUE)
@@ -345,6 +346,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PPH_CU_SOLVE_CONTEXTS CuSolveContexts;
 
     //
+    // Array of graphs.
+    //
+
+    union {
+        struct _GRAPH **GpuGraphs;
+        struct _GRAPH **Graphs;
+    };
+    struct _GRAPH **CpuGraphs;
+
+    //
     // An in-memory union of all possible on-disk table info representations.
     // This is used to capture table info prior to the :Info stream being
     // available.  The backing memory is stack-allocated in the algorithm's
@@ -465,9 +476,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     _Guarded_by_(BestGraphCriticalSection)
     struct _GRAPH *SpareGraph;
-
-    _Guarded_by_(BestGraphCriticalSection)
-    struct _GRAPH *SpareCuGraph;
 
     //
     // The following counter is incremented every time a new "best graph" is
@@ -748,8 +756,28 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_WORK MainWork;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
-    ULONG CuConcurrency;
-    ULONG Padding8;
+    union {
+        ULONG CuConcurrency;
+        ULONG NumberOfGpuThreads;
+    };
+
+    //
+    // CPU threads will be MaximumConcurrency minus NumberOfGpuThreads (which
+    // may result in it being zero, in which case, there will be no CPU solver
+    // threads).
+    //
+
+    ULONG NumberOfCpuThreads;
+
+    ULONG NumberOfCpuGraphs;
+    ULONG NumberOfGpuGraphs;
+
+    union {
+        ULONG NumberOfSpareCuGraphs;
+        ULONG NumberOfCuContexts;
+    };
+
+    ULONG TotalNumberOfGraphs;
 
     //
     // The algorithm is responsible for registering an appropriate callback

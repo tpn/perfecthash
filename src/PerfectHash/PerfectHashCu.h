@@ -161,6 +161,52 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
 
     CU_DEVICE_POINTER KeysBaseAddress;
 
+    //
+    // Best and spare graphs.
+    //
+
+    CRITICAL_SECTION BestGraphCriticalSection;
+
+    _Guarded_by_(BestGraphCriticalSection)
+    struct _GRAPH *BestGraph;
+
+    //
+    // The following counter is incremented every time a new "best graph" is
+    // registered.
+    //
+
+    _Guarded_by_(BestGraphCriticalSection)
+    volatile LONG NewBestGraphCount;
+
+    //
+    // The following counter is incremented every time a graph is found whose
+    // coverage matches the existing best graph's coverage (for the given
+    // predicate when in "find best graph" mode).
+    //
+
+    _Guarded_by_(BestGraphCriticalSection)
+    volatile LONG EqualBestGraphCount;
+
+    //
+    // Pointers to the spare graphs for this context.
+    //
+
+    struct _GRAPH *SpareHostGraph;
+    struct _GRAPH *SpareDeviceGraph;
+
+    //
+    // Number of solving contexts associated with this device.
+    //
+
+    ULONG NumberOfSolveContexts;
+    ULONG Padding1;
+
+    //
+    // Base address of array of device graphs (one per solve context).
+    //
+
+    struct _GRAPH *DeviceGraphs;
+
 } PH_CU_DEVICE_CONTEXT;
 typedef PH_CU_DEVICE_CONTEXT *PPH_CU_DEVICE_CONTEXT;
 

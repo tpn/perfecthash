@@ -459,12 +459,20 @@ Finalize:
     // copy the entire structure over to the GPU device.
     //
 
-    CuResult = Cu->StreamCreate(&Graph->Stream, CU_STREAM_NON_BLOCKING);
+#if 0
+    /// <summary>
+    ///  
+    /// </summary>
+    /// <param name="Graph"></param>
+    /// <returns></returns>
+    SolveContext = Graph->CuSolveContext;
+    CuResult = Cu->StreamCreate(, CU_STREAM_NON_BLOCKING);
     if (CU_FAILED(CuResult)) {
         CU_ERROR(GraphCuLoadInfo_StreamCreate, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
         goto Error;
     }
+#endif
 
     //
     // We're done, finish up.
@@ -557,7 +565,6 @@ Return Value:
         PH_RAISE(Result);
     }
 
-    /*
     //
     // Load the graph info.
     //
@@ -595,6 +602,14 @@ Return Value:
 
         goto End;
     }
+
+    //
+    // TODO: Launch the kernel, synchronize on the graph stream, dequeue
+    // solved graphs, attempt to register each one as best, determine
+    // whether or not to continue graph solving.
+    //
+
+    /*
 
     //
     // Begin the solving loop.
@@ -683,9 +698,10 @@ Return Value:
     // Intentional follow-on to End.
     //
 
-End:
 
     */
+
+End:
 
     if (SUCCEEDED(Result)) {
 

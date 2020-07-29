@@ -413,20 +413,10 @@ typedef union _GRAPH_FLAGS {
         ULONG IsCuGraph:1;
 
         //
-        // When set, indicates this graph is the CUDA "spare graph" for the
-        // context.  When attempting to find the best graph solution, a worker
-        // thread may register its graph as the current best solution, then use
-        // the spare graph (or previous best graph) to continue solving
-        // attempts.
-        //
-
-        ULONG IsCuSpare:1;
-
-        //
         // Unused bits.
         //
 
-        ULONG Unused:17;
+        ULONG Unused:18;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -437,14 +427,13 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet != FALSE)
 #define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded != FALSE)
 #define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare != FALSE)
-#define IsSpareCuGraph(Graph) ((Graph)->Flags.IsCuSpare != FALSE)
+#define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
 #define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification != FALSE)
 #define WantsAssignedMemoryCoverage(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverage)
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
-#define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 #define SetSpareCuGraph(Graph) (Graph->Flags.IsSpareCuGraph = TRUE)
@@ -983,11 +972,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _PERFECT_HASH_CONTEXT *Context;
 
     //
-    // If this is the host memory graph for a CUDA graph, this is the
-    // corresponding device memory address for the graph.
+    // If this is a GPU solver graph, this points to the solve context.
     //
-
-    struct _GRAPH *CuDeviceGraph;
 
     struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
 

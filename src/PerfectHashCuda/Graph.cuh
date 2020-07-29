@@ -739,11 +739,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _PERFECT_HASH_CONTEXT *Context;
 
     //
-    // If this is the host memory graph for a CUDA graph, this is the
-    // corresponding device memory address for the graph.
+    // Solve context for this graph.
     //
-
-    struct _GRAPH *CuDeviceGraph;
 
     struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
 

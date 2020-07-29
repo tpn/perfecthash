@@ -15,6 +15,28 @@ Abstract:
 
 #include "stdafx.h"
 #include "Chm01.h"
+#include "Graph_Ptx_RawCString.h"
+
+//
+// Spin count for the device context best graph critical section.
+//
+
+#define BEST_CU_GRAPH_CS_SPINCOUNT 4000
+
+//
+// Forward decls.
+//
+
+HRESULT
+InitializeCudaAndGraphsChm02(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+
+
+//
+// Main table creation implementation routine for Chm02.
+//
 
 _Use_decl_annotations_
 HRESULT
@@ -96,17 +118,11 @@ Return Value:
     PRTL Rtl;
     USHORT Index;
     PULONG Keys;
-    PGRAPH *Graphs = NULL;
-    PGRAPH *CuDeviceGraphs = NULL;
+    PGRAPH *Graphs;
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
-    BOOLEAN IsSpare;
-    BOOLEAN CreateCuGraph;
-    BOOLEAN KeysRegistered;
-    LPGUID InterfaceId;
     ULONG Attempt = 0;
-    ULONG ReferenceCount;
     BYTE NumberOfEvents;
     SIZE_T KeysSizeInBytes;
     HRESULT Result = S_OK;
@@ -119,10 +135,10 @@ Return Value:
     PHANDLE Event;
     ULONG Concurrency;
     ULONG CuConcurrency;
-    ULONG CuGraphCount = 0;
-    ULONG NumberOfCuGraphs;
-    ULONG NumberOfCpuGraphs;
     ULONG TotalNumberOfGraphs;
+    ULONG NumberOfSolveContexts;
+    ULONG NumberOfDeviceContexts;
+    PVOID KeysBaseAddress;
     PLIST_ENTRY ListEntry;
     ULONG CloseFileErrorCount = 0;
     ULONG NumberOfSeedsRequired;
@@ -133,15 +149,11 @@ Return Value:
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
     PPERFECT_HASH_CONTEXT Context;
     BOOL WaitForAllEvents = TRUE;
-    PPERFECT_HASH_TLS_CONTEXT TlsContext;
-    PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
     PPH_CU_DEVICE_CONTEXTS DeviceContexts;
-    PPH_CU_SOLVE_CONTEXT SolveContext;
+    //PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
-    CU_MEM_HOST_REGISTER_FLAGS MemHostRegisterFlags;
-    PVOID KeysBaseAddress;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
 
@@ -192,7 +204,6 @@ Return Value:
 
     TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
     Silent = (TableCreateFlags.Silent != FALSE);
-    MemHostRegisterFlags.AsULong = 0;
 
     //
     // Initialize variables used if we jump to Error early-on.
@@ -203,13 +214,13 @@ Return Value:
     TotalNumberOfGraphs = 0;
 
     //
-    // Perform the CUDA initialization.
+    // Perform the CUDA and graph initialization.
     //
 
-    Result = PerfectHashContextInitializeCuda(Context,
-                                              Table->TableCreateParameters);
+    Result = InitializeCudaAndGraphsChm02(Context,
+                                          Table->TableCreateParameters);
     if (FAILED(Result)) {
-        PH_ERROR(CreatePerfectHashTableImplChm02_InitializeCuda, Result);
+        PH_ERROR(InitializeCudaAndGraphsChm02, Result);
         goto Error;
     }
 
@@ -222,35 +233,10 @@ Return Value:
     ASSERT(CuConcurrency > 0);
 
     DeviceContexts = Context->CuDeviceContexts;
-    ASSERT(DeviceContexts != NULL);
+    NumberOfDeviceContexts = DeviceContexts->NumberOfDeviceContexts;
 
     SolveContexts = Context->CuSolveContexts;
-    ASSERT(SolveContexts != NULL);
-
-    if (FirstSolvedGraphWins(Context)) {
-        NumberOfCpuGraphs = Concurrency;
-        NumberOfCuGraphs = CuConcurrency;
-    } else {
-
-        //
-        // We add 1 to the maximum concurrency in order to account for a spare
-        // graph that doesn't actively participate in solving, but can be used
-        // by a worker thread when it discovers a graph that is classed as the
-        // "best" by the RegisterSolvedGraph() routine.
-        //
-
-        NumberOfCpuGraphs = Concurrency + 1;
-        if (NumberOfCpuGraphs == 0) {
-            return E_INVALIDARG;
-        }
-
-        NumberOfCuGraphs = CuConcurrency + 1;
-        if (NumberOfCuGraphs == 0) {
-            return E_INVALIDARG;
-        }
-    }
-
-    TotalNumberOfGraphs = NumberOfCuGraphs + NumberOfCpuGraphs;
+    NumberOfSolveContexts = SolveContexts->NumberOfSolveContexts;
 
     //
     // Copy the keys over to each device participating in the solving.
@@ -259,16 +245,7 @@ Return Value:
     KeysBaseAddress = Table->Keys->KeyArrayBaseAddress;
     KeysSizeInBytes = Table->Keys->NumberOfElements.QuadPart * sizeof(KEY);
 
-    //
-    // Register the keys base address first.
-    //
-
-    MemHostRegisterFlags.Portable = TRUE;
-    KeysRegistered = FALSE;
-
-    for (Index = 0; Index < DeviceContexts->NumberOfDeviceContexts; Index++) {
-
-        //CU_DEVICE_POINTER DevicePointer;
+    for (Index = 0; Index < NumberOfDeviceContexts; Index++) {
 
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
 
@@ -282,21 +259,6 @@ Return Value:
             Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
             goto Error;
         }
-
-#if 0
-        if (KeysRegistered == FALSE) {
-            CuResult = Cu->MemHostRegister(KeysBaseAddress,
-                                           KeysSizeInBytes,
-                                           MemHostRegisterFlags);
-            CU_CHECK(CuResult, MemHostRegister);
-            KeysRegistered = TRUE;
-        }
-
-        CuResult = Cu->MemHostGetDevicePointer(&DevicePointer,
-                                               KeysBaseAddress,
-                                               0);
-        CU_CHECK(CuResult, MemHostGetDevicePointer);
-#endif
 
         //
         // Allocate sufficient memory.
@@ -380,217 +342,6 @@ Return Value:
     Result = PrepareGraphInfoChm02(Table, &Info, NULL);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashTableImplChm02_PrepareFirstGraphInfo, Result);
-        goto Error;
-    }
-
-    //
-    // Allocate device memory for CUDA graphs.  We don't instantiate the device
-    // graphs via the normal COM component CreateInstance() glue (which would
-    // normally take care of allocating space for the component as part of the
-    // creation), so we have to allocate all of the space up-front.  (Versus
-    // allocating just an array of instance pointers, like we do for the CPU
-    // graph instances below.)
-    //
-
-    CuResult = Cu->MemAlloc((PCU_DEVICE_POINTER)&CuDeviceGraphs,
-                            sizeof(*Graph) * NumberOfCuGraphs);
-    if (CU_FAILED(CuResult)) {
-        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {
-            Result = PH_I_CUDA_OUT_OF_MEMORY;
-        } else {
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-        }
-        goto Error;
-    }
-
-    //
-    // Allocate space for an array of pointers to host graph instances.  This
-    // includes both CPU graphs and CUDA graphs.
-    //
-
-    Graphs = (PGRAPH *)(
-        Allocator->Vtbl->Calloc(
-            Allocator,
-            TotalNumberOfGraphs,
-            sizeof(Graph)
-        )
-    );
-
-    if (!Graphs) {
-        Result = PH_I_OUT_OF_MEMORY;
-        goto Error;
-    }
-
-    //
-    // We want each graph instance to have its own isolated Allocator instance
-    // rather than a reference to the global (singleton) instance that is shared
-    // amongst all components by default.
-    //
-    // There are three reasons for this.  First, it allows us to request memory
-    // with the flag HEAP_NO_SERIALIZE, which avoids a small synchronization
-    // penalty.  Second, it improves the usability of heap debugging tools (like
-    // gflags).  Third, it allows us to release all allocations by destroying
-    // the underlying heap handle (versus having to free each one individually).
-    //
-    // We communicate this desire to the COM component creation scaffolding by
-    // way of the TLS context, which allows us to toggle a flag that disables
-    // the global component override functionality for the Allocator interface,
-    // as well as specify custom flags and a minimum size to HeapCreate().
-    //
-    // So, we now obtain the active TLS context, using our local stack-allocated
-    // one if need be, toggle the disable global allocator component flag, and
-    // fill out the heap create flags and minimum size (based off the total
-    // allocation size calculated by the PrepareGraphInfoChm01() routine above).
-    //
-
-    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
-
-    ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
-    ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
-    ASSERT(!TlsContext->HeapCreateFlags);
-    ASSERT(!TlsContext->HeapMinimumSize);
-
-    TlsContextDisableGlobalAllocator(TlsContext);
-    TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
-    TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;
-    TlsContext->HeapMinimumSize = (ULONG_PTR)Info.AllocSize;
-
-    //
-    // Make sure we haven't overflowed MAX_ULONG.  This should be caught
-    // earlier when preparing the graph info.
-    //
-
-    if ((ULONGLONG)TlsContext->HeapMinimumSize != Info.AllocSize) {
-        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
-    }
-
-    //
-    // Copy the table create flags into the TLS context as well; they are now
-    // used by GraphInitialize() to tweak vtbl construction.
-    //
-
-    TlsContext->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
-
-    //
-    // Toggle the "create CUDA graph" flag in the TLS context, which is also
-    // used by GraphInitialize() to determine if a CUDA graph should be created.
-    // Initialize the count of CUDA graphs to 0.  We clear the bit once we've
-    // created the requested number of CUDA graphs.
-    //
-
-    CreateCuGraph = TRUE;
-    TlsContext->Flags.CreateCuGraph = TRUE;
-    CuGraphCount = 0;
-
-    //
-    // Create graph instances and capture the resulting pointer in the array
-    // we just allocated above.
-    //
-
-    for (Index = 0; Index < TotalNumberOfGraphs; Index++) {
-
-        //
-        // If the number of CUDA graphs created equals the desired concurrency
-        // level, toggle the CUDA graph flag in the TLS context.
-        //
-
-        if (CuGraphCount == CuConcurrency) {
-            CreateCuGraph = FALSE;
-            TlsContext->Flags.CreateCuGraph = FALSE;
-        } else if (CreateCuGraph != FALSE) {
-            ASSERT(TlsContext->Flags.CreateCuGraph != FALSE);
-            CuGraphCount++;
-        }
-
-        if (CreateCuGraph != FALSE) {
-            InterfaceId = (LPGUID)&IID_PERFECT_HASH_GRAPH_CU;
-        } else {
-            InterfaceId = (LPGUID)&IID_PERFECT_HASH_GRAPH;
-        }
-
-        Result = Table->Vtbl->CreateInstance(Table,
-                                             NULL,
-                                             (REFIID)InterfaceId,
-                                             &Graph);
-
-        if (FAILED(Result)) {
-
-            //
-            // Suppress logging for out-of-memory errors (as we communicate
-            // memory issues back to the caller via informational return codes).
-            //
-
-            if (Result != E_OUTOFMEMORY) {
-                PH_ERROR(CreatePerfectHashTableImplChm02_CreateGraph, Result);
-            }
-
-            //
-            // N.B. We 'break' instead of 'goto Error' here like we normally
-            //      do in order for the TLS context cleanup logic following
-            //      this routine to run.
-            //
-
-            break;
-        }
-
-        //
-        // Verify the uniqueness of our graph allocator and underlying handle.
-        //
-
-        ASSERT(Graph->Allocator != Table->Allocator);
-        ASSERT(Graph->Allocator->HeapHandle != Table->Allocator->HeapHandle);
-
-        //
-        // Verify the Rtl instance was global.
-        //
-
-        ASSERT(Graph->Rtl == Table->Rtl);
-
-        if (CreateCuGraph != FALSE) {
-            ASSERT(IsCuGraph(Graph));
-
-            //
-            // Wire up this graph with the corresponding device memory graph.
-            //
-
-            SolveContext = &SolveContexts->SolveContexts[Index];
-            Graph->CuDeviceGraph = CuDeviceGraphs[Index];
-            Graph->CuSolveContext = SolveContext;
-
-            SolveContext->HostGraph = Graph;
-            SolveContext->DeviceGraph = Graph->CuDeviceGraph;
-        }
-
-        //
-        // Copy relevant flags over, then save the graph instance in the array.
-        //
-
-        Graph->Flags.SkipVerification = TableCreateFlags.SkipGraphVerification;
-
-        Graph->Flags.WantsWriteCombiningForVertexPairsArray =
-            TableCreateFlags.EnableWriteCombineForVertexPairs;
-
-        Graph->Flags.RemoveWriteCombineAfterSuccessfulHashKeys =
-            TableCreateFlags.RemoveWriteCombineAfterSuccessfulHashKeys;
-
-        Graph->Index = Index;
-        Graphs[Index] = Graph;
-    }
-
-    //
-    // Restore all the values we mutated, then potentially clear the TLS context
-    // if our local stack-allocated version was used.  Then, check the result
-    // and jump to our error handling block if it indicates failure.
-    //
-
-    TlsContextEnableGlobalAllocator(TlsContext);
-    TlsContext->Flags.CustomAllocatorDetailsPresent = FALSE;
-    TlsContext->HeapCreateFlags = 0;
-    TlsContext->HeapMinimumSize = 0;
-
-    PerfectHashTlsClearContextIfActive(&LocalTlsContext);
-
-    if (FAILED(Result)) {
         goto Error;
     }
 
@@ -699,6 +450,17 @@ Return Value:
     ClearStopSolving(Context);
 
     //
+    // Synchronize on each GPU device's stream that was used for the async
+    // memcpy of the keys array before submitting any threadpool work.
+    //
+
+    for (Index = 0; Index < DeviceContexts->NumberOfDeviceContexts; Index++) {
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
+        CuResult = Cu->StreamSynchronize(DeviceContext->Stream);
+        CU_CHECK(CuResult, StreamSynchronize);
+    }
+
+    //
     // For each graph instance, set the graph info, and, if we haven't reached
     // the concurrency limit, append the graph to the context work list and
     // submit threadpool work for it (to begin graph solving).
@@ -707,13 +469,15 @@ Return Value:
     ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
     ASSERT(Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList));
 
-    if (FirstSolvedGraphWins(Context)) {
-        ASSERT(TotalNumberOfGraphs == Concurrency + CuConcurrency);
-    } else {
-        ASSERT(TotalNumberOfGraphs - 2 == Concurrency + CuConcurrency);
-    }
+    //
+    // The array of all graphs is based at GpuGraphs.  (The CpuGraphs are offset
+    // from this array; i.e. a single allocation is performed for the total
+    // graph count and then individual graphs are sliced up accordingly.)
+    //
 
-    for (Index = 0; Index < TotalNumberOfGraphs; Index++) {
+    Graphs = Context->GpuGraphs;
+
+    for (Index = 0; Index < Context->TotalNumberOfGraphs; Index++) {
 
         Graph = Graphs[Index];
 
@@ -726,57 +490,8 @@ Return Value:
             goto Error;
         }
 
-        if (!FirstSolvedGraphWins(Context)) {
-            if (Index == 0) {
+        if (!IsSpareGraph(Graph)) {
 
-                //
-                // The first CUDA graph becomes the spare CUDA graph.
-                //
-
-                Graph->Flags.IsCuSpare = TRUE;
-                IsSpare = TRUE;
-
-                //
-                // Context->SpareCuGraph is guarded by the best graph critical
-                // section.  We know that no worker threads will be running at
-                // this point; inform SAL accordingly by suppressing the
-                // concurrency warnings.
-                //
-
-                _Benign_race_begin_
-                Context->SpareCuGraph = Graph;
-                _Benign_race_end_
-
-            } else if (Index == CuConcurrency) {
-
-                //
-                // The first CPU graph becomes our spare graph.  If a worker
-                // thread finds the best graph, it will swap its graph for this
-                // spare one, such that it can continue looking for new
-                // solutions.
-                //
-
-                Graph->Flags.IsSpare = TRUE;
-                IsSpare = TRUE;
-
-                //
-                // Context->SpareGraph is guarded by the best graph critical
-                // section.  We know that no worker threads will be running at
-                // this point; inform SAL accordingly by suppressing the
-                // concurrency warnings.
-                //
-
-                _Benign_race_begin_
-                Context->SpareGraph = Graph;
-                _Benign_race_end_
-            } else {
-                IsSpare = FALSE;
-            }
-        } else {
-            IsSpare = FALSE;
-        }
-
-        if (!IsSpare) {
             InitializeListHead(&Graph->ListEntry);
             InsertTailMainWork(Context, &Graph->ListEntry);
             SubmitThreadpoolWork(Context->MainWork);
@@ -1313,31 +1028,15 @@ End:
 
 ReleaseGraphs:
 
-    if (MemHostRegisterFlags.AsULong != 0) {
-        Cu = Context->Cu;
-        KeysBaseAddress = Table->Keys->KeyArrayBaseAddress;
-        CuResult = Cu->MemHostUnregister(KeysBaseAddress);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(MemHostUnregister, CuResult);
-        }
-    }
-
     //
-    // XXX TODO: should we have the device graphs addref/release the host ones
-    // and vice versa?
+    // Todo: free keys.
     //
 
-    if (CuDeviceGraphs) {
-        Cu = Context->Cu;
-        CuResult = Context->Cu->MemFree((PCU_DEVICE_POINTER)CuDeviceGraphs);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CreatePerfectHashTableImplChm02_MemFree, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-        }
-        CuDeviceGraphs = NULL;
-    }
+    Graphs = Context->Graphs;
 
-    if (Graphs) {
+#if 0
+    if (0 && Graphs) {
+        ULONG ReferenceCount;
 
         //
         // Walk the array of graph instances and release each one (assuming it
@@ -1368,6 +1067,7 @@ ReleaseGraphs:
 
         Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Graphs);
     }
+#endif
 
     //
     // Explicitly reset all events before returning.
@@ -1394,6 +1094,1211 @@ ReleaseGraphs:
 
     return Result;
 }
+
+_Use_decl_annotations_
+HRESULT
+InitializeCudaAndGraphsChm02(
+    PPERFECT_HASH_CONTEXT Context,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    )
+/*++
+
+Routine Description:
+
+    Attempts to initialize CUDA and all supporting graphs for the given context.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which
+        the routine will try and initialize CUDA and all supporting graphs.
+
+    TableCreateParameters - Supplies a pointer to the table create parameters.
+
+Return Value:
+
+    S_OK - Initialized successfully.
+
+    S_FALSE - Already initialized.
+
+    Otherwise, an appropriate error code.
+
+--*/
+{
+    PCU Cu;
+    PRTL Rtl;
+    ULONG Index;
+    ULONG Inner;
+    ULONG Count;
+    LONG Ordinal;
+    BOOLEAN Found;
+    ULONG NumberOfDevices;
+    ULONG NumberOfContexts;
+    PULONG BitmapBuffer = NULL;
+    RTL_BITMAP Bitmap;
+    HRESULT Result;
+    CU_RESULT CuResult;
+    CU_DEVICE DeviceId;
+    CU_DEVICE MinDeviceId;
+    CU_DEVICE MaxDeviceId;
+    PALLOCATOR Allocator;
+    PGRAPH Graph;
+    PGRAPH *Graphs;
+    PGRAPH *CpuGraphs;
+    PGRAPH *GpuGraphs;
+    PGRAPH DeviceGraph;
+    PGRAPH DeviceGraphs;
+    PPH_CU_DEVICE Device;
+    PCU_OCCUPANCY Occupancy;
+    BOOLEAN SawCuConcurrency;
+    ULONG NumberOfGpuGraphs;
+    ULONG NumberOfCpuGraphs;
+    ULONG TotalNumberOfGraphs;
+    ULONG SpareGraphCount;
+    ULONG MatchedGraphCount;
+    ULONG BlocksPerGridValue;
+    ULONG ThreadsPerBlockValue;
+    ULONG KernelRuntimeTargetValue;
+    ULONG NumberOfGraphsForDevice;
+    ULONG NumberOfSolveContexts;
+    PVALUE_ARRAY Ordinals;
+    PVALUE_ARRAY BlocksPerGrid;
+    PVALUE_ARRAY ThreadsPerBlock;
+    PVALUE_ARRAY KernelRuntimeTarget;
+    CU_STREAM_FLAGS StreamFlags;
+    ULARGE_INTEGER AllocSizeInBytes;
+    ULARGE_INTEGER BitmapBufferSizeInBytes;
+    PPH_CU_DEVICE_CONTEXT DeviceContext;
+    PPH_CU_DEVICE_CONTEXTS DeviceContexts;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+    PPH_CU_SOLVE_CONTEXTS SolveContexts;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+
+    STRING KernelFunctionName =
+        RTL_CONSTANT_STRING("PerfectHashCudaEnterSolvingLoop");
+
+    CU_JIT_OPTION JitOptions[] = {
+        CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
+        CU_JIT_INFO_LOG_BUFFER,
+    };
+    PVOID JitOptionValues[2];
+    USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
+
+    CHAR JitLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
+
+    //
+    // If we've already got a CU instance, assume we're already initialized.
+    //
+
+    if (Context->Cu != NULL) {
+        return S_FALSE;
+    }
+
+    SolveContexts = NULL;
+    DeviceContexts = NULL;
+
+    Table = Context->Table;
+    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+
+    //
+    // Try create a CU instance.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_CU,
+                                           &Context->Cu);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // The CU component is a global component, which means it can't create
+    // instances of other global components like Rtl and Allocator during its
+    // initialization function.  So, we manually set them now.
+    //
+
+    Cu = Context->Cu;
+
+    Rtl = Cu->Rtl = Context->Rtl;
+    Cu->Rtl->Vtbl->AddRef(Cu->Rtl);
+
+    Cu->Allocator = Allocator = Context->Allocator;
+    Cu->Allocator->Vtbl->AddRef(Cu->Allocator);
+
+    Result = CreatePerfectHashCuDevices(Cu,
+                                        Cu->Allocator,
+                                        &Context->CuDevices);
+    if (FAILED(Result)) {
+        PH_ERROR(CreatePerfectHashCuDevices, Result);
+        goto Error;
+    }
+
+    Count = TableCreateParameters->NumberOfElements;
+    Param = TableCreateParameters->Params;
+
+    //
+    // Clear our local aliases.
+    //
+
+    Ordinals = NULL;
+    BlocksPerGrid = NULL;
+    ThreadsPerBlock = NULL;
+    KernelRuntimeTarget = NULL;
+    SawCuConcurrency = FALSE;
+
+    //
+    // Disable "enum not handled in switch statement" warning.
+    //
+    //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+    //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+    //                     is not explicitly handled by a case label
+    //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
+    for (Index = 0; Index < Count; Index++, Param++) {
+
+        switch (Param->Id) {
+
+            case TableCreateParameterCuConcurrencyId:
+                Context->CuConcurrency = Param->AsULong;
+                SawCuConcurrency = TRUE;
+                break;
+
+            case TableCreateParameterCuDevicesId:
+                Ordinals = &Param->AsValueArray;
+                break;
+
+            case TableCreateParameterCuDevicesBlocksPerGridId:
+                BlocksPerGrid = &Param->AsValueArray;
+                break;
+
+            case TableCreateParameterCuDevicesThreadsPerBlockId:
+                ThreadsPerBlock = &Param->AsValueArray;
+                break;
+
+            case TableCreateParameterCuDevicesKernelRuntimeTargetInMillisecondsId:
+                KernelRuntimeTarget = &Param->AsValueArray;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+#pragma warning(pop)
+
+    //
+    // Validate --CuConcurrency.  It's mandatory, it must be greater than zero,
+    // and less than or equal to the maximum concurrency.  (When CuConcurrency
+    // is less than max concurrency, the difference between the two will be the
+    // number of CPU solving threads launched.  E.g. if --CuConcurrency=16 and
+    // max concurrency is 18; there will be two CPU solving threads launched in
+    // addition to the 16 GPU solver threads.)
+    //
+
+    if (!SawCuConcurrency) {
+        Result = PH_E_CU_CONCURRENCY_MANDATORY_FOR_SELECTED_ALGORITHM;
+        goto Error;
+    }
+
+    if (Context->CuConcurrency == 0) {
+        Result = PH_E_INVALID_CU_CONCURRENCY;
+        goto Error;
+    }
+
+    if (Context->CuConcurrency > Context->MaximumConcurrency) {
+        Result = PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY;
+        goto Error;
+    }
+
+    //
+    // Calculate the number of CPU solving threads; this may be zero.
+    //
+
+    Context->NumberOfCpuThreads = (
+        Context->MaximumConcurrency -
+        Context->CuConcurrency
+    );
+
+    //
+    // Initialize the number of graphs to use for CPU/GPU solving.  Initially,
+    // this will match the desired respective concurrency level.
+    //
+
+    Context->NumberOfGpuGraphs = Context->CuConcurrency;
+    Context->NumberOfCpuGraphs = Context->NumberOfCpuThreads;
+
+    if (FindBestGraph(Context)) {
+
+        //
+        // We add 1 to the maximum concurrency in order to account for a spare
+        // graph that doesn't actively participate in solving, but can be used
+        // by a worker thread when it discovers a graph that is classed as the
+        // "best" by the RegisterSolvedGraph() routine.
+        //
+        // N.B. We may increment this number again, later in this routine, if we
+        //      detect that we'll be using multiple GPUs.  We'll create a spare
+        //      graph for each unique device.
+        //
+
+        Context->NumberOfGpuGraphs += 1;
+
+        //
+        // Only increment the number of CPU graphs if the number of CPU threads
+        // is greater than zero.
+        //
+
+        if (Context->NumberOfCpuThreads > 0) {
+            Context->NumberOfCpuGraphs += 1;
+        }
+
+    }
+
+    //
+    // Validate device ordinals optionally supplied via --CuDevices.  This
+    // parameter is a bit quirky: it can be a single value or list of comma-
+    // separated values.  Each value represents a device ordinal, and any
+    // device ordinal can appear one or more times.  The number of *unique*
+    // ordinals dictates the number of CUDA contexts we create.  (We only want
+    // one context per device; multiple contexts would impede performance.)
+    //
+    // If only one device ordinal is supplied, then all GPU solver threads will
+    // use this device.  If more than one ordinal is supplied, there must be at
+    // least two unique ordinals present in the entire set.  E.g.:
+    //
+    //      Valid:      --CuDevices=0,1
+    //      Invalid:    --CuDevices=0,0
+    //
+    // Additionally, if more than one ordinal is supplied, the dependent params
+    // like --CuDevicesBlocksPerGrid and --CuDevicesThreadsPerBlock must have
+    // the same number of values supplied.  E.g.:
+    //
+    //      Valid:      --CuDevices=0,1 --CuDevicesBlocksPerGrid=32,16
+    //      Invalid:    --CuDevices=0,1 --CuDevicesBlocksPerGrid=32
+    //
+    // In this situation, the order of the device ordinal in the value list will
+    // be correlated with the identically-offset value in the dependent list.
+    // In the example above, the CUDA contexts for devices 0 and 1 will use 32
+    // and 16 respectively as their blocks-per-grid value.
+    //
+
+    //
+    // First, if --CuDevices (local variable `Ordinals`) has not been supplied,
+    // verify no dependent params are present.
+    //
+
+    if (Ordinals == NULL) {
+
+        if (BlocksPerGrid != NULL) {
+            Result = PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES;
+            goto Error;
+        }
+
+        if (ThreadsPerBlock != NULL) {
+            Result = PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES;
+            goto Error;
+        }
+
+        if (KernelRuntimeTarget != NULL) {
+            Result = PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES;
+            goto Error;
+        }
+
+        //
+        // We default the number of contexts and devices to 1 in the absence of any
+        // user-supplied values.
+        //
+
+        NumberOfContexts = 1;
+        NumberOfDevices = 1;
+        goto FinishedOrdinalsProcessing;
+
+    }
+
+    //
+    // Ordinals have been supplied.  Verify the number of values matches the
+    // supplied value for --CuConcurrency, then verify that if any dependent
+    // parameters have been supplied, they have the same number of values.
+    //
+
+    if (Context->CuConcurrency != Ordinals->NumberOfValues) {
+        Result = PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY;
+        goto Error;
+    }
+
+    if ((BlocksPerGrid != NULL) &&
+        (BlocksPerGrid->NumberOfValues != Ordinals->NumberOfValues))
+    {
+        Result = PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
+        goto Error;
+    }
+
+    if ((ThreadsPerBlock != NULL) &&
+        (ThreadsPerBlock->NumberOfValues != Ordinals->NumberOfValues))
+    {
+        Result = PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
+        goto Error;
+    }
+
+    if ((KernelRuntimeTarget != NULL) &&
+        (KernelRuntimeTarget->NumberOfValues != Ordinals->NumberOfValues))
+    {
+        Result = PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT;
+        goto Error;
+    }
+
+    //
+    // Initialize the min and max device IDs, then enumerate the supplied
+    // ordinals, validating each one as we go and updating the min/max values
+    // accordingly.
+    //
+
+    MinDeviceId = 1 << 30;
+    MaxDeviceId = 0;
+
+    for (Index = 0; Index < Ordinals->NumberOfValues; Index++) {
+        Ordinal = (LONG)Ordinals->Values[Index];
+        CuResult = Cu->DeviceGet(&DeviceId, Ordinal);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CuDeviceGet, CuResult);
+            Result = PH_E_INVALID_CU_DEVICES;
+            goto Error;
+        }
+        if (DeviceId > MaxDeviceId) {
+            MaxDeviceId = DeviceId;
+        }
+        if (DeviceId < MinDeviceId) {
+            MinDeviceId = DeviceId;
+        }
+    }
+
+    //
+    // We use a bitmap to count the number of unique devices supplied in the
+    // --CuDevices parameter.  Calculate the bitmap buffer size in bytes.
+    //
+
+    BitmapBufferSizeInBytes.QuadPart = ALIGN_UP_POINTER(
+        ALIGN_UP((MaxDeviceId + 1ULL), 8) >> 3
+    );
+
+    //
+    // Sanity check we haven't overflowed.
+    //
+
+    if (BitmapBufferSizeInBytes.HighPart != 0) {
+        Result = PH_E_TOO_MANY_BITS_FOR_BITMAP;
+        goto Error;
+    }
+
+    ASSERT(BitmapBufferSizeInBytes.LowPart > 0);
+
+    //
+    // Allocate sufficient bitmap buffer space.
+    //
+
+    BitmapBuffer = Allocator->Vtbl->Calloc(Allocator,
+                                           1,
+                                           BitmapBufferSizeInBytes.LowPart);
+    if (BitmapBuffer == NULL) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    //
+    // Wire-up the device bitmap.
+    //
+
+    Bitmap.Buffer = BitmapBuffer;
+    Bitmap.SizeOfBitMap = (MaxDeviceId + 1);
+
+    //
+    // Enumerate the ordinals again, setting a corresponding bit for each
+    // ordinal we see.
+    //
+
+    for (Index = 0; Index < Ordinals->NumberOfValues; Index++) {
+        Ordinal = (LONG)Ordinals->Values[Index];
+        ASSERT(Ordinal >= 0);
+        _Analysis_assume_(Ordinal >= 0);
+        FastSetBit(&Bitmap, Ordinal);
+    }
+
+    //
+    // Count the number of bits set, this will represent the number of unique
+    // devices we encountered.  Sanity check the number doesn't exceed the total
+    // number of devices reported in the system.
+    //
+
+    Rtl = Context->Rtl;
+    NumberOfContexts = Rtl->RtlNumberOfSetBits(&Bitmap);
+    NumberOfDevices = Context->CuDevices.NumberOfDevices;
+
+    if (NumberOfContexts > NumberOfDevices) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashContextInitializeCuda_SetBitsExceedsNumDevices,
+                 Result);
+        goto Error;
+    }
+
+    Context->NumberOfCuContexts = NumberOfContexts;
+
+    //
+    // Intentional follow-on to FinishedOrdinalsProcessing.
+    //
+
+FinishedOrdinalsProcessing:
+
+    //
+    // Allocate memory for the device contexts structs.
+    //
+
+    AllocSizeInBytes.QuadPart = sizeof(*Context->CuDeviceContexts);
+
+    if (NumberOfContexts > 1) {
+
+        //
+        // Account for additional device context structures if we're creating
+        // more than one.  (We get one for free via ANYSIZE_ARRAY.)
+        //
+
+        AllocSizeInBytes.QuadPart += (
+            (NumberOfContexts - 1) *
+            sizeof(Context->CuDeviceContexts->DeviceContexts[0])
+        );
+
+        //
+        // If we're in "find best graph" mode, account for the additional spare
+        // graphs we'll need to create (one per device).
+        //
+        // N.B. We already accounted for an additional spare graph earlier in
+        //      this routine, hence the -1 below.
+        //
+
+        if (FindBestGraph(Context)) {
+            Context->NumberOfGpuGraphs += (NumberOfContexts - 1);
+
+            //
+            // Sanity check our graph counts line up.
+            //
+
+            ASSERT((Context->NumberOfCuContexts +
+                    Context->CuConcurrency) == Context->NumberOfGpuGraphs);
+        }
+
+    }
+
+    //
+    // Sanity check we haven't overflowed.
+    //
+
+    if (AllocSizeInBytes.HighPart > 0) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashContextInitializeCuda_DeviceContextAllocOverflow,
+                 Result);
+        PH_RAISE(Result);
+    }
+
+    DeviceContexts = Allocator->Vtbl->Calloc(Allocator,
+                                             1,
+                                             AllocSizeInBytes.LowPart);
+    if (DeviceContexts == NULL) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    Context->CuDeviceContexts = DeviceContexts;
+    DeviceContexts->NumberOfDeviceContexts = NumberOfContexts;
+
+    //
+    // First pass: set each device context's ordinal to the value obtained via
+    // the --CuDevices parameter.  (The logic we use to do this is a little
+    // different if we're dealing with one context versus more than one.)
+    //
+
+    if (NumberOfContexts == 1) {
+
+        DeviceContext = &DeviceContexts->DeviceContexts[0];
+
+        if (Ordinals != NULL) {
+            ASSERT(Ordinals->NumberOfValues == 1);
+            DeviceContext->Ordinal = (LONG)Ordinals->Values[0];
+        } else {
+
+            //
+            // If no --CuDevices parameter has been supplied, default to 0 for
+            // the device ordinal.
+            //
+
+            DeviceContext->Ordinal = 0;
+        }
+
+    } else {
+
+        ULONG Bit = 0;
+        const ULONG NumberToFind = 1;
+
+        for (Index = 0; Index < NumberOfContexts; Index++) {
+            DeviceContext = &DeviceContexts->DeviceContexts[Index];
+
+            //
+            // Get the device ordinal from the first set/next set bit of the
+            // bitmap.
+            //
+
+            Bit = Rtl->RtlFindSetBits(&Bitmap, NumberToFind, Bit);
+
+            if (Bit == BITS_NOT_FOUND) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(PerfectHashContextInitializeCuda_BitsNotFound,
+                         Result);
+                PH_RAISE(Result);
+            }
+
+            DeviceContext->Ordinal = (LONG)Bit;
+            Bit += 1;
+        }
+    }
+
+    //
+    // Initialize the JIT options.
+    //
+
+    JitOptionValues[0] = (PVOID)sizeof(JitLogBuffer);
+    JitOptionValues[1] = (PVOID)JitLogBuffer;
+
+    //
+    // Second pass: wire-up each device context (identified by ordinal, set
+    // in the first pass above) to the corresponding PH_CU_DEVICE instance
+    // for that device, create CUDA contexts for each device context, load
+    // the module, get the solver entry function, and calculate occupancy.
+    //
+
+    Device = NULL;
+    StreamFlags = CU_STREAM_NON_BLOCKING;
+
+    for (Index = 0; Index < NumberOfContexts; Index++) {
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
+
+        if (!InitializeCriticalSectionAndSpinCount(
+                                    &DeviceContext->BestGraphCriticalSection,
+                                    BEST_CU_GRAPH_CS_SPINCOUNT)) {
+
+            //
+            // This should never fail from Vista onward.
+            //
+
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(InitializeCudaAndGraphsChm02_InitializeCriticalSection,
+                     Result);
+            PH_RAISE(Result);
+        }
+
+        //
+        // Find the PH_CU_DEVICE instance with the same ordinal.
+        //
+
+        Found = FALSE;
+        Device = NULL;
+        for (Inner = 0; Inner < NumberOfDevices; Inner++) {
+            Device = &Context->CuDevices.Devices[Inner];
+            if (Device->Ordinal == DeviceContext->Ordinal) {
+                DeviceContext->Device = Device;
+                Found = TRUE;
+                break;
+            }
+        }
+
+        if (!Found) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashContextInitializeCuda_OrdinalNotFound, Result);
+            PH_RAISE(Result);
+        }
+
+        ASSERT(Device != NULL);
+
+        DeviceContext->Handle = Device->Handle;
+        DeviceContext->Cu = Cu;
+
+        //
+        // Create the context for the device.
+        //
+
+        CuResult = Cu->CtxCreate(&DeviceContext->Context,
+                                 CU_CTX_SCHED_YIELD,
+                                 Device->Handle);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(PerfectHashContextInitializeCuda_CuCtxCreate, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Load the module from the embedded PTX.
+        //
+
+        CuResult = Cu->ModuleLoadDataEx(&DeviceContext->Module,
+                                        (PCHAR)GraphPtxRawCStr,
+                                        NumberOfJitOptions,
+                                        JitOptions,
+                                        JitOptionValues);
+
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(PerfectHashContextInitializeCuda_CuModuleLoadDataEx,
+                     CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Module loaded successfully, resolve the kernel.
+        //
+
+        CuResult = Cu->ModuleGetFunction(&DeviceContext->Function,
+                                         DeviceContext->Module,
+                                         (PCSZ)KernelFunctionName.Buffer);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(PerfectHashContextInitializeCuda_CuModuleGetFunction,
+                     CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Get the occupancy stats.
+        //
+
+        Occupancy = &DeviceContext->Occupancy;
+        CuResult = Cu->OccupancyMaxPotentialBlockSizeWithFlags(
+            &Occupancy->MinimumGridSize,
+            &Occupancy->BlockSize,
+            DeviceContext->Function,
+            NULL,   // OccupancyBlockSizeToDynamicMemSize
+            0,      // DynamicSharedMemorySize
+            0,      // BlockSizeLimit
+            0       // Flags
+        );
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(OccupancyMaxPotentialBlockSizeWithFlags, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        CuResult = Cu->OccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
+            &Occupancy->NumBlocks,
+            DeviceContext->Function,
+            Occupancy->BlockSize,
+            0, // DynamicSharedMemorySize
+            0  // Flags
+        );
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(OccupancyMaxActiveBlocksPerMultiprocessorWithFlags,
+                     CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Create the stream to use for per-device activies (like copying keys).
+        //
+
+        CuResult = Cu->StreamCreate(&DeviceContext->Stream, StreamFlags);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(StreamCreate, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Pop the context off this thread (required before it can be used by
+        // other threads).
+        //
+
+        CuResult = Cu->CtxPopCurrent(NULL);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CtxPopCurrent, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+    }
+
+    //
+    // Allocate space for solver contexts; one per CUDA solving thread.
+    //
+
+    AllocSizeInBytes.QuadPart = sizeof(*Context->CuSolveContexts);
+
+    //
+    // Account for additional solve context structures if we're creating more
+    // than one.  (We get one for free via ANYSIZE_ARRAY.)
+    //
+
+    if (Context->CuConcurrency > 1) {
+        AllocSizeInBytes.QuadPart += (
+            (Context->CuConcurrency - 1) *
+            sizeof(Context->CuSolveContexts->SolveContexts[0])
+        );
+    }
+
+    //
+    // Sanity check we haven't overflowed.
+    //
+
+    if (AllocSizeInBytes.HighPart > 0) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashContextInitializeCuda_SolveContextAllocOverflow,
+                 Result);
+        PH_RAISE(Result);
+    }
+
+    SolveContexts = Allocator->Vtbl->Calloc(Allocator,
+                                            1,
+                                            AllocSizeInBytes.LowPart);
+    if (SolveContexts == NULL) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    Context->CuSolveContexts = SolveContexts;
+    SolveContexts->NumberOfSolveContexts = Context->CuConcurrency;
+    NumberOfSolveContexts = Context->CuConcurrency;
+
+    //
+    // Wire up the solve contexts to their respective device context.
+    //
+
+    for (Index = 0; Index < NumberOfSolveContexts; Index++) {
+
+        SolveContext = &SolveContexts->SolveContexts[Index];
+
+        //
+        // Resolve the ordinal and kernel launch parameters.
+        //
+
+        if (Ordinals == NULL) {
+            Ordinal = 0;
+        } else {
+            Ordinal = (LONG)Ordinals->Values[Index];
+        }
+
+        if (BlocksPerGrid == NULL) {
+            BlocksPerGridValue = 0;
+        } else {
+            BlocksPerGridValue = BlocksPerGrid->Values[Index];
+        }
+        if (BlocksPerGridValue == 0) {
+            BlocksPerGridValue = PERFECT_HASH_CU_DEFAULT_BLOCKS_PER_GRID;
+        }
+
+        if (ThreadsPerBlock == NULL) {
+            ThreadsPerBlockValue = 0;
+        } else {
+            ThreadsPerBlockValue = ThreadsPerBlock->Values[Index];
+        }
+        if (ThreadsPerBlockValue == 0) {
+            ThreadsPerBlockValue = PERFECT_HASH_CU_DEFAULT_THREADS_PER_BLOCK;
+        }
+
+        if (KernelRuntimeTarget == NULL) {
+            KernelRuntimeTargetValue = 0;
+        } else {
+            KernelRuntimeTargetValue = KernelRuntimeTarget->Values[Index];
+        }
+        if (KernelRuntimeTargetValue == 0) {
+            KernelRuntimeTargetValue =
+                PERFECT_HASH_CU_DEFAULT_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS;
+        }
+
+        //
+        // Find the device context for this device ordinal.
+        //
+
+        Found = FALSE;
+        DeviceContext = NULL;
+        for (Inner = 0; Inner < NumberOfContexts; Inner++) {
+            DeviceContext = &DeviceContexts->DeviceContexts[Inner];
+            if (DeviceContext->Ordinal == Ordinal) {
+                Found = TRUE;
+                break;
+            }
+        }
+
+        if (!Found) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            PH_ERROR(PerfectHashContextInitializeCuda_ContextOrdinalNotFound,
+                     Result);
+            PH_RAISE(Result);
+        }
+
+        ASSERT(DeviceContext != NULL);
+
+        //
+        // Increment the count of solve contexts for this device context.
+        //
+
+        DeviceContext->NumberOfSolveContexts++;
+
+        //
+        // Link this solve context to the corresponding device context, then
+        // fill in the kernel launch parameters.
+        //
+
+        SolveContext->DeviceContext = DeviceContext;
+
+        SolveContext->BlocksPerGrid = BlocksPerGridValue;
+        SolveContext->ThreadsPerBlock = ThreadsPerBlockValue;
+        SolveContext->KernelRuntimeTargetInMilliseconds =
+            KernelRuntimeTargetValue;
+
+        //
+        // Activate this context, create a stream, then deactivate it.
+        //
+
+        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CtxPushCurrent, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Create the stream for this solve context.
+        //
+
+        CuResult = Cu->StreamCreate(&SolveContext->Stream, StreamFlags);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(StreamCreate, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+        //
+        // Pop the context off this thread.
+        //
+
+        CuResult = Cu->CtxPopCurrent(NULL);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(CtxPopCurrent, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+
+    }
+
+    //
+    // For each device context, allocate device memory to hold sufficient graphs
+    // (one for each solve context associated with this device, plus a spare
+    // graph if we're in "find best graph" mode).
+    //
+
+    for (Index = 0; Index < NumberOfContexts; Index++) {
+
+        DeviceContext = &DeviceContexts->DeviceContexts[Index];
+
+        ASSERT(DeviceContext->NumberOfSolveContexts > 0);
+
+        NumberOfGraphsForDevice = DeviceContext->NumberOfSolveContexts;
+
+        if (FindBestGraph(Context)) {
+
+            //
+            // Account for the spare graph.
+            //
+
+            NumberOfGraphsForDevice += 1;
+        }
+
+        AllocSizeInBytes.QuadPart = NumberOfGraphsForDevice * sizeof(GRAPH);
+        ASSERT(AllocSizeInBytes.HighPart == 0);
+
+        //
+        // Set the context, then allocate the array of graphs.
+        //
+
+        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
+        CU_CHECK(CuResult, CtxPushCurrent);
+
+        CuResult = Cu->MemAlloc((PCU_DEVICE_POINTER)&DeviceGraphs,
+                                AllocSizeInBytes.LowPart);
+        CU_CHECK(CuResult, MemAlloc);
+
+        DeviceContext->DeviceGraphs = DeviceGraph = DeviceGraphs;
+
+        //
+        // Loop over the solve contexts pointing to this device context and wire
+        // up matching ones to the device graph memory we just allocated.
+        //
+
+        MatchedGraphCount = 0;
+        for (Inner = 0; Inner < NumberOfSolveContexts; Inner++) {
+            SolveContext = &SolveContexts->SolveContexts[Inner];
+
+            if (SolveContext->DeviceContext == DeviceContext) {
+                SolveContext->DeviceGraph = DeviceGraph++;
+                MatchedGraphCount++;
+            }
+        }
+
+        ASSERT(MatchedGraphCount == NumberOfGraphsForDevice - 1);
+
+        //
+        // Wire up the spare device graph if applicable.
+        //
+
+        if (FindBestGraph(Context)) {
+            ULONG_PTR Expected;
+            ULONG_PTR Actual;
+
+            DeviceContext->SpareDeviceGraph = DeviceGraph;
+
+            //
+            // Sanity check our pointer arithmetic is correct; the spare graph
+            // should match the appropriate offset from the base address.
+            //
+
+            Expected = (ULONG_PTR)DeviceContext->SpareDeviceGraph;
+            Actual = (ULONG_PTR)DeviceGraphs;
+            Actual += (NumberOfGraphsForDevice - 1) * sizeof(GRAPH);
+            ASSERT(Expected == Actual);
+        }
+
+        //
+        // Finally, pop the context.
+        //
+
+        CuResult = Cu->CtxPopCurrent(NULL);
+        CU_CHECK(CuResult, CtxPopCurrent);
+
+    }
+
+    //
+    // Time to allocate graph instances.
+    //
+
+    Graph = NULL;
+    GpuGraphs = NULL;
+    CpuGraphs = NULL;
+
+    NumberOfGpuGraphs = Context->NumberOfGpuGraphs;
+    NumberOfCpuGraphs = Context->NumberOfCpuGraphs;
+    TotalNumberOfGraphs = NumberOfCpuGraphs + NumberOfGpuGraphs;
+    Context->TotalNumberOfGraphs = TotalNumberOfGraphs;
+
+    Graphs = Allocator->Vtbl->Calloc(Allocator,
+                                     TotalNumberOfGraphs,
+                                     sizeof(Graphs[0]));
+    if (Graphs == NULL) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    GpuGraphs = Graphs;
+    CpuGraphs = Graphs + NumberOfGpuGraphs;
+
+    Context->GpuGraphs = GpuGraphs;
+    Context->CpuGraphs = CpuGraphs;
+
+    //
+    // Create GPU graphs and assign one to each solve context.
+    //
+
+    SpareGraphCount = 0;
+    DeviceContext = &DeviceContexts->DeviceContexts[0];
+
+    for (Index = 0; Index < NumberOfGpuGraphs; Index++) {
+
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_GRAPH_CU,
+                                               &Graph);
+
+        if (FAILED(Result)) {
+
+            //
+            // Suppress logging for out-of-memory errors (as we communicate
+            // memory issues back to the caller via informational return codes).
+            //
+
+            if (Result != E_OUTOFMEMORY) {
+                PH_ERROR(InitializeCudaAndGraphsChm02_CreateGpuGraph, Result);
+            }
+
+            goto Error;
+        }
+
+        Graph->Flags.IsCuGraph = TRUE;
+        Graph->Index = Index;
+        Graphs[Index] = Graph;
+
+        if (FindBestGraph(Context)) {
+
+            if (Index < NumberOfSolveContexts) {
+
+                SolveContext = &SolveContexts->SolveContexts[Index];
+                ASSERT(SolveContext->DeviceGraph != NULL);
+
+                SolveContext->HostGraph = Graph;
+                Graph->CuSolveContext = SolveContext;
+
+            } else {
+
+                //
+                // This is a spare graph.
+                //
+
+                SpareGraphCount++;
+                ASSERT(SpareGraphCount <= Context->NumberOfSpareCuGraphs);
+                Graph->Flags.IsSpare = TRUE;
+                ASSERT(DeviceContext->SpareDeviceGraph != NULL);
+                DeviceContext->SpareHostGraph = Graph;
+                DeviceContext++;
+            }
+        }
+    }
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    if (FindBestGraph(Context)) {
+        ASSERT(SpareGraphCount == Context->NumberOfSpareCuGraphs);
+    }
+
+    //
+    // If there are CPU solver threads, create CPU graph instances.
+    //
+
+    if (Context->NumberOfCpuThreads > 0) {
+
+        SpareGraphCount = 0;
+
+        for (Index = NumberOfGpuGraphs;
+             Index < (NumberOfGpuGraphs + NumberOfCpuGraphs);
+             Index++)
+        {
+
+            Result = Context->Vtbl->CreateInstance(Context,
+                                                   NULL,
+                                                   &IID_PERFECT_HASH_GRAPH,
+                                                   &Graph);
+
+            if (FAILED(Result)) {
+
+                //
+                // Suppress logging for out-of-memory errors (as we communicate
+                // memory issues back to the caller via informational return
+                // codes).
+                //
+
+                if (Result != E_OUTOFMEMORY) {
+                    PH_ERROR(InitializeCudaAndGraphsChm02_CreateCpuGraph,
+                             Result);
+                }
+
+                goto Error;
+            }
+
+            Graph->Index = Index;
+            Graphs[Index] = Graph;
+
+            if (Index == NumberOfGpuGraphs) {
+
+                //
+                // This is the first CPU graph, verify we've captured the
+                // correct CPU graph starting point.
+                //
+
+                ASSERT(&Graphs[Index] == CpuGraphs);
+            }
+
+            if (FindBestGraph(Context)) {
+
+                if ((Index - NumberOfGpuGraphs) < Context->NumberOfCpuThreads) {
+
+                    NOTHING;
+
+                } else {
+
+                    //
+                    // There should only ever be one spare CPU graph.
+                    //
+
+                    SpareGraphCount++;
+                    ASSERT(SpareGraphCount == 1);
+
+                    Graph->Flags.IsSpare = TRUE;
+
+                    //
+                    // Context->SpareGraph is guarded by the best graph critical
+                    // section.  We know that no worker threads will be running
+                    // at this point; inform SAL accordingly by suppressing the
+                    // concurrency warnings.
+                    //
+
+                    _Benign_race_begin_
+                    Context->SpareGraph = Graph;
+                    _Benign_race_end_
+                }
+            }
+
+            //
+            // Copy relevant flags over.
+            //
+
+            Graph->Flags.SkipVerification =
+                TableCreateFlags.SkipGraphVerification;
+
+            Graph->Flags.WantsWriteCombiningForVertexPairsArray =
+                TableCreateFlags.EnableWriteCombineForVertexPairs;
+
+            Graph->Flags.RemoveWriteCombineAfterSuccessfulHashKeys =
+                TableCreateFlags.RemoveWriteCombineAfterSuccessfulHashKeys;
+
+        }
+    }
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // TODO: loop through any device contexts here and free?
+    //
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    Allocator = Context->Allocator;
+
+    if (BitmapBuffer != NULL) {
+        Allocator->Vtbl->FreePointer(Allocator, &BitmapBuffer);
+    }
+
+    return Result;
+}
+
+
 
 _Use_decl_annotations_
 HRESULT
