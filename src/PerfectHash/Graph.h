@@ -30,7 +30,14 @@ Abstract:
 
 --*/
 
+#pragma once
+
+#ifndef __CUDA_ARCH__
 #include "stdafx.h"
+#else
+#include "PerfectHashPrivate.h"
+#endif
+
 
 //
 // Define the primitive key, edge and vertex types and pointers to said types.
@@ -413,10 +420,17 @@ typedef union _GRAPH_FLAGS {
         ULONG IsCuGraph:1;
 
         //
+        // When set, indicates the graph wants the host to generate random
+        // seeds.
+        //
+
+        ULONG WantsCuRandomHostSeeds:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:18;
+        ULONG Unused:17;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -433,6 +447,8 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
     ((Graph)->Flags.WantsAssignedMemoryCoverage)
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
+#define WantsCuRandomHostSeeds(Graph) \
+    ((Graph)->Flags.WantsCuRandomHostSeeds != FALSE)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)

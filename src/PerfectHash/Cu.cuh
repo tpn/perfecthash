@@ -74,6 +74,7 @@ typedef INT4 *PINT4;
 #define VOID void
 typedef void *PVOID;
 
+#if 0
 union _ULONG_BYTES {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         BYTE Byte1;
@@ -104,6 +105,7 @@ union _ULONG_BYTES {
 };
 typedef union _ULONG_BYTES ULONG_BYTES;
 typedef ULONG_BYTES *PULONG_BYTES;
+#endif
 
 union _LARGE_INTEGER {
     struct {
@@ -162,6 +164,16 @@ struct _LIST_ENTRY {
 };
 typedef struct _LIST_ENTRY LIST_ENTRY;
 typedef LIST_ENTRY *PLIST_ENTRY;
+
+#if 0
+#define STDAPICALLTYPE
+#define NTAPI
+#define FORCEINLINE static inline
+#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
+typedef _Return_type_success_(return >= 0) long HRESULT;
+#endif
+
+#include <PerfectHash.h>
 
 //
 // Define CUDA macros and typedefs in NT style.

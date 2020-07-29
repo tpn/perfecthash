@@ -1151,10 +1151,12 @@ Return Value:
     PPH_CU_DEVICE Device;
     PCU_OCCUPANCY Occupancy;
     BOOLEAN SawCuConcurrency;
+    BOOLEAN WantsRandomHostSeeds;
     PUNICODE_STRING CuPtxPath;
     ULONG NumberOfGpuGraphs;
     ULONG NumberOfCpuGraphs;
     ULONG TotalNumberOfGraphs;
+    ULONG NumberOfRandomHostSeeds;
     ULONG SpareGraphCount;
     ULONG MatchedGraphCount;
     ULONG BlocksPerGridValue;
@@ -1294,6 +1296,11 @@ Return Value:
 
             case TableCreateParameterCuPtxPathId:
                 CuPtxPath = &Param->AsUnicodeString;
+                break;
+
+            case TableCreateParameterCuNumberOfRandomHostSeedsId:
+                NumberOfRandomHostSeeds = Param->AsULong;
+                WantsRandomHostSeeds = TRUE;
                 break;
 
             default:

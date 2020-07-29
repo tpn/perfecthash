@@ -218,6 +218,15 @@ typedef struct _PH_CU_DEVICE_CONTEXTS {
 } PH_CU_DEVICE_CONTEXTS;
 typedef PH_CU_DEVICE_CONTEXTS *PPH_CU_DEVICE_CONTEXTS;
 
+typedef struct _PH_CU_RANDOM_HOST_SEEDS {
+    ULONG TotalNumberOfSeeds;
+    ULONG UsedNumberOfSeeds;
+
+    _Writable_elements_(TotalNumberOfSeeds)
+    PULONG Seeds;
+} PH_CU_RANDOM_HOST_SEEDS;
+typedef PH_CU_RANDOM_HOST_SEEDS *PPH_CU_RANDOM_HOST_SEEDS;
+
 //
 // Each solver GPU thread gets an instance of PH_CU_SOLVE_CONTEXT.
 //
@@ -242,6 +251,10 @@ typedef struct _PH_CU_SOLVE_CONTEXT {
 
     struct _GRAPH *HostGraph;
     struct _GRAPH *DeviceGraph;
+
+    //
+    // If the graph wants random host seeds,
+    //
 
     //
     // Kernel launch parameters.

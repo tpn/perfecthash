@@ -1187,14 +1187,10 @@ ZeroMemoryInline(
         Fill = 0;
     }
 
-#ifdef _M_X64
-    __stosq(Dest, FillQuad, NumberOfQuadwords);
-#else
     while (NumberOfQuadwords) {
         *Dest++ = (DWORD64)FillQuad;
         NumberOfQuadwords--;
     }
-#endif
 
     TrailingDest = (PCHAR)Dest;
 

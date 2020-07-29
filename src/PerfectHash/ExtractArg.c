@@ -1034,6 +1034,8 @@ Return Value:
         CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
     );
 
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuNumberOfRandomHostSeeds);
+
     if (IS_EQUAL(CuPtxPath)) {
         SET_PARAM_ID(CuPtxPath);
         LocalParam.AsUnicodeString.Length = ValueString->Length;

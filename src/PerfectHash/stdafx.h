@@ -12,13 +12,17 @@ Abstract:
 
 --*/
 
+#ifndef __CUDA_ARCH__
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 #error PerfectHash's stdafx.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
+#endif
 #endif
 
 #pragma once
 
+#ifndef __CUDA_ARCH__
 #include "targetver.h"
+#endif
 
 #if 0
 //
@@ -58,6 +62,7 @@ Abstract:
 //
 //
 
+#ifndef __CUDA_ARCH__
 #pragma warning(push)
 #pragma warning(disable: 4255 4668)
 #include <Windows.h>
@@ -101,6 +106,9 @@ Abstract:
 #include <mmintrin.h>
 #pragma warning(pop)
 
+#endif
+#else // ifndef __CUDA_ARCH__
+#include <no_sal2.h>
 #endif
 
 //

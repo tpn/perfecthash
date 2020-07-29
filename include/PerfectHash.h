@@ -46,14 +46,20 @@ extern "C" {
 //
 //
 
+#ifndef __CUDA_ARCH__
 #pragma warning(push)
 #pragma warning(disable: 4255)
 #pragma warning(disable: 4668)
 #include <Windows.h>
 #pragma warning(pop)
+#endif
 
+#ifndef __CUDA_ARCH__
 #include <sal.h>
 #include <specstrings.h>
+#else
+#include <PerfectHashCuda.h>
+#endif
 
 //
 // Disable the anonymous union/struct warning.
@@ -97,11 +103,15 @@ extern "C" {
 typedef struct _STRING {
     USHORT Length;
     USHORT MaximumLength;
+#ifndef __CUDA_ARCH__
 #ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
+#endif
+#else
+    ULONG Padding;
 #endif
     PCHAR Buffer;
 } STRING, ANSI_STRING, *PSTRING, *PANSI_STRING, **PPSTRING, **PPANSI_STRING;
@@ -110,11 +120,15 @@ typedef const STRING *PCSTRING;
 typedef struct _UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
+#ifndef __CUDA_ARCH__
 #ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
+#endif
+#else
+    ULONG Padding;
 #endif
     PWSTR Buffer;
 } UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING, ***PPPUNICODE_STRING;
@@ -195,7 +209,8 @@ typedef ULONG_BYTES *PULONG_BYTES;
     FIRST_ENTRY(x86, X86)                                           \
     ENTRY(x64, X64)                                                 \
     ENTRY(Arm, ARM)                                                 \
-    LAST_ENTRY(Arm64, ARM64)
+    ENTRY(Arm64, ARM64)                                             \
+    LAST_ENTRY(Cuda, CUDA)
 
 #define PERFECT_HASH_CPU_ARCH_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_CPU_ARCH_TABLE(ENTRY, ENTRY, ENTRY)
@@ -265,6 +280,8 @@ PerfectHashGetCurrentCpuArch(
     return PerfectHashArm64CpuArchId;
 #elif defined(_M_ARM)
     return PerfectHashArmCpuArchId;
+#elif defined(__CUDA_ARCH__)
+    return PerfectHashCudaArchId;
 #else
 #error Unknown CPU architecture.
 #endif
@@ -503,6 +520,7 @@ static const PCGUID PerfectHashInterfaceGuids[] = {
     NULL
 };
 
+#ifndef __CUDA_ARCH__
 static const BYTE NumberOfPerfectHashInterfaceGuids =
     ARRAYSIZE(PerfectHashInterfaceGuids);
 
@@ -539,6 +557,8 @@ PerfectHashInterfaceGuidToId(
 
     return Id;
 }
+
+#endif
 
 //
 // COM-related funtion pointer typedefs.
@@ -2913,6 +2933,7 @@ IsValidTableCompileFlags(
     ENTRY(CuDevicesBlocksPerGrid)                                    \
     ENTRY(CuDevicesThreadsPerBlock)                                  \
     ENTRY(CuDevicesKernelRuntimeTargetInMilliseconds)                \
+    ENTRY(CuNumberOfRandomHostSeeds)                                 \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     LAST_ENTRY(Seed3Byte2MaskCounts)
 
@@ -3696,6 +3717,8 @@ BOOLEAN
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
       *PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME;
 
+#ifndef __CUDA_ARCH__
+
 //
 // Scaffolding required to support structured exception handling via __try
 // blocks without having to link to the C runtime library.
@@ -3765,6 +3788,8 @@ HRESULT
     ...
     );
 typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
+
+#endif // ifndef __CUDA_ARCH__
 
 //
 // Define an X-macro for the enum types used by the library.  The ENTRY macros
@@ -3859,11 +3884,13 @@ static const char PerfectHashBuildConfigString[] = "PGO";
 static const char PerfectHashBuildConfigString[] = "Release";
 #elif defined(PERFECT_HASH_BUILD_CONFIG_DEBUG)
 static const char PerfectHashBuildConfigString[] = "Debug";
+#elif defined(__CUDA_ARCH__)
+static const char PerfectHashBuildConfigString[] = "CUDA";
 #else
 #error Unknown build config type.
 #endif
 
-
+#ifndef __CUDA_ARCH__
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 FORCEINLINE
 _Success_(return >= 0)
@@ -3972,6 +3999,7 @@ Return Value:
 
     return S_OK;
 }
+#endif
 #endif
 
 #ifdef __cplusplus

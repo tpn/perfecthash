@@ -12,12 +12,12 @@ Abstract:
 
 --*/
 
-
-#include <no_sal2.h>
-#include "../PerfectHash/Cu.cuh"
-#include "Graph.cuh"
-
 extern "C" {
+
+#include <PerfectHashCuda.h>
+#include "../PerfectHash/Graph.h"
+
+//##include "Graph.cuh"
 
 //
 // Define helper macros for referring to seed constants stored in local

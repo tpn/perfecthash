@@ -3782,3 +3782,11 @@ Language=English
 Duplicate table create parameter detected.
 .
 
+MessageId=0x3b2
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_NUMBER_OF_RANDOM_HOST_SEEDS
+Language=English
+Invalid --CuNumberOfRandomHostSeeds.
+.
+

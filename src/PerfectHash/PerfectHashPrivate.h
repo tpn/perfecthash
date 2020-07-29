@@ -15,13 +15,17 @@ Abstract:
 
 --*/
 
+#ifndef __CUDA_ARCH__
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 #error PerfectHashPrivate.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
+#endif
 #endif
 
 #pragma once
 
+#ifndef __CUDA_ARCH__
 #include "stdafx.h"
+#endif
 
 #define PERFECT_HASH_KEY_SIZE_IN_BYTES 4
 
@@ -463,6 +467,8 @@ typedef const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE
 
 #pragma warning(pop)
 
+#ifndef __CUDA_ARCH__
+
 //
 // Symbol loader helpers.
 //
@@ -626,5 +632,7 @@ Return Value:
         YieldProcessor();
     }
 }
+
+#endif // ifndef __CUDA_ARCH__
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
