@@ -456,6 +456,10 @@ Return Value:
     ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
 
     //
+    // If requested, have the host allocate random seed data.
+    //
+
+    //
     // Intentional follow-on to Finalize.
     //
 

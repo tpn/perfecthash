@@ -810,6 +810,23 @@ HRESULT
     );
 typedef GRAPH_ADD_HASHED_KEYS *PGRAPH_ADD_HASHED_KEYS;
 
+//
+// Some CUDA-specific structs/glue.
+//
+
+typedef struct _PH_CU_RANDOM_HOST_SEEDS {
+    ULONG TotalNumberOfSeeds;
+    ULONG UsedNumberOfSeeds;
+
+    _Writable_elements_(TotalNumberOfSeeds)
+    PULONG Seeds;
+} PH_CU_RANDOM_HOST_SEEDS;
+typedef PH_CU_RANDOM_HOST_SEEDS *PPH_CU_RANDOM_HOST_SEEDS;
+
+//
+// Vtbl.
+//
+
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
 
@@ -992,6 +1009,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
+
+    PH_CU_RANDOM_HOST_SEEDS CuRandomHostSeeds;
 
     //
     // Edges array.
