@@ -1034,6 +1034,14 @@ Return Value:
         CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
     );
 
+    if (IS_EQUAL(CuPtxPath)) {
+        SET_PARAM_ID(CuPtxPath);
+        LocalParam.AsUnicodeString.Length = ValueString->Length;
+        LocalParam.AsUnicodeString.MaximumLength = ValueString->MaximumLength;
+        LocalParam.AsUnicodeString.Buffer = ValueString->Buffer;
+        goto AddParam;
+    }
+
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(Name, Upper)           \
     if (IS_EQUAL(Name##ThreadpoolPriority)) {                              \
         if (IS_VALUE_EQUAL(High)) {                                        \

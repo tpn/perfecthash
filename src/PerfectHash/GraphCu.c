@@ -234,12 +234,14 @@ Return Value:
     PRTL Rtl;
     HRESULT Result;
     CU_RESULT CuResult;
-    PGRAPH CuDeviceGraph;
+    PGRAPH DeviceGraph;
     PGRAPH_INFO Info;
     PGRAPH_INFO PrevInfo;
     PALLOCATOR Allocator;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+    PPH_CU_DEVICE_CONTEXT DeviceContext;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
     CU_MEM_HOST_ALLOC_FLAGS CuMemHostAllocFlags;
@@ -266,6 +268,7 @@ Return Value:
     //
 
     ASSERT(sizeof(*Graph) == Info->SizeOfGraphStruct);
+    ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
 
     //
     // Initialize aliases.
@@ -279,9 +282,11 @@ Return Value:
     Table = Context->Table;
     TableInfoOnDisk = Table->TableInfoOnDisk;
     TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
-    CuDeviceGraph = Graph->CuDeviceGraph;
+    SolveContext = Graph->CuSolveContext;
+    DeviceContext = SolveContext->DeviceContext;
+    DeviceGraph = SolveContext->DeviceGraph;
 
-    ASSERT(CuDeviceGraph != NULL);
+    ASSERT(DeviceGraph != NULL);
 
     //
     // Set the relevant graph fields based on the provided info.
@@ -307,6 +312,13 @@ Return Value:
                sizeof(Graph->Dimensions));
 
     Result = S_OK;
+
+    //
+    // Set the CUDA context.
+    //
+
+    CuResult = Cu->CtxSetCurrent(DeviceContext->Context);
+    CU_CHECK(CuResult, CtxSetCurrent);
 
     //
     // Allocate arrays.  The VertexPairs, Edges, Next, and First arrays are all
@@ -459,20 +471,12 @@ Finalize:
     // copy the entire structure over to the GPU device.
     //
 
-#if 0
-    /// <summary>
-    ///  
-    /// </summary>
-    /// <param name="Graph"></param>
-    /// <returns></returns>
-    SolveContext = Graph->CuSolveContext;
-    CuResult = Cu->StreamCreate(, CU_STREAM_NON_BLOCKING);
-    if (CU_FAILED(CuResult)) {
-        CU_ERROR(GraphCuLoadInfo_StreamCreate, CuResult);
-        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-        goto Error;
-    }
-#endif
+    CuResult = Cu->MemcpyHtoDAsync((CU_DEVICE_POINTER)DeviceGraph,
+                                   Graph,
+                                   Graph->SizeOfStruct,
+                                   SolveContext->Stream);
+
+    CU_CHECK(CuResult, MemcpyHtoDAsync);
 
     //
     // We're done, finish up.
@@ -569,7 +573,7 @@ Return Value:
     // Load the graph info.
     //
 
-    Result = Graph->Vtbl->LoadInfo(Graph);
+    Result = GraphCuLoadInfo(Graph);
 
     if (FAILED(Result)) {
 
@@ -580,7 +584,7 @@ Return Value:
             // indicates an internal error somewhere; log the error, then raise.
             //
 
-            PH_ERROR(GraphLoadInfo, Result);
+            PH_ERROR(GraphCuLoadInfo, Result);
             PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
 
         }

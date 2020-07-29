@@ -2908,6 +2908,7 @@ IsValidTableCompileFlags(
     ENTRY(KeySizeInBytes)                                            \
     ENTRY(SolutionsFoundRatio)                                       \
     ENTRY(CuConcurrency)                                             \
+    ENTRY(CuPtxPath)                                                 \
     ENTRY(CuDevices)                                                 \
     ENTRY(CuDevicesBlocksPerGrid)                                    \
     ENTRY(CuDevicesThreadsPerBlock)                                  \
@@ -3098,10 +3099,12 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         LONG AsLong;
         ULONG AsULong;
         DOUBLE AsDouble;
+        STRING AsString;
         LONGLONG AsLongLong;
         ULONGLONG AsULongLong;
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
+        UNICODE_STRING AsUnicodeString;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID AsBestCoverageType;
         VALUE_ARRAY AsValueArray;

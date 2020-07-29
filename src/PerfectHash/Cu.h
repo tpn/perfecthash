@@ -953,7 +953,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_CTX_GET_CURRENT)(
-    _Outptr_result_maybenull_ PPCU_CONTEXT ContextPointer
+    _Out_ PCU_CONTEXT *Context
     );
 typedef CU_CTX_GET_CURRENT *PCU_CTX_GET_CURRENT;
 
@@ -961,7 +961,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_CTX_GET_DEVICE)(
-    _Outptr_result_maybenull_ PPCU_DEVICE pDevice
+    _Out_ PCU_DEVICE Device
     );
 typedef CU_CTX_GET_DEVICE *PCU_CTX_GET_DEVICE;
 

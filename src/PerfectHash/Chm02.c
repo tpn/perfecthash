@@ -1136,6 +1136,7 @@ Return Value:
     PULONG BitmapBuffer = NULL;
     RTL_BITMAP Bitmap;
     HRESULT Result;
+    PCHAR PtxString;
     CU_RESULT CuResult;
     CU_DEVICE DeviceId;
     CU_DEVICE MinDeviceId;
@@ -1150,6 +1151,7 @@ Return Value:
     PPH_CU_DEVICE Device;
     PCU_OCCUPANCY Occupancy;
     BOOLEAN SawCuConcurrency;
+    PUNICODE_STRING CuPtxPath;
     ULONG NumberOfGpuGraphs;
     ULONG NumberOfCpuGraphs;
     ULONG TotalNumberOfGraphs;
@@ -1171,6 +1173,8 @@ Return Value:
     PPH_CU_DEVICE_CONTEXTS DeviceContexts;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
+    PPERFECT_HASH_PATH Path;
+    PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
@@ -1195,6 +1199,9 @@ Return Value:
         return S_FALSE;
     }
 
+    File = NULL;
+    Path = NULL;
+    CuPtxPath = NULL;
     SolveContexts = NULL;
     DeviceContexts = NULL;
 
@@ -1283,6 +1290,10 @@ Return Value:
 
             case TableCreateParameterCuDevicesKernelRuntimeTargetInMillisecondsId:
                 KernelRuntimeTarget = &Param->AsValueArray;
+                break;
+
+            case TableCreateParameterCuPtxPathId:
+                CuPtxPath = &Param->AsUnicodeString;
                 break;
 
             default:
@@ -1664,6 +1675,64 @@ FinishedOrdinalsProcessing:
         }
     }
 
+    if (CuPtxPath == NULL) {
+
+        //
+        // No --CuPtxPath supplied; use the embedded PTX string.
+        //
+
+        PtxString = (PCHAR)GraphPtxRawCStr;
+
+    } else {
+
+        LARGE_INTEGER EndOfFile = { 0 };
+        PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags = { 0 };
+
+        //
+        // Construct a path instance.
+        //
+
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_PATH,
+                                               &Path);
+
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_CreatePath, Result);
+            goto Error;
+        }
+
+        Result = Path->Vtbl->Copy(Path, CuPtxPath, NULL, NULL);
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_PathCopy, Result);
+            goto Error;
+        }
+
+        //
+        // Create a file instance.
+        //
+
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_FILE,
+                                               &File);
+
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_CreateFile, Result);
+            goto Error;
+        }
+
+        Result = File->Vtbl->Load(File, Path, &EndOfFile, &FileLoadFlags);
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_LoadFile, Result);
+            goto Error;
+        }
+
+        PtxString = (PCHAR)File->BaseAddress;
+
+        RELEASE(Path);
+    }
+
     //
     // Initialize the JIT options.
     //
@@ -1742,7 +1811,7 @@ FinishedOrdinalsProcessing:
         //
 
         CuResult = Cu->ModuleLoadDataEx(&DeviceContext->Module,
-                                        (PCHAR)GraphPtxRawCStr,
+                                        PtxString,
                                         NumberOfJitOptions,
                                         JitOptions,
                                         JitOptionValues);
@@ -2131,7 +2200,8 @@ FinishedOrdinalsProcessing:
             goto Error;
         }
 
-        Graph->Flags.IsCuGraph = TRUE;
+        ASSERT(IsCuGraph(Graph));
+
         Graph->Index = Index;
         Graphs[Index] = Graph;
 
@@ -2202,6 +2272,8 @@ FinishedOrdinalsProcessing:
 
                 goto Error;
             }
+
+            ASSERT(!IsCuGraph(Graph));
 
             Graph->Index = Index;
             Graphs[Index] = Graph;
@@ -2289,8 +2361,14 @@ Error:
 
 End:
 
-    Allocator = Context->Allocator;
+    //
+    // Release any temporary component references.
+    //
 
+    RELEASE(Path);
+    RELEASE(File);
+
+    Allocator = Context->Allocator;
     if (BitmapBuffer != NULL) {
         Allocator->Vtbl->FreePointer(Allocator, &BitmapBuffer);
     }
@@ -2373,6 +2451,7 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    ULONG NumberOfKeys;
 
     //
     // Call out to the Chm01 preparation version first.
@@ -2384,8 +2463,15 @@ Return Value:
     }
 
     //
-    // Put our CUDA-specific logic here.
+    // CUDA-specific logic.
     //
+
+    NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+
+    Info->VertexPairsSizeInBytes = ALIGN_UP_ZMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
+        (ULONGLONG)NumberOfKeys
+    );
 
     return Result;
 }
