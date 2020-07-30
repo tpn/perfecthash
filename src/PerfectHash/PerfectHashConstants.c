@@ -1226,23 +1226,31 @@ GRAPH_VTBL GraphInterface = {
     &GraphReset,
     &GraphLoadNewSeeds,
     &GraphSolve,
+    &GraphShouldWeContinueTryingToSolve,
+    &GraphRegisterSolved,
+    &GraphAddKeys,
     &GraphCalculateAssignedMemoryCoverage,
     &GraphCalculateAssignedMemoryCoverageForKeysSubset,
-    &GraphRegisterSolved,
-    &GraphShouldWeContinueTryingToSolve,
-    &GraphAddKeys,
 };
 VERIFY_VTBL_SIZE(GRAPH, 12);
 
 //
 // GraphCu
 //
+// N.B. This interface is somewhat unique as it's currently the only one where
+//      we essentially extend/inherit parts of the base graph implementation.
+//      So, some routines have Cu-counterparts (e.g. GraphCuLoadInfo()) where
+//      applicable, otherwise, we can use the normal CPU implementation.
+//
 
 GRAPH_INITIALIZE GraphCuInitialize;
 GRAPH_RUNDOWN GraphCuRundown;
-GRAPH_SET_INFO GraphCuSetInfo;
 GRAPH_ENTER_SOLVING_LOOP GraphCuEnterSolvingLoop;
-GRAPH_VERIFY GraphCuVerify;
+GRAPH_LOAD_INFO GraphCuLoadInfo;
+GRAPH_RESET GraphCuReset;
+GRAPH_SOLVE GraphCuSolve;
+GRAPH_LOAD_NEW_SEEDS GraphCuLoadNewSeeds;
+GRAPH_REGISTER_SOLVED GraphCuRegisterSolved;
 
 GRAPH_CU_VTBL GraphCuInterface = {
     (PGRAPH_QUERY_INTERFACE)&ComponentQueryInterface,
@@ -1250,11 +1258,20 @@ GRAPH_CU_VTBL GraphCuInterface = {
     (PGRAPH_RELEASE)&ComponentRelease,
     (PGRAPH_CREATE_INSTANCE)&ComponentCreateInstance,
     (PGRAPH_LOCK_SERVER)&ComponentLockServer,
-    &GraphCuSetInfo,
-    &GraphCuEnterSolvingLoop,
-    &GraphCuVerify,
+    &GraphSetInfo,
+    &GraphEnterSolvingLoop,
+    &GraphVerify,
+    &GraphCuLoadInfo,
+    &GraphCuReset,
+    &GraphCuLoadNewSeeds,
+    &GraphCuSolve,
+    &GraphShouldWeContinueTryingToSolve,
+    &GraphCuRegisterSolved,
+    NULL, // AddKeys
+    NULL, // CalculateAssignedMemoryCoverage
+    NULL, // CalculateAssignedMemoryCoverageForKeysSubset
 };
-VERIFY_VTBL_SIZE(GRAPH_CU, 3);
+VERIFY_VTBL_SIZE(GRAPH_CU, 12);
 
 //
 // Cu

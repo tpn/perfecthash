@@ -1355,8 +1355,8 @@ CU_RESULT
     _In_ ULONG BlockDimZ,
     _In_ ULONG SharedMemoryInBytes,
     _In_ PCU_STREAM Stream,
-    _In_ PVOID *KernelParameters,
-    _In_ PVOID *Extra
+    _In_opt_ PVOID *KernelParameters,
+    _In_opt_ PVOID *Extra
     );
 typedef CU_LAUNCH_KERNEL *PCU_LAUNCH_KERNEL;
 
@@ -1492,26 +1492,6 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     )                                                              \
                                                                    \
     ENTRY(                                                         \
-        CTX_CREATE,                                                \
-        CtxCreate                                                  \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        CTX_DESTROY,                                               \
-        CtxDestroy                                                 \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        CTX_PUSH_CURRENT,                                          \
-        CtxPushCurrent                                             \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        CTX_POP_CURRENT,                                           \
-        CtxPopCurrent                                              \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
         CTX_SET_CURRENT,                                           \
         CtxSetCurrent                                              \
     )                                                              \
@@ -1557,11 +1537,6 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     )                                                              \
                                                                    \
     ENTRY(                                                         \
-        MODULE_GET_GLOBAL,                                         \
-        ModuleGetGlobal                                            \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
         STREAM_CREATE,                                             \
         StreamCreate                                               \
     )                                                              \
@@ -1569,11 +1544,6 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     ENTRY(                                                         \
         STREAM_CREATE_WITH_PRIORITY,                               \
         StreamCreateWithPriority                                   \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        STREAM_DESTROY,                                            \
-        StreamDestroy                                              \
     )                                                              \
                                                                    \
     ENTRY(                                                         \
@@ -1622,11 +1592,6 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     )                                                              \
                                                                    \
     ENTRY(                                                         \
-        EVENT_DESTROY,                                             \
-        EventDestroy                                               \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
         EVENT_ELAPSED_TIME,                                        \
         EventElapsedTime                                           \
     )                                                              \
@@ -1647,33 +1612,8 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     )                                                              \
                                                                    \
     ENTRY(                                                         \
-        MEM_ALLOC,                                                 \
-        MemAlloc                                                   \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEM_FREE,                                                  \
-        MemFree                                                    \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEM_HOST_ALLOC,                                            \
-        MemHostAlloc                                               \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
         MEM_PREFETCH_ASYNC,                                        \
         MemPrefetchAsync                                           \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEM_HOST_GET_DEVICE_POINTER,                               \
-        MemHostGetDevicePointer                                    \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEM_HOST_REGISTER,                                         \
-        MemHostRegister                                            \
     )                                                              \
                                                                    \
     ENTRY(                                                         \
@@ -1682,28 +1622,13 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     )                                                              \
                                                                    \
     ENTRY(                                                         \
+        MEM_HOST_ALLOC,                                            \
+        MemHostAlloc                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
         MEM_FREE_HOST,                                             \
         MemFreeHost                                                \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEMCPY_HOST_TO_DEVICE,                                     \
-        MemcpyHtoD                                                 \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEMCPY_DEVICE_TO_HOST,                                     \
-        MemcpyDtoH                                                 \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEMCPY_HOST_TO_DEVICE_ASYNC,                               \
-        MemcpyHtoDAsync                                            \
-    )                                                              \
-                                                                   \
-    ENTRY(                                                         \
-        MEMCPY_DEVICE_TO_HOST_ASYNC,                               \
-        MemcpyDtoHAsync                                            \
     )                                                              \
                                                                    \
     ENTRY(                                                         \
@@ -1737,8 +1662,98 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
 #define EXPAND_AS_CU_FUNCTION_STRUCT(Upper, Name) \
     PCU_##Upper Name;
 
+
+//
+// Define the CU_FUNCTION_V2_TABLE X-macro.  This is identical to the table
+// above, except the _v2 versions of functions will be loaded.
+//
+
+#define CU_FUNCTION_V2_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                             \
+    ENTRY(                                                   \
+        CTX_CREATE,                                          \
+        CtxCreate                                            \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        CTX_DESTROY,                                         \
+        CtxDestroy                                           \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        CTX_POP_CURRENT,                                     \
+        CtxPopCurrent                                        \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        CTX_PUSH_CURRENT,                                    \
+        CtxPushCurrent                                       \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        EVENT_DESTROY,                                       \
+        EventDestroy                                         \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEM_HOST_GET_DEVICE_POINTER,                         \
+        MemHostGetDevicePointer                              \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEM_HOST_REGISTER,                                   \
+        MemHostRegister                                      \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEM_ALLOC,                                           \
+        MemAlloc                                             \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEMCPY_HOST_TO_DEVICE,                               \
+        MemcpyHtoD                                           \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEMCPY_DEVICE_TO_HOST,                               \
+        MemcpyDtoH                                           \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEMCPY_HOST_TO_DEVICE_ASYNC,                         \
+        MemcpyHtoDAsync                                      \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEMCPY_DEVICE_TO_HOST_ASYNC,                         \
+        MemcpyDtoHAsync                                      \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MEM_FREE,                                            \
+        MemFree                                              \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        MODULE_GET_GLOBAL,                                   \
+        ModuleGetGlobal                                      \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        STREAM_DESTROY,                                      \
+        StreamDestroy                                        \
+    )
+
+#define CU_FUNCTION_V2_TABLE_ENTRY(ENTRY) \
+    CU_FUNCTION_V2_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_CU_FUNCTION_V2_STRUCT(Upper, Name) \
+    PCU_##Upper Name;
+
 typedef struct _CU_FUNCTIONS {
     CU_FUNCTION_TABLE_ENTRY(EXPAND_AS_CU_FUNCTION_STRUCT)
+    CU_FUNCTION_V2_TABLE_ENTRY(EXPAND_AS_CU_FUNCTION_STRUCT)
 } CU_FUNCTIONS;
 typedef CU_FUNCTIONS *PCU_FUNCTIONS;
 
@@ -1834,6 +1849,18 @@ typedef struct _CURAND_FUNCTIONS {
     CURAND_FUNCTION_TABLE_ENTRY(EXPAND_AS_CURAND_FUNCTION_STRUCT)
 } CURAND_FUNCTIONS;
 typedef CURAND_FUNCTIONS *PCURAND_FUNCTIONS;
+
+//
+// Dimensions helper.
+//
+
+typedef struct _CU_DIM3 {
+    ULONG X;
+    ULONG Y;
+    ULONG Z;
+    ULONG Padding;
+} CU_DIM3;
+typedef CU_DIM3 *PCU_DIM3;
 
 //
 // Declare CU component and define vtbl methods.
@@ -1989,6 +2016,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
 
         struct {
             CU_FUNCTION_TABLE_ENTRY(EXPAND_AS_CU_FUNCTION_STRUCT)
+            CU_FUNCTION_V2_TABLE_ENTRY(EXPAND_AS_CU_FUNCTION_STRUCT)
         };
 
         CU_FUNCTIONS CuFunctions;

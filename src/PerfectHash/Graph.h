@@ -829,46 +829,18 @@ typedef PH_CU_RANDOM_HOST_SEEDS *PPH_CU_RANDOM_HOST_SEEDS;
 
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
-
-    //
-    // These methods are common to both CPU and GPU graph implementations.
-    //
-
     PGRAPH_SET_INFO SetInfo;
     PGRAPH_ENTER_SOLVING_LOOP EnterSolvingLoop;
     PGRAPH_VERIFY Verify;
-
-    //
-    // The remaining methods are private to CPU and GPU graph implementations.
-    //
-
-    union {
-
-        //
-        // CPU methods.
-        //
-
-        struct {
-            PGRAPH_LOAD_INFO LoadInfo;
-            PGRAPH_RESET Reset;
-            PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
-            PGRAPH_SOLVE Solve;
-            PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
-                CalculateAssignedMemoryCoverage;
-            PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
-                CalculateAssignedMemoryCoverageForKeysSubset;
-            PGRAPH_REGISTER_SOLVED RegisterSolved;
-            PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
-                ShouldWeContinueTryingToSolve;
-            PGRAPH_ADD_KEYS AddKeys;
-        };
-
-        //
-        // CUDA methods.
-        //
-
-    };
-
+    PGRAPH_LOAD_INFO LoadInfo;
+    PGRAPH_RESET Reset;
+    PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
+    PGRAPH_SOLVE Solve;
+    PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE ShouldWeContinueTryingToSolve;
+    PGRAPH_REGISTER_SOLVED RegisterSolved;
+    PGRAPH_ADD_KEYS AddKeys;
+    PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE CalculateAssignedMemoryCoverage;
+    PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET CalculateAssignedMemoryCoverageForKeysSubset;
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
@@ -1011,6 +983,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
 
     PH_CU_RANDOM_HOST_SEEDS CuRandomHostSeeds;
+
+    HRESULT CuSolveResult;
+
+    ULONG Padding9;
 
     //
     // Edges array.

@@ -143,7 +143,11 @@ PerfectHashCudaEnterSolvingLoop(
     _In_ PGRAPH Graph
     )
 {
+    //printf("Entered solving loop.\n");
+    printf("Entered Solving Loop! %p\n", Graph);
     ClockBlock(1000);
+    Graph->CuSolveResult = (HRESULT)1;
+    printf("Leaving Solving Loop!\n");
 }
 
 }
