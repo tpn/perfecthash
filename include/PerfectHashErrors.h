@@ -4166,3 +4166,12 @@ Abstract:
 //
 #define PH_E_INVALID_CU_NUMBER_OF_RANDOM_HOST_SEEDS ((HRESULT)0xE00403B2L)
 
+//
+// MessageId: PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY
+//
+// MessageText:
+//
+// --CuCudaDevRuntimeLibPath is mandatory for this algorithm.
+//
+#define PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY ((HRESULT)0xE00403B3L)
+

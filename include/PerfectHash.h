@@ -180,6 +180,8 @@ typedef ULONG_BYTES *PULONG_BYTES;
 )
 #endif
 
+typedef HRESULT *PHRESULT;
+
 #define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
 
 #ifdef _WIN64
@@ -2933,6 +2935,7 @@ IsValidTableCompileFlags(
     ENTRY(CuDevicesBlocksPerGrid)                                    \
     ENTRY(CuDevicesThreadsPerBlock)                                  \
     ENTRY(CuDevicesKernelRuntimeTargetInMilliseconds)                \
+    ENTRY(CuCudaDevRuntimeLibPath)                                   \
     ENTRY(CuNumberOfRandomHostSeeds)                                 \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     LAST_ENTRY(Seed3Byte2MaskCounts)

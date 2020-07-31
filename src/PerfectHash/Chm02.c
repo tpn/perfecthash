@@ -1148,11 +1148,16 @@ Return Value:
     PGRAPH *GpuGraphs;
     PGRAPH DeviceGraph;
     PGRAPH DeviceGraphs;
+    PCHAR LinkedModule;
+    SIZE_T LinkedModuleSizeInBytes;
+    SIZE_T PtxSizeInBytes;
     PPH_CU_DEVICE Device;
     PCU_OCCUPANCY Occupancy;
+    PCU_LINK_STATE LinkState;
     BOOLEAN SawCuConcurrency;
     BOOLEAN WantsRandomHostSeeds;
     PUNICODE_STRING CuPtxPath;
+    PUNICODE_STRING CuCudaDevRuntimeLibPath;
     ULONG NumberOfGpuGraphs;
     ULONG NumberOfCpuGraphs;
     ULONG TotalNumberOfGraphs;
@@ -1175,11 +1180,15 @@ Return Value:
     PPH_CU_DEVICE_CONTEXTS DeviceContexts;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
-    PPERFECT_HASH_PATH Path;
-    PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_PATH PtxPath;
+    PPERFECT_HASH_FILE PtxFile;
+    PPERFECT_HASH_PATH RuntimeLibPath;
+    PPERFECT_HASH_FILE RuntimeLibFile;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags = { 0 };
+    LARGE_INTEGER EndOfFile = { 0 };
 
     STRING KernelFunctionName =
         RTL_CONSTANT_STRING("PerfectHashCudaEnterSolvingLoop");
@@ -1201,11 +1210,14 @@ Return Value:
         return S_FALSE;
     }
 
-    File = NULL;
-    Path = NULL;
+    PtxFile = NULL;
+    PtxPath = NULL;
     CuPtxPath = NULL;
     SolveContexts = NULL;
     DeviceContexts = NULL;
+    RuntimeLibPath = NULL;
+    RuntimeLibFile = NULL;
+    CuCudaDevRuntimeLibPath = NULL;
 
     Table = Context->Table;
     TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
@@ -1298,6 +1310,10 @@ Return Value:
                 CuPtxPath = &Param->AsUnicodeString;
                 break;
 
+            case TableCreateParameterCuCudaDevRuntimeLibPathId:
+                CuCudaDevRuntimeLibPath = &Param->AsUnicodeString;
+                break;
+
             case TableCreateParameterCuNumberOfRandomHostSeedsId:
                 NumberOfRandomHostSeeds = Param->AsULong;
                 WantsRandomHostSeeds = TRUE;
@@ -1331,6 +1347,11 @@ Return Value:
 
     if (Context->CuConcurrency > Context->MaximumConcurrency) {
         Result = PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY;
+        goto Error;
+    }
+
+    if (CuCudaDevRuntimeLibPath == NULL) {
+        Result = PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY;
         goto Error;
     }
 
@@ -1692,9 +1713,6 @@ FinishedOrdinalsProcessing:
 
     } else {
 
-        LARGE_INTEGER EndOfFile = { 0 };
-        PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags = { 0 };
-
         //
         // Construct a path instance.
         //
@@ -1702,16 +1720,16 @@ FinishedOrdinalsProcessing:
         Result = Context->Vtbl->CreateInstance(Context,
                                                NULL,
                                                &IID_PERFECT_HASH_PATH,
-                                               &Path);
+                                               &PtxPath);
 
         if (FAILED(Result)) {
-            PH_ERROR(InitializeCudaAndGraphsChm02_CreatePath, Result);
+            PH_ERROR(InitializeCudaAndGraphsChm02_CreatePtxPath, Result);
             goto Error;
         }
 
-        Result = Path->Vtbl->Copy(Path, CuPtxPath, NULL, NULL);
+        Result = PtxPath->Vtbl->Copy(PtxPath, CuPtxPath, NULL, NULL);
         if (FAILED(Result)) {
-            PH_ERROR(InitializeCudaAndGraphsChm02_PathCopy, Result);
+            PH_ERROR(InitializeCudaAndGraphsChm02_PtxPathCopy, Result);
             goto Error;
         }
 
@@ -1722,22 +1740,75 @@ FinishedOrdinalsProcessing:
         Result = Context->Vtbl->CreateInstance(Context,
                                                NULL,
                                                &IID_PERFECT_HASH_FILE,
-                                               &File);
+                                               &PtxFile);
 
         if (FAILED(Result)) {
-            PH_ERROR(InitializeCudaAndGraphsChm02_CreateFile, Result);
+            PH_ERROR(InitializeCudaAndGraphsChm02_CreatePtxFile, Result);
             goto Error;
         }
 
-        Result = File->Vtbl->Load(File, Path, &EndOfFile, &FileLoadFlags);
+        Result = PtxFile->Vtbl->Load(PtxFile,
+                                     PtxPath,
+                                     &EndOfFile,
+                                     &FileLoadFlags);
         if (FAILED(Result)) {
-            PH_ERROR(InitializeCudaAndGraphsChm02_LoadFile, Result);
+            PH_ERROR(InitializeCudaAndGraphsChm02_LoadPtxFile, Result);
             goto Error;
         }
 
-        PtxString = (PCHAR)File->BaseAddress;
+        PtxString = (PCHAR)PtxFile->BaseAddress;
 
-        RELEASE(Path);
+        RELEASE(PtxPath);
+    }
+
+    PtxSizeInBytes = strlen(PtxString);
+
+    //
+    // Open the cudadevrt.lib path.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_PATH,
+                                           &RuntimeLibPath);
+
+    if (FAILED(Result)) {
+        PH_ERROR(InitializeCudaAndGraphsChm02_CreateRuntimeLibPath, Result);
+        goto Error;
+    }
+
+    Result = RuntimeLibPath->Vtbl->Copy(RuntimeLibPath,
+                                        CuCudaDevRuntimeLibPath,
+                                        NULL,
+                                        NULL);
+    if (FAILED(Result)) {
+        PH_ERROR(InitializeCudaAndGraphsChm02_RuntimeLibPathCopy, Result);
+        goto Error;
+    }
+
+    //
+    // Create a file instance.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_FILE,
+                                           &RuntimeLibFile);
+
+    if (FAILED(Result)) {
+        PH_ERROR(InitializeCudaAndGraphsChm02_CreateRuntimeLibFile, Result);
+        goto Error;
+    }
+
+    EndOfFile.QuadPart = 0;
+    Result = RuntimeLibFile->Vtbl->Load(RuntimeLibFile,
+                                        RuntimeLibPath,
+                                        &EndOfFile,
+                                        &FileLoadFlags);
+
+    if (FAILED(Result)) {
+        PH_ERROR(InitializeCudaAndGraphsChm02_LoadRuntimeLibFile, Result);
+        goto Error;
     }
 
     //
@@ -1814,11 +1885,58 @@ FinishedOrdinalsProcessing:
         }
 
         //
+        // Create a link state.
+        //
+
+        CuResult = Cu->LinkCreate(NumberOfJitOptions,
+                                  JitOptions,
+                                  JitOptionValues,
+                                  &LinkState);
+        CU_CHECK(CuResult, LinkCreate);
+
+        //
+        // Add cudadevrt.lib.
+        //
+
+        CuResult = Cu->LinkAddData(LinkState,
+                                   CU_JIT_INPUT_LIBRARY,
+                                   RuntimeLibFile->BaseAddress,
+                                   EndOfFile.QuadPart,
+                                   "cudadevrt.lib",
+                                   0,
+                                   NULL,
+                                   NULL);
+        CU_CHECK(CuResult, LinkAddData);
+
+        //
+        // Add the PTX file.
+        //
+
+        CuResult = Cu->LinkAddData(LinkState,
+                                   CU_JIT_INPUT_PTX,
+                                   PtxString,
+                                   PtxSizeInBytes,
+                                   "Graph.ptx",
+                                   0,
+                                   NULL,
+                                   NULL);
+        CU_CHECK(CuResult, LinkAddData);
+
+        //
+        // Complete the link.
+        //
+
+        CuResult = Cu->LinkComplete(LinkState,
+                                    &LinkedModule,
+                                    &LinkedModuleSizeInBytes);
+        CU_CHECK(CuResult, LinkComplete);
+
+        //
         // Load the module from the embedded PTX.
         //
 
         CuResult = Cu->ModuleLoadDataEx(&DeviceContext->Module,
-                                        PtxString,
+                                        LinkedModule,
                                         NumberOfJitOptions,
                                         JitOptions,
                                         JitOptionValues);
@@ -2372,8 +2490,10 @@ End:
     // Release any temporary component references.
     //
 
-    RELEASE(Path);
-    RELEASE(File);
+    RELEASE(PtxPath);
+    RELEASE(PtxFile);
+    RELEASE(RuntimeLibPath);
+    RELEASE(RuntimeLibFile);
 
     Allocator = Context->Allocator;
     if (BitmapBuffer != NULL) {
@@ -2583,6 +2703,10 @@ Return Value:
             Event = &Context->FailedEvent;
         } else {
             Event = &Context->SucceededEvent;
+        }
+
+        if (!SetEvent(*Event)) {
+            SYS_ERROR(SetEvent);
         }
 
         SetStopSolving(Context);

@@ -670,6 +670,7 @@ Return Value:
             case TableCreateParameterCuPtxPathId:
             case TableCreateParameterCuConcurrencyId:
             case TableCreateParameterCuDevicesBlocksPerGridId:
+            case TableCreateParameterCuCudaDevRuntimeLibPathId:
             case TableCreateParameterCuDevicesThreadsPerBlockId:
             case TableCreateParameterCuNumberOfRandomHostSeedsId:
             case TableCreateParameterCuDevicesKernelRuntimeTargetInMillisecondsId:

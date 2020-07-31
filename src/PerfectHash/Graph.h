@@ -982,11 +982,29 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
 
-    PH_CU_RANDOM_HOST_SEEDS CuRandomHostSeeds;
+    //
+    // Host and device pointers to keys array.
+    //
 
-    HRESULT CuSolveResult;
+    _Readable_elements_(NumberOfKeys)
+    PKEY HostKeys;
+    CU_DEVICE_POINTER DeviceKeys;
 
-    ULONG Padding9;
+    //
+    // Kernel launch parameters.
+    //
+
+    ULONG CuBlocksPerGrid;
+    ULONG CuThreadsPerBlock;
+    ULONG CuKernelRuntimeTargetInMilliseconds;
+    ULONG CuJitMaxNumberOfRegisters;
+    ULONG CuRandomNumberBatchSize;
+
+    //
+    // Used by CUDA kernels to communicate the result back to the host.
+    //
+
+    HRESULT CuKernelResult;
 
     //
     // Edges array.
@@ -1183,6 +1201,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
 } GRAPH;
 typedef GRAPH *PGRAPH;
+
+typedef struct _GRAPH_SHARED {
+    HRESULT HashKeysResult;
+    ULONG Padding;
+    PHRESULT HashKeysBlockResults;
+} GRAPH_SHARED;
+typedef GRAPH_SHARED *PGRAPH_SHARED;
 
 //
 // Locking macro helpers.

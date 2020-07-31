@@ -240,12 +240,25 @@ typedef RTL_SRWLOCK SRWLOCK;
 #define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
 
 typedef _Return_type_success_(return >= 0) long HRESULT;
+typedef HRESULT *PHRESULT;
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 
 #define S_OK        ((HRESULT)0L)
 #define S_FALSE     ((HRESULT)1L)
 #define E_POINTER   _HRESULT_TYPEDEF_(0x80004003L)
 #define E_FAIL      _HRESULT_TYPEDEF_(0x80004005L)
+
+#ifndef RtlOffsetToPointer
+#define RtlOffsetToPointer(B,O)    ((PCHAR)(((PCHAR)(B)) + ((ULONG_PTR)(O))))
+#endif
+
+#ifndef RtlOffsetFromPointer
+#define RtlOffsetFromPointer(B,O)  ((PCHAR)(((PCHAR)(B)) - ((ULONG_PTR)(O))))
+#endif
+
+#ifndef RtlPointerToOffset
+#define RtlPointerToOffset(B,P)    ((ULONG_PTR)(((PCHAR)(P)) - ((PCHAR)(B))))
+#endif
 
 FORCEINLINE
 VOID

@@ -57,6 +57,10 @@ struct CU_FUNCTION;
 typedef struct CU_FUNCTION *PCU_FUNCTION;
 typedef struct CU_FUNCTION **PPCU_FUNCTION;
 
+struct CU_LINK_STATE;
+typedef struct CU_LINK_STATE *PCU_LINK_STATE;
+typedef struct CU_LINK_STATE **PPCU_LINK_STATE;
+
 #define CUDACBCALLTYPE __stdcall
 
 typedef enum _Return_type_success_(return == 0) _CU_RESULT {
@@ -495,6 +499,16 @@ typedef enum _CU_STREAM_BATCH_MEM_OP_TYPE {
 } CU_STREAM_BATCH_MEM_OP_TYPE;
 typedef CU_STREAM_BATCH_MEM_OP_TYPE *PCU_STREAM_BATCH_MEM_OP_TYPE;
 
+typedef enum _CU_JIT_INPUT_TYPE {
+    CU_JIT_INPUT_CUBIN = 0,
+    CU_JIT_INPUT_PTX,
+    CU_JIT_INPUT_FATBINARY,
+    CU_JIT_INPUT_OBJECT,
+    CU_JIT_INPUT_LIBRARY,
+    CU_JIT_NUM_INPUT_TYPES
+} CU_JIT_INPUT_TYPE;
+typedef CU_JIT_INPUT_TYPE *PCU_JIT_INPUT_TYPE;
+
 //
 // Disable padding warnings.
 //
@@ -543,7 +557,17 @@ typedef enum _CU_JIT_OPTION {
     CU_JIT_OPTIMIZATION_LEVEL,
     CU_JIT_TARGET_FROM_CUCONTEXT,
     CU_JIT_TARGET,
-    CU_JIT_FALLBACK_STRATEGY
+    CU_JIT_FALLBACK_STRATEGY,
+    CU_JIT_GENERATE_DEBUG_INFO,
+    CU_JIT_LOG_VERBOSE,
+    CU_JIT_GENERATE_LINE_INFO,
+    CU_JIT_CACHE_MODE,
+    CU_JIT_NEW_SM3X_OPT,
+    CU_JIT_FAST_COMPILE,
+    CU_JIT_GLOBAL_SYMBOL_NAMES,
+    CU_JIT_GLOBAL_SYMBOL_ADDRESSES,
+    CU_JIT_GLOBAL_SYMBOL_COUNT,
+    CU_JIT_NUM_OPTIONS
 } CU_JIT_OPTION;
 typedef CU_JIT_OPTION *PCU_JIT_OPTION;
 typedef CU_JIT_OPTION **PPCU_JIT_OPTION;
@@ -1431,6 +1455,67 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
       *PCU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS;
 
 //
+// Link Management
+//
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_LINK_CREATE)(
+    _In_ ULONG NumberOfOptions,
+    _In_reads_(NumberOfOptions) PCU_JIT_OPTION Options,
+    _In_reads_(NumberOfOptions) PVOID *OptionValues,
+    _Out_ PCU_LINK_STATE *LinkState
+    );
+typedef CU_LINK_CREATE *PCU_LINK_CREATE;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_LINK_ADD_DATA)(
+    _In_ PCU_LINK_STATE LinkState,
+    _In_ CU_JIT_INPUT_TYPE JitInputType,
+    _In_reads_(SizeInBytes) PCHAR Data,
+    _In_ SIZE_T SizeInBytes,
+    _In_opt_ PCHAR Name,
+    _In_ ULONG NumberOfOptions,
+    _In_reads_(NumberOfOptions) PCU_JIT_OPTION Options,
+    _In_reads_(NumberOfOptions) PVOID *OptionValues
+    );
+typedef CU_LINK_ADD_DATA *PCU_LINK_ADD_DATA;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_LINK_ADD_FILE)(
+    _In_ PCU_LINK_STATE LinkState,
+    _In_ CU_JIT_INPUT_TYPE JitInputType,
+    _In_ PCSZ Path,
+    _In_ ULONG NumberOfOptions,
+    _In_reads_(NumberOfOptions) PCU_JIT_OPTION Options,
+    _In_reads_(NumberOfOptions) PVOID *OptionValues
+    );
+typedef CU_LINK_ADD_FILE *PCU_LINK_ADD_FILE;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_LINK_COMPLETE)(
+    _In_ PCU_LINK_STATE LinkState,
+    _Out_writes_bytes_(*SizeInBytes) PVOID *Module,
+    _Out_ SIZE_T *SizeInBytes
+    );
+typedef CU_LINK_COMPLETE *PCU_LINK_COMPLETE;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_LINK_DESTROY)(
+    _In_ PCU_LINK_STATE LinkState
+    );
+typedef CU_LINK_DESTROY *PCU_LINK_DESTROY;
+
+//
 // Define the CU_FUNCTION_TABLE X-macro.  Each macro receives (Upper, Name) as
 // as its parameters, where Upper represents the pointer type name (excluding
 // the leading 'PCU'), and name is the capitalized name of the function, e.g.:
@@ -1514,6 +1599,16 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     ENTRY(                                                         \
         CTX_GET_STREAM_PRIORITY_RANGE,                             \
         CtxGetStreamPriorityRange                                  \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        LINK_COMPLETE,                                             \
+        LinkComplete                                               \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        LINK_DESTROY,                                              \
+        LinkDestroy                                                \
     )                                                              \
                                                                    \
     ENTRY(                                                         \
@@ -1693,6 +1788,21 @@ typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
     ENTRY(                                                   \
         EVENT_DESTROY,                                       \
         EventDestroy                                         \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        LINK_CREATE,                                         \
+        LinkCreate                                           \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        LINK_ADD_DATA,                                       \
+        LinkAddData                                          \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
+        LINK_ADD_FILE,                                       \
+        LinkAddFile                                          \
     )                                                        \
                                                              \
     ENTRY(                                                   \

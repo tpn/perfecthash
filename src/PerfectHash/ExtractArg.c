@@ -1044,6 +1044,14 @@ Return Value:
         goto AddParam;
     }
 
+    if (IS_EQUAL(CuCudaDevRuntimeLibPath)) {
+        SET_PARAM_ID(CuCudaDevRuntimeLibPath);
+        LocalParam.AsUnicodeString.Length = ValueString->Length;
+        LocalParam.AsUnicodeString.MaximumLength = ValueString->MaximumLength;
+        LocalParam.AsUnicodeString.Buffer = ValueString->Buffer;
+        goto AddParam;
+    }
+
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(Name, Upper)           \
     if (IS_EQUAL(Name##ThreadpoolPriority)) {                              \
         if (IS_VALUE_EQUAL(High)) {                                        \

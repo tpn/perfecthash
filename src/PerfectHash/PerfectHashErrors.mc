@@ -3790,3 +3790,11 @@ Language=English
 Invalid --CuNumberOfRandomHostSeeds.
 .
 
+MessageId=0x3b3
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY
+Language=English
+--CuCudaDevRuntimeLibPath is mandatory for this algorithm.
+.
+

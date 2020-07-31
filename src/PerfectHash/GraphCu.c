@@ -294,6 +294,7 @@ Return Value:
 
     Graph->Context = Context;
     Graph->NumberOfSeeds = Table->TableInfoOnDisk->NumberOfSeeds;
+    Graph->HostKeys = (PKEY)Table->Keys->KeyArrayBaseAddress;
     Graph->NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
 
     Graph->ThreadId = GetCurrentThreadId();
@@ -312,6 +313,17 @@ Return Value:
                sizeof(Graph->Dimensions));
 
     Result = S_OK;
+
+    //
+    // CUDA-specific fields.
+    //
+
+    Graph->DeviceKeys = DeviceContext->KeysBaseAddress;
+    Graph->CuBlocksPerGrid = SolveContext->BlocksPerGrid;
+    Graph->CuThreadsPerBlock = SolveContext->ThreadsPerBlock;
+    Graph->CuKernelRuntimeTargetInMilliseconds =
+        SolveContext->KernelRuntimeTargetInMilliseconds;
+    Graph->CuJitMaxNumberOfRegisters = SolveContext->JitMaxNumberOfRegisters;
 
     //
     // Set the CUDA context.
@@ -639,7 +651,22 @@ Return Value:
     // Launch the solve kernel.
     //
 
-    SharedMemoryInBytes = 0;
+    SharedMemoryInBytes = (
+
+        //
+        // Account for the GRAPH_SHARED structure.
+        //
+
+        sizeof(GRAPH_SHARED) +
+
+        //
+        // Account for the array of result codes (one per block) for HashKeys.
+        //
+
+        (sizeof(HRESULT) * SolveContext->BlocksPerGrid)
+
+    );
+
     KernelParams[0] = &DeviceGraph;
 
     CuResult = Cu->LaunchKernel(DeviceContext->Function,
@@ -654,8 +681,6 @@ Return Value:
                                 KernelParams,
                                 NULL);
     CU_CHECK(CuResult, LaunchKernel);
-
-#if 0
 
     //
     // Copy the device graph back to the host.
@@ -673,18 +698,8 @@ Return Value:
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
-#endif
 
-    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
-    CU_CHECK(CuResult, StreamSynchronize);
-
-    CuResult = Cu->MemcpyDtoH(Graph,
-                              (CU_DEVICE_POINTER)DeviceGraph,
-                              sizeof(GRAPH));
-    CU_CHECK(CuResult, MemcpyDtoH);
-
-
-    SolveResult = Graph->CuSolveResult;
+    SolveResult = Graph->CuKernelResult;
 
     if (SolveResult == (HRESULT)1) {
         NOTHING;

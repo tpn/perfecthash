@@ -44,7 +44,7 @@ PerfectHashPrintCuError(
     CHAR LocalBuffer[1024];
     ULONG_PTR Args[7];
     const STRING Prefix = RTL_CONSTANT_STRING(
-        "%1: %2!lu!: %3 failed with error: %4!lu! (0x%4!lx!): %5: %6"
+        "%1: %2!lu!: %3 failed with error: %4!lu! (0x%4!lx!): %5: %6\n"
     );
 
     CuResult = Cu->GetErrorName(Error, &CuErrorName);

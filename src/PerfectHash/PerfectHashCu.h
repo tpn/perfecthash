@@ -24,6 +24,7 @@ Abstract:
 #define PH_CU_BLOCKS_PER_GRID 32
 #define PH_CU_THREADS_PER_BLOCK 512
 #define PH_CU_WDDM_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS 1500
+#define PH_CU_RANDOM_NUMBER_BATCH_SIZE 16384
 
 //
 // Error handling function and helper macro.
@@ -52,7 +53,7 @@ extern PERFECT_HASH_PRINT_CU_ERROR PerfectHashPrintCuError;
 
 #define CU_CHECK(CuResult, Name)                   \
     if (CU_FAILED(CuResult)) {                     \
-        CU_ERROR(__FUNCTION__##Name, CuResult);    \
+        CU_ERROR(__FUNCTION__ ## Name, CuResult);  \
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
         goto Error;                                \
     }
@@ -242,10 +243,6 @@ typedef struct _PH_CU_SOLVE_CONTEXT {
 
     struct _GRAPH *HostGraph;
     struct _GRAPH *DeviceGraph;
-
-    //
-    // If the graph wants random host seeds,
-    //
 
     //
     // Kernel launch parameters.
