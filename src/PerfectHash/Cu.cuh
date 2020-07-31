@@ -213,6 +213,7 @@ ClockBlock(
 // Define CUDA Device API Typedefs.
 //
 
+#if 0
 typedef LONG CU_DEVICE;
 typedef ULONG_PTR CU_DEVICE_POINTER;
 typedef CU_DEVICE *PCU_DEVICE;
@@ -239,7 +240,7 @@ typedef struct CU_STREAM **PPCU_STREAM;
 struct CU_FUNCTION;
 typedef struct CU_FUNCTION *PCU_FUNCTION;
 typedef struct CU_FUNCTION **PPCU_FUNCTION;
-
+#endif
 
 #ifdef __cplusplus
 }

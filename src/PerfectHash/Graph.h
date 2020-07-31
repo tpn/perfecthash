@@ -823,6 +823,13 @@ typedef struct _PH_CU_RANDOM_HOST_SEEDS {
 } PH_CU_RANDOM_HOST_SEEDS;
 typedef PH_CU_RANDOM_HOST_SEEDS *PPH_CU_RANDOM_HOST_SEEDS;
 
+typedef struct _GRAPH_SHARED {
+    HRESULT HashKeysResult;
+    ULONG Padding;
+    PHRESULT HashKeysBlockResults;
+} GRAPH_SHARED;
+typedef GRAPH_SHARED *PGRAPH_SHARED;
+
 //
 // Vtbl.
 //
@@ -1005,6 +1012,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     HRESULT CuKernelResult;
+
+    //
+    // Intermediate results communicated back between CUDA parent/child grids.
+    //
+
+    HRESULT CuHashKeysResult;
+
+    ULONG Padding9;
 
     //
     // Edges array.
@@ -1201,13 +1216,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
 } GRAPH;
 typedef GRAPH *PGRAPH;
-
-typedef struct _GRAPH_SHARED {
-    HRESULT HashKeysResult;
-    ULONG Padding;
-    PHRESULT HashKeysBlockResults;
-} GRAPH_SHARED;
-typedef GRAPH_SHARED *PGRAPH_SHARED;
 
 //
 // Locking macro helpers.
