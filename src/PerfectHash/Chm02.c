@@ -1885,7 +1885,13 @@ FinishedOrdinalsProcessing:
         }
 
         //
-        // Create a link state.
+        // Our solver kernel uses dynamic parallelism (that is, it launches
+        // other kernels).  For this to work, we can't just load the PTX
+        // directly; we need to perform a linking step which also adds the
+        // cudadevrt.lib (CUDA device runtime static library) into the mix.
+        // We do this by issuing a cuLinkCreate(), cuLinkAddData() for the
+        // static .lib and our .ptx string, then cuLinkComplete() to get the
+        // final module that we can pass to cuLoadModuleEx().
         //
 
         CuResult = Cu->LinkCreate(NumberOfJitOptions,
