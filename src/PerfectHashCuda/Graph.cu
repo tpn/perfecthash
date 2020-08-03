@@ -129,6 +129,15 @@ End:
     return;
 }
 
+DEVICE
+BOOLEAN
+ShouldWeContinueSolving(
+    _In_ PGRAPH Graph
+    )
+{
+    return FALSE;
+}
+
 GLOBAL
 VOID
 PerfectHashCudaEnterSolvingLoop(
@@ -160,19 +169,12 @@ Return Value:
     ULONG BlocksPerGrid;
     ULONG ThreadsPerBlock;
     ULONG SharedMemoryInBytes;
+    HRESULT Result;
     HRESULT KernelResult = S_OK;
     CU_STREAM HashKeysStream;
     CU_RESULT CuResult;
-
-    Keys = (PKEY)Graph->DeviceKeys;
-    NumberOfKeys = Graph->NumberOfKeys;
-
-    //Graph->Seeds[0] = 2344307159;
-    //Graph->Seeds[1] = 2331343182;
-    Graph->Seeds[0] = 83;
-    Graph->Seeds[1] = 5;
-    //Graph->Seeds[2] = 2827;
-    Graph->Seeds[2] = 0x0101;
+    PGRAPH NewGraph;
+    PGRAPH_VTBL Vtvl;
 
     //
     // Abort if the kernel is called with more than one thread.
@@ -182,6 +184,113 @@ Return Value:
         KernelResult = PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS;
         goto End;
     }
+
+    //
+    // Initialize aliases.
+    //
+
+    Keys = (PKEY)Graph->DeviceKeys;
+    NumberOfKeys = Graph->NumberOfKeys;
+
+    //
+    // Initialize the graph's vtbl.
+    //
+
+    Vtbl = Graph->Vtbl;
+    Vtbl->ShouldWeContinueTryingToSolve = GraphCuShouldWeContinueTryingToSolve;
+    Vtbl->Solve = GraphCuSolve;
+    Vtbl->LoadNewSeeds = GraphCuLoadNewSeeds;
+    Vtbl->Reset = GraphCuResult;
+
+    //
+    // Begin the solving loop.
+    //
+
+    while (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph)) {
+
+        Result = Graph->Vtbl->LoadNewSeeds(Graph);
+        if (FAILED(Result)) {
+
+            //
+            // N.B. This will need to be adjusted when we support the notion
+            //      of no more seed data (PH_E_NO_MORE_SEEDS).
+            //
+
+            PH_ERROR(GraphLoadNewSeeds, Result);
+            break;
+        }
+
+        Result = Graph->Vtbl->Reset(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphReset, Result);
+            break;
+        } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {
+            break;
+        }
+
+        NewGraph = NULL;
+        Result = Graph->Vtbl->Solve(Graph, &NewGraph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphSolve, Result);
+            break;
+        }
+
+        if (Result == PH_S_STOP_GRAPH_SOLVING ||
+            Result == PH_S_GRAPH_SOLVING_STOPPED) {
+            if (NewGraph != NULL) {
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            }
+            break;
+        }
+
+        if (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING) {
+
+            if (NewGraph == NULL) {
+                PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+            }
+
+            //
+            // Acquire the new graph's lock and release the existing
+            // graph's lock.
+            //
+
+            AcquireGraphLockExclusive(NewGraph);
+            ReleaseGraphLockExclusive(Graph);
+
+            if (!IsGraphInfoLoaded(NewGraph) ||
+                NewGraph->LastLoadedNumberOfVertices <
+                Graph->NumberOfVertices) {
+
+                Result = NewGraph->Vtbl->LoadInfo(NewGraph);
+                if (FAILED(Result)) {
+                    PH_ERROR(GraphLoadInfo_NewGraph, Result);
+                    goto End;
+                }
+            }
+
+            Graph = NewGraph;
+            continue;
+        }
+
+        //
+        // Invariant check: result should always be PH_S_CONTINUE_GRAPH_SOLVING
+        // at this point.
+        //
+
+        ASSERT(Result == PH_S_CONTINUE_GRAPH_SOLVING);
+
+        //
+        // Continue the loop and attempt another solve.
+        //
+
+    }
+
+    //Graph->Seeds[0] = 2344307159;
+    //Graph->Seeds[1] = 2331343182;
+    Graph->Seeds[0] = 83;
+    Graph->Seeds[1] = 5;
+    //Graph->Seeds[2] = 2827;
+    Graph->Seeds[2] = 0x0101;
 
     //printf("Entered solving loop.\n");
     printf("Entered Solving Loop! Graph: %p, Keys: %p\n", Graph, Keys);

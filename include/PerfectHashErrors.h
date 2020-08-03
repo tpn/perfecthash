@@ -4175,3 +4175,12 @@ Abstract:
 //
 #define PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY ((HRESULT)0xE00403B3L)
 
+//
+// MessageId: PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS
+//
+// MessageText:
+//
+// Invalid launch dimensions for initial solving loop CUDA kernel.  This kernel must be launched with a single thread.
+//
+#define PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS ((HRESULT)0xE00403B4L)
+

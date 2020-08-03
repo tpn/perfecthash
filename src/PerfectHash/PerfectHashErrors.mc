@@ -3798,3 +3798,11 @@ Language=English
 --CuCudaDevRuntimeLibPath is mandatory for this algorithm.
 .
 
+MessageId=0x3b4
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS
+Language=English
+Invalid launch dimensions for initial solving loop CUDA kernel.  This kernel must be launched with a single thread.
+.
+
