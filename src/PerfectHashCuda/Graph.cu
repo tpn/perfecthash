@@ -72,9 +72,6 @@ HashAllMultiplyShiftR(
     //
 
     if (ThreadIndex.x == 0) {
-        ULONG GlobalIndex;
-
-        GlobalIndex = BlockIndex.x * BlockDim.x + ThreadIndex.x;
 
         Shared->HashKeysBlockResults = (PHRESULT)(
             RtlOffsetToPointer(
@@ -82,18 +79,9 @@ HashAllMultiplyShiftR(
                 sizeof(GRAPH_SHARED)
             )
         );
+
+
         *GlobalResult = S_OK;
-        printf("Shared %p, offset: %p, global: %p\n",
-               Shared,
-               Shared->HashKeysBlockResults,
-               GlobalResult);
-
-        printf("GlobalIndex: %d\n", GlobalIndex);
-        printf("threadIdx:(%d, %d, %d)\n", threadIdx.x, threadIdx.y, threadIdx.z);
-        printf("blockIdx:(%d, %d, %d)\n", blockIdx.x, blockIdx.y, blockIdx.z);
-
-        printf("blockDim:(%d, %d, %d)\n", blockDim.x, blockDim.y, blockDim.z);
-        printf("gridDim:(%d, %d, %d)\n", gridDim.x, gridDim.y, gridDim.z);
     }
 
     __syncthreads();
@@ -101,6 +89,11 @@ HashAllMultiplyShiftR(
     BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
 
     FOR_EACH_1D(Index, NumberOfKeys) {
+
+        //
+        // Block-level fast-path exit if we've already detected a vertex
+        // collision.
+        //
 
         if (*BlockResult != S_OK) {
             goto End;
@@ -112,13 +105,20 @@ HashAllMultiplyShiftR(
         Vertex2 = ((Key * SEED2) >> SEED3_BYTE2);
 
         if (Vertex1 == Vertex2) {
-            printf("Vertex collision! %d == %d\n", Vertex1, Vertex2);
+
+            //
+            // Set the block-level and global-level results to indicate
+            // collision, then jump to the end.
+            //
+
             *BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             goto End;
-        } else {
-            printf("Vertex good %d != %d\n", Vertex1, Vertex2);
         }
+
+        //
+        // Store the vertex pairs.
+        //
 
         Output[Index].x = Vertex1;
         Output[Index].y = Vertex2;
@@ -131,16 +131,29 @@ End:
 
 GLOBAL
 VOID
-Hello(int i)
-{
-    printf("Hello! %d\n", i);
-}
-
-GLOBAL
-VOID
 PerfectHashCudaEnterSolvingLoop(
     _In_ PGRAPH Graph
     )
+/*++
+
+Routine Description:
+
+    This is the main entry point for the CUDA graph solving implementation.
+    This kernel is intended to be called with a single thread.  It launches
+    child kernels dynamically.
+
+Arguments:
+
+    Graph - Supplies a pointer to a GRAPH structure for which solving is to be
+        performed.
+
+Return Value:
+
+    N.B. The return value is provided to the caller via Graph->CuKernelResult.
+
+    S_OK - Success.
+
+--*/
 {
     PKEY Keys;
     ULONG NumberOfKeys;
@@ -148,9 +161,7 @@ PerfectHashCudaEnterSolvingLoop(
     ULONG ThreadsPerBlock;
     ULONG SharedMemoryInBytes;
     HRESULT KernelResult = S_OK;
-    //HRESULT HashResult = S_OK;
     CU_STREAM HashKeysStream;
-    //CU_EVENT HashKeys;
     CU_RESULT CuResult;
 
     Keys = (PKEY)Graph->DeviceKeys;
@@ -162,6 +173,15 @@ PerfectHashCudaEnterSolvingLoop(
     Graph->Seeds[1] = 5;
     //Graph->Seeds[2] = 2827;
     Graph->Seeds[2] = 0x0101;
+
+    //
+    // Abort if the kernel is called with more than one thread.
+    //
+
+    if (ThreadIndex.x > 0 || BlockIndex.x > 0) {
+        KernelResult = PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS;
+        goto End;
+    }
 
     //printf("Entered solving loop.\n");
     printf("Entered Solving Loop! Graph: %p, Keys: %p\n", Graph, Keys);
@@ -234,6 +254,6 @@ End:
     Graph->CuKernelResult = KernelResult;
 }
 
-}
+} // extern "C"
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
