@@ -163,6 +163,12 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
     CU_DEVICE_POINTER KeysBaseAddress;
 
     //
+    // Device address of the CU_DEVICE_ATTRIBUTES struct.
+    //
+
+    CU_DEVICE_POINTER DeviceAttributes;
+
+    //
     // Best and spare graphs.
     //
 

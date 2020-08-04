@@ -260,6 +260,17 @@ typedef HRESULT *PHRESULT;
 #define RtlPointerToOffset(B,P)    ((ULONG_PTR)(((PCHAR)(P)) - ((PCHAR)(B))))
 #endif
 
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#define SUCCEEDED(hr) (((HRESULT)(hr)) >= 0)
+#define FAILED(hr) (((HRESULT)(hr)) < 0)
+
 FORCEINLINE
 VOID
 CopyMemoryInline(

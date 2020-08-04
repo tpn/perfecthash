@@ -2268,6 +2268,24 @@ FinishedOrdinalsProcessing:
         }
 
         //
+        // Allocate device memory to hold the CU_DEVICE_ATTRIBUTES structure.
+        //
+
+        CuResult = Cu->MemAlloc(&DeviceContext->DeviceAttributes,
+                                sizeof(CU_DEVICE_ATTRIBUTES));
+        CU_CHECK(CuResult, MemAlloc);
+
+        //
+        // Copy the host attributes to the device.
+        //
+
+        CuResult = Cu->MemcpyHtoDAsync(DeviceContext->DeviceAttributes,
+                                       &DeviceContext->Device->Attributes,
+                                       sizeof(CU_DEVICE_ATTRIBUTES),
+                                       DeviceContext->Stream);
+        CU_CHECK(CuResult, MemcpyHtoDAsync);
+
+        //
         // Finally, pop the context.
         //
 

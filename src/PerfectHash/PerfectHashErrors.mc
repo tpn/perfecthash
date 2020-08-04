@@ -96,6 +96,14 @@ Language=English
 No key size extracted from file name.
 .
 
+MessageId=0x00a
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED
+Language=English
+CUDA kernel runtime target reached.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL

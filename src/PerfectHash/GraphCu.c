@@ -324,6 +324,7 @@ Return Value:
     Graph->CuKernelRuntimeTargetInMilliseconds =
         SolveContext->KernelRuntimeTargetInMilliseconds;
     Graph->CuJitMaxNumberOfRegisters = SolveContext->JitMaxNumberOfRegisters;
+    Graph->CuDeviceAttributes = DeviceContext->DeviceAttributes;
 
     //
     // Set the CUDA context.
@@ -466,10 +467,6 @@ Return Value:
     ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
     ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
     ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
-
-    //
-    // If requested, have the host allocate random seed data.
-    //
 
     //
     // Intentional follow-on to Finalize.

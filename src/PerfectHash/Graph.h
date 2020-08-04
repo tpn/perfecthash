@@ -427,10 +427,17 @@ typedef union _GRAPH_FLAGS {
         ULONG WantsCuRandomHostSeeds:1;
 
         //
+        // When set, indicates we're in "find best graph" solving mode.  When
+        // clear, indicates we're in "first graph wins" mode.
+        //
+
+        ULONG FindBestGraph:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:17;
+        ULONG Unused:16;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -1019,7 +1026,39 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     HRESULT CuHashKeysResult;
 
+    //
+    // Number of CUDA solver loops.
+    //
+
+    ULONG CuNumberOfSolveLoops;
+
+    //
+    // Clock related fields.
+    //
+
+    ULONGLONG CuStartClock;
+    ULONGLONG CuEndClock;
+    ULONGLONG CuCycles;
+    ULONGLONG CuElapsedMilliseconds;
+
+    ULONG CuClockRate;
+
+    //
+    // Various counters.
+    //
+
+    ULONG CuVertexCollisionFailures;
+    ULONG CuCyclicGraphFailures;
+    ULONG CuFailedAttempts;
+    ULONG CuFinishedCount;
+
     ULONG Padding9;
+
+    //
+    // Pointer to device attributes in device memory.
+    //
+
+    CU_DEVICE_POINTER CuDeviceAttributes;
 
     //
     // Edges array.

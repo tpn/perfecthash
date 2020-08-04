@@ -3846,6 +3846,7 @@ IsValidPerfectHashEnumId(
 // PerfectHashPrintError to be in scope.
 //
 
+#ifndef __CUDA_ARCH__
 #define SYS_ERROR(Name) \
     PerfectHashPrintError(#Name, __FILE__, __LINE__, GetLastError())
 
@@ -3859,6 +3860,7 @@ IsValidPerfectHashEnumId(
     PerfectHashPrintMessage((ULONG)Result, __VA_ARGS__)
 
 #define PH_BREAK() __debugbreak()
+#endif
 
 //
 // Helper macro for raising non-continuable exceptions.

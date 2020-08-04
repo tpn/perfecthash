@@ -144,6 +144,15 @@ Abstract:
 //
 #define PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME ((HRESULT)0x20040009L)
 
+//
+// MessageId: PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED
+//
+// MessageText:
+//
+// CUDA kernel runtime target reached.
+//
+#define PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED ((HRESULT)0xE004000AL)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
