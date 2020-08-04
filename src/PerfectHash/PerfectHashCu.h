@@ -169,6 +169,11 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
     CU_DEVICE_POINTER DeviceAttributes;
 
     //
+    // XXX: I don't think we need this for GPU solving.
+    //
+
+#if 0
+    //
     // Best and spare graphs.
     //
 
@@ -193,13 +198,7 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
 
     _Guarded_by_(BestGraphCriticalSection)
     volatile LONG EqualBestGraphCount;
-
-    //
-    // Pointers to the spare graphs for this context.
-    //
-
-    struct _GRAPH *SpareHostGraph;
-    struct _GRAPH *SpareDeviceGraph;
+#endif
 
     //
     // Number of solving contexts associated with this device.
@@ -249,6 +248,13 @@ typedef struct _PH_CU_SOLVE_CONTEXT {
 
     struct _GRAPH *HostGraph;
     struct _GRAPH *DeviceGraph;
+
+    //
+    // Spare host and device graphs.
+    //
+
+    struct _GRAPH *SpareHostGraph;
+    struct _GRAPH *SpareDeviceGraph;
 
     //
     // Kernel launch parameters.

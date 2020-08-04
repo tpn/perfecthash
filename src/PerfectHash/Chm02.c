@@ -491,7 +491,6 @@ Return Value:
         }
 
         if (!IsSpareGraph(Graph)) {
-
             InitializeListHead(&Graph->ListEntry);
             InsertTailMainWork(Context, &Graph->ListEntry);
             SubmitThreadpoolWork(Context->MainWork);
@@ -1375,21 +1374,17 @@ Return Value:
     if (FindBestGraph(Context)) {
 
         //
-        // We add 1 to the maximum concurrency in order to account for a spare
-        // graph that doesn't actively participate in solving, but can be used
-        // by a worker thread when it discovers a graph that is classed as the
-        // "best" by the RegisterSolvedGraph() routine.
-        //
-        // N.B. We may increment this number again, later in this routine, if we
-        //      detect that we'll be using multiple GPUs.  We'll create a spare
-        //      graph for each unique device.
+        // Double the graph count if we're in "find best graph" mode to account
+        // for the spare graphs (one per solve context).
         //
 
-        Context->NumberOfGpuGraphs += 1;
+        Context->NumberOfGpuGraphs *= 2;
 
         //
         // Only increment the number of CPU graphs if the number of CPU threads
-        // is greater than zero.
+        // is greater than zero.  (We only need one extra spare graph for all
+        // CPU solver threads; this is a side-effect of the original Chm01 CPu
+        // solver implementation.)
         //
 
         if (Context->NumberOfCpuThreads > 0) {
@@ -1569,8 +1564,8 @@ Return Value:
 
     //
     // Count the number of bits set, this will represent the number of unique
-    // devices we encountered.  Sanity check the number doesn't exceed the total
-    // number of devices reported in the system.
+    // devices we encountered.  Sanity check the number doesn't exceed the
+    // total number of devices reported in the system.
     //
 
     Rtl = Context->Rtl;
@@ -1610,25 +1605,14 @@ FinishedOrdinalsProcessing:
             sizeof(Context->CuDeviceContexts->DeviceContexts[0])
         );
 
-        //
-        // If we're in "find best graph" mode, account for the additional spare
-        // graphs we'll need to create (one per device).
-        //
-        // N.B. We already accounted for an additional spare graph earlier in
-        //      this routine, hence the -1 below.
-        //
-
         if (FindBestGraph(Context)) {
-            Context->NumberOfGpuGraphs += (NumberOfContexts - 1);
 
             //
             // Sanity check our graph counts line up.
             //
 
-            ASSERT((Context->NumberOfCuContexts +
-                    Context->CuConcurrency) == Context->NumberOfGpuGraphs);
+            ASSERT((NumberOfContexts * 2) == Context->NumberOfGpuGraphs);
         }
-
     }
 
     //
@@ -1679,7 +1663,7 @@ FinishedOrdinalsProcessing:
     } else {
 
         ULONG Bit = 0;
-        const ULONG NumberToFind = 1;
+        const ULONG FindOneBit = 1;
 
         for (Index = 0; Index < NumberOfContexts; Index++) {
             DeviceContext = &DeviceContexts->DeviceContexts[Index];
@@ -1689,7 +1673,7 @@ FinishedOrdinalsProcessing:
             // bitmap.
             //
 
-            Bit = Rtl->RtlFindSetBits(&Bitmap, NumberToFind, Bit);
+            Bit = Rtl->RtlFindSetBits(&Bitmap, FindOneBit, Bit);
 
             if (Bit == BITS_NOT_FOUND) {
                 Result = PH_E_INVARIANT_CHECK_FAILED;
@@ -1713,6 +1697,12 @@ FinishedOrdinalsProcessing:
         PtxSizeInBytes = sizeof(GraphPtxRawCStr);
 
     } else {
+
+        //
+        // --CuPtxPath was supplied.  Create a path instance to encapsulate the
+        // argument, then a corresponding file object that can be loaded, such
+        // that we can access the PTX as a raw C string.
+        //
 
         //
         // Construct a path instance.
@@ -1837,6 +1827,7 @@ FinishedOrdinalsProcessing:
     for (Index = 0; Index < NumberOfContexts; Index++) {
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
 
+#if 0
         if (!InitializeCriticalSectionAndSpinCount(
                                     &DeviceContext->BestGraphCriticalSection,
                                     BEST_CU_GRAPH_CS_SPINCOUNT)) {
@@ -1850,6 +1841,7 @@ FinishedOrdinalsProcessing:
                      Result);
             PH_RAISE(Result);
         }
+#endif
 
         //
         // Find the PH_CU_DEVICE instance with the same ordinal.
@@ -1884,11 +1876,7 @@ FinishedOrdinalsProcessing:
         CuResult = Cu->CtxCreate(&DeviceContext->Context,
                                  CU_CTX_SCHED_YIELD,
                                  Device->Handle);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(PerfectHashContextInitializeCuda_CuCtxCreate, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, CtxCreate);
 
         //
         // Our solver kernel uses dynamic parallelism (that is, it launches
@@ -1952,13 +1940,7 @@ FinishedOrdinalsProcessing:
                                         NumberOfJitOptions,
                                         JitOptions,
                                         JitOptionValues);
-
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(PerfectHashContextInitializeCuda_CuModuleLoadDataEx,
-                     CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, ModuleLoadDataEx);
 
         //
         // Module loaded successfully, resolve the kernel.
@@ -1967,12 +1949,7 @@ FinishedOrdinalsProcessing:
         CuResult = Cu->ModuleGetFunction(&DeviceContext->Function,
                                          DeviceContext->Module,
                                          (PCSZ)KernelFunctionName.Buffer);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(PerfectHashContextInitializeCuda_CuModuleGetFunction,
-                     CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, ModuleGetFunction);
 
         //
         // Get the occupancy stats.
@@ -1988,11 +1965,7 @@ FinishedOrdinalsProcessing:
             0,      // BlockSizeLimit
             0       // Flags
         );
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(OccupancyMaxPotentialBlockSizeWithFlags, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, OccupancyMaxPotentialBlockSizeWithFlags);
 
         CuResult = Cu->OccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
             &Occupancy->NumBlocks,
@@ -2001,23 +1974,14 @@ FinishedOrdinalsProcessing:
             0, // DynamicSharedMemorySize
             0  // Flags
         );
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(OccupancyMaxActiveBlocksPerMultiprocessorWithFlags,
-                     CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, OccupancyMaxActiveBlocksPerMultiprocessorWithFlags);
 
         //
         // Create the stream to use for per-device activies (like copying keys).
         //
 
         CuResult = Cu->StreamCreate(&DeviceContext->Stream, StreamFlags);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(StreamCreate, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, StreamCreate);
 
         //
         // Pop the context off this thread (required before it can be used by
@@ -2025,11 +1989,7 @@ FinishedOrdinalsProcessing:
         //
 
         CuResult = Cu->CtxPopCurrent(NULL);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CtxPopCurrent, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, CtxPopCurrent);
 
     }
 
@@ -2166,40 +2126,28 @@ FinishedOrdinalsProcessing:
         //
 
         CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CtxPushCurrent, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, CtxPushCurrent);
 
         //
         // Create the stream for this solve context.
         //
 
         CuResult = Cu->StreamCreate(&SolveContext->Stream, StreamFlags);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(StreamCreate, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, StreamCreate);
 
         //
         // Pop the context off this thread.
         //
 
         CuResult = Cu->CtxPopCurrent(NULL);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CtxPopCurrent, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
+        CU_CHECK(CuResult, CtxPopCurrent);
 
     }
 
     //
-    // For each device context, allocate device memory to hold sufficient graphs
-    // (one for each solve context associated with this device, plus a spare
-    // graph if we're in "find best graph" mode).
+    // For each device context, allocate device memory to hold sufficient
+    // graphs.  If we're in "find best graph" mode, there are two graphs per
+    // solve context (to account for the spare graph); otherwise, there is one.
     //
 
     for (Index = 0; Index < NumberOfContexts; Index++) {
@@ -2213,10 +2161,10 @@ FinishedOrdinalsProcessing:
         if (FindBestGraph(Context)) {
 
             //
-            // Account for the spare graph.
+            // Account for the spare graphs.
             //
 
-            NumberOfGraphsForDevice += 1;
+            NumberOfGraphsForDevice *= 2;
         }
 
         AllocSizeInBytes.QuadPart = NumberOfGraphsForDevice * sizeof(GRAPH);
@@ -2236,8 +2184,8 @@ FinishedOrdinalsProcessing:
         DeviceContext->DeviceGraphs = DeviceGraph = DeviceGraphs;
 
         //
-        // Loop over the solve contexts pointing to this device context and wire
-        // up matching ones to the device graph memory we just allocated.
+        // Loop over the solve contexts pointing to this device context and
+        // wire up matching ones to the device graph memory we just allocated.
         //
 
         MatchedGraphCount = 0;
@@ -2247,31 +2195,14 @@ FinishedOrdinalsProcessing:
             if (SolveContext->DeviceContext == DeviceContext) {
                 SolveContext->DeviceGraph = DeviceGraph++;
                 MatchedGraphCount++;
+                if (FindBestGraph(Context)) {
+                    SolveContext->SpareDeviceGraph = DeviceGraph++;
+                    MatchedGraphCount++;
+                }
             }
         }
 
-        ASSERT(MatchedGraphCount == NumberOfGraphsForDevice - 1);
-
-        //
-        // Wire up the spare device graph if applicable.
-        //
-
-        if (FindBestGraph(Context)) {
-            ULONG_PTR Expected;
-            ULONG_PTR Actual;
-
-            DeviceContext->SpareDeviceGraph = DeviceGraph;
-
-            //
-            // Sanity check our pointer arithmetic is correct; the spare graph
-            // should match the appropriate offset from the base address.
-            //
-
-            Expected = (ULONG_PTR)DeviceContext->SpareDeviceGraph;
-            Actual = (ULONG_PTR)DeviceGraphs;
-            Actual += (NumberOfGraphsForDevice - 1) * sizeof(GRAPH);
-            ASSERT(Expected == Actual);
-        }
+        ASSERT(MatchedGraphCount == NumberOfGraphsForDevice);
 
         //
         // Allocate device memory to hold the CU_DEVICE_ATTRIBUTES structure.
@@ -2333,6 +2264,7 @@ FinishedOrdinalsProcessing:
 
     SpareGraphCount = 0;
     DeviceContext = &DeviceContexts->DeviceContexts[0];
+    SolveContext = &SolveContexts->SolveContexts[0];
 
     for (Index = 0; Index < NumberOfGpuGraphs; Index++) {
 
@@ -2360,15 +2292,40 @@ FinishedOrdinalsProcessing:
         Graph->Index = Index;
         Graphs[Index] = Graph;
 
-        if (FindBestGraph(Context)) {
+        Graph->CuSolveContext = SolveContext;
 
-            if (Index < NumberOfSolveContexts) {
+        ASSERT(SolveContext->DeviceGraph != NULL);
 
-                SolveContext = &SolveContexts->SolveContexts[Index];
-                ASSERT(SolveContext->DeviceGraph != NULL);
+        if (!FindBestGraph(Context)) {
+            SolveContext->HostGraph = Graph;
+            SolveContext++;
+        } else {
 
+            ASSERT(SolveContext->SpareDeviceGraph != NULL);
+
+            //
+            // If the index is even (least significant bit is not set), this is
+            // a normal graph.  If it's odd (LSB is 1), it's a spare graph.  We
+            // advance the solve context pointer after every spare graph.  E.g.
+            // if we have two solve contexts, we'll have four GPU graphs, which
+            // will be mapped as follows:
+            //
+            //      Graph #0            -> SolveContext #0
+            //      Graph #1 (spare)    -> SolveContext #0; SolveContext++
+            //      Graph #2            -> SolveContext #1
+            //      Graph #3 (spare)    -> SolveContext #2; SolveContext++
+            //      etc.
+            //
+
+            if ((Index & 0x1) == 0) {
+
+                //
+                // This is a normal graph.
+                //
+
+                Graph->Flags.IsSpare = FALSE;
                 SolveContext->HostGraph = Graph;
-                Graph->CuSolveContext = SolveContext;
+                ASSERT(SolveContext->SpareHostGraph == NULL);
 
             } else {
 
@@ -2376,22 +2333,21 @@ FinishedOrdinalsProcessing:
                 // This is a spare graph.
                 //
 
-                SpareGraphCount++;
-                ASSERT(SpareGraphCount <= Context->NumberOfSpareCuGraphs);
                 Graph->Flags.IsSpare = TRUE;
-                ASSERT(DeviceContext->SpareDeviceGraph != NULL);
-                DeviceContext->SpareHostGraph = Graph;
-                DeviceContext++;
+                SolveContext->SpareHostGraph = Graph;
+                ASSERT(SolveContext->HostGraph != NULL);
+
+                //
+                // Advance the solve context.
+                //
+
+                SolveContext++;
             }
         }
     }
 
     if (FAILED(Result)) {
         goto Error;
-    }
-
-    if (FindBestGraph(Context)) {
-        ASSERT(SpareGraphCount == Context->NumberOfSpareCuGraphs);
     }
 
     //

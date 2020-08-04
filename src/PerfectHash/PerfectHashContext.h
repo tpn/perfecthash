@@ -772,10 +772,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG NumberOfCpuGraphs;
     ULONG NumberOfGpuGraphs;
 
-    union {
-        ULONG NumberOfSpareCuGraphs;
-        ULONG NumberOfCuContexts;
-    };
+    ULONG NumberOfCuContexts;
 
     ULONG TotalNumberOfGraphs;
 

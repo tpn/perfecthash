@@ -234,6 +234,7 @@ Return Value:
     PRTL Rtl;
     HRESULT Result;
     CU_RESULT CuResult;
+    PGRAPH SpareGraph = NULL;
     PGRAPH DeviceGraph;
     PGRAPH_INFO Info;
     PGRAPH_INFO PrevInfo;
@@ -327,11 +328,22 @@ Return Value:
     Graph->CuDeviceAttributes = DeviceContext->DeviceAttributes;
 
     //
-    // Set the CUDA context.
+    // Set the CUDA context if we're not the spare graph.  (If we're the spare
+    // graph, the active graph will have already set the context for us.)
     //
 
-    CuResult = Cu->CtxSetCurrent(DeviceContext->Context);
-    CU_CHECK(CuResult, CtxSetCurrent);
+    if (!IsSpareGraph(Graph)) {
+
+        CuResult = Cu->CtxSetCurrent(DeviceContext->Context);
+        CU_CHECK(CuResult, CtxSetCurrent);
+
+        SpareGraph = SolveContext->SpareHostGraph;
+        ASSERT(SpareGraph->CuSolveContext == SolveContext);
+        ASSERT((SpareGraph->Index & 0x1) == 1);
+        ASSERT(Context->GpuGraphs[Graph->Index + 1] == SpareGraph);
+        ASSERT(IsSpareGraph(SpareGraph));
+
+    }
 
     //
     // Allocate arrays.  The VertexPairs, Edges, Next, and First arrays are all
@@ -518,7 +530,13 @@ Error:
 
 End:
 
-    if (SUCCEEDED(Result)) {
+    if (SUCCEEDED(Result) && SpareGraph != NULL) {
+
+        //
+        // Call LoadInfo() against the spare graph, too.
+        //
+
+        Result = GraphCuLoadInfo(SpareGraph);
     }
 
     return Result;
