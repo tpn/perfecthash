@@ -1710,6 +1710,7 @@ FinishedOrdinalsProcessing:
         //
 
         PtxString = (PCHAR)GraphPtxRawCStr;
+        PtxSizeInBytes = sizeof(GraphPtxRawCStr);
 
     } else {
 
@@ -1747,6 +1748,12 @@ FinishedOrdinalsProcessing:
             goto Error;
         }
 
+        //
+        // Load the PTX file (map it into memory).  We can then use the base
+        // address as the PTX string.  EndOfFile will capture the PTX size in
+        // bytes.
+        //
+
         Result = PtxFile->Vtbl->Load(PtxFile,
                                      PtxPath,
                                      &EndOfFile,
@@ -1757,11 +1764,10 @@ FinishedOrdinalsProcessing:
         }
 
         PtxString = (PCHAR)PtxFile->BaseAddress;
+        PtxSizeInBytes = EndOfFile.QuadPart;
 
         RELEASE(PtxPath);
     }
-
-    PtxSizeInBytes = strlen(PtxString);
 
     //
     // Open the cudadevrt.lib path.
