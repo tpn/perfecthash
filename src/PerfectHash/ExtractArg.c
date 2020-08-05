@@ -167,6 +167,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(RemoveWriteCombineAfterSuccessfulHashKeys);
     DECL_ARG(TryLargePagesForVertexPairs);
     DECL_ARG(TryUsePredictedAttemptsToLimitMaxConcurrency);
+    DECL_ARG(AlwaysRespectCuKernelRuntimeLimit);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -211,6 +212,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(RemoveWriteCombineAfterSuccessfulHashKeys);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForVertexPairs);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUsePredictedAttemptsToLimitMaxConcurrency);
+    SET_FLAG_AND_RETURN_IF_EQUAL(AlwaysRespectCuKernelRuntimeLimit);
 
     return S_FALSE;
 }

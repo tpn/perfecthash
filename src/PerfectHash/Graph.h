@@ -848,6 +848,7 @@ typedef struct _GRAPH_SHARED {
 } GRAPH_SHARED;
 typedef GRAPH_SHARED *PGRAPH_SHARED;
 
+#if 0
 //
 // cuRAND-specific glue.
 //
@@ -855,9 +856,13 @@ typedef GRAPH_SHARED *PGRAPH_SHARED;
 #ifndef __CUDA_ARCH__
 #pragma pack(push, 1)
 typedef struct _CU_RNG_STATE_PHILOX4_32_10 {
+    DECLSPEC_ALIGN(16)
     ULONG Counter[4];
+
+    DECLSPEC_ALIGN(16)
     ULONG Output[4];
-    ULONG Key[2];
+
+    ULONG Key[4];
     ULONG State;
     ULONG BoxMullerFlag;
     ULONG BoxMullerFlagDouble;
@@ -887,6 +892,7 @@ typedef struct _CU_RNG_STATE {
     };
 } CU_RNG_STATE;
 typedef CU_RNG_STATE *PCU_RNG_STATE;
+#endif
 
 //
 // Vtbl.
@@ -1066,7 +1072,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONGLONG CuRngSeed;
     ULONGLONG CuRngSubsequence;
     ULONGLONG CuRngOffset;
-    CU_RNG_STATE CuRngState;
+    PVOID CuRngState;
+    //CU_RNG_STATE CuRngState;
 
     //
     // Host and device pointers to keys array.
@@ -1075,6 +1082,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _Readable_elements_(NumberOfKeys)
     PKEY HostKeys;
     CU_DEVICE_POINTER DeviceKeys;
+
+    //
+    // Pointer to device memory view of GRAPH_INFO.
+    //
+
+    PGRAPH_INFO CuGraphInfo;
 
     //
     // Kernel launch parameters.

@@ -216,6 +216,56 @@ Return Value:
     TotalNumberOfGraphs = 0;
 
     //
+    // Initialize aliases.
+    //
+
+    Rtl = Table->Rtl;
+    Keys = (PULONG)Table->Keys->KeyArrayBaseAddress;
+    MaskFunctionId = Table->MaskFunctionId;
+    GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
+    TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
+
+    ASSERT(
+        Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList)
+    );
+
+    //
+    // Initialize output handle if we're in context table/bulk create mode.
+    // We print a dash every time a table resize event occurs to the output
+    // handle.
+    //
+
+    if (IsContextBulkCreate(Context) || IsContextTableCreate(Context)) {
+        OutputHandle = Context->OutputHandle;
+        ASSERT(IsValidHandle(OutputHandle));
+    }
+
+    //
+    // Verify we have sufficient seeds available in our on-disk structure
+    // for the given hash function.
+    //
+
+    NumberOfSeedsRequired = HashRoutineNumberOfSeeds[Table->HashFunctionId];
+    NumberOfSeedsAvailable = ((
+        FIELD_OFFSET(GRAPH, LastSeed) -
+        FIELD_OFFSET(GRAPH, FirstSeed)
+    ) / sizeof(ULONG)) + 1;
+
+    if (NumberOfSeedsAvailable < NumberOfSeedsRequired) {
+        return PH_E_INVALID_NUMBER_OF_SEEDS;
+    }
+
+    //
+    // Prepare the graph info structure.
+    //
+
+    Result = PrepareGraphInfoChm02(Table, &Info, NULL);
+    if (FAILED(Result)) {
+        PH_ERROR(CreatePerfectHashTableImplChm02_PrepareFirstGraphInfo, Result);
+        goto Error;
+    }
+
+    //
     // Perform the CUDA and graph initialization.
     //
 
@@ -262,13 +312,53 @@ Return Value:
             goto Error;
         }
 
-        //
-        // Allocate sufficient memory.
-        //
+        if (DeviceContext->KeysBaseAddress == 0) {
 
-        CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
-                                KeysSizeInBytes);
-        CU_CHECK(CuResult, MemAlloc);
+            //
+            // No device memory has been allocated for keys before, so,
+            // allocate some now.
+            //
+
+            ASSERT(DeviceContext->KeysSizeInBytes == 0);
+
+            CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
+                                    KeysSizeInBytes);
+            CU_CHECK(CuResult, MemAlloc);
+
+            DeviceContext->KeysSizeInBytes = KeysSizeInBytes;
+
+        } else {
+
+            //
+            // Device memory has already been allocated.  If it's less than what
+            // we need, free what's there and allocate new memoyr.
+            //
+
+            ASSERT(DeviceContext->KeysSizeInBytes > 0);
+
+            if (DeviceContext->KeysSizeInBytes < KeysSizeInBytes) {
+
+                CuResult = Cu->MemFree(DeviceContext->KeysBaseAddress);
+                CU_CHECK(CuResult, MemFree);
+
+                DeviceContext->KeysBaseAddress = 0;
+
+                CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
+                                        KeysSizeInBytes);
+                CU_CHECK(CuResult, MemAlloc);
+
+                DeviceContext->KeysSizeInBytes = KeysSizeInBytes;
+
+            } else {
+
+                //
+                // The existing device memory will fit the keys array, so
+                // there's nothing more to do here.
+                //
+
+                ASSERT(DeviceContext->KeysSizeInBytes >= KeysSizeInBytes);
+            }
+        }
 
         //
         // Copy the keys over.
@@ -277,6 +367,27 @@ Return Value:
         CuResult = Cu->MemcpyHtoDAsync(DeviceContext->KeysBaseAddress,
                                        KeysBaseAddress,
                                        KeysSizeInBytes,
+                                       DeviceContext->Stream);
+        CU_CHECK(CuResult, MemcpyHtoDAsync);
+
+        if (DeviceContext->DeviceGraphInfoAddress == 0) {
+
+            //
+            // Allocate memory for the graph info.
+            //
+
+            CuResult = Cu->MemAlloc(&DeviceContext->DeviceGraphInfoAddress,
+                                    sizeof(GRAPH_INFO));
+            CU_CHECK(CuResult, MemAlloc);
+        }
+
+        //
+        // Copy the graph info over.
+        //
+
+        CuResult = Cu->MemcpyHtoDAsync(DeviceContext->DeviceGraphInfoAddress,
+                                       &Info,
+                                       sizeof(GRAPH_INFO),
                                        DeviceContext->Stream);
         CU_CHECK(CuResult, MemcpyHtoDAsync);
     }
@@ -300,52 +411,6 @@ Return Value:
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
-
-    //
-    // Initialize aliases.
-    //
-
-    Rtl = Table->Rtl;
-    Keys = (PULONG)Table->Keys->KeyArrayBaseAddress;
-    MaskFunctionId = Table->MaskFunctionId;
-    GraphInfoOnDisk = Context->GraphInfoOnDisk = &GraphInfo;
-    TableInfoOnDisk = Table->TableInfoOnDisk = &GraphInfo.TableInfoOnDisk;
-
-    ASSERT(
-        Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList)
-    );
-
-    //
-    // Initialize output handle if we're in context table/bulk create mode.
-    // We print a dash every time a table resize event occurs to the output
-    // handle.
-    //
-
-    if (IsContextBulkCreate(Context) || IsContextTableCreate(Context)) {
-        OutputHandle = Context->OutputHandle;
-        ASSERT(IsValidHandle(OutputHandle));
-    }
-
-    //
-    // Verify we have sufficient seeds available in our on-disk structure
-    // for the given hash function.
-    //
-
-    NumberOfSeedsRequired = HashRoutineNumberOfSeeds[Table->HashFunctionId];
-    NumberOfSeedsAvailable = ((
-        FIELD_OFFSET(GRAPH, LastSeed) -
-        FIELD_OFFSET(GRAPH, FirstSeed)
-    ) / sizeof(ULONG)) + 1;
-
-    if (NumberOfSeedsAvailable < NumberOfSeedsRequired) {
-        return PH_E_INVALID_NUMBER_OF_SEEDS;
-    }
-
-    Result = PrepareGraphInfoChm02(Table, &Info, NULL);
-    if (FAILED(Result)) {
-        PH_ERROR(CreatePerfectHashTableImplChm02_PrepareFirstGraphInfo, Result);
-        goto Error;
-    }
 
     //
     // N.B. We don't explicitly reset all events here like in Chm01 as we're
@@ -1956,7 +2021,8 @@ FinishedOrdinalsProcessing:
         //
 
         CuResult = Cu->CtxCreate(&DeviceContext->Context,
-                                 CU_CTX_SCHED_YIELD,
+                                 //CU_CTX_SCHED_YIELD,
+                                 CU_CTX_SCHED_BLOCKING_SYNC,
                                  Device->Handle);
         CU_CHECK(CuResult, CtxCreate);
 

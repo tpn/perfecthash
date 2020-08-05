@@ -53,7 +53,7 @@ extern PERFECT_HASH_PRINT_CU_ERROR PerfectHashPrintCuError;
 
 #define CU_CHECK(CuResult, Name)                   \
     if (CU_FAILED(CuResult)) {                     \
-        CU_ERROR(__FUNCTION__ # Name, CuResult);   \
+        CU_ERROR(Name, CuResult);                  \
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
         goto Error;                                \
     }
@@ -154,7 +154,7 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
     // CUDA stream for per-device activities (like copying keys).
     //
 
-    PCU_STREAM Stream;
+    CU_STREAM Stream;
 
     //
     // Base address of the keys currently copied to the device.
@@ -163,10 +163,22 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
     CU_DEVICE_POINTER KeysBaseAddress;
 
     //
+    // Size of the keys array in bytes.
+    //
+
+    SIZE_T KeysSizeInBytes;
+
+    //
     // Device address of the CU_DEVICE_ATTRIBUTES struct.
     //
 
     CU_DEVICE_POINTER DeviceAttributes;
+
+    //
+    // Device address of the GRAPH_INFO structure.
+    //
+
+    CU_DEVICE_POINTER DeviceGraphInfoAddress;
 
 #if 0
 
@@ -248,7 +260,7 @@ typedef struct _PH_CU_SOLVE_CONTEXT {
     // Kernel launch stream.
     //
 
-    PCU_STREAM Stream;
+    CU_STREAM Stream;
 
     //
     // Host and device graph instances.

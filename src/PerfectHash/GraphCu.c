@@ -333,6 +333,7 @@ Return Value:
         SolveContext->KernelRuntimeTargetInMilliseconds;
     Graph->CuJitMaxNumberOfRegisters = SolveContext->JitMaxNumberOfRegisters;
     Graph->CuDeviceAttributes = DeviceContext->DeviceAttributes;
+    Graph->CuGraphInfo = (PGRAPH_INFO)DeviceContext->DeviceGraphInfoAddress;
 
     //
     // Set the CUDA context if we're in "find best graph" mode, or we're not
@@ -350,10 +351,13 @@ Return Value:
         Graph->CuDeviceGraph = DeviceGraph;
     } else {
         if (!IsSpareGraph(Graph)) {
-            Graph->CuHostGraph = Graph;
             DeviceGraph = SolveContext->DeviceGraph;
+            Graph->CuHostGraph = Graph;
+            Graph->CuDeviceGraph = DeviceGraph;
+
             SpareGraph = SolveContext->HostSpareGraph;
             Graph->CuHostSpareGraph = SpareGraph;
+            Graph->CuDeviceSpareGraph = SolveContext->DeviceSpareGraph;
 
             ASSERT(SpareGraph->CuHostGraph == NULL);
             ASSERT(SpareGraph->CuHostSpareGraph == NULL);
@@ -695,6 +699,13 @@ Return Value:
     ASSERT(SolveContext->HostGraph == Graph);
 
     //
+    // Make sure device work has completed.
+    //
+
+    CuResult = Cu->CtxSynchronize();
+    CU_CHECK(CuResult, CtxSynchronize);
+
+    //
     // Launch the solve kernel.
     //
 
@@ -732,10 +743,6 @@ Return Value:
     CU_CHECK(CuResult, StreamSynchronize);
 
     SolveResult = Graph->CuKernelResult;
-
-    if (SolveResult == (HRESULT)1) {
-        NOTHING;
-    }
 
     //MAYBE_STOP_GRAPH_SOLVING(Graph);
 

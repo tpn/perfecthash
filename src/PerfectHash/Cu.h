@@ -50,8 +50,8 @@ typedef struct CU_EVENT *PCU_EVENT;
 typedef struct CU_EVENT **PPCU_EVENT;
 
 struct CU_STREAM;
-typedef struct CU_STREAM *PCU_STREAM;
-typedef struct CU_STREAM **PPCU_STREAM;
+typedef struct CU_STREAM *CU_STREAM;
+typedef CU_STREAM *PCU_STREAM;
 
 struct CU_FUNCTION;
 typedef struct CU_FUNCTION *PCU_FUNCTION;
@@ -964,7 +964,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE)(
-    _Out_ PCU_STREAM *StreamPointer,
+    _Out_ PCU_STREAM Stream,
     _In_opt_ CU_STREAM_FLAGS Flags
     );
 typedef CU_STREAM_CREATE *PCU_STREAM_CREATE;
@@ -973,7 +973,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE_WITH_PRIORITY)(
-    _Outptr_result_maybenull_ PCU_STREAM *StreamPointer,
+    _Out_ PCU_STREAM Stream,
     _In_opt_ CU_STREAM_FLAGS Flags,
     _In_opt_ ULONG Priority
     );
@@ -983,7 +983,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_DESTROY)(
-    _In_ _Post_invalid_ PCU_STREAM Stream
+    _In_ _Post_invalid_ CU_STREAM Stream
     );
 typedef CU_STREAM_DESTROY *PCU_STREAM_DESTROY;
 
@@ -991,7 +991,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_QUERY)(
-    _In_ PCU_STREAM Stream
+    _In_ CU_STREAM Stream
     );
 typedef CU_STREAM_QUERY *PCU_STREAM_QUERY;
 
@@ -999,7 +999,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_SYNCHRONIZE)(
-    _In_ PCU_STREAM Stream
+    _In_ CU_STREAM Stream
     );
 typedef CU_STREAM_SYNCHRONIZE *PCU_STREAM_SYNCHRONIZE;
 
@@ -1007,7 +1007,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CALLBACK CU_STREAM_CALLBACK)(
-    _In_opt_ PCU_STREAM Stream,
+    _In_opt_ CU_STREAM Stream,
     _In_opt_ CU_RESULT Status,
     _In_opt_ PVOID UserData
     );
@@ -1017,7 +1017,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_ADD_CALLBACK)(
-    _In_ PCU_STREAM Stream,
+    _In_ CU_STREAM Stream,
     _In_ PCU_STREAM_CALLBACK Callback,
     _In_opt_ PVOID UserData,
     _In_opt_ ULONG Flags
@@ -1028,7 +1028,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_ATTACH_MEM_ASYNC)(
-    _In_ PCU_STREAM Stream,
+    _In_ CU_STREAM Stream,
     _In_ PCU_DEVICE_POINTER Address,
     _In_opt_ _Pre_ _Field_range_(==, 0) SIZE_T Length,
     _In_opt_ CU_MEM_ATTACH_FLAGS Flags
@@ -1049,7 +1049,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_WAIT_VALUE_32)(
-    _In_ PCU_STREAM Stream,
+    _In_ CU_STREAM Stream,
     _In_ PCU_DEVICE_POINTER Address,
     _In_opt_ ULONG Value,
     _In_opt_ CU_STREAM_WAIT_VALUE Flags
@@ -1060,7 +1060,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_WRITE_VALUE_32)(
-    _In_ PCU_STREAM Stream,
+    _In_ CU_STREAM Stream,
     _In_ PCU_DEVICE_POINTER Address,
     _In_opt_ ULONG Value,
     _In_opt_ CU_STREAM_WRITE_VALUE Flags
@@ -1071,7 +1071,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_BATCH_MEM_OP)(
-    _In_ PCU_STREAM Stream,
+    _In_ CU_STREAM Stream,
     _In_ ULONG Count,
     _In_reads_(Count) PCU_STREAM_BATCH_MEM_OP_PARAMS Params,
     _In_opt_ ULONG Flags
@@ -1151,7 +1151,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_MEM_FREE)(
-    _In_ _Post_invalid_ PCU_DEVICE_POINTER DevicePointer
+    _In_ CU_DEVICE_POINTER DevicePointer
     );
 typedef CU_MEM_FREE *PCU_MEM_FREE;
 
@@ -1169,7 +1169,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_MEM_PREFETCH_ASYNC)(
-    _In_ PCU_DEVICE_POINTER DevicePointer,
+    _In_ CU_DEVICE_POINTER DevicePointer,
     _In_ SIZE_T Count,
     _In_ CU_DEVICE DestDevice,
     _In_ PCU_STREAM Stream
@@ -1243,7 +1243,7 @@ CU_RESULT
     _In_ CU_DEVICE_POINTER DestDevicePointer,
     _In_reads_bytes_(ByteCount) PVOID SourceHostPointer,
     _In_ SIZE_T ByteCount,
-    _In_opt_ PCU_STREAM Stream
+    _In_opt_ CU_STREAM Stream
     );
 typedef CU_MEMCPY_HOST_TO_DEVICE_ASYNC *PCU_MEMCPY_HOST_TO_DEVICE_ASYNC;
 
@@ -1254,7 +1254,7 @@ CU_RESULT
     _Out_writes_bytes_(ByteCount) PVOID DestHostPointer,
     _In_ CU_DEVICE_POINTER SourceDevicePointer,
     _In_ SIZE_T ByteCount,
-    _In_opt_ PCU_STREAM Stream
+    _In_opt_ CU_STREAM Stream
     );
 typedef CU_MEMCPY_DEVICE_TO_HOST_ASYNC *PCU_MEMCPY_DEVICE_TO_HOST_ASYNC;
 
@@ -1274,7 +1274,7 @@ CU_RESULT
     _In_ ULONG BlockDimY,
     _In_ ULONG BlockDimZ,
     _In_ ULONG SharedMemoryInBytes,
-    _In_ PCU_STREAM Stream,
+    _In_ CU_STREAM Stream,
     _In_opt_ PVOID *KernelParameters,
     _In_opt_ PVOID *Extra
     );

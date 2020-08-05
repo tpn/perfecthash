@@ -29,9 +29,11 @@ EXTERN_C_END
 
 #include <curand_kernel.h>
 
-#define ASSERT(Condition) \
-    if (!(Condition)) {   \
-        asm("trap;");     \
+#define ASSERT(Condition)                     \
+    if (!(Condition)) {                       \
+        asm("trap;");                         \
+        Result = PH_E_INVARIANT_CHECK_FAILED; \
+        goto End;                             \
     }
 
 #define CU_RESULT cudaError_t
@@ -48,10 +50,10 @@ EXTERN_C_END
                           (ULONG)Result)
 
 
-#define CU_ERROR(Name, CuResult)             \
-    PerfectHashPrintCuError(#Name,           \
-                            __FILE__,        \
-                            __LINE__,        \
+#define CU_ERROR(Name, CuResult)      \
+    PerfectHashPrintCuError(#Name,    \
+                            __FILE__, \
+                            __LINE__, \
                             CuResult)
 
 #define CU_CHECK(CuResult, Name)                   \
@@ -60,6 +62,13 @@ EXTERN_C_END
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
         goto Error;                                \
     }
+
+#define CU_MEMSET(Buffer, Value, Size, Stream)               \
+    CuResult = cudaMemsetAsync(Buffer, Value, Size, Stream); \
+    CU_CHECK(CuResult, cudaMemsetAsync)
+
+#define CU_ZERO(Buffer, Size, Stream) \
+    CU_MEMSET(Buffer, 0, Size, Stream)
 
 //
 // Shared memory.
@@ -284,6 +293,59 @@ GraphCuShouldWeContinueTryingToSolve(
 EXTERN_C
 DEVICE
 HRESULT
+GraphCuApplySeedMasks(
+    _In_ PGRAPH Graph
+    )
+{
+    BYTE Index;
+    BYTE NumberOfSeeds;
+    LONG Mask;
+    ULONG NewSeed;
+    PULONG Seed;
+    PULONG Seeds;
+    const LONG *Masks;
+
+    if (!HasSeedMasks(Graph)) {
+
+        //
+        // No seed masks are available for this hash routine.
+        //
+
+        return S_FALSE;
+    }
+
+    //
+    // Validation complete.  Loop through the masks and apply those with a value
+    // greater than zero to the seed at the corresponding offset.
+    //
+
+    Seeds = &Graph->FirstSeed;
+    Masks = &Graph->SeedMasks.Mask1;
+
+    NumberOfSeeds = (BYTE)Graph->NumberOfSeeds;
+
+    for (Index = 0; Index < NumberOfSeeds; Index++) {
+
+        Mask = *Masks++;
+
+        if (Mask != -1 && Mask != 0) {
+
+            //
+            // Valid mask found, apply it to the seed data at this slot.
+            //
+
+            Seed = Seeds + Index;
+            NewSeed = *Seed & Mask;
+            *Seed = NewSeed;
+        }
+    }
+
+    return S_OK;
+}
+
+EXTERN_C
+DEVICE
+HRESULT
 GraphCuLoadNewSeeds(
     _In_ PGRAPH Graph
     )
@@ -305,12 +367,19 @@ Return Value:
 
 --*/
 {
-    ULONG NumberOfSeeds;
-    HRESULT Result;
+    BYTE Index;
     PULONG Seed;
+    BYTE NumberOfSeeds;
+    HRESULT Result;
+    CU_RESULT CuResult;
     curandStatePhilox4_32_10_t *State;
 
-    State = (curandStatePhilox4_32_10_t *)&Graph->CuRngState.AsPhilox43210;
+    if (Graph->CuRngState == NULL) {
+        CuResult = cudaMalloc(&Graph->CuRngState, sizeof(*State));
+        CU_CHECK(CuResult, cudaMalloc);
+    }
+
+    State = (curandStatePhilox4_32_10_t *)Graph->CuRngState;
 
     //
     // If this is the first time we're being called, we need to initialize the
@@ -325,13 +394,31 @@ Return Value:
     }
 
     Seed = &Graph->FirstSeed;
-    NumberOfSeeds = Graph->NumberOfSeeds;
+    NumberOfSeeds = (BYTE)Graph->NumberOfSeeds;
 
-    while (NumberOfSeeds--) {
+    for (Index = 0; Index < NumberOfSeeds; Index++) {
         *Seed++ = curand(State);
     }
 
     Result = S_OK;
+
+    if (HasSeedMasks(Graph)) {
+        Result = GraphCuApplySeedMasks(Graph);
+    }
+
+    goto End;
+
+Error:
+
+    if (SUCCEEDED(Result)) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
     return Result;
 }
 
@@ -339,7 +426,8 @@ EXTERN_C
 DEVICE
 HRESULT
 GraphCuReset(
-    _In_ PGRAPH Graph
+    _In_ PGRAPH Graph,
+    _In_ CU_STREAM Stream
     )
 /*++
 
@@ -351,6 +439,8 @@ Routine Description:
 Arguments:
 
     Graph - Supplies a pointer to the graph instance to reset.
+
+    Stream - Supplies the stream to use.
 
 Return Value:
 
@@ -369,8 +459,139 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    PGRAPH_INFO Info;
+    CU_RESULT CuResult;
+    ULONG TotalNumberOfPages;
+    ULONG TotalNumberOfLargePages;
+    ULONG TotalNumberOfCacheLines;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
+    PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
+    PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
+
+    //
+    // Initialize aliases.
+    //
+
+    Info = Graph->CuGraphInfo;
 
     Result = PH_S_CONTINUE_GRAPH_SOLVING;
+
+    //
+    // Clear the bitmap buffers.
+    //
+
+#define ZERO_BITMAP_BUFFER(Name)                           \
+    ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
+           ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
+    CU_ZERO(Graph->##Name##.Buffer,                        \
+            Info->##Name##BufferSizeInBytes,               \
+            Stream)
+
+    ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
+    ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
+    ZERO_BITMAP_BUFFER(AssignedBitmap);
+    ZERO_BITMAP_BUFFER(IndexBitmap);
+
+    //
+    // "Empty" all of the nodes.
+    //
+
+#define EMPTY_ARRAY(Name)                                           \
+    ASSERT(0 == Info->##Name##SizeInBytes -                         \
+           ((Info->##Name##SizeInBytes >> 3) << 3));                \
+    CU_MEMSET(Graph->##Name, ~0, Info->##Name##SizeInBytes, Stream)
+
+    EMPTY_ARRAY(First);
+    EMPTY_ARRAY(Next);
+    EMPTY_ARRAY(Edges);
+
+    //
+    // Clear any remaining values.
+    //
+
+    Graph->Collisions = 0;
+    Graph->NumberOfEmptyVertices = 0;
+    Graph->DeletedEdgeCount = 0;
+    Graph->VisitedVerticesCount = 0;
+
+    Graph->TraversalDepth = 0;
+    Graph->TotalTraversals = 0;
+    Graph->MaximumTraversalDepth = 0;
+
+    Graph->Flags.Shrinking = FALSE;
+    Graph->Flags.IsAcyclic = FALSE;
+
+    Graph->AddKeysElapsedCycles.QuadPart = 0;
+    Graph->HashKeysElapsedCycles.QuadPart = 0;
+    Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
+
+    //
+    // Avoid the overhead of resetting the memory coverage if we're in "first
+    // graph wins" mode and have been requested to skip memory coverage.
+    //
+
+    if (!FindBestGraph(Graph)) {
+        goto End;
+    }
+
+    //
+    // Clear the assigned memory coverage counts and arrays.
+    //
+
+    Coverage = &Graph->AssignedMemoryCoverage;
+
+    //
+    // Capture the totals and pointers prior to zeroing the struct.
+    //
+
+    TotalNumberOfPages = Coverage->TotalNumberOfPages;
+    TotalNumberOfLargePages = Coverage->TotalNumberOfLargePages;
+    TotalNumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+
+    NumberOfAssignedPerPage = Coverage->NumberOfAssignedPerPage;
+    NumberOfAssignedPerLargePage = Coverage->NumberOfAssignedPerLargePage;
+    NumberOfAssignedPerCacheLine = Coverage->NumberOfAssignedPerCacheLine;
+
+    CU_ZERO(Coverage, sizeof(*Coverage), Stream);
+
+    //
+    // Restore the totals and pointers.
+    //
+
+    Coverage->TotalNumberOfPages = TotalNumberOfPages;
+    Coverage->TotalNumberOfLargePages = TotalNumberOfLargePages;
+    Coverage->TotalNumberOfCacheLines = TotalNumberOfCacheLines;
+
+    Coverage->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
+    Coverage->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
+    Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
+
+#define ZERO_ASSIGNED_ARRAY(Name) \
+    CU_ZERO(Coverage->##Name, Info->##Name##SizeInBytes, Stream)
+
+    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
+    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
+    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (SUCCEEDED(Result)) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
     return Result;
 }
 
@@ -431,7 +652,8 @@ DEVICE
 HRESULT
 GraphCuSolve(
     _In_ PGRAPH Graph,
-    _Out_ PGRAPH *NewGraphPointer
+    _Out_ PGRAPH *NewGraphPointer,
+    _In_ CU_STREAM Stream
     )
 /*++
 
@@ -448,6 +670,8 @@ Arguments:
     NewGraphPointer - Supplies the address of a variable which will receive the
         address of a new graph instance to be used for solving if the routine
         returns PH_S_USE_NEW_GRAPH_FOR_SOLVING.
+
+    Stream - Supplies the stream.
 
 Return Value:
 
@@ -502,10 +726,15 @@ Return Value:
 
     );
 
+    //
+    // Launch the kernel.
+    //
+
     HashAllMultiplyShiftR<<<
         BlocksPerGrid,
         ThreadsPerBlock,
-        SharedMemoryInBytes
+        SharedMemoryInBytes,
+        Stream
     >>>(
         Keys,
         NumberOfKeys,
@@ -626,7 +855,7 @@ Error:
 
 Failed:
     Graph->CuFailedAttempts++;
-    return PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+    return PH_S_CONTINUE_GRAPH_SOLVING;
 }
 
 
@@ -658,7 +887,10 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    CU_RESULT CuResult;
     PGRAPH NewGraph;
+    CU_STREAM ResetStream;
+    CU_STREAM SolveStream;
 
     //
     // Abort if the kernel is called with more than one thread.
@@ -670,6 +902,22 @@ Return Value:
         Result = PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS;
         goto End;
     }
+
+    printf("Graph->SizeOfStruct: %u vs sizeof: %u\n", (ULONG)Graph->SizeOfStruct, (ULONG)sizeof(GRAPH));
+    printf("Graph->CuGraphInfo: 0x%p\n", Graph->CuGraphInfo);
+    printf("Graph->NumberOfSeeds: %u\n", Graph->NumberOfSeeds);
+
+    ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
+
+    //
+    // Create our streams.
+    //
+
+    CuResult = cudaStreamCreateWithFlags(&ResetStream, cudaStreamNonBlocking);
+    CU_CHECK(CuResult, cudaStreamCreateWithFlags);
+
+    CuResult = cudaStreamCreateWithFlags(&SolveStream, cudaStreamNonBlocking);
+    CU_CHECK(CuResult, cudaStreamCreateWithFlags);
 
     //
     // Begin the solving loop.
@@ -686,7 +934,7 @@ Return Value:
             break;
         }
 
-        Result = GraphCuReset(Graph);
+        Result = GraphCuReset(Graph, ResetStream);
         if (FAILED(Result)) {
             break;
         } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {
@@ -694,7 +942,7 @@ Return Value:
         }
 
         NewGraph = NULL;
-        Result = GraphCuSolve(Graph, &NewGraph);
+        Result = GraphCuSolve(Graph, &NewGraph, SolveStream);
         if (FAILED(Result)) {
             break;
         }
@@ -723,6 +971,22 @@ Return Value:
         //
 
     } while (TRUE);
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (SUCCEEDED(Result)) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
 
 End:
     Graph->CuKernelResult = Result;

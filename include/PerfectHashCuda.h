@@ -267,10 +267,14 @@ typedef _Return_type_success_(return >= 0) long HRESULT;
 typedef HRESULT *PHRESULT;
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 
-#define S_OK        ((HRESULT)0L)
-#define S_FALSE     ((HRESULT)1L)
-#define E_POINTER   _HRESULT_TYPEDEF_(0x80004003L)
-#define E_FAIL      _HRESULT_TYPEDEF_(0x80004005L)
+#define S_OK            ((HRESULT)0L)
+#define S_FALSE         ((HRESULT)1L)
+#define E_POINTER       _HRESULT_TYPEDEF_(0x80004003L)
+#define E_FAIL          _HRESULT_TYPEDEF_(0x80004005L)
+#define E_UNEXPECTED    _HRESULT_TYPEDEF_(0x8000FFFFL)
+#define E_OUTOFMEMORY   _HRESULT_TYPEDEF_(0x8007000EL)
+#define E_INVALIDARG    _HRESULT_TYPEDEF_(0x80070057L)
+#define E_NOTIMPL       _HRESULT_TYPEDEF_(0x80000001L)
 
 #ifndef RtlOffsetToPointer
 #define RtlOffsetToPointer(B,O)    ((PCHAR)(((PCHAR)(B)) + ((ULONG_PTR)(O))))

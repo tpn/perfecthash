@@ -3387,7 +3387,7 @@ Return Value:
 
 Error:
 
-    if (Result == S_OK) {
+    if (SUCCEEDED(Result)) {
         Result = E_UNEXPECTED;
     }
 
