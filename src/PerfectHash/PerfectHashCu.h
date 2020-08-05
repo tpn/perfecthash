@@ -53,7 +53,7 @@ extern PERFECT_HASH_PRINT_CU_ERROR PerfectHashPrintCuError;
 
 #define CU_CHECK(CuResult, Name)                   \
     if (CU_FAILED(CuResult)) {                     \
-        CU_ERROR(__FUNCTION__ ## Name, CuResult);  \
+        CU_ERROR(__FUNCTION__ # Name, CuResult);   \
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
         goto Error;                                \
     }
@@ -168,11 +168,12 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
 
     CU_DEVICE_POINTER DeviceAttributes;
 
+#if 0
+
     //
     // XXX: I don't think we need this for GPU solving.
     //
 
-#if 0
     //
     // Best and spare graphs.
     //
@@ -205,7 +206,14 @@ typedef struct _PH_CU_DEVICE_CONTEXT {
     //
 
     ULONG NumberOfSolveContexts;
-    ULONG Padding1;
+
+    //
+    // Each graph associated with this device gets an index assigned to its
+    // Graph->CuDeviceIndex field, which is obtained by InterlockIncrement()
+    // against the following counter.
+    //
+
+    volatile LONG NextDeviceIndex;
 
     //
     // Base address of array of device graphs (one per solve context).
@@ -253,8 +261,8 @@ typedef struct _PH_CU_SOLVE_CONTEXT {
     // Spare host and device graphs.
     //
 
-    struct _GRAPH *SpareHostGraph;
-    struct _GRAPH *SpareDeviceGraph;
+    struct _GRAPH *HostSpareGraph;
+    struct _GRAPH *DeviceSpareGraph;
 
     //
     // Kernel launch parameters.

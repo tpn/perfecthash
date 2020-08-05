@@ -420,13 +420,6 @@ typedef union _GRAPH_FLAGS {
         ULONG IsCuGraph:1;
 
         //
-        // When set, indicates the graph wants the host to generate random
-        // seeds.
-        //
-
-        ULONG WantsCuRandomHostSeeds:1;
-
-        //
         // When set, indicates we're in "find best graph" solving mode.  When
         // clear, indicates we're in "first graph wins" mode.
         //
@@ -434,10 +427,25 @@ typedef union _GRAPH_FLAGS {
         ULONG FindBestGraph:1;
 
         //
+        // When set, always try to respect the kernel runtime limit (supplied
+        // via --CuDevicesKernelRuntimeTargetInMilliseconds), even if the device
+        // indicates it has no kernel runtime limit (i.e. is in TCC mode).
+        //
+
+        ULONG AlwaysRespectCuKernelRuntimeLimit:1;
+
+        //
+        // When set, indicates the current algorithm uses seed masks (which will
+        // be populated in Graph->SeedMasks).
+        //
+
+        ULONG HasSeedMasks:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:16;
+        ULONG Unused:15;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -450,6 +458,9 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare != FALSE)
 #define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
 #define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification != FALSE)
+#define HasSeedMasks(Graph) ((Graph)->Flags.HasSeedMasks != FALSE)
+#define AlwaysRespectCuKernelRuntimeLimit(Graph) \
+    ((Graph)->Flags.AlwaysRespectCuKernelRuntimeLimit != FALSE)
 #define WantsAssignedMemoryCoverage(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverage)
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
@@ -838,6 +849,46 @@ typedef struct _GRAPH_SHARED {
 typedef GRAPH_SHARED *PGRAPH_SHARED;
 
 //
+// cuRAND-specific glue.
+//
+
+#ifndef __CUDA_ARCH__
+#pragma pack(push, 1)
+typedef struct _CU_RNG_STATE_PHILOX4_32_10 {
+    ULONG Counter[4];
+    ULONG Output[4];
+    ULONG Key[2];
+    ULONG State;
+    ULONG BoxMullerFlag;
+    ULONG BoxMullerFlagDouble;
+    FLOAT BoxMullerExtra;
+    DOUBLE BoxMullerExtraDouble;
+} CU_RNG_STATE_PHILOX4_32_10;
+#pragma pack(pop)
+#else
+typedef struct _CU_RNG_STATE_PHILOX4_32_10 {
+    UINT4 Counter;
+    UINT4 Output;
+    UINT4 Key;
+    UINT State;
+    ULONG BoxMullerFlag;
+    ULONG BoxMullerFlagDouble;
+    FLOAT BoxMullerExtra;
+    DOUBLE BoxMullerExtraDouble;
+} CU_RNG_STATE_PHILOX4_32_10;
+#endif
+typedef CU_RNG_STATE_PHILOX4_32_10 *PCU_RNG_STATE_PHILOX4_32_10;
+
+typedef struct _CU_RNG_STATE {
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONG AllocSizeInBytes;
+    union {
+        CU_RNG_STATE_PHILOX4_32_10 AsPhilox43210;
+    };
+} CU_RNG_STATE;
+typedef CU_RNG_STATE *PCU_RNG_STATE;
+
+//
 // Vtbl.
 //
 
@@ -997,6 +1048,27 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
 
     //
+    // Capture the device-side host and device graph and spare graph instances.
+    //
+
+    struct _GRAPH *CuHostGraph;
+    struct _GRAPH *CuHostSpareGraph;
+
+    struct _GRAPH *CuDeviceGraph;
+    struct _GRAPH *CuDeviceSpareGraph;
+
+    //
+    // CUDA RNG details.
+    //
+
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONG Padding9;
+    ULONGLONG CuRngSeed;
+    ULONGLONG CuRngSubsequence;
+    ULONGLONG CuRngOffset;
+    CU_RNG_STATE CuRngState;
+
+    //
     // Host and device pointers to keys array.
     //
 
@@ -1052,7 +1124,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG CuFailedAttempts;
     ULONG CuFinishedCount;
 
-    ULONG Padding9;
+    //
+    // Index of this graph relative to all graphs created for the targeted
+    // device.
+    //
+
+    LONG CuDeviceIndex;
 
     //
     // Pointer to device attributes in device memory.
@@ -1200,6 +1277,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     ULONG TotalTraversals;
+
+    //
+    // Seed masks for the current hash function.
+    //
+
+    SEED_MASKS SeedMasks;
 
     //
     // Capture the seeds used for each hash function employed by the graph.

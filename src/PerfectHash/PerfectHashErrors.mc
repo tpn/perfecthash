@@ -3814,3 +3814,27 @@ Language=English
 Invalid launch dimensions for initial solving loop CUDA kernel.  This kernel must be launched with a single thread.
 .
 
+MessageId=0x3b5
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_RNG_ID
+Language=English
+Invalid CU RNG ID.
+.
+
+MessageId=0x3b6
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_UNIMPLEMENTED_CU_RNG_ID
+Language=English
+Unimplemented CU RNG ID.
+.
+
+MessageId=0x3b7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_CU_RNG_NAME
+Language=English
+Invalid CU RNG name.
+.
+

@@ -777,6 +777,17 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG TotalNumberOfGraphs;
 
     //
+    // CUDA RNG details.
+    //
+
+    PCUNICODE_STRING CuRngName;
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONG Padding8;
+    ULONGLONG CuRngSeed;
+    ULONGLONG CuRngSubsequence;
+    ULONGLONG CuRngOffset;
+
+    //
     // The algorithm is responsible for registering an appropriate callback
     // for main thread work items in this next field.
     //
@@ -950,9 +961,6 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 
 #define ReleasePerfectHashContextLockExclusive(Context) \
     ReleaseSRWLockExclusive(&Context->Lock)
-
-#define ActiveCuDevice(Context) \
-    &((Context)->CuDevices.Devices[(Context)->CuDeviceOrdinal])
 
 //
 // Define helper macros for appending items to the tail of a guarded list.

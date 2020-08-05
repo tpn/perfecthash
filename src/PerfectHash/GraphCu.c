@@ -285,9 +285,6 @@ Return Value:
     TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
     SolveContext = Graph->CuSolveContext;
     DeviceContext = SolveContext->DeviceContext;
-    DeviceGraph = SolveContext->DeviceGraph;
-
-    ASSERT(DeviceGraph != NULL);
 
     //
     // Set the relevant graph fields based on the provided info.
@@ -308,10 +305,20 @@ Return Value:
     Graph->MaskFunctionId = Info->Context->MaskFunctionId;
 
     Graph->Flags.Paranoid = IsParanoid(Table);
+    Graph->Flags.FindBestGraph = FindBestGraph(Context);
+    Graph->Flags.AlwaysRespectCuKernelRuntimeLimit =
+        TableCreateFlags.AlwaysRespectCuKernelRuntimeLimit;
 
     CopyInline(&Graph->Dimensions,
                &Info->Dimensions,
                sizeof(Graph->Dimensions));
+
+    if (Context->SeedMasks) {
+        Graph->Flags.HasSeedMasks = TRUE;
+        CopyInline(&Graph->SeedMasks,
+                   Context->SeedMasks,
+                   sizeof(Graph->SeedMasks));
+    }
 
     Result = S_OK;
 
@@ -328,22 +335,45 @@ Return Value:
     Graph->CuDeviceAttributes = DeviceContext->DeviceAttributes;
 
     //
-    // Set the CUDA context if we're not the spare graph.  (If we're the spare
-    // graph, the active graph will have already set the context for us.)
+    // Set the CUDA context if we're in "find best graph" mode, or we're not
+    // the spare graph.
     //
 
-    if (!IsSpareGraph(Graph)) {
-
+    if (!FindBestGraph(Context) || !IsSpareGraph(Graph)) {
         CuResult = Cu->CtxSetCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxSetCurrent);
-
-        SpareGraph = SolveContext->SpareHostGraph;
-        ASSERT(SpareGraph->CuSolveContext == SolveContext);
-        ASSERT((SpareGraph->Index & 0x1) == 1);
-        ASSERT(Context->GpuGraphs[Graph->Index + 1] == SpareGraph);
-        ASSERT(IsSpareGraph(SpareGraph));
-
     }
+
+    if (!FindBestGraph(Context)) {
+        DeviceGraph = SolveContext->DeviceGraph;
+        Graph->CuHostGraph = Graph;
+        Graph->CuDeviceGraph = DeviceGraph;
+    } else {
+        if (!IsSpareGraph(Graph)) {
+            Graph->CuHostGraph = Graph;
+            DeviceGraph = SolveContext->DeviceGraph;
+            SpareGraph = SolveContext->HostSpareGraph;
+            Graph->CuHostSpareGraph = SpareGraph;
+
+            ASSERT(SpareGraph->CuHostGraph == NULL);
+            ASSERT(SpareGraph->CuHostSpareGraph == NULL);
+            ASSERT(SpareGraph->CuDeviceGraph == NULL);
+            ASSERT(SpareGraph->CuDeviceSpareGraph == NULL);
+
+            SpareGraph->CuHostGraph = Graph;
+            SpareGraph->CuHostSpareGraph = SpareGraph;
+            SpareGraph->CuDeviceGraph = DeviceGraph;
+            SpareGraph->CuDeviceSpareGraph = SolveContext->DeviceSpareGraph;
+        } else {
+            DeviceGraph = SolveContext->DeviceSpareGraph;
+            ASSERT(Graph->CuHostGraph != NULL);
+            ASSERT(Graph->CuHostSpareGraph == Graph);
+            ASSERT(Graph->CuDeviceGraph != NULL);
+            ASSERT(Graph->CuDeviceSpareGraph != NULL);
+        }
+    }
+
+    ASSERT(DeviceGraph != NULL);
 
     //
     // Allocate arrays.  The VertexPairs, Edges, Next, and First arrays are all
@@ -530,13 +560,15 @@ Error:
 
 End:
 
-    if (SUCCEEDED(Result) && SpareGraph != NULL) {
+    if (SUCCEEDED(Result) && !IsSpareGraph(Graph)) {
 
         //
         // Call LoadInfo() against the spare graph, too.
         //
 
-        Result = GraphCuLoadInfo(SpareGraph);
+        ASSERT(SolveContext->HostSpareGraph != Graph);
+        ASSERT(SolveContext->HostSpareGraph == Graph->CuHostSpareGraph);
+        Result = GraphCuLoadInfo(SolveContext->HostSpareGraph);
     }
 
     return Result;
@@ -666,22 +698,7 @@ Return Value:
     // Launch the solve kernel.
     //
 
-    SharedMemoryInBytes = (
-
-        //
-        // Account for the GRAPH_SHARED structure.
-        //
-
-        sizeof(GRAPH_SHARED) +
-
-        //
-        // Account for the array of result codes (one per block) for HashKeys.
-        //
-
-        (sizeof(HRESULT) * SolveContext->BlocksPerGrid)
-
-    );
-
+    SharedMemoryInBytes = 0;
     KernelParams[0] = &DeviceGraph;
 
     CuResult = Cu->LaunchKernel(DeviceContext->Function,

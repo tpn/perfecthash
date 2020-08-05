@@ -61,6 +61,16 @@ EXTERN_C_END
         goto Error;                                \
     }
 
+//
+// Shared memory.
+//
+
+extern SHARED ULONG SharedRaw[];
+
+//
+// Error handling.
+//
+
 EXTERN_C
 DEVICE
 VOID
@@ -109,12 +119,6 @@ PerfectHashPrintError(
            FunctionName,
            Result);
 }
-
-//
-// Shared memory.
-//
-
-extern SHARED ULONG SharedRaw[];
 
 EXTERN_C
 GLOBAL
@@ -219,7 +223,10 @@ GraphCuShouldWeContinueTryingToSolve(
     _Out_ PHRESULT Result
     )
 {
+    ULONG Target;
+    ULONG Timeout;
     ULONG ClockRate;
+    BOOLEAN CheckTimeout;
     ULONGLONG Delta;
     ULONGLONG ThisClock;
     PCU_DEVICE_ATTRIBUTES Attributes;
@@ -236,22 +243,42 @@ GraphCuShouldWeContinueTryingToSolve(
         Graph->CuCycles = Delta;
         Graph->CuElapsedMilliseconds = Delta / ClockRate;
 
-        printf("Clock rate: %d.\n", ClockRate);
-        printf("Elapsed: %u.\n", (ULONG)Graph->CuElapsedMilliseconds);
+        CheckTimeout = (
+            Attributes->KernelExecTimeout > 0 ||
+            AlwaysRespectCuKernelRuntimeLimit(Graph)
+        );
 
-        if (Graph->CuElapsedMilliseconds >=
-            Graph->CuKernelRuntimeTargetInMilliseconds) {
-            *Result = PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED;
-            return FALSE;
+        if (CheckTimeout) {
+
+            if (Attributes->KernelExecTimeout > 0) {
+
+                //
+                // There's a kernel timeout for this device.  Convert it to
+                // milliseconds, then use whatever is the smaller value between
+                // it and the user-specified kernel runtime limit.
+                //
+                // N.B. We subtract 10 milliseconds just so we're not *too*
+                //      close to the Windows-enforced driver timeout limit.
+                //
+
+                Timeout = (Attributes->KernelExecTimeout * 1000) - 10;
+
+                Target = min(Timeout,
+                             Graph->CuKernelRuntimeTargetInMilliseconds);
+            } else {
+
+                Target = Graph->CuKernelRuntimeTargetInMilliseconds;
+            }
+
+            if (Graph->CuElapsedMilliseconds >= Target) {
+                *Result = PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED;
+                return FALSE;
+            }
         }
     }
 
-    //
-    // XXX: stop solving after one loop iteration.
-    //
-
-    //return TRUE;
-    return (Graph->CuNumberOfSolveLoops < 2);
+    *Result = S_OK;
+    return TRUE;
 }
 
 EXTERN_C
@@ -276,17 +303,33 @@ Return Value:
 
     S_OK - Success.
 
-    E_POINTER - Graph was NULL.
-
-    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
-
 --*/
 {
+    ULONG NumberOfSeeds;
     HRESULT Result;
+    PULONG Seed;
+    curandStatePhilox4_32_10_t *State;
 
-    Graph->Seeds[0] = 2344307159;
-    Graph->Seeds[1] = 2331343182;
-    Graph->Seeds[2] = 2827;
+    State = (curandStatePhilox4_32_10_t *)&Graph->CuRngState.AsPhilox43210;
+
+    //
+    // If this is the first time we're being called, we need to initialize the
+    // random state.
+    //
+
+    if (Graph->CuNumberOfSolveLoops == 1) {
+        curand_init(Graph->CuRngSeed,
+                    Graph->CuRngSubsequence,
+                    Graph->CuRngOffset,
+                    State);
+    }
+
+    Seed = &Graph->FirstSeed;
+    NumberOfSeeds = Graph->NumberOfSeeds;
+
+    while (NumberOfSeeds--) {
+        *Seed++ = curand(State);
+    }
 
     Result = S_OK;
     return Result;
@@ -474,6 +517,7 @@ Return Value:
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
 
+    Result = Graph->CuHashKeysResult;
     if (FAILED(Result)) {
         if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
             Graph->CuVertexCollisionFailures++;
@@ -623,12 +667,9 @@ Return Value:
     if (GridDim.x > 1  || GridDim.y > 1  || GridDim.z > 1 ||
         BlockDim.x > 1 || BlockDim.y > 1 || BlockDim.z > 1)
     {
-        printf("Invalid dimensions!\n");
         Result = PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS;
         goto End;
     }
-
-    printf("Beginning.\n");
 
     //
     // Begin the solving loop.
@@ -636,21 +677,16 @@ Return Value:
 
     do {
 
-        printf("Loop %d\n", Graph->CuNumberOfSolveLoops);
-
         if (!GraphCuShouldWeContinueTryingToSolve(Graph, &Result)) {
-            printf("Stop solving: %d.\n", Result);
             break;
         }
 
         Result = GraphCuLoadNewSeeds(Graph);
-        printf("LoadNewSeeds: %d.\n", Result);
         if (FAILED(Result)) {
             break;
         }
 
         Result = GraphCuReset(Graph);
-        printf("Reset result: %d.\n", Result);
         if (FAILED(Result)) {
             break;
         } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {
@@ -659,7 +695,6 @@ Return Value:
 
         NewGraph = NULL;
         Result = GraphCuSolve(Graph, &NewGraph);
-        printf("GraphCuSolve result: %d\n", Result);
         if (FAILED(Result)) {
             break;
         }
@@ -688,66 +723,6 @@ Return Value:
         //
 
     } while (TRUE);
-
-#if 0
-    //Graph->Seeds[0] = 2344307159;
-    //Graph->Seeds[1] = 2331343182;
-    Graph->Seeds[0] = 83;
-    Graph->Seeds[1] = 5;
-    //Graph->Seeds[2] = 2827;
-    Graph->Seeds[2] = 0x0101;
-
-    BlocksPerGrid = Graph->CuBlocksPerGrid;
-    ThreadsPerBlock = Graph->CuThreadsPerBlock;
-
-    CuResult = cudaStreamCreateWithFlags(&HashKeysStream,
-                                         cudaStreamNonBlocking);
-    if (CU_FAILED(CuResult)) {
-        printf("cuStreamCreate() failed: %x\n", CuResult);
-        KernelResult = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-        goto End;
-    }
-
-    Graph->CuHashKeysResult = E_FAIL;
-
-    SharedMemoryInBytes = (
-
-        //
-        // Account for the GRAPH_SHARED structure.
-        //
-
-        sizeof(GRAPH_SHARED) +
-
-        //
-        // Account for the array of result codes (one per block) for HashKeys.
-        //
-
-        (sizeof(HRESULT) * BlocksPerGrid)
-
-    );
-
-    HashAllMultiplyShiftR<<<
-        BlocksPerGrid,
-        ThreadsPerBlock,
-        SharedMemoryInBytes,
-        HashKeysStream
-    >>>(
-        Keys,
-        NumberOfKeys,
-        Graph->VertexPairs,
-        Graph->Seeds,
-        &Graph->CuHashKeysResult
-    );
-
-    CuResult = cudaDeviceSynchronize();
-    if (CU_FAILED(CuResult)) {
-        printf("cudaDeviceSynchronize() failed: %x\n", CuResult);
-        KernelResult = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-        goto End;
-    }
-
-    KernelResult = Graph->CuHashKeysResult;
-#endif
 
 End:
     Graph->CuKernelResult = Result;

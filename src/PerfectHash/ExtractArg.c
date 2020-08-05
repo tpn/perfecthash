@@ -283,6 +283,7 @@ TryExtractValueArray(
     ULONG NumberOfValidValues;
     PWCHAR Wide;
     PWCHAR ValueStart = NULL;
+    ULONG LocalValue;
     PULONG Value;
     PULONG Values = NULL;
     UNICODE_STRING ValueString;
@@ -372,11 +373,13 @@ ProcessValue:
             ValueString.Length = (USHORT)RtlPointerToOffset(ValueStart, Wide);
             ValueString.MaximumLength = ValueString.Length;
 
-            Status = RtlUnicodeStringToInteger(&ValueString, 0, Value);
+            Status = RtlUnicodeStringToInteger(&ValueString, 0, &LocalValue);
             if (!SUCCEEDED(Status)) {
                 Result = E_FAIL;
                 goto Error;
             }
+
+            *Value = LocalValue;
 
             if (EnsureSortedAndUnique && Value != Values) {
                 ULONG Previous;
@@ -716,8 +719,10 @@ Return Value:
     USHORT Count;
     USHORT Index;
     ULONG Value = 0;
+    LONG64 Value64 = 0;
     PWSTR Source;
     PALLOCATOR Allocator;
+    BOOLEAN ValueIsInt64 = FALSE;
     BOOLEAN ValueIsInteger = FALSE;
     BOOLEAN EqualSignFound = FALSE;
     BOOLEAN TableParamFound = FALSE;
@@ -889,6 +894,11 @@ Return Value:
         ValueIsInteger = TRUE;
     }
 
+    Result = Rtl->RtlUnicodeStringToInt64(ValueString, 10, &Value64, NULL);
+    if (SUCCEEDED(Result)) {
+        ValueIsInt64 = TRUE;
+    }
+
 #define SET_PARAM_ID(Name)                         \
     LocalParam.Id = TableCreateParameter##Name##Id
 
@@ -897,6 +907,13 @@ Return Value:
         SET_PARAM_ID(Name);                           \
         LocalParam.AsULong = Value;                   \
         goto AddParam;                                \
+    }
+
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(Name) \
+    if (IS_EQUAL(Name) && ValueIsInt64) {           \
+        SET_PARAM_ID(Name);                         \
+        LocalParam.AsLongLong = Value64;            \
+        goto AddParam;                              \
     }
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(AttemptsBeforeTableResize);
@@ -1018,6 +1035,26 @@ Return Value:
         2,
         32
     );
+
+    if (IS_EQUAL(CuRng)) {
+        Result = PerfectHashLookupIdForName(Rtl,
+                                            PerfectHashCuRngEnumId,
+                                            ValueString,
+                                            (PULONG)&LocalParam.AsCuRngId);
+        if (SUCCEEDED(Result)) {
+            SET_PARAM_ID(CuRng);
+            goto AddParam;
+        } else {
+            Result = PH_E_INVALID_CU_RNG_NAME;
+            goto Error;
+        }
+    }
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(CuRngSeed);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(CuRngSubsequence);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(CuRngOffset);
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuConcurrency);
 

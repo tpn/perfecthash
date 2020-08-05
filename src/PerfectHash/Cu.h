@@ -103,27 +103,31 @@ typedef enum _Return_type_success_(return == 0) _CU_RESULT {
     //
     // This indicates profiling APIs are called while application is running
     // in visual profiler mode.
-   //
+    //
 
     CUDA_ERROR_PROFILER_DISABLED           = 5,
+
     //
     // This indicates profiling has not been initialized for this context.
     // Call cuProfilerInitialize() to resolve this.
-   //
+    //
 
     CUDA_ERROR_PROFILER_NOT_INITIALIZED       = 6,
+
     //
     // This indicates profiler has already been started and probably
     // cuProfilerStart() is incorrectly called.
-   //
+    //
 
     CUDA_ERROR_PROFILER_ALREADY_STARTED       = 7,
+
     //
     // This indicates profiler has already been stopped and probably
     // cuProfilerStop() is incorrectly called.
-   //
+    //
 
     CUDA_ERROR_PROFILER_ALREADY_STOPPED       = 8,
+
     //
     // This indicates that no CUDA-capable devices were detected by the
     // installed CUDA driver.
@@ -137,7 +141,6 @@ typedef enum _Return_type_success_(return == 0) _CU_RESULT {
     //
 
     CUDA_ERROR_INVALID_DEVICE                 = 101,
-
 
     //
     // This indicates that the device kernel image is invalid. This can also

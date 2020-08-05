@@ -4193,3 +4193,30 @@ Abstract:
 //
 #define PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS ((HRESULT)0xE00403B4L)
 
+//
+// MessageId: PH_E_INVALID_CU_RNG_ID
+//
+// MessageText:
+//
+// Invalid CU RNG ID.
+//
+#define PH_E_INVALID_CU_RNG_ID           ((HRESULT)0xE00403B5L)
+
+//
+// MessageId: PH_E_UNIMPLEMENTED_CU_RNG_ID
+//
+// MessageText:
+//
+// Unimplemented CU RNG ID.
+//
+#define PH_E_UNIMPLEMENTED_CU_RNG_ID     ((HRESULT)0xE00403B6L)
+
+//
+// MessageId: PH_E_INVALID_CU_RNG_NAME
+//
+// MessageText:
+//
+// Invalid CU RNG name.
+//
+#define PH_E_INVALID_CU_RNG_NAME         ((HRESULT)0xE00403B7L)
+

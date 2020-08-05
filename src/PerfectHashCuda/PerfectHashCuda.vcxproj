@@ -78,9 +78,7 @@
     </Bscmake>
     <Link>
       <AdditionalDependencies>%(AdditionalCudaDependencies);%(AdditionalDependencies)</AdditionalDependencies>
-      <!--
       <ModuleDefinitionFile>PerfectHashCuda.def</ModuleDefinitionFile>
-      -->
     </Link>
     <CudaCompile>
       <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
@@ -118,6 +116,9 @@
   -->
   <ItemGroup>
     <CudaCompile Include="Graph.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Random.cpp" />
   </ItemGroup>
   <!--
   <ItemGroup Condition="'$(Platform)' == 'x64'">

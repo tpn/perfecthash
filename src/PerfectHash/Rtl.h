@@ -1068,9 +1068,19 @@ NTSTATUS
 (NTAPI RTL_UNICODE_STRING_TO_INTEGER)(
     _In_ PCUNICODE_STRING String,
     _In_opt_ ULONG Base,
-    _Out_writes_bytes_(sizeof(*Value)) PULONG Value
+    _Out_ PULONG Value
     );
 typedef RTL_UNICODE_STRING_TO_INTEGER *PRTL_UNICODE_STRING_TO_INTEGER;
+
+typedef
+NTSTATUS
+(RTL_UNICODE_STRING_TO_INT64)(
+    _In_ PCUNICODE_STRING String,
+    _In_opt_ ULONG Base,
+    _Out_ PLONG64 Number,
+    _Out_opt_ PWSTR *EndPointer
+    );
+typedef RTL_UNICODE_STRING_TO_INT64 *PRTL_UNICODE_STRING_TO_INT64;
 
 typedef
 BOOLEAN
@@ -2835,6 +2845,11 @@ typedef RTL_VTBL *PRTL_VTBL;
     ENTRY(                                                 \
         RTL_UNICODE_STRING_TO_INTEGER,                     \
         RtlUnicodeStringToInteger                          \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        RTL_UNICODE_STRING_TO_INT64,                       \
+        RtlUnicodeStringToInt64                            \
     )                                                      \
                                                            \
     ENTRY(                                                 \

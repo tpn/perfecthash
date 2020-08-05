@@ -23,6 +23,8 @@ Abstract:
 
 #define BEST_CU_GRAPH_CS_SPINCOUNT 4000
 
+#define CU_RNG_DEFAULT PerfectHashCuRngPhilox43210Id
+
 //
 // Forward decls.
 //
@@ -1153,8 +1155,10 @@ Return Value:
     PPH_CU_DEVICE Device;
     PCU_OCCUPANCY Occupancy;
     PCU_LINK_STATE LinkState;
+    BOOLEAN SawCuRngSeed;
     BOOLEAN SawCuConcurrency;
     BOOLEAN WantsRandomHostSeeds;
+    BOOLEAN IsRngImplemented;
     PUNICODE_STRING CuPtxPath;
     PUNICODE_STRING CuCudaDevRuntimeLibPath;
     ULONG NumberOfGpuGraphs;
@@ -1179,6 +1183,7 @@ Return Value:
     PPH_CU_DEVICE_CONTEXTS DeviceContexts;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
+    //PERFECT_HASH_CU_RNG_ID CuRngId = PerfectHashCuNullRngId;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_PATH PtxPath;
     PPERFECT_HASH_FILE PtxFile;
@@ -1268,6 +1273,7 @@ Return Value:
     ThreadsPerBlock = NULL;
     KernelRuntimeTarget = NULL;
     SawCuConcurrency = FALSE;
+    SawCuRngSeed = FALSE;
 
     //
     // Disable "enum not handled in switch statement" warning.
@@ -1283,6 +1289,23 @@ Return Value:
     for (Index = 0; Index < Count; Index++, Param++) {
 
         switch (Param->Id) {
+
+            case TableCreateParameterCuRngId:
+                Context->CuRngId = Param->AsCuRngId;
+                break;
+
+            case TableCreateParameterCuRngSeedId:
+                Context->CuRngSeed = Param->AsULongLong;
+                SawCuRngSeed = TRUE;
+                break;
+
+            case TableCreateParameterCuRngSubsequenceId:
+                Context->CuRngSubsequence = Param->AsULongLong;
+                break;
+
+            case TableCreateParameterCuRngOffsetId:
+                Context->CuRngOffset = Param->AsULongLong;
+                break;
 
             case TableCreateParameterCuConcurrencyId:
                 Context->CuConcurrency = Param->AsULong;
@@ -1324,6 +1347,65 @@ Return Value:
     }
 
 #pragma warning(pop)
+
+    //
+    // Validate --CuRng.  We only implement a subset of algorithms.
+    //
+
+    if (!IsValidPerfectHashCuRngId(Context->CuRngId)) {
+        Context->CuRngId = CU_RNG_DEFAULT;
+    }
+
+    Result = PerfectHashLookupNameForId(Rtl,
+                                        PerfectHashCuRngEnumId,
+                                        Context->CuRngId,
+                                        &Context->CuRngName);
+    if (FAILED(Result)) {
+        PH_ERROR(InitializeCudaAndGraphsChm02_LookupNameForId, Result);
+        goto Error;
+    }
+
+    IsRngImplemented = FALSE;
+
+#define EXPAND_AS_CU_RNG_ID_CASE(Name, Upper, Implemented) \
+    case PerfectHashCuRng##Name##Id:                       \
+        IsRngImplemented = Implemented;                    \
+        break;
+
+    switch (Context->CuRngId) {
+
+        case PerfectHashNullCuRngId:
+        case PerfectHashInvalidCuRngId:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+
+        PERFECT_HASH_CU_RNG_TABLE_ENTRY(EXPAND_AS_CU_RNG_ID_CASE);
+
+        default:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+    }
+
+    if (!IsRngImplemented) {
+        Result = PH_E_UNIMPLEMENTED_CU_RNG_ID;
+        goto Error;
+    }
+
+    //
+    // If no seed has been supplied, generate a random one now.
+    //
+
+    if (!SawCuRngSeed) {
+
+        Result = Rtl->Vtbl->GenerateRandomBytes(Rtl,
+                                                sizeof(Context->CuRngSeed),
+                                                (PBYTE)&Context->CuRngSeed);
+
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_GenerateCuRngSeed, Result);
+            goto Error;
+        }
+    }
 
     //
     // Validate --CuConcurrency.  It's mandatory, it must be greater than zero,
@@ -2196,7 +2278,7 @@ FinishedOrdinalsProcessing:
                 SolveContext->DeviceGraph = DeviceGraph++;
                 MatchedGraphCount++;
                 if (FindBestGraph(Context)) {
-                    SolveContext->SpareDeviceGraph = DeviceGraph++;
+                    SolveContext->DeviceSpareGraph = DeviceGraph++;
                     MatchedGraphCount++;
                 }
             }
@@ -2292,16 +2374,24 @@ FinishedOrdinalsProcessing:
         Graph->Index = Index;
         Graphs[Index] = Graph;
 
+        Graph->CuDeviceIndex =
+            InterlockedIncrement(&SolveContext->DeviceContext->NextDeviceIndex);
+
         Graph->CuSolveContext = SolveContext;
 
         ASSERT(SolveContext->DeviceGraph != NULL);
+
+        Graph->CuRngId = Context->CuRngId;
+        Graph->CuRngSeed = Context->CuRngSeed;
+        Graph->CuRngSubsequence = Context->CuRngSubsequence;
+        Graph->CuRngOffset = Context->CuRngOffset;
 
         if (!FindBestGraph(Context)) {
             SolveContext->HostGraph = Graph;
             SolveContext++;
         } else {
 
-            ASSERT(SolveContext->SpareDeviceGraph != NULL);
+            ASSERT(SolveContext->DeviceSpareGraph != NULL);
 
             //
             // If the index is even (least significant bit is not set), this is
@@ -2313,7 +2403,7 @@ FinishedOrdinalsProcessing:
             //      Graph #0            -> SolveContext #0
             //      Graph #1 (spare)    -> SolveContext #0; SolveContext++
             //      Graph #2            -> SolveContext #1
-            //      Graph #3 (spare)    -> SolveContext #2; SolveContext++
+            //      Graph #3 (spare)    -> SolveContext #1; SolveContext++
             //      etc.
             //
 
@@ -2325,7 +2415,7 @@ FinishedOrdinalsProcessing:
 
                 Graph->Flags.IsSpare = FALSE;
                 SolveContext->HostGraph = Graph;
-                ASSERT(SolveContext->SpareHostGraph == NULL);
+                ASSERT(SolveContext->HostSpareGraph == NULL);
 
             } else {
 
@@ -2334,7 +2424,7 @@ FinishedOrdinalsProcessing:
                 //
 
                 Graph->Flags.IsSpare = TRUE;
-                SolveContext->SpareHostGraph = Graph;
+                SolveContext->HostSpareGraph = Graph;
                 ASSERT(SolveContext->HostGraph != NULL);
 
                 //

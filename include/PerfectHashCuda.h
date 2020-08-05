@@ -83,11 +83,35 @@ typedef __int64 LONG64, *PLONG64;
 typedef unsigned __int64 ULONG64, *PULONG64;
 typedef unsigned __int64 DWORD64, *PDWORD64;
 
+//
+// Vector types.
+//
+
+typedef int1 INT;
+typedef uint1 UINT;
 typedef int2 INT2;
 typedef int4 INT4;
+typedef uint2 UINT2;
+typedef uint4 UINT4;
+typedef int2 LONG2;
+typedef int4 LONG4;
+typedef uint2 ULONG2;
+typedef uint4 ULONG4;
+typedef longlong2 LONGLONG2;
+typedef longlong4 LONGLONG4;
+typedef ulonglong2 ULONGLONG2;
+typedef ulonglong4 ULONGLONG4;
 
 typedef INT2 *PINT2;
 typedef INT4 *PINT4;
+typedef UINT2 *PUINT2;
+typedef UINT4 *PUINT4;
+typedef ULONG2 *PULONG2;
+typedef ULONG4 *PULONG4;
+typedef LONGLONG2 *PLONGLONG2;
+typedef LONGLONG4 *PLONGLONG4;
+typedef ULONGLONG2 *PULONGLONG2;
+typedef ULONGLONG4 *PULONGLONG4;
 
 #define CONST const
 #define VOID void

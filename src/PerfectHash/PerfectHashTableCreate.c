@@ -666,6 +666,10 @@ Return Value:
                 Context->Seed3Byte2MaskCounts = &Param->AsSeedMaskCounts;
                 break;
 
+            case TableCreateParameterCuRngId:
+            case TableCreateParameterCuRngSeedId:
+            case TableCreateParameterCuRngSubsequenceId:
+            case TableCreateParameterCuRngOffsetId:
             case TableCreateParameterCuDevicesId:
             case TableCreateParameterCuPtxPathId:
             case TableCreateParameterCuConcurrencyId:

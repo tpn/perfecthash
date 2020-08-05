@@ -2727,10 +2727,19 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG TryUsePredictedAttemptsToLimitMaxConcurrency:1;
 
         //
+        // When set, always try to respect the kernel runtime limit (supplied
+        // via --CuDevicesKernelRuntimeTargetInMilliseconds), even if the
+        // device indicates it has no kernel runtime limit (i.e. is in TCC
+        // mode).  Only applies to GPU solver graphs.
+        //
+
+        ULONG AlwaysRespectCuKernelRuntimeLimit:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:5;
+        ULONG Unused:4;
     };
 
     LONG AsLong;
@@ -2913,6 +2922,74 @@ IsValidTableCompileFlags(
 }
 
 //
+// Define an X-macro for CURAND random number generators.  The ENTRY macros
+// receive the following parameters: (Name, Upper, IsImplemented).
+//
+
+#define PERFECT_HASH_CU_RNG_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(Philox43210, PHILOX43210, TRUE)                   \
+    ENTRY(XorWow, XORWOW, FALSE)                                  \
+    ENTRY(MRG32k3a, MRG32K3A, FALSE)                              \
+    ENTRY(MTGP32, MTGP32, FALSE)                                  \
+    ENTRY(Sobol32, SOBOL32, FALSE)                                \
+    ENTRY(Sobol64, SOBOL64, FALSE)                                \
+    LAST_ENTRY(Scratch, SCRATCH, FALSE)
+
+#define PERFECT_HASH_CU_RNG_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_CU_RNG_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_CU_RNG_ENUM(Name, Upper, IsImplemented) \
+    PerfectHashCuRng##Name##Id,
+
+//
+// Define an enumeration for identifying which CUDA random number generator
+// to use.
+//
+
+typedef enum _PERFECT_HASH_CU_RNG_ID {
+
+    //
+    // Explicitly define a null ID to take the 0-index slot.
+    //
+
+    PerfectHashNullCuRngId = 0,
+
+    //
+    // Begin valid RNGs.
+    //
+
+    PERFECT_HASH_CU_RNG_TABLE_ENTRY(EXPAND_AS_CU_RNG_ENUM)
+
+    //
+    // End valid RNGs.
+    //
+
+    //
+    // N.B.  Keep the next value last.
+    //
+
+    PerfectHashInvalidCuRngId,
+
+} PERFECT_HASH_CU_RNG_ID;
+typedef PERFECT_HASH_CU_RNG_ID *PPERFECT_HASH_CU_RNG_ID;
+
+//
+// Provide a simple inline RNG validation routine.
+//
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashCuRngId(
+    _In_ PERFECT_HASH_CU_RNG_ID RngId
+    )
+{
+    return (
+        RngId > PerfectHashNullCuRngId &&
+        RngId < PerfectHashInvalidCuRngId
+    );
+}
+
+//
 // Define the X-macro for table create parameters.
 //
 
@@ -2929,6 +3006,10 @@ IsValidTableCompileFlags(
     ENTRY(ValueSizeInBytes)                                          \
     ENTRY(KeySizeInBytes)                                            \
     ENTRY(SolutionsFoundRatio)                                       \
+    ENTRY(CuRng)                                                     \
+    ENTRY(CuRngSeed)                                                 \
+    ENTRY(CuRngSubsequence)                                          \
+    ENTRY(CuRngOffset)                                               \
     ENTRY(CuConcurrency)                                             \
     ENTRY(CuPtxPath)                                                 \
     ENTRY(CuDevices)                                                 \
@@ -3130,6 +3211,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         ULARGE_INTEGER AsULargeInteger;
         UNICODE_STRING AsUnicodeString;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
+        PERFECT_HASH_CU_RNG_ID AsCuRngId;
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID AsBestCoverageType;
         VALUE_ARRAY AsValueArray;
         KEYS_SUBSET AsKeysSubset;
@@ -3805,6 +3887,7 @@ typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
     ENTRY(Algorithm, ALGORITHM)                                 \
     ENTRY(HashFunction, HASH_FUNCTION)                          \
     ENTRY(MaskFunction, MASK_FUNCTION)                          \
+    ENTRY(CuRng, CU_RNG)                                        \
     ENTRY(BestCoverageType, BEST_COVERAGE_TYPE)                 \
     LAST_ENTRY(TableCreateParameter, TABLE_CREATE_PARAMETER)
 
