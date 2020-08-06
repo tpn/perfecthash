@@ -132,10 +132,11 @@ PerfectHashPrintError(
 EXTERN_C
 GLOBAL
 VOID
-HashAllMultiplyShiftR(
+HashAllMultiplyShiftRKernel(
     _In_reads_(NumberOfKeys) PKEY Keys,
     _In_ ULONG NumberOfKeys,
     _Out_writes_(NumberOfKeys) PVERTEX_PAIR VertexPairs,
+    _In_ ULONG Mask,
     _In_ PULONG Seeds,
     _Out_ PHRESULT GlobalResult
     )
@@ -196,8 +197,8 @@ HashAllMultiplyShiftR(
 
         Key = Keys[Index];
 
-        Vertex1 = ((Key * SEED1) >> SEED3_BYTE1);
-        Vertex2 = ((Key * SEED2) >> SEED3_BYTE2);
+        Vertex1 = (((Key * SEED1) >> SEED3_BYTE1) & Mask);
+        Vertex2 = (((Key * SEED2) >> SEED3_BYTE2) & Mask);
 
         if (Vertex1 == Vertex2) {
 
@@ -222,6 +223,54 @@ HashAllMultiplyShiftR(
 End:
     __syncthreads();
     return;
+}
+
+EXTERN_C
+GLOBAL
+VOID
+GraphCuAddEdgesKernel(
+    _In_ ULONG NumberOfEdges,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PVERTEX_PAIR VertexPairs,
+    _Out_ PEDGE Edges,
+    _Out_ PEDGE Next,
+    _Out_ PVERTEX First
+    )
+{
+    EDGE Edge1;
+    EDGE Edge2;
+    EDGE First1;
+    EDGE First2;
+    ULONG Index;
+    PINT2 Input = (PINT2)VertexPairs;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+
+    FOR_EACH_1D(Index, NumberOfKeys) {
+        Vertex1 = Input[Index].x;
+        Vertex2 = Input[Index].y;
+
+        Edge1 = (EDGE)Index;
+        Edge2 = Edge1 + NumberOfEdges;
+
+        //
+        // Insert the first edge.
+        //
+
+        First1 = First[Vertex1];
+        Next[Edge1] = First1;
+        First[Vertex1] = Edge1;
+        Edges[Edge1] = Vertex2;
+
+        //
+        // Insert the second edge.
+        //
+
+        First2 = First[Vertex2];
+        Next[Edge2] = First2;
+        First[Vertex2] = Edge2;
+        Edges[Edge2] = Vertex1;
+    }
 }
 
 EXTERN_C
@@ -500,7 +549,7 @@ Return Value:
 #define EMPTY_ARRAY(Name)                                           \
     ASSERT(0 == Info->##Name##SizeInBytes -                         \
            ((Info->##Name##SizeInBytes >> 3) << 3));                \
-    CU_MEMSET(Graph->##Name, ~0, Info->##Name##SizeInBytes, Stream)
+    CU_MEMSET(Graph->##Name, 0xffffffff, Info->##Name##SizeInBytes, Stream)
 
     EMPTY_ARRAY(First);
     EMPTY_ARRAY(Next);
@@ -570,9 +619,9 @@ Return Value:
 #define ZERO_ASSIGNED_ARRAY(Name) \
     CU_ZERO(Coverage->##Name, Info->##Name##SizeInBytes, Stream)
 
-    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
-    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
-    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+    //ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
+    //ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
+    //ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
 
     //
     // We're done, finish up.
@@ -730,7 +779,7 @@ Return Value:
     // Launch the kernel.
     //
 
-    HashAllMultiplyShiftR<<<
+    HashAllMultiplyShiftRKernel<<<
         BlocksPerGrid,
         ThreadsPerBlock,
         SharedMemoryInBytes,
@@ -739,6 +788,7 @@ Return Value:
         Keys,
         NumberOfKeys,
         Graph->VertexPairs,
+        Graph->VertexMask,
         Graph->Seeds,
         &Graph->CuHashKeysResult
     );
@@ -757,9 +807,21 @@ Return Value:
         goto End;
     }
 
-    return PH_S_CONTINUE_GRAPH_SOLVING;
+    Graph->CuNoVertexCollisionFailures++;
 
-    MAYBE_STOP_GRAPH_SOLVING(Graph);
+    //MAYBE_STOP_GRAPH_SOLVING(Graph);
+
+    GraphCuAddEdgesKernel<<<BlocksPerGrid, ThreadsPerBlock, 0, Stream>>>(
+        Graph->NumberOfEdges,
+        Graph->NumberOfKeys,
+        Graph->VertexPairs,
+        Graph->Edges,
+        Graph->Next,
+        Graph->First
+    );
+
+    CuResult = cudaDeviceSynchronize();
+    CU_CHECK(CuResult, cudaDeviceSynchronize);
 
     if (!GraphCuIsAcyclic(Graph)) {
 
@@ -903,10 +965,6 @@ Return Value:
         goto End;
     }
 
-    printf("Graph->SizeOfStruct: %u vs sizeof: %u\n", (ULONG)Graph->SizeOfStruct, (ULONG)sizeof(GRAPH));
-    printf("Graph->CuGraphInfo: 0x%p\n", Graph->CuGraphInfo);
-    printf("Graph->NumberOfSeeds: %u\n", Graph->NumberOfSeeds);
-
     ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
 
     //
@@ -934,7 +992,7 @@ Return Value:
             break;
         }
 
-        Result = GraphCuReset(Graph, ResetStream);
+        Result = GraphCuReset(Graph, SolveStream);
         if (FAILED(Result)) {
             break;
         } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {

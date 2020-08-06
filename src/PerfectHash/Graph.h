@@ -1126,12 +1126,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONGLONG CuCycles;
     ULONGLONG CuElapsedMilliseconds;
 
-    ULONG CuClockRate;
-
     //
     // Various counters.
     //
 
+    ULONG CuNoVertexCollisionFailures;
     ULONG CuVertexCollisionFailures;
     ULONG CuCyclicGraphFailures;
     ULONG CuFailedAttempts;
