@@ -1197,6 +1197,19 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PVERTEX_PAIR VertexPairs;
 
     //
+    // CUDA vertex arrays.
+    //
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX Vertices1;
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX Vertices2;
+
+    _Writable_elements_(NumberOfKeys)
+    PULONG VerticesIndex;
+
+    //
     // Array of values indexed by the offsets in the Assigned array.  This
     // essentially allows us to simulate a loaded table that supports the
     // Insert(), Index() and Lookup() routines as part of graph validation.

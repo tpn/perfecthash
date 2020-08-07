@@ -429,6 +429,29 @@ Return Value:
     ALLOC_HOST_ARRAY(AssignedHost);
 
     //
+    // XXX: temp experiment.
+    //
+
+#define ALLOC_SIZED_DEVICE_ARRAY(Name, ElementSize)                   \
+    CuResult = Cu->MemAlloc(                                          \
+        (PCU_DEVICE_POINTER)&Graph->##Name,                           \
+        (SIZE_T)(Graph->NumberOfKeys * ElementSize)                   \
+    );                                                                \
+    if (CU_FAILED(CuResult)) {                                        \
+        CU_ERROR(GraphCuLoadInfo_MemAlloc_##Name##_Array, CuResult);  \
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {                   \
+            Result = PH_E_CUDA_OUT_OF_MEMORY;                         \
+        } else {                                                      \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                \
+        }                                                             \
+        goto Error;                                                   \
+    }
+
+    ALLOC_SIZED_DEVICE_ARRAY(Vertices1, sizeof(VERTEX));
+    ALLOC_SIZED_DEVICE_ARRAY(Vertices2, sizeof(VERTEX));
+    ALLOC_SIZED_DEVICE_ARRAY(VerticesIndex, sizeof(VERTEX));
+
+    //
     // Set the bitmap sizes and then allocate the bitmap buffers (which all
     // live on the device).
     //

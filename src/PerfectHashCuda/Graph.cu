@@ -29,6 +29,9 @@ EXTERN_C_END
 
 #include <curand_kernel.h>
 
+#include <thrust/device_ptr.h>
+#include <thrust/sort.h>
+
 #define ASSERT(Condition)                     \
     if (!(Condition)) {                       \
         asm("trap;");                         \
@@ -221,8 +224,132 @@ HashAllMultiplyShiftRKernel(
     }
 
 End:
-    __syncthreads();
     return;
+}
+
+EXTERN_C
+GLOBAL
+VOID
+HashAllMultiplyShiftRKernel2(
+    _In_reads_(NumberOfKeys) PKEY Keys,
+    _In_ ULONG NumberOfKeys,
+    _Out_writes_(NumberOfKeys) PVERTEX Vertices1,
+    _Out_writes_(NumberOfKeys) PVERTEX Vertices2,
+    _Out_writes_(NumberOfKeys) PULONG VerticesIndex,
+    _In_ ULONG Mask,
+    _In_ PULONG Seeds,
+    _Out_ PHRESULT GlobalResult
+    )
+{
+    KEY Key;
+    ULONG Index;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    PHRESULT BlockResult;
+    PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+
+    //
+    // If this is thread 0 in the block, initialize the shared memory and set
+    // the global result to S_OK.
+    //
+
+    if (ThreadIndex.x == 0) {
+
+        Shared->HashKeysBlockResults = (PHRESULT)(
+            RtlOffsetToPointer(
+                SharedRaw,
+                sizeof(GRAPH_SHARED)
+            )
+        );
+
+
+        *GlobalResult = S_OK;
+    }
+
+    __syncthreads();
+
+    BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
+
+    FOR_EACH_1D(Index, NumberOfKeys) {
+
+        //
+        // Block-level fast-path exit if we've already detected a vertex
+        // collision.  I haven't profiled things to determine if it makes
+        // sense to either do: a) this, or b) an additional global memory
+        // read of `*GlobalResult` (currently not being done).
+        //
+
+        if (*BlockResult != S_OK) {
+            goto End;
+        }
+
+        Key = Keys[Index];
+
+        Vertex1 = (((Key * SEED1) >> SEED3_BYTE1) & Mask);
+        Vertex2 = (((Key * SEED2) >> SEED3_BYTE2) & Mask);
+
+        if (Vertex1 == Vertex2) {
+
+            //
+            // Set the block-level and global-level results to indicate
+            // collision, then jump to the end.
+            //
+
+            *BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            goto End;
+        }
+
+        //
+        // Store the vertex pairs.
+        //
+
+        //Output[Index].x = Vertex1;
+        //Output[Index].y = Vertex2;
+        Vertices1[Index] = Vertex1;
+        Vertices2[Index] = Vertex2;
+        VerticesIndex[Index] = Index;
+
+    }
+
+End:
+    return;
+}
+
+EXTERN_C
+DEVICE
+HRESULT
+GraphCuSortVertices(
+    _In_ PGRAPH Graph
+    )
+{
+    //HRESULT Result;
+    PULONG SortedIndex;
+
+    thrust::device_ptr<ULONG> Vertices1(Graph->Vertices1);
+    thrust::device_ptr<ULONG> Index(Graph->VerticesIndex);
+
+    thrust::stable_sort_by_key(thrust::device,
+                               Vertices1,
+                               Vertices1 + Graph->NumberOfKeys,
+                               Index);
+
+    SortedIndex = thrust::raw_pointer_cast(Index);
+    if (SortedIndex == Graph->VerticesIndex) {
+        ;
+    }
+    return S_OK;
 }
 
 EXTERN_C
@@ -527,6 +654,32 @@ Return Value:
     Result = PH_S_CONTINUE_GRAPH_SOLVING;
 
     //
+    // Clear scalar values.
+    //
+
+    Graph->Collisions = 0;
+    Graph->NumberOfEmptyVertices = 0;
+    Graph->DeletedEdgeCount = 0;
+    Graph->VisitedVerticesCount = 0;
+
+    Graph->TraversalDepth = 0;
+    Graph->TotalTraversals = 0;
+    Graph->MaximumTraversalDepth = 0;
+
+    Graph->Flags.Shrinking = FALSE;
+    Graph->Flags.IsAcyclic = FALSE;
+
+    Graph->AddKeysElapsedCycles.QuadPart = 0;
+    Graph->HashKeysElapsedCycles.QuadPart = 0;
+    Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
+
+    //
+    // XXX: temp.
+    //
+
+    return Result;
+
+    //
     // Clear the bitmap buffers.
     //
 
@@ -554,26 +707,6 @@ Return Value:
     EMPTY_ARRAY(First);
     EMPTY_ARRAY(Next);
     EMPTY_ARRAY(Edges);
-
-    //
-    // Clear any remaining values.
-    //
-
-    Graph->Collisions = 0;
-    Graph->NumberOfEmptyVertices = 0;
-    Graph->DeletedEdgeCount = 0;
-    Graph->VisitedVerticesCount = 0;
-
-    Graph->TraversalDepth = 0;
-    Graph->TotalTraversals = 0;
-    Graph->MaximumTraversalDepth = 0;
-
-    Graph->Flags.Shrinking = FALSE;
-    Graph->Flags.IsAcyclic = FALSE;
-
-    Graph->AddKeysElapsedCycles.QuadPart = 0;
-    Graph->HashKeysElapsedCycles.QuadPart = 0;
-    Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
 
     //
     // Avoid the overhead of resetting the memory coverage if we're in "first
@@ -779,6 +912,7 @@ Return Value:
     // Launch the kernel.
     //
 
+#if 0
     HashAllMultiplyShiftRKernel<<<
         BlocksPerGrid,
         ThreadsPerBlock,
@@ -792,6 +926,32 @@ Return Value:
         Graph->Seeds,
         &Graph->CuHashKeysResult
     );
+#else
+    HashAllMultiplyShiftRKernel2<<<
+        BlocksPerGrid,
+        ThreadsPerBlock,
+        SharedMemoryInBytes,
+        Stream
+    >>>(
+        Keys,
+        NumberOfKeys,
+        Graph->Vertices1,
+        Graph->Vertices2,
+        Graph->VerticesIndex,
+        Graph->VertexMask,
+        Graph->Seeds,
+        &Graph->CuHashKeysResult
+    );
+
+    CuResult = cudaDeviceSynchronize();
+    CU_CHECK(CuResult, cudaDeviceSynchronize);
+
+    Result = GraphCuSortVertices(Graph);
+    if (FAILED(Result)) {
+        goto End;
+    }
+
+#endif
 
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
@@ -965,7 +1125,11 @@ Return Value:
         goto End;
     }
 
-    ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
+    //ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
+    if (Graph->SizeOfStruct != sizeof(GRAPH)) {
+        printf("%u != %u!\n", Graph->SizeOfStruct, sizeof(GRAPH));
+        return;
+    }
 
     //
     // Create our streams.
