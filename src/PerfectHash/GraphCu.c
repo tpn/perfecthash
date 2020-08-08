@@ -320,6 +320,15 @@ Return Value:
                    sizeof(Graph->SeedMasks));
     }
 
+    if (Context->UserSeeds) {
+        Graph->Flags.HasUserSeeds = TRUE;
+        Result = GraphApplyUserSeeds(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphCuLoadInfo_GraphApplyUserSeeds, Result);
+            goto Error;
+        }
+    }
+
     Result = S_OK;
 
     //

@@ -3549,7 +3549,8 @@ Return Value:
 
     E_POINTER - Graph was NULL.
 
-    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph (and it's not a
+        CUDA graph).
 
     PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE - The individual value size indicated
         by the user seed value array is invalid (i.e. not sizeof(ULONG)).
@@ -3572,7 +3573,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (IsSpareGraph(Graph)) {
+    if (IsSpareGraph(Graph) && !IsCuGraph(Graph)) {
         return PH_E_SPARE_GRAPH;
     }
 

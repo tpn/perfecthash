@@ -443,10 +443,17 @@ typedef union _GRAPH_FLAGS {
         ULONG HasSeedMasks:1;
 
         //
+        // When set, indicates the user has supplied seeds (which will be
+        // populated in Graph->FirstSeed onward).
+        //
+
+        ULONG HasUserSeeds:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:15;
+        ULONG Unused:14;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -460,6 +467,7 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
 #define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification != FALSE)
 #define HasSeedMasks(Graph) ((Graph)->Flags.HasSeedMasks != FALSE)
+#define HasUserSeeds(Graph) ((Graph)->Flags.HasUserSeeds != FALSE)
 #define AlwaysRespectCuKernelRuntimeLimit(Graph) \
     ((Graph)->Flags.AlwaysRespectCuKernelRuntimeLimit != FALSE)
 #define WantsAssignedMemoryCoverage(Graph) \
@@ -1065,18 +1073,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _GRAPH *CuDeviceSpareGraph;
 
     //
-    // CUDA RNG details.
-    //
-
-    PERFECT_HASH_CU_RNG_ID CuRngId;
-    ULONG Padding9;
-    ULONGLONG CuRngSeed;
-    ULONGLONG CuRngSubsequence;
-    ULONGLONG CuRngOffset;
-    PVOID CuRngState;
-    //CU_RNG_STATE CuRngState;
-
-    //
     // Host and device pointers to keys array.
     //
 
@@ -1113,10 +1109,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     HRESULT CuHashKeysResult;
 
     //
-    // Number of CUDA solver loops.
+    // Index of this graph relative to all graphs created for the targeted
+    // device.
     //
 
-    ULONG CuNumberOfSolveLoops;
+    LONG CuDeviceIndex;
 
     //
     // Clock related fields.
@@ -1138,11 +1135,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG CuFinishedCount;
 
     //
-    // Index of this graph relative to all graphs created for the targeted
-    // device.
+    // CUDA RNG details.
     //
 
-    LONG CuDeviceIndex;
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONGLONG CuRngSeed;
+    ULONGLONG CuRngSubsequence;
+    ULONGLONG CuRngOffset;
+    PVOID CuRngState;
 
     //
     // Pointer to device attributes in device memory.

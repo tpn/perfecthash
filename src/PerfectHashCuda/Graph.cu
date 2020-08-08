@@ -27,6 +27,7 @@ EXTERN_C_END
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 #include <thrust/inner_product.h>
+#include <thrust/unique.h>
 
 #include "Graph.cuh"
 
@@ -320,6 +321,7 @@ HashAllMultiplyShiftRKernel3(
     Seed2 = Seeds[1];
     Seed3.AsULong = Seeds[2];
 
+#if 0
     //
     // If this is thread 0 in the block, initialize the shared memory and set
     // the global result to S_OK.
@@ -341,6 +343,7 @@ HashAllMultiplyShiftRKernel3(
     __syncthreads();
 
     BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
+#endif
 
     FOR_EACH_1D(Index, NumberOfKeys) {
 
@@ -351,9 +354,11 @@ HashAllMultiplyShiftRKernel3(
         // read of `*GlobalResult` (currently not being done).
         //
 
+#if 0
         if (*BlockResult != S_OK) {
             goto End;
         }
+#endif
 
         Key = Keys[Index];
 
@@ -367,7 +372,7 @@ HashAllMultiplyShiftRKernel3(
             // collision, then jump to the end.
             //
 
-            *BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            //*BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             goto End;
         }
@@ -376,8 +381,10 @@ HashAllMultiplyShiftRKernel3(
         // Store the vertex pairs.
         //
 
-        Output[Index].x = Vertex1;
-        Output[Index].y = Vertex2;
+        //Output[Index].x = Vertex1;
+        //Output[Index].y = Vertex2;
+        VertexPairs[Index].Vertex1 = Vertex1;
+        VertexPairs[Index].Vertex2 = Vertex2;
         Vertices1[Index] = Vertex1;
         Vertices2[Index] = Vertex2;
         Vertices1Index[Index] = Index;
@@ -396,13 +403,41 @@ GraphCuSortVertices1Kernel(
     _In_ PGRAPH Graph
     )
 {
+    ULONG UniqueCount;
     thrust::device_ptr<ULONG> Vertices1(Graph->Vertices1);
     thrust::device_ptr<ULONG> Index(Graph->Vertices1Index);
 
+#if 0
     thrust::stable_sort_by_key(thrust::device,
                                Vertices1,
                                Vertices1 + Graph->NumberOfKeys,
                                Index);
+#endif
+
+    thrust::stable_sort(
+        thrust::device,
+        Vertices1,
+        Vertices1 + Graph->NumberOfKeys
+    );
+
+    UniqueCount = thrust::inner_product(
+        thrust::device,
+        Vertices1,
+        Vertices1 + Graph->NumberOfKeys - 1,
+        Vertices1 + 1,
+        ULONG(1),
+        thrust::plus<ULONG>(),
+        thrust::not_equal_to<ULONG>()
+    );
+
+    printf("Vertices1:\n\tUniqueCount: %u\n\tKeys: %u\n\t"
+           "Seed1: %u\n\tSeed2: %u\n\tSeed3: %u\n",
+           UniqueCount,
+           Graph->NumberOfKeys,
+           Graph->Seed1,
+           Graph->Seed2,
+           Graph->Seed3);
+
 }
 
 KERNEL
@@ -443,8 +478,27 @@ VertexPairNotEqual(
     const VERTEX_PAIR Right
     )
 {
-    return (Left.AsULongLong != Right.AsULongLong);
+    return (
+        Left.Vertex1 != Right.Vertex1 &&
+        Left.Vertex2 != Right.Vertex2
+    );
+    //return (Left.AsULongLong != Right.AsULongLong);
 }
+
+DEVICE
+bool
+VertexPairEqual(
+    const VERTEX_PAIR Left,
+    const VERTEX_PAIR Right
+    )
+{
+    return (
+        Left.Vertex1 == Right.Vertex1 &&
+        Left.Vertex2 == Right.Vertex2
+    );
+    //return (Left.AsULongLong == Right.AsULongLong);
+}
+
 
 KERNEL
 VOID
@@ -454,9 +508,11 @@ GraphCuSortVertexPairsKernel(
 {
     ULONG UniqueCount;
     thrust::device_ptr<VERTEX_PAIR> VertexPairs(Graph->VertexPairs);
+    thrust::device_ptr<VERTEX_PAIR> VertexPairsEnd;
+    thrust::device_ptr<VERTEX_PAIR> EndUnique;
     thrust::device_ptr<ULONG> Index(Graph->VertexPairsIndex);
 
-    thrust::sort(
+    thrust::stable_sort(
         thrust::device,
         VertexPairs,
         VertexPairs + Graph->NumberOfKeys,
@@ -473,7 +529,54 @@ GraphCuSortVertexPairsKernel(
         VertexPairNotEqual
     );
 
-    printf("UniqueCount: %u (keys: %u).\n", UniqueCount, Graph->NumberOfKeys);
+    printf("VertexPair NE:\n\tUniqueCount: %u\n\tKeys: %u\n\t"
+           "Seed1: %u\n\tSeed2: %u\n\tSeed3: %u\n",
+           UniqueCount,
+           Graph->NumberOfKeys,
+           Graph->Seed1,
+           Graph->Seed2,
+           Graph->Seed3);
+
+    UniqueCount = thrust::inner_product(
+        thrust::device,
+        VertexPairs,
+        VertexPairs + Graph->NumberOfKeys - 1,
+        VertexPairs + 1,
+        ULONG(1),
+        thrust::plus<ULONG>(),
+        VertexPairEqual
+    );
+
+    printf("VertexPair EQ:\n\tUniqueCount: %u\n\tKeys: %u\n\t"
+           "Seed1: %u\n\tSeed2: %u\n\tSeed3: %u\n",
+           UniqueCount,
+           Graph->NumberOfKeys,
+           Graph->Seed1,
+           Graph->Seed2,
+           Graph->Seed3);
+
+    VertexPairsEnd = VertexPairs + Graph->NumberOfKeys;
+    EndUnique = thrust::unique(
+        thrust::device,
+        VertexPairs,
+        VertexPairsEnd,
+        VertexPairEqual
+    );
+
+    if (VertexPairsEnd != EndUnique) {
+        printf("Not unique!\n");
+    } else {
+        printf("All unique!\n");
+    }
+
+    printf("Start: 0x%p, End: 0x%p, EndUnique: 0x%p.\n",
+           VertexPairs,
+           VertexPairsEnd,
+           EndUnique);
+
+    printf("Num element: %u.\n", (VertexPairsEnd - VertexPairs));
+    printf("Num unique: %u.\n", (EndUnique - VertexPairs));
+
 }
 
 KERNEL
@@ -539,7 +642,7 @@ GraphCuShouldWeContinueTryingToSolve(
     ULONGLONG ThisClock;
     PCU_DEVICE_ATTRIBUTES Attributes;
 
-    if (Graph->CuNumberOfSolveLoops++ == 0) {
+    if (Graph->Attempt++ == 0) {
         Graph->CuStartClock = clock64();
     } else {
         ThisClock = clock64();
@@ -588,7 +691,7 @@ GraphCuShouldWeContinueTryingToSolve(
     *Result = S_OK;
 
     //return TRUE;
-    return (Graph->CuNumberOfSolveLoops <= 5);
+    return (Graph->Attempt <= 5);
 }
 
 EXTERN_C
@@ -675,6 +778,16 @@ Return Value:
     PCU_KERNEL_CONTEXT Ctx;
     curandStatePhilox4_32_10_t *State;
 
+    if (HasUserSeeds(Graph)) { // && Graph->Attempt == 1) {
+
+        //
+        // The user has supplied seeds, and this is the first attempt, so skip
+        // the curand() calls.
+        //
+
+        goto End;
+    }
+
     Ctx = Graph->CuKernelContext;
     State = &Ctx->RngState.Philox4;
 
@@ -684,6 +797,8 @@ Return Value:
     for (Index = 0; Index < NumberOfSeeds; Index++) {
         *Seed++ = curand(State);
     }
+
+End:
 
     Result = S_OK;
 
@@ -1049,6 +1164,8 @@ Return Value:
         goto End;
     }
 #else
+
+    Graph->CuHashKeysResult = S_OK;
 
     HashAllMultiplyShiftRKernel3<<<
         BlocksPerGrid,
