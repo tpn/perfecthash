@@ -54,6 +54,7 @@ typedef union _VERTEX_PAIR {
         VERTEX Vertex1;
         VERTEX Vertex2;
     };
+    LONGLONG AsLongLong;
     ULONGLONG AsULongLong;
     ULARGE_INTEGER AsULargeInteger;
 } VERTEX_PAIR, *PVERTEX_PAIR;

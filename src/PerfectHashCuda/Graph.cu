@@ -26,6 +26,7 @@ EXTERN_C_END
 
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
+#include <thrust/inner_product.h>
 
 #include "Graph.cuh"
 
@@ -435,6 +436,15 @@ VertexPairLessThan(
     }
 }
 
+DEVICE
+bool
+VertexPairNotEqual(
+    const VERTEX_PAIR Left,
+    const VERTEX_PAIR Right
+    )
+{
+    return (Left.AsULongLong != Right.AsULongLong);
+}
 
 KERNEL
 VOID
@@ -442,14 +452,28 @@ GraphCuSortVertexPairsKernel(
     _In_ PGRAPH Graph
     )
 {
+    ULONG UniqueCount;
     thrust::device_ptr<VERTEX_PAIR> VertexPairs(Graph->VertexPairs);
     thrust::device_ptr<ULONG> Index(Graph->VertexPairsIndex);
 
-    thrust::stable_sort_by_key(thrust::device,
-                               VertexPairs,
-                               VertexPairs + Graph->NumberOfKeys,
-                               Index,
-                               VertexPairLessThan);
+    thrust::sort(
+        thrust::device,
+        VertexPairs,
+        VertexPairs + Graph->NumberOfKeys,
+        VertexPairLessThan
+    );
+
+    UniqueCount = thrust::inner_product(
+        thrust::device,
+        VertexPairs,
+        VertexPairs + Graph->NumberOfKeys - 1,
+        VertexPairs + 1,
+        ULONG(1),
+        thrust::plus<ULONG>(),
+        VertexPairNotEqual
+    );
+
+    printf("UniqueCount: %u (keys: %u).\n", UniqueCount, Graph->NumberOfKeys);
 }
 
 KERNEL
