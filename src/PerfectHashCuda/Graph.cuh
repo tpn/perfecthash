@@ -42,4 +42,83 @@ Abstract:
 #define SEED6_BYTE3 Seed6.Byte3
 #define SEED6_BYTE4 Seed6.Byte4
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+
+//
+// Helper defines.
+//
+
+#define ASSERT(Condition)                     \
+    if (!(Condition)) {                       \
+        asm("trap;");                         \
+        Result = PH_E_INVARIANT_CHECK_FAILED; \
+        goto End;                             \
+    }
+
+#define CU_RESULT cudaError_t
+#define CU_STREAM cudaStream_t
+#define CU_EVENT cudaEvent_t
+
+#define FindBestGraph(Graph) ((Graph)->Flags.FindBestGraph != FALSE)
+#define FirstSolvedGraphWins(Graph) ((Graph)->Flags.FindBestGraph == FALSE)
+
+#define PH_ERROR(Name, Result)           \
+    PerfectHashPrintError(#Name,         \
+                          __FILE__,      \
+                          __LINE__,      \
+                          (ULONG)Result)
+
+
+#define CU_ERROR(Name, CuResult)      \
+    PerfectHashPrintCuError(#Name,    \
+                            __FILE__, \
+                            __LINE__, \
+                            CuResult)
+
+#define CU_CHECK(CuResult, Name)                   \
+    if (CU_FAILED(CuResult)) {                     \
+        CU_ERROR(Name, CuResult);                  \
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
+        goto Error;                                \
+    }
+
+#define CU_MEMSET(Buffer, Value, Size, Stream)               \
+    CuResult = cudaMemsetAsync(Buffer, Value, Size, Stream); \
+    CU_CHECK(CuResult, cudaMemsetAsync)
+
+#define CU_ZERO(Buffer, Size, Stream) \
+    CU_MEMSET(Buffer, 0, Size, Stream)
+
+
+#define CREATE_STREAM(Target)                                            \
+    CuResult = cudaStreamCreateWithFlags(Target, cudaStreamNonBlocking); \
+    CU_CHECK(CuResult, cudaStreamCreateWithFlags)
+
+
+typedef struct _CU_KERNEL_STREAMS {
+    union {
+        CU_STREAM Reset;
+        CU_STREAM FirstStream;
+    };
+
+    CU_STREAM SortVertices1;
+    CU_STREAM SortVertices2;
+    CU_STREAM SortVertexPairs;
+
+    union {
+        CU_STREAM Solve;
+        CU_STREAM LastStream;
+    };
+} CU_KERNEL_STREAMS;
+typedef CU_KERNEL_STREAMS *PCU_KERNEL_STREAMS;
+
+typedef struct _CU_KERNEL_CONTEXT {
+    CU_KERNEL_STREAMS Streams;
+
+    union {
+        curandStatePhilox4_32_10_t Philox4;
+    } RngState;
+
+} CU_KERNEL_CONTEXT;
+typedef CU_KERNEL_CONTEXT *PCU_KERNEL_CONTEXT;
+
+// vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

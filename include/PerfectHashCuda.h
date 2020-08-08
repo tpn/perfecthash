@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2017-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -22,11 +22,9 @@ Abstract:
 extern "C" {
 #endif
 
-
 #include <no_sal2.h>
 #define _Ret_reallocated_bytes_(Address, Size)
 #define _Frees_ptr_opt_
-
 
 //
 // Define NT-style typedefs.
@@ -443,6 +441,28 @@ typedef enum _TYPE {
 } TYPE;
 typedef TYPE *PTYPE;
 
+#ifdef __cplusplus
+#ifndef EXTERN_C
+#define EXTERN_C extern "C"
+#endif
+#ifndef EXTERN_C_BEGIN
+#define EXTERN_C_BEGIN EXTERN_C {
+#endif
+#ifndef EXTERN_C_END
+#define EXTERN_C_END }
+#endif
+#else
+#ifndef EXTERN_C
+#define EXTERN_C
+#endif
+#ifndef EXTERN_C_BEGIN
+#define EXTERN_C_BEGIN
+#endif
+#ifndef EXTERN_C_END
+#define EXTERN_C_END
+#endif
+#endif
+
 //
 // Define CUDA macros and typedefs in NT style.
 //
@@ -457,6 +477,7 @@ typedef TYPE *PTYPE;
 #define BlockIndex blockIdx
 #define ThreadIndex threadIdx
 
+#define KERNEL EXTERN_C GLOBAL
 
 #define FOR_EACH_1D(Index, Total)                           \
     for (Index = BlockIndex.x * BlockDim.x + ThreadIndex.x; \
@@ -516,7 +537,7 @@ typedef struct CU_FUNCTION **PPCU_FUNCTION;
 
 
 #ifdef __cplusplus
-}
+} // extern "C"
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cuda                         :

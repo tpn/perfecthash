@@ -12,16 +12,11 @@ Abstract:
 
 --*/
 
-#define EXTERN_C extern "C"
-#define EXTERN_C_BEGIN EXTERN_C {
-#define EXTERN_C_END }
+#include <PerfectHashCuda.h>
 
 EXTERN_C_BEGIN
-#include <PerfectHashCuda.h>
 #include "../PerfectHash/CuDeviceAttributes.h"
 #include "../PerfectHash/Graph.h"
-
-#include "Graph.cuh"
 
 #include <cuda.h>
 #include <cuda_device_runtime_api.h>
@@ -32,46 +27,7 @@ EXTERN_C_END
 #include <thrust/device_ptr.h>
 #include <thrust/sort.h>
 
-#define ASSERT(Condition)                     \
-    if (!(Condition)) {                       \
-        asm("trap;");                         \
-        Result = PH_E_INVARIANT_CHECK_FAILED; \
-        goto End;                             \
-    }
-
-#define CU_RESULT cudaError_t
-#define CU_STREAM cudaStream_t
-#define CU_EVENT cudaEvent_t
-
-#define FindBestGraph(Graph) ((Graph)->Flags.FindBestGraph != FALSE)
-#define FirstSolvedGraphWins(Graph) ((Graph)->Flags.FindBestGraph == FALSE)
-
-#define PH_ERROR(Name, Result)           \
-    PerfectHashPrintError(#Name,         \
-                          __FILE__,      \
-                          __LINE__,      \
-                          (ULONG)Result)
-
-
-#define CU_ERROR(Name, CuResult)      \
-    PerfectHashPrintCuError(#Name,    \
-                            __FILE__, \
-                            __LINE__, \
-                            CuResult)
-
-#define CU_CHECK(CuResult, Name)                   \
-    if (CU_FAILED(CuResult)) {                     \
-        CU_ERROR(Name, CuResult);                  \
-        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
-        goto Error;                                \
-    }
-
-#define CU_MEMSET(Buffer, Value, Size, Stream)               \
-    CuResult = cudaMemsetAsync(Buffer, Value, Size, Stream); \
-    CU_CHECK(CuResult, cudaMemsetAsync)
-
-#define CU_ZERO(Buffer, Size, Stream) \
-    CU_MEMSET(Buffer, 0, Size, Stream)
+#include "Graph.cuh"
 
 //
 // Shared memory.
@@ -235,7 +191,7 @@ HashAllMultiplyShiftRKernel2(
     _In_ ULONG NumberOfKeys,
     _Out_writes_(NumberOfKeys) PVERTEX Vertices1,
     _Out_writes_(NumberOfKeys) PVERTEX Vertices2,
-    _Out_writes_(NumberOfKeys) PULONG VerticesIndex,
+    _Out_writes_(NumberOfKeys) PULONG Vertices1Index,
     _In_ ULONG Mask,
     _In_ PULONG Seeds,
     _Out_ PHRESULT GlobalResult
@@ -319,7 +275,7 @@ HashAllMultiplyShiftRKernel2(
         //Output[Index].y = Vertex2;
         Vertices1[Index] = Vertex1;
         Vertices2[Index] = Vertex2;
-        VerticesIndex[Index] = Index;
+        Vertices1Index[Index] = Index;
 
     }
 
@@ -328,32 +284,175 @@ End:
 }
 
 EXTERN_C
-DEVICE
-HRESULT
-GraphCuSortVertices(
+GLOBAL
+VOID
+HashAllMultiplyShiftRKernel3(
+    _In_reads_(NumberOfKeys) PKEY Keys,
+    _In_ ULONG NumberOfKeys,
+    _Out_writes_(NumberOfKeys) PVERTEX Vertices1,
+    _Out_writes_(NumberOfKeys) PVERTEX Vertices2,
+    _Out_writes_(NumberOfKeys) PVERTEX_PAIR VertexPairs,
+    _Out_writes_(NumberOfKeys) PULONG Vertices1Index,
+    _Out_writes_(NumberOfKeys) PULONG Vertices2Index,
+    _Out_writes_(NumberOfKeys) PULONG VertexPairsIndex,
+    _In_ ULONG Mask,
+    _In_ PULONG Seeds,
+    _Out_ PHRESULT GlobalResult
+    )
+{
+    KEY Key;
+    ULONG Index;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    PHRESULT BlockResult;
+    PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
+    PINT2 Output = (PINT2)VertexPairs;
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+
+    //
+    // If this is thread 0 in the block, initialize the shared memory and set
+    // the global result to S_OK.
+    //
+
+    if (ThreadIndex.x == 0) {
+
+        Shared->HashKeysBlockResults = (PHRESULT)(
+            RtlOffsetToPointer(
+                SharedRaw,
+                sizeof(GRAPH_SHARED)
+            )
+        );
+
+
+        *GlobalResult = S_OK;
+    }
+
+    __syncthreads();
+
+    BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
+
+    FOR_EACH_1D(Index, NumberOfKeys) {
+
+        //
+        // Block-level fast-path exit if we've already detected a vertex
+        // collision.  I haven't profiled things to determine if it makes
+        // sense to either do: a) this, or b) an additional global memory
+        // read of `*GlobalResult` (currently not being done).
+        //
+
+        if (*BlockResult != S_OK) {
+            goto End;
+        }
+
+        Key = Keys[Index];
+
+        Vertex1 = (((Key * SEED1) >> SEED3_BYTE1) & Mask);
+        Vertex2 = (((Key * SEED2) >> SEED3_BYTE2) & Mask);
+
+        if (Vertex1 == Vertex2) {
+
+            //
+            // Set the block-level and global-level results to indicate
+            // collision, then jump to the end.
+            //
+
+            *BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            goto End;
+        }
+
+        //
+        // Store the vertex pairs.
+        //
+
+        Output[Index].x = Vertex1;
+        Output[Index].y = Vertex2;
+        Vertices1[Index] = Vertex1;
+        Vertices2[Index] = Vertex2;
+        Vertices1Index[Index] = Index;
+        Vertices2Index[Index] = Index;
+        VertexPairsIndex[Index] = Index;
+
+    }
+
+End:
+    return;
+}
+
+KERNEL
+VOID
+GraphCuSortVertices1Kernel(
     _In_ PGRAPH Graph
     )
 {
-    //HRESULT Result;
-    PULONG SortedIndex;
-
     thrust::device_ptr<ULONG> Vertices1(Graph->Vertices1);
-    thrust::device_ptr<ULONG> Index(Graph->VerticesIndex);
+    thrust::device_ptr<ULONG> Index(Graph->Vertices1Index);
 
     thrust::stable_sort_by_key(thrust::device,
                                Vertices1,
                                Vertices1 + Graph->NumberOfKeys,
                                Index);
-
-    SortedIndex = thrust::raw_pointer_cast(Index);
-    if (SortedIndex == Graph->VerticesIndex) {
-        ;
-    }
-    return S_OK;
 }
 
-EXTERN_C
-GLOBAL
+KERNEL
+VOID
+GraphCuSortVertices2Kernel(
+    _In_ PGRAPH Graph
+    )
+{
+    thrust::device_ptr<ULONG> Vertices2(Graph->Vertices2);
+    thrust::device_ptr<ULONG> Index(Graph->Vertices2Index);
+
+    thrust::stable_sort_by_key(thrust::device,
+                               Vertices2,
+                               Vertices2 + Graph->NumberOfKeys,
+                               Index);
+}
+
+DEVICE
+bool
+VertexPairLessThan(
+    const VERTEX_PAIR Left,
+    const VERTEX_PAIR Right
+    )
+{
+    if (Left.Vertex1 < Right.Vertex1) {
+        return true;
+    } else if (Left.Vertex1 == Right.Vertex1) {
+        return (Left.Vertex2 < Right.Vertex2);
+    } else {
+        return false;
+    }
+}
+
+
+KERNEL
+VOID
+GraphCuSortVertexPairsKernel(
+    _In_ PGRAPH Graph
+    )
+{
+    thrust::device_ptr<VERTEX_PAIR> VertexPairs(Graph->VertexPairs);
+    thrust::device_ptr<ULONG> Index(Graph->VertexPairsIndex);
+
+    thrust::stable_sort_by_key(thrust::device,
+                               VertexPairs,
+                               VertexPairs + Graph->NumberOfKeys,
+                               Index,
+                               VertexPairLessThan);
+}
+
+KERNEL
 VOID
 GraphCuAddEdgesKernel(
     _In_ ULONG NumberOfEdges,
@@ -463,7 +562,9 @@ GraphCuShouldWeContinueTryingToSolve(
     }
 
     *Result = S_OK;
-    return TRUE;
+
+    //return TRUE;
+    return (Graph->CuNumberOfSolveLoops <= 5);
 }
 
 EXTERN_C
@@ -547,27 +648,11 @@ Return Value:
     PULONG Seed;
     BYTE NumberOfSeeds;
     HRESULT Result;
-    CU_RESULT CuResult;
+    PCU_KERNEL_CONTEXT Ctx;
     curandStatePhilox4_32_10_t *State;
 
-    if (Graph->CuRngState == NULL) {
-        CuResult = cudaMalloc(&Graph->CuRngState, sizeof(*State));
-        CU_CHECK(CuResult, cudaMalloc);
-    }
-
-    State = (curandStatePhilox4_32_10_t *)Graph->CuRngState;
-
-    //
-    // If this is the first time we're being called, we need to initialize the
-    // random state.
-    //
-
-    if (Graph->CuNumberOfSolveLoops == 1) {
-        curand_init(Graph->CuRngSeed,
-                    Graph->CuRngSubsequence,
-                    Graph->CuRngOffset,
-                    State);
-    }
+    Ctx = Graph->CuKernelContext;
+    State = &Ctx->RngState.Philox4;
 
     Seed = &Graph->FirstSeed;
     NumberOfSeeds = (BYTE)Graph->NumberOfSeeds;
@@ -582,19 +667,6 @@ Return Value:
         Result = GraphCuApplySeedMasks(Graph);
     }
 
-    goto End;
-
-Error:
-
-    if (SUCCEEDED(Result)) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
     return Result;
 }
 
@@ -602,8 +674,7 @@ EXTERN_C
 DEVICE
 HRESULT
 GraphCuReset(
-    _In_ PGRAPH Graph,
-    _In_ CU_STREAM Stream
+    _In_ PGRAPH Graph
     )
 /*++
 
@@ -615,8 +686,6 @@ Routine Description:
 Arguments:
 
     Graph - Supplies a pointer to the graph instance to reset.
-
-    Stream - Supplies the stream to use.
 
 Return Value:
 
@@ -636,6 +705,7 @@ Return Value:
 {
     HRESULT Result;
     PGRAPH_INFO Info;
+    CU_STREAM Stream;
     CU_RESULT CuResult;
     ULONG TotalNumberOfPages;
     ULONG TotalNumberOfLargePages;
@@ -652,6 +722,8 @@ Return Value:
     Info = Graph->CuGraphInfo;
 
     Result = PH_S_CONTINUE_GRAPH_SOLVING;
+
+    Stream = Graph->CuKernelContext->Streams.Reset;
 
     //
     // Clear scalar values.
@@ -834,8 +906,7 @@ DEVICE
 HRESULT
 GraphCuSolve(
     _In_ PGRAPH Graph,
-    _Out_ PGRAPH *NewGraphPointer,
-    _In_ CU_STREAM Stream
+    _Out_ PGRAPH *NewGraphPointer
     )
 /*++
 
@@ -852,8 +923,6 @@ Arguments:
     NewGraphPointer - Supplies the address of a variable which will receive the
         address of a new graph instance to be used for solving if the routine
         returns PH_S_USE_NEW_GRAPH_FOR_SOLVING.
-
-    Stream - Supplies the stream.
 
 Return Value:
 
@@ -875,12 +944,16 @@ Return Value:
     ULONG BlocksPerGrid;
     ULONG ThreadsPerBlock;
     ULONG SharedMemoryInBytes;
+    PCU_KERNEL_CONTEXT Ctx;
+    PCU_KERNEL_STREAMS Streams;
     PASSIGNED_MEMORY_COVERAGE Coverage;
 
     //
     // Initialize aliases.
     //
 
+    Ctx = Graph->CuKernelContext;
+    Streams = &Ctx->Streams;
     Keys = (PKEY)Graph->DeviceKeys;
     NumberOfKeys = Graph->NumberOfKeys;
     BlocksPerGrid = Graph->CuBlocksPerGrid;
@@ -926,12 +999,13 @@ Return Value:
         Graph->Seeds,
         &Graph->CuHashKeysResult
     );
-#else
+#endif
+#if 0
     HashAllMultiplyShiftRKernel2<<<
         BlocksPerGrid,
         ThreadsPerBlock,
         SharedMemoryInBytes,
-        Stream
+        Graph->SolveStream
     >>>(
         Keys,
         NumberOfKeys,
@@ -950,8 +1024,26 @@ Return Value:
     if (FAILED(Result)) {
         goto End;
     }
+#else
 
-#endif
+    HashAllMultiplyShiftRKernel3<<<
+        BlocksPerGrid,
+        ThreadsPerBlock,
+        SharedMemoryInBytes,
+        Streams->Solve
+    >>>(
+        Keys,
+        NumberOfKeys,
+        Graph->Vertices1,
+        Graph->Vertices2,
+        Graph->VertexPairs,
+        Graph->Vertices1Index,
+        Graph->Vertices2Index,
+        Graph->VertexPairsIndex,
+        Graph->VertexMask,
+        Graph->Seeds,
+        &Graph->CuHashKeysResult
+    );
 
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
@@ -959,6 +1051,7 @@ Return Value:
     Result = Graph->CuHashKeysResult;
     if (FAILED(Result)) {
         if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
+            printf("Collided!\n");
             Graph->CuVertexCollisionFailures++;
             goto Failed;
         }
@@ -967,8 +1060,21 @@ Return Value:
         goto End;
     }
 
+    printf("No collision.\n");
     Graph->CuNoVertexCollisionFailures++;
 
+    GraphCuSortVertices1Kernel<<<1, 1, 0, Streams->SortVertices1>>>(Graph);
+    GraphCuSortVertices2Kernel<<<1, 1, 0, Streams->SortVertices2>>>(Graph);
+    GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(Graph);
+
+    CuResult = cudaDeviceSynchronize();
+    CU_CHECK(CuResult, cudaDeviceSynchronize);
+
+    printf("Sorted kernels!\n");
+
+#endif
+
+#if 0
     //MAYBE_STOP_GRAPH_SOLVING(Graph);
 
     GraphCuAddEdgesKernel<<<BlocksPerGrid, ThreadsPerBlock, 0, Stream>>>(
@@ -982,6 +1088,7 @@ Return Value:
 
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
+#endif
 
     if (!GraphCuIsAcyclic(Graph)) {
 
@@ -1080,6 +1187,65 @@ Failed:
     return PH_S_CONTINUE_GRAPH_SOLVING;
 }
 
+EXTERN_C
+DEVICE
+HRESULT
+GraphCuCreateKernelContext(
+    _In_ PGRAPH Graph
+    )
+{
+    HRESULT Result;
+    CU_RESULT CuResult;
+    PCU_KERNEL_STREAMS Streams;
+    PCU_KERNEL_CONTEXT Ctx;
+
+    if (Graph->CuKernelContext != NULL) {
+        Result = S_FALSE;
+        goto End;
+    }
+
+    CuResult = cudaMalloc(&Graph->CuKernelContext, sizeof(*Ctx));
+    CU_CHECK(CuResult, cudaMalloc);
+
+    //
+    // Create streams.
+    //
+
+    Ctx = Graph->CuKernelContext;
+    Streams = &Ctx->Streams;
+    CREATE_STREAM(&Streams->Reset);
+    CREATE_STREAM(&Streams->SortVertices1);
+    CREATE_STREAM(&Streams->SortVertices2);
+    CREATE_STREAM(&Streams->SortVertexPairs);
+    CREATE_STREAM(&Streams->Solve);
+
+    //
+    // Initialize our random state.
+    //
+
+    curand_init(Graph->CuRngSeed,
+                Graph->CuRngSubsequence,
+                Graph->CuRngOffset,
+                &Ctx->RngState.Philox4);
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (SUCCEEDED(Result)) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
 
 EXTERN_C
 GLOBAL
@@ -1109,10 +1275,7 @@ Return Value:
 --*/
 {
     HRESULT Result;
-    CU_RESULT CuResult;
     PGRAPH NewGraph;
-    CU_STREAM ResetStream;
-    CU_STREAM SolveStream;
 
     //
     // Abort if the kernel is called with more than one thread.
@@ -1127,19 +1290,18 @@ Return Value:
 
     //ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
     if (Graph->SizeOfStruct != sizeof(GRAPH)) {
-        printf("%u != %u!\n", Graph->SizeOfStruct, sizeof(GRAPH));
+        printf("%u != %u!\n", (ULONG)Graph->SizeOfStruct, (ULONG)sizeof(GRAPH));
         return;
     }
 
-    //
-    // Create our streams.
-    //
-
-    CuResult = cudaStreamCreateWithFlags(&ResetStream, cudaStreamNonBlocking);
-    CU_CHECK(CuResult, cudaStreamCreateWithFlags);
-
-    CuResult = cudaStreamCreateWithFlags(&SolveStream, cudaStreamNonBlocking);
-    CU_CHECK(CuResult, cudaStreamCreateWithFlags);
+    if (Graph->CuKernelContext == NULL) {
+        Result = GraphCuCreateKernelContext(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphCuCreateKernelContext, Result);
+            return;
+        }
+        printf("Created context successfully.\n");
+    }
 
     //
     // Begin the solving loop.
@@ -1156,7 +1318,7 @@ Return Value:
             break;
         }
 
-        Result = GraphCuReset(Graph, SolveStream);
+        Result = GraphCuReset(Graph);
         if (FAILED(Result)) {
             break;
         } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {
@@ -1164,7 +1326,7 @@ Return Value:
         }
 
         NewGraph = NULL;
-        Result = GraphCuSolve(Graph, &NewGraph, SolveStream);
+        Result = GraphCuSolve(Graph, &NewGraph);
         if (FAILED(Result)) {
             break;
         }
@@ -1200,6 +1362,7 @@ Return Value:
 
     goto End;
 
+#if 0
 Error:
 
     if (SUCCEEDED(Result)) {
@@ -1210,8 +1373,9 @@ Error:
     // Intentional follow-on to End.
     //
 
+#endif
 End:
     Graph->CuKernelResult = Result;
 }
 
-// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
+// vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

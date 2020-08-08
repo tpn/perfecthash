@@ -1196,6 +1196,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _Writable_elements_(NumberOfKeys)
     PVERTEX_PAIR VertexPairs;
 
+    _Writable_elements_(NumberOfKeys)
+    PULONG VertexPairsIndex;
+
     //
     // CUDA vertex arrays.
     //
@@ -1207,7 +1210,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PVERTEX Vertices2;
 
     _Writable_elements_(NumberOfKeys)
-    PULONG VerticesIndex;
+    PULONG Vertices1Index;
+
+    _Writable_elements_(NumberOfKeys)
+    PULONG Vertices2Index;
+
+    //
+    // Opaque context for kernels.
+    //
+
+    struct _CU_KERNEL_CONTEXT *CuKernelContext;
 
     //
     // Array of values indexed by the offsets in the Assigned array.  This
