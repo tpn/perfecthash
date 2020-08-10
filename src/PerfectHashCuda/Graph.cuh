@@ -58,6 +58,9 @@ Abstract:
 #define CU_STREAM cudaStream_t
 #define CU_EVENT cudaEvent_t
 
+typedef CU_STREAM *PCU_STREAM;
+typedef CU_EVENT *PCU_EVENT;
+
 #define FindBestGraph(Graph) ((Graph)->Flags.FindBestGraph != FALSE)
 #define FirstSolvedGraphWins(Graph) ((Graph)->Flags.FindBestGraph == FALSE)
 
@@ -100,9 +103,10 @@ typedef struct _CU_KERNEL_STREAMS {
         CU_STREAM FirstStream;
     };
 
-    CU_STREAM SortVertices1;
-    CU_STREAM SortVertices2;
+    CU_STREAM IsAcyclic;
     CU_STREAM SortVertexPairs;
+    CU_STREAM Assign;
+    CU_STREAM CalculateMemoryCoverage;
 
     union {
         CU_STREAM Solve;

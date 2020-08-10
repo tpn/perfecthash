@@ -95,23 +95,32 @@ GLOBAL
 VOID
 HashAllMultiplyShiftRKernel(
     _In_reads_(NumberOfKeys) PKEY Keys,
+    _In_ ULONG NumberOfEdges,
     _In_ ULONG NumberOfKeys,
     _Out_writes_(NumberOfKeys) PVERTEX_PAIR VertexPairs,
+    _Out_writes_(NumberOfKeys) PVERTEX_PAIR SortedVertexPairs,
+    _Out_writes_(NumberOfKeys) PULONG VertexPairsIndex,
+    _Out_ PVERTEX First,
+    _Out_ PEDGE Next,
+    _Out_ PEDGE Edges,
     _In_ ULONG Mask,
     _In_ PULONG Seeds,
     _Out_ PHRESULT GlobalResult
     )
 {
     KEY Key;
+    EDGE Edge1;
+    EDGE Edge2;
+    EDGE First1;
+    EDGE First2;
+    ULONG Vertex1;
+    ULONG Vertex2;
     ULONG Index;
     ULONG Seed1;
     ULONG Seed2;
     ULONG_BYTES Seed3;
-    ULONG Vertex1;
-    ULONG Vertex2;
-    PHRESULT BlockResult;
-    PINT2 Output = (PINT2)VertexPairs;
-    PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
+    //PHRESULT BlockResult;
+    //PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
 
     //
     // Initialize aliases.
@@ -120,6 +129,8 @@ HashAllMultiplyShiftRKernel(
     Seed1 = Seeds[0];
     Seed2 = Seeds[1];
     Seed3.AsULong = Seeds[2];
+
+#if 0
 
     //
     // If this is thread 0 in the block, initialize the shared memory and set
@@ -143,8 +154,11 @@ HashAllMultiplyShiftRKernel(
 
     BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
 
+#endif
+
     FOR_EACH_1D(Index, NumberOfKeys) {
 
+#if 0
         //
         // Block-level fast-path exit if we've already detected a vertex
         // collision.  I haven't profiled things to determine if it makes
@@ -155,6 +169,7 @@ HashAllMultiplyShiftRKernel(
         if (*BlockResult != S_OK) {
             goto End;
         }
+#endif
 
         Key = Keys[Index];
 
@@ -168,7 +183,7 @@ HashAllMultiplyShiftRKernel(
             // collision, then jump to the end.
             //
 
-            *BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            //*BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             goto End;
         }
@@ -177,8 +192,32 @@ HashAllMultiplyShiftRKernel(
         // Store the vertex pairs.
         //
 
-        Output[Index].x = Vertex1;
-        Output[Index].y = Vertex2;
+        VertexPairs[Index].Vertex1 = Vertex1;
+        VertexPairs[Index].Vertex2 = Vertex2;
+        SortedVertexPairs[Index].Vertex1 = Vertex1;
+        SortedVertexPairs[Index].Vertex2 = Vertex2;
+        VertexPairsIndex[Index] = Index;
+
+        Edge1 = (EDGE)Index;
+        Edge2 = Edge1 + NumberOfEdges;
+
+        //
+        // Insert the first edge.
+        //
+
+        First1 = First[Vertex1];
+        Next[Edge1] = First1;
+        First[Vertex1] = Edge1;
+        Edges[Edge1] = Vertex2;
+
+        //
+        // Insert the second edge.
+        //
+
+        First2 = First[Vertex2];
+        Next[Edge2] = First2;
+        First[Vertex2] = Edge2;
+        Edges[Edge2] = Vertex1;
     }
 
 End:
@@ -309,9 +348,9 @@ HashAllMultiplyShiftRKernel3(
     ULONG_BYTES Seed3;
     VERTEX Vertex1;
     VERTEX Vertex2;
-    PHRESULT BlockResult;
-    PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
-    PINT2 Output = (PINT2)VertexPairs;
+    //PHRESULT BlockResult;
+    //PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
+    //PINT2 Output = (PINT2)VertexPairs;
 
     //
     // Initialize aliases.
@@ -500,6 +539,7 @@ VertexPairEqual(
 }
 
 
+/*
 KERNEL
 VOID
 GraphCuSortVertexPairsKernel(
@@ -577,6 +617,60 @@ GraphCuSortVertexPairsKernel(
     printf("Num element: %u.\n", (VertexPairsEnd - VertexPairs));
     printf("Num unique: %u.\n", (EndUnique - VertexPairs));
 
+}
+*/
+
+KERNEL
+VOID
+GraphCuSortVertexPairsKernel(
+    _In_ ULONG NumberOfKeys,
+    _Inout_ thrust::device_ptr<VERTEX_PAIR> VertexPairs,
+    _Inout_ thrust::device_ptr<ULONG> VertexPairsIndex
+    )
+{
+    thrust::device_ptr<VERTEX_PAIR> VertexPairsEnd;
+
+    VertexPairsEnd = VertexPairs + NumberOfKeys;
+
+    thrust::sort_by_key(
+        thrust::device,
+        VertexPairs,
+        VertexPairsEnd,
+        VertexPairsIndex,
+        VertexPairLessThan
+    );
+}
+
+KERNEL
+VOID
+GraphCuIsAcyclicKernel(
+    _In_ ULONG NumberOfKeys,
+    _Inout_ thrust::device_ptr<VERTEX_PAIR> VertexPairs,
+    _Out_ PHRESULT Result
+    )
+{
+    thrust::device_ptr<VERTEX_PAIR> VertexPairsEnd;
+    thrust::device_ptr<VERTEX_PAIR> VertexPairsEndUnique;
+
+    VertexPairsEnd = VertexPairs + NumberOfKeys;
+
+    thrust::sort(
+        thrust::device,
+        VertexPairs,
+        VertexPairsEnd,
+        VertexPairLessThan
+    );
+
+    VertexPairsEndUnique = thrust::unique(
+        thrust::device,
+        VertexPairs,
+        VertexPairsEnd,
+        VertexPairEqual
+    );
+
+    if (VertexPairsEndUnique != VertexPairsEnd) {
+        *Result = PH_E_GRAPH_CYCLIC_FAILURE;
+    }
 }
 
 KERNEL
@@ -690,8 +784,8 @@ GraphCuShouldWeContinueTryingToSolve(
 
     *Result = S_OK;
 
-    //return TRUE;
-    return (Graph->Attempt <= 5);
+    return TRUE;
+    //return (Graph->Attempt <= 5);
 }
 
 EXTERN_C
@@ -1139,6 +1233,7 @@ Return Value:
         &Graph->CuHashKeysResult
     );
 #endif
+
 #if 0
     HashAllMultiplyShiftRKernel2<<<
         BlocksPerGrid,
@@ -1163,9 +1258,9 @@ Return Value:
     if (FAILED(Result)) {
         goto End;
     }
-#else
+#endif
 
-    Graph->CuHashKeysResult = S_OK;
+#if 0
 
     HashAllMultiplyShiftRKernel3<<<
         BlocksPerGrid,
@@ -1213,6 +1308,82 @@ Return Value:
 
     printf("Sorted kernels!\n");
 
+#else
+
+    Graph->CuHashKeysResult = S_OK;
+    Graph->CuIsAcyclicResult = S_OK;
+
+    SharedMemoryInBytes = 0;
+
+    HashAllMultiplyShiftRKernel<<<
+        BlocksPerGrid,
+        ThreadsPerBlock,
+        SharedMemoryInBytes,
+        Streams->Solve
+    >>>(
+        Keys,
+        Graph->NumberOfEdges,
+        NumberOfKeys,
+        Graph->VertexPairs,
+        Graph->SortedVertexPairs,
+        Graph->VertexPairsIndex,
+        Graph->First,
+        Graph->Next,
+        Graph->Edges,
+        Graph->VertexMask,
+        Graph->Seeds,
+        &Graph->CuHashKeysResult
+    );
+
+    CuResult = cudaDeviceSynchronize();
+    CU_CHECK(CuResult, cudaDeviceSynchronize);
+
+    Result = Graph->CuHashKeysResult;
+    if (FAILED(Result)) {
+        if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
+            printf("Collided!\n");
+            Graph->CuVertexCollisionFailures++;
+            goto Failed;
+        }
+        PH_ERROR(GraphCuSolve_AddKeys, Result);
+        Result = PH_S_STOP_GRAPH_SOLVING;
+        goto End;
+    }
+
+    printf("No collision.\n");
+    Graph->CuNoVertexCollisionFailures++;
+
+    //GraphCuSortVertices1Kernel<<<1, 1, 0, Streams->SortVertices1>>>(Graph);
+    //GraphCuSortVertices2Kernel<<<1, 1, 0, Streams->SortVertices2>>>(Graph);
+
+    GraphCuIsAcyclicKernel<<<1, 1, 0, Streams->IsAcyclic>>>(
+        NumberOfKeys,
+        thrust::device_ptr<VERTEX_PAIR>(Graph->VertexPairs),
+        &Graph->CuIsAcyclicResult
+    );
+
+    GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
+        NumberOfKeys,
+        thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
+        thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
+    );
+
+    CuResult = cudaDeviceSynchronize();
+    CU_CHECK(CuResult, cudaDeviceSynchronize);
+
+    Result = Graph->CuIsAcyclicResult;
+    if (FAILED(Result)) {
+        if (Result == PH_E_GRAPH_CYCLIC_FAILURE) {
+            Graph->CuCyclicGraphFailures++;
+            goto Failed;
+        }
+        PH_ERROR(GraphCuSolve_IsAcyclic, Result);
+        Result = PH_S_STOP_GRAPH_SOLVING;
+        goto End;
+    }
+
+    printf("Graph is acyclic!\n");
+
 #endif
 
 #if 0
@@ -1229,8 +1400,6 @@ Return Value:
 
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
-#endif
-
     if (!GraphCuIsAcyclic(Graph)) {
 
         //
@@ -1240,6 +1409,8 @@ Return Value:
         Graph->CuCyclicGraphFailures++;
         goto Failed;
     }
+
+#endif
 
     //
     // We created an acyclic graph.
@@ -1337,6 +1508,9 @@ GraphCuCreateKernelContext(
 {
     HRESULT Result;
     CU_RESULT CuResult;
+    PCU_STREAM Stream;
+    PCU_STREAM FirstStream;
+    PCU_STREAM LastStream;
     PCU_KERNEL_STREAMS Streams;
     PCU_KERNEL_CONTEXT Ctx;
 
@@ -1354,11 +1528,11 @@ GraphCuCreateKernelContext(
 
     Ctx = Graph->CuKernelContext;
     Streams = &Ctx->Streams;
-    CREATE_STREAM(&Streams->Reset);
-    CREATE_STREAM(&Streams->SortVertices1);
-    CREATE_STREAM(&Streams->SortVertices2);
-    CREATE_STREAM(&Streams->SortVertexPairs);
-    CREATE_STREAM(&Streams->Solve);
+    FirstStream = &Streams->FirstStream;
+    LastStream = &Streams->LastStream;
+    for (Stream = FirstStream; Stream <= LastStream; Stream++) {
+        CREATE_STREAM(Stream);
+    }
 
     //
     // Initialize our random state.

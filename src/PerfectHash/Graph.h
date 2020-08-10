@@ -1107,6 +1107,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     HRESULT CuHashKeysResult;
+    HRESULT CuIsAcyclicResult;
 
     //
     // Index of this graph relative to all graphs created for the targeted
@@ -1114,6 +1115,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     LONG CuDeviceIndex;
+
+    ULONG Padding9;
 
     //
     // Clock related fields.
@@ -1196,6 +1199,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     _Writable_elements_(NumberOfKeys)
     PVERTEX_PAIR VertexPairs;
+
+    _Writable_elements_(NumberOfKeys)
+    PVERTEX_PAIR SortedVertexPairs;
 
     _Writable_elements_(NumberOfKeys)
     PULONG VertexPairsIndex;

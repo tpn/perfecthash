@@ -461,6 +461,7 @@ Return Value:
     ALLOC_SIZED_DEVICE_ARRAY(Vertices1Index, sizeof(ULONG));
     ALLOC_SIZED_DEVICE_ARRAY(Vertices2Index, sizeof(ULONG));
     ALLOC_SIZED_DEVICE_ARRAY(VertexPairsIndex, sizeof(ULONG));
+    ALLOC_SIZED_DEVICE_ARRAY(SortedVertexPairs, sizeof(VERTEX_PAIR));
 
     //
     // Set the bitmap sizes and then allocate the bitmap buffers (which all

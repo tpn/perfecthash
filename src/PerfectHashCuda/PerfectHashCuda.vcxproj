@@ -80,66 +80,34 @@
       <AdditionalDependencies>%(AdditionalCudaDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>PerfectHashCuda.def</ModuleDefinitionFile>
     </Link>
-    <CudaCompile>
-      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+   <CudaCompile>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
     <CudaCompile>
-      <NvccCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ptx</NvccCompilation>
+      <NvccCompilation>ptx</NvccCompilation>
     </CudaCompile>
     <CudaCompile>
-      <CudaRuntime Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Shared</CudaRuntime>
+      <CudaRuntime>Shared</CudaRuntime>
     </CudaCompile>
     <CudaCompile>
-      <TargetMachinePlatform Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">64</TargetMachinePlatform>
-      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compute_35,sm_35</CodeGeneration>
-      <Include Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../include</Include>
-      <Keep Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</Keep>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_35,sm_35</CodeGeneration>
+      <Include>../../include</Include>
+      <Keep>true</Keep>
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</InterleaveSourceInPTX>
-      <PtxAsOptionV Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</PtxAsOptionV>
-      <AdditionalCompilerOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </AdditionalCompilerOptions>
+      <PtxAsOptionV>true</PtxAsOptionV>
     </CudaCompile>
   </ItemDefinitionGroup>
-  <!--
-  <ItemGroup>
-    <None Include="PerfectHashCuda.def" />
-    <None Include="PerfectHashCudaEvents.man" />
-  </ItemGroup>
-  -->
-  <!--
-  <ItemGroup>
-    <ClInclude Include="..\..\include\CompiledPerfectHashCuda.h" />
-    <ClInclude Include="..\..\include\PerfectHashCuda.h" />
-    <ClInclude Include="..\..\include\PerfectHashCudaErrors.h" />
-    <ClInclude Include="..\..\include\PerfectHashCudaEvents.h" />
-  </ItemGroup>
-  -->
   <ItemGroup>
     <CudaCompile Include="Graph.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Random.cpp" />
   </ItemGroup>
-  <!--
-  <ItemGroup Condition="'$(Platform)' == 'x64'">
-    <MASM Include="PerfectHashCudaTableFastIndexEx_x64_01.asm" />
-    <MASM Include="RtlCopyPages_x64.asm" />
-    <MASM Include="RtlFillPages_x64.asm" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="PerfectHashCuda.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="PerfectHashCuda.natvis" />
-  </ItemGroup>
-  -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 10.2.targets" />
   </ImportGroup>
-  <!--
-  <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
-  </ImportGroup>
-  -->
 </Project>
