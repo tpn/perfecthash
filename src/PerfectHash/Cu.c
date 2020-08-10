@@ -206,8 +206,17 @@ Return Value:
     ASSERT(CuRandDll[CuRandDllVersionOffset] == 'N');
     ASSERT(CuRandDll[CuRandDllVersionOffset+1] == 'M');
 
+    //
+    // Temp hack: we only support curand64_10.dll for now.
+    //
+
+#if 0
     CuRandDll[CuRandDllVersionOffset]   = Cu->DriverSuffix[0];
     CuRandDll[CuRandDllVersionOffset+1] = Cu->DriverSuffix[1];
+#else
+    CuRandDll[CuRandDllVersionOffset]   = '1';
+    CuRandDll[CuRandDllVersionOffset+1] = '0';
+#endif
 
     Module = LoadLibraryA((PCSZ)CuRandDll);
     if (!IsValidHandle(Module)) {
