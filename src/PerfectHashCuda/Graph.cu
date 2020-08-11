@@ -872,11 +872,10 @@ Return Value:
     PCU_KERNEL_CONTEXT Ctx;
     curandStatePhilox4_32_10_t *State;
 
-    if (HasUserSeeds(Graph)) { // && Graph->Attempt == 1) {
+    if (HasUserSeeds(Graph)) {
 
         //
-        // The user has supplied seeds, and this is the first attempt, so skip
-        // the curand() calls.
+        // The user has supplied seeds, so skip the curand() calls.
         //
 
         goto End;
@@ -1215,100 +1214,8 @@ Return Value:
     );
 
     //
-    // Launch the kernel.
+    // Launch the hash kernel.
     //
-
-#if 0
-    HashAllMultiplyShiftRKernel<<<
-        BlocksPerGrid,
-        ThreadsPerBlock,
-        SharedMemoryInBytes,
-        Stream
-    >>>(
-        Keys,
-        NumberOfKeys,
-        Graph->VertexPairs,
-        Graph->VertexMask,
-        Graph->Seeds,
-        &Graph->CuHashKeysResult
-    );
-#endif
-
-#if 0
-    HashAllMultiplyShiftRKernel2<<<
-        BlocksPerGrid,
-        ThreadsPerBlock,
-        SharedMemoryInBytes,
-        Graph->SolveStream
-    >>>(
-        Keys,
-        NumberOfKeys,
-        Graph->Vertices1,
-        Graph->Vertices2,
-        Graph->VerticesIndex,
-        Graph->VertexMask,
-        Graph->Seeds,
-        &Graph->CuHashKeysResult
-    );
-
-    CuResult = cudaDeviceSynchronize();
-    CU_CHECK(CuResult, cudaDeviceSynchronize);
-
-    Result = GraphCuSortVertices(Graph);
-    if (FAILED(Result)) {
-        goto End;
-    }
-#endif
-
-#if 0
-
-    HashAllMultiplyShiftRKernel3<<<
-        BlocksPerGrid,
-        ThreadsPerBlock,
-        SharedMemoryInBytes,
-        Streams->Solve
-    >>>(
-        Keys,
-        NumberOfKeys,
-        Graph->Vertices1,
-        Graph->Vertices2,
-        Graph->VertexPairs,
-        Graph->Vertices1Index,
-        Graph->Vertices2Index,
-        Graph->VertexPairsIndex,
-        Graph->VertexMask,
-        Graph->Seeds,
-        &Graph->CuHashKeysResult
-    );
-
-    CuResult = cudaDeviceSynchronize();
-    CU_CHECK(CuResult, cudaDeviceSynchronize);
-
-    Result = Graph->CuHashKeysResult;
-    if (FAILED(Result)) {
-        if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
-            printf("Collided!\n");
-            Graph->CuVertexCollisionFailures++;
-            goto Failed;
-        }
-        PH_ERROR(GraphCuSolve_AddKeys, Result);
-        Result = PH_S_STOP_GRAPH_SOLVING;
-        goto End;
-    }
-
-    printf("No collision.\n");
-    Graph->CuNoVertexCollisionFailures++;
-
-    GraphCuSortVertices1Kernel<<<1, 1, 0, Streams->SortVertices1>>>(Graph);
-    GraphCuSortVertices2Kernel<<<1, 1, 0, Streams->SortVertices2>>>(Graph);
-    GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(Graph);
-
-    CuResult = cudaDeviceSynchronize();
-    CU_CHECK(CuResult, cudaDeviceSynchronize);
-
-    printf("Sorted kernels!\n");
-
-#else
 
     Graph->CuHashKeysResult = S_OK;
     Graph->CuIsAcyclicResult = S_OK;
@@ -1341,7 +1248,7 @@ Return Value:
     Result = Graph->CuHashKeysResult;
     if (FAILED(Result)) {
         if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
-            printf("Collided!\n");
+            //printf("Collided!\n");
             Graph->CuVertexCollisionFailures++;
             goto Failed;
         }
@@ -1350,23 +1257,51 @@ Return Value:
         goto End;
     }
 
-    printf("No collision.\n");
     Graph->CuNoVertexCollisionFailures++;
 
-    //GraphCuSortVertices1Kernel<<<1, 1, 0, Streams->SortVertices1>>>(Graph);
-    //GraphCuSortVertices2Kernel<<<1, 1, 0, Streams->SortVertices2>>>(Graph);
+    //
+    // When we've got more than 225,000 keys, launching the acyclic *and* the
+    // sort kernel at the same time yields a memory allocation error in the sort
+    // kernel.  In this case, just issue a device sync between the kernel calls.
+    //
 
-    GraphCuIsAcyclicKernel<<<1, 1, 0, Streams->IsAcyclic>>>(
-        NumberOfKeys,
-        thrust::device_ptr<VERTEX_PAIR>(Graph->VertexPairs),
-        &Graph->CuIsAcyclicResult
-    );
+    if (NumberOfKeys > 225000) {
 
-    GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
-        NumberOfKeys,
-        thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
-        thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
-    );
+        GraphCuIsAcyclicKernel<<<1, 1, 0, Streams->IsAcyclic>>>(
+            NumberOfKeys,
+            thrust::device_ptr<VERTEX_PAIR>(Graph->VertexPairs),
+            &Graph->CuIsAcyclicResult
+        );
+
+        CuResult = cudaDeviceSynchronize();
+        CU_CHECK(CuResult, cudaDeviceSynchronize);
+
+        GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
+            NumberOfKeys,
+            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
+            thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
+        );
+
+
+    } else {
+
+        //
+        // We can launch both kernels and let them execute concurrently.
+        //
+
+        GraphCuIsAcyclicKernel<<<1, 1, 0, Streams->IsAcyclic>>>(
+            NumberOfKeys,
+            thrust::device_ptr<VERTEX_PAIR>(Graph->VertexPairs),
+            &Graph->CuIsAcyclicResult
+        );
+
+        GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
+            NumberOfKeys,
+            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
+            thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
+        );
+
+    }
 
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
@@ -1382,36 +1317,6 @@ Return Value:
         goto End;
     }
 
-    printf("Graph is acyclic!\n");
-
-#endif
-
-#if 0
-    //MAYBE_STOP_GRAPH_SOLVING(Graph);
-
-    GraphCuAddEdgesKernel<<<BlocksPerGrid, ThreadsPerBlock, 0, Stream>>>(
-        Graph->NumberOfEdges,
-        Graph->NumberOfKeys,
-        Graph->VertexPairs,
-        Graph->Edges,
-        Graph->Next,
-        Graph->First
-    );
-
-    CuResult = cudaDeviceSynchronize();
-    CU_CHECK(CuResult, cudaDeviceSynchronize);
-    if (!GraphCuIsAcyclic(Graph)) {
-
-        //
-        // Failed to create an acyclic graph.
-        //
-
-        Graph->CuCyclicGraphFailures++;
-        goto Failed;
-    }
-
-#endif
-
     //
     // We created an acyclic graph.
     //
@@ -1425,17 +1330,16 @@ Return Value:
     GraphCuAssign(Graph);
 
     //
-    // If we're in "first graph wins" mode and we reach this point, we're the
-    // winning thread, so, push the graph onto the finished list head, then
-    // submit the relevant finished threadpool work item and return stop graph
-    // solving.
+    // If we're in "first graph wins" mode and we reach this point, optionally
+    // calculate coverage and then finish up.
     //
 
     if (FirstSolvedGraphWins(Graph)) {
         if (WantsAssignedMemoryCoverage(Graph)) {
             GraphCuCalculateAssignedMemoryCoverage(Graph);
         }
-        return PH_S_STOP_GRAPH_SOLVING;
+        Result = PH_S_STOP_GRAPH_SOLVING;
+        goto End;
     }
 
     //
