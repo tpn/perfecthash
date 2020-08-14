@@ -343,6 +343,7 @@ Return Value:
             // Assign an initial value, then walk the subgraph.
             //
 
+            ASSERT(Graph->Assigned[Vertex] == INITIAL_ASSIGNMENT_VALUE);
             Graph->Assigned[Vertex] = INITIAL_ASSIGNMENT_VALUE;
             GraphTraverseRecursive(Graph, Vertex);
         }
@@ -733,6 +734,7 @@ Return Value:
 
     if (Vertex == Iterator->Vertex) {
 
+        ASSERT(Edge < Graph->NumberOfEdges);
         Neighbor = Graph->Edges[Edge + Graph->NumberOfEdges];
 
     } else {
