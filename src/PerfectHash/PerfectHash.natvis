@@ -97,6 +97,21 @@
         </Expand>
     </Type>
 
+    <Type Name="_GRAPH">
+        <Expand>
+            <Item Name="&lt;Number of Vertex Pairs&gt;">NumberOfKeys</Item>
+            <Synthetic Name="&lt;VertexPairs&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfKeys</Size>
+                        <ValuePointer Condition="NumberOfKeys &gt; 0 &amp;&amp; VertexPairs != nullptr">VertexPairs</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
+
     <Type Name="_PH_CU_DEVICES">
         <Expand>
             <Item Name="&lt;Number of Devices&gt;">NumberOfDevices</Item>
