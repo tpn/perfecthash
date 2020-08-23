@@ -3,6 +3,15 @@
 #===============================================================================
 import sys
 
+from .util import (
+    round_up_power_of_2,
+    round_up_next_power_of_2,
+)
+
+from perfecthash._graph import (
+    hash_all,
+)
+
 #===============================================================================
 # Globals
 #===============================================================================
@@ -51,16 +60,20 @@ class GraphIterator:
 class Graph:
     __slots__ = [
         'out',
+        'keys',
         'next',
         'first',
         'edges',
         'pairs',
+        'hashed',
         'visited',
         'assigned',
         'num_keys',
         'num_edges',
         'edge_mask',
         'hash_mask',
+        'vertices1',
+        'vertices2',
         'collisions',
         'index_mask',
         'vertex_mask',
@@ -70,13 +83,17 @@ class Graph:
         'total_traversals',
         'max_traversal_depth',
     ]
-    def __init__(self, num_keys, num_edges, num_vertices, out=None):
+    def __init__(self, keys, out=None):
         import numpy as np
         self.out = out
         if not self.out:
             self.out = lambda s: sys.stdout.write(f'{s}\n')
+        self.num_keys = num_keys = len(keys)
+        num_edges = round_up_power_of_2(num_keys)
+        num_vertices = round_up_next_power_of_2(num_edges)
         total_edges = num_edges * 2
-        self.num_keys = num_keys
+        self.keys = keys
+        self.hashed = False
         self.num_edges = num_edges
         self.num_vertices = num_vertices
         self.first = np.full(num_vertices, -1, dtype=np.int32)
@@ -84,14 +101,37 @@ class Graph:
         self.next = np.full(total_edges, -1, dtype=np.int32)
         self.pairs = np.zeros(num_keys * 2, dtype=np.uint32)
         self.assigned = np.zeros(num_vertices, dtype=np.uint32)
-        self.edge_mask = self.hash_mask = num_edges - 1
-        self.vertex_mask = self.index_mask = num_vertices - 1
+        self.vertices1 = np.zeros(num_keys, dtype=np.uint32)
+        self.vertices2 = np.zeros(num_keys, dtype=np.uint32)
+        self.edge_mask = num_edges - 1
+        self.index_mask = num_edges - 1
+        self.hash_mask = num_vertices - 1
+        self.vertex_mask = num_vertices - 1
         self.visited = set()
         self.collisions = 0
         self.index_bitmap = set()
         self.traversal_depth = 0
         self.total_traversals = 0
         self.max_traversal_depth = 0
+
+    def hash(self, seed1, seed2, seed3_byte1, seed3_byte2):
+        hash_all(
+            self.num_keys,
+            self.num_edges,
+            self.hash_mask,
+            seed1,
+            seed2,
+            seed3_byte1,
+            seed3_byte2,
+            self.keys,
+            self.vertices1,
+            self.vertices2,
+            self.first,
+            self.next,
+            self.edges,
+            self.pairs
+        )
+        self.hashed = True
 
     def edge_id(self, vertex1, vertex2):
         edge = self.first[vertex1]
@@ -190,6 +230,14 @@ class Graph:
                 self.index_bitmap.add(bit)
 
             out(f'{indent}{i} -> {f}: [{count}/{depth}] '
+                f'edge_id: {edge_id}, '
+                f'masked_edge_id: {masked_edge_id}, '
+                f'existing_id = {original_existing_id}, '
+                f'this_id = {this_id}, '
+                f'final_id = {final_id}, '
+                f'masked_final_id/bit = {masked_final_id}')
+
+            out(f'{indent}{i} -> {f}: [{count}/{depth}] '
                 f'assigning neighbor {neighbor} id: {masked_this_id}')
             self.assigned[neighbor] = masked_this_id
 
@@ -200,6 +248,7 @@ class Graph:
         self.traversal_depth -= 1
 
     def assign(self):
+        assert self.hashed
         out = self.out
         for i in range(self.num_vertices):
             f = self.first[i]
