@@ -71,6 +71,21 @@ cpdef hash_v1(ULONG key,
     vertex2 = (((key * seed2) >> seed3_byte2) & hash_mask)
     return vertex1
 
+cpdef hash_key(
+    ULONG key,
+    ULONG hash_mask,
+    ULONG seed1,
+    ULONG seed2,
+    ULONG seed3_byte1,
+    ULONG seed3_byte2
+):
+    cdef ULONG vertex1
+    cdef ULONG vertex2
+    vertex1 = (((key * seed1) >> seed3_byte1) & hash_mask)
+    vertex2 = (((key * seed2) >> seed3_byte2) & hash_mask)
+    return (vertex1, vertex2)
+
+
 cpdef hash_v1_parts(ULONG key,
               ULONG hash_mask,
               ULONG seed1,

@@ -10,6 +10,7 @@ from .util import (
 
 from perfecthash._graph import (
     hash_all,
+    hash_key,
 )
 
 #===============================================================================
@@ -63,6 +64,8 @@ class Graph:
         'keys',
         'next',
         'first',
+        'seed1',
+        'seed2',
         'edges',
         'pairs',
         'hashed',
@@ -76,6 +79,8 @@ class Graph:
         'vertices2',
         'collisions',
         'index_mask',
+        'seed3_byte1',
+        'seed3_byte2',
         'vertex_mask',
         'index_bitmap',
         'num_vertices',
@@ -132,6 +137,20 @@ class Graph:
             self.pairs
         )
         self.hashed = True
+        self.seed1 = seed1
+        self.seed2 = seed2
+        self.seed3_byte1 = seed3_byte1
+        self.seed3_byte2 = seed3_byte2
+
+    def hash_key(self, key):
+        return hash_key(
+            key,
+            self.hash_mask,
+            self.seed1,
+            self.seed2,
+            self.seed3_byte1,
+            self.seed3_byte2,
+        )
 
     def edge_id(self, vertex1, vertex2):
         edge = self.first[vertex1]
