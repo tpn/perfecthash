@@ -4050,7 +4050,6 @@ Return Value:
         FreeLibrary(Module);
         return E_UNEXPECTED;
     }
-
     PerfectHashPrintError = (PPERFECT_HASH_PRINT_ERROR)Proc;
 
     Proc = GetProcAddress(Module, "PerfectHashPrintMessage");
@@ -4058,7 +4057,6 @@ Return Value:
         FreeLibrary(Module);
         return E_UNEXPECTED;
     }
-
     PerfectHashPrintMessage = (PPERFECT_HASH_PRINT_MESSAGE)Proc;
 
     Proc = GetProcAddress(Module, "PerfectHashDllGetClassObject");
@@ -4067,7 +4065,6 @@ Return Value:
         FreeLibrary(Module);
         return E_UNEXPECTED;
     }
-
     PhDllGetClassObject = (PDLL_GET_CLASS_OBJECT)Proc;
 
     Result = PhDllGetClassObject(&CLSID_PERFECT_HASH,
@@ -4075,7 +4072,6 @@ Return Value:
                                  &ClassFactory);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashDllGetClassObject, Result);
         FreeLibrary(Module);
         return Result;
     }

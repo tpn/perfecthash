@@ -308,6 +308,11 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    ULONG FunctionVersion;
+    LONGLONG Cycles;
+    LONGLONG Microseconds;
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     VERTEX Vertex;
     ULONG NumberOfSetBits;
 
@@ -329,6 +334,8 @@ Return Value:
     //
     // Walk the graph and assign values.
     //
+
+    QueryPerformanceCounter(&Start);
 
     for (Vertex = 0; Vertex < Graph->NumberOfVertices; Vertex++) {
 
@@ -361,6 +368,13 @@ Return Value:
         ASSERT(Graph->VisitedVerticesCount == Graph->NumberOfVertices);
     }
 
+    QueryPerformanceCounter(&End);
+    Graph->AssignElapsedCycles.QuadPart = Cycles = (
+        End.QuadPart - Start.QuadPart
+    );
+    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
+    Graph->AssignElapsedMicroseconds.QuadPart = Microseconds;
+
     EventWriteGraphAssignStop(
         NULL,
         Graph->Attempt,
@@ -369,6 +383,17 @@ Return Value:
         Graph->NumberOfEmptyVertices,
         Graph->MaximumTraversalDepth,
         Graph->TotalTraversals
+    );
+
+    FunctionVersion = 1;
+    EventWriteGraphAssignResult(
+        NULL,
+        Graph->Attempt,
+        FunctionVersion,
+        Cycles,
+        Microseconds,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices
     );
 
     return;
@@ -420,6 +445,7 @@ Return Value:
     ULONG Assigned2;
     ULONG HashMask;
     ULONG IndexMask;
+    ULONG FunctionVersion;
     VERTEX Vertex1;
     VERTEX Vertex2;
     VERTEX_PAIR Hash;
@@ -429,6 +455,10 @@ Return Value:
     PALLOCATOR Allocator;
     RTL_BITMAP Visited;
     PGRAPH_INFO Info;
+    LONGLONG Cycles;
+    LONGLONG Microseconds;
+    LARGE_INTEGER Start;
+    LARGE_INTEGER End;
     ASSIGNED_ARRAY AssignedArray1;
     ASSIGNED_ARRAY AssignedArray2;
     PPERFECT_HASH_TABLE Table;
@@ -475,13 +505,6 @@ Return Value:
         PH_RAISE(E_OUTOFMEMORY);
     }
 
-    EventWriteGraphAssignStart(
-        NULL,
-        Graph->Attempt,
-        Graph->NumberOfKeys,
-        Graph->NumberOfVertices
-    );
-
 #define IsVisited(Vertex) \
     BitTest64((PLONGLONG)Visited.Buffer, (LONGLONG)Vertex)
 
@@ -492,6 +515,9 @@ Return Value:
     // Walk the graph and assign values.
     //
 
+    QueryPerformanceCounter(&Start);
+
+#if 0
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
         Order = Graph->Order[Index];
@@ -536,7 +562,75 @@ Return Value:
         RegisterVisit(Vertex1);
         RegisterVisit(Vertex2);
     }
+#else
 
+#ifndef _DEBUG
+    Key = 0;
+    Hash.AsULongLong = 0;
+#endif
+
+    for (Index = 0; Index < NumberOfKeys; Index++) {
+
+        Order = Graph->Order[Index];
+        Edge1 = Order;
+        Edge2 = Order + Graph->NumberOfEdges;
+
+        Vertex1 = Graph->Edges[Edge1];
+        Vertex2 = Graph->Edges[Edge2];
+
+#ifdef _DEBUG
+        Key = Keys[Order];
+        Hash.AsULongLong = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+        ASSERT(Hash.Vertex1 == Vertex1 || Hash.Vertex2 == Vertex1);
+        ASSERT(Hash.Vertex2 == Vertex2 || Hash.Vertex1 == Vertex2);
+#endif
+
+        Assigned1 = Assigned[Vertex1];
+        Assigned2 = Assigned[Vertex2];
+
+        IsVisited1 = IsVisited(Vertex1);
+        IsVisited2 = IsVisited(Vertex2);
+
+        if (!IsVisited(Vertex1)) {
+            Assigned1 = (((NumberOfEdges + Order) - Assigned2) & IndexMask);
+            Assigned[Vertex1] = Assigned1;
+            //RegisterVisit(Vertex1);
+        } else {
+            Assigned2 = (((NumberOfEdges + Order) - Assigned1) & IndexMask);
+            Assigned[Vertex2] = Assigned2;
+            //RegisterVisit(Vertex2);
+        }
+
+        Index2 = Assigned1 + Assigned2;
+        Index2 &= IndexMask;
+
+        ASSERT(Index2 == Order);
+
+        RegisterVisit(Vertex1);
+        RegisterVisit(Vertex2);
+    }
+
+#endif
+
+    QueryPerformanceCounter(&End);
+    Graph->Assign2ElapsedCycles.QuadPart = Cycles = (
+        End.QuadPart - Start.QuadPart
+    );
+    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
+    Graph->Assign2ElapsedMicroseconds.QuadPart = Microseconds;
+
+    FunctionVersion = 2;
+    EventWriteGraphAssignResult(
+        NULL,
+        Graph->Attempt,
+        FunctionVersion,
+        Cycles,
+        Microseconds,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices
+    );
+
+#ifdef _DEBUG
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
         Order = Graph->Order[Index];
@@ -557,7 +651,7 @@ Return Value:
         IsVisited1 = IsVisited(Vertex1);
         IsVisited2 = IsVisited(Vertex2);
 
-        ASSERT(IsVisited1 && IsVisited2);
+        //ASSERT(IsVisited1 && IsVisited2);
 
         Index2 = Assigned1 + Assigned2;
         ASSERT(Index == Index2);
@@ -565,6 +659,7 @@ Return Value:
         //RegisterVisit(Vertex1);
         //RegisterVisit(Vertex2);
     }
+#endif
 
     EventWriteGraphAssignStop(
         NULL,

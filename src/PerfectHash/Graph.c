@@ -3348,6 +3348,14 @@ Return Value:
     Graph->AddKeysElapsedCycles.QuadPart = 0;
     Graph->HashKeysElapsedCycles.QuadPart = 0;
     Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
+    Graph->AssignElapsedCycles.QuadPart = 0;
+    Graph->Assign2ElapsedCycles.QuadPart = 0;
+
+    Graph->AddKeysElapsedMicroseconds.QuadPart = 0;
+    Graph->HashKeysElapsedMicroseconds.QuadPart = 0;
+    Graph->AddHashedKeysElapsedMicroseconds.QuadPart = 0;
+    Graph->AssignElapsedMicroseconds.QuadPart = 0;
+    Graph->Assign2ElapsedMicroseconds.QuadPart = 0;
 
     //
     // Avoid the overhead of resetting the memory coverage if we're in "first

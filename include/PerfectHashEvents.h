@@ -547,7 +547,7 @@ Remarks:
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Provider "PerfectHash" event count 10
+// Provider "PerfectHash" event count 11
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // Provider GUID = d0b3028e-70a7-410f-af7e-4d495b4a3c8b
@@ -607,6 +607,8 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStar
 #define RtlGenerateRandomBytesStart_value 0x8
 EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR RtlGenerateRandomBytesStop = {0x9, 0x0, 0x10, 0x4, 0x2, 0x8, 0x8000000000000020};
 #define RtlGenerateRandomBytesStop_value 0x9
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignResult = {0xa, 0x0, 0x10, 0x4, 0x0, 0x7, 0x8000000000000010};
+#define GraphAssignResult_value 0xa
 
 //
 // MCGEN_DISABLE_PROVIDER_CODE_GENERATION macro:
@@ -811,6 +813,20 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
 #define EventWriteRtlGenerateRandomBytesStop_AssumeEnabled(BytesRequested, Result) \
         McTemplateK0qq(&PerfectHashEvents_Context, &RtlGenerateRandomBytesStop, NULL, BytesRequested, Result)
 
+//
+// Enablement check macro for GraphAssignResult
+//
+#define EventEnabledGraphAssignResult() MCGEN_EVENT_BIT_SET(PerfectHashEnableBits, 4)
+
+//
+// Event write macros for GraphAssignResult
+//
+#define EventWriteGraphAssignResult(Activity, Attempt, FunctionVersion, Cycles, Microseconds, NumberOfKeys, NumberOfVertices) \
+        MCGEN_EVENT_ENABLED(GraphAssignResult) \
+        ? McTemplateK0iqiiqq(&PerfectHashEvents_Context, &GraphAssignResult, Activity, Attempt, FunctionVersion, Cycles, Microseconds, NumberOfKeys, NumberOfVertices) : 0
+#define EventWriteGraphAssignResult_AssumeEnabled(Attempt, FunctionVersion, Cycles, Microseconds, NumberOfKeys, NumberOfVertices) \
+        McTemplateK0iqiiqq(&PerfectHashEvents_Context, &GraphAssignResult, NULL, Attempt, FunctionVersion, Cycles, Microseconds, NumberOfKeys, NumberOfVertices)
+
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //
@@ -823,6 +839,45 @@ EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {
 //
 // Template Functions
 //
+//
+//Template from manifest : GraphAssignResultTemplate
+//
+#ifndef McTemplateK0iqiiqq_def
+#define McTemplateK0iqiiqq_def
+ETW_INLINE
+ULONG
+McTemplateK0iqiiqq(
+    _In_ PMCGEN_TRACE_CONTEXT Context,
+    _In_ PCEVENT_DESCRIPTOR Descriptor,
+    _In_opt_ const GUID* Activity,
+    _In_ const signed __int64  _Arg0,
+    _In_ const unsigned int  _Arg1,
+    _In_ const signed __int64  _Arg2,
+    _In_ const signed __int64  _Arg3,
+    _In_ const unsigned int  _Arg4,
+    _In_ const unsigned int  _Arg5
+    )
+{
+#define McTemplateK0iqiiqq_ARGCOUNT 6
+
+    EVENT_DATA_DESCRIPTOR EventData[McTemplateK0iqiiqq_ARGCOUNT + 1];
+
+    EventDataDescCreate(&EventData[1],&_Arg0, sizeof(const signed __int64)  );
+
+    EventDataDescCreate(&EventData[2],&_Arg1, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[3],&_Arg2, sizeof(const signed __int64)  );
+
+    EventDataDescCreate(&EventData[4],&_Arg3, sizeof(const signed __int64)  );
+
+    EventDataDescCreate(&EventData[5],&_Arg4, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[6],&_Arg5, sizeof(const unsigned int)  );
+
+    return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0iqiiqq_ARGCOUNT + 1, EventData);
+}
+#endif // McTemplateK0iqiiqq_def
+
 //
 //Template from manifest : GraphAssignStartTemplate
 //
@@ -1234,6 +1289,7 @@ McTemplateK0qqqqiiqqqqqqqq(
 #define MSG_PerfectHash_event_7_message      0xB0000007L
 #define MSG_PerfectHash_event_8_message      0xB0000008L
 #define MSG_PerfectHash_event_9_message      0xB0000009L
+#define MSG_PerfectHash_event_10_message     0xB000000AL
 #define MSG_PerfectHash_event_0_message      0xB0010000L
 #define MSG_PerfectHash_event_1_message      0xB0010001L
 #define MSG_PerfectHash_event_2_message      0xB0010002L

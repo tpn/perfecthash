@@ -1307,6 +1307,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     LARGE_INTEGER AddHashedKeysElapsedCycles;
 
     //
+    // Elapsed cycles of the GraphAssign() routine.
+    //
+
+    LARGE_INTEGER AssignElapsedCycles;
+
+    //
+    // Elapsed cycles of the GraphAssign2() routine.
+    //
+
+    LARGE_INTEGER Assign2ElapsedCycles;
+
+    //
     // Elapsed microseconds of the GraphAddKeys() routine.
     //
 
@@ -1323,6 +1335,18 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     LARGE_INTEGER AddHashedKeysElapsedMicroseconds;
+
+    //
+    // Elapsed microseconds of the GraphAssign() routine.
+    //
+
+    LARGE_INTEGER AssignElapsedMicroseconds;
+
+    //
+    // Elapsed microseconds of the GraphAssign2() routine.
+    //
+
+    LARGE_INTEGER Assign2ElapsedMicroseconds;
 
     //
     // The current recursive traversal depth during assignment.
