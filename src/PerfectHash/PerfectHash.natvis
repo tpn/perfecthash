@@ -97,6 +97,20 @@
         </Expand>
     </Type>
 
+    <Type Name="_ASSIGNED_ARRAY">
+        <Expand>
+            <Item Name="&lt;Number of Elements&gt;">NumberOfElements</Item>
+            <Synthetic Name="&lt;Elements&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfElements</Size>
+                        <ValuePointer Condition="NumberOfElements &gt; 0 &amp;&amp; Assigned != nullptr">Assigned</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
     <Type Name="_GRAPH">
         <Expand>
             <Item Name="&lt;Number of Keys&gt;">NumberOfKeys</Item>
@@ -148,6 +162,14 @@
                     <ArrayItems>
                         <Size>TotalNumberOfEdges</Size>
                         <ValuePointer Condition="TotalNumberOfEdges &gt; 0 &amp;&amp; Next != nullptr">Next</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;Order&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfEdges</Size>
+                        <ValuePointer Condition="NumberOfEdges &gt; 0 &amp;&amp; Order != nullptr">Order</ValuePointer>
                     </ArrayItems>
                 </Expand>
             </Synthetic>

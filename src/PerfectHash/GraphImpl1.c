@@ -191,6 +191,8 @@ Return Value:
         GraphCyclicDeleteEdge(Graph, Vertex);
     }
 
+    ASSERT(Graph->OrderIndex == 0);
+
     if (!IsGraphParanoid(Graph)) {
 
         NumberOfEdgesDeleted = Graph->DeletedEdgeCount;
@@ -340,11 +342,13 @@ Return Value:
         if (!IsVisitedVertex(Graph, Vertex)) {
 
             //
-            // Assign an initial value, then walk the subgraph.
+            // This is a "root" vertex that we'll perform a depth-first search
+            // on as part of assignment.  Initialize the assigned value for this
+            // vertex (this is required as we don't zero this array as part of
+            // GraphReset()), then traverse the graph at this vertex.
             //
 
             ASSERT(Graph->Assigned[Vertex] == INITIAL_ASSIGNMENT_VALUE);
-            Graph->Assigned[Vertex] = INITIAL_ASSIGNMENT_VALUE;
             GraphTraverseRecursive(Graph, Vertex);
         }
     }
@@ -366,6 +370,214 @@ Return Value:
         Graph->MaximumTraversalDepth,
         Graph->TotalTraversals
     );
+
+    return;
+}
+
+typedef struct _ASSIGNED_ARRAY {
+    ULONG NumberOfElements;
+    ULONG Padding;
+    PASSIGNED Assigned;
+} ASSIGNED_ARRAY;
+typedef ASSIGNED_ARRAY *PASSIGNED_ARRAY;
+
+GRAPH_ASSIGN GraphAssign2;
+
+_Use_decl_annotations_
+VOID
+GraphAssign2(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine is called after a graph has determined to be acyclic.  It is
+    responsible for walking the graph and assigning values to edges in order to
+    complete the perfect hash solution.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph to operate on.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    KEY Key;
+    BOOL IsVisited1;
+    BOOL IsVisited2;
+    PKEY Keys;
+    EDGE Edge1;
+    EDGE Edge2;
+    PEDGE Edges;
+    ULONG Index;
+    ULONG Index2;
+    ULONG Order;
+    ULONG Assigned1;
+    ULONG Assigned2;
+    ULONG HashMask;
+    ULONG IndexMask;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    VERTEX_PAIR Hash;
+    ULONG NumberOfKeys;
+    ULONG NumberOfEdges;
+    PASSIGNED Assigned;
+    PALLOCATOR Allocator;
+    RTL_BITMAP Visited;
+    PGRAPH_INFO Info;
+    ASSIGNED_ARRAY AssignedArray1;
+    ASSIGNED_ARRAY AssignedArray2;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    Table = Graph->Context->Table;
+    Allocator = Table->Allocator;
+    HashMask = Table->HashMask;
+    IndexMask = Table->IndexMask;
+    Info = Graph->Info;
+    Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
+    Edges = (PEDGE)Keys;
+    NumberOfKeys = Graph->NumberOfKeys;
+    NumberOfEdges = Graph->NumberOfEdges;
+    SeededHashEx = SeededHashExRoutines[Table->HashFunctionId];
+    Visited.SizeOfBitMap = Graph->NumberOfVertices;
+
+    ASSERT(Graph->Flags.IsAcyclic);
+
+    Assigned = Allocator->Vtbl->AlignedCalloc(
+        Allocator,
+        1,
+        (ULONG_PTR)Info->AssignedSizeInBytes,
+        YMMWORD_ALIGNMENT
+    );
+
+    if (!Assigned) {
+        PH_RAISE(E_OUTOFMEMORY);
+    }
+
+    AssignedArray1.NumberOfElements = Graph->NumberOfVertices;
+    AssignedArray1.Assigned = Graph->Assigned;
+
+    AssignedArray2.NumberOfElements = Graph->NumberOfVertices;
+    AssignedArray2.Assigned = Assigned;
+
+    Visited.Buffer = Allocator->Vtbl->Calloc(
+        Allocator,
+        1,
+        (ULONG_PTR)Info->VisitedVerticesBitmapBufferSizeInBytes
+    );
+
+    if (!Visited.Buffer) {
+        PH_RAISE(E_OUTOFMEMORY);
+    }
+
+    EventWriteGraphAssignStart(
+        NULL,
+        Graph->Attempt,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices
+    );
+
+#define IsVisited(Vertex) \
+    BitTest64((PLONGLONG)Visited.Buffer, (LONGLONG)Vertex)
+
+#define RegisterVisit(Vertex) \
+    BitTestAndSet64((PLONGLONG)Visited.Buffer, (LONGLONG)Vertex)
+
+    //
+    // Walk the graph and assign values.
+    //
+
+    for (Index = 0; Index < NumberOfKeys; Index++) {
+
+        Order = Graph->Order[Index];
+        //Edge1 = Index;
+        //Edge2 = Index + Graph->NumberOfEdges;
+        Edge1 = Order;
+        Edge2 = Order + Graph->NumberOfEdges;
+        Key = Keys[Order];
+
+        Hash.AsULongLong = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+
+        Vertex1 = Graph->Edges[Edge1];
+        Vertex2 = Graph->Edges[Edge2];
+
+        ASSERT(Hash.Vertex1 == Vertex1 || Hash.Vertex2 == Vertex1);
+        ASSERT(Hash.Vertex2 == Vertex2 || Hash.Vertex1 == Vertex2);
+
+        Assigned1 = Assigned[Vertex1];
+        Assigned2 = Assigned[Vertex2];
+
+        IsVisited1 = IsVisited(Vertex1);
+        IsVisited2 = IsVisited(Vertex2);
+
+        if (!IsVisited(Vertex1)) {
+            Assigned1 = (((NumberOfEdges + Order) - Assigned2) & IndexMask);
+            //Assigned1 = (((NumberOfEdges + Index) - Assigned2) & IndexMask);
+            Assigned[Vertex1] = Assigned1;
+            //RegisterVisit(Vertex1);
+        } else {
+            //ASSERT(!IsVisited(Vertex2));
+            Assigned2 = (((NumberOfEdges + Order) - Assigned1) & IndexMask);
+            //Assigned2 = (((NumberOfEdges + Index) - Assigned1) & IndexMask);
+            Assigned[Vertex2] = Assigned2;
+            //RegisterVisit(Vertex2);
+        }
+
+        Index2 = Assigned1 + Assigned2;
+        Index2 &= IndexMask;
+
+        ASSERT(Index2 == Order);
+
+        RegisterVisit(Vertex1);
+        RegisterVisit(Vertex2);
+    }
+
+    for (Index = 0; Index < NumberOfKeys; Index++) {
+
+        Order = Graph->Order[Index];
+        Edge1 = Index;
+        Edge2 = Index + Graph->NumberOfEdges;
+        //Edge1 = Order;
+        //Edge2 = Order + Graph->NumberOfEdges;
+        Key = Keys[Index];
+
+        Hash.AsULongLong = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+
+        Vertex1 = Graph->Edges[Edge1];
+        Vertex2 = Graph->Edges[Edge2];
+
+        Assigned1 = Assigned[Vertex1];
+        Assigned2 = Assigned[Vertex2];
+
+        IsVisited1 = IsVisited(Vertex1);
+        IsVisited2 = IsVisited(Vertex2);
+
+        ASSERT(IsVisited1 && IsVisited2);
+
+        Index2 = Assigned1 + Assigned2;
+        ASSERT(Index == Index2);
+
+        //RegisterVisit(Vertex1);
+        //RegisterVisit(Vertex2);
+    }
+
+    EventWriteGraphAssignStop(
+        NULL,
+        Graph->Attempt,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices,
+        Graph->NumberOfEmptyVertices,
+        Graph->MaximumTraversalDepth,
+        Graph->TotalTraversals
+    );
+
+    Allocator->Vtbl->FreePointer(Allocator, &Assigned);
+    Allocator->Vtbl->FreePointer(Allocator, &Visited.Buffer);
 
     return;
 }
@@ -826,6 +1038,7 @@ Return Value:
         do {
 
             Iterations++;
+            ASSERT(Iterations <= 1);
             Edge = Graph->Next[Edge];
             ASSERT(!IsEmpty(Edge));
 

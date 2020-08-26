@@ -643,6 +643,7 @@ typedef struct _GRAPH_INFO {
     ULONGLONG EdgesSizeInBytes;
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
+    ULONGLONG OrderSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
 
@@ -1116,7 +1117,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     LONG CuDeviceIndex;
 
-    ULONG Padding9;
+    //
+    // Current index into the Order array (used during assignment).
+    //
+
+    ULONG OrderIndex;
 
     //
     // Clock related fields.
@@ -1159,6 +1164,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     _Writable_elements_(TotalNumberOfEdges)
     PEDGE Edges;
+
+    //
+    // Deletion order.  (Experimental array inspired by NetBSD's nbperf.)
+    //
+
+    _Writable_elements_(NumberOfKeys)
+    PULONG Order;
 
     //
     // Array of the "next" edge array, as per the referenced papers.
@@ -1221,6 +1233,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     _Writable_elements_(NumberOfKeys)
     PULONG Vertices2Index;
+
+    //
+    // CUDA array for capturing visited vertices during assignment (instead of
+    // the bitmap).
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    PULONG VisitedVertices;
 
     //
     // Opaque context for kernels.

@@ -47,6 +47,7 @@ GRAPH_ADD_KEYS GraphAddKeysOriginalSeededHashRoutines;
 GRAPH_VERIFY GraphVerifyOriginalSeededHashRoutines;
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage_AVX2;
+GRAPH_ASSIGN GraphAssign2;
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -362,6 +363,7 @@ Return Value:
     //
 
     GraphAssign(Graph);
+    GraphAssign2(Graph);
 
     //
     // If we're in "first graph wins" mode and we reach this point, we're the
@@ -2907,9 +2909,10 @@ Return Value:
         goto Error;                                   \
     }
 
-    ALLOC_ARRAY(Edges, PEDGE);
     ALLOC_ARRAY(Next, PEDGE);
+    ALLOC_ARRAY(Edges, PEDGE);
     ALLOC_ARRAY(First, PVERTEX);
+    ALLOC_ARRAY(Order, PULONG);
     ALLOC_ARRAY(Assigned, PASSIGNED);
 
     //
@@ -3255,9 +3258,24 @@ Return Value:
                        Info->##Name##SizeInBytes,    \
                        (BYTE)~0)
 
-    EMPTY_ARRAY(First);
     EMPTY_ARRAY(Next);
+    EMPTY_ARRAY(First);
     EMPTY_ARRAY(Edges);
+
+    //
+    // The Order array gets zeroed versus "emptied" (i.e. set to 0 instead of
+    // -1).
+    //
+
+#define ZERO_ARRAY(Name)                             \
+    ASSERT(0 == Info->##Name##SizeInBytes -          \
+           ((Info->##Name##SizeInBytes >> 3) << 3)); \
+    Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##,    \
+                       Info->##Name##SizeInBytes)
+
+    ZERO_ARRAY(Order);
+
+    Graph->OrderIndex = Graph->NumberOfKeys;
 
     if (TableCreateFlags.HashAllKeysFirst) {
 

@@ -164,9 +164,14 @@ RegisterEdgeDeletion(
     _In_ EDGE Edge
     )
 {
+    ULONG OrderIndex;
+    ASSERT(!TestGraphBit(DeletedEdgesBitmap, Edge));
     SetGraphBit(DeletedEdgesBitmap, Edge);
     Graph->DeletedEdgeCount++;
     ASSERT(Graph->DeletedEdgeCount <= Graph->TotalNumberOfEdges);
+    OrderIndex = --Graph->OrderIndex;
+    ASSERT((LONG)OrderIndex >= 0);
+    Graph->Order[OrderIndex] = Edge;
 }
 
 FORCEINLINE

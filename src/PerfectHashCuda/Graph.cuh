@@ -16,6 +16,16 @@ Abstract:
 
 #define MAX_NUMBER_OF_SEEDS 8
 
+#define IsEmpty(Value) ((ULONG)Value == EMPTY)
+#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
+
+//
+// When a solution has been found and the assignment step begins, the initial
+// value assigned to a vertex is govered by the following macro.
+//
+
+#define INITIAL_ASSIGNMENT_VALUE 0
+
 //
 // Define helper macros for referring to seed constants stored in local
 // variables by their uppercase names.  This allows easy copy-and-pasting of
@@ -46,6 +56,9 @@ Abstract:
 //
 // Helper defines.
 //
+
+#define BREAKPOINT __brkpt
+#define TRAP __trap
 
 #define ASSERT(Condition)                     \
     if (!(Condition)) {                       \
@@ -95,7 +108,6 @@ typedef CU_EVENT *PCU_EVENT;
 #define CREATE_STREAM(Target)                                            \
     CuResult = cudaStreamCreateWithFlags(Target, cudaStreamNonBlocking); \
     CU_CHECK(CuResult, cudaStreamCreateWithFlags)
-
 
 typedef struct _CU_KERNEL_STREAMS {
     union {
