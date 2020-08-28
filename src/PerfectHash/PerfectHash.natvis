@@ -184,6 +184,37 @@
         </Expand>
     </Type>
 
+    <Type Name="_ASSIGNED_MEMORY_COVERAGE">
+        <Expand>
+            <Item Name="&lt;Total Number Of Pages&gt;">TotalNumberOfPages</Item>
+            <Item Name="&lt;Total Number Of Large Pages&gt;">TotalNumberOfLargePages</Item>
+            <Item Name="&lt;Total Number Of Cache Lines&gt;">TotalNumberOfCacheLines</Item>
+            <Synthetic Name="&lt;NumberOfAssignedPerPage&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfPages</Size>
+                        <ValuePointer Condition="TotalNumberOfPages &gt; 0 &amp;&amp; NumberOfAssignedPerPage != nullptr">NumberOfAssignedPerPage</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;NumberOfAssignedPerLargePage&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfLargePages</Size>
+                        <ValuePointer Condition="TotalNumberOfLargePages &gt; 0 &amp;&amp; NumberOfAssignedPerLargePage != nullptr">NumberOfAssignedPerLargePage</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;NumberOfAssignedPerCacheLine&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfCacheLines</Size>
+                        <ValuePointer Condition="TotalNumberOfCacheLines &gt; 0 &amp;&amp; NumberOfAssignedPerCacheLine != nullptr">NumberOfAssignedPerCacheLine</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
 
     <Type Name="_PH_CU_DEVICES">
         <Expand>

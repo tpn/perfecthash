@@ -2996,6 +2996,7 @@ IsValidPerfectHashCuRngId(
 #define TABLE_CREATE_PARAMETER_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(AttemptsBeforeTableResize)                           \
     ENTRY(MaxNumberOfTableResizes)                                   \
+    ENTRY(MaxNumberOfEqualBestGraphs)                                \
     ENTRY(InitialNumberOfTableResizes)                               \
     ENTRY(BestCoverageAttempts)                                      \
     ENTRY(BestCoverageType)                                          \
@@ -3006,6 +3007,7 @@ IsValidPerfectHashCuRngId(
     ENTRY(ValueSizeInBytes)                                          \
     ENTRY(KeySizeInBytes)                                            \
     ENTRY(SolutionsFoundRatio)                                       \
+    ENTRY(GraphImpl)                                                 \
     ENTRY(CuRng)                                                     \
     ENTRY(CuRngSeed)                                                 \
     ENTRY(CuRngSubsequence)                                          \
@@ -3083,7 +3085,7 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(NumberOfEmptyVertices, Highest, >)                     \
     ENTRY(NumberOfEmptyVertices, Lowest, <)                      \
     ENTRY(NumberOfCollisionsDuringAssignment, Highest, >)        \
-    ENTRY(NumberOfCollisionsDuringAssignment, Lowest, >)         \
+    ENTRY(NumberOfCollisionsDuringAssignment, Lowest, <)         \
     ENTRY(MaxAssignedPerCacheLineCount, Highest, >)              \
     ENTRY(MaxAssignedPerCacheLineCountForKeysSubset, Highest, >) \
     ENTRY(MaxAssignedPerCacheLineCount, Lowest, <)               \

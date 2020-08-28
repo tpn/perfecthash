@@ -922,6 +922,8 @@ Return Value:
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(MaxNumberOfTableResizes);
 
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(MaxNumberOfEqualBestGraphs);
+
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(InitialNumberOfTableResizes);
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(BestCoverageAttempts);
@@ -929,6 +931,8 @@ Return Value:
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(KeySizeInBytes);
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(ValueSizeInBytes);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(GraphImpl);
 
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)

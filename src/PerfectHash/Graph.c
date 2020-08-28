@@ -362,8 +362,12 @@ Return Value:
     // Perform the assignment step.
     //
 
-    GraphAssign(Graph);
-    GraphAssign2(Graph);
+    if (Table->GraphImpl == 1) {
+        GraphAssign(Graph);
+    } else {
+        ASSERT(Table->GraphImpl == 2);
+        GraphAssign2(Graph);
+    }
 
     //
     // If we're in "first graph wins" mode and we reach this point, we're the
@@ -481,14 +485,16 @@ Return Value:
     EDGE Edge;
     PEDGE Edges;
     ULONG Mask;
-    LONGLONG Cycles;
-    LONGLONG Microseconds;
-    LARGE_INTEGER Start;
-    LARGE_INTEGER End;
     ULARGE_INTEGER Hash;
     HRESULT Result;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    //
+    // Initialize aliases.
+    //
 
     Table = Graph->Context->Table;
     Mask = Table->HashMask;
@@ -501,7 +507,8 @@ Return Value:
     //
 
     Result = S_OK;
-    QueryPerformanceCounter(&Start);
+
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
@@ -520,12 +527,7 @@ Return Value:
         GraphAddEdge(Graph, Edge, Hash.LowPart, Hash.HighPart);
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->AddKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
-    Graph->AddKeysElapsedMicroseconds.QuadPart = Microseconds;
+    STOP_GRAPH_COUNTER(AddKeys);
 
     EVENT_WRITE_GRAPH(AddKeys);
 
@@ -572,16 +574,14 @@ Return Value:
     PEDGE Edges;
     BOOL Success;
     HRESULT Result;
-    LONGLONG Cycles;
-    LONGLONG Microseconds;
     VERTEX_PAIR Hash;
     GRAPH_FLAGS Flags;
-    LARGE_INTEGER End;
-    LARGE_INTEGER Start;
     ULONG OldProtection;
     PULONGLONG VertexPairs;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
 
     //
     // Initialize aliases.
@@ -605,7 +605,7 @@ Return Value:
     // Enumerate all keys in the input set and hash them into the vertex arrays.
     //
 
-    QueryPerformanceCounter(&Start);
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
@@ -620,12 +620,7 @@ Return Value:
         *VertexPairs++ = Hash.AsULongLong;
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->HashKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
-    Graph->HashKeysElapsedMicroseconds.QuadPart = Microseconds;
+    STOP_GRAPH_COUNTER(HashKeys);
 
     EVENT_WRITE_GRAPH(HashKeys);
 
@@ -722,13 +717,11 @@ Return Value:
 --*/
 {
     EDGE Edge;
-    LONGLONG Cycles;
-    LONGLONG Microseconds;
-    LARGE_INTEGER Start;
-    LARGE_INTEGER End;
     HRESULT Result;
     VERTEX_PAIR VertexPair;
     PVERTEX_PAIR VertexPairs;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
 
     //
     // Attempt to hash the keys first.
@@ -746,20 +739,15 @@ Return Value:
     //
 
     VertexPairs = Graph->VertexPairs;
-    QueryPerformanceCounter(&Start);
+
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         VertexPair = *(VertexPairs++);
         GraphAddEdge(Graph, Edge, VertexPair.Vertex1, VertexPair.Vertex2);
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->AddHashedKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
-
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
-    Graph->AddHashedKeysElapsedMicroseconds.QuadPart = Microseconds;
+    STOP_GRAPH_COUNTER(AddHashedKeys);
 
     EventWriteGraphAddHashedKeysEvent(NULL, NumberOfKeys, Cycles, Microseconds);
 
@@ -802,12 +790,11 @@ Return Value:
     PEDGE Edges;
     VERTEX Vertex1;
     VERTEX Vertex2;
-    LONGLONG Cycles;
-    LARGE_INTEGER Start;
-    LARGE_INTEGER End;
     ULARGE_INTEGER Hash;
     HRESULT Result;
     PPERFECT_HASH_TABLE Table;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
 
     Table = Graph->Context->Table;
     Edges = (PEDGE)Keys;
@@ -818,7 +805,8 @@ Return Value:
     //
 
     Result = S_OK;
-    QueryPerformanceCounter(&Start);
+
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
@@ -858,10 +846,7 @@ Return Value:
         GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->AddKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
+    STOP_GRAPH_COUNTER(AddKeys);
 
 Error:
 
@@ -2087,6 +2072,8 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    BOOLEAN HasLimit = FALSE;
+    BOOLEAN IsLowestComparator = FALSE;
     BOOLEAN FoundBestGraph = FALSE;
     BOOLEAN StopGraphSolving = FALSE;
     BOOLEAN FoundEqualBestGraph = FALSE;
@@ -2094,8 +2081,10 @@ Return Value:
     ULONG EqualCount = 0;
     ULONG BestGraphIndex = 0;
     ULONG CoverageValue = 0;
+    ULONG CoverageLimit = 0;
     LONG EqualBestGraphIndex = 0;
     LONGLONG Attempt;
+    PGRAPH BestGraph;
     PGRAPH SpareGraph;
     PGRAPH PreviousBestGraph;
     ULONGLONG ElapsedMilliseconds;
@@ -2134,6 +2123,7 @@ Return Value:
     //
 
     if (Context->BestGraph) {
+        BestGraph = Context->BestGraph;
         ASSERT(Context->NewBestGraphCount > 0);
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
@@ -2142,7 +2132,7 @@ Return Value:
         ASSERT(IsSpareGraph(SpareGraph));
         SpareGraph->Flags.IsSpare = FALSE;
         Context->SpareGraph = NULL;
-        Context->BestGraph = Graph;
+        BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
@@ -2198,6 +2188,7 @@ Return Value:
 
 End:
 
+    StopGraphSolving = FALSE;
     FoundBestGraph = (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
 
     if (FoundEqualBestGraph) {
@@ -2213,7 +2204,20 @@ End:
         BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
         EqualCount = ++BestGraphInfo->EqualCount;
 
+        //
+        // If we've hit the maximum number of equal graphs, we can stop solving.
+        //
+
+        if (Context->MaxNumberOfEqualBestGraphs > 0 &&
+            Context->MaxNumberOfEqualBestGraphs <= EqualCount)
+        {
+            StopGraphSolving = TRUE;
+        }
+
+
     } else if (FoundBestGraph) {
+
+        BestGraph = Graph;
 
         //
         // If we're still within the limits for the maximum number of best
@@ -2282,8 +2286,12 @@ End:
     // the critical section acquired (as NewBestGraphCount is protected by it).
     //
 
-    StopGraphSolving =
-        (ULONGLONG)Context->NewBestGraphCount >= Context->BestCoverageAttempts;
+    if (!StopGraphSolving) {
+        StopGraphSolving = (
+            (ULONGLONG)Context->NewBestGraphCount >=
+            Context->BestCoverageAttempts
+        );
+    }
 
     //
     // Leave the critical section and complete processing.
@@ -2320,6 +2328,111 @@ End:
 
         for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
             BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
+        }
+
+    }
+
+    //
+    // We need to determine what type of comparator is being used (i.e. lowest
+    // or highest), because depending on what we're using for comparison, we
+    // may have hit the lowest or highest possible value, in which case, graph
+    // solving can be stopped (even if we haven't hit the target specified by
+    // --BestCoverageAttempts).  For example, if the best coverage type is
+    // LowestNumberOfEmptyCacheLines, and the coverage value is 0, we'll never
+    // beat this, so we can stop graph solving now.
+    //
+    // So, leverage another X-macro expansion to extract the comparator type and
+    // coverage value.  We need to do this here, after the End: label, as the
+    // very first graph being registered may have hit the limit (which we have
+    // seen happen regularly in practice).
+    //
+
+    Coverage = &BestGraph->AssignedMemoryCoverage;
+
+#define EXPAND_AS_DETERMINE_IF_LOWEST(Name, Comparison, Comparator) \
+    case BestCoverageType##Comparison##Name##Id:                    \
+        IsLowestComparator = (0 Comparator 1);                      \
+        CoverageValue = Coverage->##Name;                           \
+        break;
+
+    switch (CoverageType) {
+
+        case BestCoverageTypeNullId:
+        case BestCoverageTypeInvalidId:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+
+        BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_LOWEST)
+
+        default:
+            Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+            break;
+    }
+
+    if (FAILED(Result)) {
+        PH_RAISE(Result);
+    }
+
+    if (IsLowestComparator) {
+
+        //
+        // The comparator is "lowest"; if the best value we found was zero, then
+        // indicate stop solving, as we'll never be able to get lower than this.
+        //
+
+        if (CoverageValue == 0) {
+            StopGraphSolving = TRUE;
+        }
+
+    } else {
+
+        //
+        // For highest comparisons, things are a little trickier, as we need to
+        // know what is the maximum value to compare things against.  This info
+        // isn't available from the X-macro, nor is it applicable to all types,
+        // so, the following switch construct extracts limits manually.
+        //
+
+        HasLimit = FALSE;
+
+        //
+        // Disable "enum not handled in switch statement" warning.
+        //
+        //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+        //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+        //                     is not explicitly handled by a case label
+        //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
+        switch (CoverageType) {
+
+            case BestCoverageTypeNullId:
+            case BestCoverageTypeInvalidId:
+                PH_RAISE(PH_E_UNREACHABLE_CODE);
+                break;
+
+            case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
+                HasLimit = TRUE;
+                CoverageLimit = Coverage->TotalNumberOfCacheLines;
+                break;
+
+            case BestCoverageTypeHighestMaxAssignedPerCacheLineCountId:
+                HasLimit = TRUE;
+                CoverageLimit = 16;
+                break;
+
+            default:
+                break;
+        }
+
+#pragma warning(pop)
+
+        if (HasLimit) {
+            if (CoverageValue == CoverageLimit) {
+                StopGraphSolving = TRUE;
+            }
         }
     }
 
@@ -3263,8 +3376,7 @@ Return Value:
     EMPTY_ARRAY(Edges);
 
     //
-    // The Order array gets zeroed versus "emptied" (i.e. set to 0 instead of
-    // -1).
+    // The Order and Assigned arrays get zeroed.
     //
 
 #define ZERO_ARRAY(Name)                             \
@@ -3274,6 +3386,7 @@ Return Value:
                        Info->##Name##SizeInBytes)
 
     ZERO_ARRAY(Order);
+    ZERO_ARRAY(Assigned);
 
     Graph->OrderIndex = Graph->NumberOfKeys;
 
@@ -3345,17 +3458,10 @@ Return Value:
     Graph->Flags.Shrinking = FALSE;
     Graph->Flags.IsAcyclic = FALSE;
 
-    Graph->AddKeysElapsedCycles.QuadPart = 0;
-    Graph->HashKeysElapsedCycles.QuadPart = 0;
-    Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
-    Graph->AssignElapsedCycles.QuadPart = 0;
-    Graph->Assign2ElapsedCycles.QuadPart = 0;
-
-    Graph->AddKeysElapsedMicroseconds.QuadPart = 0;
-    Graph->HashKeysElapsedMicroseconds.QuadPart = 0;
-    Graph->AddHashedKeysElapsedMicroseconds.QuadPart = 0;
-    Graph->AssignElapsedMicroseconds.QuadPart = 0;
-    Graph->Assign2ElapsedMicroseconds.QuadPart = 0;
+    RESET_GRAPH_COUNTER(AddKeys);
+    RESET_GRAPH_COUNTER(HashKeys);
+    RESET_GRAPH_COUNTER(AddHashedKeys);
+    RESET_GRAPH_COUNTER(Assign);
 
     //
     // Avoid the overhead of resetting the memory coverage if we're in "first

@@ -3838,3 +3838,11 @@ Language=English
 Invalid CU RNG name.
 .
 
+MessageId=0x3b8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_GRAPH_IMPL
+Language=English
+Invalid value for --GraphImpl.  Valid values: 1, 2.  (Default: 2.)
+.
+

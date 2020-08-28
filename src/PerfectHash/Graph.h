@@ -304,6 +304,18 @@ CopyCoverage(
 }
 
 //
+// Helper struct to capture assigned arrays in a way that can be easily
+// presented via natvis.
+//
+
+typedef struct _ASSIGNED_ARRAY {
+    ULONG NumberOfElements;
+    ULONG Padding;
+    PASSIGNED Assigned;
+} ASSIGNED_ARRAY;
+typedef ASSIGNED_ARRAY *PASSIGNED_ARRAY;
+
+//
 // Define a graph iterator structure use to facilitate graph traversal.
 //
 
@@ -482,6 +494,42 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define SetSpareCuGraph(Graph) (Graph->Flags.IsSpareCuGraph = TRUE)
 
 DEFINE_UNUSED_STATE(GRAPH);
+
+//
+// Helper macros for declaring, starting and stopping graph activity counters.
+//
+
+#define DECL_GRAPH_COUNTER_STRUCT_FIELDS(Name) \
+    LARGE_INTEGER Name##ElapsedCycles;         \
+    LARGE_INTEGER Name##ElapsedMicroseconds
+
+#define DECL_GRAPH_COUNTER_LOCAL_VARS() \
+    LONGLONG Cycles;                    \
+    LONGLONG Microseconds;              \
+    LARGE_INTEGER Start;                \
+    LARGE_INTEGER End
+
+#define START_GRAPH_COUNTER() \
+    QueryPerformanceCounter(&Start)
+
+#define STOP_GRAPH_COUNTER(Name)                                            \
+    QueryPerformanceCounter(&End);                                          \
+    Graph->##Name##ElapsedCycles.QuadPart = Cycles = (                      \
+        End.QuadPart - Start.QuadPart                                       \
+    );                                                                      \
+    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart; \
+    Graph->##Name##ElapsedMicroseconds.QuadPart = Microseconds
+
+#define RESET_GRAPH_COUNTER(Name)                   \
+    Graph->##Name##ElapsedCycles.QuadPart = 0;      \
+    Graph->##Name##ElapsedMicroseconds.QuadPart = 0
+
+//
+// Default version of the graph implementation used (i.e. GraphImp1.c vs
+// GraphImpl2.c).
+//
+
+#define DEFAULT_GRAPH_IMPL_VERSION 2
 
 //
 // Define the primary dimensions governing the graph size.
@@ -1289,64 +1337,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ASSIGNED_MEMORY_COVERAGE AssignedMemoryCoverage;
 
     //
-    // Elapsed cycles of the GraphAddKeys() routine.
+    // Counters to track elapsed cycles and microseconds of graph activities.
+    // Each name (typically) maps 1:1 with a corresponding Graph*() function,
+    // i.e. AddKeys -> GraphAddKeys().
     //
 
-    LARGE_INTEGER AddKeysElapsedCycles;
-
-    //
-    // Elapsed cycles of the GraphHashKeys() routine, if used.
-    //
-
-    LARGE_INTEGER HashKeysElapsedCycles;
-
-    //
-    // Elapsed cycles of the GraphAddHashedKeys() routine, if used.
-    //
-
-    LARGE_INTEGER AddHashedKeysElapsedCycles;
-
-    //
-    // Elapsed cycles of the GraphAssign() routine.
-    //
-
-    LARGE_INTEGER AssignElapsedCycles;
-
-    //
-    // Elapsed cycles of the GraphAssign2() routine.
-    //
-
-    LARGE_INTEGER Assign2ElapsedCycles;
-
-    //
-    // Elapsed microseconds of the GraphAddKeys() routine.
-    //
-
-    LARGE_INTEGER AddKeysElapsedMicroseconds;
-
-    //
-    // Elapsed microseconds of the GraphHashKeys() routine, if used.
-    //
-
-    LARGE_INTEGER HashKeysElapsedMicroseconds;
-
-    //
-    // Elapsed microseconds of the GraphAddHashedKeys() routine, if used.
-    //
-
-    LARGE_INTEGER AddHashedKeysElapsedMicroseconds;
-
-    //
-    // Elapsed microseconds of the GraphAssign() routine.
-    //
-
-    LARGE_INTEGER AssignElapsedMicroseconds;
-
-    //
-    // Elapsed microseconds of the GraphAssign2() routine.
-    //
-
-    LARGE_INTEGER Assign2ElapsedMicroseconds;
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddKeys);
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(HashKeys);
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddHashedKeys);
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(Assign);
 
     //
     // The current recursive traversal depth during assignment.

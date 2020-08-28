@@ -191,7 +191,7 @@ Return Value:
         GraphCyclicDeleteEdge(Graph, Vertex);
     }
 
-    ASSERT(Graph->OrderIndex == 0);
+    ASSERT((LONG)Graph->OrderIndex >= 0);
 
     if (!IsGraphParanoid(Graph)) {
 
@@ -235,6 +235,12 @@ Return Value:
 
         ASSERT(IsAcyclic == IsAcyclicSlow);
 
+    }
+
+    if (IsAcyclic) {
+        ASSERT(Graph->OrderIndex == 0);
+    } else {
+        ASSERT(Graph->OrderIndex != 0);
     }
 
     //
@@ -350,9 +356,8 @@ Return Value:
 
             //
             // This is a "root" vertex that we'll perform a depth-first search
-            // on as part of assignment.  Initialize the assigned value for this
-            // vertex (this is required as we don't zero this array as part of
-            // GraphReset()), then traverse the graph at this vertex.
+            // on as part of assignment.  Sanity check the assigned value at
+            // this location matches our initial value, then traverse the graph.
             //
 
             ASSERT(Graph->Assigned[Vertex] == INITIAL_ASSIGNMENT_VALUE);
@@ -399,15 +404,7 @@ Return Value:
     return;
 }
 
-typedef struct _ASSIGNED_ARRAY {
-    ULONG NumberOfElements;
-    ULONG Padding;
-    PASSIGNED Assigned;
-} ASSIGNED_ARRAY;
-typedef ASSIGNED_ARRAY *PASSIGNED_ARRAY;
-
-GRAPH_ASSIGN GraphAssign2;
-
+#if 0
 _Use_decl_annotations_
 VOID
 GraphAssign2(
@@ -432,6 +429,7 @@ Return Value:
 --*/
 {
     KEY Key;
+    PRTL Rtl;
     BOOL IsVisited1;
     BOOL IsVisited2;
     PKEY Keys;
@@ -440,6 +438,7 @@ Return Value:
     PEDGE Edges;
     ULONG Index;
     ULONG Index2;
+    ULONG MaskedIndex;
     ULONG Order;
     ULONG Assigned1;
     ULONG Assigned2;
@@ -463,8 +462,11 @@ Return Value:
     ASSIGNED_ARRAY AssignedArray2;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+    //HANDLE Heap1;
+    //HANDLE Heap2;
 
     Table = Graph->Context->Table;
+    Rtl = Table->Rtl;
     Allocator = Table->Allocator;
     HashMask = Table->HashMask;
     IndexMask = Table->IndexMask;
@@ -495,6 +497,7 @@ Return Value:
     AssignedArray2.NumberOfElements = Graph->NumberOfVertices;
     AssignedArray2.Assigned = Assigned;
 
+#if 0
     Visited.Buffer = Allocator->Vtbl->Calloc(
         Allocator,
         1,
@@ -504,13 +507,25 @@ Return Value:
     if (!Visited.Buffer) {
         PH_RAISE(E_OUTOFMEMORY);
     }
+#endif
+
+#ifdef _DEBUG
+
+#define IsVisited(Vertex)                   \
+    Rtl->RtlTestBit(&Visited, (LONG)Vertex)
+
+#define RegisterVisit(Vertex)               \
+    Rtl->RtlSetBit(&Visited, (LONG)Vertex)
+
+#else
 
 #define IsVisited(Vertex) \
-    BitTest64((PLONGLONG)Visited.Buffer, (LONGLONG)Vertex)
+    BitTest((PLONG)Visited.Buffer, (LONG)Vertex)
 
 #define RegisterVisit(Vertex) \
-    BitTestAndSet64((PLONGLONG)Visited.Buffer, (LONGLONG)Vertex)
+    BitTestAndSet((PLONG)Visited.Buffer, (LONG)Vertex)
 
+#endif
     //
     // Walk the graph and assign values.
     //
@@ -572,6 +587,7 @@ Return Value:
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
         Order = Graph->Order[Index];
+
         Edge1 = Order;
         Edge2 = Order + Graph->NumberOfEdges;
 
@@ -585,22 +601,20 @@ Return Value:
         ASSERT(Hash.Vertex2 == Vertex2 || Hash.Vertex1 == Vertex2);
 #endif
 
-        Assigned1 = Assigned[Vertex1];
-        Assigned2 = Assigned[Vertex2];
-
-        IsVisited1 = IsVisited(Vertex1);
-        IsVisited2 = IsVisited(Vertex2);
+        ASSERT(Vertex1 < Visited.SizeOfBitMap);
+        ASSERT(Vertex2 < Visited.SizeOfBitMap);
 
         if (!IsVisited(Vertex1)) {
+            Assigned2 = Assigned[Vertex2];
             Assigned1 = (((NumberOfEdges + Order) - Assigned2) & IndexMask);
             Assigned[Vertex1] = Assigned1;
-            //RegisterVisit(Vertex1);
         } else {
+            Assigned1 = Assigned[Vertex1];
             Assigned2 = (((NumberOfEdges + Order) - Assigned1) & IndexMask);
             Assigned[Vertex2] = Assigned2;
-            //RegisterVisit(Vertex2);
         }
 
+#if _DEBUG
         Index2 = Assigned1 + Assigned2;
         Index2 &= IndexMask;
 
@@ -608,6 +622,7 @@ Return Value:
 
         RegisterVisit(Vertex1);
         RegisterVisit(Vertex2);
+#endif
     }
 
 #endif
@@ -653,8 +668,9 @@ Return Value:
 
         //ASSERT(IsVisited1 && IsVisited2);
 
-        Index2 = Assigned1 + Assigned2;
-        ASSERT(Index == Index2);
+        Index2 = (Assigned1 + Assigned2);
+        MaskedIndex = Index2 & IndexMask;
+        ASSERT(Index == MaskedIndex);
 
         //RegisterVisit(Vertex1);
         //RegisterVisit(Vertex2);
@@ -671,11 +687,32 @@ Return Value:
         Graph->TotalTraversals
     );
 
+#if 0
     Allocator->Vtbl->FreePointer(Allocator, &Assigned);
     Allocator->Vtbl->FreePointer(Allocator, &Visited.Buffer);
+#else
+
+    if (!HeapFree(Heap1, 0, Assigned)) {
+        SYS_ERROR(HeapFree);
+    }
+
+    if (!HeapFree(Heap2, 0, Visited.Buffer)) {
+        SYS_ERROR(HeapFree);
+    }
+
+    if (!HeapDestroy(Heap1)) {
+        SYS_ERROR(HeapDestroy);
+    }
+
+    if (!HeapDestroy(Heap2)) {
+        SYS_ERROR(HeapDestroy);
+    }
+
+#endif
 
     return;
 }
+#endif
 
 //
 // The following methods are internal methods specific to this implementation.
@@ -1133,7 +1170,7 @@ Return Value:
         do {
 
             Iterations++;
-            ASSERT(Iterations <= 1);
+            //ASSERT(Iterations <= 3);
             Edge = Graph->Next[Edge];
             ASSERT(!IsEmpty(Edge));
 

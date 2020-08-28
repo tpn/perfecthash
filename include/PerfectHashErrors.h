@@ -4220,3 +4220,12 @@ Abstract:
 //
 #define PH_E_INVALID_CU_RNG_NAME         ((HRESULT)0xE00403B7L)
 
+//
+// MessageId: PH_E_INVALID_GRAPH_IMPL
+//
+// MessageText:
+//
+// Invalid value for --GraphImpl.  Valid values: 1, 2.  (Default: 2.)
+//
+#define PH_E_INVALID_GRAPH_IMPL          ((HRESULT)0xE00403B8L)
+

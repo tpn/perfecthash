@@ -301,6 +301,9 @@
     <ClCompile Include="GraphCu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphImpl2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -584,6 +587,12 @@
     </ClInclude>
     <ClInclude Include="Graph_Ptx_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphImpl2.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphImpl1.h">
+      <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

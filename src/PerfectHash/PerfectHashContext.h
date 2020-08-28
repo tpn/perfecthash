@@ -403,10 +403,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG InitialResizes;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Maximum number of equal best graphs.  When this number is hit, graph
+    // solving will stop, even if the target number of attempts supplied by
+    // --BestCoverageAttempts hasn't been hit.
     //
 
-    ULONG Padding2;
+    ULONG MaxNumberOfEqualBestGraphs;
 
     //
     // If we're attempting to find the best memory coverage, the following
