@@ -3458,10 +3458,7 @@ Return Value:
     Graph->Flags.Shrinking = FALSE;
     Graph->Flags.IsAcyclic = FALSE;
 
-    RESET_GRAPH_COUNTER(AddKeys);
-    RESET_GRAPH_COUNTER(HashKeys);
-    RESET_GRAPH_COUNTER(AddHashedKeys);
-    RESET_GRAPH_COUNTER(Assign);
+    RESET_GRAPH_COUNTERS();
 
     //
     // Avoid the overhead of resetting the memory coverage if we're in "first

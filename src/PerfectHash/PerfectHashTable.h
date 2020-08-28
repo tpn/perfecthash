@@ -420,13 +420,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // Cycle counters and elapsed microseconds copied from the winning graph.
     //
 
-    LARGE_INTEGER AddKeysElapsedCycles;
-    LARGE_INTEGER HashKeysElapsedCycles;
-    LARGE_INTEGER AddHashedKeysElapsedCycles;
-
-    LARGE_INTEGER AddKeysElapsedMicroseconds;
-    LARGE_INTEGER HashKeysElapsedMicroseconds;
-    LARGE_INTEGER AddHashedKeysElapsedMicroseconds;
+    DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
 
     //
     // Backing vtbl.

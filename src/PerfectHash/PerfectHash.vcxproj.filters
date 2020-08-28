@@ -594,6 +594,9 @@
     <ClInclude Include="GraphImpl1.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GraphCounters.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

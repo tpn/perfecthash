@@ -496,35 +496,6 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 DEFINE_UNUSED_STATE(GRAPH);
 
 //
-// Helper macros for declaring, starting and stopping graph activity counters.
-//
-
-#define DECL_GRAPH_COUNTER_STRUCT_FIELDS(Name) \
-    LARGE_INTEGER Name##ElapsedCycles;         \
-    LARGE_INTEGER Name##ElapsedMicroseconds
-
-#define DECL_GRAPH_COUNTER_LOCAL_VARS() \
-    LONGLONG Cycles;                    \
-    LONGLONG Microseconds;              \
-    LARGE_INTEGER Start;                \
-    LARGE_INTEGER End
-
-#define START_GRAPH_COUNTER() \
-    QueryPerformanceCounter(&Start)
-
-#define STOP_GRAPH_COUNTER(Name)                                            \
-    QueryPerformanceCounter(&End);                                          \
-    Graph->##Name##ElapsedCycles.QuadPart = Cycles = (                      \
-        End.QuadPart - Start.QuadPart                                       \
-    );                                                                      \
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart; \
-    Graph->##Name##ElapsedMicroseconds.QuadPart = Microseconds
-
-#define RESET_GRAPH_COUNTER(Name)                   \
-    Graph->##Name##ElapsedCycles.QuadPart = 0;      \
-    Graph->##Name##ElapsedMicroseconds.QuadPart = 0
-
-//
 // Default version of the graph implementation used (i.e. GraphImp1.c vs
 // GraphImpl2.c).
 //
@@ -1342,10 +1313,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // i.e. AddKeys -> GraphAddKeys().
     //
 
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddKeys);
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(HashKeys);
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddHashedKeys);
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(Assign);
+    DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
 
     //
     // The current recursive traversal depth during assignment.

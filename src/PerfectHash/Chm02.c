@@ -755,23 +755,7 @@ Return Value:
     // Copy the cycle counters and elapsed microseconds from the winning graph.
     //
 
-    Table->AddKeysElapsedCycles.QuadPart =
-        Graph->AddKeysElapsedCycles.QuadPart;
-
-    Table->HashKeysElapsedCycles.QuadPart =
-        Graph->HashKeysElapsedCycles.QuadPart;
-
-    Table->AddHashedKeysElapsedCycles.QuadPart =
-        Graph->AddHashedKeysElapsedCycles.QuadPart;
-
-    Table->AddKeysElapsedMicroseconds.QuadPart =
-        Graph->AddKeysElapsedMicroseconds.QuadPart;
-
-    Table->HashKeysElapsedMicroseconds.QuadPart =
-        Graph->HashKeysElapsedMicroseconds.QuadPart;
-
-    Table->AddHashedKeysElapsedMicroseconds.QuadPart =
-        Graph->AddHashedKeysElapsedMicroseconds.QuadPart;
+    COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE();
 
     //
     // Note this graph as the one solved to the context.  This is used by the
