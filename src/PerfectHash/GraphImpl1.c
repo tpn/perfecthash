@@ -314,13 +314,10 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    ULONG FunctionVersion;
-    LONGLONG Cycles;
-    LONGLONG Microseconds;
-    LARGE_INTEGER Start;
-    LARGE_INTEGER End;
     VERTEX Vertex;
     ULONG NumberOfSetBits;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
 
     //
     // Invariant check: the acyclic flag should be set.  (Indicating that
@@ -341,7 +338,7 @@ Return Value:
     // Walk the graph and assign values.
     //
 
-    QueryPerformanceCounter(&Start);
+    START_GRAPH_COUNTER();
 
     for (Vertex = 0; Vertex < Graph->NumberOfVertices; Vertex++) {
 
@@ -373,12 +370,7 @@ Return Value:
         ASSERT(Graph->VisitedVerticesCount == Graph->NumberOfVertices);
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->AssignElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
-    Graph->AssignElapsedMicroseconds.QuadPart = Microseconds;
+    STOP_GRAPH_COUNTER(Assign);
 
     EventWriteGraphAssignStop(
         NULL,
@@ -390,11 +382,10 @@ Return Value:
         Graph->TotalTraversals
     );
 
-    FunctionVersion = 1;
     EventWriteGraphAssignResult(
         NULL,
         Graph->Attempt,
-        FunctionVersion,
+        Table->GraphImpl,
         Cycles,
         Microseconds,
         Graph->NumberOfKeys,
