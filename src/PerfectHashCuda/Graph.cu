@@ -24,12 +24,27 @@ EXTERN_C_END
 
 #include <curand_kernel.h>
 
-#include <thrust/device_ptr.h>
-#include <thrust/sort.h>
-#include <thrust/inner_product.h>
-#include <thrust/unique.h>
-
 #include "Graph.cuh"
+
+//#include "GraphImpl.cu"
+
+//
+// Define helper macros.
+//
+
+#define EMPTY ((VERTEX)-1)
+#define GRAPH_NO_NEIGHBOR ((VERTEX)-1)
+#define NO_THREAD_ID ((unsigned int)-1)
+
+#define IsEmpty(Value) ((ULONG)Value == EMPTY)
+#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
+
+//
+// When a solution has been found and the assignment step begins, the initial
+// value assigned to a vertex is govered by the following macro.
+//
+
+#define INITIAL_ASSIGNMENT_VALUE 0
 
 //
 // Shared memory.
@@ -97,9 +112,6 @@ HashAllMultiplyShiftRKernel(
     _In_reads_(NumberOfKeys) PKEY Keys,
     _In_ ULONG NumberOfEdges,
     _In_ ULONG NumberOfKeys,
-    _Out_writes_(NumberOfKeys) PVERTEX_PAIR VertexPairs,
-    _Out_writes_(NumberOfKeys) PVERTEX_PAIR SortedVertexPairs,
-    _Out_writes_(NumberOfKeys) PULONG VertexPairsIndex,
     _Out_ PVERTEX First,
     _Out_ PEDGE Next,
     _Out_ PEDGE Edges,
@@ -119,8 +131,6 @@ HashAllMultiplyShiftRKernel(
     ULONG Seed1;
     ULONG Seed2;
     ULONG_BYTES Seed3;
-    //PHRESULT BlockResult;
-    //PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
 
     //
     // Initialize aliases.
@@ -130,46 +140,7 @@ HashAllMultiplyShiftRKernel(
     Seed2 = Seeds[1];
     Seed3.AsULong = Seeds[2];
 
-#if 0
-
-    //
-    // If this is thread 0 in the block, initialize the shared memory and set
-    // the global result to S_OK.
-    //
-
-    if (ThreadIndex.x == 0) {
-
-        Shared->HashKeysBlockResults = (PHRESULT)(
-            RtlOffsetToPointer(
-                SharedRaw,
-                sizeof(GRAPH_SHARED)
-            )
-        );
-
-
-        *GlobalResult = S_OK;
-    }
-
-    __syncthreads();
-
-    BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
-
-#endif
-
     FOR_EACH_1D(Index, NumberOfKeys) {
-
-#if 0
-        //
-        // Block-level fast-path exit if we've already detected a vertex
-        // collision.  I haven't profiled things to determine if it makes
-        // sense to either do: a) this, or b) an additional global memory
-        // read of `*GlobalResult` (currently not being done).
-        //
-
-        if (*BlockResult != S_OK) {
-            goto End;
-        }
-#endif
 
         Key = Keys[Index];
 
@@ -177,26 +148,9 @@ HashAllMultiplyShiftRKernel(
         Vertex2 = (((Key * SEED2) >> SEED3_BYTE2) & Mask);
 
         if (Vertex1 == Vertex2) {
-
-            //
-            // Set the block-level and global-level results to indicate
-            // collision, then jump to the end.
-            //
-
-            //*BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
             goto End;
         }
-
-        //
-        // Store the vertex pairs.
-        //
-
-        VertexPairs[Index].Vertex1 = Vertex1;
-        VertexPairs[Index].Vertex2 = Vertex2;
-        SortedVertexPairs[Index].Vertex1 = Vertex1;
-        SortedVertexPairs[Index].Vertex2 = Vertex2;
-        VertexPairsIndex[Index] = Index;
 
         Edge1 = (EDGE)Index;
         Edge2 = Edge1 + NumberOfEdges;
@@ -222,502 +176,6 @@ HashAllMultiplyShiftRKernel(
 
 End:
     return;
-}
-
-EXTERN_C
-GLOBAL
-VOID
-HashAllMultiplyShiftRKernel2(
-    _In_reads_(NumberOfKeys) PKEY Keys,
-    _In_ ULONG NumberOfKeys,
-    _Out_writes_(NumberOfKeys) PVERTEX Vertices1,
-    _Out_writes_(NumberOfKeys) PVERTEX Vertices2,
-    _Out_writes_(NumberOfKeys) PULONG Vertices1Index,
-    _In_ ULONG Mask,
-    _In_ PULONG Seeds,
-    _Out_ PHRESULT GlobalResult
-    )
-{
-    KEY Key;
-    ULONG Index;
-    ULONG Seed1;
-    ULONG Seed2;
-    ULONG_BYTES Seed3;
-    VERTEX Vertex1;
-    VERTEX Vertex2;
-    PHRESULT BlockResult;
-    PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
-
-    //
-    // Initialize aliases.
-    //
-
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
-    Seed3.AsULong = Seeds[2];
-
-    //
-    // If this is thread 0 in the block, initialize the shared memory and set
-    // the global result to S_OK.
-    //
-
-    if (ThreadIndex.x == 0) {
-
-        Shared->HashKeysBlockResults = (PHRESULT)(
-            RtlOffsetToPointer(
-                SharedRaw,
-                sizeof(GRAPH_SHARED)
-            )
-        );
-
-
-        *GlobalResult = S_OK;
-    }
-
-    __syncthreads();
-
-    BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
-
-    FOR_EACH_1D(Index, NumberOfKeys) {
-
-        //
-        // Block-level fast-path exit if we've already detected a vertex
-        // collision.  I haven't profiled things to determine if it makes
-        // sense to either do: a) this, or b) an additional global memory
-        // read of `*GlobalResult` (currently not being done).
-        //
-
-        if (*BlockResult != S_OK) {
-            goto End;
-        }
-
-        Key = Keys[Index];
-
-        Vertex1 = (((Key * SEED1) >> SEED3_BYTE1) & Mask);
-        Vertex2 = (((Key * SEED2) >> SEED3_BYTE2) & Mask);
-
-        if (Vertex1 == Vertex2) {
-
-            //
-            // Set the block-level and global-level results to indicate
-            // collision, then jump to the end.
-            //
-
-            *BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
-            *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
-            goto End;
-        }
-
-        //
-        // Store the vertex pairs.
-        //
-
-        //Output[Index].x = Vertex1;
-        //Output[Index].y = Vertex2;
-        Vertices1[Index] = Vertex1;
-        Vertices2[Index] = Vertex2;
-        Vertices1Index[Index] = Index;
-
-    }
-
-End:
-    return;
-}
-
-EXTERN_C
-GLOBAL
-VOID
-HashAllMultiplyShiftRKernel3(
-    _In_reads_(NumberOfKeys) PKEY Keys,
-    _In_ ULONG NumberOfKeys,
-    _Out_writes_(NumberOfKeys) PVERTEX Vertices1,
-    _Out_writes_(NumberOfKeys) PVERTEX Vertices2,
-    _Out_writes_(NumberOfKeys) PVERTEX_PAIR VertexPairs,
-    _Out_writes_(NumberOfKeys) PULONG Vertices1Index,
-    _Out_writes_(NumberOfKeys) PULONG Vertices2Index,
-    _Out_writes_(NumberOfKeys) PULONG VertexPairsIndex,
-    _In_ ULONG Mask,
-    _In_ PULONG Seeds,
-    _Out_ PHRESULT GlobalResult
-    )
-{
-    KEY Key;
-    ULONG Index;
-    ULONG Seed1;
-    ULONG Seed2;
-    ULONG_BYTES Seed3;
-    VERTEX Vertex1;
-    VERTEX Vertex2;
-    //PHRESULT BlockResult;
-    //PGRAPH_SHARED Shared = (PGRAPH_SHARED)SharedRaw;
-    //PINT2 Output = (PINT2)VertexPairs;
-
-    //
-    // Initialize aliases.
-    //
-
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
-    Seed3.AsULong = Seeds[2];
-
-#if 0
-    //
-    // If this is thread 0 in the block, initialize the shared memory and set
-    // the global result to S_OK.
-    //
-
-    if (ThreadIndex.x == 0) {
-
-        Shared->HashKeysBlockResults = (PHRESULT)(
-            RtlOffsetToPointer(
-                SharedRaw,
-                sizeof(GRAPH_SHARED)
-            )
-        );
-
-
-        *GlobalResult = S_OK;
-    }
-
-    __syncthreads();
-
-    BlockResult = &Shared->HashKeysBlockResults[BlockIndex.x];
-#endif
-
-    FOR_EACH_1D(Index, NumberOfKeys) {
-
-        //
-        // Block-level fast-path exit if we've already detected a vertex
-        // collision.  I haven't profiled things to determine if it makes
-        // sense to either do: a) this, or b) an additional global memory
-        // read of `*GlobalResult` (currently not being done).
-        //
-
-#if 0
-        if (*BlockResult != S_OK) {
-            goto End;
-        }
-#endif
-
-        Key = Keys[Index];
-
-        Vertex1 = (((Key * SEED1) >> SEED3_BYTE1) & Mask);
-        Vertex2 = (((Key * SEED2) >> SEED3_BYTE2) & Mask);
-
-        if (Vertex1 == Vertex2) {
-
-            //
-            // Set the block-level and global-level results to indicate
-            // collision, then jump to the end.
-            //
-
-            //*BlockResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
-            *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
-            goto End;
-        }
-
-        //
-        // Store the vertex pairs.
-        //
-
-        //Output[Index].x = Vertex1;
-        //Output[Index].y = Vertex2;
-        VertexPairs[Index].Vertex1 = Vertex1;
-        VertexPairs[Index].Vertex2 = Vertex2;
-        Vertices1[Index] = Vertex1;
-        Vertices2[Index] = Vertex2;
-        Vertices1Index[Index] = Index;
-        Vertices2Index[Index] = Index;
-        VertexPairsIndex[Index] = Index;
-
-    }
-
-End:
-    return;
-}
-
-KERNEL
-VOID
-GraphCuSortVertices1Kernel(
-    _In_ PGRAPH Graph
-    )
-{
-    ULONG UniqueCount;
-    thrust::device_ptr<ULONG> Vertices1(Graph->Vertices1);
-    thrust::device_ptr<ULONG> Index(Graph->Vertices1Index);
-
-#if 0
-    thrust::stable_sort_by_key(thrust::device,
-                               Vertices1,
-                               Vertices1 + Graph->NumberOfKeys,
-                               Index);
-#endif
-
-    thrust::stable_sort(
-        thrust::device,
-        Vertices1,
-        Vertices1 + Graph->NumberOfKeys
-    );
-
-    UniqueCount = thrust::inner_product(
-        thrust::device,
-        Vertices1,
-        Vertices1 + Graph->NumberOfKeys - 1,
-        Vertices1 + 1,
-        ULONG(1),
-        thrust::plus<ULONG>(),
-        thrust::not_equal_to<ULONG>()
-    );
-
-    printf("Vertices1:\n\tUniqueCount: %u\n\tKeys: %u\n\t"
-           "Seed1: %u\n\tSeed2: %u\n\tSeed3: %u\n",
-           UniqueCount,
-           Graph->NumberOfKeys,
-           Graph->Seed1,
-           Graph->Seed2,
-           Graph->Seed3);
-
-}
-
-KERNEL
-VOID
-GraphCuSortVertices2Kernel(
-    _In_ PGRAPH Graph
-    )
-{
-    thrust::device_ptr<ULONG> Vertices2(Graph->Vertices2);
-    thrust::device_ptr<ULONG> Index(Graph->Vertices2Index);
-
-    thrust::stable_sort_by_key(thrust::device,
-                               Vertices2,
-                               Vertices2 + Graph->NumberOfKeys,
-                               Index);
-}
-
-DEVICE
-bool
-VertexPairLessThan(
-    const VERTEX_PAIR Left,
-    const VERTEX_PAIR Right
-    )
-{
-    if (Left.Vertex1 < Right.Vertex1) {
-        return true;
-    } else if (Left.Vertex1 == Right.Vertex1) {
-        return (Left.Vertex2 < Right.Vertex2);
-    } else {
-        return false;
-    }
-}
-
-DEVICE
-bool
-VertexPairNotEqual(
-    const VERTEX_PAIR Left,
-    const VERTEX_PAIR Right
-    )
-{
-    return (
-        Left.Vertex1 != Right.Vertex1 &&
-        Left.Vertex2 != Right.Vertex2
-    );
-    //return (Left.AsULongLong != Right.AsULongLong);
-}
-
-DEVICE
-bool
-VertexPairEqual(
-    const VERTEX_PAIR Left,
-    const VERTEX_PAIR Right
-    )
-{
-    return (
-        Left.Vertex1 == Right.Vertex1 &&
-        Left.Vertex2 == Right.Vertex2
-    );
-    //return (Left.AsULongLong == Right.AsULongLong);
-}
-
-
-/*
-KERNEL
-VOID
-GraphCuSortVertexPairsKernel(
-    _In_ PGRAPH Graph
-    )
-{
-    ULONG UniqueCount;
-    thrust::device_ptr<VERTEX_PAIR> VertexPairs(Graph->VertexPairs);
-    thrust::device_ptr<VERTEX_PAIR> VertexPairsEnd;
-    thrust::device_ptr<VERTEX_PAIR> EndUnique;
-    thrust::device_ptr<ULONG> Index(Graph->VertexPairsIndex);
-
-    thrust::stable_sort(
-        thrust::device,
-        VertexPairs,
-        VertexPairs + Graph->NumberOfKeys,
-        VertexPairLessThan
-    );
-
-    UniqueCount = thrust::inner_product(
-        thrust::device,
-        VertexPairs,
-        VertexPairs + Graph->NumberOfKeys - 1,
-        VertexPairs + 1,
-        ULONG(1),
-        thrust::plus<ULONG>(),
-        VertexPairNotEqual
-    );
-
-    printf("VertexPair NE:\n\tUniqueCount: %u\n\tKeys: %u\n\t"
-           "Seed1: %u\n\tSeed2: %u\n\tSeed3: %u\n",
-           UniqueCount,
-           Graph->NumberOfKeys,
-           Graph->Seed1,
-           Graph->Seed2,
-           Graph->Seed3);
-
-    UniqueCount = thrust::inner_product(
-        thrust::device,
-        VertexPairs,
-        VertexPairs + Graph->NumberOfKeys - 1,
-        VertexPairs + 1,
-        ULONG(1),
-        thrust::plus<ULONG>(),
-        VertexPairEqual
-    );
-
-    printf("VertexPair EQ:\n\tUniqueCount: %u\n\tKeys: %u\n\t"
-           "Seed1: %u\n\tSeed2: %u\n\tSeed3: %u\n",
-           UniqueCount,
-           Graph->NumberOfKeys,
-           Graph->Seed1,
-           Graph->Seed2,
-           Graph->Seed3);
-
-    VertexPairsEnd = VertexPairs + Graph->NumberOfKeys;
-    EndUnique = thrust::unique(
-        thrust::device,
-        VertexPairs,
-        VertexPairsEnd,
-        VertexPairEqual
-    );
-
-    if (VertexPairsEnd != EndUnique) {
-        printf("Not unique!\n");
-    } else {
-        printf("All unique!\n");
-    }
-
-    printf("Start: 0x%p, End: 0x%p, EndUnique: 0x%p.\n",
-           VertexPairs,
-           VertexPairsEnd,
-           EndUnique);
-
-    printf("Num element: %u.\n", (VertexPairsEnd - VertexPairs));
-    printf("Num unique: %u.\n", (EndUnique - VertexPairs));
-
-}
-*/
-
-KERNEL
-VOID
-GraphCuSortVertexPairsKernel(
-    _In_ ULONG NumberOfKeys,
-    _Inout_ thrust::device_ptr<VERTEX_PAIR> VertexPairs,
-    _Inout_ thrust::device_ptr<ULONG> VertexPairsIndex
-    )
-{
-    thrust::device_ptr<VERTEX_PAIR> VertexPairsEnd;
-
-    VertexPairsEnd = VertexPairs + NumberOfKeys;
-
-    thrust::sort_by_key(
-        thrust::device,
-        VertexPairs,
-        VertexPairsEnd,
-        VertexPairsIndex,
-        VertexPairLessThan
-    );
-}
-
-KERNEL
-VOID
-GraphCuIsAcyclicKernel(
-    _In_ ULONG NumberOfKeys,
-    _Inout_ thrust::device_ptr<VERTEX_PAIR> VertexPairs,
-    _Out_ PHRESULT Result
-    )
-{
-    thrust::device_ptr<VERTEX_PAIR> VertexPairsEnd;
-    thrust::device_ptr<VERTEX_PAIR> VertexPairsEndUnique;
-
-    VertexPairsEnd = VertexPairs + NumberOfKeys;
-
-    thrust::sort(
-        thrust::device,
-        VertexPairs,
-        VertexPairsEnd,
-        VertexPairLessThan
-    );
-
-    VertexPairsEndUnique = thrust::unique(
-        thrust::device,
-        VertexPairs,
-        VertexPairsEnd,
-        VertexPairEqual
-    );
-
-    if (VertexPairsEndUnique != VertexPairsEnd) {
-        *Result = PH_E_GRAPH_CYCLIC_FAILURE;
-    }
-}
-
-KERNEL
-VOID
-GraphCuAddEdgesKernel(
-    _In_ ULONG NumberOfEdges,
-    _In_ ULONG NumberOfKeys,
-    _In_reads_(NumberOfKeys) PVERTEX_PAIR VertexPairs,
-    _Out_ PEDGE Edges,
-    _Out_ PEDGE Next,
-    _Out_ PVERTEX First
-    )
-{
-    EDGE Edge1;
-    EDGE Edge2;
-    EDGE First1;
-    EDGE First2;
-    ULONG Index;
-    PINT2 Input = (PINT2)VertexPairs;
-    VERTEX Vertex1;
-    VERTEX Vertex2;
-
-    FOR_EACH_1D(Index, NumberOfKeys) {
-        Vertex1 = Input[Index].x;
-        Vertex2 = Input[Index].y;
-
-        Edge1 = (EDGE)Index;
-        Edge2 = Edge1 + NumberOfEdges;
-
-        //
-        // Insert the first edge.
-        //
-
-        First1 = First[Vertex1];
-        Next[Edge1] = First1;
-        First[Vertex1] = Edge1;
-        Edges[Edge1] = Vertex2;
-
-        //
-        // Insert the second edge.
-        //
-
-        First2 = First[Vertex2];
-        Next[Edge2] = First2;
-        First[Vertex2] = Edge2;
-        Edges[Edge2] = Vertex1;
-    }
 }
 
 EXTERN_C
@@ -731,6 +189,7 @@ GraphCuShouldWeContinueTryingToSolve(
     ULONG Target;
     ULONG Timeout;
     ULONG ClockRate;
+    BOOLEAN ContinueSolving;
     BOOLEAN CheckTimeout;
     ULONGLONG Delta;
     ULONGLONG ThisClock;
@@ -784,8 +243,9 @@ GraphCuShouldWeContinueTryingToSolve(
 
     *Result = S_OK;
 
-    return TRUE;
-    //return (Graph->Attempt <= 5);
+    //return TRUE;
+    ContinueSolving = (Graph->Attempt <= 2);
+    return ContinueSolving;
 }
 
 EXTERN_C
@@ -902,6 +362,38 @@ End:
     return Result;
 }
 
+KERNEL
+VOID
+GraphCuResetArraysKernel(
+    _In_ PGRAPH Graph
+    )
+{
+    ULONG Index;
+    ULONG Total;
+
+    Total = max(Graph->TotalNumberOfEdges, Graph->NumberOfVertices);
+
+    FOR_EACH_1D(Index, Total) {
+
+        //printf("[%d]: %d < %d\n", ThreadId, Index, Total);
+
+        if (Index < Graph->NumberOfKeys) {
+            Graph->Order[Index] = 0;
+        }
+
+        if (Index < Graph->TotalNumberOfEdges) {
+            Graph->Next[Index] = EMPTY;
+            Graph->Edges[Index] = EMPTY;
+        }
+
+        if (Index < Graph->NumberOfVertices) {
+            Graph->First[Index] = EMPTY;
+            Graph->Assigned[Index] = 0;
+            Graph->Deleted[Index] = NO_THREAD_ID;
+            Graph->Visited[Index] = NO_THREAD_ID;
+        }
+    }
+}
 EXTERN_C
 DEVICE
 HRESULT
@@ -936,9 +428,10 @@ Return Value:
 --*/
 {
     HRESULT Result;
-    PGRAPH_INFO Info;
     CU_STREAM Stream;
     CU_RESULT CuResult;
+    LONG Old;
+    ULONG SharedMemoryInBytes;
     ULONG TotalNumberOfPages;
     ULONG TotalNumberOfLargePages;
     ULONG TotalNumberOfCacheLines;
@@ -951,66 +444,50 @@ Return Value:
     // Initialize aliases.
     //
 
-    Info = Graph->CuGraphInfo;
-
     Result = PH_S_CONTINUE_GRAPH_SOLVING;
-
     Stream = Graph->CuKernelContext->Streams.Reset;
 
     //
     // Clear scalar values.
     //
 
-    Graph->Collisions = 0;
-    Graph->NumberOfEmptyVertices = 0;
-    Graph->DeletedEdgeCount = 0;
-    Graph->VisitedVerticesCount = 0;
+    Graph->OrderIndex = (LONG)Graph->NumberOfVertices;
+    ASSERT(Graph->OrderIndex > 0);
 
-    Graph->TraversalDepth = 0;
-    Graph->TotalTraversals = 0;
-    Graph->MaximumTraversalDepth = 0;
+    Old = atomicSub((LONG *)&Graph->OrderIndex, 1);
+    printf("1: atomicSub(): Old = %d, Graph->OrderIndex = %d\n",
+           Old,
+           Graph->OrderIndex);
+
+    Old = atomicSub((LONG *)&Graph->OrderIndex, 1);
+    printf("2: atomicSub(): Old = %d, Graph->OrderIndex = %d\n",
+           Old,
+           Graph->OrderIndex);
+
+    Old = atomicSub((LONG *)&Graph->OrderIndex, 1);
+    printf("3: atomicSub(): Old = %d, Graph->OrderIndex = %d\n",
+           Old,
+           Graph->OrderIndex);
+
+    Graph->OrderIndex = (LONG)Graph->NumberOfVertices;
 
     Graph->Flags.Shrinking = FALSE;
     Graph->Flags.IsAcyclic = FALSE;
 
-    Graph->AddKeysElapsedCycles.QuadPart = 0;
-    Graph->HashKeysElapsedCycles.QuadPart = 0;
-    Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
-
     //
-    // XXX: temp.
+    // Clear the arrays via a parallel kernel.
     //
 
-    return Result;
+    SharedMemoryInBytes = 0;
+    GraphCuResetArraysKernel<<<
+        Graph->CuBlocksPerGrid,
+        Graph->CuThreadsPerBlock,
+        SharedMemoryInBytes,
+        Stream
+    >>>(Graph);
 
-    //
-    // Clear the bitmap buffers.
-    //
-
-#define ZERO_BITMAP_BUFFER(Name)                           \
-    ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
-           ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
-    CU_ZERO(Graph->##Name##.Buffer,                        \
-            Info->##Name##BufferSizeInBytes,               \
-            Stream)
-
-    ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
-    ZERO_BITMAP_BUFFER(AssignedBitmap);
-    ZERO_BITMAP_BUFFER(IndexBitmap);
-
-    //
-    // "Empty" all of the nodes.
-    //
-
-#define EMPTY_ARRAY(Name)                                           \
-    ASSERT(0 == Info->##Name##SizeInBytes -                         \
-           ((Info->##Name##SizeInBytes >> 3) << 3));                \
-    CU_MEMSET(Graph->##Name, 0xffffffff, Info->##Name##SizeInBytes, Stream)
-
-    EMPTY_ARRAY(First);
-    EMPTY_ARRAY(Next);
-    EMPTY_ARRAY(Edges);
+    //CuResult = cudaDeviceSynchronize();
+    //CU_CHECK(CuResult, cudaDeviceSynchronize);
 
     //
     // Avoid the overhead of resetting the memory coverage if we're in "first
@@ -1020,6 +497,12 @@ Return Value:
     if (!FindBestGraph(Graph)) {
         goto End;
     }
+
+    //
+    // We're not calculating memory coverage yet, so skip this next bit.
+    //
+
+    goto End;
 
     //
     // Clear the assigned memory coverage counts and arrays.
@@ -1081,17 +564,11 @@ End:
     return Result;
 }
 
-EXTERN_C
-DEVICE
-BOOLEAN
-GraphCuIsAcyclic(
-    _In_ PGRAPH Graph
-    )
-{
-    return FALSE;
-}
+//
+// Begin GraphImpl1.cu
+//
 
-#if 0
+
 EXTERN_C
 FORCEINLINE
 DEVICE
@@ -1110,7 +587,390 @@ AbsoluteEdge(
     AbsEdge = (MaskedEdge + (Index * Graph->NumberOfEdges));
     return AbsEdge;
 }
+
+EXTERN_C
+FORCEINLINE
+DEVICE
+BOOLEAN
+IsDeletedEdge(
+    _In_ PGRAPH Graph,
+    _In_ EDGE Edge
+    )
+{
+    ULONG ThreadId;
+
+    ThreadId = Graph->Deleted[Edge];
+    return (ThreadId != NO_THREAD_ID);
+}
+
+#define AtomicCompareAndSwapThreadId(Name, Index)                       \
+    (NO_THREAD_ID == atomicCAS((unsigned int *)&Graph->##Name##[Index], \
+                               NO_THREAD_ID,                            \
+                               GlobalThreadIndex()))
+
+EXTERN_C
+FORCEINLINE
+DEVICE
+BOOLEAN
+TryRegisterEdgeDeletion(
+    _In_ PGRAPH Graph,
+    _In_ EDGE Edge
+    )
+{
+    LONG Old;
+    LONG OrderIndex;
+
+    if (!AtomicCompareAndSwapThreadId(Deleted, Edge)) {
+
+        //
+        // Some other thread has deleted this edge.
+        //
+
+        printf("[%d]: other thread %d deleted edge %u\n",
+               GlobalThreadIndex(),
+               Graph->Deleted[Edge],
+               Edge);
+
+        return FALSE;
+    }
+
+    printf("[%d]: we (%d) deleted edge %u\n",
+           GlobalThreadIndex(),
+           Graph->Deleted[Edge],
+           Edge);
+
+    //
+    // We were the ones to delete this thread.  Obtain the order index for this
+    // deletion, and save the edge in the order array.
+    //
+
+//#undef BREAKPOINT
+//#define BREAKPOINT()
+
+    if (Graph->OrderIndex <= 0) {
+        printf("[%d]: Graph->OrderIndex <= 0: %d\n",
+               GlobalThreadIndex(),
+               Graph->OrderIndex);
+        //BREAKPOINT();
+    }
+    Old = atomicSub((LONG *)&Graph->OrderIndex, 1);
+    if (Old <= 0) {
+        printf("[%d]: Old <= 0: %d\n",
+               GlobalThreadIndex(),
+               Old);
+        //BREAKPOINT();
+    }
+    OrderIndex = Old - 1;
+    if (OrderIndex < 0) {
+        printf("[%d]: OrderIndex < 0: %d\n",
+               GlobalThreadIndex(),
+               OrderIndex);
+        //BREAKPOINT();
+    }
+    //ASSERT((LONG)OrderIndex >= 0);
+    if (OrderIndex >= 0) {
+        printf("[%d]: Registering order deletion %d for edge %u.\n",
+               GlobalThreadIndex(),
+               OrderIndex,
+               Edge);
+        Graph->Order[OrderIndex] = Edge;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+
+EXTERN_C
+DEVICE
+BOOLEAN
+GraphFindDegree1Edge(
+    _In_ PGRAPH Graph,
+    _In_ VERTEX Vertex,
+    _Out_ PEDGE EdgePointer
+    )
+/*++
+
+Routine Description:
+
+    This routine determines if a vertex has degree 1 within the graph, and if
+    so, returns the edge associated with it.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph.
+
+    Vertex - Supplies the vertex for which the degree 1 test is made.
+
+    EdgePointer - Supplies the address of a variable that receives the EDGE
+        owning this vertex if it degree 1.
+
+Return Value:
+
+    TRUE if the vertex has degree 1, FALSE otherwise.  EdgePointer will be
+    updated if TRUE is returned.
+
+    N.B. Actually, in the CHM implementation, they seem to update the edge
+         regardless if it was a degree 1 connection.  I guess we should mirror
+         that behavior now too.
+
+--*/
+{
+    EDGE Edge;
+    EDGE AbsEdge;
+    BOOLEAN Found = FALSE;
+
+    //
+    // Get the edge for this vertex.
+    //
+
+    Edge = Graph->First[Vertex];
+
+    //
+    // If edge is empty, we're done.
+    //
+
+    if (IsEmpty(Edge)) {
+        return FALSE;
+    }
+
+    AbsEdge = AbsoluteEdge(Graph, Edge, 0);
+
+    //
+    // AbsEdge should always be less than or equal to Edge here.
+    //
+
+    //ASSERT(AbsEdge <= Edge);
+
+    //
+    // If the edge has not been deleted, capture it.
+    //
+
+    if (!IsDeletedEdge(Graph, AbsEdge)) {
+        Found = TRUE;
+        *EdgePointer = Edge;
+    }
+
+    //
+    // Determine if this is a degree 1 connection.
+    //
+
+    while (TRUE) {
+
+        //
+        // Load the next edge.
+        //
+
+        Edge = Graph->Next[Edge];
+
+        if (IsEmpty(Edge)) {
+            break;
+        }
+
+        //
+        // Obtain the absolute edge for this edge.
+        //
+
+        AbsEdge = AbsoluteEdge(Graph, Edge, 0);
+
+        //
+        // If we've already deleted this edge, we can skip it and look at the
+        // next edge in the graph.
+        //
+
+        if (IsDeletedEdge(Graph, AbsEdge)) {
+            continue;
+        }
+
+        if (Found) {
+
+            //
+            // If we've already found an edge by this point, we're not 1 degree.
+            //
+
+            return FALSE;
+        }
+
+        //
+        // We've found the first edge.
+        //
+
+        *EdgePointer = Edge;
+        Found = TRUE;
+    }
+
+    return Found;
+}
+
+EXTERN_C
+DEVICE
+VOID
+GraphCyclicDeleteEdge(
+    _In_ PGRAPH Graph,
+    _In_ VERTEX Vertex
+    )
+/*++
+
+Routine Description:
+
+    This routine deletes edges from a graph connected by vertices of degree 1.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the edge is to be deleted.
+
+    Vertex - Supplies the vertex for which the initial edge is obtained.
+
+Return Value:
+
+    None.
+
+    N.B. If an edge is deleted, its corresponding bit will be set in the bitmap
+         Graph->DeletedEdges.
+
+--*/
+{
+    EDGE Edge = 0;
+    EDGE AbsEdge;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    BOOLEAN IsDegree1;
+
+    //
+    // Determine if the vertex has a degree of 1, and if so, obtain the edge.
+    //
+
+//Restart:
+
+    IsDegree1 = GraphFindDegree1Edge(Graph, Vertex, &Edge);
+
+    //
+    // If this isn't a degree 1 edge, there's nothing left to do.
+    //
+
+    if (!IsDegree1) {
+        return;
+    }
+
+    //
+    // We've found an edge of degree 1 to delete.
+    //
+
+    Vertex1 = Vertex;
+    Vertex2 = 0;
+
+    while (TRUE) {
+
+        //
+        // Obtain the absolute edge and register it as deleted.
+        //
+
+        AbsEdge = AbsoluteEdge(Graph, Edge, 0);
+
+        //
+        // Invariant check: Edge should always be greater than or equal to
+        // AbsEdge here.
+        //
+
+        if (Edge < AbsEdge) {
+            BREAKPOINT();
+        }
+
+        //ASSERT(Edge >= AbsEdge);
+
+        //
+        // Attempt to register deletion of this edge by our global thread ID.
+        //
+
+        if (!TryRegisterEdgeDeletion(Graph, Edge)) {
+            NOTHING; //goto Restart;
+        }
+
+        //
+        // Find the other vertex the edge is connecting.
+        //
+
+        Vertex2 = Graph->Edges[AbsEdge];
+
+        if (Vertex2 == Vertex1) {
+
+            //
+            // We had the first vertex; get the second one.
+            //
+
+            AbsEdge = AbsoluteEdge(Graph, Edge, 1);
+            Vertex2 = Graph->Edges[AbsEdge];
+        }
+
+        //
+        // If the second vertex is empty, break.
+        //
+
+        if (IsEmpty(Vertex2)) {
+            break;
+        }
+
+        //
+        // Determine if the other vertex is degree 1.
+        //
+
+        IsDegree1 = GraphFindDegree1Edge(Graph, Vertex2, &Edge);
+
+        if (!IsDegree1) {
+
+            //
+            // Other vertex isn't degree 1, we can stop the search.
+            //
+
+            break;
+        }
+
+        //
+        // This vertex is also degree 1, so continue the deletion.
+        //
+
+        Vertex1 = Vertex2;
+    }
+}
+
+//
+// End GraphImpl1.cu
+
+KERNEL
+VOID
+GraphCuIsAcyclicKernel(
+    _In_ PGRAPH Graph
+    )
+{
+    VERTEX Vertex;
+
+    if (GlobalThreadIndex() == 0) {
+        printf("[%d]: Before Graph->OrderIndex: %d\n", GlobalThreadIndex(), Graph->OrderIndex);
+    }
+
+    FOR_EACH_1D(Vertex, Graph->NumberOfVertices) {
+        GraphCyclicDeleteEdge(Graph, Vertex);
+    }
+
+    __syncthreads();
+
+    if (GlobalThreadIndex() == 0) {
+        printf("[%d]: After Graph->OrderIndex: %d\n", GlobalThreadIndex(), Graph->OrderIndex);
+    }
+
+#if 0
+    __syncthreads();
+
+    if (GlobalThreadIndex() == 0) {
+        printf("[%d]: Graph->OrderIndex: %d\n", GlobalThreadIndex(), Graph->OrderIndex);
+        if (Graph->OrderIndex != 0) {
+            Graph->CuIsAcyclicResult = PH_E_GRAPH_CYCLIC_FAILURE;
+        }
+    }
 #endif
+
+}
+
 
 EXTERN_C
 KERNEL
@@ -1269,9 +1129,6 @@ Return Value:
         Keys,
         Graph->NumberOfEdges,
         NumberOfKeys,
-        Graph->VertexPairs,
-        Graph->SortedVertexPairs,
-        Graph->VertexPairsIndex,
         Graph->First,
         Graph->Next,
         Graph->Edges,
@@ -1284,9 +1141,9 @@ Return Value:
     CU_CHECK(CuResult, cudaDeviceSynchronize);
 
     Result = Graph->CuHashKeysResult;
+    printf("HashKeys: %x\n", Result);
     if (FAILED(Result)) {
         if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
-            //printf("Collided!\n");
             Graph->CuVertexCollisionFailures++;
             goto Failed;
         }
@@ -1297,54 +1154,21 @@ Return Value:
 
     Graph->CuNoVertexCollisionFailures++;
 
-    //
-    // When we've got more than 225,000 keys, launching the acyclic *and* the
-    // sort kernel at the same time yields a memory allocation error in the sort
-    // kernel.  In this case, just issue a device sync between the kernel calls.
-    //
+    printf("Before IsAcyclicKernel(): Graph->OrderIndex: %d\n", Graph->OrderIndex);
 
-    if (NumberOfKeys > 225000) {
-
-        GraphCuIsAcyclicKernel<<<1, 1, 0, Streams->IsAcyclic>>>(
-            NumberOfKeys,
-            thrust::device_ptr<VERTEX_PAIR>(Graph->VertexPairs),
-            &Graph->CuIsAcyclicResult
-        );
-
-        CuResult = cudaDeviceSynchronize();
-        CU_CHECK(CuResult, cudaDeviceSynchronize);
-
-        GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
-            NumberOfKeys,
-            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
-            thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
-        );
-
-
-    } else {
-
-        //
-        // We can launch both kernels and let them execute concurrently.
-        //
-
-        GraphCuIsAcyclicKernel<<<1, 1, 0, Streams->IsAcyclic>>>(
-            NumberOfKeys,
-            thrust::device_ptr<VERTEX_PAIR>(Graph->VertexPairs),
-            &Graph->CuIsAcyclicResult
-        );
-
-        GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
-            NumberOfKeys,
-            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
-            thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
-        );
-
-    }
+    GraphCuIsAcyclicKernel<<<
+        BlocksPerGrid,
+        ThreadsPerBlock,
+        SharedMemoryInBytes,
+        Streams->IsAcyclic
+    >>>(Graph);
 
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
 
+    printf("After IsAcyclicKernel(): Graph->OrderIndex: %d\n", Graph->OrderIndex);
     Result = Graph->CuIsAcyclicResult;
+    printf("IsAcyclic: %x\n", Result);
     if (FAILED(Result)) {
         if (Result == PH_E_GRAPH_CYCLIC_FAILURE) {
             Graph->CuCyclicGraphFailures++;
@@ -1360,6 +1184,9 @@ Return Value:
     //
 
     Graph->CuFinishedCount++;
+
+    Result = PH_S_STOP_GRAPH_SOLVING;
+    goto End;
 
     //
     // Launch the assignment kernel.
@@ -1583,6 +1410,7 @@ Return Value:
         }
 
         Result = GraphCuReset(Graph);
+        //printf("GraphCuReset() result: %x\n", Result);
         if (FAILED(Result)) {
             break;
         } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {

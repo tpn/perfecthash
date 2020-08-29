@@ -2705,6 +2705,7 @@ Return Value:
 {
     HRESULT Result;
     ULONG NumberOfKeys;
+    ULONG NumberOfVertices;
 
     //
     // Call out to the Chm01 preparation version first.
@@ -2720,10 +2721,21 @@ Return Value:
     //
 
     NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+    NumberOfVertices = Info->Dimensions.NumberOfVertices;
 
-    Info->VertexPairsSizeInBytes = ALIGN_UP_ZMMWORD(
+    Info->VertexPairsSizeInBytes = (
         RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
         (ULONGLONG)NumberOfKeys
+    );
+
+    Info->DeletedSizeInBytes = (
+        RTL_ELEMENT_SIZE(GRAPH, Deleted) *
+        (ULONGLONG)NumberOfVertices
+    );
+
+    Info->VisitedSizeInBytes = (
+        RTL_ELEMENT_SIZE(GRAPH, Visited) *
+        (ULONGLONG)NumberOfVertices
     );
 
     return Result;

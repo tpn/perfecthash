@@ -82,7 +82,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
-   <CudaCompile>
+    <CudaCompile>
       <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
     <CudaCompile>
@@ -102,6 +102,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="Graph.cu" />
+    <CudaCompile Include="GraphImpl.cu">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Random.cpp" />

@@ -1845,12 +1845,14 @@ Return Value:
         RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
     );
 
-    NextSizeInBytes = ALIGN_UP_YMMWORD(
-        RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
-    );
-
+#if 0
     OrderSizeInBytes = ALIGN_UP_YMMWORD(
         RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfEdges.QuadPart
+    );
+#endif
+
+    OrderSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfVertices.QuadPart
     );
 
     FirstSizeInBytes = ALIGN_UP_YMMWORD(

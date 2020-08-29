@@ -388,12 +388,6 @@ Return Value:
 
     ASSERT(DeviceGraph != NULL);
 
-    //
-    // Allocate arrays.  The VertexPairs, Edges, Next, and First arrays are all
-    // local to the device.  The Assigned array is allocated on both the device
-    // and the host.
-    //
-
     CuMemHostAllocFlags.AsULong = 0;
 
 #define ALLOC_DEVICE_ARRAY(Name)                                     \
@@ -429,13 +423,24 @@ Return Value:
         goto Error;                                              \
     }
 
-    ALLOC_DEVICE_ARRAY(VertexPairs);
-    ALLOC_DEVICE_ARRAY(Edges);
+    //
+    // Allocate arrays.  The Assigned array is allocated on both the device
+    // and the host (as it's the final output of a solved graph); everything
+    // else is allocated on just the device.
+    //
+
     ALLOC_DEVICE_ARRAY(Next);
     ALLOC_DEVICE_ARRAY(First);
+    ALLOC_DEVICE_ARRAY(Edges);
+    ALLOC_DEVICE_ARRAY(Order);
+    ALLOC_DEVICE_ARRAY(Deleted);
+    ALLOC_DEVICE_ARRAY(Visited);
+    ALLOC_DEVICE_ARRAY(VertexPairs);
     ALLOC_DEVICE_ARRAY(AssignedDevice);
 
     ALLOC_HOST_ARRAY(AssignedHost);
+
+#if 0
 
     //
     // XXX: temp experiment.
@@ -463,6 +468,13 @@ Return Value:
     ALLOC_SIZED_DEVICE_ARRAY(VertexPairsIndex, sizeof(ULONG));
     ALLOC_SIZED_DEVICE_ARRAY(SortedVertexPairs, sizeof(VERTEX_PAIR));
 
+#endif
+
+    //
+    // We don't use bitmaps for the CUDA kernels.
+    //
+
+#if 0
     //
     // Set the bitmap sizes and then allocate the bitmap buffers (which all
     // live on the device).
@@ -493,6 +505,7 @@ Return Value:
     ALLOC_DEVICE_BITMAP_BUFFER(VisitedVerticesBitmap);
     ALLOC_DEVICE_BITMAP_BUFFER(AssignedBitmap);
     ALLOC_DEVICE_BITMAP_BUFFER(IndexBitmap);
+#endif
 
     //
     // Check to see if we're in "first graph wins" mode, and have also been
@@ -599,7 +612,10 @@ Error:
 
 End:
 
-    if (SUCCEEDED(Result) && !IsSpareGraph(Graph)) {
+    if (SUCCEEDED(Result) &&
+        FindBestGraph(Context) &&
+        !IsSpareGraph(Graph))
+    {
 
         //
         // Call LoadInfo() against the spare graph, too.

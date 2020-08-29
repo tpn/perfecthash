@@ -23,6 +23,8 @@ Abstract:
 
 #include "stdafx.h"
 
+#include "GraphCounters.h"
+
 //
 // Define the PERFECT_HASH_TABLE_STATE structure.
 //

@@ -3025,7 +3025,7 @@ Return Value:
     ALLOC_ARRAY(Next, PEDGE);
     ALLOC_ARRAY(Edges, PEDGE);
     ALLOC_ARRAY(First, PVERTEX);
-    ALLOC_ARRAY(Order, PULONG);
+    ALLOC_ARRAY(Order, PLONG);
     ALLOC_ARRAY(Assigned, PASSIGNED);
 
     //
@@ -3388,7 +3388,8 @@ Return Value:
     ZERO_ARRAY(Order);
     ZERO_ARRAY(Assigned);
 
-    Graph->OrderIndex = Graph->NumberOfKeys;
+    Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
+    ASSERT(Graph->OrderIndex > 0);
 
     if (TableCreateFlags.HashAllKeysFirst) {
 

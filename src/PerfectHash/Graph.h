@@ -38,6 +38,7 @@ Abstract:
 #include "PerfectHashPrivate.h"
 #endif
 
+#include "GraphCounters.h"
 
 //
 // Define the primitive key, edge and vertex types and pointers to said types.
@@ -663,6 +664,8 @@ typedef struct _GRAPH_INFO {
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
     ULONGLONG OrderSizeInBytes;
+    ULONGLONG DeletedSizeInBytes;
+    ULONGLONG VisitedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
 
@@ -1140,7 +1143,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // Current index into the Order array (used during assignment).
     //
 
-    ULONG OrderIndex;
+    volatile LONG OrderIndex;
 
     //
     // Clock related fields.
@@ -1189,7 +1192,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     _Writable_elements_(NumberOfKeys)
-    PULONG Order;
+    PLONG Order;
 
     //
     // Array of the "next" edge array, as per the referenced papers.
@@ -1254,12 +1257,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PULONG Vertices2Index;
 
     //
-    // CUDA array for capturing visited vertices during assignment (instead of
-    // the bitmap).
+    // CUDA arrays for capturing deleted edges and visited vertices.
     //
 
     _Writable_elements_(NumberOfVertices)
-    PULONG VisitedVertices;
+    volatile ULONG *Deleted;
+
+    _Writable_elements_(NumberOfKeys)
+    volatile ULONG *Visited;
 
     //
     // Opaque context for kernels.

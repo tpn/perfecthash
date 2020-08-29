@@ -57,6 +57,10 @@ Abstract:
 // Helper defines.
 //
 
+#ifndef NOTHING
+#define NOTHING
+#endif
+
 #define BREAKPOINT __brkpt
 #define TRAP __trap
 

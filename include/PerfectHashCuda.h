@@ -32,7 +32,7 @@ extern "C" {
 
 typedef char CHAR;
 typedef short SHORT;
-typedef long LONG;
+typedef int LONG;
 typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
 
 typedef WCHAR *PWCHAR, *LPWCH, *PWCH, *PWSTR, *LPWSTR;
@@ -483,6 +483,8 @@ typedef TYPE *PTYPE;
     for (Index = BlockIndex.x * BlockDim.x + ThreadIndex.x; \
          Index < Total;                                     \
          Index += BlockDim.x * GridDim.x)
+
+#define GlobalThreadIndex() (BlockIndex.x * BlockDim.x + ThreadIndex.x)
 
 DEVICE
 static inline

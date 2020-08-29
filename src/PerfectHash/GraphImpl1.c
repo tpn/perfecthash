@@ -191,7 +191,7 @@ Return Value:
         GraphCyclicDeleteEdge(Graph, Vertex);
     }
 
-    ASSERT((LONG)Graph->OrderIndex >= 0);
+    ASSERT(Graph->OrderIndex >= 0);
 
     if (!IsGraphParanoid(Graph)) {
 
@@ -240,7 +240,7 @@ Return Value:
     if (IsAcyclic) {
         ASSERT(Graph->OrderIndex == 0);
     } else {
-        ASSERT(Graph->OrderIndex != 0);
+        ASSERT(Graph->OrderIndex > 0);
     }
 
     //
@@ -385,7 +385,7 @@ Return Value:
     EventWriteGraphAssignResult(
         NULL,
         Graph->Attempt,
-        Table->GraphImpl,
+        Graph->Context->Table->GraphImpl,
         Cycles,
         Microseconds,
         Graph->NumberOfKeys,
