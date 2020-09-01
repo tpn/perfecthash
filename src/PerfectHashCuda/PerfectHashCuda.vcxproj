@@ -109,6 +109,12 @@
   <ItemGroup>
     <ClCompile Include="Random.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\no_sal2.h" />
+    <ClInclude Include="..\..\include\PerfectHash.h" />
+    <ClInclude Include="..\..\include\PerfectHashCuda.h" />
+    <ClInclude Include="..\..\include\PerfectHashErrors.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 10.2.targets" />

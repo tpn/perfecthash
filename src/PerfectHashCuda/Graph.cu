@@ -942,10 +942,13 @@ GraphCuIsAcyclicKernel(
     _In_ PGRAPH Graph
     )
 {
+    //ULONG Attempt = 0;
     VERTEX Vertex;
 
     if (GlobalThreadIndex() == 0) {
-        printf("[%d]: Before Graph->OrderIndex: %d\n", GlobalThreadIndex(), Graph->OrderIndex);
+        printf("[%d]: Before Graph->OrderIndex: %d\n",
+               GlobalThreadIndex(),
+               Graph->OrderIndex);
     }
 
     FOR_EACH_1D(Vertex, Graph->NumberOfVertices) {
