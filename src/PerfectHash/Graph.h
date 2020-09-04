@@ -664,6 +664,7 @@ typedef struct _GRAPH_INFO {
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
     ULONGLONG OrderSizeInBytes;
+    ULONGLONG CountsSizeInBytes;
     ULONGLONG DeletedSizeInBytes;
     ULONGLONG VisitedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
@@ -1265,6 +1266,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     _Writable_elements_(NumberOfKeys)
     volatile ULONG *Visited;
+
+    //
+    // CUDA array for capturing count of vertices.
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    volatile ULONG *Counts;
 
     //
     // Opaque context for kernels.

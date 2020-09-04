@@ -68,6 +68,7 @@ class Graph:
         'seed2',
         'edges',
         'pairs',
+        'counts',
         'hashed',
         'visited',
         'assigned',
@@ -88,7 +89,7 @@ class Graph:
         'total_traversals',
         'max_traversal_depth',
     ]
-    def __init__(self, keys, out=None):
+    def __init__(self, keys, out=None, hash_all_func=None):
         import numpy as np
         self.out = out
         if not self.out:
@@ -105,6 +106,7 @@ class Graph:
         self.edges = np.full(total_edges, -1, dtype=np.int32)
         self.next = np.full(total_edges, -1, dtype=np.int32)
         self.pairs = np.zeros(num_keys * 2, dtype=np.uint32)
+        self.counts = np.zeros(num_vertices, dtype=np.uint32)
         self.assigned = np.zeros(num_vertices, dtype=np.uint32)
         self.vertices1 = np.zeros(num_keys, dtype=np.uint32)
         self.vertices2 = np.zeros(num_keys, dtype=np.uint32)
@@ -134,7 +136,8 @@ class Graph:
             self.first,
             self.next,
             self.edges,
-            self.pairs
+            self.pairs,
+            self.counts,
         )
         self.hashed = True
         self.seed1 = seed1
@@ -281,6 +284,8 @@ class Graph:
 
             out(f'{i} -> {f}: not visited, traversing...')
             self.traverse_recursive(i)
+
+    def is_acyclic(self):
 
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :

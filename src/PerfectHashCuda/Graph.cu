@@ -105,6 +105,86 @@ PerfectHashPrintError(
            Result);
 }
 
+#define AtomicIncrementVertex(Counts, Vertex) \
+    atomicAdd((unsigned int *)&Counts[Vertex], (unsigned int)1)
+
+EXTERN_C
+GLOBAL
+VOID
+HashAllMultiplyShiftRKernel(
+    _In_reads_(NumberOfKeys) PKEY Keys,
+    _In_ ULONG NumberOfEdges,
+    _In_ ULONG NumberOfKeys,
+    _Out_ PVERTEX First,
+    _Out_ PEDGE Next,
+    _Out_ PEDGE Edges,
+    _Out_ PULONG Counts,
+    _In_ ULONG Mask,
+    _In_ PULONG Seeds,
+    _Out_ PHRESULT GlobalResult
+    )
+{
+    KEY Key;
+    EDGE Edge1;
+    EDGE Edge2;
+    EDGE First1;
+    EDGE First2;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG Index;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+
+    FOR_EACH_1D(Index, NumberOfKeys) {
+
+        Key = Keys[Index];
+
+        Vertex1 = (((Key * SEED1) >> SEED3_BYTE1) & Mask);
+        Vertex2 = (((Key * SEED2) >> SEED3_BYTE2) & Mask);
+
+        if (Vertex1 == Vertex2) {
+            *GlobalResult = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            goto End;
+        }
+
+        AtomicIncrementVertex(Counts, Vertex1);
+        AtomicIncrementVertex(Counts, Vertex2);
+
+        Edge1 = (EDGE)Index;
+        Edge2 = Edge1 + NumberOfEdges;
+
+        //
+        // Insert the first edge.
+        //
+
+        First1 = First[Vertex1];
+        Next[Edge1] = First1;
+        First[Vertex1] = Edge1;
+        Edges[Edge1] = Vertex2;
+
+        //
+        // Insert the second edge.
+        //
+
+        First2 = First[Vertex2];
+        Next[Edge2] = First2;
+        First[Vertex2] = Edge2;
+        Edges[Edge2] = Vertex1;
+    }
+
+End:
+    return;
+}
+#if 0
 EXTERN_C
 GLOBAL
 VOID
@@ -177,6 +257,7 @@ HashAllMultiplyShiftRKernel(
 End:
     return;
 }
+#endif
 
 EXTERN_C
 DEVICE
@@ -388,6 +469,7 @@ GraphCuResetArraysKernel(
 
         if (Index < Graph->NumberOfVertices) {
             Graph->First[Index] = EMPTY;
+            Graph->Counts[Index] = 0;
             Graph->Assigned[Index] = 0;
             Graph->Deleted[Index] = NO_THREAD_ID;
             Graph->Visited[Index] = NO_THREAD_ID;
@@ -1135,6 +1217,7 @@ Return Value:
         Graph->First,
         Graph->Next,
         Graph->Edges,
+        (PULONG)Graph->Counts,
         Graph->VertexMask,
         Graph->Seeds,
         &Graph->CuHashKeysResult

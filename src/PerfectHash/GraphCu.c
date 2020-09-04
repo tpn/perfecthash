@@ -433,6 +433,7 @@ Return Value:
     ALLOC_DEVICE_ARRAY(First);
     ALLOC_DEVICE_ARRAY(Edges);
     ALLOC_DEVICE_ARRAY(Order);
+    ALLOC_DEVICE_ARRAY(Counts);
     ALLOC_DEVICE_ARRAY(Deleted);
     ALLOC_DEVICE_ARRAY(Visited);
     ALLOC_DEVICE_ARRAY(VertexPairs);

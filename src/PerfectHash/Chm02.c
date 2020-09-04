@@ -2084,6 +2084,13 @@ FinishedOrdinalsProcessing:
         CU_CHECK(CuResult, ModuleGetFunction);
 
         //
+        // We can now destroy the linker state.
+        //
+
+        CuResult = Cu->LinkDestroy(LinkState);
+        CU_CHECK(CuResult, LinkDestroy);
+
+        //
         // Get the occupancy stats.
         //
 
@@ -2735,6 +2742,11 @@ Return Value:
 
     Info->VisitedSizeInBytes = (
         RTL_ELEMENT_SIZE(GRAPH, Visited) *
+        (ULONGLONG)NumberOfVertices
+    );
+
+    Info->CountsSizeInBytes = (
+        RTL_ELEMENT_SIZE(GRAPH, Counts) *
         (ULONGLONG)NumberOfVertices
     );
 

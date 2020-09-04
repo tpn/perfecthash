@@ -12,20 +12,23 @@ ctypedef VERTEX_PAIR *PVERTEX_PAIR
 from cython cimport boundscheck, wraparound
 @boundscheck(False)
 @wraparound(False)
-cpdef hash_all(ULONG num_keys,
-               ULONG num_edges,
-               ULONG hash_mask,
-               ULONG seed1,
-               ULONG seed2,
-               BYTE seed3_byte1,
-               BYTE seed3_byte2,
-               np.ndarray[np.uint32_t, ndim=1] keys,
-               np.ndarray[np.uint32_t, ndim=1] vertices1,
-               np.ndarray[np.uint32_t, ndim=1] vertices2,
-               np.ndarray[np.int32_t, ndim=1] first,
-               np.ndarray[np.int32_t, ndim=1] next_,
-               np.ndarray[np.int32_t, ndim=1] edges,
-               np.ndarray[np.uint32_t, ndim=1] pairs):
+cpdef hash_all(
+    ULONG num_keys,
+    ULONG num_edges,
+    ULONG hash_mask,
+    ULONG seed1,
+    ULONG seed2,
+    BYTE seed3_byte1,
+    BYTE seed3_byte2,
+    np.ndarray[np.uint32_t, ndim=1] keys,
+    np.ndarray[np.uint32_t, ndim=1] vertices1,
+    np.ndarray[np.uint32_t, ndim=1] vertices2,
+    np.ndarray[np.int32_t, ndim=1] first,
+    np.ndarray[np.int32_t, ndim=1] next_,
+    np.ndarray[np.int32_t, ndim=1] edges,
+    np.ndarray[np.uint32_t, ndim=1] pairs,
+    np.ndarray[np.uint32_t, ndim=1] counts,
+):
     cdef ULONG i = 0
     cdef ULONG k = 0
     cdef ULONG key
@@ -45,6 +48,9 @@ cpdef hash_all(ULONG num_keys,
         k += 1
         pairs[k] = vertex2
         k += 1
+
+        counts[vertex1] += 1
+        counts[vertex2] += 1
 
         edge1 = i
         edge2 = i + num_edges
