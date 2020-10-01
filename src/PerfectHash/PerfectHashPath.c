@@ -1553,6 +1553,7 @@ Return Value:
     // structures.
     //
 
+    ASSERT(Path->FullPath.Length <= Path->FullPath.MaximumLength);
     ASSERT(Path->FullPath.Buffer[Path->FullPath.Length >> 1] == L'\0');
 
     Result = Path->Vtbl->ExtractParts(Path);
