@@ -68,10 +68,15 @@ mainCRTStartup(
                                             NumberOfArguments,
                                             ArgvW);
 
+    //
+    // Print the usage string if the create routine failed due to invalid number
+    // of arguments.
+    //
+
     if (FAILED(Result)) {
         PH_MESSAGE(Result);
         if (Result == PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS) {
-            PH_MESSAGE(PH_MSG_PERFECT_HASH_BULK_CREATE_EXE_USAGE);
+            PH_MESSAGE(PH_MSG_PERFECT_HASH_USAGE);
         }
     }
 

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -168,13 +168,10 @@ DoesErrorCodeWantAlgoHashMaskTableAppended(
     Code = (HRESULT)ErrorCode;
 
     //
-    // We append the algo/hash/mask table text for usage strings, currently.
+    // We append the algo/hash/mask table text for the usage string.
     //
 
-    Result = (
-        Code == PH_MSG_PERFECT_HASH_BULK_CREATE_EXE_USAGE ||
-        Code == PH_MSG_PERFECT_HASH_CREATE_EXE_USAGE
-    );
+    Result = (Code == PH_MSG_PERFECT_HASH_USAGE);
 
     return Result;
 }
