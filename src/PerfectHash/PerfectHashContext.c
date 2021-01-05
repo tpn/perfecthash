@@ -1980,5 +1980,161 @@ End:
     return Result;
 }
 
+PERFECT_HASH_CONTEXT_INITIALIZE_RNG PerfectHashContextInitializeRng;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextInitializeRng(
+    PPERFECT_HASH_CONTEXT Context,
+    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    )
+/*++
+
+Routine Description:
+
+    Enumerates the given table create parameters, validates any RNG-related
+    values, then initializes the supporting RNG infrastructure.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which
+        RNG initialization is to be performed.
+
+    TableCreateFlags - Supplies a pointer to the table create flags.
+
+    TableCreateParameters - Supplies a pointer to the table create params.
+
+Return Value:
+
+    S_OK - RNG initialized successfully.
+
+    Otherwise, an appropriate error code.
+
+--*/
+{
+    PRTL Rtl;
+    ULONG Index;
+    ULONG Count;
+    HRESULT Result;
+    RNG_FLAGS Flags;
+    BOOLEAN SawRngSeed;
+    BOOLEAN UseRandomStartSeed;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+
+    SawRngSeed = FALSE;
+    Flags.AsULong = 0;
+
+    Rtl = Context->Rtl;
+    Count = TableCreateParameters->NumberOfElements;
+    Param = TableCreateParameters->Params;
+    UseRandomStartSeed = (TableCreateFlags->RngUseRandomStartSeed == TRUE);
+
+    //
+    // Disable "enum not handled in switch statement" warning.
+    //
+    //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+    //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+    //                     is not explicitly handled by a case label
+    //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
+    for (Index = 0; Index < Count; Index++, Param++) {
+
+        switch (Param->Id) {
+
+            case TableCreateParameterRngId:
+                Context->RngId = Param->AsRngId;
+                break;
+
+            case TableCreateParameterRngSeedId:
+                Context->RngSeed = Param->AsULongLong;
+                SawRngSeed = TRUE;
+                break;
+
+            case TableCreateParameterRngSubsequenceId:
+                Context->RngSubsequence = Param->AsULongLong;
+                break;
+
+            case TableCreateParameterRngOffsetId:
+                Context->RngOffset = Param->AsULongLong;
+                break;
+
+            default:
+                break;
+        }
+
+#pragma warning(pop)
+
+    }
+
+    //
+    // Validate --Rng.
+    //
+
+    if (!IsValidPerfectHashRngId(Context->RngId)) {
+        Context->RngId = RNG_DEFAULT_ID;
+    }
+
+    Result = PerfectHashLookupNameForId(Rtl,
+                                        PerfectHashRngEnumId,
+                                        Context->RngId,
+                                        &Context->RngName);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextInitializeRng_LookupNameForId, Result);
+        goto Error;
+    }
+
+    //
+    // Initialize the RNG seed.
+    //
+
+    if (UseRandomStartSeed != FALSE) {
+        if (SawRngSeed != FALSE) {
+            Result = PH_E_RNG_USE_RANDOM_START_SEED_CONFLICTS_WITH_RNG_SEED;
+            goto Error;
+        }
+        Flags.UseRandomStartSeed = TRUE;
+    } else if (SawRngSeed == FALSE) {
+        Flags.UseDefaultStartSeed = TRUE;
+        Context->RngSeed = RNG_DEFAULT_SEED;
+    } else {
+
+        //
+        // Nothing else to do here; the user-supplied start seed will be used
+        // automatically (and has already been captured into Context->RngSeed).
+        //
+
+        NOTHING;
+    }
+
+    //
+    // Copy flags over.
+    //
+
+    Context->RngFlags.AsULong = Flags.AsULong;
+
+    //
+    // We're done!  Indicate success and finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+    return Result;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

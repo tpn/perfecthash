@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -343,6 +343,24 @@ const BYTE NumberOfIndexImplStrings = ARRAYSIZE(IndexImplStringTuples);
 // The next section defines the UNICODE_STRING representations and supporting
 // arrays of enum types.
 //
+
+//
+// Random Number Generators
+//
+
+#define EXPAND_AS_RNG_NAME(Name, Upper) \
+    const UNICODE_STRING PerfectHash##Name##RngName = RCS(L#Name);
+
+PERFECT_HASH_RNG_TABLE_ENTRY(EXPAND_AS_RNG_NAME);
+
+#define EXPAND_AS_RNG_NAME_PTR(Name, Upper) \
+    &PerfectHash##Name##RngName,
+
+const PCUNICODE_STRING RngNames[] = {
+    NULL,
+    PERFECT_HASH_RNG_TABLE_ENTRY(EXPAND_AS_RNG_NAME_PTR)
+    NULL,
+};
 
 //
 // CPU arch
@@ -777,7 +795,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
-#define NUMBER_OF_INTERFACES 13
+#define NUMBER_OF_INTERFACES 14
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -797,6 +815,7 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_GUARDED_LIST GUARDED_LIST
 #define PERFECT_HASH_GRAPH GRAPH
 #define PERFECT_HASH_CU CU
+#define PERFECT_HASH_RNG RNG
 
 #define PERFECT_HASH_IUNKNOWN_VTBL IUNKNOWN_VTBL
 #define PERFECT_HASH_ICLASSFACTORY_VTBL ICLASSFACTORY_VTBL
@@ -805,6 +824,7 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_GUARDED_LIST_VTBL GUARDED_LIST_VTBL
 #define PERFECT_HASH_GRAPH_VTBL GRAPH_VTBL
 #define PERFECT_HASH_CU_VTBL CU_VTBL
+#define PERFECT_HASH_RNG_VTBL RNG_VTBL
 
 #define EXPAND_AS_SIZEOF_COMPONENT(Name, Upper, Guid) \
     sizeof(PERFECT_HASH_##Upper),
@@ -862,6 +882,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     -1, // GuardedList
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Graph),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Cu),
+    -1, // Rng
 
     -1,
 };
@@ -883,6 +904,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // GuardedList
     -1, // Graph
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Cu),
+    -1, // Rng
 
     -1,
 };
@@ -1237,6 +1259,22 @@ CU_VTBL CuInterface = {
 VERIFY_VTBL_SIZE(CU, 1);
 
 //
+// Rng
+//
+
+RNG_VTBL RngInterface = {
+    (PRNG_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PRNG_ADD_REF)&ComponentAddRef,
+    (PRNG_RELEASE)&ComponentRelease,
+    (PRNG_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PRNG_LOCK_SERVER)&ComponentLockServer,
+    &RngInitializePseudo,
+    &RngGenerateRandomBytes,
+    &RngGetCurrentOffset,
+};
+VERIFY_VTBL_SIZE(RNG, 3);
+
+//
 // Interface array.
 //
 
@@ -1256,6 +1294,7 @@ const VOID *ComponentInterfaces[] = {
     &GuardedListInterface,
     &GraphInterface,
     &CuInterface,
+    &RngInterface,
 
     NULL,
 };
@@ -1278,6 +1317,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
     (PCOMPONENT_INITIALIZE)&CuInitialize,
+    (PCOMPONENT_INITIALIZE)&RngInitialize,
 
     NULL,
 };
@@ -1300,6 +1340,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
     (PCOMPONENT_RUNDOWN)&CuRundown,
+    (PCOMPONENT_RUNDOWN)&RngRundown,
 
     NULL,
 };

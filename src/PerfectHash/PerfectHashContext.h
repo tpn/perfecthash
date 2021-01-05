@@ -753,6 +753,17 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG MaximumConcurrency;
 
     //
+    // RNG details.
+    //
+
+    PCUNICODE_STRING RngName;
+    PERFECT_HASH_RNG_ID RngId;
+    RNG_FLAGS RngFlags;
+    ULONGLONG RngSeed;
+    ULONGLONG RngSubsequence;
+    ULONGLONG RngOffset;
+
+    //
     // The algorithm is responsible for registering an appropriate callback
     // for main thread work items in this next field.
     //
@@ -1070,6 +1081,16 @@ typedef PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
 
 typedef
 HRESULT
+(NTAPI PERFECT_HASH_CONTEXT_INITIALIZE_RNG)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_INITIALIZE_RNG
+      *PPERFECT_HASH_CONTEXT_INITIALIZE_RNG;
+
+typedef
+HRESULT
 (NTAPI PERFECT_HASH_CONTEXT_INITIALIZE_CUDA)(
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
@@ -1123,6 +1144,8 @@ extern PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
     PerfectHashContextExtractTableCreateArgsFromArgvW;
 extern PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES
     PerfectHashContextApplyThreadpoolPriorities;
+extern PERFECT_HASH_CONTEXT_INITIALIZE_RNG
+    PerfectHashContextInitializeRng;
 extern PERFECT_HASH_CONTEXT_INITIALIZE_CUDA
     PerfectHashContextInitializeCuda;
 #endif

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -388,12 +388,21 @@ PerfectHashGetCurrentCpuArch(
         )                                                            \
     )                                                                \
                                                                      \
-    LAST_ENTRY(                                                      \
+    ENTRY(                                                           \
         Cu,                                                          \
         CU,                                                          \
         GUID_EX(                                                     \
             0x8e124a55, 0xf609, 0x45be,                              \
             0xa7, 0x2e, 0x96, 0x74, 0x2d, 0xbb, 0x1, 0xf5            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    LAST_ENTRY(                                                      \
+        Rng,                                                         \
+        RNG,                                                         \
+        GUID_EX(                                                     \
+            0xfd84eebe, 0x2571, 0x4517,                              \
+            0xa5, 0x14, 0x7a, 0xe4, 0x50, 0x32, 0x7d, 0x48           \
         )                                                            \
     )
 
@@ -2706,10 +2715,17 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG TryUsePredictedAttemptsToLimitMaxConcurrency:1;
 
         //
+        // When set, if uses a random seed obtained from the operating system to
+        // initialize the selected RNG.  Requires --Rng.
+        //
+
+        ULONG RngUseRandomStartSeed:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:5;
+        ULONG Unused:4;
     };
 
     LONG AsLong;
@@ -2892,6 +2908,186 @@ IsValidTableCompileFlags(
 }
 
 //
+// Define an X-macro for random number generators.  The ENTRY macros receive
+// the following parameters: (Name, Upper).
+//
+
+#define PERFECT_HASH_RNG_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(System, SYSTEM)                                \
+    LAST_ENTRY(Philox43210, PHILOX43210)
+
+#define PERFECT_HASH_RNG_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_RNG_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_RNG_ENUM(Name, Upper) \
+    PerfectHashRng##Name##Id,
+
+//
+// Define an enumeration for identifying which random number generator to use.
+//
+
+typedef enum _PERFECT_HASH_RNG_ID {
+
+    //
+    // Explicitly define a null ID to take the 0-index slot.
+    //
+
+    PerfectHashNullRngId = 0,
+
+    //
+    // Begin valid RNGs.
+    //
+
+    PERFECT_HASH_RNG_TABLE_ENTRY(EXPAND_AS_RNG_ENUM)
+
+    //
+    // End valid RNGs.
+    //
+
+    //
+    // N.B.  Keep the next value last.
+    //
+
+    PerfectHashInvalidRngId,
+
+} PERFECT_HASH_RNG_ID;
+typedef PERFECT_HASH_RNG_ID *PPERFECT_HASH_RNG_ID;
+
+//
+// Provide a simple inline RNG validation routine.
+//
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashRngId(
+    _In_ PERFECT_HASH_RNG_ID RngId
+    )
+{
+    return (
+        RngId > PerfectHashNullRngId &&
+        RngId < PerfectHashInvalidRngId
+    );
+}
+
+//
+// Declare the RNG component.
+//
+
+DECLARE_COMPONENT(Rng, RNG);
+
+//
+// Define RNG function typedefs.
+//
+
+typedef union _RNG_FLAGS {
+    struct {
+
+        //
+        // When set, indicates new seeds should be obtained from the system
+        // random number generator during the RNG initialization routines (e.g.
+        // InitializePseudo()).  This is set automatically when the command line
+        // parameter --RngUseRandomStartSeed is supplied.
+        //
+        // Invariant: When set, UseDefaultStartSeed must not be set.
+        //
+
+        ULONG UseRandomStartSeed:1;
+
+        //
+        // When set, indicates the default random seed should be used.  This is
+        // set automatically if both --RngSeed and --RngUseRandomStartSeed are
+        // not present on the command line.
+        //
+        // Invariant: When set, UseRandomStartSeed must not be set.
+        //
+
+        ULONG UseDefaultStartSeed:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:30;
+
+    };
+    LONG AsLong;
+    ULONG AsULong;
+} RNG_FLAGS;
+C_ASSERT(sizeof(RNG_FLAGS) == sizeof(ULONG));
+typedef RNG_FLAGS *PRNG_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidRngFlags(
+    _In_ PRNG_FLAGS Flags
+    )
+{
+    if (!ARGUMENT_PRESENT(Flags)) {
+        return E_POINTER;
+    }
+
+    if (Flags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    if (Flags->UseRandomStartSeed != FALSE) {
+        if (Flags->UseDefaultStartSeed != FALSE) {
+            return E_INVALIDARG;
+        }
+    }
+
+    return S_OK;
+}
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE RNG_INITIALIZE_PSEUDO)(
+    _In_ PRNG Rng,
+    _In_ PERFECT_HASH_RNG_ID RngId,
+    _In_ PRNG_FLAGS Flags,
+    _In_ ULONGLONG Seed,
+    _In_ ULONGLONG Subsequence,
+    _In_ ULONGLONG Offset
+    );
+typedef RNG_INITIALIZE_PSEUDO *PRNG_INITIALIZE_PSEUDO;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_At_(SizeOfBufferInBytes, _Pre_satisfies_(SizeOfBufferInBytes % 4 == 0))
+HRESULT
+(STDAPICALLTYPE RNG_GENERATE_RANDOM_BYTES)(
+    _In_ PRNG Rng,
+    _In_ SIZE_T SizeOfBufferInBytes,
+    _Out_writes_(SizeOfBufferInBytes) PBYTE Buffer
+    );
+typedef RNG_GENERATE_RANDOM_BYTES *PRNG_GENERATE_RANDOM_BYTES;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE RNG_GET_CURRENT_OFFSET)(
+    _In_ PRNG Rng,
+    _Out_ PULONGLONG Offset
+    );
+typedef RNG_GET_CURRENT_OFFSET *PRNG_GET_CURRENT_OFFSET;
+
+//
+// Define the RNG vtable.
+//
+
+typedef struct _RNG_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(RNG);
+    PRNG_INITIALIZE_PSEUDO InitializePseudo;
+    PRNG_GENERATE_RANDOM_BYTES GenerateRandomBytes;
+    PRNG_GET_CURRENT_OFFSET GetCurrentOffset;
+} RNG_VTBL;
+typedef RNG_VTBL *PRNG_VTBL;
+
+//
 // Define the X-macro for table create parameters.
 //
 
@@ -2910,6 +3106,10 @@ IsValidTableCompileFlags(
     ENTRY(CuDeviceOrdinal)                                           \
     ENTRY(CuDeviceOrdinals)                                          \
     ENTRY(SolutionsFoundRatio)                                       \
+    ENTRY(Rng)                                                       \
+    ENTRY(RngSeed)                                                   \
+    ENTRY(RngSubsequence)                                            \
+    ENTRY(RngOffset)                                                 \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     LAST_ENTRY(Seed3Byte2MaskCounts)
 
@@ -3092,6 +3292,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
+        PERFECT_HASH_RNG_ID AsRngId;
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID AsBestCoverageType;
         VALUE_ARRAY AsValueArray;
         KEYS_SUBSET AsKeysSubset;
@@ -3764,7 +3965,8 @@ typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
     ENTRY(HashFunction, HASH_FUNCTION)                          \
     ENTRY(MaskFunction, MASK_FUNCTION)                          \
     ENTRY(BestCoverageType, BEST_COVERAGE_TYPE)                 \
-    LAST_ENTRY(TableCreateParameter, TABLE_CREATE_PARAMETER)
+    ENTRY(TableCreateParameter, TABLE_CREATE_PARAMETER)         \
+    LAST_ENTRY(Rng, RNG)
 
 #define PERFECT_HASH_ENUM_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_ENUM_TABLE(ENTRY, ENTRY, ENTRY)

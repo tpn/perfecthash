@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -11,6 +11,12 @@ Abstract:
     Private header file for table creation CSV glue.
 
 --*/
+
+//
+// For VER_PRODUCTVERSION_STR.
+//
+
+#include <PerfectHashVersion.rc>
 
 //
 // Define an "X-Macro"-style macro for capturing the ordered definition of
@@ -59,6 +65,46 @@ Abstract:
     ENTRY(BuildType,                                                                         \
           PerfectHashBuildConfigString,                                                      \
           OUTPUT_CSTR)                                                                       \
+                                                                                             \
+    ENTRY(Version,                                                                           \
+          VER_PRODUCTVERSION_STR,                                                            \
+          OUTPUT_CSTR)                                                                       \
+                                                                                             \
+    ENTRY(RngName,                                                                           \
+          Context->RngName,                                                                  \
+          OUTPUT_UNICODE_STRING_FAST)                                                        \
+                                                                                             \
+    ENTRY(RngId,                                                                             \
+          Context->RngId,                                                                    \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(RngFlags,                                                                          \
+          Context->RngFlags.AsULong,                                                         \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(RngStartSeed,                                                                      \
+          Context->RngSeed,                                                                  \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(RngStartSubsequence,                                                               \
+          Context->RngSubsequence,                                                           \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(RngStartOffset,                                                                    \
+          Context->RngOffset,                                                                \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(RngWinningSeed,                                                                    \
+          Table->RngSeed,                                                                    \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(RngWinningSubsequence,                                                             \
+          Table->RngSubsequence,                                                             \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(RngWinningOffset,                                                                  \
+          Table->RngOffset,                                                                  \
+          OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(MaximumConcurrency,                                                                \
           Context->MaximumConcurrency,                                                       \

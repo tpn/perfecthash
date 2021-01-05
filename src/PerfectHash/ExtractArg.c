@@ -171,6 +171,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(RemoveWriteCombineAfterSuccessfulHashKeys);
     DECL_ARG(TryLargePagesForVertexPairs);
     DECL_ARG(TryUsePredictedAttemptsToLimitMaxConcurrency);
+    DECL_ARG(RngUseRandomStartSeed);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -215,6 +216,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(RemoveWriteCombineAfterSuccessfulHashKeys);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForVertexPairs);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUsePredictedAttemptsToLimitMaxConcurrency);
+    SET_FLAG_AND_RETURN_IF_EQUAL(RngUseRandomStartSeed);
 
     return S_FALSE;
 }
@@ -724,8 +726,10 @@ Return Value:
     USHORT Count;
     USHORT Index;
     ULONG Value = 0;
+    LONG64 Value64 = 0;
     PWSTR Source;
     PALLOCATOR Allocator;
+    BOOLEAN ValueIsInt64 = FALSE;
     BOOLEAN ValueIsInteger = FALSE;
     BOOLEAN EqualSignFound = FALSE;
     BOOLEAN TableParamFound = FALSE;
@@ -889,12 +893,19 @@ Return Value:
     ASSERT(ValueString->Buffer[ValueString->Length >> 1] == L'\0');
 
     //
-    // Attempt to convert the value string into an integer representation.
+    // Attempt to convert the value string into an integer representation.  We
+    // use 0 as the base in order to leverage the automatic hex/octal/decimal
+    // parsing logic.
     //
 
-    Result = Rtl->RtlUnicodeStringToInteger(ValueString, 10, &Value);
+    Result = Rtl->RtlUnicodeStringToInteger(ValueString, 0, &Value);
     if (SUCCEEDED(Result)) {
         ValueIsInteger = TRUE;
+    }
+
+    Result = Rtl->RtlUnicodeStringToInt64(ValueString, 0, &Value64, NULL);
+    if (SUCCEEDED(Result)) {
+        ValueIsInt64 = TRUE;
     }
 
 #define SET_PARAM_ID(Name)                         \
@@ -905,6 +916,13 @@ Return Value:
         SET_PARAM_ID(Name);                           \
         LocalParam.AsULong = Value;                   \
         goto AddParam;                                \
+    }
+
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(Name) \
+    if (IS_EQUAL(Name) && ValueIsInt64) {           \
+        SET_PARAM_ID(Name);                         \
+        LocalParam.AsLongLong = Value64;            \
+        goto AddParam;                              \
     }
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(AttemptsBeforeTableResize);
@@ -1034,6 +1052,25 @@ Return Value:
         32
     );
 
+    if (IS_EQUAL(Rng)) {
+        Result = PerfectHashLookupIdForName(Rtl,
+                                            PerfectHashRngEnumId,
+                                            ValueString,
+                                            (PULONG)&LocalParam.AsRngId);
+        if (SUCCEEDED(Result)) {
+            SET_PARAM_ID(Rng);
+            goto AddParam;
+        } else {
+            Result = PH_E_INVALID_RNG_NAME;
+            goto Error;
+        }
+    }
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(RngSeed);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(RngSubsequence);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(RngOffset);
 
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(Name, Upper)           \
     if (IS_EQUAL(Name##ThreadpoolPriority)) {                              \

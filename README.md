@@ -13,6 +13,8 @@ The following usage information is available by executing either
 arguments.
 
 ```
+Invalid number of arguments for context bulk create.
+
 PerfectHashBulkCreate.exe Usage:
     <KeysDirectory> <OutputDirectory>
     <Algorithm> <HashFunction> <MaskFunction>
@@ -310,6 +312,22 @@ Table Create Flags:
              rapidly, consuming a lot of disk space.  Thus, if the old files are
              not required, it is recommended to regularly delete them manually.
 
+    --RngUseRandomStartSeed
+
+        Used in conjunction with --Rng.  If present, initializes the random
+        number generator with a random seed (obtained via the operating system).
+        If not present, the default seed 0x2019090319811025 will be used.
+
+        N.B. If you're benchmarking performance, omit this flag, as starting
+             from the same default seed is required to get comparable runs.
+
+        See Also:
+
+            --Rng
+            --RngSeed
+            --RngSubsequence
+            --RngOffset
+
 Table Compile Flags:
 
     N/A
@@ -425,6 +443,39 @@ Table Create Parameters:
         N.B. These parameters are typically less useful for bulk-create options
              as each table will have different solving characteristics.
 
+    --Rng=<RNG name>
+
+        Supplies the name of a random number generator to use for obtaining the
+        random bytes needed as part of graph solving.  Valid values:
+
+            Philox43210
+
+                Uses the Philox 4x32 10-round pseudo-RNG.  This is the default.
+
+            System
+
+                Uses the standard operating system facilities for obtaining
+                random data.  All other --Rng* parameters are ignored.
+
+    --RngSeed=<Seed>
+
+        Supplies a 64-bit seed used to initialize the RNG.  Defaults to
+        0x2019090319811025, unless --RngUseRandomStartSeed is supplied (in which
+        case, a random seed will be used, obtained via the operating system).
+
+    --RngSubsequence=<Subsequence>
+
+        Supplies the initial subsequence used by the RNG.  The first graph will
+        use this sequence, with each additional graph adding 1 to this value for
+        their subsequence.  This ensures parallel graphs generate different
+        random numbers (even if the seed is identical) when solving.  (Defaults
+        to 0.)
+
+    --RngOffset=<Offset>
+
+        Supplies the initial offset used by the RNG.  (Defaults to 0.)
+
+
 Console Output Character Legend
 
  Char | Meaning
@@ -446,7 +497,7 @@ Console Output Character Legend
     !   The system is out of memory.
 
     L   The system is running low on memory (a low memory event is triggered
-        at about 90%% RAM usage).  In certain situations we can detect this
+        at about 90% RAM usage).  In certain situations we can detect this
         situation prior to actually running out of memory; in these cases,
         we abort the current table creation attempt (which will instantly
         relieve system memory pressure).
@@ -460,5 +511,40 @@ Console Output Character Legend
     S   A shutdown event was received.  This shouldn't be seen unless externally
         signaling the named shutdown event associated with a context.
 
+Algorithms:
+
+   ID | Name
+    1   Chm01
+
+Hash Functions:
+
+   ID | Name (Number of Seeds)
+    2   Jenkins (2)
+   12   Fnv (2)
+   14   Crc32RotateX (3)
+   15   Crc32RotateXY (3)
+   16   Crc32RotateWXYZ (3)
+   17   RotateMultiplyXorRotate (3)
+   18   ShiftMultiplyXorShift (3)
+   19   ShiftMultiplyXorShift2 (6)
+   20   RotateMultiplyXorRotate2 (6)
+   21   MultiplyRotateR (3)
+   22   MultiplyRotateLR (3)
+   23   MultiplyShiftR (3)
+   24   MultiplyShiftLR (3)
+   25   Multiply (2)
+   26   MultiplyXor (4)
+   27   MultiplyRotateRMultiply (5)
+   28   MultiplyRotateR2 (5)
+   29   MultiplyShiftRMultiply (5)
+   30   MultiplyShiftR2 (5)
+   31   RotateRMultiply (3)
+   32   RotateRMultiplyRotateR (3)
+
+Mask Functions:
+
+  ID | Name
+   1   Modulus (does not work!)
+   2   And
 
 ```

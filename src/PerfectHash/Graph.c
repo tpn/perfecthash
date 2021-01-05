@@ -114,6 +114,15 @@ Return Value:
         goto Error;
     }
 
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                         NULL,
+                                         &IID_PERFECT_HASH_RNG,
+                                         &Graph->Rng);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
     //
     // Load the table create flags from the TLS context.
     //
@@ -212,6 +221,7 @@ Return Value:
 
     RELEASE(Graph->Rtl);
     RELEASE(Graph->Allocator);
+    RELEASE(Graph->Rng);
 
     //
     // Free the vertex pairs array if applicable.
@@ -2806,6 +2816,7 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    PRNG Rng;
     HRESULT Result;
     PGRAPH_INFO Info;
     PGRAPH_INFO PrevInfo;
@@ -3115,6 +3126,28 @@ Return Value:
     }
 
     ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(NumberOfAssignedPerLargePage);
+
+    //
+    // Initialize the RNG.  We add the graph's index (which is the 0-based
+    // sequential ID of the graph) to the subsequence in order to ensure each
+    // graph generates different random numbers (which they're guaranteed to do
+    // if we use different subsequences).
+    //
+
+    Rng = Graph->Rng;
+    Result = Rng->Vtbl->InitializePseudo(
+        Rng,
+        Context->RngId,
+        &Context->RngFlags,
+        Context->RngSeed,
+        Context->RngSubsequence + (ULONGLONG)Graph->Index,
+        Context->RngOffset
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(GraphLoadInfo_RngInitializePseudo, Result);
+        goto Error;
+    }
 
     //
     // We're done, finish up.
@@ -3433,11 +3466,15 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
+    PRNG Rng;
     HRESULT Result;
     ULONG SizeInBytes;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE_CREATE_PARAMETERS Params;
+
+    //
+    // Validate arguments.
+    //
 
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
@@ -3447,17 +3484,26 @@ Return Value:
         return PH_E_SPARE_GRAPH;
     }
 
+    //
+    // Arguments valid, continue.  Calculate the size in bytes required for the
+    // random data (based on the number of seeds used by the graph), then call
+    // out to the RNG component to obtain the random bytes.
+    //
+
     SizeInBytes = Graph->NumberOfSeeds * sizeof(Graph->FirstSeed);
-
-    Rtl = Graph->Rtl;
-
-    Result = Rtl->Vtbl->GenerateRandomBytes(Rtl,
+    Rng = Graph->Rng;
+    Result = Rng->Vtbl->GenerateRandomBytes(Rng,
                                             SizeInBytes,
                                             (PBYTE)&Graph->FirstSeed);
 
     if (FAILED(Result)) {
         return Result;
     }
+
+    //
+    // Successfully obtained the requested number of random bytes.  Apply any
+    // seed mask counts and user seeds, if applicable.
+    //
 
     Context = Graph->Context;
     Params = Context->Table->TableCreateParameters;
