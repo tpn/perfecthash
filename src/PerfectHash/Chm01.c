@@ -1913,10 +1913,6 @@ Return Value:
         RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
     );
 
-    NextSizeInBytes = ALIGN_UP_YMMWORD(
-        RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
-    );
-
     FirstSizeInBytes = ALIGN_UP_YMMWORD(
         RTL_ELEMENT_SIZE(GRAPH, First) * NumberOfVertices.QuadPart
     );
