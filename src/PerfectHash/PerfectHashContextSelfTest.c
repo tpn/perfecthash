@@ -324,7 +324,8 @@ Return Value:
 
     WildcardPath.MaximumLength = AllocSize.LowPart;
     WildcardPath.Length = AllocSize.LowPart - sizeof(*Dest);
-    ASSERT(WildcardPath.Buffer[WildcardPath.Length] == L'\0');
+    ASSERT(WildcardPath.Length < WildcardPath.MaximumLength);
+    ASSERT(WildcardPath.Buffer[WildcardPath.Length >> 1] == L'\0');
 
     //
     // Advance the buffer past this string allocation, up to the next 16-byte
