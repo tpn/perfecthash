@@ -3335,6 +3335,21 @@ Invalid SolutionsFoundRatio; must be a double less than 1.0 and greater than 0.0
 ;// 0x3a2 -> 0x3bf is reserved for future merge of cuda-dev.
 ;//
 
+;//
+;// 0x3a2
+;//
+
+MessageId=0x3b1
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED
+Language=English
+Duplicate table create parameter detected.
+.
+
+;//
+;// 0x3bf
+;//
 
 MessageId=0x3c0
 Severity=Fail

@@ -3691,6 +3691,21 @@ Abstract:
 // 0x3a2 -> 0x3bf is reserved for future merge of cuda-dev.
 //
 //
+// 0x3a2
+//
+//
+// MessageId: PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED
+//
+// MessageText:
+//
+// Duplicate table create parameter detected.
+//
+#define PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED ((HRESULT)0xE00403B1L)
+
+//
+// 0x3bf
+//
+//
 // MessageId: PH_E_INVALID_RNG_ID
 //
 // MessageText:
