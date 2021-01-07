@@ -141,6 +141,7 @@
     <ClInclude Include="CompiledPerfectHashTableTypesPost_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableTypesPre_CHeader_RawCString.h" />
     <ClInclude Include="Cu.h" />
+    <ClInclude Include="GraphCounters.h" />
     <ClInclude Include="PerfectHashCu.h" />
     <ClInclude Include="no_sal2_CHeader_RawCString.h" />
     <ClInclude Include="Makefile_Makefile_RawCString.h" />
