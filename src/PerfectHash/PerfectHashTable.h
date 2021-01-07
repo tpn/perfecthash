@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -426,6 +426,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     LARGE_INTEGER AddKeysElapsedMicroseconds;
     LARGE_INTEGER HashKeysElapsedMicroseconds;
     LARGE_INTEGER AddHashedKeysElapsedMicroseconds;
+
+    //
+    // Rng details from the winning graph.
+    //
+
+    ULONGLONG RngSeed;
+    ULONGLONG RngSubsequence;
+    ULONGLONG RngOffset;
 
     //
     // Backing vtbl.

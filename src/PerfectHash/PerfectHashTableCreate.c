@@ -666,6 +666,17 @@ Return Value:
                 Context->Seed3Byte2MaskCounts = &Param->AsSeedMaskCounts;
                 break;
 
+            case TableCreateParameterRngId:
+            case TableCreateParameterRngSeedId:
+            case TableCreateParameterRngSubsequenceId:
+            case TableCreateParameterRngOffsetId:
+
+                //
+                // These are handled by PerfectHashContextInitializeRng().
+                //
+
+                break;
+
             case TableCreateParameterCuDeviceOrdinalId:
             case TableCreateParameterCuDeviceOrdinalsId:
 

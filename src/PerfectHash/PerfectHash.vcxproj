@@ -176,6 +176,7 @@
     <ClInclude Include="TableCreateCsv.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="VCProjectFileChunks.h" />
+    <ClInclude Include="Rng.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BitManipulation.c" />
@@ -255,6 +256,7 @@
     <ClCompile Include="PerfectHashTableMask.c" />
     <ClCompile Include="PerfectHashTableNames.c" />
     <ClCompile Include="PerfectHashTableTest.c" />
+    <ClCompile Include="RngPhilox4x32.c" />
     <ClCompile Include="Rtl.c" />
     <ClCompile Include="RtlBuffers.c" />
     <ClCompile Include="RtlErrorHandling.c" />
@@ -269,6 +271,7 @@
     <ClCompile Include="_pow.c" />
     <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="VCProjectFileChunks.c" />
+    <ClCompile Include="Rng.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

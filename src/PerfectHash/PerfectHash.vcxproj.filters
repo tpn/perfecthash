@@ -295,6 +295,12 @@
     <ClCompile Include="_pow.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Rng.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RngPhilox4x32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -574,6 +580,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashEventsPrivate.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Rng.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -132,6 +132,7 @@ Abstract:
 #include "Cu.h"
 #include "PerfectHashCu.h"
 #include "Graph.h"
+#include "Rng.h"
 #include "PerfectHashContext.h"
 #include "PerfectHashConstants.h"
 #include "PerfectHashErrorHandling.h"

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -149,6 +149,7 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    PRNG Rng;
     USHORT Index;
     PULONG Keys;
     PGRAPH *Graphs = NULL;
@@ -1138,6 +1139,20 @@ FinishedSolution:
 
     Table->AddHashedKeysElapsedMicroseconds.QuadPart =
         Graph->AddHashedKeysElapsedMicroseconds.QuadPart;
+
+    //
+    // Capture RNG details from the winning graph.
+    //
+
+    Table->RngSeed = Graph->Rng->Seed;
+    Table->RngSubsequence = Graph->Rng->Subsequence;
+
+    Rng = Graph->Rng;
+    Result = Rng->Vtbl->GetCurrentOffset(Rng, &Table->RngOffset);
+    if (FAILED(Result)) {
+        PH_ERROR(CreatePerfectHashTableImplChm01_RngGetCurrentOffset, Result);
+        goto Error;
+    }
 
     //
     // Note this graph as the one solved to the context.  This is used by the

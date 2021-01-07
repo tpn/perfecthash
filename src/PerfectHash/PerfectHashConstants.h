@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -253,6 +253,7 @@ CompletePerfectHashTableInitialization(
 // Declare the arrays for enum type names.
 //
 
+extern const PCUNICODE_STRING RngNames[];
 extern const PCUNICODE_STRING CpuArchNames[];
 extern const PCUNICODE_STRING InterfaceNames[];
 extern const PCUNICODE_STRING AlgorithmNames[];

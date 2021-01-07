@@ -927,6 +927,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _PERFECT_HASH_CONTEXT *Context;
 
     //
+    // Pointer to an RNG instance.  Used to obtain new random data at the top of
+    // each graph solving loop.
+    //
+
+    struct _RNG *Rng;
+
+    //
     // Edges array.
     //
 

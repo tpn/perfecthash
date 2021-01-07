@@ -1317,6 +1317,14 @@ Return Value:
     PerfectHashContextApplyThreadpoolPriorities(Context,
                                                 &TableCreateParameters);
 
+    Result = PerfectHashContextInitializeRng(Context,
+                                             &TableCreateFlags,
+                                             &TableCreateParameters);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextTableCreateArgvW_InitRng, Result);
+        return Result;
+    }
+
     if (ContextTableCreateFlags.TryCuda != FALSE) {
         Result = PerfectHashContextInitializeCuda(Context,
                                                   &TableCreateParameters);

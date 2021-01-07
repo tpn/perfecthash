@@ -1700,13 +1700,21 @@ Return Value:
                                                       MaximumConcurrency);
         if (FAILED(Result)) {
             Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
-            PH_ERROR(PerfectHashContextContextBulkCreateArgvW, Result);
+            PH_ERROR(PerfectHashContextBulkCreateArgvW, Result);
             return Result;
         }
     }
 
     PerfectHashContextApplyThreadpoolPriorities(Context,
                                                 &TableCreateParameters);
+
+    Result = PerfectHashContextInitializeRng(Context,
+                                             &TableCreateFlags,
+                                             &TableCreateParameters);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextBulkCreateArgvW_InitRng, Result);
+        return Result;
+    }
 
     Result = Context->Vtbl->BulkCreate(Context,
                                        &KeysDirectory,

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -573,6 +573,22 @@ Abstract:
 //              rapidly, consuming a lot of disk space.  Thus, if the old files are
 //              not required, it is recommended to regularly delete them manually.
 // 
+//     --RngUseRandomStartSeed
+// 
+//         Used in conjunction with --Rng.  If present, initializes the random
+//         number generator with a random seed (obtained via the operating system).
+//         If not present, the default seed 0x2019090319811025 will be used.
+// 
+//         N.B. If you're benchmarking performance, omit this flag, as starting
+//              from the same default seed is required to get comparable runs.
+// 
+//         See Also:
+// 
+//             --Rng
+//             --RngSeed
+//             --RngSubsequence
+//             --RngOffset
+// 
 // Table Compile Flags:
 // 
 //     N/A
@@ -687,6 +703,39 @@ Abstract:
 // 
 //         N.B. These parameters are typically less useful for bulk-create options
 //              as each table will have different solving characteristics.
+// 
+//     --Rng=<RNG name>
+// 
+//         Supplies the name of a random number generator to use for obtaining the
+//         random bytes needed as part of graph solving.  Valid values:
+// 
+//             Philox43210
+// 
+//                 Uses the Philox 4x32 10-round pseudo-RNG.  This is the default.
+// 
+//             System
+// 
+//                 Uses the standard operating system facilities for obtaining
+//                 random data.  All other --Rng* parameters are ignored.
+// 
+//     --RngSeed=<Seed>
+// 
+//         Supplies a 64-bit seed used to initialize the RNG.  Defaults to
+//         0x2019090319811025, unless --RngUseRandomStartSeed is supplied (in which
+//         case, a random seed will be used, obtained via the operating system).
+// 
+//     --RngSubsequence=<Subsequence>
+// 
+//         Supplies the initial subsequence used by the RNG.  The first graph will
+//         use this sequence, with each additional graph adding 1 to this value for
+//         their subsequence.  This ensures parallel graphs generate different
+//         random numbers (even if the seed is identical) when solving.  (Defaults
+//         to 0.)
+// 
+//     --RngOffset=<Offset>
+// 
+//         Supplies the initial offset used by the RNG.  (Defaults to 0.)
+// 
 // 
 // Console Output Character Legend
 // 
@@ -3637,4 +3686,70 @@ Abstract:
 // Invalid SolutionsFoundRatio; must be a double less than 1.0 and greater than 0.0.
 //
 #define PH_E_INVALID_SOLUTIONS_FOUND_RATIO ((HRESULT)0xE00403A1L)
+
+//
+// 0x3a2 -> 0x3bf is reserved for future merge of cuda-dev.
+//
+//
+// MessageId: PH_E_INVALID_RNG_ID
+//
+// MessageText:
+//
+// Invalid RNG ID.
+//
+#define PH_E_INVALID_RNG_ID              ((HRESULT)0xE00403C0L)
+
+//
+// MessageId: PH_E_UNIMPLEMENTED_RNG_ID
+//
+// MessageText:
+//
+// Unimplemented RNG ID.
+//
+#define PH_E_UNIMPLEMENTED_RNG_ID        ((HRESULT)0xE00403C1L)
+
+//
+// MessageId: PH_E_INVALID_RNG_NAME
+//
+// MessageText:
+//
+// Invalid RNG name.
+//
+#define PH_E_INVALID_RNG_NAME            ((HRESULT)0xE00403C2L)
+
+//
+// MessageId: PH_E_INVALID_RNG_FLAGS
+//
+// MessageText:
+//
+// Invalid RNG flags.
+//
+#define PH_E_INVALID_RNG_FLAGS           ((HRESULT)0xE00403C3L)
+
+//
+// MessageId: PH_E_RNG_USE_RANDOM_START_SEED_CONFLICTS_WITH_RNG_SEED
+//
+// MessageText:
+//
+// --RngUseRandomStartSeed conflicts with --RngSeed.
+//
+#define PH_E_RNG_USE_RANDOM_START_SEED_CONFLICTS_WITH_RNG_SEED ((HRESULT)0xE00403C4L)
+
+//
+// MessageId: PH_E_RNG_GENERATE_RANDOM_BYTES_INVALID_BUFFER_SIZE
+//
+// MessageText:
+//
+// Invalid size of buffer passed to GenerateRandomBytes() function; must be greater than 0, less than ULONG_MAX, and a multiple of 4.
+//
+#define PH_E_RNG_GENERATE_RANDOM_BYTES_INVALID_BUFFER_SIZE ((HRESULT)0xE00403C5L)
+
+//
+// MessageId: PH_E_RNG_NOT_INITIALIZED
+//
+// MessageText:
+//
+// An RNG must be initialized before it can be used.
+//
+#define PH_E_RNG_NOT_INITIALIZED         ((HRESULT)0xE00403C6L)
 
