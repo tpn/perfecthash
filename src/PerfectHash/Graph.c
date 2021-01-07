@@ -489,14 +489,16 @@ Return Value:
     EDGE Edge;
     PEDGE Edges;
     ULONG Mask;
-    LONGLONG Cycles;
-    LONGLONG Microseconds;
-    LARGE_INTEGER Start;
-    LARGE_INTEGER End;
     ULARGE_INTEGER Hash;
     HRESULT Result;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    //
+    // Initialize aliases.
+    //
 
     Table = Graph->Context->Table;
     Mask = Table->HashMask;
@@ -509,7 +511,8 @@ Return Value:
     //
 
     Result = S_OK;
-    QueryPerformanceCounter(&Start);
+
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
@@ -528,12 +531,7 @@ Return Value:
         GraphAddEdge(Graph, Edge, Hash.LowPart, Hash.HighPart);
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->AddKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
-    Graph->AddKeysElapsedMicroseconds.QuadPart = Microseconds;
+    STOP_GRAPH_COUNTER(AddKeys);
 
     EVENT_WRITE_GRAPH(AddKeys);
 
@@ -580,16 +578,14 @@ Return Value:
     PEDGE Edges;
     BOOL Success;
     HRESULT Result;
-    LONGLONG Cycles;
-    LONGLONG Microseconds;
     VERTEX_PAIR Hash;
     GRAPH_FLAGS Flags;
-    LARGE_INTEGER End;
-    LARGE_INTEGER Start;
     ULONG OldProtection;
     PULONGLONG VertexPairs;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
 
     //
     // Initialize aliases.
@@ -613,7 +609,7 @@ Return Value:
     // Enumerate all keys in the input set and hash them into the vertex arrays.
     //
 
-    QueryPerformanceCounter(&Start);
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
@@ -628,12 +624,7 @@ Return Value:
         *VertexPairs++ = Hash.AsULongLong;
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->HashKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
-    Graph->HashKeysElapsedMicroseconds.QuadPart = Microseconds;
+    STOP_GRAPH_COUNTER(HashKeys);
 
     EVENT_WRITE_GRAPH(HashKeys);
 
@@ -730,13 +721,11 @@ Return Value:
 --*/
 {
     EDGE Edge;
-    LONGLONG Cycles;
-    LONGLONG Microseconds;
-    LARGE_INTEGER Start;
-    LARGE_INTEGER End;
     HRESULT Result;
     VERTEX_PAIR VertexPair;
     PVERTEX_PAIR VertexPairs;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
 
     //
     // Attempt to hash the keys first.
@@ -754,20 +743,15 @@ Return Value:
     //
 
     VertexPairs = Graph->VertexPairs;
-    QueryPerformanceCounter(&Start);
+
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         VertexPair = *(VertexPairs++);
         GraphAddEdge(Graph, Edge, VertexPair.Vertex1, VertexPair.Vertex2);
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->AddHashedKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
-
-    Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart;
-    Graph->AddHashedKeysElapsedMicroseconds.QuadPart = Microseconds;
+    STOP_GRAPH_COUNTER(AddHashedKeys);
 
     EventWriteGraphAddHashedKeysEvent(NULL, NumberOfKeys, Cycles, Microseconds);
 
@@ -810,12 +794,11 @@ Return Value:
     PEDGE Edges;
     VERTEX Vertex1;
     VERTEX Vertex2;
-    LONGLONG Cycles;
-    LARGE_INTEGER Start;
-    LARGE_INTEGER End;
     ULARGE_INTEGER Hash;
     HRESULT Result;
     PPERFECT_HASH_TABLE Table;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
 
     Table = Graph->Context->Table;
     Edges = (PEDGE)Keys;
@@ -826,7 +809,8 @@ Return Value:
     //
 
     Result = S_OK;
-    QueryPerformanceCounter(&Start);
+
+    START_GRAPH_COUNTER();
 
     for (Edge = 0; Edge < NumberOfKeys; Edge++) {
         Key = *Edges++;
@@ -866,10 +850,7 @@ Return Value:
         GraphAddEdge(Graph, Edge, Vertex1, Vertex2);
     }
 
-    QueryPerformanceCounter(&End);
-    Graph->AddKeysElapsedCycles.QuadPart = Cycles = (
-        End.QuadPart - Start.QuadPart
-    );
+    STOP_GRAPH_COUNTER(AddKeys);
 
 Error:
 
@@ -3360,9 +3341,7 @@ Return Value:
     Graph->Flags.Shrinking = FALSE;
     Graph->Flags.IsAcyclic = FALSE;
 
-    Graph->AddKeysElapsedCycles.QuadPart = 0;
-    Graph->HashKeysElapsedCycles.QuadPart = 0;
-    Graph->AddHashedKeysElapsedCycles.QuadPart = 0;
+    RESET_GRAPH_COUNTERS();
 
     //
     // Avoid the overhead of resetting the memory coverage if we're in "first

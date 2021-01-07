@@ -1009,40 +1009,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ASSIGNED_MEMORY_COVERAGE AssignedMemoryCoverage;
 
     //
-    // Elapsed cycles of the GraphAddKeys() routine.
+    // Counters to track elapsed cycles and microseconds of graph activities.
+    // Each name (typically) maps 1:1 with a corresponding Graph*() function,
+    // e.g. AddKeys -> GraphAddKeys().
     //
 
-    LARGE_INTEGER AddKeysElapsedCycles;
-
-    //
-    // Elapsed cycles of the GraphHashKeys() routine, if used.
-    //
-
-    LARGE_INTEGER HashKeysElapsedCycles;
-
-    //
-    // Elapsed cycles of the GraphAddHashedKeys() routine, if used.
-    //
-
-    LARGE_INTEGER AddHashedKeysElapsedCycles;
-
-    //
-    // Elapsed microseconds of the GraphAddKeys() routine.
-    //
-
-    LARGE_INTEGER AddKeysElapsedMicroseconds;
-
-    //
-    // Elapsed microseconds of the GraphHashKeys() routine, if used.
-    //
-
-    LARGE_INTEGER HashKeysElapsedMicroseconds;
-
-    //
-    // Elapsed microseconds of the GraphAddHashedKeys() routine, if used.
-    //
-
-    LARGE_INTEGER AddHashedKeysElapsedMicroseconds;
+    DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
 
     //
     // The graph interface.
