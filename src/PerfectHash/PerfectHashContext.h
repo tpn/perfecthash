@@ -345,10 +345,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     LONG CuDeviceOrdinal;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Minimum number of keys that need to be present in order to honor find
+    // best graph mode.
     //
 
-    ULONG Padding1;
+    ULONG MinNumberOfKeysForFindBestGraph;
 
     //
     // An in-memory union of all possible on-disk table info representations.

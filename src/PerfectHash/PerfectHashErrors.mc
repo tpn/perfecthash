@@ -652,6 +652,15 @@ Table Create Parameters:
         avoiding never solving a graph (because you never hit the Nth best graph
         attempt).
 
+    --MinNumberOfKeysForFindBestGraph=N [default: 512]
+
+        Where N is a positive integer, and represents the minimum number of keys
+        that need to be present before --FindBestGraph mode is honored (with the
+        default being 512).  (There's very little to no benefit in performing
+        extensive best graph searches for such small key sets, as there's not
+        going to be enough variation in assigned value cache line occupancy to
+        yield runtime performance differences.)
+
     --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
 
         Supplies a comma-separated list of keys in ascending key-value order.

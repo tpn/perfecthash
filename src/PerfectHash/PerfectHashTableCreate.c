@@ -39,6 +39,13 @@ Abstract:
 #define GRAPH_SOLVING_RESIZE_TABLE_LIMIT 5
 
 //
+// Define a default for the minimum number of keys that need to be present in
+// order for --FindBestGraph to be honored.
+//
+
+#define DEFAULT_MIN_NUMBER_OF_KEYS_FOR_FIND_BEST_GRAPH 512
+
+//
 // Forward decls.
 //
 
@@ -641,6 +648,10 @@ Return Value:
                 Context->MaxNumberOfEqualBestGraphs = Param->AsULong;
                 break;
 
+            case TableCreateParameterMinNumberOfKeysForFindBestGraphId:
+                Context->MinNumberOfKeysForFindBestGraph = Param->AsULong;
+                break;
+
             case TableCreateParameterSeedsId:
                 Context->UserSeeds = &Param->AsValueArray;
                 break;
@@ -713,6 +724,21 @@ Return Value:
                 goto Error;
 
         }
+    }
+
+    if (Context->MinNumberOfKeysForFindBestGraph == 0) {
+        Context->MinNumberOfKeysForFindBestGraph =
+            DEFAULT_MIN_NUMBER_OF_KEYS_FOR_FIND_BEST_GRAPH;
+    }
+
+    //
+    // Clear the FindBestGraph flag if the minimum number of keys are not
+    // present.
+    //
+
+    if (Table->Keys->NumberOfElements.QuadPart <
+        (ULONGLONG)Context->MinNumberOfKeysForFindBestGraph) {
+        Table->TableCreateFlags.FindBestGraph = FALSE;
     }
 
     //
