@@ -306,10 +306,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG NumberOfCollisionsDuringAssignment;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Backend GraphImpl version (i.e. 1 == GraphImpl1.c).  Defaults to
+    // DEFAULT_GRAPH_IMPL_VERSION.
     //
 
-    ULONG Padding1;
+    ULONG GraphImpl;
 
     //
     // Pointer to the path for the output directory (below).

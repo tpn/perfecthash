@@ -85,4 +85,109 @@
         </Expand>
     </Type>
 
+    <Type Name="_GRAPH">
+        <Expand>
+            <Item Name="&lt;Number of Keys&gt;">NumberOfKeys</Item>
+            <Item Name="&lt;Number of Edges&gt;">NumberOfEdges</Item>
+            <Item Name="&lt;Total Number of Edges&gt;">TotalNumberOfEdges</Item>
+            <Item Name="&lt;Number of Vertices&gt;">NumberOfVertices</Item>
+            <Synthetic Name="&lt;VertexPairs&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfKeys</Size>
+                        <ValuePointer Condition="NumberOfKeys &gt; 0 &amp;&amp; VertexPairs != nullptr">VertexPairs</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;Vertices1&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfKeys</Size>
+                        <ValuePointer Condition="NumberOfKeys &gt; 0 &amp;&amp; Vertices1 != nullptr">Vertices1</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;Vertices1&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfKeys</Size>
+                        <ValuePointer Condition="NumberOfKeys &gt; 0 &amp;&amp; Vertices2 != nullptr">Vertices2</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;Edges&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfEdges</Size>
+                        <ValuePointer Condition="TotalNumberOfEdges &gt; 0 &amp;&amp; Edges != nullptr">Edges</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;First&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfVertices</Size>
+                        <ValuePointer Condition="NumberOfVertices &gt; 0 &amp;&amp; First != nullptr">First</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;Next&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfEdges</Size>
+                        <ValuePointer Condition="TotalNumberOfEdges &gt; 0 &amp;&amp; Next != nullptr">Next</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;Order&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfEdges</Size>
+                        <ValuePointer Condition="NumberOfEdges &gt; 0 &amp;&amp; Order != nullptr">Order</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;Assigned&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>NumberOfVertices</Size>
+                        <ValuePointer Condition="NumberOfVertices &gt; 0 &amp;&amp; Assigned != nullptr">Assigned</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
+    <Type Name="_ASSIGNED_MEMORY_COVERAGE">
+        <Expand>
+            <Item Name="&lt;Total Number Of Pages&gt;">TotalNumberOfPages</Item>
+            <Item Name="&lt;Total Number Of Large Pages&gt;">TotalNumberOfLargePages</Item>
+            <Item Name="&lt;Total Number Of Cache Lines&gt;">TotalNumberOfCacheLines</Item>
+            <Synthetic Name="&lt;NumberOfAssignedPerPage&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfPages</Size>
+                        <ValuePointer Condition="TotalNumberOfPages &gt; 0 &amp;&amp; NumberOfAssignedPerPage != nullptr">NumberOfAssignedPerPage</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;NumberOfAssignedPerLargePage&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfLargePages</Size>
+                        <ValuePointer Condition="TotalNumberOfLargePages &gt; 0 &amp;&amp; NumberOfAssignedPerLargePage != nullptr">NumberOfAssignedPerLargePage</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+            <Synthetic Name="&lt;NumberOfAssignedPerCacheLine&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>TotalNumberOfCacheLines</Size>
+                        <ValuePointer Condition="TotalNumberOfCacheLines &gt; 0 &amp;&amp; NumberOfAssignedPerCacheLine != nullptr">NumberOfAssignedPerCacheLine</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
 </AutoVisualizer>

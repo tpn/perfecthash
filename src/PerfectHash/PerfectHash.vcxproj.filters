@@ -301,6 +301,9 @@
     <ClCompile Include="RngPhilox4x32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphImpl2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -586,6 +589,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GraphCounters.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphImpl2.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>

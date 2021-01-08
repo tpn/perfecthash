@@ -540,6 +540,12 @@ Table Compile Flags:
 
 Table Create Parameters:
 
+    --GraphImpl=1|2 [default: 2]
+
+        Selects the backend version of the graph assignment step.  Version 1
+        matches the original CHM algorithm, version 2 is faster and was derived
+        from NetBSD's nbperf routine.  Defaults to version 2.
+
     --ValueSizeInBytes=4|8
 
         Sets the size, in bytes, of the value element that will be stored in the
@@ -3378,6 +3384,14 @@ Facility=ITF
 SymbolicName=PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED
 Language=English
 Duplicate table create parameter detected.
+.
+
+MessageId=0x3b8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_GRAPH_IMPL
+Language=English
+Invalid value for --GraphImpl.  Valid values: 1, 2.  (Default: 2.)
 .
 
 ;//
