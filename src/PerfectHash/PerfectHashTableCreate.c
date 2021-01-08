@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -628,6 +628,10 @@ Return Value:
                 // (see PerfectHashContextApplyThreadpoolPriorities()).
                 //
 
+                break;
+
+            case TableCreateParameterMaxNumberOfEqualBestGraphsId:
+                Context->MaxNumberOfEqualBestGraphs = Param->AsULong;
                 break;
 
             case TableCreateParameterSeedsId:

@@ -3097,6 +3097,7 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(InitialNumberOfTableResizes)                               \
     ENTRY(BestCoverageAttempts)                                      \
     ENTRY(BestCoverageType)                                          \
+    ENTRY(MaxNumberOfEqualBestGraphs)                                \
     ENTRY(KeysSubset)                                                \
     ENTRY(MainWorkThreadpoolPriority)                                \
     ENTRY(FileWorkThreadpoolPriority)                                \

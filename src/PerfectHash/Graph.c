@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -2076,6 +2076,8 @@ Return Value:
 --*/
 {
     HRESULT Result;
+    BOOLEAN HasLimit = FALSE;
+    BOOLEAN IsLowestComparator = FALSE;
     BOOLEAN FoundBestGraph = FALSE;
     BOOLEAN StopGraphSolving = FALSE;
     BOOLEAN FoundEqualBestGraph = FALSE;
@@ -2083,8 +2085,10 @@ Return Value:
     ULONG EqualCount = 0;
     ULONG BestGraphIndex = 0;
     ULONG CoverageValue = 0;
+    ULONG CoverageLimit = 0;
     LONG EqualBestGraphIndex = 0;
     LONGLONG Attempt;
+    PGRAPH BestGraph;
     PGRAPH SpareGraph;
     PGRAPH PreviousBestGraph;
     ULONGLONG ElapsedMilliseconds;
@@ -2123,6 +2127,7 @@ Return Value:
     //
 
     if (Context->BestGraph) {
+        BestGraph = Context->BestGraph;
         ASSERT(Context->NewBestGraphCount > 0);
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
@@ -2131,7 +2136,7 @@ Return Value:
         ASSERT(IsSpareGraph(SpareGraph));
         SpareGraph->Flags.IsSpare = FALSE;
         Context->SpareGraph = NULL;
-        Context->BestGraph = Graph;
+        BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
@@ -2187,6 +2192,7 @@ Return Value:
 
 End:
 
+    StopGraphSolving = FALSE;
     FoundBestGraph = (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
 
     if (FoundEqualBestGraph) {
@@ -2202,7 +2208,19 @@ End:
         BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
         EqualCount = ++BestGraphInfo->EqualCount;
 
+        //
+        // If we've hit the maximum number of equal graphs, we can stop solving.
+        //
+
+        if (Context->MaxNumberOfEqualBestGraphs > 0 &&
+            Context->MaxNumberOfEqualBestGraphs <= EqualCount)
+        {
+            StopGraphSolving = TRUE;
+        }
+
     } else if (FoundBestGraph) {
+
+        BestGraph = Graph;
 
         //
         // If we're still within the limits for the maximum number of best
@@ -2271,8 +2289,12 @@ End:
     // the critical section acquired (as NewBestGraphCount is protected by it).
     //
 
-    StopGraphSolving =
-        (ULONGLONG)Context->NewBestGraphCount >= Context->BestCoverageAttempts;
+    if (!StopGraphSolving) {
+        StopGraphSolving = (
+            (ULONGLONG)Context->NewBestGraphCount >=
+            Context->BestCoverageAttempts
+        );
+    }
 
     //
     // Leave the critical section and complete processing.
@@ -2309,6 +2331,114 @@ End:
 
         for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
             BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
+        }
+    }
+
+    //
+    // We need to determine what type of comparator is being used (i.e. lowest
+    // or highest), because depending on what we're using for comparison, we
+    // may have hit the lowest or highest possible value, in which case, graph
+    // solving can be stopped (even if we haven't hit the target specified by
+    // --BestCoverageAttempts).  For example, if the best coverage type is
+    // LowestNumberOfEmptyCacheLines, and the coverage value is 0, we'll never
+    // beat this, so we can stop graph solving now.
+    //
+    // So, leverage another X-macro expansion to extract the comparator type and
+    // coverage value.  We need to do this here, after the End: label, as the
+    // very first graph being registered may have hit the limit (which we have
+    // seen happen regularly in practice).
+    //
+
+    Coverage = &BestGraph->AssignedMemoryCoverage;
+
+#define EXPAND_AS_DETERMINE_IF_LOWEST(Name, Comparison, Comparator) \
+    case BestCoverageType##Comparison##Name##Id:                    \
+        IsLowestComparator = (0 Comparator 1);                      \
+        CoverageValue = Coverage->##Name;                           \
+        break;
+
+    switch (CoverageType) {
+
+        case BestCoverageTypeNullId:
+        case BestCoverageTypeInvalidId:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+
+        BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_LOWEST)
+
+        default:
+            Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+            break;
+    }
+
+    //
+    // Any failure code at this point is a critical internal invariant failure.
+    //
+
+    if (FAILED(Result)) {
+        PH_RAISE(Result);
+    }
+
+    if (IsLowestComparator) {
+
+        //
+        // The comparator is "lowest"; if the best value we found was zero, then
+        // indicate stop solving, as we'll never be able to get lower than this.
+        //
+
+        if (CoverageValue == 0) {
+            StopGraphSolving = TRUE;
+        }
+
+    } else {
+
+        //
+        // For highest comparisons, things are a little trickier, as we need to
+        // know what is the maximum value to compare things against.  This info
+        // isn't available from the X-macro, nor is it applicable to all types,
+        // so, the following switch construct extracts limits manually.
+        //
+
+        HasLimit = FALSE;
+
+        //
+        // Disable "enum not handled in switch statement" warning.
+        //
+        //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+        //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+        //                     is not explicitly handled by a case label
+        //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
+        switch (CoverageType) {
+
+            case BestCoverageTypeNullId:
+            case BestCoverageTypeInvalidId:
+                PH_RAISE(PH_E_UNREACHABLE_CODE);
+                break;
+
+            case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
+                HasLimit = TRUE;
+                CoverageLimit = Coverage->TotalNumberOfCacheLines;
+                break;
+
+            case BestCoverageTypeHighestMaxAssignedPerCacheLineCountId:
+                HasLimit = TRUE;
+                CoverageLimit = 16;
+                break;
+
+            default:
+                break;
+        }
+
+#pragma warning(pop)
+
+        if (HasLimit) {
+            if (CoverageValue == CoverageLimit) {
+                StopGraphSolving = TRUE;
+            }
         }
     }
 
