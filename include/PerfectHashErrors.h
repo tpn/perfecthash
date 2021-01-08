@@ -595,6 +595,12 @@ Abstract:
 // 
 // Table Create Parameters:
 // 
+//     --GraphImpl=1|2 [default: 2]
+// 
+//         Selects the backend version of the graph assignment step.  Version 1
+//         matches the original CHM algorithm, version 2 is faster and was derived
+//         from NetBSD's nbperf routine.  Defaults to version 2.
+// 
 //     --ValueSizeInBytes=4|8
 // 
 //         Sets the size, in bytes, of the value element that will be stored in the
@@ -3734,6 +3740,15 @@ Abstract:
 // Duplicate table create parameter detected.
 //
 #define PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED ((HRESULT)0xE00403B1L)
+
+//
+// MessageId: PH_E_INVALID_GRAPH_IMPL
+//
+// MessageText:
+//
+// Invalid value for --GraphImpl.  Valid values: 1, 2.  (Default: 2.)
+//
+#define PH_E_INVALID_GRAPH_IMPL          ((HRESULT)0xE00403B8L)
 
 //
 // 0x3bf

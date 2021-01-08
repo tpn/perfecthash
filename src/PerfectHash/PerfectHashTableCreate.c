@@ -551,6 +551,7 @@ Return Value:
     PRTL Rtl;
     ULONG Index;
     ULONG Count;
+    ULONG GraphImpl;
     HRESULT Result = S_OK;
     BOOLEAN SawResizeLimit = FALSE;
     BOOLEAN SawInitialResizes = FALSE;
@@ -573,6 +574,8 @@ Return Value:
 
     Count = TableCreateParams->NumberOfElements;
     Param = TableCreateParams->Params;
+
+    GraphImpl = DEFAULT_GRAPH_IMPL_VERSION;
 
     if (Count == 0) {
         if (Param != NULL) {
@@ -628,6 +631,10 @@ Return Value:
                 // (see PerfectHashContextApplyThreadpoolPriorities()).
                 //
 
+                break;
+
+            case TableCreateParameterGraphImplId:
+                GraphImpl = Param->AsULong;
                 break;
 
             case TableCreateParameterMaxNumberOfEqualBestGraphsId:
@@ -775,6 +782,16 @@ Return Value:
         }
 
     }
+
+    //
+    // Validate GraphImpl.
+    //
+
+    if (GraphImpl != 1 && GraphImpl != 2) {
+        Result = PH_E_INVALID_GRAPH_IMPL;
+        goto Error;
+    }
+    Table->GraphImpl = GraphImpl;
 
     //
     // Use our default global NT-style C type names array for now.

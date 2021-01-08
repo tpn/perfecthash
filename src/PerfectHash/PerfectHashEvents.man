@@ -112,6 +112,14 @@
             <data name="BytesRequested" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="Result" inType="win:UInt32" outType="win:HexInt32"></data>
           </template>
+          <template tid="GraphAssignResultTemplate">
+            <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
+            <data name="FunctionVersion" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Cycles" inType="win:Int64" outType="xs:long"></data>
+            <data name="Microseconds" inType="win:Int64" outType="xs:long"></data>
+            <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
+          </template>
         </templates>
         <channels>
         </channels>
@@ -254,6 +262,18 @@
             keywords="RTL_RANDOM"
             message="$(string.PerfectHash.event.9.message)">
           </event>
+          <event
+            symbol="GraphAssignResult"
+            value="10"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Info"
+            task="Assign"
+            template="GraphAssignResultTemplate"
+            keywords="GRAPH_ASSIGN"
+            message="$(string.PerfectHash.event.10.message)">
+          </event>
         </events>
       </provider>
     </events>
@@ -278,6 +298,7 @@
         <string id="PerfectHash.event.7.message" value="Stopped graph assignment."></string>
         <string id="PerfectHash.event.8.message" value="Started getting random bytes."></string>
         <string id="PerfectHash.event.9.message" value="Stopped getting random bytes."></string>
+        <string id="PerfectHash.event.10.message" value="Graph assignment result."></string>
       </stringTable>
     </resources>
   </localization>

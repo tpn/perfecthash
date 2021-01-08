@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -432,6 +432,14 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 
 DEFINE_UNUSED_STATE(GRAPH);
 
+
+//
+// Default version of the graph implementation used (i.e. GraphImp1.c vs
+// GraphImpl2.c).
+//
+
+#define DEFAULT_GRAPH_IMPL_VERSION 2
+
 //
 // Define the primary dimensions governing the graph size.
 //
@@ -592,6 +600,7 @@ typedef struct _GRAPH_INFO {
     ULONGLONG EdgesSizeInBytes;
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
+    ULONGLONG OrderSizeInBytes;
     ULONGLONG AssignedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
@@ -915,10 +924,22 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG Index;
 
     //
+    // Current index into the Order array (used during assignment).
+    //
+
+    volatile LONG OrderIndex;
+
+    //
     // Number of empty vertices encountered during the assignment step.
     //
 
     ULONG NumberOfEmptyVertices;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding1;
 
     //
     // Duplicate the context pointer.  (This is also available from Info.)
@@ -939,6 +960,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     _Writable_elements_(TotalNumberOfEdges)
     PEDGE Edges;
+
+    //
+    // Deletion order.
+    //
+
+    _Writable_elements_(NumberOfKeys)
+    PLONG Order;
 
     //
     // Array of the "next" edge array, as per the referenced papers.

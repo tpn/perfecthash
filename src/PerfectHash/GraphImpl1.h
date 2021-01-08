@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -17,11 +17,21 @@ Abstract:
 #include "stdafx.h"
 
 //
-// Define helper macros for EMPTY and GRAPH_NO_NEIGHBOR constants.
+// Define helper macros.
 //
 
 #define EMPTY ((VERTEX)-1)
 #define GRAPH_NO_NEIGHBOR ((VERTEX)-1)
+
+#define IsEmpty(Value) ((ULONG)Value == EMPTY)
+#define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
+
+//
+// When a solution has been found and the assignment step begins, the initial
+// value assigned to a vertex is govered by the following macro.
+//
+
+#define INITIAL_ASSIGNMENT_VALUE 0
 
 //
 // Define function types specific to our implementation.
@@ -157,6 +167,8 @@ IsVisitedVertex(
     return TestGraphBit(VisitedVerticesBitmap, Vertex);
 }
 
+#ifdef _DEBUG
+
 FORCEINLINE
 VOID
 RegisterEdgeDeletion(
@@ -164,10 +176,33 @@ RegisterEdgeDeletion(
     _In_ EDGE Edge
     )
 {
+    LONG OrderIndex;
+    ASSERT(!TestGraphBit(DeletedEdgesBitmap, Edge));
     SetGraphBit(DeletedEdgesBitmap, Edge);
     Graph->DeletedEdgeCount++;
     ASSERT(Graph->DeletedEdgeCount <= Graph->TotalNumberOfEdges);
+    OrderIndex = --Graph->OrderIndex;
+    ASSERT(OrderIndex >= 0);
+    Graph->Order[OrderIndex] = Edge;
 }
+
+#else
+
+FORCEINLINE
+VOID
+RegisterEdgeDeletion(
+    _In_ PGRAPH Graph,
+    _In_ EDGE Edge
+    )
+{
+    ULONG OrderIndex;
+    SetGraphBit(DeletedEdgesBitmap, Edge);
+    Graph->DeletedEdgeCount++;
+    OrderIndex = --Graph->OrderIndex;
+    Graph->Order[OrderIndex] = Edge;
+}
+
+#endif
 
 FORCEINLINE
 VOID

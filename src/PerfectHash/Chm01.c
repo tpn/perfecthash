@@ -1581,6 +1581,7 @@ Return Value:
     ULONG NumberOfVertexMaskBits;
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
+    ULONGLONG OrderSizeInBytes;
     ULONGLONG EdgesSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
     ULONGLONG AssignedSizeInBytes;
@@ -1913,6 +1914,10 @@ Return Value:
         RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
     );
 
+    OrderSizeInBytes = ALIGN_UP_YMMWORD(
+        RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfEdges.QuadPart
+    );
+
     FirstSizeInBytes = ALIGN_UP_YMMWORD(
         RTL_ELEMENT_SIZE(GRAPH, First) * NumberOfVertices.QuadPart
     );
@@ -1995,6 +2000,7 @@ Return Value:
     AllocSize.QuadPart = ROUND_TO_PAGES(
         EdgesSizeInBytes +
         NextSizeInBytes +
+        OrderSizeInBytes +
         FirstSizeInBytes +
         AssignedSizeInBytes +
         VertexPairsSizeInBytes +
@@ -2051,6 +2057,7 @@ Return Value:
     Info->SizeOfGraphStruct = sizeof(GRAPH);
     Info->EdgesSizeInBytes = EdgesSizeInBytes;
     Info->NextSizeInBytes = NextSizeInBytes;
+    Info->OrderSizeInBytes = OrderSizeInBytes;
     Info->FirstSizeInBytes = FirstSizeInBytes;
     Info->AssignedSizeInBytes = AssignedSizeInBytes;
     Info->VertexPairsSizeInBytes = VertexPairsSizeInBytes;

@@ -3107,6 +3107,7 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(CuDeviceOrdinal)                                           \
     ENTRY(CuDeviceOrdinals)                                          \
     ENTRY(SolutionsFoundRatio)                                       \
+    ENTRY(GraphImpl)                                                 \
     ENTRY(Rng)                                                       \
     ENTRY(RngSeed)                                                   \
     ENTRY(RngSubsequence)                                            \

@@ -191,6 +191,8 @@ Return Value:
         GraphCyclicDeleteEdge(Graph, Vertex);
     }
 
+    ASSERT(Graph->OrderIndex >= 0);
+
     if (!IsGraphParanoid(Graph)) {
 
         NumberOfEdgesDeleted = Graph->DeletedEdgeCount;
@@ -233,6 +235,17 @@ Return Value:
 
         ASSERT(IsAcyclic == IsAcyclicSlow);
 
+    }
+
+    //
+    // Invariant check: if we're acyclic, the order index should be zero (as all
+    // keys were deleted once), greater than zero otherwise.
+    //
+
+    if (IsAcyclic) {
+        ASSERT(Graph->OrderIndex == 0);
+    } else {
+        ASSERT(Graph->OrderIndex > 0);
     }
 
     //
@@ -309,6 +322,8 @@ Return Value:
     VERTEX Vertex;
     ULONG NumberOfSetBits;
 
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
     //
     // Invariant check: the acyclic flag should be set.  (Indicating that
     // IsGraphAcyclic() successfully determined that, yes, the graph is
@@ -328,6 +343,8 @@ Return Value:
     // Walk the graph and assign values.
     //
 
+    START_GRAPH_COUNTER();
+
     for (Vertex = 0; Vertex < Graph->NumberOfVertices; Vertex++) {
 
         if (!IsGraphParanoid(Graph)) {
@@ -340,10 +357,12 @@ Return Value:
         if (!IsVisitedVertex(Graph, Vertex)) {
 
             //
-            // Assign an initial value, then walk the subgraph.
+            // This is a "root" vertex that we'll perform a depth-first search
+            // on as part of assignment.  Sanity check the assigned value at
+            // this location matches our initial value, then traverse the graph.
             //
 
-            Graph->Assigned[Vertex] = INITIAL_ASSIGNMENT_VALUE;
+            ASSERT(Graph->Assigned[Vertex] == INITIAL_ASSIGNMENT_VALUE);
             GraphTraverseRecursive(Graph, Vertex);
         }
     }
@@ -356,6 +375,8 @@ Return Value:
         ASSERT(Graph->VisitedVerticesCount == Graph->NumberOfVertices);
     }
 
+    STOP_GRAPH_COUNTER(Assign);
+
     EventWriteGraphAssignStop(
         NULL,
         Graph->Attempt,
@@ -364,6 +385,16 @@ Return Value:
         Graph->NumberOfEmptyVertices,
         Graph->MaximumTraversalDepth,
         Graph->TotalTraversals
+    );
+
+    EventWriteGraphAssignResult(
+        NULL,
+        Graph->Attempt,
+        Graph->Context->Table->GraphImpl,
+        Cycles,
+        Microseconds,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices
     );
 
     return;
@@ -733,6 +764,7 @@ Return Value:
 
     if (Vertex == Iterator->Vertex) {
 
+        ASSERT(Edge < Graph->NumberOfEdges);
         Neighbor = Graph->Edges[Edge + Graph->NumberOfEdges];
 
     } else {

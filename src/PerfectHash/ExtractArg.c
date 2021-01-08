@@ -939,6 +939,8 @@ Return Value:
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(ValueSizeInBytes);
 
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(GraphImpl);
+
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)
 
