@@ -334,6 +334,12 @@ Table Compile Flags:
 
 Table Create Parameters:
 
+    --GraphImpl=1|2 [default: 2]
+
+        Selects the backend version of the graph assignment step.  Version 1
+        matches the original CHM algorithm, version 2 is faster and was derived
+        from NetBSD's nbperf routine.  Defaults to version 2.
+
     --ValueSizeInBytes=4|8
 
         Sets the size, in bytes, of the value element that will be stored in the
@@ -368,11 +374,20 @@ Table Create Parameters:
 
         Where N is a positive integer, and represents the number of attempts
         that will be made at finding a "best" graph (based on the best coverage
-        type requested below) before the create table routine returns.
+        type requested below) before the create table routine returns.  For
+        example, if this value is set to 5, the solving will stop when the 5th
+        new best graph is found.  (A graph is considered a "new best" if its
+        coverage type predicate (below) is the highest/lowest seen before; see
+        also, --MaxNumberOfEqualBestGraphs.)
 
     --BestCoverageType=<CoverageType>
 
         Indicates the predicate to determine what constitutes the best graph.
+
+        N.B. The terms "best graph" and "best coverage" mean the same thing.
+             You're either in "first graph wins" mode, or "find best graph"
+             mode.  When the latter applies, we're looking for the best graph,
+             and that means the one with the winning coverage predicate.
 
         Valid coverage types:
 
@@ -406,6 +421,39 @@ Table Create Parameters:
             LowestNumberOfPagesUsedByKeysSubset
             LowestNumberOfLargePagesUsedByKeysSubset
             LowestNumberOfCacheLinesUsedByKeysSubset
+
+    --MaxNumberOfEqualBestGraphs=N
+
+        Where N is a positive integer, and represents the number of times an
+        "equal" best graph is encountered (based on the best coverage type)
+        before stopping further solving attempts for this graph.  For example,
+        let's say you're using --BestCoverageType=HighestNumberOfEmptyCacheLines
+        --BestCoverageAttempts=5, and that 4th new best graph encountered had a
+        value of 8 for this coverage type; subsequent graphs that also have a
+        value of 8 get classed as an "equal" best graph (as we've already found
+        one with 8).  If we supply --MaxNumberOfEqualBestGraphs=10, then we'll
+        stop further solving attempts once we see the 10th graph that has 8
+        empty cache lines.
+
+        This parameter is particularly useful for the "highest" predicates that
+        aren't restricted by page or cache line quantities, e.g.:
+
+            HighestMaxGraphTraversalDepth
+            HighestTotalGraphTraversals
+            HighestNumberOfCollisionsDuringAssignment
+
+        However, it's still useful for all other predicates as a mechanism for
+        avoiding never solving a graph (because you never hit the Nth best graph
+        attempt).
+
+    --MinNumberOfKeysForFindBestGraph=N [default: 512]
+
+        Where N is a positive integer, and represents the minimum number of keys
+        that need to be present before --FindBestGraph mode is honored (with the
+        default being 512).  (There's very little to no benefit in performing
+        extensive best graph searches for such small key sets, as there's not
+        going to be enough variation in assigned value cache line occupancy to
+        yield runtime performance differences.)
 
     --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
 
@@ -546,5 +594,4 @@ Mask Functions:
   ID | Name
    1   Modulus (does not work!)
    2   And
-
 ```
