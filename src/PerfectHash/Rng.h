@@ -62,7 +62,7 @@ typedef struct DECLSPEC_ALIGN(16) _RNG_STATE_PHILOX43210 {
     UINT4 Output;
     UINT2 Key;
     ULONG CurrentCount;
-    ULONG Padding;
+    ULONG NumberOfZeroLongsEncountered;
     ULONGLONG TotalCount;
     ULONGLONG TotalBytes;
 } RNG_STATE_PHILOX43210, *PRNG_STATE_PHILOX43210;

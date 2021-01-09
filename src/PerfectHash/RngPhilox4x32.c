@@ -330,6 +330,7 @@ RngPhilox43210Init(
     State->Key.X = (ULONG)Rng->Seed;
     State->Key.Y = (ULONG)(Rng->Seed >> 32);
     State->CurrentCount = 0;
+    State->NumberOfZeroLongsEncountered = 0;
     State->TotalCount = 0;
     State->TotalBytes = 0ULL;
     SkipaheadSubsequence(State, Rng->Subsequence);
@@ -352,9 +353,45 @@ RngPhilox43210GenerateRandomBytes(
     Long = (PLONG)Buffer;
 
     for (Index = 0; Index < NumberOfLongs; Index++) {
-        Random = GetRandomLong(State);
-        ASSERT(Random != 0);
-        *Long++ = Random;
+        do {
+            Random = GetRandomLong(State);
+
+            //
+            // I encountered a zero being returned under the following
+            // conditions for State:
+            //
+            //  Counter.X = 0x01c922d1
+            //  Counter.Y = 0x0
+            //  Counter.Z = 0x2
+            //  Counter.W = 0x0
+            //  Key.X = 0x19811025
+            //  Key.Y = 0x20190903
+            //  CurrentCount = 2
+            //  TotalCount = 119835462
+            //  TotalBytes = 479341848
+            //
+            // This was using our default seed, and occurred on the
+            // normaliz-1.keys file in sys32, with the following command line
+            // parameters:
+            //  --FindBestGraph
+            //  --BestCoverageType=LowestNumberOfEmptyCacheLines
+            //  --BestCoverageAttempts=2
+            //  --GraphImpl=1
+            //
+
+            if (Random != 0) {
+                *Long++ = Random;
+                break;
+            }
+
+            State->NumberOfZeroLongsEncountered++;
+
+            //
+            // I picked 10 arbitrarily.
+            //
+
+            ASSERT(State->NumberOfZeroLongsEncountered < 10);
+        } while (1);
     }
 
     return S_OK;
