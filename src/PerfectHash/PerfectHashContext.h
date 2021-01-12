@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -368,6 +368,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     PGUARDED_LIST GraphList;
+
+    //
+    // Command line used (for information purposes only).
+    //
+
+    LPWSTR CommandLineW;
 
     //
     // The highest number of deleted edges count encountered by a worker thread.

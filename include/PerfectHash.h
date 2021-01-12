@@ -3446,7 +3446,8 @@ HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW)(
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ ULONG NumberOfArguments,
-    _In_ LPWSTR *ArgvW
+    _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW
     );
 typedef PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW
       *PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW;
@@ -3458,6 +3459,7 @@ HRESULT
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ ULONG NumberOfArguments,
     _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW,
     _In_ PUNICODE_STRING KeysDirectory,
     _In_ PUNICODE_STRING BaseOutputDirectory,
     _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
@@ -3501,7 +3503,8 @@ HRESULT
 (STDAPICALLTYPE PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW)(
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ ULONG NumberOfArguments,
-    _In_ LPWSTR *ArgvW
+    _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW
     );
 typedef PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW
       *PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW;
@@ -3513,6 +3516,7 @@ HRESULT
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ ULONG NumberOfArguments,
     _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW,
     _In_ PUNICODE_STRING KeysPath,
     _In_ PUNICODE_STRING BaseOutputDirectory,
     _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,

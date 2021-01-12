@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -888,6 +888,7 @@ PerfectHashContextExtractTableCreateArgsFromArgvW(
     PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
     LPWSTR *ArgvW,
+    LPWSTR CommandLineW,
     PUNICODE_STRING KeysPath,
     PUNICODE_STRING BaseOutputDirectory,
     PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
@@ -915,6 +916,11 @@ Arguments:
     NumberOfArguments - Supplies the number of elements in the ArgvW array.
 
     ArgvW - Supplies a pointer to an array of wide C string arguments.
+
+    CommandLineW - Supplies a pointer to the original command line used to
+        construct the ArgvW array above.  This is only used for inclusion in
+        things like CSV output; it is not used programmatically (and is not
+        checked for correctness against ArgvW).
 
     KeysPath - Supplies a pointer to a UNICODE_STRING structure that will be
         filled out with the keys path.
@@ -999,6 +1005,10 @@ Return Value:
         return E_POINTER;
     }
 
+    if (!ARGUMENT_PRESENT(CommandLineW)) {
+        return E_POINTER;
+    }
+
     if (!ARGUMENT_PRESENT(KeysPath)) {
         return E_POINTER;
     }
@@ -1056,6 +1066,8 @@ Return Value:
     ArgW = &ArgvW[1];
     Rtl = Context->Rtl;
     Allocator = Context->Allocator;
+
+    Context->CommandLineW = CommandLineW;
 
     //
     // Extract keys path.
@@ -1221,7 +1233,8 @@ HRESULT
 PerfectHashContextTableCreateArgvW(
     PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
-    LPWSTR *ArgvW
+    LPWSTR *ArgvW,
+    LPWSTR CommandLineW
     )
 /*++
 
@@ -1288,6 +1301,7 @@ Return Value:
     Result = ExtractTableCreateArgs(Context,
                                     NumberOfArguments,
                                     ArgvW,
+                                    CommandLineW,
                                     &KeysPath,
                                     &BaseOutputDirectory,
                                     &AlgorithmId,

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -261,6 +261,14 @@ typedef APPEND_CSTR_TO_CHAR_BUFFER *PAPPEND_CSTR_TO_CHAR_BUFFER;
 
 typedef
 VOID
+(NTAPI APPEND_WSTR_TO_CHAR_BUFFER_FAST)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_ PWSTR String
+    );
+typedef APPEND_WSTR_TO_CHAR_BUFFER_FAST *PAPPEND_WSTR_TO_CHAR_BUFFER_FAST;
+
+typedef
+VOID
 (NTAPI APPEND_ERROR_CODE_CSTR_TO_CHAR_BUFFER)(
     _In_ PRTL Rtl,
     _Inout_ PCHAR *BufferPointer,
@@ -378,6 +386,7 @@ extern APPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST
 extern APPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST AppendStringToWideCharBufferFast;
 extern APPEND_CHAR_BUFFER_TO_CHAR_BUFFER AppendCharBufferToCharBuffer;
 extern APPEND_CSTR_TO_CHAR_BUFFER AppendCStrToCharBuffer;
+extern APPEND_WSTR_TO_CHAR_BUFFER_FAST AppendWStrToCharBufferFast;
 extern APPEND_ERROR_CODE_CSTR_TO_CHAR_BUFFER AppendErrorCodeCStrToCharBuffer;
 extern APPEND_CHAR_TO_CHAR_BUFFER AppendCharToCharBuffer;
 extern APPEND_UNICODE_STRING_TO_WIDE_CHAR_BUFFER
@@ -536,6 +545,7 @@ static PCSZ Exclamation = "!";
     AppendErrorCodeCStrToCharBuffer(Rtl, &Output, Code)
 
 #define OUTPUT_CSTR(Str) AppendCStrToCharBuffer(&Output, Str)
+#define OUTPUT_WSTR_FAST(Str) AppendWStrToCharBufferFast(&Output, Str)
 #define OUTPUT_CHR(Char) AppendCharToCharBuffer(&Output, Char)
 #define OUTPUT_SEP() AppendCharToCharBuffer(&Output, ',')
 #define OUTPUT_LF() AppendCharToCharBuffer(&Output, '\n')

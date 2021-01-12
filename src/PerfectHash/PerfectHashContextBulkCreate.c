@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1265,6 +1265,7 @@ PerfectHashContextExtractBulkCreateArgsFromArgvW(
     PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
     LPWSTR *ArgvW,
+    LPWSTR CommandLineW,
     PUNICODE_STRING KeysDirectory,
     PUNICODE_STRING BaseOutputDirectory,
     PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
@@ -1292,6 +1293,11 @@ Arguments:
     NumberOfArguments - Supplies the number of elements in the ArgvW array.
 
     ArgvW - Supplies a pointer to an array of wide C string arguments.
+
+    CommandLineW - Supplies a pointer to the original command line used to
+        construct the ArgvW array above.  This is only used for inclusion in
+        things like CSV output; it is not used programmatically (and is not
+        checked for correctness against ArgvW).
 
     KeysDirectory - Supplies a pointer to a UNICODE_STRING structure that
         will be filled out with the keys directory.
@@ -1373,6 +1379,10 @@ Return Value:
         return E_POINTER;
     }
 
+    if (!ARGUMENT_PRESENT(CommandLineW)) {
+        return E_POINTER;
+    }
+
     if (!ARGUMENT_PRESENT(KeysDirectory)) {
         return E_POINTER;
     }
@@ -1432,6 +1442,8 @@ Return Value:
     ArgW = &ArgvW[1];
     Rtl = Context->Rtl;
     Allocator = Context->Allocator;
+
+    Context->CommandLineW = CommandLineW;
 
     //
     // The first six arguments (keys directory, base output directory, algo ID,
@@ -1612,7 +1624,8 @@ HRESULT
 PerfectHashContextBulkCreateArgvW(
     PPERFECT_HASH_CONTEXT Context,
     ULONG NumberOfArguments,
-    LPWSTR *ArgvW
+    LPWSTR *ArgvW,
+    LPWSTR CommandLineW
     )
 /*++
 
@@ -1629,6 +1642,11 @@ Arguments:
     NumberOfArguments - Supplies the number of elements in the ArgvW array.
 
     ArgvW - Supplies a pointer to an array of wide C string arguments.
+
+    CommandLineW - Supplies a pointer to the original command line used to
+        construct the ArgvW array above.  This is only used for inclusion in
+        things like CSV output; it is not used programmatically (and is not
+        checked for correctness against ArgvW).
 
 Return Value:
 
@@ -1679,6 +1697,7 @@ Return Value:
     Result = ExtractBulkCreateArgs(Context,
                                    NumberOfArguments,
                                    ArgvW,
+                                   CommandLineW,
                                    &KeysDirectory,
                                    &BaseOutputDirectory,
                                    &AlgorithmId,

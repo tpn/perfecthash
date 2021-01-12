@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1149,6 +1149,29 @@ AppendCStrToCharBuffer(
 
     while (*Source) {
         *Dest++ = *Source++;
+    }
+
+    *BufferPointer = Dest;
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
+AppendWStrToCharBufferFast(
+    PCHAR *BufferPointer,
+    PWSTR String
+    )
+{
+    CHAR Char;
+    WCHAR Wide;
+    PCHAR Dest = *BufferPointer;
+    PWSTR Source = (PWSTR)String;
+
+    while (*Source) {
+        Wide = *Source++;
+        Char = (CHAR)Wide;
+        *Dest++ = Char;
     }
 
     *BufferPointer = Dest;

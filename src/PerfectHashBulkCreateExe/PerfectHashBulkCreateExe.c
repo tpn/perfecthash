@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -66,7 +66,8 @@ mainCRTStartup(
 
     Result = Context->Vtbl->BulkCreateArgvW(Context,
                                             NumberOfArguments,
-                                            ArgvW);
+                                            ArgvW,
+                                            CommandLineW);
 
     //
     // Print the usage string if the create routine failed due to invalid number

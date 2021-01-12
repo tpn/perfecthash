@@ -6454,9 +6454,18 @@ Abstract:
           &Keys->File->Path->FullPath,                                                       \
           OUTPUT_UNICODE_STRING_FAST)                                                        \
                                                                                              \
-    LAST_ENTRY(KeysBitmapString,                                                             \
-               Keys->Stats.KeysBitmap.String,                                                \
-               OUTPUT_RAW)
+    ENTRY(KeysBitmapString,                                                                  \
+          Keys->Stats.KeysBitmap.String,                                                     \
+          OUTPUT_RAW)                                                                        \
+                                                                                             \
+    LAST_ENTRY(CommandLineW,                                                                 \
+               Context->CommandLineW,                                                        \
+               OUTPUT_WSTR_FAST)
+
+//
+// IMPORTANT: Keep CommandLineW last above.  This is because we automatically
+// quote the last column in the CSV output.
+//
 
 //
 // Define a macro for initializing the local variables prior to writing a row.
@@ -6485,7 +6494,9 @@ Abstract:
 #define EXPAND_AS_WRITE_BULK_CREATE_BEST_ROW_LAST_COLUMN(Name,   \
                                                     Value,       \
                                                     OutputMacro) \
+    OUTPUT_CHR('"');                                             \
     OutputMacro(Value);                                          \
+    OUTPUT_CHR('"');                                             \
     OUTPUT_CHR('\n');
 
 
