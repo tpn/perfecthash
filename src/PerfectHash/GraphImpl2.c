@@ -113,11 +113,18 @@ Return Value:
 
     ASSERT(Graph->Flags.IsAcyclic);
 
-    START_GRAPH_COUNTER();
+    EventWriteGraphAssignStart(
+        NULL,
+        Graph->Attempt,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices
+    );
 
     //
     // Walk the graph and assign values.
     //
+
+    START_GRAPH_COUNTER();
 
     for (Index = 0; Index < NumberOfKeys; Index++) {
 
@@ -173,6 +180,16 @@ Return Value:
     }
 
     STOP_GRAPH_COUNTER(Assign);
+
+    EventWriteGraphAssignStop(
+        NULL,
+        Graph->Attempt,
+        Graph->NumberOfKeys,
+        Graph->NumberOfVertices,
+        Graph->NumberOfEmptyVertices,
+        0, // MaximumTraversalDepth
+        0  // TotalTraversals
+    );
 
     EventWriteGraphAssignResult(
         NULL,
