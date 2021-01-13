@@ -45,6 +45,7 @@ BEST_COVERAGE_TYPES = (
 KEYS_SLIM_1 = [
     'KeysName',
     'HashFunction',
+    'RngName',
     'BestCoverageType',
     'KeysToEdgesRatio',
     'KeysToVerticesRatio',
@@ -78,6 +79,15 @@ KEYS_SLIM_1 = [
     'AddKeysElapsedMicroseconds',
     'HashKeysElapsedMicroseconds',
     'AddHashedKeysElapsedMicroseconds',
+    'RngId',
+    'RngFlags',
+    'RngStartSeed',
+    'RngStartSubsequence',
+    'RngStartOffset',
+    'RngWinningSeed',
+    'RngWinningSubsequence',
+    'RngWinningOffset',
+    'CommandLineW',
 ]
 
 KEYS_BEST_COVERAGE_1 = [
