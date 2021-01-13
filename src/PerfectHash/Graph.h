@@ -30,6 +30,8 @@ Abstract:
 
 --*/
 
+#pragma once
+
 #include "stdafx.h"
 
 //
