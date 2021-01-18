@@ -114,7 +114,8 @@ Return Value:
     ASSERT(Graph->Flags.IsAcyclic);
 
     EventWriteGraphAssignStart(
-        NULL,
+        &Graph->Activity,
+        Graph->KeysFileName,
         Graph->Attempt,
         Graph->NumberOfKeys,
         Graph->NumberOfVertices
@@ -182,7 +183,8 @@ Return Value:
     STOP_GRAPH_COUNTER(Assign);
 
     EventWriteGraphAssignStop(
-        NULL,
+        &Graph->Activity,
+        Graph->KeysFileName,
         Graph->Attempt,
         Graph->NumberOfKeys,
         Graph->NumberOfVertices,
@@ -192,7 +194,8 @@ Return Value:
     );
 
     EventWriteGraphAssignResult(
-        NULL,
+        &Graph->Activity,
+        Graph->KeysFileName,
         Graph->Attempt,
         Table->GraphImpl,
         Cycles,

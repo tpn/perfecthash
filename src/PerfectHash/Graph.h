@@ -957,6 +957,28 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _RNG *Rng;
 
     //
+    // As we include the file name of keys in ETW events, we keep a pointer
+    // to it here to avoid having to look up six levels of indirection via:
+    //      Graph->Context->Table->Keys->Path->FileName.Buffer
+    //
+
+    PCWSTR KeysFileName;
+
+    //
+    // And as we're poking into the innards of another class, keep a reference
+    // to it so we can RELEASE() it during rundown.
+    //
+
+    struct _PERFECT_HASH_KEYS *Keys;
+
+    //
+    // GUID to use for activity tracking (i.e. the activity field of ETW
+    // events).  Currently, this is just a randomly-created GUID.
+    //
+
+    GUID Activity;
+
+    //
     // Edges array.
     //
 

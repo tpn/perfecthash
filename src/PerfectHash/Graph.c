@@ -21,7 +21,8 @@ Abstract:
 
 #define EVENT_WRITE_GRAPH(Name)   \
     EventWriteGraph##Name##Event( \
-        NULL,                     \
+        &Graph->Activity,         \
+        Graph->KeysFileName,      \
         Edge,                     \
         NumberOfKeys,             \
         Key,                      \
@@ -164,6 +165,17 @@ Return Value:
     }
 
     //
+    // Create an activity GUID to track this graph in ETW events.
+    //
+
+    Result = Graph->Rtl->Vtbl->GenerateRandomBytes(Graph->Rtl,
+                                                   sizeof(Graph->Activity),
+                                                   (PBYTE)&Graph->Activity);
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
     // We're done!  Indicate success and finish up.
     //
 
@@ -223,6 +235,7 @@ Return Value:
     RELEASE(Graph->Rtl);
     RELEASE(Graph->Allocator);
     RELEASE(Graph->Rng);
+    RELEASE(Graph->Keys);
 
     //
     // Free the vertex pairs array if applicable.
@@ -759,7 +772,13 @@ Return Value:
 
     STOP_GRAPH_COUNTER(AddHashedKeys);
 
-    EventWriteGraphAddHashedKeysEvent(NULL, NumberOfKeys, Cycles, Microseconds);
+    EventWriteGraphAddHashedKeysEvent(
+        &Graph->Activity,
+        Graph->KeysFileName,
+        NumberOfKeys,
+        Cycles,
+        Microseconds
+    );
 
     return S_OK;
 }
@@ -1988,7 +2007,8 @@ VerifyMemoryCoverageInvariants(
 
 #define EVENT_WRITE_GRAPH_FOUND(Name)                             \
     EventWriteGraph##Name##(                                      \
-        NULL,                                                     \
+        &Graph->Activity,                                         \
+        Graph->KeysFileName,                                      \
         Attempt,                                                  \
         ElapsedMilliseconds,                                      \
         (ULONG)CoverageType,                                      \
@@ -2936,9 +2956,11 @@ Return Value:
     PRNG Rng;
     HRESULT Result;
     PGRAPH_INFO Info;
+    PCWSTR KeysFileName;
     PGRAPH_INFO PrevInfo;
     PALLOCATOR Allocator;
     ULONG ProtectionFlags;
+    PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_TABLE Table;
     SIZE_T VertexPairsSizeInBytes;
     PPERFECT_HASH_CONTEXT Context;
@@ -3004,6 +3026,22 @@ Return Value:
     CopyInline(&Graph->Dimensions,
                &Info->Dimensions,
                sizeof(Graph->Dimensions));
+
+    //
+    // Wire up the keys pointer and file name buffer pointer.
+    //
+
+    Keys = Context->Table->Keys;
+    KeysFileName = Keys->File->Path->FileName.Buffer;
+
+    if (Graph->Keys != NULL) {
+        ASSERT(Graph->Keys == Keys);
+        ASSERT(Graph->KeysFileName == KeysFileName);
+    } else {
+        Graph->Keys = Context->Table->Keys;
+        Graph->Keys->Vtbl->AddRef(Keys);
+        Graph->KeysFileName = KeysFileName;
+    }
 
     Result = S_OK;
 
