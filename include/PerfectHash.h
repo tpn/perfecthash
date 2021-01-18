@@ -3171,6 +3171,12 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(NumberOfEmptyPages, Lowest, <)                         \
     ENTRY(NumberOfEmptyLargePages, Lowest, <)                    \
     ENTRY(NumberOfEmptyCacheLines, Lowest, <)                    \
+    ENTRY(NumberOfUsedPages, Highest, >)                         \
+    ENTRY(NumberOfUsedLargePages, Highest, >)                    \
+    ENTRY(NumberOfUsedCacheLines, Highest, >)                    \
+    ENTRY(NumberOfUsedPages, Lowest, <)                          \
+    ENTRY(NumberOfUsedLargePages, Lowest, <)                     \
+    ENTRY(NumberOfUsedCacheLines, Lowest, <)                     \
     ENTRY(MaxGraphTraversalDepth, Highest, >)                    \
     ENTRY(MaxGraphTraversalDepth, Lowest, <)                     \
     ENTRY(TotalGraphTraversals, Highest, >)                      \
