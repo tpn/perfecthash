@@ -11,11 +11,15 @@
     <DefaultPlatformToolset>v142</DefaultPlatformToolset>
   </PropertyGroup>
 
+  <!--
+      Disable CodeAnalysis for now; it causes heap exhaustion when compiling
+      large tables.
   <PropertyGroup>
     <PGDDirectory>$(SolutionDir)$(Platform)\</PGDDirectory>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>true</RunCodeAnalysis>
   </PropertyGroup>
+  -->
 
   <ItemDefinitionGroup>
     <ClCompile>
