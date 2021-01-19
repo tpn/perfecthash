@@ -123,6 +123,8 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 
 typedef _Null_terminated_ CONST CHAR *PCSZ;
 
+typedef DOUBLE *PDOUBLE;
+
 //
 // Define a helper union that allows easy access to the bytes and shorts
 // making up a ULONG.  This is predominantly used by the hash routines that

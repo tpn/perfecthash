@@ -631,6 +631,157 @@ AppendIntegerToCharBuffer(
     return;
 }
 
+APPEND_DOUBLE_TO_CHAR_BUFFER AppendDoubleToCharBuffer;
+
+_Use_decl_annotations_
+VOID
+AppendDoubleToCharBuffer(
+    PCHAR *BufferPointer,
+    DOUBLE Double
+    )
+{
+    PCHAR Buffer;
+    PCHAR End;
+    PCHAR Result;
+    PCHAR AfterDecimal;
+    INT Count;
+    INT Mode;
+    INT Sign;
+    INT Length;
+    INT DecimalPoint;
+    INT NumberOfDigits;
+    INT VirtualDigitsStart;
+    INT VirtualDigitsEnd;
+    SIZE_T ResultStrlen;
+    ULONG_PTR ResultLength;
+
+    End = NULL;
+    Sign = 0;
+    DecimalPoint = 0;
+    NumberOfDigits = 9;
+
+    Buffer = *BufferPointer;
+
+    //
+    // Mode = 0 -> Shortest string that yields the double when read in and
+    // rounded to the nearest value.
+    //
+
+    Mode = 0;
+
+    Result = _dtoa(
+        Double,
+        Mode,
+        NumberOfDigits,
+        &DecimalPoint,
+        &Sign,
+        &End
+    );
+
+    if (Result == NULL) {
+        return;
+    }
+
+    ResultLength = RtlPointerToOffset(Result, End);
+    if (ResultLength > 0x7fff) {
+        goto End;
+    }
+
+    ResultStrlen = strlen(Result);
+    ASSERT((ULONG_PTR)ResultStrlen == ResultLength);
+
+    Length = (INT)ResultLength;
+    VirtualDigitsEnd = DecimalPoint + NumberOfDigits;
+    if (VirtualDigitsEnd <= DecimalPoint) {
+        VirtualDigitsEnd = DecimalPoint + 1;
+    }
+    VirtualDigitsStart = DecimalPoint <= 0 ? DecimalPoint - 1 : 0;
+
+    ASSERT(VirtualDigitsStart <= 0);
+    ASSERT(0 <= Length);
+
+    if (Sign == 1) {
+        *Buffer++ = '-';
+    }
+
+    //
+    // Zero padding on the left.
+    //
+
+    if (DecimalPoint <= 0) {
+        Count = DecimalPoint - VirtualDigitsStart;
+        if (Count > 0) {
+            while (Count--) {
+                *Buffer++ = '0';
+            }
+        }
+        *Buffer++ = '.';
+        Count = 0 - DecimalPoint;
+        if (Count > 0) {
+            while (Count--) {
+                *Buffer++ = '0';
+            }
+        }
+    } else {
+        Count = 0 - VirtualDigitsStart;
+        if (Count > 0) {
+            while (Count--) {
+                *Buffer++ = '0';
+            }
+        }
+    }
+
+    //
+    // Digits, with included decimal point.
+    //
+
+    if (DecimalPoint > 0 && DecimalPoint < Length) {
+        AppendCharBufferToCharBuffer(&Buffer, Result, DecimalPoint);
+        *Buffer++ = '.';
+        AfterDecimal = Result + DecimalPoint;
+        AppendCharBufferToCharBuffer(&Buffer,
+                                     AfterDecimal,
+                                     Length-DecimalPoint);
+    } else {
+        AppendCharBufferToCharBuffer(&Buffer, Result, Length);
+    }
+
+    //
+    // Add zeros on the right.
+    //
+
+    if (Length < DecimalPoint) {
+        Count = DecimalPoint - Length;
+        if (Count > 0) {
+            while (Count--) {
+                *Buffer++ = '0';
+            }
+        }
+        *Buffer += '.';
+        Count = VirtualDigitsEnd - DecimalPoint;
+        if (Count > 0) {
+            while (Count--) {
+                *Buffer++ = '0';
+            }
+        }
+    } else {
+        Count = VirtualDigitsEnd - Length;
+        if (Count > 0) {
+            while (Count--) {
+                *Buffer++ = '0';
+            }
+        }
+    }
+
+End:
+    ASSERT(Result != NULL);
+    _freedtoa(Result);
+
+    *BufferPointer = Buffer;
+
+    return;
+}
+
 
 APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
 
