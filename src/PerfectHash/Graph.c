@@ -21,7 +21,8 @@ Abstract:
 
 #define EVENT_WRITE_GRAPH(Name)   \
     EventWriteGraph##Name##Event( \
-        NULL,                     \
+        &Graph->Activity,         \
+        Graph->KeysFileName,      \
         Edge,                     \
         NumberOfKeys,             \
         Key,                      \
@@ -164,6 +165,17 @@ Return Value:
     }
 
     //
+    // Create an activity GUID to track this graph in ETW events.
+    //
+
+    Result = Graph->Rtl->Vtbl->GenerateRandomBytes(Graph->Rtl,
+                                                   sizeof(Graph->Activity),
+                                                   (PBYTE)&Graph->Activity);
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
     // We're done!  Indicate success and finish up.
     //
 
@@ -223,6 +235,7 @@ Return Value:
     RELEASE(Graph->Rtl);
     RELEASE(Graph->Allocator);
     RELEASE(Graph->Rng);
+    RELEASE(Graph->Keys);
 
     //
     // Free the vertex pairs array if applicable.
@@ -759,7 +772,13 @@ Return Value:
 
     STOP_GRAPH_COUNTER(AddHashedKeys);
 
-    EventWriteGraphAddHashedKeysEvent(NULL, NumberOfKeys, Cycles, Microseconds);
+    EventWriteGraphAddHashedKeysEvent(
+        &Graph->Activity,
+        Graph->KeysFileName,
+        NumberOfKeys,
+        Cycles,
+        Microseconds
+    );
 
     return S_OK;
 }
@@ -1511,7 +1530,27 @@ Return Value:
     }
 
     //
-    // Enumeration of the assigned array complete; verify invariants.
+    // Enumeration of the assigned array complete.  Perform a linear regression
+    // against the NumberOfAssignedPerCacheLineCounts array, then score it.
+    //
+
+    LinearRegressionNumberOfAssignedPerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        &Coverage->Slope,
+        &Coverage->Intercept,
+        &Coverage->CorrelationCoefficient,
+        &Coverage->PredictedNumberOfFilledCacheLines
+    );
+
+    ScoreNumberOfAssignedPerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        Coverage->TotalNumberOfAssigned,
+        &Coverage->Score,
+        &Coverage->Rank
+    );
+
+    //
+    // Everything has been completed; verify invariants, then return.
     //
 
     VerifyMemoryCoverageInvariants(Graph, Coverage);
@@ -1718,7 +1757,27 @@ Return Value:
     }
 
     //
-    // Enumeration of the assigned array complete; verify invariants.
+    // Enumeration of the assigned array complete.  Perform a linear regression
+    // against the NumberOfAssignedPerCacheLineCounts array, then score it.
+    //
+
+    LinearRegressionNumberOfAssignedPerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        &Coverage->Slope,
+        &Coverage->Intercept,
+        &Coverage->CorrelationCoefficient,
+        &Coverage->PredictedNumberOfFilledCacheLines
+    );
+
+    ScoreNumberOfAssignedPerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        Coverage->TotalNumberOfAssigned,
+        &Coverage->Score,
+        &Coverage->Rank
+    );
+
+    //
+    // Everything has been completed; verify invariants, then return.
     //
 
     VerifyMemoryCoverageInvariants(Graph, Coverage);
@@ -1988,14 +2047,17 @@ VerifyMemoryCoverageInvariants(
 
 #define EVENT_WRITE_GRAPH_FOUND(Name)                             \
     EventWriteGraph##Name##(                                      \
-        NULL,                                                     \
+        &Graph->Activity,                                         \
+        Graph->KeysFileName,                                      \
         Attempt,                                                  \
         ElapsedMilliseconds,                                      \
         (ULONG)CoverageType,                                      \
         CoverageValue,                                            \
+        CoverageValueAsDouble,                                    \
         (StopGraphSolving != FALSE),                              \
         (FoundBestGraph != FALSE),                                \
         (FoundEqualBestGraph != FALSE),                           \
+        (IsCoverageValueDouble != FALSE),                         \
         EqualCount,                                               \
         Coverage->TotalNumberOfPages,                             \
         Coverage->TotalNumberOfLargePages,                        \
@@ -2042,7 +2104,12 @@ VerifyMemoryCoverageInvariants(
         Coverage->NumberOfAssignedPerCacheLineCounts[13],         \
         Coverage->NumberOfAssignedPerCacheLineCounts[14],         \
         Coverage->NumberOfAssignedPerCacheLineCounts[15],         \
-        Coverage->NumberOfAssignedPerCacheLineCounts[16]          \
+        Coverage->NumberOfAssignedPerCacheLineCounts[16],         \
+        Coverage->Slope,                                          \
+        Coverage->Intercept,                                      \
+        Coverage->CorrelationCoefficient,                         \
+        Coverage->Score,                                          \
+        Coverage->Rank                                            \
     )
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
@@ -2087,11 +2154,14 @@ Return Value:
     BOOLEAN FoundBestGraph = FALSE;
     BOOLEAN StopGraphSolving = FALSE;
     BOOLEAN FoundEqualBestGraph = FALSE;
+    BOOLEAN IsCoverageValueDouble;
+    BOOLEAN IsSlopeCoverageType;
     ULONG Index;
     ULONG EqualCount = 0;
     ULONG BestGraphIndex = 0;
     ULONG CoverageValue = 0;
     ULONG CoverageLimit = 0;
+    DOUBLE CoverageValueAsDouble = 0.0;
     LONG EqualBestGraphIndex = 0;
     LONGLONG Attempt;
     PGRAPH BestGraph;
@@ -2114,6 +2184,7 @@ Return Value:
     CoverageType = Context->BestCoverageType;
     Attempt = Coverage->Attempt;
     ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
+    IsCoverageValueDouble = DoesBestCoverageTypeUseDouble(CoverageType);
 
     //
     // Indicate continue graph solving unless we find a best graph.
@@ -2159,22 +2230,92 @@ Return Value:
     PreviousBestCoverage = &PreviousBestGraph->AssignedMemoryCoverage;
 
     //
+    // Define helper macros for reducing the amount of duplicate code we'd
+    // otherwise have to copy-and-paste when we detect a best or equal-best
+    // graph.
+    //
+
+#define FOUND_BEST_GRAPH()                         \
+    Context->BestGraph = Graph;                    \
+    *NewGraphPointer = PreviousBestGraph;          \
+    BestGraphIndex = Context->NewBestGraphCount++; \
+    Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING
+
+#define FOUND_EQUAL_BEST_GRAPH()                         \
+    Context->EqualBestGraphCount++;                      \
+    FoundEqualBestGraph = TRUE;                          \
+    EqualBestGraphIndex = Context->NewBestGraphCount - 1
+
+    //
+    // If our coverage type is slope, we also want to factor in the intercept
+    // and correlation coefficient; if we're presented with two equal slope
+    // values, we want to consult the intercept and correlation coefficient as
+    // well to try and break the tie.
+    //
+
+    IsSlopeCoverageType = (
+        CoverageType == BestCoverageTypeLowestSlopeId ||
+        CoverageType == BestCoverageTypeHighestSlopeId
+    );
+
+    if (IsSlopeCoverageType) {
+        DOUBLE Slope;
+        DOUBLE Intercept;
+        DOUBLE CorrCoeff;
+        DOUBLE PrevSlope;
+        DOUBLE PrevIntercept;
+        DOUBLE PrevCorrCoeff;
+
+        Slope = Coverage->Slope;
+        Intercept = Coverage->Intercept;
+        CorrCoeff = Coverage->CorrelationCoefficient;
+        PrevSlope = PreviousBestCoverage->Slope;
+        PrevIntercept = PreviousBestCoverage->Intercept;
+        PrevCorrCoeff = PreviousBestCoverage->CorrelationCoefficient;
+
+        CoverageValueAsDouble = Slope;
+
+        //
+        // Helper macro to reduce duplicate code for lowest/highest slope
+        // comparisons.
+        //
+
+#define IS_BEST_SLOPE(Comparator)                    \
+    if (Slope Comparator PrevSlope) {                \
+        FOUND_BEST_GRAPH();                          \
+    } else if (Slope == PrevSlope) {                 \
+        if (Intercept Comparator PrevIntercept) {    \
+            FOUND_BEST_GRAPH();                      \
+        } else if (Intercept == PrevIntercept) {     \
+            if (CorrCoeff > PrevCorrCoeff) {         \
+                FOUND_BEST_GRAPH();                  \
+            } else if (CorrCoeff == PrevCorrCoeff) { \
+                FOUND_EQUAL_BEST_GRAPH();            \
+            }                                        \
+        }                                            \
+    }
+
+        if (CoverageType == BestCoverageTypeLowestSlopeId) {
+            IS_BEST_SLOPE(<);
+        } else {
+            IS_BEST_SLOPE(>);
+        }
+
+        goto End;
+    }
+
+    //
     // Determine if this graph has the "best" memory coverage and update the
     // best graph accordingly if so.
     //
 
 #define EXPAND_AS_DETERMINE_IF_BEST_GRAPH(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                        \
-        CoverageValue = Coverage->##Name;                               \
+        CoverageValue = (ULONG)Coverage->##Name;                        \
         if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
-            Context->BestGraph = Graph;                                 \
-            *NewGraphPointer = PreviousBestGraph;                       \
-            BestGraphIndex = Context->NewBestGraphCount++;              \
-            Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;                    \
+            FOUND_BEST_GRAPH();                                         \
         } else if (Coverage->##Name == PreviousBestCoverage->##Name) {  \
-            Context->EqualBestGraphCount++;                             \
-            FoundEqualBestGraph = TRUE;                                 \
-            EqualBestGraphIndex = Context->NewBestGraphCount - 1;       \
+            FOUND_EQUAL_BEST_GRAPH();                                   \
         }                                                               \
         break;
 
@@ -2272,7 +2413,8 @@ End:
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                      \
-        BestGraphInfo->Value = Coverage->##Name;                      \
+        BestGraphInfo->Value = (ULONG)Coverage->##Name;               \
+        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->##Name;      \
         break;
 
         switch (CoverageType) {
@@ -2355,12 +2497,29 @@ End:
     // seen happen regularly in practice).
     //
 
+    //
+    // N.B. This doesn't apply to the coverage types like Slope which use
+    //      DOUBLEs instead of ULONGs, so, skip comparator check in these
+    //      cases.
+    //
+
+    if (IsCoverageValueDouble) {
+        goto SkipComparatorCheck;
+    }
+
+    //
+    // Suppress SAL warnings; not sure why it complains here.
+    //
+
+    _No_competing_thread_begin_
     Coverage = &BestGraph->AssignedMemoryCoverage;
+    _No_competing_thread_end_
 
 #define EXPAND_AS_DETERMINE_IF_LOWEST(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                    \
         IsLowestComparator = (0 Comparator 1);                      \
-        CoverageValue = Coverage->##Name;                           \
+        CoverageValue = (ULONG)Coverage->##Name;                    \
+        CoverageValueAsDouble = (DOUBLE)Coverage->##Name;           \
         break;
 
     switch (CoverageType) {
@@ -2447,6 +2606,12 @@ End:
             }
         }
     }
+
+    //
+    // Intentional follow-on to SkipComparatorCheck.
+    //
+
+SkipComparatorCheck:
 
     //
     // Communicate back to the context that solving can stop if indicated.
@@ -2936,9 +3101,11 @@ Return Value:
     PRNG Rng;
     HRESULT Result;
     PGRAPH_INFO Info;
+    PCWSTR KeysFileName;
     PGRAPH_INFO PrevInfo;
     PALLOCATOR Allocator;
     ULONG ProtectionFlags;
+    PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_TABLE Table;
     SIZE_T VertexPairsSizeInBytes;
     PPERFECT_HASH_CONTEXT Context;
@@ -3004,6 +3171,22 @@ Return Value:
     CopyInline(&Graph->Dimensions,
                &Info->Dimensions,
                sizeof(Graph->Dimensions));
+
+    //
+    // Wire up the keys pointer and file name buffer pointer.
+    //
+
+    Keys = Context->Table->Keys;
+    KeysFileName = Keys->File->Path->FileName.Buffer;
+
+    if (Graph->Keys != NULL) {
+        ASSERT(Graph->Keys == Keys);
+        ASSERT(Graph->KeysFileName == KeysFileName);
+    } else {
+        Graph->Keys = Context->Table->Keys;
+        Graph->Keys->Vtbl->AddRef(Keys);
+        Graph->KeysFileName = KeysFileName;
+    }
 
     Result = S_OK;
 

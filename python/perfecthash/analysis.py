@@ -347,6 +347,7 @@ ADD_KEYS_CSV_HEADER_SLIM = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
     'KeysProcessed',
     'NumberOfKeys',
     'LastKey',
@@ -425,6 +426,7 @@ HASH_KEYS_CSV_HEADER_SLIM = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
     'KeysProcessed',
     'NumberOfKeys',
     'LastKey',
@@ -481,6 +483,7 @@ ADD_HASHED_KEYS_CSV_HEADER_SLIM = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
     'NumberOfKeys',
     'Cycles',
     'Microseconds',
@@ -498,6 +501,7 @@ FOUND_GRAPH_ETW_HEADER_SHARED = (
     ' etw:Related ActivityId,'
     ' etw:UserSid,'
     ' etw:SessionId,'
+    ' KeysFileName,'
     ' Attempt,'
     ' ElapsedMilliseconds,'
     ' CoverageType,'
@@ -551,7 +555,12 @@ FOUND_GRAPH_ETW_HEADER_SHARED = (
     ' NumberOfAssignedPerCacheLineCounts_13,'
     ' NumberOfAssignedPerCacheLineCounts_14,'
     ' NumberOfAssignedPerCacheLineCounts_15,'
-    ' NumberOfAssignedPerCacheLineCounts_16'
+    ' NumberOfAssignedPerCacheLineCounts_16,'
+    ' Slope,'
+    ' Intercept,'
+    ' CorrelationCoefficient,'
+    ' Score,'
+    ' Rank'
 )
 
 FOUND_GRAPH_CSV_HEADER_SHARED = (
@@ -564,6 +573,7 @@ FOUND_GRAPH_CSV_HEADER_SHARED = (
     'RelatedActivityId',
     'UserSid',
     'SessionId',
+    'KeysFileName',
     'Attempt',
     'ElapsedMilliseconds',
     'CoverageType',
@@ -618,6 +628,11 @@ FOUND_GRAPH_CSV_HEADER_SHARED = (
     'NumberOfAssignedPerCacheLineCounts_14',
     'NumberOfAssignedPerCacheLineCounts_15',
     'NumberOfAssignedPerCacheLineCounts_16',
+    'Slope',
+    'Intercept',
+    'CorrelationCoefficient',
+    'Score',
+    'Rank',
 )
 
 FOUND_GRAPH_CSV_HEADER_SLIM_SHARED = (
@@ -626,6 +641,8 @@ FOUND_GRAPH_CSV_HEADER_SLIM_SHARED = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
+    'KeysFileName',
     'Attempt',
     'ElapsedMilliseconds',
     'CoverageType',
@@ -680,6 +697,11 @@ FOUND_GRAPH_CSV_HEADER_SLIM_SHARED = (
     'NumberOfAssignedPerCacheLineCounts_14',
     'NumberOfAssignedPerCacheLineCounts_15',
     'NumberOfAssignedPerCacheLineCounts_16',
+    'Slope',
+    'Intercept',
+    'CorrelationCoefficient',
+    'Score',
+    'Rank',
 )
 
 # FoundNewBestGraph
@@ -732,6 +754,7 @@ ASSIGN_START_ETW_HEADER = (
     ' etw:Related ActivityId,'
     ' etw:UserSid,'
     ' etw:SessionId,'
+    ' KeysFileName,'
     ' Attempt,'
     ' NumberOfKeys,'
     ' NumberOfVertices'
@@ -747,6 +770,7 @@ ASSIGN_START_CSV_HEADER = (
     'RelatedActivityId',
     'UserSid',
     'SessionId',
+    'KeysFileName',
     'Attempt',
     'NumberOfKeys',
     'NumberOfVertices',
@@ -759,6 +783,8 @@ ASSIGN_START_CSV_HEADER_SLIM = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
+    'KeysFileName',
     'Attempt',
     'NumberOfKeys',
     'NumberOfVertices',
@@ -778,6 +804,7 @@ ASSIGN_STOP_ETW_HEADER = (
     ' etw:Related ActivityId,'
     ' etw:UserSid,'
     ' etw:SessionId,'
+    ' KeysFileName,'
     ' Attempt,'
     ' NumberOfKeys,'
     ' NumberOfVertices,'
@@ -796,6 +823,7 @@ ASSIGN_STOP_CSV_HEADER = (
     'RelatedActivityId',
     'UserSid',
     'SessionId',
+    'KeysFileName',
     'Attempt',
     'NumberOfKeys',
     'NumberOfVertices',
@@ -811,6 +839,8 @@ ASSIGN_STOP_CSV_HEADER_SLIM = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
+    'KeysFileName',
     'Attempt',
     'NumberOfKeys',
     'NumberOfVertices',
@@ -856,6 +886,7 @@ GENERATE_RANDOM_BYTES_START_CSV_HEADER_SLIM = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
     'BytesRequested',
 )
 
@@ -898,6 +929,7 @@ GENERATE_RANDOM_BYTES_STOP_CSV_HEADER_SLIM = (
     'ProcessID',
     'ThreadID',
     'CPU',
+    'ActivityId',
     'BytesRequested',
     'Result',
 )
@@ -1900,35 +1932,35 @@ def get_yyyy_mm_dd_subdirs(dirname):
 
 def get_csv_files(directory):
     import glob
-    return [
+    return set(
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreate*.csv',
             recursive=True
         )
-    ]
+    )
 
 def get_all_bulk_create_parquet_files(directory):
     import glob
-    return [
+    return set(
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreate*.parquet',
             recursive=True
         ) if 'failed' not in f
-    ] + [
+    ).union(set(
         f for f in glob.iglob(
             f'{directory}/PerfectHashBulkCreate*.parquet',
             recursive=False
         ) if 'failed' not in f
-    ]
+    ))
 
 def get_best_bulk_create_parquet_files(directory):
     import glob
-    return [
+    return set(
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreateBest*.parquet',
             recursive=True
         ) if 'failed' not in f
-    ]
+    )
 
 def convert_csv_to_parquet(path, base_research_dir, out=None):
     if not out:
@@ -2289,6 +2321,7 @@ def process_xperf_perfecthash_csv(path, out=None):
                 'ProcessID',
                 'ThreadID',
                 'CPU',
+                'ActivityId',
                 'NumberOfKeys',
                 'NumberOfVertices',
                 'NumberOfEmptyVertices',
@@ -2310,8 +2343,9 @@ def process_xperf_perfecthash_csv(path, out=None):
                 'ProcessID',
                 'ThreadID',
                 'CPU',
+                'ActivityId',
                 'BytesRequested',
-                'Success',
+                'Result',
             ]]
 
         df.to_csv(path)
@@ -2322,6 +2356,7 @@ def process_xperf_perfecthash_csv(path, out=None):
 #===============================================================================
 
 def get_cache_line_coverage(df):
+    import numpy as np
     count = df.NewBestGraphCount.values[0]
     keys = [
         f'BestGraph{i}_CountOfCacheLinesWithNumberOfAssigned_{n}'
@@ -2335,8 +2370,11 @@ def get_cache_line_coverage(df):
     return (keys, values, attempts, columns)
 
 def ridgeline_plot(df):
+    import joypy
+    import pandas as pd
     import matplotlib.pyplot as plt
-    plt.ioff()
+    from matplotlib import cm
+    #plt.ioff()
     keys_name = df.KeysName.values[0]
     hash_func = df.HashFunction.values[0]
     best_coverage_type = df.BestCoverageType.values[0]

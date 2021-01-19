@@ -139,6 +139,14 @@ typedef APPEND_INTEGER_TO_CHAR_BUFFER *PAPPEND_INTEGER_TO_CHAR_BUFFER;
 
 typedef
 VOID
+(NTAPI APPEND_DOUBLE_TO_CHAR_BUFFER)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_ DOUBLE Double
+    );
+typedef APPEND_DOUBLE_TO_CHAR_BUFFER *PAPPEND_DOUBLE_TO_CHAR_BUFFER;
+
+typedef
+VOID
 (NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX)(
     _Inout_ PCHAR *BufferPointer,
     _In_opt_ ULONG Integer
@@ -372,6 +380,7 @@ extern APPEND_LONGLONG_INTEGER_TO_UNICODE_STRING
 extern APPEND_INTEGER_TO_STRING AppendIntegerToString;
 extern APPEND_LONGLONG_INTEGER_TO_STRING AppendLongLongIntegerToString;
 extern APPEND_INTEGER_TO_CHAR_BUFFER AppendIntegerToCharBuffer;
+extern APPEND_DOUBLE_TO_CHAR_BUFFER AppendDoubleToCharBuffer;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
 extern APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX
     AppendLongLongIntegerToCharBufferAsHex;
@@ -552,6 +561,9 @@ static PCSZ Exclamation = "!";
 
 #define OUTPUT_INT(Value)                     \
     AppendIntegerToCharBuffer(&Output, Value)
+
+#define OUTPUT_DOUBLE(Value)                 \
+    AppendDoubleToCharBuffer(&Output, Value)
 
 #define OUTPUT_FLUSH_CONSOLE()                                               \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \

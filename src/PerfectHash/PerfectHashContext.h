@@ -185,7 +185,7 @@ typedef struct _BEST_GRAPH_INFO {
     // the best graph (e.g. HighestMaxGraphTraversalDepth).
     //
 
-    ULONG Value;
+    ULONGLONG Value;
 
     //
     // Number of times a best graph was found that was equal to this existing
@@ -194,6 +194,18 @@ typedef struct _BEST_GRAPH_INFO {
     //
 
     ULONG EqualCount;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
+
+    //
+    // Coverage value as a double, if applicable.
+    //
+
+    DOUBLE ValueAsDouble;
 
     //
     // Seed values used for this best graph.

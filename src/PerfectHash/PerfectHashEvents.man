@@ -16,11 +16,13 @@
         <opcodes></opcodes>
         <templates>
           <template tid="GraphAddHashedKeysTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
             <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="Cycles" inType="win:Int64" outType="xs:long"></data>
             <data name="Microseconds" inType="win:Int64" outType="xs:long"></data>
           </template>
           <template tid="GraphAddKeysTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
             <data name="KeysProcessed" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="LastKey" inType="win:UInt32" outType="xs:unsignedInt"></data>
@@ -37,13 +39,16 @@
             <data name="Seed8" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
           <template tid="GraphFoundTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
             <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
             <data name="ElapsedMilliseconds" inType="win:UInt64" outType="xs:unsignedLong"></data>
             <data name="CoverageType" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="CoverageValue" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="CoverageValueAsDouble" inType="win:Double" outType="xs:double"></data>
             <data name="StopGraphSolving" inType="win:Boolean" outType="xs:boolean"></data>
             <data name="IsBest" inType="win:Boolean" outType="xs:boolean"></data>
             <data name="IsEqual" inType="win:Boolean" outType="xs:boolean"></data>
+            <data name="IsCoverageValueDouble" inType="win:Boolean" outType="xs:boolean"></data>
             <data name="EqualCount" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalNumberOfPages" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalNumberOfLargePages" inType="win:UInt32" outType="xs:unsignedInt"></data>
@@ -91,13 +96,20 @@
             <data name="NumberOfAssignedPerCacheLineCounts_14" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfAssignedPerCacheLineCounts_15" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfAssignedPerCacheLineCounts_16" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Slope" inType="win:Double" outType="xs:double"></data>
+            <data name="Intercept" inType="win:Double" outType="xs:double"></data>
+            <data name="CorrelationCoefficient" inType="win:Double" outType="xs:double"></data>
+            <data name="Score" inType="win:UInt64" outType="xs:unsignedLong"></data>
+            <data name="Rank" inType="win:Double" outType="xs:double"></data>
           </template>
           <template tid="GraphAssignStartTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
             <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
             <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
           <template tid="GraphAssignStopTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
             <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
             <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
@@ -113,6 +125,7 @@
             <data name="Result" inType="win:UInt32" outType="win:HexInt32"></data>
           </template>
           <template tid="GraphAssignResultTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
             <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
             <data name="FunctionVersion" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="Cycles" inType="win:Int64" outType="xs:long"></data>

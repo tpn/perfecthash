@@ -123,6 +123,8 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 
 typedef _Null_terminated_ CONST CHAR *PCSZ;
 
+typedef DOUBLE *PDOUBLE;
+
 //
 // Define a helper union that allows easy access to the bytes and shorts
 // making up a ULONG.  This is predominantly used by the hash routines that
@@ -3171,6 +3173,12 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(NumberOfEmptyPages, Lowest, <)                         \
     ENTRY(NumberOfEmptyLargePages, Lowest, <)                    \
     ENTRY(NumberOfEmptyCacheLines, Lowest, <)                    \
+    ENTRY(NumberOfUsedPages, Highest, >)                         \
+    ENTRY(NumberOfUsedLargePages, Highest, >)                    \
+    ENTRY(NumberOfUsedCacheLines, Highest, >)                    \
+    ENTRY(NumberOfUsedPages, Lowest, <)                          \
+    ENTRY(NumberOfUsedLargePages, Lowest, <)                     \
+    ENTRY(NumberOfUsedCacheLines, Lowest, <)                     \
     ENTRY(MaxGraphTraversalDepth, Highest, >)                    \
     ENTRY(MaxGraphTraversalDepth, Lowest, <)                     \
     ENTRY(TotalGraphTraversals, Highest, >)                      \
@@ -3188,7 +3196,15 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)         \
     ENTRY(NumberOfPagesUsedByKeysSubset, Highest, >)             \
     ENTRY(NumberOfLargePagesUsedByKeysSubset, Highest, >)        \
-    LAST_ENTRY(NumberOfCacheLinesUsedByKeysSubset, Highest, >)
+    ENTRY(NumberOfCacheLinesUsedByKeysSubset, Highest, >)        \
+    ENTRY(PredictedNumberOfFilledCacheLines, Lowest, <)          \
+    ENTRY(PredictedNumberOfFilledCacheLines, Highest, >)         \
+    ENTRY(Slope, Lowest, <)                                      \
+    ENTRY(Slope, Highest, >)                                     \
+    ENTRY(Score, Lowest , <)                                     \
+    ENTRY(Score, Highest , >)                                    \
+    ENTRY(Rank, Lowest , <)                                      \
+    LAST_ENTRY(Rank, Highest , >)
 
 #define BEST_COVERAGE_TYPE_TABLE_ENTRY(ENTRY) \
     BEST_COVERAGE_TYPE_TABLE(ENTRY, ENTRY, ENTRY)
@@ -3279,6 +3295,22 @@ DoesBestCoverageTypeUseValueArray(
 {
     return (
         DoesBestCoverageTypeRequireKeysSubset(CoverageType)
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+DoesBestCoverageTypeUseDouble(
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID Type
+    )
+{
+    return (
+        Type == BestCoverageTypeLowestSlopeId                              ||
+        Type == BestCoverageTypeHighestSlopeId                             ||
+        Type == BestCoverageTypeLowestPredictedNumberOfFilledCacheLinesId  ||
+        Type == BestCoverageTypeHighestPredictedNumberOfFilledCacheLinesId ||
+        Type == BestCoverageTypeLowestRankId                               ||
+        Type == BestCoverageTypeHighestRankId
     );
 }
 

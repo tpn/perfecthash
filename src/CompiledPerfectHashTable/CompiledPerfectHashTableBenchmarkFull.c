@@ -24,7 +24,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
             for (Count = Iterations; Count != 0; Count--) {
 
                 //
-                // Loop through the entire key set and insert a rotated version of the key.
+                // Loop through the entire key set and insert a rotated version
+                // of the key.
                 //
 
                 FOR_EACH_KEY {
@@ -34,8 +35,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 }
 
                 //
-                // Loop through the entire set again and ensure that lookup returns the
-                // rotated version.
+                // Loop through the entire set again and ensure that lookup
+                // returns the rotated version.
                 //
 
                 FOR_EACH_KEY {
@@ -72,7 +73,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
             for (Count = Iterations; Count != 0; Count--) {
 
                 //
-                // Loop through the entire key set and insert a rotated version of the key.
+                // Loop through the entire key set and insert a rotated version
+                // of the key.
                 //
 
                 FOR_EACH_KEY {
@@ -82,8 +84,8 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
                 }
 
                 //
-                // Loop through the entire set again and ensure that lookup returns the
-                // rotated version.
+                // Loop through the entire set again and ensure that lookup
+                // returns the rotated version.
                 //
 
                 FOR_EACH_KEY {
@@ -116,3 +118,4 @@ DECLARE_BENCHMARK_FULL_CPH_ROUTINE()
     return Best;
 }
 
+// vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
