@@ -242,7 +242,9 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     // elements, not 16.
     //
 
-    ULONG NumberOfAssignedPerCacheLineCounts[NUM_ASSIGNED_PER_CACHE_LINE + 1];
+#define TOTAL_NUM_ASSIGNED_PER_CACHE_LINE NUM_ASSIGNED_PER_CACHE_LINE + 1
+
+    ULONG NumberOfAssignedPerCacheLineCounts[TOTAL_NUM_ASSIGNED_PER_CACHE_LINE];
     union {
         ULONG MaxAssignedPerCacheLineCount;
         ULONG MaxAssignedPerCacheLineCountForKeysSubset;
@@ -274,6 +276,22 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     //
 
     LONGLONG Attempt;
+
+    //
+    // Linear regression performed against NumberOfAssignedPerCacheLineCounts.
+    //
+
+    DOUBLE Slope;
+    DOUBLE Intercept;
+    DOUBLE CorrelationCoefficient;
+    DOUBLE PredictedNumberOfFilledCacheLines;
+
+    //
+    // Score and rank for the NumberOfAssignedPerCacheLineCounts array.
+    //
+
+    ULONGLONG Score;
+    DOUBLE Rank;
 
 } ASSIGNED_MEMORY_COVERAGE;
 typedef ASSIGNED_MEMORY_COVERAGE *PASSIGNED_MEMORY_COVERAGE;

@@ -3196,7 +3196,15 @@ IsValidPerfectHashTableCreateParameterId(
     ENTRY(NumberOfCacheLinesUsedByKeysSubset, Lowest, <)         \
     ENTRY(NumberOfPagesUsedByKeysSubset, Highest, >)             \
     ENTRY(NumberOfLargePagesUsedByKeysSubset, Highest, >)        \
-    LAST_ENTRY(NumberOfCacheLinesUsedByKeysSubset, Highest, >)
+    ENTRY(NumberOfCacheLinesUsedByKeysSubset, Highest, >)        \
+    ENTRY(PredictedNumberOfFilledCacheLines, Lowest, <)          \
+    ENTRY(PredictedNumberOfFilledCacheLines, Highest, >)         \
+    ENTRY(Slope, Lowest, <)                                      \
+    ENTRY(Slope, Highest, >)                                     \
+    ENTRY(Score, Lowest , <)                                     \
+    ENTRY(Score, Highest , >)                                    \
+    ENTRY(Rank, Lowest , <)                                      \
+    LAST_ENTRY(Rank, Highest , >)
 
 #define BEST_COVERAGE_TYPE_TABLE_ENTRY(ENTRY) \
     BEST_COVERAGE_TYPE_TABLE(ENTRY, ENTRY, ENTRY)
@@ -3287,6 +3295,22 @@ DoesBestCoverageTypeUseValueArray(
 {
     return (
         DoesBestCoverageTypeRequireKeysSubset(CoverageType)
+    );
+}
+
+FORCEINLINE
+BOOLEAN
+DoesBestCoverageTypeUseDouble(
+    _In_ PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID Type
+    )
+{
+    return (
+        Type == BestCoverageTypeLowestSlopeId                              ||
+        Type == BestCoverageTypeHighestSlopeId                             ||
+        Type == BestCoverageTypeLowestPredictedNumberOfFilledCacheLinesId  ||
+        Type == BestCoverageTypeHighestPredictedNumberOfFilledCacheLinesId ||
+        Type == BestCoverageTypeLowestRankId                               ||
+        Type == BestCoverageTypeHighestRankId
     );
 }
 

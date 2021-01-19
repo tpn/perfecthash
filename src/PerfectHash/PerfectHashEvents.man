@@ -44,9 +44,11 @@
             <data name="ElapsedMilliseconds" inType="win:UInt64" outType="xs:unsignedLong"></data>
             <data name="CoverageType" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="CoverageValue" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="CoverageValueAsDouble" inType="win:Double" outType="xs:double"></data>
             <data name="StopGraphSolving" inType="win:Boolean" outType="xs:boolean"></data>
             <data name="IsBest" inType="win:Boolean" outType="xs:boolean"></data>
             <data name="IsEqual" inType="win:Boolean" outType="xs:boolean"></data>
+            <data name="IsCoverageValueDouble" inType="win:Boolean" outType="xs:boolean"></data>
             <data name="EqualCount" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalNumberOfPages" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="TotalNumberOfLargePages" inType="win:UInt32" outType="xs:unsignedInt"></data>
@@ -94,6 +96,11 @@
             <data name="NumberOfAssignedPerCacheLineCounts_14" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfAssignedPerCacheLineCounts_15" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfAssignedPerCacheLineCounts_16" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Slope" inType="win:Double" outType="xs:double"></data>
+            <data name="Intercept" inType="win:Double" outType="xs:double"></data>
+            <data name="CorrelationCoefficient" inType="win:Double" outType="xs:double"></data>
+            <data name="Score" inType="win:UInt64" outType="xs:unsignedLong"></data>
+            <data name="Rank" inType="win:Double" outType="xs:double"></data>
           </template>
           <template tid="GraphAssignStartTemplate">
             <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>

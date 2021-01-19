@@ -143,6 +143,7 @@
     <ClInclude Include="Cu.h" />
     <ClInclude Include="GraphCounters.h" />
     <ClInclude Include="GraphImpl2.h" />
+    <ClInclude Include="Math.h" />
     <ClInclude Include="PerfectHashCu.h" />
     <ClInclude Include="no_sal2_CHeader_RawCString.h" />
     <ClInclude Include="Makefile_Makefile_RawCString.h" />
@@ -225,6 +226,7 @@
     <ClCompile Include="Component.c" />
     <ClCompile Include="Cu.c" />
     <ClCompile Include="GraphImpl2.c" />
+    <ClCompile Include="Math.c" />
     <ClCompile Include="PerfectHashCu.c" />
     <ClCompile Include="dllmain.c" />
     <ClCompile Include="ExtractArg.c" />
@@ -270,6 +272,7 @@
     <ClCompile Include="RtlRandom.c" />
     <ClCompile Include="RtlUuid.c" />
     <ClCompile Include="Security.c" />
+    <ClCompile Include="_dtoa.c" />
     <ClCompile Include="_strtod.c" />
     <ClCompile Include="_pow.c" />
     <ClCompile Include="SymbolLoader.c" />

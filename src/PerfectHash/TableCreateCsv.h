@@ -614,6 +614,26 @@ Abstract:
           Coverage->NumberOfAssignedPerCacheLineCounts[16],                                  \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(Slope,                                                                             \
+          Coverage->Slope,                                                                   \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(Intercept,                                                                         \
+          Coverage->Intercept,                                                               \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(CorrelationCoefficient,                                                            \
+          Coverage->CorrelationCoefficient,                                                  \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(PredictedNumberOfFilledCacheLines,                                                 \
+          Coverage->PredictedNumberOfFilledCacheLines,                                       \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(Score,                                                                             \
+          Coverage->Score,                                                                   \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(KeysMinValue,                                                                      \
           Keys->Stats.MinValue,                                                              \
           OUTPUT_INT)                                                                        \
@@ -672,6 +692,7 @@ Abstract:
     OUTPUT_CHR('\n');
 
 #define WRITE_TABLE_CREATE_CSV_ROW() do {                 \
+    _dtoa_Allocator = Context->Allocator;                 \
     TABLE_CREATE_CSV_PRE_ROW();                           \
     TABLE_CREATE_CSV_ROW_TABLE(                           \
         EXPAND_AS_WRITE_TABLE_CREATE_ROW_NOT_LAST_COLUMN, \
@@ -679,6 +700,7 @@ Abstract:
         EXPAND_AS_WRITE_TABLE_CREATE_ROW_LAST_COLUMN      \
     );                                                    \
     TABLE_CREATE_CSV_POST_ROW();                          \
+    _dtoa_Allocator = NULL;                               \
 } while (0)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
