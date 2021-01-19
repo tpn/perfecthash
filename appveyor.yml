@@ -1,5 +1,5 @@
 version:
-    0.54.{build}
+    0.55.{build}
 
 image:
     - Visual Studio 2019
