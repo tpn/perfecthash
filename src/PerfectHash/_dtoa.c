@@ -1,3 +1,4 @@
+// From: https://raw.githubusercontent.com/python/cpython/master/Python/dtoa.c
 /****************************************************************
  *
  * The author of this software is David M. Gay.
@@ -115,19 +116,105 @@
  *              for 0 <= k <= 22).
  */
 
-/* Linking of Python's #defines to Gay's #defines starts here. */
+#include "stdafx.h"
 
-#include "Python.h"
-#include "pycore_dtoa.h"
+//
+// Disable `warning C4706: assignment within conditional expression`.
+//
 
-/* if PY_NO_SHORT_FLOAT_REPR is defined, then don't even try to compile
-   the following code */
-#ifndef PY_NO_SHORT_FLOAT_REPR
+#pragma warning(disable: 4706)
 
-#include "float.h"
+//
+// Malloc/Free implementations relying on our ALLOCATOR interface.
+//
 
-#define MALLOC PyMem_Malloc
-#define FREE PyMem_Free
+PALLOCATOR _dtoa_Allocator;
+
+_Must_inspect_result_
+_Ret_maybenull_
+_Success_(return != 0)
+_Post_writable_byte_size_(Size)
+PVOID
+PhMalloc(
+    _In_ SIZE_T Size
+    )
+{
+    return _dtoa_Allocator->Vtbl->Calloc(
+        _dtoa_Allocator,
+        1,
+        Size
+    );
+}
+
+VOID
+PhFree(
+    _Frees_ptr_opt_ PVOID Address
+    )
+{
+    _dtoa_Allocator->Vtbl->Free(_dtoa_Allocator, Address);
+}
+
+//#include "float.h"
+
+//
+// Constants from float.h.
+//
+
+
+//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+//
+// Constants
+//
+//-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+#define DBL_DECIMAL_DIG  17                      // # of decimal digits of rounding precision
+#define DBL_DIG          15                      // # of decimal digits of precision
+#define DBL_EPSILON      2.2204460492503131e-016 // smallest such that 1.0+DBL_EPSILON != 1.0
+#define DBL_HAS_SUBNORM  1                       // type does support subnormal numbers
+#define DBL_MANT_DIG     53                      // # of bits in mantissa
+#define DBL_MAX          1.7976931348623158e+308 // max value
+#define DBL_MAX_10_EXP   308                     // max decimal exponent
+#define DBL_MAX_EXP      1024                    // max binary exponent
+#define DBL_MIN          2.2250738585072014e-308 // min positive value
+#define DBL_MIN_10_EXP   (-307)                  // min decimal exponent
+#define DBL_MIN_EXP      (-1021)                 // min binary exponent
+#define _DBL_RADIX       2                       // exponent radix
+#define DBL_TRUE_MIN     4.9406564584124654e-324 // min positive value
+
+#define FLT_DECIMAL_DIG  9                       // # of decimal digits of rounding precision
+#define FLT_DIG          6                       // # of decimal digits of precision
+#define FLT_EPSILON      1.192092896e-07F        // smallest such that 1.0+FLT_EPSILON != 1.0
+#define FLT_HAS_SUBNORM  1                       // type does support subnormal numbers
+#define FLT_GUARD        0
+#define FLT_MANT_DIG     24                      // # of bits in mantissa
+#define FLT_MAX          3.402823466e+38F        // max value
+#define FLT_MAX_10_EXP   38                      // max decimal exponent
+#define FLT_MAX_EXP      128                     // max binary exponent
+#define FLT_MIN          1.175494351e-38F        // min normalized positive value
+#define FLT_MIN_10_EXP   (-37)                   // min decimal exponent
+#define FLT_MIN_EXP      (-125)                  // min binary exponent
+#define FLT_NORMALIZE    0
+#define FLT_RADIX        2                       // exponent radix
+#define FLT_TRUE_MIN     1.401298464e-45F        // min positive value
+
+#define LDBL_DIG         DBL_DIG                 // # of decimal digits of precision
+#define LDBL_EPSILON     DBL_EPSILON             // smallest such that 1.0+LDBL_EPSILON != 1.0
+#define LDBL_HAS_SUBNORM DBL_HAS_SUBNORM         // type does support subnormal numbers
+#define LDBL_MANT_DIG    DBL_MANT_DIG            // # of bits in mantissa
+#define LDBL_MAX         DBL_MAX                 // max value
+#define LDBL_MAX_10_EXP  DBL_MAX_10_EXP          // max decimal exponent
+#define LDBL_MAX_EXP     DBL_MAX_EXP             // max binary exponent
+#define LDBL_MIN         DBL_MIN                 // min normalized positive value
+#define LDBL_MIN_10_EXP  DBL_MIN_10_EXP          // min decimal exponent
+#define LDBL_MIN_EXP     DBL_MIN_EXP             // min binary exponent
+#define _LDBL_RADIX      _DBL_RADIX              // exponent radix
+#define LDBL_TRUE_MIN    DBL_TRUE_MIN            // min positive value
+
+#define DECIMAL_DIG      DBL_DECIMAL_DIG
+
+#define IEEE_8087
+
+#define MALLOC PhMalloc
+#define FREE PhFree
 
 /* This code should also work for ARM mixed-endian format on little-endian
    machines, where doubles have byte order 45670123 (in increasing address
@@ -155,14 +242,11 @@
 #endif
 
 
-typedef uint32_t ULong;
-typedef int32_t Long;
-typedef uint64_t ULLong;
+typedef unsigned long ULong;
+typedef long Long;
+typedef unsigned long long ULLong;
 
 #undef DEBUG
-#ifdef Py_DEBUG
-#define DEBUG
-#endif
 
 /* End Python #define linking */
 
@@ -264,6 +348,8 @@ typedef union { double d; ULong L[2]; } U;
 #define Quick_max 14
 #define Int_max 14
 
+#define Flt_Rounds 1
+
 #ifndef Flt_Rounds
 #ifdef FLT_ROUNDS
 #define Flt_Rounds FLT_ROUNDS
@@ -321,94 +407,25 @@ BCinfo {
        significant (x[0]) to most significant (x[wds-1]).
 */
 
+//
+// Disable warning C4820: 'Bigint': '4' bytes padding added after data member 'x'.
+//
+
+#pragma warning(push)
+#pragma warning(disable: 4820)
 struct
 Bigint {
     struct Bigint *next;
     int k, maxwds, sign, wds;
     ULong x[1];
 };
+#pragma warning(pop)
 
 typedef struct Bigint Bigint;
 
-#ifndef Py_USING_MEMORY_DEBUGGER
-
-/* Memory management: memory is allocated from, and returned to, Kmax+1 pools
-   of memory, where pool k (0 <= k <= Kmax) is for Bigints b with b->maxwds ==
-   1 << k.  These pools are maintained as linked lists, with freelist[k]
-   pointing to the head of the list for pool k.
-
-   On allocation, if there's no free slot in the appropriate pool, MALLOC is
-   called to get more memory.  This memory is not returned to the system until
-   Python quits.  There's also a private memory pool that's allocated from
-   in preference to using MALLOC.
-
-   For Bigints with more than (1 << Kmax) digits (which implies at least 1233
-   decimal digits), memory is directly allocated using MALLOC, and freed using
-   FREE.
-
-   XXX: it would be easy to bypass this memory-management system and
-   translate each call to Balloc into a call to PyMem_Malloc, and each
-   Bfree to PyMem_Free.  Investigate whether this has any significant
-   performance on impact. */
-
-static Bigint *freelist[Kmax+1];
-
 /* Allocate space for a Bigint with up to 1<<k digits */
 
-static Bigint *
-Balloc(int k)
-{
-    int x;
-    Bigint *rv;
-    unsigned int len;
-
-    if (k <= Kmax && (rv = freelist[k]))
-        freelist[k] = rv->next;
-    else {
-        x = 1 << k;
-        len = (sizeof(Bigint) + (x-1)*sizeof(ULong) + sizeof(double) - 1)
-            /sizeof(double);
-        if (k <= Kmax && pmem_next - private_mem + len <= (Py_ssize_t)PRIVATE_mem) {
-            rv = (Bigint*)pmem_next;
-            pmem_next += len;
-        }
-        else {
-            rv = (Bigint*)MALLOC(len*sizeof(double));
-            if (rv == NULL)
-                return NULL;
-        }
-        rv->k = k;
-        rv->maxwds = x;
-    }
-    rv->sign = rv->wds = 0;
-    return rv;
-}
-
-/* Free a Bigint allocated with Balloc */
-
-static void
-Bfree(Bigint *v)
-{
-    if (v) {
-        if (v->k > Kmax)
-            FREE((void*)v);
-        else {
-            v->next = freelist[v->k];
-            freelist[v->k] = v;
-        }
-    }
-}
-
-#else
-
-/* Alternative versions of Balloc and Bfree that use PyMem_Malloc and
-   PyMem_Free directly in place of the custom memory allocation scheme above.
-   These are provided for the benefit of memory debugging tools like
-   Valgrind. */
-
-/* Allocate space for a Bigint with up to 1<<k digits */
-
-static Bigint *
+Bigint *
 Balloc(int k)
 {
     int x;
@@ -416,8 +433,11 @@ Balloc(int k)
     unsigned int len;
 
     x = 1 << k;
-    len = (sizeof(Bigint) + (x-1)*sizeof(ULong) + sizeof(double) - 1)
-        /sizeof(double);
+    len = (
+        sizeof(Bigint) + 
+        (((size_t)x)-1) * sizeof(ULong) +
+        sizeof(double) - 1
+    ) / sizeof(double);
 
     rv = (Bigint*)MALLOC(len*sizeof(double));
     if (rv == NULL)
@@ -431,7 +451,7 @@ Balloc(int k)
 
 /* Free a Bigint allocated with Balloc */
 
-static void
+void
 Bfree(Bigint *v)
 {
     if (v) {
@@ -439,10 +459,12 @@ Bfree(Bigint *v)
     }
 }
 
-#endif /* Py_USING_MEMORY_DEBUGGER */
-
-#define Bcopy(x,y) memcpy((char *)&x->sign, (char *)&y->sign,   \
-                          y->wds*sizeof(Long) + 2*sizeof(int))
+#define Bcopy(x, y)                         \
+    CopyMemoryInline(                       \
+        (char *)&x->sign,                   \
+        (char *)&y->sign,                   \
+        y->wds*sizeof(Long) + 2*sizeof(int) \
+    )
 
 /* Multiply a Bigint b by m and add a.  Either modifies b in place and returns
    a pointer to the modified b, or Bfrees b and returns a pointer to a copy.
@@ -462,7 +484,7 @@ multadd(Bigint *b, int m, int a)       /* multiply by m and add a */
     carry = a;
     do {
         y = *x * (ULLong)m + carry;
-        carry = y >> 32;
+        carry = y >> 32ULL;
         *x++ = (ULong)(y & FFFFFFFF);
     }
     while(++i < wds);
@@ -489,7 +511,7 @@ multadd(Bigint *b, int m, int a)       /* multiply by m and add a */
    entry, y9 contains the result of converting the first 9 digits.  Returns
    NULL on failure. */
 
-static Bigint *
+Bigint *
 s2b(const char *s, int nd0, int nd, ULong y9)
 {
     Bigint *b;
@@ -663,7 +685,7 @@ mult(Bigint *a, Bigint *b)
             carry = 0;
             do {
                 z = *x++ * (ULLong)y + *xc + carry;
-                carry = z >> 32;
+                carry = z >> 32ULL;
                 *xc++ = (ULong)(z & FFFFFFFF);
             }
             while(x < xae);
@@ -674,69 +696,6 @@ mult(Bigint *a, Bigint *b)
     c->wds = wc;
     return c;
 }
-
-#ifndef Py_USING_MEMORY_DEBUGGER
-
-/* p5s is a linked list of powers of 5 of the form 5**(2**i), i >= 2 */
-
-static Bigint *p5s;
-
-/* multiply the Bigint b by 5**k.  Returns a pointer to the result, or NULL on
-   failure; if the returned pointer is distinct from b then the original
-   Bigint b will have been Bfree'd.   Ignores the sign of b. */
-
-static Bigint *
-pow5mult(Bigint *b, int k)
-{
-    Bigint *b1, *p5, *p51;
-    int i;
-    static const int p05[3] = { 5, 25, 125 };
-
-    if ((i = k & 3)) {
-        b = multadd(b, p05[i-1], 0);
-        if (b == NULL)
-            return NULL;
-    }
-
-    if (!(k >>= 2))
-        return b;
-    p5 = p5s;
-    if (!p5) {
-        /* first time */
-        p5 = i2b(625);
-        if (p5 == NULL) {
-            Bfree(b);
-            return NULL;
-        }
-        p5s = p5;
-        p5->next = 0;
-    }
-    for(;;) {
-        if (k & 1) {
-            b1 = mult(b, p5);
-            Bfree(b);
-            b = b1;
-            if (b == NULL)
-                return NULL;
-        }
-        if (!(k >>= 1))
-            break;
-        p51 = p5->next;
-        if (!p51) {
-            p51 = mult(p5,p5);
-            if (p51 == NULL) {
-                Bfree(b);
-                return NULL;
-            }
-            p51->next = 0;
-            p5->next = p51;
-        }
-        p5 = p51;
-    }
-    return b;
-}
-
-#else
 
 /* Version of pow5mult that doesn't cache powers of 5. Provided for
    the benefit of memory debugging tools like Valgrind. */
@@ -785,8 +744,6 @@ pow5mult(Bigint *b, int k)
     Bfree(p5);
     return b;
 }
-
-#endif /* Py_USING_MEMORY_DEBUGGER */
 
 /* shift a Bigint b left by k bits.  Return a pointer to the shifted result,
    or NULL on failure.  If the returned pointer is distinct from b then the
@@ -1025,17 +982,17 @@ sd2b(U *d, int scale, int *e)
             scale = Etiny - *e;
             *e = Etiny;
             /* We can't shift more than P-1 bits without shifting out a 1. */
-            assert(0 < scale && scale <= P - 1);
+            ASSERT(0 < scale && scale <= P - 1);
             if (scale >= 32) {
                 /* The bits shifted out should all be zero. */
-                assert(b->x[0] == 0);
+                ASSERT(b->x[0] == 0);
                 b->x[0] = b->x[1];
                 b->x[1] = 0;
                 scale -= 32;
             }
             if (scale) {
                 /* The bits shifted out should all be zero. */
-                assert(b->x[0] << (32 - scale) == 0);
+                ASSERT(b->x[0] << (32 - scale) == 0);
                 b->x[0] = (b->x[0] >> scale) | (b->x[1] << (32 - scale));
                 b->x[1] >>= scale;
             }
@@ -1105,7 +1062,7 @@ d2b(U *d, int *e, int *bits)
 /* Compute the ratio of two Bigints, as a double.  The result may have an
    error of up to 2.5 ulps. */
 
-static double
+double
 ratio(Bigint *a, Bigint *b)
 {
     U da, db;
@@ -1146,7 +1103,7 @@ static const double tinytens[] = { 1e-16, 1e-32, 1e-64, 1e-128,
 #define kmask 31
 
 
-static int
+int
 dshift(Bigint *b, int p2)
 {
     int rv = hi0bits(b->x[b->wds-1]) - 4;
@@ -1159,7 +1116,7 @@ dshift(Bigint *b, int p2)
    quotient < 10, and on entry the divisor S is normalized so that its top 4
    bits (28--31) are zero and bit 27 is set. */
 
-static int
+int
 quorem(Bigint *b, Bigint *S)
 {
     int n;
@@ -1187,7 +1144,7 @@ quorem(Bigint *b, Bigint *S)
         carry = 0;
         do {
             ys = *sx++ * (ULLong)q + carry;
-            carry = ys >> 32;
+            carry = ys >> 32ULL;
             y = *bx - (ys & FFFFFFFF) - borrow;
             borrow = y >> 32 & (ULong)1;
             *bx++ = (ULong)(y & FFFFFFFF);
@@ -1208,7 +1165,7 @@ quorem(Bigint *b, Bigint *S)
         sx = S->x;
         do {
             ys = *sx++ + carry;
-            carry = ys >> 32;
+            carry = ys >> 32ULL;
             y = *bx - (ys & FFFFFFFF) - borrow;
             borrow = y >> 32 & (ULong)1;
             *bx++ = (ULong)(y & FFFFFFFF);
@@ -1231,7 +1188,7 @@ quorem(Bigint *b, Bigint *S)
    here) and x / 2^bc.scale is exactly representable as a double,
    sulp(x) is equivalent to 2^bc.scale * ulp(x / 2^bc.scale). */
 
-static double
+double
 sulp(U *x, BCinfo *bc)
 {
     U u;
@@ -1243,7 +1200,7 @@ sulp(U *x, BCinfo *bc)
         return u.d;
     }
     else {
-        assert(word0(x) || word1(x)); /* x != 0.0 */
+        ASSERT(word0(x) || word1(x)); /* x != 0.0 */
         return ulp(x);
     }
 }
@@ -1294,7 +1251,7 @@ sulp(U *x, BCinfo *bc)
 
      Returns 0 on success, -1 on failure (e.g., due to a failed malloc call). */
 
-static int
+int
 bigcomp(U *rv, const char *s0, BCinfo *bc)
 {
     Bigint *b, *d;
@@ -1412,7 +1369,7 @@ bigcomp(U *rv, const char *s0, BCinfo *bc)
 */
 
 double
-_Py_dg_stdnan(int sign)
+_stdnan(int sign)
 {
     U rv;
     word0(&rv) = NAN_WORD0;
@@ -1426,7 +1383,7 @@ _Py_dg_stdnan(int sign)
  * positive infinity, 1 for negative infinity). */
 
 double
-_Py_dg_infinity(int sign)
+_infinity(int sign)
 {
     U rv;
     word0(&rv) = POSINF_WORD0;
@@ -1434,8 +1391,13 @@ _Py_dg_infinity(int sign)
     return sign ? -dval(&rv) : dval(&rv);
 }
 
+//
+// We've already got a strtod implementation.
+//
+
+#if 0
 double
-_Py_dg_strtod(const char *s00, char **se)
+_strtod(const char *s00, char **se)
 {
     int bb2, bb5, bbe, bd2, bd5, bs2, c, dsign, e, e1, error;
     int esign, i, j, k, lz, nd, nd0, odd, sign;
@@ -2051,8 +2013,9 @@ _Py_dg_strtod(const char *s00, char **se)
         else {
             aadj *= 0.5;
             aadj1 = dsign ? aadj : -aadj;
-            if (Flt_Rounds == 0)
+#if Flt_Rounds == 0
                 aadj1 += 0.5;
+#endif
         }
         y = word0(&rv) & Exp_mask;
 
@@ -2133,7 +2096,7 @@ _Py_dg_strtod(const char *s00, char **se)
     goto done;
 
   failed_malloc:
-    errno = ENOMEM;
+    //errno = ENOMEM;
     result = -1.0;
     goto done;
 
@@ -2142,7 +2105,7 @@ _Py_dg_strtod(const char *s00, char **se)
     goto done;
 
   ovfl:
-    errno = ERANGE;
+    //errno = ERANGE;
     /* Can't trust HUGE_VAL */
     word0(&rv) = Exp_mask;
     word1(&rv) = 0;
@@ -2158,8 +2121,9 @@ _Py_dg_strtod(const char *s00, char **se)
     return result;
 
 }
+#endif
 
-static char *
+char *
 rv_alloc(int i)
 {
     int j, k, *r;
@@ -2176,7 +2140,7 @@ rv_alloc(int i)
     return (char *)(r+1);
 }
 
-static char *
+char *
 nrv_alloc(const char *s, char **rve, int n)
 {
     char *rv, *t;
@@ -2198,7 +2162,7 @@ nrv_alloc(const char *s, char **rve, int n)
  */
 
 void
-_Py_dg_freedtoa(char *s)
+_freedtoa(char *s)
 {
     Bigint *b = (Bigint *)((int *)s - 1);
     b->maxwds = 1 << (b->k = *(int*)b);
@@ -2240,12 +2204,12 @@ _Py_dg_freedtoa(char *s)
  */
 
 /* Additional notes (METD): (1) returns NULL on failure.  (2) to avoid memory
-   leakage, a successful call to _Py_dg_dtoa should always be matched by a
-   call to _Py_dg_freedtoa. */
+   leakage, a successful call to _dtoa should always be matched by a
+   call to _freedtoa. */
 
 char *
-_Py_dg_dtoa(double dd, int mode, int ndigits,
-            int *decpt, int *sign, char **rve)
+_dtoa(double dd, int mode, int ndigits,
+      int *decpt, int *sign, char **rve)
 {
     /*  Arguments ndigits, decpt, sign are similar to those
         of ecvt and fcvt; trailing zeros are suppressed from
@@ -2498,7 +2462,7 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
             for(i = 0;;) {
                 L = (Long)dval(&u);
                 dval(&u) -= L;
-                *s++ = '0' + (int)L;
+                *s++ = '0' + (char)((int)L);
                 if (dval(&u) < dval(&eps))
                     goto ret1;
                 if (1. - dval(&u) < dval(&eps))
@@ -2516,7 +2480,7 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
                 L = (Long)(dval(&u));
                 if (!(dval(&u) -= L))
                     ilim = i;
-                *s++ = '0' + (int)L;
+                *s++ = '0' + (char)((int)L);
                 if (i == ilim) {
                     if (dval(&u) > 0.5 + dval(&eps))
                         goto bump_up;
@@ -2550,7 +2514,7 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
         for(i = 1;; i++, dval(&u) *= 10.) {
             L = (Long)(dval(&u) / ds);
             dval(&u) -= L*ds;
-            *s++ = '0' + (int)L;
+            *s++ = '0' + (char)((int)L);
             if (!dval(&u)) {
                 break;
             }
@@ -2740,7 +2704,7 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
                     goto round_9_up;
                 if (j > 0)
                     dig++;
-                *s++ = dig;
+                *s++ = (char)dig;
                 goto ret;
             }
             if (j < 0 || (j == 0 && mode != 1
@@ -2759,7 +2723,7 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
                         goto round_9_up;
                 }
               accept_dig:
-                *s++ = dig;
+                *s++ = (char)dig;
                 goto ret;
             }
             if (j1 > 0) {
@@ -2768,10 +2732,10 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
                     *s++ = '9';
                     goto roundoff;
                 }
-                *s++ = dig + 1;
+                *s++ = (char)dig + 1;
                 goto ret;
             }
-            *s++ = dig;
+            *s++ = (char)dig;
             if (i == ilim)
                 break;
             b = multadd(b, 10, 0);
@@ -2794,7 +2758,8 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
     }
     else
         for(i = 1;; i++) {
-            *s++ = dig = quorem(b,S) + '0';
+            dig = quorem(b,S) + '0';
+            *s++ = (char)dig;
             if (!b->x[0] && b->wds <= 1) {
                 goto ret;
             }
@@ -2849,11 +2814,9 @@ _Py_dg_dtoa(double dd, int mode, int ndigits,
     if (b)
         Bfree(b);
     if (s0)
-        _Py_dg_freedtoa(s0);
+        _freedtoa(s0);
     return NULL;
 }
 #ifdef __cplusplus
 }
 #endif
-
-#endif  /* PY_NO_SHORT_FLOAT_REPR */
