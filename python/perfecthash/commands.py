@@ -498,8 +498,9 @@ class ConvertCsvToParquet(InvariantAwareCommand):
 
     def run(self):
 
+        from os.path import basename
         from .analysis import convert_csv_to_parquet
-        convert_csv_to_parquet(self._path, self._out)
+        convert_csv_to_parquet(self._path, basename(self._path))
 
 class ConvertAllCsvToParquet(InvariantAwareCommand):
     """
@@ -526,7 +527,7 @@ class ConvertAllCsvToParquet(InvariantAwareCommand):
 
         if path:
             from os.path import basename
-            path = basename(path)
+            base = basename(path)
         else:
             path = base
 

@@ -1932,35 +1932,35 @@ def get_yyyy_mm_dd_subdirs(dirname):
 
 def get_csv_files(directory):
     import glob
-    return [
+    return set(
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreate*.csv',
             recursive=True
         )
-    ]
+    )
 
 def get_all_bulk_create_parquet_files(directory):
     import glob
-    return [
+    return set(
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreate*.parquet',
             recursive=True
         ) if 'failed' not in f
-    ] + [
+    ).union(set(
         f for f in glob.iglob(
             f'{directory}/PerfectHashBulkCreate*.parquet',
             recursive=False
         ) if 'failed' not in f
-    ]
+    ))
 
 def get_best_bulk_create_parquet_files(directory):
     import glob
-    return [
+    return set(
         f for f in glob.iglob(
             f'{directory}/**/PerfectHashBulkCreateBest*.parquet',
             recursive=True
         ) if 'failed' not in f
-    ]
+    )
 
 def convert_csv_to_parquet(path, base_research_dir, out=None):
     if not out:
@@ -2343,8 +2343,9 @@ def process_xperf_perfecthash_csv(path, out=None):
                 'ProcessID',
                 'ThreadID',
                 'CPU',
+                'ActivityId',
                 'BytesRequested',
-                'Success',
+                'Result',
             ]]
 
         df.to_csv(path)
@@ -2355,6 +2356,7 @@ def process_xperf_perfecthash_csv(path, out=None):
 #===============================================================================
 
 def get_cache_line_coverage(df):
+    import numpy as np
     count = df.NewBestGraphCount.values[0]
     keys = [
         f'BestGraph{i}_CountOfCacheLinesWithNumberOfAssigned_{n}'
@@ -2368,8 +2370,11 @@ def get_cache_line_coverage(df):
     return (keys, values, attempts, columns)
 
 def ridgeline_plot(df):
+    import joypy
+    import pandas as pd
     import matplotlib.pyplot as plt
-    plt.ioff()
+    from matplotlib import cm
+    #plt.ioff()
     keys_name = df.KeysName.values[0]
     hash_func = df.HashFunction.values[0]
     best_coverage_type = df.BestCoverageType.values[0]
