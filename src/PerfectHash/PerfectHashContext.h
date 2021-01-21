@@ -143,6 +143,7 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 )
 
 #define SetFirstSolvedGraphWins(Context)          \
+    ASSERT(Context->MinAttempts == 0);            \
     Context->State.FirstSolvedGraphWins = TRUE;   \
     Context->State.FindBestMemoryCoverage = FALSE
 
@@ -415,6 +416,20 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     ULONG InitialResizes;
+
+    //
+    // The following members control the minimum and maximum graph solving
+    // attempts, and are particularly useful for ensuring a fixed set of
+    // attempts are made at solving a graph, which is useful during
+    // benchmarking.  Attempt refers to literally that: an attempt.  So, it
+    // includes both failed and successfully-solved graphs.  If you want to
+    // generate a fixed number of solutions, use TargetNumberOfSolutions.
+    //
+
+    ULONG MinAttempts;
+    ULONG MaxAttempts;
+    ULONG TargetNumberOfSolutions;
+    ULONG Padding9;
 
     //
     // Maximum number of equal best graphs.  When this number is hit, graph

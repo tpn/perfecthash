@@ -871,10 +871,13 @@ Return Value:
     Context->SolvedContext = NULL;
 
     Context->Attempts = 0;
+    Context->MinAttempts = 0;
+    Context->MaxAttempts = 0;
     Context->ResizeLimit = 0;
     Context->InitialTableSize = 0;
     Context->StartMilliseconds = 0;
     Context->ResizeTableThreshold = 0;
+    Context->TargetNumberOfSolutions = 0;
     Context->HighestDeletedEdgesCount = 0;
     Context->NumberOfTableResizeEvents = 0;
     Context->TotalNumberOfAttemptsWithSmallerTableSizes = 0;

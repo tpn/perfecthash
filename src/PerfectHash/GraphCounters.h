@@ -60,18 +60,21 @@ Abstract:
     DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddKeys);       \
     DECL_GRAPH_COUNTER_STRUCT_FIELDS(HashKeys);      \
     DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddHashedKeys); \
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(Assign)
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(Assign);        \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(IsAcyclic)
 
 #define RESET_GRAPH_COUNTERS()          \
     RESET_GRAPH_COUNTER(AddKeys);       \
     RESET_GRAPH_COUNTER(HashKeys);      \
     RESET_GRAPH_COUNTER(AddHashedKeys); \
-    RESET_GRAPH_COUNTER(Assign)
+    RESET_GRAPH_COUNTER(Assign);        \
+    RESET_GRAPH_COUNTER(IsAcyclic)
 
 #define COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE() \
     COPY_GRAPH_COUNTER(AddKeys);                  \
     COPY_GRAPH_COUNTER(HashKeys);                 \
     COPY_GRAPH_COUNTER(AddHashedKeys);            \
-    COPY_GRAPH_COUNTER(Assign)
+    COPY_GRAPH_COUNTER(Assign);                   \
+    COPY_GRAPH_COUNTER(IsAcyclic)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

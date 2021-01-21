@@ -144,6 +144,15 @@ Abstract:
 //
 #define PH_S_NO_KEY_SIZE_EXTRACTED_FROM_FILENAME ((HRESULT)0x20040009L)
 
+//
+// MessageId: PH_S_MAX_ATTEMPTS_REACHED
+//
+// MessageText:
+//
+// Maximum attempts at solving reached.
+//
+#define PH_S_MAX_ATTEMPTS_REACHED        ((HRESULT)0x2004000AL)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
@@ -3824,4 +3833,94 @@ Abstract:
 // An RNG must be initialized before it can be used.
 //
 #define PH_E_RNG_NOT_INITIALIZED         ((HRESULT)0xE00403C6L)
+
+//
+// MessageId: PH_E_INVALID_FIXED_ATTEMPTS
+//
+// MessageText:
+//
+// Invalid FixedAttempts.
+//
+#define PH_E_INVALID_FIXED_ATTEMPTS      ((HRESULT)0xE00403C7L)
+
+//
+// MessageId: PH_E_INVALID_MIN_ATTEMPTS
+//
+// MessageText:
+//
+// Invalid MinAttempts.
+//
+#define PH_E_INVALID_MIN_ATTEMPTS        ((HRESULT)0xE00403C8L)
+
+//
+// MessageId: PH_E_INVALID_MAX_ATTEMPTS
+//
+// MessageText:
+//
+// Invalid MaxAttempts.
+//
+#define PH_E_INVALID_MAX_ATTEMPTS        ((HRESULT)0xE00403C9L)
+
+//
+// MessageId: PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_MINMAX_ATTEMPTS
+//
+// MessageText:
+//
+// FixedAttempts conflicts with MinAttempts/MaxAttempts.
+//
+#define PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_MINMAX_ATTEMPTS ((HRESULT)0xE00403CAL)
+
+//
+// MessageId: PH_E_MIN_ATTEMPTS_EXCEEDS_MAX_ATTEMPTS
+//
+// MessageText:
+//
+// MinAttempts must be less than or equal to MaxAttempts.
+//
+#define PH_E_MIN_ATTEMPTS_EXCEEDS_MAX_ATTEMPTS ((HRESULT)0xE00403CBL)
+
+//
+// MessageId: PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH
+//
+// MessageText:
+//
+// FixedAttempts conflicts with FindBestGraph.
+//
+#define PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH ((HRESULT)0xE00403CCL)
+
+//
+// MessageId: PH_E_MIN_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH
+//
+// MessageText:
+//
+// MinAttempts conflicts with FindBestGraph.
+//
+#define PH_E_MIN_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH ((HRESULT)0xE00403CDL)
+
+//
+// MessageId: PH_E_INVALID_TARGET_NUMBER_OF_SOLUTIONS
+//
+// MessageText:
+//
+// Invalid TargetNumberOfSolutions.
+//
+#define PH_E_INVALID_TARGET_NUMBER_OF_SOLUTIONS ((HRESULT)0xE00403CEL)
+
+//
+// MessageId: PH_E_TARGET_NUMBER_OF_SOLUTIONS_CONFLICTS_WITH_FIND_BEST_GRAPH
+//
+// MessageText:
+//
+// TargetNumberOfSolutions conflicts with FindBestGraph.
+//
+#define PH_E_TARGET_NUMBER_OF_SOLUTIONS_CONFLICTS_WITH_FIND_BEST_GRAPH ((HRESULT)0xE00403CFL)
+
+//
+// MessageId: PH_E_TARGET_NUMBER_OF_SOLUTIONS_EXCEEDS_MIN_ATTEMPTS
+//
+// MessageText:
+//
+// TargetNumberOfSolutions exceeds MinAttempts.
+//
+#define PH_E_TARGET_NUMBER_OF_SOLUTIONS_EXCEEDS_MIN_ATTEMPTS ((HRESULT)0xE00403D0L)
 

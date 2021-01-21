@@ -41,9 +41,11 @@ Abstract:
 typedef ULONG KEY;
 typedef ULONG EDGE;
 typedef ULONG VERTEX;
+typedef ULONG DEGREE;
 typedef KEY *PKEY;
 typedef EDGE *PEDGE;
 typedef VERTEX *PVERTEX;
+typedef DEGREE *PDEGREE;
 typedef union _VERTEX_PAIR {
     struct {
         VERTEX Vertex1;
@@ -52,6 +54,38 @@ typedef union _VERTEX_PAIR {
     ULONGLONG AsULongLong;
     ULARGE_INTEGER AsULargeInteger;
 } VERTEX_PAIR, *PVERTEX_PAIR;
+
+//
+// Our third graph implementation uses the following structures.  The 3 suffix
+// on the EDGE3 and VERTEX3 type names solely represents the version 3 of the
+// implementation (and not, for example, a 3-part hypergraph).
+//
+
+typedef union _EDGE3 {
+    struct {
+        VERTEX Vertex1;
+        VERTEX Vertex2;
+    };
+    VERTEX_PAIR AsVertexPair;
+    ULONGLONG AsULongLong;
+} EDGE3, *PEDGE3;
+
+typedef struct _VERTEX3 {
+
+    //
+    // The degree of connections for this vertex.
+    //
+
+    DEGREE Degree;
+
+    //
+    // All edges for this vertex; an incidence list constructed via XOR'ing all
+    // edges together (aka "the XOR-trick").
+    //
+
+    EDGE Edges;
+
+} VERTEX3, *PVERTEX3;
 
 //
 // A core concept of the 2-part hypergraph algorithm for generating a perfect
@@ -269,7 +303,13 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     // Pad out to an 8-byte boundary.
     //
 
-    ULONG Padding;
+    ULONG Padding1;
+
+    //
+    // The solution number with respect to other graphs that have been solved.
+    //
+
+    ULONGLONG SolutionNumber;
 
     //
     // Stores Graph->Attempt at the time the memory coverage was captured.
@@ -621,6 +661,7 @@ typedef struct _GRAPH_INFO {
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
     ULONGLONG OrderSizeInBytes;
+    ULONGLONG Vertices3SizeInBytes;
     ULONGLONG AssignedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
@@ -805,15 +846,37 @@ HRESULT
     );
 typedef GRAPH_ADD_HASHED_KEYS *PGRAPH_ADD_HASHED_KEYS;
 
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_IS_ACYCLIC)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_IS_ACYCLIC *PGRAPH_IS_ACYCLIC;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(STDAPICALLTYPE GRAPH_ASSIGN)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_ASSIGN *PGRAPH_ASSIGN;
+
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
     PGRAPH_SET_INFO SetInfo;
     PGRAPH_ENTER_SOLVING_LOOP EnterSolvingLoop;
+    PGRAPH_VERIFY Verify;
     PGRAPH_LOAD_INFO LoadInfo;
     PGRAPH_RESET Reset;
     PGRAPH_LOAD_NEW_SEEDS LoadNewSeeds;
     PGRAPH_SOLVE Solve;
-    PGRAPH_VERIFY Verify;
+    PGRAPH_IS_ACYCLIC IsAcyclic;
+    PGRAPH_ASSIGN Assign;
     PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE CalculateAssignedMemoryCoverage;
     PGRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
         CalculateAssignedMemoryCoverageForKeysSubset;
@@ -872,6 +935,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     ULONGLONG Attempt;
+
+    //
+    // The solution number with respect to other graphs that have been solved.
+    //
+
+    ULONGLONG SolutionNumber;
 
     //
     // A localized attempt number that reflects the number of attempts made
@@ -956,10 +1025,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONG NumberOfEmptyVertices;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Implementation version of this graph instance.
     //
 
-    ULONG Padding1;
+    ULONG Impl;
 
     //
     // Duplicate the context pointer.  (This is also available from Info.)
@@ -1029,14 +1098,29 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     _Writable_elements_(NumberOfVertices)
-    PVERTEX Assigned;
+    PASSIGNED Assigned;
 
     //
-    // Optional array of vertex pairs, indexed by number of keys.
+    // Array of VERTEX3 elements for the graph impl 3.
     //
 
-    _Writable_elements_(NumberOfKeys)
-    PVERTEX_PAIR VertexPairs;
+    _Writable_elements_(NumberOfVertices)
+    PVERTEX3 Vertices3;
+
+    //
+    // Graph implementations 1 & 2: this is an optional array of vertex pairs,
+    // indexed by number of keys.  For implementation 3, this will always
+    // contain the array of vertex pairs, indexed by edge.
+    //
+
+    _When_(GraphImpl == 1 || GraphImpl == 2,
+           _Writable_elements_(NumberOfKeys))
+    _When_(GraphImpl == 3,
+           _Writable_elements_(NumberOfEdges))
+    union {
+        PVERTEX_PAIR VertexPairs;
+        PEDGE3 Edges3;
+    };
 
     //
     // Array of values indexed by the offsets in the Assigned array.  This
@@ -1251,11 +1335,13 @@ extern GRAPH_APPLY_WEIGHTED_SEED_MASKS GraphApplyWeightedSeedMasks;
 
 extern GRAPH_SET_INFO GraphSetInfo;
 extern GRAPH_ENTER_SOLVING_LOOP GraphEnterSolvingLoop;
-extern GRAPH_LOAD_INFO GraphLoadInfo;
-extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
-extern GRAPH_RESET GraphReset;
-extern GRAPH_SOLVE GraphSolve;
 extern GRAPH_VERIFY GraphVerify;
+extern GRAPH_LOAD_INFO GraphLoadInfo;
+extern GRAPH_RESET GraphReset;
+extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
+extern GRAPH_SOLVE GraphSolve;
+extern GRAPH_IS_ACYCLIC GraphIsAcyclic;
+extern GRAPH_ASSIGN GraphAssign;
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage;
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET
@@ -1345,5 +1431,29 @@ typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
     if (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph) == FALSE) { \
         return PH_S_GRAPH_SOLVING_STOPPED;                            \
     }
+
+//
+// Define a helper macro for graph event writing.
+//
+
+#define EVENT_WRITE_GRAPH(Name)   \
+    EventWriteGraph##Name##Event( \
+        &Graph->Activity,         \
+        Graph->KeysFileName,      \
+        Edge,                     \
+        NumberOfKeys,             \
+        Key,                      \
+        Result,                   \
+        Cycles,                   \
+        Microseconds,             \
+        Graph->Seed1,             \
+        Graph->Seed2,             \
+        Graph->Seed3,             \
+        Graph->Seed4,             \
+        Graph->Seed5,             \
+        Graph->Seed6,             \
+        Graph->Seed7,             \
+        Graph->Seed8              \
+    )
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

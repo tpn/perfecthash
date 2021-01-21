@@ -23,8 +23,6 @@ HASH_FUNCTIONS = (
     'MultiplyShiftR',
     'MultiplyShiftR2',
     'MultiplyShiftRMultiply',
-    'ShiftMultiplyXorShift',
-    'ShiftMultiplyXorShift2',
     'Crc32RotateX',
     'Crc32RotateXY',
     'Crc32RotateWXYZ',
@@ -503,12 +501,15 @@ FOUND_GRAPH_ETW_HEADER_SHARED = (
     ' etw:SessionId,'
     ' KeysFileName,'
     ' Attempt,'
+    ' SolutionNumber,'
     ' ElapsedMilliseconds,'
     ' CoverageType,'
     ' CoverageValue,'
+    ' CoverageValueAsDouble,'
     ' StopGraphSolving,'
     ' IsBest,'
     ' IsEqual,'
+    ' IsCoverageValueDouble,'
     ' EqualCount,'
     ' TotalNumberOfPages,'
     ' TotalNumberOfLargePages,'
@@ -575,12 +576,15 @@ FOUND_GRAPH_CSV_HEADER_SHARED = (
     'SessionId',
     'KeysFileName',
     'Attempt',
+    'SolutionNumber',
     'ElapsedMilliseconds',
     'CoverageType',
     'CoverageValue',
+    'CoverageValueAsDouble',
     'StopGraphSolving',
     'IsBest',
     'IsEqual',
+    'IsCoverageValueDouble',
     'EqualCount',
     'TotalNumberOfPages',
     'TotalNumberOfLargePages',
@@ -644,12 +648,15 @@ FOUND_GRAPH_CSV_HEADER_SLIM_SHARED = (
     'ActivityId',
     'KeysFileName',
     'Attempt',
+    'SolutionNumber',
     'ElapsedMilliseconds',
     'CoverageType',
     'CoverageValue',
+    'CoverageValueAsDouble',
     'StopGraphSolving',
     'IsBest',
     'IsEqual',
+    'IsCoverageValueDouble',
     'EqualCount',
     'TotalNumberOfPages',
     'TotalNumberOfLargePages',

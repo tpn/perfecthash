@@ -41,6 +41,7 @@
           <template tid="GraphFoundTemplate">
             <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
             <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
+            <data name="SolutionNumber" inType="win:UInt64" outType="xs:unsignedLong"></data>
             <data name="ElapsedMilliseconds" inType="win:UInt64" outType="xs:unsignedLong"></data>
             <data name="CoverageType" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="CoverageValue" inType="win:UInt32" outType="xs:unsignedInt"></data>
@@ -133,6 +134,16 @@
             <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
           </template>
+          <template tid="GraphIsAcyclicTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
+            <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
+            <data name="FunctionVersion" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Cycles" inType="win:Int64" outType="xs:long"></data>
+            <data name="Microseconds" inType="win:Int64" outType="xs:long"></data>
+            <data name="NumberOfKeys" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="IsAcyclic" inType="win:Boolean" outType="xs:boolean"></data>
+          </template>
         </templates>
         <channels>
         </channels>
@@ -143,6 +154,7 @@
           <keyword name="GRAPH_FOUND" symbol="PH_ETW_GRAPH_FOUND" mask="0x8"></keyword>
           <keyword name="GRAPH_ASSIGN" symbol="PH_ETW_GRAPH_ASSIGN" mask="0x10"></keyword>
           <keyword name="RTL_RANDOM" symbol="PH_ETW_RTL_RANDOM" mask="0x20"></keyword>
+          <keyword name="GRAPH_IS_ACYCLIC" symbol="PH_ETW_GRAPH_IS_ACYCLIC" mask="0x40"></keyword>
         </keywords>
         <tasks>
           <task name="AddKeys" value="1"/>
@@ -153,6 +165,7 @@
           <task name="FoundGraph" value="6"/>
           <task name="Assign" value="7"/>
           <task name="GenerateRandomBytes" value="8"/>
+          <task name="IsAcyclic" value="9"/>
         </tasks>
         <events>
           <event
@@ -192,7 +205,7 @@
             message="$(string.PerfectHash.event.2.message)">
           </event>
           <event
-            symbol="GraphFoundNewBest"
+            symbol="GraphFoundNewBestEvent"
             value="3"
             version="0"
             channel="PerfectHash/Analytic"
@@ -204,7 +217,7 @@
             message="$(string.PerfectHash.event.3.message)">
           </event>
           <event
-            symbol="GraphFoundEqualBest"
+            symbol="GraphFoundEqualBestEvent"
             value="4"
             version="0"
             channel="PerfectHash/Analytic"
@@ -216,7 +229,7 @@
             message="$(string.PerfectHash.event.4.message)">
           </event>
           <event
-            symbol="GraphFound"
+            symbol="GraphFoundEvent"
             value="5"
             version="0"
             channel="PerfectHash/Analytic"
@@ -228,7 +241,7 @@
             message="$(string.PerfectHash.event.5.message)">
           </event>
           <event
-            symbol="GraphAssignStart"
+            symbol="GraphAssignStartEvent"
             value="6"
             version="0"
             channel="PerfectHash/Analytic"
@@ -240,7 +253,7 @@
             message="$(string.PerfectHash.event.6.message)">
           </event>
           <event
-            symbol="GraphAssignStop"
+            symbol="GraphAssignStopEvent"
             value="7"
             version="0"
             channel="PerfectHash/Analytic"
@@ -252,7 +265,7 @@
             message="$(string.PerfectHash.event.7.message)">
           </event>
           <event
-            symbol="RtlGenerateRandomBytesStart"
+            symbol="RtlGenerateRandomBytesStartEvent"
             value="8"
             version="0"
             channel="PerfectHash/Analytic"
@@ -264,7 +277,7 @@
             message="$(string.PerfectHash.event.8.message)">
           </event>
           <event
-            symbol="RtlGenerateRandomBytesStop"
+            symbol="RtlGenerateRandomBytesStopEvent"
             value="9"
             version="0"
             channel="PerfectHash/Analytic"
@@ -276,7 +289,7 @@
             message="$(string.PerfectHash.event.9.message)">
           </event>
           <event
-            symbol="GraphAssignResult"
+            symbol="GraphAssignResultEvent"
             value="10"
             version="0"
             channel="PerfectHash/Analytic"
@@ -286,6 +299,18 @@
             template="GraphAssignResultTemplate"
             keywords="GRAPH_ASSIGN"
             message="$(string.PerfectHash.event.10.message)">
+          </event>
+          <event
+            symbol="GraphIsAcyclicEvent"
+            value="11"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Info"
+            task="IsAcyclic"
+            template="GraphIsAcyclicTemplate"
+            keywords="GRAPH_IS_ACYCLIC"
+            message="$(string.PerfectHash.event.11.message)">
           </event>
         </events>
       </provider>
@@ -312,6 +337,7 @@
         <string id="PerfectHash.event.8.message" value="Started getting random bytes."></string>
         <string id="PerfectHash.event.9.message" value="Stopped getting random bytes."></string>
         <string id="PerfectHash.event.10.message" value="Graph assignment result."></string>
+        <string id="PerfectHash.event.11.message" value="Graph peeling (acyclic) result."></string>
       </stringTable>
     </resources>
   </localization>

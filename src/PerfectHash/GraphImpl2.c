@@ -60,7 +60,7 @@ Abstract:
 GRAPH_ASSIGN GraphAssign2;
 
 _Use_decl_annotations_
-VOID
+HRESULT
 GraphAssign2(
     PGRAPH Graph
     )
@@ -113,13 +113,7 @@ Return Value:
 
     ASSERT(Graph->Flags.IsAcyclic);
 
-    EventWriteGraphAssignStart(
-        &Graph->Activity,
-        Graph->KeysFileName,
-        Graph->Attempt,
-        Graph->NumberOfKeys,
-        Graph->NumberOfVertices
-    );
+    EVENT_WRITE_GRAPH_ASSIGN_START();
 
     //
     // Walk the graph and assign values.
@@ -182,29 +176,11 @@ Return Value:
 
     STOP_GRAPH_COUNTER(Assign);
 
-    EventWriteGraphAssignStop(
-        &Graph->Activity,
-        Graph->KeysFileName,
-        Graph->Attempt,
-        Graph->NumberOfKeys,
-        Graph->NumberOfVertices,
-        Graph->NumberOfEmptyVertices,
-        0, // MaximumTraversalDepth
-        0  // TotalTraversals
-    );
+    EVENT_WRITE_GRAPH_ASSIGN_STOP();
 
-    EventWriteGraphAssignResult(
-        &Graph->Activity,
-        Graph->KeysFileName,
-        Graph->Attempt,
-        Table->GraphImpl,
-        Cycles,
-        Microseconds,
-        Graph->NumberOfKeys,
-        Graph->NumberOfVertices
-    );
+    EVENT_WRITE_GRAPH_ASSIGN_RESULT();
 
-    return;
+    return S_OK;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
