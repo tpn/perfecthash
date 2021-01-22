@@ -46,12 +46,4 @@ BOOLEAN
 typedef IS_GRAPH_ACYCLIC *PIS_GRAPH_ACYCLIC;
 extern IS_GRAPH_ACYCLIC IsGraphAcyclic;
 
-typedef
-VOID
-(NTAPI GRAPH_ASSIGN)(
-    _In_ PGRAPH Graph
-    );
-typedef GRAPH_ASSIGN *PGRAPH_ASSIGN;
-extern GRAPH_ASSIGN GraphAssign;
-
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

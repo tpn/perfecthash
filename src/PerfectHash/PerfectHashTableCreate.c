@@ -553,7 +553,12 @@ Return Value:
     ULONG Index;
     ULONG Count;
     ULONG GraphImpl;
+    ULONG FixedAttempts;
     HRESULT Result = S_OK;
+    BOOLEAN SawMinAttempts = FALSE;
+    BOOLEAN SawMaxAttempts = FALSE;
+    BOOLEAN SawFixedAttempts = FALSE;
+    BOOLEAN SawTargetNumberOfSolutions = FALSE;
     BOOLEAN SawResizeLimit = FALSE;
     BOOLEAN SawInitialResizes = FALSE;
     BOOLEAN SawResizeThreshold = FALSE;
@@ -577,6 +582,7 @@ Return Value:
     Param = TableCreateParams->Params;
 
     GraphImpl = DEFAULT_GRAPH_IMPL_VERSION;
+    FixedAttempts = 0;
 
     if (Count == 0) {
         if (Param != NULL) {
@@ -610,6 +616,26 @@ Return Value:
                 }
                 Context->InitialResizes = Param->AsULong;
                 SawInitialResizes = TRUE;
+                break;
+
+            case TableCreateParameterMinAttemptsId:
+                Context->MinAttempts = Param->AsULong;
+                SawMinAttempts = TRUE;
+                break;
+
+            case TableCreateParameterMaxAttemptsId:
+                Context->MaxAttempts = Param->AsULong;
+                SawMaxAttempts = TRUE;
+                break;
+
+            case TableCreateParameterFixedAttemptsId:
+                FixedAttempts = Param->AsULong;
+                SawFixedAttempts = TRUE;
+                break;
+
+            case TableCreateParameterTargetNumberOfSolutionsId:
+                Context->TargetNumberOfSolutions = Param->AsULong;
+                SawTargetNumberOfSolutions = TRUE;
                 break;
 
             case TableCreateParameterBestCoverageAttemptsId:
@@ -800,14 +826,109 @@ Return Value:
             Result = PH_E_INITIAL_RESIZES_EXCEEDS_MAX_RESIZES;
             goto Error;
         }
+    }
 
+    //
+    // Validate min/max/fixed attempts.
+    //
+
+    if (SawFixedAttempts) {
+        if (FixedAttempts == 0) {
+            Result = PH_E_INVALID_FIXED_ATTEMPTS;
+            goto Error;
+        }
+
+        if (Table->TableCreateFlags.FindBestGraph != FALSE) {
+            Result = PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH;
+            goto Error;
+        };
+
+        //
+        // --MinAttempts or --MaxAttempts with --FixedAttempts doesn't make
+        // sense.
+        //
+
+        if (SawMinAttempts || SawMaxAttempts) {
+            Result = PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_MINMAX_ATTEMPTS;
+        }
+
+        //
+        // N.B. There's no Context->FixedAttempts; we just use the Min/Max
+        //      members to box the desired number of attempts.
+        //
+
+        Context->MinAttempts = FixedAttempts;
+        Context->MaxAttempts = FixedAttempts;
+
+    }
+
+    if (SawMinAttempts) {
+
+        if (Context->MinAttempts == 0) {
+            Result = PH_E_INVALID_MIN_ATTEMPTS;
+            goto Error;
+        }
+
+        if (Table->TableCreateFlags.FindBestGraph != FALSE) {
+            Result = PH_E_MIN_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH;
+            goto Error;
+        };
+
+        //
+        // If we didn't see MaxAttempts, default it to MinAttempts.  (This
+        // makes more sense than, say, reaching min attempts then switching
+        // into FirstGraphWins mode.)
+        //
+
+        if (!SawMaxAttempts) {
+            Context->MaxAttempts = Context->MinAttempts;
+        } else {
+            if (Context->MaxAttempts < Context->MinAttempts) {
+                Result = PH_E_MIN_ATTEMPTS_EXCEEDS_MAX_ATTEMPTS;
+                goto Error;
+            }
+        }
+    }
+
+    if (SawMaxAttempts) {
+        if (Context->MaxAttempts == 0) {
+            Result = PH_E_INVALID_MAX_ATTEMPTS;
+            goto Error;
+        }
+    }
+
+    if (SawTargetNumberOfSolutions) {
+
+        if (Context->TargetNumberOfSolutions == 0) {
+            Result = PH_E_INVALID_TARGET_NUMBER_OF_SOLUTIONS;
+            goto Error;
+        }
+
+        if (SawMinAttempts) {
+            if (Context->MinAttempts > Context->TargetNumberOfSolutions) {
+                Result = PH_E_TARGET_NUMBER_OF_SOLUTIONS_EXCEEDS_MIN_ATTEMPTS;
+                goto Error;
+            }
+        }
+    }
+
+    if (Context->MinAttempts > 0 ||
+        Context->MaxAttempts > 0 ||
+        Context->TargetNumberOfSolutions > 0)
+    {
+        //
+        // We don't want to stop solving after the first solution is found, so
+        // clear the applicable flag.
+        //
+
+        Context->State.FirstSolvedGraphWins = FALSE;
     }
 
     //
     // Validate GraphImpl.
     //
 
-    if (GraphImpl != 1 && GraphImpl != 2) {
+    if (GraphImpl != 1 && GraphImpl != 2 && GraphImpl != 3) {
         Result = PH_E_INVALID_GRAPH_IMPL;
         goto Error;
     }

@@ -3097,6 +3097,10 @@ typedef RNG_VTBL *PRNG_VTBL;
     FIRST_ENTRY(AttemptsBeforeTableResize)                           \
     ENTRY(MaxNumberOfTableResizes)                                   \
     ENTRY(InitialNumberOfTableResizes)                               \
+    ENTRY(MinAttempts)                                               \
+    ENTRY(MaxAttempts)                                               \
+    ENTRY(FixedAttempts)                                             \
+    ENTRY(TargetNumberOfSolutions)                                   \
     ENTRY(BestCoverageAttempts)                                      \
     ENTRY(BestCoverageType)                                          \
     ENTRY(MaxNumberOfEqualBestGraphs)                                \

@@ -160,6 +160,10 @@ Return Value:
     ULONG NumberOfEdgesDeleted;
     PRTL_NUMBER_OF_SET_BITS RtlNumberOfSetBits;
 
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    START_GRAPH_COUNTER();
+
     //
     // Resolve aliases.
     //
@@ -289,14 +293,31 @@ Return Value:
         }
     }
 
+    STOP_GRAPH_COUNTER(IsAcyclic);
+
+    //EVENT_WRITE_GRAPH_IS_ACYCLIC();
+
     return IsAcyclic;
 }
 
+GRAPH_IS_ACYCLIC GraphIsAcyclic;
+
+_Use_decl_annotations_
+HRESULT
+GraphIsAcyclic(
+    PGRAPH Graph
+    )
+{
+    BOOLEAN Success;
+
+    Success = IsGraphAcyclic(Graph);
+    return (Success ? S_OK : PH_E_GRAPH_CYCLIC_FAILURE);
+}
 
 GRAPH_ASSIGN GraphAssign;
 
 _Use_decl_annotations_
-VOID
+HRESULT
 GraphAssign(
     PGRAPH Graph
     )
@@ -314,7 +335,7 @@ Arguments:
 
 Return Value:
 
-    None.
+    S_OK.
 
 --*/
 {
@@ -332,13 +353,7 @@ Return Value:
 
     ASSERT(Graph->Flags.IsAcyclic);
 
-    EventWriteGraphAssignStart(
-        &Graph->Activity,
-        Graph->KeysFileName,
-        Graph->Attempt,
-        Graph->NumberOfKeys,
-        Graph->NumberOfVertices
-    );
+    EVENT_WRITE_GRAPH_ASSIGN_START();
 
     //
     // Walk the graph and assign values.
@@ -378,29 +393,11 @@ Return Value:
 
     STOP_GRAPH_COUNTER(Assign);
 
-    EventWriteGraphAssignStop(
-        &Graph->Activity,
-        Graph->KeysFileName,
-        Graph->Attempt,
-        Graph->NumberOfKeys,
-        Graph->NumberOfVertices,
-        Graph->NumberOfEmptyVertices,
-        Graph->MaximumTraversalDepth,
-        Graph->TotalTraversals
-    );
+    EVENT_WRITE_GRAPH_ASSIGN_STOP();
 
-    EventWriteGraphAssignResult(
-        &Graph->Activity,
-        Graph->KeysFileName,
-        Graph->Attempt,
-        Graph->Context->Table->GraphImpl,
-        Cycles,
-        Microseconds,
-        Graph->NumberOfKeys,
-        Graph->NumberOfVertices
-    );
+    EVENT_WRITE_GRAPH_ASSIGN_RESULT();
 
-    return;
+    return S_OK;
 }
 
 //

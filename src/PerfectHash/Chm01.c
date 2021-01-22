@@ -1095,9 +1095,7 @@ FinishedSolution:
         Context->BestGraph = NULL;
         LeaveCriticalSection(&Context->BestGraphCriticalSection);
 
-        if (!Graph) {
-            goto Error;
-        }
+        ASSERT(Graph != NULL);
     }
 
     //
@@ -1570,6 +1568,7 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result = S_OK;
+    ULONG GraphImpl;
     ULONG NumberOfKeys;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
@@ -1583,6 +1582,7 @@ Return Value:
     ULONGLONG FirstSizeInBytes;
     ULONGLONG OrderSizeInBytes;
     ULONGLONG EdgesSizeInBytes;
+    ULONGLONG Vertices3SizeInBytes;
     ULONGLONG ValuesSizeInBytes;
     ULONGLONG AssignedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
@@ -1621,6 +1621,7 @@ Return Value:
 
     Rtl = Table->Rtl;
     Context = Table->Context;
+    GraphImpl = Table->GraphImpl;
     MaskFunctionId = Table->MaskFunctionId;
     GraphInfoOnDisk = Context->GraphInfoOnDisk;
     TableInfoOnDisk = &GraphInfoOnDisk->TableInfoOnDisk;
@@ -1906,33 +1907,56 @@ Return Value:
     // Calculate the sizes required for each of the arrays.
     //
 
-    EdgesSizeInBytes = ALIGN_UP_YMMWORD(
-        RTL_ELEMENT_SIZE(GRAPH, Edges) * TotalNumberOfEdges.QuadPart
-    );
+    if (GraphImpl == 1 || GraphImpl == 2) {
 
-    NextSizeInBytes = ALIGN_UP_YMMWORD(
-        RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
-    );
+        EdgesSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Edges) * TotalNumberOfEdges.QuadPart
+        );
+
+        NextSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Next) * TotalNumberOfEdges.QuadPart
+        );
+
+        FirstSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, First) * NumberOfVertices.QuadPart
+        );
+
+        Vertices3SizeInBytes = 0;
+
+        if (TableCreateFlags.HashAllKeysFirst == FALSE) {
+            VertexPairsSizeInBytes = 0;
+        } else {
+            VertexPairsSizeInBytes = ALIGN_UP_ZMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, VertexPairs) * (ULONGLONG)NumberOfKeys
+            );
+        }
+
+    } else {
+
+        ASSERT(GraphImpl == 3);
+
+        EdgesSizeInBytes = 0;
+        NextSizeInBytes = 0;
+        FirstSizeInBytes = 0;
+
+        VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Edges3) * NumberOfEdges.QuadPart
+        );
+
+        Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Vertices3) * NumberOfVertices.QuadPart
+        );
+
+        DeletedEdgesBitmapBufferSizeInBytes.QuadPart = 0;
+    }
 
     OrderSizeInBytes = ALIGN_UP_YMMWORD(
         RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfEdges.QuadPart
     );
 
-    FirstSizeInBytes = ALIGN_UP_YMMWORD(
-        RTL_ELEMENT_SIZE(GRAPH, First) * NumberOfVertices.QuadPart
-    );
-
     AssignedSizeInBytes = ALIGN_UP_YMMWORD(
         RTL_ELEMENT_SIZE(GRAPH, Assigned) * NumberOfVertices.QuadPart
     );
-
-    if (TableCreateFlags.HashAllKeysFirst == FALSE) {
-        VertexPairsSizeInBytes = 0;
-    } else {
-        VertexPairsSizeInBytes = ALIGN_UP_ZMMWORD(
-            RTL_ELEMENT_SIZE(GRAPH, VertexPairs) * (ULONGLONG)NumberOfKeys
-        );
-    }
 
     //
     // Calculate the size required for the values array.  This is used as part
@@ -2002,6 +2026,7 @@ Return Value:
         NextSizeInBytes +
         OrderSizeInBytes +
         FirstSizeInBytes +
+        Vertices3SizeInBytes +
         AssignedSizeInBytes +
         VertexPairsSizeInBytes +
         ValuesSizeInBytes +
@@ -2059,6 +2084,7 @@ Return Value:
     Info->NextSizeInBytes = NextSizeInBytes;
     Info->OrderSizeInBytes = OrderSizeInBytes;
     Info->FirstSizeInBytes = FirstSizeInBytes;
+    Info->Vertices3SizeInBytes = Vertices3SizeInBytes;
     Info->AssignedSizeInBytes = AssignedSizeInBytes;
     Info->VertexPairsSizeInBytes = VertexPairsSizeInBytes;
     Info->ValuesSizeInBytes = ValuesSizeInBytes;

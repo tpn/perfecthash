@@ -96,6 +96,15 @@ Language=English
 No key size extracted from file name.
 .
 
+MessageId=0x00a
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_MAX_ATTEMPTS_REACHED
+Language=English
+Maximum attempts at solving reached.
+.
+
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL
@@ -330,6 +339,8 @@ Table Create Flags:
                  will find a graph that is better (based on the predicate) than
                  when in first graph wins mode.
 
+        N.B. See also: --TargetNumberOfSolutions, --FixedAttempts.
+
     --SkipMemoryCoverageInFirstGraphWinsMode
 
         Skips calculating memory coverage information when in "first graph wins"
@@ -540,11 +551,12 @@ Table Compile Flags:
 
 Table Create Parameters:
 
-    --GraphImpl=1|2 [default: 2]
+    --GraphImpl=1|2|3 [default: 3]
 
         Selects the backend version of the graph assignment step.  Version 1
         matches the original CHM algorithm, version 2 is faster and was derived
-        from NetBSD's nbperf routine.  Defaults to version 2.
+        from NetBSD's nbperf module, version 3 is even faster and was derived
+        from additional improvements to NetBSD's nbperf module in 2020.
 
     --ValueSizeInBytes=4|8
 
@@ -667,6 +679,18 @@ Table Create Parameters:
         Must contain two or more elements.
 
         N.B. Only applies to PerfectHashCreate.exe.
+
+    --TargetNumberOfSolutions=N
+
+        Where N is a positive integer and represents a target number of
+        solutions to find before stopping graph solving.  Typically only useful
+        for benchmarking.
+
+    --FixedAttempts=N
+
+        Where N is a positive integer and represents a fixed number of attempts
+        that will be made (irrespective of whether or not a solution was found)
+        before graph solving stops.  Typically only useful for benchmarking.
 
     --Seeds=<n1,...n8>
 
@@ -3461,5 +3485,85 @@ Facility=ITF
 SymbolicName=PH_E_RNG_NOT_INITIALIZED
 Language=English
 An RNG must be initialized before it can be used.
+.
+
+MessageId=0x3c7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_FIXED_ATTEMPTS
+Language=English
+Invalid FixedAttempts.
+.
+
+MessageId=0x3c8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_MIN_ATTEMPTS
+Language=English
+Invalid MinAttempts.
+.
+
+MessageId=0x3c9
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_MAX_ATTEMPTS
+Language=English
+Invalid MaxAttempts.
+.
+
+MessageId=0x3ca
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_MINMAX_ATTEMPTS
+Language=English
+FixedAttempts conflicts with MinAttempts/MaxAttempts.
+.
+
+MessageId=0x3cb
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_MIN_ATTEMPTS_EXCEEDS_MAX_ATTEMPTS
+Language=English
+MinAttempts must be less than or equal to MaxAttempts.
+.
+
+MessageId=0x3cc
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH
+Language=English
+FixedAttempts conflicts with FindBestGraph.
+.
+
+MessageId=0x3cd
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_MIN_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH
+Language=English
+MinAttempts conflicts with FindBestGraph.
+.
+
+MessageId=0x3ce
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_TARGET_NUMBER_OF_SOLUTIONS
+Language=English
+Invalid TargetNumberOfSolutions.
+.
+
+MessageId=0x3cf
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TARGET_NUMBER_OF_SOLUTIONS_CONFLICTS_WITH_FIND_BEST_GRAPH
+Language=English
+TargetNumberOfSolutions conflicts with FindBestGraph.
+.
+
+MessageId=0x3d0
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TARGET_NUMBER_OF_SOLUTIONS_EXCEEDS_MIN_ATTEMPTS
+Language=English
+TargetNumberOfSolutions exceeds MinAttempts.
 .
 

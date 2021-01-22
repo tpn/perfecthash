@@ -1825,8 +1825,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = DownsizedKey * Seed1;
-    Vertex2 = DownsizedKey * Seed2;
+    Vertex1 = (ULONG)(((ULONGLONG)DownsizedKey * (ULONGLONG)Seed1) >> 32);
+    Vertex2 = (ULONG)(((ULONGLONG)DownsizedKey * (ULONGLONG)Seed2) >> 32);
 
     Result.LowPart = (Vertex1 & Mask);
     Result.HighPart = (Vertex2 & Mask);

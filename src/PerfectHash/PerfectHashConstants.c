@@ -1231,18 +1231,20 @@ GRAPH_VTBL GraphInterface = {
     (PGRAPH_LOCK_SERVER)&ComponentLockServer,
     &GraphSetInfo,
     &GraphEnterSolvingLoop,
+    &GraphVerify,
     &GraphLoadInfo,
     &GraphReset,
     &GraphLoadNewSeeds,
     &GraphSolve,
-    &GraphVerify,
+    &GraphIsAcyclic,
+    &GraphAssign,
     &GraphCalculateAssignedMemoryCoverage,
     &GraphCalculateAssignedMemoryCoverageForKeysSubset,
     &GraphRegisterSolved,
     &GraphShouldWeContinueTryingToSolve,
     &GraphAddKeys,
 };
-VERIFY_VTBL_SIZE(GRAPH, 12);
+VERIFY_VTBL_SIZE(GRAPH, 14);
 
 //
 // Cu

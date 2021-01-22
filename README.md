@@ -334,11 +334,12 @@ Table Compile Flags:
 
 Table Create Parameters:
 
-    --GraphImpl=1|2 [default: 2]
+    --GraphImpl=1|2|3 [default: 3]
 
         Selects the backend version of the graph assignment step.  Version 1
         matches the original CHM algorithm, version 2 is faster and was derived
-        from NetBSD's nbperf routine.  Defaults to version 2.
+        from NetBSD's nbperf module, version 3 is even faster and was derived
+        from additional improvements to NetBSD's nbperf module in 2020.
 
     --ValueSizeInBytes=4|8
 
@@ -461,6 +462,18 @@ Table Create Parameters:
         Must contain two or more elements.
 
         N.B. Only applies to PerfectHashCreate.exe.
+
+    --TargetNumberOfSolutions=N
+
+        Where N is a positive integer and represents a target number of
+        solutions to find before stopping graph solving.  Typically only useful
+        for benchmarking.
+
+    --FixedAttempts=N
+
+        Where N is a positive integer and represents a fixed number of attempts
+        that will be made (irrespective of whether or not a solution was found)
+        before graph solving stops.  Typically only useful for benchmarking.
 
     --Seeds=<n1,...n8>
 

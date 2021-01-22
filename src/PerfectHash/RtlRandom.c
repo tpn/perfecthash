@@ -75,7 +75,7 @@ Return Value:
     // Argument validation complete.  Continue.
     //
 
-    EventWriteRtlGenerateRandomBytesStart(NULL, SizeOfBufferInBytes);
+    EVENT_WRITE_RTL_RANDOM_BYTES_START(SizeOfBufferInBytes);
 
     ASSERT(Rtl->CryptProv != 0);
     if (!CryptGenRandom(Rtl->CryptProv, SizeOfBufferInBytes, Buffer)) {
@@ -85,7 +85,7 @@ Return Value:
         Result = S_OK;
     }
 
-    EventWriteRtlGenerateRandomBytesStop(NULL, SizeOfBufferInBytes, Result);
+    EVENT_WRITE_RTL_RANDOM_BYTES_STOP(SizeOfBufferInBytes, Result);
 
     return Result;
 }

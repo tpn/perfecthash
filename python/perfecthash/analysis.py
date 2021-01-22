@@ -503,12 +503,15 @@ FOUND_GRAPH_ETW_HEADER_SHARED = (
     ' etw:SessionId,'
     ' KeysFileName,'
     ' Attempt,'
+    ' SolutionNumber,'
     ' ElapsedMilliseconds,'
     ' CoverageType,'
     ' CoverageValue,'
+    ' CoverageValueAsDouble,'
     ' StopGraphSolving,'
     ' IsBest,'
     ' IsEqual,'
+    ' IsCoverageValueDouble,'
     ' EqualCount,'
     ' TotalNumberOfPages,'
     ' TotalNumberOfLargePages,'
@@ -575,12 +578,15 @@ FOUND_GRAPH_CSV_HEADER_SHARED = (
     'SessionId',
     'KeysFileName',
     'Attempt',
+    'SolutionNumber',
     'ElapsedMilliseconds',
     'CoverageType',
     'CoverageValue',
+    'CoverageValueAsDouble',
     'StopGraphSolving',
     'IsBest',
     'IsEqual',
+    'IsCoverageValueDouble',
     'EqualCount',
     'TotalNumberOfPages',
     'TotalNumberOfLargePages',
@@ -644,12 +650,15 @@ FOUND_GRAPH_CSV_HEADER_SLIM_SHARED = (
     'ActivityId',
     'KeysFileName',
     'Attempt',
+    'SolutionNumber',
     'ElapsedMilliseconds',
     'CoverageType',
     'CoverageValue',
+    'CoverageValueAsDouble',
     'StopGraphSolving',
     'IsBest',
     'IsEqual',
+    'IsCoverageValueDouble',
     'EqualCount',
     'TotalNumberOfPages',
     'TotalNumberOfLargePages',
@@ -934,6 +943,67 @@ GENERATE_RANDOM_BYTES_STOP_CSV_HEADER_SLIM = (
     'Result',
 )
 
+# GraphIsAcyclic
+
+IS_ACYCLIC = 'PerfectHash/IsAcyclic/win:Info'
+
+IS_ACYCLIC_ETW_HEADER = (
+    'PerfectHash/IsAcyclic/win:Info,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' KeysFileName,'
+    ' Attempt,'
+    ' FunctionVersion,'
+    ' Cycles,'
+    ' Microseconds,'
+    ' NumberOfKeys,'
+    ' NumberOfVertices,'
+    ' IsAcyclic'
+)
+
+IS_ACYCLIC_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'KeysFileName',
+    'Attempt',
+    'FunctionVersion',
+    'Cycles',
+    'Microseconds',
+    'NumberOfKeys',
+    'NumberOfVertices',
+    'IsAcyclic',
+)
+
+IS_ACYCLIC_CSV_HEADER_SLIM = (
+    'LineNumber',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'KeysFileName',
+    'Attempt',
+    'FunctionVersion',
+    'Cycles',
+    'Microseconds',
+    'NumberOfKeys',
+    'NumberOfVertices',
+    'IsAcyclic',
+)
+
 # Maps
 
 EVENT_NAME_TO_ETW_HEADER = {
@@ -945,6 +1015,7 @@ EVENT_NAME_TO_ETW_HEADER = {
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_ETW_HEADER,
     FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_ETW_HEADER,
     FOUND_GRAPH: FOUND_GRAPH_ETW_HEADER,
+    IS_ACYCLIC: IS_ACYCLIC_ETW_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER = {
@@ -961,6 +1032,7 @@ EVENT_NAME_TO_CSV_HEADER = {
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER,
     FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_CSV_HEADER,
     FOUND_GRAPH: FOUND_GRAPH_CSV_HEADER,
+    IS_ACYCLIC: IS_ACYCLIC_CSV_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER_SLIM = {
@@ -977,6 +1049,7 @@ EVENT_NAME_TO_CSV_HEADER_SLIM = {
     FOUND_NEW_BEST_GRAPH: FOUND_NEW_BEST_GRAPH_CSV_HEADER_SLIM,
     FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_CSV_HEADER_SLIM,
     FOUND_GRAPH: FOUND_GRAPH_CSV_HEADER_SLIM,
+    IS_ACYCLIC: IS_ACYCLIC_CSV_HEADER_SLIM,
 }
 
 HAS_SEED_DATA = {
@@ -2118,6 +2191,7 @@ def process_xperf_perfecthash_csv(path, out=None):
     generate_random_bytes_stop = GENERATE_RANDOM_BYTES_STOP
     cswitch = CSWITCH
     pmc = PMC
+    is_acyclic = IS_ACYCLIC
 
     assign_io = io.StringIO()
     generate_random_bytes_io = io.StringIO()
@@ -2135,6 +2209,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         generate_random_bytes_stop: generate_random_bytes_io,
         cswitch: io.StringIO(),
         pmc: io.StringIO(),
+        is_acyclic: io.StringIO(),
     }
 
     paths = {
@@ -2150,6 +2225,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         generate_random_bytes_stop: f'{prefix}_GenerateRandomBytes.csv',
         cswitch: f'{prefix}_ContextSwitch.csv',
         pmc: f'{prefix}_Pmc.csv',
+        is_acyclic: f'{prefix}_IsAcyclic.csv',
     }
 
     counts = {
@@ -2165,6 +2241,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         generate_random_bytes_stop: 0,
         cswitch: 0,
         pmc: 0,
+        is_acyclic: 0,
     }
 
     names = set(counts.keys())

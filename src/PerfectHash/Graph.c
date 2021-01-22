@@ -16,39 +16,23 @@ Abstract:
 #include "PerfectHashEventsPrivate.h"
 
 //
-// Helper macro for graph event writing.
-//
-
-#define EVENT_WRITE_GRAPH(Name)   \
-    EventWriteGraph##Name##Event( \
-        &Graph->Activity,         \
-        Graph->KeysFileName,      \
-        Edge,                     \
-        NumberOfKeys,             \
-        Key,                      \
-        Result,                   \
-        Cycles,                   \
-        Microseconds,             \
-        Graph->Seed1,             \
-        Graph->Seed2,             \
-        Graph->Seed3,             \
-        Graph->Seed4,             \
-        Graph->Seed5,             \
-        Graph->Seed6,             \
-        Graph->Seed7,             \
-        Graph->Seed8              \
-    )
-
-//
 // Forward decl.
 //
 
 GRAPH_ADD_KEYS GraphHashKeysThenAdd;
+GRAPH_ADD_KEYS GraphAddKeys3;
+GRAPH_ADD_KEYS GraphHashKeysThenAdd3;
 GRAPH_ADD_KEYS GraphAddKeysOriginalSeededHashRoutines;
 GRAPH_VERIFY GraphVerifyOriginalSeededHashRoutines;
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage_AVX2;
+GRAPH_ASSIGN GraphAssign;
 GRAPH_ASSIGN GraphAssign2;
+GRAPH_ASSIGN GraphAssign3;
+GRAPH_IS_ACYCLIC GraphIsAcyclic;
+GRAPH_IS_ACYCLIC GraphIsAcyclic3;
+
+GRAPH_REGISTER_SOLVED GraphRegisterSolvedNoBestCoverage;
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -345,7 +329,8 @@ Return Value:
     // is acyclic.
     //
 
-    if (!IsGraphAcyclic(Graph)) {
+    Result = Graph->Vtbl->IsAcyclic(Graph);
+    if (FAILED(Result)) {
 
         //
         // Failed to create an acyclic graph.
@@ -368,6 +353,7 @@ Return Value:
     //
 
     FinishedCount = InterlockedIncrement64(&Context->FinishedCount);
+    Graph->SolutionNumber = FinishedCount;
 
     if (FirstSolvedGraphWins(Context)) {
 
@@ -385,11 +371,14 @@ Return Value:
     // Perform the assignment step.
     //
 
-    if (Table->GraphImpl == 1) {
-        GraphAssign(Graph);
-    } else {
-        ASSERT(Table->GraphImpl == 2);
-        GraphAssign2(Graph);
+    Result = Graph->Vtbl->Assign(Graph);
+
+    //
+    // Assign() should always succeed.
+    //
+
+    if (FAILED(Result)) {
+        PH_RAISE(Result);
     }
 
     //
@@ -400,6 +389,8 @@ Return Value:
     //
 
     if (FirstSolvedGraphWins(Context)) {
+        ASSERT(Context->MinAttempts == 0);
+        ASSERT(Context->TargetNumberOfSolutions == 0);
         CONTEXT_END_TIMERS(Solve);
         SetStopSolving(Context);
         if (WantsAssignedMemoryCoverage(Graph)) {
@@ -413,11 +404,13 @@ Return Value:
     }
 
     //
-    // If we reach this mode, we're in "find best memory coverage" mode, so,
-    // register the solved graph then continue solving.
+    // If we reach this mode, we're either in FindBestMemoryCoverage mode,
+    // FixedAttempts mode, or we have a target number of solutions to find.
     //
 
-    ASSERT(FindBestMemoryCoverage(Context));
+    ASSERT(FindBestMemoryCoverage(Context) ||
+           Context->MinAttempts > 0 ||
+           Context->TargetNumberOfSolutions > 0);
 
     //
     // Calculate memory coverage information if applicable.
@@ -450,10 +443,17 @@ Return Value:
     Coverage->NumberOfCollisionsDuringAssignment = Graph->Collisions;
 
     //
-    // Register the solved graph.  We can return this result directly.
+    // Register the solved graph then return the result directly.
     //
 
-    Result = Graph->Vtbl->RegisterSolved(Graph, NewGraphPointer);
+    if (FindBestMemoryCoverage(Context)) {
+        ASSERT(Context->MinAttempts == 0);
+        Result = Graph->Vtbl->RegisterSolved(Graph, NewGraphPointer);
+    } else {
+        ASSERT(Context->MinAttempts > 0 ||
+               Context->TargetNumberOfSolutions > 0);
+        Result = GraphRegisterSolvedNoBestCoverage(Graph, NewGraphPointer);
+    }
 
     //
     // Intentional follow-on to End.
@@ -772,13 +772,7 @@ Return Value:
 
     STOP_GRAPH_COUNTER(AddHashedKeys);
 
-    EventWriteGraphAddHashedKeysEvent(
-        &Graph->Activity,
-        Graph->KeysFileName,
-        NumberOfKeys,
-        Cycles,
-        Microseconds
-    );
+    EVENT_WRITE_GRAPH_ADD_HASHED_KEYS();
 
     return S_OK;
 }
@@ -1415,6 +1409,8 @@ Return Value:
     PageSizeBytesProcessed = 0;
     LargePageSizeBytesProcessed = 0;
 
+    Coverage->SolutionNumber = Graph->SolutionNumber;
+
     //
     // Enumerate the assigned array in cache-line-sized strides.
     //
@@ -1615,6 +1611,8 @@ Return Value:
     TotalBytesProcessed = 0;
     PageSizeBytesProcessed = 0;
     LargePageSizeBytesProcessed = 0;
+
+    Coverage->SolutionNumber = Graph->SolutionNumber;
 
     //
     // Enumerate the assigned array in cache-line-sized strides.
@@ -2041,76 +2039,9 @@ VerifyMemoryCoverageInvariants(
 #pragma optimize("", on)
 
 //
-// Helper macro for emitting graph-found events.  Used exclusively by the
-// GraphRegisterSolved() routine.
+// Helper macro for emitting graph-found events.
 //
 
-#define EVENT_WRITE_GRAPH_FOUND(Name)                             \
-    EventWriteGraph##Name##(                                      \
-        &Graph->Activity,                                         \
-        Graph->KeysFileName,                                      \
-        Attempt,                                                  \
-        ElapsedMilliseconds,                                      \
-        (ULONG)CoverageType,                                      \
-        CoverageValue,                                            \
-        CoverageValueAsDouble,                                    \
-        (StopGraphSolving != FALSE),                              \
-        (FoundBestGraph != FALSE),                                \
-        (FoundEqualBestGraph != FALSE),                           \
-        (IsCoverageValueDouble != FALSE),                         \
-        EqualCount,                                               \
-        Coverage->TotalNumberOfPages,                             \
-        Coverage->TotalNumberOfLargePages,                        \
-        Coverage->TotalNumberOfCacheLines,                        \
-        Coverage->NumberOfUsedPages,                              \
-        Coverage->NumberOfUsedLargePages,                         \
-        Coverage->NumberOfUsedCacheLines,                         \
-        Coverage->NumberOfEmptyPages,                             \
-        Coverage->NumberOfEmptyLargePages,                        \
-        Coverage->NumberOfEmptyCacheLines,                        \
-        Coverage->FirstPageUsed,                                  \
-        Coverage->FirstLargePageUsed,                             \
-        Coverage->FirstCacheLineUsed,                             \
-        Coverage->LastPageUsed,                                   \
-        Coverage->LastLargePageUsed,                              \
-        Coverage->LastCacheLineUsed,                              \
-        Coverage->TotalNumberOfAssigned,                          \
-        Coverage->NumberOfKeysWithVerticesMappingToSamePage,      \
-        Coverage->NumberOfKeysWithVerticesMappingToSameLargePage, \
-        Coverage->NumberOfKeysWithVerticesMappingToSameCacheLine, \
-        Coverage->MaxGraphTraversalDepth,                         \
-        Coverage->TotalGraphTraversals,                           \
-        Graph->Seeds[0],                                          \
-        Graph->Seeds[1],                                          \
-        Graph->Seeds[2],                                          \
-        Graph->Seeds[3],                                          \
-        Graph->Seeds[4],                                          \
-        Graph->Seeds[5],                                          \
-        Graph->Seeds[6],                                          \
-        Graph->Seeds[7],                                          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[0],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[1],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[2],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[3],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[4],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[5],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[6],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[7],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[8],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[9],          \
-        Coverage->NumberOfAssignedPerCacheLineCounts[10],         \
-        Coverage->NumberOfAssignedPerCacheLineCounts[11],         \
-        Coverage->NumberOfAssignedPerCacheLineCounts[12],         \
-        Coverage->NumberOfAssignedPerCacheLineCounts[13],         \
-        Coverage->NumberOfAssignedPerCacheLineCounts[14],         \
-        Coverage->NumberOfAssignedPerCacheLineCounts[15],         \
-        Coverage->NumberOfAssignedPerCacheLineCounts[16],         \
-        Coverage->Slope,                                          \
-        Coverage->Intercept,                                      \
-        Coverage->CorrelationCoefficient,                         \
-        Coverage->Score,                                          \
-        Coverage->Rank                                            \
-    )
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
@@ -2669,6 +2600,149 @@ SkipComparatorCheck:
     return Result;
 }
 
+_Use_decl_annotations_
+HRESULT
+GraphRegisterSolvedNoBestCoverage(
+    PGRAPH Graph,
+    PGRAPH *NewGraphPointer
+    )
+/*++
+
+Routine Description:
+
+    This is a vastly-simplified version of GraphRegisterSolved() that is called
+    when we're in FixedAttempts solving mode (which is useful for benchmarking).
+    Its main job is to mimic the local variables in the aforementioned routine
+    and call `EVENT_WRITE_GRAPH_FOUND(Found)` in order to ensure an ETW event
+    is emitted.
+
+    In order to keep all the downstream machinery working (like verification and
+    table testing), we register the first graph we find as the "best".
+
+Arguments:
+
+    Graph - Supplies a pointer to the solved graph to register.
+
+    NewGraphPointer - Supplies the address of a variable which will receive the
+        address of a new graph instance to be used for solving if the routine
+        returns PH_S_USE_NEW_GRAPH_FOR_SOLVING.
+
+Return Value:
+
+    PH_S_CONTINUE_GRAPH_SOLVING - Continue graph solving with the current graph.
+
+    PH_S_USE_NEW_GRAPH_FOR_SOLVING - Continue graph solving but use the graph
+        returned via the NewGraphPointer parameter.
+
+    PH_S_GRAPH_SOLVING_STOPPED - The context indicated that graph solving was
+        to stop (due to the target number of solutions being found).
+
+--*/
+{
+    HRESULT Result;
+    PGRAPH SpareGraph = NULL;
+    BOOLEAN FoundBestGraph = FALSE;
+    BOOLEAN StopGraphSolving = FALSE;
+    BOOLEAN FoundEqualBestGraph = FALSE;
+    BOOLEAN IsCoverageValueDouble = FALSE;
+    ULONG EqualCount = 0;
+    ULONG CoverageValue = 0;
+    DOUBLE CoverageValueAsDouble = 0.0;
+    LONGLONG Attempt;
+    ULONGLONG ElapsedMilliseconds;
+    PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
+
+    //
+    // Initialize aliases.
+    //
+
+    Context = Graph->Context;
+    Coverage = &Graph->AssignedMemoryCoverage;
+    CoverageType = Context->BestCoverageType;
+    Attempt = Coverage->Attempt;
+    ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
+
+    //
+    // Indicate continue graph solving by default.
+    //
+
+    Result = PH_S_CONTINUE_GRAPH_SOLVING;
+
+    //
+    // Avoid entering the best graph critical section if Context->BestGraph
+    // already has a value.  (We need to suppress SAL for this optimization.)
+    //
+
+    _No_competing_thread_begin_
+    if (Context->BestGraph != NULL) {
+        goto End;
+    }
+    _No_competing_thread_end_
+
+    //
+    // Enter the best graph critical section.
+    //
+
+    EnterCriticalSection(&Context->BestGraphCriticalSection);
+
+    //
+    // If there is no best graph currently set, proceed with setting it to
+    // our current graph, then use the spare graph to continue solving.
+    //
+
+    if (Context->BestGraph == NULL) {
+        ASSERT(Context->NewBestGraphCount == 0);
+        SpareGraph = Context->SpareGraph;
+        ASSERT(SpareGraph != NULL);
+        ASSERT(IsSpareGraph(SpareGraph));
+        SpareGraph->Flags.IsSpare = FALSE;
+        Context->SpareGraph = NULL;
+        Context->BestGraph = Graph;
+        FoundBestGraph = TRUE;
+        Context->NewBestGraphCount++;
+        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+    }
+
+    //
+    // Leave the critical section and complete processing.
+    //
+
+    LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+End:
+
+    if (Context->TargetNumberOfSolutions > 0) {
+        if (Graph->SolutionNumber >= Context->TargetNumberOfSolutions) {
+
+            //
+            // We've found sufficient solutions; stop solving.
+            //
+
+            StopGraphSolving = TRUE;
+        }
+    }
+
+    if (StopGraphSolving) {
+        SetStopSolving(Context);
+        Result = PH_S_STOP_GRAPH_SOLVING;
+    } else if (FoundBestGraph) {
+
+        //
+        // We only want to update the new graph pointer if we're using a new
+        // graph for solving, otherwise, a downstream assertion will trip.
+        //
+
+        ASSERT(Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
+        ASSERT(SpareGraph != NULL);
+        *NewGraphPointer = SpareGraph;
+    }
+
+    EVENT_WRITE_GRAPH_FOUND(Found);
+
+    return Result;
+}
 
 #ifdef PERFECTHASH_X64_TSX
 
@@ -3191,6 +3265,79 @@ Return Value:
     Result = S_OK;
 
     //
+    // Do some more gross vtbl hacking based on graph impl.
+    //
+
+    if (Graph->Impl) {
+
+        //
+        // If the impl has already been set and matches the incoming table's,
+        // skip this initialization.
+        //
+
+        if (Graph->Impl == Table->GraphImpl) {
+            goto SkipGraphVtblHackery;
+        }
+    }
+
+    Graph->Impl = Table->GraphImpl;
+
+    if (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE) {
+
+        //
+        // Invariant check: if original seeded hash routines are requested,
+        // GraphImpl must be 1.
+        //
+
+        ASSERT(Graph->Impl == 1);
+        Graph->Vtbl->AddKeys = GraphAddKeysOriginalSeededHashRoutines;
+        Graph->Vtbl->Verify = GraphVerifyOriginalSeededHashRoutines;
+    }
+
+    switch (Graph->Impl) {
+        case 1:
+            Graph->Vtbl->IsAcyclic = GraphIsAcyclic;
+            Graph->Vtbl->Assign = GraphAssign;
+            Graph->Vtbl->AddKeys = (
+                (TableCreateFlags.HashAllKeysFirst != FALSE) ?
+                    GraphHashKeysThenAdd : GraphAddKeys
+            );
+            break;
+
+        case 2:
+            Graph->Vtbl->IsAcyclic = GraphIsAcyclic;
+            Graph->Vtbl->Assign = GraphAssign2;
+            Graph->Vtbl->AddKeys = (
+                (TableCreateFlags.HashAllKeysFirst != FALSE) ?
+                    GraphHashKeysThenAdd : GraphAddKeys
+            );
+            break;
+
+        case 3:
+            Graph->Vtbl->IsAcyclic = GraphIsAcyclic3;
+            Graph->Vtbl->Assign = GraphAssign3;
+            Graph->Vtbl->AddKeys = (
+                (TableCreateFlags.HashAllKeysFirst != FALSE) ?
+                    GraphHashKeysThenAdd3 : GraphAddKeys3
+            );
+            break;
+
+        default:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+    }
+
+    //
+    // Intentional follow-on to SkipGraphVtblHackery.
+    //
+
+SkipGraphVtblHackery:
+
+    //
+    // Do some more gross vtbl hacking based on graph impl.
+    //
+
+    //
     // Allocate (or reallocate) arrays.
     //
 
@@ -3218,11 +3365,22 @@ Return Value:
         goto Error;                                   \
     }
 
-    ALLOC_ARRAY(Next, PEDGE);
-    ALLOC_ARRAY(Edges, PEDGE);
-    ALLOC_ARRAY(First, PVERTEX);
     ALLOC_ARRAY(Order, PLONG);
     ALLOC_ARRAY(Assigned, PASSIGNED);
+
+    if (Graph->Impl == 1 || Graph->Impl == 2) {
+        ALLOC_ARRAY(Edges, PEDGE);
+        ALLOC_ARRAY(Next, PEDGE);
+        ALLOC_ARRAY(First, PVERTEX);
+    } else {
+        ASSERT(Graph->Impl == 3);
+        ALLOC_ARRAY(Vertices3, PVERTEX3);
+
+        //
+        // N.B. We don't do `ALLOC_ARRAY(Edges3, PEDGE3);` as it's handled by
+        //      the code block below (via VertexPairs allocation).
+        //
+    }
 
     //
     // If we're hashing all keys first, prepare the vertex pairs array if it
@@ -3232,10 +3390,10 @@ Return Value:
     // above, which grow larger upon each resize event).)
     //
 
-    if (TableCreateFlags.HashAllKeysFirst) {
+    if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3) {
 
-        ASSERT(Info->VertexPairsSizeInBytes != 0);
         VertexPairsSizeInBytes = (SIZE_T)Info->VertexPairsSizeInBytes;
+        ASSERT(VertexPairsSizeInBytes != 0);
 
         if (Graph->VertexPairs == NULL) {
 
@@ -3299,26 +3457,28 @@ Return Value:
     Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices;
     Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices;
 
-#define ALLOC_BITMAP_BUFFER(Name)                          \
-    if (!Graph->##Name##.Buffer) {                         \
-        Graph->##Name##.Buffer = (PULONG)(                 \
-            Allocator->Vtbl->Malloc(                       \
-                Allocator,                                 \
-                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
-            )                                              \
-        );                                                 \
-    } else {                                               \
-        Graph->##Name##.Buffer = (PULONG)(                 \
-            Allocator->Vtbl->ReAlloc(                      \
-                Allocator,                                 \
-                Graph->##Name##.Buffer,                    \
-                (ULONG_PTR)Info->##Name##BufferSizeInBytes \
-            )                                              \
-        );                                                 \
-    }                                                      \
-    if (!Graph->##Name##.Buffer) {                         \
-        Result = E_OUTOFMEMORY;                            \
-        goto Error;                                        \
+#define ALLOC_BITMAP_BUFFER(Name)                              \
+    if (Info->##Name##BufferSizeInBytes > 0) {                 \
+        if (!Graph->##Name##.Buffer) {                         \
+            Graph->##Name##.Buffer = (PULONG)(                 \
+                Allocator->Vtbl->Malloc(                       \
+                    Allocator,                                 \
+                    (ULONG_PTR)Info->##Name##BufferSizeInBytes \
+                )                                              \
+            );                                                 \
+        } else {                                               \
+            Graph->##Name##.Buffer = (PULONG)(                 \
+                Allocator->Vtbl->ReAlloc(                      \
+                    Allocator,                                 \
+                    Graph->##Name##.Buffer,                    \
+                    (ULONG_PTR)Info->##Name##BufferSizeInBytes \
+                )                                              \
+            );                                                 \
+        }                                                      \
+        if (!Graph->##Name##.Buffer) {                         \
+            Result = E_OUTOFMEMORY;                            \
+            goto Error;                                        \
+        }                                                      \
     }
 
     ALLOC_BITMAP_BUFFER(DeletedEdgesBitmap);
@@ -3550,7 +3710,7 @@ Return Value:
 
     Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
 
-    if (!Context->FinishedCount &&
+    if ((Context->FinishedCount == 0) &&
         Graph->Attempt - 1 == Context->ResizeTableThreshold) {
 
         if (!SetEvent(Context->TryLargerTableSizeEvent)) {
@@ -3563,15 +3723,28 @@ Return Value:
     }
 
     //
+    // Check if we're capping maximum attempts; if so, and we've made sufficient
+    // attempts, indicate stop solving.
+    //
+
+    if (Context->MaxAttempts > 0) {
+        if (Graph->Attempt - 1 == Context->MaxAttempts) {
+            SetStopSolving(Context);
+            return PH_S_MAX_ATTEMPTS_REACHED;
+        }
+    }
+
+    //
     // Clear the bitmap buffers.
     //
 
-#define ZERO_BITMAP_BUFFER(Name)                           \
-    ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
-           ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
-    Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##.Buffer,   \
-                       Info->##Name##BufferSizeInBytes)
-
+#define ZERO_BITMAP_BUFFER(Name)                               \
+    if (Info->##Name##BufferSizeInBytes > 0) {                 \
+        ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
+               ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
+        Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##.Buffer,   \
+                           Info->##Name##BufferSizeInBytes);   \
+    }
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
     ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
@@ -3582,12 +3755,14 @@ Return Value:
     // "Empty" all of the nodes.
     //
 
-#define EMPTY_ARRAY(Name)                            \
-    ASSERT(0 == Info->##Name##SizeInBytes -          \
-           ((Info->##Name##SizeInBytes >> 3) << 3)); \
-    Rtl->RtlFillMemory((PDWORD64)Graph->##Name,      \
-                       Info->##Name##SizeInBytes,    \
-                       (BYTE)~0)
+#define EMPTY_ARRAY(Name)                                \
+    if (Info->##Name##SizeInBytes > 0) {                 \
+        ASSERT(0 == Info->##Name##SizeInBytes -          \
+               ((Info->##Name##SizeInBytes >> 3) << 3)); \
+        Rtl->RtlFillMemory((PDWORD64)Graph->##Name,      \
+                           Info->##Name##SizeInBytes,    \
+                           (BYTE)~0);                    \
+    }
 
     EMPTY_ARRAY(Next);
     EMPTY_ARRAY(First);
@@ -3597,19 +3772,22 @@ Return Value:
     // The Order and Assigned arrays get zeroed.
     //
 
-#define ZERO_ARRAY(Name)                             \
-    ASSERT(0 == Info->##Name##SizeInBytes -          \
-           ((Info->##Name##SizeInBytes >> 3) << 3)); \
-    Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##,    \
-                       Info->##Name##SizeInBytes)
+#define ZERO_ARRAY(Name)                                 \
+    if (Info->##Name##SizeInBytes > 0) {                 \
+        ASSERT(0 == Info->##Name##SizeInBytes -          \
+               ((Info->##Name##SizeInBytes >> 3) << 3)); \
+        Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##,    \
+                           Info->##Name##SizeInBytes);   \
+    }
 
     ZERO_ARRAY(Order);
     ZERO_ARRAY(Assigned);
+    ZERO_ARRAY(Vertices3);
 
     Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
     ASSERT(Graph->OrderIndex > 0);
 
-    if (TableCreateFlags.HashAllKeysFirst) {
+    if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3) {
 
         ASSERT(Graph->VertexPairs != NULL);
 
@@ -3626,11 +3804,6 @@ Return Value:
         // We can detect this situation by determining if the write-combining
         // behavior is requested but the array is not currently indicating as
         // write-combined.
-        //
-        // N.B. We don't need to clear the individual vertex pair array elements
-        //      like we do with the first/next/edge arrays as they have no state
-        //      associated with the notion of being visited or not.  (Whereas we
-        //      need to set the first/next/edge arrays to -1 before solving.)
         //
 
         if (Graph->Flags.WantsWriteCombiningForVertexPairsArray &&
@@ -3658,6 +3831,23 @@ Return Value:
                 Result = PH_E_SYSTEM_CALL_FAILED;
                 goto End;
             }
+        }
+
+        //
+        // For graph impl 1 and 2, We don't need to clear the individual vertex
+        // pair array elements like we do with the first/next/edge arrays as
+        // they have no state associated with the notion of being visited or
+        // not.  (Whereas we need to set the first/next/edge arrays to -1 before
+        // solving.)
+        //
+
+        //
+        // For graph impl 3, the vertex pairs have state, and need to be set to
+        // -1.
+        //
+
+        if (Graph->Impl == 3) {
+            EMPTY_ARRAY(VertexPairs);
         }
     }
 
