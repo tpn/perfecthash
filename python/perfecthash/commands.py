@@ -121,7 +121,7 @@ class ExtractAllCfgTargets(InvariantAwareCommand):
         from tqdm import tqdm
 
         from .util import mkdir
-        from .path import join
+        from .path import join, basename
 
         from .dumpbin import Dumpbin
 
@@ -142,7 +142,7 @@ class ExtractAllCfgTargets(InvariantAwareCommand):
 
         paths = []
         out(f'Finding all files in {self._input_dir} ending with {suffixes}...')
-        for path in tqdm(glob.iglob(base, recursive=True)):
+        for path in tqdm(list(glob.iglob(base, recursive=True))):
             if path.endswith(suffixes):
                 paths.append(path)
 
@@ -165,10 +165,13 @@ class ExtractAllCfgTargets(InvariantAwareCommand):
                 self._err(msg)
         else:
             for path in tqdm(paths):
-                db = Dumpbin(path)
-                if not db.is_cf_instrumented:
-                    continue
-                db.save(output_dir)
+                try:
+                    db = Dumpbin(path)
+                    if not db.is_cf_instrumented:
+                        continue
+                    db.save(output_dir)
+                except Exception as e:
+                    self._err(f'Failed to process {path}: {e}')
 
 class ExtractSingleCfgTarget(InvariantAwareCommand):
     """

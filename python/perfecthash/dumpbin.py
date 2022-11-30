@@ -4,6 +4,7 @@
 
 import re
 import sys
+import os.path
 
 import textwrap
 
@@ -116,8 +117,13 @@ class Dumpbin(InvariantAwareObject):
 
     def _load(self):
 
+        if os.path.exists(self.conf.dumpbin_exe_path):
+            dumpbin_exe = self.conf.dumpbin_exe_path
+        else:
+            dumpbin_exe = 'dumpbin.exe'
+
         cmd = [
-            self.conf.dumpbin_exe_path,
+            dumpbin_exe,
             '/headers',
             '/loadconfig',
             self.path
@@ -213,10 +219,7 @@ class Dumpbin(InvariantAwareObject):
         array = self.guard_cf_func_table_address_array_base0
         return [ hex(i)[2:].zfill(8).encode('ascii') for i in array ]
 
-    def save(self, output_dir):
-
-        import numpy as np
-
+    def binary_path(self, output_dir):
         from .path import (
             basename,
             splitext,
@@ -232,6 +235,19 @@ class Dumpbin(InvariantAwareObject):
 
         name = name.replace(' ', '').replace('(', '').replace(')', '')
 
+        prefix = join_path(output_dir, '%s-%d.' % (name, len(a)))
+
+        binary_path = ''.join((prefix, '.keys'))
+
+        return binary_path
+
+    def plot_path(self, output_dir):
+        return self.binary_path(output_dir).replace('.keys', '.png')
+
+    def save(self, output_dir):
+
+        import numpy as np
+
         a = self.guard_cf_func_table_address_array_base0
         a = np.sort(np.unique(np.array(a, dtype='uint32')))
         # Skip keys of just 0.
@@ -241,12 +257,10 @@ class Dumpbin(InvariantAwareObject):
         if len(a) == 0:
             return
 
-        prefix = join_path(output_dir, '%s-%d.' % (name, len(a)))
-
-        binary_path = ''.join((prefix, '.keys'))
+        binary_path = self.binary_path(output_dir)
 
         if self._save_plot:
-            plot_path = ''.join((prefix, '.png'))
+            plot_path = self.plot_path(output_dir)
             save_array_plot_to_png_file(plot_path, a)
 
         fp = np.memmap(binary_path, dtype='uint32', mode='w+', shape=a.shape)
