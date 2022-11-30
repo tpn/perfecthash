@@ -2635,8 +2635,8 @@ def scatter6(df, min_num_edges=None, max_num_edges=None, p=None,
 
     if not p:
         p = figure(
-            plot_width=1000,
-            plot_height=1000,
+            width=1000,
+            height=1000,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -2797,8 +2797,8 @@ def scatter7(df, min_num_edges=None, max_num_edges=None, p=None,
 
     if not p:
         p = figure(
-            plot_width=1000,
-            plot_height=1000,
+            width=1000,
+            height=1000,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -2934,12 +2934,12 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
         Select,
         TapTool,
         Range1d,
         ColorBar,
         CustomJS,
+        TabPanel,
         RangeSlider,
         MultiSelect,
         ColumnDataSource,
@@ -3063,8 +3063,8 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
         source = ColumnDataSource(df)
 
         p = figure(
-            plot_width=1000,
-            plot_height=1000,
+            width=1000,
+            height=1000,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -3119,7 +3119,7 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
         taptool = p.select(type=TapTool)
         taptool.callback = callback
 
-        panel = Panel(child=p, title=hash_func)
+        panel = TabPanel(child=p, title=hash_func)
         panels.append(panel)
 
     tabs = Tabs(tabs=panels)
@@ -3141,7 +3141,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -3274,8 +3274,8 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
         source = ColumnDataSource(df)
 
         p = figure(
-            plot_width=500,
-            plot_height=500,
+            width=500,
+            height=500,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -3353,7 +3353,7 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -3477,8 +3477,8 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
         source = ColumnDataSource(df)
 
         p = figure(
-            plot_width=500,
-            plot_height=500,
+            width=500,
+            height=500,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -3552,7 +3552,7 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -3677,8 +3677,8 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
         source = ColumnDataSource(df)
 
         p = figure(
-            plot_width=500,
-            plot_height=500,
+            width=500,
+            height=500,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -3758,7 +3758,7 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -3883,8 +3883,8 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
         df.sort_values(by=['NumberOfEdges'])
 
         p = figure(
-            plot_width=500,
-            plot_height=500,
+            width=500,
+            height=500,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -3970,7 +3970,7 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -4129,8 +4129,8 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
         df.sort_values(by=['NumberOfVertices'])
 
         p = figure(
-            plot_width=500,
-            plot_height=500,
+            width=500,
+            height=500,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -4234,7 +4234,7 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -4392,8 +4392,8 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
         df.sort_values(by=['NumberOfVertices'])
 
         p = figure(
-            plot_width=900,
-            plot_height=900,
+            width=900,
+            height=900,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -4532,7 +4532,7 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -4694,8 +4694,8 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
         df.sort_values(by=['NumberOfVertices'])
 
         p = figure(
-            plot_width=900,
-            plot_height=900,
+            width=900,
+            height=900,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -4835,7 +4835,7 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -5005,8 +5005,8 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
             tools += ',hover'
 
         p = figure(
-            plot_width=900,
-            plot_height=900,
+            width=900,
+            height=900,
             tools=tools,
             **figure_kwds,
         )
@@ -5112,7 +5112,7 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Slope,
         Legend,
         Select,
@@ -5283,8 +5283,8 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
             tools += ',hover'
 
         p = figure(
-            plot_width=500,
-            plot_height=500,
+            width=500,
+            height=500,
             tools=tools,
             **figure_kwds,
         )
@@ -5448,7 +5448,7 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
 def gridplot_hashfunc_seed_byte_count(
         source_df, hash_func, seed_num, which_bytes,
         num_resizes=0, clamp='N',
-        plot_width=None, plot_height=None,
+        width=None, height=None,
         min_num_vertices=None, max_num_vertices=None,
         show_plot=True, figure_kwds=None, sizing_mode=None,
         separate_num_vertices=None, persist_dfs=None):
@@ -5479,11 +5479,11 @@ def gridplot_hashfunc_seed_byte_count(
 
     import bokeh.palettes as bp
 
-    if plot_width is None:
-        plot_width = 500
+    if width is None:
+        width = 500
 
-    if plot_height is None:
-        plot_height = 300
+    if height is None:
+        height = 300
 
     if figure_kwds is None:
         figure_kwds = {}
@@ -5576,8 +5576,8 @@ def gridplot_hashfunc_seed_byte_count(
         p = figure(
             x_range=FactorRange(*tuple(str(i) for i in mask_byte_range)),
             y_range=(df.Count.min(), df.Count.max()),
-            plot_width=plot_width,
-            plot_height=plot_height,
+            width=width,
+            height=height,
             tools=tools,
             title=title,
             tooltips=tooltips,
@@ -5638,7 +5638,7 @@ def bar1(df, lrdf, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        Panel,
+        TabPanel,
         Slope,
         Legend,
         Select,
