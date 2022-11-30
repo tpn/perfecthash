@@ -9,6 +9,12 @@
 
 #pragma optimize("", off)
 
+//
+// Disable Spectre warnings.
+//
+
+#pragma warning(disable: 5045)
+
 #endif
 
 //
