@@ -93,7 +93,7 @@ BOOLEAN
     _In_ PUNICODE_STRING String,
     _In_ ULONG Integer,
     _In_ USHORT NumberOfDigits,
-    _In_opt_ WCHAR Trailer
+    _In_ WCHAR Trailer
     );
 typedef APPEND_INTEGER_TO_UNICODE_STRING *PAPPEND_INTEGER_TO_UNICODE_STRING;
 
@@ -103,7 +103,7 @@ BOOLEAN
     _In_ PUNICODE_STRING String,
     _In_ ULONGLONG Integer,
     _In_ USHORT NumberOfDigits,
-    _In_opt_ WCHAR Trailer
+    _In_ WCHAR Trailer
     );
 typedef APPEND_LONGLONG_INTEGER_TO_UNICODE_STRING
       *PAPPEND_LONGLONG_INTEGER_TO_UNICODE_STRING;
@@ -114,7 +114,7 @@ BOOLEAN
     _In_ PSTRING String,
     _In_ ULONG Integer,
     _In_ USHORT NumberOfDigits,
-    _In_opt_ CHAR Trailer
+    _In_ CHAR Trailer
     );
 typedef APPEND_INTEGER_TO_STRING *PAPPEND_INTEGER_TO_STRING;
 
@@ -124,7 +124,7 @@ BOOLEAN
     _In_ PSTRING String,
     _In_ ULONGLONG Integer,
     _In_ USHORT NumberOfDigits,
-    _In_opt_ CHAR Trailer
+    _In_ CHAR Trailer
     );
 typedef APPEND_LONGLONG_INTEGER_TO_STRING
       *PAPPEND_LONGLONG_INTEGER_TO_STRING;
@@ -149,7 +149,7 @@ typedef
 VOID
 (NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX)(
     _Inout_ PCHAR *BufferPointer,
-    _In_opt_ ULONG Integer
+    _In_ ULONG Integer
     );
 typedef APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX
       *PAPPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX;
@@ -158,7 +158,7 @@ typedef
 VOID
 (NTAPI APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX)(
     _Inout_ PCHAR *BufferPointer,
-    _In_opt_ ULONGLONG Integer
+    _In_ ULONGLONG Integer
     );
 typedef APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX
       *PAPPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX;
@@ -171,7 +171,7 @@ typedef
 VOID
 (NTAPI APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW)(
     _Inout_ PCHAR *BufferPointer,
-    _In_opt_ ULONG Integer
+    _In_ ULONG Integer
     );
 typedef APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
       *PAPPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW;
@@ -180,7 +180,7 @@ typedef
 VOID
 (NTAPI APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW)(
     _Inout_ PCHAR *BufferPointer,
-    _In_opt_ ULONGLONG Integer
+    _In_ ULONGLONG Integer
     );
 typedef APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
       *PAPPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW;
@@ -192,7 +192,7 @@ VOID
     _In_ ULONGLONG Integer,
     _In_ BYTE NumberOfDigits,
     _In_ CHAR Pad,
-    _In_opt_ CHAR Trailer
+    _In_ CHAR Trailer
     );
 typedef APPEND_INTEGER_TO_CHAR_BUFFER_EX *PAPPEND_INTEGER_TO_CHAR_BUFFER_EX;
 
@@ -200,7 +200,7 @@ typedef
 VOID
 (NTAPI APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW)(
     _Inout_ PCHAR *BufferPointer,
-    _In_opt_ ULONGLONG Integer
+    _In_ ULONGLONG Integer
     );
 typedef APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW
       *PAPPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX_RAW;
@@ -304,7 +304,7 @@ VOID
     _In_ ULONGLONG Integer,
     _In_ BYTE NumberOfDigits,
     _In_ WCHAR Pad,
-    _In_opt_ WCHAR Trailer
+    _In_ WCHAR Trailer
     );
 typedef APPEND_INTEGER_TO_WIDE_CHAR_BUFFER_EX
       *PAPPEND_INTEGER_TO_WIDE_CHAR_BUFFER_EX;

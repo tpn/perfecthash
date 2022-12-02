@@ -186,8 +186,8 @@ AlignedOffsetAllocBase(
     _In_ PALLOCATOR Allocator,
     _In_ SIZE_T Size,
     _In_ SIZE_T Alignment,
-    _In_opt_ SIZE_T Offset,
-    _In_opt_ BOOLEAN ZeroMemory
+    _In_ SIZE_T Offset,
+    _In_ BOOLEAN ZeroMemory
     )
 {
     ULONG Flags = 0;
@@ -231,8 +231,8 @@ AlignedOffsetReAllocBase(
     _Frees_ptr_opt_ PVOID Previous,
     _In_ SIZE_T Size,
     _In_ SIZE_T Alignment,
-    _In_opt_ SIZE_T Offset,
-    _In_opt_ BOOLEAN ZeroMemory
+    _In_ SIZE_T Offset,
+    _In_ BOOLEAN ZeroMemory
     )
 {
     ULONG Flags = 0;

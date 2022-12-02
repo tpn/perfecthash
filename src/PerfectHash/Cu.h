@@ -785,7 +785,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_INIT)(
-    _In_opt_ ULONG Flags
+    _In_ ULONG Flags
     );
 typedef CU_INIT *PCU_INIT;
 
@@ -797,7 +797,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_GET_ERROR_NAME)(
-    _In_opt_ CU_RESULT Error,
+    _In_ CU_RESULT Error,
     _Outptr_result_z_ PCSZ *ErrorString
     );
 typedef CU_GET_ERROR_NAME *PCU_GET_ERROR_NAME;
@@ -806,7 +806,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_GET_ERROR_STRING)(
-    _In_opt_ CU_RESULT Error,
+    _In_ CU_RESULT Error,
     _Outptr_result_z_ PCSZ *ErrorString
     );
 typedef CU_GET_ERROR_STRING *PCU_GET_ERROR_STRING;
@@ -832,7 +832,7 @@ _Must_inspect_result_
 CU_RESULT
 (CU_DEVICE_GET)(
     _Out_ PCU_DEVICE Device,
-    _In_opt_ LONG Ordinal
+    _In_ LONG Ordinal
     );
 typedef CU_DEVICE_GET *PCU_DEVICE_GET;
 
@@ -892,7 +892,7 @@ _Must_inspect_result_
 CU_RESULT
 (CU_CTX_CREATE)(
     _Out_ PCU_CONTEXT *ContextPointer,
-    _In_opt_ CU_CTX_CREATE_FLAGS Flags,
+    _In_ CU_CTX_CREATE_FLAGS Flags,
     _In_ CU_DEVICE Device
     );
 typedef CU_CTX_CREATE *PCU_CTX_CREATE;
@@ -1025,7 +1025,7 @@ _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE)(
     _Out_ PPCU_STREAM StreamPointer,
-    _In_opt_ CU_STREAM_FLAGS Flags
+    _In_ CU_STREAM_FLAGS Flags
     );
 typedef CU_STREAM_CREATE *PCU_STREAM_CREATE;
 
@@ -1034,8 +1034,8 @@ _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE_WITH_PRIORITY)(
     _Outptr_result_maybenull_ PPCU_STREAM StreamPointer,
-    _In_opt_ CU_STREAM_FLAGS Flags,
-    _In_opt_ ULONG Priority
+    _In_ CU_STREAM_FLAGS Flags,
+    _In_ ULONG Priority
     );
 typedef CU_STREAM_CREATE_WITH_PRIORITY *PCU_STREAM_CREATE_WITH_PRIORITY;
 
@@ -1068,7 +1068,7 @@ _Must_inspect_result_
 CU_RESULT
 (CALLBACK CU_STREAM_CALLBACK)(
     _In_opt_ PCU_STREAM Stream,
-    _In_opt_ CU_RESULT Status,
+    _In_ CU_RESULT Status,
     _In_opt_ PVOID UserData
     );
 typedef CU_STREAM_CALLBACK *PCU_STREAM_CALLBACK;
@@ -1080,7 +1080,7 @@ CU_RESULT
     _In_ PCU_STREAM Stream,
     _In_ PCU_STREAM_CALLBACK Callback,
     _In_opt_ PVOID UserData,
-    _In_opt_ ULONG Flags
+    _In_ ULONG Flags
     );
 typedef CU_STREAM_ADD_CALLBACK *PCU_STREAM_ADD_CALLBACK;
 
@@ -1090,8 +1090,8 @@ CU_RESULT
 (CU_STREAM_ATTACH_MEM_ASYNC)(
     _In_ PCU_STREAM Stream,
     _In_ PCU_DEVICE_POINTER Address,
-    _In_opt_ _Pre_ _Field_range_(==, 0) SIZE_T Length,
-    _In_opt_ CU_MEM_ATTACH_FLAGS Flags
+    _In_ _Pre_ _Field_range_(==, 0) SIZE_T Length,
+    _In_ CU_MEM_ATTACH_FLAGS Flags
     );
 typedef CU_STREAM_ATTACH_MEM_ASYNC *PCU_STREAM_ATTACH_MEM_ASYNC;
 
@@ -1101,7 +1101,7 @@ CU_RESULT
 (CU_STREAM_WAIT_EVENT)(
     _In_ PCU_STREAM Stream,
     _In_ PCU_EVENT Event,
-    _In_opt_ ULONG Unused
+    _In_ ULONG Unused
     );
 typedef CU_STREAM_WAIT_EVENT *PCU_STREAM_WAIT_EVENT;
 
@@ -1111,8 +1111,8 @@ CU_RESULT
 (CU_STREAM_WAIT_VALUE_32)(
     _In_ PCU_STREAM Stream,
     _In_ PCU_DEVICE_POINTER Address,
-    _In_opt_ ULONG Value,
-    _In_opt_ CU_STREAM_WAIT_VALUE Flags
+    _In_ ULONG Value,
+    _In_ CU_STREAM_WAIT_VALUE Flags
     );
 typedef CU_STREAM_WAIT_VALUE_32 *PCU_STREAM_WAIT_VALUE_32;
 
@@ -1122,8 +1122,8 @@ CU_RESULT
 (CU_STREAM_WRITE_VALUE_32)(
     _In_ PCU_STREAM Stream,
     _In_ PCU_DEVICE_POINTER Address,
-    _In_opt_ ULONG Value,
-    _In_opt_ CU_STREAM_WRITE_VALUE Flags
+    _In_ ULONG Value,
+    _In_ CU_STREAM_WRITE_VALUE Flags
     );
 typedef CU_STREAM_WRITE_VALUE_32 *PCU_STREAM_WRITE_VALUE_32;
 
@@ -1134,7 +1134,7 @@ CU_RESULT
     _In_ PCU_STREAM Stream,
     _In_ ULONG Count,
     _In_reads_(Count) PCU_STREAM_BATCH_MEM_OP_PARAMS Params,
-    _In_opt_ ULONG Flags
+    _In_ ULONG Flags
     );
 typedef CU_STREAM_BATCH_MEM_OP *PCU_STREAM_BATCH_MEM_OP;
 
@@ -1147,7 +1147,7 @@ _Must_inspect_result_
 CU_RESULT
 (CU_EVENT_CREATE)(
     _Outptr_result_maybenull_ PPCU_EVENT EventPointer,
-    _In_opt_ CU_EVENT_FLAGS Flags
+    _In_ CU_EVENT_FLAGS Flags
     );
 typedef CU_EVENT_CREATE *PCU_EVENT_CREATE;
 
@@ -1221,7 +1221,7 @@ CU_RESULT
 (CU_MEM_HOST_ALLOC)(
     _Outptr_result_nullonfailure_ PVOID *pHostPointer,
     _In_ SIZE_T SizeInBytes,
-    _In_opt_ CU_MEM_HOST_ALLOC_FLAGS Flags
+    _In_ CU_MEM_HOST_ALLOC_FLAGS Flags
     );
 typedef CU_MEM_HOST_ALLOC *PCU_MEM_HOST_ALLOC;
 

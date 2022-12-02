@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1048,7 +1048,7 @@ typedef
 NTSTATUS
 (NTAPI RTL_CHAR_TO_INTEGER)(
     _In_ PCSZ String,
-    _In_opt_ ULONG Base,
+    _In_ ULONG Base,
     _Out_ PULONG Value
     );
 typedef RTL_CHAR_TO_INTEGER *PRTL_CHAR_TO_INTEGER;
@@ -1057,7 +1057,7 @@ typedef
 NTSTATUS
 (NTAPI RTL_INTEGER_TO_CHAR)(
     _In_ ULONG Value,
-    _In_opt_ ULONG Base,
+    _In_ ULONG Base,
     _In_ ULONG SizeOfBuffer,
     _Out_writes_bytes_(SizeOfBuffer) PCHAR Buffer
     );
@@ -1067,7 +1067,7 @@ typedef
 NTSTATUS
 (NTAPI RTL_UNICODE_STRING_TO_INTEGER)(
     _In_ PCUNICODE_STRING String,
-    _In_opt_ ULONG Base,
+    _In_ ULONG Base,
     _Out_ PULONG Value
     );
 typedef RTL_UNICODE_STRING_TO_INTEGER *PRTL_UNICODE_STRING_TO_INTEGER;
@@ -1076,7 +1076,7 @@ typedef
 NTSTATUS
 (RTL_UNICODE_STRING_TO_INT64)(
     _In_ PCUNICODE_STRING String,
-    _In_opt_ ULONG Base,
+    _In_ ULONG Base,
     _Out_ PLONG64 Number,
     _Out_opt_ PWSTR *EndPointer
     );
@@ -1401,7 +1401,7 @@ VOID
 (NTAPI *PRTL_INITIALIZE_BITMAP)(
     _Out_ PRTL_BITMAP BitMapHeader,
     _In_opt_ PULONG BitMapBuffer,
-    _In_opt_ ULONG SizeOfBitMap
+    _In_ ULONG SizeOfBitMap
     );
 
 typedef
@@ -1792,7 +1792,7 @@ HRESULT
     _In_ PRTL Rtl,
     _In_ PCSZ FunctionName,
     _In_ PCSZ FileName,
-    _In_opt_ ULONG LineNumber
+    _In_ ULONG LineNumber
     );
 typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
 
@@ -2228,7 +2228,7 @@ BOOLEAN
 FindCharInUnicodeString(
     _In_ PCUNICODE_STRING String,
     _In_ WCHAR Char,
-    _In_opt_ _Field_range_(<=, String->Length >> 1) USHORT StartAtCharOffset,
+    _In_ _Field_range_(<=, String->Length >> 1) USHORT StartAtCharOffset,
     _Out_opt_ PUSHORT FoundAtCharOffset
     )
 {
@@ -2335,7 +2335,7 @@ HRESULT
 (RTL_FILL_PAGES)(
     _In_ PRTL Rtl,
     _Out_writes_bytes_all_(NumberOfPages * 4096) PCHAR Dest,
-    _In_opt_ BYTE Byte,
+    _In_ BYTE Byte,
     _In_ ULONG NumberOfPages
     );
 typedef RTL_FILL_PAGES *PRTL_FILL_PAGES;
@@ -2671,7 +2671,7 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE RTL_LOCK_SERVER)(
     _In_ PRTL Rtl,
-    _In_opt_ BOOL Lock
+    _In_ BOOL Lock
     );
 typedef RTL_LOCK_SERVER *PRTL_LOCK_SERVER;
 

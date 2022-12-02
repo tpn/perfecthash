@@ -132,7 +132,7 @@ HRESULT
     _In_ PALLOCATOR Allocator,
     _In_ PCUNICODE_STRING InputString,
     _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETER Param,
-    _In_opt_ BOOLEAN EnsureSortedAndUnique
+    _In_ BOOLEAN EnsureSortedAndUnique
     );
 typedef TRY_EXTRACT_VALUE_ARRAY *PTRY_EXTRACT_VALUE_ARRAY;
 

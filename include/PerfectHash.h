@@ -628,7 +628,7 @@ typedef DLL_CAN_UNLOAD_NOW *PDLL_CAN_UNLOAD_NOW;
     HRESULT                                                      \
     (STDAPICALLTYPE Upper##_LOCK_SERVER)(                        \
         _In_ P##Upper Name,                                      \
-        _In_opt_ BOOL Lock                                       \
+        _In_ BOOL Lock                                           \
         );                                                       \
     typedef Upper##_LOCK_SERVER *P##Upper##_LOCK_SERVER
 
@@ -849,7 +849,7 @@ PVOID
     _In_ PALLOCATOR Allocator,
     _In_ SIZE_T Size,
     _In_ SIZE_T Alignment,
-    _In_opt_ SIZE_T Offset
+    _In_ SIZE_T Offset
     );
 typedef ALLOCATOR_ALIGNED_OFFSET_MALLOC *PALLOCATOR_ALIGNED_OFFSET_MALLOC;
 
@@ -864,7 +864,7 @@ PVOID
     _In_ SIZE_T NumberOfElements,
     _In_ SIZE_T ElementSize,
     _In_ SIZE_T Alignment,
-    _In_opt_ SIZE_T Offset
+    _In_ SIZE_T Offset
     );
 typedef ALLOCATOR_ALIGNED_OFFSET_CALLOC *PALLOCATOR_ALIGNED_OFFSET_CALLOC;
 
@@ -878,7 +878,7 @@ PVOID
     _Frees_ptr_opt_ PVOID Address,
     _In_ SIZE_T Size,
     _In_ SIZE_T Alignment,
-    _In_opt_ SIZE_T Offset
+    _In_ SIZE_T Offset
     );
 typedef ALLOCATOR_ALIGNED_OFFSET_REALLOC *PALLOCATOR_ALIGNED_OFFSET_REALLOC;
 
@@ -893,7 +893,7 @@ PVOID
     _In_ SIZE_T NumberOfElements,
     _In_ SIZE_T ElementSize,
     _In_ SIZE_T Alignment,
-    _In_opt_ SIZE_T Offset
+    _In_ SIZE_T Offset
     );
 typedef ALLOCATOR_ALIGNED_OFFSET_RECALLOC *PALLOCATOR_ALIGNED_OFFSET_RECALLOC;
 
@@ -3741,7 +3741,7 @@ HRESULT
 (STDAPICALLTYPE PERFECT_HASH_TABLE_TEST)(
     _In_ PPERFECT_HASH_TABLE Table,
     _In_opt_ PPERFECT_HASH_KEYS Keys,
-    _In_opt_ BOOLEAN DebugBreakOnFailure
+    _In_ BOOLEAN DebugBreakOnFailure
     );
 typedef PERFECT_HASH_TABLE_TEST *PPERFECT_HASH_TABLE_TEST;
 
@@ -3991,8 +3991,8 @@ HRESULT
 (NTAPI PERFECT_HASH_PRINT_ERROR)(
     _In_ PCSZ FunctionName,
     _In_ PCSZ FileName,
-    _In_opt_ ULONG LineNumber,
-    _In_opt_ ULONG Error
+    _In_ ULONG LineNumber,
+    _In_ ULONG Error
     );
 typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
 
@@ -4001,7 +4001,7 @@ _Success_(return >= 0)
 _Check_return_opt_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_MESSAGE)(
-    _In_opt_ ULONG Code,
+    _In_ ULONG Code,
     ...
     );
 typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
@@ -4154,7 +4154,7 @@ Return Value:
 
 --*/
 {
-    PROC Proc;
+    PVOID Proc;
     HRESULT Result;
     HMODULE Module;
     PPERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
@@ -4171,7 +4171,7 @@ Return Value:
         return E_FAIL;
     }
 
-    Proc = GetProcAddress(Module, "PerfectHashPrintError");
+    Proc = (PVOID)GetProcAddress(Module, "PerfectHashPrintError");
     if (!Proc) {
         FreeLibrary(Module);
         return E_UNEXPECTED;
@@ -4179,7 +4179,7 @@ Return Value:
 
     PerfectHashPrintError = (PPERFECT_HASH_PRINT_ERROR)Proc;
 
-    Proc = GetProcAddress(Module, "PerfectHashPrintMessage");
+    Proc = (PVOID)GetProcAddress(Module, "PerfectHashPrintMessage");
     if (!Proc) {
         FreeLibrary(Module);
         return E_UNEXPECTED;
@@ -4187,7 +4187,7 @@ Return Value:
 
     PerfectHashPrintMessage = (PPERFECT_HASH_PRINT_MESSAGE)Proc;
 
-    Proc = GetProcAddress(Module, "PerfectHashDllGetClassObject");
+    Proc = (PVOID)GetProcAddress(Module, "PerfectHashDllGetClassObject");
     if (!Proc) {
         SYS_ERROR(GetProcAddress);
         FreeLibrary(Module);

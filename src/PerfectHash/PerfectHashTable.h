@@ -99,7 +99,7 @@ FORCEINLINE
 BOOLEAN
 SkipWritingCsvRow(
     _In_ PERFECT_HASH_TABLE_CREATE_FLAGS Flags,
-    _In_opt_ HRESULT TableCreateResult
+    _In_ HRESULT TableCreateResult
     )
 {
     return (
@@ -534,9 +534,9 @@ HRESULT
     _In_ PUNICODE_STRING Suffix,
     _In_opt_ PULONG NumberOfResizeEvents,
     _In_opt_ PULARGE_INTEGER NumberOfTableElements,
-    _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _In_opt_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_opt_ PCUNICODE_STRING RngName,
     _In_opt_ PCUNICODE_STRING AdditionalSuffix,
     _Out_ PUSHORT AlgorithmOffset
@@ -553,9 +553,9 @@ HRESULT
     _In_ PPERFECT_HASH_PATH ExistingPath,
     _In_opt_ PULONG NumberOfResizeEvents,
     _In_opt_ PULARGE_INTEGER NumberOfTableElements,
-    _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _In_opt_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
     _In_opt_ PCUNICODE_STRING RngName,
     _In_opt_ PCUNICODE_STRING NewDirectory,
     _In_opt_ PCUNICODE_STRING NewBaseName,
@@ -574,7 +574,7 @@ _Requires_exclusive_lock_held_(Table->Lock)
 HRESULT
 (NTAPI PERFECT_HASH_TABLE_CREATE_VALUES_ARRAY)(
     _In_ PPERFECT_HASH_TABLE Table,
-    _In_opt_ ULONG ValueSizeInBytes
+    _In_ ULONG ValueSizeInBytes
     );
 typedef PERFECT_HASH_TABLE_CREATE_VALUES_ARRAY
       *PPERFECT_HASH_TABLE_CREATE_VALUES_ARRAY;
