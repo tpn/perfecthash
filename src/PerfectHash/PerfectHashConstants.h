@@ -467,7 +467,6 @@ GetFileWorkItemStreamName(
 }
 
 FORCEINLINE
-_Must_inspect_result_
 _Success_(return != 0)
 PCUNICODE_STRING
 GetFileWorkItemBaseName(
@@ -481,7 +480,6 @@ GetFileWorkItemBaseName(
 }
 
 FORCEINLINE
-_Must_inspect_result_
 _Success_(return != 0)
 PCUNICODE_STRING
 GetFileWorkItemExtension(

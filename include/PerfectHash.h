@@ -4074,16 +4074,37 @@ IsValidPerfectHashEnumId(
 #define PH_BREAK() __debugbreak()
 
 //
+// Helper inline that decorates RaiseException() with _Analysis_noreturn_,
+// which we need for SAL to grok our PH_RAISE() calls correctly.
+//
+
+_Analysis_noreturn_
+FORCEINLINE
+VOID
+PhRaiseException(
+    _In_ DWORD dwExceptionCode,
+    _In_ DWORD dwExceptionFlags,
+    _In_ DWORD nNumberOfArguments,
+    _In_reads_opt_(nNumberOfArguments) CONST ULONG_PTR* lpArguments
+    )
+{
+    RaiseException(dwExceptionCode,
+                   dwExceptionFlags,
+                   nNumberOfArguments,
+                   lpArguments);
+}
+
+//
 // Helper macro for raising non-continuable exceptions.
 //
 
 #ifdef _DEBUG
-#define PH_RAISE(Result)                                             \
-    __debugbreak();                                                  \
-    RaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
+#define PH_RAISE(Result)                                               \
+    __debugbreak();                                                    \
+    PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #else
 #define PH_RAISE(Result) \
-    RaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
+    PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #endif
 
 //
