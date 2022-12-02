@@ -245,11 +245,23 @@ Abstract:
 //    ID | Name
 //     1   Chm01
 // 
-// Hash Functions:
+// All Hash Functions:
+// 
+//     N.B. * indicates recommended hash functions.
 // 
 //    ID | Name (Number of Seeds)
-//     2   Jenkins (2)
+// *   2   Jenkins (2)
+//     3   JenkinsMod (2)
+//     4   RotateXor (4)
+//     5   AddSubXor (4)
+//     6   Xor (2)
+//     7   Dummy (3)
+//     8   Crc32RotateXor (3)
+//     9   Crc32 (2)
+//    10   Djb (2)
+//    11   DjbXor (11)
 //    12   Fnv (2)
+//    13   Crc32Not (2)
 //    14   Crc32RotateX (3)
 //    15   Crc32RotateXY (3)
 //    16   Crc32RotateWXYZ (3)
@@ -257,18 +269,20 @@ Abstract:
 //    18   ShiftMultiplyXorShift (3)
 //    19   ShiftMultiplyXorShift2 (6)
 //    20   RotateMultiplyXorRotate2 (6)
-//    21   MultiplyRotateR (3)
-//    22   MultiplyRotateLR (3)
-//    23   MultiplyShiftR (3)
+// *  21   MultiplyRotateR (3)
+// *  22   MultiplyRotateLR (3)
+// *  23   MultiplyShiftR (3)
 //    24   MultiplyShiftLR (3)
 //    25   Multiply (2)
 //    26   MultiplyXor (4)
-//    27   MultiplyRotateRMultiply (5)
-//    28   MultiplyRotateR2 (5)
-//    29   MultiplyShiftRMultiply (5)
-//    30   MultiplyShiftR2 (5)
-//    31   RotateRMultiply (3)
-//    32   RotateRMultiplyRotateR (3)
+// *  27   MultiplyRotateRMultiply (5)
+// *  28   MultiplyRotateR2 (5)
+// *  29   MultiplyShiftRMultiply (5)
+// *  30   MultiplyShiftR2 (5)
+// *  31   RotateRMultiply (3)
+// *  32   RotateRMultiplyRotateR (3)
+// *  33   Multiply643ShiftR (3)
+// *  33   Multiply644ShiftR (3)
 // 
 // Mask Functions:
 // 
@@ -393,6 +407,8 @@ Abstract:
 //                  --FirstGraphWins mode, however, it is highly probable that it
 //                  will find a graph that is better (based on the predicate) than
 //                  when in first graph wins mode.
+// 
+//         N.B. See also: --TargetNumberOfSolutions, --FixedAttempts.
 // 
 //     --SkipMemoryCoverageInFirstGraphWinsMode
 // 
@@ -604,11 +620,12 @@ Abstract:
 // 
 // Table Create Parameters:
 // 
-//     --GraphImpl=1|2 [default: 2]
+//     --GraphImpl=1|2|3 [default: 3]
 // 
 //         Selects the backend version of the graph assignment step.  Version 1
 //         matches the original CHM algorithm, version 2 is faster and was derived
-//         from NetBSD's nbperf routine.  Defaults to version 2.
+//         from NetBSD's nbperf module, version 3 is even faster and was derived
+//         from additional improvements to NetBSD's nbperf module in 2020.
 // 
 //     --ValueSizeInBytes=4|8
 // 
@@ -731,6 +748,18 @@ Abstract:
 //         Must contain two or more elements.
 // 
 //         N.B. Only applies to PerfectHashCreate.exe.
+// 
+//     --TargetNumberOfSolutions=N
+// 
+//         Where N is a positive integer and represents a target number of
+//         solutions to find before stopping graph solving.  Typically only useful
+//         for benchmarking.
+// 
+//     --FixedAttempts=N
+// 
+//         Where N is a positive integer and represents a fixed number of attempts
+//         that will be made (irrespective of whether or not a solution was found)
+//         before graph solving stops.  Typically only useful for benchmarking.
 // 
 //     --Seeds=<n1,...n8>
 // 
@@ -3764,7 +3793,7 @@ Abstract:
 //
 // MessageText:
 //
-// Invalid value for --GraphImpl.  Valid values: 1, 2.  (Default: 2.)
+// Invalid value for --GraphImpl.  Valid values: 1, 2, 3.  (Default: 3.)
 //
 #define PH_E_INVALID_GRAPH_IMPL          ((HRESULT)0xE00403B8L)
 

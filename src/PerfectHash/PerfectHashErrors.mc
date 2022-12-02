@@ -191,11 +191,23 @@ Algorithms:
    ID | Name
     1   Chm01
 
-Hash Functions:
+All Hash Functions:
+
+    N.B. * indicates recommended hash functions.
 
    ID | Name (Number of Seeds)
-    2   Jenkins (2)
+*   2   Jenkins (2)
+    3   JenkinsMod (2)
+    4   RotateXor (4)
+    5   AddSubXor (4)
+    6   Xor (2)
+    7   Dummy (3)
+    8   Crc32RotateXor (3)
+    9   Crc32 (2)
+   10   Djb (2)
+   11   DjbXor (11)
    12   Fnv (2)
+   13   Crc32Not (2)
    14   Crc32RotateX (3)
    15   Crc32RotateXY (3)
    16   Crc32RotateWXYZ (3)
@@ -203,18 +215,20 @@ Hash Functions:
    18   ShiftMultiplyXorShift (3)
    19   ShiftMultiplyXorShift2 (6)
    20   RotateMultiplyXorRotate2 (6)
-   21   MultiplyRotateR (3)
-   22   MultiplyRotateLR (3)
-   23   MultiplyShiftR (3)
+*  21   MultiplyRotateR (3)
+*  22   MultiplyRotateLR (3)
+*  23   MultiplyShiftR (3)
    24   MultiplyShiftLR (3)
    25   Multiply (2)
    26   MultiplyXor (4)
-   27   MultiplyRotateRMultiply (5)
-   28   MultiplyRotateR2 (5)
-   29   MultiplyShiftRMultiply (5)
-   30   MultiplyShiftR2 (5)
-   31   RotateRMultiply (3)
-   32   RotateRMultiplyRotateR (3)
+*  27   MultiplyRotateRMultiply (5)
+*  28   MultiplyRotateR2 (5)
+*  29   MultiplyShiftRMultiply (5)
+*  30   MultiplyShiftR2 (5)
+*  31   RotateRMultiply (3)
+*  32   RotateRMultiplyRotateR (3)
+*  33   Multiply643ShiftR (3)
+*  33   Multiply644ShiftR (3)
 
 Mask Functions:
 
@@ -3424,7 +3438,7 @@ Severity=Fail
 Facility=ITF
 SymbolicName=PH_E_INVALID_GRAPH_IMPL
 Language=English
-Invalid value for --GraphImpl.  Valid values: 1, 2.  (Default: 2.)
+Invalid value for --GraphImpl.  Valid values: 1, 2, 3.  (Default: 3.)
 .
 
 ;//
