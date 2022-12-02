@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -2041,6 +2041,16 @@ IsValidSeedMasks(
         RotateRMultiplyRotateR,                                          \
         3,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        Multiply643ShiftR,                                               \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+    )                                                                    \
+    ENTRY(                                                               \
+        Multiply644ShiftR,                                               \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x3f3f, 0, 0, 0, 0, 0)                     \
     )                                                                    \
     LAST_ENTRY(Scratch, 3, NO_SEED_MASKS)
 

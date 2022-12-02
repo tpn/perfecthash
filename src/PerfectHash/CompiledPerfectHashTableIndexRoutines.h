@@ -31,6 +31,8 @@
 #include "CompiledPerfectHashTableChm01IndexMultiplyShiftR2And_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexRotateRMultiplyAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexRotateRMultiplyRotateRAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMultiply643ShiftRAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMultiply644ShiftRAnd_CSource_RawCString.h"
 
 //
 // Keep this last.

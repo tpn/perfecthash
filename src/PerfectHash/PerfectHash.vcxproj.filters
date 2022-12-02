@@ -609,6 +609,12 @@
     <ClInclude Include="GraphImpl3.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiply643ShiftRAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiply644ShiftRAnd_CSource_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">

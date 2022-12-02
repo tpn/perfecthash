@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1670,7 +1670,7 @@ PerfectHashTableSeededHashExMultiplyShiftR(
 
 Routine Description:
 
-    Performs a multiply then right rotate.
+    Performs a multiply then right shift.
 
 Arguments:
 
@@ -1715,6 +1715,126 @@ Return Value:
 
     Result.LowPart = (Vertex1 & Mask);
     Result.HighPart = (Vertex2 & Mask);
+
+    return Result.QuadPart;
+}
+
+_Use_decl_annotations_
+ULONGLONG
+PerfectHashTableSeededHashExMultiply643ShiftR(
+    ULONG Key,
+    PULONG Seeds,
+    ULONG Mask
+    )
+/*++
+
+Routine Description:
+
+    Performs a multiply then right shift.
+
+Arguments:
+
+    Key - Supplies the input value to hash.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Mask - Supplies the mask to AND each vertex with.
+
+Return Value:
+
+    64-bit ULONGLONG comprised of two 32-bit masked hashes.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONGLONG Vertex1;
+    ULONGLONG Vertex2;
+    ULONGLONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * (ULONGLONG)SEED1;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * (ULONGLONG)SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE2;
+
+    Result.LowPart = (ULONG)(Vertex1 & Mask);
+    Result.HighPart = (ULONG)(Vertex2 & Mask);
+
+    return Result.QuadPart;
+}
+
+_Use_decl_annotations_
+ULONGLONG
+PerfectHashTableSeededHashExMultiply644ShiftR(
+    ULONG Key,
+    PULONG Seeds,
+    ULONG Mask
+    )
+/*++
+
+Routine Description:
+
+    Performs a multiply then right shift.
+
+Arguments:
+
+    Key - Supplies the input value to hash.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Mask - Supplies the mask to AND each vertex with.
+
+Return Value:
+
+    64-bit ULONGLONG comprised of two 32-bit masked hashes.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONGLONG Vertex1;
+    ULONGLONG Vertex2;
+    ULONGLONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * (ULONGLONG)SEED1;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * (ULONGLONG)SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE2;
+
+    Result.LowPart = (ULONG)(Vertex1 & Mask);
+    Result.HighPart = (ULONG)(Vertex2 & Mask);
 
     return Result.QuadPart;
 }

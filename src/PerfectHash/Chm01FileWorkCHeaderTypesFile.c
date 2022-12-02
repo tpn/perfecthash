@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -90,6 +90,22 @@ PrepareCHeaderTypesFileChm01(
     OUTPUT_RAW("typedef ");
     OUTPUT_STRING(Table->IndexTypeName);
     OUTPUT_RAW(" CPHINDEX;\n\n");
+
+    //
+    // Write the explicit 32-bit and 64-bit versions of above.
+    //
+
+    OUTPUT_RAW("typedef unsigned int CPHKEY32;\n");
+    OUTPUT_RAW("typedef unsigned int CPHDKEY32;\n");
+    OUTPUT_RAW("typedef unsigned int CPHVALUE32;\n");
+    OUTPUT_RAW("typedef unsigned int CPHINDEX32;\n");
+    OUTPUT_RAW("typedef unsigned int CPHSEED32;\n");
+
+    OUTPUT_RAW("typedef unsigned long long CPHKEY64;\n");
+    OUTPUT_RAW("typedef unsigned long long CPHDKEY64;\n");
+    OUTPUT_RAW("typedef unsigned long long CPHVALUE64;\n");
+    OUTPUT_RAW("typedef unsigned long long CPHINDEX64;\n");
+    OUTPUT_RAW("typedef unsigned long long CPHSEED64;\n");
 
     //
     // Write the post glue.

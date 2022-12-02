@@ -108,6 +108,8 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexFnvAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexJenkinsAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexJenkinsModAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiply643ShiftRAnd_CSource_RawCString.h" />
+    <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiply644ShiftRAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexScratchAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexDummyAnd_CSource_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableChm01IndexRotateXorAnd_CSource_RawCString.h" />
