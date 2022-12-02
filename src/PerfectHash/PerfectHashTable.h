@@ -537,6 +537,7 @@ HRESULT
     _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_opt_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PCUNICODE_STRING RngName,
     _In_opt_ PCUNICODE_STRING AdditionalSuffix,
     _Out_ PUSHORT AlgorithmOffset
     );
@@ -555,6 +556,7 @@ HRESULT
     _In_opt_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_opt_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_opt_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PCUNICODE_STRING RngName,
     _In_opt_ PCUNICODE_STRING NewDirectory,
     _In_opt_ PCUNICODE_STRING NewBaseName,
     _In_opt_ PCUNICODE_STRING AdditionalSuffix,

@@ -2376,6 +2376,7 @@ PrepareTableOutputDirectory(
                                         Table->AlgorithmId,
                                         Table->HashFunctionId,
                                         Table->MaskFunctionId,
+                                        Context->RngName,
                                         BaseOutputDirectoryPath,
                                         NULL,           // NewBaseName
                                         NULL,           // AdditionalSuffix
