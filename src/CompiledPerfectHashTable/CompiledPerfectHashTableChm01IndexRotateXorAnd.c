@@ -10,7 +10,10 @@ DECLARE_INDEX_ROUTINE()
     CPHDKEY Vertex2;
     CPHDKEY DownsizedKey;
 
+    //IACA_VC_START();
+
     DownsizedKey = DOWNSIZE_KEY(Key);
+
     A = _rotl(DownsizedKey ^ SEED1, 15);
     B = _rotl(DownsizedKey + SEED2, 7);
     C = _rotr(DownsizedKey - SEED3, 11);
@@ -26,6 +29,8 @@ DECLARE_INDEX_ROUTINE()
     Vertex2 = TABLE_DATA[MaskedHigh];
 
     Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
+
+    //IACA_VC_END();
 
     return Index;
 }

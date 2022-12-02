@@ -9,6 +9,8 @@ DECLARE_INDEX_ROUTINE()
     CPHDKEY DownsizedKey;
     ULONGLONG Combined;
 
+    //IACA_VC_START();
+
     DownsizedKey = DOWNSIZE_KEY(Key);
     Vertex1 = _mm_crc32_u32(SEED1, DownsizedKey);
     Vertex2 = _mm_crc32_u32(SEED2, DownsizedKey);
@@ -22,6 +24,8 @@ DECLARE_INDEX_ROUTINE()
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
 
     Index = Combined & INDEX_MASK;
+
+    //IACA_VC_END();
 
     return Index;
 }

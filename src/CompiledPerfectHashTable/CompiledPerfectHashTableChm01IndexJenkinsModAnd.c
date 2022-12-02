@@ -17,6 +17,8 @@ DECLARE_INDEX_ROUTINE()
     ULONG MaskedHigh;
     CPHDKEY DownsizedKey;
 
+    //IACA_VC_START();
+
     DownsizedKey = DOWNSIZE_KEY(Key);
     Byte = (PBYTE)&Key;
 
@@ -70,6 +72,8 @@ DECLARE_INDEX_ROUTINE()
     Vertex2 = TABLE_DATA[MaskedHigh];
 
     Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
+
+    //IACA_VC_END();
 
     if (((Y + Z) << 4) > Index) {
         return Index;

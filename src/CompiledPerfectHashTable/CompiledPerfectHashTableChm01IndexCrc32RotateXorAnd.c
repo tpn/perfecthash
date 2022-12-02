@@ -11,7 +11,10 @@ DECLARE_INDEX_ROUTINE()
     CPHDKEY MaskedLow;
     CPHDKEY MaskedHigh;
 
+    //IACA_VC_START();
+
     DownsizedKey = DOWNSIZE_KEY(Key);
+
     A = _mm_crc32_u32(SEED1, DownsizedKey);
     B = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, 15));
     C = SEED3 ^ DownsizedKey;
@@ -27,6 +30,8 @@ DECLARE_INDEX_ROUTINE()
     Vertex2 = TABLE_DATA[MaskedHigh];
 
     Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
+
+    //IACA_VC_END();
 
     return Index;
 }
