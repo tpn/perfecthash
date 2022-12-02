@@ -646,4 +646,77 @@ class NewExperiment(InvariantAwareCommand):
     def run(self):
         raise NotImplementedError()
 
+class UpdateCopyright(InvariantAwareCommand):
+    """
+    Updates source code copyright statements to the latest year.
+    """
+
+    path = None
+    _path = None
+    class PathArg(PathInvariant):
+        _help = "path of source code file"
+
+    year = None
+    class YearArg(PositiveIntegerInvariant):
+        _help = "year to update [default: %default]"
+        _default = 2022
+        _mandatory = False
+
+    def run(self):
+        out = self._out
+        path = self._path
+
+        with open(path, 'r') as f:
+            text = f.read()
+
+        if 'Copyright (c)' not in text:
+            return
+
+        lines = text.splitlines()
+        this_year = self.year
+
+        import re
+
+        copyright_fmt = '.*Copyright \(c\) (20\d\d ?-? ?2?0?\d?\d?)(.*)$'
+        year_fmt = '20\d\d'
+        copyright_pattern = re.compile(copyright_fmt)
+        year_pattern = re.compile(year_fmt)
+
+        replace = False
+
+        for (i, line) in enumerate(lines):
+            match = copyright_pattern.match(line)
+            if not match:
+                continue
+            years_string = match.group(1)
+            trailer = match.group(2)
+            years = [ int(year) for year in year_pattern.findall(years_string) ]
+            num_years = len(years)
+            assert num_years in (1, 2), num_years
+            if years[-1] == this_year:
+                break
+            if ' - ' in years_string or num_years == 1:
+                dash = ' - '
+            else:
+                dash = '-'
+            if num_years == 1 and trailer[0] != '.':
+                dot = '. '
+            else:
+                dot = ''
+            new_years = f'{years[0]}{dash}{this_year}{dot}'
+            old_line = line
+            new_line = line.replace(years_string, new_years)
+            replace = True
+            break
+
+        if not replace:
+            return
+
+        new_text = text.replace(old_line, new_line).encode('utf-8')
+        with open(path, 'wb') as f:
+            f.write(new_text)
+
+        out(f"Updated copyright in {path} ('{years_string}' -> '{new_years}').")
+
+
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
