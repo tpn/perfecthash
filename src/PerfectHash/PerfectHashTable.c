@@ -300,7 +300,6 @@ PerfectHashTableInitializeTableSuffix(
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    PCUNICODE_STRING RngName,
     PCUNICODE_STRING AdditionalSuffix,
     PUSHORT AlgorithmOffset
     )
@@ -336,9 +335,6 @@ Arguments:
 
     MaskFunctionId - Optionally supplies the type of masking to use.
 
-    RngName - Optionally supplies the name of the random number generator to
-        append to the buffer.
-
     AdditionalSuffix - Optionally supplies an additional suffix to append to
         the buffer.
 
@@ -351,8 +347,7 @@ Return Value:
 
     S_OK - Initialized suffix successfully.
 
-    E_INVALIDARG - Either AdditionalSuffix or RngName, if non-NULL,
-        were not valid.
+    E_INVALIDARG - AdditionalSuffix, if non-NULL, was not valid.
 
     PH_E_STRING_BUFFER_OVERFLOW - Suffix was too small.
 
@@ -429,18 +424,6 @@ Return Value:
         TableSuffixLength.LongPart += (
             sizeof(L'_') +
             MaskFunctionName->Length
-        );
-    }
-
-    if (ARGUMENT_PRESENT(RngName)) {
-        if (!IsValidUnicodeString(RngName)) {
-            Result = E_INVALIDARG;
-            PH_ERROR(InitializeTableSuffix_RngName, Result);
-            goto Error;
-        }
-        TableSuffixLength.LongPart += (
-            sizeof(L'_') +
-            RngName->Length
         );
     }
 
@@ -537,13 +520,6 @@ Return Value:
         Dest += Count;
     }
 
-    if (RngName) {
-        *Dest++ = L'_';
-        Count = RngName->Length >> 1;
-        CopyInline(Dest, RngName->Buffer, RngName->Length);
-        Dest += Count;
-    }
-
     if (AdditionalSuffix) {
         *Dest++ = L'_';
         Count = AdditionalSuffix->Length >> 1;
@@ -603,7 +579,6 @@ PerfectHashTableCreatePath(
     PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    PCUNICODE_STRING RngName,
     PCUNICODE_STRING NewDirectory,
     PCUNICODE_STRING NewBaseName,
     PCUNICODE_STRING AdditionalSuffix,
@@ -637,9 +612,6 @@ Arguments:
     HashFunctionId - Optionally supplies the hash function to use.
 
     MaskFunctionId - Optionally supplies the type of masking to use.
-
-    RngName - Optionally supplies the name of the random number generator used
-        during table creation to add to the base name.
 
     NewDirectory - Optionally supplies a fully-qualified path to use as the
         directory.
@@ -701,18 +673,8 @@ Return Value:
         // routine below.
         //
 
-        AdditionalSuffixALength += (AdditionalSuffix->Length >> 1) + 1;
+        AdditionalSuffixALength = (AdditionalSuffix->Length >> 1) + 1;
     }
-
-    if (ARGUMENT_PRESENT(RngName)) {
-
-        //
-        // Likewise for the RNG name.
-        //
-
-        AdditionalSuffixALength += (RngName->Length >> 1) + 1;
-    }
-
 
     Rtl = Table->Rtl;
     ZeroArray(TableSuffixBuffer);
@@ -734,7 +696,6 @@ Return Value:
             AlgorithmId,
             HashFunctionId,
             MaskFunctionId,
-            RngName,
             AdditionalSuffix,
             &AlgorithmOffset
         )

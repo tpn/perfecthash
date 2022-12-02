@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -537,7 +537,6 @@ HRESULT
     _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _In_opt_ PCUNICODE_STRING RngName,
     _In_opt_ PCUNICODE_STRING AdditionalSuffix,
     _Out_ PUSHORT AlgorithmOffset
     );
@@ -556,7 +555,6 @@ HRESULT
     _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
     _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _In_opt_ PCUNICODE_STRING RngName,
     _In_opt_ PCUNICODE_STRING NewDirectory,
     _In_opt_ PCUNICODE_STRING NewBaseName,
     _In_opt_ PCUNICODE_STRING AdditionalSuffix,

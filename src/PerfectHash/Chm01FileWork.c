@@ -481,7 +481,6 @@ Return Value:
                                                 Table->AlgorithmId,
                                                 Table->HashFunctionId,
                                                 Table->MaskFunctionId,
-                                                Context->RngName,
                                                 NewDirectory,
                                                 NewBaseName,
                                                 AdditionalSuffix,
