@@ -35,6 +35,14 @@ huge   = 1.0e+300,
 tiny   = 1.0e-300;
 
 //
+// As of VS 2022, this is required to prevent the following:
+//  "'fabs': intrinsic function not declared
+//
+
+double fabs(double);
+#pragma intrinsic(fabs)
+
+//
 // Begin e_sqrt.c
 //
 
