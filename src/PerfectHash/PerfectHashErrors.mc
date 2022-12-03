@@ -782,11 +782,19 @@ Table Create Parameters:
             Philox43210
 
                 Uses the Philox 4x32 10-round pseudo-RNG.  This is the default.
+                This should be used when benchmarking creation performance, as
+                it ensures the random numbers fed to each graph solving attempt
+                are identical between runs, resulting in consistent runtimes
+                across subsequent runs.  It may result in slower solving times
+                versus the System RNG, depending on your key set.
 
             System
 
                 Uses the standard operating system facilities for obtaining
-                random data.  All other --Rng* parameters are ignored.
+                random data.  All other --Rng* parameters are ignored.  This
+                should be used when attempting to find legitimate solutions,
+                however, due to the inherent randomness, will result in varying
+                runtimes across subsequent runs.
 
     --RngSeed=<Seed>
 
