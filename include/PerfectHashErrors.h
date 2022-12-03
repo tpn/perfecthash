@@ -524,6 +524,16 @@ Abstract:
 //         N.B. Only applies when HashAllKeysFirst is set.  Incompatible with
 //              EnableWriteCombineForVertexPairs.
 // 
+//     --TryLargePagesForGraphEdgeAndVertexArrays
+// 
+//         When set, tries to allocate the edge and vertex arrays used by graphs
+//         during solving using large pages.
+// 
+//     --TryLargePagesForGraphTableData
+// 
+//         When set, tries to allocate the table data used by graphs during
+//         solving using large pages.
+// 
 //     --UsePreviousTableSize
 // 
 //         When set, uses any previously-recorded table sizes associated with
@@ -679,35 +689,64 @@ Abstract:
 //         Valid coverage types:
 // 
 //             HighestNumberOfEmptyPages
-//             HighestNumberOfEmptyLargePages
-//             HighestNumberOfEmptyCacheLines
-//             HighestMaxGraphTraversalDepth
-//             HighestTotalGraphTraversals
-//             HighestMaxAssignedPerCacheLineCount
-//             HighestNumberOfEmptyVertices
-//             HighestNumberOfCollisionsDuringAssignment
-// 
 //             LowestNumberOfEmptyPages
+// 
+//             HighestNumberOfEmptyLargePages
 //             LowestNumberOfEmptyLargePages
+// 
+//             HighestNumberOfEmptyCacheLines
 //             LowestNumberOfEmptyCacheLines
+// 
+//             HighestNumberOfUsedPages
+//             LowestNumberOfUsedPages
+// 
+//             HighestNumberOfUsedLargePages
+//             LowestNumberOfUsedLargePages
+// 
+//             HighestNumberOfUsedCacheLines
+//             LowestNumberOfUsedCacheLines
+// 
+//             HighestMaxGraphTraversalDepth
 //             LowestMaxGraphTraversalDepth
+// 
+//             HighestTotalGraphTraversals
 //             LowestTotalGraphTraversals
-//             LowestMaxAssignedPerCacheLineCount
+// 
+//             HighestNumberOfEmptyVertices
 //             LowestNumberOfEmptyVertices
+// 
+//             HighestNumberOfCollisionsDuringAssignment
 //             LowestNumberOfCollisionsDuringAssignment
+// 
+//             HighestMaxAssignedPerCacheLineCount
+//             LowestMaxAssignedPerCacheLineCount
+// 
+//             HighestPredictedNumberOfFilledCacheLines
+//             LowestPredictedNumberOfFilledCacheLines
+// 
+//             HighestSlope
+//             LowestSlope
+// 
+//             HighestScore
+//             LowestScore
+// 
+//             HighestRank
+//             LowestRank
 // 
 //         The following predicates must be used in conjunction with --KeysSubset
 //         (only applies to PerfectHashCreate.exe):
 // 
 //             HighestMaxAssignedPerCacheLineCountForKeysSubset
-//             HighestNumberOfPagesUsedByKeysSubset
-//             HighestNumberOfLargePagesUsedByKeysSubset
-//             HighestNumberOfCacheLinesUsedByKeysSubset
-// 
 //             LowestMaxAssignedPerCacheLineCountForKeysSubset
-//             LowestNumberOfPagesUsedByKeysSubset
-//             LowestNumberOfLargePagesUsedByKeysSubset
+// 
+//             HighestNumberOfCacheLinesUsedByKeysSubset
 //             LowestNumberOfCacheLinesUsedByKeysSubset
+// 
+//             HighestNumberOfLargePagesUsedByKeysSubset
+//             LowestNumberOfLargePagesUsedByKeysSubset
+// 
+//             HighestNumberOfPagesUsedByKeysSubset
+//             LowestNumberOfPagesUsedByKeysSubset
 // 
 //     --MaxNumberOfEqualBestGraphs=N
 // 
