@@ -467,10 +467,17 @@ typedef union _GRAPH_FLAGS {
         ULONG RemoveWriteCombineAfterSuccessfulHashKeys:1;
 
         //
+        // When set, indicates that the graph used an optimized AVX2 version
+        // of the hash function during graph solving.
+        //
+
+        ULONG UsedAvx2HashFunction:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:19;
+        ULONG Unused:18;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -883,6 +890,7 @@ typedef struct _GRAPH_VTBL {
     PGRAPH_REGISTER_SOLVED RegisterSolved;
     PGRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE ShouldWeContinueTryingToSolve;
     PGRAPH_ADD_KEYS AddKeys;
+    PGRAPH_HASH_KEYS HashKeys;
 } GRAPH_VTBL;
 typedef GRAPH_VTBL *PGRAPH_VTBL;
 
@@ -1318,6 +1326,15 @@ HRESULT
     );
 typedef GRAPH_APPLY_WEIGHTED_SEED_MASKS *PGRAPH_APPLY_WEIGHTED_SEED_MASKS;
 
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(NTAPI GRAPH_POST_HASH_KEYS)(
+    _In_ HRESULT HashResult,
+    _In_ PGRAPH Graph
+    );
 
 #ifndef __INTELLISENSE__
 extern GRAPH_INITIALIZE GraphInitialize;
@@ -1355,6 +1372,7 @@ extern GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
 extern GRAPH_ADD_KEYS GraphAddKeys;
 extern GRAPH_HASH_KEYS GraphHashKeys;
 extern GRAPH_ADD_HASHED_KEYS GraphAddHashedKeys;
+extern GRAPH_POST_HASH_KEYS GraphPostHashKeys;
 #endif
 
 //

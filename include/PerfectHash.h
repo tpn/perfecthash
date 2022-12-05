@@ -2734,10 +2734,21 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG RngUseRandomStartSeed:1;
 
         //
+        // When set, tries to use optimized AVX2 routines for hashing keys, if
+        // applicable.
+        //
+        // N.B. Only applies when HashAllKeysFirst is set.
+        //
+        // N.B. Currently only implemented for the MultiplyShiftR hash function.
+        //
+
+        ULONG TryUseAvx2HashFunction:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:4;
+        ULONG Unused:3;
     };
 
     LONG AsLong;
@@ -2779,6 +2790,14 @@ IsValidTableCreateFlags(
             TableCreateFlags->EnableWriteCombineForVertexPairs ||
             TableCreateFlags->RemoveWriteCombineAfterSuccessfulHashKeys) {
             return PH_E_VERTEX_PAIR_FLAGS_REQUIRE_HASH_ALL_KEYS_FIRST;
+        }
+
+        //
+        // Likewise for the flag related to AVX2 hash function routines.
+        //
+
+        if (TableCreateFlags->TryUseAvx2HashFunction) {
+            return PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST;
         }
 
     } else if (TableCreateFlags->TryLargePagesForVertexPairs) {
@@ -3703,10 +3722,17 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG VertexPairsArrayUsesLargePages:1;
 
         //
+        // When set, indicates that the graph used an optimized AVX2 version
+        // of the hash function during graph solving.
+        //
+
+        ULONG UsedAvx2HashFunction:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:27;
+        ULONG Unused:26;
     };
 
     LONG AsLong;

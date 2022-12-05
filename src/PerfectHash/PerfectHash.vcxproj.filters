@@ -313,6 +313,9 @@
     <ClCompile Include="GraphImpl3.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphAvx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -290,7 +290,7 @@ Return Value:
     // Attempt to hash the keys first.
     //
 
-    Result = GraphHashKeys(Graph, NumberOfKeys, Keys);
+    Result = Graph->Vtbl->HashKeys(Graph, NumberOfKeys, Keys);
     if (FAILED(Result)) {
         return Result;
     }

@@ -172,6 +172,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(TryLargePagesForVertexPairs);
     DECL_ARG(TryUsePredictedAttemptsToLimitMaxConcurrency);
     DECL_ARG(RngUseRandomStartSeed);
+    DECL_ARG(TryUseAvx2HashFunction);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -217,6 +218,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(TryLargePagesForVertexPairs);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUsePredictedAttemptsToLimitMaxConcurrency);
     SET_FLAG_AND_RETURN_IF_EQUAL(RngUseRandomStartSeed);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx2HashFunction);
 
     return S_FALSE;
 }

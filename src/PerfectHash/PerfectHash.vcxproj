@@ -282,6 +282,7 @@
     <ClCompile Include="SymbolLoader.c" />
     <ClCompile Include="VCProjectFileChunks.c" />
     <ClCompile Include="Rng.c" />
+    <ClCompile Include="GraphAvx.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

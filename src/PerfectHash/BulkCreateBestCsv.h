@@ -215,6 +215,14 @@ Abstract:
           (Table->Flags.VertexPairsArrayUsesLargePages != FALSE ? 'Y' : 'N'),                \
           OUTPUT_CHR)                                                                        \
                                                                                              \
+    ENTRY(TryUseAvx2HashFunction,                                                            \
+          (TableCreateFlags.TryUseAvx2HashFunction != FALSE ? 'Y' : 'N'),                    \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(UsedAvx2HashFunction,                                                              \
+          (Table->Flags.UsedAvx2HashFunction != FALSE ? 'Y' : 'N'),                          \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
     ENTRY(GraphRegisterSolvedTsxSuccessCount,                                                \
           Context->GraphRegisterSolvedTsxSuccess,                                            \
           OUTPUT_INT)                                                                        \

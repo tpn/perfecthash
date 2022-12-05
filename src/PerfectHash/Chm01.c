@@ -480,6 +480,16 @@ Return Value:
     TlsContext->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
 
     //
+    // ....and, many years later, we find ourselves in the position of wanting
+    // to access the table's hash function from within GraphInitialize() as
+    // well, so, we just stash the table pointer in the TLS context now too.
+    // This is a bit sloppy; we don't need TableCreateFlags if we're storing
+    // a pointer to the table directly.  Future refactoring opportunity.
+    //
+
+    TlsContext->Table = Table;
+
+    //
     // Create graph instances and capture the resulting pointer in the array
     // we just allocated above.
     //
@@ -550,6 +560,7 @@ Return Value:
     TlsContext->Flags.CustomAllocatorDetailsPresent = FALSE;
     TlsContext->HeapCreateFlags = 0;
     TlsContext->HeapMinimumSize = 0;
+    TlsContext->Table = NULL;
 
     PerfectHashTlsClearContextIfActive(&LocalTlsContext);
 
@@ -1115,6 +1126,12 @@ FinishedSolution:
     Table->Flags.VertexPairsArrayUsesLargePages = (
         Graph->Flags.VertexPairsArrayUsesLargePages
     );
+
+    //
+    // Capture whether optimized AVX versions of hash functions were used.
+    //
+
+    Table->Flags.UsedAvx2HashFunction = Graph->Flags.UsedAvx2HashFunction;
 
     //
     // Copy the cycle counters and elapsed microseconds from the winning graph.

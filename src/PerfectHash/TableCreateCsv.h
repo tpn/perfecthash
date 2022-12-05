@@ -195,6 +195,14 @@ Abstract:
           (Table->Flags.VertexPairsArrayUsesLargePages != FALSE ? 'Y' : 'N'),                \
           OUTPUT_CHR)                                                                        \
                                                                                              \
+    ENTRY(TryUseAvx2HashFunction,                                                            \
+          (TableCreateFlags.TryUseAvx2HashFunction != FALSE ? 'Y' : 'N'),                    \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(UsedAvx2HashFunction,                                                              \
+          (Table->Flags.UsedAvx2HashFunction != FALSE ? 'Y' : 'N'),                          \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
     ENTRY(UsePreviousTableSize,                                                              \
           (TableCreateFlags.UsePreviousTableSize == TRUE ?                                   \
            'Y' : 'N'),                                                                       \
@@ -686,9 +694,9 @@ Abstract:
 #define EXPAND_AS_WRITE_TABLE_CREATE_ROW_LAST_COLUMN(Name,        \
                                                      Value,       \
                                                      OutputMacro) \
-    OUTPUT_CHR('"');                                             \
-    OutputMacro(Value);                                          \
-    OUTPUT_CHR('"');                                             \
+    OUTPUT_CHR('"');                                              \
+    OutputMacro(Value);                                           \
+    OUTPUT_CHR('"');                                              \
     OUTPUT_CHR('\n');
 
 #define WRITE_TABLE_CREATE_CSV_ROW() do {                 \

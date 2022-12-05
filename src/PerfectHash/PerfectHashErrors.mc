@@ -569,6 +569,15 @@ Table Create Flags:
             --RngSubsequence
             --RngOffset
 
+    --TryUseAvx2HashFunction
+
+        When set, tries to use optimized AVX2 routines for hashing keys, if
+        applicable.
+
+        N.B. Only applies when HashAllKeysFirst is set.
+
+        N.B. Currently only implemented for the MultiplyShiftR hash function.
+
 Table Compile Flags:
 
     N/A
@@ -3626,5 +3635,13 @@ Facility=ITF
 SymbolicName=PH_E_TARGET_NUMBER_OF_SOLUTIONS_EXCEEDS_MIN_ATTEMPTS
 Language=English
 TargetNumberOfSolutions exceeds MinAttempts.
+.
+
+MessageId=0x3d1
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
+Language=English
+---HashAllKeysFirst is required when specifying --TryUseAvx2HashFunction.
 .
 

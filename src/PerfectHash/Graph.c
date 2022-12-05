@@ -31,6 +31,7 @@ GRAPH_ASSIGN GraphAssign2;
 GRAPH_ASSIGN GraphAssign3;
 GRAPH_IS_ACYCLIC GraphIsAcyclic;
 GRAPH_IS_ACYCLIC GraphIsAcyclic3;
+GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX2;
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolvedNoBestCoverage;
 
@@ -70,6 +71,7 @@ Return Value:
     PRTL Rtl;
     HRESULT Result = S_OK;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
 
     if (!ARGUMENT_PRESENT(Graph)) {
@@ -110,11 +112,14 @@ Return Value:
     }
 
     //
-    // Load the table create flags from the TLS context.
+    // Load the table create flags and hash function from the TLS context.
     //
 
     TlsContext = PerfectHashTlsEnsureContext();
     TableCreateFlags.AsULong = TlsContext->TableCreateFlags.AsULong;
+    HashFunctionId = TlsContext->Table->HashFunctionId;
+
+    Rtl = Graph->Rtl;
 
     //
     // Override vtbl methods based on table create flags.
@@ -128,13 +133,27 @@ Return Value:
 
     } else {
 
+        ASSERT(Graph->Vtbl->HashKeys == GraphHashKeys);
         ASSERT(Graph->Vtbl->AddKeys == GraphAddKeys);
         ASSERT(Graph->Vtbl->Verify == GraphVerify);
 
         if (TableCreateFlags.HashAllKeysFirst != FALSE) {
             Graph->Vtbl->AddKeys = GraphHashKeysThenAdd;
-        }
 
+            //
+            // If we have an applicable hash function, determine if we need
+            // to swap out the hash keys routine with an AVX-optimized version.
+            //
+
+            if (HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
+                if (TableCreateFlags.TryUseAvx2HashFunction &&
+                    Rtl->CpuFeatures.AVX2) {
+
+                    Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX2;
+                    Graph->Flags.UsedAvx2HashFunction = TRUE;
+                }
+            }
+        }
     }
 
     //
@@ -142,7 +161,6 @@ Return Value:
     // if the CPU supports the instruction set.
     //
 
-    Rtl = Graph->Rtl;
     if (Rtl->CpuFeatures.AVX2 != FALSE) {
         Graph->Vtbl->CalculateAssignedMemoryCoverage =
             GraphCalculateAssignedMemoryCoverage_AVX2;
@@ -557,6 +575,87 @@ Return Value:
     return Result;
 }
 
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphPostHashKeys(
+    _In_ HRESULT HashResult,
+    _In_ PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Performs post-processing after a graph has completed hashing all keys.
+
+Arguments:
+
+    HashResult - Supplies the HRESULT of the hash operation that preceeded
+        this call.
+
+    Graph - Supplies a pointer to the graph for which the post-processing will
+        take place.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_SYSTEM_CALL_FAILED - A VirtualProtect() call failed.
+
+--*/
+{
+    BOOL Success;
+    HRESULT Result;
+    GRAPH_FLAGS Flags;
+    ULONG OldProtection;
+
+    Result = HashResult;
+
+    if (SUCCEEDED(HashResult)) {
+
+        Flags.AsULong = Graph->Flags.AsULong;
+
+        if (Flags.VertexPairsArrayIsWriteCombined) {
+
+            //
+            // Determine if write-combining needs to be removed from the vertex
+            // pairs array.  If not, issue a memory barrier to ensure we've
+            // got consistency before we start reading the vertices and adding
+            // them to the graph.  (We don't do this when removing the page
+            // protection as that'll implicitly have a memory barrier.)
+            //
+
+            if (!Flags.RemoveWriteCombineAfterSuccessfulHashKeys) {
+
+                MemoryBarrier();
+
+            } else {
+
+                Success = VirtualProtect(Graph->VertexPairs,
+                                         Graph->Info->VertexPairsSizeInBytes,
+                                         PAGE_READONLY,
+                                         &OldProtection);
+
+                //
+                // If the call was successful, clear the write-combine flag,
+                // otherwise, error out.
+                //
+
+                if (Success) {
+                    Graph->Flags.VertexPairsArrayIsWriteCombined = FALSE;
+                } else {
+                    SYS_ERROR(VirtualProtect);
+                    Result = PH_E_SYSTEM_CALL_FAILED;
+                }
+            }
+        }
+    }
+
+    return Result;
+}
+
+
 GRAPH_HASH_KEYS GraphHashKeys;
 
 _Use_decl_annotations_
@@ -595,11 +694,8 @@ Return Value:
     EDGE Edge;
     ULONG Mask;
     PEDGE Edges;
-    BOOL Success;
     HRESULT Result;
     VERTEX_PAIR Hash;
-    GRAPH_FLAGS Flags;
-    ULONG OldProtection;
     PULONGLONG VertexPairs;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
@@ -647,45 +743,7 @@ Return Value:
 
     EVENT_WRITE_GRAPH(HashKeys);
 
-    if (SUCCEEDED(Result)) {
-
-        Flags.AsULong = Graph->Flags.AsULong;
-
-        if (Flags.VertexPairsArrayIsWriteCombined) {
-
-            //
-            // Determine if write-combining needs to be removed from the vertex
-            // pairs array.  If not, issue a memory barrier to ensure we've
-            // got consistency before we start reading the vertices and adding
-            // them to the graph.  (We don't do this when removing the page
-            // protection as that'll implicitly have a memory barrier.)
-            //
-
-            if (!Flags.RemoveWriteCombineAfterSuccessfulHashKeys) {
-
-                MemoryBarrier();
-
-            } else {
-
-                Success = VirtualProtect(Graph->VertexPairs,
-                                         Graph->Info->VertexPairsSizeInBytes,
-                                         PAGE_READONLY,
-                                         &OldProtection);
-
-                //
-                // If the call was successful, clear the write-combine flag,
-                // otherwise, error out.
-                //
-
-                if (Success) {
-                    Graph->Flags.VertexPairsArrayIsWriteCombined = FALSE;
-                } else {
-                    SYS_ERROR(VirtualProtect);
-                    Result = PH_E_SYSTEM_CALL_FAILED;
-                }
-            }
-        }
-    }
+    Result = GraphPostHashKeys(Result, Graph);
 
     return Result;
 }
@@ -750,7 +808,7 @@ Return Value:
     // Attempt to hash the keys first.
     //
 
-    Result = GraphHashKeys(Graph, NumberOfKeys, Keys);
+    Result = Graph->Vtbl->HashKeys(Graph, NumberOfKeys, Keys);
     if (FAILED(Result)) {
         return Result;
     }

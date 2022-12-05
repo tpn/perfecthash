@@ -1243,8 +1243,9 @@ GRAPH_VTBL GraphInterface = {
     &GraphRegisterSolved,
     &GraphShouldWeContinueTryingToSolve,
     &GraphAddKeys,
+    &GraphHashKeys,
 };
-VERIFY_VTBL_SIZE(GRAPH, 14);
+VERIFY_VTBL_SIZE(GRAPH, 15);
 
 //
 // Cu
