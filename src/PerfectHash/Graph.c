@@ -3392,10 +3392,6 @@ Return Value:
 SkipGraphVtblHackery:
 
     //
-    // Do some more gross vtbl hacking based on graph impl.
-    //
-
-    //
     // Allocate (or reallocate) arrays.
     //
 
