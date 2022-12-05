@@ -3094,6 +3094,14 @@ Return Value:
 
     while (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph)) {
 
+        Result = Graph->Vtbl->Reset(Graph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphReset, Result);
+            break;
+        } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {
+            break;
+        }
+
         Result = Graph->Vtbl->LoadNewSeeds(Graph);
         if (FAILED(Result)) {
 
@@ -3103,14 +3111,6 @@ Return Value:
             //
 
             PH_ERROR(GraphLoadNewSeeds, Result);
-            break;
-        }
-
-        Result = Graph->Vtbl->Reset(Graph);
-        if (FAILED(Result)) {
-            PH_ERROR(GraphReset, Result);
-            break;
-        } else if (Result != PH_S_CONTINUE_GRAPH_SOLVING) {
             break;
         }
 
@@ -3230,7 +3230,6 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    PRNG Rng;
     HRESULT Result;
     PGRAPH_INFO Info;
     PCWSTR KeysFileName;
@@ -3643,28 +3642,6 @@ SkipGraphVtblHackery:
     ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(NumberOfAssignedPerLargePage);
 
     //
-    // Initialize the RNG.  We add the graph's index (which is the 0-based
-    // sequential ID of the graph) to the subsequence in order to ensure each
-    // graph generates different random numbers (which they're guaranteed to do
-    // if we use different subsequences).
-    //
-
-    Rng = Graph->Rng;
-    Result = Rng->Vtbl->InitializePseudo(
-        Rng,
-        Context->RngId,
-        &Context->RngFlags,
-        Context->RngSeed,
-        Context->RngSubsequence + (ULONGLONG)Graph->Index,
-        Context->RngOffset
-    );
-
-    if (FAILED(Result)) {
-        PH_ERROR(GraphLoadInfo_RngInitializePseudo, Result);
-        goto Error;
-    }
-
-    //
     // We're done, finish up.
     //
 
@@ -3702,8 +3679,8 @@ GraphReset(
 
 Routine Description:
 
-    Resets the state of a graph instance after a solving attempt, such that it
-    can be used for a subsequent attempt.
+    Resets the state of a graph instance before a solving attempt, clearing any
+    state from the previous solving attempt, if applicable.
 
 Arguments:
 
@@ -3726,9 +3703,10 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    PRNG Rng;
     BOOL Success;
     PGRAPH_INFO Info;
-    HRESULT Result = PH_S_CONTINUE_GRAPH_SOLVING;
+    HRESULT Result;
     ULONG OldProtection;
     ULONG ProtectionFlags;
     ULONG TotalNumberOfPages;
@@ -3746,6 +3724,7 @@ Return Value:
     // Initialize aliases.
     //
 
+    Result = S_OK;
     Context = Graph->Context;
     Info = Graph->Info;
     Rtl = Context->Rtl;
@@ -3924,6 +3903,37 @@ Return Value:
     RESET_GRAPH_COUNTERS();
 
     //
+    // Initialize the RNG.  The subsequence is derived from whatever the base
+    // RNG subsequence was (via --RngSubsequence=N, or 0 default), plus the
+    // current solving attempt (Graph->Attempt).  This guarantees that the
+    // subsequence is a) unique for a given run, and b) always monotonically
+    // increasing, which ensures we explore the same PRNG space regardless of
+    // concurrency level.
+    //
+    // (Remember that the PRNG we support, Philox4x3210, is primarily included
+    // in order to yield consistent benchmarking environments.  If actual graph
+    // solving is being done in order to generate perfect hash tables, then the
+    // --Rng=System should always be used, as this will yield much better random
+    // numbers (at the expense of varying runtimes, so, not useful if you're
+    // benchmarking).)
+    //
+
+    Rng = Graph->Rng;
+    Result = Rng->Vtbl->InitializePseudo(
+        Rng,
+        Context->RngId,
+        &Context->RngFlags,
+        Context->RngSeed,
+        Context->RngSubsequence + Graph->Attempt,
+        Context->RngOffset
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(GraphLoadInfo_RngInitializePseudo, Result);
+        goto Error;
+    }
+
+    //
     // Avoid the overhead of resetting the memory coverage if we're in "first
     // graph wins" mode and have been requested to skip memory coverage.
     //
@@ -3988,6 +3998,15 @@ Error:
     //
 
 End:
+
+    //
+    // Normalize a successful error code to our code used to communicate that
+    // graph solving should continue.
+    //
+
+    if (Result == S_OK) {
+        Result = PH_S_CONTINUE_GRAPH_SOLVING;
+    }
 
     return Result;
 }
