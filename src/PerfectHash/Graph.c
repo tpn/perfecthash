@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -24,16 +24,18 @@ GRAPH_ADD_KEYS GraphAddKeys3;
 GRAPH_ADD_KEYS GraphHashKeysThenAdd3;
 GRAPH_ADD_KEYS GraphAddKeysOriginalSeededHashRoutines;
 GRAPH_VERIFY GraphVerifyOriginalSeededHashRoutines;
-GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
-    GraphCalculateAssignedMemoryCoverage_AVX2;
 GRAPH_ASSIGN GraphAssign;
 GRAPH_ASSIGN GraphAssign2;
 GRAPH_ASSIGN GraphAssign3;
 GRAPH_IS_ACYCLIC GraphIsAcyclic;
 GRAPH_IS_ACYCLIC GraphIsAcyclic3;
-GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX2;
-
 GRAPH_REGISTER_SOLVED GraphRegisterSolvedNoBestCoverage;
+
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
+    GraphCalculateAssignedMemoryCoverage_AVX2;
+GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX2;
+GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX512;
+
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -146,8 +148,15 @@ Return Value:
             //
 
             if (HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
-                if (TableCreateFlags.TryUseAvx2HashFunction &&
-                    Rtl->CpuFeatures.AVX2) {
+
+                if (TableCreateFlags.TryUseAvx512HashFunction &&
+                    Rtl->CpuFeatures.AVX512F) {
+
+                    Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX512;
+                    Graph->Flags.UsedAvx512HashFunction = TRUE;
+
+                } else if (TableCreateFlags.TryUseAvx2HashFunction &&
+                           Rtl->CpuFeatures.AVX2) {
 
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1132,6 +1132,7 @@ FinishedSolution:
     //
 
     Table->Flags.UsedAvx2HashFunction = Graph->Flags.UsedAvx2HashFunction;
+    Table->Flags.UsedAvx512HashFunction = Graph->Flags.UsedAvx512HashFunction;
 
     //
     // Copy the cycle counters and elapsed microseconds from the winning graph.

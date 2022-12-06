@@ -236,13 +236,54 @@ typedef const WCHAR *PCWCHAR;
 #define ZMMWORD_ALIGNMENT 64
 
 #ifdef _M_X64
+
+//
+// XMM, YMM, and ZMM registers.
+//
+
 typedef __m128i DECLSPEC_ALIGN(XMMWORD_ALIGNMENT) XMMWORD, *PXMMWORD;
 typedef __m256i DECLSPEC_ALIGN(YMMWORD_ALIGNMENT) YMMWORD, *PYMMWORD;
 typedef __m512i DECLSPEC_ALIGN(ZMMWORD_ALIGNMENT) ZMMWORD, *PZMMWORD;
-
 C_ASSERT(sizeof(XMMWORD) == XMMWORD_ALIGNMENT);
 C_ASSERT(sizeof(YMMWORD) == YMMWORD_ALIGNMENT);
 C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
+
+//
+// AVX-512 masks.
+//
+
+typedef __mmask16 ZMASK8, *PZMASK8;
+typedef __mmask16 ZMASK16, *PZMASK16;
+typedef __mmask32 ZMASK32, *PZMASK32;
+typedef __mmask64 ZMASK64, *PZMASK64;
+
+//
+// Helper structures for index tables fed to AVX512 permute routines such as
+// _mm512_permutex2var_epi32().
+//
+
+typedef union _ZMM_PERMUTE_INDEX_BYTE {
+    struct _Struct_size_bytes_(sizeof(BYTE)) {
+        BYTE Index:3;
+        BYTE Selector:1;
+        BYTE Unused:4;
+    };
+
+    BYTE AsByte;
+} ZMM_PERMUTE_INDEX_BYTE;
+C_ASSERT(sizeof(ZMM_PERMUTE_INDEX_BYTE) == sizeof(BYTE));
+
+typedef union _ZMM_PERMUTE_INDEX {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        ULONG Index:4;
+        ULONG Selector:1;
+        ULONG Unused:27;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} ZMM_PERMUTE_INDEX;
+C_ASSERT(sizeof(ZMM_PERMUTE_INDEX) == sizeof(ULONG));
 #endif
 
 #ifndef ALIGN_UP_XMMWORD
