@@ -1,6 +1,6 @@
 ;/*++
 ;
-;Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+;Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 ;
 ;Module Name:
 ;
@@ -3643,5 +3643,13 @@ Facility=ITF
 SymbolicName=PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
 Language=English
 ---HashAllKeysFirst is required when specifying --TryUseAvx2HashFunction.
+.
+
+MessageId=0x3d2
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
+Language=English
+---HashAllKeysFirst is required when specifying --TryUseAvx512HashFunction.
 .
 

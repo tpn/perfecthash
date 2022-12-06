@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -201,6 +201,14 @@ Abstract:
                                                                                              \
     ENTRY(UsedAvx2HashFunction,                                                              \
           (Table->Flags.UsedAvx2HashFunction != FALSE ? 'Y' : 'N'),                          \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(TryUseAvx512HashFunction,                                                          \
+          (TableCreateFlags.TryUseAvx512HashFunction != FALSE ? 'Y' : 'N'),                  \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(UsedAvx512HashFunction,                                                            \
+          (Table->Flags.UsedAvx512HashFunction != FALSE ? 'Y' : 'N'),                        \
           OUTPUT_CHR)                                                                        \
                                                                                              \
     ENTRY(UsePreviousTableSize,                                                              \

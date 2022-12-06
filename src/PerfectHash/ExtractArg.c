@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -173,6 +173,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(TryUsePredictedAttemptsToLimitMaxConcurrency);
     DECL_ARG(RngUseRandomStartSeed);
     DECL_ARG(TryUseAvx2HashFunction);
+    DECL_ARG(TryUseAvx512HashFunction);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -219,6 +220,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUsePredictedAttemptsToLimitMaxConcurrency);
     SET_FLAG_AND_RETURN_IF_EQUAL(RngUseRandomStartSeed);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx2HashFunction);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx512HashFunction);
 
     return S_FALSE;
 }

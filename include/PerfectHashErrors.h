@@ -4018,3 +4018,12 @@ Abstract:
 //
 #define PH_E_TRY_USE_AVX2_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST ((HRESULT)0xE00403D1L)
 
+//
+// MessageId: PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
+//
+// MessageText:
+//
+// ---HashAllKeysFirst is required when specifying --TryUseAvx512HashFunction.
+//
+#define PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST ((HRESULT)0xE00403D2L)
+

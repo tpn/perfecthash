@@ -308,4 +308,288 @@ End:
     return Result;
 }
 
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphHashKeysMultiplyShiftR_AVX512(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    This routine hashes all keys into vertices without adding the resulting
+    vertices to the graph.  It is used by GraphHashKeysThenAdd().
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the hash values will be
+        created.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+--*/
+{
+    KEY Key = 0;
+    EDGE Edge;
+    ULONG Mask;
+    ULONG NumberOfZmmWords;
+    ULONG TrailingKeys;
+    PULONG Seeds;
+    PEDGE Edges;
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ZMMWORD Zmm1;
+    ZMMWORD Zmm2;
+    ZMASK16 ZmmMask;
+    ZMMWORD KeysZmm;
+    ZMMWORD Seed1Zmm;
+    ZMMWORD Seed2Zmm;
+    ZMMWORD Index1Zmm;
+    ZMMWORD Index2Zmm;
+    ZMMWORD Vertex1Zmm;
+    ZMMWORD Vertex2Zmm;
+    ZMMWORD HashMaskZmm;
+    ULARGE_INTEGER Pair;
+    PULONGLONG VertexPairs;
+    PZMMWORD VertexPairsZmm;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    //
+    // The following structures are fed to _mm512_permutex2var_epi32() below.
+    // They form the index tables that direct the SIMD permute operation to
+    // unpack and interleave our two vertex registers into the final vertex pair
+    // form we want to write to memory.
+    //
+
+    ZMM_PERMUTE_INDEX PermuteIndex1[] = {
+        { .Index = 0, .Selector = 0, .Unused = 0 },
+        { .Index = 0, .Selector = 1, .Unused = 0 },
+
+        { .Index = 1, .Selector = 0, .Unused = 0 },
+        { .Index = 1, .Selector = 1, .Unused = 0 },
+
+        { .Index = 2, .Selector = 0, .Unused = 0 },
+        { .Index = 2, .Selector = 1, .Unused = 0 },
+
+        { .Index = 3, .Selector = 0, .Unused = 0 },
+        { .Index = 3, .Selector = 1, .Unused = 0 },
+
+        { .Index = 4, .Selector = 0, .Unused = 0 },
+        { .Index = 4, .Selector = 1, .Unused = 0 },
+
+        { .Index = 5, .Selector = 0, .Unused = 0 },
+        { .Index = 5, .Selector = 1, .Unused = 0 },
+
+        { .Index = 6, .Selector = 0, .Unused = 0 },
+        { .Index = 6, .Selector = 1, .Unused = 0 },
+
+        { .Index = 7, .Selector = 0, .Unused = 0 },
+        { .Index = 7, .Selector = 1, .Unused = 0 },
+    };
+
+    ZMM_PERMUTE_INDEX PermuteIndex2[] = {
+        { .Index = 8, .Selector = 0, .Unused = 0 },
+        { .Index = 8, .Selector = 1, .Unused = 0 },
+
+        { .Index = 9, .Selector = 0, .Unused = 0 },
+        { .Index = 9, .Selector = 1, .Unused = 0 },
+
+        { .Index = 10, .Selector = 0, .Unused = 0 },
+        { .Index = 10, .Selector = 1, .Unused = 0 },
+
+        { .Index = 11, .Selector = 0, .Unused = 0 },
+        { .Index = 11, .Selector = 1, .Unused = 0 },
+
+        { .Index = 12, .Selector = 0, .Unused = 0 },
+        { .Index = 12, .Selector = 1, .Unused = 0 },
+
+        { .Index = 13, .Selector = 0, .Unused = 0 },
+        { .Index = 13, .Selector = 1, .Unused = 0 },
+
+        { .Index = 14, .Selector = 0, .Unused = 0 },
+        { .Index = 14, .Selector = 1, .Unused = 0 },
+
+        { .Index = 15, .Selector = 0, .Unused = 0 },
+        { .Index = 15, .Selector = 1, .Unused = 0 },
+    };
+
+    //
+    // Initialize aliases.
+    //
+
+    Result = S_OK;
+    Table = Graph->Context->Table;
+    Mask = Table->HashMask;
+    Edges = (PEDGE)Keys;
+    C_ASSERT(sizeof(*VertexPairs) == sizeof(Graph->VertexPairs));
+    VertexPairs = (PULONGLONG)Graph->VertexPairs;
+    VertexPairsZmm = (PZMMWORD)VertexPairs;;
+
+    //
+    // Determine the number of ZMM words we'll use to iterate over the keys,
+    // 16 x 32-bit keys at a time.  Capture the number of trailing keys that
+    // we'll handle at the end with a scalar loop.
+    //
+
+    NumberOfZmmWords = NumberOfKeys >> 4;
+    TrailingKeys = NumberOfKeys % 16;
+
+    //
+    // Initialize seeds.
+    //
+
+    Seeds = &Graph->FirstSeed;
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed1Zmm = _mm512_broadcastd_epi32(_mm_set1_epi32(Seed1));
+    Seed2Zmm = _mm512_broadcastd_epi32(_mm_set1_epi32(Seed2));
+
+    //
+    // Broadcast the hash across 16 x 32-bit ZMM lanes.
+    //
+
+    HashMaskZmm = _mm512_broadcastd_epi32(_mm_set1_epi32(Mask));
+
+    //
+    // Load the permute indexes.
+    //
+
+    Index1Zmm = _mm512_loadu_epi32(&PermuteIndex1[0]);
+    Index2Zmm = _mm512_loadu_epi32(&PermuteIndex2[0]);
+
+    START_GRAPH_COUNTER();
+
+    for (Edge = 0; Edge < NumberOfZmmWords; Edge++, Edges += 16) {
+
+        //IACA_VC_START();
+
+        //
+        // Load 16 keys into our ZMM register.
+        //
+
+        KeysZmm = _mm512_loadu_epi32(Edges);
+
+        //
+        // Perform vectorized multiply, shift, then and-masking against 16
+        // keys at a time, once for each vertex.
+        //
+
+        //
+        // Vertex 1: (((Key * SEED1) >> SEED3_BYTE1) & Mask)
+        //
+
+        Vertex1Zmm = _mm512_mullo_epi32(KeysZmm, Seed1Zmm);
+        Vertex1Zmm = _mm512_srli_epi32(Vertex1Zmm, Seed3.Byte1);
+        Vertex1Zmm = _mm512_and_epi32(Vertex1Zmm, HashMaskZmm);
+
+        //
+        // Vertex 2: (((Key * SEED2) >> SEED3_BYTE2) & Mask)
+        //
+
+        Vertex2Zmm = _mm512_mullo_epi32(KeysZmm, Seed2Zmm);
+        Vertex2Zmm = _mm512_srli_epi32(Vertex2Zmm, Seed3.Byte2);
+        Vertex2Zmm = _mm512_and_epi32(Vertex2Zmm, HashMaskZmm);
+
+        //
+        // Compare each pair of vertices against each other to see if there
+        // are any conflicts (i.e. a key hashed to the same final vertex value
+        // for both seeds).  If there are, abort, indicating vertex collision.
+        //
+
+        ZmmMask = _mm512_cmpeq_epi32_mask(Vertex1Zmm, Vertex2Zmm);
+        if (ZmmMask > 0) {
+            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            goto End;
+        }
+
+        //
+        // No collisions were detected, so we can save these vertices to memory.
+        // This is a lot easier in AVX512 versus AVX2; the vperm2td instruction
+        // allows us to unpack and interleave the values from each vertex in a
+        // single instruction (versus the two permutes then blend we need for
+        // AVX2).
+        //
+
+        //
+        // Unpack-and-interleave the first 8 vertex pairs, then store.
+        //
+
+        Zmm1 = _mm512_permutex2var_epi32(Vertex1Zmm, Index1Zmm, Vertex2Zmm);
+        _mm512_storeu_epi32(VertexPairsZmm, Zmm1);
+        VertexPairsZmm++;
+
+        //
+        // Unpack-and-interleave the second 8 vertex pairs, then store.
+        //
+
+        Zmm2 = _mm512_permutex2var_epi32(Vertex1Zmm, Index2Zmm, Vertex2Zmm);
+        _mm512_storeu_epi32(VertexPairsZmm, Zmm2);
+        VertexPairsZmm++;
+
+        //IACA_VC_END();
+    }
+
+    if (TrailingKeys > 0) {
+
+        //
+        // Handle the remaining 1-15 keys using a normal, non-SIMD loop.
+        //
+
+        VertexPairs = (PULONGLONG)VertexPairsZmm;
+
+        for (Edge = 0; Edge < TrailingKeys; Edge++) {
+            Key = *Edges++;
+
+            Vertex1 = Key * Seed1;
+            Vertex1 = Vertex1 >> Seed3.Byte1;;
+            Vertex1 = Vertex1 & Mask;
+
+            Vertex2 = Key * Seed2;
+            Vertex2 = Vertex2 >> Seed3.Byte2;
+            Vertex2 = Vertex2 & Mask;
+
+            if (Vertex1 == Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                goto End;
+            }
+
+            Pair.LowPart = Vertex1;
+            Pair.HighPart = Vertex2;
+
+            *VertexPairs++ = Pair.QuadPart;
+        }
+    }
+
+End:
+
+    STOP_GRAPH_COUNTER(HashKeys);
+
+    EVENT_WRITE_GRAPH(HashKeys);
+
+    Result = GraphPostHashKeys(Result, Graph);
+
+    return Result;
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

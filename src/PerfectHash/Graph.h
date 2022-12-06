@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -474,10 +474,17 @@ typedef union _GRAPH_FLAGS {
         ULONG UsedAvx2HashFunction:1;
 
         //
+        // When set, indicates that the graph used an optimized AVX512 version
+        // of the hash function during graph solving.
+        //
+
+        ULONG UsedAvx512HashFunction:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:18;
+        ULONG Unused:17;
     };
     LONG AsLong;
     ULONG AsULong;
