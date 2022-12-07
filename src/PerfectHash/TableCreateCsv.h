@@ -84,27 +84,27 @@ Abstract:
                                                                                              \
     ENTRY(RngStartSeed,                                                                      \
           Context->RngSeed,                                                                  \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngStartSubsequence,                                                               \
           Context->RngSubsequence,                                                           \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngStartOffset,                                                                    \
           Context->RngOffset,                                                                \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningSeed,                                                                    \
           Table->RngSeed,                                                                    \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningSubsequence,                                                             \
           Table->RngSubsequence,                                                             \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningOffset,                                                                  \
           Table->RngOffset,                                                                  \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(MaximumConcurrency,                                                                \
           Context->MaximumConcurrency,                                                       \
@@ -658,13 +658,17 @@ Abstract:
           Coverage->Score,                                                                   \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(Rank,                                                                              \
+          Coverage->Rank,                                                                    \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
     ENTRY(KeysMinValue,                                                                      \
           Keys->Stats.MinValue,                                                              \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(KeysMaxValue,                                                                      \
           Keys->Stats.MaxValue,                                                              \
-          OUTPUT_INT)                                                                        \
+          OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(KeysFullPath,                                                                      \
           &Keys->File->Path->FullPath,                                                       \
@@ -672,7 +676,7 @@ Abstract:
                                                                                              \
     ENTRY(KeysBitmapString,                                                                  \
           Keys->Stats.KeysBitmap.String,                                                     \
-          OUTPUT_RAW)                                                                        \
+          OUTPUT_BITMAP_RAW)                                                                 \
                                                                                              \
     ENTRY(Remark,                                                                            \
           Table->Remark,                                                                     \
