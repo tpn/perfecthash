@@ -1128,11 +1128,13 @@ FinishedSolution:
     );
 
     //
-    // Capture whether optimized AVX versions of hash functions were used.
+    // Capture whether optimized AVX versions of various functions were used.
     //
 
     Table->Flags.UsedAvx2HashFunction = Graph->Flags.UsedAvx2HashFunction;
     Table->Flags.UsedAvx512HashFunction = Graph->Flags.UsedAvx512HashFunction;
+    Table->Flags.UsedAvx2MemoryCoverageFunction =
+        Graph->Flags.UsedAvx2MemoryCoverageFunction;
 
     //
     // Copy the cycle counters and elapsed microseconds from the winning graph.

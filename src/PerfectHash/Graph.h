@@ -481,10 +481,16 @@ typedef union _GRAPH_FLAGS {
         ULONG UsedAvx512HashFunction:1;
 
         //
+        // When set, indicates the AVX2 memory coverage function was used.
+        //
+
+        ULONG UsedAvx2MemoryCoverageFunction:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:17;
+        ULONG Unused:16;
     };
     LONG AsLong;
     ULONG AsULong;

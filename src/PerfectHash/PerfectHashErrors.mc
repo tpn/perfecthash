@@ -578,6 +578,20 @@ Table Create Flags:
 
         N.B. Currently only implemented for the MultiplyShiftR hash function.
 
+    --TryUseAvx512HashFunction
+
+        When set, tries to use optimized AVX512 routines for hashing keys, if
+        applicable.
+
+        N.B. Only applies when HashAllKeysFirst is set.
+
+        N.B. Currently only implemented for the MultiplyShiftR hash function.
+
+    --DoNotTryUseAvx2MemoryCoverageFunction
+
+        When set, disables automatically using the AVX2 memory coverage
+        calculation routine when the CPU supports the AVX2 instruction set.
+
 Table Compile Flags:
 
     N/A

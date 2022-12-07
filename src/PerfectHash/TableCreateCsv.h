@@ -211,6 +211,14 @@ Abstract:
           (Table->Flags.UsedAvx512HashFunction != FALSE ? 'Y' : 'N'),                        \
           OUTPUT_CHR)                                                                        \
                                                                                              \
+    ENTRY(DoNotTryUseAvx2MemoryCoverageFunction,                                             \
+          (TableCreateFlags.DoNotTryUseAvx2MemoryCoverageFunction != FALSE ? 'Y' : 'N'),     \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(UsedAvx2MemoryCoverageFunction,                                                    \
+          (Table->Flags.UsedAvx2MemoryCoverageFunction != FALSE ? 'Y' : 'N'),                \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
     ENTRY(UsePreviousTableSize,                                                              \
           (TableCreateFlags.UsePreviousTableSize == TRUE ?                                   \
            'Y' : 'N'),                                                                       \

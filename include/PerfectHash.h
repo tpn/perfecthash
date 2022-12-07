@@ -2756,10 +2756,17 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG TryUseAvx512HashFunction:1;
 
         //
+        // When set, disables automatically using the AVX2 version of the
+        // calculate memory coverage routine.
+        //
+
+        ULONG DoNotTryUseAvx2MemoryCoverageFunction:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:2;
+        ULONG Unused:1;
     };
 
     LONG AsLong;
@@ -3751,10 +3758,16 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG UsedAvx512HashFunction:1;
 
         //
+        // When set, indicates the AVX2 memory coverage function was used.
+        //
+
+        ULONG UsedAvx2MemoryCoverageFunction:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:25;
+        ULONG Unused:24;
     };
 
     LONG AsLong;

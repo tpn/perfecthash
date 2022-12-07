@@ -174,6 +174,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(RngUseRandomStartSeed);
     DECL_ARG(TryUseAvx2HashFunction);
     DECL_ARG(TryUseAvx512HashFunction);
+    DECL_ARG(DoNotTryUseAvx2MemoryCoverageFunction);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -221,6 +222,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(RngUseRandomStartSeed);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx2HashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx512HashFunction);
+    SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2MemoryCoverageFunction);
 
     return S_FALSE;
 }

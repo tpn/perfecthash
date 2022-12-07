@@ -167,12 +167,16 @@ Return Value:
 
     //
     // Use the optimized AVX2 routine for calculating assigned memory coverage
-    // if the CPU supports the instruction set.
+    // if the CPU supports the instruction set and we haven't been told *not*
+    // to use it.
     //
 
-    if (Rtl->CpuFeatures.AVX2 != FALSE) {
+    if (TableCreateFlags.DoNotTryUseAvx2MemoryCoverageFunction == FALSE &&
+        Rtl->CpuFeatures.AVX2 != FALSE) {
+
         Graph->Vtbl->CalculateAssignedMemoryCoverage =
             GraphCalculateAssignedMemoryCoverage_AVX2;
+        Graph->Flags.UsedAvx2MemoryCoverageFunction = TRUE;
     }
 
     //
