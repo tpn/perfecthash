@@ -928,6 +928,68 @@ typedef union _CPU_VENDOR {
 typedef CPU_VENDOR *PCPU_VENDOR;
 C_ASSERT(sizeof(CPU_VENDOR) == sizeof(ULONG));
 
+//
+// Internal CPU feature flags (i.e. not related to the actual CPU, but to the
+// structure itself, such as availability of certain data).
+//
+
+typedef union _RTL_CPU_FEATURES_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the ProcessorInfo structure has been successfully
+        // initialized and can be used.
+        //
+
+        ULONG HasProcessorInformation:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} RTL_CPU_FEATURES_FLAGS, *PRTL_CPU_FEATURES_FLAGS;
+C_ASSERT(sizeof(RTL_CPU_FEATURES_FLAGS) == sizeof(ULONG));
+
+typedef struct _SYSTEM_LOGICAL_PROCESSOR_INFO_ARRAY {
+    SIZE_T Count;
+    SIZE_T SizeInBytes;
+
+    _Readable_elements_(Count)
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ProcInfo;
+} SYSTEM_LOGICAL_PROCESSOR_INFO_ARRAY, *PSYSTEM_LOGICAL_PROCESSOR_INFO_ARRAY;
+
+typedef union _CPU_CACHE_LEVEL {
+    struct {
+        CACHE_DESCRIPTOR Unified;
+        CACHE_DESCRIPTOR Instruction;
+        CACHE_DESCRIPTOR Data;
+        CACHE_DESCRIPTOR Trace;
+    };
+
+    CACHE_DESCRIPTOR AsArray[4];
+} CPU_CACHE_LEVEL, *PCPU_CACHE_LEVEL;
+
+typedef struct _CPU_CACHES {
+    BYTE NumberOfLevels;
+    BYTE Padding[3];
+
+    union {
+        struct {
+            CPU_CACHE_LEVEL L1;
+            CPU_CACHE_LEVEL L2;
+            CPU_CACHE_LEVEL L3;
+            CPU_CACHE_LEVEL L4;
+        };
+
+        CPU_CACHE_LEVEL Level[4];
+    };
+} CPU_CACHES, *PCPU_CACHES;
+
 typedef struct _RTL_CPU_FEATURES {
 
     CPU_VENDOR Vendor;
@@ -966,7 +1028,7 @@ typedef struct _RTL_CPU_FEATURES {
         ULONG RDTSCP:1;
     } Intel;
 
-    ULONG Padding;
+    RTL_CPU_FEATURES_FLAGS Flags;
 
     union {
 
@@ -1042,8 +1104,27 @@ typedef struct _RTL_CPU_FEATURES {
     STRING Brand;
     CHAR BrandBuffer[48];
 
+    //
+    // CPU Information.
+    //
+
+    ULONG LogicalProcessorCount;
+    ULONG NumaNodeCount;
+    ULONG ProcessorCoreCount;
+    ULONG ProcessorL1CacheCount;
+    ULONG ProcessorL2CacheCount;
+    ULONG ProcessorL3CacheCount;
+    ULONG ProcessorPackageCount;
+    ULONG Padding2;
+
+    CPU_CACHES Caches;
+
+    ULONG Padding3;
+    SYSTEM_LOGICAL_PROCESSOR_INFO_ARRAY ProcInfoArray;
+
 } RTL_CPU_FEATURES;
 typedef RTL_CPU_FEATURES *PRTL_CPU_FEATURES;
+
 #endif // defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
 
 ////////////////////////////////////////////////////////////////////////////////

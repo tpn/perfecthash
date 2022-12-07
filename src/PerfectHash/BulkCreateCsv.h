@@ -45,6 +45,63 @@ Abstract:
           &Context->HexHeaderHash,                                                           \
           OUTPUT_STRING)                                                                     \
                                                                                              \
+    ENTRY(ComputerName,                                                                      \
+          &Context->ComputerName,                                                            \
+          OUTPUT_STRING)                                                                     \
+                                                                                             \
+    ENTRY(CpuBrand,                                                                          \
+          &Context->Rtl->CpuFeatures.Brand,                                                  \
+          OUTPUT_STRING)                                                                     \
+                                                                                             \
+    ENTRY(CpuSocketCount,                                                                    \
+          Context->Rtl->CpuFeatures.ProcessorPackageCount,                                   \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuNumaNodeCount,                                                                  \
+          Context->Rtl->CpuFeatures.NumaNodeCount,                                           \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuProcessorCoreCount,                                                             \
+          Context->Rtl->CpuFeatures.ProcessorCoreCount,                                      \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuLogicalProcessorCount,                                                          \
+          Context->Rtl->CpuFeatures.LogicalProcessorCount,                                   \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL1InstructionSize,                                                         \
+          Context->Rtl->CpuFeatures.Caches.L1.Instruction.Size,                              \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL1DataSize,                                                                \
+          Context->Rtl->CpuFeatures.Caches.L1.Data.Size,                                     \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL1Total,                                                                   \
+          ((ULONGLONG)Context->Rtl->CpuFeatures.Caches.L1.Instruction.Size +                 \
+           (ULONGLONG)Context->Rtl->CpuFeatures.Caches.L1.Data.Size),                        \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL2UnifiedSize,                                                             \
+          Context->Rtl->CpuFeatures.Caches.L2.Unified.Size,                                  \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL3UnifiedSize,                                                             \
+          Context->Rtl->CpuFeatures.Caches.L3.Unified.Size,                                  \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL1TraceSize,                                                               \
+          Context->Rtl->CpuFeatures.Caches.L1.Trace.Size,                                    \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL2TraceSize,                                                               \
+          Context->Rtl->CpuFeatures.Caches.L2.Trace.Size,                                    \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(CpuCacheL3TraceSize,                                                               \
+          Context->Rtl->CpuFeatures.Caches.L3.Trace.Size,                                    \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(KeysName,                                                                          \
           &Keys->File->Path->BaseNameA,                                                      \
           OUTPUT_STRING)                                                                     \

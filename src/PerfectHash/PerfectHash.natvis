@@ -190,4 +190,19 @@
         </Expand>
     </Type>
 
+    <Type Name="_SYSTEM_LOGICAL_PROCESSOR_INFO_ARRAY">
+        <Expand>
+            <Item Name="&lt;Count&gt;">Count</Item>
+            <Item Name="&lt;Size In Bytes&gt;">Size In Bytes</Item>
+            <Synthetic Name="&lt;ProcessorInfo&gt;">
+                <Expand>
+                    <ArrayItems>
+                        <Size>Count</Size>
+                        <ValuePointer Condition="Count &gt; 0 &amp;&amp; ProcInfo != nullptr">ProcInfo</ValuePointer>
+                    </ArrayItems>
+                </Expand>
+            </Synthetic>
+        </Expand>
+    </Type>
+
 </AutoVisualizer>

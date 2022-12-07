@@ -234,12 +234,6 @@ RtlInitialize(
         goto Error;
     }
 
-    Result = RtlInitializeBitManipulationFunctionPointers(Rtl);
-    if (FAILED(Result)) {
-        PH_ERROR(RtlInitializeBitManipulationFunctionPointers, Result);
-        goto Error;
-    }
-
     Result = RtlInitializeLargePages(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeLargePages, Result);
@@ -285,6 +279,7 @@ RtlRundown(
 {
     ULONG Index;
     HMODULE *Module;
+    PVOID Buffer;
 
     if (!ARGUMENT_PRESENT(Rtl)) {
         return;
@@ -295,6 +290,14 @@ RtlRundown(
             SYS_ERROR(CryptReleaseContext);
         }
         Rtl->CryptProv = 0;
+    }
+
+    Buffer = Rtl->CpuFeatures.ProcInfoArray.ProcInfo;
+    if (Buffer != NULL) {
+        if (!VirtualFree(Buffer, 0, MEM_RELEASE)) {
+            SYS_ERROR(VirtualFree);
+        }
+        Rtl->CpuFeatures.ProcInfoArray.ProcInfo = NULL;
     }
 
     //
@@ -447,6 +450,165 @@ Return Value:
 
 
 #if defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
+HRESULT
+RtlInitializeCpuFeaturesLogicalProcessors(
+    _In_ PRTL Rtl
+    )
+/*++
+
+Routine Description:
+
+    This routine initializes the logical processor information of the CPU
+    features structure in the provided Rtl instance.
+
+Arguments:
+
+    Rtl - Supplies a pointer to an RTL instance.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_SYSTEM_CALL_FAILED - System call failed.
+
+--*/
+{
+    SIZE_T Index;
+    BOOL Success;
+    HRESULT Result;
+    DWORD LastError;
+    PVOID ProcInfoBuffer;
+    DWORD ProcInfoLength;
+    ULONG ProcessorMaskBits;
+    PCPU_CACHES Caches;
+    PCPU_CACHE_LEVEL CacheLevel;
+    PCACHE_DESCRIPTOR Cache;
+    PCACHE_DESCRIPTOR CacheDesc;
+    PRTL_CPU_FEATURES Features;
+    PSYSTEM_LOGICAL_PROCESSOR_INFO_ARRAY ProcInfoArray;
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ProcInfo;
+
+    Features = &Rtl->CpuFeatures;
+
+    //
+    // Obtain the processor info.
+    //
+
+    ProcInfoLength = 0;
+    Success = GetLogicalProcessorInformation(NULL, &ProcInfoLength);
+    if (Success) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    } else {
+        LastError = GetLastError();
+        if (LastError != ERROR_INSUFFICIENT_BUFFER) {
+            SYS_ERROR(GetLogicalProcessorInformation);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto End;
+        }
+    }
+
+    ProcInfoBuffer = VirtualAlloc(NULL,
+                                  ProcInfoLength,
+                                  MEM_COMMIT | MEM_RESERVE,
+                                  PAGE_READWRITE);
+
+    if (!ProcInfoBuffer) {
+        Result = E_OUTOFMEMORY;
+        goto End;
+    }
+
+    Success = GetLogicalProcessorInformation(ProcInfoBuffer, &ProcInfoLength);
+    if (!Success) {
+        SYS_ERROR(GetLogicalProcessorInformation);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto End;
+    }
+
+    ProcInfoArray = &Features->ProcInfoArray;
+    ProcInfoArray->Count = ProcInfoLength / sizeof(*ProcInfo);
+    ProcInfoArray->SizeInBytes = ProcInfoLength;
+
+    ProcInfoArray->ProcInfo = (
+        (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION)ProcInfoBuffer
+    );
+
+    Caches = &Features->Caches;
+
+    for (Index = 0; Index < ProcInfoArray->Count; Index++) {
+
+        ProcInfo = &ProcInfoArray->ProcInfo[Index];
+
+        switch (ProcInfo->Relationship) {
+            case RelationNumaNode:
+                Features->NumaNodeCount++;
+                break;
+
+            case RelationProcessorCore:
+                Features->ProcessorCoreCount++;
+
+                ProcessorMaskBits = (ULONG)(
+                    Rtl->PopulationCountPointer(ProcInfo->ProcessorMask)
+                );
+                Features->LogicalProcessorCount += ProcessorMaskBits;
+                break;
+
+            case RelationProcessorPackage:
+                Features->ProcessorPackageCount++;
+                break;
+
+            case RelationCache:
+                CacheDesc = &ProcInfo->Cache;
+
+                if (CacheDesc->Level > 4) {
+                    break;
+                }
+
+                Caches->NumberOfLevels = max(Caches->NumberOfLevels,
+                                             CacheDesc->Level);
+
+                CacheLevel = &Caches->Level[CacheDesc->Level-1];
+                Cache = &CacheLevel->AsArray[CacheDesc->Type];
+                if (Cache->Level == 0) {
+                    CopyMemoryInline(Cache, CacheDesc, sizeof(*Cache));
+                } else {
+                    Cache->Size += CacheDesc->Size;
+                }
+                break;
+
+            case RelationAll:
+                break;
+
+            case RelationGroup:
+                break;
+
+            case RelationNumaNodeEx:
+                break;
+
+            case RelationProcessorDie:
+                break;
+
+            case RelationProcessorModule:
+                break;
+
+            default:
+                break;
+        }
+
+    }
+
+    Features->Flags.HasProcessorInformation = TRUE;
+    Result = S_OK;
+
+    //
+    // Intentional follow-on.
+    //
+
+End:
+
+    return Result;
+}
+
+
 _Use_decl_annotations_
 HRESULT
 RtlInitializeCpuFeatures(
@@ -466,6 +628,8 @@ Arguments:
 Return Value:
 
     S_OK - Success.
+
+    PH_E_SYSTEM_CALL_FAILED - System call failed.
 
 --*/
 {
@@ -602,7 +766,28 @@ Return Value:
 
     }
 
-    Result = S_OK;
+    //
+    // Initialize the bit manipulation features next, then the processor info
+    // (which needs PopulationCount).
+    //
+
+    Result = RtlInitializeBitManipulationFunctionPointers(Rtl);
+    if (FAILED(Result)) {
+        PH_ERROR(RtlInitializeBitManipulationFunctionPointers, Result);
+        goto End;
+    }
+
+    Result = RtlInitializeCpuFeaturesLogicalProcessors(Rtl);
+    if (FAILED(Result)) {
+        PH_ERROR(RtlInitializeCpuFeaturesLogicalProcessors, Result);
+        goto End;
+    }
+
+    //
+    // Intentional follow-on.
+    //
+
+End:
 
     return Result;
 }
