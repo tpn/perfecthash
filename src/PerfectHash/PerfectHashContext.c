@@ -40,6 +40,13 @@ VOID
     _Inout_     PTP_WORK              Work
     );
 
+typedef
+VOID
+(NTAPI TP_TIMER_CALLBACK)(
+    _Inout_     PTP_CALLBACK_INSTANCE Instance,
+    _Inout_opt_ PVOID                 Context,
+    _Inout_     PTP_TIMER             Work
+    );
 
 typedef
 VOID
@@ -56,6 +63,7 @@ TP_WORK_CALLBACK MainWorkCallback;
 TP_WORK_CALLBACK FileWorkCallback;
 TP_WORK_CALLBACK ErrorWorkCallback;
 TP_WORK_CALLBACK FinishedWorkCallback;
+TP_TIMER_CALLBACK SolveTimeoutCallback;
 TP_CLEANUP_GROUP_CANCEL_CALLBACK CleanupCallback;
 
 //
@@ -466,6 +474,19 @@ Return Value:
     }
 
     //
+    // Create the timer object for the solve timeout.
+    //
+
+    Context->SolveTimeout = CreateThreadpoolTimer(SolveTimeoutCallback,
+                                                  Context,
+                                                  &Context->MainCallbackEnv);
+    if (!Context->SolveTimeout) {
+        SYS_ERROR(CreateThreadpoolTimer);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
     // Create the File threadpool structures.  Automatically clamp the min/max
     // threads for this threadpool to the number of system processors.
     //
@@ -761,17 +782,19 @@ Return Value:
                                            TRUE,
                                            NULL);
         Context->MainWork = NULL;
+        Context->SolveTimeout = NULL;
         CloseThreadpoolCleanupGroup(Context->MainCleanupGroup);
         Context->MainCleanupGroup = NULL;
 
     } else {
 
         //
-        // Invariant check: Context->MainWork should never be set if
+        // Invariant check: MainWork and SolveTimeout should never be set if
         // MainCleanupGroup is not set.
         //
 
         ASSERT(!Context->MainWork);
+        ASSERT(!Context->SolveTimeout);
     }
 
     if (Context->MainThreadpool) {
@@ -910,6 +933,7 @@ Return Value:
     Context->GraphMemoryFailures = 0;
     Context->LowMemoryObserved = 0;
     Context->State.AllGraphsFailedMemoryAllocation = FALSE;
+    Context->State.SolveTimeoutExpired = FALSE;
 
     Context->VertexCollisionFailures = 0;
     Context->CyclicGraphFailures = 0;
@@ -1013,6 +1037,52 @@ Return Value:
     //
 
     Context->MainWorkCallback(Instance, Context, ListEntry);
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
+SolveTimeoutCallback(
+    PTP_CALLBACK_INSTANCE Instance,
+    PVOID Ctx,
+    PTP_TIMER Timer
+    )
+/*++
+
+Routine Description:
+
+    This is the callback routine for the Main threadpool "solve timeout" timer.
+
+Arguments:
+
+    Instance - Supplies a pointer to the callback instance responsible for this
+        threadpool callback invocation.
+
+    Ctx - Supplies a pointer to the owning PERFECT_HASH_CONTEXT.
+
+    Timer - Supplies a pointer to the TP_TIMER object for this routine.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PPERFECT_HASH_CONTEXT Context;
+
+    UNREFERENCED_PARAMETER(Instance);
+    UNREFERENCED_PARAMETER(Timer);
+
+    if (!ARGUMENT_PRESENT(Ctx)) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    Context = (PPERFECT_HASH_CONTEXT)Ctx;
+
+    SetStopSolving(Context);
+    Context->State.SolveTimeoutExpired = TRUE;
+    SubmitThreadpoolWork(Context->FinishedWork);
 
     return;
 }

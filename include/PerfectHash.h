@@ -3172,6 +3172,7 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(RngOffset)                                                 \
     ENTRY(Seed3Byte1MaskCounts)                                      \
     ENTRY(Seed3Byte2MaskCounts)                                      \
+    ENTRY(MaxSolveTimeInSeconds)                                     \
     LAST_ENTRY(Remark)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \

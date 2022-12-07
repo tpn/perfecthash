@@ -120,10 +120,16 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG IsTableCreate:1;
 
         //
+        // When set, indicates a solve timeout expired.
+        //
+
+        ULONG SolveTimeoutExpired:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:24;
+        ULONG Unused:23;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -785,6 +791,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_CLEANUP_GROUP MainCleanupGroup;
     PTP_POOL MainThreadpool;
     PTP_WORK MainWork;
+    PTP_TIMER SolveTimeout;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
 

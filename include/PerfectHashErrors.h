@@ -230,6 +230,15 @@ Abstract:
 //
 #define PH_I_TABLE_CREATED_BUT_VALUES_ARRAY_ALLOC_FAILED ((HRESULT)0x60040087L)
 
+//
+// MessageId: PH_I_SOLVE_TIMEOUT_EXPIRED
+//
+// MessageText:
+//
+// Solve timeout expired.
+//
+#define PH_I_SOLVE_TIMEOUT_EXPIRED       ((HRESULT)0x60040088L)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL -- Usage Messages
@@ -899,6 +908,11 @@ Abstract:
 //         be returned if the provided string contains commas (as this will
 //         break the .csv output).
 // 
+//     --MaxSolveTimeInSeconds=<Seconds>
+// 
+//         Supplies the maximum number of seconds to try and solve an individual
+//         graph.
+// 
 // 
 // Console Output Character Legend
 // 
@@ -913,7 +927,7 @@ Abstract:
 //         were possible (due to the maximum resize limit also being hit).
 // 
 //     F   Failed to create a table due to a target not being reached by a specific
-//         number of attempts or time duration.  Not yet implemented.
+//         number of attempts.
 // 
 //     *   None of the worker threads were able to allocate sufficient memory to
 //         attempt solving the graph.
@@ -928,12 +942,15 @@ Abstract:
 // 
 //     V   The graph was created successfully, however, we weren't able to allocate
 //         enough memory for the table values array in order for the array to be
-//         used after creation.  This can be avoided by omitting --TestAfterCreate.
+//         used after creation.  This can be avoided by supplying the command line
+//         parameter --SkipTestAfterCreate.
 // 
-//     T   The requested number of table elements was too large (exceeded 32 bits).
+//     T   The requested number of table elements was too large.
 // 
 //     S   A shutdown event was received.  This shouldn't be seen unless externally
 //         signaling the named shutdown event associated with a context.
+// 
+//     t   The solve timeout was reached before a solution was found.
 // 
 //
 #define PH_MSG_PERFECT_HASH_USAGE        ((HRESULT)0x60040101L)
@@ -4056,4 +4073,13 @@ Abstract:
 // --Remark must not contain commas.
 //
 #define PH_E_INVALID_REMARK              ((HRESULT)0xE00403D3L)
+
+//
+// MessageId: PH_E_INVALID_MAX_SOLVE_TIME_IN_SECONDS
+//
+// MessageText:
+//
+// Invalid --MaxSolveTimeInSeconds.
+//
+#define PH_E_INVALID_MAX_SOLVE_TIME_IN_SECONDS ((HRESULT)0xE00403D4L)
 

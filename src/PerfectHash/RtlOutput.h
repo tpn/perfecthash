@@ -477,6 +477,7 @@ static PCSZ Dash = "-";
 static PCSZ Plus = "+";
 static PCSZ Caret = "^";
 static PCSZ Cross = "x";
+static PCSZ LittleT = "t";
 static PCSZ Percent = "%";
 static PCSZ Newline = "\n";
 static PCSZ Question = "?";
@@ -510,6 +511,7 @@ static PCSZ Exclamation = "!";
 #define DASH() DO_OUTPUT(Dash, 1)
 #define CARET() DO_OUTPUT(Caret, 1)
 #define CROSS() DO_OUTPUT(Cross, 1)
+#define LITTLET() DO_OUTPUT(LittleT, 1)
 #define PERCENT() DO_OUTPUT(Percent, 1)
 #define NEWLINE() DO_OUTPUT(Newline, 1)
 #define QUESTION() DO_OUTPUT(Question, 1)

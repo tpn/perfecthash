@@ -104,6 +104,12 @@ typedef const CHAR *PCCHAR;
 typedef _Null_terminated_ const WCHAR *PCWSZ;
 typedef const WCHAR *PCWCHAR;
 
+typedef union _FILETIME64 {
+    FILETIME AsFileTime;
+    LONGLONG AsLongLong;
+    ULONGLONG AsULongLong;
+} FILETIME64, *PFILETIME64;
+
 #ifndef PAGE_SHIFT
 #define PAGE_SHIFT 12
 #endif

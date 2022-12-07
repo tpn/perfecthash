@@ -741,6 +741,15 @@ Return Value:
                 Table->Remark = &Param->AsUnicodeString;
                 break;
 
+            case TableCreateParameterMaxSolveTimeInSecondsId:
+                Table->MaxSolveTimeInSeconds = Param->AsULong;
+                Table->RelativeMaxSolveTimeInFiletime.AsULongLong = (ULONGLONG)(
+                    -1LL *
+                    (LONGLONG)Table->MaxSolveTimeInSeconds *
+                    10000000LL
+                );
+                break;
+
             case TableCreateParameterNullId:
             case TableCreateParameterInvalidId:
             default:

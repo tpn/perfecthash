@@ -416,7 +416,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG BenchmarkWarmups;
     ULONG BenchmarkAttempts;
     ULONG BenchmarkIterations;
-    ULONG Padding4;
+
+    ULONG MaxSolveTimeInSeconds;
+    FILETIME64 RelativeMaxSolveTimeInFiletime;
 
     TIMESTAMP SlowIndexTimestamp;
     TIMESTAMP SeededHashTimestamp;
@@ -512,6 +514,10 @@ typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
                                                                  \
         case PH_I_CREATE_TABLE_ROUTINE_RECEIVED_SHUTDOWN_EVENT:  \
             BIGS();                                              \
+            break;                                               \
+                                                                 \
+        case PH_I_SOLVE_TIMEOUT_EXPIRED:                         \
+            LITTLET();                                           \
             break;                                               \
                                                                  \
         default:                                                 \

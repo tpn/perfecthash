@@ -653,6 +653,18 @@ RetryWithLargerTableSize:
     }
 
     //
+    // If we've been asked to cap the maximum solve time, submit a threadpool
+    // timer now to achieve that.
+    //
+
+    if (Table->MaxSolveTimeInSeconds > 0) {
+        SetThreadpoolTimer(Context->SolveTimeout,
+                           &Table->RelativeMaxSolveTimeInFiletime.AsFileTime,
+                           0,
+                           0);
+    }
+
+    //
     // Submit all of the file preparation work items.
     //
 
@@ -840,6 +852,7 @@ RetryWithLargerTableSize:
 
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
         WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+        WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
 
         if (!NoFileIo(Table)) {
 
@@ -975,6 +988,7 @@ RetryWithLargerTableSize:
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+    WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
 
     Success = (Context->FinishedCount > 0);
 
@@ -1017,8 +1031,10 @@ RetryWithLargerTableSize:
 
         } else if (FailedEventSet) {
 
-            if (Context->State.AllGraphsFailedMemoryAllocation == TRUE) {
+            if (Context->State.AllGraphsFailedMemoryAllocation != FALSE) {
                 Result = PH_I_FAILED_TO_ALLOCATE_MEMORY_FOR_ALL_GRAPHS;
+            } else if (Context->State.SolveTimeoutExpired != FALSE) {
+                Result = PH_I_SOLVE_TIMEOUT_EXPIRED;
             } else {
                 Result = PH_I_CREATE_TABLE_ROUTINE_FAILED_TO_FIND_SOLUTION;
             }
@@ -1039,6 +1055,12 @@ RetryWithLargerTableSize:
         //
 
         WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
+
+        //
+        // Wait for the solve timeout, if applicable.
+        //
+
+        WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
 
         //
         // Perform the same operation for the file work threadpool.  Note that
@@ -1074,6 +1096,7 @@ FinishedSolution:
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
+    WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
 
     if (CtrlCPressed) {
         Result = PH_E_CTRL_C_PRESSED;
@@ -1383,6 +1406,7 @@ Error:
 
     SetEvent(Context->ShutdownEvent);
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
     if (!NoFileIo(Table)) {
         WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
     }

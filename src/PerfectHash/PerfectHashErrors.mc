@@ -175,6 +175,14 @@ Language=English
 The table was created successfully, however, the values array could not be allocated.  The table cannot be used.
 .
 
+MessageId=0x088
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_I_SOLVE_TIMEOUT_EXPIRED
+Language=English
+Solve timeout expired.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL -- Usage Messages
@@ -844,6 +852,11 @@ Table Create Parameters:
         be returned if the provided string contains commas (as this will
         break the .csv output).
 
+    --MaxSolveTimeInSeconds=<Seconds>
+
+        Supplies the maximum number of seconds to try and solve an individual
+        graph.
+
 
 Console Output Character Legend
 
@@ -858,7 +871,7 @@ Console Output Character Legend
         were possible (due to the maximum resize limit also being hit).
 
     F   Failed to create a table due to a target not being reached by a specific
-        number of attempts or time duration.  Not yet implemented.
+        number of attempts.
 
     *   None of the worker threads were able to allocate sufficient memory to
         attempt solving the graph.
@@ -873,12 +886,15 @@ Console Output Character Legend
 
     V   The graph was created successfully, however, we weren't able to allocate
         enough memory for the table values array in order for the array to be
-        used after creation.  This can be avoided by omitting --TestAfterCreate.
+        used after creation.  This can be avoided by supplying the command line
+        parameter --SkipTestAfterCreate.
 
-    T   The requested number of table elements was too large (exceeded 32 bits).
+    T   The requested number of table elements was too large.
 
     S   A shutdown event was received.  This shouldn't be seen unless externally
         signaling the named shutdown event associated with a context.
+
+    t   The solve timeout was reached before a solution was found.
 
 .
 
@@ -3680,5 +3696,13 @@ Facility=ITF
 SymbolicName=PH_E_INVALID_REMARK
 Language=English
 --Remark must not contain commas.
+.
+
+MessageId=0x3d4
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_MAX_SOLVE_TIME_IN_SECONDS
+Language=English
+Invalid --MaxSolveTimeInSeconds.
 .
 
