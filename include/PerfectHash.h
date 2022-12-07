@@ -3171,7 +3171,8 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(RngSubsequence)                                            \
     ENTRY(RngOffset)                                                 \
     ENTRY(Seed3Byte1MaskCounts)                                      \
-    LAST_ENTRY(Seed3Byte2MaskCounts)
+    ENTRY(Seed3Byte2MaskCounts)                                      \
+    LAST_ENTRY(Remark)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
     TABLE_CREATE_PARAMETER_TABLE(ENTRY, ENTRY, ENTRY)
@@ -3381,6 +3382,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         ULONGLONG AsULongLong;
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
+        UNICODE_STRING AsUnicodeString;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
         PERFECT_HASH_RNG_ID AsRngId;
         PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID AsBestCoverageType;

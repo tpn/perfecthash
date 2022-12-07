@@ -892,6 +892,13 @@ Abstract:
 // 
 //         Supplies the initial offset used by the RNG.  (Defaults to 0.)
 // 
+//     --Remark="Additional description about run"
+// 
+//         Supplies a remark to be associated with the run that will be included
+//         in the .csv output files under the 'Remark' column.  An error will
+//         be returned if the provided string contains commas (as this will
+//         break the .csv output).
+// 
 // 
 // Console Output Character Legend
 // 
@@ -4040,4 +4047,13 @@ Abstract:
 // ---HashAllKeysFirst is required when specifying --TryUseAvx512HashFunction.
 //
 #define PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST ((HRESULT)0xE00403D2L)
+
+//
+// MessageId: PH_E_INVALID_REMARK
+//
+// MessageText:
+//
+// --Remark must not contain commas.
+//
+#define PH_E_INVALID_REMARK              ((HRESULT)0xE00403D3L)
 

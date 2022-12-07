@@ -744,6 +744,7 @@ Return Value:
     UNICODE_STRING LocalArg = { 0 };
     UNICODE_STRING Temp = { 0 };
     PUNICODE_STRING ValueString;
+    PUNICODE_STRING LocalString;
     ULONG NumberOfTableCreateParameters;
     PERFECT_HASH_TABLE_CREATE_PARAMETER LocalParam;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
@@ -1127,6 +1128,29 @@ Return Value:
         }
         Result = PH_E_INVALID_SOLUTIONS_FOUND_RATIO;
         goto Error;
+    }
+
+    if (IS_EQUAL(Remark)) {
+
+        //
+        // Verify there are no commas in the remark, as this will break the
+        // CSV output.
+        //
+
+        Count = ValueString->Length >> 1;
+        for (Index = 0; Index < Count; Index++) {
+            if (ValueString->Buffer[Index] == L',') {
+                Result = PH_E_INVALID_REMARK;
+                goto Error;
+            }
+        }
+
+        SET_PARAM_ID(Remark);
+        LocalString = &LocalParam.AsUnicodeString;
+        LocalString->Length = ValueString->Length;
+        LocalString->MaximumLength = ValueString->MaximumLength;
+        LocalString->Buffer = ValueString->Buffer;
+        goto AddParam;
     }
 
     //

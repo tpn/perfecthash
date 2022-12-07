@@ -369,6 +369,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     PCSTRING CTypeNames;
 
     //
+    // Pointer to an optional remark supplied on the command line.
+    //
+
+    PCUNICODE_STRING Remark;
+
+    //
     // Pointers to files associated with the table.
     //
 

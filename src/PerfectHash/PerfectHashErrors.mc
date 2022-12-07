@@ -837,6 +837,13 @@ Table Create Parameters:
 
         Supplies the initial offset used by the RNG.  (Defaults to 0.)
 
+    --Remark="Additional description about run"
+
+        Supplies a remark to be associated with the run that will be included
+        in the .csv output files under the 'Remark' column.  An error will
+        be returned if the provided string contains commas (as this will
+        break the .csv output).
+
 
 Console Output Character Legend
 
@@ -3665,5 +3672,13 @@ Facility=ITF
 SymbolicName=PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
 Language=English
 ---HashAllKeysFirst is required when specifying --TryUseAvx512HashFunction.
+.
+
+MessageId=0x3d3
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_REMARK
+Language=English
+--Remark must not contain commas.
 .
 

@@ -6506,6 +6506,10 @@ Abstract:
           Keys->Stats.KeysBitmap.String,                                                     \
           OUTPUT_RAW)                                                                        \
                                                                                              \
+    ENTRY(Remark,                                                                            \
+          Table->Remark,                                                                     \
+          OUTPUT_UNICODE_STRING_FAST)                                                        \
+                                                                                             \
     LAST_ENTRY(CommandLineW,                                                                 \
                Context->CommandLineW,                                                        \
                OUTPUT_WSTR_FAST)

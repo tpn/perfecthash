@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -735,6 +735,10 @@ Return Value:
                 if (FAILED(Result)) {
                     goto Error;
                 }
+                break;
+
+            case TableCreateParameterRemarkId:
+                Table->Remark = &Param->AsUnicodeString;
                 break;
 
             case TableCreateParameterNullId:
