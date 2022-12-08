@@ -241,12 +241,12 @@ Return Value:
     //
 
     LimitConcurrency = (
-        Table->PredictedAttempts > 0 &&
+        Table->PriorPredictedAttempts > 0 &&
         TableCreateFlags.TryUsePredictedAttemptsToLimitMaxConcurrency != FALSE
     );
 
     if (LimitConcurrency) {
-        Concurrency = min(Concurrency, Table->PredictedAttempts);
+        Concurrency = min(Concurrency, Table->PriorPredictedAttempts);
     }
 
     if (FirstSolvedGraphWins(Context)) {
@@ -1176,6 +1176,39 @@ FinishedSolution:
     Result = Rng->Vtbl->GetCurrentOffset(Rng, &Table->RngOffset);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashTableImplChm01_RngGetCurrentOffset, Result);
+        goto Error;
+    }
+
+    //
+    // Calculate the solve duration, solutions found ratio, keys to edges and
+    // vertices ratios, and predicted attempts.
+    //
+
+    Table->SolveDurationInSeconds = (DOUBLE)(
+        ((DOUBLE)Context->SolveElapsedMicroseconds.QuadPart) /
+        ((DOUBLE)1e6)
+    );
+
+    Table->SolutionsFoundRatio = (DOUBLE)(
+        ((DOUBLE)Context->FinishedCount) /
+        ((DOUBLE)Context->Attempts)
+    );
+
+    Table->KeysToEdgesRatio = (DOUBLE)(
+        ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
+        ((DOUBLE)Info.Dimensions.NumberOfEdges)
+    );
+
+    Table->KeysToVerticesRatio = (DOUBLE)(
+        ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
+        ((DOUBLE)Info.Dimensions.NumberOfVertices)
+    );
+
+    Result = CalculatePredictedAttempts(Table->SolutionsFoundRatio,
+                                        &Table->PredictedAttempts);
+    if (FAILED(Result)) {
+        PH_ERROR(CreatePerfectHashTableImplChm01_CalculatePredictedAttempts,
+                 Result);
         goto Error;
     }
 

@@ -729,9 +729,11 @@ Return Value:
                 break;
 
             case TableCreateParameterSolutionsFoundRatioId:
-                Table->SolutionsFoundRatio = Param->AsDouble;
-                Result = CalculatePredictedAttempts(Param->AsDouble,
-                                                    &Table->PredictedAttempts);
+                Table->PriorSolutionsFoundRatio = Param->AsDouble;
+                Result = CalculatePredictedAttempts(
+                    Param->AsDouble,
+                    &Table->PriorPredictedAttempts
+                );
                 if (FAILED(Result)) {
                     goto Error;
                 }

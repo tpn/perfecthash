@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -16,6 +16,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "TableCreateCsv.h"
+#include "TableCreateBestCsv.h"
 
 
 #define PH_ERROR_EX(Name, Result, ...) \
@@ -47,7 +48,8 @@ _Success_(return >= 0)
 HRESULT
 (STDAPICALLTYPE PREPARE_TABLE_CREATE_CSV_FILE)(
     _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG NumberOfRows
+    _In_ ULONG NumberOfRows,
+    _In_ BOOLEAN FindBestGraph
     );
 typedef PREPARE_TABLE_CREATE_CSV_FILE *PPREPARE_TABLE_CREATE_CSV_FILE;
 extern PREPARE_TABLE_CREATE_CSV_FILE PrepareTableCreateCsvFile;
@@ -145,6 +147,7 @@ Return Value:
     PRTL Rtl;
     BOOLEAN Silent;
     USHORT NumberOfPages;
+    BOOLEAN FindBestGraph;
     ULONG NumberOfRows = 0;
     HRESULT Result = S_OK;
     HRESULT TableCreateResult;
@@ -252,13 +255,18 @@ Return Value:
     //
 
     Silent = (TableCreateFlags.Silent == TRUE);
+    FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
 
     //
     // Create a "row buffer" we can use for the CSV file.
     //
 
-    NumberOfPages = 2;
+    if (FindBestGraph) {
+        NumberOfPages = TABLE_CREATE_BEST_CSV_ROW_BUFFER_NUMBER_OF_PAGES;
+    } else {
+        NumberOfPages = TABLE_CREATE_CSV_ROW_BUFFER_NUMBER_OF_PAGES;
+    }
 
     Result = Rtl->Vtbl->CreateBuffer(Rtl,
                                      &ProcessHandle,
@@ -297,7 +305,9 @@ Return Value:
 
     if (TableCreateFlags.DisableCsvOutputFile == FALSE) {
         NumberOfRows = 1;
-        Result = PrepareTableCreateCsvFile(Context, NumberOfRows);
+        Result = PrepareTableCreateCsvFile(Context,
+                                           NumberOfRows,
+                                           FindBestGraph);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextTableCreate_PrepareCsvFile, Result);
             goto Error;
@@ -496,7 +506,11 @@ Return Value:
     //
 
     _No_competing_thread_begin_
-    WRITE_TABLE_CREATE_CSV_ROW();
+    if (FindBestGraph) {
+        WRITE_TABLE_CREATE_BEST_CSV_ROW();
+    } else {
+        WRITE_TABLE_CREATE_CSV_ROW();
+    }
     _No_competing_thread_end_
 
     //
@@ -574,7 +588,8 @@ _Use_decl_annotations_
 HRESULT
 PrepareTableCreateCsvFile(
     PPERFECT_HASH_CONTEXT Context,
-    ULONG NumberOfRows
+    ULONG NumberOfRows,
+    BOOLEAN FindBestGraph
     )
 /*++
 
@@ -591,6 +606,11 @@ Arguments:
     NumberOfRows - Supplies the number of rows anticipated to be written during
         processing.  This is used to derive an appropriate file and memory map
         size to use for the .csv file.
+
+    FindBestGraph - Supplies a boolean indicating whether or not the "find
+        best graph" solving mode is active.  This is used to select the base
+        file name used for the .csv file, as well as the header used.
+
 
 Return Value:
 
@@ -643,9 +663,15 @@ Return Value:
     OUTPUT_RAW(#Name);                                               \
     OUTPUT_CHR('\n');
 
-    TABLE_CREATE_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
-                               EXPAND_AS_COLUMN_NAME_THEN_COMMA,
-                               EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+    if (FindBestGraph) {
+        TABLE_CREATE_BEST_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                        EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                        EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+    } else {
+        TABLE_CREATE_CSV_ROW_TABLE(EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                   EXPAND_AS_COLUMN_NAME_THEN_COMMA,
+                                   EXPAND_AS_COLUMN_NAME_THEN_NEWLINE);
+    }
 
     Header.Length = (USHORT)RtlPointerToOffset(Base, Output);
     Header.MaximumLength = Header.Length;

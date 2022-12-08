@@ -259,12 +259,28 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // how many attempts it took before a solution was found.
     //
 
+    DOUBLE PriorSolutionsFoundRatio;
+
+    //
+    // The solutions found ratio (number of solutions found divided by the
+    // number of attempts) of this current run, assuming a solution was found
+    // (set after table creation has completed successfully).
+    //
+
     DOUBLE SolutionsFoundRatio;
 
     //
-    // If SolutionsFoundRatio has been supplied, PredictedAttempts will capture
-    // the predicted number of attempts required before a successful graph will
-    // be obtained.
+    // If PriorSolutionsFoundRatio has been supplied, PredictedAttempts will
+    // capture the predicted number of attempts required before a successful
+    // graph will be obtained.
+    //
+
+    ULONG PriorPredictedAttempts;
+
+    //
+    // If a solution was found (i.e. we have a solutions found ratio), this
+    // will capture the predicted attempts for the given solutions found ratio
+    // after solving has completed.
     //
 
     ULONG PredictedAttempts;
@@ -311,6 +327,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     ULONG GraphImpl;
+
+    ULONG Padding1;
 
     //
     // Pointer to the path for the output directory (below).
@@ -437,6 +455,19 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONGLONG RngSeed;
     ULONGLONG RngSubsequence;
     ULONGLONG RngOffset;
+
+    //
+    // Time it took to solve the graph, in seconds.
+    //
+
+    DOUBLE SolveDurationInSeconds;
+
+    //
+    // Ratios between keys, edges and vertices, assuming the graph was solved.
+    //
+
+    DOUBLE KeysToEdgesRatio;
+    DOUBLE KeysToVerticesRatio;
 
     //
     // Backing vtbl.

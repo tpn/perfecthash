@@ -118,6 +118,14 @@ Abstract:
           Table->HashSize,                                                                   \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(KeysToEdgesRatio,                                                                  \
+          Table->KeysToEdgesRatio,                                                           \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(KeysToVerticesRatio,                                                               \
+          Table->KeysToVerticesRatio,                                                        \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
     ENTRY(Algorithm,                                                                         \
           AlgorithmNames[Context->AlgorithmId],                                              \
           OUTPUT_UNICODE_STRING_FAST)                                                        \
@@ -227,9 +235,25 @@ Abstract:
           Context->FinishedCount,                                                            \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(PriorSolutionsFoundRatio,                                                          \
+          Table->PriorSolutionsFoundRatio,                                                   \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(PriorPredictedAttempts,                                                            \
+          Table->PriorPredictedAttempts,                                                     \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(SolutionsFoundRatio,                                                               \
+          Table->SolutionsFoundRatio,                                                        \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
     ENTRY(PredictedAttempts,                                                                 \
           Table->PredictedAttempts,                                                          \
           OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(SolveDurationInSeconds,                                                            \
+          Table->SolveDurationInSeconds,                                                     \
+          OUTPUT_DOUBLE)                                                                     \
                                                                                              \
     ENTRY(VertexCollisionFailures,                                                           \
           Context->VertexCollisionFailures,                                                  \

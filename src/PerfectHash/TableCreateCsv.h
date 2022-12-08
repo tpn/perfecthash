@@ -19,6 +19,13 @@ Abstract:
 #include <PerfectHashVersion.rc>
 
 //
+// Define the number of pages that should be allocated for the row buffer when
+// constructing the CSV file.
+//
+
+#define TABLE_CREATE_CSV_ROW_BUFFER_NUMBER_OF_PAGES 2
+
+//
 // Define an "X-Macro"-style macro for capturing the ordered definition of
 // columns in a row of table create .csv output.
 //
@@ -110,6 +117,14 @@ Abstract:
     ENTRY(NumberOfVertices,                                                                  \
           Table->HashSize,                                                                   \
           OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(KeysToEdgesRatio,                                                                  \
+          Table->KeysToEdgesRatio,                                                           \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(KeysToVerticesRatio,                                                               \
+          Table->KeysToVerticesRatio,                                                        \
+          OUTPUT_DOUBLE)                                                                     \
                                                                                              \
     ENTRY(Algorithm,                                                                         \
           AlgorithmNames[Context->AlgorithmId],                                              \
@@ -220,9 +235,25 @@ Abstract:
           Context->FinishedCount,                                                            \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(PriorSolutionsFoundRatio,                                                          \
+          Table->PriorSolutionsFoundRatio,                                                   \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
+    ENTRY(PriorPredictedAttempts,                                                            \
+          Table->PriorPredictedAttempts,                                                     \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(SolutionsFoundRatio,                                                               \
+          Table->SolutionsFoundRatio,                                                        \
+          OUTPUT_DOUBLE)                                                                     \
+                                                                                             \
     ENTRY(PredictedAttempts,                                                                 \
           Table->PredictedAttempts,                                                          \
           OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(SolveDurationInSeconds,                                                            \
+          Table->SolveDurationInSeconds,                                                     \
+          OUTPUT_DOUBLE)                                                                     \
                                                                                              \
     ENTRY(VertexCollisionFailures,                                                           \
           Context->VertexCollisionFailures,                                                  \

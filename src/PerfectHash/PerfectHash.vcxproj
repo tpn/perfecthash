@@ -179,6 +179,7 @@
     <ClInclude Include="Security.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="BulkCreateCsv.h" />
+    <ClInclude Include="TableCreateBestCsv.h" />
     <ClInclude Include="TableCreateCsv.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="VCProjectFileChunks.h" />

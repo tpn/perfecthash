@@ -1,15 +1,15 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
-    BulkCreateBestCsv.h
+    TableCreateBestCsv.h
 
 Abstract:
 
-    Private header file for bulk creation CSV glue when find best graph mode is
-    active.
+    Private header file for table creation CSV glue when find best graph mode
+    is active.
 
 --*/
 
@@ -24,16 +24,16 @@ Abstract:
 // constructing the CSV file.
 //
 
-#define BULK_CREATE_BEST_CSV_ROW_BUFFER_NUMBER_OF_PAGES 14
+#define TABLE_CREATE_BEST_CSV_ROW_BUFFER_NUMBER_OF_PAGES 14
 
 //
 // Define an "X-Macro"-style macro for capturing the ordered definition of
-// columns in a row of bulk create .csv output.
+// columns in a row of table create .csv output.
 //
 // The ENTRY macros receive (Name, Value, OutputMacro) as their parameters.
 //
 
-#define BULK_CREATE_BEST_CSV_ROW_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)                       \
+#define TABLE_CREATE_BEST_CSV_ROW_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY)                      \
     FIRST_ENTRY(ContextTimestamp,                                                            \
                 &Context->TimestampString,                                                   \
                 OUTPUT_STRING)                                                               \
@@ -324,22 +324,6 @@ Abstract:
           (Table->Flags.UsedAvx2MemoryCoverageFunction != FALSE ? 'Y' : 'N'),                \
           OUTPUT_CHR)                                                                        \
                                                                                              \
-    ENTRY(GraphRegisterSolvedTsxSuccessCount,                                                \
-          Context->GraphRegisterSolvedTsxSuccess,                                            \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(GraphRegisterSolvedTsxStartedCount,                                                \
-          Context->GraphRegisterSolvedTsxStarted,                                            \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(GraphRegisterSolvedTsxRetryCount,                                                  \
-          Context->GraphRegisterSolvedTsxRetry,                                              \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(GraphRegisterSolvedTsxFailedCount,                                                 \
-          Context->GraphRegisterSolvedTsxFailed,                                             \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
     ENTRY(UsePreviousTableSize,                                                              \
           (TableCreateFlags.UsePreviousTableSize == TRUE ?                                   \
            'Y' : 'N'),                                                                       \
@@ -375,6 +359,14 @@ Abstract:
                                                                                              \
     ENTRY(NumberOfCollisionsDuringAssignment,                                                \
           Table->NumberOfCollisionsDuringAssignment,                                         \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(HighestDeletedEdgesCount,                                                          \
+          Context->HighestDeletedEdgesCount,                                                 \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(ClosestWeCameToSolvingGraphWithSmallerTableSizes,                                  \
+          Context->ClosestWeCameToSolvingGraphWithSmallerTableSizes,                         \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(AddKeysElapsedCycles,                                                              \
@@ -421,19 +413,19 @@ Abstract:
           Table->BenchmarkIterations,                                                        \
           OUTPUT_INT)                                                                        \
                                                                                              \
-    ENTRY(SeededHashMinimumCyclesPerAttempt,                                                 \
+    ENTRY(SeededHashMinimumCycles,                                                           \
           Table->SeededHashTimestamp.MinimumCycles.QuadPart,                                 \
           OUTPUT_INT)                                                                        \
                                                                                              \
-    ENTRY(SeededHashMinimumNanosecondsPerAttempt,                                            \
+    ENTRY(SeededHashMinimumNanoseconds,                                                      \
           Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart,                            \
           OUTPUT_INT)                                                                        \
                                                                                              \
-    ENTRY(NullSeededHashMinimumCyclesPerAttempt,                                             \
+    ENTRY(NullSeededHashMinimumCycles,                                                       \
           Table->NullSeededHashTimestamp.MinimumCycles.QuadPart,                             \
           OUTPUT_INT)                                                                        \
                                                                                              \
-    ENTRY(NullSeededHashMinimumNanosecondsPerAttempt,                                        \
+    ENTRY(NullSeededHashMinimumNanoseconds,                                                  \
           Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart,                        \
           OUTPUT_INT)                                                                        \
                                                                                              \
@@ -442,17 +434,17 @@ Abstract:
           Table->NullSeededHashTimestamp.MinimumCycles.QuadPart,                             \
           OUTPUT_INT)                                                                        \
                                                                                              \
-    ENTRY(DeltaHashMinimumNanoseconds,                                                       \
-          Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart -                           \
-          Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart,                        \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
     ENTRY(DeltaHashMinimumNanosecondsPerIteration,                                           \
           Table->BenchmarkIterations == 0 ? 0 : (                                            \
             (Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart -                        \
              Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart) /                   \
              Table->BenchmarkIterations                                                      \
           ),                                                                                 \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(DeltaHashMinimumNanoseconds,                                                       \
+          Table->SeededHashTimestamp.MinimumNanoseconds.QuadPart -                           \
+          Table->NullSeededHashTimestamp.MinimumNanoseconds.QuadPart,                        \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(SlowIndexMinimumCycles,                                                            \
@@ -574,46 +566,6 @@ Abstract:
           (Context->UserSeeds != NULL &&                                                     \
            Context->UserSeeds->NumberOfValues >= 8 ?                                         \
            Context->UserSeeds->Values[7] : 0),                                               \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask1,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask1 : 0),                                                   \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask2,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask2 : 0),                                                   \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask3,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask3 : 0),                                                   \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask4,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask4 : 0),                                                   \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask5,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask5 : 0),                                                   \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask6,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask6 : 0),                                                   \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask7,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask7 : 0),                                                   \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(SeedMask8,                                                                         \
-          (Context->SeedMasks != NULL ?                                                      \
-           Context->SeedMasks->Mask8 : 0),                                                   \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(Seed3Byte1MaskCounts,                                                              \
@@ -6574,7 +6526,6 @@ Abstract:
     ENTRY(BestGraph32_Seed8,                                                                 \
           Context->BestGraphInfo[31].Seeds[7],                                               \
           OUTPUT_INT)                                                                        \
-                                                                                             \
     ENTRY(KeysMinValue,                                                                      \
           Keys->Stats.MinValue,                                                              \
           OUTPUT_HEX64)                                                                      \
@@ -6589,7 +6540,7 @@ Abstract:
                                                                                              \
     ENTRY(KeysBitmapString,                                                                  \
           Keys->Stats.KeysBitmap.String,                                                     \
-          OUTPUT_RAW)                                                                        \
+          OUTPUT_BITMAP_RAW)                                                                 \
                                                                                              \
     ENTRY(Remark,                                                                            \
           Table->Remark,                                                                     \
@@ -6608,7 +6559,7 @@ Abstract:
 // Define a macro for initializing the local variables prior to writing a row.
 //
 
-#define BULK_CREATE_BEST_CSV_PRE_ROW()                                        \
+#define TABLE_CREATE_BEST_CSV_PRE_ROW()                                       \
     PCHAR Base;                                                               \
     PCHAR Output;                                                             \
                                                                               \
@@ -6619,34 +6570,33 @@ Abstract:
 // And one for post-row writing.
 //
 
-#define BULK_CREATE_BEST_CSV_POST_ROW() \
+#define TABLE_CREATE_BEST_CSV_POST_ROW() \
     CsvFile->NumberOfBytesWritten.QuadPart = RtlPointerToOffset(Base, Output)
 
-#define EXPAND_AS_WRITE_BULK_CREATE_BEST_ROW_NOT_LAST_COLUMN(Name,        \
-                                                             Value,       \
-                                                             OutputMacro) \
-    OutputMacro(Value);                                                   \
+#define EXPAND_AS_WRITE_TABLE_CREATE_BEST_ROW_NOT_LAST_COLUMN(Name,        \
+                                                              Value,       \
+                                                              OutputMacro) \
+    OutputMacro(Value);                                                    \
     OUTPUT_CHR(',');
 
-#define EXPAND_AS_WRITE_BULK_CREATE_BEST_ROW_LAST_COLUMN(Name,   \
-                                                    Value,       \
-                                                    OutputMacro) \
-    OUTPUT_CHR('"');                                             \
-    OutputMacro(Value);                                          \
-    OUTPUT_CHR('"');                                             \
+#define EXPAND_AS_WRITE_TABLE_CREATE_BEST_ROW_LAST_COLUMN(Name,        \
+                                                          Value,       \
+                                                          OutputMacro) \
+    OUTPUT_CHR('"');                                                   \
+    OutputMacro(Value);                                                \
+    OUTPUT_CHR('"');                                                   \
     OUTPUT_CHR('\n');
 
-
-#define WRITE_BULK_CREATE_BEST_CSV_ROW() do {                 \
-    _dtoa_Allocator = Context->Allocator;                     \
-    BULK_CREATE_BEST_CSV_PRE_ROW();                           \
-    BULK_CREATE_BEST_CSV_ROW_TABLE(                           \
-        EXPAND_AS_WRITE_BULK_CREATE_BEST_ROW_NOT_LAST_COLUMN, \
-        EXPAND_AS_WRITE_BULK_CREATE_BEST_ROW_NOT_LAST_COLUMN, \
-        EXPAND_AS_WRITE_BULK_CREATE_BEST_ROW_LAST_COLUMN      \
-    );                                                        \
-    BULK_CREATE_BEST_CSV_POST_ROW();                          \
-    _dtoa_Allocator = NULL;                                   \
+#define WRITE_TABLE_CREATE_BEST_CSV_ROW() do {                 \
+    _dtoa_Allocator = Context->Allocator;                      \
+    TABLE_CREATE_BEST_CSV_PRE_ROW();                           \
+    TABLE_CREATE_BEST_CSV_ROW_TABLE(                           \
+        EXPAND_AS_WRITE_TABLE_CREATE_BEST_ROW_NOT_LAST_COLUMN, \
+        EXPAND_AS_WRITE_TABLE_CREATE_BEST_ROW_NOT_LAST_COLUMN, \
+        EXPAND_AS_WRITE_TABLE_CREATE_BEST_ROW_LAST_COLUMN      \
+    );                                                         \
+    TABLE_CREATE_BEST_CSV_POST_ROW();                          \
+    _dtoa_Allocator = NULL;                                    \
 } while (0)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
