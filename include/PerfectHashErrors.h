@@ -1210,6 +1210,16 @@ Abstract:
 // MessageText:
 //
 // The keys file supplied was not sorted.
+// 
+// Tip: Here's one way you can sort your keys in Python, assuming a filename of
+//      'mykeys.keys' and a key size of 32-bits:
+// 
+// import numpy as np
+// fp = np.memmap('mykeys.keys', dtype='uint32', mode='readwrite')
+// a = np.sort(np.unique(fp))
+// fp[:] = a[:]
+// del fp
+// 
 //
 #define PH_E_KEYS_NOT_SORTED             ((HRESULT)0xE0040218L)
 
