@@ -126,10 +126,22 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG SolveTimeoutExpired:1;
 
         //
+        // When set, indicates the fixed number of attempts were reached.
+        //
+
+        ULONG FixedAttemptsReached:1;
+
+        //
+        // When set, indicates the max number of attempts were reached.
+        //
+
+        ULONG MaxAttemptsReached:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:23;
+        ULONG Unused:21;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -431,11 +443,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // includes both failed and successfully-solved graphs.  If you want to
     // generate a fixed number of solutions, use TargetNumberOfSolutions.
     //
+    // FixedAttempts, if non-zero, trumps everything else.
+    //
 
     ULONG MinAttempts;
     ULONG MaxAttempts;
     ULONG TargetNumberOfSolutions;
-    ULONG Padding9;
+    ULONG FixedAttempts;
 
     //
     // Maximum number of equal best graphs.  When this number is hit, graph

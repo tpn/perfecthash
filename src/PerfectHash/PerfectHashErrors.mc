@@ -104,6 +104,13 @@ Language=English
 Maximum attempts at solving reached.
 .
 
+MessageId=0x00b
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_FIXED_ATTEMPTS_REACHED
+Language=English
+Fixed attempts at solving reached.
+.
 
 ;
 ;////////////////////////////////////////////////////////////////////////////////
@@ -895,6 +902,8 @@ Console Output Character Legend
         signaling the named shutdown event associated with a context.
 
     t   The solve timeout was reached before a solution was found.
+
+    ?   The error code isn't recognized!  E-mail trent@trent.me with details.
 
 .
 

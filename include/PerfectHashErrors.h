@@ -153,6 +153,15 @@ Abstract:
 //
 #define PH_S_MAX_ATTEMPTS_REACHED        ((HRESULT)0x2004000AL)
 
+//
+// MessageId: PH_S_FIXED_ATTEMPTS_REACHED
+//
+// MessageText:
+//
+// Fixed attempts at solving reached.
+//
+#define PH_S_FIXED_ATTEMPTS_REACHED      ((HRESULT)0x2004000BL)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
@@ -951,6 +960,8 @@ Abstract:
 //         signaling the named shutdown event associated with a context.
 // 
 //     t   The solve timeout was reached before a solution was found.
+// 
+//     ?   The error code isn't recognized!  E-mail trent@trent.me with details.
 // 
 //
 #define PH_MSG_PERFECT_HASH_USAGE        ((HRESULT)0x60040101L)

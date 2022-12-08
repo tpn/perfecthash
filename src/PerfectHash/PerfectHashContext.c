@@ -934,6 +934,8 @@ Return Value:
     Context->LowMemoryObserved = 0;
     Context->State.AllGraphsFailedMemoryAllocation = FALSE;
     Context->State.SolveTimeoutExpired = FALSE;
+    Context->State.FixedAttemptsReached = FALSE;
+    Context->State.MaxAttemptsReached = FALSE;
 
     Context->VertexCollisionFailures = 0;
     Context->CyclicGraphFailures = 0;
@@ -1080,6 +1082,7 @@ Return Value:
 
     Context = (PPERFECT_HASH_CONTEXT)Ctx;
 
+    CONTEXT_END_TIMERS(Solve);
     SetStopSolving(Context);
     Context->State.SolveTimeoutExpired = TRUE;
     SubmitThreadpoolWork(Context->FinishedWork);

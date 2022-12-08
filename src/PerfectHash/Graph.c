@@ -421,6 +421,7 @@ Return Value:
 
     if (FirstSolvedGraphWins(Context)) {
         ASSERT(Context->MinAttempts == 0);
+        ASSERT(Context->FixedAttempts == 0);
         ASSERT(Context->TargetNumberOfSolutions == 0);
         CONTEXT_END_TIMERS(Solve);
         SetStopSolving(Context);
@@ -478,7 +479,10 @@ Return Value:
     //
 
     if (FindBestMemoryCoverage(Context)) {
-        ASSERT(Context->MinAttempts == 0);
+        if (Context->FixedAttempts == 0) {
+            ASSERT(Context->MinAttempts == 0);
+            ASSERT(Context->MaxAttempts == 0);
+        }
         Result = Graph->Vtbl->RegisterSolved(Graph, NewGraphPointer);
     } else {
         ASSERT(Context->MinAttempts > 0 ||
@@ -2189,7 +2193,8 @@ Return Value:
     IsCoverageValueDouble = DoesBestCoverageTypeUseDouble(CoverageType);
 
     //
-    // Indicate continue graph solving unless we find a best graph.
+    // Indicate continue graph solving unless we find a best graph, or reach
+    // a fixed number of attempts.
     //
 
     Result = PH_S_CONTINUE_GRAPH_SOLVING;
@@ -2614,6 +2619,16 @@ End:
     //
 
 SkipComparatorCheck:
+
+    //
+    // FixedAttempts trumps everything else.  We handle stopping graph solving
+    // when FixedAttempts is active in GraphReset(), though, so there's nothing
+    // more to do here.
+    //
+
+    if (Context->FixedAttempts > 0) {
+        StopGraphSolving = FALSE;
+    }
 
     //
     // Communicate back to the context that solving can stop if indicated.
@@ -3769,15 +3784,27 @@ Return Value:
     }
 
     //
-    // Check if we're capping maximum attempts; if so, and we've made sufficient
-    // attempts, indicate stop solving.
+    // Check if we're capping fixed or maximum attempts; if so, and we've made
+    // sufficient attempts, indicate stop solving.
     //
 
-    if (Context->MaxAttempts > 0) {
-        if (Graph->Attempt - 1 == Context->MaxAttempts) {
-            SetStopSolving(Context);
-            return PH_S_MAX_ATTEMPTS_REACHED;
+    if (Context->FixedAttempts > 0) {
+        if (Graph->Attempt - 1 == Context->FixedAttempts) {
+            Context->State.FixedAttemptsReached = TRUE;
+            Result = PH_S_FIXED_ATTEMPTS_REACHED;
         }
+    } else if (Context->MaxAttempts > 0) {
+        if (Graph->Attempt - 1 == Context->MaxAttempts) {
+            Context->State.MaxAttemptsReached = TRUE;
+            Result = PH_S_MAX_ATTEMPTS_REACHED;
+        }
+    }
+
+    if (Result != S_OK) {
+        CONTEXT_END_TIMERS(Solve);
+        SetStopSolving(Context);
+        SubmitThreadpoolWork(Context->FinishedWork);
+        return Result;
     }
 
     //

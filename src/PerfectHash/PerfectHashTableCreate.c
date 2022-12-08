@@ -790,8 +790,8 @@ Return Value:
 
     if (Table->TableCreateFlags.FindBestGraph) {
 
-        if (!Context->BestCoverageAttempts ||
-            !Context->BestCoverageType ||
+        if (!Context->BestCoverageType ||
+            ((FixedAttempts == 0) && !Context->BestCoverageAttempts) ||
             !IsValidPerfectHashBestCoverageTypeId(Context->BestCoverageType)) {
 
             Result = PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH;
@@ -851,11 +851,6 @@ Return Value:
             goto Error;
         }
 
-        if (Table->TableCreateFlags.FindBestGraph != FALSE) {
-            Result = PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_FIND_BEST_GRAPH;
-            goto Error;
-        };
-
         //
         // --MinAttempts or --MaxAttempts with --FixedAttempts doesn't make
         // sense.
@@ -865,17 +860,14 @@ Return Value:
             Result = PH_E_FIXED_ATTEMPTS_CONFLICTS_WITH_MINMAX_ATTEMPTS;
         }
 
-        //
-        // N.B. There's no Context->FixedAttempts; we just use the Min/Max
-        //      members to box the desired number of attempts.
-        //
-
-        Context->MinAttempts = FixedAttempts;
-        Context->MaxAttempts = FixedAttempts;
-
+        Context->MinAttempts = 0;
+        Context->MaxAttempts = 0;
+        Context->FixedAttempts = FixedAttempts;
     }
 
     if (SawMinAttempts) {
+
+        ASSERT(!SawFixedAttempts);
 
         if (Context->MinAttempts == 0) {
             Result = PH_E_INVALID_MIN_ATTEMPTS;
@@ -904,6 +896,9 @@ Return Value:
     }
 
     if (SawMaxAttempts) {
+
+        ASSERT(!SawFixedAttempts);
+
         if (Context->MaxAttempts == 0) {
             Result = PH_E_INVALID_MAX_ATTEMPTS;
             goto Error;
@@ -927,6 +922,7 @@ Return Value:
 
     if (Context->MinAttempts > 0 ||
         Context->MaxAttempts > 0 ||
+        Context->FixedAttempts > 0 ||
         Context->TargetNumberOfSolutions > 0)
     {
         //

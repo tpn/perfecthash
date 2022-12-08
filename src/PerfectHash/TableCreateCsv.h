@@ -196,6 +196,18 @@ Abstract:
           Context->FinishedCount,                                                            \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(FixedAttempts,                                                                     \
+          Context->FixedAttempts,                                                            \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(MinAttempts,                                                                       \
+          Context->MinAttempts,                                                              \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(MaxAttempts,                                                                       \
+          Context->MaxAttempts,                                                              \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(Attempts,                                                                          \
           Context->Attempts,                                                                 \
           OUTPUT_INT)                                                                        \
