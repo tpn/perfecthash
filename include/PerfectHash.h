@@ -3189,7 +3189,7 @@ typedef RNG_VTBL *PRNG_VTBL;
 //      so we also export identical enum names with the prefix removed.
 //
 
-typedef enum PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
+typedef enum _PERFECT_HASH_TABLE_CREATE_PARAMETER_ID {
     TableCreateParameterNullId = 0,
     PerfectHashNullTableCreateParameterId = TableCreateParameterNullId,
 
