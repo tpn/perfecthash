@@ -442,6 +442,8 @@ Return Value:
 
     ASSERT(FindBestMemoryCoverage(Context) ||
            Context->MinAttempts > 0 ||
+           Context->MaxAttempts > 0 ||
+           Context->FixedAttempts > 0 ||
            Context->TargetNumberOfSolutions > 0);
 
     //
@@ -486,6 +488,8 @@ Return Value:
         Result = Graph->Vtbl->RegisterSolved(Graph, NewGraphPointer);
     } else {
         ASSERT(Context->MinAttempts > 0 ||
+               Context->MaxAttempts > 0 ||
+               Context->FixedAttempts > 0 ||
                Context->TargetNumberOfSolutions > 0);
         Result = GraphRegisterSolvedNoBestCoverage(Graph, NewGraphPointer);
     }
