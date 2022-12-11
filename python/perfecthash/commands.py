@@ -380,6 +380,8 @@ class UpdateRawCStringFile(InvariantAwareCommand):
         elif not extension:
             assert name == 'Makefile', name
             category = 'Makefile'
+        else:
+            raise CommandError(f'Unrecognized file: {input_path}')
 
         output_dir = join_path(src_dir, 'PerfectHash')
         new_name = '%s_%s_RawCString.h' % (name, category)

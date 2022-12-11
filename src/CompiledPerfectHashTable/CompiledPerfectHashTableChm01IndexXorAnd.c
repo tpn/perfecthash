@@ -12,8 +12,8 @@ DECLARE_INDEX_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    Long1.LongPart = DownsizedKey ^ Seed1;
-    Long2.LongPart = _rotl(DownsizedKey, 15) ^ Seed2;
+    Long1.LongPart = DownsizedKey ^ SEED1;
+    Long2.LongPart = _rotl(DownsizedKey, 15) ^ SEED2;
 
     Long1.LowPart ^= Long1.HighPart;
     Long1.HighPart = 0;
@@ -49,8 +49,8 @@ DECLARE_INDEX_IACA_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    Long1.LongPart = DownsizedKey ^ Seed1;
-    Long2.LongPart = _rotl(DownsizedKey, 15) ^ Seed2;
+    Long1.LongPart = DownsizedKey ^ SEED1;
+    Long2.LongPart = _rotl(DownsizedKey, 15) ^ SEED2;
 
     Long1.LowPart ^= Long1.HighPart;
     Long1.HighPart = 0;

@@ -9,8 +9,8 @@ DECLARE_INDEX_ROUTINE()
     //IACA_VC_START();
 
     DownsizedKey = DOWNSIZE_KEY(Key);
-    Vertex1 = (DownsizedKey + Seed1) ^ Seed3;
-    Vertex2 = (DownsizedKey - Seed2) ^ Seed4;
+    Vertex1 = (DownsizedKey + SEED1) ^ SEED3;
+    Vertex2 = (DownsizedKey - SEED2) ^ SEED4;
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;
@@ -37,8 +37,8 @@ DECLARE_INDEX_IACA_ROUTINE()
     IACA_VC_START();
 
     DownsizedKey = DOWNSIZE_KEY(Key);
-    Vertex1 = (DownsizedKey + Seed1) ^ Seed3;
-    Vertex2 = (DownsizedKey - Seed2) ^ Seed4;
+    Vertex1 = (DownsizedKey + SEED1) ^ SEED3;
+    Vertex2 = (DownsizedKey - SEED2) ^ SEED4;
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;
