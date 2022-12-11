@@ -69,7 +69,12 @@ Return Value:
         return E_POINTER;
     }
 
-    if (SolutionsFoundRatio >= 1.0 || SolutionsFoundRatio <= 0.0) {
+    if (SolutionsFoundRatio == 1.0) {
+        Attempt = 1;
+        goto End;
+    }
+
+    if (SolutionsFoundRatio > 1.0 || SolutionsFoundRatio <= 0.0) {
         return PH_E_INVALID_SOLUTIONS_FOUND_RATIO;
     }
 
@@ -90,6 +95,8 @@ Return Value:
     //
     // Update the caller's pointer and return success.
     //
+
+End:
 
     *PredictedAttempts = Attempt;
     return S_OK;
