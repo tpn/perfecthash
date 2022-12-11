@@ -39,7 +39,7 @@ Abstract:
 
 FORCEINLINE
 BOOLEAN
-IsVisitedVertex(
+IsVisitedVertex2(
     _In_ PGRAPH Graph,
     _In_ VERTEX Vertex
     )
@@ -49,7 +49,7 @@ IsVisitedVertex(
 
 FORCEINLINE
 VOID
-RegisterVertexVisit(
+RegisterVertexVisit2(
     _In_ PGRAPH Graph,
     _In_ VERTEX Vertex
     )

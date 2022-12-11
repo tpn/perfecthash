@@ -156,7 +156,7 @@ Return Value:
         //      ) & IndexMask;
         //
 
-        if (!IsVisitedVertex(Graph, Vertex1)) {
+        if (!IsVisitedVertex2(Graph, Vertex1)) {
             Assigned2 = Graph->Assigned[Vertex2];
             Assigned1 = (((NumberOfEdges + Order) - Assigned2) & IndexMask);
             Graph->Assigned[Vertex1] = Assigned1;
@@ -170,8 +170,8 @@ Return Value:
         // Set both vertices as visited.
         //
 
-        RegisterVertexVisit(Graph, Vertex1);
-        RegisterVertexVisit(Graph, Vertex2);
+        RegisterVertexVisit2(Graph, Vertex1);
+        RegisterVertexVisit2(Graph, Vertex2);
     }
 
     STOP_GRAPH_COUNTER(Assign);
