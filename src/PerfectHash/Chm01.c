@@ -1069,7 +1069,7 @@ RetryWithLargerTableSize:
         //
 
         if (!NoFileIo(Table)) {
-            WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
+            WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
         }
 
         //
@@ -1441,7 +1441,7 @@ Error:
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
     if (!NoFileIo(Table)) {
-        WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
+        WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
     }
 
     //
