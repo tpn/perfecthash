@@ -3725,3 +3725,11 @@ Language=English
 Invalid --MaxSolveTimeInSeconds.
 .
 
+MessageId=0x3d5
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SELF_TEST_OF_HASH_TABLE_FAILED
+Language=English
+Creation of the hash table was successful, but a failure was encountered during the post-create self-test routine.
+.
+

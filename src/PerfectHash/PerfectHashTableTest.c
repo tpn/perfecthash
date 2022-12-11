@@ -359,7 +359,7 @@ Return Value:
 Error:
 
     if (Result == S_OK) {
-        Result = E_UNEXPECTED;
+        Result = PH_E_SELF_TEST_OF_HASH_TABLE_FAILED;
     }
 
     //

@@ -4104,3 +4104,12 @@ Abstract:
 //
 #define PH_E_INVALID_MAX_SOLVE_TIME_IN_SECONDS ((HRESULT)0xE00403D4L)
 
+//
+// MessageId: PH_E_SELF_TEST_OF_HASH_TABLE_FAILED
+//
+// MessageText:
+//
+// Creation of the hash table was successful, but a failure was encountered during the post-create self-test routine.
+//
+#define PH_E_SELF_TEST_OF_HASH_TABLE_FAILED ((HRESULT)0xE00403D5L)
+
