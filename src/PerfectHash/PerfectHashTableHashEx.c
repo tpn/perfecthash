@@ -282,6 +282,8 @@ Return Value:
     ULONG_BYTES Seed3;
     ULONG Vertex1;
     ULONG Vertex2;
+    ULONG RotatedKey1;
+    ULONG RotatedKey2;
     ULARGE_INTEGER Result;
 
     //
@@ -296,8 +298,10 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE2));
+    RotatedKey1 = _rotr(Key, SEED3_BYTE1);
+    RotatedKey2 = _rotl(Key, SEED3_BYTE2);
+    Vertex1 = _mm_crc32_u32(SEED1, RotatedKey1);
+    Vertex2 = _mm_crc32_u32(SEED2, RotatedKey2);
 
     Result.LowPart = (Vertex1 & Mask);
     Result.HighPart = (Vertex2 & Mask);
@@ -1945,8 +1949,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = (ULONG)(((ULONGLONG)DownsizedKey * (ULONGLONG)Seed1) >> 32);
-    Vertex2 = (ULONG)(((ULONGLONG)DownsizedKey * (ULONGLONG)Seed2) >> 32);
+    Vertex1 = DownsizedKey * Seed1;
+    Vertex2 = DownsizedKey * Seed2;
 
     Result.LowPart = (Vertex1 & Mask);
     Result.HighPart = (Vertex2 & Mask);
