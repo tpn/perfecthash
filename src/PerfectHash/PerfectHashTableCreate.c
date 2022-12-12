@@ -773,6 +773,7 @@ Return Value:
 
     if (Table->Keys->NumberOfElements.QuadPart <
         (ULONGLONG)Context->MinNumberOfKeysForFindBestGraph) {
+
         Table->TableCreateFlags.FindBestGraph = FALSE;
     }
 
