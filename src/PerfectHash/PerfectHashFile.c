@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -950,15 +950,19 @@ Return Value:
             if (!DeleteFileW(File->Path->FullPath.Buffer)) {
 
                 //
-                // DeleteFileW() will fail with ERROR_ACCESS_DENIED if this was
-                // an NTFS stream (e.g. the :Info stream) and the parent file
-                // has been deleted.  Check for this condition now and suppress
-                // the error if applicable.
+                // If this is an NTFS stream, we might see ERROR_ACCESS_DENIED
+                // or ERROR_FILE_NOT_FOUND in certain situations; these aren't
+                // considered fatal, so, suppress them.  Bubble any other error
+                // code back up the stack.
                 //
 
                 LastError = GetLastError();
-                if (LastError == ERROR_ACCESS_DENIED && IsFileStream(File)) {
+                if (IsFileStream(File) &&
+                    ((LastError == ERROR_FILE_NOT_FOUND) ||
+                     (LastError == ERROR_ACCESS_DENIED))) {
+
                     SetLastError(ERROR_SUCCESS);
+
                 } else {
                     SYS_ERROR(DeleteFileW);
                     Result = PH_E_SYSTEM_CALL_FAILED;
