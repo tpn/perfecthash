@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -544,6 +544,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     _Guarded_by_(BestGraphCriticalSection)
     volatile LONG EqualBestGraphCount;
+
+    //
+    // Each time a graph is solved, the running value of solutions found ratio
+    // is updated (number of solved attempts divided by number of total
+    // attempts).
+    //
+
+    _Guarded_by_(BestGraphCriticalSection)
+    DOUBLE RunningSolutionsFoundRatio;
 
     //
     // Milliseconds returned by GetTickCount64() when solving starts; this is

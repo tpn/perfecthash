@@ -2456,6 +2456,16 @@ End:
     }
 
     //
+    // Update the solutions found ratio prior to leaving the critical section.
+    //
+
+    Context->RunningSolutionsFoundRatio = (DOUBLE)(
+        ((DOUBLE)Context->FinishedCount) /
+        ((DOUBLE)Context->Attempts)
+    );
+
+
+    //
     // Leave the critical section and complete processing.
     //
 
