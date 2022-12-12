@@ -444,6 +444,7 @@ Return Value:
     }
 
     PRINT_CHAR_FOR_TABLE_CREATE_RESULT(Result);
+    NEWLINE();
 
     if (Result != S_OK) {
 
