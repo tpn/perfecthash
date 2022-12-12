@@ -1,34 +1,4 @@
 
-//
-// Disable the anonymous union/struct warning.
-//
-
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable: 4201 4094)
-#endif
-
-typedef union _LARGE_INTEGER {
-    struct {
-        ULONG LowPart;
-        LONG HighPart;
-    };
-    LONGLONG QuadPart;
-} LARGE_INTEGER;
-typedef LARGE_INTEGER *PLARGE_INTEGER;
-
-typedef union _ULARGE_INTEGER {
-    struct {
-        ULONG LowPart;
-        ULONG HighPart;
-    };
-    ULONGLONG QuadPart;
-} ULARGE_INTEGER;
-typedef ULARGE_INTEGER *PULARGE_INTEGER;
-
-#ifdef _WIN32
-#pragma warning(pop)
-#endif
 
 extern
 void

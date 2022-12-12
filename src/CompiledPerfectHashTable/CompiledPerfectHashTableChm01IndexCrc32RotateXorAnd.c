@@ -10,6 +10,7 @@ DECLARE_INDEX_ROUTINE()
     CPHDKEY Vertex2;
     CPHDKEY MaskedLow;
     CPHDKEY MaskedHigh;
+    CPHDKEY DownsizedKey;
 
     //IACA_VC_START();
 
@@ -49,6 +50,7 @@ DECLARE_INDEX_IACA_ROUTINE()
     CPHDKEY Vertex2;
     CPHDKEY MaskedLow;
     CPHDKEY MaskedHigh;
+    CPHDKEY DownsizedKey;
 
     IACA_VC_START();
 

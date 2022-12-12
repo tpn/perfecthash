@@ -4,6 +4,8 @@ DECLARE_INDEX_ROUTINE()
     CPHINDEX Index;
     ULONG Vertex1;
     ULONG Vertex2;
+    ULONG MaskedLow;
+    ULONG MaskedHigh;
     ULONG_INTEGER Long1;
     ULONG_INTEGER Long2;
     CPHDKEY DownsizedKey;
@@ -41,6 +43,8 @@ DECLARE_INDEX_IACA_ROUTINE()
     CPHINDEX Index;
     ULONG Vertex1;
     ULONG Vertex2;
+    ULONG MaskedLow;
+    ULONG MaskedHigh;
     ULONG_INTEGER Long1;
     ULONG_INTEGER Long2;
     CPHDKEY DownsizedKey;
