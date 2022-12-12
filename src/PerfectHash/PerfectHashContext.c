@@ -428,13 +428,19 @@ Return Value:
         goto Error;
     }
 
-    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
+    //
+    // We add one to the *actual* min/max concurrency in order to ensure there
+    // will be a thread able to run if our solve timeout is ever hit.  This is
+    // not communicated back to any other component (nor does it need to be).
+    //
+
+    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency + 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
-    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
+    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency + 1);
 
     //
     // Initialize the Main threadpool and environment.
@@ -1442,10 +1448,16 @@ Return Value:
     Rtl = Context->Rtl;
     Threadpool = Context->MainThreadpool;
 
-    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
+    //
+    // We add one to the *actual* min/max concurrency in order to ensure there
+    // will be a thread able to run if our solve timeout is ever hit.  This is
+    // not communicated back to any other component (nor does it need to be).
+    //
+
+    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency + 1);
     Context->MaximumConcurrency = MaximumConcurrency;
 
-    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
+    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency + 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
     } else {
