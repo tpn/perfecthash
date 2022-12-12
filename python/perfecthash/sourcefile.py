@@ -694,8 +694,6 @@ class PerfectHashPdbexHeaderFile(SourceFile):
 
     @property
     def hash_functions(self):
-        import ipdb
-        ipdb.set_trace()
         exclude = self.disabled_hash_functions
         funcs = self.parse_enums(
             'PERFECT_HASH_HASH_FUNCTION_ID',
