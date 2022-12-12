@@ -720,5 +720,76 @@ class UpdateCopyright(InvariantAwareCommand):
 
         out(f"Updated copyright in {path} ('{years_string}' -> '{new_years}').")
 
+class CreateAndCompilePerfectHashTableForIaca(InvariantAwareCommand):
+    """
+    Creates and compiles a perfect hash table for IACA analysis.
+    """
+
+    base_output_dir = None
+    _base_output_dir = None
+    class BaseOutputDirArg(MkDirectoryInvariant):
+        _help = "Base output directory."
+
+    keys_filename = None
+    class KeysFilenameArg(StringInvariant):
+        _help = "Filename of sys32 keys file to use (e.g. acpi-591.keys)"
+        _default = 'acpi-591.keys'
+
+    def run(self):
+        out = self._out
+
+        import io
+        from .config import PERFECT_HASH_CREATE_EXE_PATH
+        from .sourcefile import PerfectHashPdbexHeaderFile
+        self.phh = PerfectHashPdbexHeaderFile()
+
+        from .path import (
+            abspath,
+            dirname,
+            basename,
+            join_path,
+        )
+
+        keys_path = join_path(
+            dirname(abspath(__file__)),
+            '../../../perfecthash-keys/sys32/',
+            self.keys_filename,
+        )
+
+        pre_command = [
+            'timemem.exe',
+            PERFECT_HASH_CREATE_EXE_PATH,
+            keys_path,
+            self.base_output_dir,
+        ]
+
+        post_command = [
+            '--Compile',
+            '--Paranoid',
+            '--GraphImpl=1',
+            '--MaxSolveTimeInSeconds=5',
+        ]
+
+        buf = io.StringIO()
+
+        algo = 'Chm01'
+        masking = 'And'
+        concurrency = '0'
+        for hash_func in self.phh.hash_functions:
+            command = list(pre_command)
+            command += [ algo, hash_func, masking, concurrency ]
+            command += post_command
+            command_text = ' '.join(command)
+            buf.write(command_text)
+            buf.write('\n')
+
+        buf.seek(0)
+
+        bat_path = join_path(self.base_output_dir, 'run.bat')
+        with open(bat_path, 'w') as f:
+            f.write(buf.read())
+
+        out(f'Wrote {bat_path}')
+
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :

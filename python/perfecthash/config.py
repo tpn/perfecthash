@@ -75,6 +75,21 @@ ROOT_DIR = join_path(LIB_DIR, '../../')
 DEBUG_DIR = join_path(ROOT_DIR, 'x64/Debug')
 RELEASE_DIR = join_path(ROOT_DIR, 'x64/Release')
 
+PERFECT_HASH_CREATE_EXE_PATH = (
+    join_path(
+        PATH,
+        '../../src/x64/Release/PerfectHashCreate.exe'
+    )
+)
+
+PERFECT_HASH_BULK_CREATE_EXE_PATH = (
+    join_path(
+        PATH,
+        '../../src/x64/Release/PerfectHashBulkCreate.exe'
+    )
+)
+
+
 #fixme: revisit these assertions
 #assert LIB_DIR.endswith('lib'), LIB_DIR
 #

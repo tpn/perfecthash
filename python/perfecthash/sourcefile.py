@@ -2,12 +2,17 @@
 # Imports
 #===============================================================================
 import re
-
+import os.path
 import sys
-
 import textwrap
 
 from collections import namedtuple
+
+from .path import (
+    abspath,
+    dirname,
+    join_path,
+)
 
 from .util import (
     memoize,
@@ -68,6 +73,33 @@ MultilineConstStringDecl = namedtuple(
         'last_lineno',
         'lines',
     ]
+)
+
+#===============================================================================
+# Globals
+#===============================================================================
+THIS_DIR = dirname(abspath(__file__))
+PERFECT_HASH_PDBEX_HEADER_PATH = (
+    join_path(
+        THIS_DIR,
+        '../../src/x64/Release/PerfectHashPdbexHeader.h'
+    )
+)
+
+PERFECT_HASH_DLL_PATH = (
+    join_path(
+        THIS_DIR,
+        '../../src/x64/Release/PerfectHash.dll'
+    )
+)
+
+PERFECT_HASH_PDB_PATH = PERFECT_HASH_DLL_PATH.replace('.dll', '.pdb')
+
+PDBEX_EXE_PATH = (
+    join_path(
+        THIS_DIR,
+        '../../bin/pdbex.exe'
+    )
 )
 
 #===============================================================================
@@ -523,5 +555,194 @@ class HeaderFile(SourceFile):
 class CodeFile(SourceFile):
     pass
 
+class PerfectHashPdbexHeaderFile(SourceFile):
+    path = None
+    _path = None
+    class PathArg(PathInvariant):
+        pass
+
+    def __init__(self, path=None):
+        InvariantAwareObject.__init__(self)
+        if not path:
+            path = PERFECT_HASH_PDBEX_HEADER_PATH
+
+        run_pdbex = False
+
+        try:
+            self.path = path
+        except:
+            run_pdbex = True
+        else:
+
+            # Check if the header is newer than the .dll file.
+            st_header = os.stat(self.path)
+            st_dll = os.stat(PERFECT_HASH_DLL_PATH)
+
+            if st_header.st_mtime < st_dll.st_mtime:
+                run_pdbex = True
+
+        if run_pdbex:
+            cmd = [
+                PDBEX_EXE_PATH,
+                '*',                          # Symbols
+                f'{PERFECT_HASH_PDB_PATH}',   # PDB file
+                '-o',                           # Output file
+                f'{PERFECT_HASH_PDBEX_HEADER_PATH}', # PdbexHeader file
+                '-p',   # Create padding members
+                '-m',   # Create Microsoft typedefs
+                '-d',   # Allow unnamed data types
+                '-i',   # Use types from stdint.h instead of native types
+                '-j',   # Print definitions of referenced types
+                '-k',   # Print header
+                '-n',   # Print declarations
+                '-l',   # Print definitions
+                '-f',   # Print functions
+                '-z',   # Print #pragma pack directives
+            ]
+
+            print('Running pdbex...')
+            from subprocess import check_call
+            check_call(cmd)
+            if not self._path:
+                self.path = path
+
+    def find_lines_startingwith(self, string):
+        results = []
+        for (lineno, line) in enumerate(self.lines):
+            if line.startswith(string):
+                results.append((lineno, line))
+        return results
+
+    def find_closing_brace_line_numbers(self):
+        results = []
+        for (lineno, line) in enumerate(self.lines):
+            if line.startswith('}'):
+                results.append(lineno)
+        return results
+
+    @property
+    @memoize
+    def closing_brace_line_numbers_as_array(self):
+        import numpy as np
+        return np.array(self.find_closing_brace_line_numbers())
+
+    def extract_elements(self, elements):
+        results = {}
+        lines = self.lines
+        linenos = self.closing_brace_line_numbers_as_array
+        for (start_lineno, line) in elements:
+            end_lineno = linenos[linenos.searchsorted(start_lineno+1)]
+            elem_lines = lines[start_lineno:end_lineno+1]
+            last_line = elem_lines[-1]
+            name = last_line.split(',')[0][2:]
+            results[name] = elem_lines
+        return results
+
+    @property
+    @memoize
+    def structs(self):
+        elems = self.find_lines_startingwith('typedef struct _PERFECT_HASH')
+        return self.extract_elements(elems)
+
+    @property
+    @memoize
+    def enums(self):
+        elems = self.find_lines_startingwith('typedef enum _PERFECT_HASH')
+        return self.extract_elements(elems)
+
+    def parse_enums(self, name, skip_if_startswith=None,
+                    remove=None, split_on=None):
+
+        lines = self.enums[name][3:-2]
+
+        results = []
+        for line in lines:
+            line = line[2:]
+            if skip_if_startswith and line.startswith(skip_if_startswith):
+                continue
+            elif 'Null' in line or 'Invalid' in line:
+                continue
+
+            if remove:
+                assert line.startswith(remove)
+                line = line.replace(remove, '')
+
+            if split_on:
+                line = line.split(split_on)[0]
+
+            results.append(line)
+        return results
+
+    @property
+    @memoize
+    def best_coverage_types(self):
+        return self.parse_enums(
+            'PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID',
+            skip_if_startswith='PerfectHash',
+            remove='BestCoverageType',
+            split_on='Id ='
+        )
+
+    @property
+    def disabled_hash_functions(self):
+        funcs = self.parse_enums(
+            'PERFECT_HASH_DISABLED_HASH_FUNCTION_ID',
+            remove='PerfectHashDisabledHash',
+            split_on='FunctionId ='
+        )
+        return set(funcs)
+
+    @property
+    def hash_functions(self):
+        import ipdb
+        ipdb.set_trace()
+        exclude = self.disabled_hash_functions
+        funcs = self.parse_enums(
+            'PERFECT_HASH_HASH_FUNCTION_ID',
+            remove='PerfectHashHash',
+            split_on='FunctionId ='
+        )
+        return [ name for name in funcs if name not in exclude ]
+
+    @property
+    @memoize
+    def table_create_parameters(self):
+        return self.parse_enums(
+            'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID',
+            skip_if_startswith='PerfectHashTable',
+            remove='TableCreateParameter',
+            split_on='Id ='
+        )
+
+    @memoize
+    def get_hash_function_code(self, algo, masking):
+        results = {}
+        for name in self.hash_functions:
+            part = (
+                '../../src/CompiledPerfectHashTable/'
+                'CompiledPerfectHashTable'
+                f'{algo}Index{name}{masking}.c'
+            )
+            path = join_path(THIS_DIR, part)
+            with open(path, 'r') as f:
+                data = f.read()
+                ix = data.find('#ifndef CPH_INLINE_ROUTINES')
+                assert ix != -1
+                data = data[:ix-1]
+                results[name] = data
+        return results
+
+    @property
+    def graph_impls(self):
+        # This isn't an enum yet.
+        return ('1', '2', '3')
+
+    @property
+    def algorithms(self):
+        return ('Chm01',)
+
+    @property
+    def maskings(self):
+        return ('And',)
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :

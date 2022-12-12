@@ -2109,6 +2109,38 @@ IsValidPerfectHashHashFunctionId(
 }
 
 //
+// Define an enum for capturing the subset of hash functions that are unusable.
+// If you want to write your own hash function, feel free to repurpose one of
+// these instead of adding a new one.
+//
+// N.B. This enum isn't used anywhere in the C code per se.  It is included
+//      in this header in order to generate a symbol that can be identified
+//      by the perfecthash.sourcefile.PerfectHashPdbexHeaderFile() class
+//      which uses it to skip these hash functions in the hash_functions()
+//      routine.
+//
+
+typedef enum _PERFECT_HASH_DISABLED_HASH_FUNCTION_ID {
+    PerfectHashDisabledNullFunctionId,
+    PerfectHashDisabledHashJenkinsModFunctionId,
+    PerfectHashDisabledHashDummyFunctionId,
+    PerfectHashDisabledHashScratchFunctionId,
+    PerfectHashDisabledHashXorFunctionId,
+    PerfectHashDisabledHashAddSubXorFunctionId,
+    PerfectHashDisabledHashCrc32RotateXYFunctionId,
+    PerfectHashDisabledHashCrc32RotateWXYZFunctionId,
+    PerfectHashDisabledHashRotateXorFunctionId,
+    PerfectHashDisabledHashCrc32FunctionId,
+    PerfectHashDisabledHashDjbFunctionId,
+    PerfectHashDisabledHashDjbXorFunctionId,
+    PerfectHashDisabledHashCrc32Rotate15FunctionId,
+    PerfectHashDisabledHashCrc32RotateXorFunctionId,
+    PerfectHashDisabledHashCrc32NotFunctionId,
+    PerfectHashDisabledInvalidFunctionId,
+} PERFECT_HASH_DISABLED_HASH_FUNCTION_ID;
+
+
+//
 // Define the seed mask counts structure, which inherits from VALUE_ARRAY.
 //
 
