@@ -1166,22 +1166,27 @@ FinishedSolution:
     COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE();
 
     //
-    // Capture RNG details from the winning graph.
+    // Capture RNG details from the winning graph if the RNG used was not the
+    // System one.
     //
 
-    Table->RngSeed = Graph->Rng->Seed;
-    Table->RngSubsequence = Graph->Rng->Subsequence;
+    if (Context->RngId != PerfectHashRngSystemId) {
+        Table->RngSeed = Graph->Rng->Seed;
+        Table->RngSubsequence = Graph->Rng->Subsequence;
+        Table->RngOffset = Graph->Rng->Offset;
 
-    Rng = Graph->Rng;
-    Result = Rng->Vtbl->GetCurrentOffset(Rng, &Table->RngOffset);
-    if (FAILED(Result)) {
-        PH_ERROR(CreatePerfectHashTableImplChm01_RngGetCurrentOffset, Result);
-        goto Error;
+        Rng = Graph->Rng;
+        Result = Rng->Vtbl->GetCurrentOffset(Rng, &Table->RngCurrentOffset);
+        if (FAILED(Result)) {
+            PH_ERROR(CreatePerfectHashTableImplChm01_RngGetCurrentOffset,
+                     Result);
+            goto Error;
+        }
     }
 
     //
-    // Calculate the solve duration, solutions found ratio, keys to edges and
-    // vertices ratios, and predicted attempts.
+    // Calculate the solve duration, solutions found ratio, and predicted
+    // attempts.
     //
 
     Table->SolveDurationInSeconds = (DOUBLE)(
@@ -1192,16 +1197,6 @@ FinishedSolution:
     Table->SolutionsFoundRatio = (DOUBLE)(
         ((DOUBLE)Context->FinishedCount) /
         ((DOUBLE)Context->Attempts)
-    );
-
-    Table->KeysToEdgesRatio = (DOUBLE)(
-        ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
-        ((DOUBLE)Info.Dimensions.NumberOfEdges)
-    );
-
-    Table->KeysToVerticesRatio = (DOUBLE)(
-        ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
-        ((DOUBLE)Info.Dimensions.NumberOfVertices)
     );
 
     Result = CalculatePredictedAttempts(Table->SolutionsFoundRatio,
@@ -2368,6 +2363,24 @@ Return Value:
     );
 
     CopyInline(&GraphInfoOnDisk->Dimensions, Dim, sizeof(*Dim));
+
+    //
+    // Capture ratios.
+    //
+
+    if (Table->Keys->NumberOfElements.QuadPart == NumberOfEdges.QuadPart) {
+        Table->KeysToEdgesRatio = (DOUBLE)1.0;
+    } else {
+        Table->KeysToEdgesRatio = (DOUBLE)(
+            ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
+            ((DOUBLE)NumberOfEdges.QuadPart)
+        );
+    }
+
+    Table->KeysToVerticesRatio = (DOUBLE)(
+        ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
+        ((DOUBLE)NumberOfVertices.QuadPart)
+    );
 
     //
     // We're done, finish up.

@@ -2211,6 +2211,7 @@ Return Value:
         ASSERT(Context->NewBestGraphCount > 0);
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
+        ASSERT(Context->FirstAttemptSolved == 0);
         SpareGraph = Context->SpareGraph;
         ASSERT(SpareGraph != NULL);
         ASSERT(IsSpareGraph(SpareGraph));
@@ -2219,6 +2220,7 @@ Return Value:
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
+        Context->FirstAttemptSolved = Graph->Attempt;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
         goto End;
     }
@@ -2786,6 +2788,7 @@ Return Value:
 
     if (Context->BestGraph == NULL) {
         ASSERT(Context->NewBestGraphCount == 0);
+        ASSERT(Context->FirstAttemptSolved == 0);
         SpareGraph = Context->SpareGraph;
         ASSERT(SpareGraph != NULL);
         ASSERT(IsSpareGraph(SpareGraph));
@@ -2794,6 +2797,7 @@ Return Value:
         Context->BestGraph = Graph;
         FoundBestGraph = TRUE;
         Context->NewBestGraphCount++;
+        Context->FirstAttemptSolved = Graph->Attempt;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
     }
 

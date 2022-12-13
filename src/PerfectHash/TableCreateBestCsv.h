@@ -160,27 +160,31 @@ Abstract:
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(RngStartSeed,                                                                      \
-          Context->RngSeed,                                                                  \
+          (!IsSystemRng(Context) ? Context->RngSeed : 0),                                    \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngStartSubsequence,                                                               \
-          Context->RngSubsequence,                                                           \
+          (!IsSystemRng(Context) ? Context->RngSubsequence : 0),                             \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngStartOffset,                                                                    \
-          Context->RngOffset,                                                                \
+          (!IsSystemRng(Context) ? Context->RngOffset : 0),                                  \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningSeed,                                                                    \
-          Table->RngSeed,                                                                    \
+          (!IsSystemRng(Context) ? Table->RngSeed : 0),                                      \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningSubsequence,                                                             \
-          Table->RngSubsequence,                                                             \
+          (!IsSystemRng(Context) ? Table->RngSubsequence : 0),                               \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningOffset,                                                                  \
-          Table->RngOffset,                                                                  \
+          (!IsSystemRng(Context) ? Table->RngOffset : 0),                                    \
+          OUTPUT_HEX64)                                                                      \
+                                                                                             \
+    ENTRY(RngWinningCurrentOffset,                                                           \
+          (!IsSystemRng(Context) ? Table->RngCurrentOffset : 0),                             \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(MaximumConcurrency,                                                                \
@@ -250,6 +254,10 @@ Abstract:
                                                                                              \
     ENTRY(PredictedAttempts,                                                                 \
           Table->PredictedAttempts,                                                          \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(FirstAttemptSolved,                                                                \
+          Context->FirstAttemptSolved,                                                       \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(SolveDurationInSeconds,                                                            \

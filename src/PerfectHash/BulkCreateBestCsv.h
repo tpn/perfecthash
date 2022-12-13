@@ -160,27 +160,31 @@ Abstract:
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(RngStartSeed,                                                                      \
-          Context->RngSeed,                                                                  \
+          (!IsSystemRng(Context) ? Context->RngSeed : 0),                                    \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngStartSubsequence,                                                               \
-          Context->RngSubsequence,                                                           \
+          (!IsSystemRng(Context) ? Context->RngSubsequence : 0),                             \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngStartOffset,                                                                    \
-          Context->RngOffset,                                                                \
+          (!IsSystemRng(Context) ? Context->RngOffset : 0),                                  \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningSeed,                                                                    \
-          Table->RngSeed,                                                                    \
+          (!IsSystemRng(Context) ? Table->RngSeed : 0),                                      \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningSubsequence,                                                             \
-          Table->RngSubsequence,                                                             \
+          (!IsSystemRng(Context) ? Table->RngSubsequence : 0),                               \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(RngWinningOffset,                                                                  \
-          Table->RngOffset,                                                                  \
+          (!IsSystemRng(Context) ? Table->RngOffset : 0),                                    \
+          OUTPUT_HEX64)                                                                      \
+                                                                                             \
+    ENTRY(RngWinningCurrentOffset,                                                           \
+          (!IsSystemRng(Context) ? Table->RngCurrentOffset : 0),                             \
           OUTPUT_HEX64)                                                                      \
                                                                                              \
     ENTRY(MaximumConcurrency,                                                                \
@@ -250,6 +254,10 @@ Abstract:
                                                                                              \
     ENTRY(PredictedAttempts,                                                                 \
           Table->PredictedAttempts,                                                          \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(FirstAttemptSolved,                                                                \
+          Context->FirstAttemptSolved,                                                       \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(SolveDurationInSeconds,                                                            \
@@ -323,22 +331,6 @@ Abstract:
     ENTRY(UsedAvx2MemoryCoverageFunction,                                                    \
           (Table->Flags.UsedAvx2MemoryCoverageFunction != FALSE ? 'Y' : 'N'),                \
           OUTPUT_CHR)                                                                        \
-                                                                                             \
-    ENTRY(GraphRegisterSolvedTsxSuccessCount,                                                \
-          Context->GraphRegisterSolvedTsxSuccess,                                            \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(GraphRegisterSolvedTsxStartedCount,                                                \
-          Context->GraphRegisterSolvedTsxStarted,                                            \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(GraphRegisterSolvedTsxRetryCount,                                                  \
-          Context->GraphRegisterSolvedTsxRetry,                                              \
-          OUTPUT_INT)                                                                        \
-                                                                                             \
-    ENTRY(GraphRegisterSolvedTsxFailedCount,                                                 \
-          Context->GraphRegisterSolvedTsxFailed,                                             \
-          OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(UsePreviousTableSize,                                                              \
           (TableCreateFlags.UsePreviousTableSize == TRUE ?                                   \
@@ -6589,7 +6581,7 @@ Abstract:
                                                                                              \
     ENTRY(KeysBitmapString,                                                                  \
           Keys->Stats.KeysBitmap.String,                                                     \
-          OUTPUT_RAW)                                                                        \
+          OUTPUT_BITMAP_RAW)                                                                 \
                                                                                              \
     ENTRY(Remark,                                                                            \
           Table->Remark,                                                                     \

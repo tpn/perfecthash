@@ -690,11 +690,11 @@ class PerfectHashPdbexHeaderFile(SourceFile):
             remove='PerfectHashDisabledHash',
             split_on='FunctionId ='
         )
-        return set(funcs)
+        return funcs
 
     @property
     def hash_functions(self):
-        exclude = self.disabled_hash_functions
+        exclude = set(self.disabled_hash_functions)
         funcs = self.parse_enums(
             'PERFECT_HASH_HASH_FUNCTION_ID',
             remove='PerfectHashHash',

@@ -960,6 +960,7 @@ Return Value:
 
     _Benign_race_begin_
     Context->NewBestGraphCount = 0;
+    Context->FirstAttemptSolved = 0;
     Context->EqualBestGraphCount = 0;
     Context->SpareGraph = NULL;
     Context->BestGraph = NULL;

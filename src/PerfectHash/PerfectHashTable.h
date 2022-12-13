@@ -455,6 +455,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONGLONG RngSeed;
     ULONGLONG RngSubsequence;
     ULONGLONG RngOffset;
+    ULONGLONG RngCurrentOffset;
 
     //
     // Time it took to solve the graph, in seconds.

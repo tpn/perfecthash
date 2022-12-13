@@ -2113,6 +2113,10 @@ IsValidPerfectHashHashFunctionId(
 // If you want to write your own hash function, feel free to repurpose one of
 // these instead of adding a new one.
 //
+// N.B. "Unusable" is any hash function that can't find a solution for any
+//      keys file in the perfecthash-keys/sys32 directory without resorting
+//      to a table resize.
+//
 // N.B. This enum isn't used anywhere in the C code per se.  It is included
 //      in this header in order to generate a symbol that can be identified
 //      by the perfecthash.sourcefile.PerfectHashPdbexHeaderFile() class
@@ -2136,6 +2140,11 @@ typedef enum _PERFECT_HASH_DISABLED_HASH_FUNCTION_ID {
     PerfectHashDisabledHashCrc32Rotate15FunctionId,
     PerfectHashDisabledHashCrc32RotateXorFunctionId,
     PerfectHashDisabledHashCrc32NotFunctionId,
+    PerfectHashDisabledHashCrc32RotateXFunctionId,
+    PerfectHashDisabledHashMultiplyFunctionId,
+    PerfectHashDisabledHashMultiplyXorFunctionId,
+    PerfectHashDisabledHashMultiplyShiftLRFunctionId,
+    PerfectHashDisabledHashFnvFunctionId,
     PerfectHashDisabledInvalidFunctionId,
 } PERFECT_HASH_DISABLED_HASH_FUNCTION_ID;
 

@@ -183,6 +183,9 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define ClearContextTableCreate(Context) \
     ((Context)->State.IsTableCreate = FALSE)
 
+#define IsSystemRngId(Id) (Id == PerfectHashRngSystemId)
+#define IsSystemRng(Context) ((Context)->RngId == PerfectHashRngSystemId)
+
 DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
 
 typedef struct _BEST_GRAPH_INFO {
@@ -527,6 +530,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     _Guarded_by_(BestGraphCriticalSection)
     struct _GRAPH *SpareGraph;
+
+    //
+    // Captures the attempt number of the first solved graph.
+    //
+
+    _Guarded_by_(BestGraphCriticalSection)
+    ULONGLONG FirstAttemptSolved;
 
     //
     // The following counter is incremented every time a new "best graph" is
