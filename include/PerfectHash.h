@@ -2113,9 +2113,10 @@ IsValidPerfectHashHashFunctionId(
 // If you want to write your own hash function, feel free to repurpose one of
 // these instead of adding a new one.
 //
-// N.B. "Unusable" is any hash function that can't find a solution for any
-//      keys file in the perfecthash-keys/sys32 directory without resorting
-//      to a table resize.
+// N.B. "Unusable" is any hash function that either a) can't find a solution
+//      for any keys file in the perfecthash-keys/sys32 directory without
+//      resorting to a table resize, or b) takes orders of magnitude longer
+//      than MultiplyShiftR (the slowest-solving algorithm) when processing
 //
 // N.B. This enum isn't used anywhere in the C code per se.  It is included
 //      in this header in order to generate a symbol that can be identified
@@ -2125,7 +2126,17 @@ IsValidPerfectHashHashFunctionId(
 //
 
 typedef enum _PERFECT_HASH_DISABLED_HASH_FUNCTION_ID {
+    //
+    // Keep this first.
+    //
+
     PerfectHashDisabledNullFunctionId,
+
+    //
+    // Poor hash functions that can't solve sys32 keys such as
+    // HologramWorld-31016.keys.
+    //
+
     PerfectHashDisabledHashJenkinsModFunctionId,
     PerfectHashDisabledHashDummyFunctionId,
     PerfectHashDisabledHashScratchFunctionId,
@@ -2145,6 +2156,21 @@ typedef enum _PERFECT_HASH_DISABLED_HASH_FUNCTION_ID {
     PerfectHashDisabledHashMultiplyXorFunctionId,
     PerfectHashDisabledHashMultiplyShiftLRFunctionId,
     PerfectHashDisabledHashFnvFunctionId,
+
+    //
+    // Hash functions that can solve the sys32-2k+ keys, but don't do so within
+    // acceptable time limits (i.e. orders of magnitude slower than our slowest
+    // working function MultiplyShiftR).
+    //
+
+    PerfectHashDisabledHashMultiplyRotateRMultiplyFunctionId,
+    PerfectHashDisabledHashMultiplyShiftRMultiplyFunctionId,
+    PerfectHashDisabledHashRotateRMultiplyFunctionId,
+
+    //
+    // Keep this last.
+    //
+
     PerfectHashDisabledInvalidFunctionId,
 } PERFECT_HASH_DISABLED_HASH_FUNCTION_ID;
 
