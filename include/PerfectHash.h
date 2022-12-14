@@ -2165,7 +2165,6 @@ typedef enum _PERFECT_HASH_DISABLED_HASH_FUNCTION_ID {
     //
 
     PerfectHashDisabledHashMultiplyRotateRMultiplyFunctionId,
-    PerfectHashDisabledHashRotateRMultiplyFunctionId,
     PerfectHashDisabledHashMultiplyShiftRMultiplyFunctionId,
 
     //
