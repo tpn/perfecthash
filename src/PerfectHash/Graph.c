@@ -2458,7 +2458,6 @@ End:
         ((DOUBLE)Context->Attempts)
     );
 
-
     //
     // Leave the critical section and complete processing.
     //
@@ -2821,6 +2820,7 @@ End:
     }
 
     if (StopGraphSolving) {
+        CONTEXT_END_TIMERS(Solve);
         SetStopSolving(Context);
         Result = PH_S_STOP_GRAPH_SOLVING;
     } else if (FoundBestGraph) {
