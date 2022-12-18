@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -356,7 +356,6 @@ Return Value:
     ULONG_PTR Bit;
     ULONG_PTR Mask;
     ULONG_PTR Index;
-    ULONG_PTR Offset;
     ULONG_PTR Shifted;
     ULONG_PTR Leading;
     ULONG_PTR Trailing;
@@ -491,20 +490,22 @@ Return Value:
     KeysBitmap->LongestRunStart = (BYTE)Start;
 
     //
-    // Construct a string representation of the bitmap.  All bit positions are
-    // initialized with the '0' character, the bitmap is enumerated, and a set
-    // bit has its corresponding character set to '1'.
+    // Construct a string representation of the bitmap.
     //
 
     Key = Bitmap;
     String = (PCHAR)&KeysBitmap->String;
-    FillMemory(String, sizeof(KeysBitmap->String), '0');
 
-    while (Key) {
-        Bit = Rtl->TrailingZeros32(Key);
-        Offset = (31 - Bit);
-        Key &= Key - 1;
-        String[Offset] = '1';
+    for (Bit = 0; Bit < 32; Bit++) {
+        String[Bit] = ((Bitmap & (1 << Bit)) != 0) ? '1' : '0';
+    }
+
+    //
+    // Clear the high 32-bits.
+    //
+
+    for (Bit = 32; Bit < 64; Bit++) {
+        String[Bit] = '0';
     }
 
     //
@@ -571,7 +572,6 @@ Return Value:
     ULONG_PTR Bit;
     ULONG_PTR Mask;
     ULONG_PTR Index;
-    ULONG_PTR Offset;
     ULONG_PTR Shifted;
     ULONG_PTR Leading;
     ULONG_PTR Trailing;
@@ -802,20 +802,14 @@ Return Value:
     //
 
     //
-    // Construct a string representation of the bitmap.  All bit positions are
-    // initialized with the '0' character, the bitmap is enumerated, and a set
-    // bit has its corresponding character set to '1'.
+    // Construct a string representation of the bitmap.
     //
 
     Key = Bitmap;
     String = (PCHAR)&KeysBitmap->String;
-    FillMemory(String, sizeof(KeysBitmap->String), '0');
 
-    while (Key) {
-        Bit = Rtl->TrailingZeros64(Key);
-        Offset = (63 - Bit);
-        Key &= Key - 1;
-        String[Offset] = '1';
+    for (Bit = 0; Bit < 64; Bit++) {
+        String[Bit] = ((Bitmap & (1ULL << Bit)) != 0) ? '1' : '0';
     }
 
     //
