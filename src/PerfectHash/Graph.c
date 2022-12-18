@@ -36,6 +36,8 @@ GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX2;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX512;
 
+GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
+    GraphCalculateMemoryCoverageCacheLineCounts;
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -1625,6 +1627,125 @@ Return Value:
     return;
 }
 
+_Use_decl_annotations_
+VOID
+GraphCalculateMemoryCoverageCacheLineCounts(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine is intended to be called after a best graph has been found.
+    It walks the entire assigned array and calculates cache line occupancy
+    counts for each page, and then emits a corresponding ETW event.
+
+    If the relevent ETW event (GraphMemoryCoverageCacheLineCountsEvent())
+    hasn't been enabled, this routine returns immediately.
+
+    N.B. The logic used to count assigned array occupancy is identical to the
+         logic used in GraphCalculateAssignedMemoryCoverage().  However, that
+         routine gets called far more frequently, which would result in orders
+         of magnitude more ETW event traffic, i.e., events would be emitted for
+         every solved graph, not every best graph.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which cache line counts are
+        to be calculated and corresponding ETW events are to be emitted.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PRTL Rtl;
+    BYTE Count;
+    ULONG PageIndex;
+    ULONG CacheLineIndex;
+    ULONG NumberOfCacheLines;
+    ULONG LocalCacheLineIndex;
+    ULONG PageSizeBytesProcessed;
+    BOOLEAN IsLastCacheLine = FALSE;
+    PASSIGNED_CACHE_LINE AssignedCacheLine;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PAGE_CACHE_LINE_COUNT CacheLineCountsPerPage = { 0, };
+
+    ULONG Index;
+    PASSIGNED Assigned;
+
+    if (!EventEnabledGraphMemoryCoverageCacheLineCountsEvent()) {
+
+        //
+        // No ETW tracing is active for this event; we're done.
+        //
+
+        return;
+    }
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Graph->Rtl;
+    Coverage = &Graph->AssignedMemoryCoverage;
+    NumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+    AssignedCacheLine = (PASSIGNED_CACHE_LINE)Graph->Assigned;
+
+    PageIndex = 0;
+    PageSizeBytesProcessed = 0;
+
+    //
+    // Enumerate the assigned array in cache-line-sized strides.
+    //
+
+    for (CacheLineIndex = 0;
+         CacheLineIndex < NumberOfCacheLines;
+         CacheLineIndex++) {
+
+        Count = 0;
+        LocalCacheLineIndex = CacheLineIndex % NUM_CACHE_LINES_PER_PAGE;
+        IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
+
+        //
+        // Point at the first element in this cache line.
+        //
+
+        Assigned = (PASSIGNED)(AssignedCacheLine[CacheLineIndex]);
+
+        //
+        // For each cache line, enumerate over each individual element, and,
+        // if it is not NULL, increment the local count.
+        //
+
+        for (Index = 0; Index < NUM_ASSIGNED_PER_CACHE_LINE; Index++) {
+            if (*Assigned++) {
+                Count++;
+            }
+        }
+
+        ASSERT(Count >= 0 && Count <= 16);
+        CacheLineCountsPerPage[LocalCacheLineIndex] = Count;
+
+        //
+        // If we've hit a page boundary, or this is the last cache line we'll
+        // be processing, emit the event and reset the counts.
+        //
+
+        PageSizeBytesProcessed += CACHE_LINE_SIZE;
+
+        if (PageSizeBytesProcessed == PAGE_SIZE || IsLastCacheLine) {
+            PageIndex++;
+            PageSizeBytesProcessed = 0;
+            EVENT_WRITE_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS();
+            ZeroStruct(CacheLineCountsPerPage);
+        }
+    }
+
+    return;
+}
+
 
 _Use_decl_annotations_
 VOID
@@ -2108,11 +2229,6 @@ VerifyMemoryCoverageInvariants(
     }
 }
 #pragma optimize("", on)
-
-//
-// Helper macro for emitting graph-found events.
-//
-
 
 GRAPH_REGISTER_SOLVED GraphRegisterSolved;
 
@@ -2684,8 +2800,10 @@ SkipComparatorCheck:
 
     if (FoundBestGraph != FALSE) {
         EVENT_WRITE_GRAPH_FOUND(FoundNewBest);
+        GraphCalculateMemoryCoverageCacheLineCounts(Graph);
     } else if (FoundEqualBestGraph != FALSE) {
         EVENT_WRITE_GRAPH_FOUND(FoundEqualBest);
+        GraphCalculateMemoryCoverageCacheLineCounts(Graph);
     }
 
     EVENT_WRITE_GRAPH_FOUND(Found);

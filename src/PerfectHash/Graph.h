@@ -198,6 +198,7 @@ typedef ASSIGNED *PASSIGNED;
 #define NUM_ASSIGNED_PER_PAGE       (PAGE_SIZE       / sizeof(ASSIGNED))
 #define NUM_ASSIGNED_PER_LARGE_PAGE (LARGE_PAGE_SIZE / sizeof(ASSIGNED))
 #define NUM_ASSIGNED_PER_CACHE_LINE (CACHE_LINE_SIZE / sizeof(ASSIGNED))
+#define NUM_CACHE_LINES_PER_PAGE    (PAGE_SIZE / CACHE_LINE_SIZE)
 
 //
 // For the human readers that don't like doing C preprocessor mental math,
@@ -207,6 +208,7 @@ typedef ASSIGNED *PASSIGNED;
 C_ASSERT(NUM_ASSIGNED_PER_PAGE       == 1024);      // Fits within USHORT.
 C_ASSERT(NUM_ASSIGNED_PER_LARGE_PAGE == 524288);    // Fits within ULONG.
 C_ASSERT(NUM_ASSIGNED_PER_CACHE_LINE == 16);        // Fits within BYTE.
+C_ASSERT(NUM_CACHE_LINES_PER_PAGE    == 64);        // Fits within BYTE.
 
 typedef ASSIGNED ASSIGNED_PAGE[NUM_ASSIGNED_PER_PAGE];
 typedef ASSIGNED_PAGE *PASSIGNED_PAGE;
@@ -225,6 +227,9 @@ typedef ASSIGNED_LARGE_PAGE_COUNT *PASSIGNED_LARGE_PAGE_COUNT;
 
 typedef BYTE ASSIGNED_CACHE_LINE_COUNT;
 typedef ASSIGNED_CACHE_LINE_COUNT *PASSIGNED_CACHE_LINE_COUNT;
+
+typedef ASSIGNED_CACHE_LINE_COUNT
+    PAGE_CACHE_LINE_COUNT[NUM_CACHE_LINES_PER_PAGE];
 
 typedef struct _ASSIGNED_MEMORY_COVERAGE {
 
@@ -1261,6 +1266,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         };
     };
 
+
 } GRAPH;
 typedef GRAPH *PGRAPH;
 
@@ -1348,6 +1354,15 @@ HRESULT
     _In_ HRESULT HashResult,
     _In_ PGRAPH Graph
     );
+
+typedef
+_Requires_exclusive_lock_held_(Graph->Lock)
+VOID
+(NTAPI GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS)(
+    _In_ PGRAPH Graph
+    );
+typedef GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
+   *PGRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS;
 
 #ifndef __INTELLISENSE__
 extern GRAPH_INITIALIZE GraphInitialize;

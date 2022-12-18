@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2021-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -203,5 +203,81 @@ Abstract:
         Coverage->Score,                                          \
         Coverage->Rank                                            \
     )
+
+#define EVENT_WRITE_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS() \
+    EventWriteGraphMemoryCoverageCacheLineCountsEvent(        \
+        &Graph->Activity,                                     \
+        Graph->KeysFileName,                                  \
+        Graph->Attempt,                                       \
+        PageIndex,                                            \
+        Coverage->TotalNumberOfPages,                         \
+        CacheLineCountsPerPage[ 0],                           \
+        CacheLineCountsPerPage[ 1],                           \
+        CacheLineCountsPerPage[ 2],                           \
+        CacheLineCountsPerPage[ 3],                           \
+        CacheLineCountsPerPage[ 4],                           \
+        CacheLineCountsPerPage[ 5],                           \
+        CacheLineCountsPerPage[ 6],                           \
+        CacheLineCountsPerPage[ 7],                           \
+        CacheLineCountsPerPage[ 8],                           \
+        CacheLineCountsPerPage[ 9],                           \
+        CacheLineCountsPerPage[10],                           \
+        CacheLineCountsPerPage[11],                           \
+        CacheLineCountsPerPage[12],                           \
+        CacheLineCountsPerPage[13],                           \
+        CacheLineCountsPerPage[14],                           \
+        CacheLineCountsPerPage[15],                           \
+        CacheLineCountsPerPage[16],                           \
+        CacheLineCountsPerPage[17],                           \
+        CacheLineCountsPerPage[18],                           \
+        CacheLineCountsPerPage[19],                           \
+        CacheLineCountsPerPage[20],                           \
+        CacheLineCountsPerPage[21],                           \
+        CacheLineCountsPerPage[22],                           \
+        CacheLineCountsPerPage[23],                           \
+        CacheLineCountsPerPage[24],                           \
+        CacheLineCountsPerPage[25],                           \
+        CacheLineCountsPerPage[26],                           \
+        CacheLineCountsPerPage[27],                           \
+        CacheLineCountsPerPage[28],                           \
+        CacheLineCountsPerPage[29],                           \
+        CacheLineCountsPerPage[30],                           \
+        CacheLineCountsPerPage[31],                           \
+        CacheLineCountsPerPage[32],                           \
+        CacheLineCountsPerPage[33],                           \
+        CacheLineCountsPerPage[34],                           \
+        CacheLineCountsPerPage[35],                           \
+        CacheLineCountsPerPage[36],                           \
+        CacheLineCountsPerPage[37],                           \
+        CacheLineCountsPerPage[38],                           \
+        CacheLineCountsPerPage[39],                           \
+        CacheLineCountsPerPage[40],                           \
+        CacheLineCountsPerPage[41],                           \
+        CacheLineCountsPerPage[42],                           \
+        CacheLineCountsPerPage[43],                           \
+        CacheLineCountsPerPage[44],                           \
+        CacheLineCountsPerPage[45],                           \
+        CacheLineCountsPerPage[46],                           \
+        CacheLineCountsPerPage[47],                           \
+        CacheLineCountsPerPage[48],                           \
+        CacheLineCountsPerPage[49],                           \
+        CacheLineCountsPerPage[50],                           \
+        CacheLineCountsPerPage[51],                           \
+        CacheLineCountsPerPage[52],                           \
+        CacheLineCountsPerPage[53],                           \
+        CacheLineCountsPerPage[54],                           \
+        CacheLineCountsPerPage[55],                           \
+        CacheLineCountsPerPage[56],                           \
+        CacheLineCountsPerPage[57],                           \
+        CacheLineCountsPerPage[58],                           \
+        CacheLineCountsPerPage[59],                           \
+        CacheLineCountsPerPage[60],                           \
+        CacheLineCountsPerPage[61],                           \
+        CacheLineCountsPerPage[62],                           \
+        CacheLineCountsPerPage[63]                            \
+    )
+
+
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

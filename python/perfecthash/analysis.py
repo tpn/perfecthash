@@ -1039,6 +1039,248 @@ IS_ACYCLIC_CSV_HEADER_SLIM = (
     'IsAcyclic',
 )
 
+# MemoryCoverageCacheLineCounts
+
+MEMORY_COVERAGE_CACHE_LINE_COUNTS = (
+    'PerfectHash/MemoryCoverageCacheLineCounts/win:Info'
+)
+
+MEMORY_COVERAGE_CACHE_LINE_COUNTS_ETW_HEADER = (
+    'PerfectHash/MemoryCoverageCacheLineCounts/win:Info,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' KeysFileName,'
+    ' Attempt,'
+    ' PageIndex,'
+    ' TotalNumberOfPages,'
+    ' CacheLine_01,'
+    ' CacheLine_02,'
+    ' CacheLine_03,'
+    ' CacheLine_04,'
+    ' CacheLine_05,'
+    ' CacheLine_06,'
+    ' CacheLine_07,'
+    ' CacheLine_08,'
+    ' CacheLine_09,'
+    ' CacheLine_10,'
+    ' CacheLine_11,'
+    ' CacheLine_12,'
+    ' CacheLine_13,'
+    ' CacheLine_14,'
+    ' CacheLine_15,'
+    ' CacheLine_16,'
+    ' CacheLine_17,'
+    ' CacheLine_18,'
+    ' CacheLine_19,'
+    ' CacheLine_20,'
+    ' CacheLine_21,'
+    ' CacheLine_22,'
+    ' CacheLine_23,'
+    ' CacheLine_24,'
+    ' CacheLine_25,'
+    ' CacheLine_26,'
+    ' CacheLine_27,'
+    ' CacheLine_28,'
+    ' CacheLine_29,'
+    ' CacheLine_30,'
+    ' CacheLine_31,'
+    ' CacheLine_32,'
+    ' CacheLine_33,'
+    ' CacheLine_34,'
+    ' CacheLine_35,'
+    ' CacheLine_36,'
+    ' CacheLine_37,'
+    ' CacheLine_38,'
+    ' CacheLine_39,'
+    ' CacheLine_40,'
+    ' CacheLine_41,'
+    ' CacheLine_42,'
+    ' CacheLine_43,'
+    ' CacheLine_44,'
+    ' CacheLine_45,'
+    ' CacheLine_46,'
+    ' CacheLine_47,'
+    ' CacheLine_48,'
+    ' CacheLine_49,'
+    ' CacheLine_50,'
+    ' CacheLine_51,'
+    ' CacheLine_52,'
+    ' CacheLine_53,'
+    ' CacheLine_54,'
+    ' CacheLine_55,'
+    ' CacheLine_56,'
+    ' CacheLine_57,'
+    ' CacheLine_58,'
+    ' CacheLine_59,'
+    ' CacheLine_60,'
+    ' CacheLine_61,'
+    ' CacheLine_62,'
+    ' CacheLine_63,'
+    ' CacheLine_64'
+)
+
+MEMORY_COVERAGE_CACHE_LINE_COUNTS_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'KeysFileName',
+    'Attempt',
+    'PageIndex',
+    'TotalNumberOfPages',
+    'CacheLine_01',
+    'CacheLine_02',
+    'CacheLine_03',
+    'CacheLine_04',
+    'CacheLine_05',
+    'CacheLine_06',
+    'CacheLine_07',
+    'CacheLine_08',
+    'CacheLine_09',
+    'CacheLine_10',
+    'CacheLine_11',
+    'CacheLine_12',
+    'CacheLine_13',
+    'CacheLine_14',
+    'CacheLine_15',
+    'CacheLine_16',
+    'CacheLine_17',
+    'CacheLine_18',
+    'CacheLine_19',
+    'CacheLine_20',
+    'CacheLine_21',
+    'CacheLine_22',
+    'CacheLine_23',
+    'CacheLine_24',
+    'CacheLine_25',
+    'CacheLine_26',
+    'CacheLine_27',
+    'CacheLine_28',
+    'CacheLine_29',
+    'CacheLine_30',
+    'CacheLine_31',
+    'CacheLine_32',
+    'CacheLine_33',
+    'CacheLine_34',
+    'CacheLine_35',
+    'CacheLine_36',
+    'CacheLine_37',
+    'CacheLine_38',
+    'CacheLine_39',
+    'CacheLine_40',
+    'CacheLine_41',
+    'CacheLine_42',
+    'CacheLine_43',
+    'CacheLine_44',
+    'CacheLine_45',
+    'CacheLine_46',
+    'CacheLine_47',
+    'CacheLine_48',
+    'CacheLine_49',
+    'CacheLine_50',
+    'CacheLine_51',
+    'CacheLine_52',
+    'CacheLine_53',
+    'CacheLine_54',
+    'CacheLine_55',
+    'CacheLine_56',
+    'CacheLine_57',
+    'CacheLine_58',
+    'CacheLine_59',
+    'CacheLine_60',
+    'CacheLine_61',
+    'CacheLine_62',
+    'CacheLine_63',
+    'CacheLine_64',
+)
+
+MEMORY_COVERAGE_CACHE_LINE_COUNTS_CSV_HEADER_SLIM = (
+    'LineNumber',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'KeysFileName',
+    'Attempt',
+    'PageIndex',
+    'TotalNumberOfPages',
+    'CacheLine_01',
+    'CacheLine_02',
+    'CacheLine_03',
+    'CacheLine_04',
+    'CacheLine_05',
+    'CacheLine_06',
+    'CacheLine_07',
+    'CacheLine_08',
+    'CacheLine_09',
+    'CacheLine_10',
+    'CacheLine_11',
+    'CacheLine_12',
+    'CacheLine_13',
+    'CacheLine_14',
+    'CacheLine_15',
+    'CacheLine_16',
+    'CacheLine_17',
+    'CacheLine_18',
+    'CacheLine_19',
+    'CacheLine_20',
+    'CacheLine_21',
+    'CacheLine_22',
+    'CacheLine_23',
+    'CacheLine_24',
+    'CacheLine_25',
+    'CacheLine_26',
+    'CacheLine_27',
+    'CacheLine_28',
+    'CacheLine_29',
+    'CacheLine_30',
+    'CacheLine_31',
+    'CacheLine_32',
+    'CacheLine_33',
+    'CacheLine_34',
+    'CacheLine_35',
+    'CacheLine_36',
+    'CacheLine_37',
+    'CacheLine_38',
+    'CacheLine_39',
+    'CacheLine_40',
+    'CacheLine_41',
+    'CacheLine_42',
+    'CacheLine_43',
+    'CacheLine_44',
+    'CacheLine_45',
+    'CacheLine_46',
+    'CacheLine_47',
+    'CacheLine_48',
+    'CacheLine_49',
+    'CacheLine_50',
+    'CacheLine_51',
+    'CacheLine_52',
+    'CacheLine_53',
+    'CacheLine_54',
+    'CacheLine_55',
+    'CacheLine_56',
+    'CacheLine_57',
+    'CacheLine_58',
+    'CacheLine_59',
+    'CacheLine_60',
+    'CacheLine_61',
+    'CacheLine_62',
+    'CacheLine_63',
+    'CacheLine_64',
+)
 # Maps
 
 EVENT_NAME_TO_ETW_HEADER = {
@@ -1051,6 +1293,8 @@ EVENT_NAME_TO_ETW_HEADER = {
     FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_ETW_HEADER,
     FOUND_GRAPH: FOUND_GRAPH_ETW_HEADER,
     IS_ACYCLIC: IS_ACYCLIC_ETW_HEADER,
+    MEMORY_COVERAGE_CACHE_LINE_COUNTS:
+        MEMORY_COVERAGE_CACHE_LINE_COUNTS_ETW_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER = {
@@ -1068,6 +1312,8 @@ EVENT_NAME_TO_CSV_HEADER = {
     FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_CSV_HEADER,
     FOUND_GRAPH: FOUND_GRAPH_CSV_HEADER,
     IS_ACYCLIC: IS_ACYCLIC_CSV_HEADER,
+    MEMORY_COVERAGE_CACHE_LINE_COUNTS:
+        MEMORY_COVERAGE_CACHE_LINE_COUNTS_CSV_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER_SLIM = {
@@ -1085,6 +1331,8 @@ EVENT_NAME_TO_CSV_HEADER_SLIM = {
     FOUND_EQUAL_BEST_GRAPH: FOUND_EQUAL_BEST_GRAPH_CSV_HEADER_SLIM,
     FOUND_GRAPH: FOUND_GRAPH_CSV_HEADER_SLIM,
     IS_ACYCLIC: IS_ACYCLIC_CSV_HEADER_SLIM,
+    MEMORY_COVERAGE_CACHE_LINE_COUNTS:
+        MEMORY_COVERAGE_CACHE_LINE_COUNTS_CSV_HEADER_SLIM,
 }
 
 HAS_SEED_DATA = {
@@ -2005,6 +2253,61 @@ def extract_solutions_found_count(df, hash_funcs):
             )
     )
 
+def get_dfs_from_csv(csv):
+    dname = os.path.dirname(csv)
+    convert_csv_to_parquet(csv, '.')
+    parquet_path = csv.replace('.csv', '.parquet')
+    # Load the df, then post-process.
+    df = df_from_parquet(parquet_path)
+    df.KeysToEdgesRatio = df.NumberOfKeys / df.NumberOfEdges
+    df.AddKeysElapsedCycles = (
+        df.HashKeysElapsedCycles -
+        df.AddHashedKeysElapsedCycles
+    )
+    df['AddKeysElapsedCyclesPerKey'] = (
+        df.AddKeysElapsedCycles / df.NumberOfKeys
+    )
+    df['HashKeysElapsedCyclesPerKey'] = (
+        df.HashKeysElapsedCycles / df.NumberOfKeys
+    )
+    df['VerifyMicrosecondsPerKey'] = (
+        df.VerifyMicroseconds / df.NumberOfKeys
+    )
+    df.rename(columns={'DeltaHashMinimumCycles': 'Cycles'}, inplace=True)
+
+    try:
+        path = join_path(dname, 'events_FoundNewBestGraph.csv')
+        nbdf = pd.read_csv(path)
+    except:
+        nbdf = None
+    try:
+        path = join_path(dname, 'events_MemoryCoverageCacheLineCounts.csv')
+        mcdf = pd.read_csv(path)
+    except:
+        mcdf = None
+
+    return (df, nbdf, mcdf)
+
+def get_mcdf(keysname, attempt, mcdf):
+    df = mcdf[(mcdf.Attempt == attempt) & (mcdf.KeysFileName == keysname)]
+    cols = [ c for c in df.columns if c.startswith('CacheLine') ]
+    counts = df[cols]
+    values = counts.values
+    return values
+
+def get_mcdf_for_df_row(df, mcdf, attempt=None):
+    assert len(df) == 1
+    keys_filename = os.path.basename(df.KeysFullPath.values[0])
+    if attempt is None:
+        attempt = df.AttemptThatFoundBestGraph.values[0]
+    d = mcdf[(mcdf.Attempt == attempt) & (mcdf.KeysFileName == keys_filename)]
+    return d
+
+def get_vals_from_mcdf(mcdf):
+    cols = [ c for c in mcdf.columns if c.startswith('CacheLine') ]
+    counts = mcdf[cols]
+    values = counts.values
+    return values
 
 #===============================================================================
 # Format Conversion
@@ -2227,6 +2530,7 @@ def process_xperf_perfecthash_csv(path, out=None):
     cswitch = CSWITCH
     pmc = PMC
     is_acyclic = IS_ACYCLIC
+    memory_coverage_cache_line_counts = MEMORY_COVERAGE_CACHE_LINE_COUNTS
 
     assign_io = io.StringIO()
     generate_random_bytes_io = io.StringIO()
@@ -2245,6 +2549,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         cswitch: io.StringIO(),
         pmc: io.StringIO(),
         is_acyclic: io.StringIO(),
+        memory_coverage_cache_line_counts: io.StringIO(),
     }
 
     paths = {
@@ -2261,6 +2566,8 @@ def process_xperf_perfecthash_csv(path, out=None):
         cswitch: f'{prefix}_ContextSwitch.csv',
         pmc: f'{prefix}_Pmc.csv',
         is_acyclic: f'{prefix}_IsAcyclic.csv',
+        memory_coverage_cache_line_counts:
+            f'{prefix}_MemoryCoverageCacheLineCounts.csv',
     }
 
     counts = {
@@ -2277,6 +2584,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         cswitch: 0,
         pmc: 0,
         is_acyclic: 0,
+        memory_coverage_cache_line_counts: 0,
     }
 
     names = set(counts.keys())
@@ -5770,6 +6078,37 @@ def bar1(df, lrdf, min_num_edges=None, max_num_edges=None,
 
     clamp = 'N' if not clamp_edges else 'Y'
 
+#===============================================================================
+# Heat Maps
+#===============================================================================
+def cache_line_occupancy_heatmap(values, figsize=None,
+                                 sort_values=False, cmap=None):
+    """
+    vals = get_vals_from_mcdf(get_mcdf_for_df_row(df[df.index == 15], mcdf))
+    cache_line_occupancy_heatmap(vals)
+    """
+    import numpy as np
+    import seaborn as sns
+    import matplotlib.pyplot as plt
 
+    (f, ax) = plt.subplots(figsize=figsize if figsize else (12, 12))
+
+    if cmap is None:
+        cmap = sns.color_palette('Spectral_r', n_colors=17)
+
+    if sort_values:
+        shape = values.shape
+        values = np.flip(np.sort(values.reshape(shape[0] * shape[1])))
+        values = values.reshape(shape[0], shape[1])
+
+    ax = sns.heatmap(values, fmt='d', linewidths=0.5, ax=ax,
+                     xticklabels=False,
+                     yticklabels=False,
+                     cbar_kws={
+                         'ticks': range(0, 17),
+                         'label': 'Number of Assigned per Cache Line',
+                     },
+                     cmap=cmap)
+    return ax
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :

@@ -144,6 +144,76 @@
             <data name="NumberOfVertices" inType="win:UInt32" outType="xs:unsignedInt"></data>
             <data name="IsAcyclic" inType="win:Boolean" outType="xs:boolean"></data>
           </template>
+          <template tid="GraphMemoryCoverageCacheLineCountsTemplate">
+            <data name="KeysFileName" inType="win:UnicodeString" outType="xs:string"></data>
+            <data name="Attempt" inType="win:Int64" outType="xs:long"></data>
+            <data name="PageIndex" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="TotalNumberOfPages" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="CacheLine_01" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_02" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_03" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_04" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_05" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_06" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_07" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_08" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_09" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_10" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_11" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_12" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_13" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_14" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_15" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_16" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_17" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_18" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_19" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_20" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_21" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_22" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_23" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_24" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_25" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_26" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_27" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_28" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_29" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_30" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_31" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_32" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_33" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_34" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_35" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_36" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_37" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_38" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_39" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_40" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_41" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_42" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_43" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_44" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_45" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_46" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_47" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_48" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_49" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_50" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_51" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_52" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_53" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_54" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_55" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_56" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_57" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_58" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_59" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_60" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_61" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_62" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_63" inType="win:UInt8" outType="xs:unsignedByte"></data>
+            <data name="CacheLine_64" inType="win:UInt8" outType="xs:unsignedByte"></data>
+          </template>
         </templates>
         <channels>
         </channels>
@@ -155,6 +225,9 @@
           <keyword name="GRAPH_ASSIGN" symbol="PH_ETW_GRAPH_ASSIGN" mask="0x10"></keyword>
           <keyword name="RTL_RANDOM" symbol="PH_ETW_RTL_RANDOM" mask="0x20"></keyword>
           <keyword name="GRAPH_IS_ACYCLIC" symbol="PH_ETW_GRAPH_IS_ACYCLIC" mask="0x40"></keyword>
+          <keyword name="GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS"
+                   symbol="PH_ETW_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS"
+                   mask="0x80"></keyword>
         </keywords>
         <tasks>
           <task name="AddKeys" value="1"/>
@@ -166,6 +239,7 @@
           <task name="Assign" value="7"/>
           <task name="GenerateRandomBytes" value="8"/>
           <task name="IsAcyclic" value="9"/>
+          <task name="MemoryCoverageCacheLineCounts" value="10"/>
         </tasks>
         <events>
           <event
@@ -312,6 +386,18 @@
             keywords="GRAPH_IS_ACYCLIC"
             message="$(string.PerfectHash.event.11.message)">
           </event>
+          <event
+            symbol="GraphMemoryCoverageCacheLineCountsEvent"
+            value="12"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Info"
+            task="MemoryCoverageCacheLineCounts"
+            template="GraphMemoryCoverageCacheLineCountsTemplate"
+            keywords="GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS"
+            message="$(string.PerfectHash.event.12.message)">
+          </event>
         </events>
       </provider>
     </events>
@@ -338,6 +424,7 @@
         <string id="PerfectHash.event.9.message" value="Stopped getting random bytes."></string>
         <string id="PerfectHash.event.10.message" value="Graph assignment result."></string>
         <string id="PerfectHash.event.11.message" value="Graph peeling (acyclic) result."></string>
+        <string id="PerfectHash.event.12.message" value="Graph memory coverage cache line counts."></string>
       </stringTable>
     </resources>
   </localization>

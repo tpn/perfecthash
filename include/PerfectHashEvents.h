@@ -659,7 +659,7 @@ Remarks:
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Provider "PerfectHash" event count 12
+// Provider "PerfectHash" event count 13
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // Provider GUID = d0b3028e-70a7-410f-af7e-4d495b4a3c8b
@@ -686,6 +686,7 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #define PerfectHashEvents_TASK_Assign 0x7
 #define PerfectHashEvents_TASK_GenerateRandomBytes 0x8
 #define PerfectHashEvents_TASK_IsAcyclic 0x9
+#define PerfectHashEvents_TASK_MemoryCoverageCacheLineCounts 0xa
 
 //
 // Keyword
@@ -697,6 +698,7 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #define PH_ETW_GRAPH_ASSIGN 0x10
 #define PH_ETW_RTL_RANDOM 0x20
 #define PH_ETW_GRAPH_IS_ACYCLIC 0x40
+#define PH_ETW_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS 0x80
 
 //
 // Event Descriptors
@@ -725,6 +727,8 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphAssignResultEvent = {
 #define GraphAssignResultEvent_value 0xa
 EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphIsAcyclicEvent = {0xb, 0x0, 0x10, 0x4, 0x0, 0x9, 0x8000000000000040};
 #define GraphIsAcyclicEvent_value 0xb
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphMemoryCoverageCacheLineCountsEvent = {0xc, 0x0, 0x10, 0x4, 0x0, 0xa, 0x8000000000000080};
+#define GraphMemoryCoverageCacheLineCountsEvent_value 0xc
 
 //
 // MCGEN_DISABLE_PROVIDER_CODE_GENERATION macro:
@@ -738,13 +742,13 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphIsAcyclicEvent = {0xb
 // These variables are for use by MC-generated code and should not be used directly.
 //
 EXTERN_C __declspec(selectany) DECLSPEC_CACHEALIGN ULONG PerfectHashEnableBits[1];
-EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[7] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004, 0x8000000000000008, 0x8000000000000010, 0x8000000000000020, 0x8000000000000040};
-EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[7] = {4, 4, 4, 4, 4, 4, 4};
+EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[8] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004, 0x8000000000000008, 0x8000000000000010, 0x8000000000000020, 0x8000000000000040, 0x8000000000000080};
+EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[8] = {4, 4, 4, 4, 4, 4, 4, 4};
 
 //
 // Provider context
 //
-EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 7, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
+EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 8, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
 
 //
 // Provider REGHANDLE
@@ -839,7 +843,7 @@ _mcgen_PASTE2(_mcgen_RegisterForContext_PerfectHash_, MCGEN_EVENTREGISTER)(
 {
     RtlZeroMemory(pContext, sizeof(*pContext));
     pContext->Context.Logger = (ULONG_PTR)PerfectHashEvents_Traits;
-    pContext->Context.EnableBitsCount = 7;
+    pContext->Context.EnableBitsCount = 8;
     pContext->Context.EnableBitMask = pContext->EnableBits;
     pContext->Context.EnableKeyWords = PerfectHashKeywords;
     pContext->Context.EnableLevel = PerfectHashLevels;
@@ -1137,6 +1141,29 @@ _mcgen_CheckContextType_PerfectHash(_In_ McGenContext_PerfectHash* pContext)
 // This macro is for use by MC-generated code and should not be used directly.
 #define _mcgen_TEMPLATE_FOR_GraphIsAcyclicEvent _mcgen_PASTE2(McTemplateK0ziqiiqqt_, MCGEN_EVENTWRITETRANSFER)
 
+//
+// Enablement check macro for event "GraphMemoryCoverageCacheLineCountsEvent"
+//
+#define EventEnabledGraphMemoryCoverageCacheLineCountsEvent() _mcgen_EVENT_BIT_SET(PerfectHashEnableBits, 7)
+#define EventEnabledGraphMemoryCoverageCacheLineCountsEvent_ForContext(pContext) _mcgen_EVENT_BIT_SET(_mcgen_CheckContextType_PerfectHash(pContext)->EnableBits, 7)
+
+//
+// Event write macros for event "GraphMemoryCoverageCacheLineCountsEvent"
+//
+#define EventWriteGraphMemoryCoverageCacheLineCountsEvent(Activity, KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64) \
+        MCGEN_EVENT_ENABLED(GraphMemoryCoverageCacheLineCountsEvent) \
+        ? _mcgen_TEMPLATE_FOR_GraphMemoryCoverageCacheLineCountsEvent(&PerfectHashEvents_Context, &GraphMemoryCoverageCacheLineCountsEvent, Activity, KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64) : 0
+#define EventWriteGraphMemoryCoverageCacheLineCountsEvent_AssumeEnabled(KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64) \
+        _mcgen_TEMPLATE_FOR_GraphMemoryCoverageCacheLineCountsEvent(&PerfectHashEvents_Context, &GraphMemoryCoverageCacheLineCountsEvent, NULL, KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64)
+#define EventWriteGraphMemoryCoverageCacheLineCountsEvent_ForContext(pContext, Activity, KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64) \
+        MCGEN_EVENT_ENABLED_FORCONTEXT(pContext, GraphMemoryCoverageCacheLineCountsEvent) \
+        ? _mcgen_TEMPLATE_FOR_GraphMemoryCoverageCacheLineCountsEvent(&(pContext)->Context, &GraphMemoryCoverageCacheLineCountsEvent, Activity, KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64) : 0
+#define EventWriteGraphMemoryCoverageCacheLineCountsEvent_ForContextAssumeEnabled(pContext, KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64) \
+        _mcgen_TEMPLATE_FOR_GraphMemoryCoverageCacheLineCountsEvent(&_mcgen_CheckContextType_PerfectHash(pContext)->Context, &GraphMemoryCoverageCacheLineCountsEvent, NULL, KeysFileName, Attempt, PageIndex, TotalNumberOfPages, CacheLine_01, CacheLine_02, CacheLine_03, CacheLine_04, CacheLine_05, CacheLine_06, CacheLine_07, CacheLine_08, CacheLine_09, CacheLine_10, CacheLine_11, CacheLine_12, CacheLine_13, CacheLine_14, CacheLine_15, CacheLine_16, CacheLine_17, CacheLine_18, CacheLine_19, CacheLine_20, CacheLine_21, CacheLine_22, CacheLine_23, CacheLine_24, CacheLine_25, CacheLine_26, CacheLine_27, CacheLine_28, CacheLine_29, CacheLine_30, CacheLine_31, CacheLine_32, CacheLine_33, CacheLine_34, CacheLine_35, CacheLine_36, CacheLine_37, CacheLine_38, CacheLine_39, CacheLine_40, CacheLine_41, CacheLine_42, CacheLine_43, CacheLine_44, CacheLine_45, CacheLine_46, CacheLine_47, CacheLine_48, CacheLine_49, CacheLine_50, CacheLine_51, CacheLine_52, CacheLine_53, CacheLine_54, CacheLine_55, CacheLine_56, CacheLine_57, CacheLine_58, CacheLine_59, CacheLine_60, CacheLine_61, CacheLine_62, CacheLine_63, CacheLine_64)
+
+// This macro is for use by MC-generated code and should not be used directly.
+#define _mcgen_TEMPLATE_FOR_GraphMemoryCoverageCacheLineCountsEvent _mcgen_PASTE2(McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_, MCGEN_EVENTWRITETRANSFER)
+
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //
@@ -1376,6 +1403,234 @@ _mcgen_PASTE2(McTemplateK0ziqqqqq_, MCGEN_EVENTWRITETRANSFER)(
     return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0ziqqqqq_ARGCOUNT + 1, EventData);
 }
 #endif // McTemplateK0ziqqqqq_def
+
+//
+// Function for template "GraphMemoryCoverageCacheLineCountsTemplate" (and possibly others).
+// This function is for use by MC-generated code and should not be used directly.
+//
+#ifndef McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_def
+#define McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_def
+ETW_INLINE
+ULONG
+_mcgen_PASTE2(McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_, MCGEN_EVENTWRITETRANSFER)(
+    _In_ PMCGEN_TRACE_CONTEXT Context,
+    _In_ PCEVENT_DESCRIPTOR Descriptor,
+    _In_opt_ const GUID* Activity,
+    _In_opt_ PCWSTR  _Arg0,
+    _In_ const signed __int64  _Arg1,
+    _In_ const unsigned int  _Arg2,
+    _In_ const unsigned int  _Arg3,
+    _In_ const unsigned char  _Arg4,
+    _In_ const unsigned char  _Arg5,
+    _In_ const unsigned char  _Arg6,
+    _In_ const unsigned char  _Arg7,
+    _In_ const unsigned char  _Arg8,
+    _In_ const unsigned char  _Arg9,
+    _In_ const unsigned char  _Arg10,
+    _In_ const unsigned char  _Arg11,
+    _In_ const unsigned char  _Arg12,
+    _In_ const unsigned char  _Arg13,
+    _In_ const unsigned char  _Arg14,
+    _In_ const unsigned char  _Arg15,
+    _In_ const unsigned char  _Arg16,
+    _In_ const unsigned char  _Arg17,
+    _In_ const unsigned char  _Arg18,
+    _In_ const unsigned char  _Arg19,
+    _In_ const unsigned char  _Arg20,
+    _In_ const unsigned char  _Arg21,
+    _In_ const unsigned char  _Arg22,
+    _In_ const unsigned char  _Arg23,
+    _In_ const unsigned char  _Arg24,
+    _In_ const unsigned char  _Arg25,
+    _In_ const unsigned char  _Arg26,
+    _In_ const unsigned char  _Arg27,
+    _In_ const unsigned char  _Arg28,
+    _In_ const unsigned char  _Arg29,
+    _In_ const unsigned char  _Arg30,
+    _In_ const unsigned char  _Arg31,
+    _In_ const unsigned char  _Arg32,
+    _In_ const unsigned char  _Arg33,
+    _In_ const unsigned char  _Arg34,
+    _In_ const unsigned char  _Arg35,
+    _In_ const unsigned char  _Arg36,
+    _In_ const unsigned char  _Arg37,
+    _In_ const unsigned char  _Arg38,
+    _In_ const unsigned char  _Arg39,
+    _In_ const unsigned char  _Arg40,
+    _In_ const unsigned char  _Arg41,
+    _In_ const unsigned char  _Arg42,
+    _In_ const unsigned char  _Arg43,
+    _In_ const unsigned char  _Arg44,
+    _In_ const unsigned char  _Arg45,
+    _In_ const unsigned char  _Arg46,
+    _In_ const unsigned char  _Arg47,
+    _In_ const unsigned char  _Arg48,
+    _In_ const unsigned char  _Arg49,
+    _In_ const unsigned char  _Arg50,
+    _In_ const unsigned char  _Arg51,
+    _In_ const unsigned char  _Arg52,
+    _In_ const unsigned char  _Arg53,
+    _In_ const unsigned char  _Arg54,
+    _In_ const unsigned char  _Arg55,
+    _In_ const unsigned char  _Arg56,
+    _In_ const unsigned char  _Arg57,
+    _In_ const unsigned char  _Arg58,
+    _In_ const unsigned char  _Arg59,
+    _In_ const unsigned char  _Arg60,
+    _In_ const unsigned char  _Arg61,
+    _In_ const unsigned char  _Arg62,
+    _In_ const unsigned char  _Arg63,
+    _In_ const unsigned char  _Arg64,
+    _In_ const unsigned char  _Arg65,
+    _In_ const unsigned char  _Arg66,
+    _In_ const unsigned char  _Arg67
+    )
+{
+#define McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_ARGCOUNT 68
+
+    EVENT_DATA_DESCRIPTOR EventData[McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_ARGCOUNT + 1];
+
+    EventDataDescCreate(&EventData[1],
+                        (_Arg0 != NULL) ? _Arg0 : L"NULL",
+                        (_Arg0 != NULL) ? (ULONG)((wcslen(_Arg0) + 1) * sizeof(WCHAR)) : (ULONG)sizeof(L"NULL"));
+
+    EventDataDescCreate(&EventData[2],&_Arg1, sizeof(const signed __int64)  );
+
+    EventDataDescCreate(&EventData[3],&_Arg2, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[4],&_Arg3, sizeof(const unsigned int)  );
+
+    EventDataDescCreate(&EventData[5],&_Arg4, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[6],&_Arg5, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[7],&_Arg6, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[8],&_Arg7, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[9],&_Arg8, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[10],&_Arg9, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[11],&_Arg10, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[12],&_Arg11, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[13],&_Arg12, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[14],&_Arg13, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[15],&_Arg14, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[16],&_Arg15, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[17],&_Arg16, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[18],&_Arg17, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[19],&_Arg18, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[20],&_Arg19, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[21],&_Arg20, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[22],&_Arg21, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[23],&_Arg22, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[24],&_Arg23, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[25],&_Arg24, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[26],&_Arg25, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[27],&_Arg26, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[28],&_Arg27, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[29],&_Arg28, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[30],&_Arg29, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[31],&_Arg30, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[32],&_Arg31, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[33],&_Arg32, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[34],&_Arg33, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[35],&_Arg34, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[36],&_Arg35, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[37],&_Arg36, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[38],&_Arg37, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[39],&_Arg38, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[40],&_Arg39, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[41],&_Arg40, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[42],&_Arg41, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[43],&_Arg42, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[44],&_Arg43, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[45],&_Arg44, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[46],&_Arg45, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[47],&_Arg46, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[48],&_Arg47, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[49],&_Arg48, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[50],&_Arg49, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[51],&_Arg50, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[52],&_Arg51, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[53],&_Arg52, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[54],&_Arg53, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[55],&_Arg54, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[56],&_Arg55, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[57],&_Arg56, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[58],&_Arg57, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[59],&_Arg58, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[60],&_Arg59, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[61],&_Arg60, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[62],&_Arg61, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[63],&_Arg62, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[64],&_Arg63, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[65],&_Arg64, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[66],&_Arg65, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[67],&_Arg66, sizeof(const unsigned char)  );
+
+    EventDataDescCreate(&EventData[68],&_Arg67, sizeof(const unsigned char)  );
+
+    return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_ARGCOUNT + 1, EventData);
+}
+#endif // McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_def
 
 //
 // Function for template "GraphFoundTemplate" (and possibly others).
@@ -1712,6 +1967,7 @@ _mcgen_PASTE2(McTemplateK0zqqqqiiqqqqqqqq_, MCGEN_EVENTWRITETRANSFER)(
 #define MSG_PerfectHash_event_9_message      0xB0000009L
 #define MSG_PerfectHash_event_10_message     0xB000000AL
 #define MSG_PerfectHash_event_11_message     0xB000000BL
+#define MSG_PerfectHash_event_12_message     0xB000000CL
 #define MSG_PerfectHash_event_0_message      0xB0010000L
 #define MSG_PerfectHash_event_1_message      0xB0010001L
 #define MSG_PerfectHash_event_2_message      0xB0010002L
