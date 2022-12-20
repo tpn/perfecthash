@@ -1,6 +1,11 @@
 #===============================================================================
 # Imports
 #===============================================================================
+from .path import (
+    dirname,
+    join_path,
+)
+
 from .util import (
     filetime_utc_to_local_tz,
     datetime_to_perfecthash_time,
@@ -2254,7 +2259,7 @@ def extract_solutions_found_count(df, hash_funcs):
     )
 
 def get_dfs_from_csv(csv):
-    dname = os.path.dirname(csv)
+    dname = dirname(csv)
     convert_csv_to_parquet(csv, '.')
     parquet_path = csv.replace('.csv', '.parquet')
     # Load the df, then post-process.
