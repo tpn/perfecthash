@@ -159,7 +159,7 @@ Return Value:
     SumXY = 0.0;
     SumY2 = 0.0;
 
-    for (Index = 1; Index < Total; Index++) {
+    for (Index = 0; Index < Total; Index++) {
         X = (DOUBLE)XCounts[Index];
 
         Y = (DOUBLE)YCounts[Index];
