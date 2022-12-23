@@ -769,10 +769,26 @@ Table Create Parameters:
 
         Supplies an optional comma-separated list of up to 8 integers that
         represent the seed values to use for every graph solving attempt.
+        Each value may be zero, which tells the algorithm to use a random
+        seed for this position as per normal.
 
-        N.B. This is rarely useful for PerfectHashBulkCreate.exe.  It is more
-             useful for PerfectHashCreate.exe when you want to re-run against
-             a set of known-good seeds.
+        The logic is also cognizant of the hash function's seed masks, e.g.
+        MultiplyShiftR has a seed mask of 0x1f1f for seed 3 (which is used to
+        control the final right shift amount), so, if we use the following:
+
+            --Seeds=0,0,4096
+
+        It will use random bytes for the first two seeds.  For the second byte
+        of the third seed, it'll use 0x10 (as 4096 is 0x1000), but will use a
+        random byte for the first byte.  (If we were to use --Seeds=0,0,16,
+        then the first byte will be locked to 0x10 and the second byte will
+        be random.)
+
+        This has proven useful for the hash function MultiplyShiftR when using
+        --InitialNumberOfTableResizes=1 --Seeds=0,0,0x1010 as it forces all
+        vertices to be constrained to the first half of the assigned array
+        (thus negating the overhead of a table resize).  It may be useful in
+        other contexts, too.
 
     --Seed3Byte1MaskCounts=<n1,...n31>
     --Seed3Byte2MaskCounts=<n1,...n31>

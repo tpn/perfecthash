@@ -4209,9 +4209,13 @@ Return Value:
 {
     HRESULT Result = S_OK;
     ULONG Index;
-    PULONG Value;
+    ULONG_BYTES Mask;
+    ULONG_BYTES Value;
+    ULONG_BYTES NewSeed;
+    PULONG ValuePointer;
     PULONG Seed;
     PULONG Seeds;
+    const LONG *Masks;
     PVALUE_ARRAY ValueArray;
     PPERFECT_HASH_CONTEXT Context;
 
@@ -4254,19 +4258,67 @@ Return Value:
 
     Seeds = &Graph->FirstSeed;
 
-    for (Index = 0, Value = ValueArray->Values;
-         Index < Graph->NumberOfSeeds && Index < ValueArray->NumberOfValues;
-         Index++, Value++) {
+    if (Context->SeedMasks) {
+        Masks = &Context->SeedMasks->Mask1;
+    } else {
+        Masks = NULL;
+    }
 
-        if (*Value != 0) {
+    for (Index = 0, ValuePointer = ValueArray->Values;
+         Index < Graph->NumberOfSeeds && Index < ValueArray->NumberOfValues;
+         Index++, ValuePointer++) {
+
+        Seed = Seeds + Index;
+        Value.AsULong = *ValuePointer;
+
+        if (Masks) {
+
+            Mask.AsULong = *Masks++;
+
+            if (Mask.AsLong != -1 && Mask.AsLong != 0) {
+
+                //
+                // Valid mask bytes detected.  For each mask byte, if it's valid
+                // (i.e. not 0 nor -1), *and* the corresponding seed byte is not
+                // 0, copy that byte over.  This allows a user to only overwrite
+                // a single byte of a seed being used for byte-level shifting.
+                // e.g., --Seeds=0,0,4096 corresponds to a seed mask of 0x1000
+                // for seed 3, which corresponds to a 0x10 value for the second
+                // byte of seed 3, which is the only byte we want to override,
+                // keeping the random bytes already present for all other bytes.
+                //
+
+                NewSeed.AsULong = *Seed;
+
+#define MAYBE_COPY_BYTE(N)               \
+    if ((Mask.Byte##N != 0xff) &&        \
+        (Mask.Byte##N != 0x00) &&        \
+        (Value.Byte##N != 0x00)) {       \
+        NewSeed.Byte##N = Value.Byte##N; \
+    }
+                MAYBE_COPY_BYTE(1);
+                MAYBE_COPY_BYTE(2);
+                MAYBE_COPY_BYTE(3);
+                MAYBE_COPY_BYTE(4);
+
+                *Seed = NewSeed.AsULong;
+                continue;
+            }
+        }
+
+        //
+        // If there are no masks for this particular seed position, just check
+        // to see if the value provided is not zero, and copy it if so.
+        //
+
+        if (Value.AsULong != 0) {
 
             //
             // Non-zero seed value detected; overwrite the applicable seed
             // slot with the caller-provided value.
             //
 
-            Seed = Seeds + Index;
-            *Seed = *Value;
+            *Seed = Value.AsULong;
         }
     }
 
