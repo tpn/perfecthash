@@ -14,10 +14,10 @@ DECLARE_INDEX_ROUTINE()
 
     DownsizedKey = Key;
 
-    Vertex1 = DownsizedKey * (CPHSEED64)SEED1;
+    Vertex1 = DownsizedKey * SEED12;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
-    Vertex2 = DownsizedKey * (CPHSEED64)SEED2;
+    Vertex2 = DownsizedKey * SEED45;
     Vertex2 = Vertex2 >> SEED3_BYTE2;
 
     MaskedLow = (CPHDKEY)(Vertex1 & HASH_MASK);
@@ -50,10 +50,10 @@ DECLARE_INDEX_IACA_ROUTINE()
 
     DownsizedKey = Key;
 
-    Vertex1 = DownsizedKey * (CPHSEED64)SEED1;
+    Vertex1 = DownsizedKey * SEED12;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
-    Vertex2 = DownsizedKey * (CPHSEED64)SEED2;
+    Vertex2 = DownsizedKey * SEED45;
     Vertex2 = Vertex2 >> SEED3_BYTE2;
 
     MaskedLow = (CPHDKEY)(Vertex1 & HASH_MASK);

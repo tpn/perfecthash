@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -23,6 +23,7 @@ Abstract:
             - U##_NUMBER_OF_KEYS
             - U##_SEEDS
             - U##_SEED[1..N]_BYTE[1..4]
+            - U##_SEED[12|23|34|45|56|67]
             - T##_Seeds[]
             - T##_Seed1 .. SeedN
             - T##_HashMask
@@ -135,6 +136,20 @@ PrepareCHeaderFileChm01(
         OUTPUT_STRING(Name);
         OUTPUT_RAW("_Seed");
         OUTPUT_INT(Count);
+        OUTPUT_RAW(";\n");
+    }
+
+    if (NumberOfSeeds >= 2) {
+        OUTPUT_RAW("extern const CPHSEED64 ");
+        OUTPUT_STRING(Name);
+        OUTPUT_RAW("_Seed12");
+        OUTPUT_RAW(";\n");
+    }
+
+    if (NumberOfSeeds >= 5) {
+        OUTPUT_RAW("extern const CPHSEED64 ");
+        OUTPUT_STRING(Name);
+        OUTPUT_RAW("_Seed34");
         OUTPUT_RAW(";\n");
     }
 
@@ -353,6 +368,28 @@ SaveCHeaderFileChm01(
 
         WRITE_SEED_WORD(1);
         WRITE_SEED_WORD(2);
+    }
+
+    if (NumberOfSeeds >= 2) {
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_SEED12 ");
+        *Output++ = '0';
+        *Output++ = 'x';
+        OUTPUT_HEX_RAW(Graph->Seeds[1]);
+        OUTPUT_HEX_RAW(Graph->Seeds[0]);
+        *Output++ = '\n';
+    }
+
+    if (NumberOfSeeds >= 5) {
+        OUTPUT_RAW("#define ");
+        OUTPUT_STRING(Upper);
+        OUTPUT_RAW("_SEED45 ");
+        *Output++ = '0';
+        *Output++ = 'x';
+        OUTPUT_HEX_RAW(Graph->Seeds[4]);
+        OUTPUT_HEX_RAW(Graph->Seeds[3]);
+        *Output++ = '\n';
     }
 
     //

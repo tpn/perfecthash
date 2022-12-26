@@ -2546,36 +2546,37 @@ Return Value:
 
 --*/
 {
-    ULONG Seed1;
-    ULONG Seed2;
     ULONG_BYTES Seed3;
     ULONGLONG Vertex1;
     ULONGLONG Vertex2;
     ULONGLONG DownsizedKey;
+    ULARGE_INTEGER Seed1;
+    ULARGE_INTEGER Seed2;
     ULARGE_INTEGER Result;
 
     UNREFERENCED_PARAMETER(Table);
 
-    ASSERT(NumberOfSeeds >= 3);
+    ASSERT(NumberOfSeeds >= 5);
     UNREFERENCED_PARAMETER(NumberOfSeeds);
 
     //
     // Initialize aliases.
     //
 
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
+    Seed1.QuadPart = *((PULONGLONG)&Seeds[0]);
     Seed3.AsULong = Seeds[2];
+    Seed2.QuadPart = *((PULONGLONG)&Seeds[3]);
+
     DownsizedKey = Key;
 
     //
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = DownsizedKey * (ULONGLONG)SEED1;
+    Vertex1 = DownsizedKey * Seed1.QuadPart;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
-    Vertex2 = DownsizedKey * (ULONGLONG)SEED2;
+    Vertex2 = DownsizedKey * Seed2.QuadPart;
     Vertex2 = Vertex2 >> SEED3_BYTE2;
 
     Result.LowPart = (ULONG)Vertex1;

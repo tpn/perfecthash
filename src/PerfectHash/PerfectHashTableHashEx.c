@@ -843,32 +843,52 @@ Return Value:
 
 --*/
 {
-    ULONG Key2;
-    ULONG Seed1;
-    ULONG Seed2;
-    BYTE Seed3;
-    ULONG Vertex1;
-    ULONG Vertex2;
+    XMMWORD KeyXmm;
+    XMMWORD Seed1Xmm;
+    XMMWORD Seed2Xmm;
+    XMMWORD Vertex1Xmm;
+    XMMWORD Vertex2Xmm;
     ULARGE_INTEGER Result;
 
+    //IACA_VC_START();
+
+#if 0
     //
-    // Initialize aliases.
+    // Load seeds.
     //
 
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
-    Seed3 = (BYTE)(Seeds[2] & 0x1f);
+    Seed1Xmm = _mm_setr_epi32(Seeds[0], Seeds[1], Seeds[2], Seeds[3]);
+    Seed2Xmm = _mm_setr_epi32(Seeds[4], Seeds[5], Seeds[6], Seeds[7]);
 
     //
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(SEED1, Key);
-    Key2 = _rotl(Key, Seed3);
-    Vertex2 = _mm_crc32_u32(SEED2, Key2);
+    Vertex1Xmm = _mm_aesenc_si128(_mm_set1_epi32(Key), Seed1Xmm);
+    Vertex2Xmm = _mm_aesenc_si128(_mm_set1_epi32(Key), Seed2Xmm);
 
-    Result.LowPart = (Vertex1 & Mask);
-    Result.HighPart = (Vertex2 & Mask);
+    Result.LowPart = (Vertex1Xmm.m128i_u32[0] & Mask);
+    Result.HighPart = (Vertex2Xmm.m128i_u32[0] & Mask);
+#else
+
+    Seed1Xmm = _mm_set1_epi32(Seeds[0]);
+    Seed2Xmm = _mm_set1_epi32(Seeds[1]);
+
+    KeyXmm = _mm_set1_epi32(Key);
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1Xmm = _mm_aesenc_si128(KeyXmm, Seed1Xmm);
+    Vertex2Xmm = _mm_aesenc_si128(KeyXmm, Seed2Xmm);
+
+    Result.LowPart = (Vertex1Xmm.m128i_u32[0] & Mask);
+    Result.HighPart = (Vertex2Xmm.m128i_u32[0] & Mask);
+
+#endif
+
+    //IACA_VC_END();
 
     return Result.QuadPart;
 }
@@ -1750,31 +1770,32 @@ Return Value:
 
 --*/
 {
-    ULONG Seed1;
-    ULONG Seed2;
     ULONG_BYTES Seed3;
     ULONGLONG Vertex1;
     ULONGLONG Vertex2;
     ULONGLONG DownsizedKey;
+    ULARGE_INTEGER Seed1;
+    ULARGE_INTEGER Seed2;
     ULARGE_INTEGER Result;
 
     //
     // Initialize aliases.
     //
 
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
+    Seed1.QuadPart = *((PULONGLONG)&Seeds[0]);
     Seed3.AsULong = Seeds[2];
+    Seed2.QuadPart = *((PULONGLONG)&Seeds[3]);
+
     DownsizedKey = Key;
 
     //
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = DownsizedKey * (ULONGLONG)SEED1;
+    Vertex1 = DownsizedKey * Seed1.QuadPart;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
-    Vertex2 = DownsizedKey * (ULONGLONG)SEED2;
+    Vertex2 = DownsizedKey * Seed2.QuadPart;
     Vertex2 = Vertex2 >> SEED3_BYTE2;
 
     Result.LowPart = (ULONG)(Vertex1 & Mask);
@@ -1810,31 +1831,36 @@ Return Value:
 
 --*/
 {
-    ULONG Seed1;
-    ULONG Seed2;
     ULONG_BYTES Seed3;
     ULONGLONG Vertex1;
     ULONGLONG Vertex2;
     ULONGLONG DownsizedKey;
+    ULARGE_INTEGER Seed1;
+    ULARGE_INTEGER Seed2;
     ULARGE_INTEGER Result;
 
     //
     // Initialize aliases.
     //
 
-    Seed1 = Seeds[0];
-    Seed2 = Seeds[1];
+    Seed1.LowPart = Seeds[0];
+    Seed1.HighPart = Seeds[1];
+
     Seed3.AsULong = Seeds[2];
+
+    Seed2.LowPart = Seeds[3];
+    Seed2.HighPart = Seeds[4];
+
     DownsizedKey = Key;
 
     //
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = DownsizedKey * (ULONGLONG)SEED1;
+    Vertex1 = DownsizedKey * Seed1.QuadPart;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
-    Vertex2 = DownsizedKey * (ULONGLONG)SEED2;
+    Vertex2 = DownsizedKey * Seed2.QuadPart;
     Vertex2 = Vertex2 >> SEED3_BYTE2;
 
     Result.LowPart = (ULONG)(Vertex1 & Mask);
