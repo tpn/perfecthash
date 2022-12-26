@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -10,14 +10,8 @@ Abstract:
 
     This is the DLL main entry point for the PerfectHash component.  It hooks
     into process and thread attach and detach messages in order to provide TLS
-    glue (see PerfectHashTls.c for more information).
-
-    It also attempts a TSX transaction on process attach (if we're x64), and,
-    if that succeeds, replaces the guarded list component interface with the
-    TSX-enlightened version of the same interface.  And the RegisterSolved()
-    vtbl entry of the GRAPH component.
-
-    And finally, we've also got some Ctrl-C interception glue stashed here.
+    glue (see PerfectHashTls.c for more information).  It also registers a
+    console control handler function to intercept Ctrl-C et al.
 
 --*/
 
@@ -68,61 +62,6 @@ RunSingleFunctionCtrlCHandler(
     return FALSE;
 }
 
-#if 0
-
-//
-// TSX detection glue.
-//
-
-BOOLEAN IsTsxAvailable;
-
-#ifdef _M_AMD64
-#pragma optimize("", off)
-
-extern const VOID *ComponentInterfaces[];
-extern PVOID GuardedListTsxInterface;
-
-extern GRAPH_VTBL GraphInterface;
-
-PVOID TsxScratch;
-static
-NOINLINE
-BOOLEAN
-CanWeUseTsx(VOID)
-{
-    ULONG Started = 0;
-    ULONG Retried = 0;
-    ULONG Status;
-    BOOLEAN UseTsx = FALSE;
-
-    TsxScratch = NULL;
-
-Retry:
-
-    Status = _xbegin();
-
-    if (Status != _XBEGIN_STARTED) {
-        if (Status & _XABORT_RETRY) {
-            Retried++;
-            goto Retry;
-        }
-    } else {
-        Started++;
-        TsxScratch = _AddressOfReturnAddress();
-        _xend();
-    }
-
-    if (TsxScratch == _AddressOfReturnAddress()) {
-        UseTsx = TRUE;
-    }
-
-    TsxScratch = NULL;
-    return UseTsx;
-}
-#pragma optimize("", on)
-#endif
-#endif
-
 BOOL
 APIENTRY
 _DllMainCRTStartup(
@@ -136,39 +75,6 @@ _DllMainCRTStartup(
         case DLL_PROCESS_ATTACH:
             __security_init_cookie();
             PerfectHashModule = Module;
-
-#if 0
-            IsTsxAvailable = FALSE;
-
-#ifdef _M_AMD64
-
-            TRY_TSX {
-
-                if (CanWeUseTsx()) {
-                    IsTsxAvailable = TRUE;
-                }
-
-            } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION {
-                NOTHING;
-            }
-
-            if (IsTsxAvailable) {
-
-                //
-                // Use the TSX-enlightened version of the guarded list interface
-                // and graph RegisterSolved() method.
-                //
-
-                PERFECT_HASH_INTERFACE_ID Id;
-                Id = PerfectHashGuardedListInterfaceId;
-                ComponentInterfaces[Id] = &GuardedListTsxInterface;
-
-                GraphInterface.RegisterSolved = GraphRegisterSolvedTsx;
-            }
-
-#endif
-
-#endif
 
             if (!PerfectHashTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;
