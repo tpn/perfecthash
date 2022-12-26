@@ -82,8 +82,7 @@ PrepareMakefileMainMkFileChm01(
                "# Auto-generated.\n\n");
 
     OUTPUT_RAW("CFLAGS := -O3 -pipe "
-                         "-Wall "
-                         "-Wno-unused-but-set-variable"
+                         "-Wall"
                          "\n\n");
 
     OUTPUT_RAW("SUBMAKEFILES :=");

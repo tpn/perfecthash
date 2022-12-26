@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -45,7 +45,9 @@ extern "C" {
 #elif defined(__linux__) || defined(__APPLE__)
 #define CPHCALLTYPE
 #if defined(__clang__)
+#ifndef __arm64__
 #include <x86intrin.h>
+#endif
 
 //
 // Clang doesn't appear to support the rotate intrinsics _rotr and _rotl,
@@ -113,6 +115,16 @@ _rotr(
 #define IACA_VC_START() __writegsbyte(111, 111)
 #define IACA_VC_END()   __writegsbyte(222, 222)
 
+#else
+#define IACA_VC_START()
+#define IACA_VC_END()
+#endif
+
+#ifdef __APPLE__
+#ifdef __arm64__
+#include <time.h>
+#define __rdtsc() clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+#endif
 #endif
 
 //
