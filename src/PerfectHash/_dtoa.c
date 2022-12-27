@@ -434,7 +434,7 @@ Balloc(int k)
 
     x = 1 << k;
     len = (
-        sizeof(Bigint) + 
+        sizeof(Bigint) +
         (((size_t)x)-1) * sizeof(ULong) +
         sizeof(double) - 1
     ) / sizeof(double);
