@@ -834,7 +834,7 @@ Abstract:
 //         MultiplyShiftR has a seed mask of 0x1f1f for seed 3 (which is used to
 //         control the final right shift amount), so, if we use the following:
 // 
-//             --Seeds=0,0,4096
+//             --Seeds=0,0,0x1000
 // 
 //         It will use random bytes for the first two seeds.  For the second byte
 //         of the third seed, it'll use 0x10 (as 4096 is 0x1000), but will use a
@@ -847,6 +847,8 @@ Abstract:
 //         vertices to be constrained to the first half of the assigned array
 //         (thus negating the overhead of a table resize).  It may be useful in
 //         other contexts, too.
+// 
+//         N.B. Either hex or decimal can be used for the seed values.
 // 
 //     --Seed3Byte1MaskCounts=<n1,...n31>
 //     --Seed3Byte2MaskCounts=<n1,...n31>
