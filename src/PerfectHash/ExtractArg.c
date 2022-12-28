@@ -734,6 +734,9 @@ Return Value:
     ULONG Value = 0;
     LONG64 Value64 = 0;
     PWSTR Source;
+    DOUBLE Double;
+    PWSTR End;
+    PWSTR Expected;
     PALLOCATOR Allocator;
     BOOLEAN ValueIsInt64 = FALSE;
     BOOLEAN ValueIsInteger = FALSE;
@@ -1118,19 +1121,27 @@ Return Value:
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(MainWork, MAIN_WORK);
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(FileWork, FILE_WORK);
 
-    if (IS_EQUAL(SolutionsFoundRatio)) {
-        double Double;
-        wchar_t *End = NULL;
-        wchar_t *Expected = ValueString->Buffer + (ValueString->Length >> 1);
-        Double = wstrtod(ValueString->Buffer, &End);
-        if (End == Expected) {
-            SET_PARAM_ID(SolutionsFoundRatio);
-            LocalParam.AsDouble = Double;
-            goto AddParam;
-        }
-        Result = PH_E_INVALID_SOLUTIONS_FOUND_RATIO;
-        goto Error;
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_DOUBLE(Name, Upper)          \
+    if (IS_EQUAL(Name)) {                                            \
+        End = NULL;                                                  \
+        Expected = ValueString->Buffer + (ValueString->Length >> 1); \
+        Double = wstrtod(ValueString->Buffer, &End);                 \
+        if (End == Expected) {                                       \
+            SET_PARAM_ID(Name);                                      \
+            LocalParam.AsDouble = Double;                            \
+            goto AddParam;                                           \
+        }                                                            \
+        Result = PH_E_INVALID_##Upper;                               \
+        goto Error;                                                  \
     }
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_DOUBLE(SolutionsFoundRatio,
+                                           SOLUTIONS_FOUND_RATIO);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_DOUBLE(
+        AutoResizeWhenKeysToEdgesRatioExceeds,
+        AUTO_RESIZE_WHEN_KEYS_TO_EDGES_RATIO_EXCEEDS
+    );
 
     if (IS_EQUAL(Remark)) {
 

@@ -154,6 +154,8 @@ Return Value:
     PULONG Keys;
     PGRAPH *Graphs = NULL;
     PGRAPH Graph;
+    DOUBLE Limit;
+    DOUBLE Current;
     BOOLEAN Silent;
     BOOLEAN Success;
     BOOLEAN LimitConcurrency;
@@ -326,6 +328,14 @@ Return Value:
 
     if (NumberOfSeedsAvailable < NumberOfSeedsRequired) {
         return PH_E_INVALID_NUMBER_OF_SEEDS;
+    }
+
+    if (WantsAutoResizeIfKeysToEdgesRatioExceedsLimit(Table)) {
+        Limit = Table->AutoResizeWhenKeysToEdgesRatioExceeds;
+        Current = Table->Keys->KeysToEdgesRatio;
+        if (Current > Limit) {
+            Context->InitialResizes = 1;
+        }
     }
 
     if (Context->InitialResizes > 0) {
@@ -2346,7 +2356,7 @@ Return Value:
     TableInfoOnDisk->IndexModulus = Table->IndexModulus;
     TableInfoOnDisk->TableDataArrayType = Table->TableDataArrayType;
     TableInfoOnDisk->NumberOfKeys.QuadPart = (
-        Table->Keys->NumberOfElements.QuadPart
+        Table->Keys->NumberOfKeys.QuadPart
     );
     TableInfoOnDisk->NumberOfSeeds = (
         HashRoutineNumberOfSeeds[Table->HashFunctionId]

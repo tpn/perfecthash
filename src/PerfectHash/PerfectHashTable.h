@@ -51,10 +51,17 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         ULONG TableDataWasHeapAllocated:1;
 
         //
+        // When set, indicates an auto-resize has been requested if keys to
+        // edges ratio exceeds a given amount.
+        //
+
+        ULONG AutoResize:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -79,6 +86,9 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 
 #define WasTableDataHeapAllocated(Table) \
     ((Table)->State.TableDataWasHeapAllocated == TRUE)
+
+#define WantsAutoResizeIfKeysToEdgesRatioExceedsLimit(Table) \
+    ((Table)->State.AutoResize != FALSE)
 
 #define IncludeNumberOfTableResizeEventsInOutputPath(Table) (                  \
     ((Table)->TableCreateFlags.IncludeNumberOfTableResizeEventsInOutputPath == \
@@ -268,6 +278,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     DOUBLE SolutionsFoundRatio;
+
+    //
+    // If a keys to edges ratio exceeds this value, an initial table resize will
+    // be done prior to starting solving.
+    //
+
+    DOUBLE AutoResizeWhenKeysToEdgesRatioExceeds;
 
     //
     // If PriorSolutionsFoundRatio has been supplied, PredictedAttempts will

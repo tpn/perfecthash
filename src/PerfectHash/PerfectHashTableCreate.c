@@ -555,6 +555,7 @@ Return Value:
     ULONG GraphImpl;
     ULONG FixedAttempts;
     HRESULT Result = S_OK;
+    BOOLEAN SawAutoResize = FALSE;
     BOOLEAN SawMinAttempts = FALSE;
     BOOLEAN SawMaxAttempts = FALSE;
     BOOLEAN SawFixedAttempts = FALSE;
@@ -737,6 +738,17 @@ Return Value:
                 if (FAILED(Result)) {
                     goto Error;
                 }
+                break;
+
+            case TableCreateParameterAutoResizeWhenKeysToEdgesRatioExceedsId:
+                if (Param->AsDouble <= 0.0 || Param->AsDouble >= 1.0) {
+                    Result =
+                       PH_E_INVALID_AUTO_RESIZE_WHEN_KEYS_TO_EDGES_RATIO_EXCEEDS;
+                    goto Error;
+                }
+                SawAutoResize = TRUE;
+                Table->AutoResizeWhenKeysToEdgesRatioExceeds = Param->AsDouble;
+                Table->State.AutoResize = TRUE;
                 break;
 
             case TableCreateParameterRemarkId:
@@ -959,6 +971,10 @@ Return Value:
     //
 
     Table->CTypeNames = (PCSTRING)&NtTypeNames;
+
+    if (!SawAutoResize) {
+        Table->AutoResizeWhenKeysToEdgesRatioExceeds = 0.0;
+    }
 
     //
     // Validation complete, finish up.

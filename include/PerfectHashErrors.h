@@ -688,7 +688,16 @@ Abstract:
 //         solve the graph, which lowers the keys-to-vertices ratio, which will
 //         improve graph solving probability.
 // 
-//         N.B. This parameter is only valid for And masking, not Modulus masking.
+//     --AutoResizeWhenKeysToEdgesRatioExceeds=D
+// 
+//         Supplies a keys to edges ratio that, if exceeded, results in an auto
+//         resize, i.e. the equivalent of --InitialNumberOfTableResizes=1.  Valid
+//         values are above 0.0 and less than 1.0.  Typical values would be 0.8 to
+//         0.9 depending on the hash function being used.
+// 
+//         This will result in much faster solving rates for "nearly full" key sets
+//         (i.e., when the number of keys is very close to a power of two, e.g.
+//          HydrogenWorld-31016.keys).
 // 
 //     --BestCoverageAttempts=N
 // 
@@ -4112,4 +4121,13 @@ Abstract:
 // Creation of the hash table was successful, but a failure was encountered during the post-create self-test routine.
 //
 #define PH_E_SELF_TEST_OF_HASH_TABLE_FAILED ((HRESULT)0xE00403D5L)
+
+//
+// MessageId: PH_E_INVALID_AUTO_RESIZE_WHEN_KEYS_TO_EDGES_RATIO_EXCEEDS
+//
+// MessageText:
+//
+// Invalid value for --AutoResizeWhenKeysToEdgesRatioExceeds
+//
+#define PH_E_INVALID_AUTO_RESIZE_WHEN_KEYS_TO_EDGES_RATIO_EXCEEDS ((HRESULT)0xE00403D6L)
 
