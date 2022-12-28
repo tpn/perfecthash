@@ -79,7 +79,9 @@ Return Value:
 
     Result = InitializeTimestampString((PCHAR)&Table->TimestampBuffer,
                                        sizeof(Table->TimestampBuffer),
-                                       &Table->TimestampString);
+                                       &Table->TimestampString,
+                                       &Table->FileTime.AsFileTime,
+                                       &Table->SystemTime);
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashTableInitialize_InitTimestampString, Result);
         goto Error;

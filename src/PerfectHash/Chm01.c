@@ -41,6 +41,13 @@ typedef PREPARE_TABLE_OUTPUT_DIRECTORY *PPREPARE_TABLE_OUTPUT_DIRECTORY;
 
 extern PREPARE_TABLE_OUTPUT_DIRECTORY PrepareTableOutputDirectory;
 
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+PrintCurrentContextStatsChm01(
+    _In_ PPERFECT_HASH_CONTEXT Context
+    );
+
 //
 // Define helper macros for checking prepare and save file work errors.
 //
@@ -633,11 +640,12 @@ RetryWithLargerTableSize:
     }
 
     //
-    // Set the context's main work callback to our worker routine, and the algo
-    // context to our graph info structure.
+    // Set the context's main work and console callbacks to our worker routines,
+    // and the algo context to our graph info structure.
     //
 
     Context->MainWorkCallback = ProcessGraphCallbackChm01;
+    Context->ConsoleWorkCallback = ProcessConsoleCallbackChm01;
     Context->AlgorithmContext = &Info;
 
     //
@@ -737,6 +745,12 @@ RetryWithLargerTableSize:
     Context->RemainingSolverLoops = Concurrency;
     Context->ActiveSolvingLoops = 0;
     ClearStopSolving(Context);
+
+    //
+    // Submit the console thread work.
+    //
+
+    SubmitThreadpoolWork(Context->ConsoleWork);
 
     //
     // For each graph instance, set the graph info, and, if we haven't reached
@@ -861,6 +875,7 @@ RetryWithLargerTableSize:
         //
 
         WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+        WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
         WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
         WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
 
@@ -895,8 +910,13 @@ RetryWithLargerTableSize:
         // size event was set, and this point.  So, check the finished count
         // first.  If it indicates a solution, jump to that handler code.
         //
+        // N.B. The user could have requested another resize via the console,
+        //      in which case, we ignore the finished count.
+        //
 
-        if (Context->FinishedCount > 0) {
+        if (Context->State.UserRequestedResize != FALSE) {
+            Context->State.UserRequestedResize = FALSE;
+        } else if (Context->FinishedCount > 0) {
             goto FinishedSolution;
         }
 
@@ -997,6 +1017,7 @@ RetryWithLargerTableSize:
     //
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
 
@@ -1067,6 +1088,12 @@ RetryWithLargerTableSize:
         WaitForThreadpoolWorkCallbacks(Context->MainWork, CancelPending);
 
         //
+        // Wait for the console thread.
+        //
+
+        WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
+
+        //
         // Wait for the solve timeout, if applicable.
         //
 
@@ -1105,6 +1132,7 @@ RetryWithLargerTableSize:
 FinishedSolution:
 
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->FinishedWork, FALSE);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
 
@@ -1114,6 +1142,12 @@ FinishedSolution:
     }
 
     ASSERT(Context->FinishedCount > 0);
+
+    Result = PrintCurrentContextStatsChm01(Context);
+    if (FAILED(Result)) {
+        PH_ERROR(PrintCurrentContextStatsChm01, Result);
+        goto Error;
+    }
 
     if (FirstSolvedGraphWins(Context)) {
 
@@ -1444,6 +1478,7 @@ Error:
 
     SetEvent(Context->ShutdownEvent);
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
     if (!NoFileIo(Table)) {
         WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
@@ -2729,6 +2764,796 @@ Return Value:
 
     }
 
+}
+
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+PrintCurrentContextStatsChm01(
+    _In_ PPERFECT_HASH_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    This routine constructs a textual representation of the current context's
+    solving status and then prints it to stdout.
+
+Arguments:
+
+    Context - Supplies a pointer to the active context.
+
+Return Value:
+
+    S_OK on success, an appropriate error code otherwise.
+
+--*/
+{
+    LONG Chars;
+    BOOL Success;
+    PCHAR Output;
+    PGRAPH Graph;
+    PCHAR Buffer;
+    HRESULT Result;
+    HANDLE OutputHandle;
+    FILETIME64 FileTime;
+    SYSTEMTIME LocalTime;
+    ULONG PredictedAttempts;
+    ULARGE_INTEGER Duration;
+    DOUBLE AttemptsPerSecond;
+    DOUBLE DurationInSeconds;
+    PFILETIME64 TableFileTime;
+    DOUBLE SolutionsFoundRatio;
+    ULONGLONG BufferSizeInBytes;
+    ULARGE_INTEGER BytesWritten;
+    DOUBLE SecondsUntilNextSolve;
+    UNICODE_STRING DurationString;
+    WCHAR DurationBuffer[80] = { 0, };
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    UNICODE_STRING SolvedDurationString;
+    ULARGE_INTEGER DurationSinceLastBest;
+    WCHAR SolvedDurationBuffer[80] = { 0, };
+    LARGE_INTEGER PredictedAttemptsRemaining;
+    UNICODE_STRING DurationSinceLastBestString;
+    WCHAR DurationSinceLastBestBuffer[80] = { 0, };
+    DOUBLE VertexCollisionToCyclicGraphFailureRatio;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    CONST WCHAR FormatString[] = L"h' hours, 'm' mins, 's 'secs'";
+
+#define CONTEXT_STATS_TABLE(ENTRY)                             \
+    ENTRY(                                                     \
+        "Keys File Name:                                    ", \
+        &Context->Table->Keys->File->Path->FileName,           \
+        OUTPUT_UNICODE_STRING_FAST                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Keys to Edges Ratio:                               ", \
+        Context->Table->KeysToEdgesRatio,                      \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Duration:                                          ", \
+        &DurationString,                                       \
+        OUTPUT_UNICODE_STRING_FAST                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Duration Since Last Best Graph:                    ", \
+        &DurationSinceLastBestString,                          \
+        OUTPUT_UNICODE_STRING_FAST                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Attempts:                                          ", \
+        Context->Attempts,                                     \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Attempts Per Second:                               ", \
+        AttemptsPerSecond,                                     \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Successful Attempts:                               ", \
+        Context->FinishedCount,                                \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Failed Attempts:                                   ", \
+        Context->FailedAttempts,                               \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "First Attempt Solved:                              ", \
+        Context->FirstAttemptSolved,                           \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Most Recent Attempt Solved:                        ", \
+        Context->MostRecentSolvedAttempt,                      \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Predicted Attempts to Solve:                       ", \
+        PredictedAttempts,                                     \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Predicted Attempts Remaining until next Solve:     ", \
+        PredictedAttemptsRemaining.QuadPart,                   \
+        OUTPUT_SIGNED_INT                                      \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Estimated Seconds until next Solve:                ", \
+        SecondsUntilNextSolve,                                 \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "New Best Graph Count:                              ", \
+        Context->NewBestGraphCount,                            \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Equal Best Graph Count:                            ", \
+        Context->EqualBestGraphCount,                          \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Solutions Found Ratio:                             ", \
+        SolutionsFoundRatio,                                   \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Vertex Collision Failures:                         ", \
+        Context->VertexCollisionFailures,                      \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Cyclic Graph Failures:                             ", \
+        Context->CyclicGraphFailures,                          \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Vertex Collision to Cyclic Graph Failure Ratio:    ", \
+        VertexCollisionToCyclicGraphFailureRatio,              \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Highest Deleted Edges Count:                       ", \
+        Context->HighestDeletedEdgesCount,                     \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Number of Table Resize Events:                     ", \
+        Context->NumberOfTableResizeEvents,                    \
+        OUTPUT_INT                                             \
+    )
+
+#define CONTEXT_STATS_BEST_GRAPH_TABLE(ENTRY)                  \
+    ENTRY(                                                     \
+        "    Attempt:                                       ", \
+        Graph->Attempt,                                        \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Solution Number:                               ", \
+        Graph->SolutionNumber,                                 \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Best Graph Number:                             ", \
+        Coverage->BestGraphNumber,                             \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Solved After:                                  ", \
+        &SolvedDurationString,                                 \
+        OUTPUT_UNICODE_STRING_FAST                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Number of Collisions During Assignment:        ", \
+        Graph->Collisions,                                     \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Max Graph Traversal Depth:                     ", \
+        Graph->MaximumTraversalDepth,                          \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Total Graph Traversals:              ", \
+        Coverage->TotalGraphTraversals,                        \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Score:                               ", \
+        Coverage->Score,                                       \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Rank:                                ", \
+        Coverage->Rank,                                        \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Slope:                               ", \
+        Coverage->Slope,                                       \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Intercept:                           ", \
+        Coverage->Intercept,                                   \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Correlation Coefficient:             ", \
+        Coverage->CorrelationCoefficient,                      \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Number of Empty Cache Lines          ", \
+        Coverage->NumberOfEmptyCacheLines,                     \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: First Cache Line Used:               ", \
+        Coverage->FirstCacheLineUsed,                          \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Last Cache Line Used:                ", \
+        Coverage->LastCacheLineUsed,                           \
+        OUTPUT_INT                                             \
+    )                                                          \
+
+
+#define EXPAND_STATS_ROW(Name, Value, OutputMacro) \
+    OUTPUT_RAW(Name);                              \
+    OutputMacro(Value);                            \
+    OUTPUT_CHR('\n');
+
+    //
+    // Fast-path exit if we're not in quiet mode.
+    //
+
+    TableCreateFlags.AsULong = Context->Table->TableCreateFlags.AsULong;
+
+    if (TableCreateFlags.Quiet) {
+        return S_OK;
+    }
+
+    //
+    // Initialize aliases.
+    //
+
+    OutputHandle = Context->OutputHandle;
+    Buffer = Context->ConsoleBuffer;
+    BufferSizeInBytes = Context->ConsoleBufferSizeInBytes;
+
+    //
+    // Dummy write to suppress SAL warning re uninitialized memory being used.
+    //
+
+    Output = Buffer;
+    *Output = '\0';
+    OUTPUT_CHR('\n');
+
+    //
+    // Capture the local system time, then convert into a friendly h/m/s
+    // duration format.
+    //
+
+    GetLocalTime(&LocalTime);
+    if (!SystemTimeToFileTime(&LocalTime, &FileTime.AsFileTime)) {
+        SYS_ERROR(SystemTimeToFileTime);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto End;
+    }
+
+    TableFileTime = &Context->Table->FileTime;
+    Duration.QuadPart = FileTime.AsULongLong - TableFileTime->AsULongLong;
+
+    Chars = GetDurationFormatEx(NULL,
+                                0,
+                                NULL,
+                                Duration.QuadPart,
+                                FormatString,
+                                &DurationBuffer[0],
+                                ARRAYSIZE(DurationBuffer));
+
+    if (Chars == 0) {
+        SYS_ERROR(GetDurationFormatEx_TableSolving);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto End;
+    }
+
+    DurationString.Buffer = &DurationBuffer[0];
+    DurationString.Length = (USHORT)(Chars << 1);
+    DurationString.MaximumLength = (USHORT)(Chars << 1);
+
+    //
+    // Calculate attempts per second.
+    //
+
+    DurationInSeconds = (DOUBLE)(
+        ((DOUBLE)Duration.QuadPart) /
+        ((DOUBLE)1e7)
+    );
+
+    AttemptsPerSecond = (((DOUBLE)Context->Attempts) / DurationInSeconds);
+
+    //
+    // If we've found at least one solution, calculate solutions found ratio
+    // and perform some predictions based on the current solving rate.
+    //
+
+    if (Context->FinishedCount > 0) {
+        SolutionsFoundRatio = (DOUBLE)(
+            ((DOUBLE)Context->FinishedCount) /
+            ((DOUBLE)Context->Attempts)
+        );
+        Result = CalculatePredictedAttempts(SolutionsFoundRatio,
+                                            &PredictedAttempts);
+        if (FAILED(Result)) {
+            PH_ERROR(PrintCurrentContextStatsChm01_CalculatePredictedAttempts,
+                     Result);
+            goto End;
+        }
+        ASSERT(Context->MostRecentSolvedAttempt != 0);
+        PredictedAttemptsRemaining.QuadPart = (LONGLONG)(
+            ((LONGLONG)PredictedAttempts) - (
+                ((LONGLONG)Context->Attempts) -
+                ((LONGLONG)Context->MostRecentSolvedAttempt)
+            )
+        );
+        if (PredictedAttemptsRemaining.QuadPart > 0) {
+            SecondsUntilNextSolve = (
+                ((DOUBLE)PredictedAttemptsRemaining.QuadPart) /
+                AttemptsPerSecond
+            );
+        } else {
+            SecondsUntilNextSolve = (
+                ((DOUBLE)(PredictedAttemptsRemaining.QuadPart * -1LL)) /
+                AttemptsPerSecond
+            ) * -1;
+        }
+
+    } else {
+        PredictedAttempts = 0;
+        SolutionsFoundRatio = 0.0;
+        SecondsUntilNextSolve = 0.0;
+        PredictedAttemptsRemaining.QuadPart = 0;
+    }
+
+    if ((Context->VertexCollisionFailures > 0) &&
+        (Context->CyclicGraphFailures > 0)) {
+
+        VertexCollisionToCyclicGraphFailureRatio = (DOUBLE)(
+            ((DOUBLE)Context->VertexCollisionFailures) /
+            ((DOUBLE)Context->CyclicGraphFailures)
+        );
+    } else {
+        VertexCollisionToCyclicGraphFailureRatio = 0.0;
+    }
+
+    //
+    // If there's a best graph, construct a friendly h/m/s duration
+    // representation for when it was solved.
+    //
+
+    _No_competing_thread_begin_
+    Graph = Context->BestGraph;
+    if (Graph != NULL) {
+
+        Duration.QuadPart = (
+            Graph->SolvedTime.AsULongLong -
+            TableFileTime->AsULongLong
+        );
+
+        Chars = GetDurationFormatEx(NULL,
+                                    0,
+                                    NULL,
+                                    Duration.QuadPart,
+                                    FormatString,
+                                    &SolvedDurationBuffer[0],
+                                    ARRAYSIZE(SolvedDurationBuffer));
+
+        if (Chars == 0) {
+            SYS_ERROR(GetDurationFormatEx_GraphSolvedDuration);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto End;
+        }
+
+        SolvedDurationString.Buffer = &SolvedDurationBuffer[0];
+        SolvedDurationString.Length = (USHORT)(Chars << 1);
+        SolvedDurationString.MaximumLength = (USHORT)(Chars << 1);
+
+        //
+        // Calculate the duration since we last found a best graph.
+        //
+
+        DurationSinceLastBest.QuadPart = (
+            FileTime.AsULongLong - Graph->SolvedTime.AsULongLong
+        );
+
+        Chars = GetDurationFormatEx(NULL,
+                                    0,
+                                    NULL,
+                                    DurationSinceLastBest.QuadPart,
+                                    FormatString,
+                                    &DurationSinceLastBestBuffer[0],
+                                    ARRAYSIZE(DurationSinceLastBestBuffer));
+
+        if (Chars == 0) {
+            SYS_ERROR(GetDurationFormatEx_GraphDurationSinceLastBest);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto End;
+        }
+
+        DurationSinceLastBestString.Buffer = &DurationSinceLastBestBuffer[0];
+        DurationSinceLastBestString.Length = (USHORT)(Chars << 1);
+        DurationSinceLastBestString.MaximumLength = (USHORT)(Chars << 1);
+    } else {
+        DurationSinceLastBestString.Buffer = NULL;
+        DurationSinceLastBestString.Length = 0;
+        DurationSinceLastBestString.MaximumLength = 0;
+    }
+
+    _No_competing_thread_end_
+
+    //
+    // Final step: set the global _dtoa_Allocator.
+    //
+
+    _dtoa_Allocator = Context->Allocator;
+
+    //
+    // If this traps, expand the number of pages being used for the buffer.
+    // (Grep for 'NumberOfPagesForConsoleBuffer'.)
+    //
+
+    _No_competing_thread_begin_
+    CONTEXT_STATS_TABLE(EXPAND_STATS_ROW);
+    if (Graph != NULL) {
+        CHAR Char;
+        ULONG Index;
+
+        Coverage = &Graph->AssignedMemoryCoverage;
+        OUTPUT_RAW("Best Graph:\n");
+        CONTEXT_STATS_BEST_GRAPH_TABLE(EXPAND_STATS_ROW);
+
+        for (Index = 0, Char = '1';
+             Index < Graph->NumberOfSeeds;
+             Index++, Char++) {
+
+            OUTPUT_RAW("    Seed ");
+            OUTPUT_CHR(Char);
+            OUTPUT_RAW(":                                        0x");
+            OUTPUT_HEX_RAW(Graph->Seeds[Index]);
+            OUTPUT_CHR('\n');
+        }
+    }
+    _No_competing_thread_end_
+
+    BytesWritten.QuadPart = RtlPointerToOffset(Buffer, Output);
+
+    ASSERT(BytesWritten.HighPart == 0);
+    ASSERT(BytesWritten.LowPart <= BufferSizeInBytes);
+
+    Success = WriteFile(OutputHandle,
+                        Buffer,
+                        BytesWritten.LowPart,
+                        NULL,
+                        NULL);
+
+    if (!Success) {
+        SYS_ERROR(WriteFile);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+    } else {
+        Result = S_OK;
+    }
+
+    PerfectHashPrintMessage(PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP);
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    _dtoa_Allocator = NULL;
+
+    return Result;
+}
+
+_Use_decl_annotations_
+VOID
+ProcessConsoleCallbackChm01(
+    PPERFECT_HASH_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    This routine is the callback for console interaction during graph solving.
+
+Arguments:
+
+    Context - Supplies a pointer to the active context.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    COORD Coord;
+    BOOL Success;
+    BOOL IsQuit;
+    BOOL IsStatus;
+    BOOL IsResize;
+    BOOL IsVerbose;
+    HRESULT Result;
+    ULONG WaitResult;
+    HANDLE InputHandle;
+    INPUT_RECORD Input;
+    ULONG NumberOfEvents;
+    DWORD NumberOfEventsRead;
+    HANDLE Events[3] = { 0, };
+    KEY_EVENT_RECORD *KeyEvent;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+
+    //
+    // Initialize aliases.
+    //
+
+    InputHandle = Context->InputHandle;
+    TableCreateFlags.AsULong = Context->Table->TableCreateFlags.AsULong;
+
+    //
+    // Initialize the event handles upon which we will wait.
+    //
+
+    NumberOfEvents = 0;
+    Events[NumberOfEvents++] = Context->ShutdownEvent;
+    Events[NumberOfEvents++] = InputHandle;
+
+    if (!TableCreateFlags.Quiet) {
+        Events[NumberOfEvents++] = Context->NewBestGraphFoundEvent;
+    } else {
+
+        //
+        // A user can toggle verbose on and off via the 'v' key, so we always
+        // wire up the NewBestGraphFoundEvent to the third event handle.
+        //
+
+        ASSERT(NumberOfEvents == 2);
+        Events[NumberOfEvents] = Context->NewBestGraphFoundEvent;
+    }
+
+    //
+    // Enter our console loop.
+    //
+
+    while (TRUE) {
+
+        WaitResult = WaitForMultipleObjects(NumberOfEvents,
+                                            Events,
+                                            FALSE,
+                                            INFINITE);
+
+        if (StopSolving(Context) || (WaitResult == WAIT_OBJECT_0)) {
+            goto End;
+        }
+
+        if ((WaitResult != WAIT_OBJECT_0+1) &&
+            (WaitResult != WAIT_OBJECT_0+2)) {
+            SYS_ERROR(WaitForSingleObject);
+            goto End;
+        }
+
+        if (WaitResult == WAIT_OBJECT_0+2) {
+
+            //
+            // A new best graph has been found.
+            //
+
+            IsStatus = TRUE;
+            IsResize = FALSE;
+            IsQuit = FALSE;
+            IsVerbose = FALSE;
+
+            //
+            // As all the context's events are created as manual reset, we need
+            // to explicitly reset the new best graph event here.
+            //
+
+            if (!ResetEvent(Context->NewBestGraphFoundEvent)) {
+                SYS_ERROR(ResetEvent);
+                goto End;
+            }
+
+        } else {
+
+            ASSERT(WaitResult == WAIT_OBJECT_0+1);
+
+            //
+            // The console input handle is signaled, proceed with reading.
+            //
+
+            Success = ReadConsoleInput(InputHandle,
+                                       &Input,
+                                       1,
+                                       &NumberOfEventsRead);
+
+            if (!Success) {
+                SYS_ERROR(ReadConsoleInput);
+                goto End;
+            }
+
+            ASSERT(NumberOfEventsRead == 1);
+
+            if (Input.EventType == WINDOW_BUFFER_SIZE_EVENT) {
+
+                //
+                // This will typically be the first event.  Capture the
+                // coordinates and continue.  Note that we don't actually do
+                // anything with the coords currently.
+                //
+
+                Coord.X = Input.Event.WindowBufferSizeEvent.dwSize.X;
+                Coord.Y = Input.Event.WindowBufferSizeEvent.dwSize.Y;
+                continue;
+            }
+
+            if (Input.EventType != KEY_EVENT) {
+
+                //
+                // We're not interested in anything other than key events
+                // herein.
+                //
+
+                continue;
+            }
+
+            KeyEvent = &Input.Event.KeyEvent;
+
+            if (KeyEvent->bKeyDown) {
+
+                //
+                // We don't care about key-down events, only key-up.
+                //
+
+                continue;
+            }
+
+            IsStatus = (
+                (KeyEvent->uChar.AsciiChar == 's') ||
+                (KeyEvent->uChar.AsciiChar == 'S') ||
+                (KeyEvent->wVirtualKeyCode == 0x0053)
+            );
+
+            IsResize = (
+                (KeyEvent->uChar.AsciiChar == 'r') ||
+                (KeyEvent->uChar.AsciiChar == 'R') ||
+                (KeyEvent->wVirtualKeyCode == 0x0052)
+            );
+
+            IsQuit = (
+                (KeyEvent->uChar.AsciiChar == 'q') ||
+                (KeyEvent->uChar.AsciiChar == 'Q') ||
+                (KeyEvent->wVirtualKeyCode == 0x0051)
+            );
+
+            IsVerbose = (
+                (KeyEvent->uChar.AsciiChar == 'v') ||
+                (KeyEvent->uChar.AsciiChar == 'V') ||
+                (KeyEvent->wVirtualKeyCode == 0x0056)
+            );
+        }
+
+        if (IsQuit) {
+
+            SetStopSolving(Context);
+            if (!SetEvent(Context->ShutdownEvent)) {
+                SYS_ERROR(SetEvent);
+            }
+            break;
+
+        } else if (IsResize) {
+
+            Context->State.UserRequestedResize = TRUE;
+            SetStopSolving(Context);
+            if (!SetEvent(Context->TryLargerTableSizeEvent)) {
+                SYS_ERROR(SetEvent);
+            }
+            break;
+
+        } else if (IsStatus) {
+
+            Result = PrintCurrentContextStatsChm01(Context);
+            if (FAILED(Result)) {
+                PH_ERROR(PrintCurrentContextStatsChm01, Result);
+
+                //
+                // We don't break here; it's easier during development (which
+                // is the only time this code path should be hit, i.e. because
+                // we've broken PrintCurrentContextStatsChm01()) to continue
+                // and process more key presses.
+                //
+            }
+
+        } else if (IsVerbose) {
+
+            //
+            // Toggle quiet mode on or off.
+            //
+
+            if (NumberOfEvents == 3) {
+                NumberOfEvents = 2;
+                Context->Table->TableCreateFlags.Quiet = TRUE;
+            } else {
+                ASSERT(NumberOfEvents == 2);
+                NumberOfEvents = 3;
+                Context->Table->TableCreateFlags.Quiet = FALSE;
+                ASSERT(
+                    Events[NumberOfEvents-1] ==
+                    Context->NewBestGraphFoundEvent
+                );
+            }
+
+        } else {
+
+            //
+            // If we don't recognize the key, just ignore it and continue the
+            // loop.
+            //
+
+            NOTHING;
+        };
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (!FlushConsoleInputBuffer(InputHandle)) {
+        SYS_ERROR(FlushConsoleInputBuffer);
+    }
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

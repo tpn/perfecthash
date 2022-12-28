@@ -369,7 +369,17 @@ Abstract:
 //     --Silent
 // 
 //         Disables console printing of the dots, dashes and other characters used
-//         to (crudely) visualize the result of individual table create operations.
+//         to (crudely) visualize the result of individual table create operations,
+//         and disable best graph information from being printed to the console.
+// 
+//         N.B. Implies --Quiet.
+// 
+//     --Quiet
+// 
+//         Disables printing best graph information to the console; only the dots
+//         and dashes etc. will be printed.
+// 
+//         N.B. Incompatible with --Silent.
 // 
 //     --NoFileIo
 // 
@@ -1001,6 +1011,15 @@ Abstract:
 // Language=English
 // Disabled.
 // .
+//
+// MessageId: PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP
+//
+// MessageText:
+//
+// [s] Status [q] Quit solving this graph [r] Force table resize [v] Toggle quiet
+//
+#define PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP ((HRESULT)0x60040104L)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_FAIL
@@ -4130,4 +4149,13 @@ Abstract:
 // Invalid value for --AutoResizeWhenKeysToEdgesRatioExceeds
 //
 #define PH_E_INVALID_AUTO_RESIZE_WHEN_KEYS_TO_EDGES_RATIO_EXCEEDS ((HRESULT)0xE00403D6L)
+
+//
+// MessageId: PH_E_SILENT_INCOMPATIBLE_WITH_QUIET
+//
+// MessageText:
+//
+// --Silent is incompatible with --Quiet.
+//
+#define PH_E_SILENT_INCOMPATIBLE_WITH_QUIET ((HRESULT)0xE00403D7L)
 

@@ -311,7 +311,17 @@ Table Create Flags:
     --Silent
 
         Disables console printing of the dots, dashes and other characters used
-        to (crudely) visualize the result of individual table create operations.
+        to (crudely) visualize the result of individual table create operations,
+        and disable best graph information from being printed to the console.
+
+        N.B. Implies --Quiet.
+
+    --Quiet
+
+        Disables printing best graph information to the console; only the dots
+        and dashes etc. will be printed.
+
+        N.B. Incompatible with --Silent.
 
     --NoFileIo
 
@@ -630,8 +640,6 @@ Table Create Parameters:
         solve the graph, which lowers the keys-to-vertices ratio, which will
         improve graph solving probability.
 
-        N.B. This parameter is only valid for And masking, not Modulus masking.
-
     --AutoResizeWhenKeysToEdgesRatioExceeds=D
 
         Supplies a keys to edges ratio that, if exceeded, results in an auto
@@ -943,6 +951,14 @@ N.B. This utility has been deprecated in favor of PerfectHashBulkCreate.exe.
 ;// Language=English
 ;// Disabled.
 ;// .
+
+MessageId=0x104
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP
+Language=English
+[s] Status [f] Quit solving this graph [r] Force table resize [v] Toggle quiet
+.
 
 ;
 ;////////////////////////////////////////////////////////////////////////////////
@@ -3750,5 +3766,13 @@ Facility=ITF
 SymbolicName=PH_E_INVALID_AUTO_RESIZE_WHEN_KEYS_TO_EDGES_RATIO_EXCEEDS
 Language=English
 Invalid value for --AutoResizeWhenKeysToEdgesRatioExceeds
+.
+
+MessageId=0x3d7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SILENT_INCOMPATIBLE_WITH_QUIET
+Language=English
+--Silent is incompatible with --Quiet.
 .
 

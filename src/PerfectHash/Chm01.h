@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -22,6 +22,7 @@ Abstract:
 
 #ifndef __INTELLISENSE__
 extern PERFECT_HASH_MAIN_WORK_CALLBACK ProcessGraphCallbackChm01;
+extern PERFECT_HASH_CONSOLE_WORK_CALLBACK ProcessConsoleCallbackChm01;
 extern PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 #endif
 

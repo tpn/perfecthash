@@ -305,10 +305,10 @@ typedef struct _ASSIGNED_MEMORY_COVERAGE {
     ULONG NumberOfCollisionsDuringAssignment;
 
     //
-    // Pad out to an 8-byte boundary.
+    // Stores the best graph number if applicable.
     //
 
-    ULONG Padding1;
+    ULONG BestGraphNumber;
 
     //
     // The solution number with respect to other graphs that have been solved.
@@ -969,6 +969,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     ULONGLONG SolutionNumber;
 
     //
+    // The local time the graph was solved, if applicable.
+    //
+
+    FILETIME64 SolvedTime;
+
+    //
     // A localized attempt number that reflects the number of attempts made
     // by just this thread.
     //
@@ -1265,7 +1271,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
             };
         };
     };
-
 
 } GRAPH;
 typedef GRAPH *PGRAPH;

@@ -310,9 +310,10 @@ Return Value:
 {
     PKEY Keys;
     PEDGE Edges;
+    HRESULT Result;
     PGRAPH_INFO Info;
     ULONG NumberOfKeys;
-    HRESULT Result;
+    SYSTEMTIME SystemTime;
     LONGLONG FinishedCount;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
@@ -378,6 +379,12 @@ Return Value:
     //
 
     //
+    // Update the context's most recent solved attempt.
+    //
+
+    Context->MostRecentSolvedAttempt = Graph->Attempt;
+
+    //
     // Increment the finished count.  If the context indicates "first solved
     // graph wins", and the value is 1, we're the winning thread, so continue
     // with graph assignment.  Otherwise, just return with the stop graph
@@ -412,6 +419,17 @@ Return Value:
 
     if (FAILED(Result)) {
         PH_RAISE(Result);
+    }
+
+    //
+    // Capture the local solve time.
+    //
+
+    GetLocalTime(&SystemTime);
+    if (!SystemTimeToFileTime(&SystemTime, &Graph->SolvedTime.AsFileTime)) {
+        SYS_ERROR(SystemTimeToFileTime);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto End;
     }
 
     //
@@ -2336,6 +2354,7 @@ Return Value:
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
+        Coverage->BestGraphNumber = BestGraphIndex + 1;
         Context->FirstAttemptSolved = Graph->Attempt;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
         goto End;
@@ -2489,6 +2508,8 @@ End:
     } else if (FoundBestGraph) {
 
         BestGraph = Graph;
+
+        Graph->AssignedMemoryCoverage.BestGraphNumber = BestGraphIndex + 1;
 
         //
         // If we're still within the limits for the maximum number of best
@@ -2808,6 +2829,13 @@ SkipComparatorCheck:
 
     EVENT_WRITE_GRAPH_FOUND(Found);
 
+    if (FoundBestGraph != FALSE && (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING)) {
+        if (!SetEvent(Context->NewBestGraphFoundEvent)) {
+            SYS_ERROR(SetEvent);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+    }
+
     return Result;
 }
 
@@ -2913,7 +2941,7 @@ Return Value:
         Context->SpareGraph = NULL;
         Context->BestGraph = Graph;
         FoundBestGraph = TRUE;
-        Context->NewBestGraphCount++;
+        Coverage->BestGraphNumber = ++Context->NewBestGraphCount;
         Context->FirstAttemptSolved = Graph->Attempt;
         Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
     }
@@ -3923,6 +3951,8 @@ Return Value:
     Graph->TraversalDepth = 0;
     Graph->TotalTraversals = 0;
     Graph->MaximumTraversalDepth = 0;
+
+    Graph->SolvedTime.AsULongLong = 0;
 
     Graph->Flags.Shrinking = FALSE;
     Graph->Flags.IsAcyclic = FALSE;

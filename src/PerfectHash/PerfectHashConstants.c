@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -538,6 +538,9 @@ const UNICODE_STRING ContextTryLargerTableSizeEventPrefix =
 const UNICODE_STRING ContextVerifiedTableEventPrefix =
     RCS(L"PerfectHashContext_VerifiedTableEvent_");
 
+const UNICODE_STRING ContextNewBestGraphEventPrefix =
+    RCS(L"PerfectHashContext_NewBestGraphEvent_");
+
 #define EXPAND_AS_EVENT_NAME(                                           \
     Verb, VUpper, Name, Upper,                                          \
     EofType, EofValue,                                                  \
@@ -563,6 +566,7 @@ const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextCompletedEventPrefix,
     &ContextTryLargerTableSizeEventPrefix,
     &ContextVerifiedTableEventPrefix,
+    &ContextNewBestGraphEventPrefix,
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME_ADDRESS)
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME_ADDRESS)

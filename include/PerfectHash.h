@@ -2629,7 +2629,9 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
 
         //
         // When set, does not print any console output related to table creation
-        // (i.e. the normal dots, dashes etc).
+        // (i.e. the normal dots, dashes etc., or any best graph output).
+        //
+        // N.B. Incompatible with flag Quiet.
         //
 
         ULONG Silent:1;
@@ -2830,10 +2832,18 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONG DoNotTryUseAvx2MemoryCoverageFunction:1;
 
         //
-        // Unused bits.
+        // When set, disables the best graph console output and only prints the
+        // normal dots and dashes etc.
+        //
+        // N.B. Incompatible with flag Silent.
         //
 
-        ULONG Unused:1;
+        ULONG Quiet:1;
+
+        //
+        // No more unused bits!  Create PERFECT_HASH_TABLE_CREATE_FLAGS2 (or
+        // make this a ULONGLONG) when more flags are needed.
+        //
     };
 
     LONG AsLong;
@@ -2854,8 +2864,8 @@ IsValidTableCreateFlags(
         return PH_E_INVALID_TABLE_CREATE_FLAGS;
     }
 
-    if (TableCreateFlags->Unused != 0) {
-        return PH_E_INVALID_TABLE_CREATE_FLAGS;
+    if (TableCreateFlags->Silent && TableCreateFlags->Quiet) {
+        return PH_E_SILENT_INCOMPATIBLE_WITH_QUIET;
     }
 
     if (TableCreateFlags->UseOriginalSeededHashRoutines &&

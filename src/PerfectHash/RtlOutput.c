@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -631,6 +631,28 @@ AppendIntegerToCharBuffer(
     return;
 }
 
+_Use_decl_annotations_
+VOID
+AppendSignedIntegerToCharBuffer(
+    PCHAR *BufferPointer,
+    LONGLONG Integer
+    )
+{
+    PCHAR Buffer;
+    ULONGLONG Positive;
+
+    if (Integer < 0) {
+        Buffer = *BufferPointer;
+        *Buffer++ = '-';
+        *BufferPointer += 1;
+        Positive = (ULONGLONG)(Integer * -1LL);
+    } else {
+        Positive = (ULONGLONG)Integer;
+    }
+
+    AppendIntegerToCharBuffer(BufferPointer, Positive);
+}
+
 APPEND_DOUBLE_TO_CHAR_BUFFER AppendDoubleToCharBuffer;
 
 _Use_decl_annotations_
@@ -661,6 +683,18 @@ AppendDoubleToCharBuffer(
     NumberOfDigits = 9;
 
     Buffer = *BufferPointer;
+
+    //
+    // Fast path for 0 and 1.
+    //
+
+    if (Double == 0.0) {
+        AppendCStrToCharBuffer(BufferPointer, "0.0");
+        return;
+    } else if (Double == 1.0) {
+        AppendCStrToCharBuffer(BufferPointer, "1.0");
+        return;
+    }
 
     //
     // Mode = 0 -> Shortest string that yields the double when read in and

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -62,6 +62,7 @@ VOID
 TP_WORK_CALLBACK MainWorkCallback;
 TP_WORK_CALLBACK FileWorkCallback;
 TP_WORK_CALLBACK ErrorWorkCallback;
+TP_WORK_CALLBACK ConsoleWorkCallback;
 TP_WORK_CALLBACK FinishedWorkCallback;
 TP_TIMER_CALLBACK SolveTimeoutCallback;
 TP_CLEANUP_GROUP_CANCEL_CALLBACK CleanupCallback;
@@ -72,11 +73,62 @@ TP_CLEANUP_GROUP_CANCEL_CALLBACK CleanupCallback;
 
 #define BEST_GRAPH_CS_SPINCOUNT 4000
 
-PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
+//
+// Helper functions.
+//
+
+ULONG
+GetMainThreadpoolConcurrency(
+    _In_ ULONG MaximumConcurrency
+    )
+/*++
+
+Routine Description:
+
+    This routine returns the concurrency value that should be used to set the
+    main work threadpool's minimum and maximum concurrency limits.  This is
+    higher than the parallel graph solving concurrency, as we need to account
+    for non-solver thread callbacks (such as the solve timeout and console
+    thread) which are also associated with the main work threadpool.
+
+    The value returned by this routine should only be passed to the threadpool
+    routines SetThreadpoolThreadMinimum() and SetThreadpoolThreadMaximum(); no
+    other component needs to know about this value.  (The concurrency values
+    captured in Context->MinimumConcurrency and Context->MaximumConcurrency
+    have very specific roles in CreatePerfectHashTableImplChm01(), for example,
+    and must precisely reflect the number of parallel solver graphs to be used.)
+
+    If SetThreadpoolThreadMaximum() was called with Context->MaximumConcurrency,
+    then the solve timeout and console threads would never get a chance to run.
+
+Arguments:
+
+    MaximumConcurrency - Supplies the maximum graph solving concurrency value.
+
+Return Value:
+
+    The concurrency level to be passed to SetThreadpoolThreadMinimum() and
+    SetThreadpoolThreadMaximum(), which will be greater than MaximumConcurrency,
+    and will take into account any additional main work thread callbacks such
+    as the solve timeout and console thread.
+
+--*/
+{
+    //
+    // Current list of non-solver thread callbacks we need to account for:
+    //  - Solve timeout
+    //  - Console thread
+    //
+
+    return MaximumConcurrency + 2;
+}
+
 
 //
 // Main context creation routine.
 //
+
+PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
 
 _Use_decl_annotations_
 HRESULT
@@ -122,6 +174,7 @@ Return Value:
     PTP_POOL Threadpool;
     PALLOCATOR Allocator;
     ULARGE_INTEGER AllocSize;
+    ULONG ThreadpoolConcurrency;
     ULARGE_INTEGER ObjectNameArraySize;
     ULARGE_INTEGER ObjectNamePointersArraySize;
     PUNICODE_STRING Name;
@@ -129,6 +182,7 @@ Return Value:
     PPUNICODE_STRING Prefixes;
     SYSTEM_INFO SystemInfo;
     EXPLICIT_ACCESS_W ExplicitAccess;
+    ULONG NumberOfPagesForConsoleBuffer;
     SECURITY_ATTRIBUTES SecurityAttributes;
     SECURITY_DESCRIPTOR SecurityDescriptor;
     PSECURITY_ATTRIBUTES Attributes;
@@ -428,19 +482,14 @@ Return Value:
         goto Error;
     }
 
-    //
-    // We add one to the *actual* min/max concurrency in order to ensure there
-    // will be a thread able to run if our solve timeout is ever hit.  This is
-    // not communicated back to any other component (nor does it need to be).
-    //
-
-    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency + 1)) {
+    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+    if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
 
-    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency + 1);
+    SetThreadpoolThreadMaximum(Threadpool, ThreadpoolConcurrency);
 
     //
     // Initialize the Main threadpool and environment.
@@ -474,7 +523,21 @@ Return Value:
                                              &Context->MainCallbackEnv);
 
     if (!Context->MainWork) {
-        SYS_ERROR(CreateThreadpoolWork);
+        SYS_ERROR(CreateThreadpoolWork_MainWork);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Create a work object for the console reader thread.
+    //
+
+    Context->ConsoleWork = CreateThreadpoolWork(ConsoleWorkCallback,
+                                                Context,
+                                                &Context->MainCallbackEnv);
+
+    if (!Context->ConsoleWork) {
+        SYS_ERROR(CreateThreadpoolWork_ConsoleWork);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
@@ -487,7 +550,7 @@ Return Value:
                                                   Context,
                                                   &Context->MainCallbackEnv);
     if (!Context->SolveTimeout) {
-        SYS_ERROR(CreateThreadpoolTimer);
+        SYS_ERROR(CreateThreadpoolTimer_SolveTimeout);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
@@ -629,7 +692,9 @@ Return Value:
 
     Result = InitializeTimestampString((PCHAR)&Context->TimestampBuffer,
                                        sizeof(Context->TimestampBuffer),
-                                       &Context->TimestampString);
+                                       &Context->TimestampString,
+                                       &Context->FileTime.AsFileTime,
+                                       &Context->SystemTime);
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashContextInitialize_InitTimestampString, Result);
         goto Error;
@@ -654,6 +719,50 @@ Return Value:
     }
     ASSERT(ComputerName->Length < MAX_COMPUTERNAME_LENGTH);
     ComputerName->Length = (USHORT)ComputerNameLength;
+
+    //
+    // Obtain stdin and stdout handles.
+    //
+
+    Context->InputHandle = GetStdHandle(STD_INPUT_HANDLE);
+    if (Context->InputHandle == INVALID_HANDLE_VALUE) {
+        SYS_ERROR(GetStdHandle_InvalidInputHandle);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    } else if (Context->InputHandle == NULL) {
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        PH_ERROR(GetStdHandle_NoStdInputHandle, Result);
+        goto Error;
+    }
+
+    Context->OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (Context->OutputHandle == INVALID_HANDLE_VALUE) {
+        SYS_ERROR(GetStdHandle_InvalidOutputHandle);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    } else if (Context->OutputHandle == NULL) {
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        PH_ERROR(GetStdHandle_NoStdOutputHandle, Result);
+        goto Error;
+    }
+
+    //
+    // Create a temporary buffer that can be used to construct console output.
+    //
+
+    NumberOfPagesForConsoleBuffer = 2;
+    Context->ProcessHandle = NULL;
+    Result = Rtl->Vtbl->CreateBuffer(Rtl,
+                                     &Context->ProcessHandle,
+                                     NumberOfPagesForConsoleBuffer,
+                                     NULL,
+                                     &Context->ConsoleBufferSizeInBytes,
+                                     &Context->ConsoleBuffer);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextInitialize_CreateConsoleBuffer, Result);
+        goto Error;
+    }
 
     //
     // We're done!  Indicate success and finish up.
@@ -838,6 +947,15 @@ Return Value:
                                      &Context->ObjectNames);
     }
 
+    if (Context->ConsoleBuffer != NULL) {
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          Context->ProcessHandle,
+                                          &Context->ConsoleBuffer);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashContextRundown_DestroyConsoleBuffer, Result);
+        }
+    }
+
 #define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Context->##Name##);
 
     CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
@@ -906,6 +1024,7 @@ Return Value:
     Context->InitialTableSize = 0;
     Context->StartMilliseconds = 0;
     Context->ResizeTableThreshold = 0;
+    Context->MostRecentSolvedAttempt = 0;
     Context->TargetNumberOfSolutions = 0;
     Context->HighestDeletedEdgesCount = 0;
     Context->NumberOfTableResizeEvents = 0;
@@ -943,8 +1062,8 @@ Return Value:
     Context->State.FixedAttemptsReached = FALSE;
     Context->State.MaxAttemptsReached = FALSE;
 
-    Context->VertexCollisionFailures = 0;
     Context->CyclicGraphFailures = 0;
+    Context->VertexCollisionFailures = 0;
 
     Context->MainWorkList->Vtbl->Reset(Context->MainWorkList);
     Context->FileWorkList->Vtbl->Reset(Context->FileWorkList);
@@ -959,11 +1078,12 @@ Return Value:
     //
 
     _Benign_race_begin_
+    Context->BestGraph = NULL;
+    Context->SpareGraph = NULL;
     Context->NewBestGraphCount = 0;
     Context->FirstAttemptSolved = 0;
     Context->EqualBestGraphCount = 0;
-    Context->SpareGraph = NULL;
-    Context->BestGraph = NULL;
+    Context->RunningSolutionsFoundRatio = 0.0;
     ZeroArray(Context->BestGraphInfo);
     _Benign_race_end_
 
@@ -1046,6 +1166,60 @@ Return Value:
     //
 
     Context->MainWorkCallback(Instance, Context, ListEntry);
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
+ConsoleWorkCallback(
+    PTP_CALLBACK_INSTANCE Instance,
+    PVOID Ctx,
+    PTP_WORK Work
+    )
+/*++
+
+Routine Description:
+
+    This is the callback routine for the read console thread.
+
+Arguments:
+
+    Instance - Supplies a pointer to the callback instance responsible for this
+        threadpool callback invocation.
+
+    Ctx - Supplies a pointer to the owning PERFECT_HASH_CONTEXT.
+
+    Work - Supplies a pointer to the TP_WORK object for this routine.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PPERFECT_HASH_CONTEXT Context;
+
+    UNREFERENCED_PARAMETER(Work);
+    UNREFERENCED_PARAMETER(Instance);
+
+    if (!ARGUMENT_PRESENT(Ctx)) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        return;
+    }
+
+    //
+    // Cast the Ctx variable into a suitable type, then remove the head item
+    // off the list.
+    //
+
+    Context = (PPERFECT_HASH_CONTEXT)Ctx;
+
+    //
+    // Dispatch the work item to the routine registered with the context.
+    //
+
+    Context->ConsoleWorkCallback(Context);
 
     return;
 }
@@ -1431,8 +1605,9 @@ Return Value:
 --*/
 {
     PRTL Rtl;
-    HRESULT Result = S_OK;
     PTP_POOL Threadpool;
+    HRESULT Result = S_OK;
+    ULONG ThreadpoolConcurrency;
 
     if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
@@ -1449,16 +1624,11 @@ Return Value:
     Rtl = Context->Rtl;
     Threadpool = Context->MainThreadpool;
 
-    //
-    // We add one to the *actual* min/max concurrency in order to ensure there
-    // will be a thread able to run if our solve timeout is ever hit.  This is
-    // not communicated back to any other component (nor does it need to be).
-    //
-
-    SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency + 1);
+    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+    SetThreadpoolThreadMaximum(Threadpool, ThreadpoolConcurrency);
     Context->MaximumConcurrency = MaximumConcurrency;
 
-    if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency + 1)) {
+    if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
     } else {

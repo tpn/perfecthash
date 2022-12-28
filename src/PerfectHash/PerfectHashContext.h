@@ -36,6 +36,18 @@ typedef PERFECT_HASH_MAIN_WORK_CALLBACK
       *PPERFECT_HASH_MAIN_WORK_CALLBACK;
 
 //
+// As above, but for the console thread.
+//
+
+typedef
+VOID
+(CALLBACK PERFECT_HASH_CONSOLE_WORK_CALLBACK)(
+    _In_ struct _PERFECT_HASH_CONTEXT *Context
+    );
+typedef PERFECT_HASH_CONSOLE_WORK_CALLBACK
+      *PPERFECT_HASH_CONSOLE_WORK_CALLBACK;
+
+//
 // Additionally, algorithms can register a callback routine for performing
 // file-oriented operations in the main threadpool (not directly related to
 // graph solving).
@@ -138,10 +150,17 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG MaxAttemptsReached:1;
 
         //
+        // When set, indicates the current resize request was manually signaled
+        // via the console.
+        //
+
+        ULONG UserRequestedResize:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:21;
+        ULONG Unused:20;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -280,12 +299,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PPERFECT_HASH_DIRECTORY BaseOutputDirectory;
 
     //
-    // Optional output handle (e.g. to stdout).
-    //
-
-    HANDLE OutputHandle;
-
-    //
     // If a bulk create operation is in progress, a pointer to a file instance
     // for the <BaseOutputDir>\PerfectHashBulkCreate_<HeaderHash>.csv file.
     //
@@ -384,6 +397,23 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     ULONG MinNumberOfKeysForFindBestGraph;
+
+    //
+    // Pointer to a buffer that is used to construct console output before
+    // issuing WriteFile().
+    //
+
+    _Writable_elements_(ConsoleBufferSizeInBytes)
+    PCHAR ConsoleBuffer;
+    ULONGLONG ConsoleBufferSizeInBytes;
+
+    //
+    // Handles to stdin and stdout, and current process.
+    //
+
+    HANDLE InputHandle;
+    HANDLE OutputHandle;
+    HANDLE ProcessHandle;
 
     //
     // An in-memory union of all possible on-disk table info representations.
@@ -539,6 +569,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG FirstAttemptSolved;
 
     //
+    // Captures the attempt number of the most recent solved graph (regardless
+    // of whether or not it was the best graph, if applicable).  Any graph can
+    // write to this value at any time; it is not synchronized in anyway.  It
+    // is used for informational purposes only.
+    //
+
+    volatile ULONGLONG MostRecentSolvedAttempt;
+
+    //
     // The following counter is incremented every time a new "best graph" is
     // registered.  It can be helpful during debugging.
     //
@@ -656,6 +695,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     HANDLE VerifiedTableEvent;
+
+    //
+    // The following event is set if we're in find best graph mode and a new
+    // best graph has been found.
+    //
+
+    HANDLE NewBestGraphFoundEvent;
 
     //
     // The following events are related to file work.  Each file work ID has
@@ -824,6 +870,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_CLEANUP_GROUP MainCleanupGroup;
     PTP_POOL MainThreadpool;
     PTP_WORK MainWork;
+    PTP_WORK ConsoleWork;
     PTP_TIMER SolveTimeout;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
@@ -845,6 +892,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     PPERFECT_HASH_MAIN_WORK_CALLBACK MainWorkCallback;
+
+    //
+    // Likewise for console interaction.
+    //
+
+    PPERFECT_HASH_CONSOLE_WORK_CALLBACK ConsoleWorkCallback;
 
     //
     // A threadpool for offloading file operations.
@@ -945,6 +998,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // up to the address of the TimestampBuffer variable.
     //
 
+    FILETIME64 FileTime;
+    SYSTEMTIME SystemTime;
     CHAR TimestampBuffer[RTL_TIMESTAMP_FORMAT_LENGTH];
     STRING TimestampString;
 

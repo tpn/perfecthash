@@ -377,6 +377,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // up to the address of the TimestampBuffer variable.
     //
 
+    FILETIME64 FileTime;
+    SYSTEMTIME SystemTime;
     CHAR TimestampBuffer[RTL_TIMESTAMP_FORMAT_LENGTH];
     STRING TimestampString;
 

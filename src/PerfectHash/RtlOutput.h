@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -136,6 +136,15 @@ VOID
     _In_ ULONGLONG Integer
     );
 typedef APPEND_INTEGER_TO_CHAR_BUFFER *PAPPEND_INTEGER_TO_CHAR_BUFFER;
+
+typedef
+VOID
+(NTAPI APPEND_SIGNED_INTEGER_TO_CHAR_BUFFER)(
+    _Inout_ PCHAR *BufferPointer,
+    _In_ LONGLONG Integer
+    );
+typedef APPEND_SIGNED_INTEGER_TO_CHAR_BUFFER
+      *PAPPEND_SIGNED_INTEGER_TO_CHAR_BUFFER;
 
 typedef
 VOID
@@ -380,6 +389,7 @@ extern APPEND_LONGLONG_INTEGER_TO_UNICODE_STRING
 extern APPEND_INTEGER_TO_STRING AppendIntegerToString;
 extern APPEND_LONGLONG_INTEGER_TO_STRING AppendLongLongIntegerToString;
 extern APPEND_INTEGER_TO_CHAR_BUFFER AppendIntegerToCharBuffer;
+extern APPEND_SIGNED_INTEGER_TO_CHAR_BUFFER AppendSignedIntegerToCharBuffer;
 extern APPEND_DOUBLE_TO_CHAR_BUFFER AppendDoubleToCharBuffer;
 extern APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
 extern APPEND_LONGLONG_INTEGER_TO_CHAR_BUFFER_AS_HEX
@@ -422,12 +432,13 @@ HRESULT
 InitializeTimestampString(
     _Inout_ PCHAR Buffer,
     _In_ ULONG SizeOfBufferInBytes,
-    _Inout_ PSTRING String
+    _Inout_ PSTRING String,
+    _Out_ PFILETIME FileTime,
+    _Out_ PSYSTEMTIME SystemTime
     )
 {
     ULONG Value;
     HRESULT Result = S_OK;
-    SYSTEMTIME LocalTime;
 
     //
     // Validate arguments.
@@ -441,10 +452,14 @@ InitializeTimestampString(
     String->Length = 0;
     String->MaximumLength = (USHORT)RTL_TIMESTAMP_FORMAT_LENGTH;
 
-    GetLocalTime(&LocalTime);
+    GetLocalTime(SystemTime);
+
+    if (!SystemTimeToFileTime(SystemTime, FileTime)) {
+        return PH_E_SYSTEM_CALL_FAILED;
+    }
 
 #define RTL_APPEND_TIME_FIELD(Field, Digits, Trailer)             \
-    Value = LocalTime.Field;                                      \
+    Value = SystemTime->Field;                                    \
     if (!AppendIntegerToString(String, Value, Digits, Trailer)) { \
         Result = PH_E_STRING_BUFFER_OVERFLOW;                     \
         goto End;                                                 \
@@ -568,6 +583,9 @@ static PCSZ Exclamation = "!";
 
 #define OUTPUT_INT(Value)                     \
     AppendIntegerToCharBuffer(&Output, Value)
+
+#define OUTPUT_SIGNED_INT(Value)                     \
+    AppendSignedIntegerToCharBuffer(&Output, Value)
 
 #define OUTPUT_DOUBLE(Value)                 \
     AppendDoubleToCharBuffer(&Output, Value)
