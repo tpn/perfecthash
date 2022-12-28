@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -140,9 +140,9 @@ Return Value:
     //
 
     ASSERT(Keys && Keys->File && Keys->KeyArrayBaseAddress);
-    ASSERT(!Keys->NumberOfElements.HighPart);
+    ASSERT(!Keys->NumberOfKeys.HighPart);
 
-    NumberOfKeys = Keys->NumberOfElements.LowPart;
+    NumberOfKeys = Keys->NumberOfKeys.LowPart;
 
     //
     // Calculate the space required for a bitmap buffer that allows us to set

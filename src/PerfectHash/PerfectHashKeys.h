@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -136,7 +136,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_KEYS {
     // Number of keys in the mapping.
     //
 
-    ULARGE_INTEGER NumberOfElements;
+    ULARGE_INTEGER NumberOfKeys;
+
+    //
+    // Number of keys rounded up to a power of 2 is referred to as the number of
+    // edges.  Calling it 'NumberOfEdges' instead of 'NumberOfKeysRoundedUpPow2'
+    // is a bit of a leaky abstraction, as keys shouldn't need to know details
+    // about the perfect hash algorithm implementation.  On the flip side, we
+    // use the terms NumberOfEdges and KeysToEdgesRatio frequently throughout
+    // the code base, so pragmatism beats perfection in this case.
+    //
+
+    ULARGE_INTEGER NumberOfEdges;
+
+    //
+    // Ratio of keys to edges.
+    //
+
+    DOUBLE KeysToEdgesRatio;
 
     //
     // Reference to a file instance backing the keys.

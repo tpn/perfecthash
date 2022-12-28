@@ -351,7 +351,7 @@ Return Value:
         // edges to a power of 2.
         //
 
-        NumberOfEdges.QuadPart = Table->Keys->NumberOfElements.QuadPart;
+        NumberOfEdges.QuadPart = Table->Keys->NumberOfKeys.QuadPart;
         ASSERT(NumberOfEdges.HighPart == 0);
 
         NumberOfEdges.QuadPart = (
@@ -1726,11 +1726,11 @@ Return Value:
     // Ensure the number of keys are under MAX_ULONG, then take a local copy.
     //
 
-    if (Table->Keys->NumberOfElements.HighPart) {
+    if (Table->Keys->NumberOfKeys.HighPart) {
         return PH_E_TOO_MANY_KEYS;
     }
 
-    NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+    NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
 
     //
     // The number of edges in our graph is equal to the number of keys in the
@@ -2368,17 +2368,10 @@ Return Value:
     // Capture ratios.
     //
 
-    if (Table->Keys->NumberOfElements.QuadPart == NumberOfEdges.QuadPart) {
-        Table->KeysToEdgesRatio = (DOUBLE)1.0;
-    } else {
-        Table->KeysToEdgesRatio = (DOUBLE)(
-            ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
-            ((DOUBLE)NumberOfEdges.QuadPart)
-        );
-    }
+    Table->KeysToEdgesRatio = Table->Keys->KeysToEdgesRatio;
 
     Table->KeysToVerticesRatio = (DOUBLE)(
-        ((DOUBLE)Table->Keys->NumberOfElements.QuadPart) /
+        ((DOUBLE)Table->Keys->NumberOfKeys.QuadPart) /
         ((DOUBLE)NumberOfVertices.QuadPart)
     );
 

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -310,7 +310,7 @@ Return Value:
 
     if (ARGUMENT_PRESENT(Keys)) {
 
-        if (Keys->NumberOfElements.QuadPart !=
+        if (Keys->NumberOfKeys.QuadPart !=
             TableInfoOnDisk->NumberOfKeys.QuadPart) {
 
             Result = PH_E_NUM_KEYS_MISMATCH_BETWEEN_HEADER_AND_KEYS;

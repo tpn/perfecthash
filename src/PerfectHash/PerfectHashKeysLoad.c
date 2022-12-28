@@ -77,6 +77,7 @@ Return Value:
 
 --*/
 {
+    PRTL Rtl;
     BOOLEAN Is32Bit;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File;
@@ -255,10 +256,26 @@ Return Value:
     );
     Keys->KeyArrayBaseAddress = Keys->File->BaseAddress;
 
-    Keys->NumberOfElements.QuadPart = (
+    Keys->NumberOfKeys.QuadPart = (
         File->FileInfo.EndOfFile.QuadPart /
         KeySizeInBytes
     );
+
+    Rtl = Keys->Rtl;
+    Keys->NumberOfEdges.QuadPart = (
+        Rtl->RoundUpPowerOfTwo64(Keys->NumberOfKeys.QuadPart)
+    );
+
+    if (Keys->NumberOfKeys.QuadPart ==
+        Keys->NumberOfEdges.QuadPart) {
+
+        Keys->KeysToEdgesRatio = 1.0;
+    } else {
+        Keys->KeysToEdgesRatio = (DOUBLE)(
+            ((DOUBLE)Keys->NumberOfKeys.QuadPart) /
+            ((DOUBLE)Keys->NumberOfEdges.QuadPart)
+        );
+    }
 
     //
     // Dispatch to the relevant LoadStats() routine.
@@ -373,7 +390,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (Keys->NumberOfElements.HighPart) {
+    if (Keys->NumberOfKeys.HighPart) {
         return PH_E_TOO_MANY_KEYS;
     }
 
@@ -390,7 +407,7 @@ Return Value:
     Bitmap = 0;
     Prev = (ULONG)-1;
     KeyArray = (PULONG)Keys->KeyArrayBaseAddress;
-    NumberOfKeys = Keys->NumberOfElements.LowPart;
+    NumberOfKeys = Keys->NumberOfKeys.LowPart;
     KeysBitmap = &Stats.KeysBitmap;
 
     Stats.MinValue = (ULONG)-1;
@@ -591,7 +608,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (Keys->NumberOfElements.HighPart) {
+    if (Keys->NumberOfKeys.HighPart) {
         return PH_E_TOO_MANY_KEYS;
     }
 
@@ -609,7 +626,7 @@ Return Value:
     Bitmap = 0;
     Prev = (ULONGLONG)-1;
     KeyArray = (PULONGLONG)Keys->File->BaseAddress;
-    NumberOfKeys = Keys->NumberOfElements.QuadPart;
+    NumberOfKeys = Keys->NumberOfKeys.QuadPart;
     KeysBitmap = &Stats.KeysBitmap;
 
     Stats.MinValue = (ULONGLONG)-1;

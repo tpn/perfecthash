@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -370,7 +370,7 @@ Return Value:
     }
 
     *BaseAddress = Keys->KeyArrayBaseAddress;
-    NumberOfElements->QuadPart = Keys->NumberOfElements.QuadPart;
+    NumberOfElements->QuadPart = Keys->NumberOfKeys.QuadPart;
 
     ReleasePerfectHashKeysLockExclusive(Keys);
 
@@ -746,7 +746,7 @@ Return Value:
     // Allocate device memory.
     //
 
-    SizeInBytes = Keys->NumberOfElements.QuadPart * sizeof(KEY);
+    SizeInBytes = Keys->NumberOfKeys.QuadPart * sizeof(KEY);
 
     CuResult = Cu->MemAlloc(&DeviceAddress, SizeInBytes);
     CU_CHECK(CuResult, MemAlloc);

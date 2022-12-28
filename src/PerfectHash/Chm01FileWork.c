@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -332,7 +332,7 @@ Return Value:
 
             case EofInitTypeNumberOfKeysMultiplier:
                 EndOfFile.QuadPart += (
-                    (LONGLONG)Keys->NumberOfElements.QuadPart *
+                    (LONGLONG)Keys->NumberOfKeys.QuadPart *
                     Eof->Multiplier
                 );
                 break;

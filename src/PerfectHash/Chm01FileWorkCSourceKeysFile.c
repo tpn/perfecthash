@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -54,7 +54,7 @@ PrepareCSourceKeysFileChm01(
     File = *Item->FilePointer;
     Path = GetActivePath(File);
     Name = &Path->TableNameA;
-    NumberOfKeys = Keys->NumberOfElements.QuadPart;
+    NumberOfKeys = Keys->NumberOfKeys.QuadPart;
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;

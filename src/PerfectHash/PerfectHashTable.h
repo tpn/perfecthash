@@ -203,7 +203,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // mean the rounded-up power-of-2 size.  The masking implementations need
     // an agnostic way to access this value, which is why it is provided here
     // at the table level (despite being obtainable from things like the number
-    // of vertices or Keys->NumberOfElements).
+    // of vertices or Keys->NumberOfKeys).
     //
 
     ULONG HashSize;

@@ -123,7 +123,7 @@ PrepareCHeaderFileChm01(
     OUTPUT_RAW("\n#endif\n\n#define ");
     OUTPUT_STRING(Upper);
     OUTPUT_RAW("_NUMBER_OF_KEYS ");
-    OUTPUT_INT(Keys->NumberOfElements.QuadPart);
+    OUTPUT_INT(Keys->NumberOfKeys.QuadPart);
 
     OUTPUT_RAW("\n\nextern const CPHSEED ");
     OUTPUT_STRING(Name);

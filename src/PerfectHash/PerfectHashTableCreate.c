@@ -197,7 +197,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (Keys->NumberOfElements.QuadPart > MAXIMUM_NUMBER_OF_KEYS) {
+    if (Keys->NumberOfKeys.QuadPart > MAXIMUM_NUMBER_OF_KEYS) {
         return PH_E_TOO_MANY_KEYS;
     }
 
@@ -767,11 +767,19 @@ Return Value:
     }
 
     //
+    // If the Silent flag has been supplied, also set Quiet.
+    //
+
+    if (Table->TableCreateFlags.Silent != FALSE) {
+        Table->TableCreateFlags.Quiet = TRUE;
+    }
+
+    //
     // Clear the FindBestGraph flag if the minimum number of keys are not
     // present.
     //
 
-    if (Table->Keys->NumberOfElements.QuadPart <
+    if (Table->Keys->NumberOfKeys.QuadPart <
         (ULONGLONG)Context->MinNumberOfKeysForFindBestGraph) {
 
         Table->TableCreateFlags.FindBestGraph = FALSE;

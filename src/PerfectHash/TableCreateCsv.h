@@ -107,7 +107,7 @@ Abstract:
           OUTPUT_STRING)                                                                     \
                                                                                              \
     ENTRY(NumberOfKeys,                                                                      \
-          Keys->NumberOfElements.QuadPart,                                                   \
+          Keys->NumberOfKeys.QuadPart,                                                       \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(NumberOfEdges,                                                                     \

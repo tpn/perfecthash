@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -104,7 +104,7 @@ Return Value:
     // Combine the two values, then perform the index masking operation, such
     // that our final index into the array falls within the confines of the
     // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
     //
 
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
@@ -235,7 +235,7 @@ Return Value:
     // Combine the two values, then perform the index masking operation, such
     // that our final index into the array falls within the confines of the
     // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
     //
 
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
@@ -375,7 +375,7 @@ Return Value:
     // Combine the two values, then perform the index masking operation, such
     // that our final index into the array falls within the confines of the
     // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
     //
 
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
@@ -514,7 +514,7 @@ Return Value:
     // Combine the two values, then perform the index masking operation, such
     // that our final index into the array falls within the confines of the
     // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
     //
 
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
@@ -655,7 +655,7 @@ Return Value:
     // Combine the two values, then perform the index masking operation, such
     // that our final index into the array falls within the confines of the
     // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
     //
 
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
@@ -838,7 +838,7 @@ Return Value:
     // Combine the two values, then perform the index masking operation, such
     // that our final index into the array falls within the confines of the
     // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
     //
 
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;
@@ -1021,7 +1021,7 @@ Return Value:
     // Combine the two values, then perform the index masking operation, such
     // that our final index into the array falls within the confines of the
     // number of edges, or keys, in the table.  That is, make sure the index
-    // value is between 0 and Table->Keys->NumberOfElements-1.
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
     //
 
     Combined = (ULONGLONG)Vertex1 + (ULONGLONG)Vertex2;

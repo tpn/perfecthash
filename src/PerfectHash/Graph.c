@@ -325,7 +325,7 @@ Return Value:
     Info = Graph->Info;
     Context = Info->Context;
     Table = Context->Table;
-    NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+    NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
     Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
 
     //
@@ -3301,7 +3301,7 @@ Return Value:
 
     Graph->Context = Context;
     Graph->NumberOfSeeds = Table->TableInfoOnDisk->NumberOfSeeds;
-    Graph->NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+    Graph->NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
 
     Graph->ThreadId = GetCurrentThreadId();
     Graph->ThreadAttempt = 0;
