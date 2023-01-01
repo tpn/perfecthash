@@ -733,7 +733,12 @@ Return Value:
     // Create the .csv file's path name.
     //
 
-    BaseName = &PerfectHashTableCreateCsvBaseName;
+    if (FindBestGraph) {
+        BaseName = &PerfectHashTableCreateBestCsvBaseName;
+    } else {
+        BaseName = &PerfectHashTableCreateCsvBaseName;
+    }
+
     ExistingPath = Context->BaseOutputDirectory->Path;
     NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
 

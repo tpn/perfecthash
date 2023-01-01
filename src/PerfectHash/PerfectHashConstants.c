@@ -602,6 +602,8 @@ const UNICODE_STRING PerfectHashBulkCreateBestCsvBaseName =
     RCS(L"PerfectHashBulkCreateBest");
 const UNICODE_STRING PerfectHashTableCreateCsvBaseName =
     RCS(L"PerfectHashTableCreate");
+const UNICODE_STRING PerfectHashTableCreateBestCsvBaseName =
+    RCS(L"PerfectHashTableCreateBest");
 
 const STRING NullString = RCS("");
 const STRING DotExeSuffixA = RCS(".exe");

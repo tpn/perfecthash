@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -383,6 +383,7 @@ extern const UNICODE_STRING KeysTableSizeSuffix;
 extern const UNICODE_STRING PerfectHashBulkCreateCsvBaseName;
 extern const UNICODE_STRING PerfectHashBulkCreateBestCsvBaseName;
 extern const UNICODE_STRING PerfectHashTableCreateCsvBaseName;
+extern const UNICODE_STRING PerfectHashTableCreateBestCsvBaseName;
 
 extern const STRING NullString;
 extern const STRING DotExeSuffixA;
