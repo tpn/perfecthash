@@ -721,6 +721,13 @@ AppendDoubleToCharBuffer(
         goto End;
     }
 
+    if (DecimalPoint == 9999) {
+        *Buffer++ = 'i';
+        *Buffer++ = 'n';
+        *Buffer++ = 'f';
+        goto End;
+    }
+
     ResultStrlen = strlen(Result);
     ASSERT((ULONG_PTR)ResultStrlen == ResultLength);
 
