@@ -1,17 +1,17 @@
-        title "PerfectHashTable"
+        title "PerfectHash Assembly Include File"
         option nokeyword:<Length>
 
 ;++
 ;
-; Copyright (c) Trent Nelson, 2016.
+; Copyright (c) Trent Nelson, 2016-2022.
 ;
 ; Module Name:
 ;
-;   PerfectHashTable.inc
+;   PerfectHash.inc
 ;
 ; Abstract:
 ;
-;   This is an include module for the PerfectHashTable component.
+;   This is an assembly include module for the PerfectHash library.
 ;
 ;--
 
@@ -47,6 +47,7 @@ IndexMask   equ 0bbbbbbbbh
 ;
 
 CHAR typedef byte
+UCHAR typedef byte
 PCHAR typedef ptr byte
 USHORT typedef word
 WCHAR typedef word
@@ -55,6 +56,9 @@ LONG typedef dword
 ULONG typedef dword
 ULONG64 typedef qword
 ULONGLONG typedef qword
+PULONG typedef ptr ULONG
+PULONGLONG typedef ptr ULONGLONG
+PUCHAR typedef ptr UCHAR
 
 PARAMS struct
     ReturnAddress dq ?
@@ -98,6 +102,51 @@ PERFECT_HASH_TABLE struct
 PERFECT_HASH_TABLE ends
 
 Table typedef PERFECT_HASH_TABLE
+
+;
+; ETW glue.
+;
+
+TRACEHANDLE typedef ULONG64
+
+MCGEN_TRACE_CONTEXT struct
+    RegistrationHandle      TRACEHANDLE ?
+    Logger                  TRACEHANDLE ?
+    MatchAnyKeyword         ULONGLONG ?
+    MatchAllKeyword         ULONGLONG ?
+    Flags                   ULONG ?
+    IsEnabled               ULONG ?
+    Level                   UCHAR ?
+    Reserve                 UCHAR ?
+    EnableBitsCount         USHORT ?
+    EnableBitMask           PULONG ?
+    EnableKeyWords          PULONGLONG ?
+    EnableLevel             PUCHAR ?
+MCGEN_TRACE_CONTEXT ends
+
+EVENT_DATA_DESCRIPTOR struct
+    Pointer         dq ?
+    SizeInBytes     dd ?
+
+    union
+        Reserved        dw ?
+        struct
+            EventType   db ?
+            Reserved1   db ?
+            Reserved2   dw ?
+        ends
+    ends
+EVENT_DATA_DESCRIPTOR ends
+
+EventDataDescriptor typedef EVENT_DATA_DESCRIPTOR
+
+_MODULEINFO struct
+    BaseAddress     PVOID   ?
+    SizeOfImage     DWORD   ?
+    EntryPoint      PVOID   ?
+_MODULEINFO ends
+
+ModuleInfo typedef _MODULEINFO
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 expandtab syntax=masm                          :
 
