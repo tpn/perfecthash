@@ -1,0 +1,12 @@
+LIBRARY FunctionHook
+EXPORTS
+    _penter=_penter_slow
+    HookedModuleIgnoreRip
+    HookedModuleBaseAddress
+    HookedModuleSizeInBytes
+    FunctionEntryCallback
+    FunctionEntryCallbackContext
+    SetFunctionEntryCallback
+    GetFunctionEntryCallback
+    ClearFunctionEntryCallback
+    IsFunctionEntryCallbackEnabled
