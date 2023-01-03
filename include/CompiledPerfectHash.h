@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -50,10 +50,14 @@ extern "C" {
 #endif
 
 //
-// Clang doesn't appear to support the rotate intrinsics _rotr and _rotl,
-// so, define some static inline versions here.
+// Older versions of clang didn't appear to support the rotate intrinsics _rotr
+// and _rotl, so, we used some static inline versions, below.  Recent versions
+// (10.0+) appear to have the intrinsics, so, disable this block for now.  If
+// you are compiling on an older version of clang, change the 0 to 1 to get the
+// rotate intrinsics back.
 //
 
+#if 0
 static inline
 unsigned int
 _rotl(
@@ -75,6 +79,7 @@ _rotr(
     b &= 31;
     return (a >> b) | (a << (32 - b));
 }
+#endif
 
 #elif defined(__GNUC__)
 #include <x86intrin.h>
@@ -263,6 +268,30 @@ Return Value:
 
 --*/
 typedef COMPILED_PERFECT_HASH_TABLE_DELETE *PCOMPILED_PERFECT_HASH_TABLE_DELETE;
+
+typedef
+CPHAPI
+CPHVALUE
+(CPHCALLTYPE COMPILED_PERFECT_HASH_TABLE_INTERLOCKED_INCREMENT)(
+    _In_ CPHKEY Key
+    );
+/*++
+
+Routine Description:
+
+    Increments the value associated with a key.
+
+Arguments:
+
+    Key - Supplies the key to increment.
+
+Return Value:
+
+    Previous value.
+
+--*/
+typedef COMPILED_PERFECT_HASH_TABLE_INTERLOCKED_INCREMENT
+      *PCOMPILED_PERFECT_HASH_TABLE_INTERLOCKED_INCREMENT;
 
 //
 // Typedefs of methods for testing and benchmarking.
