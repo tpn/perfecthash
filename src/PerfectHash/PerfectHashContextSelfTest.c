@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -175,11 +175,11 @@ Return Value:
         Allocator = Context->Allocator;
     }
 
-    VALIDATE_FLAGS(ContextSelfTest, CONTEXT_SELF_TEST);
-    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
-    VALIDATE_FLAGS(TableCreate, TABLE_CREATE);
-    VALIDATE_FLAGS(TableLoad, TABLE_LOAD);
-    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
+    VALIDATE_FLAGS(ContextSelfTest, CONTEXT_SELF_TEST, ULong);
+    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
+    VALIDATE_FLAGS(TableCreate, TABLE_CREATE, ULongLong);
+    VALIDATE_FLAGS(TableLoad, TABLE_LOAD, ULong);
+    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE, ULong);
 
     if (!ARGUMENT_PRESENT(TestDataDirectory)) {
         return E_POINTER;
@@ -430,7 +430,7 @@ Return Value:
     KeysBaseAddress = NULL;
     NumberOfKeys.QuadPart = 0;
     KeysFlags.AsULong = 0;
-    TableCreateFlags.AsULong = 0;
+    TableCreateFlags.AsULongLong = 0;
     CpuArchId = PerfectHashGetCurrentCpuArch();
 
     ASSERT(IsValidPerfectHashCpuArchId(CpuArchId));
@@ -1459,7 +1459,7 @@ Return Value:
     //
 
     KeysLoadFlags->AsULong = 0;
-    TableCreateFlags->AsULong = 0;
+    TableCreateFlags->AsULongLong = 0;
     TableLoadFlags->AsULong = 0;
     TableCompileFlags->AsULong = 0;
 

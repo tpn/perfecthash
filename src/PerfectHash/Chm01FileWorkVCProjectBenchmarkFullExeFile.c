@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -73,7 +73,13 @@ PrepareVCProjectBenchmarkFullExeFileChm01(
     Values.TargetPrefix = &BenchmarkFullTargetPrefix;
     Values.ConfigurationType = &ApplicationConfigurationTypeA;
 
-    Result = ProcessChunks(Rtl, Chunks, NumberOfChunks, &Values, &Output);
+    Result = ProcessChunks(Rtl,
+                           Chunks,
+                           NumberOfChunks,
+                           &Values,
+                           0,
+                           NULL,
+                           &Output);
 
     if (FAILED(Result)) {
         PH_ERROR(ProcessChunks, Result);

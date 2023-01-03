@@ -651,11 +651,15 @@ class PerfectHashPdbexHeaderFile(SourceFile):
         return self.extract_elements(elems)
 
     def parse_enums(self, name, skip_if_startswith=None,
-                    remove=None, split_on=None):
+                    remove=None, split_on=None, include_values=False):
 
         lines = self.enums[name][3:-2]
 
-        results = []
+        if include_values:
+            assert split_on
+            results = {}
+        else:
+            results = []
         for line in lines:
             line = line[2:]
             if skip_if_startswith and line.startswith(skip_if_startswith):
@@ -668,9 +672,17 @@ class PerfectHashPdbexHeaderFile(SourceFile):
                 line = line.replace(remove, '')
 
             if split_on:
-                line = line.split(split_on)[0]
+                if not include_values:
+                    line = line.split(split_on)[0]
+                else:
+                    parts = line.split(split_on)
+                    (name, value) = parts
+                    value = value.replace(' ', '').replace(',', '')
+                    results[name] = value
+                    continue
 
             results.append(line)
+
         return results
 
     @property
@@ -682,6 +694,18 @@ class PerfectHashPdbexHeaderFile(SourceFile):
             remove='BestCoverageType',
             split_on='Id ='
         )
+
+    @property
+    @memoize
+    def best_coverage_types_dict(self):
+        return self.parse_enums(
+            'PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID',
+            skip_if_startswith='PerfectHash',
+            remove='BestCoverageType',
+            split_on='Id = ',
+            include_values=True,
+        )
+
 
     @property
     def disabled_hash_functions(self):

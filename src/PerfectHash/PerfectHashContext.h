@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -157,10 +157,16 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG UserRequestedResize:1;
 
         //
+        // When set, indicates function hook infrastructure is active.
+        //
+
+        ULONG HasFunctionHooking:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:20;
+        ULONG Unused:19;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -770,6 +776,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     volatile LONGLONG Attempts;
 
     //
+    // Used to capture current vs total attempts per second in console output.
+    //
+
+    LONGLONG BaselineAttempts;
+    FILETIME64 BaselineFileTime;
+
+    //
     // Counters used for capturing performance information.  We capture both a
     // cycle count, using __rdtsc(), plus a "performance counter" count, via
     // QueryPerformanceCounter().  The former provides a finer resolution, but
@@ -1046,6 +1059,43 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG Padding6;
 
     //
+    // Pointers to function hook related infrastructure.
+    //
+
+    HMODULE CallbackModule;
+    HMODULE FunctionHookModule;
+    PCUNICODE_STRING CallbackDllPath;
+    PFUNCTION_ENTRY_CALLBACK FunctionEntryCallback;
+    PSET_FUNCTION_ENTRY_CALLBACK SetFunctionEntryCallback;
+    PGET_FUNCTION_ENTRY_CALLBACK GetFunctionEntryCallback;
+    PCLEAR_FUNCTION_ENTRY_CALLBACK ClearFunctionEntryCallback;
+    PIS_FUNCTION_ENTRY_CALLBACK_ENABLED IsFunctionEntryCallbackEnabled;
+    PVOID CallbackModuleTableValues;
+    SIZE_T CallbackModuleTableValueSizeInBytes;
+    SIZE_T CallbackModuleNumberOfTableValues;
+    LARGE_INTEGER CallbackModuleTableValuesEndOfFile;
+
+    //
+    // If function hooking is enabled, and the callback DLL is a compiled
+    // perfect hash table, this file will save a copy of the table values
+    // during context rundown.
+    //
+
+    struct _PERFECT_HASH_FILE *CallbackModuleTableValuesFile;
+
+    //
+    // We allow toggling of the callback function on and off during runtime
+    // via the console.  The following variables capture the necessary state
+    // required to effectuate this.
+    //
+
+    PVOID CallbackContext;
+    PVOID CallbackModuleBaseAddress;
+    PFUNCTION_ENTRY_CALLBACK CallbackFunction;
+    ULONG CallbackModuleSizeInBytes;
+    ULONG CallbackModuleIgnoreRip;
+
+    //
     // Backing vtbl.
     //
 
@@ -1058,7 +1108,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding7;
+    PVOID Padding8;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
@@ -1230,6 +1280,16 @@ typedef PERFECT_HASH_CONTEXT_INITIALIZE_CUDA
       *PPERFECT_HASH_CONTEXT_INITIALIZE_CUDA;
 
 typedef
+HRESULT
+(NTAPI PERFECT_HASH_CONTEXT_INITIALIZE_FUNCTION_HOOK_CALLBACK_DLL)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_INITIALIZE_FUNCTION_HOOK_CALLBACK_DLL
+      *PPERFECT_HASH_CONTEXT_INITIALIZE_FUNCTION_HOOK_CALLBACK_DLL;
+
+typedef
 _Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE)(
@@ -1239,6 +1299,25 @@ HRESULT
     );
 typedef PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE
       *PPERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE;
+
+typedef
+_Must_inspect_result_
+HRESULT
+(NTAPI PERFECT_HASH_CONTEXT_TRY_PREPARE_CALLBACK_TABLE_VALUES_FILE)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
+    );
+typedef PERFECT_HASH_CONTEXT_TRY_PREPARE_CALLBACK_TABLE_VALUES_FILE
+      *PPERFECT_HASH_CONTEXT_TRY_PREPARE_CALLBACK_TABLE_VALUES_FILE;
+
+typedef
+_Must_inspect_result_
+HRESULT
+(NTAPI PERFECT_HASH_CONTEXT_TRY_RUNDOWN_CALLBACK_TABLE_VALUES_FILE)(
+    _In_ PPERFECT_HASH_CONTEXT Context
+    );
+typedef PERFECT_HASH_CONTEXT_TRY_RUNDOWN_CALLBACK_TABLE_VALUES_FILE
+      *PPERFECT_HASH_CONTEXT_TRY_RUNDOWN_CALLBACK_TABLE_VALUES_FILE;
 
 //
 // Function decls.
@@ -1279,6 +1358,12 @@ extern PERFECT_HASH_CONTEXT_INITIALIZE_RNG
     PerfectHashContextInitializeRng;
 extern PERFECT_HASH_CONTEXT_INITIALIZE_CUDA
     PerfectHashContextInitializeCuda;
+extern PERFECT_HASH_CONTEXT_INITIALIZE_FUNCTION_HOOK_CALLBACK_DLL
+    PerfectHashContextInitializeFunctionHookCallbackDll;
+extern PERFECT_HASH_CONTEXT_TRY_PREPARE_CALLBACK_TABLE_VALUES_FILE
+    PerfectHashContextTryPrepareCallbackTableValuesFile;
+extern PERFECT_HASH_CONTEXT_TRY_RUNDOWN_CALLBACK_TABLE_VALUES_FILE
+    PerfectHashContextTryRundownCallbackTableValuesFile;
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

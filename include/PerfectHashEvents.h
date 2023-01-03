@@ -659,7 +659,7 @@ Remarks:
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-// Provider "PerfectHash" event count 13
+// Provider "PerfectHash" event count 15
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // Provider GUID = d0b3028e-70a7-410f-af7e-4d495b4a3c8b
@@ -687,6 +687,8 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #define PerfectHashEvents_TASK_GenerateRandomBytes 0x8
 #define PerfectHashEvents_TASK_IsAcyclic 0x9
 #define PerfectHashEvents_TASK_MemoryCoverageCacheLineCounts 0xa
+#define PerfectHashEvents_TASK_FunctionEntry 0xb
+#define PerfectHashEvents_TASK_PerfectHashIndex32 0xc
 
 //
 // Keyword
@@ -699,6 +701,8 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 #define PH_ETW_RTL_RANDOM 0x20
 #define PH_ETW_GRAPH_IS_ACYCLIC 0x40
 #define PH_ETW_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS 0x80
+#define PH_ETW_FUNCTION_ENTRY 0x100
+#define PH_ETW_INDEX32 0x200
 
 //
 // Event Descriptors
@@ -729,6 +733,10 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphIsAcyclicEvent = {0xb
 #define GraphIsAcyclicEvent_value 0xb
 EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphMemoryCoverageCacheLineCountsEvent = {0xc, 0x0, 0x10, 0x4, 0x0, 0xa, 0x8000000000000080};
 #define GraphMemoryCoverageCacheLineCountsEvent_value 0xc
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR FunctionEntryEvent = {0xd, 0x0, 0x10, 0x4, 0x0, 0xb, 0x8000000000000100};
+#define FunctionEntryEvent_value 0xd
+EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR PerfectHashIndex32Event = {0xe, 0x0, 0x10, 0x4, 0x0, 0xc, 0x8000000000000200};
+#define PerfectHashIndex32Event_value 0xe
 
 //
 // MCGEN_DISABLE_PROVIDER_CODE_GENERATION macro:
@@ -742,13 +750,13 @@ EXTERN_C __declspec(selectany) const EVENT_DESCRIPTOR GraphMemoryCoverageCacheLi
 // These variables are for use by MC-generated code and should not be used directly.
 //
 EXTERN_C __declspec(selectany) DECLSPEC_CACHEALIGN ULONG PerfectHashEnableBits[1];
-EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[8] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004, 0x8000000000000008, 0x8000000000000010, 0x8000000000000020, 0x8000000000000040, 0x8000000000000080};
-EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[8] = {4, 4, 4, 4, 4, 4, 4, 4};
+EXTERN_C __declspec(selectany) const ULONGLONG PerfectHashKeywords[10] = {0x8000000000000001, 0x8000000000000002, 0x8000000000000004, 0x8000000000000008, 0x8000000000000010, 0x8000000000000020, 0x8000000000000040, 0x8000000000000080, 0x8000000000000100, 0x8000000000000200};
+EXTERN_C __declspec(selectany) const unsigned char PerfectHashLevels[10] = {4, 4, 4, 4, 4, 4, 4, 4, 4, 4};
 
 //
 // Provider context
 //
-EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 8, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
+EXTERN_C __declspec(selectany) MCGEN_TRACE_CONTEXT PerfectHashEvents_Context = {0, (ULONG_PTR)PerfectHashEvents_Traits, 0, 0, 0, 0, 0, 0, 10, PerfectHashEnableBits, PerfectHashKeywords, PerfectHashLevels};
 
 //
 // Provider REGHANDLE
@@ -843,7 +851,7 @@ _mcgen_PASTE2(_mcgen_RegisterForContext_PerfectHash_, MCGEN_EVENTREGISTER)(
 {
     RtlZeroMemory(pContext, sizeof(*pContext));
     pContext->Context.Logger = (ULONG_PTR)PerfectHashEvents_Traits;
-    pContext->Context.EnableBitsCount = 8;
+    pContext->Context.EnableBitsCount = 10;
     pContext->Context.EnableBitMask = pContext->EnableBits;
     pContext->Context.EnableKeyWords = PerfectHashKeywords;
     pContext->Context.EnableLevel = PerfectHashLevels;
@@ -1164,6 +1172,52 @@ _mcgen_CheckContextType_PerfectHash(_In_ McGenContext_PerfectHash* pContext)
 // This macro is for use by MC-generated code and should not be used directly.
 #define _mcgen_TEMPLATE_FOR_GraphMemoryCoverageCacheLineCountsEvent _mcgen_PASTE2(McTemplateK0ziqquuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu_, MCGEN_EVENTWRITETRANSFER)
 
+//
+// Enablement check macro for event "FunctionEntryEvent"
+//
+#define EventEnabledFunctionEntryEvent() _mcgen_EVENT_BIT_SET(PerfectHashEnableBits, 8)
+#define EventEnabledFunctionEntryEvent_ForContext(pContext) _mcgen_EVENT_BIT_SET(_mcgen_CheckContextType_PerfectHash(pContext)->EnableBits, 8)
+
+//
+// Event write macros for event "FunctionEntryEvent"
+//
+#define EventWriteFunctionEntryEvent(Activity, FunctionAddress) \
+        MCGEN_EVENT_ENABLED(FunctionEntryEvent) \
+        ? _mcgen_TEMPLATE_FOR_FunctionEntryEvent(&PerfectHashEvents_Context, &FunctionEntryEvent, Activity, FunctionAddress) : 0
+#define EventWriteFunctionEntryEvent_AssumeEnabled(FunctionAddress) \
+        _mcgen_TEMPLATE_FOR_FunctionEntryEvent(&PerfectHashEvents_Context, &FunctionEntryEvent, NULL, FunctionAddress)
+#define EventWriteFunctionEntryEvent_ForContext(pContext, Activity, FunctionAddress) \
+        MCGEN_EVENT_ENABLED_FORCONTEXT(pContext, FunctionEntryEvent) \
+        ? _mcgen_TEMPLATE_FOR_FunctionEntryEvent(&(pContext)->Context, &FunctionEntryEvent, Activity, FunctionAddress) : 0
+#define EventWriteFunctionEntryEvent_ForContextAssumeEnabled(pContext, FunctionAddress) \
+        _mcgen_TEMPLATE_FOR_FunctionEntryEvent(&_mcgen_CheckContextType_PerfectHash(pContext)->Context, &FunctionEntryEvent, NULL, FunctionAddress)
+
+// This macro is for use by MC-generated code and should not be used directly.
+#define _mcgen_TEMPLATE_FOR_FunctionEntryEvent _mcgen_PASTE2(McTemplateK0p_, MCGEN_EVENTWRITETRANSFER)
+
+//
+// Enablement check macro for event "PerfectHashIndex32Event"
+//
+#define EventEnabledPerfectHashIndex32Event() _mcgen_EVENT_BIT_SET(PerfectHashEnableBits, 9)
+#define EventEnabledPerfectHashIndex32Event_ForContext(pContext) _mcgen_EVENT_BIT_SET(_mcgen_CheckContextType_PerfectHash(pContext)->EnableBits, 9)
+
+//
+// Event write macros for event "PerfectHashIndex32Event"
+//
+#define EventWritePerfectHashIndex32Event(Activity, Key, Index) \
+        MCGEN_EVENT_ENABLED(PerfectHashIndex32Event) \
+        ? _mcgen_TEMPLATE_FOR_PerfectHashIndex32Event(&PerfectHashEvents_Context, &PerfectHashIndex32Event, Activity, Key, Index) : 0
+#define EventWritePerfectHashIndex32Event_AssumeEnabled(Key, Index) \
+        _mcgen_TEMPLATE_FOR_PerfectHashIndex32Event(&PerfectHashEvents_Context, &PerfectHashIndex32Event, NULL, Key, Index)
+#define EventWritePerfectHashIndex32Event_ForContext(pContext, Activity, Key, Index) \
+        MCGEN_EVENT_ENABLED_FORCONTEXT(pContext, PerfectHashIndex32Event) \
+        ? _mcgen_TEMPLATE_FOR_PerfectHashIndex32Event(&(pContext)->Context, &PerfectHashIndex32Event, Activity, Key, Index) : 0
+#define EventWritePerfectHashIndex32Event_ForContextAssumeEnabled(pContext, Key, Index) \
+        _mcgen_TEMPLATE_FOR_PerfectHashIndex32Event(&_mcgen_CheckContextType_PerfectHash(pContext)->Context, &PerfectHashIndex32Event, NULL, Key, Index)
+
+// This macro is for use by MC-generated code and should not be used directly.
+#define _mcgen_TEMPLATE_FOR_PerfectHashIndex32Event _mcgen_PASTE2(McTemplateK0qq_, MCGEN_EVENTWRITETRANSFER)
+
 #endif // MCGEN_DISABLE_PROVIDER_CODE_GENERATION
 
 //
@@ -1176,6 +1230,31 @@ _mcgen_CheckContextType_PerfectHash(_In_ McGenContext_PerfectHash* pContext)
 //
 // Template Functions
 //
+
+//
+// Function for template "FunctionEntryTemplate_x64" (and possibly others).
+// This function is for use by MC-generated code and should not be used directly.
+//
+#ifndef McTemplateK0p_def
+#define McTemplateK0p_def
+ETW_INLINE
+ULONG
+_mcgen_PASTE2(McTemplateK0p_, MCGEN_EVENTWRITETRANSFER)(
+    _In_ PMCGEN_TRACE_CONTEXT Context,
+    _In_ PCEVENT_DESCRIPTOR Descriptor,
+    _In_opt_ const GUID* Activity,
+    _In_opt_ const void*  _Arg0
+    )
+{
+#define McTemplateK0p_ARGCOUNT 1
+
+    EVENT_DATA_DESCRIPTOR EventData[McTemplateK0p_ARGCOUNT + 1];
+
+    EventDataDescCreate(&EventData[1],&_Arg0, sizeof(const void*)  );
+
+    return McGenEventWrite(Context, Descriptor, Activity, McTemplateK0p_ARGCOUNT + 1, EventData);
+}
+#endif // McTemplateK0p_def
 
 //
 // Function for template "GenerateRandomBytesStartTemplate" (and possibly others).
@@ -1968,6 +2047,8 @@ _mcgen_PASTE2(McTemplateK0zqqqqiiqqqqqqqq_, MCGEN_EVENTWRITETRANSFER)(
 #define MSG_PerfectHash_event_10_message     0xB000000AL
 #define MSG_PerfectHash_event_11_message     0xB000000BL
 #define MSG_PerfectHash_event_12_message     0xB000000CL
+#define MSG_PerfectHash_event_13_message     0xB000000DL
+#define MSG_PerfectHash_event_14_message     0xB000000EL
 #define MSG_PerfectHash_event_0_message      0xB0010000L
 #define MSG_PerfectHash_event_1_message      0xB0010001L
 #define MSG_PerfectHash_event_2_message      0xB0010002L

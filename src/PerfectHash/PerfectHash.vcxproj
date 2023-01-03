@@ -69,6 +69,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>_PERFECT_HASH_INTERNAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions Condition="$(HookPenter) == '1'">/Gh %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Bscmake>
       <PreserveSbr>false</PreserveSbr>
@@ -223,6 +224,7 @@
     <ClCompile Include="Chm01FileWorkVCProjectTestExeFile.c" />
     <ClCompile Include="Chm01FileWorkVCPropsCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01FileWorkVSSolutionFile.c" />
+    <ClCompile Include="Chm01FileWorkModuleDefFile.c" />
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
@@ -292,6 +294,7 @@
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm" />
     <MASM Include="RtlCopyPages_x64.asm" />
     <MASM Include="RtlFillPages_x64.asm" />
+    <MASM Include="memset_x64.asm" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="PerfectHash.rc" />
@@ -299,8 +302,10 @@
   <ItemGroup>
     <Natvis Include="PerfectHash.natvis" />
   </ItemGroup>
-  <ItemGroup>
-    <MASM Include="memset_x64.asm" />
+  <ItemGroup Condition="$(HookPenter) == '1'">
+    <ProjectReference Include="..\FunctionHook\FunctionHook.vcxproj">
+      <Project>{b9ef04da-0ad9-45c4-97b0-857a13aa4850}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

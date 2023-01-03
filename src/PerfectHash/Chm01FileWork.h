@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -76,6 +76,7 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define SaveMakefileBenchmarkIndexMkFileChm01 NULL
 #define SaveMakefileBenchmarkFullMkFileChm01 NULL
 #define SaveCHeaderNoSal2FileChm01 NULL
+#define SaveModuleDefFileChm01 NULL
 
 extern FILE_WORK_CALLBACK_IMPL *FileCallbacks[];
 

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -175,6 +175,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(TryUseAvx2HashFunction);
     DECL_ARG(TryUseAvx512HashFunction);
     DECL_ARG(DoNotTryUseAvx2MemoryCoverageFunction);
+    DECL_ARG(IncludeKeysInCompiledDll);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -223,6 +224,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx2HashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx512HashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2MemoryCoverageFunction);
+    SET_FLAG_AND_RETURN_IF_EQUAL(IncludeKeysInCompiledDll);
 
     return S_FALSE;
 }
@@ -735,6 +737,7 @@ Return Value:
     LONG64 Value64 = 0;
     PWSTR Source;
     DOUBLE Double;
+    PCHAR Buffer;
     PWSTR End;
     PWSTR Expected;
     PALLOCATOR Allocator;
@@ -743,6 +746,7 @@ Return Value:
     BOOLEAN EqualSignFound = FALSE;
     BOOLEAN TableParamFound = FALSE;
     HRESULT Result = S_FALSE;
+    PSTRING LocalStringA;
     PUNICODE_STRING Arg;
     UNICODE_STRING LocalArg = { 0 };
     UNICODE_STRING Temp = { 0 };
@@ -963,6 +967,8 @@ Return Value:
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(MaxSolveTimeInSeconds);
 
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(FunctionHookCallbackIgnoreRip);
+
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)
 
@@ -1163,6 +1169,34 @@ Return Value:
         LocalString->Length = ValueString->Length;
         LocalString->MaximumLength = ValueString->MaximumLength;
         LocalString->Buffer = ValueString->Buffer;
+        goto AddParam;
+    }
+
+    if (IS_EQUAL(FunctionHookCallbackDllPath)) {
+        SET_PARAM_ID(FunctionHookCallbackDllPath);
+        LocalString = &LocalParam.AsUnicodeString;
+        LocalString->Length = ValueString->Length;
+        LocalString->MaximumLength = ValueString->MaximumLength;
+        LocalString->Buffer = ValueString->Buffer;
+        goto AddParam;
+    }
+
+    if (IS_EQUAL(FunctionHookCallbackFunctionName)) {
+
+        //
+        // Do an inline conversion of the wide character function name to a
+        // normal ASCII representation.  (GetProcAddress() only works for
+        // ASCII names.)
+        //
+
+        SET_PARAM_ID(FunctionHookCallbackFunctionName);
+        LocalStringA = &LocalParam.AsString;
+        LocalStringA->Length = ValueString->Length >> 1;
+        LocalStringA->MaximumLength = ValueString->MaximumLength >> 1;
+        LocalStringA->Buffer = (PCHAR)ValueString->Buffer;
+        Buffer = LocalStringA->Buffer;
+        AppendWStrToCharBufferFast(&Buffer, ValueString->Buffer);
+        LocalStringA->Buffer[LocalStringA->Length] = '\0';
         goto AddParam;
     }
 

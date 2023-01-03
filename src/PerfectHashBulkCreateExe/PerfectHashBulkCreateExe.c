@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -34,7 +34,7 @@ mainCRTStartup(
     LPWSTR CommandLineW;
     PICLASSFACTORY ClassFactory;
     PPERFECT_HASH_CONTEXT Context;
-    PPERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
+    PPERFECT_HASH_PRINT_ERROR PerfectHashPrintError = NULL;
     PPERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
     PICLASSFACTORY_CREATE_INSTANCE CreateInstance;
     INT NumberOfArguments = 0;
@@ -48,7 +48,15 @@ mainCRTStartup(
                                   &Module);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashBootstrap, Result);
+
+        //
+        // We can only use PH_ERROR() if PerfectHashPrintError is available.
+        //
+
+        if (PerfectHashPrintError != NULL) {
+            PH_ERROR(PerfectHashBootstrap, Result);
+        }
+
         goto Error;
     }
 

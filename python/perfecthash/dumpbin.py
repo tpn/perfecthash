@@ -101,7 +101,7 @@ class Dumpbin(InvariantAwareObject):
     class PathArg(PathInvariant):
         pass
 
-    def __init__(self, path):
+    def __init__(self, path, disasm=None):
         InvariantAwareObject.__init__(self)
         self.path = path
         self.conf = get_or_create_config()
@@ -114,6 +114,9 @@ class Dumpbin(InvariantAwareObject):
         self._save_plot = False
 
         self._load()
+
+        if disasm:
+            self._load_disasm()
 
     def _load(self):
 
@@ -165,6 +168,90 @@ class Dumpbin(InvariantAwareObject):
         self.text = text
         self.lines = lines
 
+    def _load_disasm(self):
+
+        import numpy as np
+
+        if os.path.exists(self.conf.dumpbin_exe_path):
+            dumpbin_exe = self.conf.dumpbin_exe_path
+        else:
+            dumpbin_exe = 'dumpbin.exe'
+
+        cmd = [
+            dumpbin_exe,
+            '/disasm',
+            self.path
+        ]
+
+        from subprocess import check_output
+        raw = check_output(cmd)
+        text = raw.decode(sys.stdout.encoding)
+
+        # Add a dummy line at the start of the array so that we can index
+        # lines directly by line number instead of having to subtract one
+        # first (to account for 0-based indexing).
+
+        lines = [ '', ] + text.splitlines()
+
+        self.disasm_text = text
+        self.disasm_lines = lines
+
+        (func_linenos, names) = zip(*[
+            (i, l[:-1]) for (i, l) in enumerate(lines) if (
+                l and l[0] != ' ' and l[-1] == ':'
+            )
+        ])
+        self.disasm_func_linenos = np.array(func_linenos)
+        self.disasm_func_names = names
+
+        if '_penter' in text:
+            base = self.image_base
+            call_ilt = 'call        @ILT'
+            call_penter = 'call        _penter'
+            (linenos, addresses) = zip(*[
+                (i, ((int(l[2:18], base=16)) - base))
+                    for (i, l) in enumerate(lines) if (
+                        l and (
+                            l.endswith('(_penter)') and call_ilt in l
+                        ) or l.endswith(call_penter)
+                    )
+            ])
+
+            self.disasm_call_penter_linenos = np.array(linenos)
+            self.disasm_call_penter_rips = np.array(addresses, dtype='uint32')
+
+            rip_to_name = { }
+            func_linenos = self.disasm_func_linenos
+            for (lineno, rip) in zip(linenos, addresses):
+                i = np.searchsorted(func_linenos, v=lineno) - 1
+                name = names[i]
+                rip_to_name[rip] = name
+
+            self.penter_rip_to_name = rip_to_name
+            self.penter_names = np.array(list(rip_to_name.values()), dtype='str')
+
+        if '__Pogo' in text:
+            base = self.image_base
+            call_prefix = 'call        '
+            (linenos, addresses) = zip(*[
+                (i, ((int(l[2:18], base=16)) - base))
+                    for (i, l) in enumerate(lines) if (
+                        '__Pogo' in l and call_prefix in l
+                    )
+            ])
+
+            self.disasm_call_pogo_linenos = np.array(linenos)
+            self.disasm_call_pogo_rips = np.array(addresses, dtype='uint32')
+
+            pogo_rip_to_name = { }
+            func_linenos = self.disasm_func_linenos
+            for (lineno, rip) in zip(linenos, addresses):
+                i = np.searchsorted(func_linenos, v=lineno) - 1
+                name = names[i]
+                pogo_rip_to_name[rip] = name
+
+            self.pogo_rip_to_name = pogo_rip_to_name
+
     @property
     def is_cf_instrumented(self):
         return self._guard_cf_func_table_lineno is not None
@@ -182,15 +269,19 @@ class Dumpbin(InvariantAwareObject):
 
     @property
     def image_base_start(self):
-        return self._image_base_start
+        return int(self._image_base_start, base=16)
 
     @property
     def image_base_end(self):
-        return self._image_base_end
+        return int(self._image_base_end, base=16)
 
     @property
     def image_base(self):
         return self._image_base
+
+    @property
+    def image_size(self):
+        return self.image_base_end - self.image_base_start
 
     @property
     @memoize
@@ -219,7 +310,7 @@ class Dumpbin(InvariantAwareObject):
         array = self.guard_cf_func_table_address_array_base0
         return [ hex(i)[2:].zfill(8).encode('ascii') for i in array ]
 
-    def binary_path(self, output_dir):
+    def binary_path(self, output_dir, a):
         from .path import (
             basename,
             splitext,
@@ -243,6 +334,30 @@ class Dumpbin(InvariantAwareObject):
 
     def plot_path(self, output_dir):
         return self.binary_path(output_dir).replace('.keys', '.png')
+
+    def _save_rips_as_keys(self, rips, suffix):
+
+        import numpy as np
+
+        from .path import (
+            dirname,
+            join_path,
+        )
+
+        a = np.sort(np.unique(rips))
+
+        binary_path = self.path.replace('.dll', f'{suffix}.keys')
+        fp = np.memmap(binary_path, dtype='uint32', mode='w+', shape=a.shape)
+        fp[:] = a[:]
+        del fp
+
+        print(f'Wrote {binary_path}.')
+
+    def save_penter_rips(self):
+        self._save_rips_as_keys(self.disasm_call_penter_rips, 'PenterRips')
+
+    def save_pogo_rips(self):
+        self._save_rips_as_keys(self.disasm_call_pogo_rips, 'PogoRips')
 
     def save(self, output_dir):
 

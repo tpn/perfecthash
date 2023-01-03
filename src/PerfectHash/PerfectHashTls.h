@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -111,10 +111,11 @@ typedef PERFECT_HASH_TLS_CONTEXT_FLAGS *PPERFECT_HASH_TLS_CONTEXT_FLAGS;
     (TlsContext && TlsContext->Flags.CustomAllocatorDetailsPresent)
 
 typedef struct _PERFECT_HASH_TLS_CONTEXT {
-    PERFECT_HASH_TLS_CONTEXT_FLAGS Flags;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    PERFECT_HASH_TLS_CONTEXT_FLAGS Flags;
     ULONG LastError;
     HRESULT LastResult;
+    ULONG Padding1;
     PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE Table;

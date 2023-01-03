@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -85,6 +85,12 @@ SaveCSourceTableDataFileChm01(
     //
 
     OUTPUT_RAW("#ifdef _WIN32\n#pragma const_seg(\".cphsm\")\n#endif\n");
+    OUTPUT_RAW("const BYTE ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_NumberOfSeeds = ");
+    OUTPUT_INT(NumberOfSeeds);
+    OUTPUT_RAW(";\n");
+
     OUTPUT_RAW("const CPHSEED ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Seeds[");

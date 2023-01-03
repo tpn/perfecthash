@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -120,7 +120,7 @@ Return Value:
     //
 
     TlsContext = PerfectHashTlsEnsureContext();
-    TableCreateFlags.AsULong = TlsContext->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = TlsContext->TableCreateFlags.AsULongLong;
     HashFunctionId = TlsContext->Table->HashFunctionId;
 
     Rtl = Graph->Rtl;
@@ -3321,7 +3321,7 @@ Return Value:
     Allocator = Graph->Allocator;
     Table = Context->Table;
     TableInfoOnDisk = Table->TableInfoOnDisk;
-    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
 
     //
     // Set the relevant graph fields based on the provided info.
@@ -3771,7 +3771,7 @@ Return Value:
     Context = Graph->Context;
     Info = Graph->Info;
     Rtl = Context->Rtl;
-    TableCreateFlags.AsULong = Context->Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Context->Table->TableCreateFlags.AsULongLong;
 
     MAYBE_STOP_GRAPH_SOLVING(Graph);
 

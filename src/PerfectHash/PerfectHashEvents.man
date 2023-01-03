@@ -214,6 +214,20 @@
             <data name="CacheLine_63" inType="win:UInt8" outType="xs:unsignedByte"></data>
             <data name="CacheLine_64" inType="win:UInt8" outType="xs:unsignedByte"></data>
           </template>
+          <template tid="FunctionEntryTemplate_x64">
+            <!--<data name="ReturnAddress" inType="win:Pointer" outType="xs:unsignedLong"></data>-->
+            <data name="FunctionAddress" inType="win:Pointer"></data>
+            <!--
+            <data name="Rcx" inType="win:UInt64" outType="xs:unsignedLong"></data>
+            <data name="Rdx" inType="win:UInt64" outType="xs:unsignedLong"></data>
+            <data name="R8" inType="win:UInt64" outType="xs:unsignedLong"></data>
+            <data name="R9" inType="win:UInt64" outType="xs:unsignedLong"></data>
+            -->
+          </template>
+          <template tid="PerfectHashIndex32Template">
+            <data name="Key" inType="win:UInt32" outType="xs:unsignedInt"></data>
+            <data name="Index" inType="win:UInt32" outType="xs:unsignedInt"></data>
+          </template>
         </templates>
         <channels>
         </channels>
@@ -228,6 +242,8 @@
           <keyword name="GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS"
                    symbol="PH_ETW_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS"
                    mask="0x80"></keyword>
+          <keyword name="FUNCTION_ENTRY" symbol="PH_ETW_FUNCTION_ENTRY" mask="0x100"></keyword>
+          <keyword name="PERFECT_HASH_INDEX32" symbol="PH_ETW_INDEX32" mask="0x200"></keyword>
         </keywords>
         <tasks>
           <task name="AddKeys" value="1"/>
@@ -240,6 +256,8 @@
           <task name="GenerateRandomBytes" value="8"/>
           <task name="IsAcyclic" value="9"/>
           <task name="MemoryCoverageCacheLineCounts" value="10"/>
+          <task name="FunctionEntry" value="11"/>
+          <task name="PerfectHashIndex32" value="12"/>
         </tasks>
         <events>
           <event
@@ -398,6 +416,30 @@
             keywords="GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS"
             message="$(string.PerfectHash.event.12.message)">
           </event>
+          <event
+            symbol="FunctionEntryEvent"
+            value="13"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Info"
+            task="FunctionEntry"
+            template="FunctionEntryTemplate_x64"
+            keywords="FUNCTION_ENTRY"
+            message="$(string.PerfectHash.event.13.message)">
+          </event>
+          <event
+            symbol="PerfectHashIndex32Event"
+            value="14"
+            version="0"
+            channel="PerfectHash/Analytic"
+            level="win:Informational"
+            opcode="win:Info"
+            task="PerfectHashIndex32"
+            template="PerfectHashIndex32Template"
+            keywords="PERFECT_HASH_INDEX32"
+            message="$(string.PerfectHash.event.14.message)">
+          </event>
         </events>
       </provider>
     </events>
@@ -425,6 +467,8 @@
         <string id="PerfectHash.event.10.message" value="Graph assignment result."></string>
         <string id="PerfectHash.event.11.message" value="Graph peeling (acyclic) result."></string>
         <string id="PerfectHash.event.12.message" value="Graph memory coverage cache line counts."></string>
+        <string id="PerfectHash.event.13.message" value="Function entry event."></string>
+        <string id="PerfectHash.event.14.message" value="Perfect Hash Index (32-bit key) event."></string>
       </stringTable>
     </resources>
   </localization>

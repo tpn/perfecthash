@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -238,7 +238,9 @@ CreateComponent(
     //
 
     Unknown = &Component->Unknown;
+    ASSERT(Unknown->ReferenceCount == 0);
     Unknown->Vtbl->AddRef(Unknown);
+    ASSERT(Unknown->ReferenceCount == 1);
 
     if (InterlockedIncrement(&ComponentCount) == 1) {
 

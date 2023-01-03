@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1296,6 +1296,39 @@ AppendStringToWideCharBufferFast(
     );
 
     return;
+}
+
+_Use_decl_annotations_
+HRESULT
+AppendStringToUnicodeStringFast (
+    PCSTRING String,
+    PUNICODE_STRING UnicodeString
+    )
+{
+    CHAR Char;
+    WCHAR Wide;
+    PSTR Source;
+    PWSTR Dest;
+    USHORT Count;
+    USHORT Index;
+
+    if (String->Length > (UnicodeString->MaximumLength >> 1)) {
+        return PH_E_STRING_BUFFER_TOO_SMALL;
+    }
+
+    Count = String->Length;
+    Source = String->Buffer;
+    Dest = UnicodeString->Buffer;
+
+    for (Index = 0; Index < Count; Index++) {
+        Char = Source[Index];
+        Wide = (WCHAR)Char;
+        Dest[Index] = Wide;
+    }
+
+    UnicodeString->Length = (USHORT)(Count << 1);
+
+    return S_OK;
 }
 
 _Use_decl_annotations_

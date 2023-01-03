@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -154,7 +154,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // either 4 or 8 bytes.)
     //
 
-    ULONG ValueSizeInBytes;
+    SIZE_T ValueSizeInBytes;
 
     //
     // Optional table creation parameters specified to Create().
@@ -494,8 +494,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     PERFECT_HASH_TABLE_VTBL Interface;
-
-    //PVOID Padding4;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;

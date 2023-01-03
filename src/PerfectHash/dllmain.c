@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -19,6 +19,7 @@ Abstract:
 #include "PerfectHashEventsPrivate.h"
 
 HMODULE PerfectHashModule;
+MODULEINFO PerfectHashModuleInfo;
 
 //
 // We need to define a _fltused ULONG symbol as we're working with floats and
@@ -75,6 +76,13 @@ _DllMainCRTStartup(
         case DLL_PROCESS_ATTACH:
             __security_init_cookie();
             PerfectHashModule = Module;
+
+            if (!GetModuleInformation(GetCurrentProcess(),
+                                      PerfectHashModule,
+                                      &PerfectHashModuleInfo,
+                                      sizeof(PerfectHashModuleInfo))) {
+                return FALSE;
+            }
 
             if (!PerfectHashTlsProcessAttach(Module, Reason, Reserved)) {
                 return FALSE;

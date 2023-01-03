@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -161,6 +161,15 @@ Abstract:
 // Fixed attempts at solving reached.
 //
 #define PH_S_FIXED_ATTEMPTS_REACHED      ((HRESULT)0x2004000BL)
+
+//
+// MessageId: PH_S_FUNCTION_HOOK_CALLBACK_DLL_INITIALIZED
+//
+// MessageText:
+//
+// Function hook callback DLL initialized.
+//
+#define PH_S_FUNCTION_HOOK_CALLBACK_DLL_INITIALIZED ((HRESULT)0x2004000CL)
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -941,6 +950,22 @@ Abstract:
 //         Supplies the maximum number of seconds to try and solve an individual
 //         graph.
 // 
+//     --FunctionHookCallbackDllPath=<Path>
+// 
+//         Supplies a fully-qualified path to a .dll file that will be used as the
+//         callback handler for hooked functions.
+// 
+//     --FunctionHookCallbackFunctionName=<ExportedFunctionName>
+// 
+//         Supplies the exported function name to resolve from the callback module
+//         (above) and use as the callback for hooked functions.  The default is
+//         InterlockedIncrement.
+// 
+//     --FunctionHookCallbackIgnoreRip=<RelativeRIP>
+// 
+//         Supplies a relative RIP to ignore during function callback.  That is,
+//         if a caller matches the supplied relative RIP, the function callback
+//         will not be executed.
 // 
 // Console Output Character Legend
 // 
@@ -1016,9 +1041,54 @@ Abstract:
 //
 // MessageText:
 //
-// [s] Status [q] Quit solving this graph [r] Force table resize [v] Toggle quiet
+// [r] Refresh [f] Finish [e] Resize [c] Toggle Callback [?] More Help
 //
 #define PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP ((HRESULT)0x60040104L)
+
+//
+// MessageId: PH_MSG_PERFECT_HASH_CONSOLE_KEYS_MORE_HELP
+//
+// MessageText:
+//
+// [r] Refresh
+// 
+//     Press this at any time to refresh the current solving status for a given
+//     graph.
+// 
+// [f] Finish
+// 
+//     Finish solving the current table.  If in bulk create mode, this only applies
+//     to the active table; subsequent tables will still be processed.
+// 
+//     When in find best graph mode, It is safe to "finish" a table prior to it
+//     hitting the target coverage goal; i.e. the best graph solved at that time
+//     will be the winner for which all the usual post-processing (i.e. writing
+//     the output files, testing, etc.) will occur.
+// 
+//     If no solution has been found at all when finish is pressed, this is just
+//     treated as a failure to solve the table.  If in bulk create mode, the next
+//     table will be handled normally.
+// 
+// [e] Resize
+// 
+//     Force a table resize event.  This immediately stops graph solving and
+//     requests the next size up table (i.e. the next power of two up for the
+//     number of edges), then resumes solving with a new table size.  You can
+//     view the impact of resizes via the "Number of Table Resize Events:" in
+//     the console output.
+// 
+// [c] Toggle Callback
+// 
+//     If a hooked version of PerfectHash.dll is running, and a function hook
+//     callback DLL has been configured via --FunctionHookCallbackDllPath, this
+//     command allows you to quickly toggle the callback on and off and observe
+//     the immediate performance impact in the console via the "Current Attempts
+//     Per Second" metric.
+// 
+//     If function hooking is active, this doesn't do anything.
+// 
+//
+#define PH_MSG_PERFECT_HASH_CONSOLE_KEYS_MORE_HELP ((HRESULT)0x60040105L)
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4158,4 +4228,121 @@ Abstract:
 // --Silent is incompatible with --Quiet.
 //
 #define PH_E_SILENT_INCOMPATIBLE_WITH_QUIET ((HRESULT)0xE00403D7L)
+
+//
+// MessageId: PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_CALLBACK_DLL
+//
+// MessageText:
+//
+// Failed to load the provided function hook callback DLL.
+//
+#define PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_CALLBACK_DLL ((HRESULT)0xE00403D8L)
+
+//
+// MessageId: PH_E_FAILED_TO_GET_ADDRESS_OF_FUNCTION_HOOK_CALLBACK
+//
+// MessageText:
+//
+// Failed to obtain the address of the requested function from the function hook callback DLL.
+//
+#define PH_E_FAILED_TO_GET_ADDRESS_OF_FUNCTION_HOOK_CALLBACK ((HRESULT)0xE00403D9L)
+
+//
+// MessageId: PH_E_FAILED_TO_GET_ADDRESS_OF_SET_FUNCTION_ENTRY_CALLBACK
+//
+// MessageText:
+//
+// Failed to obtain the address of SetFunctionEntryCallback from FunctionHook.dll.
+//
+#define PH_E_FAILED_TO_GET_ADDRESS_OF_SET_FUNCTION_ENTRY_CALLBACK ((HRESULT)0xE00403DAL)
+
+//
+// MessageId: PH_E_FAILED_TO_GET_ADDRESS_OF_CLEAR_FUNCTION_ENTRY_CALLBACK
+//
+// MessageText:
+//
+// Failed to obtain the address of ClearFunctionEntryCallback from FunctionHook.dll.
+//
+#define PH_E_FAILED_TO_GET_ADDRESS_OF_CLEAR_FUNCTION_ENTRY_CALLBACK ((HRESULT)0xE00403DBL)
+
+//
+// MessageId: PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_DLL
+//
+// MessageText:
+//
+// Failed to load the function hook DLL.
+//
+#define PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_DLL ((HRESULT)0xE00403DCL)
+
+//
+// MessageId: PH_E_INVALID_NUMBER_OF_CONDITIONALS
+//
+// MessageText:
+//
+// Encountered incorrect number of conditionals during chunk processing.
+//
+#define PH_E_INVALID_NUMBER_OF_CONDITIONALS ((HRESULT)0xE00403DDL)
+
+//
+// MessageId: PH_E_NUMBER_OF_CONDITIONALS_MISMATCHED
+//
+// MessageText:
+//
+// Encountered mismatched number of conditionals during chunk processing.
+//
+#define PH_E_NUMBER_OF_CONDITIONALS_MISMATCHED ((HRESULT)0xE00403DEL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_MODULE_DEF_FILE
+//
+// MessageText:
+//
+// Error closing module def file.
+//
+#define PH_E_ERROR_DURING_CLOSE_MODULE_DEF_FILE ((HRESULT)0xE00403DFL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_MODULE_DEF_FILE
+//
+// MessageText:
+//
+// Error preparing module def file.
+//
+#define PH_E_ERROR_DURING_PREPARE_MODULE_DEF_FILE ((HRESULT)0xE00403E0L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_MODULE_DEF_FILE
+//
+// MessageText:
+//
+// Error saving module def file.
+//
+#define PH_E_ERROR_DURING_SAVE_MODULE_DEF_FILE ((HRESULT)0xE00403E1L)
+
+//
+// MessageId: PH_E_STRING_BUFFER_TOO_SMALL
+//
+// MessageText:
+//
+// A provided string buffer was too small to carry out the requested operation.
+//
+#define PH_E_STRING_BUFFER_TOO_SMALL     ((HRESULT)0xE00403E2L)
+
+//
+// MessageId: PH_E_FAILED_TO_GET_ADDRESS_OF_GET_FUNCTION_ENTRY_CALLBACK
+//
+// MessageText:
+//
+// Failed to obtain the address of GetFunctionEntryCallback from FunctionHook.dll.
+//
+#define PH_E_FAILED_TO_GET_ADDRESS_OF_GET_FUNCTION_ENTRY_CALLBACK ((HRESULT)0xE00403E3L)
+
+//
+// MessageId: PH_E_FAILED_TO_GET_ADDRESS_OF_IS_FUNCTION_ENTRY_CALLBACK_ENABLED
+//
+// MessageText:
+//
+// Failed to obtain the address of IsFunctionEntryCallbackEnabled from FunctionHook.dll.
+//
+#define PH_E_FAILED_TO_GET_ADDRESS_OF_IS_FUNCTION_ENTRY_CALLBACK_ENABLED ((HRESULT)0xE00403E4L)
 

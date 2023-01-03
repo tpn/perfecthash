@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -29,10 +29,12 @@ Abstract:
 // A handle to the PerfectHash.dll module will be captured in this variable
 // via the DLL_PROCESS_ATTACH message.  This is required in order for proper
 // operation of FormatMessage() when specifying FORMAT_MESSAGE_FROM_HMODULE and
-// using our own internal error codes.
+// using our own internal error codes.  Additionally, MODULEINFO will be saved
+// to PerfectHashModuleInfo.
 //
 
 extern HMODULE PerfectHashModule;
+extern MODULEINFO PerfectHashModuleInfo;
 
 //
 // Components can check this variable to determine if Ctrl-C has been pressed.
@@ -44,15 +46,15 @@ extern volatile ULONG CtrlCPressed;
 // Define a helper macro for validating flags passed as parameters to routines.
 //
 
-#define VALIDATE_FLAGS(Name, Upper)                                \
-    if (ARGUMENT_PRESENT(##Name##FlagsPointer)) {                  \
-        if (FAILED(IsValid##Name##Flags(##Name##FlagsPointer))) {  \
-            return PH_E_INVALID_##Upper##_FLAGS;                   \
-        } else {                                                   \
-            ##Name##Flags.AsULong = ##Name##FlagsPointer->AsULong; \
-        }                                                          \
-    } else {                                                       \
-        ##Name##Flags.AsULong = 0;                                 \
+#define VALIDATE_FLAGS(Name, Upper, Type)                            \
+    if (ARGUMENT_PRESENT(##Name##FlagsPointer)) {                    \
+        if (FAILED(IsValid##Name##Flags(##Name##FlagsPointer))) {    \
+            return PH_E_INVALID_##Upper##_FLAGS;                     \
+        } else {                                                     \
+            ##Name##Flags.As##Type = ##Name##FlagsPointer->As##Type; \
+        }                                                            \
+    } else {                                                         \
+        ##Name##Flags.As##Type = 0;                                  \
     }
 
 //
