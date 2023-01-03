@@ -26,6 +26,7 @@ from datetime import (
 from os.path import (
     join,
     isdir,
+    isfile,
     abspath,
     dirname,
     basename,
@@ -1262,6 +1263,13 @@ def first_writable_file_that_preferably_exists(files):
             pass
 
     raise RuntimeError("no writable files found")
+
+def list_files_by_latest(base, file_filter=None):
+    paths = [ join(base, p) for p in os.listdir(base) ]
+    files = [ f for f in paths if isfile(f) ]
+    if file_filter:
+        files = [ f for f in paths if file_filter(f) ]
+    return [ f.path for f in file_timestamps(files) ]
 
 def list_directories_by_latest(base, directory_filter=None):
     paths = [ join(base, p) for p in os.listdir(base) ]

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -596,12 +596,18 @@ const UNICODE_STRING DotCSourceSuffix = RCS(L".c");
 const UNICODE_STRING NullUnicodeString = RCS(L"");
 const UNICODE_STRING KeysWildcardSuffix = RCS(L"*.keys");
 const UNICODE_STRING KeysTableSizeSuffix = RCS(L".TableSize");
+const UNICODE_STRING TableValuesSuffix = RCS(L"_TableValues_");
+const UNICODE_STRING TableValuesExtension = RCS(L"bin");
+
 const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
     RCS(L"PerfectHashBulkCreate");
+
 const UNICODE_STRING PerfectHashBulkCreateBestCsvBaseName =
     RCS(L"PerfectHashBulkCreateBest");
+
 const UNICODE_STRING PerfectHashTableCreateCsvBaseName =
     RCS(L"PerfectHashTableCreate");
+
 const UNICODE_STRING PerfectHashTableCreateBestCsvBaseName =
     RCS(L"PerfectHashTableCreateBest");
 
@@ -611,6 +617,8 @@ const STRING DotDllSuffixA = RCS(".dll");
 const STRING DotLibSuffixA = RCS(".lib");
 const STRING DynamicLibraryConfigurationTypeA = RCS("DynamicLibrary");
 const STRING ApplicationConfigurationTypeA = RCS("Application");
+const STRING FunctionHookCallbackDefaultFunctionNameA =
+    RCS("InterlockedIncrement");
 
 //
 // VCProject and Makefile string constants.  Consumed by the file work callback
@@ -648,6 +656,7 @@ const UNICODE_STRING BatchFileExtension = RCS(L"bat");
 const UNICODE_STRING CSourceFileExtension = RCS(L"c");
 const UNICODE_STRING CHeaderFileExtension = RCS(L"h");
 const UNICODE_STRING TableFileExtension = RCS(L"pht1");
+const UNICODE_STRING ModuleDefFileExtension = RCS(L"def");
 const UNICODE_STRING VCPropsFileExtension = RCS(L"props");
 const UNICODE_STRING MakefileMkFileExtension = RCS(L"mk");
 const UNICODE_STRING VCProjectFileExtension = RCS(L"vcxproj");

@@ -56,6 +56,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <PreprocessorDefinitions>_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <EnableEnhancedInstructionSet Condition="$(InstructionSet) != ''">$(InstructionSet)</EnableEnhancedInstructionSet>
       <!--
       <BrowseInformationFile>$(IntDir)$(ProjectName).bsc</BrowseInformationFile>
       -->
@@ -161,6 +162,10 @@
     <ResourceCompile>
       <Culture>0x0409</Culture>
     </ResourceCompile>
+
+    <MASM>
+      <IncludePaths>$(SolutionDir)\..\include</IncludePaths>
+    </MASM>
 
   </ItemDefinitionGroup>
 

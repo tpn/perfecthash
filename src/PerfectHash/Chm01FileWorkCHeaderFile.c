@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -131,6 +131,10 @@ PrepareCHeaderFileChm01(
     OUTPUT_INT(NumberOfSeeds);
     OUTPUT_RAW("];\n");
 
+    OUTPUT_RAW("\n\nextern const BYTE ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_NumberOfSeeds;\n");
+
     for (Index = 0, Count = 1; Index < NumberOfSeeds; Index++, Count++) {
         OUTPUT_RAW("extern const CPHSEED ");
         OUTPUT_STRING(Name);
@@ -155,25 +159,57 @@ PrepareCHeaderFileChm01(
 
     OUTPUT_RAW("\nextern const CPHDKEY ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_HashMask;\nextern const CPHDKEY ");
+    OUTPUT_RAW("_HashMask;\n");
+
+    OUTPUT_RAW("extern const CPHDKEY ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_IndexMask;\n\nextern const ");
+    OUTPUT_RAW("_IndexMask;\n\n");
+
+    OUTPUT_RAW("extern const ");
     OUTPUT_STRING(Table->TableDataArrayTypeName);
     OUTPUT_RAW(" ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_TableData[];\nextern CPHVALUE ");
+    OUTPUT_RAW("_TableData[];\n");
+
+    OUTPUT_RAW("extern CPHVALUE ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_TableValues[];\n\n");
+    OUTPUT_RAW("_TableValues[];\n");
+
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_TableValueSizeInBytes;\n");
+
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_NumberOfTableValues;\n\n");
 
     OUTPUT_RAW("extern const CPHKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_Keys[];\n");
+
     OUTPUT_RAW("extern const CPHDKEY ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_DownsizedKeys[];\n");
-    OUTPUT_RAW("extern const CPHDKEY ");
+
+    OUTPUT_RAW("extern const ULONG ");
     OUTPUT_STRING(Name);
-    OUTPUT_RAW("_NumberOfKeys;\n\n");
+    OUTPUT_RAW("_NumberOfKeys;\n");
+
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_KeySizeInBytes;\n");
+
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_OriginalKeySizeInBytes;\n");
+
+    OUTPUT_RAW("extern const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_DownsizedKeySizeInBytes;\n\n");
+
+    if (Table->TableCreateFlags.IncludeKeysInCompiledDll != FALSE) {
+        OUTPUT_RAW("#define CPH_HAS_KEYS 1\n\n");
+    }
 
     //
     // If key downsizing has occurred, output the bitmap that was used.

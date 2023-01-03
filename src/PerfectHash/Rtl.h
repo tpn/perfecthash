@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -2106,14 +2106,14 @@ IsAligned(
 // a given power-of-2 value.
 //
 
-typedef enum _TYPE {
-    ByteType = 0,
-    ShortType = 1,
-    LongType = 2,
-    LongLongType = 3,
-    XmmType = 4,
-    YmmType = 5,
-    ZmmType = 6,
+typedef enum _TYPE {        // Number of bytes
+    ByteType = 0,           //  1
+    ShortType = 1,          //  2
+    LongType = 2,           //  4
+    LongLongType = 3,       //  8
+    XmmType = 4,            //  16
+    YmmType = 5,            //  32
+    ZmmType = 6,            //  64
 } TYPE;
 typedef TYPE *PTYPE;
 

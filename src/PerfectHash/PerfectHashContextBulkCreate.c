@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -214,9 +214,9 @@ Return Value:
         Allocator = Context->Allocator;
     }
 
-    VALIDATE_FLAGS(ContextBulkCreate, CONTEXT_BULK_CREATE);
-    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
-    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
+    VALIDATE_FLAGS(ContextBulkCreate, CONTEXT_BULK_CREATE, ULong);
+    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
+    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE, ULong);
 
     //
     // IsValidTableCreateFlags() returns a more specific error code than the
@@ -229,10 +229,10 @@ Return Value:
         if (FAILED(Result)) {
             return Result;
         } else {
-            TableCreateFlags.AsULong = TableCreateFlagsPointer->AsULong;
+            TableCreateFlags.AsULongLong = TableCreateFlagsPointer->AsULongLong;
         }
     } else {
-        TableCreateFlags.AsULong = 0;
+        TableCreateFlags.AsULongLong = 0;
     }
 
     if (!ARGUMENT_PRESENT(KeysDirectory)) {
@@ -281,6 +281,16 @@ Return Value:
     Silent = (TableCreateFlags.Silent != FALSE);
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
+
+    Result = PerfectHashContextTryPrepareCallbackTableValuesFile(
+        Context,
+        TableCreateFlags
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextTryPrepareCallbackTableValuesFile, Result);
+        goto Error;
+    }
 
     //
     // Create a buffer we can use for temporary path construction.  We want it
@@ -1502,7 +1512,7 @@ Return Value:
 
     ContextBulkCreateFlags->AsULong = 0;
     KeysLoadFlags->AsULong = 0;
-    TableCreateFlags->AsULong = 0;
+    TableCreateFlags->AsULongLong = 0;
     TableCompileFlags->AsULong = 0;
 
     for (; CurrentArg < NumberOfArguments; CurrentArg++, ArgW++) {
@@ -1713,6 +1723,21 @@ Return Value:
     if (FAILED(Result)) {
         return Result;
     }
+
+    Result = PerfectHashContextInitializeFunctionHookCallbackDll(
+        Context,
+        &TableCreateFlags,
+        &TableCreateParameters
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(
+            PerfectHashContextTableCreateArgvW_InitFunctionHookCallbackDll,
+            Result
+        );
+        return Result;
+    }
+
 
     if (MaximumConcurrency > 0) {
         Result = Context->Vtbl->SetMaximumConcurrency(Context,

@@ -377,6 +377,22 @@ class Config(RawConfigParser):
 
     @property
     @memoize
+    def perfecthash_x64_dll_pgi_path(self):
+        return join_path(
+            self.project_root,
+            self.get('perfecthash', 'perfecthash_x64_dll_pgi'),
+        )
+
+    @property
+    @memoize
+    def perfecthash_x64_dll_pgo_path(self):
+        return join_path(
+            self.project_root,
+            self.get('perfecthash', 'perfecthash_x64_dll_pgo'),
+        )
+
+    @property
+    @memoize
     def current_architecture(self):
         import ctypes
         ptr_size = ctypes.sizeof(ctypes.c_void_p)

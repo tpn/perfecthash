@@ -3,6 +3,7 @@
 #===============================================================================
 from .path import (
     dirname,
+    basename,
     join_path,
 )
 
@@ -1286,6 +1287,49 @@ MEMORY_COVERAGE_CACHE_LINE_COUNTS_CSV_HEADER_SLIM = (
     'CacheLine_63',
     'CacheLine_64',
 )
+
+# FunctionEntry
+
+FUNCTION_ENTRY = (
+    'PerfectHash/FunctionEntry/win:Info'
+)
+
+FUNCTION_ENTRY_ETW_HEADER = (
+    'PerfectHash/FunctionEntry/win:Info,'
+    '  TimeStamp,'
+    '     Process Name ( PID),'
+    '   ThreadID,'
+    ' CPU,'
+    ' etw:ActivityId,'
+    ' etw:Related ActivityId,'
+    ' etw:UserSid,'
+    ' etw:SessionId,'
+    ' Rsp'
+)
+
+FUNCTION_ENTRY_CSV_HEADER = (
+    'EventName',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'RelatedActivityId',
+    'UserSid',
+    'SessionId',
+    'Rsp',
+)
+
+FUNCTION_ENTRY_CSV_HEADER_SLIM = (
+    'LineNumber',
+    'TimeStamp',
+    'ProcessID',
+    'ThreadID',
+    'CPU',
+    'ActivityId',
+    'Rsp',
+)
+
 # Maps
 
 EVENT_NAME_TO_ETW_HEADER = {
@@ -1300,6 +1344,7 @@ EVENT_NAME_TO_ETW_HEADER = {
     IS_ACYCLIC: IS_ACYCLIC_ETW_HEADER,
     MEMORY_COVERAGE_CACHE_LINE_COUNTS:
         MEMORY_COVERAGE_CACHE_LINE_COUNTS_ETW_HEADER,
+    FUNCTION_ENTRY: FUNCTION_ENTRY_ETW_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER = {
@@ -1319,6 +1364,7 @@ EVENT_NAME_TO_CSV_HEADER = {
     IS_ACYCLIC: IS_ACYCLIC_CSV_HEADER,
     MEMORY_COVERAGE_CACHE_LINE_COUNTS:
         MEMORY_COVERAGE_CACHE_LINE_COUNTS_CSV_HEADER,
+    FUNCTION_ENTRY: FUNCTION_ENTRY_CSV_HEADER,
 }
 
 EVENT_NAME_TO_CSV_HEADER_SLIM = {
@@ -1338,6 +1384,7 @@ EVENT_NAME_TO_CSV_HEADER_SLIM = {
     IS_ACYCLIC: IS_ACYCLIC_CSV_HEADER_SLIM,
     MEMORY_COVERAGE_CACHE_LINE_COUNTS:
         MEMORY_COVERAGE_CACHE_LINE_COUNTS_CSV_HEADER_SLIM,
+    FUNCTION_ENTRY: FUNCTION_ENTRY_CSV_HEADER_SLIM,
 }
 
 HAS_SEED_DATA = {
@@ -2536,6 +2583,7 @@ def process_xperf_perfecthash_csv(path, out=None):
     pmc = PMC
     is_acyclic = IS_ACYCLIC
     memory_coverage_cache_line_counts = MEMORY_COVERAGE_CACHE_LINE_COUNTS
+    function_entry = FUNCTION_ENTRY
 
     assign_io = io.StringIO()
     generate_random_bytes_io = io.StringIO()
@@ -2555,6 +2603,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         pmc: io.StringIO(),
         is_acyclic: io.StringIO(),
         memory_coverage_cache_line_counts: io.StringIO(),
+        function_entry: io.StringIO(),
     }
 
     paths = {
@@ -2573,6 +2622,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         is_acyclic: f'{prefix}_IsAcyclic.csv',
         memory_coverage_cache_line_counts:
             f'{prefix}_MemoryCoverageCacheLineCounts.csv',
+        function_entry: f'{prefix}_FunctionEntry.csv',
     }
 
     counts = {
@@ -2590,6 +2640,7 @@ def process_xperf_perfecthash_csv(path, out=None):
         pmc: 0,
         is_acyclic: 0,
         memory_coverage_cache_line_counts: 0,
+        function_entry: 0,
     }
 
     names = set(counts.keys())

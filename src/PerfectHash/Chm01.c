@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -235,7 +235,7 @@ Return Value:
         return E_POINTER;
     }
 
-    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
     Silent = (TableCreateFlags.Silent != FALSE);
 
     Context = Table->Context;
@@ -494,7 +494,7 @@ Return Value:
     // used by GraphInitialize() to tweak vtbl construction.
     //
 
-    TlsContext->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
+    TlsContext->TableCreateFlags.AsULongLong = TableCreateFlags.AsULongLong;
 
     //
     // ....and, many years later, we find ourselves in the position of wanting
@@ -555,13 +555,17 @@ Return Value:
         // Copy relevant flags over, then save the graph instance in the array.
         //
 
-        Graph->Flags.SkipVerification = TableCreateFlags.SkipGraphVerification;
+        Graph->Flags.SkipVerification = (
+            TableCreateFlags.SkipGraphVerification != FALSE
+        );
 
-        Graph->Flags.WantsWriteCombiningForVertexPairsArray =
-            TableCreateFlags.EnableWriteCombineForVertexPairs;
+        Graph->Flags.WantsWriteCombiningForVertexPairsArray = (
+            TableCreateFlags.EnableWriteCombineForVertexPairs != FALSE
+        );
 
-        Graph->Flags.RemoveWriteCombineAfterSuccessfulHashKeys =
-            TableCreateFlags.RemoveWriteCombineAfterSuccessfulHashKeys;
+        Graph->Flags.RemoveWriteCombineAfterSuccessfulHashKeys = (
+            TableCreateFlags.RemoveWriteCombineAfterSuccessfulHashKeys != FALSE
+        );
 
         Graph->Index = Index;
         Graphs[Index] = Graph;
@@ -1748,7 +1752,7 @@ Return Value:
     PopulationCount32 = Rtl->PopulationCount32;
     RoundUpPowerOfTwo32 = Rtl->RoundUpPowerOfTwo32;
     RoundUpNextPowerOfTwo32 = Rtl->RoundUpNextPowerOfTwo32;
-    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
 
     //
     // If a previous Info struct pointer has been passed, copy the current
@@ -2800,8 +2804,11 @@ Return Value:
     SYSTEMTIME LocalTime;
     ULONG PredictedAttempts;
     ULARGE_INTEGER Duration;
+    LONGLONG CurrentAttempts;
     DOUBLE AttemptsPerSecond;
     DOUBLE DurationInSeconds;
+    DOUBLE CurrentAttemptsPerSecond;
+    DOUBLE CurrentDurationInSeconds;
     PFILETIME64 TableFileTime;
     DOUBLE SolutionsFoundRatio;
     ULONGLONG BufferSizeInBytes;
@@ -2825,6 +2832,18 @@ Return Value:
         "Keys File Name:                                    ", \
         &Context->Table->Keys->File->Path->FileName,           \
         OUTPUT_UNICODE_STRING_FAST                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Number of Keys:                                    ", \
+        Context->Table->Keys->NumberOfKeys.QuadPart,           \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Number of Table Resize Events:                     ", \
+        Context->NumberOfTableResizeEvents,                    \
+        OUTPUT_INT                                             \
     )                                                          \
                                                                \
     ENTRY(                                                     \
@@ -2854,6 +2873,18 @@ Return Value:
     ENTRY(                                                     \
         "Attempts Per Second:                               ", \
         AttemptsPerSecond,                                     \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Current Attempts:                                  ", \
+        CurrentAttempts,                                       \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Current Attempts Per Second:                       ", \
+        CurrentAttemptsPerSecond,                              \
         OUTPUT_DOUBLE                                          \
     )                                                          \
                                                                \
@@ -2938,12 +2969,6 @@ Return Value:
     ENTRY(                                                     \
         "Highest Deleted Edges Count:                       ", \
         Context->HighestDeletedEdgesCount,                     \
-        OUTPUT_INT                                             \
-    )                                                          \
-                                                               \
-    ENTRY(                                                     \
-        "Number of Table Resize Events:                     ", \
-        Context->NumberOfTableResizeEvents,                    \
         OUTPUT_INT                                             \
     )
 
@@ -3048,7 +3073,7 @@ Return Value:
     // Fast-path exit if we're not in quiet mode.
     //
 
-    TableCreateFlags.AsULong = Context->Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Context->Table->TableCreateFlags.AsULongLong;
 
     if (TableCreateFlags.Quiet) {
         return S_OK;
@@ -3104,7 +3129,7 @@ Return Value:
     DurationString.MaximumLength = (USHORT)(Chars << 1);
 
     //
-    // Calculate attempts per second.
+    // Calculate total attempts per second.
     //
 
     DurationInSeconds = (DOUBLE)(
@@ -3113,6 +3138,29 @@ Return Value:
     );
 
     AttemptsPerSecond = (((DOUBLE)Context->Attempts) / DurationInSeconds);
+
+    //
+    // Calculate "current" values.
+    //
+
+    CurrentAttempts = Context->Attempts - Context->BaselineAttempts;
+    if (Context->BaselineFileTime.AsULongLong > 0) {
+        Duration.QuadPart = (
+            FileTime.AsULongLong -
+            Context->BaselineFileTime.AsULongLong
+        );
+
+        CurrentDurationInSeconds = (DOUBLE)(
+            ((DOUBLE)Duration.QuadPart) /
+            ((DOUBLE)1e7)
+        );
+    } else {
+        CurrentDurationInSeconds = DurationInSeconds;
+    }
+
+    CurrentAttemptsPerSecond = (
+        ((DOUBLE)CurrentAttempts) / CurrentDurationInSeconds
+    );
 
     //
     // If we've found at least one solution, calculate solutions found ratio
@@ -3321,26 +3369,38 @@ Return Value:
 {
     COORD Coord;
     BOOL Success;
-    BOOL IsQuit;
-    BOOL IsStatus;
+    BOOL IsFinish;
+    BOOL IsRefresh;
     BOOL IsResize;
     BOOL IsVerbose;
+    BOOL IsMoreHelp;
+    BOOL IsToggleCallback;
+    BOOL DoFlushOnExit;
     HRESULT Result;
     ULONG WaitResult;
+    DWORD LastError;
     HANDLE InputHandle;
     INPUT_RECORD Input;
+    FILETIME64 FileTime;
+    SYSTEMTIME LocalTime;
     ULONG NumberOfEvents;
     DWORD NumberOfEventsRead;
     HANDLE Events[3] = { 0, };
     KEY_EVENT_RECORD *KeyEvent;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    PSET_FUNCTION_ENTRY_CALLBACK SetFunctionEntryCallback;
+    PCLEAR_FUNCTION_ENTRY_CALLBACK ClearFunctionEntryCallback;
+    PIS_FUNCTION_ENTRY_CALLBACK_ENABLED IsFunctionEntryCallbackEnabled;
 
     //
     // Initialize aliases.
     //
 
     InputHandle = Context->InputHandle;
-    TableCreateFlags.AsULong = Context->Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Context->Table->TableCreateFlags.AsULongLong;
+    SetFunctionEntryCallback = Context->SetFunctionEntryCallback;
+    ClearFunctionEntryCallback = Context->ClearFunctionEntryCallback;
+    IsFunctionEntryCallbackEnabled = Context->IsFunctionEntryCallbackEnabled;
 
     //
     // Initialize the event handles upon which we will wait.
@@ -3367,6 +3427,8 @@ Return Value:
     // Enter our console loop.
     //
 
+    DoFlushOnExit = TRUE;
+
     while (TRUE) {
 
         WaitResult = WaitForMultipleObjects(NumberOfEvents,
@@ -3390,10 +3452,12 @@ Return Value:
             // A new best graph has been found.
             //
 
-            IsStatus = TRUE;
+            IsRefresh = TRUE;
             IsResize = FALSE;
-            IsQuit = FALSE;
+            IsFinish = FALSE;
             IsVerbose = FALSE;
+            IsMoreHelp = FALSE;
+            IsToggleCallback = FALSE;
 
             //
             // As all the context's events are created as manual reset, we need
@@ -3419,7 +3483,20 @@ Return Value:
                                        &NumberOfEventsRead);
 
             if (!Success) {
-                SYS_ERROR(ReadConsoleInput);
+                LastError = GetLastError();
+
+                //
+                // ERROR_INVALID_FUNCTION will be returned if the console has
+                // been redirected or isn't otherwise available; this is not
+                // considered fatal.  Otherwise, log the error.  In all cases,
+                // disable the final console flush and exit the routine.
+                //
+
+                if (LastError != ERROR_INVALID_FUNCTION) {
+                    SYS_ERROR(ReadConsoleInput);
+                }
+
+                DoFlushOnExit = FALSE;
                 goto End;
             }
 
@@ -3459,22 +3536,22 @@ Return Value:
                 continue;
             }
 
-            IsStatus = (
-                (KeyEvent->uChar.AsciiChar == 's') ||
-                (KeyEvent->uChar.AsciiChar == 'S') ||
-                (KeyEvent->wVirtualKeyCode == 0x0053)
-            );
-
-            IsResize = (
+            IsRefresh = (
                 (KeyEvent->uChar.AsciiChar == 'r') ||
                 (KeyEvent->uChar.AsciiChar == 'R') ||
                 (KeyEvent->wVirtualKeyCode == 0x0052)
             );
 
-            IsQuit = (
-                (KeyEvent->uChar.AsciiChar == 'q') ||
-                (KeyEvent->uChar.AsciiChar == 'Q') ||
-                (KeyEvent->wVirtualKeyCode == 0x0051)
+            IsResize = (
+                (KeyEvent->uChar.AsciiChar == 'e') ||
+                (KeyEvent->uChar.AsciiChar == 'E') ||
+                (KeyEvent->wVirtualKeyCode == 0x0045)
+            );
+
+            IsFinish = (
+                (KeyEvent->uChar.AsciiChar == 'f') ||
+                (KeyEvent->uChar.AsciiChar == 'F') ||
+                (KeyEvent->wVirtualKeyCode == 0x0045)
             );
 
             IsVerbose = (
@@ -3482,9 +3559,20 @@ Return Value:
                 (KeyEvent->uChar.AsciiChar == 'V') ||
                 (KeyEvent->wVirtualKeyCode == 0x0056)
             );
+
+            IsMoreHelp = (
+                (KeyEvent->uChar.AsciiChar == '?') ||
+                (KeyEvent->wVirtualKeyCode == VK_OEM_2)
+            );
+
+            IsToggleCallback = (
+                (KeyEvent->uChar.AsciiChar == 'c') ||
+                (KeyEvent->uChar.AsciiChar == 'C') ||
+                (KeyEvent->wVirtualKeyCode == 0x0043)
+            );
         }
 
-        if (IsQuit) {
+        if (IsFinish) {
 
             SetStopSolving(Context);
             if (!SetEvent(Context->ShutdownEvent)) {
@@ -3501,7 +3589,7 @@ Return Value:
             }
             break;
 
-        } else if (IsStatus) {
+        } else if (IsRefresh) {
 
             Result = PrintCurrentContextStatsChm01(Context);
             if (FAILED(Result)) {
@@ -3534,6 +3622,46 @@ Return Value:
                 );
             }
 
+        } else if (IsToggleCallback) {
+
+            if (!Context->State.HasFunctionHooking) {
+                continue;
+            }
+
+            if (IsFunctionEntryCallbackEnabled()) {
+                ClearFunctionEntryCallback(&Context->CallbackFunction,
+                                           &Context->CallbackContext,
+                                           &Context->CallbackModuleBaseAddress,
+                                           &Context->CallbackModuleSizeInBytes,
+                                           &Context->CallbackModuleIgnoreRip);
+            } else {
+                SetFunctionEntryCallback(Context->CallbackFunction,
+                                         Context->CallbackContext,
+                                         Context->CallbackModuleBaseAddress,
+                                         Context->CallbackModuleSizeInBytes,
+                                         Context->CallbackModuleIgnoreRip);
+            }
+
+            //
+            // Update the baseline attempts and file time.
+            //
+
+            GetLocalTime(&LocalTime);
+            if (!SystemTimeToFileTime(&LocalTime, &FileTime.AsFileTime)) {
+                SYS_ERROR(SystemTimeToFileTime);
+                continue;
+            }
+
+            Context->BaselineAttempts = Context->Attempts;
+            Context->BaselineFileTime.AsULongLong = FileTime.AsULongLong;
+
+            continue;
+
+        } else if (IsMoreHelp) {
+
+            PerfectHashPrintMessage(PH_MSG_PERFECT_HASH_CONSOLE_KEYS_MORE_HELP);
+            continue;
+
         } else {
 
             //
@@ -3551,7 +3679,7 @@ Return Value:
 
 End:
 
-    if (!FlushConsoleInputBuffer(InputHandle)) {
+    if (DoFlushOnExit && !FlushConsoleInputBuffer(InputHandle)) {
         SYS_ERROR(FlushConsoleInputBuffer);
     }
 }

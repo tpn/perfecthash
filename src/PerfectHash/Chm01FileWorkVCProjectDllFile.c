@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -38,6 +38,7 @@ PrepareVCProjectDllFileChm01(
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
     PCCHUNK Chunks = VCProjectDllFileChunks;
+    BOOLEAN Conditionals[3] = { FALSE, };
     const ULONG NumberOfChunks = VCProjectDllFileNumberOfChunks;
 
     //
@@ -72,7 +73,19 @@ PrepareVCProjectDllFileChm01(
     Values.FileSuffix = &DllFileSuffix;
     Values.ConfigurationType = &DynamicLibraryConfigurationTypeA;
 
-    Result = ProcessChunks(Rtl, Chunks, NumberOfChunks, &Values, &Output);
+    if (Table->TableCreateFlags.IncludeKeysInCompiledDll != FALSE) {
+        Conditionals[0] = TRUE;
+        Conditionals[1] = TRUE;
+        Conditionals[2] = TRUE;
+    }
+
+    Result = ProcessChunks(Rtl,
+                           Chunks,
+                           NumberOfChunks,
+                           &Values,
+                           ARRAYSIZE(Conditionals),
+                           &Conditionals[0],
+                           &Output);
 
     if (FAILED(Result)) {
         PH_ERROR(ProcessChunks, Result);
@@ -203,6 +216,16 @@ CHUNK VCProjectDllFileChunks[] = {
             "    </ClCompile>\r\n"
             "    <Link>\r\n"
             "      <NoEntryPoint>true</NoEntryPoint>\r\n"
+            "      <ModuleDefinitionFile>"
+        ),
+    },
+
+    { ChunkOpInsertBaseName, },
+
+    {
+        ChunkOpRaw,
+        RCS(
+            ".def</ModuleDefinitionFile>\r\n"
             "    </Link>\r\n"
             "  </ItemDefinitionGroup>\r\n"
             "  <ItemGroup>\r\n"
@@ -278,8 +301,32 @@ CHUNK VCProjectDllFileChunks[] = {
 
     {
         ChunkOpRaw,
+        RCS("_TableData.c\" />\r\n"),
+    },
+
+    //
+    // Conditionally include the keys file if requested.
+    //
+
+    {
+        ChunkOpRawConditional,
+        RCS("    <ClCompile Include=\""),
+    },
+
+    { ChunkOpInsertBaseNameConditional, },
+
+    {
+        ChunkOpRawConditional,
+        RCS("_Keys.c\" />\r\n"),
+    },
+
+    //
+    // End conditional inclusion of keys.  Conditional op count = 3.
+    //
+
+    {
+        ChunkOpRaw,
         RCS(
-            "_TableData.c\" />\r\n"
             "  </ItemGroup>\r\n"
             "  <Import Project=\"$(VCTargetsPath)\\Microsoft.Cpp.targets\" />\r\n"
             "</Project>\r\n"

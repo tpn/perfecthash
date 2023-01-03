@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -231,7 +231,7 @@ Return Value:
         return E_POINTER;
     }
 
-    VALIDATE_FLAGS(DirectoryOpen, DIRECTORY_OPEN);
+    VALIDATE_FLAGS(DirectoryOpen, DIRECTORY_OPEN, ULong);
 
     if (!TryAcquirePerfectHashPathLockShared(SourcePath)) {
         return PH_E_SOURCE_PATH_LOCKED;
@@ -416,7 +416,7 @@ Return Value:
         return E_POINTER;
     }
 
-    VALIDATE_FLAGS(DirectoryCreate, DIRECTORY_CREATE);
+    VALIDATE_FLAGS(DirectoryCreate, DIRECTORY_CREATE, ULong);
 
     if (!TryAcquirePerfectHashPathLockShared(SourcePath)) {
         return PH_E_SOURCE_PATH_LOCKED;

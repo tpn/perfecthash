@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -2517,7 +2517,7 @@ IsValidContextTableCreateFlags(
 
 typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
 
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
+    struct _Struct_size_bytes_(sizeof(ULONGLONG)) {
 
         //
         // When set, disables the default "first solved graph wins" behavior
@@ -2539,7 +2539,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         //      the best memory coverage behavior.
         //
 
-        ULONG FindBestGraph:1;
+        ULONGLONG FindBestGraph:1;
 
         //
         // When set, skips the internal graph verfication check that ensures a
@@ -2558,7 +2558,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         //      correctly detects that invalid solutions are being generated.
         //
 
-        ULONG SkipGraphVerification:1;
+        ULONGLONG SkipGraphVerification:1;
 
         //
         // When set, indicates that the resulting table will not be used after
@@ -2574,7 +2574,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // like Index() etc will result in an access violation.
         //
 
-        ULONG CreateOnly:1;
+        ULONGLONG CreateOnly:1;
 
         //
         // When set, tries to allocate the table data using large pages.  This
@@ -2584,7 +2584,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // Analogous to TryLargePagesForTableData flag in table load flags.
         //
 
-        ULONG TryLargePagesForTableData:1;
+        ULONGLONG TryLargePagesForTableData:1;
 
         //
         // When set, tries to allocate the values array using large pages.
@@ -2594,7 +2594,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // Analogous to TryLargePagesForValuesArray flag in table load flags.
         //
 
-        ULONG TryLargePagesForValuesArray:1;
+        ULONGLONG TryLargePagesForValuesArray:1;
 
         //
         // When set, uses any previous table size information associated with
@@ -2602,7 +2602,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // and masking type.
         //
 
-        ULONG UsePreviousTableSize:1;
+        ULONGLONG UsePreviousTableSize:1;
 
         //
         // When set, incorporates the number of table resize events encountered
@@ -2610,14 +2610,14 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // name.
         //
 
-        ULONG IncludeNumberOfTableResizeEventsInOutputPath:1;
+        ULONGLONG IncludeNumberOfTableResizeEventsInOutputPath:1;
 
         //
         // When set, incorporates the number of table elements (i.e. the size)
         // of the winning perfect hash solution into the final output name.
         //
 
-        ULONG IncludeNumberOfTableElementsInOutputPath:1;
+        ULONGLONG IncludeNumberOfTableElementsInOutputPath:1;
 
         //
         // When set, disables all file work (I/O).  This will prevent generation
@@ -2625,7 +2625,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // supporting source files for the compiled perfect hash table.
         //
 
-        ULONG NoFileIo:1;
+        ULONGLONG NoFileIo:1;
 
         //
         // When set, does not print any console output related to table creation
@@ -2634,7 +2634,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // N.B. Incompatible with flag Quiet.
         //
 
-        ULONG Silent:1;
+        ULONGLONG Silent:1;
 
         //
         // Enables redundant checks in the routine that determines whether or
@@ -2643,42 +2643,42 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // the graph solving logic, though.
         //
 
-        ULONG Paranoid:1;
+        ULONGLONG Paranoid:1;
 
         //
         // Skips calculating assigned memory coverage when in "first graph wins"
         // mode.
         //
 
-        ULONG SkipMemoryCoverageInFirstGraphWinsMode:1;
+        ULONGLONG SkipMemoryCoverageInFirstGraphWinsMode:1;
 
         //
         // When set, tries to allocate the edge and vertex arrays used by graphs
         // during solving using large pages.
         //
 
-        ULONG TryLargePagesForGraphEdgeAndVertexArrays:1;
+        ULONGLONG TryLargePagesForGraphEdgeAndVertexArrays:1;
 
         //
         // When set, tries to allocate the table data used by graphs during
         // solving using large pages.
         //
 
-        ULONG TryLargePagesForGraphTableData:1;
+        ULONGLONG TryLargePagesForGraphTableData:1;
 
         //
         // When set, omits writing a row in the applicable .csv file if table
         // creation failed.
         //
 
-        ULONG OmitCsvRowIfTableCreateFailed:1;
+        ULONGLONG OmitCsvRowIfTableCreateFailed:1;
 
         //
         // When set, omits writing a row in the applicable .csv file if table
         // creation succeeded.
         //
 
-        ULONG OmitCsvRowIfTableCreateSucceeded:1;
+        ULONGLONG OmitCsvRowIfTableCreateSucceeded:1;
 
         //
         // When set, causes the C preprocessor macro CPH_INDEX_ONLY to be
@@ -2691,7 +2691,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // table values independently.
         //
 
-        ULONG IndexOnly:1;
+        ULONGLONG IndexOnly:1;
 
         //
         // When set, uses a shared read-write section for the table values
@@ -2701,7 +2701,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // N.B. Has no effect if --IndexOnly is also specified.
         //
 
-        ULONG UseRwsSectionForTableValues:1;
+        ULONGLONG UseRwsSectionForTableValues:1;
 
         //
         // When set, uses implementations of RtlCopyPages and RtlFillPages that
@@ -2710,13 +2710,13 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // more info.
         //
 
-        ULONG UseNonTemporalAvx2Routines:1;
+        ULONGLONG UseNonTemporalAvx2Routines:1;
 
         //
         // When set, disables writing the output .csv file.
         //
 
-        ULONG DisableCsvOutputFile:1;
+        ULONGLONG DisableCsvOutputFile:1;
 
         //
         // When set, clamps the number of edges to always be equal to the
@@ -2732,7 +2732,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // And masking (i.e. not modulus masking).
         //
 
-        ULONG ClampNumberOfEdges:1;
+        ULONGLONG ClampNumberOfEdges:1;
 
         //
         // When set, uses the original (slower) seeded hash routines (the ones
@@ -2743,7 +2743,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // N.B. This flag is incompatible with HashAllKeysFirst.
         //
 
-        ULONG UseOriginalSeededHashRoutines:1;
+        ULONGLONG UseOriginalSeededHashRoutines:1;
 
         //
         // When set, changes the graph solving logic such that vertices (i.e.
@@ -2753,7 +2753,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // N.B. This flag is incompatible with UseOriginalSeededHashRoutines.
         //
 
-        ULONG HashAllKeysFirst:1;
+        ULONGLONG HashAllKeysFirst:1;
 
         //
         // When set, allocates the memory for the vertex pairs array with
@@ -2763,7 +2763,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         //      TryLargePagesForVertexPairs.
         //
 
-        ULONG EnableWriteCombineForVertexPairs:1;
+        ULONGLONG EnableWriteCombineForVertexPairs:1;
 
         //
         // When set, automatically changes the page protection of the vertex
@@ -2774,7 +2774,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         //      and HashAllKeysFirst is set.
         //
 
-        ULONG RemoveWriteCombineAfterSuccessfulHashKeys:1;
+        ULONGLONG RemoveWriteCombineAfterSuccessfulHashKeys:1;
 
         //
         // When set, tries to allocate the array for vertex pairs using large
@@ -2784,7 +2784,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         //      EnableWriteCombineForVertexPairs.
         //
 
-        ULONG TryLargePagesForVertexPairs:1;
+        ULONGLONG TryLargePagesForVertexPairs:1;
 
         //
         // When set, if a non-zero value is available in the table's predicted
@@ -2793,14 +2793,14 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // dispatching parallel graph solving attempts.
         //
 
-        ULONG TryUsePredictedAttemptsToLimitMaxConcurrency:1;
+        ULONGLONG TryUsePredictedAttemptsToLimitMaxConcurrency:1;
 
         //
         // When set, if uses a random seed obtained from the operating system to
         // initialize the selected RNG.  Requires --Rng.
         //
 
-        ULONG RngUseRandomStartSeed:1;
+        ULONGLONG RngUseRandomStartSeed:1;
 
         //
         // When set, tries to use optimized AVX2 routines for hashing keys, if
@@ -2811,7 +2811,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // N.B. Currently only implemented for the MultiplyShiftR hash function.
         //
 
-        ULONG TryUseAvx2HashFunction:1;
+        ULONGLONG TryUseAvx2HashFunction:1;
 
         //
         // When set, tries to use optimized AVX512 routines for hashing keys, if
@@ -2822,14 +2822,14 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // N.B. Currently only implemented for the MultiplyShiftR hash function.
         //
 
-        ULONG TryUseAvx512HashFunction:1;
+        ULONGLONG TryUseAvx512HashFunction:1;
 
         //
         // When set, disables automatically using the AVX2 version of the
         // calculate memory coverage routine.
         //
 
-        ULONG DoNotTryUseAvx2MemoryCoverageFunction:1;
+        ULONGLONG DoNotTryUseAvx2MemoryCoverageFunction:1;
 
         //
         // When set, disables the best graph console output and only prints the
@@ -2838,18 +2838,34 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // N.B. Incompatible with flag Silent.
         //
 
-        ULONG Quiet:1;
+        ULONGLONG Quiet:1;
 
         //
-        // No more unused bits!  Create PERFECT_HASH_TABLE_CREATE_FLAGS2 (or
-        // make this a ULONGLONG) when more flags are needed.
+        // When set, includes the table keys in the generated compiled perfect
+        // hash table DLL.
         //
+
+        ULONGLONG IncludeKeysInCompiledDll:1;
+
+        //
+        // When set, disables saving the table values if function hooking is
+        // active and the callback DLL has a TableValues export (which it will
+        // if it's a perfect hash compiled DLL).
+        //
+
+        ULONGLONG DisableSavingCallbackTableValues:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONGLONG Unused:30;
     };
 
-    LONG AsLong;
-    ULONG AsULong;
+    LONGLONG AsLongLong;
+    ULONGLONG AsULongLong;
 } PERFECT_HASH_TABLE_CREATE_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_TABLE_CREATE_FLAGS) == sizeof(ULONG));
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_CREATE_FLAGS) == sizeof(ULONGLONG));
 typedef PERFECT_HASH_TABLE_CREATE_FLAGS
       *PPERFECT_HASH_TABLE_CREATE_FLAGS;
 
@@ -3251,6 +3267,9 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(Seed3Byte2MaskCounts)                                      \
     ENTRY(MaxSolveTimeInSeconds)                                     \
     ENTRY(AutoResizeWhenKeysToEdgesRatioExceeds)                     \
+    ENTRY(FunctionHookCallbackDllPath)                               \
+    ENTRY(FunctionHookCallbackFunctionName)                          \
+    ENTRY(FunctionHookCallbackIgnoreRip)                             \
     LAST_ENTRY(Remark)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
@@ -3461,6 +3480,7 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         ULONGLONG AsULongLong;
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
+        STRING AsString;
         UNICODE_STRING AsUnicodeString;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
         PERFECT_HASH_RNG_ID AsRngId;
@@ -4121,6 +4141,66 @@ VOID
 typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
 
 extern __SECURITY_INIT_COOKIE __security_init_cookie;
+
+//
+// _penter function hooking scaffolding.
+//
+
+typedef
+VOID
+(NTAPI FUNCTION_ENTRY_CALLBACK)(
+    _In_ PVOID ReturnRip,
+    _In_ PVOID Context
+    );
+typedef FUNCTION_ENTRY_CALLBACK *PFUNCTION_ENTRY_CALLBACK;
+
+typedef
+VOID
+(NTAPI SET_FUNCTION_ENTRY_CALLBACK)(
+    _In_ PFUNCTION_ENTRY_CALLBACK Callback,
+    _In_ PVOID Context,
+    _In_ PVOID ModuleBaseAddress,
+    _In_ ULONG ModuleSizeInBytes,
+    _In_ ULONG IgnoreRip
+    );
+typedef SET_FUNCTION_ENTRY_CALLBACK *PSET_FUNCTION_ENTRY_CALLBACK;
+
+typedef
+VOID
+(NTAPI GET_FUNCTION_ENTRY_CALLBACK)(
+    _Out_ PFUNCTION_ENTRY_CALLBACK *Callback,
+    _Out_ PVOID *Context,
+    _Out_ PVOID *ModuleBaseAddress,
+    _Out_ ULONG *ModuleSizeInBytes,
+    _Out_ ULONG *IgnoreRip
+    );
+typedef GET_FUNCTION_ENTRY_CALLBACK *PGET_FUNCTION_ENTRY_CALLBACK;
+
+typedef
+VOID
+(NTAPI CLEAR_FUNCTION_ENTRY_CALLBACK)(
+    _Out_opt_ PFUNCTION_ENTRY_CALLBACK *Callback,
+    _Out_opt_ PVOID *Context,
+    _Out_opt_ PVOID *ModuleBaseAddress,
+    _Out_opt_ ULONG *ModuleSizeInBytes,
+    _Out_opt_ ULONG *IgnoreRip
+    );
+typedef CLEAR_FUNCTION_ENTRY_CALLBACK *PCLEAR_FUNCTION_ENTRY_CALLBACK;
+
+typedef
+BOOLEAN
+(NTAPI IS_FUNCTION_ENTRY_CALLBACK_ENABLED)(
+    VOID
+    );
+typedef IS_FUNCTION_ENTRY_CALLBACK_ENABLED
+      *PIS_FUNCTION_ENTRY_CALLBACK_ENABLED;
+
+typedef
+VOID
+(_PENTER)(
+    VOID
+    );
+typedef _PENTER *P_PENTER;
 
 //
 // Define bootstrap helpers.

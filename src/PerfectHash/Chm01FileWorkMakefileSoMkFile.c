@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2019-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -68,6 +68,8 @@ PrepareMakefileSoMkFileChm01(
     OUTPUT_SPACE_SLASH_NEWLINE_TAB();
 
     MAYBE_OUTPUT_INCLUDE_TABLE_VALUES_DOT_C();
+
+    MAYBE_OUTPUT_INCLUDE_KEYS_DOT_C();
 
     //
     // TableData.c

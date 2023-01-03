@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -103,7 +103,7 @@ Return Value:
         return E_INVALIDARG;
     }
 
-    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
+    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
 
     if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
         return PH_E_KEYS_LOCKED;
@@ -423,27 +423,60 @@ Return Value:
         KeysBitmap->Flags.HasZero = TRUE;
     }
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
-        Key = *Values++;
+    if (Rtl->CpuFeatures.BMI1 && Rtl->CpuFeatures.POPCNT) {
 
-        if (Index > 0) {
-            if (Prev > Key) {
-                return PH_E_KEYS_NOT_SORTED;
-            } else if (Prev == Key) {
-                return PH_E_DUPLICATE_KEYS_DETECTED;
+        //
+        // Fast version that will inline popcnt and tzcnt.
+        //
+
+        for (Index = 0; Index < NumberOfKeys; Index++) {
+            Key = *Values++;
+
+            if (Index > 0) {
+                if (Prev > Key) {
+                    return PH_E_KEYS_NOT_SORTED;
+                } else if (Prev == Key) {
+                    return PH_E_DUPLICATE_KEYS_DETECTED;
+                }
+            }
+
+            Prev = Key;
+
+            PopCount = (BYTE)PopulationCount32_POPCNT(Key);
+            Stats.PopCount[PopCount] += 1;
+
+            while (Key) {
+                Bit = TrailingZeros32_BMI1(Key);
+                Key &= Key - 1;
+                Bitmap |= (1 << Bit);
+                Stats.BitCount[Bit] += 1;
             }
         }
 
-        Prev = Key;
+    } else {
 
-        PopCount = (BYTE)Rtl->PopulationCount32(Key);
-        Stats.PopCount[PopCount] += 1;
+        for (Index = 0; Index < NumberOfKeys; Index++) {
+            Key = *Values++;
 
-        while (Key) {
-            Bit = Rtl->TrailingZeros32(Key);
-            Key &= Key - 1;
-            Bitmap |= (1 << Bit);
-            Stats.BitCount[Bit] += 1;
+            if (Index > 0) {
+                if (Prev > Key) {
+                    return PH_E_KEYS_NOT_SORTED;
+                } else if (Prev == Key) {
+                    return PH_E_DUPLICATE_KEYS_DETECTED;
+                }
+            }
+
+            Prev = Key;
+
+            PopCount = (BYTE)Rtl->PopulationCount32(Key);
+            Stats.PopCount[PopCount] += 1;
+
+            while (Key) {
+                Bit = Rtl->TrailingZeros32(Key);
+                Key &= Key - 1;
+                Bitmap |= (1 << Bit);
+                Stats.BitCount[Bit] += 1;
+            }
         }
     }
 

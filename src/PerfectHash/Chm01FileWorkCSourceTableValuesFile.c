@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -65,11 +65,26 @@ PrepareCSourceTableValuesFileChm01(
     // Write the table values array.
     //
 
-    OUTPUT_RAW("#ifndef CPH_INDEX_ONLY\n\n"
-               "#ifdef _WIN32\n"
+    OUTPUT_RAW("#ifndef CPH_INDEX_ONLY\n\n");
+
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_TableValueSizeInBytes = ");
+    OUTPUT_INT(Table->ValueSizeInBytes == 0 ?
+               sizeof(ULONG) : Table->ValueSizeInBytes);
+    OUTPUT_RAW(";\n");
+
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_NumberOfTableValues = ");
+    OUTPUT_INT(NumberOfElements);
+    OUTPUT_RAW(";\n\n");
+
+    OUTPUT_RAW("#ifdef _WIN32\n"
                "#pragma data_seg(\".cphval\")\n"
-               "#endif\n"
-               "CPHVALUE ");
+               "#endif\n");
+
+    OUTPUT_RAW("CPHVALUE ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_TableValues[");
     OUTPUT_INT(NumberOfElements);

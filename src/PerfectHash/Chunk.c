@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -23,6 +23,8 @@ ProcessChunks(
     PCCHUNK Chunks,
     ULONG NumberOfChunks,
     PCCHUNK_VALUES Values,
+    ULONG NumberOfConditionals,
+    PBOOLEAN Conditionals,
     PCHAR *BufferPointer
     )
 /*++
@@ -42,6 +44,12 @@ Arguments:
 
     Values - Supplies the chunk values to use for substitution as applicable.
 
+    NumberOfConditionals - Supplies the number of conditional chunk ops in the
+        array of chunks.
+
+    Conditionals - Supplies the array of boolean conditions that dictate if
+        a conditional chunk is written.
+
     BufferPointer - Supplies a pointer to the buffer that will receive the
         processed chunk strings.  This pointer will also be updated to point
         at the new end of buffer after this routine completes successfully.
@@ -59,6 +67,8 @@ Return Value:
 --*/
 {
     ULONG Index;
+    CHUNK_OP NewOp;
+    ULONG NumberOfConditionalsSeen = 0;
     PCCHUNK Chunk;
     HRESULT Result = S_OK;
     PCSTRING String;
@@ -107,6 +117,22 @@ Return Value:
             String = &Chunk->RawString;
         } else if (Chunk->Op == ChunkOpStringPointer) {
             String = Chunk->StringPointer;
+        } else if (IsConditionalChunkOp(Chunk->Op, &NewOp)) {
+            if (++NumberOfConditionalsSeen > NumberOfConditionals) {
+                Result = PH_E_INVALID_NUMBER_OF_CONDITIONALS;
+                goto Error;
+            }
+            if (Conditionals[NumberOfConditionalsSeen-1] != FALSE) {
+                if (NewOp == ChunkOpRaw) {
+                    String = &Chunk->RawString;
+                } else if (Chunk->Op == ChunkOpStringPointer) {
+                    String = Chunk->StringPointer;
+                } else {
+                    String = *(&Values->First + NewOp);
+                }
+            } else {
+                continue;
+            }
         } else {
             String = *(&Values->First + Chunk->Op);
         }
@@ -123,6 +149,11 @@ Return Value:
         CopyMemoryInline(Output, String->Buffer, String->Length);
 
         Output += String->Length;
+    }
+
+    if (NumberOfConditionals != NumberOfConditionalsSeen) {
+        Result = PH_E_NUMBER_OF_CONDITIONALS_MISMATCHED;
+        goto Error;
     }
 
     goto End;

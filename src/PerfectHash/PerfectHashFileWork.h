@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -428,6 +428,19 @@ Abstract:
         &MakefileMkFileExtension,                                          \
         NO_STREAM_NAME,                                                    \
         BASE_NAME(main)                                                    \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        ModuleDefFile,                                                     \
+        MODULE_DEF_FILE,                                                   \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &ModuleDefFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
     )                                                                      \
                                                                            \
     ENTRY(                                                                 \
@@ -1539,6 +1552,13 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
         OUTPUT_STRING(Name);                      \
         OUTPUT_RAW("_TableValues.c");             \
         OUTPUT_SPACE_SLASH_NEWLINE_TAB();         \
+    }
+
+#define MAYBE_OUTPUT_INCLUDE_KEYS_DOT_C()                                     \
+    if (Context->Table->TableCreateFlags.IncludeKeysInCompiledDll != FALSE) { \
+        OUTPUT_STRING(Name);                                                  \
+        OUTPUT_RAW("_Keys.c");                                                \
+        OUTPUT_SPACE_SLASH_NEWLINE_TAB();                                     \
     }
 
 #define OUTPUT_MAKEFILE_SPLASH_COMMENT(N)             \

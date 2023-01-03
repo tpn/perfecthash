@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -110,7 +110,7 @@ Return Value:
         return PH_E_INVALID_CPU_ARCH_ID;
     }
 
-    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
+    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE, ULong);
 
     if (!TryAcquirePerfectHashTableLockExclusive(Table)) {
         return PH_E_TABLE_LOCKED;

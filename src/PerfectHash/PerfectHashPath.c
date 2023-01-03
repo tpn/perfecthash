@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1009,7 +1009,7 @@ Return Value:
         return E_POINTER;
     }
 
-    VALIDATE_FLAGS(PathCreate, PATH_CREATE);
+    VALIDATE_FLAGS(PathCreate, PATH_CREATE, ULong);
 
     if (!TryAcquirePerfectHashPathLockShared(ExistingPath)) {
         return PH_E_EXISTING_PATH_LOCKED;

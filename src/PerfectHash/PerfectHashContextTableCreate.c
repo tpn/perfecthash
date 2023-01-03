@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -190,9 +190,9 @@ Return Value:
         Allocator = Context->Allocator;
     }
 
-    VALIDATE_FLAGS(ContextTableCreate, CONTEXT_TABLE_CREATE);
-    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD);
-    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE);
+    VALIDATE_FLAGS(ContextTableCreate, CONTEXT_TABLE_CREATE, ULong);
+    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
+    VALIDATE_FLAGS(TableCompile, TABLE_COMPILE, ULong);
 
     //
     // IsValidTableCreateFlags() returns a more specific error code than the
@@ -205,10 +205,10 @@ Return Value:
         if (FAILED(Result)) {
             return Result;
         } else {
-            TableCreateFlags.AsULong = TableCreateFlagsPointer->AsULong;
+            TableCreateFlags.AsULongLong = TableCreateFlagsPointer->AsULongLong;
         }
     } else {
-        TableCreateFlags.AsULong = 0;
+        TableCreateFlags.AsULongLong = 0;
     }
 
     if (!ARGUMENT_PRESENT(KeysPath)) {
@@ -257,6 +257,16 @@ Return Value:
     Silent = (TableCreateFlags.Silent == TRUE);
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
+
+    Result = PerfectHashContextTryPrepareCallbackTableValuesFile(
+        Context,
+        TableCreateFlags
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextTryPrepareCallbackTableValuesFile, Result);
+        goto Error;
+    }
 
     //
     // Create a "row buffer" we can use for the CSV file.
@@ -1164,7 +1174,7 @@ Return Value:
     //
 
     KeysLoadFlags->AsULong = 0;
-    TableCreateFlags->AsULong = 0;
+    TableCreateFlags->AsULongLong = 0;
     TableCompileFlags->AsULong = 0;
 
     for (; CurrentArg < NumberOfArguments; CurrentArg++, ArgW++) {
@@ -1364,6 +1374,20 @@ Return Value:
                                     &TableCreateParameters);
 
     if (FAILED(Result)) {
+        return Result;
+    }
+
+    Result = PerfectHashContextInitializeFunctionHookCallbackDll(
+        Context,
+        &TableCreateFlags,
+        &TableCreateParameters
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(
+            PerfectHashContextTableCreateArgvW_InitFunctionHookCallbackDll,
+            Result
+        );
         return Result;
     }
 

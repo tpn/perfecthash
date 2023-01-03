@@ -1,6 +1,6 @@
 ;/*++
 ;
-;Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+;Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 ;
 ;Module Name:
 ;
@@ -110,6 +110,14 @@ Facility=ITF
 SymbolicName=PH_S_FIXED_ATTEMPTS_REACHED
 Language=English
 Fixed attempts at solving reached.
+.
+
+MessageId=0x00c
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_FUNCTION_HOOK_CALLBACK_DLL_INITIALIZED
+Language=English
+Function hook callback DLL initialized.
 .
 
 ;
@@ -599,6 +607,15 @@ Table Create Flags:
         When set, disables automatically using the AVX2 memory coverage
         calculation routine when the CPU supports the AVX2 instruction set.
 
+    --IncludeKeysInCompiledDll
+
+        When set, includes the keys in the compiled DLL file.  If you want to
+        benchmark a compiled perfect hash table DLL's index routine against a
+        normal binary search routine (i.e. IndexBsearch()), you'll need to
+        supply this flag to ensure the keys get built into the binary.  We
+        don't do this by default as they're not needed for a normal perfect
+        hash table binary.
+
 Table Compile Flags:
 
     N/A
@@ -883,6 +900,22 @@ Table Create Parameters:
         Supplies the maximum number of seconds to try and solve an individual
         graph.
 
+    --FunctionHookCallbackDllPath=<Path>
+
+        Supplies a fully-qualified path to a .dll file that will be used as the
+        callback handler for hooked functions.
+
+    --FunctionHookCallbackFunctionName=<ExportedFunctionName>
+
+        Supplies the exported function name to resolve from the callback module
+        (above) and use as the callback for hooked functions.  The default is
+        InterlockedIncrement.
+
+    --FunctionHookCallbackIgnoreRip=<RelativeRIP>
+
+        Supplies a relative RIP to ignore during function callback.  That is,
+        if a caller matches the supplied relative RIP, the function callback
+        will not be executed.
 
 Console Output Character Legend
 
@@ -957,7 +990,51 @@ Severity=Informational
 Facility=ITF
 SymbolicName=PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP
 Language=English
-[s] Status [f] Quit solving this graph [r] Force table resize [v] Toggle quiet
+[r] Refresh [f] Finish [e] Resize [c] Toggle Callback [?] More Help
+.
+
+MessageId=0x105
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_MSG_PERFECT_HASH_CONSOLE_KEYS_MORE_HELP
+Language=English
+[r] Refresh
+
+    Press this at any time to refresh the current solving status for a given
+    graph.
+
+[f] Finish
+
+    Finish solving the current table.  If in bulk create mode, this only applies
+    to the active table; subsequent tables will still be processed.
+
+    When in find best graph mode, It is safe to "finish" a table prior to it
+    hitting the target coverage goal; i.e. the best graph solved at that time
+    will be the winner for which all the usual post-processing (i.e. writing
+    the output files, testing, etc.) will occur.
+
+    If no solution has been found at all when finish is pressed, this is just
+    treated as a failure to solve the table.  If in bulk create mode, the next
+    table will be handled normally.
+
+[e] Resize
+
+    Force a table resize event.  This immediately stops graph solving and
+    requests the next size up table (i.e. the next power of two up for the
+    number of edges), then resumes solving with a new table size.  You can
+    view the impact of resizes via the "Number of Table Resize Events:" in
+    the console output.
+
+[c] Toggle Callback
+
+    If a hooked version of PerfectHash.dll is running, and a function hook
+    callback DLL has been configured via --FunctionHookCallbackDllPath, this
+    command allows you to quickly toggle the callback on and off and observe
+    the immediate performance impact in the console via the "Current Attempts
+    Per Second" metric.
+
+    If function hooking is active, this doesn't do anything.
+
 .
 
 ;
@@ -3774,5 +3851,110 @@ Facility=ITF
 SymbolicName=PH_E_SILENT_INCOMPATIBLE_WITH_QUIET
 Language=English
 --Silent is incompatible with --Quiet.
+.
+
+MessageId=0x3d8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_CALLBACK_DLL
+Language=English
+Failed to load the provided function hook callback DLL.
+.
+
+MessageId=0x3d9
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_GET_ADDRESS_OF_FUNCTION_HOOK_CALLBACK
+Language=English
+Failed to obtain the address of the requested function from the function hook callback DLL.
+.
+
+MessageId=0x3da
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_GET_ADDRESS_OF_SET_FUNCTION_ENTRY_CALLBACK
+Language=English
+Failed to obtain the address of SetFunctionEntryCallback from FunctionHook.dll.
+.
+
+MessageId=0x3db
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_GET_ADDRESS_OF_CLEAR_FUNCTION_ENTRY_CALLBACK
+Language=English
+Failed to obtain the address of ClearFunctionEntryCallback from FunctionHook.dll.
+.
+
+MessageId=0x3dc
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_DLL
+Language=English
+Failed to load the function hook DLL.
+.
+
+MessageId=0x3dd
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_NUMBER_OF_CONDITIONALS
+Language=English
+Encountered incorrect number of conditionals during chunk processing.
+.
+
+MessageId=0x3de
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_NUMBER_OF_CONDITIONALS_MISMATCHED
+Language=English
+Encountered mismatched number of conditionals during chunk processing.
+.
+
+
+MessageId=0x3df
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_MODULE_DEF_FILE
+Language=English
+Error closing module def file.
+.
+
+MessageId=0x3e0
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_MODULE_DEF_FILE
+Language=English
+Error preparing module def file.
+.
+
+MessageId=0x3e1
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_MODULE_DEF_FILE
+Language=English
+Error saving module def file.
+.
+
+MessageId=0x3e2
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_STRING_BUFFER_TOO_SMALL
+Language=English
+A provided string buffer was too small to carry out the requested operation.
+.
+
+MessageId=0x3e3
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_GET_ADDRESS_OF_GET_FUNCTION_ENTRY_CALLBACK
+Language=English
+Failed to obtain the address of GetFunctionEntryCallback from FunctionHook.dll.
+.
+
+MessageId=0x3e4
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_FAILED_TO_GET_ADDRESS_OF_IS_FUNCTION_ENTRY_CALLBACK_ENABLED
+Language=English
+Failed to obtain the address of IsFunctionEntryCallbackEnabled from FunctionHook.dll.
 .
 

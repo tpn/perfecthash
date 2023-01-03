@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -854,6 +854,21 @@ Return Value:
         }
     }
 
+    Result = PerfectHashContextTryRundownCallbackTableValuesFile(Context);
+    if (FAILED(Result)) {
+        PH_ERROR(TryRundownCallbackTableValuesFile, Result);
+    }
+
+    if (Context->State.HasFunctionHooking != FALSE) {
+        Context->ClearFunctionEntryCallback(NULL, NULL, NULL, NULL, NULL);
+        if (!FreeLibrary(Context->CallbackModule)) {
+            SYS_ERROR(FreeLibrary_CallbackModule);
+        }
+        if (!FreeLibrary(Context->FunctionHookModule)) {
+            SYS_ERROR(FreeLibrary_FunctionHookModule);
+        }
+    }
+
     //
     // Free the array of PH_CU_DEVICE structs if applicable.
     //
@@ -1047,6 +1062,9 @@ Return Value:
 
     Context->FailedAttempts = 0;
     Context->FinishedCount = 0;
+
+    Context->BaselineAttempts = 0;
+    Context->BaselineFileTime.AsULongLong = 0;
 
     Context->GraphRegisterSolvedTsxStarted = 0;
     Context->GraphRegisterSolvedTsxSuccess = 0;
@@ -2392,6 +2410,650 @@ Error:
     //
 
 End:
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextTryPrepareCallbackTableValuesFile (
+    PPERFECT_HASH_CONTEXT Context,
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
+    )
+/*++
+
+Routine Description:
+
+    Prepares a file to save a callback DLL's table values.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which
+        function hook callback DLL table values are to be persisted.
+
+    TableCreateFlags - Supplies the table create flags.
+
+Return Value:
+
+    S_FALSE - User requested that table saving be disabled, or the callback
+        DLL did not export the expected symbols.
+
+    S_OK - File prepared successfully.
+
+    Otherwise, an appropriate error code.
+
+--*/
+{
+    PRTL Rtl;
+    HRESULT Result;
+    PCHAR Output;
+    PWCHAR WideOutput;
+    PCHAR Buffer = NULL;
+    ULONG SizeInBytes;
+    STRING TimestampA = { 0, };
+    UNICODE_STRING SuffixW;
+    UNICODE_STRING TimestampW;
+    LARGE_INTEGER EndOfFile;
+    PCUNICODE_STRING BaseName;
+    ULONGLONG BufferSizeInBytes;
+    ULONGLONG RemainingBytes;
+    ULONG NumberOfPagesForBuffer;
+    PCUNICODE_STRING NewDirectory;
+    PPERFECT_HASH_PATH Path = NULL;
+    PPERFECT_HASH_FILE File = NULL;
+    PPERFECT_HASH_PATH ExistingPath;
+    PPERFECT_HASH_PATH DllPath = NULL;
+    PPERFECT_HASH_PATH_PARTS DllParts = NULL;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    //
+    // Determine if we should proceed with preparing a table values file.
+    //
+
+    if (TableCreateFlags.DisableSavingCallbackTableValues != FALSE) {
+        return S_FALSE;
+    }
+
+    if ((Context->CallbackModuleNumberOfTableValues == 0)   ||
+        (Context->CallbackModuleTableValueSizeInBytes == 0) ||
+        (Context->CallbackDllPath == NULL) ||
+        (!IsValidUnicodeStringWithMinimumLengthInChars(Context->CallbackDllPath,
+                                                       4))) {
+
+        return S_FALSE;
+    }
+
+    ASSERT(Context->CallbackModuleTableValuesFile == NULL);
+
+    ASSERT(Context->BaseOutputDirectory != NULL);
+    ASSERT(Context->BaseOutputDirectory->Path != NULL);
+    ASSERT(Context->BaseOutputDirectory->Path->FullPath.Buffer != NULL);
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+
+    //
+    // Create a path instance for the callback DLL path.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_PATH,
+                                           &DllPath);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreateInstance_CallbackDllPath, Result);
+        goto Error;
+    }
+
+    Result = DllPath->Vtbl->Copy(DllPath,
+                                 Context->CallbackDllPath,
+                                 &DllParts,
+                                 NULL);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCopy_CallbackDllPath, Result);
+        goto Error;
+    }
+
+    //
+    // Create a path instance for the table values file.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_PATH,
+                                           &Path);
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreateInstance_TableValuesFile, Result);
+        goto Error;
+    }
+
+    BaseName = &DllParts->BaseName;
+    ExistingPath = Context->BaseOutputDirectory->Path;
+    NewDirectory = &Context->BaseOutputDirectory->Path->FullPath;
+
+    //
+    // Create a temporary buffer to use for path construction.
+    //
+
+    NumberOfPagesForBuffer = 1;
+    Result = Rtl->Vtbl->CreateBuffer(Rtl,
+                                     &Context->ProcessHandle,
+                                     NumberOfPagesForBuffer,
+                                     NULL,
+                                     &BufferSizeInBytes,
+                                     &Buffer);
+
+    if (FAILED(Result)) {
+        PH_ERROR(TryPrepareCallbackTableValuesFile_CreateBuffer, Result);
+        goto Error;
+    }
+
+    SizeInBytes = RTL_TIMESTAMP_FORMAT_FILE_SUFFIX_LENGTH;
+    Result = InitializeTimestampStringForFileSuffix(Buffer,
+                                                    SizeInBytes,
+                                                    &TimestampA,
+                                                    &Context->SystemTime);
+    if (FAILED(Result)) {
+        PH_ERROR(TryPrepareCallbackTableValuesFile_InitTimestampFile, Result);
+        goto Error;
+    }
+
+    //
+    // Convert the char timestamp to a wide timestamp.
+    //
+
+    Output = Buffer;
+    RemainingBytes = BufferSizeInBytes - TimestampA.Length;
+
+    Output += TimestampA.Length;
+    SuffixW.Length = 0;
+    SuffixW.MaximumLength = 0;
+    SuffixW.Buffer = WideOutput = (PWSTR)Output;
+
+    WIDE_OUTPUT_UNICODE_STRING(WideOutput, &TableValuesSuffix);
+
+    ASSERT(*WideOutput == L'\0');
+
+    SuffixW.Length = (USHORT)(RtlPointerToOffset(SuffixW.Buffer, WideOutput));
+    RemainingBytes -= SuffixW.Length;
+
+    TimestampW.Buffer = WideOutput;
+    TimestampW.Length = 0;
+    TimestampW.MaximumLength = (USHORT)min(0xffff, RemainingBytes);
+
+    Result = AppendStringToUnicodeStringFast(&TimestampA, &TimestampW);
+    if (FAILED(Result)) {
+        PH_ERROR(
+            TryPrepareCallbackTableValuesFile_AppendStringToUnicodeString,
+            Result
+        );
+        goto Error;
+    }
+
+    RemainingBytes -= TimestampW.Length;
+    SuffixW.Length += TimestampW.Length;
+    SuffixW.MaximumLength -= (USHORT)min(0xffff, RemainingBytes);
+
+    //
+    // Create the path name for the table values file.
+    //
+
+    Result = Path->Vtbl->Create(Path,
+                                ExistingPath,
+                                NewDirectory,           // NewDirectory
+                                NULL,                   // DirectorySuffix
+                                BaseName,               // NewBaseName
+                                &SuffixW,               // BaseNameSuffix
+                                &TableValuesExtension,  // NewExtension
+                                NULL,                   // NewStreamName
+                                NULL,                   // Parts
+                                NULL);                  // Reserved
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashPathCreate_TableValuesFile, Result);
+        goto Error;
+    }
+
+    EndOfFile.QuadPart = (
+        (LONGLONG)Context->CallbackModuleNumberOfTableValues *
+        (LONGLONG)Context->CallbackModuleTableValueSizeInBytes
+    );
+
+    //
+    // Create the file instance.
+    //
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_FILE,
+                                           &File);
+    if (FAILED(Result)) {
+        PH_ERROR(TryPrepareCallbackTableValuesFile_CreateFileInstance, Result);
+        goto Error;
+    }
+
+    Result = File->Vtbl->Create(File, Path, &EndOfFile, NULL, NULL);
+    if (FAILED(Result)) {
+        PH_ERROR(TryPrepareCallbackTableValuesFile_CreateFile, Result);
+        goto Error;
+    }
+
+    //
+    // File created successfully.  Save to context then finish up.
+    //
+
+    Context->CallbackModuleTableValuesFile = File;
+    Context->CallbackModuleTableValuesEndOfFile.QuadPart = EndOfFile.QuadPart;
+    File->Vtbl->AddRef(File);
+
+    //
+    // We're done!  Indicate success and finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    //
+    // Release the path and file objects, destroy the temporary buffer if
+    // applicable, then return.
+    //
+
+    RELEASE(Path);
+    RELEASE(File);
+
+    if (Buffer != NULL) {
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          Context->ProcessHandle,
+                                          &Buffer);
+        if (FAILED(Result)) {
+            PH_ERROR(TryPrepareCallbackTableValuesFile_DestroyBuffer, Result);
+        }
+    }
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextTryRundownCallbackTableValuesFile (
+    PPERFECT_HASH_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    Runs down a table values file if applicable.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which
+        function hook callback DLL table value rundown is to be performed.
+
+Return Value:
+
+    S_FALSE - No table values file is active.
+
+    S_OK - Rundown successful.
+
+    Otherwise, an appropriate error code.
+
+--*/
+{
+    PRTL Rtl;
+    HRESULT Result;
+    ULONGLONG SizeInBytes;
+    PPERFECT_HASH_FILE File;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    //
+    // Determine if we should proceed with rundown.
+    //
+
+    File = Context->CallbackModuleTableValuesFile;
+    if (File == NULL) {
+        return S_FALSE;
+    }
+
+    ASSERT(Context->CallbackModuleTableValues != NULL);
+
+    //
+    // Copy the callback module's table values to the memory mapped file.
+    //
+
+    Rtl = Context->Rtl;
+
+    SizeInBytes = Context->CallbackModuleTableValuesEndOfFile.QuadPart;
+    CopyMemory(File->BaseAddress,
+               Context->CallbackModuleTableValues,
+               Context->CallbackModuleTableValuesEndOfFile.QuadPart);
+
+    File->NumberOfBytesWritten.QuadPart = SizeInBytes;
+
+    //
+    // Close the file mapping.
+    //
+
+    Result = File->Vtbl->Close(File, NULL);
+    if (FAILED(Result)) {
+        PH_ERROR(TryRundownCallbackTableValuesFile_FileClose, Result);
+    }
+
+    //
+    // And finally, release the reference.
+    //
+
+    RELEASE(Context->CallbackModuleTableValuesFile);
+
+    return Result;
+}
+
+PERFECT_HASH_CONTEXT_INITIALIZE_FUNCTION_HOOK_CALLBACK_DLL
+    PerfectHashContextInitializeFunctionHookCallbackDll;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextInitializeFunctionHookCallbackDll(
+    PPERFECT_HASH_CONTEXT Context,
+    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    )
+/*++
+
+Routine Description:
+
+    Enumerates the given table create parameters, identifies if a function
+    hook callback DLL has been requested, and if so, initializes the required
+    infrastructure.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which
+        function hook callback DLL initialization is to be performed.
+
+    TableCreateFlags - Supplies a pointer to the table create flags.
+
+    TableCreateParameters - Supplies a pointer to the table create params.
+
+Return Value:
+
+    S_OK - No function hook callback DLL requested.
+
+    PH_S_FUNCTION_HOOK_CALLBACK_DLL_INITIALIZED - Successfully initialized the
+        requested function hook callback DLL.
+
+    Otherwise, an appropriate error code.
+
+--*/
+{
+    PRTL Rtl;
+    PVOID Proc;
+    ULONG Index;
+    ULONG Count;
+    HRESULT Result;
+    PCSTRING Name = NULL;
+    PUNICODE_STRING Path = NULL;
+    HMODULE CallbackModule = NULL;
+    HMODULE FunctionHookModule = NULL;
+    PPERFECT_HASH_PATH CallbackDllPath = NULL;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PFUNCTION_ENTRY_CALLBACK FunctionEntryCallback;
+    PSET_FUNCTION_ENTRY_CALLBACK SetFunctionEntryCallback;
+    PGET_FUNCTION_ENTRY_CALLBACK GetFunctionEntryCallback;
+    PCLEAR_FUNCTION_ENTRY_CALLBACK ClearFunctionEntryCallback;
+    PIS_FUNCTION_ENTRY_CALLBACK_ENABLED IsFunctionEntryCallbackEnabled;
+
+    UNREFERENCED_PARAMETER(TableCreateFlags);
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Context->Rtl;
+    Count = TableCreateParameters->NumberOfElements;
+    Param = TableCreateParameters->Params;
+
+    //
+    // Disable "enum not handled in switch statement" warning.
+    //
+    //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+    //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+    //                     is not explicitly handled by a case label
+    //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
+    for (Index = 0; Index < Count; Index++, Param++) {
+
+        switch (Param->Id) {
+
+            case TableCreateParameterFunctionHookCallbackDllPathId:
+                Path = &Param->AsUnicodeString;
+                break;
+
+            case TableCreateParameterFunctionHookCallbackFunctionNameId:
+                Name = &Param->AsString;
+                break;
+
+            case TableCreateParameterFunctionHookCallbackIgnoreRipId:
+                Context->CallbackModuleIgnoreRip = Param->AsULong;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+#pragma warning(pop)
+
+    if (Path == NULL) {
+
+        //
+        // No function hook callback DLL specified, finish up.
+        //
+
+        Result = S_OK;
+        goto End;
+    }
+
+    //
+    // If no name has been requested, use the default.
+    //
+
+    if (Name == NULL) {
+        Name = &FunctionHookCallbackDefaultFunctionNameA;
+    }
+
+    //
+    // A DLL has been specified.  Attempt to load it.
+    //
+
+    CallbackModule = LoadLibraryW(Path->Buffer);
+    if (!CallbackModule) {
+        SYS_ERROR(LoadLibrary);
+        Result = PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_CALLBACK_DLL;
+        goto Error;
+    }
+    Context->CallbackDllPath = Path;
+
+    //
+    // Attempt to resolve the callback function.
+    //
+
+    Proc = (PVOID)GetProcAddress(CallbackModule, Name->Buffer);
+    if (!Proc) {
+        SYS_ERROR(GetProcAddress);
+        Result = PH_E_FAILED_TO_GET_ADDRESS_OF_FUNCTION_HOOK_CALLBACK;
+        goto Error;
+    }
+    FunctionEntryCallback = (PFUNCTION_ENTRY_CALLBACK)Proc;
+
+    //
+    // Attempt to get the table values from the callback DLL.  If we can't,
+    // that's fine, it's not considered a fatal error.
+    //
+
+    Proc = (PVOID)GetProcAddress(CallbackModule, "TableValues");
+    if (Proc) {
+        Context->CallbackModuleTableValues = (PVOID)Proc;
+    }
+
+    Proc = (PVOID)GetProcAddress(CallbackModule, "NumberOfTableValues");
+    if (Proc) {
+        Context->CallbackModuleNumberOfTableValues = *((SIZE_T *)Proc);
+    }
+
+    Proc = (PVOID)GetProcAddress(CallbackModule, "TableValueSizeInBytes");
+    if (Proc) {
+        Context->CallbackModuleTableValueSizeInBytes = *((SIZE_T *)Proc);
+    }
+
+    //
+    // Successfully resolved the callback function.  Obtain a reference to the
+    // FunctionHook.dll module, then resolve the public methods.
+    //
+
+    FunctionHookModule = LoadLibraryA("FunctionHook.dll");
+    if (!FunctionHookModule) {
+        SYS_ERROR(LoadLibrary);
+        Result = PH_E_FAILED_TO_LOAD_FUNCTION_HOOK_DLL;
+        goto Error;
+    }
+
+    Proc = (PVOID)GetProcAddress(FunctionHookModule,
+                                 "SetFunctionEntryCallback");
+    if (!Proc) {
+        SYS_ERROR(GetProcAddress);
+        Result = PH_E_FAILED_TO_GET_ADDRESS_OF_SET_FUNCTION_ENTRY_CALLBACK;
+        goto Error;
+    }
+    SetFunctionEntryCallback = (PSET_FUNCTION_ENTRY_CALLBACK)Proc;
+
+    Proc = (PVOID)GetProcAddress(FunctionHookModule,
+                                 "GetFunctionEntryCallback");
+    if (!Proc) {
+        SYS_ERROR(GetProcAddress);
+        Result = PH_E_FAILED_TO_GET_ADDRESS_OF_GET_FUNCTION_ENTRY_CALLBACK;
+        goto Error;
+    }
+    GetFunctionEntryCallback = (PGET_FUNCTION_ENTRY_CALLBACK)Proc;
+
+    Proc = (PVOID)GetProcAddress(FunctionHookModule,
+                                 "ClearFunctionEntryCallback");
+    if (!Proc) {
+        SYS_ERROR(GetProcAddress);
+        Result = PH_E_FAILED_TO_GET_ADDRESS_OF_CLEAR_FUNCTION_ENTRY_CALLBACK;
+        goto Error;
+    }
+    ClearFunctionEntryCallback = (PCLEAR_FUNCTION_ENTRY_CALLBACK)Proc;
+
+    Proc = (PVOID)GetProcAddress(FunctionHookModule,
+                                 "IsFunctionEntryCallbackEnabled");
+    if (!Proc) {
+        SYS_ERROR(GetProcAddress);
+        Result =
+            PH_E_FAILED_TO_GET_ADDRESS_OF_IS_FUNCTION_ENTRY_CALLBACK_ENABLED;
+        goto Error;
+    }
+    IsFunctionEntryCallbackEnabled = (PIS_FUNCTION_ENTRY_CALLBACK_ENABLED)Proc;
+
+    //
+    // Everything has been loaded successfully.  Save all of the module and
+    // function pointers to the context, update the state, then as the final
+    // step, set the function entry callback.
+    //
+
+    Context->CallbackModule = CallbackModule;
+    Context->FunctionHookModule = FunctionHookModule;
+    Context->FunctionEntryCallback = FunctionEntryCallback;
+    Context->SetFunctionEntryCallback = SetFunctionEntryCallback;
+    Context->ClearFunctionEntryCallback = ClearFunctionEntryCallback;
+    Context->IsFunctionEntryCallbackEnabled = IsFunctionEntryCallbackEnabled;
+
+    Context->State.HasFunctionHooking = TRUE;
+
+    SetFunctionEntryCallback(FunctionEntryCallback,
+                             CallbackModule,
+                             PerfectHashModuleInfo.lpBaseOfDll,
+                             PerfectHashModuleInfo.SizeOfImage,
+                             Context->CallbackModuleIgnoreRip);
+
+    //
+    // Save the runtime values such that the hooking can be toggled on and off
+    // at runtime via console input.
+    //
+
+    GetFunctionEntryCallback(&Context->CallbackFunction,
+                             &Context->CallbackContext,
+                             &Context->CallbackModuleBaseAddress,
+                             &Context->CallbackModuleSizeInBytes,
+                             &Context->CallbackModuleIgnoreRip);
+
+    //
+    // We're done!  Indicate success and finish up.
+    //
+
+    Result = PH_S_FUNCTION_HOOK_CALLBACK_DLL_INITIALIZED;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    if (CallbackModule) {
+        if (!FreeLibrary(CallbackModule)) {
+            SYS_ERROR(FreeLibrary_CallbackModule);
+        }
+        CallbackModule = NULL;
+    }
+
+    if (FunctionHookModule) {
+        if (!FreeLibrary(FunctionHookModule)) {
+            SYS_ERROR(FreeLibrary_FunctionHookModule);
+        }
+        FunctionHookModule = NULL;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    RELEASE(CallbackDllPath);
+
     return Result;
 }
 

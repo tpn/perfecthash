@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -35,9 +35,11 @@ typedef enum _CHUNK_OP {
     ChunkOpInsertFileSuffix,
     ChunkOpInsertTargetPrefix,
     ChunkOpInsertTargetSuffix,
+    ChunkOpInsertBaseNameConditional,
+    ChunkOpRawConditional,
     ChunkOpInvalid,
     ChunkOpLast = ChunkOpInvalid - 1,
-} CHUNK_OP;
+} CHUNK_OP, *PCHUNK_OP;
 
 FORCEINLINE
 BOOLEAN
@@ -46,6 +48,29 @@ IsValidChunkOp(
     )
 {
     return Op >= ChunkOpRaw && Op <= ChunkOpLast;
+}
+
+FORCEINLINE
+BOOLEAN
+IsConditionalChunkOp(
+    _In_ CHUNK_OP Op,
+    _Out_ PCHUNK_OP NewOp
+    )
+{
+    BOOLEAN Success;
+
+    if (Op == ChunkOpRawConditional) {
+        Success = TRUE;
+        *NewOp = ChunkOpRaw;
+    } else if (Op == ChunkOpInsertBaseNameConditional) {
+        Success = TRUE;
+        *NewOp = ChunkOpInsertBaseName;
+    } else {
+        Success = FALSE;
+        *NewOp = ChunkOpInvalid;
+    }
+
+    return Success;
 }
 
 //
@@ -117,6 +142,8 @@ HRESULT
     _In_reads_(NumberOfChunks) PCCHUNK Chunks,
     _In_ ULONG NumberOfChunks,
     _In_ PCCHUNK_VALUES Values,
+    _In_ ULONG NumberOfConditionals,
+    _In_reads_(NumberOfConditionals) PBOOLEAN Conditionals,
     _Inout_ PCHAR *BufferPointer
     );
 typedef PROCESS_CHUNKS *PPROCESS_CHUNKS;

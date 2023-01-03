@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -380,6 +380,8 @@ extern const UNICODE_STRING NullUnicodeString;
 extern const UNICODE_STRING KeysWildcardSuffix;
 extern const UNICODE_STRING TableInfoStreamName;
 extern const UNICODE_STRING KeysTableSizeSuffix;
+extern const UNICODE_STRING TableValuesSuffix;
+extern const UNICODE_STRING TableValuesExtension;
 extern const UNICODE_STRING PerfectHashBulkCreateCsvBaseName;
 extern const UNICODE_STRING PerfectHashBulkCreateBestCsvBaseName;
 extern const UNICODE_STRING PerfectHashTableCreateCsvBaseName;
@@ -391,6 +393,7 @@ extern const STRING DotDllSuffixA;
 extern const STRING DotLibSuffixA;
 extern const STRING DynamicLibraryConfigurationTypeA;
 extern const STRING ApplicationConfigurationTypeA;
+extern const STRING FunctionHookCallbackDefaultFunctionNameA;
 
 extern const STRING BestCoverageTypeNamesA[];
 

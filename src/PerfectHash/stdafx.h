@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -78,6 +78,8 @@ Abstract:
 
 #include <sddl.h>
 #include <AclAPI.h>
+
+#include <psapi.h>
 
 //
 // Include intrinsic headers if we're x64.

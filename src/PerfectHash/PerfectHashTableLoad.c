@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -139,7 +139,7 @@ Return Value:
         return E_INVALIDARG;
     }
 
-    VALIDATE_FLAGS(TableLoad, TABLE_LOAD);
+    VALIDATE_FLAGS(TableLoad, TABLE_LOAD, ULong);
 
     if (!TryAcquirePerfectHashTableLockExclusive(Table)) {
         return PH_E_TABLE_LOCKED;

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -252,6 +252,15 @@ typedef APPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST
       *PAPPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST;
 
 typedef
+HRESULT
+(NTAPI APPEND_STRING_TO_UNICODE_STRING_FAST)(
+    _In_ PCSTRING String,
+    _Inout_ PUNICODE_STRING UnicodeString
+    );
+typedef APPEND_STRING_TO_UNICODE_STRING_FAST
+      *PAPPEND_STRING_TO_UNICODE_STRING_FAST;
+
+typedef
 VOID
 (NTAPI APPEND_CHAR_BUFFER_TO_CHAR_BUFFER)(
     _Inout_ PCHAR *BufferPointer,
@@ -403,6 +412,7 @@ extern APPEND_STRING_TO_CHAR_BUFFER AppendStringToCharBuffer;
 extern APPEND_UNICODE_STRING_TO_CHAR_BUFFER_FAST
     AppendUnicodeStringToCharBufferFast;
 extern APPEND_STRING_TO_WIDE_CHAR_BUFFER_FAST AppendStringToWideCharBufferFast;
+extern APPEND_STRING_TO_UNICODE_STRING_FAST AppendStringToUnicodeStringFast;
 extern APPEND_CHAR_BUFFER_TO_CHAR_BUFFER AppendCharBufferToCharBuffer;
 extern APPEND_CSTR_TO_CHAR_BUFFER AppendCStrToCharBuffer;
 extern APPEND_WSTR_TO_CHAR_BUFFER_FAST AppendWStrToCharBufferFast;
@@ -470,6 +480,57 @@ InitializeTimestampString(
     RTL_APPEND_TIME_FIELD(wDay,           2, ' ');
     RTL_APPEND_TIME_FIELD(wHour,          2, ':');
     RTL_APPEND_TIME_FIELD(wMinute,        2, ':');
+    RTL_APPEND_TIME_FIELD(wSecond,        2, '.');
+    RTL_APPEND_TIME_FIELD(wMilliseconds,  3,   0);
+
+End:
+
+    return Result;
+}
+
+#define RTL_TIMESTAMP_FORMAT_FILE_SUFFIX "yyyy-MM-dd_HH-mm-ss.000"
+#define RTL_TIMESTAMP_FORMAT_FILE_SUFFIX_LENGTH 24
+C_ASSERT(sizeof(RTL_TIMESTAMP_FORMAT_FILE_SUFFIX) ==
+         RTL_TIMESTAMP_FORMAT_FILE_SUFFIX_LENGTH);
+
+FORCEINLINE
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+InitializeTimestampStringForFileSuffix (
+    _Inout_ PCHAR Buffer,
+    _In_ ULONG SizeOfBufferInBytes,
+    _Inout_ PSTRING String,
+    _In_ PSYSTEMTIME SystemTime
+    )
+{
+    ULONG Value;
+    HRESULT Result = S_OK;
+
+    //
+    // Validate arguments.
+    //
+
+    if (SizeOfBufferInBytes != RTL_TIMESTAMP_FORMAT_FILE_SUFFIX_LENGTH) {
+        return E_INVALIDARG;
+    }
+
+    String->Buffer = Buffer;
+    String->Length = 0;
+    String->MaximumLength = (USHORT)RTL_TIMESTAMP_FORMAT_FILE_SUFFIX_LENGTH;
+
+#define RTL_APPEND_TIME_FIELD(Field, Digits, Trailer)             \
+    Value = SystemTime->Field;                                    \
+    if (!AppendIntegerToString(String, Value, Digits, Trailer)) { \
+        Result = PH_E_STRING_BUFFER_OVERFLOW;                     \
+        goto End;                                                 \
+    }
+
+    RTL_APPEND_TIME_FIELD(wYear,          4, '-');
+    RTL_APPEND_TIME_FIELD(wMonth,         2, '-');
+    RTL_APPEND_TIME_FIELD(wDay,           2, '_');
+    RTL_APPEND_TIME_FIELD(wHour,          2, '-');
+    RTL_APPEND_TIME_FIELD(wMinute,        2, '-');
     RTL_APPEND_TIME_FIELD(wSecond,        2, '.');
     RTL_APPEND_TIME_FIELD(wMilliseconds,  3,   0);
 

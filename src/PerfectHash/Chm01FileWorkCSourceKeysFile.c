@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -74,10 +74,28 @@ PrepareCSourceKeysFileChm01(
 
     OUTPUT_RAW("#ifdef _WIN32\n#pragma const_seg(\".cphkeys\")\n#endif\n");
 
-    OUTPUT_RAW("const CPHDKEY ");
+    OUTPUT_RAW("const ULONG ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_NumberOfKeys = ");
     OUTPUT_INT(NumberOfKeys);
+    OUTPUT_RAW(";\n");
+
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_KeySizeInBytes = ");
+    OUTPUT_INT(Keys->OriginalKeySizeInBytes);
+    OUTPUT_RAW(";\n");
+
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_OriginalKeySizeInBytes = ");
+    OUTPUT_INT(Keys->OriginalKeySizeInBytes);
+    OUTPUT_RAW(";\n");
+
+    OUTPUT_RAW("const ULONG ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_DownsizedKeySizeInBytes = ");
+    OUTPUT_INT(4);
     OUTPUT_RAW(";\n");
 
     OUTPUT_RAW("const CPHKEY ");

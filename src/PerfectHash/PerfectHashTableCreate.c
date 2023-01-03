@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -201,7 +201,7 @@ Return Value:
         return PH_E_TOO_MANY_KEYS;
     }
 
-    VALIDATE_FLAGS(TableCreate, TABLE_CREATE);
+    VALIDATE_FLAGS(TableCreate, TABLE_CREATE, ULongLong);
 
     if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         return PH_E_INVALID_ALGORITHM_ID;
@@ -284,7 +284,7 @@ Return Value:
     // Copy create flags.
     //
 
-    Table->TableCreateFlags.AsULong = TableCreateFlags.AsULong;
+    Table->TableCreateFlags.AsULongLong = TableCreateFlags.AsULongLong;
 
     //
     // Enable non-temporal AVX2 routines here if requested.  This is a bit
@@ -725,6 +725,16 @@ Return Value:
 
                 //
                 // These are handled in the context.
+                //
+
+                break;
+
+            case TableCreateParameterFunctionHookCallbackDllPathId:
+            case TableCreateParameterFunctionHookCallbackFunctionNameId:
+            case TableCreateParameterFunctionHookCallbackIgnoreRipId:
+
+                //
+                // Handled by the context.
                 //
 
                 break;
