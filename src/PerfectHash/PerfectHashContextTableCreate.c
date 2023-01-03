@@ -849,6 +849,23 @@ Return Value:
     File->Vtbl->AddRef(File);
 
     //
+    // Capture the header hash in the context.
+    //
+
+    Context->HexHeaderHash.Length = sizeof(Context->HexHeaderHashBuffer);
+    Context->HexHeaderHash.MaximumLength = Context->HexHeaderHash.Length;
+    ASSERT(Context->HexHeaderHash.Length >= HexHash.Length - 1);
+
+    ZeroMemory(&Context->HexHeaderHashBuffer, Context->HexHeaderHash.Length);
+    CopyMemory(Context->HexHeaderHashBuffer,
+               HexHash.Buffer + 1,
+               HexHash.Length - 1);
+
+    Context->HexHeaderHash.Buffer = (PCHAR)&Context->HexHeaderHashBuffer;
+    Context->HexHeaderHash.Length =
+        (USHORT)strlen(Context->HexHeaderHash.Buffer);
+
+    //
     // We're done, finish up.
     //
 
