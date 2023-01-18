@@ -616,6 +616,11 @@ Table Create Flags:
         don't do this by default as they're not needed for a normal perfect
         hash table binary.
 
+    --DisableSavingCallbackTableValues
+
+        When set, does not attempt to save the runtime table values when running
+        with a _penter-hooked binary.
+
 Table Compile Flags:
 
     N/A
