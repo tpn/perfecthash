@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -56,7 +56,7 @@ SaveTableFileChm01(
 
     SizeInBytes = (
         TableInfoOnDisk->NumberOfTableElements.QuadPart *
-        TableInfoOnDisk->KeySizeInBytes
+        TableInfoOnDisk->AssignedElementSizeInBytes
     );
 
     if (SizeInBytes != File->FileInfo.EndOfFile.QuadPart) {

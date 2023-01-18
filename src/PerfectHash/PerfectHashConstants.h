@@ -21,8 +21,8 @@ Abstract:
 // structure.
 //
 
-#define TABLE_INFO_ON_DISK_MAGIC_LOWPART  0x25101981
-#define TABLE_INFO_ON_DISK_MAGIC_HIGHPART 0x17071953
+#define TABLE_INFO_ON_DISK_MAGIC_LOWPART  0x25101981 // My birthday!
+#define TABLE_INFO_ON_DISK_MAGIC_HIGHPART 0x17071953 // My mum's birthday!
 
 //
 // Define the size, in characters, of the stack-allocated buffer used to
@@ -139,6 +139,7 @@ extern const PPERFECT_HASH_TABLE_SEEDED_HASH SeededHashRoutines[];
 
 extern const PPERFECT_HASH_TABLE_HASH_EX HashExRoutines[];
 extern const PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashExRoutines[];
+extern const PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHash16ExRoutines[];
 
 //
 // Declare an array of STRINGs representing C type names (e.g. 'unsigned short',
@@ -153,6 +154,12 @@ extern const STRING CTypeNames[];
 //
 
 extern const STRING NtTypeNames[];
+
+//
+// Hacky forward-decl of the 16-bit assigned index impl for Chm01.
+//
+
+extern PERFECT_HASH_TABLE_INDEX PerfectHashTableIndex16ImplChm01;
 
 //
 // Helper inline routine for initializing the extended vtbl interface and any
@@ -195,36 +202,53 @@ CompletePerfectHashTableInitialization(
     Vtbl->SeededHashEx = SeededHashExRoutines[HashFunctionId];
 
     //
-    // Default the slow index to the normal index routine.
+    // If we're using the Chm01 algorithm as the table indicates it's
+    // using 16-bit assigned table data, override the Index routines
+    // accordingly.
     //
 
-    Vtbl->SlowIndex = IndexRoutines[AlgorithmId];
+    if ((Table->State.UsingAssigned16 != FALSE) &&
+        (AlgorithmId == PerfectHashChm01AlgorithmId)) {
 
-    //
-    // Walk the fast index routine tuples and see if any of the entries match
-    // the IDs being requested.  If so, save the routine to Vtbl->FastIndex.
-    //
+        Vtbl->Index = PerfectHashTableIndex16ImplChm01;
+        Vtbl->SlowIndex = NULL;
+        Vtbl->FastIndex = NULL;
 
-    Vtbl->FastIndex = NULL;
+    } else {
 
-    for (Index = 0; Index < NumberOfFastIndexRoutines; Index++) {
+        //
+        // Default the slow index to the normal index routine.
+        //
 
-        FastIndexTuple = &FastIndexRoutines[Index];
+        Vtbl->SlowIndex = IndexRoutines[AlgorithmId];
 
-        IsMatch = (
-            AlgorithmId == FastIndexTuple->AlgorithmId &&
-            HashFunctionId == FastIndexTuple->HashFunctionId &&
-            MaskFunctionId == FastIndexTuple->MaskFunctionId
-        );
+        //
+        // Walk the fast index routine tuples and see if any of the entries match
+        // the IDs being requested.  If so, save the routine to Vtbl->FastIndex.
+        //
 
-        if (IsMatch) {
-            Vtbl->FastIndex = FastIndexTuple->FastIndex;
-            break;
+        Vtbl->FastIndex = NULL;
+
+        for (Index = 0; Index < NumberOfFastIndexRoutines; Index++) {
+
+            FastIndexTuple = &FastIndexRoutines[Index];
+
+            IsMatch = (
+                AlgorithmId == FastIndexTuple->AlgorithmId &&
+                HashFunctionId == FastIndexTuple->HashFunctionId &&
+                MaskFunctionId == FastIndexTuple->MaskFunctionId
+            );
+
+            if (IsMatch) {
+                Vtbl->FastIndex = FastIndexTuple->FastIndex;
+                break;
+            }
+
         }
 
+        Vtbl->Index = (Vtbl->FastIndex ? Vtbl->FastIndex : Vtbl->SlowIndex);
     }
 
-    Vtbl->Index = (Vtbl->FastIndex ? Vtbl->FastIndex : Vtbl->SlowIndex);
 
     //
     // Walk the C impl string tuples and try find a match.

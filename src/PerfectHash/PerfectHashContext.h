@@ -264,7 +264,10 @@ typedef struct _BEST_GRAPH_INFO {
     // Inline the entire coverage structure.
     //
 
-    ASSIGNED_MEMORY_COVERAGE Coverage;
+    union {
+        ASSIGNED_MEMORY_COVERAGE Coverage;
+        ASSIGNED16_MEMORY_COVERAGE Coverage16;
+    };
 
 } BEST_GRAPH_INFO, *PBEST_GRAPH_INFO;
 #define MAX_BEST_GRAPH_INFO 32

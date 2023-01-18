@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -9,24 +9,33 @@ Module Name:
 Abstract:
 
     This is the header file for the Graph module of the perfect hash library.
+    It defines the GRAPH structure and supporting enums and structs, the
+    GRAPH_VTBL structure and all associated function pointer typedefs, and
+    the ASSIGNED_MEMORY_COVERAGE structures which are used to evaluate the
+    cache line occupancy of the assigned data table after a solution has been
+    found, if we're in the "find best graph" mode.
 
-    N.B. This module is actively undergoing disruptive refactoring.  (It is
-         one of the oldest modules yet to receive any attention and thus, it
-         lags behind other modules with regards to common design patterns,
-         especially regarding exposing the functionality via a COM interface.)
+    The specifics of the hypergraph logic are contained within the impl files,
+    e.g., GraphImpl1.[ch], GraphImpl2.[ch], etc.
 
-         It will likely be broken into two modules down the track.  Graph.c
-         will contain the common "component" scaffolding (i.e. the COM vtbl
-         methods), and a GraphImpl.c file will contain the implementation
-         specific routines (adding edges, determining if it's acyclic, etc.)
+    The GRAPH structure and supporting methods are the workhorse of the entire
+    perfect hash library.  This module has evolved significantly during the
+    course of development as various areas of research were pursued.  It is
+    one of the venerable constantly-hacked-on kitchen-sink modules (like the
+    context and Chm01 modules), versus the more stable modules like path and
+    file, which are much cleaner, and have basically not changed since initial
+    implementation.
 
-    N.B. The bulk of this work has been done.  Graph.h (this file) now contains
-         the COM-related and generic graph functionality (as cared about by
-         consumers of the graph component, i.e. Chm01.c and PerfectHashContext).
+    For example, when the module was first written, there was no notion of
+    finding a best graph, or calculating assigned memory coverage, etc.  These
+    concepts and supporting code have all been implemented well after the core
+    CHM-based functionality was stable.
 
-         The specifics of the hypergraph logic are abstracted into GraphImpl.h,
-         and the original implementation, based on the chmd project, live in
-         GraphImpl1.[ch].
+    Thus, its best to view the graph module (including supporting impl files)
+    as primarily being a vehicle for exploratory research -- only a minimal
+    set of features was designed from the start (or rather, based on the CHM
+    approach), everything else has evolved organically over the course of the
+    project.
 
 --*/
 
@@ -111,9 +120,16 @@ typedef struct _VERTEX3 {
 // Poorly performing hash functions will often require numerous table resize
 // events before finding a solution.  On the opposite side of the spectrum,
 // good hash functions will often require no table resize events.  (We've yet
-// to observe the Jenkins hash function resulting in a table resize event;
-// however, its latency is 10x that of our best performing routines based on
-// the crc32 hardware instruction.)
+// to observe the Jenkins hash function resulting in a table resize event*;
+// however, its latency is much greater than that of our best performing
+// "multiply-shift"-derived routines.)
+//
+// [*]: This was written well before we found a swath of much faster routines
+//      (i.e., MultiplyShiftR, RotateMultiplyXorRotate etc.) that also have
+//      never been observed to require a table resize in order to solve; albeit
+//      at much poorer solving rates for certain key sets.  Table resizes are
+//      still a useful tool to immediately improve the solving rate for a given
+//      hash function by many orders of magnitude, so the point still stands.
 //
 // Typically, the more complex the hash function, the better it performs, and
 // vice versa.  Complexity in this case usually correlates directly to the
@@ -157,7 +173,21 @@ typedef struct _VERTEX3 {
 // subsequent memory fetch (so hundreds of cycles instead of 10-20 cycles) is
 // ultimately irrelevant.  So, a table with 65536 elements may perform just as
 // good, perhaps even better, than a table with 8192 elements, depending upon
-// the actual real world workload.
+// the actual real world workload*.
+//
+// [*]: We have verified this experimentally (some 3-4 years after writing the
+//      above prose): on certain real world workloads, such as runtime function
+//      tracing, where keys (relative RIPs of return addresses) have dramatic
+//      cardinalities (i.e. top 10 values dominate 99.99999% of all lookups),
+//      the size of the assigned table has virtually no impact.  (Because it
+//      doesn't impact the cache residency of those frequent top-10 values,
+//      which will always be present in the L1 cache.)
+//
+//      On the flip side, if a real world workload (such as index join on a
+//      relatively well-distributed key set) regularly used a much larger key
+//      set, then the table size would definitely impact performance, as a
+//      larger memory footprint would inevitably lead to more cache misses,
+//      and greater cache contention.
 //
 // In order to quantify the impact of memory coverage of the assigned array,
 // we need to be able to measure it.  That is the role of the following types
@@ -165,11 +195,24 @@ typedef struct _VERTEX3 {
 //
 // N.B. Memory coverage is an active work-in-progress.
 //
+// N.B. The above sentence was written 3-4 years ago.  We can now conclusively
+//      say that the assigned memory coverage concept is an integral part of
+//      our solution, and the key mechanism behind our notion of finding a
+//      "best" graph.
+//
 
 typedef VERTEX ASSIGNED;
 typedef ASSIGNED *PASSIGNED;
 
+//
+// ASSIGNED_SHIFT represents the left-shift amount needed to convert a single
+// "ASSIGNED" unit into a corresponding number of bytes.  This is similar to
+// the NT kernel macro PAGE_SHIFT, which is the left-shift amount used to take
+// a number of pages and convert it into the number of bytes for those pages.
+//
+
 #define ASSIGNED_SHIFT 2
+C_ASSERT((sizeof(ASSIGNED) >> 1) == ASSIGNED_SHIFT);
 
 #ifndef PAGE_SHIFT
 #define PAGE_SHIFT 12
@@ -361,14 +404,326 @@ CopyCoverage(
 }
 
 //
-// Define a graph iterator structure use to facilitate graph traversal.
+// The concept of assigned memory coverage, once introduced, instantly became
+// foundational to our notion of finding a best graph.  The main workhorse is
+// the ASSIGNED_MEMORY_COVERAGE structure, which is predicated upon the assigned
+// table data being an array of ULONGs.
+//
+// Many years ago, when we first implemented support for writing the source
+// code files as part of "compiled perfect hash table" generation, we added
+// some logic that dynamically sized the assigned table data based on the max
+// C type needed for a given number of edges.  E.g., tables with 65,354 vertices
+// and less only needed to use a USHORT array to capture the assigned table
+// data, not ULONG.  The resulting compiled perfect hash files enjoyed large
+// speed benefits if they could be downsized from ULONG to USHORT, as the memory
+// footprint effectively halved, which means fewer cache misses.  The effect
+// is this improvement was most notable on the BenchmarkFull exes, as they
+// would walk the entire set of keys as part of their benchmark work (versus
+// BenchmarkIndex which just called Index() for one key over and over).
+//
+// However, during solving, we originally just stuck with the assigned table
+// data being ULONG, and this trickled through to every part of the coverage
+// struct (ASSIGNED_MEMORY_COVERAGE) and supporting methods used to calculate
+// coverage (e.g., CalculateAssignedMemoryCoverage() and AVX2 variants).
+//
+// Issue 14 (https://github.com/tpn/perfecthash/issues/14) was created.  It
+// notes that the assigned memory coverage stats aren't accurate if evaluating
+// the compiled perfect hash table (when vertices <= 65,354), because they assumed
+// assigned table data was ULONG, not USHORT.  i.e., a USHORT-based table data
+// array can hold up to 32 assigned elements in a single 64-byte cache line, not
+// 16 like the ULONG-based table.
+//
+// To solve the problem, though, not only do we need to alter the routines that
+// calculate the memory coverage, we need to alter the actual data types used
+// by graphs for vertices <= 65,354 during solving.
+//
+// If this were C++, we'd use a template to abstract this detail away.  However,
+// we're C, so we just proliferate a bunch of new typedefs for the USHORT,
+// 16-bit assigned table data types and supporting routines.  This isn't
+// particularly elegant, and you can clearly tell it's been bolted on after the
+// fact, *but*, the inelegant code duplication is very much worth it, not just
+// so the assigned coverage stats are accurate for vertices <= 65,354, but
+// solving time is greatly improved, often by 50% or more.
+//
+// This is due to the fact that using the ASSIGNED16-derived data types halves
+// the memory requirements for each graph instance, which translates to massive
+// solving speedups in the real world, particularly on CPUs with a lot of cores
+// but weak-sauce L3 caches.
+//
+// (For example, my 12/24 core AMD Ryzen 9 3900X is a cheap consumer CPU that
+//  has an unusually beefy L3 cache of 64MB.  This box will regularly trounce
+//  a much more powerful (on paper) Intel Xeon W-2275 box I have that sports
+//  14/28 cores but has a weak-sauce 19.2MB L3 cache.  When setting solving
+//  concurrency to core count, which is how the whole library was designed to
+//  run in order to max perform on underlying hardware, the Xeon box will
+//  struggle to maintain 35,000-45,000 solving attempts per second (even with
+//  AVX-512 hash function enabled) for HologramWorld-31016.keys+MultiplyShiftR,
+//  as all graphs will be thrashing and competing for the L3 cache, whereas the
+//  AMD box happily churns out 60,000+ attempts per second, with little to no
+//  last-level (L3) cache thrashing.  So, the significant solving rate gained
+//  by the introduction of this "ASSIGNED16" derivative is, in large part, an
+//  artifact of the reduced memory footprint of each solver graph.)
 //
 
-typedef struct _GRAPH_ITERATOR {
-    VERTEX Vertex;
-    EDGE Edge;
-} GRAPH_ITERATOR;
-typedef GRAPH_ITERATOR *PGRAPH_ITERATOR;
+typedef USHORT EDGE16;
+typedef USHORT ASSIGNED16;
+typedef ASSIGNED16 *PASSIGNED16;
+
+typedef USHORT KEY16;
+typedef SHORT ORDER16;
+typedef USHORT EDGE16;
+typedef USHORT VERTEX16;
+typedef USHORT DEGREE16;
+
+typedef EDGE16 *PEDGE16;
+typedef VERTEX16 *PVERTEX16;
+typedef DEGREE16 *PDEGREE16;
+
+typedef union _VERTEX16_PAIR {
+    struct {
+        VERTEX16 Vertex1;
+        VERTEX16 Vertex2;
+    };
+    ULONG AsULong;
+    ULONG_INTEGER AsULongInteger;
+} VERTEX16_PAIR, *PVERTEX16_PAIR;
+C_ASSERT(sizeof(VERTEX16_PAIR) == sizeof(ULONG));
+
+//
+// Our third graph implementation uses the following structures.  The 3 suffix
+// on the EDGE163 and VERTEX163 type names solely represents the version 3 of
+// the implementation (and not, for example, a 3-part hypergraph).
+//
+
+typedef union _EDGE163 {
+    struct {
+        VERTEX16 Vertex1;
+        VERTEX16 Vertex2;
+    };
+    VERTEX16_PAIR AsVertex16Pair;
+    ULONG AsULong;
+} EDGE163, *PEDGE163;
+
+typedef struct _VERTEX163 {
+
+    //
+    // The degree of connections for this vertex.
+    //
+
+    DEGREE16 Degree;
+
+    //
+    // All edges for this vertex; an incidence list constructed via XOR'ing all
+    // edges together (aka "the XOR-trick").
+    //
+
+    EDGE16 Edges;
+
+} VERTEX163, *PVERTEX163;
+
+//
+// ASSIGNED16_SHIFT represents the left-shift amount needed to convert a single
+// "ASSIGNED16" unit into a corresponding number of bytes.  This is similar to
+// the NT kernel macro PAGE_SHIFT, which is the left-shift amount used to take
+// a number of pages and convert it into the number of bytes for those pages.
+//
+
+#define ASSIGNED16_SHIFT 1
+C_ASSERT((sizeof(ASSIGNED16) >> 1) == ASSIGNED16_SHIFT);
+
+#define NUM_ASSIGNED16_PER_PAGE       (PAGE_SIZE       / sizeof(ASSIGNED16))
+#define NUM_ASSIGNED16_PER_LARGE_PAGE (LARGE_PAGE_SIZE / sizeof(ASSIGNED16))
+#define NUM_ASSIGNED16_PER_CACHE_LINE (CACHE_LINE_SIZE / sizeof(ASSIGNED16))
+
+//
+// For the human readers that don't like doing C preprocessor mental math,
+// some C_ASSERTs to clarify the sizes above:
+//
+
+C_ASSERT(NUM_ASSIGNED16_PER_PAGE       == 2048);        // Fits within USHORT.
+C_ASSERT(NUM_ASSIGNED16_PER_LARGE_PAGE == 1048576);     // Fits within ULONG.
+C_ASSERT(NUM_ASSIGNED16_PER_CACHE_LINE == 32);          // Fits within BYTE.
+
+typedef ASSIGNED16 ASSIGNED16_PAGE[NUM_ASSIGNED16_PER_PAGE];
+typedef ASSIGNED16_PAGE *PASSIGNED16_PAGE;
+
+typedef ASSIGNED16 ASSIGNED16_LARGE_PAGE[NUM_ASSIGNED16_PER_LARGE_PAGE];
+typedef ASSIGNED16_LARGE_PAGE *PASSIGNED16_LARGE_PAGE;
+
+typedef ASSIGNED16 ASSIGNED16_CACHE_LINE[NUM_ASSIGNED16_PER_CACHE_LINE];
+typedef ASSIGNED16_CACHE_LINE *PASSIGNED16_CACHE_LINE;
+
+typedef USHORT ASSIGNED16_PAGE_COUNT;
+typedef ASSIGNED16_PAGE_COUNT *PASSIGNED16_PAGE_COUNT;
+
+typedef ULONG ASSIGNED16_LARGE_PAGE_COUNT;
+typedef ASSIGNED16_LARGE_PAGE_COUNT *PASSIGNED16_LARGE_PAGE_COUNT;
+
+typedef BYTE ASSIGNED16_CACHE_LINE_COUNT;
+typedef ASSIGNED16_CACHE_LINE_COUNT *PASSIGNED16_CACHE_LINE_COUNT;
+
+typedef ASSIGNED16_CACHE_LINE_COUNT
+    PAGE_CACHE_LINE_COUNT[NUM_CACHE_LINES_PER_PAGE];
+
+//
+// This is the USHORT, 16-bit counterpart to the ULONG, 32-bit based original
+// ASSIGNED_MEMORY_COVERAGE.  Many of the scalar total/number fields have been
+// kept as ULONG, mainly because I didn't want to invest the cognitive energy
+// to determine whether each one could be downscaled to USHORT.  Additionally,
+// this variant is larger than ASSIGNED_MEMORY_COVERAGE anyway, as the cache
+// line occupancy histogram NumberOfAssignedPerCacheLineCounts is 33 in size,
+// not 17 like the original version.
+//
+
+typedef struct _ASSIGNED16_MEMORY_COVERAGE {
+
+    ULONG TotalNumberOfPages;
+    ULONG TotalNumberOfLargePages;
+    ULONG TotalNumberOfCacheLines;
+
+    union {
+        ULONG NumberOfUsedPages;
+        ULONG NumberOfPagesUsedByKeysSubset;
+    };
+
+    union {
+        ULONG NumberOfUsedLargePages;
+        ULONG NumberOfLargePagesUsedByKeysSubset;
+    };
+
+    union {
+        ULONG NumberOfUsedCacheLines;
+        ULONG NumberOfCacheLinesUsedByKeysSubset;
+    };
+
+    ULONG NumberOfEmptyPages;
+    ULONG NumberOfEmptyLargePages;
+    ULONG NumberOfEmptyCacheLines;
+
+    ULONG FirstPageUsed;
+    ULONG FirstLargePageUsed;
+    ULONG FirstCacheLineUsed;
+
+    ULONG LastPageUsed;
+    ULONG LastLargePageUsed;
+    ULONG LastCacheLineUsed;
+
+    ULONG TotalNumberOfAssigned;
+
+    _Writable_elements_(TotalNumberOfPages)
+    PASSIGNED16_PAGE_COUNT NumberOfAssignedPerPage;
+
+    _Writable_elements_(TotalNumberOfLargePages)
+    PASSIGNED16_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
+
+    _Writable_elements_(TotalNumberOfCacheLines)
+    PASSIGNED16_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
+
+    //
+    // Histogram of cache line counts.  The +1 accounts for the fact that we
+    // want to count the number of times 0 occurs, as well, so we need 33 array
+    // elements, not 32.
+    //
+
+#define TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE NUM_ASSIGNED16_PER_CACHE_LINE + 1
+
+    ULONG NumberOfAssignedPerCacheLineCounts[
+                                           TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE];
+    union {
+        ULONG MaxAssignedPerCacheLineCount;
+        ULONG MaxAssignedPerCacheLineCountForKeysSubset;
+    };
+
+    //
+    // If we're calculating memory coverage for a subset of keys, the following
+    // counts will reflect the situation where the two vertices for a given key
+    // are co-located within the same page, large page and cache line.
+    //
+    // N.B. Coverage for key subsets has not yet been implemented for the
+    //      ASSIGNED16 logic yet.
+    //
+
+    ULONG NumberOfKeysWithVerticesMappingToSamePage;
+    ULONG NumberOfKeysWithVerticesMappingToSameLargePage;
+    ULONG NumberOfKeysWithVerticesMappingToSameCacheLine;
+
+    ULONG MaxGraphTraversalDepth;
+    ULONG TotalGraphTraversals;
+    ULONG NumberOfEmptyVertices;
+    ULONG NumberOfCollisionsDuringAssignment;
+
+    //
+    // Stores the best graph number if applicable.
+    //
+
+    ULONG BestGraphNumber;
+
+    //
+    // The solution number with respect to other graphs that have been solved.
+    //
+
+    ULONGLONG SolutionNumber;
+
+    //
+    // Stores Graph->Attempt at the time the memory coverage was captured.
+    //
+
+    LONGLONG Attempt;
+
+    //
+    // Linear regression performed against NumberOfAssigned16PerCacheLineCounts.
+    //
+
+    DOUBLE Slope;
+    DOUBLE Intercept;
+    DOUBLE CorrelationCoefficient;
+    DOUBLE PredictedNumberOfFilledCacheLines;
+
+    //
+    // Score and rank for the NumberOfAssigned16PerCacheLineCounts array.
+    //
+
+    ULONGLONG Score;
+    DOUBLE Rank;
+
+} ASSIGNED16_MEMORY_COVERAGE;
+typedef ASSIGNED16_MEMORY_COVERAGE *PASSIGNED16_MEMORY_COVERAGE;
+typedef const ASSIGNED16_MEMORY_COVERAGE *PCASSIGNED16_MEMORY_COVERAGE;
+
+//
+// The 16-bit coverage struct always needs to be equal or greater than the size
+// of the normal version, as it simplifies things like when the table does this:
+//
+//  Table->Coverage16 = Allocator->Vtbl->Calloc(Allocator,
+//                                              1,
+//                                              sizeof(*Table->Coverage16));
+//
+//
+
+C_ASSERT(sizeof(ASSIGNED16_MEMORY_COVERAGE) >=
+         sizeof(ASSIGNED_MEMORY_COVERAGE));
+
+FORCEINLINE
+VOID
+CopyCoverage16(
+    _Out_writes_bytes_all_(sizeof(*Dest)) PASSIGNED16_MEMORY_COVERAGE Dest,
+    _In_reads_(sizeof(*Source)) PCASSIGNED16_MEMORY_COVERAGE Source
+    )
+{
+    //
+    // Copy the structure, then clear the pointers.
+    //
+
+    CopyInline(Dest, Source, sizeof(*Dest));
+
+    Dest->NumberOfAssignedPerPage = NULL;
+    Dest->NumberOfAssignedPerLargePage = NULL;
+    Dest->NumberOfAssignedPerCacheLine = NULL;
+}
+
+//
+// End of USHORT, 16-bit assigned derivatives.
+//
 
 //
 // Define graph flags.
@@ -492,10 +847,17 @@ typedef union _GRAPH_FLAGS {
         ULONG UsedAvx2MemoryCoverageFunction:1;
 
         //
+        // When set, indicates the 16-bit hash/assigned infrastructure is
+        // active.
+        //
+
+        ULONG UsingAssigned16:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:16;
+        ULONG Unused:15;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -512,6 +874,7 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
+#define IsUsingAssigned16(Graph) ((Graph)->Flags.UsingAssigned16 != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 
@@ -876,6 +1239,19 @@ _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
 HRESULT
+(STDAPICALLTYPE GRAPH_ADD_HASHED_KEYS16)(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PVERTEX16_PAIR VertexPairs
+    );
+typedef GRAPH_ADD_HASHED_KEYS16 *PGRAPH_ADD_HASHED_KEYS16;
+
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
 (STDAPICALLTYPE GRAPH_IS_ACYCLIC)(
     _In_ PGRAPH Graph
     );
@@ -1048,7 +1424,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // Current index into the Order array (used during assignment).
     //
 
-    volatile LONG OrderIndex;
+    union {
+        volatile LONG OrderIndex;
+        volatile SHORT Order16Index;
+    };
 
     //
     // Number of empty vertices encountered during the assignment step.
@@ -1102,42 +1481,60 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     _Writable_elements_(TotalNumberOfEdges)
-    PEDGE Edges;
+    union {
+        PEDGE Edges;
+        PEDGE16 Edges16;
+    };
 
     //
     // Deletion order.
     //
 
     _Writable_elements_(NumberOfKeys)
-    PLONG Order;
+    union {
+        PLONG Order;
+        PSHORT Order16;
+    };
 
     //
     // Array of the "next" edge array, as per the referenced papers.
     //
 
     _Writable_elements_(TotalNumberOfEdges)
-    PEDGE Next;
+    union {
+        PEDGE Next;
+        PEDGE16 Next16;
+    };
 
     //
     // Array of vertices.
     //
 
     _Writable_elements_(NumberOfVertices)
-    PVERTEX First;
+    union {
+        PVERTEX First;
+        PVERTEX16 First16;
+    };
 
     //
     // Array of assigned vertices.
     //
 
     _Writable_elements_(NumberOfVertices)
-    PASSIGNED Assigned;
+    union {
+        PASSIGNED Assigned;
+        PASSIGNED16 Assigned16;
+    };
 
     //
     // Array of VERTEX3 elements for the graph impl 3.
     //
 
     _Writable_elements_(NumberOfVertices)
-    PVERTEX3 Vertices3;
+    union {
+        PVERTEX3 Vertices3;
+        PVERTEX163 Vertices163;
+    };
 
     //
     // Graph implementations 1 & 2: this is an optional array of vertex pairs,
@@ -1150,8 +1547,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _When_(GraphImpl == 3,
            _Writable_elements_(NumberOfEdges))
     union {
-        PVERTEX_PAIR VertexPairs;
-        PEDGE3 Edges3;
+
+        //
+        // For ASSIGNED_MEMORY_COVERAGE.
+        //
+
+        union {
+            PVERTEX_PAIR VertexPairs;
+            PEDGE3 Edges3;
+        };
+
+        //
+        // For ASSIGNED16_MEMORY_COVERAGE && GraphImpl==3.
+        //
+
+        union {
+            PVERTEX16_PAIR Vertex16Pairs;
+            PEDGE163 Edges163;
+        };
     };
 
     //
@@ -1192,7 +1605,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // Memory coverage information for the assigned array.
     //
 
-    ASSIGNED_MEMORY_COVERAGE AssignedMemoryCoverage;
+    union {
+        ASSIGNED_MEMORY_COVERAGE AssignedMemoryCoverage;
+        ASSIGNED16_MEMORY_COVERAGE Assigned16MemoryCoverage;
+    };
 
     //
     // Counters to track elapsed cycles and microseconds of graph activities.
@@ -1478,9 +1894,9 @@ typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
 // Define a helper macro for checking whether or not graph solving should stop.
 //
 
-#define MAYBE_STOP_GRAPH_SOLVING(Graph)                               \
-    if (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph) == FALSE) { \
-        return PH_S_GRAPH_SOLVING_STOPPED;                            \
+#define MAYBE_STOP_GRAPH_SOLVING(Graph)                       \
+    if (GraphShouldWeContinueTryingToSolve(Graph) == FALSE) { \
+        return PH_S_GRAPH_SOLVING_STOPPED;                    \
     }
 
 //

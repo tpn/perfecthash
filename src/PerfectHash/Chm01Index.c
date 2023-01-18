@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -135,6 +135,138 @@ Error:
     *Index = 0;
     return E_FAIL;
 }
+
+PERFECT_HASH_TABLE_INDEX PerfectHashTableIndex16ImplChm01;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableIndex16ImplChm01(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONG Index
+    )
+/*++
+
+Routine Description:
+
+    Looks up given key in a perfect hash table and returns its index.
+
+    This is the 16-bit variant used for tables with vertices <= 65,354.
+
+    N.B. If Key did not appear in the original set the hash table was created
+         from, the behavior of this routine is undefined.  (In practice, the
+         key will hash to either an existing key's location or an empty slot,
+         so there is potential for returning a non-unique index.)
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the key lookup is to be
+        performed.
+
+    Key - Supplies the key to look up.
+
+    Index - Receives the index associated with this key.  The index will be
+        between 0 and Table->HashSize-1, and can be safely used to offset
+        directly into an appropriately sized array (e.g. Table->Values[]).
+
+Return Value:
+
+    S_OK on success, E_FAIL if the underlying hash function returned a failure.
+    This will happen if the two hash values for a key happen to be identical.
+    It shouldn't happen once a perfect graph has been created (i.e. it only
+    happens when attempting to solve the graph).  The Index parameter will
+    be cleared in the case of E_FAIL.
+
+--*/
+{
+    PULONG Seeds;
+    USHORT Masked;
+    USHORT Vertex1;
+    USHORT Vertex2;
+    USHORT MaskedLow;
+    USHORT MaskedHigh;
+    USHORT HashMask;
+    USHORT IndexMask;
+    PUSHORT Assigned;
+    ULONG Combined;
+    ULONG_INTEGER Hash;
+    PTABLE_INFO_ON_DISK TableInfo;
+    PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHashEx;
+
+    //
+    // Initialize aliases.
+    //
+
+    TableInfo = Table->TableInfoOnDisk;
+    HashMask = (USHORT)TableInfo->HashMask;
+    IndexMask = (USHORT)TableInfo->IndexMask;
+    Seeds = &TableInfo->FirstSeed;
+    SeededHashEx = SeededHash16ExRoutines[Table->HashFunctionId];
+
+    //
+    // N.B. We have the benefit of writing this 16-bit version many years after
+    //      the initial Index() routine above was implemented, so we can just
+    //      call out to the proper internal seeded hash routine and manually
+    //      do the masking ourselves versus going through the VTBL route (which
+    //      won't work for a 16-bit variant table).
+    //
+
+    Hash.LongPart = SeededHashEx(Key, Seeds, HashMask);
+    if (Hash.LowPart == Hash.HighPart) {
+        goto Error;
+    }
+
+    //
+    // Mask the hash values using our usual And masking.
+    //
+
+    MaskedLow = (Hash.LowPart & HashMask);
+    MaskedHigh = (Hash.HighPart & HashMask);
+
+    //
+    // Obtain the corresponding vertex values for the masked high and low hash
+    // values.  These are derived from the "assigned" array that we construct
+    // during the creation routine's assignment step (GraphAssign()).
+    //
+
+    Assigned = Table->Assigned16;
+
+    Vertex1 = Assigned[MaskedLow];
+    Vertex2 = Assigned[MaskedHigh];
+
+    //
+    // Combine the two values, then perform the index masking operation, such
+    // that our final index into the array falls within the confines of the
+    // number of edges, or keys, in the table.  That is, make sure the index
+    // value is between 0 and Table->Keys->NumberOfKeys-1.
+    //
+
+    Combined = (ULONG)Vertex1 + (ULONG)Vertex2;
+    Masked = (USHORT)(Combined & (ULONG)IndexMask);
+
+    //
+    // Update the caller's pointer and return success.  The resulting index
+    // value represents the array offset index for this given key in the
+    // underlying table, and is guaranteed to be unique amongst the original
+    // keys in the input set.
+    //
+
+    *Index = Masked;
+    return S_OK;
+
+Error:
+
+    //
+    // Clear the caller's pointer and return failure.  We should only hit this
+    // point if the caller supplies a key that both: a) wasn't in the original
+    // input set, and b) happens to result in a hash value where both the high
+    // part and low part are identical, which is rare, but not impossible.
+    //
+
+    *Index = 0;
+    return E_FAIL;
+}
+
 
 _Use_decl_annotations_
 HRESULT

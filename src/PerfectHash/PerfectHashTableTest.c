@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -547,6 +547,31 @@ Return Value:
     //
 
     INIT_TIMESTAMP(SlowIndex);
+
+    if (Table->Vtbl->SlowIndex == NULL) {
+
+        //
+        // N.B. SlowIndex will be NULL if we're using 16-bit assigned table
+        //      data.  Don't bother benchmarking it in this case, just
+        //      start/stop the timestamp counter and return.
+        //
+        // N.B. We can't use ASSERT() here due to the earlier override, and
+        //      the absence of the DebugBreakOnFailure in this scope, so,
+        //      just PH_RAISE() instead.
+        //
+
+        if (Table->State.UsingAssigned16 == FALSE) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
+
+        if (Table->Vtbl->FastIndex != NULL) {
+            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        }
+
+        START_TIMESTAMP(SlowIndex);
+        END_TIMESTAMP(SlowIndex);
+        return;
+    }
 
     for (Outer = 0; Outer < Warmups; Outer++) {
         Result = Table->Vtbl->SlowIndex(Table, Key, &Index);

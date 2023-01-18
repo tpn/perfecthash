@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2021-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -191,6 +191,97 @@ Return Value:
 }
 
 VOID
+LinearRegressionNumberOfAssigned16PerCacheLineCounts(
+    _In_reads_(TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE) PULONG YCounts,
+    _Out_ PDOUBLE SlopePointer,
+    _Out_ PDOUBLE InterceptPointer,
+    _Out_ PDOUBLE CorrelationCoefficientPointer,
+    _Out_ PDOUBLE PredictedNumberOfFilledCacheLinesPointer
+    )
+/*++
+
+Routine Description:
+
+    Given an array of 33 cache line counts, perform a linear regression and
+    return the slope, intercept, correlation coefficient, and predicted number
+    of filled cache lines (i.e. y for `y = mx + b` where x == 32).
+
+Arguments:
+
+    YCounts - Supplies the array of cache line counts.
+
+    SlopePointer - Receives the slope.
+
+    InterceptPointer - Receives the intercept.
+
+    CorrelationCoefficientPointer - Receives the correlation coefficient.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    BYTE Index;
+    DOUBLE X;
+    DOUBLE Y;
+    DOUBLE Y2;
+    DOUBLE SumY;
+    DOUBLE SumY2;
+    DOUBLE SumXY;
+    DOUBLE Slope;
+    DOUBLE Intercept;
+    DOUBLE Predicted;
+    DOUBLE CorrelationCoefficient;
+    CONST DOUBLE N = TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE;
+    CONST DOUBLE SumX = 528.0;              // sum(range(0, 33))
+    CONST DOUBLE SumX2 = 11440.0;           // sum(math.pow(i, 2)
+                                            //     for i in range(0, 33))
+    CONST DOUBLE SumXSquared = 278784.0;    // math.pow(528, 2)
+    CONST DOUBLE Denominator = ((N * SumX2) - SumXSquared);
+    CONST BYTE Total = TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE;
+    CONST BYTE XCounts[TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE] = {
+        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16,
+        17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+    };
+
+    SumY = 0.0;
+    SumXY = 0.0;
+    SumY2 = 0.0;
+
+    for (Index = 0; Index < Total; Index++) {
+        X = (DOUBLE)XCounts[Index];
+
+        Y = (DOUBLE)YCounts[Index];
+        SumY += Y;
+
+        Y2 = sqr(Y);
+        SumY2 += Y2;
+
+        SumXY += X * Y;
+    }
+
+    Slope = ((N * SumXY) - (SumX * SumY)) / Denominator;
+    Intercept = ((SumY * SumX2) - (SumX * SumXY)) / Denominator;
+    CorrelationCoefficient = (
+        (SumXY - ((SumX * SumY) / N)) / sqrt(
+            (SumX2 - sqr(SumX) / N) *
+            (SumY2 - sqr(SumY) / N)
+        )
+    );
+
+    Predicted = (Slope * 16.0) + Intercept;
+
+    *SlopePointer = Slope;
+    *InterceptPointer = Intercept;
+    *CorrelationCoefficientPointer = CorrelationCoefficient;
+    *PredictedNumberOfFilledCacheLinesPointer = Predicted;
+
+    return;
+}
+
+
+VOID
 ScoreNumberOfAssignedPerCacheLineCounts(
     _In_reads_(TOTAL_NUM_ASSIGNED_PER_CACHE_LINE) PULONG YCounts,
     _In_ ULONG TotalNumberOfAssigned,
@@ -256,5 +347,72 @@ Return Value:
     return;
 }
 
+VOID
+ScoreNumberOfAssigned16PerCacheLineCounts(
+    _In_reads_(TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE) PULONG YCounts,
+    _In_ ULONG TotalNumberOfAssigned,
+    _Out_ PULONGLONG Score,
+    _Out_ PDOUBLE Rank
+    )
+/*++
+
+Routine Description:
+
+    Given an array of 33 cache line counts, construct a score that is obtained
+    by multiplying each array element by its relevant position squared in the
+    array, then summing the results.  E.g. the number of assigned in the 3
+    bucket is multiplied by 9, 5 is multiplied by 25, etc.
+
+    The rank is (or at least should be) a decimal value between (0,1] that
+    attempts to capture the score relative to the maximum possible score.
+
+Arguments:
+
+    YCounts - Supplies the array of cache line counts.
+
+    Score - Supplies a pointer to a variable that receives the score.
+
+    Rank - Supplies a pointer to a variable that receives the rank.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    BYTE Index;
+    ULONGLONG X;
+    ULONGLONG Y;
+    ULONGLONG Sum;
+    DOUBLE MaxScore;
+    CONST BYTE Total = TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE;
+    // print(', '.join(list(str(int(math.pow(i, 2))) for i in range(0, 33))))
+    CONST SHORT XMultipliers[TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE] = {
+        0, 1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256,
+        289, 324, 361, 400, 441, 484, 529, 576, 625, 676, 729, 784, 841, 900,
+        961, 1024
+    };
+
+    Sum = 0;
+
+    //
+    // We start at 1 to ignore the count of cache lines with no assigned
+    // elements.
+    //
+
+    for (Index = 1; Index < Total; Index++) {
+        X = (ULONGLONG)XMultipliers[Index];
+        Y = (ULONGLONG)YCounts[Index];
+
+        Sum += (Y * X);
+    }
+
+    MaxScore = ((DOUBLE)TotalNumberOfAssigned / 32.0) * (DOUBLE)1024;
+
+    *Score = Sum;
+    *Rank = Sum / MaxScore;
+
+    return;
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

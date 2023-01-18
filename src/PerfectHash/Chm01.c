@@ -1368,7 +1368,7 @@ FinishedSolution:
 
             SizeInBytes = (
                 TableInfoOnDisk->NumberOfTableElements.QuadPart *
-                TableInfoOnDisk->KeySizeInBytes
+                TableInfoOnDisk->AssignedElementSizeInBytes
             );
 
             TryLargePageVirtualAlloc = Rtl->Vtbl->TryLargePageVirtualAlloc;
@@ -1689,8 +1689,10 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result = S_OK;
+    BYTE AssignedShift;
     ULONG GraphImpl;
     ULONG NumberOfKeys;
+    BOOLEAN UseAssigned16;
     USHORT NumberOfBitmaps;
     PGRAPH_DIMENSIONS Dim;
     SYSTEM_INFO SystemInfo;
@@ -1981,6 +1983,34 @@ Return Value:
     }
 
     //
+    // If our graph impl is v3, our vertex count - 1 is less than or equal to
+    // MAX_USHORT (i.e. 65535), and the user hasn't supplied the flag to the
+    // contrary, use the 16-bit hash/assigned implementation.
+    //
+
+    if ((GraphImpl == 3) &&
+        ((NumberOfVertices.LowPart-1) <= 0x0000ffff) &&
+        (TableCreateFlags.DoNotTryUseHash16Impl == FALSE)) {
+
+        UseAssigned16 = TRUE;
+        AssignedShift = ASSIGNED16_SHIFT;
+        Table->State.UsingAssigned16 = TRUE;
+
+        //
+        // Overwrite the vtbl Index routines accordingly.
+        //
+
+        Table->Vtbl->Index = PerfectHashTableIndex16ImplChm01;
+        Table->Vtbl->FastIndex = NULL;
+        Table->Vtbl->SlowIndex = NULL;
+
+    } else {
+        UseAssigned16 = FALSE;
+        AssignedShift = ASSIGNED_SHIFT;
+        Table->State.UsingAssigned16 = FALSE;
+    }
+
+    //
     // Calculate the size required for our bitmap buffers.
     //
 
@@ -2060,24 +2090,53 @@ Return Value:
         NextSizeInBytes = 0;
         FirstSizeInBytes = 0;
 
-        VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
-            RTL_ELEMENT_SIZE(GRAPH, Edges3) * NumberOfEdges.QuadPart
-        );
+        if (!UseAssigned16) {
 
-        Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
-            RTL_ELEMENT_SIZE(GRAPH, Vertices3) * NumberOfVertices.QuadPart
-        );
+            VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, Edges3) * NumberOfEdges.QuadPart
+            );
+
+            Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, Vertices3) * NumberOfVertices.QuadPart
+            );
+
+        } else {
+
+            VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, Edges163) * NumberOfEdges.QuadPart
+            );
+
+            Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, Vertices163) *
+                NumberOfVertices.QuadPart
+            );
+
+        }
 
         DeletedEdgesBitmapBufferSizeInBytes.QuadPart = 0;
     }
 
-    OrderSizeInBytes = ALIGN_UP_YMMWORD(
-        RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfEdges.QuadPart
-    );
+    if (!UseAssigned16) {
 
-    AssignedSizeInBytes = ALIGN_UP_YMMWORD(
-        RTL_ELEMENT_SIZE(GRAPH, Assigned) * NumberOfVertices.QuadPart
-    );
+        OrderSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Order) * NumberOfEdges.QuadPart
+        );
+
+        AssignedSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Assigned) * NumberOfVertices.QuadPart
+        );
+
+    } else {
+
+        OrderSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Order16) * NumberOfEdges.QuadPart
+        );
+
+        AssignedSizeInBytes = ALIGN_UP_YMMWORD(
+            RTL_ELEMENT_SIZE(GRAPH, Assigned16) * NumberOfVertices.QuadPart
+        );
+
+    }
 
     //
     // Calculate the size required for the values array.  This is used as part
@@ -2106,15 +2165,15 @@ Return Value:
     //
 
     Info->AssignedArrayNumberOfPages = (ULONG)(
-        BYTES_TO_PAGES(NumberOfVertices.QuadPart << ASSIGNED_SHIFT)
+        BYTES_TO_PAGES(NumberOfVertices.QuadPart << AssignedShift)
     );
 
     Info->AssignedArrayNumberOfLargePages = (ULONG)(
-        BYTES_TO_LARGE_PAGES(NumberOfVertices.QuadPart << ASSIGNED_SHIFT)
+        BYTES_TO_LARGE_PAGES(NumberOfVertices.QuadPart << AssignedShift)
     );
 
     Info->AssignedArrayNumberOfCacheLines = (ULONG)(
-        BYTES_TO_CACHE_LINES(NumberOfVertices.QuadPart << ASSIGNED_SHIFT)
+        BYTES_TO_CACHE_LINES(NumberOfVertices.QuadPart << AssignedShift)
     );
 
     //
@@ -2122,20 +2181,47 @@ Return Value:
     // line.
     //
 
-    Info->NumberOfAssignedPerPageSizeInBytes = (
-        Info->AssignedArrayNumberOfPages *
-        RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE, NumberOfAssignedPerPage)
-    );
+    if (!UseAssigned16) {
 
-    Info->NumberOfAssignedPerLargePageSizeInBytes = (
-        Info->AssignedArrayNumberOfLargePages *
-        RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE, NumberOfAssignedPerLargePage)
-    );
+        Info->NumberOfAssignedPerPageSizeInBytes = (
+            Info->AssignedArrayNumberOfPages *
+            RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE,
+                             NumberOfAssignedPerPage)
+        );
 
-    Info->NumberOfAssignedPerCacheLineSizeInBytes = (
-        Info->AssignedArrayNumberOfCacheLines *
-        RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE, NumberOfAssignedPerCacheLine)
-    );
+        Info->NumberOfAssignedPerLargePageSizeInBytes = (
+            Info->AssignedArrayNumberOfLargePages *
+            RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE,
+                             NumberOfAssignedPerLargePage)
+        );
+
+        Info->NumberOfAssignedPerCacheLineSizeInBytes = (
+            Info->AssignedArrayNumberOfCacheLines *
+            RTL_ELEMENT_SIZE(ASSIGNED_MEMORY_COVERAGE,
+                             NumberOfAssignedPerCacheLine)
+        );
+
+    } else {
+
+        Info->NumberOfAssignedPerPageSizeInBytes = (
+            Info->AssignedArrayNumberOfPages *
+            RTL_ELEMENT_SIZE(ASSIGNED16_MEMORY_COVERAGE,
+                             NumberOfAssignedPerPage)
+        );
+
+        Info->NumberOfAssignedPerLargePageSizeInBytes = (
+            Info->AssignedArrayNumberOfLargePages *
+            RTL_ELEMENT_SIZE(ASSIGNED16_MEMORY_COVERAGE,
+                             NumberOfAssignedPerLargePage)
+        );
+
+        Info->NumberOfAssignedPerCacheLineSizeInBytes = (
+            Info->AssignedArrayNumberOfCacheLines *
+            RTL_ELEMENT_SIZE(ASSIGNED16_MEMORY_COVERAGE,
+                             NumberOfAssignedPerCacheLine)
+        );
+
+    }
 
     //
     // Calculate the total size required for the underlying arrays, bitmap
@@ -2375,6 +2461,7 @@ Return Value:
     TableInfoOnDisk->Magic.HighPart = TABLE_INFO_ON_DISK_MAGIC_HIGHPART;
     TableInfoOnDisk->SizeOfStruct = sizeof(*GraphInfoOnDisk);
     TableInfoOnDisk->Flags.AsULong = 0;
+    TableInfoOnDisk->Flags.UsingAssigned16 = (UseAssigned16 != FALSE);
     TableInfoOnDisk->Concurrency = Context->MaximumConcurrency;
     TableInfoOnDisk->AlgorithmId = Context->AlgorithmId;
     TableInfoOnDisk->MaskFunctionId = Context->MaskFunctionId;
@@ -2400,6 +2487,7 @@ Return Value:
     TableInfoOnDisk->NumberOfSeeds = (
         HashRoutineNumberOfSeeds[Table->HashFunctionId]
     );
+    TableInfoOnDisk->AssignedElementSizeInBytes = UseAssigned16 ? 2 : 4;
 
     //
     // This will change based on masking type and whether or not the caller
@@ -2817,6 +2905,7 @@ Return Value:
     UNICODE_STRING DurationString;
     WCHAR DurationBuffer[80] = { 0, };
     PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED16_MEMORY_COVERAGE Coverage16;
     UNICODE_STRING SolvedDurationString;
     ULARGE_INTEGER DurationSinceLastBest;
     WCHAR SolvedDurationBuffer[80] = { 0, };
@@ -3063,6 +3152,98 @@ Return Value:
         OUTPUT_INT                                             \
     )                                                          \
 
+#define CONTEXT_STATS_BEST_GRAPH16_TABLE(ENTRY)                \
+    ENTRY(                                                     \
+        "    Attempt:                                       ", \
+        Graph->Attempt,                                        \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Solution Number:                               ", \
+        Graph->SolutionNumber,                                 \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Best Graph Number:                             ", \
+        Coverage16->BestGraphNumber,                           \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Solved After:                                  ", \
+        &SolvedDurationString,                                 \
+        OUTPUT_UNICODE_STRING_FAST                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Number of Collisions During Assignment:        ", \
+        Graph->Collisions,                                     \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Max Graph Traversal Depth:                     ", \
+        Graph->MaximumTraversalDepth,                          \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Total Graph Traversals:              ", \
+        Coverage16->TotalGraphTraversals,                      \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Score:                               ", \
+        Coverage16->Score,                                     \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Rank:                                ", \
+        Coverage16->Rank,                                      \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Slope:                               ", \
+        Coverage16->Slope,                                     \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Intercept:                           ", \
+        Coverage16->Intercept,                                 \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Correlation Coefficient:             ", \
+        Coverage16->CorrelationCoefficient,                    \
+        OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Number of Empty Cache Lines          ", \
+        Coverage16->NumberOfEmptyCacheLines,                   \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: First Cache Line Used:               ", \
+        Coverage16->FirstCacheLineUsed,                        \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Coverage: Last Cache Line Used:                ", \
+        Coverage16->LastCacheLineUsed,                         \
+        OUTPUT_INT                                             \
+    )
+
+
 
 #define EXPAND_STATS_ROW(Name, Value, OutputMacro) \
     OUTPUT_RAW(Name);                              \
@@ -3298,9 +3479,15 @@ Return Value:
         CHAR Char;
         ULONG Index;
 
-        Coverage = &Graph->AssignedMemoryCoverage;
-        OUTPUT_RAW("Best Graph:\n");
-        CONTEXT_STATS_BEST_GRAPH_TABLE(EXPAND_STATS_ROW);
+        if (IsUsingAssigned16(Graph)) {
+            Coverage16 = &Graph->Assigned16MemoryCoverage;
+            OUTPUT_RAW("Best Graph:\n");
+            CONTEXT_STATS_BEST_GRAPH16_TABLE(EXPAND_STATS_ROW);
+        } else {
+            Coverage = &Graph->AssignedMemoryCoverage;
+            OUTPUT_RAW("Best Graph:\n");
+            CONTEXT_STATS_BEST_GRAPH_TABLE(EXPAND_STATS_ROW);
+        }
 
         for (Index = 0, Char = '1';
              Index < Graph->NumberOfSeeds;

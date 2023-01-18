@@ -479,6 +479,7 @@ Return Value:
     Table->AlgorithmId = AlgorithmId;
     Table->MaskFunctionId = TableInfoOnDisk->MaskFunctionId;
     Table->HashFunctionId = TableInfoOnDisk->HashFunctionId;
+    Table->State.UsingAssigned16 = TableInfoOnDisk->Flags.UsingAssigned16;
 
     //
     // Complete initialization of the table now that the algo/hash/mask IDs

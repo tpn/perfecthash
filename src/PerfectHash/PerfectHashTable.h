@@ -58,10 +58,17 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         ULONG AutoResize:1;
 
         //
+        // When set, indicates the 16-bit hash/assigned infrastructure is
+        // active.
+        //
+
+        ULONG UsingAssigned16:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:27;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -117,6 +124,7 @@ SkipWritingCsvRow(
         (Flags.OmitCsvRowIfTableCreateSucceeded && TableCreateResult == S_OK)
     );
 }
+
 
 //
 // Define the PERFECT_HASH_TABLE structure.
@@ -175,7 +183,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // coverage structure that reflects the coverage of the winning graph.
     //
 
-    struct _ASSIGNED_MEMORY_COVERAGE *Coverage;
+    union {
+        struct _ASSIGNED_MEMORY_COVERAGE *Coverage;
+        struct _ASSIGNED16_MEMORY_COVERAGE *Coverage16;
+    };
 
     //
     // Pointer to a string representation of the Index() routine's
@@ -203,6 +214,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     union {
         PULONG Assigned;
+        PUSHORT Assigned16;
         PULONG TableData;
         PVOID TableDataBaseAddress;
     };
@@ -733,5 +745,14 @@ PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_EX_FUNC_DECL);
     PERFECT_HASH_TABLE_SEEDED_HASH_EX PerfectHashTableSeededHashEx##Name;
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH_EX_FUNC_DECL);
+
+//
+// 16-bit "Ex" versions of hash and seeded hash routines.
+//
+
+#define EXPAND_AS_SEEDED_HASH16_EX_FUNC_DECL(Name, NumberOfSeeds, SeedMasks) \
+    PERFECT_HASH_TABLE_SEEDED_HASH16_EX PerfectHashTableSeededHash16Ex##Name;
+
+PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH16_EX_FUNC_DECL);
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

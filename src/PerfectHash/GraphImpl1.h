@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,6 +15,16 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+
+//
+// Define a graph iterator structure used to facilitate graph traversal.
+//
+
+typedef struct _GRAPH_ITERATOR {
+    VERTEX Vertex;
+    EDGE Edge;
+} GRAPH_ITERATOR;
+typedef GRAPH_ITERATOR *PGRAPH_ITERATOR;
 
 //
 // Define helper macros.

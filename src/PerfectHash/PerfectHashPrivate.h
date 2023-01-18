@@ -83,10 +83,17 @@ typedef union _TABLE_INFO_ON_DISK_FLAGS {
     struct {
 
         //
+        // When set, indicates the 16-bit hash/assigned infrastructure is
+        // active.
+        //
+
+        ULONG UsingAssigned16:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:32;
+        ULONG Unused:31;
 
     };
 
@@ -229,7 +236,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _TABLE_INFO_ON_DISK {
         ULONG LastSeed;
     };
 
-    ULONG Padding2;
+    //
+    // Size of an individual assigned element, in bytes.
+    //
+
+    ULONG AssignedElementSizeInBytes;
 
     //
     // Capture statistics about the perfect hash table solution that can be

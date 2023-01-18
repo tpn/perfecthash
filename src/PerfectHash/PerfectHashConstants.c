@@ -223,6 +223,20 @@ const PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashExRoutines[] = {
 VERIFY_HASH_ARRAY_SIZE(SeededHashExRoutines);
 
 //
+// Define the array of seeded hash16 "Ex" routines.
+//
+
+#define EXPAND_AS_SEEDED_HASH16_EX_ROUTINE(Name, NumberOfSeeds, SeedMasks) \
+    PerfectHashTableSeededHash16Ex##Name,
+
+const PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHash16ExRoutines[] = {
+    NULL,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH16_EX_ROUTINE)
+    NULL
+};
+VERIFY_HASH_ARRAY_SIZE(SeededHash16ExRoutines);
+
+//
 // Define the array of hash mask routines.
 //
 
@@ -1043,8 +1057,9 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableGetFile,
     NULL,   // HashEx
     NULL,   // SeededHashEx
+    NULL,   // SeededHash16Ex
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 21);
+VERIFY_VTBL_SIZE(PERFECT_HASH_TABLE, 22);
 
 //
 // Rtl

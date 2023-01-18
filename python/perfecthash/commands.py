@@ -661,7 +661,7 @@ class UpdateCopyright(InvariantAwareCommand):
     year = None
     class YearArg(PositiveIntegerInvariant):
         _help = "year to update [default: %default]"
-        _default = 2022
+        _default = 2023
         _mandatory = False
 
     def run(self):

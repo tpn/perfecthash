@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2021-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -82,8 +82,25 @@ LinearRegressionNumberOfAssignedPerCacheLineCounts(
     );
 
 VOID
+LinearRegressionNumberOfAssigned16PerCacheLineCounts(
+    _In_reads_(TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE) PULONG YCounts,
+    _Out_ PDOUBLE SlopePointer,
+    _Out_ PDOUBLE InterceptPointer,
+    _Out_ PDOUBLE CorrelationCoefficientPointer,
+    _Out_ PDOUBLE PredictedNumberOfFilledCacheLinesPointer
+    );
+
+VOID
 ScoreNumberOfAssignedPerCacheLineCounts(
     _In_reads_(TOTAL_NUM_ASSIGNED_PER_CACHE_LINE) PULONG YCounts,
+    _In_ ULONG TotalNumberOfAssigned,
+    _Out_ PULONGLONG Score,
+    _Out_ PDOUBLE Rank
+    );
+
+VOID
+ScoreNumberOfAssigned16PerCacheLineCounts(
+    _In_reads_(TOTAL_NUM_ASSIGNED16_PER_CACHE_LINE) PULONG YCounts,
     _In_ ULONG TotalNumberOfAssigned,
     _Out_ PULONGLONG Score,
     _Out_ PDOUBLE Rank
