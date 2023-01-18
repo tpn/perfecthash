@@ -697,15 +697,11 @@ class UpdateCopyright(InvariantAwareCommand):
             assert num_years in (1, 2), num_years
             if years[-1] == this_year:
                 break
-            if ' - ' in years_string or num_years == 1:
-                dash = ' - '
-            else:
-                dash = '-'
             if num_years == 1 and trailer[0] != '.':
                 dot = '. '
             else:
                 dot = ''
-            new_years = f'{years[0]}{dash}{this_year}{dot}'
+            new_years = f'{years[0]}-{this_year}{dot}'
             old_line = line
             new_line = line.replace(years_string, new_years)
             replace = True
