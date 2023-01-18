@@ -177,6 +177,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(DoNotTryUseAvx2MemoryCoverageFunction);
     DECL_ARG(IncludeKeysInCompiledDll);
     DECL_ARG(DisableSavingCallbackTableValues);
+    DECL_ARG(Quiet);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -227,6 +228,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2MemoryCoverageFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeKeysInCompiledDll);
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableSavingCallbackTableValues);
+    SET_FLAG_AND_RETURN_IF_EQUAL(Quiet);
 
     return S_FALSE;
 }
