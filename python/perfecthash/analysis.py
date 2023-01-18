@@ -1566,6 +1566,10 @@ def update_df_with_solve_duration(df):
     return df
 
 def update_df(df, source_csv_file):
+    df['SourceCsvFile'] = source_csv_file
+    return df
+
+def update_df_best_coverage(df, source_csv_file):
     from tqdm import tqdm
     import numpy as np
     import pandas as pd
@@ -2349,7 +2353,7 @@ def get_mcdf(keysname, attempt, mcdf):
 
 def get_mcdf_for_df_row(df, mcdf, attempt=None):
     assert len(df) == 1
-    keys_filename = os.path.basename(df.KeysFullPath.values[0])
+    keys_filename = basename(df.KeysFullPath.values[0])
     if attempt is None:
         attempt = df.AttemptThatFoundBestGraph.values[0]
     d = mcdf[(mcdf.Attempt == attempt) & (mcdf.KeysFileName == keys_filename)]
@@ -2839,9 +2843,10 @@ def get_cache_line_coverage(df):
             for i in range(1, count+1)
                 for n in range(0, 17)
     ]
-    values = df[keys].values.astype(np.int)
+    values = df[keys].values.astype(int)
     values = values.reshape(count, 17)
-    attempts = df[[f'BestGraph{i}_Attempt' for i in range(1, count+1)]].values[0]
+    keys = [ f'BestGraph{i}_Attempt' for i in range(1, count+1) ]
+    attempts = df[keys].values[0]
     columns = [ f'{i}' for i in range(0, 17) ]
     return (keys, values, attempts, columns)
 
@@ -2856,7 +2861,7 @@ def ridgeline_plot(df):
     best_coverage_type = df.BestCoverageType.values[0]
     table_timestamp = df.TableTimestamp.values[0]
     (keys, values, attempts, columns) = get_cache_line_coverage(df)
-    dfc = pd.DataFrame(values, columns=columns, index=attempts)
+    dfc = pd.DataFrame(values, columns=columns, index=attempts).sort_index()
     dft = dfc.T
     dft = dft[[ c for c in reversed(sorted(dft.columns)) ]]
     x_range = list(range(0, 17))
@@ -2864,16 +2869,17 @@ def ridgeline_plot(df):
         dft,
         kind="values",
         x_range=x_range,
-        labels=attempts,
+        #labels=attempts,
         colormap=cm.rainbow,
         title=f"{keys_name} {hash_func}\n{best_coverage_type}\n{table_timestamp}",
         alpha=0.5,
         overlap=0.5,
-        ylim=True,
+        #ylim=True,
         grid=True,
-        figsize=(8, 8),
+        figsize=(10, 10),
     )
     axes[-1].set_xticks(x_range)
+    axes[-1].set_yticks(dfc.index)
     #plt.draw()
     #plt.cla()
     #plt.clf()
@@ -2882,7 +2888,7 @@ def ridgeline_plot(df):
 
 def ridgeline_plot_all(df, keys_name=None):
     df = df.copy()
-    df = df[df.HeaderHash == 'C8D67583']
+    #df = df[df.HeaderHash == 'C8D67583']
     df = df.sort_values(by=['NumberOfKeys', 'BestCoverageType', 'HashFunction'])
     if keys_name:
         if isinstance(keys_name, list):
@@ -2897,8 +2903,8 @@ def ridgeline_plot_all(df, keys_name=None):
         assert(len(d) == 1)
         #(figure, axes) = ridgeline_plot(d)
         #results.append((figure, axes))
-        if d.NumberOfKeys.values[0] <= 5000:
-            continue
+        #if d.NumberOfKeys.values[0] <= 5000:
+        #    continue
         #print(d[['NumberOfKeys', 'BestCoverageType', 'HashFunction', 'TableTimestamp']].values[0])
         #ridgeline_plot(d)
         (figure, axes) = ridgeline_plot(d)
@@ -3338,12 +3344,16 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
         Range1d,
         ColorBar,
         CustomJS,
-        TabPanel,
         RangeSlider,
         MultiSelect,
         ColumnDataSource,
         RadioButtonGroup,
     )
+
+    try:
+        from bokeh.models import TabPanel
+    except ImportError:
+        from bokeh.models import Panel as TabPanel
 
     from bokeh.plotting import (
         figure,
@@ -3529,7 +3539,8 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid1(df, min_num_edges=None, max_num_edges=None,
-           show_plot=True, figure_kwds=None, circle_kwds=None):
+          width=500, height=500, ncols=4,
+          show_plot=True, figure_kwds=None, circle_kwds=None):
 
     import numpy as np
     import pandas as pd
@@ -3540,7 +3551,6 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -3590,6 +3600,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
 
     # Prep colors.
     num_edges = [ 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536 ]
+    #num_edges = [ 2048, 4096, 8192, 16384, 32768, 65536 ]
     num_edges_str = [ str(e) for e in num_edges ]
 
     colors_map = { e: bp.Spectral11[i] for (i, e) in enumerate(num_edges) }
@@ -3615,11 +3626,11 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
     )
 
     hash_funcs = (
-        df.HashFunction
-            .value_counts()
-            .sort_index()
+        df[['HashFunction', 'SolutionsFoundRatio']]
+            .groupby('HashFunction')
+            .agg('mean')
+            .sort_values('SolutionsFoundRatio', ascending=False)
             .index
-            .values
     )
 
     figures = []
@@ -3642,7 +3653,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
         ]
 
         df['KeysToEdgesRatio'] = np.around(df.KeysToEdgesRatio.values, 3)
-        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 3)
+        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 6)
 
         sdf = (
             df.groupby(['KeysToEdgesRatio', 'SolutionsFoundRatio'])
@@ -3673,8 +3684,8 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
         source = ColumnDataSource(df)
 
         p = figure(
-            width=500,
-            height=500,
+            width=width,
+            height=height,
             tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
             **figure_kwds,
         )
@@ -3731,8 +3742,8 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
 
         figures.append(p)
 
-    figures.insert(1, None)
-    grid = gridplot(figures, ncols=4)
+    #figures.insert(1, None)
+    grid = gridplot(figures, ncols=ncols)
 
     if show_plot:
         show(grid)
@@ -3752,7 +3763,6 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -3951,7 +3961,6 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -4157,7 +4166,6 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Select,
         TapTool,
         Range1d,
@@ -4369,7 +4377,6 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -4633,7 +4640,6 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -4931,7 +4937,6 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -5234,7 +5239,6 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Legend,
         Select,
         TapTool,
@@ -5511,7 +5515,6 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Slope,
         Legend,
         Select,
@@ -6037,7 +6040,6 @@ def bar1(df, lrdf, min_num_edges=None, max_num_edges=None,
 
     from bokeh.models import (
         Tabs,
-        TabPanel,
         Slope,
         Legend,
         Select,
@@ -6166,5 +6168,12 @@ def cache_line_occupancy_heatmap(values, figsize=None,
                      },
                      cmap=cmap)
     return ax
+
+#===============================================================================
+# Helpers
+#===============================================================================
+
+def get_addresses():
+    return
 
 # vim:set ts=8 sw=4 sts=4 tw=80 et                                             :
