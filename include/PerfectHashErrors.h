@@ -11,8 +11,8 @@ Abstract:
     This is the public header file for status codes used by the perfect hash
     library.  It is automatically generated from the messages defined in the
     file src/PerfectHash/PerfectHashErrors.mc by the helper batch script named
-    src/PerfectHash/build-message-tables.bat (which must be run whenever the
-    .mc file changes).
+    src/PerfectHash/run-mc.bat (which must be run whenever the .mc file (or
+    the PerfectHashEvents.man file) is changed).
 
 --*/
 //
@@ -674,6 +674,32 @@ Abstract:
 //         supply this flag to ensure the keys get built into the binary.  We
 //         don't do this by default as they're not needed for a normal perfect
 //         hash table binary.
+// 
+//     --DisableSavingCallbackTableValues
+// 
+//         When set, does not attempt to save the runtime table values when running
+//         with a _penter-hooked binary.
+// 
+//     --DoNotTryUseHash16Impl
+// 
+//         By default, if the following conditions exist, the library will
+//         automatically switch to using the USHORT, 16-bit implementations
+//         of hash functions and assigned table data seamlessly during graph
+//         solving:
+// 
+//             - Algorithm is Chm01.
+//             - GraphImpl is 3.
+//             - Number of vertices is <= 65,534 (i.e. MAX_USHORT-1).
+// 
+//         This provides significant performance improvements, which is why it's
+//         the default.  To disable this behavior, set this flag.  This flag is
+//         intended to be used during debugging and performance comparisons when
+//         benchmarking -- you shouldn't need to use it in normal use.
+// 
+//         N.B. This only affects the solving graph and table instances; the
+//              compiled perfect hash table generated files will still use the
+//              appropriate USHORT C-types if applicable (number of vertices less
+//              than or equal to 65,534).
 // 
 // Table Compile Flags:
 // 

@@ -11,8 +11,8 @@
 ;    This is the public header file for status codes used by the perfect hash
 ;    library.  It is automatically generated from the messages defined in the
 ;    file src/PerfectHash/PerfectHashErrors.mc by the helper batch script named
-;    src/PerfectHash/build-message-tables.bat (which must be run whenever the
-;    .mc file changes).
+;    src/PerfectHash/run-mc.bat (which must be run whenever the .mc file (or
+;    the PerfectHashEvents.man file) is changed).
 ;
 ;--*/
 
