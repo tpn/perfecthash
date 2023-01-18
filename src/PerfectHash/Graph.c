@@ -32,12 +32,32 @@ GRAPH_IS_ACYCLIC GraphIsAcyclic3;
 GRAPH_REGISTER_SOLVED GraphRegisterSolvedNoBestCoverage;
 
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
+    GraphCalculateAssigned16MemoryCoverage;
+
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage_AVX2;
+
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX2;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX512;
 
 GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
     GraphCalculateMemoryCoverageCacheLineCounts;
+
+GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
+    GraphCalculateMemoryCoverage16CacheLineCounts;
+
+//
+// Forward decls of 16-bit hash/assigned impls.
+//
+
+GRAPH_ASSIGN GraphAssign16;
+GRAPH_VERIFY GraphVerify16;
+GRAPH_ADD_KEYS GraphAddKeys16;
+GRAPH_HASH_KEYS GraphHashKeys16;
+GRAPH_IS_ACYCLIC GraphIsAcyclic16;
+GRAPH_ADD_KEYS GraphHashKeysThenAdd16;
+GRAPH_REGISTER_SOLVED GraphRegisterSolved16;
+GRAPH_REGISTER_SOLVED GraphRegisterSolved16NoBestCoverage;
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -74,6 +94,7 @@ Return Value:
 {
     PRTL Rtl;
     HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
@@ -116,20 +137,38 @@ Return Value:
     }
 
     //
-    // Load the table create flags and hash function from the TLS context.
+    // Load the items we need from the TLS context.
     //
 
     TlsContext = PerfectHashTlsEnsureContext();
+    Table = TlsContext->Table;
     TableCreateFlags.AsULongLong = TlsContext->TableCreateFlags.AsULongLong;
     HashFunctionId = TlsContext->Table->HashFunctionId;
 
     Rtl = Graph->Rtl;
 
     //
-    // Override vtbl methods based on table create flags.
+    // Override vtbl methods based on table state and table create flags.
     //
 
-    if (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE) {
+    if (Table->State.UsingAssigned16 != FALSE) {
+
+        Graph->Flags.UsingAssigned16 = TRUE;
+        Graph->Vtbl->HashKeys = GraphHashKeys16;
+        Graph->Vtbl->AddKeys = GraphAddKeys16;
+        Graph->Vtbl->Verify = GraphVerify16;
+        Graph->Vtbl->IsAcyclic = GraphIsAcyclic16;
+        Graph->Vtbl->Assign = GraphAssign16;
+        Graph->Vtbl->RegisterSolved = GraphRegisterSolved16;
+
+        if (TableCreateFlags.HashAllKeysFirst != FALSE) {
+            Graph->Vtbl->AddKeys = GraphHashKeysThenAdd16;
+        }
+
+        Graph->Vtbl->CalculateAssignedMemoryCoverage =
+            GraphCalculateAssigned16MemoryCoverage;
+
+    } else if (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE) {
 
         ASSERT(TableCreateFlags.HashAllKeysFirst == FALSE);
         Graph->Vtbl->AddKeys = GraphAddKeysOriginalSeededHashRoutines;
@@ -174,7 +213,8 @@ Return Value:
     //
 
     if (TableCreateFlags.DoNotTryUseAvx2MemoryCoverageFunction == FALSE &&
-        Rtl->CpuFeatures.AVX2 != FALSE) {
+        Rtl->CpuFeatures.AVX2 != FALSE &&
+        Table->State.UsingAssigned16 == FALSE) {
 
         Graph->Vtbl->CalculateAssignedMemoryCoverage =
             GraphCalculateAssignedMemoryCoverage_AVX2;
@@ -271,6 +311,49 @@ Return Value:
 // Implement main vtbl routines.
 //
 
+GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE GraphShouldWeContinueTryingToSolve;
+
+_Use_decl_annotations_
+BOOLEAN
+GraphShouldWeContinueTryingToSolve(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Determines if graph solving should continue.  This routine is intended to
+    be called periodically by the graph solving loop, particularly before and
+    after large pieces of work are completed (such as graph assignment).  If
+    this routine returns FALSE, the caller should stop what they're doing and
+    return the PH_S_STOP_GRAPH_SOLVING return code.
+
+Arguments:
+
+    Graph - Supplies a pointer to a graph instance.
+
+Return Value:
+
+    TRUE if solving should continue, FALSE otherwise.
+
+--*/
+{
+    PPERFECT_HASH_CONTEXT Context;
+
+    Context = Graph->Context;
+
+    //
+    // If ctrl-C has been pressed, set stop solving.  Continue solving unless
+    // stop solving indicates otherwise.
+    //
+
+    if (CtrlCPressed) {
+        SetStopSolving(Context);
+    }
+
+    return (StopSolving(Context) != FALSE ? FALSE : TRUE);
+}
+
 GRAPH_SOLVE GraphSolve;
 
 _Use_decl_annotations_
@@ -318,6 +401,7 @@ Return Value:
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED16_MEMORY_COVERAGE Coverage16;
 
     //
     // Initialize aliases.
@@ -447,8 +531,13 @@ Return Value:
         SetStopSolving(Context);
         if (WantsAssignedMemoryCoverage(Graph)) {
             Graph->Vtbl->CalculateAssignedMemoryCoverage(Graph);
-            CopyCoverage(Context->Table->Coverage,
-                         &Graph->AssignedMemoryCoverage);
+            if (IsUsingAssigned16(Graph)) {
+                CopyCoverage16(Context->Table->Coverage16,
+                               &Graph->Assigned16MemoryCoverage);
+            } else {
+                CopyCoverage(Context->Table->Coverage,
+                             &Graph->AssignedMemoryCoverage);
+            }
         }
         InsertHeadFinishedWork(Context, &Graph->ListEntry);
         SubmitThreadpoolWork(Context->FinishedWork);
@@ -485,16 +574,29 @@ Return Value:
     // value at the table and coverage level.  Not particularly elegant.
     //
 
-    Coverage = &Graph->AssignedMemoryCoverage;
-    Coverage->MaxGraphTraversalDepth = Graph->MaximumTraversalDepth;
+    if (!IsUsingAssigned16(Graph)) {
+        Coverage = &Graph->AssignedMemoryCoverage;
+        Coverage->MaxGraphTraversalDepth = Graph->MaximumTraversalDepth;
 
-    //
-    // Ditto for total traversals, empty vertices and collisions.
-    //
+        //
+        // Ditto for total traversals, empty vertices and collisions.
+        //
 
-    Coverage->TotalGraphTraversals = Graph->TotalTraversals;
-    Coverage->NumberOfEmptyVertices = Graph->NumberOfEmptyVertices;
-    Coverage->NumberOfCollisionsDuringAssignment = Graph->Collisions;
+        Coverage->TotalGraphTraversals = Graph->TotalTraversals;
+        Coverage->NumberOfEmptyVertices = Graph->NumberOfEmptyVertices;
+        Coverage->NumberOfCollisionsDuringAssignment = Graph->Collisions;
+    } else {
+        Coverage16 = &Graph->Assigned16MemoryCoverage;
+        Coverage16->MaxGraphTraversalDepth = Graph->MaximumTraversalDepth;
+
+        //
+        // Ditto for total traversals, empty vertices and collisions.
+        //
+
+        Coverage16->TotalGraphTraversals = Graph->TotalTraversals;
+        Coverage16->NumberOfEmptyVertices = Graph->NumberOfEmptyVertices;
+        Coverage16->NumberOfCollisionsDuringAssignment = Graph->Collisions;
+    }
 
     //
     // Register the solved graph then return the result directly.
@@ -503,7 +605,13 @@ Return Value:
     if (FindBestMemoryCoverage(Context)) {
         Result = Graph->Vtbl->RegisterSolved(Graph, NewGraphPointer);
     } else {
-        Result = GraphRegisterSolvedNoBestCoverage(Graph, NewGraphPointer);
+        if (!IsUsingAssigned16(Graph)) {
+            Result = GraphRegisterSolvedNoBestCoverage(Graph,
+                                                       NewGraphPointer);
+        } else {
+            Result = GraphRegisterSolved16NoBestCoverage(Graph,
+                                                         NewGraphPointer);
+        }
     }
 
     //
@@ -565,6 +673,8 @@ Return Value:
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
 
     DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    ASSERT(!IsUsingAssigned16(Graph));
 
     //
     // Initialize aliases.
@@ -735,6 +845,8 @@ Return Value:
 
     DECL_GRAPH_COUNTER_LOCAL_VARS();
 
+    ASSERT(!IsUsingAssigned16(Graph));
+
     //
     // Initialize aliases.
     //
@@ -837,6 +949,8 @@ Return Value:
 
     DECL_GRAPH_COUNTER_LOCAL_VARS();
 
+    ASSERT(!IsUsingAssigned16(Graph));
+
     //
     // Attempt to hash the keys first.
     //
@@ -909,6 +1023,8 @@ Return Value:
     PPERFECT_HASH_TABLE Table;
 
     DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    ASSERT(!IsUsingAssigned16(Graph));
 
     Table = Graph->Context->Table;
     Edges = (PEDGE)Keys;
@@ -1043,6 +1159,8 @@ Return Value:
     PALLOCATOR Allocator;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+
+    ASSERT(!IsUsingAssigned16(Graph));
 
     //
     // Validate arguments.
@@ -1278,6 +1396,8 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
 
+    ASSERT(!IsUsingAssigned16(Graph));
+
     //
     // Validate arguments.
     //
@@ -1436,7 +1556,6 @@ End:
     return Result;
 }
 
-
 VOID
 VerifyMemoryCoverageInvariants(
     _In_ PGRAPH Graph,
@@ -1488,6 +1607,8 @@ Return Value:
 
     ULONG Index;
     PASSIGNED Assigned;
+
+    ASSERT(!IsUsingAssigned16(Graph));
 
     Coverage = &Graph->AssignedMemoryCoverage;
     Coverage->Attempt = Graph->Attempt;
@@ -1693,6 +1814,8 @@ Return Value:
     ULONG Index;
     PASSIGNED Assigned;
 
+    ASSERT(!IsUsingAssigned16(Graph));
+
     if (!EventEnabledGraphMemoryCoverageCacheLineCountsEvent()) {
 
         //
@@ -1810,6 +1933,8 @@ Return Value:
     YMMWORD AssignedYmm;
     YMMWORD ShiftedYmm;
     const YMMWORD AllZeros = _mm256_set1_epi8(0);
+
+    ASSERT(!IsUsingAssigned16(Graph));
 
     Coverage = &Graph->AssignedMemoryCoverage;
     Coverage->Attempt = Graph->Attempt;
@@ -2050,6 +2175,8 @@ Return Value:
     PASSIGNED_LARGE_PAGE_COUNT LargePageCount;
     PASSIGNED_CACHE_LINE_COUNT CacheLineCount;
 
+    ASSERT(!IsUsingAssigned16(Graph));
+
     //
     // Initialize aliases.
     //
@@ -2200,12 +2327,70 @@ VerifyMemoryCoverageInvariants(
     )
 {
 
+    ASSERT(!IsUsingAssigned16(Graph));
+
     //
     // Invariant check: the total number of assigned elements we observed
     // should be less than or equal to the number of vertices.
     //
 
     if (Coverage->TotalNumberOfAssigned > Graph->NumberOfVertices) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    //
+    // Invariant check: the number of used plus number of empty should equal
+    // the total for each element type.
+    //
+
+    if (Coverage->NumberOfUsedPages + Coverage->NumberOfEmptyPages !=
+        Coverage->TotalNumberOfPages) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->NumberOfUsedLargePages + Coverage->NumberOfEmptyLargePages !=
+        Coverage->TotalNumberOfLargePages) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->NumberOfUsedCacheLines + Coverage->NumberOfEmptyCacheLines !=
+        Coverage->TotalNumberOfCacheLines) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    //
+    // Invariant check: the last used element should be greater than or equal
+    // to the first used element.
+    //
+
+    if (Coverage->LastPageUsed < Coverage->FirstPageUsed) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->LastLargePageUsed < Coverage->FirstLargePageUsed) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (Coverage->LastCacheLineUsed < Coverage->FirstCacheLineUsed) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+}
+
+VOID
+VerifyMemoryCoverage16Invariants(
+    _In_ PGRAPH Graph,
+    _In_ PASSIGNED16_MEMORY_COVERAGE Coverage
+    )
+{
+
+    ASSERT(IsUsingAssigned16(Graph));
+
+    //
+    // Invariant check: the total number of assigned elements we observed
+    // should be less than or equal to the number of vertices times 2.
+    //
+
+    if (Coverage->TotalNumberOfAssigned > (Graph->NumberOfVertices << 1)) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
 
@@ -2310,6 +2495,8 @@ Return Value:
     PASSIGNED_MEMORY_COVERAGE BestCoverage = NULL;
     PASSIGNED_MEMORY_COVERAGE PreviousBestCoverage;
     PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
+
+    ASSERT(!IsUsingAssigned16(Graph));
 
     //
     // Initialize aliases.
@@ -2839,6 +3026,7 @@ SkipComparatorCheck:
     return Result;
 }
 
+
 _Use_decl_annotations_
 HRESULT
 GraphRegisterSolvedNoBestCoverage(
@@ -2892,6 +3080,8 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
+
+    ASSERT(!IsUsingAssigned16(Graph));
 
     //
     // Initialize aliases.
@@ -2985,6 +3175,7 @@ End:
 
     return Result;
 }
+
 
 GRAPH_SET_INFO GraphSetInfo;
 
@@ -3135,7 +3326,7 @@ Return Value:
     // Begin the solving loop.
     //
 
-    while (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph)) {
+    while (GraphShouldWeContinueTryingToSolve(Graph)) {
 
         Result = Graph->Vtbl->Reset(Graph);
         if (FAILED(Result)) {
@@ -3285,6 +3476,7 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     BOOLEAN LargePagesForVertexPairs;
     PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED16_MEMORY_COVERAGE Coverage16;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
     PRTL_TRY_LARGE_PAGE_VIRTUAL_ALLOC Alloc;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
@@ -3396,6 +3588,8 @@ Return Value:
 
     switch (Graph->Impl) {
         case 1:
+            ASSERT(!IsUsingAssigned16(Graph));
+
             Graph->Vtbl->IsAcyclic = GraphIsAcyclic;
             Graph->Vtbl->Assign = GraphAssign;
             Graph->Vtbl->AddKeys = (
@@ -3405,6 +3599,8 @@ Return Value:
             break;
 
         case 2:
+            ASSERT(!IsUsingAssigned16(Graph));
+
             Graph->Vtbl->IsAcyclic = GraphIsAcyclic;
             Graph->Vtbl->Assign = GraphAssign2;
             Graph->Vtbl->AddKeys = (
@@ -3414,12 +3610,32 @@ Return Value:
             break;
 
         case 3:
-            Graph->Vtbl->IsAcyclic = GraphIsAcyclic3;
-            Graph->Vtbl->Assign = GraphAssign3;
-            Graph->Vtbl->AddKeys = (
-                (TableCreateFlags.HashAllKeysFirst != FALSE) ?
-                    GraphHashKeysThenAdd3 : GraphAddKeys3
-            );
+
+            if (!IsUsingAssigned16(Graph)) {
+                Graph->Vtbl->IsAcyclic = GraphIsAcyclic3;
+                Graph->Vtbl->Assign = GraphAssign3;
+                Graph->Vtbl->AddKeys = (
+                    (TableCreateFlags.HashAllKeysFirst != FALSE) ?
+                        GraphHashKeysThenAdd3 : GraphAddKeys3
+                );
+            } else {
+
+                ASSERT(Graph->Vtbl->HashKeys == GraphHashKeys16);
+                ASSERT(Graph->Vtbl->Verify == GraphVerify16);
+                ASSERT(Graph->Vtbl->IsAcyclic == GraphIsAcyclic16);
+                ASSERT(Graph->Vtbl->Assign == GraphAssign16);
+                ASSERT(Graph->Vtbl->RegisterSolved == GraphRegisterSolved16);
+
+                if (TableCreateFlags.HashAllKeysFirst != FALSE) {
+                    ASSERT(Graph->Vtbl->AddKeys == GraphHashKeysThenAdd16);
+                } else {
+                    ASSERT(Graph->Vtbl->AddKeys == GraphAddKeys16);
+                }
+
+                ASSERT(Graph->Vtbl->CalculateAssignedMemoryCoverage ==
+                       GraphCalculateAssigned16MemoryCoverage);
+
+            }
             break;
 
         default:
@@ -3607,42 +3823,30 @@ SkipGraphVtblHackery:
 
     }
 
-    //
-    // Fill out the assigned memory coverage structure and allocate buffers.
-    //
 
-    Coverage = &Graph->AssignedMemoryCoverage;
-
-    Coverage->TotalNumberOfPages = Info->AssignedArrayNumberOfPages;
-    Coverage->TotalNumberOfLargePages = Info->AssignedArrayNumberOfLargePages;
-    Coverage->TotalNumberOfCacheLines = Info->AssignedArrayNumberOfCacheLines;
-
-#define ALLOC_ASSIGNED_ARRAY(Name, Type)               \
-    if (!Coverage->##Name) {                           \
-        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
-            Allocator->Vtbl->AlignedMalloc(            \
-                Allocator,                             \
-                (ULONG_PTR)Info->##Name##SizeInBytes,  \
-                YMMWORD_ALIGNMENT                      \
-            )                                          \
-        );                                             \
-    } else {                                           \
-        Coverage->##Name = (PASSIGNED_##Type##_COUNT)( \
-            Allocator->Vtbl->AlignedReAlloc(           \
-                Allocator,                             \
-                Coverage->##Name,                      \
-                (ULONG_PTR)Info->##Name##SizeInBytes,  \
-                YMMWORD_ALIGNMENT                      \
-            )                                          \
-        );                                             \
-    }                                                  \
-    if (!Coverage->##Name) {                           \
-        Result = E_OUTOFMEMORY;                        \
-        goto Error;                                    \
+#define ALLOC_ASSIGNED_ARRAY(Coverage_, Name, Type)     \
+    if (!Coverage_->##Name) {                           \
+        Coverage_->##Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedMalloc(             \
+                Allocator,                              \
+                (ULONG_PTR)Info->##Name##SizeInBytes,   \
+                YMMWORD_ALIGNMENT                       \
+            )                                           \
+        );                                              \
+    } else {                                            \
+        Coverage_->##Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedReAlloc(            \
+                Allocator,                              \
+                Coverage_->##Name,                      \
+                (ULONG_PTR)Info->##Name##SizeInBytes,   \
+                YMMWORD_ALIGNMENT                       \
+            )                                           \
+        );                                              \
+    }                                                   \
+    if (!Coverage_->##Name) {                           \
+        Result = E_OUTOFMEMORY;                         \
+        goto Error;                                     \
     }
-
-    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerPage, PAGE);
-    ALLOC_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine, CACHE_LINE);
 
     //
     // The number of large pages consumed may not change between resize events;
@@ -3650,9 +3854,9 @@ SkipGraphVtblHackery:
     // large pages if applicable.
     //
 
-#define ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Name)                                 \
-    if (!Coverage->##Name) {                                                  \
-        Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                      \
+#define ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Coverage_, Name)                      \
+    if (!Coverage_->##Name) {                                                 \
+        Coverage_->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                     \
             Allocator->Vtbl->AlignedMalloc(                                   \
                 Allocator,                                                    \
                 (ULONG_PTR)Info->##Name##SizeInBytes,                         \
@@ -3667,22 +3871,68 @@ SkipGraphVtblHackery:
             }                                                                 \
         }                                                                     \
         if (DoReAlloc) {                                                      \
-            Coverage->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                  \
+            Coverage_->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                 \
                 Allocator->Vtbl->AlignedReAlloc(                              \
                     Allocator,                                                \
-                    Coverage->##Name,                                         \
+                    Coverage_->##Name,                                        \
                     (ULONG_PTR)Info->##Name##SizeInBytes,                     \
                     YMMWORD_ALIGNMENT                                         \
                 )                                                             \
             );                                                                \
         }                                                                     \
     }                                                                         \
-    if (!Coverage->##Name) {                                                  \
+    if (!Coverage_->##Name) {                                                 \
         Result = E_OUTOFMEMORY;                                               \
         goto Error;                                                           \
     }
 
-    ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(NumberOfAssignedPerLargePage);
+
+    //
+    // Fill out the assigned memory coverage structure and allocate buffers.
+    //
+
+    if (!IsUsingAssigned16(Graph)) {
+
+        Coverage = &Graph->AssignedMemoryCoverage;
+
+        Coverage->TotalNumberOfPages =
+            Info->AssignedArrayNumberOfPages;
+
+        Coverage->TotalNumberOfLargePages =
+            Info->AssignedArrayNumberOfLargePages;
+
+        Coverage->TotalNumberOfCacheLines =
+            Info->AssignedArrayNumberOfCacheLines;
+
+        ALLOC_ASSIGNED_ARRAY(Coverage, NumberOfAssignedPerPage, PAGE);
+        ALLOC_ASSIGNED_ARRAY(Coverage,
+                             NumberOfAssignedPerCacheLine,
+                             CACHE_LINE);
+
+        ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Coverage,
+                                        NumberOfAssignedPerLargePage);
+    } else {
+
+        Coverage16 = &Graph->Assigned16MemoryCoverage;
+
+        Coverage16->TotalNumberOfPages =
+            Info->AssignedArrayNumberOfPages;
+
+        Coverage16->TotalNumberOfLargePages =
+            Info->AssignedArrayNumberOfLargePages;
+
+        Coverage16->TotalNumberOfCacheLines =
+            Info->AssignedArrayNumberOfCacheLines;
+
+        ALLOC_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerPage, PAGE);
+
+        ALLOC_ASSIGNED_ARRAY(Coverage16,
+                             NumberOfAssignedPerCacheLine,
+                             CACHE_LINE);
+
+        ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Coverage16,
+                                        NumberOfAssignedPerLargePage);
+    }
 
     //
     // We're done, finish up.
@@ -3759,6 +4009,7 @@ Return Value:
     SIZE_T VertexPairsSizeInBytes;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED16_MEMORY_COVERAGE Coverage16;
     PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
     PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
     PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
@@ -3872,8 +4123,13 @@ Return Value:
     ZERO_ARRAY(Assigned);
     ZERO_ARRAY(Vertices3);
 
-    Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
-    ASSERT(Graph->OrderIndex > 0);
+    if (!IsUsingAssigned16(Graph)) {
+        Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
+        ASSERT(Graph->OrderIndex > 0);
+    } else {
+        Graph->Order16Index = (SHORT)Graph->NumberOfKeys;
+        ASSERT(Graph->Order16Index > 0);
+    }
 
     if (TableCreateFlags.HashAllKeysFirst || Graph->Impl == 3) {
 
@@ -3896,6 +4152,8 @@ Return Value:
 
         if (Graph->Flags.WantsWriteCombiningForVertexPairsArray &&
             !Graph->Flags.VertexPairsArrayIsWriteCombined) {
+
+            ASSERT(!IsUsingAssigned16(Graph));
 
             //
             // Restore the write-combine (and read/write) page protection so
@@ -4003,40 +4261,79 @@ Return Value:
     // Clear the assigned memory coverage counts and arrays.
     //
 
-    Coverage = &Graph->AssignedMemoryCoverage;
+    if (!IsUsingAssigned16(Graph)) {
+        Coverage = &Graph->AssignedMemoryCoverage;
 
-    //
-    // Capture the totals and pointers prior to zeroing the struct.
-    //
+        //
+        // Capture the totals and pointers prior to zeroing the struct.
+        //
 
-    TotalNumberOfPages = Coverage->TotalNumberOfPages;
-    TotalNumberOfLargePages = Coverage->TotalNumberOfLargePages;
-    TotalNumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+        TotalNumberOfPages = Coverage->TotalNumberOfPages;
+        TotalNumberOfLargePages = Coverage->TotalNumberOfLargePages;
+        TotalNumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
 
-    NumberOfAssignedPerPage = Coverage->NumberOfAssignedPerPage;
-    NumberOfAssignedPerLargePage = Coverage->NumberOfAssignedPerLargePage;
-    NumberOfAssignedPerCacheLine = Coverage->NumberOfAssignedPerCacheLine;
+        NumberOfAssignedPerPage = Coverage->NumberOfAssignedPerPage;
+        NumberOfAssignedPerLargePage = Coverage->NumberOfAssignedPerLargePage;
+        NumberOfAssignedPerCacheLine = Coverage->NumberOfAssignedPerCacheLine;
 
-    ZeroStructPointer(Coverage);
+        ZeroStructPointer(Coverage);
 
-    //
-    // Restore the totals and pointers.
-    //
+        //
+        // Restore the totals and pointers.
+        //
 
-    Coverage->TotalNumberOfPages = TotalNumberOfPages;
-    Coverage->TotalNumberOfLargePages = TotalNumberOfLargePages;
-    Coverage->TotalNumberOfCacheLines = TotalNumberOfCacheLines;
+        Coverage->TotalNumberOfPages = TotalNumberOfPages;
+        Coverage->TotalNumberOfLargePages = TotalNumberOfLargePages;
+        Coverage->TotalNumberOfCacheLines = TotalNumberOfCacheLines;
 
-    Coverage->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
-    Coverage->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
-    Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
+        Coverage->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
+        Coverage->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
+        Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
 
 #define ZERO_ASSIGNED_ARRAY(Name) \
-    ZeroMemory(Coverage->##Name, Info->##Name##SizeInBytes)
+        ZeroMemory(Coverage->##Name, Info->##Name##SizeInBytes)
 
-    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
-    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
-    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+        ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
+        ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
+        ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+
+    } else {
+
+        Coverage16 = &Graph->Assigned16MemoryCoverage;
+
+        //
+        // Capture the totals and pointers prior to zeroing the struct.
+        //
+
+        TotalNumberOfPages = Coverage16->TotalNumberOfPages;
+        TotalNumberOfLargePages = Coverage16->TotalNumberOfLargePages;
+        TotalNumberOfCacheLines = Coverage16->TotalNumberOfCacheLines;
+
+        NumberOfAssignedPerPage = Coverage16->NumberOfAssignedPerPage;
+        NumberOfAssignedPerLargePage = Coverage16->NumberOfAssignedPerLargePage;
+        NumberOfAssignedPerCacheLine = Coverage16->NumberOfAssignedPerCacheLine;
+
+        ZeroStructPointer(Coverage16);
+
+        //
+        // Restore the totals and pointers.
+        //
+
+        Coverage16->TotalNumberOfPages = TotalNumberOfPages;
+        Coverage16->TotalNumberOfLargePages = TotalNumberOfLargePages;
+        Coverage16->TotalNumberOfCacheLines = TotalNumberOfCacheLines;
+
+        Coverage16->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
+        Coverage16->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
+        Coverage16->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
+
+#define ZERO_ASSIGNED16_ARRAY(Name) \
+        ZeroMemory(Coverage16->##Name, Info->##Name##SizeInBytes)
+
+        ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerPage);
+        ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerLargePage);
+        ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerCacheLine);
+    }
 
     //
     // We're done, finish up.
@@ -4604,47 +4901,1306 @@ Return Value:
     return S_OK;
 }
 
-GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE GraphShouldWeContinueTryingToSolve;
+//
+// Implementations on the 16-bit hash/assigned impls.
+//
+
+GRAPH_VERIFY GraphVerify16;
 
 _Use_decl_annotations_
-BOOLEAN
-GraphShouldWeContinueTryingToSolve(
+HRESULT
+GraphVerify16(
     PGRAPH Graph
     )
 /*++
 
 Routine Description:
 
-    Determines if graph solving should continue.  This routine is intended to
-    be called periodically by the graph solving loop, particularly before and
-    after large pieces of work are completed (such as graph assignment).  If
-    this routine returns FALSE, the caller should stop what they're doing and
-    return the PH_S_STOP_GRAPH_SOLVING return code.
+    Verify a solved graph is working correctly using the 16-bit "Ex" hash
+    routines.
 
 Arguments:
 
-    Graph - Supplies a pointer to a graph instance.
+    Graph - Supplies a pointer to the graph to be verified.
 
 Return Value:
 
-    TRUE if solving should continue, FALSE otherwise.
+    S_OK - Graph was solved successfully.
+
+    PH_S_GRAPH_VERIFICATION_SKIPPED - The verification step was skipped.
+
+    E_POINTER - Graph was NULL.
+
+    E_OUTOFMEMORY - Out of memory.
+
+    E_UNEXPECTED - Internal error.
+
+    PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION - Collisions were
+        detected during graph validation.
+
+    PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION -
+        The number of value assignments did not equal the number of keys
+        during graph validation.
 
 --*/
 {
+    PRTL Rtl;
+    KEY Key;
+    KEY PreviousKey;
+    PKEY Keys;
+    EDGE16 Edge;
+    PEDGE Edges;
+    ULONG Bit;
+    ULONG Index;
+    ULONG PrevIndex;
+    USHORT HashMask;
+    USHORT IndexMask;
+    PULONG Values = NULL;
+    VERTEX16 Vertex1;
+    VERTEX16 Vertex2;
+    VERTEX16 PrevVertex1;
+    VERTEX16 PrevVertex2;
+    PVERTEX16 Assigned;
+    PGRAPH_INFO Info;
+    ULONG NumberOfKeys;
+    ULONG NumberOfAssignments;
+    ULONG Collisions = 0;
+    ULONG_INTEGER Hash;
+    ULONG_INTEGER PrevHash;
+    HRESULT Result = S_OK;
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHashEx;
 
-    Context = Graph->Context;
+    ASSERT(IsUsingAssigned16(Graph));
 
     //
-    // If ctrl-C has been pressed, set stop solving.  Continue solving unless
-    // stop solving indicates otherwise.
+    // Validate arguments.
     //
 
-    if (CtrlCPressed) {
-        SetStopSolving(Context);
+    if (!ARGUMENT_PRESENT(Graph)) {
+        return E_POINTER;
     }
 
-    return (StopSolving(Context) != FALSE ? FALSE : TRUE);
+    if (SkipGraphVerification(Graph)) {
+        return PH_S_GRAPH_VERIFICATION_SKIPPED;
+    }
+
+    //
+    // Initialize aliases.
+    //
+
+    Info = Graph->Info;
+    Context = Info->Context;
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    HashMask = (USHORT)Table->HashMask;
+    IndexMask = (USHORT)Table->IndexMask;
+    Allocator = Graph->Allocator;
+    NumberOfKeys = Graph->NumberOfKeys;
+    Edges = Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
+    Assigned = Graph->Assigned16;
+    SeededHashEx = SeededHash16ExRoutines[Table->HashFunctionId];
+
+    //
+    // Sanity check our assigned bitmap is clear.
+    //
+
+    NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
+    ASSERT(NumberOfAssignments == 0);
+
+    //
+    // Allocate a values array if one is not present.
+    //
+
+    Values = Graph->Values;
+
+    if (!Values) {
+        Values = Graph->Values = (PULONG)(
+            Allocator->Vtbl->Calloc(
+                Allocator,
+                Info->ValuesSizeInBytes,
+                sizeof(*Graph->Values)
+            )
+        );
+    }
+
+    if (!Values) {
+        return E_OUTOFMEMORY;
+    }
+
+    //
+    // Enumerate all keys in the input set and verify they can be resolved
+    // correctly from the assigned vertex array.
+    //
+
+    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+        Key = *Edges++;
+
+        //
+        // Hash the key.
+        //
+
+        Hash.LongPart = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+
+        ASSERT(Hash.LongPart);
+        ASSERT(Hash.HighPart != Hash.LowPart);
+
+        //
+        // Extract the individual vertices.
+        //
+
+        Vertex1 = Assigned[Hash.LowPart];
+        Vertex2 = Assigned[Hash.HighPart];
+
+        //
+        // Calculate the index by adding the assigned values together.
+        //
+
+        Index = (USHORT)((Vertex1 + Vertex2) & IndexMask);
+
+        Bit = Index;
+
+        //
+        // Make sure we haven't seen this bit before.
+        //
+
+        if (TestGraphBit(AssignedBitmap, Bit)) {
+
+            //
+            // We've seen this index before!  Get the key that previously
+            // mapped to it.
+            //
+
+            PreviousKey = Values[Index];
+
+            PrevHash.LongPart = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+
+            PrevVertex1 = Assigned[PrevHash.LowPart];
+            PrevVertex2 = Assigned[PrevHash.HighPart];
+
+            PrevIndex = (ULONG)((PrevVertex1 + PrevVertex2) & IndexMask);
+
+            Collisions++;
+
+        }
+
+        //
+        // Set the bit and store this key in the underlying values array.
+        //
+
+        SetGraphBit(AssignedBitmap, Bit);
+        Values[Index] = Key;
+
+    }
+
+    if (Collisions) {
+        Result = PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION;
+        goto Error;
+    }
+
+    NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
+
+    if (NumberOfAssignments != NumberOfKeys) {
+        Result =
+           PH_E_NUM_ASSIGNMENTS_NOT_EQUAL_TO_NUM_KEYS_DURING_GRAPH_VERIFICATION;
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    if (Graph->Values) {
+        Allocator->Vtbl->FreePointer(Allocator, &Graph->Values);
+    }
+
+    return Result;
 }
+
+VOID
+VerifyMemoryCoverage16Invariants(
+    _In_ PGRAPH Graph,
+    _In_ PASSIGNED16_MEMORY_COVERAGE Coverage
+    );
+
+GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE GraphCalculateAssigned16MemoryCoverage;
+
+_Use_decl_annotations_
+VOID
+GraphCalculateAssigned16MemoryCoverage(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Calculate the memory coverage of a solved, assigned graph.  This routine
+    walks the entire assigned array (see comments at the start of Graph.h for
+    more info about the role of the assigned array) and calculates how many
+    cache lines, pages and large pages are empty vs used.  ("Used" means one
+    or more assigned values were found.)
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which memory coverage of the
+        assigned array is to be calculated.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    BYTE Count;
+    USHORT PageCount;
+    ULONG LargePageCount;
+    ULONG PageIndex;
+    ULONG CacheLineIndex;
+    ULONG LargePageIndex;
+    ULONG NumberOfCacheLines;
+    ULONG TotalBytesProcessed;
+    ULONG PageSizeBytesProcessed;
+    ULONG LargePageSizeBytesProcessed;
+    BOOLEAN FoundFirst = FALSE;
+    BOOLEAN IsLastCacheLine = FALSE;
+    PASSIGNED16_CACHE_LINE AssignedCacheLine;
+    PASSIGNED16_MEMORY_COVERAGE Coverage;
+
+    ULONG Index;
+    PASSIGNED16 Assigned;
+
+    ASSERT(IsUsingAssigned16(Graph));
+
+    Coverage = &Graph->Assigned16MemoryCoverage;
+    Coverage->Attempt = Graph->Attempt;
+    NumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+    AssignedCacheLine = (PASSIGNED16_CACHE_LINE)Graph->Assigned16;
+
+    PageIndex = 0;
+    LargePageIndex = 0;
+    TotalBytesProcessed = 0;
+    PageSizeBytesProcessed = 0;
+    LargePageSizeBytesProcessed = 0;
+
+    Coverage->SolutionNumber = Graph->SolutionNumber;
+
+    //
+    // Enumerate the assigned array in cache-line-sized strides.
+    //
+
+    for (CacheLineIndex = 0;
+         CacheLineIndex < NumberOfCacheLines;
+         CacheLineIndex++) {
+
+        Count = 0;
+        IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
+
+        //
+        // Point at the first element in this cache line.
+        //
+
+        Assigned = (PASSIGNED16)(AssignedCacheLine[CacheLineIndex]);
+
+        //
+        // For each cache line, enumerate over each individual element, and,
+        // if it is not NULL, increment the local count and total count.
+        //
+
+        for (Index = 0; Index < NUM_ASSIGNED16_PER_CACHE_LINE; Index++) {
+            if (*Assigned++) {
+                Count++;
+                Coverage->TotalNumberOfAssigned++;
+            }
+        }
+
+        ASSERT(Count >= 0 && Count <= 32);
+        Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
+
+        //
+        // Increment the empty or used counters depending on whether or not
+        // any assigned elements were detected.
+        //
+
+        if (!Count) {
+
+            Coverage->NumberOfEmptyCacheLines++;
+
+        } else {
+
+            Coverage->NumberOfUsedCacheLines++;
+
+            if (!FoundFirst) {
+                FoundFirst = TRUE;
+                Coverage->FirstCacheLineUsed = CacheLineIndex;
+                Coverage->FirstPageUsed = PageIndex;
+                Coverage->FirstLargePageUsed = LargePageIndex;
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
+                Coverage->MaxAssignedPerCacheLineCount = Count;
+            } else {
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
+                if (Coverage->MaxAssignedPerCacheLineCount < Count) {
+                    Coverage->MaxAssignedPerCacheLineCount = Count;
+                }
+            }
+
+        }
+
+        //
+        // Update histograms based on the count we just observed.
+        //
+
+        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex] = Count;
+        Coverage->NumberOfAssignedPerLargePage[LargePageIndex] += Count;
+        Coverage->NumberOfAssignedPerPage[PageIndex] += Count;
+
+        TotalBytesProcessed += CACHE_LINE_SIZE;
+        PageSizeBytesProcessed += CACHE_LINE_SIZE;
+        LargePageSizeBytesProcessed += CACHE_LINE_SIZE;
+
+        //
+        // If we've hit a page boundary, or this is the last cache line we'll
+        // be processing, finalize counts for this page.  Likewise for large
+        // pages.
+        //
+
+        if (PageSizeBytesProcessed == PAGE_SIZE || IsLastCacheLine) {
+
+            PageSizeBytesProcessed = 0;
+            PageCount = Coverage->NumberOfAssignedPerPage[PageIndex];
+
+            if (PageCount) {
+                Coverage->NumberOfUsedPages++;
+            } else {
+                Coverage->NumberOfEmptyPages++;
+            }
+
+            PageIndex++;
+
+            if (LargePageSizeBytesProcessed == LARGE_PAGE_SIZE ||
+                IsLastCacheLine) {
+
+                LargePageSizeBytesProcessed = 0;
+                LargePageCount =
+                    Coverage->NumberOfAssignedPerLargePage[LargePageIndex];
+
+                if (LargePageCount) {
+                    Coverage->NumberOfUsedLargePages++;
+                } else {
+                    Coverage->NumberOfEmptyLargePages++;
+                }
+
+                LargePageIndex++;
+            }
+        }
+    }
+
+    //
+    // Enumeration of the assigned array complete.  Perform a linear regression
+    // against the NumberOfAssignedPerCacheLineCounts array, then score it.
+    //
+
+    LinearRegressionNumberOfAssigned16PerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        &Coverage->Slope,
+        &Coverage->Intercept,
+        &Coverage->CorrelationCoefficient,
+        &Coverage->PredictedNumberOfFilledCacheLines
+    );
+
+    ScoreNumberOfAssigned16PerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        Coverage->TotalNumberOfAssigned,
+        &Coverage->Score,
+        &Coverage->Rank
+    );
+
+    //
+    // Everything has been completed; verify invariants, then return.
+    //
+
+    VerifyMemoryCoverage16Invariants(Graph, Coverage);
+
+    return;
+}
+
+_Use_decl_annotations_
+VOID
+GraphCalculateMemoryCoverage16CacheLineCounts(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine is intended to be called after a best graph has been found.
+    It walks the entire assigned array and calculates cache line occupancy
+    counts for each page, and then emits a corresponding ETW event.
+
+    If the relevent ETW event (GraphMemoryCoverageCacheLineCountsEvent())
+    hasn't been enabled, this routine returns immediately.
+
+    N.B. The logic used to count assigned array occupancy is identical to the
+         logic used in GraphCalculateAssignedMemoryCoverage().  However, that
+         routine gets called far more frequently, which would result in orders
+         of magnitude more ETW event traffic, i.e., events would be emitted for
+         every solved graph, not every best graph.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which cache line counts are
+        to be calculated and corresponding ETW events are to be emitted.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PRTL Rtl;
+    BYTE Count;
+    ULONG PageIndex;
+    ULONG CacheLineIndex;
+    ULONG NumberOfCacheLines;
+    ULONG LocalCacheLineIndex;
+    ULONG PageSizeBytesProcessed;
+    BOOLEAN IsLastCacheLine = FALSE;
+    PASSIGNED16_CACHE_LINE AssignedCacheLine;
+    PASSIGNED16_MEMORY_COVERAGE Coverage;
+    PAGE_CACHE_LINE_COUNT CacheLineCountsPerPage = { 0, };
+
+    ULONG Index;
+    PASSIGNED16 Assigned;
+
+    if (!EventEnabledGraphMemoryCoverageCacheLineCountsEvent()) {
+
+        //
+        // No ETW tracing is active for this event; we're done.
+        //
+
+        return;
+    }
+
+    //
+    // Initialize aliases.
+    //
+
+    Rtl = Graph->Rtl;
+    Coverage = &Graph->Assigned16MemoryCoverage;
+    NumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+    AssignedCacheLine = (PASSIGNED16_CACHE_LINE)Graph->Assigned16;
+
+    PageIndex = 0;
+    PageSizeBytesProcessed = 0;
+
+    //
+    // Enumerate the assigned array in cache-line-sized strides.
+    //
+
+    for (CacheLineIndex = 0;
+         CacheLineIndex < NumberOfCacheLines;
+         CacheLineIndex++) {
+
+        Count = 0;
+        LocalCacheLineIndex = CacheLineIndex % NUM_CACHE_LINES_PER_PAGE;
+        IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
+
+        //
+        // Point at the first element in this cache line.
+        //
+
+        Assigned = (PASSIGNED16)(AssignedCacheLine[CacheLineIndex]);
+
+        //
+        // For each cache line, enumerate over each individual element, and,
+        // if it is not NULL, increment the local count.
+        //
+
+        for (Index = 0; Index < NUM_ASSIGNED16_PER_CACHE_LINE; Index++) {
+            if (*Assigned++) {
+                Count++;
+            }
+        }
+
+        ASSERT(Count >= 0 && Count <= 32);
+        CacheLineCountsPerPage[LocalCacheLineIndex] = Count;
+
+        //
+        // If we've hit a page boundary, or this is the last cache line we'll
+        // be processing, emit the event and reset the counts.
+        //
+
+        PageSizeBytesProcessed += CACHE_LINE_SIZE;
+
+        if (PageSizeBytesProcessed == PAGE_SIZE || IsLastCacheLine) {
+            PageIndex++;
+            PageSizeBytesProcessed = 0;
+            EVENT_WRITE_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS();
+            ZeroStruct(CacheLineCountsPerPage);
+        }
+    }
+
+    return;
+}
+
+GRAPH_REGISTER_SOLVED GraphRegisterSolved16;
+
+_Use_decl_annotations_
+HRESULT
+GraphRegisterSolved16(
+    PGRAPH Graph,
+    PGRAPH *NewGraphPointer
+    )
+/*++
+
+Routine Description:
+
+    Attempts to register a solved graph with a context if the graph's memory
+    coverage is the best that's been encountered so far.
+
+Arguments:
+
+    Graph - Supplies a pointer to the solved graph to register.
+
+    NewGraphPointer - Supplies the address of a variable which will receive the
+        address of a new graph instance to be used for solving if the routine
+        returns PH_S_USE_NEW_GRAPH_FOR_SOLVING.
+
+Return Value:
+
+    PH_S_CONTINUE_GRAPH_SOLVING - Continue graph solving with the current graph.
+
+    PH_S_USE_NEW_GRAPH_FOR_SOLVING - Continue graph solving but use the graph
+        returned via the NewGraphPointer parameter.
+
+    PH_S_GRAPH_SOLVING_STOPPED - The context indicated that graph solving was
+        to stop (due to a best solution already being found, or a limit being
+        hit, for example).  No graph registration is performed in this instance.
+
+--*/
+{
+    HRESULT Result;
+    BOOLEAN HasLimit = FALSE;
+    BOOLEAN IsLowestComparator = FALSE;
+    BOOLEAN FoundBestGraph = FALSE;
+    BOOLEAN StopGraphSolving = FALSE;
+    BOOLEAN FoundEqualBestGraph = FALSE;
+    BOOLEAN IsCoverageValueDouble;
+    BOOLEAN IsSlopeCoverageType;
+    ULONG Index;
+    ULONG EqualCount = 0;
+    ULONG BestGraphIndex = 0;
+    ULONG CoverageValue = 0;
+    ULONG CoverageLimit = 0;
+    DOUBLE CoverageValueAsDouble = 0.0;
+    LONG EqualBestGraphIndex = 0;
+    LONGLONG Attempt;
+    PGRAPH BestGraph;
+    PGRAPH SpareGraph;
+    PGRAPH PreviousBestGraph;
+    ULONGLONG ElapsedMilliseconds;
+    PBEST_GRAPH_INFO BestGraphInfo = NULL;
+    PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED16_MEMORY_COVERAGE Coverage;
+    PASSIGNED16_MEMORY_COVERAGE BestCoverage = NULL;
+    PASSIGNED16_MEMORY_COVERAGE PreviousBestCoverage;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
+
+    ASSERT(IsUsingAssigned16(Graph));
+
+    //
+    // Initialize aliases.
+    //
+
+    Context = Graph->Context;
+    Coverage = &Graph->Assigned16MemoryCoverage;
+    CoverageType = Context->BestCoverageType;
+    Attempt = Coverage->Attempt;
+    ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
+    IsCoverageValueDouble = DoesBestCoverageTypeUseDouble(CoverageType);
+
+    //
+    // Indicate continue graph solving unless we find a best graph, or reach
+    // a fixed number of attempts.
+    //
+
+    Result = PH_S_CONTINUE_GRAPH_SOLVING;
+
+    //
+    // Enter the best graph critical section.
+    //
+
+    EnterCriticalSection(&Context->BestGraphCriticalSection);
+
+    //
+    // If there is no best graph currently set, proceed with setting it to
+    // our current graph, then use the spare graph to continue solving.
+    //
+
+    if (Context->BestGraph) {
+        BestGraph = Context->BestGraph;
+        ASSERT(Context->NewBestGraphCount > 0);
+    } else {
+        ASSERT(Context->NewBestGraphCount == 0);
+        ASSERT(Context->FirstAttemptSolved == 0);
+        SpareGraph = Context->SpareGraph;
+        ASSERT(SpareGraph != NULL);
+        ASSERT(IsSpareGraph(SpareGraph));
+        SpareGraph->Flags.IsSpare = FALSE;
+        Context->SpareGraph = NULL;
+        BestGraph = Context->BestGraph = Graph;
+        *NewGraphPointer = SpareGraph;
+        BestGraphIndex = Context->NewBestGraphCount++;
+        Coverage->BestGraphNumber = BestGraphIndex + 1;
+        Context->FirstAttemptSolved = Graph->Attempt;
+        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+        goto End;
+    }
+
+    //
+    // There's an existing best graph set.  Verify spare graph is NULL, then
+    // initialize aliases to the previous best.
+    //
+
+    ASSERT(Context->SpareGraph == NULL);
+    PreviousBestGraph = Context->BestGraph;
+    PreviousBestCoverage = &PreviousBestGraph->Assigned16MemoryCoverage;
+
+    //
+    // Define helper macros for reducing the amount of duplicate code we'd
+    // otherwise have to copy-and-paste when we detect a best or equal-best
+    // graph.
+    //
+
+#define FOUND_BEST_GRAPH()                         \
+    Context->BestGraph = Graph;                    \
+    *NewGraphPointer = PreviousBestGraph;          \
+    BestGraphIndex = Context->NewBestGraphCount++; \
+    Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING
+
+#define FOUND_EQUAL_BEST_GRAPH()                         \
+    Context->EqualBestGraphCount++;                      \
+    FoundEqualBestGraph = TRUE;                          \
+    EqualBestGraphIndex = Context->NewBestGraphCount - 1
+
+    //
+    // If our coverage type is slope, we also want to factor in the intercept
+    // and correlation coefficient; if we're presented with two equal slope
+    // values, we want to consult the intercept and correlation coefficient as
+    // well to try and break the tie.
+    //
+
+    IsSlopeCoverageType = (
+        CoverageType == BestCoverageTypeLowestSlopeId ||
+        CoverageType == BestCoverageTypeHighestSlopeId
+    );
+
+    if (IsSlopeCoverageType) {
+        DOUBLE Slope;
+        DOUBLE Intercept;
+        DOUBLE CorrCoeff;
+        DOUBLE PrevSlope;
+        DOUBLE PrevIntercept;
+        DOUBLE PrevCorrCoeff;
+
+        Slope = Coverage->Slope;
+        Intercept = Coverage->Intercept;
+        CorrCoeff = Coverage->CorrelationCoefficient;
+        PrevSlope = PreviousBestCoverage->Slope;
+        PrevIntercept = PreviousBestCoverage->Intercept;
+        PrevCorrCoeff = PreviousBestCoverage->CorrelationCoefficient;
+
+        CoverageValueAsDouble = Slope;
+
+        //
+        // Helper macro to reduce duplicate code for lowest/highest slope
+        // comparisons.
+        //
+
+#define IS_BEST_SLOPE(Comparator)                    \
+    if (Slope Comparator PrevSlope) {                \
+        FOUND_BEST_GRAPH();                          \
+    } else if (Slope == PrevSlope) {                 \
+        if (Intercept Comparator PrevIntercept) {    \
+            FOUND_BEST_GRAPH();                      \
+        } else if (Intercept == PrevIntercept) {     \
+            if (CorrCoeff > PrevCorrCoeff) {         \
+                FOUND_BEST_GRAPH();                  \
+            } else if (CorrCoeff == PrevCorrCoeff) { \
+                FOUND_EQUAL_BEST_GRAPH();            \
+            }                                        \
+        }                                            \
+    }
+
+        if (CoverageType == BestCoverageTypeLowestSlopeId) {
+            IS_BEST_SLOPE(<);
+        } else {
+            IS_BEST_SLOPE(>);
+        }
+
+        goto End;
+    }
+
+    //
+    // Determine if this graph has the "best" memory coverage and update the
+    // best graph accordingly if so.
+    //
+
+#define EXPAND_AS_DETERMINE_IF_BEST_GRAPH(Name, Comparison, Comparator) \
+    case BestCoverageType##Comparison##Name##Id:                        \
+        CoverageValue = (ULONG)Coverage->##Name;                        \
+        if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
+            FOUND_BEST_GRAPH();                                         \
+        } else if (Coverage->##Name == PreviousBestCoverage->##Name) {  \
+            FOUND_EQUAL_BEST_GRAPH();                                   \
+        }                                                               \
+        break;
+
+    switch (CoverageType) {
+
+        case BestCoverageTypeNullId:
+        case BestCoverageTypeInvalidId:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+
+        BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_BEST_GRAPH)
+
+        default:
+            Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+            break;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    StopGraphSolving = FALSE;
+    FoundBestGraph = (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
+
+    if (FoundEqualBestGraph) {
+
+        //
+        // If this graph was found to be equal to the current best graph, update
+        // the existing best graph info's equal count.
+        //
+
+        ASSERT(!FoundBestGraph);
+        ASSERT(EqualBestGraphIndex >= 0);
+
+        BestGraphInfo = &Context->BestGraphInfo[EqualBestGraphIndex];
+        EqualCount = ++BestGraphInfo->EqualCount;
+
+        //
+        // If we've hit the maximum number of equal graphs, we can stop solving.
+        //
+
+        if (Context->MaxNumberOfEqualBestGraphs > 0 &&
+            Context->MaxNumberOfEqualBestGraphs <= EqualCount)
+        {
+            StopGraphSolving = TRUE;
+        }
+
+    } else if (FoundBestGraph) {
+
+        BestGraph = Graph;
+
+        Graph->Assigned16MemoryCoverage.BestGraphNumber = BestGraphIndex + 1;
+
+        //
+        // If we're still within the limits for the maximum number of best
+        // graphs (captured within our context), then use the relevant element
+        // from that array.
+        //
+
+        if (BestGraphIndex < MAX_BEST_GRAPH_INFO) {
+
+            BestGraphInfo = &Context->BestGraphInfo[BestGraphIndex];
+
+            //
+            // Invariant check: address of BestGraphInfo element in the array
+            // should be less than the address of next element in the struct
+            // (the LowMemoryEvent handle).
+            //
+
+            ASSERT((ULONG_PTR)(BestGraphInfo) <
+                   (ULONG_PTR)(&Context->LowMemoryEvent));
+
+            //
+            // Initialize the pointer to the best graph info's copy of the
+            // coverage structure; we can copy this over outside the critical
+            // section.
+            //
+
+            BestCoverage = &BestGraphInfo->Coverage16;
+
+        } else {
+
+            //
+            // Nothing to do if we've exceeded the number of best graphs we
+            // capture in the context.  (The information may still be emitted
+            // via an ETW event.)
+            //
+
+            ASSERT(BestCoverage == NULL);
+        }
+
+        //
+        // Capture the value used to determine that this graph was the best.
+        //
+
+#define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
+    case BestCoverageType##Comparison##Name##Id:                      \
+        BestGraphInfo->Value = (ULONG)Coverage->##Name;               \
+        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->##Name;      \
+        break;
+
+        switch (CoverageType) {
+
+            case BestCoverageTypeNullId:
+            case BestCoverageTypeInvalidId:
+                PH_RAISE(PH_E_UNREACHABLE_CODE);
+                break;
+
+            BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_SAVE_BEST_GRAPH_VALUE)
+
+            default:
+                Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+                break;
+        }
+    }
+
+    //
+    // Determine if we've found sufficient "best" graphs whilst we still have
+    // the critical section acquired (as NewBestGraphCount is protected by it).
+    //
+
+    if (!StopGraphSolving) {
+        StopGraphSolving = (
+            (ULONGLONG)Context->NewBestGraphCount >=
+            Context->BestCoverageAttempts
+        );
+    }
+
+    //
+    // Update the solutions found ratio prior to leaving the critical section.
+    //
+
+    Context->RunningSolutionsFoundRatio = (DOUBLE)(
+        ((DOUBLE)Context->FinishedCount) /
+        ((DOUBLE)Context->Attempts)
+    );
+
+    //
+    // Leave the critical section and complete processing.
+    //
+
+    LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+    //
+    // Any failure code at this point is a critical internal invariant failure.
+    //
+
+    if (FAILED(Result)) {
+        PH_RAISE(Result);
+    }
+
+    //
+    // If we found a new best graph, BestCoverage will be non-NULL.
+    //
+
+    if (BestCoverage != NULL) {
+
+        //
+        // Copy the coverage, attempt, elapsed milliseconds and seeds.
+        //
+
+        CopyCoverage16(BestCoverage, Coverage);
+
+        BestGraphInfo->Attempt = Attempt;
+        BestGraphInfo->ElapsedMilliseconds = ElapsedMilliseconds;
+
+        C_ASSERT(sizeof(BestGraphInfo->Seeds) == sizeof(Graph->Seeds));
+
+        ASSERT(BestGraphInfo != NULL);
+
+        for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
+            BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
+        }
+    }
+
+    //
+    // We need to determine what type of comparator is being used (i.e. lowest
+    // or highest), because depending on what we're using for comparison, we
+    // may have hit the lowest or highest possible value, in which case, graph
+    // solving can be stopped (even if we haven't hit the target specified by
+    // --BestCoverageAttempts).  For example, if the best coverage type is
+    // LowestNumberOfEmptyCacheLines, and the coverage value is 0, we'll never
+    // beat this, so we can stop graph solving now.
+    //
+    // So, leverage another X-macro expansion to extract the comparator type and
+    // coverage value.  We need to do this here, after the End: label, as the
+    // very first graph being registered may have hit the limit (which we have
+    // seen happen regularly in practice).
+    //
+
+    //
+    // N.B. This doesn't apply to the coverage types like Slope which use
+    //      DOUBLEs instead of ULONGs, so, skip comparator check in these
+    //      cases.
+    //
+
+    if (IsCoverageValueDouble) {
+        goto SkipComparatorCheck;
+    }
+
+    //
+    // Suppress SAL warnings; not sure why it complains here.
+    //
+
+    _No_competing_thread_begin_
+    Coverage = &BestGraph->Assigned16MemoryCoverage;
+    _No_competing_thread_end_
+
+#define EXPAND_AS_DETERMINE_IF_LOWEST(Name, Comparison, Comparator) \
+    case BestCoverageType##Comparison##Name##Id:                    \
+        IsLowestComparator = (0 Comparator 1);                      \
+        CoverageValue = (ULONG)Coverage->##Name;                    \
+        CoverageValueAsDouble = (DOUBLE)Coverage->##Name;           \
+        break;
+
+    switch (CoverageType) {
+
+        case BestCoverageTypeNullId:
+        case BestCoverageTypeInvalidId:
+            PH_RAISE(PH_E_UNREACHABLE_CODE);
+            break;
+
+        BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_DETERMINE_IF_LOWEST)
+
+        default:
+            Result = PH_E_INVALID_BEST_COVERAGE_TYPE_ID;
+            break;
+    }
+
+    //
+    // Any failure code at this point is a critical internal invariant failure.
+    //
+
+    if (FAILED(Result)) {
+        PH_RAISE(Result);
+    }
+
+    if (IsLowestComparator) {
+
+        //
+        // The comparator is "lowest"; if the best value we found was zero, then
+        // indicate stop solving, as we'll never be able to get lower than this.
+        //
+
+        if (CoverageValue == 0) {
+            StopGraphSolving = TRUE;
+        }
+
+    } else {
+
+        //
+        // For highest comparisons, things are a little trickier, as we need to
+        // know what is the maximum value to compare things against.  This info
+        // isn't available from the X-macro, nor is it applicable to all types,
+        // so, the following switch construct extracts limits manually.
+        //
+
+        HasLimit = FALSE;
+
+        //
+        // Disable "enum not handled in switch statement" warning.
+        //
+        //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
+        //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
+        //                     is not explicitly handled by a case label
+        //
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+
+        switch (CoverageType) {
+
+            case BestCoverageTypeNullId:
+            case BestCoverageTypeInvalidId:
+                PH_RAISE(PH_E_UNREACHABLE_CODE);
+                break;
+
+            case BestCoverageTypeHighestNumberOfEmptyCacheLinesId:
+                HasLimit = TRUE;
+                CoverageLimit = Coverage->TotalNumberOfCacheLines;
+                break;
+
+            case BestCoverageTypeHighestMaxAssignedPerCacheLineCountId:
+                HasLimit = TRUE;
+                CoverageLimit = 32;
+                break;
+
+            default:
+                break;
+        }
+
+#pragma warning(pop)
+
+        if (HasLimit) {
+            if (CoverageValue == CoverageLimit) {
+                StopGraphSolving = TRUE;
+            }
+        }
+    }
+
+    //
+    // Intentional follow-on to SkipComparatorCheck.
+    //
+
+SkipComparatorCheck:
+
+    //
+    // FixedAttempts trumps everything else.  We handle stopping graph solving
+    // when FixedAttempts is active in GraphReset(), though, so there's nothing
+    // more to do here.
+    //
+
+    if (Context->FixedAttempts > 0) {
+        StopGraphSolving = FALSE;
+    }
+
+    //
+    // Communicate back to the context that solving can stop if indicated.
+    //
+
+    if (StopGraphSolving) {
+
+        SetStopSolving(Context);
+
+        //
+        // Stop the solve timers here.  (These are less useful when not in
+        // "first graph wins" mode.)
+        //
+
+        CONTEXT_END_TIMERS(Solve);
+
+        //
+        // Submit the finished threadpool work regardless of whether or
+        // not a graph was found.  The finished callback will set the
+        // appropriate success or failure events after waiting for all
+        // the graph contexts to finish and then assessing the context.
+        //
+
+        SubmitThreadpoolWork(Context->FinishedWork);
+
+        //
+        // Clear the caller's NewGraphPointer, as we're not going to be doing
+        // any more graph solving.
+        //
+
+        *NewGraphPointer = NULL;
+
+        //
+        // Return graph solving stopped.
+        //
+
+        Result = PH_S_GRAPH_SOLVING_STOPPED;
+    }
+
+    //
+    // Emit the relevant ETW event.  (We use different ETW events for graph
+    // found, found equal best, and found new best, because they occur at very
+    // different frequencies, and have separate ETW keywords (to facilitate
+    // isolation of just the specific event you're interested in).
+    //
+
+    if (FoundBestGraph != FALSE) {
+        EVENT_WRITE_GRAPH_FOUND(FoundNewBest);
+        GraphCalculateMemoryCoverage16CacheLineCounts(Graph);
+    } else if (FoundEqualBestGraph != FALSE) {
+        EVENT_WRITE_GRAPH_FOUND(FoundEqualBest);
+        GraphCalculateMemoryCoverage16CacheLineCounts(Graph);
+    }
+
+    EVENT_WRITE_GRAPH_FOUND(Found);
+
+    if (FoundBestGraph != FALSE && (Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING)) {
+        if (!SetEvent(Context->NewBestGraphFoundEvent)) {
+            SYS_ERROR(SetEvent);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+    }
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+GraphRegisterSolved16NoBestCoverage(
+    PGRAPH Graph,
+    PGRAPH *NewGraphPointer
+    )
+/*++
+
+Routine Description:
+
+    This is a vastly-simplified version of GraphRegisterSolved() that is called
+    when we're in FixedAttempts solving mode (which is useful for benchmarking).
+    Its main job is to mimic the local variables in the aforementioned routine
+    and call `EVENT_WRITE_GRAPH_FOUND(Found)` in order to ensure an ETW event
+    is emitted.
+
+    In order to keep all the downstream machinery working (like verification and
+    table testing), we register the first graph we find as the "best".
+
+Arguments:
+
+    Graph - Supplies a pointer to the solved graph to register.
+
+    NewGraphPointer - Supplies the address of a variable which will receive the
+        address of a new graph instance to be used for solving if the routine
+        returns PH_S_USE_NEW_GRAPH_FOR_SOLVING.
+
+Return Value:
+
+    PH_S_CONTINUE_GRAPH_SOLVING - Continue graph solving with the current graph.
+
+    PH_S_USE_NEW_GRAPH_FOR_SOLVING - Continue graph solving but use the graph
+        returned via the NewGraphPointer parameter.
+
+    PH_S_GRAPH_SOLVING_STOPPED - The context indicated that graph solving was
+        to stop (due to the target number of solutions being found).
+
+--*/
+{
+    HRESULT Result;
+    PGRAPH SpareGraph = NULL;
+    BOOLEAN FoundBestGraph = FALSE;
+    BOOLEAN StopGraphSolving = FALSE;
+    BOOLEAN FoundEqualBestGraph = FALSE;
+    BOOLEAN IsCoverageValueDouble = FALSE;
+    ULONG EqualCount = 0;
+    ULONG CoverageValue = 0;
+    DOUBLE CoverageValueAsDouble = 0.0;
+    LONGLONG Attempt;
+    ULONGLONG ElapsedMilliseconds;
+    PPERFECT_HASH_CONTEXT Context;
+    PASSIGNED16_MEMORY_COVERAGE Coverage;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
+
+    //
+    // Initialize aliases.
+    //
+
+    Context = Graph->Context;
+    Coverage = &Graph->Assigned16MemoryCoverage;
+    CoverageType = Context->BestCoverageType;
+    Attempt = Coverage->Attempt;
+    ElapsedMilliseconds = GetTickCount64() - Context->StartMilliseconds;
+
+    //
+    // Indicate continue graph solving by default.
+    //
+
+    Result = PH_S_CONTINUE_GRAPH_SOLVING;
+
+    //
+    // Avoid entering the best graph critical section if Context->BestGraph
+    // already has a value.  (We need to suppress SAL for this optimization.)
+    //
+
+    _No_competing_thread_begin_
+    if (Context->BestGraph != NULL) {
+        goto End;
+    }
+    _No_competing_thread_end_
+
+    //
+    // Enter the best graph critical section.
+    //
+
+    EnterCriticalSection(&Context->BestGraphCriticalSection);
+
+    //
+    // If there is no best graph currently set, proceed with setting it to
+    // our current graph, then use the spare graph to continue solving.
+    //
+
+    if (Context->BestGraph == NULL) {
+        ASSERT(Context->NewBestGraphCount == 0);
+        ASSERT(Context->FirstAttemptSolved == 0);
+        SpareGraph = Context->SpareGraph;
+        ASSERT(SpareGraph != NULL);
+        ASSERT(IsSpareGraph(SpareGraph));
+        SpareGraph->Flags.IsSpare = FALSE;
+        Context->SpareGraph = NULL;
+        Context->BestGraph = Graph;
+        FoundBestGraph = TRUE;
+        Coverage->BestGraphNumber = ++Context->NewBestGraphCount;
+        Context->FirstAttemptSolved = Graph->Attempt;
+        Result = PH_S_USE_NEW_GRAPH_FOR_SOLVING;
+    }
+
+    //
+    // Leave the critical section and complete processing.
+    //
+
+    LeaveCriticalSection(&Context->BestGraphCriticalSection);
+
+End:
+
+    if (Context->TargetNumberOfSolutions > 0) {
+        if (Graph->SolutionNumber >= Context->TargetNumberOfSolutions) {
+
+            //
+            // We've found sufficient solutions; stop solving.
+            //
+
+            StopGraphSolving = TRUE;
+        }
+    }
+
+    if (StopGraphSolving) {
+        CONTEXT_END_TIMERS(Solve);
+        SetStopSolving(Context);
+        Result = PH_S_STOP_GRAPH_SOLVING;
+    } else if (FoundBestGraph) {
+
+        //
+        // We only want to update the new graph pointer if we're using a new
+        // graph for solving, otherwise, a downstream assertion will trip.
+        //
+
+        ASSERT(Result == PH_S_USE_NEW_GRAPH_FOR_SOLVING);
+        ASSERT(SpareGraph != NULL);
+        *NewGraphPointer = SpareGraph;
+    }
+
+    EVENT_WRITE_GRAPH_FOUND(Found);
+
+    return Result;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

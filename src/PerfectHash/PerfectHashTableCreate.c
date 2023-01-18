@@ -259,11 +259,13 @@ Return Value:
     // Allocate sufficient space for the assigned memory coverage structure.
     //
 
-    Table->Coverage = Allocator->Vtbl->Calloc(Allocator,
-                                              1,
-                                              sizeof(*Table->Coverage));
+    C_ASSERT(sizeof(*Table->Coverage16) > sizeof(*Table->Coverage));
 
-    if (!Table->Coverage) {
+    Table->Coverage16 = Allocator->Vtbl->Calloc(Allocator,
+                                                1,
+                                                sizeof(*Table->Coverage16));
+
+    if (!Table->Coverage16) {
         Result = E_OUTOFMEMORY;
         goto Error;
     }

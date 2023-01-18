@@ -666,6 +666,15 @@ Abstract:
 //         When set, disables automatically using the AVX2 memory coverage
 //         calculation routine when the CPU supports the AVX2 instruction set.
 // 
+//     --IncludeKeysInCompiledDll
+// 
+//         When set, includes the keys in the compiled DLL file.  If you want to
+//         benchmark a compiled perfect hash table DLL's index routine against a
+//         normal binary search routine (i.e. IndexBsearch()), you'll need to
+//         supply this flag to ensure the keys get built into the binary.  We
+//         don't do this by default as they're not needed for a normal perfect
+//         hash table binary.
+// 
 // Table Compile Flags:
 // 
 //     N/A
@@ -4345,4 +4354,13 @@ Abstract:
 // Failed to obtain the address of IsFunctionEntryCallbackEnabled from FunctionHook.dll.
 //
 #define PH_E_FAILED_TO_GET_ADDRESS_OF_IS_FUNCTION_ENTRY_CALLBACK_ENABLED ((HRESULT)0xE00403E4L)
+
+//
+// MessageId: PH_E_LOADED_TABLE_VERTEX_COLLISION_FAILURE_DURING_INDEX
+//
+// MessageText:
+//
+// Loaded table vertex collision failure during Index() routine.
+//
+#define PH_E_LOADED_TABLE_VERTEX_COLLISION_FAILURE_DURING_INDEX ((HRESULT)0xE00403E5L)
 

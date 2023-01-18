@@ -2856,10 +2856,17 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG DisableSavingCallbackTableValues:1;
 
         //
+        // When set, disables any attempt at using the 16-bit hashing mechanisms
+        // if the right conditions exist.
+        //
+
+        ULONGLONG DoNotTryUseHash16Impl:1;
+
+        //
         // Unused bits.
         //
 
-        ULONGLONG Unused:30;
+        ULONGLONG Unused:29;
     };
 
     LONGLONG AsLongLong;
@@ -4038,6 +4045,15 @@ ULONGLONG
     );
 typedef PERFECT_HASH_TABLE_SEEDED_HASH_EX *PPERFECT_HASH_TABLE_SEEDED_HASH_EX;
 
+typedef
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_TABLE_SEEDED_HASH16_EX)(
+    _In_ ULONG Key,
+    _In_ PULONG Seeds,
+    _In_ USHORT Mask
+    );
+typedef PERFECT_HASH_TABLE_SEEDED_HASH16_EX *PPERFECT_HASH_TABLE_SEEDED_HASH16_EX;
+
 typedef struct _PERFECT_HASH_TABLE_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE);
     PPERFECT_HASH_TABLE_CREATE Create;
@@ -4061,6 +4077,7 @@ typedef struct _PERFECT_HASH_TABLE_VTBL {
     PPERFECT_HASH_TABLE_GET_FILE GetFile;
     PPERFECT_HASH_TABLE_HASH_EX HashEx;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
+    PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHash16Ex;
 } PERFECT_HASH_TABLE_VTBL;
 typedef PERFECT_HASH_TABLE_VTBL *PPERFECT_HASH_TABLE_VTBL;
 

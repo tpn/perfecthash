@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -36,6 +36,17 @@ VOID
     );
 typedef GRAPH_ADD_EDGE *PGRAPH_ADD_EDGE;
 extern GRAPH_ADD_EDGE GraphAddEdge;
+
+typedef
+VOID
+(NTAPI GRAPH_ADD_EDGE16)(
+    _In_ PGRAPH Graph,
+    _In_ EDGE16 Edge,
+    _In_ VERTEX16 Vertex1,
+    _In_ VERTEX16 Vertex2
+    );
+typedef GRAPH_ADD_EDGE16 *PGRAPH_ADD_EDGE16;
+extern GRAPH_ADD_EDGE16 GraphAddEdge16;
 
 typedef
 _Must_inspect_result_

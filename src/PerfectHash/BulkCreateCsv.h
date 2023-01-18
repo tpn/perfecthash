@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -289,6 +289,10 @@ Abstract:
                                                                                              \
     ENTRY(UseOriginalSeededHashRoutines,                                                     \
           (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE ? 'Y' : 'N'),             \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(UsedAssigned16,                                                                    \
+          (Table->State.UsingAssigned16 != FALSE ? 'Y' : 'N'),                               \
           OUTPUT_CHR)                                                                        \
                                                                                              \
     ENTRY(HashAllKeysFirst,                                                                  \

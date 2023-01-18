@@ -616,6 +616,32 @@ Table Create Flags:
         don't do this by default as they're not needed for a normal perfect
         hash table binary.
 
+    --DisableSavingCallbackTableValues
+
+        When set, does not attempt to save the runtime table values when running
+        with a _penter-hooked binary.
+
+    --DoNotTryUseHash16Impl
+
+        By default, if the following conditions exist, the library will
+        automatically switch to using the USHORT, 16-bit implementations
+        of hash functions and assigned table data seamlessly during graph
+        solving:
+
+            - Algorithm is Chm01.
+            - GraphImpl is 3.
+            - Number of vertices is <= 65,534 (i.e. MAX_USHORT-1).
+
+        This provides significant performance improvements, which is why it's
+        the default.  To disable this behavior, set this flag.  This flag is
+        intended to be used during debugging and performance comparisons when
+        benchmarking -- you shouldn't need to use it in normal use.
+
+        N.B. This only affects the solving graph and table instances; the
+             compiled perfect hash table generated files will still use the
+             appropriate USHORT C-types if applicable (number of vertices less
+             than or equal to 65,534).
+
 Table Compile Flags:
 
     N/A
@@ -3956,5 +3982,13 @@ Facility=ITF
 SymbolicName=PH_E_FAILED_TO_GET_ADDRESS_OF_IS_FUNCTION_ENTRY_CALLBACK_ENABLED
 Language=English
 Failed to obtain the address of IsFunctionEntryCallbackEnabled from FunctionHook.dll.
+.
+
+MessageId=0x3e5
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_LOADED_TABLE_VERTEX_COLLISION_FAILURE_DURING_INDEX
+Language=English
+Loaded table vertex collision failure during Index() routine.
 .
 
