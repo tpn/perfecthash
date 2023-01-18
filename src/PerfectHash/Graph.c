@@ -271,6 +271,50 @@ Return Value:
 // Implement main vtbl routines.
 //
 
+GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE GraphShouldWeContinueTryingToSolve;
+
+_Use_decl_annotations_
+BOOLEAN
+GraphShouldWeContinueTryingToSolve(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    Determines if graph solving should continue.  This routine is intended to
+    be called periodically by the graph solving loop, particularly before and
+    after large pieces of work are completed (such as graph assignment).  If
+    this routine returns FALSE, the caller should stop what they're doing and
+    return the PH_S_STOP_GRAPH_SOLVING return code.
+
+Arguments:
+
+    Graph - Supplies a pointer to a graph instance.
+
+Return Value:
+
+    TRUE if solving should continue, FALSE otherwise.
+
+--*/
+{
+    PPERFECT_HASH_CONTEXT Context;
+
+    Context = Graph->Context;
+
+    //
+    // If ctrl-C has been pressed, set stop solving.  Continue solving unless
+    // stop solving indicates otherwise.
+    //
+
+    if (CtrlCPressed) {
+        SetStopSolving(Context);
+    }
+
+    return (StopSolving(Context) != FALSE ? FALSE : TRUE);
+}
+
+
 GRAPH_SOLVE GraphSolve;
 
 _Use_decl_annotations_
@@ -3135,7 +3179,7 @@ Return Value:
     // Begin the solving loop.
     //
 
-    while (Graph->Vtbl->ShouldWeContinueTryingToSolve(Graph)) {
+    while (GraphShouldWeContinueTryingToSolve(Graph)) {
 
         Result = Graph->Vtbl->Reset(Graph);
         if (FAILED(Result)) {
@@ -4602,49 +4646,6 @@ Return Value:
     *Byte = Low;
 
     return S_OK;
-}
-
-GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE GraphShouldWeContinueTryingToSolve;
-
-_Use_decl_annotations_
-BOOLEAN
-GraphShouldWeContinueTryingToSolve(
-    PGRAPH Graph
-    )
-/*++
-
-Routine Description:
-
-    Determines if graph solving should continue.  This routine is intended to
-    be called periodically by the graph solving loop, particularly before and
-    after large pieces of work are completed (such as graph assignment).  If
-    this routine returns FALSE, the caller should stop what they're doing and
-    return the PH_S_STOP_GRAPH_SOLVING return code.
-
-Arguments:
-
-    Graph - Supplies a pointer to a graph instance.
-
-Return Value:
-
-    TRUE if solving should continue, FALSE otherwise.
-
---*/
-{
-    PPERFECT_HASH_CONTEXT Context;
-
-    Context = Graph->Context;
-
-    //
-    // If ctrl-C has been pressed, set stop solving.  Continue solving unless
-    // stop solving indicates otherwise.
-    //
-
-    if (CtrlCPressed) {
-        SetStopSolving(Context);
-    }
-
-    return (StopSolving(Context) != FALSE ? FALSE : TRUE);
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
