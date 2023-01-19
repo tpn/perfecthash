@@ -14,6 +14,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "PerfectHashEventsPrivate.h"
+#include <omp.h>
 
 //
 // Forward decl.
@@ -4123,6 +4124,7 @@ Return Value:
     PRTL Rtl;
     PRNG Rng;
     BOOL Success;
+    BOOL Omp = TRUE;
     PGRAPH_INFO Info;
     HRESULT Result;
     ULONG OldProtection;
@@ -4210,10 +4212,38 @@ Return Value:
                            Info->##Name##BufferSizeInBytes);   \
     }
 
-    ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
-    ZERO_BITMAP_BUFFER(AssignedBitmap);
-    ZERO_BITMAP_BUFFER(IndexBitmap);
+
+    if (Omp) {
+
+        #pragma omp parallel sections num_threads(4)
+        {
+            #pragma omp section
+            {
+                ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
+            }
+
+            #pragma omp section
+            {
+                ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
+            }
+
+            #pragma omp section
+            {
+                ZERO_BITMAP_BUFFER(AssignedBitmap);
+            }
+
+            #pragma omp section
+            {
+                ZERO_BITMAP_BUFFER(IndexBitmap);
+            }
+        }
+
+    } else {
+        ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
+        ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
+        ZERO_BITMAP_BUFFER(AssignedBitmap);
+        ZERO_BITMAP_BUFFER(IndexBitmap);
+    }
 
     //
     // "Empty" all of the nodes.

@@ -91,6 +91,13 @@ extern "C" {
 #pragma warning(disable: 26110 26165 26167)
 
 //
+// Disable "Code analysis ignores OpenMP constructs".
+//
+//
+
+#pragma warning(disable: 6993)
+
+//
 // NT DDK types.
 //
 

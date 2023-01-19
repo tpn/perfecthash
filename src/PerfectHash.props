@@ -45,6 +45,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <CompileAsManaged>false</CompileAsManaged>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <OpenMPSupport>true</OpenMPSupport>
       <!--
       <SDLCheck>false</SDLCheck>
       -->
