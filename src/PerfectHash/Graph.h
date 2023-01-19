@@ -1786,11 +1786,17 @@ typedef GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
       *PGRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS;
 
 #ifndef __INTELLISENSE__
+
+//
+// Private non-vtbl methods.
+//
+
 extern GRAPH_INITIALIZE GraphInitialize;
 extern GRAPH_RUNDOWN GraphRundown;
 extern GRAPH_APPLY_USER_SEEDS GraphApplyUserSeeds;
 extern GRAPH_APPLY_SEED_MASKS GraphApplySeedMasks;
 extern GRAPH_APPLY_WEIGHTED_SEED_MASKS GraphApplyWeightedSeedMasks;
+extern GRAPH_POST_HASH_KEYS GraphPostHashKeys;
 
 //
 // Private vtbl methods.
@@ -1821,7 +1827,6 @@ extern GRAPH_SHOULD_WE_CONTINUE_TRYING_TO_SOLVE
 extern GRAPH_ADD_KEYS GraphAddKeys;
 extern GRAPH_HASH_KEYS GraphHashKeys;
 extern GRAPH_ADD_HASHED_KEYS GraphAddHashedKeys;
-extern GRAPH_POST_HASH_KEYS GraphPostHashKeys;
 #endif
 
 //
