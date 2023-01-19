@@ -557,6 +557,7 @@ Return Value:
     ULONG GraphImpl;
     ULONG FixedAttempts;
     HRESULT Result = S_OK;
+    BOOLEAN Invalid;
     BOOLEAN SawAutoResize = FALSE;
     BOOLEAN SawMinAttempts = FALSE;
     BOOLEAN SawMaxAttempts = FALSE;
@@ -565,6 +566,7 @@ Return Value:
     BOOLEAN SawResizeLimit = FALSE;
     BOOLEAN SawInitialResizes = FALSE;
     BOOLEAN SawResizeThreshold = FALSE;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
     PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParams;
@@ -776,6 +778,30 @@ Return Value:
                 );
                 break;
 
+            case TableCreateParameterBestCoverageTargetValueId:
+
+                //
+                // Invariant check: Context->BestCoverageType should be valid
+                // at this stage.
+                //
+
+                CoverageType = Context->BestCoverageType;
+                if (!IsValidPerfectHashBestCoverageTypeId(CoverageType)) {
+                    PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+                }
+
+                Context->State.HasBestCoverageTargetValue = TRUE;
+
+                if (DoesBestCoverageTypeUseDouble(CoverageType)) {
+                    Context->State.BestCoverageTargetValueIsDouble = TRUE;
+                    Context->BestCoverageTargetValue.AsDouble = Param->AsDouble;
+                } else {
+                    Context->State.BestCoverageTargetValueIsDouble = FALSE;
+                    Context->BestCoverageTargetValue.AsULong = Param->AsULong;
+                }
+
+                break;
+
             case TableCreateParameterNullId:
             case TableCreateParameterInvalidId:
             default:
@@ -799,14 +825,15 @@ Return Value:
     }
 
     //
-    // Clear the FindBestGraph flag if the minimum number of keys are not
-    // present.
+    // Clear the FindBestGraph flag and best coverage target value state if
+    // the minimum number of keys are not present.
     //
 
     if (Table->Keys->NumberOfKeys.QuadPart <
         (ULONGLONG)Context->MinNumberOfKeysForFindBestGraph) {
 
         Table->TableCreateFlags.FindBestGraph = FALSE;
+        Context->State.HasBestCoverageTargetValue = FALSE;
     }
 
     //
@@ -825,10 +852,17 @@ Return Value:
 
     if (Table->TableCreateFlags.FindBestGraph) {
 
-        if (!Context->BestCoverageType ||
-            ((FixedAttempts == 0) && !Context->BestCoverageAttempts) ||
-            !IsValidPerfectHashBestCoverageTypeId(Context->BestCoverageType)) {
+        Invalid = (
+            !Context->BestCoverageType ||
+            !IsValidPerfectHashBestCoverageTypeId(Context->BestCoverageType) ||
+            (
+                (FixedAttempts == 0) &&
+                (!Context->BestCoverageAttempts) &&
+                (!IsLookingForBestCoverageTargetValue(Context))
+            )
+        );
 
+        if (Invalid) {
             Result = PH_E_INVALID_TABLE_CREATE_PARAMETERS_FOR_FIND_BEST_GRAPH;
             goto Error;
         }
@@ -958,7 +992,8 @@ Return Value:
     if (Context->MinAttempts > 0 ||
         Context->MaxAttempts > 0 ||
         Context->FixedAttempts > 0 ||
-        Context->TargetNumberOfSolutions > 0)
+        Context->TargetNumberOfSolutions > 0 ||
+        IsLookingForBestCoverageTargetValue(Context))
     {
         //
         // We don't want to stop solving after the first solution is found, so

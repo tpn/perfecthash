@@ -1079,6 +1079,7 @@ Return Value:
     Context->State.SolveTimeoutExpired = FALSE;
     Context->State.FixedAttemptsReached = FALSE;
     Context->State.MaxAttemptsReached = FALSE;
+    Context->State.BestCoverageTargetValueFound = FALSE;
 
     Context->CyclicGraphFailures = 0;
     Context->VertexCollisionFailures = 0;
@@ -2089,7 +2090,7 @@ Return Value:
         // No such parameter found; use the default.
         //
 
-        ASSERT(Result == S_FALSE);
+        ASSERT(Result == PH_S_TABLE_CREATE_PARAMETER_NOT_FOUND);
         Result = S_OK;
         *KeySizeInBytes = DEFAULT_KEY_SIZE_IN_BYTES;
     }

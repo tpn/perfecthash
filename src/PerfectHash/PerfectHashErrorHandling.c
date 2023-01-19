@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -171,7 +171,7 @@ DoesErrorCodeWantAlgoHashMaskTableAppended(
     // We append the algo/hash/mask table text for the usage string.
     //
 
-    Result = (Code == PH_MSG_PERFECT_HASH_USAGE);
+    Result = (Code == PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
 
     return Result;
 }

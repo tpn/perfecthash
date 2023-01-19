@@ -2479,9 +2479,11 @@ Return Value:
     BOOLEAN IsSlopeCoverageType;
     ULONG Index;
     ULONG EqualCount = 0;
+    ULONG TargetValue = 0;
     ULONG BestGraphIndex = 0;
     ULONG CoverageValue = 0;
     ULONG CoverageLimit = 0;
+    DOUBLE TargetValueAsDouble = 0.0;
     DOUBLE CoverageValueAsDouble = 0.0;
     LONG EqualBestGraphIndex = 0;
     LONGLONG Attempt;
@@ -2766,7 +2768,7 @@ End:
     // the critical section acquired (as NewBestGraphCount is protected by it).
     //
 
-    if (!StopGraphSolving) {
+    if (!IsLookingForBestCoverageTargetValue(Context) && !StopGraphSolving) {
         StopGraphSolving = (
             (ULONGLONG)Context->NewBestGraphCount >=
             Context->BestCoverageAttempts
@@ -2838,10 +2840,15 @@ End:
     //
     // N.B. This doesn't apply to the coverage types like Slope which use
     //      DOUBLEs instead of ULONGs, so, skip comparator check in these
-    //      cases.
+    //      cases, as long as we're not looking for a target value (in which
+    //      case, we want to capture the coverage value in the appropriate
+    //      local variable (e.g., CoverageValueAsDouble or CoverageValue),
+    //      in order for the final logic that checks to see if we met our
+    //      target to work).
     //
 
-    if (IsCoverageValueDouble) {
+    if (IsCoverageValueDouble &&
+        !IsLookingForBestCoverageTargetValue(Context)) {
         goto SkipComparatorCheck;
     }
 
@@ -2880,6 +2887,16 @@ End:
 
     if (FAILED(Result)) {
         PH_RAISE(Result);
+    }
+
+    //
+    // Now we can skip the remaining comparator checks if we're a double and
+    // looking for a target value.
+    //
+
+    if (IsCoverageValueDouble &&
+        IsLookingForBestCoverageTargetValue(Context)) {
+        goto SkipComparatorCheck;
     }
 
     if (IsLowestComparator) {
@@ -2959,6 +2976,49 @@ SkipComparatorCheck:
 
     if (Context->FixedAttempts > 0) {
         StopGraphSolving = FALSE;
+    }
+
+    //
+    // If we a) haven't already been told stop graph solving, b) found a best
+    // graph, and c) have been told to look for a target value, then check to
+    // see if our coverage value meets the target criteria, factoring in the
+    // underlying data type (i.e. double vs long) and comparator type (lowest
+    // vs highest).
+    //
+
+    if ((StopGraphSolving == FALSE) &&
+        (FoundBestGraph != FALSE) &&
+        IsLookingForBestCoverageTargetValue(Context)) {
+
+        if (IsCoverageValueDouble) {
+            ASSERT(BestCoverageTargetValueIsDouble(Context));
+            TargetValueAsDouble = Context->BestCoverageTargetValue.AsDouble;
+            if (IsLowestComparator) {
+                if (CoverageValueAsDouble <= TargetValueAsDouble) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            } else {
+                if (CoverageValueAsDouble >= TargetValueAsDouble) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            }
+        } else {
+            ASSERT(!BestCoverageTargetValueIsDouble(Context));
+            TargetValue = Context->BestCoverageTargetValue.AsULong;
+            if (IsLowestComparator) {
+                if (CoverageValue <= TargetValue) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            } else {
+                if (CoverageValue >= TargetValue) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            }
+        }
     }
 
     //
@@ -5508,9 +5568,11 @@ Return Value:
     BOOLEAN IsSlopeCoverageType;
     ULONG Index;
     ULONG EqualCount = 0;
+    ULONG TargetValue = 0;
     ULONG BestGraphIndex = 0;
     ULONG CoverageValue = 0;
     ULONG CoverageLimit = 0;
+    DOUBLE TargetValueAsDouble = 0.0;
     DOUBLE CoverageValueAsDouble = 0.0;
     LONG EqualBestGraphIndex = 0;
     LONGLONG Attempt;
@@ -5795,7 +5857,7 @@ End:
     // the critical section acquired (as NewBestGraphCount is protected by it).
     //
 
-    if (!StopGraphSolving) {
+    if (!IsLookingForBestCoverageTargetValue(Context) && !StopGraphSolving) {
         StopGraphSolving = (
             (ULONGLONG)Context->NewBestGraphCount >=
             Context->BestCoverageAttempts
@@ -5867,10 +5929,15 @@ End:
     //
     // N.B. This doesn't apply to the coverage types like Slope which use
     //      DOUBLEs instead of ULONGs, so, skip comparator check in these
-    //      cases.
+    //      cases, as long as we're not looking for a target value (in which
+    //      case, we want to capture the coverage value in the appropriate
+    //      local variable (e.g., CoverageValueAsDouble or CoverageValue),
+    //      in order for the final logic that checks to see if we met our
+    //      target to work).
     //
 
-    if (IsCoverageValueDouble) {
+    if (IsCoverageValueDouble &&
+        !IsLookingForBestCoverageTargetValue(Context)) {
         goto SkipComparatorCheck;
     }
 
@@ -5909,6 +5976,16 @@ End:
 
     if (FAILED(Result)) {
         PH_RAISE(Result);
+    }
+
+    //
+    // Now we can skip the remaining comparator checks if we're a double and
+    // looking for a target value.
+    //
+
+    if (IsCoverageValueDouble &&
+        IsLookingForBestCoverageTargetValue(Context)) {
+        goto SkipComparatorCheck;
     }
 
     if (IsLowestComparator) {
@@ -5988,6 +6065,49 @@ SkipComparatorCheck:
 
     if (Context->FixedAttempts > 0) {
         StopGraphSolving = FALSE;
+    }
+
+    //
+    // If we a) haven't already been told stop graph solving, b) found a best
+    // graph, and c) have been told to look for a target value, then check to
+    // see if our coverage value meets the target criteria, factoring in the
+    // underlying data type (i.e. double vs long) and comparator type (lowest
+    // vs highest).
+    //
+
+    if ((StopGraphSolving == FALSE) &&
+        (FoundBestGraph != FALSE) &&
+        IsLookingForBestCoverageTargetValue(Context)) {
+
+        if (IsCoverageValueDouble) {
+            ASSERT(BestCoverageTargetValueIsDouble(Context));
+            TargetValueAsDouble = Context->BestCoverageTargetValue.AsDouble;
+            if (IsLowestComparator) {
+                if (CoverageValueAsDouble <= TargetValueAsDouble) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            } else {
+                if (CoverageValueAsDouble >= TargetValueAsDouble) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            }
+        } else {
+            ASSERT(!BestCoverageTargetValueIsDouble(Context));
+            TargetValue = Context->BestCoverageTargetValue.AsULong;
+            if (IsLowestComparator) {
+                if (CoverageValue <= TargetValue) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            } else {
+                if (CoverageValue >= TargetValue) {
+                    Context->State.BestCoverageTargetValueFound = TRUE;
+                    StopGraphSolving = TRUE;
+                }
+            }
+        }
     }
 
     //

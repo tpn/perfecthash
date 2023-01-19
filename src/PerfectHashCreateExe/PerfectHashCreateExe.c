@@ -85,7 +85,7 @@ mainCRTStartup(
     if (FAILED(Result)) {
         PH_MESSAGE(Result);
         if (Result == PH_E_CONTEXT_TABLE_CREATE_INVALID_NUM_ARGS) {
-            PH_MESSAGE(PH_MSG_PERFECT_HASH_USAGE);
+            PH_USAGE();
         }
     }
 

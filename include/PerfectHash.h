@@ -3277,6 +3277,7 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(FunctionHookCallbackDllPath)                               \
     ENTRY(FunctionHookCallbackFunctionName)                          \
     ENTRY(FunctionHookCallbackIgnoreRip)                             \
+    ENTRY(BestCoverageTargetValue)                                   \
     LAST_ENTRY(Remark)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \
@@ -3500,7 +3501,6 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
 typedef PERFECT_HASH_TABLE_CREATE_PARAMETER
       *PPERFECT_HASH_TABLE_CREATE_PARAMETER;
 
-
 //
 // Define table create parameter flags.
 //
@@ -3517,10 +3517,16 @@ typedef union _PERFECT_HASH_TABLE_CREATE_PARAMETERS_FLAGS {
         ULONG HasSeedMaskCounts:1;
 
         //
+        // When set, indicates a best coverage target value has been provided.
+        //
+
+        ULONG HasBestCoverageTargetValue:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -4309,6 +4315,17 @@ IsValidPerfectHashEnumId(
 
 #define PH_MESSAGE(Result, ...) \
     PerfectHashPrintMessage((ULONG)Result, __VA_ARGS__)
+
+//
+// Our usage text has exceeded the maximum message limit of 64k, so we have
+// to use multiple messages.
+//
+
+#define PH_USAGE(...)                                                     \
+    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE,             \
+                                   __VA_ARGS__);                          \
+    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1, \
+                                   __VA_ARGS__)
 
 #define PH_BREAK() __debugbreak()
 

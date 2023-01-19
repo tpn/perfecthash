@@ -163,10 +163,33 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG HasFunctionHooking:1;
 
         //
+        // When set, indicates a best coverage target value is present.
+        //
+
+        ULONG HasBestCoverageTargetValue:1;
+
+        //
+        // When set, indicates the best coverage target value is a double.
+        // When not set, indicates the value is an integer.
+        //
+        // N.B. HasBestCoverageTargetValue must be set in order for this
+        //      bitfield to be considered valid.
+        //
+
+        ULONG BestCoverageTargetValueIsDouble:1;
+
+        //
+        // When set, indicates a solution was found that met the best coverage
+        // target value criteria.
+        //
+
+        ULONG BestCoverageTargetValueFound:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:19;
+        ULONG Unused:16;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -175,9 +198,16 @@ C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_STATE) == sizeof(ULONG));
 typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 
 #define FirstSolvedGraphWins(Context) Context->State.FirstSolvedGraphWins
-#define FindBestMemoryCoverage(Context) Context->State.FindBestMemoryCoverage
+#define FindBestMemoryCoverage(Context) \
+    (((Context)->State.FindBestMemoryCoverage) != FALSE)
 #define BestMemoryCoverageForKeysSubset(Context) \
     ((Context)->State.BestMemoryCoverageForKeysSubset == TRUE)
+
+#define IsLookingForBestCoverageTargetValue(Context) \
+    ((Context)->State.HasBestCoverageTargetValue != FALSE)
+
+#define BestCoverageTargetValueIsDouble(Context)           \
+    ((Context)->State.HasBestCoverageTargetValue != FALSE)
 
 #define FirstSolvedGraphWinsAndSkipMemoryCoverage(Context) (                  \
     (Context)->State.FirstSolvedGraphWins == TRUE &&                          \
@@ -509,6 +539,16 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID BestCoverageType;
     ULONGLONG BestCoverageAttempts;
+
+    //
+    // If a best coverage target value has been supplied, it will be captured
+    // here.
+    //
+
+    union {
+        DOUBLE AsDouble;
+        ULONG AsULong;
+    } BestCoverageTargetValue;
 
     //
     // Pointer to a keys subset structure, if applicable (e.g. if the best

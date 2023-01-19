@@ -120,6 +120,14 @@ Language=English
 Function hook callback DLL initialized.
 .
 
+MessageId=0x00d
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_TABLE_CREATE_PARAMETER_NOT_FOUND
+Language=English
+No table create parameter could be found for the given Id.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL
@@ -642,6 +650,18 @@ Table Create Flags:
              appropriate USHORT C-types if applicable (number of vertices less
              than or equal to 65,534).
 
+.
+
+;//
+;// We have to split the usage up to avoid exceeding the maximum message
+;// length of 65,534.
+;//
+
+MessageId=0x106
+Severity=Informational
+Facility=ITF
+SymbolicName=PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1
+Language=English
 Table Compile Flags:
 
     N/A
@@ -808,6 +828,49 @@ Table Create Parameters:
         going to be enough variation in assigned value cache line occupancy to
         yield runtime performance differences.)
 
+    --BestCoverageTargetValue=N
+
+        Where N is a floating point number if the best coverage type uses
+        doubles (i.e., HighestRank, LowestSlope), otherwise, a positive integer.
+
+        When provided, graph solving will be stopped if a best graph's coverage
+        value meets the target value provided by this parameter.  The type of
+        comparison is derived from the coverage type, e.g., if the following
+        params are provided:
+
+            --BestCoverageType=HighestRank --BestCoverageTargetValue=0.5
+
+        Then graph solving will stop when a solution is found that has a rank
+        greater than or equal to 0.5.  If LowestRank was specified, the reverse
+        applies: we'd stop solving as soon as we see a solution with a rank
+        less than or equal to 0.5.
+
+        In bulk create mode, the most useful predicate is rank, as it is a
+        normalized score between [0.0, 1.0), and a rank of 0.5 or greater is
+        usually indicative of a tightly-packed assigned table (which we want).
+        Other predicates use absolute values, which aren't useful in bulk create
+        context when you have many differing key sizes (e.g. HighestScore and
+        --BestCoverageTargetValue=200000 does not make sense for bulk create as
+        a table has to be a certain size in order to achieve that score).
+
+        This parameter can be used in conjunction with other parameters like
+        --FixedAttempts=N or --TargetNumberOfSolutions=N.  However, note that
+        whichever limit is reached first will terminate the solving; i.e. if
+        you use --BestCoverageType=HighestRank --BestCoverageTargetValue=0.5
+        and --FixedAttempts=10, then solving will stop after 10 attempts,
+        regardless of whether or not the target value is reached.
+
+        Also note that this behavior, as with all "find best graph" behavior,
+        is trumped by the logic that skips finding a best graph if there are
+        less than the minimum number of keys available (default: 512).  This
+        can be altered via --MinNumberOfKeysForFindBestGraph.
+
+        In general, this parameter is useful for finding a balance between
+        solving time and solution quality; some key sets may take a lot of
+        attempts to break a rank of 0.39-0.40, but in general, most keys (at
+        least in the venerable sys32 set) will eventually yield tables with
+        a Rank of 0.5 or greater within a few seconds to a few minutes.
+
     --KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
 
         Supplies a comma-separated list of keys in ascending key-value order.
@@ -945,6 +1008,9 @@ Table Create Parameters:
 
 Console Output Character Legend
 
+    N.B. You can limit console output to *just* the characters via the --Quiet
+         command line parameter.  (--Silent will disable all console output.)
+
  Char | Meaning
 
     .   Table created successfully.
@@ -1059,7 +1125,7 @@ Language=English
     the immediate performance impact in the console via the "Current Attempts
     Per Second" metric.
 
-    If function hooking is active, this doesn't do anything.
+    If function hooking is not active, this doesn't do anything.
 
 .
 
@@ -3990,5 +4056,21 @@ Facility=ITF
 SymbolicName=PH_E_LOADED_TABLE_VERTEX_COLLISION_FAILURE_DURING_INDEX
 Language=English
 Loaded table vertex collision failure during Index() routine.
+.
+
+MessageId=0x3e6
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_BEST_COVERAGE_TYPE_MUST_COME_BEFORE_BEST_COVERAGE_TARGET_VALUE
+Language=English
+--BestCoverageType must come before --BestCoverageTargetValue on the command line.
+.
+
+MessageId=0x3e7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_BEST_COVERAGE_TARGET_VALUE
+Language=English
+Invalid --BestCoverageTargetValue.
 .
 

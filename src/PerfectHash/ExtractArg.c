@@ -707,9 +707,13 @@ Arguments:
 
 Return Value:
 
+    Success codes:
+
     S_OK - A table create parameter was successfully extracted.
 
     S_FALSE - No table create parameter was detected.
+
+    Error codes (note that these are not exhaustive):
 
     PH_E_COMMANDLINE_ARG_MISSING_VALUE - A table create parameter or best
         coverage type was detected, however, no equal sign or value was
@@ -759,9 +763,12 @@ Return Value:
     PUNICODE_STRING ValueString;
     PUNICODE_STRING LocalString;
     ULONG NumberOfTableCreateParameters;
+    PERFECT_HASH_TABLE_CREATE_PARAMETER_ID ParamId;
     PERFECT_HASH_TABLE_CREATE_PARAMETER LocalParam;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
+    PPERFECT_HASH_TABLE_CREATE_PARAMETER Existing;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER NewParams;
+    PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
 
     //
     // Use two X-macro expansions for declaring local variables for the table
@@ -1155,6 +1162,46 @@ Return Value:
         AUTO_RESIZE_WHEN_KEYS_TO_EDGES_RATIO_EXCEEDS
     );
 
+    //
+    // Best coverage target value will have a variable type (either an integer
+    // or double) depending on the best coverage target type.
+    //
+
+    if (IS_EQUAL(BestCoverageTargetValue)) {
+
+        //
+        // Determine the best coverage type, as this will dictate the data type
+        // used by the underlying target value.  If no best coverage type param
+        // has been provided yet, return an error indicating to the user that it
+        // must come before the --BestCoverageTargetValue param.
+        //
+
+        ParamId = TableCreateParameterBestCoverageTypeId;
+        Result = GetTableCreateParameterForId(TableCreateParameters,
+                                              ParamId,
+                                              &Existing);
+        if (FAILED(Result)) {
+            goto Error;
+        }
+
+        if (Result == PH_S_TABLE_CREATE_PARAMETER_NOT_FOUND) {
+            Result = PH_E_BEST_COVERAGE_TYPE_MUST_COME_BEFORE_BEST_COVERAGE_TARGET_VALUE;
+            goto Error;
+        }
+
+        ASSERT(Result == S_OK);
+        ASSERT(Existing != NULL);
+        ASSERT(Existing->Id == ParamId);
+
+        CoverageType = Existing->AsBestCoverageType;
+        if (DoesBestCoverageTypeUseDouble(CoverageType)) {
+            ADD_PARAM_IF_EQUAL_AND_VALUE_IS_DOUBLE(BestCoverageTargetValue,
+                                                   BEST_COVERAGE_TARGET_VALUE);
+        } else {
+            ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(BestCoverageTargetValue);
+        }
+    }
+
     if (IS_EQUAL(Remark)) {
 
         //
@@ -1417,7 +1464,7 @@ Return Value:
 
     S_OK - Successfully found parametr.
 
-    S_FALSE - No parameter found matching ID.
+    PH_S_TABLE_CREATE_PARAMETER_NOT_FOUND - No parameter found matching ID.
 
     E_POINTER - TableCreateParameters was NULL.
 
@@ -1455,7 +1502,7 @@ Return Value:
         // There are no parameters, nothing to search.
         //
 
-        return S_FALSE;
+        return PH_S_TABLE_CREATE_PARAMETER_NOT_FOUND;
     }
 
     if (Params == NULL) {
@@ -1483,7 +1530,7 @@ Return Value:
     // No parameter found.
     //
 
-    return S_FALSE;
+    return PH_S_TABLE_CREATE_PARAMETER_NOT_FOUND;
 
 }
 
