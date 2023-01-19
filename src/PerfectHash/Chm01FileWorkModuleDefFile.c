@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2022-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2022-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -26,6 +26,7 @@ PrepareModuleDefFileChm01(
     PCHAR Base;
     PCHAR Output;
     PCSTRING BaseName;
+    BOOLEAN IncludeKeys;
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
     PPERFECT_HASH_TABLE Table;
@@ -38,6 +39,7 @@ PrepareModuleDefFileChm01(
     Path = GetActivePath(File);
     BaseName = &Path->BaseNameA;
     Table = Context->Table;
+    IncludeKeys = (Table->TableCreateFlags.IncludeKeysInCompiledDll != FALSE);
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
@@ -66,7 +68,7 @@ PrepareModuleDefFileChm01(
     WRITE_PH_EXPORT(Seeds);
     WRITE_PH_EXPORT(NumberOfSeeds);
 
-    if (Table->TableCreateFlags.IncludeKeysInCompiledDll != FALSE) {
+    if (IncludeKeys) {
         WRITE_PH_EXPORT(Keys);
         WRITE_PH_EXPORT(NumberOfKeys);
         WRITE_PH_EXPORT(KeySizeInBytes);
@@ -85,7 +87,9 @@ PrepareModuleDefFileChm01(
 
     WRITE_CPH_EXPORT(Index);
     WRITE_CPH_EXPORT(IndexIaca);
-    WRITE_CPH_EXPORT(IndexBsearch);
+    if (IncludeKeys) {
+        WRITE_CPH_EXPORT(IndexBsearch);
+    }
     WRITE_CPH_EXPORT(Insert);
     WRITE_CPH_EXPORT(Lookup);
     WRITE_CPH_EXPORT(Delete);
