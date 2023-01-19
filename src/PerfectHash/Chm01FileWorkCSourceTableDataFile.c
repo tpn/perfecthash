@@ -35,11 +35,13 @@ SaveCSourceTableDataFileChm01(
     PCHAR Base;
     PCHAR Output;
     ULONG Value;
+    USHORT Value16;
     ULONG Count;
     PULONG Long;
     PULONG Seed;
     PGRAPH Graph;
     PULONG Source;
+    PUSHORT Source16;
     ULONG NumberOfSeeds;
     PCSTRING Name;
     PCSTRING Upper;
@@ -69,6 +71,7 @@ SaveCSourceTableDataFileChm01(
     Graph = (PGRAPH)Context->SolvedContext;
     NumberOfSeeds = Graph->NumberOfSeeds;
     Source = Graph->Assigned;
+    Source16 = Graph->Assigned16;
     Output = Base = (PCHAR)File->BaseAddress;
 
     //
@@ -165,28 +168,58 @@ SaveCSourceTableDataFileChm01(
     OUTPUT_INT(TotalNumberOfElements);
     OUTPUT_RAW("] = {\n\n    //\n    // 1st half.\n    //\n\n");
 
-    for (Index = 0, Count = 0; Index < TotalNumberOfElements; Index++) {
+    if (!IsUsingAssigned16(Graph)) {
 
-        if (Count == 0) {
-            INDENT();
+        for (Index = 0, Count = 0; Index < TotalNumberOfElements; Index++) {
+
+            if (Count == 0) {
+                INDENT();
+            }
+
+            Value = *Source++;
+
+            OUTPUT_HEX(Value);
+
+            *Output++ = ',';
+
+            if (++Count == 4) {
+                Count = 0;
+                *Output++ = '\n';
+            } else {
+                *Output++ = ' ';
+            }
+
+            if (Index == NumberOfElements-1) {
+                OUTPUT_RAW("\n    //\n    // 2nd half.\n    //\n\n");
+            }
         }
 
-        Value = *Source++;
+    } else {
 
-        OUTPUT_HEX(Value);
+        for (Index = 0, Count = 0; Index < TotalNumberOfElements; Index++) {
 
-        *Output++ = ',';
+            if (Count == 0) {
+                INDENT();
+            }
 
-        if (++Count == 4) {
-            Count = 0;
-            *Output++ = '\n';
-        } else {
-            *Output++ = ' ';
+            Value16 = *Source16++;
+
+            OUTPUT_HEX(Value16);
+
+            *Output++ = ',';
+
+            if (++Count == 4) {
+                Count = 0;
+                *Output++ = '\n';
+            } else {
+                *Output++ = ' ';
+            }
+
+            if (Index == NumberOfElements-1) {
+                OUTPUT_RAW("\n    //\n    // 2nd half.\n    //\n\n");
+            }
         }
 
-        if (Index == NumberOfElements-1) {
-            OUTPUT_RAW("\n    //\n    // 2nd half.\n    //\n\n");
-        }
     }
 
     //
