@@ -2895,6 +2895,7 @@ Return Value:
     LONGLONG CurrentAttempts;
     DOUBLE AttemptsPerSecond;
     DOUBLE DurationInSeconds;
+    ULONGLONG GraphSizeInBytes;
     DOUBLE CurrentAttemptsPerSecond;
     DOUBLE CurrentDurationInSeconds;
     PFILETIME64 TableFileTime;
@@ -3059,7 +3060,8 @@ Return Value:
         "Highest Deleted Edges Count:                       ", \
         Context->HighestDeletedEdgesCount,                     \
         OUTPUT_INT                                             \
-    )
+    )                                                          \
+
 
 #define CONTEXT_STATS_BEST_GRAPH_TABLE(ENTRY)                  \
     ENTRY(                                                     \
@@ -3095,6 +3097,12 @@ Return Value:
     ENTRY(                                                     \
         "    Max Graph Traversal Depth:                     ", \
         Graph->MaximumTraversalDepth,                          \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Graph Size In Bytes:                           ", \
+        GraphSizeInBytes,                                      \
         OUTPUT_INT                                             \
     )                                                          \
                                                                \
@@ -3186,6 +3194,12 @@ Return Value:
     ENTRY(                                                     \
         "    Max Graph Traversal Depth:                     ", \
         Graph->MaximumTraversalDepth,                          \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "    Graph Size In Bytes:                           ", \
+        GraphSizeInBytes,                                      \
         OUTPUT_INT                                             \
     )                                                          \
                                                                \
@@ -3406,6 +3420,13 @@ Return Value:
     Graph = Context->BestGraph;
     if (Graph != NULL) {
 
+        //
+        // Capture the size in bytes required for each graph instance.
+        //
+
+        GraphSizeInBytes = sizeof(GRAPH);
+        GraphSizeInBytes+= Graph->Info->AllocSize;
+
         Duration.QuadPart = (
             Graph->SolvedTime.AsULongLong -
             TableFileTime->AsULongLong
@@ -3455,6 +3476,7 @@ Return Value:
         DurationSinceLastBestString.Length = (USHORT)(Chars << 1);
         DurationSinceLastBestString.MaximumLength = (USHORT)(Chars << 1);
     } else {
+        GraphSizeInBytes = 0;
         DurationSinceLastBestString.Buffer = NULL;
         DurationSinceLastBestString.Length = 0;
         DurationSinceLastBestString.MaximumLength = 0;
