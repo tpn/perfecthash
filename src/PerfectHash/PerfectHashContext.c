@@ -1092,6 +1092,9 @@ Return Value:
     Context->UserSeeds = NULL;
     Context->SeedMasks = NULL;
 
+    Context->NumberOfGraphs = 0;
+    Context->Graphs = NULL;
+
     //
     // Suppress concurrency warnings.
     //

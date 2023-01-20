@@ -2863,10 +2863,17 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG DoNotTryUseHash16Impl:1;
 
         //
+        // Disables the (currently-experimental) vertex collision callback.
+        // Work-in-progress.
+        //
+
+        ULONGLONG DoNotUseVertexCollisionCallback:1;
+
+        //
         // Unused bits.
         //
 
-        ULONGLONG Unused:29;
+        ULONGLONG Unused:28;
     };
 
     LONGLONG AsLongLong;

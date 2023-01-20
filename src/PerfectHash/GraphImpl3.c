@@ -57,6 +57,12 @@ Abstract:
 #include "PerfectHashEventsPrivate.h"
 
 //
+// Forward decls.
+//
+
+extern GRAPH_VERTEX_COLLISION_CALLBACK GraphVertexCollisionCallback;
+
+//
 // Define helper macros.
 //
 
@@ -516,6 +522,7 @@ Return Value:
 
 --*/
 {
+    SHORT Index;
     KEY Key = 0;
     EDGE Edge;
     USHORT Mask;
@@ -523,6 +530,7 @@ Return Value:
     HRESULT Result;
     VERTEX16_PAIR Hash;
     PULONG VertexPairs;
+    PVERTEX_COLLISION_DB Db;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHashEx;
 
@@ -533,6 +541,7 @@ Return Value:
     //
 
     Result = S_OK;
+    Hash.AsULong = 0;
     Table = Graph->Context->Table;
     Mask = (USHORT)Table->HashMask;
     SeededHashEx = SeededHash16ExRoutines[Table->HashFunctionId];
@@ -545,6 +554,61 @@ Return Value:
 
     C_ASSERT(sizeof(*VertexPairs) == sizeof(*Graph->Vertex16Pairs));
     VertexPairs = (PULONG)Graph->Vertex16Pairs;
+
+    if (IsVertexCollisionThresholdReached(Graph)) {
+        Db = Graph->VertexCollisionDb;
+
+        //
+        // Try all the collisions.
+        //
+
+        for (Index = 0; Index < Db->NumberOfElements; Index++) {
+            Key = Db->Collisions[Index].Key;
+
+            Hash.AsULong = SeededHashEx(Key, &Graph->FirstSeed, Mask);
+
+            if (Hash.Vertex1 == Hash.Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                Graph->VertexCollisionsFromDb++;
+                break;
+            }
+
+        }
+
+        if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
+            goto End;
+        }
+
+#if 0
+        //
+        // Try all the LRU cache entries.
+        //
+
+        for (Index = 0; Index < Db->NumberOfLruCacheEntries; Index++) {
+            Key = Db->LruCache[Index].Key;
+
+            Hash.AsULong = SeededHashEx(Key, &Graph->FirstSeed, Mask);
+
+            if (Hash.Vertex1 == Hash.Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                Graph->VertexCollisionsFromLruCache++;
+                break;
+            }
+        }
+
+        if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
+            Result = GraphVertexCollisionCallback(Graph, Key);
+            Result = GraphPostHashKeys(Result, Graph);
+            return Result;
+        }
+#endif
+
+        //
+        // We've found a seed that doesn't have any existing collisions.
+        // Intentional fall-through.
+        //
+
+    }
 
     //
     // Enumerate all keys in the input set and hash them into the vertex arrays.
@@ -569,6 +633,13 @@ Return Value:
 
     EVENT_WRITE_GRAPH(HashKeys);
 
+    if ((Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) &&
+        (IsUsingVertexCollisionCallback(Graph))) {
+
+        Result = GraphVertexCollisionCallback(Graph, Key);
+    }
+
+End:
     Result = GraphPostHashKeys(Result, Graph);
 
     return Result;

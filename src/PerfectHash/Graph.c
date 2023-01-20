@@ -46,6 +46,10 @@ GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
 GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
     GraphCalculateMemoryCoverage16CacheLineCounts;
 
+GRAPH_VERTEX_COLLISION_CALLBACK GraphVertexCollisionCallback;
+GRAPH_CREATE_VERTEX_COLLISION_DB GraphCreateVertexCollisionDb;
+GRAPH_DESTROY_VERTEX_COLLISION_DB GraphDestroyVertexCollisionDb;
+
 //
 // Forward decls of 16-bit hash/assigned impls.
 //
@@ -233,6 +237,18 @@ Return Value:
     }
 
     //
+    // Enable vertex collision infrastructure if applicable.
+    //
+
+    if (TableCreateFlags.DoNotUseVertexCollisionCallback == FALSE) {
+        _Analysis_assume_lock_held_(Graph->Lock);
+        Result = GraphCreateVertexCollisionDb(Graph);
+        if (FAILED(Result)) {
+            goto Error;
+        }
+    }
+
+    //
     // We're done!  Indicate success and finish up.
     //
 
@@ -284,6 +300,14 @@ Return Value:
     //
 
     ASSERT(Graph->SizeOfStruct == sizeof(*Graph));
+
+    //
+    // Destroy the vertex collision database if applicable.
+    //
+
+    if (Graph->VertexCollisionDb != NULL) {
+        GraphDestroyVertexCollisionDb(Graph);
+    }
 
     //
     // Release applicable COM references.
@@ -854,6 +878,7 @@ Return Value:
     Result = S_OK;
     Table = Graph->Context->Table;
     Mask = Table->HashMask;
+    Hash.AsULongLong = 0;
     SeededHashEx = SeededHashExRoutines[Table->HashFunctionId];
     Edges = (PEDGE)Keys;
 
@@ -887,6 +912,12 @@ Return Value:
     STOP_GRAPH_COUNTER(HashKeys);
 
     EVENT_WRITE_GRAPH(HashKeys);
+
+    if ((Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) &&
+        (IsUsingVertexCollisionCallback(Graph))) {
+
+        Result = GraphVertexCollisionCallback(Graph, Key);
+    }
 
     Result = GraphPostHashKeys(Result, Graph);
 

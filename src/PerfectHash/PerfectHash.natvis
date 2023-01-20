@@ -205,4 +205,24 @@
         </Expand>
     </Type>
 
+    <Type Name="_VERTEX_COLLISION_DB">
+        <Synthetic Name="LRU Cache">
+            <Expand>
+                <ArrayItems>
+                    <Size>NumberOfElements</Size>
+                    <ValuePointer>Collisions</ValuePointer>
+                </ArrayItems>
+            </Expand>
+        </Synthetic>
+        <Synthetic Name="Collisions">
+            <Expand>
+                <ArrayItems>
+                    <Size>NumberOfLruCacheEntries</Size>
+                    <ValuePointer>LruCache</ValuePointer>
+                </ArrayItems>
+            </Expand>
+        </Synthetic>
+    </Type>
+
+
 </AutoVisualizer>

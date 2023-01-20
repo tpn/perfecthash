@@ -179,6 +179,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(DisableSavingCallbackTableValues);
     DECL_ARG(Quiet);
     DECL_ARG(DoNotTryUseHash16Impl);
+    DECL_ARG(DoNotUseVertexCollisionCallback);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -231,6 +232,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableSavingCallbackTableValues);
     SET_FLAG_AND_RETURN_IF_EQUAL(Quiet);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseHash16Impl);
+    SET_FLAG_AND_RETURN_IF_EQUAL(DoNotUseVertexCollisionCallback);
 
     return S_FALSE;
 }

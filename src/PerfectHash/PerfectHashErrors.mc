@@ -4074,3 +4074,11 @@ Language=English
 Invalid --BestCoverageTargetValue.
 .
 
+MessageId=0x3e8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_MAX_VERTEX_COLLISION_ARRAY_SIZE_REACHED
+Language=English
+Maximum vertex collision array size reached.
+.
+

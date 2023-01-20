@@ -795,7 +795,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
 
     volatile LONG GraphRegisterSolvedTsxStarted;
-    ULONG Padding3;
+
+    ULONG NumberOfGraphs;
+
+    _Readable_elements_(NumberOfGraphs)
+    PGRAPH *Graphs;
 
     //
     // N.B. All events are created as named events, using the random object

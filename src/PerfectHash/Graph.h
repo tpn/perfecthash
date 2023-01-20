@@ -854,10 +854,16 @@ typedef union _GRAPH_FLAGS {
         ULONG UsingAssigned16:1;
 
         //
+        // When set, indicates the vertex collision callback is active.
+        //
+
+        ULONG UsingVertexCollisionCallback:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:15;
+        ULONG Unused:14;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -875,6 +881,8 @@ C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
 #define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
 #define IsUsingAssigned16(Graph) ((Graph)->Flags.UsingAssigned16 != FALSE)
+#define IsUsingVertexCollisionCallback(Graph) \
+    ((Graph)->Flags.UsingVertexCollisionCallback != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
 
@@ -887,6 +895,92 @@ DEFINE_UNUSED_STATE(GRAPH);
 //
 
 #define DEFAULT_GRAPH_IMPL_VERSION 3
+
+//
+// Define vertex collision data structures.
+//
+
+typedef struct _VERTEX_COLLISION {
+    volatile ULONG Count;
+    KEY Key;
+} VERTEX_COLLISION;
+typedef VERTEX_COLLISION *PVERTEX_COLLISION;
+
+#define MINIMUM_VERTEX_COLLISION_COUNT 2
+#define VERTEX_COLLISION_LRU_CACHE_SIZE 16
+
+#define VERTEX_COLLISION_ARRAY_SIZE 256
+
+#define VERTEX_COLLISION_THRESHOLD 8
+
+typedef struct _Struct_size_bytes_(SizeOfStruct) _VERTEX_COLLISION_DB {
+    ULONG SizeOfStruct;
+
+    SHORT NumberOfElements;
+    USHORT TotalNumberOfElements;
+
+    SHORT NumberOfLruCacheEntries;
+    USHORT TotalNumberOfLruCacheEntries;
+
+    USHORT NumberOfLruDeletions;
+    USHORT Padding1;
+
+    PALLOCATOR Allocator;
+
+    _Readable_elements_(TotalNumberOfElements)
+    VERTEX_COLLISION Collisions[VERTEX_COLLISION_ARRAY_SIZE];
+
+    _Readable_elements_(TotalNumberOfLruCacheEntries)
+    VERTEX_COLLISION LruCache[VERTEX_COLLISION_LRU_CACHE_SIZE];
+} VERTEX_COLLISION_DB;
+typedef VERTEX_COLLISION_DB *PVERTEX_COLLISION_DB;
+
+#define IsCollisionsEmpty(Db) \
+    ((Db)->NumberOfElements == 0)
+
+#define IsCollisionsFull(Db) \
+    ((Db)->NumberOfElements == (Db)->TotalNumberOfElements)
+
+#define IsLruCacheFull(Db) \
+    ((Db)->NumberOfLruCacheEntries == (Db)->TotalNumberOfLruCacheEntries)
+
+#define IsLruCacheEmpty(Db) \
+    ((Db)->NumberOfLruCacheEntries == 0)
+
+#define IsLruCacheFull(Db) \
+    ((Db)->NumberOfLruCacheEntries == (Db)->TotalNumberOfLruCacheEntries)
+
+#define IsVertexCollisionThresholdReached(Graph) (     \
+    IsUsingVertexCollisionCallback(Graph) &&           \
+    (((Graph)->VertexCollisionDb->NumberOfElements) == \
+     VERTEX_COLLISION_THRESHOLD) \
+)
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(NTAPI GRAPH_CREATE_VERTEX_COLLISION_DB)(
+    _In_ struct _GRAPH *Graph
+    );
+
+typedef
+_Requires_exclusive_lock_held_(Graph->Lock)
+VOID
+(NTAPI GRAPH_DESTROY_VERTEX_COLLISION_DB)(
+    _In_ struct _GRAPH *Graph
+    );
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+(NTAPI GRAPH_VERTEX_COLLISION_CALLBACK)(
+    _In_ struct _GRAPH *Graph,
+    _In_ KEY Key
+    );
 
 //
 // Define the primary dimensions governing the graph size.
@@ -1332,6 +1426,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PGRAPH_INFO Info;
 
     //
+    // Vertex collision database.
+    //
+
+    PVERTEX_COLLISION_DB VertexCollisionDb;
+
+    //
     // Graph attempt.  This ID is derived from an interlocked increment against
     // Context->Attempts, and represents the attempt number across all threads.
     //
@@ -1385,6 +1485,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     ULONG Collisions;
+
+    //
+    // Fast-path vertex collisions encountered.
+    //
+
+    ULONG VertexCollisionsFromDb;
+    ULONG VertexCollisionsFromLruCache;
 
     //
     // Inline the GRAPH_DIMENSIONS structure.  This is available from the
@@ -1784,6 +1891,7 @@ VOID
     );
 typedef GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
       *PGRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS;
+
 
 #ifndef __INTELLISENSE__
 

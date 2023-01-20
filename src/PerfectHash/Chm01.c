@@ -446,6 +446,9 @@ Return Value:
         goto Error;
     }
 
+    Context->NumberOfGraphs = NumberOfGraphs;
+    Context->Graphs = Graphs;
+
     //
     // We want each graph instance to have its own isolated Allocator instance
     // rather than a reference to the global (singleton) instance that is shared
@@ -2904,6 +2907,8 @@ Return Value:
     ULARGE_INTEGER BytesWritten;
     DOUBLE SecondsUntilNextSolve;
     UNICODE_STRING DurationString;
+    ULONGLONG VertexCollisionsDb;
+    ULONGLONG VertexCollisionsLruCache;
     WCHAR DurationBuffer[80] = { 0, };
     PASSIGNED_MEMORY_COVERAGE Coverage;
     PASSIGNED16_MEMORY_COVERAGE Coverage16;
@@ -3018,6 +3023,18 @@ Return Value:
         "Estimated Seconds until next Solve:                ", \
         SecondsUntilNextSolve,                                 \
         OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Vertex Collisions: Db:                             ", \
+        VertexCollisionsDb,                                    \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "Vertex Collisions: LRU Cache                       ", \
+        VertexCollisionsLruCache,                              \
+        OUTPUT_INT                                             \
     )                                                          \
                                                                \
     ENTRY(                                                     \
@@ -3409,6 +3426,19 @@ Return Value:
         );
     } else {
         VertexCollisionToCyclicGraphFailureRatio = 0.0;
+    }
+
+    VertexCollisionsDb = 0;
+    VertexCollisionsLruCache = 0;
+
+    if (TableCreateFlags.DoNotUseVertexCollisionCallback == FALSE) {
+        ULONG Index;
+
+        for (Index = 0; Index < Context->NumberOfGraphs; Index++) {
+            Graph = Context->Graphs[Index];
+            VertexCollisionsDb += Graph->VertexCollisionsFromDb;
+            VertexCollisionsLruCache += Graph->VertexCollisionsFromLruCache;
+        }
     }
 
     //

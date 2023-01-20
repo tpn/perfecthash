@@ -316,6 +316,9 @@
     <ClCompile Include="GraphAvx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphVertexCollision.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Chm01FileWorkModuleDefFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>

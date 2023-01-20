@@ -4475,3 +4475,12 @@ Abstract:
 //
 #define PH_E_INVALID_BEST_COVERAGE_TARGET_VALUE ((HRESULT)0xE00403E7L)
 
+//
+// MessageId: PH_E_MAX_VERTEX_COLLISION_ARRAY_SIZE_REACHED
+//
+// MessageText:
+//
+// Maximum vertex collision array size reached.
+//
+#define PH_E_MAX_VERTEX_COLLISION_ARRAY_SIZE_REACHED ((HRESULT)0xE00403E8L)
+
