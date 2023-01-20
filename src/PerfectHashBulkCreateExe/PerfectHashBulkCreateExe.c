@@ -83,7 +83,6 @@ mainCRTStartup(
     //
 
     if (FAILED(Result)) {
-        PH_MESSAGE(Result);
         if (Result == PH_E_CONTEXT_BULK_CREATE_INVALID_NUM_ARGS) {
             PH_USAGE();
         }
