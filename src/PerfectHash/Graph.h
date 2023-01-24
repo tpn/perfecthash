@@ -1663,7 +1663,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
             };
             union {
                 struct {
-                    ULONG Seed3;
+                    union {
+                        ULONG Seed3;
+                        ULONG_BYTES Seed3Bytes;
+                    };
                     ULONG Seed4;
                 };
                 ULARGE_INTEGER Seeds34;

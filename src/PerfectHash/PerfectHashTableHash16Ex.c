@@ -1688,6 +1688,68 @@ Return Value:
 
 _Use_decl_annotations_
 ULONG
+PerfectHashTableSeededHash16ExMultiplyShiftRX(
+    ULONG Key,
+    PULONG Seeds,
+    USHORT Mask
+    )
+/*++
+
+Routine Description:
+
+    Performs a multiply then right shift.  Ignores mask.
+
+Arguments:
+
+    Key - Supplies the input value to hash.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Mask - Ignored.
+
+Return Value:
+
+    32-bit ULONG comprised of two 16-bit masked hashes.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULONG_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE2;
+
+    Result.LowPart = (USHORT)Vertex1;
+    Result.HighPart = (USHORT)Vertex2;
+
+    return Result.LongPart;
+}
+
+_Use_decl_annotations_
+ULONG
 PerfectHashTableSeededHash16ExMultiply643ShiftR(
     ULONG Key,
     PULONG Seeds,

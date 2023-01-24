@@ -243,6 +243,7 @@ All Hash Functions:
    32   RotateRMultiplyRotateR (3)
    33   Multiply643ShiftR (3)
    33   Multiply644ShiftR (3)
+   34   MultiplyShiftRX (3)
 
 Mask Functions:
 
