@@ -1404,21 +1404,79 @@ typedef CRYPT_BINARY_TO_STRING_W *PCRYPT_BINARY_TO_STRING_W;
 typedef
 INT
 (__cdecl CRTCOMPARE)(
-    _In_ CONST PVOID Key,
-    _In_ CONST PVOID Datum
+    _In_ const void *Key,
+    _In_ const void *Datum
     );
 typedef CRTCOMPARE *PCRTCOMPARE;
 
 typedef
+INT
+(__cdecl CRTCOMPARE_S)(
+    _In_ PVOID Context,
+    _In_ const void *Key,
+    _In_ const void *Datum
+    );
+typedef CRTCOMPARE_S *PCRTCOMPARE_S;
+
+typedef
 PVOID
-(BSEARCH)(
-    _In_ CONST PVOID Key,
-    _In_ CONST PVOID Base,
-    _In_ SIZE_T      NumberOfElements,
-    _In_ SIZE_T      WidthOfElement,
+(__cdecl BSEARCH)(
+    _In_ const void *Key,
+    _In_reads_bytes_(NumberOfElements * WidthOfElement) const void *Base,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T WidthOfElement,
     _In_ PCRTCOMPARE Compare
     );
 typedef BSEARCH *PBSEARCH;
+
+typedef
+PVOID
+(__cdecl BSEARCH_S)(
+    _In_ const void *Key,
+    _In_reads_bytes_(NumberOfElements * WidthOfElement) const void *Base,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T WidthOfElement,
+    _In_ PCRTCOMPARE_S Compare,
+    _In_opt_ PVOID Context
+    );
+typedef BSEARCH_S *PBSEARCH_S;
+
+typedef
+VOID
+(__cdecl QSORT)(
+    _Inout_updates_bytes_(NumberOfElements * SizeOfElements) PVOID Base,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T SizeOfElements,
+    _In_ PCRTCOMPARE Compare
+    );
+typedef QSORT *PQSORT;
+
+typedef
+VOID
+(__cdecl QSORT_S)(
+    _Inout_updates_bytes_(NumberOfElements * SizeOfElements) PVOID Base,
+    _In_ SIZE_T NumberOfElements,
+    _In_ SIZE_T SizeOfElements,
+    _In_ PCRTCOMPARE_S Compare,
+    _In_opt_ PVOID Context
+    );
+typedef QSORT_S *PQSORT_S;
+
+//
+// N.B. ntdll.dll doesn't export _lfind_s, which is why there's no secure
+//      LFIND_S equivalent here.
+//
+
+typedef
+PVOID
+(__cdecl LFIND)(
+    _In_ const void *Key,
+    _In_reads_bytes_((*NumberOfElements) * WidthOfElement) const void *Base,
+    _Inout_ LONG *NumberOfElements,
+    _Inout_ ULONG WidthOfElement,
+    _In_ PCRTCOMPARE Compare
+    );
+typedef LFIND *PLFIND;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Stdio
@@ -3016,6 +3074,26 @@ typedef RTL_VTBL *PRTL_VTBL;
     ENTRY(                                                 \
         BSEARCH,                                           \
         bsearch                                            \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        BSEARCH_S,                                         \
+        bsearch_s                                          \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        QSORT,                                             \
+        qsort                                              \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        QSORT_S,                                           \
+        qsort_s                                            \
+    )                                                      \
+                                                           \
+    ENTRY(                                                 \
+        LFIND,                                             \
+        _lfind                                             \
     )                                                      \
                                                            \
     ENTRY(                                                 \
