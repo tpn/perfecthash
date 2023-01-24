@@ -395,6 +395,10 @@ C_ASSERT(sizeof(ZMM_PERMUTE_INDEX) == sizeof(ULONG));
 #undef RtlFillMemory
 #endif
 
+#ifdef RtlMoveMemory
+#undef RtlMoveMemory
+#endif
+
 #ifdef CopyMemory
 #undef CopyMemory
 #endif
