@@ -40,6 +40,9 @@ GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX2;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX512;
 
+GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX2;
+GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX512;
+
 GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
     GraphCalculateMemoryCoverageCacheLineCounts;
 
@@ -200,6 +203,21 @@ Return Value:
                            Rtl->CpuFeatures.AVX2) {
 
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX2;
+                    Graph->Flags.UsedAvx2HashFunction = TRUE;
+                }
+            } else if (HashFunctionId ==
+                       PerfectHashHashMultiplyShiftRXFunctionId) {
+
+                if (TableCreateFlags.TryUseAvx512HashFunction &&
+                    Rtl->CpuFeatures.AVX512F) {
+
+                    Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX512;
+                    Graph->Flags.UsedAvx512HashFunction = TRUE;
+
+                } else if (TableCreateFlags.TryUseAvx2HashFunction &&
+                           Rtl->CpuFeatures.AVX2) {
+
+                    Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
                 }
             }
