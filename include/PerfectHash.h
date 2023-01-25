@@ -2052,6 +2052,11 @@ IsValidSeedMasks(
         5,                                                               \
         DECL_SEED_MASKS(0, 0, 0x3f3f, 0, 0, 0, 0, 0)                     \
     )                                                                    \
+    ENTRY(                                                               \
+        MultiplyShiftRX,                                                 \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
+    )                                                                    \
     LAST_ENTRY(Scratch, 8, NO_SEED_MASKS)
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
@@ -2105,6 +2110,31 @@ IsValidPerfectHashHashFunctionId(
     return (
         HashFunctionId > PerfectHashNullHashFunctionId &&
         HashFunctionId < PerfectHashInvalidHashFunctionId
+    );
+}
+
+//
+// The final 'AND' of a vertex value by a hash mask can be avoided for hash
+// functions that right-shift their final value by "32 minus the number
+// of trailing zeros of the number of vertices".  This yields slightly faster
+// final compiled routines, as it avoids the need to do additional AND mask
+// operations.
+//
+// E.g. HologramWorld-31016.keys has 32768 edges and 65536 vertices.  65536
+//      has 16 trailing zeros, thus, if the final operation of a hash function
+//      is the right-shift the final vertex value by 16 (32 - 16 = 16), there
+//      is no need to then also do a logical AND 0xffff operation.  512 keys
+//      would result in a final right-shift of 23 (1 << 9 = 512; 32 - 9 = 23).
+//
+
+FORCEINLINE
+BOOLEAN
+IsAndHashMaskRequired(
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId
+    )
+{
+    return !(
+        HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId
     );
 }
 

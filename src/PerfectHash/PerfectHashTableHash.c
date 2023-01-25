@@ -2515,6 +2515,103 @@ PerfectHashTableHashMultiplyShiftR(
 
 _Use_decl_annotations_
 HRESULT
+PerfectHashTableSeededHashMultiplyShiftRX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+/*++
+
+Routine Description:
+
+    Performs a multiply then right shift.  Identical to MultiplyShiftR, except
+    won't use hash masks in the final version.
+
+Arguments:
+
+    Table - Supplies a pointer to the table for which the hash is being created.
+
+    Key - Supplies the input value to hash.
+
+    NumberOfSeeds - Supplies the number of elements in the Seeds array.
+
+    Seeds - Supplies an array of ULONG seed values.
+
+    Hash - Receives two 32-bit hashes merged into a 64-bit value.
+
+Return Value:
+
+    S_OK on success.  If the two 32-bit hash values are identical, E_FAIL.
+
+--*/
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 3);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE2;
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashMultiplyShiftRX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+
+    return PerfectHashTableSeededHashMultiplyShiftRX(
+        Table,
+        Key,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
+        Hash
+    );
+}
+
+_Use_decl_annotations_
+HRESULT
 PerfectHashTableSeededHashMultiply643ShiftR(
     PPERFECT_HASH_TABLE Table,
     ULONG Key,
