@@ -2090,21 +2090,37 @@ Return Value:
         NextSizeInBytes = 0;
         FirstSizeInBytes = 0;
 
-        if (!UseAssigned16) {
+        if (TableCreateFlags.HashAllKeysFirst == FALSE) {
 
-            VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
-                RTL_ELEMENT_SIZE(GRAPH, Edges3) * NumberOfEdges.QuadPart
-            );
-
-            Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
-                RTL_ELEMENT_SIZE(GRAPH, Vertices3) * NumberOfVertices.QuadPart
-            );
+            VertexPairsSizeInBytes = 0;
 
         } else {
 
-            VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
-                RTL_ELEMENT_SIZE(GRAPH, Edges163) * NumberOfEdges.QuadPart
+            if (!UseAssigned16) {
+
+                VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+                    RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
+                    (ULONGLONG)NumberOfKeys
+                );
+
+            } else {
+
+                VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+                    RTL_ELEMENT_SIZE(GRAPH, Vertex16Pairs) *
+                    (ULONGLONG)NumberOfKeys
+                );
+
+            }
+        }
+
+        if (!UseAssigned16) {
+
+            Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, Vertices3) *
+                NumberOfVertices.QuadPart
             );
+
+        } else {
 
             Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
                 RTL_ELEMENT_SIZE(GRAPH, Vertices163) *

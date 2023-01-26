@@ -1538,14 +1538,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     //
     // Graph implementations 1 & 2: this is an optional array of vertex pairs,
-    // indexed by number of keys.  For implementation 3, this will always
-    // contain the array of vertex pairs, indexed by edge.
+    // indexed by the edge for the key (i.e. the 0-based offset of the key in
+    // the keys array).  For implementation 3, this will always contain the
+    // array of vertex pairs, indexed by edge for the key.
     //
 
-    _When_(GraphImpl == 1 || GraphImpl == 2,
-           _Writable_elements_(NumberOfKeys))
-    _When_(GraphImpl == 3,
-           _Writable_elements_(NumberOfEdges))
+    _Writable_elements_(NumberOfKeys)
     union {
 
         //
