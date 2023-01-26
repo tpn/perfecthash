@@ -2908,6 +2908,25 @@ typedef PERFECT_HASH_TABLE_CREATE_FLAGS
 
 FORCEINLINE
 HRESULT
+LoadDefaultTableCreateFlags(
+    _In_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(TableCreateFlags)) {
+        return E_POINTER;
+    }
+
+    TableCreateFlags->HashAllKeysFirst = TRUE;
+    TableCreateFlags->TryUseAvx2HashFunction = TRUE;
+    TableCreateFlags->IncludeKeysInCompiledDll = TRUE;
+    TableCreateFlags->UseRwsSectionForTableValues = TRUE;
+
+    return S_OK;
+}
+
+FORCEINLINE
+HRESULT
 IsValidTableCreateFlags(
     _In_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags
     )
