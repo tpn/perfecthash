@@ -37,7 +37,7 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
 #define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, TRUE)
 
 //
-// Helper macro for toggling the given flag if the current argument matches
+// Helper macros for toggling the given flag if the current argument matches
 // the given UNICODE_STRING.
 //
 
@@ -45,6 +45,12 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
     if (IS_EQUAL(Name)) {                  \
         Flags->##Name = TRUE;              \
         return S_OK;                       \
+    }
+
+#define CLEAR_FLAG_AND_RETURN_IF_EQUAL(Name, FlagName) \
+    if (IS_EQUAL(Name)) {                              \
+        Flags->##FlagName = FALSE;                     \
+        return S_OK;                                   \
     }
 
 //
@@ -162,20 +168,24 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(OmitCsvRowIfTableCreateSucceeded);
     DECL_ARG(IndexOnly);
     DECL_ARG(UseRwsSectionForTableValues);
+    DECL_ARG(DoNotUseRwsSectionForTableValues);
     DECL_ARG(UseNonTemporalAvx2Routines);
     DECL_ARG(DisableCsvOutputFile);
     DECL_ARG(ClampNumberOfEdges);
     DECL_ARG(UseOriginalSeededHashRoutines);
     DECL_ARG(HashAllKeysFirst);
+    DECL_ARG(DoNotHashAllKeysFirst);
     DECL_ARG(EnableWriteCombineForVertexPairs);
     DECL_ARG(RemoveWriteCombineAfterSuccessfulHashKeys);
     DECL_ARG(TryLargePagesForVertexPairs);
     DECL_ARG(TryUsePredictedAttemptsToLimitMaxConcurrency);
     DECL_ARG(RngUseRandomStartSeed);
     DECL_ARG(TryUseAvx2HashFunction);
+    DECL_ARG(DoNotTryUseAvx2HashFunction);
     DECL_ARG(TryUseAvx512HashFunction);
     DECL_ARG(DoNotTryUseAvx2MemoryCoverageFunction);
     DECL_ARG(IncludeKeysInCompiledDll);
+    DECL_ARG(DoNotIncludeKeysInCompiledDll);
     DECL_ARG(DisableSavingCallbackTableValues);
     DECL_ARG(Quiet);
     DECL_ARG(DoNotTryUseHash16Impl);
@@ -231,6 +241,19 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableSavingCallbackTableValues);
     SET_FLAG_AND_RETURN_IF_EQUAL(Quiet);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseHash16Impl);
+
+    //
+    // Handle inverting default flags.
+    //
+
+    CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotHashAllKeysFirst,
+                                   HashAllKeysFirst);
+    CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2HashFunction,
+                                   TryUseAvx2HashFunction);
+    CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotIncludeKeysInCompiledDll,
+                                   IncludeKeysInCompiledDll);
+    CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotUseRwsSectionForTableValues,
+                                   UseRwsSectionForTableValues);
 
     return S_FALSE;
 }

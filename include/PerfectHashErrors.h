@@ -302,6 +302,7 @@ Abstract:
 //    32   RotateRMultiplyRotateR (3)
 //    33   Multiply643ShiftR (3)
 //    33   Multiply644ShiftR (3)
+//    34   MultiplyShiftRX (3)
 // 
 // Mask Functions:
 // 
@@ -481,7 +482,8 @@ Abstract:
 //         to be used if you only need the Index() routine and will be managing the
 //         table values array independently.
 // 
-//     --UseRwsSectionForTableValues
+//     --UseRwsSectionForTableValues [default]
+//     --DoNotUseRwsSectionForTableValues
 // 
 //         When set, tells the linker to use a shared read-write section for the
 //         table values array, e.g.: #pragma comment(linker,"/section:.cphval,rws")
@@ -517,7 +519,8 @@ Abstract:
 // 
 //         N.B. This flag is incompatible with --HashAllKeysFirst.
 // 
-//     --HashAllKeysFirst
+//     --HashAllKeysFirst [default]
+//     --DoNotHashAllKeysFirst
 // 
 //         When set, changes the graph solving logic such that vertices (i.e.
 //         hash values) are generated for all keys up-front, prior to graph
@@ -652,14 +655,13 @@ Abstract:
 //             --RngSubsequence
 //             --RngOffset
 // 
-//     --TryUseAvx2HashFunction
+//     --TryUseAvx2HashFunction [default]
+//     --DoNotTryUseAvx2HashFunction
 // 
 //         When set, tries to use optimized AVX2 routines for hashing keys, if
 //         applicable.
 // 
 //         N.B. Only applies when HashAllKeysFirst is set.
-// 
-//         N.B. Currently only implemented for the MultiplyShiftR hash function.
 // 
 //     --TryUseAvx512HashFunction
 // 
@@ -668,14 +670,13 @@ Abstract:
 // 
 //         N.B. Only applies when HashAllKeysFirst is set.
 // 
-//         N.B. Currently only implemented for the MultiplyShiftR hash function.
-// 
 //     --DoNotTryUseAvx2MemoryCoverageFunction
 // 
 //         When set, disables automatically using the AVX2 memory coverage
 //         calculation routine when the CPU supports the AVX2 instruction set.
 // 
-//     --IncludeKeysInCompiledDll
+//     --IncludeKeysInCompiledDll [default]
+//     --DoNotIncludeKeysInCompiledDll
 // 
 //         When set, includes the keys in the compiled DLL file.  If you want to
 //         benchmark a compiled perfect hash table DLL's index routine against a

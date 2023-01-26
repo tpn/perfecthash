@@ -1507,13 +1507,13 @@ Return Value:
     }
 
     //
-    // Zero all flags and table create parameters.
+    // Zero all flags (except for table create flags, as these may have
+    // default values) and table create parameters.
     //
 
-    ContextBulkCreateFlags->AsULong = 0;
     KeysLoadFlags->AsULong = 0;
-    TableCreateFlags->AsULongLong = 0;
     TableCompileFlags->AsULong = 0;
+    ContextBulkCreateFlags->AsULong = 0;
 
     for (; CurrentArg < NumberOfArguments; CurrentArg++, ArgW++) {
 
@@ -1699,6 +1699,11 @@ Return Value:
     PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
         ExtractBulkCreateArgs;
     PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters = { 0 };
+
+    Result = LoadDefaultTableCreateFlags(&TableCreateFlags);
+    if (FAILED(Result)) {
+        return Result;
+    }
 
     TableCreateParameters.SizeOfStruct = sizeof(TableCreateParameters);
     TableCreateParameters.Allocator = Context->Allocator;
