@@ -707,9 +707,11 @@ GraphRemoveVertex3(
     }
 
     Graph->DeletedEdgeCount++;
-    ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
     OrderIndex = --Graph->OrderIndex;
+#ifdef _DEBUG
+    ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
     ASSERT(OrderIndex >= 0);
+#endif
     Graph->Order[OrderIndex] = Edge;
 }
 
@@ -757,10 +759,12 @@ GraphRemoveVertex16(
     }
 
     Graph->DeletedEdgeCount++;
-    ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
     OrderIndex = --Graph->Order16Index;
+#ifdef _DEBUG
+    ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
     ASSERT(OrderIndex >= 0);
     ASSERT(Edge <= 0x00007fff);
+#endif
     Graph->Order16[OrderIndex] = (SHORT)Edge;
 }
 
