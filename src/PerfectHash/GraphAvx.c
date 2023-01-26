@@ -382,7 +382,7 @@ Return Value:
     // form we want to write to memory.
     //
 
-    ZMM_PERMUTE_INDEX PermuteIndex1[] = {
+    ZMM_PERMUTEX2VAR_INDEX32 PermuteIndex1[] = {
         { .Index = 0, .Selector = 0, .Unused = 0 },
         { .Index = 0, .Selector = 1, .Unused = 0 },
 
@@ -408,7 +408,7 @@ Return Value:
         { .Index = 7, .Selector = 1, .Unused = 0 },
     };
 
-    ZMM_PERMUTE_INDEX PermuteIndex2[] = {
+    ZMM_PERMUTEX2VAR_INDEX32 PermuteIndex2[] = {
         { .Index = 8, .Selector = 0, .Unused = 0 },
         { .Index = 8, .Selector = 1, .Unused = 0 },
 
@@ -880,7 +880,7 @@ Return Value:
     // form we want to write to memory.
     //
 
-    ZMM_PERMUTE_INDEX PermuteIndex1[] = {
+    ZMM_PERMUTEX2VAR_INDEX32 PermuteIndex1[] = {
         { .Index = 0, .Selector = 0, .Unused = 0 },
         { .Index = 0, .Selector = 1, .Unused = 0 },
 
@@ -906,7 +906,7 @@ Return Value:
         { .Index = 7, .Selector = 1, .Unused = 0 },
     };
 
-    ZMM_PERMUTE_INDEX PermuteIndex2[] = {
+    ZMM_PERMUTEX2VAR_INDEX32 PermuteIndex2[] = {
         { .Index = 8, .Selector = 0, .Unused = 0 },
         { .Index = 8, .Selector = 1, .Unused = 0 },
 
@@ -1066,6 +1066,213 @@ Return Value:
             Pair.HighPart = Vertex2;
 
             *VertexPairs++ = Pair.QuadPart;
+        }
+    }
+
+End:
+
+    STOP_GRAPH_COUNTER(HashKeys);
+
+    EVENT_WRITE_GRAPH(HashKeys);
+
+    Result = GraphPostHashKeys(Result, Graph);
+
+    return Result;
+}
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphHashKeys16MultiplyShiftRX_AVX512(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    This routine hashes all keys into vertices without adding the resulting
+    vertices to the graph.  It is used by GraphHashKeysThenAdd().
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the hash values will be
+        created.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+--*/
+{
+    KEY Key = 0;
+    EDGE Edge;
+    ULONG NumberOfZmmWords;
+    ULONG TrailingKeys;
+    PULONG Seeds;
+    PEDGE Edges;
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    VERTEX Vertex1;
+    VERTEX Vertex2;
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ZMMWORD Zmm1;
+    ZMMWORD Zmm2;
+    ZMMWORD Zmm3;
+    ZMMWORD Imm0;
+    ZMASK8 ZmmMask;
+    ZMASK32 BlendMask;
+    ZMMWORD KeysZmm;
+    ZMMWORD Seed1Zmm;
+    ZMMWORD Seed2Zmm;
+    ZMMWORD Vertex1Zmm;
+    ZMMWORD Vertex2Zmm;
+    ULONG_INTEGER Pair;
+    PULONG VertexPairs;
+    PZMMWORD VertexPairsZmm;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    //
+    // Initialize aliases.
+    //
+
+    Result = S_OK;
+    Table = Graph->Context->Table;
+    Edges = (PEDGE)Keys;
+    C_ASSERT(sizeof(*VertexPairs) == sizeof(*Graph->Vertex16Pairs));
+    VertexPairs = (PULONG)Graph->Vertex16Pairs;
+    VertexPairsZmm = (PZMMWORD)VertexPairs;
+
+    //
+    // Determine the number of ZMM words we'll use to iterate over the keys,
+    // 16 x 32-bit keys at a time.  Capture the number of trailing keys that
+    // we'll handle at the end with a scalar loop.
+    //
+
+    NumberOfZmmWords = NumberOfKeys >> 4;
+    TrailingKeys = NumberOfKeys % 16;
+
+    //
+    // Initialize seeds.
+    //
+
+    Seeds = &Graph->FirstSeed;
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed1Zmm = _mm512_broadcastd_epi32(_mm_set1_epi32(Seed1));
+    Seed2Zmm = _mm512_broadcastd_epi32(_mm_set1_epi32(Seed2));
+
+    //
+    // Load the permute index and blend mask.
+    //
+
+    Imm0 = _mm512_setr_epi16( 0,  0,  2,  2,
+                              4,  4,  6,  6,
+                              8,  8, 10, 10,
+                             12, 12, 14, 14,
+                             16, 16, 18, 18,
+                             20, 20, 22, 22,
+                             24, 24, 26, 26,
+                             28, 28, 30, 30);
+
+    BlendMask = 0xaaaaaaaa;
+
+    START_GRAPH_COUNTER();
+
+    for (Edge = 0; Edge < NumberOfZmmWords; Edge++, Edges += 16) {
+
+        //IACA_VC_START();
+
+        //
+        // Load 16 keys into our ZMM register.
+        //
+
+        KeysZmm = _mm512_loadu_epi32(Edges);
+
+        //
+        // Perform vectorized multiply and shift ops against 16 keys at a time,
+        // once for each vertex.
+        //
+
+        //
+        // Vertex 1: ((Key * SEED1) >> SEED3_BYTE1)
+        //
+
+        Vertex1Zmm = _mm512_mullo_epi32(KeysZmm, Seed1Zmm);
+        Vertex1Zmm = _mm512_srli_epi32(Vertex1Zmm, Seed3.Byte1);
+
+        //
+        // Vertex 2: ((Key * SEED2) >> SEED3_BYTE2)
+        //
+
+        Vertex2Zmm = _mm512_mullo_epi32(KeysZmm, Seed2Zmm);
+        Vertex2Zmm = _mm512_srli_epi32(Vertex2Zmm, Seed3.Byte2);
+
+        //
+        // Compare each pair of vertices against each other to see if there
+        // are any conflicts (i.e. a key hashed to the same final vertex value
+        // for both seeds).  If there are, abort, indicating vertex collision.
+        //
+
+        ZmmMask = _mm512_cmpeq_epi32_mask(Vertex1Zmm, Vertex2Zmm);
+        if (ZmmMask > 0) {
+            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            goto End;
+        }
+
+        //
+        // No collisions were detected, so we can save these vertices to memory.
+        //
+
+        Zmm1 = _mm512_permutexvar_epi16(Imm0, Vertex1Zmm);
+        Zmm2 = _mm512_permutexvar_epi16(Imm0, Vertex2Zmm);
+        Zmm3 = _mm512_mask_blend_epi16(BlendMask, Zmm1, Zmm2);
+
+        _mm512_storeu_epi32(VertexPairsZmm, Zmm3);
+        VertexPairsZmm++;
+
+        //IACA_VC_END();
+    }
+
+    if (TrailingKeys > 0) {
+
+        //
+        // Handle the remaining keys using a normal, non-SIMD loop.
+        //
+
+        VertexPairs = (PULONG)VertexPairsZmm;
+
+        for (Edge = 0; Edge < TrailingKeys; Edge++) {
+            Key = *Edges++;
+
+            Vertex1 = Key * Seed1;
+            Vertex1 >>= Seed3.Byte1;
+
+            Vertex2 = Key * Seed2;
+            Vertex2 >>= Seed3.Byte2;
+
+            if (Vertex1 == Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                goto End;
+            }
+
+            Pair.LowPart = (USHORT)Vertex1;
+            Pair.HighPart = (USHORT)Vertex2;
+
+            *VertexPairs++ = Pair.LongPart;
         }
     }
 

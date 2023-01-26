@@ -268,7 +268,17 @@ typedef __mmask64 ZMASK64, *PZMASK64;
 // _mm512_permutex2var_epi32().
 //
 
-typedef union _ZMM_PERMUTE_INDEX_BYTE {
+typedef union _ZMM_PERMUTEXVAR_INDEX16 {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        ULONG Index:5;
+        ULONG Unused:27;
+    };
+
+    ULONG AsULong;
+} ZMM_PERMUTEXVAR_INDEX16;
+C_ASSERT(sizeof(ZMM_PERMUTEXVAR_INDEX16) == sizeof(ULONG));
+
+typedef union _ZMM_PERMUTEX2VAR_INDEX_BYTE {
     struct _Struct_size_bytes_(sizeof(BYTE)) {
         BYTE Index:3;
         BYTE Selector:1;
@@ -276,10 +286,22 @@ typedef union _ZMM_PERMUTE_INDEX_BYTE {
     };
 
     BYTE AsByte;
-} ZMM_PERMUTE_INDEX_BYTE;
-C_ASSERT(sizeof(ZMM_PERMUTE_INDEX_BYTE) == sizeof(BYTE));
+} ZMM_PERMUTEX2VAR_INDEX_BYTE;
+C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX_BYTE) == sizeof(BYTE));
 
-typedef union _ZMM_PERMUTE_INDEX {
+typedef union _ZMM_PERMUTEX2VAR_INDEX16 {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        ULONG Index:5;
+        ULONG Selector:1;
+        ULONG Unused:26;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} ZMM_PERMUTEX2VAR_INDEX16;
+C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX16) == sizeof(ULONG));
+
+typedef union _ZMM_PERMUTEX2VAR_INDEX32 {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         ULONG Index:4;
         ULONG Selector:1;
@@ -288,8 +310,8 @@ typedef union _ZMM_PERMUTE_INDEX {
 
     LONG AsLong;
     ULONG AsULong;
-} ZMM_PERMUTE_INDEX;
-C_ASSERT(sizeof(ZMM_PERMUTE_INDEX) == sizeof(ULONG));
+} ZMM_PERMUTEX2VAR_INDEX32;
+C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #endif
 
 #ifndef ALIGN_UP_XMMWORD

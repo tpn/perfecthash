@@ -42,6 +42,7 @@ GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX512;
 
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX2;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX512;
+GRAPH_HASH_KEYS GraphHashKeys16MultiplyShiftRX_AVX512;
 
 GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
     GraphCalculateMemoryCoverageCacheLineCounts;
@@ -164,12 +165,59 @@ Return Value:
         Graph->Vtbl->Assign = GraphAssign16;
         Graph->Vtbl->RegisterSolved = GraphRegisterSolved16;
 
-        if (TableCreateFlags.HashAllKeysFirst != FALSE) {
-            Graph->Vtbl->AddKeys = GraphHashKeysThenAdd16;
-        }
-
         Graph->Vtbl->CalculateAssignedMemoryCoverage =
             GraphCalculateAssigned16MemoryCoverage;
+
+        if (TableCreateFlags.HashAllKeysFirst != FALSE) {
+            Graph->Vtbl->AddKeys = GraphHashKeysThenAdd16;
+
+            //
+            // If we have an applicable hash function, determine if we need
+            // to swap out the hash keys routine with an AVX-optimized version.
+            //
+
+            if (HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
+
+                if (TableCreateFlags.TryUseAvx512HashFunction &&
+                    Rtl->CpuFeatures.AVX512F) {
+
+                    //
+                    // Not yet implemented.
+                    //
+
+                    NOTHING;
+
+                } else if (TableCreateFlags.TryUseAvx2HashFunction &&
+                           Rtl->CpuFeatures.AVX2) {
+
+                    //
+                    // Not yet implemented.
+                    //
+
+                    NOTHING;
+                }
+
+            } else if (HashFunctionId ==
+                       PerfectHashHashMultiplyShiftRXFunctionId) {
+
+                if (TableCreateFlags.TryUseAvx512HashFunction &&
+                    Rtl->CpuFeatures.AVX512F) {
+
+                    Graph->Vtbl->HashKeys =
+                        GraphHashKeys16MultiplyShiftRX_AVX512;
+                    Graph->Flags.UsedAvx512HashFunction = TRUE;
+
+                } else if (TableCreateFlags.TryUseAvx2HashFunction &&
+                           Rtl->CpuFeatures.AVX2) {
+
+                    //
+                    // Not yet implemented.
+                    //
+
+                    NOTHING;
+                }
+            }
+        }
 
     } else if (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE) {
 
@@ -3698,7 +3746,6 @@ Return Value:
                 );
             } else {
 
-                ASSERT(Graph->Vtbl->HashKeys == GraphHashKeys16);
                 ASSERT(Graph->Vtbl->Verify == GraphVerify16);
                 ASSERT(Graph->Vtbl->IsAcyclic == GraphIsAcyclic16);
                 ASSERT(Graph->Vtbl->Assign == GraphAssign16);
@@ -5197,12 +5244,12 @@ Return Value:
 
     }
 
+    NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
+
     if (Collisions) {
         Result = PH_E_COLLISIONS_ENCOUNTERED_DURING_GRAPH_VERIFICATION;
         goto Error;
     }
-
-    NumberOfAssignments = Rtl->RtlNumberOfSetBits(&Graph->AssignedBitmap);
 
     if (NumberOfAssignments != NumberOfKeys) {
         Result =
