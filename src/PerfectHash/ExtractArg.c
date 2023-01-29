@@ -183,6 +183,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(TryUseAvx2HashFunction);
     DECL_ARG(DoNotTryUseAvx2HashFunction);
     DECL_ARG(TryUseAvx512HashFunction);
+    DECL_ARG(DoNotTryUseAvx512HashFunction);
     DECL_ARG(DoNotTryUseAvx2MemoryCoverageFunction);
     DECL_ARG(IncludeKeysInCompiledDll);
     DECL_ARG(DoNotIncludeKeysInCompiledDll);
@@ -243,13 +244,22 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseHash16Impl);
 
     //
-    // Handle inverting default flags.
+    // Handle inverting default flags.  --DoNotHashAllKeysFirst needs
+    // to be handled specially due to its relationship with the TryAvx2
+    // and TryAvx512 flags.
     //
 
-    CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotHashAllKeysFirst,
-                                   HashAllKeysFirst);
+    if (IS_EQUAL(DoNotHashAllKeysFirst)) {
+        Flags->HashAllKeysFirst = FALSE;
+        Flags->TryUseAvx2HashFunction = FALSE;
+        Flags->TryUseAvx512HashFunction = FALSE;
+        return S_OK;
+    }
+
     CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2HashFunction,
                                    TryUseAvx2HashFunction);
+    CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx512HashFunction,
+                                   TryUseAvx512HashFunction);
     CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotIncludeKeysInCompiledDll,
                                    IncludeKeysInCompiledDll);
     CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotUseRwsSectionForTableValues,
