@@ -339,9 +339,10 @@ about 7.
 
 The `BenchmarkFull` executable returns the minimum number of cycles it took, out
 of 100 attempts, to do 10 iterations of the following:
-    - For each key, call `Insert(Key, RotateLeft(Key, 15))`.
-    - For each key, call `Value = Lookup(Key)`.
-    - For each key, call `Previous = Delete(Key)`.
+
+- For each key, call `Insert(Key, RotateLeft(Key, 15))`.
+- For each key, call `Value = Lookup(Key)`.
+- For each key, call `Previous = Delete(Key)`.
 
 ```
 C:\Temp\ph.out\x64\Release>c:\src\perfecthash\bin\timemem.exe BenchmarkFull_HologramWorld_31016_Chm01_MultiplyShiftR_And.exe
@@ -441,16 +442,15 @@ To compile the hash table on Linux (using WSL1 and GCC 9 as an example):
 % cd /mnt/c/Temp/ph.out/HologramWorld_31016_Chm01_MultiplyShiftR_And
 % make
 % export LD_LIBRARY_PATH=.
-% time ./BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And
+% ./BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And
 8094
-./BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And  0.00s user 0.02s system 146% cpu 0.011 total
 ```
 
 With clang (version 10):
 ```
 % make clean
 % CC=clang make
-% time ./BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And
+% ./BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And
 7068
 ```
 
@@ -458,5 +458,5 @@ With clang (version 10):
 Identical to Linux, except you don't need `export LD_LIBRARY_PATH=.`:
 ```
 % make
-% time ./BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And
+% ./BenchmarkIndex_HologramWorld_31016_Chm01_MultiplyShiftR_And
 ```
