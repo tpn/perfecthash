@@ -104,8 +104,13 @@ PrepareCHeaderFileChm01(
     //
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Header File.  "
-               "Auto-generated.\n//\n\n"
-               "#pragma once\n\n");
+               "Auto-generated.\n"
+               "//\n// Command line:\n"
+               "// ");
+
+    OUTPUT_WSTR_FAST(Context->CommandLineW);
+
+    OUTPUT_RAW("\n//\n\n#pragma once\n\n");
 
     OUTPUT_OPEN_EXTERN_C_SCOPE();
 
