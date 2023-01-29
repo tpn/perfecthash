@@ -68,7 +68,9 @@ mainCRTStartup(
                             &Context);
 
     if (FAILED(Result)) {
-        PH_ERROR(PerfectHashContextCreateInstance, Result);
+        if (PerfectHashPrintError != NULL) {
+            PH_ERROR(PerfectHashContextCreateInstance, Result);
+        }
         goto Error;
     }
 
@@ -79,12 +81,15 @@ mainCRTStartup(
 
     //
     // Print the usage string if the create routine failed due to invalid number
-    // of arguments.
+    // of arguments.  Otherwise, as long as we were able to resolve the error
+    // routine, print an error message.
     //
 
     if (FAILED(Result)) {
         if (Result == PH_E_CONTEXT_TABLE_CREATE_INVALID_NUM_ARGS) {
             PH_USAGE();
+        } else if (PerfectHashPrintError != NULL) {
+            PH_ERROR(TableCreate, Result);
         }
     }
 
