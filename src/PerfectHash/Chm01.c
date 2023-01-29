@@ -2092,30 +2092,12 @@ Return Value:
         NextSizeInBytes = 0;
         FirstSizeInBytes = 0;
 
-        if (TableCreateFlags.HashAllKeysFirst == FALSE) {
-
-            VertexPairsSizeInBytes = 0;
-
-        } else {
-
-            if (!UseAssigned16) {
-
-                VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
-                    RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
-                    (ULONGLONG)NumberOfKeys
-                );
-
-            } else {
-
-                VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
-                    RTL_ELEMENT_SIZE(GRAPH, Vertex16Pairs) *
-                    (ULONGLONG)NumberOfKeys
-                );
-
-            }
-        }
-
         if (!UseAssigned16) {
+
+            VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
+                (ULONGLONG)NumberOfKeys
+            );
 
             Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
                 RTL_ELEMENT_SIZE(GRAPH, Vertices3) *
@@ -2123,6 +2105,11 @@ Return Value:
             );
 
         } else {
+
+            VertexPairsSizeInBytes = ALIGN_UP_YMMWORD(
+                RTL_ELEMENT_SIZE(GRAPH, Vertex16Pairs) *
+                (ULONGLONG)NumberOfKeys
+            );
 
             Vertices3SizeInBytes = ALIGN_UP_YMMWORD(
                 RTL_ELEMENT_SIZE(GRAPH, Vertices163) *
