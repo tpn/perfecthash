@@ -1147,10 +1147,12 @@ FinishedSolution:
 
     ASSERT(Context->FinishedCount > 0);
 
-    Result = PrintCurrentContextStatsChm01(Context);
-    if (FAILED(Result)) {
-        PH_ERROR(PrintCurrentContextStatsChm01, Result);
-        goto Error;
+    if (!TableCreateFlags.Quiet) {
+        Result = PrintCurrentContextStatsChm01(Context);
+        if (FAILED(Result)) {
+            PH_ERROR(PrintCurrentContextStatsChm01, Result);
+            goto Error;
+        }
     }
 
     if (FirstSolvedGraphWins(Context)) {
@@ -3285,10 +3287,6 @@ Return Value:
     //
 
     TableCreateFlags.AsULongLong = Context->Table->TableCreateFlags.AsULongLong;
-
-    if (TableCreateFlags.Quiet) {
-        return S_OK;
-    }
 
     //
     // Initialize aliases.
