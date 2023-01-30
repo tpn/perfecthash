@@ -1624,6 +1624,8 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    BOOL Unlock = TRUE;
+    ULONG Concurrency;
     PTP_POOL Threadpool;
     HRESULT Result = S_OK;
     ULONG ThreadpoolConcurrency;
@@ -1637,24 +1639,35 @@ Return Value:
     }
 
     if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
-        return PH_E_CONTEXT_LOCKED;
+        Unlock = FALSE;
+        //return PH_E_CONTEXT_LOCKED;
     }
 
     Rtl = Context->Rtl;
     Threadpool = Context->MainThreadpool;
 
-    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+    Concurrency = MaximumConcurrency;
+
+    if (Context->NumberOfOmpThreads > 0) {
+        if (Context->NumberOfOmpThreads < Concurrency) {
+            Concurrency -= Context->NumberOfOmpThreads;
+        }
+    }
+
+    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(Concurrency);
     SetThreadpoolThreadMaximum(Threadpool, ThreadpoolConcurrency);
-    Context->MaximumConcurrency = MaximumConcurrency;
+    Context->MaximumConcurrency = Concurrency;
 
     if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
     } else {
-        Context->MinimumConcurrency = MaximumConcurrency;
+        Context->MinimumConcurrency = Concurrency;
     }
 
-    ReleasePerfectHashContextLockExclusive(Context);
+    if (Unlock) {
+        ReleasePerfectHashContextLockExclusive(Context);
+    }
 
     return Result;
 }

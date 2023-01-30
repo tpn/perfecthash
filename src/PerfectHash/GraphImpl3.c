@@ -55,6 +55,7 @@ Abstract:
 #include "stdafx.h"
 #include "GraphImpl3.h"
 #include "PerfectHashEventsPrivate.h"
+#include <omp.h>
 
 //
 // Define helper macros.
@@ -448,8 +449,11 @@ Return Value:
     HRESULT Result;
     VERTEX_PAIR VertexPair;
     PVERTEX_PAIR VertexPairs;
+    ULONG NumberOfOmpThreads;
 
     DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    NumberOfOmpThreads = Graph->Context->NumberOfOmpThreads;
 
     //
     // Attempt to hash the keys first.
@@ -470,10 +474,31 @@ Return Value:
 
     START_GRAPH_COUNTER();
 
-    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
-        VertexPair = *(VertexPairs++);
-        GraphAddEdge3(Graph, Edge, VertexPair.Vertex1, VertexPair.Vertex2);
+    if (NumberOfOmpThreads > 0) {
+
+        LONGLONG Index = 0;
+        LONGLONG NumKeys = (LONGLONG)NumberOfKeys;
+
+        omp_set_num_threads(NumberOfOmpThreads);
+
+        #pragma omp for
+        for (Index = 0; Index < NumKeys; Index++) {
+            VertexPair = VertexPairs[Index];
+            GraphAddEdge3(Graph,
+                          (ULONG)Index,
+                          VertexPair.Vertex1,
+                          VertexPair.Vertex2);
+        }
+
+    } else {
+
+        for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+            VertexPair = *(VertexPairs++);
+            GraphAddEdge3(Graph, Edge, VertexPair.Vertex1, VertexPair.Vertex2);
+        }
+
     }
+
 
     STOP_GRAPH_COUNTER(AddHashedKeys);
 

@@ -802,6 +802,19 @@ Return Value:
 
                 break;
 
+            case TableCreateParameterOmpNumThreadsId:
+                Context->NumberOfOmpThreads = Param->AsULong;
+                if (Context->NumberOfOmpThreads < Context->MaximumConcurrency) {
+                    Result = Context->Vtbl->SetMaximumConcurrency(
+                        Context,
+                        Context->MaximumConcurrency - Context->NumberOfOmpThreads
+                    );
+                    if (FAILED(Result)) {
+                        goto Error;
+                    }
+                }
+                break;
+
             case TableCreateParameterNullId:
             case TableCreateParameterInvalidId:
             default:

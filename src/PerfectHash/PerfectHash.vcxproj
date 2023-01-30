@@ -77,7 +77,7 @@
     <Link>
       <ModuleDefinitionFile>PerfectHash.def</ModuleDefinitionFile>
       <AdditionalDependencies>vcomp.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <DelayLoadDLLs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vcomp140.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>vcomp140.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

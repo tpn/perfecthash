@@ -190,6 +190,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(DisableSavingCallbackTableValues);
     DECL_ARG(Quiet);
     DECL_ARG(DoNotTryUseHash16Impl);
+    DECL_ARG(Omp);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -242,6 +243,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableSavingCallbackTableValues);
     SET_FLAG_AND_RETURN_IF_EQUAL(Quiet);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseHash16Impl);
+    SET_FLAG_AND_RETURN_IF_EQUAL(Omp);
 
     //
     // Handle inverting default flags.  --DoNotHashAllKeysFirst needs
@@ -1014,6 +1016,8 @@ Return Value:
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(MaxSolveTimeInSeconds);
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(FunctionHookCallbackIgnoreRip);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(OmpNumThreads);
 
 #define IS_VALUE_EQUAL(ValueName) \
     Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)

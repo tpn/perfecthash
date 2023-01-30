@@ -2900,10 +2900,16 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG DoNotTryUseHash16Impl:1;
 
         //
+        // When set, uses OpenMP for certain graph solving routines.
+        //
+
+        ULONGLONG Omp:1;
+
+        //
         // Unused bits.
         //
 
-        ULONGLONG Unused:29;
+        ULONGLONG Unused:28;
     };
 
     LONGLONG AsLongLong;
@@ -3334,6 +3340,7 @@ typedef RNG_VTBL *PRNG_VTBL;
     ENTRY(FunctionHookCallbackFunctionName)                          \
     ENTRY(FunctionHookCallbackIgnoreRip)                             \
     ENTRY(BestCoverageTargetValue)                                   \
+    ENTRY(OmpNumThreads)                                             \
     LAST_ENTRY(Remark)
 
 #define TABLE_CREATE_PARAMETER_TABLE_ENTRY(ENTRY) \

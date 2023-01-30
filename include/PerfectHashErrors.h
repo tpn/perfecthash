@@ -4476,3 +4476,12 @@ Abstract:
 //
 #define PH_E_INVALID_BEST_COVERAGE_TARGET_VALUE ((HRESULT)0xE00403E7L)
 
+//
+// MessageId: PH_E_INVALID_NUMBER_OF_OMP_THREADS
+//
+// MessageText:
+//
+// Invalid number of OMP threads.
+//
+#define PH_E_INVALID_NUMBER_OF_OMP_THREADS ((HRESULT)0xE00403E8L)
+

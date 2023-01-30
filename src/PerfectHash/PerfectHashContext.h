@@ -966,7 +966,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_WORK FileWork;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;
-    ULONG Padding4;
+
+    //
+    // If OpenMP is enabled, supplies the desired maximum number of omp
+    // threads.
+    //
+
+    ULONG NumberOfOmpThreads;
 
     //
     // The algorithm is responsible for registering an appropriate callback

@@ -901,12 +901,13 @@ Return Value:
 --*/
 {
     KEY Key = 0;
-    EDGE Edge;
+    ULONG Edge;
     ULONG Mask;
     PEDGE Edges;
     HRESULT Result;
     VERTEX_PAIR Hash;
     PULONGLONG VertexPairs;
+    ULONG NumberOfOmpThreads;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_SEEDED_HASH_EX SeededHashEx;
 
@@ -923,6 +924,7 @@ Return Value:
     Mask = Table->HashMask;
     SeededHashEx = SeededHashExRoutines[Table->HashFunctionId];
     Edges = (PEDGE)Keys;
+    NumberOfOmpThreads = Graph->Context->NumberOfOmpThreads;
 
     //
     // Sanity check we can enumerate over the vertex pair elements via a
@@ -938,18 +940,45 @@ Return Value:
 
     START_GRAPH_COUNTER();
 
-    for (Edge = 0; Edge < NumberOfKeys; Edge++) {
-        Key = *Edges++;
+    if (NumberOfOmpThreads > 0) {
 
-        Hash.AsULongLong = SeededHashEx(Key, &Graph->FirstSeed, Mask);
+        LONGLONG Index = 0;
+        LONGLONG NumKeys = (LONGLONG)NumberOfKeys;
 
-        if (Hash.Vertex1 == Hash.Vertex2) {
-            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
-            break;
+        omp_set_num_threads(NumberOfOmpThreads);
+
+        #pragma omp for
+        for (Index = 0; Index < NumKeys; Index++) {
+            Key = Edges[Index];
+
+            Hash.AsULongLong = SeededHashEx(Key, &Graph->FirstSeed, Mask);
+
+            if (Hash.Vertex1 == Hash.Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                break;
+            }
+
+            VertexPairs[Index] = Hash.AsULongLong;
         }
 
-        *VertexPairs++ = Hash.AsULongLong;
+        Edge = (ULONG)Index;
+
+    } else {
+
+        for (Edge = 0; Edge < NumberOfKeys; Edge++) {
+            Key = *Edges++;
+
+            Hash.AsULongLong = SeededHashEx(Key, &Graph->FirstSeed, Mask);
+
+            if (Hash.Vertex1 == Hash.Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                break;
+            }
+
+            *VertexPairs++ = Hash.AsULongLong;
+        }
     }
+
 
     STOP_GRAPH_COUNTER(HashKeys);
 
@@ -4123,8 +4152,8 @@ Return Value:
 {
     PRTL Rtl;
     PRNG Rng;
+    BOOL Omp;
     BOOL Success;
-    BOOL Omp = TRUE;
     PGRAPH_INFO Info;
     HRESULT Result;
     ULONG OldProtection;
@@ -4212,6 +4241,7 @@ Return Value:
                            Info->##Name##BufferSizeInBytes);   \
     }
 
+    Omp = (Context->NumberOfOmpThreads > 0);
 
     if (Omp) {
 
@@ -4258,9 +4288,31 @@ Return Value:
                            (BYTE)~0);                    \
     }
 
-    EMPTY_ARRAY(Next);
-    EMPTY_ARRAY(First);
-    EMPTY_ARRAY(Edges);
+    if (Omp) {
+
+        #pragma omp parallel sections num_threads(3)
+        {
+            #pragma omp section
+            {
+                EMPTY_ARRAY(Next);
+            }
+
+            #pragma omp section
+            {
+                EMPTY_ARRAY(First);
+            }
+
+            #pragma omp section
+            {
+                EMPTY_ARRAY(Edges);
+            }
+        }
+
+    } else {
+        EMPTY_ARRAY(Next);
+        EMPTY_ARRAY(First);
+        EMPTY_ARRAY(Edges);
+    }
 
     //
     // The Order and Assigned arrays get zeroed.
@@ -4274,9 +4326,31 @@ Return Value:
                            Info->##Name##SizeInBytes);   \
     }
 
-    ZERO_ARRAY(Order);
-    ZERO_ARRAY(Assigned);
-    ZERO_ARRAY(Vertices3);
+    if (Omp) {
+
+        #pragma omp parallel sections num_threads(3)
+        {
+            #pragma omp section
+            {
+                ZERO_ARRAY(Order);
+            }
+
+            #pragma omp section
+            {
+                ZERO_ARRAY(Assigned);
+            }
+
+            #pragma omp section
+            {
+                ZERO_ARRAY(Vertices3);
+            }
+        }
+
+    } else {
+        ZERO_ARRAY(Order);
+        ZERO_ARRAY(Assigned);
+        ZERO_ARRAY(Vertices3);
+    }
 
     if (!IsUsingAssigned16(Graph)) {
         Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
@@ -4448,9 +4522,31 @@ Return Value:
 #define ZERO_ASSIGNED_ARRAY(Name) \
         ZeroMemory(Coverage->##Name, Info->##Name##SizeInBytes)
 
-        ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
-        ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
-        ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+        if (Omp) {
+
+            #pragma omp parallel sections num_threads(3)
+            {
+                #pragma omp section
+                {
+                    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
+                }
+
+                #pragma omp section
+                {
+                    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
+                }
+
+                #pragma omp section
+                {
+                    ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+                }
+            }
+
+        } else {
+            ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
+            ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
+            ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
+        }
 
     } else {
 
@@ -4485,9 +4581,31 @@ Return Value:
 #define ZERO_ASSIGNED16_ARRAY(Name) \
         ZeroMemory(Coverage16->##Name, Info->##Name##SizeInBytes)
 
-        ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerPage);
-        ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerLargePage);
-        ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerCacheLine);
+        if (Omp) {
+
+            #pragma omp parallel sections num_threads(3)
+            {
+                #pragma omp section
+                {
+                    ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerPage);
+                }
+
+                #pragma omp section
+                {
+                    ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerLargePage);
+                }
+
+                #pragma omp section
+                {
+                    ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerCacheLine);
+                }
+            }
+
+        } else {
+            ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerPage);
+            ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerLargePage);
+            ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerCacheLine);
+        }
     }
 
     //

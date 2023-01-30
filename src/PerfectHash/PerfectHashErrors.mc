@@ -4075,3 +4075,11 @@ Language=English
 Invalid --BestCoverageTargetValue.
 .
 
+MessageId=0x3e8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_NUMBER_OF_OMP_THREADS
+Language=English
+Invalid number of OMP threads.
+.
+
