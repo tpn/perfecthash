@@ -91,12 +91,12 @@ endfunction()
 ################################################################################
 # Common utils
 ################################################################################
-include(CMake/Utils.cmake)
+include(cmake/Utils.cmake)
 
 ################################################################################
 # Additional Global Settings(add specific info there)
 ################################################################################
-include(CMake/GlobalSettingsInclude.cmake OPTIONAL)
+include(cmake/GlobalSettingsInclude.cmake OPTIONAL)
 
 ################################################################################
 # Use solution folders feature
