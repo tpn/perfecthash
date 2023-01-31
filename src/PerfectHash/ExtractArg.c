@@ -336,6 +336,7 @@ TryExtractValueArray(
     ULONG NumberOfValidValues;
     PWCHAR Wide;
     PWCHAR ValueStart = NULL;
+    ULONG LocalValue;
     PULONG Value;
     PULONG Values = NULL;
     UNICODE_STRING ValueString;
@@ -366,7 +367,13 @@ TryExtractValueArray(
     }
 
     if (Commas == 0) {
-        return S_FALSE;
+
+        //
+        // Not seeing any commas isn't an error, it just means we possibly
+        // have a single value.
+        //
+
+        NOTHING;
     }
 
     //
@@ -429,11 +436,13 @@ ProcessValue:
             ValueString.Length = (USHORT)RtlPointerToOffset(ValueStart, Wide);
             ValueString.MaximumLength = ValueString.Length;
 
-            Status = RtlUnicodeStringToInteger(&ValueString, 0, Value);
+            Status = RtlUnicodeStringToInteger(&ValueString, 0, &LocalValue);
             if (!SUCCEEDED(Status)) {
                 Result = E_FAIL;
                 goto Error;
             }
+
+            *Value = LocalValue;
 
             if (EnsureSortedAndUnique && Value != Values) {
                 ULONG Previous;
