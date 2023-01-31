@@ -25,7 +25,9 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B9EF04DA-0AD9-45C4-97B0-857A13AA4850}</ProjectGuid>
     <RootNamespace>FunctionHook</RootNamespace>
+    <!--
     <DefaultLanguage>en-US</DefaultLanguage>
+    -->
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>FunctionHook</ProjectName>
   </PropertyGroup>
@@ -39,10 +41,7 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Platform)'=='Win32'">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Platform)'=='x64'">
+  <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
