@@ -4416,18 +4416,31 @@ PhRaiseException(
 // Build type static strings.
 //
 
+#ifdef PERFECT_HASH_CMAKE
+
+#ifndef STRINGAFY
+#define STRINGAFY(x) #x
+#endif
+
+static const char PerfectHashBuildConfigString[] =
+    STRINGAFY(PERFECT_HASH_BUILD_CONFIG);
+
+#else
+
 #ifdef PERFECT_HASH_BUILD_CONFIG_PGI
-static const char PerfectHashBuildConfigString[] = "PGI";
+static const char PerfectHashBuildConfigString[] = "PGInstrument";
 #elif defined(PERFECT_HASH_BUILD_CONFIG_PGU)
-static const char PerfectHashBuildConfigString[] = "PGU";
+static const char PerfectHashBuildConfigString[] = "PGUpdate";
 #elif defined(PERFECT_HASH_BUILD_CONFIG_PGO)
-static const char PerfectHashBuildConfigString[] = "PGO";
+static const char PerfectHashBuildConfigString[] = "PGOptimize";
 #elif defined(PERFECT_HASH_BUILD_CONFIG_RELEASE)
 static const char PerfectHashBuildConfigString[] = "Release";
 #elif defined(PERFECT_HASH_BUILD_CONFIG_DEBUG)
 static const char PerfectHashBuildConfigString[] = "Debug";
 #else
 #error Unknown build config type.
+#endif
+
 #endif
 
 
