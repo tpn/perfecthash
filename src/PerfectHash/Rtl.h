@@ -36,26 +36,20 @@ Abstract:
 extern "C" {
 #endif
 
+#if PH_WINDOWS
 #include <minwindef.h>
+#endif
 
 //
 // NT typedefs.
 //
 
-#ifdef _WIN64
 #define RTL_CONSTANT_STRING(s) { \
     sizeof(s) - sizeof((s)[0]),  \
     sizeof( s ),                 \
     0,                           \
     s                            \
 }
-#else
-#define RTL_CONSTANT_STRING(s) { \
-    sizeof(s) - sizeof((s)[0]),  \
-    sizeof( s ),                 \
-    s                            \
-}
-#endif
 
 typedef union _ULONG_INTEGER {
     struct {
@@ -247,12 +241,18 @@ typedef union _FILETIME64 {
 // XMM, YMM, and ZMM registers.
 //
 
+#ifdef PH_WINDOWS
 typedef __m128i DECLSPEC_ALIGN(XMMWORD_ALIGNMENT) XMMWORD, *PXMMWORD;
 typedef __m256i DECLSPEC_ALIGN(YMMWORD_ALIGNMENT) YMMWORD, *PYMMWORD;
 typedef __m512i DECLSPEC_ALIGN(ZMMWORD_ALIGNMENT) ZMMWORD, *PZMMWORD;
 C_ASSERT(sizeof(XMMWORD) == XMMWORD_ALIGNMENT);
 C_ASSERT(sizeof(YMMWORD) == YMMWORD_ALIGNMENT);
 C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
+#else
+typedef __m128i XMMWORD, *PXMMWORD;
+typedef __m256i YMMWORD, *PYMMWORD;
+typedef __m512i ZMMWORD, *PZMMWORD;
+#endif
 
 //
 // AVX-512 masks.
@@ -1351,7 +1351,7 @@ ZeroMemoryInline(
         Fill = 0;
     }
 
-#ifdef _M_X64
+#if defined(_M_X64) && defined(PH_WINDOWS)
     __stosq(Dest, FillQuad, NumberOfQuadwords);
 #else
     while (NumberOfQuadwords) {
@@ -1378,7 +1378,7 @@ ZeroMemoryInline(
 // just use __stosq().
 //
 
-#ifdef _M_X64
+#if defined(_M_X64) && defined(PH_WINDOWS)
 
 #define ZeroStructInline(Name) \
     __stosq((PDWORD64)&Name, 0, (sizeof(Name) >> 3))
@@ -1387,8 +1387,11 @@ ZeroMemoryInline(
     __stosq((PDWORD64)Name, 0, (sizeof(*Name) >> 3))
 
 #else
-#define ZeroStructInline(Name) ZeroInline(&Name, sizeof(Name))
-#define ZeroStructPointer(Name) ZeroInline(Name, sizeof(*Name))
+#define ZeroStructInline(Name) \
+    memset((PDWORD64)&Name, 0, sizeof(Name) >> 3)
+
+#define ZeroStructPointerInline(Name) \
+    memset((PDWORD64)Name, 0, (sizeof(*Name) >> 3))
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1567,6 +1570,7 @@ typedef _WSPLITPATH_S *P_WSPLITPATH_S;
 // Bitmaps
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef PH_WINDOWS
 typedef struct _RTL_BITMAP {
 
     //
@@ -1590,6 +1594,7 @@ typedef struct _RTL_BITMAP {
 
 } RTL_BITMAP;
 typedef RTL_BITMAP *PRTL_BITMAP;
+#endif
 
 typedef struct _RTL_BITMAP_RUN {
     ULONG StartingIndex;

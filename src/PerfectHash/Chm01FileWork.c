@@ -381,7 +381,7 @@ Return Value:
             Result = Context->Vtbl->CreateInstance(Context,
                                                    NULL,
                                                    &IID_PERFECT_HASH_PATH,
-                                                   &Path);
+                                                   (PVOID *)&Path);
 
             if (FAILED(Result)) {
                 PH_ERROR(PerfectHashTableCreateInstance, Result);
@@ -428,7 +428,7 @@ Return Value:
             Result = Context->Vtbl->CreateInstance(Context,
                                                    NULL,
                                                    &IID_PERFECT_HASH_PATH,
-                                                   &Path);
+                                                   (PVOID *)&Path);
 
             if (FAILED(Result)) {
                 PH_ERROR(PerfectHashTableCreateInstance, Result);
@@ -753,7 +753,7 @@ Return Value:
         Result = Table->Vtbl->CreateInstance(Table,
                                              NULL,
                                              &IID_PERFECT_HASH_FILE,
-                                             &File);
+                                             (PVOID *)&File);
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileCreateInstance, Result);

@@ -52,21 +52,21 @@ PrintCurrentContextStatsChm01(
 // Define helper macros for checking prepare and save file work errors.
 //
 
-#define EXPAND_AS_CHECK_ERRORS(                                          \
-    Verb, VUpper, Name, Upper,                                           \
-    EofType, EofValue,                                                   \
-    Suffix, Extension, Stream, Base                                      \
-)                                                                        \
-    if (Verb####Name##.NumberOfErrors > 0) {                             \
-        Result = Verb####Name##.LastResult;                              \
-        if (Result == S_OK || Result == E_UNEXPECTED) {                  \
-            Result = PH_E_ERROR_DURING_##VUpper##_##Upper##;             \
-        }                                                                \
-        PH_ERROR(                                                        \
-            CreatePerfectHashTableImplChm01_ErrorDuring##Verb####Name##, \
-            Result                                                       \
-        );                                                               \
-        goto Error;                                                      \
+#define EXPAND_AS_CHECK_ERRORS(                                        \
+    Verb, VUpper, Name, Upper,                                         \
+    EofType, EofValue,                                                 \
+    Suffix, Extension, Stream, Base                                    \
+)                                                                      \
+    if (Verb####Name.NumberOfErrors > 0) {                             \
+        Result = Verb####Name.LastResult;                              \
+        if (Result == S_OK || Result == E_UNEXPECTED) {                \
+            Result = PH_E_ERROR_DURING_##VUpper##_##Upper;             \
+        }                                                              \
+        PH_ERROR(                                                      \
+            CreatePerfectHashTableImplChm01_ErrorDuring##Verb####Name, \
+            Result                                                     \
+        );                                                             \
+        goto Error;                                                    \
     }
 
 #define CHECK_ALL_PREPARE_ERRORS() \
@@ -286,12 +286,12 @@ Return Value:
     Events[4] = Context->TryLargerTableSizeEvent;
     Events[5] = Context->LowMemoryEvent;
 
-#define EXPAND_AS_ASSIGN_EVENT(                         \
-    Verb, VUpper, Name, Upper,                          \
-    EofType, EofValue,                                  \
-    Suffix, Extension, Stream, Base                     \
-)                                                       \
-    *##Verb##Event++ = Context->##Verb##d##Name##Event;
+#define EXPAND_AS_ASSIGN_EVENT(                     \
+    Verb, VUpper, Name, Upper,                      \
+    EofType, EofValue,                              \
+    Suffix, Extension, Stream, Base                 \
+)                                                   \
+    *Verb##Event++ = Context->Verb##d##Name##Event;
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
@@ -516,7 +516,7 @@ Return Value:
         Result = Table->Vtbl->CreateInstance(Table,
                                              NULL,
                                              &IID_PERFECT_HASH_GRAPH,
-                                             &Graph);
+                                             (PVOID *)&Graph);
 
         if (FAILED(Result)) {
 
@@ -690,15 +690,15 @@ RetryWithLargerTableSize:
     // Submit all of the file preparation work items.
     //
 
-#define EXPAND_AS_SUBMIT_FILE_WORK(                       \
-    Verb, VUpper, Name, Upper,                            \
-    EofType, EofValue,                                    \
-    Suffix, Extension, Stream, Base                       \
-)                                                         \
-    ASSERT(!NoFileIo(Table));                             \
-    ZeroStructInline(##Verb####Name##);                   \
-    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
-    InsertTailFileWork(Context, &Verb##Name##.ListEntry); \
+#define EXPAND_AS_SUBMIT_FILE_WORK(                     \
+    Verb, VUpper, Name, Upper,                          \
+    EofType, EofValue,                                  \
+    Suffix, Extension, Stream, Base                     \
+)                                                       \
+    ASSERT(!NoFileIo(Table));                           \
+    ZeroStructInline(Verb####Name);                     \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
+    InsertTailFileWork(Context, &Verb##Name.ListEntry); \
     SubmitThreadpoolWork(Context->FileWork);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
@@ -1527,16 +1527,16 @@ End:
         EndOfFile = NULL;
     }
 
-#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(                 \
-    Verb, VUpper, Name, Upper,                            \
-    EofType, EofValue,                                    \
-    Suffix, Extension, Stream, Base                       \
-)                                                         \
-    ASSERT(!NoFileIo(Table));                             \
-    ZeroStructInline(##Verb####Name##);                   \
-    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
-    Verb##Name##.EndOfFile = EndOfFile;                   \
-    InsertTailFileWork(Context, &Verb##Name##.ListEntry); \
+#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(               \
+    Verb, VUpper, Name, Upper,                          \
+    EofType, EofValue,                                  \
+    Suffix, Extension, Stream, Base                     \
+)                                                       \
+    ASSERT(!NoFileIo(Table));                           \
+    ZeroStructInline(Verb##Name);                       \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
+    Verb##Name.EndOfFile = EndOfFile;                   \
+    InsertTailFileWork(Context, &Verb##Name.ListEntry); \
     SubmitThreadpoolWork(Context->FileWork);
 
 #define SUBMIT_CLOSE_FILE_WORK() \
@@ -1546,21 +1546,21 @@ End:
 
     WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
 
-#define EXPAND_AS_CHECK_CLOSE_ERRORS(                                    \
-    Verb, VUpper, Name, Upper,                                           \
-    EofType, EofValue,                                                   \
-    Suffix, Extension, Stream, Base                                      \
-)                                                                        \
-    if (Verb####Name##.NumberOfErrors > 0) {                             \
-        CloseResult = Verb####Name##.LastResult;                         \
-        if (CloseResult == S_OK || CloseResult == E_UNEXPECTED) {        \
-            CloseResult = PH_E_ERROR_DURING_##VUpper##_##Upper##;        \
-        }                                                                \
-        PH_ERROR(                                                        \
-            CreatePerfectHashTableImplChm01_ErrorDuring##Verb####Name##, \
-            Result                                                       \
-        );                                                               \
-        CloseFileErrorCount++;                                           \
+#define EXPAND_AS_CHECK_CLOSE_ERRORS(                                \
+    Verb, VUpper, Name, Upper,                                       \
+    EofType, EofValue,                                               \
+    Suffix, Extension, Stream, Base                                  \
+)                                                                    \
+    if (Verb##Name.NumberOfErrors > 0) {                             \
+        CloseResult = Verb##Name.LastResult;                         \
+        if (CloseResult == S_OK || CloseResult == E_UNEXPECTED) {    \
+            CloseResult = PH_E_ERROR_DURING_##VUpper##_##Upper;      \
+        }                                                            \
+        PH_ERROR(                                                    \
+            CreatePerfectHashTableImplChm01_ErrorDuring##Verb##Name, \
+            Result                                                   \
+        );                                                           \
+        CloseFileErrorCount++;                                       \
     }
 
 #define CHECK_ALL_CLOSE_ERRORS() \
@@ -2644,7 +2644,7 @@ PrepareTableOutputDirectory(
         Result = Table->Vtbl->CreateInstance(Table,
                                              NULL,
                                              &IID_PERFECT_HASH_DIRECTORY,
-                                             &OutputDir);
+                                             (PVOID *)&OutputDir);
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashDirectoryCreateInstance, Result);
@@ -2863,6 +2863,7 @@ Return Value:
 
 }
 
+#ifdef PH_WINDOWS
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
@@ -3893,5 +3894,6 @@ End:
         SYS_ERROR(FlushConsoleInputBuffer);
     }
 }
+#endif // PH_WINDOWS
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

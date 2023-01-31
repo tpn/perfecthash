@@ -13,6 +13,9 @@ endif()
 
 if (IS_WINDOWS)
     enable_language(ASM_MASM)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC PH_WINDOWS)
+else()
+    target_compile_definitions(${PROJECT_NAME} PUBLIC PH_COMPAT)
 endif()
 
 
@@ -25,15 +28,14 @@ target_include_directories(
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "PERFECT_HASH_CMAKE")
 
-
-target_compile_definitions(
-    ${PROJECT_NAME}
-    PUBLIC
-    "PERFECT_HASH_BUILD_CONFIG=\"$<CONFIG>\""
-)
-
-
 if (IS_WINDOWS)
+
+    target_compile_definitions(
+        ${PROJECT_NAME}
+        PUBLIC
+        "PERFECT_HASH_BUILD_CONFIG=\"$<CONFIG>\""
+    )
+
 
     #target_precompile_headers(${PROJECT_NAME} PUBLIC "stdafx.h")
 
@@ -80,5 +82,19 @@ if (IS_WINDOWS)
         /MANIFESTUAC    # Enable UAC
     )
 
+
+else()
+
+    target_compile_definitions(
+        ${PROJECT_NAME}
+        PUBLIC
+        "PERFECT_HASH_BUILD_CONFIG=\"${CMAKE_SYSTEM_NAME}\""
+    )
+
+    target_compile_options(
+        ${PROJECT_NAME}
+        PUBLIC
+        -march=native
+    )
 
 endif()

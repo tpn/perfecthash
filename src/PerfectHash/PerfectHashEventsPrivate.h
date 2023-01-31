@@ -17,6 +17,8 @@ Abstract:
 
 #pragma once
 
+#ifdef PH_WINDOWS
+
 //
 // 4514: unreferenced inline function removed
 //
@@ -277,7 +279,22 @@ Abstract:
         CacheLineCountsPerPage[63]                            \
     )
 
+#else // PH_WINDOWS
 
 
+#define EVENT_WRITE_RTL_RANDOM_BYTES_START(Size)
+#define EVENT_WRITE_RTL_RANDOM_BYTES_STOP(Size, Result)
+#define EVENT_WRITE_GRAPH(Name)
+#define EVENT_WRITE_GRAPH_ADD_KEYS() EVENT_WRITE_GRAPH(AddKeys)
+#define EVENT_WRITE_GRAPH_HASH_KEYS() EVENT_WRITE_GRAPH(HashKeys)
+#define EVENT_WRITE_GRAPH_HASH_KEYS2()
+#define EVENT_WRITE_GRAPH_ADD_HASHED_KEYS()
+#define EVENT_WRITE_GRAPH_IS_ACYCLIC()
+#define EVENT_WRITE_GRAPH_ASSIGN_START()
+#define EVENT_WRITE_GRAPH_ASSIGN_STOP()
+#define EVENT_WRITE_GRAPH_ASSIGN_RESULT()
+#define EVENT_WRITE_GRAPH_FOUND(Name)
+
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

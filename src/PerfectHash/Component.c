@@ -18,7 +18,7 @@ Abstract:
 // Forward decls.
 //
 
-_Must_inspect_impl_
+_Must_inspect_result_
 _Success_(return != 0)
 PCOMPONENT
 CreateComponent(

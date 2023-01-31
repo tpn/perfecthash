@@ -512,6 +512,7 @@ typedef LOAD_SYMBOLS_FROM_MULTIPLE_MODULES *PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES;
 // Exception helpers.
 //
 
+#ifdef PH_WINDOWS
 typedef
 EXCEPTION_DISPOSITION
 (__cdecl RTL_EXCEPTION_HANDLER)(
@@ -538,7 +539,10 @@ VOID
     VOID
     );
 typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
+#endif
 
+
+#ifdef PH_WINDOWS
 //
 // Inline helper functions.
 //
@@ -636,5 +640,6 @@ Return Value:
         YieldProcessor();
     }
 }
+#endif // PH_WINDOWS
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

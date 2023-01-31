@@ -124,9 +124,6 @@ set(Resource_Files
 source_group("Resource Files" FILES ${Resource_Files})
 
 set(Source_Files
-    "_dtoa.c"
-    "_pow.c"
-    "_strtod.c"
     "BitManipulation.c"
     "Chm01.c"
     "Chm01FileWork.c"
@@ -170,7 +167,6 @@ set(Source_Files
     "Chm01Index.c"
     "Chunk.c"
     "Component.c"
-    "Cu.c"
     "dllmain.c"
     "ExtractArg.c"
     "Graph.c"
@@ -225,11 +221,22 @@ set(Source_Files
     "stdafx.c"
     "SymbolLoader.c"
     "VCProjectFileChunks.c"
-    "PerfectHashTableFastIndexEx_x64_01.asm"
-    "RtlCopyPages_x64.asm"
-    "RtlFillPages_x64.asm"
-    "memset_x64.asm"
 )
+
+if (IS_WINDOWS)
+    list(
+        APPEND SourceFiles
+        "_dtoa.c"
+        "_pow.c"
+        "_strtod.c"
+        "Cu.c"
+        "PerfectHashTableFastIndexEx_x64_01.asm"
+        "RtlCopyPages_x64.asm"
+        "RtlFillPages_x64.asm"
+        "memset_x64.asm"
+    )
+endif()
+
 source_group("Source Files" FILES ${Source_Files})
 
 set(ALL_FILES
@@ -257,7 +264,9 @@ set(ROOT_NAMESPACE PerfectHash)
 ################################################################################
 # Compile definitions
 ################################################################################
-target_compile_definitions(${PROJECT_NAME} PRIVATE
+target_compile_definitions(
+    ${PROJECT_NAME}
+    PUBLIC
     "_PERFECT_HASH_INTERNAL_BUILD"
 )
 

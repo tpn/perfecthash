@@ -63,6 +63,7 @@ RunSingleFunctionCtrlCHandler(
     return FALSE;
 }
 
+#ifdef PH_WINDOWS
 BOOL
 APIENTRY
 _DllMainCRTStartup(
@@ -114,5 +115,6 @@ _DllMainCRTStartup(
 
     return TRUE;
 }
+#endif // PH_WINDOWS
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

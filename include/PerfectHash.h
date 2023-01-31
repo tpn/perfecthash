@@ -22,6 +22,8 @@ extern "C" {
 
 #include <PerfectHashErrors.h>
 
+#ifdef PH_WINDOWS
+
 //
 // N.B. The warning disable glue is necessary to get the system headers to
 //      include with all errors enabled (/Wall).
@@ -90,6 +92,11 @@ extern "C" {
 
 #pragma warning(disable: 26110 26165 26167)
 
+#else // PH_WINDOWS
+#include <PerfectHashCompat.h>
+#endif
+
+
 //
 // NT DDK types.
 //
@@ -97,12 +104,10 @@ extern "C" {
 typedef struct _STRING {
     USHORT Length;
     USHORT MaximumLength;
-#ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
-#endif
     PCHAR Buffer;
 } STRING, ANSI_STRING, *PSTRING, *PANSI_STRING, **PPSTRING, **PPANSI_STRING;
 typedef const STRING *PCSTRING;
@@ -110,12 +115,10 @@ typedef const STRING *PCSTRING;
 typedef struct _UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
-#ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
-#endif
     PWSTR Buffer;
 } UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING, ***PPPUNICODE_STRING;
 typedef const UNICODE_STRING *PCUNICODE_STRING;
@@ -170,16 +173,12 @@ typedef ULONG_BYTES *PULONG_BYTES;
 
 #define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
 
-#ifdef _WIN64
+#ifdef PH_WINDOWS
 #define InterlockedIncrementULongPtr(Ptr) InterlockedIncrement64((PLONG64)Ptr)
 #define InterlockedDecrementULongPtr(Ptr) InterlockedDecrement64((PLONG64)Ptr)
 #define InterlockedAddULongPtr(Ptr, Val) \
     InterlockedAdd64((PLONG64)Ptr, (LONG64)Val)
 #else
-#define InterlockedIncrementULongPtr(Ptr) InterlockedIncrement((PLONG)Ptr)
-#define InterlockedDecrementULongPtr(Ptr) InterlockedDecrement((PLONG)Ptr)
-#define InterlockedAddULongPtr(Ptr, Val) \
-    InterlockedAdd((PLONG)Ptr, (LONG)Val)
 #endif
 
 //
@@ -249,6 +248,8 @@ IsValidPerfectHashCpuArchId(
     );
 }
 
+#if PH_WINDOWS
+
 //
 // Provide a simple inline routine for obtaining the current CPU architecture.
 //
@@ -271,6 +272,8 @@ PerfectHashGetCurrentCpuArch(
 #error Unknown CPU architecture.
 #endif
 }
+
+#endif // PH_WINDOWS
 
 //
 // Define an X-macro for COM interfaces.  The ENTRY macros receive the following
@@ -488,7 +491,7 @@ DEFINE_GUID_EX(CLSID_PERFECT_HASH, 0x402045fd, 0x72f4, 0x4a05,
                0x90, 0x2e, 0xd2, 0x2b, 0x7c, 0x18, 0x77, 0xb4);
 
 #define EXPAND_AS_DEFINE_GUID_EX(Name, Upper, Guid) \
-    static const GUID IID_PERFECT_HASH_##Upper## = Guid;
+    static const GUID IID_PERFECT_HASH_##Upper = Guid;
 
 PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_DEFINE_GUID_EX);
 
@@ -496,7 +499,7 @@ PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_DEFINE_GUID_EX);
 // GUID array.
 //
 
-#define EXPAND_AS_IID_ADDRESS(Name, Upper, Guid) &IID_PERFECT_HASH_##Upper##,
+#define EXPAND_AS_IID_ADDRESS(Name, Upper, Guid) &IID_PERFECT_HASH_##Upper,
 
 static const PCGUID PerfectHashInterfaceGuids[] = {
     NULL,
@@ -4170,6 +4173,8 @@ BOOLEAN
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
       *PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME;
 
+#ifdef PH_WINDOWS
+
 //
 // Scaffolding required to support structured exception handling via __try
 // blocks without having to link to the C runtime library.
@@ -4274,13 +4279,27 @@ VOID
     );
 typedef _PENTER *P_PENTER;
 
+#else // PH_WINDOWS
+
+typedef
+ULONG
+(__cdecl __C_SPECIFIC_HANDLER)(
+    PVOID ExceptionRecord,
+    ULONG_PTR Frame,
+    PVOID Context,
+    PVOID Dispatch
+    );
+typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
+
+#endif
+
 //
 // Define bootstrap helpers.
 //
 
 typedef
 _Success_(return >= 0)
-_Check_return_opt_
+_Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_ERROR)(
     _In_ PCSZ FunctionName,
@@ -4292,7 +4311,7 @@ typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
 
 typedef
 _Success_(return >= 0)
-_Check_return_opt_
+_Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_MESSAGE)(
     _In_ ULONG Code,
@@ -4393,10 +4412,14 @@ PhRaiseException(
     _In_reads_opt_(nNumberOfArguments) CONST ULONG_PTR* lpArguments
     )
 {
+#if PH_WINDOWS
     RaiseException(dwExceptionCode,
                    dwExceptionFlags,
                    nNumberOfArguments,
                    lpArguments);
+#else
+    exit(dwExceptionCode);
+#endif
 }
 
 //

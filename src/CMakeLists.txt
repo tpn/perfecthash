@@ -106,7 +106,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 ################################################################################
 # Sub-projects
 ################################################################################
-add_subdirectory(FunctionHook)
+if (HookPenter STREQUAL "1")
+    add_subdirectory(FunctionHook)
+endif()
 add_subdirectory(PerfectHash)
 add_subdirectory(PerfectHashBulkCreateExe)
 add_subdirectory(PerfectHashCreateExe)

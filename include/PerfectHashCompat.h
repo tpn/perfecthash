@@ -1,0 +1,1890 @@
+/*++
+
+Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
+
+Module Name:
+
+    PerfectHashCompat.h
+
+Abstract:
+
+    Non-Windows friendly include for the perfect hash library.
+
+--*/
+
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//
+// Standard UNIX-ey headers.
+//
+
+#include <wchar.h>
+#include <stdint.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+
+#include <x86intrin.h>
+
+
+//
+// SAL compat.
+//
+
+#include <no_sal2.h>
+
+#define _Ret_reallocated_bytes_(Address, Size)
+#define _Frees_ptr_opt_
+
+//
+// Define NT-style typedefs.
+//
+
+#define TRUE 1
+#define FALSE 0
+
+#define CONST const
+
+typedef char CHAR;
+typedef short SHORT;
+typedef int32_t LONG;
+typedef int32_t INT;
+typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
+
+typedef WCHAR *PWCHAR, *LPWCH, *PWCH, *PWSTR, *LPWSTR;
+
+typedef CHAR *PCHAR, *LPCH, *PCH, *PSTR, *LPSTR;
+
+typedef _Null_terminated_ PWSTR *PZPWSTR;
+typedef _Null_terminated_ CONST PWSTR *PCZPWSTR;
+typedef _Null_terminated_ WCHAR *LPUWSTR, *PUWSTR;
+typedef _Null_terminated_ CONST WCHAR *LPCWSTR, *PCWSTR;
+typedef _Null_terminated_ PCWSTR *PZPCWSTR;
+typedef _Null_terminated_ CONST PCWSTR *PCZPCWSTR;
+
+typedef float FLOAT;
+typedef double DOUBLE;
+typedef FLOAT *PFLOAT;
+typedef DOUBLE *PDOUBLE;
+
+typedef unsigned char BYTE;
+typedef unsigned char UCHAR;
+typedef unsigned short USHORT;
+typedef unsigned short WORD;
+typedef uint32_t ULONG;
+typedef uint32_t DWORD;
+typedef DWORD *PDWORD, *LPDWORD;
+
+typedef int32_t BOOL;
+typedef BYTE BOOLEAN;
+typedef BOOLEAN *PBOOLEAN;
+
+typedef UCHAR *PUCHAR;
+typedef USHORT *PUSHORT;
+typedef ULONG *PULONG;
+
+typedef BYTE *PBYTE;
+typedef CHAR *PCHAR;
+typedef SHORT *PSHORT;
+typedef LONG *PLONG;
+
+typedef int64_t LONGLONG;
+typedef int64_t LONG64;
+typedef int64_t LONG_PTR;
+typedef uint64_t ULONGLONG;
+typedef uint64_t ULONG64;
+typedef uint64_t DWORD_PTR;
+typedef uint64_t DWORDLONG;
+typedef uint64_t ULONG_PTR;
+typedef ULONG_PTR *PULONG_PTR;
+
+typedef LONG64 *PLONG64;
+typedef ULONG64 *PULONG64;
+
+typedef int64_t *PLONGLONG;
+typedef uint64_t *PULONGLONG;
+
+typedef int64_t LONG64, *PLONG64;
+typedef uint64_t ULONG64, *PULONG64;
+typedef uint64_t DWORD64, *PDWORD64;
+
+#define CONST const
+#define VOID void
+typedef void *PVOID;
+typedef void *LPVOID;
+typedef CONST void *LPCVOID;
+
+typedef size_t SIZE_T;
+typedef SIZE_T *PSIZE_T;
+
+typedef PVOID HANDLE;
+typedef HANDLE *PHANDLE;
+typedef HANDLE HMODULE;
+typedef HANDLE HINSTANCE;
+typedef HANDLE HCRYPTPROV;
+
+#define INVALID_HANDLE_VALUE ((HANDLE)(LONG_PTR)-1)
+
+typedef struct _FILETIME {
+    DWORD dwLowDateTime;
+    DWORD dwHighDateTime;
+} FILETIME, *PFILETIME, *LPFILETIME;
+
+typedef struct _SYSTEMTIME {
+    WORD wYear;
+    WORD wMonth;
+    WORD wDayOfWeek;
+    WORD wDay;
+    WORD wHour;
+    WORD wMinute;
+    WORD wSecond;
+    WORD wMilliseconds;
+} SYSTEMTIME, *PSYSTEMTIME, *LPSYSTEMTIME;
+
+VOID
+GetSystemTime(
+    _Out_ LPSYSTEMTIME lpSystemTime
+    );
+
+VOID
+GetSystemTimeAsFileTime(
+    _Out_ LPFILETIME lpSystemTimeAsFileTime
+    );
+
+VOID
+GetLocalTime(
+    _Out_ LPSYSTEMTIME lpSystemTime
+    );
+
+_Success_(return != FALSE)
+BOOL
+FileTimeToSystemTime(
+    _In_ CONST FILETIME* lpFileTime,
+    _Out_ LPSYSTEMTIME lpSystemTime
+    );
+
+_Success_(return != FALSE)
+BOOL
+SystemTimeToFileTime(
+    _In_ CONST SYSTEMTIME* lpSystemTime,
+    _Out_ LPFILETIME lpFileTime
+    );
+
+
+#define __cdecl
+#define __stdcall
+#define NTAPI
+#define WINAPI
+#define APIENTRY
+#define CALLBACK
+#define WINBASEAPI
+#define STDAPICALLTYPE
+
+#define FORCEINLINE static inline __attribute__((always_inline))
+
+#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
+
+typedef _Return_type_success_(return >= 0) long HRESULT;
+typedef HRESULT *PHRESULT;
+#define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
+
+#define S_OK            ((HRESULT)0L)
+#define S_FALSE         ((HRESULT)1L)
+#define E_POINTER       _HRESULT_TYPEDEF_(0x80004003L)
+#define E_FAIL          _HRESULT_TYPEDEF_(0x80004005L)
+#define E_UNEXPECTED    _HRESULT_TYPEDEF_(0x8000FFFFL)
+#define E_OUTOFMEMORY   _HRESULT_TYPEDEF_(0x8007000EL)
+#define E_INVALIDARG    _HRESULT_TYPEDEF_(0x80070057L)
+#define E_NOINTERFACE   _HRESULT_TYPEDEF_(0x80004002L)
+#define E_NOTIMPL       _HRESULT_TYPEDEF_(0x80000001L)
+
+#define CLASS_E_NOAGGREGATION _HRESULT_TYPEDEF_(0x80040110L)
+#define CLASS_E_CLASSNOTAVAILABLE _HRESULT_TYPEDEF_(0x80040111L)
+
+#define UNREFERENCED_PARAMETER(P)          (P)
+#define DBG_UNREFERENCED_PARAMETER(P)      (P)
+#define DBG_UNREFERENCED_LOCAL_VARIABLE(V) (V)
+
+typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
+typedef NTSTATUS *PNTSTATUS;
+
+typedef struct _GUID {
+    uint32_t    Data1;
+    uint16_t    Data2;
+    uint16_t    Data3;
+    uint8_t     Data4[8];
+} GUID;
+
+typedef GUID *LPGUID;
+typedef const GUID *LPCGUID;
+typedef GUID IID;
+
+#define InlineIsEqualGUID(rguid1, rguid2)  \
+        (((uint32_t *) rguid1)[0] == ((uint32_t *) rguid2)[0] &&   \
+        ((uint32_t *) rguid1)[1] == ((uint32_t *) rguid2)[1] &&    \
+        ((uint32_t *) rguid1)[2] == ((uint32_t *) rguid2)[2] &&    \
+        ((uint32_t *) rguid1)[3] == ((uint32_t *) rguid2)[3])
+
+#define IsEqualGUID(rguid1, rguid2) (!memcmp(rguid1, rguid2, sizeof(GUID)))
+
+#define REFGUID const GUID *
+#define REFIID const IID *
+#define REFCLSID const IID *
+
+#define RTL_NUMBER_OF_V1(A) (sizeof(A)/sizeof((A)[0]))
+#define ARRAYSIZE(A) RTL_NUMBER_OF_V1(A)
+
+typedef union _LARGE_INTEGER {
+    struct {
+        ULONG LowPart;
+        LONG HighPart;
+    };
+    LONGLONG QuadPart;
+} LARGE_INTEGER;
+typedef LARGE_INTEGER *PLARGE_INTEGER;
+
+typedef union _ULARGE_INTEGER {
+    struct {
+        ULONG LowPart;
+        ULONG HighPart;
+    };
+    ULONGLONG QuadPart;
+} ULARGE_INTEGER;
+typedef ULARGE_INTEGER *PULARGE_INTEGER;
+
+typedef struct _RTL_BITMAP {
+
+    //
+    // Number of bits in the bitmap.
+    //
+
+    ULONG SizeOfBitMap;
+
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding;
+
+    //
+    // Pointer to bitmap buffer.
+    //
+
+    PULONG Buffer;
+
+} RTL_BITMAP;
+typedef RTL_BITMAP *PRTL_BITMAP;
+
+struct _LIST_ENTRY {
+   struct _LIST_ENTRY *Flink;
+   struct _LIST_ENTRY *Blink;
+};
+typedef struct _LIST_ENTRY LIST_ENTRY;
+typedef LIST_ENTRY *PLIST_ENTRY;
+
+
+typedef struct _RTL_CRITICAL_SECTION_DEBUG {
+    WORD   Type;
+    WORD   CreatorBackTraceIndex;
+    struct _RTL_CRITICAL_SECTION *CriticalSection;
+    LIST_ENTRY ProcessLocksList;
+    DWORD EntryCount;
+    DWORD ContentionCount;
+    DWORD Flags;
+    WORD   CreatorBackTraceIndexHigh;
+    WORD   SpareWORD  ;
+} RTL_CRITICAL_SECTION_DEBUG, *PRTL_CRITICAL_SECTION_DEBUG, RTL_RESOURCE_DEBUG, *PRTL_RESOURCE_DEBUG;
+
+//
+// These flags define the upper byte of the critical section SpinCount field
+//
+#define RTL_CRITICAL_SECTION_FLAG_NO_DEBUG_INFO         0x01000000
+#define RTL_CRITICAL_SECTION_FLAG_DYNAMIC_SPIN          0x02000000
+#define RTL_CRITICAL_SECTION_FLAG_STATIC_INIT           0x04000000
+#define RTL_CRITICAL_SECTION_FLAG_RESOURCE_TYPE         0x08000000
+#define RTL_CRITICAL_SECTION_FLAG_FORCE_DEBUG_INFO      0x10000000
+#define RTL_CRITICAL_SECTION_ALL_FLAG_BITS              0xFF000000
+#define RTL_CRITICAL_SECTION_FLAG_RESERVED              (RTL_CRITICAL_SECTION_ALL_FLAG_BITS & (~(RTL_CRITICAL_SECTION_FLAG_NO_DEBUG_INFO | RTL_CRITICAL_SECTION_FLAG_DYNAMIC_SPIN | RTL_CRITICAL_SECTION_FLAG_STATIC_INIT | RTL_CRITICAL_SECTION_FLAG_RESOURCE_TYPE | RTL_CRITICAL_SECTION_FLAG_FORCE_DEBUG_INFO)))
+
+//
+// These flags define possible values stored in the Flags field of a critsec debuginfo.
+//
+#define RTL_CRITICAL_SECTION_DEBUG_FLAG_STATIC_INIT     0x00000001
+
+
+#pragma pack(push, 8)
+
+typedef struct _RTL_CRITICAL_SECTION {
+    PRTL_CRITICAL_SECTION_DEBUG DebugInfo;
+
+    //
+    //  The following three fields control entering and exiting the critical
+    //  section for the resource
+    //
+
+    LONG LockCount;
+    LONG RecursionCount;
+    HANDLE OwningThread;        // from the thread's ClientId->UniqueThread
+    HANDLE LockSemaphore;
+    ULONG_PTR SpinCount;        // force size on 64-bit systems when packed
+} RTL_CRITICAL_SECTION, *PRTL_CRITICAL_SECTION;
+
+#pragma pack(pop)
+
+typedef struct _RTL_SRWLOCK {
+        PVOID Ptr;
+} RTL_SRWLOCK, *PRTL_SRWLOCK;
+#define RTL_SRWLOCK_INIT {0}
+typedef struct _RTL_CONDITION_VARIABLE {
+        PVOID Ptr;
+} RTL_CONDITION_VARIABLE, *PRTL_CONDITION_VARIABLE;
+
+typedef RTL_CRITICAL_SECTION CRITICAL_SECTION;
+typedef RTL_SRWLOCK SRWLOCK;
+
+typedef CRITICAL_SECTION *PCRITICAL_SECTION, *LPCRITICAL_SECTION;
+
+WINBASEAPI
+VOID
+WINAPI
+InitializeCriticalSection(
+    _Out_ LPCRITICAL_SECTION lpCriticalSection
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+EnterCriticalSection(
+    _Inout_ LPCRITICAL_SECTION lpCriticalSection
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+LeaveCriticalSection(
+    _Inout_ LPCRITICAL_SECTION lpCriticalSection
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+BOOL
+WINAPI
+InitializeCriticalSectionAndSpinCount(
+    _Out_ LPCRITICAL_SECTION lpCriticalSection,
+    _In_ DWORD dwSpinCount
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+InitializeCriticalSectionEx(
+    _Out_ LPCRITICAL_SECTION lpCriticalSection,
+    _In_ DWORD dwSpinCount,
+    _In_ DWORD Flags
+    );
+
+WINBASEAPI
+DWORD
+WINAPI
+SetCriticalSectionSpinCount(
+    _Inout_ LPCRITICAL_SECTION lpCriticalSection,
+    _In_ DWORD dwSpinCount
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+TryEnterCriticalSection(
+    _Inout_ LPCRITICAL_SECTION lpCriticalSection
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+DeleteCriticalSection(
+    _Inout_ LPCRITICAL_SECTION lpCriticalSection
+    );
+
+//
+// Threadpool
+//
+
+typedef enum _TP_CALLBACK_PRIORITY {
+    TP_CALLBACK_PRIORITY_HIGH,
+    TP_CALLBACK_PRIORITY_NORMAL,
+    TP_CALLBACK_PRIORITY_LOW,
+    TP_CALLBACK_PRIORITY_INVALID,
+    TP_CALLBACK_PRIORITY_COUNT = TP_CALLBACK_PRIORITY_INVALID
+} TP_CALLBACK_PRIORITY;
+
+typedef DWORD TP_VERSION, *PTP_VERSION;
+
+typedef struct _TP_CALLBACK_INSTANCE TP_CALLBACK_INSTANCE, *PTP_CALLBACK_INSTANCE;
+
+typedef VOID (NTAPI *PTP_SIMPLE_CALLBACK)(
+    _Inout_     PTP_CALLBACK_INSTANCE Instance,
+    _Inout_opt_ PVOID                 Context
+    );
+
+typedef struct _TP_POOL TP_POOL, *PTP_POOL;
+
+typedef struct _TP_POOL_STACK_INFORMATION {
+    SIZE_T StackReserve;
+    SIZE_T StackCommit;
+}TP_POOL_STACK_INFORMATION, *PTP_POOL_STACK_INFORMATION;
+
+typedef struct _TP_CLEANUP_GROUP TP_CLEANUP_GROUP, *PTP_CLEANUP_GROUP;
+
+typedef VOID (NTAPI *PTP_CLEANUP_GROUP_CANCEL_CALLBACK)(
+    _Inout_opt_ PVOID ObjectContext,
+    _Inout_opt_ PVOID CleanupContext
+    );
+
+//
+// Do not manipulate this structure directly!  Allocate space for it
+// and use the inline interfaces below.
+//
+
+typedef struct _TP_CALLBACK_ENVIRON_V3 {
+    TP_VERSION                         Version;
+    PTP_POOL                           Pool;
+    PTP_CLEANUP_GROUP                  CleanupGroup;
+    PTP_CLEANUP_GROUP_CANCEL_CALLBACK  CleanupGroupCancelCallback;
+    PVOID                              RaceDll;
+    struct _ACTIVATION_CONTEXT        *ActivationContext;
+    PTP_SIMPLE_CALLBACK                FinalizationCallback;
+    union {
+        DWORD                          Flags;
+        struct {
+            DWORD                      LongFunction :  1;
+            DWORD                      Persistent   :  1;
+            DWORD                      Private      : 30;
+        } s;
+    } u;
+    TP_CALLBACK_PRIORITY               CallbackPriority;
+    DWORD                              Size;
+} TP_CALLBACK_ENVIRON_V3;
+
+typedef TP_CALLBACK_ENVIRON_V3 TP_CALLBACK_ENVIRON, *PTP_CALLBACK_ENVIRON;
+
+FORCEINLINE
+VOID
+TpInitializeCallbackEnviron(
+    _Out_ PTP_CALLBACK_ENVIRON CallbackEnviron
+    )
+{
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN7)
+
+    CallbackEnviron->Version = 3;
+
+#else
+
+    CallbackEnviron->Version = 1;
+
+#endif
+
+    CallbackEnviron->Pool = NULL;
+    CallbackEnviron->CleanupGroup = NULL;
+    CallbackEnviron->CleanupGroupCancelCallback = NULL;
+    CallbackEnviron->RaceDll = NULL;
+    CallbackEnviron->ActivationContext = NULL;
+    CallbackEnviron->FinalizationCallback = NULL;
+    CallbackEnviron->u.Flags = 0;
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN7)
+
+    CallbackEnviron->CallbackPriority = TP_CALLBACK_PRIORITY_NORMAL;
+    CallbackEnviron->Size = sizeof(TP_CALLBACK_ENVIRON);
+
+#endif
+
+}
+
+FORCEINLINE
+VOID
+TpSetCallbackThreadpool(
+    _Inout_ PTP_CALLBACK_ENVIRON CallbackEnviron,
+    _In_    PTP_POOL             Pool
+    )
+{
+    CallbackEnviron->Pool = Pool;
+}
+
+FORCEINLINE
+VOID
+TpSetCallbackCleanupGroup(
+    _Inout_  PTP_CALLBACK_ENVIRON              CallbackEnviron,
+    _In_     PTP_CLEANUP_GROUP                 CleanupGroup,
+    _In_opt_ PTP_CLEANUP_GROUP_CANCEL_CALLBACK CleanupGroupCancelCallback
+    )
+{
+    CallbackEnviron->CleanupGroup = CleanupGroup;
+    CallbackEnviron->CleanupGroupCancelCallback = CleanupGroupCancelCallback;
+}
+
+FORCEINLINE
+VOID
+TpSetCallbackActivationContext(
+    _Inout_  PTP_CALLBACK_ENVIRON CallbackEnviron,
+    _In_opt_ struct _ACTIVATION_CONTEXT *ActivationContext
+    )
+{
+    CallbackEnviron->ActivationContext = ActivationContext;
+}
+
+FORCEINLINE
+VOID
+TpSetCallbackNoActivationContext(
+    _Inout_ PTP_CALLBACK_ENVIRON CallbackEnviron
+    )
+{
+    CallbackEnviron->ActivationContext = (struct _ACTIVATION_CONTEXT *)(LONG_PTR) -1; // INVALID_ACTIVATION_CONTEXT
+}
+
+FORCEINLINE
+VOID
+TpSetCallbackLongFunction(
+    _Inout_ PTP_CALLBACK_ENVIRON CallbackEnviron
+    )
+{
+    CallbackEnviron->u.s.LongFunction = 1;
+}
+
+FORCEINLINE
+VOID
+TpSetCallbackRaceWithDll(
+    _Inout_ PTP_CALLBACK_ENVIRON CallbackEnviron,
+    _In_    PVOID                DllHandle
+    )
+{
+    CallbackEnviron->RaceDll = DllHandle;
+}
+
+FORCEINLINE
+VOID
+TpSetCallbackFinalizationCallback(
+    _Inout_ PTP_CALLBACK_ENVIRON CallbackEnviron,
+    _In_    PTP_SIMPLE_CALLBACK  FinalizationCallback
+    )
+{
+    CallbackEnviron->FinalizationCallback = FinalizationCallback;
+}
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN7)
+
+FORCEINLINE
+VOID
+TpSetCallbackPriority(
+    _Inout_ PTP_CALLBACK_ENVIRON CallbackEnviron,
+    _In_    TP_CALLBACK_PRIORITY Priority
+    )
+{
+    CallbackEnviron->CallbackPriority = Priority;
+}
+
+#endif
+
+FORCEINLINE
+VOID
+TpSetCallbackPersistent(
+    _Inout_ PTP_CALLBACK_ENVIRON CallbackEnviron
+    )
+{
+    CallbackEnviron->u.s.Persistent = 1;
+}
+
+
+FORCEINLINE
+VOID
+TpDestroyCallbackEnviron(
+    _In_ PTP_CALLBACK_ENVIRON CallbackEnviron
+    )
+{
+    //
+    // For the current version of the callback environment, no actions
+    // need to be taken to tear down an initialized structure.  This
+    // may change in a future release.
+    //
+
+    UNREFERENCED_PARAMETER(CallbackEnviron);
+}
+
+
+typedef struct _TP_WORK TP_WORK, *PTP_WORK;
+
+typedef VOID (NTAPI *PTP_WORK_CALLBACK)(
+    _Inout_     PTP_CALLBACK_INSTANCE Instance,
+    _Inout_opt_ PVOID                 Context,
+    _Inout_     PTP_WORK              Work
+    );
+
+typedef struct _TP_TIMER TP_TIMER, *PTP_TIMER;
+
+typedef VOID (NTAPI *PTP_TIMER_CALLBACK)(
+    _Inout_     PTP_CALLBACK_INSTANCE Instance,
+    _Inout_opt_ PVOID                 Context,
+    _Inout_     PTP_TIMER             Timer
+    );
+
+typedef DWORD    TP_WAIT_RESULT;
+
+typedef struct _TP_WAIT TP_WAIT, *PTP_WAIT;
+
+typedef VOID (NTAPI *PTP_WAIT_CALLBACK)(
+    _Inout_     PTP_CALLBACK_INSTANCE Instance,
+    _Inout_opt_ PVOID                 Context,
+    _Inout_     PTP_WAIT              Wait,
+    _In_        TP_WAIT_RESULT        WaitResult
+    );
+
+typedef struct _TP_IO TP_IO, *PTP_IO;
+
+typedef
+VOID
+(WINAPI *PTP_WIN32_IO_CALLBACK)(
+    _Inout_     PTP_CALLBACK_INSTANCE Instance,
+    _Inout_opt_ PVOID                 Context,
+    _Inout_opt_ PVOID                 Overlapped,
+    _In_        ULONG                 IoResult,
+    _In_        ULONG_PTR             NumberOfBytesTransferred,
+    _Inout_     PTP_IO                Io
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+PTP_POOL
+WINAPI
+CreateThreadpool(
+    _Reserved_ PVOID reserved
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+SetThreadpoolThreadMaximum(
+    _Inout_ PTP_POOL ptpp,
+    _In_ DWORD cthrdMost
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetThreadpoolThreadMinimum(
+    _Inout_ PTP_POOL ptpp,
+    _In_ DWORD cthrdMic
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetThreadpoolStackInformation(
+    _Inout_ PTP_POOL ptpp,
+    _In_ PTP_POOL_STACK_INFORMATION ptpsi
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+QueryThreadpoolStackInformation(
+    _In_ PTP_POOL ptpp,
+    _Out_ PTP_POOL_STACK_INFORMATION ptpsi
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CloseThreadpool(
+    _Inout_ PTP_POOL ptpp
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+PTP_CLEANUP_GROUP
+WINAPI
+CreateThreadpoolCleanupGroup(
+    VOID
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CloseThreadpoolCleanupGroupMembers(
+    _Inout_ PTP_CLEANUP_GROUP ptpcg,
+    _In_ BOOL fCancelPendingCallbacks,
+    _Inout_opt_ PVOID pvCleanupContext
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CloseThreadpoolCleanupGroup(
+    _Inout_ PTP_CLEANUP_GROUP ptpcg
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+SetEventWhenCallbackReturns(
+    _Inout_ PTP_CALLBACK_INSTANCE pci,
+    _In_ HANDLE evt
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+ReleaseSemaphoreWhenCallbackReturns(
+    _Inout_ PTP_CALLBACK_INSTANCE pci,
+    _In_ HANDLE sem,
+    _In_ DWORD crel
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+ReleaseMutexWhenCallbackReturns(
+    _Inout_ PTP_CALLBACK_INSTANCE pci,
+    _In_ HANDLE mut
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+LeaveCriticalSectionWhenCallbackReturns(
+    _Inout_ PTP_CALLBACK_INSTANCE pci,
+    _Inout_ PCRITICAL_SECTION pcs
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+FreeLibraryWhenCallbackReturns(
+    _Inout_ PTP_CALLBACK_INSTANCE pci,
+    _In_ HMODULE mod
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+CallbackMayRunLong(
+    _Inout_ PTP_CALLBACK_INSTANCE pci
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+DisassociateCurrentThreadFromCallback(
+    _Inout_ PTP_CALLBACK_INSTANCE pci
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+BOOL
+WINAPI
+TrySubmitThreadpoolCallback(
+    _In_ PTP_SIMPLE_CALLBACK pfns,
+    _Inout_opt_ PVOID pv,
+    _In_opt_ PTP_CALLBACK_ENVIRON pcbe
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+PTP_WORK
+WINAPI
+CreateThreadpoolWork(
+    _In_ PTP_WORK_CALLBACK pfnwk,
+    _Inout_opt_ PVOID pv,
+    _In_opt_ PTP_CALLBACK_ENVIRON pcbe
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+SubmitThreadpoolWork(
+    _Inout_ PTP_WORK pwk
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+WaitForThreadpoolWorkCallbacks(
+    _Inout_ PTP_WORK pwk,
+    _In_ BOOL fCancelPendingCallbacks
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CloseThreadpoolWork(
+    _Inout_ PTP_WORK pwk
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+PTP_TIMER
+WINAPI
+CreateThreadpoolTimer(
+    _In_ PTP_TIMER_CALLBACK pfnti,
+    _Inout_opt_ PVOID pv,
+    _In_opt_ PTP_CALLBACK_ENVIRON pcbe
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+SetThreadpoolTimer(
+    _Inout_ PTP_TIMER pti,
+    _In_opt_ PFILETIME pftDueTime,
+    _In_ DWORD msPeriod,
+    _In_opt_ DWORD msWindowLength
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+IsThreadpoolTimerSet(
+    _Inout_ PTP_TIMER pti
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+WaitForThreadpoolTimerCallbacks(
+    _Inout_ PTP_TIMER pti,
+    _In_ BOOL fCancelPendingCallbacks
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CloseThreadpoolTimer(
+    _Inout_ PTP_TIMER pti
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+PTP_WAIT
+WINAPI
+CreateThreadpoolWait(
+    _In_ PTP_WAIT_CALLBACK pfnwa,
+    _Inout_opt_ PVOID pv,
+    _In_opt_ PTP_CALLBACK_ENVIRON pcbe
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+SetThreadpoolWait(
+    _Inout_ PTP_WAIT pwa,
+    _In_opt_ HANDLE h,
+    _In_opt_ PFILETIME pftTimeout
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+WaitForThreadpoolWaitCallbacks(
+    _Inout_ PTP_WAIT pwa,
+    _In_ BOOL fCancelPendingCallbacks
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CloseThreadpoolWait(
+    _Inout_ PTP_WAIT pwa
+    );
+
+WINBASEAPI
+_Must_inspect_result_
+PTP_IO
+WINAPI
+CreateThreadpoolIo(
+    _In_ HANDLE fl,
+    _In_ PTP_WIN32_IO_CALLBACK pfnio,
+    _Inout_opt_ PVOID pv,
+    _In_opt_ PTP_CALLBACK_ENVIRON pcbe
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+StartThreadpoolIo(
+    _Inout_ PTP_IO pio
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CancelThreadpoolIo(
+    _Inout_ PTP_IO pio
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+WaitForThreadpoolIoCallbacks(
+    _Inout_ PTP_IO pio,
+    _In_ BOOL fCancelPendingCallbacks
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+CloseThreadpoolIo(
+    _Inout_ PTP_IO pio
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetThreadpoolTimerEx(
+    _Inout_ PTP_TIMER pti,
+    _In_opt_ PFILETIME pftDueTime,
+    _In_ DWORD msPeriod,
+    _In_opt_ DWORD msWindowLength
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetThreadpoolWaitEx(
+    _Inout_ PTP_WAIT pwa,
+    _In_opt_ HANDLE h,
+    _In_opt_ PFILETIME pftTimeout,
+    _Reserved_ PVOID Reserved
+    );
+
+
+
+#ifndef RtlOffsetToPointer
+#define RtlOffsetToPointer(B,O)    ((PCHAR)(((PCHAR)(B)) + ((ULONG_PTR)(O))))
+#endif
+
+#ifndef RtlOffsetFromPointer
+#define RtlOffsetFromPointer(B,O)  ((PCHAR)(((PCHAR)(B)) - ((ULONG_PTR)(O))))
+#endif
+
+#ifndef RtlPointerToOffset
+#define RtlPointerToOffset(B,P)    ((ULONG_PTR)(((PCHAR)(P)) - ((PCHAR)(B))))
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#define SUCCEEDED(hr) (((HRESULT)(hr)) >= 0)
+#define FAILED(hr) (((HRESULT)(hr)) < 0)
+
+#ifdef __cplusplus
+#ifndef EXTERN_C
+#define EXTERN_C extern "C"
+#endif
+#ifndef EXTERN_C_BEGIN
+#define EXTERN_C_BEGIN EXTERN_C {
+#endif
+#ifndef EXTERN_C_END
+#define EXTERN_C_END }
+#endif
+#else
+#ifndef EXTERN_C
+#define EXTERN_C
+#endif
+#ifndef EXTERN_C_BEGIN
+#define EXTERN_C_BEGIN
+#endif
+#ifndef EXTERN_C_END
+#define EXTERN_C_END
+#endif
+#endif
+
+//
+// Run once
+//
+
+#define RTL_RUN_ONCE_INIT {0}   // Static initializer
+
+//
+// Run once flags
+//
+
+#define RTL_RUN_ONCE_CHECK_ONLY     0x00000001UL
+#define RTL_RUN_ONCE_ASYNC          0x00000002UL
+#define RTL_RUN_ONCE_INIT_FAILED    0x00000004UL
+
+//
+// The context stored in the run once structure must leave the following number
+// of low order bits unused.
+//
+
+#define RTL_RUN_ONCE_CTX_RESERVED_BITS 2
+#define INIT_ONCE_CTX_RESERVED_BITS 2
+
+typedef union _RTL_RUN_ONCE {
+    PVOID Ptr;
+} RTL_RUN_ONCE, *PRTL_RUN_ONCE;
+
+typedef struct _RTL_BARRIER {
+    DWORD Reserved1;
+    DWORD Reserved2;
+    ULONG_PTR Reserved3[2];
+    DWORD Reserved4;
+    DWORD Reserved5;
+} RTL_BARRIER, *PRTL_BARRIER;
+
+typedef RTL_RUN_ONCE INIT_ONCE;
+typedef INIT_ONCE *PINIT_ONCE;
+
+#include "debugbreak.h"
+#define __debugbreak psnip_trap
+
+#if defined(__x86_64__)
+#define _M_X64
+#define _M_AMD64
+#define _AMD64_
+#define _WIN64
+#include <immintrin.h>
+#endif
+
+#ifdef __has_builtin
+#if __has_builtin(__builtin_offsetof)
+#define FIELD_OFFSET(type, field)    ((LONG)__builtin_offsetof(type, field))
+#define UFIELD_OFFSET(type, field)    ((DWORD)__builtin_offsetof(type, field))
+#endif
+#endif
+
+#ifndef FIELD_OFFSET
+#define FIELD_OFFSET(type, field)    ((LONG)(LONG_PTR)&(((type *)0)->field))
+#define UFIELD_OFFSET(type, field)    ((DWORD)(LONG_PTR)&(((type *)0)->field))
+#endif
+
+//
+// For compilers that don't support nameless unions/structs
+//
+#ifndef DUMMYUNIONNAME
+#if defined(NONAMELESSUNION) || !defined(_MSC_EXTENSIONS)
+#define DUMMYUNIONNAME   u
+#define DUMMYUNIONNAME2  u2
+#define DUMMYUNIONNAME3  u3
+#define DUMMYUNIONNAME4  u4
+#define DUMMYUNIONNAME5  u5
+#define DUMMYUNIONNAME6  u6
+#define DUMMYUNIONNAME7  u7
+#define DUMMYUNIONNAME8  u8
+#define DUMMYUNIONNAME9  u9
+#else
+#define DUMMYUNIONNAME
+#define DUMMYUNIONNAME2
+#define DUMMYUNIONNAME3
+#define DUMMYUNIONNAME4
+#define DUMMYUNIONNAME5
+#define DUMMYUNIONNAME6
+#define DUMMYUNIONNAME7
+#define DUMMYUNIONNAME8
+#define DUMMYUNIONNAME9
+#endif
+#endif // DUMMYUNIONNAME
+
+#ifndef DUMMYSTRUCTNAME
+#if defined(NONAMELESSUNION) || !defined(_MSC_EXTENSIONS)
+#define DUMMYSTRUCTNAME  s
+#define DUMMYSTRUCTNAME2 s2
+#define DUMMYSTRUCTNAME3 s3
+#define DUMMYSTRUCTNAME4 s4
+#define DUMMYSTRUCTNAME5 s5
+#define DUMMYSTRUCTNAME6 s6
+#else
+#define DUMMYSTRUCTNAME
+#define DUMMYSTRUCTNAME2
+#define DUMMYSTRUCTNAME3
+#define DUMMYSTRUCTNAME4
+#define DUMMYSTRUCTNAME5
+#define DUMMYSTRUCTNAME6
+#endif
+#endif // DUMMYSTRUCTNAME
+
+#define EXCEPTION_NONCONTINUABLE 0x1        // Noncontinuable exception
+#define EXCEPTION_UNWINDING 0x2             // Unwind is in progress
+#define EXCEPTION_EXIT_UNWIND 0x4           // Exit unwind is in progress
+#define EXCEPTION_STACK_INVALID 0x8         // Stack out of limits or unaligned
+#define EXCEPTION_NESTED_CALL 0x10          // Nested exception handler call
+#define EXCEPTION_TARGET_UNWIND 0x20        // Target unwind in progress
+#define EXCEPTION_COLLIDED_UNWIND 0x40      // Collided exception handler call
+#define EXCEPTION_SOFTWARE_ORIGINATE 0x80   // Exception originated in software
+
+#define EXCEPTION_UNWIND (EXCEPTION_UNWINDING | EXCEPTION_EXIT_UNWIND | \
+                          EXCEPTION_TARGET_UNWIND | EXCEPTION_COLLIDED_UNWIND)
+
+#define IS_UNWINDING(Flag) ((Flag & EXCEPTION_UNWIND) != 0)
+#define IS_DISPATCHING(Flag) ((Flag & EXCEPTION_UNWIND) == 0)
+#define IS_TARGET_UNWIND(Flag) (Flag & EXCEPTION_TARGET_UNWIND)
+
+#define EXCEPTION_MAXIMUM_PARAMETERS 15 // maximum number of exception parameters
+
+//#ifndef DECLSPEC_ALIGN
+#define DECLSPEC_ALIGN(x) __attribute__ ((aligned(x)))
+//#endif
+
+typedef struct _FILE_BASIC_INFO {
+    LARGE_INTEGER CreationTime;
+    LARGE_INTEGER LastAccessTime;
+    LARGE_INTEGER LastWriteTime;
+    LARGE_INTEGER ChangeTime;
+    DWORD FileAttributes;
+} FILE_BASIC_INFO, *PFILE_BASIC_INFO;
+
+typedef struct _FILE_STANDARD_INFO {
+    LARGE_INTEGER AllocationSize;
+    LARGE_INTEGER EndOfFile;
+    DWORD NumberOfLinks;
+    BOOLEAN DeletePending;
+    BOOLEAN Directory;
+} FILE_STANDARD_INFO, *PFILE_STANDARD_INFO;
+
+typedef struct _FILE_NAME_INFO {
+    DWORD FileNameLength;
+    WCHAR FileName[1];
+} FILE_NAME_INFO, *PFILE_NAME_INFO;
+
+typedef struct _MODULEINFO {
+    LPVOID lpBaseOfDll;
+    DWORD SizeOfImage;
+    LPVOID EntryPoint;
+} MODULEINFO, *LPMODULEINFO;
+
+BOOL
+WINAPI
+GetModuleInformation(
+    _In_ HANDLE hProcess,
+    _In_ HMODULE hModule,
+    _Out_ LPMODULEINFO lpmodinfo,
+    _In_ DWORD cb
+    );
+
+#define ANYSIZE_ARRAY 1
+
+#define ALL_PROCESSOR_GROUPS        0xffff
+
+typedef ULONG_PTR KAFFINITY;
+typedef KAFFINITY *PKAFFINITY;
+
+//
+// Structure to represent a system wide processor number. It contains a
+// group number and relative processor number within the group.
+//
+
+typedef struct _PROCESSOR_NUMBER {
+    WORD   Group;
+    BYTE  Number;
+    BYTE  Reserved;
+} PROCESSOR_NUMBER, *PPROCESSOR_NUMBER;
+
+//
+// Structure to represent a group-specific affinity, such as that of a
+// thread.  Specifies the group number and the affinity within that group.
+//
+
+typedef struct _GROUP_AFFINITY {
+    KAFFINITY Mask;
+    WORD   Group;
+    WORD   Reserved[3];
+} GROUP_AFFINITY, *PGROUP_AFFINITY;
+
+typedef enum _LOGICAL_PROCESSOR_RELATIONSHIP {
+    RelationProcessorCore,
+    RelationNumaNode,
+    RelationCache,
+    RelationProcessorPackage,
+    RelationGroup,
+    RelationProcessorDie,
+    RelationNumaNodeEx,
+    RelationProcessorModule,
+    RelationAll = 0xffff
+} LOGICAL_PROCESSOR_RELATIONSHIP;
+
+#define LTP_PC_SMT 0x1
+
+typedef enum _PROCESSOR_CACHE_TYPE {
+    CacheUnified,
+    CacheInstruction,
+    CacheData,
+    CacheTrace
+} PROCESSOR_CACHE_TYPE;
+
+#define CACHE_FULLY_ASSOCIATIVE 0xFF
+
+typedef struct _CACHE_DESCRIPTOR {
+    BYTE   Level;
+    BYTE   Associativity;
+    WORD   LineSize;
+    DWORD  Size;
+    PROCESSOR_CACHE_TYPE Type;
+} CACHE_DESCRIPTOR, *PCACHE_DESCRIPTOR;
+
+typedef struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION {
+    ULONG_PTR   ProcessorMask;
+    LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
+    union {
+        struct {
+            BYTE  Flags;
+        } ProcessorCore;
+        struct {
+            DWORD NodeNumber;
+        } NumaNode;
+        CACHE_DESCRIPTOR Cache;
+        ULONGLONG  Reserved[2];
+    } DUMMYUNIONNAME;
+} SYSTEM_LOGICAL_PROCESSOR_INFORMATION, *PSYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+
+typedef struct _PROCESSOR_RELATIONSHIP {
+    BYTE  Flags;
+    BYTE  EfficiencyClass;
+    BYTE  Reserved[20];
+    WORD   GroupCount;
+    _Field_size_(GroupCount) GROUP_AFFINITY GroupMask[ANYSIZE_ARRAY];
+} PROCESSOR_RELATIONSHIP, *PPROCESSOR_RELATIONSHIP;
+
+typedef struct _NUMA_NODE_RELATIONSHIP {
+    DWORD NodeNumber;
+    BYTE  Reserved[18];
+    WORD   GroupCount;
+    union {
+        GROUP_AFFINITY GroupMask;
+        _Field_size_(GroupCount)
+        GROUP_AFFINITY GroupMasks[ANYSIZE_ARRAY];
+    } DUMMYUNIONNAME;
+} NUMA_NODE_RELATIONSHIP, *PNUMA_NODE_RELATIONSHIP;
+
+typedef struct _CACHE_RELATIONSHIP {
+    BYTE  Level;
+    BYTE  Associativity;
+    WORD   LineSize;
+    DWORD CacheSize;
+    PROCESSOR_CACHE_TYPE Type;
+    BYTE  Reserved[18];
+    WORD   GroupCount;
+    union {
+        GROUP_AFFINITY GroupMask;
+        _Field_size_(GroupCount)
+        GROUP_AFFINITY GroupMasks[ANYSIZE_ARRAY];
+    } DUMMYUNIONNAME;
+} CACHE_RELATIONSHIP, *PCACHE_RELATIONSHIP;
+
+typedef struct _PROCESSOR_GROUP_INFO {
+    BYTE  MaximumProcessorCount;
+    BYTE  ActiveProcessorCount;
+    BYTE  Reserved[38];
+    KAFFINITY ActiveProcessorMask;
+} PROCESSOR_GROUP_INFO, *PPROCESSOR_GROUP_INFO;
+
+typedef struct _GROUP_RELATIONSHIP {
+    WORD   MaximumGroupCount;
+    WORD   ActiveGroupCount;
+    BYTE  Reserved[20];
+    _Field_size_(ActiveGroupCount) PROCESSOR_GROUP_INFO GroupInfo[ANYSIZE_ARRAY];
+} GROUP_RELATIONSHIP, *PGROUP_RELATIONSHIP;
+
+_Struct_size_bytes_(Size) struct _SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
+    LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
+    DWORD Size;
+    union {
+        PROCESSOR_RELATIONSHIP Processor;
+        NUMA_NODE_RELATIONSHIP NumaNode;
+        CACHE_RELATIONSHIP Cache;
+        GROUP_RELATIONSHIP Group;
+    } DUMMYUNIONNAME;
+};
+
+typedef struct _SECURITY_ATTRIBUTES {
+    DWORD nLength;
+    LPVOID lpSecurityDescriptor;
+    BOOL bInheritHandle;
+} SECURITY_ATTRIBUTES, *PSECURITY_ATTRIBUTES, *LPSECURITY_ATTRIBUTES;
+
+//
+// SLISTs
+//
+
+typedef struct DECLSPEC_ALIGN(16) _SLIST_ENTRY {
+    struct _SLIST_ENTRY *Next;
+} SLIST_ENTRY, *PSLIST_ENTRY;
+
+typedef union DECLSPEC_ALIGN(16) _SLIST_HEADER {
+    struct {  // original struct
+        ULONGLONG Alignment;
+        ULONGLONG Region;
+    } DUMMYSTRUCTNAME;
+    struct {  // x64 16-byte header
+        ULONGLONG Depth:16;
+        ULONGLONG Sequence:48;
+        ULONGLONG Reserved:4;
+        ULONGLONG NextEntry:60; // last 4 bits are always 0's
+    } HeaderX64;
+} SLIST_HEADER, *PSLIST_HEADER;
+
+#define MAX_COMPUTERNAME_LENGTH 31
+
+WINBASEAPI
+_Success_(return != 0)
+BOOL
+WINAPI
+GetComputerNameA (
+    _Out_writes_to_opt_(*nSize, *nSize + 1) LPSTR lpBuffer,
+    _Inout_ LPDWORD nSize
+    );
+
+WINBASEAPI
+_Success_(return != 0)
+BOOL
+WINAPI
+GetComputerNameW (
+    _Out_writes_to_opt_(*nSize, *nSize + 1) LPWSTR lpBuffer,
+    _Inout_ LPDWORD nSize
+    );
+
+#define BitTest _bittest
+#define BitTestAndComplement _bittestandcomplement
+#define BitTestAndSet _bittestandset
+#define BitTestAndReset _bittestandreset
+#define BitTest64 _bittest64
+#define BitTestAndComplement64 _bittestandcomplement64
+#define BitTestAndSet64 _bittestandset64
+#define BitTestAndReset64 _bittestandreset64
+
+_Must_inspect_result_
+BOOLEAN
+_bittest (
+    _In_reads_bytes_((Offset/8)+1) LONG const *Base,
+    _In_range_(>=,0) LONG Offset
+    );
+
+BOOLEAN
+_bittestandcomplement (
+    _Inout_updates_bytes_((Offset/8)+1) LONG *Base,
+    _In_range_(>=,0) LONG Offset
+    );
+
+BOOLEAN
+_bittestandset (
+    _Inout_updates_bytes_((Offset/8)+1) LONG *Base,
+    _In_range_(>=,0) LONG Offset
+    );
+
+BOOLEAN
+_bittestandreset (
+    _Inout_updates_bytes_((Offset/8)+1) LONG *Base,
+    _In_range_(>=,0) LONG Offset
+    );
+
+BOOLEAN
+_interlockedbittestandset (
+    _Inout_updates_bytes_((Offset/8)+1) _Interlocked_operand_ LONG volatile *Base,
+    _In_range_(>=,0) LONG Offset
+    );
+
+BOOLEAN
+_interlockedbittestandreset (
+    _Inout_updates_bytes_((Offset/8)+1) _Interlocked_operand_ LONG volatile *Base,
+    _In_range_(>=,0) LONG Offset
+    );
+
+BOOLEAN
+_bittest64 (
+    _In_reads_bytes_((Offset/8)+1) LONG64 const *Base,
+    _In_range_(>=,0) LONG64 Offset
+    );
+
+BOOLEAN
+_bittestandcomplement64 (
+    _Inout_updates_bytes_((Offset/8)+1) LONG64 *Base,
+    _In_range_(>=,0) LONG64 Offset
+    );
+
+BOOLEAN
+_bittestandset64 (
+    _Inout_updates_bytes_((Offset/8)+1) LONG64 *Base,
+    _In_range_(>=,0) LONG64 Offset
+    );
+
+BOOLEAN
+_bittestandreset64 (
+    _Inout_updates_bytes_((Offset/8)+1) LONG64 *Base,
+    _In_range_(>=,0) LONG64 Offset
+    );
+
+BOOLEAN
+_interlockedbittestandset64 (
+    _Inout_updates_bytes_((Offset/8)+1) _Interlocked_operand_ LONG64 volatile *Base,
+    _In_range_(>=,0) LONG64 Offset
+    );
+
+BOOLEAN
+_interlockedbittestandreset64 (
+    _Inout_updates_bytes_((Offset/8)+1) _Interlocked_operand_ LONG64 volatile *Base,
+    _In_range_(>=,0) LONG64 Offset
+    );
+
+#define __popcnt __builtin_popcount
+#define __popcnt64 __builtin_popcountll
+#define _tzcnt_u32 __builtin_ctz
+#define _tzcnt_u64 __builtin_ctzll
+#define _lzcnt_u32 __builtin_clz
+#define _lzcnt_u64 __builtin_clzll
+
+#define InterlockedIncrement(v) __sync_add_and_fetch(v, 1)
+#define InterlockedIncrement64(v) __sync_add_and_fetch(v, 1)
+
+#define InterlockedDecrement(v) __sync_sub_and_fetch(v, 1)
+#define InterlockedDecrement64(v) __sync_sub_and_fetch(v, 1)
+
+#ifndef min
+#define min(X,Y) ((X) < (Y) ? (X) : (Y))
+#endif
+
+#define HEAP_NO_SERIALIZE               0x00000001
+#define HEAP_GROWABLE                   0x00000002
+#define HEAP_GENERATE_EXCEPTIONS        0x00000004
+#define HEAP_ZERO_MEMORY                0x00000008
+#define HEAP_REALLOC_IN_PLACE_ONLY      0x00000010
+#define HEAP_TAIL_CHECKING_ENABLED      0x00000020
+#define HEAP_FREE_CHECKING_ENABLED      0x00000040
+#define HEAP_DISABLE_COALESCE_ON_FREE   0x00000080
+#define HEAP_CREATE_ALIGN_16            0x00010000
+#define HEAP_CREATE_ENABLE_TRACING      0x00020000
+#define HEAP_CREATE_ENABLE_EXECUTE      0x00040000
+#define HEAP_MAXIMUM_TAG                0x0FFF
+#define HEAP_PSEUDO_TAG_FLAG            0x8000
+#define HEAP_TAG_SHIFT                  18
+#define HEAP_CREATE_SEGMENT_HEAP        0x00000100
+#define HEAP_CREATE_HARDENED            0x00000200
+
+WINBASEAPI
+BOOL
+WINAPI
+SetEvent(
+    _In_ HANDLE hEvent
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+ResetEvent(
+    _In_ HANDLE hEvent
+    );
+
+WINBASEAPI
+_Check_return_
+_Post_equals_last_error_
+DWORD
+WINAPI
+GetLastError(
+    VOID
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+SetLastError(
+    _In_ DWORD dwErrCode
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+QueryPerformanceCounter(
+    _Out_ LARGE_INTEGER* lpPerformanceCount
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+QueryPerformanceFrequency(
+    _Out_ LARGE_INTEGER* lpFrequency
+    );
+
+WINBASEAPI
+ULONGLONG
+WINAPI
+GetTickCount64(
+    VOID
+    );
+
+#define STATUS_WAIT_0                    ((DWORD   )0x00000000L)
+#define STATUS_ABANDONED_WAIT_0          ((DWORD   )0x00000080L)
+#define STATUS_USER_APC                  ((DWORD   )0x000000C0L)
+#define STATUS_TIMEOUT                   ((DWORD   )0x00000102L)
+#define STATUS_PENDING                   ((DWORD   )0x00000103L)
+
+#define INFINITE            0xFFFFFFFF  // Infinite timeout
+
+#define WAIT_FAILED ((DWORD)0xFFFFFFFF)
+
+#define WAIT_OBJECT_0       ((STATUS_WAIT_0 ) + 0 )
+
+#define WAIT_ABANDONED         ((STATUS_ABANDONED_WAIT_0 ) + 0 )
+#define WAIT_ABANDONED_0       ((STATUS_ABANDONED_WAIT_0 ) + 0 )
+
+#define WAIT_IO_COMPLETION                  STATUS_USER_APC
+
+WINBASEAPI
+DWORD
+WINAPI
+WaitForSingleObject(
+    _In_ HANDLE hHandle,
+    _In_ DWORD dwMilliseconds
+    );
+
+WINBASEAPI
+DWORD
+WINAPI
+WaitForMultipleObjects(
+    _In_ DWORD nCount,
+    _In_reads_(nCount) CONST HANDLE* lpHandles,
+    _In_ BOOL bWaitAll,
+    _In_ DWORD dwMilliseconds
+    );
+
+#define SRWLOCK_INIT RTL_SRWLOCK_INIT
+
+typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
+
+WINBASEAPI
+VOID
+WINAPI
+InitializeSRWLock(
+    _Out_ PSRWLOCK SRWLock
+    );
+
+WINBASEAPI
+_Releases_exclusive_lock_(*SRWLock)
+VOID
+WINAPI
+ReleaseSRWLockExclusive(
+    _Inout_ PSRWLOCK SRWLock
+    );
+
+WINBASEAPI
+_Releases_shared_lock_(*SRWLock)
+VOID
+WINAPI
+ReleaseSRWLockShared(
+    _Inout_ PSRWLOCK SRWLock
+    );
+
+WINBASEAPI
+_Acquires_exclusive_lock_(*SRWLock)
+VOID
+WINAPI
+AcquireSRWLockExclusive(
+    _Inout_ PSRWLOCK SRWLock
+    );
+
+WINBASEAPI
+_Acquires_shared_lock_(*SRWLock)
+VOID
+WINAPI
+AcquireSRWLockShared(
+    _Inout_ PSRWLOCK SRWLock
+    );
+
+WINBASEAPI
+_When_(return!=0, _Acquires_exclusive_lock_(*SRWLock))
+BOOLEAN
+WINAPI
+TryAcquireSRWLockExclusive(
+    _Inout_ PSRWLOCK SRWLock
+    );
+
+WINBASEAPI
+_When_(return!=0, _Acquires_shared_lock_(*SRWLock))
+BOOLEAN
+WINAPI
+TryAcquireSRWLockShared(
+    _Inout_ PSRWLOCK SRWLock
+    );
+
+typedef struct _OVERLAPPED {
+    ULONG_PTR Internal;
+    ULONG_PTR InternalHigh;
+    union {
+        struct {
+            DWORD Offset;
+            DWORD OffsetHigh;
+        } DUMMYSTRUCTNAME;
+        PVOID Pointer;
+    } DUMMYUNIONNAME;
+
+    HANDLE  hEvent;
+} OVERLAPPED, *LPOVERLAPPED;
+
+typedef struct _OVERLAPPED_ENTRY {
+    ULONG_PTR lpCompletionKey;
+    LPOVERLAPPED lpOverlapped;
+    ULONG_PTR Internal;
+    DWORD dwNumberOfBytesTransferred;
+} OVERLAPPED_ENTRY, *LPOVERLAPPED_ENTRY;
+
+WINBASEAPI
+BOOL
+WINAPI
+WriteFile(
+    _In_ HANDLE hFile,
+    _In_reads_bytes_opt_(nNumberOfBytesToWrite) LPCVOID lpBuffer,
+    _In_ DWORD nNumberOfBytesToWrite,
+    _Out_opt_ LPDWORD lpNumberOfBytesWritten,
+    _Inout_opt_ LPOVERLAPPED lpOverlapped
+    );
+
+#define CONTAINING_RECORD(address, type, field) ((type *)( \
+                                                  (PCHAR)(address) - \
+                                                  (ULONG_PTR)(&((type *)0)->field)))
+
+#define PAGE_NOACCESS           0x01
+#define PAGE_READONLY           0x02
+#define PAGE_READWRITE          0x04
+#define PAGE_WRITECOPY          0x08
+#define PAGE_EXECUTE            0x10
+#define PAGE_EXECUTE_READ       0x20
+#define PAGE_EXECUTE_READWRITE  0x40
+#define PAGE_EXECUTE_WRITECOPY  0x80
+#define PAGE_GUARD             0x100
+#define PAGE_NOCACHE           0x200
+#define PAGE_WRITECOMBINE      0x400
+#define PAGE_GRAPHICS_NOACCESS           0x0800
+#define PAGE_GRAPHICS_READONLY           0x1000
+#define PAGE_GRAPHICS_READWRITE          0x2000
+#define PAGE_GRAPHICS_EXECUTE            0x4000
+#define PAGE_GRAPHICS_EXECUTE_READ       0x8000
+#define PAGE_GRAPHICS_EXECUTE_READWRITE 0x10000
+#define PAGE_GRAPHICS_COHERENT          0x20000
+#define PAGE_GRAPHICS_NOCACHE           0x40000
+#define PAGE_ENCLAVE_THREAD_CONTROL 0x80000000
+#define PAGE_REVERT_TO_FILE_MAP     0x80000000
+#define PAGE_TARGETS_NO_UPDATE      0x40000000
+#define PAGE_TARGETS_INVALID        0x40000000
+#define PAGE_ENCLAVE_UNVALIDATED    0x20000000
+#define PAGE_ENCLAVE_MASK           0x10000000
+#define PAGE_ENCLAVE_DECOMMIT       (PAGE_ENCLAVE_MASK | 0)
+#define PAGE_ENCLAVE_SS_FIRST       (PAGE_ENCLAVE_MASK | 1)
+#define PAGE_ENCLAVE_SS_REST        (PAGE_ENCLAVE_MASK | 2)
+#define MEM_COMMIT                      0x00001000
+#define MEM_RESERVE                     0x00002000
+#define MEM_REPLACE_PLACEHOLDER         0x00004000
+#define MEM_RESERVE_PLACEHOLDER         0x00040000
+#define MEM_RESET                       0x00080000
+#define MEM_TOP_DOWN                    0x00100000
+#define MEM_WRITE_WATCH                 0x00200000
+#define MEM_PHYSICAL                    0x00400000
+#define MEM_ROTATE                      0x00800000
+#define MEM_DIFFERENT_IMAGE_BASE_OK     0x00800000
+#define MEM_RESET_UNDO                  0x01000000
+#define MEM_LARGE_PAGES                 0x20000000
+#define MEM_4MB_PAGES                   0x80000000
+#define MEM_64K_PAGES                   (MEM_LARGE_PAGES | MEM_PHYSICAL)
+#define MEM_UNMAP_WITH_TRANSIENT_BOOST  0x00000001
+#define MEM_COALESCE_PLACEHOLDERS       0x00000001
+#define MEM_PRESERVE_PLACEHOLDER        0x00000002
+#define MEM_DECOMMIT                    0x00004000
+#define MEM_RELEASE                     0x00008000
+#define MEM_FREE                        0x00010000
+
+typedef struct _SYSTEM_INFO {
+    union {
+        DWORD dwOemId;          // Obsolete field...do not use
+        struct {
+            WORD wProcessorArchitecture;
+            WORD wReserved;
+        } DUMMYSTRUCTNAME;
+    } DUMMYUNIONNAME;
+    DWORD dwPageSize;
+    LPVOID lpMinimumApplicationAddress;
+    LPVOID lpMaximumApplicationAddress;
+    DWORD_PTR dwActiveProcessorMask;
+    DWORD dwNumberOfProcessors;
+    DWORD dwProcessorType;
+    DWORD dwAllocationGranularity;
+    WORD wProcessorLevel;
+    WORD wProcessorRevision;
+} SYSTEM_INFO, *LPSYSTEM_INFO;
+
+typedef struct _MEMORYSTATUSEX {
+    DWORD dwLength;
+    DWORD dwMemoryLoad;
+    DWORDLONG ullTotalPhys;
+    DWORDLONG ullAvailPhys;
+    DWORDLONG ullTotalPageFile;
+    DWORDLONG ullAvailPageFile;
+    DWORDLONG ullTotalVirtual;
+    DWORDLONG ullAvailVirtual;
+    DWORDLONG ullAvailExtendedVirtual;
+} MEMORYSTATUSEX, *LPMEMORYSTATUSEX;
+
+WINBASEAPI
+BOOL
+WINAPI
+GlobalMemoryStatusEx(
+    _Out_ LPMEMORYSTATUSEX lpBuffer
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+GetSystemInfo(
+    _Out_ LPSYSTEM_INFO lpSystemInfo
+    );
+
+WINBASEAPI
+int
+WINAPI
+GetDurationFormatEx(
+    _In_opt_ LPCWSTR lpLocaleName,
+    _In_ DWORD dwFlags,
+    _In_opt_ CONST SYSTEMTIME* lpDuration,
+    _In_ ULONGLONG ullDuration,
+    _In_opt_ LPCWSTR lpFormat,
+    _Out_writes_opt_(cchDuration) LPWSTR lpDurationStr,
+    _In_ int cchDuration
+    );
+
+typedef struct _HEAP_SUMMARY {
+    DWORD cb;
+    SIZE_T cbAllocated;
+    SIZE_T cbCommitted;
+    SIZE_T cbReserved;
+    SIZE_T cbMaxReserve;
+} HEAP_SUMMARY, *PHEAP_SUMMARY;
+typedef PHEAP_SUMMARY LPHEAP_SUMMARY;
+
+//
+// Prototypes
+//
+
+WINBASEAPI
+_Ret_maybenull_
+HANDLE
+WINAPI
+HeapCreate(
+    _In_ DWORD flOptions,
+    _In_ SIZE_T dwInitialSize,
+    _In_ SIZE_T dwMaximumSize
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+HeapDestroy(
+    _In_ HANDLE hHeap
+    );
+
+WINBASEAPI
+_Ret_maybenull_
+_Post_writable_byte_size_(dwBytes)
+LPVOID
+WINAPI
+HeapAlloc(
+    _In_ HANDLE hHeap,
+    _In_ DWORD dwFlags,
+    _In_ SIZE_T dwBytes
+    );
+
+WINBASEAPI
+_Success_(return != 0)
+_Ret_maybenull_
+_Post_writable_byte_size_(dwBytes)
+LPVOID
+WINAPI
+HeapReAlloc(
+    _Inout_ HANDLE hHeap,
+    _In_ DWORD dwFlags,
+    _Frees_ptr_opt_ LPVOID lpMem,
+    _In_ SIZE_T dwBytes
+    );
+
+WINBASEAPI
+_Success_(return != FALSE)
+BOOL
+WINAPI
+HeapFree(
+    _Inout_ HANDLE hHeap,
+    _In_ DWORD dwFlags,
+    __drv_freesMem(Mem) _Frees_ptr_opt_ LPVOID lpMem
+    );
+
+WINBASEAPI
+SIZE_T
+WINAPI
+HeapSize(
+    _In_ HANDLE hHeap,
+    _In_ DWORD dwFlags,
+    _In_ LPCVOID lpMem
+    );
+
+WINBASEAPI
+HANDLE
+WINAPI
+GetProcessHeap(
+    VOID
+    );
+
+#define HEAP_NO_SERIALIZE               0x00000001
+#define HEAP_GROWABLE                   0x00000002
+#define HEAP_GENERATE_EXCEPTIONS        0x00000004
+#define HEAP_ZERO_MEMORY                0x00000008
+#define HEAP_REALLOC_IN_PLACE_ONLY      0x00000010
+#define HEAP_TAIL_CHECKING_ENABLED      0x00000020
+#define HEAP_FREE_CHECKING_ENABLED      0x00000040
+#define HEAP_DISABLE_COALESCE_ON_FREE   0x00000080
+#define HEAP_CREATE_ALIGN_16            0x00010000
+#define HEAP_CREATE_ENABLE_TRACING      0x00020000
+#define HEAP_CREATE_ENABLE_EXECUTE      0x00040000
+#define HEAP_MAXIMUM_TAG                0x0FFF
+#define HEAP_PSEUDO_TAG_FLAG            0x8000
+#define HEAP_TAG_SHIFT                  18
+#define HEAP_CREATE_SEGMENT_HEAP        0x00000100
+#define HEAP_CREATE_HARDENED            0x00000200
+
+//
+// Ctrl Event flags
+//
+
+#define CTRL_C_EVENT        0
+#define CTRL_BREAK_EVENT    1
+#define CTRL_CLOSE_EVENT    2
+// 3 is reserved!
+// 4 is reserved!
+#define CTRL_LOGOFF_EVENT   5
+#define CTRL_SHUTDOWN_EVENT 6
+
+//
+// typedef for ctrl-c handler routines
+//
+
+typedef
+BOOL
+(WINAPI *PHANDLER_ROUTINE)(
+    _In_ DWORD CtrlType
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetConsoleCtrlHandler(
+    _In_opt_ PHANDLER_ROUTINE HandlerRoutine,
+    _In_ BOOL Add
+    );
+
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+// vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cuda                         :

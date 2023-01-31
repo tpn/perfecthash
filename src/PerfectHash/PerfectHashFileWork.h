@@ -1566,10 +1566,10 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
     OUTPUT_RAW(" Makefile.\n"                         \
                "# Auto-generated.\n\n");
 
-#define OUTPUT_MAKEFILE_TARGET(Pfx)      \
-    OUTPUT_RAW("TARGET := ");            \
-    OUTPUT_STRING(&##Pfx##TargetPrefix); \
-    OUTPUT_STRING(Name);                 \
+#define OUTPUT_MAKEFILE_TARGET(Pfx)    \
+    OUTPUT_RAW("TARGET := ");          \
+    OUTPUT_STRING(&Pfx##TargetPrefix); \
+    OUTPUT_STRING(Name);               \
     OUTPUT_RAW("\n\n")
 
 #define OUTPUT_MAKEFILE_TGT_VARS()                \

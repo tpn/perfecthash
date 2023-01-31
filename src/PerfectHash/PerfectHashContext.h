@@ -406,6 +406,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     struct _PERFECT_HASH_TABLE *Table;
 
+#ifdef PH_WINDOWS
     //
     // Pointer to a CU instance, if applicable.
     //
@@ -429,6 +430,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     LONG CuDeviceOrdinal;
+#endif
 
     //
     // Minimum number of keys that need to be present in order to honor find
@@ -758,11 +760,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // main solving thread.
     //
 
-#define EXPAND_AS_EVENT(              \
-    Verb, VUpper, Name, Upper,        \
-    EofType, EofValue,                \
-    Suffix, Extension, Stream, Base   \
-)                                     \
+#define EXPAND_AS_EVENT(            \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
     HANDLE Verb##d##Name##Event;
 
 #define EXPAND_AS_FIRST_EVENT(        \
@@ -775,14 +777,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
         HANDLE First##Verb##d##Event; \
     };
 
-#define EXPAND_AS_LAST_EVENT(         \
-    Verb, VUpper, Name, Upper,        \
-    EofType, EofValue,                \
-    Suffix, Extension, Stream, Base   \
-)                                     \
-    union {                           \
-        HANDLE Verb##d##Name##Event;  \
-        HANDLE Last##Verb##d##Event;  \
+#define EXPAND_AS_LAST_EVENT(        \
+    Verb, VUpper, Name, Upper,       \
+    EofType, EofValue,               \
+    Suffix, Extension, Stream, Base  \
+)                                    \
+    union {                          \
+        HANDLE Verb##d##Name##Event; \
+        HANDLE Last##Verb##d##Event; \
     };
 
     PREPARE_FILE_WORK_TABLE(EXPAND_AS_FIRST_EVENT,
@@ -1105,6 +1107,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     // Pointers to function hook related infrastructure.
     //
 
+#ifdef PH_WINDOWS
     HMODULE CallbackModule;
     HMODULE FunctionHookModule;
     PCUNICODE_STRING CallbackDllPath;
@@ -1137,6 +1140,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PFUNCTION_ENTRY_CALLBACK CallbackFunction;
     ULONG CallbackModuleSizeInBytes;
     ULONG CallbackModuleIgnoreRip;
+#endif
 
     //
     // Backing vtbl.
@@ -1239,32 +1243,32 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 // QueryPerformanceCounter() routine.
 //
 
-#define CONTEXT_START_TIMERS(Name)                           \
-    QueryPerformanceCounter(&Context->##Name##StartCounter); \
-    Context->##Name##StartCycles.QuadPart = __rdtsc()
+#define CONTEXT_START_TIMERS(Name)                         \
+    QueryPerformanceCounter(&Context->Name##StartCounter); \
+    Context->Name##StartCycles.QuadPart = __rdtsc()
 
-#define CONTEXT_END_TIMERS(Name)                              \
-    Context->##Name##EndCycles.QuadPart = __rdtsc();          \
-    QueryPerformanceCounter(&Context->##Name##EndCounter);    \
-    Context->##Name##ElapsedCycles.QuadPart = (               \
-        Context->##Name##EndCycles.QuadPart -                 \
-        Context->##Name##StartCycles.QuadPart                 \
-    );                                                        \
-    Context->##Name##ElapsedMicroseconds.QuadPart = (         \
-        Context->##Name##EndCounter.QuadPart -                \
-        Context->##Name##StartCounter.QuadPart                \
-    );                                                        \
-    Context->##Name##ElapsedMicroseconds.QuadPart *= 1000000; \
-    Context->##Name##ElapsedMicroseconds.QuadPart /= (        \
-        Context->Frequency.QuadPart                           \
+#define CONTEXT_END_TIMERS(Name)                            \
+    Context->Name##EndCycles.QuadPart = __rdtsc();          \
+    QueryPerformanceCounter(&Context->Name##EndCounter);    \
+    Context->Name##ElapsedCycles.QuadPart = (               \
+        Context->Name##EndCycles.QuadPart -                 \
+        Context->Name##StartCycles.QuadPart                 \
+    );                                                      \
+    Context->Name##ElapsedMicroseconds.QuadPart = (         \
+        Context->Name##EndCounter.QuadPart -                \
+        Context->Name##StartCounter.QuadPart                \
+    );                                                      \
+    Context->Name##ElapsedMicroseconds.QuadPart *= 1000000; \
+    Context->Name##ElapsedMicroseconds.QuadPart /= (        \
+        Context->Frequency.QuadPart                         \
     )
 
 #define CONTEXT_SAVE_TIMERS_TO_TABLE_INFO_ON_DISK(Name) \
-    TableInfoOnDisk->##Name##Cycles.QuadPart = (        \
-        Context->##Name##ElapsedCycles.QuadPart         \
+    TableInfoOnDisk->Name##Cycles.QuadPart = (          \
+        Context->Name##ElapsedCycles.QuadPart           \
     );                                                  \
-    TableInfoOnDisk->##Name##Microseconds.QuadPart = (  \
-        Context->##Name##ElapsedMicroseconds.QuadPart   \
+    TableInfoOnDisk->Name##Microseconds.QuadPart = (    \
+        Context->Name##ElapsedMicroseconds.QuadPart     \
     )
 
 //

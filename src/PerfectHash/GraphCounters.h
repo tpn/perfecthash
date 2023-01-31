@@ -40,21 +40,21 @@ Abstract:
 
 #define STOP_GRAPH_COUNTER(Name)                                            \
     QueryPerformanceCounter(&End);                                          \
-    Graph->##Name##ElapsedCycles.QuadPart = Cycles = (                      \
+    Graph->Name##ElapsedCycles.QuadPart = Cycles = (                        \
         End.QuadPart - Start.QuadPart                                       \
     );                                                                      \
     Microseconds = (Cycles * 1000000) / Graph->Context->Frequency.QuadPart; \
-    Graph->##Name##ElapsedMicroseconds.QuadPart = Microseconds
+    Graph->Name##ElapsedMicroseconds.QuadPart = Microseconds
 
-#define RESET_GRAPH_COUNTER(Name)                   \
-    Graph->##Name##ElapsedCycles.QuadPart = 0;      \
-    Graph->##Name##ElapsedMicroseconds.QuadPart = 0
+#define RESET_GRAPH_COUNTER(Name)                 \
+    Graph->Name##ElapsedCycles.QuadPart = 0;      \
+    Graph->Name##ElapsedMicroseconds.QuadPart = 0
 
-#define COPY_GRAPH_COUNTER(Name)                  \
-    Table->##Name##ElapsedCycles.QuadPart =       \
-        Graph->##Name##ElapsedCycles.QuadPart;    \
-    Table->##Name##ElapsedMicroseconds.QuadPart = \
-        Graph->##Name##ElapsedCycles.QuadPart
+#define COPY_GRAPH_COUNTER(Name)                \
+    Table->Name##ElapsedCycles.QuadPart =       \
+        Graph->Name##ElapsedCycles.QuadPart;    \
+    Table->Name##ElapsedMicroseconds.QuadPart = \
+        Graph->Name##ElapsedCycles.QuadPart
 
 #define DECL_GRAPH_COUNTERS_WITHIN_STRUCT()          \
     DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddKeys);       \

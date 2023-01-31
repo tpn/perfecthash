@@ -28,13 +28,21 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
 #define RCS RTL_CONSTANT_STRING
 #endif
 
+#ifdef PH_WINDOWS
 #define DECL_ARG(Name) const UNICODE_STRING Name = RCS(L#Name)
+#else
+#define DECL_ARG(Name) const UNICODE_STRING Name = RCS(#Name)
+#endif
 
 //
 // Helper macro for Rtl->RtlEqualUnicodeString() comparison.
 //
 
+#if PH_WINDOWS
 #define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, TRUE)
+#else
+#define IS_EQUAL(Name) Rtl->RtlEqualString(Arg, &Name, TRUE)
+#endif
 
 //
 // Helper macros for toggling the given flag if the current argument matches
@@ -43,13 +51,13 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
 
 #define SET_FLAG_AND_RETURN_IF_EQUAL(Name) \
     if (IS_EQUAL(Name)) {                  \
-        Flags->##Name = TRUE;              \
+        Flags->Name = TRUE;                \
         return S_OK;                       \
     }
 
 #define CLEAR_FLAG_AND_RETURN_IF_EQUAL(Name, FlagName) \
     if (IS_EQUAL(Name)) {                              \
-        Flags->##FlagName = FALSE;                     \
+        Flags->FlagName = FALSE;                       \
         return S_OK;                                   \
     }
 

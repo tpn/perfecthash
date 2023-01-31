@@ -13,7 +13,7 @@ Abstract:
 --*/
 
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
-#error PerfectHash's stdafx.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
+#error PerfectHash stdafx.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
 #endif
 
 #pragma once
@@ -41,6 +41,7 @@ Abstract:
 #endif
 #endif
 
+#ifdef PH_WINDOWS
 //
 // N.B. The warning disable glue is necessary to get the system headers to
 //      include with all errors enabled (/Wall).
@@ -103,7 +104,8 @@ Abstract:
 #include <mmintrin.h>
 #pragma warning(pop)
 
-#endif
+#endif // _M_AMD64
+#endif // PH_WINDOWS
 
 //
 // PerfectHash-related headers.
@@ -117,7 +119,9 @@ Abstract:
 #include "Rtl.h"
 #include "RtlOutput.h"
 #include "Chunk.h"
+#ifdef PH_WINDOWS
 #include "Security.h"
+#endif
 #include "GuardedList.h"
 #include "GraphCounters.h"
 #include "PerfectHashTimestamp.h"
@@ -132,8 +136,10 @@ Abstract:
 #include "PerfectHashPrimes.h"
 #include "PerfectHashPrivate.h"
 #include "PerfectHashAllocator.h"
+#ifdef PH_WINDOWS
 #include "Cu.h"
 #include "PerfectHashCu.h"
+#endif
 #include "Graph.h"
 #include "Math.h"
 #include "Rng.h"
