@@ -1,3 +1,21 @@
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(IS_WINDOWS 1)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(IS_LINUX 1)
+    set(IS_UNIX 1)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(IS_MAC 1)
+    set(IS_UNIX 1)
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+if (IS_WINDOWS)
+    enable_language(ASM_MASM)
+endif()
+
+
 target_include_directories(
     ${PROJECT_NAME}
     PUBLIC
@@ -14,11 +32,6 @@ target_compile_definitions(
     "PERFECT_HASH_BUILD_CONFIG=\"$<CONFIG>\""
 )
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    set(IS_WINDOWS 1)
-else()
-    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
-endif()
 
 if (IS_WINDOWS)
 

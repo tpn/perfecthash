@@ -5,7 +5,7 @@ set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 project(
     PerfectHash
     VERSION 0.61.0
-    LANGUAGES C ASM_MASM
+    LANGUAGES C
 )
 
 set(PROJECT_ROOT "${CMAKE_SOURCE_DIR}/..")
@@ -102,7 +102,6 @@ include(cmake/GlobalSettingsInclude.cmake OPTIONAL)
 # Use solution folders feature
 ################################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
 
 ################################################################################
 # Sub-projects
