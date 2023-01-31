@@ -883,8 +883,10 @@ Return Value:
     Vertex1Xmm = _mm_aesenc_si128(KeyXmm, Seed1Xmm);
     Vertex2Xmm = _mm_aesenc_si128(KeyXmm, Seed2Xmm);
 
+#ifdef PH_WINDOWS
     Result.LowPart = (Vertex1Xmm.m128i_u32[0] & Mask);
     Result.HighPart = (Vertex2Xmm.m128i_u32[0] & Mask);
+#endif
 
 #endif
 

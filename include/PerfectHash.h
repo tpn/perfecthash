@@ -96,6 +96,11 @@ extern "C" {
 #include <PerfectHashCompat.h>
 #endif
 
+//
+// Helper macro for casting to void **.
+//
+
+#define PPV(P) ((void **)(P))
 
 //
 // NT DDK types.
@@ -248,8 +253,6 @@ IsValidPerfectHashCpuArchId(
     );
 }
 
-#if PH_WINDOWS
-
 //
 // Provide a simple inline routine for obtaining the current CPU architecture.
 //
@@ -272,8 +275,6 @@ PerfectHashGetCurrentCpuArch(
 #error Unknown CPU architecture.
 #endif
 }
-
-#endif // PH_WINDOWS
 
 //
 // Define an X-macro for COM interfaces.  The ENTRY macros receive the following
@@ -4389,11 +4390,17 @@ IsValidPerfectHashEnumId(
 // to use multiple messages.
 //
 
+#ifdef PH_WINDOWS
 #define PH_USAGE(...)                                                     \
     PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE,             \
                                    __VA_ARGS__);                          \
     PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1, \
                                    __VA_ARGS__)
+#else
+#define PH_USAGE() \
+    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE);             \
+    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
+#endif
 
 #define PH_BREAK() __debugbreak()
 

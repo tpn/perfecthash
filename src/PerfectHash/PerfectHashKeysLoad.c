@@ -125,7 +125,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_PATH,
-                                        &Path);
+                                        PPV(&Path));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCreateInstance, Result);
@@ -212,7 +212,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_FILE,
-                                        &Keys->File);
+                                        PPV(&Keys->File));
 
     if (FAILED(Result)) {
         PH_ERROR(CreateInstancePerfectHashFile, Result);
@@ -888,7 +888,7 @@ End:
     //
 
     if (DownsizedKeyArray) {
-        Allocator->Vtbl->FreePointer(Allocator, &DownsizedKeyArray);
+        Allocator->Vtbl->FreePointer(Allocator, PPV(&DownsizedKeyArray));
     }
 
     return Result;

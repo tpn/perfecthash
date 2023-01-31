@@ -824,7 +824,17 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
+#ifdef PH_WINDOWS
 #define NUMBER_OF_INTERFACES 14
+#else
+
+//
+// Account for no CU.
+//
+
+#define NUMBER_OF_INTERFACES 14
+#endif
+
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -843,7 +853,6 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_ALLOCATOR ALLOCATOR
 #define PERFECT_HASH_GUARDED_LIST GUARDED_LIST
 #define PERFECT_HASH_GRAPH GRAPH
-#define PERFECT_HASH_CU CU
 #define PERFECT_HASH_RNG RNG
 
 #define PERFECT_HASH_IUNKNOWN_VTBL IUNKNOWN_VTBL
@@ -852,8 +861,12 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_ALLOCATOR_VTBL ALLOCATOR_VTBL
 #define PERFECT_HASH_GUARDED_LIST_VTBL GUARDED_LIST_VTBL
 #define PERFECT_HASH_GRAPH_VTBL GRAPH_VTBL
-#define PERFECT_HASH_CU_VTBL CU_VTBL
 #define PERFECT_HASH_RNG_VTBL RNG_VTBL
+
+#ifdef PH_WINDOWS
+#define PERFECT_HASH_CU CU
+#define PERFECT_HASH_CU_VTBL CU_VTBL
+#endif
 
 #define EXPAND_AS_SIZEOF_COMPONENT(Name, Upper, Guid) \
     sizeof(PERFECT_HASH_##Upper),
@@ -1277,6 +1290,8 @@ GRAPH_VTBL GraphInterface = {
 };
 VERIFY_VTBL_SIZE(GRAPH, 15);
 
+#ifdef PH_WINDOWS
+
 //
 // Cu
 //
@@ -1290,6 +1305,8 @@ CU_VTBL CuInterface = {
     &LoadCuDeviceAttributes,
 };
 VERIFY_VTBL_SIZE(CU, 1);
+
+#endif
 
 //
 // Rng
@@ -1326,7 +1343,9 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashDirectoryInterface,
     &GuardedListInterface,
     &GraphInterface,
+#ifdef PH_WINDOWS
     &CuInterface,
+#endif
     &RngInterface,
 
     NULL,
@@ -1349,7 +1368,9 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
+#ifdef PH_WINDOWS
     (PCOMPONENT_INITIALIZE)&CuInitialize,
+#endif
     (PCOMPONENT_INITIALIZE)&RngInitialize,
 
     NULL,

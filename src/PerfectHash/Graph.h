@@ -1719,10 +1719,10 @@ typedef GRAPH *PGRAPH;
 //
 
 #define TestGraphBit(Name, BitNumber) \
-    BitTest64((PLONGLONG)Graph->##Name##.Buffer, (LONGLONG)BitNumber)
+    BitTest64((PLONGLONG)Graph->Name.Buffer, (LONGLONG)BitNumber)
 
 #define SetGraphBit(Name, BitNumber) \
-    BitTestAndSet64((PLONGLONG)Graph->##Name##.Buffer, (LONGLONG)BitNumber)
+    BitTestAndSet64((PLONGLONG)Graph->Name.Buffer, (LONGLONG)BitNumber)
 
 //
 // Private non-vtbl methods.
@@ -1904,29 +1904,5 @@ typedef GRAPH_INFO_ON_DISK *PGRAPH_INFO_ON_DISK;
     if (GraphShouldWeContinueTryingToSolve(Graph) == FALSE) { \
         return PH_S_GRAPH_SOLVING_STOPPED;                    \
     }
-
-//
-// Define a helper macro for graph event writing.
-//
-
-#define EVENT_WRITE_GRAPH(Name)   \
-    EventWriteGraph##Name##Event( \
-        &Graph->Activity,         \
-        Graph->KeysFileName,      \
-        Edge,                     \
-        NumberOfKeys,             \
-        Key,                      \
-        Result,                   \
-        Cycles,                   \
-        Microseconds,             \
-        Graph->Seed1,             \
-        Graph->Seed2,             \
-        Graph->Seed3,             \
-        Graph->Seed4,             \
-        Graph->Seed5,             \
-        Graph->Seed6,             \
-        Graph->Seed7,             \
-        Graph->Seed8              \
-    )
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -134,7 +134,7 @@ CreateGlobalComponent(
     Success = InitOnceExecuteOnce(InitOnce,
                                   CreateGlobalComponentCallback,
                                   &Params,
-                                  &Component);
+                                  PPV(&Component));
 
     ReleaseGlobalComponentsLockExclusive();
 

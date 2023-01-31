@@ -63,7 +63,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_RTL,
-                                        &Keys->Rtl);
+                                        PPV(&Keys->Rtl));
 
     if (FAILED(Result)) {
         goto Error;
@@ -72,7 +72,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_ALLOCATOR,
-                                        &Keys->Allocator);
+                                        PPV(&Keys->Allocator));
 
     if (FAILED(Result)) {
         goto Error;
@@ -133,10 +133,12 @@ Return Value:
 
 --*/
 {
-    PCU Cu;
     HRESULT Result;
-    CU_RESULT CuResult;
     PALLOCATOR Allocator;
+#ifdef PH_WINDOWS
+    PCU Cu;
+    CU_RESULT CuResult;
+#endif
 
     //
     // Validate arguments.
@@ -152,6 +154,7 @@ Return Value:
 
     ASSERT(Keys->SizeOfStruct == sizeof(*Keys));
 
+#ifdef PH_WINDOWS
     Cu = Keys->Cu;
 
     if (Keys->DeviceKeyArrayBaseAddress != 0) {
@@ -169,6 +172,7 @@ Return Value:
         }
         Keys->CuCtx = NULL;
     }
+#endif // PH_WINDOWS
 
     if (Keys->File && Keys->File->BaseAddress) {
 
@@ -197,7 +201,7 @@ Return Value:
             //
 
             Allocator->Vtbl->FreePointer(Allocator,
-                                         &Keys->KeyArrayBaseAddress);
+                                         PPV(&Keys->KeyArrayBaseAddress));
 
         } else {
 
@@ -234,7 +238,9 @@ Return Value:
     // Release COM references, if applicable.
     //
 
+#ifdef PH_WINDOWS
     RELEASE(Keys->Cu);
+#endif
     RELEASE(Keys->File);
     RELEASE(Keys->Allocator);
     RELEASE(Keys->Rtl);
@@ -687,6 +693,8 @@ End:
     return Result;
 }
 
+#ifdef PH_WINDOWS
+
 PERFECT_HASH_KEYS_COPY_TO_CU_DEVICE PerfectHashKeysCopyToCuDevice;
 
 _Use_decl_annotations_
@@ -777,5 +785,7 @@ End:
     return Result;
 
 }
+
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

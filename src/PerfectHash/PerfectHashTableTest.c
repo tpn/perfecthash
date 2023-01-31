@@ -369,7 +369,7 @@ Error:
 End:
 
     if (BitmapBuffer) {
-        Allocator->Vtbl->FreePointer(Allocator, &BitmapBuffer);
+        Allocator->Vtbl->FreePointer(Allocator, PPV(&BitmapBuffer));
     }
 
     return Result;

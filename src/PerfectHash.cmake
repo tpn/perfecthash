@@ -89,12 +89,15 @@ else()
         ${PROJECT_NAME}
         PUBLIC
         "PERFECT_HASH_BUILD_CONFIG=\"${CMAKE_SYSTEM_NAME}\""
+        "PH_COMPAT"
     )
 
     target_compile_options(
         ${PROJECT_NAME}
         PUBLIC
         -march=native
+        -Wno-incompatible-pointer-types
+        -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
     )
 
 endif()

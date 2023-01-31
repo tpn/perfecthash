@@ -65,7 +65,7 @@ Return Value:
     Result = Rng->Vtbl->CreateInstance(Rng,
                                          NULL,
                                          &IID_PERFECT_HASH_RTL,
-                                         &Rng->Rtl);
+                                         PPV(&Rng->Rtl));
 
     if (FAILED(Result)) {
         goto Error;

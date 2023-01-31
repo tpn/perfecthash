@@ -28,6 +28,7 @@ extern "C" {
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <limits.h>
 
 #include <x86intrin.h>
 
@@ -55,6 +56,7 @@ typedef short SHORT;
 typedef int32_t LONG;
 typedef int32_t INT;
 typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
+typedef INT *PINT;
 
 typedef WCHAR *PWCHAR, *LPWCH, *PWCH, *PWSTR, *LPWSTR;
 
@@ -66,6 +68,11 @@ typedef _Null_terminated_ WCHAR *LPUWSTR, *PUWSTR;
 typedef _Null_terminated_ CONST WCHAR *LPCWSTR, *PCWSTR;
 typedef _Null_terminated_ PCWSTR *PZPCWSTR;
 typedef _Null_terminated_ CONST PCWSTR *PCZPCWSTR;
+
+typedef _Null_terminated_ CONST PSTR *PCZPSTR;
+typedef _Null_terminated_ CONST CHAR *LPCSTR, *PCSTR;
+typedef _Null_terminated_ PCSTR *PZPCSTR;
+typedef _Null_terminated_ CONST PCSTR *PCZPCSTR;
 
 typedef float FLOAT;
 typedef double DOUBLE;
@@ -82,6 +89,7 @@ typedef DWORD *PDWORD, *LPDWORD;
 
 typedef int32_t BOOL;
 typedef BYTE BOOLEAN;
+typedef BOOL *PBOOL;
 typedef BOOLEAN *PBOOLEAN;
 
 typedef UCHAR *PUCHAR;
@@ -95,6 +103,7 @@ typedef LONG *PLONG;
 
 typedef int64_t LONGLONG;
 typedef int64_t LONG64;
+typedef int64_t INT_PTR;
 typedef int64_t LONG_PTR;
 typedef uint64_t ULONGLONG;
 typedef uint64_t ULONG64;
@@ -127,6 +136,7 @@ typedef HANDLE *PHANDLE;
 typedef HANDLE HMODULE;
 typedef HANDLE HINSTANCE;
 typedef HANDLE HCRYPTPROV;
+typedef HANDLE HLOCAL;
 
 #define INVALID_HANDLE_VALUE ((HANDLE)(LONG_PTR)-1)
 
@@ -178,6 +188,7 @@ SystemTimeToFileTime(
 
 #define __cdecl
 #define __stdcall
+#define __callback
 #define NTAPI
 #define WINAPI
 #define APIENTRY
@@ -209,6 +220,12 @@ typedef HRESULT *PHRESULT;
 #define UNREFERENCED_PARAMETER(P)          (P)
 #define DBG_UNREFERENCED_PARAMETER(P)      (P)
 #define DBG_UNREFERENCED_LOCAL_VARIABLE(V) (V)
+
+#define FAR
+#define NEAR
+typedef INT_PTR (FAR WINAPI *FARPROC)();
+typedef INT_PTR (NEAR WINAPI *NEARPROC)();
+typedef INT_PTR (WINAPI *PROC)();
 
 typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 typedef NTSTATUS *PNTSTATUS;
@@ -960,6 +977,77 @@ SetThreadpoolWaitEx(
     _Reserved_ PVOID Reserved
     );
 
+FORCEINLINE
+VOID
+InitializeThreadpoolEnvironment(
+    _Out_ PTP_CALLBACK_ENVIRON pcbe
+    )
+{
+    TpInitializeCallbackEnviron(pcbe);
+}
+
+FORCEINLINE
+VOID
+SetThreadpoolCallbackPool(
+    _Inout_ PTP_CALLBACK_ENVIRON pcbe,
+    _In_    PTP_POOL             ptpp
+    )
+{
+    TpSetCallbackThreadpool(pcbe, ptpp);
+}
+
+FORCEINLINE
+VOID
+SetThreadpoolCallbackCleanupGroup(
+    _Inout_  PTP_CALLBACK_ENVIRON              pcbe,
+    _In_     PTP_CLEANUP_GROUP                 ptpcg,
+    _In_opt_ PTP_CLEANUP_GROUP_CANCEL_CALLBACK pfng
+    )
+{
+    TpSetCallbackCleanupGroup(pcbe, ptpcg, pfng);
+}
+
+FORCEINLINE
+VOID
+SetThreadpoolCallbackRunsLong(
+    _Inout_ PTP_CALLBACK_ENVIRON pcbe
+    )
+{
+    TpSetCallbackLongFunction(pcbe);
+}
+
+FORCEINLINE
+VOID
+SetThreadpoolCallbackLibrary(
+    _Inout_ PTP_CALLBACK_ENVIRON pcbe,
+    _In_    PVOID                mod
+    )
+{
+    TpSetCallbackRaceWithDll(pcbe, mod);
+}
+
+#if (_WIN32_WINNT >= _WIN32_WINNT_WIN7)
+
+FORCEINLINE
+VOID
+SetThreadpoolCallbackPriority(
+    _Inout_ PTP_CALLBACK_ENVIRON pcbe,
+    _In_    TP_CALLBACK_PRIORITY Priority
+    )
+{
+    TpSetCallbackPriority(pcbe, Priority);
+}
+
+#endif
+
+FORCEINLINE
+VOID
+DestroyThreadpoolEnvironment(
+    _Inout_ PTP_CALLBACK_ENVIRON pcbe
+    )
+{
+    TpDestroyCallbackEnviron(pcbe);
+}
 
 
 #ifndef RtlOffsetToPointer
@@ -1042,7 +1130,51 @@ typedef struct _RTL_BARRIER {
 } RTL_BARRIER, *PRTL_BARRIER;
 
 typedef RTL_RUN_ONCE INIT_ONCE;
-typedef INIT_ONCE *PINIT_ONCE;
+typedef INIT_ONCE *PINIT_ONCE, *LPINIT_ONCE;
+
+typedef
+BOOL
+(WINAPI *PINIT_ONCE_FN) (
+    _Inout_ PINIT_ONCE InitOnce,
+    _Inout_opt_ PVOID Parameter,
+    _Outptr_opt_result_maybenull_ PVOID *Context
+    );
+
+WINBASEAPI
+VOID
+WINAPI
+InitOnceInitialize(
+    _Out_ PINIT_ONCE InitOnce
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+InitOnceExecuteOnce(
+    _Inout_ PINIT_ONCE InitOnce,
+    _In_ __callback PINIT_ONCE_FN InitFn,
+    _Inout_opt_ PVOID Parameter,
+    _Outptr_opt_result_maybenull_ LPVOID* Context
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+InitOnceBeginInitialize(
+    _Inout_ LPINIT_ONCE lpInitOnce,
+    _In_ DWORD dwFlags,
+    _Out_ PBOOL fPending,
+    _Outptr_opt_result_maybenull_ LPVOID* lpContext
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+InitOnceComplete(
+    _Inout_ LPINIT_ONCE lpInitOnce,
+    _In_ DWORD dwFlags,
+    _In_opt_ LPVOID lpContext
+    );
 
 #include "debugbreak.h"
 #define __debugbreak psnip_trap
@@ -1130,9 +1262,9 @@ typedef INIT_ONCE *PINIT_ONCE;
 
 #define EXCEPTION_MAXIMUM_PARAMETERS 15 // maximum number of exception parameters
 
-//#ifndef DECLSPEC_ALIGN
 #define DECLSPEC_ALIGN(x) __attribute__ ((aligned(x)))
-//#endif
+
+#define DECLSPEC_NORETURN
 
 typedef struct _FILE_BASIC_INFO {
     LARGE_INTEGER CreationTime;
@@ -1433,6 +1565,14 @@ _interlockedbittestandreset64 (
     _In_range_(>=,0) LONG64 Offset
     );
 
+LONG
+InterlockedCompareExchange(
+    _Inout_ LONG volatile *Destination,
+    _In_ LONG Exchange,
+    _In_ LONG Comperand
+    );
+
+
 #define __popcnt __builtin_popcount
 #define __popcnt64 __builtin_popcountll
 #define _tzcnt_u32 __builtin_ctz
@@ -1442,12 +1582,19 @@ _interlockedbittestandreset64 (
 
 #define InterlockedIncrement(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrement64(v) __sync_add_and_fetch(v, 1)
+#define InterlockedIncrementULongPtr(v) __sync_add_and_fetch(v, 1)
+#define InterlockedAddULongPtr(v, a) __sync_add_and_fetch((v), (a))
 
 #define InterlockedDecrement(v) __sync_sub_and_fetch(v, 1)
 #define InterlockedDecrement64(v) __sync_sub_and_fetch(v, 1)
+#define InterlockedDecrementULongPtr(v) __sync_sub_and_fetch(v, 1)
 
 #ifndef min
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
+#endif
+
+#ifndef max
+#define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #endif
 
 #define HEAP_NO_SERIALIZE               0x00000001
@@ -1835,6 +1982,14 @@ GetProcessHeap(
     VOID
     );
 
+DWORD GetCurrentThreadId();
+HANDLE GetCurrentProcess();
+
+#define ERROR_NOT_ENOUGH_MEMORY          8L
+#define ERROR_INSUFFICIENT_BUFFER        122L
+#define ERROR_ALREADY_EXISTS             183L
+
+
 #define HEAP_NO_SERIALIZE               0x00000001
 #define HEAP_GROWABLE                   0x00000002
 #define HEAP_GENERATE_EXCEPTIONS        0x00000004
@@ -1851,6 +2006,63 @@ GetProcessHeap(
 #define HEAP_TAG_SHIFT                  18
 #define HEAP_CREATE_SEGMENT_HEAP        0x00000100
 #define HEAP_CREATE_HARDENED            0x00000200
+
+WINBASEAPI
+_Ret_maybenull_
+_Post_writable_byte_size_(dwSize)
+LPVOID
+WINAPI
+VirtualAlloc(
+    _In_opt_ LPVOID lpAddress,
+    _In_ SIZE_T dwSize,
+    _In_ DWORD flAllocationType,
+    _In_ DWORD flProtect
+    );
+
+WINBASEAPI
+_Success_(return != FALSE)
+BOOL
+WINAPI
+VirtualProtect(
+    _In_ LPVOID lpAddress,
+    _In_ SIZE_T dwSize,
+    _In_ DWORD flNewProtect,
+    _Out_ PDWORD lpflOldProtect
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+VirtualFree(
+    _Pre_notnull_ _When_(dwFreeType == MEM_DECOMMIT,_Post_invalid_) _When_(dwFreeType == MEM_RELEASE,_Post_ptr_invalid_) LPVOID lpAddress,
+    _In_ SIZE_T dwSize,
+    _In_ DWORD dwFreeType
+    );
+
+WINBASEAPI
+_Ret_maybenull_
+_Post_writable_byte_size_(dwSize)
+LPVOID
+WINAPI
+VirtualAllocEx(
+    _In_ HANDLE hProcess,
+    _In_opt_ LPVOID lpAddress,
+    _In_ SIZE_T dwSize,
+    _In_ DWORD flAllocationType,
+    _In_ DWORD flProtect
+    );
+
+WINBASEAPI
+_Success_(return != FALSE)
+BOOL
+WINAPI
+VirtualProtectEx(
+    _In_ HANDLE hProcess,
+    _In_ LPVOID lpAddress,
+    _In_ SIZE_T dwSize,
+    _In_ DWORD flNewProtect,
+    _Out_ PDWORD lpflOldProtect
+    );
 
 //
 // Ctrl Event flags
@@ -1882,6 +2094,410 @@ SetConsoleCtrlHandler(
     _In_ BOOL Add
     );
 
+
+#define MemoryBarrier()
+
+#ifndef TLS_OUT_OF_INDEXES
+#define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
+#endif
+
+_Must_inspect_result_
+WINBASEAPI
+DWORD
+WINAPI
+TlsAlloc(
+    VOID
+    );
+
+WINBASEAPI
+LPVOID
+WINAPI
+TlsGetValue(
+    _In_ DWORD dwTlsIndex
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+TlsSetValue(
+    _In_ DWORD dwTlsIndex,
+    _In_opt_ LPVOID lpTlsValue
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+TlsFree(
+    _In_ DWORD dwTlsIndex
+    );
+
+HMODULE
+LoadLibraryA(
+    _In_ LPCSTR lpLibFileName
+    );
+
+HMODULE
+LoadLibraryW(
+    _In_ LPCWSTR lpLibFileName
+    );
+
+FARPROC
+GetProcAddress(
+    _In_ HMODULE Module,
+    _In_ LPCSTR Name
+    );
+
+BOOL
+FreeLibrary(
+    _In_ HMODULE Module
+    );
+
+WINBASEAPI
+LPSTR
+WINAPI
+GetCommandLineA(
+    VOID
+    );
+
+WINBASEAPI
+LPWSTR
+WINAPI
+GetCommandLineW(
+    VOID
+    );
+
+LPWSTR *
+CommandLineToArgvW(
+    _In_ LPCWSTR lpCmdLine,
+    _Out_ int* pNumArgs
+    );
+
+WINBASEAPI
+HANDLE
+WINAPI
+GetStdHandle(
+    _In_ DWORD nStdHandle
+    );
+
+
+#define STD_INPUT_HANDLE    ((DWORD)-10)
+#define STD_OUTPUT_HANDLE   ((DWORD)-11)
+#define STD_ERROR_HANDLE    ((DWORD)-12)
+
+#define ExitProcess exit
+
+#define ACL_REVISION     (2)
+#define ACL_REVISION_DS  (4)
+
+// This is the history of ACL revisions.  Add a new one whenever
+// ACL_REVISION is updated
+
+#define ACL_REVISION1   (1)
+#define MIN_ACL_REVISION ACL_REVISION2
+#define ACL_REVISION2   (2)
+#define ACL_REVISION3   (3)
+#define ACL_REVISION4   (4)
+#define MAX_ACL_REVISION ACL_REVISION4
+
+typedef struct _ACL {
+    BYTE  AclRevision;
+    BYTE  Sbz1;
+    WORD  AclSize;
+    WORD  AceCount;
+    WORD  Sbz2;
+} ACL;
+typedef ACL *PACL;
+
+typedef enum _MEMORY_RESOURCE_NOTIFICATION_TYPE {
+    LowMemoryResourceNotification,
+    HighMemoryResourceNotification
+} MEMORY_RESOURCE_NOTIFICATION_TYPE;
+
+WINBASEAPI
+_Ret_maybenull_
+HANDLE
+WINAPI
+CreateMemoryResourceNotification(
+    _In_ MEMORY_RESOURCE_NOTIFICATION_TYPE NotificationType
+    );
+
+WINBASEAPI
+_Success_(return != FALSE)
+BOOL
+WINAPI
+QueryMemoryResourceNotification(
+    _In_ HANDLE ResourceNotificationHandle,
+    _Out_ PBOOL ResourceState
+    );
+
+WINBASEAPI
+WORD
+WINAPI
+GetActiveProcessorGroupCount(
+    VOID
+    );
+
+WINBASEAPI
+WORD
+WINAPI
+GetMaximumProcessorGroupCount(
+    VOID
+    );
+
+WINBASEAPI
+DWORD
+WINAPI
+GetActiveProcessorCount(
+    _In_ WORD GroupNumber
+    );
+
+WINBASEAPI
+DWORD
+WINAPI
+GetMaximumProcessorCount(
+    _In_ WORD GroupNumber
+    );
+
+WINBASEAPI
+_Ret_maybenull_
+HANDLE
+WINAPI
+CreateEventA(
+    _In_opt_ LPSECURITY_ATTRIBUTES lpEventAttributes,
+    _In_ BOOL bManualReset,
+    _In_ BOOL bInitialState,
+    _In_opt_ LPCSTR lpName
+    );
+
+WINBASEAPI
+_Ret_maybenull_
+HANDLE
+WINAPI
+CreateEventW(
+    _In_opt_ LPSECURITY_ATTRIBUTES lpEventAttributes,
+    _In_ BOOL bManualReset,
+    _In_ BOOL bInitialState,
+    _In_opt_ LPCWSTR lpName
+    );
+
+WINBASEAPI
+_Success_(return==0)
+_Ret_maybenull_
+HLOCAL
+WINAPI
+LocalFree(
+    _Frees_ptr_opt_ HLOCAL hMem
+    );
+
+typedef struct _SID_IDENTIFIER_AUTHORITY {
+    BYTE  Value[6];
+} SID_IDENTIFIER_AUTHORITY, *PSID_IDENTIFIER_AUTHORITY;
+
+
+typedef struct _SID {
+   BYTE  Revision;
+   BYTE  SubAuthorityCount;
+   SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
+   DWORD SubAuthority[ANYSIZE_ARRAY];
+} SID, *PISID;
+typedef PVOID PSID;
+typedef PVOID PSECURITY_DESCRIPTOR;
+typedef PVOID PACCESS_TOKEN;
+
+typedef enum _SE_OBJECT_TYPE
+{
+    SE_UNKNOWN_OBJECT_TYPE = 0,
+    SE_FILE_OBJECT,
+    SE_SERVICE,
+    SE_PRINTER,
+    SE_REGISTRY_KEY,
+    SE_LMSHARE,
+    SE_KERNEL_OBJECT,
+    SE_WINDOW_OBJECT,
+    SE_DS_OBJECT,
+    SE_DS_OBJECT_ALL,
+    SE_PROVIDER_DEFINED_OBJECT,
+    SE_WMIGUID_OBJECT,
+    SE_REGISTRY_WOW64_32KEY,
+    SE_REGISTRY_WOW64_64KEY,
+} SE_OBJECT_TYPE;
+
+typedef enum _TRUSTEE_TYPE
+{
+    TRUSTEE_IS_UNKNOWN,
+    TRUSTEE_IS_USER,
+    TRUSTEE_IS_GROUP,
+    TRUSTEE_IS_DOMAIN,
+    TRUSTEE_IS_ALIAS,
+    TRUSTEE_IS_WELL_KNOWN_GROUP,
+    TRUSTEE_IS_DELETED,
+    TRUSTEE_IS_INVALID,
+    TRUSTEE_IS_COMPUTER
+} TRUSTEE_TYPE;
+
+typedef enum _TRUSTEE_FORM
+{
+    TRUSTEE_IS_SID,
+    TRUSTEE_IS_NAME,
+    TRUSTEE_BAD_FORM,
+    TRUSTEE_IS_OBJECTS_AND_SID,
+    TRUSTEE_IS_OBJECTS_AND_NAME
+} TRUSTEE_FORM;
+
+typedef enum _MULTIPLE_TRUSTEE_OPERATION
+{
+    NO_MULTIPLE_TRUSTEE,
+    TRUSTEE_IS_IMPERSONATE,
+} MULTIPLE_TRUSTEE_OPERATION;
+
+typedef struct  _OBJECTS_AND_SID
+{
+    DWORD   ObjectsPresent;
+    GUID    ObjectTypeGuid;
+    GUID    InheritedObjectTypeGuid;
+    SID     * pSid;
+} OBJECTS_AND_SID, *POBJECTS_AND_SID;
+
+typedef struct  _OBJECTS_AND_NAME_A
+{
+    DWORD          ObjectsPresent;
+    SE_OBJECT_TYPE ObjectType;
+    LPSTR    ObjectTypeName;
+    LPSTR    InheritedObjectTypeName;
+    LPSTR    ptstrName;
+} OBJECTS_AND_NAME_A, *POBJECTS_AND_NAME_A;
+typedef struct  _OBJECTS_AND_NAME_W
+{
+    DWORD          ObjectsPresent;
+    SE_OBJECT_TYPE ObjectType;
+    LPWSTR   ObjectTypeName;
+    LPWSTR   InheritedObjectTypeName;
+    LPWSTR   ptstrName;
+} OBJECTS_AND_NAME_W, *POBJECTS_AND_NAME_W;
+typedef OBJECTS_AND_NAME_W OBJECTS_AND_NAME_;
+typedef POBJECTS_AND_NAME_W POBJECTS_AND_NAME_;
+
+typedef struct _TRUSTEE_A
+{
+    struct _TRUSTEE_A          *pMultipleTrustee;
+    MULTIPLE_TRUSTEE_OPERATION  MultipleTrusteeOperation;
+    TRUSTEE_FORM                TrusteeForm;
+    TRUSTEE_TYPE                TrusteeType;
+    LPCH                        ptstrName;
+} TRUSTEE_A, *PTRUSTEE_A, TRUSTEEA, *PTRUSTEEA;
+typedef struct _TRUSTEE_W
+{
+    struct _TRUSTEE_W          *pMultipleTrustee;
+    MULTIPLE_TRUSTEE_OPERATION  MultipleTrusteeOperation;
+    TRUSTEE_FORM                TrusteeForm;
+    TRUSTEE_TYPE                TrusteeType;
+    LPWCH                       ptstrName;
+} TRUSTEE_W, *PTRUSTEE_W, TRUSTEEW, *PTRUSTEEW;
+typedef TRUSTEE_W TRUSTEE_;
+typedef PTRUSTEE_W PTRUSTEE_;
+typedef TRUSTEEW TRUSTEE;
+typedef PTRUSTEEW PTRUSTEE;
+
+typedef enum _ACCESS_MODE
+{
+    NOT_USED_ACCESS = 0,
+    GRANT_ACCESS,
+    SET_ACCESS,
+    DENY_ACCESS,
+    REVOKE_ACCESS,
+    SET_AUDIT_SUCCESS,
+    SET_AUDIT_FAILURE
+} ACCESS_MODE;
+
+#define NO_INHERITANCE 0x0
+#define SUB_OBJECTS_ONLY_INHERIT            0x1
+#define SUB_CONTAINERS_ONLY_INHERIT         0x2
+#define SUB_CONTAINERS_AND_OBJECTS_INHERIT  0x3
+#define INHERIT_NO_PROPAGATE                0x4
+#define INHERIT_ONLY                        0x8
+
+#define INHERITED_ACCESS_ENTRY              0x10
+
+#define INHERITED_PARENT                    0x10000000
+#define INHERITED_GRANDPARENT               0x20000000
+
+
+typedef struct _EXPLICIT_ACCESS_A
+{
+    DWORD        grfAccessPermissions;
+    ACCESS_MODE  grfAccessMode;
+    DWORD        grfInheritance;
+    TRUSTEE_A    Trustee;
+} EXPLICIT_ACCESS_A, *PEXPLICIT_ACCESS_A, EXPLICIT_ACCESSA, *PEXPLICIT_ACCESSA;
+typedef struct _EXPLICIT_ACCESS_W
+{
+    DWORD        grfAccessPermissions;
+    ACCESS_MODE  grfAccessMode;
+    DWORD        grfInheritance;
+    TRUSTEE_W    Trustee;
+} EXPLICIT_ACCESS_W, *PEXPLICIT_ACCESS_W, EXPLICIT_ACCESSW, *PEXPLICIT_ACCESSW;
+typedef EXPLICIT_ACCESS_W EXPLICIT_ACCESS_;
+typedef PEXPLICIT_ACCESS_W PEXPLICIT_ACCESS_;
+typedef EXPLICIT_ACCESSW EXPLICIT_ACCESS;
+typedef PEXPLICIT_ACCESSW PEXPLICIT_ACCESS;
+
+
+#define SECURITY_DESCRIPTOR_REVISION     (1)
+#define SECURITY_DESCRIPTOR_REVISION1    (1)
+
+#define SECURITY_DESCRIPTOR_MIN_LENGTH   (sizeof(SECURITY_DESCRIPTOR))
+
+
+typedef WORD   SECURITY_DESCRIPTOR_CONTROL, *PSECURITY_DESCRIPTOR_CONTROL;
+
+#define SE_OWNER_DEFAULTED               (0x0001)
+#define SE_GROUP_DEFAULTED               (0x0002)
+#define SE_DACL_PRESENT                  (0x0004)
+#define SE_DACL_DEFAULTED                (0x0008)
+#define SE_SACL_PRESENT                  (0x0010)
+#define SE_SACL_DEFAULTED                (0x0020)
+#define SE_DACL_AUTO_INHERIT_REQ         (0x0100)
+#define SE_SACL_AUTO_INHERIT_REQ         (0x0200)
+#define SE_DACL_AUTO_INHERITED           (0x0400)
+#define SE_SACL_AUTO_INHERITED           (0x0800)
+#define SE_DACL_PROTECTED                (0x1000)
+#define SE_SACL_PROTECTED                (0x2000)
+#define SE_RM_CONTROL_VALID              (0x4000)
+#define SE_SELF_RELATIVE                 (0x8000)
+
+typedef struct _SECURITY_DESCRIPTOR_RELATIVE {
+    BYTE  Revision;
+    BYTE  Sbz1;
+    SECURITY_DESCRIPTOR_CONTROL Control;
+    DWORD Owner;
+    DWORD Group;
+    DWORD Sacl;
+    DWORD Dacl;
+    } SECURITY_DESCRIPTOR_RELATIVE, *PISECURITY_DESCRIPTOR_RELATIVE;
+
+typedef struct _SECURITY_DESCRIPTOR {
+   BYTE  Revision;
+   BYTE  Sbz1;
+   SECURITY_DESCRIPTOR_CONTROL Control;
+   PSID Owner;
+   PSID Group;
+   PACL Sacl;
+   PACL Dacl;
+
+   } SECURITY_DESCRIPTOR, *PISECURITY_DESCRIPTOR;
+
+
+typedef struct _SECURITY_OBJECT_AI_PARAMS {
+    DWORD Size;
+    DWORD ConstraintMask;
+} SECURITY_OBJECT_AI_PARAMS, *PSECURITY_OBJECT_AI_PARAMS;
+
+WINBASEAPI
+BOOL
+WINAPI
+CloseHandle(
+    _In_ _Post_ptr_invalid_ HANDLE hObject
+    );
 
 #ifdef __cplusplus
 } // extern "C"

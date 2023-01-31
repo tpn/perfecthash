@@ -58,7 +58,7 @@ Return Value:
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
                                          &IID_PERFECT_HASH_RTL,
-                                         &Table->Rtl);
+                                         PPV(&Table->Rtl));
 
     if (FAILED(Result)) {
         goto Error;
@@ -67,7 +67,7 @@ Return Value:
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
                                          &IID_PERFECT_HASH_ALLOCATOR,
-                                         &Table->Allocator);
+                                         PPV(&Table->Allocator));
 
     if (FAILED(Result)) {
         goto Error;
@@ -179,7 +179,8 @@ Return Value:
 
     if (Table->Flags.Created && !IsTableCreateOnly(Table)) {
         if (Table->TableInfoOnDisk && WasTableInfoOnDiskHeapAllocated(Table)) {
-            Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
+            Allocator->Vtbl->FreePointer(Allocator,
+                                         PPV(&Table->TableInfoOnDisk));
         }
         if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {
             if (!VirtualFree(Table->Assigned, 0, MEM_RELEASE)) {
@@ -194,7 +195,7 @@ Return Value:
     //
 
 #define EXPAND_AS_ASSERT_NULL(Verb, VUpper, Name, Upper) \
-    ASSERT(Table->##Name == NULL);
+    ASSERT(Table->Name == NULL);
 
     CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSERT_NULL);
 
@@ -207,7 +208,7 @@ Return Value:
     EofType, EofValue,              \
     Suffix, Extension, Stream, Base \
 )                                   \
-    RELEASE(Table->##Name##);
+    RELEASE(Table->Name);
 
     FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
 

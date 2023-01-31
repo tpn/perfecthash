@@ -46,15 +46,15 @@ extern volatile ULONG CtrlCPressed;
 // Define a helper macro for validating flags passed as parameters to routines.
 //
 
-#define VALIDATE_FLAGS(Name, Upper, Type)                            \
-    if (ARGUMENT_PRESENT(##Name##FlagsPointer)) {                    \
-        if (FAILED(IsValid##Name##Flags(##Name##FlagsPointer))) {    \
-            return PH_E_INVALID_##Upper##_FLAGS;                     \
-        } else {                                                     \
-            ##Name##Flags.As##Type = ##Name##FlagsPointer->As##Type; \
-        }                                                            \
-    } else {                                                         \
-        ##Name##Flags.As##Type = 0;                                  \
+#define VALIDATE_FLAGS(Name, Upper, Type)                        \
+    if (ARGUMENT_PRESENT(Name##FlagsPointer)) {                  \
+        if (FAILED(IsValid##Name##Flags(Name##FlagsPointer))) {  \
+            return PH_E_INVALID_##Upper##_FLAGS;                 \
+        } else {                                                 \
+            Name##Flags.As##Type = Name##FlagsPointer->As##Type; \
+        }                                                        \
+    } else {                                                     \
+        Name##Flags.As##Type = 0;                                \
     }
 
 //

@@ -168,24 +168,15 @@ set(Source_Files
     "Chunk.c"
     "Component.c"
     "dllmain.c"
-    "ExtractArg.c"
     "Graph.c"
-    "GraphAvx.c"
     "GraphImpl1.c"
     "GraphImpl2.c"
     "GraphImpl3.c"
     "GuardedList.c"
     "Math.c"
     "PerfectHashAllocator.c"
-    "PerfectHashConstants.c"
     "PerfectHashContext.c"
-    "PerfectHashContextBulkCreate.c"
-    "PerfectHashContextSelfTest.c"
     "PerfectHashContextTableCreate.c"
-    "PerfectHashCu.c"
-    "PerfectHashDirectory.c"
-    "PerfectHashErrorHandling.c"
-    "PerfectHashFile.c"
     "PerfectHashKeys.c"
     "PerfectHashKeysLoad.c"
     "PerfectHashKeysLoadTableSize.c"
@@ -193,7 +184,6 @@ set(Source_Files
     "PerfectHashPath.c"
     "PerfectHashPrimes.c"
     "PerfectHashTable.c"
-    "PerfectHashTableCompile.c"
     "PerfectHashTableCreate.c"
     "PerfectHashTableDelete.c"
     "PerfectHashTableHash.c"
@@ -209,15 +199,8 @@ set(Source_Files
     "Rng.c"
     "RngPhilox4x32.c"
     "Rtl.c"
-    "RtlBuffers.c"
-    "RtlErrorHandling.c"
-    "RtlLargePages.c"
     "RtlMemory.c"
     "RtlOutput.c"
-    "RtlPrivilege.c"
-    "RtlRandom.c"
-    "RtlUuid.c"
-    "Security.c"
     "stdafx.c"
     "SymbolLoader.c"
     "VCProjectFileChunks.c"
@@ -225,15 +208,31 @@ set(Source_Files
 
 if (IS_WINDOWS)
     list(
-        APPEND SourceFiles
-        "_dtoa.c"
-        "_pow.c"
-        "_strtod.c"
+        APPEND Source_Files
         "Cu.c"
-        "PerfectHashTableFastIndexEx_x64_01.asm"
+        "_pow.c"
+        "_dtoa.c"
+        "_strtod.c"
+        "RtlUuid.c"
+        "Security.c"
+        "GraphAvx.c"
+        "RtlRandom.c"
+        "ExtractArg.c"
+        "RtlBuffers.c"
+        "memset_x64.asm"
+        "RtlPrivilege.c"
+        "RtlLargePages.c"
+        "PerfectHashCu.c"
+        "PerfectHashFile.c"
+        "RtlErrorHandling.c"
         "RtlCopyPages_x64.asm"
         "RtlFillPages_x64.asm"
-        "memset_x64.asm"
+        "PerfectHashConstants.c"
+        "PerfectHashDirectory.c"
+        "PerfectHashTableCompile.c"
+        "PerfectHashErrorHandling.c"
+        "PerfectHashContextBulkCreate.c"
+        "PerfectHashTableFastIndexEx_x64_01.asm"
     )
 endif()
 
@@ -243,9 +242,15 @@ set(ALL_FILES
     ${Private_Header_Files}
     ${Private_Header_Files_28Auto-Generated29}
     ${Public_Header_Files}
-    ${Resource_Files}
     ${Source_Files}
 )
+
+if (IS_WINDOWS)
+    list(
+        APPEND ALL_FILES
+        ${Resource_Files}
+    )
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
 
@@ -281,6 +286,8 @@ if (HookPenter STREQUAL "1")
     target_link_libraries(${PROJECT_NAME} PUBLIC FunctionHook)
 endif()
 
-set(ADDITIONAL_LIBRARY_DEPENDENCIES "rpcrt4")
-target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
+if (IS_WINDOWS)
+    set(ADDITIONAL_LIBRARY_DEPENDENCIES "rpcrt4")
+    target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
+endif()
 

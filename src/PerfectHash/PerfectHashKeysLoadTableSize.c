@@ -175,7 +175,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_PATH,
-                                        &Path);
+                                        PPV(&Path));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCreateInstance, Result);
@@ -239,7 +239,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_FILE,
-                                        &File);
+                                        PPV(&File));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashFileCreateInstance, Result);

@@ -266,6 +266,7 @@ Return Value:
     // Create an exclusive DACL for use with our events.
     //
 
+#ifdef PH_WINDOWS
     Result = CreateExclusiveDaclForCurrentUser(Rtl,
                                                &SecurityAttributes,
                                                &SecurityDescriptor,
@@ -278,6 +279,9 @@ Return Value:
     }
 
     Attributes = &SecurityAttributes;
+#else
+    Attributes = NULL;
+#endif // PH_WINDOWS
 
     //
     // Create a low-memory notification handle.
@@ -854,6 +858,7 @@ Return Value:
         }
     }
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextTryRundownCallbackTableValuesFile(Context);
     if (FAILED(Result)) {
         PH_ERROR(TryRundownCallbackTableValuesFile, Result);
@@ -874,6 +879,7 @@ Return Value:
     //
 
     Allocator->Vtbl->FreePointer(Allocator, &Context->CuDevices.Devices);
+#endif
 
     //
     // Close the low-memory resource notification handle.
@@ -885,6 +891,7 @@ Return Value:
         }
         Context->LowMemoryEvent = NULL;
     }
+
 
     //
     // Loop through all the events associated with the context and check if
@@ -971,7 +978,7 @@ Return Value:
         }
     }
 
-#define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Context->##Name##);
+#define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Context->Name);
 
     CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
 
@@ -982,7 +989,9 @@ Return Value:
     RELEASE(Context->FinishedWorkList);
     RELEASE(Context->BulkCreateCsvFile);
     RELEASE(Context->BaseOutputDirectory);
+#ifdef PH_WINDOWS
     RELEASE(Context->Cu);
+#endif
     RELEASE(Context->Allocator);
     RELEASE(Context->Rtl);
 }
@@ -2098,6 +2107,7 @@ Return Value:
     return Result;
 }
 
+#ifdef PH_WINDOWS
 PERFECT_HASH_CONTEXT_INITIALIZE_CUDA PerfectHashContextInitializeCuda;
 
 _Use_decl_annotations_
@@ -2257,6 +2267,7 @@ End:
 
     return Result;
 }
+#endif // PH_WINDOWS
 
 PERFECT_HASH_CONTEXT_INITIALIZE_RNG PerfectHashContextInitializeRng;
 
@@ -2414,6 +2425,7 @@ End:
     return Result;
 }
 
+#ifdef PH_WINDOWS
 _Use_decl_annotations_
 HRESULT
 PerfectHashContextTryPrepareCallbackTableValuesFile (
@@ -3057,6 +3069,7 @@ End:
 
     return Result;
 }
+#endif
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

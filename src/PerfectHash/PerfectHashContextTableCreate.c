@@ -406,6 +406,7 @@ Return Value:
     // address of the array.
     //
 
+#ifdef PH_WINDOWS
     if (Context->Cu) {
         Result = PerfectHashKeysCopyToCuDevice(Keys,
                                                Context->Cu,
@@ -415,6 +416,7 @@ Return Value:
             goto Error;
         }
     }
+#endif
 
     //
     // Proceed with table creation.
@@ -916,18 +918,18 @@ End:
 #define VALIDATE_ID(Name, Upper)                                       \
     if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                  \
                                               10,                      \
-                                              (PULONG)##Name##Id))) {  \
+                                              (PULONG)Name##Id))) {    \
         return PH_E_INVALID_##Upper##_ID;                              \
-    } else if (*##Name##Id == 0) {                                     \
+    } else if (*Name##Id == 0) {                                       \
         Result = PerfectHashLookupIdForName(Rtl,                       \
                                             PerfectHash##Name##EnumId, \
                                             String,                    \
-                                            (PULONG)##Name##Id);       \
+                                            (PULONG)Name##Id);         \
         if (FAILED(Result)) {                                          \
             return PH_E_INVALID_##Upper##_ID;                          \
         }                                                              \
     }                                                                  \
-    if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {                  \
+    if (!IsValidPerfectHash##Name##Id(*Name##Id)) {                    \
         return PH_E_INVALID_##Upper##_ID;                              \
     }
 

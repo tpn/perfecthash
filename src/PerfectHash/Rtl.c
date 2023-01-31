@@ -19,8 +19,10 @@ Abstract:
 // Forward definitions.
 //
 
-extern LOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
-extern SET_C_SPECIFIC_HANDLER SetCSpecificHandler;
+LOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
+#ifdef PH_WINDOWS
+SET_C_SPECIFIC_HANDLER SetCSpecificHandler;
+#endif
 
 #define EXPAND_AS_RTL_FUNCTION_NAME(Upper, Name) \
     #Name,
@@ -35,6 +37,8 @@ const PCZPCWSTR RtlModuleNames[] = {
 };
 #define ModuleNames RtlModuleNames
 
+
+#ifdef PH_WINDOWS
 
 //
 // As we don't link to the CRT, we don't get a __C_specific_handler entry,
@@ -104,6 +108,9 @@ SetCSpecificHandler(
 
     ASSERT(Status);
 }
+
+#endif // PH_WINDOWS
+
 
 //
 // Initialize and rundown functions.
@@ -213,9 +220,10 @@ RtlInitialize(
         goto Error;
     }
 
-    SetCSpecificHandler(Rtl->__C_specific_handler);
-
     ASSERT(NumberOfSymbols == NumberOfResolvedSymbols);
+
+#ifdef PH_WINDOWS
+    SetCSpecificHandler(Rtl->__C_specific_handler);
 
     Success = CryptAcquireContextW(&Rtl->CryptProv,
                                    NULL,
@@ -227,24 +235,31 @@ RtlInitialize(
         SYS_ERROR(CryptAcquireContextW);
         goto Error;
     }
+#endif
 
+#ifdef PH_WINDOWS
     Result = RtlInitializeCpuFeatures(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeCpuFeatures, Result);
         goto Error;
     }
+#endif
 
+#ifdef PH_WINDOWS
     Result = RtlInitializeLargePages(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeLargePages, Result);
         goto Error;
     }
+#endif
 
+#ifdef PH_WINDOWS
 #if defined(_M_AMD64) || defined(_M_X64)
     if (Rtl->CpuFeatures.AVX2 != FALSE) {
         Rtl->Vtbl->CopyPages = RtlCopyPages_AVX2;
         Rtl->Vtbl->FillPages = RtlFillPages_AVX2;
     }
+#endif
 #endif
 
     //
@@ -285,12 +300,15 @@ RtlRundown(
         return;
     }
 
+#ifdef PH_WINDOWS
     if (Rtl->CryptProv) {
+
         if (!CryptReleaseContext(Rtl->CryptProv, 0)) {
             SYS_ERROR(CryptReleaseContext);
         }
         Rtl->CryptProv = 0;
     }
+#endif
 
     Buffer = Rtl->CpuFeatures.ProcInfoArray.ProcInfo;
     if (Buffer != NULL) {
@@ -449,6 +467,7 @@ Return Value:
 }
 
 
+#ifdef PH_WINDOWS
 #if defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
 HRESULT
 RtlInitializeCpuFeaturesLogicalProcessors(
@@ -791,6 +810,7 @@ End:
 
     return Result;
 }
+#endif
 
 
 _Use_decl_annotations_

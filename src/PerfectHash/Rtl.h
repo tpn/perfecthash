@@ -388,6 +388,8 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define NOTHING
 #endif
 
+#if PH_WINDOWS
+
 #ifndef DECLSPEC_NOINLINE
 #define DECLSPEC_NOINLINE __declspec(noinline)
 #endif
@@ -402,6 +404,14 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 
 #ifndef FORCEINLINE
 #define FORCEINLINE __forceinline
+#endif
+
+#else // PH_WINDOWS
+
+#define FORCEINLINE static inline __attribute__((always_inline))
+#define DECLSPEC_NOINLINE __attribute__((noinline))
+#define NOINLINE __attribute__((noinline))
+
 #endif
 
 
@@ -1392,6 +1402,10 @@ ZeroMemoryInline(
 
 #define ZeroStructPointerInline(Name) \
     memset((PDWORD64)Name, 0, (sizeof(*Name) >> 3))
+#endif
+
+#ifndef PH_WINDOWS
+#define SecureZeroMemory ZeroInline
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
