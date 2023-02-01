@@ -67,9 +67,9 @@ Abstract:
 #define NO_EXTENSION &NullUnicodeString
 #define NO_STREAM_NAME L""
 
-#define SUFFIX(N)       L#N
-#define BASE_NAME(N)    L#N
-#define STREAM_NAME(N)  L#N
+#define SUFFIX(N)       (L""#N)
+#define BASE_NAME(N)    (L""#N)
+#define STREAM_NAME(N)  (L""#N)
 
 #define EXPAND_AS_EXAMPLE(          \
     Verb, VUpper, Name, Upper,      \

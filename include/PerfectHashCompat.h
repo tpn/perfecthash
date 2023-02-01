@@ -29,6 +29,7 @@ extern "C" {
 #include <stdarg.h>
 #include <string.h>
 #include <limits.h>
+#include <assert.h>
 
 #include <x86intrin.h>
 
@@ -198,7 +199,7 @@ SystemTimeToFileTime(
 
 #define FORCEINLINE static inline __attribute__((always_inline))
 
-#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
+#define C_ASSERT(e) static_assert(e, "Assertion failed")
 
 typedef _Return_type_success_(return >= 0) long HRESULT;
 typedef HRESULT *PHRESULT;
@@ -1575,10 +1576,12 @@ InterlockedCompareExchange(
 
 #define __popcnt __builtin_popcount
 #define __popcnt64 __builtin_popcountll
+#ifdef PH_COMPILER_GCC
 #define _tzcnt_u32 __builtin_ctz
 #define _tzcnt_u64 __builtin_ctzll
 #define _lzcnt_u32 __builtin_clz
 #define _lzcnt_u64 __builtin_clzll
+#endif
 
 #define InterlockedIncrement(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrement64(v) __sync_add_and_fetch(v, 1)
@@ -2498,6 +2501,115 @@ WINAPI
 CloseHandle(
     _In_ _Post_ptr_invalid_ HANDLE hObject
     );
+
+//
+// Our helper functions.
+//
+
+#define FREE_PTR(P) free(*(P)); *(P) = NULL
+
+FORCEINLINE
+PCHAR
+CommandLineArgvAToString(
+    _In_ INT NumberOfArguments,
+    _In_reads_(NumberOfArguments) PSTR *ArgvA
+    )
+{
+    INT Index;
+    PCHAR String;
+    SIZE_T TotalSizeInBytes;
+
+    TotalSizeInBytes = 0;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        TotalSizeInBytes += strlen(ArgvA[Index]);
+    }
+
+    //
+    // Account for space and trailing \0.
+    //
+
+    TotalSizeInBytes += NumberOfArguments + 1;
+
+    String = (PCHAR)calloc(1, TotalSizeInBytes);
+    if (!String) {
+        return NULL;
+    }
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        strcat(String, ArgvA[Index]);
+        strcat(String, " ");
+    }
+
+    return String;
+}
+
+FORCEINLINE
+PWSTR *
+CommandLineArgvAToArgvW(
+    _In_ INT NumberOfArguments,
+    _In_reads_(NumberOfArguments) PSTR *ArgvA
+    )
+{
+    INT Index;
+    INT Inner;
+    CHAR Char;
+    PWSTR Wide;
+    PSTR Source;
+    PWSTR *ArgvW;
+    SIZE_T Length;
+    SIZE_T TotalSizeInBytes;
+    SIZE_T ArraySizeInBytes;
+
+    TotalSizeInBytes = 0;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        TotalSizeInBytes += strlen(ArgvA[Index]);
+    }
+
+    //
+    // Account for space and trailing \0.
+    //
+
+    TotalSizeInBytes += NumberOfArguments + 1;
+
+    //
+    // Multiply by 2 to account for char -> wchar_t.
+    //
+
+    TotalSizeInBytes <<= 1;
+
+    //
+    // Account for the array of pointers, plus a trailing NULL pointer.
+    //
+
+    ArraySizeInBytes = (sizeof(Wide) * (NumberOfArguments + 1));
+    TotalSizeInBytes += ArraySizeInBytes;
+
+    ArgvW = (PWSTR *)calloc(1, TotalSizeInBytes);
+    if (!ArgvW) {
+        return NULL;
+    }
+
+    //
+    // Wire up Wide to point to after the array.
+    //
+
+    Wide = (PWSTR)RtlOffsetToPointer(ArgvW, ArraySizeInBytes);
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        Source =ArgvA[Index];
+        Length = strlen(Source);
+        ArgvW[Index] = Wide;
+
+        for (Inner = 0; Inner < Length; Inner++) {
+            Char = Source[Inner];
+            *Wide++ = (WCHAR)Char;
+        }
+    }
+
+    return Wide;
+}
 
 #ifdef __cplusplus
 } // extern "C"

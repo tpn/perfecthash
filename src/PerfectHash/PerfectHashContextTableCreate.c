@@ -509,7 +509,10 @@ Return Value:
         goto End;
     }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
     _Analysis_assume_(CsvFile != NULL);
+#pragma clang diagnostic pop
 
     //
     // N.B. The SAL annotations are required to suppress the concurrency
@@ -1459,5 +1462,64 @@ Return Value:
 
     return Result;
 }
+
+#ifndef PH_WINDOWS
+PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA PerfectHashContextTableCreateArgvA;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextTableCreateArgvA(
+    PPERFECT_HASH_CONTEXT Context,
+    ULONG NumberOfArguments,
+    LPSTR *ArgvA
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that converts the argument array into a wide
+    version, and then calls PerfectHashContextTableCreateArgvW().
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
+        for which the arguments are to be extracted.
+
+    NumberOfArguments - Supplies the number of elements in the ArgvA array.
+
+    ArgvA - Supplies a pointer to an array of C string arguments.
+
+Return Value:
+
+    S_OK or an appropriate error code.
+
+--*/
+{
+    PWSTR *ArgvW;
+    PWSTR CommandLineW;
+    HRESULT Result;
+
+    CommandLineW = CommandLineArgvAToString(NumberOfArguments, ArgvA);
+    if (!CommandLineW) {
+        return E_OUTOFMEMORY;
+    }
+
+    ArgvW = CommandLineArgvAToArgvW(NumberOfArguments, ArgvA);
+    if (!ArgvW) {
+        return E_OUTOFMEMORY;
+    }
+
+    Result = PerfectHashContextTableCreateArgvW(Context,
+                                                NumberOfArguments,
+                                                ArgvW,
+                                                CommandLineW);
+
+    FREE_PTR(&ArgvW);
+    FREE_PTR(&CommandLineW);
+
+    return Result;
+}
+#endif
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

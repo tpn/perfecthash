@@ -28,21 +28,13 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
 #define RCS RTL_CONSTANT_STRING
 #endif
 
-#ifdef PH_WINDOWS
-#define DECL_ARG(Name) const UNICODE_STRING Name = RCS(L#Name)
-#else
-#define DECL_ARG(Name) const UNICODE_STRING Name = RCS(#Name)
-#endif
+#define DECL_ARG(Name) const UNICODE_STRING Name = RCS(L"" #Name)
 
 //
 // Helper macro for Rtl->RtlEqualUnicodeString() comparison.
 //
 
-#if PH_WINDOWS
 #define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, TRUE)
-#else
-#define IS_EQUAL(Name) Rtl->RtlEqualString(Arg, &Name, TRUE)
-#endif
 
 //
 // Helper macros for toggling the given flag if the current argument matches
@@ -314,8 +306,8 @@ TryExtractArgTableCompileFlags(
 {
     UNREFERENCED_PARAMETER(Rtl);
     UNREFERENCED_PARAMETER(Allocator);
-    DBG_UNREFERENCED_PARAMETER(Argument);
-    DBG_UNREFERENCED_PARAMETER(Flags);
+    UNREFERENCED_PARAMETER(Argument);
+    UNREFERENCED_PARAMETER(Flags);
 
     return S_FALSE;
 }

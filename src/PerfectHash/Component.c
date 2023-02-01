@@ -653,7 +653,12 @@ PerfectHashDllGetClassObject(
     ClassFactory = (PICLASSFACTORY)CreateComponent(Id, NULL);
     if (!ClassFactory) {
         Result = TlsContext->LastResult;
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
         _Analysis_assume_(Result < 0);
+#pragma clang diagnostic pop
+
         goto End;
     }
 

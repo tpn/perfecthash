@@ -204,20 +204,21 @@ set(Source_Files
     "stdafx.c"
     "SymbolLoader.c"
     "VCProjectFileChunks.c"
+    "ExtractArg.c"
+    "PerfectHashConstants.c"
+    "_pow.c"
+    "_dtoa.c"
+    "_strtod.c"
 )
 
 if (IS_WINDOWS)
     list(
         APPEND Source_Files
         "Cu.c"
-        "_pow.c"
-        "_dtoa.c"
-        "_strtod.c"
         "RtlUuid.c"
         "Security.c"
         "GraphAvx.c"
         "RtlRandom.c"
-        "ExtractArg.c"
         "RtlBuffers.c"
         "memset_x64.asm"
         "RtlPrivilege.c"
@@ -227,7 +228,6 @@ if (IS_WINDOWS)
         "RtlErrorHandling.c"
         "RtlCopyPages_x64.asm"
         "RtlFillPages_x64.asm"
-        "PerfectHashConstants.c"
         "PerfectHashDirectory.c"
         "PerfectHashTableCompile.c"
         "PerfectHashErrorHandling.c"
@@ -271,7 +271,7 @@ set(ROOT_NAMESPACE PerfectHash)
 ################################################################################
 target_compile_definitions(
     ${PROJECT_NAME}
-    PUBLIC
+    PRIVATE
     "_PERFECT_HASH_INTERNAL_BUILD"
 )
 
@@ -291,3 +291,4 @@ if (IS_WINDOWS)
     target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 endif()
 
+#  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

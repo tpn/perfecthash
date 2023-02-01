@@ -15,13 +15,17 @@ Abstract:
 
 #include "stdafx.h"
 
+#ifndef __STDC__
 #define __STDC__
+#endif
 
 #define __HI(x) *(1+(int*)&x)
 #define __LO(x) *(int*)&x
 #define __HIp(x) *(1+(int*)x)
 #define __LOp(x) *(int*)x
+#ifndef __P
 #define __P(p)  p
+#endif
 
 #ifdef __STDC__
 static const double
@@ -502,10 +506,13 @@ B.  sqrt(x) by Reciproot Iteration
         if (k >  0x7fe) return huge*copysign(huge,x); /* overflow  */
         if (k > 0)                              /* normal result */
             {__HI(x) = (hx&0x800fffff)|(k<<20); return x;}
-        if (k <= -54)
-            if (n > 50000)      /* in case integer overflow in n+k */
+        if (k <= -54) {
+            if (n > 50000) {    /* in case integer overflow in n+k */
                 return huge*copysign(huge,x);   /*overflow*/
-            else return tiny*copysign(tiny,x);  /*underflow*/
+            } else {
+                return tiny*copysign(tiny,x);  /*underflow*/
+            }
+        }
         k += 54;                                /* subnormal result */
         __HI(x) = (hx&0x800fffff)|(k<<20);
         return x*twom54;

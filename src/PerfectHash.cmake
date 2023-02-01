@@ -90,6 +90,7 @@ else()
         PUBLIC
         "PERFECT_HASH_BUILD_CONFIG=\"${CMAKE_SYSTEM_NAME}\""
         "PH_COMPAT"
+        "PH_COMPILER_$<UPPER_CASE:${CMAKE_C_COMPILER_ID}>"
     )
 
     target_compile_options(
@@ -99,5 +100,15 @@ else()
         -Wno-incompatible-pointer-types
         -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
     )
+
+    if (CMAKE_C_COMPILER_ID MATCHES Clang)
+
+        target_compile_options(
+            ${PROJECT_NAME}
+            PUBLIC
+            -Wno-enum-conversion # IsValidVCProjectFileId((FILE_ID)Id)
+        )
+    endif()
+
 
 endif()

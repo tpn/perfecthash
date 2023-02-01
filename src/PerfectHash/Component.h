@@ -73,9 +73,11 @@ IsGlobalComponentInterfaceId(
     )
 {
     return (
+#ifdef PH_WINDOWS
+        Id == PerfectHashCuInterfaceId ||
+#endif
         Id == PerfectHashRtlInterfaceId ||
-        Id == PerfectHashAllocatorInterfaceId ||
-        Id == PerfectHashCuInterfaceId
+        Id == PerfectHashAllocatorInterfaceId
     );
 }
 

@@ -52,21 +52,21 @@ PrintCurrentContextStatsChm01(
 // Define helper macros for checking prepare and save file work errors.
 //
 
-#define EXPAND_AS_CHECK_ERRORS(                                        \
-    Verb, VUpper, Name, Upper,                                         \
-    EofType, EofValue,                                                 \
-    Suffix, Extension, Stream, Base                                    \
-)                                                                      \
-    if (Verb####Name.NumberOfErrors > 0) {                             \
-        Result = Verb####Name.LastResult;                              \
-        if (Result == S_OK || Result == E_UNEXPECTED) {                \
-            Result = PH_E_ERROR_DURING_##VUpper##_##Upper;             \
-        }                                                              \
-        PH_ERROR(                                                      \
-            CreatePerfectHashTableImplChm01_ErrorDuring##Verb####Name, \
-            Result                                                     \
-        );                                                             \
-        goto Error;                                                    \
+#define EXPAND_AS_CHECK_ERRORS(                                      \
+    Verb, VUpper, Name, Upper,                                       \
+    EofType, EofValue,                                               \
+    Suffix, Extension, Stream, Base                                  \
+)                                                                    \
+    if (Verb##Name.NumberOfErrors > 0) {                             \
+        Result = Verb##Name.LastResult;                              \
+        if (Result == S_OK || Result == E_UNEXPECTED) {              \
+            Result = PH_E_ERROR_DURING_##VUpper##_##Upper;           \
+        }                                                            \
+        PH_ERROR(                                                    \
+            CreatePerfectHashTableImplChm01_ErrorDuring##Verb##Name, \
+            Result                                                   \
+        );                                                           \
+        goto Error;                                                  \
     }
 
 #define CHECK_ALL_PREPARE_ERRORS() \
@@ -696,7 +696,7 @@ RetryWithLargerTableSize:
     Suffix, Extension, Stream, Base                     \
 )                                                       \
     ASSERT(!NoFileIo(Table));                           \
-    ZeroStructInline(Verb####Name);                     \
+    ZeroStructInline(Verb##Name);                       \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     InsertTailFileWork(Context, &Verb##Name.ListEntry); \
     SubmitThreadpoolWork(Context->FileWork);
