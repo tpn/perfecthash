@@ -221,7 +221,6 @@
     <ClCompile Include="GraphImpl1.c" />
     <ClCompile Include="GuardedList.c" />
     <ClCompile Include="PerfectHashContextBulkCreate.c" />
-    <ClCompile Include="PerfectHashContextSelfTest.c" />
     <ClCompile Include="PerfectHashContextTableCreate.c" />
     <ClCompile Include="PerfectHashDirectory.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />

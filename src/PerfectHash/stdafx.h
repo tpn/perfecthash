@@ -108,6 +108,16 @@ Abstract:
 #endif // PH_WINDOWS
 
 //
+// Compat headers.
+//
+
+#ifdef PH_COMPAT
+#define IN
+#define OUT
+#include <pthread.h>
+#endif
+
+//
 // PerfectHash-related headers.
 //
 

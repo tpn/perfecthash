@@ -14,6 +14,92 @@ Abstract:
 
 #include "stdafx.h"
 
+#define PTR_SZ 8
+
+#ifndef PH_WINDOWS
+
+//
+// Heap wrappers.
+//
+
+WINBASEAPI
+_Ret_maybenull_
+_Post_writable_byte_size_(dwBytes)
+LPVOID
+WINAPI
+HeapAlloc(
+    _In_ HANDLE Heap,
+    _In_ DWORD Flags,
+    _In_ SIZE_T SizeInBytes
+    )
+{
+    UNREFERENCED_PARAMETER(Heap);
+
+    if ((Flags & HEAP_ZERO_MEMORY) != 0) {
+        return calloc(1, SizeInBytes);
+    } else {
+        return malloc(SizeInBytes);
+    }
+}
+
+WINBASEAPI
+_Success_(return != 0)
+_Ret_maybenull_
+_Post_writable_byte_size_(dwBytes)
+LPVOID
+WINAPI
+HeapReAlloc(
+    _Inout_ HANDLE Heap,
+    _In_ DWORD Flags,
+    _Frees_ptr_opt_ LPVOID Mem,
+    _In_ SIZE_T SizeInBytes
+    )
+{
+    UNREFERENCED_PARAMETER(Heap);
+
+    if ((Flags & HEAP_ZERO_MEMORY) != 0) {
+
+        //
+        // Erm, can't do anything here as we don't know the original size for
+        // a memcpy, e.g.:
+        //
+        //  New = calloc(1, SizeInBytes);
+        //  memcpy(New, Mem, OriginalSizeInBytes);
+        //  free(Mem);
+        //  return New;
+        //
+        // The only code that uses Allocator->Vtbl->ReCalloc() is ExtractArg.c
+        // for resizing the table create parameters.
+        //
+
+        NOTHING;
+    }
+
+    return realloc(Mem, SizeInBytes);
+}
+
+WINBASEAPI
+_Success_(return != FALSE)
+BOOL
+WINAPI
+HeapFree(
+    _Inout_ HANDLE Heap,
+    _In_ DWORD Flags,
+    __drv_freesMem(Mem) _Frees_ptr_opt_ LPVOID Mem
+    )
+{
+    UNREFERENCED_PARAMETER(Heap);
+    UNREFERENCED_PARAMETER(Flags);
+
+    free(Mem);
+
+    return TRUE;
+}
+
+#endif // PH_WINDOWS
+
+
+#define PTR_SZ 8
 #ifdef _WIN64
 #define PTR_SZ 8
 #else
@@ -497,6 +583,8 @@ AllocatorAlignedOffsetReCalloc(
 // Non-vtbl methods.
 //
 
+#ifdef PH_WINDOWS
+
 ALLOCATOR_INITIALIZE AllocatorInitialize;
 
 _Use_decl_annotations_
@@ -545,5 +633,35 @@ AllocatorRundown(
 {
     HeapDestroy(Allocator->HeapHandle);
 }
+
+#else // PH_WINDOWS
+
+ALLOCATOR_INITIALIZE AllocatorInitialize;
+
+_Use_decl_annotations_
+HRESULT
+AllocatorInitialize(
+    PALLOCATOR Allocator
+    )
+{
+    return S_OK;
+}
+
+
+ALLOCATOR_RUNDOWN AllocatorRundown;
+
+_Use_decl_annotations_
+VOID
+AllocatorRundown(
+    PALLOCATOR Allocator
+    )
+{
+    UNREFERENCED_PARAMETER(Allocator);
+    return;
+}
+
+
+#endif // PH_WINDOWS
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

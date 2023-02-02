@@ -258,6 +258,7 @@ Return Value:
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextTryPrepareCallbackTableValuesFile(
         Context,
         TableCreateFlags
@@ -267,6 +268,7 @@ Return Value:
         PH_ERROR(PerfectHashContextTryPrepareCallbackTableValuesFile, Result);
         goto Error;
     }
+#endif
 
     //
     // Create a "row buffer" we can use for the CSV file.
@@ -1387,6 +1389,7 @@ Return Value:
         return Result;
     }
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextInitializeFunctionHookCallbackDll(
         Context,
         &TableCreateFlags,
@@ -1400,6 +1403,7 @@ Return Value:
         );
         return Result;
     }
+#endif
 
     if (MaximumConcurrency > 0) {
         Result = Context->Vtbl->SetMaximumConcurrency(Context,
@@ -1422,6 +1426,7 @@ Return Value:
         return Result;
     }
 
+#ifdef PH_WINDOWS
     if (ContextTableCreateFlags.TryCuda != FALSE) {
         Result = PerfectHashContextInitializeCuda(Context,
                                                   &TableCreateParameters);
@@ -1430,6 +1435,7 @@ Return Value:
             return Result;
         }
     }
+#endif
 
     Result = Context->Vtbl->TableCreate(Context,
                                         &KeysPath,

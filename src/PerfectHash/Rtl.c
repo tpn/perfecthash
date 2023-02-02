@@ -133,6 +133,8 @@ RtlInitialize(
     ULONG NumberOfSymbols;
     ULONG NumberOfResolvedSymbols;
 
+#ifdef PH_WINDOWS
+
     //
     // Define an appropriately sized bitmap we can passed to LoadSymbols().
     //
@@ -222,7 +224,6 @@ RtlInitialize(
 
     ASSERT(NumberOfSymbols == NumberOfResolvedSymbols);
 
-#ifdef PH_WINDOWS
     SetCSpecificHandler(Rtl->__C_specific_handler);
 
     Success = CryptAcquireContextW(&Rtl->CryptProv,
@@ -235,31 +236,41 @@ RtlInitialize(
         SYS_ERROR(CryptAcquireContextW);
         goto Error;
     }
-#endif
 
-#ifdef PH_WINDOWS
     Result = RtlInitializeCpuFeatures(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeCpuFeatures, Result);
         goto Error;
     }
-#endif
 
-#ifdef PH_WINDOWS
     Result = RtlInitializeLargePages(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeLargePages, Result);
         goto Error;
     }
-#endif
 
-#ifdef PH_WINDOWS
 #if defined(_M_AMD64) || defined(_M_X64)
     if (Rtl->CpuFeatures.AVX2 != FALSE) {
         Rtl->Vtbl->CopyPages = RtlCopyPages_AVX2;
         Rtl->Vtbl->FillPages = RtlFillPages_AVX2;
     }
 #endif
+#else // PH_WINDOWS
+
+    //
+    // Compat initialization.
+    //
+
+    Rtl->RtlCopyMemory = RtlCopyMemory;
+    Rtl->RtlMoveMemory = RtlMoveMemory;
+    Rtl->RtlCompareMemory = RtlCompareMemory;
+    Rtl->RtlNumberOfSetBits = RtlNumberOfSetBits;
+    Rtl->RtlEqualUnicodeString = RtlEqualUnicodeString;
+    Rtl->RtlFindLongestRunClear = RtlFindLongestRunClear;
+    Rtl->RtlUnicodeStringToInt64 = RtlUnicodeStringToInt64;
+    Rtl->RtlUnicodeStringToInteger = RtlUnicodeStringToInteger;
+    Rtl->RtlAppendUnicodeStringToString = RtlAppendUnicodeStringToString;
+
 #endif
 
     //
@@ -890,5 +901,213 @@ Return Value:
 
 }
 #endif // defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
+
+#ifdef PH_COMPAT
+
+//
+// Misc compat functions.
+//
+
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/sysinfo.h>
+
+DWORD LastError;
+
+DWORD
+GetLastError(
+    VOID
+    )
+{
+    return LastError;
+}
+
+DWORD
+GetMaximumProcessorCount(
+    _In_ WORD GroupNumber
+    )
+{
+    return get_nprocs();
+}
+
+_Success_(return != 0)
+BOOL
+WINAPI
+GetComputerNameA (
+    _Out_writes_to_opt_(*nSize, *nSize + 1) LPSTR Buffer,
+    _Inout_ LPDWORD Size
+    )
+{
+    LastError = gethostname(Buffer, *Size);
+    Buffer[MAX_COMPUTERNAME_LENGTH-1] = '\0';
+    *Size = strlen(Buffer);
+    return (LastError == 0);
+}
+
+WINBASEAPI
+HANDLE
+WINAPI
+GetStdHandle(
+    _In_ DWORD StdHandle
+    )
+{
+    switch (StdHandle) {
+        case STD_INPUT_HANDLE:
+            return (HANDLE)stdin;
+
+        case STD_OUTPUT_HANDLE:
+            return (HANDLE)stdout;
+
+        case STD_ERROR_HANDLE:
+            return (HANDLE)stderr;
+
+        default:
+            return INVALID_HANDLE_VALUE;
+    }
+}
+
+//
+// SRW locks.
+//
+
+WINBASEAPI
+VOID
+WINAPI
+InitializeSRWLock(
+    _Out_ PSRWLOCK SRWLock
+    )
+{
+    LastError = pthread_mutex_init(SRWLock, NULL);
+    if (LastError != 0) {
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+}
+
+WINBASEAPI
+_Releases_exclusive_lock_(*SRWLock)
+VOID
+WINAPI
+ReleaseSRWLockExclusive(
+    _Inout_ PSRWLOCK SRWLock
+    )
+{
+    LastError = pthread_mutex_unlock(SRWLock);
+    if (LastError != 0) {
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+}
+
+WINBASEAPI
+_Releases_shared_lock_(*SRWLock)
+VOID
+WINAPI
+ReleaseSRWLockShared(
+    _Inout_ PSRWLOCK SRWLock
+    )
+{
+    LastError = pthread_mutex_unlock(SRWLock);
+    if (LastError != 0) {
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+}
+
+WINBASEAPI
+_Acquires_exclusive_lock_(*SRWLock)
+VOID
+WINAPI
+AcquireSRWLockExclusive(
+    _Inout_ PSRWLOCK SRWLock
+    )
+{
+    LastError = pthread_mutex_lock(SRWLock);
+    if (LastError != 0) {
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+}
+
+WINBASEAPI
+_Acquires_shared_lock_(*SRWLock)
+VOID
+WINAPI
+AcquireSRWLockShared(
+    _Inout_ PSRWLOCK SRWLock
+    )
+{
+    LastError = pthread_mutex_lock(SRWLock);
+    if (LastError != 0) {
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+}
+
+WINBASEAPI
+_When_(return!=0, _Acquires_exclusive_lock_(*SRWLock))
+BOOLEAN
+WINAPI
+TryAcquireSRWLockExclusive(
+    _Inout_ PSRWLOCK SRWLock
+    )
+{
+    LastError = pthread_mutex_trylock(SRWLock);
+    if (LastError != 0 && LastError != EBUSY) {
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+    return (LastError == 0);
+}
+
+WINBASEAPI
+_When_(return!=0, _Acquires_shared_lock_(*SRWLock))
+BOOLEAN
+WINAPI
+TryAcquireSRWLockShared(
+    _Inout_ PSRWLOCK SRWLock
+    )
+{
+    LastError = pthread_mutex_trylock(SRWLock);
+    if (LastError != 0 && LastError != EBUSY) {
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+    return (LastError == 0);
+}
+
+//
+// Hacky init once with global vars.
+//
+
+PINIT_ONCE InitOnceInitOnce;
+PVOID InitOnceParameter;
+PVOID InitOnceContext;
+PINIT_ONCE_FN InitOnceFunction;
+
+C_ASSERT(sizeof(INIT_ONCE) >= sizeof(pthread_once));
+
+typedef VOID (INIT_CALLBACK)(VOID);
+typedef INIT_CALLBACK *PINIT_CALLBACK;
+
+VOID
+InitOnceWrapper(
+    VOID
+    )
+{
+    InitOnceFunction(InitOnceInitOnce, InitOnceParameter, InitOnceContext);
+}
+
+WINBASEAPI
+BOOL
+WINAPI
+InitOnceExecuteOnce(
+    _Inout_ PINIT_ONCE InitOnce,
+    _In_ __callback PINIT_ONCE_FN InitFn,
+    _Inout_opt_ PVOID Parameter,
+    _Outptr_opt_result_maybenull_ LPVOID* Context
+    )
+{
+    InitOnceContext = Context;
+    InitOnceFunction = InitFn;
+    InitOnceParameter = Parameter;
+    pthread_once((pthread_once_t *)InitOnce, InitOnceWrapper);
+    return TRUE;
+}
+
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

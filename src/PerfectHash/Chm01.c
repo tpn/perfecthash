@@ -783,7 +783,7 @@ RetryWithLargerTableSize:
         // to acquire it to hang.
         //
 
-        Graph->Lock.Ptr = NULL;
+        ResetSRWLock(&Graph->Lock);
 
         AcquireGraphLockExclusive(Graph);
         Result = Graph->Vtbl->SetInfo(Graph, &Info);

@@ -1384,11 +1384,6 @@ extern PERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY
     PerfectHashContextSetBaseOutputDirectory;
 extern PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY
     PerfectHashContextGetBaseOutputDirectory;
-extern PERFECT_HASH_CONTEXT_SELF_TEST PerfectHashContextSelfTest;
-extern PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
-    PerfectHashContextSelfTestArgvW;
-extern PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-    PerfectHashContextExtractSelfTestArgsFromArgvW;
 extern PERFECT_HASH_CONTEXT_BULK_CREATE PerfectHashContextBulkCreate;
 extern PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW
     PerfectHashContextBulkCreateArgvW;

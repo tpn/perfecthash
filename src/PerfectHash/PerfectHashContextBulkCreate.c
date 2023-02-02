@@ -282,6 +282,7 @@ Return Value:
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextTryPrepareCallbackTableValuesFile(
         Context,
         TableCreateFlags
@@ -291,6 +292,7 @@ Return Value:
         PH_ERROR(PerfectHashContextTryPrepareCallbackTableValuesFile, Result);
         goto Error;
     }
+#endif
 
     //
     // Create a buffer we can use for temporary path construction.  We want it
@@ -1729,6 +1731,7 @@ Return Value:
         return Result;
     }
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextInitializeFunctionHookCallbackDll(
         Context,
         &TableCreateFlags,
@@ -1742,6 +1745,7 @@ Return Value:
         );
         return Result;
     }
+#endif
 
 
     if (MaximumConcurrency > 0) {

@@ -1031,9 +1031,6 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextGetMaximumConcurrency,
     &PerfectHashContextSetBaseOutputDirectory,
     &PerfectHashContextGetBaseOutputDirectory,
-    &PerfectHashContextSelfTest,
-    &PerfectHashContextSelfTestArgvW,
-    &PerfectHashContextExtractSelfTestArgsFromArgvW,
     &PerfectHashContextBulkCreate,
     &PerfectHashContextBulkCreateArgvW,
     &PerfectHashContextExtractBulkCreateArgsFromArgvW,
@@ -1045,9 +1042,9 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
 #endif
 };
 #ifdef PH_WINDOWS
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 13);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 10);
 #else
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 14);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 11);
 #endif
 
 //

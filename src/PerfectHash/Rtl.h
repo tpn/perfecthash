@@ -1775,10 +1775,11 @@ ULONG
 
 typedef
 ULONG
-(NTAPI *PRTL_FIND_LONGEST_RUN_CLEAR)(
+(NTAPI RTL_FIND_LONGEST_RUN_CLEAR)(
     _In_ PRTL_BITMAP BitMapHeader,
     _Out_ PULONG StartingIndex
     );
+typedef RTL_FIND_LONGEST_RUN_CLEAR *PRTL_FIND_LONGEST_RUN_CLEAR;
 
 typedef
 ULONG
@@ -1795,9 +1796,10 @@ ULONG
 
 typedef
 ULONG
-(NTAPI *PRTL_NUMBER_OF_SET_BITS)(
+(NTAPI RTL_NUMBER_OF_SET_BITS)(
     _In_ PRTL_BITMAP BitMapHeader
     );
+typedef RTL_NUMBER_OF_SET_BITS *PRTL_NUMBER_OF_SET_BITS;
 
 typedef
 BOOLEAN
@@ -3381,5 +3383,35 @@ extern RTL_FILL_PAGES RtlFillPagesNonTemporal_AVX2;
 extern RTL_COPY_PAGES RtlCopyPages_AVX2;
 extern RTL_FILL_PAGES RtlFillPages_AVX2;
 #endif
+
+#ifdef PH_COMPAT
+extern RTL_COPY_MEMORY RtlCopyMemory;
+extern RTL_MOVE_MEMORY RtlMoveMemory;
+extern RTL_COMPARE_MEMORY RtlCompareMemory;
+extern RTL_NUMBER_OF_SET_BITS RtlNumberOfSetBits;
+extern RTL_EQUAL_UNICODE_STRING RtlEqualUnicodeString;
+extern RTL_FIND_LONGEST_RUN_CLEAR RtlFindLongestRunClear;
+extern RTL_UNICODE_STRING_TO_INT64 RtlUnicodeStringToInt64;
+extern RTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;
+extern RTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString;
+#endif
+
+
+//
+// Compat glue.
+//
+
+extern ULONG LastError;
+
+FORCEINLINE
+VOID
+ResetSRWLock(PSRWLOCK Lock)
+{
+#ifdef PH_WINDOWS
+    Lock->Ptr = NULL;
+#else
+    ZeroStructPointerInline(Lock);
+#endif
+}
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

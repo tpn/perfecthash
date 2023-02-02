@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -18,8 +18,83 @@ Abstract:
 // Our TLS index.  Assigned at PROCESS_ATTACH, free'd at PROCESS_DETACH.
 //
 
-ULONG PerfectHashTlsIndex;
+#ifdef PH_WINDOWS
+#define TLS_KEY_TYPE ULONG
+#else
+#define TLS_KEY_TYPE pthread_key_t
+#endif
 
+TLS_KEY_TYPE PerfectHashTlsIndex;
+
+#ifndef PH_WINDOWS
+
+pthread_once_t PerfectHashTlsInitOnce = PTHREAD_ONCE_INIT;
+int PerfectHashTlsCreateError = 0;
+
+VOID
+PerfectHashTlsAlloc(
+    VOID
+    )
+{
+    PerfectHashTlsCreateError = pthread_key_create(&PerfectHashTlsIndex, NULL);
+    if (PerfectHashTlsCreateError != 0) {
+        PH_ERROR(phtread_key_create, PerfectHashTlsCreateError);
+        exit(PerfectHashTlsCreateError);
+    }
+}
+
+__attribute__((constructor))
+VOID
+PerfectHashTlsProcessAttach(
+    VOID
+    )
+{
+    pthread_once(&PerfectHashTlsInitOnce, PerfectHashTlsAlloc);
+}
+
+WINBASEAPI
+LPVOID
+WINAPI
+TlsGetValue(
+    _In_ DWORD TlsIndex
+    )
+{
+    TLS_KEY_TYPE Key;
+
+    Key = (TLS_KEY_TYPE)TlsIndex;
+
+    return pthread_getspecific(Key);
+}
+
+WINBASEAPI
+BOOL
+WINAPI
+TlsSetValue(
+    _In_ DWORD TlsIndex,
+    _In_opt_ LPVOID TlsValue
+    )
+{
+    TLS_KEY_TYPE Key;
+
+    Key = (TLS_KEY_TYPE)TlsIndex;
+
+    return (pthread_setspecific(Key, TlsValue) == 0);
+}
+
+WINBASEAPI
+BOOL
+WINAPI
+TlsFree(
+    _In_ DWORD TlsIndex
+    )
+{
+    UNREFERENCED_PARAMETER(TlsIndex);
+    return TRUE;
+}
+
+#endif
+
+#ifdef PH_WINDOWS
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessAttach;
 
 _Use_decl_annotations_
@@ -87,6 +162,7 @@ End:
 
     return TRUE;
 }
+#endif // PH_WINDOWS
 
 //
 // TLS Set/Get Context functions.

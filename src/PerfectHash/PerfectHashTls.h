@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -161,8 +161,10 @@ BOOLEAN
     );
 typedef PERFECT_HASH_TLS_FUNCTION *PPERFECT_HASH_TLS_FUNCTION;
 
+#ifdef PH_WINDOWS
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessAttach;
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessDetach;
+#endif
 
 //
 // Define TLS Get/Set context functions.

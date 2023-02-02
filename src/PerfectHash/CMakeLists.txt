@@ -234,6 +234,13 @@ if (IS_WINDOWS)
         "PerfectHashContextBulkCreate.c"
         "PerfectHashTableFastIndexEx_x64_01.asm"
     )
+else()
+    list(
+        APPEND Source_Files
+        "mem.c"
+        "bitmap.c"
+        "unicode.c"
+    )
 endif()
 
 source_group("Source Files" FILES ${Source_Files})

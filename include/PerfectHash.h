@@ -2501,46 +2501,6 @@ typedef PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY
       *PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY;
 
 //
-// Define the self-test flags.
-//
-
-typedef union _PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS {
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:32;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS
-      *PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS;
-
-FORCEINLINE
-HRESULT
-IsValidContextSelfTestFlags(
-    _In_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags
-    )
-{
-
-    if (!ARGUMENT_PRESENT(SelfTestFlags)) {
-        return E_POINTER;
-    }
-
-    if (SelfTestFlags->Unused != 0) {
-        return E_FAIL;
-    }
-
-    return S_OK;
-}
-
-//
 // Define the context bulk-create flags.
 //
 
@@ -3744,59 +3704,6 @@ struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CREATE_PARAMETERS {
 typedef PERFECT_HASH_TABLE_CREATE_PARAMETERS
       *PPERFECT_HASH_TABLE_CREATE_PARAMETERS;
 
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ PCUNICODE_STRING TestDataDirectory,
-    _In_ PCUNICODE_STRING BaseOutputDirectory,
-    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _In_opt_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
-    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    );
-typedef PERFECT_HASH_CONTEXT_SELF_TEST *PPERFECT_HASH_CONTEXT_SELF_TEST;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG NumberOfArguments,
-    _In_ LPWSTR *ArgvW
-    );
-typedef PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
-      *PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG NumberOfArguments,
-    _In_ LPWSTR *ArgvW,
-    _In_ PUNICODE_STRING TestDataDirectory,
-    _In_ PUNICODE_STRING BaseOutputDirectory,
-    _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _Inout_ PULONG MaximumConcurrency,
-    _Inout_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
-    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    _Inout_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
-    _Inout_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
-    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    );
-typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-      *PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
-
 //
 // Bulk Create
 //
@@ -3929,11 +3836,6 @@ typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     PPERFECT_HASH_CONTEXT_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
     PPERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY SetBaseOutputDirectory;
     PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY GetBaseOutputDirectory;
-
-    PPERFECT_HASH_CONTEXT_SELF_TEST SelfTest;
-    PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
-    PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-        ExtractSelfTestArgsFromArgvW;
 
     PPERFECT_HASH_CONTEXT_BULK_CREATE BulkCreate;
     PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW BulkCreateArgvW;

@@ -23,6 +23,7 @@ extern "C" {
 //
 
 #include <wchar.h>
+#include <errno.h>
 #include <stdint.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -30,6 +31,7 @@ extern "C" {
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
+#include <pthread.h>
 
 #include <x86intrin.h>
 
@@ -52,7 +54,7 @@ extern "C" {
 
 #define CONST const
 
-typedef char CHAR;
+typedef char CHAR, CCHAR;
 typedef short SHORT;
 typedef int32_t LONG;
 typedef int32_t INT;
@@ -363,7 +365,6 @@ typedef struct _RTL_CONDITION_VARIABLE {
 } RTL_CONDITION_VARIABLE, *PRTL_CONDITION_VARIABLE;
 
 typedef RTL_CRITICAL_SECTION CRITICAL_SECTION;
-typedef RTL_SRWLOCK SRWLOCK;
 
 typedef CRITICAL_SECTION *PCRITICAL_SECTION, *LPCRITICAL_SECTION;
 
@@ -1464,7 +1465,7 @@ typedef union DECLSPEC_ALIGN(16) _SLIST_HEADER {
     } HeaderX64;
 } SLIST_HEADER, *PSLIST_HEADER;
 
-#define MAX_COMPUTERNAME_LENGTH 31
+#define MAX_COMPUTERNAME_LENGTH 64
 
 WINBASEAPI
 _Success_(return != 0)
@@ -1492,6 +1493,49 @@ GetComputerNameW (
 #define BitTestAndComplement64 _bittestandcomplement64
 #define BitTestAndSet64 _bittestandset64
 #define BitTestAndReset64 _bittestandreset64
+
+#if 0
+// From: https://stackoverflow.com/a/54760134
+// define BSR32() and BSR64()
+#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
+    #ifdef __INTEL_COMPILER
+        typedef unsigned int bsr_idx_t;
+    #else
+        #include <intrin.h>   // MSVC
+        typedef unsigned long bsr_idx_t;
+    #endif
+
+    static inline
+    unsigned BSR32(unsigned long x){
+        bsr_idx_t idx;
+        _BitScanReverse(&idx, x); // ignore bool retval
+        return idx;
+    }
+    static inline
+    unsigned BSR64(uint64_t x) {
+        bsr_idx_t idx;
+        _BitScanReverse64(&idx, x); // ignore bool retval
+        return idx;
+    }
+#elif defined(__GNUC__)
+
+  #ifdef __clang__
+    static inline unsigned BSR64(uint64_t x) {
+        return 63-__builtin_clzll(x);
+      // gcc/ICC can't optimize this back to just BSR, but clang can and doesn't provide alternate intrinsics
+    }
+  #else
+    #define BSR64 __builtin_ia32_bsrdi
+  #endif
+
+    #include <x86intrin.h>
+    #define BSR32(x) _bit_scan_reverse(x)
+
+#endif
+
+#define BitScanReverse BSR32
+#define BitScanReverse64 BSR64
+#endif
 
 _Must_inspect_result_
 BOOLEAN
@@ -1673,6 +1717,14 @@ GetTickCount64(
 #define STATUS_USER_APC                  ((DWORD   )0x000000C0L)
 #define STATUS_TIMEOUT                   ((DWORD   )0x00000102L)
 #define STATUS_PENDING                   ((DWORD   )0x00000103L)
+#define STATUS_BUFFER_TOO_SMALL          ((NTSTATUS)0xC0000023L)
+#define STATUS_ACCESS_VIOLATION          ((NTSTATUS)0xC0000005L)
+#define STATUS_INVALID_PARAMETER         ((NTSTATUS)0xC000000DL)
+#define STATUS_BUFFER_OVERFLOW           ((NTSTATUS)0x80000005L)
+#define STATUS_SUCCESS                   ((NTSTATUS)0x00000000L)
+
+
+
 
 #define INFINITE            0xFFFFFFFF  // Infinite timeout
 
@@ -1705,7 +1757,7 @@ WaitForMultipleObjects(
 
 #define SRWLOCK_INIT RTL_SRWLOCK_INIT
 
-typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
+typedef pthread_mutex_t SRWLOCK, *PSRWLOCK;
 
 WINBASEAPI
 VOID
@@ -1941,9 +1993,9 @@ _Post_writable_byte_size_(dwBytes)
 LPVOID
 WINAPI
 HeapAlloc(
-    _In_ HANDLE hHeap,
-    _In_ DWORD dwFlags,
-    _In_ SIZE_T dwBytes
+    _In_ HANDLE Heap,
+    _In_ DWORD Flags,
+    _In_ SIZE_T SizeInBytes
     );
 
 WINBASEAPI
@@ -1953,10 +2005,10 @@ _Post_writable_byte_size_(dwBytes)
 LPVOID
 WINAPI
 HeapReAlloc(
-    _Inout_ HANDLE hHeap,
-    _In_ DWORD dwFlags,
-    _Frees_ptr_opt_ LPVOID lpMem,
-    _In_ SIZE_T dwBytes
+    _Inout_ HANDLE Heap,
+    _In_ DWORD Flags,
+    _Frees_ptr_opt_ LPVOID Mem,
+    _In_ SIZE_T SizeInBytes
     );
 
 WINBASEAPI
@@ -1964,9 +2016,9 @@ _Success_(return != FALSE)
 BOOL
 WINAPI
 HeapFree(
-    _Inout_ HANDLE hHeap,
-    _In_ DWORD dwFlags,
-    __drv_freesMem(Mem) _Frees_ptr_opt_ LPVOID lpMem
+    _Inout_ HANDLE Heap,
+    _In_ DWORD Flags,
+    __drv_freesMem(Mem) _Frees_ptr_opt_ LPVOID Mem
     );
 
 WINBASEAPI
