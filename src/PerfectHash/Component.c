@@ -93,9 +93,11 @@ CreateGlobalComponentCallback(
         )
     );
 
+#ifdef PH_WINDOWS
     if (InitOnce != ExpectedInitOnce) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
+#endif
 
     Component = CreateComponent(Params->Id, NULL);
 

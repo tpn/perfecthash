@@ -1715,14 +1715,14 @@ typedef GRAPH *PGRAPH;
     ReleaseSRWLockShared(&Graph->Lock)
 
 //
-// Bitmap macro helpers.
+// Graph bit helpers.
 //
 
 #define TestGraphBit(Name, BitNumber) \
-    BitTest64((PLONGLONG)Graph->Name.Buffer, (LONGLONG)BitNumber)
+    (TestBit64(Graph->Name.Buffer, (LONGLONG)BitNumber))
 
 #define SetGraphBit(Name, BitNumber) \
-    BitTestAndSet64((PLONGLONG)Graph->Name.Buffer, (LONGLONG)BitNumber)
+    SetBit64(Graph->Name.Buffer, (LONGLONG)BitNumber)
 
 //
 // Private non-vtbl methods.

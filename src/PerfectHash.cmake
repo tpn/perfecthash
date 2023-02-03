@@ -90,6 +90,7 @@ else()
         PUBLIC
         "PERFECT_HASH_BUILD_CONFIG=\"${CMAKE_SYSTEM_NAME}\""
         "PH_COMPAT"
+        "_DEBUG"
         "PH_COMPILER_$<UPPER_CASE:${CMAKE_C_COMPILER_ID}>"
     )
 

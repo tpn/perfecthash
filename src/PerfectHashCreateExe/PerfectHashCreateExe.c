@@ -122,7 +122,9 @@ End:
 
     ExitProcess((ULONG)Result);
 }
+
 #else // PH_WINDOWS
+
 int
 main(
     int NumberOfArguments,
@@ -210,10 +212,6 @@ Error:
     //
 
 End:
-
-    if (Module) {
-        FreeLibrary(Module);
-    }
 
     ExitProcess((ULONG)Result);
 }

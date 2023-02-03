@@ -283,6 +283,7 @@ Return Value:
     Attributes = NULL;
 #endif // PH_WINDOWS
 
+#ifdef PH_WINDOWS
     //
     // Create a low-memory notification handle.
     //
@@ -294,6 +295,9 @@ Return Value:
     }
 
     Context->LowMemoryEvent = Handle;
+#endif
+
+#ifdef PH_WINDOWS
 
     //
     // Calculate the size required by the array of UNICODE_STRING structures
@@ -339,6 +343,7 @@ Return Value:
         Result = E_OUTOFMEMORY;
         goto Error;
     }
+#endif
 
     //
     // Allocation of buffer was successful, continue with initialization.
@@ -360,6 +365,8 @@ Return Value:
 
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
+
+#ifdef PH_WINDOWS
 
     //
     // Carve the buffer we just allocated up into an array of UNICODE_STRING
@@ -424,6 +431,8 @@ Return Value:
     Context->SizeOfObjectNamesWideBuffer = SizeOfNamesWideBuffer;
     Context->NumberOfObjects = NumberOfContextObjectPrefixes;
 
+#endif
+
     //
     // Initialize the event pointer to the first handle, and the name pointer
     // to the first UNICODE_STRING pointer.  Obtain the number of events.
@@ -432,6 +441,12 @@ Return Value:
     Event = (PHANDLE)&Context->FirstEvent;
     Name = &Context->ObjectNames[0];
     NumberOfEvents = GetNumberOfContextEvents(Context);
+
+#ifdef PH_WINDOWS
+#define GetObjectNameBuffer(O) (O->Buffer)
+#else
+#define GetObjectNameBuffer(O) (NULL)
+#endif
 
     for (Index = 0; Index < NumberOfEvents; Index++, Event++, Name++) {
 
@@ -445,7 +460,7 @@ Return Value:
         *Event = CreateEventW(Attributes,
                               ManualReset,
                               FALSE,
-                              Name->Buffer);
+                              GetObjectNameBuffer(Name));
 
         LastError = GetLastError();
 
@@ -787,10 +802,12 @@ Error:
 
 End:
 
+#ifdef PH_WINDOWS
     if (Acl) {
         LocalFree(Acl);
         Acl = NULL;
     }
+#endif
 
     return Result;
 }
@@ -879,18 +896,18 @@ Return Value:
     //
 
     Allocator->Vtbl->FreePointer(Allocator, &Context->CuDevices.Devices);
-#endif
 
     //
     // Close the low-memory resource notification handle.
     //
 
     if (Context->LowMemoryEvent) {
-        if (!CloseHandle(Context->LowMemoryEvent)) {
+        if (!CloseEvent(Context->LowMemoryEvent)) {
             SYS_ERROR(CloseHandle);
         }
         Context->LowMemoryEvent = NULL;
     }
+#endif
 
 
     //
@@ -906,7 +923,7 @@ Return Value:
     for (Index = 0; Index < NumberOfEvents; Index++, Event++) {
 
         if (*Event && *Event != INVALID_HANDLE_VALUE) {
-            if (!CloseHandle(*Event)) {
+            if (!CloseEvent(*Event)) {
                 SYS_ERROR(CloseHandle);
             }
             *Event = NULL;
@@ -3069,7 +3086,8 @@ End:
 
     return Result;
 }
-#endif
+
+#endif // PH_WINDOWS
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

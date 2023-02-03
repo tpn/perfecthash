@@ -187,6 +187,27 @@ typedef ULONG_BYTES *PULONG_BYTES;
 #endif
 
 //
+// Bitmap macro helpers.
+//
+
+#define TestBit32(Address, Bit) (                              \
+    ((((PLONG32)(Address))[(Bit / 32)] >> (Bit & (32-1))) & 1) \
+)
+
+#define TestBit64(Address, Bit) (                              \
+    ((((PLONG64)(Address))[(Bit / 64)] >> (Bit & (64-1))) & 1) \
+)
+
+#define SetBit32(Address, Bit) (                                  \
+    ((((PLONG32)(Address))[(Bit / 32)] |= (1 << ((Bit - 32-1))))) \
+)
+
+#define SetBit64(Address, Bit) (                                  \
+    ((((PLONG64)(Address))[(Bit / 64)] |= (1 << ((Bit - 64-1))))) \
+)
+
+
+//
 // Define start/end markers for IACA.
 //
 
@@ -4482,6 +4503,7 @@ PhRaiseException(
     PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #else
 #define PH_RAISE(Result) \
+    __debugbreak();                                                    \
     PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #endif
 

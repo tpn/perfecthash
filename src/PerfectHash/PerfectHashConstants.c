@@ -1031,9 +1031,15 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextGetMaximumConcurrency,
     &PerfectHashContextSetBaseOutputDirectory,
     &PerfectHashContextGetBaseOutputDirectory,
+#ifdef PH_WINDOWS
     &PerfectHashContextBulkCreate,
     &PerfectHashContextBulkCreateArgvW,
     &PerfectHashContextExtractBulkCreateArgsFromArgvW,
+#else
+    NULL,
+    NULL,
+    NULL,
+#endif
     &PerfectHashContextTableCreate,
     &PerfectHashContextTableCreateArgvW,
     &PerfectHashContextExtractTableCreateArgsFromArgvW,
@@ -1060,7 +1066,11 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableCreate,
     &PerfectHashTableLoad,
     &PerfectHashTableGetFlags,
+#ifdef PH_WINDOWS
     &PerfectHashTableCompile,
+#else
+    NULL,
+#endif
     &PerfectHashTableTest,
     &PerfectHashTableInsert,
     &PerfectHashTableLookup,
@@ -1099,8 +1109,13 @@ const RTL_VTBL RtlInterface = {
     &RtlDestroyBuffer,
     &RtlCopyPages,
     &RtlFillPages,
+#ifdef PH_WINDOWS
     &RtlCreateRandomObjectNames,
     &RtlCreateSingleRandomObjectName,
+#else
+    NULL,
+    NULL,
+#endif
     &RtlTryLargePageVirtualAlloc,
     &RtlTryLargePageVirtualAllocEx,
     &RtlTryLargePageCreateFileMappingW,

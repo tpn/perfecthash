@@ -103,6 +103,12 @@ include(cmake/GlobalSettingsInclude.cmake OPTIONAL)
 ################################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # Nothing.
+else()
+    message(FATAL "Only 64-bit platforms are supported.")
+endif()
+
 ################################################################################
 # Sub-projects
 ################################################################################

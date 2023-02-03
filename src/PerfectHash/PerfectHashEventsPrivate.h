@@ -301,7 +301,6 @@ Abstract:
 
 #else // PH_WINDOWS
 
-
 #define EVENT_WRITE_GRAPH(Name)
 #define EVENT_WRITE_RTL_RANDOM_BYTES_START(Size)
 #define EVENT_WRITE_RTL_RANDOM_BYTES_STOP(Size, Result)

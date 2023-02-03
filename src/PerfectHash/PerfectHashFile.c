@@ -1506,7 +1506,7 @@ Return Value:
 
 #define SAVE_POINTER(Name)        \
     if (ARGUMENT_PRESENT(Name)) { \
-        *##Name = &File->##Name;  \
+        *Name = &File->Name;      \
         Count++;                  \
     }
 

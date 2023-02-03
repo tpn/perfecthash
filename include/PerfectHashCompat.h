@@ -97,7 +97,11 @@ typedef BOOLEAN *PBOOLEAN;
 
 typedef UCHAR *PUCHAR;
 typedef USHORT *PUSHORT;
+typedef LONG LONG32;
+typedef LONG32 *PLONG32;
 typedef ULONG *PULONG;
+typedef ULONG ULONG32;
+typedef ULONG32 *PULONG32;
 
 typedef BYTE *PBYTE;
 typedef CHAR *PCHAR;
@@ -1485,58 +1489,7 @@ GetComputerNameW (
     _Inout_ LPDWORD nSize
     );
 
-#define BitTest _bittest
-#define BitTestAndComplement _bittestandcomplement
-#define BitTestAndSet _bittestandset
-#define BitTestAndReset _bittestandreset
-#define BitTest64 _bittest64
-#define BitTestAndComplement64 _bittestandcomplement64
-#define BitTestAndSet64 _bittestandset64
-#define BitTestAndReset64 _bittestandreset64
-
 #if 0
-// From: https://stackoverflow.com/a/54760134
-// define BSR32() and BSR64()
-#if defined(_MSC_VER) || defined(__INTEL_COMPILER)
-    #ifdef __INTEL_COMPILER
-        typedef unsigned int bsr_idx_t;
-    #else
-        #include <intrin.h>   // MSVC
-        typedef unsigned long bsr_idx_t;
-    #endif
-
-    static inline
-    unsigned BSR32(unsigned long x){
-        bsr_idx_t idx;
-        _BitScanReverse(&idx, x); // ignore bool retval
-        return idx;
-    }
-    static inline
-    unsigned BSR64(uint64_t x) {
-        bsr_idx_t idx;
-        _BitScanReverse64(&idx, x); // ignore bool retval
-        return idx;
-    }
-#elif defined(__GNUC__)
-
-  #ifdef __clang__
-    static inline unsigned BSR64(uint64_t x) {
-        return 63-__builtin_clzll(x);
-      // gcc/ICC can't optimize this back to just BSR, but clang can and doesn't provide alternate intrinsics
-    }
-  #else
-    #define BSR64 __builtin_ia32_bsrdi
-  #endif
-
-    #include <x86intrin.h>
-    #define BSR32(x) _bit_scan_reverse(x)
-
-#endif
-
-#define BitScanReverse BSR32
-#define BitScanReverse64 BSR64
-#endif
-
 _Must_inspect_result_
 BOOLEAN
 _bittest (
@@ -1609,12 +1562,20 @@ _interlockedbittestandreset64 (
     _Inout_updates_bytes_((Offset/8)+1) _Interlocked_operand_ LONG64 volatile *Base,
     _In_range_(>=,0) LONG64 Offset
     );
+#endif
 
 LONG
 InterlockedCompareExchange(
     _Inout_ LONG volatile *Destination,
     _In_ LONG Exchange,
     _In_ LONG Comperand
+    );
+
+PVOID
+InterlockedCompareExchangePointer(
+    _Inout_ PVOID volatile *Destination,
+    _In_ PVOID Exchange,
+    _In_ PVOID Comperand
     );
 
 
@@ -1635,6 +1596,12 @@ InterlockedCompareExchange(
 #define InterlockedDecrement(v) __sync_sub_and_fetch(v, 1)
 #define InterlockedDecrement64(v) __sync_sub_and_fetch(v, 1)
 #define InterlockedDecrementULongPtr(v) __sync_sub_and_fetch(v, 1)
+
+#define InterlockedCompareExchange(d, e, c) \
+    __sync_val_compare_and_swap(d, e, c)
+
+#define InterlockedCompareExchangePointer(d, e, c) \
+    __sync_val_compare_and_swap(d, e, c)
 
 #ifndef min
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -1723,8 +1690,9 @@ GetTickCount64(
 #define STATUS_BUFFER_OVERFLOW           ((NTSTATUS)0x80000005L)
 #define STATUS_SUCCESS                   ((NTSTATUS)0x00000000L)
 
-
-
+#define FILE_BEGIN           0
+#define FILE_CURRENT         1
+#define FILE_END             2
 
 #define INFINITE            0xFFFFFFFF  // Infinite timeout
 
@@ -2040,7 +2008,11 @@ GetProcessHeap(
 DWORD GetCurrentThreadId();
 HANDLE GetCurrentProcess();
 
+#define ERROR_SUCCESS                    0L
+#define ERROR_FILE_NOT_FOUND             2L
+#define ERROR_ACCESS_DENIED              5L
 #define ERROR_NOT_ENOUGH_MEMORY          8L
+#define ERROR_DIR_NOT_EMPTY              145L
 #define ERROR_INSUFFICIENT_BUFFER        122L
 #define ERROR_ALREADY_EXISTS             183L
 
@@ -2061,6 +2033,8 @@ HANDLE GetCurrentProcess();
 #define HEAP_TAG_SHIFT                  18
 #define HEAP_CREATE_SEGMENT_HEAP        0x00000100
 #define HEAP_CREATE_HARDENED            0x00000200
+
+#define SEC_LARGE_PAGES 0x80000000
 
 WINBASEAPI
 _Ret_maybenull_
@@ -2095,6 +2069,23 @@ VirtualFree(
     );
 
 WINBASEAPI
+BOOL
+WINAPI
+VirtualFreeEx(
+    _In_ HANDLE Process,
+    _Pre_notnull_ _When_(dwFreeType == MEM_DECOMMIT,_Post_invalid_) _When_(dwFreeType == MEM_RELEASE,_Post_ptr_invalid_) LPVOID lpAddress,
+    _In_ SIZE_T dwSize,
+    _In_ DWORD dwFreeType
+    );
+
+WINBASEAPI
+SIZE_T
+WINAPI
+GetLargePageMinimum(
+    VOID
+    );
+
+WINBASEAPI
 _Ret_maybenull_
 _Post_writable_byte_size_(dwSize)
 LPVOID
@@ -2117,6 +2108,311 @@ VirtualProtectEx(
     _In_ SIZE_T dwSize,
     _In_ DWORD flNewProtect,
     _Out_ PDWORD lpflOldProtect
+    );
+
+typedef enum _FILE_INFO_BY_HANDLE_CLASS {
+    FileBasicInfo,
+    FileStandardInfo,
+    FileNameInfo,
+    FileRenameInfo,
+    FileDispositionInfo,
+    FileAllocationInfo,
+    FileEndOfFileInfo,
+    FileStreamInfo,
+    FileCompressionInfo,
+    FileAttributeTagInfo,
+    FileIdBothDirectoryInfo,
+    FileIdBothDirectoryRestartInfo,
+    FileIoPriorityHintInfo,
+    FileRemoteProtocolInfo,
+    FileFullDirectoryInfo,
+    FileFullDirectoryRestartInfo,
+    FileStorageInfo,
+    FileAlignmentInfo,
+    FileIdInfo,
+    FileIdExtdDirectoryInfo,
+    FileIdExtdDirectoryRestartInfo,
+    FileDispositionInfoEx,
+    FileRenameInfoEx,
+    FileCaseSensitiveInfo,
+    FileNormalizedNameInfo,
+    MaximumFileInfoByHandleClass
+} FILE_INFO_BY_HANDLE_CLASS, *PFILE_INFO_BY_HANDLE_CLASS;
+
+typedef struct _BY_HANDLE_FILE_INFORMATION {
+    DWORD dwFileAttributes;
+    FILETIME ftCreationTime;
+    FILETIME ftLastAccessTime;
+    FILETIME ftLastWriteTime;
+    DWORD dwVolumeSerialNumber;
+    DWORD nFileSizeHigh;
+    DWORD nFileSizeLow;
+    DWORD nNumberOfLinks;
+    DWORD nFileIndexHigh;
+    DWORD nFileIndexLow;
+} BY_HANDLE_FILE_INFORMATION, *PBY_HANDLE_FILE_INFORMATION, *LPBY_HANDLE_FILE_INFORMATION;
+
+WINBASEAPI
+BOOL
+WINAPI
+GetFileInformationByHandle(
+    _In_ HANDLE hFile,
+    _Out_ LPBY_HANDLE_FILE_INFORMATION lpFileInformation
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+GetFileInformationByHandleEx(
+    _In_  HANDLE hFile,
+    _In_  FILE_INFO_BY_HANDLE_CLASS FileInformationClass,
+    _Out_writes_bytes_(dwBufferSize) LPVOID lpFileInformation,
+    _In_  DWORD dwBufferSize
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+RemoveDirectoryW(
+    _In_ LPCWSTR lpPathName
+    );
+
+#define GENERIC_READ                     (0x80000000L)
+#define GENERIC_WRITE                    (0x40000000L)
+#define GENERIC_EXECUTE                  (0x20000000L)
+#define GENERIC_ALL                      (0x10000000L)
+
+#define FILE_SHARE_READ                 0x00000001
+#define FILE_SHARE_WRITE                0x00000002
+#define FILE_SHARE_DELETE               0x00000004
+
+#define FILE_READ_DATA            ( 0x0001 )    // file & pipe
+#define FILE_LIST_DIRECTORY       ( 0x0001 )    // directory
+
+#define FILE_WRITE_DATA           ( 0x0002 )    // file & pipe
+#define FILE_ADD_FILE             ( 0x0002 )    // directory
+
+#define FILE_APPEND_DATA          ( 0x0004 )    // file
+#define FILE_ADD_SUBDIRECTORY     ( 0x0004 )    // directory
+#define FILE_CREATE_PIPE_INSTANCE ( 0x0004 )    // named pipe
+
+
+#define FILE_READ_EA              ( 0x0008 )    // file & directory
+
+#define FILE_WRITE_EA             ( 0x0010 )    // file & directory
+
+#define FILE_EXECUTE              ( 0x0020 )    // file
+#define FILE_TRAVERSE             ( 0x0020 )    // directory
+
+#define FILE_DELETE_CHILD         ( 0x0040 )    // directory
+
+#define FILE_READ_ATTRIBUTES      ( 0x0080 )    // all
+
+#define FILE_WRITE_ATTRIBUTES     ( 0x0100 )    // all
+
+#define FILE_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x1FF)
+
+#define FILE_GENERIC_READ         (STANDARD_RIGHTS_READ     |\
+                                   FILE_READ_DATA           |\
+                                   FILE_READ_ATTRIBUTES     |\
+                                   FILE_READ_EA             |\
+                                   SYNCHRONIZE)
+
+
+#define FILE_GENERIC_WRITE        (STANDARD_RIGHTS_WRITE    |\
+                                   FILE_WRITE_DATA          |\
+                                   FILE_WRITE_ATTRIBUTES    |\
+                                   FILE_WRITE_EA            |\
+                                   FILE_APPEND_DATA         |\
+                                   SYNCHRONIZE)
+
+
+#define FILE_GENERIC_EXECUTE      (STANDARD_RIGHTS_EXECUTE  |\
+                                   FILE_READ_ATTRIBUTES     |\
+                                   FILE_EXECUTE             |\
+                                   SYNCHRONIZE)
+
+#define FILE_FLAG_WRITE_THROUGH         0x80000000
+#define FILE_FLAG_OVERLAPPED            0x40000000
+#define FILE_FLAG_NO_BUFFERING          0x20000000
+#define FILE_FLAG_RANDOM_ACCESS         0x10000000
+#define FILE_FLAG_SEQUENTIAL_SCAN       0x08000000
+#define FILE_FLAG_DELETE_ON_CLOSE       0x04000000
+#define FILE_FLAG_BACKUP_SEMANTICS      0x02000000
+#define FILE_FLAG_POSIX_SEMANTICS       0x01000000
+#define FILE_FLAG_SESSION_AWARE         0x00800000
+#define FILE_FLAG_OPEN_REPARSE_POINT    0x00200000
+#define FILE_FLAG_OPEN_NO_RECALL        0x00100000
+#define FILE_FLAG_FIRST_PIPE_INSTANCE   0x00080000
+
+#define SECTION_QUERY                0x0001
+#define SECTION_MAP_WRITE            0x0002
+#define SECTION_MAP_READ             0x0004
+#define SECTION_MAP_EXECUTE          0x0008
+#define SECTION_EXTEND_SIZE          0x0010
+#define SECTION_MAP_EXECUTE_EXPLICIT 0x0020 // not included in SECTION_ALL_ACCESS
+
+#define SECTION_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED|SECTION_QUERY|\
+                            SECTION_MAP_WRITE |      \
+                            SECTION_MAP_READ |       \
+                            SECTION_MAP_EXECUTE |    \
+                            SECTION_EXTEND_SIZE)
+
+#define FILE_MAP_WRITE            SECTION_MAP_WRITE
+#define FILE_MAP_READ             SECTION_MAP_READ
+#define FILE_MAP_ALL_ACCESS       SECTION_ALL_ACCESS
+
+#define FILE_MAP_EXECUTE          SECTION_MAP_EXECUTE_EXPLICIT  // not included in FILE_MAP_ALL_ACCESS
+
+#define FILE_MAP_COPY             0x00000001
+
+#define FILE_MAP_RESERVE          0x80000000
+#define FILE_MAP_TARGETS_INVALID  0x40000000
+#define FILE_MAP_LARGE_PAGES      0x20000000
+
+#define CREATE_NEW          1
+#define CREATE_ALWAYS       2
+#define OPEN_EXISTING       3
+#define OPEN_ALWAYS         4
+#define TRUNCATE_EXISTING   5
+
+#define INVALID_FILE_SIZE ((DWORD)0xFFFFFFFF)
+#define INVALID_SET_FILE_POINTER ((DWORD)-1)
+#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+
+#define MOVEFILE_REPLACE_EXISTING       0x00000001
+#define MOVEFILE_COPY_ALLOWED           0x00000002
+#define MOVEFILE_DELAY_UNTIL_REBOOT     0x00000004
+#define MOVEFILE_WRITE_THROUGH          0x00000008
+
+WINBASEAPI
+BOOL
+WINAPI
+GetFileTime(
+    _In_ HANDLE hFile,
+    _Out_opt_ LPFILETIME lpCreationTime,
+    _Out_opt_ LPFILETIME lpLastAccessTime,
+    _Out_opt_ LPFILETIME lpLastWriteTime
+    );
+
+
+WINBASEAPI
+_Ret_maybenull_
+HANDLE
+WINAPI
+CreateFileMappingW(
+    _In_ HANDLE hFile,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
+    _In_ DWORD flProtect,
+    _In_ DWORD dwMaximumSizeHigh,
+    _In_ DWORD dwMaximumSizeLow,
+    _In_opt_ LPCWSTR lpName
+    );
+
+WINBASEAPI
+HANDLE
+WINAPI
+CreateFileW(
+    _In_ LPCWSTR lpFileName,
+    _In_ DWORD dwDesiredAccess,
+    _In_ DWORD dwShareMode,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    _In_ DWORD dwCreationDisposition,
+    _In_ DWORD dwFlagsAndAttributes,
+    _In_opt_ HANDLE hTemplateFile
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+DeleteFileW(
+    _In_ LPCWSTR lpFileName
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+CreateDirectoryW(
+    _In_ LPCWSTR lpPathName,
+    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetEndOfFile(
+    _In_ HANDLE hFile
+    );
+
+WINBASEAPI
+_Ret_maybenull_
+LPVOID
+WINAPI
+MapViewOfFile(
+    _In_ HANDLE hFileMappingObject,
+    _In_ DWORD dwDesiredAccess,
+    _In_ DWORD dwFileOffsetHigh,
+    _In_ DWORD dwFileOffsetLow,
+    _In_ SIZE_T dwNumberOfBytesToMap
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+UnmapViewOfFile(
+    _In_ LPCVOID lpBaseAddress
+    );
+
+WINBASEAPI
+_Ret_maybenull_
+LPVOID
+WINAPI
+MapViewOfFileEx(
+    _In_ HANDLE hFileMappingObject,
+    _In_ DWORD dwDesiredAccess,
+    _In_ DWORD dwFileOffsetHigh,
+    _In_ DWORD dwFileOffsetLow,
+    _In_ SIZE_T dwNumberOfBytesToMap,
+    _In_opt_ LPVOID lpBaseAddress
+    );
+
+WINBASEAPI
+DWORD
+WINAPI
+SetFilePointer(
+    _In_ HANDLE hFile,
+    _In_ LONG lDistanceToMove,
+    _Inout_opt_ PLONG lpDistanceToMoveHigh,
+    _In_ DWORD dwMoveMethod
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetFilePointerEx(
+    _In_ HANDLE hFile,
+    _In_ LARGE_INTEGER liDistanceToMove,
+    _Out_opt_ PLARGE_INTEGER lpNewFilePointer,
+    _In_ DWORD dwMoveMethod
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+SetFilePointerEx(
+    _In_ HANDLE hFile,
+    _In_ LARGE_INTEGER liDistanceToMove,
+    _Out_opt_ PLARGE_INTEGER lpNewFilePointer,
+    _In_ DWORD dwMoveMethod
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+MoveFileExW(
+    _In_     LPCWSTR lpExistingFileName,
+    _In_opt_ LPCWSTR lpNewFileName,
+    _In_     DWORD    dwFlags
     );
 
 //
@@ -2553,6 +2849,58 @@ WINAPI
 CloseHandle(
     _In_ _Post_ptr_invalid_ HANDLE hObject
     );
+
+WINBASEAPI
+BOOL
+WINAPI
+CloseEvent(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
+
+#define RtlEqualMemory(Destination,Source,Length) (!memcmp((Destination),(Source),(Length)))
+#define RtlMoveMemory(Destination,Source,Length) memmove((Destination),(Source),(Length))
+#define RtlCopyMemory(Destination,Source,Length) memcpy((Destination),(Source),(Length))
+#define RtlFillMemory(Destination,Length,Fill) memset((Destination),(Fill),(Length))
+#define RtlZeroMemory(Destination,Length) memset((Destination),0,(Length))
+
+WINBASEAPI
+VOID
+WINAPI
+OutputDebugStringA(
+    _In_opt_ LPCSTR lpOutputString
+    );
+
+#define FORMAT_MESSAGE_ALLOCATE_BUFFER 0x00000100
+#define FORMAT_MESSAGE_IGNORE_INSERTS  0x00000200
+#define FORMAT_MESSAGE_FROM_STRING     0x00000400
+#define FORMAT_MESSAGE_FROM_HMODULE    0x00000800
+#define FORMAT_MESSAGE_FROM_SYSTEM     0x00001000
+#define FORMAT_MESSAGE_ARGUMENT_ARRAY  0x00002000
+#define FORMAT_MESSAGE_MAX_WIDTH_MASK  0x000000FF
+
+#define LANG_NEUTRAL 0x00
+#define SUBLANG_DEFAULT 0x01
+
+#define MAKELANGID(p, s)       ((((WORD  )(s)) << 10) | (WORD  )(p))
+#define PRIMARYLANGID(lgid)    ((WORD  )(lgid) & 0x3ff)
+#define SUBLANGID(lgid)        ((WORD  )(lgid) >> 10)
+
+WINBASEAPI
+_Success_(return != 0)
+DWORD
+WINAPI
+FormatMessageA(
+    _In_     DWORD dwFlags,
+    _In_opt_ LPCVOID lpSource,
+    _In_     DWORD dwMessageId,
+    _In_     DWORD dwLanguageId,
+    _When_((dwFlags & FORMAT_MESSAGE_ALLOCATE_BUFFER) != 0, _At_((LPSTR*)lpBuffer, _Outptr_result_z_))
+    _When_((dwFlags & FORMAT_MESSAGE_ALLOCATE_BUFFER) == 0, _Out_writes_z_(nSize))
+             LPSTR lpBuffer,
+    _In_     DWORD nSize,
+    _In_opt_ va_list *Arguments
+    );
+
 
 //
 // Our helper functions.

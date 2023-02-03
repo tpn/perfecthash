@@ -414,7 +414,7 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 
 #endif
 
-
+#ifdef PH_WINDOWS
 #ifdef RtlCopyMemory
 #undef RtlCopyMemory
 #endif
@@ -450,6 +450,29 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #undef ZeroMemory
 #endif
 #define ZeroMemory(Dest, Length) FillMemory(Dest, Length, 0)
+#else // PH_WINDOWS
+
+#ifdef CopyMemory
+#undef CopyMemory
+#endif
+#define CopyMemory RtlCopyMemory
+
+#ifdef MoveMemory
+#undef MoveMemory
+#endif
+#define MoveMemory RtlMoveMemory
+
+#ifdef FillMemory
+#undef FillMemory
+#endif
+#define FillMemory RtlFillMemory
+
+#ifdef ZeroMemory
+#undef ZeroMemory
+#endif
+#define ZeroMemory RtlZeroMemory
+
+#endif // PH_WINDOWS
 
 #ifndef ZeroStruct
 #define ZeroStruct(Name) ZeroMemory(&Name, sizeof(Name))
@@ -477,14 +500,6 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 
 #define RtlInitOnceToPointer(A) (                                           \
     ((ULONG_PTR)(A) & ~(ULONG_PTR)((1 << INIT_ONCE_CTX_RESERVED_BITS) - 1)) \
-)
-
-#ifndef BitTestAndSet
-#define BitTestAndSet _bittestandset
-#endif
-
-#define FastSetBit(Bitmap, BitNumber) (             \
-    BitTestAndSet((PLONG)Bitmap->Buffer, BitNumber) \
 )
 
 #ifndef FlagOn
@@ -3401,6 +3416,19 @@ extern RTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString;
 // Compat glue.
 //
 
+#ifdef PH_WINDOWS
+FORCEINLINE
+WINBASEAPI
+BOOL
+WINAPI
+CloseEvent(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    return CloseHandle(Object);
+}
+#endif
+
 extern ULONG LastError;
 
 FORCEINLINE
@@ -3413,5 +3441,11 @@ ResetSRWLock(PSRWLOCK Lock)
     ZeroStructPointerInline(Lock);
 #endif
 }
+
+#ifdef PH_WINDOWS
+#define TLS_KEY_TYPE ULONG
+#else
+#define TLS_KEY_TYPE pthread_key_t
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

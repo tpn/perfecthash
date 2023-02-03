@@ -4219,8 +4219,8 @@ Return Value:
     if (Info->Name##BufferSizeInBytes > 0) {                 \
         ASSERT(0 == Info->Name##BufferSizeInBytes -          \
                ((Info->Name##BufferSizeInBytes >> 3) << 3)); \
-        Rtl->RtlZeroMemory((PDWORD64)Graph->Name.Buffer,     \
-                           Info->Name##BufferSizeInBytes);   \
+        RtlZeroMemory((PDWORD64)Graph->Name.Buffer,          \
+                      Info->Name##BufferSizeInBytes);        \
     }
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
@@ -4236,9 +4236,9 @@ Return Value:
     if (Info->Name##SizeInBytes > 0) {                 \
         ASSERT(0 == Info->Name##SizeInBytes -          \
                ((Info->Name##SizeInBytes >> 3) << 3)); \
-        Rtl->RtlFillMemory((PDWORD64)Graph->Name,      \
-                           Info->Name##SizeInBytes,    \
-                           (BYTE)~0);                  \
+        RtlFillMemory((PDWORD64)Graph->Name,           \
+                      Info->Name##SizeInBytes,         \
+                      (BYTE)~0);                       \
     }
 
     EMPTY_ARRAY(Next);
@@ -4253,8 +4253,8 @@ Return Value:
     if (Info->Name##SizeInBytes > 0) {                 \
         ASSERT(0 == Info->Name##SizeInBytes -          \
                ((Info->Name##SizeInBytes >> 3) << 3)); \
-        Rtl->RtlZeroMemory((PDWORD64)Graph->Name,      \
-                           Info->Name##SizeInBytes);   \
+        RtlZeroMemory((PDWORD64)Graph->Name,           \
+                      Info->Name##SizeInBytes);        \
     }
 
     ZERO_ARRAY(Order);

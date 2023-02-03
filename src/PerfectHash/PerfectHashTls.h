@@ -83,7 +83,7 @@ C_ASSERT(sizeof(PERFECT_HASH_TLS_CONTEXT_FLAGS) == sizeof(ULONG));
 typedef PERFECT_HASH_TLS_CONTEXT_FLAGS *PPERFECT_HASH_TLS_CONTEXT_FLAGS;
 
 #define TlsContextIsGlobalComponentDisabled(TlsContext, Id) \
-    BitTest(&(TlsContext)->Flags.AsLong, (LONG)Id)
+    TestBit32(&(TlsContext)->Flags.AsLong, (LONG)Id)
 
 #define TlsContextDisableGlobalAllocator(TlsContext)          \
     TlsContext->Flags.DisableGlobalAllocatorComponent = TRUE; \

@@ -122,6 +122,117 @@ RtlUnicodeStringToInteger(
 }
 
 
+NTSTATUS
+NTAPI
+RtlUnicodeStringToInt64(
+    _In_ PCUNICODE_STRING String,
+    _In_ ULONG Base,
+    _Out_ PLONG64 Number,
+    _Out_opt_ PWSTR *EndPointer
+    )
+{
+    LPWSTR lpwstr = String->Buffer;
+    USHORT CharsRemaining = String->Length / sizeof(WCHAR);
+    WCHAR wchCurrent;
+    int digit;
+    ULONG64 RunningTotal = 0;
+    char bMinus = 0;
+
+    //
+    // We don't support endPointer.
+    //
+
+    ASSERT(EndPointer == NULL);
+
+    while (CharsRemaining >= 1 && *lpwstr <= ' ')
+    {
+        lpwstr++;
+        CharsRemaining--;
+    }
+
+    if (CharsRemaining >= 1)
+    {
+        if (*lpwstr == '+')
+        {
+            lpwstr++;
+            CharsRemaining--;
+        }
+        else if (*lpwstr == '-')
+        {
+            bMinus = 1;
+            lpwstr++;
+            CharsRemaining--;
+        }
+    }
+
+    if (Base == 0)
+    {
+        Base = 10;
+
+        if (CharsRemaining >= 2 && lpwstr[0] == '0')
+        {
+            if (lpwstr[1] == 'b')
+            {
+                lpwstr += 2;
+                CharsRemaining -= 2;
+                Base = 2;
+            }
+            else if (lpwstr[1] == 'o')
+            {
+                lpwstr += 2;
+                CharsRemaining -= 2;
+                Base = 8;
+            }
+            else if (lpwstr[1] == 'x')
+            {
+                lpwstr += 2;
+                CharsRemaining -= 2;
+                Base = 16;
+            }
+        }
+    }
+    else if (Base != 2 && Base != 8 && Base != 10 && Base != 16)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    if (Number == NULL)
+    {
+        return STATUS_ACCESS_VIOLATION;
+    }
+
+    while (CharsRemaining >= 1)
+    {
+        wchCurrent = *lpwstr;
+
+        if (wchCurrent >= '0' && wchCurrent <= '9')
+        {
+            digit = wchCurrent - '0';
+        }
+        else if (wchCurrent >= 'A' && wchCurrent <= 'Z')
+        {
+            digit = wchCurrent - 'A' + 10;
+        }
+        else if (wchCurrent >= 'a' && wchCurrent <= 'z')
+        {
+            digit = wchCurrent - 'a' + 10;
+        }
+        else
+        {
+            digit = -1;
+        }
+
+        if (digit < 0 || (ULONG)digit >= Base) break;
+
+        RunningTotal = RunningTotal * Base + digit;
+        lpwstr++;
+        CharsRemaining--;
+    }
+
+    *Number = bMinus ? (0 - RunningTotal) : RunningTotal;
+    return STATUS_SUCCESS;
+}
+
 /*
  * @implemented
  *
@@ -188,5 +299,46 @@ RtlAppendUnicodeStringToString(
     }
 
     return STATUS_SUCCESS;
+}
+
+LONG
+NTAPI
+RtlCompareUnicodeString(
+    IN PCUNICODE_STRING s1,
+    IN PCUNICODE_STRING s2,
+    IN BOOLEAN  CaseInsensitive)
+{
+    unsigned int len;
+    LONG ret = 0;
+    LPCWSTR p1, p2;
+
+    len = min(s1->Length, s2->Length) / sizeof(WCHAR);
+    p1 = s1->Buffer;
+    p2 = s2->Buffer;
+
+    ASSERT(CaseInsensitive == FALSE);
+
+    while (!ret && len--) ret = *p1++ - *p2++;
+
+    if (!ret) ret = s1->Length - s2->Length;
+
+    return ret;
+}
+
+/*
+ * @implemented
+ *
+ * RETURNS
+ *  TRUE if strings are equal.
+ */
+BOOLEAN
+NTAPI
+RtlEqualUnicodeString(
+    IN CONST UNICODE_STRING *s1,
+    IN CONST UNICODE_STRING *s2,
+    IN BOOLEAN  CaseInsensitive)
+{
+    if (s1->Length != s2->Length) return FALSE;
+    return !RtlCompareUnicodeString(s1, s2, CaseInsensitive );
 }
 
