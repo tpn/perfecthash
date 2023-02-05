@@ -15,6 +15,17 @@ Abstract:
 
 #include "stdafx.h"
 
+
+#ifdef PH_WINDOWS
+BOOL
+CloseEvent(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    return CloseHandle(Object);
+}
+#endif
+
 //
 // Forward definitions.
 //

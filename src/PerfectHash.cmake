@@ -33,6 +33,7 @@ if (IS_WINDOWS)
     target_compile_definitions(
         ${PROJECT_NAME}
         PUBLIC
+        "PH_WINDOWS"
         "PERFECT_HASH_BUILD_CONFIG=\"$<CONFIG>\""
     )
 

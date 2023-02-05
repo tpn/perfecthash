@@ -198,12 +198,12 @@ typedef ULONG_BYTES *PULONG_BYTES;
     ((((PLONG64)(Address))[(Bit / 64)] >> (Bit & (64-1))) & 1) \
 )
 
-#define SetBit32(Address, Bit) (                                  \
-    ((((PLONG32)(Address))[(Bit / 32)] |= (1 << ((Bit - 32-1))))) \
+#define SetBit32(Address, Bit) (                                   \
+    ((((PLONG32)(Address))[(Bit / 32)] |= (1L << ((Bit - 32-1))))) \
 )
 
-#define SetBit64(Address, Bit) (                                  \
-    ((((PLONG64)(Address))[(Bit / 64)] |= (1 << ((Bit - 64-1))))) \
+#define SetBit64(Address, Bit) (                                    \
+    ((((PLONG64)(Address))[(Bit / 64)] |= (1LL << ((Bit - 64-1))))) \
 )
 
 
@@ -4364,7 +4364,6 @@ typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
 
 typedef
 _Success_(return >= 0)
-_Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_ERROR)(
     _In_ PCSZ FunctionName,
@@ -4376,7 +4375,6 @@ typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
 
 typedef
 _Success_(return >= 0)
-_Must_inspect_result_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_MESSAGE)(
     _In_ ULONG Code,
@@ -4454,17 +4452,9 @@ IsValidPerfectHashEnumId(
 // to use multiple messages.
 //
 
-#ifdef PH_WINDOWS
-#define PH_USAGE(...)                                                     \
-    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE,             \
-                                   __VA_ARGS__);                          \
-    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1, \
-                                   __VA_ARGS__)
-#else
-#define PH_USAGE() \
+#define PH_USAGE()                                                         \
     PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE);             \
     PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
-#endif
 
 #define PH_BREAK() __debugbreak()
 
@@ -4489,6 +4479,7 @@ PhRaiseException(
                    nNumberOfArguments,
                    lpArguments);
 #else
+    __debugbreak();
     exit(dwExceptionCode);
 #endif
 }

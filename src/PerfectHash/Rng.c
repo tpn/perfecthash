@@ -237,9 +237,10 @@ Return Value:
 #pragma warning(push)
 #pragma warning(disable: 4062)
 
+#ifndef PH_WINDOWS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wswitch"
-
+#endif
 
     switch (Rng->RngId) {
         case PerfectHashRngSystemId:
@@ -256,8 +257,12 @@ Return Value:
             break;
     }
 
+#ifndef PH_WINDOWS
 #pragma clang diagnostic pop
+#endif
+
 #pragma warning(pop)
+
 
     //
     // We're done, finish up and indicate success.

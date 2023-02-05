@@ -95,10 +95,14 @@ Return Value:
     IsValidId = IsValidIdFunctions[EnumId];
     if (!IsValidId(Id)) {
         Result = InvalidEnumIdHResults[EnumId];
+#ifndef PH_WINDOWS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-value"
+#endif
         _Analysis_assume_(Result < 0);
+#ifndef PH_WINDOWS
 #pragma clang diagnostic pop
+#endif
         return Result;
     }
 
@@ -220,10 +224,14 @@ Return Value:
     //
 
     Result = InvalidEnumNameHResults[EnumId];
+#ifndef PH_WINDOWS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-value"
+#endif
     _Analysis_assume_(Result < 0);
+#ifndef PH_WINDOWS
 #pragma clang diagnostic pop
+#endif
     return Result;
 }
 

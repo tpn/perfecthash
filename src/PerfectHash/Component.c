@@ -656,10 +656,14 @@ PerfectHashDllGetClassObject(
     if (!ClassFactory) {
         Result = TlsContext->LastResult;
 
+#ifndef PH_WINDOWS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-value"
+#endif
         _Analysis_assume_(Result < 0);
+#ifndef PH_WINDOWS
 #pragma clang diagnostic pop
+#endif
 
         goto End;
     }

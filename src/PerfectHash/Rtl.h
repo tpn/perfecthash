@@ -3417,19 +3417,11 @@ extern RTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString;
 //
 
 #ifdef PH_WINDOWS
-FORCEINLINE
-WINBASEAPI
 BOOL
-WINAPI
 CloseEvent(
     _In_ _Post_ptr_invalid_ HANDLE Object
-    )
-{
-    return CloseHandle(Object);
-}
+    );
 #endif
-
-extern ULONG LastError;
 
 FORCEINLINE
 VOID

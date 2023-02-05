@@ -511,10 +511,14 @@ Return Value:
         goto End;
     }
 
+#ifndef PH_WINDOWS
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-value"
+#endif
     _Analysis_assume_(CsvFile != NULL);
+#ifndef PH_WINDOWS
 #pragma clang diagnostic pop
+#endif
 
     //
     // N.B. The SAL annotations are required to suppress the concurrency
