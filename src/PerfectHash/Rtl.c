@@ -24,6 +24,14 @@ CloseEvent(
 {
     return CloseHandle(Object);
 }
+
+BOOL
+CloseDirectory(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    return CloseHandle(Object);
+}
 #endif
 
 //

@@ -211,7 +211,7 @@ Return Value:
         if (String == NULL) {
             break;
         }
-        if (Rtl->RtlEqualUnicodeString(String, Name, TRUE) != FALSE) {
+        if (Rtl->RtlEqualUnicodeString(String, Name, FALSE) != FALSE) {
             *IdPointer = Index;
             return S_OK;
         }

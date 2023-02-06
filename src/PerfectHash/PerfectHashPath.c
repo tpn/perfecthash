@@ -315,14 +315,14 @@ Return Value:
     // Reverse through the string and find the first dot or slash.
     //
 
-    Count = Path->FullPath.Length >> 1;
+    Count = Path->FullPath.Length / sizeof(WCHAR);
 
     for (Index = 0, Char = End; Index < Count; Index++, Char--) {
         if (*Char == L'.') {
             LastDot = Char;
             Found = TRUE;
             break;
-        } else if (*Char == L'\\') {
+        } else if (*Char == PATHSEP) {
             LastSlash = Char;
             Found = TRUE;
             break;
@@ -379,7 +379,7 @@ Return Value:
         }
 
         Path->StreamName.MaximumLength = Path->StreamName.Length;
-        ASSERT(Path->StreamName.Buffer[Path->StreamName.Length >> 1] == L'\0');
+        ASSERT(RTL_LAST_CHAR(&Path->StreamName) == L'\0');
 
         if (LastDot) {
 
@@ -399,7 +399,7 @@ Return Value:
                 )
             );
             Path->Extension.MaximumLength = Path->Extension.Length;
-            ASSERT(Path->Extension.Buffer[Path->Extension.Length >> 1] == L':');
+            ASSERT(RTL_LAST_CHAR(&Path->Extension) == L':');
 
             Diff = OldLength - Path->Extension.Length;
             BaseNameSubtract -= Diff;
@@ -420,7 +420,7 @@ Return Value:
         Found = FALSE;
         Char = Path->Extension.Buffer - 2;
         while (Char != Start) {
-            if (*Char == L'\\') {
+            if (*Char == PATHSEP) {
                 Found = TRUE;
                 break;
             }
@@ -439,7 +439,7 @@ Return Value:
     // where the first directory separator occurs.
     //
 
-    ASSERT(*Char == L'\\');
+    ASSERT(*Char == PATHSEP);
     Char++;
     Path->BaseName.Buffer = Char;
     Path->BaseName.Length = (USHORT)(
@@ -452,11 +452,11 @@ Return Value:
     Path->BaseName.MaximumLength = Path->BaseName.Length;
 
     if (LastDot) {
-        ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'.');
+        ASSERT(RTL_LAST_CHAR(&Path->BaseName) == L'.');
     } else if (LastColon) {
-        ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L':');
+        ASSERT(RTL_LAST_CHAR(&Path->BaseName) == L':');
     } else {
-        ASSERT(Path->BaseName.Buffer[Path->BaseName.Length >> 1] == L'\0');
+        ASSERT(RTL_LAST_CHAR(&Path->BaseName) == L'\0');
     }
 
     Path->FileName.Buffer = Char;
@@ -467,7 +467,7 @@ Return Value:
         )
     );
     Path->FileName.MaximumLength = Path->FileName.Length;
-    ASSERT(Path->FileName.Buffer[Path->FileName.Length >> 1] == L'\0');
+    ASSERT(RTL_LAST_CHAR(&Path->FileName) == L'\0');
 
     Path->Directory.Buffer = Start;
     Path->Directory.Length = (USHORT)(
@@ -477,8 +477,9 @@ Return Value:
         )
     ) - sizeof(WCHAR);
     Path->Directory.MaximumLength = Path->Directory.Length;
-    ASSERT(Path->Directory.Buffer[Path->Directory.Length >> 1] == L'\\');
+    ASSERT(RTL_LAST_CHAR(&Path->Directory) == PATHSEP);
 
+#ifdef PH_WINDOWS
     //
     // Extract the drive depending on where the first colon lives.
     //
@@ -538,6 +539,7 @@ Return Value:
             NOTHING;
         }
     }
+#endif // PH_WINDOWS
 
     //
     // Verify the base name is a valid C identifier.  (Handle the first char
@@ -564,7 +566,7 @@ Return Value:
 
         Path->BaseNameA.Buffer[0] = (CHAR)Wide;
 
-        Count = Path->BaseName.Length >> 1;
+        Count = Path->BaseName.Length / sizeof(WCHAR);
         Path->BaseNameA.Length = Count;
 
         for (Index = 1; Index < Count; Index++) {
@@ -792,7 +794,7 @@ Return Value:
     //
 
     AlignedMaxLength = ALIGN_UP_POINTER(Source->MaximumLength);
-    AllocSize = (AlignedMaxLength << 1) + AlignedMaxLength;
+    AllocSize = (AlignedMaxLength * sizeof(WCHAR)) + AlignedMaxLength;
 
     BaseAddress = Allocator->Vtbl->Calloc(Allocator, 1, AllocSize);
 
@@ -1062,14 +1064,16 @@ Return Value:
     // Verify the length of the directory does not include a trailing slash.
     //
 
-    Wide = Directory->Buffer[(Directory->Length >> 1) - 1];
-    if (Wide == L'\\') {
+    Wide = RTL_SECOND_LAST_CHAR(Directory);
+    if (Wide == PATHSEP) {
         Result = E_INVALIDARG;
         PH_ERROR(PerfectHashPathCreate_DirectorySlash, Result);
         goto Error;
     }
 
     DirectoryLength = Directory->Length;
+
+#ifdef PH_WINDOWS
 
     HasDrivePath = (
         IsDevicePathInDrivePathFormat(
@@ -1089,6 +1093,10 @@ Return Value:
         DirectoryLength += ((USHORT)strlen("\\\\?\\") << 1);
     }
 
+#else // PH_WINDOWS
+    HasDrivePath = FALSE;
+#endif
+
     //
     // DirectorySuffix.
     //
@@ -1104,8 +1112,8 @@ Return Value:
         // Verify the directory suffix does not end with a slash.
         //
 
-        Wide = DirectorySuffix->Buffer[(DirectorySuffix->Length >> 1) - 1];
-        if (Wide == L'\\') {
+        Wide = RTL_SECOND_LAST_CHAR(DirectorySuffix);
+        if (Wide == PATHSEP) {
             Result = E_INVALIDARG;
             PH_ERROR(PerfectHashPathCreate_DirectorySuffixEndSlash, Result);
             goto Error;
@@ -1350,19 +1358,21 @@ Return Value:
     // copy one into the dest buffer.
     //
 
+#ifdef PH_WINDOWS
     if (!HasDrivePath) {
         *Dest++ = L'\\';
         *Dest++ = L'\\';
         *Dest++ = L'?';
         *Dest++ = L'\\';
     }
+#endif
 
     //
     // Copy the directory.
     //
 
     Source = Directory;
-    Count = Source->Length >> 1;
+    Count = Source->Length / sizeof(WCHAR);
 
     CopyInline(Dest, Source->Buffer, Source->Length);
     Dest += Count;
@@ -1372,7 +1382,7 @@ Return Value:
     ExpectedDest = (PWSTR)RtlOffsetToPointer(BaseAddress, DirectoryLength);
     CHECK_DEST();
 
-    *Dest++ = L'\\';
+    *Dest++ = PATHSEP;
 
     //
     // Copy the directory suffix, if applicable.
@@ -1380,7 +1390,7 @@ Return Value:
 
     if (DirectorySuffixLength) {
         Source = NewDirectorySuffix;
-        Count = Source->Length >> 1;
+        Count = Source->Length / sizeof(WCHAR);
         CopyInline(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ExpectedDest = (PWSTR)(
@@ -1394,7 +1404,7 @@ Return Value:
             )
         );
         CHECK_DEST();
-        *Dest++ = L'\\';
+        *Dest++ = PATHSEP;
     }
 
     //
@@ -1403,7 +1413,7 @@ Return Value:
     //
 
     Source = BaseName;
-    Count = Source->Length >> 1;
+    Count = Source->Length / sizeof(WCHAR);
 
     if (IsCharReplacementDisabled(Path)) {
 
@@ -1450,7 +1460,7 @@ Return Value:
 
     if (BaseNameSuffixLength) {
         Source = NewBaseNameSuffix;
-        Count = Source->Length >> 1;
+        Count = Source->Length / sizeof(WCHAR);
         CopyInline(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ExpectedDest = LastExpectedDest + Count;
@@ -1465,7 +1475,7 @@ Return Value:
     if (HasExtension) {
         *Dest++ = L'.';
         Source = Extension;
-        Count = Source->Length >> 1;
+        Count = Source->Length / sizeof(WCHAR);
         CopyInline(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ASSERT(*Dest == L'\0');
@@ -1481,7 +1491,7 @@ Return Value:
     if (HasStream) {
         *Dest++ = L':';
         Source = StreamName;
-        Count = Source->Length >> 1;
+        Count = Source->Length / sizeof(WCHAR);
         CopyInline(Dest, Source->Buffer, Source->Length);
         Dest += Count;
         ASSERT(*Dest == L'\0');
@@ -1514,7 +1524,7 @@ Return Value:
     // size for the full path (captured in FullPath.MaximumLength).
     //
 
-    Dest = (PWSTR)ALIGN_UP(Dest + (SpareBytes >> 1), 8);
+    Dest = (PWSTR)ALIGN_UP(Dest + (SpareBytes / sizeof(WCHAR)), 8);
     ExpectedDest = (PWSTR)(
         RtlOffsetToPointer(
             BaseAddress,
@@ -1554,7 +1564,7 @@ Return Value:
     //
 
     ASSERT(Path->FullPath.Length <= Path->FullPath.MaximumLength);
-    ASSERT(Path->FullPath.Buffer[Path->FullPath.Length >> 1] == L'\0');
+    ASSERT(RTL_LAST_CHAR(&Path->FullPath) == L'\0');
 
     Result = Path->Vtbl->ExtractParts(Path);
     if (FAILED(Result)) {
@@ -1566,7 +1576,7 @@ Return Value:
     // Sanity check ExtractParts() hasn't blown away our NULL terminator.
     //
 
-    ASSERT(Path->FullPath.Buffer[Path->FullPath.Length >> 1] == L'\0');
+    ASSERT(RTL_LAST_CHAR(&Path->FullPath) == L'\0');
 
     //
     // Update the caller's pointer if applicable.

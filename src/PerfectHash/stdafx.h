@@ -124,6 +124,10 @@ Abstract:
 #include <PerfectHash.h>
 #include <PerfectHashErrors.h>
 
+#ifdef PH_COMPAT
+#include "PerfectHashCompatPrivate.h"
+#endif
+
 #include "Component.h"
 #include "BitManipulation.h"
 #include "Rtl.h"

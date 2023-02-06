@@ -58,8 +58,8 @@ typedef char CHAR, CCHAR;
 typedef short SHORT;
 typedef int32_t LONG;
 typedef int32_t INT;
-typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
 typedef INT *PINT;
+typedef wchar_t WCHAR;
 
 typedef WCHAR *PWCHAR, *LPWCH, *PWCH, *PWSTR, *LPWSTR;
 
@@ -2859,10 +2859,13 @@ CloseHandle(
     _In_ _Post_ptr_invalid_ HANDLE hObject
     );
 
-WINBASEAPI
 BOOL
-WINAPI
 CloseEvent(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
+
+BOOL
+CloseDirectory(
     _In_ _Post_ptr_invalid_ HANDLE Object
     );
 
@@ -2910,171 +2913,30 @@ FormatMessageA(
     _In_opt_ va_list *Arguments
     );
 
-
 //
-// Our helper functions.
+// Our helpers.
 //
 
 #define FREE_PTR(P) free(*(P)); *(P) = NULL
 
-FORCEINLINE
 PCHAR
 CommandLineArgvAToString(
     _In_ INT NumberOfArguments,
     _In_reads_(NumberOfArguments) PSTR *ArgvA
-    )
-{
-    INT Index;
-    PCHAR String;
-    SIZE_T TotalSizeInBytes;
+    );
 
-    TotalSizeInBytes = 0;
-
-    for (Index = 0; Index < NumberOfArguments; Index++) {
-        TotalSizeInBytes += strlen(ArgvA[Index]);
-    }
-
-    //
-    // Account for space and trailing \0.
-    //
-
-    TotalSizeInBytes += NumberOfArguments + 1;
-
-    String = (PCHAR)calloc(1, TotalSizeInBytes);
-    if (!String) {
-        return NULL;
-    }
-
-    for (Index = 0; Index < NumberOfArguments; Index++) {
-        strcat(String, ArgvA[Index]);
-        if (Index < (NumberOfArguments - 1)) {
-            strcat(String, " ");
-        }
-    }
-
-    return String;
-}
-
-FORCEINLINE
 PWSTR
 CommandLineArgvAToStringW(
     _In_ INT NumberOfArguments,
     _In_reads_(NumberOfArguments) PSTR *ArgvA
-    )
-{
-    INT Index;
-    INT Inner;
-    CHAR Char;
-    PWSTR Wide;
-    PSTR Source;
-    SIZE_T Length;
-    PWCHAR String;
-    SIZE_T TotalSizeInBytes;
+    );
 
-    TotalSizeInBytes = 0;
-
-    for (Index = 0; Index < NumberOfArguments; Index++) {
-        TotalSizeInBytes += strlen(ArgvA[Index]);
-    }
-
-    //
-    // Account for space and trailing \0.
-    //
-
-    TotalSizeInBytes += NumberOfArguments + 1;
-
-    //
-    // Multiply by 2 to account for char -> wchar_t.
-    //
-
-    TotalSizeInBytes <<= 1;
-
-    String = (PWCHAR)calloc(1, TotalSizeInBytes);
-    if (!String) {
-        return NULL;
-    }
-
-    Wide = (PWSTR)String;
-
-    for (Index = 0; Index < NumberOfArguments; Index++) {
-        Source = ArgvA[Index];
-        Length = strlen(Source);
-
-        for (Inner = 0; Inner < Length; Inner++) {
-            Char = Source[Inner];
-            *Wide++ = (WCHAR)Char;
-        }
-    }
-
-    return String;
-}
-
-FORCEINLINE
 PWSTR *
 CommandLineArgvAToArgvW(
     _In_ INT NumberOfArguments,
     _In_reads_(NumberOfArguments) PSTR *ArgvA
-    )
-{
-    INT Index;
-    INT Inner;
-    CHAR Char;
-    PWSTR Wide;
-    PSTR Source;
-    PWSTR *ArgvW;
-    SIZE_T Length;
-    SIZE_T TotalSizeInBytes;
-    SIZE_T ArraySizeInBytes;
+    );
 
-    TotalSizeInBytes = 0;
-
-    for (Index = 0; Index < NumberOfArguments; Index++) {
-        TotalSizeInBytes += strlen(ArgvA[Index]);
-    }
-
-    //
-    // Account for space and trailing \0.
-    //
-
-    TotalSizeInBytes += NumberOfArguments + 1;
-
-    //
-    // Multiply by 2 to account for char -> wchar_t.
-    //
-
-    TotalSizeInBytes <<= 1;
-
-    //
-    // Account for the array of pointers, plus a trailing NULL pointer.
-    //
-
-    ArraySizeInBytes = (sizeof(Wide) * (NumberOfArguments + 1));
-    TotalSizeInBytes += ArraySizeInBytes;
-
-    ArgvW = (PWSTR *)calloc(1, TotalSizeInBytes);
-    if (!ArgvW) {
-        return NULL;
-    }
-
-    //
-    // Wire up Wide to point to after the array.
-    //
-
-    Wide = (PWSTR)RtlOffsetToPointer(ArgvW, ArraySizeInBytes);
-
-    for (Index = 0; Index < NumberOfArguments; Index++) {
-        Source = ArgvA[Index];
-        Length = strlen(Source);
-        ArgvW[Index] = Wide;
-
-        for (Inner = 0; Inner < Length; Inner++) {
-            Char = Source[Inner];
-            *Wide++ = (WCHAR)Char;
-        }
-    }
-
-    return Wide;
-}
 
 #ifdef __cplusplus
 } // extern "C"

@@ -921,8 +921,8 @@ End:
 // create implementation; we should look at cleaning this up down the track.
 //
 
-#define GET_LENGTH(Name) (USHORT)wcslen(Name->Buffer) << (USHORT)1
-#define GET_MAX_LENGTH(Name) Name->Length + 2
+#define GET_LENGTH(Name) (USHORT)(wcslen(Name->Buffer) * sizeof(WCHAR))
+#define GET_MAX_LENGTH(Name) Name->Length + sizeof(WCHAR) 
 
 #define VALIDATE_ID(Name, Upper)                                       \
     if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                  \
@@ -1509,7 +1509,7 @@ Return Value:
     PWSTR CommandLineW;
     HRESULT Result;
 
-    CommandLineW = CommandLineArgvAToString(NumberOfArguments, ArgvA);
+    CommandLineW = CommandLineArgvAToStringW(NumberOfArguments, ArgvA);
     if (!CommandLineW) {
         return E_OUTOFMEMORY;
     }

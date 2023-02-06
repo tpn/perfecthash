@@ -490,6 +490,8 @@ Return Value:
     // Open the directory using the newly created path.
     //
 
+#ifdef PH_WINDOWS
+
     DesiredAccess = GENERIC_READ | GENERIC_WRITE;
     ShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     FlagsAndAttributes = FILE_FLAG_BACKUP_SEMANTICS;
@@ -508,6 +510,26 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+
+#else
+
+    PSTR AnsiPath;
+
+    AnsiPath = CreateStringFromWide(Directory->Path->FullPath.Buffer);
+    if (!AnsiPath) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+    Directory->DirectoryHandle = (HANDLE)opendir(AnsiPath);
+    if (!IsValidHandle(Directory->DirectoryHandle)) {
+        SetLastError(errno);
+        SYS_ERROR(opendir);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+    FREE_PTR(&AnsiPath);
+
+#endif
 
     Opened = TRUE;
     SetDirectoryCreated(Directory);
@@ -606,7 +628,7 @@ Return Value:
     //
 
     if (Directory->DirectoryHandle) {
-        if (!CloseHandle(Directory->DirectoryHandle)) {
+        if (!CloseDirectory(Directory->DirectoryHandle)) {
             SYS_ERROR(CloseHandle);
             Result = PH_E_SYSTEM_CALL_FAILED;
         }

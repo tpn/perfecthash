@@ -488,6 +488,8 @@ Return Value:
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
 
+#ifdef PH_WINDOWS
+
     //
     // Create the Main threadpool structures.  This threadpool creates a fixed
     // number of threads equal to the maximum concurrency specified by the user
@@ -705,9 +707,13 @@ Return Value:
         goto Error;
     }
 
+#endif // PH_WINDOWS
+
     //
     // Initialize the timestamp string.
     //
+
+#ifdef PH_WINDOWS
 
     Result = InitializeTimestampString((PCHAR)&Context->TimestampBuffer,
                                        sizeof(Context->TimestampBuffer),
@@ -718,6 +724,8 @@ Return Value:
         PH_ERROR(PerfectHashContextInitialize_InitTimestampString, Result);
         goto Error;
     }
+
+#endif
 
     //
     // Wire up the ComputerName string and buffer, then get the computer name.

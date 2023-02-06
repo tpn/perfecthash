@@ -40,6 +40,12 @@ extern "C" {
 #include <minwindef.h>
 #endif
 
+#ifdef PH_WINDOWS
+#define PATHSEP L'\\'
+#else
+#define PATHSEP L'/'
+#endif
+
 //
 // NT typedefs.
 //
@@ -50,6 +56,14 @@ extern "C" {
     0,                           \
     s                            \
 }
+
+#define RTL_LAST_CHAR(s) (                              \
+    (s)->Buffer[(s)->Length / (sizeof((s)->Buffer[0]))] \
+)
+
+#define RTL_SECOND_LAST_CHAR(s) (                         \
+    (s)->Buffer[(s)->Length / (sizeof((s)->Buffer[0]))-1] \
+)
 
 typedef union _ULONG_INTEGER {
     struct {
@@ -1417,10 +1431,10 @@ ZeroMemoryInline(
 
 #else
 #define ZeroStructInline(Name) \
-    memset((PDWORD64)&Name, 0, sizeof(Name) >> 3)
+    memset((PDWORD64)&Name, 0, sizeof(Name))
 
 #define ZeroStructPointerInline(Name) \
-    memset((PDWORD64)Name, 0, (sizeof(*Name) >> 3))
+    memset((PDWORD64)Name, 0, (sizeof(*Name)))
 #endif
 
 #ifndef PH_WINDOWS
@@ -2280,7 +2294,7 @@ IsValidNullTerminatedUnicodeStringWithMinimumLengthInChars(
         String->Length >= Length &&
         String->MaximumLength >= MaximumLength &&
         sizeof(WCHAR) == (String->MaximumLength - String->Length) &&
-        String->Buffer[String->Length >> 1] == L'\0'
+        String->Buffer[String->Length / sizeof(WCHAR)] == L'\0'
     );
 }
 
@@ -2521,7 +2535,7 @@ VerifyNoSlashInUnicodeString(
     _In_ PCUNICODE_STRING String
     )
 {
-    return !FindCharInUnicodeString(String, L'\\', 0, NULL);
+    return !FindCharInUnicodeString(String, PATHSEP, 0, NULL);
 }
 
 //

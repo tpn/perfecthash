@@ -15,21 +15,36 @@ Abstract:
 #include "stdafx.h"
 #include "PerfectHashEventsPrivate.h"
 
-#ifdef PH_WINDOWS
-#error This file is not for Windows.
-#endif
+PSTR
+CreateStringFromWide(
+    _In_ PCWSTR WideString
+    )
+{
+    INT Index;
+    PCHAR Char;
+    PSTR String;
+    PWCHAR Wide;
+    SIZE_T Count;
 
-#ifndef PH_COMPAT
-#error PH_COMPAT should be defined for this file.
-#endif
+    Count = wcslen(WideString) + 1;
+    String = (PSTR)calloc(1, Count);
+    if (!String) {
+        SetLastError(ENOMEM);
+        return NULL;
+    }
+
+    Char = String;
+    Wide = (PWCHAR)WideString;
+    for (Index = 0; Index < Count; Index++) {
+        *Char++ = *Wide++;
+    }
+
+    return String;
+}
 
 //
-// Includes.
+// Misc.
 //
-
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/sysinfo.h>
 
 DWORD LastError;
 
@@ -171,7 +186,6 @@ SystemTimeToFileTime(
     return FALSE;
 }
 
-#include <time.h>
 
 WINBASEAPI
 ULONGLONG
@@ -268,11 +282,80 @@ WINBASEAPI
 BOOL
 WINAPI
 CreateDirectoryW(
-    _In_ LPCWSTR lpPathName,
-    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
+    _In_ LPCWSTR PathName,
+    _In_opt_ LPSECURITY_ATTRIBUTES SecurityAttributes
     )
 {
-    return FALSE;
+    PSTR Path;
+    INT Result;
+
+    Path = CreateStringFromWide(PathName);
+    if (!Path) {
+        return FALSE;
+    }
+
+    Result = mkdir(Path, 0755);
+
+    if (Result != 0) {
+        if (errno == EEXIST) {
+            SetLastError(ERROR_ALREADY_EXISTS);
+        } else {
+            SetLastError(errno);
+        }
+    }
+
+    FREE_PTR(&Path);
+
+    return (Result == 0);
+}
+
+BOOL
+CloseDirectory(
+    _In_ HANDLE DirectoryHandle
+    )
+{
+    DIR* Directory = (DIR*)DirectoryHandle;
+    INT Result;
+
+    if (Directory) {
+        Result = closedir(Directory);
+        if (Result != 0) {
+            SetLastError(errno);
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+WINBASEAPI
+BOOL
+WINAPI
+RemoveDirectoryW(
+    _In_ LPCWSTR PathName
+    )
+{
+    PSTR Path;
+    INT Result;
+
+    Path = CreateStringFromWide(PathName);
+    if (!Path) {
+        return FALSE;
+    }
+
+    Result = rmdir(Path);
+
+    if (Result != 0) {
+        if (errno == ENOTEMPTY) {
+            SetLastError(ERROR_DIR_NOT_EMPTY);
+        } else {
+            SetLastError(errno);
+        }
+    }
+
+    FREE_PTR(&Path);
+
+    return (Result == 0);
 }
 
 WINBASEAPI
@@ -405,15 +488,6 @@ GetFileInformationByHandleEx(
     return FALSE;
 }
 
-WINBASEAPI
-BOOL
-WINAPI
-RemoveDirectoryW(
-    _In_ LPCWSTR lpPathName
-    )
-{
-    return FALSE;
-}
 
 WINBASEAPI
 BOOL
@@ -684,59 +758,6 @@ DeleteCriticalSection(
 // Events
 //
 
-typedef union _Struct_size_bytes_(sizeof(ULONG)) _PH_EVENT_STATE {
-    struct {
-
-        //
-        // When set, indicates the event is signaled.
-        //
-
-        ULONG Signaled:1;
-
-        //
-        // When set, indicates the event is to be manually reset.
-        //
-
-        ULONG ManualReset:1;
-
-        //
-        // When set, indicates the mutex has been initialized.
-        //
-
-        ULONG MutexInitialized:1;
-
-        //
-        // When set, indicates the condition has been initialized.
-        //
-
-        ULONG ConditionInitialized:1;
-
-        //
-        // When set, indicates the name has been allocated.
-        //
-
-        ULONG NameAllocated:1;
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:27;
-
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PH_EVENT_STATE, *PPH_EVENT_STATE;
-
-typedef struct _PH_EVENT {
-    PH_EVENT_STATE State;
-    ULONG Padding1;
-    PSTR Name;
-    pthread_mutex_t Mutex;
-    pthread_cond_t Condition;
-} PH_EVENT, *PPH_EVENT;
-
 WINBASEAPI
 _Ret_maybenull_
 HANDLE
@@ -815,9 +836,7 @@ End:
     return (HANDLE)Event;
 }
 
-WINBASEAPI
 BOOL
-WINAPI
 CloseEvent(
     _In_ _Post_ptr_invalid_ HANDLE Object
     )
@@ -1020,10 +1039,6 @@ WaitForMultipleObjects(
 // Memory.
 //
 
-
-
-#include <linux/mman.h>
-#include <sys/mman.h>
 
 WINBASEAPI
 SIZE_T
@@ -1571,36 +1586,43 @@ CreateThreadpool(
     _Reserved_ PVOID reserved
     )
 {
-    return NULL;
+    PTP_POOL Pool;
+
+    Pool = (PTP_POOL)calloc(1, sizeof(*Pool));
+    if (!Pool) {
+        SetLastError(ENOMEM);
+    }
+
+    return Pool;
 }
 
 WINBASEAPI
 VOID
 WINAPI
 SetThreadpoolThreadMaximum(
-    _Inout_ PTP_POOL ptpp,
-    _In_ DWORD cthrdMost
+    _Inout_ PTP_POOL Pool,
+    _In_ DWORD MaxThreads
     )
 {
-    return;
+    Pool->ThreadMaximum = MaxThreads;
 }
 
 WINBASEAPI
 BOOL
 WINAPI
 SetThreadpoolThreadMinimum(
-    _Inout_ PTP_POOL ptpp,
-    _In_ DWORD cthrdMic
+    _Inout_ PTP_POOL Pool,
+    _In_ DWORD MinThreads
     )
 {
-    return FALSE;
+    Pool->ThreadMinimum = MinThreads;
 }
 
 WINBASEAPI
 VOID
 WINAPI
 CloseThreadpool(
-    _Inout_ PTP_POOL ptpp
+    _Inout_ PTP_POOL Pool
     )
 {
     return;
@@ -1614,7 +1636,14 @@ CreateThreadpoolCleanupGroup(
     VOID
     )
 {
-    return NULL;
+    PTP_CLEANUP_GROUP Cleanup;
+
+    Cleanup = (PTP_CLEANUP_GROUP)calloc(1, sizeof(*Cleanup));
+    if (!Cleanup) {
+        SetLastError(ENOMEM);
+    }
+
+    return Cleanup;
 }
 
 WINBASEAPI
@@ -1655,12 +1684,48 @@ _Must_inspect_result_
 PTP_WORK
 WINAPI
 CreateThreadpoolWork(
-    _In_ PTP_WORK_CALLBACK pfnwk,
-    _Inout_opt_ PVOID pv,
-    _In_opt_ PTP_CALLBACK_ENVIRON pcbe
+    _In_ PTP_WORK_CALLBACK Callback,
+    _Inout_opt_ PVOID Context,
+    _In_opt_ PTP_CALLBACK_ENVIRON CallbackEnv
     )
 {
-    return NULL;
+    PTP_WORK Work;
+    PTP_TASK Task;
+    PTP_CLEANUP_GROUP Group;
+    PTPP_CLEANUP_GROUP_MEMBER Member;
+
+
+    Work = (PTP_WORK)calloc(1, sizeof(*Work));
+    if (!Work) {
+        SetLastError(ENOMEM);
+    }
+
+    Task = &Work->Task;
+    Member = &Work->CleanupGroupMember;
+
+    Group = NULL;
+
+    if (CallbackEnv != NULL) {
+        Group = CallbackEnv->CleanupGroup;
+    }
+
+    if (Group != NULL) {
+        AcquireSRWLockExclusive(&Group->MemberLock);
+
+        //
+        // Add member to group list.
+        //
+
+        InsertTailList(&Group->MemberList, &Member->CleanupGroupMemberLinks);
+
+        ReleaseSRWLockExclusive(&Group->MemberLock);
+    }
+
+    Member->Context = Context;
+    Member->WorkCallback = Callback;
+    Member->Pool = CallbackEnv->Pool;
+
+    return Work;
 }
 
 WINBASEAPI
@@ -1896,6 +1961,163 @@ RtlPrintSysError(
     )
 {
     return E_FAIL;
+}
+
+PCHAR
+CommandLineArgvAToString(
+    _In_ INT NumberOfArguments,
+    _In_reads_(NumberOfArguments) PSTR *ArgvA
+    )
+{
+    INT Index;
+    PCHAR String;
+    SIZE_T TotalSizeInBytes;
+
+    TotalSizeInBytes = 0;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        TotalSizeInBytes += strlen(ArgvA[Index]);
+    }
+
+    //
+    // Account for space and trailing \0.
+    //
+
+    TotalSizeInBytes += NumberOfArguments + 1;
+
+    String = (PCHAR)calloc(1, TotalSizeInBytes);
+    if (!String) {
+        return NULL;
+    }
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        strcat(String, ArgvA[Index]);
+        if (Index < (NumberOfArguments - 1)) {
+            strcat(String, " ");
+        }
+    }
+
+    return String;
+}
+
+PWSTR
+CommandLineArgvAToStringW(
+    _In_ INT NumberOfArguments,
+    _In_reads_(NumberOfArguments) PSTR *ArgvA
+    )
+{
+    INT Index;
+    INT Inner;
+    CHAR Char;
+    PWCHAR Wide;
+    PSTR Source;
+    SIZE_T Length;
+    PWCHAR String;
+    SIZE_T TotalSizeInBytes;
+
+    TotalSizeInBytes = 0;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        TotalSizeInBytes += strlen(ArgvA[Index]) + 1;
+    }
+
+    //
+    // Account for space and trailing \0.
+    //
+
+    TotalSizeInBytes += NumberOfArguments + 1;
+
+    //
+    // Account for char -> wchar_t.
+    //
+
+    TotalSizeInBytes *= sizeof(WCHAR);
+
+    String = (PWCHAR)calloc(1, TotalSizeInBytes);
+    if (!String) {
+        return NULL;
+    }
+
+    Wide = (PWCHAR)String;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        Source = ArgvA[Index];
+        Length = strlen(Source);
+
+        for (Inner = 0; Inner < Length; Inner++) {
+            Char = Source[Inner];
+            *Wide++ = (WCHAR)Char;
+        }
+    }
+
+    return String;
+}
+
+PWSTR *
+CommandLineArgvAToArgvW(
+    _In_ INT NumberOfArguments,
+    _In_reads_(NumberOfArguments) PSTR *ArgvA
+    )
+{
+    INT Index;
+    INT Inner;
+    CHAR Char;
+    PWSTR Wide;
+    PSTR Source;
+    PWSTR *ArgvW;
+    SIZE_T Length;
+    SIZE_T TotalSizeInBytes;
+    SIZE_T ArraySizeInBytes;
+
+    TotalSizeInBytes = 0;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        TotalSizeInBytes += strlen(ArgvA[Index]);
+    }
+
+    //
+    // Account for space and trailing \0.
+    //
+
+    TotalSizeInBytes += NumberOfArguments + 1;
+
+    //
+    // Account for char -> wchar_t.
+    //
+
+    TotalSizeInBytes *= sizeof(WCHAR);
+
+    //
+    // Account for the array of pointers, plus a trailing NULL pointer.
+    //
+
+    ArraySizeInBytes = (sizeof(Wide) * (NumberOfArguments + 1));
+    TotalSizeInBytes += ArraySizeInBytes;
+
+    ArgvW = (PWSTR *)calloc(1, TotalSizeInBytes);
+    if (!ArgvW) {
+        return NULL;
+    }
+
+    //
+    // Wire up Wide to point to after the array.
+    //
+
+    Wide = (PWSTR)RtlOffsetToPointer(ArgvW, ArraySizeInBytes);
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        Source = ArgvA[Index];
+        Length = strlen(Source);
+        ArgvW[Index] = Wide;
+
+        for (Inner = 0; Inner < Length; Inner++) {
+            Char = Source[Inner];
+            *Wide++ = (WCHAR)Char;
+        }
+        *Wide++ = L'\0';
+    }
+
+    return ArgvW;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
