@@ -103,6 +103,12 @@ else()
         -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
     )
 
+    target_link_options(
+        ${PROJECT_NAME}
+        PUBLIC
+        -pthread
+    )
+
     if (CMAKE_C_COMPILER_ID MATCHES Clang)
 
         target_compile_options(
