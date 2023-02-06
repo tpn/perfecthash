@@ -593,10 +593,14 @@ InitOnceExecuteOnce(
     _Outptr_opt_result_maybenull_ LPVOID* Context
     )
 {
+    InitOnceInitOnce = InitOnce;
     InitOnceContext = Context;
     InitOnceFunction = InitFn;
     InitOnceParameter = Parameter;
     pthread_once((pthread_once_t *)InitOnce, InitOnceWrapper);
+    if (ARGUMENT_PRESENT(Context)) {
+        *Context = InitOnce->Context;
+    }
     return TRUE;
 }
 
@@ -1784,29 +1788,6 @@ CloseThreadpoolWait(
 }
 
 //
-// Errors.
-//
-
-WINBASEAPI
-_Success_(return != 0)
-DWORD
-WINAPI
-FormatMessageA(
-    _In_     DWORD dwFlags,
-    _In_opt_ LPCVOID lpSource,
-    _In_     DWORD dwMessageId,
-    _In_     DWORD dwLanguageId,
-    _When_((dwFlags & FORMAT_MESSAGE_ALLOCATE_BUFFER) != 0, _At_((LPSTR*)lpBuffer, _Outptr_result_z_))
-    _When_((dwFlags & FORMAT_MESSAGE_ALLOCATE_BUFFER) == 0, _Out_writes_z_(nSize))
-             LPSTR lpBuffer,
-    _In_     DWORD nSize,
-    _In_opt_ va_list *Arguments
-    )
-{
-    return 0;
-}
-
-//
 // Chm01 stubs.
 //
 
@@ -1826,6 +1807,95 @@ ProcessConsoleCallbackChm01(
     )
 {
     return;
+}
+
+//
+// Error handling.
+//
+
+PERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashPrintError(
+    PCSZ FunctionName,
+    PCSZ FileName,
+    ULONG LineNumber,
+    ULONG Error
+    )
+{
+    PCSZ CodeString;
+    HRESULT Result = S_OK;
+    const STRING Prefix1 = RTL_CONSTANT_STRING(
+        "%s: %u: %s failed with error: 0x%x\n"
+    );
+    const STRING Prefix2 = RTL_CONSTANT_STRING(
+        "%s: %u: %s failed with error: 0x%x: %s\n"
+    );
+
+    if (Error == S_OK) {
+        fprintf(stderr,
+                Prefix1.Buffer,
+                FileName,
+                LineNumber,
+                FunctionName,
+                Error);
+    } else {
+        Result = PerfectHashGetErrorCodeString(NULL, Error, &CodeString);
+        if (FAILED(Result)) {
+            fprintf(stderr,
+                    "PhtPrintError: PerfectHashGetErrorCodeString() "
+                    "failed for error 0x%x", Error);
+        } else {
+            fprintf(stderr,
+                    Prefix2.Buffer,
+                    FileName,
+                    LineNumber,
+                    FunctionName,
+                    Error,
+                    CodeString);
+        }
+    }
+
+    return Result;
+}
+
+PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashPrintMessage(
+    ULONG Code,
+    ...
+    )
+{
+    PCSZ CodeString;
+    HRESULT Result = S_OK;
+
+    Result = PerfectHashGetErrorCodeString(NULL, Code, &CodeString);
+    if (FAILED(Result)) {
+        fprintf(stderr,
+                "PhtPrintError: PerfectHashGetErrorCodeString() "
+                "failed for error 0x%x", Code);
+    } else {
+        fprintf(stderr, "%s\n", CodeString);
+    }
+
+    return Result;
+}
+
+RTL_PRINT_SYS_ERROR RtlPrintSysError;
+
+_Use_decl_annotations_
+HRESULT
+RtlPrintSysError(
+    PRTL Rtl,
+    PCSZ FunctionName,
+    PCSZ FileName,
+    ULONG LineNumber
+    )
+{
+    return E_FAIL;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

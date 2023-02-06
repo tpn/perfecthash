@@ -207,7 +207,7 @@ SystemTimeToFileTime(
 
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
 
-typedef _Return_type_success_(return >= 0) long HRESULT;
+typedef _Return_type_success_(return >= 0) LONG HRESULT;
 typedef HRESULT *PHRESULT;
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 
@@ -1135,7 +1135,16 @@ typedef struct _RTL_BARRIER {
     DWORD Reserved5;
 } RTL_BARRIER, *PRTL_BARRIER;
 
-typedef RTL_RUN_ONCE INIT_ONCE;
+//
+// We need to use a custom INIT_ONCE structure for pthread_once glue in order
+// to support all of the Windows InitOnce* semantics.
+//
+
+typedef struct _PH_INIT_ONCE_COMPAT {
+    pthread_once_t Once;
+    PVOID Context;
+} PH_INIT_ONCE_COMPAT;
+typedef PH_INIT_ONCE_COMPAT INIT_ONCE;
 typedef INIT_ONCE *PINIT_ONCE, *LPINIT_ONCE;
 
 typedef
@@ -2938,7 +2947,63 @@ CommandLineArgvAToString(
 
     for (Index = 0; Index < NumberOfArguments; Index++) {
         strcat(String, ArgvA[Index]);
-        strcat(String, " ");
+        if (Index < (NumberOfArguments - 1)) {
+            strcat(String, " ");
+        }
+    }
+
+    return String;
+}
+
+FORCEINLINE
+PWSTR
+CommandLineArgvAToStringW(
+    _In_ INT NumberOfArguments,
+    _In_reads_(NumberOfArguments) PSTR *ArgvA
+    )
+{
+    INT Index;
+    INT Inner;
+    CHAR Char;
+    PWSTR Wide;
+    PSTR Source;
+    SIZE_T Length;
+    PWCHAR String;
+    SIZE_T TotalSizeInBytes;
+
+    TotalSizeInBytes = 0;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        TotalSizeInBytes += strlen(ArgvA[Index]);
+    }
+
+    //
+    // Account for space and trailing \0.
+    //
+
+    TotalSizeInBytes += NumberOfArguments + 1;
+
+    //
+    // Multiply by 2 to account for char -> wchar_t.
+    //
+
+    TotalSizeInBytes <<= 1;
+
+    String = (PWCHAR)calloc(1, TotalSizeInBytes);
+    if (!String) {
+        return NULL;
+    }
+
+    Wide = (PWSTR)String;
+
+    for (Index = 0; Index < NumberOfArguments; Index++) {
+        Source = ArgvA[Index];
+        Length = strlen(Source);
+
+        for (Inner = 0; Inner < Length; Inner++) {
+            Char = Source[Inner];
+            *Wide++ = (WCHAR)Char;
+        }
     }
 
     return String;
@@ -2998,7 +3063,7 @@ CommandLineArgvAToArgvW(
     Wide = (PWSTR)RtlOffsetToPointer(ArgvW, ArraySizeInBytes);
 
     for (Index = 0; Index < NumberOfArguments; Index++) {
-        Source =ArgvA[Index];
+        Source = ArgvA[Index];
         Length = strlen(Source);
         ArgvW[Index] = Wide;
 

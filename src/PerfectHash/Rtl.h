@@ -498,9 +498,13 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define RtlPointerToOffset(B,P)    ((ULONG_PTR)(((PCHAR)(P)) - ((PCHAR)(B))))
 #endif
 
+#ifdef PH_WINDOWS
 #define RtlInitOnceToPointer(A) (                                           \
     ((ULONG_PTR)(A) & ~(ULONG_PTR)((1 << INIT_ONCE_CTX_RESERVED_BITS) - 1)) \
 )
+#else
+#define RtlInitOnceToPointer(A) (((PINIT_ONCE)(A))->Context)
+#endif
 
 #ifndef FlagOn
 #define FlagOn(_F,_SF)        ((_F) & (_SF))

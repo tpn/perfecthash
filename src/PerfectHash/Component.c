@@ -93,11 +93,9 @@ CreateGlobalComponentCallback(
         )
     );
 
-#ifdef PH_WINDOWS
     if (InitOnce != ExpectedInitOnce) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
-#endif
 
     Component = CreateComponent(Params->Id, NULL);
 
@@ -108,6 +106,10 @@ CreateGlobalComponentCallback(
     if (ARGUMENT_PRESENT(Context)) {
         *Context = Component;
     }
+
+#ifdef PH_COMPAT
+    InitOnce->Context = Component;
+#endif
 
     return TRUE;
 }
@@ -407,6 +409,7 @@ ComponentRelease(
         PRTL Rtl;
         PALLOCATOR Allocator;
 
+#ifdef PH_WINDOWS
         Rtl = (PRTL)RtlInitOnceToPointer(GlobalComponents.Rtl.Ptr);
         Allocator = (PALLOCATOR)(
             RtlInitOnceToPointer(GlobalComponents.Allocator.Ptr)
@@ -415,6 +418,18 @@ ComponentRelease(
         GlobalComponents.Rtl.Ptr = NULL;
         GlobalComponents.Allocator.Ptr = NULL;
         GlobalComponents.FirstComponent = NULL;
+#else
+        Rtl = (PRTL)RtlInitOnceToPointer(&GlobalComponents.Rtl);
+        Allocator = (PALLOCATOR)(
+            RtlInitOnceToPointer(&GlobalComponents.Allocator)
+        );
+
+        GlobalComponents.Rtl.Once = PTHREAD_ONCE_INIT;
+        GlobalComponents.Rtl.Context = NULL;
+        GlobalComponents.Allocator.Once = PTHREAD_ONCE_INIT ;
+        GlobalComponents.Allocator.Context = NULL;
+        GlobalComponents.FirstComponent = NULL;
+#endif
 
         ReleaseGlobalComponentsLockExclusive();
 

@@ -642,4 +642,26 @@ Return Value:
 }
 #endif // PH_WINDOWS
 
+
+FORCEINLINE
+BOOLEAN
+DoesErrorCodeWantAlgoHashMaskTableAppended(
+    _In_ ULONG ErrorCode
+    )
+{
+    HRESULT Code;
+    BOOLEAN Result;
+
+    Code = (HRESULT)ErrorCode;
+
+    //
+    // We append the algo/hash/mask table text for the usage string.
+    //
+
+    Result = (Code == PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
+
+    return Result;
+}
+
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

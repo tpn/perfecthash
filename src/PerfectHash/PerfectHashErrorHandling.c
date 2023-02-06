@@ -16,6 +16,7 @@ Abstract:
 
 #include "stdafx.h"
 
+#ifndef PH_COMPAT
 PERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
 
 _Use_decl_annotations_
@@ -156,26 +157,6 @@ End:
     return Result;
 }
 
-FORCEINLINE
-BOOLEAN
-DoesErrorCodeWantAlgoHashMaskTableAppended(
-    _In_ ULONG ErrorCode
-    )
-{
-    HRESULT Code;
-    BOOLEAN Result;
-
-    Code = (HRESULT)ErrorCode;
-
-    //
-    // We append the algo/hash/mask table text for the usage string.
-    //
-
-    Result = (Code == PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
-
-    return Result;
-}
-
 PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
 
 _Use_decl_annotations_
@@ -287,6 +268,7 @@ End:
 
     return Result;
 }
+#endif
 
 
 static const ERROR_CODE_SYMBOL_NAME CommonErrorCodes[] = {
@@ -362,10 +344,6 @@ Return Value:
     //
     // Validate arguments.
     //
-
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return E_POINTER;
-    }
 
     if (!ARGUMENT_PRESENT(StringPointer)) {
         return E_POINTER;
