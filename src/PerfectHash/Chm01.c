@@ -542,8 +542,10 @@ Return Value:
         // Verify the uniqueness of our graph allocator and underlying handle.
         //
 
+#ifdef PH_WINDOWS
         ASSERT(Graph->Allocator != Table->Allocator);
         ASSERT(Graph->Allocator->HeapHandle != Table->Allocator->HeapHandle);
+#endif
 
         //
         // Verify the Rtl instance was global.

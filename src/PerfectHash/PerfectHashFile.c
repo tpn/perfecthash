@@ -999,7 +999,7 @@ Return Value:
     }
 
     if (File->FileHandle) {
-        if (!CloseHandle(File->FileHandle)) {
+        if (!CloseFile(File->FileHandle)) {
             SYS_ERROR(CloseHandle);
             Result = PH_E_SYSTEM_CALL_FAILED;
         }
@@ -1061,8 +1061,6 @@ Return Value:
 
 --*/
 {
-    ULONG Access;
-    ULONG Protection;
     HRESULT Result = S_OK;
     LARGE_INTEGER EndOfFile;
 
@@ -1105,6 +1103,11 @@ Return Value:
     //
     // Argument validation complete.  Create the file mapping.
     //
+
+#ifdef PH_WINDOWS
+
+    ULONG Access;
+    ULONG Protection;
 
     if (IsFileReadOnly(File)) {
         Protection = PAGE_READONLY;
@@ -1203,6 +1206,45 @@ Return Value:
 
     }
 
+#else // PH_WINDOWS
+
+    int Prot;
+    int Flags;
+    PH_HANDLE Fd = { 0 };
+
+    if (IsFileReadOnly(File)) {
+        Prot = PROT_READ;
+    } else {
+        Prot = PROT_READ | PROT_WRITE;
+    }
+
+    Flags = MAP_SHARED_VALIDATE;
+    if (WantsLargePages(File)) {
+        Flags |= (MAP_HUGETLB | MAP_HUGE_2MB);
+    }
+
+    Fd.AsHandle = File->FileHandle;
+    File->BaseAddress = mmap(NULL,
+                             EndOfFile.QuadPart,
+                             Prot,
+                             Flags,
+                             Fd.AsFileDescriptor,
+                             0);
+
+    if (File->BaseAddress == MAP_FAILED) {
+        File->BaseAddress = NULL;
+        SetLastError(errno);
+        SYS_ERROR(mmap);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    if (BooleanFlagOn(Flags, MAP_HUGETLB)) {
+        File->Flags.UsesLargePages = TRUE;
+    }
+
+#endif // !PH_WINDOWS
+
     //
     // We're done, finish up.
     //
@@ -1291,6 +1333,8 @@ Return Value:
 
     Rtl = File->Rtl;
 
+#ifdef PH_WINDOWS
+
     if (!File->MappedAddress) {
 
         ASSERT(!File->Flags.UsesLargePages);
@@ -1357,6 +1401,35 @@ Return Value:
         }
         File->MappingHandle = NULL;
     }
+
+#else // PH_WINDOWS
+
+    //
+    // MappedAddress should always be NULL on POSIX.
+    //
+
+    ASSERT(!File->MappedAddress);
+    ASSERT(File->BaseAddress != MAP_FAILED)
+
+    if (File->BaseAddress != NULL) {
+        off_t EndOfFile = File->FileInfo.EndOfFile.QuadPart;
+
+        if (msync(File->BaseAddress, EndOfFile, MS_SYNC) != 0) {
+            SetLastError(errno);
+            SYS_ERROR(msync);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+
+        if (munmap(File->BaseAddress, EndOfFile) != 0) {
+            SetLastError(errno);
+            SYS_ERROR(munmap);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        }
+
+        File->BaseAddress = NULL;
+    }
+
+#endif // PH_WINDOWS
 
     if (SUCCEEDED(Result)) {
         SetFileUnmapped(File);

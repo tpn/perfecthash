@@ -73,6 +73,8 @@ Return Value:
         goto Error;
     }
 
+#ifdef PH_WINDOWS
+
     //
     // Initialize the timestamp string.
     //
@@ -86,6 +88,8 @@ Return Value:
         PH_ERROR(PerfectHashTableInitialize_InitTimestampString, Result);
         goto Error;
     }
+
+#endif
 
     //
     // We're done!  Indicate success and finish up.
@@ -504,28 +508,28 @@ Return Value:
     if (AlgorithmName) {
         *Dest++ = L'_';
         Offset = (USHORT)RtlPointerToOffset(Suffix->Buffer, Dest);
-        Count = AlgorithmName->Length >> 1;
+        Count = AlgorithmName->Length / sizeof(WCHAR);
         CopyInline(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
         Dest += Count;
     }
 
     if (HashFunctionName) {
         *Dest++ = L'_';
-        Count = HashFunctionName->Length >> 1;
+        Count = HashFunctionName->Length / sizeof(WCHAR);
         CopyInline(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
         Dest += Count;
     }
 
     if (MaskFunctionName) {
         *Dest++ = L'_';
-        Count = MaskFunctionName->Length >> 1;
+        Count = MaskFunctionName->Length / sizeof(WCHAR);
         CopyInline(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
         Dest += Count;
     }
 
     if (AdditionalSuffix) {
         *Dest++ = L'_';
-        Count = AdditionalSuffix->Length >> 1;
+        Count = AdditionalSuffix->Length / sizeof(WCHAR);
         CopyInline(Dest, AdditionalSuffix->Buffer, AdditionalSuffix->Length);
         Dest += Count;
     }
@@ -676,7 +680,7 @@ Return Value:
         // routine below.
         //
 
-        AdditionalSuffixALength = (AdditionalSuffix->Length >> 1) + 1;
+        AdditionalSuffixALength = (AdditionalSuffix->Length / sizeof(WCHAR))+1;
     }
 
     Rtl = Table->Rtl;
@@ -790,7 +794,7 @@ Return Value:
         //
 
         Path->AdditionalSuffixAOffset = (
-            (AlgorithmOffset >> 1) + ExistingPath->BaseNameA.Length
+            (AlgorithmOffset / sizeof(WCHAR)) + ExistingPath->BaseNameA.Length
         );
     }
 

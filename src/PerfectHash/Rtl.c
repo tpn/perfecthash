@@ -32,6 +32,14 @@ CloseDirectory(
 {
     return CloseHandle(Object);
 }
+
+BOOL
+CloseFile(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    return CloseHandle(Object);
+}
 #endif
 
 //
@@ -280,6 +288,13 @@ RtlInitialize(
     // Compat initialization.
     //
 
+    Result = RtlInitializeCpuFeatures(Rtl);
+    if (FAILED(Result)) {
+        PH_ERROR(RtlInitializeCpuFeatures, Result);
+        goto Error;
+    }
+
+    Rtl->RtlCompareMemory = RtlCompareMemory;
     Rtl->RtlNumberOfSetBits = RtlNumberOfSetBits;
     Rtl->RtlEqualUnicodeString = RtlEqualUnicodeString;
     Rtl->RtlFindLongestRunClear = RtlFindLongestRunClear;
@@ -495,8 +510,8 @@ Return Value:
 }
 
 
-#ifdef PH_WINDOWS
 #if defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
+#ifdef PH_WINDOWS
 HRESULT
 RtlInitializeCpuFeaturesLogicalProcessors(
     _In_ PRTL Rtl
@@ -654,7 +669,7 @@ End:
 
     return Result;
 }
-
+#endif // PH_WINDOWS
 
 _Use_decl_annotations_
 HRESULT
@@ -692,8 +707,18 @@ Return Value:
     Features = &Rtl->CpuFeatures;
     ZeroStruct(CpuInfo);
 
-    __cpuid((PINT)&CpuInfo.AsIntArray, 0);
+#ifdef PH_WINDOWS
+#define CPUID(Func) __cpuid((PINT)&CpuInfo.AsIntArray, Func)
+#define CPUIDEX(Func, Sub) __cpuidex((PINT)&CpuInfo.AsIntArray, Func, Sub)
+#else
+#define CPUID(Func) \
+    __cpuid(Func, CpuInfo.Eax, CpuInfo.Ebx, CpuInfo.Ecx, CpuInfo.Edx)
+#define CPUIDEX(Func, Sub)   \
+    __cpuid_count(Func, Sub, \
+                  CpuInfo.Eax, CpuInfo.Ebx, CpuInfo.Ecx, CpuInfo.Edx)
+#endif
 
+    CPUID(0);
     HighestId = CpuInfo.Eax;
 
     Features->Vendor.IsIntel = (
@@ -716,7 +741,7 @@ Return Value:
 
     if (HighestId >= 1) {
         ZeroStruct(CpuInfo);
-        __cpuidex((PINT)&CpuInfo.AsIntArray, 1, 0);
+        CPUIDEX(1, 0);
 
         Features->F1Ecx.AsLong = CpuInfo.Ecx;
         Features->F1Edx.AsLong = CpuInfo.Edx;
@@ -724,20 +749,20 @@ Return Value:
 
     if (HighestId >= 7) {
         ZeroStruct(CpuInfo);
-        __cpuidex((PINT)&CpuInfo.AsIntArray, 7, 0);
+        CPUIDEX(7, 0);
 
         Features->F7Ebx.AsLong = CpuInfo.Ebx;
         Features->F7Ecx.AsLong = CpuInfo.Ecx;
     }
 
     ZeroStruct(CpuInfo);
-    __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId);
+    CPUID(BaseExtendedId);
     HighestExtendedId = CpuInfo.Eax;
 
     ExtendedId = BaseExtendedId + 1;
     if (HighestExtendedId >= ExtendedId) {
         ZeroStruct(CpuInfo);
-        __cpuidex((PINT)&CpuInfo.AsIntArray, ExtendedId, 0);
+        CPUIDEX(ExtendedId, 0);
 
         Features->F81Ecx.AsLong = CpuInfo.Ecx;
         Features->F81Edx.AsLong = CpuInfo.Edx;
@@ -785,13 +810,13 @@ Return Value:
 
     if (HighestExtendedId >= (BaseExtendedId + 4)) {
 
-        __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId + 2);
+        CPUID(BaseExtendedId + 2);
         CopyMemory(Brand->Buffer, CpuInfo.AsCharArray, 16);
 
-        __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId + 3);
+        CPUID(BaseExtendedId + 3);
         CopyMemory(Brand->Buffer + 16, CpuInfo.AsCharArray, 16);
 
-        __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId + 4);
+        CPUID(BaseExtendedId + 4);
         CopyMemory(Brand->Buffer + 32, CpuInfo.AsCharArray, 16);
 
         Brand->Length = (USHORT)strlen(Brand->Buffer);
@@ -824,11 +849,13 @@ Return Value:
         goto End;
     }
 
+#ifdef PH_WINDOWS
     Result = RtlInitializeCpuFeaturesLogicalProcessors(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeCpuFeaturesLogicalProcessors, Result);
         goto End;
     }
+#endif
 
     //
     // Intentional follow-on.
@@ -838,8 +865,6 @@ End:
 
     return Result;
 }
-#endif
-
 
 _Use_decl_annotations_
 HRESULT

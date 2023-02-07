@@ -15,6 +15,8 @@ Abstract:
 #include "stdafx.h"
 #include "PerfectHashEventsPrivate.h"
 
+#define GetSystemAllocationGranularity() (max(getpagesize(), 65536))
+
 PSTR
 CreateStringFromWide(
     _In_ PCWSTR WideString
@@ -248,6 +250,7 @@ GetFileTime(
     _Out_opt_ LPFILETIME lpLastWriteTime
     )
 {
+    __debugbreak();
     return FALSE;
 }
 
@@ -256,16 +259,88 @@ WINBASEAPI
 HANDLE
 WINAPI
 CreateFileW(
-    _In_ LPCWSTR lpFileName,
-    _In_ DWORD dwDesiredAccess,
-    _In_ DWORD dwShareMode,
-    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-    _In_ DWORD dwCreationDisposition,
-    _In_ DWORD dwFlagsAndAttributes,
-    _In_opt_ HANDLE hTemplateFile
+    _In_ LPCWSTR FileName,
+    _In_ DWORD DesiredAccess,
+    _In_ DWORD ShareMode,
+    _In_opt_ LPSECURITY_ATTRIBUTES SecurityAttributes,
+    _In_ DWORD CreationDisposition,
+    _In_ DWORD FlagsAndAttributes,
+    _In_opt_ HANDLE TemplateFile
     )
 {
-    return INVALID_HANDLE_VALUE;
+    PSTR Path = NULL;
+    DWORD Access;
+    HANDLE Handle;
+    BOOL IsRead;
+    BOOL IsWrite;
+    BOOL IsReadWrite;
+    BOOL HasRetried = FALSE;
+    int Flags;
+    mode_t Mode;
+    PH_HANDLE Fd = { 0 };
+
+    UNREFERENCED_PARAMETER(SecurityAttributes);
+    UNREFERENCED_PARAMETER(TemplateFile);
+
+    Flags = 0;
+    Handle = NULL;
+    Access = DesiredAccess;
+
+    IsRead = BooleanFlagOn(Access, GENERIC_READ);
+    IsWrite = BooleanFlagOn(Access, GENERIC_WRITE);
+    IsReadWrite = (IsRead && IsWrite);
+
+    if (IsReadWrite) {
+        Flags = O_RDWR;
+    } else if (IsRead) {
+        Flags = O_RDONLY;
+    } else if (IsWrite) {
+        Flags = O_WRONLY;
+    } else {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    if (CreationDisposition == OPEN_ALWAYS) {
+        Flags |= (O_CREAT | O_EXCL);
+    } else if (CreationDisposition == OPEN_EXISTING) {
+        NOTHING;
+    } else {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    Path = CreateStringFromWide(FileName);
+    if (!Path) {
+        goto End;
+    }
+
+Retry:
+    Mode = 0664;
+    if ((Fd.AsFileDescriptor = open(Path, Flags, Mode)) == -1) {
+        if (errno != EEXIST) {
+            SetLastError(errno);
+            goto End;
+        } else if (!HasRetried && CreationDisposition == OPEN_ALWAYS) {
+            SetLastError(ERROR_ALREADY_EXISTS);
+            HasRetried = TRUE;
+
+            //
+            // Remove the O_CREAT and O_EXCL flags and try again.
+            //
+
+            Flags &= ~(O_CREAT | O_EXCL);
+            goto Retry;
+        } else {
+            SetLastError(errno);
+        }
+    } else {
+        Handle = Fd.AsHandle;
+    }
+
+End:
+
+    FREE_PTR(&Path);
+
+    return Handle;
 }
 
 WINBASEAPI
@@ -275,7 +350,24 @@ DeleteFileW(
     _In_ LPCWSTR lpFileName
     )
 {
+    __debugbreak();
     return FALSE;
+}
+
+BOOL
+CloseFile(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    PH_HANDLE Fd = { 0 };
+
+    Fd.AsHandle = Object;
+    if (close(Fd.AsFileDescriptor) == -1) {
+        SetLastError(errno);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 WINBASEAPI
@@ -359,16 +451,6 @@ RemoveDirectoryW(
 }
 
 WINBASEAPI
-BOOL
-WINAPI
-SetEndOfFile(
-    _In_ HANDLE hFile
-    )
-{
-    return FALSE;
-}
-
-WINBASEAPI
 _Ret_maybenull_
 LPVOID
 WINAPI
@@ -380,6 +462,7 @@ MapViewOfFile(
     _In_ SIZE_T dwNumberOfBytesToMap
     )
 {
+    __debugbreak();
     return NULL;
 }
 
@@ -388,15 +471,18 @@ _Ret_maybenull_
 HANDLE
 WINAPI
 CreateFileMappingW(
-    _In_ HANDLE hFile,
-    _In_opt_ LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
-    _In_ DWORD flProtect,
-    _In_ DWORD dwMaximumSizeHigh,
-    _In_ DWORD dwMaximumSizeLow,
-    _In_opt_ LPCWSTR lpName
+    _In_ HANDLE File,
+    _In_opt_ LPSECURITY_ATTRIBUTES FileMappingAttributes,
+    _In_ DWORD Protect,
+    _In_ DWORD MaximumSizeHigh,
+    _In_ DWORD MaximumSizeLow,
+    _In_opt_ LPCWSTR Name
     )
 {
-    return INVALID_HANDLE_VALUE;
+    ASSERT(FileMappingAttributes == NULL);
+    ASSERT(Name == NULL);
+    ASSERT(MaximumSizeHigh == 0);
+    ASSERT(MaximumSizeLow == 0);
 }
 
 
@@ -407,6 +493,7 @@ UnmapViewOfFile(
     _In_ LPCVOID lpBaseAddress
     )
 {
+    __debugbreak();
     return FALSE;
 }
 
@@ -423,34 +510,62 @@ MapViewOfFileEx(
     _In_opt_ LPVOID lpBaseAddress
     )
 {
+    __debugbreak();
     return NULL;
-}
-
-WINBASEAPI
-DWORD
-WINAPI
-SetFilePointer(
-    _In_ HANDLE hFile,
-    _In_ LONG lDistanceToMove,
-    _Inout_opt_ PLONG lpDistanceToMoveHigh,
-    _In_ DWORD dwMoveMethod
-    )
-{
-    return 0;
 }
 
 WINBASEAPI
 BOOL
 WINAPI
 SetFilePointerEx(
-    _In_ HANDLE hFile,
-    _In_ LARGE_INTEGER liDistanceToMove,
-    _Out_opt_ PLARGE_INTEGER lpNewFilePointer,
-    _In_ DWORD dwMoveMethod
+    _In_ HANDLE File,
+    _In_ LARGE_INTEGER DistanceToMove,
+    _Out_opt_ PLARGE_INTEGER NewFilePointer,
+    _In_ DWORD MoveMethod
     )
 {
-    return FALSE;
+    INT Error;
+    PH_HANDLE Fd = { 0 };
+    off_t Result;
+
+    ASSERT(NewFilePointer == NULL);
+    ASSERT(MoveMethod == FILE_BEGIN);
+
+    Fd.AsHandle = File;
+    Error = posix_fallocate(Fd.AsFileDescriptor, 0, DistanceToMove.QuadPart);
+    if (Error != 0) {
+        if (Error == EINVAL && DistanceToMove.QuadPart == 0) {
+            NOTHING;
+        } else {
+            SetLastError(Error);
+            return FALSE;
+        }
+    }
+
+    Result = lseek(Fd.AsFileDescriptor, DistanceToMove.QuadPart, SEEK_SET);
+    if (Result == -1) {
+        SetLastError(errno);
+        return FALSE;
+    }
+
+    return TRUE;
 }
+
+WINBASEAPI
+BOOL
+WINAPI
+SetEndOfFile(
+    _In_ HANDLE hFile
+    )
+{
+    //
+    // This is a no-op on POSIX as we've already set the end of file in
+    // SetFilePointerEx.
+    //
+
+    return TRUE;
+}
+
 
 WINBASEAPI
 BOOL
@@ -461,6 +576,7 @@ MoveFileExW(
     _In_     DWORD    dwFlags
     )
 {
+    __debugbreak();
     return FALSE;
 }
 
@@ -472,6 +588,7 @@ GetFileInformationByHandle(
     _Out_ LPBY_HANDLE_FILE_INFORMATION lpFileInformation
     )
 {
+    __debugbreak();
     return FALSE;
 }
 
@@ -479,13 +596,32 @@ WINBASEAPI
 BOOL
 WINAPI
 GetFileInformationByHandleEx(
-    _In_  HANDLE hFile,
+    _In_  HANDLE File,
     _In_  FILE_INFO_BY_HANDLE_CLASS FileInformationClass,
-    _Out_writes_bytes_(dwBufferSize) LPVOID lpFileInformation,
-    _In_  DWORD dwBufferSize
+    _Out_writes_bytes_(BufferSize) LPVOID FileInformation,
+    _In_  DWORD BufferSize
     )
 {
-    return FALSE;
+    PH_HANDLE Fd = { 0 };
+    if (FileInformationClass == FileStandardInfo) {
+        INT Result;
+        struct stat Stat;
+        PFILE_STANDARD_INFO StandardInfo = (PFILE_STANDARD_INFO)FileInformation;
+
+        Fd.AsHandle = File;
+        Result = fstat(Fd.AsFileDescriptor, &Stat);
+        if (Result != 0) {
+            SetLastError(errno);
+            return FALSE;
+        }
+
+        StandardInfo->AllocationSize.QuadPart = Stat.st_size;
+        StandardInfo->EndOfFile.QuadPart = Stat.st_size;
+
+        return TRUE;
+    } else {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
 }
 
 
@@ -692,6 +828,7 @@ GetSystemInfo(
     ZeroStructPointerInline(lpSystemInfo);
     lpSystemInfo->dwPageSize = 4096;
     lpSystemInfo->dwNumberOfProcessors = get_nprocs();
+    lpSystemInfo->dwAllocationGranularity = GetSystemAllocationGranularity();
 }
 
 //
@@ -980,7 +1117,8 @@ WaitForSingleObject(
     PPH_EVENT Event;
     DWORD WaitResult;
 
-    ASSERT(dwMilliseconds == INFINITE);
+    ASSERT((dwMilliseconds == INFINITE) ||
+           (dwMilliseconds == 0));
 
     Event = (PPH_EVENT)hHandle;
     WaitResult = WAIT_FAILED;
@@ -992,29 +1130,38 @@ WaitForSingleObject(
         goto End;
     }
 
-    while (Event->State.Signaled == FALSE) {
+    if (dwMilliseconds == 0) {
+        if (Event->State.Signaled == FALSE) {
+            WaitResult = WAIT_TIMEOUT;
+        } else {
+            WaitResult = WAIT_OBJECT_0;
+        }
+    } else {
 
-        Error = pthread_cond_wait(&Event->Condition, &Event->Mutex);
-        if (Error != 0) {
-            SetLastError(Error);
-            SYS_ERROR(pthread_cond_wait);
-            goto End;
+        while (Event->State.Signaled == FALSE) {
+
+            Error = pthread_cond_wait(&Event->Condition, &Event->Mutex);
+            if (Error != 0) {
+                SetLastError(Error);
+                SYS_ERROR(pthread_cond_wait);
+                goto Unlock;
+            }
         }
 
+        WaitResult = WAIT_OBJECT_0;
     }
 
     if (Event->State.ManualReset == FALSE) {
         Event->State.Signaled = FALSE;
     }
 
+Unlock:
     Error = pthread_mutex_unlock(&Event->Mutex);
     if (Error != 0) {
         SetLastError(Error);
         SYS_ERROR(pthread_mutex_unlock);
         goto End;
     }
-
-    WaitResult = WAIT_OBJECT_0;
 
 End:
 
@@ -1572,7 +1719,6 @@ End:
 
     return Result;
 }
-
 
 //
 // Threadpools.

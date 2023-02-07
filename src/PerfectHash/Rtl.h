@@ -3439,6 +3439,16 @@ BOOL
 CloseEvent(
     _In_ _Post_ptr_invalid_ HANDLE Object
     );
+
+BOOL
+CloseDirectory(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
+
+BOOL
+CloseFile(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
 #endif
 
 FORCEINLINE

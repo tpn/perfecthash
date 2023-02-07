@@ -29,18 +29,19 @@
  * @implemented
  */
 SIZE_T
-NTAPI
-RtlCompareMemory(IN const VOID *Source1,
-                 IN const VOID *Source2,
-                 IN SIZE_T Length)
+RtlCompareMemory(_In_ const VOID *Source1,
+                 _In_ const VOID *Source2,
+                 _In_ SIZE_T Length)
 {
-    SIZE_T i;
-    for (i = 0; (i < Length) && (((PUCHAR)Source1)[i] == ((PUCHAR)Source2)[i]); i++)
-        ;
+    PBYTE Left = (PBYTE)Source1;
+    PBYTE Right = (PBYTE)Source2;
+    SIZE_T Index;
+    for (Index = 0;
+         (Index < Length) && (Left[Index] == Right[Index]);
+         Index++);
 
-    return i;
+    return Index;
 }
-
 
 /*
  * FUNCTION: Compares a block of ULONGs with an ULONG and returns the number of equal bytes

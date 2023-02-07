@@ -33,8 +33,8 @@ extern "C" {
 #include <assert.h>
 #include <pthread.h>
 
+#include <cpuid.h>
 #include <x86intrin.h>
-
 
 //
 // SAL compat.
@@ -1706,6 +1706,7 @@ GetTickCount64(
 #define INFINITE            0xFFFFFFFF  // Infinite timeout
 
 #define WAIT_FAILED ((DWORD)0xFFFFFFFF)
+#define WAIT_TIMEOUT ((DWORD)258L)
 
 #define WAIT_OBJECT_0       ((STATUS_WAIT_0 ) + 0 )
 
@@ -2869,6 +2870,11 @@ CloseDirectory(
     _In_ _Post_ptr_invalid_ HANDLE Object
     );
 
+BOOL
+CloseFile(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
+
 #define RtlEqualMemory(Destination,Source,Length) (!memcmp((Destination),(Source),(Length)))
 #define RtlMoveMemory(Destination,Source,Length) memmove((Destination),(Source),(Length))
 #define RtlCopyMemory(Destination,Source,Length) memcpy((Destination),(Source),(Length))
@@ -2917,7 +2923,8 @@ FormatMessageA(
 // Our helpers.
 //
 
-#define FREE_PTR(P) free(*(P)); *(P) = NULL
+#define FREE_PTR(P) \
+    if ((P) != NULL && *(P) != NULL) { free(*(P)); *(P) = NULL; }
 
 PCHAR
 CommandLineArgvAToString(

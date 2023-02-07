@@ -30,6 +30,7 @@ Abstract:
 
 #include <time.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
@@ -39,6 +40,12 @@ Abstract:
 #include <linux/mman.h>
 
 extern DWORD LastError;
+
+typedef union _PH_HANDLE {
+    int AsFileDescriptor;
+    HANDLE AsHandle;
+    LARGE_INTEGER AsLargeInteger;
+} PH_HANDLE, *PPH_HANDLE;
 
 typedef union _Struct_size_bytes_(sizeof(ULONG)) _PH_EVENT_STATE {
     struct {
@@ -579,7 +586,8 @@ typedef struct _TP_WAIT
 // Our helper functions.
 //
 
-#define FREE_PTR(P) free(*(P)); *(P) = NULL
+#define FREE_PTR(P) \
+    if ((P) != NULL && *(P) != NULL) { free(*(P)); *(P) = NULL; }
 
 PSTR
 CreateStringFromWide(
