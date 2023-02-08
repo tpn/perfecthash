@@ -566,7 +566,8 @@ End:
         ASSERT(Context->RowBuffer);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
-                                          &RowBuffer);
+                                          &RowBuffer,
+                                          (SIZE_T)RowBufferSize);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
             Result = PH_E_SYSTEM_CALL_FAILED;

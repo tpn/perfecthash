@@ -106,6 +106,7 @@ SaveTableFileChm01(
                                                       &LargePagesForTableData);
 
     Table->TableDataBaseAddress = BaseAddress;
+    Table->TableDataSizeInBytes = SizeInBytes;
 
     if (!BaseAddress) {
         Result = E_OUTOFMEMORY;

@@ -546,25 +546,44 @@ SetFilePointerEx(
     INT Error;
     PH_HANDLE Fd = { 0 };
     off_t Result;
+    struct stat Stat;
 
     ASSERT(NewFilePointer == NULL);
     ASSERT(MoveMethod == FILE_BEGIN);
 
     Fd.AsHandle = File;
-    Error = posix_fallocate(Fd.AsFileDescriptor, 0, DistanceToMove.QuadPart);
-    if (Error != 0) {
-        if (Error == EINVAL && DistanceToMove.QuadPart == 0) {
-            NOTHING;
-        } else {
-            SetLastError(Error);
-            return FALSE;
-        }
-    }
 
-    Result = lseek(Fd.AsFileDescriptor, DistanceToMove.QuadPart, SEEK_SET);
-    if (Result == -1) {
+    Error = fstat(Fd.AsFileDescriptor, &Stat);
+    if (Error != 0) {
         SetLastError(errno);
         return FALSE;
+    }
+
+    if (Stat.st_size > DistanceToMove.QuadPart) {
+        Error = ftruncate(Fd.AsFileDescriptor, DistanceToMove.QuadPart);
+        if (Error != 0) {
+            SetLastError(errno);
+            return FALSE;
+        }
+    } else if (Stat.st_size < DistanceToMove.QuadPart) {
+
+        Error = posix_fallocate(Fd.AsFileDescriptor,
+                                0,
+                                DistanceToMove.QuadPart);
+        if (Error != 0) {
+            if (Error == EINVAL && DistanceToMove.QuadPart == 0) {
+                NOTHING;
+            } else {
+                SetLastError(Error);
+                return FALSE;
+            }
+        }
+
+        Result = lseek(Fd.AsFileDescriptor, DistanceToMove.QuadPart, SEEK_SET);
+        if (Result == -1) {
+            SetLastError(errno);
+            return FALSE;
+        }
     }
 
     return TRUE;
@@ -668,7 +687,11 @@ WriteFile(
     LARGE_INTEGER fd;
     SIZE_T BytesWritten;
 
-    fd.QuadPart = (LONGLONG)hFile;
+    if (hFile == (HANDLE)stdout) {
+        fd.QuadPart = 0;
+    } else {
+        fd.QuadPart = (LONGLONG)hFile;
+    }
 
     BytesWritten = write(fd.LowPart, lpBuffer, nNumberOfBytesToWrite);
 
@@ -677,6 +700,7 @@ WriteFile(
     }
 
     if (BytesWritten == -1) {
+        __debugbreak();
         SetLastError(errno);
         SYS_ERROR(write);
         return FALSE;
@@ -698,7 +722,7 @@ InitializeSRWLock(
     _Out_ PSRWLOCK SRWLock
     )
 {
-    LastError = pthread_mutex_init(SRWLock, NULL);
+    LastError = pthread_rwlock_init(SRWLock, NULL);
     if (LastError != 0) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -712,7 +736,7 @@ ReleaseSRWLockExclusive(
     _Inout_ PSRWLOCK SRWLock
     )
 {
-    LastError = pthread_mutex_unlock(SRWLock);
+    LastError = pthread_rwlock_unlock(SRWLock);
     if (LastError != 0) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -726,7 +750,7 @@ ReleaseSRWLockShared(
     _Inout_ PSRWLOCK SRWLock
     )
 {
-    LastError = pthread_mutex_unlock(SRWLock);
+    LastError = pthread_rwlock_unlock(SRWLock);
     if (LastError != 0) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -740,7 +764,7 @@ AcquireSRWLockExclusive(
     _Inout_ PSRWLOCK SRWLock
     )
 {
-    LastError = pthread_mutex_lock(SRWLock);
+    LastError = pthread_rwlock_wrlock(SRWLock);
     if (LastError != 0) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -754,7 +778,7 @@ AcquireSRWLockShared(
     _Inout_ PSRWLOCK SRWLock
     )
 {
-    LastError = pthread_mutex_lock(SRWLock);
+    LastError = pthread_rwlock_rdlock(SRWLock);
     if (LastError != 0) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -768,7 +792,7 @@ TryAcquireSRWLockExclusive(
     _Inout_ PSRWLOCK SRWLock
     )
 {
-    LastError = pthread_mutex_trylock(SRWLock);
+    LastError = pthread_rwlock_trywrlock(SRWLock);
     if (LastError != 0 && LastError != EBUSY) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -783,7 +807,7 @@ TryAcquireSRWLockShared(
     _Inout_ PSRWLOCK SRWLock
     )
 {
-    LastError = pthread_mutex_trylock(SRWLock);
+    LastError = pthread_rwlock_tryrdlock(SRWLock);
     if (LastError != 0 && LastError != EBUSY) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -1197,7 +1221,21 @@ WaitForMultipleObjects(
     _In_ DWORD Milliseconds
     )
 {
-    return WAIT_FAILED;
+    DWORD Index;
+    DWORD WaitResult;
+
+    if (WaitAll == FALSE) {
+        return WAIT_FAILED;
+    }
+
+    for (Index = 0; Index < Count; Index++) {
+        WaitResult = WaitForSingleObject(Handles[Index], Milliseconds);
+        if (WaitResult != WAIT_OBJECT_0) {
+            return WaitResult;
+        }
+    }
+
+    return WAIT_OBJECT_0;
 }
 
 
@@ -1434,6 +1472,7 @@ VirtualFree(
     LONG Error;
 
     ASSERT(FreeType == MEM_RELEASE);
+    ASSERT(Size != 0);
 
     Error = munmap(Address, Size);
     if (Error != 0) {
@@ -1731,7 +1770,7 @@ RtlFreeUuidString(
         goto End;
     }
 
-    free(&String->Buffer);
+    FREE_PTR(&String->Buffer);
     ZeroStructPointer(String);
 
 End:
@@ -1816,7 +1855,7 @@ SetThreadpoolThreadMaximum(
 }
 
 VOID
-ThreadpoolWorkerThreadEntry (
+ThreadpoolWorkerThreadEntry2 (
     _In_ PVOID Context
     )
 {
@@ -1839,6 +1878,10 @@ ThreadpoolWorkerThreadEntry (
         if (WaitResult != WAIT_OBJECT_0) {
             SYS_ERROR(WaitForSingleObject);
             break;
+        }
+
+        if (Pool->PendingWorkCount == 0) {
+            continue;
         }
 
         break;
@@ -1866,7 +1909,7 @@ CreateThreadpoolWorker(
 
     Result = pthread_create(&Worker->ThreadId,
                             NULL,
-                            ThreadpoolWorkerThreadEntry,
+                            ThreadpoolWorkerThreadEntry2,
                             Worker);
 
     if (Result != 0) {
@@ -2105,6 +2148,40 @@ End:
     return Work;
 }
 
+VOID
+ThreadpoolWorkerThreadEntry (
+    _In_ PVOID Context
+    )
+{
+    ULONG WaitResult;
+    PTP_POOL Pool;
+    HANDLE Event;
+    PTPP_WORKER Worker;
+    PTP_CALLBACK_INSTANCE Instance;
+
+    Worker = (PTPP_WORKER)Context;
+    Instance = &Worker->CallbackInstance;
+
+    Pool = Instance->Pool;
+
+    InterlockedIncrement(&Pool->ActiveWorkerCount);
+
+    while (TRUE) {
+        WaitResult = WaitForSingleObject(Event, INFINITE);
+        if (WaitResult != WAIT_OBJECT_0) {
+            SYS_ERROR(WaitForSingleObject);
+            break;
+        }
+
+        if (Pool->PendingWorkCount == 0) {
+            continue;
+        }
+
+        break;
+    }
+
+    InterlockedDecrement(&Pool->ActiveWorkerCount);
+}
 
 
 WINBASEAPI
@@ -2114,10 +2191,68 @@ SubmitThreadpoolWork(
     _Inout_ PTP_WORK Work
     )
 {
+    return;
+}
 
+#if 0
+WINBASEAPI
+VOID
+WINAPI
+SubmitThreadpoolWork(
+    _Inout_ PTP_WORK Work
+    )
+{
+    INT Result;
+    PTP_POOL Pool;
+    PTPP_WORKER Worker;
+    PTP_CALLBACK_INSTANCE Instance;
+
+    Worker = (PTPP_WORKER)calloc(1, sizeof(TPP_WORKER));
+    if (!Worker) {
+        return;
+    }
+
+    Instance = &Worker->CallbackInstance;
+    Instance->CleanupGroupMember = &Work->CleanupGroupMember;
+    Pool = Instance->Pool = Work->CleanupGroupMember.Pool;
+
+    Result = pthread_create(&Worker->ThreadId,
+                            NULL,
+                            ThreadpoolWorkerThreadEntry,
+                            Worker);
+
+    if (Result != 0) {
+        SetLastError(errno);
+        SYS_ERROR(pthread_create);
+        FREE_PTR(&Worker);
+        return;
+    }
+
+    AcquireSRWLockExclusive(&Pool->Lock);
+    InsertTailList(&Pool->WorkerList, &Worker->ListEntry);
+    Pool->NumberOfWorkers++;
+    ReleaseSRWLockExclusive(&Pool->Lock);
 
     return;
 }
+
+WINBASEAPI
+VOID
+WINAPI
+SubmitThreadpoolWork2(
+    _Inout_ PTP_WORK Work
+    )
+{
+    PTP_POOL Pool;
+
+    Pool = Work->CleanupGroupMember.Pool;
+
+    InterlockedIncrement(&Pool->PendingWorkCount);
+    SetEvent(Pool->WorkerWaitEvent);
+
+    return;
+}
+#endif
 
 WINBASEAPI
 VOID

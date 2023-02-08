@@ -187,25 +187,24 @@ typedef ULONG_BYTES *PULONG_BYTES;
 #endif
 
 //
-// Bitmap macro helpers.
+// Bitmap macro helpers.  (Thanks ChatGPT!)
 //
 
-#define TestBit32(Address, Bit) (                              \
-    ((((PLONG32)(Address))[(Bit / 32)] >> (Bit & (32-1))) & 1) \
+#define TestBit32(Address, Bit) (                          \
+    ((((PLONG32)(Address))[(Bit >> 5)] >> (Bit & 31)) & 1) \
 )
 
-#define TestBit64(Address, Bit) (                              \
-    ((((PLONG64)(Address))[(Bit / 64)] >> (Bit & (64-1))) & 1) \
+#define TestBit64(Address, Bit) (                          \
+    ((((PLONG64)(Address))[(Bit >> 6)] >> (Bit & 63)) & 1) \
 )
 
-#define SetBit32(Address, Bit) (                                   \
-    ((((PLONG32)(Address))[(Bit / 32)] |= (1L << ((Bit - 32-1))))) \
+#define SetBit32(Address, Bit) (                               \
+    ((((PLONG32)(Address))[(Bit >> 5)] |= (1L << (Bit & 31)))) \
 )
 
-#define SetBit64(Address, Bit) (                                    \
-    ((((PLONG64)(Address))[(Bit / 64)] |= (1LL << ((Bit - 64-1))))) \
+#define SetBit64(Address, Bit) (                                \
+    ((((PLONG64)(Address))[(Bit >> 6)] |= (1LL << (Bit & 63)))) \
 )
-
 
 //
 // Define start/end markers for IACA.

@@ -508,6 +508,7 @@ Return Value:
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
     Table->TableDataBaseAddress = Table->TableFile->BaseAddress;
+    Table->TableDataSizeInBytes = Table->TableFile->FileInfo.EndOfFile.QuadPart;
 
     goto End;
 

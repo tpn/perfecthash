@@ -63,6 +63,14 @@ VOID
 typedef PERFECT_HASH_FILE_WORK_CALLBACK
       *PPERFECT_HASH_FILE_WORK_CALLBACK;
 
+typedef
+VOID
+(CALLBACK PERFECT_HASH_FILE_WORK_ITEM_CALLBACK)(
+    _In_ PFILE_WORK_ITEM Item
+    );
+typedef PERFECT_HASH_FILE_WORK_ITEM_CALLBACK
+      *PPERFECT_HASH_FILE_WORK_ITEM_CALLBACK;
+
 
 //
 // Define a runtime context to encapsulate threadpool resources.  This is

@@ -2578,7 +2578,8 @@ HRESULT
 (STDAPICALLTYPE RTL_DESTROY_BUFFER)(
     _In_ PRTL Rtl,
     _In_ HANDLE ProcessHandle,
-    _Inout_ PVOID *BufferAddress
+    _Inout_ PVOID *BufferAddress,
+    _In_opt_ SIZE_T Size
     );
 typedef RTL_DESTROY_BUFFER *PRTL_DESTROY_BUFFER;
 
@@ -3271,7 +3272,8 @@ typedef struct _RTL {
     };
 
     ULONG NumberOfModules;
-    ULONG Padding2;
+
+    ULONG ProcInfoBufferSizeInBytes;
 
     //
     // Inline the Rtl functions for convenience.

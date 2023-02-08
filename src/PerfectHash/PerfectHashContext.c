@@ -488,6 +488,8 @@ Return Value:
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
 
+#ifdef PH_WINDOWS
+
     //
     // Create the Main threadpool structures.  This threadpool creates a fixed
     // number of threads equal to the maximum concurrency specified by the user
@@ -715,6 +717,7 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+#endif
 
     //
     // Initialize the timestamp string.
@@ -945,6 +948,8 @@ Return Value:
         }
     }
 
+#ifdef PH_WINDOWS
+
     if (Context->MainCleanupGroup) {
 
         CloseThreadpoolCleanupGroupMembers(Context->MainCleanupGroup,
@@ -996,6 +1001,8 @@ Return Value:
         Context->ErrorThreadpool = NULL;
     }
 
+#endif
+
     if (Context->ObjectNames) {
         Allocator->Vtbl->FreePointer(Allocator,
                                      &Context->ObjectNames);
@@ -1004,7 +1011,8 @@ Return Value:
     if (Context->ConsoleBuffer != NULL) {
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           Context->ProcessHandle,
-                                          &Context->ConsoleBuffer);
+                                          &Context->ConsoleBuffer,
+                                          Context->ConsoleBufferSizeInBytes);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextRundown_DestroyConsoleBuffer, Result);
         }
@@ -1673,27 +1681,29 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!Context->MainThreadpool) {
-        return E_UNEXPECTED;
-    }
-
     if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
         return PH_E_CONTEXT_LOCKED;
     }
 
     Rtl = Context->Rtl;
-    Threadpool = Context->MainThreadpool;
+
+    Context->MaximumConcurrency = MaximumConcurrency;
+    Context->MinimumConcurrency = MaximumConcurrency;
+
+#ifdef PH_WINDOWS
+    if (!Context->MainThreadpool) {
+        return E_UNEXPECTED;
+    }
 
     ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+    Threadpool = Context->MainThreadpool;
     SetThreadpoolThreadMaximum(Threadpool, ThreadpoolConcurrency);
-    Context->MaximumConcurrency = MaximumConcurrency;
 
     if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
-    } else {
-        Context->MinimumConcurrency = MaximumConcurrency;
     }
+#endif
 
     ReleasePerfectHashContextLockExclusive(Context);
 

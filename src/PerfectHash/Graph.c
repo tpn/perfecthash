@@ -170,8 +170,6 @@ Return Value:
         Graph->Vtbl->CalculateAssignedMemoryCoverage =
             GraphCalculateAssigned16MemoryCoverage;
 
-#ifdef PH_WINDOWS
-
         if (TableCreateFlags.HashAllKeysFirst != FALSE) {
             Graph->Vtbl->AddKeys = GraphHashKeysThenAdd16;
 
@@ -207,9 +205,11 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys =
                         GraphHashKeys16MultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
+#endif
 
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
@@ -223,8 +223,6 @@ Return Value:
             }
         }
 
-#endif // PH_WINDOWS
-
     } else if (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE) {
 
         ASSERT(TableCreateFlags.HashAllKeysFirst == FALSE);
@@ -237,7 +235,6 @@ Return Value:
         ASSERT(Graph->Vtbl->AddKeys == GraphAddKeys);
         ASSERT(Graph->Vtbl->Verify == GraphVerify);
 
-#ifdef PH_WINDOWS
         if (TableCreateFlags.HashAllKeysFirst != FALSE) {
             Graph->Vtbl->AddKeys = GraphHashKeysThenAdd;
 
@@ -251,14 +248,18 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
+#endif
 
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
+#endif
                 }
             } else if (HashFunctionId ==
                        PerfectHashHashMultiplyShiftRXFunctionId) {
@@ -266,19 +267,21 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
+#endif
 
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
+#endif
                 }
             }
         }
-#endif // PH_WINDOWS
-
     }
 
 #ifdef PH_WINDOWS
@@ -378,7 +381,9 @@ Return Value:
     //
 
     if (Graph->VertexPairs != NULL) {
-        if (!VirtualFree(Graph->VertexPairs, 0, MEM_RELEASE)) {
+        if (!VirtualFree(Graph->VertexPairs,
+                         Graph->Info->VertexPairsSizeInBytes,
+                         MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
     }
@@ -588,12 +593,14 @@ Return Value:
     // Capture the local solve time.
     //
 
+#ifdef PH_WINDOWS
     GetLocalTime(&SystemTime);
     if (!SystemTimeToFileTime(&SystemTime, &Graph->SolvedTime.AsFileTime)) {
         SYS_ERROR(SystemTimeToFileTime);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto End;
     }
+#endif
 
     //
     // If we're in "first graph wins" mode and we reach this point, we're the

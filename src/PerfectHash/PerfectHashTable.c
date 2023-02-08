@@ -160,7 +160,9 @@ Return Value:
     //
 
     if (Table->ValuesBaseAddress) {
-        if (!VirtualFree(Table->ValuesBaseAddress, 0, MEM_RELEASE)) {
+        if (!VirtualFree(Table->ValuesBaseAddress,
+                         Table->ValuesArraySizeInBytes,
+                         MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
             PH_RAISE(E_UNEXPECTED);
         }
@@ -187,7 +189,9 @@ Return Value:
                                          PPV(&Table->TableInfoOnDisk));
         }
         if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {
-            if (!VirtualFree(Table->Assigned, 0, MEM_RELEASE)) {
+            if (!VirtualFree(Table->TableDataBaseAddress,
+                             Table->TableDataSizeInBytes,
+                             MEM_RELEASE)) {
                 SYS_ERROR(VirtualFree);
             }
             Table->TableDataBaseAddress = NULL;
@@ -995,6 +999,7 @@ Return Value:
                                                       &LargePagesForValues);
 
     Table->ValuesBaseAddress = BaseAddress;
+    Table->ValuesArraySizeInBytes = ArrayAllocSize;
 
     if (!BaseAddress) {
         Result = E_OUTOFMEMORY;

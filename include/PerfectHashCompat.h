@@ -1607,10 +1607,10 @@ InterlockedCompareExchangePointer(
 #define InterlockedDecrementULongPtr(v) __sync_sub_and_fetch(v, 1)
 
 #define InterlockedCompareExchange(d, e, c) \
-    __sync_val_compare_and_swap(d, e, c)
+    __sync_val_compare_and_swap(d, c, e)
 
 #define InterlockedCompareExchangePointer(d, e, c) \
-    __sync_val_compare_and_swap(d, e, c)
+    __sync_val_compare_and_swap(d, c, e)
 
 #ifndef min
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -1735,7 +1735,7 @@ WaitForMultipleObjects(
 
 #define SRWLOCK_INIT RTL_SRWLOCK_INIT
 
-typedef pthread_mutex_t SRWLOCK, *PSRWLOCK;
+typedef pthread_rwlock_t SRWLOCK, *PSRWLOCK;
 
 WINBASEAPI
 VOID

@@ -125,7 +125,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 
 set(Source_Files
     "BitManipulation.c"
-    "Chm01.c"
+    "Chm01Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"
     "Chm01FileWorkCHeaderCompiledPerfectHashFile.c"
@@ -219,6 +219,7 @@ if (IS_WINDOWS)
     list(
         APPEND Source_Files
         "Cu.c"
+        "Chm01.c"
         "RtlUuid.c"
         "Security.c"
         "GraphAvx.c"
@@ -239,7 +240,9 @@ else()
         APPEND Source_Files
         "mem.c"
         "bitmap.c"
+        "thpool.c"
         "unicode.c"
+        "Chm01Compat.c"
         "PerfectHashCompat.c"
     )
 endif()

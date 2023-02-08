@@ -353,7 +353,7 @@ RtlRundown(
 
     Buffer = Rtl->CpuFeatures.ProcInfoArray.ProcInfo;
     if (Buffer != NULL) {
-        if (!VirtualFree(Buffer, 0, MEM_RELEASE)) {
+        if (!VirtualFree(Buffer, Rtl->ProcInfoBufferSizeInBytes, MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
         Rtl->CpuFeatures.ProcInfoArray.ProcInfo = NULL;
@@ -578,6 +578,8 @@ Return Value:
         Result = E_OUTOFMEMORY;
         goto End;
     }
+
+    Rtl->ProcInfoBufferSizeInBytes = ProcInfoLength;
 
     Success = GetLogicalProcessorInformation(ProcInfoBuffer, &ProcInfoLength);
     if (!Success) {

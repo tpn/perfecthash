@@ -164,6 +164,7 @@ IsDevicePathInDrivePathFormat(
     _In_ PCWSZ End
     )
 {
+#ifdef PH_WINDOWS
     PCWSZ Char;
     BOOLEAN IsDrivePath;
 
@@ -186,6 +187,8 @@ IsDevicePathInDrivePathFormat(
     );
 
     return IsDrivePath;
+#endif
+    return FALSE;
 }
 
 //

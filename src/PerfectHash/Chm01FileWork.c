@@ -52,6 +52,7 @@ CLOSE_FILE CloseFileChm01;
 // Begin method implementations.
 //
 
+#ifdef PH_WINDOWS
 PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
 
 _Use_decl_annotations_
@@ -60,6 +61,45 @@ FileWorkCallbackChm01(
     PTP_CALLBACK_INSTANCE Instance,
     PPERFECT_HASH_CONTEXT Context,
     PLIST_ENTRY ListEntry
+    )
+/*++
+
+Routine Description:
+
+    This routine is the callback entry point for file-oriented work we want
+    to perform in the file work threadpool context.
+
+Arguments:
+
+    Instance - Supplies a pointer to the callback instance for this invocation.
+
+    Context - Supplies a pointer to the active context for the graph solving.
+
+    ListEntry - Supplies a pointer to the list entry that was removed from the
+        context's file work list head.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    PFILE_WORK_ITEM Item;
+
+    Item = CONTAINING_RECORD(ListEntry, FILE_WORK_ITEM, ListEntry);
+    Item->Instance = Instance;
+    Item->Context = Context;
+
+    FileWorkItemCallbackChm01(Item);
+}
+#endif
+
+PERFECT_HASH_FILE_WORK_ITEM_CALLBACK FileWorkItemCallbackChm01;
+
+_Use_decl_annotations_
+VOID
+FileWorkItemCallbackChm01(
+    PFILE_WORK_ITEM Item
     )
 /*++
 
@@ -93,7 +133,6 @@ Return Value:
     FILE_ID FileId;
     FILE_WORK_ID FileWorkId;
     CONTEXT_FILE_ID ContextFileId;
-    PFILE_WORK_ITEM Item;
     PFILE_WORK_CALLBACK_IMPL Impl = NULL;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_KEYS Keys;
@@ -103,6 +142,7 @@ Return Value:
     PTABLE_INFO_ON_DISK TableInfo;
     PPERFECT_HASH_FILE *File = NULL;
     PPERFECT_HASH_FILE ContextFile = NULL;
+    PPERFECT_HASH_CONTEXT Context;
     BOOLEAN IsContextFile = FALSE;
     BOOLEAN IsMakefileOrMainMkFile = FALSE;
 
@@ -110,6 +150,7 @@ Return Value:
     // Initialize aliases.
     //
 
+    Context = Item->Context;
     Rtl = Context->Rtl;
     Info = (PGRAPH_INFO)Context->AlgorithmContext;
     Table = Context->Table;
@@ -118,14 +159,7 @@ Return Value:
 
     ASSERT(!NoFileIo(Table));
 
-    //
-    // Resolve the work item base address from the list entry.
-    //
-
-    Item = CONTAINING_RECORD(ListEntry, FILE_WORK_ITEM, ListEntry);
-
     FileWorkId = Item->FileWorkId;
-
     ASSERT(IsValidFileWorkId(FileWorkId));
 
     //
@@ -653,8 +687,13 @@ End:
     // returns, then return.
     //
 
+
     if (Event) {
-        SetEventWhenCallbackReturns(Instance, Event);
+#ifdef PH_WINDOWS
+        SetEventWhenCallbackReturns(Item->Instance, Event);
+#else
+        SetEvent(Event);
+#endif
     }
 
     return;

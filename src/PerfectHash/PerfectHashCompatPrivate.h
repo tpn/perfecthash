@@ -213,9 +213,9 @@ typedef struct _TP_POOL {
     volatile int32_t Refcount;
     volatile int32_t NumberOfWorkers;
     volatile int32_t ActiveWorkerCount;
+    volatile int32_t PendingWorkCount;
     DWORD MaximumThreads;
     DWORD MinimumThreads;
-    ULONG Padding;
     PTPP_QUEUE TaskQueue[3];
     SRWLOCK Lock;
     LIST_ENTRY PoolObjectList;

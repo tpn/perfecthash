@@ -1445,6 +1445,10 @@ typedef struct _FILE_WORK_ITEM {
 
     struct _PERFECT_HASH_FILE **FilePointer;
 
+    struct _PERFECT_HASH_CONTEXT *Context;
+
+    PTP_CALLBACK_INSTANCE Instance;
+
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;
 
