@@ -488,8 +488,6 @@ Return Value:
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
 
-#ifdef PH_WINDOWS
-
     //
     // Create the Main threadpool structures.  This threadpool creates a fixed
     // number of threads equal to the maximum concurrency specified by the user
@@ -567,6 +565,7 @@ Return Value:
     // Create the timer object for the solve timeout.
     //
 
+#ifdef PH_WINDOWS
     Context->SolveTimeout = CreateThreadpoolTimer(SolveTimeoutCallback,
                                                   Context,
                                                   &Context->MainCallbackEnv);
@@ -575,6 +574,7 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+#endif
 
     //
     // Create the File threadpool structures.  Automatically clamp the min/max
@@ -662,6 +662,10 @@ Return Value:
         goto Error;
     }
 
+    InitializeThreadpoolEnvironment(&Context->FinishedCallbackEnv);
+    SetThreadpoolCallbackPool(&Context->FinishedCallbackEnv,
+                              Context->FinishedThreadpool);
+
     if (!SetThreadpoolThreadMinimum(Context->FinishedThreadpool, 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
@@ -690,6 +694,11 @@ Return Value:
         goto Error;
     }
 
+    InitializeThreadpoolEnvironment(&Context->ErrorCallbackEnv);
+    SetThreadpoolCallbackPool(&Context->ErrorCallbackEnv,
+                              Context->ErrorThreadpool);
+
+
     if (!SetThreadpoolThreadMinimum(Context->ErrorThreadpool, 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
@@ -706,8 +715,6 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
-
-#endif // PH_WINDOWS
 
     //
     // Initialize the timestamp string.

@@ -34,7 +34,7 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
 // Helper macro for Rtl->RtlEqualUnicodeString() comparison.
 //
 
-#define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, TRUE)
+#define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, FALSE)
 
 //
 // Helper macros for toggling the given flag if the current argument matches

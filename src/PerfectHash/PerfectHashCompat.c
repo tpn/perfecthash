@@ -347,11 +347,30 @@ WINBASEAPI
 BOOL
 WINAPI
 DeleteFileW(
-    _In_ LPCWSTR lpFileName
+    _In_ LPCWSTR FileName
     )
 {
-    __debugbreak();
-    return FALSE;
+    BOOL Success;
+    PSTR Path;
+
+    Success = FALSE;
+    Path = CreateStringFromWide(FileName);
+    if (!Path) {
+        goto End;
+    }
+
+    if (unlink(Path) == -1) {
+        SetLastError(errno);
+        goto End;
+    }
+
+    Success = TRUE;
+
+End:
+
+    FREE_PTR(&Path);
+
+    return Success;
 }
 
 BOOL
@@ -1172,10 +1191,10 @@ WINBASEAPI
 DWORD
 WINAPI
 WaitForMultipleObjects(
-    _In_ DWORD nCount,
-    _In_reads_(nCount) CONST HANDLE* lpHandles,
-    _In_ BOOL bWaitAll,
-    _In_ DWORD dwMilliseconds
+    _In_ DWORD Count,
+    _In_reads_(Count) CONST HANDLE* Handles,
+    _In_ BOOL WaitAll,
+    _In_ DWORD Milliseconds
     )
 {
     return WAIT_FAILED;
@@ -1732,12 +1751,52 @@ CreateThreadpool(
     _Reserved_ PVOID reserved
     )
 {
+    BYTE Index;
+    BYTE Count;
     PTP_POOL Pool;
+    PTPP_QUEUE Queue;
 
     Pool = (PTP_POOL)calloc(1, sizeof(*Pool));
     if (!Pool) {
         SetLastError(ENOMEM);
+        goto Error;
     }
+
+    Pool->WorkerWaitEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
+
+    Count = (BYTE)ARRAYSIZE(Pool->TaskQueue);
+    for (Index = 0; Index < Count; Index++) {
+        Queue = (PTPP_QUEUE)calloc(1, sizeof(TPP_QUEUE));
+        if (!Queue) {
+            SetLastError(ENOMEM);
+            goto Error;
+        }
+        InitializeSRWLock(&Queue->Lock);
+        InitializeListHead(&Queue->Queue);
+        Pool->TaskQueue[Index] = Queue;
+    }
+
+    Pool->Refcount = 1;
+    Pool->MaximumThreads = 500;
+    Pool->MinimumThreads = 0;
+
+    InitializeSRWLock(&Pool->Lock);
+    InitializeSRWLock(&Pool->ShutdownLock);
+
+    InitializeListHead(&Pool->PoolObjectList);
+    InitializeListHead(&Pool->WorkerList);
+    InitializeListHead(&Pool->PoolLinks);
+
+    goto End;
+
+Error:
+
+    if (Pool) {
+        CloseThreadpool(Pool);
+        Pool = NULL;
+    }
+
+End:
 
     return Pool;
 }
@@ -1750,7 +1809,86 @@ SetThreadpoolThreadMaximum(
     _In_ DWORD MaxThreads
     )
 {
-    Pool->ThreadMaximum = MaxThreads;
+    AcquireSRWLockExclusive(&Pool->Lock);
+    Pool->MaximumThreads = MaxThreads;
+    ReleaseSRWLockExclusive(&Pool->Lock);
+    return;
+}
+
+VOID
+ThreadpoolWorkerThreadEntry (
+    _In_ PVOID Context
+    )
+{
+    ULONG WaitResult;
+    PTP_POOL Pool;
+    HANDLE Event;
+    PTPP_WORKER Worker;
+    PTP_CALLBACK_INSTANCE Instance;
+
+    Worker = (PTPP_WORKER)Context;
+    Instance = &Worker->CallbackInstance;
+
+    Pool = Instance->Pool;
+    Event = (HANDLE)Pool->WorkerWaitEvent;
+
+    InterlockedIncrement(&Pool->ActiveWorkerCount);
+
+    while (TRUE) {
+        WaitResult = WaitForSingleObject(Event, INFINITE);
+        if (WaitResult != WAIT_OBJECT_0) {
+            SYS_ERROR(WaitForSingleObject);
+            break;
+        }
+
+        break;
+    }
+
+    InterlockedDecrement(&Pool->ActiveWorkerCount);
+}
+
+BOOL
+CreateThreadpoolWorker(
+    _Inout_ PTP_POOL Pool
+    )
+{
+    INT Result;
+    PTPP_WORKER Worker;
+    PTP_CALLBACK_INSTANCE Instance;
+
+    Worker = (PTPP_WORKER)calloc(1, sizeof(TPP_WORKER));
+    if (!Worker) {
+        return FALSE;
+    }
+
+    Instance = &Worker->CallbackInstance;
+    Instance->Pool = Pool;
+
+    Result = pthread_create(&Worker->ThreadId,
+                            NULL,
+                            ThreadpoolWorkerThreadEntry,
+                            Worker);
+
+    if (Result != 0) {
+        SetLastError(errno);
+        SYS_ERROR(pthread_create);
+        FREE_PTR(&Worker);
+        return FALSE;
+    }
+
+    InsertTailList(&Pool->WorkerList, &Worker->ListEntry);
+
+    Pool->NumberOfWorkers++;
+
+    return TRUE;
+}
+
+BOOL
+DestroyThreadpoolWorker(
+    _Inout_ PTP_POOL Pool
+    )
+{
+    return TRUE;
 }
 
 WINBASEAPI
@@ -1761,7 +1899,33 @@ SetThreadpoolThreadMinimum(
     _In_ DWORD MinThreads
     )
 {
-    Pool->ThreadMinimum = MinThreads;
+    DWORD Index;
+    DWORD Count;
+    AcquireSRWLockExclusive(&Pool->Lock);
+
+    if (MinThreads > Pool->MaximumThreads) {
+        ReleaseSRWLockExclusive(&Pool->Lock);
+        return FALSE;
+    }
+
+    if (MinThreads > Pool->MinimumThreads) {
+        Count = MinThreads - Pool->MinimumThreads;
+        for (Index = 0; Index < Count; Index++) {
+            if (!CreateThreadpoolWorker(Pool)) {
+                ReleaseSRWLockExclusive(&Pool->Lock);
+                return FALSE;
+            }
+        }
+    } else if (MinThreads < Pool->MinimumThreads) {
+        Count = Pool->MinimumThreads - MinThreads;
+        for (Index = 0; Index < Count; Index++) {
+            DestroyThreadpoolWorker(Pool);
+        }
+    }
+
+    Pool->MinimumThreads = MinThreads;
+    ReleaseSRWLockExclusive(&Pool->Lock);
+    return TRUE;
 }
 
 WINBASEAPI
@@ -1771,7 +1935,21 @@ CloseThreadpool(
     _Inout_ PTP_POOL Pool
     )
 {
-    return;
+    BYTE Index;
+    BYTE Count;
+    PTPP_QUEUE Queue;
+
+    if (Pool->WorkerWaitEvent) {
+        SetEvent(Pool->WorkerWaitEvent);
+        CloseEvent(Pool->WorkerWaitEvent);
+    }
+
+    Count = (BYTE)ARRAYSIZE(Pool->TaskQueue);
+    for (Index = 0; Index < Count; Index++) {
+        FREE_PTR(&Pool->TaskQueue[Index]);
+    }
+
+    free(Pool);
 }
 
 WINBASEAPI
@@ -1787,7 +1965,29 @@ CreateThreadpoolCleanupGroup(
     Cleanup = (PTP_CLEANUP_GROUP)calloc(1, sizeof(*Cleanup));
     if (!Cleanup) {
         SetLastError(ENOMEM);
+        goto Error;
     }
+
+    Cleanup->Refcount = 1;
+    InitializeSRWLock(&Cleanup->MemberLock);
+    InitializeListHead(&Cleanup->MemberList);
+
+    //
+    // Init barrier here?
+    //
+
+    InitializeSRWLock(&Cleanup->CleanupLock);
+    InitializeListHead(&Cleanup->CleanupList);
+
+    goto End;
+
+Error:
+
+    if (Cleanup) {
+        FREE_PTR(&Cleanup);
+    }
+
+End:
 
     return Cleanup;
 }
@@ -1796,11 +1996,16 @@ WINBASEAPI
 VOID
 WINAPI
 CloseThreadpoolCleanupGroupMembers(
-    _Inout_ PTP_CLEANUP_GROUP ptpcg,
-    _In_ BOOL fCancelPendingCallbacks,
-    _Inout_opt_ PVOID pvCleanupContext
+    _Inout_ PTP_CLEANUP_GROUP CleanupGroup,
+    _In_ BOOL CancelPendingCallbacks,
+    _Inout_opt_ PVOID CleanupContext
     )
 {
+    //
+    // for members in group:
+    //      cleanup member
+    //
+
     return;
 }
 
@@ -1835,52 +2040,82 @@ CreateThreadpoolWork(
     _In_opt_ PTP_CALLBACK_ENVIRON CallbackEnv
     )
 {
+    PTP_POOL Pool;
     PTP_WORK Work;
-    PTP_TASK Task;
     PTP_CLEANUP_GROUP Group;
     PTPP_CLEANUP_GROUP_MEMBER Member;
 
+    ASSERT(CallbackEnv != NULL);
+    if (CallbackEnv == NULL) {
+        SetLastError(EINVAL);
+        return NULL;
+    }
+    ASSERT(CallbackEnv->Pool != NULL);
+    if (CallbackEnv->Pool == NULL) {
+        SetLastError(EINVAL);
+        return NULL;
+    }
 
     Work = (PTP_WORK)calloc(1, sizeof(*Work));
     if (!Work) {
         SetLastError(ENOMEM);
+        goto Error;
     }
 
-    Task = &Work->Task;
     Member = &Work->CleanupGroupMember;
+    Group = CallbackEnv->CleanupGroup;
 
-    Group = NULL;
-
-    if (CallbackEnv != NULL) {
-        Group = CallbackEnv->CleanupGroup;
+    if (Group == NULL) {
+        Group = CreateThreadpoolCleanupGroup();
+        if (Group == NULL) {
+            SetLastError(ENOMEM);
+            goto Error;
+        }
+        CallbackEnv->CleanupGroup = Group;
     }
 
-    if (Group != NULL) {
-        AcquireSRWLockExclusive(&Group->MemberLock);
+    //
+    // Add member to group list.
+    //
 
-        //
-        // Add member to group list.
-        //
-
-        InsertTailList(&Group->MemberList, &Member->CleanupGroupMemberLinks);
-
-        ReleaseSRWLockExclusive(&Group->MemberLock);
-    }
+    AcquireSRWLockExclusive(&Group->MemberLock);
+    InsertTailList(&Group->MemberList, &Member->CleanupGroupMemberLinks);
+    ReleaseSRWLockExclusive(&Group->MemberLock);
 
     Member->Context = Context;
     Member->WorkCallback = Callback;
-    Member->Pool = CallbackEnv->Pool;
+    Pool = Member->Pool = CallbackEnv->Pool;
+
+    Work->Callbacks.ExecuteCallback = (PVOID)Callback;
+
+    AcquireSRWLockExclusive(&Pool->Lock);
+    InsertTailList(&Pool->WorkerList, &Work->ListEntry);
+    ReleaseSRWLockExclusive(&Pool->Lock);
+
+    goto End;
+
+Error:
+
+    if (Work) {
+        FREE_PTR(&Work);
+    }
+
+End:
 
     return Work;
 }
+
+
 
 WINBASEAPI
 VOID
 WINAPI
 SubmitThreadpoolWork(
-    _Inout_ PTP_WORK pwk
+    _Inout_ PTP_WORK Work
     )
 {
+
+
     return;
 }
 

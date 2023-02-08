@@ -1213,8 +1213,8 @@ Return Value:
         //
 
         String->Buffer += 2;
-        String->Length -= 4;
-        String->MaximumLength -= 4;
+        String->Length -= (sizeof(WCHAR) * 2);
+        String->MaximumLength -= (sizeof(WCHAR) * 2);
 
         //
         // Try each argument extraction routine for this argument; if it
