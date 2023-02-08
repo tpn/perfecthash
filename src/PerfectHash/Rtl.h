@@ -52,7 +52,7 @@ extern "C" {
 
 #define RTL_CONSTANT_STRING(s) { \
     sizeof(s) - sizeof((s)[0]),  \
-    sizeof( s ),                 \
+    sizeof(s),                   \
     0,                           \
     s                            \
 }
@@ -2318,7 +2318,7 @@ IsValidNullTerminatedStringWithMinimumLengthInChars(
         String->Length >= Length &&
         String->MaximumLength >= MaximumLength &&
         sizeof(CHAR) == (String->MaximumLength - String->Length) &&
-        String->Buffer[String->Length >> 1] == '\0'
+        RTL_LAST_CHAR(String) == '\0'
     );
 }
 
@@ -2494,7 +2494,8 @@ BOOLEAN
 FindCharInUnicodeString(
     _In_ PCUNICODE_STRING String,
     _In_ WCHAR Char,
-    _In_ _Field_range_(<=, String->Length >> 1) USHORT StartAtCharOffset,
+    _In_ _Field_range_(<=, String->Length / sizeof(WCHAR))
+        USHORT StartAtCharOffset,
     _Out_opt_ PUSHORT FoundAtCharOffset
     )
 {
@@ -2504,7 +2505,7 @@ FindCharInUnicodeString(
     BOOLEAN Found = FALSE;
     USHORT Start = StartAtCharOffset;
 
-    Count = String->Length >> 1;
+    Count = String->Length / sizeof(WCHAR);
 
     if (!StartAtCharOffset || StartAtCharOffset > Count) {
         Start = 0;

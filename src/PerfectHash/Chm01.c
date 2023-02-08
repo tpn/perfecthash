@@ -2162,8 +2162,8 @@ Return Value:
     }
 
     DurationString.Buffer = &DurationBuffer[0];
-    DurationString.Length = (USHORT)(Chars << 1);
-    DurationString.MaximumLength = (USHORT)(Chars << 1);
+    DurationString.Length = (USHORT)(Chars * sizeof(WCHAR));
+    DurationString.MaximumLength = (USHORT)(Chars * sizeof(WCHAR));
 
     //
     // Calculate total attempts per second.
@@ -2289,8 +2289,8 @@ Return Value:
         }
 
         SolvedDurationString.Buffer = &SolvedDurationBuffer[0];
-        SolvedDurationString.Length = (USHORT)(Chars << 1);
-        SolvedDurationString.MaximumLength = (USHORT)(Chars << 1);
+        SolvedDurationString.Length = (USHORT)(Chars * sizeof(WCHAR));
+        SolvedDurationString.MaximumLength = (USHORT)(Chars * sizeof(WCHAR));
 
         //
         // Calculate the duration since we last found a best graph.
@@ -2315,8 +2315,10 @@ Return Value:
         }
 
         DurationSinceLastBestString.Buffer = &DurationSinceLastBestBuffer[0];
-        DurationSinceLastBestString.Length = (USHORT)(Chars << 1);
-        DurationSinceLastBestString.MaximumLength = (USHORT)(Chars << 1);
+        DurationSinceLastBestString.Length = (USHORT)(Chars * sizeof(WCHAR));
+        DurationSinceLastBestString.MaximumLength = (USHORT)(
+            Chars * sizeof(WCHAR)
+        );
     } else {
         GraphSizeInBytes = 0;
         DurationSinceLastBestString.Buffer = NULL;

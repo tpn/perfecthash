@@ -1212,8 +1212,8 @@ Return Value:
 
         Dir = &Path->Directory;
 
-        ASSERT(Dir->Buffer[Dir->Length >> 1] == L'\\');
-        Dir->Buffer[Dir->Length >> 1] = L'\0';
+        ASSERT(RTL_LAST_CHAR(Dir) == PATHSEP);
+        RTL_LAST_CHAR(Dir) = L'\0';
 
         Success = CreateDirectoryW(Dir->Buffer, NULL);
 
@@ -1221,7 +1221,7 @@ Return Value:
         // Restore the slash.
         //
 
-        Dir->Buffer[Dir->Length >> 1] = L'\\';
+        RTL_LAST_CHAR(Dir) = PATHSEP;
 
         if (!Success) {
             LastError = GetLastError();

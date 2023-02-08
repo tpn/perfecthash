@@ -626,8 +626,8 @@ Return Value:
         Length = (USHORT)RtlPointerToOffset(KeysPathString.Buffer, Dest);
         KeysPathString.Length = Length;
         KeysPathString.MaximumLength = Length + sizeof(*Dest);
-        ASSERT(KeysPathString.Buffer[KeysPathString.Length >> 1] == L'\0');
-        ASSERT(&KeysPathString.Buffer[KeysPathString.Length >> 1] == Dest);
+        ASSERT(RTL_LAST_CHAR(&KeysPathString) == L'\0');
+        ASSERT(&RTL_LAST_CHAR(&KeysPathString) == Dest);
 
         Result = Context->Vtbl->CreateInstance(Context,
                                                NULL,

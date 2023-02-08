@@ -1090,7 +1090,7 @@ Return Value:
     //
 
     if (!HasDrivePath) {
-        DirectoryLength += ((USHORT)strlen("\\\\?\\") << 1);
+        DirectoryLength += ((USHORT)strlen("\\\\?\\") * sizeof(WCHAR));
     }
 
 #else // PH_WINDOWS
@@ -1165,7 +1165,7 @@ Return Value:
     }
 
     BaseNameLength = BaseName->Length;
-    BaseNameALength.LongPart = BaseNameLength >> 1;
+    BaseNameALength.LongPart = BaseNameLength / sizeof(WCHAR);
 
     //
     // BaseNameSuffix
@@ -1184,7 +1184,7 @@ Return Value:
     }
 
     BaseNameSuffixLength = NewBaseNameSuffix->Length;
-    BaseNameALength.LongPart += BaseNameSuffixLength >> 1;
+    BaseNameALength.LongPart += BaseNameSuffixLength / sizeof(WCHAR);
 
     //
     // NewExtension
