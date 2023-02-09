@@ -135,12 +135,17 @@ both locations for cold or infrequent keys.
 
 ## Quick Guide
 
-The project only builds on Windows with Visual Studio 2022.  However, the
-generated compiled perfect hash tables are cross-platform, and will work on
+Initially, all development on this project was done exclusively on Windows, with
+Visual Studio 2022.  Linux support has recently been added, although it is still
+quite rough around the edges.  For some context: about 1,700 hours have been
+spent on the Windows portion.  The Linux support was hacked together in about
+two weeks of evening and weekend work.
+
+The generated compiled perfect hash tables are cross-platform, and will work on
 Windows, Mac, Linux, x86, x64, and ARM64.
 
-(If you're interested in Linux support, please comment-on or watch [this issue](https://github.com/tpn/perfecthash/issues/51),
-which will help me decide if there's sufficient interest).
+### Building
+#### Windows
 
 ```
 mkdir c:\src
@@ -167,6 +172,36 @@ Once built or downloaded, there are two main command line executables:
 creating a single table, and it takes a single input key file.  The latter
 can be pointed at a directory of keys, and it will create tables for all of
 them.
+
+#### Linux
+
+Prerequisites: C compiler (GCC 10 tested), CMake.  Optional: Ninja.
+
+```
+mkdir -p ~/src && cd ~/src
+git clone https://github.com/tpn/perfecthash
+git clone https://github.com/tpn/perfecthash-keys
+
+cd perfecthash/src
+mkdir build && cd build
+cmake -S .. -B . -G"Ninja Multi-Config"
+ninja -F build-Release.ninja
+ninja -F build-Debug.ninja
+```
+For normal Makefile support:
+
+```
+cd perfecthash/src
+mkdir build && cd build
+cmake -S .. -B . -G"Unix Makefiles"
+make
+```
+#### Mac
+
+I haven't tried to build it on Mac yet.  It'll require a bit of hacking, I
+assume.
+
+### Usage
 
 The usage options are almost identical for both programs.  If you run either one
 without arguments, it will print detailed usage instructions, also available
@@ -197,6 +232,13 @@ Assuming you have built a `Release` version of the library, from a Visual Studio
 mkdir c:\Temp\ph.out
 cd c:\src\perfecthash\src
 ..\bin\timemem.exe x64\Release\PerfectHashCreate.exe c:\src\perfecthash\keys\HologramWorld-31016.keys c:\Temp\ph.out Chm01 MultiplyShiftR And 0 --Compile
+```
+
+On Linux this would look like:
+```
+mkdir -p ~/tmp/ph.out
+cd ~/src/perfecthash/src
+time ../x64/Release/PerfectHashCreateExe $HOME/src/perfecthash-keys/sys32/HologramWorld-31016.keys ~/tmp/ph.out Chm01 MultiplyShiftR And 0 --DisableCsvOutputFile
 ```
 
 This should result in some output that looks like this:
@@ -239,6 +281,7 @@ Paged pool     : 167 KB
 Non-paged pool : 52 KB
 Page file size : 32280 KB
 ```
+N.B. Console output isn't supported on Linux yet.
 
 N.B. If you get an error like this, it means `msbuild` couldn't be found on
 your path; make sure to launch a Visual Studio 2022 command prompt:
