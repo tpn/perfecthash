@@ -157,7 +157,7 @@ Return Value:
     ULARGE_INTEGER NumberOfKeys;
     HANDLE OutputHandle = NULL;
     HANDLE ProcessHandle = NULL;
-    ULONGLONG RowBufferSize;
+    ULONGLONG RowBufferSize = 0;
     ULONG BytesWritten = 0;
     ULONG KeySizeInBytes = 0;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
@@ -564,6 +564,7 @@ End:
 
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
+        ASSERT(RowBufferSize != 0);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
                                           &RowBuffer,

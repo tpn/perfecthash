@@ -41,12 +41,14 @@ FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
 };
 
 //
-// Forward decls of prepare, unmap and close routines.
+// Forward decls.
 //
 
 PREPARE_FILE PrepareFileChm01;
 UNMAP_FILE UnmapFileChm01;
 CLOSE_FILE CloseFileChm01;
+
+PERFECT_HASH_FILE_WORK_ITEM_CALLBACK FileWorkItemCallbackChm01;
 
 //
 // Begin method implementations.
@@ -93,8 +95,6 @@ Return Value:
     FileWorkItemCallbackChm01(Item);
 }
 #endif
-
-PERFECT_HASH_FILE_WORK_ITEM_CALLBACK FileWorkItemCallbackChm01;
 
 _Use_decl_annotations_
 VOID

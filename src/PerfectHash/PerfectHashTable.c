@@ -161,7 +161,7 @@ Return Value:
 
     if (Table->ValuesBaseAddress) {
         if (!VirtualFree(Table->ValuesBaseAddress,
-                         Table->ValuesArraySizeInBytes,
+                         VFS(Table->ValuesArraySizeInBytes),
                          MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
             PH_RAISE(E_UNEXPECTED);
@@ -190,7 +190,7 @@ Return Value:
         }
         if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {
             if (!VirtualFree(Table->TableDataBaseAddress,
-                             Table->TableDataSizeInBytes,
+                             VFS(Table->TableDataSizeInBytes),
                              MEM_RELEASE)) {
                 SYS_ERROR(VirtualFree);
             }

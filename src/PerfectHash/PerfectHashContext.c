@@ -1692,6 +1692,7 @@ Return Value:
 
 #ifdef PH_WINDOWS
     if (!Context->MainThreadpool) {
+        ReleasePerfectHashContextLockExclusive(Context);
         return E_UNEXPECTED;
     }
 
@@ -2509,7 +2510,7 @@ Return Value:
     UNICODE_STRING TimestampW;
     LARGE_INTEGER EndOfFile;
     PCUNICODE_STRING BaseName;
-    ULONGLONG BufferSizeInBytes;
+    ULONGLONG BufferSizeInBytes = 0;
     ULONGLONG RemainingBytes;
     ULONG NumberOfPagesForBuffer;
     PCUNICODE_STRING NewDirectory;
@@ -2740,6 +2741,7 @@ End:
     RELEASE(File);
 
     if (Buffer != NULL) {
+        ASSERT(BufferSizeInBytes != 0);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           Context->ProcessHandle,
                                           &Buffer,

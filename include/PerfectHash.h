@@ -199,11 +199,11 @@ typedef ULONG_BYTES *PULONG_BYTES;
 )
 
 #define SetBit32(Address, Bit) (                               \
-    ((((PLONG32)(Address))[(Bit >> 5)] |= (1L << (Bit & 31)))) \
+    ((((PLONG32)(Address))[(Bit) >> 5] |= (1L << (Bit & 31)))) \
 )
 
 #define SetBit64(Address, Bit) (                                \
-    ((((PLONG64)(Address))[(Bit >> 6)] |= (1LL << (Bit & 63)))) \
+    ((((PLONG64)(Address))[(Bit) >> 6] |= (1LL << (Bit & 63)))) \
 )
 
 //

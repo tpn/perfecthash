@@ -226,11 +226,11 @@ Return Value:
     // slash.
     //
 
-    if (RTL_SECOND_TO_LAST_CHAR(Namespace) == L'\0') {
+    if (RTL_SECOND_LAST_CHAR(Namespace) == L'\0') {
         Namespace->Length -= sizeof(WCHAR);
     }
 
-    if (RTL_SECOND_TO_LAST_CHAR(Namespace) != PATHSEP) {
+    if (RTL_SECOND_LAST_CHAR(Namespace) != PATHSEP) {
         return E_UNEXPECTED;
     }
 

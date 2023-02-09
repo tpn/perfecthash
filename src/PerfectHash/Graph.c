@@ -382,7 +382,7 @@ Return Value:
 
     if (Graph->VertexPairs != NULL) {
         if (!VirtualFree(Graph->VertexPairs,
-                         Graph->Info->VertexPairsSizeInBytes,
+                         VFS(Graph->Info->VertexPairsSizeInBytes),
                          MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }

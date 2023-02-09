@@ -1037,8 +1037,13 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextTableCreate,
     &PerfectHashContextTableCreateArgvW,
     &PerfectHashContextExtractTableCreateArgsFromArgvW,
+#ifdef PH_COMPAT
     &PerfectHashContextTableCreateArgvA,
     &PerfectHashContextBulkCreateArgvA,
+#else
+    NULL,
+    NULL,
+#endif
 };
 VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 12);
 

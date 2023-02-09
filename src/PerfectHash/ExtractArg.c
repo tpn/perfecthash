@@ -956,7 +956,9 @@ Return Value:
 
     ValueString = &Temp;
     ValueString->Buffer = Source;
-    ValueString->Length = Argument->Length - ((Index + 1) * sizeof(WCHAR));
+    ValueString->Length = Argument->Length - (USHORT)(
+        ((USHORT)(Index + 1) * (USHORT)sizeof(WCHAR))
+    );
     ValueString->MaximumLength = ValueString->Length + sizeof(WCHAR);
 
     ASSERT(RTL_LAST_CHAR(ValueString) == L'\0');

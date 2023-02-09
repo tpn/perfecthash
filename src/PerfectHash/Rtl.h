@@ -120,6 +120,21 @@ typedef union _FILETIME64 {
     ULONGLONG AsULongLong;
 } FILETIME64, *PFILETIME64;
 
+
+//
+// Calls to VirtualFree() need to have their size parameter wrapped by
+// VFS() to ensure it works on Windows and non-Windows platforms.  (Windows
+// enforces size == 0 when MEM_RELEASE, but we need the size on *nix when we
+// unmap the backing address.)
+//
+
+#ifdef PH_WINDOWS
+#define VFS(Size) 0
+#else
+#define VFS(Size) Size
+#endif
+
+
 #ifndef PAGE_SHIFT
 #define PAGE_SHIFT 12
 #endif

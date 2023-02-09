@@ -187,8 +187,9 @@ IsDevicePathInDrivePathFormat(
     );
 
     return IsDrivePath;
-#endif
+#else
     return FALSE;
+#endif
 }
 
 //

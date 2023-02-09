@@ -176,8 +176,8 @@ Return Value:
     HANDLE ProcessHandle = NULL;
     ULONG Failures;
     ULONG KeySizeInBytes;
-    ULONGLONG BufferSize;
-    ULONGLONG RowBufferSize;
+    ULONGLONG BufferSize = 0;
+    ULONGLONG RowBufferSize = 0;
     LONG_INTEGER AllocSize;
     ULONG BytesWritten = 0;
     WIN32_FIND_DATAW FindData;
@@ -361,12 +361,11 @@ Return Value:
     //
     // Calculate the size required for a new concatenated wide string buffer
     // that combines the test data directory with the "*.keys" suffix.  The
-    // `sizeof(WCHAR) * sizeof(*Dest)` accounts for the joining slash and
-    // trailing NULL.
+    // `sizeof(WCHAR) * 2` accounts for the joining slash and trailing NULL.
     //
 
     AllocSize.LongPart = KeysDirectory->Length;
-    AllocSize.LongPart += Suffix->Length + (sizeof(WCHAR) * sizeof(*Dest));
+    AllocSize.LongPart += Suffix->Length + (sizeof(WCHAR) * 2);
 
     //
     // Sanity check we haven't overflowed.
@@ -878,6 +877,7 @@ End:
     }
 
     if (BaseBuffer) {
+        ASSERT(BufferSize != 0);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
                                           &BaseBuffer,

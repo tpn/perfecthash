@@ -473,6 +473,8 @@ RtlDestroyBuffer(
     }
 
 #ifdef PH_WINDOWS
+    UNREFERENCED_PARAMETER(Size);
+
     if (!ARGUMENT_PRESENT(ProcessHandle)) {
         return E_POINTER;
     }
@@ -482,7 +484,7 @@ RtlDestroyBuffer(
         return E_POINTER;
     }
 
-    if (!VirtualFreeEx(ProcessHandle, *Address, Size, MEM_RELEASE)) {
+    if (!VirtualFreeEx(ProcessHandle, *Address, VFS(Size), MEM_RELEASE)) {
         SYS_ERROR(VirtualFreeEx);
         return E_FAIL;
     }

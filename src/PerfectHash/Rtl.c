@@ -353,7 +353,9 @@ RtlRundown(
 
     Buffer = Rtl->CpuFeatures.ProcInfoArray.ProcInfo;
     if (Buffer != NULL) {
-        if (!VirtualFree(Buffer, Rtl->ProcInfoBufferSizeInBytes, MEM_RELEASE)) {
+        if (!VirtualFree(Buffer,
+                         VFS(Rtl->ProcInfoBufferSizeInBytes),
+                         MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
         Rtl->CpuFeatures.ProcInfoArray.ProcInfo = NULL;
