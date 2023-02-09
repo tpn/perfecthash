@@ -100,6 +100,7 @@ else()
         PUBLIC
         -march=native
         -Wno-incompatible-pointer-types
+        -Wno-deprecated-declarations
         -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
     )
 

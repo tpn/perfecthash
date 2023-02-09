@@ -117,8 +117,6 @@ if (HookPenter STREQUAL "1")
 endif()
 add_subdirectory(PerfectHash)
 add_subdirectory(PerfectHashCreateExe)
-if (IS_WINDOWS)
-    add_subdirectory(PerfectHashBulkCreateExe)
-endif()
+add_subdirectory(PerfectHashBulkCreateExe)
 
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

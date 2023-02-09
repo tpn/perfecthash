@@ -1031,27 +1031,16 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextGetMaximumConcurrency,
     &PerfectHashContextSetBaseOutputDirectory,
     &PerfectHashContextGetBaseOutputDirectory,
-#ifdef PH_WINDOWS
     &PerfectHashContextBulkCreate,
     &PerfectHashContextBulkCreateArgvW,
     &PerfectHashContextExtractBulkCreateArgsFromArgvW,
-#else
-    NULL,
-    NULL,
-    NULL,
-#endif
     &PerfectHashContextTableCreate,
     &PerfectHashContextTableCreateArgvW,
     &PerfectHashContextExtractTableCreateArgsFromArgvW,
-#ifndef PH_WINDOWS
     &PerfectHashContextTableCreateArgvA,
-#endif
+    &PerfectHashContextBulkCreateArgvA,
 };
-#ifdef PH_WINDOWS
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 10);
-#else
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 11);
-#endif
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 12);
 
 //
 // PerfectHashTable

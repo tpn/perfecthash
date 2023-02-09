@@ -28,10 +28,6 @@
 
 #include "thpool.h"
 
-#ifdef _DEBUG
-#define THPOOL_DEBUG
-#endif
-
 #ifdef THPOOL_DEBUG
 #undef THPOOL_DEBUG
 #define THPOOL_DEBUG 1

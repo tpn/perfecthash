@@ -248,10 +248,10 @@ typedef GUID *LPGUID;
 typedef const GUID *LPCGUID;
 typedef GUID IID;
 
-#define InlineIsEqualGUID(rguid1, rguid2)  \
-        (((uint32_t *) rguid1)[0] == ((uint32_t *) rguid2)[0] &&   \
-        ((uint32_t *) rguid1)[1] == ((uint32_t *) rguid2)[1] &&    \
-        ((uint32_t *) rguid1)[2] == ((uint32_t *) rguid2)[2] &&    \
+#define InlineIsEqualGUID(rguid1, rguid2)                        \
+        (((uint32_t *) rguid1)[0] == ((uint32_t *) rguid2)[0] && \
+        ((uint32_t *) rguid1)[1] == ((uint32_t *) rguid2)[1] &&  \
+        ((uint32_t *) rguid1)[2] == ((uint32_t *) rguid2)[2] &&  \
         ((uint32_t *) rguid1)[3] == ((uint32_t *) rguid2)[3])
 
 #define IsEqualGUID(rguid1, rguid2) (!memcmp(rguid1, rguid2, sizeof(GUID)))
@@ -1200,6 +1200,26 @@ InitOnceComplete(
 #define _AMD64_
 #define _WIN64
 #include <immintrin.h>
+
+#define _mm256_loadu_epi32 _mm256_loadu_si256
+#define _mm512_loadu_epi32 _mm512_loadu_si512
+#define _mm256_and_epi32 _mm256_and_si256
+#define _mm512_setr_epi16(s0,  s1,  s2,  s3,  \
+                          s4,  s5,  s6,  s7,  \
+                          s8,  s9,  s10, s11, \
+                          s12, s13, s14, s15, \
+                          s16, s17, s18, s19, \
+                          s20, s21, s22, s23, \
+                          s24, s25, s26, s27, \
+                          s28, s29, s30, s31) \
+    _mm512_set_epi16(s31, s30, s29, s28,      \
+                     s27, s26, s25, s24,      \
+                     s23, s22, s21, s20,      \
+                     s19, s18, s17, s16,      \
+                     s15, s14, s13, s12,      \
+                     s11, s10, s9,  s8,       \
+                     s7,  s6,  s5,  s4,       \
+                     s3,  s2,  s1,  s0)
 #endif
 
 #ifdef __has_builtin
@@ -1824,8 +1844,52 @@ WriteFile(
     _Inout_opt_ LPOVERLAPPED lpOverlapped
     );
 
-#define CONTAINING_RECORD(address, type, field) ((type *)( \
-                                                  (PCHAR)(address) - \
+#define MAX_PATH 260
+
+typedef struct _WIN32_FIND_DATAW {
+    DWORD dwFileAttributes;
+    FILETIME ftCreationTime;
+    FILETIME ftLastAccessTime;
+    FILETIME ftLastWriteTime;
+    DWORD nFileSizeHigh;
+    DWORD nFileSizeLow;
+    DWORD dwReserved0;
+    DWORD dwReserved1;
+    _Field_z_ WCHAR  cFileName[ MAX_PATH ];
+    _Field_z_ WCHAR  cAlternateFileName[ 14 ];
+#ifdef _MAC
+    DWORD dwFileType;
+    DWORD dwCreatorType;
+    WORD  wFinderFlags;
+#endif
+} WIN32_FIND_DATAW, *PWIN32_FIND_DATAW, *LPWIN32_FIND_DATAW;
+
+WINBASEAPI
+HANDLE
+WINAPI
+FindFirstFileW(
+    _In_ LPCWSTR lpFileName,
+    _Out_ LPWIN32_FIND_DATAW lpFindFileData
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+FindNextFileW(
+    _In_ HANDLE hFindFile,
+    _Out_ LPWIN32_FIND_DATAW lpFindFileData
+    );
+
+WINBASEAPI
+BOOL
+WINAPI
+FindClose(
+    _Inout_ HANDLE hFindFile
+    );
+
+
+#define CONTAINING_RECORD(address, type, field) ((type *)(                           \
+                                                  (PCHAR)(address) -                 \
                                                   (ULONG_PTR)(&((type *)0)->field)))
 
 #define PAGE_NOACCESS           0x01
@@ -2222,24 +2286,24 @@ RemoveDirectoryW(
 
 #define FILE_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | 0x1FF)
 
-#define FILE_GENERIC_READ         (STANDARD_RIGHTS_READ     |\
-                                   FILE_READ_DATA           |\
-                                   FILE_READ_ATTRIBUTES     |\
-                                   FILE_READ_EA             |\
+#define FILE_GENERIC_READ         (STANDARD_RIGHTS_READ     | \
+                                   FILE_READ_DATA           | \
+                                   FILE_READ_ATTRIBUTES     | \
+                                   FILE_READ_EA             | \
                                    SYNCHRONIZE)
 
 
-#define FILE_GENERIC_WRITE        (STANDARD_RIGHTS_WRITE    |\
-                                   FILE_WRITE_DATA          |\
-                                   FILE_WRITE_ATTRIBUTES    |\
-                                   FILE_WRITE_EA            |\
-                                   FILE_APPEND_DATA         |\
+#define FILE_GENERIC_WRITE        (STANDARD_RIGHTS_WRITE    | \
+                                   FILE_WRITE_DATA          | \
+                                   FILE_WRITE_ATTRIBUTES    | \
+                                   FILE_WRITE_EA            | \
+                                   FILE_APPEND_DATA         | \
                                    SYNCHRONIZE)
 
 
-#define FILE_GENERIC_EXECUTE      (STANDARD_RIGHTS_EXECUTE  |\
-                                   FILE_READ_ATTRIBUTES     |\
-                                   FILE_EXECUTE             |\
+#define FILE_GENERIC_EXECUTE      (STANDARD_RIGHTS_EXECUTE  | \
+                                   FILE_READ_ATTRIBUTES     | \
+                                   FILE_EXECUTE             | \
                                    SYNCHRONIZE)
 
 #define FILE_FLAG_WRITE_THROUGH         0x80000000
@@ -2262,10 +2326,10 @@ RemoveDirectoryW(
 #define SECTION_EXTEND_SIZE          0x0010
 #define SECTION_MAP_EXECUTE_EXPLICIT 0x0020 // not included in SECTION_ALL_ACCESS
 
-#define SECTION_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED|SECTION_QUERY|\
-                            SECTION_MAP_WRITE |      \
-                            SECTION_MAP_READ |       \
-                            SECTION_MAP_EXECUTE |    \
+#define SECTION_ALL_ACCESS (STANDARD_RIGHTS_REQUIRED|SECTION_QUERY| \
+                            SECTION_MAP_WRITE |                     \
+                            SECTION_MAP_READ |                      \
+                            SECTION_MAP_EXECUTE |                   \
                             SECTION_EXTEND_SIZE)
 
 #define FILE_MAP_WRITE            SECTION_MAP_WRITE

@@ -43,7 +43,9 @@ extern "C" {
 #ifdef PH_WINDOWS
 #define PATHSEP L'\\'
 #else
-#define PATHSEP L'/'
+#define PATHSEP   L'/'
+#define PATHSEP_W L'/'
+#define PATHSEP_A  '/'
 #endif
 
 //
@@ -2580,7 +2582,7 @@ HRESULT
     _In_ PRTL Rtl,
     _In_ HANDLE ProcessHandle,
     _Inout_ PVOID *BufferAddress,
-    _In_opt_ SIZE_T Size
+    _In_ ULONGLONG Size
     );
 typedef RTL_DESTROY_BUFFER *PRTL_DESTROY_BUFFER;
 

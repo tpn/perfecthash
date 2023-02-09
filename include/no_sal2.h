@@ -1047,5 +1047,6 @@
 #define __drv_freesMem(N)
 #define _In_count_(N)
 #define _Post_equals_last_error_
+#define _Field_z_
 
 #endif /* _NO_SAL_2_H_ */

@@ -2742,7 +2742,8 @@ End:
     if (Buffer != NULL) {
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           Context->ProcessHandle,
-                                          &Buffer);
+                                          &Buffer,
+                                          BufferSizeInBytes);
         if (FAILED(Result)) {
             PH_ERROR(TryPrepareCallbackTableValuesFile_DestroyBuffer, Result);
         }

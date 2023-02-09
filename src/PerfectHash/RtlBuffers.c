@@ -461,7 +461,7 @@ RtlDestroyBuffer(
     PRTL Rtl,
     HANDLE ProcessHandle,
     PVOID *Address,
-    SIZE_T Size
+    ULONGLONG Size
     )
 {
     //
@@ -481,7 +481,7 @@ RtlDestroyBuffer(
     if (!ARGUMENT_PRESENT(Address)) {
         return E_POINTER;
     }
-   
+
     if (!VirtualFreeEx(ProcessHandle, *Address, Size, MEM_RELEASE)) {
         SYS_ERROR(VirtualFreeEx);
         return E_FAIL;

@@ -3849,6 +3849,17 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA
       *PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA;
 
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPSTR *ArgvA
+    );
+typedef PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA
+      *PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA;
+
 typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
 
@@ -3868,9 +3879,12 @@ typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
         ExtractTableCreateArgsFromArgvW;
 
-#ifndef PH_WINDOWS
+    //
+    // N.B. These two routines will only be present on non-Windows platforms.
+    //
+
     PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA TableCreateArgvA;
-#endif
+    PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA BulkCreateArgvA;
 
 } PERFECT_HASH_CONTEXT_VTBL;
 typedef PERFECT_HASH_CONTEXT_VTBL *PPERFECT_HASH_CONTEXT_VTBL;
@@ -4443,7 +4457,10 @@ IsValidPerfectHashEnumId(
                           __LINE__,      \
                           (ULONG)Result)
 
-#define PH_MESSAGE(Result, ...) \
+#define PH_MESSAGE(Result) \
+    PerfectHashPrintMessage((ULONG)Result)
+
+#define PH_MESSAGE_ARGS(Result, ...) \
     PerfectHashPrintMessage((ULONG)Result, __VA_ARGS__)
 
 //

@@ -567,7 +567,7 @@ End:
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
                                           &RowBuffer,
-                                          (SIZE_T)RowBufferSize);
+                                          RowBufferSize);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
             Result = PH_E_SYSTEM_CALL_FAILED;
@@ -923,7 +923,7 @@ End:
 //
 
 #define GET_LENGTH(Name) (USHORT)(wcslen(Name->Buffer) * sizeof(WCHAR))
-#define GET_MAX_LENGTH(Name) Name->Length + sizeof(WCHAR) 
+#define GET_MAX_LENGTH(Name) Name->Length + sizeof(WCHAR)
 
 #define VALIDATE_ID(Name, Upper)                                       \
     if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                  \
@@ -1256,7 +1256,7 @@ Return Value:
         }
 
         if (Result == PH_E_COMMANDLINE_ARG_MISSING_VALUE) {
-            PH_MESSAGE(Result, String);
+            PH_MESSAGE_ARGS(Result, String);
             break;
         }
 
@@ -1275,7 +1275,7 @@ InvalidArg:
 
 
         Result = PH_E_INVALID_COMMANDLINE_ARG;
-        PH_MESSAGE(Result, String);
+        PH_MESSAGE_ARGS(Result, String);
         break;
     }
 

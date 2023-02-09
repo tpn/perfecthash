@@ -133,6 +133,9 @@
     <ClCompile Include="Chm01.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01Shared.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Chm01FileWorkCHeaderFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -403,6 +406,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Chm01FileWork.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Chm01Private.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Security.h">

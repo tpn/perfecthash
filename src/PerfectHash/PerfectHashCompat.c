@@ -709,10 +709,213 @@ WriteFile(
     return TRUE;
 }
 
+typedef struct _PH_FIND_HANDLE {
+    PCSTR Extension;
+    PCSTR DirectoryName;
+    DIR *Directory;
+    struct dirent Entry;
+    struct dirent *Result;
+} PH_FIND_HANDLE, *PPH_FIND_HANDLE;
+
+FORCEINLINE
+BOOLEAN
+StringEndsWith(PCSTR String, PCSTR Suffix)
+{
+    BOOLEAN EndsWith;
+    SIZE_T StringLength;
+    SIZE_T SuffixLength;
+
+    StringLength = strlen(String);
+    SuffixLength = strlen(Suffix);
+
+    if (StringLength < SuffixLength) {
+        return FALSE;
+    }
+
+    EndsWith = (
+        strncmp(String + StringLength - SuffixLength,
+                Suffix,
+                SuffixLength) == 0
+    );
+
+    return EndsWith;
+}
+
+WINBASEAPI
+BOOL
+WINAPI
+FindNextFileW(
+    _In_ HANDLE FindHandle,
+    _Out_ LPWIN32_FIND_DATAW FindFileData
+    )
+{
+    LONG Index;
+    LONG Result;
+    LONG Length;
+    PWSTR Dest;
+    PCSTR Source;
+    PCSTR FileName;
+    PPH_FIND_HANDLE Handle;
+
+    Handle = (PPH_FIND_HANDLE)FindHandle;
+
+    while (TRUE) {
+
+        Result = readdir_r(Handle->Directory,
+                           &Handle->Entry,
+                           &Handle->Result);
+
+        if (Result != 0) {
+            SetLastError(Result);
+            return FALSE;
+        } else if (!Handle->Result) {
+            return FALSE;
+        }
+
+        FileName = Handle->Entry.d_name;
+        if (!StringEndsWith(FileName, Handle->Extension)) {
+            continue;
+        }
+
+        Length = strlen(FileName);
+        if (Length >= MAX_PATH) {
+            fprintf(stderr, "Path too long: %s\n", FileName);
+            continue;
+        }
+
+        Dest = &FindFileData->cFileName[0];
+        Source = FileName;
+        for (Index = 0; Index < Length; Index++) {
+            *Dest++ = (WCHAR)*Source++;
+        }
+        *Dest = '\0';
+
+        break;
+    }
+
+    return TRUE;
+}
+
+WINBASEAPI
+HANDLE
+WINAPI
+FindFirstFileW(
+    _In_ LPCWSTR WildcardPath,
+    _Out_ LPWIN32_FIND_DATAW FindFileData
+    )
+{
+    PSTR Path;
+    LONG Index;
+    LONG Length;
+    LONG Result;
+    BOOL FoundDot;
+    BOOL FoundSep;
+    PSTR FileName;
+    PPH_FIND_HANDLE Handle;
+
+    Handle = (PPH_FIND_HANDLE)calloc(1, sizeof(*Handle));
+    if (!Handle) {
+        SetLastError(ENOMEM);
+        FREE_PTR(&Path);
+        goto End;
+    }
+
+    Path = CreateStringFromWide(WildcardPath);
+    if (!Path) {
+        goto End;
+    }
+
+    //
+    // Reverse through the path until we find the last dot, then continue
+    // and look for the last path separator.
+    //
+
+    FoundDot = FALSE;
+    FoundSep = FALSE;
+    Length = strlen(Path);
+
+    for (Index = Length - 1; Index >= 0; Index--) {
+        if (!FoundDot) {
+            if (Path[Index] == '.') {
+                ASSERT(Index != Length - 1);
+                ASSERT(Handle->Extension == NULL);
+                FoundDot = TRUE;
+                Handle->Extension = &Path[Index];
+            }
+        } else if (Path[Index] == PATHSEP_A) {
+            ASSERT(Index != Length - 1);
+            ASSERT(Handle->DirectoryName == NULL);
+            FoundSep = TRUE;
+            Handle->DirectoryName = &Path[0];
+            Path[Index] = '\0';
+            break;
+        }
+    }
+
+    if (!FoundDot || !FoundSep) {
+        PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+    }
+
+    Handle->Directory = opendir(Handle->DirectoryName);
+    if (!Handle->Directory) {
+        if (errno == ENOENT) {
+            SetLastError(ERROR_FILE_NOT_FOUND);
+        } else {
+            SetLastError(errno);
+        }
+        goto Error;
+    }
+
+    SetLastError(ERROR_SUCCESS);
+    if (!FindNextFileW((HANDLE)Handle, FindFileData)) {
+        if (GetLastError() == ERROR_SUCCESS) {
+            SetLastError(ERROR_FILE_NOT_FOUND);
+        }
+        goto Error;
+    }
+
+    goto End;
+
+Error:
+
+    if (Handle != NULL) {
+        FindClose((HANDLE)Handle);
+        Handle = NULL;
+    }
+
+End:
+
+    return (HANDLE)Handle;
+}
+
+
+WINBASEAPI
+BOOL
+WINAPI
+FindClose(
+    _Inout_ HANDLE FindFile
+    )
+{
+    PPH_FIND_HANDLE Handle;
+
+    Handle = (PPH_FIND_HANDLE)FindFile;
+
+    if (!Handle) {
+        SetLastError(E_INVALIDARG);
+        return FALSE;
+    }
+
+    if (Handle->Directory) {
+        closedir(Handle->Directory);
+    }
+
+    free(Handle);
+    Handle = NULL;
+    return TRUE;
+}
+
 //
 // SRW locks.
-//
-// TODO: change to phtread_rwlock_*.
 //
 
 WINBASEAPI

@@ -1403,6 +1403,8 @@ extern PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW
 #ifndef PH_WINDOWS
 extern PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA
     PerfectHashContextTableCreateArgvA;
+extern PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA
+    PerfectHashContextBulkCreateArgvA;
 #endif
 extern PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
     PerfectHashContextExtractTableCreateArgsFromArgvW;
