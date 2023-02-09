@@ -95,7 +95,14 @@ Return Value:
     IsValidId = IsValidIdFunctions[EnumId];
     if (!IsValidId(Id)) {
         Result = InvalidEnumIdHResults[EnumId];
+#ifndef PH_WINDOWS
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+#endif
         _Analysis_assume_(Result < 0);
+#ifndef PH_WINDOWS
+#pragma clang diagnostic pop
+#endif
         return Result;
     }
 
@@ -204,7 +211,7 @@ Return Value:
         if (String == NULL) {
             break;
         }
-        if (Rtl->RtlEqualUnicodeString(String, Name, TRUE) != FALSE) {
+        if (Rtl->RtlEqualUnicodeString(String, Name, FALSE) != FALSE) {
             *IdPointer = Index;
             return S_OK;
         }
@@ -217,7 +224,14 @@ Return Value:
     //
 
     Result = InvalidEnumNameHResults[EnumId];
+#ifndef PH_WINDOWS
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+#endif
     _Analysis_assume_(Result < 0);
+#ifndef PH_WINDOWS
+#pragma clang diagnostic pop
+#endif
     return Result;
 }
 

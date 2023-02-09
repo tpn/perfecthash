@@ -67,9 +67,9 @@ Abstract:
 #define NO_EXTENSION &NullUnicodeString
 #define NO_STREAM_NAME L""
 
-#define SUFFIX(N)       L#N
-#define BASE_NAME(N)    L#N
-#define STREAM_NAME(N)  L#N
+#define SUFFIX(N)       (L""#N)
+#define BASE_NAME(N)    (L""#N)
+#define STREAM_NAME(N)  (L""#N)
 
 #define EXPAND_AS_EXAMPLE(          \
     Verb, VUpper, Name, Upper,      \
@@ -1445,6 +1445,10 @@ typedef struct _FILE_WORK_ITEM {
 
     struct _PERFECT_HASH_FILE **FilePointer;
 
+    struct _PERFECT_HASH_CONTEXT *Context;
+
+    PTP_CALLBACK_INSTANCE Instance;
+
 } FILE_WORK_ITEM;
 typedef FILE_WORK_ITEM *PFILE_WORK_ITEM;
 
@@ -1566,10 +1570,10 @@ typedef FILE_WORK_CALLBACK_IMPL *PFILE_WORK_CALLBACK_IMPL;
     OUTPUT_RAW(" Makefile.\n"                         \
                "# Auto-generated.\n\n");
 
-#define OUTPUT_MAKEFILE_TARGET(Pfx)      \
-    OUTPUT_RAW("TARGET := ");            \
-    OUTPUT_STRING(&##Pfx##TargetPrefix); \
-    OUTPUT_STRING(Name);                 \
+#define OUTPUT_MAKEFILE_TARGET(Pfx)    \
+    OUTPUT_RAW("TARGET := ");          \
+    OUTPUT_STRING(&Pfx##TargetPrefix); \
+    OUTPUT_STRING(Name);               \
     OUTPUT_RAW("\n\n")
 
 #define OUTPUT_MAKEFILE_TGT_VARS()                \

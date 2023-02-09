@@ -103,11 +103,20 @@ include(cmake/GlobalSettingsInclude.cmake OPTIONAL)
 ################################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # Nothing.
+else()
+    message(FATAL "Only 64-bit platforms are supported.")
+endif()
+
 ################################################################################
 # Sub-projects
 ################################################################################
-add_subdirectory(FunctionHook)
+if (HookPenter STREQUAL "1")
+    add_subdirectory(FunctionHook)
+endif()
 add_subdirectory(PerfectHash)
-add_subdirectory(PerfectHashBulkCreateExe)
 add_subdirectory(PerfectHashCreateExe)
+add_subdirectory(PerfectHashBulkCreateExe)
 
+#  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

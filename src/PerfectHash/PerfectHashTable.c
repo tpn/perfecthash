@@ -58,7 +58,7 @@ Return Value:
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
                                          &IID_PERFECT_HASH_RTL,
-                                         &Table->Rtl);
+                                         PPV(&Table->Rtl));
 
     if (FAILED(Result)) {
         goto Error;
@@ -67,11 +67,13 @@ Return Value:
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
                                          &IID_PERFECT_HASH_ALLOCATOR,
-                                         &Table->Allocator);
+                                         PPV(&Table->Allocator));
 
     if (FAILED(Result)) {
         goto Error;
     }
+
+#ifdef PH_WINDOWS
 
     //
     // Initialize the timestamp string.
@@ -86,6 +88,8 @@ Return Value:
         PH_ERROR(PerfectHashTableInitialize_InitTimestampString, Result);
         goto Error;
     }
+
+#endif
 
     //
     // We're done!  Indicate success and finish up.
@@ -156,7 +160,9 @@ Return Value:
     //
 
     if (Table->ValuesBaseAddress) {
-        if (!VirtualFree(Table->ValuesBaseAddress, 0, MEM_RELEASE)) {
+        if (!VirtualFree(Table->ValuesBaseAddress,
+                         VFS(Table->ValuesArraySizeInBytes),
+                         MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
             PH_RAISE(E_UNEXPECTED);
         }
@@ -179,10 +185,13 @@ Return Value:
 
     if (Table->Flags.Created && !IsTableCreateOnly(Table)) {
         if (Table->TableInfoOnDisk && WasTableInfoOnDiskHeapAllocated(Table)) {
-            Allocator->Vtbl->FreePointer(Allocator, &Table->TableInfoOnDisk);
+            Allocator->Vtbl->FreePointer(Allocator,
+                                         PPV(&Table->TableInfoOnDisk));
         }
         if (Table->TableDataBaseAddress && WasTableDataHeapAllocated(Table)) {
-            if (!VirtualFree(Table->Assigned, 0, MEM_RELEASE)) {
+            if (!VirtualFree(Table->TableDataBaseAddress,
+                             VFS(Table->TableDataSizeInBytes),
+                             MEM_RELEASE)) {
                 SYS_ERROR(VirtualFree);
             }
             Table->TableDataBaseAddress = NULL;
@@ -194,7 +203,7 @@ Return Value:
     //
 
 #define EXPAND_AS_ASSERT_NULL(Verb, VUpper, Name, Upper) \
-    ASSERT(Table->##Name == NULL);
+    ASSERT(Table->Name == NULL);
 
     CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSERT_NULL);
 
@@ -207,7 +216,7 @@ Return Value:
     EofType, EofValue,              \
     Suffix, Extension, Stream, Base \
 )                                   \
-    RELEASE(Table->##Name##);
+    RELEASE(Table->Name);
 
     FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
 
@@ -503,28 +512,28 @@ Return Value:
     if (AlgorithmName) {
         *Dest++ = L'_';
         Offset = (USHORT)RtlPointerToOffset(Suffix->Buffer, Dest);
-        Count = AlgorithmName->Length >> 1;
+        Count = AlgorithmName->Length / sizeof(WCHAR);
         CopyInline(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
         Dest += Count;
     }
 
     if (HashFunctionName) {
         *Dest++ = L'_';
-        Count = HashFunctionName->Length >> 1;
+        Count = HashFunctionName->Length / sizeof(WCHAR);
         CopyInline(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
         Dest += Count;
     }
 
     if (MaskFunctionName) {
         *Dest++ = L'_';
-        Count = MaskFunctionName->Length >> 1;
+        Count = MaskFunctionName->Length / sizeof(WCHAR);
         CopyInline(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
         Dest += Count;
     }
 
     if (AdditionalSuffix) {
         *Dest++ = L'_';
-        Count = AdditionalSuffix->Length >> 1;
+        Count = AdditionalSuffix->Length / sizeof(WCHAR);
         CopyInline(Dest, AdditionalSuffix->Buffer, AdditionalSuffix->Length);
         Dest += Count;
     }
@@ -675,7 +684,7 @@ Return Value:
         // routine below.
         //
 
-        AdditionalSuffixALength = (AdditionalSuffix->Length >> 1) + 1;
+        AdditionalSuffixALength = (AdditionalSuffix->Length / sizeof(WCHAR))+1;
     }
 
     Rtl = Table->Rtl;
@@ -789,7 +798,7 @@ Return Value:
         //
 
         Path->AdditionalSuffixAOffset = (
-            (AlgorithmOffset >> 1) + ExistingPath->BaseNameA.Length
+            (AlgorithmOffset / sizeof(WCHAR)) + ExistingPath->BaseNameA.Length
         );
     }
 
@@ -990,6 +999,7 @@ Return Value:
                                                       &LargePagesForValues);
 
     Table->ValuesBaseAddress = BaseAddress;
+    Table->ValuesArraySizeInBytes = ArrayAllocSize;
 
     if (!BaseAddress) {
         Result = E_OUTOFMEMORY;

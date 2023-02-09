@@ -95,7 +95,7 @@ PrepareVSSolutionFileChm01(
     //
 
 #define EXPAND_AS_ASSIGN_EVENT(Verb, VUpper, Name, Upper) \
-    *##Verb##Event++ = Context->##Verb##d##Name##Event;
+    *Verb##Event++ = Context->Verb##d##Name##Event;
 
     PREPARE_VCPROJECT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
 
@@ -140,13 +140,13 @@ PrepareVSSolutionFileChm01(
     //
 
 #define EXPAND_AS_ASSIGN_FILE_POINTER(Verb, VUpper, Name, Upper) \
-    if (!Table->##Name) {                                        \
+    if (!Table->Name) {                                          \
         goto Error;                                              \
     }                                                            \
-    if (!IsValidUuidString(&Table->##Name##->Uuid)) {            \
+    if (!IsValidUuidString(&Table->Name->Uuid)) {                \
         goto Error;                                              \
     }                                                            \
-    VCProjects[Index++] = Table->##Name##;
+    VCProjects[Index++] = Table->Name;
 
     VCPROJECT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_FILE_POINTER);
 

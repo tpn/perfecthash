@@ -22,6 +22,8 @@ extern "C" {
 
 #include <PerfectHashErrors.h>
 
+#ifdef PH_WINDOWS
+
 //
 // N.B. The warning disable glue is necessary to get the system headers to
 //      include with all errors enabled (/Wall).
@@ -90,6 +92,16 @@ extern "C" {
 
 #pragma warning(disable: 26110 26165 26167)
 
+#else // PH_WINDOWS
+#include <PerfectHashCompat.h>
+#endif
+
+//
+// Helper macro for casting to void **.
+//
+
+#define PPV(P) ((void **)(P))
+
 //
 // NT DDK types.
 //
@@ -97,12 +109,10 @@ extern "C" {
 typedef struct _STRING {
     USHORT Length;
     USHORT MaximumLength;
-#ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
-#endif
     PCHAR Buffer;
 } STRING, ANSI_STRING, *PSTRING, *PANSI_STRING, **PPSTRING, **PPANSI_STRING;
 typedef const STRING *PCSTRING;
@@ -110,12 +120,10 @@ typedef const STRING *PCSTRING;
 typedef struct _UNICODE_STRING {
     USHORT Length;
     USHORT MaximumLength;
-#ifdef _WIN64
     union {
         LONG Hash;
         LONG Padding;
     };
-#endif
     PWSTR Buffer;
 } UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING, ***PPPUNICODE_STRING;
 typedef const UNICODE_STRING *PCUNICODE_STRING;
@@ -170,17 +178,33 @@ typedef ULONG_BYTES *PULONG_BYTES;
 
 #define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
 
-#ifdef _WIN64
+#ifdef PH_WINDOWS
 #define InterlockedIncrementULongPtr(Ptr) InterlockedIncrement64((PLONG64)Ptr)
 #define InterlockedDecrementULongPtr(Ptr) InterlockedDecrement64((PLONG64)Ptr)
 #define InterlockedAddULongPtr(Ptr, Val) \
     InterlockedAdd64((PLONG64)Ptr, (LONG64)Val)
 #else
-#define InterlockedIncrementULongPtr(Ptr) InterlockedIncrement((PLONG)Ptr)
-#define InterlockedDecrementULongPtr(Ptr) InterlockedDecrement((PLONG)Ptr)
-#define InterlockedAddULongPtr(Ptr, Val) \
-    InterlockedAdd((PLONG)Ptr, (LONG)Val)
 #endif
+
+//
+// Bitmap macro helpers.  (Thanks ChatGPT!)
+//
+
+#define TestBit32(Address, Bit) (                          \
+    ((((PLONG32)(Address))[(Bit >> 5)] >> (Bit & 31)) & 1) \
+)
+
+#define TestBit64(Address, Bit) (                          \
+    ((((PLONG64)(Address))[(Bit >> 6)] >> (Bit & 63)) & 1) \
+)
+
+#define SetBit32(Address, Bit) (                               \
+    ((((PLONG32)(Address))[(Bit) >> 5] |= (1L << (Bit & 31)))) \
+)
+
+#define SetBit64(Address, Bit) (                                \
+    ((((PLONG64)(Address))[(Bit) >> 6] |= (1LL << (Bit & 63)))) \
+)
 
 //
 // Define start/end markers for IACA.
@@ -280,6 +304,11 @@ PerfectHashGetCurrentCpuArch(
 #define GUID_EX(l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
     { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
 
+//
+// Windows has CU, Compat doesn't.
+//
+
+#ifdef PH_WINDOWS
 #define PERFECT_HASH_INTERFACE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
                                                                      \
     FIRST_ENTRY(                                                     \
@@ -407,6 +436,126 @@ PerfectHashGetCurrentCpuArch(
             0xa5, 0x14, 0x7a, 0xe4, 0x50, 0x32, 0x7d, 0x48           \
         )                                                            \
     )
+#else
+#define PERFECT_HASH_INTERFACE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                                     \
+    FIRST_ENTRY(                                                     \
+        IUnknown,                                                    \
+        IUNKNOWN,                                                    \
+        GUID_EX(                                                     \
+            0x00000000, 0x0000, 0x0000,                              \
+            0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        IClassFactory,                                               \
+        ICLASSFACTORY,                                               \
+        GUID_EX(                                                     \
+            0x00000001, 0x0000, 0x0000,                              \
+            0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Keys,                                                        \
+        KEYS,                                                        \
+        GUID_EX(                                                     \
+            0x7e43ebea, 0x8671, 0x47ba,                              \
+            0xb8, 0x44, 0x76, 0xb, 0x7a, 0x9e, 0xa9, 0x21            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Context,                                                     \
+        CONTEXT,                                                     \
+        GUID_EX(                                                     \
+            0xd4b24571, 0x99d7, 0x44ba,                              \
+            0x8a, 0x27, 0x63, 0xd8, 0x73, 0x9f, 0x9b, 0x81           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Table,                                                       \
+        TABLE,                                                       \
+        GUID_EX(                                                     \
+            0xc265816f, 0xc6a9, 0x4b44,                              \
+            0xbc, 0xee, 0xec, 0x5a, 0x12, 0xab, 0xe1, 0xef           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Rtl,                                                         \
+        RTL,                                                         \
+        GUID_EX(                                                     \
+            0x9c05a3d6, 0xbc30, 0x45e6,                              \
+            0xbe, 0xa6, 0x50, 0x4f, 0xcc, 0x92, 0x43, 0xa8           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Allocator,                                                   \
+        ALLOCATOR,                                                   \
+        GUID_EX(                                                     \
+            0xf87564d2, 0xb3c7, 0x4cca,                              \
+            0x90, 0x13, 0xeb, 0x59, 0xc1, 0xe2, 0x53, 0xb7           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        File,                                                        \
+        FILE,                                                        \
+        GUID_EX(                                                     \
+            0x27549274, 0x968a, 0x499a,                              \
+            0x83, 0x49, 0x31, 0x33, 0xe3, 0xd5, 0xe6, 0x49           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Path,                                                        \
+        PATH,                                                        \
+        GUID_EX(                                                     \
+            0x267623b1, 0xc5d, 0x47b1,                               \
+            0xa2, 0x97, 0xdf, 0xe, 0x54, 0x67, 0xaf, 0xd1            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Directory,                                                   \
+        DIRECTORY,                                                   \
+        GUID_EX(                                                     \
+            0x5d673839, 0x1686, 0x411e,                              \
+            0x99, 0x2, 0x46, 0xc6, 0xe9, 0x7c, 0xa5, 0x67            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        GuardedList,                                                 \
+        GUARDED_LIST,                                                \
+        GUID_EX(                                                     \
+            0x14a25ba2, 0x3c18, 0x413f,                              \
+            0x8c, 0x76, 0xa7, 0xa9, 0x1e, 0xc8, 0x8c, 0x2a           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Graph,                                                       \
+        GRAPH,                                                       \
+        GUID_EX(                                                     \
+            0xb906f824, 0xcb59, 0x4696,                              \
+            0x84, 0x77, 0x44, 0xd4, 0xba, 0x9, 0xda, 0x94            \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    LAST_ENTRY(                                                      \
+        Rng,                                                         \
+        RNG,                                                         \
+        GUID_EX(                                                     \
+            0xfd84eebe, 0x2571, 0x4517,                              \
+            0xa5, 0x14, 0x7a, 0xe4, 0x50, 0x32, 0x7d, 0x48           \
+        )                                                            \
+    )
+#endif
 
 #define PERFECT_HASH_INTERFACE_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_INTERFACE_TABLE(ENTRY, ENTRY, ENTRY)
@@ -488,7 +637,7 @@ DEFINE_GUID_EX(CLSID_PERFECT_HASH, 0x402045fd, 0x72f4, 0x4a05,
                0x90, 0x2e, 0xd2, 0x2b, 0x7c, 0x18, 0x77, 0xb4);
 
 #define EXPAND_AS_DEFINE_GUID_EX(Name, Upper, Guid) \
-    static const GUID IID_PERFECT_HASH_##Upper## = Guid;
+    static const GUID IID_PERFECT_HASH_##Upper = Guid;
 
 PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_DEFINE_GUID_EX);
 
@@ -496,7 +645,7 @@ PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_DEFINE_GUID_EX);
 // GUID array.
 //
 
-#define EXPAND_AS_IID_ADDRESS(Name, Upper, Guid) &IID_PERFECT_HASH_##Upper##,
+#define EXPAND_AS_IID_ADDRESS(Name, Upper, Guid) &IID_PERFECT_HASH_##Upper,
 
 static const PCGUID PerfectHashInterfaceGuids[] = {
     NULL,
@@ -2372,46 +2521,6 @@ typedef PERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY
       *PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY;
 
 //
-// Define the self-test flags.
-//
-
-typedef union _PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS {
-
-    struct _Struct_size_bytes_(sizeof(ULONG)) {
-
-        //
-        // Unused bits.
-        //
-
-        ULONG Unused:32;
-    };
-
-    LONG AsLong;
-    ULONG AsULong;
-} PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS;
-C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS) == sizeof(ULONG));
-typedef PERFECT_HASH_CONTEXT_SELF_TEST_FLAGS
-      *PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS;
-
-FORCEINLINE
-HRESULT
-IsValidContextSelfTestFlags(
-    _In_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS SelfTestFlags
-    )
-{
-
-    if (!ARGUMENT_PRESENT(SelfTestFlags)) {
-        return E_POINTER;
-    }
-
-    if (SelfTestFlags->Unused != 0) {
-        return E_FAIL;
-    }
-
-    return S_OK;
-}
-
-//
 // Define the context bulk-create flags.
 //
 
@@ -3615,59 +3724,6 @@ struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_CREATE_PARAMETERS {
 typedef PERFECT_HASH_TABLE_CREATE_PARAMETERS
       *PPERFECT_HASH_TABLE_CREATE_PARAMETERS;
 
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ PCUNICODE_STRING TestDataDirectory,
-    _In_ PCUNICODE_STRING BaseOutputDirectory,
-    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _In_opt_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
-    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    );
-typedef PERFECT_HASH_CONTEXT_SELF_TEST *PPERFECT_HASH_CONTEXT_SELF_TEST;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG NumberOfArguments,
-    _In_ LPWSTR *ArgvW
-    );
-typedef PERFECT_HASH_CONTEXT_SELF_TEST_ARGVW
-      *PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW;
-
-typedef
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW)(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG NumberOfArguments,
-    _In_ LPWSTR *ArgvW,
-    _In_ PUNICODE_STRING TestDataDirectory,
-    _In_ PUNICODE_STRING BaseOutputDirectory,
-    _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    _Inout_ PULONG MaximumConcurrency,
-    _Inout_ PPERFECT_HASH_CONTEXT_SELF_TEST_FLAGS ContextSelfTestFlags,
-    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    _Inout_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
-    _Inout_ PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlags,
-    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    );
-typedef PERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-      *PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW;
-
 //
 // Bulk Create
 //
@@ -3782,6 +3838,28 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
       *PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW;
 
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPSTR *ArgvA
+    );
+typedef PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA
+      *PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPSTR *ArgvA
+    );
+typedef PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA
+      *PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA;
+
 typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT);
 
@@ -3790,20 +3868,23 @@ typedef struct _PERFECT_HASH_CONTEXT_VTBL {
     PPERFECT_HASH_CONTEXT_SET_BASE_OUTPUT_DIRECTORY SetBaseOutputDirectory;
     PPERFECT_HASH_CONTEXT_GET_BASE_OUTPUT_DIRECTORY GetBaseOutputDirectory;
 
-    PPERFECT_HASH_CONTEXT_SELF_TEST SelfTest;
-    PPERFECT_HASH_CONTEXT_SELF_TEST_ARGVW SelfTestArgvW;
-    PPERFECT_HASH_CONTEXT_EXTRACT_SELF_TEST_ARGS_FROM_ARGVW
-        ExtractSelfTestArgsFromArgvW;
-
     PPERFECT_HASH_CONTEXT_BULK_CREATE BulkCreate;
     PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVW BulkCreateArgvW;
     PPERFECT_HASH_CONTEXT_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
         ExtractBulkCreateArgsFromArgvW;
 
     PPERFECT_HASH_CONTEXT_TABLE_CREATE TableCreate;
+
     PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW TableCreateArgvW;
     PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
         ExtractTableCreateArgsFromArgvW;
+
+    //
+    // N.B. These two routines will only be present on non-Windows platforms.
+    //
+
+    PPERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA TableCreateArgvA;
+    PPERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA BulkCreateArgvA;
 
 } PERFECT_HASH_CONTEXT_VTBL;
 typedef PERFECT_HASH_CONTEXT_VTBL *PPERFECT_HASH_CONTEXT_VTBL;
@@ -4170,6 +4251,8 @@ BOOLEAN
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
       *PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME;
 
+#ifdef PH_WINDOWS
+
 //
 // Scaffolding required to support structured exception handling via __try
 // blocks without having to link to the C runtime library.
@@ -4274,13 +4357,26 @@ VOID
     );
 typedef _PENTER *P_PENTER;
 
+#else // PH_WINDOWS
+
+typedef
+ULONG
+(__cdecl __C_SPECIFIC_HANDLER)(
+    PVOID ExceptionRecord,
+    ULONG_PTR Frame,
+    PVOID Context,
+    PVOID Dispatch
+    );
+typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
+
+#endif
+
 //
 // Define bootstrap helpers.
 //
 
 typedef
 _Success_(return >= 0)
-_Check_return_opt_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_ERROR)(
     _In_ PCSZ FunctionName,
@@ -4292,7 +4388,6 @@ typedef PERFECT_HASH_PRINT_ERROR *PPERFECT_HASH_PRINT_ERROR;
 
 typedef
 _Success_(return >= 0)
-_Check_return_opt_
 HRESULT
 (NTAPI PERFECT_HASH_PRINT_MESSAGE)(
     _In_ ULONG Code,
@@ -4362,7 +4457,10 @@ IsValidPerfectHashEnumId(
                           __LINE__,      \
                           (ULONG)Result)
 
-#define PH_MESSAGE(Result, ...) \
+#define PH_MESSAGE(Result) \
+    PerfectHashPrintMessage((ULONG)Result)
+
+#define PH_MESSAGE_ARGS(Result, ...) \
     PerfectHashPrintMessage((ULONG)Result, __VA_ARGS__)
 
 //
@@ -4370,11 +4468,9 @@ IsValidPerfectHashEnumId(
 // to use multiple messages.
 //
 
-#define PH_USAGE(...)                                                     \
-    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE,             \
-                                   __VA_ARGS__);                          \
-    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1, \
-                                   __VA_ARGS__)
+#define PH_USAGE()                                                         \
+    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE);             \
+    PerfectHashPrintMessage((ULONG)PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
 
 #define PH_BREAK() __debugbreak()
 
@@ -4393,10 +4489,15 @@ PhRaiseException(
     _In_reads_opt_(nNumberOfArguments) CONST ULONG_PTR* lpArguments
     )
 {
+#if PH_WINDOWS
     RaiseException(dwExceptionCode,
                    dwExceptionFlags,
                    nNumberOfArguments,
                    lpArguments);
+#else
+    __debugbreak();
+    exit(dwExceptionCode);
+#endif
 }
 
 //
@@ -4409,6 +4510,7 @@ PhRaiseException(
     PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #else
 #define PH_RAISE(Result) \
+    __debugbreak();                                                    \
     PhRaiseException((DWORD)Result, EXCEPTION_NONCONTINUABLE, 0, NULL)
 #endif
 
@@ -4445,6 +4547,7 @@ static const char PerfectHashBuildConfigString[] = "Debug";
 
 
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
+#ifdef PH_WINDOWS
 FORCEINLINE
 _Success_(return >= 0)
 HRESULT
@@ -4552,7 +4655,81 @@ Return Value:
 
     return S_OK;
 }
-#endif
+#else // PH_WINDOWS
+
+extern PERFECT_HASH_PRINT_ERROR PerfectHashPrintError;
+extern PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
+extern DLL_GET_CLASS_OBJECT PerfectHashDllGetClassObject;
+
+FORCEINLINE
+_Success_(return >= 0)
+HRESULT
+PerfectHashBootstrap(
+    _Out_ PICLASSFACTORY *ClassFactoryPointer,
+    _Out_ PPERFECT_HASH_PRINT_ERROR *PrintErrorPointer,
+    _Out_ PPERFECT_HASH_PRINT_MESSAGE *PrintMessagePointer,
+    _Out_ HMODULE *ModulePointer
+    )
+/*++
+
+Routine Description:
+
+    This is a simple helper routine that loads the PerfectHash.dll library,
+    obtains an IClassFactory interface, and an error handling function pointer.
+    It is useful for using the library without needing any underlying system
+    COM support (e.g. CoCreateInstance).
+
+Arguments:
+
+    ClassFactoryPointer - Supplies the address of a variable that will receive
+        an instance of an ICLASSFACTORY interface if the routine is successful.
+        Caller is responsible for calling ClassFactory->Vtbl->Release() when
+        finished with the instance.
+
+    PrintErrorPointer - Supplies the address of a variable that will receive the
+        function pointer to the PerfectHashPrintError error handling routine.
+
+    PrintMessagePointer - Supplies the address of a variable that will receive
+        the function pointer to the PerfectHashPrintMessage routine.
+
+    ModulePointer - Supplies the address of a variable that will receive the
+        handle of the loaded module.  Callers can call FreeLibrary() against
+        this handle when finished with the library.
+
+Return Value:
+
+    S_OK - Routine completed successfully.
+
+    The following error codes may also be returned.  This is not an exhaustive
+    list.
+
+    E_FAIL - Failed to load PerfectHash.dll.
+
+    E_UNEXPECTED - Failed to resolve symbol from loaded PerfectHash.dll.
+
+--*/
+{
+    HRESULT Result;
+    PICLASSFACTORY ClassFactory;
+
+    Result = PerfectHashDllGetClassObject(&CLSID_PERFECT_HASH,
+                                          &IID_PERFECT_HASH_ICLASSFACTORY,
+                                          PPV(&ClassFactory));
+
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashDllGetClassObject, Result);
+        return Result;
+    }
+
+    *ClassFactoryPointer = ClassFactory;
+    *PrintErrorPointer = PerfectHashPrintError;
+    *PrintMessagePointer = PerfectHashPrintMessage;
+    *ModulePointer = NULL;
+
+    return S_OK;
+}
+#endif // PH_WINDOWS
+#endif // _PERFECT_HASH_INTERNAL_BUILD
 
 #ifdef __cplusplus
 } // extern "C"

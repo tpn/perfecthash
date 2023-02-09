@@ -70,6 +70,7 @@
     <ClInclude Include="BulkCreateBestCsv.h" />
     <ClInclude Include="Chm01.h" />
     <ClInclude Include="Chm01FileWork.h" />
+    <ClInclude Include="Chm01Private.h" />
     <ClInclude Include="Chunk.h" />
     <ClInclude Include="CompiledPerfectHashMacroGlue_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableBenchmarkFullExe_CSource_RawCString.h" />
@@ -208,6 +209,7 @@
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
+    <ClCompile Include="Chm01Shared.c" />
     <ClCompile Include="Chunk.c" />
     <ClCompile Include="Component.c" />
     <ClCompile Include="Cu.c" />
@@ -221,7 +223,6 @@
     <ClCompile Include="GraphImpl1.c" />
     <ClCompile Include="GuardedList.c" />
     <ClCompile Include="PerfectHashContextBulkCreate.c" />
-    <ClCompile Include="PerfectHashContextSelfTest.c" />
     <ClCompile Include="PerfectHashContextTableCreate.c" />
     <ClCompile Include="PerfectHashDirectory.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />

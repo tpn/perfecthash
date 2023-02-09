@@ -363,7 +363,7 @@ const BYTE NumberOfIndexImplStrings = ARRAYSIZE(IndexImplStringTuples);
 //
 
 #define EXPAND_AS_RNG_NAME(Name, Upper) \
-    const UNICODE_STRING PerfectHash##Name##RngName = RCS(L#Name);
+    const UNICODE_STRING PerfectHash##Name##RngName = RCS(L"" #Name);
 
 PERFECT_HASH_RNG_TABLE_ENTRY(EXPAND_AS_RNG_NAME);
 
@@ -381,7 +381,7 @@ const PCUNICODE_STRING RngNames[] = {
 //
 
 #define EXPAND_AS_CPU_ARCH_NAME(Name, Upper) \
-    const UNICODE_STRING PerfectHash##Name##CpuArchName = RCS(L#Name);
+    const UNICODE_STRING PerfectHash##Name##CpuArchName = RCS(L"" #Name);
 
 PERFECT_HASH_CPU_ARCH_TABLE_ENTRY(EXPAND_AS_CPU_ARCH_NAME);
 
@@ -399,7 +399,7 @@ const PCUNICODE_STRING CpuArchNames[] = {
 //
 
 #define EXPAND_AS_INTERFACE_NAME(Name, Upper, Guid) \
-    const UNICODE_STRING PerfectHash##Name##InterfaceName = RCS(L#Name);
+    const UNICODE_STRING PerfectHash##Name##InterfaceName = RCS(L"" #Name);
 
 PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_INTERFACE_NAME);
 
@@ -417,7 +417,7 @@ const PCUNICODE_STRING InterfaceNames[] = {
 //
 
 #define EXPAND_AS_ALGORITHM_NAME(Name, Upper) \
-    const UNICODE_STRING PerfectHash##Name##AlgorithmName = RCS(L#Name);
+    const UNICODE_STRING PerfectHash##Name##AlgorithmName = RCS(L"" #Name);
 
 PERFECT_HASH_ALGORITHM_TABLE_ENTRY(EXPAND_AS_ALGORITHM_NAME);
 
@@ -436,7 +436,7 @@ VERIFY_ALGORITHM_ARRAY_SIZE(AlgorithmNames);
 //
 
 #define EXPAND_AS_HASH_FUNCTION_NAME(Name, NumberOfSeeds, SeedMasks) \
-    const UNICODE_STRING PerfectHashHash##Name##FunctionName = RCS(L#Name);
+    const UNICODE_STRING PerfectHashHash##Name##FunctionName = RCS(L"" #Name);
 
 PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_HASH_FUNCTION_NAME)
 
@@ -455,7 +455,7 @@ VERIFY_HASH_ARRAY_SIZE(HashFunctionNames);
 //
 
 #define EXPAND_AS_MASK_FUNCTION_NAME(Name, Upper) \
-    const UNICODE_STRING PerfectHash##Name##MaskFunctionName = RCS(L#Name);
+    const UNICODE_STRING PerfectHash##Name##MaskFunctionName = RCS(L"" #Name);
 
 PERFECT_HASH_MASK_FUNCTION_TABLE_ENTRY(EXPAND_AS_MASK_FUNCTION_NAME);
 
@@ -475,7 +475,7 @@ VERIFY_MASK_ARRAY_SIZE(MaskFunctionNames);
 
 #define EXPAND_AS_BEST_COVERAGE_TYPE_NAME(Name, Comparison, Comparator)    \
     const UNICODE_STRING                                                   \
-        PerfectHash##Comparison##Name##BestCoverageTypeName = RCS(L#Name);
+        PerfectHash##Comparison##Name##BestCoverageTypeName = RCS(L"" #Name);
 
 BEST_COVERAGE_TYPE_TABLE_ENTRY(EXPAND_AS_BEST_COVERAGE_TYPE_NAME);
 
@@ -503,7 +503,7 @@ const STRING BestCoverageTypeNamesA[] = {
 
 #define EXPAND_AS_TABLE_CREATE_PARAMETER_NAME(Name)                    \
     const UNICODE_STRING PerfectHash##Name##TableCreateParameterName = \
-        RCS(L#Name);
+        RCS(L"" #Name);
 
 TABLE_CREATE_PARAMETER_TABLE_ENTRY(EXPAND_AS_TABLE_CREATE_PARAMETER_NAME);
 
@@ -561,7 +561,7 @@ const UNICODE_STRING ContextNewBestGraphEventPrefix =
     Suffix, Extension, Stream, Base                                     \
 )                                                                       \
     const UNICODE_STRING Context##Verb##d##Name##EventPrefix =          \
-        RCS(L"PerfectHashContext_" L#Verb L"d" L#Name L"EventPrefix_");
+        RCS(L"PerfectHashContext_" L"" #Verb L"d" L"" #Name L"EventPrefix_");
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
 SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME);
@@ -824,7 +824,17 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 // the leading NullInterfaceId and trailing InvalidInterfaceId slots.
 //
 
+#ifdef PH_WINDOWS
 #define NUMBER_OF_INTERFACES 14
+#else
+
+//
+// Account for no CU.
+//
+
+#define NUMBER_OF_INTERFACES 13
+#endif
+
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -843,7 +853,6 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_ALLOCATOR ALLOCATOR
 #define PERFECT_HASH_GUARDED_LIST GUARDED_LIST
 #define PERFECT_HASH_GRAPH GRAPH
-#define PERFECT_HASH_CU CU
 #define PERFECT_HASH_RNG RNG
 
 #define PERFECT_HASH_IUNKNOWN_VTBL IUNKNOWN_VTBL
@@ -852,8 +861,12 @@ C_ASSERT(NUMBER_OF_INTERFACES == PerfectHashInvalidInterfaceId-1);
 #define PERFECT_HASH_ALLOCATOR_VTBL ALLOCATOR_VTBL
 #define PERFECT_HASH_GUARDED_LIST_VTBL GUARDED_LIST_VTBL
 #define PERFECT_HASH_GRAPH_VTBL GRAPH_VTBL
-#define PERFECT_HASH_CU_VTBL CU_VTBL
 #define PERFECT_HASH_RNG_VTBL RNG_VTBL
+
+#ifdef PH_WINDOWS
+#define PERFECT_HASH_CU CU
+#define PERFECT_HASH_CU_VTBL CU_VTBL
+#endif
 
 #define EXPAND_AS_SIZEOF_COMPONENT(Name, Upper, Guid) \
     sizeof(PERFECT_HASH_##Upper),
@@ -910,7 +923,9 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Directory),
     -1, // GuardedList
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Graph),
+#ifdef PH_WINDOWS
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Cu),
+#endif
     -1, // Rng
 
     -1,
@@ -932,7 +947,9 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // Directory
     -1, // GuardedList
     -1, // Graph
+#ifdef PH_WINDOWS
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Cu),
+#endif
     -1, // Rng
 
     -1,
@@ -1014,17 +1031,21 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
     &PerfectHashContextGetMaximumConcurrency,
     &PerfectHashContextSetBaseOutputDirectory,
     &PerfectHashContextGetBaseOutputDirectory,
-    &PerfectHashContextSelfTest,
-    &PerfectHashContextSelfTestArgvW,
-    &PerfectHashContextExtractSelfTestArgsFromArgvW,
     &PerfectHashContextBulkCreate,
     &PerfectHashContextBulkCreateArgvW,
     &PerfectHashContextExtractBulkCreateArgsFromArgvW,
     &PerfectHashContextTableCreate,
     &PerfectHashContextTableCreateArgvW,
     &PerfectHashContextExtractTableCreateArgsFromArgvW,
+#ifdef PH_COMPAT
+    &PerfectHashContextTableCreateArgvA,
+    &PerfectHashContextBulkCreateArgvA,
+#else
+    NULL,
+    NULL,
+#endif
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 13);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 12);
 
 //
 // PerfectHashTable
@@ -1039,7 +1060,11 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableCreate,
     &PerfectHashTableLoad,
     &PerfectHashTableGetFlags,
+#ifdef PH_WINDOWS
     &PerfectHashTableCompile,
+#else
+    NULL,
+#endif
     &PerfectHashTableTest,
     &PerfectHashTableInsert,
     &PerfectHashTableLookup,
@@ -1078,8 +1103,13 @@ const RTL_VTBL RtlInterface = {
     &RtlDestroyBuffer,
     &RtlCopyPages,
     &RtlFillPages,
+#ifdef PH_WINDOWS
     &RtlCreateRandomObjectNames,
     &RtlCreateSingleRandomObjectName,
+#else
+    NULL,
+    NULL,
+#endif
     &RtlTryLargePageVirtualAlloc,
     &RtlTryLargePageVirtualAllocEx,
     &RtlTryLargePageCreateFileMappingW,
@@ -1220,6 +1250,9 @@ const GUARDED_LIST_VTBL GuardedListInterface = {
 };
 VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
 
+
+#ifdef PH_WINDOWS
+
 //
 // TSX versions of the GuardedList interface.  See dllmain.c for more info.
 //
@@ -1248,6 +1281,7 @@ const GUARDED_LIST_VTBL GuardedListTsxInterface = {
     &GuardedListReset,
 };
 VERIFY_VTBL_SIZE(GUARDED_LIST, 10);
+#endif
 
 //
 // Graph
@@ -1277,6 +1311,8 @@ GRAPH_VTBL GraphInterface = {
 };
 VERIFY_VTBL_SIZE(GRAPH, 15);
 
+#ifdef PH_WINDOWS
+
 //
 // Cu
 //
@@ -1290,6 +1326,8 @@ CU_VTBL CuInterface = {
     &LoadCuDeviceAttributes,
 };
 VERIFY_VTBL_SIZE(CU, 1);
+
+#endif
 
 //
 // Rng
@@ -1326,7 +1364,9 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashDirectoryInterface,
     &GuardedListInterface,
     &GraphInterface,
+#ifdef PH_WINDOWS
     &CuInterface,
+#endif
     &RngInterface,
 
     NULL,
@@ -1349,7 +1389,9 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
+#ifdef PH_WINDOWS
     (PCOMPONENT_INITIALIZE)&CuInitialize,
+#endif
     (PCOMPONENT_INITIALIZE)&RngInitialize,
 
     NULL,
@@ -1372,7 +1414,9 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
+#ifdef PH_WINDOWS
     (PCOMPONENT_RUNDOWN)&CuRundown,
+#endif
     (PCOMPONENT_RUNDOWN)&RngRundown,
 
     NULL,

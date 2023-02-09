@@ -157,7 +157,7 @@ Return Value:
     ULARGE_INTEGER NumberOfKeys;
     HANDLE OutputHandle = NULL;
     HANDLE ProcessHandle = NULL;
-    ULONGLONG RowBufferSize;
+    ULONGLONG RowBufferSize = 0;
     ULONG BytesWritten = 0;
     ULONG KeySizeInBytes = 0;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
@@ -258,6 +258,7 @@ Return Value:
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextTryPrepareCallbackTableValuesFile(
         Context,
         TableCreateFlags
@@ -267,6 +268,7 @@ Return Value:
         PH_ERROR(PerfectHashContextTryPrepareCallbackTableValuesFile, Result);
         goto Error;
     }
+#endif
 
     //
     // Create a "row buffer" we can use for the CSV file.
@@ -406,6 +408,7 @@ Return Value:
     // address of the array.
     //
 
+#ifdef PH_WINDOWS
     if (Context->Cu) {
         Result = PerfectHashKeysCopyToCuDevice(Keys,
                                                Context->Cu,
@@ -415,6 +418,7 @@ Return Value:
             goto Error;
         }
     }
+#endif
 
     //
     // Proceed with table creation.
@@ -507,7 +511,14 @@ Return Value:
         goto End;
     }
 
+#ifndef PH_WINDOWS
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+#endif
     _Analysis_assume_(CsvFile != NULL);
+#ifndef PH_WINDOWS
+#pragma clang diagnostic pop
+#endif
 
     //
     // N.B. The SAL annotations are required to suppress the concurrency
@@ -553,9 +564,11 @@ End:
 
     if (RowBuffer) {
         ASSERT(Context->RowBuffer);
+        ASSERT(RowBufferSize != 0);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
-                                          &RowBuffer);
+                                          &RowBuffer,
+                                          RowBufferSize);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
             Result = PH_E_SYSTEM_CALL_FAILED;
@@ -910,24 +923,24 @@ End:
 // create implementation; we should look at cleaning this up down the track.
 //
 
-#define GET_LENGTH(Name) (USHORT)wcslen(Name->Buffer) << (USHORT)1
-#define GET_MAX_LENGTH(Name) Name->Length + 2
+#define GET_LENGTH(Name) (USHORT)(wcslen(Name->Buffer) * sizeof(WCHAR))
+#define GET_MAX_LENGTH(Name) Name->Length + sizeof(WCHAR)
 
 #define VALIDATE_ID(Name, Upper)                                       \
     if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                  \
                                               10,                      \
-                                              (PULONG)##Name##Id))) {  \
+                                              (PULONG)Name##Id))) {    \
         return PH_E_INVALID_##Upper##_ID;                              \
-    } else if (*##Name##Id == 0) {                                     \
+    } else if (*Name##Id == 0) {                                       \
         Result = PerfectHashLookupIdForName(Rtl,                       \
                                             PerfectHash##Name##EnumId, \
                                             String,                    \
-                                            (PULONG)##Name##Id);       \
+                                            (PULONG)Name##Id);         \
         if (FAILED(Result)) {                                          \
             return PH_E_INVALID_##Upper##_ID;                          \
         }                                                              \
     }                                                                  \
-    if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {                  \
+    if (!IsValidPerfectHash##Name##Id(*Name##Id)) {                    \
         return PH_E_INVALID_##Upper##_ID;                              \
     }
 
@@ -1202,8 +1215,8 @@ Return Value:
         //
 
         String->Buffer += 2;
-        String->Length -= 4;
-        String->MaximumLength -= 4;
+        String->Length -= (sizeof(WCHAR) * 2);
+        String->MaximumLength -= (sizeof(WCHAR) * 2);
 
         //
         // Try each argument extraction routine for this argument; if it
@@ -1244,7 +1257,7 @@ Return Value:
         }
 
         if (Result == PH_E_COMMANDLINE_ARG_MISSING_VALUE) {
-            PH_MESSAGE(Result, String);
+            PH_MESSAGE_ARGS(Result, String);
             break;
         }
 
@@ -1263,7 +1276,7 @@ InvalidArg:
 
 
         Result = PH_E_INVALID_COMMANDLINE_ARG;
-        PH_MESSAGE(Result, String);
+        PH_MESSAGE_ARGS(Result, String);
         break;
     }
 
@@ -1382,6 +1395,7 @@ Return Value:
         return Result;
     }
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextInitializeFunctionHookCallbackDll(
         Context,
         &TableCreateFlags,
@@ -1395,6 +1409,7 @@ Return Value:
         );
         return Result;
     }
+#endif
 
     if (MaximumConcurrency > 0) {
         Result = Context->Vtbl->SetMaximumConcurrency(Context,
@@ -1417,6 +1432,7 @@ Return Value:
         return Result;
     }
 
+#ifdef PH_WINDOWS
     if (ContextTableCreateFlags.TryCuda != FALSE) {
         Result = PerfectHashContextInitializeCuda(Context,
                                                   &TableCreateParameters);
@@ -1425,6 +1441,7 @@ Return Value:
             return Result;
         }
     }
+#endif
 
     Result = Context->Vtbl->TableCreate(Context,
                                         &KeysPath,
@@ -1457,5 +1474,64 @@ Return Value:
 
     return Result;
 }
+
+#ifndef PH_WINDOWS
+PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA PerfectHashContextTableCreateArgvA;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextTableCreateArgvA(
+    PPERFECT_HASH_CONTEXT Context,
+    ULONG NumberOfArguments,
+    LPSTR *ArgvA
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that converts the argument array into a wide
+    version, and then calls PerfectHashContextTableCreateArgvW().
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
+        for which the arguments are to be extracted.
+
+    NumberOfArguments - Supplies the number of elements in the ArgvA array.
+
+    ArgvA - Supplies a pointer to an array of C string arguments.
+
+Return Value:
+
+    S_OK or an appropriate error code.
+
+--*/
+{
+    PWSTR *ArgvW;
+    PWSTR CommandLineW;
+    HRESULT Result;
+
+    CommandLineW = CommandLineArgvAToStringW(NumberOfArguments, ArgvA);
+    if (!CommandLineW) {
+        return E_OUTOFMEMORY;
+    }
+
+    ArgvW = CommandLineArgvAToArgvW(NumberOfArguments, ArgvA);
+    if (!ArgvW) {
+        return E_OUTOFMEMORY;
+    }
+
+    Result = PerfectHashContextTableCreateArgvW(Context,
+                                                NumberOfArguments,
+                                                ArgvW,
+                                                CommandLineW);
+
+    FREE_PTR(&ArgvW);
+    FREE_PTR(&CommandLineW);
+
+    return Result;
+}
+#endif
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

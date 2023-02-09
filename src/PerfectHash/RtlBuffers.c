@@ -460,7 +460,8 @@ HRESULT
 RtlDestroyBuffer(
     PRTL Rtl,
     HANDLE ProcessHandle,
-    PVOID *Address
+    PVOID *Address,
+    ULONGLONG Size
     )
 {
     //
@@ -471,19 +472,19 @@ RtlDestroyBuffer(
         return E_POINTER;
     }
 
+#ifdef PH_WINDOWS
+    UNREFERENCED_PARAMETER(Size);
+
     if (!ARGUMENT_PRESENT(ProcessHandle)) {
         return E_POINTER;
     }
+#endif
 
     if (!ARGUMENT_PRESENT(Address)) {
         return E_POINTER;
     }
 
-    if (!ARGUMENT_PRESENT(*Address)) {
-        return E_POINTER;
-    }
-
-    if (!VirtualFreeEx(ProcessHandle, *Address, 0, MEM_RELEASE)) {
+    if (!VirtualFreeEx(ProcessHandle, *Address, VFS(Size), MEM_RELEASE)) {
         SYS_ERROR(VirtualFreeEx);
         return E_FAIL;
     }

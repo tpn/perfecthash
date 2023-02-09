@@ -176,8 +176,8 @@ Return Value:
     HANDLE ProcessHandle = NULL;
     ULONG Failures;
     ULONG KeySizeInBytes;
-    ULONGLONG BufferSize;
-    ULONGLONG RowBufferSize;
+    ULONGLONG BufferSize = 0;
+    ULONGLONG RowBufferSize = 0;
     LONG_INTEGER AllocSize;
     ULONG BytesWritten = 0;
     WIN32_FIND_DATAW FindData;
@@ -282,6 +282,7 @@ Return Value:
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextTryPrepareCallbackTableValuesFile(
         Context,
         TableCreateFlags
@@ -291,6 +292,7 @@ Return Value:
         PH_ERROR(PerfectHashContextTryPrepareCallbackTableValuesFile, Result);
         goto Error;
     }
+#endif
 
     //
     // Create a buffer we can use for temporary path construction.  We want it
@@ -359,11 +361,11 @@ Return Value:
     //
     // Calculate the size required for a new concatenated wide string buffer
     // that combines the test data directory with the "*.keys" suffix.  The
-    // 2 * sizeof(*Dest) accounts for the joining slash and trailing NULL.
+    // `sizeof(WCHAR) * 2` accounts for the joining slash and trailing NULL.
     //
 
     AllocSize.LongPart = KeysDirectory->Length;
-    AllocSize.LongPart += Suffix->Length + (2 * sizeof(*Dest));
+    AllocSize.LongPart += Suffix->Length + (sizeof(WCHAR) * 2);
 
     //
     // Sanity check we haven't overflowed.
@@ -374,6 +376,7 @@ Return Value:
         PH_ERROR(PerfectHashContextBulkCreate_AllocSize, Result);
         goto Error;
     }
+
 
     WildcardPath.Buffer = (PWSTR)Buffer;
 
@@ -396,18 +399,18 @@ Return Value:
     //
 
     Dest = (PWSTR)RtlOffsetToPointer(WildcardPath.Buffer, Length);
-    *Dest++ = L'\\';
+    *Dest++ = PATHSEP;
     CopyInline(Dest, Suffix->Buffer, Suffix->Length);
 
     //
-    // Wire up the search path length and maximum length variables.  The max
-    // length will be our AllocSize, length will be this value minus 2 to
-    // account for the trailing NULL.
+    // Wire up the search path length and maximum length variables.
+    // The max length will be our AllocSize, length will be this value
+    // minus sizeof(*Dest) to account for the trailing NULL.
     //
 
     WildcardPath.MaximumLength = AllocSize.LowPart;
     WildcardPath.Length = AllocSize.LowPart - sizeof(*Dest);
-    ASSERT(WildcardPath.Buffer[WildcardPath.Length] == L'\0');
+    ASSERT(RTL_LAST_CHAR(&WildcardPath) == L'\0');
 
     //
     // Advance the buffer past this string allocation, up to the next 16-byte
@@ -461,7 +464,7 @@ Return Value:
 
     do {
         NumberOfKeysFiles++;
-    } while (FindNextFile(FindHandle, &FindData));
+    } while (FindNextFileW(FindHandle, &FindData));
 
     //
     // Sanity check we saw at least one *.keys file.
@@ -541,7 +544,7 @@ Return Value:
     //
 
     Dest = (PWSTR)RtlOffsetToPointer(KeysPathString.Buffer, Length);
-    *Dest++ = L'\\';
+    *Dest++ = PATHSEP;
 
     //
     // Update the length to account for the slash we just wrote, then make a
@@ -624,8 +627,8 @@ Return Value:
         Length = (USHORT)RtlPointerToOffset(KeysPathString.Buffer, Dest);
         KeysPathString.Length = Length;
         KeysPathString.MaximumLength = Length + sizeof(*Dest);
-        ASSERT(KeysPathString.Buffer[KeysPathString.Length >> 1] == L'\0');
-        ASSERT(&KeysPathString.Buffer[KeysPathString.Length >> 1] == Dest);
+        ASSERT(RTL_LAST_CHAR(&KeysPathString) == L'\0');
+        ASSERT(&RTL_LAST_CHAR(&KeysPathString) == Dest);
 
         Result = Context->Vtbl->CreateInstance(Context,
                                                NULL,
@@ -821,7 +824,7 @@ Return Value:
             break;
         }
 
-    } while (FindNextFile(FindHandle, &FindData));
+    } while (FindNextFileW(FindHandle, &FindData));
 
     //
     // Bulk create complete!
@@ -864,7 +867,8 @@ End:
         ASSERT(Context->RowBuffer);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
-                                          &RowBuffer);
+                                          &RowBuffer,
+                                          RowBufferSize);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
             Result = PH_E_SYSTEM_CALL_FAILED;
@@ -873,9 +877,11 @@ End:
     }
 
     if (BaseBuffer) {
+        ASSERT(BufferSize != 0);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           ProcessHandle,
-                                          &BaseBuffer);
+                                          &BaseBuffer,
+                                          BufferSize);
         if (FAILED(Result)) {
             SYS_ERROR(VirtualFree);
             Result = PH_E_SYSTEM_CALL_FAILED;
@@ -1238,24 +1244,24 @@ End:
 // Helper macros for argument extraction.
 //
 
-#define GET_LENGTH(Name) (USHORT)wcslen(Name->Buffer) << (USHORT)1
-#define GET_MAX_LENGTH(Name) Name->Length + 2
+#define GET_LENGTH(Name) ((USHORT)wcslen(Name->Buffer) * (USHORT)sizeof(WCHAR))
+#define GET_MAX_LENGTH(Name) Name->Length + sizeof(WCHAR)
 
 #define VALIDATE_ID(Name, Upper)                                       \
     if (FAILED(Rtl->RtlUnicodeStringToInteger(String,                  \
                                               10,                      \
-                                              (PULONG)##Name##Id))) {  \
+                                              (PULONG)Name##Id))) {    \
         return PH_E_INVALID_##Upper##_ID;                              \
-    } else if (*##Name##Id == 0) {                                     \
+    } else if (*Name##Id == 0) {                                       \
         Result = PerfectHashLookupIdForName(Rtl,                       \
                                             PerfectHash##Name##EnumId, \
                                             String,                    \
-                                            (PULONG)##Name##Id);       \
+                                            (PULONG)Name##Id);         \
         if (FAILED(Result)) {                                          \
             return PH_E_INVALID_##Upper##_ID;                          \
         }                                                              \
     }                                                                  \
-    if (!IsValidPerfectHash##Name##Id(*##Name##Id)) {                  \
+    if (!IsValidPerfectHash##Name##Id(*Name##Id)) {                    \
         return PH_E_INVALID_##Upper##_ID;                              \
     }
 
@@ -1540,8 +1546,8 @@ Return Value:
         //
 
         String->Buffer += 2;
-        String->Length -= 4;
-        String->MaximumLength -= 4;
+        String->Length -= (sizeof(WCHAR) * 2);
+        String->MaximumLength -= (sizeof(WCHAR) * 2);
 
         //
         // Try each argument extraction routine for this argument; if it
@@ -1587,7 +1593,7 @@ Return Value:
         }
 
         if (Result == PH_E_COMMANDLINE_ARG_MISSING_VALUE) {
-            PH_MESSAGE(Result, String);
+            PH_MESSAGE_ARGS(Result, String);
             break;
         }
 
@@ -1606,7 +1612,7 @@ InvalidArg:
 
 
         Result = PH_E_INVALID_COMMANDLINE_ARG;
-        PH_MESSAGE(Result, String);
+        PH_MESSAGE_ARGS(Result, String);
         break;
     }
 
@@ -1729,6 +1735,7 @@ Return Value:
         return Result;
     }
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextInitializeFunctionHookCallbackDll(
         Context,
         &TableCreateFlags,
@@ -1742,6 +1749,7 @@ Return Value:
         );
         return Result;
     }
+#endif
 
 
     if (MaximumConcurrency > 0) {
@@ -1796,5 +1804,63 @@ Return Value:
 
     return Result;
 }
+
+#ifndef PH_WINDOWS
+PERFECT_HASH_CONTEXT_BULK_CREATE_ARGVA PerfectHashContextBulkCreateArgvA;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextBulkCreateArgvA(
+    PPERFECT_HASH_CONTEXT Context,
+    ULONG NumberOfArguments,
+    LPSTR *ArgvA
+    )
+/*++
+
+Routine Description:
+
+    This is a helper routine that converts the argument array into a wide
+    version, and then calls PerfectHashContextBulkCreateArgvW().
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance
+        for which the arguments are to be extracted.
+
+    NumberOfArguments - Supplies the number of elements in the ArgvA array.
+
+    ArgvA - Supplies a pointer to an array of C string arguments.
+
+Return Value:
+
+    S_OK or an appropriate error code.
+
+--*/
+{
+    PWSTR *ArgvW;
+    PWSTR CommandLineW;
+    HRESULT Result;
+
+    CommandLineW = CommandLineArgvAToStringW(NumberOfArguments, ArgvA);
+    if (!CommandLineW) {
+        return E_OUTOFMEMORY;
+    }
+
+    ArgvW = CommandLineArgvAToArgvW(NumberOfArguments, ArgvA);
+    if (!ArgvW) {
+        return E_OUTOFMEMORY;
+    }
+
+    Result = PerfectHashContextBulkCreateArgvW(Context,
+                                                NumberOfArguments,
+                                                ArgvW,
+                                                CommandLineW);
+
+    FREE_PTR(&ArgvW);
+    FREE_PTR(&CommandLineW);
+
+    return Result;
+}
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

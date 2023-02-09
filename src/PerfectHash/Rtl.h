@@ -36,26 +36,36 @@ Abstract:
 extern "C" {
 #endif
 
+#if PH_WINDOWS
 #include <minwindef.h>
+#endif
+
+#ifdef PH_WINDOWS
+#define PATHSEP L'\\'
+#else
+#define PATHSEP   L'/'
+#define PATHSEP_W L'/'
+#define PATHSEP_A  '/'
+#endif
 
 //
 // NT typedefs.
 //
 
-#ifdef _WIN64
 #define RTL_CONSTANT_STRING(s) { \
     sizeof(s) - sizeof((s)[0]),  \
-    sizeof( s ),                 \
+    sizeof(s),                   \
     0,                           \
     s                            \
 }
-#else
-#define RTL_CONSTANT_STRING(s) { \
-    sizeof(s) - sizeof((s)[0]),  \
-    sizeof( s ),                 \
-    s                            \
-}
-#endif
+
+#define RTL_LAST_CHAR(s) (                              \
+    (s)->Buffer[(s)->Length / (sizeof((s)->Buffer[0]))] \
+)
+
+#define RTL_SECOND_LAST_CHAR(s) (                         \
+    (s)->Buffer[(s)->Length / (sizeof((s)->Buffer[0]))-1] \
+)
 
 typedef union _ULONG_INTEGER {
     struct {
@@ -109,6 +119,21 @@ typedef union _FILETIME64 {
     LONGLONG AsLongLong;
     ULONGLONG AsULongLong;
 } FILETIME64, *PFILETIME64;
+
+
+//
+// Calls to VirtualFree() need to have their size parameter wrapped by
+// VFS() to ensure it works on Windows and non-Windows platforms.  (Windows
+// enforces size == 0 when MEM_RELEASE, but we need the size on *nix when we
+// unmap the backing address.)
+//
+
+#ifdef PH_WINDOWS
+#define VFS(Size) 0
+#else
+#define VFS(Size) Size
+#endif
+
 
 #ifndef PAGE_SHIFT
 #define PAGE_SHIFT 12
@@ -247,12 +272,18 @@ typedef union _FILETIME64 {
 // XMM, YMM, and ZMM registers.
 //
 
+#ifdef PH_WINDOWS
 typedef __m128i DECLSPEC_ALIGN(XMMWORD_ALIGNMENT) XMMWORD, *PXMMWORD;
 typedef __m256i DECLSPEC_ALIGN(YMMWORD_ALIGNMENT) YMMWORD, *PYMMWORD;
 typedef __m512i DECLSPEC_ALIGN(ZMMWORD_ALIGNMENT) ZMMWORD, *PZMMWORD;
 C_ASSERT(sizeof(XMMWORD) == XMMWORD_ALIGNMENT);
 C_ASSERT(sizeof(YMMWORD) == YMMWORD_ALIGNMENT);
 C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
+#else
+typedef __m128i XMMWORD, *PXMMWORD;
+typedef __m256i YMMWORD, *PYMMWORD;
+typedef __m512i ZMMWORD, *PZMMWORD;
+#endif
 
 //
 // AVX-512 masks.
@@ -388,6 +419,8 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define NOTHING
 #endif
 
+#if PH_WINDOWS
+
 #ifndef DECLSPEC_NOINLINE
 #define DECLSPEC_NOINLINE __declspec(noinline)
 #endif
@@ -404,7 +437,15 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define FORCEINLINE __forceinline
 #endif
 
+#else // PH_WINDOWS
 
+#define FORCEINLINE static inline __attribute__((always_inline))
+#define DECLSPEC_NOINLINE __attribute__((noinline))
+#define NOINLINE __attribute__((noinline))
+
+#endif
+
+#ifdef PH_WINDOWS
 #ifdef RtlCopyMemory
 #undef RtlCopyMemory
 #endif
@@ -440,6 +481,29 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #undef ZeroMemory
 #endif
 #define ZeroMemory(Dest, Length) FillMemory(Dest, Length, 0)
+#else // PH_WINDOWS
+
+#ifdef CopyMemory
+#undef CopyMemory
+#endif
+#define CopyMemory RtlCopyMemory
+
+#ifdef MoveMemory
+#undef MoveMemory
+#endif
+#define MoveMemory RtlMoveMemory
+
+#ifdef FillMemory
+#undef FillMemory
+#endif
+#define FillMemory RtlFillMemory
+
+#ifdef ZeroMemory
+#undef ZeroMemory
+#endif
+#define ZeroMemory RtlZeroMemory
+
+#endif // PH_WINDOWS
 
 #ifndef ZeroStruct
 #define ZeroStruct(Name) ZeroMemory(&Name, sizeof(Name))
@@ -465,17 +529,13 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define RtlPointerToOffset(B,P)    ((ULONG_PTR)(((PCHAR)(P)) - ((PCHAR)(B))))
 #endif
 
+#ifdef PH_WINDOWS
 #define RtlInitOnceToPointer(A) (                                           \
     ((ULONG_PTR)(A) & ~(ULONG_PTR)((1 << INIT_ONCE_CTX_RESERVED_BITS) - 1)) \
 )
-
-#ifndef BitTestAndSet
-#define BitTestAndSet _bittestandset
+#else
+#define RtlInitOnceToPointer(A) (((PINIT_ONCE)(A))->Context)
 #endif
-
-#define FastSetBit(Bitmap, BitNumber) (             \
-    BitTestAndSet((PLONG)Bitmap->Buffer, BitNumber) \
-)
 
 #ifndef FlagOn
 #define FlagOn(_F,_SF)        ((_F) & (_SF))
@@ -1351,7 +1411,7 @@ ZeroMemoryInline(
         Fill = 0;
     }
 
-#ifdef _M_X64
+#if defined(_M_X64) && defined(PH_WINDOWS)
     __stosq(Dest, FillQuad, NumberOfQuadwords);
 #else
     while (NumberOfQuadwords) {
@@ -1378,7 +1438,7 @@ ZeroMemoryInline(
 // just use __stosq().
 //
 
-#ifdef _M_X64
+#if defined(_M_X64) && defined(PH_WINDOWS)
 
 #define ZeroStructInline(Name) \
     __stosq((PDWORD64)&Name, 0, (sizeof(Name) >> 3))
@@ -1387,8 +1447,15 @@ ZeroMemoryInline(
     __stosq((PDWORD64)Name, 0, (sizeof(*Name) >> 3))
 
 #else
-#define ZeroStructInline(Name) ZeroInline(&Name, sizeof(Name))
-#define ZeroStructPointer(Name) ZeroInline(Name, sizeof(*Name))
+#define ZeroStructInline(Name) \
+    memset((PDWORD64)&Name, 0, sizeof(Name))
+
+#define ZeroStructPointerInline(Name) \
+    memset((PDWORD64)Name, 0, (sizeof(*Name)))
+#endif
+
+#ifndef PH_WINDOWS
+#define SecureZeroMemory ZeroInline
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1567,6 +1634,7 @@ typedef _WSPLITPATH_S *P_WSPLITPATH_S;
 // Bitmaps
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifdef PH_WINDOWS
 typedef struct _RTL_BITMAP {
 
     //
@@ -1590,6 +1658,7 @@ typedef struct _RTL_BITMAP {
 
 } RTL_BITMAP;
 typedef RTL_BITMAP *PRTL_BITMAP;
+#endif
 
 typedef struct _RTL_BITMAP_RUN {
     ULONG StartingIndex;
@@ -1756,10 +1825,11 @@ ULONG
 
 typedef
 ULONG
-(NTAPI *PRTL_FIND_LONGEST_RUN_CLEAR)(
+(NTAPI RTL_FIND_LONGEST_RUN_CLEAR)(
     _In_ PRTL_BITMAP BitMapHeader,
     _Out_ PULONG StartingIndex
     );
+typedef RTL_FIND_LONGEST_RUN_CLEAR *PRTL_FIND_LONGEST_RUN_CLEAR;
 
 typedef
 ULONG
@@ -1776,9 +1846,10 @@ ULONG
 
 typedef
 ULONG
-(NTAPI *PRTL_NUMBER_OF_SET_BITS)(
+(NTAPI RTL_NUMBER_OF_SET_BITS)(
     _In_ PRTL_BITMAP BitMapHeader
     );
+typedef RTL_NUMBER_OF_SET_BITS *PRTL_NUMBER_OF_SET_BITS;
 
 typedef
 BOOLEAN
@@ -2240,7 +2311,7 @@ IsValidNullTerminatedUnicodeStringWithMinimumLengthInChars(
         String->Length >= Length &&
         String->MaximumLength >= MaximumLength &&
         sizeof(WCHAR) == (String->MaximumLength - String->Length) &&
-        String->Buffer[String->Length >> 1] == L'\0'
+        String->Buffer[String->Length / sizeof(WCHAR)] == L'\0'
     );
 }
 
@@ -2264,7 +2335,7 @@ IsValidNullTerminatedStringWithMinimumLengthInChars(
         String->Length >= Length &&
         String->MaximumLength >= MaximumLength &&
         sizeof(CHAR) == (String->MaximumLength - String->Length) &&
-        String->Buffer[String->Length >> 1] == '\0'
+        RTL_LAST_CHAR(String) == '\0'
     );
 }
 
@@ -2440,7 +2511,8 @@ BOOLEAN
 FindCharInUnicodeString(
     _In_ PCUNICODE_STRING String,
     _In_ WCHAR Char,
-    _In_ _Field_range_(<=, String->Length >> 1) USHORT StartAtCharOffset,
+    _In_ _Field_range_(<=, String->Length / sizeof(WCHAR))
+        USHORT StartAtCharOffset,
     _Out_opt_ PUSHORT FoundAtCharOffset
     )
 {
@@ -2450,7 +2522,7 @@ FindCharInUnicodeString(
     BOOLEAN Found = FALSE;
     USHORT Start = StartAtCharOffset;
 
-    Count = String->Length >> 1;
+    Count = String->Length / sizeof(WCHAR);
 
     if (!StartAtCharOffset || StartAtCharOffset > Count) {
         Start = 0;
@@ -2481,7 +2553,7 @@ VerifyNoSlashInUnicodeString(
     _In_ PCUNICODE_STRING String
     )
 {
-    return !FindCharInUnicodeString(String, L'\\', 0, NULL);
+    return !FindCharInUnicodeString(String, PATHSEP, 0, NULL);
 }
 
 //
@@ -2524,7 +2596,8 @@ HRESULT
 (STDAPICALLTYPE RTL_DESTROY_BUFFER)(
     _In_ PRTL Rtl,
     _In_ HANDLE ProcessHandle,
-    _Inout_ PVOID *BufferAddress
+    _Inout_ PVOID *BufferAddress,
+    _In_ ULONGLONG Size
     );
 typedef RTL_DESTROY_BUFFER *PRTL_DESTROY_BUFFER;
 
@@ -3217,7 +3290,8 @@ typedef struct _RTL {
     };
 
     ULONG NumberOfModules;
-    ULONG Padding2;
+
+    ULONG ProcInfoBufferSizeInBytes;
 
     //
     // Inline the Rtl functions for convenience.
@@ -3361,6 +3435,57 @@ extern RTL_COPY_PAGES RtlCopyPagesNonTemporal_AVX2;
 extern RTL_FILL_PAGES RtlFillPagesNonTemporal_AVX2;
 extern RTL_COPY_PAGES RtlCopyPages_AVX2;
 extern RTL_FILL_PAGES RtlFillPages_AVX2;
+#endif
+
+#ifdef PH_COMPAT
+extern RTL_COPY_MEMORY RtlCopyMemory;
+extern RTL_MOVE_MEMORY RtlMoveMemory;
+extern RTL_COMPARE_MEMORY RtlCompareMemory;
+extern RTL_NUMBER_OF_SET_BITS RtlNumberOfSetBits;
+extern RTL_EQUAL_UNICODE_STRING RtlEqualUnicodeString;
+extern RTL_FIND_LONGEST_RUN_CLEAR RtlFindLongestRunClear;
+extern RTL_UNICODE_STRING_TO_INT64 RtlUnicodeStringToInt64;
+extern RTL_UNICODE_STRING_TO_INTEGER RtlUnicodeStringToInteger;
+extern RTL_APPEND_UNICODE_STRING_TO_STRING RtlAppendUnicodeStringToString;
+#endif
+
+
+//
+// Compat glue.
+//
+
+#ifdef PH_WINDOWS
+BOOL
+CloseEvent(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
+
+BOOL
+CloseDirectory(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
+
+BOOL
+CloseFile(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    );
+#endif
+
+FORCEINLINE
+VOID
+ResetSRWLock(PSRWLOCK Lock)
+{
+#ifdef PH_WINDOWS
+    Lock->Ptr = NULL;
+#else
+    ZeroStructPointerInline(Lock);
+#endif
+}
+
+#ifdef PH_WINDOWS
+#define TLS_KEY_TYPE ULONG
+#else
+#define TLS_KEY_TYPE pthread_key_t
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

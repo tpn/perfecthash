@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -59,7 +59,7 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         //      is set via:
         //
         //      #define TlsContextIsGlobalComponentDisabled(TlsContext, Id) \
-        //          BitTest(&TlsContext->Flags.AsLong, Id)
+        //          TestBit32(&TlsContext->Flags.AsLong, Id)
         //
         //      If you add new global components, take special care to ensure
         //      the relevant interface bit position is used.  (This will lead
@@ -81,9 +81,6 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
 } PERFECT_HASH_TLS_CONTEXT_FLAGS;
 C_ASSERT(sizeof(PERFECT_HASH_TLS_CONTEXT_FLAGS) == sizeof(ULONG));
 typedef PERFECT_HASH_TLS_CONTEXT_FLAGS *PPERFECT_HASH_TLS_CONTEXT_FLAGS;
-
-#define TlsContextIsGlobalComponentDisabled(TlsContext, Id) \
-    BitTest(&(TlsContext)->Flags.AsLong, (LONG)Id)
 
 #define TlsContextDisableGlobalAllocator(TlsContext)          \
     TlsContext->Flags.DisableGlobalAllocatorComponent = TRUE; \
@@ -144,6 +141,28 @@ typedef struct _PERFECT_HASH_TLS_CONTEXT {
 } PERFECT_HASH_TLS_CONTEXT;
 typedef PERFECT_HASH_TLS_CONTEXT *PPERFECT_HASH_TLS_CONTEXT;
 
+#define TlsContextIsGlobalComponentDisabled2(TlsContext, Id) \
+    TestBit32(&(TlsContext)->Flags.AsLong, (LONG)Id)
+
+static
+BOOL
+TlsContextIsGlobalComponentDisabled(
+    _In_ PPERFECT_HASH_TLS_CONTEXT TlsContext,
+    _In_ PERFECT_HASH_INTERFACE_ID Id
+    )
+{
+    BOOL Result;
+    BOOL Result2;
+    LONG Flags;
+
+    Flags = TlsContext->Flags.AsLong;
+
+    Result = TestBit32(&Flags, (LONG)Id);
+    Result2 = TlsContextIsGlobalComponentDisabled2(TlsContext, Id);
+    ASSERT(Result == Result2);
+    return Result;
+}
+
 extern ULONG PerfectHashTlsIndex;
 
 //
@@ -161,8 +180,10 @@ BOOLEAN
     );
 typedef PERFECT_HASH_TLS_FUNCTION *PPERFECT_HASH_TLS_FUNCTION;
 
+#ifdef PH_WINDOWS
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessAttach;
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessDetach;
+#endif
 
 //
 // Define TLS Get/Set context functions.

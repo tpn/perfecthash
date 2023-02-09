@@ -175,7 +175,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_PATH,
-                                        &Path);
+                                        PPV(&Path));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCreateInstance, Result);
@@ -239,7 +239,7 @@ Return Value:
     Result = Keys->Vtbl->CreateInstance(Keys,
                                         NULL,
                                         &IID_PERFECT_HASH_FILE,
-                                        &File);
+                                        PPV(&File));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashFileCreateInstance, Result);
@@ -423,7 +423,7 @@ Return Value:
     //
 
     Offset = (USHORT)RtlPointerToOffset(Suffix->Buffer, Dest);
-    Count = AlgorithmName->Length >> 1;
+    Count = AlgorithmName->Length / sizeof(WCHAR);
     CopyInline(Dest, AlgorithmName->Buffer, AlgorithmName->Length);
     Dest += Count;
 
@@ -432,7 +432,7 @@ Return Value:
     //
 
     *Dest++ = L'_';
-    Count = HashFunctionName->Length >> 1;
+    Count = HashFunctionName->Length / sizeof(WCHAR);
     CopyInline(Dest, HashFunctionName->Buffer, HashFunctionName->Length);
     Dest += Count;
 
@@ -441,7 +441,7 @@ Return Value:
     //
 
     *Dest++ = L'_';
-    Count = MaskFunctionName->Length >> 1;
+    Count = MaskFunctionName->Length / sizeof(WCHAR);
     CopyInline(Dest, MaskFunctionName->Buffer, MaskFunctionName->Length);
     Dest += Count;
 
@@ -449,7 +449,7 @@ Return Value:
     // AdditionalSuffix
     //
 
-    Count = AdditionalSuffix->Length >> 1;
+    Count = AdditionalSuffix->Length / sizeof(WCHAR);
     CopyInline(Dest, AdditionalSuffix->Buffer, AdditionalSuffix->Length);
     Dest += Count;
 

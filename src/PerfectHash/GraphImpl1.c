@@ -27,6 +27,19 @@ Abstract:
 #include "GraphImpl1.h"
 #include "PerfectHashEventsPrivate.h"
 
+//
+// Forward decls.
+//
+
+GRAPH_CYCLIC_DELETE_EDGE GraphCyclicDeleteEdge;
+GRAPH_FIND_DEGREE1_EDGE GraphFindDegree1Edge;
+GRAPH_NEIGHBORS_ITERATOR GraphNeighborsIterator;
+GRAPH_NEXT_NEIGHBOR GraphNextNeighbor;
+GRAPH_EDGE_ID GraphEdgeId;
+GRAPH_DELETE_EDGE GraphDeleteEdge;
+GRAPH_CHECK_EDGE GraphCheckEdge;
+GRAPH_TRAVERSE GraphTraverseRecursive;
+
 #define IsEmpty(Value) ((ULONG)Value == EMPTY)
 #define IsNeighborEmpty(Neighbor) ((ULONG)Neighbor == EMPTY)
 

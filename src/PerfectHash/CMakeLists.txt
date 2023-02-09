@@ -9,6 +9,7 @@ set(Private_Header_Files
     "BulkCreateCsv.h"
     "Chm01.h"
     "Chm01FileWork.h"
+    "Chm01Private.h"
     "Chunk.h"
     "Component.h"
     "Cu.h"
@@ -124,11 +125,8 @@ set(Resource_Files
 source_group("Resource Files" FILES ${Resource_Files})
 
 set(Source_Files
-    "_dtoa.c"
-    "_pow.c"
-    "_strtod.c"
     "BitManipulation.c"
-    "Chm01.c"
+    "Chm01Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"
     "Chm01FileWorkCHeaderCompiledPerfectHashFile.c"
@@ -170,26 +168,16 @@ set(Source_Files
     "Chm01Index.c"
     "Chunk.c"
     "Component.c"
-    "Cu.c"
     "dllmain.c"
-    "ExtractArg.c"
     "Graph.c"
-    "GraphAvx.c"
     "GraphImpl1.c"
     "GraphImpl2.c"
     "GraphImpl3.c"
     "GuardedList.c"
     "Math.c"
     "PerfectHashAllocator.c"
-    "PerfectHashConstants.c"
     "PerfectHashContext.c"
-    "PerfectHashContextBulkCreate.c"
-    "PerfectHashContextSelfTest.c"
     "PerfectHashContextTableCreate.c"
-    "PerfectHashCu.c"
-    "PerfectHashDirectory.c"
-    "PerfectHashErrorHandling.c"
-    "PerfectHashFile.c"
     "PerfectHashKeys.c"
     "PerfectHashKeysLoad.c"
     "PerfectHashKeysLoadTableSize.c"
@@ -197,7 +185,6 @@ set(Source_Files
     "PerfectHashPath.c"
     "PerfectHashPrimes.c"
     "PerfectHashTable.c"
-    "PerfectHashTableCompile.c"
     "PerfectHashTableCreate.c"
     "PerfectHashTableDelete.c"
     "PerfectHashTableHash.c"
@@ -210,35 +197,73 @@ set(Source_Files
     "PerfectHashTableNames.c"
     "PerfectHashTableTest.c"
     "PerfectHashTls.c"
+    "RtlBuffers.c"
+    "RtlLargePages.c"
+    "PerfectHashFile.c"
+    "PerfectHashDirectory.c"
+    "PerfectHashErrorHandling.c"
+    "PerfectHashContextBulkCreate.c"
     "Rng.c"
     "RngPhilox4x32.c"
     "Rtl.c"
-    "RtlBuffers.c"
-    "RtlErrorHandling.c"
-    "RtlLargePages.c"
     "RtlMemory.c"
     "RtlOutput.c"
-    "RtlPrivilege.c"
-    "RtlRandom.c"
-    "RtlUuid.c"
-    "Security.c"
     "stdafx.c"
-    "SymbolLoader.c"
     "VCProjectFileChunks.c"
-    "PerfectHashTableFastIndexEx_x64_01.asm"
-    "RtlCopyPages_x64.asm"
-    "RtlFillPages_x64.asm"
-    "memset_x64.asm"
+    "ExtractArg.c"
+    "PerfectHashConstants.c"
+    "_pow.c"
+    "_dtoa.c"
+    "_strtod.c"
 )
+
+if (IS_WINDOWS)
+    list(
+        APPEND Source_Files
+        "Cu.c"
+        "Chm01.c"
+        "RtlUuid.c"
+        "Security.c"
+        "GraphAvx.c"
+        "RtlRandom.c"
+        "memset_x64.asm"
+        "RtlPrivilege.c"
+        "SymbolLoader.c"
+        "PerfectHashCu.c"
+        "RtlErrorHandling.c"
+        "RtlCopyPages_x64.asm"
+        "RtlFillPages_x64.asm"
+        "PerfectHashTableCompile.c"
+        "PerfectHashContextBulkCreate.c"
+        "PerfectHashTableFastIndexEx_x64_01.asm"
+    )
+else()
+    list(
+        APPEND Source_Files
+        "mem.c"
+        "bitmap.c"
+        "thpool.c"
+        "unicode.c"
+        "Chm01Compat.c"
+        "PerfectHashCompat.c"
+    )
+endif()
+
 source_group("Source Files" FILES ${Source_Files})
 
 set(ALL_FILES
     ${Private_Header_Files}
     ${Private_Header_Files_28Auto-Generated29}
     ${Public_Header_Files}
-    ${Resource_Files}
     ${Source_Files}
 )
+
+if (IS_WINDOWS)
+    list(
+        APPEND ALL_FILES
+        ${Resource_Files}
+    )
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
 
@@ -257,7 +282,9 @@ set(ROOT_NAMESPACE PerfectHash)
 ################################################################################
 # Compile definitions
 ################################################################################
-target_compile_definitions(${PROJECT_NAME} PRIVATE
+target_compile_definitions(
+    ${PROJECT_NAME}
+    PRIVATE
     "_PERFECT_HASH_INTERNAL_BUILD"
 )
 
@@ -272,6 +299,9 @@ if (HookPenter STREQUAL "1")
     target_link_libraries(${PROJECT_NAME} PUBLIC FunctionHook)
 endif()
 
-set(ADDITIONAL_LIBRARY_DEPENDENCIES "rpcrt4")
-target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
+if (IS_WINDOWS)
+    set(ADDITIONAL_LIBRARY_DEPENDENCIES "rpcrt4")
+    target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
+endif()
 
+#  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

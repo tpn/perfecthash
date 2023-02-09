@@ -53,7 +53,7 @@ PrepareMakefileMainMkFileChm01(
     //
 
 #define EXPAND_AS_ASSIGN_EVENT(Verb, VUpper, Name, Upper) \
-    *##Verb##Event++ = Context->##Verb##d##Name##Event;
+    *Verb##Event++ = Context->Verb##d##Name##Event;
 
     PREPARE_SUBMAKEFILE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
 
@@ -94,7 +94,7 @@ PrepareMakefileMainMkFileChm01(
     //
 
 #define EXPAND_AS_WRITE_SUBMAKEFILE(Verb, VUpper, Name, Upper) \
-    SubMakefileFile = Table->##Name;                           \
+    SubMakefileFile = Table->Name;                             \
     if (!SubMakefileFile) {                                    \
         goto Error;                                            \
     }                                                          \

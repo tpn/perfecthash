@@ -206,6 +206,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
         PULONG Values;
     };
 
+    ULONGLONG ValuesArraySizeInBytes;
+
     //
     // Pointer to the base address of the table data.  During creation, this
     // is referred to as the "Assigned" array.  During the load phase, it is
@@ -218,6 +220,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
         PULONG TableData;
         PVOID TableDataBaseAddress;
     };
+
+    ULONGLONG TableDataSizeInBytes;
 
     //
     // Capture the number of elements in the underlying perfect hash table.

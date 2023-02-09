@@ -46,15 +46,15 @@ extern volatile ULONG CtrlCPressed;
 // Define a helper macro for validating flags passed as parameters to routines.
 //
 
-#define VALIDATE_FLAGS(Name, Upper, Type)                            \
-    if (ARGUMENT_PRESENT(##Name##FlagsPointer)) {                    \
-        if (FAILED(IsValid##Name##Flags(##Name##FlagsPointer))) {    \
-            return PH_E_INVALID_##Upper##_FLAGS;                     \
-        } else {                                                     \
-            ##Name##Flags.As##Type = ##Name##FlagsPointer->As##Type; \
-        }                                                            \
-    } else {                                                         \
-        ##Name##Flags.As##Type = 0;                                  \
+#define VALIDATE_FLAGS(Name, Upper, Type)                        \
+    if (ARGUMENT_PRESENT(Name##FlagsPointer)) {                  \
+        if (FAILED(IsValid##Name##Flags(Name##FlagsPointer))) {  \
+            return PH_E_INVALID_##Upper##_FLAGS;                 \
+        } else {                                                 \
+            Name##Flags.As##Type = Name##FlagsPointer->As##Type; \
+        }                                                        \
+    } else {                                                     \
+        Name##Flags.As##Type = 0;                                \
     }
 
 //
@@ -512,6 +512,7 @@ typedef LOAD_SYMBOLS_FROM_MULTIPLE_MODULES *PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES;
 // Exception helpers.
 //
 
+#ifdef PH_WINDOWS
 typedef
 EXCEPTION_DISPOSITION
 (__cdecl RTL_EXCEPTION_HANDLER)(
@@ -538,7 +539,10 @@ VOID
     VOID
     );
 typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
+#endif
 
+
+#ifdef PH_WINDOWS
 //
 // Inline helper functions.
 //
@@ -636,5 +640,28 @@ Return Value:
         YieldProcessor();
     }
 }
+#endif // PH_WINDOWS
+
+
+FORCEINLINE
+BOOLEAN
+DoesErrorCodeWantAlgoHashMaskTableAppended(
+    _In_ ULONG ErrorCode
+    )
+{
+    HRESULT Code;
+    BOOLEAN Result;
+
+    Code = (HRESULT)ErrorCode;
+
+    //
+    // We append the algo/hash/mask table text for the usage string.
+    //
+
+    Result = (Code == PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1);
+
+    return Result;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

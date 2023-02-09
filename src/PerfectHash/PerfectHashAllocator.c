@@ -14,12 +14,7 @@ Abstract:
 
 #include "stdafx.h"
 
-#ifdef _WIN64
 #define PTR_SZ 8
-#else
-#define PTR_SZ 4
-#endif
-
 
 ALLOCATOR_MALLOC AllocatorMalloc;
 
@@ -497,6 +492,8 @@ AllocatorAlignedOffsetReCalloc(
 // Non-vtbl methods.
 //
 
+#ifdef PH_WINDOWS
+
 ALLOCATOR_INITIALIZE AllocatorInitialize;
 
 _Use_decl_annotations_
@@ -545,5 +542,35 @@ AllocatorRundown(
 {
     HeapDestroy(Allocator->HeapHandle);
 }
+
+#else // PH_WINDOWS
+
+ALLOCATOR_INITIALIZE AllocatorInitialize;
+
+_Use_decl_annotations_
+HRESULT
+AllocatorInitialize(
+    PALLOCATOR Allocator
+    )
+{
+    return S_OK;
+}
+
+
+ALLOCATOR_RUNDOWN AllocatorRundown;
+
+_Use_decl_annotations_
+VOID
+AllocatorRundown(
+    PALLOCATOR Allocator
+    )
+{
+    UNREFERENCED_PARAMETER(Allocator);
+    return;
+}
+
+
+#endif // PH_WINDOWS
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

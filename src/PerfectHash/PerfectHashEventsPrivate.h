@@ -17,6 +17,8 @@ Abstract:
 
 #pragma once
 
+#ifdef PH_WINDOWS
+
 //
 // 4514: unreferenced inline function removed
 //
@@ -35,6 +37,26 @@ Abstract:
 #include <PerfectHashEvents.h>
 #undef RtlZeroMemory
 #pragma warning(pop)
+
+#define EVENT_WRITE_GRAPH(Name)   \
+    EventWriteGraph##Name##Event( \
+        &Graph->Activity,         \
+        Graph->KeysFileName,      \
+        Edge,                     \
+        NumberOfKeys,             \
+        Key,                      \
+        Result,                   \
+        Cycles,                   \
+        Microseconds,             \
+        Graph->Seed1,             \
+        Graph->Seed2,             \
+        Graph->Seed3,             \
+        Graph->Seed4,             \
+        Graph->Seed5,             \
+        Graph->Seed6,             \
+        Graph->Seed7,             \
+        Graph->Seed8              \
+    )
 
 #define EVENT_WRITE_RTL_RANDOM_BYTES_START(Size) \
     EventWriteRtlGenerateRandomBytesStartEvent(  \
@@ -277,7 +299,23 @@ Abstract:
         CacheLineCountsPerPage[63]                            \
     )
 
+#else // PH_WINDOWS
 
+#define EVENT_WRITE_GRAPH(Name)
+#define EVENT_WRITE_RTL_RANDOM_BYTES_START(Size)
+#define EVENT_WRITE_RTL_RANDOM_BYTES_STOP(Size, Result)
+#define EVENT_WRITE_GRAPH_ADD_KEYS() EVENT_WRITE_GRAPH(AddKeys)
+#define EVENT_WRITE_GRAPH_HASH_KEYS() EVENT_WRITE_GRAPH(HashKeys)
+#define EVENT_WRITE_GRAPH_HASH_KEYS2()
+#define EVENT_WRITE_GRAPH_ADD_HASHED_KEYS()
+#define EVENT_WRITE_GRAPH_IS_ACYCLIC()
+#define EVENT_WRITE_GRAPH_ASSIGN_START()
+#define EVENT_WRITE_GRAPH_ASSIGN_STOP()
+#define EVENT_WRITE_GRAPH_ASSIGN_RESULT()
+#define EVENT_WRITE_GRAPH_FOUND(Name)
+#define EVENT_WRITE_GRAPH_MEMORY_COVERAGE_CACHE_LINE_COUNTS()
+#define EventEnabledGraphMemoryCoverageCacheLineCountsEvent() (0)
 
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

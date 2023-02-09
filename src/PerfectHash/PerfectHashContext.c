@@ -266,6 +266,7 @@ Return Value:
     // Create an exclusive DACL for use with our events.
     //
 
+#ifdef PH_WINDOWS
     Result = CreateExclusiveDaclForCurrentUser(Rtl,
                                                &SecurityAttributes,
                                                &SecurityDescriptor,
@@ -278,7 +279,11 @@ Return Value:
     }
 
     Attributes = &SecurityAttributes;
+#else
+    Attributes = NULL;
+#endif // PH_WINDOWS
 
+#ifdef PH_WINDOWS
     //
     // Create a low-memory notification handle.
     //
@@ -290,6 +295,9 @@ Return Value:
     }
 
     Context->LowMemoryEvent = Handle;
+#endif
+
+#ifdef PH_WINDOWS
 
     //
     // Calculate the size required by the array of UNICODE_STRING structures
@@ -335,6 +343,7 @@ Return Value:
         Result = E_OUTOFMEMORY;
         goto Error;
     }
+#endif
 
     //
     // Allocation of buffer was successful, continue with initialization.
@@ -356,6 +365,8 @@ Return Value:
 
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
+
+#ifdef PH_WINDOWS
 
     //
     // Carve the buffer we just allocated up into an array of UNICODE_STRING
@@ -420,6 +431,8 @@ Return Value:
     Context->SizeOfObjectNamesWideBuffer = SizeOfNamesWideBuffer;
     Context->NumberOfObjects = NumberOfContextObjectPrefixes;
 
+#endif
+
     //
     // Initialize the event pointer to the first handle, and the name pointer
     // to the first UNICODE_STRING pointer.  Obtain the number of events.
@@ -428,6 +441,12 @@ Return Value:
     Event = (PHANDLE)&Context->FirstEvent;
     Name = &Context->ObjectNames[0];
     NumberOfEvents = GetNumberOfContextEvents(Context);
+
+#ifdef PH_WINDOWS
+#define GetObjectNameBuffer(O) (O->Buffer)
+#else
+#define GetObjectNameBuffer(O) (NULL)
+#endif
 
     for (Index = 0; Index < NumberOfEvents; Index++, Event++, Name++) {
 
@@ -441,7 +460,7 @@ Return Value:
         *Event = CreateEventW(Attributes,
                               ManualReset,
                               FALSE,
-                              Name->Buffer);
+                              GetObjectNameBuffer(Name));
 
         LastError = GetLastError();
 
@@ -468,6 +487,8 @@ Return Value:
 
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
+
+#ifdef PH_WINDOWS
 
     //
     // Create the Main threadpool structures.  This threadpool creates a fixed
@@ -546,6 +567,7 @@ Return Value:
     // Create the timer object for the solve timeout.
     //
 
+#ifdef PH_WINDOWS
     Context->SolveTimeout = CreateThreadpoolTimer(SolveTimeoutCallback,
                                                   Context,
                                                   &Context->MainCallbackEnv);
@@ -554,6 +576,7 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+#endif
 
     //
     // Create the File threadpool structures.  Automatically clamp the min/max
@@ -641,6 +664,10 @@ Return Value:
         goto Error;
     }
 
+    InitializeThreadpoolEnvironment(&Context->FinishedCallbackEnv);
+    SetThreadpoolCallbackPool(&Context->FinishedCallbackEnv,
+                              Context->FinishedThreadpool);
+
     if (!SetThreadpoolThreadMinimum(Context->FinishedThreadpool, 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
@@ -669,6 +696,11 @@ Return Value:
         goto Error;
     }
 
+    InitializeThreadpoolEnvironment(&Context->ErrorCallbackEnv);
+    SetThreadpoolCallbackPool(&Context->ErrorCallbackEnv,
+                              Context->ErrorThreadpool);
+
+
     if (!SetThreadpoolThreadMinimum(Context->ErrorThreadpool, 1)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
@@ -685,10 +717,13 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+#endif
 
     //
     // Initialize the timestamp string.
     //
+
+#ifdef PH_WINDOWS
 
     Result = InitializeTimestampString((PCHAR)&Context->TimestampBuffer,
                                        sizeof(Context->TimestampBuffer),
@@ -699,6 +734,8 @@ Return Value:
         PH_ERROR(PerfectHashContextInitialize_InitTimestampString, Result);
         goto Error;
     }
+
+#endif
 
     //
     // Wire up the ComputerName string and buffer, then get the computer name.
@@ -783,10 +820,12 @@ Error:
 
 End:
 
+#ifdef PH_WINDOWS
     if (Acl) {
         LocalFree(Acl);
         Acl = NULL;
     }
+#endif
 
     return Result;
 }
@@ -854,6 +893,7 @@ Return Value:
         }
     }
 
+#ifdef PH_WINDOWS
     Result = PerfectHashContextTryRundownCallbackTableValuesFile(Context);
     if (FAILED(Result)) {
         PH_ERROR(TryRundownCallbackTableValuesFile, Result);
@@ -880,11 +920,13 @@ Return Value:
     //
 
     if (Context->LowMemoryEvent) {
-        if (!CloseHandle(Context->LowMemoryEvent)) {
+        if (!CloseEvent(Context->LowMemoryEvent)) {
             SYS_ERROR(CloseHandle);
         }
         Context->LowMemoryEvent = NULL;
     }
+#endif
+
 
     //
     // Loop through all the events associated with the context and check if
@@ -899,12 +941,14 @@ Return Value:
     for (Index = 0; Index < NumberOfEvents; Index++, Event++) {
 
         if (*Event && *Event != INVALID_HANDLE_VALUE) {
-            if (!CloseHandle(*Event)) {
+            if (!CloseEvent(*Event)) {
                 SYS_ERROR(CloseHandle);
             }
             *Event = NULL;
         }
     }
+
+#ifdef PH_WINDOWS
 
     if (Context->MainCleanupGroup) {
 
@@ -957,6 +1001,8 @@ Return Value:
         Context->ErrorThreadpool = NULL;
     }
 
+#endif
+
     if (Context->ObjectNames) {
         Allocator->Vtbl->FreePointer(Allocator,
                                      &Context->ObjectNames);
@@ -965,13 +1011,14 @@ Return Value:
     if (Context->ConsoleBuffer != NULL) {
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           Context->ProcessHandle,
-                                          &Context->ConsoleBuffer);
+                                          &Context->ConsoleBuffer,
+                                          Context->ConsoleBufferSizeInBytes);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextRundown_DestroyConsoleBuffer, Result);
         }
     }
 
-#define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Context->##Name##);
+#define EXPAND_AS_RELEASE(Verb, VUpper, Name, Upper) RELEASE(Context->Name);
 
     CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_RELEASE);
 
@@ -982,7 +1029,9 @@ Return Value:
     RELEASE(Context->FinishedWorkList);
     RELEASE(Context->BulkCreateCsvFile);
     RELEASE(Context->BaseOutputDirectory);
+#ifdef PH_WINDOWS
     RELEASE(Context->Cu);
+#endif
     RELEASE(Context->Allocator);
     RELEASE(Context->Rtl);
 }
@@ -1632,27 +1681,30 @@ Return Value:
         return E_POINTER;
     }
 
-    if (!Context->MainThreadpool) {
-        return E_UNEXPECTED;
-    }
-
     if (!TryAcquirePerfectHashContextLockExclusive(Context)) {
         return PH_E_CONTEXT_LOCKED;
     }
 
     Rtl = Context->Rtl;
-    Threadpool = Context->MainThreadpool;
+
+    Context->MaximumConcurrency = MaximumConcurrency;
+    Context->MinimumConcurrency = MaximumConcurrency;
+
+#ifdef PH_WINDOWS
+    if (!Context->MainThreadpool) {
+        ReleasePerfectHashContextLockExclusive(Context);
+        return E_UNEXPECTED;
+    }
 
     ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+    Threadpool = Context->MainThreadpool;
     SetThreadpoolThreadMaximum(Threadpool, ThreadpoolConcurrency);
-    Context->MaximumConcurrency = MaximumConcurrency;
 
     if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
-    } else {
-        Context->MinimumConcurrency = MaximumConcurrency;
     }
+#endif
 
     ReleasePerfectHashContextLockExclusive(Context);
 
@@ -2098,6 +2150,7 @@ Return Value:
     return Result;
 }
 
+#ifdef PH_WINDOWS
 PERFECT_HASH_CONTEXT_INITIALIZE_CUDA PerfectHashContextInitializeCuda;
 
 _Use_decl_annotations_
@@ -2257,6 +2310,7 @@ End:
 
     return Result;
 }
+#endif // PH_WINDOWS
 
 PERFECT_HASH_CONTEXT_INITIALIZE_RNG PerfectHashContextInitializeRng;
 
@@ -2414,6 +2468,7 @@ End:
     return Result;
 }
 
+#ifdef PH_WINDOWS
 _Use_decl_annotations_
 HRESULT
 PerfectHashContextTryPrepareCallbackTableValuesFile (
@@ -2455,7 +2510,7 @@ Return Value:
     UNICODE_STRING TimestampW;
     LARGE_INTEGER EndOfFile;
     PCUNICODE_STRING BaseName;
-    ULONGLONG BufferSizeInBytes;
+    ULONGLONG BufferSizeInBytes = 0;
     ULONGLONG RemainingBytes;
     ULONG NumberOfPagesForBuffer;
     PCUNICODE_STRING NewDirectory;
@@ -2686,9 +2741,11 @@ End:
     RELEASE(File);
 
     if (Buffer != NULL) {
+        ASSERT(BufferSizeInBytes != 0);
         Result = Rtl->Vtbl->DestroyBuffer(Rtl,
                                           Context->ProcessHandle,
-                                          &Buffer);
+                                          &Buffer,
+                                          BufferSizeInBytes);
         if (FAILED(Result)) {
             PH_ERROR(TryPrepareCallbackTableValuesFile_DestroyBuffer, Result);
         }
@@ -3057,6 +3114,8 @@ End:
 
     return Result;
 }
+
+#endif // PH_WINDOWS
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

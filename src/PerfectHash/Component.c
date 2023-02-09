@@ -18,7 +18,7 @@ Abstract:
 // Forward decls.
 //
 
-_Must_inspect_impl_
+_Must_inspect_result_
 _Success_(return != 0)
 PCOMPONENT
 CreateComponent(
@@ -107,6 +107,10 @@ CreateGlobalComponentCallback(
         *Context = Component;
     }
 
+#ifdef PH_COMPAT
+    InitOnce->Context = Component;
+#endif
+
     return TRUE;
 }
 
@@ -134,7 +138,7 @@ CreateGlobalComponent(
     Success = InitOnceExecuteOnce(InitOnce,
                                   CreateGlobalComponentCallback,
                                   &Params,
-                                  &Component);
+                                  PPV(&Component));
 
     ReleaseGlobalComponentsLockExclusive();
 
@@ -405,6 +409,7 @@ ComponentRelease(
         PRTL Rtl;
         PALLOCATOR Allocator;
 
+#ifdef PH_WINDOWS
         Rtl = (PRTL)RtlInitOnceToPointer(GlobalComponents.Rtl.Ptr);
         Allocator = (PALLOCATOR)(
             RtlInitOnceToPointer(GlobalComponents.Allocator.Ptr)
@@ -413,6 +418,18 @@ ComponentRelease(
         GlobalComponents.Rtl.Ptr = NULL;
         GlobalComponents.Allocator.Ptr = NULL;
         GlobalComponents.FirstComponent = NULL;
+#else
+        Rtl = (PRTL)RtlInitOnceToPointer(&GlobalComponents.Rtl);
+        Allocator = (PALLOCATOR)(
+            RtlInitOnceToPointer(&GlobalComponents.Allocator)
+        );
+
+        GlobalComponents.Rtl.Once = PTHREAD_ONCE_INIT;
+        GlobalComponents.Rtl.Context = NULL;
+        GlobalComponents.Allocator.Once = PTHREAD_ONCE_INIT ;
+        GlobalComponents.Allocator.Context = NULL;
+        GlobalComponents.FirstComponent = NULL;
+#endif
 
         ReleaseGlobalComponentsLockExclusive();
 
@@ -653,7 +670,16 @@ PerfectHashDllGetClassObject(
     ClassFactory = (PICLASSFACTORY)CreateComponent(Id, NULL);
     if (!ClassFactory) {
         Result = TlsContext->LastResult;
+
+#ifndef PH_WINDOWS
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+#endif
         _Analysis_assume_(Result < 0);
+#ifndef PH_WINDOWS
+#pragma clang diagnostic pop
+#endif
+
         goto End;
     }
 

@@ -149,7 +149,7 @@ Return Value:
 
     if (Trailer) {
         String->Length += sizeof(WCHAR);
-        String->Buffer[(String->Length - 1) >> 1] = Trailer;
+        String->Buffer[(String->Length - 1) / sizeof(WCHAR)] = Trailer;
     }
 
     return TRUE;
@@ -290,7 +290,7 @@ Return Value:
 
     if (Trailer) {
         String->Length += sizeof(WCHAR);
-        String->Buffer[(String->Length - 1) >> 1] = Trailer;
+        String->Buffer[(String->Length - 1) / sizeof(WCHAR)] = Trailer;
     }
 
     return TRUE;
@@ -1249,7 +1249,7 @@ AppendUnicodeStringToCharBufferFast(
         return;
     }
 
-    Count = String->Length >> 1;
+    Count = String->Length / sizeof(WCHAR);
     Source = String->Buffer;
     Dest = *BufferPointer;
 
@@ -1291,7 +1291,7 @@ AppendStringToWideCharBufferFast(
     *BufferPointer = (PWCHAR)(
         RtlOffsetToPointer(
             Dest,
-            (ULONG_PTR)Count << 1
+            (ULONG_PTR)Count * sizeof(WCHAR)
         )
     );
 
@@ -1312,7 +1312,7 @@ AppendStringToUnicodeStringFast (
     USHORT Count;
     USHORT Index;
 
-    if (String->Length > (UnicodeString->MaximumLength >> 1)) {
+    if (String->Length > (UnicodeString->MaximumLength / sizeof(WCHAR))) {
         return PH_E_STRING_BUFFER_TOO_SMALL;
     }
 
@@ -1326,7 +1326,7 @@ AppendStringToUnicodeStringFast (
         Dest[Index] = Wide;
     }
 
-    UnicodeString->Length = (USHORT)(Count << 1);
+    UnicodeString->Length = (USHORT)(Count * sizeof(WCHAR));
 
     return S_OK;
 }

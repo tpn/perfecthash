@@ -66,6 +66,10 @@
 #undef _Check_return_
 #endif
 #define _Check_return_
+#ifdef _Check_return_opt_
+#undef _Check_return_opt_
+#endif
+#define _Check_return_opt_
 #ifdef _Must_inspect_result_
 #undef _Must_inspect_result_
 #endif
@@ -1038,5 +1042,11 @@
 #define _Post_readable_byte_size_(s) _Post_ _Readable_bytes_(s) _Post_ _Valid_
 #undef _Post_writable_byte_size_
 #define _Post_writable_byte_size_(s) _Post_ _Writable_bytes_(s)
+
+#define __drv_aliasesMem
+#define __drv_freesMem(N)
+#define _In_count_(N)
+#define _Post_equals_last_error_
+#define _Field_z_
 
 #endif /* _NO_SAL_2_H_ */

@@ -272,7 +272,8 @@ Return Value:
         // Verify bit isn't already set and set it.
         //
 
-        ASSERT(!BitTestAndSet(BitmapBuffer, ValueIndex));
+        ASSERT(!TestBit32(BitmapBuffer, ValueIndex));
+        SetBit32(BitmapBuffer, ValueIndex);
 
     }
 
@@ -369,7 +370,7 @@ Error:
 End:
 
     if (BitmapBuffer) {
-        Allocator->Vtbl->FreePointer(Allocator, &BitmapBuffer);
+        Allocator->Vtbl->FreePointer(Allocator, PPV(&BitmapBuffer));
     }
 
     return Result;

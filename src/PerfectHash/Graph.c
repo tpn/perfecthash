@@ -34,6 +34,7 @@ GRAPH_REGISTER_SOLVED GraphRegisterSolvedNoBestCoverage;
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssigned16MemoryCoverage;
 
+#ifdef PH_WINDOWS
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage_AVX2;
 
@@ -43,6 +44,7 @@ GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX512;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX2;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX512;
 GRAPH_HASH_KEYS GraphHashKeys16MultiplyShiftRX_AVX512;
+#endif
 
 GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
     GraphCalculateMemoryCoverageCacheLineCounts;
@@ -116,7 +118,7 @@ Return Value:
     Result = Graph->Vtbl->CreateInstance(Graph,
                                          NULL,
                                          &IID_PERFECT_HASH_RTL,
-                                         &Graph->Rtl);
+                                         PPV(&Graph->Rtl));
 
     if (FAILED(Result)) {
         goto Error;
@@ -125,7 +127,7 @@ Return Value:
     Result = Graph->Vtbl->CreateInstance(Graph,
                                          NULL,
                                          &IID_PERFECT_HASH_ALLOCATOR,
-                                         &Graph->Allocator);
+                                         PPV(&Graph->Allocator));
 
     if (FAILED(Result)) {
         goto Error;
@@ -134,7 +136,7 @@ Return Value:
     Result = Graph->Vtbl->CreateInstance(Graph,
                                          NULL,
                                          &IID_PERFECT_HASH_RNG,
-                                         &Graph->Rng);
+                                         PPV(&Graph->Rng));
 
     if (FAILED(Result)) {
         goto Error;
@@ -203,9 +205,11 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys =
                         GraphHashKeys16MultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
+#endif
 
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
@@ -244,14 +248,18 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
+#endif
 
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
+#endif
                 }
             } else if (HashFunctionId ==
                        PerfectHashHashMultiplyShiftRXFunctionId) {
@@ -259,18 +267,24 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
+#endif
 
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
+#ifdef PH_WINDOWS
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
+#endif
                 }
             }
         }
     }
+
+#ifdef PH_WINDOWS
 
     //
     // Use the optimized AVX2 routine for calculating assigned memory coverage
@@ -286,6 +300,8 @@ Return Value:
             GraphCalculateAssignedMemoryCoverage_AVX2;
         Graph->Flags.UsedAvx2MemoryCoverageFunction = TRUE;
     }
+
+#endif // PH_WINDOWS
 
     //
     // Create an activity GUID to track this graph in ETW events.
@@ -365,7 +381,9 @@ Return Value:
     //
 
     if (Graph->VertexPairs != NULL) {
-        if (!VirtualFree(Graph->VertexPairs, 0, MEM_RELEASE)) {
+        if (!VirtualFree(Graph->VertexPairs,
+                         VFS(Graph->Info->VertexPairsSizeInBytes),
+                         MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
     }
@@ -575,12 +593,14 @@ Return Value:
     // Capture the local solve time.
     //
 
+#ifdef PH_WINDOWS
     GetLocalTime(&SystemTime);
     if (!SystemTimeToFileTime(&SystemTime, &Graph->SolvedTime.AsFileTime)) {
         SYS_ERROR(SystemTimeToFileTime);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto End;
     }
+#endif
 
     //
     // If we're in "first graph wins" mode and we reach this point, we're the
@@ -1391,7 +1411,7 @@ Error:
 End:
 
     if (Graph->Values) {
-        Allocator->Vtbl->FreePointer(Allocator, &Graph->Values);
+        Allocator->Vtbl->FreePointer(Allocator, PPV(&Graph->Values));
     }
 
     return Result;
@@ -1616,7 +1636,7 @@ Error:
 End:
 
     if (Graph->Values) {
-        Allocator->Vtbl->FreePointer(Allocator, &Graph->Values);
+        Allocator->Vtbl->FreePointer(Allocator, PPV(&Graph->Values));
     }
 
     return Result;
@@ -2706,10 +2726,10 @@ Return Value:
 
 #define EXPAND_AS_DETERMINE_IF_BEST_GRAPH(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                        \
-        CoverageValue = (ULONG)Coverage->##Name;                        \
-        if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
+        CoverageValue = (ULONG)Coverage->Name;                        \
+        if (Coverage->Name Comparator PreviousBestCoverage->Name) { \
             FOUND_BEST_GRAPH();                                         \
-        } else if (Coverage->##Name == PreviousBestCoverage->##Name) {  \
+        } else if (Coverage->Name == PreviousBestCoverage->Name) {  \
             FOUND_EQUAL_BEST_GRAPH();                                   \
         }                                                               \
         break;
@@ -2810,8 +2830,8 @@ End:
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                      \
-        BestGraphInfo->Value = (ULONG)Coverage->##Name;               \
-        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->##Name;      \
+        BestGraphInfo->Value = (ULONG)Coverage->Name;               \
+        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;      \
         break;
 
         switch (CoverageType) {
@@ -2929,8 +2949,8 @@ End:
 #define EXPAND_AS_DETERMINE_IF_LOWEST(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                    \
         IsLowestComparator = (0 Comparator 1);                      \
-        CoverageValue = (ULONG)Coverage->##Name;                    \
-        CoverageValueAsDouble = (DOUBLE)Coverage->##Name;           \
+        CoverageValue = (ULONG)Coverage->Name;                    \
+        CoverageValueAsDouble = (DOUBLE)Coverage->Name;           \
         break;
 
     switch (CoverageType) {
@@ -3778,28 +3798,28 @@ SkipGraphVtblHackery:
     // Allocate (or reallocate) arrays.
     //
 
-#define ALLOC_ARRAY(Name, Type)                       \
-    if (!Graph->##Name) {                             \
-        Graph->##Name = (Type)(                       \
-            Allocator->Vtbl->AlignedMalloc(           \
-                Allocator,                            \
-                (ULONG_PTR)Info->##Name##SizeInBytes, \
-                YMMWORD_ALIGNMENT                     \
-            )                                         \
-        );                                            \
-    } else {                                          \
-        Graph->##Name## = (Type)(                     \
-            Allocator->Vtbl->AlignedReAlloc(          \
-                Allocator,                            \
-                Graph->##Name,                        \
-                (ULONG_PTR)Info->##Name##SizeInBytes, \
-                YMMWORD_ALIGNMENT                     \
-            )                                         \
-        );                                            \
-    }                                                 \
-    if (!Graph->##Name) {                             \
-        Result = E_OUTOFMEMORY;                       \
-        goto Error;                                   \
+#define ALLOC_ARRAY(Name, Type)                     \
+    if (!Graph->Name) {                             \
+        Graph->Name = (Type)(                       \
+            Allocator->Vtbl->AlignedMalloc(         \
+                Allocator,                          \
+                (ULONG_PTR)Info->Name##SizeInBytes, \
+                YMMWORD_ALIGNMENT                   \
+            )                                       \
+        );                                          \
+    } else {                                        \
+        Graph->Name = (Type)(                       \
+            Allocator->Vtbl->AlignedReAlloc(        \
+                Allocator,                          \
+                Graph->Name,                        \
+                (ULONG_PTR)Info->Name##SizeInBytes, \
+                YMMWORD_ALIGNMENT                   \
+            )                                       \
+        );                                          \
+    }                                               \
+    if (!Graph->Name) {                             \
+        Result = E_OUTOFMEMORY;                     \
+        goto Error;                                 \
     }
 
     ALLOC_ARRAY(Order, PLONG);
@@ -3894,28 +3914,28 @@ SkipGraphVtblHackery:
     Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices;
     Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices;
 
-#define ALLOC_BITMAP_BUFFER(Name)                              \
-    if (Info->##Name##BufferSizeInBytes > 0) {                 \
-        if (!Graph->##Name##.Buffer) {                         \
-            Graph->##Name##.Buffer = (PULONG)(                 \
-                Allocator->Vtbl->Malloc(                       \
-                    Allocator,                                 \
-                    (ULONG_PTR)Info->##Name##BufferSizeInBytes \
-                )                                              \
-            );                                                 \
-        } else {                                               \
-            Graph->##Name##.Buffer = (PULONG)(                 \
-                Allocator->Vtbl->ReAlloc(                      \
-                    Allocator,                                 \
-                    Graph->##Name##.Buffer,                    \
-                    (ULONG_PTR)Info->##Name##BufferSizeInBytes \
-                )                                              \
-            );                                                 \
-        }                                                      \
-        if (!Graph->##Name##.Buffer) {                         \
-            Result = E_OUTOFMEMORY;                            \
-            goto Error;                                        \
-        }                                                      \
+#define ALLOC_BITMAP_BUFFER(Name)                            \
+    if (Info->Name##BufferSizeInBytes > 0) {                 \
+        if (!Graph->Name.Buffer) {                           \
+            Graph->Name.Buffer = (PULONG)(                   \
+                Allocator->Vtbl->Malloc(                     \
+                    Allocator,                               \
+                    (ULONG_PTR)Info->Name##BufferSizeInBytes \
+                )                                            \
+            );                                               \
+        } else {                                             \
+            Graph->Name.Buffer = (PULONG)(                   \
+                Allocator->Vtbl->ReAlloc(                    \
+                    Allocator,                               \
+                    Graph->Name.Buffer,                      \
+                    (ULONG_PTR)Info->Name##BufferSizeInBytes \
+                )                                            \
+            );                                               \
+        }                                                    \
+        if (!Graph->Name.Buffer) {                           \
+            Result = E_OUTOFMEMORY;                          \
+            goto Error;                                      \
+        }                                                    \
     }
 
     ALLOC_BITMAP_BUFFER(DeletedEdgesBitmap);
@@ -3949,28 +3969,28 @@ SkipGraphVtblHackery:
     }
 
 
-#define ALLOC_ASSIGNED_ARRAY(Coverage_, Name, Type)     \
-    if (!Coverage_->##Name) {                           \
-        Coverage_->##Name = (PASSIGNED_##Type##_COUNT)( \
-            Allocator->Vtbl->AlignedMalloc(             \
-                Allocator,                              \
-                (ULONG_PTR)Info->##Name##SizeInBytes,   \
-                YMMWORD_ALIGNMENT                       \
-            )                                           \
-        );                                              \
-    } else {                                            \
-        Coverage_->##Name = (PASSIGNED_##Type##_COUNT)( \
-            Allocator->Vtbl->AlignedReAlloc(            \
-                Allocator,                              \
-                Coverage_->##Name,                      \
-                (ULONG_PTR)Info->##Name##SizeInBytes,   \
-                YMMWORD_ALIGNMENT                       \
-            )                                           \
-        );                                              \
-    }                                                   \
-    if (!Coverage_->##Name) {                           \
-        Result = E_OUTOFMEMORY;                         \
-        goto Error;                                     \
+#define ALLOC_ASSIGNED_ARRAY(Coverage_, Name, Type)   \
+    if (!Coverage_->Name) {                           \
+        Coverage_->Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedMalloc(           \
+                Allocator,                            \
+                (ULONG_PTR)Info->Name##SizeInBytes,   \
+                YMMWORD_ALIGNMENT                     \
+            )                                         \
+        );                                            \
+    } else {                                          \
+        Coverage_->Name = (PASSIGNED_##Type##_COUNT)( \
+            Allocator->Vtbl->AlignedReAlloc(          \
+                Allocator,                            \
+                Coverage_->Name,                      \
+                (ULONG_PTR)Info->Name##SizeInBytes,   \
+                YMMWORD_ALIGNMENT                     \
+            )                                         \
+        );                                            \
+    }                                                 \
+    if (!Coverage_->Name) {                           \
+        Result = E_OUTOFMEMORY;                       \
+        goto Error;                                   \
     }
 
     //
@@ -3979,36 +3999,36 @@ SkipGraphVtblHackery:
     // large pages if applicable.
     //
 
-#define ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Coverage_, Name)                      \
-    if (!Coverage_->##Name) {                                                 \
-        Coverage_->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                     \
-            Allocator->Vtbl->AlignedMalloc(                                   \
-                Allocator,                                                    \
-                (ULONG_PTR)Info->##Name##SizeInBytes,                         \
-                YMMWORD_ALIGNMENT                                             \
-            )                                                                 \
-        );                                                                    \
-    } else {                                                                  \
-        BOOLEAN DoReAlloc = TRUE;                                             \
-        if (PrevInfo) {                                                       \
-            if (PrevInfo->##Name##SizeInBytes == Info->##Name##SizeInBytes) { \
-                DoReAlloc = FALSE;                                            \
-            }                                                                 \
-        }                                                                     \
-        if (DoReAlloc) {                                                      \
-            Coverage_->##Name = (PASSIGNED_LARGE_PAGE_COUNT)(                 \
-                Allocator->Vtbl->AlignedReAlloc(                              \
-                    Allocator,                                                \
-                    Coverage_->##Name,                                        \
-                    (ULONG_PTR)Info->##Name##SizeInBytes,                     \
-                    YMMWORD_ALIGNMENT                                         \
-                )                                                             \
-            );                                                                \
-        }                                                                     \
-    }                                                                         \
-    if (!Coverage_->##Name) {                                                 \
-        Result = E_OUTOFMEMORY;                                               \
-        goto Error;                                                           \
+#define ALLOC_ASSIGNED_LARGE_PAGE_ARRAY(Coverage_, Name)                  \
+    if (!Coverage_->Name) {                                               \
+        Coverage_->Name = (PASSIGNED_LARGE_PAGE_COUNT)(                   \
+            Allocator->Vtbl->AlignedMalloc(                               \
+                Allocator,                                                \
+                (ULONG_PTR)Info->Name##SizeInBytes,                       \
+                YMMWORD_ALIGNMENT                                         \
+            )                                                             \
+        );                                                                \
+    } else {                                                              \
+        BOOLEAN DoReAlloc = TRUE;                                         \
+        if (PrevInfo) {                                                   \
+            if (PrevInfo->Name##SizeInBytes == Info->Name##SizeInBytes) { \
+                DoReAlloc = FALSE;                                        \
+            }                                                             \
+        }                                                                 \
+        if (DoReAlloc) {                                                  \
+            Coverage_->Name = (PASSIGNED_LARGE_PAGE_COUNT)(               \
+                Allocator->Vtbl->AlignedReAlloc(                          \
+                    Allocator,                                            \
+                    Coverage_->Name,                                      \
+                    (ULONG_PTR)Info->Name##SizeInBytes,                   \
+                    YMMWORD_ALIGNMENT                                     \
+                )                                                         \
+            );                                                            \
+        }                                                                 \
+    }                                                                     \
+    if (!Coverage_->Name) {                                               \
+        Result = E_OUTOFMEMORY;                                           \
+        goto Error;                                                       \
     }
 
 
@@ -4202,12 +4222,12 @@ Return Value:
     // Clear the bitmap buffers.
     //
 
-#define ZERO_BITMAP_BUFFER(Name)                               \
-    if (Info->##Name##BufferSizeInBytes > 0) {                 \
-        ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
-               ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
-        Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##.Buffer,   \
-                           Info->##Name##BufferSizeInBytes);   \
+#define ZERO_BITMAP_BUFFER(Name)                             \
+    if (Info->Name##BufferSizeInBytes > 0) {                 \
+        ASSERT(0 == Info->Name##BufferSizeInBytes -          \
+               ((Info->Name##BufferSizeInBytes >> 3) << 3)); \
+        ZeroMemory((PDWORD64)Graph->Name.Buffer,             \
+                   Info->Name##BufferSizeInBytes);           \
     }
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
@@ -4219,13 +4239,13 @@ Return Value:
     // "Empty" all of the nodes.
     //
 
-#define EMPTY_ARRAY(Name)                                \
-    if (Info->##Name##SizeInBytes > 0) {                 \
-        ASSERT(0 == Info->##Name##SizeInBytes -          \
-               ((Info->##Name##SizeInBytes >> 3) << 3)); \
-        Rtl->RtlFillMemory((PDWORD64)Graph->##Name,      \
-                           Info->##Name##SizeInBytes,    \
-                           (BYTE)~0);                    \
+#define EMPTY_ARRAY(Name)                              \
+    if (Info->Name##SizeInBytes > 0) {                 \
+        ASSERT(0 == Info->Name##SizeInBytes -          \
+               ((Info->Name##SizeInBytes >> 3) << 3)); \
+        FillMemory((PDWORD64)Graph->Name,              \
+                   Info->Name##SizeInBytes,            \
+                   (BYTE)~0);                          \
     }
 
     EMPTY_ARRAY(Next);
@@ -4236,12 +4256,12 @@ Return Value:
     // The Order and Assigned arrays get zeroed.
     //
 
-#define ZERO_ARRAY(Name)                                 \
-    if (Info->##Name##SizeInBytes > 0) {                 \
-        ASSERT(0 == Info->##Name##SizeInBytes -          \
-               ((Info->##Name##SizeInBytes >> 3) << 3)); \
-        Rtl->RtlZeroMemory((PDWORD64)Graph->##Name##,    \
-                           Info->##Name##SizeInBytes);   \
+#define ZERO_ARRAY(Name)                               \
+    if (Info->Name##SizeInBytes > 0) {                 \
+        ASSERT(0 == Info->Name##SizeInBytes -          \
+               ((Info->Name##SizeInBytes >> 3) << 3)); \
+        ZeroMemory((PDWORD64)Graph->Name,              \
+                   Info->Name##SizeInBytes);           \
     }
 
     ZERO_ARRAY(Order);
@@ -4416,7 +4436,7 @@ Return Value:
         Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
 
 #define ZERO_ASSIGNED_ARRAY(Name) \
-        ZeroMemory(Coverage->##Name, Info->##Name##SizeInBytes)
+        ZeroMemory(Coverage->Name, Info->Name##SizeInBytes)
 
         ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
         ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
@@ -4453,7 +4473,7 @@ Return Value:
         Coverage16->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
 
 #define ZERO_ASSIGNED16_ARRAY(Name) \
-        ZeroMemory(Coverage16->##Name, Info->##Name##SizeInBytes)
+        ZeroMemory(Coverage16->Name, Info->Name##SizeInBytes)
 
         ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerPage);
         ZERO_ASSIGNED16_ARRAY(NumberOfAssignedPerLargePage);
@@ -5276,7 +5296,7 @@ Error:
 End:
 
     if (Graph->Values) {
-        Allocator->Vtbl->FreePointer(Allocator, &Graph->Values);
+        Allocator->Vtbl->FreePointer(Allocator, PPV(&Graph->Values));
     }
 
     return Result;
@@ -5818,10 +5838,10 @@ Return Value:
 
 #define EXPAND_AS_DETERMINE_IF_BEST_GRAPH(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                        \
-        CoverageValue = (ULONG)Coverage->##Name;                        \
-        if (Coverage->##Name Comparator PreviousBestCoverage->##Name) { \
+        CoverageValue = (ULONG)Coverage->Name;                          \
+        if (Coverage->Name Comparator PreviousBestCoverage->Name) {     \
             FOUND_BEST_GRAPH();                                         \
-        } else if (Coverage->##Name == PreviousBestCoverage->##Name) {  \
+        } else if (Coverage->Name == PreviousBestCoverage->Name) {      \
             FOUND_EQUAL_BEST_GRAPH();                                   \
         }                                                               \
         break;
@@ -5922,8 +5942,8 @@ End:
 
 #define EXPAND_AS_SAVE_BEST_GRAPH_VALUE(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                      \
-        BestGraphInfo->Value = (ULONG)Coverage->##Name;               \
-        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->##Name;      \
+        BestGraphInfo->Value = (ULONG)Coverage->Name;                 \
+        BestGraphInfo->ValueAsDouble = (DOUBLE)Coverage->Name;        \
         break;
 
         switch (CoverageType) {
@@ -6041,8 +6061,8 @@ End:
 #define EXPAND_AS_DETERMINE_IF_LOWEST(Name, Comparison, Comparator) \
     case BestCoverageType##Comparison##Name##Id:                    \
         IsLowestComparator = (0 Comparator 1);                      \
-        CoverageValue = (ULONG)Coverage->##Name;                    \
-        CoverageValueAsDouble = (DOUBLE)Coverage->##Name;           \
+        CoverageValue = (ULONG)Coverage->Name;                      \
+        CoverageValueAsDouble = (DOUBLE)Coverage->Name;             \
         break;
 
     switch (CoverageType) {

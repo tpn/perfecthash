@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -18,8 +18,11 @@ Abstract:
 // Our TLS index.  Assigned at PROCESS_ATTACH, free'd at PROCESS_DETACH.
 //
 
-ULONG PerfectHashTlsIndex;
+#ifdef PH_WINDOWS
+TLS_KEY_TYPE PerfectHashTlsIndex;
+#endif
 
+#ifdef PH_WINDOWS
 PERFECT_HASH_TLS_FUNCTION PerfectHashTlsProcessAttach;
 
 _Use_decl_annotations_
@@ -87,6 +90,7 @@ End:
 
     return TRUE;
 }
+#endif // PH_WINDOWS
 
 //
 // TLS Set/Get Context functions.

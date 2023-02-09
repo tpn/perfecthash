@@ -54,7 +54,6 @@ VOID
     _In_ VERTEX Vertex
     );
 typedef GRAPH_CYCLIC_DELETE_EDGE *PGRAPH_CYCLIC_DELETE_EDGE;
-extern GRAPH_CYCLIC_DELETE_EDGE GraphCyclicDeleteEdge;
 
 typedef
 _Success_(return != 0)
@@ -65,7 +64,6 @@ BOOLEAN
     _Out_ PEDGE Edge
     );
 typedef GRAPH_FIND_DEGREE1_EDGE *PGRAPH_FIND_DEGREE1_EDGE;
-extern GRAPH_FIND_DEGREE1_EDGE GraphFindDegree1Edge;
 
 typedef
 _Check_return_
@@ -75,7 +73,6 @@ GRAPH_ITERATOR
     _In_ VERTEX Vertex
     );
 typedef GRAPH_NEIGHBORS_ITERATOR *PGRAPH_NEIGHBORS_ITERATOR;
-extern GRAPH_NEIGHBORS_ITERATOR GraphNeighborsIterator;
 
 typedef
 VERTEX
@@ -84,7 +81,6 @@ VERTEX
     _Inout_ PGRAPH_ITERATOR Iterator
     );
 typedef GRAPH_NEXT_NEIGHBOR *PGRAPH_NEXT_NEIGHBOR;
-extern GRAPH_NEXT_NEIGHBOR GraphNextNeighbor;
 
 typedef
 EDGE
@@ -94,7 +90,6 @@ EDGE
     _In_ VERTEX Vertex2
     );
 typedef GRAPH_EDGE_ID *PGRAPH_EDGE_ID;
-extern GRAPH_EDGE_ID GraphEdgeId;
 
 typedef
 VOID
@@ -103,7 +98,6 @@ VOID
     _In_ EDGE Edge
     );
 typedef GRAPH_DELETE_EDGE *PGRAPH_DELETE_EDGE;
-extern GRAPH_DELETE_EDGE GraphDeleteEdge;
 
 typedef
 BOOLEAN
@@ -114,7 +108,6 @@ BOOLEAN
     _In_ VERTEX Vertex2
     );
 typedef GRAPH_CHECK_EDGE *PGRAPH_CHECK_EDGE;
-extern GRAPH_CHECK_EDGE GraphCheckEdge;
 
 typedef
 VOID
@@ -123,7 +116,6 @@ VOID
     _In_ EDGE Edge
     );
 typedef GRAPH_TRAVERSE *PGRAPH_TRAVERSE;
-extern GRAPH_TRAVERSE GraphTraverseRecursive;
 
 //
 // Inline function helpers.

@@ -55,7 +55,7 @@
       <SubSystem>Console</SubSystem>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WholeProgramOptimization>true</WholeProgramOptimization>
-      <PreprocessorDefinitions>_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PH_WINDOWS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableEnhancedInstructionSet Condition="$(InstructionSet) != ''">$(InstructionSet)</EnableEnhancedInstructionSet>
       <!--
       <BrowseInformationFile>$(IntDir)$(ProjectName).bsc</BrowseInformationFile>

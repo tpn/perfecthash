@@ -216,7 +216,7 @@ Return Value:
     // Namespace length should be (far) less than the desired name length.
     //
 
-    if (Namespace->Length >= (LengthOfNameInChars << 1)) {
+    if (Namespace->Length >= (LengthOfNameInChars * sizeof(WCHAR))) {
         return E_UNEXPECTED;
     }
 
@@ -226,11 +226,11 @@ Return Value:
     // slash.
     //
 
-    if (Namespace->Buffer[(Namespace->Length >> 1) - 1] == L'\0') {
+    if (RTL_SECOND_LAST_CHAR(Namespace) == L'\0') {
         Namespace->Length -= sizeof(WCHAR);
     }
 
-    if (Namespace->Buffer[(Namespace->Length >> 1) - 1] != L'\\') {
+    if (RTL_SECOND_LAST_CHAR(Namespace) != PATHSEP) {
         return E_UNEXPECTED;
     }
 
@@ -311,7 +311,9 @@ Return Value:
     // the actual length converted.
     //
 
-    OldLengthOfWideBase64BufferInChars = SizeOfWideBase64BufferInBytes >> 1;
+    OldLengthOfWideBase64BufferInChars = (
+        SizeOfWideBase64BufferInBytes / sizeof(WCHAR)
+    );
     LengthOfWideBase64BufferInChars = OldLengthOfWideBase64BufferInChars;
 
     CryptFlags = CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF;
@@ -353,7 +355,7 @@ Return Value:
         // to the namespace length to account for the trailing NULL.
         //
 
-        CharsUsed = (Namespace->Length >> 1) + 1;
+        CharsUsed = (Namespace->Length / sizeof(WCHAR)) + 1;
         CharsRemaining = (LONG)LengthOfNameInChars - CharsUsed;
 
         if (Prefixes && ((Prefix = *(Prefixes + Index)) != NULL)) {
@@ -364,7 +366,7 @@ Return Value:
             // and verify we've got a sensible number left.
             //
 
-            PrefixLengthInChars = Prefix->Length >> 1;
+            PrefixLengthInChars = Prefix->Length / sizeof(WCHAR);
             if (Prefix->Buffer[PrefixLengthInChars - 1] == L'\0') {
                 PrefixLengthInChars -= 1;
             }
@@ -389,7 +391,7 @@ Return Value:
         NumberOfWideBase64CharsToCopy = CharsRemaining;
 
         FinalCharCount = (
-            (Namespace->Length >> 1) +
+            (Namespace->Length / sizeof(WCHAR)) +
             PrefixLengthInChars +
             NumberOfWideBase64CharsToCopy +
             1
@@ -407,7 +409,10 @@ Return Value:
         // the random characters.
         //
 
-        String->Length = (USHORT)(FinalCharCount << 1) - (USHORT)sizeof(WCHAR);
+        String->Length = (USHORT)(
+            (FinalCharCount * sizeof(WCHAR)) -
+            (USHORT)sizeof(WCHAR)
+        );
         String->MaximumLength = String->Length + sizeof(WCHAR);
 
         Dest = String->Buffer = (WideBase64Buffer + RandomCharsUsed);
@@ -418,7 +423,7 @@ Return Value:
         // update counters.
         //
 
-        Count = Namespace->Length >> 1;
+        Count = Namespace->Length / sizeof(WCHAR);
         CopyMemory(Dest, Namespace->Buffer, Namespace->Length);
         Dest += Count;
         RandomCharsUsed += Count;

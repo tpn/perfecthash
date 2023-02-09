@@ -28,13 +28,13 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
 #define RCS RTL_CONSTANT_STRING
 #endif
 
-#define DECL_ARG(Name) const UNICODE_STRING Name = RCS(L#Name)
+#define DECL_ARG(Name) const UNICODE_STRING Name = RCS(L"" #Name)
 
 //
 // Helper macro for Rtl->RtlEqualUnicodeString() comparison.
 //
 
-#define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, TRUE)
+#define IS_EQUAL(Name) Rtl->RtlEqualUnicodeString(Arg, &Name, FALSE)
 
 //
 // Helper macros for toggling the given flag if the current argument matches
@@ -43,13 +43,13 @@ double wstrtod(wchar_t *string, wchar_t **endPtr);
 
 #define SET_FLAG_AND_RETURN_IF_EQUAL(Name) \
     if (IS_EQUAL(Name)) {                  \
-        Flags->##Name = TRUE;              \
+        Flags->Name = TRUE;                \
         return S_OK;                       \
     }
 
 #define CLEAR_FLAG_AND_RETURN_IF_EQUAL(Name, FlagName) \
     if (IS_EQUAL(Name)) {                              \
-        Flags->##FlagName = FALSE;                     \
+        Flags->FlagName = FALSE;                       \
         return S_OK;                                   \
     }
 
@@ -306,8 +306,8 @@ TryExtractArgTableCompileFlags(
 {
     UNREFERENCED_PARAMETER(Rtl);
     UNREFERENCED_PARAMETER(Allocator);
-    DBG_UNREFERENCED_PARAMETER(Argument);
-    DBG_UNREFERENCED_PARAMETER(Flags);
+    UNREFERENCED_PARAMETER(Argument);
+    UNREFERENCED_PARAMETER(Flags);
 
     return S_FALSE;
 }
@@ -358,7 +358,7 @@ TryExtractValueArray(
     //
 
     Wide = InputString->Buffer;
-    NumberOfInputStringChars = InputString->Length >> 1;
+    NumberOfInputStringChars = InputString->Length / sizeof(WCHAR);
 
     for (Index = 0; Index < NumberOfInputStringChars; Index++, Wide++) {
         if (*Wide == L',') {
@@ -634,7 +634,7 @@ TryExtractSeedMaskCounts(
 
     Source = InputString->Buffer;
     Dest = (PWCHAR)Buffer;
-    NumberOfInputStringChars = InputString->Length >> 1;
+    NumberOfInputStringChars = InputString->Length / sizeof(WCHAR);
 
     for (Index = 0; Index < NumberOfInputStringChars; Index++) {
         Wide = Source[Index];
@@ -860,7 +860,7 @@ Return Value:
     //
 
     Source = Argument->Buffer;
-    Count = Argument->Length >> 1;
+    Count = Argument->Length / sizeof(WCHAR);
 
     for (Index = 0; Index < Count; Index++) {
         if (*Source == L'=') {
@@ -884,7 +884,7 @@ Return Value:
     if (EqualSignFound) {
         LocalArg.Length = (USHORT)RtlPointerToOffset(LocalArg.Buffer, Source-1);
         LocalArg.MaximumLength = LocalArg.Length;
-        ASSERT(LocalArg.Buffer[LocalArg.Length >> 1] == L'=');
+        ASSERT(RTL_LAST_CHAR(&LocalArg) == L'=');
     }
 
     //
@@ -956,10 +956,12 @@ Return Value:
 
     ValueString = &Temp;
     ValueString->Buffer = Source;
-    ValueString->Length = Argument->Length - ((Index + 1) << 1);
-    ValueString->MaximumLength = ValueString->Length + 2;
+    ValueString->Length = Argument->Length - (USHORT)(
+        ((USHORT)(Index + 1) * (USHORT)sizeof(WCHAR))
+    );
+    ValueString->MaximumLength = ValueString->Length + sizeof(WCHAR);
 
-    ASSERT(ValueString->Buffer[ValueString->Length >> 1] == L'\0');
+    ASSERT(RTL_LAST_CHAR(ValueString) == L'\0');
 
     //
     // Attempt to convert the value string into an integer representation.  We
@@ -1025,7 +1027,7 @@ Return Value:
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(FunctionHookCallbackIgnoreRip);
 
 #define IS_VALUE_EQUAL(ValueName) \
-    Rtl->RtlEqualUnicodeString(ValueString, &ValueName, TRUE)
+    Rtl->RtlEqualUnicodeString(ValueString, &ValueName, FALSE)
 
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_EQUAL(Name, ValueName) \
     if (IS_EQUAL(Name) && IS_VALUE_EQUAL(ValueName)) {      \
@@ -1182,18 +1184,18 @@ Return Value:
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(MainWork, MAIN_WORK);
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(FileWork, FILE_WORK);
 
-#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_DOUBLE(Name, Upper)          \
-    if (IS_EQUAL(Name)) {                                            \
-        End = NULL;                                                  \
-        Expected = ValueString->Buffer + (ValueString->Length >> 1); \
-        Double = wstrtod(ValueString->Buffer, &End);                 \
-        if (End == Expected) {                                       \
-            SET_PARAM_ID(Name);                                      \
-            LocalParam.AsDouble = Double;                            \
-            goto AddParam;                                           \
-        }                                                            \
-        Result = PH_E_INVALID_##Upper;                               \
-        goto Error;                                                  \
+#define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_DOUBLE(Name, Upper)                   \
+    if (IS_EQUAL(Name)) {                                                     \
+        End = NULL;                                                           \
+        Expected = ValueString->Buffer + (ValueString->Length/sizeof(WCHAR)); \
+        Double = wstrtod(ValueString->Buffer, &End);                          \
+        if (End == Expected) {                                                \
+            SET_PARAM_ID(Name);                                               \
+            LocalParam.AsDouble = Double;                                     \
+            goto AddParam;                                                    \
+        }                                                                     \
+        Result = PH_E_INVALID_##Upper;                                        \
+        goto Error;                                                           \
     }
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_DOUBLE(SolutionsFoundRatio,
@@ -1251,7 +1253,7 @@ Return Value:
         // CSV output.
         //
 
-        Count = ValueString->Length >> 1;
+        Count = ValueString->Length / sizeof(WCHAR);
         for (Index = 0; Index < Count; Index++) {
             if (ValueString->Buffer[Index] == L',') {
                 Result = PH_E_INVALID_REMARK;
@@ -1286,8 +1288,8 @@ Return Value:
 
         SET_PARAM_ID(FunctionHookCallbackFunctionName);
         LocalStringA = &LocalParam.AsString;
-        LocalStringA->Length = ValueString->Length >> 1;
-        LocalStringA->MaximumLength = ValueString->MaximumLength >> 1;
+        LocalStringA->Length = ValueString->Length / sizeof(WCHAR);
+        LocalStringA->MaximumLength = ValueString->MaximumLength / sizeof(WCHAR);
         LocalStringA->Buffer = (PCHAR)ValueString->Buffer;
         Buffer = LocalStringA->Buffer;
         AppendWStrToCharBufferFast(&Buffer, ValueString->Buffer);

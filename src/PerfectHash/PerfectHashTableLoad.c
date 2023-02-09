@@ -184,7 +184,7 @@ Return Value:
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
                                          &IID_PERFECT_HASH_PATH,
-                                         &Path);
+                                         PPV(&Path));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCreateInstance, Result);
@@ -205,7 +205,7 @@ Return Value:
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
                                          &IID_PERFECT_HASH_PATH,
-                                         &InfoStreamPath);
+                                         PPV(&InfoStreamPath));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashPathCreateInstance, Result);
@@ -393,7 +393,7 @@ Return Value:
     Result = Table->Vtbl->CreateInstance(Table,
                                          NULL,
                                          &IID_PERFECT_HASH_FILE,
-                                         &File);
+                                         PPV(&File));
 
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashFileCreateInstance, Result);
@@ -508,6 +508,7 @@ Return Value:
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
     Table->TableDataBaseAddress = Table->TableFile->BaseAddress;
+    Table->TableDataSizeInBytes = Table->TableFile->FileInfo.EndOfFile.QuadPart;
 
     goto End;
 

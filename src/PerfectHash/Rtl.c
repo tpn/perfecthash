@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,12 +15,41 @@ Abstract:
 
 #include "stdafx.h"
 
+
+#ifdef PH_WINDOWS
+BOOL
+CloseEvent(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    return CloseHandle(Object);
+}
+
+BOOL
+CloseDirectory(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    return CloseHandle(Object);
+}
+
+BOOL
+CloseFile(
+    _In_ _Post_ptr_invalid_ HANDLE Object
+    )
+{
+    return CloseHandle(Object);
+}
+#endif
+
 //
 // Forward definitions.
 //
 
-extern LOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
-extern SET_C_SPECIFIC_HANDLER SetCSpecificHandler;
+#ifdef PH_WINDOWS
+LOAD_SYMBOLS_FROM_MULTIPLE_MODULES LoadSymbolsFromMultipleModules;
+SET_C_SPECIFIC_HANDLER SetCSpecificHandler;
+#endif
 
 #define EXPAND_AS_RTL_FUNCTION_NAME(Upper, Name) \
     #Name,
@@ -35,6 +64,8 @@ const PCZPCWSTR RtlModuleNames[] = {
 };
 #define ModuleNames RtlModuleNames
 
+
+#ifdef PH_WINDOWS
 
 //
 // As we don't link to the CRT, we don't get a __C_specific_handler entry,
@@ -105,6 +136,9 @@ SetCSpecificHandler(
     ASSERT(Status);
 }
 
+#endif // PH_WINDOWS
+
+
 //
 // Initialize and rundown functions.
 //
@@ -125,6 +159,8 @@ RtlInitialize(
     ULONG NumberOfModules;
     ULONG NumberOfSymbols;
     ULONG NumberOfResolvedSymbols;
+
+#ifdef PH_WINDOWS
 
     //
     // Define an appropriately sized bitmap we can passed to LoadSymbols().
@@ -213,9 +249,9 @@ RtlInitialize(
         goto Error;
     }
 
-    SetCSpecificHandler(Rtl->__C_specific_handler);
-
     ASSERT(NumberOfSymbols == NumberOfResolvedSymbols);
+
+    SetCSpecificHandler(Rtl->__C_specific_handler);
 
     Success = CryptAcquireContextW(&Rtl->CryptProv,
                                    NULL,
@@ -245,6 +281,27 @@ RtlInitialize(
         Rtl->Vtbl->CopyPages = RtlCopyPages_AVX2;
         Rtl->Vtbl->FillPages = RtlFillPages_AVX2;
     }
+#endif
+#else // PH_WINDOWS
+
+    //
+    // Compat initialization.
+    //
+
+    Result = RtlInitializeCpuFeatures(Rtl);
+    if (FAILED(Result)) {
+        PH_ERROR(RtlInitializeCpuFeatures, Result);
+        goto Error;
+    }
+
+    Rtl->RtlCompareMemory = RtlCompareMemory;
+    Rtl->RtlNumberOfSetBits = RtlNumberOfSetBits;
+    Rtl->RtlEqualUnicodeString = RtlEqualUnicodeString;
+    Rtl->RtlFindLongestRunClear = RtlFindLongestRunClear;
+    Rtl->RtlUnicodeStringToInt64 = RtlUnicodeStringToInt64;
+    Rtl->RtlUnicodeStringToInteger = RtlUnicodeStringToInteger;
+    Rtl->RtlAppendUnicodeStringToString = RtlAppendUnicodeStringToString;
+
 #endif
 
     //
@@ -285,7 +342,9 @@ RtlRundown(
         return;
     }
 
+#ifdef PH_WINDOWS
     if (Rtl->CryptProv) {
+
         if (!CryptReleaseContext(Rtl->CryptProv, 0)) {
             SYS_ERROR(CryptReleaseContext);
         }
@@ -294,7 +353,9 @@ RtlRundown(
 
     Buffer = Rtl->CpuFeatures.ProcInfoArray.ProcInfo;
     if (Buffer != NULL) {
-        if (!VirtualFree(Buffer, 0, MEM_RELEASE)) {
+        if (!VirtualFree(Buffer,
+                         VFS(Rtl->ProcInfoBufferSizeInBytes),
+                         MEM_RELEASE)) {
             SYS_ERROR(VirtualFree);
         }
         Rtl->CpuFeatures.ProcInfoArray.ProcInfo = NULL;
@@ -330,6 +391,8 @@ RtlRundown(
 
         Rtl->SysErrorMessageBuffer = NULL;
     }
+#endif
+
 }
 
 _Use_decl_annotations_
@@ -450,6 +513,7 @@ Return Value:
 
 
 #if defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
+#ifdef PH_WINDOWS
 HRESULT
 RtlInitializeCpuFeaturesLogicalProcessors(
     _In_ PRTL Rtl
@@ -516,6 +580,8 @@ Return Value:
         Result = E_OUTOFMEMORY;
         goto End;
     }
+
+    Rtl->ProcInfoBufferSizeInBytes = ProcInfoLength;
 
     Success = GetLogicalProcessorInformation(ProcInfoBuffer, &ProcInfoLength);
     if (!Success) {
@@ -607,7 +673,7 @@ End:
 
     return Result;
 }
-
+#endif // PH_WINDOWS
 
 _Use_decl_annotations_
 HRESULT
@@ -645,8 +711,18 @@ Return Value:
     Features = &Rtl->CpuFeatures;
     ZeroStruct(CpuInfo);
 
-    __cpuid((PINT)&CpuInfo.AsIntArray, 0);
+#ifdef PH_WINDOWS
+#define CPUID(Func) __cpuid((PINT)&CpuInfo.AsIntArray, Func)
+#define CPUIDEX(Func, Sub) __cpuidex((PINT)&CpuInfo.AsIntArray, Func, Sub)
+#else
+#define CPUID(Func) \
+    __cpuid(Func, CpuInfo.Eax, CpuInfo.Ebx, CpuInfo.Ecx, CpuInfo.Edx)
+#define CPUIDEX(Func, Sub)   \
+    __cpuid_count(Func, Sub, \
+                  CpuInfo.Eax, CpuInfo.Ebx, CpuInfo.Ecx, CpuInfo.Edx)
+#endif
 
+    CPUID(0);
     HighestId = CpuInfo.Eax;
 
     Features->Vendor.IsIntel = (
@@ -669,7 +745,7 @@ Return Value:
 
     if (HighestId >= 1) {
         ZeroStruct(CpuInfo);
-        __cpuidex((PINT)&CpuInfo.AsIntArray, 1, 0);
+        CPUIDEX(1, 0);
 
         Features->F1Ecx.AsLong = CpuInfo.Ecx;
         Features->F1Edx.AsLong = CpuInfo.Edx;
@@ -677,20 +753,20 @@ Return Value:
 
     if (HighestId >= 7) {
         ZeroStruct(CpuInfo);
-        __cpuidex((PINT)&CpuInfo.AsIntArray, 7, 0);
+        CPUIDEX(7, 0);
 
         Features->F7Ebx.AsLong = CpuInfo.Ebx;
         Features->F7Ecx.AsLong = CpuInfo.Ecx;
     }
 
     ZeroStruct(CpuInfo);
-    __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId);
+    CPUID(BaseExtendedId);
     HighestExtendedId = CpuInfo.Eax;
 
     ExtendedId = BaseExtendedId + 1;
     if (HighestExtendedId >= ExtendedId) {
         ZeroStruct(CpuInfo);
-        __cpuidex((PINT)&CpuInfo.AsIntArray, ExtendedId, 0);
+        CPUIDEX(ExtendedId, 0);
 
         Features->F81Ecx.AsLong = CpuInfo.Ecx;
         Features->F81Edx.AsLong = CpuInfo.Edx;
@@ -738,13 +814,13 @@ Return Value:
 
     if (HighestExtendedId >= (BaseExtendedId + 4)) {
 
-        __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId + 2);
+        CPUID(BaseExtendedId + 2);
         CopyMemory(Brand->Buffer, CpuInfo.AsCharArray, 16);
 
-        __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId + 3);
+        CPUID(BaseExtendedId + 3);
         CopyMemory(Brand->Buffer + 16, CpuInfo.AsCharArray, 16);
 
-        __cpuid((PINT)&CpuInfo.AsIntArray, BaseExtendedId + 4);
+        CPUID(BaseExtendedId + 4);
         CopyMemory(Brand->Buffer + 32, CpuInfo.AsCharArray, 16);
 
         Brand->Length = (USHORT)strlen(Brand->Buffer);
@@ -777,11 +853,13 @@ Return Value:
         goto End;
     }
 
+#ifdef PH_WINDOWS
     Result = RtlInitializeCpuFeaturesLogicalProcessors(Rtl);
     if (FAILED(Result)) {
         PH_ERROR(RtlInitializeCpuFeaturesLogicalProcessors, Result);
         goto End;
     }
+#endif
 
     //
     // Intentional follow-on.
@@ -791,7 +869,6 @@ End:
 
     return Result;
 }
-
 
 _Use_decl_annotations_
 HRESULT

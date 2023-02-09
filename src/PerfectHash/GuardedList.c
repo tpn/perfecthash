@@ -61,7 +61,7 @@ Return Value:
     Result = List->Vtbl->CreateInstance(List,
                                         NULL,
                                         &IID_PERFECT_HASH_RTL,
-                                        &List->Rtl);
+                                        PPV(&List->Rtl));
 
     if (FAILED(Result)) {
         goto Error;
@@ -70,7 +70,7 @@ Return Value:
     Result = List->Vtbl->CreateInstance(List,
                                         NULL,
                                         &IID_PERFECT_HASH_ALLOCATOR,
-                                        &List->Allocator);
+                                        PPV(&List->Allocator));
 
     if (FAILED(Result)) {
         goto Error;
@@ -343,6 +343,8 @@ GuardedListReset(
     ReleaseGuardedListLockExclusive(List);
 }
 
+#if PH_WINDOWS
+
 //
 // TSX versions of the above.
 //
@@ -549,5 +551,7 @@ GuardedListRemoveHeadExTsx(
 }
 
 #endif
+
+#endif // if PH_WINDOWS
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
