@@ -37,7 +37,6 @@ Abstract:
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/sysinfo.h>
-#include <linux/mman.h>
 
 #define FREE_PTR(P) \
     if ((P) != NULL && *(P) != NULL) { free(*(P)); *(P) = NULL; }

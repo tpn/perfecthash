@@ -86,6 +86,14 @@ if (IS_WINDOWS)
 
 else()
 
+    if (IS_LINUX)
+        target_compile_definitions(
+            ${PROJECT_NAME}
+            PUBLIC
+            "PH_LINUX"
+        )
+    endif()
+
     target_compile_definitions(
         ${PROJECT_NAME}
         PUBLIC
@@ -108,6 +116,7 @@ else()
         ${PROJECT_NAME}
         PUBLIC
         -pthread
+        -lrt
     )
 
     if (CMAKE_C_COMPILER_ID MATCHES Clang)

@@ -36,6 +36,23 @@ extern "C" {
 #include <cpuid.h>
 #include <x86intrin.h>
 
+#ifdef PH_LINUX
+#include <linux/mman.h>
+
+//
+// No idea why these two defines aren't always available when including
+// <linux/mman.h>.
+//
+#ifndef MAP_HUGE_2MB
+#define HUGETLB_FLAG_ENCODE_SHIFT 26
+#define HUGETLB_FLAG_ENCODE_2MB (21 << HUGETLB_FLAG_ENCODE_SHIFT)
+#define MAP_HUGE_2MB HUGETLB_FLAG_ENCODE_2MB
+#endif
+#ifndef MAP_SHARED_VALIDATE
+#define MAP_SHARED_VALIDATE MAP_SHARED
+#endif
+#endif // PH_LINUX
+
 //
 // SAL compat.
 //
@@ -205,7 +222,15 @@ SystemTimeToFileTime(
 
 #define FORCEINLINE static inline __attribute__((always_inline))
 
+#if defined(__GNUC__)
+#if (__GNUC__ < 11)
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
+#else
+#define C_ASSERT(e) _Static_assert(e, "Assertion failed")
+#endif
+#else
+#define C_ASSERT(e) static_assert(e, "Assertion failed")
+#endif
 
 typedef _Return_type_success_(return >= 0) LONG HRESULT;
 typedef HRESULT *PHRESULT;
