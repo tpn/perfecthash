@@ -73,8 +73,6 @@ Return Value:
         goto Error;
     }
 
-#ifdef PH_WINDOWS
-
     //
     // Initialize the timestamp string.
     //
@@ -88,8 +86,6 @@ Return Value:
         PH_ERROR(PerfectHashTableInitialize_InitTimestampString, Result);
         goto Error;
     }
-
-#endif
 
     //
     // We're done!  Indicate success and finish up.

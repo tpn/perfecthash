@@ -723,8 +723,6 @@ Return Value:
     // Initialize the timestamp string.
     //
 
-#ifdef PH_WINDOWS
-
     Result = InitializeTimestampString((PCHAR)&Context->TimestampBuffer,
                                        sizeof(Context->TimestampBuffer),
                                        &Context->TimestampString,
@@ -734,8 +732,6 @@ Return Value:
         PH_ERROR(PerfectHashContextInitialize_InitTimestampString, Result);
         goto Error;
     }
-
-#endif
 
     //
     // Wire up the ComputerName string and buffer, then get the computer name.

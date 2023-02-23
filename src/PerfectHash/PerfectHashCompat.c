@@ -14,6 +14,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "PerfectHashEventsPrivate.h"
+#include <sys/time.h>
 
 #define GetSystemAllocationGranularity() (max(getpagesize(), 65536))
 
@@ -138,54 +139,335 @@ OutputDebugStringA(
     fprintf(stderr, "%s\n", lpOutputString);
 }
 
+//
+// Time.
+//
 
 //
-// File times.
+// Win32 Epoch (Jan 1, 1601) to Unix Epoch (Jan 1, 1970).  365 days in a year,
+// 369 years between 1601 and 1970, 89 leap days between 1601 and 1970.
 //
+
+#define DAYS_BETWEEN_EPOCHS ((ULONGLONG)(((369 * 365) + 89)))
+
+//
+// 86400 seconds in a day.
+//
+
+#define SECONDS_IN_DAYS_BETWEEN_EPOCHS (DAYS_BETWEEN_EPOCHS * 86400LL)
+
+C_ASSERT(SECONDS_IN_DAYS_BETWEEN_EPOCHS == 11644473600LL);
+
+//
+// Convert a struct timeval to a FILETIME.
+//
+
+VOID
+ConvertStructTimevalToFileTime(
+    _In_ struct timeval *Timeval,
+    _Out_ LPFILETIME FileTime
+    )
+{
+    ULONGLONG Time;
+    ULARGE_INTEGER Quad;
+
+    Time = (Timeval->tv_sec + SECONDS_IN_DAYS_BETWEEN_EPOCHS) * 1e9;
+
+    //
+    // Instead of doing the following, just multiply by 10:
+    //
+    //  Time += ((Timeval->tv_usec * 1000) / 100);
+    //
+
+    Time += Timeval->tv_usec * 10;
+
+    Quad.QuadPart = Time;
+    FileTime->dwLowDateTime = Quad.LowPart;
+    FileTime->dwHighDateTime = Quad.HighPart;
+}
 
 
 VOID
-GetSystemTime(
-    _Out_ LPSYSTEMTIME lpSystemTime
+ConvertUnixTimeToSystemTime(
+    _In_ struct tm *Time,
+    _In_ struct timeval *Timeval,
+    _Out_ LPSYSTEMTIME SystemTime
     )
 {
+    SystemTime->wYear = (WORD)(Time->tm_year + 1900);
+    SystemTime->wMonth = (WORD)(Time->tm_mon + 1);
+    SystemTime->wDayOfWeek = (WORD)Time->tm_wday;
+    SystemTime->wDay = (WORD)Time->tm_mday;
+    SystemTime->wHour = (WORD)Time->tm_hour;
+    SystemTime->wMinute = (WORD)Time->tm_min;
+    SystemTime->wSecond = (WORD)Time->tm_sec;
+    SystemTime->wMilliseconds = (WORD)(Timeval->tv_usec / 1000);
+}
+
+VOID
+GetSystemTime(
+    _Out_ LPSYSTEMTIME SystemTime
+    )
+{
+    time_t t;
+    struct tm *tmp;
+    struct timeval tv;
+    struct tm tm_utc = { 0, };
+
+    if (gettimeofday(&tv, NULL) == -1) {
+        PH_ERROR(gettimeofday, PH_E_SYSTEM_CALL_FAILED);
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+
+    t = tv.tv_sec;
+
+    tmp = gmtime_r(&t, &tm_utc);
+    if (tmp == NULL) {
+        PH_ERROR(gmtime, PH_E_SYSTEM_CALL_FAILED);
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+
+    ConvertUnixTimeToSystemTime(tmp, &tv, SystemTime);
+
     return;
 }
 
 VOID
 GetSystemTimeAsFileTime(
-    _Out_ LPFILETIME lpSystemTimeAsFileTime
+    _Out_ LPFILETIME FileTime
     )
 {
+    struct timeval tv;
+
+    if (gettimeofday(&tv, NULL) == -1) {
+        PH_ERROR(gettimeofday, PH_E_SYSTEM_CALL_FAILED);
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+
+    ConvertStructTimevalToFileTime(&tv, FileTime);
     return;
 }
 
 VOID
 GetLocalTime(
-    _Out_ LPSYSTEMTIME lpSystemTime
+    _Out_ LPSYSTEMTIME SystemTime
     )
 {
+    time_t t;
+    struct tm *tmp;
+    struct timeval tv;
+    struct tm tm_local = { 0, };
+
+    if (gettimeofday(&tv, NULL) == -1) {
+        PH_ERROR(gettimeofday, PH_E_SYSTEM_CALL_FAILED);
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+
+    t = tv.tv_sec;
+
+    tmp = localtime_r(&t, &tm_local);
+    if (tmp == NULL) {
+        PH_ERROR(gmtime, PH_E_SYSTEM_CALL_FAILED);
+        PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
+    }
+
+    ConvertUnixTimeToSystemTime(tmp, &tv, SystemTime);
+
     return;
 }
+
+//
+// Convert a FILETIME to SYSTEMTIME.  Thanks ChatGPT!
+//
 
 _Success_(return != FALSE)
 BOOL
 FileTimeToSystemTime(
-    _In_ CONST FILETIME* lpFileTime,
-    _Out_ LPSYSTEMTIME lpSystemTime
+    _In_ CONST FILETIME* FileTime,
+    _Out_ LPSYSTEMTIME SystemTime
     )
 {
-    return FALSE;
+    ULONGLONG Days;
+    ULONGLONG Seconds;
+    ULONGLONG Interval;
+    ULARGE_INTEGER Quad;
+    ULONGLONG SecondsIntoDay;
+    ULONGLONG DaysSinceLeapYear;
+    DWORD Year;
+    DWORD Month;
+    DWORD YearDay;
+    DWORD DayOfWeek;
+    DWORD LeapYears;
+    DWORD DayOfMonth;
+
+    if (FileTime == NULL || SystemTime == NULL) {
+        SetLastError(E_INVALIDARG);
+        return FALSE;
+    }
+
+    //
+    // Convert the FILETIME value to the number of 100-nanosecond intervals
+    // since January 1, 1601.
+    //
+
+    Quad.LowPart = FileTime->dwLowDateTime;
+    Quad.HighPart = FileTime->dwHighDateTime;
+    Interval = Quad.QuadPart;
+
+    //
+    // Calculate the number of seconds since January 1, 1970 (Unix epoch).
+    //
+
+    Seconds = Interval / 10000000ULL - SECONDS_IN_DAYS_BETWEEN_EPOCHS;
+
+    //
+    // Calculate the number of seconds into the current day.
+    //
+
+    SecondsIntoDay = Seconds % 86400;
+
+    //
+    // Calculate the number of days since January 1, 1970.
+    //
+
+    Days = Seconds / 86400;
+
+    //
+    // Calculate the day of the week (0=Sunday, 1=Monday, etc.).
+    //
+
+    DayOfWeek = (DWORD)((Days + 1) % 7);
+
+    //
+    // Calculate the year, month, and day of the month.
+    //
+
+    LeapYears = (DWORD)((Days - 1) / 1461);
+    Year = (DWORD)(1970 + 4 * LeapYears);
+    DaysSinceLeapYear = Days - LeapYears * 1461;
+    if (DaysSinceLeapYear >= 366) {
+        LeapYears++;
+        Year++;
+        DaysSinceLeapYear -= 366;
+    }
+    YearDay = (DWORD)DaysSinceLeapYear;
+    for (Month = 1; Month <= 12; Month++) {
+        DWORD DaysInMonth = 31;
+        if (Month == 4 || Month == 6 || Month == 9 || Month == 11) {
+            DaysInMonth = 30;
+        } else if (Month == 2) {
+            DaysInMonth = Year % 4 == 0 && (
+                Year % 100 != 0 || Year % 400 == 0
+            ) ? 29 : 28;
+        }
+        if (YearDay < DaysInMonth) {
+            DayOfMonth = YearDay + 1;
+            break;
+        }
+        YearDay -= DaysInMonth;
+    }
+
+    //
+    // Set the fields in the SYSTEMTIME structure.
+    //
+
+    SystemTime->wYear = (WORD)Year;
+    SystemTime->wMonth = (WORD)Month;
+    SystemTime->wDayOfWeek = (WORD)DayOfWeek;
+    SystemTime->wDay = (WORD)DayOfMonth;
+    SystemTime->wHour = (WORD)(SecondsIntoDay / 3600);
+    SystemTime->wMinute = (WORD)((SecondsIntoDay % 3600) / 60);
+    SystemTime->wSecond = (WORD)(SecondsIntoDay % 60);
+    SystemTime->wMilliseconds = (WORD)(Interval % 10000);
+
+    return TRUE;
 }
+
+//
+// Convert SYSTEMTIME to FILETIME.  Thanks ChatGPT!
+//
 
 _Success_(return != FALSE)
 BOOL
 SystemTimeToFileTime(
-    _In_ CONST SYSTEMTIME* lpSystemTime,
-    _Out_ LPFILETIME lpFileTime
+    _In_ CONST SYSTEMTIME* SystemTime,
+    _Out_ LPFILETIME FileTime
     )
 {
-    return FALSE;
+    ULONGLONG Seconds;
+    ULONGLONG Interval;
+    DWORD Year;
+    DWORD Month;
+    DWORD DayOfWeek;
+    DWORD LeapYears;
+    DWORD DayOfMonth;
+    DWORD DaysInMonth;
+    DWORD DaysSince1970;
+    DWORD DaysSinceLeapYear;
+
+    if (SystemTime == NULL || FileTime == NULL)
+    {
+        PH_RAISE(E_INVALIDARG);
+        return FALSE;
+    }
+
+    //
+    // Calculate the number of seconds since January 1, 1970 (Unix epoch).
+    //
+
+    Year = SystemTime->wYear;
+    Month = SystemTime->wMonth;
+    DayOfMonth = SystemTime->wDay;
+    LeapYears = (Year - 1969) / 4 - (Year - 1901) / 100 + (Year - 1601) / 400;
+    DaysSince1970 = (Year - 1970) * 365 + LeapYears;
+    switch (Month)
+    {
+        case 12:
+            DaysSince1970 += 30;
+        case 11:
+            DaysSince1970 += 31;
+        case 10:
+            DaysSince1970 += 30;
+        case 9:
+            DaysSince1970 += 31;
+        case 8:
+            DaysSince1970 += 31;
+        case 7:
+            DaysSince1970 += 30;
+        case 6:
+            DaysSince1970 += 31;
+        case 5:
+            DaysSince1970 += 30;
+        case 4:
+            DaysSince1970 += 31;
+        case 3:
+            DaysSince1970 += Year % 4 == 0 && (
+                Year % 100 != 0 || Year % 400 == 0
+            ) ? 29 : 28;
+        case 2:
+            DaysSince1970 += 31;
+        case 1:
+        default:
+            break;
+    }
+
+    DaysSince1970 += DayOfMonth - 1;
+    DayOfWeek = (DWORD)((DaysSince1970 + 4) % 7);
+    Seconds = DaysSince1970 * 86400ULL +
+        SystemTime->wHour * 3600ULL +
+        SystemTime->wMinute * 60ULL +
+        SystemTime->wSecond;
+
+    //
+    // Convert the number of seconds to a FILETIME value.
+    //
+
+    Interval = Seconds + SECONDS_IN_DAYS_BETWEEN_EPOCHS;
+    Interval *= 10000000ULL;
+    FileTime->dwLowDateTime = (DWORD)Interval;
+    FileTime->dwHighDateTime = (DWORD)(Interval >> 32);
+
+    return TRUE;
 }
 
 
@@ -244,14 +526,33 @@ WINBASEAPI
 BOOL
 WINAPI
 GetFileTime(
-    _In_ HANDLE hFile,
-    _Out_opt_ LPFILETIME lpCreationTime,
-    _Out_opt_ LPFILETIME lpLastAccessTime,
-    _Out_opt_ LPFILETIME lpLastWriteTime
+    _In_ HANDLE File,
+    _Out_opt_ LPFILETIME CreationTime,
+    _Out_opt_ LPFILETIME LastAccessTime,
+    _Out_opt_ LPFILETIME LastWriteTime
     )
 {
-    __debugbreak();
-    return FALSE;
+    INT Result;
+    PH_HANDLE Fd = { 0 };
+    struct stat Stat;
+
+    Fd.AsHandle = File;
+    Result = fstat(Fd.AsFileDescriptor, &Stat);
+    if (Result != 0) {
+        SetLastError(errno);
+        return FALSE;
+    }
+
+    CreationTime->dwLowDateTime = (DWORD)Stat.st_ctime;
+    CreationTime->dwHighDateTime = (DWORD)(Stat.st_ctime >> 32);
+
+    LastAccessTime->dwLowDateTime = (DWORD)Stat.st_atime;
+    LastAccessTime->dwHighDateTime = (DWORD)(Stat.st_atime >> 32);
+
+    LastWriteTime->dwLowDateTime = (DWORD)Stat.st_mtime;
+    LastWriteTime->dwHighDateTime = (DWORD)(Stat.st_mtime >> 32);
+
+    return TRUE;
 }
 
 
