@@ -70,14 +70,14 @@ Return Value:
     const BYTE CuRandDllVersionOffset = 9;
 
 #define EXPAND_AS_CU_NAME(Upper, Name) "cu" # Name,
-#define EXPAND_AS_CU_V2_NAME(Upper, Name) "cu" # Name ## "_v2",
+#define EXPAND_AS_CU_V2_NAME(Upper, Name) "cu" # Name "_v2",
 
     CONST PCSZ CuNames[] = {
         CU_FUNCTION_TABLE_ENTRY(EXPAND_AS_CU_NAME)
         CU_FUNCTION_V2_TABLE_ENTRY(EXPAND_AS_CU_V2_NAME)
     };
 
-#define EXPAND_AS_CURAND_NAME(Upper, Name) "curand" # Name,
+#define EXPAND_AS_CURAND_NAME(Upper, Name) "curand"#Name,
     CONST PCSZ CuRandNames[] = {
         CURAND_FUNCTION_TABLE_ENTRY(EXPAND_AS_CURAND_NAME)
     };

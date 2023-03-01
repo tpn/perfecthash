@@ -1817,12 +1817,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     LONG CuDeviceIndex;
 
     //
-    // Current index into the Order array (used during assignment).
-    //
-
-    volatile LONG OrderIndex;
-
-    //
     // Clock related fields.
     //
 
@@ -1915,46 +1909,43 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     _Writable_elements_(NumberOfKeys)
-    PVERTEX_PAIR VertexPairs;
+    PVERTEX_PAIR SortedVertexPairsDevice;
 
     _Writable_elements_(NumberOfKeys)
-    PVERTEX_PAIR SortedVertexPairs;
-
-    _Writable_elements_(NumberOfKeys)
-    PULONG VertexPairsIndex;
+    PULONG VertexPairsIndexDevice;
 
     //
     // CUDA vertex arrays.
     //
 
     _Writable_elements_(NumberOfKeys)
-    PVERTEX Vertices1;
+    PVERTEX Vertices1Device;
 
     _Writable_elements_(NumberOfKeys)
-    PVERTEX Vertices2;
+    PVERTEX Vertices2Device;
 
     _Writable_elements_(NumberOfKeys)
-    PULONG Vertices1Index;
+    PULONG Vertices1IndexDevice;
 
     _Writable_elements_(NumberOfKeys)
-    PULONG Vertices2Index;
+    PULONG Vertices2IndexDevice;
 
     //
     // CUDA arrays for capturing deleted edges and visited vertices.
     //
 
     _Writable_elements_(NumberOfVertices)
-    volatile ULONG *Deleted;
+    volatile ULONG *DeletedDevice;
 
     _Writable_elements_(NumberOfKeys)
-    volatile ULONG *Visited;
+    volatile ULONG *VisitedDevice;
 
     //
     // CUDA array for capturing count of vertices.
     //
 
     _Writable_elements_(NumberOfVertices)
-    volatile ULONG *Counts;
+    volatile ULONG *CountsDevice;
 
     //
     // Seed masks for the current hash function.

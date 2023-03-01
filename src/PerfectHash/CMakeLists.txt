@@ -47,6 +47,10 @@ set(Private_Header_Files
     "TableCreateCsv.h"
     "targetver.h"
     "VCProjectFileChunks.h"
+    "Cu.cuh"
+    "GraphCu.h"
+    "PerfectHashCu.h"
+    "CuDeviceAttributes.h"
 )
 source_group("Private Header Files" FILES ${Private_Header_Files})
 
@@ -107,6 +111,8 @@ set(Private_Header_Files_28Auto-Generated29
     "CompiledPerfectHashTableTypesPre_CHeader_RawCString.h"
     "Makefile_Makefile_RawCString.h"
     "no_sal2_CHeader_RawCString.h"
+    "GraphDebug_Ptx_RawCString.h"
+    "Graph_Ptx_RawCString.h"
 )
 source_group("Private Header Files %28Auto-Generated%29" FILES ${Private_Header_Files_28Auto-Generated29})
 
@@ -215,12 +221,15 @@ set(Source_Files
     "_pow.c"
     "_dtoa.c"
     "_strtod.c"
+    "Cu.c"
+    "Chm02.c"
+    "GraphCu.c"
+    "PerfectHashCu.c"
 )
 
 if (IS_WINDOWS)
     list(
         APPEND Source_Files
-        "Cu.c"
         "Chm01.c"
         "RtlUuid.c"
         "Security.c"

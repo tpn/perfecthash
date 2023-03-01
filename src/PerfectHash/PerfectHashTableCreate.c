@@ -726,8 +726,6 @@ Return Value:
 
                 break;
 
-            case TableCreateParameterCuDeviceOrdinalId:
-            case TableCreateParameterCuDeviceOrdinalsId:
             case TableCreateParameterCuRngId:
             case TableCreateParameterCuRngSeedId:
             case TableCreateParameterCuRngSubsequenceId:
