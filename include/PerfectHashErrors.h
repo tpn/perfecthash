@@ -180,6 +180,15 @@ Abstract:
 //
 #define PH_S_TABLE_CREATE_PARAMETER_NOT_FOUND ((HRESULT)0x2004000DL)
 
+//
+// MessageId: PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED
+//
+// MessageText:
+//
+// CUDA kernel runtime target reached.
+//
+#define PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED ((HRESULT)0xE004000EL)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
@@ -265,6 +274,15 @@ Abstract:
 // Solve timeout expired.
 //
 #define PH_I_SOLVE_TIMEOUT_EXPIRED       ((HRESULT)0x60040088L)
+
+//
+// MessageId: PH_I_CUDA_OUT_OF_MEMORY
+//
+// MessageText:
+//
+// The CUDA device is out of memory.
+//
+#define PH_I_CUDA_OUT_OF_MEMORY          ((HRESULT)0x60040089L)
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -4090,10 +4108,201 @@ Abstract:
 #define PH_E_INVALID_SOLUTIONS_FOUND_RATIO ((HRESULT)0xE00403A1L)
 
 //
-// 0x3a2 -> 0x3bf is reserved for future merge of cuda-dev.
+// 0x3a2 -> 0x3bf reserved for CUDA.
 //
 //
-// 0x3a2
+// MessageId: PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY
+//
+// MessageText:
+//
+// CuConcurrency exceeds MaximumConcurrency.
+//
+#define PH_E_CU_CONCURRENCY_EXCEEDS_MAX_CONCURRENCY ((HRESULT)0xE00403A2L)
+
+//
+// MessageId: PH_E_CUDA_OUT_OF_MEMORY
+//
+// MessageText:
+//
+// The CUDA device is out of memory.
+//
+#define PH_E_CUDA_OUT_OF_MEMORY          ((HRESULT)0xE00403A3L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES
+//
+// MessageText:
+//
+// Invalid --CuDevices.
+//
+#define PH_E_INVALID_CU_DEVICES          ((HRESULT)0xE00403A4L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES_BLOCKS_PER_GRID
+//
+// MessageText:
+//
+// Invalid --CuDevicesBlocksPerGrid.
+//
+#define PH_E_INVALID_CU_DEVICES_BLOCKS_PER_GRID ((HRESULT)0xE00403A5L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES_THREADS_PER_BLOCK
+//
+// MessageText:
+//
+// Invalid --CuDevicesThreadsPerBlock.
+//
+#define PH_E_INVALID_CU_DEVICES_THREADS_PER_BLOCK ((HRESULT)0xE00403A6L)
+
+//
+// MessageId: PH_E_INVALID_CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
+//
+// MessageText:
+//
+// Invalid --CuDevicesKernelRuntimeTargetInMilliseconds.
+//
+#define PH_E_INVALID_CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS ((HRESULT)0xE00403A7L)
+
+//
+// MessageId: PH_E_INVALID_CU_CONCURRENCY
+//
+// MessageText:
+//
+// --CuConcurrency must be greater than 0 and less than or equal to maximum concurrency.
+//
+#define PH_E_INVALID_CU_CONCURRENCY      ((HRESULT)0xE00403A8L)
+
+//
+// MessageId: PH_E_CU_CONCURRENCY_MANDATORY_FOR_SELECTED_ALGORITHM
+//
+// MessageText:
+//
+// --CuConcurrency is mandatory for the selected algorithm.
+//
+#define PH_E_CU_CONCURRENCY_MANDATORY_FOR_SELECTED_ALGORITHM ((HRESULT)0xE00403A9L)
+
+//
+// MessageId: PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES
+//
+// MessageText:
+//
+// --CuDevicesBlocksPerGrid requires --CuDevices.
+//
+#define PH_E_CU_BLOCKS_PER_GRID_REQUIRES_CU_DEVICES ((HRESULT)0xE00403AAL)
+
+//
+// MessageId: PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES
+//
+// MessageText:
+//
+// --CuDevicesThreadsPerBlock requires --CuDevices.
+//
+#define PH_E_CU_THREADS_PER_BLOCK_REQUIRES_CU_DEVICES ((HRESULT)0xE00403ABL)
+
+//
+// MessageId: PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES
+//
+// MessageText:
+//
+// --CuDevicesKernelRuntimeTargetInMilliseconds requires --CuDevices.
+//
+#define PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_REQUIRES_CU_DEVICES ((HRESULT)0xE00403ACL)
+
+//
+// MessageId: PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevicesBlocksPerGrid must match the number of values supplied to --CuDevices.
+//
+#define PH_E_CU_BLOCKS_PER_GRID_COUNT_MUST_MATCH_CU_DEVICES_COUNT ((HRESULT)0xE00403ADL)
+
+//
+// MessageId: PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevicesThreadsPerBlock must match the number of values supplied to --CuDevices.
+//
+#define PH_E_CU_THREADS_PER_BLOCK_COUNT_MUST_MATCH_CU_DEVICES_COUNT ((HRESULT)0xE00403AEL)
+
+//
+// MessageId: PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevicesKernelRuntimeTargetInMilliseconds must match the number of values supplied to --CuDevices.
+//
+#define PH_E_CU_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS_COUNT_MUST_MATCH_CU_DEVICES_COUNT ((HRESULT)0xE00403AFL)
+
+//
+// MessageId: PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY
+//
+// MessageText:
+//
+// Number of values supplied to --CuDevices must match the value supplied by --CuConcurrency.
+//
+#define PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY ((HRESULT)0xE00403B0L)
+
+//
+// MessageId: PH_E_INVALID_CU_NUMBER_OF_RANDOM_HOST_SEEDS
+//
+// MessageText:
+//
+// Invalid --CuNumberOfRandomHostSeeds.
+//
+#define PH_E_INVALID_CU_NUMBER_OF_RANDOM_HOST_SEEDS ((HRESULT)0xE00403B2L)
+
+//
+// MessageId: PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY
+//
+// MessageText:
+//
+// --CuCudaDevRuntimeLibPath is mandatory for this algorithm.
+//
+#define PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY ((HRESULT)0xE00403B3L)
+
+//
+// MessageId: PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS
+//
+// MessageText:
+//
+// Invalid launch dimensions for initial solving loop CUDA kernel.  This kernel must be launched with a single thread.
+//
+#define PH_E_CU_KERNEL_SOLVE_LOOP_INVALID_DIMENSIONS ((HRESULT)0xE00403B4L)
+
+//
+// MessageId: PH_E_INVALID_CU_RNG_ID
+//
+// MessageText:
+//
+// Invalid CU RNG ID.
+//
+#define PH_E_INVALID_CU_RNG_ID           ((HRESULT)0xE00403B5L)
+
+//
+// MessageId: PH_E_UNIMPLEMENTED_CU_RNG_ID
+//
+// MessageText:
+//
+// Unimplemented CU RNG ID.
+//
+#define PH_E_UNIMPLEMENTED_CU_RNG_ID     ((HRESULT)0xE00403B6L)
+
+//
+// MessageId: PH_E_INVALID_CU_RNG_NAME
+//
+// MessageText:
+//
+// Invalid CU RNG name.
+//
+#define PH_E_INVALID_CU_RNG_NAME         ((HRESULT)0xE00403B7L)
+
+//
+// 0x3bf end of CUDA.
+//
+// 0x3c0 next set of IDs.
 //
 //
 // MessageId: PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED
@@ -4102,7 +4311,7 @@ Abstract:
 //
 // Duplicate table create parameter detected.
 //
-#define PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED ((HRESULT)0xE00403B1L)
+#define PH_E_DUPLICATE_TABLE_CREATE_PARAMETER_DETECTED ((HRESULT)0xE00403C0L)
 
 //
 // MessageId: PH_E_INVALID_GRAPH_IMPL
@@ -4111,28 +4320,7 @@ Abstract:
 //
 // Invalid value for --GraphImpl.  Valid values: 1, 2, 3.  (Default: 3.)
 //
-#define PH_E_INVALID_GRAPH_IMPL          ((HRESULT)0xE00403B8L)
-
-//
-// 0x3bf
-//
-//
-// MessageId: PH_E_INVALID_RNG_ID
-//
-// MessageText:
-//
-// Invalid RNG ID.
-//
-#define PH_E_INVALID_RNG_ID              ((HRESULT)0xE00403C0L)
-
-//
-// MessageId: PH_E_UNIMPLEMENTED_RNG_ID
-//
-// MessageText:
-//
-// Unimplemented RNG ID.
-//
-#define PH_E_UNIMPLEMENTED_RNG_ID        ((HRESULT)0xE00403C1L)
+#define PH_E_INVALID_GRAPH_IMPL          ((HRESULT)0xE00403C1L)
 
 //
 // MessageId: PH_E_INVALID_RNG_NAME
@@ -4475,4 +4663,22 @@ Abstract:
 // Invalid --BestCoverageTargetValue.
 //
 #define PH_E_INVALID_BEST_COVERAGE_TARGET_VALUE ((HRESULT)0xE00403E7L)
+
+//
+// MessageId: PH_E_INVALID_RNG_ID
+//
+// MessageText:
+//
+// Invalid RNG ID.
+//
+#define PH_E_INVALID_RNG_ID              ((HRESULT)0xE00403E8L)
+
+//
+// MessageId: PH_E_UNIMPLEMENTED_RNG_ID
+//
+// MessageText:
+//
+// Unimplemented RNG ID.
+//
+#define PH_E_UNIMPLEMENTED_RNG_ID        ((HRESULT)0xE00403E9L)
 
