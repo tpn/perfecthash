@@ -204,7 +204,7 @@ Return Value:
         return E_POINTER;
     }
 
-    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
     Silent = (TableCreateFlags.Silent != FALSE);
 
     //
@@ -295,7 +295,7 @@ Return Value:
     //
 
     KeysBaseAddress = Table->Keys->KeyArrayBaseAddress;
-    KeysSizeInBytes = Table->Keys->NumberOfElements.QuadPart * sizeof(KEY);
+    KeysSizeInBytes = Table->Keys->NumberOfKeys.QuadPart * sizeof(KEY);
 
     for (Index = 0; Index < NumberOfDeviceContexts; Index++) {
 
@@ -402,12 +402,12 @@ Return Value:
     Events[FAILED_EVENT] = Context->FailedEvent;
     Events[LOW_MEMORY_EVENT] = Context->LowMemoryEvent;
 
-#define EXPAND_AS_ASSIGN_EVENT(                         \
-    Verb, VUpper, Name, Upper,                          \
-    EofType, EofValue,                                  \
-    Suffix, Extension, Stream, Base                     \
-)                                                       \
-    *##Verb##Event++ = Context->##Verb##d##Name##Event;
+#define EXPAND_AS_ASSIGN_EVENT(                     \
+    Verb, VUpper, Name, Upper,                      \
+    EofType, EofValue,                              \
+    Suffix, Extension, Stream, Base                 \
+)                                                   \
+    *Verb##Event++ = Context->Verb##d##Name##Event;
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSIGN_EVENT);
@@ -456,15 +456,15 @@ Return Value:
     // Submit all of the file preparation work items.
     //
 
-#define EXPAND_AS_SUBMIT_FILE_WORK(                       \
-    Verb, VUpper, Name, Upper,                            \
-    EofType, EofValue,                                    \
-    Suffix, Extension, Stream, Base                       \
-)                                                         \
-    ASSERT(!NoFileIo(Table));                             \
-    ZeroStructInline(##Verb####Name##);                   \
-    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
-    InsertTailFileWork(Context, &Verb##Name##.ListEntry); \
+#define EXPAND_AS_SUBMIT_FILE_WORK(                     \
+    Verb, VUpper, Name, Upper,                          \
+    EofType, EofValue,                                  \
+    Suffix, Extension, Stream, Base                     \
+)                                                       \
+    ASSERT(!NoFileIo(Table));                           \
+    ZeroStructInline(Verb##Name);                       \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
+    InsertTailFileWork(Context, &Verb##Name.ListEntry); \
     SubmitThreadpoolWork(Context->FileWork);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
@@ -1026,16 +1026,16 @@ End:
         EndOfFile = NULL;
     }
 
-#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(                 \
-    Verb, VUpper, Name, Upper,                            \
-    EofType, EofValue,                                    \
-    Suffix, Extension, Stream, Base                       \
-)                                                         \
-    ASSERT(!NoFileIo(Table));                             \
-    ZeroStructInline(##Verb####Name##);                   \
-    Verb##Name##.FileWorkId = FileWork##Verb##Name##Id;   \
-    Verb##Name##.EndOfFile = EndOfFile;                   \
-    InsertTailFileWork(Context, &Verb##Name##.ListEntry); \
+#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(               \
+    Verb, VUpper, Name, Upper,                          \
+    EofType, EofValue,                                  \
+    Suffix, Extension, Stream, Base                     \
+)                                                       \
+    ASSERT(!NoFileIo(Table));                           \
+    ZeroStructInline(Verb##Name);                       \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
+    Verb##Name.EndOfFile = EndOfFile;                   \
+    InsertTailFileWork(Context, &Verb##Name.ListEntry); \
     SubmitThreadpoolWork(Context->FileWork);
 
 #define SUBMIT_CLOSE_FILE_WORK() \
@@ -1045,21 +1045,21 @@ End:
 
     WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
 
-#define EXPAND_AS_CHECK_CLOSE_ERRORS(                                    \
-    Verb, VUpper, Name, Upper,                                           \
-    EofType, EofValue,                                                   \
-    Suffix, Extension, Stream, Base                                      \
-)                                                                        \
-    if (Verb####Name##.NumberOfErrors > 0) {                             \
-        CloseResult = Verb####Name##.LastResult;                         \
-        if (CloseResult == S_OK || CloseResult == E_UNEXPECTED) {        \
-            CloseResult = PH_E_ERROR_DURING_##VUpper##_##Upper##;        \
-        }                                                                \
-        PH_ERROR(                                                        \
-            CreatePerfectHashTableImplChm02_ErrorDuring##Verb####Name##, \
-            Result                                                       \
-        );                                                               \
-        CloseFileErrorCount++;                                           \
+#define EXPAND_AS_CHECK_CLOSE_ERRORS(                                \
+    Verb, VUpper, Name, Upper,                                       \
+    EofType, EofValue,                                               \
+    Suffix, Extension, Stream, Base                                  \
+)                                                                    \
+    if (Verb##Name.NumberOfErrors > 0) {                             \
+        CloseResult = Verb##Name.LastResult;                         \
+        if (CloseResult == S_OK || CloseResult == E_UNEXPECTED) {    \
+            CloseResult = PH_E_ERROR_DURING_##VUpper##_##Upper;      \
+        }                                                            \
+        PH_ERROR(                                                    \
+            CreatePerfectHashTableImplChm02_ErrorDuring##Verb##Name, \
+            Result                                                   \
+        );                                                           \
+        CloseFileErrorCount++;                                       \
     }
 
 #define CHECK_ALL_CLOSE_ERRORS() \
@@ -1273,7 +1273,7 @@ Return Value:
     CuCudaDevRuntimeLibPath = NULL;
 
     Table = Context->Table;
-    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
 
     //
     // Try create a CU instance.
@@ -1690,7 +1690,7 @@ Return Value:
         Ordinal = (LONG)Ordinals->Values[Index];
         ASSERT(Ordinal >= 0);
         _Analysis_assume_(Ordinal >= 0);
-        FastSetBit(&Bitmap, Ordinal);
+        SetBit32(&Bitmap, Ordinal);
     }
 
     //
@@ -2727,13 +2727,15 @@ Return Value:
     // CUDA-specific logic.
     //
 
-    NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+    NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
     NumberOfVertices = Info->Dimensions.NumberOfVertices;
 
     Info->VertexPairsSizeInBytes = (
         RTL_ELEMENT_SIZE(GRAPH, VertexPairs) *
         (ULONGLONG)NumberOfKeys
     );
+
+#if 0
 
     Info->DeletedSizeInBytes = (
         RTL_ELEMENT_SIZE(GRAPH, Deleted) *
@@ -2749,6 +2751,8 @@ Return Value:
         RTL_ELEMENT_SIZE(GRAPH, Counts) *
         (ULONGLONG)NumberOfVertices
     );
+
+#endif
 
     return Result;
 }

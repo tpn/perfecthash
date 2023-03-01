@@ -58,6 +58,8 @@ extern "C" {
 //
 
 #include <no_sal2.h>
+#define IN
+#define OUT
 
 #define _Ret_reallocated_bytes_(Address, Size)
 #define _Frees_ptr_opt_

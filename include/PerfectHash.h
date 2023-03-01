@@ -121,9 +121,9 @@ typedef struct _STRING {
         LONG Hash;
         LONG Padding;
     };
-#endif
 #else
     ULONG Padding;
+#endif
 #endif
     PCHAR Buffer;
 } STRING, ANSI_STRING, *PSTRING, *PANSI_STRING, **PPSTRING, **PPANSI_STRING;
@@ -138,9 +138,9 @@ typedef struct _UNICODE_STRING {
         LONG Hash;
         LONG Padding;
     };
-#endif
 #else
     ULONG Padding;
+#endif
 #endif
     PWSTR Buffer;
 } UNICODE_STRING, *PUNICODE_STRING, **PPUNICODE_STRING, ***PPPUNICODE_STRING;
@@ -3382,7 +3382,6 @@ IsValidPerfectHashCuRngId(
 #define TABLE_CREATE_PARAMETER_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     FIRST_ENTRY(AttemptsBeforeTableResize)                           \
     ENTRY(MaxNumberOfTableResizes)                                   \
-    ENTRY(MaxNumberOfEqualBestGraphs)                                \
     ENTRY(InitialNumberOfTableResizes)                               \
     ENTRY(MinAttempts)                                               \
     ENTRY(MaxAttempts)                                               \
@@ -3412,6 +3411,10 @@ IsValidPerfectHashCuRngId(
     ENTRY(FunctionHookCallbackFunctionName)                          \
     ENTRY(FunctionHookCallbackIgnoreRip)                             \
     ENTRY(BestCoverageTargetValue)                                   \
+    ENTRY(CuRng)                                                     \
+    ENTRY(CuRngSeed)                                                 \
+    ENTRY(CuRngSubsequence)                                          \
+    ENTRY(CuRngOffset)                                               \
     ENTRY(CuConcurrency)                                             \
     ENTRY(CuPtxPath)                                                 \
     ENTRY(CuDevices)                                                 \
@@ -3640,7 +3643,6 @@ typedef struct _PERFECT_HASH_TABLE_CREATE_PARAMETER {
         ULONGLONG AsULongLong;
         LARGE_INTEGER AsLargeInteger;
         ULARGE_INTEGER AsULargeInteger;
-        STRING AsString;
         UNICODE_STRING AsUnicodeString;
         TP_CALLBACK_PRIORITY AsTpCallbackPriority;
         PERFECT_HASH_RNG_ID AsRngId;
@@ -4246,9 +4248,9 @@ BOOLEAN
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
       *PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME;
 
-#ifdef PH_WINDOWS
-
 #ifndef __CUDA_ARCH__
+
+#ifdef PH_WINDOWS
 
 //
 // Scaffolding required to support structured exception handling via __try
@@ -4366,7 +4368,8 @@ ULONG
     );
 typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
 
-#endif
+#endif // !PH_WINDOWS
+#endif // __CUDA_ARCH__
 
 //
 // Define bootstrap helpers.
@@ -4391,8 +4394,6 @@ HRESULT
     ...
     );
 typedef PERFECT_HASH_PRINT_MESSAGE *PPERFECT_HASH_PRINT_MESSAGE;
-
-#endif // ifndef __CUDA_ARCH__
 
 //
 // Define an X-macro for the enum types used by the library.  The ENTRY macros
@@ -4546,6 +4547,8 @@ static const char PerfectHashBuildConfigString[] = "CUDA";
 #else
 #error Unknown build config type.
 #endif
+
+#endif // PERFECT_HASH_CMAKE
 
 #ifndef __CUDA_ARCH__
 #ifndef _PERFECT_HASH_INTERNAL_BUILD

@@ -282,7 +282,7 @@ Return Value:
     Allocator = Graph->Allocator;
     Table = Context->Table;
     TableInfoOnDisk = Table->TableInfoOnDisk;
-    TableCreateFlags.AsULong = Table->TableCreateFlags.AsULong;
+    TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
     SolveContext = Graph->CuSolveContext;
     DeviceContext = SolveContext->DeviceContext;
 
@@ -293,7 +293,7 @@ Return Value:
     Graph->Context = Context;
     Graph->NumberOfSeeds = Table->TableInfoOnDisk->NumberOfSeeds;
     Graph->HostKeys = (PKEY)Table->Keys->KeyArrayBaseAddress;
-    Graph->NumberOfKeys = Table->Keys->NumberOfElements.LowPart;
+    Graph->NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
 
     Graph->ThreadId = GetCurrentThreadId();
     Graph->ThreadAttempt = 0;
@@ -429,6 +429,7 @@ Return Value:
     // else is allocated on just the device.
     //
 
+#if 0
     ALLOC_DEVICE_ARRAY(Next);
     ALLOC_DEVICE_ARRAY(First);
     ALLOC_DEVICE_ARRAY(Edges);
@@ -440,6 +441,7 @@ Return Value:
     ALLOC_DEVICE_ARRAY(AssignedDevice);
 
     ALLOC_HOST_ARRAY(AssignedHost);
+#endif
 
 #if 0
 

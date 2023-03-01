@@ -208,6 +208,7 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define FirstSolvedGraphWins(Context) Context->State.FirstSolvedGraphWins
 #define FindBestMemoryCoverage(Context) \
     (((Context)->State.FindBestMemoryCoverage) != FALSE)
+#define FindBestGraph(Context) (FindBestMemoryCoverage(Context))
 #define BestMemoryCoverageForKeysSubset(Context) \
     ((Context)->State.BestMemoryCoverageForKeysSubset == TRUE)
 
@@ -1201,7 +1202,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding8;
+    PVOID Padding9;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
