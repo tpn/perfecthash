@@ -3938,22 +3938,6 @@ Invalid value for --GraphImpl.  Valid values: 1, 2, 3.  (Default: 3.)
 MessageId=0x3c2
 Severity=Fail
 Facility=ITF
-SymbolicName=PH_E_INVALID_RNG_ID
-Language=English
-Invalid RNG ID.
-.
-
-MessageId=0x3c3
-Severity=Fail
-Facility=ITF
-SymbolicName=PH_E_UNIMPLEMENTED_RNG_ID
-Language=English
-Unimplemented RNG ID.
-.
-
-MessageId=0x3c2
-Severity=Fail
-Facility=ITF
 SymbolicName=PH_E_INVALID_RNG_NAME
 Language=English
 Invalid RNG name.
@@ -4254,5 +4238,21 @@ Facility=ITF
 SymbolicName=PH_E_INVALID_BEST_COVERAGE_TARGET_VALUE
 Language=English
 Invalid --BestCoverageTargetValue.
+.
+
+MessageId=0x3e8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_RNG_ID
+Language=English
+Invalid RNG ID.
+.
+
+MessageId=0x3e9
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_UNIMPLEMENTED_RNG_ID
+Language=English
+Unimplemented RNG ID.
 .
 
