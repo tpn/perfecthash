@@ -5,7 +5,7 @@ set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 project(
     PerfectHash
     VERSION 0.61.0
-    LANGUAGES C
+    LANGUAGES C CUDA
 )
 
 set(PROJECT_ROOT "${CMAKE_SOURCE_DIR}/..")
@@ -116,6 +116,7 @@ if (HookPenter STREQUAL "1")
     add_subdirectory(FunctionHook)
 endif()
 add_subdirectory(PerfectHash)
+add_subdirectory(PerfectHashCuda)
 add_subdirectory(PerfectHashCreateExe)
 add_subdirectory(PerfectHashBulkCreateExe)
 

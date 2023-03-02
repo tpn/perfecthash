@@ -18,7 +18,6 @@ else()
     target_compile_definitions(${PROJECT_NAME} PUBLIC PH_COMPAT)
 endif()
 
-
 target_include_directories(
     ${PROJECT_NAME}
     PUBLIC
@@ -28,7 +27,15 @@ target_include_directories(
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "PERFECT_HASH_CMAKE")
 
-if (IS_WINDOWS)
+if (IS_CUDA)
+
+    target_compile_definitions(
+        ${PROJECT_NAME}
+        PUBLIC
+        "PERFECT_HASH_BUILD_CONFIG=\"$<CONFIG>\""
+    )
+
+elseif (IS_WINDOWS)
 
     target_compile_definitions(
         ${PROJECT_NAME}

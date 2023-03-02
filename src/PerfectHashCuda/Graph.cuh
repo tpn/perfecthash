@@ -64,12 +64,14 @@ Abstract:
 #define BREAKPOINT __brkpt
 #define TRAP __trap
 
+#undef ASSERT
 #define ASSERT(Condition)                     \
     if (!(Condition)) {                       \
         asm("trap;");                         \
         Result = PH_E_INVARIANT_CHECK_FAILED; \
         goto End;                             \
     }
+
 
 #define CU_RESULT cudaError_t
 #define CU_STREAM cudaStream_t
@@ -78,21 +80,14 @@ Abstract:
 typedef CU_STREAM *PCU_STREAM;
 typedef CU_EVENT *PCU_EVENT;
 
+#define CU_SUCCEEDED(Result) (Result == CUDA_SUCCESS)
+#define CU_FAILED(Result) (Result != CUDA_SUCCESS)
+
+#undef FindBestGraph
 #define FindBestGraph(Graph) ((Graph)->Flags.FindBestGraph != FALSE)
+
+#undef FirstSolvedGraphWins
 #define FirstSolvedGraphWins(Graph) ((Graph)->Flags.FindBestGraph == FALSE)
-
-#define PH_ERROR(Name, Result)           \
-    PerfectHashPrintError(#Name,         \
-                          __FILE__,      \
-                          __LINE__,      \
-                          (ULONG)Result)
-
-
-#define CU_ERROR(Name, CuResult)      \
-    PerfectHashPrintCuError(#Name,    \
-                            __FILE__, \
-                            __LINE__, \
-                            CuResult)
 
 #define CU_CHECK(CuResult, Name)                   \
     if (CU_FAILED(CuResult)) {                     \

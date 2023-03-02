@@ -12,10 +12,8 @@ Abstract:
 
 --*/
 
-#ifndef __CUDA_ARCH__
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 #error PerfectHash stdafx.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
-#endif
 #endif
 
 #pragma once
@@ -158,9 +156,11 @@ Abstract:
 #include "PerfectHashPrimes.h"
 #include "PerfectHashPrivate.h"
 #include "PerfectHashAllocator.h"
+#ifndef PH_CU
 #include "Cu.h"
-#include "Graph.h"
+#endif
 #include "PerfectHashCu.h"
+#include "Graph.h"
 #include "Math.h"
 #include "Rng.h"
 #include "GraphCu.h"

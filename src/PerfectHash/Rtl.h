@@ -67,39 +67,6 @@ extern "C" {
     (s)->Buffer[(s)->Length / (sizeof((s)->Buffer[0]))-1] \
 )
 
-typedef union _ULONG_INTEGER {
-    struct {
-        USHORT  LowPart;
-        USHORT  HighPart;
-    };
-    ULONG   LongPart;
-
-} ULONG_INTEGER, *PULONG_INTEGER;
-
-typedef union _LONG_INTEGER {
-    struct {
-        USHORT  LowPart;
-        SHORT   HighPart;
-    };
-    LONG   LongPart;
-} LONG_INTEGER, *PLONG_INTEGER;
-
-typedef union _USHORT_INTEGER {
-    struct {
-        BYTE  LowPart;
-        BYTE  HighPart;
-    };
-    USHORT   ShortPart;
-} USHORT_INTEGER, *PUSHORT_INTEGER;
-
-typedef union _SHORT_INTEGER {
-    struct {
-        CHAR  LowPart;
-        CHAR  HighPart;
-    };
-    SHORT   ShortPart;
-} SHORT_INTEGER, *PSHORT_INTEGER;
-
 typedef union _WIDE_CHARACTER {
     struct {
         CHAR  LowPart;
@@ -113,13 +80,6 @@ typedef const CHAR *PCCHAR;
 
 typedef _Null_terminated_ const WCHAR *PCWSZ;
 typedef const WCHAR *PCWCHAR;
-
-typedef union _FILETIME64 {
-    FILETIME AsFileTime;
-    LONGLONG AsLongLong;
-    ULONGLONG AsULongLong;
-} FILETIME64, *PFILETIME64;
-
 
 //
 // Calls to VirtualFree() need to have their size parameter wrapped by
