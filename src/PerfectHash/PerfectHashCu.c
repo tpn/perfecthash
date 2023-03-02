@@ -16,6 +16,7 @@ Abstract:
 
 PERFECT_HASH_PRINT_CU_ERROR PerfectHashPrintCuError;
 
+#ifdef PH_WINDOWS
 _Use_decl_annotations_
 HRESULT
 PerfectHashPrintCuError(
@@ -149,6 +150,72 @@ End:
 
     return Result;
 }
+
+#else // PH_WINDOWS
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashPrintCuError(
+    PCU Cu,
+    PCSZ FunctionName,
+    PCSZ FileName,
+    ULONG LineNumber,
+    CU_RESULT Error
+    )
+{
+    PCHAR CuErrorName;
+    PCHAR CuErrorString;
+    CU_RESULT CuResult;
+    HRESULT Result = PH_E_SYSTEM_CALL_FAILED;
+
+    const STRING Prefix = RTL_CONSTANT_STRING(
+        "%s: %u: %s failed with error: 0x%x: %s: %s\n"
+    );
+
+    CuResult = Cu->GetErrorName(Error, &CuErrorName);
+    if (CU_FAILED(CuResult)) {
+        OutputDebugStringA("PhPrintCuError: CuGetErrorName() failed.\n");
+        goto Error;
+    }
+
+    CuResult = Cu->GetErrorString(Error, &CuErrorString);
+    if (CU_FAILED(CuResult)) {
+        OutputDebugStringA("PhPrintCuError: CuGetErrorString() failed.\n");
+        goto Error;
+    }
+
+    fprintf(stderr,
+            Prefix.Buffer,
+            FileName,
+            LineNumber,
+            FunctionName,
+            Error,
+            CuErrorName,
+            CuErrorString);
+
+    //
+    // We're done, finish up and return.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+#endif // !PH_WINDOWS
 
 _Must_inspect_result_
 _Success_(return >= 0)

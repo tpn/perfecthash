@@ -117,10 +117,10 @@ else()
         PUBLIC
         -pthread
         -lrt
+        -ldl
     )
 
     if (CMAKE_C_COMPILER_ID MATCHES Clang)
-
         target_compile_options(
             ${PROJECT_NAME}
             PUBLIC

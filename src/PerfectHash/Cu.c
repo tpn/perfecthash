@@ -16,6 +16,12 @@ Abstract:
 
 extern LOAD_SYMBOLS LoadSymbols;
 
+#ifdef PH_WINDOWS
+#define PH_NVCUDA_DLL_NAME "nvcuda.dll"
+#else
+#define PH_NVCUDA_DLL_NAME "libcuda.so"
+#endif
+
 //
 // Forward decl.
 //
@@ -66,8 +72,13 @@ Return Value:
     ULONG NumberOfCuResolvedSymbols;
     ULONG NumberOfCuRandNames;
     ULONG NumberOfCuRandResolvedSymbols;
+#ifdef PH_WINDOWS
     CHAR CuRandDll[] = "curand64_NM.dll";
     const BYTE CuRandDllVersionOffset = 9;
+#else
+    CHAR CuRandDll[] = "libcurand.so.10";
+    const BYTE CuRandDllVersionOffset = 13;
+#endif
 
 #define EXPAND_AS_CU_NAME(Upper, Name) "cu" # Name,
 #define EXPAND_AS_CU_V2_NAME(Upper, Name) "cu" # Name "_v2",
@@ -116,11 +127,12 @@ Return Value:
     Cu->NumberOfCuFunctions = sizeof(Cu->CuFunctions) / sizeof(ULONG_PTR);
     ASSERT(Cu->NumberOfCuFunctions == NumberOfCuNames);
 
-    Module = LoadLibraryA("nvcuda.dll");
+    Module = LoadLibraryA(PH_NVCUDA_DLL_NAME);
     if (!IsValidHandle(Module)) {
         Result = PH_E_NVCUDA_DLL_LOAD_LIBRARY_FAILED;
         goto Error;
     }
+    Cu->NvCudaModule = Module;
 
     Success = LoadSymbols(CuNames,
                           NumberOfCuNames,
@@ -199,12 +211,14 @@ Return Value:
         (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '1')
     );
 
+#ifdef PH_WINDOWS
     //
     // Overlay the version into the curand dll name.
     //
 
     ASSERT(CuRandDll[CuRandDllVersionOffset] == 'N');
     ASSERT(CuRandDll[CuRandDllVersionOffset+1] == 'M');
+#endif
 
     //
     // Temp hack: we only support curand64_10.dll for now.
@@ -223,7 +237,6 @@ Return Value:
         Result = PH_E_CURAND_DLL_LOAD_LIBRARY_FAILED;
         goto Error;
     }
-
     Cu->CuRandModule = Module;
 
     //

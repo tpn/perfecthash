@@ -222,22 +222,22 @@ set(Source_Files
     "_dtoa.c"
     "_strtod.c"
     "Cu.c"
-    "Chm02.c"
     "GraphCu.c"
     "PerfectHashCu.c"
+    "SymbolLoader.c"
 )
 
 if (IS_WINDOWS)
     list(
         APPEND Source_Files
         "Chm01.c"
+        "Chm02.c"
         "RtlUuid.c"
         "Security.c"
         "GraphAvx.c"
         "RtlRandom.c"
         "memset_x64.asm"
         "RtlPrivilege.c"
-        "SymbolLoader.c"
         "PerfectHashCu.c"
         "RtlErrorHandling.c"
         "RtlCopyPages_x64.asm"
@@ -254,6 +254,7 @@ else()
         "thpool.c"
         "unicode.c"
         "Chm01Compat.c"
+        "Chm02Compat.c"
         "PerfectHashCompat.c"
     )
 endif()
