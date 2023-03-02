@@ -378,6 +378,24 @@ const PCUNICODE_STRING RngNames[] = {
 };
 
 //
+// CUDA Random Number Generators
+//
+
+#define EXPAND_AS_CU_RNG_NAME(Name, Upper, Implemented) \
+    const UNICODE_STRING PerfectHash##Name##CuRngName = RCS(L"" #Name);
+
+PERFECT_HASH_CU_RNG_TABLE_ENTRY(EXPAND_AS_CU_RNG_NAME);
+
+#define EXPAND_AS_CU_RNG_NAME_PTR(Name, Upper, Implemented) \
+    &PerfectHash##Name##CuRngName,
+
+const PCUNICODE_STRING CuRngNames[] = {
+    NULL,
+    PERFECT_HASH_CU_RNG_TABLE_ENTRY(EXPAND_AS_CU_RNG_NAME_PTR)
+    NULL,
+};
+
+//
 // CPU arch
 //
 

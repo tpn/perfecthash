@@ -46,6 +46,68 @@ CreateStringFromWide(
 }
 
 //
+// Library.
+//
+
+#include <dlfcn.h>
+
+_Ret_maybenull_
+HMODULE
+LoadLibraryA(
+    _In_ LPCSTR LibFileName
+    )
+{
+    PSTR Error;
+    PVOID Handle;
+
+    Handle = dlopen(LibFileName, RTLD_LAZY);
+    if (Handle == NULL) {
+        Error = dlerror();
+        if (Error != NULL) {
+            fprintf(stderr, "dlopen failed: %s\n", Error);
+        }
+        SetLastError(PH_E_SYSTEM_CALL_FAILED);
+    }
+
+    return (HMODULE)Handle;
+}
+
+BOOL
+FreeLibrary (
+    _In_ HMODULE Module
+    )
+{
+    (VOID)dlclose((PVOID)Module);
+    return TRUE;
+}
+
+FARPROC
+GetProcAddress(
+    _In_ HMODULE Module,
+    _In_ LPCSTR ProcName
+    )
+{
+    PSTR Error;
+    PVOID Proc;
+
+    Proc = dlsym((PVOID)Module, ProcName);
+    if (Proc == NULL) {
+        Error = dlerror();
+        if (Error != NULL) {
+            fprintf(stderr,
+                    "dlsym(%p, '%s') failed: %s\n",
+                    (PVOID)Module,
+                    ProcName,
+                    Error);
+        }
+        SetLastError(PH_E_SYSTEM_CALL_FAILED);
+    }
+
+    return Proc;
+}
+
+
+//
 // Misc.
 //
 
