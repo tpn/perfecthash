@@ -26,6 +26,14 @@ Abstract:
 #include "stdafx.h"
 #endif
 
+#ifdef PH_COMPAT
+#ifdef PH_CUDA
+EXTERN_C_BEGIN
+#include <cuda.h>
+EXTERN_C_END
+#endif
+#endif
+
 //
 // Define CUDA Device API Typedefs.
 //
@@ -45,13 +53,24 @@ struct CU_MODULE;
 typedef struct CU_MODULE *PCU_MODULE;
 typedef struct CU_MODULE **PPCU_MODULE;
 
+#ifndef PH_CU
 struct CU_EVENT;
 typedef struct CU_EVENT *PCU_EVENT;
 typedef struct CU_EVENT **PPCU_EVENT;
 
 struct CU_STREAM;
 typedef struct CU_STREAM *CU_STREAM;
+typedef struct CU_STREAM *PCU_STREAM;
+#else
+
+#define CU_RESULT cudaError_t
+#define CU_STREAM cudaStream_t
+#define CU_EVENT cudaEvent_t
+
 typedef CU_STREAM *PCU_STREAM;
+typedef CU_EVENT *PCU_EVENT;
+
+#endif
 
 struct CU_FUNCTION;
 typedef struct CU_FUNCTION *PCU_FUNCTION;
@@ -63,6 +82,7 @@ typedef struct CU_LINK_STATE **PPCU_LINK_STATE;
 
 #define CUDACBCALLTYPE __stdcall
 
+#ifndef PH_CU
 typedef enum _Return_type_success_(return == 0) _CU_RESULT {
 
     //
@@ -439,9 +459,6 @@ typedef enum _Return_type_success_(return == 0) _CU_RESULT {
 
 } CU_RESULT;
 
-#define CU_SUCCEEDED(Result) (Result == CUDA_SUCCESS)
-#define CU_FAILED(Result) (Result != CUDA_SUCCESS)
-
 typedef enum _CU_LIMIT {
     CU_LIMIT_STACK_SIZE                       = 0x00, /**< GPU thread stack size */
     CU_LIMIT_PRINTF_FIFO_SIZE                 = 0x01, /**< GPU printf FIFO size */
@@ -683,7 +700,37 @@ typedef enum _CU_DEVICE_ATTRIBUTE {
     CU_DEVICE_ATTRIBUTE_HANDLE_TYPE_WIN32_KMT_HANDLE_SUPPORTED = 105,
     CU_DEVICE_ATTRIBUTE_MAX
 } CU_DEVICE_ATTRIBUTE;
+
+typedef enum _Enum_is_bitflag_ _CU_OCCUPANCY_FLAGS {
+    CU_OCCUPANCY_DEFAULT                  = 0x0, /**< Default behavior */
+    CU_OCCUPANCY_DISABLE_CACHING_OVERRIDE = 0x1  /**< Assume global caching is enabled and cannot be automatically turned off */
+} CU_OCCUPANCY_FLAGS;
+
 typedef CU_DEVICE_ATTRIBUTE *PCU_DEVICE_ATTRIBUTE;
+
+#else // PH_CU
+
+typedef enum cudaError_enum CU_RESULT;
+typedef enum CUdevice_attribute_enum CU_DEVICE_ATTRIBUTE;
+typedef enum CUlimit_enum CU_LIMIT;
+typedef enum CUctx_flags_enum CU_CTX_CREATE_FLAGS;
+typedef enum CUevent_flags_enum CU_EVENT_FLAGS;
+typedef enum CUmemAttach_flags_enum CU_MEM_ATTACH_FLAGS;
+typedef enum CUstream_flags_enum CU_STREAM_FLAGS;
+typedef enum CUjit_option_enum CU_JIT_OPTION;
+typedef CU_JIT_OPTION *PCU_JIT_OPTION;
+typedef enum CUjitInputType_enum CU_JIT_INPUT_TYPE;
+typedef enum CUstreamWaitValue_flags_enum CU_STREAM_WAIT_VALUE;
+typedef enum CUstreamWriteValue_flags_enum CU_STREAM_WRITE_VALUE;
+typedef enum CUstreamBatchMemOpType_enum CU_STREAM_BATCH_MEM_OP_TYPE;
+typedef enum CUoccupancy_flags_enum CU_OCCUPANCY_FLAGS;
+typedef union CUstreamBatchMemOpParams_union CU_STREAM_BATCH_MEM_OP_PARAMS;
+typedef CU_STREAM_BATCH_MEM_OP_PARAMS *PCU_STREAM_BATCH_MEM_OP_PARAMS;
+
+#endif
+
+#define CU_SUCCEEDED(Result) (Result == CUDA_SUCCESS)
+#define CU_FAILED(Result) (Result != CUDA_SUCCESS)
 
 #include "CuDeviceAttributes.h"
 
@@ -1284,11 +1331,6 @@ typedef CU_LAUNCH_KERNEL *PCU_LAUNCH_KERNEL;
 // Occupancy
 //
 
-typedef enum _Enum_is_bitflag_ _CU_OCCUPANCY_FLAGS {
-    CU_OCCUPANCY_DEFAULT                  = 0x0, /**< Default behavior */
-    CU_OCCUPANCY_DISABLE_CACHING_OVERRIDE = 0x1  /**< Assume global caching is enabled and cannot be automatically turned off */
-} CU_OCCUPANCY_FLAGS;
-
 typedef
 _Must_inspect_result_
 CU_RESULT
@@ -1767,6 +1809,7 @@ typedef CU_FUNCTIONS *PCU_FUNCTIONS;
 // CuRand
 //
 
+#ifndef PH_CUDA
 typedef enum _Return_type_success_(return == 0) _CURAND_RESULT {
     CURAND_STATUS_SUCCESS = 0, ///< No errors
     CURAND_STATUS_VERSION_MISMATCH = 100, ///< Header file and linked library version do not match
@@ -1797,6 +1840,12 @@ typedef enum _CURAND_RNG_TYPE {
     CURAND_RNG_QUASI_SOBOL64 = 203, ///< Sobol64 quasirandom generator
     CURAND_RNG_QUASI_SCRAMBLED_SOBOL64 = 204  ///< Scrambled Sobol64 quasirandom generator
 } CURAND_RNG_TYPE;
+#else
+
+typedef enum curandRngType CURAND_RNG_TYPE;
+typedef enum curandStatus CURAND_RESULT;
+
+#endif
 
 struct CURAND_GENERATOR;
 typedef struct CURAND_GENERATOR *PCURAND_GENERATOR;

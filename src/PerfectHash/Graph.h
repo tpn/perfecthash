@@ -41,7 +41,7 @@ Abstract:
 
 #pragma once
 
-#ifndef __CUDA_ARCH__
+#ifndef PH_CUDA
 #include "stdafx.h"
 #else
 #include "PerfectHashPrivate.h"

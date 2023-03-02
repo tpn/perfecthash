@@ -12,11 +12,14 @@ Abstract:
 
 --*/
 
-#include <PerfectHashCuda.h>
+#define PH_CU
+
+#include <PerfectHash.h>
 
 EXTERN_C_BEGIN
 #include "../PerfectHash/CuDeviceAttributes.h"
 #include "../PerfectHash/Graph.h"
+//#include "../PerfectHash/Cu.h"
 
 #include <cuda.h>
 #include <cuda_device_runtime_api.h>
@@ -37,14 +40,10 @@ EXTERN_C_END
 
 extern SHARED ULONG SharedRaw[];
 
-//
-// Error handling.
-//
-
 EXTERN_C
 DEVICE
 VOID
-PerfectHashPrintCuError(
+PerfectHashPrintCuErrorGraphThrust(
     PCSZ FunctionName,
     PCSZ FileName,
     ULONG LineNumber,
@@ -76,7 +75,7 @@ PerfectHashPrintCuError(
 EXTERN_C
 DEVICE
 VOID
-PerfectHashPrintError(
+PerfectHashPrintErrorGraphThrust(
     PCSZ FunctionName,
     PCSZ FileName,
     ULONG LineNumber,
@@ -89,6 +88,23 @@ PerfectHashPrintError(
            FunctionName,
            Result);
 }
+
+#undef PH_ERROR
+#define PH_ERROR(Name, Result)                      \
+    PerfectHashPrintErrorGraphThrust(#Name,         \
+                                     __FILE__,      \
+                                     __LINE__,      \
+                                     (ULONG)Result)
+
+
+#undef CU_ERROR
+#define CU_ERROR(Name, CuResult)                 \
+    PerfectHashPrintCuErrorGraphThrust(#Name,    \
+                                       __FILE__, \
+                                       __LINE__, \
+                                       CuResult)
+
+
 
 EXTERN_C
 GLOBAL
@@ -443,8 +459,8 @@ GraphCuSortVertices1Kernel(
     )
 {
     ULONG UniqueCount;
-    thrust::device_ptr<ULONG> Vertices1(Graph->Vertices1);
-    thrust::device_ptr<ULONG> Index(Graph->Vertices1Index);
+    thrust::device_ptr<ULONG> Vertices1(Graph->Vertices1Device);
+    thrust::device_ptr<ULONG> Index(Graph->Vertices1IndexDevice);
 
 #if 0
     thrust::stable_sort_by_key(thrust::device,
@@ -485,8 +501,8 @@ GraphCuSortVertices2Kernel(
     _In_ PGRAPH Graph
     )
 {
-    thrust::device_ptr<ULONG> Vertices2(Graph->Vertices2);
-    thrust::device_ptr<ULONG> Index(Graph->Vertices2Index);
+    thrust::device_ptr<ULONG> Vertices2(Graph->Vertices2Device);
+    thrust::device_ptr<ULONG> Index(Graph->Vertices2IndexDevice);
 
     thrust::stable_sort_by_key(thrust::device,
                                Vertices2,
@@ -988,10 +1004,10 @@ Return Value:
     //
 
 #define ZERO_BITMAP_BUFFER(Name)                           \
-    ASSERT(0 == Info->##Name##BufferSizeInBytes -          \
-           ((Info->##Name##BufferSizeInBytes >> 3) << 3)); \
-    CU_ZERO(Graph->##Name##.Buffer,                        \
-            Info->##Name##BufferSizeInBytes,               \
+    ASSERT(0 == Info->Name##BufferSizeInBytes -          \
+           ((Info->Name##BufferSizeInBytes >> 3) << 3)); \
+    CU_ZERO(Graph->Name.Buffer,                        \
+            Info->Name##BufferSizeInBytes,               \
             Stream)
 
     ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
@@ -1004,9 +1020,9 @@ Return Value:
     //
 
 #define EMPTY_ARRAY(Name)                                           \
-    ASSERT(0 == Info->##Name##SizeInBytes -                         \
-           ((Info->##Name##SizeInBytes >> 3) << 3));                \
-    CU_MEMSET(Graph->##Name, 0xffffffff, Info->##Name##SizeInBytes, Stream)
+    ASSERT(0 == Info->Name##SizeInBytes -                         \
+           ((Info->Name##SizeInBytes >> 3) << 3));                \
+    CU_MEMSET(Graph->Name, 0xffffffff, Info->Name##SizeInBytes, Stream)
 
     EMPTY_ARRAY(First);
     EMPTY_ARRAY(Next);
@@ -1054,7 +1070,7 @@ Return Value:
     Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
 
 #define ZERO_ASSIGNED_ARRAY(Name) \
-    CU_ZERO(Coverage->##Name, Info->##Name##SizeInBytes, Stream)
+    CU_ZERO(Coverage->Name, Info->Name##SizeInBytes, Stream)
 
     //ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
     //ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
@@ -1270,8 +1286,8 @@ Return Value:
         Graph->NumberOfEdges,
         NumberOfKeys,
         Graph->VertexPairs,
-        Graph->SortedVertexPairs,
-        Graph->VertexPairsIndex,
+        Graph->SortedVertexPairsDevice,
+        Graph->VertexPairsIndexDevice,
         Graph->First,
         Graph->Next,
         Graph->Edges,
@@ -1316,8 +1332,8 @@ Return Value:
 
         GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
             NumberOfKeys,
-            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
-            thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
+            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairsDevice),
+            thrust::device_ptr<ULONG>(Graph->VertexPairsIndexDevice)
         );
 
 
@@ -1335,8 +1351,8 @@ Return Value:
 
         GraphCuSortVertexPairsKernel<<<1, 1, 0, Streams->SortVertexPairs>>>(
             NumberOfKeys,
-            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairs),
-            thrust::device_ptr<ULONG>(Graph->VertexPairsIndex)
+            thrust::device_ptr<VERTEX_PAIR>(Graph->SortedVertexPairsDevice),
+            thrust::device_ptr<ULONG>(Graph->VertexPairsIndexDevice)
         );
 
     }

@@ -15,7 +15,7 @@ Abstract:
 
 --*/
 
-#ifndef __CUDA_ARCH__
+#ifndef PH_CUDA
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 #error PerfectHashPrivate.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
 #endif
@@ -23,7 +23,7 @@ Abstract:
 
 #pragma once
 
-#ifndef __CUDA_ARCH__
+#ifndef PH_CUDA
 #include "stdafx.h"
 #endif
 

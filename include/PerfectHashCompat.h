@@ -661,8 +661,6 @@ TpDestroyCallbackEnviron(
     // need to be taken to tear down an initialized structure.  This
     // may change in a future release.
     //
-
-    UNREFERENCED_PARAMETER(CallbackEnviron);
 }
 
 
@@ -1659,12 +1657,16 @@ InterlockedCompareExchangePointer(
 #define InterlockedCompareExchangePointer(d, e, c) \
     __sync_val_compare_and_swap(d, c, e)
 
+#ifndef PH_CUDA
+
 #ifndef min
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
 #endif
 
 #ifndef max
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
+#endif
+
 #endif
 
 #define HEAP_NO_SERIALIZE               0x00000001

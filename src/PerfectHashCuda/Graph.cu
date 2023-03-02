@@ -12,10 +12,13 @@ Abstract:
 
 --*/
 
-#include <PerfectHashCuda.h>
+#define PH_CU
+
+#include <PerfectHash.h>
 
 EXTERN_C_BEGIN
 #include "../PerfectHash/CuDeviceAttributes.h"
+//#include "../PerfectHash/Cu.h"
 #include "../PerfectHash/Graph.h"
 
 #include <cuda.h>
@@ -25,6 +28,8 @@ EXTERN_C_END
 #include <curand_kernel.h>
 
 #include "Graph.cuh"
+
+#include <stdio.h>
 
 //#include "GraphImpl.cu"
 
@@ -52,14 +57,10 @@ EXTERN_C_END
 
 extern SHARED ULONG SharedRaw[];
 
-//
-// Error handling.
-//
-
 EXTERN_C
 DEVICE
 VOID
-PerfectHashPrintCuError(
+PerfectHashPrintCuErrorGraph(
     PCSZ FunctionName,
     PCSZ FileName,
     ULONG LineNumber,
@@ -91,7 +92,7 @@ PerfectHashPrintCuError(
 EXTERN_C
 DEVICE
 VOID
-PerfectHashPrintError(
+PerfectHashPrintErrorGraph(
     PCSZ FunctionName,
     PCSZ FileName,
     ULONG LineNumber,
@@ -104,6 +105,22 @@ PerfectHashPrintError(
            FunctionName,
            Result);
 }
+
+#undef PH_ERROR
+#define PH_ERROR(Name, Result)                \
+    PerfectHashPrintErrorGraph(#Name,         \
+                               __FILE__,      \
+                               __LINE__,      \
+                               (ULONG)Result)
+
+
+#undef CU_ERROR
+#define CU_ERROR(Name, CuResult)           \
+    PerfectHashPrintCuErrorGraph(#Name,    \
+                                 __FILE__, \
+                                 __LINE__, \
+                                 CuResult)
+
 
 #define AtomicIncrementVertex(Counts, Vertex) \
     atomicAdd((unsigned int *)&Counts[Vertex], (unsigned int)1)
@@ -469,10 +486,10 @@ GraphCuResetArraysKernel(
 
         if (Index < Graph->NumberOfVertices) {
             Graph->First[Index] = EMPTY;
-            Graph->Counts[Index] = 0;
-            Graph->Assigned[Index] = 0;
-            Graph->Deleted[Index] = NO_THREAD_ID;
-            Graph->Visited[Index] = NO_THREAD_ID;
+            Graph->CountsDevice[Index] = 0;
+            Graph->AssignedDevice[Index] = 0;
+            Graph->DeletedDevice[Index] = NO_THREAD_ID;
+            Graph->VisitedDevice[Index] = NO_THREAD_ID;
         }
     }
 }
@@ -619,7 +636,7 @@ Return Value:
     Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
 
 #define ZERO_ASSIGNED_ARRAY(Name) \
-    CU_ZERO(Coverage->##Name, Info->##Name##SizeInBytes, Stream)
+    CU_ZERO(Coverage->Name, Info->Name##SizeInBytes, Stream)
 
     //ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
     //ZERO_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
@@ -681,13 +698,13 @@ IsDeletedEdge(
 {
     ULONG ThreadId;
 
-    ThreadId = Graph->Deleted[Edge];
+    ThreadId = Graph->DeletedDevice[Edge];
     return (ThreadId != NO_THREAD_ID);
 }
 
-#define AtomicCompareAndSwapThreadId(Name, Index)                       \
-    (NO_THREAD_ID == atomicCAS((unsigned int *)&Graph->##Name##[Index], \
-                               NO_THREAD_ID,                            \
+#define AtomicCompareAndSwapThreadId(Name, Index)                           \
+    (NO_THREAD_ID == atomicCAS((unsigned int *)&Graph->Name##Device[Index], \
+                               NO_THREAD_ID,                                \
                                GlobalThreadIndex()))
 
 EXTERN_C
@@ -710,7 +727,7 @@ TryRegisterEdgeDeletion(
 
         printf("[%d]: other thread %d deleted edge %u\n",
                GlobalThreadIndex(),
-               Graph->Deleted[Edge],
+               Graph->DeletedDevice[Edge],
                Edge);
 
         return FALSE;
@@ -718,7 +735,7 @@ TryRegisterEdgeDeletion(
 
     printf("[%d]: we (%d) deleted edge %u\n",
            GlobalThreadIndex(),
-           Graph->Deleted[Edge],
+           Graph->DeletedDevice[Edge],
            Edge);
 
     //
@@ -1217,7 +1234,7 @@ Return Value:
         Graph->First,
         Graph->Next,
         Graph->Edges,
-        (PULONG)Graph->Counts,
+        (PULONG)Graph->CountsDevice,
         Graph->VertexMask,
         Graph->Seeds,
         &Graph->CuHashKeysResult

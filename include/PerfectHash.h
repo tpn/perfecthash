@@ -48,19 +48,14 @@ extern "C" {
 //
 //
 
-#ifndef __CUDA_ARCH__
+#ifndef PH_CUDA
 #pragma warning(push)
 #pragma warning(disable: 4255)
 #pragma warning(disable: 4668)
 #include <Windows.h>
 #pragma warning(pop)
-#endif
-
-#ifndef __CUDA_ARCH__
 #include <sal.h>
 #include <specstrings.h>
-#else
-#include <PerfectHashCuda.h>
 #endif
 
 //
@@ -187,6 +182,46 @@ typedef union _ULONG_BYTES {
 } ULONG_BYTES;
 C_ASSERT(sizeof(ULONG_BYTES) == sizeof(ULONG));
 typedef ULONG_BYTES *PULONG_BYTES;
+
+typedef union _ULONG_INTEGER {
+    struct {
+        USHORT  LowPart;
+        USHORT  HighPart;
+    };
+    ULONG   LongPart;
+
+} ULONG_INTEGER, *PULONG_INTEGER;
+
+typedef union _LONG_INTEGER {
+    struct {
+        USHORT  LowPart;
+        SHORT   HighPart;
+    };
+    LONG   LongPart;
+} LONG_INTEGER, *PLONG_INTEGER;
+
+typedef union _USHORT_INTEGER {
+    struct {
+        BYTE  LowPart;
+        BYTE  HighPart;
+    };
+    USHORT   ShortPart;
+} USHORT_INTEGER, *PUSHORT_INTEGER;
+
+typedef union _SHORT_INTEGER {
+    struct {
+        CHAR  LowPart;
+        CHAR  HighPart;
+    };
+    SHORT   ShortPart;
+} SHORT_INTEGER, *PSHORT_INTEGER;
+
+typedef union _FILETIME64 {
+    FILETIME AsFileTime;
+    LONGLONG AsLongLong;
+    ULONGLONG AsULongLong;
+} FILETIME64, *PFILETIME64;
+
 
 #ifndef ARGUMENT_PRESENT
 #define ARGUMENT_PRESENT(ArgumentPointer) (                  \
@@ -4732,6 +4767,10 @@ Return Value:
 #endif // PH_WINDOWS
 #endif // _PERFECT_HASH_INTERNAL_BUILD
 #endif // __CUDA_ARCH__
+
+#ifdef PH_CUDA
+#include <PerfectHashCuda.h>
+#endif
 
 #ifdef __cplusplus
 } // extern "C"
