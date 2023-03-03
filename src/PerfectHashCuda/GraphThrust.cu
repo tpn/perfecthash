@@ -41,72 +41,6 @@ EXTERN_C_END
 extern SHARED ULONG SharedRaw[];
 
 EXTERN_C
-DEVICE
-VOID
-PerfectHashPrintCuErrorGraphThrust(
-    PCSZ FunctionName,
-    PCSZ FileName,
-    ULONG LineNumber,
-    ULONG Error
-    )
-{
-    PCSZ ErrorName;
-    PCSZ ErrorString;
-
-    ErrorName = cudaGetErrorName((CU_RESULT)Error);
-    ErrorString = cudaGetErrorString((CU_RESULT)Error);
-
-    //
-    // Error message format:
-    //
-    //      <FileName>:<LineNumber>: <Name> failed with error <Code>: \
-    //          <ErrorName>: <ErrorString>.
-    //
-
-    printf("%s:%d %s failed with error 0x%x: %s: %s.\n",
-           FileName,
-           LineNumber,
-           FunctionName,
-           Error,
-           ErrorName,
-           ErrorString);
-}
-
-EXTERN_C
-DEVICE
-VOID
-PerfectHashPrintErrorGraphThrust(
-    PCSZ FunctionName,
-    PCSZ FileName,
-    ULONG LineNumber,
-    ULONG Result
-    )
-{
-    printf("%s:%d %s failed with error 0x%x.\n",
-           FileName,
-           LineNumber,
-           FunctionName,
-           Result);
-}
-
-#undef PH_ERROR
-#define PH_ERROR(Name, Result)                      \
-    PerfectHashPrintErrorGraphThrust(#Name,         \
-                                     __FILE__,      \
-                                     __LINE__,      \
-                                     (ULONG)Result)
-
-
-#undef CU_ERROR
-#define CU_ERROR(Name, CuResult)                 \
-    PerfectHashPrintCuErrorGraphThrust(#Name,    \
-                                       __FILE__, \
-                                       __LINE__, \
-                                       CuResult)
-
-
-
-EXTERN_C
 GLOBAL
 VOID
 HashAllMultiplyShiftRKernel(
@@ -1003,10 +937,10 @@ Return Value:
     // Clear the bitmap buffers.
     //
 
-#define ZERO_BITMAP_BUFFER(Name)                           \
+#define ZERO_BITMAP_BUFFER(Name)                         \
     ASSERT(0 == Info->Name##BufferSizeInBytes -          \
            ((Info->Name##BufferSizeInBytes >> 3) << 3)); \
-    CU_ZERO(Graph->Name.Buffer,                        \
+    CU_ZERO(Graph->Name.Buffer,                          \
             Info->Name##BufferSizeInBytes,               \
             Stream)
 
@@ -1019,9 +953,9 @@ Return Value:
     // "Empty" all of the nodes.
     //
 
-#define EMPTY_ARRAY(Name)                                           \
-    ASSERT(0 == Info->Name##SizeInBytes -                         \
-           ((Info->Name##SizeInBytes >> 3) << 3));                \
+#define EMPTY_ARRAY(Name)                                               \
+    ASSERT(0 == Info->Name##SizeInBytes -                               \
+           ((Info->Name##SizeInBytes >> 3) << 3));                      \
     CU_MEMSET(Graph->Name, 0xffffffff, Info->Name##SizeInBytes, Stream)
 
     EMPTY_ARRAY(First);
@@ -1225,14 +1159,14 @@ Return Value:
 {
     PKEY Keys;
     HRESULT Result;
-    CU_RESULT CuResult;
+    //CU_RESULT CuResult;
     ULONG NumberOfKeys;
     ULONG BlocksPerGrid;
     ULONG ThreadsPerBlock;
     ULONG SharedMemoryInBytes;
     PCU_KERNEL_CONTEXT Ctx;
     PCU_KERNEL_STREAMS Streams;
-    PASSIGNED_MEMORY_COVERAGE Coverage;
+    //PASSIGNED_MEMORY_COVERAGE Coverage;
 
     //
     // Initialize aliases.
@@ -1276,6 +1210,7 @@ Return Value:
 
     SharedMemoryInBytes = 0;
 
+#if 0
     HashAllMultiplyShiftRKernel<<<
         BlocksPerGrid,
         ThreadsPerBlock,
@@ -1295,7 +1230,33 @@ Return Value:
         Graph->Seeds,
         &Graph->CuHashKeysResult
     );
+#else
+    HashAllMultiplyShiftRKernel3<<<
+        BlocksPerGrid,
+        ThreadsPerBlock,
+        SharedMemoryInBytes,
+        Streams->Solve
+    >>>(
+        Keys,
+        NumberOfKeys,
+        Graph->Vertices1Device,
+        Graph->Vertices2Device,
+        Graph->VertexPairs,
+        Graph->Vertices1IndexDevice,
+        Graph->Vertices2IndexDevice,
+        Graph->VertexPairsIndexDevice,
+        Graph->VertexMask,
+        Graph->Seeds,
+        &Graph->CuHashKeysResult
+    );
 
+    Result = S_OK;
+
+    goto End;
+
+#endif
+
+#if 0
     CuResult = cudaDeviceSynchronize();
     CU_CHECK(CuResult, cudaDeviceSynchronize);
 
@@ -1446,6 +1407,8 @@ Return Value:
 
     Result = GraphCuRegisterSolved(Graph, NewGraphPointer);
 
+#endif
+
     //
     // Intentional follow-on to End.
     //
@@ -1456,12 +1419,14 @@ End:
     // Intentional follow-on to Error.
     //
 
-Error:
+//Error:
     return Result;
 
+#if 0
 Failed:
     Graph->CuFailedAttempts++;
     return PH_S_CONTINUE_GRAPH_SOLVING;
+#endif
 }
 
 EXTERN_C
@@ -1610,6 +1575,8 @@ Return Value:
         if (FAILED(Result)) {
             break;
         }
+
+        goto End;
 
         if (Result == PH_S_STOP_GRAPH_SOLVING ||
             Result == PH_S_GRAPH_SOLVING_STOPPED) {

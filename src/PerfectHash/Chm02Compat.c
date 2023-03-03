@@ -1248,13 +1248,16 @@ Return Value:
         RTL_CONSTANT_STRING("PerfectHashCudaEnterSolvingLoop");
 
     CU_JIT_OPTION JitOptions[] = {
-        CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
         CU_JIT_INFO_LOG_BUFFER,
+        CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
+        CU_JIT_ERROR_LOG_BUFFER,
+        CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES,
     };
-    PVOID JitOptionValues[2];
+    PVOID JitOptionValues[4];
     USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
 
-    CHAR JitLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
+    CHAR JitInfoLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
+    CHAR JitErrorLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
 
     //
     // If we've already got a CU instance, assume we're already initialized.
@@ -1442,19 +1445,11 @@ Return Value:
     }
 
     //
-    // If no seed has been supplied, generate a random one now.
+    // If no seed has been supplied, use the default.
     //
 
     if (!SawCuRngSeed) {
-
-        Result = Rtl->Vtbl->GenerateRandomBytes(Rtl,
-                                                sizeof(Context->CuRngSeed),
-                                                (PBYTE)&Context->CuRngSeed);
-
-        if (FAILED(Result)) {
-            PH_ERROR(InitializeCudaAndGraphsChm02_GenerateCuRngSeed, Result);
-            goto Error;
-        }
+        Context->CuRngSeed = RNG_DEFAULT_SEED;
     }
 
     //
@@ -1691,7 +1686,7 @@ Return Value:
         Ordinal = (LONG)Ordinals->Values[Index];
         ASSERT(Ordinal >= 0);
         _Analysis_assume_(Ordinal >= 0);
-        SetBit32(&Bitmap, Ordinal);
+        SetBit32(Bitmap.Buffer, Ordinal);
     }
 
     //
@@ -1708,6 +1703,10 @@ Return Value:
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashContextInitializeCuda_SetBitsExceedsNumDevices,
                  Result);
+        goto Error;
+    } else if (NumberOfContexts == 0) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashContextInitializeCuda_NumContextsIsZero, Result);
         goto Error;
     }
 
@@ -1943,8 +1942,11 @@ FinishedOrdinalsProcessing:
     // Initialize the JIT options.
     //
 
-    JitOptionValues[0] = (PVOID)sizeof(JitLogBuffer);
-    JitOptionValues[1] = (PVOID)JitLogBuffer;
+    JitOptionValues[0] = (PVOID)JitInfoLogBuffer;
+    JitOptionValues[1] = (PVOID)sizeof(JitInfoLogBuffer);
+
+    JitOptionValues[2] = (PVOID)JitErrorLogBuffer;
+    JitOptionValues[3] = (PVOID)sizeof(JitErrorLogBuffer);
 
     //
     // Second pass: wire-up each device context (identified by ordinal, set
@@ -2011,6 +2013,15 @@ FinishedOrdinalsProcessing:
                                  Device->Handle);
         CU_CHECK(CuResult, CtxCreate);
 
+#define CU_LINK_CHECK(CuResult, Name)                   \
+    if (CU_FAILED(CuResult)) {                          \
+        CU_ERROR(Name, CuResult);                       \
+        fprintf(stderr, "%s\n", &JitErrorLogBuffer[0]); \
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;      \
+        goto Error;                                     \
+    }
+
+
         //
         // Our solver kernel uses dynamic parallelism (that is, it launches
         // other kernels).  For this to work, we can't just load the PTX
@@ -2039,7 +2050,7 @@ FinishedOrdinalsProcessing:
                                    0,
                                    NULL,
                                    NULL);
-        CU_CHECK(CuResult, LinkAddData);
+        CU_LINK_CHECK(CuResult, LinkAddData);
 
         //
         // Add the PTX file.
@@ -2053,7 +2064,7 @@ FinishedOrdinalsProcessing:
                                    0,
                                    NULL,
                                    NULL);
-        CU_CHECK(CuResult, LinkAddData);
+        CU_LINK_CHECK(CuResult, LinkAddData);
 
         //
         // Complete the link.
@@ -2062,7 +2073,7 @@ FinishedOrdinalsProcessing:
         CuResult = Cu->LinkComplete(LinkState,
                                     &LinkedModule,
                                     &LinkedModuleSizeInBytes);
-        CU_CHECK(CuResult, LinkComplete);
+        CU_LINK_CHECK(CuResult, LinkComplete);
 
         //
         // Load the module from the embedded PTX.
@@ -2073,7 +2084,7 @@ FinishedOrdinalsProcessing:
                                         NumberOfJitOptions,
                                         JitOptions,
                                         JitOptionValues);
-        CU_CHECK(CuResult, ModuleLoadDataEx);
+        CU_LINK_CHECK(CuResult, ModuleLoadDataEx);
 
         //
         // Module loaded successfully, resolve the kernel.
@@ -2082,7 +2093,7 @@ FinishedOrdinalsProcessing:
         CuResult = Cu->ModuleGetFunction(&DeviceContext->Function,
                                          DeviceContext->Module,
                                          (PCSZ)KernelFunctionName.Buffer);
-        CU_CHECK(CuResult, ModuleGetFunction);
+        CU_LINK_CHECK(CuResult, ModuleGetFunction);
 
         //
         // We can now destroy the linker state.
