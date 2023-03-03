@@ -1,6 +1,8 @@
 # Perfect Hash
 
+<!-- Disable this whilst cuda-dev2 is in flux. 
 <img src="https://ci.appveyor.com/api/projects/status/github/tpn/perfecthash?svg=true&retina=true" alt="Appveyor Badge">
+-->
 
 ## Overview
 
