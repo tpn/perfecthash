@@ -51,6 +51,12 @@ PrintCurrentContextStatsChm01(
     _In_ PPERFECT_HASH_CONTEXT Context
     );
 
+VOID
+FileWorkItemCallbackChm01(
+    _In_ PFILE_WORK_ITEM Item
+    );
+
+
 //
 // Helper macro for adding a 4-space indent to the output stream.
 //

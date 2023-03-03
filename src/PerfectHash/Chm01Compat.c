@@ -30,13 +30,8 @@ Abstract:
 //
 
 VOID
-GraphCallback(
+GraphCallbackChm01Compat(
     PGRAPH Graph
-    );
-
-VOID
-FileWorkItemCallbackChm01(
-    PFILE_WORK_ITEM Item
     );
 
 
@@ -787,7 +782,7 @@ RetryWithLargerTableSize:
 
         } else {
             Graph->Flags.IsSpare = FALSE;
-            ThreadpoolAddWork(GraphThreadpool, GraphCallback, Graph);
+            ThreadpoolAddWork(GraphThreadpool, GraphCallbackChm01Compat, Graph);
         }
 
     }
@@ -1529,7 +1524,7 @@ ReleaseGraphs:
 
 _Use_decl_annotations_
 VOID
-GraphCallback(
+GraphCallbackChm01Compat(
     PGRAPH Graph
     )
 /*++

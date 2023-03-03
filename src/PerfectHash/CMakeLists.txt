@@ -10,6 +10,7 @@ set(Private_Header_Files
     "Chm01.h"
     "Chm01FileWork.h"
     "Chm01Private.h"
+    "Chm02Private.h"
     "Chunk.h"
     "Component.h"
     "Cu.h"
@@ -133,6 +134,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Source_Files
     "BitManipulation.c"
     "Chm01Shared.c"
+    "Chm02Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"
     "Chm01FileWorkCHeaderCompiledPerfectHashFile.c"
