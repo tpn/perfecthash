@@ -281,10 +281,12 @@ class TrailingSlashesAlign(InvariantAwareCommand):
 
     path = None
     class PathArg(PathInvariant):
-        _help = "path of the file"
+        _help = "path of the file (stdin will be used if not specified)"
+        _mandatory = False
 
     def run(self):
         out = self._out
+        err = self._err
         options = self.options
         verbose = self._verbose
 
@@ -298,6 +300,8 @@ class TrailingSlashesAlign(InvariantAwareCommand):
 
         defines = source.defines
         multiline_macro_defines = source.multiline_macro_defines
+
+        msg = out if path else lambda _: None
 
         if not multiline_macro_defines:
             return
@@ -318,13 +322,16 @@ class TrailingSlashesAlign(InvariantAwareCommand):
 
             lines[macro.first_lineno:macro.last_lineno+1] = new_lines
             dirty = True
-            out("Aligned trailing slashes for %s macro." % name)
+            msg("Aligned trailing slashes for %s macro." % name)
 
         if dirty:
             text = '%s\n' % '\n'.join(lines)
-            text = text.encode('utf-8')
-            with open(path, 'wb') as f:
-                f.write(text)
+            if not path:
+                sys.stdout.write(text)
+            else:
+                text = text.encode('utf-8')
+                with open(path, 'wb') as f:
+                    f.write(text)
 
 class UpdateRawCStringFile(InvariantAwareCommand):
     """
