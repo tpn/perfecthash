@@ -121,6 +121,25 @@ typedef struct _CU_DEVICE_ATTRIBUTES {
     ULONG HandleTypePosixFileDescriptorSupported;
     ULONG HandleTypeWin32HandleSupported;
     ULONG HandleTypeWin32KmtHandleSupported;
+    ULONG MaxBlocksPerMultiprocessor;
+    ULONG GenericCompressionSupported;
+    ULONG MaxPersistingL2CacheSize;
+    ULONG MaxAccessPolicyWindowSize;
+    ULONG GPUDirectRDMASupportedWithCUDAVMM;
+    ULONG ReservedSharedMemoryPerBlock;
+    ULONG SparseCUDAArraysSupported;
+    ULONG ReadOnlyHostRegisterSupported;
+    ULONG TimelineSemaphoreInteropSupported;
+    ULONG MemoryPoolsSupported;
+    ULONG GPUDirectRDMASupported;
+    ULONG GPUDirectRDMAFlushWritesOptions;
+    ULONG GPUDirectRDMANoWritesOrdering;
+    ULONG MemPoolSupportedHandleTypes;
+    ULONG ClusterLaunchSupported;
+    ULONG DeferredMappingCUDAArraysSupported;
+    ULONG CanUse64BitStreamMemOpsV2;
+    ULONG CanUseStreamWaitValueNorV2;
+    ULONG DMABufSupported;
 } CU_DEVICE_ATTRIBUTES;
 typedef CU_DEVICE_ATTRIBUTES *PCU_DEVICE_ATTRIBUTES;
 

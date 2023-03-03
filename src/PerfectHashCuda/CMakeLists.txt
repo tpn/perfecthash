@@ -12,7 +12,7 @@ set(Header_Files
 source_group("Header Files" FILES ${Header_Files})
 
 set(Source_Files
-    #"Graph.cu"
+    "Graph.cu"
     "GraphThrust.cu"
 )
 source_group("Source Files" FILES ${Source_Files})
@@ -22,7 +22,8 @@ set(ALL_FILES
     ${Source_Files}
 )
 
-add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
+add_library(${PROJECT_NAME} OBJECT ${ALL_FILES})
+set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_PTX_COMPILATION ON)
 
 ################################################################################
 # Target
@@ -64,7 +65,6 @@ if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
         -v
         -rdc=true
         -cudart shared
-        #-ptx
         -maxrregcount=0
         --restrict
         --ptxas-options=-v

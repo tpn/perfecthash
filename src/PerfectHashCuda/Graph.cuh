@@ -136,4 +136,37 @@ typedef struct _CU_KERNEL_CONTEXT {
 } CU_KERNEL_CONTEXT;
 typedef CU_KERNEL_CONTEXT *PCU_KERNEL_CONTEXT;
 
+#define PerfectHashPrintCuError(FunctionName, FileName, LineNumber, Error) \
+    printf("%s:%d %s failed with error 0x%x: %s: %s.\n",                   \
+           FileName,                                                       \
+           LineNumber,                                                     \
+           FunctionName,                                                   \
+           Error,                                                          \
+           cudaGetErrorName((CU_RESULT)Error),                             \
+           cudaGetErrorString((CU_RESULT)Error))
+
+#define PerfectHashPrintError(FunctionName, FileName, LineNumber, Result) \
+    printf("%s:%d %s failed with error 0x%x.\n",                          \
+           FileName,                                                      \
+           LineNumber,                                                    \
+           FunctionName,                                                  \
+           Result)
+
+#undef PH_ERROR
+#define PH_ERROR(Name, Result)           \
+    PerfectHashPrintError(#Name,         \
+                          __FILE__,      \
+                          __LINE__,      \
+                          (ULONG)Result)
+
+
+#undef CU_ERROR
+#define CU_ERROR(Name, CuResult)      \
+    PerfectHashPrintCuError(#Name,    \
+                            __FILE__, \
+                            __LINE__, \
+                            CuResult)
+
+
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

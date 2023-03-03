@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -56,71 +56,6 @@ EXTERN_C_END
 //
 
 extern SHARED ULONG SharedRaw[];
-
-EXTERN_C
-DEVICE
-VOID
-PerfectHashPrintCuErrorGraph(
-    PCSZ FunctionName,
-    PCSZ FileName,
-    ULONG LineNumber,
-    ULONG Error
-    )
-{
-    PCSZ ErrorName;
-    PCSZ ErrorString;
-
-    ErrorName = cudaGetErrorName((CU_RESULT)Error);
-    ErrorString = cudaGetErrorString((CU_RESULT)Error);
-
-    //
-    // Error message format:
-    //
-    //      <FileName>:<LineNumber>: <Name> failed with error <Code>: \
-    //          <ErrorName>: <ErrorString>.
-    //
-
-    printf("%s:%d %s failed with error 0x%x: %s: %s.\n",
-           FileName,
-           LineNumber,
-           FunctionName,
-           Error,
-           ErrorName,
-           ErrorString);
-}
-
-EXTERN_C
-DEVICE
-VOID
-PerfectHashPrintErrorGraph(
-    PCSZ FunctionName,
-    PCSZ FileName,
-    ULONG LineNumber,
-    ULONG Result
-    )
-{
-    printf("%s:%d %s failed with error 0x%x.\n",
-           FileName,
-           LineNumber,
-           FunctionName,
-           Result);
-}
-
-#undef PH_ERROR
-#define PH_ERROR(Name, Result)                \
-    PerfectHashPrintErrorGraph(#Name,         \
-                               __FILE__,      \
-                               __LINE__,      \
-                               (ULONG)Result)
-
-
-#undef CU_ERROR
-#define CU_ERROR(Name, CuResult)           \
-    PerfectHashPrintCuErrorGraph(#Name,    \
-                                 __FILE__, \
-                                 __LINE__, \
-                                 CuResult)
-
 
 #define AtomicIncrementVertex(Counts, Vertex) \
     atomicAdd((unsigned int *)&Counts[Vertex], (unsigned int)1)
