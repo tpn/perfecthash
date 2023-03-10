@@ -3325,11 +3325,13 @@ typedef struct _RTL {
 
     };
 
+#ifdef _M_X64
     //
     // CPU Features.
     //
 
     RTL_CPU_FEATURES CpuFeatures;
+#endif
 
     RTL_VTBL Interface;
 } RTL;

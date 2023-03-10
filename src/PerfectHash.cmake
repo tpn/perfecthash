@@ -106,7 +106,6 @@ else()
     target_compile_options(
         ${PROJECT_NAME}
         PUBLIC
-        -march=native
         -Wno-incompatible-pointer-types
         -Wno-deprecated-declarations
         -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
@@ -126,7 +125,12 @@ else()
             PUBLIC
             -Wno-enum-conversion # IsValidVCProjectFileId((FILE_ID)Id)
         )
+    else()
+        target_compile_options(
+            ${PROJECT_NAME}
+            PUBLIC
+            -march=native
+        )
     endif()
-
 
 endif()

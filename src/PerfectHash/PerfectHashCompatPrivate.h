@@ -33,10 +33,21 @@ Abstract:
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <pthread.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/types.h>
+#ifdef PH_LINUX
 #include <sys/sysinfo.h>
+#endif
+
+//
+// OS X doesn't have pthread_barrier_t.
+//
+
+#ifdef __APPLE__
+#include "pthread_barrier.h"
+#endif
 
 #define FREE_PTR(P) \
     if ((P) != NULL && *(P) != NULL) { free(*(P)); *(P) = NULL; }

@@ -249,6 +249,13 @@ else()
     )
 endif()
 
+if (IS_MAC)
+    list(
+        APPEND Source_Files
+        "pthread_barrier.c"
+    )
+endif()
+
 source_group("Source Files" FILES ${Source_Files})
 
 set(ALL_FILES

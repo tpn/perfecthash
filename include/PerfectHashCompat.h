@@ -33,8 +33,12 @@ extern "C" {
 #include <assert.h>
 #include <pthread.h>
 
+#ifndef __arm64
 #include <cpuid.h>
 #include <x86intrin.h>
+#else
+#define _M_ARM64
+#endif
 
 #ifdef PH_LINUX
 #include <linux/mman.h>

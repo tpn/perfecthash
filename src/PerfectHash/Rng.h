@@ -50,7 +50,9 @@ typedef union DECLSPEC_ALIGN(16) _UINT4 {
         ULONGLONG XY;
         ULONGLONG ZW;
     };
+#ifdef _M_X64
     XMMWORD AsXmmWord;
+#endif
 } UINT4, *PUINT4;
 
 //
