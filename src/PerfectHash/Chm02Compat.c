@@ -14,6 +14,13 @@ Abstract:
 
 --*/
 
+//
+// For pthread_setname_np().
+//
+
+#define _GNU_SOURCE
+#include <pthread.h>
+
 #include "stdafx.h"
 #include "Chm01.h"
 #include "Chm02Private.h"
@@ -26,7 +33,6 @@ Abstract:
 #ifndef PH_COMPAT
 #error PH_COMPAT not defined.
 #endif
-
 
 //
 // Spin count for the device context best graph critical section.
@@ -1195,6 +1201,22 @@ ReleaseGraphs:
     return Result;
 }
 
+VOID
+GraphSetThreadName (
+    _In_ PGRAPH Graph
+    )
+{
+    CHAR Buf[80];
+    size_t Length;
+    pthread_t Thread;
+
+    Length = snprintf(Buf, ARRAYSIZE(Buf), "Graph-%d", Graph->Index);
+    ASSERT(Buf[Length] == '\0');
+
+    Thread = pthread_self();
+    pthread_setname_np(Thread, Buf);
+}
+
 _Use_decl_annotations_
 VOID
 GraphCallbackChm02Compat(
@@ -1226,6 +1248,8 @@ Return Value:
     Context = Graph->Context;
 
     InterlockedIncrement(&Context->ActiveSolvingLoops);
+
+    GraphSetThreadName(Graph);
 
     Result = Graph->Vtbl->EnterSolvingLoop(Graph);
 

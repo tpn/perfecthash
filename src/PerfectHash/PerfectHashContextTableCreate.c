@@ -28,16 +28,6 @@ Abstract:
 #define PH_TABLE_ERROR(Name, Result) \
     PH_ERROR(Name, Result)
 
-#if 0
-#define PH_ERROR_EX(Name, Result, ...)     \
-    PerfectHashPrintErrorEx(#Name,         \
-                            __FILE__,      \
-                            __FUNCTION__,  \
-                            __LINE__,      \
-                            (ULONG)Result, \
-                            __VA_ARGS__)
-#endif
-
 //
 // Forward decls.
 //
@@ -1064,6 +1054,7 @@ Return Value:
     PUNICODE_STRING String;
     BOOLEAN InvalidPrefix;
     BOOLEAN ValidNumberOfArguments;
+    PDEBUGGER_CONTEXT DebuggerContext;
 
     String = &Temp;
 
@@ -1294,6 +1285,23 @@ InvalidArg:
             PH_ERROR(CleanupTableCreateParameters, CleanupResult);
             Result = CleanupResult;
         }
+    }
+
+    //
+    // Handle the debugger flag if applicable.
+    //
+
+    if (TableCreateFlags->WaitForDebugger != FALSE) {
+
+        DebuggerContext = &Rtl->DebuggerContext;
+
+        InitializeDebuggerContext(
+            DebuggerContext,
+            TableCreateFlags->WaitForDebugger,
+            TableCreateFlags->SwitchToCudaGdbBeforeLaunchKernel
+        );
+
+        MaybeWaitForGdbAttach(DebuggerContext);
     }
 
     return Result;

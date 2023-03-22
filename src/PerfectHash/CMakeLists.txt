@@ -52,6 +52,7 @@ set(Private_Header_Files
     "GraphCu.h"
     "PerfectHashCu.h"
     "CuDeviceAttributes.h"
+    "Debugger.h"
 )
 source_group("Private Header Files" FILES ${Private_Header_Files})
 
@@ -227,6 +228,7 @@ set(Source_Files
     "GraphCu.c"
     "PerfectHashCu.c"
     "SymbolLoader.c"
+    "Debugger.c"
 )
 
 if (IS_WINDOWS)

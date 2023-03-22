@@ -114,6 +114,7 @@ typedef struct _CU_KERNEL_STREAMS {
         CU_STREAM FirstStream;
     };
 
+    CU_STREAM AddKeys;
     CU_STREAM IsAcyclic;
     CU_STREAM SortVertexPairs;
     CU_STREAM Assign;

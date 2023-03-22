@@ -3227,6 +3227,8 @@ typedef struct _RTL {
         SIZE_T SizeOfSysErrorMessageBufferInBytes;
     };
 
+    DEBUGGER_CONTEXT DebuggerContext;
+
     HCRYPTPROV CryptProv;
 
     SIZE_T LargePageMinimum;

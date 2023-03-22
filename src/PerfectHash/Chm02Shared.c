@@ -123,8 +123,15 @@ Return Value:
         CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
         CU_JIT_ERROR_LOG_BUFFER,
         CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES,
+#ifdef _DEBUG
+        CU_JIT_GENERATE_DEBUG_INFO,
+#else
+        CU_JIT_GENERATE_LINE_INFO,
+#endif
+        CU_JIT_LOG_VERBOSE,
     };
-    PVOID JitOptionValues[4];
+
+    PVOID JitOptionValues[ARRAYSIZE(JitOptions)];
     USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
 
     CHAR JitInfoLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
@@ -820,6 +827,18 @@ FinishedOrdinalsProcessing:
     JitOptionValues[3] = (PVOID)sizeof(JitErrorLogBuffer);
 
     //
+    // Debug or lineinfo mode.
+    //
+
+    JitOptionValues[4] = (PVOID)1;
+
+    //
+    // Verbose linking.
+    //
+
+    JitOptionValues[5] = (PVOID)1;
+
+    //
     // Second pass: wire-up each device context (identified by ordinal, set
     // in the first pass above) to the corresponding PH_CU_DEVICE instance
     // for that device, create CUDA contexts for each device context, load
@@ -831,22 +850,6 @@ FinishedOrdinalsProcessing:
 
     for (Index = 0; Index < NumberOfContexts; Index++) {
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
-
-#if 0
-        if (!InitializeCriticalSectionAndSpinCount(
-                                    &DeviceContext->BestGraphCriticalSection,
-                                    BEST_CU_GRAPH_CS_SPINCOUNT)) {
-
-            //
-            // This should never fail from Vista onward.
-            //
-
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(InitializeCudaAndGraphsChm02_InitializeCriticalSection,
-                     Result);
-            PH_RAISE(Result);
-        }
-#endif
 
         //
         // Find the PH_CU_DEVICE instance with the same ordinal.
@@ -879,7 +882,6 @@ FinishedOrdinalsProcessing:
         //
 
         CuResult = Cu->CtxCreate(&DeviceContext->Context,
-                                 //CU_CTX_SCHED_YIELD,
                                  CU_CTX_SCHED_BLOCKING_SYNC,
                                  Device->Handle);
         CU_CHECK(CuResult, CtxCreate);

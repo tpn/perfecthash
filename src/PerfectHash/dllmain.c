@@ -18,6 +18,34 @@ Abstract:
 #include "stdafx.h"
 #include "PerfectHashEventsPrivate.h"
 
+//
+// Ctrl-C glue.
+//
+
+volatile ULONG CtrlCPressed = 0;
+
+#ifdef PH_COMPAT
+VOID
+SignalHandlerSigInt (
+    INT Signal
+    )
+{
+    printf("Received Ctrl-C, interrupting...\n");
+    CtrlCPressed = 1;
+    return;
+}
+
+__attribute__((constructor))
+VOID
+InstallSigIntSignalHandler (
+    VOID
+    )
+{
+    signal(SIGINT, SignalHandlerSigInt);
+}
+#endif
+
+#ifdef PH_WINDOWS
 HMODULE PerfectHashModule;
 MODULEINFO PerfectHashModuleInfo;
 
@@ -29,12 +57,6 @@ MODULEINFO PerfectHashModuleInfo;
 //
 
 ULONG _fltused;
-
-//
-// Ctrl-C glue.
-//
-
-volatile ULONG CtrlCPressed = 0;
 
 BOOL
 RunSingleFunctionCtrlCHandler(
@@ -63,7 +85,6 @@ RunSingleFunctionCtrlCHandler(
     return FALSE;
 }
 
-#ifdef PH_WINDOWS
 BOOL
 APIENTRY
 _DllMainCRTStartup(

@@ -2946,10 +2946,25 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG AlwaysRespectCuKernelRuntimeLimit:1;
 
         //
+        // When set, waits for a debugger to attach before attempting any graph
+        // solving.
+        //
+
+        ULONGLONG WaitForDebugger:1;
+
+        //
+        // When set, indicates the desire to switch to cuda-gdb prior to
+        // launching a kernel.  Only applies when the existing process is being
+        // debugged via gdb.
+        //
+
+        ULONGLONG SwitchToCudaGdbBeforeLaunchKernel:1;
+
+        //
         // Unused bits.
         //
 
-        ULONGLONG Unused:28;
+        ULONGLONG Unused:26;
     };
 
     LONGLONG AsLongLong;
