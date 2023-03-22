@@ -4682,3 +4682,12 @@ Abstract:
 //
 #define PH_E_UNIMPLEMENTED_RNG_ID        ((HRESULT)0xE00403E9L)
 
+//
+// MessageId: PH_E_UNKNOWN_DEBUGGER
+//
+// MessageText:
+//
+// Unknown debugger.
+//
+#define PH_E_UNKNOWN_DEBUGGER            ((HRESULT)0xE00403EAL)
+

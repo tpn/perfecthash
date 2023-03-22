@@ -136,6 +136,7 @@ Abstract:
 
 #include "Component.h"
 #include "BitManipulation.h"
+#include "Debugger.h"
 #include "Rtl.h"
 #include "RtlOutput.h"
 #include "Chunk.h"

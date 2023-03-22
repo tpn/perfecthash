@@ -12,8 +12,10 @@ set(Header_Files
 source_group("Header Files" FILES ${Header_Files})
 
 set(Source_Files
-    "Graph.cu"
-    "GraphThrust.cu"
+    #"Graph.cu"
+    #"Graph3.cu"
+    "Graph4.cu"
+    #"GraphThrust.cu"
 )
 source_group("Source Files" FILES ${Source_Files})
 

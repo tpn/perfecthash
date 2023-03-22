@@ -4256,3 +4256,11 @@ Language=English
 Unimplemented RNG ID.
 .
 
+MessageId=0x3ea
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_UNKNOWN_DEBUGGER
+Language=English
+Unknown debugger.
+.
+

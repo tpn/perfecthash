@@ -732,6 +732,7 @@ Return Value:
     ULONG SharedMemoryInBytes;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
+    PDEBUGGER_CONTEXT DebuggerContext;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
     PVOID KernelParams[1];
@@ -749,6 +750,7 @@ Return Value:
     DeviceContext = SolveContext->DeviceContext;
     DeviceGraph = SolveContext->DeviceGraph;
     Cu = DeviceContext->Cu;
+    DebuggerContext = &Graph->Rtl->DebuggerContext;
 
     ASSERT(SolveContext->HostGraph == Graph);
 
@@ -758,6 +760,15 @@ Return Value:
 
     CuResult = Cu->CtxSynchronize();
     CU_CHECK(CuResult, CtxSynchronize);
+
+    //
+    // Maybe switch to CUDA GDB if applicable prior to kernel launch.
+    //
+
+    MaybeSwitchToCudaGdb(DebuggerContext);
+    if (CtrlCPressed) {
+        return PH_E_CTRL_C_PRESSED;
+    }
 
     //
     // Launch the solve kernel.
@@ -778,6 +789,15 @@ Return Value:
                                 KernelParams,
                                 NULL);
     CU_CHECK(CuResult, LaunchKernel);
+
+    //
+    // If we were using GDB, then switched to CUDA GDB, switch back to GDB now.
+    //
+
+    MaybeSwitchBackToGdb(&DebuggerContext);
+    if (CtrlCPressed) {
+        return PH_E_CTRL_C_PRESSED;
+    }
 
     //
     // Copy the device graph back to the host.
