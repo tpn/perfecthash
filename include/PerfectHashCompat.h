@@ -33,8 +33,11 @@ extern "C" {
 #include <assert.h>
 #include <pthread.h>
 
+
+#ifndef PH_CUDA
 #include <cpuid.h>
 #include <x86intrin.h>
+#endif
 
 #ifdef PH_LINUX
 #include <linux/mman.h>
@@ -224,16 +227,22 @@ SystemTimeToFileTime(
 
 #define FORCEINLINE static inline __attribute__((always_inline))
 
-#define C_ASSERT(e) static_assert(e, "Assertion failed")
+#ifndef C_ASSERT
+#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
+#endif
 
+#if 0
 #if defined(__GNUC__)
 #if (__GNUC__ == 10)
 #define C_ASSERT(e) _Static_assert(e, "Assertion failed")
+#elif (__GNUC__ == 11)
+#define C_ASSERT(e) _Static_assert(e)
 #endif
 #endif
 
 #ifndef C_ASSERT
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
+#endif
 #endif
 
 typedef _Return_type_success_(return >= 0) LONG HRESULT;
@@ -1226,7 +1235,9 @@ InitOnceComplete(
 #define _M_AMD64
 #define _AMD64_
 #define _WIN64
+#ifndef PH_CUDA
 #include <immintrin.h>
+
 
 #define _mm256_loadu_epi32 _mm256_loadu_si256
 #define _mm512_loadu_epi32 _mm512_loadu_si512
@@ -1247,6 +1258,7 @@ InitOnceComplete(
                      s11, s10, s9,  s8,       \
                      s7,  s6,  s5,  s4,       \
                      s3,  s2,  s1,  s0)
+#endif
 #endif
 
 #ifdef __has_builtin

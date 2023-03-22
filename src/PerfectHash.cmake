@@ -124,7 +124,6 @@ else()
         PUBLIC
         -pthread
         -lrt
-        -ldl
     )
 
     if (CMAKE_C_COMPILER_ID MATCHES Clang)
