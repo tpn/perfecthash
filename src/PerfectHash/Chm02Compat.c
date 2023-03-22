@@ -1265,8 +1265,9 @@ Return Value:
         //
 
         PermissibleErrorCode = (
-            Result == E_OUTOFMEMORY      ||
-            Result == PH_E_NO_MORE_SEEDS
+            Result == E_OUTOFMEMORY       ||
+            Result == PH_E_NO_MORE_SEEDS  ||
+            Result == PH_E_CTRL_C_PRESSED
         );
 
         if (!PermissibleErrorCode) {

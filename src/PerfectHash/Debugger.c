@@ -34,23 +34,35 @@ const STRING GetNameCommand = RTL_CONSTANT_STRING(
     "cat /proc/%d/status | grep '^Name:' | awk '{ print $2 }'"
 );
 
+const STRING CopyToXClipCommand = RTL_CONSTANT_STRING(
+    "printf \"%s\" | xclip -selection clipboard"
+);
+
+#if 1
+const STRING DebuggerAttachCommand = RTL_CONSTANT_STRING(
+    "%s --pid=%d %s"
+);
+#else
 const STRING DebuggerAttachCommand = RTL_CONSTANT_STRING(
     "%s --pid=%d %s --ex '!kill -SIGUSR1 %d'"
 );
+#endif
 
 const STRING GdbExtraCommand = RTL_CONSTANT_STRING(
     "--iex 'set pagination off' "
     "--iex 'set non-stop on' "
-    "--ex 'set scheduler-locking off' "
-    "--ex 'handle SIGUSR1 nostop print pass' "
+    "--iex 'set debug infrun 1'"
+    //"--ex 'set scheduler-locking off' "
+    //"--ex 'handle SIGUSR1 nostop print pass' "
 );
 
 #if 1
 const STRING CudaGdbExtraCommand = RTL_CONSTANT_STRING(
     "--iex 'set pagination off' "
     "--iex 'set non-stop on' "
-    "--ex 'set scheduler-locking off' "
-    "--ex 'handle SIGUSR1 nostop print pass' "
+    "--iex 'set debug infrun 1'"
+    //"--ex 'set scheduler-locking off' "
+    //"--ex 'handle SIGUSR1 nostop print pass' "
 );
 #else
 const STRING CudaGdbExtraCommand = RTL_CONSTANT_STRING("");
@@ -111,6 +123,10 @@ Arguments:
         whether the process should switch to cuda-gdb before launching the
         kernel.
 
+Return Value:
+
+    None.
+
 --*/
 {
     ZeroStructPointer(Context);
@@ -118,6 +134,46 @@ Arguments:
     Context->Flags.SwitchToCudaGdbBeforeLaunchKernel =
         SwitchToCudaGdbBeforeLaunchKernel;
 }
+
+
+HRESULT
+CopyStringToClipboard (
+    _In_ PSTR String
+    )
+/*++
+
+Routine Description:
+
+    This routine copies the supplied string to the clipboard using xclip.
+
+Arguments:
+
+    String - Supplies a pointer to a NULL-terminated string to copy to the
+        clipboard.
+
+Return Value:
+
+    S_OK - The string was copied to the clipboard.
+
+    Or, an appropriate error code.
+
+--*/
+{
+    HRESULT Result;
+    CHAR Command[MAX_PATH] = { 0, };
+
+    sprintf(Command, CopyToXClipCommand.Buffer, String);
+
+    if (system(Command) != 0) {
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        PH_ERROR(CopyStringToClipboard_CopyToXClipCommandFailed, Result);
+    } else {
+        Result = S_OK;
+    }
+
+    return Result;
+}
+
 
 HRESULT
 IsDebuggerAttached (
@@ -223,6 +279,118 @@ End:
 
 HRESULT
 WaitForDebuggerAttach (
+    VOID
+    )
+/*++
+
+Routine Description:
+
+    This routine waits for a debugger to attach to the current process.
+
+Arguments:
+
+    None.
+
+Return Value:
+
+    S_OK - A debugger is attached to the current process.
+
+    Or, an appropriate error code.
+
+--*/
+{
+    BOOL First = TRUE;
+    HRESULT Result;
+    DEBUGGER_TYPE DebuggerType;
+
+    while (TRUE) {
+        if (CtrlCPressed) {
+            Result = PH_E_CTRL_C_PRESSED;
+            break;
+        }
+        Result = IsDebuggerAttached(&DebuggerType);
+        if (FAILED(Result)) {
+            PH_ERROR(WaitForDebuggerAttach_IsDebuggerAttachedFailed, Result);
+        }
+        if (DebuggerType != DebuggerTypeNone) {
+            Result = S_OK;
+            break;
+        } else if (First) {
+            printf("Waiting for a debugger to attach.");
+            fflush(stdout);
+            First = FALSE;
+        }
+        sleep(1);
+        printf(".");
+        fflush(stdout);
+    }
+
+    if (!First) {
+        printf("\n");
+    }
+
+    return Result;
+}
+
+
+HRESULT
+WaitForDebuggerDetach (
+    VOID
+    )
+/*++
+
+Routine Description:
+
+    This routine waits for a debugger to detach from the current process.
+
+Arguments:
+
+    None.
+
+Return Value:
+
+    S_OK - No debugger is attached to the current process.
+
+    Or, an appropriate error code.
+
+--*/
+{
+    BOOL First = TRUE;
+    HRESULT Result;
+    DEBUGGER_TYPE DebuggerType;
+
+    while (TRUE) {
+        if (CtrlCPressed) {
+            Result = PH_E_CTRL_C_PRESSED;
+            break;
+        }
+        Result = IsDebuggerAttached(&DebuggerType);
+        if (FAILED(Result)) {
+            PH_ERROR(WaitForDebuggerDetach_IsDebuggerAttachedFailed, Result);
+        }
+        if (DebuggerType == DebuggerTypeNone) {
+            Result = S_OK;
+            break;
+        } else if (First) {
+            printf("Waiting for debugger to detach.");
+            fflush(stdout);
+            First = FALSE;
+        }
+        sleep(1);
+        printf(".");
+        fflush(stdout);
+    }
+
+    if (!First) {
+        printf("\n");
+    }
+
+    return Result;
+}
+
+
+HRESULT
+DoDebuggerAction (
     _Inout_ PDEBUGGER_CONTEXT Context,
     _In_ DEBUGGER_DISPOSITION Disposition
     )
@@ -230,8 +398,7 @@ WaitForDebuggerAttach (
 
 Routine Description:
 
-    This routine waits for a debugger to attach to the current process, if
-    applicable.
+    This routine handles the various debugger actions that can be taken.
 
 Arguments:
 
@@ -293,7 +460,7 @@ Return Value:
 
     Result = IsDebuggerAttached(&CurrentDebuggerType);
     if (FAILED(Result)) {
-        PH_ERROR(WaitForDebuggerAttach_IsDebuggerAttachedFailed, Result);
+        PH_ERROR(DoDebuggerAction_IsDebuggerAttachedFailed, Result);
         return Result;
     }
 
@@ -358,7 +525,12 @@ Return Value:
             return S_FALSE;
         }
 
-        printf("Detach existing debugger now with `detach`.\n");
+        printf("Detach existing debugger now (e.g. via `detach`).\n");
+        Result = WaitForDebuggerDetach();
+        if (FAILED(Result)) {
+            return Result;
+        }
+        printf("Existing debugger detached, continuing.\n");
     }
 
     if (DesiredDebuggerType == DebuggerTypeCudaGdb) {
@@ -378,34 +550,27 @@ Return Value:
             DebuggerExtra,
             Pid);
 
-    printf("Waiting for %s debugger to attach; run: `%s`\n",
-           DebuggerName,
-           Buffer);
+    printf("Attach %s debugger now: `%s`\n", DebuggerName, Buffer);
 
-    //
-    // Infinite loop that waits for ContinueExecution to be set to 1.  This is
-    // done by the signal handler.
-    //
-
-    Count = 0;
-    while (TRUE) {
-        if (*((volatile LONG *)&ContinueExecution) == 1) {
-            printf("Detected ContinueExecution!\n");
-            break;
-        }
-        if (CtrlCPressed) {
-            printf("Detecting Ctrl-C...\n");
-            break;
-        }
-        sleep(1);
+    if (SUCCEEDED(CopyStringToClipboard(Buffer))) {
+        printf("N.B. Debugger attach command copied to clipboard.\n");
     }
 
-    //
-    // Always reset ContinueExecution to 0 before returning.
-    //
+    Result = WaitForDebuggerAttach();
+    if (FAILED(Result)) {
 
-    ContinueExecution = 0;
+        //
+        // We can't do anything more here, and an error will have already been
+        // printed.
+        //
+
+        NOTHING;
+    } else {
+        printf("Debugger attached, continuing.\n");
+    }
+
 }
+
 
 //
 // Glue for switching between gdb and cuda-gdb.
@@ -416,7 +581,7 @@ MaybeWaitForGdbAttach (
     _Inout_ PDEBUGGER_CONTEXT Context
     )
 {
-    WaitForDebuggerAttach(Context, DebuggerMaybeWaitForGdbAttachDisposition);
+    DoDebuggerAction(Context, DebuggerMaybeWaitForGdbAttachDisposition);
 }
 
 HRESULT
@@ -424,7 +589,7 @@ MaybeSwitchToCudaGdb (
     _Inout_ PDEBUGGER_CONTEXT Context
     )
 {
-    WaitForDebuggerAttach(Context, DebuggerMaybeSwitchToCudaGdbDisposition);
+    DoDebuggerAction(Context, DebuggerMaybeSwitchToCudaGdbDisposition);
 }
 
 HRESULT
@@ -432,7 +597,7 @@ MaybeSwitchBackToGdb (
     _Inout_ PDEBUGGER_CONTEXT Context
     )
 {
-    WaitForDebuggerAttach(Context, DebuggerMaybeSwitchBackToGdbDisposition);
+    DoDebuggerAction(Context, DebuggerMaybeSwitchBackToGdbDisposition);
 }
 
 
