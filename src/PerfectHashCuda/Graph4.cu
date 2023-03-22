@@ -97,7 +97,7 @@ Return Value:
         return;
     }
 
-    printf("Entered solving loop!  sizeof(GRAPH): %d\n", sizeof(GRAPH));
+    printf("Entered solving loop!  sizeof(GRAPH): %d\n", (LONG)sizeof(GRAPH));
 
 #if 0
     if (Graph->CuKernelContext == NULL) {

@@ -244,11 +244,18 @@ Return Value:
 
     Stdout = popen(Command, "r");
     while (fgets(Buffer, sizeof(Buffer), Stdout)) {
-        if (strstr(Buffer, "gdb")) {
-            *DebuggerType = DebuggerTypeGdb;
-            Result = S_OK;
-        } else if (strstr(Buffer, "cuda-gdb")) {
+
+        //
+        // N.B. It's important we check for cuda-gdb before gdb, as the latter
+        //      is contained within the former, so `strstr(Buffer, "gdb")` will
+        //      return true for both gdb and cuda-gdb.
+        //
+
+        if (strstr(Buffer, "cuda-gdb")) {
             *DebuggerType = DebuggerTypeCudaGdb;
+            Result = S_OK;
+        } else if (strstr(Buffer, "gdb")) {
+            *DebuggerType = DebuggerTypeGdb;
             Result = S_OK;
         } else {
             *DebuggerType = DebuggerTypeUnknown;

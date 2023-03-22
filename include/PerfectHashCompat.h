@@ -224,13 +224,15 @@ SystemTimeToFileTime(
 
 #define FORCEINLINE static inline __attribute__((always_inline))
 
-#if defined(__GNUC__)
-#if (__GNUC__ < 11)
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
-#else
+
+#if defined(__GNUC__)
+#if (__GNUC__ == 10)
 #define C_ASSERT(e) _Static_assert(e, "Assertion failed")
 #endif
-#else
+#endif
+
+#ifndef C_ASSERT
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
 #endif
 
