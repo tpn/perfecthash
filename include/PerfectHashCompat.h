@@ -1184,13 +1184,14 @@ typedef struct _RTL_BARRIER {
 // to support all of the Windows InitOnce* semantics.
 //
 
-#ifndef PH_CUDA
+#ifndef PH_WINDOWS
 typedef struct _PH_INIT_ONCE_COMPAT {
     pthread_once_t Once;
     PVOID Context;
 } PH_INIT_ONCE_COMPAT;
 typedef PH_INIT_ONCE_COMPAT INIT_ONCE;
 typedef INIT_ONCE *PINIT_ONCE, *LPINIT_ONCE;
+#endif
 
 typedef
 BOOL
@@ -1235,7 +1236,6 @@ InitOnceComplete(
     _In_ DWORD dwFlags,
     _In_opt_ LPVOID lpContext
     );
-#endif
 
 #ifndef PH_CUDA
 #include "debugbreak.h"
@@ -1350,10 +1350,12 @@ InitOnceComplete(
 
 #define EXCEPTION_MAXIMUM_PARAMETERS 15 // maximum number of exception parameters
 
-#ifndef PH_CUDA
+#ifndef PH_WINDOWS
 #define DECLSPEC_ALIGN(x) __attribute__ ((aligned(x)))
 #else
-#define DECLSPEC_ALIGN(x)
+#ifndef DECLSPEC_ALIGN
+#define DECLSPEC_ALIGN(x) __declspec(align(x))
+#endif
 #endif
 
 #define DECLSPEC_NORETURN
@@ -1674,7 +1676,7 @@ InterlockedCompareExchangePointer(
 #define _lzcnt_u64 __builtin_clzll
 #endif
 
-#if (defined PH_WINDOWS && defined PH_CUDA)
+#if (!defined PH_WINDOWS && !defined PH_CUDA)
 #define InterlockedIncrement(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrement64(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrementULongPtr(v) __sync_add_and_fetch(v, 1)
@@ -1818,10 +1820,14 @@ WaitForMultipleObjects(
 
 #define SRWLOCK_INIT RTL_SRWLOCK_INIT
 
-#ifndef PH_CUDA
+#ifndef PH_WINDOWS
 typedef pthread_rwlock_t SRWLOCK, *PSRWLOCK;
 #else
-typedef PVOID SRWLOCK, *PSRWLOCK;
+typedef struct _RTL_SRWLOCK
+{
+    PVOID Ptr;
+} RTL_SRWLOCK, *PRTL_SRWLOCK;
+typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
 #endif
 
 WINBASEAPI
