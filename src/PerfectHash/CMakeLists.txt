@@ -228,10 +228,10 @@ set(Source_Files
     "GraphCu.c"
     "PerfectHashCu.c"
     "SymbolLoader.c"
-    "Debugger.c"
 )
 
 if (IS_WINDOWS)
+
     list(
         APPEND Source_Files
         "Chm01.c"
@@ -240,16 +240,13 @@ if (IS_WINDOWS)
         "Security.c"
         "GraphAvx.c"
         "RtlRandom.c"
-        "memset_x64.asm"
         "RtlPrivilege.c"
         "PerfectHashCu.c"
         "RtlErrorHandling.c"
-        "RtlCopyPages_x64.asm"
-        "RtlFillPages_x64.asm"
         "PerfectHashTableCompile.c"
         "PerfectHashContextBulkCreate.c"
-        "PerfectHashTableFastIndexEx_x64_01.asm"
     )
+
 else()
     list(
         APPEND Source_Files
@@ -257,6 +254,7 @@ else()
         "bitmap.c"
         "thpool.c"
         "unicode.c"
+        "Debugger.c"
         "Chm01Compat.c"
         "Chm02Compat.c"
         "PerfectHashCompat.c"
@@ -277,6 +275,11 @@ if (IS_WINDOWS)
         APPEND ALL_FILES
         ${Resource_Files}
     )
+
+    list(
+        APPEND ALL_FILES
+        ${Assembly_Source_Files}
+    )
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
@@ -284,8 +287,8 @@ add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
 ################################################################################
 # Target
 ################################################################################
-
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
+
 ################################################################################
 # Includes for CMake from *.props
 ################################################################################
@@ -314,7 +317,8 @@ if (HookPenter STREQUAL "1")
 endif()
 
 if (IS_WINDOWS)
-    set(ADDITIONAL_LIBRARY_DEPENDENCIES "rpcrt4")
+    add_dependencies(${PROJECT_NAME} PerfectHashAsm)
+    set(ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4 PerfectHashAsm)
     target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 endif()
 

@@ -594,6 +594,11 @@ static PCSZ Exclamation = "!";
 #define ASTERISK() DO_OUTPUT(Asterisk, 1)
 #define EXCLAMATION() DO_OUTPUT(Exclamation, 1)
 
+#define PRINT_CSTR(Buf) do {                \
+    DO_OUTPUT((Buf), (DWORD)strlen((Buf))); \
+    NEWLINE();                              \
+} while (0)
+
 #define MAYBE_DOT() MAYBE_OUTPUT(Dot, 1)
 #define MAYBE_DASH() MAYBE_OUTPUT(Dash, 1)
 #define MAYBE_PLUS() MAYBE_OUTPUT(Plus, 1)

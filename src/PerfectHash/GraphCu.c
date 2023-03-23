@@ -307,7 +307,7 @@ Return Value:
     Graph->Flags.Paranoid = IsParanoid(Table);
     Graph->Flags.FindBestGraph = FindBestGraph(Context);
     Graph->Flags.AlwaysRespectCuKernelRuntimeLimit =
-        TableCreateFlags.AlwaysRespectCuKernelRuntimeLimit;
+        (TableCreateFlags.AlwaysRespectCuKernelRuntimeLimit != FALSE);
 
     CopyInline(&Graph->Dimensions,
                &Info->Dimensions,

@@ -56,6 +56,8 @@ extern "C" {
 #pragma warning(pop)
 #include <sal.h>
 #include <specstrings.h>
+#else
+#include <PerfectHashCompat.h>
 #endif
 
 //
@@ -233,12 +235,15 @@ typedef HRESULT *PHRESULT;
 
 #define IsValidHandle(Handle) (Handle != NULL && Handle != INVALID_HANDLE_VALUE)
 
-#ifdef PH_WINDOWS
+#ifndef InterlockedIncrementULongPtr
 #define InterlockedIncrementULongPtr(Ptr) InterlockedIncrement64((PLONG64)Ptr)
+#endif
+#ifndef InterlockedDecrementULongPtr
 #define InterlockedDecrementULongPtr(Ptr) InterlockedDecrement64((PLONG64)Ptr)
+#endif
+#ifndef InterlockedAddULongPtr
 #define InterlockedAddULongPtr(Ptr, Val) \
     InterlockedAdd64((PLONG64)Ptr, (LONG64)Val)
-#else
 #endif
 
 //
@@ -4542,7 +4547,7 @@ PhRaiseException(
     _In_reads_opt_(nNumberOfArguments) CONST ULONG_PTR* lpArguments
     )
 {
-#if PH_WINDOWS
+#if (defined PH_WINDOWS && !defined PH_CUDA)
     RaiseException(dwExceptionCode,
                    dwExceptionFlags,
                    nNumberOfArguments,

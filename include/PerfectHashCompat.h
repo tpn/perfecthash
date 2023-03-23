@@ -31,10 +31,9 @@ extern "C" {
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
-#include <pthread.h>
-
 
 #ifndef PH_CUDA
+#include <pthread.h>
 #include <cpuid.h>
 #include <x86intrin.h>
 #endif
@@ -46,6 +45,7 @@ extern "C" {
 // No idea why these two defines aren't always available when including
 // <linux/mman.h>.
 //
+
 #ifndef MAP_HUGE_2MB
 #define HUGETLB_FLAG_ENCODE_SHIFT 26
 #define HUGETLB_FLAG_ENCODE_2MB (21 << HUGETLB_FLAG_ENCODE_SHIFT)
@@ -217,7 +217,9 @@ SystemTimeToFileTime(
 
 #define __cdecl
 #define __stdcall
+#ifndef __callback
 #define __callback
+#endif
 #define NTAPI
 #define WINAPI
 #define APIENTRY
@@ -225,7 +227,13 @@ SystemTimeToFileTime(
 #define WINBASEAPI
 #define STDAPICALLTYPE
 
+#ifndef FORCEINLINE
+#ifndef PH_WINDOWS
 #define FORCEINLINE static inline __attribute__((always_inline))
+#else
+#define FORCEINLINE __forceinline
+#endif
+#endif
 
 #ifndef C_ASSERT
 #define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
@@ -1176,6 +1184,7 @@ typedef struct _RTL_BARRIER {
 // to support all of the Windows InitOnce* semantics.
 //
 
+#ifndef PH_CUDA
 typedef struct _PH_INIT_ONCE_COMPAT {
     pthread_once_t Once;
     PVOID Context;
@@ -1226,9 +1235,14 @@ InitOnceComplete(
     _In_ DWORD dwFlags,
     _In_opt_ LPVOID lpContext
     );
+#endif
 
+#ifndef PH_CUDA
 #include "debugbreak.h"
 #define __debugbreak psnip_trap
+#else
+#define __debugbreak()
+#endif
 
 #if defined(__x86_64__)
 #define _M_X64
@@ -1336,7 +1350,11 @@ InitOnceComplete(
 
 #define EXCEPTION_MAXIMUM_PARAMETERS 15 // maximum number of exception parameters
 
+#ifndef PH_CUDA
 #define DECLSPEC_ALIGN(x) __attribute__ ((aligned(x)))
+#else
+#define DECLSPEC_ALIGN(x)
+#endif
 
 #define DECLSPEC_NORETURN
 
@@ -1656,6 +1674,7 @@ InterlockedCompareExchangePointer(
 #define _lzcnt_u64 __builtin_clzll
 #endif
 
+#if (defined PH_WINDOWS && defined PH_CUDA)
 #define InterlockedIncrement(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrement64(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrementULongPtr(v) __sync_add_and_fetch(v, 1)
@@ -1670,6 +1689,7 @@ InterlockedCompareExchangePointer(
 
 #define InterlockedCompareExchangePointer(d, e, c) \
     __sync_val_compare_and_swap(d, c, e)
+#endif
 
 #ifndef PH_CUDA
 
@@ -1798,7 +1818,11 @@ WaitForMultipleObjects(
 
 #define SRWLOCK_INIT RTL_SRWLOCK_INIT
 
+#ifndef PH_CUDA
 typedef pthread_rwlock_t SRWLOCK, *PSRWLOCK;
+#else
+typedef PVOID SRWLOCK, *PSRWLOCK;
+#endif
 
 WINBASEAPI
 VOID

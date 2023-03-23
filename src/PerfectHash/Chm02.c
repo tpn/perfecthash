@@ -15,7 +15,6 @@ Abstract:
 
 #include "stdafx.h"
 #include "Chm01.h"
-#include "Graph_Ptx_RawCString.h"
 
 //
 // Spin count for the device context best graph critical section.

@@ -1816,6 +1816,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     LONG CuDeviceIndex;
 
+    ULONG Padding1;
+
     //
     // Clock related fields.
     //

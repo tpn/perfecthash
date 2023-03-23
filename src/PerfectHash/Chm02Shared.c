@@ -115,6 +115,16 @@ Return Value:
     PERFECT_HASH_FILE_LOAD_FLAGS FileLoadFlags = { 0 };
     LARGE_INTEGER EndOfFile = { 0 };
 
+#ifdef PH_WINDOWS
+    //
+    // Required for DO_OUTPUT/PRINT_CSTR.
+    //
+
+    BOOLEAN Silent = FALSE;
+    DWORD BytesWritten = 0;
+    HANDLE OutputHandle = Context->Rtl->SysErrorOutputHandle;
+#endif
+
     STRING KernelFunctionName =
         RTL_CONSTANT_STRING("PerfectHashCudaEnterSolvingLoop");
 
@@ -886,6 +896,7 @@ FinishedOrdinalsProcessing:
                                  Device->Handle);
         CU_CHECK(CuResult, CtxCreate);
 
+#ifndef PH_WINDOWS
 #define CU_LINK_CHECK(CuResult, Name)                   \
     if (CU_FAILED(CuResult)) {                          \
         CU_ERROR(Name, CuResult);                       \
@@ -893,7 +904,15 @@ FinishedOrdinalsProcessing:
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;      \
         goto Error;                                     \
     }
-
+#else
+#define CU_LINK_CHECK(CuResult, Name)              \
+    if (CU_FAILED(CuResult)) {                     \
+        CU_ERROR(Name, CuResult);                  \
+        PRINT_CSTR(&JitErrorLogBuffer[0]);         \
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED; \
+        goto Error;                                \
+    }
+#endif
 
         //
         // Our solver kernel uses dynamic parallelism (that is, it launches
@@ -1466,14 +1485,14 @@ FinishedOrdinalsProcessing:
             //
 
             Graph->Flags.SkipVerification =
-                TableCreateFlags.SkipGraphVerification;
+                (TableCreateFlags.SkipGraphVerification != FALSE);
 
             Graph->Flags.WantsWriteCombiningForVertexPairsArray =
-                TableCreateFlags.EnableWriteCombineForVertexPairs;
+                (TableCreateFlags.EnableWriteCombineForVertexPairs != FALSE);
 
             Graph->Flags.RemoveWriteCombineAfterSuccessfulHashKeys =
-                TableCreateFlags.RemoveWriteCombineAfterSuccessfulHashKeys;
-
+                (TableCreateFlags.RemoveWriteCombineAfterSuccessfulHashKeys
+                 != FALSE);
         }
     }
 

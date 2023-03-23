@@ -89,8 +89,6 @@ typedef struct _PH_CU_DEVICE {
 
     CU_DEVICE_ATTRIBUTES Attributes;
 
-    ULONG Padding2;
-
 } PH_CU_DEVICE;
 typedef PH_CU_DEVICE *PPH_CU_DEVICE;
 

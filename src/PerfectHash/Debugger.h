@@ -58,7 +58,13 @@ typedef DEBUGGER_CONTEXT *PDEBUGGER_CONTEXT;
 
 #ifdef PH_WINDOWS
 
-#define WaitForDebuggerAttach(Debugger, Disposition)
+#define InitializeDebuggerContext(Debugger,                         \
+                                  WaitForDebugger,                  \
+                                  SwitchToCudaGdbBeforeLaunchKernel)
+
+#define MaybeWaitForGdbAttach(Context) (S_OK)
+#define MaybeSwitchToCudaGdb(Context) (S_OK)
+#define MaybeSwitchBackToGdb(Context) (S_OK)
 
 #else
 

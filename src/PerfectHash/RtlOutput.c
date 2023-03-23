@@ -1777,4 +1777,22 @@ Crc32HashUnicodeString(
     Crc32HashString((PSTRING)String);
 }
 
+#ifdef PH_WINDOWS
+size_t __cdecl __imp_wcslen(_In_z_ wchar_t const *s)
+{
+    const wchar_t *p = s;
+    while (*p)
+        ++p;
+    return p - s;
+}
+
+size_t __cdecl strlen(_In_z_ char const *s)
+{
+    const char *p = s;
+    while (*p)
+        ++p;
+    return p - s;
+}
+#endif
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

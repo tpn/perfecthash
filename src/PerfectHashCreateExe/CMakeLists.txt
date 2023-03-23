@@ -13,7 +13,7 @@ source_group("Header Files" FILES ${Header_Files})
 
 set(Source_Files
     "PerfectHashCreateExe.c"
-    "stdafx.c"
+    #"stdafx.c"
 )
 source_group("Source Files" FILES ${Source_Files})
 
