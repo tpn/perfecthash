@@ -61,7 +61,7 @@ target_compile_definitions(
 if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
     target_compile_options(
         ${PROJECT_NAME}
-        PUBLIC
+        PRIVATE
         --source-in-ptx
         -Wno-deprecated-gpu-targets
         -v
@@ -73,6 +73,11 @@ if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
         --machine 64
         --keep
     )
+    target_compile_options_config(Debug "-g;-G")
+    target_compile_options_not_config(Debug "-lineinfo")
+
+    target_compile_definitions_config(Debug _DEBUG)
+    target_compile_definitions_not_config(Debug NDEBUG)
 endif()
 
 
