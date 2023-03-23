@@ -364,6 +364,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     ULONG GraphImpl;
 
     //
+    // Pad out to an 8-byte boundary.
+    //
+
+    ULONG Padding1;
+
+    //
     // Pointer to the path for the output directory (below).
     //
 

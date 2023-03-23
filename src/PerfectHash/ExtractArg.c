@@ -237,6 +237,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx2HashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx512HashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2MemoryCoverageFunction);
+    SET_FLAG_AND_RETURN_IF_EQUAL(IncludeKeysInCompiledDll);
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableSavingCallbackTableValues);
     SET_FLAG_AND_RETURN_IF_EQUAL(Quiet);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseHash16Impl);

@@ -38,7 +38,7 @@ set(CMAKE_CONFIGURATION_TYPES
 ################################################################################
 # Global compiler options
 ################################################################################
-if(MSVC)
+if (MSVC)
     # remove default flags provided with CMake for MSVC
     set(CMAKE_C_FLAGS "")
     set(CMAKE_C_FLAGS_DEBUG "")
@@ -109,11 +109,26 @@ else()
     message(FATAL "Only 64-bit platforms are supported.")
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(IS_WINDOWS 1)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(IS_LINUX 1)
+    set(IS_UNIX 1)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(IS_MAC 1)
+    set(IS_UNIX 1)
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
 ################################################################################
 # Sub-projects
 ################################################################################
 if (HookPenter STREQUAL "1")
     add_subdirectory(FunctionHook)
+endif()
+if (WIN32)
+    add_subdirectory(PerfectHashAsm)
 endif()
 add_subdirectory(PerfectHash)
 add_subdirectory(PerfectHashCuda)

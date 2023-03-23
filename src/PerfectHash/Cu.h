@@ -1011,7 +1011,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE)(
-    _Out_ PCU_STREAM Stream,
+    _Out_ CU_STREAM *Stream,
     _In_ CU_STREAM_FLAGS Flags
     );
 typedef CU_STREAM_CREATE *PCU_STREAM_CREATE;
@@ -1020,7 +1020,7 @@ typedef
 _Must_inspect_result_
 CU_RESULT
 (CU_STREAM_CREATE_WITH_PRIORITY)(
-    _Out_ PCU_STREAM Stream,
+    _Out_ CU_STREAM *Stream,
     _In_ CU_STREAM_FLAGS Flags,
     _In_ ULONG Priority
     );

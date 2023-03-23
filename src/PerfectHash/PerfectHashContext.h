@@ -456,6 +456,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     ULONG MinNumberOfKeysForFindBestGraph;
 
+    ULONG Padding1;
+
     //
     // Pointer to a buffer that is used to construct console output before
     // issuing WriteFile().

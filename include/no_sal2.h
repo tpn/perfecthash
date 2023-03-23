@@ -1042,10 +1042,20 @@
 #undef _Post_writable_byte_size_
 #define _Post_writable_byte_size_(s) _Post_ _Writable_bytes_(s)
 
+#ifndef __drv_aliasesMem
 #define __drv_aliasesMem
+#endif
+#ifndef __drv_freesMem
 #define __drv_freesMem(N)
+#endif
+#ifndef _In_count_
 #define _In_count_(N)
+#endif
+#ifndef _Post_equals_last_error_
 #define _Post_equals_last_error_
+#endif
+#ifndef _Field_z_
 #define _Field_z_
+#endif
 
 #endif /* _NO_SAL_2_H_ */
