@@ -1191,6 +1191,10 @@ typedef struct _PH_INIT_ONCE_COMPAT {
 } PH_INIT_ONCE_COMPAT;
 typedef PH_INIT_ONCE_COMPAT INIT_ONCE;
 typedef INIT_ONCE *PINIT_ONCE, *LPINIT_ONCE;
+#else
+typedef RTL_RUN_ONCE INIT_ONCE;
+typedef PRTL_RUN_ONCE PINIT_ONCE;
+typedef PRTL_RUN_ONCE LPINIT_ONCE;
 #endif
 
 typedef
@@ -1823,10 +1827,6 @@ WaitForMultipleObjects(
 #ifndef PH_WINDOWS
 typedef pthread_rwlock_t SRWLOCK, *PSRWLOCK;
 #else
-typedef struct _RTL_SRWLOCK
-{
-    PVOID Ptr;
-} RTL_SRWLOCK, *PRTL_SRWLOCK;
 typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
 #endif
 
