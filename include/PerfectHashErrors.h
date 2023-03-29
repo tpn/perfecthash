@@ -4691,3 +4691,11 @@ Abstract:
 //
 #define PH_E_UNKNOWN_DEBUGGER            ((HRESULT)0xE00403EAL)
 
+//
+// MessageId: PH_E_INVALID_DEBUGGER_CONTEXT_FLAGS
+//
+// MessageText:
+//
+// Invalid debugger context flags.
+//
+#define PH_E_INVALID_DEBUGGER_CONTEXT_FLAGS ((HRESULT)0xE00403EBL)

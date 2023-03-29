@@ -24,7 +24,7 @@ typedef DEBUGGER_TYPE *PDEBUGGER_TYPE;
 
 typedef enum _DEBUGGER_DISPOSITION {
     DebuggerDispositionNone = 0,
-    DebuggerMaybeWaitForGdbAttachDisposition,
+    DebuggerMaybeWaitForAttachDisposition,
     DebuggerMaybeSwitchToCudaGdbDisposition,
     DebuggerMaybeSwitchBackToGdbDisposition,
 } DEBUGGER_DISPOSITION;
@@ -32,18 +32,30 @@ typedef DEBUGGER_DISPOSITION *PDEBUGGER_DISPOSITION;
 
 typedef union _DEBUGGER_CONTEXT_FLAGS {
     struct {
-        ULONG WaitForDebugger:1;
-        ULONG SwitchToCudaGdbBeforeLaunchKernel:1;
-        ULONG Unused:30;
+        ULONG WaitForGdb:1;
+        ULONG WaitForCudaGdb:1;
+        ULONG UseGdbForHostDebugging:1;
+        ULONG Unused:29;
     };
     ULONG AsULong;
 } DEBUGGER_CONTEXT_FLAGS;
 C_ASSERT(sizeof(DEBUGGER_CONTEXT_FLAGS) == sizeof(ULONG));
 typedef DEBUGGER_CONTEXT_FLAGS *PDEBUGGER_CONTEXT_FLAGS;
 
+#define WantsDebuggerSwitching(Context) (                  \
+    (                                                      \
+        ((Context)->Flags.WaitForGdb != FALSE) &&          \
+        ((Context)->Flags.WaitForCudaGdb == FALSE)         \
+    ) || (                                                 \
+        ((Context)->Flags.WaitForCudaGdb != FALSE) &&      \
+        ((Context)->Flags.UseGdbForHostDebugging != FALSE) \
+    )                                                      \
+)
+
 typedef union _DEBUGGER_CONTEXT_STATE {
     struct {
-        ULONG Unused:32;
+        ULONG FirstDebuggerAttach:1;
+        ULONG Unused:31;
     };
     ULONG AsULong;
 } DEBUGGER_CONTEXT_STATE;
@@ -53,39 +65,41 @@ typedef DEBUGGER_CONTEXT_STATE *PDEBUGGER_CONTEXT_STATE;
 typedef struct _DEBUGGER_CONTEXT {
     DEBUGGER_CONTEXT_FLAGS Flags;
     DEBUGGER_CONTEXT_STATE State;
+    DEBUGGER_TYPE FirstDebuggerType;
 } DEBUGGER_CONTEXT;
 typedef DEBUGGER_CONTEXT *PDEBUGGER_CONTEXT;
-
-#ifdef PH_WINDOWS
-
-#define InitializeDebuggerContext(Debugger,                         \
-                                  WaitForDebugger,                  \
-                                  SwitchToCudaGdbBeforeLaunchKernel)
-
-#define MaybeWaitForGdbAttach(Context) (S_OK)
-#define MaybeSwitchToCudaGdb(Context) (S_OK)
-#define MaybeSwitchBackToGdb(Context) (S_OK)
-
-#else
 
 //
 // Public functions.
 //
 
-VOID
+HRESULT
 InitializeDebuggerContext (
     _Out_ PDEBUGGER_CONTEXT Context,
-    _In_ BOOLEAN WaitForDebugger,
-    _In_ BOOLEAN SwitchToCudaGdbBeforeLaunchKernel
+    _In_ PDEBUGGER_CONTEXT_FLAGS Flags
     );
 
+#ifdef PH_WINDOWS
+
+#define MaybeWaitForDebuggerAttach(Context) (S_FALSE)
+#define MaybeSwitchToCudaGdb(Context) (S_FALSE)
+#define MaybeSwitchBackToCudaGdb(Context) (S_FALSE)
+#define MaybeSwitchBackToGdb(Context) (S_FALSE)
+
+#else
+
 HRESULT
-MaybeWaitForGdbAttach (
+MaybeWaitForDebuggerAttach (
     _Inout_ PDEBUGGER_CONTEXT Context
     );
 
 HRESULT
 MaybeSwitchToCudaGdb (
+    _Inout_ PDEBUGGER_CONTEXT Context
+    );
+
+HRESULT
+MaybeSwitchBackToCudaGdb (
     _Inout_ PDEBUGGER_CONTEXT Context
     );
 

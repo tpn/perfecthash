@@ -38,35 +38,27 @@ const STRING CopyToXClipCommand = RTL_CONSTANT_STRING(
     "printf \"%s\" | xclip -selection clipboard"
 );
 
-#if 1
 const STRING DebuggerAttachCommand = RTL_CONSTANT_STRING(
     "%s --pid=%d %s"
 );
-#else
-const STRING DebuggerAttachCommand = RTL_CONSTANT_STRING(
-    "%s --pid=%d %s --ex '!kill -SIGUSR1 %d'"
-);
-#endif
 
 const STRING GdbExtraCommand = RTL_CONSTANT_STRING(
-    "--iex 'set pagination off' "
-    "--iex 'set non-stop on' "
-    "--iex 'set debug infrun 1'"
+    ""
+    //"--iex 'set pagination off' "
+    //"--iex 'set non-stop on' "
+    //"--iex 'set debug infrun 1'"
     //"--ex 'set scheduler-locking off' "
     //"--ex 'handle SIGUSR1 nostop print pass' "
 );
 
-#if 1
 const STRING CudaGdbExtraCommand = RTL_CONSTANT_STRING(
-    "--iex 'set pagination off' "
-    "--iex 'set non-stop on' "
-    "--iex 'set debug infrun 1'"
+    ""
+    //"--iex 'set pagination off' "
+    //"--iex 'set non-stop on' "
+    //"--iex 'set debug infrun 1'"
     //"--ex 'set scheduler-locking off' "
     //"--ex 'handle SIGUSR1 nostop print pass' "
 );
-#else
-const STRING CudaGdbExtraCommand = RTL_CONSTANT_STRING("");
-#endif
 
 volatile LONG ContinueExecution = 0;
 
@@ -99,40 +91,68 @@ Return Value:
 }
 
 
-VOID
+HRESULT
 InitializeDebuggerContext (
     _Out_ PDEBUGGER_CONTEXT Context,
-    _In_ BOOLEAN WaitForDebugger,
-    _In_ BOOLEAN SwitchToCudaGdbBeforeLaunchKernel
+    _In_ PDEBUGGER_CONTEXT_FLAGS Flags
     )
 /*++
 
 Routine Description:
 
-    This routine initializes a DEBUGGER_CONTEXT structure.
+    This routine initializes a DEBUGGER_CONTEXT structure from the supplied
+    flags.
 
 Arguments:
 
     Context - Supplies a pointer to a DEBUGGER_CONTEXT structure to
         initialize.
 
-    WaitForDebugger - Supplies a boolean value indicating whether the
-        process should wait for a debugger to attach before continuing.
-
-    SwitchToCudaGdbBeforeLaunchKernel - Supplies a boolean value indicating
-        whether the process should switch to cuda-gdb before launching the
-        kernel.
+    Flags - Supplies a pointer to the flags used to initialize the structure.
 
 Return Value:
 
-    None.
+    S_OK - Debugger context initialized successfully.
+
+    PH_E_INVALID_POINTER - One or more of the supplied pointers was NULL.
+
+    PH_E_INVALID_DEBUGGER_CONTEXT_FLAGS - The supplied flags were invalid.
 
 --*/
 {
+    BOOLEAN Invalid;
+
+    Invalid = (
+        (
+            (Flags->WaitForGdb != FALSE) &&
+            (Flags->WaitForCudaGdb != FALSE)
+        ) ||
+        (
+            (Flags->WaitForCudaGdb == FALSE) &&
+            (Flags->UseGdbForHostDebugging != FALSE)
+        ) ||
+        (
+            (Flags->WaitForGdb == FALSE) &&
+            (Flags->WaitForCudaGdb == FALSE) &&
+            (Flags->UseGdbForHostDebugging != FALSE)
+        )
+    );
+
+    if (Invalid) {
+        return PH_E_INVALID_DEBUGGER_CONTEXT_FLAGS;
+    }
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Flags)) {
+        return E_POINTER;
+    }
+
     ZeroStructPointer(Context);
-    Context->Flags.WaitForDebugger = WaitForDebugger;
-    Context->Flags.SwitchToCudaGdbBeforeLaunchKernel =
-        SwitchToCudaGdbBeforeLaunchKernel;
+    Context->Flags.AsULong = Flags->AsULong;
+    return S_OK;
 }
 
 
@@ -286,7 +306,7 @@ End:
 
 HRESULT
 WaitForDebuggerAttach (
-    VOID
+    _Out_opt_ PDEBUGGER_TYPE DebuggerType
     )
 /*++
 
@@ -296,7 +316,9 @@ Routine Description:
 
 Arguments:
 
-    None.
+    DebuggerType - Supplies an optional pointer to a variable that receives
+        the debugger type, if a debugger is attached.  If no debugger is
+        attached, this value will be set to DebuggerTypeNone.
 
 Return Value:
 
@@ -306,20 +328,20 @@ Return Value:
 
 --*/
 {
-    BOOL First = TRUE;
     HRESULT Result;
-    DEBUGGER_TYPE DebuggerType;
+    BOOL First = TRUE;
+    DEBUGGER_TYPE Type = DebuggerTypeNone;
 
     while (TRUE) {
         if (CtrlCPressed) {
             Result = PH_E_CTRL_C_PRESSED;
             break;
         }
-        Result = IsDebuggerAttached(&DebuggerType);
+        Result = IsDebuggerAttached(&Type);
         if (FAILED(Result)) {
             PH_ERROR(WaitForDebuggerAttach_IsDebuggerAttachedFailed, Result);
         }
-        if (DebuggerType != DebuggerTypeNone) {
+        if (Type != DebuggerTypeNone) {
             Result = S_OK;
             break;
         } else if (First) {
@@ -336,13 +358,17 @@ Return Value:
         printf("\n");
     }
 
+    if (ARGUMENT_PRESENT(DebuggerType)) {
+        *DebuggerType = Type;
+    }
+
     return Result;
 }
 
 
 HRESULT
 WaitForDebuggerDetach (
-    VOID
+    _Out_opt_ PDEBUGGER_TYPE DebuggerType
     )
 /*++
 
@@ -352,7 +378,9 @@ Routine Description:
 
 Arguments:
 
-    None.
+    DebuggerType - Supplies an optional pointer to a variable that receives
+        the debugger type, if a debugger was attached.  Otherwise, it will
+        be set to DebuggerTypeNone.
 
 Return Value:
 
@@ -362,26 +390,28 @@ Return Value:
 
 --*/
 {
-    BOOL First = TRUE;
     HRESULT Result;
-    DEBUGGER_TYPE DebuggerType;
+    BOOL First = TRUE;
+    DEBUGGER_TYPE Type = DebuggerTypeNone;
+    DEBUGGER_TYPE FirstType = DebuggerTypeNone;
 
     while (TRUE) {
         if (CtrlCPressed) {
             Result = PH_E_CTRL_C_PRESSED;
             break;
         }
-        Result = IsDebuggerAttached(&DebuggerType);
+        Result = IsDebuggerAttached(&Type);
         if (FAILED(Result)) {
             PH_ERROR(WaitForDebuggerDetach_IsDebuggerAttachedFailed, Result);
         }
-        if (DebuggerType == DebuggerTypeNone) {
+        if (Type == DebuggerTypeNone) {
             Result = S_OK;
             break;
         } else if (First) {
             printf("Waiting for debugger to detach.");
             fflush(stdout);
             First = FALSE;
+            FirstType = Type;
         }
         sleep(1);
         printf(".");
@@ -390,6 +420,10 @@ Return Value:
 
     if (!First) {
         printf("\n");
+    }
+
+    if (ARGUMENT_PRESENT(DebuggerType)) {
+        *DebuggerType = FirstType;
     }
 
     return Result;
@@ -410,16 +444,14 @@ Routine Description:
 Arguments:
 
     Context - Supplies a pointer to an initialized DEBUGGER_CONTEXT structure.
-        The context flags WaitForDebugger and SwitchToCudaGdbBeforeLaunchKernel
-        are consulted to determine how this routine should behave.
 
-    Disposition - Supplies the desired disposition of the debugger attach.
+    Disposition - Supplies the desired disposition of the debugger action.
 
 Return Value:
 
-    S_OK - The debugger attach was successful.
+    S_OK - The debugger action was successful.
 
-    S_FALSE - The debugger attach was not performed.
+    S_FALSE - The debugger action was not performed.
 
     PH_E_SYSTEM_CALL_FAILED - A system call failed.
 
@@ -433,8 +465,10 @@ Return Value:
     ULONG Count;
     HRESULT Result;
     CHAR Buffer[MAX_PATH] = { 0, };
-    PSTR DebuggerName = "gdb";
-    PSTR DebuggerExtra = GdbExtraCommand.Buffer;
+    PSTR DebuggerName;
+    PSTR DebuggerExtra;
+    BOOLEAN SwitchBackToGdb;
+    DEBUGGER_TYPE DebuggerType;
     DEBUGGER_TYPE CurrentDebuggerType;
     DEBUGGER_TYPE DesiredDebuggerType = DebuggerTypeNone;
 
@@ -443,23 +477,11 @@ Return Value:
     // debugger, return S_FALSE immediately.
     //
 
-    if (!Context->Flags.WaitForDebugger) {
-        return S_FALSE;
+    if ((Context->Flags.WaitForGdb == FALSE) &&
+        (Context->Flags.WaitForCudaGdb == FALSE)) {
+        Result = S_FALSE;
+        goto End;
     }
-
-    //
-    // Always reset the volatile global sentinel ContinueExecution to 0.
-    //
-
-    ContinueExecution = 0;
-
-    //
-    // We explicitly, unconditionally, *always* register our signal handler.
-    // When we don't do this, cycling between gdb and cuda-gdb appears to lose
-    // the signal handler registration.
-    //
-
-    signal(SIGUSR1, SignalHandlerUsr1);
 
     //
     // Determine if a debugger is already attached.
@@ -468,7 +490,7 @@ Return Value:
     Result = IsDebuggerAttached(&CurrentDebuggerType);
     if (FAILED(Result)) {
         PH_ERROR(DoDebuggerAction_IsDebuggerAttachedFailed, Result);
-        return Result;
+        goto End;
     }
 
     //
@@ -486,7 +508,7 @@ Return Value:
 
         ASSERT(CurrentDebuggerType == DebuggerTypeNone);
 
-        if (Disposition != DebuggerMaybeWaitForGdbAttachDisposition) {
+        if (Disposition != DebuggerMaybeWaitForAttachDisposition) {
 
             //
             // The disposition doesn't match the current debugger state.
@@ -495,18 +517,30 @@ Return Value:
             return S_FALSE;
 
         } else {
-            DesiredDebuggerType = DebuggerTypeGdb;
+
+            //
+            // Determine which debugger to wait for, based on our flags.
+            //
+
+            if (Context->Flags.WaitForCudaGdb) {
+                DesiredDebuggerType = DebuggerTypeCudaGdb;
+            } else if (Context->Flags.WaitForGdb) {
+                DesiredDebuggerType = DebuggerTypeGdb;
+            } else {
+                PH_RAISE(PH_E_UNREACHABLE_CODE);
+            }
         }
 
     } else {
 
         //
-        // A debugger is currently attached.  If the context flag indicates no
-        // CUDA GDB switch is desired, there's nothing more to do.
+        // A debugger is currently attached.  If we don't need to do any
+        // switching, we can return now.
         //
 
-        if (!Context->Flags.SwitchToCudaGdbBeforeLaunchKernel) {
-            return S_FALSE;
+        if (!WantsDebuggerSwitching(Context)) {
+            Result = S_FALSE;
+            goto End;
         }
 
         if (CurrentDebuggerType == DebuggerTypeGdb) {
@@ -529,20 +563,27 @@ Return Value:
             // The disposition doesn't match the current debugger state.
             //
 
-            return S_FALSE;
+            Result = S_FALSE;
+            goto End;
         }
 
         printf("Detach existing debugger now (e.g. via `detach`).\n");
-        Result = WaitForDebuggerDetach();
+        Result = WaitForDebuggerDetach(NULL);
         if (FAILED(Result)) {
-            return Result;
+            goto End;
         }
         printf("Existing debugger detached, continuing.\n");
     }
 
-    if (DesiredDebuggerType == DebuggerTypeCudaGdb) {
+
+    if (DesiredDebuggerType == DebuggerTypeGdb) {
+        DebuggerName = "gdb";
+        DebuggerExtra = CudaGdbExtraCommand.Buffer;
+    } else if (DesiredDebuggerType == DebuggerTypeCudaGdb) {
         DebuggerName = "cuda-gdb";
         DebuggerExtra = CudaGdbExtraCommand.Buffer;
+    } else {
+        PH_RAISE(PH_E_UNREACHABLE_CODE);
     }
 
     //
@@ -563,7 +604,7 @@ Return Value:
         printf("N.B. Debugger attach command copied to clipboard.\n");
     }
 
-    Result = WaitForDebuggerAttach();
+    Result = WaitForDebuggerAttach(&DebuggerType);
     if (FAILED(Result)) {
 
         //
@@ -572,24 +613,56 @@ Return Value:
         //
 
         NOTHING;
+
     } else {
-        printf("Debugger attached, continuing.\n");
+
+        if (Context->State.FirstDebuggerAttach != FALSE) {
+            printf("Debugger attached, continuing.\n");
+        } else {
+
+            //
+            // This was the first attach.  If it's a cuda-gdb attach, and we've
+            // been requested to facilitate host debugging via gdb, we'll need
+            // to switch back now.
+            //
+
+            Context->State.FirstDebuggerAttach = TRUE;
+            Context->FirstDebuggerType = DesiredDebuggerType;
+
+            SwitchBackToGdb = (
+                (Context->Flags.WaitForCudaGdb != FALSE) &&
+                (Context->Flags.UseGdbForHostDebugging != FALSE) &&
+                (DebuggerType == DebuggerTypeCudaGdb)
+            );
+
+            if (SwitchBackToGdb) {
+
+                //
+                // Recursive call to switch back to gdb.
+                //
+
+                Disposition = DebuggerMaybeSwitchBackToGdbDisposition;
+                Result = DoDebuggerAction(Context, Disposition);
+            }
+        }
     }
 
+End:
+
+    return Result;
 }
 
+HRESULT
+MaybeWaitForDebuggerAttach (
+    _Inout_ PDEBUGGER_CONTEXT Context
+    )
+{
+    DoDebuggerAction(Context, DebuggerMaybeWaitForAttachDisposition);
+}
 
 //
 // Glue for switching between gdb and cuda-gdb.
 //
-
-HRESULT
-MaybeWaitForGdbAttach (
-    _Inout_ PDEBUGGER_CONTEXT Context
-    )
-{
-    DoDebuggerAction(Context, DebuggerMaybeWaitForGdbAttachDisposition);
-}
 
 HRESULT
 MaybeSwitchToCudaGdb (
