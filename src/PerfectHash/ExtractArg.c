@@ -187,8 +187,9 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(Quiet);
     DECL_ARG(DoNotTryUseHash16Impl);
     DECL_ARG(AlwaysRespectCuKernelRuntimeLimit);
-    DECL_ARG(SwitchToCudaGdbBeforeLaunchKernel);
-    DECL_ARG(WaitForDebugger);
+    DECL_ARG(WaitForGdb);
+    DECL_ARG(WaitForCudaGdb);
+    DECL_ARG(UseGdbForHostDebugging);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -242,8 +243,9 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(Quiet);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseHash16Impl);
     SET_FLAG_AND_RETURN_IF_EQUAL(AlwaysRespectCuKernelRuntimeLimit);
-    SET_FLAG_AND_RETURN_IF_EQUAL(SwitchToCudaGdbBeforeLaunchKernel);
-    SET_FLAG_AND_RETURN_IF_EQUAL(WaitForDebugger);
+    SET_FLAG_AND_RETURN_IF_EQUAL(WaitForGdb);
+    SET_FLAG_AND_RETURN_IF_EQUAL(WaitForCudaGdb);
+    SET_FLAG_AND_RETURN_IF_EQUAL(UseGdbForHostDebugging);
 
     //
     // Handle inverting default flags.  --DoNotHashAllKeysFirst needs

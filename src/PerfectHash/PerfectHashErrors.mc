@@ -4264,3 +4264,11 @@ Language=English
 Unknown debugger.
 .
 
+MessageId=0x3eb
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_DEBUGGER_CONTEXT_FLAGS
+Language=English
+Invalid debugger context flags.
+.
+
