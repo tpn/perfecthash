@@ -1582,7 +1582,9 @@ Return Value:
 
             PreviousKey = Values[Index];
 
-            PrevHash.QuadPart = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+            PrevHash.QuadPart = SeededHashEx(PreviousKey,
+                                             &Graph->FirstSeed,
+                                             HashMask);
 
             PrevVertex1 = Assigned[PrevHash.LowPart];
             PrevVertex2 = Assigned[PrevHash.HighPart];
