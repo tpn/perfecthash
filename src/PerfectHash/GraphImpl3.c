@@ -1194,7 +1194,6 @@ Return Value:
     PEDGE163 Edge3;
     SHORT Order;
     USHORT Index;
-    USHORT IndexMask;
     VERTEX16 Vertex1;
     VERTEX16 Vertex2;
     USHORT Assigned;
@@ -1209,7 +1208,6 @@ Return Value:
     //
 
     Table = Graph->Context->Table;
-    IndexMask = (USHORT)Table->IndexMask;
     NumberOfKeys = (USHORT)Graph->NumberOfKeys;
     NumberOfEdges = (USHORT)Graph->NumberOfEdges;
 
