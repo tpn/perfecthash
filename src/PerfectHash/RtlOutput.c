@@ -653,6 +653,15 @@ AppendSignedIntegerToCharBuffer(
     AppendIntegerToCharBuffer(BufferPointer, Positive);
 }
 
+//
+// Due to historical reluctance to use the CRT on Windows (vestige of the tracer
+// project), we have our own double-to-string conversion routine.  This has
+// worked fine on Windows, but on Linux, the _dtoa() routine sometimes gets
+// stuck in an infinite loop.  So, on Linux (PH_COMPAT), just use snprintf().
+//
+
+#ifdef PH_WINDOWS
+
 APPEND_DOUBLE_TO_CHAR_BUFFER AppendDoubleToCharBuffer;
 
 _Use_decl_annotations_
@@ -822,6 +831,35 @@ End:
 
     return;
 }
+
+#else // PH_WINDOWS
+
+APPEND_DOUBLE_TO_CHAR_BUFFER AppendDoubleToCharBuffer;
+
+_Use_decl_annotations_
+VOID
+AppendDoubleToCharBuffer(
+    PCHAR *BufferPointer,
+    DOUBLE Double
+    )
+{
+    INT Count;
+    PCHAR Buffer;
+
+    Buffer = *BufferPointer;
+
+    Count = sprintf(Buffer, "%f", Double);
+
+    //
+    // Update the buffer pointer based on the number of characters written,
+    // excluding the trailing NUL.
+    //
+
+    ASSERT(Buffer[Count] == 0);
+    *BufferPointer = Buffer + (Count - 1);
+}
+
+#endif // !PH_WINDOWS
 
 
 APPEND_INTEGER_TO_CHAR_BUFFER_AS_HEX AppendIntegerToCharBufferAsHex;
