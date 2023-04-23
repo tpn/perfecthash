@@ -17,6 +17,9 @@ Abstract:
 #pragma once
 
 #include "stdafx.h"
+#ifndef PH_WINDOWS
+#include "bsthreadpool.h"
+#endif
 
 //
 // Algorithms are required to register a callback routine with the perfect hash
@@ -945,7 +948,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PGUARDED_LIST MainWorkList;
     TP_CALLBACK_ENVIRON MainCallbackEnv;
     PTP_CLEANUP_GROUP MainCleanupGroup;
+#ifdef PH_WINDOWS
     PTP_POOL MainThreadpool;
+#else
+    PTHREADPOOL MainThreadpool;
+#endif
     PTP_WORK MainWork;
     PTP_WORK ConsoleWork;
     PTP_TIMER SolveTimeout;
@@ -1013,7 +1020,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PGUARDED_LIST FileWorkList;
     TP_CALLBACK_ENVIRON FileCallbackEnv;
     PTP_CLEANUP_GROUP FileCleanupGroup;
+#ifdef PH_WINDOWS
     PTP_POOL FileThreadpool;
+#else
+    PTHREADPOOL FileThreadpool;
+#endif
     PTP_WORK FileWork;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;

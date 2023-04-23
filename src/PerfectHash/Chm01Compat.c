@@ -15,7 +15,8 @@ Abstract:
 #include "stdafx.h"
 #include "Chm01.h"
 #include "Chm01Private.h"
-#include "thpool.h"
+
+#include "bsthreadpool.h"
 
 #ifdef PH_WINDOWS
 #error This file is not for Windows.
@@ -661,11 +662,7 @@ RetryWithLargerTableSize:
 
     if (!NoFileIo(Table)) {
         NumberOfFileWorkThreads = 1;
-        FileWorkThreadpool = ThreadpoolInit(NumberOfFileWorkThreads);
-        if (!FileWorkThreadpool) {
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
+        FileWorkThreadpool = Context->FileThreadpool;
         SUBMIT_PREPARE_FILE_WORK();
     }
 
@@ -727,11 +724,7 @@ RetryWithLargerTableSize:
         ASSERT(NumberOfGraphs - 1 == Concurrency);
     }
 
-    GraphThreadpool = ThreadpoolInit(Concurrency);
-    if (!GraphThreadpool) {
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
+    GraphThreadpool = Context->MainThreadpool;
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {
 
@@ -1504,20 +1497,6 @@ ReleaseGraphs:
     //
 
     RELEASE(Table->OutputPath);
-
-    //
-    // Destroy the threadpools if applicable.
-    //
-
-    if (GraphThreadpool) {
-        ThreadpoolDestroy(GraphThreadpool);
-        GraphThreadpool = NULL;
-    }
-
-    if (FileWorkThreadpool) {
-        ThreadpoolDestroy(FileWorkThreadpool);
-        FileWorkThreadpool = NULL;
-    }
 
     return Result;
 }

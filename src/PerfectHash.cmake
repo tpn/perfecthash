@@ -104,6 +104,7 @@ else()
         -Wno-incompatible-pointer-types
         -Wno-deprecated-declarations
         -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
+        -fno-omit-frame-pointer
     )
 
     target_link_options(

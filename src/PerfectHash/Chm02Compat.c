@@ -24,7 +24,7 @@ Abstract:
 #include "stdafx.h"
 #include "Chm01.h"
 #include "Chm02Private.h"
-#include "thpool.h"
+#include "bsthreadpool.h"
 
 #ifdef PH_WINDOWS
 #error This file is not for Windows.
