@@ -253,6 +253,7 @@ else()
         "mem.c"
         "bitmap.c"
         "thpool.c"
+        "bsthreadpool.cpp"
         "unicode.c"
         "Debugger.c"
         "Chm01Compat.c"

@@ -21,6 +21,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "bsthreadpool.h"
 
 //
 // Forward definition of various callbacks we implement in this module.
@@ -488,6 +489,8 @@ Return Value:
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
 
+    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+
 #ifdef PH_WINDOWS
 
     //
@@ -503,7 +506,6 @@ Return Value:
         goto Error;
     }
 
-    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
     if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
@@ -717,6 +719,23 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+#else // PH_COMPAT
+
+
+    Context->FileThreadpool = ThreadpoolInit(MaximumConcurrency);
+    if (!Context->FileThreadpool) {
+        SYS_ERROR(ThreadpoolInit_FileWork);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    Context->MainThreadpool = ThreadpoolInit(ThreadpoolConcurrency);
+    if (!Context->MainThreadpool) {
+        SYS_ERROR(ThreadpoolInit_Main);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
 #endif
 
     //
@@ -732,6 +751,8 @@ Return Value:
         PH_ERROR(PerfectHashContextInitialize_InitTimestampString, Result);
         goto Error;
     }
+
+#if 0
 
     //
     // Wire up the ComputerName string and buffer, then get the computer name.
@@ -752,6 +773,7 @@ Return Value:
     }
     ASSERT(ComputerName->Length < MAX_COMPUTERNAME_LENGTH);
     ComputerName->Length = (USHORT)ComputerNameLength;
+#endif
 
     //
     // Obtain stdin and stdout handles.
@@ -1007,6 +1029,18 @@ Return Value:
     if (Context->ErrorThreadpool) {
         CloseThreadpool(Context->ErrorThreadpool);
         Context->ErrorThreadpool = NULL;
+    }
+
+#else // PH_COMPAT
+
+    if (Context->MainThreadpool) {
+        ThreadpoolDestroy(Context->MainThreadpool);
+        Context->MainThreadpool = NULL;
+    }
+
+    if (Context->FileThreadpool) {
+        ThreadpoolDestroy(Context->FileThreadpool);
+        Context->FileThreadpool = NULL;
     }
 
 #endif
