@@ -235,22 +235,18 @@ SystemTimeToFileTime(
 #endif
 #endif
 
-#ifndef C_ASSERT
-#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
-#endif
-
-#if 0
 #if defined(__GNUC__)
-#if (__GNUC__ == 10)
+#if (__GNUC__ < 11)
+#define C_ASSERT(e) static_assert(e, "Assertion failed")
+#else
 #define C_ASSERT(e) _Static_assert(e, "Assertion failed")
-#elif (__GNUC__ == 11)
-#define C_ASSERT(e) _Static_assert(e)
 #endif
-#endif
-
-#ifndef C_ASSERT
+#else
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
 #endif
+
+#ifndef C_ASSERT
+#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
 #endif
 
 typedef _Return_type_success_(return >= 0) LONG HRESULT;
