@@ -550,16 +550,7 @@ Return Value:
 
     for (Bit = 0; Bit < 32; Bit++) {
         Offset = (63 - Bit);
-        String[Offset] = ((Key & (1 << Bit)) != 0) ? '1' : '0';
-    }
-
-    //
-    // Clear the high 32-bits.
-    //
-
-    for (Bit = 32; Bit < 64; Bit++) {
-        Offset = (63 - Bit);
-        String[Offset] = '0';
+        String[Offset] = (Bit < 32 && (Key & (1 << Bit))) ? '1' : '0';
     }
 
     //
