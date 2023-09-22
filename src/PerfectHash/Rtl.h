@@ -3229,6 +3229,8 @@ typedef struct _RTL {
 
     DEBUGGER_CONTEXT DebuggerContext;
 
+    ULONG Padding1;
+
     HCRYPTPROV CryptProv;
 
     SIZE_T LargePageMinimum;

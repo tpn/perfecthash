@@ -752,8 +752,6 @@ Return Value:
         goto Error;
     }
 
-#if 0
-
     //
     // Wire up the ComputerName string and buffer, then get the computer name.
     //
@@ -773,7 +771,6 @@ Return Value:
     }
     ASSERT(ComputerName->Length < MAX_COMPUTERNAME_LENGTH);
     ComputerName->Length = (USHORT)ComputerNameLength;
-#endif
 
     //
     // Obtain stdin and stdout handles.
@@ -928,24 +925,6 @@ Return Value:
     }
 
     //
-    // Free the array of PH_CU_DEVICE structs if applicable.
-    //
-
-    Allocator->Vtbl->FreePointer(Allocator, &Context->CuDevices.Devices);
-
-    //
-    // Free the solving contexts.
-    //
-
-    Allocator->Vtbl->FreePointer(Allocator, &Context->CuSolveContexts);
-
-    //
-    // Free the device contexts.
-    //
-
-    Allocator->Vtbl->FreePointer(Allocator, &Context->CuDeviceContexts);
-
-    //
     // Close the low-memory resource notification handle.
     //
 
@@ -957,6 +936,13 @@ Return Value:
     }
 #endif
 
+    DestroyCuRuntimeContext(&Context->CuRuntimeContext);
+
+    //
+    // Free the solving contexts.
+    //
+
+    Allocator->Vtbl->FreePointer(Allocator, &Context->CuSolveContexts);
 
     //
     // Loop through all the events associated with the context and check if

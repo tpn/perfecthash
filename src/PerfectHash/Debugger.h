@@ -73,20 +73,21 @@ typedef DEBUGGER_CONTEXT *PDEBUGGER_CONTEXT;
 // Public functions.
 //
 
-HRESULT
-InitializeDebuggerContext (
-    _Out_ PDEBUGGER_CONTEXT Context,
-    _In_ PDEBUGGER_CONTEXT_FLAGS Flags
-    );
-
 #ifdef PH_WINDOWS
 
+#define InitializeDebuggerContext(Context, Flags) (S_FALSE)
 #define MaybeWaitForDebuggerAttach(Context) (S_FALSE)
 #define MaybeSwitchToCudaGdb(Context) (S_FALSE)
 #define MaybeSwitchBackToCudaGdb(Context) (S_FALSE)
 #define MaybeSwitchBackToGdb(Context) (S_FALSE)
 
 #else
+
+HRESULT
+InitializeDebuggerContext (
+    _Out_ PDEBUGGER_CONTEXT Context,
+    _In_ PDEBUGGER_CONTEXT_FLAGS Flags
+    );
 
 HRESULT
 MaybeWaitForDebuggerAttach (
