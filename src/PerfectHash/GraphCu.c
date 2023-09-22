@@ -336,11 +336,13 @@ Return Value:
     //
 
     Graph->DeviceKeys = DeviceContext->KeysBaseAddress;
+#if 0
     Graph->CuBlocksPerGrid = SolveContext->BlocksPerGrid;
     Graph->CuThreadsPerBlock = SolveContext->ThreadsPerBlock;
     Graph->CuKernelRuntimeTargetInMilliseconds =
         SolveContext->KernelRuntimeTargetInMilliseconds;
     Graph->CuJitMaxNumberOfRegisters = SolveContext->JitMaxNumberOfRegisters;
+#endif
     Graph->CuDeviceAttributes = DeviceContext->DeviceAttributes;
     Graph->CuGraphInfo = (PGRAPH_INFO)DeviceContext->DeviceGraphInfoAddress;
 
@@ -722,8 +724,8 @@ Return Value:
 --*/
 {
     PCU Cu;
-    CU_DIM3 Grid = { 1, 1, 1 };
-    CU_DIM3 Block = { 1, 1, 1 };
+    //CU_DIM3 Grid = { 1, 1, 1 };
+    //CU_DIM3 Block = { 1, 1, 1 };
     HRESULT Result;
     HRESULT SolveResult;
     PGRAPH DeviceGraph;
@@ -777,6 +779,7 @@ Return Value:
     SharedMemoryInBytes = 0;
     KernelParams[0] = &DeviceGraph;
 
+#if 0
     CuResult = Cu->LaunchKernel(DeviceContext->Function,
                                 Grid.X,
                                 Grid.Y,
@@ -789,6 +792,7 @@ Return Value:
                                 KernelParams,
                                 NULL);
     CU_CHECK(CuResult, LaunchKernel);
+#endif
 
     //
     // If we were using GDB, then switched to CUDA GDB, switch back to GDB now.

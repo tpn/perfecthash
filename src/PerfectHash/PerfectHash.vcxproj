@@ -71,6 +71,8 @@
     <ClInclude Include="Chm01.h" />
     <ClInclude Include="Chm01FileWork.h" />
     <ClInclude Include="Chm01Private.h" />
+    <ClInclude Include="Chm02Private.h" />
+    <ClInclude Include="Debugger.h" />
     <ClInclude Include="Chunk.h" />
     <ClInclude Include="CompiledPerfectHashMacroGlue_CHeader_RawCString.h" />
     <ClInclude Include="CompiledPerfectHashTableBenchmarkFullExe_CSource_RawCString.h" />
@@ -126,11 +128,10 @@
     <ClInclude Include="CompiledPerfectHashTableTypesPre_CHeader_RawCString.h" />
     <ClInclude Include="Cu.h" />
     <ClInclude Include="GraphCounters.h" />
+    <ClInclude Include="GraphImpl1.h" />
     <ClInclude Include="GraphImpl2.h" />
     <ClInclude Include="GraphImpl3.h" />
     <ClInclude Include="Math.h" />
-    <ClInclude Include="GraphImpl1.h" />
-    <ClInclude Include="GraphImpl2.h" />
     <ClInclude Include="Graph_Ptx_RawCString.h" />
     <ClInclude Include="PerfectHashCu.h" />
     <ClInclude Include="no_sal2_CHeader_RawCString.h" />
@@ -210,10 +211,12 @@
     <ClCompile Include="Chm01FileWorkVSSolutionFile.c" />
     <ClCompile Include="Chm01FileWorkModuleDefFile.c" />
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
+    <ClCompile Include="Debugger.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chm02.c" />
     <ClCompile Include="Chm01Shared.c" />
+    <ClCompile Include="Chm02Shared.c" />
     <ClCompile Include="Chunk.c" />
     <ClCompile Include="Component.c" />
     <ClCompile Include="Cu.c" />

@@ -1823,7 +1823,9 @@ size_t __cdecl __imp_wcslen(_In_z_ wchar_t const *s)
         ++p;
     return p - s;
 }
+#endif
 
+#if 0
 size_t __cdecl strlen(_In_z_ char const *s)
 {
     const char *p = s;

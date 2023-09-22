@@ -1106,7 +1106,7 @@ Return Value:
 {
     PKEY Keys;
     HRESULT Result;
-    CU_RESULT CuResult;
+    //CU_RESULT CuResult;
     ULONG NumberOfKeys;
     ULONG BlocksPerGrid;
     ULONG ThreadsPerBlock;
@@ -1175,8 +1175,8 @@ Return Value:
         &Graph->CuHashKeysResult
     );
 
-    CuResult = cudaDeviceSynchronize();
-    CU_CHECK(CuResult, cudaDeviceSynchronize);
+    //CuResult = cudaDeviceSynchronize();
+    //CU_CHECK(CuResult, cudaDeviceSynchronize);
 
     Result = Graph->CuHashKeysResult;
     printf("HashKeys: %x\n", Result);
@@ -1201,8 +1201,8 @@ Return Value:
         Streams->IsAcyclic
     >>>(Graph);
 
-    CuResult = cudaDeviceSynchronize();
-    CU_CHECK(CuResult, cudaDeviceSynchronize);
+    //CuResult = cudaDeviceSynchronize();
+    //CU_CHECK(CuResult, cudaDeviceSynchronize);
 
     printf("After IsAcyclicKernel(): Graph->OrderIndex: %d\n", Graph->OrderIndex);
     Result = Graph->CuIsAcyclicResult;
@@ -1305,8 +1305,9 @@ End:
     // Intentional follow-on to Error.
     //
 
-Error:
-    return Result;
+//Error:
+
+//    return Result;
 
 Failed:
     Graph->CuFailedAttempts++;
@@ -1506,6 +1507,36 @@ Error:
 #endif
 End:
     Graph->CuKernelResult = Result;
+}
+
+EXTERN_C
+GLOBAL
+VOID
+LoadKeyStats(
+    _In_ PGRAPH Graph
+    )
+{
+    return;
+}
+
+EXTERN_C
+GLOBAL
+VOID
+AddKeysToGraph(
+    _In_ PGRAPH Graph
+    )
+{
+    return;
+}
+
+EXTERN_C
+GLOBAL
+VOID
+IsGraphAcyclic(
+    _In_ PGRAPH Graph
+    )
+{
+    return;
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

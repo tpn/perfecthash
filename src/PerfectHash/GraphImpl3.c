@@ -1134,7 +1134,6 @@ Return Value:
         if (!IsVisitedVertex3(Graph, Edge3->Vertex1)) {
             Vertex1 = Edge3->Vertex1;
             Vertex2 = Edge3->Vertex2;
-            ASSERT(Graph->Assigned[Vertex1] == INITIAL_ASSIGNMENT_VALUE);
         } else {
             Vertex1 = Edge3->Vertex2;
             Vertex2 = Edge3->Vertex1;
@@ -1238,7 +1237,6 @@ Return Value:
         if (!IsVisitedVertex16(Graph, Edge3->Vertex1)) {
             Vertex1 = Edge3->Vertex1;
             Vertex2 = Edge3->Vertex2;
-            ASSERT(Graph->Assigned16[Vertex1] == INITIAL_ASSIGNMENT_VALUE);
         } else {
             Vertex1 = Edge3->Vertex2;
             Vertex2 = Edge3->Vertex1;

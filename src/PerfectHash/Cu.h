@@ -1351,7 +1351,7 @@ CU_RESULT
     _In_ PCU_FUNCTION Function,
     _In_ LONG BlockSize,
     _In_ SIZE_T DynamicSharedMemorySize,
-    _In_opt_ CU_OCCUPANCY_FLAGS OccupancyFlags
+    _In_ CU_OCCUPANCY_FLAGS OccupancyFlags
     );
 typedef CU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR_WITH_FLAGS
       *PCU_OCCUPANCY_MAX_ACTIVE_BLOCKS_PER_MULTIPROCESSOR_WITH_FLAGS;
@@ -1371,8 +1371,8 @@ CU_RESULT
     _Out_ LONG *BlockSize,
     _In_ PCU_FUNCTION Function,
     _In_opt_ PCU_OCCUPANCY_B2D_SIZE OccupancyBlockSizeToDynamicMemSize,
-    _In_opt_ SIZE_T DynamicSharedMemorySize,
-    _In_opt_ LONG BlockSizeLimit
+    _In_ SIZE_T DynamicSharedMemorySize,
+    _In_ LONG BlockSizeLimit
     );
 typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE
       *PCU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE;
@@ -1385,9 +1385,9 @@ CU_RESULT
     _Out_ LONG *BlockSize,
     _In_ PCU_FUNCTION Function,
     _In_opt_ PCU_OCCUPANCY_B2D_SIZE OccupancyBlockSizeToDynamicMemSize,
-    _In_opt_ SIZE_T DynamicSharedMemorySize,
-    _In_opt_ LONG BlockSizeLimit,
-    _In_opt_ CU_OCCUPANCY_FLAGS OccupancyFlags
+    _In_ SIZE_T DynamicSharedMemorySize,
+    _In_ LONG BlockSizeLimit,
+    _In_ CU_OCCUPANCY_FLAGS OccupancyFlags
     );
 typedef CU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS
       *PCU_OCCUPANCY_MAX_POTENTIAL_BLOCK_SIZE_WITH_FLAGS;
@@ -2004,6 +2004,9 @@ DEFINE_UNUSED_FLAGS(CU);
 #define PERFECT_HASH_CU_DEFAULT_BLOCKS_PER_GRID 16
 #define PERFECT_HASH_CU_DEFAULT_THREADS_PER_BLOCK 128
 #define PERFECT_HASH_CU_DEFAULT_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS 1500
+
+extern CHAR JitInfoLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
+extern CHAR JitErrorLogBuffer[PERFECT_HASH_CU_JIT_LOG_BUFFER_SIZE_IN_BYTES];
 
 typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     COMMON_COMPONENT_HEADER(CU);

@@ -136,6 +136,12 @@
     <ClCompile Include="Chm01Shared.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm02Shared.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Debugger.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Chm01FileWorkCHeaderFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -631,6 +637,12 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GraphImpl3.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Debugger.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Chm02Private.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiply643ShiftRAnd_CSource_RawCString.h">

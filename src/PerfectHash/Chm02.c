@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,25 +15,7 @@ Abstract:
 
 #include "stdafx.h"
 #include "Chm01.h"
-
-//
-// Spin count for the device context best graph critical section.
-//
-
-#define BEST_CU_GRAPH_CS_SPINCOUNT 4000
-
-#define CU_RNG_DEFAULT PerfectHashCuRngPhilox43210Id
-
-//
-// Forward decls.
-//
-
-HRESULT
-InitializeCudaAndGraphsChm02(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    );
-
+#include "Chm02Private.h"
 
 //
 // Main table creation implementation routine for Chm02.
@@ -125,7 +107,6 @@ Return Value:
     BOOLEAN Success;
     ULONG Attempt = 0;
     BYTE NumberOfEvents;
-    SIZE_T KeysSizeInBytes;
     HRESULT Result = S_OK;
     HRESULT CloseResult = S_OK;
     CU_RESULT CuResult;
@@ -138,8 +119,6 @@ Return Value:
     ULONG CuConcurrency;
     ULONG TotalNumberOfGraphs;
     ULONG NumberOfSolveContexts;
-    ULONG NumberOfDeviceContexts;
-    PVOID KeysBaseAddress;
     PLIST_ENTRY ListEntry;
     ULONG CloseFileErrorCount = 0;
     ULONG NumberOfSeedsRequired;
@@ -283,112 +262,27 @@ Return Value:
     ASSERT(CuConcurrency <= Concurrency);
     ASSERT(CuConcurrency > 0);
 
-    DeviceContexts = Context->CuDeviceContexts;
-    NumberOfDeviceContexts = DeviceContexts->NumberOfDeviceContexts;
-
     SolveContexts = Context->CuSolveContexts;
     NumberOfSolveContexts = SolveContexts->NumberOfSolveContexts;
 
     //
-    // Copy the keys over to each device participating in the solving.
+    // Copy the keys to all devices.
     //
 
-    KeysBaseAddress = Table->Keys->KeyArrayBaseAddress;
-    KeysSizeInBytes = Table->Keys->NumberOfKeys.QuadPart * sizeof(KEY);
+    Result = CopyKeysToDevices(Context, Table->Keys);
+    if (FAILED(Result)) {
+        PH_ERROR(CopyKeysToDevices, Result);
+        goto Error;
+    }
 
-    for (Index = 0; Index < NumberOfDeviceContexts; Index++) {
+    //
+    // Copy the graph info to all devices.
+    //
 
-        DeviceContext = &DeviceContexts->DeviceContexts[Index];
-
-        //
-        // Active the context.
-        //
-
-        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CtxPushCurrent, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
-
-        if (DeviceContext->KeysBaseAddress == 0) {
-
-            //
-            // No device memory has been allocated for keys before, so,
-            // allocate some now.
-            //
-
-            ASSERT(DeviceContext->KeysSizeInBytes == 0);
-
-            CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
-                                    KeysSizeInBytes);
-            CU_CHECK(CuResult, MemAlloc);
-
-            DeviceContext->KeysSizeInBytes = KeysSizeInBytes;
-
-        } else {
-
-            //
-            // Device memory has already been allocated.  If it's less than what
-            // we need, free what's there and allocate new memoyr.
-            //
-
-            ASSERT(DeviceContext->KeysSizeInBytes > 0);
-
-            if (DeviceContext->KeysSizeInBytes < KeysSizeInBytes) {
-
-                CuResult = Cu->MemFree(DeviceContext->KeysBaseAddress);
-                CU_CHECK(CuResult, MemFree);
-
-                DeviceContext->KeysBaseAddress = 0;
-
-                CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
-                                        KeysSizeInBytes);
-                CU_CHECK(CuResult, MemAlloc);
-
-                DeviceContext->KeysSizeInBytes = KeysSizeInBytes;
-
-            } else {
-
-                //
-                // The existing device memory will fit the keys array, so
-                // there's nothing more to do here.
-                //
-
-                ASSERT(DeviceContext->KeysSizeInBytes >= KeysSizeInBytes);
-            }
-        }
-
-        //
-        // Copy the keys over.
-        //
-
-        CuResult = Cu->MemcpyHtoDAsync(DeviceContext->KeysBaseAddress,
-                                       KeysBaseAddress,
-                                       KeysSizeInBytes,
-                                       DeviceContext->Stream);
-        CU_CHECK(CuResult, MemcpyHtoDAsync);
-
-        if (DeviceContext->DeviceGraphInfoAddress == 0) {
-
-            //
-            // Allocate memory for the graph info.
-            //
-
-            CuResult = Cu->MemAlloc(&DeviceContext->DeviceGraphInfoAddress,
-                                    sizeof(GRAPH_INFO));
-            CU_CHECK(CuResult, MemAlloc);
-        }
-
-        //
-        // Copy the graph info over.
-        //
-
-        CuResult = Cu->MemcpyHtoDAsync(DeviceContext->DeviceGraphInfoAddress,
-                                       &Info,
-                                       sizeof(GRAPH_INFO),
-                                       DeviceContext->Stream);
-        CU_CHECK(CuResult, MemcpyHtoDAsync);
+    Result = CopyGraphInfoToDevices(Context, &Info);
+    if (FAILED(Result)) {
+        PH_ERROR(CopyGraphInfoToDevices, Result);
+        goto Error;
     }
 
     //
@@ -520,6 +414,7 @@ Return Value:
     // memcpy of the keys array before submitting any threadpool work.
     //
 
+    DeviceContexts = Context->CuRuntimeContext->CuDeviceContexts;
     for (Index = 0; Index < DeviceContexts->NumberOfDeviceContexts; Index++) {
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
         CuResult = Cu->StreamSynchronize(DeviceContext->Stream);

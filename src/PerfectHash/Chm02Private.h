@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -14,6 +14,12 @@ Abstract:
 
 #include "stdafx.h"
 #include "Chm01Private.h"
+
+//
+// Spin count for the device context best graph critical section.
+//
+
+#define BEST_CU_GRAPH_CS_SPINCOUNT 4000
 
 #define CU_RNG_DEFAULT PerfectHashCuRngPhilox43210Id
 
@@ -30,10 +36,16 @@ InitializeCudaAndGraphsChm02(
     _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
     );
 
+HRESULT
+CopyKeysToDevices(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PPERFECT_HASH_KEYS Keys
+    );
 
 HRESULT
-LoadPerfectHashTableImplChm02(
-    _In_ PPERFECT_HASH_TABLE Table
+CopyGraphInfoToDevices(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PGRAPH_INFO GraphInfo
     );
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

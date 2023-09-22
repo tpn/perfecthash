@@ -425,16 +425,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     struct _CU *Cu;
 
     //
-    // CUDA devices.
+    // Pointer to a PH_CU_RUNTIME_CONTEXT instance, if applicable.
     //
 
-    PH_CU_DEVICES CuDevices;
-
-    //
-    // CUDA device contexts.
-    //
-
-    PPH_CU_DEVICE_CONTEXTS CuDeviceContexts;
+    struct _PH_CU_RUNTIME_CONTEXT *CuRuntimeContext;
 
     //
     // Per-thread CUDA solving contexts.
@@ -974,10 +968,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG NumberOfCpuGraphs;
     ULONG NumberOfGpuGraphs;
 
-    ULONG NumberOfCuContexts;
-
     ULONG TotalNumberOfGraphs;
 
+    ULONG Padding8;
+
+#if 0
     //
     // CUDA RNG details.
     //
@@ -988,6 +983,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG CuRngSeed;
     ULONGLONG CuRngSubsequence;
     ULONGLONG CuRngOffset;
+#endif
 
     //
     // RNG details.
