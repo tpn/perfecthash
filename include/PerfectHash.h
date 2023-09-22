@@ -1759,6 +1759,8 @@ typedef struct _PERFECT_HASH_KEYS_BITMAP {
     BYTE LongestRunStart;
     BYTE TrailingZeros;
     BYTE LeadingZeros;
+    BYTE NumberOfSetBits;
+    BYTE Padding[7];
 
     ULONGLONG Bitmap;
     ULONGLONG ShiftedMask;

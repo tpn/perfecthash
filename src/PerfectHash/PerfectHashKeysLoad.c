@@ -373,6 +373,7 @@ Return Value:
     ULONG_PTR Bit;
     ULONG_PTR Mask;
     ULONG_PTR Index;
+    ULONG_PTR Offset;
     ULONG_PTR Shifted;
     ULONG_PTR Leading;
     ULONG_PTR Trailing;
@@ -510,6 +511,7 @@ Return Value:
 
     KeysBitmap->LeadingZeros = (BYTE)Leading;
     KeysBitmap->TrailingZeros = (BYTE)Trailing;
+    KeysBitmap->NumberOfSetBits = PopCount;
 
     if (PopCount == 32) {
         KeysBitmap->Flags.Contiguous = TRUE;
@@ -547,7 +549,8 @@ Return Value:
     String = (PCHAR)&KeysBitmap->String;
 
     for (Bit = 0; Bit < 32; Bit++) {
-        String[Bit] = ((Bitmap & (1 << Bit)) != 0) ? '1' : '0';
+        Offset = (63 - Bit);
+        String[Offset] = ((Key & (1 << Bit)) != 0) ? '1' : '0';
     }
 
     //
@@ -555,7 +558,8 @@ Return Value:
     //
 
     for (Bit = 32; Bit < 64; Bit++) {
-        String[Bit] = '0';
+        Offset = (63 - Bit);
+        String[Offset] = '0';
     }
 
     //
@@ -622,6 +626,7 @@ Return Value:
     ULONG_PTR Bit;
     ULONG_PTR Mask;
     ULONG_PTR Index;
+    ULONG_PTR Offset;
     ULONG_PTR Shifted;
     ULONG_PTR Leading;
     ULONG_PTR Trailing;
@@ -729,6 +734,7 @@ Return Value:
 
     KeysBitmap->LeadingZeros = (BYTE)Leading;
     KeysBitmap->TrailingZeros = (BYTE)Trailing;
+    KeysBitmap->NumberOfSetBits = PopCount;
 
     if (PopCount == 64) {
         KeysBitmap->Flags.Contiguous = TRUE;
@@ -859,7 +865,8 @@ Return Value:
     String = (PCHAR)&KeysBitmap->String;
 
     for (Bit = 0; Bit < 64; Bit++) {
-        String[Bit] = ((Bitmap & (1ULL << Bit)) != 0) ? '1' : '0';
+        Offset = (63 - Bit);
+        String[Offset] = ((Key & (1ULL << Bit)) != 0) ? '1' : '0';
     }
 
     //

@@ -782,9 +782,49 @@ Abstract:
           &Keys->File->Path->FullPath,                                                       \
           OUTPUT_UNICODE_STRING_FAST)                                                        \
                                                                                              \
-    ENTRY(KeysBitmapString,                                                                  \
+    ENTRY(KeysBitmapFlagsContiguous,                                                         \
+          (Keys->Stats.KeysBitmap.Flags.Contiguous != 0 ? 'Y' : 'N'),                        \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(KeysBitmapFlagsHasZero,                                                            \
+          (Keys->Stats.KeysBitmap.Flags.HasZero != 0 ? 'Y' : 'N'),                           \
+          OUTPUT_CHR)                                                                        \
+                                                                                             \
+    ENTRY(KeysBitmapLongestRunStart,                                                         \
+          Keys->Stats.KeysBitmap.LongestRunStart,                                            \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(KeysBitmapLongestRunLength,                                                        \
+          Keys->Stats.KeysBitmap.LongestRunLength,                                           \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(KeysBitmapTrailingZeros,                                                           \
+          Keys->Stats.KeysBitmap.TrailingZeros,                                              \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(KeysBitmapLeadingZeros,                                                            \
+          Keys->Stats.KeysBitmap.LeadingZeros,                                               \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(KeysBitmapNumberOfSetBits,                                                         \
+          Keys->Stats.KeysBitmap.NumberOfSetBits,                                            \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(KeysBitmapHex64,                                                                   \
+          Keys->Stats.KeysBitmap.Bitmap,                                                     \
+          OUTPUT_HEX64)                                                                      \
+                                                                                             \
+    ENTRY(KeysBitmapShiftedMask64,                                                           \
+          Keys->Stats.KeysBitmap.ShiftedMask,                                                \
+          OUTPUT_HEX64)                                                                      \
+                                                                                             \
+    ENTRY(KeysBitmapString32,                                                                \
           Keys->Stats.KeysBitmap.String,                                                     \
-          OUTPUT_BITMAP_RAW)                                                                 \
+          OUTPUT_BITMAP32_RAW)                                                               \
+                                                                                             \
+    ENTRY(KeysBitmapString64,                                                                \
+          Keys->Stats.KeysBitmap.String,                                                     \
+          OUTPUT_BITMAP64_RAW)                                                               \
                                                                                              \
     ENTRY(Remark,                                                                            \
           Table->Remark,                                                                     \
