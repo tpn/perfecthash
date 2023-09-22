@@ -612,10 +612,15 @@ static PCSZ Exclamation = "!";
 #define OUTPUT_RAW(String)                                          \
     AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
 
-#define OUTPUT_BITMAP_RAW(String)                                   \
-    *Output++ = '0';                                                \
-    *Output++ = 'b';                                                \
-    AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
+#define OUTPUT_BITMAP32_RAW(String)                     \
+    *Output++ = '0';                                    \
+    *Output++ = 'b';                                    \
+    AppendCharBufferToCharBuffer(&Output, String+32, 32)
+
+#define OUTPUT_BITMAP64_RAW(String)                   \
+    *Output++ = '0';                                  \
+    *Output++ = 'b';                                  \
+    AppendCharBufferToCharBuffer(&Output, String, 64)
 
 #define OUTPUT_HEX(Integer) AppendIntegerToCharBufferAsHex(&Output, Integer)
 #define OUTPUT_HEX64(Integer) \
