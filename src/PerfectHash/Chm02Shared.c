@@ -618,8 +618,9 @@ Return Value:
         CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxPushCurrent);
 
-        CuResult = Cu->MemAlloc((PCU_DEVICE_POINTER)&DeviceGraphs,
-                                AllocSizeInBytes.LowPart);
+        CuResult = Cu->MemAllocManaged((PCU_DEVICE_POINTER)&DeviceGraphs,
+                                       AllocSizeInBytes.LowPart,
+                                       CU_MEM_ATTACH_GLOBAL);
         CU_CHECK(CuResult, MemAlloc);
 
         DeviceContext->DeviceGraphs = DeviceGraph = DeviceGraphs;

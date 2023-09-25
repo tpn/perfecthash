@@ -1215,6 +1215,16 @@ typedef CU_MEM_HOST_ALLOC *PCU_MEM_HOST_ALLOC;
 typedef
 _Must_inspect_result_
 CU_RESULT
+(CU_MEM_ALLOC_MANAGED)(
+    _Out_ PCU_DEVICE_POINTER DevicePointer,
+    _In_ SIZE_T SizeInBytes,
+    _In_ CU_MEM_ATTACH_FLAGS Flags
+    );
+typedef CU_MEM_ALLOC_MANAGED *PCU_MEM_ALLOC_MANAGED;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
 (CU_MEM_PREFETCH_ASYNC)(
     _In_ CU_DEVICE_POINTER DevicePointer,
     _In_ SIZE_T Count,
@@ -1304,6 +1314,43 @@ CU_RESULT
     _In_opt_ CU_STREAM Stream
     );
 typedef CU_MEMCPY_DEVICE_TO_HOST_ASYNC *PCU_MEMCPY_DEVICE_TO_HOST_ASYNC;
+
+//
+// Memset Functions.
+//
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_MEMSET_D8_ASYNC)(
+    _Out_writes_(NumberOfElements * sizeof(Element)) PVOID Address,
+    _In_ BYTE Element,
+    _In_ SIZE_T NumberOfElements,
+    _In_ CU_STREAM Stream
+    );
+typedef CU_MEMSET_D8_ASYNC *PCU_MEMSET_D8_ASYNC;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_MEMSET_D16_ASYNC)(
+    _Out_writes_(NumberOfElements * sizeof(Element)) PVOID Address,
+    _In_ USHORT Element,
+    _In_ SIZE_T NumberOfElements,
+    _In_ CU_STREAM Stream
+    );
+typedef CU_MEMSET_D16_ASYNC *PCU_MEMSET_D16_ASYNC;
+
+typedef
+_Must_inspect_result_
+CU_RESULT
+(CU_MEMSET_D32_ASYNC)(
+    _Out_writes_(NumberOfElements * sizeof(Element)) PVOID Address,
+    _In_ ULONG Element,
+    _In_ SIZE_T NumberOfElements,
+    _In_ CU_STREAM Stream
+    );
+typedef CU_MEMSET_D32_ASYNC *PCU_MEMSET_D32_ASYNC;
 
 //
 // Functions.
@@ -1660,8 +1707,28 @@ typedef CU_LINK_DESTROY *PCU_LINK_DESTROY;
     )                                                              \
                                                                    \
     ENTRY(                                                         \
+        MEM_ALLOC_MANAGED,                                         \
+        MemAllocManaged                                            \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
         MEM_FREE_HOST,                                             \
         MemFreeHost                                                \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEMSET_D8_ASYNC,                                           \
+        MemsetD8Async                                              \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEMSET_D16_ASYNC,                                          \
+        MemsetD16Async                                             \
+    )                                                              \
+                                                                   \
+    ENTRY(                                                         \
+        MEMSET_D32_ASYNC,                                          \
+        MemsetD32Async                                             \
     )                                                              \
                                                                    \
     ENTRY(                                                         \
@@ -1759,6 +1826,11 @@ typedef CU_LINK_DESTROY *PCU_LINK_DESTROY;
     )                                                        \
                                                              \
     ENTRY(                                                   \
+        MEM_FREE,                                            \
+        MemFree                                              \
+    )                                                        \
+                                                             \
+    ENTRY(                                                   \
         MEMCPY_HOST_TO_DEVICE,                               \
         MemcpyHtoD                                           \
     )                                                        \
@@ -1776,11 +1848,6 @@ typedef CU_LINK_DESTROY *PCU_LINK_DESTROY;
     ENTRY(                                                   \
         MEMCPY_DEVICE_TO_HOST_ASYNC,                         \
         MemcpyDtoHAsync                                      \
-    )                                                        \
-                                                             \
-    ENTRY(                                                   \
-        MEM_FREE,                                            \
-        MemFree                                              \
     )                                                        \
                                                              \
     ENTRY(                                                   \
