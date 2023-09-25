@@ -106,9 +106,6 @@
     <ClCompile Include="PerfectHashTableNames.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PerfectHashContextSelfTest.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Graph.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -656,6 +653,9 @@
     </ClInclude>
     <ClInclude Include="Graph_Ptx_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphImpl1.h">
+      <Filter>Private Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
