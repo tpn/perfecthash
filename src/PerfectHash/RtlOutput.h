@@ -599,6 +599,11 @@ static PCSZ Exclamation = "!";
     NEWLINE();                              \
 } while (0)
 
+#define PRINT_WSTR(Buf) do {                       \
+    DO_OUTPUT((Buf), ((DWORD)wcslen((Buf)) << 1)); \
+    NEWLINE();                                     \
+} while (0)
+
 #define MAYBE_DOT() MAYBE_OUTPUT(Dot, 1)
 #define MAYBE_DASH() MAYBE_OUTPUT(Dash, 1)
 #define MAYBE_PLUS() MAYBE_OUTPUT(Plus, 1)
@@ -612,9 +617,9 @@ static PCSZ Exclamation = "!";
 #define OUTPUT_RAW(String)                                          \
     AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
 
-#define OUTPUT_BITMAP32_RAW(String)                     \
-    *Output++ = '0';                                    \
-    *Output++ = 'b';                                    \
+#define OUTPUT_BITMAP32_RAW(String)                      \
+    *Output++ = '0';                                     \
+    *Output++ = 'b';                                     \
     AppendCharBufferToCharBuffer(&Output, String+32, 32)
 
 #define OUTPUT_BITMAP64_RAW(String)                   \
