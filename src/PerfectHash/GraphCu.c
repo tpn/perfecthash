@@ -77,11 +77,31 @@ Return Value:
         goto Error;
     }
 
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                         NULL,
+                                         &IID_PERFECT_HASH_RNG,
+                                         PPV(&Graph->Rng));
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
     //
     // Set the IsCuGraph flag indicating we're a CUDA graph.
     //
 
     Graph->Flags.IsCuGraph = TRUE;
+
+    //
+    // Create an activity GUID to track this graph in ETW events.
+    //
+
+    Result = Graph->Rtl->Vtbl->GenerateRandomBytes(Graph->Rtl,
+                                                   sizeof(Graph->Activity),
+                                                   (PBYTE)&Graph->Activity);
+    if (FAILED(Result)) {
+        goto Error;
+    }
 
     //
     // We're done!  Indicate success and finish up.
@@ -142,6 +162,8 @@ Return Value:
 
     RELEASE(Graph->Rtl);
     RELEASE(Graph->Allocator);
+    RELEASE(Graph->Rng);
+    RELEASE(Graph->Keys);
 
     return;
 }
@@ -238,13 +260,16 @@ Return Value:
     PGRAPH DeviceGraph;
     PGRAPH_INFO Info;
     PGRAPH_INFO PrevInfo;
+    PCWSTR KeysFileName;
     PALLOCATOR Allocator;
+    PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
-    PASSIGNED_MEMORY_COVERAGE Coverage;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED16_MEMORY_COVERAGE Coverage16;
     CU_MEM_HOST_ALLOC_FLAGS CuMemHostAllocFlags;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
 
@@ -313,20 +338,20 @@ Return Value:
                &Info->Dimensions,
                sizeof(Graph->Dimensions));
 
-    if (Context->SeedMasks) {
-        Graph->Flags.HasSeedMasks = TRUE;
-        CopyInline(&Graph->SeedMasks,
-                   Context->SeedMasks,
-                   sizeof(Graph->SeedMasks));
-    }
+    //
+    // Wire up the keys pointer and file name buffer pointer.
+    //
 
-    if (Context->UserSeeds) {
-        Graph->Flags.HasUserSeeds = TRUE;
-        Result = GraphApplyUserSeeds(Graph);
-        if (FAILED(Result)) {
-            PH_ERROR(GraphCuLoadInfo_GraphApplyUserSeeds, Result);
-            goto Error;
-        }
+    Keys = Context->Table->Keys;
+    KeysFileName = Keys->File->Path->FileName.Buffer;
+
+    if (Graph->Keys != NULL) {
+        ASSERT(Graph->Keys == Keys);
+        ASSERT(Graph->KeysFileName == KeysFileName);
+    } else {
+        Graph->Keys = Context->Table->Keys;
+        Graph->Keys->Vtbl->AddRef(Keys);
+        Graph->KeysFileName = KeysFileName;
     }
 
     Result = S_OK;
@@ -336,13 +361,7 @@ Return Value:
     //
 
     Graph->DeviceKeys = DeviceContext->KeysBaseAddress;
-#if 0
-    Graph->CuBlocksPerGrid = SolveContext->BlocksPerGrid;
-    Graph->CuThreadsPerBlock = SolveContext->ThreadsPerBlock;
-    Graph->CuKernelRuntimeTargetInMilliseconds =
-        SolveContext->KernelRuntimeTargetInMilliseconds;
-    Graph->CuJitMaxNumberOfRegisters = SolveContext->JitMaxNumberOfRegisters;
-#endif
+
     Graph->CuDeviceAttributes = DeviceContext->DeviceAttributes;
     Graph->CuGraphInfo = (PGRAPH_INFO)DeviceContext->DeviceGraphInfoAddress;
 
@@ -425,11 +444,32 @@ Return Value:
         goto Error;                                              \
     }
 
+#define ALLOC_MANAGED_ARRAY(Name)                                   \
+    ASSERT(Graph->Name == NULL);                                    \
+    CuResult = Cu->MemAllocManaged(                                 \
+        (PCU_DEVICE_POINTER)&Graph->Name,                           \
+        (SIZE_T)Info->Name##SizeInBytes,                            \
+        CU_MEM_ATTACH_GLOBAL                                        \
+    );                                                              \
+    if (CU_FAILED(CuResult)) {                                      \
+        CU_ERROR(GraphCuLoadInfo_MemAllocManaged_##Name, CuResult); \
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {                 \
+            Result = PH_E_CUDA_OUT_OF_MEMORY;                       \
+        } else {                                                    \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;              \
+        }                                                           \
+        goto Error;                                                 \
+    }
+
     //
-    // Allocate arrays.  The Assigned array is allocated on both the device
-    // and the host (as it's the final output of a solved graph); everything
-    // else is allocated on just the device.
+    // Allocate arrays.
     //
+
+    ALLOC_MANAGED_ARRAY(Order);
+    ALLOC_MANAGED_ARRAY(Assigned);
+    ALLOC_MANAGED_ARRAY(Vertices3);
+
+    ALLOC_HOST_ARRAY(VertexPairs);
 
 #if 0
     ALLOC_DEVICE_ARRAY(Next);
@@ -476,13 +516,8 @@ Return Value:
 #endif
 
     //
-    // We don't use bitmaps for the CUDA kernels.
-    //
-
-#if 0
-    //
-    // Set the bitmap sizes and then allocate the bitmap buffers (which all
-    // live on the device).
+    // Set the bitmap sizes and then allocate (or reallocate) the bitmap
+    // buffers.
     //
 
     Graph->DeletedEdgesBitmap.SizeOfBitMap = Graph->TotalNumberOfEdges;
@@ -490,27 +525,34 @@ Return Value:
     Graph->AssignedBitmap.SizeOfBitMap = Graph->NumberOfVertices;
     Graph->IndexBitmap.SizeOfBitMap = Graph->NumberOfVertices;
 
-#define ALLOC_DEVICE_BITMAP_BUFFER(Name)                              \
-    ASSERT(Graph->Name##.Buffer == NULL);                             \
-    CuResult = Cu->MemAlloc(                                          \
-        (PCU_DEVICE_POINTER)&Graph->Name##.Buffer,                    \
-        (SIZE_T)Info->Name##BufferSizeInBytes                         \
-    );                                                                \
-    if (CU_FAILED(CuResult)) {                                        \
-        CU_ERROR(GraphCuLoadInfo_MemAlloc_##Name##_Bitmap, CuResult); \
-        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {                   \
-            Result = PH_E_CUDA_OUT_OF_MEMORY;                         \
-        } else {                                                      \
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                \
-        }                                                             \
-        goto Error;                                                   \
+#define ALLOC_HOST_BITMAP_BUFFER(Name)                       \
+    if (Info->Name##BufferSizeInBytes > 0) {                 \
+        if (!Graph->Name.Buffer) {                           \
+            Graph->Name.Buffer = (PULONG)(                   \
+                Allocator->Vtbl->Malloc(                     \
+                    Allocator,                               \
+                    (ULONG_PTR)Info->Name##BufferSizeInBytes \
+                )                                            \
+            );                                               \
+        } else {                                             \
+            Graph->Name.Buffer = (PULONG)(                   \
+                Allocator->Vtbl->ReAlloc(                    \
+                    Allocator,                               \
+                    Graph->Name.Buffer,                      \
+                    (ULONG_PTR)Info->Name##BufferSizeInBytes \
+                )                                            \
+            );                                               \
+        }                                                    \
+        if (!Graph->Name.Buffer) {                           \
+            Result = E_OUTOFMEMORY;                          \
+            goto Error;                                      \
+        }                                                    \
     }
 
-    ALLOC_DEVICE_BITMAP_BUFFER(DeletedEdgesBitmap);
-    ALLOC_DEVICE_BITMAP_BUFFER(VisitedVerticesBitmap);
-    ALLOC_DEVICE_BITMAP_BUFFER(AssignedBitmap);
-    ALLOC_DEVICE_BITMAP_BUFFER(IndexBitmap);
-#endif
+    ALLOC_HOST_BITMAP_BUFFER(DeletedEdgesBitmap);
+    ALLOC_HOST_BITMAP_BUFFER(VisitedVerticesBitmap);
+    ALLOC_HOST_BITMAP_BUFFER(AssignedBitmap);
+    ALLOC_HOST_BITMAP_BUFFER(IndexBitmap);
 
     //
     // Check to see if we're in "first graph wins" mode, and have also been
@@ -537,16 +579,6 @@ Return Value:
 
     }
 
-    //
-    // Fill out the assigned memory coverage structure and allocate buffers.
-    //
-
-    Coverage = &Graph->AssignedMemoryCoverage;
-
-    Coverage->TotalNumberOfPages = Info->AssignedArrayNumberOfPages;
-    Coverage->TotalNumberOfLargePages = Info->AssignedArrayNumberOfLargePages;
-    Coverage->TotalNumberOfCacheLines = Info->AssignedArrayNumberOfCacheLines;
-
 #define ALLOC_DEVICE_ASSIGNED_ARRAY(Name)                                    \
     ASSERT(Coverage->Name == NULL);                                          \
     CuResult = Cu->MemAlloc(                                                 \
@@ -563,9 +595,62 @@ Return Value:
         goto Error;                                                          \
     }
 
-    ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerPage);
-    ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerCacheLine);
-    ALLOC_DEVICE_ASSIGNED_ARRAY(NumberOfAssignedPerLargePage);
+#define ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage_, Name)                    \
+    ASSERT(Coverage_->Name == NULL);                                     \
+    CuResult = Cu->MemAllocManaged(                                      \
+        (PCU_DEVICE_POINTER)&Coverage_->Name,                            \
+        (SIZE_T)Info->Name##SizeInBytes,                                 \
+        CU_MEM_ATTACH_GLOBAL                                             \
+    );                                                                   \
+    if (CU_FAILED(CuResult)) {                                           \
+        CU_ERROR(GraphCuLoadInfo_MemAllocManaged_##Name##_AssignedArray, \
+                 CuResult);                                              \
+        if (CuResult == CUDA_ERROR_OUT_OF_MEMORY) {                      \
+            Result = PH_E_CUDA_OUT_OF_MEMORY;                            \
+        } else {                                                         \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                   \
+        }                                                                \
+        goto Error;                                                      \
+    }
+
+    //
+    // Fill out the assigned memory coverage structure and allocate buffers.
+    //
+
+    if (!IsUsingAssigned16(Graph)) {
+
+        Coverage = &Graph->AssignedMemoryCoverage;
+
+        Coverage->TotalNumberOfPages =
+            Info->AssignedArrayNumberOfPages;
+
+        Coverage->TotalNumberOfLargePages =
+            Info->AssignedArrayNumberOfLargePages;
+
+        Coverage->TotalNumberOfCacheLines =
+            Info->AssignedArrayNumberOfCacheLines;
+
+        ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage, NumberOfAssignedPerPage);
+        ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage, NumberOfAssignedPerCacheLine);
+        ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage, NumberOfAssignedPerLargePage);
+
+    } else {
+
+        Coverage16 = &Graph->Assigned16MemoryCoverage;
+
+        Coverage16->TotalNumberOfPages =
+            Info->AssignedArrayNumberOfPages;
+
+        Coverage16->TotalNumberOfLargePages =
+            Info->AssignedArrayNumberOfLargePages;
+
+        Coverage16->TotalNumberOfCacheLines =
+            Info->AssignedArrayNumberOfCacheLines;
+
+        ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerPage);
+        ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerCacheLine);
+        ALLOC_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerLargePage);
+    }
 
     //
     // Intentional follow-on to Finalize.
@@ -669,21 +754,324 @@ Return Value:
 
 --*/
 {
-    UNREFERENCED_PARAMETER(Graph);
+    PCU Cu;
+    PRTL Rtl;
+    PRNG Rng;
+    PGRAPH_INFO Info;
+    HRESULT Result;
+    CU_RESULT CuResult;
+    ULONG TotalNumberOfPages;
+    ULONG TotalNumberOfLargePages;
+    ULONG TotalNumberOfCacheLines;
+    PPERFECT_HASH_CONTEXT Context;
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+    PASSIGNED16_MEMORY_COVERAGE Coverage16;
+    PASSIGNED_PAGE_COUNT NumberOfAssignedPerPage;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
+    PASSIGNED_LARGE_PAGE_COUNT NumberOfAssignedPerLargePage;
+    PASSIGNED_CACHE_LINE_COUNT NumberOfAssignedPerCacheLine;
 
     //
-    // Increment the attempt counter with GPU attempts, and potentially signal
-    // for stop solving.
+    // Initialize aliases.
     //
 
-    //++Graph->ThreadAttempt;
-    //Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
+    Result = S_OK;
+    Context = Graph->Context;
+    Cu = Context->Cu;
+    Info = Graph->Info;
+    Rtl = Context->Rtl;
+    TableCreateFlags.AsULongLong = Context->Table->TableCreateFlags.AsULongLong;
+    SolveContext = Graph->CuSolveContext;
+
+    MAYBE_STOP_GRAPH_SOLVING(Graph);
+
+    ++Graph->ThreadAttempt;
+
+    Graph->Attempt = InterlockedIncrement64(&Context->Attempts);
 
     //
-    // Clear scalar values.
+    // Check if we're capping fixed or maximum attempts; if so, and we've made
+    // sufficient attempts, indicate stop solving.
     //
 
-    return PH_S_CONTINUE_GRAPH_SOLVING;
+    if (Context->FixedAttempts > 0) {
+        if (Graph->Attempt - 1 == Context->FixedAttempts) {
+            Context->State.FixedAttemptsReached = TRUE;
+            Result = PH_S_FIXED_ATTEMPTS_REACHED;
+        }
+    } else if (Context->MaxAttempts > 0) {
+        if (Graph->Attempt - 1 == Context->MaxAttempts) {
+            Context->State.MaxAttemptsReached = TRUE;
+            Result = PH_S_MAX_ATTEMPTS_REACHED;
+        }
+    }
+
+    if (Result != S_OK) {
+        CONTEXT_END_TIMERS(Solve);
+        SetStopSolving(Context);
+        SubmitThreadpoolWork(Context->FinishedWork);
+        return Result;
+    }
+
+    //
+    // Clear the bitmap buffers.
+    //
+
+#define ZERO_BITMAP_BUFFER(Name)                             \
+    if (Info->Name##BufferSizeInBytes > 0) {                 \
+        ASSERT(0 == Info->Name##BufferSizeInBytes -          \
+               ((Info->Name##BufferSizeInBytes >> 3) << 3)); \
+        ZeroMemory((PDWORD64)Graph->Name.Buffer,             \
+                   Info->Name##BufferSizeInBytes);           \
+    }
+
+    ZERO_BITMAP_BUFFER(DeletedEdgesBitmap);
+    ZERO_BITMAP_BUFFER(VisitedVerticesBitmap);
+    ZERO_BITMAP_BUFFER(AssignedBitmap);
+    ZERO_BITMAP_BUFFER(IndexBitmap);
+
+    //
+    // "Empty" all of the nodes.
+    //
+
+#define EMPTY_ARRAY(Name)                              \
+    if (Info->Name##SizeInBytes > 0) {                 \
+        ASSERT(0 == Info->Name##SizeInBytes -          \
+               ((Info->Name##SizeInBytes >> 3) << 3)); \
+        FillMemory((PDWORD64)Graph->Name,              \
+                   Info->Name##SizeInBytes,            \
+                   (BYTE)~0);                          \
+    }
+
+    EMPTY_ARRAY(Next);
+    EMPTY_ARRAY(First);
+    EMPTY_ARRAY(Edges);
+
+    //
+    // The Order and Assigned arrays get zeroed.
+    //
+
+#define ZERO_MANAGED_ARRAY(Name)                                               \
+    if (Info->Name##SizeInBytes > 0) {                                         \
+        ASSERT(0 == Info->Name##SizeInBytes -                                  \
+               ((Info->Name##SizeInBytes >> 3) << 3));                         \
+        CuResult = Cu->MemsetD8Async(                                          \
+            (PVOID)Graph->Name,                                                \
+            0,                                                                 \
+            Info->Name##SizeInBytes,                                           \
+            SolveContext->Stream                                               \
+        );                                                                     \
+        if (CU_FAILED(CuResult)) {                                             \
+            CU_ERROR(GraphCuReset_MemsetD8Async_##Name##_ZeroArray, CuResult); \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                         \
+            goto Error;                                                        \
+        }                                                                      \
+    }
+
+#define EMPTY_MANAGED_ARRAY(Name)                                               \
+    if (Info->Name##SizeInBytes > 0) {                                          \
+        ASSERT(0 == Info->Name##SizeInBytes -                                   \
+               ((Info->Name##SizeInBytes >> 3) << 3));                          \
+        CuResult = Cu->MemsetD8Async(                                           \
+            (PVOID)Graph->Name,                                                 \
+            ~((BYTE)0),                                                         \
+            Info->Name##SizeInBytes,                                            \
+            SolveContext->Stream                                                \
+        );                                                                      \
+        if (CU_FAILED(CuResult)) {                                              \
+            CU_ERROR(GraphCuReset_MemsetD8Async_##Name##_EmptyArray, CuResult); \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                          \
+            goto Error;                                                         \
+        }                                                                       \
+    }
+
+    ZERO_MANAGED_ARRAY(Order);
+    ZERO_MANAGED_ARRAY(Assigned);
+    ZERO_MANAGED_ARRAY(Vertices3);
+
+    EMPTY_ARRAY(VertexPairs);
+
+    if (!IsUsingAssigned16(Graph)) {
+        Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
+        ASSERT(Graph->OrderIndex > 0);
+    } else {
+        Graph->Order16Index = (SHORT)Graph->NumberOfKeys;
+        ASSERT(Graph->Order16Index > 0);
+    }
+
+    //
+    // Clear any remaining values.
+    //
+
+    Graph->Collisions = 0;
+    Graph->NumberOfEmptyVertices = 0;
+    Graph->DeletedEdgeCount = 0;
+    Graph->VisitedVerticesCount = 0;
+
+    Graph->TraversalDepth = 0;
+    Graph->TotalTraversals = 0;
+    Graph->MaximumTraversalDepth = 0;
+
+    Graph->SolvedTime.AsULongLong = 0;
+
+    Graph->Flags.Shrinking = FALSE;
+    Graph->Flags.IsAcyclic = FALSE;
+
+    RESET_GRAPH_COUNTERS();
+
+    //
+    // Initialize the RNG.  The subsequence is derived from whatever the base
+    // RNG subsequence was (via --RngSubsequence=N, or 0 default), plus the
+    // current solving attempt (Graph->Attempt).  This guarantees that the
+    // subsequence is a) unique for a given run, and b) always monotonically
+    // increasing, which ensures we explore the same PRNG space regardless of
+    // concurrency level.
+    //
+    // (Remember that the PRNG we support, Philox4x3210, is primarily included
+    // in order to yield consistent benchmarking environments.  If actual graph
+    // solving is being done in order to generate perfect hash tables, then the
+    // --Rng=System should always be used, as this will yield much better random
+    // numbers (at the expense of varying runtimes, so, not useful if you're
+    // benchmarking).)
+    //
+
+    Rng = Graph->Rng;
+    Result = Rng->Vtbl->InitializePseudo(
+        Rng,
+        Context->RngId,
+        &Context->RngFlags,
+        Context->RngSeed,
+        Context->RngSubsequence + Graph->Attempt,
+        Context->RngOffset
+    );
+
+    if (FAILED(Result)) {
+        PH_ERROR(GraphLoadInfo_RngInitializePseudo, Result);
+        goto Error;
+    }
+
+    //
+    // Avoid the overhead of resetting the memory coverage if we're in "first
+    // graph wins" mode and have been requested to skip memory coverage.
+    //
+
+    if (FirstSolvedGraphWinsAndSkipMemoryCoverage(Context)) {
+        goto End;
+    }
+
+    //
+    // Clear the assigned memory coverage counts and arrays.
+    //
+
+#define ZERO_MANAGED_ASSIGNED_ARRAY(Coverage_, Name)                           \
+        CuResult = Cu->MemsetD8Async((PVOID)Coverage_->Name,                   \
+                                     0,                                        \
+                                     Info->Name##SizeInBytes,                  \
+                                     SolveContext->Stream);                    \
+        if (CU_FAILED(CuResult)) {                                             \
+            CU_ERROR(GraphCuLoadInfo_MemsetD8Async_##Name##_ZeroAssignedArray, \
+                     CuResult);                                                \
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;                         \
+            goto Error;                                                        \
+        }
+
+    if (!IsUsingAssigned16(Graph)) {
+        Coverage = &Graph->AssignedMemoryCoverage;
+
+        //
+        // Capture the totals and pointers prior to zeroing the struct.
+        //
+
+        TotalNumberOfPages = Coverage->TotalNumberOfPages;
+        TotalNumberOfLargePages = Coverage->TotalNumberOfLargePages;
+        TotalNumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+
+        NumberOfAssignedPerPage = Coverage->NumberOfAssignedPerPage;
+        NumberOfAssignedPerLargePage = Coverage->NumberOfAssignedPerLargePage;
+        NumberOfAssignedPerCacheLine = Coverage->NumberOfAssignedPerCacheLine;
+
+        ZeroStructPointer(Coverage);
+
+        //
+        // Restore the totals and pointers.
+        //
+
+        Coverage->TotalNumberOfPages = TotalNumberOfPages;
+        Coverage->TotalNumberOfLargePages = TotalNumberOfLargePages;
+        Coverage->TotalNumberOfCacheLines = TotalNumberOfCacheLines;
+
+        Coverage->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
+        Coverage->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
+        Coverage->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
+
+        ZERO_MANAGED_ASSIGNED_ARRAY(Coverage, NumberOfAssignedPerPage);
+        ZERO_MANAGED_ASSIGNED_ARRAY(Coverage, NumberOfAssignedPerLargePage);
+        ZERO_MANAGED_ASSIGNED_ARRAY(Coverage, NumberOfAssignedPerCacheLine);
+
+    } else {
+
+        Coverage16 = &Graph->Assigned16MemoryCoverage;
+
+        //
+        // Capture the totals and pointers prior to zeroing the struct.
+        //
+
+        TotalNumberOfPages = Coverage16->TotalNumberOfPages;
+        TotalNumberOfLargePages = Coverage16->TotalNumberOfLargePages;
+        TotalNumberOfCacheLines = Coverage16->TotalNumberOfCacheLines;
+
+        NumberOfAssignedPerPage = Coverage16->NumberOfAssignedPerPage;
+        NumberOfAssignedPerLargePage = Coverage16->NumberOfAssignedPerLargePage;
+        NumberOfAssignedPerCacheLine = Coverage16->NumberOfAssignedPerCacheLine;
+
+        ZeroStructPointer(Coverage16);
+
+        //
+        // Restore the totals and pointers.
+        //
+
+        Coverage16->TotalNumberOfPages = TotalNumberOfPages;
+        Coverage16->TotalNumberOfLargePages = TotalNumberOfLargePages;
+        Coverage16->TotalNumberOfCacheLines = TotalNumberOfCacheLines;
+
+        Coverage16->NumberOfAssignedPerPage = NumberOfAssignedPerPage;
+        Coverage16->NumberOfAssignedPerLargePage = NumberOfAssignedPerLargePage;
+        Coverage16->NumberOfAssignedPerCacheLine = NumberOfAssignedPerCacheLine;
+
+        ZERO_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerPage);
+        ZERO_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerLargePage);
+        ZERO_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerCacheLine);
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    //
+    // Normalize a successful error code to our code used to communicate that
+    // graph solving should continue.
+    //
+
+    if (Result == S_OK) {
+        Result = PH_S_CONTINUE_GRAPH_SOLVING;
+    }
+
+    return Result;
 }
 
 GRAPH_SOLVE GraphCuSolve;
@@ -724,13 +1112,14 @@ Return Value:
 --*/
 {
     PCU Cu;
-    //CU_DIM3 Grid = { 1, 1, 1 };
-    //CU_DIM3 Block = { 1, 1, 1 };
+    CU_DIM3 Grid = { 1, 1, 1 };
+    CU_DIM3 Block = { 1, 1, 1 };
     HRESULT Result;
     HRESULT SolveResult;
     PGRAPH DeviceGraph;
     PGRAPH_INFO Info;
     CU_RESULT CuResult;
+    PCU_FUNCTION Function;
     ULONG SharedMemoryInBytes;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
@@ -757,11 +1146,24 @@ Return Value:
     ASSERT(SolveContext->HostGraph == Graph);
 
     //
+    // Ensure any async memsets from Reset() have completed.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    //
+    // I don't think we need this one.
+    //
+
+#if 0
+    //
     // Make sure device work has completed.
     //
 
     CuResult = Cu->CtxSynchronize();
     CU_CHECK(CuResult, CtxSynchronize);
+#endif
 
     //
     // Maybe switch to CUDA GDB if applicable prior to kernel launch.
@@ -779,8 +1181,21 @@ Return Value:
     SharedMemoryInBytes = 0;
     KernelParams[0] = &DeviceGraph;
 
-#if 0
-    CuResult = Cu->LaunchKernel(DeviceContext->Function,
+    //
+    // Initialize the grid to a 1D grid using PERFECT_HASH_CU_BLOCKS_PER_GRID
+    // and PERFECT_HASH_CU_THREADS_PER_BLOCK.
+    //
+
+    Grid.X = PERFECT_HASH_CU_BLOCKS_PER_GRID;
+    Grid.Y = 1;
+    Grid.Z = 1;
+
+    Block.X = PERFECT_HASH_CU_THREADS_PER_BLOCK;
+    Block.Y = 1;
+    Block.Z = 1;
+
+    Function = DeviceContext->AddKeysToGraphKernel.Function;
+    CuResult = Cu->LaunchKernel(Function,
                                 Grid.X,
                                 Grid.Y,
                                 Grid.Z,
@@ -792,7 +1207,6 @@ Return Value:
                                 KernelParams,
                                 NULL);
     CU_CHECK(CuResult, LaunchKernel);
-#endif
 
     //
     // If we were using GDB, then switched to CUDA GDB, switch back to GDB now.
@@ -823,6 +1237,23 @@ Return Value:
     SolveResult = Graph->CuKernelResult;
 
     //MAYBE_STOP_GRAPH_SOLVING(Graph);
+
+    //
+    // We've added all of the vertices to the graph.  Determine if the graph
+    // is acyclic.
+    //
+
+#if 0
+    if (!IsGraphAcyclic(Graph)) {
+
+        //
+        // Failed to create an acyclic graph.
+        //
+
+        InterlockedIncrement64(&Context->CyclicGraphFailures);
+        goto Failed;
+    }
+#endif
 
 #if 0
 
@@ -967,8 +1398,7 @@ GraphCuLoadNewSeeds(
     PGRAPH Graph
     )
 {
-    UNREFERENCED_PARAMETER(Graph);
-    return S_OK;
+    return GraphLoadNewSeeds(Graph);
 }
 
 GRAPH_REGISTER_SOLVED GraphCuRegisterSolved;
@@ -980,10 +1410,7 @@ GraphCuRegisterSolved(
     PGRAPH *NewGraphPointer
     )
 {
-    UNREFERENCED_PARAMETER(Graph);
-    UNREFERENCED_PARAMETER(NewGraphPointer);
-
-    return PH_S_GRAPH_SOLVING_STOPPED;
+    return GraphRegisterSolved(Graph, NewGraphPointer);
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

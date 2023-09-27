@@ -1962,6 +1962,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     struct _CU_KERNEL_CONTEXT *CuKernelContext;
 
     //
+    // A device-side Cu graph interface and corresponding vtbl pointer.
+    //
+
+    GRAPH_VTBL CuInterface;
+    PGRAPH_VTBL CuVtbl;
+
+    //
     // The graph interface.
     //
 

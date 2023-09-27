@@ -3650,6 +3650,7 @@ Return Value:
     //
 
     ASSERT(sizeof(*Graph) == Info->SizeOfGraphStruct);
+    ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
 
     //
     // Initialize aliases.
