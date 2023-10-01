@@ -153,6 +153,8 @@ Return Value:
 
     Rtl = Graph->Rtl;
 
+    Graph->HashFunctionId = HashFunctionId;
+
     //
     // Override vtbl methods based on table state and table create flags.
     //

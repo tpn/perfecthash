@@ -4272,3 +4272,27 @@ Language=English
 Invalid debugger context flags.
 .
 
+MessageId=0x3ec
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED
+Language=English
+LoadSymbols failed for PerfectHashCuda.dll.
+.
+
+MessageId=0x3ed
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_PERFECT_HASH_CUDA_DLL_LOAD_LIBRARY_FAILED
+Language=English
+LoadLibrary failed for PerfectHashCuda.dll.
+.
+
+MessageId=0x3ef
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS
+Language=English
+Failed to load all expected symbols from PerfectHashCuda.dll.
+.
+

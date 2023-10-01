@@ -28,9 +28,9 @@ Abstract:
 
 #ifdef PH_COMPAT
 #ifdef PH_CUDA
-EXTERN_C_BEGIN
+//EXTERN_C_BEGIN
 #include <cuda.h>
-EXTERN_C_END
+//EXTERN_C_END
 #endif
 #endif
 
@@ -53,23 +53,20 @@ struct CU_MODULE;
 typedef struct CU_MODULE *PCU_MODULE;
 typedef struct CU_MODULE **PPCU_MODULE;
 
-#ifndef PH_CU
 struct CU_EVENT;
 typedef struct CU_EVENT *PCU_EVENT;
 typedef struct CU_EVENT **PPCU_EVENT;
 
-struct CU_STREAM;
-typedef struct CU_STREAM *CU_STREAM;
-typedef struct CU_STREAM *PCU_STREAM;
-#else
+struct _CU_STREAM;
+typedef struct _CU_STREAM *CU_STREAM;
+typedef struct _CU_STREAM **PCU_STREAM;
 
+#if 0
+#ifndef PH_CU
 #define CU_RESULT cudaError_t
 #define CU_STREAM cudaStream_t
 #define CU_EVENT cudaEvent_t
-
-typedef CU_STREAM *PCU_STREAM;
-typedef CU_EVENT *PCU_EVENT;
-
+#endif
 #endif
 
 struct CU_FUNCTION;
@@ -708,7 +705,7 @@ typedef enum _Enum_is_bitflag_ _CU_OCCUPANCY_FLAGS {
 
 typedef CU_DEVICE_ATTRIBUTE *PCU_DEVICE_ATTRIBUTE;
 
-#else // PH_CU
+#else
 
 typedef enum cudaError_enum CU_RESULT;
 typedef enum CUdevice_attribute_enum CU_DEVICE_ATTRIBUTE;
@@ -2061,6 +2058,51 @@ typedef struct _CU_OCCUPANCY {
 typedef CU_OCCUPANCY *PCU_OCCUPANCY;
 
 //
+// PerfectHashCuda
+//
+
+typedef
+_Must_inspect_result_
+VOID
+(PERFECT_HASH_CUDA_HASH_KEYS)(
+    _Inout_ struct _GRAPH *Graph
+    );
+typedef PERFECT_HASH_CUDA_HASH_KEYS *PPERFECT_HASH_CUDA_HASH_KEYS;
+
+typedef
+_Must_inspect_result_
+VOID
+(PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC)(
+    _Inout_ struct _GRAPH *Graph
+    );
+typedef PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC
+      *PPERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC;
+
+//
+// Define the PERFECT_HASH_CUDA_FUNCTION_TABLE X-macro.
+//
+
+#define PERFECT_HASH_CUDA_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                                         \
+    FIRST_ENTRY(HASH_KEYS,                                               \
+                HashKeys)                                                \
+                                                                         \
+    LAST_ENTRY(IS_GRAPH_ACYCLIC,                                         \
+               IsGraphAcyclicHost)
+
+#define PERFECT_HASH_CUDA_FUNCTION_TABLE_ENTRY(ENTRY) \
+    PERFECT_HASH_CUDA_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)
+
+#define EXPAND_AS_PERFECT_HASH_CUDA_FUNCTION_STRUCT(Upper, Name) \
+    PPERFECT_HASH_CUDA_##Upper Name;
+
+typedef struct _PERFECT_HASH_CUDA_FUNCTIONS {
+    PERFECT_HASH_CUDA_FUNCTION_TABLE_ENTRY(
+        EXPAND_AS_PERFECT_HASH_CUDA_FUNCTION_STRUCT)
+} PERFECT_HASH_CUDA_FUNCTIONS;
+typedef PERFECT_HASH_CUDA_FUNCTIONS *PPERFECT_HASH_CUDA_FUNCTIONS;
+
+//
 // Define the CU structure that encapsulates all CUDA Driver functionality.
 //
 
@@ -2091,6 +2133,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     ULONG NumberOfCuRandFunctions;
 
     //
+    // Number of PerfectHashCuda.dll function pointers.
+    //
+
+    ULONG NumberOfPerfectHashCudaFunctions;
+
+    //
     // Driver Version.
     //
 
@@ -2118,6 +2166,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     LONG NumberOfDevices;
 
     //
+    // Pad out to 8-byte boundary.
+    //
+
+    ULONG Padding2;
+
+    //
     // nvcuda.dll module.
     //
 
@@ -2128,6 +2182,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
     //
 
     HMODULE CuRandModule;
+
+    //
+    // PerfectHashCuda.dll module.
+    //
+
+    HMODULE PerfectHashCudaModule;
 
     //
     // Function pointers.
@@ -2158,6 +2218,20 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _CU {
         };
 
         CURAND_FUNCTIONS CuRandFunctions;
+    };
+
+    union {
+
+        //
+        // Inline the PerfectHashCuda functions for convenience.
+        //
+
+        struct {
+            PERFECT_HASH_CUDA_FUNCTION_TABLE_ENTRY(
+                EXPAND_AS_PERFECT_HASH_CUDA_FUNCTION_STRUCT)
+        };
+
+        PERFECT_HASH_CUDA_FUNCTIONS PerfectHashCudaFunctions;
     };
 
     //

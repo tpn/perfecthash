@@ -48,6 +48,9 @@ Return Value:
 --*/
 {
     HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
 
     if (!ARGUMENT_PRESENT(Graph)) {
         return E_POINTER;
@@ -102,6 +105,17 @@ Return Value:
     if (FAILED(Result)) {
         goto Error;
     }
+
+    //
+    // Load the items we need from the TLS context.
+    //
+
+    TlsContext = PerfectHashTlsEnsureContext();
+    Table = TlsContext->Table;
+    TableCreateFlags.AsULongLong = TlsContext->TableCreateFlags.AsULongLong;
+
+    Graph->HashFunctionId = TlsContext->Table->HashFunctionId;
+    Graph->Flags.UsingAssigned16 = (Table->State.UsingAssigned16 != FALSE);
 
     //
     // We're done!  Indicate success and finish up.
@@ -1074,6 +1088,12 @@ End:
     return Result;
 }
 
+EXTERN_C
+VOID
+IsGraphAcyclicHost(
+    _In_ PGRAPH Graph
+    );
+
 GRAPH_SOLVE GraphCuSolve;
 
 _Use_decl_annotations_
@@ -1115,7 +1135,7 @@ Return Value:
     CU_DIM3 Grid = { 1, 1, 1 };
     CU_DIM3 Block = { 1, 1, 1 };
     HRESULT Result;
-    HRESULT SolveResult;
+    //HRESULT SolveResult;
     PGRAPH DeviceGraph;
     PGRAPH_INFO Info;
     CU_RESULT CuResult;
@@ -1194,7 +1214,7 @@ Return Value:
     Block.Y = 1;
     Block.Z = 1;
 
-    Function = DeviceContext->AddKeysToGraphKernel.Function;
+    Function = DeviceContext->HashKeysKernel.Function;
     CuResult = Cu->LaunchKernel(Function,
                                 Grid.X,
                                 Grid.Y,
@@ -1234,7 +1254,76 @@ Return Value:
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
-    SolveResult = Graph->CuKernelResult;
+    if (Graph->CuHashKeysResult != S_OK) {
+        Result = Graph->CuHashKeysResult;
+        goto Error;
+    }
+
+    Cu->IsGraphAcyclicHost(Graph);
+
+    //
+    // Wait for completion.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    //
+    // Copy the device graph back to the host.
+    //
+
+    CuResult = Cu->MemcpyDtoHAsync(Graph,
+                                   (CU_DEVICE_POINTER)DeviceGraph,
+                                   sizeof(GRAPH),
+                                   SolveContext->Stream);
+    CU_CHECK(CuResult, MemcpyDtoHAsync);
+
+    if (Graph->CuIsAcyclicResult != S_OK) {
+        Result = Graph->CuIsAcyclicResult;
+        goto Error;
+    }
+
+#if 0
+    //Grid.X = 1;
+    //Block.X = 1;
+    Function = DeviceContext->IsGraphAcyclicKernel.Function;
+    CuResult = Cu->LaunchKernel(Function,
+                                32, //Grid.X,
+                                Grid.Y,
+                                Grid.Z,
+                                64, //Block.X,
+                                Block.Y,
+                                Block.Z,
+                                SharedMemoryInBytes,
+                                SolveContext->Stream,
+                                KernelParams,
+                                NULL);
+    CU_CHECK(CuResult, LaunchKernel);
+
+    //
+    // Copy the device graph back to the host.
+    //
+
+    CuResult = Cu->MemcpyDtoHAsync(Graph,
+                                   (CU_DEVICE_POINTER)DeviceGraph,
+                                   sizeof(GRAPH),
+                                   SolveContext->Stream);
+    CU_CHECK(CuResult, MemcpyDtoHAsync);
+
+    //
+    // Wait for completion.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    if (Graph->CuIsAcyclicResult != S_OK) {
+        Result = Graph->CuIsAcyclicResult;
+        goto Error;
+    }
+#endif
+
+    //SolveResult = Graph->CuKernelResult;
 
     //MAYBE_STOP_GRAPH_SOLVING(Graph);
 
@@ -1398,7 +1487,31 @@ GraphCuLoadNewSeeds(
     PGRAPH Graph
     )
 {
-    return GraphLoadNewSeeds(Graph);
+    PCU Cu;
+    HRESULT Result;
+    CU_RESULT CuResult;
+    PGRAPH DeviceGraph;
+
+    Result = GraphLoadNewSeeds(Graph);
+    if (FAILED(Result)) {
+        PH_ERROR(GraphCuLoadNewSeeds, Result);
+        return Result;
+    }
+
+    Cu = Graph->CuSolveContext->DeviceContext->Cu;
+    DeviceGraph = Graph->CuSolveContext->DeviceGraph;
+    CuResult = Cu->MemcpyHtoDAsync((CU_DEVICE_POINTER)&DeviceGraph->Seeds[0],
+                                   Graph->Seeds,
+                                   Graph->NumberOfSeeds * sizeof(ULONG),
+                                   Graph->CuSolveContext->Stream);
+
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuLoadNewSeeds_MemcpyHtoDAsync, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        return Result;
+    }
+
+    return S_OK;
 }
 
 GRAPH_REGISTER_SOLVED GraphCuRegisterSolved;

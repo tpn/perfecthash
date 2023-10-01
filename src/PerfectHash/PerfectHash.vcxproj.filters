@@ -665,6 +665,9 @@
     <None Include="PerfectHashEvents.man">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="GraphThrust.cu">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x64'">
     <MASM Include="PerfectHashTableFastIndexEx_x64_01.asm">

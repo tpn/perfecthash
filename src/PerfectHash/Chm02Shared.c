@@ -90,6 +90,8 @@ Return Value:
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
     PPH_CU_RUNTIME_CONTEXT CuRuntimeContext;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext;
     //PERFECT_HASH_CU_RNG_ID CuRngId = PerfectHashCuNullRngId;
     PPERFECT_HASH_PATH PtxPath;
     PPERFECT_HASH_FILE PtxFile;
@@ -699,6 +701,34 @@ Return Value:
 
     Context->GpuGraphs = GpuGraphs;
     Context->CpuGraphs = CpuGraphs;
+
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+
+    ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
+    ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
+    ASSERT(!TlsContext->HeapCreateFlags);
+    ASSERT(!TlsContext->HeapMinimumSize);
+
+    TlsContextDisableGlobalAllocator(TlsContext);
+    TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
+    TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;
+
+    //
+    // Copy the table create flags into the TLS context as well; they are now
+    // used by GraphInitialize() to tweak vtbl construction.
+    //
+
+    TlsContext->TableCreateFlags.AsULongLong = TableCreateFlags.AsULongLong;
+
+    //
+    // ....and, many years later, we find ourselves in the position of wanting
+    // to access the table's hash function from within GraphInitialize() as
+    // well, so, we just stash the table pointer in the TLS context now too.
+    // This is a bit sloppy; we don't need TableCreateFlags if we're storing
+    // a pointer to the table directly.  Future refactoring opportunity.
+    //
+
+    TlsContext->Table = Context->Table;
 
     //
     // Create GPU graphs and assign one to each solve context.

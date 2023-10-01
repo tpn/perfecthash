@@ -52,7 +52,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <CallingConvention>StdCall</CallingConvention>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\include;$(SolutionDir);$(VC_IncludePath)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\include;$(SolutionDir);$(VC_IncludePath);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <SubSystem>Console</SubSystem>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WholeProgramOptimization>true</WholeProgramOptimization>

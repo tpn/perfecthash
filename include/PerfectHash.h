@@ -48,7 +48,7 @@ extern "C" {
 //
 //
 
-#ifndef PH_CUDA
+//#ifndef PH_CUDA
 #pragma warning(push)
 #pragma warning(disable: 4255)
 #pragma warning(disable: 4668)
@@ -56,9 +56,9 @@ extern "C" {
 #pragma warning(pop)
 #include <sal.h>
 #include <specstrings.h>
-#else
-#include <PerfectHashCompat.h>
-#endif
+//#else
+//#include <PerfectHashCompat.h>
+//#endif // PH_CUDA
 
 //
 // Disable the anonymous union/struct warning.
@@ -601,7 +601,7 @@ static const PCGUID PerfectHashInterfaceGuids[] = {
     NULL
 };
 
-#ifndef __CUDA_ARCH__
+#ifndef PH_CUDA
 static const BYTE NumberOfPerfectHashInterfaceGuids =
     ARRAYSIZE(PerfectHashInterfaceGuids);
 
@@ -639,7 +639,7 @@ PerfectHashInterfaceGuidToId(
     return Id;
 }
 
-#endif // __CUDA_ARCH__
+#endif // PH_CUDA
 
 //
 // COM-related funtion pointer typedefs.
@@ -4315,9 +4315,7 @@ BOOLEAN
 typedef GET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME
       *PGET_PERFECT_HASH_TABLE_MASK_FUNCTION_NAME;
 
-#ifndef __CUDA_ARCH__
-
-#ifdef PH_WINDOWS
+#if (defined PH_WINDOWS && !defined PH_CUDA)
 
 //
 // Scaffolding required to support structured exception handling via __try
@@ -4362,6 +4360,20 @@ VOID
 typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
 
 extern __SECURITY_INIT_COOKIE __security_init_cookie;
+
+#else
+
+typedef
+ULONG
+(__cdecl __C_SPECIFIC_HANDLER)(
+    PVOID ExceptionRecord,
+    ULONG_PTR Frame,
+    PVOID Context,
+    PVOID Dispatch
+    );
+typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
+
+#endif
 
 //
 // _penter function hooking scaffolding.
@@ -4422,21 +4434,6 @@ VOID
     VOID
     );
 typedef _PENTER *P_PENTER;
-
-#else // PH_WINDOWS
-
-typedef
-ULONG
-(__cdecl __C_SPECIFIC_HANDLER)(
-    PVOID ExceptionRecord,
-    ULONG_PTR Frame,
-    PVOID Context,
-    PVOID Dispatch
-    );
-typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
-
-#endif // !PH_WINDOWS
-#endif // __CUDA_ARCH__
 
 //
 // Define bootstrap helpers.
@@ -4516,7 +4513,7 @@ IsValidPerfectHashEnumId(
 // PerfectHashPrintError to be in scope.
 //
 
-#ifndef __CUDA_ARCH__
+#ifndef PH_CUDA
 #define SYS_ERROR(Name) \
     PerfectHashPrintError(#Name, __FILE__, __LINE__, GetLastError())
 

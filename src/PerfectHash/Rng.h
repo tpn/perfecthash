@@ -31,6 +31,7 @@ Abstract:
 // Helper CUDA-like packed int "vector" typedefs.
 //
 
+#ifndef PH_CUDA
 typedef union DECLSPEC_ALIGN(8) _UINT2 {
     struct {
         ULONG X;
@@ -52,6 +53,7 @@ typedef union DECLSPEC_ALIGN(16) _UINT4 {
     };
     XMMWORD AsXmmWord;
 } UINT4, *PUINT4;
+#endif
 
 //
 // Define the random state structs for each RNG type.

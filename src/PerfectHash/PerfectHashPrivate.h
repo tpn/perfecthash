@@ -37,8 +37,10 @@ Abstract:
 // to PerfectHashModuleInfo.
 //
 
+#if (defined PH_WINDOWS && !defined PH_CUDA)
 extern HMODULE PerfectHashModule;
 extern MODULEINFO PerfectHashModuleInfo;
+#endif
 
 //
 // Components can check this variable to determine if Ctrl-C has been pressed.
@@ -516,40 +518,6 @@ BOOLEAN
     _Out_ PULONG NumberOfResolvedSymbolsPointer
     );
 typedef LOAD_SYMBOLS_FROM_MULTIPLE_MODULES *PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES;
-
-//
-// Exception helpers.
-//
-
-#ifdef PH_WINDOWS
-typedef
-EXCEPTION_DISPOSITION
-(__cdecl RTL_EXCEPTION_HANDLER)(
-    PEXCEPTION_RECORD ExceptionRecord,
-    ULONG_PTR Frame,
-    PCONTEXT Context,
-    struct _DISPATCHER_CONTEXT *Dispatch
-    );
-typedef RTL_EXCEPTION_HANDLER *PRTL_EXCEPTION_HANDLER;
-
-typedef RTL_EXCEPTION_HANDLER __C_SPECIFIC_HANDLER;
-typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
-
-typedef
-VOID
-(NTAPI SET_C_SPECIFIC_HANDLER)(
-    _In_ P__C_SPECIFIC_HANDLER Handler
-    );
-typedef SET_C_SPECIFIC_HANDLER *PSET_C_SPECIFIC_HANDLER;
-
-typedef
-VOID
-(__cdecl __SECURITY_INIT_COOKIE)(
-    VOID
-    );
-typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
-#endif
-
 
 #ifdef PH_WINDOWS
 //
