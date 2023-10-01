@@ -157,9 +157,9 @@ Abstract:
 #include "PerfectHashPrimes.h"
 #include "PerfectHashPrivate.h"
 #include "PerfectHashAllocator.h"
-#ifndef PH_CU
+//#ifndef PH_CU
 #include "Cu.h"
-#endif
+//#endif
 #include "PerfectHashCu.h"
 #include "Graph.h"
 #include "Math.h"

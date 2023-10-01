@@ -22,7 +22,7 @@ Abstract:
 //
 
 #define PERFECT_HASH_CU_BLOCKS_PER_GRID 32
-#define PERFECT_HASH_CU_THREADS_PER_BLOCK 512
+#define PERFECT_HASH_CU_THREADS_PER_BLOCK 128
 #define PERFECT_HASH_CU_WDDM_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS 1500
 #define PERFECT_HASH_CU_RANDOM_NUMBER_BATCH_SIZE 16384
 #define PERFECT_HASH_CU_RNG_DEFAULT PerfectHashCuRngPhilox43210Id
@@ -129,10 +129,18 @@ typedef PH_CU_DEVICES *PPH_CU_DEVICES;
 //  4. Runtime target in milliseconds for WDDM drivers only.
 //
 
+#if 0
 #define PERFECT_HASH_CUDA_KERNELS_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
                                                                         \
     FIRST_ENTRY(                                                        \
         LoadKeyStats,                                                   \
+        PERFECT_HASH_CU_BLOCKS_PER_GRID,                                \
+        PERFECT_HASH_CU_THREADS_PER_BLOCK,                              \
+        PERFECT_HASH_CU_WDDM_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS      \
+    )                                                                   \
+                                                                        \
+    ENTRY(                                                              \
+        HashKeys,                                                       \
         PERFECT_HASH_CU_BLOCKS_PER_GRID,                                \
         PERFECT_HASH_CU_THREADS_PER_BLOCK,                              \
         PERFECT_HASH_CU_WDDM_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS      \
@@ -151,6 +159,15 @@ typedef PH_CU_DEVICES *PPH_CU_DEVICES;
         PERFECT_HASH_CU_THREADS_PER_BLOCK,                              \
         PERFECT_HASH_CU_WDDM_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS      \
     )
+#else
+#define PERFECT_HASH_CUDA_KERNELS_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+                                                                        \
+    FIRST_ENTRY(                                                        \
+        HashKeys,                                                       \
+        PERFECT_HASH_CU_BLOCKS_PER_GRID,                                \
+        PERFECT_HASH_CU_THREADS_PER_BLOCK,                              \
+        PERFECT_HASH_CU_WDDM_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS      \
+    )
 
 #define PERFECT_HASH_CUDA_KERNELS_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_CUDA_KERNELS_TABLE(ENTRY, ENTRY, ENTRY)
@@ -158,6 +175,7 @@ typedef PH_CU_DEVICES *PPH_CU_DEVICES;
 #define EXPAND_AS_CUDA_KERNEL_ENUM(Name, BlocksPerGrid, ThreadsPerBlock, \
                                    RuntimeTargetInMilliseconds)          \
     PerfectHashCudaKernel##Name##Id,
+#endif
 
 typedef enum _PERFECT_HASH_CUDA_KERNEL_ID {
 

@@ -232,6 +232,7 @@ typedef const WCHAR *PCWCHAR;
 // XMM, YMM, and ZMM registers.
 //
 
+#ifndef PH_CUDA
 #ifdef PH_WINDOWS
 typedef __m128i DECLSPEC_ALIGN(XMMWORD_ALIGNMENT) XMMWORD, *PXMMWORD;
 typedef __m256i DECLSPEC_ALIGN(YMMWORD_ALIGNMENT) YMMWORD, *PYMMWORD;
@@ -243,7 +244,7 @@ C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
 typedef __m128i XMMWORD, *PXMMWORD;
 typedef __m256i YMMWORD, *PYMMWORD;
 typedef __m512i ZMMWORD, *PZMMWORD;
-#endif
+#endif // PH_WINDOWS
 
 //
 // AVX-512 masks.
@@ -253,6 +254,8 @@ typedef __mmask16 ZMASK8, *PZMASK8;
 typedef __mmask16 ZMASK16, *PZMASK16;
 typedef __mmask32 ZMASK32, *PZMASK32;
 typedef __mmask64 ZMASK64, *PZMASK64;
+
+#endif // PH_CUDA
 
 //
 // Helper structures for index tables fed to AVX512 permute routines such as
@@ -2484,12 +2487,12 @@ FindCharInUnicodeString(
 
     Count = String->Length / sizeof(WCHAR);
 
-    if (!StartAtCharOffset || StartAtCharOffset > Count) {
+    if (StartAtCharOffset >= Count) {
         Start = 0;
     }
 
     Wide = String->Buffer;
-    for (Index = 0; Index < Count; Index++, Wide++) {
+    for (Index = Start; Index < Count; Index++, Wide++) {
         if (*Wide == Char) {
             Found = TRUE;
             break;
@@ -3450,6 +3453,11 @@ ResetSRWLock(PSRWLOCK Lock)
 #define TLS_KEY_TYPE ULONG
 #else
 #define TLS_KEY_TYPE pthread_key_t
+#endif
+
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -12,20 +12,32 @@ set(Header_Files
 source_group("Header Files" FILES ${Header_Files})
 
 set(Source_Files
-    #"Graph.cu"
+    "Graph.cu"
     #"Graph3.cu"
-    "Graph4.cu"
+    #"Graph4.cu"
     #"GraphThrust.cu"
 )
 source_group("Source Files" FILES ${Source_Files})
 
+set(Resource_Files
+    "PerfectHashCuda.def"
+)
+source_group("Resource Files" FILES ${Resource_Files})
+
 set(ALL_FILES
     ${Header_Files}
     ${Source_Files}
+    ${Resource_Files}
 )
 
-add_library(${PROJECT_NAME} OBJECT ${ALL_FILES})
-set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_PTX_COMPILATION ON)
+add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
+#set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_PTX_COMPILATION ON)
+
+set_target_properties(${PROJECT_NAME}
+   PROPERTIES
+       CUDA_SEPARABLE_COMPILATION ON
+       CUDA_RESOLVE_DEVICE_SYMBOLS ON
+)
 
 ################################################################################
 # Target
@@ -52,6 +64,7 @@ target_compile_definitions(
     ${PROJECT_NAME}
     PRIVATE
     "_PERFECT_HASH_CUDA_INTERNAL_BUILD"
+    "_PERFECT_HASH_INTERNAL_BUILD"
     "PH_CUDA"
 )
 
@@ -71,7 +84,7 @@ if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
         --restrict
         --ptxas-options=-v
         --machine 64
-        --keep
+        -I../../include
     )
     target_compile_options_config(Debug "-g;-G")
     target_compile_options_not_config(Debug "-lineinfo")

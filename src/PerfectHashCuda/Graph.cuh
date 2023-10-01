@@ -77,8 +77,8 @@ Abstract:
 #define CU_STREAM cudaStream_t
 #define CU_EVENT cudaEvent_t
 
-typedef CU_STREAM *PCU_STREAM;
-typedef CU_EVENT *PCU_EVENT;
+//typedef CU_STREAM *PCU_STREAM;
+//typedef CU_EVENT *PCU_EVENT;
 
 #define CU_SUCCEEDED(Result) (Result == CUDA_SUCCESS)
 #define CU_FAILED(Result) (Result != CUDA_SUCCESS)
@@ -168,6 +168,270 @@ typedef CU_KERNEL_CONTEXT *PCU_KERNEL_CONTEXT;
                             __LINE__, \
                             CuResult)
 
+
+
+//
+// Assigned 8
+//
+
+typedef BYTE EDGE8;
+typedef BYTE ASSIGNED8;
+typedef ASSIGNED8 *PASSIGNED8;
+
+typedef BYTE KEY8;
+typedef CHAR ORDER8;
+typedef BYTE EDGE8;
+typedef BYTE VERTEX8;
+typedef BYTE DEGREE8;
+
+typedef EDGE8 *PEDGE8;
+typedef VERTEX8 *PVERTEX8;
+typedef DEGREE8 *PDEGREE8;
+
+//
+// 64-bit types.
+//
+
+typedef uint64_t KEY64;
+typedef uint64_t VERTEX64;
+typedef uint64_t DEGREE64;
+typedef uint64_t ORDER64;
+typedef KEY64 *PKEY64;
+typedef uint64_t EDGE64;
+typedef EDGE64 *PEDGE64;
+typedef VERTEX64 *PVERTEX64;
+typedef DEGREE64 *PDEGREE64;
+
+
+template<typename VertexTypeT, typename PairTypeT>
+
+class VERTEX_PAIR_CU {
+public:
+    //VERTEX_PAIR_CU() : Vertex1{0}, Vertex2{0} {}
+
+    using VertexType = VertexTypeT;
+    using PairType = PairTypeT;
+    struct {
+        union {
+            struct {
+                union {
+                    VertexType Vertex1;
+                    VertexType LowPart;
+                };
+                union {
+                    VertexType Vertex2;
+                    VertexType HighPart;
+                };
+            };
+            union {
+                PairType AsPair;
+                PairType CombinedPart;
+            };
+        };
+    };
+
+    __host__ __device__ __forceinline__
+    bool
+    operator< (
+        const VERTEX_PAIR_CU& Right
+        ) const
+    {
+        if (Vertex1 < Right.Vertex1) {
+            return true;
+        } else if (Vertex1 == Right.Vertex1) {
+            return (Vertex2 < Right.Vertex2);
+        } else {
+            return false;
+        }
+    }
+
+    __host__ __device__ __forceinline__
+    bool
+    operator< (
+        const VERTEX_PAIR_CU* Right
+        ) const
+    {
+        return (*this < *Right);
+    }
+
+    __host__ __device__ __forceinline__
+    bool
+    operator== (
+        const VERTEX_PAIR_CU& Right
+        ) const
+    {
+        return (Vertex1 == Right.Vertex1) && (Vertex2 == Right.Vertex2);
+    }
+
+    __host__ __device__ __forceinline__
+    bool
+    operator== (
+        const VERTEX_PAIR_CU* Right
+        ) const
+    {
+        return (*this == *Right);
+    }
+
+};
+template<typename VertexType, typename PairType>
+using PVERTEX_PAIR_CU = VERTEX_PAIR_CU<VertexType, PairType> *;
+
+using VERTEX_PAIR_CU8 = VERTEX_PAIR_CU<VERTEX8, USHORT>;
+using VERTEX_PAIR_CU16 = VERTEX_PAIR_CU<VERTEX16, ULONG>;
+using VERTEX_PAIR_CU32 = VERTEX_PAIR_CU<VERTEX, ULONGLONG>;
+//using VERTEX_PAIR_CU64 = VERTEX_PAIR_CU<VERTEX64, __int128>;
+
+typedef struct _EDGE83 {
+    union {
+        struct {
+            VERTEX8 Vertex1;
+            VERTEX8 Vertex2;
+        };
+        VERTEX_PAIR_CU8 AsVertex8Pair;
+        USHORT AsUShort;
+    };
+} EDGE83, *PEDGE83;
+
+typedef struct _VERTEX83 {
+
+    //
+    // The degree of connections for this vertex.
+    //
+
+    DEGREE8 Degree;
+
+    //
+    // All edges for this vertex; an incidence list constructed via XOR'ing all
+    // edges together (aka "the XOR-trick").
+    //
+
+    EDGE8 Edges;
+
+} VERTEX83, *PVERTEX83;
+
+
+template<typename ResultType, typename KeyType, typename VertexType>
+using HashFunctionType = ResultType(*)(KeyType, PULONG Seeds, VertexType);
+
+template<typename ResultType,
+         typename KeyType,
+         typename VertexType>
+FORCEINLINE
+DEVICE
+auto
+GetHashFunctionForId(
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID Id
+    )
+{
+    switch (Id) {
+        case PerfectHashHashJenkinsFunctionId:
+            return PerfectHashTableSeededHashExCppJenkins<
+                typename ResultType,
+                typename KeyType,
+                typename VertexType>;
+
+        case PerfectHashHashMultiplyShiftRFunctionId:
+            return PerfectHashTableSeededHashExCppMultiplyShiftR<
+                typename ResultType,
+                typename KeyType,
+                typename VertexType>;
+
+        default:
+            return PerfectHashTableSeededHashExCppNull<
+                typename ResultType,
+                typename KeyType,
+                typename VertexType>;
+    }
+}
+
+template<
+    typename KeyTypeT,
+    typename VertexTypeT,
+    typename VertexPairTypeT,
+    typename Edge3TypeT,
+    typename Vertex3Type,
+    typename EdgeTypeT,
+    typename OrderTypeT,
+    typename AssignedTypeT,
+    typename ValueTypeT,
+    typename CountTypeT//,
+    //CountTypeT MaxCountT = std::numeric_limits<CountTypeT>::max()
+    >
+struct GRAPH_CU : GRAPH {
+    using KeyType = KeyTypeT;
+    using VertexType = VertexTypeT;
+    using VertexPairType = VertexPairTypeT;
+    using AssignedType = AssignedTypeT;
+    using OrderType = OrderTypeT;
+    using EdgeType = EdgeTypeT;
+    using IndexType = EdgeTypeT;
+    using Edge3Type = Edge3TypeT;
+    using ValueType = ValueTypeT;
+    using CountType = CountTypeT;
+    //using MaxCount = std::integral_constant<CountTypeT, MaxCountT>;
+};
+
+using GRAPH8 =
+    GRAPH_CU<
+        uint32_t,          // KeyType
+        VERTEX8,           // VertexType
+        VERTEX_PAIR_CU8,   // VertexPairType
+        EDGE83,            // Edge3Type
+        VERTEX83,          // Vertex3Type
+        EDGE8,             // EdgeType
+        ORDER8,            // OrderType
+        ASSIGNED8,         // AssignedType
+        int8_t,            // ValueType
+        uint8_t>;          // CountType
+        //0xf>;            // MaxCount
+using PGRAPH8 = GRAPH8*;
+
+using GRAPH16 =
+    GRAPH_CU<
+        uint32_t,           // KeyType
+        VERTEX16,           // VertexType
+        VERTEX_PAIR_CU16,   // VertexPairType
+        EDGE163,            // Edge3Type
+        VERTEX163,          // Vertex3Type
+        EDGE16,             // EdgeType
+        ORDER16,            // OrderType
+        ASSIGNED16,         // AssignedType
+        int16_t,            // ValueType
+        uint8_t>;           // CountType
+        //0xf>;             // MaxCount
+using PGRAPH16 = GRAPH16*;
+
+using GRAPH32 =
+    GRAPH_CU<
+        uint32_t,           // KeyType
+        VERTEX,             // VertexType
+        VERTEX_PAIR_CU32,   // VertexPairType
+        EDGE3,              // Edge3Type
+        VERTEX3,            // Vertex3Type
+        EDGE,               // EdgeType
+        ORDER,              // OrderType
+        ASSIGNED,           // AssignedType
+        int32_t,            // ValueType
+        uint8_t>;           // CountType
+        //0xf>;             // MaxCount
+using PGRAPH32 = GRAPH32*;
+
+#if 0
+using GRAPH64 =
+    GRAPH_CU<
+        uint64_t,           // KeyType
+        VERTEX,             // VertexType
+        VERTEX_PAIR_CU64,   // VertexPairType
+        EDGE3,              // Edge3Type
+        VERTEX3,            // Vertex3Type
+        EDGE,               // EdgeType
+        ORDER,              // OrderType
+        ASSIGNED,           // AssignedType
+        int64_t,            // ValueType
+        uint8_t,            // CountType
+        0xf>;               // MaxCount
+using PGRAPH64 = GRAPH64*;
+#endif
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

@@ -4699,3 +4699,31 @@ Abstract:
 // Invalid debugger context flags.
 //
 #define PH_E_INVALID_DEBUGGER_CONTEXT_FLAGS ((HRESULT)0xE00403EBL)
+
+//
+// MessageId: PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED
+//
+// MessageText:
+//
+// LoadSymbols failed for PerfectHashCuda.dll.
+//
+#define PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED ((HRESULT)0xE00403ECL)
+
+//
+// MessageId: PH_E_PERFECT_HASH_CUDA_DLL_LOAD_LIBRARY_FAILED
+//
+// MessageText:
+//
+// LoadLibrary failed for PerfectHashCuda.dll.
+//
+#define PH_E_PERFECT_HASH_CUDA_DLL_LOAD_LIBRARY_FAILED ((HRESULT)0xE00403EDL)
+
+//
+// MessageId: PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS
+//
+// MessageText:
+//
+// Failed to load all expected symbols from PerfectHashCuda.dll.
+//
+#define PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS ((HRESULT)0xE00403EFL)
+

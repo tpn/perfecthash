@@ -19,7 +19,9 @@ Abstract:
 // combined them, so, just typedef now.
 //
 
+#ifndef PH_CUDA
 typedef GRAPH_VTBL GRAPH_CU_VTBL;
 typedef GRAPH_CU_VTBL *PGRAPH_CU_VTBL;
+#endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

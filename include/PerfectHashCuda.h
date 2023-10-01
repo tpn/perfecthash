@@ -77,6 +77,7 @@ typedef ULONG64 *PULONG64;
 
 typedef long long *PLONGLONG;
 typedef unsigned long long *PULONGLONG;
+
 #endif
 
 //
@@ -85,10 +86,10 @@ typedef unsigned long long *PULONGLONG;
 
 typedef int2 INT2;
 typedef int4 INT4;
-typedef uint2 UINT2;
-typedef uint4 UINT4;
 typedef int2 LONG2;
 typedef int4 LONG4;
+typedef uint2 UINT2;
+typedef uint4 UINT4;
 typedef uint2 ULONG2;
 typedef uint4 ULONG4;
 typedef longlong2 LONGLONG2;
@@ -107,6 +108,8 @@ typedef LONGLONG4 *PLONGLONG4;
 typedef ULONGLONG2 *PULONGLONG2;
 typedef ULONGLONG4 *PULONGLONG4;
 
+
+#if 0
 FORCEINLINE
 VOID
 CopyMemoryInline(
@@ -195,6 +198,7 @@ ZeroMemoryInline(
 
 #define ZeroInline(Dest, Size) ZeroMemoryInline(Dest, Size, FALSE)
 #define ZeroArrayInline(Name) ZeroInline(Name, sizeof(Name))
+#endif
 
 #define AllOnesInline(Dest, Size) ZeroMemoryInline(Dest, Size, TRUE)
 
@@ -216,28 +220,29 @@ ZeroMemoryInline(
     Name##_FLAGS Flags;               \
     ULONG Reserved
 
-#define DEFINE_UNUSED_STATE(Name)                  \
-typedef union _##Name##_STATE {                    \
-    struct {                                       \
-        ULONG Unused:32;                           \
-    };                                             \
-    LONG AsLong;                                   \
-    ULONG AsULong;                                 \
-} Name##_STATE;                                    \
-C_ASSERT(sizeof(Name##_STATE) == sizeof(ULONG));   \
+#define DEFINE_UNUSED_STATE(Name)                \
+typedef union _##Name##_STATE {                  \
+    struct {                                     \
+        ULONG Unused:32;                         \
+    };                                           \
+    LONG AsLong;                                 \
+    ULONG AsULong;                               \
+} Name##_STATE;                                  \
+C_ASSERT(sizeof(Name##_STATE) == sizeof(ULONG)); \
 typedef Name##_STATE *P##Name##_STATE
 
-#define DEFINE_UNUSED_FLAGS(Name)                  \
-typedef union _##Name##_FLAGS {                    \
-    struct {                                       \
-        ULONG Unused:32;                           \
-    };                                             \
-    LONG AsLong;                                   \
-    ULONG AsULong;                                 \
-} Name##_FLAGS;                                    \
-C_ASSERT(sizeof(Name##_FLAGS) == sizeof(ULONG));   \
+#define DEFINE_UNUSED_FLAGS(Name)                \
+typedef union _##Name##_FLAGS {                  \
+    struct {                                     \
+        ULONG Unused:32;                         \
+    };                                           \
+    LONG AsLong;                                 \
+    ULONG AsULong;                               \
+} Name##_FLAGS;                                  \
+C_ASSERT(sizeof(Name##_FLAGS) == sizeof(ULONG)); \
 typedef Name##_FLAGS *P##Name##_FLAGS
 
+#if 0
 typedef enum _TYPE {
     ByteType = 0,
     ShortType = 1,
@@ -248,6 +253,7 @@ typedef enum _TYPE {
     ZmmType = 6,
 } TYPE;
 typedef TYPE *PTYPE;
+#endif
 
 
 #ifdef __cplusplus
@@ -295,6 +301,7 @@ typedef TYPE *PTYPE;
 
 #define GlobalThreadIndex() (BlockIndex.x * BlockDim.x + ThreadIndex.x)
 
+#if 0
 DEVICE
 static inline
 void
@@ -308,6 +315,7 @@ ClockBlock(
         Offset = clock64() - Start;
     }
 }
+#endif
 
 //
 // Define CUDA Device API Typedefs.
@@ -345,7 +353,6 @@ typedef struct CU_FUNCTION **PPCU_FUNCTION;
 #define CU_SUCCEEDED(Result) (Result == 0)
 #define CU_FAILED(Result) (Result != 0)
 #endif
-
 
 #ifdef __cplusplus
 } // extern "C"

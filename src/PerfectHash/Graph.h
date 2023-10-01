@@ -41,10 +41,15 @@ Abstract:
 
 #pragma once
 
+#include "stdafx.h"
+
+#if 0
 #ifndef PH_CUDA
 #include "stdafx.h"
 #else
+#include "Rtl.h"
 #include "PerfectHashPrivate.h"
+#endif
 #endif
 
 #include "GraphCounters.h"
@@ -57,6 +62,7 @@ typedef ULONG KEY;
 typedef ULONG EDGE;
 typedef ULONG VERTEX;
 typedef ULONG DEGREE;
+typedef ULONG ORDER;
 typedef KEY *PKEY;
 typedef EDGE *PEDGE;
 typedef VERTEX *PVERTEX;
@@ -1816,7 +1822,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     LONG CuDeviceIndex;
 
-    ULONG Padding1;
+    //
+    // Capture the hash function ID so that CUDA kernels can resolve the correct
+    // hash function.
+    //
+
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
 
     //
     // Clock related fields.
@@ -1960,13 +1971,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
 
     struct _CU_KERNEL_CONTEXT *CuKernelContext;
-
-    //
-    // A device-side Cu graph interface and corresponding vtbl pointer.
-    //
-
-    GRAPH_VTBL CuInterface;
-    PGRAPH_VTBL CuVtbl;
 
     //
     // The graph interface.

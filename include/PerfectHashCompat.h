@@ -22,6 +22,7 @@ extern "C" {
 // Standard UNIX-ey headers.
 //
 
+#ifndef PH_WINDOWS
 #include <wchar.h>
 #include <errno.h>
 #include <stdint.h>
@@ -36,7 +37,12 @@ extern "C" {
 #include <pthread.h>
 #include <cpuid.h>
 #include <x86intrin.h>
-#endif
+
+#define _Ret_reallocated_bytes_(Address, Size)
+#define _Frees_ptr_opt_
+
+#endif // PH_CUDA
+#endif // PH_WINDOWS
 
 #ifdef PH_LINUX
 #include <linux/mman.h>
@@ -56,16 +62,16 @@ extern "C" {
 #endif
 #endif // PH_LINUX
 
+#ifndef PH_CUDA
 //
 // SAL compat.
 //
 
 #include <no_sal2.h>
+#endif // PH_CUDA
+
 #define IN
 #define OUT
-
-#define _Ret_reallocated_bytes_(Address, Size)
-#define _Frees_ptr_opt_
 
 //
 // Define NT-style typedefs.
@@ -215,6 +221,7 @@ SystemTimeToFileTime(
     );
 
 
+#ifndef PH_CUDA
 #define __cdecl
 #define __stdcall
 #ifndef __callback
@@ -226,6 +233,8 @@ SystemTimeToFileTime(
 #define CALLBACK
 #define WINBASEAPI
 #define STDAPICALLTYPE
+#endif // PH_CUDA
+
 
 #ifndef FORCEINLINE
 #ifndef PH_WINDOWS
@@ -235,6 +244,7 @@ SystemTimeToFileTime(
 #endif
 #endif
 
+#ifndef PH_CUDA
 #if defined(__GNUC__)
 #if (__GNUC__ < 11)
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
@@ -243,6 +253,7 @@ SystemTimeToFileTime(
 #endif
 #else
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
+#endif
 #endif
 
 #ifndef C_ASSERT
@@ -253,6 +264,7 @@ typedef _Return_type_success_(return >= 0) LONG HRESULT;
 typedef HRESULT *PHRESULT;
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 
+#ifndef PH_CUDA
 #define S_OK            ((HRESULT)0L)
 #define S_FALSE         ((HRESULT)1L)
 #define E_POINTER       _HRESULT_TYPEDEF_(0x80004003L)
@@ -304,6 +316,7 @@ typedef GUID IID;
 
 #define RTL_NUMBER_OF_V1(A) (sizeof(A)/sizeof((A)[0]))
 #define ARRAYSIZE(A) RTL_NUMBER_OF_V1(A)
+#endif // PH_CUDA
 
 typedef union _LARGE_INTEGER {
     struct {
@@ -414,6 +427,7 @@ typedef RTL_CRITICAL_SECTION CRITICAL_SECTION;
 
 typedef CRITICAL_SECTION *PCRITICAL_SECTION, *LPCRITICAL_SECTION;
 
+#ifndef PH_CUDA
 WINBASEAPI
 VOID
 WINAPI
@@ -1667,8 +1681,14 @@ InterlockedCompareExchangePointer(
     );
 
 
+#ifndef PH_CUDA
+#ifndef __popcnt
 #define __popcnt __builtin_popcount
+#endif
+#ifndef __popcnt64
 #define __popcnt64 __builtin_popcountll
+#endif
+#endif
 #ifdef PH_COMPILER_GCC
 #define _tzcnt_u32 __builtin_ctz
 #define _tzcnt_u64 __builtin_ctzll
@@ -2589,7 +2609,9 @@ SetConsoleCtrlHandler(
     );
 
 
+#ifndef PH_CUDA
 #define MemoryBarrier()
+#endif
 
 #ifndef TLS_OUT_OF_INDEXES
 #define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
@@ -3077,6 +3099,7 @@ CommandLineArgvAToArgvW(
     _In_reads_(NumberOfArguments) PSTR *ArgvA
     );
 
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

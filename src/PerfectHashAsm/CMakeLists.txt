@@ -57,7 +57,8 @@ target_compile_options(
     /I../../include
 )
 
-target_compile_options_config(Debug /Zi)
+# ^ This appears to have stopped working, so hack it in here.
+set(CMAKE_ASM_MASM_FLAGS "${CMAKE_ASM_MASM_FLAGS} /Zd /Zf /WX /nologo /I${CMAKE_SOURCE_DIR}/../include")
 
 ################################################################################
 # Dependencies

@@ -18,8 +18,10 @@ extern LOAD_SYMBOLS LoadSymbols;
 
 #ifdef PH_WINDOWS
 #define PH_NVCUDA_DLL_NAME "nvcuda.dll"
+#define PERFECT_HASH_CUDA_DLL_NAME "PerfectHashCuda.dll"
 #else
 #define PH_NVCUDA_DLL_NAME "libcuda.so"
+#define PERFECT_HASH_CUDA_DLL_NAME "PerfectHashCuda.so"
 #endif
 
 //
@@ -72,6 +74,8 @@ Return Value:
     ULONG NumberOfCuResolvedSymbols;
     ULONG NumberOfCuRandNames;
     ULONG NumberOfCuRandResolvedSymbols;
+    ULONG NumberOfPerfectHashCudaNames;
+    ULONG NumberOfPerfectHashCudaResolvedSymbols;
 #ifdef PH_WINDOWS
     CHAR CuRandDll[] = "curand64_NM.dll";
     const BYTE CuRandDllVersionOffset = 9;
@@ -93,6 +97,12 @@ Return Value:
         CURAND_FUNCTION_TABLE_ENTRY(EXPAND_AS_CURAND_NAME)
     };
 
+#define EXPAND_AS_PERFECT_HASH_CUDA_NAME(Upper, Name) #Name,
+
+    CONST PCSZ PerfectHashCudaNames[] = {
+        PERFECT_HASH_CUDA_FUNCTION_TABLE_ENTRY(EXPAND_AS_PERFECT_HASH_CUDA_NAME)
+    };
+
     //
     // Define appropriately-sized bitmaps we can passed to LoadSymbols().
     //
@@ -104,6 +114,10 @@ Return Value:
     ULONG CuRandBitmapBuffer[(ALIGN_UP(ARRAYSIZE(CuRandNames),
                              sizeof(ULONG) << 3) >> 5)+1] = { 0 };
     RTL_BITMAP CuRandFailedBitmap;
+
+    ULONG PerfectHashCudaBitmapBuffer[(ALIGN_UP(ARRAYSIZE(PerfectHashCudaNames),
+                                      sizeof(ULONG) << 3) >> 5)+1] = { 0 };
+    RTL_BITMAP PerfectHashCudaFailedBitmap;
 
     //
     // Validate arguments.
@@ -271,6 +285,49 @@ Return Value:
 
     if (Cu->NumberOfCuRandFunctions != NumberOfCuRandResolvedSymbols) {
         Result = PH_E_CURAND_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS;
+        goto Error;
+    }
+
+    //
+    // Load PerfectHashCuda.dll's symbols.
+    //
+
+    PerfectHashCudaFailedBitmap.SizeOfBitMap = ARRAYSIZE(PerfectHashCudaNames) + 1;
+    PerfectHashCudaFailedBitmap.Buffer = (PULONG)&PerfectHashCudaBitmapBuffer;
+
+    NumberOfPerfectHashCudaNames = ARRAYSIZE(PerfectHashCudaNames);
+
+    Cu->NumberOfPerfectHashCudaFunctions = (
+        sizeof(Cu->PerfectHashCudaFunctions) /
+        sizeof(ULONG_PTR)
+    );
+    ASSERT(Cu->NumberOfPerfectHashCudaFunctions == NumberOfPerfectHashCudaNames);
+
+    Module = LoadLibraryA(PERFECT_HASH_CUDA_DLL_NAME);
+    if (!IsValidHandle(Module)) {
+        Result = PH_E_PERFECT_HASH_CUDA_DLL_LOAD_LIBRARY_FAILED;
+        goto Error;
+    }
+    Cu->PerfectHashCudaModule = Module;
+
+    Success = LoadSymbols(PerfectHashCudaNames,
+                          NumberOfPerfectHashCudaNames,
+                          (PULONG_PTR)&Cu->PerfectHashCudaFunctions,
+                          Cu->NumberOfPerfectHashCudaFunctions,
+                          Module,
+                          &PerfectHashCudaFailedBitmap,
+                          &NumberOfPerfectHashCudaResolvedSymbols);
+
+    if (!Success) {
+        Result = PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED;
+        goto Error;
+    }
+
+    if (Cu->NumberOfPerfectHashCudaFunctions !=
+        NumberOfPerfectHashCudaResolvedSymbols)
+    {
+        Result =
+            PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS;
         goto Error;
     }
 
@@ -488,6 +545,15 @@ Return Value:
     //
 
     ASSERT(Cu->SizeOfStruct == sizeof(*Cu));
+
+    //
+    // Release the PerfectHashCuda.dll module if applicable.
+    //
+
+    if (Cu->PerfectHashCudaModule != NULL) {
+        FreeLibrary(Cu->PerfectHashCudaModule);
+        Cu->PerfectHashCudaModule = NULL;
+    }
 
     //
     // Release the curand module if applicable.
