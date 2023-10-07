@@ -48,8 +48,7 @@ CuInitialize(
 
 Routine Description:
 
-    Initializes a graph structure.  This is a relatively simple method that
-    just primes the COM scaffolding.
+    Initializes a CU instance.
 
 Arguments:
 

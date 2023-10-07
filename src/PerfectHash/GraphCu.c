@@ -1238,6 +1238,13 @@ Return Value:
     }
 
     //
+    // Wait for completion.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    //
     // Copy the device graph back to the host.
     //
 
@@ -1277,6 +1284,9 @@ Return Value:
                                    sizeof(GRAPH),
                                    SolveContext->Stream);
     CU_CHECK(CuResult, MemcpyDtoHAsync);
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
 
     if (Graph->CuIsAcyclicResult != S_OK) {
         Result = Graph->CuIsAcyclicResult;
