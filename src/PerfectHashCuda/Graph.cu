@@ -275,6 +275,7 @@ GraphCuHashKeys(
         Key = Keys[Index];
         Hash = HashFunction(Key, Seeds, Mask);
 
+#if 0
         //
         // For each active thread in the group, check if any thread has
         // the same vertex value as any other thread.
@@ -311,6 +312,7 @@ GraphCuHashKeys(
         if (Collision) {
             break;
         }
+#endif
 
         VertexPairs[Index] = Hash;
 
@@ -377,9 +379,9 @@ HashKeys(
     Graph->CuHashKeysResult = S_OK;
     if (GlobalThreadIndex() == 0) {
         printf("Graph->CuHashKeysResult: %d\n", Graph->CuHashKeysResult);
-        printf("Graph->Seeds[0]: %d\n", Graph->Seeds[0]);
-        printf("Graph->Seeds[1]: %d\n", Graph->Seeds[1]);
-        printf("Graph->Seeds[2]: %d\n", Graph->Seeds[2]);
+        printf("Graph->Seeds[0]: 0x%08x\n", Graph->Seeds[0]);
+        printf("Graph->Seeds[1]: 0x%08x\n", Graph->Seeds[1]);
+        printf("Graph->Seeds[2]: 0x%08x\n", Graph->Seeds[2]);
     }
 
     if (IsUsingAssigned16(Graph)) {
@@ -404,6 +406,38 @@ AddKeysToGraph(
     return;
 }
 
+
+template<typename VertexPairType>
+DEVICE
+bool
+VertexPairNotEqual(
+    const VertexPairType Left,
+    const VertexPairType Right
+    )
+{
+    return (
+        Left.Vertex1 != Right.Vertex1 &&
+        Left.Vertex2 != Right.Vertex2
+    );
+    //return (Left.AsULongLong != Right.AsULongLong);
+}
+
+template<typename VertexPairType>
+DEVICE
+bool
+VertexPairEqual(
+    const VertexPairType Left,
+    const VertexPairType Right
+    )
+{
+    return (
+        Left.Vertex1 == Right.Vertex1 &&
+        Left.Vertex2 == Right.Vertex2
+    );
+    //return (Left.AsULongLong == Right.AsULongLong);
+}
+
+
 template<typename GraphType>
 HOST
 VOID
@@ -411,6 +445,7 @@ GraphCuIsAcyclic(
     GraphType* Graph
     )
 {
+    //uint32_t UniqueCount;
     typename GraphType::VertexPairType *VertexPairs;
     typename GraphType::VertexPairType *VertexPairsEnd;
     typename GraphType::VertexPairType *VertexPairsUnique;
@@ -418,13 +453,48 @@ GraphCuIsAcyclic(
 
     Graph->CuIsAcyclicResult = S_OK;
 
+
     VertexPairs = (typename GraphType::VertexPairType *)Graph->VertexPairs;
     VertexPairsEnd = VertexPairs + NumberOfKeys;
+
+    printf("111 Starting thrust::unique...\n");
+    VertexPairsUnique = thrust::unique(
+        thrust::device,
+        VertexPairs,
+        VertexPairsEnd
+    );
+    printf("111 Finished thrust::unique...\n");
+
+    if (VertexPairsUnique != VertexPairsEnd) {
+        printf("111 VertexPairsUnique != VertexPairsEnd!\n");
+        Graph->CuIsAcyclicResult = PH_E_GRAPH_CYCLIC_FAILURE;
+    } else {
+        printf("111 VertexPairsUnique == VertexPairsEnd!\n");
+    }
+
+    printf("VertexPairs[0].Vertex1: %d\n", VertexPairs[0].Vertex1);
+    printf("VertexPairs[0].Vertex2: %d\n", VertexPairs[0].Vertex2);
+    printf("VertexPairs[100].Vertex1: %d\n", VertexPairs[100].Vertex1);
+    printf("VertexPairs[100].Vertex2: %d\n", VertexPairs[100].Vertex2);
+    printf("VertexPairsEnd[0].Vertex1: %d\n", VertexPairsEnd[0].Vertex1);
+    printf("VertexPairsEnd[0].Vertex2: %d\n", VertexPairsEnd[0].Vertex2);
     printf("Number of keys: %d\n", NumberOfKeys);
 
     printf("Starting thrust::sort...\n");
     thrust::sort(thrust::device, VertexPairs, VertexPairsEnd);
     printf("Finished thrust sort...\n");
+    printf("VertexPairs[0].Vertex1: %d\n", VertexPairs[0].Vertex1);
+    printf("VertexPairs[0].Vertex2: %d\n", VertexPairs[0].Vertex2);
+    printf("VertexPairs[100].Vertex1: %d\n", VertexPairs[100].Vertex1);
+    printf("VertexPairs[100].Vertex2: %d\n", VertexPairs[100].Vertex2);
+    printf("VertexPairsEnd[0].Vertex1: %d\n", VertexPairsEnd[0].Vertex1);
+    printf("VertexPairsEnd[0].Vertex2: %d\n", VertexPairsEnd[0].Vertex2);
+
+    for (uint32_t i = 0; i < NumberOfKeys; i++) {
+        printf("%d,%d\n",
+               VertexPairs[i].Vertex1,
+               VertexPairs[i].Vertex2);
+    }
 
     printf("Starting thrust::unique...\n");
     VertexPairsUnique = thrust::unique(
@@ -440,6 +510,25 @@ GraphCuIsAcyclic(
     } else {
         printf("VertexPairsUnique == VertexPairsEnd!\n");
     }
+
+#if 0
+    UniqueCount = thrust::inner_product(
+        thrust::device,
+        VertexPairs,
+        VertexPairsEnd - 1,
+        VertexPairs + 1,
+        ULONG(1),
+        thrust::plus<ULONG>(),
+        VertexPairNotEqual<typename GraphType::VertexPairType>
+    );
+
+    printf("VertexPair unique count: %d, num keys: %d\n",
+           UniqueCount, NumberOfKeys);
+#endif
+
+    auto diff = thrust::distance(VertexPairs, VertexPairsEnd);
+    printf("diff: %td\n", diff);
+
 }
 
 EXTERN_C
