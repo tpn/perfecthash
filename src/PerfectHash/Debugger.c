@@ -16,7 +16,6 @@ Abstract:
 
 #include "stdafx.h"
 
-#if 0
 #ifdef PH_WINDOWS
 #error This file is not for Windows.
 #endif
@@ -681,5 +680,4 @@ MaybeSwitchBackToGdb (
     DoDebuggerAction(Context, DebuggerMaybeSwitchBackToGdbDisposition);
 }
 
-#endif
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

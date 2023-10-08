@@ -1961,6 +1961,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     volatile ULONG *CountsDevice;
 
     //
+    // CUDA vertex locks.
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    PVOID VertexLocks;
+
+    //
     // Seed masks for the current hash function.
     //
 

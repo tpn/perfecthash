@@ -46,10 +46,10 @@ elseif (IS_WINDOWS)
         /Wall       # All warnings
         /FC         # Use full paths
         /GS-        # No security checks
-        /FR         # Generate browse info
+        #/FR         # Generate browse info
     )
 
-    target_compile_options_config(Debug /ZI)
+    target_compile_options_config(Debug /ZI /Od /Ob0)
     target_compile_options_not_config(Debug /Zi)
 
     target_compile_definitions(${PROJECT_NAME} PUBLIC _WINDOWS _UNICODE UNICODE)
@@ -66,6 +66,7 @@ elseif (IS_WINDOWS)
         /NXCOMPAT               # Data execution prevention
         chkstk.obj              # Link with chkstk.obj
         bufferoverflowU.lib     # Link with bufferoverflowU.lib
+        #libcmtd.lib             # Link with libcmtd.lib
     )
 
     target_link_options_not_config(

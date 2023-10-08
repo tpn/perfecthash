@@ -128,7 +128,11 @@ CreateGlobalComponent(
 
     TlsContext = PerfectHashTlsEnsureContext();
 
+    ASSERT(TlsContext->Flags.GlobalComponentLockAcquired == FALSE);
+
     AcquireGlobalComponentsLockExclusive();
+
+    TlsContext->Flags.GlobalComponentLockAcquired = TRUE;
 
     InitOnce = GetGlobalComponentInitOnce(Id);
 
@@ -141,6 +145,8 @@ CreateGlobalComponent(
                                   PPV(&Component));
 
     ReleaseGlobalComponentsLockExclusive();
+
+    TlsContext->Flags.GlobalComponentLockAcquired = FALSE;
 
     if (!Success) {
         SYS_ERROR(InitOnceExecuteOnce);
@@ -174,6 +180,7 @@ CreateComponent(
     SIZE_T Index;
     SIZE_T NumberOfFunctions;
     SIZE_T InterfaceSizeInBytes;
+    BOOLEAN AcquiredGlobalLock;
     PULONG_PTR DestFunction;
     PULONG_PTR SourceFunction;
     PCOMPONENT Component;
@@ -272,11 +279,21 @@ CreateComponent(
             }
             TlsContext->LastResult = Result;
             Unknown->Vtbl->Release(Unknown);
-            AcquireGlobalComponentsLockExclusive();
+            //
+            // Make sure we don't attempt to recursively exclusively acquire
+            // the global components lock.
+            //
+            AcquiredGlobalLock = FALSE;
+            if (!TlsContext->Flags.GlobalComponentLockAcquired) {
+                AcquireGlobalComponentsLockExclusive();
+                AcquiredGlobalLock = TRUE;
+            }
             if (GlobalComponents.FirstComponent == Component) {
                 GlobalComponents.FirstComponent = NULL;
             }
-            ReleaseGlobalComponentsLockExclusive();
+            if (AcquiredGlobalLock) {
+                ReleaseGlobalComponentsLockExclusive();
+            }
             Component = NULL;
         }
     }

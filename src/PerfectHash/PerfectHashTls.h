@@ -39,10 +39,17 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         ULONG CreateCuGraph:1;
 
         //
+        // When set, indicates the global component lock has been exclusively
+        // acquired.
+        //
+
+        ULONG GlobalComponentLockAcquired:1;
+
+        //
         // Unused bits.  (Consume these before the Unused2 bits.)
         //
 
-        ULONG Unused1:4;
+        ULONG Unused1:3;
 
         //
         // The following bits, when set, prevent the global component logic
