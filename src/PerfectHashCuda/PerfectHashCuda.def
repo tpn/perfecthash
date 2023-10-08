@@ -1,4 +1,6 @@
 LIBRARY PerfectHashCuda
 EXPORTS
     HashKeys
+    HashKeysHost
+    AddHashedKeysHost
     IsGraphAcyclicHost

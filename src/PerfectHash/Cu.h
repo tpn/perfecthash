@@ -1906,8 +1906,10 @@ typedef enum _CURAND_RNG_TYPE {
 } CURAND_RNG_TYPE;
 #else
 
-typedef enum curandRngType CURAND_RNG_TYPE;
-typedef enum curandStatus CURAND_RESULT;
+#define CURAND_RNG_TYPE curandRngType
+#define CURAND_RESULT curandStatus
+//typedef enum curandRngType CURAND_RNG_TYPE;
+//typedef enum curandStatus CURAND_RESULT;
 
 #endif
 
@@ -2062,18 +2064,33 @@ typedef CU_OCCUPANCY *PCU_OCCUPANCY;
 //
 
 typedef
-_Must_inspect_result_
 VOID
 (PERFECT_HASH_CUDA_HASH_KEYS)(
-    _Inout_ struct _GRAPH *Graph
+    _Inout_ struct _GRAPH *Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
     );
 typedef PERFECT_HASH_CUDA_HASH_KEYS *PPERFECT_HASH_CUDA_HASH_KEYS;
 
 typedef
-_Must_inspect_result_
+VOID
+(PERFECT_HASH_CUDA_ADD_HASHED_KEYS)(
+    _Inout_ struct _GRAPH *Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    );
+typedef PERFECT_HASH_CUDA_ADD_HASHED_KEYS
+      *PPERFECT_HASH_CUDA_ADD_HASHED_KEYS;
+
+typedef
 VOID
 (PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC)(
-    _Inout_ struct _GRAPH *Graph
+    _Inout_ struct _GRAPH *Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
     );
 typedef PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC
       *PPERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC;
@@ -2085,7 +2102,10 @@ typedef PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC
 #define PERFECT_HASH_CUDA_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
                                                                          \
     FIRST_ENTRY(HASH_KEYS,                                               \
-                HashKeys)                                                \
+                HashKeysHost)                                            \
+                                                                         \
+    ENTRY(ADD_HASHED_KEYS,                                               \
+          AddHashedKeysHost)                                             \
                                                                          \
     LAST_ENTRY(IS_GRAPH_ACYCLIC,                                         \
                IsGraphAcyclicHost)

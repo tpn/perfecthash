@@ -48,6 +48,12 @@ extern "C" {
 #define PATHSEP_A  '/'
 #endif
 
+#ifdef PH_WINDOWS
+EXTERN_C
+size_t __cdecl __imp_wcslen(_In_z_ wchar_t const *s);
+#define wcslen __imp_wcslen
+#endif
+
 //
 // NT typedefs.
 //
@@ -405,6 +411,7 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define FORCEINLINE static inline __attribute__((always_inline))
 #define DECLSPEC_NOINLINE __attribute__((noinline))
 #define NOINLINE __attribute__((noinline))
+#define INLINE inline
 
 #endif
 

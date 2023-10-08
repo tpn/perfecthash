@@ -1058,4 +1058,14 @@
 #define _Field_z_
 #endif
 
+#ifdef _Ret_reallocated_bytes_
+#undef _Ret_reallocated_bytes_
+#endif
+#define _Ret_reallocated_bytes_(Address, Size)
+
+#ifdef _Frees_ptr_opt_
+#undef _Frees_ptr_opt_
+#endif
+#define _Frees_ptr_opt_
+
 #endif /* _NO_SAL_2_H_ */

@@ -71,7 +71,7 @@ target_compile_definitions(
 ################################################################################
 # Compile and link options
 ################################################################################
-if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
+#if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
     target_compile_options(
         ${PROJECT_NAME}
         PRIVATE
@@ -91,7 +91,7 @@ if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
 
     target_compile_definitions_config(Debug _DEBUG)
     target_compile_definitions_not_config(Debug NDEBUG)
-endif()
+#endif()
 
 
 ################################################################################

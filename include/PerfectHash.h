@@ -181,6 +181,10 @@ typedef union _ULONG_BYTES {
 
     LONG AsLong;
     ULONG AsULong;
+    BYTE Bytes[4];
+    CHAR Chars[4];
+    SHORT Words[2];
+    USHORT UWords[2];
 } ULONG_BYTES;
 C_ASSERT(sizeof(ULONG_BYTES) == sizeof(ULONG));
 typedef ULONG_BYTES *PULONG_BYTES;
@@ -344,7 +348,7 @@ PerfectHashGetCurrentCpuArch(
     VOID
     )
 {
-#ifdef _M_AMD64
+#if defined(_M_AMD64)
     return PerfectHashx64CpuArchId;
 #elif defined(_M_IX86)
     return PerfectHashx86CpuArchId;
@@ -355,7 +359,9 @@ PerfectHashGetCurrentCpuArch(
 #elif defined(__CUDA_ARCH__)
     return PerfectHashCudaArchId;
 #else
-#error Unknown CPU architecture.
+#ifdef PH_CUDA
+    return PerfectHashCudaCpuArchId;
+#endif
 #endif
 }
 

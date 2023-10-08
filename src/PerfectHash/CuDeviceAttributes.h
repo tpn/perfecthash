@@ -15,7 +15,143 @@ Abstract:
 
 #pragma once
 
+#define CU_DEVICE_ATTRIBUTE_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
+    FIRST_ENTRY(MaxThreadsPerBlock)                               \
+    ENTRY(MaxBlockDimX)                                           \
+    ENTRY(MaxBlockDimY)                                           \
+    ENTRY(MaxBlockDimZ)                                           \
+    ENTRY(MaxGridDimX)                                            \
+    ENTRY(MaxGridDimY)                                            \
+    ENTRY(MaxGridDimZ)                                            \
+    ENTRY(MaxSharedMemoryPerBlock)                                \
+    ENTRY(TotalConstantMemory)                                    \
+    ENTRY(WarpSize)                                               \
+    ENTRY(MaxPitch)                                               \
+    ENTRY(MaxRegistersPerBlock)                                   \
+    ENTRY(ClockRate)                                              \
+    ENTRY(TextureAlignment)                                       \
+    ENTRY(GpuOverlap)                                             \
+    ENTRY(MultiprocessorCount)                                    \
+    ENTRY(KernelExecTimeout)                                      \
+    ENTRY(Integrated)                                             \
+    ENTRY(CanMapHostMemory)                                       \
+    ENTRY(ComputeMode)                                            \
+    ENTRY(MaximumTexture1DWidth)                                  \
+    ENTRY(MaximumTexture2DWidth)                                  \
+    ENTRY(MaximumTexture2DHeight)                                 \
+    ENTRY(MaximumTexture3DWidth)                                  \
+    ENTRY(MaximumTexture3DHeight)                                 \
+    ENTRY(MaximumTexture3DDepth)                                  \
+    ENTRY(MaximumTexture2DArrayWidth)                             \
+    ENTRY(MaximumTexture2DArrayHeight)                            \
+    ENTRY(MaximumTexture2DArrayNumslices)                         \
+    ENTRY(SurfaceAlignment)                                       \
+    ENTRY(ConcurrentKernels)                                      \
+    ENTRY(EccEnabled)                                             \
+    ENTRY(PciBusId)                                               \
+    ENTRY(PciDeviceId)                                            \
+    ENTRY(TccDriver)                                              \
+    ENTRY(MemoryClockRate)                                        \
+    ENTRY(GlobalMemoryBusWidth)                                   \
+    ENTRY(L2CacheSize)                                            \
+    ENTRY(MaxThreadsPerMultiprocessor)                            \
+    ENTRY(AsyncEngineCount)                                       \
+    ENTRY(UnifiedAddressing)                                      \
+    ENTRY(MaximumTexture1DLayeredWidth)                           \
+    ENTRY(MaximumTexture1DLayeredLayers)                          \
+    ENTRY(CanTex2DGather)                                         \
+    ENTRY(MaximumTexture2DGatherWidth)                            \
+    ENTRY(MaximumTexture2DGatherHeight)                           \
+    ENTRY(MaximumTexture3DWidthAlternate)                         \
+    ENTRY(MaximumTexture3DHeightAlternate)                        \
+    ENTRY(MaximumTexture3DDepthAlternate)                         \
+    ENTRY(PciDomainId)                                            \
+    ENTRY(TexturePitchAlignment)                                  \
+    ENTRY(MaximumTexturecubemapWidth)                             \
+    ENTRY(MaximumTexturecubemapLayeredWidth)                      \
+    ENTRY(MaximumTexturecubemapLayeredLayers)                     \
+    ENTRY(MaximumSurface1DWidth)                                  \
+    ENTRY(MaximumSurface2DWidth)                                  \
+    ENTRY(MaximumSurface2DHeight)                                 \
+    ENTRY(MaximumSurface3DWidth)                                  \
+    ENTRY(MaximumSurface3DHeight)                                 \
+    ENTRY(MaximumSurface3DDepth)                                  \
+    ENTRY(MaximumSurface1DLayeredWidth)                           \
+    ENTRY(MaximumSurface1DLayeredLayers)                          \
+    ENTRY(MaximumSurface2DLayeredWidth)                           \
+    ENTRY(MaximumSurface2DLayeredHeight)                          \
+    ENTRY(MaximumSurface2DLayeredLayers)                          \
+    ENTRY(MaximumSurfacecubemapWidth)                             \
+    ENTRY(MaximumSurfacecubemapLayeredWidth)                      \
+    ENTRY(MaximumSurfacecubemapLayeredLayers)                     \
+    ENTRY(MaximumTexture1DLinearWidth)                            \
+    ENTRY(MaximumTexture2DLinearWidth)                            \
+    ENTRY(MaximumTexture2DLinearHeight)                           \
+    ENTRY(MaximumTexture2DLinearPitch)                            \
+    ENTRY(MaximumTexture2DMipmappedWidth)                         \
+    ENTRY(MaximumTexture2DMipmappedHeight)                        \
+    ENTRY(ComputeCapabilityMajor)                                 \
+    ENTRY(ComputeCapabilityMinor)                                 \
+    ENTRY(MaximumTexture1DMipmappedWidth)                         \
+    ENTRY(StreamPrioritiesSupported)                              \
+    ENTRY(GlobalL1CacheSupported)                                 \
+    ENTRY(LocalL1CacheSupported)                                  \
+    ENTRY(MaxSharedMemoryPerMultiprocessor)                       \
+    ENTRY(MaxRegistersPerMultiprocessor)                          \
+    ENTRY(ManagedMemory)                                          \
+    ENTRY(MultiGpuBoard)                                          \
+    ENTRY(MultiGpuBoardGroupId)                                   \
+    ENTRY(HostNativeAtomicSupported)                              \
+    ENTRY(SingleToDoublePrecisionPerfRatio)                       \
+    ENTRY(PageableMemoryAccess)                                   \
+    ENTRY(ConcurrentManagedAccess)                                \
+    ENTRY(ComputePreemptionSupported)                             \
+    ENTRY(CanUseHostPointerForRegisteredMem)                      \
+    ENTRY(CanUseStreamMemOps)                                     \
+    ENTRY(CanUse64BitStreamMemOps)                                \
+    ENTRY(CanUseStreamWaitValueNor)                               \
+    ENTRY(CooperativeLaunch)                                      \
+    ENTRY(CooperativeMultiDeviceLaunch)                           \
+    ENTRY(MaxSharedMemoryPerBlockOptin)                           \
+    ENTRY(CanFlushRemoteWrites)                                   \
+    ENTRY(HostRegisterSupported)                                  \
+    ENTRY(PageableMemoryAccessUsesHostPageTables)                 \
+    ENTRY(DirectManagedMemAccessFromHost)                         \
+    ENTRY(VirtualAddressManagementSupported)                      \
+    ENTRY(HandleTypePosixFileDescriptorSupported)                 \
+    ENTRY(HandleTypeWin32HandleSupported)                         \
+    ENTRY(HandleTypeWin32KmtHandleSupported)                      \
+    ENTRY(MaxBlocksPerMultiprocessor)                             \
+    ENTRY(GenericCompressionSupported)                            \
+    ENTRY(MaxPersistingL2CacheSize)                               \
+    ENTRY(MaxAccessPolicyWindowSize)                              \
+    ENTRY(GPUDirectRDMASupportedWithCUDAVMM)                      \
+    ENTRY(ReservedSharedMemoryPerBlock)                           \
+    ENTRY(SparseCUDAArraysSupported)                              \
+    ENTRY(ReadOnlyHostRegisterSupported)                          \
+    ENTRY(TimelineSemaphoreInteropSupported)                      \
+    ENTRY(MemoryPoolsSupported)                                   \
+    ENTRY(GPUDirectRDMASupported)                                 \
+    ENTRY(GPUDirectRDMAFlushWritesOptions)                        \
+    ENTRY(GPUDirectRDMANoWritesOrdering)                          \
+    ENTRY(MemPoolSupportedHandleTypes)                            \
+    ENTRY(ClusterLaunchSupported)                                 \
+    ENTRY(DeferredMappingCUDAArraysSupported)                     \
+    ENTRY(CanUse64BitStreamMemOpsV2)                              \
+    ENTRY(CanUseStreamWaitValueNorV2)                             \
+    LAST_ENTRY(DMABufSupported)
+
+#define EXPAND_AS_CU_DEVICE_ATTRIBUTE_STRUCT(Name) ULONG Name;
+
+#define CU_DEVICE_ATTRIBUTE_TABLE_ENTRY(ENTRY) \
+    CU_DEVICE_ATTRIBUTE_TABLE(ENTRY, ENTRY, ENTRY)
+
+
 typedef struct _CU_DEVICE_ATTRIBUTES {
+    CU_DEVICE_ATTRIBUTE_TABLE_ENTRY(EXPAND_AS_CU_DEVICE_ATTRIBUTE_STRUCT)
+} CU_DEVICE_ATTRIBUTES, *PCU_DEVICE_ATTRIBUTES;
+
+typedef struct _CU_DEVICE_ATTRIBUTES_OLD {
     ULONG MaxThreadsPerBlock;
     ULONG MaxBlockDimX;
     ULONG MaxBlockDimY;
@@ -140,7 +276,10 @@ typedef struct _CU_DEVICE_ATTRIBUTES {
     ULONG CanUse64BitStreamMemOpsV2;
     ULONG CanUseStreamWaitValueNorV2;
     ULONG DMABufSupported;
-} CU_DEVICE_ATTRIBUTES;
+} CU_DEVICE_ATTRIBUTES_OLD;
 typedef CU_DEVICE_ATTRIBUTES *PCU_DEVICE_ATTRIBUTES;
+
+C_ASSERT(sizeof(CU_DEVICE_ATTRIBUTES) == sizeof(CU_DEVICE_ATTRIBUTES_OLD));
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

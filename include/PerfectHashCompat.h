@@ -62,13 +62,11 @@ extern "C" {
 #endif
 #endif // PH_LINUX
 
-#ifndef PH_CUDA
 //
 // SAL compat.
 //
 
 #include <no_sal2.h>
-#endif // PH_CUDA
 
 #define IN
 #define OUT
@@ -221,7 +219,7 @@ SystemTimeToFileTime(
     );
 
 
-#ifndef PH_CUDA
+#ifndef PH_WINDOWS
 #define __cdecl
 #define __stdcall
 #ifndef __callback
@@ -233,7 +231,7 @@ SystemTimeToFileTime(
 #define CALLBACK
 #define WINBASEAPI
 #define STDAPICALLTYPE
-#endif // PH_CUDA
+#endif // PH_WINDOWS
 
 
 #ifndef FORCEINLINE
@@ -264,7 +262,7 @@ typedef _Return_type_success_(return >= 0) LONG HRESULT;
 typedef HRESULT *PHRESULT;
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 
-#ifndef PH_CUDA
+#if !defined(PH_WINDOWS)
 #define S_OK            ((HRESULT)0L)
 #define S_FALSE         ((HRESULT)1L)
 #define E_POINTER       _HRESULT_TYPEDEF_(0x80004003L)
@@ -316,7 +314,7 @@ typedef GUID IID;
 
 #define RTL_NUMBER_OF_V1(A) (sizeof(A)/sizeof((A)[0]))
 #define ARRAYSIZE(A) RTL_NUMBER_OF_V1(A)
-#endif // PH_CUDA
+#endif // PH_WINDOWS
 
 typedef union _LARGE_INTEGER {
     struct {
@@ -427,7 +425,7 @@ typedef RTL_CRITICAL_SECTION CRITICAL_SECTION;
 
 typedef CRITICAL_SECTION *PCRITICAL_SECTION, *LPCRITICAL_SECTION;
 
-#ifndef PH_CUDA
+#ifndef PH_WINDOWS
 WINBASEAPI
 VOID
 WINAPI
@@ -1258,7 +1256,7 @@ InitOnceComplete(
 #define __debugbreak()
 #endif
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(PH_CUDA)
 #define _M_X64
 #define _M_AMD64
 #define _AMD64_

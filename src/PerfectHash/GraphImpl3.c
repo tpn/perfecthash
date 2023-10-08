@@ -1225,7 +1225,7 @@ Return Value:
 
     START_GRAPH_COUNTER();
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = Graph->Order16Index; Index < NumberOfKeys; Index++) {
 
         //
         // Obtain the edge for the deletion order at this index.

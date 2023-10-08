@@ -482,8 +482,7 @@ Return Value:
     ALLOC_MANAGED_ARRAY(Order);
     ALLOC_MANAGED_ARRAY(Assigned);
     ALLOC_MANAGED_ARRAY(Vertices3);
-
-    ALLOC_HOST_ARRAY(VertexPairs);
+    ALLOC_MANAGED_ARRAY(VertexPairs);
 
 #if 0
     ALLOC_DEVICE_ARRAY(Next);
@@ -889,7 +888,7 @@ Return Value:
                ((Info->Name##SizeInBytes >> 3) << 3));                          \
         CuResult = Cu->MemsetD8Async(                                           \
             (PVOID)Graph->Name,                                                 \
-            ~((BYTE)0),                                                         \
+            ((BYTE)~0),                                                         \
             Info->Name##SizeInBytes,                                            \
             SolveContext->Stream                                                \
         );                                                                      \
@@ -903,8 +902,7 @@ Return Value:
     ZERO_MANAGED_ARRAY(Order);
     ZERO_MANAGED_ARRAY(Assigned);
     ZERO_MANAGED_ARRAY(Vertices3);
-
-    EMPTY_ARRAY(VertexPairs);
+    EMPTY_MANAGED_ARRAY(VertexPairs);
 
     if (!IsUsingAssigned16(Graph)) {
         Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
@@ -1132,21 +1130,17 @@ Return Value:
 --*/
 {
     PCU Cu;
-    CU_DIM3 Grid = { 1, 1, 1 };
-    CU_DIM3 Block = { 1, 1, 1 };
     HRESULT Result;
     //HRESULT SolveResult;
     PGRAPH DeviceGraph;
     PGRAPH_INFO Info;
     CU_RESULT CuResult;
-    PCU_FUNCTION Function;
     ULONG SharedMemoryInBytes;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
     PDEBUGGER_CONTEXT DebuggerContext;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
-    PVOID KernelParams[1];
 
     UNREFERENCED_PARAMETER(NewGraphPointer);
 
@@ -1199,6 +1193,12 @@ Return Value:
     //
 
     SharedMemoryInBytes = 0;
+
+#if 0
+    //CU_DIM3 Grid = { 1, 1, 1 };
+    //CU_DIM3 Block = { 1, 1, 1 };
+    PCU_FUNCTION Function;
+    PVOID KernelParams[1];
     KernelParams[0] = &DeviceGraph;
 
     //
@@ -1227,6 +1227,14 @@ Return Value:
                                 KernelParams,
                                 NULL);
     CU_CHECK(CuResult, LaunchKernel);
+#else
+
+    Cu->HashKeysHost(DeviceGraph,
+                     PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                     PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                     SharedMemoryInBytes);
+
+#endif
 
     //
     // If we were using GDB, then switched to CUDA GDB, switch back to GDB now.
@@ -1245,28 +1253,23 @@ Return Value:
     CU_CHECK(CuResult, StreamSynchronize);
 
     //
-    // Copy the device graph back to the host.
+    // Copy the return code back.
     //
 
-    CuResult = Cu->MemcpyDtoHAsync(Graph,
-                                   (CU_DEVICE_POINTER)DeviceGraph,
-                                   sizeof(GRAPH),
-                                   SolveContext->Stream);
-    CU_CHECK(CuResult, MemcpyDtoHAsync);
-
-    //
-    // Wait for completion.
-    //
-
-    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
-    CU_CHECK(CuResult, StreamSynchronize);
+    CuResult = Cu->MemcpyDtoH(&Graph->CuHashKeysResult,
+                              (CU_DEVICE_POINTER)&DeviceGraph->CuHashKeysResult,
+                              sizeof(Graph->CuHashKeysResult));
+    CU_CHECK(CuResult, MemcpyDtoH_CuHashKeysResult);
 
     if (Graph->CuHashKeysResult != S_OK) {
         Result = Graph->CuHashKeysResult;
         goto Error;
     }
 
-    Cu->IsGraphAcyclicHost(Graph);
+    Cu->AddHashedKeysHost(DeviceGraph,
+                          PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                          PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                          SharedMemoryInBytes);
 
     //
     // Wait for completion.
@@ -1275,18 +1278,22 @@ Return Value:
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
-    //
-    // Copy the device graph back to the host.
-    //
+    Cu->IsGraphAcyclicHost(DeviceGraph,
+                           PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                           PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                           SharedMemoryInBytes);
 
-    CuResult = Cu->MemcpyDtoHAsync(Graph,
-                                   (CU_DEVICE_POINTER)DeviceGraph,
-                                   sizeof(GRAPH),
-                                   SolveContext->Stream);
-    CU_CHECK(CuResult, MemcpyDtoHAsync);
+    //
+    // Wait for completion.
+    //
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
+
+    CuResult = Cu->MemcpyDtoH(&Graph->CuIsAcyclicResult,
+                              (CU_DEVICE_POINTER)&DeviceGraph->CuIsAcyclicResult,
+                              sizeof(Graph->CuIsAcyclicResult));
+    CU_CHECK(CuResult, MemcpyDtoH_CuIsAcyclicResult);
 
     if (Graph->CuIsAcyclicResult != S_OK) {
         Result = Graph->CuIsAcyclicResult;
