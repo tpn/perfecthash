@@ -110,12 +110,7 @@ Routine Description:
 
 Arguments:
 
-    Instance - Supplies a pointer to the callback instance for this invocation.
-
-    Context - Supplies a pointer to the active context for the graph solving.
-
-    ListEntry - Supplies a pointer to the list entry that was removed from the
-        context's file work list head.
+    Item - Supplies a pointer to the file work item for this callback.
 
 Return Value:
 
@@ -183,6 +178,13 @@ Return Value:
     //
 
     Item->FileId = FileId = FileWorkIdToFileId(FileWorkId);
+
+#if 0
+    if (FileId == FileGraphVertexPairsFileId ||
+        FileId == FileGraphVertices3FileId) {
+        __debugbreak();
+    }
+#endif
 
     //
     // Determine if this is a context file.  Context files get treated

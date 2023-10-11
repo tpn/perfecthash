@@ -158,6 +158,8 @@ set(Source_Files
     "Chm01FileWorkCSourceTableValuesFile.c"
     "Chm01FileWorkCSourceTestExeFile.c"
     "Chm01FileWorkCSourceTestFile.c"
+    "Chm01FileWorkGraphVertexPairsFile.c"
+    "Chm01FileWorkGraphVertices3File.c"
     "Chm01FileWorkMakefileBenchmarkFullMkFile.c"
     "Chm01FileWorkMakefileBenchmarkIndexMkFile.c"
     "Chm01FileWorkMakefileFile.c"

@@ -62,7 +62,7 @@ typedef ULONG KEY;
 typedef ULONG EDGE;
 typedef ULONG VERTEX;
 typedef ULONG DEGREE;
-typedef ULONG ORDER;
+typedef LONG ORDER;
 typedef KEY *PKEY;
 typedef EDGE *PEDGE;
 typedef VERTEX *PVERTEX;
@@ -92,21 +92,24 @@ typedef union _EDGE3 {
     ULONGLONG AsULongLong;
 } EDGE3, *PEDGE3;
 
-typedef struct _VERTEX3 {
+typedef union _VERTEX3 {
+    struct {
 
-    //
-    // The degree of connections for this vertex.
-    //
+        //
+        // The degree of connections for this vertex.
+        //
 
-    DEGREE Degree;
+        DEGREE Degree;
 
-    //
-    // All edges for this vertex; an incidence list constructed via XOR'ing all
-    // edges together (aka "the XOR-trick").
-    //
+        //
+        // All edges for this vertex; an incidence list constructed via XOR'ing all
+        // edges together (aka "the XOR-trick").
+        //
 
-    EDGE Edges;
+        EDGE Edges;
+    };
 
+    ULONGLONG_BYTES Combined;
 } VERTEX3, *PVERTEX3;
 
 //
@@ -517,20 +520,25 @@ typedef union _EDGE163 {
     ULONG AsULong;
 } EDGE163, *PEDGE163;
 
-typedef struct _VERTEX163 {
+typedef union _VERTEX163 {
 
-    //
-    // The degree of connections for this vertex.
-    //
+    struct {
 
-    DEGREE16 Degree;
+        //
+        // The degree of connections for this vertex.
+        //
 
-    //
-    // All edges for this vertex; an incidence list constructed via XOR'ing all
-    // edges together (aka "the XOR-trick").
-    //
+        DEGREE16 Degree;
 
-    EDGE16 Edges;
+        //
+        // All edges for this vertex; an incidence list constructed via XOR'ing all
+        // edges together (aka "the XOR-trick").
+        //
+
+        EDGE16 Edges;
+    };
+
+    ULONG_BYTES Combined;
 
 } VERTEX163, *PVERTEX163;
 
@@ -1634,6 +1642,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         PSHORT Order16;
     };
 
+    _Writable_elements_(NumberOfVertices)
+    union {
+        PLONG OrderByVertex;
+        PSHORT Order16ByVertex;
+    };
+
+    volatile LONG OrderByVertexIndex;
+    LONG Padding;
+
     //
     // Array of the "next" edge array, as per the referenced papers.
     //
@@ -1967,6 +1984,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _Writable_elements_(NumberOfVertices)
     PVOID VertexLocks;
 
+    PVOID _Edges;
+    PVOID _Degrees;
+    LONG _SavedVertices3;
+    LONG _SavedVertexPairs;
+    PFILE_WORK_ITEM SaveVertices3FileWorkItem;
+    PFILE_WORK_ITEM SaveVertexPairsFileWorkItem;
+    struct _GRAPH *CpuGraph;
+
     //
     // Seed masks for the current hash function.
     //
@@ -2177,6 +2202,7 @@ extern GRAPH_RESET GraphReset;
 extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
 extern GRAPH_SOLVE GraphSolve;
 extern GRAPH_IS_ACYCLIC GraphIsAcyclic;
+extern GRAPH_IS_ACYCLIC GraphIsAcyclic16;
 extern GRAPH_ASSIGN GraphAssign;
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage;

@@ -108,6 +108,32 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        GraphVertexPairsFile,                                              \
+        GRAPH_VERTEX_PAIRS_FILE,                                           \
+        EofInitTypeNumberOfKeysMultiplier,                                 \
+        4,                                                                 \
+        SUFFIX(GraphVertexPairs),                                          \
+        &BinFileExtension,                                                 \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        GraphVertices3File,                                                \
+        GRAPH_VERTICES3_FILE,                                              \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        4,                                                                 \
+        SUFFIX(GraphVertices3),                                            \
+        &BinFileExtension,                                                 \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         CHeaderFile,                                                       \
         C_HEADER_FILE,                                                     \
         EofInitTypeDefault,                                                \
@@ -559,7 +585,6 @@ Abstract:
         NO_STREAM_NAME,                                                    \
         BASE_NAME(CompiledPerfectHash)                                     \
     )
-
 
 #define PREPARE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_FILE_WORK_TABLE(Prepare, PREPARE, FIRST_ENTRY, ENTRY, LAST_ENTRY)

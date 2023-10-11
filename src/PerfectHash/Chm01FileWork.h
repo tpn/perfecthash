@@ -35,6 +35,8 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareTableFileChm01 NULL
 #define PrepareTableInfoStreamChm01 NULL
 #define PrepareCSourceTableDataFileChm01 NULL
+#define PrepareGraphVertexPairsFileChm01 NULL
+#define PrepareGraphVertices3FileChm01 NULL
 
 //
 // Add defines for files that don't have a save callback.  Corresponds to

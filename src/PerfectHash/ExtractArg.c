@@ -190,6 +190,7 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(WaitForGdb);
     DECL_ARG(WaitForCudaGdb);
     DECL_ARG(UseGdbForHostDebugging);
+    DECL_ARG(CompareGpuAndCpuGraphs);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -246,6 +247,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(WaitForGdb);
     SET_FLAG_AND_RETURN_IF_EQUAL(WaitForCudaGdb);
     SET_FLAG_AND_RETURN_IF_EQUAL(UseGdbForHostDebugging);
+    SET_FLAG_AND_RETURN_IF_EQUAL(CompareGpuAndCpuGraphs);
 
     //
     // Handle inverting default flags.  --DoNotHashAllKeysFirst needs

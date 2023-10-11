@@ -117,6 +117,16 @@ Return Value:
     Graph->HashFunctionId = TlsContext->Table->HashFunctionId;
     Graph->Flags.UsingAssigned16 = (Table->State.UsingAssigned16 != FALSE);
 
+    if (TableCreateFlags.CompareGpuAndCpuGraphs) {
+        Result = Graph->Vtbl->CreateInstance(Graph,
+                                             NULL,
+                                             &IID_PERFECT_HASH_GRAPH,
+                                             PPV(&Graph->CpuGraph));
+        if (FAILED(Result)) {
+            goto Error;
+        }
+    }
+
     //
     // We're done!  Indicate success and finish up.
     //
@@ -178,6 +188,7 @@ Return Value:
     RELEASE(Graph->Allocator);
     RELEASE(Graph->Rng);
     RELEASE(Graph->Keys);
+    RELEASE(Graph->CpuGraph);
 
     return;
 }
@@ -216,18 +227,30 @@ Return Value:
 
 --*/
 {
+    HRESULT Result = S_OK;
+
     if (!ARGUMENT_PRESENT(Graph)) {
-        return E_POINTER;
+        Result = E_POINTER;
+        goto End;
     }
 
     if (!ARGUMENT_PRESENT(Info)) {
-        return E_POINTER;
+        Result = E_POINTER;
+        goto End;
     }
 
     Graph->Info = Info;
     Graph->Flags.IsInfoSet = TRUE;
 
-    return S_OK;
+    if (Graph->CpuGraph) {
+        Result = Graph->CpuGraph->Vtbl->SetInfo(Graph->CpuGraph, Info);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphCuSetInfo_CpuGraph_SetInfo, Result);
+        }
+    }
+
+End:
+    return Result;
 }
 
 GRAPH_LOAD_INFO GraphCuLoadInfo;
@@ -688,6 +711,14 @@ Finalize:
 
     CU_CHECK(CuResult, MemcpyHtoDAsync);
 
+    if (Graph->CpuGraph) {
+        Result = Graph->CpuGraph->Vtbl->LoadInfo(Graph->CpuGraph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphCuLoadInfo_CpuGraph_LoadInfo, Result);
+            goto Error;
+        }
+    }
+
     //
     // We're done, finish up.
     //
@@ -1056,6 +1087,14 @@ Return Value:
         ZERO_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerCacheLine);
     }
 
+    if (Graph->CpuGraph) {
+        Result = Graph->CpuGraph->Vtbl->Reset(Graph->CpuGraph);
+        if (FAILED(Result)) {
+            PH_ERROR(GraphReset_CpuGraphReset, Result);
+            goto End;
+        }
+    }
+
     //
     // We're done, finish up.
     //
@@ -1089,6 +1128,16 @@ End:
 EXTERN_C
 VOID
 IsGraphAcyclicHost(
+    _In_ PGRAPH Graph
+    );
+
+VOID
+GraphIsAcyclic16Phase1(
+    _In_ PGRAPH Graph
+    );
+
+VOID
+GraphIsAcyclic16Phase2(
     _In_ PGRAPH Graph
     );
 
@@ -1130,8 +1179,13 @@ Return Value:
 --*/
 {
     PCU Cu;
+    PKEY Keys;
     HRESULT Result;
+    HRESULT CpuResult;
+    PGRAPH CpuGraph;
     //HRESULT SolveResult;
+    ULONG NumberOfKeys;
+    ULONG NumberOfVertices;
     PGRAPH DeviceGraph;
     PGRAPH_INFO Info;
     CU_RESULT CuResult;
@@ -1156,8 +1210,45 @@ Return Value:
     DeviceGraph = SolveContext->DeviceGraph;
     Cu = DeviceContext->Cu;
     DebuggerContext = &Graph->Rtl->DebuggerContext;
+    CpuGraph = Graph->CpuGraph;
 
     ASSERT(SolveContext->HostGraph == Graph);
+
+    NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
+    NumberOfVertices = Graph->NumberOfVertices;
+    if (CpuGraph) {
+        Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
+
+        CpuResult = CpuGraph->Vtbl->AddKeys(CpuGraph, NumberOfKeys, Keys);
+        if (FAILED(CpuResult)) {
+            PH_ERROR(GraphCuSolve_CpuGraphAddKeys, CpuResult);
+            Result = CpuResult;
+            goto Error;
+        }
+    }
+
+    CuResult = Cu->MemAllocManaged(
+        (PCU_DEVICE_POINTER)&Graph->OrderByVertex,
+        NumberOfVertices * sizeof(Graph->OrderByVertex[0]),
+        CU_MEM_ATTACH_GLOBAL
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemAllocManaged_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemcpyHtoD(
+        (CU_DEVICE_POINTER)&DeviceGraph->OrderByVertex,
+        &Graph->OrderByVertex,
+        sizeof(Graph->OrderByVertex)
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemcpyHtoD_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
 
     //
     // Ensure any async memsets from Reset() have completed.
@@ -1165,19 +1256,6 @@ Return Value:
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
-
-    //
-    // I don't think we need this one.
-    //
-
-#if 0
-    //
-    // Make sure device work has completed.
-    //
-
-    CuResult = Cu->CtxSynchronize();
-    CU_CHECK(CuResult, CtxSynchronize);
-#endif
 
     //
     // Maybe switch to CUDA GDB if applicable prior to kernel launch.
@@ -1237,6 +1315,177 @@ Return Value:
 #endif
 
     //
+    // Wait for completion.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    BOOL Success;
+    PCHAR Output;
+    PCHAR OutputBuffer;
+    DWORD CharsWritten = 0;
+    ULARGE_INTEGER BytesToWrite = {0,};
+    HANDLE OutputHandle;
+    ULONGLONG BufferSizeInBytes;
+
+    OutputHandle = Context->OutputHandle;
+    OutputBuffer = Context->ConsoleBuffer;
+    BufferSizeInBytes = Context->ConsoleBufferSizeInBytes;
+
+        //
+        // Dummy write to suppress SAL warning re uninitialized memory being used.
+        //
+
+    Output = OutputBuffer;
+    *Output = '\0';
+    OUTPUT_CHR('\n');
+
+    if (CpuGraph) {
+
+#if 0
+        //
+        // Copy device vertex pairs back to host graph.
+        //
+
+        CuResult = Cu->MemcpyDtoH(Graph->VertexPairs,
+                                  (CU_DEVICE_POINTER)DeviceGraph->VertexPairs,
+                                  Graph->Info->VertexPairsSizeInBytes);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(GraphCuSolve_MemcpyDtoH_VertexPairs, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+#endif
+
+        //
+        // Loop through all of the vertex pairs and compare the GPU results with
+        // the CPU results.
+        //
+
+        ULONG Index;
+        ULONG Vertex1Mismatch = 0;
+        ULONG Vertex2Mismatch = 0;
+        ULONG Correct = 0;
+        if (IsUsingAssigned16(Graph)) {
+            PVERTEX16_PAIR VertexPairsHost;
+            PVERTEX16_PAIR VertexPairsDevice;
+            VERTEX16_PAIR VertexPairHost;
+            VERTEX16_PAIR VertexPairDevice;
+
+            VertexPairsHost = CpuGraph->Vertex16Pairs;
+            VertexPairsDevice = Graph->Vertex16Pairs;
+
+            for (Index = 0; Index < NumberOfKeys; Index++) {
+                VertexPairHost = *VertexPairsHost++;
+                VertexPairDevice = *VertexPairsDevice++;
+
+                if (VertexPairHost.Vertex1 != VertexPairDevice.Vertex1) {
+                    Vertex1Mismatch++;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Vertex1 mismatch: ");
+                    OUTPUT_HEX(VertexPairHost.Vertex1);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_HEX(VertexPairDevice.Vertex1);
+                    OUTPUT_CHR('\n');
+                } else if (VertexPairHost.Vertex2 != VertexPairDevice.Vertex2) {
+                    Vertex2Mismatch++;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Vertex2 mismatch: ");
+                    OUTPUT_HEX(VertexPairHost.Vertex2);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_HEX(VertexPairDevice.Vertex2);
+                    OUTPUT_CHR('\n');
+                } else {
+                    Correct++;
+                }
+            }
+
+            OUTPUT_FLUSH_CONSOLE();
+        }
+    }
+
+    Cu->AddHashedKeysHost(DeviceGraph,
+                          PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                          PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                          SharedMemoryInBytes);
+
+    //
+    // Wait for completion.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    if (CpuGraph) {
+
+#if 0
+        CuResult = Cu->MemcpyDtoH(Graph->VertexPairs,
+                                  (CU_DEVICE_POINTER)DeviceGraph->VertexPairs,
+                                  Graph->Info->VertexPairsSizeInBytes);
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(GraphCuSolve_MemcpyDtoH_VertexPairs, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+#endif
+
+        //
+        // Loop through all of the vertex pairs and compare the GPU results with
+        // the CPU results.
+        //
+
+        ULONG Index;
+        ULONG DegreeMismatch = 0;
+        ULONG EdgesMismatch = 0;
+        ULONG Correct = 0;
+        if (IsUsingAssigned16(Graph)) {
+            PVERTEX163 Vertices3Host;
+            PVERTEX163 Vertices3Device;
+            VERTEX163 Vertex3Host;
+            VERTEX163 Vertex3Device;
+
+            Vertices3Host = CpuGraph->Vertices163;
+            Vertices3Device = Graph->Vertices163;
+
+            for (Index = 0; Index < NumberOfVertices; Index++) {
+                Vertex3Host = *Vertices3Host++;
+                Vertex3Device = *Vertices3Device++;
+
+                if (Vertex3Host.Degree != Vertex3Device.Degree) {
+                    DegreeMismatch++;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Degree mismatch: ");
+                    OUTPUT_HEX(Vertex3Host.Degree);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_HEX(Vertex3Device.Degree);
+                    OUTPUT_CHR('\n');
+                } else if (Vertex3Host.Edges != Vertex3Device.Edges) {
+                    EdgesMismatch++;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Edges mismatch: ");
+                    OUTPUT_HEX(Vertex3Host.Edges);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_HEX(Vertex3Device.Edges);
+                    OUTPUT_CHR('\n');
+                } else {
+                    Correct++;
+                }
+            }
+
+            OUTPUT_FLUSH_CONSOLE();
+        }
+    }
+
+    //
     // If we were using GDB, then switched to CUDA GDB, switch back to GDB now.
     //
 
@@ -1266,10 +1515,86 @@ Return Value:
         goto Error;
     }
 
-    Cu->AddHashedKeysHost(DeviceGraph,
-                          PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                          PERFECT_HASH_CU_THREADS_PER_BLOCK,
-                          SharedMemoryInBytes);
+    if (CpuGraph) {
+        if (IsUsingAssigned16(Graph)) {
+            GraphIsAcyclic16Phase1(CpuGraph);
+        }
+    }
+
+    Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
+                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                 SharedMemoryInBytes);
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    if (CpuGraph && 0) {
+
+        //
+        // Loop through all of the vertex pairs and compare the GPU results with
+        // the CPU results.
+        //
+
+        ULONG Index;
+        ULONG Errors = 0;
+        ULONG DegreeMismatch = 0;
+        ULONG EdgesMismatch = 0;
+        ULONG Correct = 0;
+        if (IsUsingAssigned16(Graph)) {
+            BOOLEAN DegreeError;
+            BOOLEAN EdgeError;
+            PVERTEX163 Vertices3Host;
+            PVERTEX163 Vertices3Device;
+            VERTEX163 Vertex3Host;
+            VERTEX163 Vertex3Device;
+
+            Vertices3Host = CpuGraph->Vertices163;
+            Vertices3Device = Graph->Vertices163;
+
+            for (Index = 0; Index < NumberOfVertices; Index++) {
+                Vertex3Host = *Vertices3Host++;
+                Vertex3Device = *Vertices3Device++;
+
+                DegreeError = FALSE;
+                EdgeError = FALSE;
+                if (Vertex3Host.Degree != Vertex3Device.Degree) {
+                    DegreeMismatch++;
+                    DegreeError = TRUE;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Degree mismatch: ");
+                    OUTPUT_INT(Vertex3Host.Degree);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_INT(Vertex3Device.Degree);
+                    OUTPUT_CHR('\n');
+                }
+                if (Vertex3Host.Edges != Vertex3Device.Edges) {
+                    EdgesMismatch++;
+                    EdgeError = TRUE;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Edges mismatch:  ");
+                    OUTPUT_HEX(Vertex3Host.Edges);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_HEX(Vertex3Device.Edges);
+                    OUTPUT_CHR('\n');
+                }
+                if ((DegreeError == FALSE) && (EdgeError == FALSE)) {
+                    Correct++;
+                } else {
+                    Errors++;
+                }
+                if ((Errors % 50) == 0) {
+                    OUTPUT_FLUSH_CONSOLE();
+                }
+            }
+
+            OUTPUT_FLUSH_CONSOLE();
+        }
+    }
 
     //
     // Wait for completion.
@@ -1278,17 +1603,101 @@ Return Value:
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
-    Cu->IsGraphAcyclicHost(DeviceGraph,
-                           PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                           PERFECT_HASH_CU_THREADS_PER_BLOCK,
-                           SharedMemoryInBytes);
+    if (CpuGraph) {
+        if (IsUsingAssigned16(Graph)) {
+            GraphIsAcyclic16Phase2(CpuGraph);
+        }
+    }
 
-    //
-    // Wait for completion.
-    //
+#if 0
+    Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
+                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                 SharedMemoryInBytes);
+#endif
+    Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
+                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                 SharedMemoryInBytes);
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
+
+    if (CpuGraph) {
+
+        ULONG Index;
+        ULONG Errors = 0;
+        ULONG Ignored = 0;
+        ULONG DegreeMismatch = 0;
+        ULONG EdgesMismatch = 0;
+        ULONG Correct = 0;
+        if (IsUsingAssigned16(Graph)) {
+            BOOLEAN DegreeError;
+            BOOLEAN EdgeError;
+            PVERTEX163 Vertices3Host;
+            PVERTEX163 Vertices3Device;
+            VERTEX163 Vertex3Host;
+            VERTEX163 Vertex3Device;
+
+            Vertices3Host = CpuGraph->Vertices163;
+            Vertices3Device = Graph->Vertices163;
+
+            for (Index = 0; Index < NumberOfVertices; Index++) {
+                Vertex3Host = *Vertices3Host++;
+                Vertex3Device = *Vertices3Device++;
+
+                DegreeError = FALSE;
+                EdgeError = FALSE;
+
+                if (Vertex3Host.Degree == 0 ||
+                    Vertex3Device.Degree == 0) {
+                    Ignored++;
+                    continue;
+                }
+
+                if (Vertex3Host.Edges == 0 ||
+                    Vertex3Device.Edges == 0) {
+                    Ignored++;
+                    continue;
+                }
+
+                if (Vertex3Host.Degree != Vertex3Device.Degree) {
+                    DegreeMismatch++;
+                    DegreeError = TRUE;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Degree mismatch: ");
+                    OUTPUT_INT(Vertex3Host.Degree);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_INT(Vertex3Device.Degree);
+                    OUTPUT_CHR('\n');
+                }
+                if (Vertex3Host.Edges != Vertex3Device.Edges) {
+                    EdgesMismatch++;
+                    EdgeError = TRUE;
+                    OUTPUT_CHR('[');
+                    OUTPUT_HEX(Index);
+                    OUTPUT_CHR(']');
+                    OUTPUT_CSTR(" Edges mismatch:  ");
+                    OUTPUT_HEX(Vertex3Host.Edges);
+                    OUTPUT_CSTR(" != ");
+                    OUTPUT_HEX(Vertex3Device.Edges);
+                    OUTPUT_CHR('\n');
+                }
+                if ((DegreeError == FALSE) && (EdgeError == FALSE)) {
+                    Correct++;
+                } else {
+                    Errors++;
+                }
+                if ((Errors % 50) == 0) {
+                    OUTPUT_FLUSH_CONSOLE();
+                }
+            }
+
+            OUTPUT_FLUSH_CONSOLE();
+        }
+    }
 
     CuResult = Cu->MemcpyDtoH(&Graph->CuIsAcyclicResult,
                               (CU_DEVICE_POINTER)&DeviceGraph->CuIsAcyclicResult,
@@ -1505,6 +1914,7 @@ GraphCuLoadNewSeeds(
     )
 {
     PCU Cu;
+    PRTL Rtl;
     HRESULT Result;
     CU_RESULT CuResult;
     PGRAPH DeviceGraph;
@@ -1512,7 +1922,7 @@ GraphCuLoadNewSeeds(
     Result = GraphLoadNewSeeds(Graph);
     if (FAILED(Result)) {
         PH_ERROR(GraphCuLoadNewSeeds, Result);
-        return Result;
+        goto End;
     }
 
     Cu = Graph->CuSolveContext->DeviceContext->Cu;
@@ -1525,10 +1935,26 @@ GraphCuLoadNewSeeds(
     if (CU_FAILED(CuResult)) {
         CU_ERROR(GraphCuLoadNewSeeds_MemcpyHtoDAsync, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-        return Result;
+        goto End;
     }
 
-    return S_OK;
+    if (Graph->CpuGraph) {
+
+        //
+        // Just copy the GPU seeds explicitly to the CPU graph to ensure they're
+        // identical (which they might not be if we were to call LoadNewSeeds()
+        // and the user hasn't provided a command line --Seeds argument).
+        //
+
+        Rtl = Graph->Rtl;
+        CopyMemory(Graph->CpuGraph->Seeds,
+                   Graph->Seeds,
+                   Graph->NumberOfSeeds * sizeof(ULONG));
+    }
+
+End:
+
+    return Result;
 }
 
 GRAPH_REGISTER_SOLVED GraphCuRegisterSolved;

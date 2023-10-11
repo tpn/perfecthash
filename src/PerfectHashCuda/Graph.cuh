@@ -380,6 +380,7 @@ template<
     typename Vertex3TypeT,
     typename AtomicVertex3TypeT,
     typename EdgeTypeT,
+    typename DegreeTypeT,
     typename OrderTypeT,
     typename AssignedTypeT,
     typename ValueTypeT,
@@ -394,6 +395,7 @@ struct GRAPH_CU : GRAPH {
     using Vertex3Type = Vertex3TypeT;
     using AtomicVertex3Type = AtomicVertex3TypeT;
     using EdgeType = EdgeTypeT;
+    using DegreeType = DegreeTypeT;
     using OrderType = OrderTypeT;
     using AssignedType = AssignedTypeT;
     using IndexType = EdgeTypeT;
@@ -416,6 +418,7 @@ using GRAPH8 =
         VERTEX83,               // Vertex3Type
         ATOMIC_VERTEX<EDGE8>,   // AtomicVertex3Type
         EDGE8,                  // EdgeType
+        DEGREE8,                // DegreeType
         ORDER8,                 // OrderType
         ASSIGNED8,              // AssignedType
         int8_t,                 // ValueType
@@ -432,6 +435,7 @@ using GRAPH16 =
         VERTEX163,             // Vertex3Type
         ATOMIC_VERTEX<EDGE16>, // AtomicVertex3Type
         EDGE16,                // EdgeType
+        DEGREE16,              // DegreeType
         ORDER16,               // OrderType
         ASSIGNED16,            // AssignedType
         int16_t,               // ValueType
@@ -448,6 +452,7 @@ using GRAPH32 =
         VERTEX3,               // Vertex3Type
         ATOMIC_VERTEX<EDGE>,   // AtomicVertex3Type
         EDGE,                  // EdgeType
+        DEGREE,                // DegreeType
         ORDER,                 // OrderType
         ASSIGNED,              // AssignedType
         int32_t,               // ValueType
@@ -472,24 +477,50 @@ using GRAPH64 =
 using PGRAPH64 = GRAPH64*;
 #endif
 
-struct LOCK {
-    cuda::std::atomic<bool> Value;
+template<typename AtomicType = int32_t,
+         int16_t SpinCount = 1000,
+         int8_t InitialNanosecondSleep = 8,
+         int16_t MaxNanosecondSleep = 256>
+struct LOCK_CU {
+    cuda::std::atomic<AtomicType> Value;
 
     __device__ __forceinline__
-    void
+    bool
     Lock() {
-        while (Value.exchange(true, cuda::std::memory_order_acquire)) {
-            // Spin.
-        }
+        bool Result;
+        bool Success = false;
+        decltype(MaxNanosecondSleep) Nanoseconds = InitialNanosecondSleep;
+        AtomicType CurrentThreadIndex = GlobalThreadIndex();
+        AtomicType Expected = -1;
+        decltype(SpinCount) Count = 0;
+        do {
+            Result = Value.compare_exchange_strong(
+                Expected,
+                CurrentThreadIndex,
+                cuda::std::memory_order_acquire,
+                cuda::std::memory_order_relaxed
+            );
+            if (Result != false) {
+                Success = true;
+                break;
+            }
+            Expected = -1;
+            __nanosleep(Nanoseconds);
+            if (Nanoseconds < MaxNanosecondSleep) {
+                Nanoseconds <<= 1;
+            }
+        } while (++Count < SpinCount);
+        return Success;
     }
 
     __device__ __forceinline__
     void
     Unlock() {
-        Value.store(false, cuda::std::memory_order_release);
+        Value.store(-1, cuda::std::memory_order_release);
     }
 };
-typedef LOCK *PLOCK;
+using LOCK = LOCK_CU<>;
+using PLOCK = LOCK*;
 
 template <typename T>
 __forceinline__
@@ -547,6 +578,21 @@ AtomicAggSubCGV(T *Address)
     if (Group.thread_rank() == 0) {
         auto Size = Group.size();
         atomicSub((decltype(Size) *)Address, Size);
+    }
+    return;
+}
+
+template <typename T,
+          typename V>
+__forceinline__
+__device__
+void
+AtomicAggXorCGV(T *Address, V Value)
+{
+    cg::coalesced_group Group = cg::coalesced_threads();
+    if (Group.thread_rank() == 0) {
+        auto Size = Group.size();
+        atomicXor((decltype(Size) *)Address, Value);
     }
     return;
 }
