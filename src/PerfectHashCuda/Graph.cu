@@ -1626,12 +1626,12 @@ GraphCuRemoveVertex(
 
     __syncthreads();
 
+#if 0
     AtomicAggIncCGV(&Graph->DeletedEdgeCount);
     OrderIndex = AtomicAggSubCG(&Graph->OrderIndex);
     Graph->Order[OrderIndex] = Edge;
     Graph->OrderByVertex[GlobalThreadIndex()] = Edge;
-
-#if 0
+#else
 #ifdef _DEBUG
     //ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
     //ASSERT(OrderIndex < Graph->NumberOfEdges);
@@ -1643,7 +1643,9 @@ GraphCuRemoveVertex(
         }
     }
 
-    Graph->OrderByVertex[GlobalThreadIndex()] = Edge;
+    Graph->OrderByThread[GlobalThreadIndex()] = Edge;
+    Graph->OrderByVertex[VertexIndex] = GlobalThreadIndex();
+    Graph->OrderByEdge[Edge] = GlobalThreadIndex();
 #endif
 End:
     return Retry;
@@ -1755,6 +1757,35 @@ GraphCuIsAcyclicPhase1(
     return;
 }
 
+template <typename T>
+struct IS_NOT_EMPTY {
+    __host__ __device__
+    bool operator()(const T &Value) const {
+        return (Value != static_cast<T>(-1));
+    }
+};
+
+EXTERN_C
+HOST
+SIZE_T
+CountNonEmptyHost(
+    PGRAPH Graph,
+    PLONG Values
+    )
+{
+    using ValueType = std::remove_reference_t<decltype(Values[0])>;
+
+    SIZE_T Count;
+
+    thrust::device_ptr<ValueType> ValuesPtr(Values);
+    Count = thrust::count_if(ValuesPtr,
+                             ValuesPtr + Graph->NumberOfVertices,
+                             IS_NOT_EMPTY<ValueType>());
+    return Count;
+}
+
+
+
 template<typename GraphType>
 GLOBAL
 VOID
@@ -1781,7 +1812,7 @@ GraphCuIsAcyclicPhase2(
 
     Index = GlobalThreadIndex();
 
-#if 0
+#if 1
     if (GlobalThreadIndex() == 0) {
         for (Index = (int32_t)NumberOfKeys;
              Graph->OrderIndex > 0 && Index > Graph->OrderIndex;
@@ -1804,7 +1835,7 @@ GraphCuIsAcyclicPhase2(
             Graph->CuIsAcyclicResult = PH_E_GRAPH_CYCLIC_FAILURE;
         }
     }
-#endif
+#else
 
     while (Index < NumberOfKeys) {
         EdgeIndex = Order[Index];
@@ -1828,6 +1859,7 @@ GraphCuIsAcyclicPhase2(
             Graph->CuIsAcyclicResult = PH_E_GRAPH_CYCLIC_FAILURE;
         }
     }
+#endif
 
     return;
 }

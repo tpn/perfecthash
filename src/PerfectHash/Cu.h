@@ -2095,6 +2095,16 @@ VOID
 typedef PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC
       *PPERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC;
 
+typedef
+SIZE_T
+(PERFECT_HASH_CUDA_COUNT_NONEMPTY)(
+    _In_ struct _GRAPH *Graph,
+    _In_ PLONG Values,
+    _In_ SIZE_T NumberOfValues
+    );
+typedef PERFECT_HASH_CUDA_COUNT_NONEMPTY
+      *PPERFECT_HASH_CUDA_COUNT_NONEMPTY;
+
 //
 // Define the PERFECT_HASH_CUDA_FUNCTION_TABLE X-macro.
 //
@@ -2106,6 +2116,9 @@ typedef PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC
                                                                          \
     ENTRY(ADD_HASHED_KEYS,                                               \
           AddHashedKeysHost)                                             \
+                                                                         \
+    ENTRY(COUNT_NONEMPTY,                                                \
+          CountNonEmptyHost)                                             \
                                                                          \
     ENTRY(IS_GRAPH_ACYCLIC,                                              \
           IsGraphAcyclicPhase1Host)                                      \

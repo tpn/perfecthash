@@ -1644,8 +1644,20 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     _Writable_elements_(NumberOfVertices)
     union {
+        PLONG OrderByThread;
+        PSHORT Order16ByThread;
+    };
+
+    _Writable_elements_(NumberOfVertices)
+    union {
         PLONG OrderByVertex;
         PSHORT Order16ByVertex;
+    };
+
+    _Writable_elements_(NumberOfVertices)
+    union {
+        PLONG OrderByEdge;
+        PSHORT Order16ByEdge;
     };
 
     volatile LONG OrderByVertexIndex;
