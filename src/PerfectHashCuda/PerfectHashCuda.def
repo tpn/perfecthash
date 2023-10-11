@@ -3,5 +3,6 @@ EXPORTS
     HashKeys
     HashKeysHost
     AddHashedKeysHost
+    CountNonEmptyHost
     IsGraphAcyclicPhase1Host
     IsGraphAcyclicPhase2Host

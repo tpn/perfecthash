@@ -1227,6 +1227,51 @@ Return Value:
         }
     }
 
+    //
+    // ByThread.
+    //
+
+    CuResult = Cu->MemAllocManaged(
+        (PCU_DEVICE_POINTER)&Graph->OrderByThread,
+        NumberOfVertices * sizeof(Graph->OrderByThread[0]),
+        CU_MEM_ATTACH_GLOBAL
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemAllocManaged_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemcpyHtoD(
+        (CU_DEVICE_POINTER)&DeviceGraph->OrderByThread,
+        &Graph->OrderByThread,
+        sizeof(Graph->OrderByThread)
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemcpyHtoD_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemsetD32Async(
+        (PVOID)Graph->OrderByThread,
+        ((ULONG)-1),
+        NumberOfVertices,
+        SolveContext->Stream
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemsetD32Async_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    //
+    // ByVertex.
+    //
+
     CuResult = Cu->MemAllocManaged(
         (PCU_DEVICE_POINTER)&Graph->OrderByVertex,
         NumberOfVertices * sizeof(Graph->OrderByVertex[0]),
@@ -1245,6 +1290,56 @@ Return Value:
     );
     if (CU_FAILED(CuResult)) {
         CU_ERROR(GraphCuSolve_MemcpyHtoD_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemsetD32Async(
+        (PVOID)Graph->OrderByVertex,
+        ((ULONG)-1),
+        NumberOfVertices,
+        SolveContext->Stream
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemsetD32Async_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // ByEdge.
+    //
+
+    CuResult = Cu->MemAllocManaged(
+        (PCU_DEVICE_POINTER)&Graph->OrderByEdge,
+        NumberOfVertices * sizeof(Graph->OrderByEdge[0]),
+        CU_MEM_ATTACH_GLOBAL
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemAllocManaged_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemcpyHtoD(
+        (CU_DEVICE_POINTER)&DeviceGraph->OrderByEdge,
+        &Graph->OrderByEdge,
+        sizeof(Graph->OrderByEdge)
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemcpyHtoD_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemsetD32Async(
+        (PVOID)Graph->OrderByEdge,
+        ((ULONG)-1),
+        NumberOfVertices,
+        SolveContext->Stream
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemsetD32Async_OrderByVertices, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
         goto Error;
     }
@@ -1529,6 +1624,35 @@ Return Value:
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
+    SIZE_T ThreadOrderCount;
+    SIZE_T VertexOrderCount;
+    SIZE_T EdgeOrderCount;
+    SIZE_T ThreadOrderCount1;
+    SIZE_T VertexOrderCount1;
+    SIZE_T EdgeOrderCount1;
+    SIZE_T ThreadOrderCount2;
+    SIZE_T VertexOrderCount2;
+    SIZE_T EdgeOrderCount2;
+    SIZE_T ThreadOrderDelta;
+    SIZE_T VertexOrderDelta;
+    SIZE_T EdgeOrderDelta;
+
+    ThreadOrderCount1 = Cu->CountNonEmptyHost(DeviceGraph,
+                                              DeviceGraph->OrderByThread,
+                                              Graph->NumberOfVertices);
+
+    VertexOrderCount1 = Cu->CountNonEmptyHost(DeviceGraph,
+                                              DeviceGraph->OrderByVertex,
+                                              Graph->NumberOfVertices);
+
+    EdgeOrderCount1 = Cu->CountNonEmptyHost(DeviceGraph,
+                                            DeviceGraph->OrderByEdge,
+                                            Graph->NumberOfVertices);
+
+    ThreadOrderCount = ThreadOrderCount1;
+    VertexOrderCount = VertexOrderCount1;
+    EdgeOrderCount = EdgeOrderCount1;
+
     if (CpuGraph && 0) {
 
         //
@@ -1609,19 +1733,68 @@ Return Value:
         }
     }
 
-#if 0
-    Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
-                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
-                                 SharedMemoryInBytes);
-#endif
-    Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
-                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
-                                 SharedMemoryInBytes);
+    ULONG Attempts = 0;
+    while (TRUE) {
+        ++Attempts;
 
-    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
-    CU_CHECK(CuResult, StreamSynchronize);
+#if 1
+        Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
+                                     PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                                     PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                     SharedMemoryInBytes);
+#else
+        Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
+                                     PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                                     PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                     SharedMemoryInBytes);
+#endif
+
+        CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+        CU_CHECK(CuResult, StreamSynchronize);
+
+        ThreadOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
+                                                  DeviceGraph->OrderByThread,
+                                                  Graph->NumberOfVertices);
+
+        VertexOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
+                                                  DeviceGraph->OrderByVertex,
+                                                  Graph->NumberOfVertices);
+
+        EdgeOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
+                                                DeviceGraph->OrderByEdge,
+                                                Graph->NumberOfVertices);
+
+        ThreadOrderDelta = ThreadOrderCount2 - ThreadOrderCount1;
+        VertexOrderDelta = VertexOrderCount2 - VertexOrderCount1;
+        EdgeOrderDelta = EdgeOrderCount2 - EdgeOrderCount1;
+
+        if (VertexOrderDelta == 0 && EdgeOrderDelta == 0) {
+            break;
+        }
+
+        if (EdgeOrderDelta == 0) {
+            break;
+        }
+
+        ThreadOrderCount += ThreadOrderDelta;
+        VertexOrderCount += VertexOrderDelta;
+        EdgeOrderCount += EdgeOrderDelta;
+
+        ThreadOrderCount1 = ThreadOrderCount2;
+        VertexOrderCount1 = VertexOrderCount2;
+        EdgeOrderCount1 = EdgeOrderCount2;
+
+        if (EdgeOrderCount >= NumberOfKeys) {
+            break;
+        }
+
+#if 0
+        if (VertexOrderCount >= NumberOfKeys ||
+            EdgeOrderCount >= NumberOfKeys) {
+            break;
+        }
+#endif
+    }
 
     if (CpuGraph) {
 
