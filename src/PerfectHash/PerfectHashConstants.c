@@ -694,6 +694,7 @@ const UNICODE_STRING VCPropsFileExtension = RCS(L"props");
 const UNICODE_STRING MakefileMkFileExtension = RCS(L"mk");
 const UNICODE_STRING VCProjectFileExtension = RCS(L"vcxproj");
 const UNICODE_STRING VSSolutionFileExtension = RCS(L"sln");
+const UNICODE_STRING BinFileExtension = RCS(L"bin");
 
 #define VERIFY_FILE_WORK_ARRAY_SIZE(Name) \
     C_ASSERT(ARRAYSIZE(Name) == NUMBER_OF_FILES + 2)

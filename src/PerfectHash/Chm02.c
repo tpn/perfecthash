@@ -451,6 +451,16 @@ Return Value:
             goto Error;
         }
 
+        if (Graph->CpuGraph) {
+            AcquireGraphLockExclusive(Graph->CpuGraph);
+            Result = Graph->CpuGraph->Vtbl->SetInfo(Graph->CpuGraph, &Info);
+            ReleaseGraphLockExclusive(Graph->CpuGraph);
+            if (FAILED(Result)) {
+                PH_ERROR(GraphSetInfo_CpuGraph, Result);
+                goto Error;
+            }
+        }
+
         if (!IsSpareGraph(Graph)) {
             InitializeListHead(&Graph->ListEntry);
             InsertTailMainWork(Context, &Graph->ListEntry);

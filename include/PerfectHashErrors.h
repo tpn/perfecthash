@@ -4727,3 +4727,57 @@ Abstract:
 //
 #define PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS ((HRESULT)0xE00403EFL)
 
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_GRAPH_VERTEX_PAIRS_FILE
+//
+// MessageText:
+//
+// Error preparing graph vertex pairs file.
+//
+#define PH_E_ERROR_DURING_PREPARE_GRAPH_VERTEX_PAIRS_FILE ((HRESULT)0xE00403F0L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_GRAPH_VERTEX_PAIRS_FILE
+//
+// MessageText:
+//
+// Error saving graph vertex pairs file.
+//
+#define PH_E_ERROR_DURING_SAVE_GRAPH_VERTEX_PAIRS_FILE ((HRESULT)0xE00403F1L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_GRAPH_VERTEX_PAIRS_FILE
+//
+// MessageText:
+//
+// Error closing graph vertex pairs file.
+//
+#define PH_E_ERROR_DURING_CLOSE_GRAPH_VERTEX_PAIRS_FILE ((HRESULT)0xE00403F2L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_GRAPH_VERTICES3_FILE
+//
+// MessageText:
+//
+// Error preparing graph vertices3 file.
+//
+#define PH_E_ERROR_DURING_PREPARE_GRAPH_VERTICES3_FILE ((HRESULT)0xE00403F3L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_GRAPH_VERTICES3_FILE
+//
+// MessageText:
+//
+// Error saving graph vertices3 file.
+//
+#define PH_E_ERROR_DURING_SAVE_GRAPH_VERTICES3_FILE ((HRESULT)0xE00403F4L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_GRAPH_VERTICES3_FILE
+//
+// MessageText:
+//
+// Error closing graph vertices3 file.
+//
+#define PH_E_ERROR_DURING_CLOSE_GRAPH_VERTICES3_FILE ((HRESULT)0xE00403F5L)
+

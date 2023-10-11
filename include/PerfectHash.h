@@ -189,13 +189,74 @@ typedef union _ULONG_BYTES {
 C_ASSERT(sizeof(ULONG_BYTES) == sizeof(ULONG));
 typedef ULONG_BYTES *PULONG_BYTES;
 
+typedef union _ULONGLONG_BYTES {
+    struct _Struct_size_bytes_(sizeof(ULONGLONG)) {
+        BYTE Byte1;
+        BYTE Byte2;
+        BYTE Byte3;
+        BYTE Byte4;
+        BYTE Byte5;
+        BYTE Byte6;
+        BYTE Byte7;
+        BYTE Byte8;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONGLONG)) {
+        CHAR Char1;
+        CHAR Char2;
+        CHAR Char3;
+        CHAR Char4;
+        CHAR Char5;
+        CHAR Char6;
+        CHAR Char7;
+        CHAR Char8;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONGLONG)) {
+        SHORT Word1;
+        SHORT Word2;
+        SHORT Word3;
+        SHORT Word4;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONGLONG)) {
+        USHORT UWord1;
+        USHORT UWord2;
+        USHORT UWord3;
+        USHORT UWord4;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONGLONG)) {
+        LONG Long1;
+        LONG Long2;
+    };
+
+    struct _Struct_size_bytes_(sizeof(ULONGLONG)) {
+        ULONG ULong1;
+        ULONG ULong2;
+    };
+
+    BYTE Bytes[8];
+    CHAR Chars[8];
+    SHORT Words[4];
+    USHORT UWords[4];
+    LONG Longs[2];
+    ULONG ULongs[2];
+    LONGLONG AsLongLong;
+    ULONGLONG AsULongLong;
+} ULONGLONG_BYTES;
+C_ASSERT(sizeof(ULONGLONG_BYTES) == sizeof(ULONGLONG));
+typedef ULONGLONG_BYTES *PULONGLONG_BYTES;
+
 typedef union _ULONG_INTEGER {
     struct {
         USHORT  LowPart;
         USHORT  HighPart;
     };
-    ULONG   LongPart;
-
+    union {
+        ULONG LongPart;
+        ULONG CombinedPart;
+    };
 } ULONG_INTEGER, *PULONG_INTEGER;
 
 typedef union _LONG_INTEGER {
@@ -203,15 +264,21 @@ typedef union _LONG_INTEGER {
         USHORT  LowPart;
         SHORT   HighPart;
     };
-    LONG   LongPart;
+    union {
+        LONG LongPart;
+        LONG CombinedPart;
+    };
 } LONG_INTEGER, *PLONG_INTEGER;
 
 typedef union _USHORT_INTEGER {
     struct {
-        BYTE  LowPart;
-        BYTE  HighPart;
+        BYTE LowPart;
+        BYTE HighPart;
     };
-    USHORT   ShortPart;
+    union {
+        USHORT ShortPart;
+        USHORT CombinedPart;
+    };
 } USHORT_INTEGER, *PUSHORT_INTEGER;
 
 typedef union _SHORT_INTEGER {
@@ -219,7 +286,10 @@ typedef union _SHORT_INTEGER {
         CHAR  LowPart;
         CHAR  HighPart;
     };
-    SHORT   ShortPart;
+    union {
+        SHORT ShortPart;
+        SHORT CombinedPart;
+    };
 } SHORT_INTEGER, *PSHORT_INTEGER;
 
 typedef union _FILETIME64 {
@@ -2984,10 +3054,18 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG UseGdbForHostDebugging:1;
 
         //
+        // When set, indicates that each step of a GPU solver graph should be
+        // validated against the corresponding CPU solver graph.  This is only
+        // applicable to the Chm02 algorithm.
+        //
+
+        ULONGLONG CompareGpuAndCpuGraphs:1;
+
+        //
         // Unused bits.
         //
 
-        ULONGLONG Unused:24;
+        ULONGLONG Unused:23;
     };
 
     LONGLONG AsLongLong;

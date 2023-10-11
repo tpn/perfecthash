@@ -4296,3 +4296,51 @@ Language=English
 Failed to load all expected symbols from PerfectHashCuda.dll.
 .
 
+MessageId=0x3f0
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_GRAPH_VERTEX_PAIRS_FILE
+Language=English
+Error preparing graph vertex pairs file.
+.
+
+MessageId=0x3f1
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_GRAPH_VERTEX_PAIRS_FILE
+Language=English
+Error saving graph vertex pairs file.
+.
+
+MessageId=0x3f2
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_GRAPH_VERTEX_PAIRS_FILE
+Language=English
+Error closing graph vertex pairs file.
+.
+
+MessageId=0x3f3
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_GRAPH_VERTICES3_FILE
+Language=English
+Error preparing graph vertices3 file.
+.
+
+MessageId=0x3f4
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_GRAPH_VERTICES3_FILE
+Language=English
+Error saving graph vertices3 file.
+.
+
+MessageId=0x3f5
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_GRAPH_VERTICES3_FILE
+Language=English
+Error closing graph vertices3 file.
+.
+

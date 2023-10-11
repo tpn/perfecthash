@@ -2107,8 +2107,11 @@ typedef PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC
     ENTRY(ADD_HASHED_KEYS,                                               \
           AddHashedKeysHost)                                             \
                                                                          \
+    ENTRY(IS_GRAPH_ACYCLIC,                                              \
+          IsGraphAcyclicPhase1Host)                                      \
+                                                                         \
     LAST_ENTRY(IS_GRAPH_ACYCLIC,                                         \
-               IsGraphAcyclicHost)
+               IsGraphAcyclicPhase2Host)
 
 #define PERFECT_HASH_CUDA_FUNCTION_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_CUDA_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)

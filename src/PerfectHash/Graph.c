@@ -804,6 +804,12 @@ Return Value:
     return Result;
 }
 
+HRESULT
+SaveGraphVertexPairsFileChm01(
+    PPERFECT_HASH_CONTEXT Context,
+    PFILE_WORK_ITEM Item
+    );
+
 _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
@@ -842,6 +848,16 @@ Return Value:
     Result = HashResult;
 
     if (SUCCEEDED(HashResult)) {
+
+#if 0
+        Result = SaveGraphVertexPairsFileChm01(
+            Graph->Context,
+            Graph->SaveVertexPairsFileWorkItem
+        );
+        if (FAILED(Result)) {
+            goto End;
+        }
+#endif
 
         Flags.AsULong = Graph->Flags.AsULong;
 

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2021 Trent Nelson <trent@trent.me>
+Copyright (c) 2021-2023 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -56,25 +56,31 @@ Abstract:
     Table->Name##ElapsedMicroseconds.QuadPart = \
         Graph->Name##ElapsedCycles.QuadPart
 
-#define DECL_GRAPH_COUNTERS_WITHIN_STRUCT()          \
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddKeys);       \
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(HashKeys);      \
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddHashedKeys); \
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(Assign);        \
-    DECL_GRAPH_COUNTER_STRUCT_FIELDS(IsAcyclic)
+#define DECL_GRAPH_COUNTERS_WITHIN_STRUCT()            \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddKeys);         \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(HashKeys);        \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(AddHashedKeys);   \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(Assign);          \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(IsAcyclic);       \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(IsAcyclicPhase1); \
+    DECL_GRAPH_COUNTER_STRUCT_FIELDS(IsAcyclicPhase2)
 
-#define RESET_GRAPH_COUNTERS()          \
-    RESET_GRAPH_COUNTER(AddKeys);       \
-    RESET_GRAPH_COUNTER(HashKeys);      \
-    RESET_GRAPH_COUNTER(AddHashedKeys); \
-    RESET_GRAPH_COUNTER(Assign);        \
-    RESET_GRAPH_COUNTER(IsAcyclic)
+#define RESET_GRAPH_COUNTERS()            \
+    RESET_GRAPH_COUNTER(AddKeys);         \
+    RESET_GRAPH_COUNTER(HashKeys);        \
+    RESET_GRAPH_COUNTER(AddHashedKeys);   \
+    RESET_GRAPH_COUNTER(Assign);          \
+    RESET_GRAPH_COUNTER(IsAcyclic);       \
+    RESET_GRAPH_COUNTER(IsAcyclicPhase1); \
+    RESET_GRAPH_COUNTER(IsAcyclicPhase2)
 
 #define COPY_GRAPH_COUNTERS_FROM_GRAPH_TO_TABLE() \
     COPY_GRAPH_COUNTER(AddKeys);                  \
     COPY_GRAPH_COUNTER(HashKeys);                 \
     COPY_GRAPH_COUNTER(AddHashedKeys);            \
     COPY_GRAPH_COUNTER(Assign);                   \
-    COPY_GRAPH_COUNTER(IsAcyclic)
+    COPY_GRAPH_COUNTER(IsAcyclic);                \
+    COPY_GRAPH_COUNTER(IsAcyclicPhase1);          \
+    COPY_GRAPH_COUNTER(IsAcyclicPhase2)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

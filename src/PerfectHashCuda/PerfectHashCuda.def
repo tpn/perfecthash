@@ -3,4 +3,5 @@ EXPORTS
     HashKeys
     HashKeysHost
     AddHashedKeysHost
-    IsGraphAcyclicHost
+    IsGraphAcyclicPhase1Host
+    IsGraphAcyclicPhase2Host
