@@ -178,6 +178,8 @@ Return Value:
     //
 
     CuPtxPath = CuRuntimeContext->CuPtxPath;
+    PtxString = NULL;
+    PtxSizeInBytes = 0;
 
     if (0) {
 

@@ -33,33 +33,6 @@ namespace cg = cooperative_groups;
 #define INITIAL_ASSIGNMENT_VALUE 0
 
 //
-// Define helper macros for referring to seed constants stored in local
-// variables by their uppercase names.  This allows easy copy-and-pasting of
-// the algorithm "guts" between the "compiled" perfect hash table routines in
-// ../CompiledPerfectHashTable and the SeededHashEx() implementations here.
-//
-
-#define SEED1 Seed1
-#define SEED2 Seed2
-#define SEED3 Seed3
-#define SEED4 Seed4
-#define SEED5 Seed5
-#define SEED6 Seed6
-#define SEED7 Seed7
-#define SEED8 Seed8
-
-#define SEED3_BYTE1 Seed3.Byte1
-#define SEED3_BYTE2 Seed3.Byte2
-#define SEED3_BYTE3 Seed3.Byte3
-#define SEED3_BYTE4 Seed3.Byte4
-
-#define SEED6_BYTE1 Seed6.Byte1
-#define SEED6_BYTE2 Seed6.Byte2
-#define SEED6_BYTE3 Seed6.Byte3
-#define SEED6_BYTE4 Seed6.Byte4
-
-
-//
 // Helper defines.
 //
 
@@ -341,41 +314,12 @@ struct ATOMIC_VERTEX {
 template<typename ResultType, typename KeyType, typename VertexType>
 using HashFunctionType = ResultType(*)(KeyType, PULONG Seeds, VertexType);
 
-template<typename ResultType,
-         typename KeyType,
-         typename VertexType>
-FORCEINLINE
-DEVICE
-auto
-GetHashFunctionForId(
-    _In_ PERFECT_HASH_HASH_FUNCTION_ID Id
-    )
-{
-    switch (Id) {
-        case PerfectHashHashJenkinsFunctionId:
-            return PerfectHashTableSeededHashExCppJenkins<
-                ResultType,
-                KeyType,
-                VertexType>;
-
-        case PerfectHashHashMultiplyShiftRFunctionId:
-            return PerfectHashTableSeededHashExCppMultiplyShiftR<
-                ResultType,
-                KeyType,
-                VertexType>;
-
-        default:
-            return PerfectHashTableSeededHashExCppNull<
-                ResultType,
-                KeyType,
-                VertexType>;
-    }
-}
 
 template<
     typename KeyTypeT,
     typename VertexTypeT,
     typename VertexPairTypeT,
+    typename VertexPairNativeT,
     typename Edge3TypeT,
     typename Vertex3TypeT,
     typename AtomicVertex3TypeT,
@@ -391,6 +335,7 @@ struct GRAPH_CU : GRAPH {
     using KeyType = KeyTypeT;
     using VertexType = VertexTypeT;
     using VertexPairType = VertexPairTypeT;
+    using VertexPairNativeType = VertexPairNativeT;
     using Edge3Type = Edge3TypeT;
     using Vertex3Type = Vertex3TypeT;
     using AtomicVertex3Type = AtomicVertex3TypeT;
@@ -414,6 +359,7 @@ using GRAPH8 =
         uint32_t,               // KeyType
         VERTEX8,                // VertexType
         VERTEX_PAIR_CU8,        // VertexPairType
+        uint16_t,               // VertexPairNativeType
         EDGE83,                 // Edge3Type
         VERTEX83,               // Vertex3Type
         ATOMIC_VERTEX<EDGE8>,   // AtomicVertex3Type
@@ -431,6 +377,7 @@ using GRAPH16 =
         uint32_t,              // KeyType
         VERTEX16,              // VertexType
         VERTEX_PAIR_CU16,      // VertexPairType
+        uint32_t,              // VertexPairNativeType
         EDGE163,               // Edge3Type
         VERTEX163,             // Vertex3Type
         ATOMIC_VERTEX<EDGE16>, // AtomicVertex3Type
@@ -448,6 +395,7 @@ using GRAPH32 =
         uint32_t,              // KeyType
         VERTEX,                // VertexType
         VERTEX_PAIR_CU32,      // VertexPairType
+        uint64_t,              // VertexPairNativeType
         EDGE3,                 // Edge3Type
         VERTEX3,               // Vertex3Type
         ATOMIC_VERTEX<EDGE>,   // AtomicVertex3Type
@@ -466,6 +414,7 @@ using GRAPH64 =
         uint64_t,           // KeyType
         VERTEX,             // VertexType
         VERTEX_PAIR_CU64,   // VertexPairType
+        __int128            // VertexPairNativeType
         EDGE3,              // Edge3Type
         VERTEX3,            // Vertex3Type
         EDGE,               // EdgeType
@@ -502,6 +451,7 @@ struct LOCK_CU {
             );
             if (Result != false) {
                 Success = true;
+                __threadfence();
                 break;
             }
             Expected = -1;
@@ -517,6 +467,7 @@ struct LOCK_CU {
     void
     Unlock() {
         Value.store(-1, cuda::std::memory_order_release);
+        __threadfence();
     }
 };
 using LOCK = LOCK_CU<>;
@@ -547,10 +498,10 @@ AtomicAggSubCG(T *Address)
     T Prev;
     cg::coalesced_group Group = cg::coalesced_threads();
     if (Group.thread_rank() == 0) {
-        auto Size = Group.size();
+        auto Size = Group.num_threads();
         Prev = atomicSub((decltype(Size) *)Address, Size);
     }
-    Prev = Group.thread_rank() - Group.shfl(Prev, 0);
+    Prev = Group.shfl(Prev, 0) - Group.thread_rank();
     return Prev;
 }
 
