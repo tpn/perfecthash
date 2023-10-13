@@ -300,112 +300,27 @@ Return Value:
     ASSERT(CuConcurrency <= Concurrency);
     ASSERT(CuConcurrency > 0);
 
-    DeviceContexts = Context->CuDeviceContexts;
-    NumberOfDeviceContexts = DeviceContexts->NumberOfDeviceContexts;
-
     SolveContexts = Context->CuSolveContexts;
     NumberOfSolveContexts = SolveContexts->NumberOfSolveContexts;
 
     //
-    // Copy the keys over to each device participating in the solving.
+    // Copy the keys to all devices.
     //
 
-    KeysBaseAddress = Table->Keys->KeyArrayBaseAddress;
-    KeysSizeInBytes = Table->Keys->NumberOfKeys.QuadPart * sizeof(KEY);
+    Result = CopyKeysToDevices(Context, Table->Keys);
+    if (FAILED(Result)) {
+        PH_ERROR(CopyKeysToDevices, Result);
+        goto Error;
+    }
 
-    for (Index = 0; Index < NumberOfDeviceContexts; Index++) {
+    //
+    // Copy the graph info to all devices.
+    //
 
-        DeviceContext = &DeviceContexts->DeviceContexts[Index];
-
-        //
-        // Active the context.
-        //
-
-        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CtxPushCurrent, CuResult);
-            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
-            goto Error;
-        }
-
-        if (DeviceContext->KeysBaseAddress == 0) {
-
-            //
-            // No device memory has been allocated for keys before, so,
-            // allocate some now.
-            //
-
-            ASSERT(DeviceContext->KeysSizeInBytes == 0);
-
-            CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
-                                    KeysSizeInBytes);
-            CU_CHECK(CuResult, MemAlloc);
-
-            DeviceContext->KeysSizeInBytes = KeysSizeInBytes;
-
-        } else {
-
-            //
-            // Device memory has already been allocated.  If it's less than what
-            // we need, free what's there and allocate new memoyr.
-            //
-
-            ASSERT(DeviceContext->KeysSizeInBytes > 0);
-
-            if (DeviceContext->KeysSizeInBytes < KeysSizeInBytes) {
-
-                CuResult = Cu->MemFree(DeviceContext->KeysBaseAddress);
-                CU_CHECK(CuResult, MemFree);
-
-                DeviceContext->KeysBaseAddress = 0;
-
-                CuResult = Cu->MemAlloc(&DeviceContext->KeysBaseAddress,
-                                        KeysSizeInBytes);
-                CU_CHECK(CuResult, MemAlloc);
-
-                DeviceContext->KeysSizeInBytes = KeysSizeInBytes;
-
-            } else {
-
-                //
-                // The existing device memory will fit the keys array, so
-                // there's nothing more to do here.
-                //
-
-                ASSERT(DeviceContext->KeysSizeInBytes >= KeysSizeInBytes);
-            }
-        }
-
-        //
-        // Copy the keys over.
-        //
-
-        CuResult = Cu->MemcpyHtoDAsync(DeviceContext->KeysBaseAddress,
-                                       KeysBaseAddress,
-                                       KeysSizeInBytes,
-                                       DeviceContext->Stream);
-        CU_CHECK(CuResult, MemcpyHtoDAsync);
-
-        if (DeviceContext->DeviceGraphInfoAddress == 0) {
-
-            //
-            // Allocate memory for the graph info.
-            //
-
-            CuResult = Cu->MemAlloc(&DeviceContext->DeviceGraphInfoAddress,
-                                    sizeof(GRAPH_INFO));
-            CU_CHECK(CuResult, MemAlloc);
-        }
-
-        //
-        // Copy the graph info over.
-        //
-
-        CuResult = Cu->MemcpyHtoDAsync(DeviceContext->DeviceGraphInfoAddress,
-                                       &Info,
-                                       sizeof(GRAPH_INFO),
-                                       DeviceContext->Stream);
-        CU_CHECK(CuResult, MemcpyHtoDAsync);
+    Result = CopyGraphInfoToDevices(Context, &Info);
+    if (FAILED(Result)) {
+        PH_ERROR(CopyGraphInfoToDevices, Result);
+        goto Error;
     }
 
     //
@@ -524,10 +439,15 @@ Return Value:
     // memcpy of the keys array before submitting any threadpool work.
     //
 
+    DeviceContexts = Context->CuRuntimeContext->CuDeviceContexts;
     for (Index = 0; Index < DeviceContexts->NumberOfDeviceContexts; Index++) {
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
+        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
+        CU_CHECK(CuResult, CtxPushCurrent);
         CuResult = Cu->StreamSynchronize(DeviceContext->Stream);
         CU_CHECK(CuResult, StreamSynchronize);
+        CuResult = Cu->CtxPopCurrent(NULL);
+        CU_CHECK(CuResult, CtxPopCurrent);
     }
 
     //
@@ -572,6 +492,19 @@ Return Value:
 
         Graph->Flags.IsInfoLoaded = FALSE;
         Graph->Context = Context;
+
+        if (Graph->CpuGraph) {
+            AcquireGraphLockExclusive(Graph->CpuGraph);
+            Result = Graph->CpuGraph->Vtbl->SetInfo(Graph->CpuGraph, &Info);
+            ReleaseGraphLockExclusive(Graph->CpuGraph);
+            if (FAILED(Result)) {
+                PH_ERROR(GraphSetInfo_CpuGraph, Result);
+                goto Error;
+            }
+
+            Graph->CpuGraph->Flags.IsInfoLoaded = FALSE;
+            Graph->CpuGraph->Context = Context;
+        }
 
         if (!IsSpareGraph(Graph)) {
             ThreadpoolAddWork(GraphThreadpool,
@@ -779,7 +712,7 @@ FinishedSolution:
         Rng = Graph->Rng;
         Result = Rng->Vtbl->GetCurrentOffset(Rng, &Table->RngCurrentOffset);
         if (FAILED(Result)) {
-            PH_ERROR(CreatePerfectHashTableImplChm01_RngGetCurrentOffset,
+            PH_ERROR(CreatePerfectHashTableImplChm02_RngGetCurrentOffset,
                      Result);
             goto Error;
         }
@@ -803,7 +736,7 @@ FinishedSolution:
     Result = CalculatePredictedAttempts(Table->SolutionsFoundRatio,
                                         &Table->PredictedAttempts);
     if (FAILED(Result)) {
-        PH_ERROR(CreatePerfectHashTableImplChm01_CalculatePredictedAttempts,
+        PH_ERROR(CreatePerfectHashTableImplChm02_CalculatePredictedAttempts,
                  Result);
         goto Error;
     }
@@ -871,7 +804,7 @@ FinishedSolution:
 
         if (Graph->FirstSeed == 0) {
             Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(CreatePerfectHashTableImplChm01_GraphFirstSeedIs0, Result);
+            PH_ERROR(CreatePerfectHashTableImplChm02_GraphFirstSeedIs0, Result);
             PH_RAISE(Result);
         }
 
@@ -1122,13 +1055,10 @@ End:
 
 ReleaseGraphs:
 
-    //
-    // Todo: free keys.
-    //
-
     Graphs = Context->Graphs;
 
     if (Graphs) {
+
         ULONG ReferenceCount;
 
         //
@@ -1140,7 +1070,22 @@ ReleaseGraphs:
 
             Graph = Graphs[Index];
 
-            if (Graph) {
+            if (Graph != NULL) {
+
+                if (Graph->CpuGraph != NULL) {
+
+                    ReferenceCount = Graph->CpuGraph->Vtbl->Release(Graph->CpuGraph);
+
+                    //
+                    // Invariant check: reference count should always be 0 here.
+                    //
+
+                    if (ReferenceCount != 0) {
+                        Result = PH_E_INVARIANT_CHECK_FAILED;
+                        PH_ERROR(CpuGraphReferenceCountNotZero, Result);
+                        PH_RAISE(Result);
+                    }
+                }
 
                 ReferenceCount = Graph->Vtbl->Release(Graph);
 

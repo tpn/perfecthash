@@ -179,7 +179,7 @@ Return Value:
 
     CuPtxPath = CuRuntimeContext->CuPtxPath;
 
-    if (CuPtxPath == NULL) {
+    if (0) {
 
         //
         // No --CuPtxPath supplied; use the embedded PTX string.
@@ -188,7 +188,7 @@ Return Value:
         PtxString = (PCHAR)GraphPtxRawCStr;
         PtxSizeInBytes = sizeof(GraphPtxRawCStr);
 
-    } else {
+    } else if (CuPtxPath != NULL) {
 
         //
         // --CuPtxPath was supplied.  Create a path instance to encapsulate the
@@ -251,53 +251,58 @@ Return Value:
         RELEASE(PtxPath);
     }
 
-    //
-    // Open the cudadevrt.lib path.
-    //
-
-    Result = Context->Vtbl->CreateInstance(Context,
-                                           NULL,
-                                           &IID_PERFECT_HASH_PATH,
-                                           &RuntimeLibPath);
-
-    if (FAILED(Result)) {
-        PH_ERROR(InitializeCudaAndGraphsChm02_CreateRuntimeLibPath, Result);
-        goto Error;
-    }
-
     CuCudaDevRuntimeLibPath = CuRuntimeContext->CuCudaDevRuntimeLibPath;
-    Result = RuntimeLibPath->Vtbl->Copy(RuntimeLibPath,
-                                        CuCudaDevRuntimeLibPath,
-                                        NULL,
-                                        NULL);
-    if (FAILED(Result)) {
-        PH_ERROR(InitializeCudaAndGraphsChm02_RuntimeLibPathCopy, Result);
-        goto Error;
-    }
 
-    //
-    // Create a file instance.
-    //
+    if (CuCudaDevRuntimeLibPath != NULL) {
 
-    Result = Context->Vtbl->CreateInstance(Context,
-                                           NULL,
-                                           &IID_PERFECT_HASH_FILE,
-                                           &RuntimeLibFile);
+        //
+        // Open the cudadevrt.lib path.
+        //
 
-    if (FAILED(Result)) {
-        PH_ERROR(InitializeCudaAndGraphsChm02_CreateRuntimeLibFile, Result);
-        goto Error;
-    }
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_PATH,
+                                               &RuntimeLibPath);
 
-    EndOfFile.QuadPart = 0;
-    Result = RuntimeLibFile->Vtbl->Load(RuntimeLibFile,
-                                        RuntimeLibPath,
-                                        &EndOfFile,
-                                        &FileLoadFlags);
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_CreateRuntimeLibPath, Result);
+            goto Error;
+        }
 
-    if (FAILED(Result)) {
-        PH_ERROR(InitializeCudaAndGraphsChm02_LoadRuntimeLibFile, Result);
-        goto Error;
+        Result = RuntimeLibPath->Vtbl->Copy(RuntimeLibPath,
+                                            CuCudaDevRuntimeLibPath,
+                                            NULL,
+                                            NULL);
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_RuntimeLibPathCopy, Result);
+            goto Error;
+        }
+
+        //
+        // Create a file instance.
+        //
+
+        Result = Context->Vtbl->CreateInstance(Context,
+                                               NULL,
+                                               &IID_PERFECT_HASH_FILE,
+                                               &RuntimeLibFile);
+
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_CreateRuntimeLibFile, Result);
+            goto Error;
+        }
+
+        EndOfFile.QuadPart = 0;
+        Result = RuntimeLibFile->Vtbl->Load(RuntimeLibFile,
+                                            RuntimeLibPath,
+                                            &EndOfFile,
+                                            &FileLoadFlags);
+
+        if (FAILED(Result)) {
+            PH_ERROR(InitializeCudaAndGraphsChm02_LoadRuntimeLibFile, Result);
+            goto Error;
+        }
+
     }
 
     //
@@ -375,86 +380,90 @@ Return Value:
                                  Device->Handle);
         CU_CHECK(CuResult, CtxCreate);
 
-        //
-        // Our solver kernel uses dynamic parallelism (that is, it launches
-        // other kernels).  For this to work, we can't just load the PTX
-        // directly; we need to perform a linking step which also adds the
-        // cudadevrt.lib (CUDA device runtime static library) into the mix.
-        // We do this by issuing a cuLinkCreate(), cuLinkAddData() for the
-        // static .lib and our .ptx string, then cuLinkComplete() to get the
-        // final module that we can pass to cuLoadModuleEx().
-        //
 
-        CuResult = Cu->LinkCreate(NumberOfJitOptions,
-                                  JitOptions,
-                                  JitOptionValues,
-                                  &LinkState);
-        CU_CHECK(CuResult, LinkCreate);
+        if (CuCudaDevRuntimeLibPath != NULL) {
 
-        //
-        // Add cudadevrt.lib.
-        //
+            //
+            // Our solver kernel uses dynamic parallelism (that is, it launches
+            // other kernels).  For this to work, we can't just load the PTX
+            // directly; we need to perform a linking step which also adds the
+            // cudadevrt.lib (CUDA device runtime static library) into the mix.
+            // We do this by issuing a cuLinkCreate(), cuLinkAddData() for the
+            // static .lib and our .ptx string, then cuLinkComplete() to get the
+            // final module that we can pass to cuLoadModuleEx().
+            //
 
-        CuResult = Cu->LinkAddData(LinkState,
-                                   CU_JIT_INPUT_LIBRARY,
-                                   RuntimeLibFile->BaseAddress,
-                                   EndOfFile.QuadPart,
-                                   "cudadevrt.lib",
-                                   0,
-                                   NULL,
-                                   NULL);
-        CU_LINK_CHECK(CuResult, LinkAddData);
+            CuResult = Cu->LinkCreate(NumberOfJitOptions,
+                                      JitOptions,
+                                      JitOptionValues,
+                                      &LinkState);
+            CU_CHECK(CuResult, LinkCreate);
 
-        //
-        // Add the PTX file.
-        //
+            //
+            // Add cudadevrt.lib.
+            //
 
-        CuResult = Cu->LinkAddData(LinkState,
-                                   CU_JIT_INPUT_PTX,
-                                   PtxString,
-                                   PtxSizeInBytes,
-                                   "Graph.ptx",
-                                   0,
-                                   NULL,
-                                   NULL);
-        CU_LINK_CHECK(CuResult, LinkAddData);
+            CuResult = Cu->LinkAddData(LinkState,
+                                       CU_JIT_INPUT_LIBRARY,
+                                       RuntimeLibFile->BaseAddress,
+                                       EndOfFile.QuadPart,
+                                       "cudadevrt.lib",
+                                       0,
+                                       NULL,
+                                       NULL);
+            CU_LINK_CHECK(CuResult, LinkAddData);
 
-        //
-        // Complete the link.
-        //
+            //
+            // Add the PTX file.
+            //
 
-        CuResult = Cu->LinkComplete(LinkState,
-                                    &LinkedModule,
-                                    &LinkedModuleSizeInBytes);
-        CU_LINK_CHECK(CuResult, LinkComplete);
+            CuResult = Cu->LinkAddData(LinkState,
+                                       CU_JIT_INPUT_PTX,
+                                       PtxString,
+                                       PtxSizeInBytes,
+                                       "Graph.ptx",
+                                       0,
+                                       NULL,
+                                       NULL);
+            CU_LINK_CHECK(CuResult, LinkAddData);
 
-        //
-        // Load the module from the embedded PTX.
-        //
+            //
+            // Complete the link.
+            //
 
-        CuResult = Cu->ModuleLoadDataEx(&DeviceContext->Module,
-                                        LinkedModule,
-                                        NumberOfJitOptions,
-                                        JitOptions,
-                                        JitOptionValues);
-        CU_LINK_CHECK(CuResult, ModuleLoadDataEx);
+            CuResult = Cu->LinkComplete(LinkState,
+                                        &LinkedModule,
+                                        &LinkedModuleSizeInBytes);
+            CU_LINK_CHECK(CuResult, LinkComplete);
 
-        //
-        // We can now destroy the linker state.
-        //
+            //
+            // Load the module from the embedded PTX.
+            //
 
-        CuResult = Cu->LinkDestroy(LinkState);
-        CU_CHECK(CuResult, LinkDestroy);
+            CuResult = Cu->ModuleLoadDataEx(&DeviceContext->Module,
+                                            LinkedModule,
+                                            NumberOfJitOptions,
+                                            JitOptions,
+                                            JitOptionValues);
+            CU_LINK_CHECK(CuResult, ModuleLoadDataEx);
 
-        //
-        // Module loaded successfully, resolve the kernels.
-        //
+            //
+            // We can now destroy the linker state.
+            //
 
-        Result = CuDeviceContextInitializeKernels(DeviceContext);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashContextInitializeCuda_InitializeKernels,
-                     Result);
-            goto Error;
+            CuResult = Cu->LinkDestroy(LinkState);
+            CU_CHECK(CuResult, LinkDestroy);
+
+            //
+            // Module loaded successfully, resolve the kernels.
+            //
+
+            Result = CuDeviceContextInitializeKernels(DeviceContext);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashContextInitializeCuda_InitializeKernels,
+                         Result);
+                goto Error;
+            }
         }
 
         //

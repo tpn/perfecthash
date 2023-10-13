@@ -964,12 +964,14 @@ Return Value:
     NumberOfVertices = Graph->NumberOfVertices;
 
     //
-    // Invariant check: we should not be shrinking prior to this point, and our
-    // deleted edge count should be 0.
+    // Invariant check: we should not be shrinking prior to this point, our
+    // deleted edge count should be 0, and our order index should match the
+    // number of keys.
     //
 
-    ASSERT(!Graph->Flags.Shrinking);
+    ASSERT(Graph->Flags.Shrinking == FALSE);
     ASSERT(Graph->DeletedEdgeCount == 0);
+    ASSERT(Graph->OrderIndex == (SHORT)Graph->NumberOfKeys);
 
     //
     // Toggle the shrinking bit to indicate we've started edge deletion.
@@ -1034,16 +1036,6 @@ Return Value:
     NumberOfKeys = Graph->NumberOfKeys;
     NumberOfEdges = Graph->NumberOfEdges;
     NumberOfVertices = Graph->NumberOfVertices;
-
-    //
-    // Invariant check: we *should* be shrinking at this point, and our
-    // deleted edge count should be greater than 0.
-    //
-
-    ASSERT(Graph->Flags.Shrinking != FALSE);
-    ASSERT(Graph->DeletedEdgeCount > 0);
-
-    Graph->Order16Index = (SHORT)NumberOfKeys;
 
     START_GRAPH_COUNTER();
 

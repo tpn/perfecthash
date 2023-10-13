@@ -21,7 +21,7 @@ extern LOAD_SYMBOLS LoadSymbols;
 #define PERFECT_HASH_CUDA_DLL_NAME "PerfectHashCuda.dll"
 #else
 #define PH_NVCUDA_DLL_NAME "libcuda.so"
-#define PERFECT_HASH_CUDA_DLL_NAME "PerfectHashCuda.so"
+#define PERFECT_HASH_CUDA_DLL_NAME "libPerfectHashCuda.so"
 #endif
 
 //

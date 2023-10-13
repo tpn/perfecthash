@@ -666,6 +666,7 @@ static PCSZ Exclamation = "!";
 #define OUTPUT_DOUBLE(Value)                 \
     AppendDoubleToCharBuffer(&Output, Value)
 
+#ifdef PH_WINDOWS
 #define OUTPUT_FLUSH_CONSOLE()                                               \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
     Success = WriteConsoleA(OutputHandle,                                    \
@@ -675,6 +676,12 @@ static PCSZ Exclamation = "!";
                             NULL);                                           \
     ASSERT(Success);                                                         \
     Output = OutputBuffer
+#else
+#define OUTPUT_FLUSH_CONSOLE()                                               \
+    BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
+    write(1, OutputBuffer, BytesToWrite.LowPart);                            \
+    Output = OutputBuffer
+#endif
 
 #define OUTPUT_FLUSH_FILE()                                                    \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer)-1; \
