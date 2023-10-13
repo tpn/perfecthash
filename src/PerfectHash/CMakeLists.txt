@@ -259,7 +259,7 @@ else()
         "unicode.c"
         "Debugger.c"
         "Chm01Compat.c"
-        #"Chm02Compat.c"
+        "Chm02Compat.c"
         "PerfectHashCompat.c"
     )
 endif()

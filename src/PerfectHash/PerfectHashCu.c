@@ -845,6 +845,7 @@ Return Value:
         CuRuntimeContext->CuRngSeed = RNG_DEFAULT_SEED;
     }
 
+#if 0
     //
     // Ensure a runtime path was supplied.
     //
@@ -853,6 +854,7 @@ Return Value:
         Result = PH_E_CU_CUDA_DEV_RUNTIME_LIB_PATH_MANDATORY;
         goto Error;
     }
+#endif
 
     //
     // Validate --CuConcurrency.  It's mandatory, it must be greater than zero,

@@ -1922,6 +1922,7 @@ IsGraphAcyclicPhase1Host(
     printf("Graph: %p\n", Graph);
     printf("Locks: %p\n", Locks);
 
+#if 0
     CUDA_CALL(cudaGetDeviceProperties(&DeviceProperties, 0));
     CUDA_CALL(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &NumberOfBlocksPerSm,
@@ -1938,6 +1939,7 @@ IsGraphAcyclicPhase1Host(
     printf("DeviceProperties.multiProcessorCount: %d\n",
            DeviceProperties.multiProcessorCount);
     printf("NumberOfBlocksPerSm: %d\n", NumberOfBlocksPerSm);
+#endif
     printf("BlocksPerGrid: %d\n", BlocksPerGrid);
     printf("ThreadsPerBlock: %d\n", ThreadsPerBlock);
 
