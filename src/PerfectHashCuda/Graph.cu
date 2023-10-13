@@ -34,9 +34,11 @@ EXTERN_C_BEGIN
 #include "../PerfectHash/stdafx.h"
 #include "../PerfectHash/Graph.h"
 EXTERN_C_END
-#include "../PerfectHash/PerfectHashTableHashExCpp.hpp"
 
 #include "Graph.cuh"
+
+#include "../PerfectHash/PerfectHashTableHashExCpp.hpp"
+
 
 #include <stdio.h>
 
@@ -267,24 +269,24 @@ GraphCuHashKeys(
     GraphType* Graph
     )
 {
+    using KeyType = typename GraphType::KeyType;
+    using VertexType = typename GraphType::VertexType;
+    using VertexPairType = typename GraphType::VertexPairType;
+    using ResultType = VertexPairType;
+
     bool Collision;
     uint32_t Index;
-    typename GraphType::KeyType Key;
-    typename GraphType::KeyType *Keys;
-    typename GraphType::VertexPairType *VertexPairs;
-    typename GraphType::VertexPairType Hash;
-    auto Mask = Graph->NumberOfVertices - 1;
+    KeyType Key;
+    KeyType *Keys;
+    VertexPairType Hash;
+    VertexPairType *VertexPairs;
+    VertexType Mask = Graph->NumberOfVertices - 1;
     uint32_t NumberOfKeys = Graph->NumberOfKeys;
-    PULONG Seeds = Graph->Seeds;
 
-    auto HashFunction = GetHashFunctionForId<
-        std::remove_reference_t<decltype(VertexPairs[0])>,
-        std::remove_reference_t<decltype(Keys[0])>,
-        decltype(Mask)
-    >(Graph->HashFunctionId);
+    auto HashFunction = GraphGetHashFunction(Graph);
 
-    VertexPairs = (typename GraphType::VertexPairType *)Graph->VertexPairs;
-    Keys = (typename GraphType::KeyType *)Graph->DeviceKeys;
+    VertexPairs = (VertexPairType *)Graph->VertexPairs;
+    Keys = (KeyType *)Graph->DeviceKeys;
 
     Index = GlobalThreadIndex();
 
@@ -305,7 +307,7 @@ GraphCuHashKeys(
     while (Index < NumberOfKeys) {
 
         Key = Keys[Index];
-        Hash = HashFunction(Key, Seeds, Mask);
+        Hash = HashFunction(Key, Mask);
 
 #if 0
         //
@@ -451,6 +453,18 @@ HashKeysHost(
     SolveContext = Graph->CuSolveContext;
 
     printf("HashKeysHost: Graph: %p\n", Graph);
+
+    if (!GraphIsHashFunctionSupported(Graph)) {
+        printf("Unsupported hash function ID on GPU: %d.\n",
+               Graph->HashFunctionId);
+        return;
+    }
+
+    CUDA_CALL(cudaMemcpyToSymbol(c_GraphSeeds,
+                                 &Graph->GraphSeeds,
+                                 sizeof(Graph->GraphSeeds),
+                                 0,
+                                 cudaMemcpyHostToDevice));
 
     HashKeys<<<BlocksPerGrid,
                ThreadsPerBlock,
@@ -1100,11 +1114,7 @@ CheckHashedKeys(
     Vertices3 = (decltype(Vertices3))Graph->Vertices3;
     VertexPairs = (decltype(VertexPairs))Graph->VertexPairs;
 
-    auto HashFunction = GetHashFunctionForId<
-        std::remove_reference_t<decltype(VertexPairs[0])>,
-        std::remove_reference_t<decltype(Keys[0])>,
-        decltype(Mask)
-    >(Graph->HashFunctionId);
+    auto HashFunction = GraphGetHashFunction(Graph);
 
     int32_t *Degrees = (int32_t *)Graph->_Degrees;
     int32_t *Edges = (int32_t *)Graph->_Edges;
@@ -1313,7 +1323,8 @@ GraphCuRemoveEdgeVertex(
     _In_ GraphType* Graph,
     _In_ typename GraphType::VertexType VertexIndex,
     _In_ typename GraphType::EdgeType Edge,
-    _In_ PLOCK Locks
+    _In_ PLOCK Locks,
+    _Out_ bool &Removed
     )
 {
     bool Retry = false;
@@ -1325,6 +1336,8 @@ GraphCuRemoveEdgeVertex(
 
     Vertex3Type *Vertex;
     Vertex3Type *Vertices3;
+
+    Removed = false;
 
     Vertices3 = (decltype(Vertices3))Graph->Vertices3;
 
@@ -1357,6 +1370,7 @@ GraphCuRemoveEdgeVertex(
 
             atomicXor((uint32_t *)&(Vertex->Edges), (uint32_t)Edge);
             atomicSub((uint32_t *)&(Vertex->Degree), GroupSize);
+            __threadfence();
 
         } else if constexpr (sizeof(VertexType) == sizeof(uint16_t)) {
 
@@ -1393,6 +1407,9 @@ GraphCuRemoveEdgeVertex(
 
             } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
+            Removed = true;
+            __threadfence();
+
         } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
 
             //
@@ -1405,6 +1422,7 @@ GraphCuRemoveEdgeVertex(
 
 End:
     LabeledGroup.sync();
+    Removed = LabeledGroup.shfl(Removed, 0);
     return Retry;
 }
 
@@ -1562,21 +1580,30 @@ GraphCuRemoveVertex(
     using Vertex3Type = typename GraphType::Vertex3Type;
     using VertexPairType = typename GraphType::VertexPairType;
     using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
+    using OrderIndexType = int32_t;
 
     bool Retry = false;
     bool Retry1 = true;
     bool Retry2 = true;
+    bool Removed1 = false;
+    bool Removed2 = false;
     EdgeType Edge;
     DegreeType Degree;
     Edge3Type *Edge3;
     Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
-    OrderType OrderIndex;
+    OrderType *Order = (decltype(Order))Graph->Order;
+    OrderIndexType *GraphOrderIndex = (decltype(GraphOrderIndex))&Graph->OrderIndex;
+    OrderIndexType OrderIndex;
 
     Vertex3Type *Vertex;
     Vertex3Type *Vertices3;
 
     Vertices3 = (decltype(Vertices3))Graph->Vertices3;
     Vertex = &Vertices3[VertexIndex];
+
+    if (Vertex->Degree == 0) {
+        goto End;
+    }
 
     if (!Locks[VertexIndex].Lock()) {
         Retry = true;
@@ -1617,14 +1644,20 @@ GraphCuRemoveVertex(
 
     do {
         if (Retry1) {
-            Retry1 = GraphCuRemoveEdgeVertex(Graph, Edge3->Vertex1, Edge, Locks);
+            Retry1 = GraphCuRemoveEdgeVertex(Graph,
+                                             Edge3->Vertex1,
+                                             Edge,
+                                             Locks,
+                                             Removed1);
         }
         if (Retry2) {
-            Retry2 = GraphCuRemoveEdgeVertex(Graph, Edge3->Vertex2, Edge, Locks);
+            Retry2 = GraphCuRemoveEdgeVertex(Graph,
+                                             Edge3->Vertex2,
+                                             Edge,
+                                             Locks,
+                                             Removed2);
         }
     } while (Retry1 || Retry2);
-
-    __syncthreads();
 
 #if 0
     AtomicAggIncCGV(&Graph->DeletedEdgeCount);
@@ -1636,16 +1669,35 @@ GraphCuRemoveVertex(
     //ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
     //ASSERT(OrderIndex < Graph->NumberOfEdges);
 #endif
-    if (Graph->OrderIndex > 0) {
-        OrderIndex = AtomicAggSubCG(&Graph->OrderIndex);
+
+    if (Removed1 || Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndexEither);
+    }
+    if (Removed1 && Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndexBoth);
+    }
+    if (Removed1) {
+        AtomicAggIncCGV(&Graph->OrderIndex1);
+    }
+    if (Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndex2);
+    }
+    if (!Removed1 && !Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndexNone);
+    }
+
+    if (Removed1 || Removed2) {
+        AtomicAggIncCGV(&Graph->DeletedEdgeCount);
+        OrderIndex = AtomicAggSubCG(GraphOrderIndex);
         if (OrderIndex >= 0) {
-            Graph->Order[OrderIndex] = Edge;
+            Order[OrderIndex] = Edge;
         }
     }
 
     Graph->OrderByThread[GlobalThreadIndex()] = Edge;
     Graph->OrderByVertex[VertexIndex] = GlobalThreadIndex();
     Graph->OrderByEdge[Edge] = GlobalThreadIndex();
+    __threadfence();
 #endif
 End:
     return Retry;
@@ -1799,10 +1851,10 @@ GraphCuIsAcyclicPhase2(
     using OrderType = typename GraphType::OrderType;
     using VertexType = typename GraphType::VertexType;
 
-    bool IsAcyclic;
+    bool Retry1;
+    bool Retry2;
     int32_t Index;
     uint32_t NumberOfKeys = Graph->NumberOfKeys;
-    uint32_t NumberOfEdgesDeleted;
     OrderType *Order = (decltype(Order))Graph->Order;
     Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
     OrderType EdgeIndex;
@@ -1810,9 +1862,24 @@ GraphCuIsAcyclicPhase2(
 
     //auto Grid = cg::this_grid();
 
-    Index = GlobalThreadIndex();
+    for (Index = NumberOfKeys - GlobalThreadIndex();
+         Graph->OrderIndex > 0 && Index > Graph->OrderIndex;
+         NOTHING)
+    {
+        EdgeIndex = Order[Index];
+        OtherEdge = &Edges3[EdgeIndex];
+        do {
+            if (Retry1) {
+                Retry1 = GraphCuRemoveVertex(Graph, OtherEdge->Vertex1, Locks);
+            }
+            if (Retry2) {
+                Retry2 = GraphCuRemoveVertex(Graph, OtherEdge->Vertex2, Locks);
+            }
+        } while (Retry1 || Retry2);
+        Index -= gridDim.x * blockDim.x;
+    }
 
-#if 1
+#if 0
     if (GlobalThreadIndex() == 0) {
         for (Index = (int32_t)NumberOfKeys;
              Graph->OrderIndex > 0 && Index > Graph->OrderIndex;
@@ -1835,7 +1902,7 @@ GraphCuIsAcyclicPhase2(
             Graph->CuIsAcyclicResult = PH_E_GRAPH_CYCLIC_FAILURE;
         }
     }
-#else
+#elif 0
 
     while (Index < NumberOfKeys) {
         EdgeIndex = Order[Index];
@@ -1878,13 +1945,11 @@ IsGraphAcyclicPhase1Host(
     PLOCK Locks;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PVOID Kernel;
-    int NumberOfBlocksPerSm;
-    cudaDeviceProp DeviceProperties;
 
     SolveContext = Graph->CuSolveContext;
 
     printf("IsGraphAcyclicHost: Graph: %p\n", Graph);
-    Graph->OrderIndex = Graph->NumberOfKeys;
+    //Graph->OrderIndex = Graph->NumberOfKeys;
     printf("IsGraphAcyclicHost: Graph->OrderIndex: %d\n", Graph->OrderIndex);
 
     HostGraph = (PGRAPH)SolveContext->HostGraph;
@@ -1922,7 +1987,9 @@ IsGraphAcyclicPhase1Host(
     printf("Graph: %p\n", Graph);
     printf("Locks: %p\n", Locks);
 
-#if 0
+#if PH_WINDOWS
+    int NumberOfBlocksPerSm;
+    cudaDeviceProp DeviceProperties;
     CUDA_CALL(cudaGetDeviceProperties(&DeviceProperties, 0));
     CUDA_CALL(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &NumberOfBlocksPerSm,

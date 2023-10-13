@@ -1462,6 +1462,7 @@ Return Value:
         ULONG Vertex1Mismatch = 0;
         ULONG Vertex2Mismatch = 0;
         ULONG Correct = 0;
+        ULONG Errors = 0;
         if (IsUsingAssigned16(Graph)) {
             PVERTEX16_PAIR VertexPairsHost;
             PVERTEX16_PAIR VertexPairsDevice;
@@ -1476,6 +1477,7 @@ Return Value:
                 VertexPairDevice = *VertexPairsDevice++;
 
                 if (VertexPairHost.Vertex1 != VertexPairDevice.Vertex1) {
+                    Errors++;
                     Vertex1Mismatch++;
                     OUTPUT_CHR('[');
                     OUTPUT_HEX(Index);
@@ -1486,6 +1488,7 @@ Return Value:
                     OUTPUT_HEX(VertexPairDevice.Vertex1);
                     OUTPUT_CHR('\n');
                 } else if (VertexPairHost.Vertex2 != VertexPairDevice.Vertex2) {
+                    Errors++;
                     Vertex2Mismatch++;
                     OUTPUT_CHR('[');
                     OUTPUT_HEX(Index);
@@ -1497,6 +1500,10 @@ Return Value:
                     OUTPUT_CHR('\n');
                 } else {
                     Correct++;
+                }
+
+                if ((Errors % 50) == 0) {
+                    OUTPUT_FLUSH_CONSOLE();
                 }
             }
 
@@ -1535,9 +1542,11 @@ Return Value:
         //
 
         ULONG Index;
+        ULONG Ignored = 0;
         ULONG DegreeMismatch = 0;
         ULONG EdgesMismatch = 0;
         ULONG Correct = 0;
+        ULONG Errors = 0;
         if (IsUsingAssigned16(Graph)) {
             PVERTEX163 Vertices3Host;
             PVERTEX163 Vertices3Device;
@@ -1551,7 +1560,20 @@ Return Value:
                 Vertex3Host = *Vertices3Host++;
                 Vertex3Device = *Vertices3Device++;
 
+                if (Vertex3Host.Degree == 0 ||
+                    Vertex3Device.Degree == 0) {
+                    Ignored++;
+                    continue;
+                }
+
+                if (Vertex3Host.Edges == 0 ||
+                    Vertex3Device.Edges == 0) {
+                    Ignored++;
+                    continue;
+                }
+
                 if (Vertex3Host.Degree != Vertex3Device.Degree) {
+                    Errors++;
                     DegreeMismatch++;
                     OUTPUT_CHR('[');
                     OUTPUT_HEX(Index);
@@ -1562,6 +1584,7 @@ Return Value:
                     OUTPUT_HEX(Vertex3Device.Degree);
                     OUTPUT_CHR('\n');
                 } else if (Vertex3Host.Edges != Vertex3Device.Edges) {
+                    Errors++;
                     EdgesMismatch++;
                     OUTPUT_CHR('[');
                     OUTPUT_HEX(Index);
@@ -1573,6 +1596,9 @@ Return Value:
                     OUTPUT_CHR('\n');
                 } else {
                     Correct++;
+                }
+                if ((Errors % 50) == 0) {
+                    OUTPUT_FLUSH_CONSOLE();
                 }
             }
 
@@ -1616,7 +1642,18 @@ Return Value:
         }
     }
 
+    DeviceGraph->Order16Index = (SHORT)CpuGraph->NumberOfKeys;
+    DeviceGraph->DeletedEdgeCount = 0;
+
     Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
+                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
+                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                 SharedMemoryInBytes);
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+    Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
                                  PERFECT_HASH_CU_BLOCKS_PER_GRID,
                                  PERFECT_HASH_CU_THREADS_PER_BLOCK,
                                  SharedMemoryInBytes);
@@ -1737,7 +1774,7 @@ Return Value:
     while (TRUE) {
         ++Attempts;
 
-#if 1
+#if 0
         Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
                                      PERFECT_HASH_CU_BLOCKS_PER_GRID,
                                      PERFECT_HASH_CU_THREADS_PER_BLOCK,
@@ -1768,6 +1805,7 @@ Return Value:
         VertexOrderDelta = VertexOrderCount2 - VertexOrderCount1;
         EdgeOrderDelta = EdgeOrderCount2 - EdgeOrderCount1;
 
+#if 0
         if (VertexOrderDelta == 0 && EdgeOrderDelta == 0) {
             break;
         }
@@ -1775,6 +1813,7 @@ Return Value:
         if (EdgeOrderDelta == 0) {
             break;
         }
+#endif
 
         ThreadOrderCount += ThreadOrderDelta;
         VertexOrderCount += VertexOrderDelta;
@@ -1783,6 +1822,10 @@ Return Value:
         ThreadOrderCount1 = ThreadOrderCount2;
         VertexOrderCount1 = VertexOrderCount2;
         EdgeOrderCount1 = EdgeOrderCount2;
+
+        if (DeviceGraph->OrderIndex <= 0) {
+            break;
+        }
 
         if (EdgeOrderCount >= NumberOfKeys) {
             break;

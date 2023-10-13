@@ -1363,6 +1363,77 @@ typedef struct _GRAPH_SHARED {
 } GRAPH_SHARED;
 typedef GRAPH_SHARED *PGRAPH_SHARED;
 
+typedef struct _GRAPH_SEEDS {
+
+    //
+    // Capture the seeds used for each hash function employed by the graph.
+    //
+
+    ULONG NumberOfSeeds;
+    ULONG Padding;
+
+    union {
+        ULONG Seeds[MAX_NUMBER_OF_SEEDS];
+        struct {
+            union {
+                struct {
+                    union {
+                        ULONG Seed1;
+                        ULONG FirstSeed;
+                        ULONG_BYTES Seed1Bytes;
+                    };
+                    union {
+                        ULONG Seed2;
+                        ULONG_BYTES Seed2Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds12;
+            };
+            union {
+                struct {
+                    union {
+                        ULONG Seed3;
+                        ULONG_BYTES Seed3Bytes;
+                    };
+                    union {
+                        ULONG Seed4;
+                        ULONG_BYTES Seed4Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds34;
+            };
+            union {
+                struct {
+                    union {
+                        ULONG Seed5;
+                        ULONG_BYTES Seed5Bytes;
+                    };
+                    union {
+                        ULONG Seed6;
+                        ULONG_BYTES Seed6Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds56;
+            };
+            union {
+                struct {
+                    union {
+                        ULONG Seed7;
+                        ULONG_BYTES Seed7Bytes;
+                    };
+                    union {
+                        ULONG Seed8;
+                        ULONG LastSeed;
+                        ULONG_BYTES Seed8Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds78;
+            };
+        };
+    };
+} GRAPH_SEEDS;
+typedef GRAPH_SEEDS *PGRAPH_SEEDS;
+
 #if 0
 //
 // cuRAND-specific glue.
@@ -1575,6 +1646,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         volatile SHORT Order16Index;
     };
 
+    volatile LONG OrderIndex1;
+    volatile LONG OrderIndex2;
+    volatile LONG OrderIndexBoth;
+    volatile LONG OrderIndexNone;
+    volatile LONG OrderIndexEither;
+    LONG Padding8;
+
     //
     // Number of empty vertices encountered during the assignment step.
     //
@@ -1661,7 +1739,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     };
 
     volatile LONG OrderByVertexIndex;
-    LONG Padding;
+    LONG Padding1;
 
     //
     // Array of the "next" edge array, as per the referenced papers.
@@ -2040,51 +2118,84 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     ULONG TotalTraversals;
 
-    //
-    // Capture the seeds used for each hash function employed by the graph.
-    //
-
-    ULONG NumberOfSeeds;
+    ULONG Padding2;
 
     union {
-        ULONG Seeds[MAX_NUMBER_OF_SEEDS];
+
+        GRAPH_SEEDS GraphSeeds;
+
+        //
+        // The GRAPH_SEEDS structure was introduced many years after the GRAPH
+        // struct itself was written.  To avoid breaking compatibility with all
+        // the existing code that uses the GRAPH struct, we inline the entire
+        // GRAPH_SEEDS structure here.  This allows new GPU code to reliably
+        // copy the entire GRAPH_SEEDS struct into constant memory, whilst not
+        // breaking all of the existing code that features Graph->Seed1, etc.
+        //
+
         struct {
+
+            ULONG NumberOfSeeds;
+            ULONG Padding3;
+
             union {
+                ULONG Seeds[MAX_NUMBER_OF_SEEDS];
                 struct {
                     union {
-                        ULONG Seed1;
-                        ULONG FirstSeed;
+                        struct {
+                            union {
+                                ULONG Seed1;
+                                ULONG FirstSeed;
+                                ULONG_BYTES Seed1Bytes;
+                            };
+                            union {
+                                ULONG Seed2;
+                                ULONG_BYTES Seed2Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds12;
                     };
-                    ULONG Seed2;
-                };
-                ULARGE_INTEGER Seeds12;
-            };
-            union {
-                struct {
                     union {
-                        ULONG Seed3;
-                        ULONG_BYTES Seed3Bytes;
+                        struct {
+                            union {
+                                ULONG Seed3;
+                                ULONG_BYTES Seed3Bytes;
+                            };
+                            union {
+                                ULONG Seed4;
+                                ULONG_BYTES Seed4Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds34;
                     };
-                    ULONG Seed4;
-                };
-                ULARGE_INTEGER Seeds34;
-            };
-            union {
-                struct {
-                    ULONG Seed5;
-                    ULONG Seed6;
-                };
-                ULARGE_INTEGER Seeds56;
-            };
-            union {
-                struct {
-                    ULONG Seed7;
                     union {
-                        ULONG Seed8;
-                        ULONG LastSeed;
+                        struct {
+                            union {
+                                ULONG Seed5;
+                                ULONG_BYTES Seed5Bytes;
+                            };
+                            union {
+                                ULONG Seed6;
+                                ULONG_BYTES Seed6Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds56;
+                    };
+                    union {
+                        struct {
+                            union {
+                                ULONG Seed7;
+                                ULONG_BYTES Seed7Bytes;
+                            };
+                            union {
+                                ULONG Seed8;
+                                ULONG LastSeed;
+                                ULONG_BYTES Seed8Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds78;
                     };
                 };
-                ULARGE_INTEGER Seeds78;
             };
         };
     };
