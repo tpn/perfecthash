@@ -1136,8 +1136,18 @@ GraphIsAcyclic16Phase1(
     _In_ PGRAPH Graph
     );
 
-VOID
+HRESULT
 GraphIsAcyclic16Phase2(
+    _In_ PGRAPH Graph
+    );
+
+VOID
+GraphIsAcyclic3Phase1(
+    _In_ PGRAPH Graph
+    );
+
+HRESULT
+GraphIsAcyclic3Phase2(
     _In_ PGRAPH Graph
     );
 
@@ -1195,6 +1205,8 @@ Return Value:
     PDEBUGGER_CONTEXT DebuggerContext;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
+    LONG BlocksPerGrid = PERFECT_HASH_CU_BLOCKS_PER_GRID;
+    LONG ThreadsPerBlock = PERFECT_HASH_CU_THREADS_PER_BLOCK;
 
     UNREFERENCED_PARAMETER(NewGraphPointer);
 
@@ -1375,15 +1387,15 @@ Return Value:
     KernelParams[0] = &DeviceGraph;
 
     //
-    // Initialize the grid to a 1D grid using PERFECT_HASH_CU_BLOCKS_PER_GRID
-    // and PERFECT_HASH_CU_THREADS_PER_BLOCK.
+    // Initialize the grid to a 1D grid using BlocksPerGrid
+    // and ThreadsPerBlock.
     //
 
-    Grid.X = PERFECT_HASH_CU_BLOCKS_PER_GRID;
+    Grid.X = BlocksPerGrid;
     Grid.Y = 1;
     Grid.Z = 1;
 
-    Block.X = PERFECT_HASH_CU_THREADS_PER_BLOCK;
+    Block.X = ThreadsPerBlock;
     Block.Y = 1;
     Block.Z = 1;
 
@@ -1403,8 +1415,8 @@ Return Value:
 #else
 
     Cu->HashKeysHost(DeviceGraph,
-                     PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                     PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                     BlocksPerGrid,
+                     ThreadsPerBlock,
                      SharedMemoryInBytes);
 
 #endif
@@ -1428,9 +1440,9 @@ Return Value:
     OutputBuffer = Context->ConsoleBuffer;
     BufferSizeInBytes = Context->ConsoleBufferSizeInBytes;
 
-        //
-        // Dummy write to suppress SAL warning re uninitialized memory being used.
-        //
+    //
+    // Dummy write to suppress SAL warning re uninitialized memory being used.
+    //
 
     Output = OutputBuffer;
     *Output = '\0';
@@ -1512,8 +1524,8 @@ Return Value:
     }
 
     Cu->AddHashedKeysHost(DeviceGraph,
-                          PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                          PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                          BlocksPerGrid,
+                          ThreadsPerBlock,
                           SharedMemoryInBytes);
 
     //
@@ -1639,23 +1651,25 @@ Return Value:
     if (CpuGraph) {
         if (IsUsingAssigned16(Graph)) {
             GraphIsAcyclic16Phase1(CpuGraph);
+        } else {
+            GraphIsAcyclic3Phase1(CpuGraph);
         }
     }
 
-    DeviceGraph->Order16Index = (SHORT)CpuGraph->NumberOfKeys;
+    DeviceGraph->OrderIndex = CpuGraph->NumberOfKeys;
     DeviceGraph->DeletedEdgeCount = 0;
 
     Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
-                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                 BlocksPerGrid,
+                                 ThreadsPerBlock,
                                  SharedMemoryInBytes);
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
     Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
-                                 PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                                 PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                 BlocksPerGrid,
+                                 ThreadsPerBlock,
                                  SharedMemoryInBytes);
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
@@ -1767,6 +1781,8 @@ Return Value:
     if (CpuGraph) {
         if (IsUsingAssigned16(Graph)) {
             GraphIsAcyclic16Phase2(CpuGraph);
+        } else {
+            GraphIsAcyclic3Phase2(CpuGraph);
         }
     }
 
@@ -1774,15 +1790,15 @@ Return Value:
     while (TRUE) {
         ++Attempts;
 
-#if 0
+#if 1
         Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
-                                     PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                                     PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                     BlocksPerGrid,
+                                     ThreadsPerBlock,
                                      SharedMemoryInBytes);
 #else
         Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
-                                     PERFECT_HASH_CU_BLOCKS_PER_GRID,
-                                     PERFECT_HASH_CU_THREADS_PER_BLOCK,
+                                     BlocksPerGrid,
+                                     ThreadsPerBlock,
                                      SharedMemoryInBytes);
 #endif
 
