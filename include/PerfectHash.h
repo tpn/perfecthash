@@ -180,11 +180,12 @@ typedef union _ULONG_BYTES {
     };
 
     LONG AsLong;
-    ULONG AsULong;
     BYTE Bytes[4];
     CHAR Chars[4];
     SHORT Words[2];
     USHORT UWords[2];
+    ULONG AsULong;
+    ULONG AsLargestIntegral;
 } ULONG_BYTES;
 C_ASSERT(sizeof(ULONG_BYTES) == sizeof(ULONG));
 typedef ULONG_BYTES *PULONG_BYTES;
@@ -244,6 +245,7 @@ typedef union _ULONGLONG_BYTES {
     ULONG ULongs[2];
     LONGLONG AsLongLong;
     ULONGLONG AsULongLong;
+    ULONGLONG AsLargestIntegral;
 } ULONGLONG_BYTES;
 C_ASSERT(sizeof(ULONGLONG_BYTES) == sizeof(ULONGLONG));
 typedef ULONGLONG_BYTES *PULONGLONG_BYTES;

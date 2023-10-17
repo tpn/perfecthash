@@ -417,8 +417,12 @@ Return Value:
     DeviceContexts = Context->CuRuntimeContext->CuDeviceContexts;
     for (Index = 0; Index < DeviceContexts->NumberOfDeviceContexts; Index++) {
         DeviceContext = &DeviceContexts->DeviceContexts[Index];
+        CuResult = Cu->CtxPushCurrent(DeviceContext->Context);
+        CU_CHECK(CuResult, Chm02_CtxPushCurrent);
         CuResult = Cu->StreamSynchronize(DeviceContext->Stream);
         CU_CHECK(CuResult, StreamSynchronize);
+        CuResult = Cu->CtxPopCurrent(NULL);
+        CU_CHECK(CuResult, Chm02_CtxPopCurrent);
     }
 
     //

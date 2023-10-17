@@ -323,6 +323,7 @@ template<
     typename Edge3TypeT,
     typename Vertex3TypeT,
     typename AtomicVertex3TypeT,
+    typename AtomicVertex3CASTypeT,
     typename EdgeTypeT,
     typename DegreeTypeT,
     typename OrderTypeT,
@@ -339,6 +340,7 @@ struct GRAPH_CU : GRAPH {
     using Edge3Type = Edge3TypeT;
     using Vertex3Type = Vertex3TypeT;
     using AtomicVertex3Type = AtomicVertex3TypeT;
+    using AtomicVertex3CASType = AtomicVertex3CASTypeT;
     using EdgeType = EdgeTypeT;
     using DegreeType = DegreeTypeT;
     using OrderType = OrderTypeT;
@@ -363,6 +365,7 @@ using GRAPH8 =
         EDGE83,                 // Edge3Type
         VERTEX83,               // Vertex3Type
         ATOMIC_VERTEX<EDGE8>,   // AtomicVertex3Type
+        uint32_t,               // AtomicVertex3CASTypeT
         EDGE8,                  // EdgeType
         DEGREE8,                // DegreeType
         ORDER8,                 // OrderType
@@ -381,6 +384,7 @@ using GRAPH16 =
         EDGE163,               // Edge3Type
         VERTEX163,             // Vertex3Type
         ATOMIC_VERTEX<EDGE16>, // AtomicVertex3Type
+        uint32_t,              // AtomicVertex3CASTypeT
         EDGE16,                // EdgeType
         DEGREE16,              // DegreeType
         ORDER16,               // OrderType
@@ -399,6 +403,7 @@ using GRAPH32 =
         EDGE3,                 // Edge3Type
         VERTEX3,               // Vertex3Type
         ATOMIC_VERTEX<EDGE>,   // AtomicVertex3Type
+        uint64_t,              // AtomicVertex3CASTypeT
         EDGE,                  // EdgeType
         DEGREE,                // DegreeType
         ORDER,                 // OrderType
@@ -427,9 +432,9 @@ using PGRAPH64 = GRAPH64*;
 #endif
 
 template<typename AtomicType = int32_t,
-         int16_t SpinCount = 1000,
+         int16_t SpinCount = 100,
          int8_t InitialNanosecondSleep = 8,
-         int16_t MaxNanosecondSleep = 256>
+         int16_t MaxNanosecondSleep = 128>
 struct LOCK_CU {
     cuda::std::atomic<AtomicType> Value;
 
