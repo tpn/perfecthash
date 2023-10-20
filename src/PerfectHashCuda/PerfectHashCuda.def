@@ -10,3 +10,4 @@ EXPORTS
     GraphPostAddHashedKeysHost
     WriteDataToFileSync
     WriteDataToFileAsync
+    GraphScratchHost

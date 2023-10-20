@@ -1746,7 +1746,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     };
 
     volatile LONG OrderByVertexIndex;
-    LONG Padding1;
+
+    LONG CuScratch;
+
+    union {
+        PLONG SortedOrder16;
+        PSHORT SortedOrder;
+    };
 
     //
     // Array of the "next" edge array, as per the referenced papers.
