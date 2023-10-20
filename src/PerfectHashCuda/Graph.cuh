@@ -165,6 +165,152 @@ typedef CU_KERNEL_CONTEXT *PCU_KERNEL_CONTEXT;
         exit(-1);                                      \
     }
 
+//
+// Singly-linked lists
+//
+
+struct _CU_SLIST_ENTRY;
+typedef struct _CU_SLIST_ENTRY {
+    struct _CU_SLIST_ENTRY *Next;
+} CU_SLIST_ENTRY, *PCU_SLIST_ENTRY;
+
+namespace impl {
+    constexpr unsigned int DepthBits = 4;
+    constexpr unsigned int SequenceBits = 8;
+
+    constexpr unsigned int NextEntryBits = 32;
+    constexpr unsigned int AlignmentBits = 4;
+};
+
+template <unsigned int DepthBitsT = impl::DepthBits,
+          unsigned int SequenceBitsT = impl::SequenceBits,
+          unsigned int NextEntryBitsT = impl::NextEntryBits,
+          unsigned int AlignmentBitsT = impl::AlignmentBits>
+struct _CU_SLIST_HEADER {
+    using DepthBits = std::integral_constant<unsigned int, DepthBitsT>;
+    using SequenceBits = std::integral_constant<unsigned int, SequenceBitsT>;
+    using NextEntryBits = std::integral_constant<unsigned int, NextEntryBitsT>;
+    using AlignmentBits = std::integral_constant<unsigned int, AlignmentBitsT>;
+
+    static_assert(DepthBitsT + SequenceBitsT + NextEntryBitsT == 64,
+                  "Total bit size must be 64");
+    union {
+        cuda::std::atomic<unsigned long long> Atomic;
+        unsigned long long Alignment;
+        struct {
+            unsigned long long Depth : DepthBitsT;
+            unsigned long long Sequence : SequenceBitsT;
+            unsigned long long NextEntry : NextEntryBitsT;
+            unsigned long long Shift : AlignmentBitsT;
+        };
+    };
+
+#if 0
+    __host__
+    __device__
+    __forceinline__
+    bool
+    operator< (
+        const struct _CU_SLIST_HEADER& Right
+        ) const
+    {
+        return (this->Depth < Right.Depth);
+    }
+#endif
+
+    __device__
+    __forceinline__
+    struct _CU_SLIST_ENTRY *
+    PushEntry(
+        _In_ struct _CU_LIST_ENTRY *Entry
+        )
+    {
+        decltype(this) Prev;
+        decltype(this) Next;
+
+        do {
+            __threadfence();
+            Prev.Atomic = this->Atomic.load();
+            Entry->Next = (PCU_SLIST_ENTRY)(Prev.NextEntry << AlignmentBits::value);
+            Next.Depth = Prev.Depth;
+            if ((Next.Depth + 1) > Prev.Depth) {
+                Next.Depth += 1;
+            }
+            Next.Sequence = Prev.Sequence + 1;
+            Next.NextEntry = (unsigned long long)Entry >> AlignmentBits::value;
+        } while (atomicCAS(&this->Atomic, Prev.Atomic, Next.Atomic) != Prev.Atomic);
+
+        return (struct _CU_SLIST_ENTRY *)(Prev.NextEntry << AlignmentBits::value);
+    }
+
+    __device__
+    __forceinline__
+    struct _CU_SLIST_ENTRY *
+    PopEntry(
+        void
+        )
+    {
+        decltype(this) Prev;
+        decltype(this) Next;
+
+        do {
+            __threadfence();
+            Prev.Atomic = this->Atomic.load();
+            if (Prev.Depth == 0) {
+                return nullptr;
+            }
+            Next.Depth = Prev.Depth - 1;
+            Next.Sequence = Prev.Sequence + 1;
+            Next.NextEntry = (unsigned long long)Prev.NextEntry << AlignmentBits::value;
+        } while (atomicCAS(&this->Atomic, Prev.Atomic, Next.Atomic) != Prev.Atomic);
+
+        return (struct _CU_SLIST_ENTRY *)(Prev.NextEntry << AlignmentBits::value);
+    }
+};
+
+using CU_SLIST_HEADER = _CU_SLIST_HEADER<>;
+using PCU_SLIST_HEADER = CU_SLIST_HEADER *;
+
+#if 0
+template<typename HeaderType>
+__device__
+PSLIST_ENTRY
+InterlockedPushEntrySList(
+    HeaderType* ListHead,
+    PSLIST_ENTRY ListEntry
+    )
+{
+    constexpr unsigned int DepthBits = HeaderType::DepthBits::value;
+    constexpr unsigned int SequenceBits = HeaderType::SequenceBits::value;
+    constexpr unsigned int NextEntryBits = HeaderType::NextEntryBits::value;
+    constexpr unsigned int AlignmentBits = HeaderType::AlignmentBits::value;
+
+    unsigned long long OldDepth, OldSequence, OldNextEntry;
+    unsigned long long NewDepth, NewSequence, NewNextEntry;
+    unsigned long long OldAlignment, NewAlignment, Result;
+
+    OldAlignment = ListHead->Alignment;
+    do {
+        OldDepth = OldAlignment & ((1ULL << DepthBits) - 1);
+        OldSequence = (OldAlignment >> DepthBits) & ((1ULL << SequenceBits) - 1);
+        OldNextEntry = (OldAlignment >> (DepthBits + SequenceBits)) & ((1ULL << NextEntryBits) - 1);
+
+        ListEntry->Next = (PSLIST_ENTRY)(OldNextEntry << AlignmentBits);
+
+        NewDepth = OldDepth + 1;
+        NewSequence = OldSequence + 1;
+        NewNextEntry = (unsigned long long)ListEntry >> AlignmentBits;
+
+        NewAlignment = (NewDepth) | (NewSequence << DepthBits) | (NewNextEntry << (DepthBits + SequenceBits));
+
+        Result = atomicCAS(&ListHead->Alignment, OldAlignment, NewAlignment);
+        OldAlignment = Result;
+    } while (Result != OldAlignment);
+
+    return (PSLIST_ENTRY)(OldNextEntry << AlignmentBits);
+}
+#endif
+
 
 //
 // Assigned 8
@@ -440,7 +586,7 @@ struct LOCK_CU {
 
     __device__ __forceinline__
     bool
-    Lock() {
+    TryLock() {
         bool Result;
         bool Success = false;
         decltype(MaxNanosecondSleep) Nanoseconds = InitialNanosecondSleep;
@@ -466,6 +612,33 @@ struct LOCK_CU {
             }
         } while (++Count < SpinCount);
         return Success;
+    }
+
+    __device__ __forceinline__
+    bool
+    Lock() {
+        bool Result;
+        decltype(MaxNanosecondSleep) Nanoseconds = InitialNanosecondSleep;
+        AtomicType CurrentThreadIndex = GlobalThreadIndex();
+        AtomicType Expected = -1;
+        do {
+            Result = Value.compare_exchange_strong(
+                Expected,
+                CurrentThreadIndex,
+                cuda::std::memory_order_acquire,
+                cuda::std::memory_order_relaxed
+            );
+            if (Result != false) {
+                __threadfence();
+                break;
+            }
+            Expected = -1;
+            __nanosleep(Nanoseconds);
+            if (Nanoseconds < MaxNanosecondSleep) {
+                Nanoseconds <<= 1;
+            }
+        } while (true);
+        return true;
     }
 
     __device__ __forceinline__
@@ -862,5 +1035,29 @@ AtomicAggXORMultiCGEx(
         } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
     }
 }
+
+#define WRITE_SYNC(FileName, Directory, Data, Size) \
+    WriteDataToFileSync(FileName, Directory, (const char *)Data, Size);
+
+#define WRITE_ASYNC(FileName, Directory, Data, Size) \
+    WriteDataToFileAsync(FileName, Directory, (const char *)Data, Size);
+
+EXTERN_C
+bool
+WriteDataToFile(
+    const char* FilenameCStr,
+    const char* DirectoryCStr,
+    const char* Buffer,
+    size_t NumberOfBytesytes);
+
+EXTERN_C
+HOST
+void
+WriteDataToFileAsync(
+    const char* FilenameCStr,
+    const char* DirectoryCStr,
+    const char* Buffer,
+    size_t NumberOfBytesytes);
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

@@ -223,7 +223,7 @@ Return Value:
     // Generate the first hash.
     //
 
-    A = B = 0x9e3779b9;
+    A = B = 0x79b9;
     C = SEED1;
 
     A += (((VertexType)Byte[3]) << 24);
@@ -245,7 +245,7 @@ Return Value:
     // Generate the second hash.
     //
 
-    D = E = 0x9e3779b9;
+    D = E = 0x9e37;
     F = SEED2;
 
     D += (((VertexType)Byte[3]) << 24);
@@ -1377,7 +1377,7 @@ GetHashFunctionForId(
     _In_ PERFECT_HASH_HASH_FUNCTION_ID Id
     )
 {
-    using VertexType = typename ResultType::PairType;
+    using VertexType = typename ResultType::VertexType;
 
     switch (Id) {
         case PerfectHashHashJenkinsFunctionId:

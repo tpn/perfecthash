@@ -4,5 +4,9 @@ EXPORTS
     HashKeysHost
     AddHashedKeysHost
     CountNonEmptyHost
+    IsGraphAcyclicOldHost
     IsGraphAcyclicPhase1Host
     IsGraphAcyclicPhase2Host
+    GraphPostAddHashedKeysHost
+    WriteDataToFileSync
+    WriteDataToFileAsync

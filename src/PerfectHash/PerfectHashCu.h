@@ -412,10 +412,20 @@ typedef struct _PH_CU_SOLVE_CONTEXT {
     PPH_CU_DEVICE_CONTEXT DeviceContext;
 
     //
-    // Stream for this solve context.
+    // Streams for this solve context.
     //
 
-    CU_STREAM Stream;
+    union {
+        CU_STREAM Stream;
+        CU_STREAM Stream1;
+        CU_STREAM FirstStream;
+    };
+    CU_STREAM Stream2;
+    CU_STREAM Stream3;
+    union {
+        CU_STREAM Stream4;
+        CU_STREAM LastStream;
+    };
 
     //
     // Host and device graph instances.

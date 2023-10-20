@@ -527,6 +527,9 @@ Return Value:
     Ordinals = CuRuntimeContext->Ordinals;
 
     for (Index = 0; Index < NumberOfSolveContexts; Index++) {
+        PCU_STREAM FirstStream;
+        PCU_STREAM Stream;
+        PCU_STREAM LastStream;
 
         SolveContext = &SolveContexts->SolveContexts[Index];
 
@@ -583,11 +586,24 @@ Return Value:
         CU_CHECK(CuResult, CtxPushCurrent);
 
         //
-        // Create the stream for this solve context.
+        // Create the streams for this solve context.
         //
 
-        CuResult = Cu->StreamCreate(&SolveContext->Stream, StreamFlags);
-        CU_CHECK(CuResult, StreamCreate);
+        Stream = FirstStream = &SolveContext->FirstStream;
+        LastStream = &SolveContext->LastStream;
+
+        do {
+
+            CuResult = Cu->StreamCreate(Stream, StreamFlags);
+            CU_CHECK(CuResult, StreamCreate);
+
+            if (Stream == LastStream) {
+                break;
+            }
+
+            Stream++;
+
+        } while (TRUE);
 
         //
         // Pop the context off this thread.

@@ -75,6 +75,7 @@ target_compile_definitions(
     target_compile_options(
         ${PROJECT_NAME}
         PRIVATE
+        --extended-lambda
         --source-in-ptx
         -Wno-deprecated-gpu-targets
         -v
