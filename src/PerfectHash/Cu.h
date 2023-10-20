@@ -2065,6 +2065,25 @@ typedef CU_OCCUPANCY *PCU_OCCUPANCY;
 
 typedef
 VOID
+(PERFECT_HASH_CUDA_GRAPH_FUNCTION)(
+    _Inout_ struct _GRAPH *Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    );
+typedef PERFECT_HASH_CUDA_GRAPH_FUNCTION
+      *PPERFECT_HASH_CUDA_GRAPH_FUNCTION;
+
+typedef
+VOID
+(PERFECT_HASH_CUDA_HOST_GRAPH_FUNCTION)(
+    _Inout_ struct _GRAPH *Graph
+    );
+typedef PERFECT_HASH_CUDA_HOST_GRAPH_FUNCTION
+      *PPERFECT_HASH_CUDA_HOST_GRAPH_FUNCTION;
+
+typedef
+VOID
 (PERFECT_HASH_CUDA_HASH_KEYS)(
     _Inout_ struct _GRAPH *Graph,
     _In_ ULONG BlocksPerGrid,
@@ -2119,6 +2138,12 @@ typedef PERFECT_HASH_CUDA_COUNT_NONEMPTY
                                                                          \
     ENTRY(COUNT_NONEMPTY,                                                \
           CountNonEmptyHost)                                             \
+                                                                         \
+    ENTRY(HOST_GRAPH_FUNCTION,                                           \
+          IsGraphAcyclicOldHost)                                         \
+                                                                         \
+    ENTRY(GRAPH_FUNCTION,                                                \
+          GraphPostAddHashedKeysHost)                                    \
                                                                          \
     ENTRY(IS_GRAPH_ACYCLIC,                                              \
           IsGraphAcyclicPhase1Host)                                      \

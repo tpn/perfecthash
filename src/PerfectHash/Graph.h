@@ -1651,7 +1651,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     volatile LONG OrderIndexBoth;
     volatile LONG OrderIndexNone;
     volatile LONG OrderIndexEither;
-    LONG Padding8;
+
+    ULONG NumberOfNonZeroVertices;
 
     //
     // Number of empty vertices encountered during the assignment step.
@@ -1738,6 +1739,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         PSHORT Order16ByEdge;
     };
 
+    _Writable_elements_(NumberOfVertices)
+    union {
+        PLONG OrderByThreadOrder;
+        PSHORT Order16ByThreadOrder;
+    };
+
     volatile LONG OrderByVertexIndex;
     LONG Padding1;
 
@@ -1784,6 +1791,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         PVERTEX3 Vertices3Host;
         PVERTEX163 Vertices163Host;
     };
+
+    PVERTEX3 SortedVertices3;
+    PULONG SortedVertices3Indices;
 
     //
     // Graph implementations 1 & 2: this is an optional array of vertex pairs,
