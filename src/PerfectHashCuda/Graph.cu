@@ -1134,21 +1134,6 @@ GraphCuAddHashedKeys(
         VertexPair = VertexPairs[Index];
         Edge = Index;
 
-#if 0
-        GraphAddEdge3(Graph,
-                      Edge,
-                      VertexPair.Vertex1,
-                      VertexPair.Vertex2);
-
-        GraphCuAddEdge3(Graph,
-                        Edge,
-                        VertexPair.Vertex1);
-
-        GraphCuAddEdge3(Graph,
-                        Edge,
-                        VertexPair.Vertex2);
-#endif
-
         GraphCuAddEdge2(Graph,
                         Edge,
                         VertexPair.Vertex1);
@@ -1156,16 +1141,6 @@ GraphCuAddHashedKeys(
         GraphCuAddEdge2(Graph,
                         Edge,
                         VertexPair.Vertex2);
-
-#if 0
-        GraphCuAddEdge3(Graph,
-                        Edge,
-                        VertexPair.Vertex1);
-
-        GraphCuAddEdge3(Graph,
-                        Edge,
-                        VertexPair.Vertex2);
-#endif
 
         Index += Stride;
     }
@@ -1787,6 +1762,7 @@ GraphCuRemoveVertex(
     Edge3Type *Edge3;
     Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
     OrderType *Order = (decltype(Order))Graph->Order;
+    OrderType *SortedOrder = (decltype(Order))Graph->SortedOrder;
     OrderType *OrderAddress;
     OrderIndexType *GraphOrderIndex = (decltype(GraphOrderIndex))&Graph->OrderIndex;
     OrderIndexType OrderIndex;
@@ -1897,6 +1873,7 @@ GraphCuRemoveVertex(
             Order[OrderIndex] = Edge;
             ASSERT(Order[OrderIndex] == Edge);
             ASSERT(*OrderAddress == Edge);
+            SortedOrder[OrderIndex] = Edge;
         }
         //Graph->OrderByThreadOrder[ThreadOrderIndex] = Edge;
     }
@@ -2946,4 +2923,85 @@ WriteDataToFileAsync(
     Thread.detach();
 }
 
+//
+// Scratch
+//
+
+template<typename GraphType>
+HOST
+VOID
+GraphCuSortOrder(
+    _In_ GraphType* Graph
+    )
+{
+    using OrderType = typename GraphType::OrderType;
+
+    OrderType Start;
+    OrderType *Begin;
+    OrderType *End;
+    OrderType *Unique;
+
+    PPH_CU_SOLVE_CONTEXT SolveContext;
+
+    SolveContext = Graph->CuSolveContext;
+
+    CUstream_st *Stream = (CUstream_st *)SolveContext->Stream3;
+
+    Start = (Graph->OrderIndex <= 0 ? 0 : Graph->OrderIndex);
+    printf("Start: %d\n", Start);
+
+    Begin = ((OrderType *)Graph->SortedOrder) + Start;
+    End = Begin + (Graph->NumberOfKeys - Start);
+
+    //
+    // Copy Graph->Order to Graph->SortedOrder using thrust.
+    //
+
+#if 0
+    thrust::copy(thrust::cuda::par.on(Stream),
+                 Begin,
+                 End,
+                 (OrderType *)Graph->Order);
+#endif
+
+    Unique = thrust::unique(thrust::cuda::par.on(Stream), Begin, End);
+    if (Unique != End) {
+        printf("Unique != End!, %p != %p\n", Unique, End);
+    } else {
+        printf("Unique == End!\n");
+    }
+
+    printf("sorting...\n");
+    thrust::sort(thrust::cuda::par.on(Stream), Begin, End);
+    printf("sorted!\n");
+
+    auto Diff = thrust::distance(Begin, End);
+    printf("Diff: %td\n", Diff);
+}
+
+
+EXTERN_C
+HOST
+VOID
+GraphScratchHost(
+    _In_ PGRAPH Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    switch (Graph->CuScratch) {
+        case 1: {
+            if (IsUsingAssigned16(Graph)) {
+                GraphCuSortOrder<GRAPH16>((PGRAPH16)Graph);
+            } else {
+                GraphCuSortOrder<GRAPH32>((PGRAPH32)Graph);
+            }
+
+            break;
+        }
+        default:
+            break;
+    }
+}
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

@@ -1465,6 +1465,52 @@ Return Value:
     }
 
     //
+    // SortedOrder
+    //
+
+    CuResult = Cu->MemAllocManaged(
+        (PCU_DEVICE_POINTER)&Graph->SortedOrder,
+        NumberOfKeys * (IsUsingAssigned16(Graph) ? 2 : 4),
+        CU_MEM_ATTACH_GLOBAL
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemAllocManaged_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemcpyHtoD(
+        (CU_DEVICE_POINTER)&DeviceGraph->SortedOrder,
+        &Graph->SortedOrder,
+        sizeof(Graph->SortedOrder)
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemcpyHtoD_SortedOrder, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+    if (IsUsingAssigned16(Graph)) {
+        CuResult = Cu->MemsetD16Async(
+            (PVOID)Graph->SortedOrder,
+            0,
+            NumberOfKeys,
+            SolveContext->Stream
+        );
+    } else {
+        CuResult = Cu->MemsetD32Async(
+            (PVOID)Graph->SortedOrder,
+            0,
+            NumberOfKeys,
+            SolveContext->Stream
+        );
+    }
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemsetD1632Async_SortedOrder, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
     // Ensure any async memsets from Reset() have completed.
     //
 
@@ -1675,7 +1721,7 @@ Return Value:
             }
 
             OUTPUT_FLUSH_CONSOLE();
-        
+
         }
     }
 
@@ -2134,10 +2180,25 @@ Return Value:
         }
     }
 
+    if (DeviceGraph->OrderIndex <= 0) {
+
+        DeviceGraph->CuScratch = 1;
+        Cu->GraphScratchHost(DeviceGraph,
+                             BlocksPerGrid,
+                             ThreadsPerBlock,
+                             SharedMemoryInBytes);
+
+    }
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+#if 0
     CuResult = Cu->MemcpyDtoH(&Graph->CuIsAcyclicResult,
                               (CU_DEVICE_POINTER)&DeviceGraph->CuIsAcyclicResult,
                               sizeof(Graph->CuIsAcyclicResult));
     CU_CHECK(CuResult, MemcpyDtoH_CuIsAcyclicResult);
+#endif
 
     if (Graph->CuIsAcyclicResult != S_OK) {
         Result = Graph->CuIsAcyclicResult;
