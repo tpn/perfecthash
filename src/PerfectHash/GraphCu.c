@@ -1205,7 +1205,7 @@ Return Value:
     PDEBUGGER_CONTEXT DebuggerContext;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
-    LONG BlocksPerGrid = PERFECT_HASH_CU_BLOCKS_PER_GRID;
+    LONG BlocksPerGrid = 600; //PERFECT_HASH_CU_BLOCKS_PER_GRID;
     LONG ThreadsPerBlock = PERFECT_HASH_CU_THREADS_PER_BLOCK;
 
     UNREFERENCED_PARAMETER(NewGraphPointer);
@@ -1567,10 +1567,13 @@ Return Value:
     CU_CHECK(CuResult, LaunchKernel);
 #else
 
+#if 1
     Cu->HashKeysHost(DeviceGraph,
                      BlocksPerGrid,
                      ThreadsPerBlock,
                      SharedMemoryInBytes);
+
+#endif
 
 #endif
 
@@ -1604,6 +1607,7 @@ Return Value:
     *Output = '\0';
     OUTPUT_CHR('\n');
 
+#if 0
     if (CpuGraph) {
 
 #if 0
@@ -1724,6 +1728,7 @@ Return Value:
 
         }
     }
+#endif
 
 #if 0
     CuResult = Cu->MemsetD32Async(
@@ -1889,7 +1894,7 @@ Return Value:
         }
     }
 
-    DeviceGraph->OrderIndex = CpuGraph->NumberOfKeys;
+    DeviceGraph->OrderIndex = Graph->NumberOfKeys;
     DeviceGraph->DeletedEdgeCount = 0;
 
     Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
@@ -1900,6 +1905,7 @@ Return Value:
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
+#if 0
     Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
                                  BlocksPerGrid,
                                  ThreadsPerBlock,
@@ -1907,7 +1913,9 @@ Return Value:
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
+#endif
 
+#if 0
     SIZE_T ThreadOrderCount;
     SIZE_T VertexOrderCount;
     SIZE_T EdgeOrderCount;
@@ -2012,13 +2020,7 @@ Return Value:
             OUTPUT_FLUSH_CONSOLE();
         }
     }
-
-    //
-    // Wait for completion.
-    //
-
-    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
-    CU_CHECK(CuResult, StreamSynchronize);
+#endif
 
     if (CpuGraph) {
         if (IsUsingAssigned16(Graph)) {
@@ -2028,25 +2030,68 @@ Return Value:
         }
     }
 
+    LONG DeviceOrderIndex;
+    LONG PreviousDeviceOrderIndex = 0;
+    LONG Delta;
+
     ULONG Attempts = 0;
+
+    BOOLEAN UsePhase2 = TRUE;
+
     while (TRUE) {
         ++Attempts;
 
-#if 1
-        Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
-                                     BlocksPerGrid,
-                                     ThreadsPerBlock,
-                                     SharedMemoryInBytes);
-#else
-        Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
-                                     BlocksPerGrid,
-                                     ThreadsPerBlock,
-                                     SharedMemoryInBytes);
-#endif
+        if (UsePhase2) {
+            Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
+                                         BlocksPerGrid,
+                                         ThreadsPerBlock,
+                                         SharedMemoryInBytes);
+        } else {
+            Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
+                                         BlocksPerGrid,
+                                         ThreadsPerBlock,
+                                         SharedMemoryInBytes);
+        }
 
         CuResult = Cu->StreamSynchronize(SolveContext->Stream);
         CU_CHECK(CuResult, StreamSynchronize);
 
+#if 0
+        CuResult = Cu->MemcpyDtoH(&DeviceOrderIndex,
+                                  (CU_DEVICE_POINTER)&DeviceGraph->OrderIndex,
+                                  sizeof(DeviceGraph->OrderIndex));
+        if (CU_FAILED(CuResult)) {
+            CU_ERROR(GraphCuSolve_MemcpyDtoH_OrderIndex, CuResult);
+            Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+            goto Error;
+        }
+#endif
+
+        DeviceOrderIndex = DeviceGraph->OrderIndex;
+
+        if (DeviceOrderIndex <= 0) {
+            break;
+        }
+
+        if (Attempts == 1) {
+            PreviousDeviceOrderIndex = DeviceOrderIndex;
+            continue;
+        }
+
+        Delta = PreviousDeviceOrderIndex - DeviceOrderIndex;
+        ASSERT(Delta >= 0);
+        if (Delta == 0) {
+            if (UsePhase2 != FALSE) {
+                UsePhase2 = FALSE;
+                PreviousDeviceOrderIndex = DeviceOrderIndex;
+                continue;
+            }
+            break;
+        }
+
+        continue;
+
+#if 0
         ThreadOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
                                                   DeviceGraph->OrderByThread,
                                                   Graph->NumberOfVertices);
@@ -2101,6 +2146,8 @@ Return Value:
             EdgeOrderCount >= NumberOfKeys) {
             break;
         }
+#endif
+
 #endif
     }
 

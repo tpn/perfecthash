@@ -23,6 +23,7 @@ Abstract:
 #include <curand_kernel.h>
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
+#include <cooperative_groups/memcpy_async.h>
 
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
@@ -721,7 +722,7 @@ void GraphCuAddEdge2(
 
             } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
-            __threadfence();
+            //__threadfence();
 
 
         } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
@@ -1147,6 +1148,87 @@ GraphCuAddHashedKeys(
 }
 
 
+#define BLOCK_SIZE 128
+
+template<typename GraphType>
+DEVICE
+VOID
+GraphCuAddHashedKeys2(
+    GraphType* Graph
+    )
+{
+    using KeyType = typename GraphType::KeyType;
+    using EdgeType = typename GraphType::EdgeType;
+    using VertexType = typename GraphType::VertexType;
+    using VertexPairType = typename GraphType::VertexPairType;
+
+    uint32_t Index;
+    uint32_t Batch;
+    uint32_t BlockBatchIndex;
+    uint32_t NumberOfKeys = Graph->NumberOfKeys;
+    VertexType Mask = Graph->NumberOfVertices - 1;
+
+    KeyType Key;
+    EdgeType Edge;
+    KeyType *Keys;
+    VertexPairType VertexPair;
+    VertexPairType *VertexPairs;
+
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    __shared__ KeyType SharedKeys[BLOCK_SIZE];
+
+    auto Grid = cg::this_grid();
+    auto Block = cg::this_thread_block();
+    auto GroupIndexX = Block.group_index().x;
+    auto BlockSize = Block.size();
+    auto GridSize = Grid.size();
+    auto LocalIndex = Block.thread_rank();
+    auto const BlockCopySize = sizeof(KeyType) * BlockSize;
+
+    Keys = (KeyType *)Graph->DeviceKeys;
+    VertexPairs = (VertexPairType *)Graph->VertexPairs;
+
+    auto HashFunction = GraphGetHashFunction(Graph);
+
+    Index = GlobalThreadIndex();
+
+    Batch = 0;
+
+    while (Index < NumberOfKeys) {
+
+        BlockBatchIndex = (Block.group_index().x * Block.size());
+        BlockBatchIndex += (Grid.size() * Batch);
+
+        cg::memcpy_async(Block,
+                         SharedKeys,
+                         Keys + BlockBatchIndex,
+                         BlockCopySize);
+
+        cg::wait(Block);
+
+        Key = SharedKeys[LocalIndex];
+        VertexPair = HashFunction(Key, Mask);
+
+        Edge = Index;
+
+        GraphCuAddEdge2(Graph,
+                        Edge,
+                        VertexPair.Vertex1);
+
+        GraphCuAddEdge2(Graph,
+                        Edge,
+                        VertexPair.Vertex2);
+
+        Index += Stride;
+
+        Block.sync();
+
+        VertexPairs[Index] = VertexPair;
+    }
+}
+
+
 GLOBAL
 VOID
 AddHashedKeys(
@@ -1223,7 +1305,7 @@ CheckHashedKeys(
 
     Index = GlobalThreadIndex();
     if (Index == 0) {
-        printf("GraphCuAddHashedKeys: Graph: %p\n", Graph);
+        printf("CheckAddHashedKeys: Graph: %p\n", Graph);
     }
 
     while (Index < NumberOfKeys) {
@@ -1358,6 +1440,7 @@ AddHashedKeysHost(
     PrintCuDeviceAttributes(Attributes);
 #endif
 
+#if 0
     size_t AllocSize = sizeof(int32_t) * Graph->NumberOfVertices;
     CUDA_CALL(cudaMallocManaged((void **)&Graph->_Edges, AllocSize));
     CUDA_CALL(cudaMallocManaged((void **)&Graph->_Degrees, AllocSize));
@@ -1367,11 +1450,50 @@ AddHashedKeysHost(
 
     SolveContext->HostGraph->_Edges = Graph->_Edges;
     SolveContext->HostGraph->_Degrees = Graph->_Degrees;
+#endif
 
     printf("AddHashedKeysHost: Graph: %p\n", Graph);
 
-    AddHashedKeys<<<BlocksPerGrid,
-                    ThreadsPerBlock,
+    if (!GraphIsHashFunctionSupported(Graph)) {
+        printf("Unsupported hash function ID on GPU: %d.\n",
+               Graph->HashFunctionId);
+        return;
+    }
+
+    CUDA_CALL(cudaMemcpyToSymbol(c_GraphSeeds,
+                                 &Graph->GraphSeeds,
+                                 sizeof(Graph->GraphSeeds),
+                                 0,
+                                 cudaMemcpyHostToDevice));
+
+#if PH_WINDOWS
+    int NumberOfBlocksPerSm;
+    cudaDeviceProp DeviceProperties;
+    CUDA_CALL(cudaGetDeviceProperties(&DeviceProperties, 0));
+    CUDA_CALL(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &NumberOfBlocksPerSm,
+        AddHashedKeys,
+        (int)ThreadsPerBlock,
+        (size_t)SharedMemoryInBytes
+    ));
+
+    ULONG LocalBlocksPerGrid = (
+        DeviceProperties.multiProcessorCount * NumberOfBlocksPerSm
+    );
+    BlocksPerGrid = min(BlocksPerGrid, LocalBlocksPerGrid);
+
+    printf("DeviceProperties.multiProcessorCount: %d\n",
+           DeviceProperties.multiProcessorCount);
+    printf("NumberOfBlocksPerSm: %d\n", NumberOfBlocksPerSm);
+#endif
+    printf("BlocksPerGrid: %d\n", BlocksPerGrid);
+    printf("ThreadsPerBlock: %d\n", ThreadsPerBlock);
+
+    dim3 GridDim(BlocksPerGrid, 1, 1);
+    dim3 BlockDim(ThreadsPerBlock, 1, 1);
+
+    AddHashedKeys<<<GridDim,
+                    BlockDim,
                     SharedMemoryInBytes,
                     (CUstream_st *)SolveContext->Stream>>>(Graph);
 
@@ -1474,7 +1596,7 @@ GraphCuRemoveEdge(
 
         } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
-        __threadfence();
+        //__threadfence();
 
     } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
 
@@ -1575,7 +1697,7 @@ GraphCuRemoveEdgeVertex(
             } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
             Removed = true;
-            __threadfence();
+            //__threadfence();
 
         } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
 
@@ -1878,11 +2000,13 @@ GraphCuRemoveVertex(
         //Graph->OrderByThreadOrder[ThreadOrderIndex] = Edge;
     }
 
+#if 0
     Graph->OrderByThread[GlobalThreadIndex()] = Edge;
     Graph->OrderByVertex[VertexIndex] = GlobalThreadIndex();
     Graph->OrderByEdge[Edge] = GlobalThreadIndex();
     Graph->OrderByThreadOrder[OrderIndex] = GlobalThreadIndex();
-    __threadfence();
+#endif
+    //__threadfence();
 #endif
 End:
     return Retry;
@@ -1925,7 +2049,7 @@ GraphCuRemoveVertexNew(
     Vertices3 = (decltype(Vertices3))Graph->Vertices3;
     Vertex = &Vertices3[VertexIndex];
 
-    __threadfence();
+    //__threadfence();
 
     if (Vertex->Degree == 0) {
         return Retry;
@@ -1960,7 +2084,7 @@ GraphCuRemoveVertexNew(
 
     Locks[VertexIndex].Unlock();
 
-    __threadfence();
+    //__threadfence();
 
     if (SecondVertex->Degree == 0) {
         return Retry;
@@ -2296,7 +2420,8 @@ GraphCuIsAcyclicPhase2(
     uint32_t ThreadRetries = 0;
 
     for (Index = NumberOfKeys - GlobalThreadIndex();
-         Graph->OrderIndex > 0 && Index > Graph->OrderIndex;
+         Graph->OrderIndex > 0 &&
+         Index > (Graph->OrderIndex <= 0 ? 0 : Graph->OrderIndex);
          NOTHING)
     {
         Retry1 = true;
@@ -2451,7 +2576,7 @@ IsGraphAcyclicPhase1Host(
     ULONG LocalBlocksPerGrid = (
         DeviceProperties.multiProcessorCount * NumberOfBlocksPerSm
     );
-    BlocksPerGrid = max(BlocksPerGrid, LocalBlocksPerGrid);
+    BlocksPerGrid = min(BlocksPerGrid, LocalBlocksPerGrid);
 
     printf("DeviceProperties.multiProcessorCount: %d\n",
            DeviceProperties.multiProcessorCount);
@@ -2951,7 +3076,14 @@ GraphCuSortOrder(
     printf("Start: %d\n", Start);
 
     Begin = ((OrderType *)Graph->SortedOrder) + Start;
+    printf("Begin: %p\n", Begin);
     End = Begin + (Graph->NumberOfKeys - Start);
+    printf("End: %p\n", End);
+    printf("*End: %d\n", *End);
+    printf("*(End-1): %d\n", *(End-1));
+    printf("*(End-2): %d\n", *(End-2));
+    printf("Distance: %td\n", thrust::distance(Begin, End));
+    printf("NumberOfKeys: %d\n", Graph->NumberOfKeys);
 
     //
     // Copy Graph->Order to Graph->SortedOrder using thrust.
@@ -2964,19 +3096,30 @@ GraphCuSortOrder(
                  (OrderType *)Graph->Order);
 #endif
 
-    Unique = thrust::unique(thrust::cuda::par.on(Stream), Begin, End);
-    if (Unique != End) {
-        printf("Unique != End!, %p != %p\n", Unique, End);
-    } else {
-        printf("Unique == End!\n");
-    }
-
     printf("sorting...\n");
     thrust::sort(thrust::cuda::par.on(Stream), Begin, End);
     printf("sorted!\n");
 
+    printf("*End: %d\n", *End);
+    printf("*(End-1): %d\n", *(End-1));
+    printf("*(End-2): %d\n", *(End-2));
+
+    Unique = thrust::unique(thrust::cuda::par.on(Stream), Begin, End);
+    printf("Unique: %p\n", Unique);
+    printf("*Unique: %d\n", *Unique);
+    printf("*(Unique-1): %d\n", *(Unique-1));
+    printf("*(Unique-2): %d\n", *(Unique-2));
+    printf("*(Unique+1): %d\n", *(Unique+1));
+    printf("*(Unique+2): %d\n", *(Unique+2));
+    if (Unique != End) {
+        printf("Unique != End! %p != %p\n", Unique, End);
+    } else {
+        printf("Unique == End!\n");
+    }
+
     auto Diff = thrust::distance(Begin, End);
-    printf("Diff: %td\n", Diff);
+    printf("Diff1: %td\n", Diff);
+    printf("Distance unique: %td\n", thrust::distance(Begin, Unique));
 }
 
 
