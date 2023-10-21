@@ -229,7 +229,7 @@ struct _CU_SLIST_HEADER {
         decltype(this) Next;
 
         do {
-            __threadfence();
+            //__threadfence();
             Prev.Atomic = this->Atomic.load();
             Entry->Next = (PCU_SLIST_ENTRY)(Prev.NextEntry << AlignmentBits::value);
             Next.Depth = Prev.Depth;
@@ -254,7 +254,7 @@ struct _CU_SLIST_HEADER {
         decltype(this) Next;
 
         do {
-            __threadfence();
+            //__threadfence();
             Prev.Atomic = this->Atomic.load();
             if (Prev.Depth == 0) {
                 return nullptr;
@@ -602,7 +602,7 @@ struct LOCK_CU {
             );
             if (Result != false) {
                 Success = true;
-                __threadfence();
+                //__threadfence();
                 break;
             }
             Expected = -1;
@@ -629,7 +629,7 @@ struct LOCK_CU {
                 cuda::std::memory_order_relaxed
             );
             if (Result != false) {
-                __threadfence();
+                //__threadfence();
                 break;
             }
             Expected = -1;
@@ -645,7 +645,7 @@ struct LOCK_CU {
     void
     Unlock() {
         Value.store(-1, cuda::std::memory_order_release);
-        __threadfence();
+        //__threadfence();
     }
 };
 using LOCK = LOCK_CU<>;
