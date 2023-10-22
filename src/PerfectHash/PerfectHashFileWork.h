@@ -173,6 +173,19 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        CudaSourceFile,                                                    \
+        CUDA_SOURCE_FILE,                                                  \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CudaSourceFileExtension,                                          \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         CHeaderStdAfxFile,                                                 \
         C_HEADER_STDAFX_FILE,                                              \
         EofInitTypeNumberOfPages,                                          \
@@ -467,6 +480,19 @@ Abstract:
         &ModuleDefFileExtension,                                           \
         NO_STREAM_NAME,                                                    \
         NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CMakeListsTextFile,                                                \
+        CMAKE_LISTS_TEXT_FILE,                                             \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &TextFileExtension,                                                \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(CMakeLists)                                              \
     )                                                                      \
                                                                            \
     ENTRY(                                                                 \

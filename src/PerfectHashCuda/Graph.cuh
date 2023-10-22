@@ -466,6 +466,7 @@ template<
     typename VertexTypeT,
     typename VertexPairTypeT,
     typename VertexPairNativeT,
+    typename HashVertexTypeT,
     typename Edge3TypeT,
     typename Vertex3TypeT,
     typename AtomicVertex3TypeT,
@@ -483,6 +484,7 @@ struct GRAPH_CU : GRAPH {
     using VertexType = VertexTypeT;
     using VertexPairType = VertexPairTypeT;
     using VertexPairNativeType = VertexPairNativeT;
+    using HashVertexType = HashVertexTypeT;
     using Edge3Type = Edge3TypeT;
     using Vertex3Type = Vertex3TypeT;
     using AtomicVertex3Type = AtomicVertex3TypeT;
@@ -508,6 +510,7 @@ using GRAPH8 =
         VERTEX8,                // VertexType
         VERTEX_PAIR_CU8,        // VertexPairType
         uint16_t,               // VertexPairNativeType
+        uint32_t,               // HashVertexType
         EDGE83,                 // Edge3Type
         VERTEX83,               // Vertex3Type
         ATOMIC_VERTEX<EDGE8>,   // AtomicVertex3Type
@@ -527,6 +530,7 @@ using GRAPH16 =
         VERTEX16,              // VertexType
         VERTEX_PAIR_CU16,      // VertexPairType
         uint32_t,              // VertexPairNativeType
+        uint32_t,              // HashVertexType
         EDGE163,               // Edge3Type
         VERTEX163,             // Vertex3Type
         ATOMIC_VERTEX<EDGE16>, // AtomicVertex3Type
@@ -546,6 +550,7 @@ using GRAPH32 =
         VERTEX,                // VertexType
         VERTEX_PAIR_CU32,      // VertexPairType
         uint64_t,              // VertexPairNativeType
+        uint32_t,              // HashVertexType
         EDGE3,                 // Edge3Type
         VERTEX3,               // Vertex3Type
         ATOMIC_VERTEX<EDGE>,   // AtomicVertex3Type

@@ -1369,6 +1369,7 @@ Return Value:
 //
 
 template<typename ResultType,
+         typename VertexType,
          typename KeyType>
 FORCEINLINE
 DEVICE
@@ -1377,8 +1378,6 @@ GetHashFunctionForId(
     _In_ PERFECT_HASH_HASH_FUNCTION_ID Id
     )
 {
-    using VertexType = typename ResultType::VertexType;
-
     switch (Id) {
         case PerfectHashHashJenkinsFunctionId:
             return PerfectHashTableSeededHashExCppJenkins<
@@ -1517,9 +1516,12 @@ GraphGetHashFunction(
     )
 {
     using ResultType = typename GraphType::VertexPairType;
+    using VertexType = typename GraphType::HashVertexType;
     using KeyType = typename GraphType::KeyType;
 
-    return GetHashFunctionForId<ResultType, KeyType>(Graph->HashFunctionId);
+    return GetHashFunctionForId<ResultType,
+                                VertexType,
+                                KeyType>(Graph->HashFunctionId);
 }
 
 template <typename GraphType>

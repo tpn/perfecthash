@@ -375,6 +375,9 @@ class UpdateRawCStringFile(InvariantAwareCommand):
         if extension == '.c':
             category = 'CSource'
             is_c = True
+        elif extension == '.cu':
+            category = 'CudaSource'
+            is_c = True
         elif extension == '.h':
             category = 'CHeader'
             is_c = True

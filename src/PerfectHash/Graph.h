@@ -1801,6 +1801,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PVERTEX3 SortedVertices3;
     PULONG SortedVertices3Indices;
 
+    PEDGE3 OrderedVertices;
+
     //
     // Graph implementations 1 & 2: this is an optional array of vertex pairs,
     // indexed by the edge for the key (i.e. the 0-based offset of the key in
@@ -2134,7 +2136,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     ULONG TotalTraversals;
 
-    ULONG Padding2;
+    volatile ULONG TotalNumberOfAssigned;
 
     union {
 

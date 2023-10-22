@@ -3,6 +3,8 @@ project(PerfectHashCuda)
 set(PROJECT_NAME PerfectHashCuda)
 set(IS_CUDA 1)
 
+find_package(stdgpu REQUIRED)
+
 ################################################################################
 # Source groups
 ################################################################################
@@ -85,13 +87,23 @@ target_compile_definitions(
         --restrict
         --ptxas-options=-v
         --machine 64
-        -I../../include
+        --forward-unknown-opts
     )
     target_compile_options_config(Debug "-g;-G")
     target_compile_options_not_config(Debug "-lineinfo")
 
     target_compile_definitions_config(Debug _DEBUG)
     target_compile_definitions_not_config(Debug NDEBUG)
+
+    if (IS_WINDOWS)
+        target_link_options(
+            ${PROJECT_NAME}
+            PRIVATE
+            -Xlinker "/FdPerfectHashCuda.pdb"
+        )
+
+    endif()
+
 #endif()
 
 
@@ -103,5 +115,6 @@ target_compile_definitions(
 #)
 
 #target_link_libraries(${PROJECT_NAME} PerfectHash)
+target_link_libraries(${PROJECT_NAME} PUBLIC stdgpu::stdgpu)
 
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

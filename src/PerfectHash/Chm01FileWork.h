@@ -79,6 +79,8 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define SaveMakefileBenchmarkFullMkFileChm01 NULL
 #define SaveCHeaderNoSal2FileChm01 NULL
 #define SaveModuleDefFileChm01 NULL
+#define SaveCMakeListsTextFileChm01 NULL
+#define SaveCudaSourceFileChm01 NULL
 
 extern FILE_WORK_CALLBACK_IMPL *FileCallbacks[];
 

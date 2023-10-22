@@ -2151,6 +2151,9 @@ typedef PERFECT_HASH_CUDA_COUNT_NONEMPTY
     ENTRY(GRAPH_FUNCTION,                                                \
           GraphScratchHost)                                              \
                                                                          \
+    ENTRY(GRAPH_FUNCTION,                                                \
+          GraphAssignHost)                                               \
+                                                                         \
     LAST_ENTRY(IS_GRAPH_ACYCLIC,                                         \
                IsGraphAcyclicPhase2Host)
 

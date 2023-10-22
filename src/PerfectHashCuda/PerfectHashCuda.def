@@ -11,3 +11,4 @@ EXPORTS
     WriteDataToFileSync
     WriteDataToFileAsync
     GraphScratchHost
+    GraphAssignHost
