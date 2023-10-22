@@ -4781,3 +4781,57 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_CLOSE_GRAPH_VERTICES3_FILE ((HRESULT)0xE00403F5L)
 
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_CMAKE_LISTS_TEXT_FILE
+//
+// MessageText:
+//
+// Error preparing CMakeLists.txt file.
+//
+#define PH_E_ERROR_DURING_PREPARE_CMAKE_LISTS_TEXT_FILE ((HRESULT)0xE00403F6L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_CMAKE_LISTS_TEXT_FILE
+//
+// MessageText:
+//
+// Error saving CMakeLists.txt file.
+//
+#define PH_E_ERROR_DURING_SAVE_CMAKE_LISTS_TEXT_FILE ((HRESULT)0xE00403F7L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_CMAKE_LISTS_TEXT_FILE
+//
+// MessageText:
+//
+// Error closing CMakeLists.txt file.
+//
+#define PH_E_ERROR_DURING_CLOSE_CMAKE_LISTS_TEXT_FILE ((HRESULT)0xE00403F8L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_CUDA_SOURCE_FILE
+//
+// MessageText:
+//
+// Error preparing CUDA source file.
+//
+#define PH_E_ERROR_DURING_PREPARE_CUDA_SOURCE_FILE ((HRESULT)0xE00403F9L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_CUDA_SOURCE_FILE
+//
+// MessageText:
+//
+// Error saving CUDA source file.
+//
+#define PH_E_ERROR_DURING_SAVE_CUDA_SOURCE_FILE ((HRESULT)0xE00403FAL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_CUDA_SOURCE_FILE
+//
+// MessageText:
+//
+// Error closing CUDA source file.
+//
+#define PH_E_ERROR_DURING_CLOSE_CUDA_SOURCE_FILE ((HRESULT)0xE00403FBL)
+

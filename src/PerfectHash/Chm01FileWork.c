@@ -179,13 +179,6 @@ Return Value:
 
     Item->FileId = FileId = FileWorkIdToFileId(FileWorkId);
 
-#if 0
-    if (FileId == FileGraphVertexPairsFileId ||
-        FileId == FileGraphVertices3FileId) {
-        __debugbreak();
-    }
-#endif
-
     //
     // Determine if this is a context file.  Context files get treated
     // differently to normal table output files in that they are only

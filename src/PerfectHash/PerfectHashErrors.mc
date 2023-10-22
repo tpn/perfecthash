@@ -4344,3 +4344,51 @@ Language=English
 Error closing graph vertices3 file.
 .
 
+MessageId=0x3f6
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_CMAKE_LISTS_TEXT_FILE
+Language=English
+Error preparing CMakeLists.txt file.
+.
+
+MessageId=0x3f7
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_CMAKE_LISTS_TEXT_FILE
+Language=English
+Error saving CMakeLists.txt file.
+.
+
+MessageId=0x3f8
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_CMAKE_LISTS_TEXT_FILE
+Language=English
+Error closing CMakeLists.txt file.
+.
+
+MessageId=0x3f9
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_CUDA_SOURCE_FILE
+Language=English
+Error preparing CUDA source file.
+.
+
+MessageId=0x3fa
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_CUDA_SOURCE_FILE
+Language=English
+Error saving CUDA source file.
+.
+
+MessageId=0x3fb
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_CUDA_SOURCE_FILE
+Language=English
+Error closing CUDA source file.
+.
+

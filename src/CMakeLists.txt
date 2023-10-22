@@ -135,4 +135,12 @@ add_subdirectory(PerfectHashCuda)
 add_subdirectory(PerfectHashCreateExe)
 add_subdirectory(PerfectHashBulkCreateExe)
 
+if (IS_WINDOWS)
+    # N.B. PerfectHashResources is defined in PerfectHash's CMakeLists.txt.
+    add_dependencies(PerfectHash PerfectHashResources)
+    add_dependencies(PerfectHashCuda PerfectHashResources)
+    add_dependencies(PerfectHashCreateExe PerfectHashResources)
+    add_dependencies(PerfectHashBulkCreateExe PerfectHashResources)
+endif()
+
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

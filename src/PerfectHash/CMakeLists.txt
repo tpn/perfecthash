@@ -176,6 +176,8 @@ set(Source_Files
     "Chm01FileWorkVCProjectTestExeFile.c"
     "Chm01FileWorkVCPropsCompiledPerfectHashFile.c"
     "Chm01FileWorkVSSolutionFile.c"
+    "Chm01FileWorkCMakeListsTextFile.c"
+    "Chm01FileWorkCudaSourceFile.c"
     "Chm01Index.c"
     "Chunk.c"
     "Component.c"
@@ -283,6 +285,22 @@ if (IS_WINDOWS)
         APPEND ALL_FILES
         ${Assembly_Source_Files}
     )
+
+    set(OUTPUT_FILE "../../../include/PerfectHashErrors.h")
+
+    set(MC_COMMAND cd ../../PerfectHash &&
+                   mc.exe -v -o -c -b -h ../../include -x .
+                          -km PerfectHashEvents.man PerfectHashErrors.mc)
+
+    add_custom_command(
+      OUTPUT ${OUTPUT_FILE}
+      COMMAND ${MC_COMMAND}
+      DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
+      COMMENT "Compiling PerfectHashErrors.mc and PerfectHashEvents.man..."
+    )
+
+    add_custom_target(PerfectHashResources ALL DEPENDS ${OUTPUT_FILE})
+
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})

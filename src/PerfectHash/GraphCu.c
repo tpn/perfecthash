@@ -1153,6 +1153,16 @@ GraphIsAcyclic3Phase2(
 
 GRAPH_SOLVE GraphCuSolve;
 
+HRESULT
+GraphAssign3(
+    _In_ PGRAPH Graph
+    );
+
+HRESULT
+GraphAssign16(
+    _In_ PGRAPH Graph
+    );
+
 _Use_decl_annotations_
 HRESULT
 GraphCuSolve(
@@ -1465,6 +1475,43 @@ Return Value:
     }
 
     //
+    // OrderedVertices
+    //
+
+    CuResult = Cu->MemAllocManaged(
+        (PCU_DEVICE_POINTER)&Graph->OrderedVertices,
+        NumberOfVertices * sizeof(Graph->OrderedVertices[0]),
+        CU_MEM_ATTACH_GLOBAL
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemAllocManaged_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemcpyHtoD(
+        (CU_DEVICE_POINTER)&DeviceGraph->OrderedVertices,
+        &Graph->OrderedVertices,
+        sizeof(Graph->OrderedVertices)
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemcpyHtoD_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+    CuResult = Cu->MemsetD32Async(
+        (PVOID)Graph->OrderedVertices,
+        0,
+        NumberOfVertices,
+        SolveContext->Stream
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemsetD32Async_OrderedVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
     // SortedOrder
     //
 
@@ -1607,7 +1654,7 @@ Return Value:
     *Output = '\0';
     OUTPUT_CHR('\n');
 
-#if 0
+#if 1
     if (CpuGraph) {
 
 #if 0
@@ -2036,7 +2083,7 @@ Return Value:
 
     ULONG Attempts = 0;
 
-    BOOLEAN UsePhase2 = TRUE;
+    BOOLEAN UsePhase2 = FALSE;
 
     while (TRUE) {
         ++Attempts;
@@ -2087,6 +2134,8 @@ Return Value:
                 continue;
             }
             break;
+        } else {
+            PreviousDeviceOrderIndex = DeviceOrderIndex;
         }
 
         continue;
@@ -2229,12 +2278,36 @@ Return Value:
 
     if (DeviceGraph->OrderIndex <= 0) {
 
+
         DeviceGraph->CuScratch = 1;
         Cu->GraphScratchHost(DeviceGraph,
                              BlocksPerGrid,
                              ThreadsPerBlock,
                              SharedMemoryInBytes);
 
+        if (CpuGraph) {
+            if (IsUsingAssigned16(Graph)) {
+                GraphAssign16(CpuGraph);
+            } else {
+                GraphAssign3(CpuGraph);
+            }
+        }
+
+        CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+        CU_CHECK(CuResult, StreamSynchronize);
+
+        Cu->GraphAssignHost(DeviceGraph,
+                            BlocksPerGrid,
+                            ThreadsPerBlock,
+                            SharedMemoryInBytes);
+
+        CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+        CU_CHECK(CuResult, StreamSynchronize);
+
+        if (CpuGraph) {
+            CpuGraph->Vtbl->CalculateAssignedMemoryCoverage(CpuGraph);
+            CpuGraph->Vtbl->CalculateAssignedMemoryCoverage(DeviceGraph);
+        }
     }
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
