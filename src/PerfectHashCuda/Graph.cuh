@@ -534,7 +534,7 @@ using GRAPH16 =
         EDGE163,               // Edge3Type
         VERTEX163,             // Vertex3Type
         ATOMIC_VERTEX<EDGE16>, // AtomicVertex3Type
-        uint32_t,              // AtomicVertex3CASTypeT
+        unsigned int,          // AtomicVertex3CASTypeT
         EDGE16,                // EdgeType
         DEGREE16,              // DegreeType
         ORDER16,               // OrderType
@@ -554,7 +554,7 @@ using GRAPH32 =
         EDGE3,                 // Edge3Type
         VERTEX3,               // Vertex3Type
         ATOMIC_VERTEX<EDGE>,   // AtomicVertex3Type
-        uint64_t,              // AtomicVertex3CASTypeT
+        unsigned long long,    // AtomicVertex3CASTypeT
         EDGE,                  // EdgeType
         DEGREE,                // DegreeType
         ORDER,                 // OrderType
