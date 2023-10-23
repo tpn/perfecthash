@@ -1482,7 +1482,7 @@ AddHashedKeysHost(
     ULONG LocalBlocksPerGrid = (
         DeviceProperties.multiProcessorCount * NumberOfBlocksPerSm
     );
-    BlocksPerGrid = min(BlocksPerGrid, LocalBlocksPerGrid);
+    BlocksPerGrid = max(BlocksPerGrid, LocalBlocksPerGrid);
 
     printf("DeviceProperties.multiProcessorCount: %d\n",
            DeviceProperties.multiProcessorCount);
