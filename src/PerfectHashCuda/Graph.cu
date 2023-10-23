@@ -3259,7 +3259,7 @@ GraphCuAssign1(
 template<typename GraphType>
 GLOBAL
 VOID
-GraphCuAssign2Old(
+GraphCuAssign2Orig(
     GraphType* Graph,
     stdgpu::bitset<> VisitedBitset
     )
@@ -3297,10 +3297,6 @@ GraphCuAssign2Old(
 
     Index = GlobalThreadIndex();
 
-    if (Index == 0) {
-        printf("xx NumberOfKeys: %d\n", NumberOfKeys);
-    }
-
     while (Index < NumberOfKeys) {
 
         Shared[LocalIndex].Order = Orders[Index];
@@ -3337,6 +3333,123 @@ template<typename GraphType>
 GLOBAL
 VOID
 GraphCuAssign2(
+    GraphType* Graph,
+    stdgpu::bitset<> VisitedBitset
+    )
+{
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using AssignedType = typename GraphType::AssignedType;
+
+    __shared__ Edge3Type Shared[BLOCK_SIZE];
+
+    uint32_t Index;
+    const uint32_t NumberOfKeys = Graph->NumberOfKeys;
+    const uint32_t NumberOfEdges = Graph->NumberOfEdges;
+
+    Edge3Type *Edges = (Edge3Type *)Graph->OrderedVertices;
+    AssignedType *Assigneds = (AssignedType *)Graph->Assigned;
+
+    OrderType Order;
+    Edge3Type Edge;
+    VertexType Vertex1;
+    VertexType Vertex2;
+    AssignedType Assigned;
+
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    auto Block = cg::this_thread_block();
+    auto LocalIndex = Block.thread_rank();
+
+    Index = GlobalThreadIndex();
+
+    if (0 && Index == 0) {
+        printf("xx NumberOfKeys: %d\n", NumberOfKeys);
+        printf("Visited.size(): %d\n", VisitedBitset.size());
+        //printf("Visited.count(): %d\n", VisitedBitset.count());
+        printf("NumberOfVertices: %d\n", Graph->NumberOfVertices);
+    }
+
+    while (Index < NumberOfKeys) {
+
+        Shared[LocalIndex] = Edges[Index];
+        Block.sync();
+
+        Order = (OrderType)Index;
+        Edge = Shared[LocalIndex];
+
+        Vertex1 = Edge.Vertex1;
+        Vertex2 = Edge.Vertex2;
+
+        if (VisitedBitset.test(Vertex1)) {
+
+            //
+            // Swap Vertex1 and Vertex2.
+            //
+
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+
+            ASSERT(Vertex1 == Edge.Vertex2);
+            ASSERT(Vertex2 == Edge.Vertex1);
+        }
+
+        Assigned = Order - Assigneds[Vertex2];
+        if (Assigned >= NumberOfEdges) {
+            Assigned += NumberOfEdges;
+        }
+
+        Assigneds[Vertex1] = Assigned;
+
+        VisitedBitset.set(Vertex1);
+        VisitedBitset.set(Vertex2);
+
+        Index += Stride;
+
+#if 0
+        ASSERT(Vertex1 < Graph->NumberOfVertices);
+        ASSERT(Vertex2 < Graph->NumberOfVertices);
+
+        if (VisitedBitset.test(Vertex1)) {
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+        }
+
+        //Assigned = Assigneds[Vertex1];
+
+        //if (Assigned != 0) {
+
+            //
+            // Swap Vertex1 and Vertex2.
+            //
+
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+        }
+
+        Assigned = Order - Assigneds[Vertex2];
+        if (Assigned >= NumberOfEdges) {
+            Assigned += NumberOfEdges;
+        }
+
+        Assigneds[Vertex1] = Assigned;
+
+        //VisitedBitset.set(Vertex1);
+        //VisitedBitset.set(Vertex2);
+#endif
+
+        Index += Stride;
+    }
+}
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuAssign2Old2(
     GraphType* Graph,
     stdgpu::bitset<> VisitedBitset
     )
@@ -3515,13 +3628,13 @@ GraphCuTest(
 
         AssignedIndex = (uint32_t)Assigned;
 
+#if 0
         if (Index > 0) {
             if (Indices[AssignedIndex] != 0) {
                 printf("Index: %d, Assigned: %d, Indices[Assigned]: %d\n",
                        Index, AssignedIndex, Indices[Assigned]);
             }
         }
-        Indices[AssignedIndex] = Index;
 
         if (AssignedIndex >= NumberOfKeys) {
             printf("B Index: %d, Assigned: %d, Indices[Assigned]: %d\n",
@@ -3533,6 +3646,9 @@ GraphCuTest(
             printf("Index: %d, Assigned: %d\n", Index, Assigned);
         }
         //ASSERT(!IndexBitset.test(Assigned));
+#endif
+
+        Indices[AssignedIndex] = Index;
         IndexBitset.set(Assigned);
 
         Index += Stride;
@@ -3682,12 +3798,14 @@ GraphAssign2(
 
     Visited.reset();
 
+#if 0
     GraphCuTest<<<BlocksPerGrid,
                   ThreadsPerBlock,
                   SharedMemoryInBytes,
                   Stream>>>(Graph, Visited);
 
     cudaStreamSynchronize(Stream);
+#endif
 
     printf("Num indices: %d\n", Visited.count());
 
