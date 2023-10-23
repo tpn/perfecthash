@@ -3386,12 +3386,48 @@ GraphCuAssign2(
         Vertex1 = Edge.Vertex1;
         Vertex2 = Edge.Vertex2;
 
+        if (!VisitedBitset.test(Vertex1)) {
+
+            //
+            // Swap Vertex1 and Vertex2.
+            //
+
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+
+        } else {
+
+            Vertex1 = Edge.Vertex2;
+            Vertex2 = Edge.Vertex1;
+
+        }
+
+        Assigned = Order - Assigneds[Vertex2];
+        if (Assigned >= NumberOfEdges) {
+            Assigned += NumberOfEdges;
+        }
+
+        Assigneds[Vertex1] = Assigned;
+
+        VisitedBitset.set(Vertex1);
+        VisitedBitset.set(Vertex2);
+
+        Index += Stride;
+
+#if 0
         ASSERT(Vertex1 < Graph->NumberOfVertices);
         ASSERT(Vertex2 < Graph->NumberOfVertices);
 
-        Assigned = Assigneds[Vertex1];
+        if (VisitedBitset.test(Vertex1)) {
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+        }
 
-        if (Assigned != 0) {
+        //Assigned = Assigneds[Vertex1];
+
+        //if (Assigned != 0) {
 
             //
             // Swap Vertex1 and Vertex2.
@@ -3411,6 +3447,7 @@ GraphCuAssign2(
 
         //VisitedBitset.set(Vertex1);
         //VisitedBitset.set(Vertex2);
+#endif
 
         Index += Stride;
     }
@@ -3436,6 +3473,7 @@ GraphCuTest(
     __shared__ KeyType SharedKeys[BLOCK_SIZE];
 
     uint32_t Index;
+    uint32_t AssignedIndex;
     const uint32_t NumberOfKeys = Graph->NumberOfKeys;
 
     KeyType Key;
@@ -3444,6 +3482,7 @@ GraphCuTest(
     KeyType *Keys = (KeyType *)Graph->Keys;
     const VertexType Mask = Graph->NumberOfVertices - 1;
     const EdgeType IndexMask = Graph->NumberOfEdges - 1;
+    uint32_t *Indices = (uint32_t *)Graph->Indices;
 
     AssignedType *Assigneds = (AssignedType *)Graph->Assigned;
 
@@ -3474,7 +3513,23 @@ GraphCuTest(
         Assigned = Assigned1 + Assigned2;
         Assigned &= IndexMask;
 
-        if (IndexBitset.test(Assigned)) {
+        AssignedIndex = (uint32_t)Assigned;
+
+        if (Index > 0) {
+            if (Indices[AssignedIndex] != 0) {
+                printf("Index: %d, Assigned: %d, Indices[Assigned]: %d\n",
+                       Index, AssignedIndex, Indices[Assigned]);
+            }
+        }
+        Indices[AssignedIndex] = Index;
+
+        if (AssignedIndex >= NumberOfKeys) {
+            printf("B Index: %d, Assigned: %d, Indices[Assigned]: %d\n",
+                   Index, AssignedIndex, Indices[Assigned]);
+        }
+        ASSERT(AssignedIndex < Graph->NumberOfKeys);
+
+        if (IndexBitset.test(AssignedIndex)) {
             printf("Index: %d, Assigned: %d\n", Index, Assigned);
         }
         //ASSERT(!IndexBitset.test(Assigned));

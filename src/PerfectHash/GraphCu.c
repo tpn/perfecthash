@@ -1558,6 +1558,52 @@ Return Value:
     }
 
     //
+    // Indices
+    //
+
+    CuResult = Cu->MemAllocManaged(
+        (PCU_DEVICE_POINTER)&Graph->Indices,
+        NumberOfKeys * (IsUsingAssigned16(Graph) ? 2 : 4),
+        CU_MEM_ATTACH_GLOBAL
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemAllocManaged_OrderByVertices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->MemcpyHtoD(
+        (CU_DEVICE_POINTER)&DeviceGraph->Indices,
+        &Graph->Indices,
+        sizeof(Graph->Indices)
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemcpyHtoD_Indices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+    if (IsUsingAssigned16(Graph)) {
+        CuResult = Cu->MemsetD16Async(
+            (PVOID)Graph->Indices,
+            0,
+            NumberOfKeys,
+            SolveContext->Stream
+        );
+    } else {
+        CuResult = Cu->MemsetD32Async(
+            (PVOID)Graph->Indices,
+            0,
+            NumberOfKeys,
+            SolveContext->Stream
+        );
+    }
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuSolve_MemsetD1632Async_Indices, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
     // Ensure any async memsets from Reset() have completed.
     //
 

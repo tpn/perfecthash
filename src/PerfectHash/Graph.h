@@ -1802,6 +1802,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PULONG SortedVertices3Indices;
 
     PEDGE3 OrderedVertices;
+    PULONG Indices;
 
     //
     // Graph implementations 1 & 2: this is an optional array of vertex pairs,

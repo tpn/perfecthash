@@ -95,14 +95,14 @@ target_compile_definitions(
     target_compile_definitions_config(Debug _DEBUG)
     target_compile_definitions_not_config(Debug NDEBUG)
 
-    if (IS_WINDOWS)
-        target_link_options(
-            ${PROJECT_NAME}
-            PRIVATE
-            -Xlinker "/FdPerfectHashCuda.pdb"
-        )
-
-    endif()
+#    if (IS_WINDOWS)
+#        target_link_options(
+#            ${PROJECT_NAME}
+#            PRIVATE
+#            -Xlinker "/FdPerfectHashCuda.pdb"
+#        )
+#
+#    endif()
 
 #endif()
 
