@@ -1215,8 +1215,9 @@ Return Value:
     PDEBUGGER_CONTEXT DebuggerContext;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
-    LONG BlocksPerGrid = 600; //PERFECT_HASH_CU_BLOCKS_PER_GRID;
     LONG ThreadsPerBlock = PERFECT_HASH_CU_THREADS_PER_BLOCK;
+    LONG BlocksPerGridKeys;
+    LONG BlocksPerGridVertices;
 
     UNREFERENCED_PARAMETER(NewGraphPointer);
 
@@ -1233,6 +1234,9 @@ Return Value:
     Cu = DeviceContext->Cu;
     DebuggerContext = &Graph->Rtl->DebuggerContext;
     CpuGraph = Graph->CpuGraph;
+
+    BlocksPerGridKeys = Graph->NumberOfKeys / ThreadsPerBlock;
+    BlocksPerGridVertices = Graph->NumberOfVertices / ThreadsPerBlock;
 
     ASSERT(SolveContext->HostGraph == Graph);
 
@@ -1662,7 +1666,7 @@ Return Value:
 
 #if 1
     Cu->HashKeysHost(DeviceGraph,
-                     BlocksPerGrid,
+                     BlocksPerGridKeys,
                      ThreadsPerBlock,
                      SharedMemoryInBytes);
 
@@ -1841,7 +1845,7 @@ Return Value:
     CU_CHECK(CuResult, StreamSynchronize);
 
     Cu->AddHashedKeysHost(DeviceGraph,
-                          BlocksPerGrid,
+                          BlocksPerGridKeys,
                           ThreadsPerBlock,
                           SharedMemoryInBytes);
 
@@ -1991,7 +1995,7 @@ Return Value:
     DeviceGraph->DeletedEdgeCount = 0;
 
     Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
-                                 BlocksPerGrid,
+                                 BlocksPerGridVertices,
                                  ThreadsPerBlock,
                                  SharedMemoryInBytes);
 
@@ -2136,12 +2140,12 @@ Return Value:
 
         if (UsePhase2) {
             Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
-                                         BlocksPerGrid,
+                                         BlocksPerGridVertices,
                                          ThreadsPerBlock,
                                          SharedMemoryInBytes);
         } else {
             Cu->IsGraphAcyclicPhase1Host(DeviceGraph,
-                                         BlocksPerGrid,
+                                         BlocksPerGridVertices,
                                          ThreadsPerBlock,
                                          SharedMemoryInBytes);
         }
@@ -2327,7 +2331,7 @@ Return Value:
 
         DeviceGraph->CuScratch = 1;
         Cu->GraphScratchHost(DeviceGraph,
-                             BlocksPerGrid,
+                             BlocksPerGridVertices,
                              ThreadsPerBlock,
                              SharedMemoryInBytes);
 
@@ -2343,7 +2347,7 @@ Return Value:
         CU_CHECK(CuResult, StreamSynchronize);
 
         Cu->GraphAssignHost(DeviceGraph,
-                            BlocksPerGrid,
+                            BlocksPerGridVertices,
                             ThreadsPerBlock,
                             SharedMemoryInBytes);
 
