@@ -1860,7 +1860,7 @@ GraphCuRemoveVertexOld(
 template<typename GraphType>
 DEVICE
 bool
-GraphCuRemoveVertex(
+GraphCuRemoveVertexShared(
     _In_ GraphType* Graph,
     _In_ typename GraphType::VertexType VertexIndex,
     _In_ PLOCK Locks
@@ -2024,6 +2024,174 @@ GraphCuRemoveVertex(
             ASSERT(*OrderAddress == Edge);
             SortedOrder[OrderIndex] = Edge;
             OrderedVertices[OrderIndex] = *Edge3;
+        }
+        //Graph->OrderByThreadOrder[ThreadOrderIndex] = Edge;
+    }
+
+#if 0
+    Graph->OrderByThread[GlobalThreadIndex()] = Edge;
+    Graph->OrderByVertex[VertexIndex] = GlobalThreadIndex();
+    Graph->OrderByEdge[Edge] = GlobalThreadIndex();
+    Graph->OrderByThreadOrder[OrderIndex] = GlobalThreadIndex();
+#endif
+    //__threadfence();
+#endif
+End:
+    return Retry;
+}
+
+template<typename GraphType>
+DEVICE
+bool
+GraphCuRemoveVertex(
+    _In_ GraphType* Graph,
+    _In_ typename GraphType::VertexType VertexIndex,
+    _In_ PLOCK Locks
+    )
+{
+    using EdgeType = typename GraphType::EdgeType;
+    using DegreeType = typename GraphType::DegreeType;
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using Vertex3Type = typename GraphType::Vertex3Type;
+    using VertexPairType = typename GraphType::VertexPairType;
+    using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
+    using OrderIndexType = int32_t;
+
+    bool Retry = false;
+    bool Retry1 = true;
+    bool Retry2 = true;
+    bool Removed1 = false;
+    bool Removed2 = false;
+    EdgeType Edge;
+    //DegreeType Degree;
+    Edge3Type Edge3;
+    Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
+    OrderType *Order = (decltype(Order))Graph->Order;
+    OrderType *SortedOrder = (decltype(Order))Graph->SortedOrder;
+    OrderType *OrderAddress;
+    OrderIndexType OrderIndex;
+    OrderIndexType *GraphOrderIndex = (decltype(GraphOrderIndex))&Graph->OrderIndex;
+    Edge3Type *OrderedVertices = (decltype(OrderedVertices))Graph->OrderedVertices;
+
+    Vertex3Type Vertex;
+    Vertex3Type *Vertices3;
+
+    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
+    //__shared__ EdgeType SharedEdges[BLOCK_SIZE];
+
+    Vertex = Vertices3[VertexIndex];
+
+    if (Vertex.Degree != 1) {
+        goto End;
+    }
+
+#if 0
+
+    Vertex = &Vertices3[VertexIndex];
+
+    if (Vertex->Degree == 0) {
+        goto End;
+    }
+
+    if (!Locks[VertexIndex].TryLock()) {
+        Retry = true;
+        goto End;
+    }
+    Degree = Vertex->Degree;
+    Locks[VertexIndex].Unlock();
+    if (Degree != 1) {
+        goto End;
+    }
+#endif
+
+    Edge = Vertex.Edges;
+    Edge3 = Edges3[Edge];
+
+#if 0
+    if (IsEmpty(Edge3->Vertex1)) {
+        if (!IsEmpty(Edge3->Vertex2)) {
+            printf("A VertexIndex: %d\n", VertexIndex);
+            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
+            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
+        }
+        ASSERT(IsEmpty(Edge3->Vertex2));
+        goto End;
+    } else if (IsEmpty(Edge3->Vertex2)) {
+        if (!IsEmpty(Edge3->Vertex1)) {
+            printf("B VertexIndex: %d\n", VertexIndex);
+            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
+            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
+        }
+        ASSERT(IsEmpty(Edge3->Vertex1));
+        goto End;
+    }
+#endif
+
+    do {
+        if (Retry1) {
+            Retry1 = GraphCuRemoveEdgeVertex(Graph,
+                                             Edge3.Vertex1,
+                                             Edge,
+                                             Locks,
+                                             Removed1);
+        }
+        if (Retry2) {
+            Retry2 = GraphCuRemoveEdgeVertex(Graph,
+                                             Edge3.Vertex2,
+                                             Edge,
+                                             Locks,
+                                             Removed2);
+        }
+    } while (Retry1 || Retry2);
+
+#if 0
+    AtomicAggIncCGV(&Graph->DeletedEdgeCount);
+    OrderIndex = AtomicAggSubCG(&Graph->OrderIndex);
+    Graph->Order[OrderIndex] = Edge;
+    Graph->OrderByVertex[GlobalThreadIndex()] = Edge;
+#else
+#ifdef _DEBUG
+    //ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
+    //ASSERT(OrderIndex < Graph->NumberOfEdges);
+#endif
+
+#if 0
+    if (Removed1 || Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndexEither);
+    }
+    if (Removed1 && Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndexBoth);
+    }
+    if (Removed1) {
+        AtomicAggIncCGV(&Graph->OrderIndex1);
+    }
+    if (Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndex2);
+    }
+    if (!Removed1 && !Removed2) {
+        AtomicAggIncCGV(&Graph->OrderIndexNone);
+    }
+#endif
+
+    if (Removed1 || Removed2) {
+        AtomicAggIncCGV(&Graph->DeletedEdgeCount);
+        OrderIndex = AtomicAggSubCG(GraphOrderIndex);
+        OrderAddress = &Order[OrderIndex];
+#if 0
+        if (OrderIndex < 0) {
+            ASSERT(false);
+        }
+#endif
+        if (OrderIndex >= 0) {
+            ASSERT(*OrderAddress == 0);
+            ASSERT(Order[OrderIndex] == 0);
+            Order[OrderIndex] = Edge;
+            ASSERT(Order[OrderIndex] == Edge);
+            ASSERT(*OrderAddress == Edge);
+            SortedOrder[OrderIndex] = Edge;
+            OrderedVertices[OrderIndex] = Edge3;
         }
         //Graph->OrderByThreadOrder[ThreadOrderIndex] = Edge;
     }
@@ -2604,7 +2772,7 @@ IsGraphAcyclicPhase1Host(
     ULONG LocalBlocksPerGrid = (
         DeviceProperties.multiProcessorCount * NumberOfBlocksPerSm
     );
-    BlocksPerGrid = min(BlocksPerGrid, LocalBlocksPerGrid);
+    BlocksPerGrid = max(BlocksPerGrid, LocalBlocksPerGrid);
 
     printf("DeviceProperties.multiProcessorCount: %d\n",
            DeviceProperties.multiProcessorCount);
@@ -3187,7 +3355,7 @@ GraphScratchHost(
 template<typename GraphType>
 GLOBAL
 VOID
-GraphCuAssign1(
+GraphCuAssign1Shared(
     GraphType* Graph
     )
 {
@@ -3255,6 +3423,65 @@ GraphCuAssign1(
         }
     }
 }
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuAssign1(
+    GraphType* Graph
+    )
+{
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using AssignedType = typename GraphType::AssignedType;
+
+    uint8_t Phase;
+    uint32_t Index;
+    const uint32_t NumberOfKeys = Graph->NumberOfKeys;
+    const uint32_t NumberOfEdges = Graph->NumberOfEdges;
+
+    OrderType *Orders = (OrderType *)Graph->Order;
+    Edge3Type *Edges = (Edge3Type *)Graph->Edges3;
+    AssignedType *Assigneds = (AssignedType *)Graph->Assigned;
+
+    OrderType Order;
+    Edge3Type Edge;
+    VertexType Vertex1;
+    VertexType Vertex2;
+    AssignedType Assigned;
+
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    for (Phase = 1; Phase <= 2; Phase++) {
+        Index = GlobalThreadIndex();
+        while (Index < NumberOfKeys) {
+
+            Order = Orders[Index];
+            Edge = Edges[Index];
+
+            Vertex1 = Edge.Vertex1;
+            Vertex2 = Edge.Vertex2;
+
+            if (Vertex1 > Vertex2) {
+                Vertex1 = Edge.Vertex2;
+                Vertex2 = Edge.Vertex1;
+            }
+
+            if (Phase == 1) {
+                Assigneds[Vertex2] = Order;
+            } else {
+                Assigned = Order - Assigneds[Vertex2];
+                if (Assigned >= NumberOfEdges) {
+                    Assigned += NumberOfEdges;
+                }
+                Assigneds[Vertex1] = Assigned;
+            }
+            Index += Stride;
+        }
+    }
+}
+
 
 template<typename GraphType>
 GLOBAL
@@ -3332,7 +3559,7 @@ GraphCuAssign2Orig(
 template<typename GraphType>
 GLOBAL
 VOID
-GraphCuAssign2(
+GraphCuAssign2Shared(
     GraphType* Graph,
     stdgpu::bitset<> VisitedBitset
     )
@@ -3378,6 +3605,115 @@ GraphCuAssign2(
 
         Order = (OrderType)Index;
         Edge = Shared[LocalIndex];
+
+        Vertex1 = Edge.Vertex1;
+        Vertex2 = Edge.Vertex2;
+
+        if (VisitedBitset.test(Vertex1)) {
+
+            //
+            // Swap Vertex1 and Vertex2.
+            //
+
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+
+            ASSERT(Vertex1 == Edge.Vertex2);
+            ASSERT(Vertex2 == Edge.Vertex1);
+        }
+
+        Assigned = Order - Assigneds[Vertex2];
+        if (Assigned >= NumberOfEdges) {
+            Assigned += NumberOfEdges;
+        }
+
+        Assigneds[Vertex1] = Assigned;
+
+        VisitedBitset.set(Vertex1);
+        VisitedBitset.set(Vertex2);
+
+        Index += Stride;
+
+#if 0
+        ASSERT(Vertex1 < Graph->NumberOfVertices);
+        ASSERT(Vertex2 < Graph->NumberOfVertices);
+
+        if (VisitedBitset.test(Vertex1)) {
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+        }
+
+        //Assigned = Assigneds[Vertex1];
+
+        //if (Assigned != 0) {
+
+            //
+            // Swap Vertex1 and Vertex2.
+            //
+
+            Vertex1 ^= Vertex2;
+            Vertex2 ^= Vertex1;
+            Vertex1 ^= Vertex2;
+        }
+
+        Assigned = Order - Assigneds[Vertex2];
+        if (Assigned >= NumberOfEdges) {
+            Assigned += NumberOfEdges;
+        }
+
+        Assigneds[Vertex1] = Assigned;
+
+        //VisitedBitset.set(Vertex1);
+        //VisitedBitset.set(Vertex2);
+#endif
+
+        Index += Stride;
+    }
+}
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuAssign2(
+    GraphType* Graph,
+    stdgpu::bitset<> VisitedBitset
+    )
+{
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using AssignedType = typename GraphType::AssignedType;
+
+    uint32_t Index;
+    const uint32_t NumberOfKeys = Graph->NumberOfKeys;
+    const uint32_t NumberOfEdges = Graph->NumberOfEdges;
+
+    Edge3Type *Edges = (Edge3Type *)Graph->OrderedVertices;
+    AssignedType *Assigneds = (AssignedType *)Graph->Assigned;
+
+    OrderType Order;
+    Edge3Type Edge;
+    VertexType Vertex1;
+    VertexType Vertex2;
+    AssignedType Assigned;
+
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    Index = GlobalThreadIndex();
+
+    if (0 && Index == 0) {
+        printf("xx NumberOfKeys: %d\n", NumberOfKeys);
+        printf("Visited.size(): %d\n", VisitedBitset.size());
+        //printf("Visited.count(): %d\n", VisitedBitset.count());
+        printf("NumberOfVertices: %d\n", Graph->NumberOfVertices);
+    }
+
+    while (Index < NumberOfKeys) {
+
+        Order = (OrderType)Index;
+        Edge = Edges[Index];
 
         Vertex1 = Edge.Vertex1;
         Vertex2 = Edge.Vertex2;
@@ -3569,7 +3905,7 @@ GraphCuAssign2Old2(
 template<typename GraphType>
 GLOBAL
 VOID
-GraphCuTest(
+GraphCuTestShared(
     GraphType* Graph,
     stdgpu::bitset<> IndexBitset
     )
@@ -3655,11 +3991,92 @@ GraphCuTest(
     }
 }
 
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuTest(
+    GraphType* Graph,
+    stdgpu::bitset<> IndexBitset
+    )
+{
+    using KeyType = typename GraphType::KeyType;
+    using EdgeType = typename GraphType::EdgeType;
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using AssignedType = typename GraphType::AssignedType;
+    using VertexPairType = typename GraphType::VertexPairType;
+    using ResultType = VertexPairType;
+
+    uint32_t Index;
+    uint32_t AssignedIndex;
+    const uint32_t NumberOfKeys = Graph->NumberOfKeys;
+
+    KeyType Key;
+    VertexPairType Hash;
+
+    KeyType *Keys = (KeyType *)Graph->DeviceKeys;
+    const VertexType Mask = Graph->NumberOfVertices - 1;
+    const EdgeType IndexMask = Graph->NumberOfEdges - 1;
+    uint32_t *Indices = (uint32_t *)Graph->Indices;
+
+    AssignedType *Assigneds = (AssignedType *)Graph->Assigned;
+
+    AssignedType Assigned;
+    AssignedType Assigned1;
+    AssignedType Assigned2;
+
+    auto HashFunction = GraphGetHashFunction(Graph);
+
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    Index = GlobalThreadIndex();
+
+    while (Index < NumberOfKeys) {
+
+        Key = Keys[Index];
+        Hash = HashFunction(Key, Mask);
+
+        Assigned1 = Assigneds[Hash.Vertex1];
+        Assigned2 = Assigneds[Hash.Vertex2];
+
+        Assigned = Assigned1 + Assigned2;
+        Assigned &= IndexMask;
+
+        AssignedIndex = (uint32_t)Assigned;
+
+#if 0
+        if (Index > 0) {
+            if (Indices[AssignedIndex] != 0) {
+                printf("Index: %d, Assigned: %d, Indices[Assigned]: %d\n",
+                       Index, AssignedIndex, Indices[Assigned]);
+            }
+        }
+
+        if (AssignedIndex >= NumberOfKeys) {
+            printf("B Index: %d, Assigned: %d, Indices[Assigned]: %d\n",
+                   Index, AssignedIndex, Indices[Assigned]);
+        }
+        //ASSERT(AssignedIndex < Graph->NumberOfKeys);
+
+        if (IndexBitset.test(AssignedIndex)) {
+            printf("Index: %d, Assigned: %d\n", Index, Assigned);
+        }
+        //ASSERT(!IndexBitset.test(Assigned));
+#endif
+
+        Indices[AssignedIndex] = Index;
+        IndexBitset.set(Assigned);
+
+        Index += Stride;
+    }
+}
+
 
 template<typename GraphType>
 GLOBAL
 VOID
-GraphCuCountAssigned(
+GraphCuCountAssignedShared(
     GraphType* Graph,
     stdgpu::bitset<> AssignedBitset
     )
@@ -3689,6 +4106,38 @@ GraphCuCountAssigned(
         Block.sync();
 
         if (SharedAssigned[LocalIndex] > 0) {
+            AssignedBitset.set(Index);
+        }
+
+        Index += Stride;
+    }
+}
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuCountAssigned(
+    GraphType* Graph,
+    stdgpu::bitset<> AssignedBitset
+    )
+{
+    using Edge3Type = typename GraphType::Edge3Type;
+    using OrderType = typename GraphType::OrderType;
+    using VertexType = typename GraphType::VertexType;
+    using AssignedType = typename GraphType::AssignedType;
+
+    uint32_t Index;
+    const uint32_t NumberOfVertices = Graph->NumberOfVertices;
+
+    AssignedType *Assigned = (AssignedType *)Graph->Assigned;
+
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    Index = GlobalThreadIndex();
+
+    while (Index < NumberOfVertices) {
+
+        if (Assigned[Index] > 0) {
             AssignedBitset.set(Index);
         }
 
