@@ -4388,6 +4388,7 @@ CountDegrees(
 
     if (Graph->_FirstNumUniqueDegrees == 0) {
         Graph->_FirstNumUniqueDegrees = NumUnique;
+        Graph->_NumUniqueDegrees = NumUnique;
     } else {
         ASSERT(Graph->_FirstNumUniqueDegrees >= NumUnique);
         ASSERT(Graph->_NumUniqueDegrees >= NumUnique);
@@ -4455,13 +4456,14 @@ CountDegrees(
     //
     // Print the histogram.
     //
-
+#if 0
     thrust::host_vector<DegreeType> hUniqueDegrees = UniqueDegrees;
     thrust::host_vector<size_t> hCounts = Counts;
     std::cout << "Degree Count" << std::endl;
     for (size_t i = 0; i < NumUnique; i++) {
         std::cout << hUniqueDegrees[i] << " " << hCounts[i] << std::endl;
     }
+#endif
 }
 
 EXTERN_C

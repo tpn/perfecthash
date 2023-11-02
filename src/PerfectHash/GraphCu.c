@@ -2176,6 +2176,9 @@ Return Value:
                                          SharedMemoryInBytes);
         }
 
+        CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+        CU_CHECK(CuResult, StreamSynchronize);
+
         Cu->CountDegreesHost(DeviceGraph,
                              BlocksPerGridKeys,
                              ThreadsPerBlock,
