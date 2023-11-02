@@ -2136,6 +2136,9 @@ typedef PERFECT_HASH_CUDA_COUNT_NONEMPTY
     ENTRY(ADD_HASHED_KEYS,                                               \
           AddHashedKeysHost)                                             \
                                                                          \
+    ENTRY(GRAPH_FUNCTION,                                                \
+          CountDegreesHost)                                              \
+                                                                         \
     ENTRY(COUNT_NONEMPTY,                                                \
           CountNonEmptyHost)                                             \
                                                                          \

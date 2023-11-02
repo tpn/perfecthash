@@ -1856,6 +1856,19 @@ Return Value:
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
+    Cu->CountDegreesHost(DeviceGraph,
+                         BlocksPerGridKeys,
+                         ThreadsPerBlock,
+                         SharedMemoryInBytes);
+
+    //
+    // Wait for completion.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
+
 #if 0
     Cu->GraphPostAddHashedKeysHost(DeviceGraph,
                                    BlocksPerGrid,
@@ -2001,6 +2014,19 @@ Return Value:
 
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
+
+    Cu->CountDegreesHost(DeviceGraph,
+                         BlocksPerGridKeys,
+                         ThreadsPerBlock,
+                         SharedMemoryInBytes);
+
+    //
+    // Wait for completion.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    CU_CHECK(CuResult, StreamSynchronize);
+
 
 #if 0
     Cu->IsGraphAcyclicPhase2Host(DeviceGraph,
@@ -2149,6 +2175,11 @@ Return Value:
                                          ThreadsPerBlock,
                                          SharedMemoryInBytes);
         }
+
+        Cu->CountDegreesHost(DeviceGraph,
+                             BlocksPerGridKeys,
+                             ThreadsPerBlock,
+                             SharedMemoryInBytes);
 
         CuResult = Cu->StreamSynchronize(SolveContext->Stream);
         CU_CHECK(CuResult, StreamSynchronize);

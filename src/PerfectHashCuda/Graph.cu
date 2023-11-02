@@ -29,6 +29,7 @@ Abstract:
 
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
 #include <thrust/sort.h>
 #include <thrust/unique.h>
 #include <thrust/inner_product.h>
@@ -1420,6 +1421,28 @@ CheckHashedKeys(
     }
 }
 
+template <typename GraphType>
+HOST
+VOID
+AllocDegreesAndEdges(
+    _In_ GraphType* Graph
+    )
+{
+    using EdgeType = typename GraphType::EdgeType;
+    using DegreeType = typename GraphType::DegreeType;
+
+    static_assert(sizeof(DegreeType) == sizeof(EdgeType));
+
+    size_t AllocSize = sizeof(DegreeType) * Graph->NumberOfVertices;
+    CUDA_CALL(cudaMallocManaged((void **)&Graph->_Edges, AllocSize));
+    CUDA_CALL(cudaMallocManaged((void **)&Graph->_Degrees, AllocSize));
+    CUDA_CALL(cudaMallocManaged((void **)&Graph->_UniqueDegrees, AllocSize));
+
+    CUDA_CALL(cudaMemset(Graph->_Edges, 0, AllocSize));
+    CUDA_CALL(cudaMemset(Graph->_Degrees, 0, AllocSize));
+    CUDA_CALL(cudaMemset(Graph->_UniqueDegrees, 0, AllocSize));
+}
+
 EXTERN_C
 HOST
 VOID
@@ -1440,18 +1463,6 @@ AddHashedKeysHost(
     Attributes = (PCU_DEVICE_ATTRIBUTES)DeviceContext->DeviceAttributes;
 
     PrintCuDeviceAttributes(Attributes);
-#endif
-
-#if 0
-    size_t AllocSize = sizeof(int32_t) * Graph->NumberOfVertices;
-    CUDA_CALL(cudaMallocManaged((void **)&Graph->_Edges, AllocSize));
-    CUDA_CALL(cudaMallocManaged((void **)&Graph->_Degrees, AllocSize));
-
-    CUDA_CALL(cudaMemset(Graph->_Edges, 0, AllocSize));
-    CUDA_CALL(cudaMemset(Graph->_Degrees, 0, AllocSize));
-
-    SolveContext->HostGraph->_Edges = Graph->_Edges;
-    SolveContext->HostGraph->_Degrees = Graph->_Degrees;
 #endif
 
     printf("AddHashedKeysHost: Graph: %p\n", Graph);
@@ -1493,6 +1504,12 @@ AddHashedKeysHost(
 
     dim3 GridDim(BlocksPerGrid, 1, 1);
     dim3 BlockDim(ThreadsPerBlock, 1, 1);
+
+    if (IsUsingAssigned16(Graph)) {
+        AllocDegreesAndEdges((PGRAPH16)Graph);
+    } else {
+        AllocDegreesAndEdges((PGRAPH32)Graph);
+    }
 
     AddHashedKeys<<<GridDim,
                     BlockDim,
@@ -4283,5 +4300,192 @@ GraphAssignHost(
                               SharedMemoryInBytes);
     }
 }
+
+//
+// CountDegrees
+//
+
+template<typename VertexType, typename DegreeType>
+__global__ void extractDegrees(const VertexType* vertices,
+        DegreeType* degrees, size_t numVertices) {
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < numVertices) {
+        degrees[index] = vertices[index].Degree;
+    }
+}
+
+
+template<typename GraphType>
+GLOBAL
+VOID
+ExtractDegrees(
+    _In_ GraphType* Graph
+    )
+{
+    using DegreeType = typename GraphType::DegreeType;
+    using Vertex3Type = typename GraphType::Vertex3Type;
+
+    DegreeType *Degrees = (DegreeType *)Graph->_Degrees;
+    Vertex3Type *Vertices = (Vertex3Type *)Graph->Vertices3;
+
+    uint32_t Index = GlobalThreadIndex();
+
+    const uint32_t NumberOfVertices = Graph->NumberOfVertices;
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    while (Index < NumberOfVertices) {
+        Degrees[Index] = Vertices[Index].Degree;
+        Index += Stride;
+    }
+}
+
+
+template<typename GraphType>
+HOST
+VOID
+CountDegrees(
+    _In_ GraphType* Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    using DegreeType = typename GraphType::DegreeType;
+    using Vertex3Type = typename GraphType::Vertex3Type;
+
+    PPH_CU_SOLVE_CONTEXT SolveContext = Graph->CuSolveContext;
+
+    DegreeType* GraphDegrees = (DegreeType *)Graph->_Degrees;
+
+    int NumBlocks = (
+        (Graph->NumberOfVertices + ThreadsPerBlock - 1) / ThreadsPerBlock
+    );
+
+    ExtractDegrees<<<NumBlocks,
+                     ThreadsPerBlock,
+                     SharedMemoryInBytes,
+                     (CUstream_st *)SolveContext->Stream>>>(Graph);
+
+    CUDA_CALL(cudaStreamSynchronize((CUstream_st *)SolveContext->Stream));
+
+    thrust::device_ptr<DegreeType> DegreesBegin(GraphDegrees);
+    thrust::device_ptr<DegreeType> DegreesEnd(
+        GraphDegrees + Graph->NumberOfVertices
+    );
+
+    thrust::sort(thrust::cuda::par,
+                 DegreesBegin,
+                 DegreesEnd,
+                 thrust::greater<DegreeType>());
+
+    thrust::device_vector<DegreeType> UniqueDegrees(Graph->NumberOfVertices);
+    auto UniqueEnd = thrust::unique_copy(thrust::cuda::par,
+                                         DegreesBegin,
+                                         DegreesEnd,
+                                         UniqueDegrees.begin());
+
+    size_t NumUnique = thrust::distance(UniqueDegrees.begin(), UniqueEnd);
+
+    if (Graph->_FirstNumUniqueDegrees == 0) {
+        Graph->_FirstNumUniqueDegrees = NumUnique;
+    } else {
+        ASSERT(Graph->_FirstNumUniqueDegrees >= NumUnique);
+        ASSERT(Graph->_NumUniqueDegrees >= NumUnique);
+        Graph->_NumUniqueDegrees = NumUnique;
+    }
+
+    //
+    // Resize the unique degrees vector to its actual size
+    //
+
+    UniqueDegrees.resize(NumUnique);
+
+    std::cout << "NumUnique: " << NumUnique << std::endl;
+
+    //
+    // Copy the unique degrees vector to Graph->_UniqueDegrees.
+    //
+
+    CUDA_CALL(cudaMemcpy(Graph->_UniqueDegrees,
+                         thrust::raw_pointer_cast(UniqueDegrees.data()),
+                         NumUnique * sizeof(DegreeType),
+                         cudaMemcpyDeviceToDevice));
+
+    //
+    // Allocate a vector to store the counts of each unique degree
+    //
+
+    thrust::device_vector<size_t> Counts(NumUnique);
+
+    //
+    // Calculate the count of each unique degree
+    //
+
+    for (size_t i = 0; i < NumUnique; i++) {
+        std::cout << "Counting degree " << UniqueDegrees[i] << ": ";
+        Counts[i] = thrust::count(thrust::cuda::par,
+                                  DegreesBegin,
+                                  DegreesEnd,
+                                  UniqueDegrees[i]);
+        std::cout << Counts[i] << std::endl;
+    }
+
+    //
+    // Alloc and copy the counts to Graph->_Counts.
+    //
+
+    if (Graph->_Counts == nullptr) {
+        CUDA_CALL(
+            cudaMallocManaged(
+                (void **)&Graph->_Counts,
+                Graph->_FirstNumUniqueDegrees * sizeof(DegreeType)
+            )
+        );
+    } else {
+        CUDA_CALL(cudaMemset(Graph->_Counts,
+                             0,
+                             Graph->_FirstNumUniqueDegrees * sizeof(DegreeType)));
+    }
+
+    CUDA_CALL(cudaMemcpy(Graph->_Counts,
+                         thrust::raw_pointer_cast(Counts.data()),
+                         NumUnique * sizeof(DegreeType),
+                         cudaMemcpyDeviceToDevice));
+
+    //
+    // Print the histogram.
+    //
+
+    thrust::host_vector<DegreeType> hUniqueDegrees = UniqueDegrees;
+    thrust::host_vector<size_t> hCounts = Counts;
+    std::cout << "Degree Count" << std::endl;
+    for (size_t i = 0; i < NumUnique; i++) {
+        std::cout << hUniqueDegrees[i] << " " << hCounts[i] << std::endl;
+    }
+}
+
+EXTERN_C
+HOST
+VOID
+CountDegreesHost(
+    _In_ PGRAPH Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    if (IsUsingAssigned16(Graph)) {
+        CountDegrees<GRAPH16>((PGRAPH16)Graph,
+                              BlocksPerGrid,
+                              ThreadsPerBlock,
+                              SharedMemoryInBytes);
+    } else {
+        CountDegrees<GRAPH32>((PGRAPH32)Graph,
+                              BlocksPerGrid,
+                              ThreadsPerBlock,
+                              SharedMemoryInBytes);
+    }
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :
