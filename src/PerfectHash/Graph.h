@@ -2095,6 +2095,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     PVOID _Edges;
     PVOID _Degrees;
+    PVOID _UniqueDegrees;
+    PVOID _Counts;
+
+    LONG _NumUniqueDegrees;
+    LONG _FirstNumUniqueDegrees;
+
     LONG _SavedVertices3;
     LONG _SavedVertexPairs;
     PFILE_WORK_ITEM SaveVertices3FileWorkItem;
