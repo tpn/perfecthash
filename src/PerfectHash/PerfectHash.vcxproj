@@ -182,6 +182,7 @@
     <ClCompile Include="Chm01FileWorkCHeaderStdAfxFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderSupportFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderTypesFile.c" />
+    <ClCompile Include="Chm01FileWorkCMakeListsTextFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexExeFile.c" />
@@ -195,6 +196,9 @@
     <ClCompile Include="Chm01FileWorkCSourceTableValuesFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceTestFile.c" />
+    <ClCompile Include="Chm01FileWorkCudaSourceFile.c" />
+    <ClCompile Include="Chm01FileWorkGraphVertexPairsFile.c" />
+    <ClCompile Include="Chm01FileWorkGraphVertices3File.c" />
     <ClCompile Include="Chm01FileWorkMakefileBenchmarkFullMkFile.c" />
     <ClCompile Include="Chm01FileWorkMakefileBenchmarkIndexMkFile.c" />
     <ClCompile Include="Chm01FileWorkMakefileSoMkFile.c" />
@@ -212,7 +216,6 @@
     <ClCompile Include="Chm01FileWorkVSSolutionFile.c" />
     <ClCompile Include="Chm01FileWorkModuleDefFile.c" />
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
-    <ClCompile Include="Debugger.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chm02.c" />

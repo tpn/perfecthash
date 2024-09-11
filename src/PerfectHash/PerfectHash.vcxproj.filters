@@ -136,9 +136,6 @@
     <ClCompile Include="Chm02Shared.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Debugger.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Chm01FileWorkCHeaderFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -332,6 +329,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableHash16Ex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCMakeListsTextFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCudaSourceFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkGraphVertexPairsFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkGraphVertices3File.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
