@@ -25,6 +25,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
+      <DisableSpecificWarnings>6396</DisableSpecificWarnings>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
