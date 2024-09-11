@@ -332,8 +332,8 @@ class Dumpbin(InvariantAwareObject):
 
         return binary_path
 
-    def plot_path(self, output_dir):
-        return self.binary_path(output_dir).replace('.keys', '.png')
+    def plot_path(self, output_dir, a):
+        return self.binary_path(output_dir, a).replace('.keys', '.png')
 
     def _save_rips_as_keys(self, rips, suffix):
 
@@ -372,10 +372,10 @@ class Dumpbin(InvariantAwareObject):
         if len(a) == 0:
             return
 
-        binary_path = self.binary_path(output_dir)
+        binary_path = self.binary_path(output_dir, a)
 
         if self._save_plot:
-            plot_path = self.plot_path(output_dir)
+            plot_path = self.plot_path(output_dir, a)
             save_array_plot_to_png_file(plot_path, a)
 
         fp = np.memmap(binary_path, dtype='uint32', mode='w+', shape=a.shape)
