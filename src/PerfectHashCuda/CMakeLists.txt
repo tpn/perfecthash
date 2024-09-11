@@ -5,6 +5,17 @@ set(IS_CUDA 1)
 
 find_package(stdgpu REQUIRED)
 
+CPMAddPackage(
+  NAME cuco
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../cuco
+  #GITHUB_REPOSITORY NVIDIA/cuCollections
+  #GIT_TAG dev
+  OPTIONS
+     "BUILD_TESTS OFF"
+     "BUILD_BENCHMARKS OFF"
+     "BUILD_EXAMPLES OFF"
+)
+
 ################################################################################
 # Source groups
 ################################################################################
@@ -78,6 +89,8 @@ target_compile_definitions(
         ${PROJECT_NAME}
         PRIVATE
         --extended-lambda
+        --expt-relaxed-constexpr
+        --expt-extended-lambda
         --source-in-ptx
         -Wno-deprecated-gpu-targets
         -v
@@ -115,6 +128,10 @@ target_compile_definitions(
 #)
 
 #target_link_libraries(${PROJECT_NAME} PerfectHash)
-target_link_libraries(${PROJECT_NAME} PUBLIC stdgpu::stdgpu)
+
+target_link_libraries(${PROJECT_NAME}
+                      PUBLIC
+                      stdgpu::stdgpu
+                      cuco)
 
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

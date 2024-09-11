@@ -80,11 +80,11 @@ __host__ __device__ unsigned int __viaddmin_u32_(unsigned int a,
 // Define helper macros.
 //
 
-#undef EMPTY
+#undef EMPTY_SENTINEL
 #undef IsEmpty
 
-#define EMPTY (-1)
-#define IsEmpty(Value) (Value == ((decltype(Value))EMPTY))
+#define EMPTY_SENTINEL (-1)
+#define IsEmpty(Value) (Value == ((decltype(Value))EMPTY_SENTINEL))
 
 
 EXTERN_C
@@ -1434,12 +1434,24 @@ AllocDegreesAndEdges(
     static_assert(sizeof(DegreeType) == sizeof(EdgeType));
 
     size_t AllocSize = sizeof(DegreeType) * Graph->NumberOfVertices;
+    printf("AllocDegreesAndEdges: AllocSize: %Iu\n", AllocSize);
+
+    printf("Allocating _Edges...\n");
     CUDA_CALL(cudaMallocManaged((void **)&Graph->_Edges, AllocSize));
+
+    printf("Allocating _Degrees...\n");
     CUDA_CALL(cudaMallocManaged((void **)&Graph->_Degrees, AllocSize));
+
+    printf("Allocating _UniqueDegrees...\n");
     CUDA_CALL(cudaMallocManaged((void **)&Graph->_UniqueDegrees, AllocSize));
 
+    printf("Zeroing _Edges...\n");
     CUDA_CALL(cudaMemset(Graph->_Edges, 0, AllocSize));
+
+    printf("Zeroing _Degrees...\n");
     CUDA_CALL(cudaMemset(Graph->_Degrees, 0, AllocSize));
+
+    printf("Zeroing _UniqueDegrees...\n");
     CUDA_CALL(cudaMemset(Graph->_UniqueDegrees, 0, AllocSize));
 }
 
@@ -2789,7 +2801,7 @@ IsGraphAcyclicPhase1Host(
     ULONG LocalBlocksPerGrid = (
         DeviceProperties.multiProcessorCount * NumberOfBlocksPerSm
     );
-    BlocksPerGrid = max(BlocksPerGrid, LocalBlocksPerGrid);
+    BlocksPerGrid = min(BlocksPerGrid, LocalBlocksPerGrid);
 
     printf("DeviceProperties.multiProcessorCount: %d\n",
            DeviceProperties.multiProcessorCount);
@@ -2844,6 +2856,9 @@ IsGraphAcyclicPhase1Host(
     //cudaStreamSynchronize((CUstream_st *)SolveContext->Stream);
 
     //CUDA_CALL(cudaFree(Locks));
+
+    printf("Leaving IsGraphAcyclicPhase1Host...\n");
+
     return;
 }
 
@@ -4476,6 +4491,8 @@ CountDegreesHost(
     _In_ ULONG SharedMemoryInBytes
     )
 {
+    printf("Entered CountDegrees...\n");
+
     if (IsUsingAssigned16(Graph)) {
         CountDegrees<GRAPH16>((PGRAPH16)Graph,
                               BlocksPerGrid,
@@ -4487,6 +4504,124 @@ CountDegreesHost(
                               ThreadsPerBlock,
                               SharedMemoryInBytes);
     }
+
+    printf("Leaving CountDegrees...\n");
+}
+
+//
+// CuCo
+//
+// N.B. Copied from cuco/examples/host_bulk_example.cu.
+//
+
+#include <cuco/static_map.cuh>
+
+#include <thrust/device_vector.h>
+#include <thrust/equal.h>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/sequence.h>
+#include <thrust/transform.h>
+
+#include <cmath>
+#include <cstddef>
+#include <iostream>
+#include <limits>
+
+
+template<typename GraphType>
+VOID
+GraphCuCo(
+    _In_ GraphType* Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    using KeyType = typename GraphType::KeyType;
+    using ValueType = typename GraphType::IndexType;
+
+    constexpr KeyType EmptyKey = (KeyType)-1;
+    constexpr ValueType EmptyValue = (ValueType)-1;
+
+    size_t NumberOfKeys = Graph->NumberOfKeys;
+
+    constexpr float LoadFactor = 0.5f;
+    const size_t Capacity = std::ceil(NumberOfKeys / LoadFactor);
+
+    std::cout << "Capacity: " << Capacity << std::endl;
+
+    cuco::static_map<KeyType, ValueType> map{
+        Capacity,
+        cuco::empty_key{EmptyKey},
+        cuco::empty_value{EmptyValue},
+    };
+
+    KeyType *Keys = (KeyType *)Graph->DeviceKeys;
+    auto tuple = thrust::make_tuple(
+        thrust::device_ptr<KeyType>(Keys),
+        thrust::counting_iterator<ValueType>(0)
+    );
+    auto zipped = thrust::make_zip_iterator(tuple);
+
+    printf("Inserting %d keys...\n", NumberOfKeys);
+    map.insert(zipped, zipped + NumberOfKeys);
+    printf("Done inserting keys.\n");
+
+    thrust::device_vector<ValueType> Values(NumberOfKeys);
+
+    printf("Finding matched values...\n");
+    map.find(thrust::device_ptr<KeyType>(Keys),
+             thrust::device_ptr<KeyType>(Keys) + NumberOfKeys,
+             Values.begin());
+    printf("Done finding matched values.\n");
+
+    const bool AllValuesMatch = thrust::equal(
+        Values.begin(),
+        Values.end(),
+        thrust::counting_iterator<ValueType>(0)
+    );
+
+    printf("All values match: %s\n", AllValuesMatch ? "true" : "false");
+
+    //
+    // The `Keys` array is of length `NumberOfKeys`.  What is the equivalent of
+    // these six lines from the cuco example?
+    //
+    //   thrust::device_vector<Key> insert_keys(num_keys);
+    //   thrust::sequence(insert_keys.begin(), insert_keys.end(), 0);
+    //   thrust::device_vector<Value> insert_values(num_keys);
+    //   thrust::sequence(insert_values.begin(), insert_values.end(), 0);
+    //   auto zipped =
+    //     thrust::make_zip_iterator(thrust::make_tuple(insert_keys.begin(), insert_values.begin()));
+    //
+
+}
+
+
+EXTERN_C
+HOST
+VOID
+CuCoHost(
+    _In_ PGRAPH Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    )
+{
+    printf("Entered CuCoHost...\n");
+
+    if (IsUsingAssigned16(Graph)) {
+        GraphCuCo<GRAPH16>((PGRAPH16)Graph,
+                           BlocksPerGrid,
+                           ThreadsPerBlock,
+                           SharedMemoryInBytes);
+    } else {
+        GraphCuCo<GRAPH32>((PGRAPH32)Graph,
+                           BlocksPerGrid,
+                           ThreadsPerBlock,
+                           SharedMemoryInBytes);
+    }
+
 }
 
 

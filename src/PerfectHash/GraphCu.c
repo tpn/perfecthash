@@ -1240,6 +1240,14 @@ Return Value:
 
     ASSERT(SolveContext->HostGraph == Graph);
 
+    Cu->CuCoHost(DeviceGraph,
+                 BlocksPerGridKeys,
+                 ThreadsPerBlock,
+                 SharedMemoryInBytes);
+
+    Result = PH_S_STOP_GRAPH_SOLVING;
+    goto End;
+
     NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
     NumberOfVertices = Graph->NumberOfVertices;
     if (CpuGraph) {
@@ -1868,6 +1876,10 @@ Return Value:
     CuResult = Cu->StreamSynchronize(SolveContext->Stream);
     CU_CHECK(CuResult, StreamSynchronize);
 
+    Cu->CuCoHost(DeviceGraph,
+                 BlocksPerGridKeys,
+                 ThreadsPerBlock,
+                 SharedMemoryInBytes);
 
 #if 0
     Cu->GraphPostAddHashedKeysHost(DeviceGraph,
