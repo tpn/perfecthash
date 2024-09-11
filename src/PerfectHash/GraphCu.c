@@ -1521,7 +1521,7 @@ Return Value:
 
     CuResult = Cu->MemAllocManaged(
         (PCU_DEVICE_POINTER)&Graph->SortedOrder,
-        NumberOfKeys * (IsUsingAssigned16(Graph) ? 2 : 4),
+        (SIZE_T)NumberOfKeys * (IsUsingAssigned16(Graph) ? 2 : 4),
         CU_MEM_ATTACH_GLOBAL
     );
     if (CU_FAILED(CuResult)) {
@@ -1567,7 +1567,7 @@ Return Value:
 
     CuResult = Cu->MemAllocManaged(
         (PCU_DEVICE_POINTER)&Graph->Indices,
-        NumberOfKeys * (IsUsingAssigned16(Graph) ? 2 : 4),
+        (SIZE_T)NumberOfKeys * (IsUsingAssigned16(Graph) ? 2 : 4),
         CU_MEM_ATTACH_GLOBAL
     );
     if (CU_FAILED(CuResult)) {
