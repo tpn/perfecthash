@@ -1202,6 +1202,7 @@ Return Value:
     PKEY Keys;
     HRESULT Result;
     HRESULT CpuResult;
+    HRESULT CpuAddKeysResult;
     PGRAPH CpuGraph;
     //HRESULT SolveResult;
     ULONG NumberOfKeys;
@@ -1248,8 +1249,10 @@ Return Value:
         CpuResult = CpuGraph->Vtbl->AddKeys(CpuGraph, NumberOfKeys, Keys);
         if (FAILED(CpuResult)) {
             PH_ERROR(GraphCuSolve_CpuGraphAddKeys, CpuResult);
-            Result = CpuResult;
-            goto Error;
+            CpuAddKeysResult = CpuResult;
+            // Let this fall through.
+            //Result = CpuResult;
+            //goto Error;
         }
     }
 
@@ -2155,11 +2158,16 @@ Return Value:
 
     LONG DeviceOrderIndex;
     LONG PreviousDeviceOrderIndex = 0;
-    LONG Delta;
+    LONG DeviceDeletedEdges;
+    LONG PreviousDeviceDeletedEdges = 0;
+    LONG OrderIndexDelta;
+    LONG DeletedEdgeDelta = 0;
+    LONG TotalDeletedEdges = 0;
 
     ULONG Attempts = 0;
 
     BOOLEAN UsePhase2 = FALSE;
+    BOOLEAN IsAcyclic = FALSE;
 
     while (TRUE) {
         ++Attempts;
@@ -2199,89 +2207,74 @@ Return Value:
 #endif
 
         DeviceOrderIndex = DeviceGraph->OrderIndex;
+        DeviceDeletedEdges = DeviceGraph->DeletedEdgeCount;
 
         if (DeviceOrderIndex <= 0) {
-            break;
+            OUTPUT_CSTR("DeviceOrderIndex = ");
+            OUTPUT_INT(DeviceOrderIndex);
+            OUTPUT_CHR('\n');
+            OUTPUT_CSTR("DeviceGraph->DeletedEdgeCount = ");
+            OUTPUT_INT(DeviceGraph->DeletedEdgeCount);
+            OUTPUT_CHR('\n');
+            SIZE_T Total = DeviceGraph->DeletedEdgeCount + DeviceOrderIndex;
+            OUTPUT_CSTR("Total = ");
+            OUTPUT_INT(Total);
+            OUTPUT_FLUSH_CONSOLE();
+            TotalDeletedEdges = DeviceDeletedEdges + DeviceOrderIndex;
+            if (TotalDeletedEdges == (LONG)NumberOfKeys) {
+                IsAcyclic = TRUE;
+                break;
+            }
         }
 
         if (Attempts == 1) {
             PreviousDeviceOrderIndex = DeviceOrderIndex;
+            PreviousDeviceDeletedEdges = DeviceDeletedEdges;
             continue;
         }
 
-        Delta = PreviousDeviceOrderIndex - DeviceOrderIndex;
-        ASSERT(Delta >= 0);
-        if (Delta == 0) {
+        OrderIndexDelta = PreviousDeviceOrderIndex - DeviceOrderIndex;
+        DeletedEdgeDelta = DeviceDeletedEdges - PreviousDeviceDeletedEdges;
+        ASSERT(OrderIndexDelta >= 0);
+        ASSERT(DeletedEdgeDelta >= 0);
+        if (OrderIndexDelta == 0 || DeletedEdgeDelta == 0) {
+            OUTPUT_CSTR("Attempt = ");
+            OUTPUT_INT(Attempts);
+            OUTPUT_CSTR(", OrderIndexDelta = ");
+            OUTPUT_INT(OrderIndexDelta);
+            OUTPUT_CHR('\n');
+            OUTPUT_CSTR("X DeviceOrderIndex = ");
+            OUTPUT_INT(DeviceOrderIndex);
+            OUTPUT_CHR('\n');
+            OUTPUT_CSTR("DeviceGraph->DeletedEdgeCount = ");
+            OUTPUT_INT(DeviceGraph->DeletedEdgeCount);
+            OUTPUT_CHR('\n');
+            SIZE_T Total = DeviceGraph->DeletedEdgeCount + DeviceOrderIndex;
+            OUTPUT_CSTR("Total = ");
+            OUTPUT_INT(Total);
+            OUTPUT_FLUSH_CONSOLE();
+
+            //TotalDeletedEdges = DeviceDeletedEdges + DeviceOrderIndex;
+            //if (TotalDeletedEdges == (LONG)NumberOfKeys) {
+            //    IsAcyclic = TRUE;
+            //    break;
+            //}
+
+#if 0
             if (UsePhase2 != FALSE) {
                 UsePhase2 = FALSE;
                 PreviousDeviceOrderIndex = DeviceOrderIndex;
                 continue;
             }
+#endif
             break;
         } else {
             PreviousDeviceOrderIndex = DeviceOrderIndex;
+            PreviousDeviceDeletedEdges = DeviceDeletedEdges;
         }
 
         continue;
 
-#if 0
-        ThreadOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
-                                                  DeviceGraph->OrderByThread,
-                                                  Graph->NumberOfVertices);
-
-        VertexOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
-                                                  DeviceGraph->OrderByVertex,
-                                                  Graph->NumberOfVertices);
-
-        EdgeOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
-                                                DeviceGraph->OrderByEdge,
-                                                Graph->NumberOfVertices);
-
-        OrderThreadOrderCount2 = Cu->CountNonEmptyHost(DeviceGraph,
-                                                       DeviceGraph->OrderByThreadOrder,
-                                                       Graph->NumberOfVertices);
-
-        ThreadOrderDelta = ThreadOrderCount2 - ThreadOrderCount1;
-        VertexOrderDelta = VertexOrderCount2 - VertexOrderCount1;
-        EdgeOrderDelta = EdgeOrderCount2 - EdgeOrderCount1;
-        OrderThreadOrderDelta = OrderThreadOrderCount2 - OrderThreadOrderCount1;
-
-#if 0
-        if (VertexOrderDelta == 0 && EdgeOrderDelta == 0) {
-            break;
-        }
-
-        if (EdgeOrderDelta == 0) {
-            break;
-        }
-#endif
-
-        ThreadOrderCount += ThreadOrderDelta;
-        VertexOrderCount += VertexOrderDelta;
-        EdgeOrderCount += EdgeOrderDelta;
-        OrderThreadOrderCount += OrderThreadOrderDelta;
-
-        ThreadOrderCount1 = ThreadOrderCount2;
-        VertexOrderCount1 = VertexOrderCount2;
-        EdgeOrderCount1 = EdgeOrderCount2;
-        OrderThreadOrderCount1 = OrderThreadOrderCount2;
-
-        if (DeviceGraph->OrderIndex <= 0) {
-            break;
-        }
-
-        if (EdgeOrderCount >= NumberOfKeys) {
-            break;
-        }
-
-#if 0
-        if (VertexOrderCount >= NumberOfKeys ||
-            EdgeOrderCount >= NumberOfKeys) {
-            break;
-        }
-#endif
-
-#endif
     }
 
     if (CpuGraph) {

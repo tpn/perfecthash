@@ -86,191 +86,6 @@ __host__ __device__ unsigned int __viaddmin_u32_(unsigned int a,
 #define EMPTY (-1)
 #define IsEmpty(Value) (Value == ((decltype(Value))EMPTY))
 
-
-EXTERN_C
-DEVICE
-BOOLEAN
-GraphCuShouldWeContinueTryingToSolve(
-    _In_ PGRAPH Graph,
-    _Out_ PHRESULT Result
-    )
-{
-    ULONG Target;
-    ULONG Timeout;
-    ULONG ClockRate;
-    BOOLEAN ContinueSolving;
-    BOOLEAN CheckTimeout;
-    ULONGLONG Delta;
-    ULONGLONG ThisClock;
-    PCU_DEVICE_ATTRIBUTES Attributes;
-
-    if (Graph->Attempt++ == 0) {
-        Graph->CuStartClock = clock64();
-    } else {
-        ThisClock = clock64();
-        Delta = ThisClock - Graph->CuStartClock;
-        Attributes = (PCU_DEVICE_ATTRIBUTES)Graph->CuDeviceAttributes;
-        ClockRate = Attributes->ClockRate;
-
-        Graph->CuEndClock = ThisClock;
-        Graph->CuCycles = Delta;
-        Graph->CuElapsedMilliseconds = Delta / ClockRate;
-
-        CheckTimeout = (
-            Attributes->KernelExecTimeout > 0 ||
-            AlwaysRespectCuKernelRuntimeLimit(Graph)
-        );
-
-        if (CheckTimeout) {
-
-            if (Attributes->KernelExecTimeout > 0) {
-
-                //
-                // There's a kernel timeout for this device.  Convert it to
-                // milliseconds, then use whatever is the smaller value between
-                // it and the user-specified kernel runtime limit.
-                //
-                // N.B. We subtract 10 milliseconds just so we're not *too*
-                //      close to the Windows-enforced driver timeout limit.
-                //
-
-                Timeout = (Attributes->KernelExecTimeout * 1000) - 10;
-
-                Target = min(Timeout,
-                             Graph->CuKernelRuntimeTargetInMilliseconds);
-            } else {
-
-                Target = Graph->CuKernelRuntimeTargetInMilliseconds;
-            }
-
-            if (Graph->CuElapsedMilliseconds >= Target) {
-                *Result = PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED;
-                return FALSE;
-            }
-        }
-    }
-
-    *Result = S_OK;
-
-    //return TRUE;
-    ContinueSolving = (Graph->Attempt <= 2);
-    return ContinueSolving;
-}
-
-EXTERN_C
-DEVICE
-HRESULT
-GraphCuApplySeedMasks(
-    _In_ PGRAPH Graph
-    )
-{
-    BYTE Index;
-    BYTE NumberOfSeeds;
-    LONG Mask;
-    ULONG NewSeed;
-    PULONG Seed;
-    PULONG Seeds;
-    const LONG *Masks;
-
-    if (!HasSeedMasks(Graph)) {
-
-        //
-        // No seed masks are available for this hash routine.
-        //
-
-        return S_FALSE;
-    }
-
-    //
-    // Validation complete.  Loop through the masks and apply those with a value
-    // greater than zero to the seed at the corresponding offset.
-    //
-
-    Seeds = &Graph->FirstSeed;
-    Masks = &Graph->SeedMasks.Mask1;
-
-    NumberOfSeeds = (BYTE)Graph->NumberOfSeeds;
-
-    for (Index = 0; Index < NumberOfSeeds; Index++) {
-
-        Mask = *Masks++;
-
-        if (Mask != -1 && Mask != 0) {
-
-            //
-            // Valid mask found, apply it to the seed data at this slot.
-            //
-
-            Seed = Seeds + Index;
-            NewSeed = *Seed & Mask;
-            *Seed = NewSeed;
-        }
-    }
-
-    return S_OK;
-}
-
-EXTERN_C
-DEVICE
-HRESULT
-GraphCuLoadNewSeeds(
-    _In_ PGRAPH Graph
-    )
-/*++
-
-Routine Description:
-
-    Loads new seed data for a graph instance.  This is called prior to each
-    solving attempt.
-
-Arguments:
-
-    Graph - Supplies a pointer to the graph instance for which the new seed
-        data will be loaded.
-
-Return Value:
-
-    S_OK - Success.
-
---*/
-{
-    BYTE Index;
-    PULONG Seed;
-    BYTE NumberOfSeeds;
-    HRESULT Result;
-    PCU_KERNEL_CONTEXT Ctx;
-    curandStatePhilox4_32_10_t *State;
-
-    if (HasUserSeeds(Graph)) {
-
-        //
-        // The user has supplied seeds, so skip the curand() calls.
-        //
-
-        goto End;
-    }
-
-    Ctx = Graph->CuKernelContext;
-    State = &Ctx->RngState.Philox4;
-
-    Seed = &Graph->FirstSeed;
-    NumberOfSeeds = (BYTE)Graph->NumberOfSeeds;
-
-    for (Index = 0; Index < NumberOfSeeds; Index++) {
-        *Seed++ = curand(State);
-    }
-
-End:
-
-    Result = S_OK;
-
-    if (HasSeedMasks(Graph)) {
-        Result = GraphCuApplySeedMasks(Graph);
-    }
-
-    return Result;
-}
-
 template<typename GraphType>
 DEVICE
 VOID
@@ -318,7 +133,6 @@ GraphCuHashKeys(
         Key = Keys[Index];
         Hash = HashFunction(Key, Mask);
 
-#if 0
         //
         // For each active thread in the group, check if any thread has
         // the same vertex value as any other thread.
@@ -355,7 +169,6 @@ GraphCuHashKeys(
         if (Collision) {
             break;
         }
-#endif
 
         VertexPairs[Index] = Hash;
 
@@ -620,32 +433,17 @@ HashKeysHost(
                ThreadsPerBlock,
                SharedMemoryInBytes,
                (CUstream_st *)SolveContext->Stream>>>(Graph);
+
+    cudaStreamSynchronize((CUstream_st *)SolveContext->Stream);
+
+    printf("Graph->CuHashKeysResult: %x\n", Graph->CuHashKeysResult);
+
 }
 
 
 //
 // AddHashedKeys Logic.
 //
-
-template<typename GraphType>
-HOST
-VOID
-GraphCuPrintOneVertices(
-    GraphType* Graph,
-    uint32_t Index
-    )
-{
-    using Vertex3Type = typename GraphType::Vertex3Type;
-    typename GraphType::Vertex3Type *Vertices3;
-
-    Vertices3 = (typename GraphType::Vertex3Type *)Graph->Vertices3;
-    Vertex3Type Vertex3 = Vertices3[Index];
-    printf("Vertex %d has degree %d, edges: %x\n",
-           Index,
-           Vertex3.Degree,
-           Vertex3.Edges);
-}
-
 
 template<typename GraphType,
          typename AtomicType = uint32_t>
@@ -782,334 +580,6 @@ void GraphCuAddEdge2(
 }
 
 template<typename GraphType>
-FORCEINLINE
-DEVICE
-void GraphCuAddEdge(
-    GraphType* Graph,
-    typename GraphType::EdgeType Edge,
-    typename GraphType::VertexType VertexIndex
-    )
-{
-    using EdgeType = typename GraphType::EdgeType;
-    using VertexType = typename GraphType::VertexType;
-    using Vertex3Type = typename GraphType::Vertex3Type;
-    using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
-
-    AtomicVertex3Type *Vertex;
-    AtomicVertex3Type *Vertices3;
-
-    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
-    Vertex = &Vertices3[VertexIndex];
-
-    cg::coalesced_group Group = cg::coalesced_threads();
-    auto LabeledGroup = cg::labeled_partition(Group, VertexIndex);
-
-    //
-    // XOR reduction across all threads in the labeled group.
-    //
-
-    auto CumulativeXOR =
-        cg::reduce(LabeledGroup, Edge, cg::bit_xor<EdgeType>());
-
-    if (LabeledGroup.size() > 1) {
-        for (int i = 0; i < LabeledGroup.size(); i++) {
-            if (i == LabeledGroup.thread_rank()) {
-                printf("[%d,%d,%d] LabeledGroup[%d/%d]->Edge: %x\n",
-                        blockIdx.x,
-                        threadIdx.x,
-                        threadIdx.y,
-                        i,
-                        LabeledGroup.size(),
-                        Edge);
-            }
-        }
-        LabeledGroup.sync();
-    }
-
-    if (LabeledGroup.thread_rank() == 0) {
-        bool print = false;
-
-        //
-        // Print the size of the labeled group, and then print the cumulative
-        // XOR value, the vertex index, and the vertex's edges and degree
-        // values before and after the atomic operations.  Prefix each line
-        // with the thread/block dimensions.
-        //
-
-#if 0
-        if (LabeledGroup.size() > 1 ||
-            Vertex->Degree.load() != 0 ||
-            Vertex->Edges.load() != 0) {
-            print = true;
-        }
-#endif
-        if (LabeledGroup.size() > 1) {
-            print = true;
-        }
-        if (print) {
-            printf("[%d,%d,%d] LabeledGroup.size(): %d\n",
-                   blockIdx.x,
-                   threadIdx.x,
-                   threadIdx.y,
-                   LabeledGroup.size());
-            printf("[%d,%d,%d] Edge: %x\n",
-                   blockIdx.x,
-                   threadIdx.x,
-                   threadIdx.y,
-                   Edge);
-            printf("[%d,%d,%d] CumulativeXOR: %x\n",
-                   blockIdx.x,
-                   threadIdx.x,
-                   threadIdx.y,
-                   CumulativeXOR);
-            printf("[%d,%d,%d] VertexIndex: %d\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    VertexIndex);
-            printf("[%d,%d,%d] Before: Vertex->Edges: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Edges.load());
-            printf("[%d,%d,%d] Before: Vertex->Degree: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Degree.load());
-
-        }
-
-        Vertex->Degree += LabeledGroup.size();
-        Vertex->Edges ^= CumulativeXOR;
-
-        if (print) {
-
-            printf("[%d,%d,%d] After: Vertex->Edges: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Edges.load());
-            printf("[%d,%d,%d] After: Vertex->Degree: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Degree.load());
-        }
-    }
-
-    LabeledGroup.sync();
-    return;
-}
-
-template<typename GraphType>
-FORCEINLINE
-DEVICE
-void GraphCuAddEdge3(
-    GraphType* Graph,
-    typename GraphType::EdgeType Edge,
-    typename GraphType::VertexType VertexIndex
-    )
-{
-    using EdgeType = typename GraphType::EdgeType;
-    using VertexType = typename GraphType::VertexType;
-    using Vertex3Type = typename GraphType::Vertex3Type;
-    using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
-
-    AtomicVertex3Type *Vertex;
-    AtomicVertex3Type *Vertices3;
-
-    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
-    Vertex = &Vertices3[VertexIndex];
-
-    cg::coalesced_group Group = cg::coalesced_threads();
-    auto LabeledGroup = cg::labeled_partition(Group, VertexIndex);
-
-    int32_t *Degrees = (int32_t *)Graph->_Degrees;
-    int32_t *Edges = (int32_t *)Graph->_Edges;
-
-    //
-    // XOR reduction across all threads in the labeled group.
-    //
-
-    auto CumulativeXOR =
-        cg::reduce(LabeledGroup, Edge, cg::bit_xor<EdgeType>());
-
-    if (LabeledGroup.size() > 1) {
-        for (int i = 0; i < LabeledGroup.size(); i++) {
-            if (i == LabeledGroup.thread_rank()) {
-                printf("[%d,%d,%d] LabeledGroup[%d/%d]->Edge: %x\n",
-                        blockIdx.x,
-                        threadIdx.x,
-                        threadIdx.y,
-                        i,
-                        LabeledGroup.size(),
-                        Edge);
-            }
-        }
-        LabeledGroup.sync();
-    }
-
-    if (LabeledGroup.thread_rank() == 0) {
-        bool print = false;
-
-        //
-        // Print the size of the labeled group, and then print the cumulative
-        // XOR value, the vertex index, and the vertex's edges and degree
-        // values before and after the atomic operations.  Prefix each line
-        // with the thread/block dimensions.
-        //
-
-#if 0
-        if (LabeledGroup.size() > 1 ||
-            Vertex->Degree.load() != 0 ||
-            Vertex->Edges.load() != 0) {
-            print = true;
-        }
-#endif
-        if (LabeledGroup.size() > 1) {
-            print = true;
-        }
-        if (print) {
-            printf("[%d,%d,%d] LabeledGroup.size(): %d\n",
-                   blockIdx.x,
-                   threadIdx.x,
-                   threadIdx.y,
-                   LabeledGroup.size());
-            printf("[%d,%d,%d] Edge: %x\n",
-                   blockIdx.x,
-                   threadIdx.x,
-                   threadIdx.y,
-                   Edge);
-            printf("[%d,%d,%d] CumulativeXOR: %x\n",
-                   blockIdx.x,
-                   threadIdx.x,
-                   threadIdx.y,
-                   CumulativeXOR);
-            printf("[%d,%d,%d] VertexIndex: %d\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    VertexIndex);
-            printf("[%d,%d,%d] Before: Vertex->Edges: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Edges.load());
-            printf("[%d,%d,%d] Before: Vertex->Degree: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Degree.load());
-
-        }
-
-        atomicAdd(&Degrees[VertexIndex], LabeledGroup.size());
-        //Vertex->Degree += LabeledGroup.size();
-        atomicXor(&Edges[VertexIndex], Edge);
-        //Vertex->Edges ^= CumulativeXOR;
-
-        if (print) {
-
-            printf("[%d,%d,%d] After: Vertex->Edges: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Edges.load());
-            printf("[%d,%d,%d] After: Vertex->Degree: %x\n",
-                    blockIdx.x,
-                    threadIdx.x,
-                    threadIdx.y,
-                    Vertex->Degree.load());
-        }
-    }
-
-    LabeledGroup.sync();
-    return;
-}
-
-template<typename GraphType>
-HOST
-VOID
-GraphCuPrintVertices(
-    GraphType* Graph
-    )
-{
-#if 0
-    typename GraphType::Vertex3Type *Vertices3;
-
-    Vertices3 = (typename GraphType::Vertex3Type *)Graph->Vertices3;
-
-    for (auto i = 0; i < 10; i++) {
-        printf("Vertex %d has degree %d, edges: %x\n",
-               i,
-               Vertices3[i].Degree,
-               Vertices3[i].Edges);
-    }
-#endif
-}
-
-template<typename GraphType>
-DEVICE
-VOID
-GraphAddEdge3(
-    GraphType* Graph,
-    typename GraphType::EdgeType Edge,
-    typename GraphType::VertexType Vertex1Index,
-    typename GraphType::VertexType Vertex2Index
-    )
-/*++
-
-Routine Description:
-
-    This routine adds an edge to the hypergraph for two vertices.
-
-Arguments:
-
-    Graph - Supplies a pointer to the graph for which the edge is to be added.
-
-    Edge - Supplies the edge to add to the graph.
-
-    Vertex1 - Supplies the first vertex.
-
-    Vertex2 - Supplies the second vertex.
-
-Return Value:
-
-    None.
-
---*/
-{
-#ifdef _DEBUG
-    //
-    // Invariant checks:
-    //
-    //      - Vertex1Index should be less than the number of vertices.
-    //      - Vertex2Index should be less than the number of vertices.
-    //      - Edge should be less than the number of edges.
-    //      - The graph must not have started deletions.
-    //
-
-    ASSERT(Vertex1Index < Graph->NumberOfVertices);
-    ASSERT(Vertex2Index < Graph->NumberOfVertices);
-    ASSERT(Edge < Graph->NumberOfEdges);
-    ASSERT(!Graph->Flags.Shrinking);
-#endif
-
-    //
-    // Insert the first edge.
-    //
-
-    GraphCuAddEdge(Graph, Edge, Vertex1Index);
-
-    //
-    // Insert the second edge.
-    //
-
-    GraphCuAddEdge(Graph, Edge, Vertex2Index);
-}
-
-template<typename GraphType>
 DEVICE
 VOID
 GraphCuAddHashedKeys(
@@ -1150,88 +620,6 @@ GraphCuAddHashedKeys(
     }
 }
 
-
-#define BLOCK_SIZE 128
-
-template<typename GraphType>
-DEVICE
-VOID
-GraphCuAddHashedKeys2(
-    GraphType* Graph
-    )
-{
-    using KeyType = typename GraphType::KeyType;
-    using EdgeType = typename GraphType::EdgeType;
-    using VertexType = typename GraphType::VertexType;
-    using VertexPairType = typename GraphType::VertexPairType;
-
-    uint32_t Index;
-    uint32_t Batch;
-    uint32_t BlockBatchIndex;
-    uint32_t NumberOfKeys = Graph->NumberOfKeys;
-    VertexType Mask = Graph->NumberOfVertices - 1;
-
-    KeyType Key;
-    EdgeType Edge;
-    KeyType *Keys;
-    VertexPairType VertexPair;
-    VertexPairType *VertexPairs;
-
-    const int32_t Stride = gridDim.x * blockDim.x;
-
-    __shared__ KeyType SharedKeys[BLOCK_SIZE];
-
-    auto Grid = cg::this_grid();
-    auto Block = cg::this_thread_block();
-    auto GroupIndexX = Block.group_index().x;
-    auto BlockSize = Block.size();
-    auto GridSize = Grid.size();
-    auto LocalIndex = Block.thread_rank();
-    auto const BlockCopySize = sizeof(KeyType) * BlockSize;
-
-    Keys = (KeyType *)Graph->DeviceKeys;
-    VertexPairs = (VertexPairType *)Graph->VertexPairs;
-
-    auto HashFunction = GraphGetHashFunction(Graph);
-
-    Index = GlobalThreadIndex();
-
-    Batch = 0;
-
-    while (Index < NumberOfKeys) {
-
-        BlockBatchIndex = (Block.group_index().x * Block.size());
-        BlockBatchIndex += (Grid.size() * Batch);
-
-        cg::memcpy_async(Block,
-                         SharedKeys,
-                         Keys + BlockBatchIndex,
-                         BlockCopySize);
-
-        cg::wait(Block);
-
-        Key = SharedKeys[LocalIndex];
-        VertexPair = HashFunction(Key, Mask);
-
-        Edge = Index;
-
-        GraphCuAddEdge2(Graph,
-                        Edge,
-                        VertexPair.Vertex1);
-
-        GraphCuAddEdge2(Graph,
-                        Edge,
-                        VertexPair.Vertex2);
-
-        Index += Stride;
-
-        Block.sync();
-
-        VertexPairs[Index] = VertexPair;
-    }
-}
-
-
 GLOBAL
 VOID
 AddHashedKeys(
@@ -1259,167 +647,7 @@ AddHashedKeys(
     }
 }
 
-template<typename GraphType>
-GLOBAL
-VOID
-CheckHashedKeys(
-    GraphType* Graph
-    )
-{
-    using EdgeType = typename GraphType::EdgeType;
-    using VertexType = typename GraphType::VertexType;
-    using Vertex3Type = typename GraphType::Vertex3Type;
-    using VertexPairType = typename GraphType::VertexPairType;
-    using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
-
-    typename GraphType::VertexPairType Hash;
-    typename GraphType::KeyType Key;
-    typename GraphType::KeyType *Keys;
-    PULONG Seeds = Graph->Seeds;
-    Keys = (typename GraphType::KeyType *)Graph->DeviceKeys;
-    auto Mask = Graph->NumberOfVertices - 1;
-
-    uint32_t Index;
-    uint32_t NumberOfKeys = Graph->NumberOfKeys;
-
-    EdgeType Edge;
-    Vertex3Type *Vertex;
-    Vertex3Type *Vertices3;
-    VertexPairType VertexPair;
-    VertexPairType *VertexPairs;
-
-    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
-    VertexPairs = (decltype(VertexPairs))Graph->VertexPairs;
-
-    auto HashFunction = GraphGetHashFunction(Graph);
-
-    int32_t *Degrees = (int32_t *)Graph->_Degrees;
-    int32_t *Edges = (int32_t *)Graph->_Edges;
-
-    int32_t V1Degree1;
-    int32_t V1Degree2;
-    int32_t V1Edge1;
-    int32_t V1Edge2;
-
-    int32_t V2Degree1;
-    int32_t V2Degree2;
-    int32_t V2Edge1;
-    int32_t V2Edge2;
-
-    Index = GlobalThreadIndex();
-    if (Index == 0) {
-        printf("CheckAddHashedKeys: Graph: %p\n", Graph);
-    }
-
-    while (Index < NumberOfKeys) {
-
-        VertexPair = VertexPairs[Index];
-        Edge = Index;
-
-        Key = Keys[Index];
-        Hash = HashFunction(Key, Seeds, Mask);
-
-#if 0
-        if (Hash.Vertex1 != VertexPair.Vertex1) {
-            printf("[%d] Vertex1: %d != %d\n",
-                   Index,
-                   Hash.Vertex1,
-                   VertexPair.Vertex1);
-        }
-
-        if (Hash.Vertex2 != VertexPair.Vertex2) {
-            printf("[%d] Vertex2: %d != %d\n",
-                   Index,
-                   Hash.Vertex2,
-                   VertexPair.Vertex2);
-        }
-#endif
-
-#if 0
-        V1Degree1 = (int32_t)Vertices3[VertexPair.Vertex1].Degree;
-        V1Degree2 = Degrees[VertexPair.Vertex1];
-        if (V1Degree1 != V1Degree2) {
-            printf("[%d] V1Degree Vertex: %d, %d != %d\n",
-                   Index,
-                   VertexPair.Vertex1,
-                   V1Degree1,
-                   V1Degree2);
-        }
-
-        V2Degree1 = (int32_t)Vertices3[VertexPair.Vertex2].Degree;
-        V2Degree2 = Degrees[VertexPair.Vertex2];
-        if (V2Degree1 != V2Degree2) {
-            printf("[%d] V2Degree Vertex: %d, %d != %d\n",
-                   Index,
-                   VertexPair.Vertex2,
-                   V2Degree1,
-                   V2Degree2);
-        }
-
-        V1Edge1 = (int32_t)Vertices3[VertexPair.Vertex1].Edges;
-        V1Edge2 = Edges[VertexPair.Vertex1];
-        if (V1Edge1 != V1Edge2) {
-            printf("[%d] V1Edge Vertex: %d, %x != %x\n",
-                   Index,
-                   VertexPair.Vertex1,
-                   V1Edge1,
-                   V1Edge2);
-        }
-
-        V2Edge1 = (int32_t)Vertices3[VertexPair.Vertex2].Edges;
-        V2Edge2 = Edges[VertexPair.Vertex2];
-        if (V2Edge1 != V2Edge2) {
-            printf("[%d] V2Edge Vertex: %d, %x != %x\n",
-                   Index,
-                   VertexPair.Vertex2,
-                   V2Edge1,
-                   V2Edge2);
-        }
-#elif 0
-        V1Degree1 = (int32_t)Vertices3[VertexPair.Vertex1].Degree;
-        V1Degree2 = Degrees[VertexPair.Vertex1];
-        if (V1Degree1 == V1Degree2) {
-            printf("[%d] V1Degree Vertex: %d, %d == %d\n",
-                   Index,
-                   VertexPair.Vertex1,
-                   V1Degree1,
-                   V1Degree2);
-        }
-
-        V2Degree1 = (int32_t)Vertices3[VertexPair.Vertex2].Degree;
-        V2Degree2 = Degrees[VertexPair.Vertex2];
-        if (V2Degree1 == V2Degree2) {
-            printf("[%d] V2Degree Vertex: %d, %d == %d\n",
-                   Index,
-                   VertexPair.Vertex2,
-                   V2Degree1,
-                   V2Degree2);
-        }
-
-        V1Edge1 = (int32_t)Vertices3[VertexPair.Vertex1].Edges;
-        V1Edge2 = Edges[VertexPair.Vertex1];
-        if (V1Edge1 == V1Edge2) {
-            printf("[%d] V1Edge Vertex: %d, %x == %x\n",
-                   Index,
-                   VertexPair.Vertex1,
-                   V1Edge1,
-                   V1Edge2);
-        }
-
-        V2Edge1 = (int32_t)Vertices3[VertexPair.Vertex2].Edges;
-        V2Edge2 = Edges[VertexPair.Vertex2];
-        if (V2Edge1 == V2Edge2) {
-            printf("[%d] V2Edge Vertex: %d, %x == %x\n",
-                   Index,
-                   VertexPair.Vertex2,
-                   V2Edge1,
-                   V2Edge2);
-        }
-#endif
-
-        Index += gridDim.x * blockDim.x;
-    }
-}
+#define BLOCK_SIZE 128
 
 template <typename GraphType>
 HOST
@@ -1456,14 +684,6 @@ AddHashedKeysHost(
     PPH_CU_SOLVE_CONTEXT SolveContext;
 
     SolveContext = Graph->CuSolveContext;
-#if 0
-    PPH_CU_DEVICE_CONTEXT DeviceContext;
-    PCU_DEVICE_ATTRIBUTES Attributes;
-    DeviceContext = SolveContext->DeviceContext;
-    Attributes = (PCU_DEVICE_ATTRIBUTES)DeviceContext->DeviceAttributes;
-
-    PrintCuDeviceAttributes(Attributes);
-#endif
 
     printf("AddHashedKeysHost: Graph: %p\n", Graph);
 
@@ -1519,28 +739,6 @@ AddHashedKeysHost(
     //
     // Sync the stream to ensure the kernel has completed.
     //
-
-#if 0
-    cudaStreamSynchronize((CUstream_st *)SolveContext->Stream);
-
-    if (IsUsingAssigned16(Graph)) {
-
-        CheckHashedKeys<GRAPH16><<<1,
-                                   1,
-                                   SharedMemoryInBytes,
-                                   (CUstream_st *)SolveContext->Stream>>>(
-                                        (PGRAPH16)Graph);
-
-    } else {
-
-        CheckHashedKeys<GRAPH32><<<BlocksPerGrid,
-                                   ThreadsPerBlock,
-                                   SharedMemoryInBytes,
-                                   (CUstream_st *)SolveContext->Stream>>>(
-                                        (PGRAPH32)Graph);
-
-    }
-#endif
 
     cudaStreamSynchronize((CUstream_st *)SolveContext->Stream);
 
@@ -1632,7 +830,8 @@ GraphCuRemoveEdgeVertex(
     _In_ GraphType* Graph,
     _In_ typename GraphType::VertexType VertexIndex,
     _In_ typename GraphType::EdgeType Edge,
-    _In_ PLOCK Locks,
+    _In_ PLOCK VertexLocks,
+    _In_ PLOCK EdgeLocks,
     _Out_ bool &Removed
     )
 {
@@ -1650,410 +849,93 @@ GraphCuRemoveEdgeVertex(
 
     Vertices3 = (decltype(Vertices3))Graph->Vertices3;
 
-    cg::coalesced_group Group = cg::coalesced_threads();
-    auto LabeledGroup = cg::labeled_partition(Group, VertexIndex);
-    auto CumulativeXOR = cg::reduce(LabeledGroup,
-                                    Edge,
-                                    cg::bit_xor<EdgeType>());
-
-    auto GroupSize = LabeledGroup.num_threads();
-
-    if (LabeledGroup.thread_rank() == 0) {
-
-        if (!Locks[VertexIndex].TryLock()) {
-            Retry = true;
-            goto End;
-        }
-
-        Vertex = (decltype(Vertex))&Vertices3[VertexIndex];
-        if (Vertex->Degree == 0) {
-            Locks[VertexIndex].Unlock();
-            goto End;
-        }
-
-        if constexpr (sizeof(VertexType) == sizeof(uint32_t) ||
-                      sizeof(VertexType) == sizeof(uint16_t))
-        {
-
-#if 0
-            atomicXor((uint32_t *)&(Vertex->Edges), (uint32_t)Edge);
-            atomicSub((uint32_t *)&(Vertex->Degree), GroupSize);
-            Removed = true;
-            __threadfence();
-#endif
-
-            Vertex3Type PrevVertex3;
-            EdgeType NextEdges;
-            DegreeType NextDegree;
-            Vertex3Type NextVertex3;
-            AtomicCASType PrevAtomic;
-            AtomicCASType NextAtomic;
-            AtomicCASType *Address = reinterpret_cast<AtomicCASType*>(Vertex);
-            intptr_t Delta;
-
-            do {
-                PrevVertex3 = *Vertex;
-
-                NextDegree = PrevVertex3.Degree;
-
-                Delta = ((intptr_t)NextDegree - GroupSize);
-                if (Delta < 0) {
-                    Retry = true;
-                    break;
-                } else {
-                    NextDegree -= GroupSize;
-                }
-
-                NextEdges = PrevVertex3.Edges;
-                NextEdges ^= CumulativeXOR;
-
-                NextVertex3.Degree = NextDegree;
-                NextVertex3.Edges = NextEdges;
-
-                PrevAtomic = PrevVertex3.Combined.AsLargestIntegral;
-                NextAtomic = NextVertex3.Combined.AsLargestIntegral;
-
-            } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
-
-            Removed = true;
-            //__threadfence();
-
-        } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
-
-            //
-            // Not yet implemented.
-            //
-        }
-
-        Locks[VertexIndex].Unlock();
-    }
-
-End:
-    LabeledGroup.sync();
-    //
-    // Don't propagate the 'Removed' value back to other threads.
-    //
-    //Removed = LabeledGroup.shfl(Removed, 0);
-    return Retry;
-}
-
-template<typename GraphType>
-DEVICE
-VOID
-GraphCuRemoveVertexOld(
-    _In_ GraphType* Graph,
-    _In_ typename GraphType::VertexType VertexIndex,
-    _In_ PLOCK Locks
-    )
-{
-    using EdgeType = typename GraphType::EdgeType;
-    using DegreeType = typename GraphType::DegreeType;
-    using Edge3Type = typename GraphType::Edge3Type;
-    using OrderType = typename GraphType::OrderType;
-    using VertexType = typename GraphType::VertexType;
-    using Vertex3Type = typename GraphType::Vertex3Type;
-    using VertexPairType = typename GraphType::VertexPairType;
-    using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
-
-    EdgeType Edge;
-    DegreeType Degree;
-    Edge3Type *Edge3;
-    Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
-    OrderType OrderIndex;
-    Vertex3Type *Vertex1;
-    Vertex3Type *Vertex2;
-
-    Vertex3Type *Vertex;
-    Vertex3Type *Vertices3;
-
-    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
-    Vertex = &Vertices3[VertexIndex];
-
-    if (!Locks[VertexIndex].TryLock()) {
-        printf("Failed to acquire lock for VertexIndex: %d\n", VertexIndex);
-        return;
-    }
-
-    Degree = Vertex->Degree;
-    Locks[VertexIndex].Unlock();
-    if (Degree != 1) {
-        return;
-    }
-
-    Edge = Vertex->Edges;
-    Edge3 = &Edges3[Edge];
-
-    if (IsEmpty(Edge3->Vertex1)) {
-#if 0
-        if (!IsEmpty(Edge3->Vertex2)) {
-            printf("A VertexIndex: %d\n", VertexIndex);
-            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
-            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
-        }
-#endif
-        ASSERT(IsEmpty(Edge3->Vertex2));
-        return;
-    } else if (IsEmpty(Edge3->Vertex2)) {
-#if 0
-        if (!IsEmpty(Edge3->Vertex1)) {
-            printf("B VertexIndex: %d\n", VertexIndex);
-            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
-            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
-        }
-#endif
-        ASSERT(IsEmpty(Edge3->Vertex1));
-        return;
-    }
-
-    cg::coalesced_group Group1 = cg::coalesced_threads();
-    auto Vertex1Group = cg::labeled_partition(Group1, Edge3->Vertex1);
-    auto CumulativeXOR1 = cg::reduce(Vertex1Group,
-                                     Edge,
-                                     cg::bit_xor<EdgeType>());
-
-    if (Vertex1Group.thread_rank() == 0) {
-        Vertex1 = (decltype(Vertex1))&Vertices3[Edge3->Vertex1];
-        if (Vertex1->Degree >= 1) {
-            Locks[Edge3->Vertex1].TryLock();
-            if (Vertex1->Degree >= 1) {
-                Vertex1->Edges ^= CumulativeXOR1;
-                Vertex1->Degree -= Vertex1Group.num_threads();
-#if 0
-                auto NextDegree = (intptr_t)Vertex1->Degree - Vertex1Group.num_threads();
-                if (NextDegree < 0) {
-                    printf("Vertex1->Degree: %d\n", Vertex1->Degree);
-                    printf("Vertex1Group.num_threads(): %d\n", Vertex1Group.num_threads());
-                    printf("NextDegree: %d\n", NextDegree);
-                    Vertex1->Degree = 0;
-                } else {
-                    Vertex1->Degree -= Vertex1Group.num_threads();
-                }
-#endif
-            }
-            Locks[Edge3->Vertex1].Unlock();
-        }
-    }
-    Vertex1Group.sync();
-
-    cg::coalesced_group Group2 = cg::coalesced_threads();
-    auto Vertex2Group = cg::labeled_partition(Group1, Edge3->Vertex2);
-    auto CumulativeXOR2 = cg::reduce(Vertex2Group,
-                                     Edge,
-                                     cg::bit_xor<EdgeType>());
-
-    if (Vertex2Group.thread_rank() == 0) {
-        Vertex2 = (decltype(Vertex2))&Vertices3[Edge3->Vertex2];
-        if (Vertex2->Degree >= 1) {
-            Locks[Edge3->Vertex2].TryLock();
-            if (Vertex2->Degree >= 1) {
-                Vertex2->Edges ^= CumulativeXOR2;
-                Vertex2->Degree -= Vertex2Group.num_threads();
-#if 0
-                auto NextDegree = (intptr_t)Vertex2->Degree - Vertex2Group.num_threads();
-                if (NextDegree < 0) {
-                    printf("Vertex2->Degree: %d\n", Vertex2->Degree);
-                    printf("Vertex2Group.num_threads(): %d\n", Vertex2Group.num_threads());
-                    printf("NextDegree: %d\n", NextDegree);
-                    Vertex2->Degree = 0;
-                } else {
-                    Vertex2->Degree -= Vertex2Group.num_threads();
-                }
-#endif
-            }
-            Locks[Edge3->Vertex2].Unlock();
-        }
-    }
-    Vertex2Group.sync();
-
-    AtomicAggIncCGV(&Graph->DeletedEdgeCount);
-    OrderIndex = AtomicAggSubCG(&Graph->OrderIndex);
-#ifdef _DEBUG
-    ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
-    ASSERT(OrderIndex < Graph->NumberOfEdges);
-#endif
-    Graph->Order[OrderIndex] = Edge;
-}
-
-template<typename GraphType>
-DEVICE
-bool
-GraphCuRemoveVertexShared(
-    _In_ GraphType* Graph,
-    _In_ typename GraphType::VertexType VertexIndex,
-    _In_ PLOCK Locks
-    )
-{
-    using EdgeType = typename GraphType::EdgeType;
-    using DegreeType = typename GraphType::DegreeType;
-    using Edge3Type = typename GraphType::Edge3Type;
-    using OrderType = typename GraphType::OrderType;
-    using VertexType = typename GraphType::VertexType;
-    using Vertex3Type = typename GraphType::Vertex3Type;
-    using VertexPairType = typename GraphType::VertexPairType;
-    using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
-    using OrderIndexType = int32_t;
-
-    bool Retry = false;
-    bool Retry1 = true;
-    bool Retry2 = true;
-    bool Removed1 = false;
-    bool Removed2 = false;
-    EdgeType Edge;
-    //DegreeType Degree;
-    Edge3Type *Edge3;
-    Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
-    OrderType *Order = (decltype(Order))Graph->Order;
-    OrderType *SortedOrder = (decltype(Order))Graph->SortedOrder;
-    OrderType *OrderAddress;
-    OrderIndexType OrderIndex;
-    OrderIndexType *GraphOrderIndex = (decltype(GraphOrderIndex))&Graph->OrderIndex;
-    Edge3Type *OrderedVertices = (decltype(OrderedVertices))Graph->OrderedVertices;
-
-    //Vertex3Type *Vertex;
-    Vertex3Type *Vertices3;
-
-    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
-    __shared__ Vertex3Type SharedVertices3[BLOCK_SIZE];
-    //__shared__ EdgeType SharedEdges[BLOCK_SIZE];
-
-    //
-    // Copy the vertex to shared memory.
-    //
-
-    auto Block = cg::this_thread_block();
-    auto LocalIndex = Block.thread_rank();
-
-    SharedVertices3[LocalIndex] = Vertices3[VertexIndex];
-    Block.sync();
-
-    //
-    // Load the vertex from the shared vertices.
-    //
-
-    auto LocalVertex = SharedVertices3[LocalIndex];
-
-    if (LocalVertex.Degree != 1) {
-        goto End;
-    }
-
-#if 0
-
-    Vertex = &Vertices3[VertexIndex];
-
-    if (Vertex->Degree == 0) {
-        goto End;
-    }
-
-    if (!Locks[VertexIndex].TryLock()) {
+    if (!VertexLocks[VertexIndex].TryLock()) {
         Retry = true;
         goto End;
     }
-    Degree = Vertex->Degree;
-    Locks[VertexIndex].Unlock();
-    if (Degree != 1) {
+
+    if (!EdgeLocks[Edge].TryLock()) {
+        VertexLocks[VertexIndex].Unlock();
+        Retry = true;
         goto End;
     }
-#endif
 
-    Edge = LocalVertex.Edges;
-    Edge3 = &Edges3[Edge];
+    Vertex = (decltype(Vertex))&Vertices3[VertexIndex];
+    if (Vertex->Degree == 0) {
+        goto Unlock;
+    }
 
-#if 0
-    if (IsEmpty(Edge3->Vertex1)) {
-        if (!IsEmpty(Edge3->Vertex2)) {
-            printf("A VertexIndex: %d\n", VertexIndex);
-            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
-            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
+    if constexpr (sizeof(VertexType) == sizeof(uint32_t) ||
+                  sizeof(VertexType) == sizeof(uint16_t))
+    {
+        Vertex3Type PrevVertex3;
+        EdgeType NextEdges;
+        DegreeType NextDegree;
+        Vertex3Type NextVertex3;
+        AtomicCASType PrevAtomic;
+        AtomicCASType NextAtomic;
+        AtomicCASType *Address = reinterpret_cast<AtomicCASType*>(Vertex);
+        intptr_t Delta;
+        bool Error = false;
+
+        do {
+            PrevVertex3 = *Vertex;
+
+            NextDegree = PrevVertex3.Degree;
+
+            Delta = ((intptr_t)NextDegree - 1);
+            if (Delta < 0) {
+                printf("Error!  Delta < 0 (%lld)\n", Delta);
+                Error = true;
+                break;
+            } else {
+                NextDegree -= 1;
+            }
+
+            NextEdges = PrevVertex3.Edges;
+            NextEdges ^= Edge;
+
+            NextVertex3.Degree = NextDegree;
+            NextVertex3.Edges = NextEdges;
+
+            PrevAtomic = PrevVertex3.Combined.AsLargestIntegral;
+            NextAtomic = NextVertex3.Combined.AsLargestIntegral;
+
+        } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
+
+        if (!Error) {
+            Removed = true;
         }
-        ASSERT(IsEmpty(Edge3->Vertex2));
-        goto End;
-    } else if (IsEmpty(Edge3->Vertex2)) {
-        if (!IsEmpty(Edge3->Vertex1)) {
-            printf("B VertexIndex: %d\n", VertexIndex);
-            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
-            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
-        }
-        ASSERT(IsEmpty(Edge3->Vertex1));
-        goto End;
-    }
-#endif
 
-    do {
-        if (Retry1) {
-            Retry1 = GraphCuRemoveEdgeVertex(Graph,
-                                             Edge3->Vertex1,
-                                             Edge,
-                                             Locks,
-                                             Removed1);
-        }
-        if (Retry2) {
-            Retry2 = GraphCuRemoveEdgeVertex(Graph,
-                                             Edge3->Vertex2,
-                                             Edge,
-                                             Locks,
-                                             Removed2);
-        }
-    } while (Retry1 || Retry2);
+        __threadfence();
 
-#if 0
-    AtomicAggIncCGV(&Graph->DeletedEdgeCount);
-    OrderIndex = AtomicAggSubCG(&Graph->OrderIndex);
-    Graph->Order[OrderIndex] = Edge;
-    Graph->OrderByVertex[GlobalThreadIndex()] = Edge;
-#else
-#ifdef _DEBUG
-    //ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
-    //ASSERT(OrderIndex < Graph->NumberOfEdges);
-#endif
+    } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
 
-#if 0
-    if (Removed1 || Removed2) {
-        AtomicAggIncCGV(&Graph->OrderIndexEither);
-    }
-    if (Removed1 && Removed2) {
-        AtomicAggIncCGV(&Graph->OrderIndexBoth);
-    }
-    if (Removed1) {
-        AtomicAggIncCGV(&Graph->OrderIndex1);
-    }
-    if (Removed2) {
-        AtomicAggIncCGV(&Graph->OrderIndex2);
-    }
-    if (!Removed1 && !Removed2) {
-        AtomicAggIncCGV(&Graph->OrderIndexNone);
-    }
-#endif
-
-    if (Removed1 || Removed2) {
-        AtomicAggIncCGV(&Graph->DeletedEdgeCount);
-        OrderIndex = AtomicAggSubCG(GraphOrderIndex);
-        OrderAddress = &Order[OrderIndex];
-#if 0
-        if (OrderIndex < 0) {
-            ASSERT(false);
-        }
-#endif
-        if (OrderIndex >= 0) {
-            ASSERT(*OrderAddress == 0);
-            ASSERT(Order[OrderIndex] == 0);
-            Order[OrderIndex] = Edge;
-            ASSERT(Order[OrderIndex] == Edge);
-            ASSERT(*OrderAddress == Edge);
-            SortedOrder[OrderIndex] = Edge;
-            OrderedVertices[OrderIndex] = *Edge3;
-        }
-        //Graph->OrderByThreadOrder[ThreadOrderIndex] = Edge;
+        //
+        // Not yet implemented.
+        //
     }
 
-#if 0
-    Graph->OrderByThread[GlobalThreadIndex()] = Edge;
-    Graph->OrderByVertex[VertexIndex] = GlobalThreadIndex();
-    Graph->OrderByEdge[Edge] = GlobalThreadIndex();
-    Graph->OrderByThreadOrder[OrderIndex] = GlobalThreadIndex();
-#endif
-    //__threadfence();
-#endif
+Unlock:
+
+    //
+    // Unlock edge and vertex locks in the reverse order in which they were
+    // acquired.
+    //
+
+    EdgeLocks[Edge].Unlock();
+    VertexLocks[VertexIndex].Unlock();
+
+    //
+    // Intentional fall-through.
+    //
+
 End:
+
+    //
+    // Don't propagate the 'Removed' value back to other threads.
+    //
+
     return Retry;
 }
 
@@ -2063,7 +945,8 @@ bool
 GraphCuRemoveVertex(
     _In_ GraphType* Graph,
     _In_ typename GraphType::VertexType VertexIndex,
-    _In_ PLOCK Locks
+    _In_ PLOCK VertexLocks,
+    _In_ PLOCK EdgeLocks
     )
 {
     using EdgeType = typename GraphType::EdgeType;
@@ -2126,39 +1009,21 @@ GraphCuRemoveVertex(
     Edge = Vertex.Edges;
     Edge3 = Edges3[Edge];
 
-#if 0
-    if (IsEmpty(Edge3->Vertex1)) {
-        if (!IsEmpty(Edge3->Vertex2)) {
-            printf("A VertexIndex: %d\n", VertexIndex);
-            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
-            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
-        }
-        ASSERT(IsEmpty(Edge3->Vertex2));
-        goto End;
-    } else if (IsEmpty(Edge3->Vertex2)) {
-        if (!IsEmpty(Edge3->Vertex1)) {
-            printf("B VertexIndex: %d\n", VertexIndex);
-            printf("Edge3->Vertex2: %x\n", Edge3->Vertex2);
-            printf("Edge3->Vertex1: %x\n", Edge3->Vertex1);
-        }
-        ASSERT(IsEmpty(Edge3->Vertex1));
-        goto End;
-    }
-#endif
-
     do {
         if (Retry1) {
             Retry1 = GraphCuRemoveEdgeVertex(Graph,
                                              Edge3.Vertex1,
                                              Edge,
-                                             Locks,
+                                             VertexLocks,
+                                             EdgeLocks,
                                              Removed1);
         }
         if (Retry2) {
             Retry2 = GraphCuRemoveEdgeVertex(Graph,
                                              Edge3.Vertex2,
                                              Edge,
-                                             Locks,
+                                             VertexLocks,
+                                             EdgeLocks,
                                              Removed2);
         }
     } while (Retry1 || Retry2);
@@ -2348,163 +1213,14 @@ End:
     return Retry;
 }
 
-template<typename GraphType>
-DEVICE
-VOID
-GraphCuRemoveVertexUnsafe(
-    _In_ GraphType* Graph,
-    _In_ typename GraphType::VertexType VertexIndex
-    )
-{
-    using EdgeType = typename GraphType::EdgeType;
-    using Edge3Type = typename GraphType::Edge3Type;
-    using OrderType = typename GraphType::OrderType;
-    using VertexType = typename GraphType::VertexType;
-    using Vertex3Type = typename GraphType::Vertex3Type;
-    using VertexPairType = typename GraphType::VertexPairType;
-    using AtomicVertex3Type = typename GraphType::AtomicVertex3Type;
-
-    EdgeType Edge;
-    Edge3Type *Edge3;
-    Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
-    OrderType OrderIndex;
-    Vertex3Type *Vertex1;
-    Vertex3Type *Vertex2;
-
-    Vertex3Type *Vertex;
-    Vertex3Type *Vertices3;
-
-    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
-    Vertex = &Vertices3[VertexIndex];
-
-    if (Vertex->Degree != 1) {
-        return;
-    }
-
-    Edge = Vertex->Edges;
-    Edge3 = &Edges3[Edge];
-
-    if (IsEmpty(Edge3->Vertex1)) {
-        ASSERT(IsEmpty(Edge3->Vertex2));
-        return;
-    } else if (IsEmpty(Edge3->Vertex2)) {
-        ASSERT(IsEmpty(Edge3->Vertex1));
-        return;
-    }
-
-    Vertex1 = &Vertices3[Edge3->Vertex1];
-    if (Vertex1->Degree >= 1) {
-        Vertex1->Edges ^= Edge;
-        --Vertex1->Degree;
-    }
-
-    Vertex2 = &Vertices3[Edge3->Vertex2];
-    if (Vertex2->Degree >= 1) {
-        Vertex2->Edges ^= Edge;
-        --Vertex2->Degree;
-    }
-
-    Graph->DeletedEdgeCount++;
-    OrderIndex = --Graph->OrderIndex;
-#ifdef _DEBUG
-    ASSERT(Graph->DeletedEdgeCount <= Graph->NumberOfEdges);
-    ASSERT(OrderIndex < Graph->NumberOfEdges);
-#endif
-    Graph->Order[OrderIndex] = Edge;
-}
-
-template<typename GraphType>
-GLOBAL
-VOID
-GraphCuIsAcyclicPhase1x4(
-    GraphType* Graph,
-    PLOCK Locks
-    )
-{
-    using VertexType = typename GraphType::VertexType;
-
-    int32_t Index1;
-    int32_t Index2;
-    int32_t Index3;
-    int32_t Index4;
-
-    const int32_t Stride = gridDim.x * blockDim.x;
-    const uint32_t NumberOfVertices = Graph->NumberOfVertices;
-
-    Index1 = GlobalThreadIndex();
-
-    Index2 = Index1 + Stride;
-    Index3 = Index1 + Stride + Stride;
-    Index4 = Index1 + Stride + Stride + Stride;
-
-    uint8_t LocalRetries;
-    uint32_t ThreadRetries = 0;
-
-    while (Index1 < NumberOfVertices) {
-        bool Retry1 = true;
-        bool Retry2 = (Index2 < NumberOfVertices);
-        bool Retry3 = (Index3 < NumberOfVertices);
-        bool Retry4 = (Index4 < NumberOfVertices);
-        LocalRetries = 0;
-
-        do {
-            if (Retry1) {
-                Retry1 = GraphCuRemoveVertex(Graph,
-                                             (VertexType)Index1,
-                                             Locks);
-            }
-
-            if (Retry2) {
-                Retry2 = GraphCuRemoveVertex(Graph,
-                                             (VertexType)Index2,
-                                             Locks);
-            }
-
-            if (Retry3) {
-                Retry3 = GraphCuRemoveVertex(Graph,
-                                             (VertexType)Index3,
-                                             Locks);
-            }
-
-            if (Retry4) {
-                Retry4 = GraphCuRemoveVertex(Graph,
-                                             (VertexType)Index4,
-                                             Locks);
-            }
-
-            if (Retry1) {
-                LocalRetries++;
-            }
-            if (Retry2) {
-                LocalRetries++;
-            }
-            if (Retry3) {
-                LocalRetries++;
-            }
-            if (Retry4) {
-                LocalRetries++;
-            }
-            if (LocalRetries) {
-                ThreadRetries += LocalRetries;
-            }
-
-        } while (Retry1 || Retry2 || Retry3 || Retry4);
-
-        Index1 = Index4 + Stride;
-        Index2 = Index4 + Stride + Stride;
-        Index3 = Index4 + Stride + Stride + Stride;
-        Index4 = Index4 + Stride + Stride + Stride + Stride;
-    }
-
-    return;
-}
 
 template<typename GraphType>
 GLOBAL
 VOID
 GraphCuIsAcyclicPhase1(
     GraphType* Graph,
-    PLOCK Locks
+    PLOCK VertexLocks,
+    PLOCK EdgeLocks
     )
 {
     using VertexType = typename GraphType::VertexType;
@@ -2527,7 +1243,8 @@ GraphCuIsAcyclicPhase1(
             if (Retry1) {
                 Retry1 = GraphCuRemoveVertex(Graph,
                                              (VertexType)Index,
-                                             Locks);
+                                             VertexLocks,
+                                             EdgeLocks);
             }
 
             if (Retry1) {
@@ -2540,36 +1257,6 @@ GraphCuIsAcyclicPhase1(
         } while (Retry1);
 
         Index += Stride;
-    }
-
-    return;
-}
-
-template<typename GraphType>
-GLOBAL
-VOID
-GraphCuIsAcyclicPhase1Old(
-    GraphType* Graph,
-    PLOCK Locks
-    )
-{
-    using VertexType = typename GraphType::VertexType;
-
-    int32_t Index;
-    uint32_t NumberOfVertices = Graph->NumberOfVertices;
-    VertexType Vertex;
-
-    Index = GlobalThreadIndex();
-
-    bool Retry;
-
-    while (Index < NumberOfVertices) {
-        Vertex = (VertexType)Index;
-        Retry = true;
-        do {
-            Retry = GraphCuRemoveVertex(Graph, Vertex, Locks);
-        } while (Retry);
-        Index += gridDim.x * blockDim.x;
     }
 
     return;
@@ -2609,7 +1296,8 @@ GLOBAL
 VOID
 GraphCuIsAcyclicPhase2(
     GraphType* Graph,
-    PLOCK Locks
+    PLOCK VertexLocks,
+    PLOCK EdgeLocks
     )
 {
     using EdgeType = typename GraphType::EdgeType;
@@ -2647,12 +1335,14 @@ GraphCuIsAcyclicPhase2(
             if (Retry1) {
                 Retry1 = GraphCuRemoveVertex(Graph,
                                              OtherEdge->Vertex1,
-                                             Locks);
+                                             VertexLocks,
+                                             EdgeLocks);
             }
             if (Retry2) {
                 Retry2 = GraphCuRemoveVertex(Graph,
                                              OtherEdge->Vertex2,
-                                             Locks);
+                                             VertexLocks,
+                                             EdgeLocks);
             }
             if (Retry1) {
                 LocalRetries++;
@@ -2730,7 +1420,8 @@ IsGraphAcyclicPhase1Host(
     )
 {
     PGRAPH HostGraph;
-    PLOCK Locks;
+    PLOCK VertexLocks;
+    PLOCK EdgeLocks;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     PVOID Kernel;
 
@@ -2744,15 +1435,19 @@ IsGraphAcyclicPhase1Host(
     ASSERT(HostGraph != Graph);
     ASSERT(SolveContext->DeviceGraph == Graph);
 
-    size_t AllocSize = sizeof(*Locks) * Graph->NumberOfVertices;
+    //
+    // Allocate VertexLocks.
+    //
+
+    size_t VertexLocksAllocSize = sizeof(*VertexLocks) * Graph->NumberOfVertices;
 
     if (HostGraph->VertexLocks == NULL) {
         printf("Allocating %Iu bytes for HostGraph->VertexLocks...\n",
-               AllocSize);
+               VertexLocksAllocSize);
 
-        CUDA_CALL(cudaMalloc((void **)&Locks, AllocSize));
-        printf("cudaMalloc: Locks: %p\n", Locks);
-        HostGraph->VertexLocks = (PVOID)Locks;
+        CUDA_CALL(cudaMalloc((void **)&VertexLocks, VertexLocksAllocSize));
+        printf("cudaMalloc: VertexLocks: %p\n", VertexLocks);
+        HostGraph->VertexLocks = (PVOID)VertexLocks;
 
         CUDA_CALL(cudaMemcpy(&Graph->VertexLocks,
                              HostGraph->VertexLocks,
@@ -2760,10 +1455,35 @@ IsGraphAcyclicPhase1Host(
                              cudaMemcpyHostToDevice));
 
     } else {
-        Locks = (PLOCK)HostGraph->VertexLocks;
+        VertexLocks = (PLOCK)HostGraph->VertexLocks;
     }
 
-    CUDA_CALL(cudaMemset(Locks, -1, AllocSize));
+    CUDA_CALL(cudaMemset(VertexLocks, -1, VertexLocksAllocSize));
+
+    //
+    // Allocate EdgeLocks.
+    //
+
+    size_t EdgeLocksAllocSize = sizeof(*EdgeLocks) * Graph->NumberOfVertices;
+
+    if (HostGraph->EdgeLocks == NULL) {
+        printf("Allocating %Iu bytes for HostGraph->EdgeLocks...\n",
+               EdgeLocksAllocSize);
+
+        CUDA_CALL(cudaMalloc((void **)&EdgeLocks, EdgeLocksAllocSize));
+        printf("cudaMalloc: EdgeLocks: %p\n", EdgeLocks);
+        HostGraph->EdgeLocks = (PVOID)EdgeLocks;
+
+        CUDA_CALL(cudaMemcpy(&Graph->EdgeLocks,
+                             HostGraph->EdgeLocks,
+                             sizeof(Graph->EdgeLocks),
+                             cudaMemcpyHostToDevice));
+
+    } else {
+        EdgeLocks = (PLOCK)HostGraph->EdgeLocks;
+    }
+
+    CUDA_CALL(cudaMemset(EdgeLocks, -1, EdgeLocksAllocSize));
 
     if (IsUsingAssigned16(Graph)) {
         Kernel = (PVOID)GraphCuIsAcyclicPhase1<GRAPH16>;
@@ -2773,7 +1493,8 @@ IsGraphAcyclicPhase1Host(
 
     printf("Kernel: %p\n", Kernel);
     printf("Graph: %p\n", Graph);
-    printf("Locks: %p\n", Locks);
+    printf("VertexLocks: %p\n", VertexLocks);
+    printf("EdgeLocks: %p\n", EdgeLocks);
 
 #if PH_WINDOWS
     int NumberOfBlocksPerSm;
@@ -2808,7 +1529,8 @@ IsGraphAcyclicPhase1Host(
                                           SharedMemoryInBytes,
                                           (CUstream_st *)SolveContext->Stream>>>(
             (PGRAPH16)Graph,
-            Locks
+            VertexLocks,
+            EdgeLocks
         );
     } else {
         GraphCuIsAcyclicPhase1<GRAPH32><<<GridDim,
@@ -2816,7 +1538,8 @@ IsGraphAcyclicPhase1Host(
                                           SharedMemoryInBytes,
                                           (CUstream_st *)SolveContext->Stream>>>(
             (PGRAPH32)Graph,
-            Locks
+            VertexLocks,
+            EdgeLocks
         );
     }
 
@@ -2858,7 +1581,8 @@ IsGraphAcyclicPhase2Host(
     )
 {
     PGRAPH HostGraph;
-    PLOCK Locks;
+    PLOCK VertexLocks;
+    PLOCK EdgeLocks;
     PPH_CU_SOLVE_CONTEXT SolveContext;
 
     SolveContext = Graph->CuSolveContext;
@@ -2867,12 +1591,16 @@ IsGraphAcyclicPhase2Host(
     ASSERT(HostGraph != Graph);
     ASSERT(SolveContext->DeviceGraph == Graph);
 
-    size_t AllocSize = sizeof(*Locks) * Graph->NumberOfVertices;
+    size_t AllocSize = sizeof(*VertexLocks) * Graph->NumberOfVertices;
 
-    Locks = (PLOCK)HostGraph->VertexLocks;
-    ASSERT(Locks != NULL);
+    VertexLocks = (PLOCK)HostGraph->VertexLocks;
+    ASSERT(VertexLocks != NULL);
 
-    CUDA_CALL(cudaMemset(Locks, -1, AllocSize));
+    EdgeLocks = (PLOCK)HostGraph->EdgeLocks;
+    ASSERT(EdgeLocks != NULL);
+
+    CUDA_CALL(cudaMemset(VertexLocks, -1, AllocSize));
+    CUDA_CALL(cudaMemset(EdgeLocks, -1, AllocSize));
 
     printf("IsGraphAcyclicPhase2Host: Graph: %p\n", Graph);
     //Graph->OrderIndex = Graph->NumberOfKeys;
@@ -2884,7 +1612,8 @@ IsGraphAcyclicPhase2Host(
                                           SharedMemoryInBytes,
                                           (CUstream_st *)SolveContext->Stream>>>(
             (PGRAPH16)Graph,
-            Locks
+            VertexLocks,
+            EdgeLocks
         );
     } else {
         GraphCuIsAcyclicPhase2<GRAPH32><<<BlocksPerGrid,
@@ -2892,7 +1621,8 @@ IsGraphAcyclicPhase2Host(
                                           SharedMemoryInBytes,
                                           (CUstream_st *)SolveContext->Stream>>>(
             (PGRAPH32)Graph,
-            Locks
+            VertexLocks,
+            EdgeLocks
         );
 
     }
@@ -4305,16 +3035,6 @@ GraphAssignHost(
 // CountDegrees
 //
 
-template<typename VertexType, typename DegreeType>
-__global__ void extractDegrees(const VertexType* vertices,
-        DegreeType* degrees, size_t numVertices) {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index < numVertices) {
-        degrees[index] = vertices[index].Degree;
-    }
-}
-
-
 template<typename GraphType>
 GLOBAL
 VOID
@@ -4435,17 +3155,11 @@ CountDegrees(
     // Alloc and copy the counts to Graph->_Counts.
     //
 
+    size_t AllocSize = Graph->_FirstNumUniqueDegrees * sizeof(DegreeType);
     if (Graph->_Counts == nullptr) {
-        CUDA_CALL(
-            cudaMallocManaged(
-                (void **)&Graph->_Counts,
-                Graph->_FirstNumUniqueDegrees * sizeof(DegreeType)
-            )
-        );
+        CUDA_CALL(cudaMallocManaged((void **)&Graph->_Counts, AllocSize));
     } else {
-        CUDA_CALL(cudaMemset(Graph->_Counts,
-                             0,
-                             Graph->_FirstNumUniqueDegrees * sizeof(DegreeType)));
+        CUDA_CALL(cudaMemset(Graph->_Counts, 0, AllocSize));
     }
 
     CUDA_CALL(cudaMemcpy(Graph->_Counts,
@@ -4453,10 +3167,11 @@ CountDegrees(
                          NumUnique * sizeof(DegreeType),
                          cudaMemcpyDeviceToDevice));
 
+#if 0
     //
     // Print the histogram.
     //
-#if 0
+
     thrust::host_vector<DegreeType> hUniqueDegrees = UniqueDegrees;
     thrust::host_vector<size_t> hCounts = Counts;
     std::cout << "Degree Count" << std::endl;

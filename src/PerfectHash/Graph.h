@@ -2093,6 +2093,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     _Writable_elements_(NumberOfVertices)
     PVOID VertexLocks;
 
+    _Writable_elements_(NumberOfEdges)
+    PVOID EdgeLocks;
+
     PVOID _Edges;
     PVOID _Degrees;
     PVOID _UniqueDegrees;
