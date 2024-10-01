@@ -516,9 +516,6 @@ Return Value:
 
         Graph->Index = Index;
         Graphs[Index] = Graph;
-
-        Graph->SaveVertices3FileWorkItem = &SaveGraphVertices3File;
-        Graph->SaveVertexPairsFileWorkItem = &SaveGraphVertexPairsFile;
     }
 
     //

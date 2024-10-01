@@ -1,15 +1,4 @@
 LIBRARY PerfectHashCuda
 EXPORTS
-    HashKeys
-    HashKeysHost
-    AddHashedKeysHost
-    CountDegreesHost
-    CountNonEmptyHost
-    IsGraphAcyclicOldHost
-    IsGraphAcyclicPhase1Host
-    IsGraphAcyclicPhase2Host
-    GraphPostAddHashedKeysHost
-    WriteDataToFileSync
-    WriteDataToFileAsync
-    GraphScratchHost
-    GraphAssignHost
+    GraphCuIsAcyclic
+    GraphCuAddKeys

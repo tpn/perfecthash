@@ -46,10 +46,6 @@ SaveGraphVertexPairsFileChm01(
     Info = Graph->Info;
     Source = Graph->VertexPairs;
 
-    if (Graph->_SavedVertexPairs) {
-        return S_OK;
-    }
-
     SizeInBytes = Info->VertexPairsSizeInBytes;
 
     if (SizeInBytes > File->FileInfo.EndOfFile.QuadPart) {
@@ -75,7 +71,6 @@ SaveGraphVertexPairsFileChm01(
     // We're done, finish up.
     //
 
-    Graph->_SavedVertexPairs = 1;
     return Result;
 }
 

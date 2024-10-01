@@ -4835,3 +4835,30 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_CLOSE_CUDA_SOURCE_FILE ((HRESULT)0xE00403FBL)
 
+//
+// MessageId: PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE
+//
+// MessageText:
+//
+// Graph GPU warp vertex collision failure.
+//
+#define PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE ((HRESULT)0xE00403FCL)
+
+//
+// MessageId: PH_E_HASH_FUNCTION_NOT_SUPPORTED_ON_GPU
+//
+// MessageText:
+//
+// Requested hash function is not supported on the GPU.
+//
+#define PH_E_HASH_FUNCTION_NOT_SUPPORTED_ON_GPU ((HRESULT)0xE00403FDL)
+
+//
+// MessageId: PH_E_CUDA_ERROR
+//
+// MessageText:
+//
+// CUDA API error encountered.
+//
+#define PH_E_CUDA_ERROR                  ((HRESULT)0xE00403FEL)
+

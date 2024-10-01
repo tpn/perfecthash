@@ -2104,7 +2104,17 @@ typedef PERFECT_HASH_CUDA_ADD_HASHED_KEYS
       *PPERFECT_HASH_CUDA_ADD_HASHED_KEYS;
 
 typedef
-VOID
+HRESULT
+(PERFECT_HASH_CUDA_ADD_KEYS)(
+    _Inout_ struct _GRAPH *Graph,
+    _In_ ULONG BlocksPerGrid,
+    _In_ ULONG ThreadsPerBlock,
+    _In_ ULONG SharedMemoryInBytes
+    );
+typedef PERFECT_HASH_CUDA_ADD_KEYS *PPERFECT_HASH_CUDA_ADD_KEYS;
+
+typedef
+HRESULT
 (PERFECT_HASH_CUDA_IS_GRAPH_ACYCLIC)(
     _Inout_ struct _GRAPH *Graph,
     _In_ ULONG BlocksPerGrid,
@@ -2130,35 +2140,9 @@ typedef PERFECT_HASH_CUDA_COUNT_NONEMPTY
 
 #define PERFECT_HASH_CUDA_FUNCTION_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
                                                                          \
-    FIRST_ENTRY(HASH_KEYS,                                               \
-                HashKeysHost)                                            \
+    FIRST_ENTRY(ADD_KEYS, AddKeys)                                       \
                                                                          \
-    ENTRY(ADD_HASHED_KEYS,                                               \
-          AddHashedKeysHost)                                             \
-                                                                         \
-    ENTRY(GRAPH_FUNCTION,                                                \
-          CountDegreesHost)                                              \
-                                                                         \
-    ENTRY(COUNT_NONEMPTY,                                                \
-          CountNonEmptyHost)                                             \
-                                                                         \
-    ENTRY(HOST_GRAPH_FUNCTION,                                           \
-          IsGraphAcyclicOldHost)                                         \
-                                                                         \
-    ENTRY(GRAPH_FUNCTION,                                                \
-          GraphPostAddHashedKeysHost)                                    \
-                                                                         \
-    ENTRY(IS_GRAPH_ACYCLIC,                                              \
-          IsGraphAcyclicPhase1Host)                                      \
-                                                                         \
-    ENTRY(GRAPH_FUNCTION,                                                \
-          GraphScratchHost)                                              \
-                                                                         \
-    ENTRY(GRAPH_FUNCTION,                                                \
-          GraphAssignHost)                                               \
-                                                                         \
-    LAST_ENTRY(IS_GRAPH_ACYCLIC,                                         \
-               IsGraphAcyclicPhase2Host)
+    LAST_ENTRY(IS_GRAPH_ACYCLIC, IsAcyclic)
 
 #define PERFECT_HASH_CUDA_FUNCTION_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_CUDA_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)

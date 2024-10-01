@@ -510,7 +510,8 @@ Return Value:
         //
         // If the failure was due to a vertex collision, increment the counter
         // and jump to the failure handler (which results in the status code
-        // PH_S_CONTINUE_GRAPH_SOLVING ultimately being returned).
+        // PH_S_CONTINUE_GRAPH_SOLVING ultimately being returned).  Likewise
+        // for GPU warp vertex collisions.
         //
         // For any other reason, the error is considered fatal and graph solving
         // should stop.
@@ -518,6 +519,9 @@ Return Value:
 
         if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
             InterlockedIncrement64(&Context->VertexCollisionFailures);
+            goto Failed;
+        } else if (Result == PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE) {
+            InterlockedIncrement64(&Context->WarpVertexCollisionFailures);
             goto Failed;
         }
 

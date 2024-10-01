@@ -1093,24 +1093,13 @@ Return Value:
         (ULONGLONG)NumberOfKeys
     );
 
-#if 0
-
-    Info->DeletedSizeInBytes = (
-        RTL_ELEMENT_SIZE(GRAPH, Deleted) *
-        (ULONGLONG)NumberOfVertices
+    Info->CuVertexLocksSizeInBytes = (
+        PH_CUDA_LOCK_SIZE * NumberOfVertices
     );
 
-    Info->VisitedSizeInBytes = (
-        RTL_ELEMENT_SIZE(GRAPH, Visited) *
-        (ULONGLONG)NumberOfVertices
+    Info->CuEdgeLocksSizeInBytes = (
+        PH_CUDA_LOCK_SIZE * Info->Dimensions.NumberOfEdges
     );
-
-    Info->CountsSizeInBytes = (
-        RTL_ELEMENT_SIZE(GRAPH, Counts) *
-        (ULONGLONG)NumberOfVertices
-    );
-
-#endif
 
     return Result;
 }

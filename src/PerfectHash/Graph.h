@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -43,14 +43,7 @@ Abstract:
 
 #include "stdafx.h"
 
-#if 0
-#ifndef PH_CUDA
-#include "stdafx.h"
-#else
-#include "Rtl.h"
-#include "PerfectHashPrivate.h"
-#endif
-#endif
+#define PH_CUDA_LOCK_SIZE sizeof(ULONG)
 
 #include "GraphCounters.h"
 
@@ -432,9 +425,9 @@ CopyCoverage(
 // and less only needed to use a USHORT array to capture the assigned table
 // data, not ULONG.  The resulting compiled perfect hash files enjoyed large
 // speed benefits if they could be downsized from ULONG to USHORT, as the memory
-// footprint effectively halved, which means fewer cache misses.  The effect
-// is this improvement was most notable on the BenchmarkFull exes, as they
-// would walk the entire set of keys as part of their benchmark work (versus
+// footprint effectively halved, which means fewer cache misses.  The effect of
+// this improvement was most notable on the BenchmarkFull exes, as they would
+// walk the entire set of keys as part of their benchmark work (versus
 // BenchmarkIndex which just called Index() for one key over and over).
 //
 // However, during solving, we originally just stuck with the assigned table
@@ -444,10 +437,10 @@ CopyCoverage(
 //
 // Issue 14 (https://github.com/tpn/perfecthash/issues/14) was created.  It
 // notes that the assigned memory coverage stats aren't accurate if evaluating
-// the compiled perfect hash table (when vertices <= 65,354), because they assumed
-// assigned table data was ULONG, not USHORT.  i.e., a USHORT-based table data
-// array can hold up to 32 assigned elements in a single 64-byte cache line, not
-// 16 like the ULONG-based table.
+// the compiled perfect hash table (when vertices <= 65,354), because they
+// assumed assigned table data was ULONG, not USHORT.  i.e., a USHORT-based
+// table data array can hold up to 32 assigned elements in a single 64-byte
+// cache line, not 16 like the ULONG-based table.
 //
 // To solve the problem, though, not only do we need to alter the routines that
 // calculate the memory coverage, we need to alter the actual data types used
@@ -1119,6 +1112,9 @@ typedef struct _GRAPH_INFO {
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
 
+    ULONGLONG CuVertexLocksSizeInBytes;
+    ULONGLONG CuEdgeLocksSizeInBytes;
+
     //
     // We use a union for the Assigned size in order to work with macros in the
     // CUDA GraphCuLoadInfo() routine.
@@ -1434,52 +1430,6 @@ typedef struct _GRAPH_SEEDS {
 } GRAPH_SEEDS;
 typedef GRAPH_SEEDS *PGRAPH_SEEDS;
 
-#if 0
-//
-// cuRAND-specific glue.
-//
-
-#ifndef __CUDA_ARCH__
-#pragma pack(push, 1)
-typedef struct _CU_RNG_STATE_PHILOX4_32_10 {
-    DECLSPEC_ALIGN(16)
-    ULONG Counter[4];
-
-    DECLSPEC_ALIGN(16)
-    ULONG Output[4];
-
-    ULONG Key[4];
-    ULONG State;
-    ULONG BoxMullerFlag;
-    ULONG BoxMullerFlagDouble;
-    FLOAT BoxMullerExtra;
-    DOUBLE BoxMullerExtraDouble;
-} CU_RNG_STATE_PHILOX4_32_10;
-#pragma pack(pop)
-#else
-typedef struct _CU_RNG_STATE_PHILOX4_32_10 {
-    UINT4 Counter;
-    UINT4 Output;
-    UINT4 Key;
-    UINT State;
-    ULONG BoxMullerFlag;
-    ULONG BoxMullerFlagDouble;
-    FLOAT BoxMullerExtra;
-    DOUBLE BoxMullerExtraDouble;
-} CU_RNG_STATE_PHILOX4_32_10;
-#endif
-typedef CU_RNG_STATE_PHILOX4_32_10 *PCU_RNG_STATE_PHILOX4_32_10;
-
-typedef struct _CU_RNG_STATE {
-    PERFECT_HASH_CU_RNG_ID CuRngId;
-    ULONG AllocSizeInBytes;
-    union {
-        CU_RNG_STATE_PHILOX4_32_10 AsPhilox43210;
-    };
-} CU_RNG_STATE;
-typedef CU_RNG_STATE *PCU_RNG_STATE;
-#endif
-
 //
 // Vtbl.
 //
@@ -1588,7 +1538,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // acyclic graph detection stage.
     //
 
-    ULONG DeletedEdgeCount;
+    volatile ULONG DeletedEdgeCount;
 
     //
     // Counter that is incremented each time we visit a vertex during the
@@ -1645,14 +1595,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         volatile LONG OrderIndex;
         volatile SHORT Order16Index;
     };
-
-    volatile LONG OrderIndex1;
-    volatile LONG OrderIndex2;
-    volatile LONG OrderIndexBoth;
-    volatile LONG OrderIndexNone;
-    volatile LONG OrderIndexEither;
-
-    ULONG NumberOfNonZeroVertices;
 
     //
     // Number of empty vertices encountered during the assignment step.
@@ -1721,39 +1663,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         PSHORT Order16;
     };
 
-    _Writable_elements_(NumberOfVertices)
-    union {
-        PLONG OrderByThread;
-        PSHORT Order16ByThread;
-    };
-
-    _Writable_elements_(NumberOfVertices)
-    union {
-        PLONG OrderByVertex;
-        PSHORT Order16ByVertex;
-    };
-
-    _Writable_elements_(NumberOfVertices)
-    union {
-        PLONG OrderByEdge;
-        PSHORT Order16ByEdge;
-    };
-
-    _Writable_elements_(NumberOfVertices)
-    union {
-        PLONG OrderByThreadOrder;
-        PSHORT Order16ByThreadOrder;
-    };
-
-    volatile LONG OrderByVertexIndex;
-
-    LONG CuScratch;
-
-    union {
-        PLONG SortedOrder16;
-        PSHORT SortedOrder;
-    };
-
     //
     // Array of the "next" edge array, as per the referenced papers.
     //
@@ -1782,8 +1691,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     union {
         PASSIGNED Assigned;
         PASSIGNED16 Assigned16;
-        PASSIGNED AssignedHost;
-        PASSIGNED16 Assigned16Host;
     };
 
     //
@@ -1794,15 +1701,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     union {
         PVERTEX3 Vertices3;
         PVERTEX163 Vertices163;
-        PVERTEX3 Vertices3Host;
-        PVERTEX163 Vertices163Host;
     };
-
-    PVERTEX3 SortedVertices3;
-    PULONG SortedVertices3Indices;
-
-    PEDGE3 OrderedVertices;
-    PULONG Indices;
 
     //
     // Graph implementations 1 & 2: this is an optional array of vertex pairs,
@@ -1821,8 +1720,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         union {
             PVERTEX_PAIR VertexPairs;
             PEDGE3 Edges3;
-            PVERTEX_PAIR VertexPairsHost;
-            PEDGE3 Edges3Host;
         };
 
         //
@@ -1832,8 +1729,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
         union {
             PVERTEX16_PAIR Vertex16Pairs;
             PEDGE163 Edges163;
-            PVERTEX16_PAIR Vertex16PairsHost;
-            PEDGE163 Edges163Host;
         };
     };
 
@@ -1888,6 +1783,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
 
+#ifdef HAS_CUDA
+
     //
     // If this is a GPU solver graph, this points to the solve context.
     //
@@ -1924,15 +1821,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     ULONG CuBlocksPerGrid;
     ULONG CuThreadsPerBlock;
+    ULONG CuSharedMemory;
     ULONG CuKernelRuntimeTargetInMilliseconds;
     ULONG CuJitMaxNumberOfRegisters;
-    ULONG CuRandomNumberBatchSize;
-
-    //
-    // Used by CUDA kernels to communicate the result back to the host.
-    //
-
-    HRESULT CuKernelResult;
 
     //
     // Intermediate results communicated back between CUDA parent/child grids.
@@ -1956,23 +1847,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
 
     //
-    // Clock related fields.
-    //
-
-    ULONGLONG CuStartClock;
-    ULONGLONG CuEndClock;
-    ULONGLONG CuCycles;
-    ULONGLONG CuElapsedMilliseconds;
-
-    //
     // Various counters.
     //
 
-    ULONG CuNoVertexCollisionFailures;
-    ULONG CuVertexCollisionFailures;
+    volatile ULONG CuVertexCollisionFailures;
+    volatile ULONG CuWarpVertexCollisionFailures;
     ULONG CuCyclicGraphFailures;
     ULONG CuFailedAttempts;
     ULONG CuFinishedCount;
+    ULONG CuIsAcyclicPhase1Attempts;
 
     //
     // CUDA RNG details.
@@ -1991,136 +1874,30 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     CU_DEVICE_POINTER CuDeviceAttributes;
 
     //
-    // Device addresses.
-    //
-
-    //
-    // Array of assigned vertices.
+    // CUDA vertex and edge locks.
     //
 
     _Writable_elements_(NumberOfVertices)
-    union {
-        PASSIGNED AssignedDevice;
-        PASSIGNED16 Assigned16Device;
-    };
-
-    //
-    // Array of VERTEX3 elements for the graph impl 3.
-    //
-
-    _Writable_elements_(NumberOfVertices)
-    union {
-        PVERTEX3 Vertices3Device;
-        PVERTEX163 Vertices163Device;
-    };
-
-    //
-    // Graph implementations 1 & 2: this is an optional array of vertex pairs,
-    // indexed by the edge for the key (i.e. the 0-based offset of the key in
-    // the keys array).  For implementation 3, this will always contain the
-    // array of vertex pairs, indexed by edge for the key.
-    //
-
-    _Writable_elements_(NumberOfKeys)
-    union {
-
-        //
-        // For ASSIGNED_MEMORY_COVERAGE.
-        //
-
-        union {
-            PVERTEX_PAIR VertexPairsDevice;
-            PEDGE3 Edges3Device;
-        };
-
-        //
-        // For ASSIGNED16_MEMORY_COVERAGE && GraphImpl==3.
-        //
-
-        union {
-            PVERTEX16_PAIR Vertex16PairsDevice;
-            PEDGE163 Edges163Device;
-        };
-    };
-
-    //
-    // Optional array of vertex pairs, indexed by number of keys.
-    //
-
-    _Writable_elements_(NumberOfKeys)
-    PVERTEX_PAIR SortedVertexPairsDevice;
-
-    _Writable_elements_(NumberOfKeys)
-    PULONG VertexPairsIndexDevice;
-
-    //
-    // CUDA vertex arrays.
-    //
-
-    _Writable_elements_(NumberOfKeys)
-    PVERTEX Vertices1Device;
-
-    _Writable_elements_(NumberOfKeys)
-    PVERTEX Vertices2Device;
-
-    _Writable_elements_(NumberOfKeys)
-    PULONG Vertices1IndexDevice;
-
-    _Writable_elements_(NumberOfKeys)
-    PULONG Vertices2IndexDevice;
-
-    //
-    // CUDA arrays for capturing deleted edges and visited vertices.
-    //
-
-    _Writable_elements_(NumberOfVertices)
-    volatile ULONG *DeletedDevice;
-
-    _Writable_elements_(NumberOfKeys)
-    volatile ULONG *VisitedDevice;
-
-    //
-    // CUDA array for capturing count of vertices.
-    //
-
-    _Writable_elements_(NumberOfVertices)
-    volatile ULONG *CountsDevice;
-
-    //
-    // CUDA vertex locks.
-    //
-
-    _Writable_elements_(NumberOfVertices)
-    PVOID VertexLocks;
+    PLONG CuVertexLocks;
 
     _Writable_elements_(NumberOfEdges)
-    PVOID EdgeLocks;
+    PLONG CuEdgeLocks;
 
-    PVOID _Edges;
-    PVOID _Degrees;
-    PVOID _UniqueDegrees;
-    PVOID _Counts;
-
-    LONG _NumUniqueDegrees;
-    LONG _FirstNumUniqueDegrees;
-
-    LONG _SavedVertices3;
-    LONG _SavedVertexPairs;
-    PFILE_WORK_ITEM SaveVertices3FileWorkItem;
-    PFILE_WORK_ITEM SaveVertexPairsFileWorkItem;
     struct _GRAPH *CpuGraph;
-
-    //
-    // Seed masks for the current hash function.
-    //
-
-    SEED_MASKS SeedMasks;
 
     //
     // Opaque context for kernels.
     //
 
     struct _CU_KERNEL_CONTEXT *CuKernelContext;
+
+#endif  // HAS_CUDA
+
+    //
+    // Seed masks for the current hash function.
+    //
+
+    SEED_MASKS SeedMasks;
 
     //
     // The graph interface.

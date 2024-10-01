@@ -603,6 +603,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     volatile LONGLONG VertexCollisionFailures;
 
     //
+    // Captures the number of failures due to the generation of two
+    // identical vertices amongst a GPU warp.
+    //
+
+    volatile LONGLONG WarpVertexCollisionFailures;
+
+    //
     // Computer name.
     //
 

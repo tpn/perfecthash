@@ -1339,12 +1339,12 @@ VERIFY_VTBL_SIZE(GRAPH, 15);
 
 GRAPH_INITIALIZE GraphCuInitialize;
 GRAPH_RUNDOWN GraphCuRundown;
-GRAPH_ENTER_SOLVING_LOOP GraphCuEnterSolvingLoop;
 GRAPH_LOAD_INFO GraphCuLoadInfo;
 GRAPH_RESET GraphCuReset;
-GRAPH_SOLVE GraphCuSolve;
 GRAPH_LOAD_NEW_SEEDS GraphCuLoadNewSeeds;
 GRAPH_REGISTER_SOLVED GraphCuRegisterSolved;
+GRAPH_ADD_KEYS GraphCuAddKeys;
+GRAPH_IS_ACYCLIC GraphCuIsAcyclic;
 
 GRAPH_CU_VTBL GraphCuInterface = {
     (PGRAPH_QUERY_INTERFACE)&ComponentQueryInterface,
@@ -1358,14 +1358,14 @@ GRAPH_CU_VTBL GraphCuInterface = {
     &GraphCuLoadInfo,
     &GraphCuReset,
     &GraphCuLoadNewSeeds,
-    &GraphCuSolve,
-    NULL, // IsAcyclic
-    NULL, // Assign
-    NULL, // CalculateAssignedMemoryCoverage
-    NULL, // CalculateAssignedMemoryCoverageForKeysSubset
-    &GraphCuRegisterSolved,
+    &GraphSolve,
+    &GraphCuIsAcyclic,
+    &GraphAssign,
+    &GraphCalculateAssignedMemoryCoverage,
+    &GraphCalculateAssignedMemoryCoverageForKeysSubset,
+    &GraphRegisterSolved,
     &GraphShouldWeContinueTryingToSolve,
-    NULL, // AddKeys
+    &GraphCuAddKeys,
     NULL, // HashKeys
 };
 VERIFY_VTBL_SIZE(GRAPH_CU, 15);

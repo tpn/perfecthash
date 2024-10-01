@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -14,6 +14,9 @@ Abstract:
 
 #pragma once
 
+#include <cuda_runtime.h>
+#include <cuda/atomic>
+#include <cuda_awbarrier.h>
 #include <limits>
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
@@ -153,7 +156,7 @@ typedef CU_KERNEL_CONTEXT *PCU_KERNEL_CONTEXT;
                cudaGetErrorString(cudaGetLastError()), \
                __FILE__,                               \
                __LINE__-1);                            \
-        exit(-1);                                      \
+        return PH_E_CUDA_ERROR;                        \
     }
 
 #define CUDA_CHECK()                                   \
@@ -175,33 +178,33 @@ typedef struct _CU_SLIST_ENTRY {
 } CU_SLIST_ENTRY, *PCU_SLIST_ENTRY;
 
 namespace impl {
-    constexpr unsigned int DepthBits = 4;
-    constexpr unsigned int SequenceBits = 8;
+    constexpr uint32_t DepthBits = 4;
+    constexpr uint32_t SequenceBits = 8;
 
-    constexpr unsigned int NextEntryBits = 32;
-    constexpr unsigned int AlignmentBits = 4;
+    constexpr uint32_t NextEntryBits = 32;
+    constexpr uint32_t AlignmentBits = 4;
 };
 
-template <unsigned int DepthBitsT = impl::DepthBits,
-          unsigned int SequenceBitsT = impl::SequenceBits,
-          unsigned int NextEntryBitsT = impl::NextEntryBits,
-          unsigned int AlignmentBitsT = impl::AlignmentBits>
+template <uint32_t DepthBitsT = impl::DepthBits,
+          uint32_t SequenceBitsT = impl::SequenceBits,
+          uint32_t NextEntryBitsT = impl::NextEntryBits,
+          uint32_t AlignmentBitsT = impl::AlignmentBits>
 struct _CU_SLIST_HEADER {
-    using DepthBits = std::integral_constant<unsigned int, DepthBitsT>;
-    using SequenceBits = std::integral_constant<unsigned int, SequenceBitsT>;
-    using NextEntryBits = std::integral_constant<unsigned int, NextEntryBitsT>;
-    using AlignmentBits = std::integral_constant<unsigned int, AlignmentBitsT>;
+    using DepthBits = std::integral_constant<uint32_t, DepthBitsT>;
+    using SequenceBits = std::integral_constant<uint32_t, SequenceBitsT>;
+    using NextEntryBits = std::integral_constant<uint32_t, NextEntryBitsT>;
+    using AlignmentBits = std::integral_constant<uint32_t, AlignmentBitsT>;
 
     static_assert(DepthBitsT + SequenceBitsT + NextEntryBitsT == 64,
                   "Total bit size must be 64");
     union {
-        cuda::std::atomic<unsigned long long> Atomic;
-        unsigned long long Alignment;
+        cuda::std::atomic<uint64_t> Atomic;
+        uint64_t Alignment;
         struct {
-            unsigned long long Depth : DepthBitsT;
-            unsigned long long Sequence : SequenceBitsT;
-            unsigned long long NextEntry : NextEntryBitsT;
-            unsigned long long Shift : AlignmentBitsT;
+            uint64_t Depth : DepthBitsT;
+            uint64_t Sequence : SequenceBitsT;
+            uint64_t NextEntry : NextEntryBitsT;
+            uint64_t Shift : AlignmentBitsT;
         };
     };
 
@@ -237,7 +240,7 @@ struct _CU_SLIST_HEADER {
                 Next.Depth += 1;
             }
             Next.Sequence = Prev.Sequence + 1;
-            Next.NextEntry = (unsigned long long)Entry >> AlignmentBits::value;
+            Next.NextEntry = (uint64_t)Entry >> AlignmentBits::value;
         } while (atomicCAS(&this->Atomic, Prev.Atomic, Next.Atomic) != Prev.Atomic);
 
         return (struct _CU_SLIST_ENTRY *)(Prev.NextEntry << AlignmentBits::value);
@@ -261,7 +264,7 @@ struct _CU_SLIST_HEADER {
             }
             Next.Depth = Prev.Depth - 1;
             Next.Sequence = Prev.Sequence + 1;
-            Next.NextEntry = (unsigned long long)Prev.NextEntry << AlignmentBits::value;
+            Next.NextEntry = (uint64_t)Prev.NextEntry << AlignmentBits::value;
         } while (atomicCAS(&this->Atomic, Prev.Atomic, Next.Atomic) != Prev.Atomic);
 
         return (struct _CU_SLIST_ENTRY *)(Prev.NextEntry << AlignmentBits::value);
@@ -655,6 +658,7 @@ struct LOCK_CU {
 };
 using LOCK = LOCK_CU<>;
 using PLOCK = LOCK*;
+static_assert(sizeof(LOCK) == PH_CUDA_LOCK_SIZE, "Invalid lock size.");
 
 template <typename T>
 __forceinline__
@@ -695,6 +699,19 @@ void
 AtomicAggIncCGV(T *Address)
 {
     cg::coalesced_group Group = cg::coalesced_threads();
+    if (Group.thread_rank() == 0) {
+        auto Size = Group.size();
+        atomicAdd((decltype(Size) *)Address, Size);
+    }
+    return;
+}
+
+template <typename T>
+__forceinline__
+__device__
+void
+AtomicAggIncCGV(T *Address, cg::coalesced_group& Group)
+{
     if (Group.thread_rank() == 0) {
         auto Size = Group.size();
         atomicAdd((decltype(Size) *)Address, Size);
@@ -1040,29 +1057,5 @@ AtomicAggXORMultiCGEx(
         } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
     }
 }
-
-#define WRITE_SYNC(FileName, Directory, Data, Size) \
-    WriteDataToFileSync(FileName, Directory, (const char *)Data, Size);
-
-#define WRITE_ASYNC(FileName, Directory, Data, Size) \
-    WriteDataToFileAsync(FileName, Directory, (const char *)Data, Size);
-
-EXTERN_C
-bool
-WriteDataToFile(
-    const char* FilenameCStr,
-    const char* DirectoryCStr,
-    const char* Buffer,
-    size_t NumberOfBytesytes);
-
-EXTERN_C
-HOST
-void
-WriteDataToFileAsync(
-    const char* FilenameCStr,
-    const char* DirectoryCStr,
-    const char* Buffer,
-    size_t NumberOfBytesytes);
-
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab filetype=cuda formatoptions=croql   :

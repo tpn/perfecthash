@@ -326,6 +326,12 @@ target_compile_definitions(
     "_PERFECT_HASH_INTERNAL_BUILD"
 )
 
+target_compile_definitions(
+    ${PROJECT_NAME}
+    PUBLIC
+    HAS_CUDA
+)
+
 ################################################################################
 # Compile and link options
 ################################################################################

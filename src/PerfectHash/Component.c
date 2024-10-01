@@ -278,7 +278,6 @@ CreateComponent(
                 PH_ERROR(PerfectHashComponentInitialize, Result);
             }
             TlsContext->LastResult = Result;
-            Unknown->Vtbl->Release(Unknown);
             //
             // Make sure we don't attempt to recursively exclusively acquire
             // the global components lock.
@@ -294,6 +293,7 @@ CreateComponent(
             if (AcquiredGlobalLock) {
                 ReleaseGlobalComponentsLockExclusive();
             }
+            Unknown->Vtbl->Release(Unknown);
             Component = NULL;
         }
     }

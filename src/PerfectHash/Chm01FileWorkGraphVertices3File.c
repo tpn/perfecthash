@@ -47,10 +47,6 @@ SaveGraphVertices3FileChm01(
     Info = Graph->Info;
     Source = Graph->Vertices3;
 
-    if (Graph->_SavedVertices3) {
-        return S_OK;
-    }
-
     SizeInBytes = Info->Vertices3SizeInBytes;
 
     if (SizeInBytes > File->FileInfo.EndOfFile.QuadPart) {
@@ -75,8 +71,6 @@ SaveGraphVertices3FileChm01(
     //
     // We're done, finish up.
     //
-
-    Graph->_SavedVertices3 = 1;
 
     return Result;
 }

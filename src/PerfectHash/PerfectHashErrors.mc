@@ -4392,3 +4392,27 @@ Language=English
 Error closing CUDA source file.
 .
 
+MessageId=0x3fc
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE
+Language=English
+Graph GPU warp vertex collision failure.
+.
+
+MessageId=0x3fd
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_HASH_FUNCTION_NOT_SUPPORTED_ON_GPU
+Language=English
+Requested hash function is not supported on the GPU.
+.
+
+MessageId=0x3fe
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_CUDA_ERROR
+Language=English
+CUDA API error encountered.
+.
+

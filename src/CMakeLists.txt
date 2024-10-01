@@ -10,6 +10,9 @@ project(
 
 set(PROJECT_ROOT "${CMAKE_SOURCE_DIR}/..")
 set(SRC_ROOT "${CMAKE_SOURCE_DIR}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_EXPORT_LINK_COMMANDS ON)
+set(CMAKE_COLOR_MAKEFILE ON)
 
 ################################################################################
 # Set target arch type if empty. Visual studio solution generator provides it.
@@ -34,6 +37,27 @@ set(CMAKE_CONFIGURATION_TYPES
     "Release"
     CACHE STRING "" FORCE
 )
+
+###############################################################################
+# CUDA
+###############################################################################
+
+# Define a CMake option to enable or disable CUDA manually
+option(USE_CUDA "Enable CUDA support if available" ON)
+
+# Find CUDA if the user did not explicitly disable it
+if(USE_CUDA)
+    find_package(CUDA)
+endif()
+
+# Set the HAS_CUDA variable based on whether CUDA was found
+if(CUDA_FOUND)
+    message(STATUS "CUDA found, enabling CUDA support")
+    set(HAS_CUDA TRUE)
+else()
+    message(STATUS "CUDA not found, CUDA support is disabled")
+    set(HAS_CUDA FALSE)
+endif()
 
 ###############################################################################
 # Global compiler options
@@ -131,16 +155,25 @@ if (WIN32)
     add_subdirectory(PerfectHashAsm)
 endif()
 add_subdirectory(PerfectHash)
-add_subdirectory(PerfectHashCuda)
 add_subdirectory(PerfectHashCreateExe)
 add_subdirectory(PerfectHashBulkCreateExe)
+
+if (HAS_CUDA)
+    add_subdirectory(PerfectHashCuda)
+endif()
 
 if (IS_WINDOWS)
     # N.B. PerfectHashResources is defined in PerfectHash's CMakeLists.txt.
     add_dependencies(PerfectHash PerfectHashResources)
-    add_dependencies(PerfectHashCuda PerfectHashResources)
     add_dependencies(PerfectHashCreateExe PerfectHashResources)
     add_dependencies(PerfectHashBulkCreateExe PerfectHashResources)
+    if (HAS_CUDA)
+        add_dependencies(PerfectHashCuda PerfectHashResources)
+    endif()
+endif()
+
+if (HAS_CUDA)
+    add_dependencies(PerfectHash PerfectHashCuda)
 endif()
 
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :
