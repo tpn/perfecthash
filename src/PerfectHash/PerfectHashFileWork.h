@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -111,7 +111,7 @@ Abstract:
         GraphVertexPairsFile,                                              \
         GRAPH_VERTEX_PAIRS_FILE,                                           \
         EofInitTypeNumberOfKeysMultiplier,                                 \
-        4,                                                                 \
+        8,                                                                 \
         SUFFIX(GraphVertexPairs),                                          \
         &BinFileExtension,                                                 \
         NO_STREAM_NAME,                                                    \
