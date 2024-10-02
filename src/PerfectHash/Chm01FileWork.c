@@ -360,14 +360,14 @@ Return Value:
                 break;
 
             case EofInitTypeNumberOfKeysMultiplier:
-                EndOfFile.QuadPart += (
+                EndOfFile.QuadPart = (
                     (LONGLONG)Keys->NumberOfKeys.QuadPart *
                     Eof->Multiplier
                 );
                 break;
 
             case EofInitTypeNumberOfTableElementsMultiplier:
-                EndOfFile.QuadPart += (
+                EndOfFile.QuadPart = (
                     NumberOfTableElements.QuadPart *
                     Eof->Multiplier
                 );
