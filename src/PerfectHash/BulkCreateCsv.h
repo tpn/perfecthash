@@ -267,8 +267,28 @@ Abstract:
           Context->VertexCollisionFailures,                                                  \
           OUTPUT_INT)                                                                        \
                                                                                              \
+    ENTRY(WarpVertexCollisionFailures,                                                       \
+          Context->WarpVertexCollisionFailures,                                              \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
     ENTRY(CyclicGraphFailures,                                                               \
           Context->CyclicGraphFailures,                                                      \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(GpuAddKeysSuccessButCpuAddKeysFailures,                                            \
+          Context->GpuAddKeysSuccessButCpuAddKeysFailures,                                   \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(GpuIsAcyclicButCpuIsCyclicFailures,                                                \
+          Context->GpuIsAcyclicButCpuIsCyclicFailures,                                       \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(GpuAndCpuAddKeysSuccess,                                                           \
+          Context->GpuAndCpuAddKeysSuccess,                                                  \
+          OUTPUT_INT)                                                                        \
+                                                                                             \
+    ENTRY(GpuAndCpuIsAcyclicSuccess,                                                         \
+          Context->GpuAndCpuAddKeysSuccess,                                                  \
           OUTPUT_INT)                                                                        \
                                                                                              \
     ENTRY(BestCoverageAttempts,                                                              \

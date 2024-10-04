@@ -603,11 +603,46 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     volatile LONGLONG VertexCollisionFailures;
 
     //
+    // Captures the number of failures due to the graph being cyclic.
+    //
+
+    volatile LONGLONG CyclicGraphFailures;
+
+    //
     // Captures the number of failures due to the generation of two
     // identical vertices amongst a GPU warp.
     //
 
     volatile LONGLONG WarpVertexCollisionFailures;
+
+    //
+    // Captures the number of times the GPU AddKeys() routine succeeded but the
+    // CPU AddKeys() routine failed (due to a vertex collision).
+    //
+
+    volatile LONGLONG GpuAddKeysSuccessButCpuAddKeysFailures;
+
+    //
+    // Captures the number of times the GPU IsAcyclic() routine succeeded in
+    // detecting an acyclic graph, but the CPU IsAcyclic() routine reported
+    // a cycle.
+    //
+
+    volatile LONGLONG GpuIsAcyclicButCpuIsCyclicFailures;
+
+    //
+    // Captures the number of times the GPU and CPU AddKeys() routines both
+    // return success.
+    //
+
+    volatile LONGLONG GpuAndCpuAddKeysSuccess;
+
+    //
+    // Captures the number of times the GPU and CPU IsAcyclic() routines both
+    // return success.
+    //
+
+    volatile LONGLONG GpuAndCpuIsAcyclicSuccess;
 
     //
     // Computer name.
@@ -1133,12 +1168,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG NumberOfTableResizeEvents;
     ULONGLONG TotalNumberOfAttemptsWithSmallerTableSizes;
     ULONGLONG ClosestWeCameToSolvingGraphWithSmallerTableSizes;
-
-    //
-    // Captures the number of failures due to the graph being cyclic.
-    //
-
-    volatile LONGLONG CyclicGraphFailures;
 
     //
     // Pointers to the context file instances.

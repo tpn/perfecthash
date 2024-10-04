@@ -1064,10 +1064,12 @@ Return Value:
     // parameters have been supplied, they have the same number of values.
     //
 
-    if (Context->CuConcurrency != Ordinals->NumberOfValues) {
+#if 0
+    if (0 && Context->CuConcurrency != Ordinals->NumberOfValues) {
         Result = PH_E_CU_DEVICES_COUNT_MUST_MATCH_CU_CONCONCURRENCY;
         goto Error;
     }
+#endif
 
     if ((BlocksPerGrid != NULL) &&
         (BlocksPerGrid->NumberOfValues != Ordinals->NumberOfValues))
@@ -1175,8 +1177,13 @@ Return Value:
     //
 
     Rtl = Context->Rtl;
+#if 0
     NumberOfContexts = Rtl->RtlNumberOfSetBits(&Bitmap);
     NumberOfDevices = CuRuntimeContext->CuDevices.NumberOfDevices;
+#else
+    NumberOfContexts = Context->CuConcurrency;
+    NumberOfDevices = CuRuntimeContext->CuDevices.NumberOfDevices;
+#endif
 
     //
     // Intentional follow-on to FinalizeOrdinalsProcessing.
@@ -1184,6 +1191,7 @@ Return Value:
 
 FinalizeOrdinalsProcessing:
 
+#if 0
     if (NumberOfContexts > NumberOfDevices) {
         Result = PH_E_INVARIANT_CHECK_FAILED;
         PH_ERROR(PerfectHashContextInitializeCuda_SetBitsExceedsNumDevices,
@@ -1194,6 +1202,7 @@ FinalizeOrdinalsProcessing:
         PH_ERROR(PerfectHashContextInitializeCuda_NumContextsIsZero, Result);
         goto Error;
     }
+#endif
 
     //Context->NumberOfCuContexts = NumberOfContexts;
 
@@ -1327,6 +1336,8 @@ Return Value:
     CuRuntimeContext->CuDeviceContexts = DeviceContexts;
     DeviceContexts->NumberOfDeviceContexts = NumberOfContexts;
 
+    Ordinals = CuRuntimeContext->Ordinals;
+
     //
     // First pass: set each device context's ordinal to the value obtained via
     // the --CuDevices parameter.  (The logic we use to do this is a little
@@ -1338,7 +1349,6 @@ Return Value:
         DeviceContext = &DeviceContexts->DeviceContexts[0];
         DeviceContext->Rtl = Rtl;
 
-        Ordinals = CuRuntimeContext->Ordinals;
         if (Ordinals != NULL) {
             ASSERT(Ordinals->NumberOfValues == 1);
             DeviceContext->Ordinal = (LONG)Ordinals->Values[0];
@@ -1350,6 +1360,19 @@ Return Value:
             //
 
             DeviceContext->Ordinal = 0;
+        }
+
+    } else if (NumberOfContexts > 1 && Ordinals != NULL &&
+               Ordinals->NumberOfValues == 1) {
+
+        //
+        // Multiple contexts for a single device.
+        //
+
+        for (Index = 0; Index < NumberOfContexts; Index++) {
+            DeviceContext = &DeviceContexts->DeviceContexts[Index];
+            DeviceContext->Rtl = Rtl;
+            DeviceContext->Ordinal = (LONG)Ordinals->Values[0];
         }
 
     } else {

@@ -105,7 +105,6 @@ Return Value:
     PGRAPH Graph;
     BOOLEAN Silent;
     BOOLEAN Success;
-    ULONG Attempt = 0;
     BYTE NumberOfEvents;
     HRESULT Result = S_OK;
     HRESULT CloseResult = S_OK;
@@ -132,7 +131,6 @@ Return Value:
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PPH_CU_DEVICE_CONTEXT DeviceContext;
     PPH_CU_DEVICE_CONTEXTS DeviceContexts;
-    //PPH_CU_SOLVE_CONTEXT SolveContext;
     PPH_CU_SOLVE_CONTEXTS SolveContexts;
     LARGE_INTEGER EmptyEndOfFile = { 0 };
     PLARGE_INTEGER EndOfFile;
@@ -325,6 +323,7 @@ Return Value:
     //
 
     Context->MainWorkCallback = ProcessGraphCallbackChm02;
+    Context->ConsoleWorkCallback = ProcessConsoleCallbackChm01;
     Context->AlgorithmContext = &Info;
 
     //
@@ -408,6 +407,12 @@ Return Value:
     Context->RemainingSolverLoops = Concurrency;
     Context->ActiveSolvingLoops = 0;
     ClearStopSolving(Context);
+
+    //
+    // Submit the console thread work.
+    //
+
+    SubmitThreadpoolWork(Context->ConsoleWork);
 
     //
     // Synchronize on each GPU device's stream that was used for the async
@@ -892,6 +897,7 @@ Error:
 
     SetEvent(Context->ShutdownEvent);
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
+    WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
     if (!NoFileIo(Table)) {
         WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
     }
@@ -912,13 +918,7 @@ End:
         Result = PH_I_CUDA_OUT_OF_MEMORY;
     }
 
-    //
-    // If no attempts were made, no file work was submitted, which means we
-    // can skip the close logic below and jump straight to releasing graphs.
-    // Likewise for no file I/O.
-    //
-
-    if (Attempt == 0 || NoFileIo(Table)) {
+    if (NoFileIo(Table)) {
         goto ReleaseGraphs;
     }
 
@@ -986,14 +986,10 @@ End:
 
 ReleaseGraphs:
 
-    //
-    // Todo: free keys.
-    //
-
     Graphs = Context->Graphs;
 
 #if 0
-    if (0 && Graphs) {
+    if (Graphs) {
         ULONG ReferenceCount;
 
         //

@@ -1345,6 +1345,8 @@ GRAPH_LOAD_NEW_SEEDS GraphCuLoadNewSeeds;
 GRAPH_REGISTER_SOLVED GraphCuRegisterSolved;
 GRAPH_ADD_KEYS GraphCuAddKeys;
 GRAPH_IS_ACYCLIC GraphCuIsAcyclic;
+GRAPH_ASSIGN GraphCuAssign;
+GRAPH_VERIFY GraphCuVerify;
 
 GRAPH_CU_VTBL GraphCuInterface = {
     (PGRAPH_QUERY_INTERFACE)&ComponentQueryInterface,
@@ -1354,13 +1356,13 @@ GRAPH_CU_VTBL GraphCuInterface = {
     (PGRAPH_LOCK_SERVER)&ComponentLockServer,
     &GraphSetInfo,
     &GraphEnterSolvingLoop,
-    &GraphVerify,
+    &GraphCuVerify,
     &GraphCuLoadInfo,
     &GraphCuReset,
     &GraphCuLoadNewSeeds,
     &GraphSolve,
     &GraphCuIsAcyclic,
-    &GraphAssign,
+    &GraphCuAssign,
     &GraphCalculateAssignedMemoryCoverage,
     &GraphCalculateAssignedMemoryCoverageForKeysSubset,
     &GraphRegisterSolved,

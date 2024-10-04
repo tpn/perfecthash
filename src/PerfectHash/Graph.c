@@ -2643,11 +2643,15 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-        SpareGraph = Context->SpareGraph;
+        if (IsCuGraph(Graph)) {
+            SpareGraph = Graph->CuHostSpareGraph;
+        } else {
+            SpareGraph = Context->SpareGraph;
+            Context->SpareGraph = NULL;
+        }
         ASSERT(SpareGraph != NULL);
         ASSERT(IsSpareGraph(SpareGraph));
         SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;

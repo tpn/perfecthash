@@ -841,10 +841,9 @@ Return Value:
 
 GRAPH_IS_ACYCLIC GraphIsAcyclic3;
 
-_Use_decl_annotations_
 HRESULT
 GraphIsAcyclic3Phase2(
-    PGRAPH Graph
+    _In_ PGRAPH Graph
     )
 /*++
 

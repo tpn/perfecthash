@@ -539,6 +539,8 @@ Return Value:
 
         if (Ordinals == NULL) {
             Ordinal = 0;
+        } else if (Index+1 > Ordinals->NumberOfValues) {
+            Ordinal = (LONG)Ordinals->Values[Ordinals->NumberOfValues - 1];
         } else {
             Ordinal = (LONG)Ordinals->Values[Index];
         }
@@ -552,8 +554,10 @@ Return Value:
         for (Inner = 0; Inner < NumberOfContexts; Inner++) {
             DeviceContext = &DeviceContexts->DeviceContexts[Inner];
             if (DeviceContext->Ordinal == Ordinal) {
-                Found = TRUE;
-                break;
+                if (DeviceContext->NumberOfSolveContexts == 0) {
+                    Found = TRUE;
+                    break;
+                }
             }
         }
 
@@ -1252,7 +1256,6 @@ End:
 
     return Result;
 }
-
 
 HRESULT
 CopyGraphInfoToDevices(

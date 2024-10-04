@@ -95,14 +95,17 @@ PerfectHashPrintError(
     Count = FormatMessageA(Flags,
                            PerfectHashModule,
                            Error,
-                           LanguageId,
+                           0,
                            (PSTR)Buffer,
                            (ULONG)SizeOfBufferInChars,
                            NULL);
 
     if (!Count) {
         OutputDebugStringA("PhtPrintError: FormatMessageA() 2 failed.\n");
-        goto Error;
+
+        //
+        // Let this fall through so we print *something*.
+        //
     }
 
     Buffer += Count;

@@ -15,6 +15,70 @@ Abstract:
 #include "stdafx.h"
 
 //
+// Forward decls.
+//
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphAddKeys3(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PKEY Keys
+    );
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphAddKeys16(
+    _In_ PGRAPH Graph,
+    _In_ ULONG NumberOfKeys,
+    _In_reads_(NumberOfKeys) PKEY Keys
+    );
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphAssign16(
+    _In_ PGRAPH Graph
+    );
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphIsAcyclic3(
+    _In_ PGRAPH Graph
+    );
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphIsAcyclic16(
+    _In_ PGRAPH Graph
+    );
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphAssign3(
+    _In_ PGRAPH Graph
+    );
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Graph->Lock)
+HRESULT
+GraphAssign16(
+    _In_ PGRAPH Graph
+    );
+
+//
 // COM scaffolding routines for initialization and rundown.
 //
 
@@ -47,6 +111,7 @@ Return Value:
 
 --*/
 {
+    PGRAPH_VTBL Vtbl;
     HRESULT Result = S_OK;
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
@@ -107,6 +172,19 @@ Return Value:
     }
 
     //
+    // Create a standalone CPU graph that we will dispatch various routines
+    // to that don't currently have GPU equivalents.
+    //
+
+    Result = Graph->Vtbl->CreateInstance(Graph,
+                                         NULL,
+                                         &IID_PERFECT_HASH_GRAPH,
+                                         PPV(&Graph->CpuGraph));
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
     // Load the items we need from the TLS context.
     //
 
@@ -117,15 +195,17 @@ Return Value:
     Graph->HashFunctionId = TlsContext->Table->HashFunctionId;
     Graph->Flags.UsingAssigned16 = (Table->State.UsingAssigned16 != FALSE);
 
-    if (TableCreateFlags.CompareGpuAndCpuGraphs) {
-        Result = Graph->Vtbl->CreateInstance(Graph,
-                                             NULL,
-                                             &IID_PERFECT_HASH_GRAPH,
-                                             PPV(&Graph->CpuGraph));
-        if (FAILED(Result)) {
-            goto Error;
-        }
-    }
+    //
+    // Mirror the CPU graph's appropriate vtbl function pointers.
+    //
+
+    Vtbl = Graph->CpuGraph->Vtbl;
+
+    Graph->Vtbl->CalculateAssignedMemoryCoverage =
+        Vtbl->CalculateAssignedMemoryCoverage;
+
+    Graph->Vtbl->CalculateAssignedMemoryCoverageForKeysSubset =
+        Vtbl->CalculateAssignedMemoryCoverageForKeysSubset;
 
     //
     // We're done!  Indicate success and finish up.
@@ -462,6 +542,12 @@ Return Value:
     Result = S_OK;
 
     //
+    // GPU graphs are always v3.
+    //
+
+    Graph->Impl = 3;
+
+    //
     // CUDA-specific fields.
     //
 
@@ -471,11 +557,10 @@ Return Value:
     Graph->CuGraphInfo = (PGRAPH_INFO)DeviceContext->DeviceGraphInfoAddress;
 
     //
-    // Set the CUDA context if we're in "find best graph" mode, or we're not
-    // the spare graph.
+    // Set the CUDA context if we're not the spare graph.
     //
 
-    if (!FindBestGraph(Context) || !IsSpareGraph(Graph)) {
+    if (!IsSpareGraph(Graph)) {
         CuResult = Cu->CtxSetCurrent(DeviceContext->Context);
         CU_CHECK(CuResult, CtxSetCurrent);
     }
@@ -831,6 +916,7 @@ Return Value:
     PGRAPH_INFO Info;
     HRESULT Result;
     CU_RESULT CuResult;
+    PGRAPH DeviceGraph;
     ULONG TotalNumberOfPages;
     ULONG TotalNumberOfLargePages;
     ULONG TotalNumberOfCacheLines;
@@ -960,10 +1046,14 @@ Return Value:
     ZERO_MANAGED_ARRAY(Order);
     ZERO_MANAGED_ARRAY(Assigned);
     ZERO_MANAGED_ARRAY(Vertices3);
-    EMPTY_MANAGED_ARRAY(VertexPairs);
 
-    ZERO_MANAGED_ARRAY(CuVertexLocks);
-    ZERO_MANAGED_ARRAY(CuEdgeLocks);
+    //
+    // The vertex pairs and locks default to -1 (0xffffffff).
+    //
+
+    EMPTY_MANAGED_ARRAY(VertexPairs);
+    EMPTY_MANAGED_ARRAY(CuVertexLocks);
+    EMPTY_MANAGED_ARRAY(CuEdgeLocks);
 
     if (!IsUsingAssigned16(Graph)) {
         Graph->OrderIndex = (LONG)Graph->NumberOfKeys;
@@ -1117,6 +1207,20 @@ Return Value:
         ZERO_MANAGED_ASSIGNED_ARRAY(Coverage16, NumberOfAssignedPerCacheLine);
     }
 
+    //
+    // At this point, we've reset the host-backed Graph instance, and need to
+    // copy the entire structure over to the GPU device.
+    //
+
+    DeviceGraph = SolveContext->DeviceGraph;
+    CuResult = Cu->MemcpyHtoDAsync((CU_DEVICE_POINTER)DeviceGraph,
+                                   Graph,
+                                   Graph->SizeOfStruct,
+                                   SolveContext->Stream);
+
+    CU_CHECK(CuResult, MemcpyHtoDAsync);
+
+
     if (Graph->CpuGraph) {
         Result = Graph->CpuGraph->Vtbl->Reset(Graph->CpuGraph);
         if (FAILED(Result)) {
@@ -1215,13 +1319,16 @@ GraphCuAddKeys(
     )
 {
     PCU Cu;
-    PPERFECT_HASH_CONTEXT Context;
+
+    //
+    // Keys have already been prepared on the GPU, so we don't need to use
+    // these parameters.
+    //
 
     UNREFERENCED_PARAMETER(NumberOfKeys);
     UNREFERENCED_PARAMETER(Keys);
 
-    Context = Graph->Context;
-    Cu = Context->Cu;
+    Cu = Graph->CuSolveContext->DeviceContext->Cu;
 
     return Cu->AddKeys(Graph,
                        Graph->CuBlocksPerGrid,
@@ -1235,15 +1342,181 @@ GraphCuIsAcyclic(
     )
 {
     PCU Cu;
+    PRTL Rtl;
+    PKEY Keys;
+    HRESULT Result;
+    PGRAPH_INFO Info;
+    ULONG NumberOfKeys;
+    PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_CONTEXT Context;
 
-    Context = Graph->Context;
-    Cu = Context->Cu;
+#if 0
+    PGRAPH DeviceGraph;
+    SIZE_T SizeInBytes;
+    CU_RESULT CuResult;
+    CU_DEVICE_POINTER DeviceVertexPairs;
+#endif
+    PPH_CU_SOLVE_CONTEXT SolveContext;
 
-    return Cu->IsAcyclic(Graph,
-                         Graph->CuBlocksPerGrid,
-                         Graph->CuThreadsPerBlock,
-                         Graph->CuSharedMemory);
+    SolveContext = Graph->CuSolveContext;
+    Cu = SolveContext->DeviceContext->Cu;
+
+    Result = Cu->IsAcyclic(Graph,
+                           Graph->CuBlocksPerGrid,
+                           Graph->CuThreadsPerBlock,
+                           Graph->CuSharedMemory);
+
+    //
+    // If we weren't acyclic, return.
+    //
+
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+#if 0
+
+    //
+    // We successfully used the GPU to determine that the graph was acyclic.
+    // We now need to repeat the process on the CPU graph as a prerequisite to
+    // performing the solving step.
+    //
+    // First, copy the vertex pairs from the GPU to the CPU.  Then, dispatch
+    // a CPU graph call to IsAcyclic(), which will prime the Order[] array
+    // correctly.
+    //
+
+    DeviceGraph = Graph->CuSolveContext->DeviceGraph;
+    DeviceVertexPairs = (CU_DEVICE_POINTER)DeviceGraph->VertexPairs;
+    if (IsUsingAssigned16(Graph)) {
+        SizeInBytes = Graph->NumberOfVertices * sizeof(VERTEX16_PAIR);
+    } else {
+        SizeInBytes = Graph->NumberOfVertices * sizeof(VERTEX_PAIR);
+    }
+    CuResult = Cu->MemcpyDtoHAsync((PVOID)Graph->VertexPairs,
+                                  (CU_DEVICE_POINTER)DeviceVertexPairs,
+                                  SizeInBytes,
+                                  SolveContext->Stream);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuIsAcyclic_MemcpyDtoHAsync_VertexPairs, CuResult);
+        return PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    //
+    // Synchronize the stream before calling IsAcyclic() on the CPU graph.
+    //
+
+    CuResult = Cu->StreamSynchronize(SolveContext->Stream);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(GraphCuIsAcyclic_StreamSynchronize, CuResult);
+        return PH_E_CUDA_DRIVER_API_CALL_FAILED;
+    }
+
+    //
+    // Now, finally, repeat the IsAcyclic() call on the CPU graph.
+    //
+
+#endif
+
+    //
+    // Initialize aliases.
+    //
+
+    Info = Graph->Info;
+    Context = Info->Context;
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    NumberOfKeys = Table->Keys->NumberOfKeys.LowPart;
+    Keys = (PKEY)Table->Keys->KeyArrayBaseAddress;
+
+    ASSERT(Graph->CpuGraph != NULL);
+    ASSERT(Graph->Impl == 3);
+
+    if (IsUsingAssigned16(Graph)) {
+        Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
+                                                NumberOfKeys,
+                                                Keys);
+        if (FAILED(Result)) {
+            InterlockedIncrement64(
+                &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
+            return Result;
+        } else {
+            InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
+        }
+
+        Result = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
+        if (FAILED(Result)) {
+            InterlockedIncrement64(
+                &Context->GpuIsAcyclicButCpuIsCyclicFailures);
+            return Result;
+        } else {
+            InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
+        }
+    } else {
+        Result = Graph->CpuGraph->Vtbl->AddKeys(Graph->CpuGraph,
+                                                NumberOfKeys,
+                                                Keys);
+        if (FAILED(Result)) {
+            InterlockedIncrement64(
+                &Context->GpuAddKeysSuccessButCpuAddKeysFailures);
+            return Result;
+        } else {
+            InterlockedIncrement64(&Context->GpuAndCpuAddKeysSuccess);
+        }
+
+        Result = Graph->CpuGraph->Vtbl->IsAcyclic(Graph->CpuGraph);
+        if (FAILED(Result)) {
+            InterlockedIncrement64(
+                &Context->GpuIsAcyclicButCpuIsCyclicFailures);
+            return Result;
+        } else {
+            InterlockedIncrement64(&Context->GpuAndCpuIsAcyclicSuccess);
+        }
+    }
+
+    //
+    // Copy the Order[] array from the CPU graph.
+    //
+
+    ASSERT(SUCCEEDED(Result));
+    CopyMemory(Graph->Order,
+               Graph->CpuGraph->Order,
+               Info->OrderSizeInBytes);
+
+    return Result;
 }
+
+HRESULT
+GraphCuAssign(
+    _In_ PGRAPH Graph
+    )
+{
+    PRTL Rtl;
+    HRESULT Result;
+
+    Result = Graph->CpuGraph->Vtbl->Assign(Graph->CpuGraph);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Rtl = Graph->Context->Rtl;
+    CopyMemory(Graph->Assigned,
+               Graph->CpuGraph->Assigned,
+               Graph->Info->AssignedSizeInBytes);
+
+    return Result;
+}
+
+HRESULT
+GraphCuVerify(
+    _In_ PGRAPH Graph
+    )
+{
+    HRESULT Result;
+
+    Result = Graph->CpuGraph->Vtbl->Verify(Graph->CpuGraph);
+    return Result;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

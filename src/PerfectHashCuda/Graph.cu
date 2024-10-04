@@ -153,7 +153,7 @@ GraphCuHashKeysKernel(
 template<typename GraphType>
 DEVICE
 bool
-GraphCuAddEdge(
+GraphCuAddEdge1(
     GraphType* Graph,
     typename GraphType::EdgeType Edge,
     typename GraphType::VertexType VertexIndex
@@ -241,10 +241,181 @@ End:
     return Retry;
 }
 
+template<typename GraphType,
+         typename AtomicType = uint32_t>
+FORCEINLINE
+DEVICE
+void GraphCuAddEdge(
+    GraphType* Graph,
+    typename GraphType::EdgeType Edge,
+    typename GraphType::VertexType VertexIndex
+    )
+{
+    using EdgeType = typename GraphType::EdgeType;
+    using DegreeType = typename GraphType::DegreeType;
+    using VertexType = typename GraphType::VertexType;
+    using Vertex3Type = typename GraphType::Vertex3Type;
+    using AtomicCASType = typename GraphType::AtomicVertex3CASType;
+
+    Vertex3Type *Vertex;
+    Vertex3Type *Vertices3;
+
+    Vertices3 = (decltype(Vertices3))Graph->Vertices3;
+    Vertex = &Vertices3[VertexIndex];
+
+    cg::coalesced_group Group = cg::coalesced_threads();
+    auto LabeledGroup = cg::labeled_partition(Group, VertexIndex);
+
+    //
+    // XOR reduction across all threads in the labeled group.
+    //
+
+    auto CumulativeXOR =
+        cg::reduce(LabeledGroup, Edge, cg::bit_xor<EdgeType>());
+
+    auto GroupSize = LabeledGroup.num_threads();
+
+    if (LabeledGroup.thread_rank() == 0) {
+
+        //
+        // Atomically perform the XOR and increment operations.
+        //
+
+        if constexpr (sizeof(VertexType) == sizeof(uint32_t) ||
+                      sizeof(VertexType) == sizeof(uint16_t))
+        {
+
+#if 0
+            //
+            // For 32-bit VertexType, use separate atomic operations.
+            //
+
+            atomicXor((uint32_t *)&(Vertex->Edges), (uint32_t)Edge);
+            atomicAdd((uint32_t *)&(Vertex->Degree), GroupSize);
+#endif
+
+            Vertex3Type PrevVertex3;
+            EdgeType NextEdges;
+            DegreeType NextDegree;
+            Vertex3Type NextVertex3;
+            AtomicCASType PrevAtomic;
+            AtomicCASType NextAtomic;
+            AtomicCASType *Address = reinterpret_cast<AtomicCASType*>(Vertex);
+
+            do {
+                PrevVertex3 = *Vertex;
+
+                NextDegree = PrevVertex3.Degree;
+                NextDegree += GroupSize;
+
+                NextEdges = PrevVertex3.Edges;
+                NextEdges ^= CumulativeXOR;
+
+                NextVertex3.Degree = NextDegree;
+                NextVertex3.Edges = NextEdges;
+
+                PrevAtomic = PrevVertex3.Combined.AsLargestIntegral;
+                NextAtomic = NextVertex3.Combined.AsLargestIntegral;
+
+            } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
+
+            __threadfence();
+
+        } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
+
+            //
+            // N.B. Above code is untested and almost certainly incorrect.
+            //
+
+            AtomicType PrevEdge;
+            AtomicType PrevAtomic;
+            AtomicType PrevDegree;
+            AtomicType NextAtomic;
+            AtomicType NextDegree;
+
+            AtomicType *Address = reinterpret_cast<AtomicType*>(Vertex);
+
+            //
+            // Index to pick the appropriate byte permutation.
+            //
+
+            uint8_t Index = sizeof(Edge);
+            constexpr AtomicType ValueMask = ~0;
+            constexpr AtomicType Selection[] = {
+                0x3214, 0x3240, 0x3410, 0x4210
+            };
+            AtomicType Selector = Selection[Index];
+
+            const AtomicType Mask = ~0x3;
+            const AtomicType Bucket = ((VertexIndex >> 2) & Mask);
+            const uint8_t Index2 = static_cast<uint8_t>(VertexIndex & 0x3);
+            const uint32_t Selector2 = Selection[Index];
+            uintptr_t Base = reinterpret_cast<uintptr_t>(Graph->Vertices3);
+            Base += VertexIndex * sizeof(Vertex3Type);
+            Base &= ~0x3;
+            AtomicType *Address2 = reinterpret_cast<AtomicType*>(Base);
+            AtomicType PrevAtomic2 = *Address2;
+
+            do {
+                PrevAtomic = *Address;
+                PrevEdge = (PrevAtomic >> (Index * 8)) & ValueMask;
+                PrevEdge ^= CumulativeXOR;
+                PrevDegree = PrevAtomic & ValueMask;
+                NextDegree = PrevDegree + 1;
+
+                AtomicType Combined = (NextDegree << 8) | PrevEdge;
+                NextAtomic = __byte_perm(PrevAtomic, Combined, Selector);
+
+            } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
+
+            __threadfence();
+        }
+    }
+
+    LabeledGroup.sync();
+    return;
+}
+
 template<typename GraphType>
 GLOBAL
 VOID
 GraphCuAddHashedKeysKernel(
+    GraphType* Graph
+    )
+{
+    uint32_t Index;
+    uint32_t NumberOfKeys = Graph->NumberOfKeys;
+    typename GraphType::EdgeType Edge;
+    typename GraphType::VertexPairType VertexPair;
+    typename GraphType::VertexPairType *VertexPairs;
+
+    const int32_t Stride = gridDim.x * blockDim.x;
+
+    VertexPairs = (typename GraphType::VertexPairType *)Graph->VertexPairs;
+
+    Index = GlobalThreadIndex();
+
+    while (Index < NumberOfKeys) {
+
+        VertexPair = VertexPairs[Index];
+        Edge = Index;
+
+        GraphCuAddEdge(Graph,
+                       Edge,
+                       VertexPair.Vertex1);
+
+        GraphCuAddEdge(Graph,
+                       Edge,
+                       VertexPair.Vertex2);
+
+        Index += Stride;
+    }
+}
+
+template<typename GraphType>
+GLOBAL
+VOID
+GraphCuAddHashedKeysKernel1(
     GraphType* Graph
     )
 {
@@ -270,13 +441,13 @@ GraphCuAddHashedKeysKernel(
 
         do {
             if (Retry1) {
-                Retry1 = GraphCuAddEdge(Graph,
+                Retry1 = GraphCuAddEdge1(Graph,
                                         Edge,
                                         VertexPair.Vertex1);
             }
 
             if (Retry2) {
-                Retry2 = GraphCuAddEdge(Graph,
+                Retry2 = GraphCuAddEdge1(Graph,
                                         Edge,
                                         VertexPair.Vertex2);
             }
@@ -301,14 +472,21 @@ GetKernelConfig(
     cudaDeviceProp DeviceProperties;
     CUfunction Function = (CUfunction)Kernel;
 
+    if (ThreadsPerBlock == 0) {
+        ThreadsPerBlock = DEFAULT_BLOCK_SIZE;
+    }
+
     if (BlocksPerGrid == 0) {
-        BlocksPerGrid = DEFAULT_BLOCK_SIZE;
+        BlocksPerGrid = (
+            ((Graph->NumberOfKeys + ThreadsPerBlock) - 1) / ThreadsPerBlock
+        );
     }
 
     CUDA_CALL(
         cudaGetDeviceProperties(
             &DeviceProperties,
-            Graph->CuDeviceIndex-1
+            0
+            //Graph->CuDeviceIndex-1
         )
     );
 
@@ -340,6 +518,7 @@ GraphCuAddKeys(
     )
 {
     HRESULT Result;
+    PGRAPH DeviceGraph;
     CUstream_st* Stream;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     ULONG SharedMemory = SharedMemoryInBytes;
@@ -389,6 +568,7 @@ GraphCuAddKeys(
     //
 
     SolveContext = Graph->CuSolveContext;
+    DeviceGraph = SolveContext->DeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
     //
@@ -399,19 +579,19 @@ GraphCuAddKeys(
         GraphCuHashKeysKernel<<<BlocksPerGrid,
                                 ThreadsPerBlock,
                                 SharedMemory,
-                                Stream>>>((PGRAPH16)Graph);
+                                Stream>>>((PGRAPH16)DeviceGraph);
     } else {
         GraphCuHashKeysKernel<<<BlocksPerGrid,
                                 ThreadsPerBlock,
                                 SharedMemory,
-                                Stream>>>((PGRAPH32)Graph);
+                                Stream>>>((PGRAPH32)DeviceGraph);
     }
 
     CUDA_CALL(cudaStreamSynchronize(Stream));
 
-    if (Graph->CuWarpVertexCollisionFailures > 0) {
+    if (DeviceGraph->CuWarpVertexCollisionFailures > 0) {
         Result = PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE;
-    } else if (Graph->CuVertexCollisionFailures > 0) {
+    } else if (DeviceGraph->CuVertexCollisionFailures > 0) {
         Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
     } else {
         Result = S_OK;
@@ -458,12 +638,12 @@ GraphCuAddKeys(
         GraphCuAddHashedKeysKernel<GRAPH16><<<BlocksPerGrid,
                                               ThreadsPerBlock,
                                               SharedMemory,
-                                              Stream>>>((PGRAPH16)Graph);
+                                              Stream>>>((PGRAPH16)DeviceGraph);
     } else {
         GraphCuAddHashedKeysKernel<GRAPH32><<<BlocksPerGrid,
                                               ThreadsPerBlock,
                                               SharedMemory,
-                                              Stream>>>((PGRAPH32)Graph);
+                                              Stream>>>((PGRAPH32)DeviceGraph);
     }
 
     CUDA_CALL(cudaStreamSynchronize(Stream));
@@ -501,6 +681,7 @@ GraphCuRemoveEdgeVertex(
     using AtomicCASType = typename GraphType::AtomicVertex3CASType;
 
     bool Retry = false;
+    bool DidNotRemove = false;
     Vertex3Type *Vertex;
     Vertex3Type *Vertices3;
     PLOCK VertexLocks = (PLOCK)Graph->CuVertexLocks;
@@ -539,6 +720,11 @@ GraphCuRemoveEdgeVertex(
         do {
             PrevVertex3 = *Vertex;
 
+            if (PrevVertex3.Degree == 0) {
+                DidNotRemove = true;
+                break;
+            }
+
             NextDegree = PrevVertex3.Degree;
             NextDegree -= 1;
 
@@ -554,6 +740,10 @@ GraphCuRemoveEdgeVertex(
         } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
         __threadfence();
+
+        if (!DidNotRemove) {
+            Removed = true;
+        }
 
     } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
 
@@ -712,6 +902,7 @@ GraphCuIsAcyclic(
     LONG PreviousOrderIndex = 0;
 
     HRESULT Result;
+    PGRAPH DeviceGraph;
     CUstream_st* Stream;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     ULONG SharedMemory = SharedMemoryInBytes;
@@ -743,11 +934,14 @@ GraphCuIsAcyclic(
     //
 
     SolveContext = Graph->CuSolveContext;
+    DeviceGraph = SolveContext->DeviceGraph;
     Stream = (CUstream_st *)SolveContext->Stream;
 
     //
     // Enter the kernel launch loop.
     //
+
+    ASSERT(DeviceGraph->OrderIndex == Graph->NumberOfKeys);
 
     while (TRUE) {
 
@@ -761,12 +955,12 @@ GraphCuIsAcyclic(
             GraphCuIsAcyclicPhase1Kernel<<<BlocksPerGrid,
                                            ThreadsPerBlock,
                                            SharedMemory,
-                                           Stream>>>((PGRAPH16)Graph);
+                                           Stream>>>((PGRAPH16)DeviceGraph);
         } else {
             GraphCuIsAcyclicPhase1Kernel<<<BlocksPerGrid,
                                            ThreadsPerBlock,
                                            SharedMemory,
-                                           Stream>>>((PGRAPH32)Graph);
+                                           Stream>>>((PGRAPH32)DeviceGraph);
         }
 
         CUDA_CALL(cudaStreamSynchronize(Stream));
@@ -777,7 +971,7 @@ GraphCuIsAcyclic(
         // some cases.)
         //
 
-        if (Graph->OrderIndex <= 0) {
+        if (DeviceGraph->OrderIndex <= 0) {
 
             //
             // We were able to delete all vertices with degree 1, therefore,
@@ -794,7 +988,7 @@ GraphCuIsAcyclic(
         //
 
         if (Attempts == 1) {
-            PreviousOrderIndex = Graph->OrderIndex;
+            PreviousOrderIndex = DeviceGraph->OrderIndex;
             continue;
         }
 
@@ -805,7 +999,7 @@ GraphCuIsAcyclic(
         // graph isn't acyclic.
         //
 
-        OrderIndexDelta = PreviousOrderIndex - Graph->OrderIndex;
+        OrderIndexDelta = PreviousOrderIndex - DeviceGraph->OrderIndex;
         ASSERT(OrderIndexDelta >= 0);
         if (OrderIndexDelta == 0) {
             break;
@@ -815,7 +1009,7 @@ GraphCuIsAcyclic(
         // Update previous value and continue for another pass.
         //
 
-        PreviousOrderIndex = Graph->OrderIndex;
+        PreviousOrderIndex = DeviceGraph->OrderIndex;
     }
 
     //
@@ -834,15 +1028,6 @@ GraphCuIsAcyclic(
     if (IsAcyclic) {
 
         Graph->Flags.IsAcyclic = TRUE;
-
-        //
-        // Hack: if OrderIndex isn't 0, make it 0.
-        //
-
-        ASSERT(Graph->OrderIndex <= 0);
-        if (Graph->OrderIndex != 0) {
-            Graph->OrderIndex = 0;
-        }
 
     } else {
 
