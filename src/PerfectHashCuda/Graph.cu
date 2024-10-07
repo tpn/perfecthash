@@ -522,6 +522,13 @@ GraphCuAddKeys(
     CUstream_st* Stream;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     ULONG SharedMemory = SharedMemoryInBytes;
+    union {
+        struct {
+            ULONG CuVertexCollisionFailures;
+            ULONG CuWarpVertexCollisionFailures;
+        };
+        ULARGE_INTEGER CuHashKeysCollisionFailures;
+    };
 
     //
     // Verify the requested hash function is supported on GPU.
@@ -587,11 +594,19 @@ GraphCuAddKeys(
                                 Stream>>>((PGRAPH32)DeviceGraph);
     }
 
+    CUDA_CALL(
+        cudaMemcpyAsync((PVOID)&CuHashKeysCollisionFailures.QuadPart,
+                        &DeviceGraph->CuHashKeysCollisionFailures.QuadPart,
+                        sizeof(CuHashKeysCollisionFailures.QuadPart),
+                        cudaMemcpyDeviceToHost,
+                        Stream)
+    );
+
     CUDA_CALL(cudaStreamSynchronize(Stream));
 
-    if (DeviceGraph->CuWarpVertexCollisionFailures > 0) {
+    if (CuWarpVertexCollisionFailures > 0) {
         Result = PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE;
-    } else if (DeviceGraph->CuVertexCollisionFailures > 0) {
+    } else if (CuVertexCollisionFailures > 0) {
         Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
     } else {
         Result = S_OK;
@@ -900,6 +915,7 @@ GraphCuIsAcyclic(
     ULONG Attempts = 0;
     LONG OrderIndexDelta = 0;
     LONG PreviousOrderIndex = 0;
+    LONG DeviceOrderIndex = 0;
 
     HRESULT Result;
     PGRAPH DeviceGraph;
@@ -941,8 +957,6 @@ GraphCuIsAcyclic(
     // Enter the kernel launch loop.
     //
 
-    ASSERT(DeviceGraph->OrderIndex == Graph->NumberOfKeys);
-
     while (TRUE) {
 
         ++Attempts;
@@ -963,6 +977,12 @@ GraphCuIsAcyclic(
                                            Stream>>>((PGRAPH32)DeviceGraph);
         }
 
+        CUDA_CALL(cudaMemcpyAsync((PVOID)&DeviceOrderIndex,
+                                  (PVOID)&DeviceGraph->OrderIndex,
+                                  sizeof(DeviceOrderIndex),
+                                  cudaMemcpyDeviceToHost,
+                                  Stream));
+
         CUDA_CALL(cudaStreamSynchronize(Stream));
 
         //
@@ -971,7 +991,7 @@ GraphCuIsAcyclic(
         // some cases.)
         //
 
-        if (DeviceGraph->OrderIndex <= 0) {
+        if (DeviceOrderIndex <= 0) {
 
             //
             // We were able to delete all vertices with degree 1, therefore,
@@ -988,7 +1008,7 @@ GraphCuIsAcyclic(
         //
 
         if (Attempts == 1) {
-            PreviousOrderIndex = DeviceGraph->OrderIndex;
+            PreviousOrderIndex = DeviceOrderIndex;
             continue;
         }
 
@@ -999,7 +1019,7 @@ GraphCuIsAcyclic(
         // graph isn't acyclic.
         //
 
-        OrderIndexDelta = PreviousOrderIndex - DeviceGraph->OrderIndex;
+        OrderIndexDelta = PreviousOrderIndex - DeviceOrderIndex;
         ASSERT(OrderIndexDelta >= 0);
         if (OrderIndexDelta == 0) {
             break;
@@ -1009,7 +1029,7 @@ GraphCuIsAcyclic(
         // Update previous value and continue for another pass.
         //
 
-        PreviousOrderIndex = DeviceGraph->OrderIndex;
+        PreviousOrderIndex = DeviceOrderIndex;
     }
 
     //

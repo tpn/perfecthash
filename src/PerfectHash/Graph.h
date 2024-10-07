@@ -1850,11 +1850,24 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // Various counters.
     //
 
-    volatile ULONG CuVertexCollisionFailures;
-    volatile ULONG CuWarpVertexCollisionFailures;
     ULONG CuCyclicGraphFailures;
     ULONG CuFailedAttempts;
     ULONG CuFinishedCount;
+
+    union {
+        struct {
+            volatile ULONG CuVertexCollisionFailures;
+            volatile ULONG CuWarpVertexCollisionFailures;
+        };
+
+        //
+        // This is copied from the device after the GraphCuHashKeysKernel()
+        // CUDA kernel is run.
+        //
+
+        ULARGE_INTEGER CuHashKeysCollisionFailures;
+    };
+
     ULONG CuIsAcyclicPhase1Attempts;
 
     //
