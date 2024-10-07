@@ -51,15 +51,3 @@ endfunction()
 
 ################################################################################
 
-create_property_reader("TARGET_NAME")
-create_property_reader("OUTPUT_DIRECTORY")
-
-set_config_specific_property("TARGET_NAME" "${PROPS_TARGET}")
-set_config_specific_property("OUTPUT_NAME" "${TARGET_NAME}")
-set_config_specific_property("ARCHIVE_OUTPUT_NAME" "${TARGET_NAME}")
-set_config_specific_property("LIBRARY_OUTPUT_NAME" "${TARGET_NAME}")
-set_config_specific_property("RUNTIME_OUTPUT_NAME" "${TARGET_NAME}")
-
-set_config_specific_property("ARCHIVE_OUTPUT_DIRECTORY" "${OUTPUT_DIRECTORY}")
-set_config_specific_property("LIBRARY_OUTPUT_DIRECTORY" "${OUTPUT_DIRECTORY}")
-set_config_specific_property("RUNTIME_OUTPUT_DIRECTORY" "${OUTPUT_DIRECTORY}")
