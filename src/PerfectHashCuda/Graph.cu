@@ -215,8 +215,6 @@ GraphCuAddEdge1(
 
         } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
-        __threadfence();
-
     } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
 
         //
@@ -319,8 +317,6 @@ void GraphCuAddEdge(
 
             } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
-            __threadfence();
-
         } else if constexpr (sizeof(VertexType) == sizeof(uint8_t)) {
 
             //
@@ -368,7 +364,6 @@ void GraphCuAddEdge(
 
             } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
-            __threadfence();
         }
     }
 
@@ -754,8 +749,6 @@ GraphCuRemoveEdgeVertex(
 
         } while (atomicCAS(Address, PrevAtomic, NextAtomic) != PrevAtomic);
 
-        __threadfence();
-
         if (!DidNotRemove) {
             Removed = true;
         }
@@ -850,8 +843,6 @@ GraphCuRemoveVertex(
         }
 
     } while (Retry1 || Retry2);
-
-    __threadfence();
 
     if (Removed1 || Removed2) {
         AtomicAggIncCGV(&Graph->DeletedEdgeCount);
