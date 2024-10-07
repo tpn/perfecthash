@@ -17,10 +17,22 @@ set(Source_Files
 )
 source_group("Source Files" FILES ${Source_Files})
 
+set(Resource_Files
+    "PerfectHashBulkCreateExe.rc"
+)
+source_group("Resource Files" FILES ${Resource_Files})
+
 set(ALL_FILES
     ${Header_Files}
     ${Source_Files}
 )
+
+if (IS_WINDOWS)
+    list(
+        APPEND ALL_FILES
+        ${Resource_Files}
+    )
+endif()
 
 add_executable(PerfectHashBulkCreateExe ${ALL_FILES})
 
@@ -37,10 +49,10 @@ use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "../PerfectHash.cmake")
 set(ROOT_NAMESPACE PerfectHashBulkCreateExe)
 
 ################################################################################
-# Target name
+# Output executable name
 ################################################################################
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    TARGET_NAME "PerfectHashBulkCreate"
+    OUTPUT_NAME "PerfectHashBulkCreate"
 )
 ################################################################################
 # Compile definitions

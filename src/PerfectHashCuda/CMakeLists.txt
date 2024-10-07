@@ -23,14 +23,21 @@ source_group("Source Files" FILES ${Source_Files})
 
 set(Resource_Files
     "PerfectHashCuda.def"
+    "PerfectHashCuda.rc"
 )
 source_group("Resource Files" FILES ${Resource_Files})
 
 set(ALL_FILES
     ${Header_Files}
     ${Source_Files}
-    ${Resource_Files}
 )
+
+if (IS_WINDOWS)
+    list(
+        APPEND ALL_FILES
+        ${Resource_Files}
+    )
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
 #set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_PTX_COMPILATION ON)
@@ -54,10 +61,10 @@ use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "../PerfectHash.cmake")
 set(ROOT_NAMESPACE PerfectHashCuda)
 
 ################################################################################
-# Target name
+# Output shared library name
 ################################################################################
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    TARGET_NAME "PerfectHashCuda"
+    OUTPUT_NAME "PerfectHashCuda"
 )
 ################################################################################
 # Compile definitions
@@ -73,7 +80,7 @@ target_compile_definitions(
 ################################################################################
 # Compile and link options
 ################################################################################
-#if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
+if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
     target_compile_options(
         ${PROJECT_NAME}
         PRIVATE
@@ -95,16 +102,15 @@ target_compile_definitions(
     target_compile_definitions_config(Debug _DEBUG)
     target_compile_definitions_not_config(Debug NDEBUG)
 
-    if (IS_WINDOWS)
-        target_link_options(
-            ${PROJECT_NAME}
-            PRIVATE
-            -Xlinker "/FdPerfectHashCuda.pdb"
-        )
+    #if (IS_WINDOWS)
+    #    target_link_options(
+    #        ${PROJECT_NAME}
+    #        PRIVATE
+    #        -Xlinker "/FdPerfectHashCuda.pdb"
+    #    )
+    #endif()
 
-    endif()
-
-#endif()
+endif()
 
 
 ################################################################################

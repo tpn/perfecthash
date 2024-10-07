@@ -128,6 +128,7 @@ source_group("Public Header Files" FILES ${Public_Header_Files})
 
 set(Resource_Files
     "PerfectHash.def"
+    "PerfectHash.rc"
     "PerfectHashEvents.man"
 )
 source_group("Resource Files" FILES ${Resource_Files})
