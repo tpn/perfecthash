@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -13,7 +13,6 @@ Abstract:
 
 --*/
 
-#include "PerfectHashCudaErrors.rc"
 #include "../PerfectHashVersion.rc"
 
 #define VER_FILEDESCRIPTION_STR "PerfectHashCuda Library"
