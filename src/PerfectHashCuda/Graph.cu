@@ -808,7 +808,7 @@ GraphCuRemoveVertex(
     Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
     OrderType *Order = (decltype(Order))Graph->Order;
     OrderType *OrderAddress;
-    OrderIndexType OrderIndex;
+    //OrderIndexType OrderIndex;
     OrderIndexType *GraphOrderIndex =
         (decltype(GraphOrderIndex))&Graph->OrderIndex;
 
@@ -846,6 +846,8 @@ GraphCuRemoveVertex(
 
     if (Removed1 || Removed2) {
         AtomicAggIncCGV(&Graph->DeletedEdgeCount);
+        AtomicAggSubCGV(GraphOrderIndex);
+#if 0
         OrderIndex = AtomicAggSubCG(GraphOrderIndex);
         OrderAddress = &Order[OrderIndex];
 
@@ -856,6 +858,7 @@ GraphCuRemoveVertex(
             ASSERT(Order[OrderIndex] == Edge);
             ASSERT(*OrderAddress == Edge);
         }
+#endif
     }
 
 End:
