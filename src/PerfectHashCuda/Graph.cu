@@ -517,13 +517,9 @@ GraphCuAddKeys(
     CUstream_st* Stream;
     PPH_CU_SOLVE_CONTEXT SolveContext;
     ULONG SharedMemory = SharedMemoryInBytes;
-    union {
-        struct {
-            ULONG CuVertexCollisionFailures;
-            ULONG CuWarpVertexCollisionFailures;
-        };
-        ULARGE_INTEGER CuHashKeysCollisionFailures;
-    };
+    ULONG CuVertexCollisionFailures;
+    ULONG CuWarpVertexCollisionFailures;
+    ULARGE_INTEGER CuHashKeysCollisionFailures;
 
     //
     // Verify the requested hash function is supported on GPU.
@@ -598,6 +594,9 @@ GraphCuAddKeys(
     );
 
     CUDA_CALL(cudaStreamSynchronize(Stream));
+
+    CuVertexCollisionFailures = CuHashKeysCollisionFailures.LowPart;
+    CuWarpVertexCollisionFailures = CuHashKeysCollisionFailures.HighPart;
 
     if (CuWarpVertexCollisionFailures > 0) {
         Result = PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE;
