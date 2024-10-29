@@ -10,7 +10,10 @@ Abstract:
 
     This is the header file for the Chm01.c module, which is our first pass
     at the CHM perfect hash table algorithm.  It defines types related to the
-    implementation of the CHM algorithm.
+    implementation of the CHM algorithm.  Chm02.c is based on Chm01.c, and is
+    used to explore the viability of CUDA support.  Thus, some symbols in this
+    file have 02 appended to them if they're specific to the Chm02.c module
+    (instead of the 01 suffix for Chm01.c functionality).
 
 --*/
 
@@ -20,11 +23,10 @@ Abstract:
 // Declare the main work and file work callback functions.
 //
 
-#ifndef __INTELLISENSE__
 extern PERFECT_HASH_MAIN_WORK_CALLBACK ProcessGraphCallbackChm01;
+extern PERFECT_HASH_MAIN_WORK_CALLBACK ProcessGraphCallbackChm02;
 extern PERFECT_HASH_CONSOLE_WORK_CALLBACK ProcessConsoleCallbackChm01;
 extern PERFECT_HASH_FILE_WORK_CALLBACK FileWorkCallbackChm01;
-#endif
 
 typedef
 _Must_inspect_result_
@@ -63,10 +65,38 @@ HRESULT
     );
 typedef CLOSE_FILE *PCLOSE_FILE;
 
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PREPARE_GRAPH_INFO)(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _When_(PrevInfo == NULL, _Out_)
+    _When_(PrevInfo != NULL, _Inout_)
+        PGRAPH_INFO Info,
+    _Out_opt_ PGRAPH_INFO PrevInfo
+    );
+typedef PREPARE_GRAPH_INFO *PPREPARE_GRAPH_INFO;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PREPARE_TABLE_OUTPUT_DIRECTORY)(
+    _In_ PPERFECT_HASH_TABLE Table
+    );
+typedef PREPARE_TABLE_OUTPUT_DIRECTORY *PPREPARE_TABLE_OUTPUT_DIRECTORY;
+
 extern PREPARE_FILE PrepareFileChm01;
 extern UNMAP_FILE UnmapFileChm01;
 extern CLOSE_FILE CloseFileChm01;
 
+extern PREPARE_TABLE_OUTPUT_DIRECTORY PrepareTableOutputDirectory;
+
+extern PREPARE_GRAPH_INFO PrepareGraphInfoChm01;
+extern PREPARE_GRAPH_INFO PrepareGraphInfoChm02;
+
+//
 //
 // Internal methods private to Chm01.c and Chm01Compat.c.
 //

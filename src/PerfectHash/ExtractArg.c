@@ -71,13 +71,11 @@ TryExtractArgContextBulkCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
-    DECL_ARG(TryCuda);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
-    SET_FLAG_AND_RETURN_IF_EQUAL(TryCuda);
 
     return S_FALSE;
 }
@@ -97,13 +95,11 @@ TryExtractArgContextTableCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
-    DECL_ARG(TryCuda);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
-    SET_FLAG_AND_RETURN_IF_EQUAL(TryCuda);
 
     return S_FALSE;
 }
@@ -190,6 +186,11 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(DisableSavingCallbackTableValues);
     DECL_ARG(Quiet);
     DECL_ARG(DoNotTryUseHash16Impl);
+    DECL_ARG(AlwaysRespectCuKernelRuntimeLimit);
+    DECL_ARG(WaitForGdb);
+    DECL_ARG(WaitForCudaGdb);
+    DECL_ARG(UseGdbForHostDebugging);
+    DECL_ARG(CompareGpuAndCpuGraphs);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -242,6 +243,11 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableSavingCallbackTableValues);
     SET_FLAG_AND_RETURN_IF_EQUAL(Quiet);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseHash16Impl);
+    SET_FLAG_AND_RETURN_IF_EQUAL(AlwaysRespectCuKernelRuntimeLimit);
+    SET_FLAG_AND_RETURN_IF_EQUAL(WaitForGdb);
+    SET_FLAG_AND_RETURN_IF_EQUAL(WaitForCudaGdb);
+    SET_FLAG_AND_RETURN_IF_EQUAL(UseGdbForHostDebugging);
+    SET_FLAG_AND_RETURN_IF_EQUAL(CompareGpuAndCpuGraphs);
 
     //
     // Handle inverting default flags.  --DoNotHashAllKeysFirst needs
@@ -364,6 +370,7 @@ TryExtractValueArray(
         if (*Wide == L',') {
             Commas++;
         }
+
     }
 
     if (Commas == 0) {
@@ -979,6 +986,11 @@ Return Value:
         ValueIsInt64 = TRUE;
     }
 
+    Result = Rtl->RtlUnicodeStringToInt64(ValueString, 10, &Value64, NULL);
+    if (SUCCEEDED(Result)) {
+        ValueIsInt64 = TRUE;
+    }
+
 #define SET_PARAM_ID(Name)                         \
     LocalParam.Id = TableCreateParameter##Name##Id
 
@@ -1071,13 +1083,6 @@ Return Value:
         KEYS_SUBSET
     );
 
-    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV_OF_ASCENDING_INTEGERS(
-        CuDeviceOrdinals,
-        CU_DEVICE_ORDINALS
-    );
-
-    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuDeviceOrdinal);
-
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(Name, Upper) \
     if (IS_EQUAL(Name)) {                                \
         Result = TryExtractValueArray(Rtl,               \
@@ -1160,6 +1165,64 @@ Return Value:
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(RngSubsequence);
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(RngOffset);
+
+    //
+    // CUDA-related arguments.
+    //
+
+    if (IS_EQUAL(CuRng)) {
+        Result = PerfectHashLookupIdForName(Rtl,
+                                            PerfectHashCuRngEnumId,
+                                            ValueString,
+                                            (PULONG)&LocalParam.AsCuRngId);
+        if (SUCCEEDED(Result)) {
+            SET_PARAM_ID(CuRng);
+            goto AddParam;
+        } else {
+            Result = PH_E_INVALID_CU_RNG_NAME;
+            goto Error;
+        }
+    }
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(CuRngSeed);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(CuRngSubsequence);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INT64(CuRngOffset);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuConcurrency);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(CuDevices, CU_DEVICES);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(CuDevicesBlocksPerGrid,
+                                        CU_DEVICES_BLOCKS_PER_GRID);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(CuDevicesThreadsPerBlock,
+                                        CU_DEVICES_THREADS_PER_BLOCK);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_CSV(
+        CuDevicesKernelRuntimeTargetInMilliseconds,
+        CU_DEVICES_KERNEL_RUNTIME_TARGET_IN_MILLISECONDS
+    );
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(CuNumberOfRandomHostSeeds);
+
+    if (IS_EQUAL(CuPtxPath)) {
+        SET_PARAM_ID(CuPtxPath);
+        LocalParam.AsUnicodeString.Length = ValueString->Length;
+        LocalParam.AsUnicodeString.MaximumLength = ValueString->MaximumLength;
+        LocalParam.AsUnicodeString.Buffer = ValueString->Buffer;
+        goto AddParam;
+    }
+
+    if (IS_EQUAL(CuCudaDevRuntimeLibPath)) {
+        SET_PARAM_ID(CuCudaDevRuntimeLibPath);
+        LocalParam.AsUnicodeString.Length = ValueString->Length;
+        LocalParam.AsUnicodeString.MaximumLength = ValueString->MaximumLength;
+        LocalParam.AsUnicodeString.Buffer = ValueString->Buffer;
+        goto AddParam;
+    }
+
 
 #define ADD_PARAM_IF_EQUAL_AND_VALUE_IS_TP_PRIORITY(Name, Upper)           \
     if (IS_EQUAL(Name##ThreadpoolPriority)) {                              \
@@ -1384,7 +1447,6 @@ End:
 
     return Result;
 }
-
 
 CLEANUP_TABLE_CREATE_PARAMETERS CleanupTableCreateParameters;
 

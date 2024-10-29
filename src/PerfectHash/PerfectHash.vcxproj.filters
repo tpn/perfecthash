@@ -106,9 +106,6 @@
     <ClCompile Include="PerfectHashTableNames.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PerfectHashContextSelfTest.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Graph.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -134,6 +131,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Chm01Shared.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm02Shared.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Chm01FileWorkCHeaderFile.c">
@@ -298,7 +298,13 @@
     <ClCompile Include="_pow.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm02.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Rng.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GraphCu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RngPhilox4x32.c">
@@ -323,6 +329,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableHash16Ex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCMakeListsTextFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCudaSourceFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkGraphVertexPairsFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkGraphVertices3File.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -627,6 +645,12 @@
     <ClInclude Include="GraphImpl3.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Debugger.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Chm02Private.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="CompiledPerfectHashTableChm01IndexMultiply643ShiftRAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
@@ -636,6 +660,12 @@
     <ClInclude Include="TableCreateBestCsv.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Graph_Ptx_RawCString.h">
+      <Filter>Private Header Files %28Auto-Generated%29</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphImpl1.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="PerfectHash.def">
@@ -643,6 +673,9 @@
     </None>
     <None Include="PerfectHashEvents.man">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="GraphThrust.cu">
+      <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
   <ItemGroup Condition="'$(Platform)' == 'x64'">

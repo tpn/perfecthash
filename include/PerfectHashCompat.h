@@ -22,6 +22,7 @@ extern "C" {
 // Standard UNIX-ey headers.
 //
 
+#ifndef PH_WINDOWS
 #include <wchar.h>
 #include <errno.h>
 #include <stdint.h>
@@ -31,10 +32,17 @@ extern "C" {
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
-#include <pthread.h>
 
+#ifndef PH_CUDA
+#include <pthread.h>
 #include <cpuid.h>
 #include <x86intrin.h>
+
+#define _Ret_reallocated_bytes_(Address, Size)
+#define _Frees_ptr_opt_
+
+#endif // PH_CUDA
+#endif // PH_WINDOWS
 
 #ifdef PH_LINUX
 #include <linux/mman.h>
@@ -43,6 +51,7 @@ extern "C" {
 // No idea why these two defines aren't always available when including
 // <linux/mman.h>.
 //
+
 #ifndef MAP_HUGE_2MB
 #define HUGETLB_FLAG_ENCODE_SHIFT 26
 #define HUGETLB_FLAG_ENCODE_2MB (21 << HUGETLB_FLAG_ENCODE_SHIFT)
@@ -59,8 +68,8 @@ extern "C" {
 
 #include <no_sal2.h>
 
-#define _Ret_reallocated_bytes_(Address, Size)
-#define _Frees_ptr_opt_
+#define IN
+#define OUT
 
 //
 // Define NT-style typedefs.
@@ -210,18 +219,30 @@ SystemTimeToFileTime(
     );
 
 
+#ifndef PH_WINDOWS
 #define __cdecl
 #define __stdcall
+#ifndef __callback
 #define __callback
+#endif
 #define NTAPI
 #define WINAPI
 #define APIENTRY
 #define CALLBACK
 #define WINBASEAPI
 #define STDAPICALLTYPE
+#endif // PH_WINDOWS
 
+
+#ifndef FORCEINLINE
+#ifndef PH_WINDOWS
 #define FORCEINLINE static inline __attribute__((always_inline))
+#else
+#define FORCEINLINE __forceinline
+#endif
+#endif
 
+#ifndef PH_CUDA
 #if defined(__GNUC__)
 #if (__GNUC__ < 11)
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
@@ -231,11 +252,17 @@ SystemTimeToFileTime(
 #else
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
 #endif
+#endif
+
+#ifndef C_ASSERT
+#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
+#endif
 
 typedef _Return_type_success_(return >= 0) LONG HRESULT;
 typedef HRESULT *PHRESULT;
 #define _HRESULT_TYPEDEF_(_sc) ((HRESULT)_sc)
 
+#if !defined(PH_WINDOWS)
 #define S_OK            ((HRESULT)0L)
 #define S_FALSE         ((HRESULT)1L)
 #define E_POINTER       _HRESULT_TYPEDEF_(0x80004003L)
@@ -287,6 +314,7 @@ typedef GUID IID;
 
 #define RTL_NUMBER_OF_V1(A) (sizeof(A)/sizeof((A)[0]))
 #define ARRAYSIZE(A) RTL_NUMBER_OF_V1(A)
+#endif // PH_WINDOWS
 
 typedef union _LARGE_INTEGER {
     struct {
@@ -397,6 +425,7 @@ typedef RTL_CRITICAL_SECTION CRITICAL_SECTION;
 
 typedef CRITICAL_SECTION *PCRITICAL_SECTION, *LPCRITICAL_SECTION;
 
+#ifndef PH_WINDOWS
 WINBASEAPI
 VOID
 WINAPI
@@ -659,8 +688,6 @@ TpDestroyCallbackEnviron(
     // need to be taken to tear down an initialized structure.  This
     // may change in a future release.
     //
-
-    UNREFERENCED_PARAMETER(CallbackEnviron);
 }
 
 
@@ -1165,12 +1192,18 @@ typedef struct _RTL_BARRIER {
 // to support all of the Windows InitOnce* semantics.
 //
 
+#ifndef PH_WINDOWS
 typedef struct _PH_INIT_ONCE_COMPAT {
     pthread_once_t Once;
     PVOID Context;
 } PH_INIT_ONCE_COMPAT;
 typedef PH_INIT_ONCE_COMPAT INIT_ONCE;
 typedef INIT_ONCE *PINIT_ONCE, *LPINIT_ONCE;
+#else
+typedef RTL_RUN_ONCE INIT_ONCE;
+typedef PRTL_RUN_ONCE PINIT_ONCE;
+typedef PRTL_RUN_ONCE LPINIT_ONCE;
+#endif
 
 typedef
 BOOL
@@ -1216,15 +1249,21 @@ InitOnceComplete(
     _In_opt_ LPVOID lpContext
     );
 
+#ifndef PH_CUDA
 #include "debugbreak.h"
 #define __debugbreak psnip_trap
+#else
+#define __debugbreak()
+#endif
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(PH_CUDA)
 #define _M_X64
 #define _M_AMD64
 #define _AMD64_
 #define _WIN64
+#ifndef PH_CUDA
 #include <immintrin.h>
+
 
 #define _mm256_loadu_epi32 _mm256_loadu_si256
 #define _mm512_loadu_epi32 _mm512_loadu_si512
@@ -1245,6 +1284,7 @@ InitOnceComplete(
                      s11, s10, s9,  s8,       \
                      s7,  s6,  s5,  s4,       \
                      s3,  s2,  s1,  s0)
+#endif
 #endif
 
 #ifdef __has_builtin
@@ -1322,7 +1362,13 @@ InitOnceComplete(
 
 #define EXCEPTION_MAXIMUM_PARAMETERS 15 // maximum number of exception parameters
 
+#ifndef PH_WINDOWS
 #define DECLSPEC_ALIGN(x) __attribute__ ((aligned(x)))
+#else
+#ifndef DECLSPEC_ALIGN
+#define DECLSPEC_ALIGN(x) __declspec(align(x))
+#endif
+#endif
 
 #define DECLSPEC_NORETURN
 
@@ -1633,8 +1679,14 @@ InterlockedCompareExchangePointer(
     );
 
 
+#ifndef PH_CUDA
+#ifndef __popcnt
 #define __popcnt __builtin_popcount
+#endif
+#ifndef __popcnt64
 #define __popcnt64 __builtin_popcountll
+#endif
+#endif
 #ifdef PH_COMPILER_GCC
 #define _tzcnt_u32 __builtin_ctz
 #define _tzcnt_u64 __builtin_ctzll
@@ -1642,6 +1694,7 @@ InterlockedCompareExchangePointer(
 #define _lzcnt_u64 __builtin_clzll
 #endif
 
+#if (!defined PH_WINDOWS && !defined PH_CUDA)
 #define InterlockedIncrement(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrement64(v) __sync_add_and_fetch(v, 1)
 #define InterlockedIncrementULongPtr(v) __sync_add_and_fetch(v, 1)
@@ -1656,6 +1709,9 @@ InterlockedCompareExchangePointer(
 
 #define InterlockedCompareExchangePointer(d, e, c) \
     __sync_val_compare_and_swap(d, c, e)
+#endif
+
+#ifndef PH_CUDA
 
 #ifndef min
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -1663,6 +1719,8 @@ InterlockedCompareExchangePointer(
 
 #ifndef max
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
+#endif
+
 #endif
 
 #define HEAP_NO_SERIALIZE               0x00000001
@@ -1780,7 +1838,11 @@ WaitForMultipleObjects(
 
 #define SRWLOCK_INIT RTL_SRWLOCK_INIT
 
+#ifndef PH_WINDOWS
 typedef pthread_rwlock_t SRWLOCK, *PSRWLOCK;
+#else
+typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
+#endif
 
 WINBASEAPI
 VOID
@@ -2545,7 +2607,9 @@ SetConsoleCtrlHandler(
     );
 
 
+#ifndef PH_CUDA
 #define MemoryBarrier()
+#endif
 
 #ifndef TLS_OUT_OF_INDEXES
 #define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
@@ -3033,6 +3097,7 @@ CommandLineArgvAToArgvW(
     _In_reads_(NumberOfArguments) PSTR *ArgvA
     );
 
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

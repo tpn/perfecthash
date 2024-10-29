@@ -717,8 +717,8 @@ Return Value:
 #else
 #define CPUID(Func) \
     __cpuid(Func, CpuInfo.Eax, CpuInfo.Ebx, CpuInfo.Ecx, CpuInfo.Edx)
-#define CPUIDEX(Func, Sub)   \
-    __cpuid_count(Func, Sub, \
+#define CPUIDEX(Func, Sub)                                            \
+    __cpuid_count(Func, Sub,                                          \
                   CpuInfo.Eax, CpuInfo.Ebx, CpuInfo.Ecx, CpuInfo.Edx)
 #endif
 

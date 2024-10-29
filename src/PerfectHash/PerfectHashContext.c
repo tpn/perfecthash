@@ -21,6 +21,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "bsthreadpool.h"
 
 //
 // Forward definition of various callbacks we implement in this module.
@@ -488,6 +489,8 @@ Return Value:
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
 
+    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+
 #ifdef PH_WINDOWS
 
     //
@@ -503,7 +506,6 @@ Return Value:
         goto Error;
     }
 
-    ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
     if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
         SYS_ERROR(SetThreadpoolThreadMinimum);
         Result = PH_E_SYSTEM_CALL_FAILED;
@@ -717,6 +719,23 @@ Return Value:
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto Error;
     }
+#else // PH_COMPAT
+
+
+    Context->FileThreadpool = ThreadpoolInit(MaximumConcurrency);
+    if (!Context->FileThreadpool) {
+        SYS_ERROR(ThreadpoolInit_FileWork);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
+    Context->MainThreadpool = ThreadpoolInit(ThreadpoolConcurrency);
+    if (!Context->MainThreadpool) {
+        SYS_ERROR(ThreadpoolInit_Main);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+        goto Error;
+    }
+
 #endif
 
     //
@@ -906,12 +925,6 @@ Return Value:
     }
 
     //
-    // Free the array of PH_CU_DEVICE structs if applicable.
-    //
-
-    Allocator->Vtbl->FreePointer(Allocator, &Context->CuDevices.Devices);
-
-    //
     // Close the low-memory resource notification handle.
     //
 
@@ -923,6 +936,13 @@ Return Value:
     }
 #endif
 
+    DestroyCuRuntimeContext(&Context->CuRuntimeContext);
+
+    //
+    // Free the solving contexts.
+    //
+
+    Allocator->Vtbl->FreePointer(Allocator, &Context->CuSolveContexts);
 
     //
     // Loop through all the events associated with the context and check if
@@ -995,6 +1015,18 @@ Return Value:
     if (Context->ErrorThreadpool) {
         CloseThreadpool(Context->ErrorThreadpool);
         Context->ErrorThreadpool = NULL;
+    }
+
+#else // PH_COMPAT
+
+    if (Context->MainThreadpool) {
+        ThreadpoolDestroy(Context->MainThreadpool);
+        Context->MainThreadpool = NULL;
+    }
+
+    if (Context->FileThreadpool) {
+        ThreadpoolDestroy(Context->FileThreadpool);
+        Context->FileThreadpool = NULL;
     }
 
 #endif
@@ -2146,168 +2178,6 @@ Return Value:
     return Result;
 }
 
-#ifdef PH_WINDOWS
-PERFECT_HASH_CONTEXT_INITIALIZE_CUDA PerfectHashContextInitializeCuda;
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashContextInitializeCuda(
-    PPERFECT_HASH_CONTEXT Context,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    )
-/*++
-
-Routine Description:
-
-    Attempts to initialize CUDA for the given context.
-
-Arguments:
-
-    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT instance for which9
-        the routine will try and initialize CUDA.  If successful, the Context's
-        Cu member will be non-NULL and point to an initialized CUDA instance.
-
-    TableCreateParameters - Optionally supplies a pointer to the table create
-        parameters, if applicable.
-
-Return Value:
-
-    None.
-
---*/
-{
-    PCU Cu;
-    ULONG Index;
-    ULONG Count;
-    LONG Ordinal;
-    CU_DEVICE Device;
-    HRESULT Result;
-    CU_RESULT CuResult;
-    PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
-    PVALUE_ARRAY Ordinals;
-
-    //
-    // Try create a CU instance.
-    //
-
-    Result = Context->Vtbl->CreateInstance(Context,
-                                           NULL,
-                                           &IID_PERFECT_HASH_CU,
-                                           &Context->Cu);
-
-    if (FAILED(Result)) {
-        goto Error;
-    }
-
-    //
-    // The CU component is a global component, which means it can't create
-    // instances of other global components like Rtl and Allocator during its
-    // initialization function.  So, we manually set them now.
-    //
-
-    Cu = Context->Cu;
-
-    Cu->Rtl = Context->Rtl;
-    Cu->Rtl->Vtbl->AddRef(Cu->Rtl);
-
-    Cu->Allocator = Context->Allocator;
-    Cu->Allocator->Vtbl->AddRef(Cu->Allocator);
-
-    Result = CreatePerfectHashCuDevices(Cu,
-                                        Cu->Allocator,
-                                        &Context->CuDevices);
-    if (FAILED(Result)) {
-        PH_ERROR(CreatePerfectHashCuDevices, Result);
-        goto Error;
-    }
-
-    Count = TableCreateParameters->NumberOfElements;
-    Param = TableCreateParameters->Params;
-
-    //
-    // Disable "enum not handled in switch statement" warning.
-    //
-    //      warning C4061: enumerator 'TableCreateParameterNullId' in switch
-    //                     of enum 'PERFECT_HASH_TABLE_CREATE_PARAMETER_ID'
-    //                     is not explicitly handled by a case label
-    //
-
-#pragma warning(push)
-#pragma warning(disable: 4061)
-
-    for (Index = 0; Index < Count; Index++, Param++) {
-
-        switch (Param->Id) {
-            case TableCreateParameterCuDeviceOrdinalId:
-                Context->CuDeviceOrdinal = Param->AsLong;
-                break;
-            case TableCreateParameterCuDeviceOrdinalsId:
-                Context->CuDeviceOrdinals = &Param->AsValueArray;
-                break;
-            default:
-                break;
-        }
-    }
-
-#pragma warning(pop)
-
-    //
-    // Validate any ordinals provided.
-    //
-
-    if (Context->CuDeviceOrdinals) {
-        Ordinals = Context->CuDeviceOrdinals;
-        for (Index = 0; Index < Ordinals->NumberOfValues; Index++) {
-            Ordinal = (LONG)Ordinals->Values[Index];
-            CuResult = Cu->DeviceGet(&Device, Ordinal);
-            if (CU_FAILED(CuResult)) {
-                CU_ERROR(CuDeviceGet, CuResult);
-                Result = PH_E_INVALID_CU_DEVICE_ORDINALS;
-                goto Error;
-            }
-        }
-    }
-
-    if (Context->CuDeviceOrdinal) {
-        CuResult = Cu->DeviceGet(&Device, Context->CuDeviceOrdinal);
-        if (CU_FAILED(CuResult)) {
-            CU_ERROR(CuDeviceGet, CuResult);
-            Result = PH_E_INVALID_CU_DEVICE_ORDINALS;
-            goto Error;
-        }
-
-        //
-        // Invariant check: ordinal should be within count.
-        //
-
-        if (Context->CuDeviceOrdinal >= Context->CuDevices.NumberOfDevices) {
-            PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
-        }
-    }
-
-    //
-    // We're done, finish up.
-    //
-
-    Result = S_OK;
-    goto End;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    //
-    // Intentional follow-on to End.
-    //
-
-End:
-
-    return Result;
-}
-#endif // PH_WINDOWS
-
 PERFECT_HASH_CONTEXT_INITIALIZE_RNG PerfectHashContextInitializeRng;
 
 _Use_decl_annotations_
@@ -3112,6 +2982,7 @@ End:
 }
 
 #endif // PH_WINDOWS
+
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

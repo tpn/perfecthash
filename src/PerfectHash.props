@@ -9,6 +9,7 @@
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v143</PlatformToolset>
     <DefaultPlatformToolset>v143</DefaultPlatformToolset>
+    <AdditionalCudaDependencies>cudart_static.lib</AdditionalCudaDependencies>
   </PropertyGroup>
 
   <!--
@@ -24,6 +25,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
+      <DisableSpecificWarnings>6396</DisableSpecificWarnings>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -51,7 +53,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <WholeProgramOptimization>true</WholeProgramOptimization>
       <CallingConvention>StdCall</CallingConvention>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\include;$(SolutionDir);$(VC_IncludePath)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\include;$(SolutionDir);$(VC_IncludePath);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
       <SubSystem>Console</SubSystem>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -61,6 +63,10 @@
       <BrowseInformationFile>$(IntDir)$(ProjectName).bsc</BrowseInformationFile>
       -->
     </ClCompile>
+
+    <CudaCompile>
+        <TargetMachinePlatform>64</TargetMachinePlatform>
+    </CudaCompile>
 
     <!--
     <ClCompile Condition="$(Platform) == 'x64'">

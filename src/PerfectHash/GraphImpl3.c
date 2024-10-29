@@ -768,12 +768,82 @@ GraphRemoveVertex16(
     Graph->Order16[OrderIndex] = (SHORT)Edge;
 }
 
+HRESULT
+SaveGraphVertices3FileChm01(
+    PPERFECT_HASH_CONTEXT Context,
+    PFILE_WORK_ITEM Item
+    );
+
+VOID
+GraphIsAcyclic3Phase1(
+    _In_ PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine determines whether or not the graph is acyclic.  An acyclic
+    graph is one where, after deletion of all edges in the graph with vertices
+    of degree 1, no edges remain.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph to operate on.
+
+Return Value:
+
+    TRUE if the graph is acyclic, FALSE if it's cyclic.
+
+--*/
+{
+    VERTEX Vertex;
+    ULONG NumberOfVertices;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    //
+    // Resolve aliases.
+    //
+
+    NumberOfVertices = Graph->NumberOfVertices;
+
+    //
+    // Invariant check: we should not be shrinking prior to this point, our
+    // deleted edge count should be 0, and our order index should match the
+    // number of keys.
+    //
+
+    ASSERT(Graph->Flags.Shrinking == FALSE);
+    ASSERT(Graph->DeletedEdgeCount == 0);
+    ASSERT(Graph->OrderIndex == (LONG)Graph->NumberOfKeys);
+
+    //
+    // Toggle the shrinking bit to indicate we've started edge deletion.
+    //
+
+    Graph->Flags.Shrinking = TRUE;
+
+    //
+    // Enumerate through all vertices in the graph and attempt to delete those
+    // connected by edges that have degree 1.
+    //
+
+    START_GRAPH_COUNTER();
+
+    for (Vertex = 0; Vertex < NumberOfVertices; Vertex++) {
+        GraphRemoveVertex3(Graph, Vertex);
+    }
+
+    STOP_GRAPH_COUNTER(IsAcyclicPhase1);
+
+    return;
+}
+
 GRAPH_IS_ACYCLIC GraphIsAcyclic3;
 
-_Use_decl_annotations_
 HRESULT
-GraphIsAcyclic3(
-    PGRAPH Graph
+GraphIsAcyclic3Phase2(
+    _In_ PGRAPH Graph
     )
 /*++
 
@@ -795,7 +865,6 @@ Return Value:
 {
     LONG Index;
     ULONG EdgeIndex;
-    VERTEX Vertex;
     PEDGE3 OtherEdge;
     BOOLEAN IsAcyclic;
     ULONG NumberOfKeys;
@@ -813,32 +882,7 @@ Return Value:
     NumberOfEdges = Graph->NumberOfEdges;
     NumberOfVertices = Graph->NumberOfVertices;
 
-    //
-    // Invariant check: we should not be shrinking prior to this point, and our
-    // deleted edge count should be 0.
-    //
-
-    ASSERT(!Graph->Flags.Shrinking);
-    ASSERT(Graph->DeletedEdgeCount == 0);
-
-    Graph->OrderIndex = (LONG)NumberOfKeys;
-
-    //
-    // Toggle the shrinking bit to indicate we've started edge deletion.
-    //
-
-    Graph->Flags.Shrinking = TRUE;
-
-    //
-    // Enumerate through all vertices in the graph and attempt to delete those
-    // connected by edges that have degree 1.
-    //
-
     START_GRAPH_COUNTER();
-
-    for (Vertex = 0; Vertex < NumberOfVertices; Vertex++) {
-        GraphRemoveVertex3(Graph, Vertex);
-    }
 
     for (Index = (LONG)NumberOfKeys;
          Graph->OrderIndex > 0 && Index > Graph->OrderIndex;
@@ -907,18 +951,121 @@ Return Value:
         }
     }
 
-    STOP_GRAPH_COUNTER(IsAcyclic);
+    STOP_GRAPH_COUNTER(IsAcyclicPhase2);
 
     EVENT_WRITE_GRAPH_IS_ACYCLIC();
 
     return (IsAcyclic ? S_OK : PH_E_GRAPH_CYCLIC_FAILURE);
 }
 
-GRAPH_IS_ACYCLIC GraphIsAcyclic16;
-
 _Use_decl_annotations_
 HRESULT
-GraphIsAcyclic16(
+GraphIsAcyclic3(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine determines whether or not the graph is acyclic.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph to operate on.
+
+Return Value:
+
+    TRUE if the graph is acyclic, FALSE if it's cyclic.
+
+--*/
+{
+    HRESULT Result;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    START_GRAPH_COUNTER();
+
+    GraphIsAcyclic3Phase1(Graph);
+
+    Result = GraphIsAcyclic3Phase2(Graph);
+
+    STOP_GRAPH_COUNTER(IsAcyclic);
+
+    return Result;
+}
+
+//
+// 16-bit VERTEX versions.
+//
+
+VOID
+GraphIsAcyclic16Phase1(
+    _In_ PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine determines whether or not the graph is acyclic.  An acyclic
+    graph is one where, after deletion of all edges in the graph with vertices
+    of degree 1, no edges remain.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph to operate on.
+
+Return Value:
+
+    TRUE if the graph is acyclic, FALSE if it's cyclic.
+
+--*/
+{
+    VERTEX Vertex;
+    ULONG NumberOfVertices;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    //
+    // Resolve aliases.
+    //
+
+    NumberOfVertices = Graph->NumberOfVertices;
+
+    //
+    // Invariant check: we should not be shrinking prior to this point, our
+    // deleted edge count should be 0, and our order index should match the
+    // number of keys.
+    //
+
+    ASSERT(Graph->Flags.Shrinking == FALSE);
+    ASSERT(Graph->DeletedEdgeCount == 0);
+    ASSERT(Graph->OrderIndex == (SHORT)Graph->NumberOfKeys);
+
+    //
+    // Toggle the shrinking bit to indicate we've started edge deletion.
+    //
+
+    Graph->Flags.Shrinking = TRUE;
+
+    //
+    // Enumerate through all vertices in the graph and attempt to delete those
+    // connected by edges that have degree 1.
+    //
+
+    START_GRAPH_COUNTER();
+
+    for (Vertex = 0; Vertex < NumberOfVertices; Vertex++) {
+        GraphRemoveVertex16(Graph, Vertex);
+    }
+
+    STOP_GRAPH_COUNTER(IsAcyclicPhase1);
+
+    return;
+}
+
+_Must_inspect_result_
+HRESULT
+GraphIsAcyclic16Phase2(
     PGRAPH Graph
     )
 /*++
@@ -941,7 +1088,6 @@ Return Value:
 {
     SHORT Index;
     USHORT EdgeIndex;
-    VERTEX Vertex;
     PEDGE163 OtherEdge;
     BOOLEAN IsAcyclic;
     ULONG NumberOfKeys;
@@ -959,32 +1105,7 @@ Return Value:
     NumberOfEdges = Graph->NumberOfEdges;
     NumberOfVertices = Graph->NumberOfVertices;
 
-    //
-    // Invariant check: we should not be shrinking prior to this point, and our
-    // deleted edge count should be 0.
-    //
-
-    ASSERT(!Graph->Flags.Shrinking);
-    ASSERT(Graph->DeletedEdgeCount == 0);
-
-    Graph->Order16Index = (SHORT)NumberOfKeys;
-
-    //
-    // Toggle the shrinking bit to indicate we've started edge deletion.
-    //
-
-    Graph->Flags.Shrinking = TRUE;
-
-    //
-    // Enumerate through all vertices in the graph and attempt to delete those
-    // connected by edges that have degree 1.
-    //
-
     START_GRAPH_COUNTER();
-
-    for (Vertex = 0; Vertex < NumberOfVertices; Vertex++) {
-        GraphRemoveVertex16(Graph, Vertex);
-    }
 
     for (Index = (SHORT)NumberOfKeys;
          Graph->Order16Index > 0 && Index > Graph->Order16Index;
@@ -1053,11 +1174,51 @@ Return Value:
         }
     }
 
-    STOP_GRAPH_COUNTER(IsAcyclic);
+    STOP_GRAPH_COUNTER(IsAcyclicPhase2);
 
     EVENT_WRITE_GRAPH_IS_ACYCLIC();
 
     return (IsAcyclic ? S_OK : PH_E_GRAPH_CYCLIC_FAILURE);
+}
+
+GRAPH_IS_ACYCLIC GraphIsAcyclic16;
+
+_Use_decl_annotations_
+HRESULT
+GraphIsAcyclic16(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    This routine determines whether or not the graph is acyclic.  An acyclic
+    graph is one where, after deletion of all edges in the graph with vertices
+    of degree 1, no edges remain.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph to operate on.
+
+Return Value:
+
+    TRUE if the graph is acyclic, FALSE if it's cyclic.
+
+--*/
+{
+    HRESULT Result;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    START_GRAPH_COUNTER();
+
+    GraphIsAcyclic16Phase1(Graph);
+
+    Result = GraphIsAcyclic16Phase2(Graph);
+
+    STOP_GRAPH_COUNTER(IsAcyclic);
+
+    return Result;
 }
 
 GRAPH_ASSIGN GraphAssign3;
@@ -1134,7 +1295,6 @@ Return Value:
         if (!IsVisitedVertex3(Graph, Edge3->Vertex1)) {
             Vertex1 = Edge3->Vertex1;
             Vertex2 = Edge3->Vertex2;
-            ASSERT(Graph->Assigned[Vertex1] == INITIAL_ASSIGNMENT_VALUE);
         } else {
             Vertex1 = Edge3->Vertex2;
             Vertex2 = Edge3->Vertex1;
@@ -1194,7 +1354,6 @@ Return Value:
     PEDGE163 Edge3;
     SHORT Order;
     USHORT Index;
-    USHORT IndexMask;
     VERTEX16 Vertex1;
     VERTEX16 Vertex2;
     USHORT Assigned;
@@ -1209,7 +1368,6 @@ Return Value:
     //
 
     Table = Graph->Context->Table;
-    IndexMask = (USHORT)Table->IndexMask;
     NumberOfKeys = (USHORT)Graph->NumberOfKeys;
     NumberOfEdges = (USHORT)Graph->NumberOfEdges;
 
@@ -1228,7 +1386,7 @@ Return Value:
 
     START_GRAPH_COUNTER();
 
-    for (Index = 0; Index < NumberOfKeys; Index++) {
+    for (Index = Graph->Order16Index; Index < NumberOfKeys; Index++) {
 
         //
         // Obtain the edge for the deletion order at this index.
@@ -1240,7 +1398,6 @@ Return Value:
         if (!IsVisitedVertex16(Graph, Edge3->Vertex1)) {
             Vertex1 = Edge3->Vertex1;
             Vertex2 = Edge3->Vertex2;
-            ASSERT(Graph->Assigned16[Vertex1] == INITIAL_ASSIGNMENT_VALUE);
         } else {
             Vertex1 = Edge3->Vertex2;
             Vertex2 = Edge3->Vertex1;

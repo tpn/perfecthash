@@ -256,6 +256,14 @@ CompletePerfectHashTableInitialization(
 
     Table->IndexImplString = NULL;
 
+    //
+    // Chm02 uses all of Chm01's resources, so switch the ID if applicable.
+    //
+
+    if (AlgorithmId == PerfectHashChm02AlgorithmId) {
+        AlgorithmId = PerfectHashChm01AlgorithmId;
+    }
+
     for (Index = 0; Index < NumberOfIndexImplStrings; Index++) {
 
         StringTuple = &IndexImplStringTuples[Index];
@@ -278,6 +286,7 @@ CompletePerfectHashTableInitialization(
 //
 
 extern const PCUNICODE_STRING RngNames[];
+extern const PCUNICODE_STRING CuRngNames[];
 extern const PCUNICODE_STRING CpuArchNames[];
 extern const PCUNICODE_STRING InterfaceNames[];
 extern const PCUNICODE_STRING AlgorithmNames[];

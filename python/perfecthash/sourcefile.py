@@ -307,17 +307,22 @@ class SourceFile(InvariantAwareObject):
     path = None
     _path = None
     class PathArg(PathInvariant):
-        pass
+        _mandatory = False
 
-    def __init__(self, path):
+    def __init__(self, path=None):
         InvariantAwareObject.__init__(self)
-        self.path = path
+        if not path:
+            self._data = sys.stdin.read()
+        else:
+            self.path = path
+            self._data = None
 
     @property
-    @memoize
     def data(self):
-        with open(self._path, 'r') as f:
-            return f.read()
+        if not self._data:
+            with open(self._path, 'r') as f:
+                self._data = f.read()
+        return self._data
 
     @property
     @memoize

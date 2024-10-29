@@ -26,11 +26,11 @@ Abstract:
 // File work callback array.
 //
 
-#define EXPAND_AS_CALLBACK(          \
-    Verb, VUpper, Name, Upper,       \
-    EofType, EofValue,               \
-    Suffix, Extension, Stream, Base  \
-)                                    \
+#define EXPAND_AS_CALLBACK(         \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
     Verb##Name##Chm01,
 
 FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
@@ -110,12 +110,7 @@ Routine Description:
 
 Arguments:
 
-    Instance - Supplies a pointer to the callback instance for this invocation.
-
-    Context - Supplies a pointer to the active context for the graph solving.
-
-    ListEntry - Supplies a pointer to the list entry that was removed from the
-        context's file work list head.
+    Item - Supplies a pointer to the file work item for this callback.
 
 Return Value:
 
@@ -365,14 +360,14 @@ Return Value:
                 break;
 
             case EofInitTypeNumberOfKeysMultiplier:
-                EndOfFile.QuadPart += (
+                EndOfFile.QuadPart = (
                     (LONGLONG)Keys->NumberOfKeys.QuadPart *
                     Eof->Multiplier
                 );
                 break;
 
             case EofInitTypeNumberOfTableElementsMultiplier:
-                EndOfFile.QuadPart += (
+                EndOfFile.QuadPart = (
                     NumberOfTableElements.QuadPart *
                     Eof->Multiplier
                 );

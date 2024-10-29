@@ -648,6 +648,7 @@ Return Value:
 
         if (FAILED(Result)) {
             PH_KEYS_ERROR(PerfectHashKeysLoad, Result);
+            PRINT_WSTR(KeysPathString.Buffer);
             Failures++;
             Terminate = TRUE;
             goto ReleaseKeys;

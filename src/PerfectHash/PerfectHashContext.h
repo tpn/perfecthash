@@ -17,6 +17,9 @@ Abstract:
 #pragma once
 
 #include "stdafx.h"
+#ifndef PH_WINDOWS
+#include "bsthreadpool.h"
+#endif
 
 //
 // Algorithms are required to register a callback routine with the perfect hash
@@ -208,6 +211,7 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define FirstSolvedGraphWins(Context) Context->State.FirstSolvedGraphWins
 #define FindBestMemoryCoverage(Context) \
     (((Context)->State.FindBestMemoryCoverage) != FALSE)
+#define FindBestGraph(Context) (FindBestMemoryCoverage(Context))
 #define BestMemoryCoverageForKeysSubset(Context) \
     ((Context)->State.BestMemoryCoverageForKeysSubset == TRUE)
 
@@ -414,7 +418,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 
     struct _PERFECT_HASH_TABLE *Table;
 
-#ifdef PH_WINDOWS
     //
     // Pointer to a CU instance, if applicable.
     //
@@ -422,23 +425,26 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     struct _CU *Cu;
 
     //
-    // CUDA devices.
+    // Pointer to a PH_CU_RUNTIME_CONTEXT instance, if applicable.
     //
 
-    PH_CU_DEVICES CuDevices;
+    struct _PH_CU_RUNTIME_CONTEXT *CuRuntimeContext;
 
     //
-    // Pointer to the array of CUDA device ordinals from the command line.
+    // Per-thread CUDA solving contexts.
     //
 
-    PVALUE_ARRAY CuDeviceOrdinals;
+    PPH_CU_SOLVE_CONTEXTS CuSolveContexts;
 
     //
-    // CUDA device ordinal from the command line.
+    // Array of graphs.
     //
 
-    LONG CuDeviceOrdinal;
-#endif
+    union {
+        struct _GRAPH **GpuGraphs;
+        struct _GRAPH **Graphs;
+    };
+    struct _GRAPH **CpuGraphs;
 
     //
     // Minimum number of keys that need to be present in order to honor find
@@ -446,6 +452,8 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     ULONG MinNumberOfKeysForFindBestGraph;
+
+    ULONG Padding1;
 
     //
     // Pointer to a buffer that is used to construct console output before
@@ -593,6 +601,48 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //
 
     volatile LONGLONG VertexCollisionFailures;
+
+    //
+    // Captures the number of failures due to the graph being cyclic.
+    //
+
+    volatile LONGLONG CyclicGraphFailures;
+
+    //
+    // Captures the number of failures due to the generation of two
+    // identical vertices amongst a GPU warp.
+    //
+
+    volatile LONGLONG WarpVertexCollisionFailures;
+
+    //
+    // Captures the number of times the GPU AddKeys() routine succeeded but the
+    // CPU AddKeys() routine failed (due to a vertex collision).
+    //
+
+    volatile LONGLONG GpuAddKeysSuccessButCpuAddKeysFailures;
+
+    //
+    // Captures the number of times the GPU IsAcyclic() routine succeeded in
+    // detecting an acyclic graph, but the CPU IsAcyclic() routine reported
+    // a cycle.
+    //
+
+    volatile LONGLONG GpuIsAcyclicButCpuIsCyclicFailures;
+
+    //
+    // Captures the number of times the GPU and CPU AddKeys() routines both
+    // return success.
+    //
+
+    volatile LONGLONG GpuAndCpuAddKeysSuccess;
+
+    //
+    // Captures the number of times the GPU and CPU IsAcyclic() routines both
+    // return success.
+    //
+
+    volatile LONGLONG GpuAndCpuIsAcyclicSuccess;
 
     //
     // Computer name.
@@ -934,12 +984,48 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PGUARDED_LIST MainWorkList;
     TP_CALLBACK_ENVIRON MainCallbackEnv;
     PTP_CLEANUP_GROUP MainCleanupGroup;
+#ifdef PH_WINDOWS
     PTP_POOL MainThreadpool;
+#else
+    PTHREADPOOL MainThreadpool;
+#endif
     PTP_WORK MainWork;
     PTP_WORK ConsoleWork;
     PTP_TIMER SolveTimeout;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
+    union {
+        ULONG CuConcurrency;
+        ULONG NumberOfGpuThreads;
+    };
+
+    //
+    // CPU threads will be MaximumConcurrency minus NumberOfGpuThreads (which
+    // may result in it being zero, in which case, there will be no CPU solver
+    // threads).
+    //
+
+    ULONG NumberOfCpuThreads;
+
+    ULONG NumberOfCpuGraphs;
+    ULONG NumberOfGpuGraphs;
+
+    ULONG TotalNumberOfGraphs;
+
+    ULONG Padding8;
+
+#if 0
+    //
+    // CUDA RNG details.
+    //
+
+    PCUNICODE_STRING CuRngName;
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONG Padding8;
+    ULONGLONG CuRngSeed;
+    ULONGLONG CuRngSubsequence;
+    ULONGLONG CuRngOffset;
+#endif
 
     //
     // RNG details.
@@ -972,7 +1058,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PGUARDED_LIST FileWorkList;
     TP_CALLBACK_ENVIRON FileCallbackEnv;
     PTP_CLEANUP_GROUP FileCleanupGroup;
+#ifdef PH_WINDOWS
     PTP_POOL FileThreadpool;
+#else
+    PTHREADPOOL FileThreadpool;
+#endif
     PTP_WORK FileWork;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;
@@ -1080,12 +1170,6 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONGLONG ClosestWeCameToSolvingGraphWithSmallerTableSizes;
 
     //
-    // Captures the number of failures due to the graph being cyclic.
-    //
-
-    volatile LONGLONG CyclicGraphFailures;
-
-    //
     // Pointers to the context file instances.
     //
 
@@ -1163,7 +1247,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     //      warnings.
     //
 
-    PVOID Padding8;
+    PVOID Padding9;
 
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
@@ -1173,9 +1257,6 @@ typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
 
 #define ReleasePerfectHashContextLockExclusive(Context) \
     ReleaseSRWLockExclusive(&Context->Lock)
-
-#define ActiveCuDevice(Context) \
-    &((Context)->CuDevices.Devices[(Context)->CuDeviceOrdinal])
 
 //
 // Define helper macros for appending items to the tail of a guarded list.

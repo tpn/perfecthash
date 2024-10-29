@@ -1,15 +1,4 @@
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    set(IS_WINDOWS 1)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(IS_LINUX 1)
-    set(IS_UNIX 1)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(IS_MAC 1)
-    set(IS_UNIX 1)
-else()
-    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
-endif()
 
 if (IS_WINDOWS)
     enable_language(ASM_MASM)
@@ -17,7 +6,6 @@ if (IS_WINDOWS)
 else()
     target_compile_definitions(${PROJECT_NAME} PUBLIC PH_COMPAT)
 endif()
-
 
 target_include_directories(
     ${PROJECT_NAME}
@@ -28,7 +16,15 @@ target_include_directories(
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "PERFECT_HASH_CMAKE")
 
-if (IS_WINDOWS)
+if (IS_CUDA)
+
+    target_compile_definitions(
+        ${PROJECT_NAME}
+        PUBLIC
+        "PERFECT_HASH_BUILD_CONFIG=\"$<CONFIG>\""
+    )
+
+elseif (IS_WINDOWS)
 
     target_compile_definitions(
         ${PROJECT_NAME}
@@ -36,7 +32,6 @@ if (IS_WINDOWS)
         "PH_WINDOWS"
         "PERFECT_HASH_BUILD_CONFIG=\"$<CONFIG>\""
     )
-
 
     #target_precompile_headers(${PROJECT_NAME} PUBLIC "stdafx.h")
 
@@ -51,10 +46,10 @@ if (IS_WINDOWS)
         /Wall       # All warnings
         /FC         # Use full paths
         /GS-        # No security checks
-        /FR         # Generate browse info
+        #/FR         # Generate browse info
     )
 
-    target_compile_options_config(Debug /ZI)
+    target_compile_options_config(Debug /ZI /Od /Ob0)
     target_compile_options_not_config(Debug /Zi)
 
     target_compile_definitions(${PROJECT_NAME} PUBLIC _WINDOWS _UNICODE UNICODE)
@@ -71,6 +66,7 @@ if (IS_WINDOWS)
         /NXCOMPAT               # Data execution prevention
         chkstk.obj              # Link with chkstk.obj
         bufferoverflowU.lib     # Link with bufferoverflowU.lib
+        #libcmtd.lib             # Link with libcmtd.lib
     )
 
     target_link_options_not_config(
@@ -82,7 +78,6 @@ if (IS_WINDOWS)
         /RELEASE        # Set checksum
         /MANIFESTUAC    # Enable UAC
     )
-
 
 else()
 
@@ -110,6 +105,7 @@ else()
         -Wno-incompatible-pointer-types
         -Wno-deprecated-declarations
         -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
+        -fno-omit-frame-pointer
     )
 
     target_link_options(
@@ -120,7 +116,6 @@ else()
     )
 
     if (CMAKE_C_COMPILER_ID MATCHES Clang)
-
         target_compile_options(
             ${PROJECT_NAME}
             PUBLIC

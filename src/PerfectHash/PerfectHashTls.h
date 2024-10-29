@@ -31,10 +31,25 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         ULONG CustomAllocatorDetailsPresent:1;
 
         //
+        // When set, indicates new graph instances should be created as CUDA
+        // graphs.  (Used by GraphInitialize() when creating instances of a
+        // GRAPH structure via IID_PERFECT_HASH_GRAPH.)
+        //
+
+        ULONG CreateCuGraph:1;
+
+        //
+        // When set, indicates the global component lock has been exclusively
+        // acquired.
+        //
+
+        ULONG GlobalComponentLockAcquired:1;
+
+        //
         // Unused bits.  (Consume these before the Unused2 bits.)
         //
 
-        ULONG Unused1:5;
+        ULONG Unused1:3;
 
         //
         // The following bits, when set, prevent the global component logic

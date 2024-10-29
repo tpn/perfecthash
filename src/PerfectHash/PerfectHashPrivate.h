@@ -15,13 +15,17 @@ Abstract:
 
 --*/
 
+#ifndef PH_CUDA
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 #error PerfectHashPrivate.h being included but _PERFECT_HASH_INTERNAL_BUILD not set.
+#endif
 #endif
 
 #pragma once
 
+#ifndef PH_CUDA
 #include "stdafx.h"
+#endif
 
 #define PERFECT_HASH_KEY_SIZE_IN_BYTES 4
 
@@ -33,8 +37,10 @@ Abstract:
 // to PerfectHashModuleInfo.
 //
 
+#if (defined PH_WINDOWS && !defined PH_CUDA)
 extern HMODULE PerfectHashModule;
 extern MODULEINFO PerfectHashModuleInfo;
+#endif
 
 //
 // Components can check this variable to determine if Ctrl-C has been pressed.
@@ -379,6 +385,7 @@ typedef CREATE_PERFECT_HASH_TABLE_IMPL *PCREATE_PERFECT_HASH_TABLE_IMPL;
 //
 
 CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm01;
+CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm02;
 
 //
 // Likewise, each algorithm implements a loader routine that matches the
@@ -403,6 +410,7 @@ typedef LOAD_PERFECT_HASH_TABLE_IMPL *PLOAD_PERFECT_HASH_TABLE_IMPL;
 //
 
 LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm01;
+LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm02;
 
 //
 // For each algorithm, declare the index impl routine.  These are gathered in an
@@ -410,6 +418,7 @@ LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm01;
 //
 
 PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexImplChm01;
+PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexImplChm02;
 
 //
 // For each algorithm, declare fast-index impl routines.  These differ from the
@@ -473,6 +482,8 @@ typedef const PERFECT_HASH_TABLE_INDEX_IMPL_STRING_TUPLE
 
 #pragma warning(pop)
 
+#ifndef __CUDA_ARCH__
+
 //
 // Symbol loader helpers.
 //
@@ -507,40 +518,6 @@ BOOLEAN
     _Out_ PULONG NumberOfResolvedSymbolsPointer
     );
 typedef LOAD_SYMBOLS_FROM_MULTIPLE_MODULES *PLOAD_SYMBOLS_FROM_MULTIPLE_MODULES;
-
-//
-// Exception helpers.
-//
-
-#ifdef PH_WINDOWS
-typedef
-EXCEPTION_DISPOSITION
-(__cdecl RTL_EXCEPTION_HANDLER)(
-    PEXCEPTION_RECORD ExceptionRecord,
-    ULONG_PTR Frame,
-    PCONTEXT Context,
-    struct _DISPATCHER_CONTEXT *Dispatch
-    );
-typedef RTL_EXCEPTION_HANDLER *PRTL_EXCEPTION_HANDLER;
-
-typedef RTL_EXCEPTION_HANDLER __C_SPECIFIC_HANDLER;
-typedef __C_SPECIFIC_HANDLER *P__C_SPECIFIC_HANDLER;
-
-typedef
-VOID
-(NTAPI SET_C_SPECIFIC_HANDLER)(
-    _In_ P__C_SPECIFIC_HANDLER Handler
-    );
-typedef SET_C_SPECIFIC_HANDLER *PSET_C_SPECIFIC_HANDLER;
-
-typedef
-VOID
-(__cdecl __SECURITY_INIT_COOKIE)(
-    VOID
-    );
-typedef __SECURITY_INIT_COOKIE *P__SECURITY_INIT_COOKIE;
-#endif
-
 
 #ifdef PH_WINDOWS
 //
@@ -663,5 +640,7 @@ DoesErrorCodeWantAlgoHashMaskTableAppended(
     return Result;
 }
 
+
+#endif // ifndef __CUDA_ARCH__
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -17,7 +17,7 @@ Abstract:
 #include "stdafx.h"
 #include "TableCreateCsv.h"
 #include "TableCreateBestCsv.h"
-
+#include "PerfectHashTls.h"
 
 #define PH_ERROR_EX(Name, Result, ...) \
     PH_ERROR(Name, Result)
@@ -27,16 +27,6 @@ Abstract:
 
 #define PH_TABLE_ERROR(Name, Result) \
     PH_ERROR(Name, Result)
-
-#if 0
-#define PH_ERROR_EX(Name, Result, ...)     \
-    PerfectHashPrintErrorEx(#Name,         \
-                            __FILE__,      \
-                            __FUNCTION__,  \
-                            __LINE__,      \
-                            (ULONG)Result, \
-                            __VA_ARGS__)
-#endif
 
 //
 // Forward decls.
@@ -403,6 +393,7 @@ Return Value:
         goto Error;
     }
 
+#if 0
     //
     // Keys were loaded successfully.  If CUDA is available, register the base
     // address of the array.
@@ -418,6 +409,7 @@ Return Value:
             goto Error;
         }
     }
+#endif
 #endif
 
     //
@@ -1056,12 +1048,15 @@ Return Value:
     LPWSTR Arg;
     HRESULT Result = S_OK;
     HRESULT CleanupResult;
+    HRESULT DebuggerResult;
     ULONG CurrentArg = 1;
     PALLOCATOR Allocator;
     UNICODE_STRING Temp;
     PUNICODE_STRING String;
     BOOLEAN InvalidPrefix;
+    DEBUGGER_CONTEXT_FLAGS Flags;
     BOOLEAN ValidNumberOfArguments;
+    PDEBUGGER_CONTEXT DebuggerContext;
 
     String = &Temp;
 
@@ -1281,6 +1276,54 @@ InvalidArg:
     }
 
     //
+    // Initialize the debugger flags from the table create flags, initialize
+    // the debugger context, then, maybe way for a debugger attach.  This is
+    // a no-op on Windows, or if no debugger has been requested.
+    //
+
+    Flags.AsULong = 0;
+    Flags.WaitForGdb = (TableCreateFlags->WaitForGdb != FALSE);
+    Flags.WaitForCudaGdb = (TableCreateFlags->WaitForCudaGdb != FALSE);
+    Flags.UseGdbForHostDebugging = (
+        TableCreateFlags->UseGdbForHostDebugging != FALSE
+    );
+
+    //
+    // Initialize the debugger context.  It's a singleton stashed in the
+    // RTL structure.  We capture the result in DebuggerResult, not Result,
+    // as we don't want to overwrite the error code before a debugger has
+    // had a chance to attach.
+    //
+
+    DebuggerContext = &Rtl->DebuggerContext;
+    DebuggerResult = InitializeDebuggerContext(DebuggerContext, &Flags);
+
+    if (FAILED(DebuggerResult)) {
+
+        PH_ERROR(InitializeDebuggerContext, DebuggerResult);
+
+        //
+        // *Now* we can propagate the debugger result back as the primary
+        // result, which ensures the cleanup code below runs.
+        //
+
+        Result = DebuggerResult;
+
+    } else {
+
+        //
+        // Debugger context was successfully initialized, so, maybe wait for
+        // a debugger to attach (depending on what flags were supplied).
+        //
+
+        Result = MaybeWaitForDebuggerAttach(DebuggerContext);
+        if (FAILED(Result)) {
+            PH_ERROR(MaybeWaitForDebuggerAttach, Result);
+        }
+
+    }
+
+    //
     // If we failed, clean up the table create parameters.  If that fails,
     // report the error, then replace our return value error code with that
     // error code.
@@ -1365,6 +1408,8 @@ Return Value:
     PPERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
         ExtractTableCreateArgs;
     PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters = { 0 };
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
 
     Result = LoadDefaultTableCreateFlags(&TableCreateFlags);
     if (FAILED(Result)) {
@@ -1432,16 +1477,12 @@ Return Value:
         return Result;
     }
 
-#ifdef PH_WINDOWS
-    if (ContextTableCreateFlags.TryCuda != FALSE) {
-        Result = PerfectHashContextInitializeCuda(Context,
-                                                  &TableCreateParameters);
-        if (FAILED(Result)) {
-            PH_ERROR(PerfectHashContextTableCreateArgvW_InitializeCuda, Result);
-            return Result;
-        }
-    }
-#endif
+    //
+    // Set the active context via TLS.
+    //
+
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+    TlsContext->Context = Context;
 
     Result = Context->Vtbl->TableCreate(Context,
                                         &KeysPath,
@@ -1465,6 +1506,8 @@ Return Value:
 
         NOTHING;
     }
+
+    PerfectHashTlsClearContextIfActive(&LocalTlsContext);
 
     CleanupResult = CleanupTableCreateParameters(&TableCreateParameters);
     if (FAILED(CleanupResult)) {

@@ -15,11 +15,11 @@ Abstract:
 
 #include "stdafx.h"
 
-#define EXPAND_AS_CALLBACK_DECL(                        \
-    Verb, VUpper, Name, Upper,                          \
-    EofType, EofValue,                                  \
-    Suffix, Extension, Stream, Base                     \
-)                                                       \
+#define EXPAND_AS_CALLBACK_DECL(                      \
+    Verb, VUpper, Name, Upper,                        \
+    EofType, EofValue,                                \
+    Suffix, Extension, Stream, Base                   \
+)                                                     \
     extern FILE_WORK_CALLBACK_IMPL Verb##Name##Chm01;
 
 PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
@@ -35,6 +35,8 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareTableFileChm01 NULL
 #define PrepareTableInfoStreamChm01 NULL
 #define PrepareCSourceTableDataFileChm01 NULL
+#define PrepareGraphVertexPairsFileChm01 NULL
+#define PrepareGraphVertices3FileChm01 NULL
 
 //
 // Add defines for files that don't have a save callback.  Corresponds to
@@ -77,6 +79,8 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define SaveMakefileBenchmarkFullMkFileChm01 NULL
 #define SaveCHeaderNoSal2FileChm01 NULL
 #define SaveModuleDefFileChm01 NULL
+#define SaveCMakeListsTextFileChm01 NULL
+#define SaveCudaSourceFileChm01 NULL
 
 extern FILE_WORK_CALLBACK_IMPL *FileCallbacks[];
 

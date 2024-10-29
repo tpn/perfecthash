@@ -10,6 +10,7 @@ set(Private_Header_Files
     "Chm01.h"
     "Chm01FileWork.h"
     "Chm01Private.h"
+    "Chm02Private.h"
     "Chunk.h"
     "Component.h"
     "Cu.h"
@@ -47,6 +48,11 @@ set(Private_Header_Files
     "TableCreateCsv.h"
     "targetver.h"
     "VCProjectFileChunks.h"
+    "Cu.cuh"
+    "GraphCu.h"
+    "PerfectHashCu.h"
+    "CuDeviceAttributes.h"
+    "Debugger.h"
 )
 source_group("Private Header Files" FILES ${Private_Header_Files})
 
@@ -107,6 +113,8 @@ set(Private_Header_Files_28Auto-Generated29
     "CompiledPerfectHashTableTypesPre_CHeader_RawCString.h"
     "Makefile_Makefile_RawCString.h"
     "no_sal2_CHeader_RawCString.h"
+    "GraphDebug_Ptx_RawCString.h"
+    "Graph_Ptx_RawCString.h"
 )
 source_group("Private Header Files %28Auto-Generated%29" FILES ${Private_Header_Files_28Auto-Generated29})
 
@@ -120,6 +128,7 @@ source_group("Public Header Files" FILES ${Public_Header_Files})
 
 set(Resource_Files
     "PerfectHash.def"
+    "PerfectHash.rc"
     "PerfectHashEvents.man"
 )
 source_group("Resource Files" FILES ${Resource_Files})
@@ -127,6 +136,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Source_Files
     "BitManipulation.c"
     "Chm01Shared.c"
+    "Chm02Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"
     "Chm01FileWorkCHeaderCompiledPerfectHashFile.c"
@@ -149,6 +159,8 @@ set(Source_Files
     "Chm01FileWorkCSourceTableValuesFile.c"
     "Chm01FileWorkCSourceTestExeFile.c"
     "Chm01FileWorkCSourceTestFile.c"
+    "Chm01FileWorkGraphVertexPairsFile.c"
+    "Chm01FileWorkGraphVertices3File.c"
     "Chm01FileWorkMakefileBenchmarkFullMkFile.c"
     "Chm01FileWorkMakefileBenchmarkIndexMkFile.c"
     "Chm01FileWorkMakefileFile.c"
@@ -165,6 +177,8 @@ set(Source_Files
     "Chm01FileWorkVCProjectTestExeFile.c"
     "Chm01FileWorkVCPropsCompiledPerfectHashFile.c"
     "Chm01FileWorkVSSolutionFile.c"
+    "Chm01FileWorkCMakeListsTextFile.c"
+    "Chm01FileWorkCudaSourceFile.c"
     "Chm01Index.c"
     "Chunk.c"
     "Component.c"
@@ -215,36 +229,40 @@ set(Source_Files
     "_pow.c"
     "_dtoa.c"
     "_strtod.c"
+    "Cu.c"
+    "GraphCu.c"
+    "PerfectHashCu.c"
+    "SymbolLoader.c"
 )
 
 if (IS_WINDOWS)
+
     list(
         APPEND Source_Files
-        "Cu.c"
         "Chm01.c"
+        "Chm02.c"
         "RtlUuid.c"
         "Security.c"
         "GraphAvx.c"
         "RtlRandom.c"
-        "memset_x64.asm"
         "RtlPrivilege.c"
-        "SymbolLoader.c"
         "PerfectHashCu.c"
         "RtlErrorHandling.c"
-        "RtlCopyPages_x64.asm"
-        "RtlFillPages_x64.asm"
         "PerfectHashTableCompile.c"
         "PerfectHashContextBulkCreate.c"
-        "PerfectHashTableFastIndexEx_x64_01.asm"
     )
+
 else()
     list(
         APPEND Source_Files
         "mem.c"
         "bitmap.c"
         "thpool.c"
+        "bsthreadpool.cpp"
         "unicode.c"
+        "Debugger.c"
         "Chm01Compat.c"
+        "Chm02Compat.c"
         "PerfectHashCompat.c"
     )
 endif()
@@ -263,6 +281,27 @@ if (IS_WINDOWS)
         APPEND ALL_FILES
         ${Resource_Files}
     )
+
+    list(
+        APPEND ALL_FILES
+        ${Assembly_Source_Files}
+    )
+
+    set(OUTPUT_FILE "../../../include/PerfectHashErrors.h")
+
+    set(MC_COMMAND cd ../../PerfectHash &&
+                   mc.exe -v -o -c -b -h ../../include -x .
+                          -km PerfectHashEvents.man PerfectHashErrors.mc)
+
+    add_custom_command(
+      OUTPUT ${OUTPUT_FILE}
+      COMMAND ${MC_COMMAND}
+      DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
+      COMMENT "Compiling PerfectHashErrors.mc and PerfectHashEvents.man..."
+    )
+
+    add_custom_target(PerfectHashResources ALL DEPENDS ${OUTPUT_FILE})
+
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
@@ -270,8 +309,8 @@ add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
 ################################################################################
 # Target
 ################################################################################
-
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
+
 ################################################################################
 # Includes for CMake from *.props
 ################################################################################
@@ -288,6 +327,12 @@ target_compile_definitions(
     "_PERFECT_HASH_INTERNAL_BUILD"
 )
 
+target_compile_definitions(
+    ${PROJECT_NAME}
+    PUBLIC
+    HAS_CUDA
+)
+
 ################################################################################
 # Compile and link options
 ################################################################################
@@ -300,7 +345,8 @@ if (HookPenter STREQUAL "1")
 endif()
 
 if (IS_WINDOWS)
-    set(ADDITIONAL_LIBRARY_DEPENDENCIES "rpcrt4")
+    add_dependencies(${PROJECT_NAME} PerfectHashAsm)
+    set(ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4 PerfectHashAsm)
     target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 endif()
 

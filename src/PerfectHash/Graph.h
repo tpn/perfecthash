@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -43,6 +43,10 @@ Abstract:
 
 #include "stdafx.h"
 
+#define PH_CUDA_LOCK_SIZE sizeof(ULONG)
+
+#include "GraphCounters.h"
+
 //
 // Define the primitive key, edge and vertex types and pointers to said types.
 //
@@ -51,6 +55,7 @@ typedef ULONG KEY;
 typedef ULONG EDGE;
 typedef ULONG VERTEX;
 typedef ULONG DEGREE;
+typedef LONG ORDER;
 typedef KEY *PKEY;
 typedef EDGE *PEDGE;
 typedef VERTEX *PVERTEX;
@@ -60,6 +65,7 @@ typedef union _VERTEX_PAIR {
         VERTEX Vertex1;
         VERTEX Vertex2;
     };
+    LONGLONG AsLongLong;
     ULONGLONG AsULongLong;
     ULARGE_INTEGER AsULargeInteger;
 } VERTEX_PAIR, *PVERTEX_PAIR;
@@ -79,21 +85,24 @@ typedef union _EDGE3 {
     ULONGLONG AsULongLong;
 } EDGE3, *PEDGE3;
 
-typedef struct _VERTEX3 {
+typedef union _VERTEX3 {
+    struct {
 
-    //
-    // The degree of connections for this vertex.
-    //
+        //
+        // The degree of connections for this vertex.
+        //
 
-    DEGREE Degree;
+        DEGREE Degree;
 
-    //
-    // All edges for this vertex; an incidence list constructed via XOR'ing all
-    // edges together (aka "the XOR-trick").
-    //
+        //
+        // All edges for this vertex; an incidence list constructed via XOR'ing all
+        // edges together (aka "the XOR-trick").
+        //
 
-    EDGE Edges;
+        EDGE Edges;
+    };
 
+    ULONGLONG_BYTES Combined;
 } VERTEX3, *PVERTEX3;
 
 //
@@ -416,9 +425,9 @@ CopyCoverage(
 // and less only needed to use a USHORT array to capture the assigned table
 // data, not ULONG.  The resulting compiled perfect hash files enjoyed large
 // speed benefits if they could be downsized from ULONG to USHORT, as the memory
-// footprint effectively halved, which means fewer cache misses.  The effect
-// is this improvement was most notable on the BenchmarkFull exes, as they
-// would walk the entire set of keys as part of their benchmark work (versus
+// footprint effectively halved, which means fewer cache misses.  The effect of
+// this improvement was most notable on the BenchmarkFull exes, as they would
+// walk the entire set of keys as part of their benchmark work (versus
 // BenchmarkIndex which just called Index() for one key over and over).
 //
 // However, during solving, we originally just stuck with the assigned table
@@ -428,10 +437,10 @@ CopyCoverage(
 //
 // Issue 14 (https://github.com/tpn/perfecthash/issues/14) was created.  It
 // notes that the assigned memory coverage stats aren't accurate if evaluating
-// the compiled perfect hash table (when vertices <= 65,354), because they assumed
-// assigned table data was ULONG, not USHORT.  i.e., a USHORT-based table data
-// array can hold up to 32 assigned elements in a single 64-byte cache line, not
-// 16 like the ULONG-based table.
+// the compiled perfect hash table (when vertices <= 65,354), because they
+// assumed assigned table data was ULONG, not USHORT.  i.e., a USHORT-based
+// table data array can hold up to 32 assigned elements in a single 64-byte
+// cache line, not 16 like the ULONG-based table.
 //
 // To solve the problem, though, not only do we need to alter the routines that
 // calculate the memory coverage, we need to alter the actual data types used
@@ -504,20 +513,25 @@ typedef union _EDGE163 {
     ULONG AsULong;
 } EDGE163, *PEDGE163;
 
-typedef struct _VERTEX163 {
+typedef union _VERTEX163 {
 
-    //
-    // The degree of connections for this vertex.
-    //
+    struct {
 
-    DEGREE16 Degree;
+        //
+        // The degree of connections for this vertex.
+        //
 
-    //
-    // All edges for this vertex; an incidence list constructed via XOR'ing all
-    // edges together (aka "the XOR-trick").
-    //
+        DEGREE16 Degree;
 
-    EDGE16 Edges;
+        //
+        // All edges for this vertex; an incidence list constructed via XOR'ing all
+        // edges together (aka "the XOR-trick").
+        //
+
+        EDGE16 Edges;
+    };
+
+    ULONG_BYTES Combined;
 
 } VERTEX163, *PVERTEX163;
 
@@ -854,10 +868,45 @@ typedef union _GRAPH_FLAGS {
         ULONG UsingAssigned16:1;
 
         //
+        // When set, indicates that this is a CUDA graph.
+        //
+
+        ULONG IsCuGraph:1;
+
+        //
+        // When set, always try to respect the kernel runtime limit (supplied
+        // via --CuDevicesKernelRuntimeTargetInMilliseconds), even if the device
+        // indicates it has no kernel runtime limit (i.e. is in TCC mode).
+        //
+
+        ULONG AlwaysRespectCuKernelRuntimeLimit:1;
+
+        //
+        // When set, indicates we're in "find best graph" solving mode.  When
+        // clear, indicates we're in "first graph wins" mode.
+        //
+
+        ULONG FindBestGraph:1;
+
+        //
+        // When set, indicates the current algorithm uses seed masks (which will
+        // be populated in Graph->SeedMasks).
+        //
+
+        ULONG HasSeedMasks:1;
+
+        //
+        // When set, indicates the user has supplied seeds (which will be
+        // populated in Graph->FirstSeed onward).
+        //
+
+        ULONG HasUserSeeds:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:15;
+        ULONG Unused:10;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -865,24 +914,32 @@ typedef union _GRAPH_FLAGS {
 typedef GRAPH_FLAGS *PGRAPH_FLAGS;
 C_ASSERT(sizeof(GRAPH_FLAGS) == sizeof(ULONG));
 
-#define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet == TRUE)
-#define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded == TRUE)
-#define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare == TRUE)
-#define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification == TRUE)
+#define IsGraphInfoSet(Graph) ((Graph)->Flags.IsInfoSet != FALSE)
+#define IsGraphInfoLoaded(Graph) ((Graph)->Flags.IsInfoLoaded != FALSE)
+#define IsSpareGraph(Graph) ((Graph)->Flags.IsSpare != FALSE)
+#define IsCuGraph(Graph) ((Graph)->Flags.IsCuGraph != FALSE)
+#define SkipGraphVerification(Graph) ((Graph)->Flags.SkipVerification != FALSE)
+#define HasSeedMasks(Graph) ((Graph)->Flags.HasSeedMasks != FALSE)
+#define HasUserSeeds(Graph) ((Graph)->Flags.HasUserSeeds != FALSE)
+#define AlwaysRespectCuKernelRuntimeLimit(Graph) \
+    ((Graph)->Flags.AlwaysRespectCuKernelRuntimeLimit != FALSE)
 #define WantsAssignedMemoryCoverage(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverage)
 #define WantsAssignedMemoryCoverageForKeysSubset(Graph) \
     ((Graph)->Flags.WantsAssignedMemoryCoverageForKeysSubset)
-#define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid == TRUE)
+#define WantsCuRandomHostSeeds(Graph) \
+    ((Graph)->Flags.WantsCuRandomHostSeeds != FALSE)
+#define IsGraphParanoid(Graph) ((Graph)->Flags.Paranoid != FALSE)
 #define IsUsingAssigned16(Graph) ((Graph)->Flags.UsingAssigned16 != FALSE)
 
 #define SetSpareGraph(Graph) (Graph->Flags.IsSpareGraph = TRUE)
+#define SetSpareCuGraph(Graph) (Graph->Flags.IsSpareCuGraph = TRUE)
 
 DEFINE_UNUSED_STATE(GRAPH);
 
 
 //
-// Default version of the graph implementation used (i.e. GraphImp1.c vs
+// Default version of the graph implementation used (i.e. GraphImp11.c vs
 // GraphImpl2.c vs GraphImpl3.c).
 //
 
@@ -1049,10 +1106,25 @@ typedef struct _GRAPH_INFO {
     ULONGLONG NextSizeInBytes;
     ULONGLONG FirstSizeInBytes;
     ULONGLONG OrderSizeInBytes;
+    ULONGLONG CountsSizeInBytes;
+    ULONGLONG DeletedSizeInBytes;
     ULONGLONG Vertices3SizeInBytes;
-    ULONGLONG AssignedSizeInBytes;
     ULONGLONG VertexPairsSizeInBytes;
     ULONGLONG ValuesSizeInBytes;
+
+    ULONGLONG CuVertexLocksSizeInBytes;
+    ULONGLONG CuEdgeLocksSizeInBytes;
+
+    //
+    // We use a union for the Assigned size in order to work with macros in the
+    // CUDA GraphCuLoadInfo() routine.
+    //
+
+    union {
+        ULONGLONG AssignedSizeInBytes;
+        ULONGLONG AssignedHostSizeInBytes;
+        ULONGLONG AssignedDeviceSizeInBytes;
+    };
 
     //
     // Bitmap buffer sizes.
@@ -1267,6 +1339,101 @@ HRESULT
     );
 typedef GRAPH_ASSIGN *PGRAPH_ASSIGN;
 
+//
+// Some CUDA-specific structs/glue.
+//
+
+typedef struct _PH_CU_RANDOM_HOST_SEEDS {
+    ULONG TotalNumberOfSeeds;
+    ULONG UsedNumberOfSeeds;
+
+    _Writable_elements_(TotalNumberOfSeeds)
+    PULONG Seeds;
+} PH_CU_RANDOM_HOST_SEEDS;
+typedef PH_CU_RANDOM_HOST_SEEDS *PPH_CU_RANDOM_HOST_SEEDS;
+
+typedef struct _GRAPH_SHARED {
+    HRESULT HashKeysResult;
+    ULONG Padding;
+    PHRESULT HashKeysBlockResults;
+} GRAPH_SHARED;
+typedef GRAPH_SHARED *PGRAPH_SHARED;
+
+typedef struct _GRAPH_SEEDS {
+
+    //
+    // Capture the seeds used for each hash function employed by the graph.
+    //
+
+    ULONG NumberOfSeeds;
+    ULONG Padding;
+
+    union {
+        ULONG Seeds[MAX_NUMBER_OF_SEEDS];
+        struct {
+            union {
+                struct {
+                    union {
+                        ULONG Seed1;
+                        ULONG FirstSeed;
+                        ULONG_BYTES Seed1Bytes;
+                    };
+                    union {
+                        ULONG Seed2;
+                        ULONG_BYTES Seed2Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds12;
+            };
+            union {
+                struct {
+                    union {
+                        ULONG Seed3;
+                        ULONG_BYTES Seed3Bytes;
+                    };
+                    union {
+                        ULONG Seed4;
+                        ULONG_BYTES Seed4Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds34;
+            };
+            union {
+                struct {
+                    union {
+                        ULONG Seed5;
+                        ULONG_BYTES Seed5Bytes;
+                    };
+                    union {
+                        ULONG Seed6;
+                        ULONG_BYTES Seed6Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds56;
+            };
+            union {
+                struct {
+                    union {
+                        ULONG Seed7;
+                        ULONG_BYTES Seed7Bytes;
+                    };
+                    union {
+                        ULONG Seed8;
+                        ULONG LastSeed;
+                        ULONG_BYTES Seed8Bytes;
+                    };
+                };
+                ULARGE_INTEGER Seeds78;
+            };
+        };
+    };
+} GRAPH_SEEDS;
+typedef GRAPH_SEEDS *PGRAPH_SEEDS;
+
+//
+// Vtbl.
+//
+
 typedef struct _GRAPH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(GRAPH);
     PGRAPH_SET_INFO SetInfo;
@@ -1371,7 +1538,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     // acyclic graph detection stage.
     //
 
-    ULONG DeletedEdgeCount;
+    volatile ULONG DeletedEdgeCount;
 
     //
     // Counter that is incremented each time we visit a vertex during the
@@ -1611,10 +1778,139 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
     //
     // Counters to track elapsed cycles and microseconds of graph activities.
     // Each name (typically) maps 1:1 with a corresponding Graph*() function,
-    // e.g. AddKeys -> GraphAddKeys().
+    // Elapsed microseconds of the GraphAddKeys() routine.
     //
 
     DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
+
+#ifdef HAS_CUDA
+
+    //
+    // If this is a GPU solver graph, this points to the solve context.
+    //
+
+    struct _PH_CU_SOLVE_CONTEXT *CuSolveContext;
+
+    //
+    // Capture the device-side host and device graph and spare graph instances.
+    //
+
+    struct _GRAPH *CuHostGraph;
+    struct _GRAPH *CuHostSpareGraph;
+
+    struct _GRAPH *CuDeviceGraph;
+    struct _GRAPH *CuDeviceSpareGraph;
+
+    //
+    // Host and device pointers to keys array.
+    //
+
+    _Readable_elements_(NumberOfKeys)
+    PKEY HostKeys;
+    CU_DEVICE_POINTER DeviceKeys;
+
+    //
+    // Pointer to device memory view of GRAPH_INFO.
+    //
+
+    PGRAPH_INFO CuGraphInfo;
+
+    //
+    // Kernel launch parameters.
+    //
+
+    ULONG CuBlocksPerGrid;
+    ULONG CuThreadsPerBlock;
+    ULONG CuSharedMemory;
+    ULONG CuKernelRuntimeTargetInMilliseconds;
+    ULONG CuJitMaxNumberOfRegisters;
+
+    //
+    // Intermediate results communicated back between CUDA parent/child grids.
+    //
+
+    HRESULT CuHashKeysResult;
+    HRESULT CuIsAcyclicResult;
+
+    //
+    // Index of this graph relative to all graphs created for the targeted
+    // device.
+    //
+
+    LONG CuDeviceIndex;
+
+    //
+    // Capture the hash function ID so that CUDA kernels can resolve the correct
+    // hash function.
+    //
+
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+
+    //
+    // Various counters.
+    //
+
+    ULONG CuCyclicGraphFailures;
+    ULONG CuFailedAttempts;
+    ULONG CuFinishedCount;
+
+    union {
+        struct {
+            volatile ULONG CuVertexCollisionFailures;
+            volatile ULONG CuWarpVertexCollisionFailures;
+        };
+
+        //
+        // This is copied from the device after the GraphCuHashKeysKernel()
+        // CUDA kernel is run.
+        //
+
+        ULARGE_INTEGER CuHashKeysCollisionFailures;
+    };
+
+    ULONG CuIsAcyclicPhase1Attempts;
+
+    //
+    // CUDA RNG details.
+    //
+
+    PERFECT_HASH_CU_RNG_ID CuRngId;
+    ULONGLONG CuRngSeed;
+    ULONGLONG CuRngSubsequence;
+    ULONGLONG CuRngOffset;
+    PVOID CuRngState;
+
+    //
+    // Pointer to device attributes in device memory.
+    //
+
+    CU_DEVICE_POINTER CuDeviceAttributes;
+
+    //
+    // CUDA vertex and edge locks.
+    //
+
+    _Writable_elements_(NumberOfVertices)
+    PLONG CuVertexLocks;
+
+    _Writable_elements_(NumberOfEdges)
+    PLONG CuEdgeLocks;
+
+    struct _GRAPH *CpuGraph;
+
+    //
+    // Opaque context for kernels.
+    //
+
+    struct _CU_KERNEL_CONTEXT *CuKernelContext;
+
+#endif  // HAS_CUDA
+
+    //
+    // Seed masks for the current hash function.
+    //
+
+    SEED_MASKS SeedMasks;
 
     //
     // The graph interface.
@@ -1640,51 +1936,84 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     ULONG TotalTraversals;
 
-    //
-    // Capture the seeds used for each hash function employed by the graph.
-    //
-
-    ULONG NumberOfSeeds;
+    volatile ULONG TotalNumberOfAssigned;
 
     union {
-        ULONG Seeds[MAX_NUMBER_OF_SEEDS];
+
+        GRAPH_SEEDS GraphSeeds;
+
+        //
+        // The GRAPH_SEEDS structure was introduced many years after the GRAPH
+        // struct itself was written.  To avoid breaking compatibility with all
+        // the existing code that uses the GRAPH struct, we inline the entire
+        // GRAPH_SEEDS structure here.  This allows new GPU code to reliably
+        // copy the entire GRAPH_SEEDS struct into constant memory, whilst not
+        // breaking all of the existing code that features Graph->Seed1, etc.
+        //
+
         struct {
+
+            ULONG NumberOfSeeds;
+            ULONG Padding3;
+
             union {
+                ULONG Seeds[MAX_NUMBER_OF_SEEDS];
                 struct {
                     union {
-                        ULONG Seed1;
-                        ULONG FirstSeed;
+                        struct {
+                            union {
+                                ULONG Seed1;
+                                ULONG FirstSeed;
+                                ULONG_BYTES Seed1Bytes;
+                            };
+                            union {
+                                ULONG Seed2;
+                                ULONG_BYTES Seed2Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds12;
                     };
-                    ULONG Seed2;
-                };
-                ULARGE_INTEGER Seeds12;
-            };
-            union {
-                struct {
                     union {
-                        ULONG Seed3;
-                        ULONG_BYTES Seed3Bytes;
+                        struct {
+                            union {
+                                ULONG Seed3;
+                                ULONG_BYTES Seed3Bytes;
+                            };
+                            union {
+                                ULONG Seed4;
+                                ULONG_BYTES Seed4Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds34;
                     };
-                    ULONG Seed4;
-                };
-                ULARGE_INTEGER Seeds34;
-            };
-            union {
-                struct {
-                    ULONG Seed5;
-                    ULONG Seed6;
-                };
-                ULARGE_INTEGER Seeds56;
-            };
-            union {
-                struct {
-                    ULONG Seed7;
                     union {
-                        ULONG Seed8;
-                        ULONG LastSeed;
+                        struct {
+                            union {
+                                ULONG Seed5;
+                                ULONG_BYTES Seed5Bytes;
+                            };
+                            union {
+                                ULONG Seed6;
+                                ULONG_BYTES Seed6Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds56;
+                    };
+                    union {
+                        struct {
+                            union {
+                                ULONG Seed7;
+                                ULONG_BYTES Seed7Bytes;
+                            };
+                            union {
+                                ULONG Seed8;
+                                ULONG LastSeed;
+                                ULONG_BYTES Seed8Bytes;
+                            };
+                        };
+                        ULARGE_INTEGER Seeds78;
                     };
                 };
-                ULARGE_INTEGER Seeds78;
             };
         };
     };
@@ -1814,6 +2143,7 @@ extern GRAPH_RESET GraphReset;
 extern GRAPH_LOAD_NEW_SEEDS GraphLoadNewSeeds;
 extern GRAPH_SOLVE GraphSolve;
 extern GRAPH_IS_ACYCLIC GraphIsAcyclic;
+extern GRAPH_IS_ACYCLIC GraphIsAcyclic16;
 extern GRAPH_ASSIGN GraphAssign;
 extern GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage;

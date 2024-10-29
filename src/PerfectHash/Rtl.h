@@ -48,6 +48,12 @@ extern "C" {
 #define PATHSEP_A  '/'
 #endif
 
+#ifdef PH_WINDOWS
+EXTERN_C
+size_t __cdecl __imp_wcslen(_In_z_ wchar_t const *s);
+#define wcslen __imp_wcslen
+#endif
+
 //
 // NT typedefs.
 //
@@ -67,39 +73,6 @@ extern "C" {
     (s)->Buffer[(s)->Length / (sizeof((s)->Buffer[0]))-1] \
 )
 
-typedef union _ULONG_INTEGER {
-    struct {
-        USHORT  LowPart;
-        USHORT  HighPart;
-    };
-    ULONG   LongPart;
-
-} ULONG_INTEGER, *PULONG_INTEGER;
-
-typedef union _LONG_INTEGER {
-    struct {
-        USHORT  LowPart;
-        SHORT   HighPart;
-    };
-    LONG   LongPart;
-} LONG_INTEGER, *PLONG_INTEGER;
-
-typedef union _USHORT_INTEGER {
-    struct {
-        BYTE  LowPart;
-        BYTE  HighPart;
-    };
-    USHORT   ShortPart;
-} USHORT_INTEGER, *PUSHORT_INTEGER;
-
-typedef union _SHORT_INTEGER {
-    struct {
-        CHAR  LowPart;
-        CHAR  HighPart;
-    };
-    SHORT   ShortPart;
-} SHORT_INTEGER, *PSHORT_INTEGER;
-
 typedef union _WIDE_CHARACTER {
     struct {
         CHAR  LowPart;
@@ -113,13 +86,6 @@ typedef const CHAR *PCCHAR;
 
 typedef _Null_terminated_ const WCHAR *PCWSZ;
 typedef const WCHAR *PCWCHAR;
-
-typedef union _FILETIME64 {
-    FILETIME AsFileTime;
-    LONGLONG AsLongLong;
-    ULONGLONG AsULongLong;
-} FILETIME64, *PFILETIME64;
-
 
 //
 // Calls to VirtualFree() need to have their size parameter wrapped by
@@ -272,6 +238,7 @@ typedef union _FILETIME64 {
 // XMM, YMM, and ZMM registers.
 //
 
+#ifndef PH_CUDA
 #ifdef PH_WINDOWS
 typedef __m128i DECLSPEC_ALIGN(XMMWORD_ALIGNMENT) XMMWORD, *PXMMWORD;
 typedef __m256i DECLSPEC_ALIGN(YMMWORD_ALIGNMENT) YMMWORD, *PYMMWORD;
@@ -283,7 +250,7 @@ C_ASSERT(sizeof(ZMMWORD) == ZMMWORD_ALIGNMENT);
 typedef __m128i XMMWORD, *PXMMWORD;
 typedef __m256i YMMWORD, *PYMMWORD;
 typedef __m512i ZMMWORD, *PZMMWORD;
-#endif
+#endif // PH_WINDOWS
 
 //
 // AVX-512 masks.
@@ -293,6 +260,8 @@ typedef __mmask16 ZMASK8, *PZMASK8;
 typedef __mmask16 ZMASK16, *PZMASK16;
 typedef __mmask32 ZMASK32, *PZMASK32;
 typedef __mmask64 ZMASK64, *PZMASK64;
+
+#endif // PH_CUDA
 
 //
 // Helper structures for index tables fed to AVX512 permute routines such as
@@ -442,6 +411,7 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define FORCEINLINE static inline __attribute__((always_inline))
 #define DECLSPEC_NOINLINE __attribute__((noinline))
 #define NOINLINE __attribute__((noinline))
+#define INLINE inline
 
 #endif
 
@@ -2524,12 +2494,12 @@ FindCharInUnicodeString(
 
     Count = String->Length / sizeof(WCHAR);
 
-    if (!StartAtCharOffset || StartAtCharOffset > Count) {
+    if (StartAtCharOffset >= Count) {
         Start = 0;
     }
 
     Wide = String->Buffer;
-    for (Index = 0; Index < Count; Index++, Wide++) {
+    for (Index = Start; Index < Count; Index++, Wide++) {
         if (*Wide == Char) {
             Found = TRUE;
             break;
@@ -3267,6 +3237,10 @@ typedef struct _RTL {
         SIZE_T SizeOfSysErrorMessageBufferInBytes;
     };
 
+    DEBUGGER_CONTEXT DebuggerContext;
+
+    ULONG Padding1;
+
     HCRYPTPROV CryptProv;
 
     SIZE_T LargePageMinimum;
@@ -3486,6 +3460,11 @@ ResetSRWLock(PSRWLOCK Lock)
 #define TLS_KEY_TYPE ULONG
 #else
 #define TLS_KEY_TYPE pthread_key_t
+#endif
+
+
+#ifdef __cplusplus
+} // extern "C"
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

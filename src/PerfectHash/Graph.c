@@ -153,6 +153,8 @@ Return Value:
 
     Rtl = Graph->Rtl;
 
+    Graph->HashFunctionId = HashFunctionId;
+
     //
     // Override vtbl methods based on table state and table create flags.
     //
@@ -508,7 +510,8 @@ Return Value:
         //
         // If the failure was due to a vertex collision, increment the counter
         // and jump to the failure handler (which results in the status code
-        // PH_S_CONTINUE_GRAPH_SOLVING ultimately being returned).
+        // PH_S_CONTINUE_GRAPH_SOLVING ultimately being returned).  Likewise
+        // for GPU warp vertex collisions.
         //
         // For any other reason, the error is considered fatal and graph solving
         // should stop.
@@ -516,6 +519,9 @@ Return Value:
 
         if (Result == PH_E_GRAPH_VERTEX_COLLISION_FAILURE) {
             InterlockedIncrement64(&Context->VertexCollisionFailures);
+            goto Failed;
+        } else if (Result == PH_E_GRAPH_GPU_WARP_VERTEX_COLLISION_FAILURE) {
+            InterlockedIncrement64(&Context->WarpVertexCollisionFailures);
             goto Failed;
         }
 
@@ -593,14 +599,12 @@ Return Value:
     // Capture the local solve time.
     //
 
-#ifdef PH_WINDOWS
     GetLocalTime(&SystemTime);
     if (!SystemTimeToFileTime(&SystemTime, &Graph->SolvedTime.AsFileTime)) {
         SYS_ERROR(SystemTimeToFileTime);
         Result = PH_E_SYSTEM_CALL_FAILED;
         goto End;
     }
-#endif
 
     //
     // If we're in "first graph wins" mode and we reach this point, we're the
@@ -804,6 +808,12 @@ Return Value:
     return Result;
 }
 
+HRESULT
+SaveGraphVertexPairsFileChm01(
+    PPERFECT_HASH_CONTEXT Context,
+    PFILE_WORK_ITEM Item
+    );
+
 _Must_inspect_result_
 _Success_(return >= 0)
 _Requires_exclusive_lock_held_(Graph->Lock)
@@ -842,6 +852,16 @@ Return Value:
     Result = HashResult;
 
     if (SUCCEEDED(HashResult)) {
+
+#if 0
+        Result = SaveGraphVertexPairsFileChm01(
+            Graph->Context,
+            Graph->SaveVertexPairsFileWorkItem
+        );
+        if (FAILED(Result)) {
+            goto End;
+        }
+#endif
 
         Flags.AsULong = Graph->Flags.AsULong;
 
@@ -1584,7 +1604,9 @@ Return Value:
 
             PreviousKey = Values[Index];
 
-            PrevHash.QuadPart = SeededHashEx(Key, &Graph->FirstSeed, HashMask);
+            PrevHash.QuadPart = SeededHashEx(PreviousKey,
+                                             &Graph->FirstSeed,
+                                             HashMask);
 
             PrevVertex1 = Assigned[PrevHash.LowPart];
             PrevVertex2 = Assigned[PrevHash.HighPart];
@@ -2621,11 +2643,15 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
-        SpareGraph = Context->SpareGraph;
+        if (IsCuGraph(Graph)) {
+            SpareGraph = Graph->CuHostSpareGraph;
+        } else {
+            SpareGraph = Context->SpareGraph;
+            Context->SpareGraph = NULL;
+        }
         ASSERT(SpareGraph != NULL);
         ASSERT(IsSpareGraph(SpareGraph));
         SpareGraph->Flags.IsSpare = FALSE;
-        Context->SpareGraph = NULL;
         BestGraph = Context->BestGraph = Graph;
         *NewGraphPointer = SpareGraph;
         BestGraphIndex = Context->NewBestGraphCount++;
@@ -2780,6 +2806,7 @@ End:
             StopGraphSolving = TRUE;
         }
 
+
     } else if (FoundBestGraph) {
 
         BestGraph = Graph;
@@ -2906,6 +2933,7 @@ End:
         for (Index = 0; Index < Graph->NumberOfSeeds; Index++) {
             BestGraphInfo->Seeds[Index] = Graph->Seeds[Index];
         }
+
     }
 
     //
@@ -3648,6 +3676,7 @@ Return Value:
     //
 
     ASSERT(sizeof(*Graph) == Info->SizeOfGraphStruct);
+    ASSERT(Graph->SizeOfStruct == sizeof(GRAPH));
 
     //
     // Initialize aliases.
@@ -4488,7 +4517,7 @@ Return Value:
 
 Error:
 
-    if (SUCCEEDED(Result) == S_OK) {
+    if (Result == S_OK) {
         Result = E_UNEXPECTED;
     }
 
@@ -4696,7 +4725,8 @@ Return Value:
 
     E_POINTER - Graph was NULL.
 
-    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph.
+    PH_E_SPARE_GRAPH - Graph is indicated as the spare graph (and it's not a
+        CUDA graph).
 
     PH_E_INVALID_USER_SEEDS_ELEMENT_SIZE - The individual value size indicated
         by the user seed value array is invalid (i.e. not sizeof(ULONG)).
@@ -4723,7 +4753,7 @@ Return Value:
         return E_POINTER;
     }
 
-    if (IsSpareGraph(Graph)) {
+    if (IsSpareGraph(Graph) && !IsCuGraph(Graph)) {
         return PH_E_SPARE_GRAPH;
     }
 

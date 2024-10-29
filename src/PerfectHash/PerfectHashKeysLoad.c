@@ -373,6 +373,7 @@ Return Value:
     ULONG_PTR Bit;
     ULONG_PTR Mask;
     ULONG_PTR Index;
+    ULONG_PTR Offset;
     ULONG_PTR Shifted;
     ULONG_PTR Leading;
     ULONG_PTR Trailing;
@@ -429,15 +430,34 @@ Return Value:
         // Fast version that will inline popcnt and tzcnt.
         //
 
-        for (Index = 0; Index < NumberOfKeys; Index++) {
+        //
+        // Process the first element outside of the loop.
+        //
+
+        Prev = Key = *Values++;
+
+        PopCount = (BYTE)PopulationCount32_POPCNT(Key);
+        Stats.PopCount[PopCount] += 1;
+
+        while (Key) {
+            Bit = TrailingZeros32_BMI1(Key);
+            Key &= Key - 1;
+            Bitmap |= (1 << Bit);
+            Stats.BitCount[Bit] += 1;
+        }
+
+        //
+        // Process the remaining values whilst verifying that the keys are
+        // sorted and unique during each loop iteration.
+        //
+
+        for (Index = 1; Index < NumberOfKeys; Index++) {
             Key = *Values++;
 
-            if (Index > 0) {
-                if (Prev > Key) {
-                    return PH_E_KEYS_NOT_SORTED;
-                } else if (Prev == Key) {
-                    return PH_E_DUPLICATE_KEYS_DETECTED;
-                }
+            if (Prev > Key) {
+                return PH_E_KEYS_NOT_SORTED;
+            } else if (Prev == Key) {
+                return PH_E_DUPLICATE_KEYS_DETECTED;
             }
 
             Prev = Key;
@@ -510,6 +530,7 @@ Return Value:
 
     KeysBitmap->LeadingZeros = (BYTE)Leading;
     KeysBitmap->TrailingZeros = (BYTE)Trailing;
+    KeysBitmap->NumberOfSetBits = PopCount;
 
     if (PopCount == 32) {
         KeysBitmap->Flags.Contiguous = TRUE;
@@ -546,16 +567,9 @@ Return Value:
     Key = Bitmap;
     String = (PCHAR)&KeysBitmap->String;
 
-    for (Bit = 0; Bit < 32; Bit++) {
-        String[Bit] = ((Bitmap & (1 << Bit)) != 0) ? '1' : '0';
-    }
-
-    //
-    // Clear the high 32-bits.
-    //
-
-    for (Bit = 32; Bit < 64; Bit++) {
-        String[Bit] = '0';
+    for (Bit = 0; Bit < 64; Bit++) {
+        Offset = (63 - Bit);
+        String[Offset] = ((Bit < 32) && ((Key & (1 << Bit)) != 0)) ? '1' : '0';
     }
 
     //
@@ -622,6 +636,7 @@ Return Value:
     ULONG_PTR Bit;
     ULONG_PTR Mask;
     ULONG_PTR Index;
+    ULONG_PTR Offset;
     ULONG_PTR Shifted;
     ULONG_PTR Leading;
     ULONG_PTR Trailing;
@@ -729,6 +744,7 @@ Return Value:
 
     KeysBitmap->LeadingZeros = (BYTE)Leading;
     KeysBitmap->TrailingZeros = (BYTE)Trailing;
+    KeysBitmap->NumberOfSetBits = PopCount;
 
     if (PopCount == 64) {
         KeysBitmap->Flags.Contiguous = TRUE;
@@ -859,7 +875,8 @@ Return Value:
     String = (PCHAR)&KeysBitmap->String;
 
     for (Bit = 0; Bit < 64; Bit++) {
-        String[Bit] = ((Bitmap & (1ULL << Bit)) != 0) ? '1' : '0';
+        Offset = (63 - Bit);
+        String[Offset] = ((Key & (1ULL << Bit)) != 0) ? '1' : '0';
     }
 
     //

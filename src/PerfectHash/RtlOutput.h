@@ -594,6 +594,16 @@ static PCSZ Exclamation = "!";
 #define ASTERISK() DO_OUTPUT(Asterisk, 1)
 #define EXCLAMATION() DO_OUTPUT(Exclamation, 1)
 
+#define PRINT_CSTR(Buf) do {                \
+    DO_OUTPUT((Buf), (DWORD)strlen((Buf))); \
+    NEWLINE();                              \
+} while (0)
+
+#define PRINT_WSTR(Buf) do {                       \
+    DO_OUTPUT((Buf), ((DWORD)wcslen((Buf)) << 1)); \
+    NEWLINE();                                     \
+} while (0)
+
 #define MAYBE_DOT() MAYBE_OUTPUT(Dot, 1)
 #define MAYBE_DASH() MAYBE_OUTPUT(Dash, 1)
 #define MAYBE_PLUS() MAYBE_OUTPUT(Plus, 1)
@@ -607,10 +617,15 @@ static PCSZ Exclamation = "!";
 #define OUTPUT_RAW(String)                                          \
     AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
 
-#define OUTPUT_BITMAP_RAW(String)                                   \
-    *Output++ = '0';                                                \
-    *Output++ = 'b';                                                \
-    AppendCharBufferToCharBuffer(&Output, String, sizeof(String)-1)
+#define OUTPUT_BITMAP32_RAW(String)                      \
+    *Output++ = '0';                                     \
+    *Output++ = 'b';                                     \
+    AppendCharBufferToCharBuffer(&Output, String+32, 32)
+
+#define OUTPUT_BITMAP64_RAW(String)                   \
+    *Output++ = '0';                                  \
+    *Output++ = 'b';                                  \
+    AppendCharBufferToCharBuffer(&Output, String, 64)
 
 #define OUTPUT_HEX(Integer) AppendIntegerToCharBufferAsHex(&Output, Integer)
 #define OUTPUT_HEX64(Integer) \
@@ -651,6 +666,7 @@ static PCSZ Exclamation = "!";
 #define OUTPUT_DOUBLE(Value)                 \
     AppendDoubleToCharBuffer(&Output, Value)
 
+#ifdef PH_WINDOWS
 #define OUTPUT_FLUSH_CONSOLE()                                               \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
     Success = WriteConsoleA(OutputHandle,                                    \
@@ -660,6 +676,12 @@ static PCSZ Exclamation = "!";
                             NULL);                                           \
     ASSERT(Success);                                                         \
     Output = OutputBuffer
+#else
+#define OUTPUT_FLUSH_CONSOLE()                                               \
+    BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer); \
+    write(1, OutputBuffer, BytesToWrite.LowPart);                            \
+    Output = OutputBuffer
+#endif
 
 #define OUTPUT_FLUSH_FILE()                                                    \
     BytesToWrite.QuadPart = ((ULONG_PTR)Output) - ((ULONG_PTR)OutputBuffer)-1; \

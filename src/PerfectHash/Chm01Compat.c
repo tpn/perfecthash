@@ -15,7 +15,8 @@ Abstract:
 #include "stdafx.h"
 #include "Chm01.h"
 #include "Chm01Private.h"
-#include "thpool.h"
+
+#include "bsthreadpool.h"
 
 #ifdef PH_WINDOWS
 #error This file is not for Windows.
@@ -30,13 +31,8 @@ Abstract:
 //
 
 VOID
-GraphCallback(
+GraphCallbackChm01Compat(
     PGRAPH Graph
-    );
-
-VOID
-FileWorkItemCallbackChm01(
-    PFILE_WORK_ITEM Item
     );
 
 
@@ -643,17 +639,17 @@ RetryWithLargerTableSize:
     // Submit all of the file preparation work items.
     //
 
-#define EXPAND_AS_SUBMIT_FILE_WORK(                     \
-    Verb, VUpper, Name, Upper,                          \
-    EofType, EofValue,                                  \
-    Suffix, Extension, Stream, Base                     \
-)                                                       \
-    ASSERT(!NoFileIo(Table));                           \
-    ZeroStructInline(Verb##Name);                       \
-    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
-    Verb##Name.Context = Context;                       \
-    ThreadpoolAddWork(FileWorkThreadpool,               \
-                      FileWorkItemCallbackChm01,        \
+#define EXPAND_AS_SUBMIT_FILE_WORK(                   \
+    Verb, VUpper, Name, Upper,                        \
+    EofType, EofValue,                                \
+    Suffix, Extension, Stream, Base                   \
+)                                                     \
+    ASSERT(!NoFileIo(Table));                         \
+    ZeroStructInline(Verb##Name);                     \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id; \
+    Verb##Name.Context = Context;                     \
+    ThreadpoolAddWork(FileWorkThreadpool,             \
+                      FileWorkItemCallbackChm01,      \
                       &Verb##Name);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
@@ -666,11 +662,7 @@ RetryWithLargerTableSize:
 
     if (!NoFileIo(Table)) {
         NumberOfFileWorkThreads = 1;
-        FileWorkThreadpool = ThreadpoolInit(NumberOfFileWorkThreads);
-        if (!FileWorkThreadpool) {
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
+        FileWorkThreadpool = Context->FileThreadpool;
         SUBMIT_PREPARE_FILE_WORK();
     }
 
@@ -732,11 +724,7 @@ RetryWithLargerTableSize:
         ASSERT(NumberOfGraphs - 1 == Concurrency);
     }
 
-    GraphThreadpool = ThreadpoolInit(Concurrency);
-    if (!GraphThreadpool) {
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
-    }
+    GraphThreadpool = Context->MainThreadpool;
 
     for (Index = 0; Index < NumberOfGraphs; Index++) {
 
@@ -787,7 +775,7 @@ RetryWithLargerTableSize:
 
         } else {
             Graph->Flags.IsSpare = FALSE;
-            ThreadpoolAddWork(GraphThreadpool, GraphCallback, Graph);
+            ThreadpoolAddWork(GraphThreadpool, GraphCallbackChm01Compat, Graph);
         }
 
     }
@@ -1401,18 +1389,18 @@ End:
         EndOfFile = NULL;
     }
 
-#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(               \
-    Verb, VUpper, Name, Upper,                          \
-    EofType, EofValue,                                  \
-    Suffix, Extension, Stream, Base                     \
-)                                                       \
-    ASSERT(!NoFileIo(Table));                           \
-    ZeroStructInline(Verb##Name);                       \
-    Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
-    Verb##Name.EndOfFile = EndOfFile;                   \
-    Verb##Name.Context = Context;                       \
-    ThreadpoolAddWork(FileWorkThreadpool,               \
-                      FileWorkItemCallbackChm01,        \
+#define EXPAND_AS_SUBMIT_CLOSE_FILE_WORK(             \
+    Verb, VUpper, Name, Upper,                        \
+    EofType, EofValue,                                \
+    Suffix, Extension, Stream, Base                   \
+)                                                     \
+    ASSERT(!NoFileIo(Table));                         \
+    ZeroStructInline(Verb##Name);                     \
+    Verb##Name.FileWorkId = FileWork##Verb##Name##Id; \
+    Verb##Name.EndOfFile = EndOfFile;                 \
+    Verb##Name.Context = Context;                     \
+    ThreadpoolAddWork(FileWorkThreadpool,             \
+                      FileWorkItemCallbackChm01,      \
                       &Verb##Name);
 
 #define SUBMIT_CLOSE_FILE_WORK() \
@@ -1510,26 +1498,12 @@ ReleaseGraphs:
 
     RELEASE(Table->OutputPath);
 
-    //
-    // Destroy the threadpools if applicable.
-    //
-
-    if (GraphThreadpool) {
-        ThreadpoolDestroy(GraphThreadpool);
-        GraphThreadpool = NULL;
-    }
-
-    if (FileWorkThreadpool) {
-        ThreadpoolDestroy(FileWorkThreadpool);
-        FileWorkThreadpool = NULL;
-    }
-
     return Result;
 }
 
 _Use_decl_annotations_
 VOID
-GraphCallback(
+GraphCallbackChm01Compat(
     PGRAPH Graph
     )
 /*++

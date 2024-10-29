@@ -280,38 +280,61 @@ endfunction()
 # compile options
 function(target_compile_options_config CONFIG)
     foreach(opt ${ARGN})
-        target_compile_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:${CONFIG}>:${opt}>")
+        target_compile_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:${CONFIG}>:${opt}>")
     endforeach()
 endfunction()
 
 function(target_compile_options_not_config CONFIG)
     foreach(opt ${ARGN})
-        target_compile_options(${PROJECT_NAME} PUBLIC "$<$<NOT:$<CONFIG:${CONFIG}>>:${opt}>")
+        target_compile_options(${PROJECT_NAME} PRIVATE "$<$<NOT:$<CONFIG:${CONFIG}>>:${opt}>")
     endforeach()
 endfunction()
 
 # compile definitions
 function(target_compile_definitions_config CONFIG)
     foreach(opt ${ARGN})
-        target_compile_definitions(${PROJECT_NAME} PUBLIC "$<$<CONFIG:${CONFIG}>:${opt}>")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<CONFIG:${CONFIG}>:${opt}>")
     endforeach()
 endfunction()
 
 function(target_compile_definitions_not_config CONFIG)
     foreach(opt ${ARGN})
-        target_compile_definitions(${PROJECT_NAME} PUBLIC "$<$<NOT:$<CONFIG:${CONFIG}>>:${opt}>")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE "$<$<NOT:$<CONFIG:${CONFIG}>>:${opt}>")
     endforeach()
 endfunction()
 
 # link options
 function(target_link_options_config CONFIG)
     foreach(opt ${ARGN})
-        target_link_options(${PROJECT_NAME} PUBLIC "$<$<CONFIG:${CONFIG}>:${opt}>")
+        target_link_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:${CONFIG}>:${opt}>")
     endforeach()
 endfunction()
 
 function(target_link_options_not_config CONFIG)
     foreach(opt ${ARGN})
-        target_link_options(${PROJECT_NAME} PUBLIC "$<$<NOT:$<CONFIG:${CONFIG}>>:${opt}>")
+        target_link_options(${PROJECT_NAME} PRIVATE "$<$<NOT:$<CONFIG:${CONFIG}>>:${opt}>")
+    endforeach()
+endfunction()
+
+# ChatGPT-assisted functions.
+function(apply_target_compile_options_to_c_files SOURCE_FILES)
+    set(options "${ARGN}")
+    foreach(source_file ${SOURCE_FILES})
+        get_filename_component(extension ${source_file} EXT)
+        if(extension STREQUAL ".c")
+            set_source_files_properties(${source_file}
+                                        PROPERTIES COMPILE_OPTIONS ${options})
+        endif()
+    endforeach()
+endfunction()
+
+function(apply_target_compile_options_config_to_c_files CONFIG SOURCE_FILES)
+    set(options "${ARGN}")
+    foreach(source_file ${SOURCE_FILES})
+        get_filename_component(extension ${source_file} EXT)
+        if(extension STREQUAL ".c")
+            set_source_files_properties(${source_file}
+                                        PROPERTIES COMPILE_OPTIONS ${options})
+        endif()
     endforeach()
 endfunction()

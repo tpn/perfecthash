@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2019 Trent Nelson <trent@trent.me>
+Copyright (c) 2019-2020 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,6 +15,23 @@ Abstract:
 #include "stdafx.h"
 
 extern LOAD_SYMBOLS LoadSymbols;
+
+#ifdef PH_WINDOWS
+#define PH_NVCUDA_DLL_NAME "nvcuda.dll"
+#define PERFECT_HASH_CUDA_DLL_NAME "PerfectHashCuda.dll"
+#else
+#define PH_NVCUDA_DLL_NAME "libcuda.so"
+#define PERFECT_HASH_CUDA_DLL_NAME "libPerfectHashCuda.so"
+#endif
+
+//
+// Forward decl.
+//
+
+HRESULT
+CuLoadKernels(
+    _In_ PCU Cu
+    );
 
 //
 // COM scaffolding routines for initialization and rundown.
@@ -31,8 +48,7 @@ CuInitialize(
 
 Routine Description:
 
-    Initializes a graph structure.  This is a relatively simple method that
-    just primes the COM scaffolding.
+    Initializes a CU instance.
 
 Arguments:
 
@@ -57,17 +73,33 @@ Return Value:
     ULONG NumberOfCuResolvedSymbols;
     ULONG NumberOfCuRandNames;
     ULONG NumberOfCuRandResolvedSymbols;
+    ULONG NumberOfPerfectHashCudaNames;
+    ULONG NumberOfPerfectHashCudaResolvedSymbols;
+#ifdef PH_WINDOWS
     CHAR CuRandDll[] = "curand64_NM.dll";
     const BYTE CuRandDllVersionOffset = 9;
+#else
+    CHAR CuRandDll[] = "libcurand.so.10";
+    const BYTE CuRandDllVersionOffset = 13;
+#endif
 
 #define EXPAND_AS_CU_NAME(Upper, Name) "cu" # Name,
+#define EXPAND_AS_CU_V2_NAME(Upper, Name) "cu" # Name "_v2",
+
     CONST PCSZ CuNames[] = {
         CU_FUNCTION_TABLE_ENTRY(EXPAND_AS_CU_NAME)
+        CU_FUNCTION_V2_TABLE_ENTRY(EXPAND_AS_CU_V2_NAME)
     };
 
-#define EXPAND_AS_CURAND_NAME(Upper, Name) "curand" # Name,
+#define EXPAND_AS_CURAND_NAME(Upper, Name) "curand"#Name,
     CONST PCSZ CuRandNames[] = {
         CURAND_FUNCTION_TABLE_ENTRY(EXPAND_AS_CURAND_NAME)
+    };
+
+#define EXPAND_AS_PERFECT_HASH_CUDA_NAME(Upper, Name) "GraphCu"#Name,
+
+    CONST PCSZ PerfectHashCudaNames[] = {
+        PERFECT_HASH_CUDA_FUNCTION_TABLE_ENTRY(EXPAND_AS_PERFECT_HASH_CUDA_NAME)
     };
 
     //
@@ -81,6 +113,10 @@ Return Value:
     ULONG CuRandBitmapBuffer[(ALIGN_UP(ARRAYSIZE(CuRandNames),
                              sizeof(ULONG) << 3) >> 5)+1] = { 0 };
     RTL_BITMAP CuRandFailedBitmap;
+
+    ULONG PerfectHashCudaBitmapBuffer[(ALIGN_UP(ARRAYSIZE(PerfectHashCudaNames),
+                                      sizeof(ULONG) << 3) >> 5)+1] = { 0 };
+    RTL_BITMAP PerfectHashCudaFailedBitmap;
 
     //
     // Validate arguments.
@@ -104,11 +140,12 @@ Return Value:
     Cu->NumberOfCuFunctions = sizeof(Cu->CuFunctions) / sizeof(ULONG_PTR);
     ASSERT(Cu->NumberOfCuFunctions == NumberOfCuNames);
 
-    Module = LoadLibraryA("nvcuda.dll");
+    Module = LoadLibraryA(PH_NVCUDA_DLL_NAME);
     if (!IsValidHandle(Module)) {
         Result = PH_E_NVCUDA_DLL_LOAD_LIBRARY_FAILED;
         goto Error;
     }
+    Cu->NvCudaModule = Module;
 
     Success = LoadSymbols(CuNames,
                           NumberOfCuNames,
@@ -135,6 +172,17 @@ Return Value:
     CuResult = Cu->Init(0);
     if (CU_FAILED(CuResult)) {
         CU_ERROR(CuInitialize_Init, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Get the number of devices.
+    //
+
+    CuResult = Cu->DeviceGetCount(&Cu->NumberOfDevices);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuInitialize_DeviceGetCount, CuResult);
         Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
         goto Error;
     }
@@ -173,25 +221,36 @@ Return Value:
         (Cu->DriverSuffix[0] == '8' && Cu->DriverSuffix[1] == '0') ||
         (Cu->DriverSuffix[0] == '9' && Cu->DriverSuffix[1] == '0') ||
         (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '0') ||
-        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '1')
+        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '1') ||
+        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '2')
     );
 
+#ifdef PH_WINDOWS
     //
     // Overlay the version into the curand dll name.
     //
 
     ASSERT(CuRandDll[CuRandDllVersionOffset] == 'N');
     ASSERT(CuRandDll[CuRandDllVersionOffset+1] == 'M');
+#endif
 
+    //
+    // Temp hack: we only support curand64_10.dll for now.
+    //
+
+#if 0
     CuRandDll[CuRandDllVersionOffset]   = Cu->DriverSuffix[0];
     CuRandDll[CuRandDllVersionOffset+1] = Cu->DriverSuffix[1];
+#else
+    CuRandDll[CuRandDllVersionOffset]   = '1';
+    CuRandDll[CuRandDllVersionOffset+1] = '0';
+#endif
 
     Module = LoadLibraryA((PCSZ)CuRandDll);
     if (!IsValidHandle(Module)) {
         Result = PH_E_CURAND_DLL_LOAD_LIBRARY_FAILED;
         goto Error;
     }
-
     Cu->CuRandModule = Module;
 
     //
@@ -229,6 +288,49 @@ Return Value:
     }
 
     //
+    // Load PerfectHashCuda.dll's symbols.
+    //
+
+    PerfectHashCudaFailedBitmap.SizeOfBitMap = ARRAYSIZE(PerfectHashCudaNames) + 1;
+    PerfectHashCudaFailedBitmap.Buffer = (PULONG)&PerfectHashCudaBitmapBuffer;
+
+    NumberOfPerfectHashCudaNames = ARRAYSIZE(PerfectHashCudaNames);
+
+    Cu->NumberOfPerfectHashCudaFunctions = (
+        sizeof(Cu->PerfectHashCudaFunctions) /
+        sizeof(ULONG_PTR)
+    );
+    ASSERT(Cu->NumberOfPerfectHashCudaFunctions == NumberOfPerfectHashCudaNames);
+
+    Module = LoadLibraryA(PERFECT_HASH_CUDA_DLL_NAME);
+    if (!IsValidHandle(Module)) {
+        Result = PH_E_PERFECT_HASH_CUDA_DLL_LOAD_LIBRARY_FAILED;
+        goto Error;
+    }
+    Cu->PerfectHashCudaModule = Module;
+
+    Success = LoadSymbols(PerfectHashCudaNames,
+                          NumberOfPerfectHashCudaNames,
+                          (PULONG_PTR)&Cu->PerfectHashCudaFunctions,
+                          Cu->NumberOfPerfectHashCudaFunctions,
+                          Module,
+                          &PerfectHashCudaFailedBitmap,
+                          &NumberOfPerfectHashCudaResolvedSymbols);
+
+    if (!Success) {
+        Result = PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED;
+        goto Error;
+    }
+
+    if (Cu->NumberOfPerfectHashCudaFunctions !=
+        NumberOfPerfectHashCudaResolvedSymbols)
+    {
+        Result =
+            PH_E_PERFECT_HASH_CUDA_DLL_LOAD_SYMBOLS_FAILED_TO_LOAD_ALL_SYMBOLS;
+        goto Error;
+    }
+
+    //
     // We're done!  Indicate success and finish up.
     //
 
@@ -249,6 +351,169 @@ End:
 
     return Result;
 }
+
+#if 0
+HRESULT
+CuLoadKernels(
+    _In_ PCU Cu
+    )
+/*++
+
+Routine Description:
+
+    Loads kernels.
+
+Arguments:
+
+    Cu - Supplies a pointer to a CU structure for which initialization
+        is to be performed.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Cu is NULL.
+
+    E_UNEXPECTED - All other errors.
+
+--*/
+{
+    HRESULT Result;
+    CU_RESULT CuResult;
+    PCU_MODULE Module;
+    PCU_FUNCTION *Function;
+    PCU_OCCUPANCY Occupancy;
+    PCU_CONTEXT CuContext;
+    PCSZ FunctionName;
+    CU_DEVICE DeviceOrdinal;
+    PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+
+    PCSZ KernelFunctionNames[] = {
+        (PCSZ)"PerfectHashCudaSeededHashAllMultiplyShiftR2",
+    };
+
+    CU_JIT_OPTION JitOptions[] = {
+        CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
+        CU_JIT_INFO_LOG_BUFFER,
+        CU_JIT_MAX_REGISTERS,
+    };
+    PVOID JitOptionValues[3];
+    USHORT NumberOfJitOptions = ARRAYSIZE(JitOptions);
+
+    //
+    // Load the TLS context and device ordinal.
+    //
+
+    TlsContext = PerfectHashTlsEnsureContext();
+    Context = TlsContext->Context;
+    DeviceOrdinal = 0;
+    //DeviceOrdinal = Context->CuDeviceOrdinal;
+
+    //
+    // Initialize the JIT options.
+    //
+
+    JitOptionValues[0] = (PVOID)sizeof(Cu->JitLogBuffer);
+    JitOptionValues[1] = (PVOID)Cu->JitLogBuffer;
+    //JitOptionValues[2] = (PVOID)Cu->JitMaxNumberOfRegisters;
+    JitOptionValues[2] = (PVOID)64LL;
+
+    //
+    // Create a CUDA context.
+    //
+
+    CuResult = Cu->CtxCreate(&CuContext, CU_CTX_SCHED_AUTO, DeviceOrdinal);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuCtxCreate, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Load the module from the embedded PTX.
+    //
+
+    CuResult = Cu->ModuleLoadDataEx(&Module,
+                                    (PCHAR)GraphPtxRawCStr,
+                                    NumberOfJitOptions,
+                                    JitOptions,
+                                    JitOptionValues);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuModuleLoadDataEx, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Module loaded successfully, resolve the kernel.
+    //
+
+    Function = &Cu->Functions[0];
+    FunctionName = KernelFunctionNames[0];
+    CuResult = Cu->ModuleGetFunction(Function, Module, FunctionName);
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(CuModuleGetFunction, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // Get occupancy stats for each function.
+    //
+
+    Occupancy = &Cu->Occupancy[0];
+
+    CuResult = Cu->OccupancyMaxPotentialBlockSizeWithFlags(
+        &Occupancy->MinimumGridSize,
+        &Occupancy->BlockSize,
+        *Function,
+        NULL,   // OccupancyBlockSizeToDynamicMemSize
+        0,      // DynamicSharedMemorySize
+        0,      // BlockSizeLimit
+        0       // Flags
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(OccupancyMaxPotentialBlockSizeWithFlags, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    CuResult = Cu->OccupancyMaxActiveBlocksPerMultiprocessorWithFlags(
+        &Occupancy->NumBlocks,
+        *Function,
+        Occupancy->BlockSize,
+        0, // DynamicSharedMemorySize
+        0  // Flags
+    );
+    if (CU_FAILED(CuResult)) {
+        CU_ERROR(OccupancyMaxActiveBlocksPerMultiprocessorWithFlags, CuResult);
+        Result = PH_E_CUDA_DRIVER_API_CALL_FAILED;
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+#endif
 
 
 CU_RUNDOWN CuRundown;
@@ -279,6 +544,15 @@ Return Value:
     //
 
     ASSERT(Cu->SizeOfStruct == sizeof(*Cu));
+
+    //
+    // Release the PerfectHashCuda.dll module if applicable.
+    //
+
+    if (Cu->PerfectHashCudaModule != NULL) {
+        FreeLibrary(Cu->PerfectHashCudaModule);
+        Cu->PerfectHashCudaModule = NULL;
+    }
 
     //
     // Release the curand module if applicable.

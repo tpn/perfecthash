@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -140,6 +140,19 @@ Abstract:
         NO_EOF_VALUE,                                                      \
         NO_SUFFIX,                                                         \
         &CSourceFileExtension,                                             \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CudaSourceFile,                                                    \
+        CUDA_SOURCE_FILE,                                                  \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &CudaSourceFileExtension,                                          \
         NO_STREAM_NAME,                                                    \
         NO_BASE_NAME                                                       \
     )                                                                      \
@@ -446,6 +459,19 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        CMakeListsTextFile,                                                \
+        CMAKE_LISTS_TEXT_FILE,                                             \
+        EofInitTypeDefault,                                                \
+        NO_EOF_VALUE,                                                      \
+        NO_SUFFIX,                                                         \
+        &TextFileExtension,                                                \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(CMakeLists)                                              \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         VCProjectDllFile,                                                  \
         VCPROJECT_DLL_FILE,                                                \
         EofInitTypeDefault,                                                \
@@ -560,6 +586,39 @@ Abstract:
         BASE_NAME(CompiledPerfectHash)                                     \
     )
 
+#if 0
+
+//
+// These files are intended for debugging.
+//
+
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        GraphVertexPairsFile,                                              \
+        GRAPH_VERTEX_PAIRS_FILE,                                           \
+        EofInitTypeNumberOfKeysMultiplier,                                 \
+        8,                                                                 \
+        SUFFIX(GraphVertexPairs),                                          \
+        &BinFileExtension,                                                 \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        GraphVertices3File,                                                \
+        GRAPH_VERTICES3_FILE,                                              \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        4,                                                                 \
+        SUFFIX(GraphVertices3),                                            \
+        &BinFileExtension,                                                 \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )
+
+#endif
 
 #define PREPARE_FILE_WORK_TABLE(FIRST_ENTRY, ENTRY, LAST_ENTRY) \
     VERB_FILE_WORK_TABLE(Prepare, PREPARE, FIRST_ENTRY, ENTRY, LAST_ENTRY)
@@ -1069,7 +1128,7 @@ FileRequiresUuid(
     )
 {
     return (
-        IsValidVCProjectFileId((FILE_ID)Id) ||
+        IsValidVCProjectFileId((VCPROJECT_FILE_ID)Id) ||
         Id == FileVSSolutionFileId
     );
 }
@@ -1256,19 +1315,19 @@ FileWorkIdToFileId(
     _In_ FILE_WORK_ID FileWorkId
     )
 {
-    FILE_ID Id;
+    LONG Id;
 
-    Id = FileWorkId;
+    Id = (LONG)FileWorkId;
 
     if (IsSaveFileWorkId(FileWorkId)) {
-        Id -= (FileWorkSaveFirstId - 1);
+        Id -= ((LONG)(FileWorkSaveFirstId - 1));
     } else if (IsCloseFileWorkId(FileWorkId)) {
-        Id -= (FileWorkCloseFirstId - 1);
+        Id -= ((LONG)(FileWorkCloseFirstId - 1));
     }
 
-    ASSERT(IsValidFileId(Id));
+    ASSERT(IsValidFileId((FILE_ID)Id));
 
-    return Id;
+    return (FILE_ID)Id;
 }
 
 FORCEINLINE
@@ -1336,7 +1395,7 @@ FileWorkIdToDependentId(
 
     ASSERT(Id >= FileWorkPrepareFirstId && Id <= FileWorkCloseLastId);
 
-    return Id;
+    return (FILE_WORK_ID)Id;
 }
 
 FORCEINLINE

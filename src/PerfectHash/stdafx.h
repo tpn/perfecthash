@@ -18,7 +18,9 @@ Abstract:
 
 #pragma once
 
+#ifndef __CUDA_ARCH__
 #include "targetver.h"
+#endif
 
 #if 0
 //
@@ -59,6 +61,7 @@ Abstract:
 //
 //
 
+#ifndef __CUDA_ARCH__
 #pragma warning(push)
 #pragma warning(disable: 4255 4668)
 #include <Windows.h>
@@ -116,6 +119,9 @@ Abstract:
 #define OUT
 #include <pthread.h>
 #endif
+#else // ifndef __CUDA_ARCH__
+#include <no_sal2.h>
+#endif
 
 //
 // PerfectHash-related headers.
@@ -130,6 +136,7 @@ Abstract:
 
 #include "Component.h"
 #include "BitManipulation.h"
+#include "Debugger.h"
 #include "Rtl.h"
 #include "RtlOutput.h"
 #include "Chunk.h"
@@ -150,13 +157,14 @@ Abstract:
 #include "PerfectHashPrimes.h"
 #include "PerfectHashPrivate.h"
 #include "PerfectHashAllocator.h"
-#ifdef PH_WINDOWS
+//#ifndef PH_CU
 #include "Cu.h"
+//#endif
 #include "PerfectHashCu.h"
-#endif
 #include "Graph.h"
 #include "Math.h"
 #include "Rng.h"
+#include "GraphCu.h"
 #include "PerfectHashContext.h"
 #include "PerfectHashConstants.h"
 #include "PerfectHashErrorHandling.h"

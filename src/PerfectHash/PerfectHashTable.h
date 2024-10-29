@@ -23,6 +23,8 @@ Abstract:
 
 #include "stdafx.h"
 
+#include "GraphCounters.h"
+
 //
 // Define the PERFECT_HASH_TABLE_STATE structure.
 //
@@ -361,6 +363,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
 
     ULONG GraphImpl;
 
+    //
+    // Pad out to an 8-byte boundary.
+    //
+
     ULONG Padding1;
 
     //
@@ -431,11 +437,11 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     // Pointers to files associated with the table.
     //
 
-#define EXPAND_AS_FILE(               \
-    Verb, VUpper, Name, Upper,        \
-    EofType, EofValue,                \
-    Suffix, Extension, Stream, Base   \
-)                                     \
+#define EXPAND_AS_FILE(             \
+    Verb, VUpper, Name, Upper,      \
+    EofType, EofValue,              \
+    Suffix, Extension, Stream, Base \
+)                                   \
     PPERFECT_HASH_FILE Name;
 
 #define EXPAND_AS_FIRST_FILE(         \
@@ -448,14 +454,14 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
         PPERFECT_HASH_FILE FirstFile; \
     };
 
-#define EXPAND_AS_LAST_FILE(          \
-    Verb, VUpper, Name, Upper,        \
-    EofType, EofValue,                \
-    Suffix, Extension, Stream, Base   \
-)                                     \
-    union {                           \
-        PPERFECT_HASH_FILE Name;      \
-        PPERFECT_HASH_FILE LastFile;  \
+#define EXPAND_AS_LAST_FILE(         \
+    Verb, VUpper, Name, Upper,       \
+    EofType, EofValue,               \
+    Suffix, Extension, Stream, Base  \
+)                                    \
+    union {                          \
+        PPERFECT_HASH_FILE Name;     \
+        PPERFECT_HASH_FILE LastFile; \
     };
 
     FILE_WORK_TABLE(EXPAND_AS_FIRST_FILE,

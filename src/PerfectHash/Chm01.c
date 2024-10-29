@@ -20,6 +20,7 @@ Abstract:
 #error This file is Windows only.
 #endif
 
+
 _Use_decl_annotations_
 HRESULT
 CreatePerfectHashTableImplChm01(
@@ -1891,6 +1892,12 @@ Return Value:
     )                                                          \
                                                                \
     ENTRY(                                                     \
+        "Warp Vertex Collision Failures:                    ", \
+        Context->WarpVertexCollisionFailures,                  \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
         "Cyclic Graph Failures:                             ", \
         Context->CyclicGraphFailures,                          \
         OUTPUT_INT                                             \
@@ -1900,6 +1907,30 @@ Return Value:
         "Vertex Collision to Cyclic Graph Failure Ratio:    ", \
         VertexCollisionToCyclicGraphFailureRatio,              \
         OUTPUT_DOUBLE                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "GPU<->CPU AddKeys Mismatches                       ", \
+        Context->GpuAddKeysSuccessButCpuAddKeysFailures,       \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "GPU<->CPU IsAcyclic Mismatches                     ", \
+        Context->GpuIsAcyclicButCpuIsCyclicFailures,           \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "GPU<->CPU AddKeys Successes                        ", \
+        Context->GpuAndCpuAddKeysSuccess,                      \
+        OUTPUT_INT                                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
+        "GPU<->CPU IsAcyclic Successes                      ", \
+        Context->GpuAndCpuIsAcyclicSuccess,                    \
+        OUTPUT_INT                                             \
     )                                                          \
                                                                \
     ENTRY(                                                     \
