@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -24,11 +24,11 @@ Abstract:
 #define VER_DEBUG 0
 #endif
 
-#define VER_FILEVERSION 0,61,0,0
-#define VER_FILEVERSION_STR "v0.61"
+#define VER_FILEVERSION 0,62,0,0
+#define VER_FILEVERSION_STR "v0.62"
 
-#define VER_PRODUCTVERSION 0,61,0,0
-#define VER_PRODUCTVERSION_STR "v0.61"
+#define VER_PRODUCTVERSION 0,62,0,0
+#define VER_PRODUCTVERSION_STR "v0.62"
 
 #ifndef PH_COMPAT
 #define VER_FILEFLAGS (VS_FF_PRERELEASE|VER_DEBUG)
@@ -36,7 +36,7 @@ Abstract:
 
 #define VER_PRODUCTNAME_STR "PerfectHash (https://github.com/tpn/perfecthash)"
 #define VER_COMPANYNAME_STR "Trent Nelson <trent@trent.me>"
-#define VER_LEGALCOPYRIGHT_STR "Copyright (c) 2018-2023 " \
+#define VER_LEGALCOPYRIGHT_STR "Copyright (c) 2018-2024 " \
                                "Trent Nelson <trent@trent.me>"
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
