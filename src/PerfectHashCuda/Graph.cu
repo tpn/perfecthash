@@ -806,8 +806,8 @@ GraphCuRemoveVertex(
     //DegreeType Degree;
     Edge3Type Edge3;
     Edge3Type *Edges3 = (decltype(Edges3))Graph->Edges3;
-    OrderType *Order = (decltype(Order))Graph->Order;
-    OrderType *OrderAddress;
+    //OrderType *Order = (decltype(Order))Graph->Order;
+    //OrderType *OrderAddress;
     //OrderIndexType OrderIndex;
     OrderIndexType *GraphOrderIndex =
         (decltype(GraphOrderIndex))&Graph->OrderIndex;
