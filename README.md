@@ -4,6 +4,9 @@
 <img src="https://ci.appveyor.com/api/projects/status/github/tpn/perfecthash?svg=true&retina=true" alt="Appveyor Badge">
 -->
 
+[Helper Utility for Generating Command Line Syntax](https://tpn.github.io/perfecthash-ui/)
+
+
 ## Overview
 
 This project is a library for creating perfect hash tables from 32-bit key sets.
