@@ -131,12 +131,6 @@ include(cmake/GlobalSettingsInclude.cmake OPTIONAL)
 ################################################################################
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-    # Nothing.
-else()
-    message(FATAL "Only 64-bit platforms are supported.")
-endif()
-
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
     set(IS_WINDOWS 1)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -145,9 +139,31 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(IS_MAC 1)
     set(IS_UNIX 1)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+    set(IS_EMSCRIPTEN 1)
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_PTHREADS=1")
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s WASM_BIGINT=1")
+
+    # Define the output target as HTML, JS, or Wasm file as desired
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+
+    # Add any other Emscripten-specific compiler or linker flags
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ASSERTIONS=1")
+
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
+
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # Nothing.
+elseif(!IS_EMSCRIPT)
+    message(FATAL_ERROR "Only 64-bit platforms are supported.")
+endif()
+
 
 ################################################################################
 # Sub-projects

@@ -101,12 +101,19 @@ else()
     target_compile_options(
         ${PROJECT_NAME}
         PUBLIC
-        -march=native
         -Wno-incompatible-pointer-types
         -Wno-deprecated-declarations
         -Wno-multichar # For Rtlc: CpuInfo.Ebx = (LONG)'uneG'
         -fno-omit-frame-pointer
     )
+
+    if (NOT IS_EMSCRIPTEN)
+        target_compile_options(
+            ${PROJECT_NAME}
+            PUBLIC
+            -march=native
+        )
+    endif()
 
     target_link_options(
         ${PROJECT_NAME}
