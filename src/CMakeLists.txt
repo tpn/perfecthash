@@ -5,7 +5,7 @@ set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 project(
     PerfectHash
     VERSION 0.62.0
-    LANGUAGES C CXX CUDA
+    LANGUAGES C CXX
 )
 
 set(PROJECT_ROOT "${CMAKE_SOURCE_DIR}/..")
@@ -43,17 +43,21 @@ set(CMAKE_CONFIGURATION_TYPES
 ###############################################################################
 
 # Define a CMake option to enable or disable CUDA manually
-option(USE_CUDA "Enable CUDA support if available" ON)
+option(USE_CUDA "Enable CUDA support if available" OFF)
 
 # Find CUDA if the user did not explicitly disable it
 if(USE_CUDA)
     find_package(CUDA)
+else()
+    set(CUDA_FOUND FALSE)
 endif()
 
 # Set the HAS_CUDA variable based on whether CUDA was found
 if(CUDA_FOUND)
     message(STATUS "CUDA found, enabling CUDA support")
     set(HAS_CUDA TRUE)
+    # Add CUDA to our project languages.
+    enable_language(CUDA)
 else()
     message(STATUS "CUDA not found, CUDA support is disabled")
     set(HAS_CUDA FALSE)
