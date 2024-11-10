@@ -16,6 +16,14 @@ target_include_directories(
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "PERFECT_HASH_CMAKE")
 
+if(USE_CUDA)
+    target_compile_definitions(
+        ${PROJECT_NAME}
+        PUBLIC
+        "PH_USE_CUDA"
+    )
+endif()
+
 if (IS_CUDA)
 
     target_compile_definitions(

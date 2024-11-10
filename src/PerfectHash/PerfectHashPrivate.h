@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -385,7 +385,9 @@ typedef CREATE_PERFECT_HASH_TABLE_IMPL *PCREATE_PERFECT_HASH_TABLE_IMPL;
 //
 
 CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm01;
+#ifdef PH_USE_CUDA
 CREATE_PERFECT_HASH_TABLE_IMPL CreatePerfectHashTableImplChm02;
+#endif
 
 //
 // Likewise, each algorithm implements a loader routine that matches the
@@ -410,7 +412,9 @@ typedef LOAD_PERFECT_HASH_TABLE_IMPL *PLOAD_PERFECT_HASH_TABLE_IMPL;
 //
 
 LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm01;
+#ifdef PH_USE_CUDA
 LOAD_PERFECT_HASH_TABLE_IMPL LoadPerfectHashTableImplChm02;
+#endif
 
 //
 // For each algorithm, declare the index impl routine.  These are gathered in an

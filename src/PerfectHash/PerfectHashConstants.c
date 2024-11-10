@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -104,6 +104,36 @@ const ENUM_ID_BOUNDS_TUPLE EnumIdBoundsTuples[] = {
     PERFECT_HASH_ENUM_TABLE_ENTRY(EXPAND_AS_ENUM_ID_BOUNDS)
     { (ULONG)-1, 0 },
 };
+
+#ifndef PH_USE_CUDA
+
+//
+// Hacky stubs to allow the X-macro below to compile.
+//
+
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+CreatePerfectHashTableImplChm02(
+    _Inout_ PPERFECT_HASH_TABLE Table
+    )
+{
+    UNREFERENCED_PARAMETER(Table);
+    return E_NOTIMPL;
+}
+
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+LoadPerfectHashTableImplChm02(
+    _Inout_ PPERFECT_HASH_TABLE Table
+    )
+{
+    UNREFERENCED_PARAMETER(Table);
+    return E_NOTIMPL;
+}
+
+#endif
 
 //
 // Declare the array of creation routines.
@@ -1328,6 +1358,8 @@ GRAPH_VTBL GraphInterface = {
 };
 VERIFY_VTBL_SIZE(GRAPH, 15);
 
+#ifdef PH_USE_CUDA
+
 //
 // GraphCu
 //
@@ -1371,6 +1403,8 @@ GRAPH_CU_VTBL GraphCuInterface = {
     NULL, // HashKeys
 };
 VERIFY_VTBL_SIZE(GRAPH_CU, 15);
+
+#endif  // PH_USE_CUDA
 
 //
 // Cu
@@ -1421,8 +1455,13 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashDirectoryInterface,
     &GuardedListInterface,
     &GraphInterface,
+#ifdef PH_USE_CUDA
     &GraphCuInterface,
     &CuInterface,
+#else
+    NULL,
+    NULL,
+#endif
     &RngInterface,
     NULL,
 };
@@ -1444,8 +1483,13 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
+#ifdef PH_USE_CUDA
     (PCOMPONENT_INITIALIZE)&GraphCuInitialize,
     (PCOMPONENT_INITIALIZE)&CuInitialize,
+#else
+    NULL,
+    NULL,
+#endif
     (PCOMPONENT_INITIALIZE)&RngInitialize,
 
     NULL,
@@ -1468,8 +1512,13 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
+#ifdef PH_USE_CUDA
     (PCOMPONENT_RUNDOWN)&GraphCuRundown,
     (PCOMPONENT_RUNDOWN)&CuRundown,
+#else
+    NULL,
+    NULL,
+#endif
     (PCOMPONENT_RUNDOWN)&RngRundown,
 
     NULL,

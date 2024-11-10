@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -16,7 +16,6 @@ Abstract:
 
 #include "stdafx.h"
 
-_Use_decl_annotations_
 HRESULT
 SaveGraphVertices3FileChm01(
     PPERFECT_HASH_CONTEXT Context,

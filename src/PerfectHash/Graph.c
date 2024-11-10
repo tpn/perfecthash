@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -153,7 +153,9 @@ Return Value:
 
     Rtl = Graph->Rtl;
 
+#ifdef PH_USE_CUDA
     Graph->HashFunctionId = HashFunctionId;
+#endif
 
     //
     // Override vtbl methods based on table state and table create flags.
@@ -2643,12 +2645,17 @@ Return Value:
     } else {
         ASSERT(Context->NewBestGraphCount == 0);
         ASSERT(Context->FirstAttemptSolved == 0);
+#ifdef PH_USE_CUDA
         if (IsCuGraph(Graph)) {
             SpareGraph = Graph->CuHostSpareGraph;
         } else {
             SpareGraph = Context->SpareGraph;
             Context->SpareGraph = NULL;
         }
+#else
+        SpareGraph = Context->SpareGraph;
+        Context->SpareGraph = NULL;
+#endif
         ASSERT(SpareGraph != NULL);
         ASSERT(IsSpareGraph(SpareGraph));
         SpareGraph->Flags.IsSpare = FALSE;
