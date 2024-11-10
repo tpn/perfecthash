@@ -1783,7 +1783,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     DECL_GRAPH_COUNTERS_WITHIN_STRUCT();
 
-#ifdef HAS_CUDA
+#ifdef PH_USE_CUDA
 
     //
     // If this is a GPU solver graph, this points to the solve context.
@@ -1904,7 +1904,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _GRAPH {
 
     struct _CU_KERNEL_CONTEXT *CuKernelContext;
 
-#endif  // HAS_CUDA
+#endif  // PH_USE_CUDA
 
     //
     // Seed masks for the current hash function.

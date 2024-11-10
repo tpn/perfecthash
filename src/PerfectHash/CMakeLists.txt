@@ -1,8 +1,8 @@
 set(PROJECT_NAME PerfectHash)
 
-################################################################################
+# ###############################################################################
 # Source groups
-################################################################################
+# ###############################################################################
 set(Private_Header_Files
     "BitManipulation.h"
     "BulkCreateBestCsv.h"
@@ -136,7 +136,6 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Source_Files
     "BitManipulation.c"
     "Chm01Shared.c"
-    "Chm02Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"
     "Chm01FileWorkCHeaderCompiledPerfectHashFile.c"
@@ -230,17 +229,22 @@ set(Source_Files
     "_dtoa.c"
     "_strtod.c"
     "Cu.c"
-    "GraphCu.c"
     "PerfectHashCu.c"
     "SymbolLoader.c"
 )
 
-if (IS_WINDOWS)
+if(USE_CUDA)
+    list(
+        APPEND Source_Files
+        "Chm02Shared.c"
+        "GraphCu.c"
+    )
+endif()
 
+if(IS_WINDOWS)
     list(
         APPEND Source_Files
         "Chm01.c"
-        "Chm02.c"
         "RtlUuid.c"
         "Security.c"
         "GraphAvx.c"
@@ -252,6 +256,13 @@ if (IS_WINDOWS)
         "PerfectHashContextBulkCreate.c"
     )
 
+    if(USE_CUDA)
+        list(
+            APPEND Source_Files
+            "Chm02.c"
+        )
+    endif()
+
 else()
     list(
         APPEND Source_Files
@@ -262,9 +273,15 @@ else()
         "unicode.c"
         "Debugger.c"
         "Chm01Compat.c"
-        "Chm02Compat.c"
         "PerfectHashCompat.c"
     )
+
+    if(USE_CUDA)
+        list(
+            APPEND Source_Files
+            "Chm02Compat.c"
+        )
+    endif()
 endif()
 
 source_group("Source Files" FILES ${Source_Files})
@@ -276,7 +293,7 @@ set(ALL_FILES
     ${Source_Files}
 )
 
-if (IS_WINDOWS)
+if(IS_WINDOWS)
     list(
         APPEND ALL_FILES
         ${Resource_Files}
@@ -290,64 +307,59 @@ if (IS_WINDOWS)
     set(OUTPUT_FILE "../../../include/PerfectHashErrors.h")
 
     set(MC_COMMAND cd ../../PerfectHash &&
-                   mc.exe -v -o -c -b -h ../../include -x .
-                          -km PerfectHashEvents.man PerfectHashErrors.mc)
+        mc.exe -v -o -c -b -h ../../include -x .
+        -km PerfectHashEvents.man PerfectHashErrors.mc)
 
     add_custom_command(
-      OUTPUT ${OUTPUT_FILE}
-      COMMAND ${MC_COMMAND}
-      DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
-      COMMENT "Compiling PerfectHashErrors.mc and PerfectHashEvents.man..."
+        OUTPUT ${OUTPUT_FILE}
+        COMMAND ${MC_COMMAND}
+        DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
+        COMMENT "Compiling PerfectHashErrors.mc and PerfectHashEvents.man..."
     )
 
     add_custom_target(PerfectHashResources ALL DEPENDS ${OUTPUT_FILE})
-
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
 
-################################################################################
+# ###############################################################################
 # Target
-################################################################################
+# ###############################################################################
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
 
-################################################################################
+# ###############################################################################
 # Includes for CMake from *.props
-################################################################################
+# ###############################################################################
 use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "../PerfectHash.cmake")
 
 set(ROOT_NAMESPACE PerfectHash)
 
-################################################################################
+# ###############################################################################
 # Compile definitions
-################################################################################
+# ###############################################################################
 target_compile_definitions(
     ${PROJECT_NAME}
     PRIVATE
     "_PERFECT_HASH_INTERNAL_BUILD"
 )
 
-target_compile_definitions(
-    ${PROJECT_NAME}
-    PUBLIC
-    HAS_CUDA
-)
-
-################################################################################
+# ###############################################################################
 # Compile and link options
-################################################################################
-################################################################################
+# ###############################################################################
+
+# ###############################################################################
 # Dependencies
-################################################################################
+# ###############################################################################
+
 # Link with other targets.
-if (HookPenter STREQUAL "1")
+if(HookPenter STREQUAL "1")
     target_link_libraries(${PROJECT_NAME} PUBLIC FunctionHook)
 endif()
 
-if (IS_WINDOWS)
+if(IS_WINDOWS)
     add_dependencies(${PROJECT_NAME} PerfectHashAsm)
     set(ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4 PerfectHashAsm)
     target_link_libraries(${PROJECT_NAME} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 endif()
 
-#  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :
+# vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

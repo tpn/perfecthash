@@ -26,7 +26,10 @@ Abstract:
 #include <cooperative_groups/memcpy_async.h>
 
 #define PH_CU
-#define HAS_CUDA
+
+#ifndef PH_USE_CUDA
+#error PH_USE_CUDA must be defined by this stage.
+#endif
 
 #include <PerfectHash.h>
 
