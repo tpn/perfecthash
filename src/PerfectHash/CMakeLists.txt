@@ -113,8 +113,6 @@ set(Private_Header_Files_28Auto-Generated29
     "CompiledPerfectHashTableTypesPre_CHeader_RawCString.h"
     "Makefile_Makefile_RawCString.h"
     "no_sal2_CHeader_RawCString.h"
-    "GraphDebug_Ptx_RawCString.h"
-    "Graph_Ptx_RawCString.h"
 )
 source_group("Private Header Files %28Auto-Generated%29" FILES ${Private_Header_Files_28Auto-Generated29})
 

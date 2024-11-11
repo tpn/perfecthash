@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,7 +15,6 @@ Abstract:
 #include "stdafx.h"
 #include "Chm01.h"
 #include "Chm02Private.h"
-#include "Graph_Ptx_RawCString.h"
 
 //
 // Main initialization routine.
@@ -181,16 +180,7 @@ Return Value:
     PtxString = NULL;
     PtxSizeInBytes = 0;
 
-    if (0) {
-
-        //
-        // No --CuPtxPath supplied; use the embedded PTX string.
-        //
-
-        PtxString = (PCHAR)GraphPtxRawCStr;
-        PtxSizeInBytes = sizeof(GraphPtxRawCStr);
-
-    } else if (CuPtxPath != NULL) {
+    if (CuPtxPath != NULL) {
 
         //
         // --CuPtxPath was supplied.  Create a path instance to encapsulate the
