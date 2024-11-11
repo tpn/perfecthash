@@ -1,0 +1,813 @@
+PerfectHashBulkCreate.exe Usage:
+<KeysDirectory> <OutputDirectory>
+<Algorithm> <HashFunction> <MaskFunction>
+<MaximumConcurrency>
+[BulkCreateFlags] [KeysLoadFlags] [TableCreateFlags]
+[TableCompileFlags] [TableCreateParameters]
+
+PerfectHashCreate.exe Usage:
+<KeysPath> <OutputDirectory>
+<Algorithm> <HashFunction> <MaskFunction>
+<MaximumConcurrency>
+[CreateFlags] [KeysLoadFlags] [TableCreateFlags]
+[TableCompileFlags] [TableCreateParameters]
+
+Create and Bulk Create Flags:
+
+## SkipTestAfterCreate
+
+Normally, after a table has been successfully created, it is tested.
+Setting this flag disables this behavior.
+
+N.B. This will also disable benchmarking, so no performance information
+     will be present in the .csv output file.
+
+## Compile
+
+Compiles the table after creation.
+
+N.B. msbuild.exe must be on the PATH environment variable for this
+     to work.  (The current error message if this isn't the case is
+     quite cryptic.)
+
+Keys Load Flags:
+
+## TryLargePagesForKeysData
+
+Tries to allocate the keys buffer using large pages.
+
+## SkipKeysVerification
+
+Skips the logic that enumerates all keys after loading and a) ensures
+they are sorted, and b) constructs a keys bitmap.  If you can be certain
+the keys are sorted, specifying this flag can provide a speedup when
+loading large key sets.
+
+## DisableImplicitKeyDownsizing
+
+When loading keys that are 64-bit (8 bytes), a bitmap is kept that
+tracks whether or not a given bit was seen across the entire key set.
+After enumerating the set, the number of zeros in the bitmap are
+counted; if this number is less than or equal to 32, it means that the
+entire key set can be compressed into 32-bit values with some parallel
+bit extraction logic (i.e. _pext_u64()).  As this has beneficial size
+and performance implications, when detected, the key load operation will
+implicitly heap-allocate another array and convert all the 64-bit keys
+into their unique 32-bit equivalent.  Specifying this flag will disable
+this behavior.
+
+## TryInferKeySizeFromKeysFilename
+
+The default key size is 32-bit (4 bytes).  When this flag is present,
+if the keys file name ends with "64.keys" (e.g. "foo64.keys"), the key
+size will be interpreted as 64-bit (8 bytes).  This flag takes
+precedence over the table create parameter --KeySizeInBytes.
+
+Table Create Flags:
+
+## Silent
+
+Disables console printing of the dots, dashes and other characters used
+to (crudely) visualize the result of individual table create operations,
+and disable best graph information from being printed to the console.
+
+N.B. Implies --Quiet.
+
+## Quiet
+
+Disables printing best graph information to the console; only the dots
+and dashes etc. will be printed.
+
+N.B. Incompatible with --Silent.
+
+## NoFileIo
+
+Disables writing of all files when a perfect hash solution has been
+found.  The only time you would use this flag from the console
+application is to observe the performance of table creation without
+performing any file I/O operations.
+
+## Paranoid
+
+Enables redundant checks in the routine that determines whether or not
+a generated graph is acyclic.
+
+## FirstGraphWins | --FindBestGraph
+
+## FirstGraphWins [default]
+
+    This is the default behavior.  When searching for solutions in
+    parallel, the first graph to be found, "wins".  i.e. it's the
+    solution that is subsequently written to disk.
+
+## FindBestGraph
+
+    Requires the following two table create parameters to be present:
+
+        --BestCoverageAttempts=N
+        --BestCoverageType=<CoverageType>
+
+    The table create routine will then run until it finds the number of
+    best coverage attempts specified.  At that point, the graph that was
+    found to be the "best" based on the coverage type predicate "wins",
+    and is subsequently saved to disk.
+
+    N.B. This option is significantly more CPU intensive than the
+         --FirstGraphWins mode, however, it is highly probable that it
+         will find a graph that is better (based on the predicate) than
+         when in first graph wins mode.
+
+N.B. See also: --TargetNumberOfSolutions, --FixedAttempts.
+
+## SkipMemoryCoverageInFirstGraphWinsMode
+
+Skips calculating memory coverage information when in "first graph wins"
+mode.  This will result in the corresponding fields in the .csv output
+indicating 0.
+
+## SkipGraphVerification
+
+When present, skips the internal graph verification check that ensures
+a valid perfect hash solution has been found (i.e. with no collisions
+across the entire key set).
+
+## DisableCsvOutputFile
+
+When present, disables writing the .csv output file.  This is required
+when running multiple instances of the tool against the same output
+directory in parallel.
+
+## OmitCsvRowIfTableCreateFailed
+
+When present, omits writing a row in the .csv output file if table
+creation fails for a given keys file.  Ignored if --DisableCsvOutputFile
+is speficied.
+
+## OmitCsvRowIfTableCreateSucceeded
+
+When present, omits writing a row in the .csv output file if table
+creation succeeded for a given keys file.  Ignored if
+## DisableCsvOutputFile is specified.
+
+## IndexOnly
+
+When set, affects the generated C files by defining the C preprocessor
+macro CPH_INDEX_ONLY, which results in omitting the compiled perfect
+hash routines that deal with the underlying table values array (i.e.
+any routine other than Index(); e.g. Insert(), Lookup(), Delete() etc),
+as well as the array itself.  This results in a size reduction of the
+final compiled perfect hash binary.  Additionally, only the .dll and
+BenchmarkIndex projects will be built, as the BenchmarkFull and Test
+projects require access to a table values array.  This flag is intended
+to be used if you only need the Index() routine and will be managing the
+table values array independently.
+
+## UseRwsSectionForTableValues [default]
+## DoNotUseRwsSectionForTableValues
+
+When set, tells the linker to use a shared read-write section for the
+table values array, e.g.: #pragma comment(linker,"/section:.cphval,rws")
+This will result in the table values array being accessible across
+multiple processes.  Thus, the array will persist as long as one process
+maintains an open section (mapping); i.e. keeps the .dll loaded.
+
+## UseNonTemporalAvx2Routines
+
+When set, uses implementations of RtlCopyPages and RtlFillPages that
+use non-temporal hints.
+
+## ClampNumberOfEdges
+
+When present, clamps the number of edges to always be equal to the
+number of keys, rounded up to a power of two, regardless of the
+number of table resizes currently in effect.  Normally, when a table
+is resized, the number of vertices are doubled, and the number of
+edges are set to the number of vertices shifted right once (divided
+by two).  When this flag is set, the vertex doubling stays the same,
+however, the number of edges is always clamped to be equal to the
+number of keys rounded up to a power of two.  This is a research
+option used to evaluate the impact of the number of edges on the
+graph solving probability for a given key set.  Only applies to
+And masking (i.e. not modulus masking).
+
+## UseOriginalSeededHashRoutines
+
+When set, uses the original (slower) seeded hash routines (the ones
+that return an HRESULT return code and write the hash value to an
+output parameter) -- as opposed to using the newer, faster, "Ex"
+version of the hash routines.
+
+N.B. This flag is incompatible with --HashAllKeysFirst.
+
+## HashAllKeysFirst [default]
+## DoNotHashAllKeysFirst
+
+When set, changes the graph solving logic such that vertices (i.e.
+hash values) are generated for all keys up-front, prior to graph
+construction.  The hashed keys are stored in a "vertex pair" array.
+The page table type and page protection applied to this array can be
+further refined by the following flags.
+
+N.B. This flag is incompatible with --UseOriginalSeededHashRoutines.
+
+## EnableWriteCombineForVertexPairs
+
+When set, allocates the memory for the vertex pairs array with
+write-combine page protection.
+
+N.B. Only applies when --HashAllKeysFirst is set.  Incompatible with
+     --TryLargePagesForVertexPairs.
+
+## RemoveWriteCombineAfterSuccessfulHashKeys
+
+When set, automatically changes the page protection of the vertex
+pairs array (after successful hashing of all keys without any vertex
+collisions) from PAGE_READWRITE|PAGE_WRITECOMBINE to PAGE_READONLY.
+
+N.B. Only applies when the flags --EnableWriteCombineForVertexPairs
+     and --HashAllKeysFirst is set.
+
+## TryLargePagesForVertexPairs
+
+When set, tries to allocate the array for vertex pairs using large
+pages.
+
+N.B. Only applies when HashAllKeysFirst is set.  Incompatible with
+     EnableWriteCombineForVertexPairs.
+
+## TryLargePagesForGraphEdgeAndVertexArrays
+
+When set, tries to allocate the edge and vertex arrays used by graphs
+during solving using large pages.
+
+## TryLargePagesForGraphTableData
+
+When set, tries to allocate the table data used by graphs during
+solving using large pages.
+
+## UsePreviousTableSize
+
+When set, uses any previously-recorded table sizes associated with
+the keys file for the given algorithm, hash function and masking type.
+
+N.B. To forcibly delete all previously-recorded table sizes from all
+     keys in a directory, the following PowerShell snippet can be used:
+
+     PS C:\Temp\keys> Get-Item -Path *.keys -Stream *.TableSize | Remove-Item
+
+## IncludeNumberOfTableResizeEventsInOutputPath
+
+When set, incorporates the number of table resize events encountered
+whilst searching for a perfect hash solution into the final output
+names, e.g.:
+
+    C:\Temp\output\KernelBase_2485_1_Chm01_Crc32Rotate_And\...
+                                   ^
+                                   Number of resize events.
+
+## IncludeNumberOfTableElementsInOutputPath
+
+When set, incorporates the number of table elements (i.e. the final
+table size) into the output path, e.g.:
+
+    C:\Temp\output\KernelBase_2485_16384_Chm01_Crc32Rotate_And\...
+                                   ^
+                                   Number of table elements.
+
+N.B. These two flags can be combined, yielding a path as follows:
+
+    C:\Temp\output\KernelBase_2485_1_16384_Chm01_Crc32Rotate_And\...
+
+N.B. It is important to understand how table resize events impact the
+     behavior of this program if one or both of these flags are present.
+     Using the example above, the initial path that will be used for
+     the solution will be:
+
+        C:\Temp\output\KernelBase_2485_0_8192_Chm01_Crc32Rotate_And\...
+
+     After the maximum number of attempts are reached, a table resize
+     event occurs; the new path component will be:
+
+        C:\Temp\output\KernelBase_2485_1_16384_Chm01_Crc32Rotate_And\...
+
+     However, the actual renaming of the directory is not done until
+     a solution has been found and all files have been written.  If
+     this program is being run repeatedly, then the target directory
+     will already exist.  This complicates things, as, unlike files,
+     we can't just replace an existing directory with a new one.
+
+     There are two ways this could be handled: a) delete all the
+     existing files under the target path, then delete the directory,
+     then perform the rename, or b) move the target directory somewhere
+     else first, preserving the existing contents, then proceed with
+     the rename.
+
+     This program takes the latter approach.  The existing directory
+     will be moved to:
+
+        C:\Temp\output\old\KernelBase_1_16384_Chm01_Crc32Rotate_And_2018-11-19-011023-512\...
+
+     The timestamp appended to the directory name is derived from the
+     existing directory's creation time, which should ensure uniqueness.
+     (In the unlikely situation the target directory already exists in
+     the old subdirectory, the whole operation is aborted and the table
+     create routine returns a failure.)
+
+     The point of mentioning all of this is the following: when one or
+     both of these flags are routinely specified, the number of output
+     files rooted in the output directory's 'old' subdirectory will grow
+     rapidly, consuming a lot of disk space.  Thus, if the old files are
+     not required, it is recommended to regularly delete them manually.
+
+## RngUseRandomStartSeed
+
+Used in conjunction with --Rng.  If present, initializes the random
+number generator with a random seed (obtained via the operating system).
+If not present, the default seed 0x2019090319811025 will be used.
+
+N.B. If you're benchmarking performance, omit this flag, as starting
+     from the same default seed is required to get comparable runs.
+
+See Also:
+
+    --Rng
+    --RngSeed
+    --RngSubsequence
+    --RngOffset
+
+## TryUseAvx2HashFunction [default]
+## DoNotTryUseAvx2HashFunction
+
+When set, tries to use optimized AVX2 routines for hashing keys, if
+applicable.
+
+N.B. Only applies when HashAllKeysFirst is set.
+
+## TryUseAvx512HashFunction
+
+When set, tries to use optimized AVX512 routines for hashing keys, if
+applicable.
+
+N.B. Only applies when HashAllKeysFirst is set.
+
+## DoNotTryUseAvx2MemoryCoverageFunction
+
+When set, disables automatically using the AVX2 memory coverage
+calculation routine when the CPU supports the AVX2 instruction set.
+
+## IncludeKeysInCompiledDll [default]
+## DoNotIncludeKeysInCompiledDll
+
+When set, includes the keys in the compiled DLL file.  If you want to
+benchmark a compiled perfect hash table DLL's index routine against a
+normal binary search routine (i.e. IndexBsearch()), you'll need to
+supply this flag to ensure the keys get built into the binary.  We
+don't do this by default as they're not needed for a normal perfect
+hash table binary.
+
+## DisableSavingCallbackTableValues
+
+When set, does not attempt to save the runtime table values when running
+with a _penter-hooked binary.
+
+## DoNotTryUseHash16Impl
+
+By default, if the following conditions exist, the library will
+automatically switch to using the USHORT, 16-bit implementations
+of hash functions and assigned table data seamlessly during graph
+solving:
+
+    - Algorithm is Chm01.
+    - GraphImpl is 3.
+    - Number of vertices is <= 65,534 (i.e. MAX_USHORT-1).
+
+This provides significant performance improvements, which is why it's
+the default.  To disable this behavior, set this flag.  This flag is
+intended to be used during debugging and performance comparisons when
+benchmarking -- you shouldn't need to use it in normal use.
+
+N.B. This only affects the solving graph and table instances; the
+     compiled perfect hash table generated files will still use the
+     appropriate USHORT C-types if applicable (number of vertices less
+     than or equal to 65,534).
+
+Table Compile Flags:
+
+N/A
+
+Table Create Parameters:
+
+## GraphImpl=1|2|3 [default: 3]
+
+Selects the backend version of the graph assignment step.  Version 1
+matches the original CHM algorithm, version 2 is faster and was derived
+from NetBSD's nbperf module, version 3 is even faster and was derived
+from additional improvements to NetBSD's nbperf module in 2020.
+
+## ValueSizeInBytes=4|8
+
+Sets the size, in bytes, of the value element that will be stored in the
+compiled perfect hash table via Insert().  Defaults to 4 bytes (ULONG).
+
+## MainWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+## FileWorkThreadpoolPriority=<High|Normal|Low> [default: Normal]
+
+Sets the main work (i.e. the CPU-intensive graph solving) threadpool
+priority, or the file work threadpool priority, to the given value.
+
+## AttemptsBeforeTableResize=N [default = 4,294,967,295 ]
+
+Specifies the number of attempts at solving the graph that will be made
+before a table resize event will occur (assuming that resize events are
+permitted, as per the following flag).
+
+## MaxNumberOfTableResizes=N [default = 5]
+
+Maximum number of table resizes that will be permitted before giving up.
+
+## InitialNumberOfTableResizes=N [default = 0]
+
+Initial number of table resizes to simulate before attempting graph
+solving.  Each table resize doubles the number of vertices used to
+solve the graph, which lowers the keys-to-vertices ratio, which will
+improve graph solving probability.
+
+## AutoResizeWhenKeysToEdgesRatioExceeds=D
+
+Supplies a keys to edges ratio that, if exceeded, results in an auto
+resize, i.e. the equivalent of --InitialNumberOfTableResizes=1.  Valid
+values are above 0.0 and less than 1.0.  Typical values would be 0.8 to
+0.9 depending on the hash function being used.
+
+This will result in much faster solving rates for "nearly full" key sets
+(i.e., when the number of keys is very close to a power of two, e.g.
+ HydrogenWorld-31016.keys).
+
+## BestCoverageAttempts=N
+
+Where N is a positive integer, and represents the number of attempts
+that will be made at finding a "best" graph (based on the best coverage
+type requested below) before the create table routine returns.  For
+example, if this value is set to 5, the solving will stop when the 5th
+new best graph is found.  (A graph is considered a "new best" if its
+coverage type predicate (below) is the highest/lowest seen before; see
+also, --MaxNumberOfEqualBestGraphs.)
+
+## BestCoverageType=<CoverageType>
+
+Indicates the predicate to determine what constitutes the best graph.
+
+N.B. The terms "best graph" and "best coverage" mean the same thing.
+     You're either in "first graph wins" mode, or "find best graph"
+     mode.  When the latter applies, we're looking for the best graph,
+     and that means the one with the winning coverage predicate.
+
+Valid coverage types:
+
+    HighestNumberOfEmptyPages
+    LowestNumberOfEmptyPages
+
+    HighestNumberOfEmptyLargePages
+    LowestNumberOfEmptyLargePages
+
+    HighestNumberOfEmptyCacheLines
+    LowestNumberOfEmptyCacheLines
+
+    HighestNumberOfUsedPages
+    LowestNumberOfUsedPages
+
+    HighestNumberOfUsedLargePages
+    LowestNumberOfUsedLargePages
+
+    HighestNumberOfUsedCacheLines
+    LowestNumberOfUsedCacheLines
+
+    HighestMaxGraphTraversalDepth
+    LowestMaxGraphTraversalDepth
+
+    HighestTotalGraphTraversals
+    LowestTotalGraphTraversals
+
+    HighestNumberOfEmptyVertices
+    LowestNumberOfEmptyVertices
+
+    HighestNumberOfCollisionsDuringAssignment
+    LowestNumberOfCollisionsDuringAssignment
+
+    HighestMaxAssignedPerCacheLineCount
+    LowestMaxAssignedPerCacheLineCount
+
+    HighestPredictedNumberOfFilledCacheLines
+    LowestPredictedNumberOfFilledCacheLines
+
+    HighestSlope
+    LowestSlope
+
+    HighestScore
+    LowestScore
+
+    HighestRank
+    LowestRank
+
+The following predicates must be used in conjunction with --KeysSubset
+(only applies to PerfectHashCreate.exe):
+
+    HighestMaxAssignedPerCacheLineCountForKeysSubset
+    LowestMaxAssignedPerCacheLineCountForKeysSubset
+
+    HighestNumberOfCacheLinesUsedByKeysSubset
+    LowestNumberOfCacheLinesUsedByKeysSubset
+
+    HighestNumberOfLargePagesUsedByKeysSubset
+    LowestNumberOfLargePagesUsedByKeysSubset
+
+    HighestNumberOfPagesUsedByKeysSubset
+    LowestNumberOfPagesUsedByKeysSubset
+
+## MaxNumberOfEqualBestGraphs=N
+
+Where N is a positive integer, and represents the number of times an
+"equal" best graph is encountered (based on the best coverage type)
+before stopping further solving attempts for this graph.  For example,
+let's say you're using --BestCoverageType=HighestNumberOfEmptyCacheLines
+## BestCoverageAttempts=5, and that 4th new best graph encountered had a
+value of 8 for this coverage type; subsequent graphs that also have a
+value of 8 get classed as an "equal" best graph (as we've already found
+one with 8).  If we supply --MaxNumberOfEqualBestGraphs=10, then we'll
+stop further solving attempts once we see the 10th graph that has 8
+empty cache lines.
+
+This parameter is particularly useful for the "highest" predicates that
+aren't restricted by page or cache line quantities, e.g.:
+
+    HighestMaxGraphTraversalDepth
+    HighestTotalGraphTraversals
+    HighestNumberOfCollisionsDuringAssignment
+
+However, it's still useful for all other predicates as a mechanism for
+avoiding never solving a graph (because you never hit the Nth best graph
+attempt).
+
+## MinNumberOfKeysForFindBestGraph=N [default: 512]
+
+Where N is a positive integer, and represents the minimum number of keys
+that need to be present before --FindBestGraph mode is honored (with the
+default being 512).  (There's very little to no benefit in performing
+extensive best graph searches for such small key sets, as there's not
+going to be enough variation in assigned value cache line occupancy to
+yield runtime performance differences.)
+
+## BestCoverageTargetValue=N
+
+Where N is a floating point number if the best coverage type uses
+doubles (i.e., HighestRank, LowestSlope), otherwise, a positive integer.
+
+When provided, graph solving will be stopped if a best graph's coverage
+value meets the target value provided by this parameter.  The type of
+comparison is derived from the coverage type, e.g., if the following
+params are provided:
+
+    --BestCoverageType=HighestRank --BestCoverageTargetValue=0.5
+
+Then graph solving will stop when a solution is found that has a rank
+greater than or equal to 0.5.  If LowestRank was specified, the reverse
+applies: we'd stop solving as soon as we see a solution with a rank
+less than or equal to 0.5.
+
+In bulk create mode, the most useful predicate is rank, as it is a
+normalized score between [0.0, 1.0), and a rank of 0.5 or greater is
+usually indicative of a tightly-packed assigned table (which we want).
+Other predicates use absolute values, which aren't useful in bulk create
+context when you have many differing key sizes (e.g. HighestScore and
+## BestCoverageTargetValue=200000 does not make sense for bulk create as
+a table has to be a certain size in order to achieve that score).
+
+This parameter can be used in conjunction with other parameters like
+## FixedAttempts=N or --TargetNumberOfSolutions=N.  However, note that
+whichever limit is reached first will terminate the solving; i.e. if
+you use --BestCoverageType=HighestRank --BestCoverageTargetValue=0.5
+and --FixedAttempts=10, then solving will stop after 10 attempts,
+regardless of whether or not the target value is reached.
+
+Also note that this behavior, as with all "find best graph" behavior,
+is trumped by the logic that skips finding a best graph if there are
+less than the minimum number of keys available (default: 512).  This
+can be altered via --MinNumberOfKeysForFindBestGraph.
+
+In general, this parameter is useful for finding a balance between
+solving time and solution quality; some key sets may take a lot of
+attempts to break a rank of 0.39-0.40, but in general, most keys (at
+least in the venerable sys32 set) will eventually yield tables with
+a Rank of 0.5 or greater within a few seconds to a few minutes.
+
+## KeysSubset=N,N+1[,N+2,N+3,...] (e.g. --KeysSubset=10,50,123,600,670)
+
+Supplies a comma-separated list of keys in ascending key-value order.
+Must contain two or more elements.
+
+N.B. Only applies to PerfectHashCreate.exe.
+
+## TargetNumberOfSolutions=N
+
+Where N is a positive integer and represents a target number of
+solutions to find before stopping graph solving.  Typically only useful
+for benchmarking.
+
+## FixedAttempts=N
+
+Where N is a positive integer and represents a fixed number of attempts
+that will be made (irrespective of whether or not a solution was found)
+before graph solving stops.  Typically only useful for benchmarking.
+
+## Seeds=<n1,...n8>
+
+Supplies an optional comma-separated list of up to 8 integers that
+represent the seed values to use for every graph solving attempt.
+Each value may be zero, which tells the algorithm to use a random
+seed for this position as per normal.
+
+The logic is also cognizant of the hash function's seed masks, e.g.
+MultiplyShiftR has a seed mask of 0x1f1f for seed 3 (which is used to
+control the final right shift amount), so, if we use the following:
+
+    --Seeds=0,0,0x1000
+
+It will use random bytes for the first two seeds.  For the second byte
+of the third seed, it'll use 0x10 (as 4096 is 0x1000), but will use a
+random byte for the first byte.  (If we were to use --Seeds=0,0,16,
+then the first byte will be locked to 0x10 and the second byte will
+be random.)
+
+This has proven useful for the hash function MultiplyShiftR when using
+`--InitialNumberOfTableResizes=1 --Seeds=0,0,0x1010 as it forces all
+vertices to be constrained to the first half of the assigned array
+(thus negating the overhead of a table resize).  It may be useful in
+other contexts, too.
+
+N.B. Either hex or decimal can be used for the seed values.
+
+## Seed3Byte1MaskCounts=<n1,...n31>
+## Seed3Byte2MaskCounts=<n1,...n31>
+
+Supplies a comma-separated list of 32 integers that represent weighted
+counts of seed mask's byte values.  (Experimental.)
+
+## SolutionsFoundRatio=<double>
+## TryUsePredictedAttemptsToLimitMaxConcurrency
+
+Supplies a double (64-bit) floating point number indicating the ratio
+of solutions found (obtained from a prior run).  This is then used to
+calculate the predicted number of attempts required to solve a given
+graph; when combined with --TryUsePredictedAttemptsToLimitMaxConcurrency
+the maximum concurrency used when solving will be the minimum of the
+predicted attempts and the maximum concurrency indicated on the command
+line.
+
+N.B. These parameters are typically less useful for bulk-create options
+     as each table will have different solving characteristics.
+
+## Rng=<RNG name>
+
+Supplies the name of a random number generator to use for obtaining the
+random bytes needed as part of graph solving.  Valid values:
+
+    Philox43210
+
+        Uses the Philox 4x32 10-round pseudo-RNG.  This is the default.
+        This should be used when benchmarking creation performance, as
+        it ensures the random numbers fed to each graph solving attempt
+        are identical between runs, resulting in consistent runtimes
+        across subsequent runs.  It may result in slower solving times
+        versus the System RNG, depending on your key set.
+
+    System
+
+        Uses the standard operating system facilities for obtaining
+        random data.  All other --Rng* parameters are ignored.  This
+        should be used when attempting to find legitimate solutions,
+        however, due to the inherent randomness, will result in varying
+        runtimes across subsequent runs.
+
+## RngSeed=<Seed>
+
+Supplies a 64-bit seed used to initialize the RNG.  Defaults to
+0x2019090319811025, unless --RngUseRandomStartSeed is supplied (in which
+case, a random seed will be used, obtained via the operating system).
+
+## RngSubsequence=<Subsequence>
+
+Supplies the initial subsequence used by the RNG.  The first graph will
+use this sequence, with each additional graph adding 1 to this value for
+their subsequence.  This ensures parallel graphs generate different
+random numbers (even if the seed is identical) when solving.  (Defaults
+to 0.)
+
+## RngOffset=<Offset>
+
+Supplies the initial offset used by the RNG.  (Defaults to 0.)
+
+## Remark="Additional description about run"
+
+Supplies a remark to be associated with the run that will be included
+in the .csv output files under the 'Remark' column.  An error will
+be returned if the provided string contains commas (as this will
+break the .csv output).
+
+## MaxSolveTimeInSeconds=<Seconds>
+
+Supplies the maximum number of seconds to try and solve an individual
+graph.
+
+## FunctionHookCallbackDllPath=<Path>
+
+Supplies a fully-qualified path to a .dll file that will be used as the
+callback handler for hooked functions.
+
+## FunctionHookCallbackFunctionName=<ExportedFunctionName>
+
+Supplies the exported function name to resolve from the callback module
+(above) and use as the callback for hooked functions.  The default is
+InterlockedIncrement.
+
+## FunctionHookCallbackIgnoreRip=<RelativeRIP>
+
+Supplies a relative RIP to ignore during function callback.  That is,
+if a caller matches the supplied relative RIP, the function callback
+will not be executed.
+
+Console Output Character Legend
+
+N.B. You can limit console output to *just* the characters via the --Quiet
+ command line parameter.  (--Silent will disable all console output.)
+
+Char | Meaning
+
+.   Table created successfully.
+
++   Table resize event occured.
+
+x   Failed to create a table.  The maximum number of attempts at trying to
+solve the table at a given size was reached, and no more resize attempts
+were possible (due to the maximum resize limit also being hit).
+
+F   Failed to create a table due to a target not being reached by a specific
+number of attempts.
+
+*   None of the worker threads were able to allocate sufficient memory to
+attempt solving the graph.
+
+!   The system is out of memory.
+
+L   The system is running low on memory (a low memory event is triggered
+at about 90% RAM usage).  In certain situations we can detect this
+situation prior to actually running out of memory; in these cases,
+we abort the current table creation attempt (which will instantly
+relieve system memory pressure).
+
+V   The graph was created successfully, however, we weren't able to allocate
+enough memory for the table values array in order for the array to be
+used after creation.  This can be avoided by supplying the command line
+parameter --SkipTestAfterCreate.
+
+T   The requested number of table elements was too large.
+
+S   A shutdown event was received.  This shouldn't be seen unless externally
+signaling the named shutdown event associated with a context.
+
+t   The solve timeout was reached before a solution was found.
+
+?   The error code isn't recognized!  E-mail trent@trent.me with details.
+
+Algorithms:
+
+ID | Name
+1   Chm01
+
+All Hash Functions:
+
+ID | Name (Number of Seeds)
+2   Jenkins (2)
+12   Fnv (2)
+14   Crc32RotateX (3)
+17   RotateMultiplyXorRotate (3)
+18   ShiftMultiplyXorShift (3)
+19   ShiftMultiplyXorShift2 (6)
+20   RotateMultiplyXorRotate2 (6)
+21   MultiplyRotateR (3)
+22   MultiplyRotateLR (3)
+23   MultiplyShiftR (3)
+24   MultiplyShiftLR (3)
+27   MultiplyRotateRMultiply (5)
+28   MultiplyRotateR2 (5)
+29   MultiplyShiftRMultiply (5)
+30   MultiplyShiftR2 (5)
+32   RotateRMultiplyRotateR (3)
+33   Multiply643ShiftR (3)
+33   Multiply644ShiftR (3)
+34   MultiplyShiftRX (3)
+
+Mask Functions:
+
+ID | Name
+2   And
+

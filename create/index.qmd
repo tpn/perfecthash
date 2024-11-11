@@ -1,0 +1,11 @@
+---
+title: "Perfect Hash Command Line Generator"
+page-layout: full
+comments: false
+format:
+  html:
+    include-in-header:
+      - file: header.html
+---
+
+<div id="root"></div>

@@ -1,0 +1,32 @@
+---
+title: "Perfect Hash"
+comments: false
+about:
+  template: jolla
+  image: resources/github-repo-images/perfecthash.png
+  links:
+    - icon: github
+      href: https://github.com/tpn/perfecthash
+      text: GitHub
+    - icon: twitter
+      href: https://twitter.com/trentnelson
+      text: Twitter
+    - icon: reddit
+      href: https://www.reddit.com/u/trentnelson/
+      text: Reddit
+    - icon: linkedin
+      href: https://www.linkedin.com/in/trent-p-nelson
+      text: LinkedIn
+    - icon: ycombinator
+      href: https://news.ycombinator.com/user?id=trentnelson
+      text: Hacker News
+    - icon: speaker-deck
+      href: https://speakerdeck.com/trent
+      text: SpeakerDeck
+---
+
+Trent Nelson's Perfect Hash Project.
+
+Work in progress.
+
+Contact: [&#116;&#114;&#101;&#110;&#116;&#64;&#116;&#114;&#101;&#110;&#116;&#46;&#109;&#101;](mailto:&#116;&#114;&#101;&#110;&#116;&#64;&#116;&#114;&#101;&#110;&#116;&#46;&#109;&#101;).

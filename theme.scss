@@ -1,0 +1,81 @@
+/*-- scss:defaults --*/
+
+$navbar-bg: transparent;
+$navbar-fg: white;
+$navbar-image: url('/resources/bluebg.jpg');
+
+$font-family-sans-serif: 'Garamond', 'EB Garamond', 'Palatino', sans-serif;
+$font-family-monospace: 'Comic Mono NF', 'Monaco', monospace;
+
+// Set the monospace font size to be smaller than the default font size.
+$font-size-monospace: 0.75rem;
+// Smaller sizes for smaller screens.
+$font-size-monospace-ipad-mini: 0.5rem;
+$font-size-monospace-mobile: 0.42rem;
+
+/*
+$grid-column-gutter-width-mobile: 0.5rem;
+$grid-column-gutter-width: 0.6rem;
+*/
+
+/*-- scss:rules --*/
+
+// Import Bootstrap's main SCSS file
+@import "bootstrap";
+
+// Override specific elements with monospace font sizes
+code, kbd, samp {
+    font-size: $font-size-monospace; // Apply custom font size to monospace elements
+}
+
+pre {
+    font-size: $font-size-monospace; // Apply custom font size to pre elements
+}
+
+pre code {
+    font-size: $font-size-monospace; // Apply custom font size to code inside pre
+}
+
+// Adjust font size for smaller screens
+
+// Mobile phone.
+@media (max-width: 767px) {
+
+    pre.sourceCode,
+    kbd.sourceCode,
+    samp.sourceCode,
+    code.sourceCode,
+    p code.sourceCode,
+    li code.sourceCode,
+    td code.sourceCode {
+        font-size: $font-size-monospace-mobile;
+    }
+
+    // No margins or padding for code blocks on mobile.
+    .tab-content {
+        padding: 2px;
+        margin: 2px;
+    }
+
+}
+
+// iPad mini-ish.
+@media (max-width: 991px) {
+
+    pre.sourceCode,
+    kbd.sourceCode,
+    samp.sourceCode,
+    code.sourceCode,
+    p code.sourceCode,
+    li code.sourceCode,
+    td code.sourceCode {
+        font-size: $font-size-monospace-ipad-mini;
+    }
+
+    .tab-content {
+        padding: 4px;
+        margin: 4px;
+    }
+
+}
+

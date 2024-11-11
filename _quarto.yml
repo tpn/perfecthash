@@ -1,0 +1,74 @@
+project:
+  type: website
+  output-dir: docs # Github Pages requires this
+  preview:
+    host: 0.0.0.0
+    port: 8081
+  post-render:
+    - post-render.sh
+  render:
+    - "*.qmd"
+    - "!*pyscript.qmd"
+
+website:
+  title: "Perfect Hash"
+  favicon: "favicon.ico"
+  site-url: "https://perfecthash.trent.me"
+  repo-url: "https://github.com/tpn/perfecthash"
+  repo-branch: "gh-pages"
+  issue-url: "https://github.com/tpn/perfecthash/issues/new/choose"
+  google-analytics:
+    tracking-id: "G-NX516KK8TW"
+    anonymize-ip: false
+    version: 4
+  repo-actions: [edit, issue]
+  twitter-card: true
+  open-graph: true
+  page-navigation: true
+  bread-crumbs: true
+  reader-mode: true
+  search:
+    show-item-context: true
+    type: overlay
+  comments:
+    giscus:
+      repo: tpn/perfecthash
+      category: Announcements
+      mapping: pathname
+      theme: dark
+  navbar:
+    left:
+      - text: Creation Tool
+        href: create/index.qmd
+      - text: Hash Functions
+        href: functions/index.qmd
+      - text: Documentation
+        href: documentation/index.qmd
+    tools:
+      - icon: twitter
+        href: https://twitter.com/trentnelson
+        text: Twitter
+      - icon: github
+        href: https://github.com/tpn/perfecthash
+        text: GitHub
+      - icon: linkedin
+        href: https://www.linkedin.com/in/trent-p-nelson
+        text: LinkedIn
+
+format:
+  html:
+    link-external-icon: true
+    anchor-sections: true
+    syntax-definitions:
+      - asm.xml
+      - c.xml
+    highlight-style: tpn.theme
+    theme:
+      dark: [darkly, theme.scss, theme-dark.scss]
+      light: [flatly, theme.scss, theme-light.scss]
+    css: styles.css
+    toc: true
+    toc-depth: 5
+    toc-location: right-body
+    toc-title: Contents
+

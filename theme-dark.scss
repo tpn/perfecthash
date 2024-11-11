@@ -1,0 +1,31 @@
+/*-- scss:defaults --*/
+
+$body-bg: #181818;
+$body-color: white;
+$code-not-sourceCode-bg: $body-bg;
+$code-not-sourceCode-color: plum;
+
+/*-- scss:rules --*/
+
+/* Override background color to inherit */
+/*
+p code:not(.sourceCode),li code:not(.sourceCode),td code:not(.sourceCode) {
+    background-color: #333333;
+    padding: .2em
+}
+*/
+
+:root {
+    --bs-code-color: "plum";
+}
+
+kbd,
+samp,
+pre:not(.sourceCode),
+code:not(.sourceCode),
+p code:not(.sourceCode),
+li code:not(.sourceCode),
+td code:not(.sourceCode) {
+    background-color: $code-not-sourceCode-bg;
+    color: $code-not-sourceCode-color;
+}
