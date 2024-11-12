@@ -4,7 +4,7 @@ set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "" FORCE)
 
 project(
     PerfectHash
-    VERSION 0.62.0
+    VERSION 0.63.0
     LANGUAGES C CXX
 )
 
