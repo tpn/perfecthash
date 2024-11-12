@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -48,7 +48,6 @@ extern "C" {
 //
 //
 
-//#ifndef PH_CUDA
 #pragma warning(push)
 #pragma warning(disable: 4255)
 #pragma warning(disable: 4668)
@@ -56,9 +55,6 @@ extern "C" {
 #pragma warning(pop)
 #include <sal.h>
 #include <specstrings.h>
-//#else
-//#include <PerfectHashCompat.h>
-//#endif // PH_CUDA
 
 //
 // Disable the anonymous union/struct warning.
