@@ -673,7 +673,6 @@ EXTERN_C __declspec(selectany) const GUID PerfectHashEvents = {0xd0b3028e, 0x70a
 // Channel
 //
 #define PerfectHashAnalytic 0x10
-#define PerfectHashAnalytic_KEYWORD 0x8000000000000000
 
 //
 // Tasks

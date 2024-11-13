@@ -284,6 +284,7 @@ extern PERFECT_HASH_DIRECTORY_OPEN PerfectHashDirectoryOpen;
 extern PERFECT_HASH_DIRECTORY_CREATE PerfectHashDirectoryCreate;
 extern PERFECT_HASH_DIRECTORY_GET_FLAGS PerfectHashDirectoryGetFlags;
 extern PERFECT_HASH_DIRECTORY_GET_PATH PerfectHashDirectoryGetPath;
+extern PERFECT_HASH_DIRECTORY_GET_PATH PerfectHashDirectoryVisit;
 extern PERFECT_HASH_DIRECTORY_CLOSE PerfectHashDirectoryClose;
 extern PERFECT_HASH_DIRECTORY_SCHEDULE_RENAME
     PerfectHashDirectoryScheduleRename;

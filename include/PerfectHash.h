@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -48,7 +48,6 @@ extern "C" {
 //
 //
 
-//#ifndef PH_CUDA
 #pragma warning(push)
 #pragma warning(disable: 4255)
 #pragma warning(disable: 4668)
@@ -56,9 +55,6 @@ extern "C" {
 #pragma warning(pop)
 #include <sal.h>
 #include <specstrings.h>
-//#else
-//#include <PerfectHashCompat.h>
-//#endif // PH_CUDA
 
 //
 // Disable the anonymous union/struct warning.
@@ -1290,6 +1286,79 @@ HRESULT
     );
 typedef PERFECT_HASH_PATH_GET_PARTS *PPERFECT_HASH_PATH_GET_PARTS;
 
+//
+// Define Visit() method and supporting flags.
+//
+
+typedef union _PERFECT_HASH_PATH_VISIT_FLAGS {
+
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, only visit the intermediate (ancestor) directories
+        // and not the final path.
+        //
+
+        ULONG VisitIntermediateDirectoriesOnly:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_PATH_VISIT_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_PATH_VISIT_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_PATH_VISIT_FLAGS
+      *PPERFECT_HASH_PATH_VISIT_FLAGS;
+
+FORCEINLINE
+HRESULT
+IsValidPathVisitFlags(
+    _In_ PPERFECT_HASH_PATH_VISIT_FLAGS PathVisitFlags
+    )
+{
+
+    if (!ARGUMENT_PRESENT(PathVisitFlags)) {
+        return E_POINTER;
+    }
+
+    if (PathVisitFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Path->Lock)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_PATH_VISIT_CALLBACK)(
+    _In_ PPERFECT_HASH_PATH Path,
+    _In_ PUNICODE_STRING Part,
+    _In_opt_ PVOID Context
+    );
+typedef PERFECT_HASH_PATH_VISIT_CALLBACK
+      *PPERFECT_HASH_PATH_VISIT_CALLBACK;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_lock_not_held_(Path->Lock)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_PATH_VISIT)(
+    _In_ PPERFECT_HASH_PATH Path,
+    _In_ PPERFECT_HASH_PATH_VISIT_CALLBACK Callback,
+    _In_opt_ PPERFECT_HASH_PATH_VISIT_FLAGS PathVisitFlags,
+    _In_opt_ PVOID Context
+    );
+typedef PERFECT_HASH_PATH_VISIT *PPERFECT_HASH_PATH_VISIT;
+
 #ifndef _PERFECT_HASH_INTERNAL_BUILD
 typedef struct _PERFECT_HASH_PATH_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_PATH);
@@ -1297,6 +1366,7 @@ typedef struct _PERFECT_HASH_PATH_VTBL {
     PPERFECT_HASH_PATH_CREATE Create;
     PPERFECT_HASH_PATH_RESET Reset;
     PPERFECT_HASH_PATH_GET_PARTS GetParts;
+    PPERFECT_HASH_PATH_VISIT Visit;
 } PERFECT_HASH_PATH_VTBL;
 typedef PERFECT_HASH_PATH_VTBL *PPERFECT_HASH_PATH_VTBL;
 
@@ -1391,10 +1461,16 @@ typedef union _PERFECT_HASH_DIRECTORY_CREATE_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
 
         //
+        // When set, does not attempt to create any intermediate directories.
+        //
+
+        ULONG DoNotCreateIntermediateDirectories:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:32;
+        ULONG Unused:31;
     };
 
     LONG AsLong;

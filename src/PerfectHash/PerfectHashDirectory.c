@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -348,6 +348,134 @@ End:
     return Result;
 }
 
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_exclusive_lock_held_(Path->Lock)
+HRESULT
+CreateIntermediateDirectoriesVisitCallback(
+    _In_ PPERFECT_HASH_PATH Path,
+    _In_ PUNICODE_STRING Part,
+    _In_opt_ PVOID Context
+    )
+/*++
+
+Routine Description:
+
+    Path visit callback routine responsible for creating intermediate
+    directories.
+
+Arguments:
+
+    Path - Supplies a pointer to the path instance being visited.  This is
+        the full path that was supplied to the original visit call.
+
+    Part - Supplies a pointer to the part being visited.
+
+    Context - Supplies an optional context pointer.
+
+Return Value:
+
+    S_OK on success, otherwise, an appropriate HRESULT.
+--*/
+{
+    USHORT End;
+    HRESULT Result;
+    WCHAR Separator;
+
+    UNREFERENCED_PARAMETER(Context);
+
+    if (!IsValidMinimumDirectoryUnicodeString(Part)) {
+        Result = PH_E_INVALID_PATH;
+        PH_ERROR(CreateIntermediateDirectoriesVisitCallback_InvalidPath,
+                 Result);
+        goto Error;
+    }
+
+    //
+    // CreateDirectoryW() expects a NUL-terminated string.  However, the
+    // parts we're passed are UNICODE_STRING instances, so we'll need to
+    // temporarily overwrite one past the last character with a NUL, and
+    // then restore it after the directory is created.
+    //
+
+    //
+    // Invariant checks: we shouldn't be called for the final path, as we
+    // requested VisitIntermediateDirectoriesOnly.  There should be at least
+    // one character left in the underlying buffer, and that character should
+    // be a path separator.
+    //
+
+    if (Path->FullPath.Length == Part->Length) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(CreateIntermediateDirectoriesVisitCallback_LastDir, Result);
+        goto Error;
+    }
+
+    if (Part->MaximumLength < (Part->Length + sizeof(WCHAR))) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(CreateIntermediateDirectoriesVisitCallback_BufferTooSmall,
+                 Result);
+        goto Error;
+    }
+
+    End = Part->Length / sizeof(WCHAR);
+    Separator = Part->Buffer[End];
+    if (Separator != PATHSEP) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(CreateIntermediateDirectoriesVisitCallback_MissingSeparator,
+                 Result);
+        goto Error;
+    }
+
+    //
+    // Invariant checks complete.  We can safely NUL-terminate the part.
+    //
+
+    Part->Buffer[End] = L'\0';
+
+    if (!CreateDirectoryW(Part->Buffer, NULL)) {
+        ULONG LastError = GetLastError();
+        if (LastError != ERROR_ALREADY_EXISTS) {
+            SYS_ERROR(CreateDirectoryW);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+        } else {
+            Result = S_OK;
+        }
+    } else {
+        Result = S_OK;
+    }
+
+    //
+    // Restore the separator.
+    //
+
+    Part->Buffer[End] = Separator;
+
+    if (SUCCEEDED(Result)) {
+        goto End;
+    }
+
+    //
+    // Intentional follow-on to Error.
+    //
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
+
+
 PERFECT_HASH_DIRECTORY_CREATE PerfectHashDirectoryCreate;
 
 _Use_decl_annotations_
@@ -400,6 +528,7 @@ Return Value:
     ULONG ShareMode;
     ULONG DesiredAccess;
     ULONG FlagsAndAttributes;
+    BOOLEAN CreateIntermediates = TRUE;
     HRESULT Result = S_OK;
     BOOLEAN Opened = FALSE;
     PERFECT_HASH_DIRECTORY_CREATE_FLAGS DirectoryCreateFlags = { 0 };
@@ -418,7 +547,18 @@ Return Value:
 
     VALIDATE_FLAGS(DirectoryCreate, DIRECTORY_CREATE, ULong);
 
-    if (!TryAcquirePerfectHashPathLockShared(SourcePath)) {
+    if (DirectoryCreateFlags.DoNotCreateIntermediateDirectories) {
+        CreateIntermediates = FALSE;
+    }
+
+    //
+    // We need an exclusive lock on the path as we may be fiddling with the
+    // path separators when creating intermediate directories (specifically,
+    // we'll temporary replace an intermediate path separator with a NUL
+    // before calling CreateDirectoryW()).
+    //
+
+    if (!TryAcquirePerfectHashPathLockExclusive(SourcePath)) {
         return PH_E_SOURCE_PATH_LOCKED;
     }
 
@@ -473,6 +613,49 @@ Return Value:
     Directory->Path = SourcePath;
 
     //
+    // Attempt to create the directory first, regardless of whether we've
+    // been asked to create intermediate directories or not.  This allows
+    // us to avoid the visit overhead if the directory already exists.
+    //
+
+    LastError = ERROR_SUCCESS;
+    if (!CreateDirectoryW(Directory->Path->FullPath.Buffer, NULL)) {
+        LastError = GetLastError();
+        if (LastError == ERROR_ALREADY_EXISTS) {
+            goto OpenDirectory;
+        } else if (LastError != ERROR_PATH_NOT_FOUND) {
+            SYS_ERROR(CreateDirectoryW);
+            goto Error;
+        }
+    } else {
+        Directory->State.WasCreatedByUs = TRUE;
+        goto OpenDirectory;
+    }
+
+    ASSERT(LastError == ERROR_PATH_NOT_FOUND);
+
+    if (CreateIntermediates) {
+        PPERFECT_HASH_PATH_VISIT_CALLBACK Callback;
+        PERFECT_HASH_PATH_VISIT_FLAGS Flags;
+        Flags.AsULong = 0;
+        Flags.VisitIntermediateDirectoriesOnly = TRUE;
+
+        Callback = CreateIntermediateDirectoriesVisitCallback;
+        Result = SourcePath->Vtbl->Visit(SourcePath,
+                                         Callback,
+                                         &Flags,
+                                         NULL);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashDirectoryCreate_Visit, Result);
+            goto Error;
+        }
+    } else {
+        Result = PH_E_DIRECTORY_DOES_NOT_EXIST;
+        PH_ERROR(PerfectHashDirectoryCreate_IntermediatesNotCreated, Result);
+        goto Error;
+    }
+
+    //
     // Attempt to create the directory.
     //
 
@@ -485,6 +668,8 @@ Return Value:
     } else {
         Directory->State.WasCreatedByUs = TRUE;
     }
+
+OpenDirectory:
 
     //
     // Open the directory using the newly created path.
@@ -554,7 +739,7 @@ Error:
 
 End:
 
-    ReleasePerfectHashPathLockShared(SourcePath);
+    ReleasePerfectHashPathLockExclusive(SourcePath);
     ReleasePerfectHashDirectoryLockExclusive(Directory);
 
     if (Opened && FAILED(Result)) {
@@ -1687,6 +1872,5 @@ End:
 
     return Result;
 }
-
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
