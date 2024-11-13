@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -44,6 +44,7 @@ typedef struct _PERFECT_HASH_PATH_VTBL {
     PPERFECT_HASH_PATH_CREATE Create;
     PPERFECT_HASH_PATH_RESET Reset;
     PPERFECT_HASH_PATH_GET_PARTS GetParts;
+    PPERFECT_HASH_PATH_VISIT Visit;
 
     //
     // Begin private methods.
@@ -292,5 +293,6 @@ extern PERFECT_HASH_PATH_CREATE PerfectHashPathCreate;
 extern PERFECT_HASH_PATH_GET_PARTS PerfectHashPathGetParts;
 extern PERFECT_HASH_PATH_RESET PerfectHashPathReset;
 extern PERFECT_HASH_PATH_EXTRACT_PARTS PerfectHashPathExtractParts;
+extern PERFECT_HASH_PATH_VISIT PerfectHashPathVisit;
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

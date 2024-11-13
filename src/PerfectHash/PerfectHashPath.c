@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1700,5 +1700,200 @@ Return Value:
 
     return S_OK;
 }
+
+_Must_inspect_result_
+_Success_(return >= 0)
+_Requires_lock_not_held_(Path->Lock)
+HRESULT
+PerfectHashPathVisit(
+    _In_ PPERFECT_HASH_PATH Path,
+    _In_ PPERFECT_HASH_PATH_VISIT_CALLBACK Callback,
+    _In_opt_ PPERFECT_HASH_PATH_VISIT_FLAGS PathVisitFlags,
+    _In_opt_ PVOID Context
+    )
+/*++
+
+Routine Description:
+
+    Visits all parts of a path and invokes a callback.
+
+Arguments:
+
+    Path - Supplies a pointer to the path to visit.
+
+    Callback - Supplies a pointer to the callback routine to invoke.
+
+    PathVisitFlags - Optionally supplies flags that control the behavior
+        of the visit operation.
+
+    Context - Optionally supplies a pointer to a context structure that
+        is passed to the callback routine.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Path or Callback parameters were NULL.
+
+    PH_E_INVALID_PATH_VISIT_FLAGS - Invalid visit flags.
+
+    Or, an appropriate HRESULT error code.
+--*/
+{
+    USHORT Index;
+    USHORT End;
+    HRESULT Result = S_OK;
+    BOOLEAN IntermediateOnly = FALSE;
+    UNICODE_STRING Part = { 0, };
+    WCHAR Separator = PATHSEP;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Path)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Callback)) {
+        return E_POINTER;
+    }
+
+    if (ARGUMENT_PRESENT(PathVisitFlags)) {
+        if (FAILED(IsValidPathVisitFlags(PathVisitFlags))) {
+            return PH_E_INVALID_PATH_VISIT_FLAGS;
+        } else {
+            if (PathVisitFlags->VisitIntermediateDirectoriesOnly) {
+                IntermediateOnly = TRUE;
+            }
+        }
+    }
+
+    //
+    // Parameters validated, continue.
+    //
+
+    Part.Buffer = Path->FullPath.Buffer;
+    Part.MaximumLength = Path->FullPath.MaximumLength;
+    End = Path->FullPath.Length / sizeof(WCHAR);
+
+#ifdef PH_WINDOWS
+
+    //
+    // On Windows, we initialize the Index past the drive part.
+    //
+
+    if (!IsValidUnicodeString(&Path->Drive)) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashPathVisit_CanNotDetermineDrive, Result);
+        goto Error;
+    }
+
+    Index = Path->Drive.Length / sizeof(WCHAR);
+
+    //
+    // Sanity check we're pointing at a colon.
+    //
+
+    if (Part.Buffer[Index] != L':') {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashPathVisit_UnexpectedPath, Result);
+        goto Error;
+    }
+
+    //
+    // Advance past the colon, then find the first non-separator character.
+    //
+
+    while (++Index < End && Part.Buffer[Index] == Separator);
+
+    if (Index >= End) {
+        Result = PH_E_INVARIANT_CHECK_FAILED;
+        PH_ERROR(PerfectHashPathVisit_NoPath, Result);
+        goto Error;
+    }
+
+#else
+
+    //
+    // Skip the first '/'.
+    //
+
+    Index = 1;
+
+#endif
+
+    for (; Index < End; Index++) {
+
+        //
+        // Scan for the next separator.
+        //
+
+        if (Part.Buffer[Index] != Separator) {
+            continue;
+        }
+
+        //
+        // We've found a separator.  Update the length of the part and invoke
+        // the callback.
+        //
+
+        Part.Length = (USHORT)(
+            RtlPointerToOffset(
+                Part.Buffer,
+                &Part.Buffer[Index]
+            )
+        );
+        Result = Callback(Path, &Part, Context);
+        if (FAILED(Result)) {
+            goto Error;
+        }
+
+        //
+        // Skip consecutive separators.
+        //
+
+        while (++Index < End && Part.Buffer[Index] == Separator);
+    }
+
+    //
+    // If we're only visiting intermediate directories, we're done.
+    //
+
+    if (IntermediateOnly) {
+        goto End;
+    }
+
+    //
+    // Perform a callback on the final path component.
+    //
+
+    Part.Length = Path->FullPath.Length;
+    Result = Callback(Path, &Part, Context);
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
+    // We're done, finish up.
+    //
+
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

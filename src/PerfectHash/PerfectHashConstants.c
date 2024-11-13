@@ -1238,6 +1238,7 @@ const PERFECT_HASH_PATH_VTBL PerfectHashPathInterface = {
     &PerfectHashPathCreate,
     &PerfectHashPathReset,
     &PerfectHashPathGetParts,
+    &PerfectHashPathVisit,
 
     //
     // Begin private methods.
@@ -1245,7 +1246,7 @@ const PERFECT_HASH_PATH_VTBL PerfectHashPathInterface = {
 
     &PerfectHashPathExtractParts,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_PATH, 5);
+VERIFY_VTBL_SIZE(PERFECT_HASH_PATH, 5 + 1);
 
 //
 // PerfectHashDirectory

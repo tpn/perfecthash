@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -4861,4 +4861,22 @@ Abstract:
 // CUDA API error encountered.
 //
 #define PH_E_CUDA_ERROR                  ((HRESULT)0xE00403FEL)
+
+//
+// MessageId: PH_E_INVALID_PATH_VISIT_FLAGS
+//
+// MessageText:
+//
+// Invalid path visit flags.
+//
+#define PH_E_INVALID_PATH_VISIT_FLAGS    ((HRESULT)0xE00403FFL)
+
+//
+// MessageId: PH_E_INVALID_PATH
+//
+// MessageText:
+//
+// Invalid path.
+//
+#define PH_E_INVALID_PATH                ((HRESULT)0xE0040400L)
 

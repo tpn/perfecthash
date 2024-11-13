@@ -1,6 +1,6 @@
 ;/*++
 ;
-;Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+;Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 ;
 ;Module Name:
 ;
@@ -4414,5 +4414,21 @@ Facility=ITF
 SymbolicName=PH_E_CUDA_ERROR
 Language=English
 CUDA API error encountered.
+.
+
+MessageId=0x3ff
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_PATH_VISIT_FLAGS
+Language=English
+Invalid path visit flags.
+.
+
+MessageId=0x400
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_INVALID_PATH
+Language=English
+Invalid path.
 .
 
