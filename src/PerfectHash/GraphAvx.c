@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2022-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2022-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -721,11 +721,11 @@ Return Value:
         Vertex1Ymm = _mm256_srli_epi32(Vertex1Ymm, Seed3.Byte1);
 
         //
-        // Vertex 2: ((Key * SEED2) >> SEED3_BYTE2)
+        // Vertex 2: ((Key * SEED2) >> SEED3_BYTE1)
         //
 
         Vertex2Ymm = _mm256_mullo_epi32(KeysYmm, Seed2Ymm);
-        Vertex2Ymm = _mm256_srli_epi32(Vertex2Ymm, Seed3.Byte2);
+        Vertex2Ymm = _mm256_srli_epi32(Vertex2Ymm, Seed3.Byte1);
 
         //
         // Compare each pair of vertices against each other to see if there
@@ -785,7 +785,7 @@ Return Value:
             Vertex1 = Vertex1 >> Seed3.Byte1;;
 
             Vertex2 = Key * Seed2;
-            Vertex2 = Vertex2 >> Seed3.Byte2;
+            Vertex2 = Vertex2 >> Seed3.Byte1;
 
             if (Vertex1 == Vertex2) {
                 Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
@@ -995,11 +995,11 @@ Return Value:
         Vertex1Zmm = _mm512_srli_epi32(Vertex1Zmm, Seed3.Byte1);
 
         //
-        // Vertex 2: ((Key * SEED2) >> SEED3_BYTE2)
+        // Vertex 2: ((Key * SEED2) >> SEED3_BYTE1)
         //
 
         Vertex2Zmm = _mm512_mullo_epi32(KeysZmm, Seed2Zmm);
-        Vertex2Zmm = _mm512_srli_epi32(Vertex2Zmm, Seed3.Byte2);
+        Vertex2Zmm = _mm512_srli_epi32(Vertex2Zmm, Seed3.Byte1);
 
         //
         // Compare each pair of vertices against each other to see if there
@@ -1055,7 +1055,7 @@ Return Value:
             Vertex1 = Vertex1 >> Seed3.Byte1;;
 
             Vertex2 = Key * Seed2;
-            Vertex2 = Vertex2 >> Seed3.Byte2;
+            Vertex2 = Vertex2 >> Seed3.Byte1;
 
             if (Vertex1 == Vertex2) {
                 Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
@@ -1215,11 +1215,11 @@ Return Value:
         Vertex1Zmm = _mm512_srli_epi32(Vertex1Zmm, Seed3.Byte1);
 
         //
-        // Vertex 2: ((Key * SEED2) >> SEED3_BYTE2)
+        // Vertex 2: ((Key * SEED2) >> SEED3_BYTE1)
         //
 
         Vertex2Zmm = _mm512_mullo_epi32(KeysZmm, Seed2Zmm);
-        Vertex2Zmm = _mm512_srli_epi32(Vertex2Zmm, Seed3.Byte2);
+        Vertex2Zmm = _mm512_srli_epi32(Vertex2Zmm, Seed3.Byte1);
 
         //
         // Compare each pair of vertices against each other to see if there
@@ -1262,7 +1262,7 @@ Return Value:
             Vertex1 >>= Seed3.Byte1;
 
             Vertex2 = Key * Seed2;
-            Vertex2 >>= Seed3.Byte2;
+            Vertex2 >>= Seed3.Byte1;
 
             if (Vertex1 == Vertex2) {
                 Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
