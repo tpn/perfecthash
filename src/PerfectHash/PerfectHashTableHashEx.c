@@ -1799,7 +1799,7 @@ Return Value:
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = Vertex2 >> SEED3_BYTE2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
 
     Result.LowPart = Vertex1;
     Result.HighPart = Vertex2;

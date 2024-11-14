@@ -4605,18 +4605,9 @@ Return Value:
     // out to the RNG component to obtain the random bytes.
     //
 
-    //
-    // Small optimization to reduce the amount of random bytes needed if we're
-    // using fixed bytes for seed 3.
-    //
-
     Context = Graph->Context;
     Table = Context->Table;
     NumberOfSeeds = Graph->NumberOfSeeds;
-    if (!IsAndHashMaskRequired(Table->HashFunctionId) &&
-        NumberOfSeeds == 3) {
-        NumberOfSeeds--;
-    }
     SizeInBytes = NumberOfSeeds * sizeof(Graph->FirstSeed);
     ASSERT((SizeInBytes % 4) == 0);
     Rng = Graph->Rng;
@@ -4638,16 +4629,12 @@ Return Value:
     if (!IsAndHashMaskRequired(Table->HashFunctionId)) {
 
         //
-        // Invariant check: the only routines that fall into this category at
-        // the moment have 3 seeds.
+        // Hash functions that don't require an AND mask are required to use
+        // seed 3's first byte as the final hash shift (in lieu of an extra
+        // AND mask).
         //
 
-        ASSERT(Graph->NumberOfSeeds == 3);
         Graph->Seed3Bytes.Byte1 = (BYTE)Table->HashShift;
-        Graph->Seed3Bytes.Byte2 = (BYTE)Table->HashShift;
-        Graph->Seed3Bytes.Byte3 = 0;
-        Graph->Seed3Bytes.Byte4 = 0;
-
     }
 
     if (Params->Flags.HasSeedMaskCounts != FALSE) {

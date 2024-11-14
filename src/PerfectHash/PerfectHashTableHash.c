@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -2577,7 +2577,7 @@ Return Value:
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = Vertex2 >> SEED3_BYTE2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;

@@ -15,7 +15,7 @@ DECLARE_INDEX_ROUTINE()
     Vertex1 = TABLE_DATA[Vertex1];
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = Vertex2 >> SEED3_BYTE2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
     Vertex2 = TABLE_DATA[Vertex2];
 
     Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
@@ -43,7 +43,7 @@ DECLARE_INDEX_IACA_ROUTINE()
     Vertex1 = TABLE_DATA[Vertex1];
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = Vertex2 >> SEED3_BYTE2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
     Vertex2 = TABLE_DATA[Vertex2];
 
     Index = (CPHINDEX)((Vertex1 + Vertex2) & INDEX_MASK);
