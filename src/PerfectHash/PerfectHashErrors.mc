@@ -259,6 +259,10 @@ All Hash Functions:
    33   Multiply643ShiftR (3)
    33   Multiply644ShiftR (3)
    34   MultiplyShiftRX (3)
+   35   Mulshrolate1RX (3)
+   36   Mulshrolate2RX (3)
+   37   Mulshrolate3RX (3)
+   38   Mulshrolate4RX (3)
 
 Mask Functions:
 

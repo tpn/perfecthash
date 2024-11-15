@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -110,6 +110,9 @@ _rotr(
 #else
 #define CPHAPI
 #endif
+
+#define RotateRight _rotr
+#define RotateLeft  _rotl
 
 #ifdef _M_X64
 

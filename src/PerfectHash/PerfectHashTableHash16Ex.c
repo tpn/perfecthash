@@ -2447,6 +2447,194 @@ Return Value:
     return Result.LongPart;
 }
 
+_Use_decl_annotations_
+ULONG
+PerfectHashTableSeededHash16ExMulshrolate1RX(
+    ULONG Key,
+    PULONG Seeds,
+    USHORT Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULONG_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (USHORT)Vertex1;
+    Result.HighPart = (USHORT)Vertex2;
+
+    return Result.LongPart;
+}
+
+_Use_decl_annotations_
+ULONG
+PerfectHashTableSeededHash16ExMulshrolate2RX(
+    ULONG Key,
+    PULONG Seeds,
+    USHORT Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULONG_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (USHORT)Vertex1;
+    Result.HighPart = (USHORT)Vertex2;
+
+    return Result.LongPart;
+}
+
+_Use_decl_annotations_
+ULONG
+PerfectHashTableSeededHash16ExMulshrolate3RX(
+    ULONG Key,
+    PULONG Seeds,
+    USHORT Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Seed4;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULONG_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed4 = Seeds[3];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (USHORT)Vertex1;
+    Result.HighPart = (USHORT)Vertex2;
+
+    return Result.LongPart;
+}
+
+_Use_decl_annotations_
+ULONG
+PerfectHashTableSeededHash16ExMulshrolate4RX(
+    ULONG Key,
+    PULONG Seeds,
+    USHORT Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULONG_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed4 = Seeds[3];
+    Seed5 = Seeds[4];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 * SEED5;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (USHORT)Vertex1;
+    Result.HighPart = (USHORT)Vertex2;
+
+    return Result.LongPart;
+}
+
 #define EXPAND_AS_HASH16_EX_ROUTINE(Name, NumberOfSeeds, SeedMasks) \
 ULONGLONG                                                           \
 PerfectHashTableHash16Ex##Name(                                     \

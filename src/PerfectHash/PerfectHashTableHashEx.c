@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -2427,7 +2427,7 @@ Return Value:
     //
 
     Vertex1 = DownsizedKey;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
     Vertex1 *= SEED1;
 
     Vertex2 = DownsizedKey;
@@ -2500,6 +2500,195 @@ Return Value:
 
     Result.LowPart = (Vertex1 & Mask);
     Result.HighPart = (Vertex2 & Mask);
+
+    return Result.QuadPart;
+}
+
+_Use_decl_annotations_
+ULONGLONG
+PerfectHashTableSeededHashExMulshrolate1RX(
+    ULONG Key,
+    PULONG Seeds,
+    ULONG Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    return Result.QuadPart;
+}
+
+_Use_decl_annotations_
+ULONGLONG
+PerfectHashTableSeededHashExMulshrolate2RX(
+    ULONG Key,
+    PULONG Seeds,
+    ULONG Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    return Result.QuadPart;
+}
+
+_Use_decl_annotations_
+ULONGLONG
+PerfectHashTableSeededHashExMulshrolate3RX(
+    ULONG Key,
+    PULONG Seeds,
+    ULONG Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Seed4;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed4 = Seeds[3];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    return Result.QuadPart;
+}
+
+_Use_decl_annotations_
+ULONGLONG
+PerfectHashTableSeededHashExMulshrolate4RX(
+    ULONG Key,
+    PULONG Seeds,
+    ULONG Mask
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Mask);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed4 = Seeds[3];
+    Seed5 = Seeds[4];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 * SEED5;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
 
     return Result.QuadPart;
 }

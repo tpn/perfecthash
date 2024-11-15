@@ -3645,4 +3645,312 @@ PerfectHashTableHashRotateRMultiplyRotateR(
     );
 }
 
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashMulshrolate1RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 3);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashMulshrolate1RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+
+    return PerfectHashTableSeededHashMulshrolate1RX(
+        Table,
+        Key,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
+        Hash
+    );
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashMulshrolate2RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 3);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashMulshrolate2RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+
+    return PerfectHashTableSeededHashMulshrolate2RX(
+        Table,
+        Key,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
+        Hash
+    );
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashMulshrolate3RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Seed4;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 4);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed4 = Seeds[3];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashMulshrolate3RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+
+    return PerfectHashTableSeededHashMulshrolate3RX(
+        Table,
+        Key,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
+        Hash
+    );
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableSeededHashMulshrolate4RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    ULONG NumberOfSeeds,
+    PULONG Seeds,
+    PULONGLONG Hash
+    )
+{
+    ULONG Seed1;
+    ULONG Seed2;
+    ULONG_BYTES Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
+    ULONG Vertex1;
+    ULONG Vertex2;
+    ULONG DownsizedKey;
+    ULARGE_INTEGER Result;
+
+    UNREFERENCED_PARAMETER(Table);
+
+    ASSERT(NumberOfSeeds >= 4);
+    UNREFERENCED_PARAMETER(NumberOfSeeds);
+
+    //
+    // Initialize aliases.
+    //
+
+    Seed1 = Seeds[0];
+    Seed2 = Seeds[1];
+    Seed3.AsULong = Seeds[2];
+    Seed4 = Seeds[3];
+    Seed5 = Seeds[4];
+    DownsizedKey = Key;
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 * SEED5;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    if (Vertex1 == Vertex2) {
+        return E_FAIL;
+    }
+
+    Result.LowPart = Vertex1;
+    Result.HighPart = Vertex2;
+
+    *Hash = Result.QuadPart;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashMulshrolate4RX(
+    PPERFECT_HASH_TABLE Table,
+    ULONG Key,
+    PULONGLONG Hash
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo = Table->TableInfoOnDisk;
+
+    return PerfectHashTableSeededHashMulshrolate4RX(
+        Table,
+        Key,
+        TableInfo->NumberOfSeeds,
+        &TableInfo->FirstSeed,
+        Hash
+    );
+}
+
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -723,7 +723,7 @@ Return Value:
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = Vertex2 >> SEED3_BYTE2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
 
     Result.LowPart = (decltype(Result.LowPart))Vertex1;
     Result.HighPart = (decltype(Result.HighPart))Vertex2;
@@ -1364,6 +1364,168 @@ Return Value:
     return Result;
 }
 
+template<typename ResultType,
+         typename KeyType,
+         typename VertexType>
+FORCEINLINE
+DEVICE
+ResultType
+PerfectHashTableSeededHashExCppMulshrolate1RX(
+    KeyType Key,
+    VertexType Mask
+    )
+{
+    VertexType Vertex1;
+    VertexType Vertex2;
+    KeyType DownsizedKey;
+    ResultType Result;
+
+    //
+    // Initialize aliases.
+    //
+
+    DownsizedKey = DOWNSIZE_KEY(Key);
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = RotateRight(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (decltype(Result.LowPart))(Vertex1);
+    Result.HighPart = (decltype(Result.HighPart))(Vertex2);
+
+    return Result.QuadPart;
+}
+
+template<typename ResultType,
+         typename KeyType,
+         typename VertexType>
+FORCEINLINE
+DEVICE
+ResultType
+PerfectHashTableSeededHashExCppMulshrolate2RX(
+    KeyType Key,
+    VertexType Mask
+    )
+{
+    VertexType Vertex1;
+    VertexType Vertex2;
+    KeyType DownsizedKey;
+    ResultType Result;
+
+    //
+    // Initialize aliases.
+    //
+
+    DownsizedKey = DOWNSIZE_KEY(Key);
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = RotateRight(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = RotateRight(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (decltype(Result.LowPart))(Vertex1);
+    Result.HighPart = (decltype(Result.HighPart))(Vertex2);
+
+    return Result.QuadPart;
+}
+
+template<typename ResultType,
+         typename KeyType,
+         typename VertexType>
+FORCEINLINE
+DEVICE
+ResultType
+PerfectHashTableSeededHashExCppMulshrolate3RX(
+    KeyType Key,
+    VertexType Mask
+    )
+{
+    VertexType Vertex1;
+    VertexType Vertex2;
+    KeyType DownsizedKey;
+    ResultType Result;
+
+    //
+    // Initialize aliases.
+    //
+
+    DownsizedKey = DOWNSIZE_KEY(Key);
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = RotateRight(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = RotateRight(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (decltype(Result.LowPart))(Vertex1);
+    Result.HighPart = (decltype(Result.HighPart))(Vertex2);
+
+    return Result.QuadPart;
+}
+
+template<typename ResultType,
+         typename KeyType,
+         typename VertexType>
+FORCEINLINE
+DEVICE
+ResultType
+PerfectHashTableSeededHashExCppMulshrolate4RX(
+    KeyType Key,
+    VertexType Mask
+    )
+{
+    VertexType Vertex1;
+    VertexType Vertex2;
+    KeyType DownsizedKey;
+    ResultType Result;
+
+    //
+    // Initialize aliases.
+    //
+
+    DownsizedKey = DOWNSIZE_KEY(Key);
+
+    //
+    // Calculate the individual hash parts.
+    //
+
+    Vertex1 = DownsizedKey * SEED1;
+    Vertex1 = RotateRight(Vertex1, SEED3_BYTE2);
+    Vertex1 = Vertex1 * SEED4;
+    Vertex1 = Vertex1 >> SEED3_BYTE1;
+
+    Vertex2 = DownsizedKey * SEED2;
+    Vertex2 = RotateRight(Vertex2, SEED3_BYTE3);
+    Vertex2 = Vertex2 * SEED5;
+    Vertex2 = Vertex2 >> SEED3_BYTE1;
+
+    Result.LowPart = (decltype(Result.LowPart))(Vertex1);
+    Result.HighPart = (decltype(Result.HighPart))(Vertex2);
+
+    return Result.QuadPart;
+}
+
 //
 // Helper routines for resolving hash functions from IDs at runtime.
 //
@@ -1499,6 +1661,30 @@ GetHashFunctionForId(
                 KeyType,
                 VertexType>;
 
+        case PerfectHashHashMulshrolate1RXFunctionId:
+            return PerfectHashTableSeededHashExCppMulshrolate1RX<
+                ResultType,
+                KeyType,
+                VertexType>;
+
+        case PerfectHashHashMulshrolate2RXFunctionId:
+            return PerfectHashTableSeededHashExCppMulshrolate2RX<
+                ResultType,
+                KeyType,
+                VertexType>;
+
+        case PerfectHashHashMulshrolate3RXFunctionId:
+            return PerfectHashTableSeededHashExCppMulshrolate3RX<
+                ResultType,
+                KeyType,
+                VertexType>;
+
+        case PerfectHashHashMulshrolate4RXFunctionId:
+            return PerfectHashTableSeededHashExCppMulshrolate4RX<
+                ResultType,
+                KeyType,
+                VertexType>;
+
         default:
             return PerfectHashTableSeededHashExCppNull<
                 ResultType,
@@ -1554,6 +1740,10 @@ GraphIsHashFunctionSupported(
         case PerfectHashHashMultiplyShiftR2FunctionId:
         case PerfectHashHashRotateRMultiplyFunctionId:
         case PerfectHashHashRotateRMultiplyRotateRFunctionId:
+        case PerfectHashHashMulshrolate1RXFunctionId:
+        case PerfectHashHashMulshrolate2RXFunctionId:
+        case PerfectHashHashMulshrolate3RXFunctionId:
+        case PerfectHashHashMulshrolate4RXFunctionId:
             return true;
         default:
             return false;
