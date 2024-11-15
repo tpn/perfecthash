@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -96,8 +96,8 @@ const CHAR VCProjectFileHeaderChunkCStr[] =
     "  </ItemGroup>\r\n"
     "  <PropertyGroup Label=\"Globals\">\r\n"
     "    <OutDir>..\\$(Platform)\\$(Configuration)\\</OutDir>\r\n"
-    "    <WindowsTargetPlatformVersion>" WINDOWS_TARGET_PLATFORM_VERSION "</WindowsTargetPlatformVersion>\r\n"
-    "    <PlatformToolset>" PLATFORM_TOOLSET "</PlatformToolset>\r\n"
+    "    <WindowsTargetPlatformVersion Condition=\"'$(WindowsTargetPlatformVersion)' == ''\">" WINDOWS_TARGET_PLATFORM_VERSION "</WindowsTargetPlatformVersion>\r\n"
+    "    <PlatformToolset Condition=\"'$(PlatformToolset)' == ''\">" PLATFORM_TOOLSET "</PlatformToolset>\r\n"
     "    <ProjectGuid>{";
 
 const STRING VCProjectFileHeaderChunk = {

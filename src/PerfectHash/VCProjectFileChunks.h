@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -17,8 +17,8 @@ Abstract:
 
 #include "stdafx.h"
 
-#define WINDOWS_TARGET_PLATFORM_VERSION "10.0.22000.0"
-#define PLATFORM_TOOLSET "v143"
+#define WINDOWS_TARGET_PLATFORM_VERSION "10.0"
+#define PLATFORM_TOOLSET "$(DefaultPlatformToolset)"
 
 extern const CHAR VCProjectFileHeaderChunkCStr[];
 extern const STRING VCProjectFileHeaderChunk;
