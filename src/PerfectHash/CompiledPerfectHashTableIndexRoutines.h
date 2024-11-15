@@ -34,8 +34,13 @@
 #include "CompiledPerfectHashTableChm01IndexRotateRMultiplyRotateRAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexMultiply643ShiftRAnd_CSource_RawCString.h"
 #include "CompiledPerfectHashTableChm01IndexMultiply644ShiftRAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMulshrolate1RXAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMulshrolate2RXAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMulshrolate3RXAnd_CSource_RawCString.h"
+#include "CompiledPerfectHashTableChm01IndexMulshrolate4RXAnd_CSource_RawCString.h"
 
 //
 // Keep this last.
 //
+
 #include "CompiledPerfectHashTableChm01IndexScratchAnd_CSource_RawCString.h"

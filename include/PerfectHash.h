@@ -2314,6 +2314,26 @@ IsValidSeedMasks(
         3,                                                               \
         DECL_SEED_MASKS(0, 0, 0x1f1f, 0, 0, 0, 0, 0)                     \
     )                                                                    \
+    ENTRY(                                                               \
+        Mulshrolate1RX,                                                  \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        Mulshrolate2RX,                                                  \
+        3,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        Mulshrolate3RX,                                                  \
+        4,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
+    ENTRY(                                                               \
+        Mulshrolate4RX,                                                  \
+        5,                                                               \
+        DECL_SEED_MASKS(0, 0, 0x1f1f1f1f, 0, 0, 0, 0, 0)                 \
+    )                                                                    \
     LAST_ENTRY(Scratch, 8, NO_SEED_MASKS)
 
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
@@ -2391,7 +2411,11 @@ IsAndHashMaskRequired(
     )
 {
     return !(
-        HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId
+        HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId ||
+        HashFunctionId == PerfectHashHashMulshrolate1RXFunctionId ||
+        HashFunctionId == PerfectHashHashMulshrolate2RXFunctionId ||
+        HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId ||
+        HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId
     );
 }
 
