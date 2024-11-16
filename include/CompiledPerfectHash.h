@@ -152,10 +152,11 @@ Routine Description:
 
     Looks up given key in a compiled perfect hash table and returns its index.
 
-    N.B. If the given key did not appear in the original set the hash table was
-         created from, the behavior of this routine is undefined.  (In practice, the
-         key will hash to either an existing key's location or an empty slot,
-         so there is potential for returning a non-unique index.)
+    N.B. If the given key did not appear in the original set from which the
+         hash table was created, the behavior of this routine is undefined.
+         (In practice, the key will hash to either an existing key's location
+         or an empty slot, so there is potential for returning a non-unique
+         index.)
 
 Arguments:
 
@@ -184,11 +185,11 @@ Routine Description:
     present.  If no insertion has taken place for this key, this routine
     guarantees to return 0 as the value.
 
-    N.B. If the given key did not appear in the original set the hash table was
-         created from, the behavior of this routine is undefined.  (In practice, the
-         value returned will be the value for some other key in the table that
-         hashes to the same location -- or potentially an empty slot in the
-         table.)
+    N.B. If the given key did not appear in the original set from which the
+         hash table was created, the behavior of this routine is undefined.
+         (In practice, the value returned will be the value for some other
+         key in the table that hashes to the same location, or, potentially,
+         an empty slot in the table.)
 
 Arguments:
 
@@ -216,11 +217,11 @@ Routine Description:
     Inserts value at key into a compiled hash table, and returns the previously
     set value (which will be 0 if no prior insert occurred).
 
-    N.B. If the given key did not appear in the original set the hash table was
-         created from, the behavior of this routine is undefined.  (In practice, the
-         key will hash to either an existing key's location or an empty slot, so
-         there is potential to corrupt the table in the sense that previously
-         inserted values will be trampled over.)
+    N.B. If the given key did not appear in the original set from which the
+         hash table was created, the behavior of this routine is undefined.
+         (In practice, the key will hash to either an existing key's location
+         or an empty slot, so there is potential to corrupt the table in the
+         sense that previously inserted values will be trampled over.)
 
 Arguments:
 
@@ -233,7 +234,8 @@ Return Value:
     Previous value at the relevant table location prior to this insertion.
 
 --*/
-typedef COMPILED_PERFECT_HASH_TABLE_INSERT *PCOMPILED_PERFECT_HASH_TABLE_INSERT;
+typedef COMPILED_PERFECT_HASH_TABLE_INSERT
+      *PCOMPILED_PERFECT_HASH_TABLE_INSERT;
 
 
 typedef
@@ -253,10 +255,10 @@ Routine Description:
     returning 0 as the previous value.  That is, a caller can safely issue
     deletes of keys regardless of whether or not said keys were inserted first.
 
-    N.B. If the given key did not appear in the original set the hash table
-         was created from, the behavior of this routine is undefined.  (In
-         practice, the key will hash to either an existing key's location or
-         an empty slot, so there is potential to corrupt the table in the
+    N.B. If the given key did not appear in the original set from which the
+         hash table was created, the behavior of this routine is undefined.
+         (In practice, the key will hash to either an existing key's location
+         or an empty slot, so there is potential to corrupt the table in the
          sense that a previously inserted value for an unrelated, valid key
          will be cleared.)
 
