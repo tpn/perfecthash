@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -105,6 +105,7 @@ PrepareCHeaderFileChm01(
 
     OUTPUT_RAW("//\n// Compiled Perfect Hash Table C Header File.  "
                "Auto-generated.\n"
+               "// https://github.com/tpn/perfecthash\n"
                "//\n// Command line:\n"
                "// ");
 
@@ -228,7 +229,7 @@ PrepareCHeaderFileChm01(
         OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
         OUTPUT_RAW("\n#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_DOWNSIZE_KEY(Key) ((CPHDKEY)_pext_u64(Key, 0x");
+        OUTPUT_RAW("_DOWNSIZE_KEY(Key) ((CPHDKEY)ExtractBits64(Key, 0x");
         OUTPUT_HEX64_RAW(Keys->DownsizeBitmap);
         OUTPUT_RAW("))\n");
 
@@ -238,11 +239,11 @@ PrepareCHeaderFileChm01(
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_LEFT _rotl64\n");
+        OUTPUT_RAW("_ROTATE_KEY_LEFT RotateLeft64\n");
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr64\n\n");
+        OUTPUT_RAW("_ROTATE_KEY_RIGHT RotateRight64\n\n");
 
     } else {
 
@@ -260,11 +261,11 @@ PrepareCHeaderFileChm01(
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_LEFT _rotl\n");
+        OUTPUT_RAW("_ROTATE_KEY_LEFT RotateLeft32\n");
 
         OUTPUT_RAW("#define ");
         OUTPUT_STRING(Upper);
-        OUTPUT_RAW("_ROTATE_KEY_RIGHT _rotr\n\n");
+        OUTPUT_RAW("_ROTATE_KEY_RIGHT RotateRight32\n\n");
     }
 
     OUTPUT_RAW("#include <CompiledPerfectHashMacroGlue.h>\n");

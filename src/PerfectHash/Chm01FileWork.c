@@ -139,7 +139,7 @@ Return Value:
     PPERFECT_HASH_FILE ContextFile = NULL;
     PPERFECT_HASH_CONTEXT Context;
     BOOLEAN IsContextFile = FALSE;
-    BOOLEAN IsMakefileOrMainMkFile = FALSE;
+    BOOLEAN IsMakefileOrMainMkOrCMakeListsTextFile = FALSE;
 
     //
     // Initialize aliases.
@@ -196,13 +196,14 @@ Return Value:
         ContextFileId = ContextFileNullId;
 
         //
-        // Toggle a boolean if this is the Makefile or main.mk file; we need
-        // this later when creating the path.
+        // Toggle a boolean if this is the Makefile, main.mk, or CMakeLists.txt
+        // file; we need this later when creating the path.
         //
 
-        IsMakefileOrMainMkFile = (
-            FileId == FileMakefileFileId ||
-            FileId == FileMakefileMainMkFileId
+        IsMakefileOrMainMkOrCMakeListsTextFile = (
+            FileId == FileMakefileFileId        ||
+            FileId == FileMakefileMainMkFileId  ||
+            FileId == FileCMakeListsTextFileId
         );
 
     } else {
@@ -439,7 +440,7 @@ Return Value:
                 goto End;
             }
 
-        } else if (IsMakefileOrMainMkFile) {
+        } else if (IsMakefileOrMainMkOrCMakeListsTextFile) {
 
             //
             // The Makefile and main.mk files are special as they're the only
@@ -448,6 +449,8 @@ Return Value:
             // named "Makefile" and "main.mk".  As with the context file logic
             // above, we handle this requirement by creating the path manually
             // instead of using PerfectHashTableCreatePath().
+            //
+            // Update: this also applies to CMakeLists.txt files.
             //
 
             //

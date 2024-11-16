@@ -11,13 +11,13 @@ DECLARE_INDEX_ROUTINE()
     DownsizedKey = DOWNSIZE_KEY(Key);
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = RotateRight(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
     Vertex1 = Vertex1 * SEED4;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
     Vertex1 = TABLE_DATA[Vertex1];
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = RotateRight(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 = Vertex2 * SEED5;
     Vertex2 = Vertex2 >> SEED3_BYTE1;
     Vertex2 = TABLE_DATA[Vertex2];
@@ -43,13 +43,13 @@ DECLARE_INDEX_IACA_ROUTINE()
     DownsizedKey = DOWNSIZE_KEY(Key);
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = RotateRight(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
     Vertex1 = Vertex1 * SEED4;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
     Vertex1 = TABLE_DATA[Vertex1];
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = RotateRight(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 = Vertex2 * SEED5;
     Vertex2 = Vertex2 >> SEED3_BYTE1;
     Vertex2 = TABLE_DATA[Vertex2];

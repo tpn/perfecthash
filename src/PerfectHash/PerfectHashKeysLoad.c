@@ -810,7 +810,7 @@ Return Value:
         for (Index = 0; Index < NumberOfKeys; Index++) {
             Key = *Values++;
 
-            DownsizedKey = _pext_u64(Key, Bitmap);
+            DownsizedKey = ExtractBits64(Key, Bitmap);
             ASSERT(Rtl->LeadingZeros64(DownsizedKey) >= 32);
 
             DownsizedKeyArray[Index] = (ULONG)DownsizedKey;
