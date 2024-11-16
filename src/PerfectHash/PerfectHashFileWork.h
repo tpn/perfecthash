@@ -461,8 +461,8 @@ Abstract:
         VUpper,                                                            \
         CMakeListsTextFile,                                                \
         CMAKE_LISTS_TEXT_FILE,                                             \
-        EofInitTypeDefault,                                                \
-        NO_EOF_VALUE,                                                      \
+        EofInitTypeNumberOfPages,                                          \
+        4,                                                                 \
         NO_SUFFIX,                                                         \
         &TextFileExtension,                                                \
         NO_STREAM_NAME,                                                    \
