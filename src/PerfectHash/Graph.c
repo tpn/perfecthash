@@ -6455,5 +6455,209 @@ End:
     return Result;
 }
 
+VOID
+GraphCalculateAssignedMemoryCoverage_AVX512(
+    PGRAPH Graph
+    )
+/*++
+
+Routine Description:
+
+    AVX512 implementation of GraphCalculateAssignedMemoryCoverage().
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which memory coverage of the
+        assigned array is to be calculated.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    BYTE Count;
+    USHORT PageCount;
+    ULONG LargePageCount;
+    ULONG PageIndex;
+    ULONG CacheLineIndex;
+    ULONG LargePageIndex;
+    ULONG NumberOfCacheLines;
+    ULONG TotalBytesProcessed;
+    ULONG PageSizeBytesProcessed;
+    ULONG LargePageSizeBytesProcessed;
+    BOOLEAN FoundFirst = FALSE;
+    BOOLEAN IsLastCacheLine = FALSE;
+    PASSIGNED_CACHE_LINE AssignedCacheLine;
+    PASSIGNED_MEMORY_COVERAGE Coverage;
+
+    PBYTE Assigned;
+    ZMMWORD AssignedZmm;
+    ZMASK16 Mask;
+    const ZMMWORD AllZeros = _mm512_setzero_si512();
+
+    ASSERT(!IsUsingAssigned16(Graph));
+
+    Coverage = &Graph->AssignedMemoryCoverage;
+    Coverage->Attempt = Graph->Attempt;
+    NumberOfCacheLines = Coverage->TotalNumberOfCacheLines;
+    AssignedCacheLine = (PASSIGNED_CACHE_LINE)Graph->Assigned;
+
+    PageIndex = 0;
+    LargePageIndex = 0;
+    TotalBytesProcessed = 0;
+    PageSizeBytesProcessed = 0;
+    LargePageSizeBytesProcessed = 0;
+
+    Coverage->SolutionNumber = Graph->SolutionNumber;
+
+    //
+    // Enumerate the assigned array in cache-line-sized strides.
+    //
+
+    for (CacheLineIndex = 0;
+         CacheLineIndex < NumberOfCacheLines;
+         CacheLineIndex++) {
+
+        Count = 0;
+        IsLastCacheLine = (CacheLineIndex == NumberOfCacheLines - 1);
+
+        //
+        // Load 64 bytes into a ZMM register and compare it against zero.
+        // The population count of the resulting mask provides us with the
+        // number of non-zero ULONG elements within that 64-byte chunk.
+        //
+
+        //
+        // Load 64 bytes of the cache line.
+        //
+
+        Assigned = (PBYTE)AssignedCacheLine;
+        AssignedZmm = _mm512_load_si512((const void*)Assigned);
+        Mask = _mm512_cmpneq_epi32_mask(AssignedZmm, AllZeros);
+        Count = (BYTE)_mm_popcnt_u32((unsigned int)Mask);
+        ASSERT(Count >= 0 && Count <= 16);
+
+        Coverage->TotalNumberOfAssigned += Count;
+
+        Coverage->NumberOfAssignedPerCacheLineCounts[Count]++;
+
+        //
+        // Advance the cache line pointer.
+        //
+
+        AssignedCacheLine++;
+
+        //
+        // Increment the empty or used counters depending on whether or not
+        // any assigned elements were detected.
+        //
+
+        if (!Count) {
+
+            Coverage->NumberOfEmptyCacheLines++;
+
+        } else {
+
+            Coverage->NumberOfUsedCacheLines++;
+
+            if (!FoundFirst) {
+                FoundFirst = TRUE;
+                Coverage->FirstCacheLineUsed = CacheLineIndex;
+                Coverage->FirstPageUsed = PageIndex;
+                Coverage->FirstLargePageUsed = LargePageIndex;
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
+                Coverage->MaxAssignedPerCacheLineCount = Count;
+            } else {
+                Coverage->LastCacheLineUsed = CacheLineIndex;
+                Coverage->LastPageUsed = PageIndex;
+                Coverage->LastLargePageUsed = LargePageIndex;
+                if (Coverage->MaxAssignedPerCacheLineCount < Count) {
+                    Coverage->MaxAssignedPerCacheLineCount = Count;
+                }
+            }
+
+        }
+
+        //
+        // Update histograms based on the count we just observed.
+        //
+
+        Coverage->NumberOfAssignedPerCacheLine[CacheLineIndex] = Count;
+        Coverage->NumberOfAssignedPerLargePage[LargePageIndex] += Count;
+        Coverage->NumberOfAssignedPerPage[PageIndex] += Count;
+
+        TotalBytesProcessed += CACHE_LINE_SIZE;
+        PageSizeBytesProcessed += CACHE_LINE_SIZE;
+        LargePageSizeBytesProcessed += CACHE_LINE_SIZE;
+
+        //
+        // If we've hit a page boundary, or this is the last cache line we'll
+        // be processing, finalize counts for this page.  Likewise for large
+        // pages.
+        //
+
+        if (PageSizeBytesProcessed == PAGE_SIZE || IsLastCacheLine) {
+
+            PageSizeBytesProcessed = 0;
+            PageCount = Coverage->NumberOfAssignedPerPage[PageIndex];
+
+            if (PageCount) {
+                Coverage->NumberOfUsedPages++;
+            } else {
+                Coverage->NumberOfEmptyPages++;
+            }
+
+            PageIndex++;
+
+            if (LargePageSizeBytesProcessed == LARGE_PAGE_SIZE ||
+                IsLastCacheLine) {
+
+                LargePageSizeBytesProcessed = 0;
+                LargePageCount =
+                    Coverage->NumberOfAssignedPerLargePage[LargePageIndex];
+
+                if (LargePageCount) {
+                    Coverage->NumberOfUsedLargePages++;
+                } else {
+                    Coverage->NumberOfEmptyLargePages++;
+                }
+
+                LargePageIndex++;
+            }
+        }
+    }
+
+    //
+    // Enumeration of the assigned array complete.  Perform a linear regression
+    // against the NumberOfAssignedPerCacheLineCounts array, then score it.
+    //
+
+    LinearRegressionNumberOfAssignedPerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        &Coverage->Slope,
+        &Coverage->Intercept,
+        &Coverage->CorrelationCoefficient,
+        &Coverage->PredictedNumberOfFilledCacheLines
+    );
+
+    ScoreNumberOfAssignedPerCacheLineCounts(
+        (PULONG)&Coverage->NumberOfAssignedPerCacheLineCounts,
+        Coverage->TotalNumberOfAssigned,
+        &Coverage->Score,
+        &Coverage->Rank
+    );
+
+    //
+    // Everything has been completed; verify invariants, then return.
+    //
+
+    VerifyMemoryCoverageInvariants(Graph, Coverage);
+
+    return;
+}
+
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :
