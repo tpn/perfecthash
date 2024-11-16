@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2022-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2022-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -50,17 +50,18 @@ PrepareModuleDefFileChm01(
 
     OUTPUT_RAW("EXPORTS\n");
 
+    //
+    // Raw exports of table-related symbols using their full name.
+    //
+
 #define WRITE_PH_EXPORT(Export) \
     OUTPUT_RAW("    ");         \
-    OUTPUT_RAW(#Export);        \
-    OUTPUT_RAW(" = ");          \
     OUTPUT_STRING(BaseName);    \
     OUTPUT_RAW("_");            \
     OUTPUT_RAW(#Export);        \
     OUTPUT_RAW("\n")
 
     WRITE_PH_EXPORT(TableData);
-
     WRITE_PH_EXPORT(TableValues);
     WRITE_PH_EXPORT(NumberOfTableValues);
     WRITE_PH_EXPORT(TableValueSizeInBytes);
@@ -76,13 +77,15 @@ PrepareModuleDefFileChm01(
         WRITE_PH_EXPORT(DownsizedKeySizeInBytes);
     }
 
-#define WRITE_CPH_EXPORT(Export)           \
-    OUTPUT_RAW("    ");                    \
-    OUTPUT_RAW(#Export);                   \
-    OUTPUT_RAW(" = CompiledPerfectHash_"); \
-    OUTPUT_STRING(BaseName);               \
-    OUTPUT_RAW("_");                       \
-    OUTPUT_RAW(#Export);                   \
+    //
+    // Raw exports of function-related symbols using their full name.
+    //
+
+#define WRITE_CPH_EXPORT(Export)            \
+    OUTPUT_RAW("    CompiledPerfectHash_"); \
+    OUTPUT_STRING(BaseName);                \
+    OUTPUT_RAW("_");                        \
+    OUTPUT_RAW(#Export);                    \
     OUTPUT_RAW("\n");
 
     WRITE_CPH_EXPORT(Index);
@@ -94,6 +97,58 @@ PrepareModuleDefFileChm01(
     WRITE_CPH_EXPORT(Lookup);
     WRITE_CPH_EXPORT(Delete);
     WRITE_CPH_EXPORT(InterlockedIncrement);
+
+    //
+    // Aliases for the table-related exports.
+    //
+
+#define WRITE_PH_EXPORT_ALIAS(Export) \
+    OUTPUT_RAW("    ");               \
+    OUTPUT_RAW(#Export);              \
+    OUTPUT_RAW(" = ");                \
+    OUTPUT_STRING(BaseName);          \
+    OUTPUT_RAW("_");                  \
+    OUTPUT_RAW(#Export);              \
+    OUTPUT_RAW("\n")
+
+    WRITE_PH_EXPORT_ALIAS(TableData);
+    WRITE_PH_EXPORT_ALIAS(TableValues);
+    WRITE_PH_EXPORT_ALIAS(NumberOfTableValues);
+    WRITE_PH_EXPORT_ALIAS(TableValueSizeInBytes);
+
+    WRITE_PH_EXPORT_ALIAS(Seeds);
+    WRITE_PH_EXPORT_ALIAS(NumberOfSeeds);
+
+    if (IncludeKeys) {
+        WRITE_PH_EXPORT_ALIAS(Keys);
+        WRITE_PH_EXPORT_ALIAS(NumberOfKeys);
+        WRITE_PH_EXPORT_ALIAS(KeySizeInBytes);
+        WRITE_PH_EXPORT_ALIAS(OriginalKeySizeInBytes);
+        WRITE_PH_EXPORT_ALIAS(DownsizedKeySizeInBytes);
+    }
+
+    //
+    // Aliases for the function-related exports.
+    //
+
+#define WRITE_CPH_EXPORT_ALIAS(Export)     \
+    OUTPUT_RAW("    ");                    \
+    OUTPUT_RAW(#Export);                   \
+    OUTPUT_RAW(" = CompiledPerfectHash_"); \
+    OUTPUT_STRING(BaseName);               \
+    OUTPUT_RAW("_");                       \
+    OUTPUT_RAW(#Export);                   \
+    OUTPUT_RAW("\n");
+
+    WRITE_CPH_EXPORT_ALIAS(Index);
+    WRITE_CPH_EXPORT_ALIAS(IndexIaca);
+    if (IncludeKeys) {
+        WRITE_CPH_EXPORT_ALIAS(IndexBsearch);
+    }
+    WRITE_CPH_EXPORT_ALIAS(Insert);
+    WRITE_CPH_EXPORT_ALIAS(Lookup);
+    WRITE_CPH_EXPORT_ALIAS(Delete);
+    WRITE_CPH_EXPORT_ALIAS(InterlockedIncrement);
 
     //
     // Finish up.
