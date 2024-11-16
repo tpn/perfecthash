@@ -16,10 +16,10 @@ DECLARE_INDEX_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    A = _mm_crc32_u32(SEED1, DownsizedKey);
-    B = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, 15));
+    A = Crc32u32(SEED1, DownsizedKey);
+    B = Crc32u32(SEED2, RotateLeft32(DownsizedKey, 15));
     C = SEED3 ^ DownsizedKey;
-    D = _mm_crc32_u32(B, C);
+    D = Crc32u32(B, C);
 
     Vertex1 = A;
     Vertex2 = D;
@@ -56,10 +56,10 @@ DECLARE_INDEX_IACA_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    A = _mm_crc32_u32(SEED1, DownsizedKey);
-    B = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, 15));
+    A = Crc32u32(SEED1, DownsizedKey);
+    B = Crc32u32(SEED2, RotateLeft32(DownsizedKey, 15));
     C = SEED3 ^ DownsizedKey;
-    D = _mm_crc32_u32(B, C);
+    D = Crc32u32(B, C);
 
     Vertex1 = A;
     Vertex2 = D;

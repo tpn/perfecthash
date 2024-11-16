@@ -20,11 +20,105 @@ Abstract:
 extern "C" {
 #endif
 
+#include <stdint.h>
+
+//
+// Static inline C versions of rotate and bit extraction.
+//
+
+//
+// Equivalent to _rotl intrinsic on x64.
+//
+
+static inline
+uint32_t
+RotateLeft32_C(
+    uint32_t a,
+    uint32_t b
+    )
+{
+    b &= 31;
+    return (a << b) | (a >> (32 - b));
+}
+
+//
+// Equivalent to _rotr intrinsic on x64.
+//
+
+static inline
+uint32_t
+RotateRight32_C(
+    uint32_t a,
+    uint32_t b
+    )
+{
+    b &= 31;
+    return (a >> b) | (a << (32 - b));
+}
+
+//
+// Equivalent to _rotl64 intrinsic on x64.
+//
+
+static inline
+uint64_t
+RotateLeft64_C(
+    uint64_t a,
+    uint64_t b
+    )
+{
+    b &= 63;
+    return (a << b) | (a >> (64 - b));
+}
+
+//
+// Equivalent to _rotr64 intrinsic on x64.
+//
+
+static inline
+uint64_t
+RotateRight64_C(
+    uint64_t a,
+    uint64_t b
+    )
+{
+    b &= 63;
+    return (a >> b) | (a << (64 - b));
+}
+
+//
+// Equivalent to _pext_u64 intrinsic on x64.
+//
+
+static inline
+uint64_t
+ExtractBits64_C(
+    uint64_t value,
+    uint64_t mask
+    )
+{
+    uint64_t result = 0;
+    uint64_t bit_position = 0;
+
+    while (mask != 0) {
+        if (mask & 1) {
+            result |= (value & 1) << bit_position;
+            bit_position++;
+        }
+
+        mask >>= 1;
+        value >>= 1;
+    }
+
+    return result;
+}
+
 //
 // Platform-dependent defines.
 //
 
 #ifdef _WIN32
+
 #include <sal.h>
 
 //
@@ -44,48 +138,35 @@ extern "C" {
 #endif
 #elif defined(__linux__) || defined(__APPLE__)
 #define CPHCALLTYPE
-#if defined(__clang__)
-#ifndef __arm64__
-#include <x86intrin.h>
-#endif
+#if defined(__clang__) || defined(__GNUC__)
+#   ifdef __arm64__
+#       ifdef __ARM_FEATURE_SVE
+#           include <arm_sve.h>
+#       else // !__ARM_FEATURE_SVE
+#           include <arm_neon.h>
+#       endif // __ARM_FEATURE_SVE
 
-//
-// Older versions of clang didn't appear to support the rotate intrinsics _rotr
-// and _rotl, so, we used some static inline versions, below.  Recent versions
-// (10.0+) appear to have the intrinsics, so, disable this block for now.  If
-// you are compiling on an older version of clang, change the 0 to 1 to get the
-// rotate intrinsics back.
-//
+#define RotateRight32 __builtin_rotateright32
+#define RotateLeft32  __builtin_rotateleft32
+#define RotateRight64 __builtin_rotateright64
+#define RotateLeft64  __builtin_rotateleft64
+#define ExtractBits64 ExtractBits64_C
 
-#if 0
-static inline
-unsigned int
-_rotl(
-    unsigned int a,
-    unsigned int b
-    )
-{
-    b &= 31;
-    return (a << b) | (a >> (32 - b));
-}
+#   else // !__arm64__
+#       include <x86intrin.h>
 
-static inline
-unsigned int
-_rotr(
-    unsigned int a,
-    unsigned int b
-    )
-{
-    b &= 31;
-    return (a >> b) | (a << (32 - b));
-}
-#endif
+#define RotateRight32 _rotr
+#define RotateLeft32  _rotl
+#define RotateRight64 _rotr64
+#define RotateLeft64  _rotl64
+#define ExtractBits64 _pext_u64
+#define Crc32u32      _mm_crc32_u32
 
-#elif defined(__GNUC__)
-#include <x86intrin.h>
+#   endif // __arm64__
 #else
 #error Unrecognized compiler.
 #endif
+
 #include <no_sal2.h>
 #ifndef FORCEINLINE
 #define FORCEINLINE static inline __attribute__((always_inline))
@@ -111,10 +192,14 @@ _rotr(
 #define CPHAPI
 #endif
 
-#define RotateRight _rotr
-#define RotateLeft  _rotl
-
 #ifdef _M_X64
+
+#define RotateRight32 _rotr
+#define RotateLeft32  _rotl
+#define RotateRight64 _rotr64
+#define RotateLeft64  _rotl64
+#define ExtractBits64 _pext_u64
+#define Crc32u32      _mm_crc32_u32
 
 //
 // Define start/end markers for IACA.
@@ -134,7 +219,6 @@ _rotr(
 #define __rdtsc() clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
 #endif
 #endif
-
 //
 // Define the main functions exposed by a compiled perfect hash table: index,
 // lookup, insert and delete.

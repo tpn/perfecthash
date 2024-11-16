@@ -13,14 +13,14 @@ DECLARE_INDEX_ROUTINE()
     DownsizedKey = DOWNSIZE_KEY(Key);
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE1);
     Vertex1 *= SEED2;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
 
     Vertex2 = DownsizedKey * SEED4;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 *= SEED5;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE4);
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;
@@ -51,14 +51,14 @@ DECLARE_INDEX_IACA_ROUTINE()
     DownsizedKey = DOWNSIZE_KEY(Key);
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE1);
     Vertex1 *= SEED2;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
 
     Vertex2 = DownsizedKey * SEED4;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 *= SEED5;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE4);
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;

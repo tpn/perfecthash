@@ -4695,6 +4695,112 @@ IsValidPerfectHashEnumId(
 }
 
 //
+// Static inline C versions of rotate and bit extraction.
+//
+
+//
+// Equivalent to _rotl intrinsic on x64.
+//
+
+static inline
+ULONG
+RotateLeft32_C(
+    ULONG a,
+    ULONG b
+    )
+{
+    b &= 31;
+    return (a << b) | (a >> (32 - b));
+}
+
+//
+// Equivalent to _rotr intrinsic on x64.
+//
+
+static inline
+ULONG
+RotateRight32_C(
+    ULONG a,
+    ULONG b
+    )
+{
+    b &= 31;
+    return (a >> b) | (a << (32 - b));
+}
+
+//
+// Equivalent to _rotl64 intrinsic on x64.
+//
+
+static inline
+ULONGLONG
+RotateLeft64_C(
+    ULONGLONG a,
+    ULONGLONG b
+    )
+{
+    b &= 63;
+    return (a << b) | (a >> (64 - b));
+}
+
+//
+// Equivalent to _rotr64 intrinsic on x64.
+//
+
+static inline
+ULONGLONG
+RotateRight64_C(
+    ULONGLONG a,
+    ULONGLONG b
+    )
+{
+    b &= 63;
+    return (a >> b) | (a << (64 - b));
+}
+
+//
+// Equivalent to _pext_u64 intrinsic on x64.
+//
+
+static inline
+ULONGLONG
+ExtractBits64_C(
+    ULONGLONG Value,
+    ULONGLONG Mask
+    )
+{
+    ULONGLONG Result = 0;
+    ULONGLONG BitPosition = 0;
+
+    while (Mask != 0) {
+        if (Mask & 1) {
+            Result |= (Value & 1) << BitPosition;
+            BitPosition++;
+        }
+
+        Mask >>= 1;
+        Value >>= 1;
+    }
+
+    return Result;
+}
+
+#ifndef PH_CUDA
+#define RotateRight32 _rotr
+#define RotateLeft32  _rotl
+#define RotateRight64 _rotr64
+#define RotateLeft64  _rotl64
+#define ExtractBits64 _pext_u64
+#define Crc32u32      _mm_crc32_u32
+#else
+#define RotateRight32 RotateRight32_C
+#define RotateLeft32  RotateLeft32_C
+#define RotateRight64 RotateRight64_C
+#define RotateLeft64  RotateLeft64_C
+#define ExtractBits64 ExtractBits64_C
+#endif
+
+//
 // Define helper macros for printing errors to stdout.  Requires the symbol
 // PerfectHashPrintError to be in scope.
 //

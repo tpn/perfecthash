@@ -14,10 +14,10 @@ DECLARE_INDEX_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    A = _rotl(DownsizedKey ^ SEED1, 15);
-    B = _rotl(DownsizedKey + SEED2, 7);
-    C = _rotr(DownsizedKey - SEED3, 11);
-    D = _rotr(DownsizedKey ^ SEED4, 20);
+    A = RotateLeft32(DownsizedKey ^ SEED1, 15);
+    B = RotateLeft32(DownsizedKey + SEED2, 7);
+    C = RotateRight32(DownsizedKey - SEED3, 11);
+    D = RotateRight32(DownsizedKey ^ SEED4, 20);
 
     Vertex1 = A ^ C;
     Vertex2 = B ^ D;
@@ -52,10 +52,10 @@ DECLARE_INDEX_IACA_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    A = _rotl(DownsizedKey ^ SEED1, 15);
-    B = _rotl(DownsizedKey + SEED2, 7);
-    C = _rotr(DownsizedKey - SEED3, 11);
-    D = _rotr(DownsizedKey ^ SEED4, 20);
+    A = RotateLeft32(DownsizedKey ^ SEED1, 15);
+    B = RotateLeft32(DownsizedKey + SEED2, 7);
+    C = RotateRight32(DownsizedKey - SEED3, 11);
+    D = RotateRight32(DownsizedKey ^ SEED4, 20);
 
     Vertex1 = A ^ C;
     Vertex2 = B ^ D;

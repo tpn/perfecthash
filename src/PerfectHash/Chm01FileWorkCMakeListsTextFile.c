@@ -30,6 +30,7 @@ PrepareCMakeListsTextFileChm01(
     ULONG NumberOfSeeds;
     PCSTRING Name;
     PCSTRING Upper;
+    BOOLEAN IncludeKeys;
     PPERFECT_HASH_KEYS Keys;
     PPERFECT_HASH_PATH Path;
     PPERFECT_HASH_FILE File;
@@ -51,6 +52,7 @@ PrepareCMakeListsTextFileChm01(
     Upper = &Path->TableNameUpperA;
     TableInfoOnDisk = Table->TableInfoOnDisk;
     NumberOfSeeds = TableInfoOnDisk->NumberOfSeeds;
+    IncludeKeys = (Table->TableCreateFlags.IncludeKeysInCompiledDll != FALSE);
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
@@ -106,7 +108,9 @@ PrepareCMakeListsTextFileChm01(
     OUTPUT_FILE4(".c");
     OUTPUT_FILE4("_TableValues.c");
     OUTPUT_FILE4("_TableData.c");
-    OUTPUT_FILE4("_Keys.c");
+    if (IncludeKeys) {
+        OUTPUT_FILE4("_Keys.c");
+    }
     OUTPUT_RAW("    ${PCH_SOURCE}\n");
     OUTPUT_RAW(")\n\n");
 

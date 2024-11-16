@@ -12,8 +12,8 @@ DECLARE_INDEX_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    Vertex1 = _mm_crc32_u32(SEED1, _rotr(DownsizedKey, SEED3_BYTE1));
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, SEED3_BYTE2));
+    Vertex1 = Crc32u32(SEED1, RotateRight32(DownsizedKey, SEED3_BYTE1));
+    Vertex2 = Crc32u32(SEED2, RotateLeft32(DownsizedKey, SEED3_BYTE2));
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;
@@ -43,8 +43,8 @@ DECLARE_INDEX_IACA_ROUTINE()
 
     DownsizedKey = DOWNSIZE_KEY(Key);
 
-    Vertex1 = _mm_crc32_u32(SEED1, _rotr(DownsizedKey, SEED3_BYTE1));
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(DownsizedKey, SEED3_BYTE2));
+    Vertex1 = Crc32u32(SEED1, RotateRight32(DownsizedKey, SEED3_BYTE1));
+    Vertex2 = Crc32u32(SEED2, RotateLeft32(DownsizedKey, SEED3_BYTE2));
 
     MaskedLow = Vertex1 & HASH_MASK;
     MaskedHigh = Vertex2 & HASH_MASK;
