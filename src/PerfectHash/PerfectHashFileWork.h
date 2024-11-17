@@ -215,7 +215,7 @@ Abstract:
         CSourceTableDataFile,                                              \
         C_SOURCE_TABLE_DATA_FILE,                                          \
         EofInitTypeNumberOfTableElementsMultiplier,                        \
-        16,                                                                \
+        128,                                                               \
         SUFFIX(TableData),                                                 \
         &CSourceFileExtension,                                             \
         NO_STREAM_NAME,                                                    \
