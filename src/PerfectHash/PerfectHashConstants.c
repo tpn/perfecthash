@@ -604,6 +604,9 @@ const UNICODE_STRING ContextVerifiedTableEventPrefix =
 const UNICODE_STRING ContextNewBestGraphEventPrefix =
     RCS(L"PerfectHashContext_NewBestGraphEvent_");
 
+const UNICODE_STRING ContextSolveTimeoutExpiredEventPrefix =
+    RCS(L"PerfectHashContext_SolveTimeoutExpiredEvent_");
+
 #define EXPAND_AS_EVENT_NAME(                                                 \
     Verb, VUpper, Name, Upper,                                                \
     EofType, EofValue,                                                        \
@@ -630,6 +633,7 @@ const PCUNICODE_STRING ContextObjectPrefixes[] = {
     &ContextTryLargerTableSizeEventPrefix,
     &ContextVerifiedTableEventPrefix,
     &ContextNewBestGraphEventPrefix,
+    &ContextSolveTimeoutExpiredEventPrefix,
 
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME_ADDRESS)
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_EVENT_NAME_ADDRESS)

@@ -2466,6 +2466,10 @@ Return Value:
     BOOL IsMoreHelp;
     BOOL IsToggleCallback;
     BOOL DoFlushOnExit;
+    BOOL IsInputEvent;
+    BOOL IsBestGraphEvent;
+    LONG InputEvent;
+    LONG BestGraphEvent = -1;
     HRESULT Result;
     ULONG WaitResult;
     DWORD LastError;
@@ -2473,9 +2477,9 @@ Return Value:
     INPUT_RECORD Input;
     FILETIME64 FileTime;
     SYSTEMTIME LocalTime;
-    ULONG NumberOfEvents;
+    LONG NumberOfEvents;
     DWORD NumberOfEventsRead;
-    HANDLE Events[3] = { 0, };
+    HANDLE Events[9] = { 0, };
     KEY_EVENT_RECORD *KeyEvent;
     PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags;
     PSET_FUNCTION_ENTRY_CALLBACK SetFunctionEntryCallback;
@@ -2497,10 +2501,18 @@ Return Value:
     //
 
     NumberOfEvents = 0;
+    Events[NumberOfEvents++] = Context->SucceededEvent;
+    Events[NumberOfEvents++] = Context->CompletedEvent;
     Events[NumberOfEvents++] = Context->ShutdownEvent;
+    Events[NumberOfEvents++] = Context->FailedEvent;
+    Events[NumberOfEvents++] = Context->TryLargerTableSizeEvent;
+    Events[NumberOfEvents++] = Context->LowMemoryEvent;
+    Events[NumberOfEvents++] = Context->SolveTimeoutExpiredEvent;
+    InputEvent = NumberOfEvents;
     Events[NumberOfEvents++] = InputHandle;
 
     if (!TableCreateFlags.Quiet) {
+        BestGraphEvent = NumberOfEvents;
         Events[NumberOfEvents++] = Context->NewBestGraphFoundEvent;
     } else {
 
@@ -2509,7 +2521,7 @@ Return Value:
         // wire up the NewBestGraphFoundEvent to the third event handle.
         //
 
-        ASSERT(NumberOfEvents == 2);
+        BestGraphEvent = NumberOfEvents;
         Events[NumberOfEvents] = Context->NewBestGraphFoundEvent;
     }
 
@@ -2526,17 +2538,28 @@ Return Value:
                                             FALSE,
                                             INFINITE);
 
-        if (StopSolving(Context) || (WaitResult == WAIT_OBJECT_0)) {
+        IsInputEvent = (WaitResult == (WAIT_OBJECT_0 + (DWORD)InputEvent));
+        if (BestGraphEvent != -1) {
+            IsBestGraphEvent = (WaitResult == WAIT_OBJECT_0 + (DWORD)BestGraphEvent);
+        }
+        else {
+            IsBestGraphEvent = FALSE;
+        }
+
+        if (StopSolving(Context)) {
             goto End;
         }
 
-        if ((WaitResult != WAIT_OBJECT_0+1) &&
-            (WaitResult != WAIT_OBJECT_0+2)) {
-            SYS_ERROR(WaitForSingleObject);
+        //
+        // Invariant check: one of these should be set by this point.
+        //
+
+        if (!IsInputEvent && !IsBestGraphEvent) {
+            SYS_ERROR(WaitForMultipleObjects);
             goto End;
         }
 
-        if (WaitResult == WAIT_OBJECT_0+2) {
+        if (IsBestGraphEvent) {
 
             //
             // A new best graph has been found.
@@ -2561,7 +2584,7 @@ Return Value:
 
         } else {
 
-            ASSERT(WaitResult == WAIT_OBJECT_0+1);
+            ASSERT(IsInputEvent);
 
             //
             // The console input handle is signaled, proceed with reading.

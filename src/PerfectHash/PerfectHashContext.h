@@ -813,6 +813,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     HANDLE NewBestGraphFoundEvent;
 
     //
+    // The following event is set if the solve timeout has expired.
+    //
+
+    HANDLE SolveTimeoutExpiredEvent;
+
+    //
     // The following events are related to file work.  Each file work ID has
     // both a prepared and saved event, which is used to synchronize with the
     // main solving thread.
