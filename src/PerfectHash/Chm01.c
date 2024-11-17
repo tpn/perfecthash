@@ -1766,6 +1766,12 @@ Return Value:
 
 #define CONTEXT_STATS_TABLE(ENTRY)                             \
     ENTRY(                                                     \
+        "Hash Function Name:                                ", \
+        HashFunctionNames[Context->HashFunctionId],            \
+        OUTPUT_UNICODE_STRING_FAST                             \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
         "Keys File Name:                                    ", \
         &Context->Table->Keys->File->Path->FileName,           \
         OUTPUT_UNICODE_STRING_FAST                             \
