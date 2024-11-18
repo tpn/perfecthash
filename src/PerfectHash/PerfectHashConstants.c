@@ -719,8 +719,10 @@ const UNICODE_STRING TableInfoStreamName = RCS(L"Info");
 //
 
 const UNICODE_STRING TextFileExtension = RCS(L"txt");
+const UNICODE_STRING PythonFileExtension = RCS(L"py");
 const UNICODE_STRING BatchFileExtension = RCS(L"bat");
 const UNICODE_STRING CSourceFileExtension = RCS(L"c");
+const UNICODE_STRING CppSourceFileExtension = RCS(L"cpp");
 const UNICODE_STRING CudaSourceFileExtension = RCS(L"cu");
 const UNICODE_STRING CHeaderFileExtension = RCS(L"h");
 const UNICODE_STRING TableFileExtension = RCS(L"pht1");
@@ -853,6 +855,21 @@ const STRING NtTypeNames[] = {
     RCS("XMMWORD"),
     RCS("YMMWORD"),
     RCS("ZMMWORD"),
+    { 0, },
+};
+
+//
+// C++ <cstdint> names corresponding to TYPE enum values.
+//
+
+const STRING CppTypeNames[] = {
+    RCS("uint8_t"),
+    RCS("uint16_t"),
+    RCS("uint32_t"),
+    RCS("uint64_t"),
+    RCS("__m128i"),
+    RCS("__m256i"),
+    RCS("__m512i"),
     { 0, },
 };
 

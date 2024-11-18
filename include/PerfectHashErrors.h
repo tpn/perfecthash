@@ -321,6 +321,10 @@ Abstract:
 //    33   Multiply643ShiftR (3)
 //    33   Multiply644ShiftR (3)
 //    34   MultiplyShiftRX (3)
+//    35   Mulshrolate1RX (3)
+//    36   Mulshrolate2RX (3)
+//    37   Mulshrolate3RX (3)
+//    38   Mulshrolate4RX (3)
 // 
 // Mask Functions:
 // 
@@ -4879,4 +4883,31 @@ Abstract:
 // Invalid path.
 //
 #define PH_E_INVALID_PATH                ((HRESULT)0xE0040400L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_CPP_SOURCE_UNITY_FILE
+//
+// MessageText:
+//
+// Error preparing C++ source unity file.
+//
+#define PH_E_ERROR_DURING_PREPARE_CPP_SOURCE_UNITY_FILE ((HRESULT)0xE0040401L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_CPP_SOURCE_UNITY_FILE
+//
+// MessageText:
+//
+// Error saving C++ source unity file.
+//
+#define PH_E_ERROR_DURING_SAVE_CPP_SOURCE_UNITY_FILE ((HRESULT)0xE0040402L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_CPP_SOURCE_UNITY_FILE
+//
+// MessageText:
+//
+// Error closing C++ source unity file.
+//
+#define PH_E_ERROR_DURING_CLOSE_CPP_SOURCE_UNITY_FILE ((HRESULT)0xE0040403L)
 

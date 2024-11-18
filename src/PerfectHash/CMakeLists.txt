@@ -115,6 +115,7 @@ set(Private_Header_Files_28Auto-Generated29
     "CompiledPerfectHashTableTestExe_CSource_RawCString.h"
     "CompiledPerfectHashTableTypesPost_CHeader_RawCString.h"
     "CompiledPerfectHashTableTypesPre_CHeader_RawCString.h"
+    "CompiledPerfectHashTableBenchmarkIndexInline_CSource_RawCString.h"
     "Makefile_Makefile_RawCString.h"
     "no_sal2_CHeader_RawCString.h"
 )
@@ -160,6 +161,7 @@ set(Source_Files
     "Chm01FileWorkCSourceTableValuesFile.c"
     "Chm01FileWorkCSourceTestExeFile.c"
     "Chm01FileWorkCSourceTestFile.c"
+    "Chm01FileWorkCppSourceUnityFile.c"
     "Chm01FileWorkGraphVertexPairsFile.c"
     "Chm01FileWorkGraphVertices3File.c"
     "Chm01FileWorkMakefileBenchmarkFullMkFile.c"

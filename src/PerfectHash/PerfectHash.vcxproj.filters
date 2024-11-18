@@ -334,6 +334,9 @@
     <ClCompile Include="PerfectHashCu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkCppSourceUnityFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -591,7 +594,6 @@
     <ClInclude Include="CompiledPerfectHashTableChm01IndexMulshrolate4RXAnd_CSource_RawCString.h">
       <Filter>Private Header Files %28Auto-Generated%29</Filter>
     </ClInclude>
-
     <ClInclude Include="ExtractArg.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
