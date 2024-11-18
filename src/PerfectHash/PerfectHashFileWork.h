@@ -472,6 +472,19 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        CppSourceUnityFile,                                                \
+        CPP_SOURCE_UNITY_FILE,                                             \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        1024,                                                              \
+        NO_SUFFIX,                                                         \
+        &CppSourceFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         VCProjectDllFile,                                                  \
         VCPROJECT_DLL_FILE,                                                \
         EofInitTypeDefault,                                                \

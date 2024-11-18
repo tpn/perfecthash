@@ -14,7 +14,9 @@ Abstract:
 
 --*/
 
-#pragma once
+#ifndef _COMPILED_PERFECT_HASH_H_
+#define _COMPILED_PERFECT_HASH_H_
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -167,7 +169,9 @@ ExtractBits64_C(
 #error Unrecognized compiler.
 #endif
 
+#ifndef PH_UNITY
 #include <no_sal2.h>
+#endif
 #ifndef FORCEINLINE
 #define FORCEINLINE static inline __attribute__((always_inline))
 #define DEBUGBREAK __builtin_trap
@@ -462,5 +466,7 @@ typedef BENCHMARK_INDEX_COMPILED_PERFECT_HASH_TABLE
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
+#endif // _COMPILED_PERFECT_HASH_H_
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

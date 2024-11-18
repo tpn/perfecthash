@@ -4436,3 +4436,27 @@ Language=English
 Invalid path.
 .
 
+MessageId=0x401
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_CPP_SOURCE_UNITY_FILE
+Language=English
+Error preparing C++ source unity file.
+.
+
+MessageId=0x402
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_CPP_SOURCE_UNITY_FILE
+Language=English
+Error saving C++ source unity file.
+.
+
+MessageId=0x403
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_CPP_SOURCE_UNITY_FILE
+Language=English
+Error closing C++ source unity file.
+.
+

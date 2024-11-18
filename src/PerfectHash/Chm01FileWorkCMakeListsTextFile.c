@@ -178,6 +178,16 @@ PrepareCMakeListsTextFileChm01(
     OUTPUT_RAW("\n)\n\n");
 
     //
+    // C++ unity build.
+    //
+
+    OUTPUT_RAW("add_executable(Unity_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n");
+    OUTPUT_FILE4(".cpp");
+    OUTPUT_RAW(")\n\n");
+
+    //
     // We're done, update number of bytes written and finish up.
     //
 

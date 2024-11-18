@@ -19,6 +19,8 @@ QueryPerformanceCounter(
     _Out_ PLARGE_INTEGER Count
     );
 
+#ifndef PH_UNITY
+
 #define CPH_MAIN() \
 VOID               \
 __stdcall          \
@@ -28,6 +30,20 @@ mainCRTStartup(    \
 
 extern void ExitProcess(ULONG);
 #define CPH_EXIT(Code) ExitProcess(Code)
+
+#else
+
+#define CPH_MAIN() \
+int                \
+main(              \
+    int argc,      \
+    char **argv    \
+    )
+
+#define CPH_EXIT(Code)    \
+    return Code
+
+#endif
 
 #elif defined(__linux__) || defined(__APPLE__)
 
