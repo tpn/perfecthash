@@ -296,7 +296,7 @@ class CLI(object):
 
     def _find_command_subclasses(self):
         seen = dict()
-        pattern = re.compile('^class ([^\s]+)\(.*', re.M)
+        pattern = re.compile(r'^class ([^\s]+)\(.*', re.M)
         subclasses = list()
         for (namespace, module) in self.modules.commands.items():
             path = module.__file__

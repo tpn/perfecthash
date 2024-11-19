@@ -691,8 +691,8 @@ class UpdateCopyright(InvariantAwareCommand):
 
         import re
 
-        copyright_fmt = '.*Copyright \(c\) (20\d\d ?-? ?2?0?\d?\d?)(.*)$'
-        year_fmt = '20\d\d'
+        copyright_fmt = r'.*Copyright \(c\) (20\d\d ?-? ?2?0?\d?\d?)(.*)$'
+        year_fmt = r'20\d\d'
         copyright_pattern = re.compile(copyright_fmt)
         year_pattern = re.compile(year_fmt)
 

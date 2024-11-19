@@ -1089,7 +1089,7 @@ def get_source(obj):
         return src
 
     main = sys.modules['__main__']
-    pattern = re.compile('class %s\(' % obj.__class__.__name__)
+    pattern = re.compile(r'class %s\(' % obj.__class__.__name__)
     for src in reversed(main.In):
         if pattern.search(src):
             return src
