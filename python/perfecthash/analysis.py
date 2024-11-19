@@ -2433,6 +2433,7 @@ def convert_csv_to_parquet(path, base_research_dir, out=None):
     if not out:
         out = lambda _: None
 
+    from os import sep
     from os.path import exists
     import pandas as pd
 
@@ -2447,7 +2448,7 @@ def convert_csv_to_parquet(path, base_research_dir, out=None):
         out(f'Processing {path} -> {parquet_path}...')
 
         df = pd.read_csv(path)
-        source_csv_file = path.replace(base_research_dir + '\\', '')
+        source_csv_file = path.replace(base_research_dir + sep, '')
         update_df(df, source_csv_file)
 
         df_to_parquet(df, parquet_path)
@@ -2457,12 +2458,14 @@ def concat_subdir_parquets(base, subdir, out=None):
     if not out:
         out = lambda _: None
 
+    from os import sep
     from os.path import exists
     import pandas as pd
     from tqdm import tqdm
 
-    subdir_path = f'{base}\\{subdir}'
-    results_path = f'{base}\\{subdir}\\results.parquet'
+    subdir_path = f'{base}{sep}{subdir}'
+    results_path = f'{base}{sep}{subdir}{sep}results.parquet'
+
     if not exists(results_path):
         names = get_all_bulk_create_parquet_files(subdir_path)
         if not names:
@@ -2487,7 +2490,7 @@ def concat_subdir_parquets(base, subdir, out=None):
     files = get_best_bulk_create_parquet_files(subdir_path)
 
     found_source_csv_files = set(
-        f.replace(base + '\\', '')
+        f.replace(base + sep, '')
          .replace('.parquet', '.csv') for f in files
     )
 
@@ -2501,7 +2504,7 @@ def concat_subdir_parquets(base, subdir, out=None):
     out('\n'.join(f'    {m}' for m in missing))
 
     names = [
-        f'{base}\\{subpath}'.replace('.csv', '.parquet')
+        f'{base}{sep}{subpath}'.replace('.csv', '.parquet')
             for subpath in missing
     ]
 
@@ -2517,13 +2520,14 @@ def post_process_results_parquet(base, subdir, out=None):
     if not out:
         out = lambda _: None
 
+    from os import sep
     from os.path import exists
     import pandas as pd
 
     df = None
     sdf = None
 
-    parquet_path = f'{base}\\{subdir}\\results.parquet'
+    parquet_path = f'{base}{sep}{subdir}{sep}results.parquet'
     if not exists(parquet_path):
         out(f'{parquet_path} does not exist, run concat-parquet-to-results-'
             f'parquet command first.')
