@@ -1450,13 +1450,13 @@ def update_df_old(df):
     from scipy.stats import linregress
     df['BestCoverageValue'] = np.int(0)
     df['BestCoverageEqualCount'] = np.int(0)
-    df['BestCoverageSlope'] = np.float(0)
-    df['BestCoverageIntercept'] = np.float(0)
-    df['BestCoverageRValue'] = np.float(0)
-    df['BestCoverageR2'] = np.float(0)
-    df['BestCoveragePValue'] = np.float(0)
-    df['BestCoverageStdErr'] = np.float(0)
-    #df['BestCoverageCovariance'] = np.float(0)
+    df['BestCoverageSlope'] = float(0)
+    df['BestCoverageIntercept'] = float(0)
+    df['BestCoverageRValue'] = float(0)
+    df['BestCoverageR2'] = float(0)
+    df['BestCoveragePValue'] = float(0)
+    df['BestCoverageStdErr'] = float(0)
+    #df['BestCoverageCovariance'] = float(0)
     df['BestCoveragePositiveSlopeNumber'] = np.int(0)
     df['BestCoveragePositiveSlopeAttempt'] = np.int(0)
     df['KeysToEdgesRatio'] = df.NumberOfKeys / df.NumberOfEdges
@@ -1577,13 +1577,13 @@ def update_df_best_coverage(df, source_csv_file):
     df['SourceCsvFile'] = source_csv_file
     df['BestCoverageValue'] = np.int(0)
     df['BestCoverageEqualCount'] = np.int(0)
-    df['BestCoverageSlope'] = np.float(0)
-    df['BestCoverageIntercept'] = np.float(0)
-    df['BestCoverageRValue'] = np.float(0)
-    df['BestCoverageR2'] = np.float(0)
-    df['BestCoveragePValue'] = np.float(0)
-    df['BestCoverageStdErr'] = np.float(0)
-    #df['BestCoverageCovariance'] = np.float(0)
+    df['BestCoverageSlope'] = float(0)
+    df['BestCoverageIntercept'] = float(0)
+    df['BestCoverageRValue'] = float(0)
+    df['BestCoverageR2'] = float(0)
+    df['BestCoveragePValue'] = float(0)
+    df['BestCoverageStdErr'] = float(0)
+    #df['BestCoverageCovariance'] = float(0)
     df['BestCoveragePositiveSlopeNumber'] = np.int(0)
     df['BestCoveragePositiveSlopeAttempt'] = np.int(0)
     df['KeysToEdgesRatio'] = df.NumberOfKeys / df.NumberOfEdges
@@ -2171,6 +2171,117 @@ def extract_mean_solving_data(df):
 
     new_df = pd.DataFrame(results, columns=columns)
     return new_df
+
+def extract_mean_solving_data_no_clamp_or_resize(df):
+
+    import numpy as np
+    import pandas as pd
+    from tqdm import tqdm
+    from itertools import product
+    from scipy.stats import linregress
+
+    hash_funcs = (
+        df.HashFunction
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    keys_names = (
+        df.KeysName
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    num_edges = (
+        df.NumberOfEdges
+            .value_counts()
+            .sort_index()
+            .index
+            .values
+    )
+
+    keys_subset = [
+        'KeysName',
+        'HashFunction',
+        'NumberOfKeys',
+        'NumberOfEdges',
+        'NumberOfVertices',
+        'KeysToEdgesRatio',
+        'KeysToVerticesRatio',
+        'SolutionsFoundRatio',
+    ]
+
+    dfa = df[keys_subset]
+
+    targets = [
+        (hf, kn, ne) for (hf, kn, ne) in (
+            product(hash_funcs, keys_names, num_edges)
+        )
+    ]
+
+    results = []
+
+    np.seterr('raise')
+
+    for (hash_func, keys_name, num_edges) in tqdm(targets):
+
+        query = (
+            f'HashFunction == "{hash_func}" and '
+            f'KeysName == "{keys_name}" and '
+            f'NumberOfEdges == {num_edges}'
+        )
+        df = dfa.query(query)
+
+        # Skip empties.
+        if df.empty:
+            continue
+
+        result = [
+            keys_name,
+            hash_func,
+            df.NumberOfKeys.values[0],
+            df.NumberOfEdges.values[0],
+            df.NumberOfVertices.values[0],
+            df.KeysToEdgesRatio.values[0],
+            df.KeysToVerticesRatio.values[0],
+        ]
+
+        result += list(df.SolutionsFoundRatio.describe().values)
+
+        results.append(result)
+
+    suffixes = [
+        '_Count',
+        '', # Mean
+        '_StdDev',
+        '_Min',
+        '_25%',
+        '_50%',
+        '_75%',
+        '_Max',
+    ]
+
+    columns = [
+        'KeysName',
+        'HashFunction',
+        'NumberOfKeys',
+        'NumberOfEdges',
+        'NumberOfVertices',
+        'KeysToEdgesRatio',
+        'KeysToVerticesRatio',
+    ]
+
+    columns += [
+        f'SolutionsFoundRatio{suffix}' for suffix in suffixes
+    ]
+
+    new_df = pd.DataFrame(results, columns=columns)
+    return new_df
+
 
 def perf_details_by_hash_func(df):
     import pandas as pd
@@ -3061,7 +3172,7 @@ def scatter6(df, min_num_edges=None, max_num_edges=None, p=None,
     df = df.query(f'NumberOfEdges >= {min_num_edges} and '
                   f'NumberOfEdges <= {max_num_edges}').copy()
 
-    df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(np.str)
+    df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(str)
 
     num_edges = [ 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536 ]
     num_edges_str = [ str(e) for e in num_edges ]
@@ -3223,7 +3334,7 @@ def scatter7(df, min_num_edges=None, max_num_edges=None, p=None,
     df = df.query(f'NumberOfEdges >= {min_num_edges} and '
                   f'NumberOfEdges <= {max_num_edges}').copy()
 
-    df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(np.str)
+    df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(str)
 
     num_edges = [ 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536 ]
     num_edges_str = [ str(e) for e in num_edges ]
@@ -3437,7 +3548,7 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
                              f'NumberOfEdges <= {max_num_edges} and '
                              f'HashFunction == "{hash_func}"').copy()
 
-        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(np.str)
+        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(str)
 
         df['Color'] = [ colors_map[e] for e in df.NumberOfEdges.values ]
         df['LineColor'] = [
@@ -3464,8 +3575,8 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
@@ -3649,7 +3760,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
                              f'NumberOfEdges <= {max_num_edges} and '
                              f'HashFunction == "{hash_func}"').copy()
 
-        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(np.str)
+        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(str)
 
         df['Color'] = [ colors_map[e] for e in df.NumberOfEdges.values ]
         df['LineColor'] = [
@@ -3676,8 +3787,8 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
@@ -3836,7 +3947,7 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
                              f'NumberOfEdges <= {max_num_edges} and '
                              f'HashFunction == "{hash_func}"').copy()
 
-        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(np.str)
+        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(str)
 
         num_edges = (
             df.NumberOfEdges
@@ -3876,8 +3987,8 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
@@ -4035,7 +4146,7 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
                              f'NumberOfVertices <= {max_num_vertices} and '
                              f'HashFunction == "{hash_func}"').copy()
 
-        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(np.str)
+        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(str)
 
         num_vertices = (
             df.NumberOfVertices
@@ -4075,8 +4186,8 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
@@ -4242,7 +4353,7 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
                              f'NumberOfEdges <= {max_num_edges} and '
                              f'HashFunction == "{hash_func}"').copy()
 
-        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(np.str)
+        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(str)
 
         num_edges = (
             df.NumberOfEdges
@@ -4282,8 +4393,8 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
@@ -4487,7 +4598,7 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
             f'NumberOfTableResizeEvents == {resizes} '
         ).copy()
 
-        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(np.str)
+        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(str)
 
         num_vertices = (
             df.NumberOfVertices
@@ -4527,8 +4638,8 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
@@ -4749,7 +4860,7 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
             f'ClampNumberOfEdges == "{clamp}"'
         ).copy()
 
-        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(np.str)
+        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(str)
 
         num_vertices = (
             df.NumberOfVertices
@@ -4789,8 +4900,8 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
@@ -5050,7 +5161,7 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
             f'ClampNumberOfEdges == "{clamp}"'
         ).copy()
 
-        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(np.str)
+        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(str)
 
         num_vertices = (
             df.NumberOfVertices
@@ -5090,8 +5201,8 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
@@ -5353,7 +5464,7 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
         ).copy()
 
         df['NumberOfTableResizeEventsStr'] = (
-            df.NumberOfTableResizeEvents.values.astype(np.str)
+            df.NumberOfTableResizeEvents.values.astype(str)
         )
 
         num_resizes = (
@@ -5396,8 +5507,8 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
 
             size_map[k] = v
 
-        df['Size'] = np.float(0)
-        df['LogSize'] = np.float(0)
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
 
         for (i, row) in df.iterrows():
             k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
@@ -5632,7 +5743,7 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
         )
         df = sample.query(query).copy()
 
-        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(np.str)
+        df['NumberOfVerticesStr'] = df.NumberOfVertices.values.astype(str)
 
         num_vertices = (
             df.NumberOfVertices
@@ -5673,8 +5784,8 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
 
                 size_map[k] = v
 
-            df['Size'] = np.float(0)
-            df['LogSize'] = np.float(0)
+            df['Size'] = float(0)
+            df['LogSize'] = float(0)
 
             for (i, row) in df.iterrows():
                 k = (row.KeysToVerticesRatio, row.SolutionsFoundRatio)
@@ -5964,7 +6075,7 @@ def gridplot_hashfunc_seed_byte_count(
                 .rename(columns={ 0: 'Count' })
         )
 
-        total = np.float(df.Count.sum())
+        total = float(df.Count.sum())
         df['Probability'] = df.Count / total
         df['Color'] = bp.viridis(len(df))
         df['ByteValue'] = df[key].apply(str)
