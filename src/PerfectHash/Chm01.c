@@ -1948,6 +1948,12 @@ Return Value:
 
 #define CONTEXT_STATS_BEST_GRAPH_TABLE(ENTRY)                  \
     ENTRY(                                                     \
+        "    Best Coverage Predicate:                       ", \
+        &BestCoverageTypeNamesA[Context->BestCoverageType],    \
+        OUTPUT_STRING                                          \
+    )                                                          \
+                                                               \
+    ENTRY(                                                     \
         "    Attempt:                                       ", \
         Graph->Attempt,                                        \
         OUTPUT_INT                                             \
@@ -2044,6 +2050,12 @@ Return Value:
     )                                                          \
 
 #define CONTEXT_STATS_BEST_GRAPH16_TABLE(ENTRY)                \
+    ENTRY(                                                     \
+        "    Best Coverage Predicate:                       ", \
+        &BestCoverageTypeNamesA[Context->BestCoverageType],    \
+        OUTPUT_STRING                                          \
+    )                                                          \
+                                                               \
     ENTRY(                                                     \
         "    Attempt:                                       ", \
         Graph->Attempt,                                        \
