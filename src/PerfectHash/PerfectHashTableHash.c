@@ -160,7 +160,7 @@ Return Value:
     //
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, 15));
+    Vertex2 = _mm_crc32_u32(SEED2, RotateLeft32(Key, 15));
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -250,7 +250,7 @@ Return Value:
     //
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE1));
+    Vertex2 = _mm_crc32_u32(SEED2, RotateLeft32(Key, SEED3_BYTE1));
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -338,8 +338,8 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE2));
+    Vertex1 = _mm_crc32_u32(SEED1, RotateRight32(Key, SEED3_BYTE1));
+    Vertex2 = _mm_crc32_u32(SEED2, RotateLeft32(Key, SEED3_BYTE2));
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -427,11 +427,11 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _mm_crc32_u32(SEED1, _rotr(Key, SEED3_BYTE1));
-    Vertex1 = _rotl(Vertex1, SEED3_BYTE2);
+    Vertex1 = _mm_crc32_u32(SEED1, RotateRight32(Key, SEED3_BYTE1));
+    Vertex1 = RotateLeft32(Vertex1, SEED3_BYTE2);
 
-    Vertex2 = _mm_crc32_u32(SEED2, _rotl(Key, SEED3_BYTE3));
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
+    Vertex2 = _mm_crc32_u32(SEED2, RotateLeft32(Key, SEED3_BYTE3));
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE4);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -528,10 +528,10 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    A = _rotl(Key ^ Seed1, 15);
-    B = _rotl(Key + Seed2, 7);
-    C = _rotr(Key - Seed3, 11);
-    D = _rotr(Key ^ Seed4, 20);
+    A = RotateLeft32(Key ^ Seed1, 15);
+    B = RotateLeft32(Key + Seed2, 7);
+    C = RotateRight32(Key - Seed3, 11);
+    D = RotateRight32(Key ^ Seed4, 20);
 
     Vertex1 = A ^ C;
     Vertex2 = B ^ D;
@@ -709,7 +709,7 @@ Return Value:
     //
 
     Long1.LongPart = Vertex1 = Key ^ Seed1;
-    Long2.LongPart = Vertex2 = _rotl(Key, 15) ^ Seed2;
+    Long2.LongPart = Vertex2 = RotateLeft32(Key, 15) ^ Seed2;
 
     Long1.LowPart ^= Long1.HighPart;
     Long1.HighPart = 0;
@@ -1080,7 +1080,7 @@ Return Value:
     //
 
     A = _mm_crc32_u32(SEED1, Key);
-    B = _mm_crc32_u32(SEED2, _rotl(Key, 15));
+    B = _mm_crc32_u32(SEED2, RotateLeft32(Key, 15));
     C = Seed3 ^ Key;
     D = _mm_crc32_u32(B, C);
 
@@ -1178,7 +1178,7 @@ Return Value:
     //
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
-    Key2 = _rotl(Key, Seed3);
+    Key2 = RotateLeft32(Key, Seed3);
     Vertex2 = _mm_crc32_u32(SEED2, Key2);
 
     if (Vertex1 == Vertex2) {
@@ -1268,7 +1268,7 @@ Return Value:
     //
 
     Vertex1 = _mm_crc32_u32(SEED1, Key);
-    Key2 = _rotl(Key, Seed3);
+    Key2 = RotateLeft32(Key, Seed3);
     Vertex2 = _mm_crc32_u32(SEED2, Key2);
 
     if (Vertex1 == Vertex2) {
@@ -1865,13 +1865,13 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _rotr(DownsizedKey, SEED3_BYTE1);
+    Vertex1 = RotateRight32(DownsizedKey, SEED3_BYTE1);
     Vertex1 *= SEED1;
-    Vertex1 ^= _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 ^= RotateRight32(Vertex1, SEED3_BYTE2);
 
-    Vertex2 = _rotr(DownsizedKey, SEED3_BYTE3);
+    Vertex2 = RotateRight32(DownsizedKey, SEED3_BYTE3);
     Vertex2 *= SEED2;
-    Vertex2 ^= _rotr(Vertex2, SEED3_BYTE4);
+    Vertex2 ^= RotateRight32(Vertex2, SEED3_BYTE4);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -2070,17 +2070,17 @@ Return Value:
     // Calculate the individual hash parts.
     //
 
-    Vertex1 = _rotr(DownsizedKey, SEED3_BYTE1);
+    Vertex1 = RotateRight32(DownsizedKey, SEED3_BYTE1);
     Vertex1 *= SEED1;
-    Vertex1 ^= _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 ^= RotateRight32(Vertex1, SEED3_BYTE2);
     Vertex1 *= SEED2;
-    Vertex1 ^= _rotr(Vertex1, SEED3_BYTE3);
+    Vertex1 ^= RotateRight32(Vertex1, SEED3_BYTE3);
 
-    Vertex2 = _rotr(DownsizedKey, SEED6_BYTE1);
+    Vertex2 = RotateRight32(DownsizedKey, SEED6_BYTE1);
     Vertex2 *= SEED4;
-    Vertex2 ^= _rotr(Vertex2, SEED6_BYTE2);
+    Vertex2 ^= RotateRight32(Vertex2, SEED6_BYTE2);
     Vertex2 *= SEED5;
-    Vertex2 ^= _rotr(Vertex2, SEED6_BYTE3);
+    Vertex2 ^= RotateRight32(Vertex2, SEED6_BYTE3);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -2285,10 +2285,10 @@ Return Value:
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE1);
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE2);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE2);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -2381,10 +2381,10 @@ Return Value:
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotl(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateLeft32(Vertex1, SEED3_BYTE1);
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE2);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE2);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -3099,11 +3099,11 @@ Return Value:
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE1);
     Vertex1 *= SEED2;
 
     Vertex2 = DownsizedKey * SEED4;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE2);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE2);
     Vertex2 *= SEED5;
 
     if (Vertex1 == Vertex2) {
@@ -3201,14 +3201,14 @@ Return Value:
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE1);
     Vertex1 *= SEED2;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
 
     Vertex2 = DownsizedKey * SEED4;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 *= SEED5;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE4);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -3507,11 +3507,11 @@ Return Value:
     //
 
     Vertex1 = DownsizedKey;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE1);
     Vertex1 *= SEED1;
 
     Vertex2 = DownsizedKey;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE2);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE2);
     Vertex2 *= SEED2;
 
     if (Vertex1 == Vertex2) {
@@ -3605,14 +3605,14 @@ Return Value:
     //
 
     Vertex1 = DownsizedKey;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE1);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE1);
     Vertex1 *= SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
 
     Vertex2 = DownsizedKey;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 *= SEED2;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE4);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE4);
 
     if (Vertex1 == Vertex2) {
         return E_FAIL;
@@ -3682,7 +3682,7 @@ PerfectHashTableSeededHashMulshrolate1RX(
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
     Vertex2 = DownsizedKey * SEED2;
@@ -3756,11 +3756,11 @@ PerfectHashTableSeededHashMulshrolate2RX(
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 = Vertex2 >> SEED3_BYTE1;
 
     if (Vertex1 == Vertex2) {
@@ -3833,12 +3833,12 @@ PerfectHashTableSeededHashMulshrolate3RX(
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
     Vertex1 = Vertex1 * SEED4;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 = Vertex2 >> SEED3_BYTE1;
 
     if (Vertex1 == Vertex2) {
@@ -3913,12 +3913,12 @@ PerfectHashTableSeededHashMulshrolate4RX(
     //
 
     Vertex1 = DownsizedKey * SEED1;
-    Vertex1 = _rotr(Vertex1, SEED3_BYTE2);
+    Vertex1 = RotateRight32(Vertex1, SEED3_BYTE2);
     Vertex1 = Vertex1 * SEED4;
     Vertex1 = Vertex1 >> SEED3_BYTE1;
 
     Vertex2 = DownsizedKey * SEED2;
-    Vertex2 = _rotr(Vertex2, SEED3_BYTE3);
+    Vertex2 = RotateRight32(Vertex2, SEED3_BYTE3);
     Vertex2 = Vertex2 * SEED5;
     Vertex2 = Vertex2 >> SEED3_BYTE1;
 
