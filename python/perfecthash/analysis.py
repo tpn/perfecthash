@@ -3116,7 +3116,7 @@ def lmplot_solutions_found(df):
 #===============================================================================
 
 def scatter6(df, min_num_edges=None, max_num_edges=None, p=None,
-             show_plot=True, figure_kwds=None, circle_kwds=None):
+             show_plot=True, figure_kwds=None, scatter_kwds=None):
 
     import numpy as np
 
@@ -3150,8 +3150,8 @@ def scatter6(df, min_num_edges=None, max_num_edges=None, p=None,
             ],
         }
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if not p:
         p = figure(
@@ -3198,7 +3198,7 @@ def scatter6(df, min_num_edges=None, max_num_edges=None, p=None,
 
     source = ColumnDataSource(df)
 
-    cr = p.circle(
+    cr = p.scatter(
         'KeysToEdgesRatio',
         'SolutionsFoundRatio',
         color='Color',
@@ -3213,7 +3213,7 @@ def scatter6(df, min_num_edges=None, max_num_edges=None, p=None,
         #line_color=color_mapper,
         #color=color_mapper,
         legend_field='NumberOfEdgesStr',
-        **circle_kwds,
+        **scatter_kwds,
     )
 
     #color_bar = ColorBar(color_mapper=mapper['transform'], width=8, location=(0,0))
@@ -3278,7 +3278,7 @@ def scatter6(df, min_num_edges=None, max_num_edges=None, p=None,
     return p
 
 def scatter7(df, min_num_edges=None, max_num_edges=None, p=None,
-             show_plot=True, figure_kwds=None, circle_kwds=None):
+             show_plot=True, figure_kwds=None, scatter_kwds=None):
 
     import numpy as np
 
@@ -3312,8 +3312,8 @@ def scatter7(df, min_num_edges=None, max_num_edges=None, p=None,
             ],
         }
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if not p:
         p = figure(
@@ -3361,7 +3361,7 @@ def scatter7(df, min_num_edges=None, max_num_edges=None, p=None,
 
     source = ColumnDataSource(df)
 
-    cr = p.circle(
+    cr = p.scatter(
         'KeysToEdgesRatio',
         'SolutionsFoundRatio',
         color='Color',
@@ -3376,7 +3376,7 @@ def scatter7(df, min_num_edges=None, max_num_edges=None, p=None,
         #line_color=color_mapper,
         #color=color_mapper,
         legend_field='NumberOfEdgesStr',
-        **circle_kwds,
+        **scatter_kwds,
     )
 
     #color_bar = ColorBar(color_mapper=mapper['transform'], width=8, location=(0,0))
@@ -3443,7 +3443,7 @@ def scatter7(df, min_num_edges=None, max_num_edges=None, p=None,
     return p
 
 def panel1(df, min_num_edges=None, max_num_edges=None,
-           show_plot=True, figure_kwds=None, circle_kwds=None):
+           show_plot=True, figure_kwds=None, scatter_kwds=None):
 
     import numpy as np
     import pandas as pd
@@ -3492,8 +3492,8 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
     if 'tooltips' not in figure_kwds:
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -3595,7 +3595,7 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
 
         p.y_range = y_range
 
-        cr = p.circle(
+        cr = p.scatter(
             'KeysToEdgesRatio',
             'SolutionsFoundRatio',
             color='Color',
@@ -3605,7 +3605,7 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
             line_color='LineColor',
             source=source,
             legend_field='NumberOfEdgesStr',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         p.background_fill_color = "#eeeeee"
@@ -3655,7 +3655,7 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
 
 def grid1(df, min_num_edges=None, max_num_edges=None,
           width=500, height=500, ncols=4,
-          show_plot=True, figure_kwds=None, circle_kwds=None):
+          show_plot=True, figure_kwds=None, scatter_kwds=None):
 
     import numpy as np
     import pandas as pd
@@ -3703,8 +3703,8 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
     if 'tooltips' not in figure_kwds:
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -3807,7 +3807,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
 
         p.y_range = y_range
 
-        cr = p.circle(
+        cr = p.scatter(
             'KeysToEdgesRatio',
             'SolutionsFoundRatio',
             color='Color',
@@ -3817,7 +3817,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
             line_color='LineColor',
             source=source,
             legend_field='NumberOfEdgesStr',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         p.background_fill_color = "#eeeeee"
@@ -3866,7 +3866,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid2(df, min_num_edges=None, max_num_edges=None,
-           show_plot=True, figure_kwds=None, circle_kwds=None,
+           show_plot=True, figure_kwds=None, scatter_kwds=None,
            color_category=None):
 
     import numpy as np
@@ -3915,8 +3915,8 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
     if 'tooltips' not in figure_kwds:
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -4009,7 +4009,7 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
 
         p.y_range = y_range
 
-        cr = p.circle(
+        cr = p.scatter(
             'KeysToEdgesRatio',
             'SolutionsFoundRatio',
             color='Color',
@@ -4018,7 +4018,7 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
             line_alpha=1.0,
             source=source,
             legend_field='NumberOfEdgesStr',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         p.background_fill_color = "#eeeeee"
@@ -4064,7 +4064,7 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
-          show_plot=True, figure_kwds=None, circle_kwds=None,
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
           color_category=None, ncols=None):
 
     import numpy as np
@@ -4114,8 +4114,8 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
     if 'tooltips' not in figure_kwds:
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_vertices is None:
         min_num_vertices = 256
@@ -4211,7 +4211,7 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
         p.xaxis.axis_label = 'Keys to Vertices Ratio'
         p.yaxis.axis_label = 'Probability of Finding Solution'
 
-        cr = p.circle(
+        cr = p.scatter(
             'KeysToVerticesRatio',
             'SolutionsFoundRatio',
             color='Color',
@@ -4220,7 +4220,7 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
             line_alpha=1.0,
             source=source,
             legend_group='NumberOfVertices',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         p.background_fill_color = "#eeeeee"
@@ -4269,7 +4269,7 @@ def grid3(df, lrdf=None, min_num_vertices=None, max_num_vertices=None,
     return p
 
 def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
-          show_plot=True, figure_kwds=None, circle_kwds=None,
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
           color_category=None, ncols=None):
 
     import numpy as np
@@ -4321,8 +4321,8 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     if 'tooltips' not in figure_kwds:
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -4418,7 +4418,7 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
         source = ColumnDataSource(df)
 
-        cr = p.circle(
+        cr = p.scatter(
             'KeysToEdgesRatio',
             'SolutionsFoundRatio',
             color='Color',
@@ -4427,7 +4427,7 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
             line_alpha=1.0,
             source=source,
             legend_group='NumberOfEdges',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         p.background_fill_color = "#eeeeee"
@@ -4476,7 +4476,7 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
-          show_plot=True, figure_kwds=None, circle_kwds=None,
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
           color_category=None, ncols=None, hash_funcs=None,
           clamp_edges=None, num_resizes=None, clamp_glyph_map=None):
 
@@ -4539,8 +4539,8 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     if 'tooltips' not in figure_kwds:
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -4581,7 +4581,7 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     if clamp_glyph_map is None:
         clamp_glyph_map = {
-            'Y': 'circle',
+            'Y': 'scatter',
             'N': 'x',
         }
 
@@ -4678,7 +4678,7 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
                 line_alpha=1.0,
                 source=source,
                 legend_group='NumberOfVertices',
-                **circle_kwds,
+                **scatter_kwds,
             )
             legend_items.append((clamp, [g]))
             renderers[clamp] = g
@@ -4739,7 +4739,7 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
-          show_plot=True, figure_kwds=None, circle_kwds=None,
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
           color_category=None, ncols=None, hash_funcs=None,
           clamp_edges=None, num_resizes=None, clamp_glyph_map=None):
 
@@ -4802,8 +4802,8 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     if 'tooltips' not in figure_kwds:
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -4843,7 +4843,7 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
     if clamp_glyph_map is None:
         clamp_glyph_map = {
-            'Y': 'circle',
+            'Y': 'scatter',
             'N': 'x',
         }
 
@@ -4945,7 +4945,7 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
                 line_alpha=1.0,
                 source=source,
                 #legend_group='NumberOfVertices',
-                **circle_kwds,
+                **scatter_kwds,
             )
             resize_legend_items.append((str(resize), [g]))
             renderers.append(g)
@@ -5035,7 +5035,7 @@ def grid6(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
-          show_plot=True, figure_kwds=None, circle_kwds=None,
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
           color_category=None, ncols=None, hash_funcs=None,
           clamp_edges=None, min_num_resizes=None, max_num_resizes=None,
           sample_frac=None, use_tooltips=False):
@@ -5098,8 +5098,8 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
         ]
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -5236,7 +5236,7 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
         target_df = df
         source = ColumnDataSource(target_df)
         #glyph = getattr(p, BOKEH_GLYPHS[resize])
-        glyph = getattr(p, 'circle')
+        glyph = getattr(p, 'scatter')
         g = glyph(
             'KeysToVerticesRatio',
             'SolutionsFoundRatio',
@@ -5246,7 +5246,7 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
             line_alpha=1.0,
             source=source,
             legend_group='NumberOfVertices',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         if 0:
@@ -5333,7 +5333,7 @@ def grid7(df, lrdf=None, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
-          show_plot=True, figure_kwds=None, circle_kwds=None,
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
           color_category=None, ncols=None, hash_funcs=None,
           clamp_edges=None, min_num_resizes=None, max_num_resizes=None,
           sample_frac=None, use_tooltips=False):
@@ -5400,8 +5400,8 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
         ]
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -5546,7 +5546,7 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
         target_df = df
         source = ColumnDataSource(target_df)
         #glyph = getattr(p, BOKEH_GLYPHS[resize])
-        glyph = getattr(p, 'circle')
+        glyph = getattr(p, 'scatter')
         g = glyph(
             'KeysToVerticesRatio',
             'SolutionsFoundRatio',
@@ -5556,7 +5556,7 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
             line_alpha=1.0,
             source=source,
             legend_group='NumberOfTableResizeEvents',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         p.background_fill_color = "#eeeeee"
@@ -5609,7 +5609,7 @@ def grid8(df, lrdf, min_num_edges=None, max_num_edges=None,
     return p
 
 def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
-          show_plot=True, figure_kwds=None, circle_kwds=None,
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
           color_category=None, ncols=None, hash_funcs=None,
           clamp_edges=None, min_num_resizes=None, max_num_resizes=None,
           sample_frac=None, use_tooltips=False):
@@ -5677,8 +5677,8 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
         ]
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
@@ -5827,7 +5827,7 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
         target_df = df
         source = ColumnDataSource(target_df)
         #glyph = getattr(p, BOKEH_GLYPHS[resize])
-        glyph = getattr(p, 'circle')
+        glyph = getattr(p, 'scatter')
         g = glyph(
             'KeysToVerticesRatio',
             'SolutionsFoundRatio',
@@ -5837,7 +5837,7 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
             line_alpha=1.0,
             source=source,
             legend_group='NumberOfVertices',
-            **circle_kwds,
+            **scatter_kwds,
         )
 
         legend_items = []
@@ -6138,7 +6138,7 @@ def gridplot_hashfunc_seed_byte_count(
 #===============================================================================
 
 def bar1(df, lrdf, min_num_edges=None, max_num_edges=None,
-         show_plot=True, figure_kwds=None, circle_kwds=None,
+         show_plot=True, figure_kwds=None, scatter_kwds=None,
          color_category=None, ncols=None, hash_funcs=None,
          clamp_edges=None, min_num_resizes=None, max_num_resizes=None):
 
@@ -6202,8 +6202,8 @@ def bar1(df, lrdf, min_num_edges=None, max_num_edges=None,
         ]
         figure_kwds['tooltips'] = tooltips
 
-    if circle_kwds is None:
-        circle_kwds = {}
+    if scatter_kwds is None:
+        scatter_kwds = {}
 
     if min_num_edges is None:
         min_num_edges = 256
