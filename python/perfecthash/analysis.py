@@ -1431,6 +1431,33 @@ def predict_targets(probability, targets=(0.5, 0.75, 0.99, 0.999)):
             for target in targets
     }
 
+def calculate_predicted_attempts(solutions_found_ratio):
+    # Equivalent to C routine CalculatePredictedAttempts().
+    if solutions_found_ratio == 1.0:
+        return 1
+
+    if not (0.0 < solutions_found_ratio < 1.0):
+        raise ValueError(
+            "SolutionsFoundRatio must be greater than 0.0 and "
+            f"less than or equal to 1.0; actual: {solutions_found_ratio}"
+        )
+
+    last_cumulative = 0.0
+    success = solutions_found_ratio
+    failure = 1 - solutions_found_ratio
+    attempt = 1
+
+    while True:
+        probability = success * (failure ** (attempt - 1))
+        cumulative = attempt * probability
+        delta = last_cumulative - cumulative
+        if delta > 0.0:
+            break
+        last_cumulative = cumulative
+        attempt += 1
+
+    return attempt
+
 def df_from_csv_with_sys_and_group(path):
     d = dirname(path)
     (sys, group) = d.split('/')
@@ -3655,7 +3682,8 @@ def panel1(df, min_num_edges=None, max_num_edges=None,
 
 def grid1(df, min_num_edges=None, max_num_edges=None,
           width=500, height=500, ncols=4,
-          show_plot=True, figure_kwds=None, scatter_kwds=None):
+          show_plot=True, figure_kwds=None, scatter_kwds=None,
+          log_size_multiplier=None, size_multiplier=None):
 
     import numpy as np
     import pandas as pd
@@ -3665,16 +3693,10 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
     )
 
     from bokeh.models import (
-        Tabs,
-        Select,
         TapTool,
         Range1d,
-        ColorBar,
         CustomJS,
-        RangeSlider,
-        MultiSelect,
         ColumnDataSource,
-        RadioButtonGroup,
     )
 
     from bokeh.plotting import (
@@ -3710,11 +3732,19 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
         min_num_edges = 256
 
     if max_num_edges is None:
-        #max_num_edges = df.NumberOfEdges.max()
-        max_num_edges = 65536
+        max_num_edges = df.NumberOfEdges.max()
+        #max_num_edges = 65536
+
+    if log_size_multiplier is None:
+        log_size_multiplier = 1.5
+
+    if size_multiplier is None:
+        size_multiplier = 2
 
     # Prep colors.
-    num_edges = [ 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536 ]
+    num_edges = [
+        256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072
+    ]
     #num_edges = [ 2048, 4096, 8192, 16384, 32768, 65536 ]
     num_edges_str = [ str(e) for e in num_edges ]
 
@@ -3777,7 +3807,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
               .rename(columns={0: 'Size'})
         )
 
-        sdf['LogSize'] = np.log(sdf['Size'].values * 2)
+        sdf['LogSize'] = np.log(sdf['Size'].values * log_size_multiplier)
 
         size_map = {}
 
@@ -3793,7 +3823,7 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
         for (i, row) in df.iterrows():
             k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
             (size, log_size) = size_map[k]
-            df.at[i, 'Size'] = size * 3
+            df.at[i, 'Size'] = size * size_multiplier
             df.at[i, 'LogSize'] = log_size
 
         source = ColumnDataSource(df)
@@ -3805,9 +3835,20 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
             **figure_kwds,
         )
 
+        p.title.text = hash_func
         p.y_range = y_range
+        p.xaxis.axis_label = 'Keys to Edges Ratio'
+        p.yaxis.axis_label = 'Probability of Finding Solution'
+        p.title.text_font = "Garamond"
+        p.title.text_font_size = "1.25em"
+        p.xaxis.axis_label_text_font = "Garamond"
+        p.yaxis.axis_label_text_font = "Garamond"
+        p.xaxis.axis_label_text_font_style = "italic"
+        p.yaxis.axis_label_text_font_style = "italic"
+        p.xaxis.axis_label_text_font_size = "1.25em"
+        p.yaxis.axis_label_text_font_size = "1.25em"
 
-        cr = p.scatter(
+        p.scatter(
             'KeysToEdgesRatio',
             'SolutionsFoundRatio',
             color='Color',
@@ -3815,10 +3856,20 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
             fill_alpha=0.5,
             line_alpha=1.0,
             line_color='LineColor',
+            muted_color='grey',
+            muted_alpha=0.2,
             source=source,
             legend_field='NumberOfEdgesStr',
             **scatter_kwds,
         )
+
+        p.legend.title = 'Number of Edges'
+        p.legend.title_text_font = "Garamond"
+        p.legend.title_text_font_size = "0.95em"
+        p.legend.location = "top_right"
+        #p.legend.click_policy = "mute"
+        p.legend.label_text_font = "Comic Mono"
+        p.legend.label_text_font_size = "0.75em"
 
         p.background_fill_color = "#eeeeee"
         p.grid.grid_line_color = "white"
@@ -3865,9 +3916,250 @@ def grid1(df, min_num_edges=None, max_num_edges=None,
 
     return p
 
+def grid1_hf(df, min_num_edges=None, max_num_edges=None,
+             width=500, height=500, ncols=4,
+             show_plot=True, figure_kwds=None, scatter_kwds=None,
+             log_size_multiplier=None, size_multiplier=None):
+    """
+    Displays a grid of scatter plots for each edge size, where the x-axis is
+    the keys to edges ratio and the y-axis is the probability of finding a
+    solution.  Coloured scatter glyphs are added for each hash function.
+    """
+
+    import numpy as np
+    import pandas as pd
+
+    from bokeh.io import (
+        show,
+    )
+
+    from bokeh.models import (
+        TapTool,
+        Range1d,
+        CustomJS,
+        ColumnDataSource,
+    )
+
+    from bokeh.plotting import (
+        figure,
+    )
+
+    from bokeh.layouts import (
+        gridplot,
+    )
+
+    import bokeh.palettes as bp
+    import bokeh.transform as bt
+
+    tooltips = [
+        ("Index", "@index"),
+        ("Keys", "@KeysName"),
+        ("Hash Function", "@HashFunction"),
+        ("Number of Keys", "@NumberOfKeys"),
+        ("Keys to Edges Ratio", "@KeysToEdgesRatio"),
+        ("Solutions Found Ratio", "@SolutionsFoundRatio{(0.0000000)}"),
+    ]
+
+    if figure_kwds is None:
+        figure_kwds = {}
+
+    if 'tooltips' not in figure_kwds:
+        figure_kwds['tooltips'] = tooltips
+
+    if scatter_kwds is None:
+        scatter_kwds = {}
+
+    if min_num_edges is None:
+        min_num_edges = 256
+
+    if max_num_edges is None:
+        max_num_edges = df.NumberOfEdges.max()
+        #max_num_edges = 65536
+
+    if log_size_multiplier is None:
+        log_size_multiplier = 1.5
+
+    if size_multiplier is None:
+        size_multiplier = 2
+
+    # Prep colors.
+    num_edges = [
+        256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072
+    ]
+    #num_edges = [ 2048, 4096, 8192, 16384, 32768, 65536 ]
+    num_edges_str = [ str(e) for e in num_edges ]
+
+    colors_map = { e: bp.Spectral11[i] for (i, e) in enumerate(num_edges) }
+    # Change the light yellow color to a darker color.
+    colors_map[8192] = "#f4d03f"
+
+    line_colors_map = { e: bp.Spectral11[i] for (i, e) in enumerate(num_edges) }
+    line_colors_map[8192] = "#f1c40f"
+
+    color_mapper = bt.factor_cmap(
+        field_name='NumberOfEdgesStr',
+        palette=bp.Spectral11,
+        factors=num_edges_str,
+    )
+
+    greys = [ bp.Greys256[i] for i in range(-50, 60, 10) ]
+    greys_map = { e: greys[i] for (i, e) in enumerate(num_edges) }
+
+    grey_mapper = bt.factor_cmap(
+        field_name='NumberOfEdgesStr',
+        palette=greys,
+        factors=num_edges_str,
+    )
+
+    hash_funcs = (
+        df[['HashFunction', 'SolutionsFoundRatio']]
+            .groupby('HashFunction')
+            .agg('mean')
+            .sort_values('SolutionsFoundRatio', ascending=False)
+            .index
+    )
+
+    figures = []
+
+    source_df = df
+
+    y_range = Range1d(0, 1.0)
+
+    for edges in num_edges:
+
+        df = source_df.query(f'NumberOfEdges == {edges}').copy()
+
+        df['NumberOfEdgesStr'] = df.NumberOfEdges.values.astype(str)
+
+        df['Color'] = [ colors_map[e] for e in df.NumberOfEdges.values ]
+        df['LineColor'] = [
+            line_colors_map[e] for e in df.NumberOfEdges.values
+        ]
+
+        df['KeysToEdgesRatio'] = np.around(df.KeysToEdgesRatio.values, 3)
+        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 6)
+
+        sdf = (
+            df.groupby(['KeysToEdgesRatio', 'SolutionsFoundRatio'])
+              .size()
+              .reset_index()
+              .rename(columns={0: 'Size'})
+        )
+
+        sdf['LogSize'] = np.log(sdf['Size'].values * log_size_multiplier)
+
+        size_map = {}
+
+        for (i, row) in sdf.iterrows():
+            k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
+            v = (row.Size, row.LogSize)
+
+            size_map[k] = v
+
+        df['Size'] = float(0)
+        df['LogSize'] = float(0)
+
+        for (i, row) in df.iterrows():
+            k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
+            (size, log_size) = size_map[k]
+            df.at[i, 'Size'] = size * size_multiplier
+            df.at[i, 'LogSize'] = log_size
+
+        source = ColumnDataSource(df)
+
+        p = figure(
+            width=width,
+            height=height,
+            tools='pan,wheel_zoom,box_select,lasso_select,reset,tap,hover',
+            **figure_kwds,
+        )
+
+        p.title.text = f'Number of Edges: {edges}'
+        p.y_range = y_range
+        p.xaxis.axis_label = 'Keys to Edges Ratio'
+        p.yaxis.axis_label = 'Probability of Finding Solution'
+        p.title.text_font = "Garamond"
+        p.title.text_font_size = "1.25em"
+        p.xaxis.axis_label_text_font = "Garamond"
+        p.yaxis.axis_label_text_font = "Garamond"
+        p.xaxis.axis_label_text_font_style = "italic"
+        p.yaxis.axis_label_text_font_style = "italic"
+        p.xaxis.axis_label_text_font_size = "1.25em"
+        p.yaxis.axis_label_text_font_size = "1.25em"
+
+        p.scatter(
+            'KeysToEdgesRatio',
+            'SolutionsFoundRatio',
+            color='Color',
+            size='Size',
+            fill_alpha=0.5,
+            line_alpha=1.0,
+            line_color='LineColor',
+            muted_color='grey',
+            muted_alpha=0.2,
+            source=source,
+            legend_field='HashFunction',
+            **scatter_kwds,
+        )
+
+        p.legend.title = 'Hash Function'
+        p.legend.title_text_font = "Garamond"
+        p.legend.title_text_font_size = "0.95em"
+        p.legend.location = "top_right"
+        #p.legend.click_policy = "mute"
+        p.legend.label_text_font = "Comic Mono"
+        p.legend.label_text_font_size = "0.75em"
+
+        p.background_fill_color = "#eeeeee"
+        p.grid.grid_line_color = "white"
+
+        code = """
+            const d = s.data;
+            const selected_index = s.selected.indices[0];
+            const selected_num_edges = d['NumberOfEdges'][selected_index];
+            const selected_color = colors_map[selected_num_edges];
+            var num_edges;
+            var color;
+            var new_selection = [];
+
+            for (var i = 0; i < d['index'].length; i++) {
+                num_edges = d['NumberOfEdges'][i];
+                if (num_edges == selected_num_edges) {
+                    new_selection.push(i);
+                }
+            }
+
+            s.selected.indices = new_selection;
+
+            s.change.emit();
+        """
+
+        args = {
+            's': source,
+            'greys_map': greys_map,
+            'colors_map': colors_map,
+        }
+
+        #callback = CustomJS(args=args, code=code)
+
+        #taptool = p.select(type=TapTool)
+        #taptool.callback = callback
+
+        figures.append(p)
+
+    #figures.insert(1, None)
+    grid = gridplot(figures, ncols=ncols)
+
+    if show_plot:
+        show(grid)
+
+    return grid
+
+
 def grid2(df, min_num_edges=None, max_num_edges=None,
            show_plot=True, figure_kwds=None, scatter_kwds=None,
-           color_category=None):
+           color_category=None, ncols=None, log_size_multiplier=None,
+           size_multiplier=None):
 
     import numpy as np
     import pandas as pd
@@ -3927,6 +4219,15 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
     if color_category is None:
         color_category = bp.Category20
 
+    if ncols is None:
+        ncols = 4
+
+    if log_size_multiplier is None:
+        log_size_multiplier = 1.5
+
+    if size_multiplier is None:
+        size_multiplier = 2
+
     hash_funcs = (
         df.HashFunction
             .value_counts()
@@ -3977,7 +4278,7 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
               .rename(columns={0: 'Size'})
         )
 
-        sdf['LogSize'] = np.log(sdf['Size'].values * 2)
+        sdf['LogSize'] = np.log(sdf['Size'].values * log_size_multiplier)
 
         size_map = {}
 
@@ -3993,7 +4294,7 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
         for (i, row) in df.iterrows():
             k = (row.KeysToEdgesRatio, row.SolutionsFoundRatio)
             (size, log_size) = size_map[k]
-            df.at[i, 'Size'] = size * 3
+            df.at[i, 'Size'] = size * size_multiplier
             df.at[i, 'LogSize'] = log_size
 
         df.sort_values(by=['NumberOfEdges'])
@@ -4007,7 +4308,10 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
             **figure_kwds,
         )
 
+        p.title.text = hash_func
         p.y_range = y_range
+        p.xaxis.axis_label = 'Keys to Edges Ratio'
+        p.yaxis.axis_label = 'Probability of Finding Solution'
 
         cr = p.scatter(
             'KeysToEdgesRatio',
@@ -4055,8 +4359,8 @@ def grid2(df, min_num_edges=None, max_num_edges=None,
 
         figures.append(p)
 
-    figures.insert(1, None)
-    grid = gridplot(figures, ncols=4)
+    #figures.insert(1, None)
+    grid = gridplot(figures, ncols=ncols)
 
     if show_plot:
         show(grid)
@@ -4373,8 +4677,8 @@ def grid4(df, lrdf=None, min_num_edges=None, max_num_edges=None,
 
         df['Color'] = [ colors_map[e] for e in df.NumberOfEdgesStr.values ]
 
-        df['KeysToEdgesRatio'] = np.around(df.KeysToEdgesRatio.values, 3)
-        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 3)
+        df['KeysToEdgesRatio'] = np.around(df.KeysToEdgesRatio.values, 5)
+        df['SolutionsFoundRatio'] = np.around(df.SolutionsFoundRatio.values, 5)
 
         sdf = (
             df.groupby(['KeysToEdgesRatio', 'SolutionsFoundRatio'])
@@ -4683,7 +4987,8 @@ def grid5(df, lrdf=None, min_num_edges=None, max_num_edges=None,
             legend_items.append((clamp, [g]))
             renderers[clamp] = g
 
-        p.legend.title = 'Number of Vertices'
+        #p.legend.title = 'Number of Edges'
+        p.legend.click_policy = 'hide'
 
         legend = Legend(
             title='Clamp Number of Edges?',
@@ -5807,13 +6112,19 @@ def grid9(df, lrdf, min_num_edges=None, max_num_edges=None,
         )
 
         failed = df.FailedAttempts.values.sum()
-        pre_fail = df.PreMaskedVertexCollisionFailures.values.sum()
-        post_fail = df.PostMaskedVertexCollisionFailures.values.sum()
         cyclic_fail = df.CyclicGraphFailures.values.sum()
-        p.title.text = (
-            f'{hash_func}/R:{num_resize}/C:{clamp}/F:{failed} '
-            f'({pre_fail}/{post_fail}/{cyclic_fail})'
-        )
+        if False:
+            pre_fail = df.PreMaskedVertexCollisionFailures.values.sum()
+            post_fail = df.PostMaskedVertexCollisionFailures.values.sum()
+            p.title.text = (
+                f'{hash_func}/R:{num_resize}/C:{clamp}/F:{failed} '
+                f'({pre_fail}/{post_fail}/{cyclic_fail})'
+            )
+        else:
+            p.title.text = (
+                f'{hash_func}/R:{num_resize}/C:{clamp}/F:{failed} '
+                f'({cyclic_fail})'
+            )
         p.xaxis.axis_label = 'Keys to Vertices Ratio'
         p.yaxis.axis_label = 'Probability of Finding Solution'
         p.y_range = y_range
