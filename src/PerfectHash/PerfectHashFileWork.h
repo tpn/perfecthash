@@ -475,7 +475,7 @@ Abstract:
         CppSourceUnityFile,                                                \
         CPP_SOURCE_UNITY_FILE,                                             \
         EofInitTypeNumberOfTableElementsMultiplier,                        \
-        1024,                                                              \
+        16384,                                                             \
         NO_SUFFIX,                                                         \
         &CppSourceFileExtension,                                           \
         NO_STREAM_NAME,                                                    \
