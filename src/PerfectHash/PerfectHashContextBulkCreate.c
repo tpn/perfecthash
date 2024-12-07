@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -9,9 +9,6 @@ Module Name:
 Abstract:
 
     This module implements the bulk-create routine for the perfect hash library.
-
-    N.B. This component is a work in progress.  It is based off the self-test
-         component.
 
 --*/
 
@@ -28,16 +25,6 @@ Abstract:
 
 #define PH_TABLE_ERROR(Name, Result) \
     PH_ERROR(Name, Result)
-
-#if 0
-#define PH_ERROR_EX(Name, Result, ...)     \
-    PerfectHashPrintErrorEx(#Name,         \
-                            __FILE__,      \
-                            __FUNCTION__,  \
-                            __LINE__,      \
-                            (ULONG)Result, \
-                            __VA_ARGS__)
-#endif
 
 //
 // Forward decls.
