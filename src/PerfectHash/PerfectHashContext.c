@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -161,7 +161,6 @@ Return Value:
     BOOL Success;
     HRESULT Result = S_OK;
     ULONG LastError;
-    HANDLE Handle;
     PHANDLE Event;
     PCHAR Buffer;
     PCHAR BaseBuffer;
@@ -283,20 +282,6 @@ Return Value:
 #else
     Attributes = NULL;
 #endif // PH_WINDOWS
-
-#ifdef PH_WINDOWS
-    //
-    // Create a low-memory notification handle.
-    //
-
-    Handle = CreateMemoryResourceNotification(LowMemoryResourceNotification);
-    if (!IsValidHandle(Handle)) {
-        SYS_ERROR(CreateMemoryResourceNotification);
-        goto Error;
-    }
-
-    Context->LowMemoryEvent = Handle;
-#endif
 
 #ifdef PH_WINDOWS
 
@@ -2983,6 +2968,104 @@ End:
 
 #endif // PH_WINDOWS
 
+_Must_inspect_result_
+HRESULT
+NTAPI
+PerfectHashContextInitializeLowMemoryMonitor(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ BOOLEAN MonitorLowMemory
+    )
+/*++
+
+Routine Description:
+
+    If we haven't already created a low-memory notification event, this
+    routine will create one and register for low-memory notifications when
+    `MonitorLowMemory` is TRUE.  Windows only.
+
+Arguments:
+
+    Context - Supplies an instance of PERFECT_HASH_CONTEXT.
+
+    MonitorLowMemory - Supplies a boolean value that indicates whether or not
+        low-memory conditions should be monitored.
+
+Return Value:
+
+    S_OK on success, otherwise an appropriate error code.
+
+--*/
+{
+    HANDLE Handle;
+    HRESULT Result = S_OK;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+#ifndef PH_WINDOWS
+    return Result;
+#else
+
+    //
+    // If the low-memory handle is already non-NULL, we're done.  We ignore
+    // checking for the invariant of the handle not being NULL but the flag
+    // being FALSE.
+    //
+
+    if (Context->LowMemoryEvent) {
+        return Result;
+    }
+
+    //
+    // If we've been asked to monitor low-memory conditions, create an
+    // appropriate low-memory resource notification handle.  If not, just
+    // create a dummy event handle that will never be signaled, as this
+    // simplifies the main solving logic with regards to waiting on arrays
+    // of event handles.
+    //
+
+    if (MonitorLowMemory) {
+        MEMORY_RESOURCE_NOTIFICATION_TYPE Type;
+        Type = LowMemoryResourceNotification;
+        Handle = CreateMemoryResourceNotification(Type);
+        if (!IsValidHandle(Handle)) {
+            SYS_ERROR(CreateMemoryResourceNotification);
+            Result = E_OUTOFMEMORY;
+            goto Error;
+        }
+    } else {
+        Handle = CreateEventW(NULL, TRUE, FALSE, NULL);
+        if (!IsValidHandle(Handle)) {
+            SYS_ERROR(CreateEventW);
+            Result = E_OUTOFMEMORY;
+            goto Error;
+        }
+    }
+
+    Context->LowMemoryEvent = Handle;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
+
+    return Result;
+
+#endif
+}
 
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

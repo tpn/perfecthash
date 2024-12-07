@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -136,6 +136,7 @@ Return Value:
 {
     PRTL Rtl;
     BOOLEAN Silent;
+    BOOLEAN MonitorLowMemory;
     USHORT NumberOfPages;
     BOOLEAN FindBestGraph;
     ULONG NumberOfRows = 0;
@@ -247,6 +248,16 @@ Return Value:
     Silent = (TableCreateFlags.Silent == TRUE);
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
+
+    MonitorLowMemory = (ContextTableCreateFlags.MonitorLowMemory != FALSE);
+    Result = PerfectHashContextInitializeLowMemoryMonitor(
+        Context,
+        MonitorLowMemory
+    );
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextInitializeLowMemoryMonitor, Result);
+        return Result;
+    }
 
 #ifdef PH_WINDOWS
     Result = PerfectHashContextTryPrepareCallbackTableValuesFile(

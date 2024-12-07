@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -71,11 +71,13 @@ TryExtractArgContextBulkCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
+    DECL_ARG(MonitorLowMemory);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
+    SET_FLAG_AND_RETURN_IF_EQUAL(MonitorLowMemory);
 
     return S_FALSE;
 }
@@ -95,11 +97,13 @@ TryExtractArgContextTableCreateFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(SkipTestAfterCreate);
     DECL_ARG(Compile);
+    DECL_ARG(MonitorLowMemory);
 
     UNREFERENCED_PARAMETER(Allocator);
 
     SET_FLAG_AND_RETURN_IF_EQUAL(SkipTestAfterCreate);
     SET_FLAG_AND_RETURN_IF_EQUAL(Compile);
+    SET_FLAG_AND_RETURN_IF_EQUAL(MonitorLowMemory);
 
     return S_FALSE;
 }

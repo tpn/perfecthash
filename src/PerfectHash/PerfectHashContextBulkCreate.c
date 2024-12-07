@@ -150,6 +150,7 @@ Return Value:
     BOOLEAN Failed;
     BOOLEAN Terminate;
     BOOLEAN FindBestGraph;
+    BOOLEAN MonitorLowMemory;
     HRESULT Result;
     HRESULT TableCreateResult;
     PCHAR Buffer;
@@ -268,6 +269,16 @@ Return Value:
     Silent = (TableCreateFlags.Silent != FALSE);
     FindBestGraph = (TableCreateFlags.FindBestGraph != FALSE);
     ZeroStruct(EmptyCoverage);
+
+    MonitorLowMemory = (ContextBulkCreateFlags.MonitorLowMemory != FALSE);
+    Result = PerfectHashContextInitializeLowMemoryMonitor(
+        Context,
+        MonitorLowMemory
+    );
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextInitializeLowMemoryMonitor, Result);
+        return Result;
+    }
 
 #ifdef PH_WINDOWS
     Result = PerfectHashContextTryPrepareCallbackTableValuesFile(

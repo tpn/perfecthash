@@ -2679,10 +2679,21 @@ typedef union _PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
+        // When set, creates a low-memory resource notification handle that
+        // will be signaled when the system is running low on memory, which
+        // will immediately terminate any table creation operation in progress
+        // in order to relieve memory pressure.
+        //
+        // N.B. Windows only.
+        //
+
+        ULONG MonitorLowMemory:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
 
     LONG AsLong;
@@ -2739,10 +2750,21 @@ typedef union _PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS {
         ULONG Compile:1;
 
         //
+        // When set, creates a low-memory resource notification handle that
+        // will be signaled when the system is running low on memory, which
+        // will immediately terminate any table creation operation in progress
+        // in order to relieve memory pressure.
+        //
+        // N.B. Windows only.
+        //
+
+        ULONG MonitorLowMemory:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
 
     LONG AsLong;

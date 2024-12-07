@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1460,6 +1460,14 @@ HRESULT
     );
 typedef PERFECT_HASH_CONTEXT_TRY_RUNDOWN_CALLBACK_TABLE_VALUES_FILE
       *PPERFECT_HASH_CONTEXT_TRY_RUNDOWN_CALLBACK_TABLE_VALUES_FILE;
+
+_Must_inspect_result_
+HRESULT
+NTAPI
+PerfectHashContextInitializeLowMemoryMonitor(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ BOOLEAN MonitorLowMemory
+    );
 
 //
 // Function decls.
