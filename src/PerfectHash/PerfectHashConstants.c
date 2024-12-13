@@ -267,6 +267,21 @@ const PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHash16ExRoutines[] = {
 VERIFY_HASH_ARRAY_SIZE(SeededHash16ExRoutines);
 
 //
+// Define the array of seeded hash64 "Ex" routines.
+//
+
+#define EXPAND_AS_SEEDED_HASH64_EX_ROUTINE(Name, NumberOfSeeds, SeedMasks) \
+    PerfectHashTableSeededHashEx##Name,
+
+const PPERFECT_HASH_TABLE_SEEDED_HASH64_EX SeededHash64ExRoutines[] = {
+    NULL,
+    PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(EXPAND_AS_SEEDED_HASH64_EX_ROUTINE)
+    NULL
+};
+VERIFY_HASH_ARRAY_SIZE(SeededHash64ExRoutines);
+
+
+//
 // Define the array of hash mask routines.
 //
 
