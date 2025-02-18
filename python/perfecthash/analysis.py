@@ -1406,11 +1406,12 @@ def get_num_zeros_fraction(p):
     zeros = (len(p) - ix) - len(p[ix:].lstrip('0'))
     return zeros
 
-def predict_attempts(probability, target=0.5):
+def predict_attempts(probability, target=0.5, max_attempts=None):
     import numpy as np
     from scipy.stats import geom
-    zeros = get_num_zeros_fraction(probability) or 1
-    max_attempts = 10 ** (zeros + 1)
+    if max_attempts is None:
+        zeros = get_num_zeros_fraction(probability) or 1
+        max_attempts = 10 ** (zeros + 1)
     try:
         while True:
             x = np.arange(0, max_attempts)
@@ -1447,14 +1448,24 @@ def calculate_predicted_attempts(solutions_found_ratio):
     failure = 1 - solutions_found_ratio
     attempt = 1
 
-    while True:
+    found = False
+
+    for _ in range(1_000_000):
         probability = success * (failure ** (attempt - 1))
         cumulative = attempt * probability
         delta = last_cumulative - cumulative
         if delta > 0.0:
+            found = True
             break
         last_cumulative = cumulative
         attempt += 1
+
+    if not found:
+        raise ValueError(
+            f"Failed to find a solution for: {solutions_found_ratio}, "
+            f"last_cumulative: {last_cumulative}, attempt: {attempt}, "
+            f"delta: {delta}, probability: {probability}"
+        )
 
     return attempt
 
