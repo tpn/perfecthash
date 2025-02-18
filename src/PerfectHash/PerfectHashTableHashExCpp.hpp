@@ -1400,7 +1400,7 @@ PerfectHashTableSeededHashExCppMulshrolate1RX(
     Result.LowPart = (decltype(Result.LowPart))(Vertex1);
     Result.HighPart = (decltype(Result.HighPart))(Vertex2);
 
-    return Result.QuadPart;
+    return Result;
 }
 
 template<typename ResultType,
@@ -1440,7 +1440,7 @@ PerfectHashTableSeededHashExCppMulshrolate2RX(
     Result.LowPart = (decltype(Result.LowPart))(Vertex1);
     Result.HighPart = (decltype(Result.HighPart))(Vertex2);
 
-    return Result.QuadPart;
+    return Result;
 }
 
 template<typename ResultType,
@@ -1481,7 +1481,7 @@ PerfectHashTableSeededHashExCppMulshrolate3RX(
     Result.LowPart = (decltype(Result.LowPart))(Vertex1);
     Result.HighPart = (decltype(Result.HighPart))(Vertex2);
 
-    return Result.QuadPart;
+    return Result;
 }
 
 template<typename ResultType,
@@ -1523,7 +1523,7 @@ PerfectHashTableSeededHashExCppMulshrolate4RX(
     Result.LowPart = (decltype(Result.LowPart))(Vertex1);
     Result.HighPart = (decltype(Result.HighPart))(Vertex2);
 
-    return Result.QuadPart;
+    return Result;
 }
 
 //
