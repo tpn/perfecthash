@@ -2171,6 +2171,7 @@ HANDLE GetCurrentProcess();
 
 #define ERROR_SUCCESS                    0L
 #define ERROR_FILE_NOT_FOUND             2L
+#define ERROR_PATH_NOT_FOUND             3L
 #define ERROR_ACCESS_DENIED              5L
 #define ERROR_NOT_ENOUGH_MEMORY          8L
 #define ERROR_DIR_NOT_EMPTY              145L
