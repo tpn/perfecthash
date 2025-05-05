@@ -278,7 +278,7 @@ Return Value:
     Result = PrepareGraphInfoChm02(Table, &Info, NULL);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashTableImplChm02_PrepareFirstGraphInfo, Result);
-        goto Error;
+        return Result;
     }
 
     //
@@ -289,7 +289,7 @@ Return Value:
                                           Table->TableCreateParameters);
     if (FAILED(Result)) {
         PH_ERROR(InitializeCudaAndGraphsChm02, Result);
-        goto Error;
+        return Result;
     }
 
     Cu = Context->Cu;

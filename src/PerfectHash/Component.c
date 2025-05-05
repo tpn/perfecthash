@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2025 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -405,7 +405,9 @@ ComponentRelease(
     )
 {
     LONG Count;
+    BOOLEAN AcquiredGlobalLock;
     PCOMPONENT_RUNDOWN Rundown;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
 
     Count = InterlockedDecrement((PLONG)&Component->ReferenceCount);
 
@@ -415,12 +417,28 @@ ComponentRelease(
         return Count;
     }
 
-    ASSERT(InterlockedDecrement(&ComponentCount) >= 0);
+    Count = InterlockedDecrement(&ComponentCount);
 
-    AcquireGlobalComponentsLockExclusive();
+    ASSERT(Count >= 0);
+
+    //
+    // Obtain the TLS context to see if the global component lock has already
+    // been acquired.
+    //
+
+    TlsContext = PerfectHashTlsGetContext();
+
+    AcquiredGlobalLock = FALSE;
+    if (TlsContext != NULL && !TlsContext->Flags.GlobalComponentLockAcquired) {
+        AcquireGlobalComponentsLockExclusive();
+        AcquiredGlobalLock = TRUE;
+    }
 
     if (GlobalComponents.FirstComponent != Component) {
-        ReleaseGlobalComponentsLockExclusive();
+        if (AcquiredGlobalLock) {
+            ReleaseGlobalComponentsLockExclusive();
+            AcquiredGlobalLock = FALSE;
+        }
     } else {
 
         PRTL Rtl;
@@ -448,7 +466,10 @@ ComponentRelease(
         GlobalComponents.FirstComponent = NULL;
 #endif
 
-        ReleaseGlobalComponentsLockExclusive();
+        if (AcquiredGlobalLock) {
+            ReleaseGlobalComponentsLockExclusive();
+            AcquiredGlobalLock = FALSE;
+        }
 
         RELEASE(Rtl);
         RELEASE(Allocator);

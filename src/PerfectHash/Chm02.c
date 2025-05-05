@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2025 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -238,7 +238,7 @@ Return Value:
     Result = PrepareGraphInfoChm02(Table, &Info, NULL);
     if (FAILED(Result)) {
         PH_ERROR(CreatePerfectHashTableImplChm02_PrepareFirstGraphInfo, Result);
-        goto Error;
+        return Result;
     }
 
     //
@@ -249,7 +249,7 @@ Return Value:
                                           Table->TableCreateParameters);
     if (FAILED(Result)) {
         PH_ERROR(InitializeCudaAndGraphsChm02, Result);
-        goto Error;
+        return Result;
     }
 
     Cu = Context->Cu;
