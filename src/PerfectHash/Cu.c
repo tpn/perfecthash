@@ -222,7 +222,8 @@ Return Value:
         (Cu->DriverSuffix[0] == '9' && Cu->DriverSuffix[1] == '0') ||
         (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '0') ||
         (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '1') ||
-        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '2')
+        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '2') ||
+        (Cu->DriverSuffix[0] == '1' && Cu->DriverSuffix[1] == '3')
     );
 
 #ifdef PH_WINDOWS
