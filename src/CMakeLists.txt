@@ -58,6 +58,11 @@ if(CUDA_FOUND)
     set(HAS_CUDA TRUE)
     # Add CUDA to our project languages.
     enable_language(CUDA)
+    # Set C++17 standard for CUDA
+    set(CMAKE_CUDA_STANDARD 17)
+    set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+    # Enable source in PTX
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --source-in-ptx")
 else()
     message(STATUS "CUDA not found, CUDA support is disabled")
     set(HAS_CUDA FALSE)
