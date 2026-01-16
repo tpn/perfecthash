@@ -5,6 +5,8 @@
 -->
 
 [Helper Utility for Generating Command Line Syntax](https://tpn.github.io/perfecthash-ui/)
+The `ui/` directory contains the companion web UI (submodule) for generating
+command line syntax. See [ui/README.md](ui/README.md) for details.
 
 
 ## Overview
