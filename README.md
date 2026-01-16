@@ -194,6 +194,16 @@ cmake --build build --config Debug
 ```
 Note: the default build enables `-march=native` for required SIMD intrinsics.
 Use `-DPERFECTHASH_ENABLE_NATIVE_ARCH=OFF` if you need a portable binary.
+
+CUDA build (Ninja Multi-Config):
+
+```
+cmake -S . -B build-cuda -G"Ninja Multi-Config" \
+    -DUSE_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=89
+cmake --build build-cuda --config Release
+```
+CUDA builds require CUDAToolkit on PATH. Set
+`CMAKE_CUDA_ARCHITECTURES` to your GPU (e.g., 86, 89, 90).
 For normal Makefile support:
 
 ```
