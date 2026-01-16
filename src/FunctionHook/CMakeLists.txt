@@ -1,6 +1,8 @@
-project(FunctionHook)
+set(target FunctionHook)
 
-set(PROJECT_NAME FunctionHook)
+if(WIN32)
+    enable_language(ASM_MASM)
+endif()
 
 ################################################################################
 # Source groups
@@ -18,19 +20,13 @@ set(ALL_FILES
     ${Sources}
 )
 
-add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
+add_library(${target} SHARED ${ALL_FILES})
 
 ################################################################################
 # Target
 ################################################################################
 
-use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
-################################################################################
-# Includes for CMake from *.props
-################################################################################
-use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "../PerfectHash.cmake")
-
-set(ROOT_NAMESPACE FunctionHook)
+perfecthash_apply_common_settings(${target})
 
 ################################################################################
 # Compile definitions

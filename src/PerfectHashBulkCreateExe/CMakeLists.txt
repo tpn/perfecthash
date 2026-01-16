@@ -1,6 +1,4 @@
-project(PerfectHashBulkCreateExe)
-
-set(PROJECT_NAME PerfectHashBulkCreateExe)
+set(target PerfectHashBulkCreateExe)
 
 ################################################################################
 # Source groups
@@ -27,31 +25,25 @@ set(ALL_FILES
     ${Source_Files}
 )
 
-if (IS_WINDOWS)
+if(WIN32)
     list(
         APPEND ALL_FILES
         ${Resource_Files}
     )
 endif()
 
-add_executable(PerfectHashBulkCreateExe ${ALL_FILES})
+add_executable(${target} ${ALL_FILES})
 
 ################################################################################
 # Target
 ################################################################################
 
-use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
-################################################################################
-# Includes for CMake from *.props
-################################################################################
-use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "../PerfectHash.cmake")
-
-set(ROOT_NAMESPACE PerfectHashBulkCreateExe)
+perfecthash_apply_common_settings(${target})
 
 ################################################################################
 # Output executable name
 ################################################################################
-set_target_properties(${PROJECT_NAME} PROPERTIES
+set_target_properties(${target} PROPERTIES
     OUTPUT_NAME "PerfectHashBulkCreate"
 )
 ################################################################################
@@ -64,10 +56,10 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 ################################################################################
 # Dependencies
 ################################################################################
-add_dependencies(${PROJECT_NAME}
+add_dependencies(${target}
     PerfectHash
 )
 
-target_link_libraries(${PROJECT_NAME} PerfectHash ${CMAKE_DL_LIBS})
+target_link_libraries(${target} PRIVATE PerfectHash ${CMAKE_DL_LIBS})
 
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

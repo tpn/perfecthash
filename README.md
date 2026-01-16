@@ -187,19 +187,19 @@ mkdir -p ~/src && cd ~/src
 git clone https://github.com/tpn/perfecthash
 git clone https://github.com/tpn/perfecthash-keys
 
-cd perfecthash/src
-mkdir build && cd build
-cmake -S .. -B . -G"Ninja Multi-Config"
-ninja -F build-Release.ninja
-ninja -F build-Debug.ninja
+cd perfecthash
+cmake -S . -B build -G"Ninja Multi-Config"
+cmake --build build --config Release
+cmake --build build --config Debug
 ```
+Note: the default build enables `-march=native` for required SIMD intrinsics.
+Use `-DPERFECTHASH_ENABLE_NATIVE_ARCH=OFF` if you need a portable binary.
 For normal Makefile support:
 
 ```
-cd perfecthash/src
-mkdir build && cd build
-cmake -S .. -B . -G"Unix Makefiles"
-make
+cd perfecthash
+cmake -S . -B build -G"Unix Makefiles"
+cmake --build build
 ```
 #### Mac
 

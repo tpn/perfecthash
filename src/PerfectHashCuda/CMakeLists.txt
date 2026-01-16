@@ -1,8 +1,4 @@
-project(PerfectHashCuda)
-
-set(PROJECT_NAME PerfectHashCuda)
-set(IS_CUDA 1)
-
+set(target PerfectHashCuda)
 #find_package(stdgpu REQUIRED)
 
 ################################################################################
@@ -32,17 +28,17 @@ set(ALL_FILES
     ${Source_Files}
 )
 
-if (IS_WINDOWS)
+if(WIN32)
     list(
         APPEND ALL_FILES
         ${Resource_Files}
     )
 endif()
 
-add_library(${PROJECT_NAME} SHARED ${ALL_FILES})
+add_library(${target} SHARED ${ALL_FILES})
 #set_property(TARGET ${PROJECT_NAME} PROPERTY CUDA_PTX_COMPILATION ON)
 
-set_target_properties(${PROJECT_NAME}
+set_target_properties(${target}
    PROPERTIES
        CUDA_SEPARABLE_COMPILATION ON
        CUDA_RESOLVE_DEVICE_SYMBOLS ON
@@ -52,37 +48,30 @@ set_target_properties(${PROJECT_NAME}
 # Target
 ################################################################################
 
-use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "${DEFAULT_CXX_PROPS}")
-################################################################################
-# Includes for CMake from *.props
-################################################################################
-use_props(${PROJECT_NAME} "${CMAKE_CONFIGURATION_TYPES}" "../PerfectHash.cmake")
-
-set(ROOT_NAMESPACE PerfectHashCuda)
+perfecthash_apply_cuda_settings(${target})
 
 ################################################################################
 # Output shared library name
 ################################################################################
-set_target_properties(${PROJECT_NAME} PROPERTIES
+set_target_properties(${target} PROPERTIES
     OUTPUT_NAME "PerfectHashCuda"
 )
 ################################################################################
 # Compile definitions
 ################################################################################
 target_compile_definitions(
-    ${PROJECT_NAME}
+    ${target}
     PRIVATE
     "_PERFECT_HASH_CUDA_INTERNAL_BUILD"
     "_PERFECT_HASH_INTERNAL_BUILD"
-    "PH_CUDA"
 )
 
 ################################################################################
 # Compile and link options
 ################################################################################
-if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
+if(CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
     target_compile_options(
-        ${PROJECT_NAME}
+        ${target}
         PRIVATE
         --extended-lambda
         --source-in-ptx
@@ -96,11 +85,19 @@ if (CMAKE_CUDA_COMPILER_ID MATCHES NVIDIA)
         --machine 64
         --forward-unknown-opts
     )
-    target_compile_options_config(Debug "-g;-G")
-    target_compile_options_not_config(Debug "-lineinfo")
+    target_compile_options(
+        ${target}
+        PRIVATE
+        $<$<CONFIG:Debug>:-g;-G>
+        $<$<NOT:$<CONFIG:Debug>>:-lineinfo>
+    )
 
-    target_compile_definitions_config(Debug _DEBUG)
-    target_compile_definitions_not_config(Debug NDEBUG)
+    target_compile_definitions(
+        ${target}
+        PRIVATE
+        $<$<CONFIG:Debug>:_DEBUG>
+        $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+    )
 
     #if (IS_WINDOWS)
     #    target_link_options(
@@ -116,11 +113,15 @@ endif()
 ################################################################################
 # Dependencies
 ################################################################################
-#add_dependencies(${PROJECT_NAME}
+#add_dependencies(${target}
 #    PerfectHash
 #)
 
-#target_link_libraries(${PROJECT_NAME} PerfectHash)
+#target_link_libraries(${target} PerfectHash)
 #target_link_libraries(${PROJECT_NAME} PUBLIC stdgpu::stdgpu)
+
+if(CUDAToolkit_FOUND)
+    target_link_libraries(${target} PRIVATE CUDA::cudart)
+endif()
 
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :
