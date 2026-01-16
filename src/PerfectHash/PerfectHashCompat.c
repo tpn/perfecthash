@@ -1047,22 +1047,32 @@ WriteFile(
     _Inout_opt_ LPOVERLAPPED lpOverlapped
     )
 {
-    LARGE_INTEGER fd;
-    SIZE_T BytesWritten;
+    int fd;
+    ssize_t BytesWritten;
+
+    UNREFERENCED_PARAMETER(lpOverlapped);
 
     if (hFile == (HANDLE)stdout) {
-        fd.QuadPart = 0;
+        fd = fileno(stdout);
+    } else if (hFile == (HANDLE)stderr) {
+        fd = fileno(stderr);
+    } else if (hFile == (HANDLE)stdin) {
+        fd = fileno(stdin);
     } else {
-        fd.QuadPart = (LONGLONG)hFile;
+        fd = (int)(intptr_t)hFile;
     }
 
-    BytesWritten = write(fd.LowPart, lpBuffer, nNumberOfBytesToWrite);
+    BytesWritten = write(fd, lpBuffer, nNumberOfBytesToWrite);
 
     if (ARGUMENT_PRESENT(lpNumberOfBytesWritten)) {
-        *lpNumberOfBytesWritten = BytesWritten;
+        if (BytesWritten < 0) {
+            *lpNumberOfBytesWritten = 0;
+        } else {
+            *lpNumberOfBytesWritten = (DWORD)BytesWritten;
+        }
     }
 
-    if (BytesWritten == -1) {
+    if (BytesWritten < 0) {
         __debugbreak();
         SetLastError(errno);
         SYS_ERROR(write);
