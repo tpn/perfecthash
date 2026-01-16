@@ -237,6 +237,13 @@ set(Source_Files
     "SymbolLoader.c"
 )
 
+if(PERFECTHASH_IS_WINDOWS OR PERFECTHASH_IS_LINUX)
+    list(
+        APPEND Source_Files
+        "GraphAvx.c"
+    )
+endif()
+
 if(PERFECTHASH_HAS_CUDA)
     list(
         APPEND Source_Files
@@ -251,7 +258,6 @@ if(WIN32)
         "Chm01.c"
         "RtlUuid.c"
         "Security.c"
-        "GraphAvx.c"
         "RtlRandom.c"
         "RtlPrivilege.c"
         "PerfectHashCu.c"
@@ -296,6 +302,14 @@ set(ALL_FILES
     ${Public_Header_Files}
     ${Source_Files}
 )
+
+if(PERFECTHASH_IS_LINUX)
+    set_source_files_properties(
+        "GraphAvx.c"
+        PROPERTIES
+        COMPILE_OPTIONS "-mavx2;-mavx512f;-mavx512bw;-mavx512vl;-mavx512dq;-mavx512cd"
+    )
+endif()
 
 if(WIN32)
     list(
@@ -351,9 +365,12 @@ if(PERFECTHASH_ENABLE_PENTER)
     target_link_libraries(${target} PUBLIC FunctionHook)
 endif()
 
-if(WIN32)
+if(TARGET PerfectHashAsm)
     add_dependencies(${target} PerfectHashAsm)
-    set(ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4 PerfectHashAsm)
+    set(ADDITIONAL_LIBRARY_DEPENDENCIES PerfectHashAsm)
+    if(WIN32)
+        list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4)
+    endif()
     target_link_libraries(${target} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 endif()
 

@@ -27,3 +27,12 @@ output
 *.aps
 ctags.exe
 build
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+build.ninja
+.ninja_deps
+.ninja_log
+install/

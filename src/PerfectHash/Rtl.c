@@ -302,6 +302,13 @@ RtlInitialize(
     Rtl->RtlUnicodeStringToInteger = RtlUnicodeStringToInteger;
     Rtl->RtlAppendUnicodeStringToString = RtlAppendUnicodeStringToString;
 
+#if defined(_M_AMD64) || defined(_M_X64)
+    if (Rtl->CpuFeatures.AVX2 != FALSE) {
+        Rtl->Vtbl->CopyPages = RtlCopyPages_AVX2;
+        Rtl->Vtbl->FillPages = RtlFillPages_AVX2;
+    }
+#endif
+
 #endif
 
     //

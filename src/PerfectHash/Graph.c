@@ -34,7 +34,7 @@ GRAPH_REGISTER_SOLVED GraphRegisterSolvedNoBestCoverage;
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssigned16MemoryCoverage;
 
-#ifdef PH_WINDOWS
+#if defined(_M_AMD64) || defined(_M_X64)
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage_AVX2;
 
@@ -209,7 +209,7 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
-#ifdef PH_WINDOWS
+#if defined(_M_AMD64) || defined(_M_X64)
                     Graph->Vtbl->HashKeys =
                         GraphHashKeys16MultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
@@ -252,7 +252,7 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
-#ifdef PH_WINDOWS
+#if defined(_M_AMD64) || defined(_M_X64)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
 #endif
@@ -260,7 +260,7 @@ Return Value:
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
-#ifdef PH_WINDOWS
+#if defined(_M_AMD64) || defined(_M_X64)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
 #endif
@@ -271,7 +271,7 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
-#ifdef PH_WINDOWS
+#if defined(_M_AMD64) || defined(_M_X64)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
 #endif
@@ -279,7 +279,7 @@ Return Value:
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
-#ifdef PH_WINDOWS
+#if defined(_M_AMD64) || defined(_M_X64)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
 #endif
@@ -288,7 +288,7 @@ Return Value:
         }
     }
 
-#ifdef PH_WINDOWS
+#if defined(_M_AMD64) || defined(_M_X64)
 
     //
     // Use the optimized AVX2 routine for calculating assigned memory coverage
@@ -305,7 +305,7 @@ Return Value:
         Graph->Flags.UsedAvx2MemoryCoverageFunction = TRUE;
     }
 
-#endif // PH_WINDOWS
+#endif // _M_AMD64 || _M_X64
 
     //
     // Create an activity GUID to track this graph in ETW events.

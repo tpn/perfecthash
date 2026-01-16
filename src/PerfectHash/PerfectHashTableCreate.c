@@ -295,7 +295,6 @@ Return Value:
     // anything.
     //
 
-#ifdef PH_WINDOWS
 #if defined(_M_AMD64) || defined(_M_X64)
     if (UseNonTemporalAvx2Routines(Table) &&
         Rtl->CpuFeatures.AVX2 != FALSE) {
@@ -303,7 +302,6 @@ Return Value:
         Rtl->Vtbl->CopyPages = RtlCopyPagesNonTemporal_AVX2;
         Rtl->Vtbl->FillPages = RtlFillPagesNonTemporal_AVX2;
     }
-#endif
 #endif
 
     //

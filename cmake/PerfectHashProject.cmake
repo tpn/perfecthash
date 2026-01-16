@@ -66,6 +66,13 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(PERFECTHASH_IS_EMSCRIPTEN TRUE)
 endif()
 
+if(PERFECTHASH_IS_LINUX)
+    # Ensure installed binaries can find ../lib without LD_LIBRARY_PATH.
+    set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+elseif(PERFECTHASH_IS_MAC)
+    set(CMAKE_INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR}")
+endif()
+
 if(NOT PERFECTHASH_IS_EMSCRIPTEN AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "Only 64-bit platforms are supported.")
 endif()
