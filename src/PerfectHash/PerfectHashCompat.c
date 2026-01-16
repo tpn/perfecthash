@@ -16,6 +16,10 @@ Abstract:
 #include "PerfectHashEventsPrivate.h"
 #include <sys/time.h>
 
+#ifdef PH_LINUX
+#include "PerfectHashErrors_EnglishBin.h"
+#endif
+
 #define GetSystemAllocationGranularity() (max(getpagesize(), 65536))
 
 PSTR
@@ -3017,6 +3021,393 @@ PerfectHashPrintError(
     return Result;
 }
 
+#ifdef PH_LINUX
+
+#define PH_MESSAGE_RESOURCE_UNICODE 0x0001
+
+static
+USHORT
+ReadU16LE(
+    _In_reads_(2) const UCHAR *Buffer
+    )
+{
+    return (USHORT)(
+        ((USHORT)Buffer[0]) |
+        ((USHORT)Buffer[1] << 8)
+    );
+}
+
+static
+ULONG
+ReadU32LE(
+    _In_reads_(4) const UCHAR *Buffer
+    )
+{
+    return (ULONG)(
+        ((ULONG)Buffer[0]) |
+        ((ULONG)Buffer[1] << 8) |
+        ((ULONG)Buffer[2] << 16) |
+        ((ULONG)Buffer[3] << 24)
+    );
+}
+
+static
+HRESULT
+PerfectHashLookupMessageEntry(
+    _In_ ULONG Code,
+    _Outptr_result_maybenull_ const UCHAR **Text,
+    _Out_ PUSHORT TextLength,
+    _Out_ PUSHORT Flags
+    )
+{
+    ULONG Index;
+    ULONG LowId;
+    ULONG HighId;
+    ULONG Offset;
+    ULONG NumberOfBlocks;
+    ULONG Id;
+    USHORT EntryLength;
+    USHORT EntryFlags;
+    size_t BaseOffset;
+    size_t BlocksSize;
+    size_t EntryOffset;
+    size_t DataSize;
+    const UCHAR *Data;
+
+    if (!Text || !TextLength || !Flags) {
+        return E_POINTER;
+    }
+
+    *Text = NULL;
+    *TextLength = 0;
+    *Flags = 0;
+
+    Data = PerfectHashErrorsEnglishBin;
+    DataSize = PerfectHashErrorsEnglishBinSize;
+    if (DataSize < sizeof(ULONG)) {
+        return E_FAIL;
+    }
+
+    NumberOfBlocks = ReadU32LE(Data);
+    BlocksSize = (size_t)NumberOfBlocks * 12;
+    if (DataSize < (sizeof(ULONG) + BlocksSize)) {
+        return E_FAIL;
+    }
+
+    for (Index = 0; Index < NumberOfBlocks; Index++) {
+        BaseOffset = sizeof(ULONG) + ((size_t)Index * 12);
+        LowId = ReadU32LE(Data + BaseOffset);
+        HighId = ReadU32LE(Data + BaseOffset + 4);
+        Offset = ReadU32LE(Data + BaseOffset + 8);
+
+        if (Code < LowId || Code > HighId) {
+            continue;
+        }
+
+        if (Offset >= DataSize) {
+            return E_FAIL;
+        }
+
+        EntryOffset = Offset;
+        for (Id = LowId; ; Id++) {
+            if ((EntryOffset + 4) > DataSize) {
+                return E_FAIL;
+            }
+
+            EntryLength = ReadU16LE(Data + EntryOffset);
+            EntryFlags = ReadU16LE(Data + EntryOffset + 2);
+
+            if (EntryLength < 4) {
+                return E_FAIL;
+            }
+
+            if ((EntryOffset + EntryLength) > DataSize) {
+                return E_FAIL;
+            }
+
+            if (Id == Code) {
+                *Text = Data + EntryOffset + 4;
+                *TextLength = (USHORT)(EntryLength - 4);
+                *Flags = EntryFlags;
+                return S_OK;
+            }
+
+            EntryOffset += EntryLength;
+
+            if (Id == HighId) {
+                break;
+            }
+        }
+    }
+
+    return S_FALSE;
+}
+
+static
+SIZE_T
+PerfectHashCollapsePercentEscapes(
+    _Inout_updates_bytes_(Length) PSTR Buffer,
+    _In_ SIZE_T Length
+    );
+
+static
+HRESULT
+PerfectHashConvertMessageEntryToAnsi(
+    _In_reads_(TextLength) const UCHAR *Text,
+    _In_ USHORT TextLength,
+    _In_ USHORT Flags,
+    _Outptr_result_maybenull_ PSTR *MessageBuffer,
+    _Out_ PSIZE_T MessageLength
+    )
+{
+    SIZE_T Index;
+    SIZE_T Count;
+    SIZE_T Written;
+    USHORT Wide;
+    PSTR Buffer;
+
+    if (!MessageBuffer || !MessageLength) {
+        return E_POINTER;
+    }
+
+    *MessageBuffer = NULL;
+    *MessageLength = 0;
+
+    if (Flags & PH_MESSAGE_RESOURCE_UNICODE) {
+        if ((TextLength % sizeof(USHORT)) != 0) {
+            return E_FAIL;
+        }
+
+        Count = TextLength / sizeof(USHORT);
+        Buffer = (PSTR)calloc(Count + 1, sizeof(CHAR));
+        if (!Buffer) {
+            return E_OUTOFMEMORY;
+        }
+
+        Written = 0;
+        for (Index = 0; Index < Count; Index++) {
+            Wide = ReadU16LE(Text + (Index * sizeof(USHORT)));
+            if (Wide == 0) {
+                break;
+            }
+            Buffer[Written++] = (Wide <= 0x7f) ? (CHAR)Wide : '?';
+        }
+
+        Written = PerfectHashCollapsePercentEscapes(Buffer, Written);
+        *MessageBuffer = Buffer;
+        *MessageLength = Written;
+        return S_OK;
+    }
+
+    Buffer = (PSTR)calloc(TextLength + 1, sizeof(CHAR));
+    if (!Buffer) {
+        return E_OUTOFMEMORY;
+    }
+
+    Written = 0;
+    for (Index = 0; Index < TextLength; Index++) {
+        if (Text[Index] == '\0') {
+            break;
+        }
+        Buffer[Written++] = (CHAR)Text[Index];
+    }
+
+    Written = PerfectHashCollapsePercentEscapes(Buffer, Written);
+    *MessageBuffer = Buffer;
+    *MessageLength = Written;
+    return S_OK;
+}
+
+static
+SIZE_T
+PerfectHashCollapsePercentEscapes(
+    _Inout_updates_bytes_(Length) PSTR Buffer,
+    _In_ SIZE_T Length
+    )
+{
+    SIZE_T ReadIndex;
+    SIZE_T WriteIndex;
+
+    ReadIndex = 0;
+    WriteIndex = 0;
+
+    while (ReadIndex < Length) {
+        if (Buffer[ReadIndex] == '%' &&
+            (ReadIndex + 1) < Length &&
+            Buffer[ReadIndex + 1] == '%') {
+            Buffer[WriteIndex++] = '%';
+            ReadIndex += 2;
+            continue;
+        }
+
+        Buffer[WriteIndex++] = Buffer[ReadIndex++];
+    }
+
+    Buffer[WriteIndex] = '\0';
+    return WriteIndex;
+}
+
+static
+HRESULT
+PerfectHashGetMessageStringFromBin(
+    _In_ ULONG Code,
+    _Outptr_result_maybenull_ PSTR *MessageBuffer,
+    _Out_ PSIZE_T MessageLength
+    )
+{
+    USHORT Flags;
+    USHORT TextLength;
+    const UCHAR *Text;
+    HRESULT Result;
+
+    if (!MessageBuffer || !MessageLength) {
+        return E_POINTER;
+    }
+
+    Result = PerfectHashLookupMessageEntry(Code, &Text, &TextLength, &Flags);
+    if (Result != S_OK) {
+        return Result;
+    }
+
+    return PerfectHashConvertMessageEntryToAnsi(Text,
+                                                TextLength,
+                                                Flags,
+                                                MessageBuffer,
+                                                MessageLength);
+}
+
+static
+HRESULT
+PerfectHashCreateStringFromUnicodeString(
+    _In_opt_ PCUNICODE_STRING UnicodeString,
+    _Outptr_result_maybenull_ PSTR *StringPointer,
+    _Out_ PSIZE_T StringLength
+    )
+{
+    SIZE_T Count;
+    PSTR Buffer;
+    PCHAR Dest;
+
+    if (!StringPointer || !StringLength) {
+        return E_POINTER;
+    }
+
+    *StringPointer = NULL;
+    *StringLength = 0;
+
+    if (!UnicodeString || !UnicodeString->Buffer || UnicodeString->Length == 0) {
+        Buffer = (PSTR)calloc(1, sizeof(CHAR));
+        if (!Buffer) {
+            return E_OUTOFMEMORY;
+        }
+        *StringPointer = Buffer;
+        *StringLength = 0;
+        return S_OK;
+    }
+
+    Count = (SIZE_T)(UnicodeString->Length / sizeof(WCHAR));
+    Buffer = (PSTR)calloc(Count + 1, sizeof(CHAR));
+    if (!Buffer) {
+        return E_OUTOFMEMORY;
+    }
+
+    Dest = Buffer;
+    AppendUnicodeStringToCharBufferFast(&Dest, UnicodeString);
+
+    *StringPointer = Buffer;
+    *StringLength = (SIZE_T)(Dest - Buffer);
+    return S_OK;
+}
+
+static
+HRESULT
+PerfectHashFormatMessageArgs(
+    _In_ PCSZ Message,
+    _In_ SIZE_T MessageLength,
+    _Inout_ va_list *Args,
+    _Outptr_result_maybenull_ PSTR *FormattedMessage,
+    _Out_ PSIZE_T FormattedLength
+    )
+{
+    PCSZ Cursor;
+    PCSZ Match;
+    PSTR ArgString;
+    SIZE_T ArgLength;
+    SIZE_T OutputLength;
+    SIZE_T PrefixLength;
+    SIZE_T SuffixLength;
+    SIZE_T TotalLength;
+    PSTR Output;
+    const SIZE_T MarkerLength = sizeof("%1!wZ!") - 1;
+    const PCSZ Marker = "%1!wZ!";
+    HRESULT Result;
+
+    if (!FormattedMessage || !FormattedLength) {
+        return E_POINTER;
+    }
+
+    *FormattedMessage = NULL;
+    *FormattedLength = 0;
+
+    Cursor = Message;
+    Match = strstr(Cursor, Marker);
+    if (!Match) {
+        return S_FALSE;
+    }
+
+    Result = PerfectHashCreateStringFromUnicodeString(
+        va_arg(*Args, PCUNICODE_STRING),
+        &ArgString,
+        &ArgLength
+    );
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    OutputLength = 0;
+    Cursor = Message;
+    while ((Match = strstr(Cursor, Marker)) != NULL) {
+        OutputLength += (SIZE_T)(Match - Cursor);
+        OutputLength += ArgLength;
+        Cursor = Match + MarkerLength;
+    }
+    OutputLength += strlen(Cursor);
+
+    Output = (PSTR)calloc(OutputLength + 1, sizeof(CHAR));
+    if (!Output) {
+        free(ArgString);
+        return E_OUTOFMEMORY;
+    }
+
+    Cursor = Message;
+    TotalLength = 0;
+    while ((Match = strstr(Cursor, Marker)) != NULL) {
+        PrefixLength = (SIZE_T)(Match - Cursor);
+        CopyMemoryInline(Output + TotalLength, Cursor, PrefixLength);
+        TotalLength += PrefixLength;
+
+        CopyMemoryInline(Output + TotalLength, ArgString, ArgLength);
+        TotalLength += ArgLength;
+
+        Cursor = Match + MarkerLength;
+    }
+
+    SuffixLength = strlen(Cursor);
+    CopyMemoryInline(Output + TotalLength, Cursor, SuffixLength);
+    TotalLength += SuffixLength;
+
+    Output[TotalLength] = '\0';
+    *FormattedMessage = Output;
+    *FormattedLength = TotalLength;
+
+    free(ArgString);
+
+    UNREFERENCED_PARAMETER(MessageLength);
+    return S_OK;
+}
+
+#endif // PH_LINUX
+
 PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
 
 _Use_decl_annotations_
@@ -3028,6 +3419,56 @@ PerfectHashPrintMessage(
 {
     PCSZ CodeString;
     HRESULT Result = S_OK;
+#ifdef PH_LINUX
+    PSTR Message;
+    PSTR FormattedMessage;
+    SIZE_T MessageLength;
+    SIZE_T FormattedLength;
+    va_list Args;
+#endif
+
+#ifdef PH_LINUX
+    Message = NULL;
+    FormattedMessage = NULL;
+    MessageLength = 0;
+    FormattedLength = 0;
+
+    Result = PerfectHashGetMessageStringFromBin(Code,
+                                                &Message,
+                                                &MessageLength);
+    if (Result == S_OK) {
+        va_start(Args, Code);
+        Result = PerfectHashFormatMessageArgs(Message,
+                                              MessageLength,
+                                              &Args,
+                                              &FormattedMessage,
+                                              &FormattedLength);
+        va_end(Args);
+
+        if (Result == S_OK) {
+            fwrite(FormattedMessage, 1, FormattedLength, stderr);
+            free(FormattedMessage);
+        } else {
+            fwrite(Message, 1, MessageLength, stderr);
+        }
+
+        free(Message);
+        Result = S_OK;
+
+        if (DoesErrorCodeWantAlgoHashMaskTableAppended(Code)) {
+            HRESULT NewResult;
+
+            NewResult = PerfectHashPrintMessage(
+                PH_MSG_PERFECT_HASH_ALGO_HASH_MASK_NAMES
+            );
+            if (FAILED(NewResult)) {
+                Result = NewResult;
+            }
+        }
+
+        return Result;
+    }
+#endif
 
     Result = PerfectHashGetErrorCodeString(NULL, Code, &CodeString);
     if (FAILED(Result)) {

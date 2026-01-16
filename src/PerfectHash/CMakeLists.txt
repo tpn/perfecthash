@@ -294,6 +294,37 @@ else()
     endif()
 endif()
 
+if(PERFECTHASH_IS_LINUX)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+    set(PERFECTHASH_MESSAGE_BIN
+        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors_English.bin"
+    )
+    set(PERFECTHASH_MESSAGE_TABLE_C
+        "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashErrors_EnglishBin.c"
+    )
+    set(PERFECTHASH_MESSAGE_TABLE_H
+        "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashErrors_EnglishBin.h"
+    )
+
+    add_custom_command(
+        OUTPUT ${PERFECTHASH_MESSAGE_TABLE_C} ${PERFECTHASH_MESSAGE_TABLE_H}
+        COMMAND "${Python3_EXECUTABLE}"
+                "${PERFECTHASH_ROOT_DIR}/scripts/generate_message_table.py"
+                --input "${PERFECTHASH_MESSAGE_BIN}"
+                --output-c "${PERFECTHASH_MESSAGE_TABLE_C}"
+                --output-h "${PERFECTHASH_MESSAGE_TABLE_H}"
+        DEPENDS
+            "${PERFECTHASH_MESSAGE_BIN}"
+            "${PERFECTHASH_ROOT_DIR}/scripts/generate_message_table.py"
+        COMMENT "Generating PerfectHash message table for Linux..."
+        VERBATIM
+    )
+
+    list(APPEND Source_Files "${PERFECTHASH_MESSAGE_TABLE_C}")
+    list(APPEND Private_Header_Files "${PERFECTHASH_MESSAGE_TABLE_H}")
+endif()
+
 source_group("Source Files" FILES ${Source_Files})
 
 set(ALL_FILES
@@ -337,6 +368,11 @@ if(WIN32)
 endif()
 
 add_library(${target} SHARED ${ALL_FILES})
+
+# Generated Linux message table header lives in the build directory.
+if(PERFECTHASH_IS_LINUX)
+    target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
 
 # ###############################################################################
 # Target
