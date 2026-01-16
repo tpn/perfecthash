@@ -126,18 +126,32 @@ even_larger_sizes = (
 )
 
 even_larger_sizes_2 = (
-   10983181,
-   13910515,
-   17829914,
-   24810562,
+    10983181,
+    13910515,
+    17829914,
+    24810562,
 )
 
+even_larger_sizes_3 = (
+    30983181,
+    43910515,
+    57829914,
+    64810562,
+    74810562,
+    83910515,
+    100000000,
+)
+
+even_larger_sizes_4 = (
+    2 ** 27,
+    (2 ** 27) - 1,
+)
 
 all_sizes = (
     #list(normal_sizes) +
     #list(large_sizes) +
     #list(even_larger_sizes)
-    list(even_larger_sizes_2)
+    list(even_larger_sizes_4)
 )
 
 # Toggle this depending on which sizes you want.
