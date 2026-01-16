@@ -1456,18 +1456,13 @@ ReleaseGraphs:
 
             if (Graph) {
 
-                //
-                // Use the pre-release count; the graph is freed by Release().
-                //
-
-                ReferenceCount = Graph->ReferenceCount;
-                Graph->Vtbl->Release(Graph);
+                ReferenceCount = Graph->Vtbl->Release(Graph);
 
                 //
-                // Invariant check: reference count should always be 1 here.
+                // Invariant check: reference count should always be 0 here.
                 //
 
-                if (ReferenceCount != 1) {
+                if (ReferenceCount != 0) {
                     Result = PH_E_INVARIANT_CHECK_FAILED;
                     PH_ERROR(GraphReferenceCountNotZero, Result);
                     PH_RAISE(Result);

@@ -404,22 +404,23 @@ ComponentRelease(
     PCOMPONENT Component
     )
 {
-    LONG Count;
+    LONG RefCount;
+    LONG NewComponentCount;
     BOOLEAN AcquiredGlobalLock;
     PCOMPONENT_RUNDOWN Rundown;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
 
-    Count = InterlockedDecrement((PLONG)&Component->ReferenceCount);
+    RefCount = InterlockedDecrement((PLONG)&Component->ReferenceCount);
 
-    ASSERT(Count >= 0);
+    ASSERT(RefCount >= 0);
 
-    if (Count > 0) {
-        return Count;
+    if (RefCount > 0) {
+        return (ULONG)RefCount;
     }
 
-    Count = InterlockedDecrement(&ComponentCount);
+    NewComponentCount = InterlockedDecrement(&ComponentCount);
 
-    ASSERT(Count >= 0);
+    ASSERT(NewComponentCount >= 0);
 
     //
     // Obtain the TLS context to see if the global component lock has already
@@ -492,7 +493,7 @@ ComponentRelease(
         SYS_ERROR(HeapFree);
     }
 
-    return (ULONG)Count;
+    return (ULONG)RefCount;
 }
 
 COMPONENT_CREATE_INSTANCE ComponentCreateInstance;
