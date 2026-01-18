@@ -149,8 +149,8 @@ Abstract:
         VUpper,                                                            \
         CudaSourceFile,                                                    \
         CUDA_SOURCE_FILE,                                                  \
-        EofInitTypeDefault,                                                \
-        NO_EOF_VALUE,                                                      \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        256,                                                               \
         NO_SUFFIX,                                                         \
         &CudaSourceFileExtension,                                          \
         NO_STREAM_NAME,                                                    \

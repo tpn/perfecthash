@@ -34,8 +34,12 @@ SavePythonFileChm01(
     ULONG Seed1;
     ULONG Seed2;
     ULONG Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
     ULONG Seed3Byte1;
     ULONG Seed3Byte2;
+    ULONG Seed3Byte3;
+    ULONG Seed3Byte4;
     PGRAPH Graph;
     PULONG Source;
     PUSHORT Source16;
@@ -50,6 +54,7 @@ SavePythonFileChm01(
     ULONGLONG TotalNumberOfElements;
     const ULONG Indent = 0x20202020;
     BOOLEAN UsingAssigned16;
+    BOOLEAN Supported;
 
     //
     // Initialize aliases.
@@ -68,6 +73,10 @@ SavePythonFileChm01(
     Seeds = &Graph->FirstSeed;
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
     UsingAssigned16 = IsUsingAssigned16(Graph);
+    Supported = (
+        Table->MaskFunctionId == PerfectHashAndMaskFunctionId &&
+        IsGoodPerfectHashHashFunctionId(Table->HashFunctionId)
+    );
 
     Base = (PCHAR)File->BaseAddress;
     Output = Base;
@@ -110,6 +119,12 @@ SavePythonFileChm01(
     } else {
         OUTPUT_RAW("0");
     }
+    OUTPUT_RAW("\nSUPPORTED = ");
+    if (Supported) {
+        OUTPUT_RAW("True");
+    } else {
+        OUTPUT_RAW("False");
+    }
     OUTPUT_RAW("\n\n");
 
     //
@@ -145,8 +160,12 @@ SavePythonFileChm01(
     Seed1 = (NumberOfSeeds >= 1 ? Graph->Seeds[0] : 0);
     Seed2 = (NumberOfSeeds >= 2 ? Graph->Seeds[1] : 0);
     Seed3 = (NumberOfSeeds >= 3 ? Graph->Seeds[2] : 0);
+    Seed4 = (NumberOfSeeds >= 4 ? Graph->Seeds[3] : 0);
+    Seed5 = (NumberOfSeeds >= 5 ? Graph->Seeds[4] : 0);
     Seed3Byte1 = (Seed3 & 0xff);
     Seed3Byte2 = ((Seed3 >> 8) & 0xff);
+    Seed3Byte3 = ((Seed3 >> 16) & 0xff);
+    Seed3Byte4 = ((Seed3 >> 24) & 0xff);
 
     OUTPUT_RAW("SEED1 = ");
     OUTPUT_HEX(Seed1);
@@ -154,10 +173,18 @@ SavePythonFileChm01(
     OUTPUT_HEX(Seed2);
     OUTPUT_RAW("\nSEED3 = ");
     OUTPUT_HEX(Seed3);
+    OUTPUT_RAW("\nSEED4 = ");
+    OUTPUT_HEX(Seed4);
+    OUTPUT_RAW("\nSEED5 = ");
+    OUTPUT_HEX(Seed5);
     OUTPUT_RAW("\nSEED3_BYTE1 = ");
     OUTPUT_HEX(Seed3Byte1);
     OUTPUT_RAW("\nSEED3_BYTE2 = ");
     OUTPUT_HEX(Seed3Byte2);
+    OUTPUT_RAW("\nSEED3_BYTE3 = ");
+    OUTPUT_HEX(Seed3Byte3);
+    OUTPUT_RAW("\nSEED3_BYTE4 = ");
+    OUTPUT_HEX(Seed3Byte4);
     OUTPUT_RAW("\n\n");
 
     //
@@ -293,6 +320,12 @@ SavePythonFileChm01(
     //
 
     OUTPUT_RAW("KEY_MASK = (1 << (KEY_SIZE_BYTES * 8)) - 1\n");
+    OUTPUT_RAW("KEY_TYPE_MASK = ");
+    if (Keys->KeySizeInBytes <= 4) {
+        OUTPUT_RAW("0xFFFFFFFF\n");
+    } else {
+        OUTPUT_RAW("0xFFFFFFFFFFFFFFFF\n");
+    }
     OUTPUT_RAW("ORIGINAL_KEY_MASK = (1 << (ORIGINAL_KEY_SIZE_BYTES * 8)) - 1\n\n");
 
     OUTPUT_RAW("def _extract_bits64(value, bitmap):\n");
@@ -312,19 +345,153 @@ SavePythonFileChm01(
     OUTPUT_RAW("        return _extract_bits64(key, DOWNSIZE_BITMAP) & KEY_MASK\n");
     OUTPUT_RAW("    return key & KEY_MASK\n\n");
 
-    if (Table->HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId &&
-        Table->MaskFunctionId == PerfectHashAndMaskFunctionId) {
+    OUTPUT_RAW("def _rotr32(value, shift):\n");
+    OUTPUT_RAW("    shift &= 31\n");
+    OUTPUT_RAW("    if shift == 0:\n");
+    OUTPUT_RAW("        return value & 0xFFFFFFFF\n");
+    OUTPUT_RAW("    return ((value >> shift) | ");
+    OUTPUT_RAW("((value << (32 - shift)) & 0xFFFFFFFF)) & 0xFFFFFFFF\n\n");
 
-        OUTPUT_RAW("def index(key):\n");
-        OUTPUT_RAW("    key = _downsize_key(key)\n");
-        OUTPUT_RAW("    vertex1 = (key * SEED1) & KEY_MASK\n");
-        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
-        OUTPUT_RAW("    vertex2 = (key * SEED2) & KEY_MASK\n");
-        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2\n");
-        OUTPUT_RAW("    masked_low = vertex1 & HASH_MASK\n");
-        OUTPUT_RAW("    masked_high = vertex2 & HASH_MASK\n");
-        OUTPUT_RAW("    return (TABLE_DATA[masked_low] + ");
-        OUTPUT_RAW("TABLE_DATA[masked_high]) & INDEX_MASK\n");
+    if (Table->MaskFunctionId == PerfectHashAndMaskFunctionId) {
+
+        if (Table->HashFunctionId ==
+            PerfectHashHashMultiplyShiftRFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED2) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2\n");
+            OUTPUT_RAW("    masked_low = vertex1 & HASH_MASK\n");
+            OUTPUT_RAW("    masked_high = vertex2 & HASH_MASK\n");
+            OUTPUT_RAW("    return (TABLE_DATA[masked_low] + ");
+            OUTPUT_RAW("TABLE_DATA[masked_high]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMultiplyShiftLRFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex1 = (vertex1 << SEED3_BYTE1) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED2) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2\n");
+            OUTPUT_RAW("    masked_low = vertex1 & HASH_MASK\n");
+            OUTPUT_RAW("    masked_high = vertex2 & HASH_MASK\n");
+            OUTPUT_RAW("    return (TABLE_DATA[masked_low] + ");
+            OUTPUT_RAW("TABLE_DATA[masked_high]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMultiplyShiftRMultiplyFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex1 = (vertex1 * SEED2) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED4) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2\n");
+            OUTPUT_RAW("    vertex2 = (vertex2 * SEED5) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    masked_low = vertex1 & HASH_MASK\n");
+            OUTPUT_RAW("    masked_high = vertex2 & HASH_MASK\n");
+            OUTPUT_RAW("    return (TABLE_DATA[masked_low] + ");
+            OUTPUT_RAW("TABLE_DATA[masked_high]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMultiplyShiftR2FunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex1 = (vertex1 * SEED2) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE2\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED4) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE3\n");
+            OUTPUT_RAW("    vertex2 = (vertex2 * SEED5) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE4\n");
+            OUTPUT_RAW("    masked_low = vertex1 & HASH_MASK\n");
+            OUTPUT_RAW("    masked_high = vertex2 & HASH_MASK\n");
+            OUTPUT_RAW("    return (TABLE_DATA[masked_low] + ");
+            OUTPUT_RAW("TABLE_DATA[masked_high]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMultiplyShiftRXFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED2) & KEY_TYPE_MASK\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    return (TABLE_DATA[vertex1] + ");
+            OUTPUT_RAW("TABLE_DATA[vertex2]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMulshrolate1RXFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex1 = _rotr32(vertex1, SEED3_BYTE2)\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED2) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    return (TABLE_DATA[vertex1] + ");
+            OUTPUT_RAW("TABLE_DATA[vertex2]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMulshrolate2RXFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex1 = _rotr32(vertex1, SEED3_BYTE2)\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED2) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex2 = _rotr32(vertex2, SEED3_BYTE3)\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    return (TABLE_DATA[vertex1] + ");
+            OUTPUT_RAW("TABLE_DATA[vertex2]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMulshrolate3RXFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex1 = _rotr32(vertex1, SEED3_BYTE2)\n");
+            OUTPUT_RAW("    vertex1 = (vertex1 * SEED4) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED2) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex2 = _rotr32(vertex2, SEED3_BYTE3)\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    return (TABLE_DATA[vertex1] + ");
+            OUTPUT_RAW("TABLE_DATA[vertex2]) & INDEX_MASK\n");
+
+        } else if (Table->HashFunctionId ==
+                   PerfectHashHashMulshrolate4RXFunctionId) {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    key = _downsize_key(key)\n");
+            OUTPUT_RAW("    vertex1 = (key * SEED1) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex1 = _rotr32(vertex1, SEED3_BYTE2)\n");
+            OUTPUT_RAW("    vertex1 = (vertex1 * SEED4) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    vertex2 = (key * SEED2) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex2 = _rotr32(vertex2, SEED3_BYTE3)\n");
+            OUTPUT_RAW("    vertex2 = (vertex2 * SEED5) & 0xFFFFFFFF\n");
+            OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1\n");
+            OUTPUT_RAW("    return (TABLE_DATA[vertex1] + ");
+            OUTPUT_RAW("TABLE_DATA[vertex2]) & INDEX_MASK\n");
+
+        } else {
+
+            OUTPUT_RAW("def index(key):\n");
+            OUTPUT_RAW("    raise NotImplementedError(\n");
+            OUTPUT_RAW("        \"Unsupported hash/mask combination for Python\")\n");
+        }
 
     } else {
 

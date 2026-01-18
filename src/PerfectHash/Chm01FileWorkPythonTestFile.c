@@ -74,8 +74,11 @@ SavePythonTestFileChm01(
     OUTPUT_RAW("        raise AssertionError(\"index count mismatch\")\n\n");
 
     OUTPUT_RAW("if __name__ == \"__main__\":\n");
-    OUTPUT_RAW("    _assert_unique_indexes()\n");
-    OUTPUT_RAW("    print(\"ok\")\n");
+    OUTPUT_RAW("    if hasattr(ph, \"SUPPORTED\") and not ph.SUPPORTED:\n");
+    OUTPUT_RAW("        print(\"unsupported\")\n");
+    OUTPUT_RAW("    else:\n");
+    OUTPUT_RAW("        _assert_unique_indexes()\n");
+    OUTPUT_RAW("        print(\"ok\")\n");
 
     //
     // Update the number of bytes written.

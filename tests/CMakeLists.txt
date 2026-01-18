@@ -73,3 +73,73 @@ add_test(
         -DTEST_BUILD_CONFIG=$<CONFIG>
         -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
 )
+
+add_test(
+    NAME perfecthash.cli.codegen.mulshrolate1rx
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate1rx
+        -DTEST_ARGS=Chm01|Mulshrolate1RX|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+add_test(
+    NAME perfecthash.cli.codegen.mulshrolate2rx
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate2rx
+        -DTEST_ARGS=Chm01|Mulshrolate2RX|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+add_test(
+    NAME perfecthash.cli.codegen.mulshrolate3rx
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate3rx
+        -DTEST_ARGS=Chm01|Mulshrolate3RX|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+add_test(
+    NAME perfecthash.cli.codegen.mulshrolate4rx
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-mulshrolate4rx
+        -DTEST_ARGS=Chm01|Mulshrolate4RX|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+add_test(
+    NAME perfecthash.cli.codegen.multiplyshiftrx
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen-multiplyshiftrx
+        -DTEST_ARGS=Chm01|MultiplyShiftRX|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)

@@ -97,6 +97,7 @@ endif()
 set(table_name "${CMAKE_MATCH_1}")
 set(test_exe_name "Test_${table_name}")
 set(cpp_header_test_name "CppHeaderOnlyTest_${table_name}")
+set(cuda_test_name "CudaTest_${table_name}")
 
 set(candidate_paths
   "${build_dir}/${test_exe_name}"
@@ -170,6 +171,41 @@ if(NOT result EQUAL 0)
   message(STATUS "stdout: ${stdout}")
   message(STATUS "stderr: ${stderr}")
   message(FATAL_ERROR "C++ header-only test failed with exit code ${result}")
+endif()
+
+set(cuda_test_path "")
+set(cuda_candidate_paths
+  "${build_dir}/${cuda_test_name}"
+  "${build_dir}/${cuda_test_name}.exe"
+)
+
+if(DEFINED TEST_BUILD_CONFIG AND NOT TEST_BUILD_CONFIG STREQUAL "")
+  list(APPEND cuda_candidate_paths
+    "${build_dir}/${TEST_BUILD_CONFIG}/${cuda_test_name}"
+    "${build_dir}/${TEST_BUILD_CONFIG}/${cuda_test_name}.exe"
+  )
+endif()
+
+foreach(candidate IN LISTS cuda_candidate_paths)
+  if(EXISTS "${candidate}")
+    set(cuda_test_path "${candidate}")
+    break()
+  endif()
+endforeach()
+
+if(NOT cuda_test_path STREQUAL "")
+  execute_process(
+    COMMAND "${cuda_test_path}"
+    RESULT_VARIABLE result
+    OUTPUT_VARIABLE stdout
+    ERROR_VARIABLE stderr
+  )
+
+  if(NOT result EQUAL 0)
+    message(STATUS "stdout: ${stdout}")
+    message(STATUS "stderr: ${stderr}")
+    message(FATAL_ERROR "CUDA test failed with exit code ${result}")
+  endif()
 endif()
 
 file(GLOB test_python "${gen_dir}/test_*.py")

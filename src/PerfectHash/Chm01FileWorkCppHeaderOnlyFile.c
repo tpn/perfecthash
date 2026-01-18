@@ -34,8 +34,12 @@ SaveCppHeaderOnlyFileChm01(
     ULONG Seed1;
     ULONG Seed2;
     ULONG Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
     ULONG Seed3Byte1;
     ULONG Seed3Byte2;
+    ULONG Seed3Byte3;
+    ULONG Seed3Byte4;
     PGRAPH Graph;
     PULONG Source;
     PUSHORT Source16;
@@ -70,8 +74,8 @@ SaveCppHeaderOnlyFileChm01(
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
     UsingAssigned16 = IsUsingAssigned16(Graph);
     Supported = (
-        Table->HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId &&
-        Table->MaskFunctionId == PerfectHashAndMaskFunctionId
+        Table->MaskFunctionId == PerfectHashAndMaskFunctionId &&
+        IsGoodPerfectHashHashFunctionId(Table->HashFunctionId)
     );
 
     Base = (PCHAR)File->BaseAddress;
@@ -179,18 +183,34 @@ SaveCppHeaderOnlyFileChm01(
     OUTPUT_RAW("inline constexpr std::uint32_t seed3 = ");
     OUTPUT_HEX((NumberOfSeeds >= 3) ? Graph->Seeds[2] : 0);
     OUTPUT_RAW("u;\n\n");
+    OUTPUT_RAW("inline constexpr std::uint32_t seed4 = ");
+    OUTPUT_HEX((NumberOfSeeds >= 4) ? Graph->Seeds[3] : 0);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr std::uint32_t seed5 = ");
+    OUTPUT_HEX((NumberOfSeeds >= 5) ? Graph->Seeds[4] : 0);
+    OUTPUT_RAW("u;\n\n");
 
     Seed1 = (NumberOfSeeds >= 1 ? Graph->Seeds[0] : 0);
     Seed2 = (NumberOfSeeds >= 2 ? Graph->Seeds[1] : 0);
     Seed3 = (NumberOfSeeds >= 3 ? Graph->Seeds[2] : 0);
+    Seed4 = (NumberOfSeeds >= 4 ? Graph->Seeds[3] : 0);
+    Seed5 = (NumberOfSeeds >= 5 ? Graph->Seeds[4] : 0);
     Seed3Byte1 = (Seed3 & 0xff);
     Seed3Byte2 = ((Seed3 >> 8) & 0xff);
+    Seed3Byte3 = ((Seed3 >> 16) & 0xff);
+    Seed3Byte4 = ((Seed3 >> 24) & 0xff);
 
     OUTPUT_RAW("inline constexpr std::uint32_t seed3_byte1 = ");
     OUTPUT_HEX(Seed3Byte1);
     OUTPUT_RAW("u;\n");
     OUTPUT_RAW("inline constexpr std::uint32_t seed3_byte2 = ");
     OUTPUT_HEX(Seed3Byte2);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr std::uint32_t seed3_byte3 = ");
+    OUTPUT_HEX(Seed3Byte3);
+    OUTPUT_RAW("u;\n");
+    OUTPUT_RAW("inline constexpr std::uint32_t seed3_byte4 = ");
+    OUTPUT_HEX(Seed3Byte4);
     OUTPUT_RAW("u;\n\n");
 
     //
@@ -346,33 +366,198 @@ SaveCppHeaderOnlyFileChm01(
     OUTPUT_RAW("    return result;\n");
     OUTPUT_RAW("}\n\n");
 
-    OUTPUT_RAW("constexpr std::uint64_t downsize_key("
+    OUTPUT_RAW("constexpr key_type downsize_key("
                "std::uint64_t key) noexcept {\n");
     OUTPUT_RAW("    key &= original_key_mask;\n");
     OUTPUT_RAW("    if (downsize_bitmap) {\n");
-    OUTPUT_RAW("        return extract_bits64(key, downsize_bitmap) & key_mask;\n");
+    OUTPUT_RAW("        return static_cast<key_type>(\n");
+    OUTPUT_RAW("            extract_bits64(key, downsize_bitmap) & key_mask);\n");
     OUTPUT_RAW("    }\n");
-    OUTPUT_RAW("    return key & key_mask;\n");
+    OUTPUT_RAW("    return static_cast<key_type>(key & key_mask);\n");
+    OUTPUT_RAW("}\n\n");
+
+    OUTPUT_RAW("constexpr std::uint32_t rotr32(std::uint32_t value, "
+               "std::uint32_t shift) noexcept {\n");
+    OUTPUT_RAW("    shift &= 31u;\n");
+    OUTPUT_RAW("    if (shift == 0u) {\n");
+    OUTPUT_RAW("        return value;\n");
+    OUTPUT_RAW("    }\n");
+    OUTPUT_RAW("    return (value >> shift) | (value << (32u - shift));\n");
     OUTPUT_RAW("}\n\n");
 
     OUTPUT_RAW("inline std::uint32_t index(original_key_type key) {\n");
     OUTPUT_RAW("    if constexpr (kSupported) {\n");
-    OUTPUT_RAW("        const std::uint64_t downsized = downsize_key("
+    OUTPUT_RAW("        const key_type downsized = downsize_key("
                "static_cast<std::uint64_t>(key));\n");
-    OUTPUT_RAW("        std::uint64_t vertex1 = (downsized * seed1) & key_mask;\n");
-    OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
-    OUTPUT_RAW("        std::uint64_t vertex2 = (downsized * seed2) & key_mask;\n");
-    OUTPUT_RAW("        vertex2 >>= seed3_byte2;\n");
-    OUTPUT_RAW("        const std::uint32_t masked_low = "
-               "static_cast<std::uint32_t>(vertex1 & hash_mask);\n");
-    OUTPUT_RAW("        const std::uint32_t masked_high = "
-               "static_cast<std::uint32_t>(vertex2 & hash_mask);\n");
-    OUTPUT_RAW("        const std::uint32_t value_low = "
-               "static_cast<std::uint32_t>(table_data[masked_low]);\n");
-    OUTPUT_RAW("        const std::uint32_t value_high = "
-               "static_cast<std::uint32_t>(table_data[masked_high]);\n");
-    OUTPUT_RAW("        return static_cast<std::uint32_t>("
-               "(value_low + value_high) & index_mask);\n");
+    if (Table->HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
+        OUTPUT_RAW("        key_type vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        key_type vertex2 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte2;\n");
+        OUTPUT_RAW("        const std::uint32_t masked_low = "
+                   "static_cast<std::uint32_t>(vertex1 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t masked_high = "
+                   "static_cast<std::uint32_t>(vertex2 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[masked_low]);\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[masked_high]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftLRFunctionId) {
+        OUTPUT_RAW("        key_type vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("        vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            vertex1 << seed3_byte1);\n");
+        OUTPUT_RAW("        key_type vertex2 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte2;\n");
+        OUTPUT_RAW("        const std::uint32_t masked_low = "
+                   "static_cast<std::uint32_t>(vertex1 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t masked_high = "
+                   "static_cast<std::uint32_t>(vertex2 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[masked_low]);\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[masked_high]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftRMultiplyFunctionId) {
+        OUTPUT_RAW("        key_type vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            vertex1 * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("        key_type vertex2 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed4));\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte2;\n");
+        OUTPUT_RAW("        vertex2 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            vertex2 * static_cast<key_type>(seed5));\n");
+        OUTPUT_RAW("        const std::uint32_t masked_low = "
+                   "static_cast<std::uint32_t>(vertex1 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t masked_high = "
+                   "static_cast<std::uint32_t>(vertex2 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[masked_low]);\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[masked_high]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftR2FunctionId) {
+        OUTPUT_RAW("        key_type vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            vertex1 * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte2;\n");
+        OUTPUT_RAW("        key_type vertex2 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed4));\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte3;\n");
+        OUTPUT_RAW("        vertex2 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            vertex2 * static_cast<key_type>(seed5));\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte4;\n");
+        OUTPUT_RAW("        const std::uint32_t masked_low = "
+                   "static_cast<std::uint32_t>(vertex1 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t masked_high = "
+                   "static_cast<std::uint32_t>(vertex2 & hash_mask);\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[masked_low]);\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[masked_high]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftRXFunctionId) {
+        OUTPUT_RAW("        key_type vertex1 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed1));\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data["
+                   "static_cast<std::size_t>(vertex1)]);\n");
+        OUTPUT_RAW("        key_type vertex2 = static_cast<key_type>(\n");
+        OUTPUT_RAW("            downsized * static_cast<key_type>(seed2));\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data["
+                   "static_cast<std::size_t>(vertex2)]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate1RXFunctionId) {
+        OUTPUT_RAW("        const std::uint32_t downsized32 = "
+                   "static_cast<std::uint32_t>(downsized);\n");
+        OUTPUT_RAW("        std::uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("        vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[vertex1]);\n");
+        OUTPUT_RAW("        std::uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[vertex2]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate2RXFunctionId) {
+        OUTPUT_RAW("        const std::uint32_t downsized32 = "
+                   "static_cast<std::uint32_t>(downsized);\n");
+        OUTPUT_RAW("        std::uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("        vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[vertex1]);\n");
+        OUTPUT_RAW("        std::uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("        vertex2 = rotr32(vertex2, seed3_byte3);\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[vertex2]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate3RXFunctionId) {
+        OUTPUT_RAW("        const std::uint32_t downsized32 = "
+                   "static_cast<std::uint32_t>(downsized);\n");
+        OUTPUT_RAW("        std::uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("        vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("        vertex1 = vertex1 * seed4;\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[vertex1]);\n");
+        OUTPUT_RAW("        std::uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("        vertex2 = rotr32(vertex2, seed3_byte3);\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[vertex2]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate4RXFunctionId) {
+        OUTPUT_RAW("        const std::uint32_t downsized32 = "
+                   "static_cast<std::uint32_t>(downsized);\n");
+        OUTPUT_RAW("        std::uint32_t vertex1 = downsized32 * seed1;\n");
+        OUTPUT_RAW("        vertex1 = rotr32(vertex1, seed3_byte2);\n");
+        OUTPUT_RAW("        vertex1 = vertex1 * seed4;\n");
+        OUTPUT_RAW("        vertex1 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_low = "
+                   "static_cast<std::uint32_t>(table_data[vertex1]);\n");
+        OUTPUT_RAW("        std::uint32_t vertex2 = downsized32 * seed2;\n");
+        OUTPUT_RAW("        vertex2 = rotr32(vertex2, seed3_byte3);\n");
+        OUTPUT_RAW("        vertex2 = vertex2 * seed5;\n");
+        OUTPUT_RAW("        vertex2 >>= seed3_byte1;\n");
+        OUTPUT_RAW("        const std::uint32_t value_high = "
+                   "static_cast<std::uint32_t>(table_data[vertex2]);\n");
+        OUTPUT_RAW("        return static_cast<std::uint32_t>("
+                   "(value_low + value_high) & index_mask);\n");
+    } else {
+        OUTPUT_RAW("        (void)downsized;\n");
+        OUTPUT_RAW("        throw std::logic_error("
+                   "\"Unsupported hash/mask combination\");\n");
+    }
     OUTPUT_RAW("    }\n");
     OUTPUT_RAW("    (void)key;\n");
     OUTPUT_RAW("    throw std::logic_error("

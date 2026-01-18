@@ -2349,6 +2349,17 @@ IsValidSeedMasks(
 #define PERFECT_HASH_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
     PERFECT_HASH_HASH_FUNCTION_TABLE(ENTRY, ENTRY, ENTRY)
 
+#define PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
+    ENTRY(MultiplyShiftR)                                  \
+    ENTRY(MultiplyShiftLR)                                 \
+    ENTRY(MultiplyShiftRMultiply)                          \
+    ENTRY(MultiplyShiftR2)                                 \
+    ENTRY(MultiplyShiftRX)                                 \
+    ENTRY(Mulshrolate1RX)                                  \
+    ENTRY(Mulshrolate2RX)                                  \
+    ENTRY(Mulshrolate3RX)                                  \
+    ENTRY(Mulshrolate4RX)
+
 #define EXPAND_AS_HASH_FUNCTION_ENUM(Name, NumberOfSeeds, SeedMasks) \
     PerfectHashHash##Name##FunctionId,
 
@@ -2428,6 +2439,27 @@ IsAndHashMaskRequired(
         HashFunctionId == PerfectHashHashMulshrolate4RXFunctionId
     );
 }
+
+#define EXPAND_AS_GOOD_HASH_FUNCTION_CASE(Name) \
+    case PerfectHashHash##Name##FunctionId:     \
+        return TRUE;
+
+FORCEINLINE
+BOOLEAN
+IsGoodPerfectHashHashFunctionId(
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId
+    )
+{
+    switch (HashFunctionId) {
+        PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(
+            EXPAND_AS_GOOD_HASH_FUNCTION_CASE
+        );
+        default:
+            return FALSE;
+    }
+}
+
+#undef EXPAND_AS_GOOD_HASH_FUNCTION_CASE
 
 //
 // Define an enum for capturing the subset of hash functions that are unusable.

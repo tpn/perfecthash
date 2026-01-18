@@ -216,6 +216,32 @@ PrepareCMakeListsTextFileChm01(
     OUTPUT_RAW(" PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED YES)\n\n");
 
     //
+    // CUDA kernel test executable.
+    //
+
+    OUTPUT_RAW("include(CheckLanguage)\n");
+    OUTPUT_RAW("check_language(CUDA)\n");
+    OUTPUT_RAW("if(CMAKE_CUDA_COMPILER)\n");
+    OUTPUT_RAW("    enable_language(CUDA)\n");
+    OUTPUT_RAW("    set(CMAKE_CUDA_STANDARD 17)\n");
+    OUTPUT_RAW("    set(CMAKE_CUDA_STANDARD_REQUIRED ON)\n");
+    OUTPUT_RAW("    find_package(CUDAToolkit)\n");
+    OUTPUT_RAW("    if(CUDAToolkit_FOUND)\n");
+    OUTPUT_RAW("        add_executable(CudaTest_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n");
+    OUTPUT_FILE4(".cu");
+    OUTPUT_RAW("        )\n\n");
+    OUTPUT_RAW("        target_link_libraries(CudaTest_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW(" PRIVATE CUDA::cudart)\n");
+    OUTPUT_RAW("        set_target_properties(CudaTest_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW(" PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED YES)\n");
+    OUTPUT_RAW("    endif()\n");
+    OUTPUT_RAW("endif()\n\n");
+
+    //
     // Rust cargo targets.
     //
 

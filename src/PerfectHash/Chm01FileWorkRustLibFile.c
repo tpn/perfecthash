@@ -34,8 +34,12 @@ SaveRustLibFileChm01(
     ULONG Seed1;
     ULONG Seed2;
     ULONG Seed3;
+    ULONG Seed4;
+    ULONG Seed5;
     ULONG Seed3Byte1;
     ULONG Seed3Byte2;
+    ULONG Seed3Byte3;
+    ULONG Seed3Byte4;
     PGRAPH Graph;
     PULONG Source;
     PUSHORT Source16;
@@ -70,8 +74,8 @@ SaveRustLibFileChm01(
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
     UsingAssigned16 = IsUsingAssigned16(Graph);
     Supported = (
-        Table->HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId &&
-        Table->MaskFunctionId == PerfectHashAndMaskFunctionId
+        Table->MaskFunctionId == PerfectHashAndMaskFunctionId &&
+        IsGoodPerfectHashHashFunctionId(Table->HashFunctionId)
     );
 
     Base = (PCHAR)File->BaseAddress;
@@ -198,8 +202,12 @@ SaveRustLibFileChm01(
     Seed1 = (NumberOfSeeds >= 1 ? Graph->Seeds[0] : 0);
     Seed2 = (NumberOfSeeds >= 2 ? Graph->Seeds[1] : 0);
     Seed3 = (NumberOfSeeds >= 3 ? Graph->Seeds[2] : 0);
+    Seed4 = (NumberOfSeeds >= 4 ? Graph->Seeds[3] : 0);
+    Seed5 = (NumberOfSeeds >= 5 ? Graph->Seeds[4] : 0);
     Seed3Byte1 = (Seed3 & 0xff);
     Seed3Byte2 = ((Seed3 >> 8) & 0xff);
+    Seed3Byte3 = ((Seed3 >> 16) & 0xff);
+    Seed3Byte4 = ((Seed3 >> 24) & 0xff);
 
     OUTPUT_RAW("pub const SEED1: u32 = ");
     OUTPUT_HEX(Seed1);
@@ -210,11 +218,23 @@ SaveRustLibFileChm01(
     OUTPUT_RAW("pub const SEED3: u32 = ");
     OUTPUT_HEX(Seed3);
     OUTPUT_RAW(";\n");
+    OUTPUT_RAW("pub const SEED4: u32 = ");
+    OUTPUT_HEX(Seed4);
+    OUTPUT_RAW(";\n");
+    OUTPUT_RAW("pub const SEED5: u32 = ");
+    OUTPUT_HEX(Seed5);
+    OUTPUT_RAW(";\n");
     OUTPUT_RAW("pub const SEED3_BYTE1: u32 = ");
     OUTPUT_HEX(Seed3Byte1);
     OUTPUT_RAW(";\n");
     OUTPUT_RAW("pub const SEED3_BYTE2: u32 = ");
     OUTPUT_HEX(Seed3Byte2);
+    OUTPUT_RAW(";\n");
+    OUTPUT_RAW("pub const SEED3_BYTE3: u32 = ");
+    OUTPUT_HEX(Seed3Byte3);
+    OUTPUT_RAW(";\n");
+    OUTPUT_RAW("pub const SEED3_BYTE4: u32 = ");
+    OUTPUT_HEX(Seed3Byte4);
     OUTPUT_RAW(";\n\n");
 
     //
@@ -363,12 +383,17 @@ SaveRustLibFileChm01(
     OUTPUT_RAW("    result\n");
     OUTPUT_RAW("}\n\n");
 
-    OUTPUT_RAW("fn downsize_key(key: u64) -> u64 {\n");
+    OUTPUT_RAW("fn downsize_key(key: u64) -> KeyType {\n");
     OUTPUT_RAW("    let key = key & ORIGINAL_KEY_MASK;\n");
     OUTPUT_RAW("    if DOWNSIZE_BITMAP != 0 {\n");
-    OUTPUT_RAW("        return extract_bits64(key, DOWNSIZE_BITMAP) & KEY_MASK;\n");
+    OUTPUT_RAW("        return (extract_bits64(key, DOWNSIZE_BITMAP) & KEY_MASK) "
+               "as KeyType;\n");
     OUTPUT_RAW("    }\n");
-    OUTPUT_RAW("    key & KEY_MASK\n");
+    OUTPUT_RAW("    (key & KEY_MASK) as KeyType\n");
+    OUTPUT_RAW("}\n\n");
+
+    OUTPUT_RAW("fn rotr32(value: u32, shift: u32) -> u32 {\n");
+    OUTPUT_RAW("    value.rotate_right(shift & 31)\n");
     OUTPUT_RAW("}\n\n");
 
     OUTPUT_RAW("pub fn index(key: OriginalKeyType) -> u32 {\n");
@@ -376,19 +401,138 @@ SaveRustLibFileChm01(
     OUTPUT_RAW("        panic!(\"Unsupported hash/mask combination\");\n");
     OUTPUT_RAW("    }\n");
     OUTPUT_RAW("    let downsized = downsize_key(key as u64);\n");
-    OUTPUT_RAW("    let mut vertex1 = "
-               "downsized.wrapping_mul(SEED1 as u64) & KEY_MASK;\n");
-    OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
-    OUTPUT_RAW("    let mut vertex2 = "
-               "downsized.wrapping_mul(SEED2 as u64) & KEY_MASK;\n");
-    OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2;\n");
-    OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
-    OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
-    OUTPUT_RAW("    let value_low = "
-               "TABLE_DATA[masked_low as usize] as u32;\n");
-    OUTPUT_RAW("    let value_high = "
-               "TABLE_DATA[masked_high as usize] as u32;\n");
-    OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    if (Table->HashFunctionId == PerfectHashHashMultiplyShiftRFunctionId) {
+        OUTPUT_RAW("    let mut vertex1: KeyType = "
+                   "downsized.wrapping_mul(SEED1 as KeyType);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let mut vertex2: KeyType = "
+                   "downsized.wrapping_mul(SEED2 as KeyType);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2;\n");
+        OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let value_low = "
+                   "TABLE_DATA[masked_low as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = "
+                   "TABLE_DATA[masked_high as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftLRFunctionId) {
+        OUTPUT_RAW("    let mut vertex1: KeyType = "
+                   "downsized.wrapping_mul(SEED1 as KeyType);\n");
+        OUTPUT_RAW("    vertex1 <<= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let mut vertex2: KeyType = "
+                   "downsized.wrapping_mul(SEED2 as KeyType);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2;\n");
+        OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let value_low = "
+                   "TABLE_DATA[masked_low as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = "
+                   "TABLE_DATA[masked_high as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftRMultiplyFunctionId) {
+        OUTPUT_RAW("    let mut vertex1: KeyType = "
+                   "downsized.wrapping_mul(SEED1 as KeyType);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    vertex1 = vertex1.wrapping_mul(SEED2 as KeyType);\n");
+        OUTPUT_RAW("    let mut vertex2: KeyType = "
+                   "downsized.wrapping_mul(SEED4 as KeyType);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE2;\n");
+        OUTPUT_RAW("    vertex2 = vertex2.wrapping_mul(SEED5 as KeyType);\n");
+        OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let value_low = "
+                   "TABLE_DATA[masked_low as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = "
+                   "TABLE_DATA[masked_high as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftR2FunctionId) {
+        OUTPUT_RAW("    let mut vertex1: KeyType = "
+                   "downsized.wrapping_mul(SEED1 as KeyType);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    vertex1 = vertex1.wrapping_mul(SEED2 as KeyType);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE2;\n");
+        OUTPUT_RAW("    let mut vertex2: KeyType = "
+                   "downsized.wrapping_mul(SEED4 as KeyType);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE3;\n");
+        OUTPUT_RAW("    vertex2 = vertex2.wrapping_mul(SEED5 as KeyType);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE4;\n");
+        OUTPUT_RAW("    let masked_low = (vertex1 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let masked_high = (vertex2 as u32) & HASH_MASK;\n");
+        OUTPUT_RAW("    let value_low = "
+                   "TABLE_DATA[masked_low as usize] as u32;\n");
+        OUTPUT_RAW("    let value_high = "
+                   "TABLE_DATA[masked_high as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMultiplyShiftRXFunctionId) {
+        OUTPUT_RAW("    let mut vertex1: KeyType = "
+                   "downsized.wrapping_mul(SEED1 as KeyType);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_low = "
+                   "TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let mut vertex2: KeyType = "
+                   "downsized.wrapping_mul(SEED2 as KeyType);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_high = "
+                   "TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate1RXFunctionId) {
+        OUTPUT_RAW("    let downsized32 = downsized as u32;\n");
+        OUTPUT_RAW("    let mut vertex1 = downsized32.wrapping_mul(SEED1);\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate2RXFunctionId) {
+        OUTPUT_RAW("    let downsized32 = downsized as u32;\n");
+        OUTPUT_RAW("    let mut vertex1 = downsized32.wrapping_mul(SEED1);\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
+        OUTPUT_RAW("    vertex2 = rotr32(vertex2, SEED3_BYTE3);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate3RXFunctionId) {
+        OUTPUT_RAW("    let downsized32 = downsized as u32;\n");
+        OUTPUT_RAW("    let mut vertex1 = downsized32.wrapping_mul(SEED1);\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
+        OUTPUT_RAW("    vertex1 = vertex1.wrapping_mul(SEED4);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
+        OUTPUT_RAW("    vertex2 = rotr32(vertex2, SEED3_BYTE3);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else if (Table->HashFunctionId ==
+               PerfectHashHashMulshrolate4RXFunctionId) {
+        OUTPUT_RAW("    let downsized32 = downsized as u32;\n");
+        OUTPUT_RAW("    let mut vertex1 = downsized32.wrapping_mul(SEED1);\n");
+        OUTPUT_RAW("    vertex1 = rotr32(vertex1, SEED3_BYTE2);\n");
+        OUTPUT_RAW("    vertex1 = vertex1.wrapping_mul(SEED4);\n");
+        OUTPUT_RAW("    vertex1 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_low = TABLE_DATA[vertex1 as usize] as u32;\n");
+        OUTPUT_RAW("    let mut vertex2 = downsized32.wrapping_mul(SEED2);\n");
+        OUTPUT_RAW("    vertex2 = rotr32(vertex2, SEED3_BYTE3);\n");
+        OUTPUT_RAW("    vertex2 = vertex2.wrapping_mul(SEED5);\n");
+        OUTPUT_RAW("    vertex2 >>= SEED3_BYTE1;\n");
+        OUTPUT_RAW("    let value_high = TABLE_DATA[vertex2 as usize] as u32;\n");
+        OUTPUT_RAW("    value_low.wrapping_add(value_high) & INDEX_MASK\n");
+    } else {
+        OUTPUT_RAW("    let _ = downsized;\n");
+        OUTPUT_RAW("    panic!(\"Unsupported hash/mask combination\");\n");
+    }
     OUTPUT_RAW("}\n\n");
 
     OUTPUT_RAW("#[cfg(test)]\n");
