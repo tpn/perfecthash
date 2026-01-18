@@ -55,6 +55,16 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
+    foreach(var CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+        if(DEFINED ${var})
+            foreach(opt "/RTC1" "/RTCc" "/RTCs" "/RTCu" "/RTC")
+                string(REPLACE "${opt}" "" ${var} "${${var}}")
+            endforeach()
+            string(REGEX REPLACE "[ ]+" " " ${var} "${${var}}")
+            set(${var} "${${var}}" CACHE STRING "" FORCE)
+        endif()
+    endforeach()
 endif()
 
 set(PERFECTHASH_IS_WINDOWS FALSE)

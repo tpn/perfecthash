@@ -426,13 +426,11 @@ PerfectHashGetCurrentCpuArch(
     return PerfectHashArmCpuArchId;
 #elif defined(__CUDA_ARCH__)
     return PerfectHashCudaArchId;
-#else
-#ifdef PH_CUDA
+#elif defined(PH_CUDA)
     return PerfectHashCudaCpuArchId;
-#endif
-#endif
-
+#else
     return PerfectHashInvalidCpuArchId;
+#endif
 }
 
 //
@@ -695,9 +693,11 @@ PerfectHashInterfaceGuidToId(
     BYTE Count;
     PERFECT_HASH_INTERFACE_ID Id = PerfectHashNullInterfaceId;
 
+#ifndef __cplusplus
     if (!Guid) {
         return PerfectHashInvalidInterfaceId;
     }
+#endif
 
     //
     // We start the index at 1 in order to skip the first NULL entry.
@@ -706,10 +706,18 @@ PerfectHashInterfaceGuidToId(
     Count = NumberOfPerfectHashInterfaceGuids;
 
     for (Index = 1; Index < Count; Index++) {
+#ifdef __cplusplus
+        const GUID *Entry = PerfectHashInterfaceGuids[Index];
+        if (Entry && InlineIsEqualGUID(Guid, *Entry)) {
+            Id = (PERFECT_HASH_INTERFACE_ID)Index;
+            break;
+        }
+#else
         if (InlineIsEqualGUID(Guid, PerfectHashInterfaceGuids[Index])) {
             Id = (PERFECT_HASH_INTERFACE_ID)Index;
             break;
         }
+#endif
     }
 
     return Id;
@@ -5020,9 +5028,15 @@ Return Value:
     }
     PhDllGetClassObject = (PDLL_GET_CLASS_OBJECT)Proc;
 
+#ifdef __cplusplus
+    Result = PhDllGetClassObject(CLSID_PERFECT_HASH,
+                                 IID_PERFECT_HASH_ICLASSFACTORY,
+                                 (PVOID *)&ClassFactory);
+#else
     Result = PhDllGetClassObject(&CLSID_PERFECT_HASH,
                                  &IID_PERFECT_HASH_ICLASSFACTORY,
-                                 &ClassFactory);
+                                 (PVOID *)&ClassFactory);
+#endif
 
     if (FAILED(Result)) {
         FreeLibrary(Module);

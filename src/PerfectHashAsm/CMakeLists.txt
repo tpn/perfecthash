@@ -48,6 +48,9 @@ add_library(${target} STATIC ${ALL_FILES})
 if (ASM_LANGUAGE STREQUAL "ASM_MASM")
     set(CMAKE_ASM_MASM_CREATE_STATIC_LIBRARY
         "<CMAKE_AR> /NOLOGO /OUT:<TARGET> <LINK_FLAGS> <OBJECTS>")
+elseif (WIN32 AND ASM_LANGUAGE STREQUAL "ASM_NASM")
+    set(CMAKE_ASM_NASM_CREATE_STATIC_LIBRARY
+        "<CMAKE_AR> /NOLOGO /OUT:<TARGET> <LINK_FLAGS> <OBJECTS>")
 endif()
 
 ################################################################################

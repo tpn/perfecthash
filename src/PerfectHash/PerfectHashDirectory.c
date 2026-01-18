@@ -534,6 +534,10 @@ Return Value:
     BOOLEAN Opened = FALSE;
     PERFECT_HASH_DIRECTORY_CREATE_FLAGS DirectoryCreateFlags = { 0 };
 
+#ifdef PH_WINDOWS
+    UNREFERENCED_PARAMETER(AnsiPath);
+#endif
+
     //
     // Validate arguments.
     //
