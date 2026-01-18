@@ -657,7 +657,7 @@ MaybeWaitForDebuggerAttach (
     _Inout_ PDEBUGGER_CONTEXT Context
     )
 {
-    DoDebuggerAction(Context, DebuggerMaybeWaitForAttachDisposition);
+    return DoDebuggerAction(Context, DebuggerMaybeWaitForAttachDisposition);
 }
 
 //
@@ -669,7 +669,7 @@ MaybeSwitchToCudaGdb (
     _Inout_ PDEBUGGER_CONTEXT Context
     )
 {
-    DoDebuggerAction(Context, DebuggerMaybeSwitchToCudaGdbDisposition);
+    return DoDebuggerAction(Context, DebuggerMaybeSwitchToCudaGdbDisposition);
 }
 
 HRESULT
@@ -677,7 +677,7 @@ MaybeSwitchBackToGdb (
     _Inout_ PDEBUGGER_CONTEXT Context
     )
 {
-    DoDebuggerAction(Context, DebuggerMaybeSwitchBackToGdbDisposition);
+    return DoDebuggerAction(Context, DebuggerMaybeSwitchBackToGdbDisposition);
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

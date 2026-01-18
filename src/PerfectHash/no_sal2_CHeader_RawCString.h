@@ -766,7 +766,7 @@ const CHAR no_sal2CHeaderRawCStr[] =
     "#ifdef _Analysis_assume_\n"
     "#undef _Analysis_assume_\n"
     "#endif\n"
-    "#define _Analysis_assume_\n"
+    "#define _Analysis_assume_(e) ((void)0)\n"
     "#ifdef _Analysis_assume_nullterminated_\n"
     "#undef _Analysis_assume_nullterminated_\n"
     "#endif\n"

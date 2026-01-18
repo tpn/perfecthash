@@ -10,6 +10,8 @@ project(
     LANGUAGES C CXX
 )
 
+include(CTest)
+
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(
         CMAKE_INSTALL_PREFIX
@@ -23,6 +25,10 @@ include(PerfectHashProject)
 include(PerfectHashTargets)
 
 add_subdirectory(src)
+
+if(PERFECTHASH_ENABLE_TESTS AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 if(PERFECTHASH_ENABLE_INSTALL)
     install(DIRECTORY "${PERFECTHASH_ROOT_DIR}/include/" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

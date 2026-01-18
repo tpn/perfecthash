@@ -1,0 +1,4 @@
+# Generated requirements live alongside this file.
+# Update `dependencies.yaml` and run `rapids-dependency-file-generator`.
+
+-r requirements_runtime.txt

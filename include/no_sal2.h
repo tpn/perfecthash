@@ -760,7 +760,7 @@
 #ifdef _Analysis_assume_
 #undef _Analysis_assume_
 #endif
-#define _Analysis_assume_
+#define _Analysis_assume_(e) ((void)0)
 #ifdef _Analysis_assume_nullterminated_
 #undef _Analysis_assume_nullterminated_
 #endif

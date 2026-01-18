@@ -243,7 +243,9 @@ SystemTimeToFileTime(
 #endif
 
 #ifndef PH_CUDA
-#if defined(__GNUC__)
+#ifdef __cplusplus
+#define C_ASSERT(e) static_assert(e, "Assertion failed")
+#elif defined(__GNUC__)
 #if (__GNUC__ < 11)
 #define C_ASSERT(e) static_assert(e, "Assertion failed")
 #else

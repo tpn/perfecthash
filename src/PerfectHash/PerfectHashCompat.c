@@ -582,6 +582,7 @@ QueryPerformanceFrequency(
     )
 {
     lpFrequency->QuadPart = 1000;
+    return TRUE;
 }
 
 //
@@ -869,6 +870,8 @@ CreateFileMappingW(
     ASSERT(Name == NULL);
     ASSERT(MaximumSizeHigh == 0);
     ASSERT(MaximumSizeLow == 0);
+    SetLastError(ENOSYS);
+    return NULL;
 }
 
 
@@ -1026,6 +1029,7 @@ GetFileInformationByHandleEx(
         return TRUE;
     } else {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
+        return FALSE;
     }
 }
 

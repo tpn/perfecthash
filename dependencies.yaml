@@ -1,0 +1,206 @@
+files:
+  dev-linux:
+    output: conda
+    conda_dir: conda/environments
+    matrix:
+      os: [linux]
+      arch: [x86_64]
+      py: ["3.13", "3.14"]
+      cuda: ["none", "12.4"]
+      compiler: ["llvm"]
+    includes:
+      - build-tools
+      - compiler
+      - cuda
+      - build
+      - python-runtime
+      - python-analysis
+      - python-dev
+  dev-windows:
+    output: conda
+    conda_dir: conda/environments
+    matrix:
+      os: [windows]
+      arch: [x86_64]
+      py: ["3.13", "3.14"]
+      compiler: ["msvc"]
+    includes:
+      - build-tools
+      - compiler
+      - build
+      - python-runtime
+      - python-analysis
+      - python-dev
+  runtime:
+    output: requirements
+    requirements_dir: python
+    includes:
+      - python-runtime
+  analysis:
+    output: requirements
+    requirements_dir: python
+    includes:
+      - python-analysis
+  dev:
+    output: requirements
+    requirements_dir: python
+    includes:
+      - build
+      - python-runtime
+      - python-analysis
+      - python-dev
+  pyproject:
+    output: pyproject
+    pyproject_dir: python
+    includes:
+      - python-runtime
+    extras:
+      table: project
+  pyproject-analysis:
+    output: pyproject
+    pyproject_dir: python
+    includes:
+      - python-analysis
+    extras:
+      table: project.optional-dependencies
+      key: analysis
+  pyproject-dev:
+    output: pyproject
+    pyproject_dir: python
+    includes:
+      - build
+      - python-dev
+    extras:
+      table: project.optional-dependencies
+      key: dev
+  pyproject-build:
+    output: pyproject
+    pyproject_dir: python
+    includes:
+      - build
+    extras:
+      table: build-system
+
+channels:
+  - conda-forge
+
+dependencies:
+  build:
+    common:
+      - output_types: [conda, requirements, pyproject]
+        packages:
+          - setuptools>=61
+          - wheel
+          - cython>=3.0
+          - numpy
+  build-tools:
+    common:
+      - output_types: conda
+        packages:
+          - cmake>=3.20
+          - ninja
+          - pip
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              os: linux
+            packages:
+              - make
+              - pkg-config
+          - matrix: {}
+            packages:
+  compiler:
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              os: linux
+              compiler: llvm
+            packages:
+              - clang
+              - clangxx
+              - lld
+              - llvmdev
+          - matrix:
+              os: linux
+              compiler: gcc
+            packages:
+              - gcc_linux-64
+              - gxx_linux-64
+          - matrix:
+              os: windows
+              compiler: msvc
+            packages:
+          - matrix: {}
+            packages:
+  cuda:
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              cuda: "11.8"
+            packages:
+              - cudatoolkit
+          - matrix:
+              cuda: "12.4"
+            packages:
+              - cudatoolkit
+          - matrix: {}
+            packages:
+  python-runtime:
+    common:
+      - output_types: conda
+        packages:
+          - numpy
+          - pandas
+          - tqdm
+          - psutil
+      - output_types: [requirements, pyproject]
+        packages:
+          - numpy
+          - pandas
+          - tqdm
+          - psutil
+          - "pywin32; platform_system == 'Windows'"
+    specific:
+      - output_types: conda
+        matrices:
+          - matrix:
+              py: "3.13"
+            packages:
+              - python=3.13
+          - matrix:
+              py: "3.14"
+            packages:
+              - python=3.14
+          - matrix: {}
+            packages:
+      - output_types: conda
+        matrices:
+          - matrix:
+              os: windows
+            packages:
+              - pywin32
+          - matrix: {}
+            packages:
+  python-analysis:
+    common:
+      - output_types: [conda, requirements, pyproject]
+        packages:
+          - bokeh
+          - matplotlib
+          - seaborn
+          - scipy
+          - pyarrow
+          - joypy
+  python-dev:
+    common:
+      - output_types: [conda, requirements, pyproject]
+        packages:
+          - ipython
+          - ipdb
+          - pytest
+          - ruff
+          - black
+          - mypy

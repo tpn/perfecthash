@@ -1286,52 +1286,55 @@ InvalidArg:
         break;
     }
 
-    //
-    // Initialize the debugger flags from the table create flags, initialize
-    // the debugger context, then, maybe way for a debugger attach.  This is
-    // a no-op on Windows, or if no debugger has been requested.
-    //
-
-    Flags.AsULong = 0;
-    Flags.WaitForGdb = (TableCreateFlags->WaitForGdb != FALSE);
-    Flags.WaitForCudaGdb = (TableCreateFlags->WaitForCudaGdb != FALSE);
-    Flags.UseGdbForHostDebugging = (
-        TableCreateFlags->UseGdbForHostDebugging != FALSE
-    );
-
-    //
-    // Initialize the debugger context.  It's a singleton stashed in the
-    // RTL structure.  We capture the result in DebuggerResult, not Result,
-    // as we don't want to overwrite the error code before a debugger has
-    // had a chance to attach.
-    //
-
-    DebuggerContext = &Rtl->DebuggerContext;
-    DebuggerResult = InitializeDebuggerContext(DebuggerContext, &Flags);
-
-    if (FAILED(DebuggerResult)) {
-
-        PH_ERROR(InitializeDebuggerContext, DebuggerResult);
+    if (SUCCEEDED(Result)) {
 
         //
-        // *Now* we can propagate the debugger result back as the primary
-        // result, which ensures the cleanup code below runs.
+        // Initialize the debugger flags from the table create flags, initialize
+        // the debugger context, then, maybe wait for a debugger attach.  This
+        // is a no-op on Windows, or if no debugger has been requested.
         //
 
-        Result = DebuggerResult;
-
-    } else {
+        Flags.AsULong = 0;
+        Flags.WaitForGdb = (TableCreateFlags->WaitForGdb != FALSE);
+        Flags.WaitForCudaGdb = (TableCreateFlags->WaitForCudaGdb != FALSE);
+        Flags.UseGdbForHostDebugging = (
+            TableCreateFlags->UseGdbForHostDebugging != FALSE
+        );
 
         //
-        // Debugger context was successfully initialized, so, maybe wait for
-        // a debugger to attach (depending on what flags were supplied).
+        // Initialize the debugger context.  It's a singleton stashed in the
+        // RTL structure.  We capture the result in DebuggerResult, not Result,
+        // as we don't want to overwrite the error code before a debugger has
+        // had a chance to attach.
         //
 
-        Result = MaybeWaitForDebuggerAttach(DebuggerContext);
-        if (FAILED(Result)) {
-            PH_ERROR(MaybeWaitForDebuggerAttach, Result);
+        DebuggerContext = &Rtl->DebuggerContext;
+        DebuggerResult = InitializeDebuggerContext(DebuggerContext, &Flags);
+
+        if (FAILED(DebuggerResult)) {
+
+            PH_ERROR(InitializeDebuggerContext, DebuggerResult);
+
+            //
+            // *Now* we can propagate the debugger result back as the primary
+            // result, which ensures the cleanup code below runs.
+            //
+
+            Result = DebuggerResult;
+
+        } else {
+
+            //
+            // Debugger context was successfully initialized, so, maybe wait for
+            // a debugger to attach (depending on what flags were supplied).
+            //
+
+            Result = MaybeWaitForDebuggerAttach(DebuggerContext);
+            if (FAILED(Result)) {
+                PH_ERROR(MaybeWaitForDebuggerAttach, Result);
+            }
+
         }
-
     }
 
     //

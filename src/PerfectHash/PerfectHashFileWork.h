@@ -1367,12 +1367,12 @@ FileWorkIdToFileIndex(
 FORCEINLINE
 ULONG
 ContextFileIdToContextFileIndex(
-    _In_ FILE_ID FileId
+    _In_ CONTEXT_FILE_ID ContextFileId
     )
 {
     LONG Index;
 
-    Index = FileId - ContextFileFirstId;
+    Index = (LONG)ContextFileId - (LONG)ContextFileFirstId;
 
     ASSERT(Index >= 0 && Index <= NUMBER_OF_CONTEXT_FILES-1);
 

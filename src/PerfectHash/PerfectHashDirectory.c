@@ -528,6 +528,7 @@ Return Value:
     ULONG ShareMode;
     ULONG DesiredAccess;
     ULONG FlagsAndAttributes;
+    PSTR AnsiPath = NULL;
     BOOLEAN CreateIntermediates = TRUE;
     HRESULT Result = S_OK;
     BOOLEAN Opened = FALSE;
@@ -697,8 +698,6 @@ OpenDirectory:
     }
 
 #else
-
-    PSTR AnsiPath;
 
     AnsiPath = CreateStringFromWide(Directory->Path->FullPath.Buffer);
     if (!AnsiPath) {

@@ -9,6 +9,7 @@ option(PERFECTHASH_USE_CUDA "Enable CUDA support if available" OFF)
 option(PERFECTHASH_ENABLE_PENTER "Enable FunctionHook support" OFF)
 option(PERFECTHASH_ENABLE_NATIVE_ARCH "Enable -march=native on supported compilers" ON)
 option(PERFECTHASH_ENABLE_INSTALL "Enable install rules" ON)
+option(PERFECTHASH_ENABLE_TESTS "Enable tests" ON)
 
 if(DEFINED USE_CUDA AND NOT DEFINED PERFECTHASH_USE_CUDA)
     set(PERFECTHASH_USE_CUDA "${USE_CUDA}" CACHE BOOL "" FORCE)
