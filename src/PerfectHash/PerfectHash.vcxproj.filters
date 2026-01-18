@@ -337,6 +337,30 @@
     <ClCompile Include="Chm01FileWorkCppSourceUnityFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkCppHeaderOnlyFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkCppHeaderOnlyTestFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkRustCargoTomlFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkRustLibFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkRustTestFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkRustBenchFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkPythonFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01FileWorkPythonTestFile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">

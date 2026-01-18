@@ -720,9 +720,11 @@ const UNICODE_STRING TableInfoStreamName = RCS(L"Info");
 
 const UNICODE_STRING TextFileExtension = RCS(L"txt");
 const UNICODE_STRING PythonFileExtension = RCS(L"py");
+const UNICODE_STRING TomlFileExtension = RCS(L"toml");
 const UNICODE_STRING BatchFileExtension = RCS(L"bat");
 const UNICODE_STRING CSourceFileExtension = RCS(L"c");
 const UNICODE_STRING CppSourceFileExtension = RCS(L"cpp");
+const UNICODE_STRING CppHeaderFileExtension = RCS(L"hpp");
 const UNICODE_STRING CudaSourceFileExtension = RCS(L"cu");
 const UNICODE_STRING CHeaderFileExtension = RCS(L"h");
 const UNICODE_STRING TableFileExtension = RCS(L"pht1");
@@ -732,6 +734,7 @@ const UNICODE_STRING MakefileMkFileExtension = RCS(L"mk");
 const UNICODE_STRING VCProjectFileExtension = RCS(L"vcxproj");
 const UNICODE_STRING VSSolutionFileExtension = RCS(L"sln");
 const UNICODE_STRING BinFileExtension = RCS(L"bin");
+const UNICODE_STRING RustFileExtension = RCS(L"rs");
 
 #define VERIFY_FILE_WORK_ARRAY_SIZE(Name) \
     C_ASSERT(ARRAYSIZE(Name) == NUMBER_OF_FILES + 2)

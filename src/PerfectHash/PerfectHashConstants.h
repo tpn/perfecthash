@@ -419,6 +419,9 @@ extern const UNICODE_STRING PerfectHashBulkCreateCsvBaseName;
 extern const UNICODE_STRING PerfectHashBulkCreateBestCsvBaseName;
 extern const UNICODE_STRING PerfectHashTableCreateCsvBaseName;
 extern const UNICODE_STRING PerfectHashTableCreateBestCsvBaseName;
+extern const UNICODE_STRING CppHeaderFileExtension;
+extern const UNICODE_STRING TomlFileExtension;
+extern const UNICODE_STRING RustFileExtension;
 
 extern const STRING NullString;
 extern const STRING DotExeSuffixA;

@@ -4923,3 +4923,219 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_CLOSE_CPP_SOURCE_UNITY_FILE ((HRESULT)0xE0040403L)
 
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_PYTHON_FILE
+//
+// MessageText:
+//
+// Error preparing Python file.
+//
+#define PH_E_ERROR_DURING_PREPARE_PYTHON_FILE ((HRESULT)0xE0040404L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_PYTHON_FILE
+//
+// MessageText:
+//
+// Error saving Python file.
+//
+#define PH_E_ERROR_DURING_SAVE_PYTHON_FILE ((HRESULT)0xE0040405L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_PYTHON_FILE
+//
+// MessageText:
+//
+// Error closing Python file.
+//
+#define PH_E_ERROR_DURING_CLOSE_PYTHON_FILE ((HRESULT)0xE0040406L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_PYTHON_TEST_FILE
+//
+// MessageText:
+//
+// Error preparing Python test file.
+//
+#define PH_E_ERROR_DURING_PREPARE_PYTHON_TEST_FILE ((HRESULT)0xE0040407L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_PYTHON_TEST_FILE
+//
+// MessageText:
+//
+// Error saving Python test file.
+//
+#define PH_E_ERROR_DURING_SAVE_PYTHON_TEST_FILE ((HRESULT)0xE0040408L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_PYTHON_TEST_FILE
+//
+// MessageText:
+//
+// Error closing Python test file.
+//
+#define PH_E_ERROR_DURING_CLOSE_PYTHON_TEST_FILE ((HRESULT)0xE0040409L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_CPP_HEADER_ONLY_FILE
+//
+// MessageText:
+//
+// Error preparing C++ header-only file.
+//
+#define PH_E_ERROR_DURING_PREPARE_CPP_HEADER_ONLY_FILE ((HRESULT)0xE004040AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_CPP_HEADER_ONLY_FILE
+//
+// MessageText:
+//
+// Error saving C++ header-only file.
+//
+#define PH_E_ERROR_DURING_SAVE_CPP_HEADER_ONLY_FILE ((HRESULT)0xE004040BL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_CPP_HEADER_ONLY_FILE
+//
+// MessageText:
+//
+// Error closing C++ header-only file.
+//
+#define PH_E_ERROR_DURING_CLOSE_CPP_HEADER_ONLY_FILE ((HRESULT)0xE004040CL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_CPP_HEADER_ONLY_TEST_FILE
+//
+// MessageText:
+//
+// Error preparing C++ header-only test file.
+//
+#define PH_E_ERROR_DURING_PREPARE_CPP_HEADER_ONLY_TEST_FILE ((HRESULT)0xE004040DL)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_CPP_HEADER_ONLY_TEST_FILE
+//
+// MessageText:
+//
+// Error saving C++ header-only test file.
+//
+#define PH_E_ERROR_DURING_SAVE_CPP_HEADER_ONLY_TEST_FILE ((HRESULT)0xE004040EL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_CPP_HEADER_ONLY_TEST_FILE
+//
+// MessageText:
+//
+// Error closing C++ header-only test file.
+//
+#define PH_E_ERROR_DURING_CLOSE_CPP_HEADER_ONLY_TEST_FILE ((HRESULT)0xE004040FL)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_RUST_CARGO_TOML_FILE
+//
+// MessageText:
+//
+// Error preparing Rust Cargo.toml file.
+//
+#define PH_E_ERROR_DURING_PREPARE_RUST_CARGO_TOML_FILE ((HRESULT)0xE0040410L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_RUST_CARGO_TOML_FILE
+//
+// MessageText:
+//
+// Error saving Rust Cargo.toml file.
+//
+#define PH_E_ERROR_DURING_SAVE_RUST_CARGO_TOML_FILE ((HRESULT)0xE0040411L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_RUST_CARGO_TOML_FILE
+//
+// MessageText:
+//
+// Error closing Rust Cargo.toml file.
+//
+#define PH_E_ERROR_DURING_CLOSE_RUST_CARGO_TOML_FILE ((HRESULT)0xE0040412L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_RUST_LIB_FILE
+//
+// MessageText:
+//
+// Error preparing Rust lib file.
+//
+#define PH_E_ERROR_DURING_PREPARE_RUST_LIB_FILE ((HRESULT)0xE0040413L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_RUST_LIB_FILE
+//
+// MessageText:
+//
+// Error saving Rust lib file.
+//
+#define PH_E_ERROR_DURING_SAVE_RUST_LIB_FILE ((HRESULT)0xE0040414L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_RUST_LIB_FILE
+//
+// MessageText:
+//
+// Error closing Rust lib file.
+//
+#define PH_E_ERROR_DURING_CLOSE_RUST_LIB_FILE ((HRESULT)0xE0040415L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_RUST_TEST_FILE
+//
+// MessageText:
+//
+// Error preparing Rust test file.
+//
+#define PH_E_ERROR_DURING_PREPARE_RUST_TEST_FILE ((HRESULT)0xE0040416L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_RUST_TEST_FILE
+//
+// MessageText:
+//
+// Error saving Rust test file.
+//
+#define PH_E_ERROR_DURING_SAVE_RUST_TEST_FILE ((HRESULT)0xE0040417L)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_RUST_TEST_FILE
+//
+// MessageText:
+//
+// Error closing Rust test file.
+//
+#define PH_E_ERROR_DURING_CLOSE_RUST_TEST_FILE ((HRESULT)0xE0040418L)
+
+//
+// MessageId: PH_E_ERROR_DURING_PREPARE_RUST_BENCH_FILE
+//
+// MessageText:
+//
+// Error preparing Rust benchmark file.
+//
+#define PH_E_ERROR_DURING_PREPARE_RUST_BENCH_FILE ((HRESULT)0xE0040419L)
+
+//
+// MessageId: PH_E_ERROR_DURING_SAVE_RUST_BENCH_FILE
+//
+// MessageText:
+//
+// Error saving Rust benchmark file.
+//
+#define PH_E_ERROR_DURING_SAVE_RUST_BENCH_FILE ((HRESULT)0xE004041AL)
+
+//
+// MessageId: PH_E_ERROR_DURING_CLOSE_RUST_BENCH_FILE
+//
+// MessageText:
+//
+// Error closing Rust benchmark file.
+//
+#define PH_E_ERROR_DURING_CLOSE_RUST_BENCH_FILE ((HRESULT)0xE004041BL)
+

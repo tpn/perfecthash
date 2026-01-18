@@ -35,6 +35,14 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareTableFileChm01 NULL
 #define PrepareTableInfoStreamChm01 NULL
 #define PrepareCSourceTableDataFileChm01 NULL
+#define PreparePythonFileChm01 NULL
+#define PreparePythonTestFileChm01 NULL
+#define PrepareCppHeaderOnlyFileChm01 NULL
+#define PrepareCppHeaderOnlyTestFileChm01 NULL
+#define PrepareRustCargoTomlFileChm01 NULL
+#define PrepareRustLibFileChm01 NULL
+#define PrepareRustTestFileChm01 NULL
+#define PrepareRustBenchFileChm01 NULL
 #define PrepareGraphVertexPairsFileChm01 NULL
 #define PrepareGraphVertices3FileChm01 NULL
 

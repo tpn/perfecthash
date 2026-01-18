@@ -8,6 +8,12 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+find_program(CARGO_EXECUTABLE cargo)
+if(NOT CARGO_EXECUTABLE)
+    set(CARGO_EXECUTABLE "")
+endif()
+
 add_executable(perfecthash_unit_tests
     PerfectHashArgvTests.cpp
 )
@@ -52,4 +58,18 @@ add_test(
         -DTEST_ARGS=Chm01|MultiplyShiftR|And|1
         -DTEST_FLAGS=--Quiet|--NoFileIo
         -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_test.cmake
+)
+
+add_test(
+    NAME perfecthash.cli.codegen
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/codegen
+        -DTEST_ARGS=Chm01|MultiplyShiftR|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
 )

@@ -203,7 +203,8 @@ Return Value:
         IsMakefileOrMainMkOrCMakeListsTextFile = (
             FileId == FileMakefileFileId        ||
             FileId == FileMakefileMainMkFileId  ||
-            FileId == FileCMakeListsTextFileId
+            FileId == FileCMakeListsTextFileId  ||
+            FileId == FileRustCargoTomlFileId
         );
 
     } else {
@@ -255,6 +256,12 @@ Return Value:
         PCUNICODE_STRING NewBaseName = NULL;
         PCUNICODE_STRING NewStreamName = NULL;
         PCUNICODE_STRING AdditionalSuffix = NULL;
+        UNICODE_STRING TestBaseName = { 0 };
+        WCHAR TestBaseNameBuffer[MAX_PATH];
+        PCSTRING TableNameA = NULL;
+        USHORT TableNameChars = 0;
+        USHORT TestBaseNameChars = 0;
+        USHORT NameIndex = 0;
 
         Eof = &EofInits[FileWorkId];
         NewBaseName = GetFileWorkItemBaseName(FileWorkId);
@@ -286,6 +293,38 @@ Return Value:
 
             AdditionalSuffix = GetFileWorkItemSuffix(FileWorkId);
             NewStreamName = GetFileWorkItemStreamName(FileWorkId);
+
+            if (FileId == FilePythonTestFileId) {
+                TableNameA = &Table->Keys->File->Path->TableNameA;
+                if (TableNameA->Length > 0) {
+                    TableNameChars = (USHORT)TableNameA->Length;
+                    TestBaseNameChars = (USHORT)(5 + TableNameChars);
+                    if ((TestBaseNameChars + 1) <=
+                        ARRAYSIZE(TestBaseNameBuffer)) {
+                        TestBaseName.Buffer = TestBaseNameBuffer;
+                        TestBaseName.Length = (
+                            TestBaseNameChars * sizeof(WCHAR)
+                        );
+                        TestBaseName.MaximumLength = (
+                            (TestBaseNameChars + 1) * sizeof(WCHAR)
+                        );
+                        TestBaseNameBuffer[0] = L't';
+                        TestBaseNameBuffer[1] = L'e';
+                        TestBaseNameBuffer[2] = L's';
+                        TestBaseNameBuffer[3] = L't';
+                        TestBaseNameBuffer[4] = L'_';
+                        for (NameIndex = 0;
+                             NameIndex < TableNameChars;
+                             NameIndex++) {
+                            TestBaseNameBuffer[5 + NameIndex] = (WCHAR)(
+                                TableNameA->Buffer[NameIndex]
+                            );
+                        }
+                        TestBaseNameBuffer[TestBaseNameChars] = L'\0';
+                        NewBaseName = &TestBaseName;
+                    }
+                }
+            }
 
             if (IsValidUnicodeString(NewStreamName)) {
 

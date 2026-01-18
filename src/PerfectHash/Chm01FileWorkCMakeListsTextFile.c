@@ -188,6 +188,57 @@ PrepareCMakeListsTextFileChm01(
     OUTPUT_RAW(")\n\n");
 
     //
+    // C++23 header-only implementation and test.
+    //
+
+    OUTPUT_RAW("add_library(");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_CppHeaderOnly INTERFACE)\n");
+    OUTPUT_RAW("target_include_directories(");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_CppHeaderOnly INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})\n");
+    OUTPUT_RAW("target_compile_features(");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_CppHeaderOnly INTERFACE cxx_std_23)\n\n");
+
+    OUTPUT_RAW("add_executable(CppHeaderOnlyTest_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n");
+    OUTPUT_FILE4("_CppHeaderOnlyTest.cpp");
+    OUTPUT_RAW(")\n\n");
+    OUTPUT_RAW("target_link_libraries(CppHeaderOnlyTest_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n    ");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("_CppHeaderOnly\n)\n\n");
+    OUTPUT_RAW("set_target_properties(CppHeaderOnlyTest_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW(" PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED YES)\n\n");
+
+    //
+    // Rust cargo targets.
+    //
+
+    OUTPUT_RAW("find_program(CARGO_EXECUTABLE cargo)\n");
+    OUTPUT_RAW("if(CARGO_EXECUTABLE)\n");
+
+    OUTPUT_RAW("    add_custom_target(RustTest_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n");
+    OUTPUT_RAW("        COMMAND ${CARGO_EXECUTABLE} run --quiet --bin rust_test\n");
+    OUTPUT_RAW("        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}\n");
+    OUTPUT_RAW("    )\n");
+
+    OUTPUT_RAW("    add_custom_target(RustBench_");
+    OUTPUT_STRING(Name);
+    OUTPUT_RAW("\n");
+    OUTPUT_RAW("        COMMAND ${CARGO_EXECUTABLE} run --quiet --bin rust_bench --release\n");
+    OUTPUT_RAW("        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}\n");
+    OUTPUT_RAW("    )\n");
+
+    OUTPUT_RAW("endif()\n\n");
+
+    //
     // We're done, update number of bytes written and finish up.
     //
 

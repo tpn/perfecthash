@@ -4472,3 +4472,194 @@ Language=English
 Error closing C++ source unity file.
 .
 
+MessageId=0x404
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_PYTHON_FILE
+Language=English
+Error preparing Python file.
+.
+
+MessageId=0x405
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_PYTHON_FILE
+Language=English
+Error saving Python file.
+.
+
+MessageId=0x406
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_PYTHON_FILE
+Language=English
+Error closing Python file.
+.
+
+MessageId=0x407
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_PYTHON_TEST_FILE
+Language=English
+Error preparing Python test file.
+.
+
+MessageId=0x408
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_PYTHON_TEST_FILE
+Language=English
+Error saving Python test file.
+.
+
+MessageId=0x409
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_PYTHON_TEST_FILE
+Language=English
+Error closing Python test file.
+.
+
+MessageId=0x40A
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_CPP_HEADER_ONLY_FILE
+Language=English
+Error preparing C++ header-only file.
+.
+
+MessageId=0x40B
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_CPP_HEADER_ONLY_FILE
+Language=English
+Error saving C++ header-only file.
+.
+
+MessageId=0x40C
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_CPP_HEADER_ONLY_FILE
+Language=English
+Error closing C++ header-only file.
+.
+
+MessageId=0x40D
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_CPP_HEADER_ONLY_TEST_FILE
+Language=English
+Error preparing C++ header-only test file.
+.
+
+MessageId=0x40E
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_CPP_HEADER_ONLY_TEST_FILE
+Language=English
+Error saving C++ header-only test file.
+.
+
+MessageId=0x40F
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_CPP_HEADER_ONLY_TEST_FILE
+Language=English
+Error closing C++ header-only test file.
+.
+
+MessageId=0x410
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_RUST_CARGO_TOML_FILE
+Language=English
+Error preparing Rust Cargo.toml file.
+.
+
+MessageId=0x411
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_RUST_CARGO_TOML_FILE
+Language=English
+Error saving Rust Cargo.toml file.
+.
+
+MessageId=0x412
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_RUST_CARGO_TOML_FILE
+Language=English
+Error closing Rust Cargo.toml file.
+.
+
+MessageId=0x413
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_RUST_LIB_FILE
+Language=English
+Error preparing Rust lib file.
+.
+
+MessageId=0x414
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_RUST_LIB_FILE
+Language=English
+Error saving Rust lib file.
+.
+
+MessageId=0x415
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_RUST_LIB_FILE
+Language=English
+Error closing Rust lib file.
+.
+
+MessageId=0x416
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_RUST_TEST_FILE
+Language=English
+Error preparing Rust test file.
+.
+
+MessageId=0x417
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_RUST_TEST_FILE
+Language=English
+Error saving Rust test file.
+.
+
+MessageId=0x418
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_RUST_TEST_FILE
+Language=English
+Error closing Rust test file.
+.
+
+MessageId=0x419
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_PREPARE_RUST_BENCH_FILE
+Language=English
+Error preparing Rust benchmark file.
+.
+
+MessageId=0x41A
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_SAVE_RUST_BENCH_FILE
+Language=English
+Error saving Rust benchmark file.
+.
+
+MessageId=0x41B
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_ERROR_DURING_CLOSE_RUST_BENCH_FILE
+Language=English
+Error closing Rust benchmark file.
+.

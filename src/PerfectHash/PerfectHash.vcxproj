@@ -186,6 +186,14 @@
     <ClCompile Include="Chm01FileWorkCHeaderTypesFile.c" />
     <ClCompile Include="Chm01FileWorkCMakeListsTextFile.c" />
     <ClCompile Include="Chm01FileWorkCppSourceUnityFile.c" />
+    <ClCompile Include="Chm01FileWorkCppHeaderOnlyFile.c" />
+    <ClCompile Include="Chm01FileWorkCppHeaderOnlyTestFile.c" />
+    <ClCompile Include="Chm01FileWorkRustCargoTomlFile.c" />
+    <ClCompile Include="Chm01FileWorkRustLibFile.c" />
+    <ClCompile Include="Chm01FileWorkRustTestFile.c" />
+    <ClCompile Include="Chm01FileWorkRustBenchFile.c" />
+    <ClCompile Include="Chm01FileWorkPythonFile.c" />
+    <ClCompile Include="Chm01FileWorkPythonTestFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullExeFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkFullFile.c" />
     <ClCompile Include="Chm01FileWorkCSourceBenchmarkIndexExeFile.c" />

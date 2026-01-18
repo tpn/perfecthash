@@ -238,6 +238,110 @@ Abstract:
     ENTRY(                                                                 \
         Verb,                                                              \
         VUpper,                                                            \
+        PythonFile,                                                        \
+        PYTHON_FILE,                                                       \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        256,                                                               \
+        SUFFIX(Python),                                                    \
+        &PythonFileExtension,                                              \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        PythonTestFile,                                                    \
+        PYTHON_TEST_FILE,                                                  \
+        EofInitTypeNumberOfKeysMultiplier,                                 \
+        8,                                                                 \
+        SUFFIX(python),                                                    \
+        &PythonFileExtension,                                              \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CppHeaderOnlyFile,                                                 \
+        CPP_HEADER_ONLY_FILE,                                              \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        256,                                                               \
+        SUFFIX(CppHeaderOnly),                                             \
+        &CppHeaderFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        CppHeaderOnlyTestFile,                                             \
+        CPP_HEADER_ONLY_TEST_FILE,                                         \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(CppHeaderOnlyTest),                                         \
+        &CppSourceFileExtension,                                           \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        RustCargoTomlFile,                                                 \
+        RUST_CARGO_TOML_FILE,                                              \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        NO_SUFFIX,                                                         \
+        &TomlFileExtension,                                                \
+        NO_STREAM_NAME,                                                    \
+        BASE_NAME(Cargo)                                                   \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        RustLibFile,                                                       \
+        RUST_LIB_FILE,                                                     \
+        EofInitTypeNumberOfTableElementsMultiplier,                        \
+        256,                                                               \
+        SUFFIX(RustLib),                                                   \
+        &RustFileExtension,                                                \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        RustTestFile,                                                      \
+        RUST_TEST_FILE,                                                    \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(RustTest),                                                  \
+        &RustFileExtension,                                                \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
+        RustBenchFile,                                                     \
+        RUST_BENCH_FILE,                                                   \
+        EofInitTypeNumberOfPages,                                          \
+        1,                                                                 \
+        SUFFIX(RustBench),                                                 \
+        &RustFileExtension,                                                \
+        NO_STREAM_NAME,                                                    \
+        NO_BASE_NAME                                                       \
+    )                                                                      \
+                                                                           \
+    ENTRY(                                                                 \
+        Verb,                                                              \
+        VUpper,                                                            \
         CHeaderSupportFile,                                                \
         C_HEADER_SUPPORT_FILE,                                             \
         EofInitTypeDefault,                                                \
