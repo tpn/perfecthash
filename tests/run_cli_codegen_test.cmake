@@ -15,6 +15,10 @@ if(NOT DEFINED TEST_CARGO)
   set(TEST_CARGO "")
 endif()
 
+file(TO_NATIVE_PATH "${TEST_EXE}" test_exe_native)
+file(TO_NATIVE_PATH "${TEST_KEYS}" test_keys_native)
+file(TO_NATIVE_PATH "${TEST_OUTPUT}" test_output_native)
+
 set(args_list "")
 set(flags_list "")
 
@@ -25,11 +29,11 @@ if(DEFINED TEST_FLAGS)
   string(REPLACE "|" ";" flags_list "${TEST_FLAGS}")
 endif()
 
-file(REMOVE_RECURSE "${TEST_OUTPUT}")
-file(MAKE_DIRECTORY "${TEST_OUTPUT}")
+file(REMOVE_RECURSE "${test_output_native}")
+file(MAKE_DIRECTORY "${test_output_native}")
 
 execute_process(
-  COMMAND "${TEST_EXE}" "${TEST_KEYS}" "${TEST_OUTPUT}" ${args_list} ${flags_list}
+  COMMAND "${test_exe_native}" "${test_keys_native}" "${test_output_native}" ${args_list} ${flags_list}
   RESULT_VARIABLE result
   OUTPUT_VARIABLE stdout
   ERROR_VARIABLE stderr
@@ -41,7 +45,7 @@ if(NOT result EQUAL 0)
   message(FATAL_ERROR "Command failed with exit code ${result}")
 endif()
 
-file(GLOB cmake_lists "${TEST_OUTPUT}/*/CMakeLists.txt")
+file(GLOB cmake_lists "${test_output_native}/*/CMakeLists.txt")
 list(LENGTH cmake_lists cmake_lists_count)
 if(cmake_lists_count LESS 1)
   message(FATAL_ERROR "No generated CMakeLists.txt under ${TEST_OUTPUT}")
@@ -85,7 +89,7 @@ if(NOT result EQUAL 0)
 endif()
 
 file(READ "${gen_cmake}" cmake_text)
-string(REGEX MATCH "project\\(([A-Za-z0-9_]+)\\)" _project_match "${cmake_text}")
+string(REGEX MATCH "project\\(([^)]+)\\)" _project_match "${cmake_text}")
 if(NOT CMAKE_MATCH_1)
   message(FATAL_ERROR "Failed to find project() name in ${gen_cmake}")
 endif()

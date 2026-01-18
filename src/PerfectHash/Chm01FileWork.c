@@ -299,8 +299,8 @@ Return Value:
                 if (TableNameA->Length > 0) {
                     TableNameChars = (USHORT)TableNameA->Length;
                     TestBaseNameChars = (USHORT)(5 + TableNameChars);
-                    if ((TestBaseNameChars + 1) <=
-                        ARRAYSIZE(TestBaseNameBuffer)) {
+                    if ((USHORT)(TestBaseNameChars + 1) <=
+                        (USHORT)ARRAYSIZE(TestBaseNameBuffer)) {
                         TestBaseName.Buffer = TestBaseNameBuffer;
                         TestBaseName.Length = (
                             TestBaseNameChars * sizeof(WCHAR)

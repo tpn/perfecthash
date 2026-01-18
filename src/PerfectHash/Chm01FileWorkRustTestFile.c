@@ -31,6 +31,8 @@ SaveRustTestFileChm01(
     // Initialize aliases.
     //
 
+    UNREFERENCED_PARAMETER(Context);
+
     File = *Item->FilePointer;
 
     Base = (PCHAR)File->BaseAddress;

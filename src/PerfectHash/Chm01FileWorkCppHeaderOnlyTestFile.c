@@ -32,6 +32,8 @@ SaveCppHeaderOnlyTestFileChm01(
     // Initialize aliases.
     //
 
+    UNREFERENCED_PARAMETER(Context);
+
     File = *Item->FilePointer;
     Name = &GetActivePath(File)->TableNameA;
 
