@@ -1453,7 +1453,7 @@ GetSystemInfo(
     )
 {
     ZeroStructPointerInline(lpSystemInfo);
-    lpSystemInfo->dwPageSize = 4096;
+    lpSystemInfo->dwPageSize = (DWORD)sysconf(_SC_PAGESIZE);
     lpSystemInfo->dwNumberOfProcessors = get_nprocs();
     lpSystemInfo->dwAllocationGranularity = GetSystemAllocationGranularity();
 }
@@ -2009,10 +2009,31 @@ VirtualProtect(
     LONG Error;
     int prot;
 
+    prot = 0;
     if (BooleanFlagOn(NewProtect, PAGE_NOACCESS)) {
         prot = PROT_NONE;
-    } else if (BooleanFlagOn(NewProtect, PAGE_READONLY)) {
-        prot = PROT_READ;
+    } else {
+        if (BooleanFlagOn(NewProtect, PAGE_READONLY) ||
+            BooleanFlagOn(NewProtect, PAGE_READWRITE) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_READ) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_READWRITE) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_WRITECOPY)) {
+            prot |= PROT_READ;
+        }
+        if (BooleanFlagOn(NewProtect, PAGE_READWRITE) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_READWRITE) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_WRITECOPY)) {
+            prot |= PROT_WRITE;
+        }
+        if (BooleanFlagOn(NewProtect, PAGE_EXECUTE) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_READ) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_READWRITE) ||
+            BooleanFlagOn(NewProtect, PAGE_EXECUTE_WRITECOPY)) {
+            prot |= PROT_EXEC;
+        }
+        if (prot == 0) {
+            prot = PROT_READ | PROT_WRITE;
+        }
     }
 
     Error = mprotect(Address, Size, prot);

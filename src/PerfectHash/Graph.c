@@ -1998,6 +1998,7 @@ Return Value:
 }
 
 
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
 _Use_decl_annotations_
 VOID
 GraphCalculateAssignedMemoryCoverage_AVX2(
@@ -2227,6 +2228,16 @@ Return Value:
 
     return;
 }
+#else
+_Use_decl_annotations_
+VOID
+GraphCalculateAssignedMemoryCoverage_AVX2(
+    PGRAPH Graph
+    )
+{
+    GraphCalculateAssignedMemoryCoverage(Graph);
+}
+#endif
 
 
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE_FOR_KEYS_SUBSET

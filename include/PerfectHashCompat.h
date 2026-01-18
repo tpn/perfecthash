@@ -32,17 +32,191 @@ extern "C" {
 #include <string.h>
 #include <limits.h>
 #include <assert.h>
+#include <time.h>
 
 #ifndef PH_CUDA
 #include <pthread.h>
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)
 #include <cpuid.h>
 #include <x86intrin.h>
+#endif
 
 #define _Ret_reallocated_bytes_(Address, Size)
 #define _Frees_ptr_opt_
 
 #endif // PH_CUDA
 #endif // PH_WINDOWS
+
+//
+// Provide fallbacks for x86 intrinsics on non-x86 platforms.
+//
+
+#if !defined(PH_CUDA) && \
+    !defined(__i386__) && !defined(__x86_64__) && \
+    !defined(_M_IX86) && !defined(_M_X64)
+
+static inline uint32_t
+ph_rotl32(
+    uint32_t value,
+    int shift
+    )
+{
+    shift &= 31;
+    if (shift == 0) {
+        return value;
+    }
+    return (value << shift) | (value >> (32 - shift));
+}
+
+static inline uint32_t
+ph_rotr32(
+    uint32_t value,
+    int shift
+    )
+{
+    shift &= 31;
+    if (shift == 0) {
+        return value;
+    }
+    return (value >> shift) | (value << (32 - shift));
+}
+
+static inline uint64_t
+ph_rotl64(
+    uint64_t value,
+    int shift
+    )
+{
+    shift &= 63;
+    if (shift == 0) {
+        return value;
+    }
+    return (value << shift) | (value >> (64 - shift));
+}
+
+static inline uint64_t
+ph_rotr64(
+    uint64_t value,
+    int shift
+    )
+{
+    shift &= 63;
+    if (shift == 0) {
+        return value;
+    }
+    return (value >> shift) | (value << (64 - shift));
+}
+
+#ifndef _rotl
+#define _rotl(Value, Shift) ph_rotl32((uint32_t)(Value), (int)(Shift))
+#endif
+#ifndef _rotr
+#define _rotr(Value, Shift) ph_rotr32((uint32_t)(Value), (int)(Shift))
+#endif
+#ifndef _rotl64
+#define _rotl64(Value, Shift) ph_rotl64((uint64_t)(Value), (int)(Shift))
+#endif
+#ifndef _rotr64
+#define _rotr64(Value, Shift) ph_rotr64((uint64_t)(Value), (int)(Shift))
+#endif
+
+#ifndef _pext_u64
+static inline uint64_t
+_pext_u64(
+    uint64_t value,
+    uint64_t mask
+    )
+{
+    uint64_t result = 0;
+    uint64_t bit_position = 0;
+
+    while (mask != 0) {
+        if (mask & 1) {
+            result |= (value & 1) << bit_position;
+            bit_position++;
+        }
+
+        mask >>= 1;
+        value >>= 1;
+    }
+
+    return result;
+}
+#endif
+
+static inline uint32_t
+ph_crc32c_u8(
+    uint32_t crc,
+    uint8_t value
+    )
+{
+    uint32_t i;
+    crc ^= value;
+    for (i = 0; i < 8; i++) {
+        uint32_t mask = (uint32_t)-(int)(crc & 1);
+        crc = (crc >> 1) ^ (0x82F63B78u & mask);
+    }
+    return crc;
+}
+
+#ifndef _mm_crc32_u8
+static inline uint32_t
+_mm_crc32_u8(
+    uint32_t crc,
+    uint8_t value
+    )
+{
+    return ph_crc32c_u8(crc, value);
+}
+#endif
+
+#ifndef _mm_crc32_u32
+static inline uint32_t
+_mm_crc32_u32(
+    uint32_t crc,
+    uint32_t value
+    )
+{
+    crc = ph_crc32c_u8(crc, (uint8_t)value);
+    crc = ph_crc32c_u8(crc, (uint8_t)(value >> 8));
+    crc = ph_crc32c_u8(crc, (uint8_t)(value >> 16));
+    crc = ph_crc32c_u8(crc, (uint8_t)(value >> 24));
+    return crc;
+}
+#endif
+
+static inline uint64_t
+ph_rdtsc_fallback(
+    void
+    )
+{
+    struct timespec ts;
+#if defined(CLOCK_MONOTONIC_RAW)
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+#else
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
+    return ((uint64_t)ts.tv_sec * 1000000000ull) + (uint64_t)ts.tv_nsec;
+}
+
+#ifndef __rdtsc
+#define __rdtsc() ph_rdtsc_fallback()
+#endif
+
+#ifndef __rdtscp
+static inline uint64_t
+__rdtscp(
+    unsigned int *aux
+    )
+{
+    if (aux) {
+        *aux = 0;
+    }
+    return ph_rdtsc_fallback();
+}
+#endif
+
+#endif // non-x86 fallback
 
 #ifdef PH_LINUX
 #include <linux/mman.h>
@@ -396,6 +570,7 @@ typedef struct _RTL_CRITICAL_SECTION_DEBUG {
 #define RTL_CRITICAL_SECTION_DEBUG_FLAG_STATIC_INIT     0x00000001
 
 
+#ifdef PH_WINDOWS
 #pragma pack(push, 8)
 
 typedef struct _RTL_CRITICAL_SECTION {
@@ -414,6 +589,13 @@ typedef struct _RTL_CRITICAL_SECTION {
 } RTL_CRITICAL_SECTION, *PRTL_CRITICAL_SECTION;
 
 #pragma pack(pop)
+#else
+
+typedef struct _RTL_CRITICAL_SECTION {
+    pthread_mutex_t Mutex;
+} RTL_CRITICAL_SECTION, *PRTL_CRITICAL_SECTION;
+
+#endif
 
 typedef struct _RTL_SRWLOCK {
         PVOID Ptr;
@@ -1258,7 +1440,7 @@ InitOnceComplete(
 #define __debugbreak()
 #endif
 
-#if defined(__x86_64__) || defined(PH_CUDA)
+#if defined(__x86_64__) || defined(_M_X64) || defined(_M_AMD64) || defined(PH_CUDA)
 #define _M_X64
 #define _M_AMD64
 #define _AMD64_
@@ -1287,6 +1469,10 @@ InitOnceComplete(
                      s7,  s6,  s5,  s4,       \
                      s3,  s2,  s1,  s0)
 #endif
+#elif defined(__aarch64__) || defined(__arm64__)
+#define _M_ARM64
+#define _ARM64_
+#define _WIN64
 #endif
 
 #ifdef __has_builtin
@@ -1689,7 +1875,8 @@ InterlockedCompareExchangePointer(
 #define __popcnt64 __builtin_popcountll
 #endif
 #endif
-#ifdef PH_COMPILER_GCC
+#if defined(PH_COMPILER_GCC) || defined(PH_COMPILER_GNU) || \
+    defined(__GNUC__) || defined(__clang__)
 #define _tzcnt_u32 __builtin_ctz
 #define _tzcnt_u64 __builtin_ctzll
 #define _lzcnt_u32 __builtin_clz

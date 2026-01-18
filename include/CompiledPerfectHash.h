@@ -116,6 +116,40 @@ ExtractBits64_C(
 }
 
 //
+// Software CRC32C (Castagnoli) fallback.
+//
+
+static inline
+uint32_t
+Crc32cU8_C(
+    uint32_t crc,
+    uint8_t value
+    )
+{
+    uint32_t i;
+    crc ^= value;
+    for (i = 0; i < 8; i++) {
+        uint32_t mask = (uint32_t)-(int)(crc & 1);
+        crc = (crc >> 1) ^ (0x82F63B78u & mask);
+    }
+    return crc;
+}
+
+static inline
+uint32_t
+Crc32u32_C(
+    uint32_t crc,
+    uint32_t value
+    )
+{
+    crc = Crc32cU8_C(crc, (uint8_t)value);
+    crc = Crc32cU8_C(crc, (uint8_t)(value >> 8));
+    crc = Crc32cU8_C(crc, (uint8_t)(value >> 16));
+    crc = Crc32cU8_C(crc, (uint8_t)(value >> 24));
+    return crc;
+}
+
+//
 // Platform-dependent defines.
 //
 
@@ -141,20 +175,16 @@ ExtractBits64_C(
 #elif defined(__linux__) || defined(__APPLE__)
 #define CPHCALLTYPE
 #if defined(__clang__) || defined(__GNUC__)
-#   ifdef __arm64__
-#       ifdef __ARM_FEATURE_SVE
-#           include <arm_sve.h>
-#       else // !__ARM_FEATURE_SVE
-#           include <arm_neon.h>
-#       endif // __ARM_FEATURE_SVE
+#   if defined(__aarch64__) || defined(__arm64__)
 
-#define RotateRight32 __builtin_rotateright32
-#define RotateLeft32  __builtin_rotateleft32
-#define RotateRight64 __builtin_rotateright64
-#define RotateLeft64  __builtin_rotateleft64
+#define RotateRight32 RotateRight32_C
+#define RotateLeft32  RotateLeft32_C
+#define RotateRight64 RotateRight64_C
+#define RotateLeft64  RotateLeft64_C
 #define ExtractBits64 ExtractBits64_C
+#define Crc32u32      Crc32u32_C
 
-#   else // !__arm64__
+#   else // !arm64
 #       include <x86intrin.h>
 
 #define RotateRight32 _rotr
@@ -164,7 +194,7 @@ ExtractBits64_C(
 #define ExtractBits64 _pext_u64
 #define Crc32u32      _mm_crc32_u32
 
-#   endif // __arm64__
+#   endif // arm64
 #else
 #error Unrecognized compiler.
 #endif
@@ -221,6 +251,23 @@ ExtractBits64_C(
 #ifdef __arm64__
 #include <time.h>
 #define __rdtsc() clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+#endif
+#endif
+
+#ifdef __linux__
+#if defined(__aarch64__) || defined(__arm64__)
+#include <time.h>
+static inline uint64_t
+__rdtsc(void)
+{
+    struct timespec ts;
+#if defined(CLOCK_MONOTONIC_RAW)
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+#else
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
+    return ((uint64_t)ts.tv_sec * 1000000000ull) + (uint64_t)ts.tv_nsec;
+}
 #endif
 #endif
 //

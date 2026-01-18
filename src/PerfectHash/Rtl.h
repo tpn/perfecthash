@@ -102,7 +102,11 @@ typedef const WCHAR *PCWCHAR;
 
 
 #ifndef PAGE_SHIFT
+#ifdef PH_PAGE_SHIFT
+#define PAGE_SHIFT PH_PAGE_SHIFT
+#else
 #define PAGE_SHIFT 12
+#endif
 #endif
 
 #ifndef PAGE_SIZE
@@ -268,6 +272,22 @@ typedef __mmask64 ZMASK64, *PZMASK64;
 // _mm512_permutex2var_epi32().
 //
 
+#else // !_M_X64
+
+typedef struct DECLSPEC_ALIGN(XMMWORD_ALIGNMENT) _XMMWORD_FALLBACK {
+    BYTE Bytes[XMMWORD_ALIGNMENT];
+} XMMWORD, *PXMMWORD;
+
+typedef struct DECLSPEC_ALIGN(YMMWORD_ALIGNMENT) _YMMWORD_FALLBACK {
+    BYTE Bytes[YMMWORD_ALIGNMENT];
+} YMMWORD, *PYMMWORD;
+
+typedef struct DECLSPEC_ALIGN(ZMMWORD_ALIGNMENT) _ZMMWORD_FALLBACK {
+    BYTE Bytes[ZMMWORD_ALIGNMENT];
+} ZMMWORD, *PZMMWORD;
+
+#endif // _M_X64
+
 typedef union _ZMM_PERMUTEXVAR_INDEX16 {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         ULONG Index:5;
@@ -312,7 +332,6 @@ typedef union _ZMM_PERMUTEX2VAR_INDEX32 {
     ULONG AsULong;
 } ZMM_PERMUTEX2VAR_INDEX32;
 C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
-#endif
 
 #ifndef ALIGN_UP_XMMWORD
 #define ALIGN_UP_XMMWORD(Address) (ALIGN_UP(Address, XMMWORD_ALIGNMENT))
@@ -523,7 +542,7 @@ C_ASSERT(sizeof(ZMM_PERMUTEX2VAR_INDEX32) == sizeof(ULONG));
 #define ClearFlag(_F,_SF)     ((_F) &= ~(_SF))
 #endif
 
-#if defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
+#if defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86) || defined(_M_ARM64)
 ////////////////////////////////////////////////////////////////////////////////
 // Intel/AMD x86/x64 CPU Features
 ////////////////////////////////////////////////////////////////////////////////

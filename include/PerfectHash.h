@@ -416,13 +416,13 @@ PerfectHashGetCurrentCpuArch(
     VOID
     )
 {
-#if defined(_M_AMD64)
+#if defined(_M_AMD64) || defined(__x86_64__)
     return PerfectHashx64CpuArchId;
-#elif defined(_M_IX86)
+#elif defined(_M_IX86) || defined(__i386__)
     return PerfectHashx86CpuArchId;
-#elif defined(_M_ARM64)
+#elif defined(_M_ARM64) || defined(__aarch64__) || defined(__arm64__)
     return PerfectHashArm64CpuArchId;
-#elif defined(_M_ARM)
+#elif defined(_M_ARM) || defined(__arm__)
     return PerfectHashArmCpuArchId;
 #elif defined(__CUDA_ARCH__)
     return PerfectHashCudaArchId;
@@ -431,6 +431,8 @@ PerfectHashGetCurrentCpuArch(
     return PerfectHashCudaCpuArchId;
 #endif
 #endif
+
+    return PerfectHashInvalidCpuArchId;
 }
 
 //

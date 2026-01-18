@@ -237,7 +237,7 @@ set(Source_Files
     "SymbolLoader.c"
 )
 
-if(PERFECTHASH_IS_WINDOWS OR PERFECTHASH_IS_LINUX)
+if((PERFECTHASH_IS_WINDOWS OR PERFECTHASH_IS_LINUX) AND PERFECTHASH_ARCH_X86_64)
     list(
         APPEND Source_Files
         "GraphAvx.c"
@@ -334,7 +334,7 @@ set(ALL_FILES
     ${Source_Files}
 )
 
-if(PERFECTHASH_IS_LINUX)
+if(PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_X86_64)
     set_source_files_properties(
         "GraphAvx.c"
         PROPERTIES

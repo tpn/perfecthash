@@ -786,6 +786,7 @@ Return Value:
 
 --*/
 {
+#if defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__)
     XMMWORD KeyXmm;
     XMMWORD Seed1Xmm;
     XMMWORD Seed2Xmm;
@@ -836,6 +837,9 @@ Return Value:
     //IACA_VC_END();
 
     return Result.LongPart;
+#else
+    return PerfectHashTableSeededHash16ExCrc32Rotate15(Key, Seeds, Mask);
+#endif
 }
 
 _Use_decl_annotations_

@@ -953,6 +953,38 @@ Return Value:
     return S_OK;
 
 }
+#else // non-x86
+
+_Use_decl_annotations_
+HRESULT
+RtlInitializeCpuFeatures(
+    PRTL Rtl
+    )
+{
+    ZeroStruct(Rtl->CpuFeatures);
+    return RtlInitializeBitManipulationFunctionPointers(Rtl);
+}
+
+_Use_decl_annotations_
+HRESULT
+RtlInitializeBitManipulationFunctionPointers(
+    PRTL Rtl
+    )
+{
+    PRTL_BIT_MANIPULATION_FUNCTIONS Functions;
+
+    Functions = &Rtl->RtlBitManipulationFunctions;
+
+#define EXPAND_AS_C_FUNCTION_ASSIGNMENT(Upper, Name, Unused3, Unused4) \
+    Functions->Name = Name##_C;
+
+    RTL_BIT_MANIPULATION_FUNCTION_TABLE_ENTRY(EXPAND_AS_C_FUNCTION_ASSIGNMENT);
+
+#undef EXPAND_AS_C_FUNCTION_ASSIGNMENT
+
+    return S_OK;
+}
+
 #endif // defined(_M_AMD64) || defined(_M_X64) || defined(_M_IX86)
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

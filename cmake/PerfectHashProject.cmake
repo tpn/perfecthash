@@ -75,11 +75,45 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(PERFECTHASH_IS_EMSCRIPTEN TRUE)
 endif()
 
+set(PERFECTHASH_ARCH_X86_64 FALSE)
+set(PERFECTHASH_ARCH_X86 FALSE)
+set(PERFECTHASH_ARCH_ARM64 FALSE)
+set(PERFECTHASH_ARCH_ARM FALSE)
+if(CMAKE_SYSTEM_PROCESSOR)
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" PERFECTHASH_SYSTEM_PROCESSOR)
+    if(PERFECTHASH_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
+        set(PERFECTHASH_ARCH_X86_64 TRUE)
+    elseif(PERFECTHASH_SYSTEM_PROCESSOR MATCHES "^(i[3-6]86|x86)$")
+        set(PERFECTHASH_ARCH_X86 TRUE)
+    elseif(PERFECTHASH_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+        set(PERFECTHASH_ARCH_ARM64 TRUE)
+    elseif(PERFECTHASH_SYSTEM_PROCESSOR MATCHES "^arm")
+        set(PERFECTHASH_ARCH_ARM TRUE)
+    endif()
+endif()
+
 if(PERFECTHASH_IS_LINUX)
     # Ensure installed binaries can find ../lib without LD_LIBRARY_PATH.
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
 elseif(PERFECTHASH_IS_MAC)
     set(CMAKE_INSTALL_RPATH "@loader_path/../${CMAKE_INSTALL_LIBDIR}")
+endif()
+
+if(PERFECTHASH_IS_LINUX)
+    execute_process(
+        COMMAND getconf PAGE_SIZE
+        OUTPUT_VARIABLE PERFECTHASH_PAGE_SIZE
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(PERFECTHASH_PAGE_SIZE MATCHES "^[0-9]+$")
+        set(_ph_page_shift 0)
+        set(_ph_page_size "${PERFECTHASH_PAGE_SIZE}")
+        while(_ph_page_size GREATER 1)
+            math(EXPR _ph_page_size "${_ph_page_size} / 2")
+            math(EXPR _ph_page_shift "${_ph_page_shift} + 1")
+        endwhile()
+        set(PERFECTHASH_PAGE_SHIFT "${_ph_page_shift}" CACHE INTERNAL "" FORCE)
+    endif()
 endif()
 
 if(NOT PERFECTHASH_IS_EMSCRIPTEN AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
