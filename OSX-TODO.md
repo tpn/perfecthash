@@ -6,3 +6,5 @@
 - [x] Run unit/integration tests via CTest and record results.
 - [x] Regenerate dependency files via `rapids-dependency-file-generator`.
 - [x] Add macOS x86_64 envs + CMake presets for Intel macOS.
+- [x] Add Rust toolchain (cargo) to dev envs and tighten codegen tests for generated artifacts + Unix Makefiles build.
+- [x] Re-run macOS CTest after cargo + codegen coverage changes.

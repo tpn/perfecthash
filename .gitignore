@@ -27,7 +27,7 @@ output
 *.aps
 ctags.exe
 build
-build-tests/
+build-*
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake

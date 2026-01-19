@@ -8,3 +8,7 @@
 - 2026-01-19: Installed `rapids-dependency-file-generator` in the macOS env and regenerated all dependency outputs.
 - 2026-01-19: Added Intel macOS envs plus CMake preset for `ninja-multi-macos-x86_64` and build presets.
 - 2026-01-19: Added GitHub Actions macOS workflow for arm64 (macos-14) and x86_64 (macos-13) using micromamba + CMake presets.
+- 2026-01-19: Added Rust toolchain (cargo) to dependency sets and regenerated env files; updated README to note Rust requirement for codegen tests.
+- 2026-01-19: Strengthened codegen test coverage to assert generated artifacts, require cargo when Rust outputs exist, and run a Unix Makefiles CMake build.
+- 2026-01-19: Installed Rust toolchain into `perfecthash-macos` via mamba to enable cargo-backed codegen tests.
+- 2026-01-19: Configured `build-tests-macos`, built with Ninja, and ran full CTest suite (14/14 passing) with cargo-enabled codegen checks.

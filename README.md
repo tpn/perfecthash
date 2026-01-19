@@ -206,7 +206,7 @@ environment manually:
 
 ```
 mamba create -y -n perfecthash-dev -c conda-forge \
-  python=3.12 cmake ninja make pkg-config clang clangxx lld llvmdev pytest
+  python=3.12 rust cmake ninja make pkg-config clang clangxx lld llvmdev pytest
 mamba activate perfecthash-dev
 ```
 
@@ -244,6 +244,7 @@ cmake --build build
 
 Unit tests and CLI integration tests are available via CTest.  They require a
 build with tests enabled and use the `keys/HologramWorld-31016.keys` fixture.
+The codegen tests require `cargo` (from the Rust toolchain) to be available.
 
 ```
 cmake -S . -B build-tests -G Ninja -DPERFECTHASH_ENABLE_TESTS=ON -DBUILD_TESTING=ON

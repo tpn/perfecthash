@@ -28,6 +28,7 @@ dependencies:
 - pytest
 - python=3.13
 - ruff
+- rust
 - scipy
 - seaborn
 - setuptools>=61

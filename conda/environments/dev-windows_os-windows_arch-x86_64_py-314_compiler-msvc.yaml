@@ -22,6 +22,7 @@ dependencies:
 - python=3.14
 - pywin32
 - ruff
+- rust
 - scipy
 - seaborn
 - setuptools>=61
