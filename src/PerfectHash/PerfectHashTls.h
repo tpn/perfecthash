@@ -178,7 +178,7 @@ TlsContextIsGlobalComponentDisabled(
     return Result;
 }
 
-extern ULONG PerfectHashTlsIndex;
+extern TLS_KEY_TYPE PerfectHashTlsIndex;
 
 //
 // The PROCESS_ATTACH and PROCESS_ATTACH functions share the same signature.

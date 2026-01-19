@@ -708,7 +708,7 @@ PerfectHashInterfaceGuidToId(
     for (Index = 1; Index < Count; Index++) {
 #ifdef __cplusplus
         const GUID *Entry = PerfectHashInterfaceGuids[Index];
-        if (Entry && InlineIsEqualGUID(Guid, *Entry)) {
+        if (Entry && InlineIsEqualGUID(Guid, Entry)) {
             Id = (PERFECT_HASH_INTERFACE_ID)Index;
             break;
         }

@@ -32,6 +32,22 @@ files:
       - python-runtime
       - python-analysis
       - python-dev
+  dev-macos:
+    output: conda
+    conda_dir: conda/environments
+    matrix:
+      os: [macos]
+      arch: [arm64]
+      py: ["3.13", "3.14"]
+      cuda: ["none"]
+      compiler: ["llvm"]
+    includes:
+      - build-tools
+      - compiler
+      - build
+      - python-runtime
+      - python-analysis
+      - python-dev
   dev-windows:
     output: conda
     conda_dir: conda/environments
@@ -124,6 +140,11 @@ dependencies:
             packages:
               - make
               - pkg-config
+          - matrix:
+              os: macos
+            packages:
+              - make
+              - pkg-config
           - matrix: {}
             packages:
   compiler:
@@ -132,6 +153,14 @@ dependencies:
         matrices:
           - matrix:
               os: linux
+              compiler: llvm
+            packages:
+              - clang
+              - clangxx
+              - lld
+              - llvmdev
+          - matrix:
+              os: macos
               compiler: llvm
             packages:
               - clang

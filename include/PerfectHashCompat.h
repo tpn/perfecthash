@@ -476,11 +476,11 @@ typedef GUID *LPGUID;
 typedef const GUID *LPCGUID;
 typedef GUID IID;
 
-#define InlineIsEqualGUID(rguid1, rguid2)                        \
-        (((uint32_t *) rguid1)[0] == ((uint32_t *) rguid2)[0] && \
-        ((uint32_t *) rguid1)[1] == ((uint32_t *) rguid2)[1] &&  \
-        ((uint32_t *) rguid1)[2] == ((uint32_t *) rguid2)[2] &&  \
-        ((uint32_t *) rguid1)[3] == ((uint32_t *) rguid2)[3])
+#define InlineIsEqualGUID(rguid1, rguid2)                              \
+        (((const uint32_t *)(rguid1))[0] == ((const uint32_t *)(rguid2))[0] && \
+        ((const uint32_t *)(rguid1))[1] == ((const uint32_t *)(rguid2))[1] &&  \
+        ((const uint32_t *)(rguid1))[2] == ((const uint32_t *)(rguid2))[2] &&  \
+        ((const uint32_t *)(rguid1))[3] == ((const uint32_t *)(rguid2))[3])
 
 #define IsEqualGUID(rguid1, rguid2) (!memcmp(rguid1, rguid2, sizeof(GUID)))
 
@@ -2025,11 +2025,11 @@ WaitForMultipleObjects(
     _In_ DWORD dwMilliseconds
     );
 
-#define SRWLOCK_INIT RTL_SRWLOCK_INIT
-
 #ifndef PH_WINDOWS
+#define SRWLOCK_INIT PTHREAD_RWLOCK_INITIALIZER
 typedef pthread_rwlock_t SRWLOCK, *PSRWLOCK;
 #else
+#define SRWLOCK_INIT RTL_SRWLOCK_INIT
 typedef RTL_SRWLOCK SRWLOCK, *PSRWLOCK;
 #endif
 
@@ -2630,6 +2630,8 @@ RemoveDirectoryW(
 #define INVALID_FILE_SIZE ((DWORD)0xFFFFFFFF)
 #define INVALID_SET_FILE_POINTER ((DWORD)-1)
 #define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
+#define FILE_ATTRIBUTE_DIRECTORY 0x00000010
+#define FILE_ATTRIBUTE_NORMAL    0x00000080
 
 #define MOVEFILE_REPLACE_EXISTING       0x00000001
 #define MOVEFILE_COPY_ALLOWED           0x00000002

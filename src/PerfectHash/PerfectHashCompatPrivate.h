@@ -36,10 +36,116 @@ Abstract:
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/types.h>
+#ifdef PH_LINUX
 #include <sys/sysinfo.h>
+#elif defined(PH_MAC)
+#include <sys/sysctl.h>
+#endif
 
 #define FREE_PTR(P) \
     if ((P) != NULL && *(P) != NULL) { free(*(P)); *(P) = NULL; }
+
+//
+// macOS does not implement pthread barriers; provide a lightweight fallback.
+//
+
+#if defined(PH_MAC) && !defined(PTHREAD_BARRIER_SERIAL_THREAD)
+typedef struct {
+    int Dummy;
+} pthread_barrierattr_t;
+
+typedef struct {
+    pthread_mutex_t Mutex;
+    pthread_cond_t Condition;
+    unsigned Count;
+    unsigned Waiting;
+    unsigned Generation;
+} pthread_barrier_t;
+
+#define PTHREAD_BARRIER_SERIAL_THREAD 1
+
+static inline int
+pthread_barrier_init(
+    pthread_barrier_t *Barrier,
+    const pthread_barrierattr_t *Attr,
+    unsigned Count
+    )
+{
+    UNREFERENCED_PARAMETER(Attr);
+    if (!Barrier || Count == 0) {
+        return EINVAL;
+    }
+    int Result = pthread_mutex_init(&Barrier->Mutex, NULL);
+    if (Result != 0) {
+        return Result;
+    }
+    Result = pthread_cond_init(&Barrier->Condition, NULL);
+    if (Result != 0) {
+        pthread_mutex_destroy(&Barrier->Mutex);
+        return Result;
+    }
+    Barrier->Count = Count;
+    Barrier->Waiting = 0;
+    Barrier->Generation = 0;
+    return 0;
+}
+
+static inline int
+pthread_barrier_destroy(
+    pthread_barrier_t *Barrier
+    )
+{
+    if (!Barrier) {
+        return EINVAL;
+    }
+    int Result = pthread_mutex_destroy(&Barrier->Mutex);
+    if (Result != 0) {
+        return Result;
+    }
+    return pthread_cond_destroy(&Barrier->Condition);
+}
+
+static inline int
+pthread_barrier_wait(
+    pthread_barrier_t *Barrier
+    )
+{
+    if (!Barrier) {
+        return EINVAL;
+    }
+    pthread_mutex_lock(&Barrier->Mutex);
+    unsigned Generation = Barrier->Generation;
+    Barrier->Waiting++;
+    if (Barrier->Waiting == Barrier->Count) {
+        Barrier->Generation++;
+        Barrier->Waiting = 0;
+        pthread_cond_broadcast(&Barrier->Condition);
+        pthread_mutex_unlock(&Barrier->Mutex);
+        return PTHREAD_BARRIER_SERIAL_THREAD;
+    }
+    while (Generation == Barrier->Generation) {
+        pthread_cond_wait(&Barrier->Condition, &Barrier->Mutex);
+    }
+    pthread_mutex_unlock(&Barrier->Mutex);
+    return 0;
+}
+#endif
+
+//
+// macOS doesn't define Linux-specific mmap flags; normalize to safe defaults.
+//
+
+#ifndef MAP_SHARED_VALIDATE
+#define MAP_SHARED_VALIDATE MAP_SHARED
+#endif
+
+#ifndef MAP_HUGETLB
+#define MAP_HUGETLB 0
+#endif
+
+#ifndef MAP_HUGE_2MB
+#define MAP_HUGE_2MB 0
+#endif
 
 PSTR
 CreateStringFromWide(
@@ -99,7 +205,10 @@ typedef union _Struct_size_bytes_(sizeof(ULONG)) _PH_EVENT_STATE {
     ULONG AsULong;
 } PH_EVENT_STATE, *PPH_EVENT_STATE;
 
+#define PH_EVENT_SIGNATURE 0x544E5645u // 'EVNT'
+
 typedef struct _PH_EVENT {
+    ULONG Signature;
     PH_EVENT_STATE State;
     ULONG Padding1;
     PSTR Name;

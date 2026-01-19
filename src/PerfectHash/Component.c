@@ -37,7 +37,7 @@ volatile LONG ServerLockCount = 0;
 // The "global" global components structure.
 //
 
-GLOBAL_COMPONENTS GlobalComponents = { 0 };
+GLOBAL_COMPONENTS GlobalComponents = { SRWLOCK_INIT };
 
 _Requires_exclusive_lock_held_(GlobalComponents.Lock)
 FORCEINLINE
@@ -460,10 +460,8 @@ ComponentRelease(
             RtlInitOnceToPointer(&GlobalComponents.Allocator)
         );
 
-        GlobalComponents.Rtl.Once = PTHREAD_ONCE_INIT;
-        GlobalComponents.Rtl.Context = NULL;
-        GlobalComponents.Allocator.Once = PTHREAD_ONCE_INIT ;
-        GlobalComponents.Allocator.Context = NULL;
+        InitOnceInitialize(&GlobalComponents.Rtl);
+        InitOnceInitialize(&GlobalComponents.Allocator);
         GlobalComponents.FirstComponent = NULL;
 #endif
 

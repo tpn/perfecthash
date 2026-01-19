@@ -21,7 +21,11 @@ protected:
     result = createInstance(
         classFactory_,
         nullptr,
+#ifdef PH_WINDOWS
         IID_PERFECT_HASH_CONTEXT,
+#else
+        &IID_PERFECT_HASH_CONTEXT,
+#endif
         reinterpret_cast<void **>(&context_));
     ASSERT_GE(result, 0);
   }

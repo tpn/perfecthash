@@ -117,6 +117,32 @@ GetProcAddress(
 
 DWORD LastError;
 
+static DWORD
+PhGetNumberOfProcessors(
+    VOID
+    )
+{
+#ifdef PH_LINUX
+    long Count = get_nprocs();
+#elif defined(PH_MAC)
+    int Count = 0;
+    size_t Size = sizeof(Count);
+    if (sysctlbyname("hw.logicalcpu", &Count, &Size, NULL, 0) != 0 ||
+        Count <= 0) {
+        long SysconfCount = sysconf(_SC_NPROCESSORS_ONLN);
+        if (SysconfCount > 0) {
+            Count = (int)SysconfCount;
+        }
+    }
+#else
+    long Count = sysconf(_SC_NPROCESSORS_ONLN);
+#endif
+    if (Count < 1) {
+        Count = 1;
+    }
+    return (DWORD)Count;
+}
+
 DWORD
 GetLastError(
     VOID
@@ -138,7 +164,13 @@ GetCurrentThreadId(
     VOID
     )
 {
-    return (DWORD)pthread_self();
+#ifdef PH_MAC
+    uint64_t ThreadId = 0;
+    if (pthread_threadid_np(NULL, &ThreadId) == 0) {
+        return (DWORD)ThreadId;
+    }
+#endif
+    return (DWORD)(uintptr_t)pthread_self();
     //return syscall(__NR_gettid);
 }
 
@@ -156,7 +188,8 @@ GetMaximumProcessorCount(
     _In_ WORD GroupNumber
     )
 {
-    return get_nprocs();
+    UNREFERENCED_PARAMETER(GroupNumber);
+    return PhGetNumberOfProcessors();
 }
 
 _Success_(return != 0)
@@ -837,6 +870,166 @@ RemoveDirectoryW(
     return (Result == 0);
 }
 
+typedef struct _PH_FILE_MAPPING {
+    ULONG Signature;
+    int FileDescriptor;
+} PH_FILE_MAPPING, *PPH_FILE_MAPPING;
+
+#define PH_FILE_MAPPING_SIGNATURE 0x4D504846u // 'FHP M'
+
+typedef struct _PH_MAPPED_VIEW {
+    void *Address;
+    size_t Size;
+    struct _PH_MAPPED_VIEW *Next;
+} PH_MAPPED_VIEW, *PPH_MAPPED_VIEW;
+
+static pthread_mutex_t PhMappedViewLock = PTHREAD_MUTEX_INITIALIZER;
+static PPH_MAPPED_VIEW PhMappedViewList;
+
+typedef struct _PH_VIRTUAL_ALLOC {
+    void *Address;
+    size_t Size;
+    struct _PH_VIRTUAL_ALLOC *Next;
+} PH_VIRTUAL_ALLOC, *PPH_VIRTUAL_ALLOC;
+
+static pthread_mutex_t PhVirtualAllocLock = PTHREAD_MUTEX_INITIALIZER;
+static PPH_VIRTUAL_ALLOC PhVirtualAllocList;
+
+static VOID
+PhTrackMappedView(
+    _In_ void *Address,
+    _In_ size_t Size
+    )
+{
+    PPH_MAPPED_VIEW View;
+
+    View = (PPH_MAPPED_VIEW)calloc(1, sizeof(*View));
+    if (!View) {
+        return;
+    }
+
+    View->Address = Address;
+    View->Size = Size;
+
+    pthread_mutex_lock(&PhMappedViewLock);
+    View->Next = PhMappedViewList;
+    PhMappedViewList = View;
+    pthread_mutex_unlock(&PhMappedViewLock);
+}
+
+static BOOL
+PhUntrackMappedView(
+    _In_ void *Address,
+    _Out_ size_t *Size
+    )
+{
+    BOOL Found;
+    PPH_MAPPED_VIEW Prev;
+    PPH_MAPPED_VIEW View;
+
+    Found = FALSE;
+    Prev = NULL;
+
+    pthread_mutex_lock(&PhMappedViewLock);
+    View = PhMappedViewList;
+    while (View) {
+        if (View->Address == Address) {
+            if (Prev) {
+                Prev->Next = View->Next;
+            } else {
+                PhMappedViewList = View->Next;
+            }
+            *Size = View->Size;
+            free(View);
+            Found = TRUE;
+            break;
+        }
+        Prev = View;
+        View = View->Next;
+    }
+    pthread_mutex_unlock(&PhMappedViewLock);
+
+    return Found;
+}
+
+static VOID
+PhTrackVirtualAlloc(
+    _In_ void *Address,
+    _In_ size_t Size
+    )
+{
+    PPH_VIRTUAL_ALLOC Entry;
+
+    Entry = (PPH_VIRTUAL_ALLOC)calloc(1, sizeof(*Entry));
+    if (!Entry) {
+        return;
+    }
+
+    Entry->Address = Address;
+    Entry->Size = Size;
+
+    pthread_mutex_lock(&PhVirtualAllocLock);
+    Entry->Next = PhVirtualAllocList;
+    PhVirtualAllocList = Entry;
+    pthread_mutex_unlock(&PhVirtualAllocLock);
+}
+
+static BOOL
+PhUntrackVirtualAlloc(
+    _In_ void *Address,
+    _Out_ size_t *Size
+    )
+{
+    BOOL Found;
+    PPH_VIRTUAL_ALLOC Prev;
+    PPH_VIRTUAL_ALLOC Entry;
+
+    Found = FALSE;
+    Prev = NULL;
+
+    pthread_mutex_lock(&PhVirtualAllocLock);
+    Entry = PhVirtualAllocList;
+    while (Entry) {
+        if (Entry->Address == Address) {
+            if (Prev) {
+                Prev->Next = Entry->Next;
+            } else {
+                PhVirtualAllocList = Entry->Next;
+            }
+            *Size = Entry->Size;
+            free(Entry);
+            Found = TRUE;
+            break;
+        }
+        Prev = Entry;
+        Entry = Entry->Next;
+    }
+    pthread_mutex_unlock(&PhVirtualAllocLock);
+
+    return Found;
+}
+
+static BOOL
+PhTryGetFileMappingFd(
+    _In_ HANDLE MappingHandle,
+    _Out_ int *FileDescriptor
+    )
+{
+    PPH_FILE_MAPPING Mapping;
+
+    Mapping = (PPH_FILE_MAPPING)MappingHandle;
+    if (!Mapping || Mapping == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    if (Mapping->Signature == PH_FILE_MAPPING_SIGNATURE) {
+        *FileDescriptor = Mapping->FileDescriptor;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 WINBASEAPI
 _Ret_maybenull_
 LPVOID
@@ -849,8 +1042,57 @@ MapViewOfFile(
     _In_ SIZE_T dwNumberOfBytesToMap
     )
 {
-    __debugbreak();
-    return NULL;
+    int fd;
+    int Prot;
+    int Flags;
+    off_t Offset;
+    size_t Size;
+    void *Address;
+    struct stat Stat;
+
+    if (!PhTryGetFileMappingFd(hFileMappingObject, &fd)) {
+        fd = (int)(intptr_t)hFileMappingObject;
+    }
+
+    Offset = ((off_t)dwFileOffsetHigh << 32) | dwFileOffsetLow;
+    Size = (size_t)dwNumberOfBytesToMap;
+
+    if (Size == 0) {
+        if (fstat(fd, &Stat) != 0) {
+            SetLastError(errno);
+            return NULL;
+        }
+        if ((off_t)Stat.st_size <= Offset) {
+            SetLastError(EINVAL);
+            return NULL;
+        }
+        Size = (size_t)(Stat.st_size - Offset);
+    }
+
+    Prot = 0;
+    if (dwDesiredAccess & FILE_MAP_READ) {
+        Prot |= PROT_READ;
+    }
+    if (dwDesiredAccess & FILE_MAP_WRITE) {
+        Prot |= PROT_WRITE;
+    }
+    if (dwDesiredAccess & FILE_MAP_EXECUTE) {
+        Prot |= PROT_EXEC;
+    }
+    if (Prot == 0) {
+        Prot = PROT_READ;
+    }
+
+    Flags = MAP_SHARED;
+
+    Address = mmap(NULL, Size, Prot, Flags, fd, Offset);
+    if (Address == MAP_FAILED) {
+        SetLastError(errno);
+        return NULL;
+    }
+
+    PhTrackMappedView(Address, Size);
+    return Address;
 }
 
 WINBASEAPI
@@ -866,12 +1108,40 @@ CreateFileMappingW(
     _In_opt_ LPCWSTR Name
     )
 {
+    PH_HANDLE Fd = { 0 };
+    PPH_FILE_MAPPING Mapping;
+    int DupFd;
+
     ASSERT(FileMappingAttributes == NULL);
     ASSERT(Name == NULL);
     ASSERT(MaximumSizeHigh == 0);
     ASSERT(MaximumSizeLow == 0);
-    SetLastError(ENOSYS);
-    return NULL;
+
+    if (File == INVALID_HANDLE_VALUE || File == NULL) {
+        SetLastError(EBADF);
+        return NULL;
+    }
+
+    Fd.AsHandle = File;
+    DupFd = dup(Fd.AsFileDescriptor);
+    if (DupFd == -1) {
+        SetLastError(errno);
+        return NULL;
+    }
+
+    Mapping = (PPH_FILE_MAPPING)calloc(1, sizeof(*Mapping));
+    if (!Mapping) {
+        close(DupFd);
+        SetLastError(ENOMEM);
+        return NULL;
+    }
+
+    Mapping->Signature = PH_FILE_MAPPING_SIGNATURE;
+    Mapping->FileDescriptor = DupFd;
+
+    UNREFERENCED_PARAMETER(Protect);
+
+    return (HANDLE)Mapping;
 }
 
 
@@ -882,8 +1152,20 @@ UnmapViewOfFile(
     _In_ LPCVOID lpBaseAddress
     )
 {
-    __debugbreak();
-    return FALSE;
+    size_t Size;
+
+    if (!PhUntrackMappedView((void *)lpBaseAddress, &Size)) {
+        SetLastError(EINVAL);
+        return FALSE;
+    }
+
+    if (munmap((void *)lpBaseAddress, Size) != 0) {
+        SetLastError(errno);
+        SYS_ERROR(munmap);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 WINBASEAPI
@@ -899,8 +1181,57 @@ MapViewOfFileEx(
     _In_opt_ LPVOID lpBaseAddress
     )
 {
-    __debugbreak();
-    return NULL;
+    int fd;
+    int Prot;
+    int Flags;
+    off_t Offset;
+    size_t Size;
+    void *Address;
+    struct stat Stat;
+
+    if (!PhTryGetFileMappingFd(hFileMappingObject, &fd)) {
+        fd = (int)(intptr_t)hFileMappingObject;
+    }
+
+    Offset = ((off_t)dwFileOffsetHigh << 32) | dwFileOffsetLow;
+    Size = (size_t)dwNumberOfBytesToMap;
+
+    if (Size == 0) {
+        if (fstat(fd, &Stat) != 0) {
+            SetLastError(errno);
+            return NULL;
+        }
+        if ((off_t)Stat.st_size <= Offset) {
+            SetLastError(EINVAL);
+            return NULL;
+        }
+        Size = (size_t)(Stat.st_size - Offset);
+    }
+
+    Prot = 0;
+    if (dwDesiredAccess & FILE_MAP_READ) {
+        Prot |= PROT_READ;
+    }
+    if (dwDesiredAccess & FILE_MAP_WRITE) {
+        Prot |= PROT_WRITE;
+    }
+    if (dwDesiredAccess & FILE_MAP_EXECUTE) {
+        Prot |= PROT_EXEC;
+    }
+    if (Prot == 0) {
+        Prot = PROT_READ;
+    }
+
+    Flags = MAP_SHARED;
+
+    Address = mmap(lpBaseAddress, Size, Prot, Flags, fd, Offset);
+    if (Address == MAP_FAILED) {
+        SetLastError(errno);
+        return NULL;
+    }
+
+    PhTrackMappedView(Address, Size);
+    return Address;
 }
 
 WINBASEAPI
@@ -937,6 +1268,13 @@ SetFilePointerEx(
         }
     } else if (Stat.st_size < DistanceToMove.QuadPart) {
 
+#ifdef PH_MAC
+        Error = ftruncate(Fd.AsFileDescriptor, DistanceToMove.QuadPart);
+        if (Error != 0) {
+            SetLastError(errno);
+            return FALSE;
+        }
+#else
         Error = posix_fallocate(Fd.AsFileDescriptor,
                                 0,
                                 DistanceToMove.QuadPart);
@@ -948,6 +1286,7 @@ SetFilePointerEx(
                 return FALSE;
             }
         }
+#endif
 
         Result = lseek(Fd.AsFileDescriptor, DistanceToMove.QuadPart, SEEK_SET);
         if (Result == -1) {
@@ -984,8 +1323,46 @@ MoveFileExW(
     _In_     DWORD    dwFlags
     )
 {
-    __debugbreak();
-    return FALSE;
+    int Result;
+    BOOL ReplaceExisting;
+    PSTR ExistingPath;
+    PSTR NewPath;
+    struct stat Stat;
+
+    ReplaceExisting = BooleanFlagOn(dwFlags, MOVEFILE_REPLACE_EXISTING);
+
+    if (!lpExistingFileName || !lpNewFileName) {
+        SetLastError(EINVAL);
+        return FALSE;
+    }
+
+    ExistingPath = CreateStringFromWide(lpExistingFileName);
+    if (!ExistingPath) {
+        return FALSE;
+    }
+
+    NewPath = CreateStringFromWide(lpNewFileName);
+    if (!NewPath) {
+        FREE_PTR(&ExistingPath);
+        return FALSE;
+    }
+
+    if (!ReplaceExisting && stat(NewPath, &Stat) == 0) {
+        FREE_PTR(&ExistingPath);
+        FREE_PTR(&NewPath);
+        SetLastError(EEXIST);
+        return FALSE;
+    }
+
+    Result = rename(ExistingPath, NewPath);
+    if (Result != 0) {
+        SetLastError(errno);
+    }
+
+    FREE_PTR(&ExistingPath);
+    FREE_PTR(&NewPath);
+
+    return (Result == 0);
 }
 
 WINBASEAPI
@@ -996,8 +1373,43 @@ GetFileInformationByHandle(
     _Out_ LPBY_HANDLE_FILE_INFORMATION lpFileInformation
     )
 {
-    __debugbreak();
-    return FALSE;
+    INT Result;
+    PH_HANDLE Fd = { 0 };
+    struct stat Stat;
+
+    if (!lpFileInformation) {
+        SetLastError(EINVAL);
+        return FALSE;
+    }
+
+    Fd.AsHandle = hFile;
+    Result = fstat(Fd.AsFileDescriptor, &Stat);
+    if (Result != 0) {
+        SetLastError(errno);
+        return FALSE;
+    }
+
+    ZeroStructPointerInline(lpFileInformation);
+
+    if (S_ISDIR(Stat.st_mode)) {
+        lpFileInformation->dwFileAttributes = FILE_ATTRIBUTE_DIRECTORY;
+    } else {
+        lpFileInformation->dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
+    }
+
+    lpFileInformation->ftCreationTime.dwLowDateTime = (DWORD)Stat.st_ctime;
+    lpFileInformation->ftCreationTime.dwHighDateTime = (DWORD)(Stat.st_ctime >> 32);
+    lpFileInformation->ftLastAccessTime.dwLowDateTime = (DWORD)Stat.st_atime;
+    lpFileInformation->ftLastAccessTime.dwHighDateTime = (DWORD)(Stat.st_atime >> 32);
+    lpFileInformation->ftLastWriteTime.dwLowDateTime = (DWORD)Stat.st_mtime;
+    lpFileInformation->ftLastWriteTime.dwHighDateTime = (DWORD)(Stat.st_mtime >> 32);
+    lpFileInformation->nFileSizeHigh = (DWORD)((uint64_t)Stat.st_size >> 32);
+    lpFileInformation->nFileSizeLow = (DWORD)((uint64_t)Stat.st_size & 0xffffffffu);
+    lpFileInformation->nNumberOfLinks = (DWORD)Stat.st_nlink;
+    lpFileInformation->nFileIndexHigh = (DWORD)((uint64_t)Stat.st_ino >> 32);
+    lpFileInformation->nFileIndexLow = (DWORD)((uint64_t)Stat.st_ino & 0xffffffffu);
+
+    return TRUE;
 }
 
 WINBASEAPI
@@ -1041,7 +1453,48 @@ CloseHandle(
     _In_ _Post_ptr_invalid_ HANDLE hObject
     )
 {
-    return FALSE;
+    int Result;
+    int FileDescriptor;
+    PPH_FILE_MAPPING Mapping;
+
+    if (hObject == NULL || hObject == INVALID_HANDLE_VALUE) {
+        SetLastError(EBADF);
+        return FALSE;
+    }
+
+    if (hObject == (HANDLE)stdin ||
+        hObject == (HANDLE)stdout ||
+        hObject == (HANDLE)stderr) {
+        return TRUE;
+    }
+
+    if (PhTryGetFileMappingFd(hObject, &FileDescriptor)) {
+        Mapping = (PPH_FILE_MAPPING)hObject;
+        Result = close(FileDescriptor);
+        free(Mapping);
+        return (Result == 0);
+    }
+
+    if ((uintptr_t)hObject <= INT_MAX) {
+        Result = close((int)(intptr_t)hObject);
+        if (Result != 0) {
+            SetLastError(errno);
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    if (((PPH_EVENT)hObject)->Signature == PH_EVENT_SIGNATURE) {
+        return CloseEvent(hObject);
+    }
+
+    Result = close((int)(intptr_t)hObject);
+    if (Result != 0) {
+        SetLastError(errno);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 WINBASEAPI
@@ -1312,6 +1765,25 @@ InitializeSRWLock(
     }
 }
 
+static int
+PhEnsureSrwLockInitialized(
+    _Inout_ PSRWLOCK SRWLock
+    )
+{
+    int Result;
+
+    Result = pthread_rwlock_init(SRWLock, NULL);
+    if (Result == 0) {
+        return 0;
+    }
+
+    if (Result == EBUSY) {
+        return 0;
+    }
+
+    return Result;
+}
+
 WINBASEAPI
 _Releases_exclusive_lock_(*SRWLock)
 VOID
@@ -1349,6 +1821,14 @@ AcquireSRWLockExclusive(
     )
 {
     LastError = pthread_rwlock_wrlock(SRWLock);
+    if (LastError == EINVAL) {
+        int InitError = PhEnsureSrwLockInitialized(SRWLock);
+        if (InitError == 0) {
+            LastError = pthread_rwlock_wrlock(SRWLock);
+        } else {
+            LastError = InitError;
+        }
+    }
     if (LastError != 0) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -1363,6 +1843,14 @@ AcquireSRWLockShared(
     )
 {
     LastError = pthread_rwlock_rdlock(SRWLock);
+    if (LastError == EINVAL) {
+        int InitError = PhEnsureSrwLockInitialized(SRWLock);
+        if (InitError == 0) {
+            LastError = pthread_rwlock_rdlock(SRWLock);
+        } else {
+            LastError = InitError;
+        }
+    }
     if (LastError != 0) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -1377,6 +1865,14 @@ TryAcquireSRWLockExclusive(
     )
 {
     LastError = pthread_rwlock_trywrlock(SRWLock);
+    if (LastError == EINVAL) {
+        int InitError = PhEnsureSrwLockInitialized(SRWLock);
+        if (InitError == 0) {
+            LastError = pthread_rwlock_trywrlock(SRWLock);
+        } else {
+            LastError = InitError;
+        }
+    }
     if (LastError != 0 && LastError != EBUSY) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -1392,6 +1888,14 @@ TryAcquireSRWLockShared(
     )
 {
     LastError = pthread_rwlock_tryrdlock(SRWLock);
+    if (LastError == EINVAL) {
+        int InitError = PhEnsureSrwLockInitialized(SRWLock);
+        if (InitError == 0) {
+            LastError = pthread_rwlock_tryrdlock(SRWLock);
+        } else {
+            LastError = InitError;
+        }
+    }
     if (LastError != 0 && LastError != EBUSY) {
         PH_RAISE(PH_E_SYSTEM_CALL_FAILED);
     }
@@ -1418,6 +1922,18 @@ InitOnceWrapper(
     )
 {
     InitOnceFunction(InitOnceInitOnce, InitOnceParameter, InitOnceContext);
+}
+
+WINBASEAPI
+VOID
+WINAPI
+InitOnceInitialize(
+    _Out_ PINIT_ONCE InitOnce
+    )
+{
+    static const pthread_once_t PhOnceInit = PTHREAD_ONCE_INIT;
+    InitOnce->Once = PhOnceInit;
+    InitOnce->Context = NULL;
 }
 
 WINBASEAPI
@@ -1454,7 +1970,7 @@ GetSystemInfo(
 {
     ZeroStructPointerInline(lpSystemInfo);
     lpSystemInfo->dwPageSize = (DWORD)sysconf(_SC_PAGESIZE);
-    lpSystemInfo->dwNumberOfProcessors = get_nprocs();
+    lpSystemInfo->dwNumberOfProcessors = PhGetNumberOfProcessors();
     lpSystemInfo->dwAllocationGranularity = GetSystemAllocationGranularity();
 }
 
@@ -1549,6 +2065,8 @@ CreateEventW(
         return INVALID_HANDLE_VALUE;
     }
 
+    Event->Signature = PH_EVENT_SIGNATURE;
+
     if (Name != NULL) {
         NameLengthInChars = wcslen(Name);
         LocalName = Event->Name = (PSTR)calloc(1, NameLengthInChars+1);
@@ -1613,6 +2131,12 @@ CloseEvent(
     Event = (PPH_EVENT)Object;
 
     if (Event == NULL || Event == INVALID_HANDLE_VALUE) {
+        SetLastError(EBADF);
+        goto End;
+    }
+
+    if (Event->Signature != PH_EVENT_SIGNATURE) {
+        SetLastError(EBADF);
         goto End;
     }
 
@@ -1664,6 +2188,11 @@ SetEvent(
 
     Success = FALSE;
 
+    if (Event->Signature != PH_EVENT_SIGNATURE) {
+        SetLastError(EBADF);
+        goto End;
+    }
+
     Error = pthread_mutex_lock(&Event->Mutex);
     if (Error != 0) {
         SetLastError(Error);
@@ -1709,6 +2238,11 @@ ResetEvent(
 
     Success = FALSE;
 
+    if (Event->Signature != PH_EVENT_SIGNATURE) {
+        SetLastError(EBADF);
+        goto End;
+    }
+
     Error = pthread_mutex_lock(&Event->Mutex);
     if (Error != 0) {
         SetLastError(Error);
@@ -1749,6 +2283,11 @@ WaitForSingleObject(
 
     Event = (PPH_EVENT)hHandle;
     WaitResult = WAIT_FAILED;
+
+    if (Event->Signature != PH_EVENT_SIGNATURE) {
+        SetLastError(EBADF);
+        goto End;
+    }
 
     Error = pthread_mutex_lock(&Event->Mutex);
     if (Error != 0) {
@@ -1974,6 +2513,8 @@ VirtualAlloc(
         SetLastError(errno);
         SYS_ERROR(mmap);
         addr = NULL;
+    } else {
+        PhTrackVirtualAlloc(addr, Size);
     }
 
     return addr;
@@ -2008,6 +2549,10 @@ VirtualProtect(
 {
     LONG Error;
     int prot;
+    size_t PageSize;
+    size_t ProtectSize;
+    uintptr_t Addr;
+    uintptr_t Aligned;
 
     prot = 0;
     if (BooleanFlagOn(NewProtect, PAGE_NOACCESS)) {
@@ -2036,7 +2581,15 @@ VirtualProtect(
         }
     }
 
-    Error = mprotect(Address, Size, prot);
+    UNREFERENCED_PARAMETER(OldProtect);
+
+    PageSize = (size_t)sysconf(_SC_PAGESIZE);
+    Addr = (uintptr_t)Address;
+    Aligned = Addr & ~(uintptr_t)(PageSize - 1);
+    ProtectSize = Size + (Addr - Aligned);
+    ProtectSize = (ProtectSize + PageSize - 1) & ~(PageSize - 1);
+
+    Error = mprotect((void *)Aligned, ProtectSize, prot);
     if (Error != 0) {
         SetLastError(errno);
         SYS_ERROR(mprotect);
@@ -2075,11 +2628,27 @@ VirtualFree(
     )
 {
     LONG Error;
+    size_t ActualSize;
 
     ASSERT(FreeType == MEM_RELEASE);
-    ASSERT(Size != 0);
 
-    Error = munmap(Address, Size);
+    ActualSize = Size;
+    if (ActualSize == 0) {
+        if (!PhUntrackVirtualAlloc(Address, &ActualSize)) {
+            SetLastError(EINVAL);
+            return FALSE;
+        }
+    } else {
+        size_t TrackedSize;
+        PhUntrackVirtualAlloc(Address, &TrackedSize);
+    }
+
+    if (ActualSize == 0) {
+        SetLastError(EINVAL);
+        return FALSE;
+    }
+
+    Error = munmap(Address, ActualSize);
     if (Error != 0) {
         SetLastError(errno);
         SYS_ERROR(munmap);

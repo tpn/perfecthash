@@ -252,8 +252,32 @@ ctest --test-dir build-tests --output-on-failure
 
 #### Mac
 
-I haven't tried to build it on Mac yet.  It'll require a bit of hacking, I
-assume.
+Prerequisites: Xcode Command Line Tools, CMake, Ninja. Optional: mamba/conda.
+
+Recommended (mamba/conda) environment:
+
+```
+# Apple Silicon (arm64)
+mamba env create -f conda/environments/dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm.yaml
+mamba activate dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm
+```
+
+```
+mkdir -p ~/src && cd ~/src
+git clone https://github.com/tpn/perfecthash
+git clone https://github.com/tpn/perfecthash-keys
+
+cd perfecthash
+cmake -S . -B build-macos -G"Ninja Multi-Config"
+cmake --build build-macos --config Release
+cmake --build build-macos --config Debug
+```
+
+Tests:
+
+```
+ctest --test-dir build-macos --output-on-failure -C Release
+```
 
 ### Usage
 
