@@ -2450,7 +2450,7 @@ IsGoodPerfectHashHashFunctionId(
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId
     )
 {
-    switch (HashFunctionId) {
+    switch ((ULONG)HashFunctionId) {
         PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(
             EXPAND_AS_GOOD_HASH_FUNCTION_CASE
         );

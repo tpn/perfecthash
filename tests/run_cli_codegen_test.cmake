@@ -54,7 +54,7 @@ endif()
 list(GET cmake_lists 0 gen_cmake)
 get_filename_component(gen_dir "${gen_cmake}" DIRECTORY)
 
-set(build_dir "${gen_dir}/_build")
+set(build_dir "${test_output_native}/_build")
 file(MAKE_DIRECTORY "${build_dir}")
 
 execute_process(

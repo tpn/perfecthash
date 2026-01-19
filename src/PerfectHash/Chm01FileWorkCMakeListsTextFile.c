@@ -73,6 +73,19 @@ PrepareCMakeListsTextFileChm01(
     OUTPUT_RAW("include_directories(..)\n");
     OUTPUT_RAW("include_directories(${CMAKE_CURRENT_SOURCE_DIR})\n\n");
 
+    OUTPUT_RAW("if(MSVC)\n");
+    OUTPUT_RAW("    foreach(var CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTC1\" \"\" ${var} \"${${var}}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTCc\" \"\" ${var} \"${${var}}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTCs\" \"\" ${var} \"${${var}}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTCu\" \"\" ${var} \"${${var}}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTC\" \"\" ${var} \"${${var}}\")\n");
+    OUTPUT_RAW("        string(REGEX REPLACE \"[ ]+\" \" \" ${var} \"${${var}}\")\n");
+    OUTPUT_RAW("        set(${var} \"${${var}}\" CACHE STRING \"\" FORCE)\n");
+    OUTPUT_RAW("    endforeach()\n");
+    OUTPUT_RAW("    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/Oi>)\n");
+    OUTPUT_RAW("endif()\n\n");
+
     OUTPUT_RAW("set(PCH_HEADER ");
     OUTPUT_STRING(Name);
     OUTPUT_RAW("_StdAfx.h)\n");
@@ -225,6 +238,15 @@ PrepareCMakeListsTextFileChm01(
     OUTPUT_RAW("    enable_language(CUDA)\n");
     OUTPUT_RAW("    set(CMAKE_CUDA_STANDARD 17)\n");
     OUTPUT_RAW("    set(CMAKE_CUDA_STANDARD_REQUIRED ON)\n");
+    OUTPUT_RAW("    if(MSVC)\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTC1\" \"\" CMAKE_CUDA_FLAGS_DEBUG \"${CMAKE_CUDA_FLAGS_DEBUG}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTCc\" \"\" CMAKE_CUDA_FLAGS_DEBUG \"${CMAKE_CUDA_FLAGS_DEBUG}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTCs\" \"\" CMAKE_CUDA_FLAGS_DEBUG \"${CMAKE_CUDA_FLAGS_DEBUG}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTCu\" \"\" CMAKE_CUDA_FLAGS_DEBUG \"${CMAKE_CUDA_FLAGS_DEBUG}\")\n");
+    OUTPUT_RAW("        string(REPLACE \"/RTC\" \"\" CMAKE_CUDA_FLAGS_DEBUG \"${CMAKE_CUDA_FLAGS_DEBUG}\")\n");
+    OUTPUT_RAW("        string(REGEX REPLACE \"[ ]+\" \" \" CMAKE_CUDA_FLAGS_DEBUG \"${CMAKE_CUDA_FLAGS_DEBUG}\")\n");
+    OUTPUT_RAW("        set(CMAKE_CUDA_FLAGS_DEBUG \"${CMAKE_CUDA_FLAGS_DEBUG}\" CACHE STRING \"\" FORCE)\n");
+    OUTPUT_RAW("    endif()\n");
     OUTPUT_RAW("    find_package(CUDAToolkit)\n");
     OUTPUT_RAW("    if(CUDAToolkit_FOUND)\n");
     OUTPUT_RAW("        add_executable(CudaTest_");
