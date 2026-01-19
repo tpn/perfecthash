@@ -16,6 +16,22 @@ files:
       - python-runtime
       - python-analysis
       - python-dev
+  dev-linux-arm64:
+    output: conda
+    conda_dir: conda/environments
+    matrix:
+      os: [linux]
+      arch: [aarch64]
+      py: ["3.13", "3.14"]
+      cuda: ["none"]
+      compiler: ["llvm"]
+    includes:
+      - build-tools
+      - compiler
+      - build
+      - python-runtime
+      - python-analysis
+      - python-dev
   dev-windows:
     output: conda
     conda_dir: conda/environments

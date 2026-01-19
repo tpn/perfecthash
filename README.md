@@ -184,6 +184,31 @@ them.
 
 Prerequisites: C compiler (GCC 10 tested), CMake.  Optional: Ninja.
 
+Recommended (mamba/conda) environment:
+
+```
+# x86_64 (pre-generated)
+mamba env create -f conda/environments/dev-linux_os-linux_arch-x86_64_py-313_cuda-none_compiler-llvm.yaml
+mamba activate dev-linux_os-linux_arch-x86_64_py-313_cuda-none_compiler-llvm
+
+# ARM64 / aarch64 (pre-generated)
+mamba env create -f conda/environments/dev-linux-arm64_os-linux_arch-aarch64_py-313_cuda-none_compiler-llvm.yaml
+mamba activate dev-linux-arm64_os-linux_arch-aarch64_py-313_cuda-none_compiler-llvm
+```
+
+Generated environment files live under `conda/environments/` and are produced
+from `dependencies.yaml` using `rapids-dependency-file-generator`.
+
+If you need a different Python version, pick the matching `py-314` environment
+file from `conda/environments/`.  You can also create a minimal dev/test
+environment manually:
+
+```
+mamba create -y -n perfecthash-dev -c conda-forge \
+  python=3.12 cmake ninja make pkg-config clang clangxx lld llvmdev pytest
+mamba activate perfecthash-dev
+```
+
 ```
 mkdir -p ~/src && cd ~/src
 git clone https://github.com/tpn/perfecthash
@@ -213,6 +238,18 @@ cd perfecthash
 cmake -S . -B build -G"Unix Makefiles"
 cmake --build build
 ```
+
+#### Tests (Linux/macOS)
+
+Unit tests and CLI integration tests are available via CTest.  They require a
+build with tests enabled and use the `keys/HologramWorld-31016.keys` fixture.
+
+```
+cmake -S . -B build-tests -G Ninja -DPERFECTHASH_ENABLE_TESTS=ON -DBUILD_TESTING=ON
+cmake --build build-tests
+ctest --test-dir build-tests --output-on-failure
+```
+
 #### Mac
 
 I haven't tried to build it on Mac yet.  It'll require a bit of hacking, I
