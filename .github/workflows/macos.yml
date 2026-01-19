@@ -1,0 +1,56 @@
+name: macos
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-arm64
+            runner: macos-14
+            env_file: conda/environments/dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm.yaml
+            env_name: dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm
+            build_preset: ninja-multi
+            build_dir: build
+          - name: macos-x86_64
+            runner: macos-13
+            env_file: conda/environments/dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm.yaml
+            env_name: dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm
+            build_preset: ninja-multi-macos-x86_64
+            build_dir: build-macos-x86_64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          micromamba-version: "1.5.10"
+          environment-file: ${{ matrix.env_file }}
+          environment-name: ${{ matrix.env_name }}
+          cache-environment: true
+          cache-environment-key: ${{ matrix.name }}
+
+      - name: Configure
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" cmake --preset "${{ matrix.build_preset }}"
+
+      - name: Build (Release)
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" cmake --build "${{ matrix.build_dir }}" --config Release
+
+      - name: Test (Release)
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure -C Release

@@ -4,4 +4,5 @@
 - [x] Fix macOS-specific compat gaps (sysinfo/get_nprocs, mmap flags, file mapping, SRW locks, VirtualAlloc sizing).
 - [x] Add macOS build notes and dependency guidance to docs.
 - [x] Run unit/integration tests via CTest and record results.
-- [ ] (Optional) Run `rapids-dependency-file-generator` to regenerate all env files from `dependencies.yaml`.
+- [x] Regenerate dependency files via `rapids-dependency-file-generator`.
+- [x] Add macOS x86_64 envs + CMake presets for Intel macOS.

@@ -3,6 +3,7 @@
 <!-- Disable this whilst cuda-dev2 is in flux. 
 <img src="https://ci.appveyor.com/api/projects/status/github/tpn/perfecthash?svg=true&retina=true" alt="Appveyor Badge">
 -->
+[![macos](https://github.com/tpn/perfecthash/actions/workflows/macos.yml/badge.svg)](https://github.com/tpn/perfecthash/actions/workflows/macos.yml)
 
 [Helper Utility for Generating Command Line Syntax](https://tpn.github.io/perfecthash-ui/)
 The `ui/` directory contains the companion web UI (submodule) for generating
@@ -260,6 +261,10 @@ Recommended (mamba/conda) environment:
 # Apple Silicon (arm64)
 mamba env create -f conda/environments/dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm.yaml
 mamba activate dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm
+
+# Intel (x86_64)
+mamba env create -f conda/environments/dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm.yaml
+mamba activate dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm
 ```
 
 ```
@@ -271,6 +276,13 @@ cd perfecthash
 cmake -S . -B build-macos -G"Ninja Multi-Config"
 cmake --build build-macos --config Release
 cmake --build build-macos --config Debug
+```
+
+For Intel macOS CI (or cross-build on Apple Silicon), you can use the preset:
+
+```
+cmake --preset ninja-multi-macos-x86_64
+cmake --build --preset ninja-macos-x86_64-release
 ```
 
 Tests:

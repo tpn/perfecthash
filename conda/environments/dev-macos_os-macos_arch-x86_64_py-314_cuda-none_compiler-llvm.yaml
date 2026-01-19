@@ -32,4 +32,4 @@ dependencies:
 - setuptools>=61
 - tqdm
 - wheel
-name: dev-linux-arm64_os-linux_arch-aarch64_py-314_cuda-none_compiler-llvm
+name: dev-macos_os-macos_arch-x86_64_py-314_cuda-none_compiler-llvm

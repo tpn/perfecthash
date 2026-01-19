@@ -37,7 +37,7 @@ files:
     conda_dir: conda/environments
     matrix:
       os: [macos]
-      arch: [arm64]
+      arch: [arm64, x86_64]
       py: ["3.13", "3.14"]
       cuda: ["none"]
       compiler: ["llvm"]

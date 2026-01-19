@@ -24,6 +24,16 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "USE_CUDA": "ON"
       }
+    },
+    {
+      "name": "ninja-multi-macos-x86_64",
+      "displayName": "Ninja Multi-Config (macOS x86_64)",
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "${sourceDir}/build-macos-x86_64",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_OSX_ARCHITECTURES": "x86_64"
+      }
     }
   ],
   "buildPresets": [
@@ -35,6 +45,16 @@
     {
       "name": "ninja-release",
       "configurePreset": "ninja-multi",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-macos-x86_64-debug",
+      "configurePreset": "ninja-multi-macos-x86_64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ninja-macos-x86_64-release",
+      "configurePreset": "ninja-multi-macos-x86_64",
       "configuration": "Release"
     }
   ]
