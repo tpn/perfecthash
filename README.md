@@ -4,6 +4,8 @@
 <img src="https://ci.appveyor.com/api/projects/status/github/tpn/perfecthash?svg=true&retina=true" alt="Appveyor Badge">
 -->
 [![macos](https://github.com/tpn/perfecthash/actions/workflows/macos.yml/badge.svg)](https://github.com/tpn/perfecthash/actions/workflows/macos.yml)
+[![linux](https://github.com/tpn/perfecthash/actions/workflows/linux.yml/badge.svg)](https://github.com/tpn/perfecthash/actions/workflows/linux.yml)
+[![windows](https://github.com/tpn/perfecthash/actions/workflows/windows.yml/badge.svg)](https://github.com/tpn/perfecthash/actions/workflows/windows.yml)
 
 [Helper Utility for Generating Command Line Syntax](https://tpn.github.io/perfecthash-ui/)
 The `ui/` directory contains the companion web UI (submodule) for generating

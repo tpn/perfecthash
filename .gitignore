@@ -18,6 +18,7 @@ sdv.temp
 *.vcxproj.user
 .ipynb_checkpoints
 TestResults
+Testing
 *.pgd
 .idea
 .cache

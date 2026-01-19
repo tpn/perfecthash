@@ -1,0 +1,152 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (defaults to tag or CMakeLists.txt)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            env_file: conda/environments/dev-linux_os-linux_arch-x86_64_py-313_cuda-none_compiler-llvm.yaml
+            env_name: dev-linux_os-linux_arch-x86_64_py-313_cuda-none_compiler-llvm
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            env_file: conda/environments/dev-linux-arm64_os-linux_arch-aarch64_py-313_cuda-none_compiler-llvm.yaml
+            env_name: dev-linux-arm64_os-linux_arch-aarch64_py-313_cuda-none_compiler-llvm
+    env:
+      RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          micromamba-version: "1.5.10"
+          environment-file: ${{ matrix.env_file }}
+          environment-name: ${{ matrix.env_name }}
+          cache-environment: true
+          cache-environment-key: release-${{ matrix.arch }}
+
+      - name: Build release
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" ci/release-linux.sh --clean
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-${{ matrix.arch }}
+          path: out/release/**/dist/*
+
+  macos:
+    name: macos-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-14
+            env_file: conda/environments/dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm.yaml
+            env_name: dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm
+          - arch: x86_64
+            runner: macos-13
+            env_file: conda/environments/dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm.yaml
+            env_name: dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm
+    env:
+      RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          micromamba-version: "1.5.10"
+          environment-file: ${{ matrix.env_file }}
+          environment-name: ${{ matrix.env_name }}
+          cache-environment: true
+          cache-environment-key: release-${{ matrix.arch }}
+
+      - name: Build release
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" ci/release-macos.sh --arch "${{ matrix.arch }}" --clean
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-${{ matrix.arch }}
+          path: out/release/**/dist/*
+
+  windows:
+    name: windows-x86_64
+    runs-on: windows-latest
+    env:
+      RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Ninja
+        run: choco install ninja -y
+
+      - name: Build release
+        shell: pwsh
+        run: |
+          pwsh -File ci/release-windows.ps1 -ReleaseVersion $env:RELEASE_VERSION -Clean
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-x86_64
+          path: out/release/**/dist/*
+
+  publish:
+    name: publish
+    runs-on: ubuntu-24.04
+    needs: [linux, macos, windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
