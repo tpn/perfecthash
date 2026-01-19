@@ -1,0 +1,25 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Ninja
+        run: choco install ninja -y
+      - name: Configure
+        run: cmake --preset ninja-multi
+      - name: Build (Release)
+        run: cmake --build --preset ninja-release --parallel
+      - name: Test (Release)
+        run: ctest --test-dir build -C Release --output-on-failure --timeout 300
