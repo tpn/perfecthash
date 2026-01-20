@@ -476,7 +476,7 @@ typedef GUID *LPGUID;
 typedef const GUID *LPCGUID;
 typedef GUID IID;
 
-#define InlineIsEqualGUID(rguid1, rguid2)                              \
+#define InlineIsEqualGUID(rguid1, rguid2)                                      \
         (((const uint32_t *)(rguid1))[0] == ((const uint32_t *)(rguid2))[0] && \
         ((const uint32_t *)(rguid1))[1] == ((const uint32_t *)(rguid2))[1] &&  \
         ((const uint32_t *)(rguid1))[2] == ((const uint32_t *)(rguid2))[2] &&  \
