@@ -2804,8 +2804,16 @@ Return Value:
 
 End:
 
-    if (DoFlushOnExit && !FlushConsoleInputBuffer(InputHandle)) {
-        SYS_ERROR(FlushConsoleInputBuffer);
+    if (DoFlushOnExit && InputHandle && InputHandle != INVALID_HANDLE_VALUE) {
+        if (!FlushConsoleInputBuffer(InputHandle)) {
+            LastError = GetLastError();
+            if (LastError != ERROR_INVALID_HANDLE) {
+                SetLastError(LastError);
+                SYS_ERROR(FlushConsoleInputBuffer);
+            } else {
+                SetLastError(ERROR_SUCCESS);
+            }
+        }
     }
 }
 

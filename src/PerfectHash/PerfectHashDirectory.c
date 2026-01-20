@@ -1487,6 +1487,13 @@ Return Value:
         AcquirePerfectHashFileLockExclusive(File);
 
         //
+        // The file has been removed from our list; reinitialize the list
+        // entry so it reflects the detached state.
+        //
+
+        InitializeListHead(&File->ListEntry);
+
+        //
         // Invariant checks: file should not be readonly, should be closed,
         // should not have any renames scheduled, and the file's directory
         // path should not match ours.
@@ -1784,8 +1791,6 @@ Return Value:
 
     PH_E_DIRECTORY_READONLY - The directory is readonly.
 
-    PH_E_DIRECTORY_ALREADY_CLOSED - The directory has already been closed.
-
     PH_E_FILE_NOT_OPEN - The file has not yet been opened, or has been closed.
 
     PH_E_FILE_ADDED_TO_DIFFERENT_DIRECTORY - The file has already been added
@@ -1841,17 +1846,13 @@ Return Value:
         goto Error;
     }
 
-    if (IsDirectoryClosed(Directory)) {
-        Result = PH_E_DIRECTORY_CLOSED;
-        goto Error;
-    }
-
     //
     // Argument validation complete.  Remove the file from the directory.
     //
 
     List = Directory->FilesList;
     List->Vtbl->RemoveEntry(List, &File->ListEntry);
+    InitializeListHead(&File->ListEntry);
 
     File->Vtbl->Release(File);
     RELEASE(File->ParentDirectory);

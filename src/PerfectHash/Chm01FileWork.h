@@ -39,7 +39,6 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PreparePythonTestFileChm01 NULL
 #define PrepareCppHeaderOnlyFileChm01 NULL
 #define PrepareCppHeaderOnlyTestFileChm01 NULL
-#define PrepareCudaSourceFileChm01 NULL
 #define PrepareRustCargoTomlFileChm01 NULL
 #define PrepareRustLibFileChm01 NULL
 #define PrepareRustTestFileChm01 NULL

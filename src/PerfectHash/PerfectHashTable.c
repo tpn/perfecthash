@@ -134,6 +134,7 @@ Return Value:
 --*/
 {
     PALLOCATOR Allocator;
+    HRESULT RemoveResult;
 
     //
     // Validate arguments.
@@ -202,6 +203,28 @@ Return Value:
     ASSERT(Table->Name == NULL);
 
     CONTEXT_FILE_WORK_TABLE_ENTRY(EXPAND_AS_ASSERT_NULL);
+
+    //
+    // Detach file instances from their parent directories before releasing
+    // our references.  This breaks directory/file reference cycles.
+    //
+
+#define EXPAND_AS_DETACH_FILE(                                      \
+    Verb, VUpper, Name, Upper,                                      \
+    EofType, EofValue,                                              \
+    Suffix, Extension, Stream, Base                                 \
+)                                                                   \
+    if (Table->Name && Table->Name->ParentDirectory) {              \
+        RemoveResult = Table->Name->ParentDirectory->Vtbl->         \
+            RemoveFile(Table->Name->ParentDirectory, Table->Name);  \
+        if (FAILED(RemoveResult)) {                                 \
+            PH_ERROR(PerfectHashDirectoryRemoveFile, RemoveResult); \
+        }                                                           \
+    }
+
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_DETACH_FILE);
+
+#undef EXPAND_AS_DETACH_FILE
 
     //
     // Release applicable COM references.
