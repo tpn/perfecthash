@@ -1,0 +1,221 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 1st hero title */
+.hero-title1 {
+  font-family: "Georgia", "Iowan Old Style", serif;
+  /* or 'Lora', 'Cormorant Garamond' */
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  font-variant-caps: small-caps;
+  color: #1a1a1a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .7), 0 2px 4px rgba(0, 0, 0, .06);
+}
+
+/* 2nd hero title */
+.hero-title2 {
+  font-family: "Libre Baskerville", serif;
+  font-weight: 700;
+  color: #1d436a;
+  text-shadow: 0 7px 0 rgba(255, 255, 255, .7), 0 2px 4px rgba(201, 123, 123, 0.06);
+}
+
+.hero-title2::after {
+  content: "";
+  display: block;
+  height: 2px;
+  margin-top: .4rem;
+  background: linear-gradient(90deg, #6aa3ff, #a88bff 40%, #ffb3e6);
+  border-radius: 2px;
+  width: min(24ch, 92%);
+}
+
+/* 3rd hero title */
+.hero-title3 {
+  font-family: "Spectral", serif;
+  font-weight: 700;
+  color: #0f2233;
+}
+
+.hero-title3 .drop {
+  float: left;
+  line-height: .8;
+  font-size: 1.3em;
+  margin-right: .06em;
+  color: transparent;
+  -webkit-text-stroke: 1px #0f2233;
+}
+
+/* 4th hero title */
+.hero-title4 {
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 600;
+  color: #0e2032;
+  display: flex;
+  gap: .5rem;
+  align-items: baseline;
+}
+
+.hero-title4 em {
+  font-family: "Inter", system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: .08em;
+  font-size: .6em;
+  padding: .18em .5em;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(16, 32, 50, .08);
+}
+
+/* 5th hero title */
+.hero-title5 {
+  font-family: "Playfair Display", serif;
+  font-weight: 700;
+  letter-spacing: .3px;
+  background: linear-gradient(180deg, #1b2b45 10%, #2a4d9e 50%, #7b67d8 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(28, 56, 129, .12));
+}
+
+/* 6th hero title */
+.hero-title6 {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  color: transparent;
+  -webkit-text-stroke: 1.5px #1b2b45;
+  text-shadow: 3px 3px 0 rgba(123, 103, 216, .18);
+}
+
+/* 7th hero title */
+@keyframes breathe {
+
+  0%,
+  100% {
+    font-variation-settings: "wght" 630, "wdth" 100;
+    letter-spacing: .2px;
+  }
+
+  50% {
+    font-variation-settings: "wght" 680, "wdth" 110;
+    letter-spacing: .5px;
+  }
+}
+
+.hero-title7 {
+  font-family: "Fraunces", serif;
+  /* any variable serif works */
+  animation: breathe 6s ease-in-out infinite;
+  color: #0f1d33;
+}
+
+/* 8th hero title */
+.hero-title8 {
+  display: inline-block;
+  padding: .6rem 1rem;
+  border-radius: 16px;
+  background: radial-gradient(120% 140% at 10% 10%, rgba(255, 255, 255, .7), rgba(255, 255, 255, .35));
+  box-shadow: 0 8px 28px rgba(16, 32, 50, .12), inset 0 1px 0 rgba(255, 255, 255, .6);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, .5);
+}
+
+.hero-title8 {
+  margin: 0;
+  font-family: "Garamond", serif;
+  color: #0e2233;
+}
+
+/* 9th hero title */
+.hero-title9 {
+  position: relative;
+  display: inline-block;
+  font-family: "Fraunces", serif;
+  font-weight: 800;
+  color: #0f1d33;
+  letter-spacing: .4px;
+  mix-blend-mode: multiply;
+}
+
+.hero-title9::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10% -30%;
+  background:
+    radial-gradient(60% 40% at 30% 40%, rgba(122, 164, 255, .3), transparent 60%),
+    radial-gradient(50% 35% at 70% 60%, rgba(168, 139, 255, .25), transparent 70%);
+  filter: blur(18px);
+  z-index: -1;
+}
+
+/* 10th hero title */
+.hero-title10 {
+  font-family: "Libre Baskerville", serif;
+  font-weight: 500;
+  letter-spacing: .3px;
+  background: linear-gradient(180deg, #95a4b8 10%, #8497c5 50%, #4f69a4 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(29, 48, 96, 0.12));
+}
+
+/* App header + settings */
+.app-header {
+  position: relative;
+}
+
+.settings-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: none;
+  background: transparent;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.settings-button:hover {
+  opacity: 0.8;
+}

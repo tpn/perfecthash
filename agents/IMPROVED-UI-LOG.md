@@ -45,3 +45,4 @@
 - Added a CMake configure field to set `CARGO_EXECUTABLE` and updated CLI test defaults to `build/bin/PerfectHashCreate`.
 - Added a CMake configure toggle to reset the build directory before reconfiguring.
 - Ignored generated `keys/*.keys*` artifacts.
+- Converted the UI from a submodule to a tracked folder and ignored Playwright output directories.
