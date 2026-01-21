@@ -171,6 +171,10 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
+    //
+    // Pad out to an 8-byte boundary.
+    //
+    ULONG Padding;
     PVOID ExecutionEngine;
     PVOID Context;
     PVOID IndexFunction;

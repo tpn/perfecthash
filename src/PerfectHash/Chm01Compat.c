@@ -1183,7 +1183,7 @@ FinishedSolution:
         }
 
         CopyMemory(NewGraphInfoOnDisk,
-                   Table->TableInfoOnDisk,
+                   GraphInfoOnDisk,
                    sizeof(*NewGraphInfoOnDisk));
 
         //

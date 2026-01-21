@@ -70,12 +70,15 @@ function(perfecthash_apply_common_settings target)
             chkstk.obj              # Link with chkstk.obj
             bufferoverflowU.lib     # Link with bufferoverflowU.lib
         )
-        target_link_libraries(
-            ${target}
-            PRIVATE
-            $<$<CONFIG:Debug>:ucrtd;vcruntimed>
-            $<$<NOT:$<CONFIG:Debug>>:ucrt;vcruntime>
-        )
+        get_target_property(ph_skip_runtime_libs ${target} PERFECTHASH_SKIP_RUNTIME_LIBS)
+        if(NOT ph_skip_runtime_libs)
+            target_link_libraries(
+                ${target}
+                PRIVATE
+                $<$<CONFIG:Debug>:ucrtd;vcruntimed>
+                $<$<NOT:$<CONFIG:Debug>>:ucrt;vcruntime>
+            )
+        endif()
         target_link_options(
             ${target}
             PRIVATE

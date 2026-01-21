@@ -392,6 +392,7 @@ endif()
 # ###############################################################################
 # Target
 # ###############################################################################
+set_property(TARGET ${target} PROPERTY PERFECTHASH_SKIP_RUNTIME_LIBS TRUE)
 perfecthash_apply_common_settings(${target})
 
 # ###############################################################################
@@ -422,16 +423,34 @@ if(PERFECTHASH_HAS_LLVM)
         separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
         target_compile_options(${target} PRIVATE ${LLVM_DEFINITIONS_LIST})
     endif()
-    llvm_map_components_to_libnames(
-        LLVM_LIBS
-        core
-        executionengine
-        mcjit
-        native
-        target
-        support
-    )
-    target_link_libraries(${target} PRIVATE ${LLVM_LIBS})
+    if(MSVC)
+        find_library(LLVM_C_LIB NAMES LLVM-C)
+    endif()
+    if(MSVC AND LLVM_C_LIB)
+        target_link_libraries(${target} PRIVATE ${LLVM_C_LIB})
+    else()
+        llvm_map_components_to_libnames(
+            LLVM_LIBS
+            core
+            executionengine
+            mcjit
+            native
+            target
+            support
+        )
+        target_link_libraries(${target} PRIVATE ${LLVM_LIBS})
+        if(MSVC)
+            target_link_libraries(
+                ${target}
+                PRIVATE
+                $<$<CONFIG:Debug>:msvcprtd>
+                $<$<NOT:$<CONFIG:Debug>>:msvcprt>
+                $<$<CONFIG:Debug>:msvcrtd>
+                $<$<NOT:$<CONFIG:Debug>>:msvcrt>
+                oldnames
+            )
+        endif()
+    endif()
 endif()
 
 if(TARGET PerfectHashAsm)
@@ -441,6 +460,17 @@ if(TARGET PerfectHashAsm)
         list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4)
     endif()
     target_link_libraries(${target} PUBLIC "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
+endif()
+
+if(MSVC)
+    target_link_libraries(
+        ${target}
+        PRIVATE
+        $<$<CONFIG:Debug>:vcruntimed>
+        $<$<NOT:$<CONFIG:Debug>>:vcruntime>
+        $<$<CONFIG:Debug>:ucrtd>
+        $<$<NOT:$<CONFIG:Debug>>:ucrt>
+    )
 endif()
 
 # vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

@@ -100,8 +100,20 @@ PERFECT_HASH_TABLE_JIT_INDEX4 PerfectHashTableJitInterfaceIndex4;
 PERFECT_HASH_TABLE_JIT_INDEX2_64 PerfectHashTableJitInterfaceIndex2_64;
 PERFECT_HASH_TABLE_JIT_INDEX4_64 PerfectHashTableJitInterfaceIndex4_64;
 
-static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
-    PerfectHashTableJitInterfaceVtbl;
+static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
+    PerfectHashTableJitInterfaceVtbl = {
+    &PerfectHashTableJitInterfaceQueryInterface,
+    &PerfectHashTableJitInterfaceAddRef,
+    &PerfectHashTableJitInterfaceRelease,
+    &PerfectHashTableJitInterfaceCreateInstance,
+    &PerfectHashTableJitInterfaceLockServer,
+    &PerfectHashTableJitInterfaceIndex,
+    &PerfectHashTableJitInterfaceIndex64,
+    &PerfectHashTableJitInterfaceIndex2,
+    &PerfectHashTableJitInterfaceIndex4,
+    &PerfectHashTableJitInterfaceIndex2_64,
+    &PerfectHashTableJitInterfaceIndex4_64,
+};
 
 #if defined(PH_HAS_LLVM)
 
@@ -117,6 +129,8 @@ IsSupportedJitHashFunctionId(
     _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId
     )
 {
+#pragma warning(push)
+#pragma warning(disable: 4061)
     switch (HashFunctionId) {
         case PerfectHashHashMultiplyShiftRFunctionId:
         case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
@@ -131,6 +145,7 @@ IsSupportedJitHashFunctionId(
         default:
             return FALSE;
     }
+#pragma warning(pop)
 }
 
 FORCEINLINE
@@ -216,6 +231,7 @@ typedef struct _CHM01_JIT_CONTEXT {
     LLVMValueRef TableDataConst;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     BOOLEAN UseAssigned16;
+    BYTE Padding1[3];
 } CHM01_JIT_CONTEXT;
 typedef CHM01_JIT_CONTEXT *PCHM01_JIT_CONTEXT;
 
@@ -551,6 +567,8 @@ BuildChm01IndexFunction(
         Key32 = Key;
     }
 
+#pragma warning(push)
+#pragma warning(disable: 4061)
     switch (Ctx->HashFunctionId) {
 
         case PerfectHashHashMultiplyShiftRFunctionId:
@@ -959,6 +977,7 @@ BuildChm01IndexFunction(
         default:
             return NULL;
     }
+#pragma warning(pop)
 
     Index = LLVMBuildAdd(Ctx->Builder, Vertex1, Vertex2, "index_add");
     Index = LLVMBuildAnd(Ctx->Builder,
@@ -1283,7 +1302,7 @@ CompileChm01IndexJit(
     LLVMSetTarget(Module, TargetTriple);
     LLVMSetDataLayout(Module, DataLayout);
 
-    ZeroStruct(JitContext);
+    ZeroStructInline(JitContext);
     JitContext.Context = Context;
     JitContext.Module = Module;
     JitContext.Builder = Builder;
@@ -1685,21 +1704,6 @@ PerfectHashTableCompileJit(
 }
 
 #endif
-
-static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
-    PerfectHashTableJitInterfaceVtbl = {
-    &PerfectHashTableJitInterfaceQueryInterface,
-    &PerfectHashTableJitInterfaceAddRef,
-    &PerfectHashTableJitInterfaceRelease,
-    &PerfectHashTableJitInterfaceCreateInstance,
-    &PerfectHashTableJitInterfaceLockServer,
-    &PerfectHashTableJitInterfaceIndex,
-    &PerfectHashTableJitInterfaceIndex64,
-    &PerfectHashTableJitInterfaceIndex2,
-    &PerfectHashTableJitInterfaceIndex4,
-    &PerfectHashTableJitInterfaceIndex2_64,
-    &PerfectHashTableJitInterfaceIndex4_64,
-};
 
 _Use_decl_annotations_
 HRESULT

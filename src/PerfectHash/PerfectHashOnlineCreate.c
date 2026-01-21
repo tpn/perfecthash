@@ -210,6 +210,12 @@ Return Value:
         goto Error;
     }
 
+    Result = PerfectHashContextInitializeLowMemoryMonitor(Context, FALSE);
+    if (FAILED(Result)) {
+        PH_ERROR(PerfectHashContextInitializeLowMemoryMonitor, Result);
+        goto Error;
+    }
+
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
     TlsContext->Context = Context;
     TlsContextSet = TRUE;

@@ -119,7 +119,7 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
+    PRTL Rtl = NULL;
     BOOLEAN Is32Bit;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File;
@@ -423,7 +423,7 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
+    PRTL Rtl = NULL;
     PVOID Buffer;
     BOOLEAN Is32Bit;
     HRESULT Result = S_OK;
@@ -478,6 +478,7 @@ Return Value:
 
     AllocationSize = (SIZE_T)NumberOfKeys * KeySizeInBytes;
     Allocator = Keys->Allocator;
+    Rtl = Keys->Rtl;
     Buffer = Allocator->Vtbl->Malloc(Allocator, AllocationSize);
 
     if (!Buffer) {
@@ -510,7 +511,6 @@ Return Value:
 
     Keys->NumberOfKeys.QuadPart = NumberOfKeys;
 
-    Rtl = Keys->Rtl;
     Keys->NumberOfEdges.QuadPart = (
         Rtl->RoundUpPowerOfTwo64(Keys->NumberOfKeys.QuadPart)
     );
