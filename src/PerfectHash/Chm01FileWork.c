@@ -400,17 +400,25 @@ Return Value:
                 break;
 
             case EofInitTypeNumberOfKeysMultiplier:
-                EndOfFile.QuadPart = (
-                    (LONGLONG)Keys->NumberOfKeys.QuadPart *
-                    Eof->Multiplier
-                );
+                {
+                    LONGLONG Computed = (LONGLONG)(
+                        Keys->NumberOfKeys.QuadPart * Eof->Multiplier
+                    );
+                    if (Computed > EndOfFile.QuadPart) {
+                        EndOfFile.QuadPart = Computed;
+                    }
+                }
                 break;
 
             case EofInitTypeNumberOfTableElementsMultiplier:
-                EndOfFile.QuadPart = (
-                    NumberOfTableElements.QuadPart *
-                    Eof->Multiplier
-                );
+                {
+                    LONGLONG Computed = (LONGLONG)(
+                        NumberOfTableElements.QuadPart * Eof->Multiplier
+                    );
+                    if (Computed > EndOfFile.QuadPart) {
+                        EndOfFile.QuadPart = Computed;
+                    }
+                }
                 break;
 
             case EofInitTypeNumberOfPages:
@@ -727,7 +735,11 @@ End:
 
     if (Event) {
 #ifdef PH_WINDOWS
-        SetEventWhenCallbackReturns(Item->Instance, Event);
+        if (Item->Instance) {
+            SetEventWhenCallbackReturns(Item->Instance, Event);
+        } else {
+            SetEvent(Event);
+        }
 #else
         SetEvent(Event);
 #endif

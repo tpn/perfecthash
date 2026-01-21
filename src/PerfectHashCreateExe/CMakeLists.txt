@@ -60,6 +60,10 @@ add_dependencies(${target}
     PerfectHash
 )
 
+if(WIN32)
+    target_link_libraries(${target} PRIVATE Dbghelp)
+endif()
+
 target_link_libraries(${target} PRIVATE PerfectHash ${CMAKE_DL_LIBS})
 
 #  vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

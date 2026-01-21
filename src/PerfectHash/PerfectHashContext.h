@@ -127,6 +127,12 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG IsBulkCreate:1;
 
         //
+        // When set, indicates context-level file work should be skipped.
+        //
+
+        ULONG SkipContextFileWork:1;
+
+        //
         // When set, indicates the graph solving failed because every worker
         // thread failed to allocate sufficient memory to even attempt solving
         // the graph (specifically, the every graph's LoadInfo() call returned
@@ -200,7 +206,7 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         // Unused bits.
         //
 
-        ULONG Unused:16;
+        ULONG Unused:15;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -244,6 +250,13 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define IsContextBulkCreate(Context) ((Context)->State.IsBulkCreate == TRUE)
 #define SetContextBulkCreate(Context) ((Context)->State.IsBulkCreate = TRUE)
 #define ClearContextBulkCreate(Context) ((Context)->State.IsBulkCreate = FALSE)
+
+#define SkipContextFileWork(Context) \
+    ((Context)->State.SkipContextFileWork == TRUE)
+#define SetContextSkipContextFileWork(Context) \
+    ((Context)->State.SkipContextFileWork = TRUE)
+#define ClearContextSkipContextFileWork(Context) \
+    ((Context)->State.SkipContextFileWork = FALSE)
 
 #define IsContextTableCreate(Context) ((Context)->State.IsTableCreate == TRUE)
 #define SetContextTableCreate(Context) ((Context)->State.IsTableCreate = TRUE)
@@ -1071,6 +1084,15 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
 #endif
     PTP_WORK FileWork;
 
+    //
+    // Optional IOCP integration for file work dispatch.
+    //
+
+    HANDLE FileWorkIoCompletionPort;
+    HANDLE FileWorkOutstandingEvent;
+    volatile LONG FileWorkOutstanding;
+    ULONG Padding7;
+
     volatile LONG GraphRegisterSolvedTsxSuccess;
     ULONG Padding4;
 
@@ -1395,6 +1417,23 @@ typedef PERFECT_HASH_CONTEXT_RESET *PPERFECT_HASH_CONTEXT_RESET;
 
 typedef
 VOID
+(NTAPI PERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK)(
+    _In_ PPERFECT_HASH_CONTEXT Context
+    );
+typedef PERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK
+      *PPERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK;
+
+typedef
+VOID
+(NTAPI PERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ BOOL CancelPending
+    );
+typedef PERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS
+      *PPERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS;
+
+typedef
+VOID
 (NTAPI PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES)(
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
@@ -1477,6 +1516,9 @@ PerfectHashContextInitializeLowMemoryMonitor(
 extern PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
 extern PERFECT_HASH_CONTEXT_RUNDOWN PerfectHashContextRundown;
 extern PERFECT_HASH_CONTEXT_RESET PerfectHashContextReset;
+extern PERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK PerfectHashContextSubmitFileWork;
+extern PERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS
+    PerfectHashContextWaitForFileWorkCallbacks;
 extern PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE
     PerfectHashContextInitializeKeySize;
 extern PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY

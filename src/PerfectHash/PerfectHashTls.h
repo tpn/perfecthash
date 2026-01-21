@@ -49,7 +49,7 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         // Unused bits.  (Consume these before the Unused2 bits.)
         //
 
-        ULONG Unused1:3;
+        ULONG Unused1:6;
 
         //
         // The following bits, when set, prevent the global component logic
@@ -88,7 +88,7 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         // Remaining unused bits.  (Consume Unused1 before using these.)
         //
 
-        ULONG Unused2:24;
+        ULONG Unused2:21;
 
     };
     LONG AsLong;

@@ -15,3 +15,6 @@
 
 ## File enum capacity
 - File enums are tracked via a 64-bit bitmap. When we run out of bits, add a new enum group with a `_2`, `_3`, etc. suffix and keep the existing enum ordering rules intact.
+
+## Auto-generated files
+- `include/PerfectHashEvents.h` is auto-generated; discard local changes before rebasing or merging.

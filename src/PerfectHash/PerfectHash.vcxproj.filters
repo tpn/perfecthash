@@ -43,6 +43,9 @@
     <ClCompile Include="PerfectHashPrimes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashServer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashTableDelete.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -56,6 +59,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashContext.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashContextIocp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashAsync.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashClient.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RtlPrivilege.c">
@@ -125,6 +137,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableCreate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Chm01Async.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Chm01.c">
@@ -393,6 +408,15 @@
     <ClInclude Include="PerfectHashContext.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PerfectHashContextIocp.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashAsync.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashClient.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="PerfectHashKeys.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
@@ -417,6 +441,9 @@
     <ClInclude Include="PerfectHashPrimes.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PerfectHashServer.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Graph.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
@@ -430,6 +457,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Chm01.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Chm01Async.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashDirectory.h">

@@ -1,0 +1,60 @@
+# IOCP Logs
+
+## 2026-01-19
+- Added IOCP context/server/client interfaces and COM scaffolding.
+- Added NUMA-aware IOCP runtime skeleton (per-node IOCPs, worker threads with affinity).
+- Wired new components into PerfectHash constants/build definitions.
+- Added server/client executables with basic CLI parsing and IOCP startup wiring.
+- Fixed /Wall padding warnings and confirmed Debug builds for server/client targets.
+- Implemented named-pipe IOCP transport in the server with per-node pipe instances and a request/response state machine.
+- Implemented client-side named-pipe connect and request submission with wire protocol headers.
+- Fixed /Wall issues in new IOCP code (Rtl-backed ZeroMemory usage, struct padding, enum exhaustiveness) and rebuilt server/client executables.
+- Wired server request dispatch to parse command-line payloads and call IOCP context bulk/table create entrypoints.
+- Implemented IOCP ArgvW entrypoints by delegating to legacy PerfectHashContext workflows.
+- Added server endpoint/local-only API + CLI configuration, plus error-response payload handling and client-side retrieval/printing.
+- Added a PowerShell smoke test script for server/client shutdown round-trips.
+- Ran `scripts/iocp-smoke.ps1` after fixes to confirm clean startup/shutdown.
+- Diagnosed a Debug breakpoint during table create to a TLS global-component bitfield mismatch; realigned TLS flag bit positions to interface IDs and removed fragile asserts.
+- Added a create-exe unhandled-exception stack trace hook (DbgHelp) to aid future diagnostics.
+- Hardened `scripts/iocp-smoke.ps1` to handle missing exit codes after timed waits; smoke test now completes successfully.
+- Added IOCP work item header/signature and per-item completion dispatch in the IOCP worker loop.
+- Updated server pipe handling to use per-pipe IOCP work items instead of global completion callbacks.
+- Added stress scripts for sys32 bulk create (direct and IOCP variants).
+- Rebuilt PerfectHashServerExe and reran `scripts/iocp-smoke.ps1` successfully.
+- Added bulk-create directory server request with per-request completion token (event + mapping).
+- Implemented server-side directory walk and per-file IOCP work item dispatch for bulk requests.
+- Added client-side `--BulkCreateDirectory` support with token wait and bulk result handling.
+- Fixed bulk enqueue completion accounting and failure handling to avoid double-decrement.
+- Updated IOCP sys32 stress script to use bulk-create directory request.
+- Regenerated PerfectHash error headers/resources for new status codes.
+- Rebuilt PerfectHashServerExe/PerfectHashClientExe with `/p:CL_MPCount=1` and reran `scripts/iocp-smoke.ps1`.
+- Built Release targets for PerfectHashBulkCreate/Server/Client with `/p:CL_MPCount=1`.
+- BulkCreate Release sys32 run at concurrency 32 crashed (`0xC0000005`); repeated `FlushConsoleInputBuffer` errors observed.
+- BulkCreateDirectory argv handling fixed to always inject a program name for parsing.
+- IOCP Release sys32 run at concurrency 32 fails with `SetThreadpoolThreadMinimum` access denied during per-file context init.
+- Created `D:\\src\\perfecthash-main` worktree, built Release `PerfectHashBulkCreate.exe` and tested baseline bulk-create.
+- `hard2` run succeeded but printed repeated `FlushConsoleInputBuffer` errors.
+- `sys32` run crashed with access violation (`0xC0000005`) and the same flush errors, indicating the crash exists on `main`.
+
+## 2026-01-20
+- Rebased `iocp-dev` onto `origin/main` and resolved `PerfectHashBulkCreateExe.c` conflict by keeping upstream minidump handler.
+- Ignored `ERROR_ACCESS_DENIED` from `SetMaximumConcurrency` in IOCP per-file work items to allow bulk runs to continue.
+- Diagnosed IOCP bulk-create server crash (`0xC0000005`) to use-after-free of `CommandLineToArgvW` buffers referenced by table-create parameters.
+- Retained bulk-create directory `ArgvW` buffers in request state (free on completion) and moved argv adjustment into server dispatch to keep string pointers alive.
+- Fixed IOCP bulk work-item callback use-after-free (request freed before work item allocator cleanup).
+- Mapped IOCP bulk-create crash to `PrepareCHeaderFileChm01` using `Context->CommandLineW`; crash was NULL due to direct `TableCreate` usage.
+- Preserved request command line and seeded per-file contexts with `Context->CommandLineW` to keep header generation stable.
+- Updated IOCP stress script to accept `PH_S_SERVER_BULK_CREATE_ALL_SUCCEEDED` as a success exit code.
+- Ran `scripts/stress-sys32-iocp.ps1` against a single-file keys dir (Release, max concurrency 1); completed successfully.
+- Added IOCP-backed file work dispatch hooks: context submit/wait helpers with outstanding-event tracking, per-file context IOCP port wiring, and file-work event signaling for non-threadpool callbacks.
+- Added async work framework scaffolding and CHM01 async state machine skeleton (new modules, build integration).
+- Added CHM01 async bridge that runs the legacy CHM01 routine on a worker thread and polls completion via IOCP, plus an env-gated async entrypoint.
+- Replaced the CHM01 async bridge with IOCP-driven solver slices, graph work items, and a state-machine finalize path for save/close/verify.
+- Fixed CHM01 async header macro usage inside a struct (removed extra semicolons) and prevented double-include macro expansion by adding `#pragma once` to `Chm01FileWork.h`.
+- Added explicit padding to CHM01 async graph work items and undefed `EXPAND_AS_CHECK_ERRORS` before redefining to satisfy `/Wall` with warnings-as-errors.
+- Rebuilt `PerfectHashServerExe` Debug successfully after the async/header fixes.
+- Ran `scripts/stress-sys32-iocp.ps1` with `PERFECT_HASH_IOCP_ASYNC_CHM01=1` against `perfecthash-keys\\hard` (Debug, max concurrency 32); run timed out with client hung waiting for completion (server already exited), leaving partial output in `build-win\\iocp-stress-hard`.
+- Added IOCP work-item flags and a CHM01 async pump loop so IOCP completions continue while `Chm01AsyncWaitJob()` waits; file work/async/pipe items are dispatched inline, bulk work items are requeued.
+- Added a CHM01 async prepare-wait state for the try-larger-table-size path (still returns `PH_E_NOT_IMPLEMENTED` but now waits for prepare file work before closing).
+- Stress runs against `perfecthash-keys\\hard` still time out; observed repeated `SetEndOfFile`/`PerfectHashFileTruncate` failures (error 1224: mapped section open) and `PrepareFileChm01` failures during IOCP bulk runs.
+- Added a context flag to skip context-level file work for per-file IOCP contexts; CHM01 async prepare/save/close now bypass context file items and signal events directly to avoid `ERROR_USER_MAPPED_FILE` conflicts.

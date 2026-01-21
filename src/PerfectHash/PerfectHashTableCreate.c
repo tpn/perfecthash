@@ -16,6 +16,36 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#ifdef PH_WINDOWS
+#include "Chm01Async.h"
+#endif
+
+//
+// Async gating.
+//
+
+#ifdef PH_WINDOWS
+static
+BOOLEAN
+IsChm01AsyncEnabled(
+    VOID
+    )
+{
+    static LONG Initialized = 0;
+    static BOOLEAN Enabled = FALSE;
+    WCHAR Buffer[32];
+    DWORD Length;
+
+    if (InterlockedCompareExchange(&Initialized, 1, 0) == 0) {
+        Length = GetEnvironmentVariableW(L"PERFECT_HASH_IOCP_ASYNC_CHM01",
+                                         Buffer,
+                                         ARRAYSIZE(Buffer));
+        Enabled = (Length > 0);
+    }
+
+    return Enabled;
+}
+#endif
 
 //
 // Cap the maximum key set size we're willing to process to 2 billion.
@@ -393,7 +423,21 @@ Return Value:
     // Dispatch remaining creation work to the algorithm-specific routine.
     //
 
+#ifdef PH_WINDOWS
+    if (AlgorithmId == PerfectHashChm01AlgorithmId &&
+        Table->Context &&
+        Table->Context->FileWorkIoCompletionPort &&
+        IsChm01AsyncEnabled()) {
+        Result = CreatePerfectHashTableImplChm01Async(
+            Table,
+            Table->Context->FileWorkIoCompletionPort
+        );
+    } else {
+        Result = CreationRoutines[AlgorithmId](Table);
+    }
+#else
     Result = CreationRoutines[AlgorithmId](Table);
+#endif
 
     if (Table->OutputDirectory) {
         CloseResult = Table->OutputDirectory->Vtbl->Close(Table->OutputDirectory);

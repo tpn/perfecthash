@@ -18,6 +18,76 @@ Abstract:
 
 _Use_decl_annotations_
 HRESULT
+PrepareCppHeaderOnlyFileChm01(
+    PPERFECT_HASH_CONTEXT Context,
+    PFILE_WORK_ITEM Item
+    )
+{
+    HRESULT Result = S_OK;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_KEYS Keys;
+    PPERFECT_HASH_FILE File;
+    PTABLE_INFO_ON_DISK TableInfo;
+    ULONGLONG NumberOfKeys;
+    ULONGLONG NumberOfTableElements;
+    ULONGLONG KeyElementBytes;
+    ULONGLONG TableElementBytes;
+    ULONGLONG BaseSize;
+    ULONGLONG RequiredSize;
+    ULONGLONG AlignedSize;
+    LARGE_INTEGER EndOfFile;
+
+    //
+    // Initialize aliases.
+    //
+
+    Table = Context->Table;
+    Keys = Table->Keys;
+    File = *Item->FilePointer;
+    TableInfo = Table->TableInfoOnDisk;
+
+    if (!File) {
+        return E_UNEXPECTED;
+    }
+
+    NumberOfKeys = Keys->NumberOfKeys.QuadPart;
+    NumberOfTableElements = TableInfo->NumberOfTableElements.QuadPart;
+
+    //
+    // Estimate required output size.  Use fixed-width hex output estimates
+    // plus a base allowance for headers and function bodies.
+    //
+
+    BaseSize = Context->SystemAllocationGranularity;
+    TableElementBytes = 16;
+    KeyElementBytes = (
+        Keys->OriginalKeySizeType == LongLongType ? 24 : 16
+    );
+
+    RequiredSize = (
+        BaseSize +
+        (NumberOfTableElements * TableElementBytes) +
+        (NumberOfKeys * KeyElementBytes)
+    );
+
+    AlignedSize = ALIGN_UP(RequiredSize,
+                           Context->SystemAllocationGranularity);
+
+    if (AlignedSize > (ULONGLONG)File->FileInfo.EndOfFile.QuadPart) {
+        EndOfFile.QuadPart = (LONGLONG)AlignedSize;
+        AcquirePerfectHashFileLockExclusive(File);
+        Result = File->Vtbl->Extend(File, &EndOfFile);
+        ReleasePerfectHashFileLockExclusive(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileExtend, Result);
+        }
+    }
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
 SaveCppHeaderOnlyFileChm01(
     PPERFECT_HASH_CONTEXT Context,
     PFILE_WORK_ITEM Item

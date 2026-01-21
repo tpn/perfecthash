@@ -415,24 +415,21 @@ Return Value:
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
 
-    ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
-    ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
-    ASSERT(!TlsContext->HeapCreateFlags);
-    ASSERT(!TlsContext->HeapMinimumSize);
-
     TlsContextDisableGlobalAllocator(TlsContext);
     TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
     TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;
     TlsContext->HeapMinimumSize = (ULONG_PTR)Info.AllocSize;
 
     //
-    // Make sure we haven't overflowed MAX_ULONG.  This should be caught
-    // earlier when preparing the graph info.
+    // Make sure we haven't overflowed the heap minimum size on 32-bit builds.
+    // This should be caught earlier when preparing the graph info.
     //
 
+#if defined(_M_IX86)
     if ((ULONGLONG)TlsContext->HeapMinimumSize != Info.AllocSize) {
         PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
     }
+#endif
 
     //
     // Copy the table create flags into the TLS context as well; they are now
@@ -646,7 +643,7 @@ RetryWithLargerTableSize:
     ZeroStructInline(Verb##Name);                       \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     InsertTailFileWork(Context, &Verb##Name.ListEntry); \
-    SubmitThreadpoolWork(Context->FileWork);
+    PerfectHashContextSubmitFileWork(Context);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_FILE_WORK)
@@ -1057,7 +1054,7 @@ RetryWithLargerTableSize:
         //
 
         if (!NoFileIo(Table)) {
-            WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+            PerfectHashContextWaitForFileWorkCallbacks(Context, FALSE);
         }
 
         //
@@ -1435,7 +1432,7 @@ Error:
     WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
     WaitForThreadpoolTimerCallbacks(Context->SolveTimeout, TRUE);
     if (!NoFileIo(Table)) {
-        WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+        PerfectHashContextWaitForFileWorkCallbacks(Context, FALSE);
     }
 
     //
@@ -1485,14 +1482,14 @@ End:
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     Verb##Name.EndOfFile = EndOfFile;                   \
     InsertTailFileWork(Context, &Verb##Name.ListEntry); \
-    SubmitThreadpoolWork(Context->FileWork);
+    PerfectHashContextSubmitFileWork(Context);
 
 #define SUBMIT_CLOSE_FILE_WORK() \
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_CLOSE_FILE_WORK)
 
     SUBMIT_CLOSE_FILE_WORK();
 
-    WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+    PerfectHashContextWaitForFileWorkCallbacks(Context, FALSE);
 
 #define EXPAND_AS_CHECK_CLOSE_ERRORS(                                \
     Verb, VUpper, Name, Upper,                                       \
