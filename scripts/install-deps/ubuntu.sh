@@ -21,6 +21,13 @@ packages=(
   ninja-build
 )
 
+if [ "${WITH_RUST:-0}" = "1" ]; then
+  packages+=(
+    rustc
+    cargo
+  )
+fi
+
 run apt-get update
 run apt-get install -y "${packages[@]}"
 

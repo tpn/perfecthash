@@ -41,4 +41,13 @@ if (-not (Test-Command "nasm")) {
     Write-Host "NASM already available."
 }
 
+if ($env:WITH_RUST -eq "1") {
+    if (-not (Test-Command "cargo")) {
+        Write-Host "Installing Rust (rustup)..."
+        Install-Package -Id "Rustlang.Rustup"
+    } else {
+        Write-Host "Rust already available."
+    }
+}
+
 Write-Host "Done. If new tools were installed, open a new terminal before building."

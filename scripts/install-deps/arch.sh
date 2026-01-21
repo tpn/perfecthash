@@ -21,6 +21,12 @@ packages=(
   ninja
 )
 
+if [ "${WITH_RUST:-0}" = "1" ]; then
+  packages+=(
+    rust
+  )
+fi
+
 run pacman -Sy --needed --noconfirm "${packages[@]}"
 
 if [ "${WITH_CUDA:-0}" = "1" ]; then

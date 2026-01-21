@@ -1,0 +1,47 @@
+# Improved UI Log
+
+## 2026-01-19
+- Bootstrapped a new React UI in `ui/` with Vite, routing, and page scaffolds.
+- Ported Parallelopedia typography and background styling, added layout and motion polish.
+- Added a command builder on User/Create with flag presets and command preview.
+- Added Developer and Analysis sections with Environment/Build/Test and Overview/Benchmarks pages.
+- Added test scaffolding with Vitest + Testing Library and Playwright, plus an agent skill companion.
+- Ran `npm test` in `ui/` (Vitest).
+- Ran `npm run test:e2e:install` and `npm run test:e2e` in `ui/` (Playwright).
+- Added a local runner backend and UI wiring for executing Create commands.
+- Ran `npm test` in `ui/` after runner updates.
+- Ran `npm run test:e2e` in `ui/` after runner updates.
+- Added env-configurable dev server allowed hosts in `ui/vite.config.js`.
+- Reworked the Developer/Environment page with runnable actions, conda compositing controls, and a bootstrap flow.
+- Added a terminal session panel with read-only xterm output, minimize controls, and sudo password prompts.
+- Extended the UI runner backend with platform detection and interactive terminal sessions.
+- Ran `npm test` in `ui/` after adding xterm and terminal updates.
+- Reworked Environment terminals to be single-instance, inline with their panels, and adjusted header styling.
+- Fixed terminal status handling to avoid false error states on normal exits.
+- Ran `npm test` in `ui/` after Environment and terminal refinements.
+- Updated Playwright config to start the UI runner backend during e2e tests.
+- Swapped terminal status text for icon + spinner indicators and adjusted colors for readability.
+- Prevented terminal output replay on reconnect and stop treating stream drops as failures.
+- Ran `npm test` in `ui/` after terminal stream tweaks.
+- Added a stop button for terminal sessions and auto-terminate any running session before starting a new one.
+- Improved stop handling with SIGINT/SIGTERM/SIGKILL escalation and a stopping status.
+- Rebuilt Developer/Build with CMake-first rows, configurable options, and runnable terminal sessions.
+- Ran `npm test` in `ui/` after the Build page update.
+- Added Playwright coverage for the Developer/Build CMake configure preview.
+- Ran `npm run test:e2e` in `ui/` after adding the Build e2e test.
+- Added install prefix presets and defaulted CMake install prefix to ./install.
+- Ran `npm test` in `ui/` after Build install prefix tweaks.
+- Built out the Developer/Test page with runnable CTest, CLI regression, and UI test controls.
+- Synced Test page defaults with Build selections and auto-adjusted the default test executable path.
+- Allowed `ctest` and `npm` commands in the UI backend command whitelist.
+- Ran `npm test` in `ui/` after the Test page update.
+- Ran `npm run test:e2e` in `ui/` after the Test page update.
+- Added Playwright coverage for the Developer/Test page defaults.
+- Ran `npm run test:e2e` in `ui/` after adding the Test page e2e test.
+- Added smooth auto-scroll to newly opened terminal panels.
+- Guarded terminal session starts to prevent double-triggered commands.
+- Defaulted the codegen test Cargo path to `cargo` and surfaced a note about the requirement.
+- Added a System prerequisites toggle to include Rust/Cargo installs, with script support.
+- Added a CMake configure field to set `CARGO_EXECUTABLE` and updated CLI test defaults to `build/bin/PerfectHashCreate`.
+- Added a CMake configure toggle to reset the build directory before reconfiguring.
+- Ignored generated `keys/*.keys*` artifacts.

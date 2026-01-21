@@ -23,6 +23,13 @@ packages=(
   ninja-build
 )
 
+if [ "${WITH_RUST:-0}" = "1" ]; then
+  packages+=(
+    rust
+    cargo
+  )
+fi
+
 run dnf install -y "${packages[@]}"
 
 if [ "${WITH_CUDA:-0}" = "1" ]; then
