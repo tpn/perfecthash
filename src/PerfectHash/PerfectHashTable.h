@@ -67,10 +67,16 @@ typedef union _PERFECT_HASH_TABLE_STATE {
         ULONG UsingAssigned16:1;
 
         //
+        // When set, indicates downsize metadata is available on the table.
+        //
+
+        ULONG DownsizeMetadataValid:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:27;
+        ULONG Unused:26;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -80,6 +86,104 @@ typedef PERFECT_HASH_TABLE_STATE *PPERFECT_HASH_TABLE_STATE;
 
 #define IsValidTable(Table) ((Table)->State.Valid == TRUE)
 #define IsTableCreateOnly(Table) ((Table)->TableCreateFlags.CreateOnly == TRUE)
+
+//
+// Define the PERFECT_HASH_TABLE_JIT_FLAGS structure.
+//
+
+typedef union _PERFECT_HASH_TABLE_JIT_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the JIT state is initialized and usable.
+        //
+
+        ULONG Valid:1;
+
+        //
+        // When set, indicates the Index() routine has been compiled.
+        //
+
+        ULONG IndexCompiled:1;
+
+        //
+        // When set, indicates the 64-bit Index() routine has been compiled.
+        //
+
+        ULONG Index64Compiled:1;
+
+        //
+        // When set, indicates the Index2() routine has been compiled.
+        //
+
+        ULONG Index2Compiled:1;
+
+        //
+        // When set, indicates the Index4() routine has been compiled.
+        //
+
+        ULONG Index4Compiled:1;
+
+        //
+        // When set, indicates the Index2_64() routine has been compiled.
+        //
+
+        ULONG Index2_64Compiled:1;
+
+        //
+        // When set, indicates the Index4_64() routine has been compiled.
+        //
+
+        ULONG Index4_64Compiled:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:25;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_JIT_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_JIT_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_JIT_FLAGS *PPERFECT_HASH_TABLE_JIT_FLAGS;
+
+//
+// Define the PERFECT_HASH_TABLE_JIT_INTERFACE structure used for QueryInterface
+// exposure of JIT-compiled routines.
+//
+
+typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE {
+    PPERFECT_HASH_TABLE_JIT_INTERFACE_VTBL Vtbl;
+    struct _PERFECT_HASH_TABLE *Table;
+} PERFECT_HASH_TABLE_JIT_INTERFACE;
+typedef PERFECT_HASH_TABLE_JIT_INTERFACE
+      *PPERFECT_HASH_TABLE_JIT_INTERFACE;
+
+//
+// Define the PERFECT_HASH_TABLE_JIT structure.
+//
+
+typedef struct _PERFECT_HASH_TABLE_JIT {
+    ULONG SizeOfStruct;
+    PERFECT_HASH_TABLE_JIT_FLAGS Flags;
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
+    PVOID ExecutionEngine;
+    PVOID Context;
+    PVOID IndexFunction;
+    PVOID Index64Function;
+    PVOID Index2Function;
+    PVOID Index4Function;
+    PVOID Index2_64Function;
+    PVOID Index4_64Function;
+    PPERFECT_HASH_TABLE_INDEX OriginalIndex;
+    PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
+    PERFECT_HASH_TABLE_JIT_INTERFACE Interface;
+} PERFECT_HASH_TABLE_JIT;
+typedef PERFECT_HASH_TABLE_JIT *PPERFECT_HASH_TABLE_JIT;
 
 #define NoFileIo(Table) ((Table)->TableCreateFlags.NoFileIo == TRUE)
 #define IsParanoid(Table) ((Table)->TableCreateFlags.Paranoid == TRUE)
@@ -179,6 +283,17 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     struct _TABLE_INFO_ON_DISK *TableInfoOnDisk;
+
+    //
+    // If keys were downsized during load, capture the metadata required to
+    // downsize 64-bit keys at runtime (e.g. for JIT Index64 routines).
+    //
+
+    ULONGLONG DownsizeBitmap;
+    ULONGLONG DownsizeShiftedMask;
+    BYTE DownsizeTrailingZeros;
+    BYTE DownsizeContiguous;
+    BYTE DownsizePadding[6];
 
     //
     // If we're in "find best coverage" mode, a pointer to an assigned memory
@@ -516,6 +631,12 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     PERFECT_HASH_TABLE_VTBL Interface;
+
+    //
+    // Optional JIT state (online compilation).
+    //
+
+    PPERFECT_HASH_TABLE_JIT Jit;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;

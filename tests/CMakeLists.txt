@@ -16,6 +16,7 @@ endif()
 
 add_executable(perfecthash_unit_tests
     PerfectHashArgvTests.cpp
+    PerfectHashOnlineTests.cpp
 )
 
 target_link_libraries(perfecthash_unit_tests
@@ -31,8 +32,26 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
     CXX_STANDARD_REQUIRED YES
 )
 
+add_executable(perfecthash_benchmarks
+    PerfectHashBenchmarks.cpp
+)
+
+target_link_libraries(perfecthash_benchmarks
+    PRIVATE
+        PerfectHash
+)
+
+perfecthash_apply_common_definitions(perfecthash_benchmarks)
+
+set_target_properties(perfecthash_benchmarks PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+)
+
 include(GoogleTest)
-gtest_discover_tests(perfecthash_unit_tests)
+gtest_discover_tests(perfecthash_unit_tests
+    TEST_PREFIX "perfecthash_unit_tests."
+)
 
 set(TEST_KEYS_FILE "${PERFECTHASH_ROOT_DIR}/keys/HologramWorld-31016.keys")
 set(TEST_KEYS_DIR "${PERFECTHASH_ROOT_DIR}/keys")

@@ -900,7 +900,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 //
 
 
-#define NUMBER_OF_INTERFACES 15
+#define NUMBER_OF_INTERFACES 16
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -999,6 +999,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     -1, // GraphCu
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Cu),
     -1, // Rng
+    -1, // Online
 
     -1,
 };
@@ -1022,6 +1023,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // GraphCu
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Cu),
     -1, // Rng
+    -1, // Online
 
     -1,
 };
@@ -1131,11 +1133,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableCreate,
     &PerfectHashTableLoad,
     &PerfectHashTableGetFlags,
-#ifdef PH_WINDOWS
     &PerfectHashTableCompile,
-#else
-    NULL,
-#endif
     &PerfectHashTableTest,
     &PerfectHashTableInsert,
     &PerfectHashTableLookup,
@@ -1462,6 +1460,21 @@ RNG_VTBL RngInterface = {
 VERIFY_VTBL_SIZE(RNG, 3);
 
 //
+// PerfectHashOnline
+//
+
+const PERFECT_HASH_ONLINE_VTBL PerfectHashOnlineInterface = {
+    (PPERFECT_HASH_ONLINE_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_ONLINE_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_ONLINE_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_ONLINE_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_ONLINE_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashOnlineCreateTableFromKeys,
+    &PerfectHashOnlineCompileTable,
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_ONLINE, 2);
+
+//
 // Interface array.
 //
 
@@ -1488,6 +1501,7 @@ const VOID *ComponentInterfaces[] = {
     NULL,
 #endif
     &RngInterface,
+    &PerfectHashOnlineInterface,
     NULL,
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaces);
@@ -1516,6 +1530,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     NULL,
 #endif
     (PCOMPONENT_INITIALIZE)&RngInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashOnlineInitialize,
 
     NULL,
 };
@@ -1545,6 +1560,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     NULL,
 #endif
     (PCOMPONENT_RUNDOWN)&RngRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashOnlineRundown,
 
     NULL,
 };

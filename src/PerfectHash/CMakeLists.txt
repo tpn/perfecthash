@@ -7,6 +7,7 @@ set(Private_Header_Files
     "BitManipulation.h"
     "BulkCreateBestCsv.h"
     "BulkCreateCsv.h"
+    "ChmOnline01.h"
     "Chm01.h"
     "Chm01FileWork.h"
     "Chm01Private.h"
@@ -33,6 +34,7 @@ set(Private_Header_Files
     "PerfectHashFileWork.h"
     "PerfectHashKeys.h"
     "PerfectHashNames.h"
+    "PerfectHashOnline.h"
     "PerfectHashPath.h"
     "PerfectHashPrimes.h"
     "PerfectHashPrivate.h"
@@ -138,6 +140,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 
 set(Source_Files
     "BitManipulation.c"
+    "ChmOnline01.c"
     "Chm01Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"
@@ -206,6 +209,9 @@ set(Source_Files
     "PerfectHashKeys.c"
     "PerfectHashKeysLoad.c"
     "PerfectHashKeysLoadTableSize.c"
+    "PerfectHashOnline.c"
+    "PerfectHashOnlineCompile.c"
+    "PerfectHashOnlineCreate.c"
     "PerfectHashNames.c"
     "PerfectHashPath.c"
     "PerfectHashPrimes.c"
@@ -292,6 +298,7 @@ else()
         "Debugger.c"
         "Chm01Compat.c"
         "PerfectHashCompat.c"
+        "PerfectHashTableCompileCompat.c"
     )
 
     if(PERFECTHASH_HAS_CUDA)
@@ -407,6 +414,24 @@ target_compile_definitions(
 # Link with other targets.
 if(PERFECTHASH_ENABLE_PENTER)
     target_link_libraries(${target} PUBLIC FunctionHook)
+endif()
+
+if(PERFECTHASH_HAS_LLVM)
+    target_include_directories(${target} SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+    if(LLVM_DEFINITIONS)
+        separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+        target_compile_options(${target} PRIVATE ${LLVM_DEFINITIONS_LIST})
+    endif()
+    llvm_map_components_to_libnames(
+        LLVM_LIBS
+        core
+        executionengine
+        mcjit
+        native
+        target
+        support
+    )
+    target_link_libraries(${target} PRIVATE ${LLVM_LIBS})
 endif()
 
 if(TARGET PerfectHashAsm)

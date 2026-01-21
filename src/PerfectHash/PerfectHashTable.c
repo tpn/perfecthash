@@ -153,6 +153,12 @@ Return Value:
     Allocator = Table->Allocator;
 
     //
+    // Release any JIT resources before freeing table data.
+    //
+
+    PerfectHashTableJitRundown(Table);
+
+    //
     // Free the memory used for the values array, if applicable.
     //
 

@@ -70,6 +70,15 @@
     <ClCompile Include="PerfectHashKeys.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashOnline.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashOnlineCompile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashOnlineCreate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashTls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -112,6 +121,9 @@
     <ClCompile Include="PerfectHashTableCompile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashTableCompileCompat.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -122,6 +134,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Chm01Index.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ChmOnline01.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableCreate.c">
@@ -396,6 +411,9 @@
     <ClInclude Include="PerfectHashKeys.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PerfectHashOnline.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="RtlOutput.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
@@ -430,6 +448,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Chm01.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChmOnline01.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashDirectory.h">

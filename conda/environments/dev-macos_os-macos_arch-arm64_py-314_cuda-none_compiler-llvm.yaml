@@ -5,15 +5,15 @@ channels:
 dependencies:
 - black
 - bokeh
-- clang
-- clangxx
+- clang>=15
+- clangxx>=15
 - cmake>=3.20
 - cython>=3.0
 - ipdb
 - ipython
 - joypy
-- lld
-- llvmdev
+- lld>=15
+- llvmdev>=15
 - make
 - matplotlib
 - mypy

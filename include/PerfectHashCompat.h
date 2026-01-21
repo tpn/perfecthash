@@ -1877,10 +1877,18 @@ InterlockedCompareExchangePointer(
 #endif
 #if defined(PH_COMPILER_GCC) || defined(PH_COMPILER_GNU) || \
     defined(__GNUC__) || defined(__clang__)
+#ifndef _tzcnt_u32
 #define _tzcnt_u32 __builtin_ctz
+#endif
+#ifndef _tzcnt_u64
 #define _tzcnt_u64 __builtin_ctzll
+#endif
+#ifndef _lzcnt_u32
 #define _lzcnt_u32 __builtin_clz
+#endif
+#ifndef _lzcnt_u64
 #define _lzcnt_u64 __builtin_clzll
+#endif
 #endif
 
 #if (!defined PH_WINDOWS && !defined PH_CUDA)

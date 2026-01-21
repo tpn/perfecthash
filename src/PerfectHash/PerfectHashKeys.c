@@ -198,6 +198,15 @@ Return Value:
 
             Keys->KeyArrayBaseAddress = NULL;
         }
+    } else if (Keys->KeyArrayBaseAddress) {
+
+        if (KeysKeyArrayWasHeapAllocated(Keys)) {
+            Allocator = Keys->Allocator;
+            Allocator->Vtbl->FreePointer(Allocator,
+                                         PPV(&Keys->KeyArrayBaseAddress));
+        } else {
+            Keys->KeyArrayBaseAddress = NULL;
+        }
     }
 
     //

@@ -121,6 +121,12 @@ Return Value:
         return PH_E_TABLE_NOT_CREATED;
     }
 
+    if (TableCompileFlags.Jit) {
+        Result = PerfectHashTableCompileJit(Table, &TableCompileFlags);
+        ReleasePerfectHashTableLockExclusive(Table);
+        return Result;
+    }
+
     //
     // Argument validation complete.
     //

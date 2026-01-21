@@ -156,18 +156,18 @@ dependencies:
               os: linux
               compiler: llvm
             packages:
-              - clang
-              - clangxx
-              - lld
-              - llvmdev
+              - clang>=15
+              - clangxx>=15
+              - lld>=15
+              - llvmdev>=15
           - matrix:
               os: macos
               compiler: llvm
             packages:
-              - clang
-              - clangxx
-              - lld
-              - llvmdev
+              - clang>=15
+              - clangxx>=15
+              - lld>=15
+              - llvmdev>=15
           - matrix:
               os: linux
               compiler: gcc

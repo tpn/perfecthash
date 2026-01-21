@@ -68,6 +68,7 @@
     <ClInclude Include="..\..\include\PerfectHashErrors.h" />
     <ClInclude Include="..\..\include\PerfectHashEvents.h" />
     <ClInclude Include="BulkCreateBestCsv.h" />
+    <ClInclude Include="ChmOnline01.h" />
     <ClInclude Include="Chm01.h" />
     <ClInclude Include="Chm01FileWork.h" />
     <ClInclude Include="Chm01Private.h" />
@@ -154,6 +155,7 @@
     <ClInclude Include="PerfectHashFile.h" />
     <ClInclude Include="PerfectHashFileWork.h" />
     <ClInclude Include="PerfectHashKeys.h" />
+    <ClInclude Include="PerfectHashOnline.h" />
     <ClInclude Include="PerfectHashNames.h" />
     <ClInclude Include="PerfectHashPath.h" />
     <ClInclude Include="PerfectHashPrimes.h" />
@@ -228,6 +230,7 @@
     <ClCompile Include="Chm01FileWorkModuleDefFile.c" />
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
+    <ClCompile Include="ChmOnline01.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chm01Shared.c" />
     <ClCompile Include="Chunk.c" />
@@ -251,12 +254,16 @@
     <ClCompile Include="PerfectHashKeys.c" />
     <ClCompile Include="PerfectHashKeysLoad.c" />
     <ClCompile Include="PerfectHashKeysLoadTableSize.c" />
+    <ClCompile Include="PerfectHashOnline.c" />
+    <ClCompile Include="PerfectHashOnlineCompile.c" />
+    <ClCompile Include="PerfectHashOnlineCreate.c" />
     <ClCompile Include="PerfectHashNames.c" />
     <ClCompile Include="PerfectHashPath.c" />
     <ClCompile Include="PerfectHashPrimes.c" />
     <ClCompile Include="PerfectHashAllocator.c" />
     <ClCompile Include="PerfectHashConstants.c" />
     <ClCompile Include="PerfectHashTableCompile.c" />
+    <ClCompile Include="PerfectHashTableCompileCompat.c" />
     <ClCompile Include="PerfectHashTableCreate.c" />
     <ClCompile Include="PerfectHashTableHash16Ex.c" />
     <ClCompile Include="PerfectHashTableHashEx.c" />

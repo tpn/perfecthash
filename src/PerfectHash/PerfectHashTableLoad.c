@@ -320,6 +320,26 @@ Return Value:
     }
 
     //
+    // Capture downsizing metadata if keys were supplied and downsized.
+    //
+
+    Table->State.DownsizeMetadataValid = FALSE;
+    Table->DownsizeBitmap = 0;
+    Table->DownsizeShiftedMask = 0;
+    Table->DownsizeTrailingZeros = 0;
+    Table->DownsizeContiguous = FALSE;
+
+    if (ARGUMENT_PRESENT(Keys) && KeysWereDownsized(Keys)) {
+        Table->DownsizeBitmap = Keys->DownsizeBitmap;
+        Table->DownsizeShiftedMask = Keys->Stats.KeysBitmap.ShiftedMask;
+        Table->DownsizeTrailingZeros = Keys->Stats.KeysBitmap.TrailingZeros;
+        Table->DownsizeContiguous = (
+            Keys->Stats.KeysBitmap.Flags.Contiguous != FALSE
+        );
+        Table->State.DownsizeMetadataValid = TRUE;
+    }
+
+    //
     // Validate the algorithm ID.  We use this as a lookup directly into the
     // loader routines array, so validation is especially important.
     //
