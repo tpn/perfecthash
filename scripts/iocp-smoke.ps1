@@ -2,7 +2,9 @@ param(
     [string]$BuildDir = "build-win",
     [string]$Config = "Debug",
     [string]$Endpoint = "\\.\\pipe\\PerfectHashServer-Smoke",
-    [int]$TimeoutSeconds = 10
+    [int]$TimeoutSeconds = 10,
+    [bool]$WaitForServer = $true,
+    [int]$ConnectTimeoutMs = 10000
 )
 
 Set-StrictMode -Version Latest
@@ -47,6 +49,12 @@ $tableArg = "--TableCreate=$createCommand"
 
 $serverArgs = @("--Endpoint=$Endpoint")
 $clientArgs = @("--Endpoint=$Endpoint", "--Shutdown")
+if ($WaitForServer) {
+    $clientArgs += "--WaitForServer"
+    if ($ConnectTimeoutMs -gt 0) {
+        $clientArgs += ("--ConnectTimeout={0}" -f $ConnectTimeoutMs)
+    }
+}
 
 $server = Start-Process -FilePath $serverExe `
                         -ArgumentList $serverArgs `
@@ -55,9 +63,16 @@ $server = Start-Process -FilePath $serverExe `
 
 Start-Sleep -Milliseconds 500
 
+$clientCreateArgs = @("--Endpoint=$Endpoint", "`"$tableArg`"")
+if ($WaitForServer) {
+    $clientCreateArgs += "--WaitForServer"
+    if ($ConnectTimeoutMs -gt 0) {
+        $clientCreateArgs += ("--ConnectTimeout={0}" -f $ConnectTimeoutMs)
+    }
+}
+
 $clientCreate = Start-Process -FilePath $clientExe `
-                              -ArgumentList @("--Endpoint=$Endpoint",
-                                              "`"$tableArg`"") `
+                              -ArgumentList $clientCreateArgs `
                               -PassThru `
                               -NoNewWindow `
                               -Wait

@@ -17,14 +17,26 @@ Abstract:
 #include "stdafx.h"
 #include <stdio.h>
 
+typedef union _PERFECT_HASH_CLIENT_CLI_FLAGS {
+    struct {
+        ULONG EndpointPresent:1;
+        ULONG CommandLinePresent:1;
+        ULONG RequestTypePresent:1;
+        ULONG WaitForServer:1;
+        ULONG ConnectTimeoutPresent:1;
+        ULONG Unused:27;
+    };
+    ULONG AsULong;
+} PERFECT_HASH_CLIENT_CLI_FLAGS;
+typedef PERFECT_HASH_CLIENT_CLI_FLAGS *PPERFECT_HASH_CLIENT_CLI_FLAGS;
+
 typedef struct _PERFECT_HASH_CLIENT_CLI_OPTIONS {
     UNICODE_STRING Endpoint;
     UNICODE_STRING CommandLine;
     PERFECT_HASH_SERVER_REQUEST_TYPE RequestType;
-    BOOLEAN EndpointPresent;
-    BOOLEAN CommandLinePresent;
-    BOOLEAN RequestTypePresent;
-    UCHAR Padding1[9];
+    ULONG ConnectTimeoutInMilliseconds;
+    PERFECT_HASH_CLIENT_CLI_FLAGS Flags;
+    ULONG Padding1;
 } PERFECT_HASH_CLIENT_CLI_OPTIONS;
 typedef PERFECT_HASH_CLIENT_CLI_OPTIONS *PPERFECT_HASH_CLIENT_CLI_OPTIONS;
 
@@ -36,10 +48,13 @@ PrintUsage(
 {
     wprintf(L"Usage: PerfectHashClient [--Endpoint=<name>] "
             L"[--Shutdown|--TableCreate=<cmd>|--BulkCreate=<cmd>|"
-            L"--BulkCreateDirectory=<cmd>]\n");
+            L"--BulkCreateDirectory=<cmd>|--Ping]\n");
     wprintf(L"  --TableCreate=<cmd>     PerfectHashCreate-style arguments\n");
     wprintf(L"  --BulkCreate=<cmd>      PerfectHashBulkCreate-style arguments\n");
     wprintf(L"  --BulkCreateDirectory=<cmd>  BulkCreate args with single token\n");
+    wprintf(L"  --Ping                  Wait for server readiness\n");
+    wprintf(L"  --WaitForServer          Wait for server to appear\n");
+    wprintf(L"  --ConnectTimeout=<ms>    Cap wait time for --WaitForServer\n");
 }
 
 static
@@ -55,13 +70,12 @@ ParseClientArgs(
     Options->Endpoint.Buffer = NULL;
     Options->Endpoint.Length = 0;
     Options->Endpoint.MaximumLength = 0;
-    Options->EndpointPresent = FALSE;
+    Options->Flags.AsULong = 0;
     Options->CommandLine.Buffer = NULL;
     Options->CommandLine.Length = 0;
     Options->CommandLine.MaximumLength = 0;
-    Options->CommandLinePresent = FALSE;
     Options->RequestType = PerfectHashNullServerRequestType;
-    Options->RequestTypePresent = FALSE;
+    Options->ConnectTimeoutInMilliseconds = 0;
 
     for (Index = 1; Index < NumberOfArguments; Index++) {
         PCWSTR Arg = ArgvW[Index];
@@ -92,16 +106,49 @@ ParseClientArgs(
             Options->Endpoint.Buffer = (PWSTR)Value;
             Options->Endpoint.Length = (USHORT)Length;
             Options->Endpoint.MaximumLength = (USHORT)Length + sizeof(WCHAR);
-            Options->EndpointPresent = TRUE;
+            Options->Flags.EndpointPresent = TRUE;
             continue;
         }
 
         if (_wcsicmp(Arg, L"Shutdown") == 0) {
-            if (Options->RequestTypePresent) {
+            if (Options->Flags.RequestTypePresent) {
                 return PH_E_INVALID_COMMANDLINE_ARG;
             }
             Options->RequestType = PerfectHashShutdownServerRequestType;
-            Options->RequestTypePresent = TRUE;
+            Options->Flags.RequestTypePresent = TRUE;
+            continue;
+        }
+
+        if (_wcsicmp(Arg, L"Ping") == 0) {
+            if (Options->Flags.RequestTypePresent) {
+                return PH_E_INVALID_COMMANDLINE_ARG;
+            }
+            Options->RequestType = PerfectHashPingServerRequestType;
+            Options->Flags.RequestTypePresent = TRUE;
+            continue;
+        }
+
+        if (_wcsicmp(Arg, L"WaitForServer") == 0) {
+            Options->Flags.WaitForServer = TRUE;
+            continue;
+        }
+
+        if (_wcsnicmp(Arg, L"ConnectTimeout=", 15) == 0) {
+            PCWSTR Value;
+            ULONG Timeout;
+
+            Value = Arg + 15;
+            if (!Value || *Value == L'\0') {
+                return PH_E_INVALID_COMMANDLINE_ARG;
+            }
+
+            Timeout = wcstoul(Value, NULL, 10);
+            if (Timeout == 0) {
+                return PH_E_INVALID_COMMANDLINE_ARG;
+            }
+
+            Options->ConnectTimeoutInMilliseconds = Timeout;
+            Options->Flags.ConnectTimeoutPresent = TRUE;
             continue;
         }
 
@@ -109,7 +156,7 @@ ParseClientArgs(
             PCWSTR Value;
             ULONG Length;
 
-            if (Options->RequestTypePresent) {
+            if (Options->Flags.RequestTypePresent) {
                 return PH_E_INVALID_COMMANDLINE_ARG;
             }
 
@@ -120,9 +167,9 @@ ParseClientArgs(
             Options->CommandLine.Length = (USHORT)Length;
             Options->CommandLine.MaximumLength = (USHORT)Length +
                                                  sizeof(WCHAR);
-            Options->CommandLinePresent = TRUE;
+            Options->Flags.CommandLinePresent = TRUE;
             Options->RequestType = PerfectHashTableCreateServerRequestType;
-            Options->RequestTypePresent = TRUE;
+            Options->Flags.RequestTypePresent = TRUE;
             continue;
         }
 
@@ -130,7 +177,7 @@ ParseClientArgs(
             PCWSTR Value;
             ULONG Length;
 
-            if (Options->RequestTypePresent) {
+            if (Options->Flags.RequestTypePresent) {
                 return PH_E_INVALID_COMMANDLINE_ARG;
             }
 
@@ -141,9 +188,9 @@ ParseClientArgs(
             Options->CommandLine.Length = (USHORT)Length;
             Options->CommandLine.MaximumLength = (USHORT)Length +
                                                  sizeof(WCHAR);
-            Options->CommandLinePresent = TRUE;
+            Options->Flags.CommandLinePresent = TRUE;
             Options->RequestType = PerfectHashBulkCreateServerRequestType;
-            Options->RequestTypePresent = TRUE;
+            Options->Flags.RequestTypePresent = TRUE;
             continue;
         }
 
@@ -151,7 +198,7 @@ ParseClientArgs(
             PCWSTR Value;
             ULONG Length;
 
-            if (Options->RequestTypePresent) {
+            if (Options->Flags.RequestTypePresent) {
                 return PH_E_INVALID_COMMANDLINE_ARG;
             }
 
@@ -162,24 +209,109 @@ ParseClientArgs(
             Options->CommandLine.Length = (USHORT)Length;
             Options->CommandLine.MaximumLength = (USHORT)Length +
                                                  sizeof(WCHAR);
-            Options->CommandLinePresent = TRUE;
+            Options->Flags.CommandLinePresent = TRUE;
             Options->RequestType =
                 PerfectHashBulkCreateDirectoryServerRequestType;
-            Options->RequestTypePresent = TRUE;
+            Options->Flags.RequestTypePresent = TRUE;
             continue;
         }
 
         return PH_E_INVALID_COMMANDLINE_ARG;
     }
 
-    if (Options->RequestTypePresent) {
-        if (Options->RequestType == PerfectHashShutdownServerRequestType) {
-            if (Options->CommandLinePresent) {
+    if (Options->Flags.RequestTypePresent) {
+        if (Options->RequestType == PerfectHashShutdownServerRequestType ||
+            Options->RequestType == PerfectHashPingServerRequestType) {
+            if (Options->Flags.CommandLinePresent) {
                 return PH_E_INVALID_COMMANDLINE_ARG;
             }
-        } else if (!Options->CommandLinePresent) {
+        } else if (!Options->Flags.CommandLinePresent) {
             return PH_E_INVALID_COMMANDLINE_ARG;
         }
+    }
+
+    if (Options->Flags.ConnectTimeoutPresent && !Options->Flags.WaitForServer) {
+        return PH_E_INVALID_COMMANDLINE_ARG;
+    }
+
+    return S_OK;
+}
+
+static
+HRESULT
+PerfectHashClientConnectWithWait(
+    _In_ PPERFECT_HASH_CLIENT Client,
+    _In_opt_ PCUNICODE_STRING Endpoint,
+    _In_ BOOLEAN WaitForServer,
+    _In_ BOOLEAN TimeoutPresent,
+    _In_ ULONG TimeoutInMilliseconds
+    )
+{
+    HRESULT Result;
+    ULONGLONG StartTicks;
+
+    if (!WaitForServer) {
+        return Client->Vtbl->Connect(Client, Endpoint);
+    }
+
+    StartTicks = GetTickCount64();
+
+    for (;;) {
+        Result = Client->Vtbl->Connect(Client, Endpoint);
+        if (SUCCEEDED(Result)) {
+            return S_OK;
+        }
+
+        if (Result != HRESULT_FROM_WIN32(ERROR_PIPE_BUSY) &&
+            Result != HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+            return Result;
+        }
+
+        if (TimeoutPresent) {
+            ULONGLONG Elapsed = GetTickCount64() - StartTicks;
+            if (Elapsed >= TimeoutInMilliseconds) {
+                return HRESULT_FROM_WIN32(WAIT_TIMEOUT);
+            }
+        }
+
+        Sleep(50);
+    }
+}
+
+static
+HRESULT
+PerfectHashClientPing(
+    _In_ PPERFECT_HASH_CLIENT Client
+    )
+{
+    HRESULT Result;
+    ULONG ResponseFlags = 0;
+    UNICODE_STRING ResponsePayload;
+    PERFECT_HASH_SERVER_REQUEST Request = { 0 };
+
+    Request.SizeOfStruct = sizeof(Request);
+    Request.RequestType = PerfectHashPingServerRequestType;
+    Request.RequestId = 1;
+
+    Result = Client->Vtbl->SubmitRequest(Client, &Request);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Result = Client->Vtbl->GetLastResponse(Client,
+                                           &ResponsePayload,
+                                           &ResponseFlags);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    if (!(ResponseFlags & PERFECT_HASH_SERVER_RESPONSE_FLAG_PONG)) {
+        return E_UNEXPECTED;
+    }
+
+    if (!ResponsePayload.Buffer ||
+        _wcsicmp(ResponsePayload.Buffer, L"PONG") != 0) {
+        return E_UNEXPECTED;
     }
 
     return S_OK;
@@ -350,19 +482,47 @@ mainCRTStartup(
         goto Error;
     }
 
-    Result = Client->Vtbl->Connect(Client,
-                                   Options.EndpointPresent ?
-                                   &Options.Endpoint :
-                                   NULL);
+    Result = PerfectHashClientConnectWithWait(
+        Client,
+        Options.Flags.EndpointPresent ? &Options.Endpoint : NULL,
+        (BOOLEAN)!!Options.Flags.WaitForServer,
+        (BOOLEAN)!!Options.Flags.ConnectTimeoutPresent,
+        Options.ConnectTimeoutInMilliseconds
+    );
     if (FAILED(Result)) {
         goto Error;
     }
 
-    if (Options.RequestTypePresent) {
+    if (Options.Flags.WaitForServer ||
+        Options.RequestType == PerfectHashPingServerRequestType) {
+        Result = PerfectHashClientPing(Client);
+        if (FAILED(Result)) {
+            goto Error;
+        }
+
+        if (Options.RequestType == PerfectHashPingServerRequestType ||
+            !Options.Flags.RequestTypePresent) {
+            goto End;
+        }
+
+        Client->Vtbl->Disconnect(Client);
+        Result = PerfectHashClientConnectWithWait(
+            Client,
+            Options.Flags.EndpointPresent ? &Options.Endpoint : NULL,
+            (BOOLEAN)!!Options.Flags.WaitForServer,
+            (BOOLEAN)!!Options.Flags.ConnectTimeoutPresent,
+            Options.ConnectTimeoutInMilliseconds
+        );
+        if (FAILED(Result)) {
+            goto Error;
+        }
+    }
+
+    if (Options.Flags.RequestTypePresent) {
         Request.SizeOfStruct = sizeof(Request);
         Request.RequestType = Options.RequestType;
         Request.RequestId = 1;
-        if (Options.CommandLinePresent) {
+        if (Options.Flags.CommandLinePresent) {
             Request.CommandLine = Options.CommandLine;
         }
 

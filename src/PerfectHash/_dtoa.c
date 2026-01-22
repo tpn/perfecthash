@@ -130,6 +130,36 @@
 
 PALLOCATOR _dtoa_Allocator;
 
+static
+PALLOCATOR
+PhGetDtoaAllocator(
+    VOID
+    )
+{
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+
+    Allocator = _dtoa_Allocator;
+    if (Allocator) {
+        return Allocator;
+    }
+
+    TlsContext = PerfectHashTlsGetContext();
+    if (!TlsContext) {
+        return NULL;
+    }
+
+    if (TlsContext->Allocator) {
+        return TlsContext->Allocator;
+    }
+
+    if (TlsContext->Context) {
+        return TlsContext->Context->Allocator;
+    }
+
+    return NULL;
+}
+
 _Must_inspect_result_
 _Ret_maybenull_
 _Success_(return != 0)
@@ -139,11 +169,14 @@ PhMalloc(
     _In_ SIZE_T Size
     )
 {
-    return _dtoa_Allocator->Vtbl->Calloc(
-        _dtoa_Allocator,
-        1,
-        Size
-    );
+    PALLOCATOR Allocator;
+
+    Allocator = PhGetDtoaAllocator();
+    if (!Allocator) {
+        return NULL;
+    }
+
+    return Allocator->Vtbl->Calloc(Allocator, 1, Size);
 }
 
 VOID
@@ -151,7 +184,14 @@ PhFree(
     _Frees_ptr_opt_ PVOID Address
     )
 {
-    _dtoa_Allocator->Vtbl->Free(_dtoa_Allocator, Address);
+    PALLOCATOR Allocator;
+
+    Allocator = PhGetDtoaAllocator();
+    if (!Allocator) {
+        return;
+    }
+
+    Allocator->Vtbl->Free(Allocator, Address);
 }
 
 //#include "float.h"

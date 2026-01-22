@@ -186,6 +186,12 @@ PerfectHashServerPrepareErrorPayload(
 
 static
 HRESULT
+PerfectHashServerPreparePingPayload(
+    _In_ PPERFECT_HASH_SERVER_PIPE Pipe
+    );
+
+static
+HRESULT
 PerfectHashServerPrepareBulkCreateDirectoryPayload(
     _In_ PPERFECT_HASH_SERVER_PIPE Pipe,
     _In_ HANDLE EventHandle,
@@ -221,6 +227,15 @@ PerfectHashServerLogBulkCreateException(
     _In_ ULONG Stage,
     _In_opt_ PPERFECT_HASH_SERVER_BULK_WORK_ITEM WorkItem,
     _In_ struct _EXCEPTION_POINTERS *ExceptionPointers
+    );
+
+static
+VOID
+PerfectHashServerLogBulkCreateCounts(
+    _In_ ULONG Stage,
+    _In_opt_ PPERFECT_HASH_SERVER_BULK_WORK_ITEM WorkItem,
+    _In_opt_ PPERFECT_HASH_SERVER_BULK_REQUEST Request,
+    _In_ LONG Outstanding
     );
 
 static
@@ -1317,6 +1332,58 @@ PerfectHashServerPrepareErrorPayload(
 
 static
 HRESULT
+PerfectHashServerPreparePingPayload(
+    PPERFECT_HASH_SERVER_PIPE Pipe
+    )
+{
+    PALLOCATOR Allocator = NULL;
+    PRTL Rtl = NULL;
+    WCHAR Pong[] = L"PONG";
+    ULONG PayloadLength;
+
+    if (!ARGUMENT_PRESENT(Pipe)) {
+        return E_POINTER;
+    }
+
+    Allocator = Pipe->Server ? Pipe->Server->Allocator : NULL;
+    Rtl = Pipe->Server ? Pipe->Server->Rtl : NULL;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    PayloadLength = (ULONG)sizeof(Pong);
+    if (PayloadLength > PERFECT_HASH_SERVER_MAX_MESSAGE_SIZE) {
+        return E_INVALIDARG;
+    }
+
+    if (!Pipe->PayloadBuffer || Pipe->PayloadBufferSize < PayloadLength) {
+        if (Pipe->PayloadBuffer) {
+            Allocator->Vtbl->FreePointer(Allocator,
+                                         &Pipe->PayloadBuffer);
+        }
+
+        Pipe->PayloadBuffer = Allocator->Vtbl->Calloc(Allocator,
+                                                      1,
+                                                      PayloadLength);
+        if (!Pipe->PayloadBuffer) {
+            return E_OUTOFMEMORY;
+        }
+
+        Pipe->PayloadBufferSize = PayloadLength;
+    } else {
+        ZeroMemory(Pipe->PayloadBuffer, PayloadLength);
+    }
+
+    CopyMemory(Pipe->PayloadBuffer, Pong, PayloadLength);
+
+    Pipe->ResponseHeader.PayloadLength = PayloadLength;
+    Pipe->ResponseHeader.Flags |= PERFECT_HASH_SERVER_RESPONSE_FLAG_PONG;
+
+    return S_OK;
+}
+
+static
+HRESULT
 PerfectHashServerPrepareBulkCreateDirectoryPayload(
     PPERFECT_HASH_SERVER_PIPE Pipe,
     HANDLE EventHandle,
@@ -1393,6 +1460,7 @@ PerfectHashServerCompleteBulkRequest(
     HRESULT FirstFailure;
     PPERFECT_HASH_SERVER_BULK_RESULT BulkResult;
     PALLOCATOR Allocator;
+    LONG Outstanding;
 
     if (!ARGUMENT_PRESENT(Request)) {
         return;
@@ -1401,6 +1469,9 @@ PerfectHashServerCompleteBulkRequest(
     if (InterlockedCompareExchange(&Request->CompletionSignaled, 1, 0) != 0) {
         return;
     }
+
+    Outstanding = Request->OutstandingWorkItems;
+    PerfectHashServerLogBulkCreateCounts(3, NULL, Request, Outstanding);
 
     Failed = (ULONG)Request->FailedWorkItems;
     Total = Request->TotalWorkItems;
@@ -1574,6 +1645,90 @@ PerfectHashServerLogBulkCreateException(
 
 static
 VOID
+PerfectHashServerLogBulkCreateCounts(
+    _In_ ULONG Stage,
+    _In_opt_ PPERFECT_HASH_SERVER_BULK_WORK_ITEM WorkItem,
+    _In_opt_ PPERFECT_HASH_SERVER_BULK_REQUEST Request,
+    _In_ LONG Outstanding
+    )
+{
+#ifdef PH_WINDOWS
+    int Count;
+    DWORD BytesWritten;
+    HANDLE LogHandle;
+    CHAR Buffer[512];
+    ULONG PathChars = 0;
+    LONG DispatchComplete = 0;
+    LONG Failed = 0;
+    LONG PendingNodes = 0;
+    ULONG Total = 0;
+    ULONG NodeIndex = 0;
+
+    if (GetEnvironmentVariableW(L"PH_LOG_BULK_CREATE_COUNTS", NULL, 0) == 0) {
+        return;
+    }
+
+    if (Request) {
+        DispatchComplete = Request->DispatchComplete;
+        Failed = Request->FailedWorkItems;
+        PendingNodes = Request->PendingNodes;
+        Total = Request->TotalWorkItems;
+    }
+
+    if (WorkItem) {
+        NodeIndex = WorkItem->NodeIndex;
+        if (WorkItem->KeysPath.Buffer) {
+            PathChars = WorkItem->KeysPath.Length / sizeof(WCHAR);
+        }
+    }
+
+    LogHandle = CreateFileW(L"PerfectHashServerBulkCreateCounts.log",
+                            FILE_APPEND_DATA,
+                            FILE_SHARE_READ,
+                            NULL,
+                            OPEN_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+    if (!IsValidHandle(LogHandle)) {
+        return;
+    }
+
+    Count = _snprintf_s(
+        Buffer,
+        sizeof(Buffer),
+        _TRUNCATE,
+        "Stage=%lu Outstanding=%ld Dispatch=%ld Total=%lu Failed=%ld "
+        "PendingNodes=%ld Node=%lu Path=%.*S\r\n",
+        Stage,
+        Outstanding,
+        DispatchComplete,
+        Total,
+        Failed,
+        PendingNodes,
+        NodeIndex,
+        (int)PathChars,
+        WorkItem ? WorkItem->KeysPath.Buffer : L""
+    );
+
+    if (Count > 0) {
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
+    }
+
+    CloseHandle(LogHandle);
+#else
+    UNREFERENCED_PARAMETER(Stage);
+    UNREFERENCED_PARAMETER(WorkItem);
+    UNREFERENCED_PARAMETER(Request);
+    UNREFERENCED_PARAMETER(Outstanding);
+#endif
+}
+
+static
+VOID
 PerfectHashServerLogBulkCreateFailure(
     _In_ ULONG Stage,
     _In_opt_ PPERFECT_HASH_SERVER_BULK_WORK_ITEM WorkItem,
@@ -1661,6 +1816,7 @@ PerfectHashServerBulkCreateWorkItemCallback(
 {
     HRESULT Result;
     HRESULT Failure;
+    LONG Outstanding;
     LONG NodeOutstanding;
     PALLOCATOR Allocator = NULL;
     PPERFECT_HASH_CONTEXT Context = NULL;
@@ -1865,8 +2021,10 @@ Complete:
         }
     }
 
-    if (InterlockedDecrement(&Request->OutstandingWorkItems) == 0 &&
-        Request->DispatchComplete != 0) {
+    Outstanding = InterlockedDecrement(&Request->OutstandingWorkItems);
+    PerfectHashServerLogBulkCreateCounts(1, WorkItem, Request, Outstanding);
+
+    if (Outstanding == 0 && Request->DispatchComplete != 0) {
         PerfectHashServerCompleteBulkRequest(Request);
         Request = NULL;
     }
@@ -1892,6 +2050,7 @@ PerfectHashServerEnqueueBulkRequest(
     ULONG BytesToAllocate;
     ULONG WildcardBytes;
     ULONG KeysPathBytes;
+    LONG Outstanding;
     PALLOCATOR Allocator = NULL;
     PRTL Rtl = NULL;
     PWSTR WildcardBuffer = NULL;
@@ -2153,7 +2312,9 @@ End:
 
     if (DispatchInitialized) {
         Request->DispatchComplete = 1;
-        if (InterlockedDecrement(&Request->OutstandingWorkItems) == 0) {
+        Outstanding = InterlockedDecrement(&Request->OutstandingWorkItems);
+        PerfectHashServerLogBulkCreateCounts(2, NULL, Request, Outstanding);
+        if (Outstanding == 0) {
             PerfectHashServerCompleteBulkRequest(Request);
         }
     }
@@ -2794,6 +2955,17 @@ PerfectHashServerDispatchRequest(
         case PerfectHashNullServerRequestType:
         case PerfectHashInvalidServerRequestType:
             Result = E_INVALIDARG;
+            break;
+
+        case PerfectHashPingServerRequestType:
+            if (Pipe->PayloadLength != 0) {
+                Result = E_INVALIDARG;
+                break;
+            }
+            if (Pipe->Server && Pipe->Server->StartedEvent) {
+                WaitForSingleObject(Pipe->Server->StartedEvent, INFINITE);
+            }
+            Result = PerfectHashServerPreparePingPayload(Pipe);
             break;
 
         case PerfectHashShutdownServerRequestType:

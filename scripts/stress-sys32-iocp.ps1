@@ -9,7 +9,9 @@ param(
     [string]$MaskFunction = "And",
     [int]$MaximumConcurrency = 0,
     [string[]]$ExtraArgs = @(),
-    [int]$TimeoutSeconds = 300
+    [int]$TimeoutSeconds = 300,
+    [bool]$WaitForServer = $true,
+    [int]$ConnectTimeoutMs = 10000
 )
 
 Set-StrictMode -Version Latest
@@ -57,11 +59,17 @@ $server = Start-Process -FilePath $serverExe `
                         -PassThru `
                         -NoNewWindow
 
-Start-Sleep -Milliseconds 500
+$clientArgs = @("--Endpoint=$Endpoint")
+if ($WaitForServer) {
+    $clientArgs += "--WaitForServer"
+    if ($ConnectTimeoutMs -gt 0) {
+        $clientArgs += ("--ConnectTimeout={0}" -f $ConnectTimeoutMs)
+    }
+}
 
+$clientCreateArgs = @($clientArgs + "`"$bulkArg`"")
 $clientCreate = Start-Process -FilePath $clientExe `
-                              -ArgumentList @("--Endpoint=$Endpoint",
-                                              "`"$bulkArg`"") `
+                              -ArgumentList $clientCreateArgs `
                               -PassThru `
                               -NoNewWindow `
                               -Wait
@@ -71,9 +79,9 @@ if ($clientCreate.ExitCode -ne 0 -and $clientCreate.ExitCode -ne $bulkSuccess) {
     throw ("Client bulk-create exited with code {0}" -f $clientCreate.ExitCode)
 }
 
+$clientShutdownArgs = @($clientArgs + "--Shutdown")
 $clientShutdown = Start-Process -FilePath $clientExe `
-                                -ArgumentList @("--Endpoint=$Endpoint",
-                                                "--Shutdown") `
+                                -ArgumentList $clientShutdownArgs `
                                 -PassThru `
                                 -NoNewWindow `
                                 -Wait

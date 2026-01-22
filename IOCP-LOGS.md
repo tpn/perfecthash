@@ -91,3 +91,18 @@
 - Diagnosed `TpIsTimerSet` invalid-parameter crash in IOCP worker threads to `SubmitThreadpoolWork(Context->FinishedWork)` from `GraphSolve`; guarded finished-work submissions in `Graph.c`/`GraphCu.c` when threadpool init is skipped.
 - Rebuilt Debug and reran IOCP bulk create on `perfecthash-keys\\test1` under cdb with breakpoints on `Chm01AsyncGraphComplete` and `PerfectHashServerCompleteBulkRequest`; graph completion fired repeatedly, bulk completion callback fired once, and all five output directories were created (`cdb-server-graphcomplete.log`).
 - Re-ran IOCP bulk create on `perfecthash-keys\\test1` without cdb (`PERFECT_HASH_IOCP_ASYNC_CHM01=1`); completed successfully and emitted all five output directories (`build-win\\iocp-stress-test1-nocdb`).
+- Replaced `CHM01_ASYNC_JOB.Events[5]` with an enum-backed count macro and updated initialization to use named event IDs.
+- Added client `--WaitForServer`/`--ConnectTimeout=<ms>` and ping request/response support to wait for server readiness before submitting work.
+- Updated IOCP scripts to pass `--WaitForServer`/`--ConnectTimeout`; ping check against `PerfectHashServer-PingTest` returned 0 for ping/shutdown/server.
+- IOCP bulk run against `perfecthash-keys\\hard` (Debug, concurrency 32) still timed out after ~360s; all 23 output directories were created, server exited, but the client remained waiting until terminated (`build-win\\iocp-stress-hard-latest`).
+- OG bulk create (Debug) against `perfecthash-keys\\hard` completed in ~0.82s (cmd /c run, concurrency 32), exit 0.
+- IOCP bulk run against `perfecthash-keys\\hard` with concurrency 1 under cdb hit `PerfectHashServerEnqueueBulkRequest`/`WorkItem` callbacks, then crashed in `PerfectHash!PhFree` while printing stats (`PrintCurrentContextStatsChm01` -> `Chm01AsyncFinalizeVerify`); client timed out waiting (`cdb-server-hard1.log`).
+- Fixed `_dtoa_Allocator` race by resolving allocator from TLS context in `_dtoa.c` (no TLS var in DLL); Debug rebuild succeeded.
+- Re-ran IOCP bulk `hard` with concurrency 1 under cdb; no crash, `PerfectHashServerCompleteBulkRequest` hit, client exited cleanly (`cdb-server-hard1b.log`).
+
+## 2026-01-22
+- Reproduced IOCP bulk-create hang on `perfecthash-keys\\hard` (Debug, concurrency 32); client waited indefinitely while many per-file outputs were created.
+- Added optional bulk-count logging (`PH_LOG_BULK_CREATE_COUNTS`) and CHM01 async job logging (`PH_LOG_CHM01_ASYNC_JOB`) to track request completion and async state transitions.
+- Identified `Chm01AsyncWaitJob()` pump loop could block in `GetQueuedCompletionStatus()` after job completion, leaving bulk work items stuck mid-callback.
+- Added a dummy IOCP wake post in `Chm01AsyncComplete()` and switched the pump loop to a 100ms timeout to re-check job completion state.
+- Re-ran IOCP stress on `perfecthash-keys\\hard` with `Mulshrolate4RX`/concurrency 32; run completed successfully and server shutdown cleanly.

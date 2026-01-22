@@ -4488,6 +4488,7 @@ typedef enum _PERFECT_HASH_SERVER_REQUEST_TYPE {
     PerfectHashTableCreateServerRequestType,
     PerfectHashBulkCreateServerRequestType,
     PerfectHashBulkCreateDirectoryServerRequestType,
+    PerfectHashPingServerRequestType,
     PerfectHashShutdownServerRequestType,
     PerfectHashInvalidServerRequestType
 } PERFECT_HASH_SERVER_REQUEST_TYPE;
@@ -4523,6 +4524,7 @@ typedef PERFECT_HASH_SERVER_REQUEST *PPERFECT_HASH_SERVER_REQUEST;
 
 #define PERFECT_HASH_SERVER_RESPONSE_FLAG_ERROR_MESSAGE 0x00000001
 #define PERFECT_HASH_SERVER_RESPONSE_FLAG_BULK_CREATE_TOKEN 0x00000002
+#define PERFECT_HASH_SERVER_RESPONSE_FLAG_PONG 0x00000004
 #define PERFECT_HASH_SERVER_BULK_CREATE_TOKEN_FORMAT \
     L"EventHandle=%llu ResultHandle=%llu"
 

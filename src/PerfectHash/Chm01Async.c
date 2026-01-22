@@ -27,6 +27,7 @@ Abstract:
 #define CHM01_ASYNC_JOB_FLAG_CLOSE_DELETES_FILES   0x00000001
 #define CHM01_ASYNC_JOB_FLAG_CLOSE_SUBMITTED       0x00000002
 #define CHM01_ASYNC_JOB_FLAG_SAVE_SUBMITTED        0x00000008
+#define CHM01_ASYNC_IOCP_PUMP_TIMEOUT_MS           100
 
 typedef struct _CHM01_ASYNC_GRAPH_WORK {
     PERFECT_HASH_ASYNC_WORK Work;
@@ -53,6 +54,99 @@ Chm01AsyncShouldSkipContextFileWork(
     FileId = FileWorkIdToFileId(FileWorkId);
 
     return IsValidContextFileId((CONTEXT_FILE_ID)FileId);
+}
+
+static
+VOID
+Chm01AsyncLogJobState(
+    _In_ PCHM01_ASYNC_JOB Job,
+    _In_ ULONG Stage
+    )
+{
+#ifdef PH_WINDOWS
+    int Count;
+    DWORD BytesWritten;
+    HANDLE LogHandle;
+    CHAR Buffer[512];
+    LONG Outstanding = 0;
+    LONG ActiveGraphs = 0;
+    ULONG State = 0;
+    ULONG Attempt = 0;
+    ULONG Flags = 0;
+    HRESULT Result = S_OK;
+    ULONG NameChars = 0;
+    PCWSTR NameBuffer = L"";
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_KEYS Keys;
+    PPERFECT_HASH_FILE File;
+    PPERFECT_HASH_PATH Path;
+
+    if (GetEnvironmentVariableW(L"PH_LOG_CHM01_ASYNC_JOB", NULL, 0) == 0) {
+        return;
+    }
+
+    if (!ARGUMENT_PRESENT(Job)) {
+        return;
+    }
+
+    Outstanding = Job->Async.Outstanding;
+    ActiveGraphs = Job->ActiveGraphs;
+    State = (ULONG)Job->State;
+    Attempt = Job->Attempt;
+    Flags = Job->Flags;
+    Result = Job->LastResult;
+
+    Table = Job->Table;
+    Keys = Table ? Table->Keys : NULL;
+    File = Keys ? Keys->File : NULL;
+    Path = File ? GetActivePath(File) : NULL;
+
+    if (Path && Path->FileName.Buffer) {
+        NameBuffer = Path->FileName.Buffer;
+        NameChars = Path->FileName.Length / sizeof(WCHAR);
+    }
+
+    LogHandle = CreateFileW(L"PerfectHashChm01AsyncJob.log",
+                            FILE_APPEND_DATA,
+                            FILE_SHARE_READ,
+                            NULL,
+                            OPEN_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+    if (!IsValidHandle(LogHandle)) {
+        return;
+    }
+
+    Count = _snprintf_s(
+        Buffer,
+        sizeof(Buffer),
+        _TRUNCATE,
+        "Stage=%lu State=%lu Outstanding=%ld ActiveGraphs=%ld Attempt=%lu "
+        "Flags=0x%08lX Result=0x%08lX Name=%.*S\r\n",
+        Stage,
+        State,
+        Outstanding,
+        ActiveGraphs,
+        Attempt,
+        Flags,
+        Result,
+        (int)NameChars,
+        NameBuffer
+    );
+
+    if (Count > 0) {
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
+    }
+
+    CloseHandle(LogHandle);
+#else
+    UNREFERENCED_PARAMETER(Job);
+    UNREFERENCED_PARAMETER(Stage);
+#endif
 }
 
 static
@@ -428,11 +522,11 @@ Chm01AsyncInitializeJob(
     // Initialize event arrays.
     //
 
-    Job->Events[0] = Context->SucceededEvent;
-    Job->Events[1] = Context->CompletedEvent;
-    Job->Events[2] = Context->ShutdownEvent;
-    Job->Events[3] = Context->FailedEvent;
-    Job->Events[4] = Context->LowMemoryEvent;
+    Job->Events[Chm01AsyncJobEventSucceeded] = Context->SucceededEvent;
+    Job->Events[Chm01AsyncJobEventCompleted] = Context->CompletedEvent;
+    Job->Events[Chm01AsyncJobEventShutdown] = Context->ShutdownEvent;
+    Job->Events[Chm01AsyncJobEventFailed] = Context->FailedEvent;
+    Job->Events[Chm01AsyncJobEventLowMemory] = Context->LowMemoryEvent;
 
     {
         PHANDLE SaveEvent = Job->SaveEvents;
@@ -1415,8 +1509,17 @@ Chm01AsyncComplete(
     Job = CONTAINING_RECORD(Work, CHM01_ASYNC_JOB, Work);
     Job->LastResult = Result;
 
+    Chm01AsyncLogJobState(Job, 1);
+
     if (Job->CompletionEvent) {
         SetEvent(Job->CompletionEvent);
+    }
+
+    if (Job->Async.IoCompletionPort) {
+        PostQueuedCompletionStatus(Job->Async.IoCompletionPort,
+                                   0,
+                                   0,
+                                   NULL);
     }
 }
 
@@ -1532,8 +1635,11 @@ Chm01AsyncPumpIoCompletionPort(
 {
     BOOL Success;
     DWORD NumberOfBytes;
+    DWORD LastError;
     ULONG_PTR CompletionKey;
     LPOVERLAPPED Overlapped;
+    BOOLEAN LoggedCompletionSignaled = FALSE;
+    BOOLEAN LoggedOutstandingZero = FALSE;
     HANDLE IoCompletionPort;
     PPERFECT_HASH_IOCP_WORK WorkItem;
     const ULONG AllowedFlags = (
@@ -1552,13 +1658,27 @@ Chm01AsyncPumpIoCompletionPort(
             if (Job->Async.Outstanding == 0) {
                 break;
             }
+            if (!LoggedCompletionSignaled) {
+                Chm01AsyncLogJobState(Job, 2);
+                LoggedCompletionSignaled = TRUE;
+            }
+        } else if (Job->Async.Outstanding == 0 && !LoggedOutstandingZero) {
+            Chm01AsyncLogJobState(Job, 3);
+            LoggedOutstandingZero = TRUE;
         }
 
         Success = GetQueuedCompletionStatus(IoCompletionPort,
                                             &NumberOfBytes,
                                             &CompletionKey,
                                             &Overlapped,
-                                            INFINITE);
+                                            CHM01_ASYNC_IOCP_PUMP_TIMEOUT_MS);
+
+        if (!Success && !Overlapped) {
+            LastError = GetLastError();
+            if (LastError == WAIT_TIMEOUT) {
+                continue;
+            }
+        }
 
         if (CompletionKey == PERFECT_HASH_IOCP_SHUTDOWN_KEY) {
             PostQueuedCompletionStatus(IoCompletionPort,

@@ -28,6 +28,17 @@ typedef enum _CHM01_ASYNC_STATE {
     Chm01AsyncStateError
 } CHM01_ASYNC_STATE;
 
+typedef enum _CHM01_ASYNC_JOB_EVENT_ID {
+    Chm01AsyncJobEventSucceeded = 0,
+    Chm01AsyncJobEventCompleted,
+    Chm01AsyncJobEventShutdown,
+    Chm01AsyncJobEventFailed,
+    Chm01AsyncJobEventLowMemory,
+    Chm01AsyncJobEventInvalid
+} CHM01_ASYNC_JOB_EVENT_ID;
+
+#define NUMBER_OF_CHM01_ASYNC_JOB_EVENTS (Chm01AsyncJobEventInvalid)
+
 typedef struct _CHM01_ASYNC_GRAPH_WORK CHM01_ASYNC_GRAPH_WORK;
 typedef CHM01_ASYNC_GRAPH_WORK *PCHM01_ASYNC_GRAPH_WORK;
 
@@ -52,7 +63,7 @@ typedef struct _CHM01_ASYNC_JOB {
     GRAPH_INFO PrevGraphInfo;
     GRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
-    HANDLE Events[5];
+    HANDLE Events[NUMBER_OF_CHM01_ASYNC_JOB_EVENTS];
     HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];
     HANDLE PrepareEvents[NUMBER_OF_PREPARE_FILE_EVENTS];
     PCHM01_ASYNC_GRAPH_WORK *GraphWorkItems;
