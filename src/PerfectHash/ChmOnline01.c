@@ -58,6 +58,28 @@ typedef PH_JIT_INDEX4_FUNCTION *PPH_JIT_INDEX4_FUNCTION;
 
 typedef
 VOID
+(PH_JIT_INDEX8_FUNCTION)(
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _In_ ULONG Key3,
+    _In_ ULONG Key4,
+    _In_ ULONG Key5,
+    _In_ ULONG Key6,
+    _In_ ULONG Key7,
+    _In_ ULONG Key8,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8
+    );
+typedef PH_JIT_INDEX8_FUNCTION *PPH_JIT_INDEX8_FUNCTION;
+
+typedef
+VOID
 (PH_JIT_INDEX2_64_FUNCTION)(
     _In_ ULONGLONG Key1,
     _In_ ULONGLONG Key2,
@@ -80,6 +102,28 @@ VOID
     );
 typedef PH_JIT_INDEX4_64_FUNCTION *PPH_JIT_INDEX4_64_FUNCTION;
 
+typedef
+VOID
+(PH_JIT_INDEX8_64_FUNCTION)(
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _In_ ULONGLONG Key3,
+    _In_ ULONGLONG Key4,
+    _In_ ULONGLONG Key5,
+    _In_ ULONGLONG Key6,
+    _In_ ULONGLONG Key7,
+    _In_ ULONGLONG Key8,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8
+    );
+typedef PH_JIT_INDEX8_64_FUNCTION *PPH_JIT_INDEX8_64_FUNCTION;
+
 PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexJit;
 PERFECT_HASH_TABLE_QUERY_INTERFACE PerfectHashTableQueryInterfaceJit;
 
@@ -99,8 +143,10 @@ PERFECT_HASH_TABLE_JIT_INDEX2 PerfectHashTableJitInterfaceIndex2;
 PERFECT_HASH_TABLE_JIT_INDEX4 PerfectHashTableJitInterfaceIndex4;
 PERFECT_HASH_TABLE_JIT_INDEX2_64 PerfectHashTableJitInterfaceIndex2_64;
 PERFECT_HASH_TABLE_JIT_INDEX4_64 PerfectHashTableJitInterfaceIndex4_64;
+PERFECT_HASH_TABLE_JIT_INDEX8 PerfectHashTableJitInterfaceIndex8;
+PERFECT_HASH_TABLE_JIT_INDEX8_64 PerfectHashTableJitInterfaceIndex8_64;
 
-static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
+static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     PerfectHashTableJitInterfaceVtbl = {
     &PerfectHashTableJitInterfaceQueryInterface,
     &PerfectHashTableJitInterfaceAddRef,
@@ -113,6 +159,8 @@ static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     &PerfectHashTableJitInterfaceIndex4,
     &PerfectHashTableJitInterfaceIndex2_64,
     &PerfectHashTableJitInterfaceIndex4_64,
+    &PerfectHashTableJitInterfaceIndex8,
+    &PerfectHashTableJitInterfaceIndex8_64,
 };
 
 #if defined(PH_HAS_LLVM)
@@ -150,6 +198,56 @@ IsSupportedJitHashFunctionId(
 
 FORCEINLINE
 LLVMValueRef
+BuildSplatVectorConstant(
+    _In_ LLVMTypeRef VectorType,
+    _In_ LLVMValueRef ScalarConstant,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMValueRef Values[8];
+    ULONG Index;
+
+    for (Index = 0; Index < Lanes; Index++) {
+        Values[Index] = ScalarConstant;
+    }
+
+    return LLVMConstVector(Values, Lanes);
+}
+
+FORCEINLINE
+LLVMValueRef
+BuildConstIntLike(
+    _In_ LLVMValueRef Like,
+    _In_ ULONG Value
+    )
+{
+    LLVMTypeRef Type;
+
+    Type = LLVMTypeOf(Like);
+
+    if (LLVMGetTypeKind(Type) == LLVMVectorTypeKind) {
+        LLVMTypeRef ElementType;
+        LLVMValueRef Element;
+        LLVMValueRef Values[8];
+        ULONG Lanes;
+        ULONG Index;
+
+        ElementType = LLVMGetElementType(Type);
+        Element = LLVMConstInt(ElementType, Value, FALSE);
+        Lanes = LLVMGetVectorSize(Type);
+
+        for (Index = 0; Index < Lanes; Index++) {
+            Values[Index] = Element;
+        }
+
+        return LLVMConstVector(Values, Lanes);
+    }
+
+    return LLVMConstInt(Type, Value, FALSE);
+}
+
+FORCEINLINE
+LLVMValueRef
 BuildRotateRight32(
     _In_ LLVMBuilderRef Builder,
     _In_ LLVMValueRef Value,
@@ -165,11 +263,11 @@ BuildRotateRight32(
     LLVMValueRef Left;
 
     Type = LLVMTypeOf(Value);
-    Mask = LLVMConstInt(Type, 31, FALSE);
+    Mask = BuildConstIntLike(Value, 31);
     ShiftMasked = LLVMBuildAnd(Builder, Shift, Mask, "shift");
 
     ShiftInverse = LLVMBuildSub(Builder,
-                                LLVMConstInt(Type, 32, FALSE),
+                                BuildConstIntLike(Value, 32),
                                 ShiftMasked,
                                 "shift_inv");
 
@@ -1054,6 +1152,434 @@ BuildChm01Index2Function(
 
 static
 LLVMValueRef
+BuildChm01IndexVectorFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ LLVMTypeRef KeyType,
+    _In_opt_ LLVMValueRef DownsizeFunction,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMTypeRef VecType;
+    LLVMTypeRef Params[16];
+    LLVMValueRef Function;
+    LLVMValueRef KeyParams[8];
+    LLVMValueRef IndexPtrs[8];
+    LLVMValueRef KeyVec;
+    LLVMValueRef Seed1Vec;
+    LLVMValueRef Seed2Vec;
+    LLVMValueRef Seed3Byte1Vec;
+    LLVMValueRef Seed3Byte2Vec;
+    LLVMValueRef Seed3Byte3Vec;
+    LLVMValueRef Seed3Byte4Vec;
+    LLVMValueRef Seed4Vec;
+    LLVMValueRef Seed5Vec;
+    LLVMValueRef HashMaskVec;
+    LLVMValueRef Vertex1Vec;
+    LLVMValueRef Vertex2Vec;
+    LLVMValueRef IndexVec1;
+    LLVMValueRef IndexVec2;
+    LLVMValueRef LaneConst;
+    LLVMValueRef Key;
+    LLVMValueRef Key32;
+    LLVMValueRef Index1;
+    LLVMValueRef Index2;
+    LLVMValueRef Vertex1;
+    LLVMValueRef Vertex2;
+    LLVMValueRef Index;
+    BOOLEAN UseHashMask;
+    ULONG IndexLane;
+
+    if (Lanes != 2 && Lanes != 4 && Lanes != 8) {
+        return NULL;
+    }
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        Params[IndexLane] = KeyType;
+    }
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        Params[Lanes + IndexLane] = Ctx->I32Ptr;
+    }
+
+    FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
+                                    Params,
+                                    Lanes * 2,
+                                    FALSE);
+
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        KeyParams[IndexLane] = LLVMGetParam(Function, IndexLane);
+        IndexPtrs[IndexLane] = LLVMGetParam(Function, Lanes + IndexLane);
+    }
+
+    VecType = LLVMVectorType(Ctx->I32, Lanes);
+    KeyVec = LLVMGetUndef(VecType);
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        Key = KeyParams[IndexLane];
+
+        if (KeyType == Ctx->I64) {
+            if (DownsizeFunction) {
+                LLVMTypeRef DownsizeType;
+                DownsizeType = LLVMFunctionType(Ctx->I32, &Ctx->I64, 1, FALSE);
+                Key32 = LLVMBuildCall2(Ctx->Builder,
+                                       DownsizeType,
+                                       DownsizeFunction,
+                                       &Key,
+                                       1,
+                                       "key_downsized");
+            } else {
+                Key32 = LLVMBuildTrunc(Ctx->Builder,
+                                       Key,
+                                       Ctx->I32,
+                                       "key32");
+            }
+        } else {
+            Key32 = Key;
+        }
+
+        LaneConst = LLVMConstInt(Ctx->I32, IndexLane, FALSE);
+        KeyVec = LLVMBuildInsertElement(Ctx->Builder,
+                                        KeyVec,
+                                        Key32,
+                                        LaneConst,
+                                        "key_lane");
+    }
+
+    Seed1Vec = BuildSplatVectorConstant(VecType, Ctx->Seed1Const, Lanes);
+    Seed2Vec = BuildSplatVectorConstant(VecType, Ctx->Seed2Const, Lanes);
+    Seed3Byte1Vec = BuildSplatVectorConstant(VecType,
+                                             Ctx->Seed3Byte1Const,
+                                             Lanes);
+    Seed3Byte2Vec = BuildSplatVectorConstant(VecType,
+                                             Ctx->Seed3Byte2Const,
+                                             Lanes);
+    Seed3Byte3Vec = BuildSplatVectorConstant(VecType,
+                                             Ctx->Seed3Byte3Const,
+                                             Lanes);
+    Seed3Byte4Vec = BuildSplatVectorConstant(VecType,
+                                             Ctx->Seed3Byte4Const,
+                                             Lanes);
+    Seed4Vec = BuildSplatVectorConstant(VecType, Ctx->Seed4Const, Lanes);
+    Seed5Vec = BuildSplatVectorConstant(VecType, Ctx->Seed5Const, Lanes);
+    HashMaskVec = BuildSplatVectorConstant(VecType,
+                                           Ctx->HashMaskConst,
+                                           Lanes);
+
+    UseHashMask = FALSE;
+
+    switch (Ctx->HashFunctionId) {
+
+        case PerfectHashHashMultiplyShiftRFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr");
+
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr1");
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed2Vec,
+                                      "v1.mul2");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed4Vec,
+                                      "v2.mul1");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr1");
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftR2FunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr1");
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed2Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte2Vec,
+                                       "v1.shr2");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed4Vec,
+                                      "v2.mul1");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte3Vec,
+                                       "v2.shr1");
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte4Vec,
+                                       "v2.shr2");
+
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMultiplyShiftLRFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildShl(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed3Byte1Vec,
+                                      "v1.shl");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr");
+
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMulshrolate1RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate2RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate3RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed4Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate4RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed4Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul1");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        default:
+            return NULL;
+    }
+
+    if (UseHashMask) {
+        IndexVec1 = LLVMBuildAnd(Ctx->Builder,
+                                 Vertex1Vec,
+                                 HashMaskVec,
+                                 "masked_low");
+        IndexVec2 = LLVMBuildAnd(Ctx->Builder,
+                                 Vertex2Vec,
+                                 HashMaskVec,
+                                 "masked_high");
+    } else {
+        IndexVec1 = Vertex1Vec;
+        IndexVec2 = Vertex2Vec;
+    }
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        LaneConst = LLVMConstInt(Ctx->I32, IndexLane, FALSE);
+        Index1 = LLVMBuildExtractElement(Ctx->Builder,
+                                         IndexVec1,
+                                         LaneConst,
+                                         "index1");
+        Index2 = LLVMBuildExtractElement(Ctx->Builder,
+                                         IndexVec2,
+                                         LaneConst,
+                                         "index2");
+
+        Vertex1 = BuildTableDataLoadAndExtend(Ctx->Builder,
+                                              Ctx->TableElementType,
+                                              Ctx->I64,
+                                              Ctx->I32,
+                                              Ctx->TableDataConst,
+                                              Index1);
+
+        Vertex2 = BuildTableDataLoadAndExtend(Ctx->Builder,
+                                              Ctx->TableElementType,
+                                              Ctx->I64,
+                                              Ctx->I32,
+                                              Ctx->TableDataConst,
+                                              Index2);
+
+        Index = LLVMBuildAdd(Ctx->Builder, Vertex1, Vertex2, "index_add");
+        Index = LLVMBuildAnd(Ctx->Builder,
+                             Index,
+                             Ctx->IndexMaskConst,
+                             "index_masked");
+        LLVMBuildStore(Ctx->Builder, Index, IndexPtrs[IndexLane]);
+    }
+
+    LLVMBuildRetVoid(Ctx->Builder);
+
+    return Function;
+}
+
+static
+LLVMValueRef
 BuildChm01Index4Function(
     _In_ PCHM01_JIT_CONTEXT Ctx,
     _In_ PCSTR Name,
@@ -1145,6 +1671,63 @@ BuildChm01Index4Function(
     return Function;
 }
 
+static
+LLVMValueRef
+BuildChm01Index8Function(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ LLVMValueRef IndexFunction,
+    _In_ LLVMTypeRef IndexFunctionType,
+    _In_ LLVMTypeRef KeyType
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMTypeRef Params[16];
+    LLVMValueRef Function;
+    LLVMValueRef KeyParams[8];
+    LLVMValueRef IndexPtrs[8];
+    LLVMValueRef IndexValue;
+    ULONG Index;
+
+    for (Index = 0; Index < 8; Index++) {
+        Params[Index] = KeyType;
+    }
+    for (Index = 0; Index < 8; Index++) {
+        Params[8 + Index] = Ctx->I32Ptr;
+    }
+
+    FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
+
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    for (Index = 0; Index < 8; Index++) {
+        KeyParams[Index] = LLVMGetParam(Function, Index);
+        IndexPtrs[Index] = LLVMGetParam(Function, 8 + Index);
+    }
+
+    for (Index = 0; Index < 8; Index++) {
+        IndexValue = LLVMBuildCall2(Ctx->Builder,
+                                    IndexFunctionType,
+                                    IndexFunction,
+                                    &KeyParams[Index],
+                                    1,
+                                    "index");
+        LLVMBuildStore(Ctx->Builder, IndexValue, IndexPtrs[Index]);
+    }
+
+    LLVMBuildRetVoid(Ctx->Builder);
+
+    return Function;
+}
+
 _Must_inspect_result_
 static
 HRESULT
@@ -1171,8 +1754,16 @@ CompileChm01IndexJit(
     BOOLEAN CompileIndex64;
     BOOLEAN CompileIndex2;
     BOOLEAN CompileIndex4;
+    BOOLEAN CompileIndex8;
     BOOLEAN CompileIndex2_64;
     BOOLEAN CompileIndex4_64;
+    BOOLEAN CompileIndex8_64;
+    BOOLEAN CompileVectorIndex2;
+    BOOLEAN CompileVectorIndex4;
+    BOOLEAN CompileVectorIndex8;
+    BOOLEAN CompileVectorIndex2_64;
+    BOOLEAN CompileVectorIndex4_64;
+    BOOLEAN CompileVectorIndex8_64;
     HRESULT Result = S_OK;
     PTABLE_INFO_ON_DISK TableInfo;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
@@ -1233,8 +1824,15 @@ CompileChm01IndexJit(
     Seed3Byte3 = ((Seed3 >> 16) & 0xff);
     Seed3Byte4 = ((Seed3 >> 24) & 0xff);
 
-    CompileIndex2 = (CompileFlags->JitIndex2 != FALSE);
-    CompileIndex4 = (CompileFlags->JitIndex4 != FALSE);
+    CompileVectorIndex2 = (CompileFlags->JitVectorIndex2 != FALSE);
+    CompileVectorIndex4 = (CompileFlags->JitVectorIndex4 != FALSE);
+    CompileVectorIndex8 = (CompileFlags->JitVectorIndex8 != FALSE);
+    CompileIndex2 = (CompileFlags->JitIndex2 != FALSE) ||
+                    (CompileVectorIndex2 != FALSE);
+    CompileIndex4 = (CompileFlags->JitIndex4 != FALSE) ||
+                    (CompileVectorIndex4 != FALSE);
+    CompileIndex8 = (CompileFlags->JitIndex8 != FALSE) ||
+                    (CompileVectorIndex8 != FALSE);
 
     if (CompileFlags->JitIndex64 && !KeysDownsized) {
         return PH_E_NOT_IMPLEMENTED;
@@ -1243,6 +1841,10 @@ CompileChm01IndexJit(
     CompileIndex64 = (KeysDownsized != FALSE);
     CompileIndex2_64 = (CompileIndex64 && CompileIndex2);
     CompileIndex4_64 = (CompileIndex64 && CompileIndex4);
+    CompileIndex8_64 = (CompileIndex64 && CompileIndex8);
+    CompileVectorIndex2_64 = (CompileIndex64 && CompileVectorIndex2);
+    CompileVectorIndex4_64 = (CompileIndex64 && CompileVectorIndex4);
+    CompileVectorIndex8_64 = (CompileIndex64 && CompileVectorIndex8);
 
     if (KeysDownsized) {
         if (Keys) {
@@ -1395,46 +1997,140 @@ CompileChm01IndexJit(
     }
 
     if (CompileIndex2) {
-        if (!BuildChm01Index2Function(&JitContext,
-                                      "PerfectHashJitIndex2",
-                                      IndexFunction,
-                                      IndexFunctionType,
-                                      JitContext.I32)) {
-            Result = PH_E_TABLE_COMPILATION_FAILED;
-            goto Error;
+        if (CompileVectorIndex2) {
+            if (!BuildChm01IndexVectorFunction(&JitContext,
+                                               "PerfectHashJitIndex2Vector",
+                                               JitContext.I32,
+                                               NULL,
+                                               2)) {
+                CompileVectorIndex2 = FALSE;
+            }
+        }
+
+        if (!CompileVectorIndex2) {
+            if (!BuildChm01Index2Function(&JitContext,
+                                          "PerfectHashJitIndex2",
+                                          IndexFunction,
+                                          IndexFunctionType,
+                                          JitContext.I32)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
         }
     }
 
     if (CompileIndex4) {
-        if (!BuildChm01Index4Function(&JitContext,
-                                      "PerfectHashJitIndex4",
-                                      IndexFunction,
-                                      IndexFunctionType,
-                                      JitContext.I32)) {
-            Result = PH_E_TABLE_COMPILATION_FAILED;
-            goto Error;
+        if (CompileVectorIndex4) {
+            if (!BuildChm01IndexVectorFunction(&JitContext,
+                                               "PerfectHashJitIndex4Vector",
+                                               JitContext.I32,
+                                               NULL,
+                                               4)) {
+                CompileVectorIndex4 = FALSE;
+            }
+        }
+
+        if (!CompileVectorIndex4) {
+            if (!BuildChm01Index4Function(&JitContext,
+                                          "PerfectHashJitIndex4",
+                                          IndexFunction,
+                                          IndexFunctionType,
+                                          JitContext.I32)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    if (CompileIndex8) {
+        if (CompileVectorIndex8) {
+            if (!BuildChm01IndexVectorFunction(&JitContext,
+                                               "PerfectHashJitIndex8Vector",
+                                               JitContext.I32,
+                                               NULL,
+                                               8)) {
+                CompileVectorIndex8 = FALSE;
+            }
+        }
+
+        if (!CompileVectorIndex8) {
+            if (!BuildChm01Index8Function(&JitContext,
+                                          "PerfectHashJitIndex8",
+                                          IndexFunction,
+                                          IndexFunctionType,
+                                          JitContext.I32)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
         }
     }
 
     if (CompileIndex2_64) {
-        if (!BuildChm01Index2Function(&JitContext,
-                                      "PerfectHashJitIndex2_64",
-                                      Index64Function,
-                                      Index64FunctionType,
-                                      JitContext.I64)) {
-            Result = PH_E_TABLE_COMPILATION_FAILED;
-            goto Error;
+        if (CompileVectorIndex2_64) {
+            if (!BuildChm01IndexVectorFunction(&JitContext,
+                                               "PerfectHashJitIndex2Vector_64",
+                                               JitContext.I64,
+                                               DownsizeFunction,
+                                               2)) {
+                CompileVectorIndex2_64 = FALSE;
+            }
+        }
+
+        if (!CompileVectorIndex2_64) {
+            if (!BuildChm01Index2Function(&JitContext,
+                                          "PerfectHashJitIndex2_64",
+                                          Index64Function,
+                                          Index64FunctionType,
+                                          JitContext.I64)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
         }
     }
 
     if (CompileIndex4_64) {
-        if (!BuildChm01Index4Function(&JitContext,
-                                      "PerfectHashJitIndex4_64",
-                                      Index64Function,
-                                      Index64FunctionType,
-                                      JitContext.I64)) {
-            Result = PH_E_TABLE_COMPILATION_FAILED;
-            goto Error;
+        if (CompileVectorIndex4_64) {
+            if (!BuildChm01IndexVectorFunction(&JitContext,
+                                               "PerfectHashJitIndex4Vector_64",
+                                               JitContext.I64,
+                                               DownsizeFunction,
+                                               4)) {
+                CompileVectorIndex4_64 = FALSE;
+            }
+        }
+
+        if (!CompileVectorIndex4_64) {
+            if (!BuildChm01Index4Function(&JitContext,
+                                          "PerfectHashJitIndex4_64",
+                                          Index64Function,
+                                          Index64FunctionType,
+                                          JitContext.I64)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    if (CompileIndex8_64) {
+        if (CompileVectorIndex8_64) {
+            if (!BuildChm01IndexVectorFunction(&JitContext,
+                                               "PerfectHashJitIndex8Vector_64",
+                                               JitContext.I64,
+                                               DownsizeFunction,
+                                               8)) {
+                CompileVectorIndex8_64 = FALSE;
+            }
+        }
+
+        if (!CompileVectorIndex8_64) {
+            if (!BuildChm01Index8Function(&JitContext,
+                                          "PerfectHashJitIndex8_64",
+                                          Index64Function,
+                                          Index64FunctionType,
+                                          JitContext.I64)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
         }
     }
 
@@ -1474,8 +2170,13 @@ CompileChm01IndexJit(
     }
 
     if (CompileIndex2) {
-        Jit->Index2Function = (PVOID)(ULONG_PTR)
-            LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2");
+        if (CompileVectorIndex2) {
+            Jit->Index2Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2Vector");
+        } else {
+            Jit->Index2Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2");
+        }
         if (!Jit->Index2Function) {
             Result = PH_E_TABLE_COMPILATION_FAILED;
             goto Error;
@@ -1484,8 +2185,13 @@ CompileChm01IndexJit(
     }
 
     if (CompileIndex4) {
-        Jit->Index4Function = (PVOID)(ULONG_PTR)
-            LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4");
+        if (CompileVectorIndex4) {
+            Jit->Index4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4Vector");
+        } else {
+            Jit->Index4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4");
+        }
         if (!Jit->Index4Function) {
             Result = PH_E_TABLE_COMPILATION_FAILED;
             goto Error;
@@ -1493,9 +2199,30 @@ CompileChm01IndexJit(
         Jit->Flags.Index4Compiled = TRUE;
     }
 
+    if (CompileIndex8) {
+        if (CompileVectorIndex8) {
+            Jit->Index8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex8Vector");
+        } else {
+            Jit->Index8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex8");
+        }
+        if (!Jit->Index8Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        Jit->Flags.Index8Compiled = TRUE;
+    }
+
     if (CompileIndex2_64) {
-        Jit->Index2_64Function = (PVOID)(ULONG_PTR)
-            LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2_64");
+        if (CompileVectorIndex2_64) {
+            Jit->Index2_64Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitIndex2Vector_64");
+        } else {
+            Jit->Index2_64Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2_64");
+        }
         if (!Jit->Index2_64Function) {
             Result = PH_E_TABLE_COMPILATION_FAILED;
             goto Error;
@@ -1504,13 +2231,35 @@ CompileChm01IndexJit(
     }
 
     if (CompileIndex4_64) {
-        Jit->Index4_64Function = (PVOID)(ULONG_PTR)
-            LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4_64");
+        if (CompileVectorIndex4_64) {
+            Jit->Index4_64Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitIndex4Vector_64");
+        } else {
+            Jit->Index4_64Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4_64");
+        }
         if (!Jit->Index4_64Function) {
             Result = PH_E_TABLE_COMPILATION_FAILED;
             goto Error;
         }
         Jit->Flags.Index4_64Compiled = TRUE;
+    }
+
+    if (CompileIndex8_64) {
+        if (CompileVectorIndex8_64) {
+            Jit->Index8_64Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitIndex8Vector_64");
+        } else {
+            Jit->Index8_64Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex8_64");
+        }
+        if (!Jit->Index8_64Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        Jit->Flags.Index8_64Compiled = TRUE;
     }
 
     Jit->ExecutionEngine = Engine;
@@ -2003,6 +2752,80 @@ PerfectHashTableJitInterfaceIndex4(
 
 _Use_decl_annotations_
 HRESULT
+PerfectHashTableJitInterfaceIndex8(
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    ULONG Key1,
+    ULONG Key2,
+    ULONG Key3,
+    ULONG Key4,
+    ULONG Key5,
+    ULONG Key6,
+    ULONG Key7,
+    ULONG Key8,
+    PULONG Index1,
+    PULONG Index2,
+    PULONG Index3,
+    PULONG Index4,
+    PULONG Index5,
+    PULONG Index6,
+    PULONG Index7,
+    PULONG Index8
+    )
+{
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_JIT JitState;
+    PPH_JIT_INDEX8_FUNCTION IndexFunction;
+
+    if (!ARGUMENT_PRESENT(Jit) ||
+        !ARGUMENT_PRESENT(Index1) ||
+        !ARGUMENT_PRESENT(Index2) ||
+        !ARGUMENT_PRESENT(Index3) ||
+        !ARGUMENT_PRESENT(Index4) ||
+        !ARGUMENT_PRESENT(Index5) ||
+        !ARGUMENT_PRESENT(Index6) ||
+        !ARGUMENT_PRESENT(Index7) ||
+        !ARGUMENT_PRESENT(Index8)) {
+        return E_POINTER;
+    }
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    JitState = Table->Jit;
+    if (!ARGUMENT_PRESENT(JitState) ||
+        !JitState->Flags.Valid ||
+        !JitState->Flags.Index8Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction = (PPH_JIT_INDEX8_FUNCTION)JitState->Index8Function;
+    if (!ARGUMENT_PRESENT(IndexFunction)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction(Key1,
+                  Key2,
+                  Key3,
+                  Key4,
+                  Key5,
+                  Key6,
+                  Key7,
+                  Key8,
+                  Index1,
+                  Index2,
+                  Index3,
+                  Index4,
+                  Index5,
+                  Index6,
+                  Index7,
+                  Index8);
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
 PerfectHashTableJitInterfaceIndex2_64(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONGLONG Key1,
@@ -2093,6 +2916,80 @@ PerfectHashTableJitInterfaceIndex4_64(
                   Index2,
                   Index3,
                   Index4);
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableJitInterfaceIndex8_64(
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    ULONGLONG Key1,
+    ULONGLONG Key2,
+    ULONGLONG Key3,
+    ULONGLONG Key4,
+    ULONGLONG Key5,
+    ULONGLONG Key6,
+    ULONGLONG Key7,
+    ULONGLONG Key8,
+    PULONG Index1,
+    PULONG Index2,
+    PULONG Index3,
+    PULONG Index4,
+    PULONG Index5,
+    PULONG Index6,
+    PULONG Index7,
+    PULONG Index8
+    )
+{
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_JIT JitState;
+    PPH_JIT_INDEX8_64_FUNCTION IndexFunction;
+
+    if (!ARGUMENT_PRESENT(Jit) ||
+        !ARGUMENT_PRESENT(Index1) ||
+        !ARGUMENT_PRESENT(Index2) ||
+        !ARGUMENT_PRESENT(Index3) ||
+        !ARGUMENT_PRESENT(Index4) ||
+        !ARGUMENT_PRESENT(Index5) ||
+        !ARGUMENT_PRESENT(Index6) ||
+        !ARGUMENT_PRESENT(Index7) ||
+        !ARGUMENT_PRESENT(Index8)) {
+        return E_POINTER;
+    }
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    JitState = Table->Jit;
+    if (!ARGUMENT_PRESENT(JitState) ||
+        !JitState->Flags.Valid ||
+        !JitState->Flags.Index8_64Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction = (PPH_JIT_INDEX8_64_FUNCTION)JitState->Index8_64Function;
+    if (!ARGUMENT_PRESENT(IndexFunction)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction(Key1,
+                  Key2,
+                  Key3,
+                  Key4,
+                  Key5,
+                  Key6,
+                  Key7,
+                  Key8,
+                  Index1,
+                  Index2,
+                  Index3,
+                  Index4,
+                  Index5,
+                  Index6,
+                  Index7,
+                  Index8);
     return S_OK;
 }
 

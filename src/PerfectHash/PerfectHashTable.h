@@ -125,6 +125,12 @@ typedef union _PERFECT_HASH_TABLE_JIT_FLAGS {
         ULONG Index4Compiled:1;
 
         //
+        // When set, indicates the Index8() routine has been compiled.
+        //
+
+        ULONG Index8Compiled:1;
+
+        //
         // When set, indicates the Index2_64() routine has been compiled.
         //
 
@@ -137,10 +143,16 @@ typedef union _PERFECT_HASH_TABLE_JIT_FLAGS {
         ULONG Index4_64Compiled:1;
 
         //
+        // When set, indicates the Index8_64() routine has been compiled.
+        //
+
+        ULONG Index8_64Compiled:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:25;
+        ULONG Unused:23;
     };
 
     LONG AsLong;
@@ -183,6 +195,8 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     PVOID Index4Function;
     PVOID Index2_64Function;
     PVOID Index4_64Function;
+    PVOID Index8Function;
+    PVOID Index8_64Function;
     PPERFECT_HASH_TABLE_INDEX OriginalIndex;
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
     PERFECT_HASH_TABLE_JIT_INTERFACE Interface;

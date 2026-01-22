@@ -696,7 +696,31 @@ SymbolicName=PH_MSG_PERFECT_HASH_USAGE_CONTINUED_1
 Language=English
 Table Compile Flags:
 
-    N/A
+    --Jit
+
+        Compiles an in-memory, online JIT representation of the table using
+        LLVM.
+
+    --JitIndex64
+
+        Also compiles the 64-bit Index() routine (keys must have been
+        downsized from 64-bit to 32-bit for this to be valid).
+
+    --JitIndex2
+    --JitIndex4
+    --JitIndex8
+
+        Compiles the 2-wide or 4-wide Index() routines, respectively.
+        The 8-wide variant follows the same behavior.
+
+    --JitVectorIndex2
+    --JitVectorIndex4
+    --JitVectorIndex8
+
+        Compiles vectorized 2-wide or 4-wide Index() routines. These imply
+        --JitIndex2/--JitIndex4 and are intended to map to NEON/SSE on the
+        active CPU architecture. The 8-wide variant follows the same
+        behavior.
 
 Table Create Parameters:
 

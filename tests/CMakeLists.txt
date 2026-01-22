@@ -53,6 +53,12 @@ gtest_discover_tests(perfecthash_unit_tests
     TEST_PREFIX "perfecthash_unit_tests."
 )
 
+add_test(
+    NAME perfecthash.fast.unit
+    COMMAND $<TARGET_FILE:perfecthash_unit_tests>
+)
+set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
+
 set(TEST_KEYS_FILE "${PERFECTHASH_ROOT_DIR}/keys/HologramWorld-31016.keys")
 set(TEST_KEYS_DIR "${PERFECTHASH_ROOT_DIR}/keys")
 set(TEST_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/cli-out")
@@ -161,4 +167,48 @@ add_test(
         -DTEST_CARGO=${CARGO_EXECUTABLE}
         -DTEST_BUILD_CONFIG=$<CONFIG>
         -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+add_test(
+    NAME perfecthash.fast.cli.create
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/fast-create
+        -DTEST_ARGS=Chm01|Mulshrolate4RX|And|1
+        -DTEST_FLAGS=--NoFileIo
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_test.cmake
+)
+
+add_test(
+    NAME perfecthash.fast.cli.bulk
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashBulkCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_DIR}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/fast-bulk
+        -DTEST_ARGS=Chm01|Mulshrolate4RX|And|1
+        -DTEST_FLAGS=--Quiet|--NoFileIo
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_test.cmake
+)
+
+add_test(
+    NAME perfecthash.fast.cli.codegen
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/fast-codegen
+        -DTEST_ARGS=Chm01|Mulshrolate4RX|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+set_tests_properties(
+    perfecthash.fast.cli.create
+    perfecthash.fast.cli.bulk
+    perfecthash.fast.cli.codegen
+    PROPERTIES
+        LABELS fast
 )

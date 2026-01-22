@@ -314,10 +314,65 @@ TryExtractArgTableCompileFlags(
     PPERFECT_HASH_TABLE_COMPILE_FLAGS Flags
     )
 {
+    PCUNICODE_STRING Arg = Argument;
+    DECL_ARG(Jit);
+    DECL_ARG(JitIndex64);
+    DECL_ARG(JitIndex2);
+    DECL_ARG(JitIndex4);
+    DECL_ARG(JitIndex8);
+    DECL_ARG(JitVectorIndex2);
+    DECL_ARG(JitVectorIndex4);
+    DECL_ARG(JitVectorIndex8);
+
     UNREFERENCED_PARAMETER(Rtl);
     UNREFERENCED_PARAMETER(Allocator);
-    UNREFERENCED_PARAMETER(Argument);
-    UNREFERENCED_PARAMETER(Flags);
+
+    if (IS_EQUAL(Jit)) {
+        Flags->Jit = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex64)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex64 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex2)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex4)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex8)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex2)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex4)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex8)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex8 = TRUE;
+        return S_OK;
+    }
 
     return S_FALSE;
 }

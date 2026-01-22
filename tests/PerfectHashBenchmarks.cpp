@@ -34,6 +34,10 @@ struct BenchmarkOptions {
   bool jit = true;
   bool index2 = false;
   bool index4 = false;
+  bool index8 = false;
+  bool jit_vector_index2 = false;
+  bool jit_vector_index4 = false;
+  bool jit_vector_index8 = false;
 };
 
 bool StartsWith(const char *value, const char *prefix) {
@@ -121,6 +125,29 @@ bool ParseArguments(int argc, char **argv, BenchmarkOptions *options) {
       continue;
     }
 
+    if (std::strcmp(arg, "--index8") == 0) {
+      options->index8 = true;
+      continue;
+    }
+
+    if (std::strcmp(arg, "--jit-vector-index2") == 0) {
+      options->jit_vector_index2 = true;
+      options->index2 = true;
+      continue;
+    }
+
+    if (std::strcmp(arg, "--jit-vector-index4") == 0) {
+      options->jit_vector_index4 = true;
+      options->index4 = true;
+      continue;
+    }
+
+    if (std::strcmp(arg, "--jit-vector-index8") == 0) {
+      options->jit_vector_index8 = true;
+      options->index8 = true;
+      continue;
+    }
+
     return false;
   }
 
@@ -130,7 +157,9 @@ bool ParseArguments(int argc, char **argv, BenchmarkOptions *options) {
 void PrintUsage(const char *exe) {
   std::cout << "Usage: " << (exe ? exe : "perfecthash_benchmarks")
             << " [--keys=N] [--iterations=N] [--loops=N] [--seed=N]"
-            << " [--no-jit] [--index2] [--index4]\n";
+            << " [--no-jit] [--index2] [--index4] [--index8]"
+            << " [--jit-vector-index2] [--jit-vector-index4]"
+            << " [--jit-vector-index8]\n";
 }
 
 std::vector<ULONG> BuildKeys(size_t count, uint64_t seed) {
@@ -176,6 +205,10 @@ int main(int argc, char **argv) {
   if (options.index4) {
     options.index2 = false;
   }
+  if (options.index8) {
+    options.index2 = false;
+    options.index4 = false;
+  }
 
 #ifndef PH_HAS_LLVM
   if (options.jit) {
@@ -197,6 +230,13 @@ int main(int argc, char **argv) {
   std::cout << "  JIT:        " << (options.jit ? "on" : "off") << "\n";
   std::cout << "  Index2:     " << (options.index2 ? "on" : "off") << "\n";
   std::cout << "  Index4:     " << (options.index4 ? "on" : "off") << "\n";
+  std::cout << "  Index8:     " << (options.index8 ? "on" : "off") << "\n";
+  std::cout << "  JIT Vec2:   "
+            << (options.jit_vector_index2 ? "on" : "off") << "\n";
+  std::cout << "  JIT Vec4:   "
+            << (options.jit_vector_index4 ? "on" : "off") << "\n";
+  std::cout << "  JIT Vec8:   "
+            << (options.jit_vector_index8 ? "on" : "off") << "\n";
 
   PICLASSFACTORY classFactory = nullptr;
   PPERFECT_HASH_ONLINE online = nullptr;
@@ -278,6 +318,18 @@ int main(int argc, char **argv) {
   if (options.index4) {
     compileFlags.JitIndex4 = TRUE;
   }
+  if (options.index8) {
+    compileFlags.JitIndex8 = TRUE;
+  }
+  if (options.jit_vector_index2) {
+    compileFlags.JitVectorIndex2 = TRUE;
+  }
+  if (options.jit_vector_index4) {
+    compileFlags.JitVectorIndex4 = TRUE;
+  }
+  if (options.jit_vector_index8) {
+    compileFlags.JitVectorIndex8 = TRUE;
+  }
 
   double jitCompileMs = 0.0;
   if (options.jit) {
@@ -333,8 +385,47 @@ int main(int argc, char **argv) {
   volatile ULONG sink = 0;
 
   auto perfectHashLookup = [&]() {
-    if (options.jit && jitInterface && (options.index2 || options.index4)) {
-      if (options.index4) {
+    if (options.jit && jitInterface &&
+        (options.index2 || options.index4 || options.index8)) {
+      if (options.index8) {
+        for (size_t loop = 0; loop < options.loops; ++loop) {
+          size_t limit = keys.size() - (keys.size() % 8);
+          for (size_t i = 0; i < limit; i += 8) {
+            ULONG index1 = 0;
+            ULONG index2 = 0;
+            ULONG index3 = 0;
+            ULONG index4 = 0;
+            ULONG index5 = 0;
+            ULONG index6 = 0;
+            ULONG index7 = 0;
+            ULONG index8 = 0;
+            jitInterface->Vtbl->Index8(jitInterface,
+                                       keys[i],
+                                       keys[i + 1],
+                                       keys[i + 2],
+                                       keys[i + 3],
+                                       keys[i + 4],
+                                       keys[i + 5],
+                                       keys[i + 6],
+                                       keys[i + 7],
+                                       &index1,
+                                       &index2,
+                                       &index3,
+                                       &index4,
+                                       &index5,
+                                       &index6,
+                                       &index7,
+                                       &index8);
+            sink ^= index1 ^ index2 ^ index3 ^ index4 ^
+                    index5 ^ index6 ^ index7 ^ index8;
+          }
+          for (size_t i = limit; i < keys.size(); ++i) {
+            ULONG index = 0;
+            jitInterface->Vtbl->Index(jitInterface, keys[i], &index);
+            sink ^= index;
+          }
+        }
+      } else if (options.index4) {
         for (size_t loop = 0; loop < options.loops; ++loop) {
           size_t limit = keys.size() - (keys.size() % 4);
           for (size_t i = 0; i < limit; i += 4) {
