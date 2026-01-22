@@ -20,10 +20,10 @@ PERFECT_HASH_TABLE_JIT_RUNDOWN PerfectHashTableJitRundown;
 
 typedef
 ULONG
-(PH_JIT_INDEX_FUNCTION)(
+(PH_JIT_INDEX32_FUNCTION)(
     _In_ ULONG Key
     );
-typedef PH_JIT_INDEX_FUNCTION *PPH_JIT_INDEX_FUNCTION;
+typedef PH_JIT_INDEX32_FUNCTION *PPH_JIT_INDEX32_FUNCTION;
 
 typedef
 ULONG
@@ -34,17 +34,17 @@ typedef PH_JIT_INDEX64_FUNCTION *PPH_JIT_INDEX64_FUNCTION;
 
 typedef
 VOID
-(PH_JIT_INDEX2_FUNCTION)(
+(PH_JIT_INDEX32X2_FUNCTION)(
     _In_ ULONG Key1,
     _In_ ULONG Key2,
     _Out_ PULONG Index1,
     _Out_ PULONG Index2
     );
-typedef PH_JIT_INDEX2_FUNCTION *PPH_JIT_INDEX2_FUNCTION;
+typedef PH_JIT_INDEX32X2_FUNCTION *PPH_JIT_INDEX32X2_FUNCTION;
 
 typedef
 VOID
-(PH_JIT_INDEX4_FUNCTION)(
+(PH_JIT_INDEX32X4_FUNCTION)(
     _In_ ULONG Key1,
     _In_ ULONG Key2,
     _In_ ULONG Key3,
@@ -54,11 +54,11 @@ VOID
     _Out_ PULONG Index3,
     _Out_ PULONG Index4
     );
-typedef PH_JIT_INDEX4_FUNCTION *PPH_JIT_INDEX4_FUNCTION;
+typedef PH_JIT_INDEX32X4_FUNCTION *PPH_JIT_INDEX32X4_FUNCTION;
 
 typedef
 VOID
-(PH_JIT_INDEX8_FUNCTION)(
+(PH_JIT_INDEX32X8_FUNCTION)(
     _In_ ULONG Key1,
     _In_ ULONG Key2,
     _In_ ULONG Key3,
@@ -76,21 +76,59 @@ VOID
     _Out_ PULONG Index7,
     _Out_ PULONG Index8
     );
-typedef PH_JIT_INDEX8_FUNCTION *PPH_JIT_INDEX8_FUNCTION;
+typedef PH_JIT_INDEX32X8_FUNCTION *PPH_JIT_INDEX32X8_FUNCTION;
 
 typedef
 VOID
-(PH_JIT_INDEX2_64_FUNCTION)(
+(PH_JIT_INDEX32X16_FUNCTION)(
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _In_ ULONG Key3,
+    _In_ ULONG Key4,
+    _In_ ULONG Key5,
+    _In_ ULONG Key6,
+    _In_ ULONG Key7,
+    _In_ ULONG Key8,
+    _In_ ULONG Key9,
+    _In_ ULONG Key10,
+    _In_ ULONG Key11,
+    _In_ ULONG Key12,
+    _In_ ULONG Key13,
+    _In_ ULONG Key14,
+    _In_ ULONG Key15,
+    _In_ ULONG Key16,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8,
+    _Out_ PULONG Index9,
+    _Out_ PULONG Index10,
+    _Out_ PULONG Index11,
+    _Out_ PULONG Index12,
+    _Out_ PULONG Index13,
+    _Out_ PULONG Index14,
+    _Out_ PULONG Index15,
+    _Out_ PULONG Index16
+    );
+typedef PH_JIT_INDEX32X16_FUNCTION *PPH_JIT_INDEX32X16_FUNCTION;
+
+typedef
+VOID
+(PH_JIT_INDEX64X2_FUNCTION)(
     _In_ ULONGLONG Key1,
     _In_ ULONGLONG Key2,
     _Out_ PULONG Index1,
     _Out_ PULONG Index2
     );
-typedef PH_JIT_INDEX2_64_FUNCTION *PPH_JIT_INDEX2_64_FUNCTION;
+typedef PH_JIT_INDEX64X2_FUNCTION *PPH_JIT_INDEX64X2_FUNCTION;
 
 typedef
 VOID
-(PH_JIT_INDEX4_64_FUNCTION)(
+(PH_JIT_INDEX64X4_FUNCTION)(
     _In_ ULONGLONG Key1,
     _In_ ULONGLONG Key2,
     _In_ ULONGLONG Key3,
@@ -100,11 +138,11 @@ VOID
     _Out_ PULONG Index3,
     _Out_ PULONG Index4
     );
-typedef PH_JIT_INDEX4_64_FUNCTION *PPH_JIT_INDEX4_64_FUNCTION;
+typedef PH_JIT_INDEX64X4_FUNCTION *PPH_JIT_INDEX64X4_FUNCTION;
 
 typedef
 VOID
-(PH_JIT_INDEX8_64_FUNCTION)(
+(PH_JIT_INDEX64X8_FUNCTION)(
     _In_ ULONGLONG Key1,
     _In_ ULONGLONG Key2,
     _In_ ULONGLONG Key3,
@@ -122,7 +160,45 @@ VOID
     _Out_ PULONG Index7,
     _Out_ PULONG Index8
     );
-typedef PH_JIT_INDEX8_64_FUNCTION *PPH_JIT_INDEX8_64_FUNCTION;
+typedef PH_JIT_INDEX64X8_FUNCTION *PPH_JIT_INDEX64X8_FUNCTION;
+
+typedef
+VOID
+(PH_JIT_INDEX64X16_FUNCTION)(
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _In_ ULONGLONG Key3,
+    _In_ ULONGLONG Key4,
+    _In_ ULONGLONG Key5,
+    _In_ ULONGLONG Key6,
+    _In_ ULONGLONG Key7,
+    _In_ ULONGLONG Key8,
+    _In_ ULONGLONG Key9,
+    _In_ ULONGLONG Key10,
+    _In_ ULONGLONG Key11,
+    _In_ ULONGLONG Key12,
+    _In_ ULONGLONG Key13,
+    _In_ ULONGLONG Key14,
+    _In_ ULONGLONG Key15,
+    _In_ ULONGLONG Key16,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8,
+    _Out_ PULONG Index9,
+    _Out_ PULONG Index10,
+    _Out_ PULONG Index11,
+    _Out_ PULONG Index12,
+    _Out_ PULONG Index13,
+    _Out_ PULONG Index14,
+    _Out_ PULONG Index15,
+    _Out_ PULONG Index16
+    );
+typedef PH_JIT_INDEX64X16_FUNCTION *PPH_JIT_INDEX64X16_FUNCTION;
 
 PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexJit;
 PERFECT_HASH_TABLE_QUERY_INTERFACE PerfectHashTableQueryInterfaceJit;
@@ -137,14 +213,16 @@ PERFECT_HASH_TABLE_JIT_INTERFACE_CREATE_INSTANCE
     PerfectHashTableJitInterfaceCreateInstance;
 PERFECT_HASH_TABLE_JIT_INTERFACE_LOCK_SERVER
     PerfectHashTableJitInterfaceLockServer;
-PERFECT_HASH_TABLE_JIT_INDEX PerfectHashTableJitInterfaceIndex;
+PERFECT_HASH_TABLE_JIT_INDEX32 PerfectHashTableJitInterfaceIndex32;
 PERFECT_HASH_TABLE_JIT_INDEX64 PerfectHashTableJitInterfaceIndex64;
-PERFECT_HASH_TABLE_JIT_INDEX2 PerfectHashTableJitInterfaceIndex2;
-PERFECT_HASH_TABLE_JIT_INDEX4 PerfectHashTableJitInterfaceIndex4;
-PERFECT_HASH_TABLE_JIT_INDEX2_64 PerfectHashTableJitInterfaceIndex2_64;
-PERFECT_HASH_TABLE_JIT_INDEX4_64 PerfectHashTableJitInterfaceIndex4_64;
-PERFECT_HASH_TABLE_JIT_INDEX8 PerfectHashTableJitInterfaceIndex8;
-PERFECT_HASH_TABLE_JIT_INDEX8_64 PerfectHashTableJitInterfaceIndex8_64;
+PERFECT_HASH_TABLE_JIT_INDEX32X2 PerfectHashTableJitInterfaceIndex32x2;
+PERFECT_HASH_TABLE_JIT_INDEX32X4 PerfectHashTableJitInterfaceIndex32x4;
+PERFECT_HASH_TABLE_JIT_INDEX32X8 PerfectHashTableJitInterfaceIndex32x8;
+PERFECT_HASH_TABLE_JIT_INDEX32X16 PerfectHashTableJitInterfaceIndex32x16;
+PERFECT_HASH_TABLE_JIT_INDEX64X2 PerfectHashTableJitInterfaceIndex64x2;
+PERFECT_HASH_TABLE_JIT_INDEX64X4 PerfectHashTableJitInterfaceIndex64x4;
+PERFECT_HASH_TABLE_JIT_INDEX64X8 PerfectHashTableJitInterfaceIndex64x8;
+PERFECT_HASH_TABLE_JIT_INDEX64X16 PerfectHashTableJitInterfaceIndex64x16;
 
 static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     PerfectHashTableJitInterfaceVtbl = {
@@ -153,14 +231,16 @@ static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     &PerfectHashTableJitInterfaceRelease,
     &PerfectHashTableJitInterfaceCreateInstance,
     &PerfectHashTableJitInterfaceLockServer,
-    &PerfectHashTableJitInterfaceIndex,
+    &PerfectHashTableJitInterfaceIndex32,
     &PerfectHashTableJitInterfaceIndex64,
-    &PerfectHashTableJitInterfaceIndex2,
-    &PerfectHashTableJitInterfaceIndex4,
-    &PerfectHashTableJitInterfaceIndex2_64,
-    &PerfectHashTableJitInterfaceIndex4_64,
-    &PerfectHashTableJitInterfaceIndex8,
-    &PerfectHashTableJitInterfaceIndex8_64,
+    &PerfectHashTableJitInterfaceIndex32x2,
+    &PerfectHashTableJitInterfaceIndex32x4,
+    &PerfectHashTableJitInterfaceIndex32x8,
+    &PerfectHashTableJitInterfaceIndex32x16,
+    &PerfectHashTableJitInterfaceIndex64x2,
+    &PerfectHashTableJitInterfaceIndex64x4,
+    &PerfectHashTableJitInterfaceIndex64x8,
+    &PerfectHashTableJitInterfaceIndex64x16,
 };
 
 #if defined(PH_HAS_LLVM)
@@ -1752,18 +1832,20 @@ CompileChm01IndexJit(
     BOOLEAN UseAssigned16;
     BOOLEAN KeysDownsized;
     BOOLEAN CompileIndex64;
-    BOOLEAN CompileIndex2;
-    BOOLEAN CompileIndex4;
-    BOOLEAN CompileIndex8;
-    BOOLEAN CompileIndex2_64;
-    BOOLEAN CompileIndex4_64;
-    BOOLEAN CompileIndex8_64;
-    BOOLEAN CompileVectorIndex2;
-    BOOLEAN CompileVectorIndex4;
-    BOOLEAN CompileVectorIndex8;
-    BOOLEAN CompileVectorIndex2_64;
-    BOOLEAN CompileVectorIndex4_64;
-    BOOLEAN CompileVectorIndex8_64;
+    BOOLEAN CompileIndex32x2;
+    BOOLEAN CompileIndex32x4;
+    BOOLEAN CompileIndex32x8;
+    BOOLEAN CompileIndex32x16;
+    BOOLEAN CompileIndex64x2;
+    BOOLEAN CompileIndex64x4;
+    BOOLEAN CompileIndex64x8;
+    BOOLEAN CompileIndex64x16;
+    BOOLEAN CompileVectorIndex32x2;
+    BOOLEAN CompileVectorIndex32x4;
+    BOOLEAN CompileVectorIndex32x8;
+    BOOLEAN CompileVectorIndex64x2;
+    BOOLEAN CompileVectorIndex64x4;
+    BOOLEAN CompileVectorIndex64x8;
     HRESULT Result = S_OK;
     PTABLE_INFO_ON_DISK TableInfo;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
@@ -1824,27 +1906,39 @@ CompileChm01IndexJit(
     Seed3Byte3 = ((Seed3 >> 16) & 0xff);
     Seed3Byte4 = ((Seed3 >> 24) & 0xff);
 
-    CompileVectorIndex2 = (CompileFlags->JitVectorIndex2 != FALSE);
-    CompileVectorIndex4 = (CompileFlags->JitVectorIndex4 != FALSE);
-    CompileVectorIndex8 = (CompileFlags->JitVectorIndex8 != FALSE);
-    CompileIndex2 = (CompileFlags->JitIndex2 != FALSE) ||
-                    (CompileVectorIndex2 != FALSE);
-    CompileIndex4 = (CompileFlags->JitIndex4 != FALSE) ||
-                    (CompileVectorIndex4 != FALSE);
-    CompileIndex8 = (CompileFlags->JitIndex8 != FALSE) ||
-                    (CompileVectorIndex8 != FALSE);
+    CompileVectorIndex32x2 = (CompileFlags->JitVectorIndex32x2 != FALSE);
+    CompileVectorIndex32x4 = (CompileFlags->JitVectorIndex32x4 != FALSE);
+    CompileVectorIndex32x8 = (CompileFlags->JitVectorIndex32x8 != FALSE);
+    CompileIndex32x2 = (CompileFlags->JitIndex32x2 != FALSE) ||
+                       (CompileVectorIndex32x2 != FALSE);
+    CompileIndex32x4 = (CompileFlags->JitIndex32x4 != FALSE) ||
+                       (CompileVectorIndex32x4 != FALSE);
+    CompileIndex32x8 = (CompileFlags->JitIndex32x8 != FALSE) ||
+                       (CompileVectorIndex32x8 != FALSE);
+    CompileIndex32x16 = (CompileFlags->JitIndex32x16 != FALSE);
 
     if (CompileFlags->JitIndex64 && !KeysDownsized) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    CompileIndex64 = (KeysDownsized != FALSE);
-    CompileIndex2_64 = (CompileIndex64 && CompileIndex2);
-    CompileIndex4_64 = (CompileIndex64 && CompileIndex4);
-    CompileIndex8_64 = (CompileIndex64 && CompileIndex8);
-    CompileVectorIndex2_64 = (CompileIndex64 && CompileVectorIndex2);
-    CompileVectorIndex4_64 = (CompileIndex64 && CompileVectorIndex4);
-    CompileVectorIndex8_64 = (CompileIndex64 && CompileVectorIndex8);
+    CompileIndex64 = (KeysDownsized != FALSE) &&
+                     (CompileFlags->JitIndex64 != FALSE);
+    CompileIndex64x2 = (CompileIndex64 && CompileIndex32x2);
+    CompileIndex64x4 = (CompileIndex64 && CompileIndex32x4);
+    CompileIndex64x8 = (CompileIndex64 && CompileIndex32x8);
+    CompileIndex64x16 = (CompileIndex64 && CompileIndex32x16);
+    CompileVectorIndex64x2 = (CompileIndex64 && CompileVectorIndex32x2);
+    CompileVectorIndex64x4 = (CompileIndex64 && CompileVectorIndex32x4);
+    CompileVectorIndex64x8 = (CompileIndex64 && CompileVectorIndex32x8);
+
+    //
+    // Index32x16/Index64x16 are not implemented yet.
+    //
+
+    if (CompileIndex32x16 || CompileIndex64x16) {
+        CompileIndex32x16 = FALSE;
+        CompileIndex64x16 = FALSE;
+    }
 
     if (KeysDownsized) {
         if (Keys) {
@@ -1970,7 +2064,7 @@ CompileChm01IndexJit(
                                          FALSE);
 
     IndexFunction = BuildChm01IndexFunction(&JitContext,
-                                            "PerfectHashJitIndex",
+                                            "PerfectHashJitIndex32",
                                             JitContext.I32,
                                             NULL);
 
@@ -1996,20 +2090,20 @@ CompileChm01IndexJit(
         }
     }
 
-    if (CompileIndex2) {
-        if (CompileVectorIndex2) {
+    if (CompileIndex32x2) {
+        if (CompileVectorIndex32x2) {
             if (!BuildChm01IndexVectorFunction(&JitContext,
-                                               "PerfectHashJitIndex2Vector",
+                                               "PerfectHashJitIndex32x2Vector",
                                                JitContext.I32,
                                                NULL,
                                                2)) {
-                CompileVectorIndex2 = FALSE;
+                CompileVectorIndex32x2 = FALSE;
             }
         }
 
-        if (!CompileVectorIndex2) {
+        if (!CompileVectorIndex32x2) {
             if (!BuildChm01Index2Function(&JitContext,
-                                          "PerfectHashJitIndex2",
+                                          "PerfectHashJitIndex32x2",
                                           IndexFunction,
                                           IndexFunctionType,
                                           JitContext.I32)) {
@@ -2019,20 +2113,20 @@ CompileChm01IndexJit(
         }
     }
 
-    if (CompileIndex4) {
-        if (CompileVectorIndex4) {
+    if (CompileIndex32x4) {
+        if (CompileVectorIndex32x4) {
             if (!BuildChm01IndexVectorFunction(&JitContext,
-                                               "PerfectHashJitIndex4Vector",
+                                               "PerfectHashJitIndex32x4Vector",
                                                JitContext.I32,
                                                NULL,
                                                4)) {
-                CompileVectorIndex4 = FALSE;
+                CompileVectorIndex32x4 = FALSE;
             }
         }
 
-        if (!CompileVectorIndex4) {
+        if (!CompileVectorIndex32x4) {
             if (!BuildChm01Index4Function(&JitContext,
-                                          "PerfectHashJitIndex4",
+                                          "PerfectHashJitIndex32x4",
                                           IndexFunction,
                                           IndexFunctionType,
                                           JitContext.I32)) {
@@ -2042,20 +2136,20 @@ CompileChm01IndexJit(
         }
     }
 
-    if (CompileIndex8) {
-        if (CompileVectorIndex8) {
+    if (CompileIndex32x8) {
+        if (CompileVectorIndex32x8) {
             if (!BuildChm01IndexVectorFunction(&JitContext,
-                                               "PerfectHashJitIndex8Vector",
+                                               "PerfectHashJitIndex32x8Vector",
                                                JitContext.I32,
                                                NULL,
                                                8)) {
-                CompileVectorIndex8 = FALSE;
+                CompileVectorIndex32x8 = FALSE;
             }
         }
 
-        if (!CompileVectorIndex8) {
+        if (!CompileVectorIndex32x8) {
             if (!BuildChm01Index8Function(&JitContext,
-                                          "PerfectHashJitIndex8",
+                                          "PerfectHashJitIndex32x8",
                                           IndexFunction,
                                           IndexFunctionType,
                                           JitContext.I32)) {
@@ -2065,20 +2159,20 @@ CompileChm01IndexJit(
         }
     }
 
-    if (CompileIndex2_64) {
-        if (CompileVectorIndex2_64) {
+    if (CompileIndex64x2) {
+        if (CompileVectorIndex64x2) {
             if (!BuildChm01IndexVectorFunction(&JitContext,
-                                               "PerfectHashJitIndex2Vector_64",
+                                               "PerfectHashJitIndex64x2Vector",
                                                JitContext.I64,
                                                DownsizeFunction,
                                                2)) {
-                CompileVectorIndex2_64 = FALSE;
+                CompileVectorIndex64x2 = FALSE;
             }
         }
 
-        if (!CompileVectorIndex2_64) {
+        if (!CompileVectorIndex64x2) {
             if (!BuildChm01Index2Function(&JitContext,
-                                          "PerfectHashJitIndex2_64",
+                                          "PerfectHashJitIndex64x2",
                                           Index64Function,
                                           Index64FunctionType,
                                           JitContext.I64)) {
@@ -2088,20 +2182,20 @@ CompileChm01IndexJit(
         }
     }
 
-    if (CompileIndex4_64) {
-        if (CompileVectorIndex4_64) {
+    if (CompileIndex64x4) {
+        if (CompileVectorIndex64x4) {
             if (!BuildChm01IndexVectorFunction(&JitContext,
-                                               "PerfectHashJitIndex4Vector_64",
+                                               "PerfectHashJitIndex64x4Vector",
                                                JitContext.I64,
                                                DownsizeFunction,
                                                4)) {
-                CompileVectorIndex4_64 = FALSE;
+                CompileVectorIndex64x4 = FALSE;
             }
         }
 
-        if (!CompileVectorIndex4_64) {
+        if (!CompileVectorIndex64x4) {
             if (!BuildChm01Index4Function(&JitContext,
-                                          "PerfectHashJitIndex4_64",
+                                          "PerfectHashJitIndex64x4",
                                           Index64Function,
                                           Index64FunctionType,
                                           JitContext.I64)) {
@@ -2111,20 +2205,20 @@ CompileChm01IndexJit(
         }
     }
 
-    if (CompileIndex8_64) {
-        if (CompileVectorIndex8_64) {
+    if (CompileIndex64x8) {
+        if (CompileVectorIndex64x8) {
             if (!BuildChm01IndexVectorFunction(&JitContext,
-                                               "PerfectHashJitIndex8Vector_64",
+                                               "PerfectHashJitIndex64x8Vector",
                                                JitContext.I64,
                                                DownsizeFunction,
                                                8)) {
-                CompileVectorIndex8_64 = FALSE;
+                CompileVectorIndex64x8 = FALSE;
             }
         }
 
-        if (!CompileVectorIndex8_64) {
+        if (!CompileVectorIndex64x8) {
             if (!BuildChm01Index8Function(&JitContext,
-                                          "PerfectHashJitIndex8_64",
+                                          "PerfectHashJitIndex64x8",
                                           Index64Function,
                                           Index64FunctionType,
                                           JitContext.I64)) {
@@ -2149,15 +2243,15 @@ CompileChm01IndexJit(
         goto Error;
     }
 
-    Jit->IndexFunction = (PVOID)(ULONG_PTR)
-        LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex");
+    Jit->Index32Function = (PVOID)(ULONG_PTR)
+        LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex32");
 
-    if (!Jit->IndexFunction) {
+    if (!Jit->Index32Function) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
 
-    Jit->Flags.IndexCompiled = TRUE;
+    Jit->Flags.Index32Compiled = TRUE;
 
     if (CompileIndex64) {
         Jit->Index64Function = (PVOID)(ULONG_PTR)
@@ -2169,97 +2263,100 @@ CompileChm01IndexJit(
         Jit->Flags.Index64Compiled = TRUE;
     }
 
-    if (CompileIndex2) {
-        if (CompileVectorIndex2) {
-            Jit->Index2Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2Vector");
-        } else {
-            Jit->Index2Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2");
-        }
-        if (!Jit->Index2Function) {
-            Result = PH_E_TABLE_COMPILATION_FAILED;
-            goto Error;
-        }
-        Jit->Flags.Index2Compiled = TRUE;
-    }
-
-    if (CompileIndex4) {
-        if (CompileVectorIndex4) {
-            Jit->Index4Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4Vector");
-        } else {
-            Jit->Index4Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4");
-        }
-        if (!Jit->Index4Function) {
-            Result = PH_E_TABLE_COMPILATION_FAILED;
-            goto Error;
-        }
-        Jit->Flags.Index4Compiled = TRUE;
-    }
-
-    if (CompileIndex8) {
-        if (CompileVectorIndex8) {
-            Jit->Index8Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex8Vector");
-        } else {
-            Jit->Index8Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex8");
-        }
-        if (!Jit->Index8Function) {
-            Result = PH_E_TABLE_COMPILATION_FAILED;
-            goto Error;
-        }
-        Jit->Flags.Index8Compiled = TRUE;
-    }
-
-    if (CompileIndex2_64) {
-        if (CompileVectorIndex2_64) {
-            Jit->Index2_64Function = (PVOID)(ULONG_PTR)
+    if (CompileIndex32x2) {
+        if (CompileVectorIndex32x2) {
+            Jit->Index32x2Function = (PVOID)(ULONG_PTR)
                 LLVMGetFunctionAddress(Engine,
-                                       "PerfectHashJitIndex2Vector_64");
+                                       "PerfectHashJitIndex32x2Vector");
         } else {
-            Jit->Index2_64Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex2_64");
+            Jit->Index32x2Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex32x2");
         }
-        if (!Jit->Index2_64Function) {
+        if (!Jit->Index32x2Function) {
             Result = PH_E_TABLE_COMPILATION_FAILED;
             goto Error;
         }
-        Jit->Flags.Index2_64Compiled = TRUE;
+        Jit->Flags.Index32x2Compiled = TRUE;
     }
 
-    if (CompileIndex4_64) {
-        if (CompileVectorIndex4_64) {
-            Jit->Index4_64Function = (PVOID)(ULONG_PTR)
+    if (CompileIndex32x4) {
+        if (CompileVectorIndex32x4) {
+            Jit->Index32x4Function = (PVOID)(ULONG_PTR)
                 LLVMGetFunctionAddress(Engine,
-                                       "PerfectHashJitIndex4Vector_64");
+                                       "PerfectHashJitIndex32x4Vector");
         } else {
-            Jit->Index4_64Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex4_64");
+            Jit->Index32x4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex32x4");
         }
-        if (!Jit->Index4_64Function) {
+        if (!Jit->Index32x4Function) {
             Result = PH_E_TABLE_COMPILATION_FAILED;
             goto Error;
         }
-        Jit->Flags.Index4_64Compiled = TRUE;
+        Jit->Flags.Index32x4Compiled = TRUE;
     }
 
-    if (CompileIndex8_64) {
-        if (CompileVectorIndex8_64) {
-            Jit->Index8_64Function = (PVOID)(ULONG_PTR)
+    if (CompileIndex32x8) {
+        if (CompileVectorIndex32x8) {
+            Jit->Index32x8Function = (PVOID)(ULONG_PTR)
                 LLVMGetFunctionAddress(Engine,
-                                       "PerfectHashJitIndex8Vector_64");
+                                       "PerfectHashJitIndex32x8Vector");
         } else {
-            Jit->Index8_64Function = (PVOID)(ULONG_PTR)
-                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex8_64");
+            Jit->Index32x8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex32x8");
         }
-        if (!Jit->Index8_64Function) {
+        if (!Jit->Index32x8Function) {
             Result = PH_E_TABLE_COMPILATION_FAILED;
             goto Error;
         }
-        Jit->Flags.Index8_64Compiled = TRUE;
+        Jit->Flags.Index32x8Compiled = TRUE;
+    }
+
+    if (CompileIndex64x2) {
+        if (CompileVectorIndex64x2) {
+            Jit->Index64x2Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitIndex64x2Vector");
+        } else {
+            Jit->Index64x2Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex64x2");
+        }
+        if (!Jit->Index64x2Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        Jit->Flags.Index64x2Compiled = TRUE;
+    }
+
+    if (CompileIndex64x4) {
+        if (CompileVectorIndex64x4) {
+            Jit->Index64x4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitIndex64x4Vector");
+        } else {
+            Jit->Index64x4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex64x4");
+        }
+        if (!Jit->Index64x4Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        Jit->Flags.Index64x4Compiled = TRUE;
+    }
+
+    if (CompileIndex64x8) {
+        if (CompileVectorIndex64x8) {
+            Jit->Index64x8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitIndex64x8Vector");
+        } else {
+            Jit->Index64x8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex64x8");
+        }
+        if (!Jit->Index64x8Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        Jit->Flags.Index64x8Compiled = TRUE;
     }
 
     Jit->ExecutionEngine = Engine;
@@ -2583,7 +2680,7 @@ PerfectHashTableJitInterfaceLockServer(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableJitInterfaceIndex(
+PerfectHashTableJitInterfaceIndex32(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONG Key,
     PULONG Index
@@ -2591,7 +2688,7 @@ PerfectHashTableJitInterfaceIndex(
 {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX_FUNCTION IndexFunction;
+    PPH_JIT_INDEX32_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Index)) {
         return E_POINTER;
@@ -2605,11 +2702,11 @@ PerfectHashTableJitInterfaceIndex(
     JitState = Table->Jit;
     if (!ARGUMENT_PRESENT(JitState) ||
         !JitState->Flags.Valid ||
-        !JitState->Flags.IndexCompiled) {
+        !JitState->Flags.Index32Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX_FUNCTION)JitState->IndexFunction;
+    IndexFunction = (PPH_JIT_INDEX32_FUNCTION)JitState->Index32Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2657,7 +2754,7 @@ PerfectHashTableJitInterfaceIndex64(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableJitInterfaceIndex2(
+PerfectHashTableJitInterfaceIndex32x2(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONG Key1,
     ULONG Key2,
@@ -2667,7 +2764,7 @@ PerfectHashTableJitInterfaceIndex2(
 {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX2_FUNCTION IndexFunction;
+    PPH_JIT_INDEX32X2_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Jit) ||
         !ARGUMENT_PRESENT(Index1) ||
@@ -2683,11 +2780,11 @@ PerfectHashTableJitInterfaceIndex2(
     JitState = Table->Jit;
     if (!ARGUMENT_PRESENT(JitState) ||
         !JitState->Flags.Valid ||
-        !JitState->Flags.Index2Compiled) {
+        !JitState->Flags.Index32x2Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX2_FUNCTION)JitState->Index2Function;
+    IndexFunction = (PPH_JIT_INDEX32X2_FUNCTION)JitState->Index32x2Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2698,7 +2795,7 @@ PerfectHashTableJitInterfaceIndex2(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableJitInterfaceIndex4(
+PerfectHashTableJitInterfaceIndex32x4(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONG Key1,
     ULONG Key2,
@@ -2712,7 +2809,7 @@ PerfectHashTableJitInterfaceIndex4(
 {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX4_FUNCTION IndexFunction;
+    PPH_JIT_INDEX32X4_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Jit) ||
         !ARGUMENT_PRESENT(Index1) ||
@@ -2730,11 +2827,11 @@ PerfectHashTableJitInterfaceIndex4(
     JitState = Table->Jit;
     if (!ARGUMENT_PRESENT(JitState) ||
         !JitState->Flags.Valid ||
-        !JitState->Flags.Index4Compiled) {
+        !JitState->Flags.Index32x4Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX4_FUNCTION)JitState->Index4Function;
+    IndexFunction = (PPH_JIT_INDEX32X4_FUNCTION)JitState->Index32x4Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2752,7 +2849,7 @@ PerfectHashTableJitInterfaceIndex4(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableJitInterfaceIndex8(
+PerfectHashTableJitInterfaceIndex32x8(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONG Key1,
     ULONG Key2,
@@ -2774,7 +2871,7 @@ PerfectHashTableJitInterfaceIndex8(
 {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX8_FUNCTION IndexFunction;
+    PPH_JIT_INDEX32X8_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Jit) ||
         !ARGUMENT_PRESENT(Index1) ||
@@ -2796,11 +2893,11 @@ PerfectHashTableJitInterfaceIndex8(
     JitState = Table->Jit;
     if (!ARGUMENT_PRESENT(JitState) ||
         !JitState->Flags.Valid ||
-        !JitState->Flags.Index8Compiled) {
+        !JitState->Flags.Index32x8Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX8_FUNCTION)JitState->Index8Function;
+    IndexFunction = (PPH_JIT_INDEX32X8_FUNCTION)JitState->Index32x8Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2826,7 +2923,121 @@ PerfectHashTableJitInterfaceIndex8(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableJitInterfaceIndex2_64(
+PerfectHashTableJitInterfaceIndex32x16(
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    ULONG Key1,
+    ULONG Key2,
+    ULONG Key3,
+    ULONG Key4,
+    ULONG Key5,
+    ULONG Key6,
+    ULONG Key7,
+    ULONG Key8,
+    ULONG Key9,
+    ULONG Key10,
+    ULONG Key11,
+    ULONG Key12,
+    ULONG Key13,
+    ULONG Key14,
+    ULONG Key15,
+    ULONG Key16,
+    PULONG Index1,
+    PULONG Index2,
+    PULONG Index3,
+    PULONG Index4,
+    PULONG Index5,
+    PULONG Index6,
+    PULONG Index7,
+    PULONG Index8,
+    PULONG Index9,
+    PULONG Index10,
+    PULONG Index11,
+    PULONG Index12,
+    PULONG Index13,
+    PULONG Index14,
+    PULONG Index15,
+    PULONG Index16
+    )
+{
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_JIT JitState;
+    PPH_JIT_INDEX32X16_FUNCTION IndexFunction;
+
+    if (!ARGUMENT_PRESENT(Jit) ||
+        !ARGUMENT_PRESENT(Index1) ||
+        !ARGUMENT_PRESENT(Index2) ||
+        !ARGUMENT_PRESENT(Index3) ||
+        !ARGUMENT_PRESENT(Index4) ||
+        !ARGUMENT_PRESENT(Index5) ||
+        !ARGUMENT_PRESENT(Index6) ||
+        !ARGUMENT_PRESENT(Index7) ||
+        !ARGUMENT_PRESENT(Index8) ||
+        !ARGUMENT_PRESENT(Index9) ||
+        !ARGUMENT_PRESENT(Index10) ||
+        !ARGUMENT_PRESENT(Index11) ||
+        !ARGUMENT_PRESENT(Index12) ||
+        !ARGUMENT_PRESENT(Index13) ||
+        !ARGUMENT_PRESENT(Index14) ||
+        !ARGUMENT_PRESENT(Index15) ||
+        !ARGUMENT_PRESENT(Index16)) {
+        return E_POINTER;
+    }
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    JitState = Table->Jit;
+    if (!ARGUMENT_PRESENT(JitState) ||
+        !JitState->Flags.Valid ||
+        !JitState->Flags.Index32x16Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction = (PPH_JIT_INDEX32X16_FUNCTION)JitState->Index32x16Function;
+    if (!ARGUMENT_PRESENT(IndexFunction)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction(Key1,
+                  Key2,
+                  Key3,
+                  Key4,
+                  Key5,
+                  Key6,
+                  Key7,
+                  Key8,
+                  Key9,
+                  Key10,
+                  Key11,
+                  Key12,
+                  Key13,
+                  Key14,
+                  Key15,
+                  Key16,
+                  Index1,
+                  Index2,
+                  Index3,
+                  Index4,
+                  Index5,
+                  Index6,
+                  Index7,
+                  Index8,
+                  Index9,
+                  Index10,
+                  Index11,
+                  Index12,
+                  Index13,
+                  Index14,
+                  Index15,
+                  Index16);
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableJitInterfaceIndex64x2(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONGLONG Key1,
     ULONGLONG Key2,
@@ -2836,7 +3047,7 @@ PerfectHashTableJitInterfaceIndex2_64(
 {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX2_64_FUNCTION IndexFunction;
+    PPH_JIT_INDEX64X2_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Jit) ||
         !ARGUMENT_PRESENT(Index1) ||
@@ -2852,11 +3063,11 @@ PerfectHashTableJitInterfaceIndex2_64(
     JitState = Table->Jit;
     if (!ARGUMENT_PRESENT(JitState) ||
         !JitState->Flags.Valid ||
-        !JitState->Flags.Index2_64Compiled) {
+        !JitState->Flags.Index64x2Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX2_64_FUNCTION)JitState->Index2_64Function;
+    IndexFunction = (PPH_JIT_INDEX64X2_FUNCTION)JitState->Index64x2Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2867,7 +3078,7 @@ PerfectHashTableJitInterfaceIndex2_64(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableJitInterfaceIndex4_64(
+PerfectHashTableJitInterfaceIndex64x4(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONGLONG Key1,
     ULONGLONG Key2,
@@ -2881,7 +3092,7 @@ PerfectHashTableJitInterfaceIndex4_64(
 {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX4_64_FUNCTION IndexFunction;
+    PPH_JIT_INDEX64X4_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Jit) ||
         !ARGUMENT_PRESENT(Index1) ||
@@ -2899,11 +3110,11 @@ PerfectHashTableJitInterfaceIndex4_64(
     JitState = Table->Jit;
     if (!ARGUMENT_PRESENT(JitState) ||
         !JitState->Flags.Valid ||
-        !JitState->Flags.Index4_64Compiled) {
+        !JitState->Flags.Index64x4Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX4_64_FUNCTION)JitState->Index4_64Function;
+    IndexFunction = (PPH_JIT_INDEX64X4_FUNCTION)JitState->Index64x4Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2921,7 +3132,7 @@ PerfectHashTableJitInterfaceIndex4_64(
 
 _Use_decl_annotations_
 HRESULT
-PerfectHashTableJitInterfaceIndex8_64(
+PerfectHashTableJitInterfaceIndex64x8(
     PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     ULONGLONG Key1,
     ULONGLONG Key2,
@@ -2943,7 +3154,7 @@ PerfectHashTableJitInterfaceIndex8_64(
 {
     PPERFECT_HASH_TABLE Table;
     PPERFECT_HASH_TABLE_JIT JitState;
-    PPH_JIT_INDEX8_64_FUNCTION IndexFunction;
+    PPH_JIT_INDEX64X8_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Jit) ||
         !ARGUMENT_PRESENT(Index1) ||
@@ -2965,11 +3176,11 @@ PerfectHashTableJitInterfaceIndex8_64(
     JitState = Table->Jit;
     if (!ARGUMENT_PRESENT(JitState) ||
         !JitState->Flags.Valid ||
-        !JitState->Flags.Index8_64Compiled) {
+        !JitState->Flags.Index64x8Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX8_64_FUNCTION)JitState->Index8_64Function;
+    IndexFunction = (PPH_JIT_INDEX64X8_FUNCTION)JitState->Index64x8Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -2995,6 +3206,120 @@ PerfectHashTableJitInterfaceIndex8_64(
 
 _Use_decl_annotations_
 HRESULT
+PerfectHashTableJitInterfaceIndex64x16(
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    ULONGLONG Key1,
+    ULONGLONG Key2,
+    ULONGLONG Key3,
+    ULONGLONG Key4,
+    ULONGLONG Key5,
+    ULONGLONG Key6,
+    ULONGLONG Key7,
+    ULONGLONG Key8,
+    ULONGLONG Key9,
+    ULONGLONG Key10,
+    ULONGLONG Key11,
+    ULONGLONG Key12,
+    ULONGLONG Key13,
+    ULONGLONG Key14,
+    ULONGLONG Key15,
+    ULONGLONG Key16,
+    PULONG Index1,
+    PULONG Index2,
+    PULONG Index3,
+    PULONG Index4,
+    PULONG Index5,
+    PULONG Index6,
+    PULONG Index7,
+    PULONG Index8,
+    PULONG Index9,
+    PULONG Index10,
+    PULONG Index11,
+    PULONG Index12,
+    PULONG Index13,
+    PULONG Index14,
+    PULONG Index15,
+    PULONG Index16
+    )
+{
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_JIT JitState;
+    PPH_JIT_INDEX64X16_FUNCTION IndexFunction;
+
+    if (!ARGUMENT_PRESENT(Jit) ||
+        !ARGUMENT_PRESENT(Index1) ||
+        !ARGUMENT_PRESENT(Index2) ||
+        !ARGUMENT_PRESENT(Index3) ||
+        !ARGUMENT_PRESENT(Index4) ||
+        !ARGUMENT_PRESENT(Index5) ||
+        !ARGUMENT_PRESENT(Index6) ||
+        !ARGUMENT_PRESENT(Index7) ||
+        !ARGUMENT_PRESENT(Index8) ||
+        !ARGUMENT_PRESENT(Index9) ||
+        !ARGUMENT_PRESENT(Index10) ||
+        !ARGUMENT_PRESENT(Index11) ||
+        !ARGUMENT_PRESENT(Index12) ||
+        !ARGUMENT_PRESENT(Index13) ||
+        !ARGUMENT_PRESENT(Index14) ||
+        !ARGUMENT_PRESENT(Index15) ||
+        !ARGUMENT_PRESENT(Index16)) {
+        return E_POINTER;
+    }
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    JitState = Table->Jit;
+    if (!ARGUMENT_PRESENT(JitState) ||
+        !JitState->Flags.Valid ||
+        !JitState->Flags.Index64x16Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction = (PPH_JIT_INDEX64X16_FUNCTION)JitState->Index64x16Function;
+    if (!ARGUMENT_PRESENT(IndexFunction)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction(Key1,
+                  Key2,
+                  Key3,
+                  Key4,
+                  Key5,
+                  Key6,
+                  Key7,
+                  Key8,
+                  Key9,
+                  Key10,
+                  Key11,
+                  Key12,
+                  Key13,
+                  Key14,
+                  Key15,
+                  Key16,
+                  Index1,
+                  Index2,
+                  Index3,
+                  Index4,
+                  Index5,
+                  Index6,
+                  Index7,
+                  Index8,
+                  Index9,
+                  Index10,
+                  Index11,
+                  Index12,
+                  Index13,
+                  Index14,
+                  Index15,
+                  Index16);
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
 PerfectHashTableIndexJit(
     PPERFECT_HASH_TABLE Table,
     ULONG Key,
@@ -3002,7 +3327,7 @@ PerfectHashTableIndexJit(
     )
 {
     PPERFECT_HASH_TABLE_JIT Jit;
-    PPH_JIT_INDEX_FUNCTION IndexFunction;
+    PPH_JIT_INDEX32_FUNCTION IndexFunction;
 
     if (!ARGUMENT_PRESENT(Table) || !ARGUMENT_PRESENT(Index)) {
         return E_POINTER;
@@ -3011,11 +3336,11 @@ PerfectHashTableIndexJit(
     Jit = Table->Jit;
     if (!ARGUMENT_PRESENT(Jit) ||
         !Jit->Flags.Valid ||
-        !Jit->Flags.IndexCompiled) {
+        !Jit->Flags.Index32Compiled) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    IndexFunction = (PPH_JIT_INDEX_FUNCTION)Jit->IndexFunction;
+    IndexFunction = (PPH_JIT_INDEX32_FUNCTION)Jit->Index32Function;
     if (!ARGUMENT_PRESENT(IndexFunction)) {
         return PH_E_NOT_IMPLEMENTED;
     }

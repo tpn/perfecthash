@@ -726,7 +726,7 @@ PerfectHashInterfaceGuidToId(
     for (Index = 1; Index < Count; Index++) {
 #ifdef __cplusplus
         const GUID *Entry = PerfectHashInterfaceGuids[Index];
-        if (Entry && InlineIsEqualGUID(Guid, *Entry)) {
+        if (Entry && InlineIsEqualGUID(Guid, Entry)) {
             Id = (PERFECT_HASH_INTERFACE_ID)Index;
             break;
         }
@@ -3463,53 +3463,59 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG Jit:1;
 
         //
-        // When set, compiles a 64-bit key Index() routine (keys must have been
+        // When set, compiles the Index64() routine (keys must have been
         // downsized from 64-bit to 32-bit for this to be valid).
         //
 
         ULONG JitIndex64:1;
 
         //
-        // When set, compiles a 2-wide Index() routine.
+        // When set, compiles a 2-wide Index32() routine.
         //
 
-        ULONG JitIndex2:1;
+        ULONG JitIndex32x2:1;
 
         //
-        // When set, compiles a 4-wide Index() routine.
+        // When set, compiles a 4-wide Index32() routine.
         //
 
-        ULONG JitIndex4:1;
+        ULONG JitIndex32x4:1;
 
         //
-        // When set, compiles an 8-wide Index() routine.
+        // When set, compiles an 8-wide Index32() routine.
         //
 
-        ULONG JitIndex8:1;
+        ULONG JitIndex32x8:1;
 
         //
-        // When set, compiles a vectorized 2-wide Index() routine.
+        // When set, compiles a 16-wide Index32() routine.
         //
 
-        ULONG JitVectorIndex2:1;
+        ULONG JitIndex32x16:1;
 
         //
-        // When set, compiles a vectorized 4-wide Index() routine.
+        // When set, compiles a vectorized 2-wide Index32() routine.
         //
 
-        ULONG JitVectorIndex4:1;
+        ULONG JitVectorIndex32x2:1;
 
         //
-        // When set, compiles a vectorized 8-wide Index() routine.
+        // When set, compiles a vectorized 4-wide Index32() routine.
         //
 
-        ULONG JitVectorIndex8:1;
+        ULONG JitVectorIndex32x4:1;
+
+        //
+        // When set, compiles a vectorized 8-wide Index32() routine.
+        //
+
+        ULONG JitVectorIndex32x8:1;
 
         //
         // Unused bits.
         //
 
-        ULONG Unused:23;
+        ULONG Unused:22;
     };
 
     LONG AsLong;
@@ -4642,12 +4648,12 @@ typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32)(
     _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     _In_ ULONG Key,
     _Out_ PULONG Index
     );
-typedef PERFECT_HASH_TABLE_JIT_INDEX *PPERFECT_HASH_TABLE_JIT_INDEX;
+typedef PERFECT_HASH_TABLE_JIT_INDEX32 *PPERFECT_HASH_TABLE_JIT_INDEX32;
 
 typedef
 _Must_inspect_result_
@@ -4664,20 +4670,20 @@ typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX2)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X2)(
     _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     _In_ ULONG Key1,
     _In_ ULONG Key2,
     _Out_ PULONG Index1,
     _Out_ PULONG Index2
     );
-typedef PERFECT_HASH_TABLE_JIT_INDEX2 *PPERFECT_HASH_TABLE_JIT_INDEX2;
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X2 *PPERFECT_HASH_TABLE_JIT_INDEX32X2;
 
 typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX4)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X4)(
     _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     _In_ ULONG Key1,
     _In_ ULONG Key2,
@@ -4688,43 +4694,13 @@ HRESULT
     _Out_ PULONG Index3,
     _Out_ PULONG Index4
     );
-typedef PERFECT_HASH_TABLE_JIT_INDEX4 *PPERFECT_HASH_TABLE_JIT_INDEX4;
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X4 *PPERFECT_HASH_TABLE_JIT_INDEX32X4;
 
 typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX2_64)(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2
-    );
-typedef PERFECT_HASH_TABLE_JIT_INDEX2_64 *PPERFECT_HASH_TABLE_JIT_INDEX2_64;
-
-typedef
-_Must_inspect_result_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX4_64)(
-    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
-    _In_ ULONGLONG Key1,
-    _In_ ULONGLONG Key2,
-    _In_ ULONGLONG Key3,
-    _In_ ULONGLONG Key4,
-    _Out_ PULONG Index1,
-    _Out_ PULONG Index2,
-    _Out_ PULONG Index3,
-    _Out_ PULONG Index4
-    );
-typedef PERFECT_HASH_TABLE_JIT_INDEX4_64 *PPERFECT_HASH_TABLE_JIT_INDEX4_64;
-
-typedef
-_Must_inspect_result_
-_Success_(return >= 0)
-HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX8)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X8)(
     _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     _In_ ULONG Key1,
     _In_ ULONG Key2,
@@ -4743,13 +4719,84 @@ HRESULT
     _Out_ PULONG Index7,
     _Out_ PULONG Index8
     );
-typedef PERFECT_HASH_TABLE_JIT_INDEX8 *PPERFECT_HASH_TABLE_JIT_INDEX8;
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X8 *PPERFECT_HASH_TABLE_JIT_INDEX32X8;
 
 typedef
 _Must_inspect_result_
 _Success_(return >= 0)
 HRESULT
-(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX8_64)(
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X16)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _In_ ULONG Key3,
+    _In_ ULONG Key4,
+    _In_ ULONG Key5,
+    _In_ ULONG Key6,
+    _In_ ULONG Key7,
+    _In_ ULONG Key8,
+    _In_ ULONG Key9,
+    _In_ ULONG Key10,
+    _In_ ULONG Key11,
+    _In_ ULONG Key12,
+    _In_ ULONG Key13,
+    _In_ ULONG Key14,
+    _In_ ULONG Key15,
+    _In_ ULONG Key16,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8,
+    _Out_ PULONG Index9,
+    _Out_ PULONG Index10,
+    _Out_ PULONG Index11,
+    _Out_ PULONG Index12,
+    _Out_ PULONG Index13,
+    _Out_ PULONG Index14,
+    _Out_ PULONG Index15,
+    _Out_ PULONG Index16
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X16 *PPERFECT_HASH_TABLE_JIT_INDEX32X16;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X2)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X2 *PPERFECT_HASH_TABLE_JIT_INDEX64X2;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X4)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _In_ ULONGLONG Key3,
+    _In_ ULONGLONG Key4,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X4 *PPERFECT_HASH_TABLE_JIT_INDEX64X4;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X8)(
     _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
     _In_ ULONGLONG Key1,
     _In_ ULONGLONG Key2,
@@ -4768,18 +4815,61 @@ HRESULT
     _Out_ PULONG Index7,
     _Out_ PULONG Index8
     );
-typedef PERFECT_HASH_TABLE_JIT_INDEX8_64 *PPERFECT_HASH_TABLE_JIT_INDEX8_64;
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X8 *PPERFECT_HASH_TABLE_JIT_INDEX64X8;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X16)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _In_ ULONGLONG Key3,
+    _In_ ULONGLONG Key4,
+    _In_ ULONGLONG Key5,
+    _In_ ULONGLONG Key6,
+    _In_ ULONGLONG Key7,
+    _In_ ULONGLONG Key8,
+    _In_ ULONGLONG Key9,
+    _In_ ULONGLONG Key10,
+    _In_ ULONGLONG Key11,
+    _In_ ULONGLONG Key12,
+    _In_ ULONGLONG Key13,
+    _In_ ULONGLONG Key14,
+    _In_ ULONGLONG Key15,
+    _In_ ULONGLONG Key16,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8,
+    _Out_ PULONG Index9,
+    _Out_ PULONG Index10,
+    _Out_ PULONG Index11,
+    _Out_ PULONG Index12,
+    _Out_ PULONG Index13,
+    _Out_ PULONG Index14,
+    _Out_ PULONG Index15,
+    _Out_ PULONG Index16
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X16 *PPERFECT_HASH_TABLE_JIT_INDEX64X16;
 
 typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE_JIT_INTERFACE);
-    PPERFECT_HASH_TABLE_JIT_INDEX Index;
+    PPERFECT_HASH_TABLE_JIT_INDEX32 Index32;
     PPERFECT_HASH_TABLE_JIT_INDEX64 Index64;
-    PPERFECT_HASH_TABLE_JIT_INDEX2 Index2;
-    PPERFECT_HASH_TABLE_JIT_INDEX4 Index4;
-    PPERFECT_HASH_TABLE_JIT_INDEX2_64 Index2_64;
-    PPERFECT_HASH_TABLE_JIT_INDEX4_64 Index4_64;
-    PPERFECT_HASH_TABLE_JIT_INDEX8 Index8;
-    PPERFECT_HASH_TABLE_JIT_INDEX8_64 Index8_64;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X2 Index32x2;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X4 Index32x4;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X8 Index32x8;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X16 Index32x16;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X2 Index64x2;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X4 Index64x4;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X8 Index64x8;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X16 Index64x16;
 } PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL;
 typedef PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
       *PPERFECT_HASH_TABLE_JIT_INTERFACE_VTBL;

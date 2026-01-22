@@ -286,7 +286,8 @@ TEST_F(PerfectHashOnlineTests, JitAssigned16MatchesOriginalIndex) {
   shim->Vtbl->Release(table);
 }
 
-TEST_F(PerfectHashOnlineTests, JitInterfaceIndex2Index4Index8MatchSlowIndex) {
+TEST_F(PerfectHashOnlineTests,
+       JitInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex) {
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
       59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
@@ -301,9 +302,9 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex2Index4Index8MatchSlowIndex) {
   ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.JitIndex2 = TRUE;
-  compileFlags.JitIndex4 = TRUE;
-  compileFlags.JitIndex8 = TRUE;
+  compileFlags.JitIndex32x2 = TRUE;
+  compileFlags.JitIndex32x4 = TRUE;
+  compileFlags.JitIndex32x8 = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
   ASSERT_GE(result, 0);
@@ -331,7 +332,7 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex2Index4Index8MatchSlowIndex) {
     result = shim->Vtbl->SlowIndex(table, keys[i + 1], &expected2);
     ASSERT_GE(result, 0);
 
-    result = jit->Vtbl->Index2(jit, keys[i], keys[i + 1], &index1, &index2);
+    result = jit->Vtbl->Index32x2(jit, keys[i], keys[i + 1], &index1, &index2);
     ASSERT_GE(result, 0);
 
     EXPECT_EQ(expected1, index1);
@@ -357,7 +358,7 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex2Index4Index8MatchSlowIndex) {
     result = shim->Vtbl->SlowIndex(table, keys[i + 3], &expected4);
     ASSERT_GE(result, 0);
 
-    result = jit->Vtbl->Index4(jit,
+    result = jit->Vtbl->Index32x4(jit,
                                keys[i],
                                keys[i + 1],
                                keys[i + 2],
@@ -409,7 +410,7 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex2Index4Index8MatchSlowIndex) {
     result = shim->Vtbl->SlowIndex(table, keys[i + 7], &expected8);
     ASSERT_GE(result, 0);
 
-    result = jit->Vtbl->Index8(jit,
+    result = jit->Vtbl->Index32x8(jit,
                                keys[i],
                                keys[i + 1],
                                keys[i + 2],
@@ -442,7 +443,7 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex2Index4Index8MatchSlowIndex) {
   shim->Vtbl->Release(table);
 }
 
-TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64MatchesDownsizedIndex) {
+TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
   const std::vector<ULONGLONG> keys = {
       1ull, 3ull, 5ull, 7ull, 11ull, 13ull, 17ull, 19ull,
       23ull, 29ull, 31ull, 37ull, 41ull, 43ull, 47ull, 53ull,
@@ -470,9 +471,10 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64MatchesDownsizedIndex) {
   }
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
-  compileFlags.JitIndex2 = TRUE;
-  compileFlags.JitIndex4 = TRUE;
-  compileFlags.JitIndex8 = TRUE;
+  compileFlags.JitIndex64 = TRUE;
+  compileFlags.JitIndex32x2 = TRUE;
+  compileFlags.JitIndex32x4 = TRUE;
+  compileFlags.JitIndex32x8 = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
   ASSERT_GE(result, 0);
@@ -500,7 +502,7 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64MatchesDownsizedIndex) {
     ULONG index1 = 0;
     ULONG index2 = 0;
 
-    result = jit->Vtbl->Index2_64(jit,
+    result = jit->Vtbl->Index64x2(jit,
                                   keys[i],
                                   keys[i + 1],
                                   &index1,
@@ -517,7 +519,7 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64MatchesDownsizedIndex) {
     ULONG index3 = 0;
     ULONG index4 = 0;
 
-    result = jit->Vtbl->Index4_64(jit,
+    result = jit->Vtbl->Index64x4(jit,
                                   keys[i],
                                   keys[i + 1],
                                   keys[i + 2],
@@ -544,7 +546,7 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64MatchesDownsizedIndex) {
     ULONG index7 = 0;
     ULONG index8 = 0;
 
-    result = jit->Vtbl->Index8_64(jit,
+    result = jit->Vtbl->Index64x8(jit,
                                   keys[i],
                                   keys[i + 1],
                                   keys[i + 2],
@@ -585,11 +587,12 @@ TEST_F(PerfectHashOnlineTests, JitAssigned16MatchesOriginalIndex) {
   GTEST_SKIP() << "LLVM support is disabled.";
 }
 
-TEST_F(PerfectHashOnlineTests, JitInterfaceIndex2Index4Index8MatchSlowIndex) {
+TEST_F(PerfectHashOnlineTests,
+       JitInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex) {
   GTEST_SKIP() << "LLVM support is disabled.";
 }
 
-TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64MatchesDownsizedIndex) {
+TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
   GTEST_SKIP() << "LLVM support is disabled.";
 }
 #endif

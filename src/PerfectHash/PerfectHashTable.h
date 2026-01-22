@@ -101,58 +101,70 @@ typedef union _PERFECT_HASH_TABLE_JIT_FLAGS {
         ULONG Valid:1;
 
         //
-        // When set, indicates the Index() routine has been compiled.
+        // When set, indicates the Index32() routine has been compiled.
         //
 
-        ULONG IndexCompiled:1;
+        ULONG Index32Compiled:1;
 
         //
-        // When set, indicates the 64-bit Index() routine has been compiled.
+        // When set, indicates the Index64() routine has been compiled.
         //
 
         ULONG Index64Compiled:1;
 
         //
-        // When set, indicates the Index2() routine has been compiled.
+        // When set, indicates the Index32x2() routine has been compiled.
         //
 
-        ULONG Index2Compiled:1;
+        ULONG Index32x2Compiled:1;
 
         //
-        // When set, indicates the Index4() routine has been compiled.
+        // When set, indicates the Index32x4() routine has been compiled.
         //
 
-        ULONG Index4Compiled:1;
+        ULONG Index32x4Compiled:1;
 
         //
-        // When set, indicates the Index8() routine has been compiled.
+        // When set, indicates the Index32x8() routine has been compiled.
         //
 
-        ULONG Index8Compiled:1;
+        ULONG Index32x8Compiled:1;
 
         //
-        // When set, indicates the Index2_64() routine has been compiled.
+        // When set, indicates the Index32x16() routine has been compiled.
         //
 
-        ULONG Index2_64Compiled:1;
+        ULONG Index32x16Compiled:1;
 
         //
-        // When set, indicates the Index4_64() routine has been compiled.
+        // When set, indicates the Index64x2() routine has been compiled.
         //
 
-        ULONG Index4_64Compiled:1;
+        ULONG Index64x2Compiled:1;
 
         //
-        // When set, indicates the Index8_64() routine has been compiled.
+        // When set, indicates the Index64x4() routine has been compiled.
         //
 
-        ULONG Index8_64Compiled:1;
+        ULONG Index64x4Compiled:1;
+
+        //
+        // When set, indicates the Index64x8() routine has been compiled.
+        //
+
+        ULONG Index64x8Compiled:1;
+
+        //
+        // When set, indicates the Index64x16() routine has been compiled.
+        //
+
+        ULONG Index64x16Compiled:1;
 
         //
         // Unused bits.
         //
 
-        ULONG Unused:23;
+        ULONG Unused:21;
     };
 
     LONG AsLong;
@@ -189,14 +201,16 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     ULONG Padding;
     PVOID ExecutionEngine;
     PVOID Context;
-    PVOID IndexFunction;
+    PVOID Index32Function;
     PVOID Index64Function;
-    PVOID Index2Function;
-    PVOID Index4Function;
-    PVOID Index2_64Function;
-    PVOID Index4_64Function;
-    PVOID Index8Function;
-    PVOID Index8_64Function;
+    PVOID Index32x2Function;
+    PVOID Index32x4Function;
+    PVOID Index32x8Function;
+    PVOID Index32x16Function;
+    PVOID Index64x2Function;
+    PVOID Index64x4Function;
+    PVOID Index64x8Function;
+    PVOID Index64x16Function;
     PPERFECT_HASH_TABLE_INDEX OriginalIndex;
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
     PERFECT_HASH_TABLE_JIT_INTERFACE Interface;

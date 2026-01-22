@@ -317,6 +317,13 @@ TryExtractArgTableCompileFlags(
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(Jit);
     DECL_ARG(JitIndex64);
+    DECL_ARG(JitIndex32x2);
+    DECL_ARG(JitIndex32x4);
+    DECL_ARG(JitIndex32x8);
+    DECL_ARG(JitIndex32x16);
+    DECL_ARG(JitVectorIndex32x2);
+    DECL_ARG(JitVectorIndex32x4);
+    DECL_ARG(JitVectorIndex32x8);
     DECL_ARG(JitIndex2);
     DECL_ARG(JitIndex4);
     DECL_ARG(JitIndex8);
@@ -338,39 +345,81 @@ TryExtractArgTableCompileFlags(
         return S_OK;
     }
 
+    if (IS_EQUAL(JitIndex32x2)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex32x16)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x16 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex32x2)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x8 = TRUE;
+        return S_OK;
+    }
+
     if (IS_EQUAL(JitIndex2)) {
         Flags->Jit = TRUE;
-        Flags->JitIndex2 = TRUE;
+        Flags->JitIndex32x2 = TRUE;
         return S_OK;
     }
 
     if (IS_EQUAL(JitIndex4)) {
         Flags->Jit = TRUE;
-        Flags->JitIndex4 = TRUE;
+        Flags->JitIndex32x4 = TRUE;
         return S_OK;
     }
 
     if (IS_EQUAL(JitIndex8)) {
         Flags->Jit = TRUE;
-        Flags->JitIndex8 = TRUE;
+        Flags->JitIndex32x8 = TRUE;
         return S_OK;
     }
 
     if (IS_EQUAL(JitVectorIndex2)) {
         Flags->Jit = TRUE;
-        Flags->JitVectorIndex2 = TRUE;
+        Flags->JitVectorIndex32x2 = TRUE;
         return S_OK;
     }
 
     if (IS_EQUAL(JitVectorIndex4)) {
         Flags->Jit = TRUE;
-        Flags->JitVectorIndex4 = TRUE;
+        Flags->JitVectorIndex32x4 = TRUE;
         return S_OK;
     }
 
     if (IS_EQUAL(JitVectorIndex8)) {
         Flags->Jit = TRUE;
-        Flags->JitVectorIndex8 = TRUE;
+        Flags->JitVectorIndex32x8 = TRUE;
         return S_OK;
     }
 
