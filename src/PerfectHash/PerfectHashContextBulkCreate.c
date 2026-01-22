@@ -346,15 +346,18 @@ Return Value:
     // Get a reference to the stdout handle.
     //
 
-    if (!Context->OutputHandle) {
-        Context->OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!Silent) {
         if (!Context->OutputHandle) {
-            SYS_ERROR(GetStdHandle);
-            goto Error;
+            Context->OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (!Context->OutputHandle ||
+                Context->OutputHandle == INVALID_HANDLE_VALUE) {
+                Context->OutputHandle = NULL;
+                Silent = TRUE;
+            }
         }
-    }
 
-    OutputHandle = Context->OutputHandle;
+        OutputHandle = Context->OutputHandle;
+    }
 
     //
     // Calculate the size required for a new concatenated wide string buffer

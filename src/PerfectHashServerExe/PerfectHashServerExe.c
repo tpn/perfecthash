@@ -24,6 +24,7 @@ Abstract:
 typedef DWORD MINIDUMP_TYPE;
 
 #define MiniDumpWithDataSegs ((MINIDUMP_TYPE)0x00000001)
+#define MiniDumpIgnoreInaccessibleMemory ((MINIDUMP_TYPE)0x00020000)
 
 #pragma warning(push)
 #pragma warning(disable: 4820)
@@ -68,6 +69,79 @@ typedef BOOL (WINAPI *PMINIDUMP_WRITE_DUMP)(
     PMINIDUMP_CALLBACK_INFORMATION CallbackParam
     );
 
+static HMODULE ServerDbgHelpModule = NULL;
+static PMINIDUMP_WRITE_DUMP ServerMiniDumpWriteDump = NULL;
+static WCHAR ServerCrashDir[MAX_PATH];
+
+static
+VOID
+BuildCrashPath(
+    _In_opt_ PCWSTR CrashDir,
+    _In_ PCWSTR FileName,
+    _Out_writes_(BufferChars) PWSTR Buffer,
+    _In_ ULONG BufferChars
+    )
+{
+    size_t Length;
+
+    if (!CrashDir || !*CrashDir) {
+        wcscpy_s(Buffer, BufferChars, FileName);
+        return;
+    }
+
+    Length = wcslen(CrashDir);
+    if (CrashDir[Length - 1] == L'\\' || CrashDir[Length - 1] == L'/') {
+        wcscpy_s(Buffer, BufferChars, CrashDir);
+        wcscat_s(Buffer, BufferChars, FileName);
+    } else {
+        wcscpy_s(Buffer, BufferChars, CrashDir);
+        wcscat_s(Buffer, BufferChars, L"\\");
+        wcscat_s(Buffer, BufferChars, FileName);
+    }
+}
+
+static
+VOID
+InitializeServerCrashDir(
+    VOID
+    )
+{
+    DWORD Length;
+
+    ServerCrashDir[0] = L'\0';
+    Length = GetEnvironmentVariableW(L"PH_SERVER_CRASH_DIR",
+                                     ServerCrashDir,
+                                     ARRAYSIZE(ServerCrashDir));
+    if (Length == 0 || Length >= ARRAYSIZE(ServerCrashDir)) {
+        ServerCrashDir[0] = L'\0';
+    } else {
+        ServerCrashDir[Length] = L'\0';
+    }
+}
+
+static
+VOID
+PreloadServerDbgHelp(
+    VOID
+    )
+{
+    if (ServerMiniDumpWriteDump) {
+        return;
+    }
+
+    ServerDbgHelpModule = LoadLibraryW(L"DbgHelp.dll");
+    if (!ServerDbgHelpModule) {
+        return;
+    }
+
+#pragma warning(push)
+#pragma warning(disable: 4191)
+    ServerMiniDumpWriteDump = (PMINIDUMP_WRITE_DUMP)(
+        GetProcAddress(ServerDbgHelpModule, "MiniDumpWriteDump")
+    );
+#pragma warning(pop)
+}
+
 static
 LONG
 WINAPI
@@ -79,6 +153,7 @@ PerfectHashServerUnhandledExceptionFilter(
     HANDLE FileHandle = INVALID_HANDLE_VALUE;
     PMINIDUMP_WRITE_DUMP MiniDumpWriteDump;
     MINIDUMP_EXCEPTION_INFORMATION ExceptionInfo;
+    PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam = NULL;
     MINIDUMP_TYPE DumpType;
     BOOL DumpResult = FALSE;
     BOOL FallbackResult = FALSE;
@@ -99,8 +174,20 @@ PerfectHashServerUnhandledExceptionFilter(
     CHAR ModulePathA[MAX_PATH];
     DWORD ModulePathLength;
     INT ModulePathChars;
+    WCHAR DumpPath[MAX_PATH];
+    WCHAR LogPath[MAX_PATH];
 
-    LogHandle = CreateFileW(L"PerfectHashServerCrash.log",
+    BuildCrashPath(ServerCrashDir,
+                   L"PerfectHashServerCrash.dmp",
+                   DumpPath,
+                   ARRAYSIZE(DumpPath));
+
+    BuildCrashPath(ServerCrashDir,
+                   L"PerfectHashServerCrash.log",
+                   LogPath,
+                   ARRAYSIZE(LogPath));
+
+    LogHandle = CreateFileW(LogPath,
                             GENERIC_WRITE,
                             FILE_SHARE_READ,
                             NULL,
@@ -109,45 +196,69 @@ PerfectHashServerUnhandledExceptionFilter(
                             NULL);
 
     if (LogHandle != INVALID_HANDLE_VALUE) {
-        _snprintf_s(Buffer,
-                    sizeof(Buffer),
-                    _TRUNCATE,
-                    "ExceptionCode: 0x%08lX\r\n",
-                    ExceptionPointers->ExceptionRecord->ExceptionCode);
+        if (ExceptionPointers) {
+            _snprintf_s(Buffer,
+                        sizeof(Buffer),
+                        _TRUNCATE,
+                        "ExceptionCode: 0x%08lX\r\n",
+                        ExceptionPointers->ExceptionRecord->ExceptionCode);
 
-        WriteFile(LogHandle,
-                  Buffer,
-                  (DWORD)strlen(Buffer),
-                  &BytesWritten,
-                  NULL);
-
-        _snprintf_s(Buffer,
-                    sizeof(Buffer),
-                    _TRUNCATE,
-                    "ExceptionAddress: 0x%p\r\n",
-                    ExceptionPointers->ExceptionRecord->ExceptionAddress);
-
-        WriteFile(LogHandle,
-                  Buffer,
-                  (DWORD)strlen(Buffer),
-                  &BytesWritten,
-                  NULL);
-
-        Module = NULL;
-        if (GetModuleHandleExW(
-                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                    GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                (LPCWSTR)ExceptionPointers->ExceptionRecord->ExceptionAddress,
-                &Module)) {
-            Offset = (ULONG_PTR)ExceptionPointers->ExceptionRecord->ExceptionAddress -
-                     (ULONG_PTR)Module;
+            WriteFile(LogHandle,
+                      Buffer,
+                      (DWORD)strlen(Buffer),
+                      &BytesWritten,
+                      NULL);
 
             _snprintf_s(Buffer,
                         sizeof(Buffer),
                         _TRUNCATE,
-                        "ExceptionModule: 0x%p Offset: 0x%Ix\r\n",
-                        Module,
-                        Offset);
+                        "ExceptionAddress: 0x%p\r\n",
+                        ExceptionPointers->ExceptionRecord->ExceptionAddress);
+
+            WriteFile(LogHandle,
+                      Buffer,
+                      (DWORD)strlen(Buffer),
+                      &BytesWritten,
+                      NULL);
+
+            Module = NULL;
+            if (GetModuleHandleExW(
+                    GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                    (LPCWSTR)ExceptionPointers->ExceptionRecord->ExceptionAddress,
+                    &Module)) {
+                Offset = (ULONG_PTR)ExceptionPointers->ExceptionRecord->ExceptionAddress -
+                         (ULONG_PTR)Module;
+
+                _snprintf_s(Buffer,
+                            sizeof(Buffer),
+                            _TRUNCATE,
+                            "ExceptionModule: 0x%p Offset: 0x%Ix\r\n",
+                            Module,
+                            Offset);
+
+                WriteFile(LogHandle,
+                          Buffer,
+                          (DWORD)strlen(Buffer),
+                          &BytesWritten,
+                          NULL);
+            }
+        } else {
+            _snprintf_s(Buffer,
+                        sizeof(Buffer),
+                        _TRUNCATE,
+                        "ExceptionCode: <none>\r\n");
+
+            WriteFile(LogHandle,
+                      Buffer,
+                      (DWORD)strlen(Buffer),
+                      &BytesWritten,
+                      NULL);
+
+            _snprintf_s(Buffer,
+                        sizeof(Buffer),
+                        _TRUNCATE,
+                        "ExceptionAddress: <none>\r\n");
 
             WriteFile(LogHandle,
                       Buffer,
@@ -169,23 +280,19 @@ PerfectHashServerUnhandledExceptionFilter(
                   NULL);
     }
 
-    DbgHelpModule = LoadLibraryW(L"DbgHelp.dll");
-    if (!DbgHelpModule) {
-        goto End;
+    if (!ServerMiniDumpWriteDump) {
+        PreloadServerDbgHelp();
     }
 
-#pragma warning(push)
-#pragma warning(disable: 4191)
-    MiniDumpWriteDump = (PMINIDUMP_WRITE_DUMP)(
-        GetProcAddress(DbgHelpModule, "MiniDumpWriteDump")
-    );
-#pragma warning(pop)
+    DbgHelpModule = ServerDbgHelpModule;
+    MiniDumpWriteDump = ServerMiniDumpWriteDump;
 
     if (!MiniDumpWriteDump) {
-        goto End;
+        DumpError = GetLastError();
+        goto LogOnly;
     }
 
-    FileHandle = CreateFileW(L"PerfectHashServerCrash.dmp",
+    FileHandle = CreateFileW(DumpPath,
                              GENERIC_WRITE,
                              FILE_SHARE_READ,
                              NULL,
@@ -194,14 +301,18 @@ PerfectHashServerUnhandledExceptionFilter(
                              NULL);
 
     if (FileHandle == INVALID_HANDLE_VALUE) {
-        goto End;
+        DumpError = GetLastError();
+        goto LogOnly;
     }
 
-    ExceptionInfo.ThreadId = GetCurrentThreadId();
-    ExceptionInfo.ExceptionPointers = ExceptionPointers;
-    ExceptionInfo.ClientPointers = FALSE;
+    if (ExceptionPointers) {
+        ExceptionInfo.ThreadId = GetCurrentThreadId();
+        ExceptionInfo.ExceptionPointers = ExceptionPointers;
+        ExceptionInfo.ClientPointers = FALSE;
+        ExceptionParam = &ExceptionInfo;
+    }
 
-    DumpType = MiniDumpWithDataSegs;
+    DumpType = MiniDumpWithDataSegs | MiniDumpIgnoreInaccessibleMemory;
 
     ForceFallback = (GetEnvironmentVariableW(
         L"PH_SERVER_MINIDUMP_FORCE_FALLBACK",
@@ -214,7 +325,7 @@ PerfectHashServerUnhandledExceptionFilter(
                                        GetCurrentProcessId(),
                                        FileHandle,
                                        DumpType,
-                                       &ExceptionInfo,
+                                       ExceptionParam,
                                        NULL,
                                        NULL);
     } else {
@@ -226,10 +337,28 @@ PerfectHashServerUnhandledExceptionFilter(
         if (!ForceFallback) {
             DumpError = GetLastError();
         }
+
+        if (DumpError == ERROR_NOACCESS && ExceptionParam) {
+            DumpResult = MiniDumpWriteDump(GetCurrentProcess(),
+                                           GetCurrentProcessId(),
+                                           FileHandle,
+                                           DumpType,
+                                           NULL,
+                                           NULL,
+                                           NULL);
+            if (!DumpResult) {
+                DumpError = GetLastError();
+            }
+        }
+
+        if (DumpResult) {
+            goto LogOnly;
+        }
+
         TriedFallback = TRUE;
 
         CloseHandle(FileHandle);
-        FileHandle = CreateFileW(L"PerfectHashServerCrash.dmp",
+        FileHandle = CreateFileW(DumpPath,
                                  GENERIC_WRITE,
                                  FILE_SHARE_READ,
                                  NULL,
@@ -238,12 +367,12 @@ PerfectHashServerUnhandledExceptionFilter(
                                  NULL);
 
         if (FileHandle != INVALID_HANDLE_VALUE) {
-            DumpType = 0;
+            DumpType = MiniDumpIgnoreInaccessibleMemory;
             FallbackResult = MiniDumpWriteDump(GetCurrentProcess(),
                                                GetCurrentProcessId(),
                                                FileHandle,
                                                DumpType,
-                                               &ExceptionInfo,
+                                               ExceptionParam,
                                                NULL,
                                                NULL);
             if (!FallbackResult) {
@@ -252,8 +381,10 @@ PerfectHashServerUnhandledExceptionFilter(
         }
     }
 
+LogOnly:
+
     if (LogHandle == INVALID_HANDLE_VALUE) {
-        LogHandle = CreateFileW(L"PerfectHashServerCrash.log",
+        LogHandle = CreateFileW(LogPath,
                                 FILE_APPEND_DATA,
                                 FILE_SHARE_READ,
                                 NULL,
@@ -415,7 +546,49 @@ InstallPerfectHashServerCrashHandler(
         return;
     }
 
+    InitializeServerCrashDir();
+    PreloadServerDbgHelp();
+
     SetUnhandledExceptionFilter(PerfectHashServerUnhandledExceptionFilter);
+}
+
+static
+VOID
+TriggerServerCrashTest(
+    _In_ ULONG ExceptionCode
+    )
+{
+    UNREFERENCED_PARAMETER(ExceptionCode);
+    PerfectHashServerUnhandledExceptionFilter(NULL);
+    ExitProcess((ULONG)E_UNEXPECTED);
+}
+
+static
+VOID
+MaybeTriggerServerCrashTest(
+    VOID
+    )
+{
+    DWORD Length;
+    WCHAR Buffer[32];
+    Length = GetEnvironmentVariableW(L"PH_SERVER_CRASH_TEST",
+                                     Buffer,
+                                     ARRAYSIZE(Buffer));
+
+    if (Length == 0 || Length >= ARRAYSIZE(Buffer)) {
+        return;
+    }
+
+    Buffer[Length] = L'\0';
+
+    InitializeServerCrashDir();
+
+    if (_wcsicmp(Buffer, L"AV") == 0 ||
+        _wcsicmp(Buffer, L"ACCESS_VIOLATION") == 0) {
+        TriggerServerCrashTest(STATUS_ACCESS_VIOLATION);
+    } else {
+        TriggerServerCrashTest(0xE0000001);
+    }
 }
 
 #endif
@@ -666,6 +839,7 @@ mainCRTStartup(
     ArgvW = CommandLineToArgvW(CommandLineW, &NumberOfArguments);
 
     InstallPerfectHashServerCrashHandler();
+    MaybeTriggerServerCrashTest();
 
     Result = PerfectHashBootstrap(&ClassFactory,
                                   &PerfectHashPrintError,

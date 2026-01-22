@@ -427,7 +427,8 @@ Return Value:
     if (AlgorithmId == PerfectHashChm01AlgorithmId &&
         Table->Context &&
         Table->Context->FileWorkIoCompletionPort &&
-        IsChm01AsyncEnabled()) {
+        (IsChm01AsyncEnabled() ||
+         SkipThreadpoolInitialization(Table->Context))) {
         Result = CreatePerfectHashTableImplChm01Async(
             Table,
             Table->Context->FileWorkIoCompletionPort

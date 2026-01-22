@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2025 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -20,7 +20,6 @@ Abstract:
 typedef enum _CHM01_ASYNC_STATE {
     Chm01AsyncStateInitialize = 0,
     Chm01AsyncStateSolveGraphs,
-    Chm01AsyncStateFinalizeWaitPrepare,
     Chm01AsyncStateFinalizeVerify,
     Chm01AsyncStateFinalizeWaitSave,
     Chm01AsyncStateFinalizeClose,
@@ -53,7 +52,7 @@ typedef struct _CHM01_ASYNC_JOB {
     GRAPH_INFO PrevGraphInfo;
     GRAPH_INFO_ON_DISK GraphInfoOnDisk;
     PTABLE_INFO_ON_DISK TableInfoOnDisk;
-    HANDLE Events[6];
+    HANDLE Events[5];
     HANDLE SaveEvents[NUMBER_OF_SAVE_FILE_EVENTS];
     HANDLE PrepareEvents[NUMBER_OF_PREPARE_FILE_EVENTS];
     PCHM01_ASYNC_GRAPH_WORK *GraphWorkItems;

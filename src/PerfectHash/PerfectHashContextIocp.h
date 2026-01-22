@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2025 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -202,10 +202,22 @@ HRESULT
 typedef PERFECT_HASH_CONTEXT_IOCP_STOP
       *PPERFECT_HASH_CONTEXT_IOCP_STOP;
 
+typedef
+_Must_inspect_result_
+HRESULT
+(NTAPI PERFECT_HASH_CONTEXT_IOCP_CREATE_TABLE_CONTEXT)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _Outptr_ PPERFECT_HASH_CONTEXT *Context
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_CREATE_TABLE_CONTEXT
+      *PPERFECT_HASH_CONTEXT_IOCP_CREATE_TABLE_CONTEXT;
+
 extern PERFECT_HASH_CONTEXT_IOCP_INITIALIZE PerfectHashContextIocpInitialize;
 extern PERFECT_HASH_CONTEXT_IOCP_RUNDOWN PerfectHashContextIocpRundown;
 extern PERFECT_HASH_CONTEXT_IOCP_START PerfectHashContextIocpStart;
 extern PERFECT_HASH_CONTEXT_IOCP_STOP PerfectHashContextIocpStop;
+extern PERFECT_HASH_CONTEXT_IOCP_CREATE_TABLE_CONTEXT
+    PerfectHashContextIocpCreateTableContext;
 
 extern PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_CONCURRENCY
     PerfectHashContextIocpSetMaximumConcurrency;

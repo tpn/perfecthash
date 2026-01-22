@@ -266,7 +266,29 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define IsSystemRngId(Id) (Id == PerfectHashRngSystemId)
 #define IsSystemRng(Context) ((Context)->RngId == PerfectHashRngSystemId)
 
-DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
+typedef union _PERFECT_HASH_CONTEXT_FLAGS {
+    struct {
+
+        //
+        // When set, skip threadpool initialization for this context.
+        //
+
+        ULONG SkipThreadpoolInitialization:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:31;
+    };
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_CONTEXT_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_CONTEXT_FLAGS *PPERFECT_HASH_CONTEXT_FLAGS;
+
+#define SkipThreadpoolInitialization(Context) \
+    ((Context)->Flags.SkipThreadpoolInitialization != FALSE)
 
 typedef struct _BEST_GRAPH_INFO {
 

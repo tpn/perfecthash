@@ -179,6 +179,25 @@ Return Value:
 
     Item->FileId = FileId = FileWorkIdToFileId(FileWorkId);
 
+    if (SkipContextFileWork(Context) &&
+        IsValidContextFileId((CONTEXT_FILE_ID)FileId)) {
+        Item->Flags.IsContextFile = TRUE;
+        Item->LastResult = S_OK;
+        Item->LastError = 0;
+        if (Event) {
+#ifdef PH_WINDOWS
+            if (Item->Instance) {
+                SetEventWhenCallbackReturns(Item->Instance, Event);
+            } else {
+                SetEvent(Event);
+            }
+#else
+            SetEvent(Event);
+#endif
+        }
+        return;
+    }
+
     //
     // Determine if this is a context file.  Context files get treated
     // differently to normal table output files in that they are only

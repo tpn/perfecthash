@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2025 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -62,7 +62,6 @@ typedef struct _PERFECT_HASH_SERVER_BULK_REQUEST {
     ULONG PerFileMaximumConcurrency;
     ULONG Padding1;
     PPERFECT_HASH_SERVER Server;
-    PPERFECT_HASH_CONTEXT ParseContext;
     LPWSTR *ArgvW;
     PWSTR CommandLineBuffer;
     PERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlags;
@@ -99,6 +98,8 @@ typedef struct _PERFECT_HASH_SERVER_BULK_WORK_ITEM {
     ULONG Padding1;
     UNICODE_STRING KeysPath;
     PWSTR KeysPathBuffer;
+    ULONG LastError;
+    ULONG Padding2;
 } PERFECT_HASH_SERVER_BULK_WORK_ITEM;
 typedef PERFECT_HASH_SERVER_BULK_WORK_ITEM *PPERFECT_HASH_SERVER_BULK_WORK_ITEM;
 
@@ -165,6 +166,15 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
     _In_ LPWSTR *ArgvW,
     _In_ LPWSTR CommandLine,
     _Out_ PBOOLEAN ArgvWOwned
+    );
+
+static
+HRESULT
+PerfectHashServerDispatchTableCreateRequest(
+    _In_ PPERFECT_HASH_SERVER_PIPE Pipe,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLine
     );
 
 static
@@ -263,7 +273,7 @@ Return Value:
     UNREFERENCED_PARAMETER(Server);
     return E_NOTIMPL;
 #else
-    HRESULT Result;
+    HRESULT Result = E_UNEXPECTED;
     PPERFECT_HASH_CONTEXT_IOCP ContextIocp;
 
     if (!ARGUMENT_PRESENT(Server)) {
@@ -394,7 +404,7 @@ PerfectHashServerSetMaximumConcurrency(
     ULONG MaximumConcurrency
     )
 {
-    HRESULT Result;
+    HRESULT Result = E_UNEXPECTED;
 
     if (!ARGUMENT_PRESENT(Server)) {
         return E_POINTER;
@@ -747,6 +757,7 @@ PerfectHashServerCreatePipes(
     ULONG PipeCount;
     HRESULT Result;
     PALLOCATOR Allocator;
+    PRTL Rtl;
     PPERFECT_HASH_CONTEXT_IOCP ContextIocp;
 
     if (!ARGUMENT_PRESENT(Server)) {
@@ -759,8 +770,9 @@ PerfectHashServerCreatePipes(
 
     ContextIocp = Server->ContextIocp;
     Allocator = Server->Allocator;
+    Rtl = Server->Rtl;
 
-    if (!ContextIocp || !Allocator) {
+    if (!ContextIocp || !Allocator || !Rtl) {
         return E_UNEXPECTED;
     }
 
@@ -1433,7 +1445,7 @@ PerfectHashServerCompleteBulkRequest(
         CloseHandle(Request->CompletionEvent);
     }
 
-    if (Request->ParseContext) {
+    if (Request->TableCreateParameters.SizeOfStruct != 0) {
         HRESULT CleanupResult;
 
         CleanupResult = CleanupTableCreateParameters(
@@ -1442,8 +1454,6 @@ PerfectHashServerCompleteBulkRequest(
         if (FAILED(CleanupResult)) {
             PH_ERROR(CleanupTableCreateParameters, CleanupResult);
         }
-
-        Request->ParseContext->Vtbl->Release(Request->ParseContext);
     }
 
     if (Request->ArgvW) {
@@ -1492,9 +1502,11 @@ PerfectHashServerLogBulkCreateException(
     DWORD BytesWritten;
     ULONG NodeIndex = 0;
     ULONG_PTR Address = 0;
+    ULONG_PTR Offset = 0;
     DWORD Code = 0;
     DWORD ThreadId;
     CHAR Buffer[256];
+    HMODULE Module = NULL;
 
     if (!ARGUMENT_PRESENT(ExceptionPointers)) {
         return;
@@ -1523,15 +1535,28 @@ PerfectHashServerLogBulkCreateException(
     Code = ExceptionPointers->ExceptionRecord->ExceptionCode;
     Address = (ULONG_PTR)ExceptionPointers->ExceptionRecord->ExceptionAddress;
 
-    _snprintf_s(Buffer,
-                sizeof(Buffer),
-                _TRUNCATE,
-                "Stage=%lu Code=0x%08lX Address=0x%p ThreadId=%lu Node=%lu\r\n",
-                Stage,
-                Code,
-                (PVOID)Address,
-                ThreadId,
-                NodeIndex);
+    if (GetModuleHandleExW(
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            (LPCWSTR)ExceptionPointers->ExceptionRecord->ExceptionAddress,
+            &Module)) {
+        Offset = Address - (ULONG_PTR)Module;
+    }
+
+    _snprintf_s(
+        Buffer,
+        sizeof(Buffer),
+        _TRUNCATE,
+        "Stage=%lu Code=0x%08lX Address=0x%p Module=0x%p Offset=0x%Ix "
+        "ThreadId=%lu Node=%lu\r\n",
+        Stage,
+        Code,
+        (PVOID)Address,
+        Module,
+        Offset,
+        ThreadId,
+        NodeIndex
+    );
 
     WriteFile(LogHandle,
               Buffer,
@@ -1544,6 +1569,69 @@ PerfectHashServerLogBulkCreateException(
     UNREFERENCED_PARAMETER(Stage);
     UNREFERENCED_PARAMETER(WorkItem);
     UNREFERENCED_PARAMETER(ExceptionPointers);
+#endif
+}
+
+static
+VOID
+PerfectHashServerLogBulkCreateFailure(
+    _In_ ULONG Stage,
+    _In_opt_ PPERFECT_HASH_SERVER_BULK_WORK_ITEM WorkItem,
+    _In_ HRESULT Result
+    )
+{
+#ifdef PH_WINDOWS
+    int Count;
+    DWORD BytesWritten;
+    HANDLE LogHandle;
+    CHAR Buffer[1024];
+    ULONG PathChars = 0;
+
+    if (GetEnvironmentVariableW(L"PH_LOG_BULK_CREATE_FAILURES", NULL, 0) == 0) {
+        return;
+    }
+
+    if (!WorkItem || !WorkItem->KeysPath.Buffer) {
+        return;
+    }
+
+    PathChars = WorkItem->KeysPath.Length / sizeof(WCHAR);
+
+    LogHandle = CreateFileW(L"PerfectHashServerBulkCreateFailures.log",
+                            FILE_APPEND_DATA,
+                            FILE_SHARE_READ,
+                            NULL,
+                            OPEN_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+    if (!IsValidHandle(LogHandle)) {
+        return;
+    }
+
+    Count = _snprintf_s(Buffer,
+                        sizeof(Buffer),
+                        _TRUNCATE,
+                        "Stage=%lu Result=0x%08lX LastError=%lu (0x%08lX) "
+                        "Path=%.*S\r\n",
+                        Stage,
+                        Result,
+                        WorkItem->LastError,
+                        WorkItem->LastError,
+                        (int)PathChars,
+                        WorkItem->KeysPath.Buffer);
+    if (Count > 0) {
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
+    }
+
+    CloseHandle(LogHandle);
+#else
+    UNREFERENCED_PARAMETER(Stage);
+    UNREFERENCED_PARAMETER(WorkItem);
+    UNREFERENCED_PARAMETER(Result);
 #endif
 }
 
@@ -1584,20 +1672,21 @@ PerfectHashServerBulkCreateWorkItemCallback(
     ULONG Stage = 0;
     BOOLEAN ExceptionRaised = FALSE;
 
-    UNREFERENCED_PARAMETER(ContextIocp);
     UNREFERENCED_PARAMETER(NumberOfBytesTransferred);
-
-    if (!Success) {
-        Failure = HRESULT_FROM_WIN32(GetLastError());
-    } else {
-        Failure = S_OK;
-    }
 
     WorkItem = CONTAINING_RECORD(Overlapped,
                                  PERFECT_HASH_SERVER_BULK_WORK_ITEM,
                                  Iocp.Overlapped);
     Request = WorkItem->Request;
     Allocator = (Request && Request->Server) ? Request->Server->Allocator : NULL;
+    WorkItem->LastError = ERROR_SUCCESS;
+
+    if (!Success) {
+        WorkItem->LastError = GetLastError();
+        Failure = HRESULT_FROM_WIN32(WorkItem->LastError);
+    } else {
+        Failure = S_OK;
+    }
 
     __try {
         Stage = 1;
@@ -1615,12 +1704,8 @@ PerfectHashServerBulkCreateWorkItemCallback(
         }
 
         Stage = 2;
-        Result = Request->Server->Vtbl->CreateInstance(
-            Request->Server,
-            NULL,
-            &IID_PERFECT_HASH_CONTEXT,
-            &Context
-        );
+        Result = PerfectHashContextIocpCreateTableContext(ContextIocp,
+                                                          &Context);
         if (FAILED(Result)) {
             Failure = Result;
             InterlockedIncrement(&Request->FailedWorkItems);
@@ -1681,11 +1766,6 @@ PerfectHashServerBulkCreateWorkItemCallback(
             goto Complete;
         }
 
-        PerfectHashContextApplyThreadpoolPriorities(
-            Context,
-            &Request->TableCreateParameters
-        );
-
         Stage = 4;
         Result = PerfectHashContextInitializeRng(
             Context,
@@ -1726,6 +1806,7 @@ PerfectHashServerBulkCreateWorkItemCallback(
         PerfectHashTlsClearContextIfActive(&LocalTlsContext);
 
         if (FAILED(Result)) {
+            WorkItem->LastError = GetLastError();
             Failure = Result;
             InterlockedIncrement(&Request->FailedWorkItems);
             InterlockedCompareExchange(&Request->FirstFailure,
@@ -1758,6 +1839,10 @@ PerfectHashServerBulkCreateWorkItemCallback(
     }
 
 Complete:
+
+    if (FAILED(Failure)) {
+        PerfectHashServerLogBulkCreateFailure(Stage, WorkItem, Failure);
+    }
 
     if (Context) {
         Context->Vtbl->Release(Context);
@@ -2106,7 +2191,6 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
     PALLOCATOR Allocator;
     PRTL Rtl;
     PPERFECT_HASH_SERVER Server;
-    PPERFECT_HASH_CONTEXT ParseContext = NULL;
     PPERFECT_HASH_CONTEXT_IOCP ContextIocp;
     PPERFECT_HASH_SERVER_BULK_REQUEST Request = NULL;
     PPERFECT_HASH_SERVER_BULK_RESULT BulkResult = NULL;
@@ -2123,6 +2207,7 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
     PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
     PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters = { 0 };
     LPWSTR *AdjustedArgvW = NULL;
+    BOOLEAN ParsedArgs = FALSE;
 
     if (!ARGUMENT_PRESENT(Pipe)) {
         return E_POINTER;
@@ -2147,21 +2232,13 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
 
     *ArgvWOwned = FALSE;
 
-    Result = Server->Vtbl->CreateInstance(Server,
-                                          NULL,
-                                          &IID_PERFECT_HASH_CONTEXT,
-                                          &ParseContext);
-    if (FAILED(Result)) {
-        return Result;
-    }
-
     Result = LoadDefaultTableCreateFlags(&TableCreateFlags);
     if (FAILED(Result)) {
         goto Error;
     }
 
     TableCreateParameters.SizeOfStruct = sizeof(TableCreateParameters);
-    TableCreateParameters.Allocator = ParseContext->Allocator;
+    TableCreateParameters.Allocator = Allocator;
 
     AdjustedArguments = NumberOfArguments + 1;
     AdjustedArgvW = Allocator->Vtbl->Calloc(Allocator,
@@ -2177,8 +2254,8 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
                ArgvW,
                NumberOfArguments * sizeof(*AdjustedArgvW));
 
-    Result = ParseContext->Vtbl->ExtractBulkCreateArgsFromArgvW(
-        ParseContext,
+    Result = ContextIocp->Vtbl->ExtractBulkCreateArgsFromArgvW(
+        ContextIocp,
         AdjustedArguments,
         AdjustedArgvW,
         CommandLine,
@@ -2197,6 +2274,7 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
     if (FAILED(Result)) {
         goto Error;
     }
+    ParsedArgs = TRUE;
 
     ContextTableCreateFlags.AsULong = 0;
     ContextTableCreateFlags.SkipTestAfterCreate =
@@ -2221,7 +2299,6 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
 
     Request->SizeOfStruct = sizeof(*Request);
     Request->Server = Server;
-    Request->ParseContext = ParseContext;
     Request->ContextBulkCreateFlags = ContextBulkCreateFlags;
     Request->ContextTableCreateFlags = ContextTableCreateFlags;
     Request->KeysLoadFlags = KeysLoadFlags;
@@ -2438,14 +2515,235 @@ Error:
         Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Request);
     }
 
-    if (ParseContext) {
+    if (ParsedArgs) {
         CleanupResult = CleanupTableCreateParameters(&TableCreateParameters);
         if (FAILED(CleanupResult)) {
             PH_ERROR(CleanupTableCreateParameters, CleanupResult);
             Result = CleanupResult;
         }
+    }
 
-        ParseContext->Vtbl->Release(ParseContext);
+    return Result;
+}
+
+static
+HRESULT
+PerfectHashServerDispatchTableCreateRequest(
+    PPERFECT_HASH_SERVER_PIPE Pipe,
+    ULONG NumberOfArguments,
+    LPWSTR *ArgvW,
+    LPWSTR CommandLine
+    )
+{
+    HRESULT Result;
+    HRESULT CleanupResult;
+    ULONG CommandLineChars;
+    ULONG CommandLineBytes;
+    ULONG AdjustedArguments;
+    ULONG MaximumConcurrency = 0;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
+    PPERFECT_HASH_SERVER Server;
+    PPERFECT_HASH_CONTEXT Context = NULL;
+    PPERFECT_HASH_CONTEXT_IOCP ContextIocp;
+    PPERFECT_HASH_IOCP_NODE Node = NULL;
+    LPWSTR *AdjustedArgvW = NULL;
+    LPWSTR *ArgvToUse = NULL;
+    PWSTR CommandLineBuffer = NULL;
+    UNICODE_STRING KeysPath = { 0 };
+    UNICODE_STRING BaseOutputDirectory = { 0 };
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId = 0;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId = 0;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId = 0;
+    PERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags = { 0 };
+    PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags = { 0 };
+    PERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags = { 0 };
+    PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags = { 0 };
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters = { 0 };
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
+    BOOLEAN ParsedArgs = FALSE;
+    BOOLEAN TlsContextSet = FALSE;
+
+    if (!ARGUMENT_PRESENT(Pipe)) {
+        return E_POINTER;
+    }
+
+    Server = Pipe->Server;
+    if (!Server) {
+        return E_UNEXPECTED;
+    }
+
+    ContextIocp = Server->ContextIocp;
+    Allocator = Server->Allocator;
+    Rtl = Server->Rtl;
+
+    if (!ContextIocp || !Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    if (!ARGUMENT_PRESENT(ArgvW) || NumberOfArguments == 0) {
+        return E_INVALIDARG;
+    }
+
+    Result = LoadDefaultTableCreateFlags(&TableCreateFlags);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    TableCreateParameters.SizeOfStruct = sizeof(TableCreateParameters);
+    TableCreateParameters.Allocator = Allocator;
+
+    ArgvToUse = ArgvW;
+    AdjustedArguments = NumberOfArguments;
+
+    if (ArgvW[0][0] == L'-' || ArgvW[0][0] == L'/') {
+        AdjustedArgvW = Allocator->Vtbl->Calloc(Allocator,
+                                                NumberOfArguments + 1,
+                                                sizeof(*AdjustedArgvW));
+        if (!AdjustedArgvW) {
+            Result = E_OUTOFMEMORY;
+            goto Error;
+        }
+
+        AdjustedArgvW[0] = L"PerfectHashTableCreate";
+        CopyMemory(&AdjustedArgvW[1],
+                   ArgvW,
+                   NumberOfArguments * sizeof(*AdjustedArgvW));
+        ArgvToUse = AdjustedArgvW;
+        AdjustedArguments = NumberOfArguments + 1;
+    }
+
+    Result = ContextIocp->Vtbl->ExtractTableCreateArgsFromArgvW(
+        ContextIocp,
+        AdjustedArguments,
+        ArgvToUse,
+        CommandLine,
+        &KeysPath,
+        &BaseOutputDirectory,
+        &AlgorithmId,
+        &HashFunctionId,
+        &MaskFunctionId,
+        &MaximumConcurrency,
+        &ContextTableCreateFlags,
+        &KeysLoadFlags,
+        &TableCreateFlags,
+        &TableCompileFlags,
+        &TableCreateParameters
+    );
+    if (FAILED(Result)) {
+        goto Error;
+    }
+    ParsedArgs = TRUE;
+
+    Result = PerfectHashContextIocpCreateTableContext(ContextIocp,
+                                                      &Context);
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    if (CommandLine) {
+        CommandLineChars = (ULONG)wcslen(CommandLine);
+        if (CommandLineChars > ((ULONG_MAX / sizeof(WCHAR)) - 1)) {
+            Result = E_INVALIDARG;
+            goto Error;
+        }
+
+        CommandLineBytes = (CommandLineChars + 1) * sizeof(WCHAR);
+        CommandLineBuffer = (PWSTR)Allocator->Vtbl->Calloc(Allocator,
+                                                           1,
+                                                           CommandLineBytes);
+        if (!CommandLineBuffer) {
+            Result = E_OUTOFMEMORY;
+            goto Error;
+        }
+
+        CopyMemory(CommandLineBuffer, CommandLine, CommandLineBytes);
+        Context->CommandLineW = CommandLineBuffer;
+    }
+
+    if (ContextIocp->NodeCount > 0 && ContextIocp->Nodes) {
+        Node = &ContextIocp->Nodes[0];
+        if (Node->IoCompletionPort) {
+            Context->FileWorkIoCompletionPort = Node->IoCompletionPort;
+        }
+    }
+
+    SetContextSkipContextFileWork(Context);
+
+    Result = PerfectHashContextInitializeFunctionHookCallbackDll(
+        Context,
+        &TableCreateFlags,
+        &TableCreateParameters
+    );
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    if (MaximumConcurrency > 0) {
+        Result = Context->Vtbl->SetMaximumConcurrency(Context,
+                                                      MaximumConcurrency);
+        if (FAILED(Result)) {
+            if (Result == PH_E_SET_MAXIMUM_CONCURRENCY_FAILED &&
+                GetLastError() == ERROR_ACCESS_DENIED) {
+                Result = S_OK;
+            }
+        }
+        if (FAILED(Result)) {
+            goto Error;
+        }
+    }
+
+    Result = PerfectHashContextInitializeRng(Context,
+                                             &TableCreateFlags,
+                                             &TableCreateParameters);
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+    TlsContext->Context = Context;
+    TlsContextSet = TRUE;
+
+    Result = Context->Vtbl->TableCreate(Context,
+                                        &KeysPath,
+                                        &BaseOutputDirectory,
+                                        AlgorithmId,
+                                        HashFunctionId,
+                                        MaskFunctionId,
+                                        &ContextTableCreateFlags,
+                                        &KeysLoadFlags,
+                                        &TableCreateFlags,
+                                        &TableCompileFlags,
+                                        &TableCreateParameters);
+
+Error:
+
+    if (TlsContextSet) {
+        PerfectHashTlsClearContextIfActive(&LocalTlsContext);
+    }
+
+    if (ParsedArgs) {
+        CleanupResult = CleanupTableCreateParameters(&TableCreateParameters);
+        if (FAILED(CleanupResult)) {
+            PH_ERROR(CleanupTableCreateParameters, CleanupResult);
+            if (SUCCEEDED(Result)) {
+                Result = CleanupResult;
+            }
+        }
+    }
+
+    if (Context) {
+        Context->Vtbl->Release(Context);
+    }
+
+    if (CommandLineBuffer && Allocator) {
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     (PVOID *)&CommandLineBuffer);
+    }
+
+    if (AdjustedArgvW && Allocator) {
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&AdjustedArgvW);
     }
 
     return Result;
@@ -2457,16 +2755,13 @@ PerfectHashServerDispatchRequest(
     PPERFECT_HASH_SERVER_PIPE Pipe
     )
 {
-    HRESULT Result;
+    HRESULT Result = E_UNEXPECTED;
     PPERFECT_HASH_CONTEXT_IOCP ContextIocp;
     PERFECT_HASH_SERVER_REQUEST_TYPE RequestType;
     PALLOCATOR Allocator;
     LPWSTR CommandLine;
     LPWSTR *ArgvW;
-    LPWSTR *AdjustedArgvW;
-    LPWSTR *ArgvToUse;
     ULONG NumberOfArguments;
-    ULONG AdjustedArguments;
     PRTL Rtl;
     BOOLEAN ArgvWOwned;
 
@@ -2491,10 +2786,7 @@ PerfectHashServerDispatchRequest(
     Pipe->ResponseHeader.PayloadLength = 0;
 
     ArgvW = NULL;
-    AdjustedArgvW = NULL;
-    ArgvToUse = NULL;
     NumberOfArguments = 0;
-    AdjustedArguments = 0;
     CommandLine = NULL;
     ArgvWOwned = FALSE;
 
@@ -2544,52 +2836,22 @@ PerfectHashServerDispatchRequest(
                 break;
             }
 
-            ArgvToUse = ArgvW;
-            AdjustedArguments = NumberOfArguments;
-
-            if (RequestType !=
-                PerfectHashBulkCreateDirectoryServerRequestType &&
-                (ArgvW[0][0] == L'-' || ArgvW[0][0] == L'/')) {
-                AdjustedArgvW = Allocator->Vtbl->Calloc(
-                    Allocator,
-                    NumberOfArguments + 1,
-                    sizeof(*AdjustedArgvW)
-                );
-                if (!AdjustedArgvW) {
-                    Result = E_OUTOFMEMORY;
-                    break;
-                }
-
-                AdjustedArgvW[0] = L"PerfectHashServer";
-                CopyMemory(&AdjustedArgvW[1],
-                           ArgvW,
-                           NumberOfArguments * sizeof(*AdjustedArgvW));
-                ArgvToUse = AdjustedArgvW;
-                AdjustedArguments = NumberOfArguments + 1;
-            }
-
             if (RequestType == PerfectHashTableCreateServerRequestType) {
-                Result = ContextIocp->Vtbl->TableCreateArgvW(
-                    ContextIocp,
-                    AdjustedArguments,
-                    ArgvToUse,
+                Result = PerfectHashServerDispatchTableCreateRequest(
+                    Pipe,
+                    NumberOfArguments,
+                    ArgvW,
                     CommandLine
                 );
             } else if (RequestType ==
-                       PerfectHashBulkCreateDirectoryServerRequestType) {
+                       PerfectHashBulkCreateDirectoryServerRequestType ||
+                       RequestType == PerfectHashBulkCreateServerRequestType) {
                 Result = PerfectHashServerDispatchBulkCreateDirectoryRequest(
                     Pipe,
                     NumberOfArguments,
                     ArgvW,
                     CommandLine,
                     &ArgvWOwned
-                );
-            } else {
-                Result = ContextIocp->Vtbl->BulkCreateArgvW(
-                    ContextIocp,
-                    AdjustedArguments,
-                    ArgvToUse,
-                    CommandLine
                 );
             }
 
@@ -2598,10 +2860,6 @@ PerfectHashServerDispatchRequest(
         default:
             Result = E_INVALIDARG;
             break;
-    }
-
-    if (AdjustedArgvW && Allocator) {
-        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&AdjustedArgvW);
     }
 
     if (ArgvW && !ArgvWOwned) {

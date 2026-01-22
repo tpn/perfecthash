@@ -339,6 +339,21 @@ Return Value:
     Context->State.AsULong = 0;
     Context->Flags.AsULong = 0;
 
+    //
+    // Honor the TLS flag that requests IOCP-native contexts without
+    // threadpool initialization.
+    //
+
+    {
+        PPERFECT_HASH_TLS_CONTEXT TlsContext;
+
+        TlsContext = PerfectHashTlsGetContext();
+        if (TlsContext &&
+            TlsContext->Flags.CreateContextWithoutThreadpool) {
+            Context->Flags.SkipThreadpoolInitialization = TRUE;
+        }
+    }
+
     InitializeSRWLock(&Context->Lock);
 
     if (!InitializeCriticalSectionAndSpinCount(
@@ -475,6 +490,8 @@ Return Value:
     Context->MaximumConcurrency = MaximumConcurrency;
 
     ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+
+    if (!Context->Flags.SkipThreadpoolInitialization) {
 
 #ifdef PH_WINDOWS
 
@@ -738,6 +755,8 @@ Return Value:
     }
 
 #endif
+
+    }
 
     //
     // Initialize the timestamp string.
@@ -1982,6 +2001,11 @@ Return Value:
 
 #ifdef PH_WINDOWS
     if (!Context->MainThreadpool) {
+        if (Context->Flags.SkipThreadpoolInitialization) {
+            ReleasePerfectHashContextLockExclusive(Context);
+            return S_OK;
+        }
+
         ReleasePerfectHashContextLockExclusive(Context);
         return E_UNEXPECTED;
     }

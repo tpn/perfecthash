@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2025 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -975,6 +975,75 @@ PerfectHashContextIocpGetBaseOutputDirectory(
     return S_OK;
 }
 
+PERFECT_HASH_CONTEXT_IOCP_CREATE_TABLE_CONTEXT
+    PerfectHashContextIocpCreateTableContext;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextIocpCreateTableContext(
+    PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    PPERFECT_HASH_CONTEXT *ContextPointer
+    )
+/*++
+
+Routine Description:
+
+    Creates a PERFECT_HASH_CONTEXT instance suitable for IOCP-native
+    workflows.  The TLS flag CreateContextWithoutThreadpool is set for the
+    duration of the call to suppress threadpool initialization.
+
+Arguments:
+
+    ContextIocp - Supplies a pointer to the IOCP context.
+
+    ContextPointer - Receives the newly created PERFECT_HASH_CONTEXT instance.
+
+Return Value:
+
+    S_OK on success, otherwise an error code.
+
+--*/
+{
+    HRESULT Result;
+    BOOLEAN LocalTlsActive = FALSE;
+    PPERFECT_HASH_TLS_CONTEXT ActiveTls;
+    PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
+    PERFECT_HASH_TLS_CONTEXT_FLAGS SavedFlags = { 0 };
+
+    if (!ARGUMENT_PRESENT(ContextIocp)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(ContextPointer)) {
+        return E_POINTER;
+    }
+
+    *ContextPointer = NULL;
+
+    ActiveTls = PerfectHashTlsGetContext();
+    if (ActiveTls) {
+        SavedFlags = ActiveTls->Flags;
+        ActiveTls->Flags.CreateContextWithoutThreadpool = TRUE;
+    } else {
+        ActiveTls = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+        ActiveTls->Flags.CreateContextWithoutThreadpool = TRUE;
+        LocalTlsActive = TRUE;
+    }
+
+    Result = ContextIocp->Vtbl->CreateInstance(ContextIocp,
+                                               NULL,
+                                               &IID_PERFECT_HASH_CONTEXT,
+                                               ContextPointer);
+
+    if (LocalTlsActive) {
+        PerfectHashTlsClearContextIfActive(&LocalTlsContext);
+    } else if (ActiveTls) {
+        ActiveTls->Flags = SavedFlags;
+    }
+
+    return Result;
+}
+
 PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE PerfectHashContextIocpBulkCreate;
 PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVW PerfectHashContextIocpBulkCreateArgvW;
 PERFECT_HASH_CONTEXT_IOCP_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
@@ -1090,44 +1159,6 @@ PerfectHashContextIocpBulkCreateArgvW(
     );
 }
 
-_Use_decl_annotations_
-HRESULT
-PerfectHashContextIocpExtractBulkCreateArgsFromArgvW(
-    PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
-    ULONG NumberOfArguments,
-    LPWSTR *ArgvW,
-    LPWSTR CommandLineW,
-    PUNICODE_STRING KeysDirectory,
-    PUNICODE_STRING BaseOutputDirectory,
-    PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    PULONG MaximumConcurrency,
-    PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlags,
-    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    )
-{
-    UNREFERENCED_PARAMETER(ContextIocp);
-    UNREFERENCED_PARAMETER(NumberOfArguments);
-    UNREFERENCED_PARAMETER(ArgvW);
-    UNREFERENCED_PARAMETER(CommandLineW);
-    UNREFERENCED_PARAMETER(KeysDirectory);
-    UNREFERENCED_PARAMETER(BaseOutputDirectory);
-    UNREFERENCED_PARAMETER(AlgorithmId);
-    UNREFERENCED_PARAMETER(HashFunctionId);
-    UNREFERENCED_PARAMETER(MaskFunctionId);
-    UNREFERENCED_PARAMETER(MaximumConcurrency);
-    UNREFERENCED_PARAMETER(ContextBulkCreateFlags);
-    UNREFERENCED_PARAMETER(KeysLoadFlags);
-    UNREFERENCED_PARAMETER(TableCreateFlags);
-    UNREFERENCED_PARAMETER(TableCompileFlags);
-    UNREFERENCED_PARAMETER(TableCreateParameters);
-
-    return E_NOTIMPL;
-}
 
 _Use_decl_annotations_
 HRESULT
@@ -1178,44 +1209,6 @@ PerfectHashContextIocpTableCreateArgvW(
     );
 }
 
-_Use_decl_annotations_
-HRESULT
-PerfectHashContextIocpExtractTableCreateArgsFromArgvW(
-    PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
-    ULONG NumberOfArguments,
-    LPWSTR *ArgvW,
-    LPWSTR CommandLineW,
-    PUNICODE_STRING KeysPath,
-    PUNICODE_STRING BaseOutputDirectory,
-    PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    PULONG MaximumConcurrency,
-    PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags,
-    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    )
-{
-    UNREFERENCED_PARAMETER(ContextIocp);
-    UNREFERENCED_PARAMETER(NumberOfArguments);
-    UNREFERENCED_PARAMETER(ArgvW);
-    UNREFERENCED_PARAMETER(CommandLineW);
-    UNREFERENCED_PARAMETER(KeysPath);
-    UNREFERENCED_PARAMETER(BaseOutputDirectory);
-    UNREFERENCED_PARAMETER(AlgorithmId);
-    UNREFERENCED_PARAMETER(HashFunctionId);
-    UNREFERENCED_PARAMETER(MaskFunctionId);
-    UNREFERENCED_PARAMETER(MaximumConcurrency);
-    UNREFERENCED_PARAMETER(ContextTableCreateFlags);
-    UNREFERENCED_PARAMETER(KeysLoadFlags);
-    UNREFERENCED_PARAMETER(TableCreateFlags);
-    UNREFERENCED_PARAMETER(TableCompileFlags);
-    UNREFERENCED_PARAMETER(TableCreateParameters);
-
-    return E_NOTIMPL;
-}
 
 _Use_decl_annotations_
 HRESULT

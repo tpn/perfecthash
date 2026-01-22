@@ -58,3 +58,36 @@
 - Added a CHM01 async prepare-wait state for the try-larger-table-size path (still returns `PH_E_NOT_IMPLEMENTED` but now waits for prepare file work before closing).
 - Stress runs against `perfecthash-keys\\hard` still time out; observed repeated `SetEndOfFile`/`PerfectHashFileTruncate` failures (error 1224: mapped section open) and `PrepareFileChm01` failures during IOCP bulk runs.
 - Added a context flag to skip context-level file work for per-file IOCP contexts; CHM01 async prepare/save/close now bypass context file items and signal events directly to avoid `ERROR_USER_MAPPED_FILE` conflicts.
+- Added `CHM01_ASYNC_JOB_FLAG_SAVE_SUBMITTED` and gated `Chm01AsyncFinalizeClose()` on save completion; updated graph completion to use `Job->Context` and the IOCP pump to wait for `Outstanding == 0` before exiting.
+- IOCP stress runs still time out within the 120s tool limit, but bulk create AVs in `Chm01AsyncGraphStep` are no longer reproduced.
+- Added per-work-item `LastError` tracking in IOCP bulk logging (`PerfectHashServerBulkCreateFailures.log`) to capture `GetLastError()` at the point of failure.
+- Added focused two-file IOCP stress run directory (`build-win\\keys-test`) to isolate failures on `shell32-13803.keys`/`CoreUIComponents-7995.keys`.
+- `Mulshrolate4X` is not recognized by `PerfectHashClient` (invalid hash function ID); only `Mulshrolate4RX` exists in current hash table list.
+- IOCP bulk-create against the two-file `build-win\\keys-test` set with `Mulshrolate4RX` still hangs (client/server left running until manually terminated; no bulk failure log emitted).
+- Normal `PerfectHashBulkCreate.exe` run on the same two-file set with `Mulshrolate4RX` crashed with `0xC0000005` after `CoreUIComponents-7995.keys`; no crash dump/log emitted.
+- OG `PerfectHashBulkCreate.exe` run against `perfecthash-keys\\test1` (5 files) crashed with `0xC0000005` after `Hydrogen-43013.keys` even with an absolute output directory; `--DisableCsvOutputFile` did not prevent the crash; no crash dump/log emitted.
+
+## 2026-01-21
+- Created a clean `D:\\src\\perfecthash-main-clean` worktree at `origin/main` (7c83dc5a), built Debug `PerfectHashBulkCreateExe`, and ran `PerfectHashBulkCreate.exe` against `..\\perfecthash-keys\\test1` with `Chm01 Mulshrolate4RX And 4`; completed successfully with five output directories, indicating the crash is specific to `iocp-dev`.
+- Noted that `tests/CMakeLists.txt` includes a bulk CLI test that uses `--NoFileIo` and `MultiplyShiftR`, so it doesn't cover the current file-I/O crash scenario.
+- Clean rebuilt `build-win` after `PERFECT_HASH_CONTEXT` layout changes; `PerfectHashBulkCreate.exe` no longer AVs on `test1`, indicating a stale PCH/obj mismatch was responsible.
+- Added crash-dir env overrides (`PH_BULK_CREATE_CRASH_DIR`, `PH_SERVER_CRASH_DIR`) and server crash test env (`PH_SERVER_CRASH_TEST`), plus DbgHelp preloading and `MiniDumpIgnoreInaccessibleMemory`.
+- Reworked crash-test path to generate dumps without exception pointers (avoid `MiniDumpWriteDump` 998) and added `scripts/test-minidump.ps1`; Debug run now produces non-empty minidumps for bulk-create and server.
+- Added a `MiniDumpWriteDump` retry path that drops exception pointers on `ERROR_NOACCESS`, keeping real-crash logs while allowing dumps to be written.
+- Removed CHM01 async resize/try-larger-table logic (events, state transitions, and initial resize setup) to keep IOCP async solving focused on single-pass solve behavior.
+- IOCP bulk stress against `perfecthash-keys\\hard` (Debug) still times out in ~120s; server left running and only ~12/23 output dirs created, indicating completion/hang persists post-resize removal.
+- Attached `cdb` to `PerfectHashServer.exe` ~10s into a Debug IOCP bulk run and captured `~* kb` (`cdb-hard-backtrace.log`): main thread blocked in `PerfectHashServerWait`, IOCP worker threads blocked in `GetQueuedCompletionStatus` (33 waits on one IOCP handle, 24 on another), and ~1539 threads waiting in `ZwWaitForWorkViaWorkerFactory`, indicating no active IOCP completions at capture time and unexpected threadpool worker proliferation.
+- Added IOCP-native argument extraction helpers (`PerfectHashContextIocpArgs.c`) and wired into build files.
+- Added TLS flag plumbing for threadpool-less context creation and IOCP helper to create contexts with `CreateContextWithoutThreadpool` set.
+- Updated server bulk/table create to avoid legacy context parsing and use IOCP-native arg extraction.
+- Added IOCP table-create dispatch in server (context creation, file-work IOCP wiring, hook/RNG init, TLS context) and removed threadpool priority application.
+- Routed server BulkCreate requests through the bulk-create directory path to avoid legacy context invocation.
+- Clean rebuild (Debug) succeeded; IOCP stress on `perfecthash-keys\\hard` with `Mulshrolate4RX` and concurrency 32 timed out in ~330s; 23/23 output directories were created but the client hung waiting for completion, then was terminated.
+- Debugger run with cdb breakpoints (`cdb-server-bp5.log`, `cdb-client-bp5.log`) showed client hits `PerfectHashClientWaitForBulkCreateToken`/`WaitForSingleObject`, server hits `PerfectHashServerBulkCreateWorkItemCallback`, but `PerfectHashServerCompleteBulkRequest` never hit within 120s; only 9 work-item callbacks logged and 5/23 output dirs created before termination.
+- Debugger run against `perfecthash-keys\\test1` (5 files) showed `PerfectHashServerBulkCreateWorkItemCallback` hit 3 times, `PerfectHashServerCompleteBulkRequest` never hit, and only 1 output dir created (`cdb-server-bp-test1.log`, `cdb-client-bp-test1.log`).
+- Repeated test1 run with server `--MaxConcurrency=1` showed only 1 work-item callback hit, no bulk completion, and 1 output dir created (`cdb-server-bp-test1-1.log`, `cdb-client-bp-test1-1.log`).
+- Added cdb request-state logging using struct offsets from `cdb-types.log`. On test1, `PerfectHashServerEnqueueBulkRequest` hit once, and three work-item callbacks logged `TotalWorkItems=5` with `OutstandingWorkItems` at 2/4/6 and `DispatchComplete=0` at callback entry. `PerfectHashServerCompleteBulkRequest` never hit and only 1 output dir was created (`cdb-server-bp-test1-B.log`, `cdb-client-bp-test1-B.log`).
+- `--NoFileIo` test (test1) under cdb: enqueue hit once, two work-item callbacks observed, no bulk completion hit, and no output directories created (`cdb-server-bp-test1-nofile.log`, `cdb-client-bp-test1-nofile.log`).
+- Diagnosed `TpIsTimerSet` invalid-parameter crash in IOCP worker threads to `SubmitThreadpoolWork(Context->FinishedWork)` from `GraphSolve`; guarded finished-work submissions in `Graph.c`/`GraphCu.c` when threadpool init is skipped.
+- Rebuilt Debug and reran IOCP bulk create on `perfecthash-keys\\test1` under cdb with breakpoints on `Chm01AsyncGraphComplete` and `PerfectHashServerCompleteBulkRequest`; graph completion fired repeatedly, bulk completion callback fired once, and all five output directories were created (`cdb-server-graphcomplete.log`).
+- Re-ran IOCP bulk create on `perfecthash-keys\\test1` without cdb (`PERFECT_HASH_IOCP_ASYNC_CHM01=1`); completed successfully and emitted all five output directories (`build-win\\iocp-stress-test1-nocdb`).

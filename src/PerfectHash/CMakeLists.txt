@@ -208,6 +208,7 @@ set(Source_Files
     "PerfectHashAllocator.c"
     "PerfectHashContext.c"
     "PerfectHashContextIocp.c"
+    "PerfectHashContextIocpArgs.c"
     "PerfectHashContextTableCreate.c"
     "PerfectHashClient.c"
     "PerfectHashKeys.c"

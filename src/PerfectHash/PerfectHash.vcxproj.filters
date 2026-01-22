@@ -64,6 +64,9 @@
     <ClCompile Include="PerfectHashContextIocp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashContextIocpArgs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashAsync.c">
       <Filter>Source Files</Filter>
     </ClCompile>

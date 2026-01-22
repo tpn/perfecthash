@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2025 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -268,9 +268,10 @@ PerfectHashClientWaitForBulkCreateToken(
 
     if (ARGUMENT_PRESENT(BulkResult)) {
         *BulkResult = *Mapping;
+        Result = S_OK;
+    } else {
+        Result = Mapping->Result;
     }
-
-    Result = Mapping->Result;
 
 End:
 
@@ -395,6 +396,14 @@ mainCRTStartup(
 
             Result = BulkResult.Result;
             if (FAILED(Result)) {
+                if (BulkResult.TotalFiles || BulkResult.FailedFiles) {
+                    wprintf(L"Bulk result: total=%lu succeeded=%lu failed=%lu "
+                            L"first=0x%08lX\n",
+                            BulkResult.TotalFiles,
+                            BulkResult.SucceededFiles,
+                            BulkResult.FailedFiles,
+                            (ULONG)BulkResult.FirstFailure);
+                }
                 if (PerfectHashPrintError != NULL) {
                     PH_ERROR(BulkCreateDirectory, Result);
                 }

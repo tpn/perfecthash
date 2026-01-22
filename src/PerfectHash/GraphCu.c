@@ -967,7 +967,9 @@ Return Value:
     if (Result != S_OK) {
         CONTEXT_END_TIMERS(Solve);
         SetStopSolving(Context);
-        SubmitThreadpoolWork(Context->FinishedWork);
+        if (!SkipThreadpoolInitialization(Context)) {
+            SubmitThreadpoolWork(Context->FinishedWork);
+        }
         return Result;
     }
 

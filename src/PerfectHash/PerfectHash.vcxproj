@@ -254,6 +254,7 @@
     <ClCompile Include="PerfectHashErrorHandling.c" />
     <ClCompile Include="PerfectHashContext.c" />
     <ClCompile Include="PerfectHashContextIocp.c" />
+    <ClCompile Include="PerfectHashContextIocpArgs.c" />
     <ClCompile Include="PerfectHashAsync.c" />
     <ClCompile Include="PerfectHashClient.c" />
     <ClCompile Include="PerfectHashFile.c" />

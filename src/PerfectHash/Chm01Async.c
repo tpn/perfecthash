@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2025 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -24,9 +24,9 @@ Abstract:
 // Async job flags.
 //
 
-#define CHM01_ASYNC_JOB_FLAG_CLOSE_DELETES_FILES 0x00000001
-#define CHM01_ASYNC_JOB_FLAG_CLOSE_SUBMITTED    0x00000002
-#define CHM01_ASYNC_JOB_FLAG_TRY_LARGER_TABLE_SIZE 0x00000004
+#define CHM01_ASYNC_JOB_FLAG_CLOSE_DELETES_FILES   0x00000001
+#define CHM01_ASYNC_JOB_FLAG_CLOSE_SUBMITTED       0x00000002
+#define CHM01_ASYNC_JOB_FLAG_SAVE_SUBMITTED        0x00000008
 
 typedef struct _CHM01_ASYNC_GRAPH_WORK {
     PERFECT_HASH_ASYNC_WORK Work;
@@ -88,12 +88,6 @@ Chm01AsyncPollSolveEvents(
 
 static
 HRESULT
-Chm01AsyncFinalizeWaitPrepare(
-    _In_ PCHM01_ASYNC_JOB Job
-    );
-
-static
-HRESULT
 Chm01AsyncFinalizeVerify(
     _In_ PCHM01_ASYNC_JOB Job
     );
@@ -146,7 +140,7 @@ Chm01AsyncGraphStep(
 
     GraphWork = CONTAINING_RECORD(Work, CHM01_ASYNC_GRAPH_WORK, Work);
     Graph = GraphWork->Graph;
-    Context = Graph->Context;
+    Context = GraphWork->Job->Context;
 
     if (!GraphWork->Started) {
         GraphWork->Started = TRUE;
@@ -263,7 +257,6 @@ Chm01AsyncGraphComplete(
 {
     PGRAPH Graph;
     PHANDLE Event;
-    ULONG WaitResult;
     PPERFECT_HASH_CONTEXT Context;
     PCHM01_ASYNC_JOB Job;
     PCHM01_ASYNC_GRAPH_WORK GraphWork;
@@ -273,25 +266,22 @@ Chm01AsyncGraphComplete(
     GraphWork = CONTAINING_RECORD(Work, CHM01_ASYNC_GRAPH_WORK, Work);
     Job = GraphWork->Job;
     Graph = GraphWork->Graph;
-    Context = Graph->Context;
+    Context = Job->Context;
 
     if (GraphWork->Started) {
         InterlockedDecrement(&Context->ActiveSolvingLoops);
     }
 
     if (InterlockedDecrement(&Context->RemainingSolverLoops) == 0) {
-        WaitResult = WaitForSingleObject(Context->TryLargerTableSizeEvent, 0);
-        if (WaitResult != WAIT_OBJECT_0) {
-            if (Context->FinishedCount == 0) {
-                Event = &Context->FailedEvent;
-            } else {
-                Event = &Context->SucceededEvent;
-            }
-            if (!SetEvent(*Event)) {
-                SYS_ERROR(SetEvent);
-            }
-            SetStopSolving(Context);
+        if (Context->FinishedCount == 0) {
+            Event = &Context->FailedEvent;
+        } else {
+            Event = &Context->SucceededEvent;
         }
+        if (!SetEvent(*Event)) {
+            SYS_ERROR(SetEvent);
+        }
+        SetStopSolving(Context);
     }
 
     if (InterlockedDecrement(&Job->ActiveGraphs) == 0) {
@@ -409,10 +399,7 @@ Chm01AsyncInitializeJob(
     PCHM01_ASYNC_JOB Job
     )
 {
-    PRTL Rtl;
     USHORT Index;
-    DOUBLE Limit;
-    DOUBLE Current;
     HRESULT Result;
     BOOLEAN LimitConcurrency;
     ULONG Concurrency;
@@ -434,7 +421,6 @@ Chm01AsyncInitializeJob(
 
     Table = Job->Table;
     Context = Table->Context;
-    Rtl = Table->Rtl;
     Allocator = Table->Allocator;
     TableCreateFlags.AsULongLong = Table->TableCreateFlags.AsULongLong;
 
@@ -446,8 +432,7 @@ Chm01AsyncInitializeJob(
     Job->Events[1] = Context->CompletedEvent;
     Job->Events[2] = Context->ShutdownEvent;
     Job->Events[3] = Context->FailedEvent;
-    Job->Events[4] = Context->TryLargerTableSizeEvent;
-    Job->Events[5] = Context->LowMemoryEvent;
+    Job->Events[4] = Context->LowMemoryEvent;
 
     {
         PHANDLE SaveEvent = Job->SaveEvents;
@@ -519,59 +504,8 @@ Chm01AsyncInitializeJob(
 
     Job->NumberOfGraphs = NumberOfGraphs;
 
-    if (WantsAutoResizeIfKeysToEdgesRatioExceedsLimit(Table)) {
-        Limit = Table->AutoResizeWhenKeysToEdgesRatioExceeds;
-        Current = Table->Keys->KeysToEdgesRatio;
-        if (Current > Limit) {
-            Context->InitialResizes = 1;
-        }
-    }
-
-    if (Context->InitialResizes > 0) {
-        ULONG InitialResizes;
-        ULARGE_INTEGER NumberOfEdges;
-        ULARGE_INTEGER NumberOfVertices;
-
-        NumberOfEdges.QuadPart = Table->Keys->NumberOfKeys.QuadPart;
-        ASSERT(NumberOfEdges.HighPart == 0);
-
-        NumberOfEdges.QuadPart = (
-            Rtl->RoundUpPowerOfTwo32(
-                NumberOfEdges.LowPart
-            )
-        );
-
-        if (NumberOfEdges.QuadPart < 8) {
-            NumberOfEdges.QuadPart = 8;
-        }
-
-        if (NumberOfEdges.HighPart) {
-            Result = PH_E_TOO_MANY_EDGES;
-            goto Error;
-        }
-
-        NumberOfVertices.QuadPart = (
-            Rtl->RoundUpNextPowerOfTwo32(NumberOfEdges.LowPart)
-        );
-
-        Table->RequestedNumberOfTableElements.QuadPart = (
-            NumberOfVertices.QuadPart
-        );
-
-        for (InitialResizes = Context->InitialResizes;
-             InitialResizes > 0;
-             InitialResizes--) {
-
-            Table->RequestedNumberOfTableElements.QuadPart <<= 1ULL;
-
-            if (Table->RequestedNumberOfTableElements.HighPart) {
-                Result = PH_I_REQUESTED_NUMBER_OF_TABLE_ELEMENTS_TOO_LARGE;
-                goto Error;
-            }
-        }
-
-        Context->NumberOfTableResizeEvents = Context->InitialResizes;
-    }
+    Context->InitialResizes = 0;
+    Context->NumberOfTableResizeEvents = 0;
 
     Result = PrepareGraphInfoChm01(Table, &Job->GraphInfo, NULL);
     if (FAILED(Result)) {
@@ -687,7 +621,6 @@ Chm01AsyncInitializeJob(
     Context->State.SolveTimeoutExpired = FALSE;
     Context->State.FixedAttemptsReached = FALSE;
     Context->State.MaxAttemptsReached = FALSE;
-    Context->State.UserRequestedResize = FALSE;
     ClearStopSolving(Context);
 
     Job->Attempt = 1;
@@ -717,7 +650,7 @@ Chm01AsyncInitializeJob(
     // Configure solve timeout if requested.
     //
 
-    if (Table->MaxSolveTimeInSeconds > 0) {
+    if (Table->MaxSolveTimeInSeconds > 0 && Context->SolveTimeout) {
         SetThreadpoolTimer(Context->SolveTimeout,
                            &Table->RelativeMaxSolveTimeInFiletime.AsFileTime,
                            0,
@@ -817,7 +750,6 @@ Chm01AsyncPollSolveEvents(
     )
 {
     ULONG WaitResult;
-    BOOLEAN TryLargerTableSize;
     PPERFECT_HASH_CONTEXT Context;
 
     Context = Job->Context;
@@ -837,84 +769,12 @@ Chm01AsyncPollSolveEvents(
         return PH_E_CTRL_C_PRESSED;
     }
 
-    if (WaitResult == WAIT_OBJECT_0 + 5) {
+    if (WaitResult == WAIT_OBJECT_0 + 4) {
         InterlockedIncrement(&Context->LowMemoryObserved);
         return PH_I_LOW_MEMORY;
     }
 
-    TryLargerTableSize = (
-        WaitResult == WAIT_OBJECT_0 + 4 || (
-            WaitForSingleObject(Context->TryLargerTableSizeEvent, 0) ==
-            WAIT_OBJECT_0
-        )
-    );
-
-    if (TryLargerTableSize) {
-        Job->Flags |= CHM01_ASYNC_JOB_FLAG_TRY_LARGER_TABLE_SIZE;
-        Job->LastResult = PH_E_NOT_IMPLEMENTED;
-        return S_OK;
-    }
-
     return S_OK;
-}
-
-_Use_decl_annotations_
-static
-HRESULT
-Chm01AsyncFinalizeWaitPrepare(
-    PCHM01_ASYNC_JOB Job
-    )
-{
-    HRESULT Result;
-    ULONG WaitResult;
-
-    WaitResult = WaitForMultipleObjects(ARRAYSIZE(Job->PrepareEvents),
-                                        Job->PrepareEvents,
-                                        TRUE,
-                                        0);
-
-    if (WaitResult == WAIT_TIMEOUT) {
-        return S_FALSE;
-    }
-
-    if (WaitResult != WAIT_OBJECT_0) {
-        SYS_ERROR(WaitForMultipleObjects);
-        return PH_E_SYSTEM_CALL_FAILED;
-    }
-
-    Result = S_OK;
-
-#undef EXPAND_AS_CHECK_ERRORS
-#define EXPAND_AS_CHECK_ERRORS(                                      \
-    Verb, VUpper, Name, Upper,                                       \
-    EofType, EofValue,                                               \
-    Suffix, Extension, Stream, Base                                  \
-)                                                                    \
-    if (Job->Verb##Name.NumberOfErrors > 0) {                        \
-        Result = Job->Verb##Name.LastResult;                         \
-        if (Result == S_OK || Result == E_UNEXPECTED) {              \
-            Result = PH_E_ERROR_DURING_##VUpper##_##Upper;           \
-        }                                                            \
-        PH_ERROR(                                                    \
-            CreatePerfectHashTableImplChm01_ErrorDuring##Verb##Name, \
-            Result                                                   \
-        );                                                           \
-        goto Error;                                                  \
-    }
-
-    PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CHECK_ERRORS)
-
-#undef EXPAND_AS_CHECK_ERRORS
-
-    return S_OK;
-
-Error:
-
-    if (Result == S_OK) {
-        Result = E_UNEXPECTED;
-    }
-
-    return Result;
 }
 
 _Use_decl_annotations_
@@ -1092,6 +952,7 @@ Chm01AsyncFinalizeVerify(
 
 #undef SUBMIT_SAVE_FILE_WORK
 #undef EXPAND_AS_SUBMIT_FILE_WORK
+        Job->Flags |= CHM01_ASYNC_JOB_FLAG_SAVE_SUBMITTED;
 
     } else {
 
@@ -1274,6 +1135,20 @@ Chm01AsyncFinalizeClose(
         WaitResult = WaitForSingleObject(Job->GraphsCompleteEvent, 0);
         if (WaitResult != WAIT_OBJECT_0) {
             return S_FALSE;
+        }
+    }
+
+    if (Job->Flags & CHM01_ASYNC_JOB_FLAG_SAVE_SUBMITTED) {
+        WaitResult = WaitForMultipleObjects(ARRAYSIZE(Job->SaveEvents),
+                                            Job->SaveEvents,
+                                            TRUE,
+                                            0);
+        if (WaitResult == WAIT_TIMEOUT) {
+            return S_FALSE;
+        }
+        if (WaitResult != WAIT_OBJECT_0) {
+            SYS_ERROR(WaitForMultipleObjects);
+            return PH_E_SYSTEM_CALL_FAILED;
         }
     }
 
@@ -1464,26 +1339,7 @@ Chm01AsyncStep(
                 Job->State = Chm01AsyncStateFinalizeClose;
                 return S_FALSE;
             }
-            if (Job->Flags & CHM01_ASYNC_JOB_FLAG_TRY_LARGER_TABLE_SIZE) {
-                Job->Flags |= CHM01_ASYNC_JOB_FLAG_CLOSE_DELETES_FILES;
-                Job->State = Chm01AsyncStateFinalizeWaitPrepare;
-            } else {
-                Job->State = Chm01AsyncStateFinalizeVerify;
-            }
-            return S_FALSE;
-
-        case Chm01AsyncStateFinalizeWaitPrepare:
-            Result = Chm01AsyncFinalizeWaitPrepare(Job);
-            if (Result == S_FALSE) {
-                return S_FALSE;
-            }
-            if (FAILED(Result)) {
-                Job->LastResult = Result;
-                Job->Flags |= CHM01_ASYNC_JOB_FLAG_CLOSE_DELETES_FILES;
-                Job->State = Chm01AsyncStateFinalizeClose;
-                return S_FALSE;
-            }
-            Job->State = Chm01AsyncStateFinalizeClose;
+            Job->State = Chm01AsyncStateFinalizeVerify;
             return S_FALSE;
 
         case Chm01AsyncStateFinalizeVerify:
@@ -1693,7 +1549,9 @@ Chm01AsyncPumpIoCompletionPort(
 
     for (;;) {
         if (WaitForSingleObject(Job->CompletionEvent, 0) == WAIT_OBJECT_0) {
-            break;
+            if (Job->Async.Outstanding == 0) {
+                break;
+            }
         }
 
         Success = GetQueuedCompletionStatus(IoCompletionPort,
