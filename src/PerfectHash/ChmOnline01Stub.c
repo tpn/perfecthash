@@ -167,8 +167,18 @@ PerfectHashTableCompileJit(
     PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
     )
 {
-    if (!ARGUMENT_PRESENT(CompileFlags) ||
-        !CompileFlags->JitBackendLlvm) {
+    if (!ARGUMENT_PRESENT(CompileFlags)) {
+        UNREFERENCED_PARAMETER(Table);
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+#if defined(PH_HAS_RAWDOG_JIT)
+    if (CompileFlags->JitBackendRawDog) {
+        return PerfectHashTableCompileJitRawDog(Table, CompileFlags);
+    }
+#endif
+
+    if (!CompileFlags->JitBackendLlvm) {
         UNREFERENCED_PARAMETER(Table);
         return PH_E_NOT_IMPLEMENTED;
     }
@@ -196,6 +206,13 @@ PerfectHashTableJitRundown(
     if (!ARGUMENT_PRESENT(Table) || !ARGUMENT_PRESENT(Table->Jit)) {
         return;
     }
+
+#if defined(PH_HAS_RAWDOG_JIT)
+    if (Table->Jit->Flags.BackendRawDog) {
+        PerfectHashTableJitRundownRawDog(Table);
+        return;
+    }
+#endif
 
     if (FAILED(EnsurePerfectHashLLVMLoaded())) {
         return;

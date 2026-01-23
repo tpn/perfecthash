@@ -32,6 +32,10 @@ set_target_properties(perfecthash_unit_tests PROPERTIES
     CXX_STANDARD_REQUIRED YES
 )
 
+if(PERFECTHASH_HAS_RAWDOG_JIT)
+    target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
+endif()
+
 add_executable(perfecthash_benchmarks
     PerfectHashBenchmarks.cpp
 )
@@ -47,6 +51,10 @@ set_target_properties(perfecthash_benchmarks PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED YES
 )
+
+if(PERFECTHASH_HAS_RAWDOG_JIT)
+    target_compile_definitions(perfecthash_benchmarks PRIVATE PH_HAS_RAWDOG_JIT)
+endif()
 
 include(GoogleTest)
 gtest_discover_tests(perfecthash_unit_tests

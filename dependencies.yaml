@@ -141,6 +141,7 @@ dependencies:
             packages:
               - make
               - pkg-config
+              - nasm
           - matrix:
               os: macos
             packages:

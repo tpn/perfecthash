@@ -101,6 +101,18 @@ typedef union _PERFECT_HASH_TABLE_JIT_FLAGS {
         ULONG Valid:1;
 
         //
+        // When set, indicates the LLVM backend was used for JIT compilation.
+        //
+
+        ULONG BackendLlvm:1;
+
+        //
+        // When set, indicates the RawDog backend was used for JIT compilation.
+        //
+
+        ULONG BackendRawDog:1;
+
+        //
         // When set, indicates the Index32() routine has been compiled.
         //
 
@@ -206,7 +218,7 @@ typedef union _PERFECT_HASH_TABLE_JIT_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:14;
+        ULONG Unused:12;
     };
 
     LONG AsLong;

@@ -2706,6 +2706,7 @@ PerfectHashTableCompileJit(
         return Result;
     }
 
+    Jit->Flags.BackendLlvm = TRUE;
     Jit->Flags.Valid = TRUE;
     Table->Flags.JitEnabled = TRUE;
     Table->Vtbl->Index = PerfectHashTableIndexJit;

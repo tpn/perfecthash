@@ -1,5 +1,9 @@
 set(target PerfectHash)
 
+if(NOT DEFINED PERFECTHASH_HAS_RAWDOG_JIT)
+    set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability")
+endif()
+
 # ###############################################################################
 # Source groups
 # ###############################################################################
@@ -338,6 +342,58 @@ if(PERFECTHASH_IS_LINUX)
 
     list(APPEND Source_Files "${PERFECTHASH_MESSAGE_TABLE_C}")
     list(APPEND Private_Header_Files "${PERFECTHASH_MESSAGE_TABLE_H}")
+
+    if(PERFECTHASH_ARCH_X86_64)
+        find_program(PERFECTHASH_NASM_EXECUTABLE nasm)
+        find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
+        if(NOT PERFECTHASH_OBJCOPY_EXECUTABLE)
+            find_program(PERFECTHASH_OBJCOPY_EXECUTABLE objcopy)
+        endif()
+
+        if(PERFECTHASH_NASM_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
+            set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
+
+            set(RAWDOG_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.nasm"
+            )
+            set(RAWDOG_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.o"
+            )
+            set(RAWDOG_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.bin"
+            )
+            set(RAWDOG_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR_x64.h"
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_OBJ}"
+                        "${RAWDOG_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_BIN}
+                        "${RAWDOG_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_BIN}"
+                        --output "${RAWDOG_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftR_x64
+                DEPENDS
+                    "${RAWDOG_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR..."
+                VERBATIM
+            )
+
+            list(APPEND Private_Header_Files "${RAWDOG_HDR}")
+            list(APPEND Source_Files "ChmOnline01RawDog.c")
+        else()
+            message(WARNING "RawDog JIT disabled (missing nasm/objcopy).")
+            set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
+        endif()
+    endif()
 endif()
 
 source_group("Source Files" FILES ${Source_Files})
@@ -438,6 +494,14 @@ target_compile_definitions(
     "PH_USE_LLVMLIB"
 )
 
+if(PERFECTHASH_HAS_RAWDOG_JIT)
+    target_compile_definitions(
+        ${target}
+        PRIVATE
+        "PH_HAS_RAWDOG_JIT"
+    )
+endif()
+
 # ###############################################################################
 # Compile and link options
 # ###############################################################################
@@ -532,6 +596,13 @@ foreach(ph_online_target ${online_target} ${online_static_target})
         "PH_ONLINE_ONLY"
         "PH_USE_LLVMLIB"
     )
+    if(PERFECTHASH_HAS_RAWDOG_JIT)
+        target_compile_definitions(
+            ${ph_online_target}
+            PRIVATE
+            "PH_HAS_RAWDOG_JIT"
+        )
+    endif()
 endforeach()
 
 foreach(ph_online_target ${online_core_target} ${online_core_static_target})

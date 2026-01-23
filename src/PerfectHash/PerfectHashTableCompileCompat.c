@@ -86,7 +86,8 @@ Return Value:
     }
 
     if (TableCompileFlags.Jit) {
-        if (!TableCompileFlags.JitBackendLlvm) {
+        if (!TableCompileFlags.JitBackendLlvm &&
+            !TableCompileFlags.JitBackendRawDog) {
             TableCompileFlags.JitBackendLlvm = TRUE;
         }
         Result = PerfectHashTableCompileJit(Table, &TableCompileFlags);

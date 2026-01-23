@@ -36,6 +36,10 @@ typedef PERFECT_HASH_TABLE_JIT_RUNDOWN *PPERFECT_HASH_TABLE_JIT_RUNDOWN;
 #ifndef __INTELLISENSE__
 extern PERFECT_HASH_TABLE_COMPILE_JIT PerfectHashTableCompileJit;
 extern PERFECT_HASH_TABLE_JIT_RUNDOWN PerfectHashTableJitRundown;
+#if defined(PH_HAS_RAWDOG_JIT)
+extern PERFECT_HASH_TABLE_COMPILE_JIT PerfectHashTableCompileJitRawDog;
+extern PERFECT_HASH_TABLE_JIT_RUNDOWN PerfectHashTableJitRundownRawDog;
+#endif
 #endif
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

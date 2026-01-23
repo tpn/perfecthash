@@ -3539,6 +3539,13 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG JitBackendLlvm:1;
 
         //
+        // When set, indicates the RawDog backend should be used for JIT
+        // compilation.
+        //
+
+        ULONG JitBackendRawDog:1;
+
+        //
         // When set, compiles the Index64() routine (keys must have been
         // downsized from 64-bit to 32-bit for this to be valid).
         //
@@ -3597,7 +3604,7 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:18;
+        ULONG Unused:17;
     };
 
     LONG AsLong;
@@ -3617,6 +3624,11 @@ IsValidTableCompileFlags(
     }
 
     if (CompileFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    if (CompileFlags->JitBackendLlvm &&
+        CompileFlags->JitBackendRawDog) {
         return E_FAIL;
     }
 
@@ -4732,6 +4744,8 @@ typedef PERFECT_HASH_TABLE_VTBL *PPERFECT_HASH_TABLE_VTBL;
 typedef union _PERFECT_HASH_TABLE_JIT_INFO_FLAGS {
     struct _Struct_size_bytes_(sizeof(ULONG)) {
         ULONG Valid:1;
+        ULONG BackendLlvm:1;
+        ULONG BackendRawDog:1;
         ULONG Index32Compiled:1;
         ULONG Index64Compiled:1;
         ULONG Index32x2Compiled:1;
@@ -4749,7 +4763,7 @@ typedef union _PERFECT_HASH_TABLE_JIT_INFO_FLAGS {
         ULONG Index64x4Vector:1;
         ULONG Index64x8Vector:1;
         ULONG Index32x16Vector:1;
-        ULONG Unused:14;
+        ULONG Unused:12;
     };
 
     LONG AsLong;

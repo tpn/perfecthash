@@ -203,6 +203,62 @@ TEST_F(PerfectHashOnlineTests, CreateTableFromUnsortedKeysReturnsUniqueIndexes) 
   shim->Vtbl->Release(table);
 }
 
+#if defined(PH_HAS_RAWDOG_JIT)
+TEST_F(PerfectHashOnlineTests, RawDogJitIndexMatchesSlowIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  ASSERT_GE(result, 0);
+
+  for (ULONG key : keys) {
+    ULONG slowIndex = 0;
+    ULONG jitIndex = 0;
+
+    result = shim->Vtbl->SlowIndex(table, key, &slowIndex);
+    ASSERT_GE(result, 0);
+
+    result = shim->Vtbl->Index(table, key, &jitIndex);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(slowIndex, jitIndex);
+  }
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  PERFECT_HASH_TABLE_JIT_INFO info = {0};
+  result = jitInterface->Vtbl->GetInfo(jitInterface, &info);
+  ASSERT_GE(result, 0);
+  EXPECT_TRUE(info.Flags.BackendRawDog);
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+#endif
+
 #if defined(PH_HAS_LLVM)
 TEST_F(PerfectHashOnlineTests, JitIndexMatchesSlowIndex) {
   const std::vector<ULONG> keys = {

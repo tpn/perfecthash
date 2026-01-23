@@ -316,6 +316,7 @@ TryExtractArgTableCompileFlags(
 {
     PCUNICODE_STRING Arg = Argument;
     DECL_ARG(Jit);
+    DECL_ARG(JitRawDog);
     DECL_ARG(JitIndex64);
     DECL_ARG(JitIndex32x2);
     DECL_ARG(JitIndex32x4);
@@ -343,6 +344,12 @@ TryExtractArgTableCompileFlags(
 
     if (IS_EQUAL(Jit)) {
         Flags->Jit = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitRawDog)) {
+        Flags->Jit = TRUE;
+        Flags->JitBackendRawDog = TRUE;
         return S_OK;
     }
 
