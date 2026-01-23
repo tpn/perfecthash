@@ -47,6 +47,15 @@ if(PERFECTHASH_ENABLE_INSTALL)
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
 
+    if(TARGET PerfectHashLLVM)
+        install(
+            TARGETS PerfectHashLLVM
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        )
+    endif()
+
     if(PERFECTHASH_HAS_CUDA)
         install(
             TARGETS PerfectHashCuda

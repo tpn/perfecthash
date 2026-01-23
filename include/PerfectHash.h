@@ -3532,6 +3532,13 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG Jit:1;
 
         //
+        // When set, indicates the LLVM backend should be used for JIT
+        // compilation.
+        //
+
+        ULONG JitBackendLlvm:1;
+
+        //
         // When set, compiles the Index64() routine (keys must have been
         // downsized from 64-bit to 32-bit for this to be valid).
         //
@@ -3590,7 +3597,7 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:19;
+        ULONG Unused:18;
     };
 
     LONG AsLong;

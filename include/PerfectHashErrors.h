@@ -5165,3 +5165,12 @@ Abstract:
 //
 #define PH_E_ERROR_DURING_CLOSE_RUST_BENCH_FILE ((HRESULT)0xE004041BL)
 
+//
+// MessageId: PH_E_LLVM_BACKEND_NOT_FOUND
+//
+// MessageText:
+//
+// LLVM JIT backend library not found.
+//
+#define PH_E_LLVM_BACKEND_NOT_FOUND       ((HRESULT)0xE004041CL)
+

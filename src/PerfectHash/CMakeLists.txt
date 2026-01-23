@@ -140,7 +140,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 
 set(Source_Files
     "BitManipulation.c"
-    "ChmOnline01.c"
+    "ChmOnline01Stub.c"
     "Chm01Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"
@@ -360,7 +360,6 @@ list(APPEND ONLINE_SOURCE_FILES "PerfectHashContextCreateStub.c")
 
 set(ONLINE_CORE_SOURCE_FILES ${ONLINE_SOURCE_FILES})
 list(FILTER ONLINE_CORE_SOURCE_FILES EXCLUDE REGEX "ChmOnline01\\.c$")
-list(APPEND ONLINE_CORE_SOURCE_FILES "ChmOnline01Stub.c")
 
 set(ONLINE_ALL_FILES
     ${Private_Header_Files}
@@ -375,6 +374,13 @@ set(ONLINE_CORE_ALL_FILES
     ${Public_Header_Files}
     ${ONLINE_CORE_SOURCE_FILES}
 )
+
+set(LLVM_SOURCE_FILES
+    "ChmOnline01.c"
+)
+if(WIN32)
+    list(APPEND LLVM_SOURCE_FILES "PerfectHashLLVM.def")
+endif()
 
 if(PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_X86_64)
     set_source_files_properties(
@@ -429,6 +435,7 @@ target_compile_definitions(
     ${target}
     PRIVATE
     "_PERFECT_HASH_INTERNAL_BUILD"
+    "PH_USE_LLVMLIB"
 )
 
 # ###############################################################################
@@ -444,41 +451,6 @@ if(PERFECTHASH_ENABLE_PENTER)
     target_link_libraries(${target} PUBLIC FunctionHook)
 endif()
 
-if(PERFECTHASH_HAS_LLVM)
-    target_include_directories(${target} SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
-    if(LLVM_DEFINITIONS)
-        separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-        target_compile_options(${target} PRIVATE ${LLVM_DEFINITIONS_LIST})
-    endif()
-    if(MSVC)
-        find_library(LLVM_C_LIB NAMES LLVM-C)
-    endif()
-    if(MSVC AND LLVM_C_LIB)
-        target_link_libraries(${target} PRIVATE ${LLVM_C_LIB})
-    else()
-        llvm_map_components_to_libnames(
-            LLVM_LIBS
-            core
-            executionengine
-            mcjit
-            native
-            target
-            support
-        )
-        target_link_libraries(${target} PRIVATE ${LLVM_LIBS})
-        if(MSVC)
-            target_link_libraries(
-                ${target}
-                PRIVATE
-                $<$<CONFIG:Debug>:msvcprtd>
-                $<$<NOT:$<CONFIG:Debug>>:msvcprt>
-                $<$<CONFIG:Debug>:msvcrtd>
-                $<$<NOT:$<CONFIG:Debug>>:msvcrt>
-                oldnames
-            )
-        endif()
-    endif()
-endif()
 
 if(TARGET PerfectHashAsm)
     add_dependencies(${target} PerfectHashAsm)
@@ -521,12 +493,21 @@ set_target_properties(
     OUTPUT_NAME PerfectHashOnlineCore
 )
 
+set(llvm_target PerfectHashLLVM)
+
+if(PERFECTHASH_HAS_LLVM)
+    add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
+endif()
+
 # Generated Linux message table header lives in the build directory.
 if(PERFECTHASH_IS_LINUX)
     target_include_directories(${online_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(${online_static_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(${online_core_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(${online_core_static_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    if(TARGET ${llvm_target})
+        target_include_directories(${llvm_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
 endif()
 
 set_property(TARGET ${online_target} PROPERTY PERFECTHASH_SKIP_RUNTIME_LIBS TRUE)
@@ -538,12 +519,18 @@ perfecthash_apply_common_settings(${online_static_target})
 perfecthash_apply_common_settings(${online_core_target})
 perfecthash_apply_common_settings(${online_core_static_target})
 
+if(TARGET ${llvm_target})
+    set_property(TARGET ${llvm_target} PROPERTY PERFECTHASH_SKIP_RUNTIME_LIBS TRUE)
+    perfecthash_apply_common_settings(${llvm_target})
+endif()
+
 foreach(ph_online_target ${online_target} ${online_static_target})
     target_compile_definitions(
         ${ph_online_target}
         PRIVATE
         "_PERFECT_HASH_INTERNAL_BUILD"
         "PH_ONLINE_ONLY"
+        "PH_USE_LLVMLIB"
     )
 endforeach()
 
@@ -556,6 +543,14 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
         "PH_ONLINE_CORE_ONLY"
     )
 endforeach()
+
+if(TARGET ${llvm_target})
+    target_compile_definitions(
+        ${llvm_target}
+        PRIVATE
+        "_PERFECT_HASH_INTERNAL_BUILD"
+    )
+endif()
 
 if(MSVC)
     foreach(ph_online_target ${online_static_target} ${online_core_static_target})
@@ -585,55 +580,6 @@ foreach(ph_online_target ${online_target} ${online_static_target})
         target_link_libraries(${ph_online_target} PUBLIC FunctionHook)
     endif()
 
-    if(PERFECTHASH_HAS_LLVM)
-        target_include_directories(
-            ${ph_online_target}
-            SYSTEM
-            PRIVATE
-            ${LLVM_INCLUDE_DIRS}
-        )
-        if(LLVM_DEFINITIONS)
-            separate_arguments(
-                LLVM_DEFINITIONS_LIST
-                NATIVE_COMMAND
-                ${LLVM_DEFINITIONS}
-            )
-            target_compile_options(
-                ${ph_online_target}
-                PRIVATE
-                ${LLVM_DEFINITIONS_LIST}
-            )
-        endif()
-        if(MSVC)
-            find_library(LLVM_C_LIB NAMES LLVM-C)
-        endif()
-        if(MSVC AND LLVM_C_LIB)
-            target_link_libraries(${ph_online_target} PRIVATE ${LLVM_C_LIB})
-        else()
-            llvm_map_components_to_libnames(
-                LLVM_LIBS
-                core
-                executionengine
-                mcjit
-                native
-                target
-                support
-            )
-            target_link_libraries(${ph_online_target} PRIVATE ${LLVM_LIBS})
-            if(MSVC)
-                target_link_libraries(
-                    ${ph_online_target}
-                    PRIVATE
-                    $<$<CONFIG:Debug>:msvcprtd>
-                    $<$<NOT:$<CONFIG:Debug>>:msvcprt>
-                    $<$<CONFIG:Debug>:msvcrtd>
-                    $<$<NOT:$<CONFIG:Debug>>:msvcrt>
-                    oldnames
-                )
-            endif()
-        endif()
-    endif()
-
     if(TARGET PerfectHashAsm)
         add_dependencies(${ph_online_target} PerfectHashAsm)
         set(ADDITIONAL_LIBRARY_DEPENDENCIES PerfectHashAsm)
@@ -688,5 +634,57 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
         )
     endif()
 endforeach()
+
+if(TARGET ${llvm_target})
+    target_link_libraries(${llvm_target} PRIVATE ${target})
+
+    target_include_directories(${llvm_target} SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+    if(LLVM_DEFINITIONS)
+        separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+        target_compile_options(${llvm_target} PRIVATE ${LLVM_DEFINITIONS_LIST})
+    endif()
+    if(MSVC)
+        find_library(LLVM_C_LIB NAMES LLVM-C)
+    endif()
+    if(MSVC AND LLVM_C_LIB)
+        target_link_libraries(${llvm_target} PRIVATE ${LLVM_C_LIB})
+    endif()
+    if(LLVM_LINK_LLVM_DYLIB AND TARGET LLVM)
+        target_link_libraries(${llvm_target} PRIVATE LLVM)
+    else()
+        llvm_map_components_to_libnames(
+            LLVM_LIBS
+            core
+            executionengine
+            mcjit
+            native
+            target
+            support
+        )
+        target_link_libraries(${llvm_target} PRIVATE ${LLVM_LIBS})
+        if(MSVC)
+            target_link_libraries(
+                ${llvm_target}
+                PRIVATE
+                $<$<CONFIG:Debug>:msvcprtd>
+                $<$<NOT:$<CONFIG:Debug>>:msvcprt>
+                $<$<CONFIG:Debug>:msvcrtd>
+                $<$<NOT:$<CONFIG:Debug>>:msvcrt>
+                oldnames
+            )
+        endif()
+    endif()
+
+    if(MSVC)
+        target_link_libraries(
+            ${llvm_target}
+            PRIVATE
+            $<$<CONFIG:Debug>:vcruntimed>
+            $<$<NOT:$<CONFIG:Debug>>:vcruntime>
+            $<$<CONFIG:Debug>:ucrtd>
+            $<$<NOT:$<CONFIG:Debug>>:ucrt>
+        )
+    endif()
+endif()
 
 # vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

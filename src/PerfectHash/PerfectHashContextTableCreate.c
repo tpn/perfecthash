@@ -1591,6 +1591,7 @@ Return Value:
 
     return Result;
 }
+#endif // PH_WINDOWS
 #endif // PH_ONLINE_ONLY
 
 

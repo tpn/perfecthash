@@ -4694,3 +4694,11 @@ SymbolicName=PH_E_ERROR_DURING_CLOSE_RUST_BENCH_FILE
 Language=English
 Error closing Rust benchmark file.
 .
+
+MessageId=0x41C
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_LLVM_BACKEND_NOT_FOUND
+Language=English
+LLVM JIT backend library not found.
+.

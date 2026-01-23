@@ -122,6 +122,9 @@ Return Value:
     }
 
     if (TableCompileFlags.Jit) {
+        if (!TableCompileFlags.JitBackendLlvm) {
+            TableCompileFlags.JitBackendLlvm = TRUE;
+        }
         Result = PerfectHashTableCompileJit(Table, &TableCompileFlags);
         ReleasePerfectHashTableLockExclusive(Table);
         return Result;
