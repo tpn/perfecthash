@@ -522,6 +522,11 @@ Return Value:
 
     Table->Flags.Created = TRUE;
     Table->Flags.Loaded = FALSE;
+    if (Table->State.UsingAssigned16) {
+        Table->Flags.AssignedElementSizeInBits = 2; // 16 bits
+    } else {
+        Table->Flags.AssignedElementSizeInBits = 4; // 32 bits
+    }
     Table->State.Valid = TRUE;
 
     goto End;

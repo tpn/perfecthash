@@ -4444,7 +4444,7 @@ typedef PERFECT_HASH_TABLE_LOAD *PPERFECT_HASH_TABLE_LOAD;
 
 //
 // Define the table flags enum and associated function pointer to obtain the
-// flags from a loaded table.
+// flags from a created or loaded table.
 //
 
 typedef union _PERFECT_HASH_TABLE_FLAGS {
@@ -4525,10 +4525,18 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG JitEnabled:1;
 
         //
+        // Encoded assigned element size in bytes (1, 2, 4, 8). To obtain
+        // the size in bits, use `AssignedElementSizeInBits << 3`.
+        // Zero indicates unknown or not initialized.
+        //
+
+        ULONG AssignedElementSizeInBits:4;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:23;
+        ULONG Unused:19;
     };
 
     LONG AsLong;

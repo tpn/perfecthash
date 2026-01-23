@@ -548,6 +548,14 @@ Return Value:
 
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
+    if (TableInfoOnDisk->AssignedElementSizeInBytes) {
+        Table->Flags.AssignedElementSizeInBits =
+            TableInfoOnDisk->AssignedElementSizeInBytes;
+    } else if (Table->State.UsingAssigned16) {
+        Table->Flags.AssignedElementSizeInBits = 2; // 16 bits
+    } else {
+        Table->Flags.AssignedElementSizeInBits = 4; // 32 bits
+    }
     Table->TableDataBaseAddress = Table->TableFile->BaseAddress;
     Table->TableDataSizeInBytes = Table->TableFile->FileInfo.EndOfFile.QuadPart;
 

@@ -365,6 +365,186 @@ if(PERFECTHASH_IS_LINUX)
             set(RAWDOG_HDR
                 "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR_x64.h"
             )
+            set(RAWDOG_M1_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX_x64.nasm"
+            )
+            set(RAWDOG_M1_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX_x64.o"
+            )
+            set(RAWDOG_M1_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX_x64.bin"
+            )
+            set(RAWDOG_M1_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX_x64.h"
+            )
+            set(RAWDOG_MSR16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR16_x64.nasm"
+            )
+            set(RAWDOG_MSR16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16_x64.o"
+            )
+            set(RAWDOG_MSR16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16_x64.bin"
+            )
+            set(RAWDOG_MSR16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR16_x64.h"
+            )
+            set(RAWDOG_M1RX16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX16_x64.nasm"
+            )
+            set(RAWDOG_M1RX16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16_x64.o"
+            )
+            set(RAWDOG_M1RX16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16_x64.bin"
+            )
+            set(RAWDOG_M1RX16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX16_x64.h"
+            )
+            set(RAWDOG_M2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate2RX_x64.nasm"
+            )
+            set(RAWDOG_M2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX_x64.o"
+            )
+            set(RAWDOG_M2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX_x64.bin"
+            )
+            set(RAWDOG_M2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate2RX_x64.h"
+            )
+            set(RAWDOG_M2RX16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate2RX16_x64.nasm"
+            )
+            set(RAWDOG_M2RX16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX16_x64.o"
+            )
+            set(RAWDOG_M2RX16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX16_x64.bin"
+            )
+            set(RAWDOG_M2RX16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate2RX16_x64.h"
+            )
+            set(RAWDOG_M2_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate2RXAvx2_x64.nasm"
+            )
+            set(RAWDOG_M2_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RXAvx2_x64.o"
+            )
+            set(RAWDOG_M2_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RXAvx2_x64.bin"
+            )
+            set(RAWDOG_M2_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate2RXAvx2_x64.h"
+            )
+            set(RAWDOG_M2RX16_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate2RX16Avx2_x64.nasm"
+            )
+            set(RAWDOG_M2RX16_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX16Avx2_x64.o"
+            )
+            set(RAWDOG_M2RX16_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX16Avx2_x64.bin"
+            )
+            set(RAWDOG_M2RX16_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate2RX16Avx2_x64.h"
+            )
+            set(RAWDOG_M2_AVX512_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate2RXAvx512_x64.nasm"
+            )
+            set(RAWDOG_M2_AVX512_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RXAvx512_x64.o"
+            )
+            set(RAWDOG_M2_AVX512_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RXAvx512_x64.bin"
+            )
+            set(RAWDOG_M2_AVX512_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate2RXAvx512_x64.h"
+            )
+            set(RAWDOG_M2RX16_AVX512_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate2RX16Avx512_x64.nasm"
+            )
+            set(RAWDOG_M2RX16_AVX512_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX16Avx512_x64.o"
+            )
+            set(RAWDOG_M2RX16_AVX512_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate2RX16Avx512_x64.bin"
+            )
+            set(RAWDOG_M2RX16_AVX512_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate2RX16Avx512_x64.h"
+            )
+            set(RAWDOG_M3_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate3RX_x64.nasm"
+            )
+            set(RAWDOG_M3_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX_x64.o"
+            )
+            set(RAWDOG_M3_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX_x64.bin"
+            )
+            set(RAWDOG_M3_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RX_x64.h"
+            )
+            set(RAWDOG_M3RX16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate3RX16_x64.nasm"
+            )
+            set(RAWDOG_M3RX16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX16_x64.o"
+            )
+            set(RAWDOG_M3RX16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX16_x64.bin"
+            )
+            set(RAWDOG_M3RX16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RX16_x64.h"
+            )
+            set(RAWDOG_M3_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate3RXAvx2_x64.nasm"
+            )
+            set(RAWDOG_M3_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RXAvx2_x64.o"
+            )
+            set(RAWDOG_M3_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RXAvx2_x64.bin"
+            )
+            set(RAWDOG_M3_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RXAvx2_x64.h"
+            )
+            set(RAWDOG_M3RX16_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate3RX16Avx2_x64.nasm"
+            )
+            set(RAWDOG_M3RX16_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX16Avx2_x64.o"
+            )
+            set(RAWDOG_M3RX16_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX16Avx2_x64.bin"
+            )
+            set(RAWDOG_M3RX16_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RX16Avx2_x64.h"
+            )
+            set(RAWDOG_M3_AVX512_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate3RXAvx512_x64.nasm"
+            )
+            set(RAWDOG_M3_AVX512_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RXAvx512_x64.o"
+            )
+            set(RAWDOG_M3_AVX512_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RXAvx512_x64.bin"
+            )
+            set(RAWDOG_M3_AVX512_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RXAvx512_x64.h"
+            )
+            set(RAWDOG_M3RX16_AVX512_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate3RX16Avx512_x64.nasm"
+            )
+            set(RAWDOG_M3RX16_AVX512_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX16Avx512_x64.o"
+            )
+            set(RAWDOG_M3RX16_AVX512_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate3RX16Avx512_x64.bin"
+            )
+            set(RAWDOG_M3RX16_AVX512_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RX16Avx512_x64.h"
+            )
 
             add_custom_command(
                 OUTPUT ${RAWDOG_HDR}
@@ -387,7 +567,338 @@ if(PERFECTHASH_IS_LINUX)
                 VERBATIM
             )
 
-            list(APPEND Private_Header_Files "${RAWDOG_HDR}")
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M1_OBJ}"
+                        "${RAWDOG_M1_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M1_BIN}
+                        "${RAWDOG_M1_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1_BIN}"
+                        --output "${RAWDOG_M1_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX_x64
+                DEPENDS
+                    "${RAWDOG_M1_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSR16_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_MSR16_OBJ}"
+                        "${RAWDOG_MSR16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_MSR16_BIN}
+                        "${RAWDOG_MSR16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSR16_BIN}"
+                        --output "${RAWDOG_MSR16_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftR16_x64
+                DEPENDS
+                    "${RAWDOG_MSR16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR16..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX16_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M1RX16_OBJ}"
+                        "${RAWDOG_M1RX16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M1RX16_BIN}
+                        "${RAWDOG_M1RX16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX16_BIN}"
+                        --output "${RAWDOG_M1RX16_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX16_x64
+                DEPENDS
+                    "${RAWDOG_M1RX16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX16..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M2_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M2_OBJ}"
+                        "${RAWDOG_M2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M2_BIN}
+                        "${RAWDOG_M2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M2_BIN}"
+                        --output "${RAWDOG_M2_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate2RX_x64
+                DEPENDS
+                    "${RAWDOG_M2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate2RX..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M2RX16_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M2RX16_OBJ}"
+                        "${RAWDOG_M2RX16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M2RX16_BIN}
+                        "${RAWDOG_M2RX16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M2RX16_BIN}"
+                        --output "${RAWDOG_M2RX16_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate2RX16_x64
+                DEPENDS
+                    "${RAWDOG_M2RX16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate2RX16..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M2_AVX2_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M2_AVX2_OBJ}"
+                        "${RAWDOG_M2_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M2_AVX2_BIN}
+                        "${RAWDOG_M2_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M2_AVX2_BIN}"
+                        --output "${RAWDOG_M2_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate2RXAvx2_x64
+                DEPENDS
+                    "${RAWDOG_M2_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate2RX AVX2..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M2RX16_AVX2_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M2RX16_AVX2_OBJ}"
+                        "${RAWDOG_M2RX16_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M2RX16_AVX2_BIN}
+                        "${RAWDOG_M2RX16_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M2RX16_AVX2_BIN}"
+                        --output "${RAWDOG_M2RX16_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate2RX16Avx2_x64
+                DEPENDS
+                    "${RAWDOG_M2RX16_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate2RX16 AVX2..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M2_AVX512_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M2_AVX512_OBJ}"
+                        "${RAWDOG_M2_AVX512_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M2_AVX512_BIN}
+                        "${RAWDOG_M2_AVX512_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M2_AVX512_BIN}"
+                        --output "${RAWDOG_M2_AVX512_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate2RXAvx512_x64
+                DEPENDS
+                    "${RAWDOG_M2_AVX512_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate2RX AVX-512..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M2RX16_AVX512_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M2RX16_AVX512_OBJ}"
+                        "${RAWDOG_M2RX16_AVX512_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M2RX16_AVX512_BIN}
+                        "${RAWDOG_M2RX16_AVX512_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M2RX16_AVX512_BIN}"
+                        --output "${RAWDOG_M2RX16_AVX512_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate2RX16Avx512_x64
+                DEPENDS
+                    "${RAWDOG_M2RX16_AVX512_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate2RX16 AVX-512..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M3_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M3_OBJ}"
+                        "${RAWDOG_M3_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M3_BIN}
+                        "${RAWDOG_M3_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M3_BIN}"
+                        --output "${RAWDOG_M3_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate3RX_x64
+                DEPENDS
+                    "${RAWDOG_M3_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate3RX..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M3RX16_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M3RX16_OBJ}"
+                        "${RAWDOG_M3RX16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M3RX16_BIN}
+                        "${RAWDOG_M3RX16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M3RX16_BIN}"
+                        --output "${RAWDOG_M3RX16_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate3RX16_x64
+                DEPENDS
+                    "${RAWDOG_M3RX16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate3RX16..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M3_AVX2_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M3_AVX2_OBJ}"
+                        "${RAWDOG_M3_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M3_AVX2_BIN}
+                        "${RAWDOG_M3_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M3_AVX2_BIN}"
+                        --output "${RAWDOG_M3_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate3RXAvx2_x64
+                DEPENDS
+                    "${RAWDOG_M3_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate3RX AVX2..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M3RX16_AVX2_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M3RX16_AVX2_OBJ}"
+                        "${RAWDOG_M3RX16_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M3RX16_AVX2_BIN}
+                        "${RAWDOG_M3RX16_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M3RX16_AVX2_BIN}"
+                        --output "${RAWDOG_M3RX16_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate3RX16Avx2_x64
+                DEPENDS
+                    "${RAWDOG_M3RX16_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate3RX16 AVX2..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M3_AVX512_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M3_AVX512_OBJ}"
+                        "${RAWDOG_M3_AVX512_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M3_AVX512_BIN}
+                        "${RAWDOG_M3_AVX512_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M3_AVX512_BIN}"
+                        --output "${RAWDOG_M3_AVX512_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate3RXAvx512_x64
+                DEPENDS
+                    "${RAWDOG_M3_AVX512_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate3RX AVX-512..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M3RX16_AVX512_HDR}
+                COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                        -f elf64
+                        -o "${RAWDOG_M3RX16_AVX512_OBJ}"
+                        "${RAWDOG_M3RX16_AVX512_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text=${RAWDOG_M3RX16_AVX512_BIN}
+                        "${RAWDOG_M3RX16_AVX512_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M3RX16_AVX512_BIN}"
+                        --output "${RAWDOG_M3RX16_AVX512_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate3RX16Avx512_x64
+                DEPENDS
+                    "${RAWDOG_M3RX16_AVX512_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate3RX16 AVX-512..."
+                VERBATIM
+            )
+
+            list(APPEND Private_Header_Files
+                 "${RAWDOG_HDR}"
+                 "${RAWDOG_M1_HDR}"
+                 "${RAWDOG_MSR16_HDR}"
+                 "${RAWDOG_M1RX16_HDR}"
+                 "${RAWDOG_M2_HDR}"
+                 "${RAWDOG_M2RX16_HDR}"
+                 "${RAWDOG_M2_AVX2_HDR}"
+                 "${RAWDOG_M2RX16_AVX2_HDR}"
+                 "${RAWDOG_M2_AVX512_HDR}"
+                 "${RAWDOG_M2RX16_AVX512_HDR}"
+                 "${RAWDOG_M3_HDR}"
+                 "${RAWDOG_M3RX16_HDR}"
+                 "${RAWDOG_M3_AVX2_HDR}"
+                 "${RAWDOG_M3RX16_AVX2_HDR}"
+                 "${RAWDOG_M3_AVX512_HDR}"
+                 "${RAWDOG_M3RX16_AVX512_HDR}")
             list(APPEND Source_Files "ChmOnline01RawDog.c")
         else()
             message(WARNING "RawDog JIT disabled (missing nasm/objcopy).")

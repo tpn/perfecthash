@@ -65,6 +65,7 @@ struct BenchmarkOptions {
   bool compare_backends_process = false;
   bool process_child = false;
   size_t process_iterations = 3;
+  bool allow_assigned16 = false;
   bool no_std_map_baselines = false;
   std::string keys_file;
   bool use_keys_file = false;
@@ -92,8 +93,11 @@ struct BenchmarkResult {
   double unordered_build_ms = 0.0;
   double ordered_build_ms = 0.0;
   double lookup_ph_ms = 0.0;
+  double lookup_ph_ns = 0.0;
   double lookup_unordered_ms = 0.0;
+  double lookup_unordered_ns = 0.0;
   double lookup_ordered_ms = 0.0;
+  double lookup_ordered_ns = 0.0;
   bool jit = false;
   PERFECT_HASH_JIT_MAX_ISA_ID jit_max_isa = PerfectHashJitMaxIsaAuto;
   bool index32x2 = false;
@@ -101,6 +105,7 @@ struct BenchmarkResult {
   bool index32x8 = false;
   bool index32x16 = false;
   bool index32x16_available = true;
+  ULONG assigned_element_bits = 0;
   std::string jit_target_cpu;
   std::string jit_target_features;
 };
@@ -409,6 +414,11 @@ bool ParseArguments(int argc, char **argv, BenchmarkOptions *options) {
       continue;
     }
 
+    if (std::strcmp(arg, "--allow-assigned16") == 0) {
+      options->allow_assigned16 = true;
+      continue;
+    }
+
     if (std::strcmp(arg, "--no-jit") == 0) {
       options->jit = false;
       continue;
@@ -577,6 +587,7 @@ void PrintUsage(const char *exe) {
             << " [--no-jit] [--jit-backend=auto|llvm|rawdog]"
             << " [--jit-max-isa=auto|avx|avx2|avx512|neon|sve|sve2]"
             << " [--no-std-map-baselines]"
+            << " [--allow-assigned16]"
             << " [--index32x2] [--index32x4] [--index32x8] [--index32x16]"
             << " [--jit-vector-index32x2] [--jit-vector-index32x4]"
             << " [--jit-vector-index32x8]\n";
@@ -758,6 +769,10 @@ std::vector<std::string> BuildChildArgs(const BenchmarkOptions &options,
   args.emplace_back(std::string("--jit-max-isa=") +
                     JitMaxIsaToString(options.jit_max_isa));
 
+  if (options.allow_assigned16) {
+    args.emplace_back("--allow-assigned16");
+  }
+
   if (options.index32x2) {
     args.emplace_back("--index32x2");
   }
@@ -878,14 +893,27 @@ int RunBenchmark(const BenchmarkOptions &base,
   }
 #endif
 
-  if (options.jit_backend == BenchmarkOptions::JitBackend::RawDog &&
-      (options.index32x2 || options.index32x4 ||
-       options.index32x8 || options.index32x16 ||
-       options.jit_vector_index32x2 ||
-       options.jit_vector_index32x4 ||
-       options.jit_vector_index32x8)) {
-    std::cerr << "RawDog JIT only supports scalar Index32().\n";
-    return 1;
+  if (options.jit_backend == BenchmarkOptions::JitBackend::RawDog) {
+    const bool wants_vector =
+        options.index32x8 || options.index32x16 ||
+        options.jit_vector_index32x8;
+    const bool wants_unsupported =
+        options.index32x2 || options.index32x4 ||
+        options.jit_vector_index32x2 || options.jit_vector_index32x4;
+    if (wants_unsupported) {
+      std::cerr << "RawDog JIT only supports Index32(), Index32x8, "
+                   "and Index32x16.\n";
+      return 1;
+    }
+    if (wants_vector &&
+        options.hash_function_id !=
+            PerfectHashHashMulshrolate2RXFunctionId &&
+        options.hash_function_id !=
+            PerfectHashHashMulshrolate3RXFunctionId) {
+      std::cerr << "RawDog vector JIT only supports Mulshrolate2RX or "
+                   "Mulshrolate3RX.\n";
+      return 1;
+    }
   }
 
   std::vector<ULONG> keys;
@@ -947,6 +975,8 @@ int RunBenchmark(const BenchmarkOptions &base,
               << (options.jit_vector_index32x4 ? "on" : "off") << "\n";
     std::cout << "  JIT Vec32x8: "
               << (options.jit_vector_index32x8 ? "on" : "off") << "\n";
+    std::cout << "  Allow Assigned16: "
+              << (options.allow_assigned16 ? "on" : "off") << "\n";
   }
 
   PICLASSFACTORY classFactory = nullptr;
@@ -988,7 +1018,7 @@ int RunBenchmark(const BenchmarkOptions &base,
   PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
   tableFlags.NoFileIo = TRUE;
   tableFlags.Quiet = TRUE;
-  tableFlags.DoNotTryUseHash16Impl = TRUE;
+  tableFlags.DoNotTryUseHash16Impl = options.allow_assigned16 ? FALSE : TRUE;
 
   PPERFECT_HASH_TABLE table = nullptr;
   std::vector<PERFECT_HASH_TABLE_CREATE_PARAMETER> table_params;
@@ -1063,6 +1093,14 @@ int RunBenchmark(const BenchmarkOptions &base,
   }
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ULONG assignedElementBits = 0;
+  {
+    PERFECT_HASH_TABLE_FLAGS flags = {0};
+    HRESULT flagsResult = shim->Vtbl->GetFlags(table, sizeof(flags), &flags);
+    if (flagsResult >= 0) {
+      assignedElementBits = flags.AssignedElementSizeInBits << 3;
+    }
+  }
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
   if (options.index32x2) {
@@ -1392,6 +1430,18 @@ int RunBenchmark(const BenchmarkOptions &base,
   double perfectHashAvg = perfectHashTotal / options.iterations;
   double unorderedAvg = unorderedTotal / options.iterations;
   double orderedAvg = orderedTotal / options.iterations;
+  double perCallPhNs = 0.0;
+  double perCallUnorderedNs = 0.0;
+  double perCallOrderedNs = 0.0;
+  if (options.loops > 0 && !keys.empty()) {
+    double totalOps = static_cast<double>(keys.size()) *
+                      static_cast<double>(options.loops);
+    perCallPhNs = (perfectHashAvg * 1e6) / totalOps;
+    if (!options.no_std_map_baselines) {
+      perCallUnorderedNs = (unorderedAvg * 1e6) / totalOps;
+      perCallOrderedNs = (orderedAvg * 1e6) / totalOps;
+    }
+  }
 
   if (verbose) {
     std::cout << "Key sort time:           " << sortMs << " ms\n";
@@ -1407,13 +1457,31 @@ int RunBenchmark(const BenchmarkOptions &base,
       std::cout << "JIT compile time:        " << jitCompileMs << " ms\n";
     }
 
-    std::cout << "Lookup avg (PerfectHash): " << perfectHashAvg << " ms\n";
+    std::cout << "Lookup avg (PerfectHash): " << perfectHashAvg << " ms";
+    if (perCallPhNs > 0.0) {
+      std::cout << " (" << std::fixed << std::setprecision(1)
+                << perCallPhNs << " ns/op)" << std::defaultfloat;
+    }
+    std::cout << "\n";
     if (options.no_std_map_baselines) {
       std::cout << "Lookup avg (unordered_map): n/a\n";
       std::cout << "Lookup avg (map): n/a\n";
     } else {
-      std::cout << "Lookup avg (unordered_map): " << unorderedAvg << " ms\n";
-      std::cout << "Lookup avg (map): " << orderedAvg << " ms\n";
+      std::cout << "Lookup avg (unordered_map): " << unorderedAvg << " ms";
+      if (perCallUnorderedNs > 0.0) {
+        std::cout << " (" << std::fixed << std::setprecision(1)
+                  << perCallUnorderedNs << " ns/op)" << std::defaultfloat;
+      }
+      std::cout << "\n";
+      std::cout << "Lookup avg (map): " << orderedAvg << " ms";
+      if (perCallOrderedNs > 0.0) {
+        std::cout << " (" << std::fixed << std::setprecision(1)
+                  << perCallOrderedNs << " ns/op)" << std::defaultfloat;
+      }
+      std::cout << "\n";
+    }
+    if (assignedElementBits) {
+      std::cout << "Assigned element bits:   " << assignedElementBits << "\n";
     }
   }
 
@@ -1443,8 +1511,11 @@ int RunBenchmark(const BenchmarkOptions &base,
     result->unordered_build_ms = unorderedBuildMs;
     result->ordered_build_ms = orderedBuildMs;
     result->lookup_ph_ms = perfectHashAvg;
+    result->lookup_ph_ns = perCallPhNs;
     result->lookup_unordered_ms = unorderedAvg;
+    result->lookup_unordered_ns = perCallUnorderedNs;
     result->lookup_ordered_ms = orderedAvg;
+    result->lookup_ordered_ns = perCallOrderedNs;
     result->jit = options.jit;
     result->jit_max_isa = options.jit_max_isa;
     result->index32x2 = options.index32x2;
@@ -1452,6 +1523,7 @@ int RunBenchmark(const BenchmarkOptions &base,
     result->index32x8 = options.index32x8;
     result->index32x16 = options.index32x16;
     result->index32x16_available = index32x16_available;
+    result->assigned_element_bits = assignedElementBits;
   }
 
   return 0;
@@ -1582,8 +1654,14 @@ int RunCompare(const BenchmarkOptions &base) {
   std::cout << "  Graph Impl: " << options.graph_impl << "\n";
   std::cout << "  Iterations: " << options.iterations << "\n";
   std::cout << "  Loops:      " << options.loops << "\n";
+  if (baseline.assigned_element_bits) {
+    std::cout << "  Assigned bits: " << baseline.assigned_element_bits << "\n";
+  }
   std::cout << "  JIT Max ISA cap: "
             << JitMaxIsaToString(options.jit_max_isa) << "\n";
+  if (baseline.assigned_element_bits) {
+    std::cout << "  Assigned bits: " << baseline.assigned_element_bits << "\n";
+  }
   if (options.seed_count > 0) {
     std::cout << "  Seeds:      ";
     for (size_t i = 0; i < options.seed_count; ++i) {
@@ -1612,6 +1690,7 @@ int RunCompare(const BenchmarkOptions &base) {
             << std::setw(8) << "ISA"
             << std::setw(8) << "Index"
             << std::right << std::setw(12) << "Avg ms"
+            << std::setw(12) << "ns/op"
             << std::setw(12) << "Speedup"
             << " Delta\n";
 
@@ -1628,6 +1707,7 @@ int RunCompare(const BenchmarkOptions &base) {
               << std::setw(8) << entry.index_label
               << std::right << std::setw(12) << std::setprecision(2)
               << res.lookup_ph_ms
+              << std::setw(12) << std::setprecision(1) << res.lookup_ph_ns
               << std::setw(11) << std::setprecision(2) << speedup << "x"
               << " " << std::showpos << std::setprecision(1) << improvement
               << "%" << std::noshowpos << "\n";
@@ -1728,6 +1808,9 @@ int RunBackendCompare(const BenchmarkOptions &base) {
   std::cout << "  Graph Impl: " << options.graph_impl << "\n";
   std::cout << "  Iterations: " << options.iterations << "\n";
   std::cout << "  Loops:      " << options.loops << "\n";
+  if (baseline.assigned_element_bits) {
+    std::cout << "  Assigned bits: " << baseline.assigned_element_bits << "\n";
+  }
   if (options.seed_count > 0) {
     std::cout << "  Seeds:      ";
     for (size_t i = 0; i < options.seed_count; ++i) {
@@ -1749,6 +1832,7 @@ int RunBackendCompare(const BenchmarkOptions &base) {
   std::cout << std::left << std::setw(10) << "Backend"
             << std::right << std::setw(14) << "JIT ms"
             << std::setw(14) << "Lookup ms"
+            << std::setw(12) << "ns/op"
             << std::setw(12) << "Speedup"
             << " Delta\n";
 
@@ -1765,6 +1849,7 @@ int RunBackendCompare(const BenchmarkOptions &base) {
               << res.jit_compile_ms
               << std::setw(14) << std::setprecision(2)
               << res.lookup_ph_ms
+              << std::setw(12) << std::setprecision(1) << res.lookup_ph_ns
               << std::setw(11) << std::setprecision(2) << speedup << "x"
               << " " << std::showpos << std::setprecision(1) << improvement
               << "%" << std::noshowpos << "\n";
