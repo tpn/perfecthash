@@ -1136,6 +1136,8 @@ const PERFECT_HASH_CONTEXT_IOCP_VTBL PerfectHashContextIocpInterface = {
     (PPERFECT_HASH_CONTEXT_IOCP_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashContextIocpSetMaximumConcurrency,
     &PerfectHashContextIocpGetMaximumConcurrency,
+    &PerfectHashContextIocpSetMaximumThreads,
+    &PerfectHashContextIocpGetMaximumThreads,
     &PerfectHashContextIocpSetNumaNodeMask,
     &PerfectHashContextIocpGetNumaNodeMask,
     &PerfectHashContextIocpSetBaseOutputDirectory,
@@ -1154,7 +1156,7 @@ const PERFECT_HASH_CONTEXT_IOCP_VTBL PerfectHashContextIocpInterface = {
     NULL,
 #endif
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT_IOCP, 14);
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT_IOCP, 16);
 
 //
 // PerfectHashServer
@@ -1168,18 +1170,24 @@ const PERFECT_HASH_SERVER_VTBL PerfectHashServerInterface = {
     (PPERFECT_HASH_SERVER_LOCK_SERVER)&ComponentLockServer,
     &PerfectHashServerSetMaximumConcurrency,
     &PerfectHashServerGetMaximumConcurrency,
+    &PerfectHashServerSetMaximumThreads,
+    &PerfectHashServerGetMaximumThreads,
     &PerfectHashServerSetNumaNodeMask,
     &PerfectHashServerGetNumaNodeMask,
     &PerfectHashServerSetEndpoint,
     &PerfectHashServerGetEndpoint,
     &PerfectHashServerSetLocalOnly,
     &PerfectHashServerGetLocalOnly,
+    &PerfectHashServerSetVerbose,
+    &PerfectHashServerGetVerbose,
+    &PerfectHashServerSetNoFileIo,
+    &PerfectHashServerGetNoFileIo,
     &PerfectHashServerStart,
     &PerfectHashServerStop,
     &PerfectHashServerWait,
     &PerfectHashServerSubmitRequest,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_SERVER, 12);
+VERIFY_VTBL_SIZE(PERFECT_HASH_SERVER, 18);
 
 //
 // PerfectHashClient

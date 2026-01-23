@@ -1035,6 +1035,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_TIMER SolveTimeout;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
+    ULONG InitialPerFileConcurrency;
+    ULONG MaxPerFileConcurrency;
+    ULONG IncreaseConcurrencyAfterMilliseconds;
+    ULONG Padding10;
     union {
         ULONG CuConcurrency;
         ULONG NumberOfGpuThreads;

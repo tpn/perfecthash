@@ -57,8 +57,14 @@ typedef struct _CHM01_ASYNC_JOB {
     PGRAPH *Graphs;
     ULONG NumberOfGraphs;
     ULONG Concurrency;
+    ULONG InitialConcurrency;
+    ULONG DispatchedGraphs;
+    ULONG IncreaseConcurrencyAfterMilliseconds;
     ULONG Attempt;
+    volatile LONG FirstGraphStarted;
     ULONG Padding1;
+    ULONGLONG FirstGraphStartMilliseconds;
+    ULONGLONG NextConcurrencyIncreaseMilliseconds;
     GRAPH_INFO GraphInfo;
     GRAPH_INFO PrevGraphInfo;
     GRAPH_INFO_ON_DISK GraphInfoOnDisk;

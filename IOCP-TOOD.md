@@ -1,24 +1,21 @@
 # IOCP TODO
 
-- Validate bulk-create directory request end-to-end (sys32 stress) and tune per-file concurrency defaults.
-- Run IOCP sys32 stress pass (Release, max concurrency) after clean rebuild and crash fixes.
-- Decide how to guard against stale PCH/obj after `PERFECT_HASH_CONTEXT` layout changes (force clean or touch header) and recheck Release bulk-create.
-- Track down `FlushConsoleInputBuffer` failures during bulk create (seen on `main` and iocp-dev).
+- Get a sys32 `--NoFileIo` run to complete (Release, max concurrency); if it hangs, capture bulk-count logs and identify the stuck state.
+- Diagnose 1000-file sys32 subset hang with `--IocpConcurrency=32 --MaxThreads=64` (Release, `--NoFileIo`); identify which work items are stuck and why.
+- Re-run sys32 with file I/O to `G:\\Scratch` once `--NoFileIo` completes; record timing and correctness.
+- Decide how to guard against stale PCH/obj after `PERFECT_HASH_CONTEXT` layout changes (force clean or touch header).
+- Track down `FlushConsoleInputBuffer` failures and fully disable console work for IOCP contexts if still triggered.
 - Validate access-denied fallback for per-file context threadpool minimum failures at higher concurrency.
 - Recheck named-pipe endpoint handling if `PerfectHashServer-StressSys32` continues to fail.
 - Decide whether BulkCreateDirectory should accept a single-directory short form or keep output dir required.
 - Exercise IOCP file work dispatch path (bulk create) to confirm outstanding event signaling and non-threadpool file work callbacks.
-- Validate CHM01 async path with smaller keysets (e.g. `hard`) and record timing vs legacy.
-- Identify root cause of remaining IOCP bulk-create failures (`E_UNEXPECTED` on `shell32-13803.keys` / `CoreUIComponents-7995.keys`), using new `LastError` logging.
-- Verify `MiniDumpWriteDump` retry-with-NULL covers real crash scenarios; decide whether to keep exception-pointer dumps as the primary path.
-- Investigate IOCP bulk-create async hang on `hard` keyset (client wait never completes).
-- Confirm bulk request completion signaling and outstanding-count decrements when all files complete (hard run produced all 23 outputs but token never signaled).
-- Investigate unexpected ~1500 threadpool worker threads (`ZwWaitForWorkViaWorkerFactory`) observed during IOCP server runs; identify source (RPC/TP APIs) and whether it contributes to the hang.
+- Identify root cause of remaining IOCP bulk-create failures (`E_UNEXPECTED` on `shell32-13803.keys` / `CoreUIComponents-7995.keys`) if they recur.
+- Investigate unexpected ~1500 threadpool worker threads (`ZwWaitForWorkViaWorkerFactory`) observed during IOCP server runs; identify source (RPC/TP APIs) and whether it contributes to hangs.
 - Validate context file work skip fix for `SetEndOfFile`/`PerfectHashFileTruncate` 1224 failures; decide whether to generate context files once per bulk request.
-- Wire IOCP server bulk path to CHM01 async jobs and request completion callbacks.
-- Run a clean build after the IOCP-native arg parsing/context creation changes and confirm no duplicate symbol issues.
 - Decide whether `PerfectHashClientExe` should wait on bulk-create tokens for `BulkCreate=` requests now that the server routes them through the bulk-directory path.
 - Choose a node-selection policy for single table-create server requests (round-robin vs node 0 vs affinity).
 - Add IOCP work item queueing/state to drive per-request pipelines.
 - Integrate per-request concurrency caps and queueing policies.
-- Draft IOCP-README.md once protocol and dispatch behavior settle.
+- Validate per-file concurrency ramp behavior (`--InitialPerFileConcurrency`, `--MaxPerFileConcurrency`, `--IncreaseConcurrencyAfterMilliseconds`) on `hard` and sys32 subsets; confirm no early failure.
+- Capture and diagnose `PerfectHashServer.exe` `0xC0000005` crash on `hard` (Release, `--NoFileIo`, concurrency 4); set `PH_SERVER_CRASH_DIR` for minidumps if needed.
+- Draft `IOCP-README.md` once protocol and dispatch behavior settle.

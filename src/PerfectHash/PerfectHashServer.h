@@ -43,8 +43,10 @@ typedef union _PERFECT_HASH_SERVER_FLAGS {
 
         ULONG LocalOnly:1;
         ULONG EndpointAllocated:1;
+        ULONG Verbose:1;
+        ULONG NoFileIo:1;
 
-        ULONG Unused:30;
+        ULONG Unused:28;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -59,11 +61,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_SERVER {
 
     COMMON_COMPONENT_HEADER(PERFECT_HASH_SERVER);
 
-    ULONG MaximumConcurrency;
+    ULONG IocpConcurrency;
+    ULONG MaxWorkerThreads;
     ULONG NumaNodeCount;
-    PERFECT_HASH_NUMA_NODE_MASK NumaNodeMask;
     ULONG Padding1;
+    PERFECT_HASH_NUMA_NODE_MASK NumaNodeMask;
     ULONG Padding2;
+    ULONG Padding3;
 
     //
     // The underlying IOCP context used by the server.
@@ -83,7 +87,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_SERVER {
 
     PPERFECT_HASH_SERVER_PIPE Pipes;
     ULONG PipeCount;
-    ULONG Padding3;
+    ULONG Padding4;
 
     HANDLE ShutdownEvent;
     HANDLE StartedEvent;
@@ -119,6 +123,10 @@ extern PERFECT_HASH_SERVER_SET_MAXIMUM_CONCURRENCY
     PerfectHashServerSetMaximumConcurrency;
 extern PERFECT_HASH_SERVER_GET_MAXIMUM_CONCURRENCY
     PerfectHashServerGetMaximumConcurrency;
+extern PERFECT_HASH_SERVER_SET_MAXIMUM_THREADS
+    PerfectHashServerSetMaximumThreads;
+extern PERFECT_HASH_SERVER_GET_MAXIMUM_THREADS
+    PerfectHashServerGetMaximumThreads;
 extern PERFECT_HASH_SERVER_SET_NUMA_NODE_MASK
     PerfectHashServerSetNumaNodeMask;
 extern PERFECT_HASH_SERVER_GET_NUMA_NODE_MASK
@@ -127,6 +135,10 @@ extern PERFECT_HASH_SERVER_SET_ENDPOINT PerfectHashServerSetEndpoint;
 extern PERFECT_HASH_SERVER_GET_ENDPOINT PerfectHashServerGetEndpoint;
 extern PERFECT_HASH_SERVER_SET_LOCAL_ONLY PerfectHashServerSetLocalOnly;
 extern PERFECT_HASH_SERVER_GET_LOCAL_ONLY PerfectHashServerGetLocalOnly;
+extern PERFECT_HASH_SERVER_SET_VERBOSE PerfectHashServerSetVerbose;
+extern PERFECT_HASH_SERVER_GET_VERBOSE PerfectHashServerGetVerbose;
+extern PERFECT_HASH_SERVER_SET_NO_FILE_IO PerfectHashServerSetNoFileIo;
+extern PERFECT_HASH_SERVER_GET_NO_FILE_IO PerfectHashServerGetNoFileIo;
 extern PERFECT_HASH_SERVER_START PerfectHashServerStart;
 extern PERFECT_HASH_SERVER_STOP PerfectHashServerStop;
 extern PERFECT_HASH_SERVER_WAIT PerfectHashServerWait;

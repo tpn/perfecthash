@@ -45,13 +45,19 @@ typedef PVOID PMINIDUMP_CALLBACK_INFORMATION;
 typedef struct _PERFECT_HASH_SERVER_CLI_OPTIONS {
     UNICODE_STRING Endpoint;
     PERFECT_HASH_NUMA_NODE_MASK NumaNodeMask;
-    ULONG MaximumConcurrency;
+    ULONG IocpConcurrency;
+    ULONG MaxThreads;
     BOOLEAN EndpointPresent;
-    BOOLEAN MaximumConcurrencyPresent;
+    BOOLEAN IocpConcurrencyPresent;
+    BOOLEAN MaxThreadsPresent;
     BOOLEAN NumaNodeMaskPresent;
     BOOLEAN LocalOnly;
     BOOLEAN LocalOnlyPresent;
-    UCHAR Padding1[7];
+    BOOLEAN Verbose;
+    BOOLEAN VerbosePresent;
+    BOOLEAN NoFileIo;
+    BOOLEAN NoFileIoPresent;
+    UCHAR Padding1[6];
 } PERFECT_HASH_SERVER_CLI_OPTIONS;
 typedef PERFECT_HASH_SERVER_CLI_OPTIONS *PPERFECT_HASH_SERVER_CLI_OPTIONS;
 
@@ -598,14 +604,19 @@ PrintUsage(
     VOID
     )
 {
-    wprintf(L"Usage: PerfectHashServer [--MaxConcurrency=<N>] "
-            L"[--Numa=All|<list>] [--Endpoint=<pipe>] "
-            L"[--AllowRemote|--LocalOnly]\n");
-    wprintf(L"  --MaxConcurrency=<N>   Total worker threads (default: all)\n");
+    wprintf(L"Usage: PerfectHashServer [--IocpConcurrency=<N>] "
+            L"[--MaxThreads=<N>] [--Numa=All|<list>] [--Endpoint=<pipe>] "
+            L"[--AllowRemote|--LocalOnly] [--Verbose] [--NoFileIo]\n");
+    wprintf(L"  --IocpConcurrency=<N> IOCP concurrency per NUMA node\n");
+    wprintf(L"  --MaxConcurrency=<N>  Alias for --IocpConcurrency\n");
+    wprintf(L"  --MaxThreads=<N>      Worker threads per NUMA node\n");
+    wprintf(L"                        Default: IocpConcurrency * 2 when set\n");
     wprintf(L"  --Numa=All|0,1|0-3      NUMA node selection mask\n");
     wprintf(L"  --Endpoint=<pipe>      Named pipe endpoint\n");
     wprintf(L"  --AllowRemote          Allow remote named pipe clients\n");
     wprintf(L"  --LocalOnly            Reject remote named pipe clients\n");
+    wprintf(L"  --Verbose              Enable per-request console output\n");
+    wprintf(L"  --NoFileIo             Disable file I/O for requests\n");
 }
 
 static
@@ -705,16 +716,22 @@ ParseServerArgs(
 {
     ULONG Index;
 
-    Options->MaximumConcurrency = 0;
+    Options->IocpConcurrency = 0;
+    Options->MaxThreads = 0;
     Options->NumaNodeMask = PERFECT_HASH_NUMA_NODE_MASK_ALL;
     Options->Endpoint.Buffer = NULL;
     Options->Endpoint.Length = 0;
     Options->Endpoint.MaximumLength = 0;
     Options->EndpointPresent = FALSE;
-    Options->MaximumConcurrencyPresent = FALSE;
+    Options->IocpConcurrencyPresent = FALSE;
+    Options->MaxThreadsPresent = FALSE;
     Options->NumaNodeMaskPresent = FALSE;
     Options->LocalOnly = TRUE;
     Options->LocalOnlyPresent = FALSE;
+    Options->Verbose = FALSE;
+    Options->VerbosePresent = FALSE;
+    Options->NoFileIo = FALSE;
+    Options->NoFileIoPresent = FALSE;
 
     for (Index = 1; Index < NumberOfArguments; Index++) {
         PCWSTR Arg = ArgvW[Index];
@@ -735,14 +752,36 @@ ParseServerArgs(
             return S_FALSE;
         }
 
-        if (_wcsnicmp(Arg, L"MaxConcurrency=", 15) == 0) {
+        if (_wcsnicmp(Arg, L"IocpConcurrency=", 16) == 0) {
             HRESULT Result;
-            Arg += 15;
-            Result = ParseUnsignedInteger(Arg, &Options->MaximumConcurrency);
+            Arg += 16;
+            Result = ParseUnsignedInteger(Arg, &Options->IocpConcurrency);
             if (FAILED(Result)) {
                 return Result;
             }
-            Options->MaximumConcurrencyPresent = TRUE;
+            Options->IocpConcurrencyPresent = TRUE;
+            continue;
+        }
+
+        if (_wcsnicmp(Arg, L"MaxConcurrency=", 15) == 0) {
+            HRESULT Result;
+            Arg += 15;
+            Result = ParseUnsignedInteger(Arg, &Options->IocpConcurrency);
+            if (FAILED(Result)) {
+                return Result;
+            }
+            Options->IocpConcurrencyPresent = TRUE;
+            continue;
+        }
+
+        if (_wcsnicmp(Arg, L"MaxThreads=", 11) == 0) {
+            HRESULT Result;
+            Arg += 11;
+            Result = ParseUnsignedInteger(Arg, &Options->MaxThreads);
+            if (FAILED(Result)) {
+                return Result;
+            }
+            Options->MaxThreadsPresent = TRUE;
             continue;
         }
 
@@ -780,6 +819,18 @@ ParseServerArgs(
         if (_wcsicmp(Arg, L"LocalOnly") == 0) {
             Options->LocalOnly = TRUE;
             Options->LocalOnlyPresent = TRUE;
+            continue;
+        }
+
+        if (_wcsicmp(Arg, L"Verbose") == 0) {
+            Options->Verbose = TRUE;
+            Options->VerbosePresent = TRUE;
+            continue;
+        }
+
+        if (_wcsicmp(Arg, L"NoFileIo") == 0) {
+            Options->NoFileIo = TRUE;
+            Options->NoFileIoPresent = TRUE;
             continue;
         }
 
@@ -876,10 +927,33 @@ mainCRTStartup(
         goto Error;
     }
 
-    if (Options.MaximumConcurrencyPresent) {
+    if (Options.IocpConcurrencyPresent) {
         Result = Server->Vtbl->SetMaximumConcurrency(
             Server,
-            Options.MaximumConcurrency
+            Options.IocpConcurrency
+        );
+        if (FAILED(Result)) {
+            goto Error;
+        }
+
+        if (!Options.MaxThreadsPresent) {
+            ULONGLONG DefaultThreads;
+
+            DefaultThreads = (ULONGLONG)Options.IocpConcurrency * 2;
+            if (DefaultThreads == 0 || DefaultThreads > ULONG_MAX) {
+                Result = E_INVALIDARG;
+                goto Error;
+            }
+
+            Options.MaxThreads = (ULONG)DefaultThreads;
+            Options.MaxThreadsPresent = TRUE;
+        }
+    }
+
+    if (Options.MaxThreadsPresent) {
+        Result = Server->Vtbl->SetMaximumThreads(
+            Server,
+            Options.MaxThreads
         );
         if (FAILED(Result)) {
             goto Error;
@@ -903,6 +977,20 @@ mainCRTStartup(
 
     if (Options.LocalOnlyPresent) {
         Result = Server->Vtbl->SetLocalOnly(Server, Options.LocalOnly);
+        if (FAILED(Result)) {
+            goto Error;
+        }
+    }
+
+    if (Options.VerbosePresent) {
+        Result = Server->Vtbl->SetVerbose(Server, Options.Verbose);
+        if (FAILED(Result)) {
+            goto Error;
+        }
+    }
+
+    if (Options.NoFileIoPresent) {
+        Result = Server->Vtbl->SetNoFileIo(Server, Options.NoFileIo);
         if (FAILED(Result)) {
             goto Error;
         }

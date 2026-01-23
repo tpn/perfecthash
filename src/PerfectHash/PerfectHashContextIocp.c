@@ -112,10 +112,8 @@ Return Value:
 
     Rtl = ContextIocp->Rtl;
 
-    ContextIocp->MaximumConcurrency = Rtl->CpuFeatures.LogicalProcessorCount;
-    if (ContextIocp->MaximumConcurrency == 0) {
-        ContextIocp->MaximumConcurrency = 1;
-    }
+    ContextIocp->IocpConcurrency = 0;
+    ContextIocp->MaxWorkerThreads = 0;
 
     ContextIocp->NumaNodeCount = Rtl->CpuFeatures.NumaNodeCount;
     if (ContextIocp->NumaNodeCount == 0) {
@@ -624,40 +622,49 @@ PerfectHashContextIocpEnumerateNumaNodes(
     }
 
     //
-    // Distribute worker thread counts across nodes.
+    // Configure per-node IOCP concurrency and worker thread counts.
     //
 
     {
         ULONG Index;
-        ULONG TargetConcurrency;
-        ULONG Remaining;
-
-        TargetConcurrency = ContextIocp->MaximumConcurrency;
-        if (TargetConcurrency == 0 || TargetConcurrency > TotalProcessors) {
-            TargetConcurrency = TotalProcessors;
-        }
-
-        Remaining = TargetConcurrency;
+        ULONG TotalWorkerThreads = 0;
+        ULONG DefaultIocpConcurrency = ContextIocp->IocpConcurrency;
+        ULONG DefaultMaxThreads = ContextIocp->MaxWorkerThreads;
 
         for (Index = 0; Index < ContextIocp->NodeCount; Index++) {
             PPERFECT_HASH_IOCP_NODE Node = &Nodes[Index];
-            ULONG Share = (Node->ProcessorCount * TargetConcurrency) /
-                          TotalProcessors;
-            Node->WorkerThreadCount = Share;
-            Remaining -= Share;
-        }
+            ULONG IocpConcurrency;
+            ULONG MaxThreads;
 
-        Index = 0;
-        while (Remaining) {
-            Nodes[Index].WorkerThreadCount++;
-            Remaining--;
-            Index++;
-            if (Index == ContextIocp->NodeCount) {
-                Index = 0;
+            IocpConcurrency = DefaultIocpConcurrency;
+            if (IocpConcurrency == 0 ||
+                IocpConcurrency > Node->ProcessorCount) {
+                IocpConcurrency = Node->ProcessorCount;
             }
+
+            if (IocpConcurrency == 0) {
+                IocpConcurrency = 1;
+            }
+
+            MaxThreads = DefaultMaxThreads;
+            if (MaxThreads == 0) {
+                if (DefaultIocpConcurrency != 0) {
+                    MaxThreads = IocpConcurrency * 2;
+                } else {
+                    MaxThreads = Node->ProcessorCount;
+                }
+            }
+
+            if (MaxThreads == 0) {
+                MaxThreads = 1;
+            }
+
+            Node->IocpConcurrency = IocpConcurrency;
+            Node->WorkerThreadCount = MaxThreads;
+            TotalWorkerThreads += MaxThreads;
         }
 
-        ContextIocp->TotalWorkerThreadCount = TargetConcurrency;
+        ContextIocp->TotalWorkerThreadCount = TotalWorkerThreads;
     }
 
     return S_OK;
@@ -687,7 +694,7 @@ PerfectHashContextIocpCreateIoCompletionPorts(
             INVALID_HANDLE_VALUE,
             NULL,
             0,
-            Node->ProcessorCount
+            Node->IocpConcurrency
         );
 
         if (!Node->IoCompletionPort) {
@@ -764,7 +771,7 @@ PerfectHashContextIocpCreateWorkerThreads(
 }
 
 PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_CONCURRENCY
-    PerfectHashContextIocpSetMaximumConcurrency;
+PerfectHashContextIocpSetMaximumConcurrency;
 
 _Use_decl_annotations_
 HRESULT
@@ -785,7 +792,7 @@ PerfectHashContextIocpSetMaximumConcurrency(
         return PH_E_CONTEXT_LOCKED;
     }
 
-    ContextIocp->MaximumConcurrency = MaximumConcurrency;
+    ContextIocp->IocpConcurrency = MaximumConcurrency;
 
     ReleasePerfectHashContextIocpLockExclusive(ContextIocp);
 
@@ -793,7 +800,7 @@ PerfectHashContextIocpSetMaximumConcurrency(
 }
 
 PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_CONCURRENCY
-    PerfectHashContextIocpGetMaximumConcurrency;
+PerfectHashContextIocpGetMaximumConcurrency;
 
 _Use_decl_annotations_
 HRESULT
@@ -810,7 +817,58 @@ PerfectHashContextIocpGetMaximumConcurrency(
         return E_POINTER;
     }
 
-    *MaximumConcurrency = ContextIocp->MaximumConcurrency;
+    *MaximumConcurrency = ContextIocp->IocpConcurrency;
+    return S_OK;
+}
+
+PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_THREADS
+    PerfectHashContextIocpSetMaximumThreads;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextIocpSetMaximumThreads(
+    PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    ULONG MaximumThreads
+    )
+{
+    if (!ARGUMENT_PRESENT(ContextIocp)) {
+        return E_POINTER;
+    }
+
+    if (MaximumThreads == 0) {
+        return E_INVALIDARG;
+    }
+
+    if (!TryAcquirePerfectHashContextIocpLockExclusive(ContextIocp)) {
+        return PH_E_CONTEXT_LOCKED;
+    }
+
+    ContextIocp->MaxWorkerThreads = MaximumThreads;
+
+    ReleasePerfectHashContextIocpLockExclusive(ContextIocp);
+
+    return S_OK;
+}
+
+PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_THREADS
+    PerfectHashContextIocpGetMaximumThreads;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashContextIocpGetMaximumThreads(
+    PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    PULONG MaximumThreads
+    )
+{
+    if (!ARGUMENT_PRESENT(ContextIocp)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(MaximumThreads)) {
+        return E_POINTER;
+    }
+
+    *MaximumThreads = ContextIocp->MaxWorkerThreads;
     return S_OK;
 }
 
@@ -1083,14 +1141,23 @@ PerfectHashContextIocpInvokeLegacyContextArgvW(
         return Result;
     }
 
-    if (ContextIocp->MaximumConcurrency > 0) {
-        Result = Context->Vtbl->SetMaximumConcurrency(
-            Context,
-            ContextIocp->MaximumConcurrency
-        );
-        if (FAILED(Result)) {
-            RELEASE(Context);
-            return Result;
+    {
+        ULONG Concurrency;
+
+        Concurrency = ContextIocp->MaxWorkerThreads;
+        if (Concurrency == 0) {
+            Concurrency = ContextIocp->IocpConcurrency;
+        }
+
+        if (Concurrency > 0) {
+            Result = Context->Vtbl->SetMaximumConcurrency(
+                Context,
+                Concurrency
+            );
+            if (FAILED(Result)) {
+                RELEASE(Context);
+                return Result;
+            }
         }
     }
 

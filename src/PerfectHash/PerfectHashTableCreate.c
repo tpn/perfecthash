@@ -611,6 +611,9 @@ Return Value:
     BOOLEAN SawResizeLimit = FALSE;
     BOOLEAN SawInitialResizes = FALSE;
     BOOLEAN SawResizeThreshold = FALSE;
+    BOOLEAN SawInitialPerFileConcurrency = FALSE;
+    BOOLEAN SawMaxPerFileConcurrency = FALSE;
+    BOOLEAN SawIncreaseConcurrencyAfter = FALSE;
     PERFECT_HASH_TABLE_BEST_COVERAGE_TYPE_ID CoverageType;
     PPERFECT_HASH_CONTEXT Context;
     PPERFECT_HASH_TABLE_CREATE_PARAMETER Param;
@@ -833,6 +836,21 @@ Return Value:
                 );
                 break;
 
+            case TableCreateParameterInitialPerFileConcurrencyId:
+                Context->InitialPerFileConcurrency = Param->AsULong;
+                SawInitialPerFileConcurrency = TRUE;
+                break;
+
+            case TableCreateParameterMaxPerFileConcurrencyId:
+                Context->MaxPerFileConcurrency = Param->AsULong;
+                SawMaxPerFileConcurrency = TRUE;
+                break;
+
+            case TableCreateParameterIncreaseConcurrencyAfterMillisecondsId:
+                Context->IncreaseConcurrencyAfterMilliseconds = Param->AsULong;
+                SawIncreaseConcurrencyAfter = TRUE;
+                break;
+
             case TableCreateParameterBestCoverageTargetValueId:
 
                 //
@@ -869,6 +887,36 @@ Return Value:
     if (Context->MinNumberOfKeysForFindBestGraph == 0) {
         Context->MinNumberOfKeysForFindBestGraph =
             DEFAULT_MIN_NUMBER_OF_KEYS_FOR_FIND_BEST_GRAPH;
+    }
+
+    if (!SawInitialPerFileConcurrency) {
+        Context->InitialPerFileConcurrency = 1;
+    }
+
+    if (!SawMaxPerFileConcurrency) {
+        if (Context->MaximumConcurrency > 0) {
+            Context->MaxPerFileConcurrency = Context->MaximumConcurrency;
+        } else {
+            Context->MaxPerFileConcurrency = 1;
+        }
+    }
+
+    if (!SawIncreaseConcurrencyAfter) {
+        Context->IncreaseConcurrencyAfterMilliseconds = 500;
+    }
+
+    if (Context->InitialPerFileConcurrency == 0 ||
+        Context->MaxPerFileConcurrency == 0 ||
+        Context->InitialPerFileConcurrency > Context->MaxPerFileConcurrency) {
+        Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+        goto Error;
+    }
+
+    if (!SkipThreadpoolInitialization(Context) &&
+        Context->MaximumConcurrency > 0 &&
+        Context->MaxPerFileConcurrency > Context->MaximumConcurrency) {
+        Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+        goto Error;
     }
 
     //

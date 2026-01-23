@@ -700,7 +700,19 @@ Return Value:
 
             EndOfFile.QuadPart = File->FileInfo.EndOfFile.QuadPart;
 
-            if (!FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists) {
+            if (EndOfFile.QuadPart == 0) {
+
+                //
+                // Existing file is empty; treat it like a new file and extend
+                // it to the requested size.  This avoids invalid end-of-file
+                // failures when mapping zero-length streams.
+                //
+
+                ASSERT(EndOfFilePointer->QuadPart > 0);
+
+                EndOfFile.QuadPart = EndOfFilePointer->QuadPart;
+
+            } else if (!FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists) {
 
                 DoTruncate = FALSE;
 

@@ -92,6 +92,8 @@ typedef struct _PERFECT_HASH_IOCP_NODE {
     struct _PERFECT_HASH_CONTEXT_IOCP *ContextIocp;
     ULONG NodeId;
     ULONG ProcessorCount;
+    ULONG IocpConcurrency;
+    ULONG Padding1;
 #ifdef PH_WINDOWS
     GROUP_AFFINITY GroupAffinity;
 #else
@@ -100,7 +102,7 @@ typedef struct _PERFECT_HASH_IOCP_NODE {
     HANDLE IoCompletionPort;
     HANDLE *WorkerThreads;
     ULONG WorkerThreadCount;
-    ULONG Padding1;
+    ULONG Padding2;
 } PERFECT_HASH_IOCP_NODE;
 typedef PERFECT_HASH_IOCP_NODE *PPERFECT_HASH_IOCP_NODE;
 
@@ -112,11 +114,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT_IOCP {
     // Configuration.
     //
 
-    ULONG MaximumConcurrency;
+    ULONG IocpConcurrency;
+    ULONG MaxWorkerThreads;
     ULONG NumaNodeCount;
-    PERFECT_HASH_NUMA_NODE_MASK NumaNodeMask;
     ULONG Padding1;
+    PERFECT_HASH_NUMA_NODE_MASK NumaNodeMask;
     ULONG Padding2;
+    ULONG Padding3;
 
     //
     // Pointer to the base output directory, if set.
@@ -132,7 +136,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT_IOCP {
     ULONG NodeCount;
     ULONG TotalWorkerThreadCount;
     ULONG IoCompletionPortCount;
-    ULONG Padding3;
+    ULONG Padding4;
 
     //
     // Completion dispatch callback (owned by higher-level components).
@@ -223,6 +227,10 @@ extern PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_CONCURRENCY
     PerfectHashContextIocpSetMaximumConcurrency;
 extern PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_CONCURRENCY
     PerfectHashContextIocpGetMaximumConcurrency;
+extern PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_THREADS
+    PerfectHashContextIocpSetMaximumThreads;
+extern PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_THREADS
+    PerfectHashContextIocpGetMaximumThreads;
 extern PERFECT_HASH_CONTEXT_IOCP_SET_NUMA_NODE_MASK
     PerfectHashContextIocpSetNumaNodeMask;
 extern PERFECT_HASH_CONTEXT_IOCP_GET_NUMA_NODE_MASK

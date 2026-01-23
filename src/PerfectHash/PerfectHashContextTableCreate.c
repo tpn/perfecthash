@@ -1371,6 +1371,27 @@ InvalidArg:
     }
 
     if (SUCCEEDED(Result)) {
+        PPERFECT_HASH_TABLE_CREATE_PARAMETER Param = NULL;
+        HRESULT LookupResult;
+
+        LookupResult = GetTableCreateParameterForId(
+            TableCreateParameters,
+            TableCreateParameterMaxPerFileConcurrencyId,
+            &Param
+        );
+        if (FAILED(LookupResult)) {
+            PH_ERROR(ExtractTableCreateArgs_GetMaxPerFileConcurrency, LookupResult);
+            Result = LookupResult;
+        } else if (LookupResult == S_OK && Param) {
+            if (Param->AsULong == 0) {
+                Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+            } else {
+                *MaximumConcurrency = Param->AsULong;
+            }
+        }
+    }
+
+    if (SUCCEEDED(Result)) {
 
         //
         // Initialize the debugger flags from the table create flags, initialize

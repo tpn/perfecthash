@@ -321,7 +321,8 @@ Return Value:
 
     ContextIocp = Server->ContextIocp;
 
-    Server->MaximumConcurrency = ContextIocp->MaximumConcurrency;
+    Server->IocpConcurrency = ContextIocp->IocpConcurrency;
+    Server->MaxWorkerThreads = ContextIocp->MaxWorkerThreads;
     Server->NumaNodeMask = ContextIocp->NumaNodeMask;
     Server->NumaNodeCount = ContextIocp->NumaNodeCount;
 
@@ -338,6 +339,8 @@ Return Value:
     Server->Endpoint = PerfectHashServerDefaultPipeName;
     Server->Flags.LocalOnly = TRUE;
     Server->Flags.EndpointAllocated = FALSE;
+    Server->Flags.Verbose = FALSE;
+    Server->Flags.NoFileIo = FALSE;
     Server->State.Initialized = TRUE;
 
     return S_OK;
@@ -439,7 +442,7 @@ PerfectHashServerSetMaximumConcurrency(
         }
     }
 
-    Server->MaximumConcurrency = MaximumConcurrency;
+    Server->IocpConcurrency = MaximumConcurrency;
     return S_OK;
 }
 
@@ -461,7 +464,63 @@ PerfectHashServerGetMaximumConcurrency(
         return E_POINTER;
     }
 
-    *MaximumConcurrency = Server->MaximumConcurrency;
+    *MaximumConcurrency = Server->IocpConcurrency;
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_SET_MAXIMUM_THREADS
+    PerfectHashServerSetMaximumThreads;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerSetMaximumThreads(
+    PPERFECT_HASH_SERVER Server,
+    ULONG MaximumThreads
+    )
+{
+    HRESULT Result = E_UNEXPECTED;
+
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (MaximumThreads == 0) {
+        return E_INVALIDARG;
+    }
+
+    if (Server->ContextIocp) {
+        Result = Server->ContextIocp->Vtbl->SetMaximumThreads(
+            Server->ContextIocp,
+            MaximumThreads
+        );
+        if (FAILED(Result)) {
+            return Result;
+        }
+    }
+
+    Server->MaxWorkerThreads = MaximumThreads;
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_GET_MAXIMUM_THREADS
+    PerfectHashServerGetMaximumThreads;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerGetMaximumThreads(
+    PPERFECT_HASH_SERVER Server,
+    PULONG MaximumThreads
+    )
+{
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(MaximumThreads)) {
+        return E_POINTER;
+    }
+
+    *MaximumThreads = Server->MaxWorkerThreads;
     return S_OK;
 }
 
@@ -640,6 +699,90 @@ PerfectHashServerGetLocalOnly(
     }
 
     *LocalOnly = (Server->Flags.LocalOnly != 0);
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_SET_VERBOSE PerfectHashServerSetVerbose;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerSetVerbose(
+    PPERFECT_HASH_SERVER Server,
+    BOOLEAN Verbose
+    )
+{
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (Server->State.Running) {
+        return E_UNEXPECTED;
+    }
+
+    Server->Flags.Verbose = Verbose ? 1 : 0;
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_GET_VERBOSE PerfectHashServerGetVerbose;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerGetVerbose(
+    PPERFECT_HASH_SERVER Server,
+    PBOOLEAN Verbose
+    )
+{
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Verbose)) {
+        return E_POINTER;
+    }
+
+    *Verbose = (Server->Flags.Verbose != 0);
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_SET_NO_FILE_IO PerfectHashServerSetNoFileIo;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerSetNoFileIo(
+    PPERFECT_HASH_SERVER Server,
+    BOOLEAN NoFileIo
+    )
+{
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (Server->State.Running) {
+        return E_UNEXPECTED;
+    }
+
+    Server->Flags.NoFileIo = NoFileIo ? 1 : 0;
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_GET_NO_FILE_IO PerfectHashServerGetNoFileIo;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerGetNoFileIo(
+    PPERFECT_HASH_SERVER Server,
+    PBOOLEAN NoFileIo
+    )
+{
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(NoFileIo)) {
+        return E_POINTER;
+    }
+
+    *NoFileIo = (Server->Flags.NoFileIo != 0);
     return S_OK;
 }
 
@@ -2449,6 +2592,13 @@ PerfectHashServerDispatchBulkCreateDirectoryRequest(
     //
 
     TableCreateFlags.DisableCsvOutputFile = TRUE;
+    if (Server->Flags.NoFileIo) {
+        TableCreateFlags.NoFileIo = TRUE;
+    }
+    if (!Server->Flags.Verbose) {
+        TableCreateFlags.Silent = TRUE;
+        TableCreateFlags.Quiet = FALSE;
+    }
 
     Request = (PPERFECT_HASH_SERVER_BULK_REQUEST)(
         Allocator->Vtbl->Calloc(Allocator, 1, sizeof(*Request))
@@ -2796,6 +2946,14 @@ PerfectHashServerDispatchTableCreateRequest(
         goto Error;
     }
     ParsedArgs = TRUE;
+
+    if (Server->Flags.NoFileIo) {
+        TableCreateFlags.NoFileIo = TRUE;
+    }
+    if (!Server->Flags.Verbose) {
+        TableCreateFlags.Silent = TRUE;
+        TableCreateFlags.Quiet = FALSE;
+    }
 
     Result = PerfectHashContextIocpCreateTableContext(ContextIocp,
                                                       &Context);

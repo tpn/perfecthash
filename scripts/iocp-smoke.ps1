@@ -3,12 +3,19 @@ param(
     [string]$Config = "Debug",
     [string]$Endpoint = "\\.\\pipe\\PerfectHashServer-Smoke",
     [int]$TimeoutSeconds = 10,
+    [int]$IocpConcurrency = 0,
+    [int]$MaxThreads = 0,
     [bool]$WaitForServer = $true,
-    [int]$ConnectTimeoutMs = 10000
+    [int]$ConnectTimeoutMs = 10000,
+    [bool]$NoFileIo = $true,
+    [bool]$VerboseServer = $false
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+Remove-Item Env:PH_LOG_BULK_CREATE_COUNTS -ErrorAction SilentlyContinue
+Remove-Item Env:PH_LOG_CHM01_ASYNC_JOB -ErrorAction SilentlyContinue
 
 $serverExe = Join-Path $BuildDir ("bin\\{0}\\PerfectHashServer.exe" -f $Config)
 $clientExe = Join-Path $BuildDir ("bin\\{0}\\PerfectHashClient.exe" -f $Config)
@@ -48,6 +55,18 @@ $createCommand = "PerfectHashCreate.exe $keysPath $outputPath " +
 $tableArg = "--TableCreate=$createCommand"
 
 $serverArgs = @("--Endpoint=$Endpoint")
+if ($IocpConcurrency -gt 0) {
+    $serverArgs += ("--IocpConcurrency={0}" -f $IocpConcurrency)
+}
+if ($MaxThreads -gt 0) {
+    $serverArgs += ("--MaxThreads={0}" -f $MaxThreads)
+}
+if ($NoFileIo) {
+    $serverArgs += "--NoFileIo"
+}
+if ($VerboseServer) {
+    $serverArgs += "--Verbose"
+}
 $clientArgs = @("--Endpoint=$Endpoint", "--Shutdown")
 if ($WaitForServer) {
     $clientArgs += "--WaitForServer"

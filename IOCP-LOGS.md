@@ -106,3 +106,27 @@
 - Identified `Chm01AsyncWaitJob()` pump loop could block in `GetQueuedCompletionStatus()` after job completion, leaving bulk work items stuck mid-callback.
 - Added a dummy IOCP wake post in `Chm01AsyncComplete()` and switched the pump loop to a 100ms timeout to re-check job completion state.
 - Re-ran IOCP stress on `perfecthash-keys\\hard` with `Mulshrolate4RX`/concurrency 32; run completed successfully and server shutdown cleanly.
+- Clean Release rebuild after build dir cleanup and ran IOCP sys32 stress (`Mulshrolate4RX`, concurrency 32); run completed in ~197s but emitted repeated `PerfectHashKeysLoadTableSize` invalid EOF messages (0xe0040264).
+- Identified 31 sys32 keys files with zero-length `Chm01_Mulshrolate4RX_And.TableSize` streams causing invalid EOF failures.
+- Reproduced the invalid EOF with a single file (`aadauthhelper-189.keys`) via `PerfectHashCreate.exe`.
+- Fixed `PerfectHashFileCreate()` to extend existing zero-length files when `NoTruncate` is set; single-file create now succeeds.
+- Added `ADS.md` with notes on table-size vs table-info ADS usage and risks of removal.
+- Created `..\\perfecthash-keys\\win32.temp50` with 50 random sys32 keys and ran IOCP bulk create (Release, `Mulshrolate4RX`, concurrency 32); run completed with 50 output dirs.
+- Attempted full sys32 IOCP run (Release, `Mulshrolate4RX`, concurrency 32) to `build-win\\iocp-stress-sys32-release`; run emitted `SetEndOfFile` failures with `ERROR_DISK_FULL` and was halted; output dir grew to ~193 GB with ~13,637 directories before shutdown.
+- Added IOCP server verbosity/no-file-IO controls (`--Verbose`, `--NoFileIo`) and vtbl setters/getters; server now defaults to silent output and only prints console legend when console work is enabled.
+- Updated IOCP scripts (`scripts/iocp-smoke.ps1`, `scripts/stress-sys32-iocp.ps1`) to pass the new server flags (NoFileIo default true, optional verbose).
+- Ran IOCP sys32 `--NoFileIo` stress (Release, `Mulshrolate4RX`, concurrency 32) via script; client/server did not complete within tool timeout, shutdown timed out, and both processes required termination (follow-up needed).
+- Ran IOCP bulk create against a 200-file subset of `sys32` (`G:\\Scratch\\sys32-200`, Release, `Mulshrolate4RX`, concurrency 4, `--NoFileIo`); completed successfully within the 30s timeout.
+- Captured server thread samples during the 200-file run (Release, concurrency 4). `PerfectHashServer.exe` showed 68 threads total; initial samples had 31-36 running, then all waiting. Wait reasons were dominated by `EventPairLow` (IOCP), with a few `Unknown`/`UserRequest`.
+- Re-ran the 200-file sys32 subset with server `--MaxConcurrency=4` (Release, `Mulshrolate4RX`, `--NoFileIo`). Thread sampling showed 8 total threads (4 running initially, then all waiting), with wait reasons dominated by `EventPairLow`; client/server exited cleanly.
+- Added separate IOCP concurrency and worker thread controls: `--IocpConcurrency` (`--MaxConcurrency` alias) and `--MaxThreads` (default `IocpConcurrency * 2` when set). IOCP ports now use per-node concurrency, worker threads default per node; scripts accept `-IocpConcurrency`/`-MaxThreads`.
+- 200-file sys32 subset run with `--IocpConcurrency=4` (Release, `Mulshrolate4RX`, `--NoFileIo`) showed 12 total server threads (6 running initially), wait reasons dominated by `EventPairLow`; client/server exited cleanly.
+- 1000-file random sys32 subset (`G:\\Scratch\\sys32-1000`, Release, `Mulshrolate4RX`, `--NoFileIo`, per-file concurrency 32, server `--IocpConcurrency=32 --MaxThreads=64`) did not complete within 900s; client/server remained running and required termination.
+- OG `PerfectHashBulkCreate.exe` run on the same 1000-file subset (Release, `Mulshrolate4RX`, `--NoFileIo`, concurrency 32, `--Silent`) completed in ~1.95s with exit code 0.
+- Added per-file concurrency ramp controls (`InitialPerFileConcurrency`, `MaxPerFileConcurrency`, `IncreaseConcurrencyAfterMilliseconds`) with defaults (1, max, 500ms).
+- Wired new table-create params into arg parsing and validation, IOCP arg helpers, and `PERFECT_HASH_CONTEXT`.
+- Updated `Chm01Async` to dispatch the initial per-file graph work count and enqueue additional graph work after the configured delay.
+- Documented new parameters in `USAGE.txt`.
+- IOCP sys32-200 subset run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms) completed successfully.
+- IOCP `hard` run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms) crashed with `0xC0000005` (server exit code -1073741819); no minidump found.
+- Re-ran `hard` under `cdb` attach (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms); client returned `0x2004000F`, shutdown succeeded, and no AV was captured (`build-win\\logs\\cdb-hard-attach-release.log`).

@@ -383,6 +383,39 @@ InvalidArg:
         break;
     }
 
+    if (SUCCEEDED(Result)) {
+        PPERFECT_HASH_TABLE_CREATE_PARAMETER Param = NULL;
+        HRESULT LookupResult;
+
+        LookupResult = GetTableCreateParameterForId(
+            TableCreateParameters,
+            TableCreateParameterMaxPerFileConcurrencyId,
+            &Param
+        );
+        if (FAILED(LookupResult)) {
+            PH_ERROR(ExtractBulkCreateArgs_GetMaxPerFileConcurrency, LookupResult);
+            Result = LookupResult;
+        } else if (LookupResult == S_OK && Param) {
+            if (Param->AsULong == 0) {
+                Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+            } else {
+                *MaximumConcurrency = Param->AsULong;
+            }
+        }
+    }
+
+    if (SUCCEEDED(Result) &&
+        *MaximumConcurrency == 0 &&
+        ContextIocp->IocpConcurrency > 0) {
+        *MaximumConcurrency = ContextIocp->IocpConcurrency;
+    }
+
+    if (SUCCEEDED(Result) &&
+        ContextIocp->IocpConcurrency > 0 &&
+        *MaximumConcurrency > ContextIocp->IocpConcurrency) {
+        Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+    }
+
     //
     // If we failed, clean up the table create parameters.  If that fails,
     // report the error, then replace our return value error code with that
@@ -727,6 +760,39 @@ InvalidArg:
         Result = PH_E_INVALID_COMMANDLINE_ARG;
         PH_MESSAGE_ARGS(Result, String);
         break;
+    }
+
+    if (SUCCEEDED(Result)) {
+        PPERFECT_HASH_TABLE_CREATE_PARAMETER Param = NULL;
+        HRESULT LookupResult;
+
+        LookupResult = GetTableCreateParameterForId(
+            TableCreateParameters,
+            TableCreateParameterMaxPerFileConcurrencyId,
+            &Param
+        );
+        if (FAILED(LookupResult)) {
+            PH_ERROR(ExtractTableCreateArgs_GetMaxPerFileConcurrency, LookupResult);
+            Result = LookupResult;
+        } else if (LookupResult == S_OK && Param) {
+            if (Param->AsULong == 0) {
+                Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+            } else {
+                *MaximumConcurrency = Param->AsULong;
+            }
+        }
+    }
+
+    if (SUCCEEDED(Result) &&
+        *MaximumConcurrency == 0 &&
+        ContextIocp->IocpConcurrency > 0) {
+        *MaximumConcurrency = ContextIocp->IocpConcurrency;
+    }
+
+    if (SUCCEEDED(Result) &&
+        ContextIocp->IocpConcurrency > 0 &&
+        *MaximumConcurrency > ContextIocp->IocpConcurrency) {
+        Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
     }
 
     if (SUCCEEDED(Result)) {

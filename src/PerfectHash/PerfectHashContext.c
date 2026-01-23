@@ -488,6 +488,9 @@ Return Value:
 
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
+    Context->InitialPerFileConcurrency = 1;
+    Context->MaxPerFileConcurrency = MaximumConcurrency;
+    Context->IncreaseConcurrencyAfterMilliseconds = 500;
 
     ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
 

@@ -2432,7 +2432,9 @@ Return Value:
         Result = S_OK;
     }
 
-    PerfectHashPrintMessage(PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP);
+    if (Context->ConsoleWork != NULL) {
+        PerfectHashPrintMessage(PH_MSG_PERFECT_HASH_CONSOLE_KEYS_HELP);
+    }
 
     //
     // Intentional follow-on to End.

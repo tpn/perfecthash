@@ -164,8 +164,15 @@ Chm01AsyncGraphComplete(
 
 static
 HRESULT
-Chm01AsyncDispatchGraphWork(
+Chm01AsyncPrepareGraphs(
     _In_ PCHM01_ASYNC_JOB Job
+    );
+
+static
+HRESULT
+Chm01AsyncDispatchGraphWork(
+    _In_ PCHM01_ASYNC_JOB Job,
+    _In_ ULONG DispatchCount
     );
 
 static
@@ -177,6 +184,12 @@ Chm01AsyncInitializeJob(
 static
 HRESULT
 Chm01AsyncPollSolveEvents(
+    _In_ PCHM01_ASYNC_JOB Job
+    );
+
+static
+HRESULT
+Chm01AsyncMaybeIncreaseConcurrency(
     _In_ PCHM01_ASYNC_JOB Job
     );
 
@@ -230,15 +243,25 @@ Chm01AsyncGraphStep(
     ULONG OldNumberOfVertices;
     HRESULT Result;
     PPERFECT_HASH_CONTEXT Context;
+    PCHM01_ASYNC_JOB Job;
     PCHM01_ASYNC_GRAPH_WORK GraphWork;
 
     GraphWork = CONTAINING_RECORD(Work, CHM01_ASYNC_GRAPH_WORK, Work);
     Graph = GraphWork->Graph;
-    Context = GraphWork->Job->Context;
+    Job = GraphWork->Job;
+    Context = Job->Context;
 
     if (!GraphWork->Started) {
         GraphWork->Started = TRUE;
         InterlockedIncrement(&Context->ActiveSolvingLoops);
+        if (InterlockedCompareExchange(&Job->FirstGraphStarted, 1, 0) == 0) {
+            Job->FirstGraphStartMilliseconds = GetTickCount64();
+            if (Job->IncreaseConcurrencyAfterMilliseconds > 0) {
+                Job->NextConcurrencyIncreaseMilliseconds =
+                    Job->FirstGraphStartMilliseconds +
+                    Job->IncreaseConcurrencyAfterMilliseconds;
+            }
+        }
     }
 
     LockedGraph = Graph;
@@ -392,28 +415,18 @@ Chm01AsyncGraphComplete(
 _Use_decl_annotations_
 static
 HRESULT
-Chm01AsyncDispatchGraphWork(
+Chm01AsyncPrepareGraphs(
     PCHM01_ASYNC_JOB Job
     )
 {
     HRESULT Result;
     ULONG Index;
-    ULONG ActiveGraphs;
     PGRAPH Graph;
     PGRAPH *Graphs;
     PPERFECT_HASH_CONTEXT Context;
-    PCHM01_ASYNC_GRAPH_WORK GraphWork;
 
     Context = Job->Context;
     Graphs = Job->Graphs;
-    ActiveGraphs = 0;
-
-    if (Job->GraphsCompleteEvent) {
-        ResetEvent(Job->GraphsCompleteEvent);
-    }
-
-    ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
-    ASSERT(Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList));
 
     if (FirstSolvedGraphWins(Context)) {
         ASSERT(Job->NumberOfGraphs == Job->Concurrency);
@@ -450,6 +463,61 @@ Chm01AsyncDispatchGraphWork(
         }
 
         Graph->Flags.IsSpare = FALSE;
+    }
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+static
+HRESULT
+Chm01AsyncDispatchGraphWork(
+    PCHM01_ASYNC_JOB Job,
+    ULONG DispatchCount
+    )
+{
+    HRESULT Result;
+    ULONG Index;
+    ULONG GraphIndex;
+    ULONG Remaining;
+    PGRAPH Graph;
+    PGRAPH *Graphs;
+    PPERFECT_HASH_CONTEXT Context;
+    PCHM01_ASYNC_GRAPH_WORK GraphWork;
+
+    Context = Job->Context;
+    Graphs = Job->Graphs;
+
+    Remaining = Job->Concurrency - Job->DispatchedGraphs;
+    if (DispatchCount == 0 || Remaining == 0) {
+        return S_OK;
+    }
+
+    if (DispatchCount > Remaining) {
+        DispatchCount = Remaining;
+    }
+
+    if (Job->GraphsCompleteEvent) {
+        ResetEvent(Job->GraphsCompleteEvent);
+    }
+
+    if (Job->DispatchedGraphs == 0) {
+        ASSERT(Context->MainWorkList->Vtbl->IsEmpty(Context->MainWorkList));
+        ASSERT(Context->FinishedWorkList->Vtbl->IsEmpty(Context->FinishedWorkList));
+    }
+
+    for (Index = 0; Index < DispatchCount; Index++) {
+
+        GraphIndex = Job->DispatchedGraphs;
+        if (!FirstSolvedGraphWins(Context)) {
+            GraphIndex++;
+        }
+
+        if (GraphIndex >= Job->NumberOfGraphs) {
+            return PH_E_INVARIANT_CHECK_FAILED;
+        }
+
+        Graph = Graphs[GraphIndex];
 
         GraphWork = (PCHM01_ASYNC_GRAPH_WORK)(
             Job->Allocator->Vtbl->Calloc(
@@ -469,18 +537,15 @@ Chm01AsyncDispatchGraphWork(
         GraphWork->Work.Complete = Chm01AsyncGraphComplete;
         GraphWork->Work.SliceBudget = Job->SliceBudget;
 
-        ActiveGraphs++;
+        InterlockedIncrement(&Context->GraphMemoryFailures);
+        InterlockedIncrement(&Context->RemainingSolverLoops);
+        InterlockedIncrement(&Job->ActiveGraphs);
+        Job->DispatchedGraphs++;
 
         Result = PerfectHashAsyncSubmit(&Job->Async, &GraphWork->Work);
         if (FAILED(Result)) {
             return Result;
         }
-    }
-
-    Job->ActiveGraphs = (LONG)ActiveGraphs;
-
-    if (ActiveGraphs == 0 && Job->GraphsCompleteEvent) {
-        SetEvent(Job->GraphsCompleteEvent);
     }
 
     return S_OK;
@@ -497,6 +562,7 @@ Chm01AsyncInitializeJob(
     HRESULT Result;
     BOOLEAN LimitConcurrency;
     ULONG Concurrency;
+    ULONG InitialConcurrency;
     ULONG NumberOfGraphs;
     ULONG NumberOfSeedsRequired;
     ULONG NumberOfSeedsAvailable;
@@ -574,7 +640,13 @@ Chm01AsyncInitializeJob(
     // Determine concurrency.
     //
 
-    Concurrency = Context->MaximumConcurrency;
+    Concurrency = Context->MaxPerFileConcurrency;
+    if (Concurrency == 0) {
+        Concurrency = Context->MaximumConcurrency;
+    }
+    if (Concurrency == 0) {
+        return PH_E_INVALID_MAXIMUM_CONCURRENCY;
+    }
 
     LimitConcurrency = (
         Table->PriorPredictedAttempts > 0 &&
@@ -585,7 +657,27 @@ Chm01AsyncInitializeJob(
         Concurrency = min(Concurrency, Table->PriorPredictedAttempts);
     }
 
+    if (Concurrency == 0) {
+        return PH_E_INVALID_MAXIMUM_CONCURRENCY;
+    }
+
+    InitialConcurrency = Context->InitialPerFileConcurrency;
+    if (InitialConcurrency == 0) {
+        InitialConcurrency = 1;
+    }
+
+    if (InitialConcurrency > Concurrency) {
+        InitialConcurrency = Concurrency;
+    }
+
     Job->Concurrency = Concurrency;
+    Job->InitialConcurrency = InitialConcurrency;
+    Job->DispatchedGraphs = 0;
+    Job->IncreaseConcurrencyAfterMilliseconds =
+        Context->IncreaseConcurrencyAfterMilliseconds;
+    Job->FirstGraphStarted = 0;
+    Job->FirstGraphStartMilliseconds = 0;
+    Job->NextConcurrencyIncreaseMilliseconds = 0;
 
     if (FirstSolvedGraphWins(Context)) {
         NumberOfGraphs = Concurrency;
@@ -696,6 +788,15 @@ Chm01AsyncInitializeJob(
     }
 
     //
+    // Prepare all graphs for solving.
+    //
+
+    Result = Chm01AsyncPrepareGraphs(Job);
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    //
     // Reset all context events.
     //
 
@@ -800,8 +901,8 @@ Chm01AsyncInitializeJob(
     // Reset counters.
     //
 
-    Context->GraphMemoryFailures = Concurrency;
-    Context->RemainingSolverLoops = Concurrency;
+    Context->GraphMemoryFailures = 0;
+    Context->RemainingSolverLoops = 0;
     Context->ActiveSolvingLoops = 0;
     Context->Attempts = 0;
     Context->FailedAttempts = 0;
@@ -812,7 +913,7 @@ Chm01AsyncInitializeJob(
     // Dispatch graph work.
     //
 
-    Result = Chm01AsyncDispatchGraphWork(Job);
+    Result = Chm01AsyncDispatchGraphWork(Job, Job->InitialConcurrency);
     if (FAILED(Result)) {
         goto Error;
     }
@@ -843,6 +944,7 @@ Chm01AsyncPollSolveEvents(
     PCHM01_ASYNC_JOB Job
     )
 {
+    HRESULT Result;
     ULONG WaitResult;
     PPERFECT_HASH_CONTEXT Context;
 
@@ -854,6 +956,10 @@ Chm01AsyncPollSolveEvents(
                                         0);
 
     if (WaitResult == WAIT_TIMEOUT) {
+        Result = Chm01AsyncMaybeIncreaseConcurrency(Job);
+        if (FAILED(Result)) {
+            return Result;
+        }
         return S_FALSE;
     }
 
@@ -867,6 +973,51 @@ Chm01AsyncPollSolveEvents(
         InterlockedIncrement(&Context->LowMemoryObserved);
         return PH_I_LOW_MEMORY;
     }
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+static
+HRESULT
+Chm01AsyncMaybeIncreaseConcurrency(
+    PCHM01_ASYNC_JOB Job
+    )
+{
+    HRESULT Result;
+    ULONGLONG Now;
+    PPERFECT_HASH_CONTEXT Context;
+
+    Context = Job->Context;
+
+    if (Job->IncreaseConcurrencyAfterMilliseconds == 0) {
+        return S_OK;
+    }
+
+    if (Job->FirstGraphStarted == 0) {
+        return S_OK;
+    }
+
+    if (Job->DispatchedGraphs >= Job->Concurrency) {
+        return S_OK;
+    }
+
+    if (StopSolving(Context)) {
+        return S_OK;
+    }
+
+    Now = GetTickCount64();
+    if (Now < Job->NextConcurrencyIncreaseMilliseconds) {
+        return S_OK;
+    }
+
+    Result = Chm01AsyncDispatchGraphWork(Job, 1);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Job->NextConcurrencyIncreaseMilliseconds =
+        Now + Job->IncreaseConcurrencyAfterMilliseconds;
 
     return S_OK;
 }
