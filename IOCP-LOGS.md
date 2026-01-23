@@ -130,3 +130,9 @@
 - IOCP sys32-200 subset run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms) completed successfully.
 - IOCP `hard` run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms) crashed with `0xC0000005` (server exit code -1073741819); no minidump found.
 - Re-ran `hard` under `cdb` attach (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms); client returned `0x2004000F`, shutdown succeeded, and no AV was captured (`build-win\\logs\\cdb-hard-attach-release.log`).
+- IOCP full sys32 run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=32`, `--MaxThreads=64`, per-file ramp 1/4/500ms) completed in ~38.1s.
+- OG BulkCreate full sys32 run (Release, `Mulshrolate4RX`, `--NoFileIo`, concurrency 32, full paths) completed in ~20.05s; no errors logged (`build-win\\logs\\og-sys32-conc32.log`).
+- IOCP full sys32 run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=32`, `--MaxThreads=64`, per-file ramp 1/16/500ms) completed in ~38.1s.
+- OG BulkCreate full sys32 run with file I/O (Release, `Mulshrolate4RX`, concurrency 32) completed in ~2m30s based on `G:\\Scratch\\sys32.og.fileio` directory timestamps (created 19:27:31, last write 19:30:01).
+- IOCP full sys32 run with file I/O (Release, `Mulshrolate4RX`, `--IocpConcurrency=32`, `--MaxThreads=64`, per-file ramp 1/4/500ms) completed in ~1m27s (`G:\\Scratch\\iocp-sys32-conc32-fileio.log`).
+- IOCP full sys32 run with file I/O (Release, `Mulshrolate4RX`, `--IocpConcurrency=60`, `--MaxThreads=240`, per-file ramp 1/4/500ms) completed in ~1m49s (`G:\\Scratch\\iocp-sys32-conc60-1-4-500-fileio.log`).
