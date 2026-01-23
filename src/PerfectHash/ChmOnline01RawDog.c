@@ -856,6 +856,16 @@ PerfectHashTableCompileJitRawDog(
     }
 
     CompileFlags.Jit = TRUE;
+    if (CompileFlags.JitIndex64 ||
+        CompileFlags.JitIndex32x2 ||
+        CompileFlags.JitIndex32x4 ||
+        CompileFlags.JitIndex32x8 ||
+        CompileFlags.JitIndex32x16 ||
+        CompileFlags.JitVectorIndex32x2 ||
+        CompileFlags.JitVectorIndex32x4 ||
+        CompileFlags.JitVectorIndex32x8) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
 
     if (Table->Jit) {
         PerfectHashTableJitRundown(Table);
