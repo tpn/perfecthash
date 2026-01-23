@@ -17,6 +17,27 @@ Abstract:
 
 PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
 
+#ifdef PH_ONLINE_ONLY
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableLoad(
+    PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
+    PCUNICODE_STRING TablePath,
+    PPERFECT_HASH_KEYS Keys
+    )
+{
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(TableLoadFlagsPointer);
+    UNREFERENCED_PARAMETER(TablePath);
+    UNREFERENCED_PARAMETER(Keys);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
+#else
+
 _Use_decl_annotations_
 HRESULT
 PerfectHashTableLoad(
@@ -562,5 +583,7 @@ End:
 
     return Result;
 }
+
+#endif // PH_ONLINE_ONLY
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

@@ -127,6 +127,11 @@ Return Value:
         return Result;
     }
 
+#ifdef PH_ONLINE_ONLY
+    ReleasePerfectHashTableLockExclusive(Table);
+    return PH_E_NOT_IMPLEMENTED;
+#endif
+
     //
     // Argument validation complete.
     //

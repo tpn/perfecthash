@@ -203,6 +203,10 @@ Return Value:
 
     VALIDATE_FLAGS(TableCreate, TABLE_CREATE, ULongLong);
 
+#ifdef PH_ONLINE_ONLY
+    TableCreateFlags.NoFileIo = TRUE;
+#endif
+
     if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         return PH_E_INVALID_ALGORITHM_ID;
     }

@@ -36,6 +36,8 @@ if(PERFECTHASH_ENABLE_INSTALL)
     install(
         TARGETS
             PerfectHash
+            PerfectHashOnline
+            PerfectHashOnlineStatic
             PerfectHashCreateExe
             PerfectHashBulkCreateExe
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

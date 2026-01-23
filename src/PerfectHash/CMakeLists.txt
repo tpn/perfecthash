@@ -349,6 +349,17 @@ set(ALL_FILES
     ${Source_Files}
 )
 
+set(ONLINE_SOURCE_FILES ${Source_Files})
+list(FILTER ONLINE_SOURCE_FILES EXCLUDE REGEX "Chm01FileWork.*\\.c$")
+list(APPEND ONLINE_SOURCE_FILES "Chm01FileWorkStub.c")
+
+set(ONLINE_ALL_FILES
+    ${Private_Header_Files}
+    ${Private_Header_Files_28Auto-Generated29}
+    ${Public_Header_Files}
+    ${ONLINE_SOURCE_FILES}
+)
+
 if(PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_X86_64)
     set_source_files_properties(
         "GraphAvx.c"
@@ -472,5 +483,134 @@ if(MSVC)
         $<$<NOT:$<CONFIG:Debug>>:ucrt>
     )
 endif()
+
+set(online_target PerfectHashOnline)
+set(online_static_target PerfectHashOnlineStatic)
+
+add_library(${online_target} SHARED ${ONLINE_ALL_FILES})
+add_library(${online_static_target} STATIC ${ONLINE_ALL_FILES})
+set_target_properties(
+    ${online_static_target}
+    PROPERTIES
+    OUTPUT_NAME PerfectHashOnline
+)
+
+# Generated Linux message table header lives in the build directory.
+if(PERFECTHASH_IS_LINUX)
+    target_include_directories(${online_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    target_include_directories(${online_static_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+set_property(TARGET ${online_target} PROPERTY PERFECTHASH_SKIP_RUNTIME_LIBS TRUE)
+set_property(TARGET ${online_static_target} PROPERTY PERFECTHASH_SKIP_RUNTIME_LIBS TRUE)
+perfecthash_apply_common_settings(${online_target})
+perfecthash_apply_common_settings(${online_static_target})
+
+foreach(ph_online_target ${online_target} ${online_static_target})
+    target_compile_definitions(
+        ${ph_online_target}
+        PRIVATE
+        "_PERFECT_HASH_INTERNAL_BUILD"
+        "PH_ONLINE_ONLY"
+    )
+endforeach()
+
+if(MSVC)
+    set_target_properties(
+        ${online_static_target}
+        PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/static"
+    )
+    if(CMAKE_CONFIGURATION_TYPES)
+        foreach(config ${CMAKE_CONFIGURATION_TYPES})
+            string(TOUPPER "${config}" config_upper)
+            set_target_properties(
+                ${online_static_target}
+                PROPERTIES
+                ARCHIVE_OUTPUT_DIRECTORY_${config_upper}
+                "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${config_upper}}/static"
+            )
+        endforeach()
+    endif()
+endif()
+
+foreach(ph_online_target ${online_target} ${online_static_target})
+    if(PERFECTHASH_ENABLE_PENTER)
+        target_link_libraries(${ph_online_target} PUBLIC FunctionHook)
+    endif()
+
+    if(PERFECTHASH_HAS_LLVM)
+        target_include_directories(
+            ${ph_online_target}
+            SYSTEM
+            PRIVATE
+            ${LLVM_INCLUDE_DIRS}
+        )
+        if(LLVM_DEFINITIONS)
+            separate_arguments(
+                LLVM_DEFINITIONS_LIST
+                NATIVE_COMMAND
+                ${LLVM_DEFINITIONS}
+            )
+            target_compile_options(
+                ${ph_online_target}
+                PRIVATE
+                ${LLVM_DEFINITIONS_LIST}
+            )
+        endif()
+        if(MSVC)
+            find_library(LLVM_C_LIB NAMES LLVM-C)
+        endif()
+        if(MSVC AND LLVM_C_LIB)
+            target_link_libraries(${ph_online_target} PRIVATE ${LLVM_C_LIB})
+        else()
+            llvm_map_components_to_libnames(
+                LLVM_LIBS
+                core
+                executionengine
+                mcjit
+                native
+                target
+                support
+            )
+            target_link_libraries(${ph_online_target} PRIVATE ${LLVM_LIBS})
+            if(MSVC)
+                target_link_libraries(
+                    ${ph_online_target}
+                    PRIVATE
+                    $<$<CONFIG:Debug>:msvcprtd>
+                    $<$<NOT:$<CONFIG:Debug>>:msvcprt>
+                    $<$<CONFIG:Debug>:msvcrtd>
+                    $<$<NOT:$<CONFIG:Debug>>:msvcrt>
+                    oldnames
+                )
+            endif()
+        endif()
+    endif()
+
+    if(TARGET PerfectHashAsm)
+        add_dependencies(${ph_online_target} PerfectHashAsm)
+        set(ADDITIONAL_LIBRARY_DEPENDENCIES PerfectHashAsm)
+        if(WIN32)
+            list(APPEND ADDITIONAL_LIBRARY_DEPENDENCIES rpcrt4)
+        endif()
+        target_link_libraries(
+            ${ph_online_target}
+            PUBLIC
+            "${ADDITIONAL_LIBRARY_DEPENDENCIES}"
+        )
+    endif()
+
+    if(MSVC)
+        target_link_libraries(
+            ${ph_online_target}
+            PRIVATE
+            $<$<CONFIG:Debug>:vcruntimed>
+            $<$<NOT:$<CONFIG:Debug>>:vcruntime>
+            $<$<CONFIG:Debug>:ucrtd>
+            $<$<NOT:$<CONFIG:Debug>>:ucrt>
+        )
+    endif()
+endforeach()
 
 # vim:set ts=8 sw=4 sts=4 tw=80 expandtab syntax=cmake                        :

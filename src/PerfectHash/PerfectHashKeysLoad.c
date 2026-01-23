@@ -59,6 +59,27 @@ CompareUlongLongKeys(
 
 PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
 
+#ifdef PH_ONLINE_ONLY
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysLoad(
+    PPERFECT_HASH_KEYS Keys,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
+    PCUNICODE_STRING KeysPath,
+    ULONG KeySizeInBytes
+    )
+{
+    UNREFERENCED_PARAMETER(Keys);
+    UNREFERENCED_PARAMETER(KeysLoadFlagsPointer);
+    UNREFERENCED_PARAMETER(KeysPath);
+    UNREFERENCED_PARAMETER(KeySizeInBytes);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
+#else
+
 _Use_decl_annotations_
 HRESULT
 PerfectHashKeysLoad(
@@ -371,6 +392,8 @@ End:
 
     return Result;
 }
+
+#endif // PH_ONLINE_ONLY
 
 PERFECT_HASH_KEYS_LOAD_FROM_ARRAY PerfectHashKeysLoadFromArray;
 
