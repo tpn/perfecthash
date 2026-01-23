@@ -15,126 +15,12 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+
+#ifndef PH_ONLINE_ONLY
+
 #include "TableCreateCsv.h"
 #include "TableCreateBestCsv.h"
 #include "PerfectHashTls.h"
-
-#ifdef PH_ONLINE_ONLY
-
-PERFECT_HASH_CONTEXT_TABLE_CREATE PerfectHashContextTableCreate;
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashContextTableCreate(
-    PPERFECT_HASH_CONTEXT Context,
-    PCUNICODE_STRING KeysPath,
-    PCUNICODE_STRING BaseOutputDirectory,
-    PERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlagsPointer,
-    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
-    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlagsPointer,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlagsPointer,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    )
-{
-    UNREFERENCED_PARAMETER(Context);
-    UNREFERENCED_PARAMETER(KeysPath);
-    UNREFERENCED_PARAMETER(BaseOutputDirectory);
-    UNREFERENCED_PARAMETER(AlgorithmId);
-    UNREFERENCED_PARAMETER(HashFunctionId);
-    UNREFERENCED_PARAMETER(MaskFunctionId);
-    UNREFERENCED_PARAMETER(ContextTableCreateFlagsPointer);
-    UNREFERENCED_PARAMETER(KeysLoadFlagsPointer);
-    UNREFERENCED_PARAMETER(TableCreateFlagsPointer);
-    UNREFERENCED_PARAMETER(TableCompileFlagsPointer);
-    UNREFERENCED_PARAMETER(TableCreateParameters);
-
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-PERFECT_HASH_CONTEXT_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
-    PerfectHashContextExtractTableCreateArgsFromArgvW;
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashContextExtractTableCreateArgsFromArgvW(
-    PPERFECT_HASH_CONTEXT Context,
-    ULONG NumberOfArguments,
-    LPWSTR *ArgvW,
-    LPWSTR CommandLineW,
-    PUNICODE_STRING KeysPath,
-    PUNICODE_STRING BaseOutputDirectory,
-    PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
-    PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
-    PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
-    PULONG MaximumConcurrency,
-    PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS ContextTableCreateFlags,
-    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
-    PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
-    PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
-    PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
-    )
-{
-    UNREFERENCED_PARAMETER(Context);
-    UNREFERENCED_PARAMETER(NumberOfArguments);
-    UNREFERENCED_PARAMETER(ArgvW);
-    UNREFERENCED_PARAMETER(CommandLineW);
-    UNREFERENCED_PARAMETER(KeysPath);
-    UNREFERENCED_PARAMETER(BaseOutputDirectory);
-    UNREFERENCED_PARAMETER(AlgorithmId);
-    UNREFERENCED_PARAMETER(HashFunctionId);
-    UNREFERENCED_PARAMETER(MaskFunctionId);
-    UNREFERENCED_PARAMETER(MaximumConcurrency);
-    UNREFERENCED_PARAMETER(ContextTableCreateFlags);
-    UNREFERENCED_PARAMETER(KeysLoadFlags);
-    UNREFERENCED_PARAMETER(TableCreateFlags);
-    UNREFERENCED_PARAMETER(TableCompileFlags);
-    UNREFERENCED_PARAMETER(TableCreateParameters);
-
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVW PerfectHashContextTableCreateArgvW;
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashContextTableCreateArgvW(
-    PPERFECT_HASH_CONTEXT Context,
-    ULONG NumberOfArguments,
-    LPWSTR *ArgvW,
-    LPWSTR CommandLineW
-    )
-{
-    UNREFERENCED_PARAMETER(Context);
-    UNREFERENCED_PARAMETER(NumberOfArguments);
-    UNREFERENCED_PARAMETER(ArgvW);
-    UNREFERENCED_PARAMETER(CommandLineW);
-
-    return PH_E_NOT_IMPLEMENTED;
-}
-
-#ifdef PH_COMPAT
-PERFECT_HASH_CONTEXT_TABLE_CREATE_ARGVA PerfectHashContextTableCreateArgvA;
-
-_Use_decl_annotations_
-HRESULT
-PerfectHashContextTableCreateArgvA(
-    PPERFECT_HASH_CONTEXT Context,
-    ULONG NumberOfArguments,
-    LPSTR *ArgvA
-    )
-{
-    UNREFERENCED_PARAMETER(Context);
-    UNREFERENCED_PARAMETER(NumberOfArguments);
-    UNREFERENCED_PARAMETER(ArgvA);
-
-    return PH_E_NOT_IMPLEMENTED;
-}
-#endif
-
-#else
 
 #define PH_ERROR_EX(Name, Result, ...) \
     PH_ERROR(Name, Result)
@@ -1705,8 +1591,6 @@ Return Value:
 
     return Result;
 }
-#endif
-
 #endif // PH_ONLINE_ONLY
 
 

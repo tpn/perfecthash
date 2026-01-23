@@ -133,10 +133,16 @@
     <ClCompile Include="Chm01FileWork.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Chm01FileWorkStub.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Chm01Index.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ChmOnline01.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ChmOnline01Stub.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashTableCreate.c">
@@ -251,6 +257,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PerfectHashContextTableCreate.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashContextCreateStub.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c">

@@ -45,6 +45,12 @@ Return Value:
 
 --*/
 {
+#ifdef PH_ONLINE_CORE_ONLY
+    UNREFERENCED_PARAMETER(Online);
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(CompileFlagsPointer);
+    return PH_E_NOT_IMPLEMENTED;
+#else
     HRESULT Result;
     PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags;
 
@@ -83,6 +89,7 @@ Return Value:
     return Table->Vtbl->Compile(Table,
                                 &CompileFlags,
                                 PerfectHashGetCurrentCpuArch());
+#endif
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

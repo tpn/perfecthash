@@ -38,6 +38,8 @@ if(PERFECTHASH_ENABLE_INSTALL)
             PerfectHash
             PerfectHashOnline
             PerfectHashOnlineStatic
+            PerfectHashOnlineCore
+            PerfectHashOnlineCoreStatic
             PerfectHashCreateExe
             PerfectHashBulkCreateExe
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

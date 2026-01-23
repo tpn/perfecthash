@@ -179,6 +179,7 @@
   <ItemGroup>
     <ClCompile Include="BitManipulation.c" />
     <ClCompile Include="Chm01FileWork.c" />
+    <ClCompile Include="Chm01FileWorkStub.c" />
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderCompiledPerfectHashMacroGlueFile.c" />
     <ClCompile Include="Chm01FileWorkCHeaderFile.c" />
@@ -231,6 +232,7 @@
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="ChmOnline01.c" />
+    <ClCompile Include="ChmOnline01Stub.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chm01Shared.c" />
     <ClCompile Include="Chunk.c" />
@@ -247,6 +249,7 @@
     <ClCompile Include="GuardedList.c" />
     <ClCompile Include="PerfectHashContextBulkCreate.c" />
     <ClCompile Include="PerfectHashContextTableCreate.c" />
+    <ClCompile Include="PerfectHashContextCreateStub.c" />
     <ClCompile Include="PerfectHashDirectory.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />
     <ClCompile Include="PerfectHashContext.c" />

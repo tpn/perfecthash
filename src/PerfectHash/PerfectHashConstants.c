@@ -666,6 +666,7 @@ const UNICODE_STRING KeysTableSizeSuffix = RCS(L".TableSize");
 const UNICODE_STRING TableValuesSuffix = RCS(L"_TableValues_");
 const UNICODE_STRING TableValuesExtension = RCS(L"bin");
 
+#ifndef PH_ONLINE_ONLY
 const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
     RCS(L"PerfectHashBulkCreate");
 
@@ -677,6 +678,7 @@ const UNICODE_STRING PerfectHashTableCreateCsvBaseName =
 
 const UNICODE_STRING PerfectHashTableCreateBestCsvBaseName =
     RCS(L"PerfectHashTableCreateBest");
+#endif // PH_ONLINE_ONLY
 
 const STRING NullString = RCS("");
 const STRING DotExeSuffixA = RCS(".exe");
@@ -1216,6 +1218,7 @@ const ALLOCATOR_VTBL AllocatorInterface = {
 };
 VERIFY_VTBL_SIZE(ALLOCATOR, 18);
 
+#ifndef PH_ONLINE_ONLY
 //
 // PerfectHashFile
 //
@@ -1296,6 +1299,7 @@ const PERFECT_HASH_DIRECTORY_VTBL PerfectHashDirectoryInterface = {
     &PerfectHashDirectoryRemoveFile,
 };
 VERIFY_VTBL_SIZE(PERFECT_HASH_DIRECTORY, 4 + 5);
+#endif // PH_ONLINE_ONLY
 
 //
 // GuardedList
@@ -1488,9 +1492,15 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashTableInterface,
     &RtlInterface,
     &AllocatorInterface,
+#ifdef PH_ONLINE_ONLY
+    NULL,
+    NULL,
+    NULL,
+#else
     &PerfectHashFileInterface,
     &PerfectHashPathInterface,
     &PerfectHashDirectoryInterface,
+#endif
     &GuardedListInterface,
     &GraphInterface,
 #ifdef PH_USE_CUDA
@@ -1517,9 +1527,15 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashTableInitialize,
     (PCOMPONENT_INITIALIZE)&RtlInitialize,
     (PCOMPONENT_INITIALIZE)&AllocatorInitialize,
+#ifdef PH_ONLINE_ONLY
+    NULL,
+    NULL,
+    NULL,
+#else
     (PCOMPONENT_INITIALIZE)&PerfectHashFileInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashPathInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
+#endif
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
 #ifdef PH_USE_CUDA
@@ -1547,9 +1563,15 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashTableRundown,
     (PCOMPONENT_RUNDOWN)&RtlRundown,
     (PCOMPONENT_RUNDOWN)&AllocatorRundown,
+#ifdef PH_ONLINE_ONLY
+    NULL,
+    NULL,
+    NULL,
+#else
     (PCOMPONENT_RUNDOWN)&PerfectHashFileRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashPathRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
+#endif
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
 #ifdef PH_USE_CUDA
@@ -1566,6 +1588,7 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
 };
 VERIFY_ARRAY_SIZE(ComponentRundownRoutines);
 
+#ifndef PH_ONLINE_ONLY
 //
 // Include source files for any strings that are referenced in more than one
 // compilation unit.
@@ -1574,6 +1597,7 @@ VERIFY_ARRAY_SIZE(ComponentRundownRoutines);
 #include "CompiledPerfectHashTableRoutinesPre_CSource_RawCString.h"
 #include "CompiledPerfectHashTableRoutines_CSource_RawCString.h"
 #include "CompiledPerfectHashTableRoutinesPost_CSource_RawCString.h"
+#endif // PH_ONLINE_ONLY
 #include "CompiledPerfectHashTableTypesPre_CHeader_RawCString.h"
 #include "CompiledPerfectHashTableTypesPost_CHeader_RawCString.h"
 
