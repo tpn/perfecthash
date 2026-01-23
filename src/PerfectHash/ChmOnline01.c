@@ -350,6 +350,8 @@ BuildClampedHostFeatures(
 {
     BOOLEAN DisableAvx2;
     BOOLEAN DisableAvx512;
+    BOOLEAN DisableSve;
+    BOOLEAN DisableSve2;
     size_t Length;
     char *Buffer;
     char *Cursor;
@@ -360,7 +362,8 @@ BuildClampedHostFeatures(
     }
 
     if (MaxIsa == PerfectHashJitMaxIsaAuto ||
-        MaxIsa == PerfectHashJitMaxIsaAvx512) {
+        MaxIsa == PerfectHashJitMaxIsaAvx512 ||
+        MaxIsa == PerfectHashJitMaxIsaSve2) {
         return NULL;
     }
 
@@ -375,6 +378,9 @@ BuildClampedHostFeatures(
     DisableAvx512 = (MaxIsa == PerfectHashJitMaxIsaAvx ||
                      MaxIsa == PerfectHashJitMaxIsaAvx2);
     DisableAvx2 = (MaxIsa == PerfectHashJitMaxIsaAvx);
+    DisableSve = (MaxIsa == PerfectHashJitMaxIsaNeon);
+    DisableSve2 = (MaxIsa == PerfectHashJitMaxIsaNeon ||
+                   MaxIsa == PerfectHashJitMaxIsaSve);
 
     Cursor = Buffer;
     while (Cursor && *Cursor) {
@@ -391,6 +397,14 @@ BuildClampedHostFeatures(
             } else if (DisableAvx512 &&
                        TokenLength >= 7 &&
                        strncmp(Cursor + 1, "avx512", 6) == 0) {
+                Cursor[0] = '-';
+            } else if (DisableSve2 &&
+                       TokenLength >= 5 &&
+                       strncmp(Cursor + 1, "sve2", 4) == 0) {
+                Cursor[0] = '-';
+            } else if (DisableSve &&
+                       TokenLength >= 4 &&
+                       strncmp(Cursor + 1, "sve", 3) == 0) {
                 Cursor[0] = '-';
             }
         }

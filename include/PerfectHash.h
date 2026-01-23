@@ -3472,6 +3472,24 @@ typedef enum _PERFECT_HASH_JIT_MAX_ISA_ID {
     PerfectHashJitMaxIsaAvx512,
 
     //
+    // Cap JIT code generation at NEON (AArch64 ASIMD).
+    //
+
+    PerfectHashJitMaxIsaNeon,
+
+    //
+    // Cap JIT code generation at SVE.
+    //
+
+    PerfectHashJitMaxIsaSve,
+
+    //
+    // Cap JIT code generation at SVE2.
+    //
+
+    PerfectHashJitMaxIsaSve2,
+
+    //
     // N.B. Keep the next value last.
     //
 
@@ -3566,13 +3584,13 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         // Optionally caps the maximum ISA used by the JIT backend.
         //
 
-        ULONG JitMaxIsa:2;
+        ULONG JitMaxIsa:3;
 
         //
         // Unused bits.
         //
 
-        ULONG Unused:20;
+        ULONG Unused:19;
     };
 
     LONG AsLong;

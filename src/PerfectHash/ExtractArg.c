@@ -335,6 +335,9 @@ TryExtractArgTableCompileFlags(
     DECL_ARG(Avx);
     DECL_ARG(Avx2);
     DECL_ARG(Avx512);
+    DECL_ARG(Neon);
+    DECL_ARG(Sve);
+    DECL_ARG(Sve2);
 
     UNREFERENCED_PARAMETER(Allocator);
 
@@ -463,6 +466,12 @@ TryExtractArgTableCompileFlags(
             Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx2;
         } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Avx512, FALSE)) {
             Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx512;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Neon, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaNeon;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Sve, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaSve;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Sve2, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaSve2;
         } else {
             return PH_E_INVALID_TABLE_COMPILE_FLAGS;
         }

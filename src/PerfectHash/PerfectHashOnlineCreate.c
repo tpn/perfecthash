@@ -76,6 +76,10 @@ Return Value:
     PPERFECT_HASH_TABLE Table = NULL;
     PPERFECT_HASH_CONTEXT Context = NULL;
     BOOLEAN TlsContextSet = FALSE;
+    BOOLEAN AllocatorOverrideSet = FALSE;
+    BOOLEAN PrevDisableGlobalAllocator = FALSE;
+    PALLOCATOR PrevAllocator = NULL;
+    PALLOCATOR AllocatorOverride = NULL;
     PPERFECT_HASH_TLS_CONTEXT TlsContext;
     PERFECT_HASH_TLS_CONTEXT LocalTlsContext = { 0 };
     PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
@@ -162,6 +166,22 @@ Return Value:
     }
 
     //
+    // Establish TLS context early so we can honor an allocator override.
+    //
+
+    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
+
+    if (TableCreateParameters->Allocator) {
+        AllocatorOverride = TableCreateParameters->Allocator;
+        PrevAllocator = TlsContext->Allocator;
+        PrevDisableGlobalAllocator =
+            TlsContext->Flags.DisableGlobalAllocatorComponent;
+        TlsContext->Allocator = AllocatorOverride;
+        TlsContext->Flags.DisableGlobalAllocatorComponent = FALSE;
+        AllocatorOverrideSet = TRUE;
+    }
+
+    //
     // Create keys, context, and table instances.
     //
 
@@ -216,7 +236,6 @@ Return Value:
         goto Error;
     }
 
-    TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
     TlsContext->Context = Context;
     TlsContextSet = TRUE;
 
@@ -253,6 +272,13 @@ Return Value:
         goto Error;
     }
 
+    if (AllocatorOverrideSet) {
+        TlsContext->Allocator = PrevAllocator;
+        TlsContext->Flags.DisableGlobalAllocatorComponent =
+            PrevDisableGlobalAllocator;
+        AllocatorOverrideSet = FALSE;
+    }
+
     if (TlsContextSet) {
         PerfectHashTlsClearContextIfActive(&LocalTlsContext);
         TlsContextSet = FALSE;
@@ -269,6 +295,13 @@ Return Value:
     return S_OK;
 
 Error:
+
+    if (AllocatorOverrideSet) {
+        TlsContext->Allocator = PrevAllocator;
+        TlsContext->Flags.DisableGlobalAllocatorComponent =
+            PrevDisableGlobalAllocator;
+        AllocatorOverrideSet = FALSE;
+    }
 
     if (TlsContextSet) {
         PerfectHashTlsClearContextIfActive(&LocalTlsContext);

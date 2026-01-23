@@ -720,14 +720,14 @@ Table Compile Flags:
 
         Compiles vectorized 2-wide, 4-wide, or 8-wide Index32() routines.
         These imply --JitIndex32x2/--JitIndex32x4 and are intended to map
-        to NEON/SSE on the active CPU architecture. The 8-wide variant
+        to NEON/SVE/SSE on the active CPU architecture. The 8-wide variant
         follows the same behavior.
 
-    --JitMaxIsa=Auto|Avx|Avx2|Avx512
+    --JitMaxIsa=Auto|Avx|Avx2|Avx512|Neon|Sve|Sve2
 
         Caps the maximum ISA used by the LLVM JIT backend. Auto selects the
         host CPU features. Avx/Avx2/Avx512 downgrade the maximum ISA even if
-        the host CPU supports higher levels.
+        the host CPU supports higher levels. Neon/Sve/Sve2 apply to AArch64.
 
 Table Create Parameters:
 

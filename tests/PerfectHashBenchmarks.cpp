@@ -386,6 +386,21 @@ bool ParseArguments(int argc, char **argv, BenchmarkOptions *options) {
         options->jit_max_isa = PerfectHashJitMaxIsaAvx512;
         continue;
       }
+      if (std::strcmp(value, "neon") == 0 ||
+          std::strcmp(value, "Neon") == 0) {
+        options->jit_max_isa = PerfectHashJitMaxIsaNeon;
+        continue;
+      }
+      if (std::strcmp(value, "sve") == 0 ||
+          std::strcmp(value, "Sve") == 0) {
+        options->jit_max_isa = PerfectHashJitMaxIsaSve;
+        continue;
+      }
+      if (std::strcmp(value, "sve2") == 0 ||
+          std::strcmp(value, "Sve2") == 0) {
+        options->jit_max_isa = PerfectHashJitMaxIsaSve2;
+        continue;
+      }
       return false;
     }
 
@@ -486,7 +501,7 @@ void PrintUsage(const char *exe) {
             << " [--graph-impl=N]"
             << " [--fixed-attempts=N] [--max-solve-time=N]"
             << " [--compare-isa]"
-            << " [--no-jit] [--jit-max-isa=auto|avx|avx2|avx512]"
+            << " [--no-jit] [--jit-max-isa=auto|avx|avx2|avx512|neon|sve|sve2]"
             << " [--index32x2] [--index32x4] [--index32x8] [--index32x16]"
             << " [--jit-vector-index32x2] [--jit-vector-index32x4]"
             << " [--jit-vector-index32x8]\n";
@@ -502,6 +517,12 @@ const char *JitMaxIsaToString(PERFECT_HASH_JIT_MAX_ISA_ID value) {
       return "avx2";
     case PerfectHashJitMaxIsaAvx512:
       return "avx512";
+    case PerfectHashJitMaxIsaNeon:
+      return "neon";
+    case PerfectHashJitMaxIsaSve:
+      return "sve";
+    case PerfectHashJitMaxIsaSve2:
+      return "sve2";
     default:
       return "unknown";
   }
@@ -1144,6 +1165,12 @@ int RunCompare(const BenchmarkOptions &base) {
       case PerfectHashJitMaxIsaAvx2:
         return 2;
       case PerfectHashJitMaxIsaAvx512:
+        return 3;
+      case PerfectHashJitMaxIsaNeon:
+        return 1;
+      case PerfectHashJitMaxIsaSve:
+        return 2;
+      case PerfectHashJitMaxIsaSve2:
         return 3;
       default:
         return 3;
