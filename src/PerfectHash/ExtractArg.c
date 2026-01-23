@@ -330,8 +330,12 @@ TryExtractArgTableCompileFlags(
     DECL_ARG(JitVectorIndex2);
     DECL_ARG(JitVectorIndex4);
     DECL_ARG(JitVectorIndex8);
+    DECL_ARG(JitMaxIsa);
+    DECL_ARG(Auto);
+    DECL_ARG(Avx);
+    DECL_ARG(Avx2);
+    DECL_ARG(Avx512);
 
-    UNREFERENCED_PARAMETER(Rtl);
     UNREFERENCED_PARAMETER(Allocator);
 
     if (IS_EQUAL(Jit)) {
@@ -420,6 +424,50 @@ TryExtractArgTableCompileFlags(
     if (IS_EQUAL(JitVectorIndex8)) {
         Flags->Jit = TRUE;
         Flags->JitVectorIndex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (Arg->Length > JitMaxIsa.Length &&
+        Arg->Buffer[JitMaxIsa.Length / sizeof(WCHAR)] == L'=') {
+        USHORT ValueOffset;
+        UNICODE_STRING PrefixString;
+        UNICODE_STRING ValueString;
+
+        ValueOffset = JitMaxIsa.Length;
+        PrefixString.Buffer = Arg->Buffer;
+        PrefixString.Length = ValueOffset;
+        PrefixString.MaximumLength = ValueOffset;
+
+        if (!Rtl->RtlEqualUnicodeString(&PrefixString, &JitMaxIsa, FALSE)) {
+            return S_FALSE;
+        }
+
+        if (Arg->Length <= (ValueOffset + sizeof(WCHAR)) ||
+            Arg->Buffer[ValueOffset / sizeof(WCHAR)] != L'=') {
+            return PH_E_COMMANDLINE_ARG_MISSING_VALUE;
+        }
+
+        ValueString.Buffer = Arg->Buffer + (ValueOffset / sizeof(WCHAR) + 1);
+        ValueString.Length = Arg->Length - (ValueOffset + sizeof(WCHAR));
+        ValueString.MaximumLength = ValueString.Length;
+
+        if (ValueString.Length == 0) {
+            return PH_E_COMMANDLINE_ARG_MISSING_VALUE;
+        }
+
+        if (Rtl->RtlEqualUnicodeString(&ValueString, &Auto, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAuto;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Avx, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Avx2, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx2;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Avx512, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx512;
+        } else {
+            return PH_E_INVALID_TABLE_COMPILE_FLAGS;
+        }
+
+        Flags->Jit = TRUE;
         return S_OK;
     }
 

@@ -3441,6 +3441,57 @@ IsValidTableLoadFlags(
 // Define table compilation flags.
 //
 
+//
+// Define max ISA for JIT compilation.
+//
+
+typedef enum _PERFECT_HASH_JIT_MAX_ISA_ID {
+
+    //
+    // Auto-select the host CPU features.
+    //
+
+    PerfectHashJitMaxIsaAuto = 0,
+
+    //
+    // Cap JIT code generation at AVX.
+    //
+
+    PerfectHashJitMaxIsaAvx,
+
+    //
+    // Cap JIT code generation at AVX2.
+    //
+
+    PerfectHashJitMaxIsaAvx2,
+
+    //
+    // Cap JIT code generation at AVX-512.
+    //
+
+    PerfectHashJitMaxIsaAvx512,
+
+    //
+    // N.B. Keep the next value last.
+    //
+
+    PerfectHashInvalidJitMaxIsa,
+
+} PERFECT_HASH_JIT_MAX_ISA_ID;
+typedef PERFECT_HASH_JIT_MAX_ISA_ID *PPERFECT_HASH_JIT_MAX_ISA_ID;
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashJitMaxIsaId(
+    _In_ PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa
+    )
+{
+    return (
+        JitMaxIsa >= PerfectHashJitMaxIsaAuto &&
+        JitMaxIsa < PerfectHashInvalidJitMaxIsa
+    );
+}
+
 typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
 
     struct _Struct_size_bytes_(sizeof(ULONG)) {
@@ -3512,10 +3563,16 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG JitVectorIndex32x8:1;
 
         //
+        // Optionally caps the maximum ISA used by the JIT backend.
+        //
+
+        ULONG JitMaxIsa:2;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:22;
+        ULONG Unused:20;
     };
 
     LONG AsLong;
@@ -3535,6 +3592,11 @@ IsValidTableCompileFlags(
     }
 
     if (CompileFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    if (!IsValidPerfectHashJitMaxIsaId(
+        (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa)) {
         return E_FAIL;
     }
 
@@ -4639,6 +4701,47 @@ typedef PERFECT_HASH_TABLE_VTBL *PPERFECT_HASH_TABLE_VTBL;
 // Define the PERFECT_HASH_TABLE_JIT_INTERFACE.
 //
 
+#define PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS 64
+#define PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS 1024
+
+typedef union _PERFECT_HASH_TABLE_JIT_INFO_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        ULONG Valid:1;
+        ULONG Index32Compiled:1;
+        ULONG Index64Compiled:1;
+        ULONG Index32x2Compiled:1;
+        ULONG Index32x4Compiled:1;
+        ULONG Index32x8Compiled:1;
+        ULONG Index32x16Compiled:1;
+        ULONG Index64x2Compiled:1;
+        ULONG Index64x4Compiled:1;
+        ULONG Index64x8Compiled:1;
+        ULONG Index64x16Compiled:1;
+        ULONG Index32x2Vector:1;
+        ULONG Index32x4Vector:1;
+        ULONG Index32x8Vector:1;
+        ULONG Index64x2Vector:1;
+        ULONG Index64x4Vector:1;
+        ULONG Index64x8Vector:1;
+        ULONG Index32x16Vector:1;
+        ULONG Unused:14;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_JIT_INFO_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_JIT_INFO_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_JIT_INFO_FLAGS *PPERFECT_HASH_TABLE_JIT_INFO_FLAGS;
+
+typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_JIT_INFO {
+    ULONG SizeOfStruct;
+    PERFECT_HASH_TABLE_JIT_INFO_FLAGS Flags;
+    PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
+    CHAR TargetCpu[PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS];
+    CHAR TargetFeatures[PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS];
+} PERFECT_HASH_TABLE_JIT_INFO;
+typedef PERFECT_HASH_TABLE_JIT_INFO *PPERFECT_HASH_TABLE_JIT_INFO;
+
 DECLARE_COMPONENT(TableJitInterface, PERFECT_HASH_TABLE_JIT_INTERFACE);
 
 typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE PERFECT_HASH_TABLE_JIT_INTERFACE;
@@ -4858,6 +4961,16 @@ HRESULT
     );
 typedef PERFECT_HASH_TABLE_JIT_INDEX64X16 *PPERFECT_HASH_TABLE_JIT_INDEX64X16;
 
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_GET_INFO)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _Out_ PPERFECT_HASH_TABLE_JIT_INFO Info
+    );
+typedef PERFECT_HASH_TABLE_JIT_GET_INFO *PPERFECT_HASH_TABLE_JIT_GET_INFO;
+
 typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL {
     DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE_JIT_INTERFACE);
     PPERFECT_HASH_TABLE_JIT_INDEX32 Index32;
@@ -4870,6 +4983,7 @@ typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL {
     PPERFECT_HASH_TABLE_JIT_INDEX64X4 Index64x4;
     PPERFECT_HASH_TABLE_JIT_INDEX64X8 Index64x8;
     PPERFECT_HASH_TABLE_JIT_INDEX64X16 Index64x16;
+    PPERFECT_HASH_TABLE_JIT_GET_INFO GetInfo;
 } PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL;
 typedef PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
       *PPERFECT_HASH_TABLE_JIT_INTERFACE_VTBL;

@@ -712,8 +712,7 @@ Table Compile Flags:
     --JitIndex32x16
 
         Compiles the 2-wide, 4-wide, 8-wide, or 16-wide Index32() routines.
-        The x16 variant is currently not implemented and will return
-        PH_E_NOT_IMPLEMENTED if invoked.
+        The x16 variant requires AVX-512 support from the JIT backend.
 
     --JitVectorIndex32x2
     --JitVectorIndex32x4
@@ -723,6 +722,12 @@ Table Compile Flags:
         These imply --JitIndex32x2/--JitIndex32x4 and are intended to map
         to NEON/SSE on the active CPU architecture. The 8-wide variant
         follows the same behavior.
+
+    --JitMaxIsa=Auto|Avx|Avx2|Avx512
+
+        Caps the maximum ISA used by the LLVM JIT backend. Auto selects the
+        host CPU features. Avx/Avx2/Avx512 downgrade the maximum ISA even if
+        the host CPU supports higher levels.
 
 Table Create Parameters:
 

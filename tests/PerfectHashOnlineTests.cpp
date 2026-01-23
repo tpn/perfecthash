@@ -443,6 +443,267 @@ TEST_F(PerfectHashOnlineTests,
   shim->Vtbl->Release(table);
 }
 
+TEST_F(PerfectHashOnlineTests,
+       JitVectorInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+      127, 131,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitVectorIndex32x2 = TRUE;
+  compileFlags.JitVectorIndex32x4 = TRUE;
+  compileFlags.JitVectorIndex32x8 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  PERFECT_HASH_TABLE_JIT_INFO info = {0};
+  result = jit->Vtbl->GetInfo(jit, &info);
+  ASSERT_GE(result, 0);
+  EXPECT_TRUE(info.Flags.Index32x2Vector);
+  EXPECT_TRUE(info.Flags.Index32x4Vector);
+  EXPECT_TRUE(info.Flags.Index32x8Vector);
+
+  for (size_t i = 0; i < keys.size(); i += 2) {
+    ULONG expected1 = 0;
+    ULONG expected2 = 0;
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+
+    result = shim->Vtbl->SlowIndex(table, keys[i], &expected1);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 1], &expected2);
+    ASSERT_GE(result, 0);
+
+    result = jit->Vtbl->Index32x2(jit, keys[i], keys[i + 1], &index1, &index2);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected1, index1);
+    EXPECT_EQ(expected2, index2);
+  }
+
+  for (size_t i = 0; i < keys.size(); i += 4) {
+    ULONG expected1 = 0;
+    ULONG expected2 = 0;
+    ULONG expected3 = 0;
+    ULONG expected4 = 0;
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+    ULONG index3 = 0;
+    ULONG index4 = 0;
+
+    result = shim->Vtbl->SlowIndex(table, keys[i], &expected1);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 1], &expected2);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 2], &expected3);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 3], &expected4);
+    ASSERT_GE(result, 0);
+
+    result = jit->Vtbl->Index32x4(jit,
+                               keys[i],
+                               keys[i + 1],
+                               keys[i + 2],
+                               keys[i + 3],
+                               &index1,
+                               &index2,
+                               &index3,
+                               &index4);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected1, index1);
+    EXPECT_EQ(expected2, index2);
+    EXPECT_EQ(expected3, index3);
+    EXPECT_EQ(expected4, index4);
+  }
+
+  for (size_t i = 0; i < keys.size(); i += 8) {
+    ULONG expected1 = 0;
+    ULONG expected2 = 0;
+    ULONG expected3 = 0;
+    ULONG expected4 = 0;
+    ULONG expected5 = 0;
+    ULONG expected6 = 0;
+    ULONG expected7 = 0;
+    ULONG expected8 = 0;
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+    ULONG index3 = 0;
+    ULONG index4 = 0;
+    ULONG index5 = 0;
+    ULONG index6 = 0;
+    ULONG index7 = 0;
+    ULONG index8 = 0;
+
+    result = shim->Vtbl->SlowIndex(table, keys[i], &expected1);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 1], &expected2);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 2], &expected3);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 3], &expected4);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 4], &expected5);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 5], &expected6);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 6], &expected7);
+    ASSERT_GE(result, 0);
+    result = shim->Vtbl->SlowIndex(table, keys[i + 7], &expected8);
+    ASSERT_GE(result, 0);
+
+    result = jit->Vtbl->Index32x8(jit,
+                               keys[i],
+                               keys[i + 1],
+                               keys[i + 2],
+                               keys[i + 3],
+                               keys[i + 4],
+                               keys[i + 5],
+                               keys[i + 6],
+                               keys[i + 7],
+                               &index1,
+                               &index2,
+                               &index3,
+                               &index4,
+                               &index5,
+                               &index6,
+                               &index7,
+                               &index8);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected1, index1);
+    EXPECT_EQ(expected2, index2);
+    EXPECT_EQ(expected3, index3);
+    EXPECT_EQ(expected4, index4);
+    EXPECT_EQ(expected5, index5);
+    EXPECT_EQ(expected6, index6);
+    EXPECT_EQ(expected7, index7);
+    EXPECT_EQ(expected8, index8);
+  }
+
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
+      127, 131,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitIndex32x16 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  PERFECT_HASH_TABLE_JIT_INFO info = {0};
+  result = jit->Vtbl->GetInfo(jit, &info);
+  ASSERT_GE(result, 0);
+
+  if (!info.Flags.Index32x16Compiled) {
+    jit->Vtbl->Release(jit);
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "JIT Index32x16 not supported on this host.";
+  }
+
+  EXPECT_TRUE(info.Flags.Index32x16Vector);
+
+  for (size_t i = 0; i < keys.size(); i += 16) {
+    ULONG expected[16] = {};
+    ULONG index[16] = {};
+
+    for (size_t lane = 0; lane < 16; ++lane) {
+      result = shim->Vtbl->SlowIndex(table, keys[i + lane], &expected[lane]);
+      ASSERT_GE(result, 0);
+    }
+
+    result = jit->Vtbl->Index32x16(jit,
+                                   keys[i],
+                                   keys[i + 1],
+                                   keys[i + 2],
+                                   keys[i + 3],
+                                   keys[i + 4],
+                                   keys[i + 5],
+                                   keys[i + 6],
+                                   keys[i + 7],
+                                   keys[i + 8],
+                                   keys[i + 9],
+                                   keys[i + 10],
+                                   keys[i + 11],
+                                   keys[i + 12],
+                                   keys[i + 13],
+                                   keys[i + 14],
+                                   keys[i + 15],
+                                   &index[0],
+                                   &index[1],
+                                   &index[2],
+                                   &index[3],
+                                   &index[4],
+                                   &index[5],
+                                   &index[6],
+                                   &index[7],
+                                   &index[8],
+                                   &index[9],
+                                   &index[10],
+                                   &index[11],
+                                   &index[12],
+                                   &index[13],
+                                   &index[14],
+                                   &index[15]);
+    ASSERT_GE(result, 0);
+
+    for (size_t lane = 0; lane < 16; ++lane) {
+      EXPECT_EQ(expected[lane], index[lane]);
+    }
+  }
+
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
+
 TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
   const std::vector<ULONGLONG> keys = {
       1ull, 3ull, 5ull, 7ull, 11ull, 13ull, 17ull, 19ull,
@@ -578,6 +839,150 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
   jit->Vtbl->Release(jit);
   shim->Vtbl->Release(table);
 }
+
+TEST_F(PerfectHashOnlineTests,
+       JitVectorInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
+  const std::vector<ULONGLONG> keys = {
+      1ull, 3ull, 5ull, 7ull, 11ull, 13ull, 17ull, 19ull,
+      23ull, 29ull, 31ull, 37ull, 41ull, 43ull, 47ull, 53ull,
+      59ull, 61ull, 67ull, 71ull, 73ull, 79ull, 83ull, 89ull,
+      97ull, 101ull, 103ull, 107ull, 109ull, 113ull, 127ull, 131ull,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys64(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  ASSERT_NE(shim->Vtbl->SlowIndex, nullptr);
+
+  const ULONGLONG mask = BuildDownsizeMask(keys);
+  std::vector<ULONG> expected;
+  expected.reserve(keys.size());
+
+  for (auto key : keys) {
+    ULONG downsized = DownsizeKey(key, mask);
+    ULONG index = 0;
+    HRESULT result = shim->Vtbl->SlowIndex(table, downsized, &index);
+    ASSERT_GE(result, 0);
+    expected.push_back(index);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.JitIndex64 = TRUE;
+  compileFlags.JitVectorIndex32x2 = TRUE;
+  compileFlags.JitVectorIndex32x4 = TRUE;
+  compileFlags.JitVectorIndex32x8 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jit));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jit, nullptr);
+
+  PERFECT_HASH_TABLE_JIT_INFO info = {0};
+  result = jit->Vtbl->GetInfo(jit, &info);
+  ASSERT_GE(result, 0);
+  EXPECT_TRUE(info.Flags.Index64x2Vector);
+  EXPECT_TRUE(info.Flags.Index64x4Vector);
+  EXPECT_TRUE(info.Flags.Index64x8Vector);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    result = jit->Vtbl->Index64(jit, keys[i], &index);
+    ASSERT_GE(result, 0);
+    EXPECT_EQ(expected[i], index);
+  }
+
+  for (size_t i = 0; i < keys.size(); i += 2) {
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+
+    result = jit->Vtbl->Index64x2(jit,
+                                  keys[i],
+                                  keys[i + 1],
+                                  &index1,
+                                  &index2);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], index1);
+    EXPECT_EQ(expected[i + 1], index2);
+  }
+
+  for (size_t i = 0; i < keys.size(); i += 4) {
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+    ULONG index3 = 0;
+    ULONG index4 = 0;
+
+    result = jit->Vtbl->Index64x4(jit,
+                                  keys[i],
+                                  keys[i + 1],
+                                  keys[i + 2],
+                                  keys[i + 3],
+                                  &index1,
+                                  &index2,
+                                  &index3,
+                                  &index4);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], index1);
+    EXPECT_EQ(expected[i + 1], index2);
+    EXPECT_EQ(expected[i + 2], index3);
+    EXPECT_EQ(expected[i + 3], index4);
+  }
+
+  for (size_t i = 0; i < keys.size(); i += 8) {
+    ULONG index1 = 0;
+    ULONG index2 = 0;
+    ULONG index3 = 0;
+    ULONG index4 = 0;
+    ULONG index5 = 0;
+    ULONG index6 = 0;
+    ULONG index7 = 0;
+    ULONG index8 = 0;
+
+    result = jit->Vtbl->Index64x8(jit,
+                                  keys[i],
+                                  keys[i + 1],
+                                  keys[i + 2],
+                                  keys[i + 3],
+                                  keys[i + 4],
+                                  keys[i + 5],
+                                  keys[i + 6],
+                                  keys[i + 7],
+                                  &index1,
+                                  &index2,
+                                  &index3,
+                                  &index4,
+                                  &index5,
+                                  &index6,
+                                  &index7,
+                                  &index8);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], index1);
+    EXPECT_EQ(expected[i + 1], index2);
+    EXPECT_EQ(expected[i + 2], index3);
+    EXPECT_EQ(expected[i + 3], index4);
+    EXPECT_EQ(expected[i + 4], index5);
+    EXPECT_EQ(expected[i + 5], index6);
+    EXPECT_EQ(expected[i + 6], index7);
+    EXPECT_EQ(expected[i + 7], index8);
+  }
+
+  jit->Vtbl->Release(jit);
+  shim->Vtbl->Release(table);
+}
 #else
 TEST_F(PerfectHashOnlineTests, JitIndexMatchesSlowIndex) {
   GTEST_SKIP() << "LLVM support is disabled.";
@@ -592,7 +997,21 @@ TEST_F(PerfectHashOnlineTests,
   GTEST_SKIP() << "LLVM support is disabled.";
 }
 
+TEST_F(PerfectHashOnlineTests,
+       JitVectorInterfaceIndex32x2Index32x4Index32x8MatchSlowIndex) {
+  GTEST_SKIP() << "LLVM support is disabled.";
+}
+
+TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
+  GTEST_SKIP() << "LLVM support is disabled.";
+}
+
 TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
+  GTEST_SKIP() << "LLVM support is disabled.";
+}
+
+TEST_F(PerfectHashOnlineTests,
+       JitVectorInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
   GTEST_SKIP() << "LLVM support is disabled.";
 }
 #endif

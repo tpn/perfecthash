@@ -161,10 +161,52 @@ typedef union _PERFECT_HASH_TABLE_JIT_FLAGS {
         ULONG Index64x16Compiled:1;
 
         //
+        // When set, indicates the Index32x2() routine uses vector IR.
+        //
+
+        ULONG Index32x2Vector:1;
+
+        //
+        // When set, indicates the Index32x4() routine uses vector IR.
+        //
+
+        ULONG Index32x4Vector:1;
+
+        //
+        // When set, indicates the Index32x8() routine uses vector IR.
+        //
+
+        ULONG Index32x8Vector:1;
+
+        //
+        // When set, indicates the Index64x2() routine uses vector IR.
+        //
+
+        ULONG Index64x2Vector:1;
+
+        //
+        // When set, indicates the Index64x4() routine uses vector IR.
+        //
+
+        ULONG Index64x4Vector:1;
+
+        //
+        // When set, indicates the Index64x8() routine uses vector IR.
+        //
+
+        ULONG Index64x8Vector:1;
+
+        //
+        // When set, indicates the Index32x16() routine uses vector IR.
+        //
+
+        ULONG Index32x16Vector:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:21;
+        ULONG Unused:14;
     };
 
     LONG AsLong;
@@ -192,6 +234,7 @@ typedef PERFECT_HASH_TABLE_JIT_INTERFACE
 typedef struct _PERFECT_HASH_TABLE_JIT {
     ULONG SizeOfStruct;
     PERFECT_HASH_TABLE_JIT_FLAGS Flags;
+    PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
     PERFECT_HASH_ALGORITHM_ID AlgorithmId;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
@@ -213,6 +256,8 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     PVOID Index64x16Function;
     PPERFECT_HASH_TABLE_INDEX OriginalIndex;
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
+    CHAR TargetCpu[PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS];
+    CHAR TargetFeatures[PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS];
     PERFECT_HASH_TABLE_JIT_INTERFACE Interface;
 } PERFECT_HASH_TABLE_JIT;
 typedef PERFECT_HASH_TABLE_JIT *PPERFECT_HASH_TABLE_JIT;

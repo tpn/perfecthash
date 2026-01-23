@@ -14,6 +14,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include <string.h>
 
 PERFECT_HASH_TABLE_COMPILE_JIT PerfectHashTableCompileJit;
 PERFECT_HASH_TABLE_JIT_RUNDOWN PerfectHashTableJitRundown;
@@ -223,6 +224,7 @@ PERFECT_HASH_TABLE_JIT_INDEX64X2 PerfectHashTableJitInterfaceIndex64x2;
 PERFECT_HASH_TABLE_JIT_INDEX64X4 PerfectHashTableJitInterfaceIndex64x4;
 PERFECT_HASH_TABLE_JIT_INDEX64X8 PerfectHashTableJitInterfaceIndex64x8;
 PERFECT_HASH_TABLE_JIT_INDEX64X16 PerfectHashTableJitInterfaceIndex64x16;
+PERFECT_HASH_TABLE_JIT_GET_INFO PerfectHashTableJitInterfaceGetInfo;
 
 static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     PerfectHashTableJitInterfaceVtbl = {
@@ -241,6 +243,7 @@ static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     &PerfectHashTableJitInterfaceIndex64x4,
     &PerfectHashTableJitInterfaceIndex64x8,
     &PerfectHashTableJitInterfaceIndex64x16,
+    &PerfectHashTableJitInterfaceGetInfo,
 };
 
 #if defined(PH_HAS_LLVM)
@@ -250,6 +253,10 @@ static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define PH_JIT_VECTOR_MAX_LANES 16
 
 FORCEINLINE
 BOOLEAN
@@ -284,8 +291,12 @@ BuildSplatVectorConstant(
     _In_ ULONG Lanes
     )
 {
-    LLVMValueRef Values[8];
+    LLVMValueRef Values[PH_JIT_VECTOR_MAX_LANES];
     ULONG Index;
+
+    if (Lanes > PH_JIT_VECTOR_MAX_LANES) {
+        return NULL;
+    }
 
     for (Index = 0; Index < Lanes; Index++) {
         Values[Index] = ScalarConstant;
@@ -308,13 +319,17 @@ BuildConstIntLike(
     if (LLVMGetTypeKind(Type) == LLVMVectorTypeKind) {
         LLVMTypeRef ElementType;
         LLVMValueRef Element;
-        LLVMValueRef Values[8];
+        LLVMValueRef Values[PH_JIT_VECTOR_MAX_LANES];
         ULONG Lanes;
         ULONG Index;
 
         ElementType = LLVMGetElementType(Type);
         Element = LLVMConstInt(ElementType, Value, FALSE);
         Lanes = LLVMGetVectorSize(Type);
+
+        if (Lanes > PH_JIT_VECTOR_MAX_LANES) {
+            return NULL;
+        }
 
         for (Index = 0; Index < Lanes; Index++) {
             Values[Index] = Element;
@@ -324,6 +339,70 @@ BuildConstIntLike(
     }
 
     return LLVMConstInt(Type, Value, FALSE);
+}
+
+static
+char *
+BuildClampedHostFeatures(
+    _In_opt_ const char *HostFeatures,
+    _In_ PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa
+    )
+{
+    BOOLEAN DisableAvx2;
+    BOOLEAN DisableAvx512;
+    size_t Length;
+    char *Buffer;
+    char *Cursor;
+    char *Next;
+
+    if (!HostFeatures || *HostFeatures == '\0') {
+        return NULL;
+    }
+
+    if (MaxIsa == PerfectHashJitMaxIsaAuto ||
+        MaxIsa == PerfectHashJitMaxIsaAvx512) {
+        return NULL;
+    }
+
+    Length = strlen(HostFeatures);
+    Buffer = (char *)malloc(Length + 1);
+    if (!Buffer) {
+        return NULL;
+    }
+
+    memcpy(Buffer, HostFeatures, Length + 1);
+
+    DisableAvx512 = (MaxIsa == PerfectHashJitMaxIsaAvx ||
+                     MaxIsa == PerfectHashJitMaxIsaAvx2);
+    DisableAvx2 = (MaxIsa == PerfectHashJitMaxIsaAvx);
+
+    Cursor = Buffer;
+    while (Cursor && *Cursor) {
+        size_t TokenLength;
+
+        Next = strchr(Cursor, ',');
+        TokenLength = Next ? (size_t)(Next - Cursor) : strlen(Cursor);
+
+        if (Cursor[0] == '+') {
+            if (DisableAvx2 &&
+                TokenLength == 5 &&
+                strncmp(Cursor + 1, "avx2", 4) == 0) {
+                Cursor[0] = '-';
+            } else if (DisableAvx512 &&
+                       TokenLength >= 7 &&
+                       strncmp(Cursor + 1, "avx512", 6) == 0) {
+                Cursor[0] = '-';
+            }
+        }
+
+        if (!Next) {
+            break;
+        }
+
+        Cursor = Next + 1;
+    }
+
+    return Buffer;
 }
 
 FORCEINLINE
@@ -1242,10 +1321,10 @@ BuildChm01IndexVectorFunction(
 {
     LLVMTypeRef FunctionType;
     LLVMTypeRef VecType;
-    LLVMTypeRef Params[16];
+    LLVMTypeRef Params[PH_JIT_VECTOR_MAX_LANES * 2];
     LLVMValueRef Function;
-    LLVMValueRef KeyParams[8];
-    LLVMValueRef IndexPtrs[8];
+    LLVMValueRef KeyParams[PH_JIT_VECTOR_MAX_LANES];
+    LLVMValueRef IndexPtrs[PH_JIT_VECTOR_MAX_LANES];
     LLVMValueRef KeyVec;
     LLVMValueRef Seed1Vec;
     LLVMValueRef Seed2Vec;
@@ -1271,7 +1350,7 @@ BuildChm01IndexVectorFunction(
     BOOLEAN UseHashMask;
     ULONG IndexLane;
 
-    if (Lanes != 2 && Lanes != 4 && Lanes != 8) {
+    if (Lanes != 2 && Lanes != 4 && Lanes != 8 && Lanes != 16) {
         return NULL;
     }
 
@@ -1843,9 +1922,11 @@ CompileChm01IndexJit(
     BOOLEAN CompileVectorIndex32x2;
     BOOLEAN CompileVectorIndex32x4;
     BOOLEAN CompileVectorIndex32x8;
+    BOOLEAN CompileVectorIndex32x16;
     BOOLEAN CompileVectorIndex64x2;
     BOOLEAN CompileVectorIndex64x4;
     BOOLEAN CompileVectorIndex64x8;
+    BOOLEAN HostHasAvx512;
     HRESULT Result = S_OK;
     PTABLE_INFO_ON_DISK TableInfo;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
@@ -1859,6 +1940,11 @@ CompileChm01IndexJit(
     char *ErrorMessage = NULL;
     char *TargetTriple = NULL;
     char *DataLayout = NULL;
+    char *HostCpuName = NULL;
+    char *HostCpuFeatures = NULL;
+    char *TargetCpu = NULL;
+    char *TargetFeatures = NULL;
+    char *ClampedFeatures = NULL;
 
     LLVMTargetRef Target = NULL;
     LLVMContextRef Context = NULL;
@@ -1874,6 +1960,7 @@ CompileChm01IndexJit(
     LLVMValueRef Index64Function = NULL;
     LLVMTypeRef IndexFunctionType = NULL;
     LLVMTypeRef Index64FunctionType = NULL;
+    PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
 
     //
     // Initialize aliases.
@@ -1909,6 +1996,8 @@ CompileChm01IndexJit(
     CompileVectorIndex32x2 = (CompileFlags->JitVectorIndex32x2 != FALSE);
     CompileVectorIndex32x4 = (CompileFlags->JitVectorIndex32x4 != FALSE);
     CompileVectorIndex32x8 = (CompileFlags->JitVectorIndex32x8 != FALSE);
+    CompileVectorIndex32x16 = (CompileFlags->JitIndex32x16 != FALSE);
+    JitMaxIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     CompileIndex32x2 = (CompileFlags->JitIndex32x2 != FALSE) ||
                        (CompileVectorIndex32x2 != FALSE);
     CompileIndex32x4 = (CompileFlags->JitIndex32x4 != FALSE) ||
@@ -1930,15 +2019,6 @@ CompileChm01IndexJit(
     CompileVectorIndex64x2 = (CompileIndex64 && CompileVectorIndex32x2);
     CompileVectorIndex64x4 = (CompileIndex64 && CompileVectorIndex32x4);
     CompileVectorIndex64x8 = (CompileIndex64 && CompileVectorIndex32x8);
-
-    //
-    // Index32x16/Index64x16 are not implemented yet.
-    //
-
-    if (CompileIndex32x16 || CompileIndex64x16) {
-        CompileIndex32x16 = FALSE;
-        CompileIndex64x16 = FALSE;
-    }
 
     if (KeysDownsized) {
         if (Keys) {
@@ -1975,10 +2055,52 @@ CompileChm01IndexJit(
         goto Error;
     }
 
+    HostCpuName = LLVMGetHostCPUName();
+    HostCpuFeatures = LLVMGetHostCPUFeatures();
+    TargetCpu = HostCpuName ? HostCpuName : "";
+    TargetFeatures = HostCpuFeatures ? HostCpuFeatures : "";
+    HostHasAvx512 = (HostCpuFeatures &&
+                     strstr(HostCpuFeatures, "+avx512f") != NULL);
+
+    if (JitMaxIsa != PerfectHashJitMaxIsaAuto) {
+        ClampedFeatures = BuildClampedHostFeatures(HostCpuFeatures, JitMaxIsa);
+        if (ClampedFeatures) {
+            TargetFeatures = ClampedFeatures;
+        }
+    }
+
+    if (JitMaxIsa != PerfectHashJitMaxIsaAuto &&
+        JitMaxIsa != PerfectHashJitMaxIsaAvx512) {
+        HostHasAvx512 = FALSE;
+    }
+
+    if (CompileIndex32x16 && !HostHasAvx512) {
+        CompileIndex32x16 = FALSE;
+        CompileVectorIndex32x16 = FALSE;
+    }
+
+    CompileIndex64x16 = FALSE;
+
+    Jit->JitMaxIsa = JitMaxIsa;
+    ZeroMemory(Jit->TargetCpu, sizeof(Jit->TargetCpu));
+    ZeroMemory(Jit->TargetFeatures, sizeof(Jit->TargetFeatures));
+    if (TargetCpu && *TargetCpu) {
+        strncpy(Jit->TargetCpu,
+                TargetCpu,
+                sizeof(Jit->TargetCpu) - 1);
+        Jit->TargetCpu[sizeof(Jit->TargetCpu) - 1] = '\0';
+    }
+    if (TargetFeatures && *TargetFeatures) {
+        strncpy(Jit->TargetFeatures,
+                TargetFeatures,
+                sizeof(Jit->TargetFeatures) - 1);
+        Jit->TargetFeatures[sizeof(Jit->TargetFeatures) - 1] = '\0';
+    }
+
     TargetMachine = LLVMCreateTargetMachine(Target,
                                             TargetTriple,
-                                            "",
-                                            "",
+                                            TargetCpu,
+                                            TargetFeatures,
                                             LLVMCodeGenLevelAggressive,
                                             LLVMRelocDefault,
                                             LLVMCodeModelJITDefault);
@@ -2159,6 +2281,17 @@ CompileChm01IndexJit(
         }
     }
 
+    if (CompileIndex32x16) {
+        if (!BuildChm01IndexVectorFunction(&JitContext,
+                                           "PerfectHashJitIndex32x16Vector",
+                                           JitContext.I32,
+                                           NULL,
+                                           16)) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+    }
+
     if (CompileIndex64x2) {
         if (CompileVectorIndex64x2) {
             if (!BuildChm01IndexVectorFunction(&JitContext,
@@ -2277,6 +2410,7 @@ CompileChm01IndexJit(
             goto Error;
         }
         Jit->Flags.Index32x2Compiled = TRUE;
+        Jit->Flags.Index32x2Vector = (CompileVectorIndex32x2 != FALSE);
     }
 
     if (CompileIndex32x4) {
@@ -2293,6 +2427,7 @@ CompileChm01IndexJit(
             goto Error;
         }
         Jit->Flags.Index32x4Compiled = TRUE;
+        Jit->Flags.Index32x4Vector = (CompileVectorIndex32x4 != FALSE);
     }
 
     if (CompileIndex32x8) {
@@ -2309,6 +2444,18 @@ CompileChm01IndexJit(
             goto Error;
         }
         Jit->Flags.Index32x8Compiled = TRUE;
+        Jit->Flags.Index32x8Vector = (CompileVectorIndex32x8 != FALSE);
+    }
+
+    if (CompileIndex32x16) {
+        Jit->Index32x16Function = (PVOID)(ULONG_PTR)
+            LLVMGetFunctionAddress(Engine, "PerfectHashJitIndex32x16Vector");
+        if (!Jit->Index32x16Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        Jit->Flags.Index32x16Compiled = TRUE;
+        Jit->Flags.Index32x16Vector = (CompileVectorIndex32x16 != FALSE);
     }
 
     if (CompileIndex64x2) {
@@ -2325,6 +2472,7 @@ CompileChm01IndexJit(
             goto Error;
         }
         Jit->Flags.Index64x2Compiled = TRUE;
+        Jit->Flags.Index64x2Vector = (CompileVectorIndex64x2 != FALSE);
     }
 
     if (CompileIndex64x4) {
@@ -2341,6 +2489,7 @@ CompileChm01IndexJit(
             goto Error;
         }
         Jit->Flags.Index64x4Compiled = TRUE;
+        Jit->Flags.Index64x4Vector = (CompileVectorIndex64x4 != FALSE);
     }
 
     if (CompileIndex64x8) {
@@ -2357,6 +2506,7 @@ CompileChm01IndexJit(
             goto Error;
         }
         Jit->Flags.Index64x8Compiled = TRUE;
+        Jit->Flags.Index64x8Vector = (CompileVectorIndex64x8 != FALSE);
     }
 
     Jit->ExecutionEngine = Engine;
@@ -2402,6 +2552,21 @@ Error:
     if (TargetMachine) {
         LLVMDisposeTargetMachine(TargetMachine);
         TargetMachine = NULL;
+    }
+
+    if (ClampedFeatures) {
+        free(ClampedFeatures);
+        ClampedFeatures = NULL;
+    }
+
+    if (HostCpuFeatures) {
+        LLVMDisposeMessage(HostCpuFeatures);
+        HostCpuFeatures = NULL;
+    }
+
+    if (HostCpuName) {
+        LLVMDisposeMessage(HostCpuName);
+        HostCpuName = NULL;
     }
 
     if (DataLayout) {
@@ -3315,6 +3480,50 @@ PerfectHashTableJitInterfaceIndex64x16(
                   Index14,
                   Index15,
                   Index16);
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableJitInterfaceGetInfo(
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    PPERFECT_HASH_TABLE_JIT_INFO Info
+    )
+{
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_JIT JitState;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Info)) {
+        return E_POINTER;
+    }
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    JitState = Table->Jit;
+    if (!ARGUMENT_PRESENT(JitState) || !JitState->Flags.Valid) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    ZeroMemory(Info, sizeof(*Info));
+    Info->SizeOfStruct = sizeof(*Info);
+    Info->Flags.AsULong = JitState->Flags.AsULong;
+    Info->JitMaxIsa = JitState->JitMaxIsa;
+    if (JitState->TargetCpu[0] != '\0') {
+        strncpy(Info->TargetCpu,
+                JitState->TargetCpu,
+                sizeof(Info->TargetCpu) - 1);
+        Info->TargetCpu[sizeof(Info->TargetCpu) - 1] = '\0';
+    }
+    if (JitState->TargetFeatures[0] != '\0') {
+        strncpy(Info->TargetFeatures,
+                JitState->TargetFeatures,
+                sizeof(Info->TargetFeatures) - 1);
+        Info->TargetFeatures[sizeof(Info->TargetFeatures) - 1] = '\0';
+    }
+
     return S_OK;
 }
 

@@ -1,0 +1,15 @@
+name: perfecthash-linux
+channels:
+  - conda-forge
+dependencies:
+  - cmake>=3.20
+  - ninja
+  - llvmdev>=15
+  - clang
+  - c-compiler
+  - cxx-compiler
+  - zlib
+  - libxml2
+  - python=3.13
+  - pip
+  - rust
