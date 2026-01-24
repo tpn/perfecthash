@@ -907,10 +907,17 @@ int RunBenchmark(const BenchmarkOptions &base,
     }
     if (wants_vector &&
         options.hash_function_id !=
+            PerfectHashHashMultiplyShiftRFunctionId &&
+        options.hash_function_id !=
+            PerfectHashHashMultiplyShiftRXFunctionId &&
+        options.hash_function_id !=
+            PerfectHashHashMulshrolate1RXFunctionId &&
+        options.hash_function_id !=
             PerfectHashHashMulshrolate2RXFunctionId &&
         options.hash_function_id !=
             PerfectHashHashMulshrolate3RXFunctionId) {
-      std::cerr << "RawDog vector JIT only supports Mulshrolate2RX or "
+      std::cerr << "RawDog vector JIT only supports MultiplyShiftR, "
+                   "MultiplyShiftRX, Mulshrolate1RX, Mulshrolate2RX, or "
                    "Mulshrolate3RX.\n";
       return 1;
     }

@@ -2,6 +2,11 @@
 
 #include <PerfectHash.h>
 
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <fstream>
+#include <string>
 #include <unordered_set>
 #include <vector>
 
@@ -34,6 +39,129 @@ ULONG DownsizeKey(ULONGLONG key, ULONGLONG mask) {
   }
 
   return static_cast<ULONG>(result);
+}
+
+std::string TrimWhitespace(std::string value) {
+  auto not_space = [](unsigned char ch) { return !std::isspace(ch); };
+  auto begin = std::find_if(value.begin(), value.end(), not_space);
+  auto end = std::find_if(value.rbegin(), value.rend(), not_space).base();
+  if (begin >= end) {
+    return std::string();
+  }
+  return std::string(begin, end);
+}
+
+bool LoadKeysFromFile(const std::string &path, std::vector<ULONG> *keys) {
+  if (!keys) {
+    return false;
+  }
+
+  std::ifstream file(path, std::ios::binary | std::ios::ate);
+  if (!file) {
+    return false;
+  }
+
+  std::streamsize size = file.tellg();
+  if (size <= 0 || (size % static_cast<std::streamsize>(sizeof(ULONG))) != 0) {
+    return false;
+  }
+
+  keys->resize(static_cast<size_t>(size / sizeof(ULONG)));
+  file.seekg(0, std::ios::beg);
+  if (!file.read(reinterpret_cast<char *>(keys->data()), size)) {
+    return false;
+  }
+
+  return true;
+}
+
+bool ParseSeedLine(const std::string &line, size_t *index, ULONG *value) {
+  if (!index || !value) {
+    return false;
+  }
+
+  std::string trimmed = TrimWhitespace(line);
+  if (trimmed.empty() || trimmed[0] == '#') {
+    return false;
+  }
+
+  auto comment = trimmed.find('#');
+  if (comment != std::string::npos) {
+    trimmed = TrimWhitespace(trimmed.substr(0, comment));
+    if (trimmed.empty()) {
+      return false;
+    }
+  }
+
+  auto equals = trimmed.find('=');
+  if (equals == std::string::npos) {
+    return false;
+  }
+
+  std::string left = TrimWhitespace(trimmed.substr(0, equals));
+  std::string right = TrimWhitespace(trimmed.substr(equals + 1));
+  if (left.rfind("Seed", 0) != 0 || left.find("Seed3_") == 0) {
+    return false;
+  }
+
+  std::string suffix = left.substr(4);
+  if (suffix.empty() || suffix.size() > 2) {
+    return false;
+  }
+  for (char ch : suffix) {
+    if (ch < '0' || ch > '9') {
+      return false;
+    }
+  }
+
+  size_t parsed_index = static_cast<size_t>(std::stoul(suffix));
+  if (parsed_index == 0 || parsed_index > 8) {
+    return false;
+  }
+
+  char *end = nullptr;
+  unsigned long parsed_value = std::strtoul(right.c_str(), &end, 0);
+  if (!end || end == right.c_str() || *end != '\0') {
+    return false;
+  }
+
+  *index = parsed_index;
+  *value = static_cast<ULONG>(parsed_value);
+  return true;
+}
+
+bool LoadSeedsFromFile(const std::string &path, std::vector<ULONG> *seeds) {
+  if (!seeds) {
+    return false;
+  }
+
+  std::ifstream file(path);
+  if (!file) {
+    return false;
+  }
+
+  std::vector<ULONG> local_seeds(8, 0);
+  size_t max_index = 0;
+  std::string line;
+  while (std::getline(file, line)) {
+    size_t index = 0;
+    ULONG value = 0;
+    if (!ParseSeedLine(line, &index, &value)) {
+      continue;
+    }
+    local_seeds[index - 1] = value;
+    if (index > max_index) {
+      max_index = index;
+    }
+  }
+
+  if (max_index == 0) {
+    return false;
+  }
+
+  local_seeds.resize(max_index);
+  *seeds = std::move(local_seeds);
+  return true;
 }
 
 class PerfectHashOnlineTests : public ::testing::Test {
@@ -79,14 +207,43 @@ protected:
   PPERFECT_HASH_TABLE CreateTableFromKeys(
       const std::vector<ULONG> &keys,
       PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId,
-      bool allowAssigned16 = false) {
+      bool allowAssigned16 = false,
+      ULONG graphImpl = 0,
+      const std::vector<ULONG> *seeds = nullptr) {
     PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
     PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
+    std::vector<PERFECT_HASH_TABLE_CREATE_PARAMETER> table_params;
+    PERFECT_HASH_TABLE_CREATE_PARAMETERS tableCreateParams = {};
+    PPERFECT_HASH_TABLE_CREATE_PARAMETERS tableCreateParamsPtr = nullptr;
     PPERFECT_HASH_TABLE table = nullptr;
 
     tableFlags.NoFileIo = TRUE;
     tableFlags.Quiet = TRUE;
     tableFlags.DoNotTryUseHash16Impl = allowAssigned16 ? FALSE : TRUE;
+
+    if (graphImpl != 0) {
+      PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+      param.Id = TableCreateParameterGraphImplId;
+      param.AsULong = graphImpl;
+      table_params.push_back(param);
+    }
+
+    if (seeds && !seeds->empty()) {
+      PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+      param.Id = TableCreateParameterSeedsId;
+      param.AsValueArray.Values = const_cast<ULONG *>(seeds->data());
+      param.AsValueArray.NumberOfValues = static_cast<ULONG>(seeds->size());
+      param.AsValueArray.ValueSizeInBytes = sizeof(ULONG);
+      table_params.push_back(param);
+    }
+
+    if (!table_params.empty()) {
+      tableCreateParams.SizeOfStruct = sizeof(tableCreateParams);
+      tableCreateParams.NumberOfElements =
+          static_cast<ULONG>(table_params.size());
+      tableCreateParams.Params = table_params.data();
+      tableCreateParamsPtr = &tableCreateParams;
+    }
 
     HRESULT result = online_->Vtbl->CreateTableFromKeys(
         online_,
@@ -98,7 +255,7 @@ protected:
         const_cast<ULONG *>(keys.data()),
         &keysFlags,
         &tableFlags,
-        nullptr,
+        tableCreateParamsPtr,
         &table);
     EXPECT_GE(result, 0);
     return table;
@@ -394,6 +551,774 @@ TEST_F(PerfectHashOnlineTests,
     EXPECT_EQ(expected[i + 5], i6);
     EXPECT_EQ(expected[i + 6], i7);
     EXPECT_EQ(expected[i + 7], i8);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRIndex32x8MatchesIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19,
+      23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89,
+      97, 101, 103, 107, 109, 113, 127, 131,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x8 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x8 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  for (size_t i = 0; i < keys.size(); i += 8) {
+    ULONG i1 = 0;
+    ULONG i2 = 0;
+    ULONG i3 = 0;
+    ULONG i4 = 0;
+    ULONG i5 = 0;
+    ULONG i6 = 0;
+    ULONG i7 = 0;
+    ULONG i8 = 0;
+
+    result = jitInterface->Vtbl->Index32x8(jitInterface,
+                                           keys[i],
+                                           keys[i + 1],
+                                           keys[i + 2],
+                                           keys[i + 3],
+                                           keys[i + 4],
+                                           keys[i + 5],
+                                           keys[i + 6],
+                                           keys[i + 7],
+                                           &i1,
+                                           &i2,
+                                           &i3,
+                                           &i4,
+                                           &i5,
+                                           &i6,
+                                           &i7,
+                                           &i8);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], i1);
+    EXPECT_EQ(expected[i + 1], i2);
+    EXPECT_EQ(expected[i + 2], i3);
+    EXPECT_EQ(expected[i + 3], i4);
+    EXPECT_EQ(expected[i + 4], i5);
+    EXPECT_EQ(expected[i + 5], i6);
+    EXPECT_EQ(expected[i + 6], i7);
+    EXPECT_EQ(expected[i + 7], i8);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRIndex32x16MatchesIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19,
+      23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89,
+      97, 101, 103, 107, 109, 113, 127, 131,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x16 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x16 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  for (size_t i = 0; i < keys.size(); i += 16) {
+    ULONG index[16] = {};
+
+    result = jitInterface->Vtbl->Index32x16(jitInterface,
+                                            keys[i],
+                                            keys[i + 1],
+                                            keys[i + 2],
+                                            keys[i + 3],
+                                            keys[i + 4],
+                                            keys[i + 5],
+                                            keys[i + 6],
+                                            keys[i + 7],
+                                            keys[i + 8],
+                                            keys[i + 9],
+                                            keys[i + 10],
+                                            keys[i + 11],
+                                            keys[i + 12],
+                                            keys[i + 13],
+                                            keys[i + 14],
+                                            keys[i + 15],
+                                            &index[0],
+                                            &index[1],
+                                            &index[2],
+                                            &index[3],
+                                            &index[4],
+                                            &index[5],
+                                            &index[6],
+                                            &index[7],
+                                            &index[8],
+                                            &index[9],
+                                            &index[10],
+                                            &index[11],
+                                            &index[12],
+                                            &index[13],
+                                            &index[14],
+                                            &index[15]);
+    ASSERT_GE(result, 0);
+
+    for (size_t lane = 0; lane < 16; ++lane) {
+      EXPECT_EQ(expected[i + lane], index[lane]);
+    }
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRXIndex32x8MatchesIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19,
+      23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89,
+      97, 101, 103, 107, 109, 113, 127, 131,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRXFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x8 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x8 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  for (size_t i = 0; i < keys.size(); i += 8) {
+    ULONG i1 = 0;
+    ULONG i2 = 0;
+    ULONG i3 = 0;
+    ULONG i4 = 0;
+    ULONG i5 = 0;
+    ULONG i6 = 0;
+    ULONG i7 = 0;
+    ULONG i8 = 0;
+
+    result = jitInterface->Vtbl->Index32x8(jitInterface,
+                                           keys[i],
+                                           keys[i + 1],
+                                           keys[i + 2],
+                                           keys[i + 3],
+                                           keys[i + 4],
+                                           keys[i + 5],
+                                           keys[i + 6],
+                                           keys[i + 7],
+                                           &i1,
+                                           &i2,
+                                           &i3,
+                                           &i4,
+                                           &i5,
+                                           &i6,
+                                           &i7,
+                                           &i8);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], i1);
+    EXPECT_EQ(expected[i + 1], i2);
+    EXPECT_EQ(expected[i + 2], i3);
+    EXPECT_EQ(expected[i + 3], i4);
+    EXPECT_EQ(expected[i + 4], i5);
+    EXPECT_EQ(expected[i + 5], i6);
+    EXPECT_EQ(expected[i + 6], i7);
+    EXPECT_EQ(expected[i + 7], i8);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRXIndex32x16MatchesIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19,
+      23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89,
+      97, 101, 103, 107, 109, 113, 127, 131,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMultiplyShiftRXFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x16 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x16 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  for (size_t i = 0; i < keys.size(); i += 16) {
+    ULONG index[16] = {};
+
+    result = jitInterface->Vtbl->Index32x16(jitInterface,
+                                            keys[i],
+                                            keys[i + 1],
+                                            keys[i + 2],
+                                            keys[i + 3],
+                                            keys[i + 4],
+                                            keys[i + 5],
+                                            keys[i + 6],
+                                            keys[i + 7],
+                                            keys[i + 8],
+                                            keys[i + 9],
+                                            keys[i + 10],
+                                            keys[i + 11],
+                                            keys[i + 12],
+                                            keys[i + 13],
+                                            keys[i + 14],
+                                            keys[i + 15],
+                                            &index[0],
+                                            &index[1],
+                                            &index[2],
+                                            &index[3],
+                                            &index[4],
+                                            &index[5],
+                                            &index[6],
+                                            &index[7],
+                                            &index[8],
+                                            &index[9],
+                                            &index[10],
+                                            &index[11],
+                                            &index[12],
+                                            &index[13],
+                                            &index[14],
+                                            &index[15]);
+    ASSERT_GE(result, 0);
+
+    for (size_t lane = 0; lane < 16; ++lane) {
+      EXPECT_EQ(expected[i + lane], index[lane]);
+    }
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRIndex32x8Assigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.MultiplyShiftR.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMultiplyShiftRFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x8 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x8 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  const size_t limit = keys.size() - (keys.size() % 8);
+  for (size_t i = 0; i < limit; i += 8) {
+    ULONG i1 = 0;
+    ULONG i2 = 0;
+    ULONG i3 = 0;
+    ULONG i4 = 0;
+    ULONG i5 = 0;
+    ULONG i6 = 0;
+    ULONG i7 = 0;
+    ULONG i8 = 0;
+
+    result = jitInterface->Vtbl->Index32x8(jitInterface,
+                                           keys[i],
+                                           keys[i + 1],
+                                           keys[i + 2],
+                                           keys[i + 3],
+                                           keys[i + 4],
+                                           keys[i + 5],
+                                           keys[i + 6],
+                                           keys[i + 7],
+                                           &i1,
+                                           &i2,
+                                           &i3,
+                                           &i4,
+                                           &i5,
+                                           &i6,
+                                           &i7,
+                                           &i8);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], i1);
+    EXPECT_EQ(expected[i + 1], i2);
+    EXPECT_EQ(expected[i + 2], i3);
+    EXPECT_EQ(expected[i + 3], i4);
+    EXPECT_EQ(expected[i + 4], i5);
+    EXPECT_EQ(expected[i + 5], i6);
+    EXPECT_EQ(expected[i + 6], i7);
+    EXPECT_EQ(expected[i + 7], i8);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRIndex32x16Assigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.MultiplyShiftR.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMultiplyShiftRFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x16 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x16 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  const size_t limit = keys.size() - (keys.size() % 16);
+  for (size_t i = 0; i < limit; i += 16) {
+    ULONG index[16] = {};
+
+    result = jitInterface->Vtbl->Index32x16(jitInterface,
+                                            keys[i],
+                                            keys[i + 1],
+                                            keys[i + 2],
+                                            keys[i + 3],
+                                            keys[i + 4],
+                                            keys[i + 5],
+                                            keys[i + 6],
+                                            keys[i + 7],
+                                            keys[i + 8],
+                                            keys[i + 9],
+                                            keys[i + 10],
+                                            keys[i + 11],
+                                            keys[i + 12],
+                                            keys[i + 13],
+                                            keys[i + 14],
+                                            keys[i + 15],
+                                            &index[0],
+                                            &index[1],
+                                            &index[2],
+                                            &index[3],
+                                            &index[4],
+                                            &index[5],
+                                            &index[6],
+                                            &index[7],
+                                            &index[8],
+                                            &index[9],
+                                            &index[10],
+                                            &index[11],
+                                            &index[12],
+                                            &index[13],
+                                            &index[14],
+                                            &index[15]);
+    ASSERT_GE(result, 0);
+
+    for (size_t lane = 0; lane < 16; ++lane) {
+      EXPECT_EQ(expected[i + lane], index[lane]);
+    }
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRXIndex32x8Assigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.MultiplyShiftRX.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMultiplyShiftRXFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x8 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x8 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  const size_t limit = keys.size() - (keys.size() % 8);
+  for (size_t i = 0; i < limit; i += 8) {
+    ULONG i1 = 0;
+    ULONG i2 = 0;
+    ULONG i3 = 0;
+    ULONG i4 = 0;
+    ULONG i5 = 0;
+    ULONG i6 = 0;
+    ULONG i7 = 0;
+    ULONG i8 = 0;
+
+    result = jitInterface->Vtbl->Index32x8(jitInterface,
+                                           keys[i],
+                                           keys[i + 1],
+                                           keys[i + 2],
+                                           keys[i + 3],
+                                           keys[i + 4],
+                                           keys[i + 5],
+                                           keys[i + 6],
+                                           keys[i + 7],
+                                           &i1,
+                                           &i2,
+                                           &i3,
+                                           &i4,
+                                           &i5,
+                                           &i6,
+                                           &i7,
+                                           &i8);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], i1);
+    EXPECT_EQ(expected[i + 1], i2);
+    EXPECT_EQ(expected[i + 2], i3);
+    EXPECT_EQ(expected[i + 3], i4);
+    EXPECT_EQ(expected[i + 4], i5);
+    EXPECT_EQ(expected[i + 5], i6);
+    EXPECT_EQ(expected[i + 6], i7);
+    EXPECT_EQ(expected[i + 7], i8);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMultiplyShiftRXIndex32x16Assigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.MultiplyShiftRX.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMultiplyShiftRXFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x16 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x16 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  const size_t limit = keys.size() - (keys.size() % 16);
+  for (size_t i = 0; i < limit; i += 16) {
+    ULONG index[16] = {};
+
+    result = jitInterface->Vtbl->Index32x16(jitInterface,
+                                            keys[i],
+                                            keys[i + 1],
+                                            keys[i + 2],
+                                            keys[i + 3],
+                                            keys[i + 4],
+                                            keys[i + 5],
+                                            keys[i + 6],
+                                            keys[i + 7],
+                                            keys[i + 8],
+                                            keys[i + 9],
+                                            keys[i + 10],
+                                            keys[i + 11],
+                                            keys[i + 12],
+                                            keys[i + 13],
+                                            keys[i + 14],
+                                            keys[i + 15],
+                                            &index[0],
+                                            &index[1],
+                                            &index[2],
+                                            &index[3],
+                                            &index[4],
+                                            &index[5],
+                                            &index[6],
+                                            &index[7],
+                                            &index[8],
+                                            &index[9],
+                                            &index[10],
+                                            &index[11],
+                                            &index[12],
+                                            &index[13],
+                                            &index[14],
+                                            &index[15]);
+    ASSERT_GE(result, 0);
+
+    for (size_t lane = 0; lane < 16; ++lane) {
+      EXPECT_EQ(expected[i + lane], index[lane]);
+    }
   }
 
   jitInterface->Vtbl->Release(jitInterface);

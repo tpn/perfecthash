@@ -26,6 +26,9 @@ target_link_libraries(perfecthash_unit_tests
 )
 
 perfecthash_apply_common_definitions(perfecthash_unit_tests)
+target_compile_definitions(perfecthash_unit_tests
+    PRIVATE PERFECTHASH_TEST_ROOT_DIR="${PERFECTHASH_ROOT_DIR}"
+)
 
 set_target_properties(perfecthash_unit_tests PROPERTIES
     CXX_STANDARD 17
