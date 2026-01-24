@@ -69,6 +69,7 @@
     <ClInclude Include="..\..\include\PerfectHashEvents.h" />
     <ClInclude Include="BulkCreateBestCsv.h" />
     <ClInclude Include="Chm01.h" />
+    <ClInclude Include="Chm01Async.h" />
     <ClInclude Include="Chm01FileWork.h" />
     <ClInclude Include="Chm01Private.h" />
     <ClInclude Include="Chm02Private.h" />
@@ -148,6 +149,10 @@
     <ClInclude Include="GuardedList.h" />
     <ClInclude Include="PerfectHashAllocator.h" />
     <ClInclude Include="PerfectHashContext.h" />
+    <ClInclude Include="PerfectHashContextIocp.h" />
+    <ClInclude Include="PerfectHashIocpBufferPool.h" />
+    <ClInclude Include="PerfectHashAsync.h" />
+    <ClInclude Include="PerfectHashClient.h" />
     <ClInclude Include="PerfectHashDirectory.h" />
     <ClInclude Include="PerfectHashErrorHandling.h" />
     <ClInclude Include="PerfectHashEventsPrivate.h" />
@@ -158,6 +163,7 @@
     <ClInclude Include="PerfectHashPath.h" />
     <ClInclude Include="PerfectHashPrimes.h" />
     <ClInclude Include="PerfectHashPrivate.h" />
+    <ClInclude Include="PerfectHashServer.h" />
     <ClInclude Include="PerfectHashTable.h" />
     <ClInclude Include="PerfectHashConstants.h" />
     <ClInclude Include="PerfectHashTimestamp.h" />
@@ -228,6 +234,7 @@
     <ClCompile Include="Chm01FileWorkModuleDefFile.c" />
     <ClCompile Include="Chm01FileWorkBatchBuildSolutionFile.c" />
     <ClCompile Include="Chm01Index.c" />
+    <ClCompile Include="Chm01Async.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chm01Shared.c" />
     <ClCompile Include="Chunk.c" />
@@ -247,6 +254,11 @@
     <ClCompile Include="PerfectHashDirectory.c" />
     <ClCompile Include="PerfectHashErrorHandling.c" />
     <ClCompile Include="PerfectHashContext.c" />
+    <ClCompile Include="PerfectHashContextIocp.c" />
+    <ClCompile Include="PerfectHashContextIocpArgs.c" />
+    <ClCompile Include="PerfectHashIocpBufferPool.c" />
+    <ClCompile Include="PerfectHashAsync.c" />
+    <ClCompile Include="PerfectHashClient.c" />
     <ClCompile Include="PerfectHashFile.c" />
     <ClCompile Include="PerfectHashKeys.c" />
     <ClCompile Include="PerfectHashKeysLoad.c" />
@@ -254,6 +266,7 @@
     <ClCompile Include="PerfectHashNames.c" />
     <ClCompile Include="PerfectHashPath.c" />
     <ClCompile Include="PerfectHashPrimes.c" />
+    <ClCompile Include="PerfectHashServer.c" />
     <ClCompile Include="PerfectHashAllocator.c" />
     <ClCompile Include="PerfectHashConstants.c" />
     <ClCompile Include="PerfectHashTableCompile.c" />

@@ -21,6 +21,8 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashContextIocp.h"
+#include "PerfectHashIocpBufferPool.h"
 
 //
 // File work callback array.
@@ -39,6 +41,805 @@ FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
     SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK)
     NULL
 };
+
+static
+VOID
+Chm01GetFileWorkBufferPoolState(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL **PoolsPointer,
+    _Out_ PULONG *PoolCountPointer,
+    _Outptr_ PGUARDED_LIST *BufferListPointer,
+    _Outptr_ PLIST_ENTRY *OversizeListPointer,
+    _Outptr_ PULONG *OversizeCountPointer,
+    _Outptr_ PSRWLOCK *PoolLockPointer,
+    _Out_ PUSHORT NumaNodePointer
+    )
+{
+    PPERFECT_HASH_IOCP_NODE Node;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(PoolsPointer) ||
+        !ARGUMENT_PRESENT(PoolCountPointer) ||
+        !ARGUMENT_PRESENT(BufferListPointer) ||
+        !ARGUMENT_PRESENT(OversizeListPointer) ||
+        !ARGUMENT_PRESENT(OversizeCountPointer) ||
+        !ARGUMENT_PRESENT(PoolLockPointer) ||
+        !ARGUMENT_PRESENT(NumaNodePointer)) {
+        return;
+    }
+
+    Node = Context->IocpNode;
+    if (Node) {
+        *PoolsPointer = &Node->FileWorkBufferPools;
+        *PoolCountPointer = &Node->FileWorkBufferPoolCount;
+        *BufferListPointer = Node->FileWorkBufferList;
+        *OversizeListPointer = &Node->FileWorkOversizePools;
+        *OversizeCountPointer = &Node->FileWorkOversizePoolCount;
+        *PoolLockPointer = &Node->FileWorkBufferPoolLock;
+        *NumaNodePointer = (USHORT)Node->NodeId;
+    } else {
+        *PoolsPointer = &Context->FileWorkBufferPools;
+        *PoolCountPointer = &Context->FileWorkBufferPoolCount;
+        *BufferListPointer = Context->FileWorkBufferList;
+        *OversizeListPointer = &Context->FileWorkOversizePools;
+        *OversizeCountPointer = &Context->FileWorkOversizePoolCount;
+        *PoolLockPointer = &Context->Lock;
+        *NumaNodePointer = 0;
+    }
+}
+
+static
+HRESULT
+Chm01EnsureFileWorkBufferPools(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolsPointer,
+    _Out_ PULONG PoolCountPointer,
+    _Outptr_ PGUARDED_LIST *BufferListPointer,
+    _Out_ PUSHORT NumaNodePointer
+    )
+{
+    HRESULT Result;
+    ULONG Flags;
+    ULONG PoolIndex;
+    ULONG PoolCount;
+    ULONGLONG PayloadSize;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pools;
+    PPERFECT_HASH_IOCP_BUFFER_POOL *PoolArrayPointer;
+    PULONG PoolCountField;
+    PGUARDED_LIST BufferList;
+    PLIST_ENTRY OversizeList;
+    PULONG OversizeCount;
+    PSRWLOCK PoolLock;
+    USHORT NumaNode;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(PoolsPointer) ||
+        !ARGUMENT_PRESENT(PoolCountPointer) ||
+        !ARGUMENT_PRESENT(BufferListPointer) ||
+        !ARGUMENT_PRESENT(NumaNodePointer)) {
+        return E_POINTER;
+    }
+
+    Allocator = Context->Allocator;
+    Rtl = Context->Rtl;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    Chm01GetFileWorkBufferPoolState(Context,
+                                    &PoolArrayPointer,
+                                    &PoolCountField,
+                                    &BufferList,
+                                    &OversizeList,
+                                    &OversizeCount,
+                                    &PoolLock,
+                                    &NumaNode);
+
+    if (!PoolArrayPointer || !PoolCountField || !BufferList) {
+        return E_UNEXPECTED;
+    }
+
+    Pools = *PoolArrayPointer;
+    if (!Pools) {
+        AcquireSRWLockExclusive(PoolLock);
+        Pools = *PoolArrayPointer;
+        if (!Pools) {
+            PoolCount = PERFECT_HASH_IOCP_BUFFER_CLASS_COUNT;
+            Pools = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
+                Allocator,
+                PoolCount,
+                sizeof(*Pools)
+            );
+            if (!Pools) {
+                ReleaseSRWLockExclusive(PoolLock);
+                return E_OUTOFMEMORY;
+            }
+
+            Flags = UseIocpBufferGuardPages(Context) ?
+                PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES :
+                0;
+            for (PoolIndex = 0; PoolIndex < PoolCount; PoolIndex++) {
+                PayloadSize =
+                    PerfectHashIocpBufferGetPayloadSizeFromClassIndex(
+                        (LONG)PoolIndex
+                    );
+
+                Result = PerfectHashIocpBufferPoolInitialize(
+                    Rtl,
+                    &Pools[PoolIndex],
+                    PayloadSize,
+                    NumaNode,
+                    Flags,
+                    Context->ProcessHandle,
+                    BufferList
+                );
+
+                if (FAILED(Result)) {
+                    ReleaseSRWLockExclusive(PoolLock);
+                    Allocator->Vtbl->FreePointer(
+                        Allocator,
+                        (PVOID *)&Pools
+                    );
+                    return Result;
+                }
+            }
+
+            *PoolArrayPointer = Pools;
+            *PoolCountField = PoolCount;
+        }
+        ReleaseSRWLockExclusive(PoolLock);
+    }
+
+    *PoolsPointer = Pools;
+    *PoolCountPointer = *PoolCountField;
+    *BufferListPointer = BufferList;
+    *NumaNodePointer = NumaNode;
+    return S_OK;
+}
+
+static
+HRESULT
+Chm01GetOversizeFileWorkBufferPool(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONGLONG PayloadSize,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer
+    )
+{
+    HRESULT Result;
+    ULONG Flags;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+    PPERFECT_HASH_IOCP_BUFFER_POOL *PoolArrayPointer;
+    PULONG PoolCountField;
+    PGUARDED_LIST BufferList;
+    PLIST_ENTRY OversizeList;
+    PLIST_ENTRY Entry;
+    PULONG OversizeCount;
+    PSRWLOCK PoolLock;
+    USHORT NumaNode;
+
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(PoolPointer)) {
+        return E_POINTER;
+    }
+
+    Allocator = Context->Allocator;
+    Rtl = Context->Rtl;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    Chm01GetFileWorkBufferPoolState(Context,
+                                    &PoolArrayPointer,
+                                    &PoolCountField,
+                                    &BufferList,
+                                    &OversizeList,
+                                    &OversizeCount,
+                                    &PoolLock,
+                                    &NumaNode);
+
+    if (!OversizeList || !OversizeCount || !PoolLock) {
+        return E_UNEXPECTED;
+    }
+
+    AcquireSRWLockExclusive(PoolLock);
+
+    Entry = OversizeList->Flink;
+    while (Entry != OversizeList) {
+        Pool = CONTAINING_RECORD(Entry,
+                                 PERFECT_HASH_IOCP_BUFFER_POOL,
+                                 ListEntry);
+        if (Pool->PayloadSize == PayloadSize) {
+            ReleaseSRWLockExclusive(PoolLock);
+            *PoolPointer = Pool;
+            return S_OK;
+        }
+
+        Entry = Entry->Flink;
+    }
+
+    Pool = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
+        Allocator,
+        1,
+        sizeof(*Pool)
+    );
+    if (!Pool) {
+        ReleaseSRWLockExclusive(PoolLock);
+        return E_OUTOFMEMORY;
+    }
+
+    Flags = PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_OVERSIZE;
+    if (UseIocpBufferGuardPages(Context)) {
+        Flags |= PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES;
+    }
+    Result = PerfectHashIocpBufferPoolInitialize(Rtl,
+                                                 Pool,
+                                                 PayloadSize,
+                                                 NumaNode,
+                                                 Flags,
+                                                 Context->ProcessHandle,
+                                                 BufferList);
+
+    if (FAILED(Result)) {
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
+        ReleaseSRWLockExclusive(PoolLock);
+        return Result;
+    }
+
+    InsertTailList(OversizeList, &Pool->ListEntry);
+    (*OversizeCount)++;
+    ReleaseSRWLockExclusive(PoolLock);
+
+    *PoolPointer = Pool;
+    return S_OK;
+}
+
+static
+HRESULT
+Chm01GetFileWorkBufferPool(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONGLONG RequiredPayloadBytes,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer
+    )
+{
+    HRESULT Result;
+    LONG ClassIndex;
+    ULONG PoolCount;
+    ULONGLONG PayloadSize;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pools;
+    PGUARDED_LIST BufferList;
+    USHORT NumaNode;
+
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(PoolPointer)) {
+        return E_POINTER;
+    }
+
+    Rtl = Context->Rtl;
+    if (!Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    ClassIndex = PerfectHashIocpBufferGetClassIndex(Rtl,
+                                                    RequiredPayloadBytes);
+    if (ClassIndex >= 0) {
+        Result = Chm01EnsureFileWorkBufferPools(Context,
+                                                &Pools,
+                                                &PoolCount,
+                                                &BufferList,
+                                                &NumaNode);
+        if (FAILED(Result)) {
+            return Result;
+        }
+
+        if ((ULONG)ClassIndex >= PoolCount) {
+            return E_INVALIDARG;
+        }
+
+        *PoolPointer = &Pools[ClassIndex];
+        return S_OK;
+    }
+
+    PayloadSize = Rtl->RoundUpPowerOfTwo64(RequiredPayloadBytes);
+    if (PayloadSize == 0) {
+        return E_INVALIDARG;
+    }
+
+    return Chm01GetOversizeFileWorkBufferPool(Context,
+                                              PayloadSize,
+                                              PoolPointer);
+}
+
+static
+HRESULT
+Chm01AcquireFileWorkBuffer(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG FileIndex,
+    _In_ ULONGLONG RequiredPayloadBytes,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER *BufferPointer
+    )
+{
+    HRESULT Result;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+
+    UNREFERENCED_PARAMETER(FileIndex);
+
+    if (!ARGUMENT_PRESENT(BufferPointer) || !ARGUMENT_PRESENT(PoolPointer)) {
+        return E_POINTER;
+    }
+
+    *BufferPointer = NULL;
+    *PoolPointer = NULL;
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return E_POINTER;
+    }
+
+    Allocator = Context->Allocator;
+    Rtl = Context->Rtl;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    Result = Chm01GetFileWorkBufferPool(Context,
+                                        RequiredPayloadBytes,
+                                        &Pool);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Result = PerfectHashIocpBufferPoolAcquire(Rtl,
+                                              Allocator,
+                                              Pool,
+                                              &Buffer);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    if (Buffer->PayloadSize < RequiredPayloadBytes) {
+        PerfectHashIocpBufferPoolRelease(Pool, Buffer);
+        return E_FAIL;
+    }
+
+    *PoolPointer = Pool;
+    *BufferPointer = Buffer;
+    return S_OK;
+}
+
+static
+VOID
+Chm01ClearFileWorkBuffer(
+    _In_ PPERFECT_HASH_FILE File
+    )
+{
+    if (!ARGUMENT_PRESENT(File)) {
+        return;
+    }
+
+    File->IocpBufferPool = NULL;
+    File->IocpBuffer = NULL;
+    File->BaseAddress = NULL;
+}
+
+static
+VOID
+Chm01ReleaseIocpBuffer(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool,
+    _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
+    )
+{
+    UNREFERENCED_PARAMETER(Context);
+
+    if (!ARGUMENT_PRESENT(Pool) || !ARGUMENT_PRESENT(Buffer)) {
+        return;
+    }
+
+    PerfectHashIocpBufferPoolRelease(Pool, Buffer);
+}
+
+static
+VOID
+Chm01ReleaseFileWorkBuffer(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PPERFECT_HASH_FILE File
+    )
+{
+    if (!ARGUMENT_PRESENT(File)) {
+        return;
+    }
+
+    if (File->IocpBufferPool && File->IocpBuffer) {
+        Chm01ReleaseIocpBuffer(Context,
+                               File->IocpBufferPool,
+                               File->IocpBuffer);
+    }
+
+    Chm01ClearFileWorkBuffer(File);
+}
+
+static
+VOID
+Chm01RequeueFileWorkItem(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PFILE_WORK_ITEM Item
+    )
+{
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(Item)) {
+        return;
+    }
+
+    InsertTailFileWork(Context, &Item->ListEntry);
+    PerfectHashContextSubmitFileWork(Context);
+}
+
+static
+HRESULT
+Chm01EnsureFileWorkBuffer(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONG FileIndex,
+    _In_ ULONGLONG RequiredPayloadBytes,
+    _In_ PPERFECT_HASH_FILE File
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    if (File->IocpBuffer) {
+        if (File->IocpBuffer->PayloadSize < RequiredPayloadBytes) {
+            Chm01ReleaseFileWorkBuffer(Context, File);
+        } else {
+            File->BaseAddress = PerfectHashIocpBufferPayload(File->IocpBuffer);
+            return S_OK;
+        }
+    }
+
+    Result = Chm01AcquireFileWorkBuffer(Context,
+                                        FileIndex,
+                                        RequiredPayloadBytes,
+                                        &Pool,
+                                        &Buffer);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    File->IocpBufferPool = Pool;
+    File->IocpBuffer = Buffer;
+    File->BaseAddress = PerfectHashIocpBufferPayload(Buffer);
+
+    return S_OK;
+}
+
+static
+ULONGLONG
+Chm01AdjustRequiredPayloadBytes(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ FILE_ID FileId,
+    _In_ ULONGLONG RequiredPayloadBytes
+    )
+{
+    ULONGLONG Adjusted;
+    ULONGLONG BucketCount;
+    PRTL Rtl;
+    PCEOF_INIT Eof;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_KEYS Keys;
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return RequiredPayloadBytes;
+    }
+
+    Rtl = Context->Rtl;
+    Table = Context->Table;
+    Keys = Table ? Table->Keys : NULL;
+
+    if (!Rtl || !Table || !Keys) {
+        return RequiredPayloadBytes;
+    }
+
+    if (!IsValidFileId(FileId)) {
+        return RequiredPayloadBytes;
+    }
+
+    Eof = &EofInits[FileId];
+    switch (Eof->Type) {
+        case EofInitTypeNumberOfKeysMultiplier:
+            BucketCount = Rtl->RoundUpPowerOfTwo64(Keys->NumberOfKeys.QuadPart);
+            if (BucketCount == 0 || Eof->Multiplier == 0) {
+                return RequiredPayloadBytes;
+            }
+            if (BucketCount > ((ULONGLONG)-1) / Eof->Multiplier) {
+                return RequiredPayloadBytes;
+            }
+            Adjusted = BucketCount * Eof->Multiplier;
+            break;
+
+        case EofInitTypeNumberOfTableElementsMultiplier:
+            if (!Table->TableInfoOnDisk) {
+                return RequiredPayloadBytes;
+            }
+            BucketCount = Rtl->RoundUpPowerOfTwo64(
+                Table->TableInfoOnDisk->NumberOfTableElements.QuadPart
+            );
+            if (BucketCount == 0 || Eof->Multiplier == 0) {
+                return RequiredPayloadBytes;
+            }
+            if (BucketCount > ((ULONGLONG)-1) / Eof->Multiplier) {
+                return RequiredPayloadBytes;
+            }
+            Adjusted = BucketCount * Eof->Multiplier;
+            break;
+
+        case EofInitTypeNull:
+        case EofInitTypeDefault:
+        case EofInitTypeAssignedSize:
+        case EofInitTypeFixed:
+        case EofInitTypeNumberOfPages:
+        case EofInitTypeInvalid:
+        default:
+            return RequiredPayloadBytes;
+    }
+
+    if (Adjusted < Context->SystemAllocationGranularity) {
+        Adjusted = Context->SystemAllocationGranularity;
+    }
+
+    if (Adjusted < RequiredPayloadBytes) {
+        Adjusted = RequiredPayloadBytes;
+    }
+
+    return Adjusted;
+}
+
+typedef struct _CHM01_FILE_IOCP_WRITE {
+    PERFECT_HASH_IOCP_WORK Iocp;
+    PPERFECT_HASH_CONTEXT Context;
+    PFILE_WORK_ITEM Item;
+    PPERFECT_HASH_FILE File;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+    ULONG BytesToWrite;
+    ULONG Padding1;
+} CHM01_FILE_IOCP_WRITE;
+typedef CHM01_FILE_IOCP_WRITE *PCHM01_FILE_IOCP_WRITE;
+
+static
+HRESULT
+Chm01FileWriteIocpCompletionCallback(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG_PTR CompletionKey,
+    _In_ LPOVERLAPPED Overlapped,
+    _In_ DWORD NumberOfBytesTransferred,
+    _In_ BOOL Success
+    )
+{
+    ULONG EventIndex;
+    ULONG LastError;
+    HANDLE Event;
+    HRESULT Result;
+    PFILE_WORK_ITEM Item;
+    PPERFECT_HASH_CONTEXT Context;
+    PCHM01_FILE_IOCP_WRITE WorkItem;
+
+    UNREFERENCED_PARAMETER(ContextIocp);
+    UNREFERENCED_PARAMETER(CompletionKey);
+
+    WorkItem = (PCHM01_FILE_IOCP_WRITE)Overlapped;
+    if (!WorkItem) {
+        return E_POINTER;
+    }
+
+    Context = WorkItem->Context;
+    Item = WorkItem->Item;
+    Event = NULL;
+    Result = S_OK;
+    LastError = ERROR_SUCCESS;
+
+    if (!Success) {
+        LastError = GetLastError();
+        SYS_ERROR(WriteFile_IocpCompletion);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+    } else if (NumberOfBytesTransferred != WorkItem->BytesToWrite) {
+        LastError = ERROR_WRITE_FAULT;
+        SetLastError(LastError);
+        Result = PH_E_SYSTEM_CALL_FAILED;
+    }
+
+    if (WorkItem->Buffer) {
+        WorkItem->Buffer->BytesWritten = NumberOfBytesTransferred;
+    }
+
+    if (WorkItem->Pool && WorkItem->Buffer) {
+        Chm01ReleaseIocpBuffer(Context, WorkItem->Pool, WorkItem->Buffer);
+    }
+
+    if (WorkItem->File) {
+        Chm01ClearFileWorkBuffer(WorkItem->File);
+    }
+
+    if (Item) {
+        Item->LastResult = Result;
+        Item->LastError = (LONG)LastError;
+        if (FAILED(Result)) {
+            InterlockedIncrement(&Item->NumberOfErrors);
+        }
+    }
+
+    if (Context && Item && !IsCloseFileWorkId(Item->FileWorkId)) {
+        EventIndex = FileWorkIdToEventIndex(Item->FileWorkId);
+        Event = *(&Context->FirstPreparedEvent + EventIndex);
+        if (Event) {
+            SetEvent(Event);
+        }
+    }
+
+    if (Context && Context->Allocator) {
+        Context->Allocator->Vtbl->FreePointer(
+            Context->Allocator,
+            (PVOID *)&WorkItem
+        );
+    }
+
+    return S_OK;
+}
+
+static
+HRESULT
+Chm01WriteFileFromBuffer(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ PFILE_WORK_ITEM Item,
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool,
+    _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
+    )
+{
+    BOOL Success;
+    DWORD BytesWritten;
+    DWORD BytesToWrite;
+    ULONG LastError;
+    HRESULT Result = S_OK;
+    LARGE_INTEGER BytesRemaining;
+    PVOID BaseAddress;
+    PALLOCATOR Allocator;
+    PCHM01_FILE_IOCP_WRITE WorkItem;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(File) ||
+        !ARGUMENT_PRESENT(Item) ||
+        !ARGUMENT_PRESENT(Pool) ||
+        !ARGUMENT_PRESENT(Buffer)) {
+        return E_POINTER;
+    }
+
+    BytesRemaining.QuadPart = File->NumberOfBytesWritten.QuadPart;
+    if (BytesRemaining.QuadPart <= 0) {
+        PerfectHashIocpBufferPoolRelease(Pool, Buffer);
+        return S_OK;
+    }
+
+#ifdef PH_WINDOWS
+    if (BytesRemaining.QuadPart > (LONGLONG)Buffer->PayloadSize ||
+        BytesRemaining.QuadPart >= (LONGLONG)(1ULL << 30)) {
+        BOOL LogLargeWrite;
+        WCHAR LogBuffer[512];
+        int CharCount;
+        HANDLE LogHandle;
+        DWORD BytesWrittenLog;
+
+        LogLargeWrite = (GetEnvironmentVariableW(
+            L"PH_LOG_LARGE_FILE_WRITE", NULL, 0) != 0);
+
+        if (LogLargeWrite) {
+            CharCount = _snwprintf_s(
+                LogBuffer,
+                ARRAYSIZE(LogBuffer),
+                _TRUNCATE,
+                L"PH_LARGE_WRITE: FileId=%lu FileWorkId=%lu "
+                L"BytesRemaining=%lld PayloadSize=%llu "
+                L"EndOfFile=%lld Path=%wZ\n",
+                (ULONG)Item->FileId,
+                (ULONG)Item->FileWorkId,
+                BytesRemaining.QuadPart,
+                Buffer->PayloadSize,
+                File->FileInfo.EndOfFile.QuadPart,
+                (File->Path ? &File->Path->FullPath : &NullUnicodeString)
+            );
+
+            if (CharCount > 0) {
+                OutputDebugStringW(LogBuffer);
+                LogHandle = CreateFileW(L"PerfectHashLargeWrite.log",
+                                        FILE_APPEND_DATA,
+                                        FILE_SHARE_READ,
+                                        NULL,
+                                        OPEN_ALWAYS,
+                                        FILE_ATTRIBUTE_NORMAL,
+                                        NULL);
+                if (IsValidHandle(LogHandle)) {
+                    WriteFile(LogHandle,
+                              LogBuffer,
+                              (DWORD)(CharCount * sizeof(WCHAR)),
+                              &BytesWrittenLog,
+                              NULL);
+                    CloseHandle(LogHandle);
+                }
+            }
+        }
+
+        PH_RAISE(PH_E_INVALID_END_OF_FILE);
+    }
+#endif
+
+    if (BytesRemaining.HighPart != 0) {
+        PH_RAISE(PH_E_INVALID_END_OF_FILE);
+    }
+
+    BaseAddress = PerfectHashIocpBufferPayload(Buffer);
+    BytesToWrite = BytesRemaining.LowPart;
+    BytesWritten = 0;
+
+    Allocator = Context->Allocator;
+    if (!Allocator) {
+        Result = E_UNEXPECTED;
+        goto End;
+    }
+
+    WorkItem = (PCHM01_FILE_IOCP_WRITE)Allocator->Vtbl->Calloc(
+        Allocator,
+        1,
+        sizeof(*WorkItem)
+    );
+    if (!WorkItem) {
+        Result = E_OUTOFMEMORY;
+        goto End;
+    }
+
+    WorkItem->Iocp.Signature = PH_IOCP_WORK_SIGNATURE;
+    WorkItem->Iocp.Flags = PH_IOCP_WORK_FLAG_FILE_IO;
+    WorkItem->Iocp.CompletionCallback =
+        Chm01FileWriteIocpCompletionCallback;
+    WorkItem->Context = Context;
+    WorkItem->Item = Item;
+    WorkItem->File = File;
+    WorkItem->Pool = Pool;
+    WorkItem->Buffer = Buffer;
+    WorkItem->BytesToWrite = BytesToWrite;
+
+    Success = WriteFile(File->FileHandle,
+                        BaseAddress,
+                        BytesToWrite,
+                        &BytesWritten,
+                        &WorkItem->Iocp.Overlapped);
+
+    if (!Success) {
+        LastError = GetLastError();
+        if (LastError != ERROR_IO_PENDING) {
+            SetLastError(LastError);
+            SYS_ERROR(WriteFile);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&WorkItem);
+            goto End;
+        }
+    }
+
+    return S_FALSE;
+
+End:
+
+    Chm01ReleaseIocpBuffer(Context, Pool, Buffer);
+    Chm01ClearFileWorkBuffer(File);
+    return Result;
+}
 
 //
 // Forward decls.
@@ -127,6 +928,7 @@ Return Value:
     PGRAPH_INFO Info;
     FILE_ID FileId;
     FILE_WORK_ID FileWorkId;
+    FILE_WORK_ID PrepareWorkId;
     CONTEXT_FILE_ID ContextFileId;
     PFILE_WORK_CALLBACK_IMPL Impl = NULL;
     PPERFECT_HASH_TABLE Table;
@@ -140,6 +942,8 @@ Return Value:
     PPERFECT_HASH_CONTEXT Context;
     BOOLEAN IsContextFile = FALSE;
     BOOLEAN IsMakefileOrMainMkOrCMakeListsTextFile = FALSE;
+    BOOLEAN HasSaveCallback = FALSE;
+    BOOLEAN HasPrepareCallback = FALSE;
 
     //
     // Initialize aliases.
@@ -178,6 +982,25 @@ Return Value:
     //
 
     Item->FileId = FileId = FileWorkIdToFileId(FileWorkId);
+
+    if (SkipContextFileWork(Context) &&
+        IsValidContextFileId((CONTEXT_FILE_ID)FileId)) {
+        Item->Flags.IsContextFile = TRUE;
+        Item->LastResult = S_OK;
+        Item->LastError = 0;
+        if (Event) {
+#ifdef PH_WINDOWS
+            if (Item->Instance) {
+                SetEventWhenCallbackReturns(Item->Instance, Event);
+            } else {
+                SetEvent(Event);
+            }
+#else
+            SetEvent(Event);
+#endif
+        }
+        return;
+    }
 
     //
     // Determine if this is a context file.  Context files get treated
@@ -400,17 +1223,25 @@ Return Value:
                 break;
 
             case EofInitTypeNumberOfKeysMultiplier:
-                EndOfFile.QuadPart = (
-                    (LONGLONG)Keys->NumberOfKeys.QuadPart *
-                    Eof->Multiplier
-                );
+                {
+                    LONGLONG Computed = (LONGLONG)(
+                        Keys->NumberOfKeys.QuadPart * Eof->Multiplier
+                    );
+                    if (Computed > EndOfFile.QuadPart) {
+                        EndOfFile.QuadPart = Computed;
+                    }
+                }
                 break;
 
             case EofInitTypeNumberOfTableElementsMultiplier:
-                EndOfFile.QuadPart = (
-                    NumberOfTableElements.QuadPart *
-                    Eof->Multiplier
-                );
+                {
+                    LONGLONG Computed = (LONGLONG)(
+                        NumberOfTableElements.QuadPart * Eof->Multiplier
+                    );
+                    if (Computed > EndOfFile.QuadPart) {
+                        EndOfFile.QuadPart = Computed;
+                    }
+                }
                 break;
 
             case EofInitTypeNumberOfPages:
@@ -576,19 +1407,147 @@ Return Value:
             PH_RAISE(PH_E_INVARIANT_CHECK_FAILED);
         }
 
+#ifdef PH_WINDOWS
+        if (EndOfFile.QuadPart >= (LONGLONG)(1ULL << 30)) {
+            BOOL LogLargeEof;
+            BOOL FailLargeEof;
+            ULONGLONG NumberOfKeys;
+            ULONGLONG LargeEofTableElements;
+            ULONGLONG AssignedSizeInBytes;
+            ULONG AllocationGranularity;
+            PCUNICODE_STRING Extension;
+            PCUNICODE_STRING Suffix;
+            WCHAR LogBuffer[512];
+            int CharCount;
+            HANDLE LogHandle;
+            DWORD BytesWritten;
+
+            LogLargeEof = (GetEnvironmentVariableW(
+                L"PH_LOG_LARGE_EOF", NULL, 0) != 0);
+            FailLargeEof = (GetEnvironmentVariableW(
+                L"PH_FAIL_LARGE_EOF", NULL, 0) != 0);
+
+            if (LogLargeEof || FailLargeEof) {
+                NumberOfKeys = Keys ? Keys->NumberOfKeys.QuadPart : 0;
+                LargeEofTableElements = (
+                    TableInfo ?
+                    TableInfo->NumberOfTableElements.QuadPart :
+                    0
+                );
+                AssignedSizeInBytes = (
+                    Info ? Info->AssignedSizeInBytes : 0
+                );
+                AllocationGranularity = (
+                    Context ? Context->SystemAllocationGranularity : 0
+                );
+                Extension = GetFileWorkItemExtension(FileWorkId);
+                Suffix = GetFileWorkItemSuffix(FileWorkId);
+
+                CharCount = _snwprintf_s(
+                    LogBuffer,
+                    ARRAYSIZE(LogBuffer),
+                    _TRUNCATE,
+                    L"PH_LARGE_EOF: FileWorkId=%lu FileId=%lu "
+                    L"EofType=%lu Multiplier=%llu EndOfFile=%lld "
+                    L"Keys=%llu TableElements=%llu AssignedSize=%llu "
+                    L"Granularity=%lu Suffix=%wZ Ext=%wZ Path=%wZ\n",
+                    (ULONG)FileWorkId,
+                    (ULONG)FileId,
+                    (ULONG)Eof->Type,
+                    (ULONGLONG)Eof->Multiplier,
+                    EndOfFile.QuadPart,
+                    NumberOfKeys,
+                    LargeEofTableElements,
+                    AssignedSizeInBytes,
+                    AllocationGranularity,
+                    Suffix ? Suffix : &NullUnicodeString,
+                    Extension ? Extension : &NullUnicodeString,
+                    Path ? &Path->FullPath : &NullUnicodeString
+                );
+
+                if (CharCount > 0) {
+                    OutputDebugStringW(LogBuffer);
+
+                    LogHandle = CreateFileW(L"PerfectHashLargeEof.log",
+                                            FILE_APPEND_DATA,
+                                            FILE_SHARE_READ,
+                                            NULL,
+                                            OPEN_ALWAYS,
+                                            FILE_ATTRIBUTE_NORMAL,
+                                            NULL);
+                    if (IsValidHandle(LogHandle)) {
+                        WriteFile(LogHandle,
+                                  LogBuffer,
+                                  (DWORD)(CharCount * sizeof(WCHAR)),
+                                  &BytesWritten,
+                                  NULL);
+                        CloseHandle(LogHandle);
+                    }
+                }
+            }
+
+            if (FailLargeEof) {
+                Result = PH_E_INVALID_END_OF_FILE;
+                PH_ERROR(PrepareFileChm01_LargeEof, Result);
+                goto End;
+            }
+        }
+#endif
+
         Result = PrepareFileChm01(Table,
                                   Item,
                                   Path,
                                   &EndOfFile,
                                   DependentEvent);
 
+        if (Result == S_FALSE) {
+            Chm01RequeueFileWorkItem(Context, Item);
+            return;
+        }
+
         if (FAILED(Result)) {
             PH_ERROR(PrepareFileChm01, Result);
             goto End;
         }
 
+        if (UseOverlappedIo(Context) && Impl) {
+            ULONGLONG BufferPayloadBytes;
+
+            if (!*File) {
+                Result = E_UNEXPECTED;
+                goto End;
+            }
+
+            BufferPayloadBytes = Chm01AdjustRequiredPayloadBytes(
+                Context,
+                FileId,
+                (ULONGLONG)EndOfFile.QuadPart
+            );
+
+            Result = Chm01EnsureFileWorkBuffer(
+                Context,
+                FileIndex,
+                BufferPayloadBytes,
+                *File
+            );
+            if (FAILED(Result)) {
+                goto End;
+            }
+
+            //
+            // Reset bytes written for IOCP buffers.  Prepare routines must
+            // explicitly advance this as they generate output.
+            //
+
+            (*File)->NumberOfBytesWritten.QuadPart = 0;
+        }
+
         if (Impl) {
             Result = Impl(Context, Item);
+            if (Result == S_FALSE) {
+                Chm01RequeueFileWorkItem(Context, Item);
+                return;
+            }
             if (FAILED(Result)) {
 
                 //
@@ -597,6 +1556,31 @@ Return Value:
                 //
 
                 NOTHING;
+            }
+        }
+
+        if (UseOverlappedIo(Context) && Impl) {
+            FILE_WORK_ID SaveWorkId;
+
+            SaveWorkId = FileWorkIdToDependentId(FileWorkId);
+            HasSaveCallback = (FileCallbacks[SaveWorkId] != NULL);
+
+            if (!HasSaveCallback) {
+                Result = Chm01WriteFileFromBuffer(
+                    Context,
+                    Item,
+                    *File,
+                    (*File)->IocpBufferPool,
+                    (*File)->IocpBuffer
+                );
+                if (Result == S_FALSE) {
+                    Chm01ClearFileWorkBuffer(*File);
+                    return;
+                }
+                Chm01ClearFileWorkBuffer(*File);
+                if (FAILED(Result)) {
+                    goto End;
+                }
             }
         }
 
@@ -611,7 +1595,14 @@ Return Value:
         DependentEventIndex = FileWorkIdToDependentEventIndex(FileWorkId);
         DependentEvent = *(&Context->FirstPreparedEvent + DependentEventIndex);
 
-        WaitResult = WaitForSingleObject(DependentEvent, INFINITE);
+        WaitResult = WaitForSingleObject(
+            DependentEvent,
+            UseOverlappedIo(Context) ? 0 : INFINITE
+        );
+        if (WaitResult == WAIT_TIMEOUT && UseOverlappedIo(Context)) {
+            Chm01RequeueFileWorkItem(Context, Item);
+            return;
+        }
         if (WaitResult != WAIT_OBJECT_0) {
             SYS_ERROR(WaitForSingleObject);
             Result = PH_E_SYSTEM_CALL_FAILED;
@@ -632,8 +1623,57 @@ Return Value:
             goto End;
         }
 
+        PrepareWorkId = FileWorkIdToDependentId(FileWorkId);
+        HasPrepareCallback = (FileCallbacks[PrepareWorkId] != NULL);
+
+        if (UseOverlappedIo(Context)) {
+            if (Impl || (*File)->IocpBuffer) {
+                ULONGLONG BufferPayloadBytes;
+
+                BufferPayloadBytes = Chm01AdjustRequiredPayloadBytes(
+                    Context,
+                    FileId,
+                    (ULONGLONG)(*File)->FileInfo.EndOfFile.QuadPart
+                );
+
+                Result = Chm01EnsureFileWorkBuffer(
+                    Context,
+                    FileIndex,
+                    BufferPayloadBytes,
+                    *File
+                );
+                if (FAILED(Result)) {
+                    goto End;
+                }
+            }
+        }
+
+        if (UseOverlappedIo(Context) && Impl && !HasPrepareCallback) {
+            (*File)->NumberOfBytesWritten.QuadPart = 0;
+        }
+
         if (Impl) {
             Result = Impl(Context, Item);
+            if (Result == S_FALSE) {
+                Chm01RequeueFileWorkItem(Context, Item);
+                return;
+            }
+            if (FAILED(Result)) {
+                goto End;
+            }
+        }
+
+        if (UseOverlappedIo(Context) && (*File)->IocpBuffer) {
+            Result = Chm01WriteFileFromBuffer(Context,
+                                              Item,
+                                              *File,
+                                              (*File)->IocpBufferPool,
+                                              (*File)->IocpBuffer);
+            if (Result == S_FALSE) {
+                Chm01ClearFileWorkBuffer(*File);
+                return;
+            }
+            Chm01ClearFileWorkBuffer(*File);
             if (FAILED(Result)) {
                 goto End;
             }
@@ -646,15 +1686,17 @@ Return Value:
         // has to do when the close work items are submitted in parallel.
         //
 
-        Result = UnmapFileChm01(Table, Item);
-        if (FAILED(Result)) {
+        if (!UseOverlappedIo(Context)) {
+            Result = UnmapFileChm01(Table, Item);
+            if (FAILED(Result)) {
 
-            //
-            // Nothing needs doing here.  The Result will bubble back up
-            // via the normal mechanisms.
-            //
+                //
+                // Nothing needs doing here.  The Result will bubble back up
+                // via the normal mechanisms.
+                //
 
-            NOTHING;
+                NOTHING;
+            }
         }
 
     } else {
@@ -698,6 +1740,15 @@ End:
 
     RELEASE(Path);
 
+    if (UseOverlappedIo(Context) &&
+        File &&
+        *File &&
+        (*File)->IocpBuffer) {
+        if (FAILED(Result) || IsCloseFileWorkId(FileWorkId)) {
+            Chm01ReleaseFileWorkBuffer(Context, *File);
+        }
+    }
+
     //
     // If the item's UUID string buffer is non-NULL here, the downstream routine
     // did not successfully take ownership of it, and thus, we're responsbile
@@ -727,7 +1778,11 @@ End:
 
     if (Event) {
 #ifdef PH_WINDOWS
-        SetEventWhenCallbackReturns(Item->Instance, Event);
+        if (Item->Instance) {
+            SetEventWhenCallbackReturns(Item->Instance, Event);
+        } else {
+            SetEvent(Event);
+        }
 #else
         SetEvent(Event);
 #endif
@@ -790,22 +1845,9 @@ Return Value:
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File = NULL;
     PPERFECT_HASH_DIRECTORY Directory = NULL;
-
-    //
-    // If a dependent event has been provided, wait for this object to become
-    // signaled first before proceeding.
-    //
-
-    if (IsValidHandle(DependentEvent)) {
-        ULONG WaitResult;
-
-        WaitResult = WaitForSingleObject(DependentEvent, INFINITE);
-        if (WaitResult != WAIT_OBJECT_0) {
-            SYS_ERROR(WaitForSingleObject);
-            Result = PH_E_SYSTEM_CALL_FAILED;
-            goto Error;
-        }
-    }
+    PPERFECT_HASH_CONTEXT Context = NULL;
+    PERFECT_HASH_FILE_CREATE_FLAGS CreateFlags = { 0 };
+    PPERFECT_HASH_FILE_CREATE_FLAGS CreateFlagsPointer = NULL;
 
     //
     // Dereference the file pointer provided by the caller.  If NULL, this
@@ -817,6 +1859,32 @@ Return Value:
     //
 
     File = *Item->FilePointer;
+    Context = Table->Context;
+
+    //
+    // If a dependent event has been provided, wait for this object to become
+    // signaled first before proceeding.
+    //
+
+    if (IsValidHandle(DependentEvent)) {
+        ULONG WaitResult;
+        DWORD Timeout;
+
+        Timeout = (Context && UseOverlappedIo(Context)) ? 0 : INFINITE;
+
+        WaitResult = WaitForSingleObject(DependentEvent, Timeout);
+        if (WaitResult == WAIT_TIMEOUT && Timeout == 0) {
+            return S_FALSE;
+        }
+        if (WaitResult != WAIT_OBJECT_0) {
+            SYS_ERROR(WaitForSingleObject);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
+    }
+
+    //
+    // Dereference the file pointer provided by the caller.  If NULL, this
 
     if (!File) {
 
@@ -847,16 +1915,41 @@ Return Value:
             Directory = Table->OutputDirectory;
         }
 
+        if (Context && UseOverlappedIo(Context)) {
+            CreateFlags.SkipMapping = TRUE;
+            CreateFlagsPointer = &CreateFlags;
+        }
+
         Result = File->Vtbl->Create(File,
                                     Path,
                                     EndOfFile,
                                     Directory,
-                                    NULL);
+                                    CreateFlagsPointer);
 
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileCreate, Result);
             RELEASE(File);
             goto Error;
+        }
+
+        if (Context &&
+            UseOverlappedIo(Context) &&
+            Context->FileWorkIoCompletionPort) {
+            HANDLE PortHandle;
+
+            PortHandle = CreateIoCompletionPort(
+                File->FileHandle,
+                Context->FileWorkIoCompletionPort,
+                (ULONG_PTR)File,
+                0
+            );
+
+            if (!PortHandle) {
+                SYS_ERROR(CreateIoCompletionPort_FileWork);
+                Result = PH_E_SYSTEM_CALL_FAILED;
+                RELEASE(File);
+                goto Error;
+            }
         }
 
         //

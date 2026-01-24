@@ -25,6 +25,7 @@ Abstract:
 typedef DWORD MINIDUMP_TYPE;
 
 #define MiniDumpWithDataSegs ((MINIDUMP_TYPE)0x00000001)
+#define MiniDumpIgnoreInaccessibleMemory ((MINIDUMP_TYPE)0x00020000)
 
 #pragma warning(push)
 #pragma warning(disable: 4820)
@@ -58,6 +59,79 @@ typedef BOOL (WINAPI *PMINIDUMP_WRITE_DUMP)(
     PMINIDUMP_CALLBACK_INFORMATION CallbackParam
     );
 
+static HMODULE BulkCreateDbgHelpModule = NULL;
+static PMINIDUMP_WRITE_DUMP BulkCreateMiniDumpWriteDump = NULL;
+static WCHAR BulkCreateCrashDir[MAX_PATH];
+
+static
+VOID
+BuildCrashPath(
+    _In_opt_ PCWSTR CrashDir,
+    _In_ PCWSTR FileName,
+    _Out_writes_(BufferChars) PWSTR Buffer,
+    _In_ ULONG BufferChars
+    )
+{
+    size_t Length;
+
+    if (!CrashDir || !*CrashDir) {
+        wcscpy_s(Buffer, BufferChars, FileName);
+        return;
+    }
+
+    Length = wcslen(CrashDir);
+    if (CrashDir[Length - 1] == L'\\' || CrashDir[Length - 1] == L'/') {
+        wcscpy_s(Buffer, BufferChars, CrashDir);
+        wcscat_s(Buffer, BufferChars, FileName);
+    } else {
+        wcscpy_s(Buffer, BufferChars, CrashDir);
+        wcscat_s(Buffer, BufferChars, L"\\");
+        wcscat_s(Buffer, BufferChars, FileName);
+    }
+}
+
+static
+VOID
+InitializeBulkCreateCrashDir(
+    VOID
+    )
+{
+    DWORD Length;
+
+    BulkCreateCrashDir[0] = L'\0';
+    Length = GetEnvironmentVariableW(L"PH_BULK_CREATE_CRASH_DIR",
+                                     BulkCreateCrashDir,
+                                     ARRAYSIZE(BulkCreateCrashDir));
+    if (Length == 0 || Length >= ARRAYSIZE(BulkCreateCrashDir)) {
+        BulkCreateCrashDir[0] = L'\0';
+    } else {
+        BulkCreateCrashDir[Length] = L'\0';
+    }
+}
+
+static
+VOID
+PreloadBulkCreateDbgHelp(
+    VOID
+    )
+{
+    if (BulkCreateMiniDumpWriteDump) {
+        return;
+    }
+
+    BulkCreateDbgHelpModule = LoadLibraryW(L"DbgHelp.dll");
+    if (!BulkCreateDbgHelpModule) {
+        return;
+    }
+
+#pragma warning(push)
+#pragma warning(disable: 4191)
+    BulkCreateMiniDumpWriteDump = (PMINIDUMP_WRITE_DUMP)(
+        GetProcAddress(BulkCreateDbgHelpModule, "MiniDumpWriteDump")
+    );
+#pragma warning(pop)
+}
+
 static
 LONG
 WINAPI
@@ -69,6 +143,7 @@ BulkCreateUnhandledExceptionFilter(
     HANDLE FileHandle = INVALID_HANDLE_VALUE;
     PMINIDUMP_WRITE_DUMP MiniDumpWriteDump;
     MINIDUMP_EXCEPTION_INFORMATION ExceptionInfo;
+    PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam = NULL;
     MINIDUMP_TYPE DumpType;
     BOOL DumpResult = FALSE;
     BOOL FallbackResult = FALSE;
@@ -89,24 +164,32 @@ BulkCreateUnhandledExceptionFilter(
     CHAR ModulePathA[MAX_PATH];
     DWORD ModulePathLength;
     INT ModulePathChars;
+    WCHAR DumpPath[MAX_PATH];
+    WCHAR LogPath[MAX_PATH];
 
-    DbgHelpModule = LoadLibraryW(L"DbgHelp.dll");
-    if (!DbgHelpModule) {
-        goto End;
+    BuildCrashPath(BulkCreateCrashDir,
+                   L"PerfectHashBulkCreateCrash.dmp",
+                   DumpPath,
+                   ARRAYSIZE(DumpPath));
+
+    BuildCrashPath(BulkCreateCrashDir,
+                   L"PerfectHashBulkCreateCrash.log",
+                   LogPath,
+                   ARRAYSIZE(LogPath));
+
+    if (!BulkCreateMiniDumpWriteDump) {
+        PreloadBulkCreateDbgHelp();
     }
 
-#pragma warning(push)
-#pragma warning(disable: 4191)
-    MiniDumpWriteDump = (PMINIDUMP_WRITE_DUMP)(
-        GetProcAddress(DbgHelpModule, "MiniDumpWriteDump")
-    );
-#pragma warning(pop)
+    DbgHelpModule = BulkCreateDbgHelpModule;
+    MiniDumpWriteDump = BulkCreateMiniDumpWriteDump;
 
     if (!MiniDumpWriteDump) {
-        goto End;
+        DumpError = GetLastError();
+        goto LogOnly;
     }
 
-    FileHandle = CreateFileW(L"PerfectHashBulkCreateCrash.dmp",
+    FileHandle = CreateFileW(DumpPath,
                              GENERIC_WRITE,
                              FILE_SHARE_READ,
                              NULL,
@@ -115,14 +198,18 @@ BulkCreateUnhandledExceptionFilter(
                              NULL);
 
     if (FileHandle == INVALID_HANDLE_VALUE) {
-        goto End;
+        DumpError = GetLastError();
+        goto LogOnly;
     }
 
-    ExceptionInfo.ThreadId = GetCurrentThreadId();
-    ExceptionInfo.ExceptionPointers = ExceptionPointers;
-    ExceptionInfo.ClientPointers = FALSE;
+    if (ExceptionPointers) {
+        ExceptionInfo.ThreadId = GetCurrentThreadId();
+        ExceptionInfo.ExceptionPointers = ExceptionPointers;
+        ExceptionInfo.ClientPointers = FALSE;
+        ExceptionParam = &ExceptionInfo;
+    }
 
-    DumpType = MiniDumpWithDataSegs;
+    DumpType = MiniDumpWithDataSegs | MiniDumpIgnoreInaccessibleMemory;
 
     ForceFallback = (GetEnvironmentVariableW(
         L"PH_BULK_CREATE_MINIDUMP_FORCE_FALLBACK",
@@ -135,7 +222,7 @@ BulkCreateUnhandledExceptionFilter(
                                        GetCurrentProcessId(),
                                        FileHandle,
                                        DumpType,
-                                       &ExceptionInfo,
+                                       ExceptionParam,
                                        NULL,
                                        NULL);
     } else {
@@ -147,10 +234,28 @@ BulkCreateUnhandledExceptionFilter(
         if (!ForceFallback) {
             DumpError = GetLastError();
         }
+
+        if (DumpError == ERROR_NOACCESS && ExceptionParam) {
+            DumpResult = MiniDumpWriteDump(GetCurrentProcess(),
+                                           GetCurrentProcessId(),
+                                           FileHandle,
+                                           DumpType,
+                                           NULL,
+                                           NULL,
+                                           NULL);
+            if (!DumpResult) {
+                DumpError = GetLastError();
+            }
+        }
+
+        if (DumpResult) {
+            goto LogOnly;
+        }
+
         TriedFallback = TRUE;
 
         CloseHandle(FileHandle);
-        FileHandle = CreateFileW(L"PerfectHashBulkCreateCrash.dmp",
+        FileHandle = CreateFileW(DumpPath,
                                  GENERIC_WRITE,
                                  FILE_SHARE_READ,
                                  NULL,
@@ -159,12 +264,12 @@ BulkCreateUnhandledExceptionFilter(
                                  NULL);
 
         if (FileHandle != INVALID_HANDLE_VALUE) {
-            DumpType = 0;
+            DumpType = MiniDumpIgnoreInaccessibleMemory;
             FallbackResult = MiniDumpWriteDump(GetCurrentProcess(),
                                                GetCurrentProcessId(),
                                                FileHandle,
                                                DumpType,
-                                               &ExceptionInfo,
+                                               ExceptionParam,
                                                NULL,
                                                NULL);
             if (!FallbackResult) {
@@ -173,7 +278,9 @@ BulkCreateUnhandledExceptionFilter(
         }
     }
 
-    LogHandle = CreateFileW(L"PerfectHashBulkCreateCrash.log",
+LogOnly:
+
+    LogHandle = CreateFileW(LogPath,
                             GENERIC_WRITE,
                             FILE_SHARE_READ,
                             NULL,
@@ -229,21 +336,53 @@ BulkCreateUnhandledExceptionFilter(
                   NULL);
     }
 
-    _snprintf_s(Buffer,
-                sizeof(Buffer),
-                _TRUNCATE,
-                "ExceptionCode: 0x%08lX\r\n",
-                ExceptionPointers->ExceptionRecord->ExceptionCode);
+    if (ExceptionPointers) {
+        _snprintf_s(Buffer,
+                    sizeof(Buffer),
+                    _TRUNCATE,
+                    "ExceptionCode: 0x%08lX\r\n",
+                    ExceptionPointers->ExceptionRecord->ExceptionCode);
 
-    WriteFile(LogHandle, Buffer, (DWORD)strlen(Buffer), &BytesWritten, NULL);
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
 
-    _snprintf_s(Buffer,
-                sizeof(Buffer),
-                _TRUNCATE,
-                "ExceptionAddress: 0x%p\r\n",
-                ExceptionPointers->ExceptionRecord->ExceptionAddress);
+        _snprintf_s(Buffer,
+                    sizeof(Buffer),
+                    _TRUNCATE,
+                    "ExceptionAddress: 0x%p\r\n",
+                    ExceptionPointers->ExceptionRecord->ExceptionAddress);
 
-    WriteFile(LogHandle, Buffer, (DWORD)strlen(Buffer), &BytesWritten, NULL);
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
+    } else {
+        _snprintf_s(Buffer,
+                    sizeof(Buffer),
+                    _TRUNCATE,
+                    "ExceptionCode: <none>\r\n");
+
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
+
+        _snprintf_s(Buffer,
+                    sizeof(Buffer),
+                    _TRUNCATE,
+                    "ExceptionAddress: <none>\r\n");
+
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
+    }
 
     Frames = RtlCaptureStackBackTrace(0,
                                       ARRAYSIZE(BackTrace),
@@ -332,7 +471,21 @@ InstallBulkCreateCrashHandler(
         return;
     }
 
+    InitializeBulkCreateCrashDir();
+    PreloadBulkCreateDbgHelp();
+
     SetUnhandledExceptionFilter(BulkCreateUnhandledExceptionFilter);
+}
+
+static
+VOID
+TriggerBulkCreateCrashTest(
+    _In_ ULONG ExceptionCode
+    )
+{
+    UNREFERENCED_PARAMETER(ExceptionCode);
+    BulkCreateUnhandledExceptionFilter(NULL);
+    ExitProcess((ULONG)E_UNEXPECTED);
 }
 
 static
@@ -343,7 +496,6 @@ MaybeTriggerBulkCreateCrashTest(
 {
     DWORD Length;
     WCHAR Buffer[32];
-
     Length = GetEnvironmentVariableW(L"PH_BULK_CREATE_CRASH_TEST",
                                      Buffer,
                                      ARRAYSIZE(Buffer));
@@ -354,12 +506,13 @@ MaybeTriggerBulkCreateCrashTest(
 
     Buffer[Length] = L'\0';
 
+    InitializeBulkCreateCrashDir();
+
     if (_wcsicmp(Buffer, L"AV") == 0 ||
         _wcsicmp(Buffer, L"ACCESS_VIOLATION") == 0) {
-        volatile int *Ptr = (volatile int *)1;
-        *Ptr = 1;
+        TriggerBulkCreateCrashTest(STATUS_ACCESS_VIOLATION);
     } else {
-        RaiseException(0xE0000001, 0, 0, NULL);
+        TriggerBulkCreateCrashTest(0xE0000001);
     }
 }
 DECLSPEC_NORETURN

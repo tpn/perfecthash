@@ -189,6 +189,15 @@ Abstract:
 //
 #define PH_S_CU_KERNEL_RUNTIME_TARGET_REACHED ((HRESULT)0xE004000EL)
 
+//
+// MessageId: PH_S_SERVER_BULK_CREATE_ALL_SUCCEEDED
+//
+// MessageText:
+//
+// Bulk create request completed successfully.
+//
+#define PH_S_SERVER_BULK_CREATE_ALL_SUCCEEDED ((HRESULT)0x2004000FL)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // PH_SEVERITY_INFORMATIONAL
@@ -2538,7 +2547,16 @@ Abstract:
 #define PH_E_ERROR_DURING_PREPARE_VCPROPS_COMPILED_PERFECT_HASH_FILE ((HRESULT)0xE004028FL)
 
 //
-// Spare IDs: 0x290, 0x291.
+// MessageId: PH_E_SERVER_BULK_CREATE_FAILED
+//
+// MessageText:
+//
+// Bulk create request failed.
+//
+#define PH_E_SERVER_BULK_CREATE_FAILED   ((HRESULT)0xE0040290L)
+
+//
+// Spare ID: 0x291.
 //
 //
 // MessageId: PH_E_ERROR_DURING_SAVE_VCPROJECT_DLL_FILE

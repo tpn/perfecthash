@@ -884,6 +884,66 @@ Return Value:
 
     CopyInline(&GraphInfoOnDisk->Dimensions, Dim, sizeof(*Dim));
 
+#ifdef PH_WINDOWS
+    if (GetEnvironmentVariableW(L"PH_LOG_GRAPH_INFO", NULL, 0) != 0) {
+        if (TableInfoOnDisk->NumberOfTableElements.QuadPart >= (1ULL << 20) ||
+            AssignedSizeInBytes >= (1ULL << 30)) {
+            WCHAR LogBuffer[512];
+            int CharCount;
+            HANDLE LogHandle;
+            DWORD BytesWritten;
+            PCUNICODE_STRING KeysPath = NULL;
+
+            if (Table->Keys &&
+                Table->Keys->File &&
+                Table->Keys->File->Path &&
+                Table->Keys->File->Path->FullPath.Length > 0) {
+                KeysPath = &Table->Keys->File->Path->FullPath;
+            }
+
+            CharCount = _snwprintf_s(
+                LogBuffer,
+                ARRAYSIZE(LogBuffer),
+                _TRUNCATE,
+                L"PH_GRAPH_INFO: Keys=%llu TableElems=%llu "
+                L"AssignedBytes=%llu Vertices=%llu Edges=%llu "
+                L"HashSize=%lu IndexSize=%lu Requested=%llu "
+                L"HashFunc=%lu MaskFunc=%lu Path=%wZ\n",
+                (Table->Keys ? Table->Keys->NumberOfKeys.QuadPart : 0),
+                TableInfoOnDisk->NumberOfTableElements.QuadPart,
+                AssignedSizeInBytes,
+                NumberOfVertices.QuadPart,
+                NumberOfEdges.QuadPart,
+                (ULONG)Table->HashSize,
+                (ULONG)Table->IndexSize,
+                Table->RequestedNumberOfTableElements.QuadPart,
+                (ULONG)Table->HashFunctionId,
+                (ULONG)Table->MaskFunctionId,
+                KeysPath ? KeysPath : &NullUnicodeString
+            );
+
+            if (CharCount > 0) {
+                OutputDebugStringW(LogBuffer);
+                LogHandle = CreateFileW(L"PerfectHashGraphInfo.log",
+                                        FILE_APPEND_DATA,
+                                        FILE_SHARE_READ,
+                                        NULL,
+                                        OPEN_ALWAYS,
+                                        FILE_ATTRIBUTE_NORMAL,
+                                        NULL);
+                if (IsValidHandle(LogHandle)) {
+                    WriteFile(LogHandle,
+                              LogBuffer,
+                              (DWORD)(CharCount * sizeof(WCHAR)),
+                              &BytesWritten,
+                              NULL);
+                    CloseHandle(LogHandle);
+                }
+            }
+        }
+    }
+#endif
+
     //
     // Capture ratios.
     //

@@ -632,7 +632,9 @@ Return Value:
             }
         }
         InsertHeadFinishedWork(Context, &Graph->ListEntry);
-        SubmitThreadpoolWork(Context->FinishedWork);
+        if (!SkipThreadpoolInitialization(Context)) {
+            SubmitThreadpoolWork(Context->FinishedWork);
+        }
         return PH_S_STOP_GRAPH_SOLVING;
     }
 
@@ -3175,7 +3177,9 @@ SkipComparatorCheck:
         // the graph contexts to finish and then assessing the context.
         //
 
-        SubmitThreadpoolWork(Context->FinishedWork);
+        if (!SkipThreadpoolInitialization(Context)) {
+            SubmitThreadpoolWork(Context->FinishedWork);
+        }
 
         //
         // Clear the caller's NewGraphPointer, as we're not going to be doing
@@ -4261,7 +4265,9 @@ Return Value:
     if (Result != S_OK) {
         CONTEXT_END_TIMERS(Solve);
         SetStopSolving(Context);
-        SubmitThreadpoolWork(Context->FinishedWork);
+        if (!SkipThreadpoolInitialization(Context)) {
+            SubmitThreadpoolWork(Context->FinishedWork);
+        }
         return Result;
     }
 
@@ -6276,7 +6282,9 @@ SkipComparatorCheck:
         // the graph contexts to finish and then assessing the context.
         //
 
-        SubmitThreadpoolWork(Context->FinishedWork);
+        if (!SkipThreadpoolInitialization(Context)) {
+            SubmitThreadpoolWork(Context->FinishedWork);
+        }
 
         //
         // Clear the caller's NewGraphPointer, as we're not going to be doing

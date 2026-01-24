@@ -719,6 +719,24 @@ Table Create Parameters:
         Supplies the maximum number of seconds to try and solve an individual
         graph.
 
+    --InitialPerFileConcurrency=N
+
+        Sets the initial number of graph solver work items to dispatch per
+        keys file (default: 1).  This is useful for IOCP-driven bulk runs
+        where most key sets solve quickly and only "hard" sets should ramp
+        up additional concurrency.
+
+    --MaxPerFileConcurrency=N
+
+        Caps the maximum number of graph solver work items per keys file.
+        Defaults to the maximum concurrency supplied on the command line.
+
+    --IncreaseConcurrencyAfterMilliseconds=N
+
+        When set, and the first solver work item has been running longer than
+        the supplied interval, an additional solver work item will be queued
+        (up to --MaxPerFileConcurrency).  Defaults to 500ms; use 0 to disable.
+
     --FunctionHookCallbackDllPath=<Path>
 
         Supplies a fully-qualified path to a .dll file that will be used as the
@@ -811,4 +829,3 @@ Mask Functions:
 
   ID | Name
    2   And
-

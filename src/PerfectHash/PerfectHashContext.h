@@ -21,6 +21,11 @@ Abstract:
 #include "bsthreadpool.h"
 #endif
 
+typedef struct _PERFECT_HASH_IOCP_BUFFER_POOL PERFECT_HASH_IOCP_BUFFER_POOL;
+typedef PERFECT_HASH_IOCP_BUFFER_POOL *PPERFECT_HASH_IOCP_BUFFER_POOL;
+struct _PERFECT_HASH_IOCP_NODE;
+typedef struct _PERFECT_HASH_IOCP_NODE *PPERFECT_HASH_IOCP_NODE;
+
 //
 // Algorithms are required to register a callback routine with the perfect hash
 // table context that matches the following signature.  This routine will be
@@ -127,6 +132,12 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         ULONG IsBulkCreate:1;
 
         //
+        // When set, indicates context-level file work should be skipped.
+        //
+
+        ULONG SkipContextFileWork:1;
+
+        //
         // When set, indicates the graph solving failed because every worker
         // thread failed to allocate sufficient memory to even attempt solving
         // the graph (specifically, the every graph's LoadInfo() call returned
@@ -200,7 +211,7 @@ typedef union _PERFECT_HASH_CONTEXT_STATE {
         // Unused bits.
         //
 
-        ULONG Unused:16;
+        ULONG Unused:15;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -245,6 +256,13 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define SetContextBulkCreate(Context) ((Context)->State.IsBulkCreate = TRUE)
 #define ClearContextBulkCreate(Context) ((Context)->State.IsBulkCreate = FALSE)
 
+#define SkipContextFileWork(Context) \
+    ((Context)->State.SkipContextFileWork == TRUE)
+#define SetContextSkipContextFileWork(Context) \
+    ((Context)->State.SkipContextFileWork = TRUE)
+#define ClearContextSkipContextFileWork(Context) \
+    ((Context)->State.SkipContextFileWork = FALSE)
+
 #define IsContextTableCreate(Context) ((Context)->State.IsTableCreate == TRUE)
 #define SetContextTableCreate(Context) ((Context)->State.IsTableCreate = TRUE)
 #define ClearContextTableCreate(Context) \
@@ -253,7 +271,60 @@ typedef PERFECT_HASH_CONTEXT_STATE *PPERFECT_HASH_CONTEXT_STATE;
 #define IsSystemRngId(Id) (Id == PerfectHashRngSystemId)
 #define IsSystemRng(Context) ((Context)->RngId == PerfectHashRngSystemId)
 
-DEFINE_UNUSED_FLAGS(PERFECT_HASH_CONTEXT);
+typedef union _PERFECT_HASH_CONTEXT_FLAGS {
+    struct {
+
+        //
+        // When set, skip threadpool initialization for this context.
+        //
+
+        ULONG SkipThreadpoolInitialization:1;
+
+        //
+        // When set, indicates file I/O should use overlapped buffers instead
+        // of memory-mapped views. Intended for IOCP-native contexts.
+        //
+
+        ULONG UseOverlappedIo:1;
+
+        //
+        // When set, IOCP file I/O buffers use guard pages.
+        //
+
+        ULONG UseIocpBufferGuardPages:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:29;
+    };
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_CONTEXT_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_CONTEXT_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_CONTEXT_FLAGS *PPERFECT_HASH_CONTEXT_FLAGS;
+
+#define SkipThreadpoolInitialization(Context) \
+    ((Context)->Flags.SkipThreadpoolInitialization != FALSE)
+
+#define UseOverlappedIo(Context) \
+    ((Context)->Flags.UseOverlappedIo != FALSE)
+
+#define SetContextUseOverlappedIo(Context) \
+    ((Context)->Flags.UseOverlappedIo = TRUE)
+
+#define ClearContextUseOverlappedIo(Context) \
+    ((Context)->Flags.UseOverlappedIo = FALSE)
+
+#define UseIocpBufferGuardPages(Context) \
+    ((Context)->Flags.UseIocpBufferGuardPages != FALSE)
+
+#define SetContextUseIocpBufferGuardPages(Context) \
+    ((Context)->Flags.UseIocpBufferGuardPages = TRUE)
+
+#define ClearContextUseIocpBufferGuardPages(Context) \
+    ((Context)->Flags.UseIocpBufferGuardPages = FALSE)
 
 typedef struct _BEST_GRAPH_INFO {
 
@@ -1000,6 +1071,10 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTP_TIMER SolveTimeout;
     ULONG MinimumConcurrency;
     ULONG MaximumConcurrency;
+    ULONG InitialPerFileConcurrency;
+    ULONG MaxPerFileConcurrency;
+    ULONG IncreaseConcurrencyAfterMilliseconds;
+    ULONG Padding10;
     union {
         ULONG CuConcurrency;
         ULONG NumberOfGpuThreads;
@@ -1070,6 +1145,23 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     PTHREADPOOL FileThreadpool;
 #endif
     PTP_WORK FileWork;
+
+    //
+    // Optional IOCP integration for file work dispatch.
+    //
+
+    HANDLE FileWorkIoCompletionPort;
+    HANDLE FileWorkOutstandingEvent;
+    volatile LONG FileWorkOutstanding;
+    ULONG FileWorkOutstandingPadding;
+    PPERFECT_HASH_IOCP_NODE IocpNode;
+    ULONG IocpNodeIndex;
+    ULONG IocpNodePadding;
+    PPERFECT_HASH_IOCP_BUFFER_POOL FileWorkBufferPools;
+    ULONG FileWorkBufferPoolCount;
+    ULONG FileWorkOversizePoolCount;
+    LIST_ENTRY FileWorkOversizePools;
+    PGUARDED_LIST FileWorkBufferList;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;
     ULONG Padding4;
@@ -1395,6 +1487,23 @@ typedef PERFECT_HASH_CONTEXT_RESET *PPERFECT_HASH_CONTEXT_RESET;
 
 typedef
 VOID
+(NTAPI PERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK)(
+    _In_ PPERFECT_HASH_CONTEXT Context
+    );
+typedef PERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK
+      *PPERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK;
+
+typedef
+VOID
+(NTAPI PERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS)(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ BOOL CancelPending
+    );
+typedef PERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS
+      *PPERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS;
+
+typedef
+VOID
 (NTAPI PERFECT_HASH_CONTEXT_APPLY_THREADPOOL_PRIORITIES)(
     _In_ PPERFECT_HASH_CONTEXT Context,
     _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
@@ -1477,6 +1586,9 @@ PerfectHashContextInitializeLowMemoryMonitor(
 extern PERFECT_HASH_CONTEXT_INITIALIZE PerfectHashContextInitialize;
 extern PERFECT_HASH_CONTEXT_RUNDOWN PerfectHashContextRundown;
 extern PERFECT_HASH_CONTEXT_RESET PerfectHashContextReset;
+extern PERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK PerfectHashContextSubmitFileWork;
+extern PERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS
+    PerfectHashContextWaitForFileWorkCallbacks;
 extern PERFECT_HASH_CONTEXT_INITIALIZE_KEY_SIZE
     PerfectHashContextInitializeKeySize;
 extern PERFECT_HASH_CONTEXT_SET_MAXIMUM_CONCURRENCY

@@ -900,7 +900,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 //
 
 
-#define NUMBER_OF_INTERFACES 15
+#define NUMBER_OF_INTERFACES 18
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -988,6 +988,9 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     -1, // IClassFactory
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Keys),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Context),
+    -1, // ContextIocp
+    -1, // Server
+    -1, // Client
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Table),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Rtl),
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Allocator),
@@ -1011,6 +1014,9 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // IClassFactory
     -1, // Keys
     -1, // Context
+    -1, // ContextIocp
+    -1, // Server
+    -1, // Client
     -1, // Table
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Rtl),
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Allocator),
@@ -1117,6 +1123,90 @@ const PERFECT_HASH_CONTEXT_VTBL PerfectHashContextInterface = {
 #endif
 };
 VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT, 12);
+
+//
+// PerfectHashContextIocp
+//
+
+const PERFECT_HASH_CONTEXT_IOCP_VTBL PerfectHashContextIocpInterface = {
+    (PPERFECT_HASH_CONTEXT_IOCP_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_CONTEXT_IOCP_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_CONTEXT_IOCP_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_CONTEXT_IOCP_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_CONTEXT_IOCP_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashContextIocpSetMaximumConcurrency,
+    &PerfectHashContextIocpGetMaximumConcurrency,
+    &PerfectHashContextIocpSetMaximumThreads,
+    &PerfectHashContextIocpGetMaximumThreads,
+    &PerfectHashContextIocpSetNumaNodeMask,
+    &PerfectHashContextIocpGetNumaNodeMask,
+    &PerfectHashContextIocpSetBaseOutputDirectory,
+    &PerfectHashContextIocpGetBaseOutputDirectory,
+    &PerfectHashContextIocpBulkCreate,
+    &PerfectHashContextIocpBulkCreateArgvW,
+    &PerfectHashContextIocpExtractBulkCreateArgsFromArgvW,
+    &PerfectHashContextIocpTableCreate,
+    &PerfectHashContextIocpTableCreateArgvW,
+    &PerfectHashContextIocpExtractTableCreateArgsFromArgvW,
+#ifdef PH_COMPAT
+    &PerfectHashContextIocpTableCreateArgvA,
+    &PerfectHashContextIocpBulkCreateArgvA,
+#else
+    NULL,
+    NULL,
+#endif
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_CONTEXT_IOCP, 16);
+
+//
+// PerfectHashServer
+//
+
+const PERFECT_HASH_SERVER_VTBL PerfectHashServerInterface = {
+    (PPERFECT_HASH_SERVER_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_SERVER_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_SERVER_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_SERVER_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_SERVER_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashServerSetMaximumConcurrency,
+    &PerfectHashServerGetMaximumConcurrency,
+    &PerfectHashServerSetMaximumThreads,
+    &PerfectHashServerGetMaximumThreads,
+    &PerfectHashServerSetNumaNodeMask,
+    &PerfectHashServerGetNumaNodeMask,
+    &PerfectHashServerSetEndpoint,
+    &PerfectHashServerGetEndpoint,
+    &PerfectHashServerSetLocalOnly,
+    &PerfectHashServerGetLocalOnly,
+    &PerfectHashServerSetVerbose,
+    &PerfectHashServerGetVerbose,
+    &PerfectHashServerSetNoFileIo,
+    &PerfectHashServerGetNoFileIo,
+    &PerfectHashServerSetIocpBufferGuardPages,
+    &PerfectHashServerGetIocpBufferGuardPages,
+    &PerfectHashServerStart,
+    &PerfectHashServerStop,
+    &PerfectHashServerWait,
+    &PerfectHashServerSubmitRequest,
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_SERVER, 20);
+
+//
+// PerfectHashClient
+//
+
+const PERFECT_HASH_CLIENT_VTBL PerfectHashClientInterface = {
+    (PPERFECT_HASH_CLIENT_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_CLIENT_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_CLIENT_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_CLIENT_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_CLIENT_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashClientConnect,
+    &PerfectHashClientDisconnect,
+    &PerfectHashClientSubmitRequest,
+    &PerfectHashClientGetLastResponse,
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_CLIENT, 4);
 
 //
 // PerfectHashTable
@@ -1472,6 +1562,9 @@ const VOID *ComponentInterfaces[] = {
     &IClassFactoryInterface,
     &PerfectHashKeysInterface,
     &PerfectHashContextInterface,
+    &PerfectHashContextIocpInterface,
+    &PerfectHashServerInterface,
+    &PerfectHashClientInterface,
     &PerfectHashTableInterface,
     &RtlInterface,
     &AllocatorInterface,
@@ -1500,6 +1593,9 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
 
     (PCOMPONENT_INITIALIZE)&PerfectHashKeysInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashContextInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashContextIocpInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashServerInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashClientInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashTableInitialize,
     (PCOMPONENT_INITIALIZE)&RtlInitialize,
     (PCOMPONENT_INITIALIZE)&AllocatorInitialize,
@@ -1529,6 +1625,9 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
 
     (PCOMPONENT_RUNDOWN)&PerfectHashKeysRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashContextRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashContextIocpRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashServerRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashClientRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashTableRundown,
     (PCOMPONENT_RUNDOWN)&RtlRundown,
     (PCOMPONENT_RUNDOWN)&AllocatorRundown,

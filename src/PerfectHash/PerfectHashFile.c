@@ -15,6 +15,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashIocpBufferPool.h"
 
 //
 // Helper inline method for updating the file's FILE_INFO structure.
@@ -39,6 +40,457 @@ PerfectHashFileUpdateFileInfo(
     }
 
     return S_OK;
+}
+
+static
+VOID
+PerfectHashFileGetIocpBufferPoolState(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL **PoolsPointer,
+    _Out_ PULONG *PoolCountPointer,
+    _Outptr_ PGUARDED_LIST *BufferListPointer,
+    _Outptr_ PLIST_ENTRY *OversizeListPointer,
+    _Outptr_ PULONG *OversizeCountPointer,
+    _Outptr_ PSRWLOCK *PoolLockPointer,
+    _Out_ PUSHORT NumaNodePointer
+    )
+{
+    PPERFECT_HASH_IOCP_NODE Node;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(PoolsPointer) ||
+        !ARGUMENT_PRESENT(PoolCountPointer) ||
+        !ARGUMENT_PRESENT(BufferListPointer) ||
+        !ARGUMENT_PRESENT(OversizeListPointer) ||
+        !ARGUMENT_PRESENT(OversizeCountPointer) ||
+        !ARGUMENT_PRESENT(PoolLockPointer) ||
+        !ARGUMENT_PRESENT(NumaNodePointer)) {
+        return;
+    }
+
+    Node = Context->IocpNode;
+    if (Node) {
+        *PoolsPointer = &Node->FileWorkBufferPools;
+        *PoolCountPointer = &Node->FileWorkBufferPoolCount;
+        *BufferListPointer = Node->FileWorkBufferList;
+        *OversizeListPointer = &Node->FileWorkOversizePools;
+        *OversizeCountPointer = &Node->FileWorkOversizePoolCount;
+        *PoolLockPointer = &Node->FileWorkBufferPoolLock;
+        *NumaNodePointer = (USHORT)Node->NodeId;
+    } else {
+        *PoolsPointer = &Context->FileWorkBufferPools;
+        *PoolCountPointer = &Context->FileWorkBufferPoolCount;
+        *BufferListPointer = Context->FileWorkBufferList;
+        *OversizeListPointer = &Context->FileWorkOversizePools;
+        *OversizeCountPointer = &Context->FileWorkOversizePoolCount;
+        *PoolLockPointer = &Context->Lock;
+        *NumaNodePointer = 0;
+    }
+}
+
+static
+HRESULT
+PerfectHashFileEnsureIocpBufferPools(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolsPointer,
+    _Out_ PULONG PoolCountPointer
+    )
+{
+    HRESULT Result;
+    ULONG Flags;
+    ULONG PoolIndex;
+    ULONG PoolCount;
+    ULONGLONG PayloadSize;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pools;
+    PPERFECT_HASH_IOCP_BUFFER_POOL *PoolArrayPointer;
+    PULONG PoolCountField;
+    PGUARDED_LIST BufferList;
+    PLIST_ENTRY OversizeList;
+    PULONG OversizeCount;
+    PSRWLOCK PoolLock;
+    USHORT NumaNode;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(PoolsPointer) ||
+        !ARGUMENT_PRESENT(PoolCountPointer)) {
+        return E_POINTER;
+    }
+
+    Allocator = Context->Allocator;
+    Rtl = Context->Rtl;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    PerfectHashFileGetIocpBufferPoolState(Context,
+                                          &PoolArrayPointer,
+                                          &PoolCountField,
+                                          &BufferList,
+                                          &OversizeList,
+                                          &OversizeCount,
+                                          &PoolLock,
+                                          &NumaNode);
+
+    if (!PoolArrayPointer || !PoolCountField || !BufferList) {
+        return E_UNEXPECTED;
+    }
+
+    Pools = *PoolArrayPointer;
+    if (!Pools) {
+        AcquireSRWLockExclusive(PoolLock);
+        Pools = *PoolArrayPointer;
+        if (!Pools) {
+            PoolCount = PERFECT_HASH_IOCP_BUFFER_CLASS_COUNT;
+            Pools = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
+                Allocator,
+                PoolCount,
+                sizeof(*Pools)
+            );
+            if (!Pools) {
+                ReleaseSRWLockExclusive(PoolLock);
+                return E_OUTOFMEMORY;
+            }
+
+            Flags = UseIocpBufferGuardPages(Context) ?
+                PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES :
+                0;
+            for (PoolIndex = 0; PoolIndex < PoolCount; PoolIndex++) {
+                PayloadSize =
+                    PerfectHashIocpBufferGetPayloadSizeFromClassIndex(
+                        (LONG)PoolIndex
+                    );
+
+                Result = PerfectHashIocpBufferPoolInitialize(
+                    Rtl,
+                    &Pools[PoolIndex],
+                    PayloadSize,
+                    NumaNode,
+                    Flags,
+                    Context->ProcessHandle,
+                    BufferList
+                );
+
+                if (FAILED(Result)) {
+                    ReleaseSRWLockExclusive(PoolLock);
+                    Allocator->Vtbl->FreePointer(
+                        Allocator,
+                        (PVOID *)&Pools
+                    );
+                    return Result;
+                }
+            }
+
+            *PoolArrayPointer = Pools;
+            *PoolCountField = PoolCount;
+        }
+        ReleaseSRWLockExclusive(PoolLock);
+    }
+
+    *PoolsPointer = Pools;
+    *PoolCountPointer = *PoolCountField;
+    return S_OK;
+}
+
+static
+HRESULT
+PerfectHashFileGetOversizeIocpBufferPool(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONGLONG PayloadSize,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer
+    )
+{
+    HRESULT Result;
+    ULONG Flags;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+    PPERFECT_HASH_IOCP_BUFFER_POOL *PoolArrayPointer;
+    PULONG PoolCountField;
+    PGUARDED_LIST BufferList;
+    PLIST_ENTRY OversizeList;
+    PLIST_ENTRY Entry;
+    PULONG OversizeCount;
+    PSRWLOCK PoolLock;
+    USHORT NumaNode;
+
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(PoolPointer)) {
+        return E_POINTER;
+    }
+
+    Allocator = Context->Allocator;
+    Rtl = Context->Rtl;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    PerfectHashFileGetIocpBufferPoolState(Context,
+                                          &PoolArrayPointer,
+                                          &PoolCountField,
+                                          &BufferList,
+                                          &OversizeList,
+                                          &OversizeCount,
+                                          &PoolLock,
+                                          &NumaNode);
+
+    if (!OversizeList || !OversizeCount || !PoolLock) {
+        return E_UNEXPECTED;
+    }
+
+    AcquireSRWLockExclusive(PoolLock);
+
+    Entry = OversizeList->Flink;
+    while (Entry != OversizeList) {
+        Pool = CONTAINING_RECORD(Entry,
+                                 PERFECT_HASH_IOCP_BUFFER_POOL,
+                                 ListEntry);
+        if (Pool->PayloadSize == PayloadSize) {
+            ReleaseSRWLockExclusive(PoolLock);
+            *PoolPointer = Pool;
+            return S_OK;
+        }
+
+        Entry = Entry->Flink;
+    }
+
+    Pool = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
+        Allocator,
+        1,
+        sizeof(*Pool)
+    );
+    if (!Pool) {
+        ReleaseSRWLockExclusive(PoolLock);
+        return E_OUTOFMEMORY;
+    }
+
+    Flags = PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_OVERSIZE;
+    if (UseIocpBufferGuardPages(Context)) {
+        Flags |= PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES;
+    }
+
+    Result = PerfectHashIocpBufferPoolInitialize(Rtl,
+                                                 Pool,
+                                                 PayloadSize,
+                                                 NumaNode,
+                                                 Flags,
+                                                 Context->ProcessHandle,
+                                                 BufferList);
+
+    if (FAILED(Result)) {
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
+        ReleaseSRWLockExclusive(PoolLock);
+        return Result;
+    }
+
+    InsertTailList(OversizeList, &Pool->ListEntry);
+    (*OversizeCount)++;
+    ReleaseSRWLockExclusive(PoolLock);
+
+    *PoolPointer = Pool;
+    return S_OK;
+}
+
+static
+HRESULT
+PerfectHashFileGetIocpBufferPool(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONGLONG RequiredPayloadBytes,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer
+    )
+{
+    HRESULT Result;
+    LONG ClassIndex;
+    ULONG PoolCount;
+    ULONGLONG PayloadSize;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pools;
+
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(PoolPointer)) {
+        return E_POINTER;
+    }
+
+    Rtl = Context->Rtl;
+    if (!Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    ClassIndex = PerfectHashIocpBufferGetClassIndex(Rtl,
+                                                    RequiredPayloadBytes);
+    if (ClassIndex >= 0) {
+        Result = PerfectHashFileEnsureIocpBufferPools(Context,
+                                                      &Pools,
+                                                      &PoolCount);
+        if (FAILED(Result)) {
+            return Result;
+        }
+
+        if ((ULONG)ClassIndex >= PoolCount) {
+            return E_INVALIDARG;
+        }
+
+        *PoolPointer = &Pools[ClassIndex];
+        return S_OK;
+    }
+
+    PayloadSize = Rtl->RoundUpPowerOfTwo64(RequiredPayloadBytes);
+    if (PayloadSize == 0) {
+        return E_INVALIDARG;
+    }
+
+    return PerfectHashFileGetOversizeIocpBufferPool(Context,
+                                                    PayloadSize,
+                                                    PoolPointer);
+}
+
+static
+HRESULT
+PerfectHashFileAcquireIocpBuffer(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONGLONG RequiredPayloadBytes,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER *BufferPointer
+    )
+{
+    HRESULT Result;
+    PRTL Rtl;
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(PoolPointer) ||
+        !ARGUMENT_PRESENT(BufferPointer)) {
+        return E_POINTER;
+    }
+
+    Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
+    if (!Rtl || !Allocator) {
+        return E_UNEXPECTED;
+    }
+
+    Result = PerfectHashFileGetIocpBufferPool(Context,
+                                              RequiredPayloadBytes,
+                                              &Pool);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Result = PerfectHashIocpBufferPoolAcquire(Rtl,
+                                              Allocator,
+                                              Pool,
+                                              &Buffer);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *PoolPointer = Pool;
+    *BufferPointer = Buffer;
+    return S_OK;
+}
+
+static
+HRESULT
+PerfectHashFileReadOverlapped(
+    _In_ PPERFECT_HASH_FILE File,
+    _In_ ULONGLONG FileSize
+    )
+{
+    HRESULT Result;
+    BOOL Success;
+    DWORD BytesRead;
+    ULONG LastError;
+    ULONGLONG Offset;
+    ULONGLONG Remaining;
+    PBYTE Dest;
+    PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_TLS_CONTEXT TlsContext;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+
+    if (!ARGUMENT_PRESENT(File)) {
+        return E_POINTER;
+    }
+
+    if (FileSize == 0) {
+        return PH_E_FILE_EMPTY;
+    }
+
+    TlsContext = PerfectHashTlsGetContext();
+    if (!TlsContext || !TlsContext->Context) {
+        return PH_E_NO_TLS_CONTEXT_SET;
+    }
+
+    Context = TlsContext->Context;
+    Result = PerfectHashFileAcquireIocpBuffer(Context,
+                                              FileSize,
+                                              &Pool,
+                                              &Buffer);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    File->IocpBufferPool = Pool;
+    File->IocpBuffer = Buffer;
+    File->BaseAddress = PerfectHashIocpBufferPayload(Buffer);
+
+    Offset = 0;
+    Remaining = FileSize;
+    Dest = (PBYTE)File->BaseAddress;
+
+    while (Remaining) {
+        DWORD Chunk;
+        OVERLAPPED Overlapped;
+
+        Chunk = (Remaining > MAXDWORD) ? MAXDWORD : (DWORD)Remaining;
+        ZeroStructInline(Overlapped);
+        Overlapped.Offset = (DWORD)Offset;
+        Overlapped.OffsetHigh = (DWORD)(Offset >> 32);
+
+        BytesRead = 0;
+        Success = ReadFile(File->FileHandle,
+                           Dest,
+                           Chunk,
+                           &BytesRead,
+                           &Overlapped);
+        if (!Success) {
+            LastError = GetLastError();
+            if (LastError == ERROR_IO_PENDING) {
+                Success = GetOverlappedResult(File->FileHandle,
+                                              &Overlapped,
+                                              &BytesRead,
+                                              TRUE);
+                if (!Success) {
+                    SYS_ERROR(GetOverlappedResult);
+                    Result = PH_E_SYSTEM_CALL_FAILED;
+                    break;
+                }
+            } else {
+                SYS_ERROR(ReadFile);
+                Result = PH_E_SYSTEM_CALL_FAILED;
+                break;
+            }
+        }
+
+        if (BytesRead != Chunk) {
+            Result = PH_E_INVARIANT_CHECK_FAILED;
+            break;
+        }
+
+        Remaining -= BytesRead;
+        Offset += BytesRead;
+        Dest += BytesRead;
+    }
+
+    if (FAILED(Result)) {
+        PerfectHashIocpBufferPoolRelease(Pool, Buffer);
+        File->IocpBufferPool = NULL;
+        File->IocpBuffer = NULL;
+        File->BaseAddress = NULL;
+    }
+
+    return Result;
 }
 
 
@@ -356,6 +808,8 @@ Return Value:
     }
 
     File->State.IsReadOnly = TRUE;
+    File->FileCreateFlags.AsULong = 0;
+    File->FileCreateFlags.SkipMapping = FileLoadFlags.SkipMapping;
 
     //
     // Add a reference to the source path.
@@ -420,15 +874,34 @@ Return Value:
         EndOfFilePointer->QuadPart = File->FileInfo.EndOfFile.QuadPart;
     }
 
-    //
-    // Map the file into memory.
-    //
+    if (FileLoadFlags.SkipMapping) {
 
-    Result = File->Vtbl->Map(File);
+        //
+        // Load the file data into an overlapped buffer.
+        //
 
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileMap, Result);
-        goto Error;
+        Result = PerfectHashFileReadOverlapped(
+            File,
+            (ULONGLONG)File->FileInfo.EndOfFile.QuadPart
+        );
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileReadOverlapped, Result);
+            goto Error;
+        }
+
+    } else {
+
+        //
+        // Map the file into memory.
+        //
+
+        Result = File->Vtbl->Map(File);
+
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileMap, Result);
+            goto Error;
+        }
     }
 
     //
@@ -629,6 +1102,7 @@ Return Value:
     }
 
     File->State.IsReadOnly = FALSE;
+    File->FileCreateFlags.AsULong = FileCreateFlags.AsULong;
 
     //
     // Add a reference to the source path.
@@ -700,7 +1174,19 @@ Return Value:
 
             EndOfFile.QuadPart = File->FileInfo.EndOfFile.QuadPart;
 
-            if (!FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists) {
+            if (EndOfFile.QuadPart == 0) {
+
+                //
+                // Existing file is empty; treat it like a new file and extend
+                // it to the requested size.  This avoids invalid end-of-file
+                // failures when mapping zero-length streams.
+                //
+
+                ASSERT(EndOfFilePointer->QuadPart > 0);
+
+                EndOfFile.QuadPart = EndOfFilePointer->QuadPart;
+
+            } else if (!FileCreateFlags.EndOfFileIsExtensionSizeIfFileExists) {
 
                 DoTruncate = FALSE;
 
@@ -760,11 +1246,12 @@ Return Value:
     // Map the file into memory.
     //
 
-    Result = File->Vtbl->Map(File);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileMap, Result);
-        goto Error;
+    if (!FileCreateFlags.SkipMapping) {
+        Result = File->Vtbl->Map(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileMap, Result);
+            goto Error;
+        }
     }
 
     //
@@ -913,6 +1400,14 @@ Return Value:
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashFileUnmap, Result);
         }
+    }
+
+    if (File->IocpBufferPool && File->IocpBuffer) {
+        PerfectHashIocpBufferPoolRelease(File->IocpBufferPool,
+                                         File->IocpBuffer);
+        File->IocpBufferPool = NULL;
+        File->IocpBuffer = NULL;
+        File->BaseAddress = NULL;
     }
 
     //
@@ -1317,6 +1812,11 @@ Return Value:
 
     if (!IsFileOpen(File)) {
         return PH_E_FILE_NOT_OPEN;
+    }
+
+    if (File->FileCreateFlags.SkipMapping) {
+        SetFileUnmapped(File);
+        return S_OK;
     }
 
     if (IsFileUnmapped(File)) {
@@ -1791,6 +2291,10 @@ Return Value:
     //
 
     File->NumberOfBytesWritten.QuadPart = 0;
+
+    if (File->FileCreateFlags.SkipMapping) {
+        goto End;
+    }
 
     Result = File->Vtbl->Map(File);
     if (FAILED(Result)) {

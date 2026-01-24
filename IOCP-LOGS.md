@@ -1,0 +1,200 @@
+# IOCP Logs
+
+## 2026-01-19
+- Added IOCP context/server/client interfaces and COM scaffolding.
+- Added NUMA-aware IOCP runtime skeleton (per-node IOCPs, worker threads with affinity).
+- Wired new components into PerfectHash constants/build definitions.
+- Added server/client executables with basic CLI parsing and IOCP startup wiring.
+- Fixed /Wall padding warnings and confirmed Debug builds for server/client targets.
+- Implemented named-pipe IOCP transport in the server with per-node pipe instances and a request/response state machine.
+- Implemented client-side named-pipe connect and request submission with wire protocol headers.
+- Fixed /Wall issues in new IOCP code (Rtl-backed ZeroMemory usage, struct padding, enum exhaustiveness) and rebuilt server/client executables.
+- Wired server request dispatch to parse command-line payloads and call IOCP context bulk/table create entrypoints.
+- Implemented IOCP ArgvW entrypoints by delegating to legacy PerfectHashContext workflows.
+- Added server endpoint/local-only API + CLI configuration, plus error-response payload handling and client-side retrieval/printing.
+- Added a PowerShell smoke test script for server/client shutdown round-trips.
+- Ran `scripts/iocp-smoke.ps1` after fixes to confirm clean startup/shutdown.
+- Diagnosed a Debug breakpoint during table create to a TLS global-component bitfield mismatch; realigned TLS flag bit positions to interface IDs and removed fragile asserts.
+- Added a create-exe unhandled-exception stack trace hook (DbgHelp) to aid future diagnostics.
+- Hardened `scripts/iocp-smoke.ps1` to handle missing exit codes after timed waits; smoke test now completes successfully.
+- Added IOCP work item header/signature and per-item completion dispatch in the IOCP worker loop.
+- Updated server pipe handling to use per-pipe IOCP work items instead of global completion callbacks.
+- Added stress scripts for sys32 bulk create (direct and IOCP variants).
+- Rebuilt PerfectHashServerExe and reran `scripts/iocp-smoke.ps1` successfully.
+- Added bulk-create directory server request with per-request completion token (event + mapping).
+- Implemented server-side directory walk and per-file IOCP work item dispatch for bulk requests.
+- Added client-side `--BulkCreateDirectory` support with token wait and bulk result handling.
+- Fixed bulk enqueue completion accounting and failure handling to avoid double-decrement.
+- Updated IOCP sys32 stress script to use bulk-create directory request.
+- Regenerated PerfectHash error headers/resources for new status codes.
+- Rebuilt PerfectHashServerExe/PerfectHashClientExe with `/p:CL_MPCount=1` and reran `scripts/iocp-smoke.ps1`.
+- Built Release targets for PerfectHashBulkCreate/Server/Client with `/p:CL_MPCount=1`.
+- BulkCreate Release sys32 run at concurrency 32 crashed (`0xC0000005`); repeated `FlushConsoleInputBuffer` errors observed.
+- BulkCreateDirectory argv handling fixed to always inject a program name for parsing.
+- IOCP Release sys32 run at concurrency 32 fails with `SetThreadpoolThreadMinimum` access denied during per-file context init.
+- Created `D:\\src\\perfecthash-main` worktree, built Release `PerfectHashBulkCreate.exe` and tested baseline bulk-create.
+- `hard2` run succeeded but printed repeated `FlushConsoleInputBuffer` errors.
+- `sys32` run crashed with access violation (`0xC0000005`) and the same flush errors, indicating the crash exists on `main`.
+
+## 2026-01-20
+- Rebased `iocp-dev` onto `origin/main` and resolved `PerfectHashBulkCreateExe.c` conflict by keeping upstream minidump handler.
+- Ignored `ERROR_ACCESS_DENIED` from `SetMaximumConcurrency` in IOCP per-file work items to allow bulk runs to continue.
+- Diagnosed IOCP bulk-create server crash (`0xC0000005`) to use-after-free of `CommandLineToArgvW` buffers referenced by table-create parameters.
+- Retained bulk-create directory `ArgvW` buffers in request state (free on completion) and moved argv adjustment into server dispatch to keep string pointers alive.
+- Fixed IOCP bulk work-item callback use-after-free (request freed before work item allocator cleanup).
+- Mapped IOCP bulk-create crash to `PrepareCHeaderFileChm01` using `Context->CommandLineW`; crash was NULL due to direct `TableCreate` usage.
+- Preserved request command line and seeded per-file contexts with `Context->CommandLineW` to keep header generation stable.
+- Updated IOCP stress script to accept `PH_S_SERVER_BULK_CREATE_ALL_SUCCEEDED` as a success exit code.
+- Ran `scripts/stress-sys32-iocp.ps1` against a single-file keys dir (Release, max concurrency 1); completed successfully.
+- Added IOCP-backed file work dispatch hooks: context submit/wait helpers with outstanding-event tracking, per-file context IOCP port wiring, and file-work event signaling for non-threadpool callbacks.
+- Added async work framework scaffolding and CHM01 async state machine skeleton (new modules, build integration).
+- Added CHM01 async bridge that runs the legacy CHM01 routine on a worker thread and polls completion via IOCP, plus an env-gated async entrypoint.
+- Replaced the CHM01 async bridge with IOCP-driven solver slices, graph work items, and a state-machine finalize path for save/close/verify.
+- Fixed CHM01 async header macro usage inside a struct (removed extra semicolons) and prevented double-include macro expansion by adding `#pragma once` to `Chm01FileWork.h`.
+- Added explicit padding to CHM01 async graph work items and undefed `EXPAND_AS_CHECK_ERRORS` before redefining to satisfy `/Wall` with warnings-as-errors.
+- Rebuilt `PerfectHashServerExe` Debug successfully after the async/header fixes.
+- Ran `scripts/stress-sys32-iocp.ps1` with `PERFECT_HASH_IOCP_ASYNC_CHM01=1` against `perfecthash-keys\\hard` (Debug, max concurrency 32); run timed out with client hung waiting for completion (server already exited), leaving partial output in `build-win\\iocp-stress-hard`.
+- Added IOCP work-item flags and a CHM01 async pump loop so IOCP completions continue while `Chm01AsyncWaitJob()` waits; file work/async/pipe items are dispatched inline, bulk work items are requeued.
+- Added a CHM01 async prepare-wait state for the try-larger-table-size path (still returns `PH_E_NOT_IMPLEMENTED` but now waits for prepare file work before closing).
+- Stress runs against `perfecthash-keys\\hard` still time out; observed repeated `SetEndOfFile`/`PerfectHashFileTruncate` failures (error 1224: mapped section open) and `PrepareFileChm01` failures during IOCP bulk runs.
+- Added a context flag to skip context-level file work for per-file IOCP contexts; CHM01 async prepare/save/close now bypass context file items and signal events directly to avoid `ERROR_USER_MAPPED_FILE` conflicts.
+- Added `CHM01_ASYNC_JOB_FLAG_SAVE_SUBMITTED` and gated `Chm01AsyncFinalizeClose()` on save completion; updated graph completion to use `Job->Context` and the IOCP pump to wait for `Outstanding == 0` before exiting.
+- IOCP stress runs still time out within the 120s tool limit, but bulk create AVs in `Chm01AsyncGraphStep` are no longer reproduced.
+- Added per-work-item `LastError` tracking in IOCP bulk logging (`PerfectHashServerBulkCreateFailures.log`) to capture `GetLastError()` at the point of failure.
+- Added focused two-file IOCP stress run directory (`build-win\\keys-test`) to isolate failures on `shell32-13803.keys`/`CoreUIComponents-7995.keys`.
+- `Mulshrolate4X` is not recognized by `PerfectHashClient` (invalid hash function ID); only `Mulshrolate4RX` exists in current hash table list.
+- IOCP bulk-create against the two-file `build-win\\keys-test` set with `Mulshrolate4RX` still hangs (client/server left running until manually terminated; no bulk failure log emitted).
+- Normal `PerfectHashBulkCreate.exe` run on the same two-file set with `Mulshrolate4RX` crashed with `0xC0000005` after `CoreUIComponents-7995.keys`; no crash dump/log emitted.
+- OG `PerfectHashBulkCreate.exe` run against `perfecthash-keys\\test1` (5 files) crashed with `0xC0000005` after `Hydrogen-43013.keys` even with an absolute output directory; `--DisableCsvOutputFile` did not prevent the crash; no crash dump/log emitted.
+
+## 2026-01-21
+- Created a clean `D:\\src\\perfecthash-main-clean` worktree at `origin/main` (7c83dc5a), built Debug `PerfectHashBulkCreateExe`, and ran `PerfectHashBulkCreate.exe` against `..\\perfecthash-keys\\test1` with `Chm01 Mulshrolate4RX And 4`; completed successfully with five output directories, indicating the crash is specific to `iocp-dev`.
+- Noted that `tests/CMakeLists.txt` includes a bulk CLI test that uses `--NoFileIo` and `MultiplyShiftR`, so it doesn't cover the current file-I/O crash scenario.
+- Clean rebuilt `build-win` after `PERFECT_HASH_CONTEXT` layout changes; `PerfectHashBulkCreate.exe` no longer AVs on `test1`, indicating a stale PCH/obj mismatch was responsible.
+- Added crash-dir env overrides (`PH_BULK_CREATE_CRASH_DIR`, `PH_SERVER_CRASH_DIR`) and server crash test env (`PH_SERVER_CRASH_TEST`), plus DbgHelp preloading and `MiniDumpIgnoreInaccessibleMemory`.
+- Reworked crash-test path to generate dumps without exception pointers (avoid `MiniDumpWriteDump` 998) and added `scripts/test-minidump.ps1`; Debug run now produces non-empty minidumps for bulk-create and server.
+- Added a `MiniDumpWriteDump` retry path that drops exception pointers on `ERROR_NOACCESS`, keeping real-crash logs while allowing dumps to be written.
+- Removed CHM01 async resize/try-larger-table logic (events, state transitions, and initial resize setup) to keep IOCP async solving focused on single-pass solve behavior.
+- IOCP bulk stress against `perfecthash-keys\\hard` (Debug) still times out in ~120s; server left running and only ~12/23 output dirs created, indicating completion/hang persists post-resize removal.
+- Attached `cdb` to `PerfectHashServer.exe` ~10s into a Debug IOCP bulk run and captured `~* kb` (`cdb-hard-backtrace.log`): main thread blocked in `PerfectHashServerWait`, IOCP worker threads blocked in `GetQueuedCompletionStatus` (33 waits on one IOCP handle, 24 on another), and ~1539 threads waiting in `ZwWaitForWorkViaWorkerFactory`, indicating no active IOCP completions at capture time and unexpected threadpool worker proliferation.
+- Added IOCP-native argument extraction helpers (`PerfectHashContextIocpArgs.c`) and wired into build files.
+
+## 2026-01-25
+- Refactored IOCP file-work buffers to size-class pools (4KB–16MB) plus dynamic oversize pools; buffers tracked via guarded lists for teardown.
+- Updated IOCP context/node structs and rundown paths to free pooled buffers and oversize pool lists.
+- Reworked CHM01 file-work buffer acquisition to use size-class/oversize pools (no one-off pools) and new acquire/release APIs.
+- Updated IOCP buffer pool API to accept `PRTL` for initialization zeroing; removed legacy create/pop/push/destroy calls.
+- Updated IOCP buffer pool unit tests and size-class helper coverage.
+- Built Release `perfecthash_unit_tests` and ran `build-win\\bin\\Release\\perfecthash_unit_tests.exe` (all 8 tests pass).
+- Added TLS flag plumbing for threadpool-less context creation and IOCP helper to create contexts with `CreateContextWithoutThreadpool` set.
+- Updated server bulk/table create to avoid legacy context parsing and use IOCP-native arg extraction.
+- Added IOCP table-create dispatch in server (context creation, file-work IOCP wiring, hook/RNG init, TLS context) and removed threadpool priority application.
+- Routed server BulkCreate requests through the bulk-create directory path to avoid legacy context invocation.
+- Clean rebuild (Debug) succeeded; IOCP stress on `perfecthash-keys\\hard` with `Mulshrolate4RX` and concurrency 32 timed out in ~330s; 23/23 output directories were created but the client hung waiting for completion, then was terminated.
+- Debugger run with cdb breakpoints (`cdb-server-bp5.log`, `cdb-client-bp5.log`) showed client hits `PerfectHashClientWaitForBulkCreateToken`/`WaitForSingleObject`, server hits `PerfectHashServerBulkCreateWorkItemCallback`, but `PerfectHashServerCompleteBulkRequest` never hit within 120s; only 9 work-item callbacks logged and 5/23 output dirs created before termination.
+- Debugger run against `perfecthash-keys\\test1` (5 files) showed `PerfectHashServerBulkCreateWorkItemCallback` hit 3 times, `PerfectHashServerCompleteBulkRequest` never hit, and only 1 output dir created (`cdb-server-bp-test1.log`, `cdb-client-bp-test1.log`).
+- Repeated test1 run with server `--MaxConcurrency=1` showed only 1 work-item callback hit, no bulk completion, and 1 output dir created (`cdb-server-bp-test1-1.log`, `cdb-client-bp-test1-1.log`).
+- Added cdb request-state logging using struct offsets from `cdb-types.log`. On test1, `PerfectHashServerEnqueueBulkRequest` hit once, and three work-item callbacks logged `TotalWorkItems=5` with `OutstandingWorkItems` at 2/4/6 and `DispatchComplete=0` at callback entry. `PerfectHashServerCompleteBulkRequest` never hit and only 1 output dir was created (`cdb-server-bp-test1-B.log`, `cdb-client-bp-test1-B.log`).
+- `--NoFileIo` test (test1) under cdb: enqueue hit once, two work-item callbacks observed, no bulk completion hit, and no output directories created (`cdb-server-bp-test1-nofile.log`, `cdb-client-bp-test1-nofile.log`).
+- Diagnosed `TpIsTimerSet` invalid-parameter crash in IOCP worker threads to `SubmitThreadpoolWork(Context->FinishedWork)` from `GraphSolve`; guarded finished-work submissions in `Graph.c`/`GraphCu.c` when threadpool init is skipped.
+- Rebuilt Debug and reran IOCP bulk create on `perfecthash-keys\\test1` under cdb with breakpoints on `Chm01AsyncGraphComplete` and `PerfectHashServerCompleteBulkRequest`; graph completion fired repeatedly, bulk completion callback fired once, and all five output directories were created (`cdb-server-graphcomplete.log`).
+- Re-ran IOCP bulk create on `perfecthash-keys\\test1` without cdb (`PERFECT_HASH_IOCP_ASYNC_CHM01=1`); completed successfully and emitted all five output directories (`build-win\\iocp-stress-test1-nocdb`).
+- Replaced `CHM01_ASYNC_JOB.Events[5]` with an enum-backed count macro and updated initialization to use named event IDs.
+- Added client `--WaitForServer`/`--ConnectTimeout=<ms>` and ping request/response support to wait for server readiness before submitting work.
+- Updated IOCP scripts to pass `--WaitForServer`/`--ConnectTimeout`; ping check against `PerfectHashServer-PingTest` returned 0 for ping/shutdown/server.
+- IOCP bulk run against `perfecthash-keys\\hard` (Debug, concurrency 32) still timed out after ~360s; all 23 output directories were created, server exited, but the client remained waiting until terminated (`build-win\\iocp-stress-hard-latest`).
+- OG bulk create (Debug) against `perfecthash-keys\\hard` completed in ~0.82s (cmd /c run, concurrency 32), exit 0.
+- IOCP bulk run against `perfecthash-keys\\hard` with concurrency 1 under cdb hit `PerfectHashServerEnqueueBulkRequest`/`WorkItem` callbacks, then crashed in `PerfectHash!PhFree` while printing stats (`PrintCurrentContextStatsChm01` -> `Chm01AsyncFinalizeVerify`); client timed out waiting (`cdb-server-hard1.log`).
+- Fixed `_dtoa_Allocator` race by resolving allocator from TLS context in `_dtoa.c` (no TLS var in DLL); Debug rebuild succeeded.
+- Re-ran IOCP bulk `hard` with concurrency 1 under cdb; no crash, `PerfectHashServerCompleteBulkRequest` hit, client exited cleanly (`cdb-server-hard1b.log`).
+
+## 2026-01-22
+- Reproduced IOCP bulk-create hang on `perfecthash-keys\\hard` (Debug, concurrency 32); client waited indefinitely while many per-file outputs were created.
+- Added optional bulk-count logging (`PH_LOG_BULK_CREATE_COUNTS`) and CHM01 async job logging (`PH_LOG_CHM01_ASYNC_JOB`) to track request completion and async state transitions.
+- Identified `Chm01AsyncWaitJob()` pump loop could block in `GetQueuedCompletionStatus()` after job completion, leaving bulk work items stuck mid-callback.
+- Added a dummy IOCP wake post in `Chm01AsyncComplete()` and switched the pump loop to a 100ms timeout to re-check job completion state.
+- Re-ran IOCP stress on `perfecthash-keys\\hard` with `Mulshrolate4RX`/concurrency 32; run completed successfully and server shutdown cleanly.
+- Clean Release rebuild after build dir cleanup and ran IOCP sys32 stress (`Mulshrolate4RX`, concurrency 32); run completed in ~197s but emitted repeated `PerfectHashKeysLoadTableSize` invalid EOF messages (0xe0040264).
+- Identified 31 sys32 keys files with zero-length `Chm01_Mulshrolate4RX_And.TableSize` streams causing invalid EOF failures.
+- Reproduced the invalid EOF with a single file (`aadauthhelper-189.keys`) via `PerfectHashCreate.exe`.
+- Fixed `PerfectHashFileCreate()` to extend existing zero-length files when `NoTruncate` is set; single-file create now succeeds.
+- Added `ADS.md` with notes on table-size vs table-info ADS usage and risks of removal.
+- Created `..\\perfecthash-keys\\win32.temp50` with 50 random sys32 keys and ran IOCP bulk create (Release, `Mulshrolate4RX`, concurrency 32); run completed with 50 output dirs.
+- Attempted full sys32 IOCP run (Release, `Mulshrolate4RX`, concurrency 32) to `build-win\\iocp-stress-sys32-release`; run emitted `SetEndOfFile` failures with `ERROR_DISK_FULL` and was halted; output dir grew to ~193 GB with ~13,637 directories before shutdown.
+- Added IOCP server verbosity/no-file-IO controls (`--Verbose`, `--NoFileIo`) and vtbl setters/getters; server now defaults to silent output and only prints console legend when console work is enabled.
+- Updated IOCP scripts (`scripts/iocp-smoke.ps1`, `scripts/stress-sys32-iocp.ps1`) to pass the new server flags (NoFileIo default true, optional verbose).
+- Ran IOCP sys32 `--NoFileIo` stress (Release, `Mulshrolate4RX`, concurrency 32) via script; client/server did not complete within tool timeout, shutdown timed out, and both processes required termination (follow-up needed).
+- Ran IOCP bulk create against a 200-file subset of `sys32` (`G:\\Scratch\\sys32-200`, Release, `Mulshrolate4RX`, concurrency 4, `--NoFileIo`); completed successfully within the 30s timeout.
+- Captured server thread samples during the 200-file run (Release, concurrency 4). `PerfectHashServer.exe` showed 68 threads total; initial samples had 31-36 running, then all waiting. Wait reasons were dominated by `EventPairLow` (IOCP), with a few `Unknown`/`UserRequest`.
+- Re-ran the 200-file sys32 subset with server `--MaxConcurrency=4` (Release, `Mulshrolate4RX`, `--NoFileIo`). Thread sampling showed 8 total threads (4 running initially, then all waiting), with wait reasons dominated by `EventPairLow`; client/server exited cleanly.
+- Added separate IOCP concurrency and worker thread controls: `--IocpConcurrency` (`--MaxConcurrency` alias) and `--MaxThreads` (default `IocpConcurrency * 2` when set). IOCP ports now use per-node concurrency, worker threads default per node; scripts accept `-IocpConcurrency`/`-MaxThreads`.
+- 200-file sys32 subset run with `--IocpConcurrency=4` (Release, `Mulshrolate4RX`, `--NoFileIo`) showed 12 total server threads (6 running initially), wait reasons dominated by `EventPairLow`; client/server exited cleanly.
+- 1000-file random sys32 subset (`G:\\Scratch\\sys32-1000`, Release, `Mulshrolate4RX`, `--NoFileIo`, per-file concurrency 32, server `--IocpConcurrency=32 --MaxThreads=64`) did not complete within 900s; client/server remained running and required termination.
+- OG `PerfectHashBulkCreate.exe` run on the same 1000-file subset (Release, `Mulshrolate4RX`, `--NoFileIo`, concurrency 32, `--Silent`) completed in ~1.95s with exit code 0.
+- Added per-file concurrency ramp controls (`InitialPerFileConcurrency`, `MaxPerFileConcurrency`, `IncreaseConcurrencyAfterMilliseconds`) with defaults (1, max, 500ms).
+- Wired new table-create params into arg parsing and validation, IOCP arg helpers, and `PERFECT_HASH_CONTEXT`.
+- Updated `Chm01Async` to dispatch the initial per-file graph work count and enqueue additional graph work after the configured delay.
+- Documented new parameters in `USAGE.txt`.
+- IOCP sys32-200 subset run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms) completed successfully.
+- IOCP `hard` run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms) crashed with `0xC0000005` (server exit code -1073741819); no minidump found.
+- Re-ran `hard` under `cdb` attach (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=4`, `--MaxThreads=8`, per-file ramp 1/4/500ms); client returned `0x2004000F`, shutdown succeeded, and no AV was captured (`build-win\\logs\\cdb-hard-attach-release.log`).
+- IOCP full sys32 run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=32`, `--MaxThreads=64`, per-file ramp 1/4/500ms) completed in ~38.1s.
+- OG BulkCreate full sys32 run (Release, `Mulshrolate4RX`, `--NoFileIo`, concurrency 32, full paths) completed in ~20.05s; no errors logged (`build-win\\logs\\og-sys32-conc32.log`).
+- IOCP full sys32 run (Release, `Mulshrolate4RX`, `--NoFileIo`, `--IocpConcurrency=32`, `--MaxThreads=64`, per-file ramp 1/16/500ms) completed in ~38.1s.
+- OG BulkCreate full sys32 run with file I/O (Release, `Mulshrolate4RX`, concurrency 32) completed in ~2m30s based on `G:\\Scratch\\sys32.og.fileio` directory timestamps (created 19:27:31, last write 19:30:01).
+- IOCP full sys32 run with file I/O (Release, `Mulshrolate4RX`, `--IocpConcurrency=32`, `--MaxThreads=64`, per-file ramp 1/4/500ms) completed in ~1m27s (`G:\\Scratch\\iocp-sys32-conc32-fileio.log`).
+- IOCP full sys32 run with file I/O (Release, `Mulshrolate4RX`, `--IocpConcurrency=60`, `--MaxThreads=240`, per-file ramp 1/4/500ms) completed in ~1m49s (`G:\\Scratch\\iocp-sys32-conc60-1-4-500-fileio.log`).
+- Added IOCP buffer pool module (`PerfectHashIocpBufferPool.[ch]`) and gtest coverage for create/pop/push and empty-pop behavior.
+- Fixed buffer-pool unit test AVs by providing test `RtlFillMemory`/`RtlZeroMemory` helpers (internal `ZeroMemory()` macros call `Rtl->RtlFillMemory`).
+- Verified `ctest -C Debug -R PerfectHashIocpBufferPool` passes.
+- Added per-node bucketed IOCP file-work buffer pools (bucketed by AlignUpPow2(keys) and indexed by file id); IOCP contexts now capture node pointers from the server for pool selection.
+- Switched IOCP file saves to true overlapped writes: issue `WriteFile` with IOCP work item, associate output file handles with per-node ports, and complete saves via IOCP callback (set events, return buffers, record errors).
+- IOCP sys32-200 subset run with file I/O (Release, `Mulshrolate4RX`, `--IocpConcurrency=4`, `--MaxThreads=8`) hung; only 7/200 output dirs created in `G:\\Scratch\\iocp-sys32-200-conc4-fileio-new`, client stuck waiting, server already exited.
+- Attached cdb to `PerfectHashServer.exe` during sys32-200 file-I/O run; captured access violation (`0xC0000005`) in `PerfectHashFileTruncate()` → `PerfectHashFileCreate()` → `PrepareFileChm01()` → `FileWorkItemCallbackChm01()` on an IOCP worker thread, with other threads in `PrepareCHeaderFileChm01()`/`AppendCharBufferToCharBuffer()`; log at `build-win\\logs\\cdb-iocp-fileio-sys32-200-av.log`.
+
+## 2026-01-23
+- Ran IOCP bulk-create against `G:\\Scratch\\sys32-200` (Release, `Mulshrolate4RX`, `--IocpConcurrency=4 --MaxThreads=8 --NoFileIo`); client exited with `0x2004000F` success after manual run.
+- Captured server thread stacks post-run: main thread waiting in `PerfectHashServerWait`, IOCP worker threads blocked in `GetQueuedCompletionStatus`, two worker-factory threads idle; log at `build-win\\logs\\cdb-iocp-200-conc4-stacks2.log`.
+- Manual `PerfectHashClient` runs require quoting the entire `--BulkCreateDirectory=...` argument; otherwise client reports an invalid argument.
+- Ran IOCP bulk-create against `G:\\Scratch\\sys32-1000` (Release, `Mulshrolate4RX`, `--IocpConcurrency=4 --MaxThreads=8 --NoFileIo`) and attached cdb ~1s in with `!runaway;~* kb`. Thread sample shows main thread waiting in `PerfectHashServerWait`, IOCP worker threads in `GetQueuedCompletionStatus`, and four worker-factory threads parked in `ZwWaitForWorkViaWorkerFactory` while work is active; log at `build-win\\logs\\cdb-iocp-1000-conc4-stacks.log`.
+- Reviewed async/bulk accounting paths (server + CHM01 async + file work) and identified potential outstanding-count leaks on error/requeue paths; see analysis notes for proposed fixes.
+- Fixed IOCP async accounting: requeue failures now complete work (decrement outstanding), and graph-work submit failures roll back counts and signal events when needed.
+- Quick test (Release, `Mulshrolate4RX`, `G:\\Scratch\\sys32-200`, `--IocpConcurrency=4 --MaxThreads=8 --NoFileIo`) completed in ~1.01s, client exit `0x2004000F`, server exit 0.
+
+## 2026-01-24
+- Fixed IOCP buffer sizing to index EOF initializers by `FileId` (not `FileWorkId`) to avoid out-of-bounds reads during save-stage sizing; `SavePythonTestFileChm01` no longer fails with `PH_E_INVARIANT_CHECK_FAILED`.
+- Rebuilt Release and reran IOCP file-I/O runs on `perfecthash-keys\\test1` and `perfecthash-keys\\hard` (Release, `Mulshrolate4RX`, `--IocpConcurrency=4 --MaxThreads=8`); both completed without errors.
+- Skipped mapping in `PerfectHashFileExtend()` when `SkipMapping` is set (IOCP mode) to prevent `ERROR_USER_MAPPED_FILE` during close.
+- Added IOCP one-off buffer fallback and buffer-size validation/cleanup so save stages can request larger payloads without failing; one-off pools are destroyed after use.
+- Rebuilt Release and reran IOCP file-I/O on a 200-file sys32 subset (`D:\\Scratch\\sys32-200` → `D:\\Scratch\\iocp-sys32-200-fileio-4`, `Mulshrolate4RX`, `--IocpConcurrency=4 --MaxThreads=8`); run completed cleanly with no file-work errors.
+- Timed IOCP file-I/O run on `G:\\Scratch\\sys32-1000` (1000 random sys32 keys) with `Mulshrolate4RX`, `--IocpConcurrency=4 --MaxThreads=8 --MaximumConcurrency=4`; completed in ~26.11s (`G:\\Scratch\\iocp-sys32-1000-fileio-timed2-20260123-120241`).
+- Timed OG bulk-create file-I/O run on the same 1000-file set with `Mulshrolate4RX` and concurrency 4; completed in ~11.30s (`G:\\Scratch\\sys32-1000-og-fileio-timed2-20260123-120330`).
+- Reset `File->NumberOfBytesWritten` before IOCP prepare callbacks and added IOCP-only bounds checks in `SaveCHeaderFileChm01`/`SaveCppSourceUnityFileChm01` to avoid stale offsets and AVs.
+- `Chm01AcquireFileWorkBuffer()` now falls back to one-off buffers when the per-file pool is empty (instead of returning `E_OUTOFMEMORY`).
+- IOCP file-I/O run on `G:\\Scratch\\sys32-repro-small` (Release, `Mulshrolate4RX`, `--IocpConcurrency=1 --MaxThreads=2`) completed successfully.
+- IOCP file-I/O run on `D:\\src\\perfecthash-keys\\hard` (Release, `Mulshrolate4RX`, `--IocpConcurrency=4 --MaxThreads=8`) completed successfully.
+- Added fail-fast `PH_RAISE` guards for oversized IOCP write requests and reset `NumberOfBytesWritten` for IOCP save-only file work items.
+- Full IOCP sys32 file-I/O run completed (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `G:\\Scratch\\iocp-sys32-full` in ~289.6s; largest output file ~2.5MB, no anomalously large files observed.
+- OG BulkCreate sys32 file-I/O run completed (Release, `Mulshrolate4RX`, concurrency 32) to `G:\\Scratch\\sys32-og-full` in ~126.6s; largest output file ~21.3MB (CSV), no anomalously large files observed.
+- IOCP sys32 file-I/O run with per-file ramp 1/16/500 completed (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `G:\\Scratch\\iocp-sys32-full-max16` in ~289.6s; largest output file ~2.5MB, no anomalously large files observed.
+- Created a fresh 1000-file sys32 subset at `E:\\Scratch\\sys32-1000` for ramp tuning.
+- OG BulkCreate run on `E:\\Scratch\\sys32-1000` completed in ~22.9s (Release, `Mulshrolate4RX`, concurrency 32) to `E:\\Scratch\\sys32-1000-og`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with ramp `Initial=2`, `Max=8`, `After=200ms` completed in ~21.1s (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `E:\\Scratch\\sys32-1000-iocp-2-8-200`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with ramp `Initial=1`, `Max=8`, `After=200ms` completed in ~21.1s (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `E:\\Scratch\\sys32-1000-iocp-1-8-200-2`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with ramp `Initial=1`, `Max=4`, `After=200ms` completed in ~20.1s (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `E:\\Scratch\\sys32-1000-iocp-1-4-200`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with `--IocpConcurrency=64 --MaxThreads=196`, ramp `Initial=1`, `Max=4`, `After=100ms` hit `VirtualAllocEx` failures (error 1455) and `PH_E_OUTOFMEMORY` during save (`SaveCppSourceUnityFile`); run completed in ~21.1s but was not clean (`E:\\Scratch\\sys32-1000-iocp-1-4-100-64`).
+- IOCP run on `E:\\Scratch\\sys32-1000` with `--IocpConcurrency=64 --MaxThreads=128 --MaximumConcurrency=32`, ramp `Initial=1`, `Max=2`, `After=100ms` still hit `VirtualAllocEx` failures (error 1455) and `PH_E_OUTOFMEMORY` during save (`SaveCppSourceUnityFile`); run completed in ~20.1s but was not clean (`E:\\Scratch\\sys32-1000-iocp-1-2-100-64`).
+
+## 2026-01-25
+- Planned IOCP buffer pool redesign based on `D:\\src\\lookaside` NUMA lookaside pattern:
+  - Replace per-file/bucket pools with per-NUMA size-class pools keyed by payload size (power-of-two).
+  - Size classes initially 4KB–16MB; oversize allocations use dynamic pools keyed by next power-of-two.
+  - Pools allocate on demand; buffers are reusable via SLIST free lists and tracked via `GUARDED_LIST` for rundown.
+  - One-off allocations become reusable buffers owned by a pool; guarded list enables safe teardown.
+  - Add optional guard-page allocation flag (default on) to choose between guard-page buffers vs raw chunks.
+  - Add basic pool stats/diagnostics later (depth, alloc failures); ETW deferred.
+
+## 2026-01-26
+- Added IOCP buffer guard-page toggle: new server flag + CLI (`--IocpBufferGuardPages`), context flag propagation, and pool init wiring.
+- Implemented IOCP keys-load path: `PERFECT_HASH_KEYS_LOAD_FLAGS.UseOverlappedIo`, `PERFECT_HASH_FILE_LOAD_FLAGS.SkipMapping`, overlapped `ReadFile` into pooled buffers, and buffer release on file close.
+- Added gtest coverage for guard-page buffer pool flag propagation.

@@ -21,6 +21,11 @@ Abstract:
 
 #include "stdafx.h"
 
+typedef struct _PERFECT_HASH_IOCP_BUFFER_POOL PERFECT_HASH_IOCP_BUFFER_POOL;
+typedef struct _PERFECT_HASH_IOCP_BUFFER PERFECT_HASH_IOCP_BUFFER;
+typedef PERFECT_HASH_IOCP_BUFFER_POOL *PPERFECT_HASH_IOCP_BUFFER_POOL;
+typedef PERFECT_HASH_IOCP_BUFFER *PPERFECT_HASH_IOCP_BUFFER;
+
 //
 // Private vtbl methods.
 //
@@ -316,6 +321,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_FILE {
     //
 
     PVOID MappedAddress;
+
+    //
+    // Optional IOCP buffer state used when SkipMapping is active.
+    //
+
+    PPERFECT_HASH_IOCP_BUFFER_POOL IocpBufferPool;
+    PPERFECT_HASH_IOCP_BUFFER IocpBuffer;
 
     //
     // File info for the current file.  Updated whenever any routine mutates

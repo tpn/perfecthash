@@ -56,6 +56,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashIocpBufferPool.h"
 
 extern const STRING CompiledPerfectHashTableRoutinesPreCSourceRawCString;
 extern const STRING CompiledPerfectHashTableRoutinesCSourceRawCString;
@@ -334,6 +335,15 @@ SaveCHeaderFileChm01(
         (USHORT)RtlPointerToOffset(Path->TableNameUpperA.Buffer, Algo.Buffer)
     );
     Algo.MaximumLength = Algo.Length;
+
+    if (UseOverlappedIo(Context)) {
+        if (!File->IocpBuffer ||
+            File->NumberOfBytesWritten.QuadPart <= 0 ||
+            (ULONGLONG)File->NumberOfBytesWritten.QuadPart >=
+                File->IocpBuffer->PayloadSize) {
+            return PH_E_INVALID_END_OF_FILE;
+        }
+    }
 
     //
     // Pick up the offset from where we left off.

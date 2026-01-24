@@ -21,6 +21,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashIocpBufferPool.h"
 #include "bsthreadpool.h"
 
 //
@@ -124,6 +125,110 @@ Return Value:
     return MaximumConcurrency + 2;
 }
 
+static
+VOID
+PerfectHashIocpFreeBuffer(
+    _In_ PRTL Rtl,
+    _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
+    )
+{
+    BOOL Success;
+    HRESULT Result;
+    HANDLE ProcessHandle;
+    PVOID BaseAddress;
+
+    if (!ARGUMENT_PRESENT(Rtl) || !ARGUMENT_PRESENT(Buffer)) {
+        return;
+    }
+
+    ProcessHandle = NULL;
+    if (Buffer->OwnerPool) {
+        ProcessHandle = Buffer->OwnerPool->ProcessHandle;
+    }
+
+    if (!ProcessHandle) {
+        ProcessHandle = GetCurrentProcess();
+    }
+
+    if (Buffer->Flags & PERFECT_HASH_IOCP_BUFFER_FLAG_GUARD_PAGES) {
+        BaseAddress = Buffer;
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          ProcessHandle,
+                                          &BaseAddress,
+                                          Buffer->AllocationSize);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashIocpFreeBuffer_DestroyBuffer, Result);
+        }
+        return;
+    }
+
+    Success = VirtualFreeEx(ProcessHandle, Buffer, 0, MEM_RELEASE);
+    if (!Success) {
+        SYS_ERROR(VirtualFreeEx);
+    }
+}
+
+static
+VOID
+PerfectHashIocpRundownBufferList(
+    _In_ PRTL Rtl,
+    _In_ PGUARDED_LIST BufferList
+    )
+{
+    BOOLEAN NotEmpty;
+    PLIST_ENTRY Entry;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+
+    if (!ARGUMENT_PRESENT(Rtl) || !ARGUMENT_PRESENT(BufferList)) {
+        return;
+    }
+
+    while (TRUE) {
+        Entry = NULL;
+        NotEmpty = BufferList->Vtbl->RemoveHeadEx(BufferList, &Entry);
+        if (!NotEmpty) {
+            break;
+        }
+
+        Buffer = CONTAINING_RECORD(Entry,
+                                   PERFECT_HASH_IOCP_BUFFER,
+                                   ListEntry);
+
+        PerfectHashIocpFreeBuffer(Rtl, Buffer);
+    }
+
+    BufferList->Vtbl->Reset(BufferList);
+}
+
+static
+VOID
+PerfectHashIocpRundownOversizePools(
+    _In_ PALLOCATOR Allocator,
+    _Inout_ PLIST_ENTRY ListHead,
+    _Inout_opt_ PULONG PoolCount
+    )
+{
+    PLIST_ENTRY Entry;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+
+    if (!ARGUMENT_PRESENT(Allocator) || !ARGUMENT_PRESENT(ListHead)) {
+        return;
+    }
+
+    while (!IsListEmpty(ListHead)) {
+        Entry = RemoveHeadList(ListHead);
+        Pool = CONTAINING_RECORD(Entry,
+                                 PERFECT_HASH_IOCP_BUFFER_POOL,
+                                 ListEntry);
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
+    }
+
+    InitializeListHead(ListHead);
+    if (PoolCount) {
+        *PoolCount = 0;
+    }
+}
+
 
 //
 // Main context creation routine.
@@ -154,12 +259,13 @@ Return Value:
 
 --*/
 {
+    HRESULT Result = S_OK;
     PRTL Rtl;
+    PALLOCATOR Allocator;
     PACL Acl = NULL;
     BYTE Index;
     BYTE NumberOfEvents;
     BOOL Success;
-    HRESULT Result = S_OK;
     ULONG LastError;
     PHANDLE Event;
     PCHAR Buffer;
@@ -172,7 +278,6 @@ Return Value:
     PSTRING ComputerName;
     DWORD ComputerNameLength;
     PTP_POOL Threadpool;
-    PALLOCATOR Allocator;
     ULARGE_INTEGER AllocSize;
     ULONG ThreadpoolConcurrency;
     ULARGE_INTEGER ObjectNameArraySize;
@@ -247,6 +352,18 @@ Return Value:
     if (FAILED(Result)) {
         goto Error;
     }
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_GUARDED_LIST,
+                                           &Context->FileWorkBufferList);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    InitializeListHead(&Context->FileWorkOversizePools);
+    Context->FileWorkOversizePoolCount = 0;
 
     //
     // Initialize aliases.
@@ -338,6 +455,21 @@ Return Value:
     Context->SizeOfStruct = sizeof(*Context);
     Context->State.AsULong = 0;
     Context->Flags.AsULong = 0;
+
+    //
+    // Honor the TLS flag that requests IOCP-native contexts without
+    // threadpool initialization.
+    //
+
+    {
+        PPERFECT_HASH_TLS_CONTEXT TlsContext;
+
+        TlsContext = PerfectHashTlsGetContext();
+        if (TlsContext &&
+            TlsContext->Flags.CreateContextWithoutThreadpool) {
+            Context->Flags.SkipThreadpoolInitialization = TRUE;
+        }
+    }
 
     InitializeSRWLock(&Context->Lock);
 
@@ -473,8 +605,13 @@ Return Value:
 
     Context->MinimumConcurrency = MaximumConcurrency;
     Context->MaximumConcurrency = MaximumConcurrency;
+    Context->InitialPerFileConcurrency = 1;
+    Context->MaxPerFileConcurrency = MaximumConcurrency;
+    Context->IncreaseConcurrencyAfterMilliseconds = 500;
 
     ThreadpoolConcurrency = GetMainThreadpoolConcurrency(MaximumConcurrency);
+
+    if (!Context->Flags.SkipThreadpoolInitialization) {
 
 #ifdef PH_WINDOWS
 
@@ -492,9 +629,13 @@ Return Value:
     }
 
     if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
-        SYS_ERROR(SetThreadpoolThreadMinimum);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
+        LastError = GetLastError();
+        if (LastError != ERROR_ACCESS_DENIED) {
+            SetLastError(LastError);
+            SYS_ERROR(SetThreadpoolThreadMinimum);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
     }
 
     SetThreadpoolThreadMaximum(Threadpool, ThreadpoolConcurrency);
@@ -593,9 +734,13 @@ Return Value:
     SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
 
     if (!SetThreadpoolThreadMinimum(Threadpool, MaximumConcurrency)) {
-        SYS_ERROR(SetThreadpoolThreadMinimum);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
+        LastError = GetLastError();
+        if (LastError != ERROR_ACCESS_DENIED) {
+            SetLastError(LastError);
+            SYS_ERROR(SetThreadpoolThreadMinimum);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
     }
 
     SetThreadpoolThreadMaximum(Threadpool, MaximumConcurrency);
@@ -656,9 +801,13 @@ Return Value:
                               Context->FinishedThreadpool);
 
     if (!SetThreadpoolThreadMinimum(Context->FinishedThreadpool, 1)) {
-        SYS_ERROR(SetThreadpoolThreadMinimum);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
+        LastError = GetLastError();
+        if (LastError != ERROR_ACCESS_DENIED) {
+            SetLastError(LastError);
+            SYS_ERROR(SetThreadpoolThreadMinimum);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
     }
 
     SetThreadpoolThreadMaximum(Context->FinishedThreadpool, 1);
@@ -689,9 +838,13 @@ Return Value:
 
 
     if (!SetThreadpoolThreadMinimum(Context->ErrorThreadpool, 1)) {
-        SYS_ERROR(SetThreadpoolThreadMinimum);
-        Result = PH_E_SYSTEM_CALL_FAILED;
-        goto Error;
+        LastError = GetLastError();
+        if (LastError != ERROR_ACCESS_DENIED) {
+            SetLastError(LastError);
+            SYS_ERROR(SetThreadpoolThreadMinimum);
+            Result = PH_E_SYSTEM_CALL_FAILED;
+            goto Error;
+        }
     }
 
     SetThreadpoolThreadMaximum(Context->ErrorThreadpool, 1);
@@ -722,6 +875,8 @@ Return Value:
     }
 
 #endif
+
+    }
 
     //
     // Initialize the timestamp string.
@@ -853,12 +1008,12 @@ Return Value:
 
 --*/
 {
+    HRESULT Result;
     PRTL Rtl;
+    PALLOCATOR Allocator;
     BYTE Index;
     BYTE NumberOfEvents;
-    PALLOCATOR Allocator;
     PHANDLE Event;
-    HRESULT Result;
 
     //
     // Validate arguments.
@@ -869,6 +1024,7 @@ Return Value:
     }
 
     Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
     Allocator = Context->Allocator;
 
     if (!Rtl || !Allocator) {
@@ -951,6 +1107,13 @@ Return Value:
 
 #ifdef PH_WINDOWS
 
+    if (Context->FileWorkOutstandingEvent) {
+        if (!CloseEvent(Context->FileWorkOutstandingEvent)) {
+            SYS_ERROR(CloseHandle);
+        }
+        Context->FileWorkOutstandingEvent = NULL;
+    }
+
     if (Context->MainCleanupGroup) {
 
         CloseThreadpoolCleanupGroupMembers(Context->MainCleanupGroup,
@@ -1016,6 +1179,27 @@ Return Value:
 
 #endif
 
+    if (Context->FileWorkBufferList && Rtl) {
+        PerfectHashIocpRundownBufferList(Rtl, Context->FileWorkBufferList);
+    }
+
+    if (Allocator) {
+        if (Context->FileWorkBufferPools) {
+            Allocator->Vtbl->FreePointer(
+                Allocator,
+                (PVOID *)&Context->FileWorkBufferPools
+            );
+        }
+
+        PerfectHashIocpRundownOversizePools(
+            Allocator,
+            &Context->FileWorkOversizePools,
+            &Context->FileWorkOversizePoolCount
+        );
+    }
+
+    Context->FileWorkBufferPoolCount = 0;
+
     if (Context->ObjectNames) {
         Allocator->Vtbl->FreePointer(Allocator,
                                      &Context->ObjectNames);
@@ -1039,6 +1223,7 @@ Return Value:
 
     RELEASE(Context->MainWorkList);
     RELEASE(Context->FileWorkList);
+    RELEASE(Context->FileWorkBufferList);
     RELEASE(Context->FinishedWorkList);
     RELEASE(Context->BulkCreateCsvFile);
     RELEASE(Context->BaseOutputDirectory);
@@ -1079,12 +1264,14 @@ Return Value:
 --*/
 {
     PRTL Rtl;
+    PALLOCATOR Allocator;
 
     if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
     }
 
     Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
 
     Context->AlgorithmId = PerfectHashNullAlgorithmId;
     Context->HashFunctionId = PerfectHashNullHashFunctionId;
@@ -1149,6 +1336,34 @@ Return Value:
     Context->MainWorkList->Vtbl->Reset(Context->MainWorkList);
     Context->FileWorkList->Vtbl->Reset(Context->FileWorkList);
     Context->FinishedWorkList->Vtbl->Reset(Context->FinishedWorkList);
+
+#ifdef PH_WINDOWS
+    Context->FileWorkOutstanding = 0;
+    if (Context->FileWorkOutstandingEvent) {
+        SetEvent(Context->FileWorkOutstandingEvent);
+    }
+#endif
+
+    if (Context->FileWorkBufferList && Rtl) {
+        PerfectHashIocpRundownBufferList(Rtl, Context->FileWorkBufferList);
+    }
+
+    if (Allocator) {
+        if (Context->FileWorkBufferPools) {
+            Allocator->Vtbl->FreePointer(
+                Allocator,
+                (PVOID *)&Context->FileWorkBufferPools
+            );
+        }
+
+        PerfectHashIocpRundownOversizePools(
+            Allocator,
+            &Context->FileWorkOversizePools,
+            &Context->FileWorkOversizePoolCount
+        );
+    }
+
+    Context->FileWorkBufferPoolCount = 0;
 
     Context->KeysSubset = NULL;
     Context->UserSeeds = NULL;
@@ -1421,6 +1636,252 @@ Return Value:
     return;
 }
 
+/*++
+
+Structure Description:
+
+    This structure wraps an IOCP work header and the target context pointer
+    for IOCP-dispatched file work callbacks.
+
+--*/
+typedef struct _PERFECT_HASH_FILE_WORK_IOCP {
+    PERFECT_HASH_IOCP_WORK Iocp;
+    PPERFECT_HASH_CONTEXT Context;
+} PERFECT_HASH_FILE_WORK_IOCP;
+typedef PERFECT_HASH_FILE_WORK_IOCP *PPERFECT_HASH_FILE_WORK_IOCP;
+
+static
+HRESULT
+PerfectHashContextFileWorkIocpCompletionCallback(
+    PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    ULONG_PTR CompletionKey,
+    LPOVERLAPPED Overlapped,
+    DWORD NumberOfBytesTransferred,
+    BOOL Success
+    )
+/*++
+
+Routine Description:
+
+    Completion callback for IOCP-dispatched file work.  This routine removes
+    one file work item from the context list, invokes the registered file work
+    callback, decrements the outstanding count, and signals the outstanding
+    event when all work items have completed.
+
+Arguments:
+
+    ContextIocp - Supplies the owning IOCP context.
+
+    CompletionKey - Supplies the IOCP completion key.
+
+    Overlapped - Supplies a pointer to the IOCP work header for this request.
+
+    NumberOfBytesTransferred - Supplies the number of bytes transferred.
+
+    Success - Supplies the success status of the IOCP completion.
+
+Return Value:
+
+    S_OK on success, or E_POINTER for invalid arguments.
+
+--*/
+{
+    PPERFECT_HASH_CONTEXT Context;
+    PPERFECT_HASH_FILE_WORK_IOCP WorkItem;
+
+    UNREFERENCED_PARAMETER(ContextIocp);
+    UNREFERENCED_PARAMETER(CompletionKey);
+    UNREFERENCED_PARAMETER(NumberOfBytesTransferred);
+    UNREFERENCED_PARAMETER(Success);
+
+    WorkItem = (PPERFECT_HASH_FILE_WORK_IOCP)Overlapped;
+    if (!WorkItem) {
+        return E_POINTER;
+    }
+
+    Context = WorkItem->Context;
+    if (!Context) {
+        return E_POINTER;
+    }
+
+    FileWorkCallback(NULL, Context, NULL);
+
+    if (InterlockedDecrement(&Context->FileWorkOutstanding) == 0) {
+        if (Context->FileWorkOutstandingEvent) {
+            SetEvent(Context->FileWorkOutstandingEvent);
+        }
+    }
+
+    if (Context->Allocator) {
+        Context->Allocator->Vtbl->FreePointer(Context->Allocator,
+                                              (PVOID *)&WorkItem);
+    }
+
+    return S_OK;
+}
+
+PERFECT_HASH_CONTEXT_SUBMIT_FILE_WORK PerfectHashContextSubmitFileWork;
+
+_Use_decl_annotations_
+VOID
+PerfectHashContextSubmitFileWork(
+    PPERFECT_HASH_CONTEXT Context
+    )
+/*++
+
+Routine Description:
+
+    Submits a file work item.  If an IOCP port has been configured, this
+    routine posts an IOCP completion and tracks outstanding file work so that
+    callers can wait on a single event.  Otherwise, the file work is submitted
+    to the file threadpool.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    BOOL Success;
+    BOOLEAN Incremented = FALSE;
+    LONG Outstanding;
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_FILE_WORK_IOCP WorkItem = NULL;
+
+    if (!ARGUMENT_PRESENT(Context)) {
+        return;
+    }
+
+#ifdef PH_WINDOWS
+    if (Context->FileWorkIoCompletionPort) {
+
+        if (!Context->FileWorkOutstandingEvent) {
+            Context->FileWorkOutstandingEvent =
+                CreateEventW(NULL, TRUE, TRUE, NULL);
+            if (!Context->FileWorkOutstandingEvent) {
+                SYS_ERROR(CreateEventW_FileWorkOutstandingEvent);
+                goto InlineWork;
+            }
+        }
+
+        Allocator = Context->Allocator;
+        if (!Allocator) {
+            goto InlineWork;
+        }
+
+        WorkItem = (PPERFECT_HASH_FILE_WORK_IOCP)Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            sizeof(*WorkItem)
+        );
+        if (!WorkItem) {
+            goto InlineWork;
+        }
+
+        WorkItem->Iocp.Signature = PH_IOCP_WORK_SIGNATURE;
+        WorkItem->Iocp.Flags = PH_IOCP_WORK_FLAG_FILE_WORK;
+        WorkItem->Iocp.CompletionCallback =
+            PerfectHashContextFileWorkIocpCompletionCallback;
+        WorkItem->Context = Context;
+
+        Outstanding = InterlockedIncrement(&Context->FileWorkOutstanding);
+        Incremented = TRUE;
+        if (Outstanding == 1 && Context->FileWorkOutstandingEvent) {
+            ResetEvent(Context->FileWorkOutstandingEvent);
+        }
+
+        Success = PostQueuedCompletionStatus(
+            Context->FileWorkIoCompletionPort,
+            0,
+            0,
+            &WorkItem->Iocp.Overlapped
+        );
+
+        if (!Success) {
+            SYS_ERROR(PostQueuedCompletionStatus_FileWork);
+            goto InlineWork;
+        }
+
+        return;
+    }
+#endif
+
+    SubmitThreadpoolWork(Context->FileWork);
+    return;
+
+InlineWork:
+
+    //
+    // Fall back to synchronous execution if IOCP submission fails.
+    //
+
+    FileWorkCallback(NULL, Context, NULL);
+
+    if (Context->FileWorkIoCompletionPort && Incremented) {
+        if (InterlockedDecrement(&Context->FileWorkOutstanding) == 0) {
+            if (Context->FileWorkOutstandingEvent) {
+                SetEvent(Context->FileWorkOutstandingEvent);
+            }
+        }
+    }
+
+    Allocator = Context->Allocator;
+    if (Allocator && WorkItem) {
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&WorkItem);
+    }
+
+    return;
+}
+
+PERFECT_HASH_CONTEXT_WAIT_FOR_FILE_WORK_CALLBACKS
+    PerfectHashContextWaitForFileWorkCallbacks;
+
+_Use_decl_annotations_
+VOID
+PerfectHashContextWaitForFileWorkCallbacks(
+    PPERFECT_HASH_CONTEXT Context,
+    BOOL CancelPending
+    )
+/*++
+
+Routine Description:
+
+    Waits for all file work callbacks to complete.  When IOCP dispatch is in
+    effect, this waits on the outstanding file work event; otherwise, it
+    waits on the file threadpool work callbacks.
+
+Arguments:
+
+    Context - Supplies a pointer to the PERFECT_HASH_CONTEXT.
+
+    CancelPending - Supplies the cancellation behavior for threadpool work.
+
+Return Value:
+
+    None.
+
+--*/
+{
+    if (!ARGUMENT_PRESENT(Context)) {
+        return;
+    }
+
+#ifdef PH_WINDOWS
+    if (Context->FileWorkIoCompletionPort) {
+        if (Context->FileWorkOutstandingEvent) {
+            WaitForSingleObject(Context->FileWorkOutstandingEvent, INFINITE);
+        }
+        return;
+    }
+#endif
+
+    WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
+}
+
 _Use_decl_annotations_
 VOID
 FinishedWorkCallback(
@@ -1688,6 +2149,7 @@ Return Value:
     PRTL Rtl;
     PTP_POOL Threadpool;
     HRESULT Result = S_OK;
+    ULONG LastError;
     ULONG ThreadpoolConcurrency;
 
     if (!ARGUMENT_PRESENT(Context)) {
@@ -1705,6 +2167,11 @@ Return Value:
 
 #ifdef PH_WINDOWS
     if (!Context->MainThreadpool) {
+        if (Context->Flags.SkipThreadpoolInitialization) {
+            ReleasePerfectHashContextLockExclusive(Context);
+            return S_OK;
+        }
+
         ReleasePerfectHashContextLockExclusive(Context);
         return E_UNEXPECTED;
     }
@@ -1714,8 +2181,12 @@ Return Value:
     SetThreadpoolThreadMaximum(Threadpool, ThreadpoolConcurrency);
 
     if (!SetThreadpoolThreadMinimum(Threadpool, ThreadpoolConcurrency)) {
-        SYS_ERROR(SetThreadpoolThreadMinimum);
-        Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
+        LastError = GetLastError();
+        if (LastError != ERROR_ACCESS_DENIED) {
+            SetLastError(LastError);
+            SYS_ERROR(SetThreadpoolThreadMinimum);
+            Result = PH_E_SET_MAXIMUM_CONCURRENCY_FAILED;
+        }
     }
 #endif
 

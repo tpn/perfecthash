@@ -357,7 +357,7 @@ Return Value:
     ZeroStructInline(Verb##Name);                       \
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     InsertTailFileWork(Context, &Verb##Name.ListEntry); \
-    SubmitThreadpoolWork(Context->FileWork);
+    PerfectHashContextSubmitFileWork(Context);
 
 #define SUBMIT_PREPARE_FILE_WORK() \
     PREPARE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_FILE_WORK)
@@ -588,7 +588,7 @@ Return Value:
         //
 
         if (!NoFileIo(Table)) {
-            WaitForThreadpoolWorkCallbacks(Context->FileWork, CancelPending);
+            PerfectHashContextWaitForFileWorkCallbacks(Context, CancelPending);
         }
 
         //
@@ -899,7 +899,7 @@ Error:
     WaitForThreadpoolWorkCallbacks(Context->MainWork, TRUE);
     WaitForThreadpoolWorkCallbacks(Context->ConsoleWork, TRUE);
     if (!NoFileIo(Table)) {
-        WaitForThreadpoolWorkCallbacks(Context->FileWork, TRUE);
+        PerfectHashContextWaitForFileWorkCallbacks(Context, TRUE);
     }
 
     //
@@ -944,14 +944,14 @@ End:
     Verb##Name.FileWorkId = FileWork##Verb##Name##Id;   \
     Verb##Name.EndOfFile = EndOfFile;                   \
     InsertTailFileWork(Context, &Verb##Name.ListEntry); \
-    SubmitThreadpoolWork(Context->FileWork);
+    PerfectHashContextSubmitFileWork(Context);
 
 #define SUBMIT_CLOSE_FILE_WORK() \
     CLOSE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_SUBMIT_CLOSE_FILE_WORK)
 
     SUBMIT_CLOSE_FILE_WORK();
 
-    WaitForThreadpoolWorkCallbacks(Context->FileWork, FALSE);
+    PerfectHashContextWaitForFileWorkCallbacks(Context, FALSE);
 
 #define EXPAND_AS_CHECK_CLOSE_ERRORS(                                \
     Verb, VUpper, Name, Upper,                                       \

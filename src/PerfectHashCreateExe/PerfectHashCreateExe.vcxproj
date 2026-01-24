@@ -50,6 +50,9 @@
     <Bscmake>
       <PreserveSbr>false</PreserveSbr>
     </Bscmake>
+    <Link>
+      <AdditionalDependencies>Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

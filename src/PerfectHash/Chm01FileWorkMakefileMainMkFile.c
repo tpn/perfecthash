@@ -63,10 +63,16 @@ PrepareMakefileMainMkFileChm01(
 
     ASSERT(ARRAYSIZE(PrepareEvents) == (SIZE_T)NumberOfEvents);
 
-    WaitResult = WaitForMultipleObjects(NumberOfEvents,
-                                        PrepareEvents,
-                                        WaitForAllEvents,
-                                        INFINITE);
+    WaitResult = WaitForMultipleObjects(
+        NumberOfEvents,
+        PrepareEvents,
+        WaitForAllEvents,
+        UseOverlappedIo(Context) ? 0 : INFINITE
+    );
+
+    if (WaitResult == WAIT_TIMEOUT && UseOverlappedIo(Context)) {
+        return S_FALSE;
+    }
 
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForMultipleObjects);

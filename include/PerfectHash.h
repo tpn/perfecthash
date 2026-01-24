@@ -480,6 +480,33 @@ PerfectHashGetCurrentCpuArch(
     )                                                                \
                                                                      \
     ENTRY(                                                           \
+        ContextIocp,                                                 \
+        CONTEXT_IOCP,                                                \
+        GUID_EX(                                                     \
+            0x72bf14d6, 0xa312, 0x4bf5,                              \
+            0xb0, 0x51, 0x9e, 0xef, 0xa5, 0xfd, 0x8f, 0x59           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Server,                                                      \
+        SERVER,                                                      \
+        GUID_EX(                                                     \
+            0xbba77b60, 0xb38e, 0x4396,                              \
+            0xaa, 0x4b, 0xdc, 0xa5, 0x8e, 0xdf, 0xcf, 0x08           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
+        Client,                                                      \
+        CLIENT,                                                      \
+        GUID_EX(                                                     \
+            0x997e42aa, 0x035f, 0x4d40,                              \
+            0x82, 0x9f, 0x6c, 0x4c, 0xe2, 0xd2, 0xeb, 0x44           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    ENTRY(                                                           \
         Table,                                                       \
         TABLE,                                                       \
         GUID_EX(                                                     \
@@ -708,7 +735,7 @@ PerfectHashInterfaceGuidToId(
     for (Index = 1; Index < Count; Index++) {
 #ifdef __cplusplus
         const GUID *Entry = PerfectHashInterfaceGuids[Index];
-        if (Entry && InlineIsEqualGUID(Guid, Entry)) {
+        if (Entry && InlineIsEqualGUID(Guid, *Entry)) {
             Id = (PERFECT_HASH_INTERFACE_ID)Index;
             break;
         }
@@ -1624,10 +1651,17 @@ typedef union _PERFECT_HASH_FILE_LOAD_FLAGS {
         ULONG TryLargePagesForFileData:1;
 
         //
+        // When set, skip mapping the file into memory.  The caller is
+        // responsible for providing a suitable buffer and handling any I/O.
+        //
+
+        ULONG SkipMapping:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -1711,10 +1745,18 @@ typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
         ULONG EndOfFileIsExtensionSizeIfFileExists:1;
 
         //
+        // When set, skip creating a memory-mapped view for this file.  The
+        // caller is responsible for providing a suitable buffer and handling
+        // any I/O.
+        //
+
+        ULONG SkipMapping:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
 
     LONG AsLong;
@@ -1958,6 +2000,13 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         ULONG TryLargePagesForKeysData:1;
 
         //
+        // When set, keys are loaded using overlapped I/O into a buffer instead
+        // of memory-mapped views. Intended for IOCP-native contexts.
+        //
+
+        ULONG UseOverlappedIo:1;
+
+        //
         // When set, skips the verification of keys during loading.
         // Specifically, skips enumerating all keys and verifying that the
         // keys are sorted, as well as constructing the keys bitmap.
@@ -1998,7 +2047,7 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:27;
     };
 
     LONG AsLong;
@@ -2656,7 +2705,20 @@ IsModulusMasking(
 // PERFECT_HASH_TABLE interface's creation routine.
 //
 
+//
+// Define NUMA node mask handling.  A mask of all 1s indicates "all nodes";
+// callers should intersect it with the machine's available NUMA nodes.
+//
+
+typedef ULONGLONG PERFECT_HASH_NUMA_NODE_MASK;
+typedef PERFECT_HASH_NUMA_NODE_MASK *PPERFECT_HASH_NUMA_NODE_MASK;
+
+#define PERFECT_HASH_NUMA_NODE_MASK_ALL ((PERFECT_HASH_NUMA_NODE_MASK)~0ULL)
+
 DECLARE_COMPONENT(Context, PERFECT_HASH_CONTEXT);
+DECLARE_COMPONENT(ContextIocp, PERFECT_HASH_CONTEXT_IOCP);
+DECLARE_COMPONENT(Server, PERFECT_HASH_SERVER);
+DECLARE_COMPONENT(Client, PERFECT_HASH_CLIENT);
 
 typedef
 HRESULT
@@ -3723,6 +3785,9 @@ IsValidPerfectHashCuRngId(
     ENTRY(Seed3Byte1MaskCounts)                                      \
     ENTRY(Seed3Byte2MaskCounts)                                      \
     ENTRY(MaxSolveTimeInSeconds)                                     \
+    ENTRY(InitialPerFileConcurrency)                                 \
+    ENTRY(MaxPerFileConcurrency)                                     \
+    ENTRY(IncreaseConcurrencyAfterMilliseconds)                      \
     ENTRY(AutoResizeWhenKeysToEdgesRatioExceeds)                     \
     ENTRY(FunctionHookCallbackDllPath)                               \
     ENTRY(FunctionHookCallbackFunctionName)                          \
@@ -4208,6 +4273,609 @@ typedef struct _PERFECT_HASH_CONTEXT {
     PPERFECT_HASH_CONTEXT_VTBL Vtbl;
 } PERFECT_HASH_CONTEXT;
 typedef PERFECT_HASH_CONTEXT *PPERFECT_HASH_CONTEXT;
+#endif
+
+//
+// Define the PERFECT_HASH_CONTEXT_IOCP interface.
+//
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG MaximumConcurrency
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_CONCURRENCY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _Out_ PULONG MaximumConcurrency
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_CONCURRENCY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_THREADS)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG MaximumThreads
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_THREADS
+      *PPERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_THREADS;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_THREADS)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _Out_ PULONG MaximumThreads
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_THREADS
+      *PPERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_THREADS;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_SET_NUMA_NODE_MASK)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ PERFECT_HASH_NUMA_NODE_MASK NumaNodeMask
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_SET_NUMA_NODE_MASK
+      *PPERFECT_HASH_CONTEXT_IOCP_SET_NUMA_NODE_MASK;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_GET_NUMA_NODE_MASK)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _Out_ PPERFECT_HASH_NUMA_NODE_MASK NumaNodeMask
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_GET_NUMA_NODE_MASK
+      *PPERFECT_HASH_CONTEXT_IOCP_GET_NUMA_NODE_MASK;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_SET_BASE_OUTPUT_DIRECTORY)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ PCUNICODE_STRING BaseOutputDirectory
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_SET_BASE_OUTPUT_DIRECTORY
+      *PPERFECT_HASH_CONTEXT_IOCP_SET_BASE_OUTPUT_DIRECTORY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_GET_BASE_OUTPUT_DIRECTORY)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _Inout_ PPERFECT_HASH_DIRECTORY *BaseOutputDirectory
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_GET_BASE_OUTPUT_DIRECTORY
+      *PPERFECT_HASH_CONTEXT_IOCP_GET_BASE_OUTPUT_DIRECTORY;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ PCUNICODE_STRING KeysDirectory,
+    _In_ PCUNICODE_STRING BaseOutputDirectory,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlags,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE
+      *PPERFECT_HASH_CONTEXT_IOCP_BULK_CREATE;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVW
+      *PPERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVW;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW,
+    _In_ PUNICODE_STRING KeysDirectory,
+    _In_ PUNICODE_STRING BaseOutputDirectory,
+    _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _Inout_ PULONG MaximumConcurrency,
+    _Inout_ PPERFECT_HASH_CONTEXT_BULK_CREATE_FLAGS ContextBulkCreateFlags,
+    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _Inout_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
+      *PPERFECT_HASH_CONTEXT_IOCP_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ PCUNICODE_STRING KeysPath,
+    _In_ PCUNICODE_STRING BaseOutputDirectory,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_opt_ PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS
+            ContextTableCreateFlags,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE
+      *PPERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVW
+      *PPERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVW;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE
+ PERFECT_HASH_CONTEXT_IOCP_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPWSTR *ArgvW,
+    _In_ LPWSTR CommandLineW,
+    _In_ PUNICODE_STRING KeysPath,
+    _In_ PUNICODE_STRING BaseOutputDirectory,
+    _Inout_ PPERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _Inout_ PPERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _Inout_ PPERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _Inout_ PULONG MaximumConcurrency,
+    _Inout_ PPERFECT_HASH_CONTEXT_TABLE_CREATE_FLAGS
+            ContextTableCreateFlags,
+    _Inout_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _Inout_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _Inout_ PPERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags,
+    _In_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
+      *PPERFECT_HASH_CONTEXT_IOCP_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVA)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPSTR *ArgvA
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVA
+      *PPERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVA;
+
+typedef
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVA)(
+    _In_ PPERFECT_HASH_CONTEXT_IOCP ContextIocp,
+    _In_ ULONG NumberOfArguments,
+    _In_ LPSTR *ArgvA
+    );
+typedef PERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVA
+      *PPERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVA;
+
+typedef struct _PERFECT_HASH_CONTEXT_IOCP_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CONTEXT_IOCP);
+
+    PPERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
+    PPERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
+    PPERFECT_HASH_CONTEXT_IOCP_SET_MAXIMUM_THREADS SetMaximumThreads;
+    PPERFECT_HASH_CONTEXT_IOCP_GET_MAXIMUM_THREADS GetMaximumThreads;
+    PPERFECT_HASH_CONTEXT_IOCP_SET_NUMA_NODE_MASK SetNumaNodeMask;
+    PPERFECT_HASH_CONTEXT_IOCP_GET_NUMA_NODE_MASK GetNumaNodeMask;
+    PPERFECT_HASH_CONTEXT_IOCP_SET_BASE_OUTPUT_DIRECTORY SetBaseOutputDirectory;
+    PPERFECT_HASH_CONTEXT_IOCP_GET_BASE_OUTPUT_DIRECTORY GetBaseOutputDirectory;
+
+    PPERFECT_HASH_CONTEXT_IOCP_BULK_CREATE BulkCreate;
+    PPERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVW BulkCreateArgvW;
+    PPERFECT_HASH_CONTEXT_IOCP_EXTRACT_BULK_CREATE_ARGS_FROM_ARGVW
+        ExtractBulkCreateArgsFromArgvW;
+
+    PPERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE TableCreate;
+
+    PPERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVW TableCreateArgvW;
+    PPERFECT_HASH_CONTEXT_IOCP_EXTRACT_TABLE_CREATE_ARGS_FROM_ARGVW
+        ExtractTableCreateArgsFromArgvW;
+
+    //
+    // N.B. These two routines will only be present on non-Windows platforms.
+    //
+
+    PPERFECT_HASH_CONTEXT_IOCP_TABLE_CREATE_ARGVA TableCreateArgvA;
+    PPERFECT_HASH_CONTEXT_IOCP_BULK_CREATE_ARGVA BulkCreateArgvA;
+
+} PERFECT_HASH_CONTEXT_IOCP_VTBL;
+typedef PERFECT_HASH_CONTEXT_IOCP_VTBL *PPERFECT_HASH_CONTEXT_IOCP_VTBL;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_CONTEXT_IOCP {
+    PPERFECT_HASH_CONTEXT_IOCP_VTBL Vtbl;
+} PERFECT_HASH_CONTEXT_IOCP;
+typedef PERFECT_HASH_CONTEXT_IOCP *PPERFECT_HASH_CONTEXT_IOCP;
+#endif
+
+//
+// Define the PERFECT_HASH_SERVER interface.
+//
+
+typedef enum _PERFECT_HASH_SERVER_REQUEST_TYPE {
+    PerfectHashNullServerRequestType = 0,
+    PerfectHashTableCreateServerRequestType,
+    PerfectHashBulkCreateServerRequestType,
+    PerfectHashBulkCreateDirectoryServerRequestType,
+    PerfectHashPingServerRequestType,
+    PerfectHashShutdownServerRequestType,
+    PerfectHashInvalidServerRequestType
+} PERFECT_HASH_SERVER_REQUEST_TYPE;
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashServerRequestType(
+    _In_ PERFECT_HASH_SERVER_REQUEST_TYPE RequestType
+    )
+{
+    return (
+        RequestType > PerfectHashNullServerRequestType &&
+        RequestType < PerfectHashInvalidServerRequestType
+    );
+}
+
+typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_SERVER_REQUEST {
+    ULONG SizeOfStruct;
+    PERFECT_HASH_SERVER_REQUEST_TYPE RequestType;
+    ULONG Padding1;
+    ULONG Padding2;
+    ULONGLONG RequestId;
+    UNICODE_STRING CommandLine;
+} PERFECT_HASH_SERVER_REQUEST;
+typedef PERFECT_HASH_SERVER_REQUEST *PPERFECT_HASH_SERVER_REQUEST;
+
+//
+// Wire protocol structures for client/server IPC.
+//
+
+#define PERFECT_HASH_SERVER_MESSAGE_VERSION 1
+#define PERFECT_HASH_SERVER_MAX_MESSAGE_SIZE (1024 * 1024)
+
+#define PERFECT_HASH_SERVER_RESPONSE_FLAG_ERROR_MESSAGE 0x00000001
+#define PERFECT_HASH_SERVER_RESPONSE_FLAG_BULK_CREATE_TOKEN 0x00000002
+#define PERFECT_HASH_SERVER_RESPONSE_FLAG_PONG 0x00000004
+#define PERFECT_HASH_SERVER_BULK_CREATE_TOKEN_FORMAT \
+    L"EventHandle=%llu ResultHandle=%llu"
+
+#define PERFECT_HASH_SERVER_BULK_RESULT_VERSION 1
+
+typedef struct _Struct_size_bytes_(SizeOfStruct)
+_PERFECT_HASH_SERVER_BULK_RESULT {
+    ULONG SizeOfStruct;
+    ULONG Version;
+    HRESULT Result;
+    ULONG Flags;
+    ULONG TotalFiles;
+    ULONG SucceededFiles;
+    ULONG FailedFiles;
+    HRESULT FirstFailure;
+} PERFECT_HASH_SERVER_BULK_RESULT;
+typedef PERFECT_HASH_SERVER_BULK_RESULT *PPERFECT_HASH_SERVER_BULK_RESULT;
+
+typedef struct _Struct_size_bytes_(SizeOfStruct)
+_PERFECT_HASH_SERVER_REQUEST_HEADER {
+    ULONG SizeOfStruct;
+    ULONG Version;
+    PERFECT_HASH_SERVER_REQUEST_TYPE RequestType;
+    ULONG Flags;
+    ULONGLONG RequestId;
+    ULONG PayloadLength;
+    ULONG Reserved;
+} PERFECT_HASH_SERVER_REQUEST_HEADER;
+typedef PERFECT_HASH_SERVER_REQUEST_HEADER
+      *PPERFECT_HASH_SERVER_REQUEST_HEADER;
+
+typedef struct _Struct_size_bytes_(SizeOfStruct)
+_PERFECT_HASH_SERVER_RESPONSE_HEADER {
+    ULONG SizeOfStruct;
+    ULONG Version;
+    HRESULT Result;
+    ULONG Flags;
+    ULONGLONG RequestId;
+    ULONG PayloadLength;
+    ULONG Reserved;
+} PERFECT_HASH_SERVER_RESPONSE_HEADER;
+typedef PERFECT_HASH_SERVER_RESPONSE_HEADER
+      *PPERFECT_HASH_SERVER_RESPONSE_HEADER;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ ULONG MaximumConcurrency
+    );
+typedef PERFECT_HASH_SERVER_SET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_SERVER_SET_MAXIMUM_CONCURRENCY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_MAXIMUM_CONCURRENCY)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PULONG MaximumConcurrency
+    );
+typedef PERFECT_HASH_SERVER_GET_MAXIMUM_CONCURRENCY
+      *PPERFECT_HASH_SERVER_GET_MAXIMUM_CONCURRENCY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_MAXIMUM_THREADS)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ ULONG MaximumThreads
+    );
+typedef PERFECT_HASH_SERVER_SET_MAXIMUM_THREADS
+      *PPERFECT_HASH_SERVER_SET_MAXIMUM_THREADS;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_MAXIMUM_THREADS)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PULONG MaximumThreads
+    );
+typedef PERFECT_HASH_SERVER_GET_MAXIMUM_THREADS
+      *PPERFECT_HASH_SERVER_GET_MAXIMUM_THREADS;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_NUMA_NODE_MASK)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ PERFECT_HASH_NUMA_NODE_MASK NumaNodeMask
+    );
+typedef PERFECT_HASH_SERVER_SET_NUMA_NODE_MASK
+      *PPERFECT_HASH_SERVER_SET_NUMA_NODE_MASK;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_NUMA_NODE_MASK)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PPERFECT_HASH_NUMA_NODE_MASK NumaNodeMask
+    );
+typedef PERFECT_HASH_SERVER_GET_NUMA_NODE_MASK
+      *PPERFECT_HASH_SERVER_GET_NUMA_NODE_MASK;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_ENDPOINT)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ PCUNICODE_STRING Endpoint
+    );
+typedef PERFECT_HASH_SERVER_SET_ENDPOINT
+      *PPERFECT_HASH_SERVER_SET_ENDPOINT;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_ENDPOINT)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PUNICODE_STRING Endpoint
+    );
+typedef PERFECT_HASH_SERVER_GET_ENDPOINT
+      *PPERFECT_HASH_SERVER_GET_ENDPOINT;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_LOCAL_ONLY)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ BOOLEAN LocalOnly
+    );
+typedef PERFECT_HASH_SERVER_SET_LOCAL_ONLY
+      *PPERFECT_HASH_SERVER_SET_LOCAL_ONLY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_LOCAL_ONLY)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PBOOLEAN LocalOnly
+    );
+typedef PERFECT_HASH_SERVER_GET_LOCAL_ONLY
+      *PPERFECT_HASH_SERVER_GET_LOCAL_ONLY;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_VERBOSE)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ BOOLEAN Verbose
+    );
+typedef PERFECT_HASH_SERVER_SET_VERBOSE
+      *PPERFECT_HASH_SERVER_SET_VERBOSE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_VERBOSE)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PBOOLEAN Verbose
+    );
+typedef PERFECT_HASH_SERVER_GET_VERBOSE
+      *PPERFECT_HASH_SERVER_GET_VERBOSE;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_NO_FILE_IO)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ BOOLEAN NoFileIo
+    );
+typedef PERFECT_HASH_SERVER_SET_NO_FILE_IO
+      *PPERFECT_HASH_SERVER_SET_NO_FILE_IO;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_NO_FILE_IO)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PBOOLEAN NoFileIo
+    );
+typedef PERFECT_HASH_SERVER_GET_NO_FILE_IO
+      *PPERFECT_HASH_SERVER_GET_NO_FILE_IO;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ BOOLEAN GuardPages
+    );
+typedef PERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES
+      *PPERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PBOOLEAN GuardPages
+    );
+typedef PERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES
+      *PPERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_START)(
+    _In_ PPERFECT_HASH_SERVER Server
+    );
+typedef PERFECT_HASH_SERVER_START *PPERFECT_HASH_SERVER_START;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_STOP)(
+    _In_ PPERFECT_HASH_SERVER Server
+    );
+typedef PERFECT_HASH_SERVER_STOP *PPERFECT_HASH_SERVER_STOP;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_WAIT)(
+    _In_ PPERFECT_HASH_SERVER Server
+    );
+typedef PERFECT_HASH_SERVER_WAIT *PPERFECT_HASH_SERVER_WAIT;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SUBMIT_REQUEST)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ PPERFECT_HASH_SERVER_REQUEST Request
+    );
+typedef PERFECT_HASH_SERVER_SUBMIT_REQUEST
+      *PPERFECT_HASH_SERVER_SUBMIT_REQUEST;
+
+typedef struct _PERFECT_HASH_SERVER_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_SERVER);
+
+    PPERFECT_HASH_SERVER_SET_MAXIMUM_CONCURRENCY SetMaximumConcurrency;
+    PPERFECT_HASH_SERVER_GET_MAXIMUM_CONCURRENCY GetMaximumConcurrency;
+    PPERFECT_HASH_SERVER_SET_MAXIMUM_THREADS SetMaximumThreads;
+    PPERFECT_HASH_SERVER_GET_MAXIMUM_THREADS GetMaximumThreads;
+    PPERFECT_HASH_SERVER_SET_NUMA_NODE_MASK SetNumaNodeMask;
+    PPERFECT_HASH_SERVER_GET_NUMA_NODE_MASK GetNumaNodeMask;
+    PPERFECT_HASH_SERVER_SET_ENDPOINT SetEndpoint;
+    PPERFECT_HASH_SERVER_GET_ENDPOINT GetEndpoint;
+    PPERFECT_HASH_SERVER_SET_LOCAL_ONLY SetLocalOnly;
+    PPERFECT_HASH_SERVER_GET_LOCAL_ONLY GetLocalOnly;
+    PPERFECT_HASH_SERVER_SET_VERBOSE SetVerbose;
+    PPERFECT_HASH_SERVER_GET_VERBOSE GetVerbose;
+    PPERFECT_HASH_SERVER_SET_NO_FILE_IO SetNoFileIo;
+    PPERFECT_HASH_SERVER_GET_NO_FILE_IO GetNoFileIo;
+    PPERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES
+        SetIocpBufferGuardPages;
+    PPERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES
+        GetIocpBufferGuardPages;
+    PPERFECT_HASH_SERVER_START Start;
+    PPERFECT_HASH_SERVER_STOP Stop;
+    PPERFECT_HASH_SERVER_WAIT Wait;
+    PPERFECT_HASH_SERVER_SUBMIT_REQUEST SubmitRequest;
+} PERFECT_HASH_SERVER_VTBL;
+typedef PERFECT_HASH_SERVER_VTBL *PPERFECT_HASH_SERVER_VTBL;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_SERVER {
+    PPERFECT_HASH_SERVER_VTBL Vtbl;
+} PERFECT_HASH_SERVER;
+typedef PERFECT_HASH_SERVER *PPERFECT_HASH_SERVER;
+#endif
+
+//
+// Define the PERFECT_HASH_CLIENT interface.
+//
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CLIENT_CONNECT)(
+    _In_ PPERFECT_HASH_CLIENT Client,
+    _In_opt_ PCUNICODE_STRING Endpoint
+    );
+typedef PERFECT_HASH_CLIENT_CONNECT *PPERFECT_HASH_CLIENT_CONNECT;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CLIENT_DISCONNECT)(
+    _In_ PPERFECT_HASH_CLIENT Client
+    );
+typedef PERFECT_HASH_CLIENT_DISCONNECT *PPERFECT_HASH_CLIENT_DISCONNECT;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CLIENT_SUBMIT_REQUEST)(
+    _In_ PPERFECT_HASH_CLIENT Client,
+    _In_ PPERFECT_HASH_SERVER_REQUEST Request
+    );
+typedef PERFECT_HASH_CLIENT_SUBMIT_REQUEST
+      *PPERFECT_HASH_CLIENT_SUBMIT_REQUEST;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_CLIENT_GET_LAST_RESPONSE)(
+    _In_ PPERFECT_HASH_CLIENT Client,
+    _Out_ PUNICODE_STRING ResponsePayload,
+    _Out_opt_ PULONG ResponseFlags
+    );
+typedef PERFECT_HASH_CLIENT_GET_LAST_RESPONSE
+      *PPERFECT_HASH_CLIENT_GET_LAST_RESPONSE;
+
+typedef struct _PERFECT_HASH_CLIENT_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_CLIENT);
+
+    PPERFECT_HASH_CLIENT_CONNECT Connect;
+    PPERFECT_HASH_CLIENT_DISCONNECT Disconnect;
+    PPERFECT_HASH_CLIENT_SUBMIT_REQUEST SubmitRequest;
+    PPERFECT_HASH_CLIENT_GET_LAST_RESPONSE GetLastResponse;
+} PERFECT_HASH_CLIENT_VTBL;
+typedef PERFECT_HASH_CLIENT_VTBL *PPERFECT_HASH_CLIENT_VTBL;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_CLIENT {
+    PPERFECT_HASH_CLIENT_VTBL Vtbl;
+} PERFECT_HASH_CLIENT;
+typedef PERFECT_HASH_CLIENT *PPERFECT_HASH_CLIENT;
 #endif
 
 //

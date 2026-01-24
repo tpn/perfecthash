@@ -1725,10 +1725,10 @@ Return Value:
         goto Error;
     }
 
-    if (IsDirectoryClosed(Directory)) {
-        Result = PH_E_DIRECTORY_CLOSED;
-        goto Error;
-    }
+    //
+    // Allow removals even if the directory has been closed.  This is required
+    // to break directory/file reference cycles during rundown.
+    //
 
     //
     // Argument validation complete.  Add the file to the files list and

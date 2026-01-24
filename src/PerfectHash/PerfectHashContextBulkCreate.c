@@ -206,6 +206,10 @@ Return Value:
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
     VALIDATE_FLAGS(TableCompile, TABLE_COMPILE, ULong);
 
+    if (UseOverlappedIo(Context)) {
+        KeysLoadFlags.UseOverlappedIo = TRUE;
+    }
+
     //
     // IsValidTableCreateFlags() returns a more specific error code than the
     // other validation routines invoked above (which would be converted into
@@ -346,15 +350,18 @@ Return Value:
     // Get a reference to the stdout handle.
     //
 
-    if (!Context->OutputHandle) {
-        Context->OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!Silent) {
         if (!Context->OutputHandle) {
-            SYS_ERROR(GetStdHandle);
-            goto Error;
+            Context->OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (!Context->OutputHandle ||
+                Context->OutputHandle == INVALID_HANDLE_VALUE) {
+                Context->OutputHandle = NULL;
+                Silent = TRUE;
+            }
         }
-    }
 
-    OutputHandle = Context->OutputHandle;
+        OutputHandle = Context->OutputHandle;
+    }
 
     //
     // Calculate the size required for a new concatenated wide string buffer
@@ -1613,6 +1620,27 @@ InvalidArg:
         Result = PH_E_INVALID_COMMANDLINE_ARG;
         PH_MESSAGE_ARGS(Result, String);
         break;
+    }
+
+    if (SUCCEEDED(Result)) {
+        PPERFECT_HASH_TABLE_CREATE_PARAMETER Param = NULL;
+        HRESULT LookupResult;
+
+        LookupResult = GetTableCreateParameterForId(
+            TableCreateParameters,
+            TableCreateParameterMaxPerFileConcurrencyId,
+            &Param
+        );
+        if (FAILED(LookupResult)) {
+            PH_ERROR(ExtractBulkCreateArgs_GetMaxPerFileConcurrency, LookupResult);
+            Result = LookupResult;
+        } else if (LookupResult == S_OK && Param) {
+            if (Param->AsULong == 0) {
+                Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+            } else {
+                *MaximumConcurrency = Param->AsULong;
+            }
+        }
     }
 
     //

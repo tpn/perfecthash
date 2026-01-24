@@ -166,6 +166,12 @@ Abstract:
 #include "Rng.h"
 #include "GraphCu.h"
 #include "PerfectHashContext.h"
+#include "PerfectHashContextIocp.h"
+#ifdef PH_WINDOWS
+#include "PerfectHashAsync.h"
+#endif
+#include "PerfectHashServer.h"
+#include "PerfectHashClient.h"
 #include "PerfectHashConstants.h"
 #include "PerfectHashErrorHandling.h"
 #include "GraphImpl.h"

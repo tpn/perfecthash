@@ -725,11 +725,6 @@ Return Value:
 
     TlsContext = PerfectHashTlsGetOrSetContext(&LocalTlsContext);
 
-    ASSERT(!TlsContext->Flags.DisableGlobalAllocatorComponent);
-    ASSERT(!TlsContext->Flags.CustomAllocatorDetailsPresent);
-    ASSERT(!TlsContext->HeapCreateFlags);
-    ASSERT(!TlsContext->HeapMinimumSize);
-
     TlsContextDisableGlobalAllocator(TlsContext);
     TlsContext->Flags.CustomAllocatorDetailsPresent = TRUE;
     TlsContext->HeapCreateFlags = HEAP_NO_SERIALIZE;

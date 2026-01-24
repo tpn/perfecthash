@@ -136,6 +136,14 @@ Language=English
 CUDA kernel runtime target reached.
 .
 
+MessageId=0x00f
+Severity=Success
+Facility=ITF
+SymbolicName=PH_S_SERVER_BULK_CREATE_ALL_SUCCEEDED
+Language=English
+Bulk create request completed successfully.
+.
+
 ;
 ;////////////////////////////////////////////////////////////////////////////////
 ;// PH_SEVERITY_INFORMATIONAL
@@ -2338,8 +2346,16 @@ Language=English
 Error preparing CompiledPerfectHash.props file.
 .
 
+MessageId=0x290
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_SERVER_BULK_CREATE_FAILED
+Language=English
+Bulk create request failed.
+.
+
 ;//
-;// Spare IDs: 0x290, 0x291.
+;// Spare ID: 0x291.
 ;//
 
 MessageId=0x292

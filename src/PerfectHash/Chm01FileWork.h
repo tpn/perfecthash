@@ -13,6 +13,8 @@ Abstract:
 
 --*/
 
+#pragma once
+
 #include "stdafx.h"
 
 #define EXPAND_AS_CALLBACK_DECL(                      \
@@ -37,7 +39,6 @@ SAVE_FILE_WORK_TABLE_ENTRY(EXPAND_AS_CALLBACK_DECL);
 #define PrepareCSourceTableDataFileChm01 NULL
 #define PreparePythonFileChm01 NULL
 #define PreparePythonTestFileChm01 NULL
-#define PrepareCppHeaderOnlyFileChm01 NULL
 #define PrepareCppHeaderOnlyTestFileChm01 NULL
 #define PrepareRustCargoTomlFileChm01 NULL
 #define PrepareRustLibFileChm01 NULL

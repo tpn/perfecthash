@@ -46,10 +46,17 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         ULONG GlobalComponentLockAcquired:1;
 
         //
+        // When set, indicates new PERFECT_HASH_CONTEXT instances should skip
+        // threadpool initialization (IOCP-native contexts).
+        //
+
+        ULONG CreateContextWithoutThreadpool:1;
+
+        //
         // Unused bits.  (Consume these before the Unused2 bits.)
         //
 
-        ULONG Unused1:3;
+        ULONG Unused1:5;
 
         //
         // The following bits, when set, prevent the global component logic
@@ -88,7 +95,7 @@ typedef union _PERFECT_HASH_TLS_CONTEXT_FLAGS {
         // Remaining unused bits.  (Consume Unused1 before using these.)
         //
 
-        ULONG Unused2:24;
+        ULONG Unused2:21;
 
     };
     LONG AsLong;

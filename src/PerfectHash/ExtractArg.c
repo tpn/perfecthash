@@ -1040,6 +1040,14 @@ Return Value:
 
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(MaxSolveTimeInSeconds);
 
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(InitialPerFileConcurrency);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(MaxPerFileConcurrency);
+
+    ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(
+        IncreaseConcurrencyAfterMilliseconds
+    );
+
     ADD_PARAM_IF_EQUAL_AND_VALUE_IS_INTEGER(FunctionHookCallbackIgnoreRip);
 
 #define IS_VALUE_EQUAL(ValueName) \

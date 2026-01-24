@@ -153,6 +153,30 @@ Return Value:
     Allocator = Table->Allocator;
 
     //
+    // Detach any files still linked to a parent directory.  This breaks the
+    // directory/file reference cycle prior to releasing file objects.
+    //
+
+#define EXPAND_AS_DETACH_FILE(     \
+    Verb, VUpper, Name, Upper,     \
+    EofType, EofValue,             \
+    Suffix, Extension, Stream, Base \
+)                                  \
+    if (Table->Name && Table->Name->ParentDirectory) {                    \
+        RemoveResult = Table->Name->ParentDirectory->Vtbl->RemoveFile(    \
+            Table->Name->ParentDirectory,                                 \
+            Table->Name                                                   \
+        );                                                                \
+        if (FAILED(RemoveResult)) {                                       \
+            PH_ERROR(PerfectHashDirectoryRemoveFile, RemoveResult);       \
+        }                                                                 \
+    }
+
+    FILE_WORK_TABLE_ENTRY(EXPAND_AS_DETACH_FILE);
+
+#undef EXPAND_AS_DETACH_FILE
+
+    //
     // Free the memory used for the values array, if applicable.
     //
 

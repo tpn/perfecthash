@@ -44,6 +44,64 @@ HRESULT
 typedef PREPARE_TABLE_CREATE_CSV_FILE *PPREPARE_TABLE_CREATE_CSV_FILE;
 extern PREPARE_TABLE_CREATE_CSV_FILE PrepareTableCreateCsvFile;
 
+static
+VOID
+PerfectHashLogTableCreateFailure(
+    _In_opt_ PCUNICODE_STRING KeysPath,
+    _In_ ULONG Stage,
+    _In_ HRESULT Result
+    )
+{
+#ifdef PH_WINDOWS
+    int Count;
+    DWORD BytesWritten;
+    HANDLE LogHandle;
+    CHAR Buffer[1024];
+    ULONG PathChars = 0;
+
+    if (GetEnvironmentVariableW(L"PH_LOG_TABLE_CREATE_FAILURES", NULL, 0) == 0) {
+        return;
+    }
+
+    if (ARGUMENT_PRESENT(KeysPath) && KeysPath->Buffer) {
+        PathChars = KeysPath->Length / sizeof(WCHAR);
+    }
+
+    LogHandle = CreateFileW(L"PerfectHashTableCreateFailures.log",
+                            FILE_APPEND_DATA,
+                            FILE_SHARE_READ,
+                            NULL,
+                            OPEN_ALWAYS,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+    if (!IsValidHandle(LogHandle)) {
+        return;
+    }
+
+    Count = _snprintf_s(Buffer,
+                        sizeof(Buffer),
+                        _TRUNCATE,
+                        "Stage=%lu Result=0x%08lX Path=%.*S\r\n",
+                        Stage,
+                        Result,
+                        (int)PathChars,
+                        (PathChars ? KeysPath->Buffer : L""));
+    if (Count > 0) {
+        WriteFile(LogHandle,
+                  Buffer,
+                  (DWORD)strlen(Buffer),
+                  &BytesWritten,
+                  NULL);
+    }
+
+    CloseHandle(LogHandle);
+#else
+    UNREFERENCED_PARAMETER(KeysPath);
+    UNREFERENCED_PARAMETER(Stage);
+    UNREFERENCED_PARAMETER(Result);
+#endif
+}
+
 //
 // Method implementations.
 //
@@ -169,6 +227,7 @@ Return Value:
     ASSIGNED_MEMORY_COVERAGE EmptyCoverage;
     PASSIGNED_MEMORY_COVERAGE Coverage;
     BOOLEAN UnknownTableCreateResult = FALSE;
+    ULONG Stage = 0;
 
     //
     // Validate arguments.
@@ -184,6 +243,10 @@ Return Value:
     VALIDATE_FLAGS(ContextTableCreate, CONTEXT_TABLE_CREATE, ULong);
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
     VALIDATE_FLAGS(TableCompile, TABLE_COMPILE, ULong);
+
+    if (UseOverlappedIo(Context)) {
+        KeysLoadFlags.UseOverlappedIo = TRUE;
+    }
 
     //
     // IsValidTableCreateFlags() returns a more specific error code than the
@@ -214,16 +277,19 @@ Return Value:
         return E_INVALIDARG;
     }
     else {
+        Stage = 1;
         Result = Context->Vtbl->SetBaseOutputDirectory(Context,
                                                        BaseOutputDirectory);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextSetBaseOutputDirectory, Result);
+            PerfectHashLogTableCreateFailure(KeysPath, Stage, Result);
             return Result;
         }
 
         Result = Context->Vtbl->GetBaseOutputDirectory(Context, &BaseOutputDir);
         if (FAILED(Result)) {
             PH_ERROR(PerfectHashContextGetBaseOutputDirectory, Result);
+            PerfectHashLogTableCreateFailure(KeysPath, Stage, Result);
             return Result;
         }
         RELEASE(BaseOutputDir);
@@ -250,16 +316,19 @@ Return Value:
     ZeroStruct(EmptyCoverage);
 
     MonitorLowMemory = (ContextTableCreateFlags.MonitorLowMemory != FALSE);
+    Stage = 2;
     Result = PerfectHashContextInitializeLowMemoryMonitor(
         Context,
         MonitorLowMemory
     );
     if (FAILED(Result)) {
         PH_ERROR(PerfectHashContextInitializeLowMemoryMonitor, Result);
+        PerfectHashLogTableCreateFailure(KeysPath, Stage, Result);
         return Result;
     }
 
 #ifdef PH_WINDOWS
+    Stage = 3;
     Result = PerfectHashContextTryPrepareCallbackTableValuesFile(
         Context,
         TableCreateFlags
@@ -281,6 +350,7 @@ Return Value:
         NumberOfPages = TABLE_CREATE_CSV_ROW_BUFFER_NUMBER_OF_PAGES;
     }
 
+    Stage = 4;
     Result = Rtl->Vtbl->CreateBuffer(Rtl,
                                      &ProcessHandle,
                                      NumberOfPages,
@@ -290,6 +360,7 @@ Return Value:
 
     if (FAILED(Result)) {
         Result = E_OUTOFMEMORY;
+        PerfectHashLogTableCreateFailure(KeysPath, Stage, Result);
         return Result;
     }
 
@@ -302,20 +373,25 @@ Return Value:
     // Get a reference to the stdout handle.
     //
 
-    if (!Context->OutputHandle) {
-        Context->OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    Stage = 5;
+    if (!Silent) {
         if (!Context->OutputHandle) {
-            SYS_ERROR(GetStdHandle);
-            goto Error;
+            Context->OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+            if (!Context->OutputHandle ||
+                Context->OutputHandle == INVALID_HANDLE_VALUE) {
+                Context->OutputHandle = NULL;
+                Silent = TRUE;
+            }
         }
-    }
 
-    OutputHandle = Context->OutputHandle;
+        OutputHandle = Context->OutputHandle;
+    }
 
     //
     // Prepare the .csv file if applicable.
     //
 
+    Stage = 6;
     if (TableCreateFlags.DisableCsvOutputFile == FALSE) {
         NumberOfRows = 1;
         Result = PrepareTableCreateCsvFile(Context,
@@ -350,6 +426,7 @@ Return Value:
     // We pass this value to Keys->Vtbl->Load().
     //
 
+    Stage = 7;
     Result = PerfectHashContextInitializeKeySize(&KeysLoadFlags,
                                                  TableCreateParameters,
                                                  &KeySizeInBytes);
@@ -362,6 +439,7 @@ Return Value:
     // Create a keys instance.
     //
 
+    Stage = 8;
     Result = Context->Vtbl->CreateInstance(Context,
                                            NULL,
                                            &IID_PERFECT_HASH_KEYS,
@@ -376,6 +454,7 @@ Return Value:
     // Load the keys.
     //
 
+    Stage = 9;
     Result = Keys->Vtbl->Load(Keys,
                               &KeysLoadFlags,
                               KeysPath,
@@ -386,6 +465,7 @@ Return Value:
         goto Error;
     }
 
+    Stage = 10;
     Result = Keys->Vtbl->GetFlags(Keys,
                                   sizeof(KeysFlags),
                                   &KeysFlags);
@@ -395,6 +475,7 @@ Return Value:
         goto Error;
     }
 
+    Stage = 11;
     Result = Keys->Vtbl->GetAddress(Keys,
                                     &KeysBaseAddress,
                                     &NumberOfKeys);
@@ -429,6 +510,7 @@ Return Value:
 
     ASSERT(Table == NULL);
 
+    Stage = 12;
     Result = Context->Vtbl->CreateInstance(Context,
                                            NULL,
                                            &IID_PERFECT_HASH_TABLE,
@@ -439,6 +521,7 @@ Return Value:
         goto Error;
     }
 
+    Stage = 13;
     Result = Table->Vtbl->Create(Table,
                                  Context,
                                  AlgorithmId,
@@ -477,6 +560,7 @@ Return Value:
 
         if (!ContextTableCreateFlags.SkipTestAfterCreate) {
 
+            Stage = 14;
             Result = Table->Vtbl->Test(Table, Keys, FALSE);
 
             if (FAILED(Result)) {
@@ -491,6 +575,7 @@ Return Value:
 
         if (ContextTableCreateFlags.Compile) {
 
+            Stage = 15;
             Result = Table->Vtbl->Compile(Table,
                                           &TableCompileFlags,
                                           CpuArchId);
@@ -506,6 +591,7 @@ Return Value:
     // Write the .csv row if applicable.
     //
 
+    Stage = 16;
     if (TableCreateFlags.DisableCsvOutputFile != FALSE) {
         goto End;
     }
@@ -549,6 +635,8 @@ Error:
     if (Result == S_OK) {
         Result = E_UNEXPECTED;
     }
+
+    PerfectHashLogTableCreateFailure(KeysPath, Stage, Result);
 
     //
     // Intentional follow-on to End.
@@ -1284,6 +1372,27 @@ InvalidArg:
         Result = PH_E_INVALID_COMMANDLINE_ARG;
         PH_MESSAGE_ARGS(Result, String);
         break;
+    }
+
+    if (SUCCEEDED(Result)) {
+        PPERFECT_HASH_TABLE_CREATE_PARAMETER Param = NULL;
+        HRESULT LookupResult;
+
+        LookupResult = GetTableCreateParameterForId(
+            TableCreateParameters,
+            TableCreateParameterMaxPerFileConcurrencyId,
+            &Param
+        );
+        if (FAILED(LookupResult)) {
+            PH_ERROR(ExtractTableCreateArgs_GetMaxPerFileConcurrency, LookupResult);
+            Result = LookupResult;
+        } else if (LookupResult == S_OK && Param) {
+            if (Param->AsULong == 0) {
+                Result = PH_E_INVALID_MAXIMUM_CONCURRENCY;
+            } else {
+                *MaximumConcurrency = Param->AsULong;
+            }
+        }
     }
 
     if (SUCCEEDED(Result)) {
