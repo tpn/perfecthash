@@ -112,6 +112,60 @@ typedef struct _RAW_DOG_PATCH_ENTRY {
 
 static const CHAR RawDogTargetCpu[] = "rawdog-x64";
 
+static
+HRESULT
+EnsureRawDogAssigned16Padding(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _Inout_ PPERFECT_HASH_TABLE_JIT Jit,
+    _Out_ PULONGLONG Assigned
+    )
+{
+    PTABLE_INFO_ON_DISK TableInfo;
+    ULONGLONG SizeInBytes;
+    ULONGLONG AllocSizeInBytes;
+    PVOID Buffer;
+    PALLOCATOR Allocator;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Jit) ||
+        !ARGUMENT_PRESENT(Assigned)) {
+        return E_POINTER;
+    }
+
+    if (ARGUMENT_PRESENT(Jit->Assigned16Padded)) {
+        *Assigned = (ULONGLONG)(ULONG_PTR)Jit->Assigned16Padded;
+        return S_OK;
+    }
+
+    if (!ARGUMENT_PRESENT(Table->Assigned16)) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    TableInfo = Table->TableInfoOnDisk;
+    if (!ARGUMENT_PRESENT(TableInfo)) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    SizeInBytes = (
+        TableInfo->NumberOfTableElements.QuadPart * sizeof(USHORT)
+    );
+    AllocSizeInBytes = SizeInBytes + sizeof(ULONG);
+
+    Allocator = Table->Allocator;
+    Buffer = Allocator->Vtbl->Calloc(Allocator, 1, AllocSizeInBytes);
+    if (!Buffer) {
+        return E_OUTOFMEMORY;
+    }
+
+    CopyMemory(Buffer, Table->Assigned16, SizeInBytes);
+
+    Jit->Assigned16Padded = Buffer;
+    Jit->Assigned16PaddedSize = AllocSizeInBytes;
+    *Assigned = (ULONGLONG)(ULONG_PTR)Buffer;
+
+    return S_OK;
+}
+
 _Use_decl_annotations_
 VOID
 PerfectHashTableJitRundownRawDog(
@@ -272,9 +326,14 @@ CompileChm01IndexJitRawDog(
     }
 
     Seed3Bytes.AsULong = TableInfo->Seed3;
-    Assigned = (ULONGLONG)(ULONG_PTR)(UseAssigned16 ?
-                                      (PVOID)Table->Assigned16 :
-                                      (PVOID)Table->TableData);
+    if (UseAssigned16) {
+        Result = EnsureRawDogAssigned16Padding(Table, Jit, &Assigned);
+        if (FAILED(Result)) {
+            return Result;
+        }
+    } else {
+        Assigned = (ULONGLONG)(ULONG_PTR)(PVOID)Table->TableData;
+    }
 
     SourceCode = NULL;
     CodeSize = 0;
@@ -550,9 +609,14 @@ CompileChm01IndexVectorJitRawDog(
     }
 
     Seed3Bytes.AsULong = TableInfo->Seed3;
-    Assigned = (ULONGLONG)(ULONG_PTR)(UseAssigned16 ?
-                                      (PVOID)Table->Assigned16 :
-                                      (PVOID)Table->TableData);
+    if (UseAssigned16) {
+        Result = EnsureRawDogAssigned16Padding(Table, Jit, &Assigned);
+        if (FAILED(Result)) {
+            return Result;
+        }
+    } else {
+        Assigned = (ULONGLONG)(ULONG_PTR)(PVOID)Table->TableData;
+    }
 
     Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
         RAWDOG_SENTINEL_ASSIGNED,
@@ -1547,6 +1611,10 @@ PerfectHashTableJitRundownRawDog(
     Jit->ExecutionEngine = NULL;
 
     Allocator = Table->Allocator;
+    if (Jit->Assigned16Padded) {
+        Allocator->Vtbl->FreePointer(Allocator, &Jit->Assigned16Padded);
+        Jit->Assigned16PaddedSize = 0;
+    }
     Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Table->Jit);
 }
 

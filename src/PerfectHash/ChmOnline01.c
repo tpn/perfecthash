@@ -253,10 +253,63 @@ static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
 #include <llvm-c/ExecutionEngine.h>
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define PH_JIT_VECTOR_MAX_LANES 16
+
+static
+const char *
+GetJitDumpPrefix(VOID)
+{
+    const char *Value;
+
+    Value = getenv("PH_JIT_DUMP");
+    if (!Value || *Value == '\0') {
+        return NULL;
+    }
+
+    return Value;
+}
+
+static
+VOID
+DumpJitModuleIfEnabled(
+    _In_ LLVMModuleRef Module,
+    _In_ LLVMTargetMachineRef TargetMachine
+    )
+{
+    const char *Prefix;
+    char Path[512];
+    char *ErrorMessage = NULL;
+
+    Prefix = GetJitDumpPrefix();
+    if (!Prefix) {
+        return;
+    }
+
+    if (snprintf(Path, sizeof(Path), "%s.ll", Prefix) > 0) {
+        if (LLVMPrintModuleToFile(Module, Path, &ErrorMessage) != 0) {
+            if (ErrorMessage) {
+                LLVMDisposeMessage(ErrorMessage);
+                ErrorMessage = NULL;
+            }
+        }
+    }
+
+    if (snprintf(Path, sizeof(Path), "%s.s", Prefix) > 0) {
+        if (LLVMTargetMachineEmitToFile(TargetMachine,
+                                        Module,
+                                        Path,
+                                        LLVMAssemblyFile,
+                                        &ErrorMessage) != 0) {
+            if (ErrorMessage) {
+                LLVMDisposeMessage(ErrorMessage);
+            }
+        }
+    }
+}
 
 FORCEINLINE
 BOOLEAN
@@ -2374,6 +2427,8 @@ CompileChm01IndexJit(
             }
         }
     }
+
+    DumpJitModuleIfEnabled(Module, TargetMachine);
 
     if (LLVMVerifyModule(Module,
                          LLVMReturnStatusAction,

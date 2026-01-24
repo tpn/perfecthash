@@ -266,6 +266,8 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     PVOID Index64x4Function;
     PVOID Index64x8Function;
     PVOID Index64x16Function;
+    PVOID Assigned16Padded;
+    ULONGLONG Assigned16PaddedSize;
     PPERFECT_HASH_TABLE_INDEX OriginalIndex;
     PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
     CHAR TargetCpu[PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS];
