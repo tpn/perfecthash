@@ -78,6 +78,14 @@
 - IOCP bulk stress against `perfecthash-keys\\hard` (Debug) still times out in ~120s; server left running and only ~12/23 output dirs created, indicating completion/hang persists post-resize removal.
 - Attached `cdb` to `PerfectHashServer.exe` ~10s into a Debug IOCP bulk run and captured `~* kb` (`cdb-hard-backtrace.log`): main thread blocked in `PerfectHashServerWait`, IOCP worker threads blocked in `GetQueuedCompletionStatus` (33 waits on one IOCP handle, 24 on another), and ~1539 threads waiting in `ZwWaitForWorkViaWorkerFactory`, indicating no active IOCP completions at capture time and unexpected threadpool worker proliferation.
 - Added IOCP-native argument extraction helpers (`PerfectHashContextIocpArgs.c`) and wired into build files.
+
+## 2026-01-25
+- Refactored IOCP file-work buffers to size-class pools (4KB–16MB) plus dynamic oversize pools; buffers tracked via guarded lists for teardown.
+- Updated IOCP context/node structs and rundown paths to free pooled buffers and oversize pool lists.
+- Reworked CHM01 file-work buffer acquisition to use size-class/oversize pools (no one-off pools) and new acquire/release APIs.
+- Updated IOCP buffer pool API to accept `PRTL` for initialization zeroing; removed legacy create/pop/push/destroy calls.
+- Updated IOCP buffer pool unit tests and size-class helper coverage.
+- Built Release `perfecthash_unit_tests` and ran `build-win\\bin\\Release\\perfecthash_unit_tests.exe` (all 8 tests pass).
 - Added TLS flag plumbing for threadpool-less context creation and IOCP helper to create contexts with `CreateContextWithoutThreadpool` set.
 - Updated server bulk/table create to avoid legacy context parsing and use IOCP-native arg extraction.
 - Added IOCP table-create dispatch in server (context creation, file-work IOCP wiring, hook/RNG init, TLS context) and removed threadpool priority application.
@@ -167,3 +175,21 @@
 - IOCP file-I/O run on `D:\\src\\perfecthash-keys\\hard` (Release, `Mulshrolate4RX`, `--IocpConcurrency=4 --MaxThreads=8`) completed successfully.
 - Added fail-fast `PH_RAISE` guards for oversized IOCP write requests and reset `NumberOfBytesWritten` for IOCP save-only file work items.
 - Full IOCP sys32 file-I/O run completed (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `G:\\Scratch\\iocp-sys32-full` in ~289.6s; largest output file ~2.5MB, no anomalously large files observed.
+- OG BulkCreate sys32 file-I/O run completed (Release, `Mulshrolate4RX`, concurrency 32) to `G:\\Scratch\\sys32-og-full` in ~126.6s; largest output file ~21.3MB (CSV), no anomalously large files observed.
+- IOCP sys32 file-I/O run with per-file ramp 1/16/500 completed (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `G:\\Scratch\\iocp-sys32-full-max16` in ~289.6s; largest output file ~2.5MB, no anomalously large files observed.
+- Created a fresh 1000-file sys32 subset at `E:\\Scratch\\sys32-1000` for ramp tuning.
+- OG BulkCreate run on `E:\\Scratch\\sys32-1000` completed in ~22.9s (Release, `Mulshrolate4RX`, concurrency 32) to `E:\\Scratch\\sys32-1000-og`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with ramp `Initial=2`, `Max=8`, `After=200ms` completed in ~21.1s (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `E:\\Scratch\\sys32-1000-iocp-2-8-200`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with ramp `Initial=1`, `Max=8`, `After=200ms` completed in ~21.1s (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `E:\\Scratch\\sys32-1000-iocp-1-8-200-2`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with ramp `Initial=1`, `Max=4`, `After=200ms` completed in ~20.1s (Release, `Mulshrolate4RX`, `--IocpConcurrency=32 --MaxThreads=64 --MaximumConcurrency=32`) to `E:\\Scratch\\sys32-1000-iocp-1-4-200`.
+- IOCP run on `E:\\Scratch\\sys32-1000` with `--IocpConcurrency=64 --MaxThreads=196`, ramp `Initial=1`, `Max=4`, `After=100ms` hit `VirtualAllocEx` failures (error 1455) and `PH_E_OUTOFMEMORY` during save (`SaveCppSourceUnityFile`); run completed in ~21.1s but was not clean (`E:\\Scratch\\sys32-1000-iocp-1-4-100-64`).
+- IOCP run on `E:\\Scratch\\sys32-1000` with `--IocpConcurrency=64 --MaxThreads=128 --MaximumConcurrency=32`, ramp `Initial=1`, `Max=2`, `After=100ms` still hit `VirtualAllocEx` failures (error 1455) and `PH_E_OUTOFMEMORY` during save (`SaveCppSourceUnityFile`); run completed in ~20.1s but was not clean (`E:\\Scratch\\sys32-1000-iocp-1-2-100-64`).
+
+## 2026-01-25
+- Planned IOCP buffer pool redesign based on `D:\\src\\lookaside` NUMA lookaside pattern:
+  - Replace per-file/bucket pools with per-NUMA size-class pools keyed by payload size (power-of-two).
+  - Size classes initially 4KB–16MB; oversize allocations use dynamic pools keyed by next power-of-two.
+  - Pools allocate on demand; buffers are reusable via SLIST free lists and tracked via `GUARDED_LIST` for rundown.
+  - One-off allocations become reusable buffers owned by a pool; guarded list enables safe teardown.
+  - Add optional guard-page allocation flag (default on) to choose between guard-page buffers vs raw chunks.
+  - Add basic pool stats/diagnostics later (depth, alloc failures); ETW deferred.

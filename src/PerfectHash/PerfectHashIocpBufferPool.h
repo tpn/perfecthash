@@ -33,36 +33,54 @@ typedef struct _RTL RTL;
 typedef RTL *PRTL;
 
 //
-// IOCP buffer buckets keyed by AlignUpPow2(NumberOfKeys).
+// IOCP buffer size-class configuration (payload sizes in bytes).
 //
 
-#define PERFECT_HASH_IOCP_BUFFER_BUCKET_COUNT 32
-#define PERFECT_HASH_IOCP_BUFFER_MAX_BUCKET_INDEX \
-    (PERFECT_HASH_IOCP_BUFFER_BUCKET_COUNT - 1)
+#define PERFECT_HASH_IOCP_BUFFER_MIN_SHIFT 12  // 4KB
+#define PERFECT_HASH_IOCP_BUFFER_MAX_SHIFT 24  // 16MB
+
+#define PERFECT_HASH_IOCP_BUFFER_MIN_SIZE \
+    (1ULL << PERFECT_HASH_IOCP_BUFFER_MIN_SHIFT)
+
+#define PERFECT_HASH_IOCP_BUFFER_MAX_SIZE \
+    (1ULL << PERFECT_HASH_IOCP_BUFFER_MAX_SHIFT)
+
+#define PERFECT_HASH_IOCP_BUFFER_CLASS_COUNT (                                   \
+    PERFECT_HASH_IOCP_BUFFER_MAX_SHIFT -                                        \
+    PERFECT_HASH_IOCP_BUFFER_MIN_SHIFT +                                        \
+    1                                                                           \
+)
 
 //
-// Buffer pool flags.
+// Buffer flags.
 //
 
-#define PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_ONE_OFF 0x00000001
+#define PERFECT_HASH_IOCP_BUFFER_FLAG_GUARD_PAGES 0x00000001
+#define PERFECT_HASH_IOCP_BUFFER_FLAG_OVERSIZE    0x00000002
+
+//
+// Pool flags.
+//
+
+#define PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_INITIALIZED 0x00000001
+#define PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES 0x00000002
+#define PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_OVERSIZE    0x00000004
 
 //
 // IOCP buffer header used by IOCP file work. Payload begins at PayloadOffset.
 //
 
 typedef struct DECLSPEC_ALIGN(16) _PERFECT_HASH_IOCP_BUFFER {
-    SLIST_ENTRY ListEntry;
+    SLIST_ENTRY FreeListEntry;
+    LIST_ENTRY ListEntry;
+    struct _PERFECT_HASH_IOCP_BUFFER_POOL *OwnerPool;
     ULONGLONG BytesWritten;
     ULONGLONG PayloadSize;
+    ULONGLONG AllocationSize;
     ULONG SizeOfStruct;
     ULONG PayloadOffset;
-    ULONG BucketIndex;
-    ULONG FileId;
-    USHORT NumaNode;
-    USHORT Flags;
+    ULONG Flags;
     ULONG Padding1;
-    ULONG Padding2;
-    ULONG Padding3;
 } PERFECT_HASH_IOCP_BUFFER;
 typedef PERFECT_HASH_IOCP_BUFFER *PPERFECT_HASH_IOCP_BUFFER;
 
@@ -82,77 +100,126 @@ PerfectHashIocpBufferPayload(
     return (PVOID)((PCHAR)Buffer + Buffer->PayloadOffset);
 }
 
+FORCEINLINE
+LONG
+PerfectHashIocpBufferGetClassIndex(
+    _In_ PRTL Rtl,
+    _In_ ULONGLONG PayloadBytes
+    )
+{
+    ULONGLONG Rounded;
+    ULONG TrailingZeros;
+
+    if (!ARGUMENT_PRESENT(Rtl)) {
+        return -1;
+    }
+
+    if (PayloadBytes <= PERFECT_HASH_IOCP_BUFFER_MIN_SIZE) {
+        return 0;
+    }
+
+    Rounded = Rtl->RoundUpPowerOfTwo64(PayloadBytes);
+    if (Rounded == 0) {
+        return -1;
+    }
+
+    if (Rounded > PERFECT_HASH_IOCP_BUFFER_MAX_SIZE) {
+        return -1;
+    }
+
+    TrailingZeros = (ULONG)Rtl->TrailingZeros64(Rounded);
+    return (LONG)TrailingZeros - PERFECT_HASH_IOCP_BUFFER_MIN_SHIFT;
+}
+
+FORCEINLINE
+ULONGLONG
+PerfectHashIocpBufferGetPayloadSizeFromClassIndex(
+    _In_ LONG ClassIndex
+    )
+{
+    ULONGLONG Shift;
+
+    if (ClassIndex < 0) {
+        return 0;
+    }
+
+    Shift = (ULONGLONG)ClassIndex + PERFECT_HASH_IOCP_BUFFER_MIN_SHIFT;
+    return (1ULL << Shift);
+}
+
 //
 // IOCP buffer pool.
 //
 
 typedef struct DECLSPEC_ALIGN(16) _PERFECT_HASH_IOCP_BUFFER_POOL {
+    LIST_ENTRY ListEntry;
+    SLIST_HEADER FreeList;
+    PGUARDED_LIST BufferList;
+    HANDLE ProcessHandle;
+    ULONGLONG PayloadSize;
+    ULONGLONG AllocationSize;
     ULONG SizeOfStruct;
     ULONG Flags;
-    ULONG PageSize;
-    ULONG NumberOfBuffers;
-    ULONG NumberOfPagesPerBuffer;
-    ULONG PayloadOffset;
-    ULONGLONG UsableBufferSizeInBytes;
-    ULONGLONG PayloadSizeInBytes;
-    ULONGLONG BufferStrideInBytes;
-    ULONGLONG TotalAllocationSizeInBytes;
-    HANDLE ProcessHandle;
-    PVOID BaseAddress;
-    ULONGLONG ListHeadPadding;
-    SLIST_HEADER ListHead;
+    ULONG Padding1;
+    USHORT NumaNode;
+    USHORT Padding2;
 } PERFECT_HASH_IOCP_BUFFER_POOL;
 typedef PERFECT_HASH_IOCP_BUFFER_POOL *PPERFECT_HASH_IOCP_BUFFER_POOL;
 
 typedef
 _Must_inspect_result_
 HRESULT
-(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_CREATE)(
+(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_INITIALIZE)(
     _In_ PRTL Rtl,
-    _In_opt_ PHANDLE ProcessHandle,
-    _In_ ULONG PageSize,
-    _In_ ULONG NumberOfBuffers,
-    _In_ ULONG NumberOfPagesPerBuffer,
-    _In_opt_ PULONG AdditionalProtectionFlags,
-    _In_opt_ PULONG AdditionalAllocationTypeFlags,
-    _Out_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool
+    _In_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool,
+    _In_ ULONGLONG PayloadSize,
+    _In_ USHORT NumaNode,
+    _In_ ULONG Flags,
+    _In_opt_ HANDLE ProcessHandle,
+    _In_opt_ PGUARDED_LIST BufferList
     );
-typedef PERFECT_HASH_IOCP_BUFFER_POOL_CREATE
-      *PPERFECT_HASH_IOCP_BUFFER_POOL_CREATE;
+typedef PERFECT_HASH_IOCP_BUFFER_POOL_INITIALIZE
+      *PPERFECT_HASH_IOCP_BUFFER_POOL_INITIALIZE;
 
 typedef
 _Must_inspect_result_
 HRESULT
-(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_DESTROY)(
+(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_ACQUIRE)(
     _In_ PRTL Rtl,
-    _Inout_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool
+    _In_opt_ PALLOCATOR Allocator,
+    _In_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER *BufferPointer
     );
-typedef PERFECT_HASH_IOCP_BUFFER_POOL_DESTROY
-      *PPERFECT_HASH_IOCP_BUFFER_POOL_DESTROY;
-
-typedef
-_Must_inspect_result_
-_Success_(return != NULL)
-PPERFECT_HASH_IOCP_BUFFER
-(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_POP)(
-    _In_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool
-    );
-typedef PERFECT_HASH_IOCP_BUFFER_POOL_POP
-      *PPERFECT_HASH_IOCP_BUFFER_POOL_POP;
+typedef PERFECT_HASH_IOCP_BUFFER_POOL_ACQUIRE
+      *PPERFECT_HASH_IOCP_BUFFER_POOL_ACQUIRE;
 
 typedef
 VOID
-(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_PUSH)(
+(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_RELEASE)(
     _In_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool,
     _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
     );
-typedef PERFECT_HASH_IOCP_BUFFER_POOL_PUSH
-      *PPERFECT_HASH_IOCP_BUFFER_POOL_PUSH;
+typedef PERFECT_HASH_IOCP_BUFFER_POOL_RELEASE
+      *PPERFECT_HASH_IOCP_BUFFER_POOL_RELEASE;
 
-extern PERFECT_HASH_IOCP_BUFFER_POOL_CREATE PerfectHashIocpBufferPoolCreate;
-extern PERFECT_HASH_IOCP_BUFFER_POOL_DESTROY PerfectHashIocpBufferPoolDestroy;
-extern PERFECT_HASH_IOCP_BUFFER_POOL_POP PerfectHashIocpBufferPoolPop;
-extern PERFECT_HASH_IOCP_BUFFER_POOL_PUSH PerfectHashIocpBufferPoolPush;
+typedef
+VOID
+(NTAPI PERFECT_HASH_IOCP_BUFFER_POOL_RUNDOWN)(
+    _In_ PRTL Rtl,
+    _In_opt_ PALLOCATOR Allocator,
+    _Inout_ PPERFECT_HASH_IOCP_BUFFER_POOL Pool
+    );
+typedef PERFECT_HASH_IOCP_BUFFER_POOL_RUNDOWN
+      *PPERFECT_HASH_IOCP_BUFFER_POOL_RUNDOWN;
+
+extern PERFECT_HASH_IOCP_BUFFER_POOL_INITIALIZE
+    PerfectHashIocpBufferPoolInitialize;
+extern PERFECT_HASH_IOCP_BUFFER_POOL_ACQUIRE
+    PerfectHashIocpBufferPoolAcquire;
+extern PERFECT_HASH_IOCP_BUFFER_POOL_RELEASE
+    PerfectHashIocpBufferPoolRelease;
+extern PERFECT_HASH_IOCP_BUFFER_POOL_RUNDOWN
+    PerfectHashIocpBufferPoolRundown;
 
 #ifdef __cplusplus
 } // extern "C"

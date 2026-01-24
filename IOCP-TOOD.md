@@ -3,18 +3,16 @@
 - Overlapped I/O plan (IOCP only; OG remains memory-mapped):
   - Done: added `UseOverlappedIo` flag to `PERFECT_HASH_CONTEXT` (IOCP contexts set it).
   - Done: added `PerfectHashFileCreateFlags.SkipMapping` so output files can be created with `FILE_FLAG_OVERLAPPED` and no mapping.
-  - Implement a per-NUMA buffer pool:
-    - Buckets keyed by `AlignUpPow2(NumberOfKeys)` (32 buckets max), then indexed by file id.
-    - Each bucket/file id has an `SLIST_HEADER` of buffers.
-    - New buffer header struct: `SLIST_ENTRY`, `ULONG Size`, `ULONG Bucket`, `ULONG FileId`, `USHORT NumaNode`, `USHORT Flags`, `PVOID Base`, `ULONG BytesCapacity`, `ULONG BytesWritten`.
-    - Base address for file work writes must point *after* the header. Account for header overhead in sizing; rely on existing EOF multipliers + trap-on-overrun. If traps occur, bump multipliers.
-    - Allocate buffers from NUMA node (or `RtlCreateMultipleBuffers()` if it supports NUMA), with guard pages enabled.
-    - Cap per-bucket buffers to `IocpConcurrency` (or `min(IocpConcurrency, FilesInBucket)`).
-    - Done (initial): per-file buffer pool backed by `RtlCreateMultipleBuffers()` + guard pages.
-    - Done (initial): per-NUMA bucketed pool indexing by bucket+file id (on-demand allocation). Still need directory-scan sizing and pre-allocation.
-  - Pre-size and allocate pools per bulk request:
-    - During directory scan, capture `NumberOfKeys` per file; compute bucket index and per-file output sizes via existing file work table logic.
-    - Compute total bytes for all buffers (sum of bucket capacity * per-buffer size) and allocate one large NUMA block; carve into buffer headers + payloads.
+- Done: rebuild IOCP file-work buffers as NUMA size-class pools (lookaside-style).
+  - Pools keyed by payload size class (power-of-two); 4KB–16MB classes.
+  - Dynamic oversize pools keyed by next power-of-two above max size class.
+  - Each pool has an `SLIST_HEADER` free list and a `GUARDED_LIST` of all buffers for rundown.
+  - New buffer header: `SLIST_ENTRY` + `LIST_ENTRY` + `OwnerPool` + `PayloadSize` +
+    `AllocationSize` + `PayloadOffset` + `BytesWritten` + flags.
+  - Base address for file work writes points *after* the header; sizing still uses EOF multipliers + trap-on-overrun.
+  - Allocate on demand; buffers pushed to pool free list and guarded list for teardown.
+  - One-off allocations removed; buffers reused via size-class or oversize pools.
+  - TODO: add a guard-page allocation flag to toggle `RtlCreateBuffer()` vs raw allocation.
   - Output file pipeline (IOCP):
     - Pop a buffer for each file work save stage.
     - Set `File->BaseAddress` to buffer base (after header) to reuse existing `OUTPUT_*` macros.

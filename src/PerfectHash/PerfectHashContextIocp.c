@@ -47,6 +47,28 @@ PerfectHashIocpApplyNodeAffinity(
     );
 
 static
+VOID
+PerfectHashIocpFreeBuffer(
+    _In_ PRTL Rtl,
+    _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
+    );
+
+static
+VOID
+PerfectHashIocpRundownBufferList(
+    _In_ PRTL Rtl,
+    _In_ PGUARDED_LIST BufferList
+    );
+
+static
+VOID
+PerfectHashIocpRundownOversizePools(
+    _In_ PALLOCATOR Allocator,
+    _Inout_ PLIST_ENTRY ListHead,
+    _Inout_opt_ PULONG PoolCount
+    );
+
+static
 #ifdef PH_WINDOWS
 DWORD
 WINAPI
@@ -59,6 +81,110 @@ PerfectHashIocpWorkerThreadProc(
     _In_ PVOID Parameter
     );
 #endif
+
+static
+VOID
+PerfectHashIocpFreeBuffer(
+    _In_ PRTL Rtl,
+    _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
+    )
+{
+    BOOL Success;
+    HRESULT Result;
+    HANDLE ProcessHandle;
+    PVOID BaseAddress;
+
+    if (!ARGUMENT_PRESENT(Rtl) || !ARGUMENT_PRESENT(Buffer)) {
+        return;
+    }
+
+    ProcessHandle = NULL;
+    if (Buffer->OwnerPool) {
+        ProcessHandle = Buffer->OwnerPool->ProcessHandle;
+    }
+
+    if (!ProcessHandle) {
+        ProcessHandle = GetCurrentProcess();
+    }
+
+    if (Buffer->Flags & PERFECT_HASH_IOCP_BUFFER_FLAG_GUARD_PAGES) {
+        BaseAddress = Buffer;
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          ProcessHandle,
+                                          &BaseAddress,
+                                          Buffer->AllocationSize);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashIocpFreeBuffer_DestroyBuffer, Result);
+        }
+        return;
+    }
+
+    Success = VirtualFreeEx(ProcessHandle, Buffer, 0, MEM_RELEASE);
+    if (!Success) {
+        SYS_ERROR(VirtualFreeEx);
+    }
+}
+
+static
+VOID
+PerfectHashIocpRundownBufferList(
+    _In_ PRTL Rtl,
+    _In_ PGUARDED_LIST BufferList
+    )
+{
+    BOOLEAN NotEmpty;
+    PLIST_ENTRY Entry;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+
+    if (!ARGUMENT_PRESENT(Rtl) || !ARGUMENT_PRESENT(BufferList)) {
+        return;
+    }
+
+    while (TRUE) {
+        Entry = NULL;
+        NotEmpty = BufferList->Vtbl->RemoveHeadEx(BufferList, &Entry);
+        if (!NotEmpty) {
+            break;
+        }
+
+        Buffer = CONTAINING_RECORD(Entry,
+                                   PERFECT_HASH_IOCP_BUFFER,
+                                   ListEntry);
+
+        PerfectHashIocpFreeBuffer(Rtl, Buffer);
+    }
+
+    BufferList->Vtbl->Reset(BufferList);
+}
+
+static
+VOID
+PerfectHashIocpRundownOversizePools(
+    _In_ PALLOCATOR Allocator,
+    _Inout_ PLIST_ENTRY ListHead,
+    _Inout_opt_ PULONG PoolCount
+    )
+{
+    PLIST_ENTRY Entry;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+
+    if (!ARGUMENT_PRESENT(Allocator) || !ARGUMENT_PRESENT(ListHead)) {
+        return;
+    }
+
+    while (!IsListEmpty(ListHead)) {
+        Entry = RemoveHeadList(ListHead);
+        Pool = CONTAINING_RECORD(Entry,
+                                 PERFECT_HASH_IOCP_BUFFER_POOL,
+                                 ListEntry);
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
+    }
+
+    InitializeListHead(ListHead);
+    if (PoolCount) {
+        *PoolCount = 0;
+    }
+}
 
 PERFECT_HASH_CONTEXT_IOCP_INITIALIZE PerfectHashContextIocpInitialize;
 
@@ -184,41 +310,29 @@ Return Value:
             PPERFECT_HASH_IOCP_NODE Node = &ContextIocp->Nodes[Index];
             ULONG ThreadIndex;
 
-            if (Node->FileWorkBufferPools) {
-                ULONG PoolIndex;
+            if (Node->FileWorkBufferList && Rtl) {
+                PerfectHashIocpRundownBufferList(Rtl,
+                                                 Node->FileWorkBufferList);
+            }
 
-                for (PoolIndex = 0;
-                     PoolIndex < Node->FileWorkBufferPoolCount;
-                     PoolIndex++) {
-                    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
-
-                    Pool = &Node->FileWorkBufferPools[PoolIndex];
-                    if (!Pool->BaseAddress) {
-                        continue;
-                    }
-
-                    if (Rtl) {
-                        HRESULT Result;
-
-                        Result = PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
-                        if (FAILED(Result)) {
-                            PH_ERROR(PerfectHashIocpBufferPoolDestroy, Result);
-                        }
-                    }
-                }
-
-                if (Allocator) {
+            if (Allocator) {
+                if (Node->FileWorkBufferPools) {
                     Allocator->Vtbl->FreePointer(
                         Allocator,
                         (PVOID *)&Node->FileWorkBufferPools
                     );
                 }
 
-                Node->FileWorkBufferPoolBucketCount = 0;
-                Node->FileWorkBufferPoolFileCount = 0;
-                Node->FileWorkBufferPoolCount = 0;
-                Node->FileWorkBufferPoolPageSize = 0;
+                PerfectHashIocpRundownOversizePools(
+                    Allocator,
+                    &Node->FileWorkOversizePools,
+                    &Node->FileWorkOversizePoolCount
+                );
             }
+
+            Node->FileWorkBufferPoolCount = 0;
+
+            RELEASE(Node->FileWorkBufferList);
 
             if (Node->WorkerThreads) {
                 for (ThreadIndex = 0;
@@ -374,6 +488,8 @@ Return Value:
 #else
     ULONG NodeIndex;
     ULONG ThreadIndex;
+    PRTL Rtl;
+    PALLOCATOR Allocator;
 
     if (!ARGUMENT_PRESENT(ContextIocp)) {
         return E_POINTER;
@@ -382,6 +498,9 @@ Return Value:
     if (!ContextIocp->Nodes) {
         return S_FALSE;
     }
+
+    Rtl = ContextIocp->Rtl;
+    Allocator = ContextIocp->Allocator;
 
     ContextIocp->State.Stopping = TRUE;
     if (ContextIocp->ShutdownEvent) {
@@ -416,6 +535,30 @@ Return Value:
 
     for (NodeIndex = 0; NodeIndex < ContextIocp->NodeCount; NodeIndex++) {
         PPERFECT_HASH_IOCP_NODE Node = &ContextIocp->Nodes[NodeIndex];
+
+        if (Node->FileWorkBufferList && Rtl) {
+            PerfectHashIocpRundownBufferList(Rtl,
+                                             Node->FileWorkBufferList);
+        }
+
+        if (Allocator) {
+            if (Node->FileWorkBufferPools) {
+                Allocator->Vtbl->FreePointer(
+                    Allocator,
+                    (PVOID *)&Node->FileWorkBufferPools
+                );
+            }
+
+            PerfectHashIocpRundownOversizePools(
+                Allocator,
+                &Node->FileWorkOversizePools,
+                &Node->FileWorkOversizePoolCount
+            );
+        }
+
+        Node->FileWorkBufferPoolCount = 0;
+
+        RELEASE(Node->FileWorkBufferList);
 
         if (Node->WorkerThreads) {
             for (ThreadIndex = 0;
@@ -552,6 +695,7 @@ PerfectHashContextIocpEnumerateNumaNodes(
 {
 #ifdef PH_WINDOWS
     BOOL Success;
+    HRESULT Result;
     USHORT NodeId;
     ULONG HighestNode;
     USHORT HighestNodeShort;
@@ -662,6 +806,20 @@ PerfectHashContextIocpEnumerateNumaNodes(
         Node->ProcessorCount = ProcessorCount;
         Node->GroupAffinity = Affinity;
         InitializeSRWLock(&Node->FileWorkBufferPoolLock);
+        InitializeListHead(&Node->FileWorkOversizePools);
+        Node->FileWorkBufferPoolCount = 0;
+        Node->FileWorkOversizePoolCount = 0;
+
+        Result = ContextIocp->Vtbl->CreateInstance(
+            ContextIocp,
+            NULL,
+            &IID_PERFECT_HASH_GUARDED_LIST,
+            &Node->FileWorkBufferList
+        );
+
+        if (FAILED(Result)) {
+            return Result;
+        }
     }
 
     //

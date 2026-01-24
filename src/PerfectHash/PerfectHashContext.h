@@ -1144,7 +1144,9 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     ULONG IocpNodePadding;
     PPERFECT_HASH_IOCP_BUFFER_POOL FileWorkBufferPools;
     ULONG FileWorkBufferPoolCount;
-    ULONG FileWorkBufferPoolPageSize;
+    ULONG FileWorkOversizePoolCount;
+    LIST_ENTRY FileWorkOversizePools;
+    PGUARDED_LIST FileWorkBufferList;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;
     ULONG Padding4;

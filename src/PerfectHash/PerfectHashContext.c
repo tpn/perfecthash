@@ -125,6 +125,110 @@ Return Value:
     return MaximumConcurrency + 2;
 }
 
+static
+VOID
+PerfectHashIocpFreeBuffer(
+    _In_ PRTL Rtl,
+    _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
+    )
+{
+    BOOL Success;
+    HRESULT Result;
+    HANDLE ProcessHandle;
+    PVOID BaseAddress;
+
+    if (!ARGUMENT_PRESENT(Rtl) || !ARGUMENT_PRESENT(Buffer)) {
+        return;
+    }
+
+    ProcessHandle = NULL;
+    if (Buffer->OwnerPool) {
+        ProcessHandle = Buffer->OwnerPool->ProcessHandle;
+    }
+
+    if (!ProcessHandle) {
+        ProcessHandle = GetCurrentProcess();
+    }
+
+    if (Buffer->Flags & PERFECT_HASH_IOCP_BUFFER_FLAG_GUARD_PAGES) {
+        BaseAddress = Buffer;
+        Result = Rtl->Vtbl->DestroyBuffer(Rtl,
+                                          ProcessHandle,
+                                          &BaseAddress,
+                                          Buffer->AllocationSize);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashIocpFreeBuffer_DestroyBuffer, Result);
+        }
+        return;
+    }
+
+    Success = VirtualFreeEx(ProcessHandle, Buffer, 0, MEM_RELEASE);
+    if (!Success) {
+        SYS_ERROR(VirtualFreeEx);
+    }
+}
+
+static
+VOID
+PerfectHashIocpRundownBufferList(
+    _In_ PRTL Rtl,
+    _In_ PGUARDED_LIST BufferList
+    )
+{
+    BOOLEAN NotEmpty;
+    PLIST_ENTRY Entry;
+    PPERFECT_HASH_IOCP_BUFFER Buffer;
+
+    if (!ARGUMENT_PRESENT(Rtl) || !ARGUMENT_PRESENT(BufferList)) {
+        return;
+    }
+
+    while (TRUE) {
+        Entry = NULL;
+        NotEmpty = BufferList->Vtbl->RemoveHeadEx(BufferList, &Entry);
+        if (!NotEmpty) {
+            break;
+        }
+
+        Buffer = CONTAINING_RECORD(Entry,
+                                   PERFECT_HASH_IOCP_BUFFER,
+                                   ListEntry);
+
+        PerfectHashIocpFreeBuffer(Rtl, Buffer);
+    }
+
+    BufferList->Vtbl->Reset(BufferList);
+}
+
+static
+VOID
+PerfectHashIocpRundownOversizePools(
+    _In_ PALLOCATOR Allocator,
+    _Inout_ PLIST_ENTRY ListHead,
+    _Inout_opt_ PULONG PoolCount
+    )
+{
+    PLIST_ENTRY Entry;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+
+    if (!ARGUMENT_PRESENT(Allocator) || !ARGUMENT_PRESENT(ListHead)) {
+        return;
+    }
+
+    while (!IsListEmpty(ListHead)) {
+        Entry = RemoveHeadList(ListHead);
+        Pool = CONTAINING_RECORD(Entry,
+                                 PERFECT_HASH_IOCP_BUFFER_POOL,
+                                 ListEntry);
+        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
+    }
+
+    InitializeListHead(ListHead);
+    if (PoolCount) {
+        *PoolCount = 0;
+    }
+}
+
 
 //
 // Main context creation routine.
@@ -248,6 +352,18 @@ Return Value:
     if (FAILED(Result)) {
         goto Error;
     }
+
+    Result = Context->Vtbl->CreateInstance(Context,
+                                           NULL,
+                                           &IID_PERFECT_HASH_GUARDED_LIST,
+                                           &Context->FileWorkBufferList);
+
+    if (FAILED(Result)) {
+        goto Error;
+    }
+
+    InitializeListHead(&Context->FileWorkOversizePools);
+    Context->FileWorkOversizePoolCount = 0;
 
     //
     // Initialize aliases.
@@ -897,9 +1013,7 @@ Return Value:
     PALLOCATOR Allocator;
     BYTE Index;
     BYTE NumberOfEvents;
-    ULONG PoolIndex;
     PHANDLE Event;
-    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
 
     //
     // Validate arguments.
@@ -1065,27 +1179,26 @@ Return Value:
 
 #endif
 
-    if (Context->FileWorkBufferPools) {
-        for (PoolIndex = 0;
-             PoolIndex < Context->FileWorkBufferPoolCount;
-             PoolIndex++) {
+    if (Context->FileWorkBufferList && Rtl) {
+        PerfectHashIocpRundownBufferList(Rtl, Context->FileWorkBufferList);
+    }
 
-            Pool = &Context->FileWorkBufferPools[PoolIndex];
-            if (!Pool->BaseAddress) {
-                continue;
-            }
-
-            Result = PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
-            if (FAILED(Result)) {
-                PH_ERROR(PerfectHashIocpBufferPoolDestroy, Result);
-            }
+    if (Allocator) {
+        if (Context->FileWorkBufferPools) {
+            Allocator->Vtbl->FreePointer(
+                Allocator,
+                (PVOID *)&Context->FileWorkBufferPools
+            );
         }
 
-        Allocator->Vtbl->FreePointer(Allocator,
-                                     (PVOID *)&Context->FileWorkBufferPools);
-        Context->FileWorkBufferPoolCount = 0;
-        Context->FileWorkBufferPoolPageSize = 0;
+        PerfectHashIocpRundownOversizePools(
+            Allocator,
+            &Context->FileWorkOversizePools,
+            &Context->FileWorkOversizePoolCount
+        );
     }
+
+    Context->FileWorkBufferPoolCount = 0;
 
     if (Context->ObjectNames) {
         Allocator->Vtbl->FreePointer(Allocator,
@@ -1110,6 +1223,7 @@ Return Value:
 
     RELEASE(Context->MainWorkList);
     RELEASE(Context->FileWorkList);
+    RELEASE(Context->FileWorkBufferList);
     RELEASE(Context->FinishedWorkList);
     RELEASE(Context->BulkCreateCsvFile);
     RELEASE(Context->BaseOutputDirectory);
@@ -1149,11 +1263,8 @@ Return Value:
 
 --*/
 {
-    HRESULT Result;
     PRTL Rtl;
     PALLOCATOR Allocator;
-    ULONG PoolIndex;
-    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
 
     if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
@@ -1233,32 +1344,26 @@ Return Value:
     }
 #endif
 
-    if (Context->FileWorkBufferPools) {
-        for (PoolIndex = 0;
-             PoolIndex < Context->FileWorkBufferPoolCount;
-             PoolIndex++) {
+    if (Context->FileWorkBufferList && Rtl) {
+        PerfectHashIocpRundownBufferList(Rtl, Context->FileWorkBufferList);
+    }
 
-            Pool = &Context->FileWorkBufferPools[PoolIndex];
-            if (!Pool->BaseAddress) {
-                continue;
-            }
-
-            Result = PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
-            if (FAILED(Result)) {
-                PH_ERROR(PerfectHashIocpBufferPoolDestroy, Result);
-            }
-        }
-
-        if (Allocator) {
+    if (Allocator) {
+        if (Context->FileWorkBufferPools) {
             Allocator->Vtbl->FreePointer(
                 Allocator,
                 (PVOID *)&Context->FileWorkBufferPools
             );
         }
 
-        Context->FileWorkBufferPoolCount = 0;
-        Context->FileWorkBufferPoolPageSize = 0;
+        PerfectHashIocpRundownOversizePools(
+            Allocator,
+            &Context->FileWorkOversizePools,
+            &Context->FileWorkOversizePoolCount
+        );
     }
+
+    Context->FileWorkBufferPoolCount = 0;
 
     Context->KeysSubset = NULL;
     Context->UserSeeds = NULL;

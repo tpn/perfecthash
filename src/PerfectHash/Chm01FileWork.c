@@ -43,270 +43,183 @@ FILE_WORK_CALLBACK_IMPL *FileCallbacks[] = {
 };
 
 static
-ULONG
-Chm01GetFileWorkBufferBucketIndex(
-    _In_ PRTL Rtl,
-    _In_ ULONGLONG NumberOfKeys
-    )
-{
-    ULONGLONG Rounded;
-    ULONG BucketIndex;
-
-    if (!ARGUMENT_PRESENT(Rtl)) {
-        return 0;
-    }
-
-    if (NumberOfKeys == 0) {
-        return 0;
-    }
-
-    Rounded = Rtl->RoundUpPowerOfTwo64(NumberOfKeys);
-    if (Rounded == 0) {
-        return 0;
-    }
-
-    BucketIndex = (ULONG)Rtl->TrailingZeros64(Rounded);
-    if (BucketIndex > PERFECT_HASH_IOCP_BUFFER_MAX_BUCKET_INDEX) {
-        BucketIndex = PERFECT_HASH_IOCP_BUFFER_MAX_BUCKET_INDEX;
-    }
-
-    return BucketIndex;
-}
-
-static
-ULONG
-Chm01GetFileWorkBufferBucketIndexForFile(
+VOID
+Chm01GetFileWorkBufferPoolState(
     _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG FileIndex
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL **PoolsPointer,
+    _Out_ PULONG *PoolCountPointer,
+    _Outptr_ PGUARDED_LIST *BufferListPointer,
+    _Outptr_ PLIST_ENTRY *OversizeListPointer,
+    _Outptr_ PULONG *OversizeCountPointer,
+    _Outptr_ PSRWLOCK *PoolLockPointer,
+    _Out_ PUSHORT NumaNodePointer
     )
 {
-    FILE_ID FileId;
-    ULONGLONG Count;
-    PRTL Rtl;
-    PCEOF_INIT Eof;
-    PPERFECT_HASH_TABLE Table;
-    PPERFECT_HASH_KEYS Keys;
-
-    if (!ARGUMENT_PRESENT(Context)) {
-        return 0;
-    }
-
-    Rtl = Context->Rtl;
-    if (!Rtl) {
-        return 0;
-    }
-
-    FileId = (FILE_ID)(FileIndex + 1);
-    if (!IsValidFileId(FileId)) {
-        return 0;
-    }
-
-    Table = Context->Table;
-    Keys = Table ? Table->Keys : NULL;
-    if (!Table || !Keys) {
-        return 0;
-    }
-
-    Count = Keys->NumberOfKeys.QuadPart;
-    Eof = &EofInits[FileId];
-    if (Eof->Type == EofInitTypeNumberOfTableElementsMultiplier &&
-        Table->TableInfoOnDisk) {
-        Count = Table->TableInfoOnDisk->NumberOfTableElements.QuadPart;
-    }
-
-    return Chm01GetFileWorkBufferBucketIndex(Rtl, Count);
-}
-
-static
-HRESULT
-Chm01GetFileWorkBufferPool(
-    _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONG FileIndex,
-    _In_ ULONG BucketIndex,
-    _In_ ULONGLONG RequiredPayloadBytes,
-    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer
-    )
-{
-    HRESULT Result;
-    ULONG Pages;
-    ULONG BufferCount;
-    ULONG PoolIndex;
-    ULONG PoolCount;
-    ULONGLONG RequiredSize;
-    PALLOCATOR Allocator;
-    PRTL Rtl;
-    PPERFECT_HASH_IOCP_BUFFER_POOL Pools;
-    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
     PPERFECT_HASH_IOCP_NODE Node;
 
-    if (!ARGUMENT_PRESENT(Context)) {
-        return E_POINTER;
-    }
-
-    if (!ARGUMENT_PRESENT(PoolPointer)) {
-        return E_POINTER;
-    }
-
-    *PoolPointer = NULL;
-
-    if (FileIndex >= NUMBER_OF_FILES) {
-        return E_INVALIDARG;
-    }
-
-    Allocator = Context->Allocator;
-    Rtl = Context->Rtl;
-
-    if (!Allocator || !Rtl) {
-        return E_UNEXPECTED;
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(PoolsPointer) ||
+        !ARGUMENT_PRESENT(PoolCountPointer) ||
+        !ARGUMENT_PRESENT(BufferListPointer) ||
+        !ARGUMENT_PRESENT(OversizeListPointer) ||
+        !ARGUMENT_PRESENT(OversizeCountPointer) ||
+        !ARGUMENT_PRESENT(PoolLockPointer) ||
+        !ARGUMENT_PRESENT(NumaNodePointer)) {
+        return;
     }
 
     Node = Context->IocpNode;
     if (Node) {
-        if (!Node->FileWorkBufferPools) {
-            AcquireSRWLockExclusive(&Node->FileWorkBufferPoolLock);
-            if (!Node->FileWorkBufferPools) {
-                PoolCount = PERFECT_HASH_IOCP_BUFFER_BUCKET_COUNT *
-                            NUMBER_OF_FILES;
-                if (PoolCount < PERFECT_HASH_IOCP_BUFFER_BUCKET_COUNT ||
-                    PoolCount < NUMBER_OF_FILES) {
-                    ReleaseSRWLockExclusive(&Node->FileWorkBufferPoolLock);
-                    return E_INVALIDARG;
-                }
-
-                Pools = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
-                    Allocator,
-                    PoolCount,
-                    sizeof(*Pools)
-                );
-                if (!Pools) {
-                    ReleaseSRWLockExclusive(&Node->FileWorkBufferPoolLock);
-                    return E_OUTOFMEMORY;
-                }
-
-                Node->FileWorkBufferPools = Pools;
-                Node->FileWorkBufferPoolBucketCount =
-                    PERFECT_HASH_IOCP_BUFFER_BUCKET_COUNT;
-                Node->FileWorkBufferPoolFileCount = NUMBER_OF_FILES;
-                Node->FileWorkBufferPoolCount = PoolCount;
-                Node->FileWorkBufferPoolPageSize = PAGE_SIZE;
-            }
-            ReleaseSRWLockExclusive(&Node->FileWorkBufferPoolLock);
-        }
-
-        if (BucketIndex >= Node->FileWorkBufferPoolBucketCount) {
-            return E_INVALIDARG;
-        }
-
-        PoolIndex = (BucketIndex * Node->FileWorkBufferPoolFileCount) +
-                    FileIndex;
-        if (PoolIndex >= Node->FileWorkBufferPoolCount) {
-            return E_INVALIDARG;
-        }
-
-        Pool = &Node->FileWorkBufferPools[PoolIndex];
+        *PoolsPointer = &Node->FileWorkBufferPools;
+        *PoolCountPointer = &Node->FileWorkBufferPoolCount;
+        *BufferListPointer = Node->FileWorkBufferList;
+        *OversizeListPointer = &Node->FileWorkOversizePools;
+        *OversizeCountPointer = &Node->FileWorkOversizePoolCount;
+        *PoolLockPointer = &Node->FileWorkBufferPoolLock;
+        *NumaNodePointer = (USHORT)Node->NodeId;
     } else {
-        if (!Context->FileWorkBufferPools) {
-            AcquireSRWLockExclusive(&Context->Lock);
-            if (!Context->FileWorkBufferPools) {
-                Pools = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
-                    Allocator,
-                    NUMBER_OF_FILES,
-                    sizeof(*Pools)
-                );
-                if (!Pools) {
-                    ReleaseSRWLockExclusive(&Context->Lock);
-                    return E_OUTOFMEMORY;
-                }
+        *PoolsPointer = &Context->FileWorkBufferPools;
+        *PoolCountPointer = &Context->FileWorkBufferPoolCount;
+        *BufferListPointer = Context->FileWorkBufferList;
+        *OversizeListPointer = &Context->FileWorkOversizePools;
+        *OversizeCountPointer = &Context->FileWorkOversizePoolCount;
+        *PoolLockPointer = &Context->Lock;
+        *NumaNodePointer = 0;
+    }
+}
 
-                Context->FileWorkBufferPools = Pools;
-                Context->FileWorkBufferPoolCount = NUMBER_OF_FILES;
-                Context->FileWorkBufferPoolPageSize = PAGE_SIZE;
-            }
-            ReleaseSRWLockExclusive(&Context->Lock);
-        }
+static
+HRESULT
+Chm01EnsureFileWorkBufferPools(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolsPointer,
+    _Out_ PULONG PoolCountPointer,
+    _Outptr_ PGUARDED_LIST *BufferListPointer,
+    _Out_ PUSHORT NumaNodePointer
+    )
+{
+    HRESULT Result;
+    ULONG Flags;
+    ULONG PoolIndex;
+    ULONG PoolCount;
+    ULONGLONG PayloadSize;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pools;
+    PPERFECT_HASH_IOCP_BUFFER_POOL *PoolArrayPointer;
+    PULONG PoolCountField;
+    PGUARDED_LIST BufferList;
+    PLIST_ENTRY OversizeList;
+    PULONG OversizeCount;
+    PSRWLOCK PoolLock;
+    USHORT NumaNode;
 
-        Pool = &Context->FileWorkBufferPools[FileIndex];
+    if (!ARGUMENT_PRESENT(Context) ||
+        !ARGUMENT_PRESENT(PoolsPointer) ||
+        !ARGUMENT_PRESENT(PoolCountPointer) ||
+        !ARGUMENT_PRESENT(BufferListPointer) ||
+        !ARGUMENT_PRESENT(NumaNodePointer)) {
+        return E_POINTER;
     }
 
-    if (!Pool->BaseAddress) {
-        if (Node) {
-            AcquireSRWLockExclusive(&Node->FileWorkBufferPoolLock);
-        } else {
-            AcquireSRWLockExclusive(&Context->Lock);
-        }
-        if (!Pool->BaseAddress) {
-            if (Node && Node->IocpConcurrency != 0) {
-                BufferCount = Node->IocpConcurrency;
-            } else {
-                BufferCount = Context->MaximumConcurrency;
-            }
-            if (BufferCount == 0) {
-                BufferCount = 1;
-            }
+    Allocator = Context->Allocator;
+    Rtl = Context->Rtl;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
 
-            RequiredSize = RequiredPayloadBytes +
-                           PERFECT_HASH_IOCP_BUFFER_HEADER_SIZE;
-            Pages = (ULONG)BYTES_TO_PAGES(RequiredSize);
-            if (Pages == 0) {
-                Pages = 1;
-            }
+    Chm01GetFileWorkBufferPoolState(Context,
+                                    &PoolArrayPointer,
+                                    &PoolCountField,
+                                    &BufferList,
+                                    &OversizeList,
+                                    &OversizeCount,
+                                    &PoolLock,
+                                    &NumaNode);
 
-            Result = PerfectHashIocpBufferPoolCreate(
-                Rtl,
-                &Context->ProcessHandle,
-                PAGE_SIZE,
-                BufferCount,
-                Pages,
-                NULL,
-                NULL,
-                Pool
+    if (!PoolArrayPointer || !PoolCountField || !BufferList) {
+        return E_UNEXPECTED;
+    }
+
+    Pools = *PoolArrayPointer;
+    if (!Pools) {
+        AcquireSRWLockExclusive(PoolLock);
+        Pools = *PoolArrayPointer;
+        if (!Pools) {
+            PoolCount = PERFECT_HASH_IOCP_BUFFER_CLASS_COUNT;
+            Pools = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
+                Allocator,
+                PoolCount,
+                sizeof(*Pools)
             );
-
-            if (FAILED(Result)) {
-                if (Node) {
-                    ReleaseSRWLockExclusive(&Node->FileWorkBufferPoolLock);
-                } else {
-                    ReleaseSRWLockExclusive(&Context->Lock);
-                }
-                return Result;
+            if (!Pools) {
+                ReleaseSRWLockExclusive(PoolLock);
+                return E_OUTOFMEMORY;
             }
+
+            Flags = 0;
+            for (PoolIndex = 0; PoolIndex < PoolCount; PoolIndex++) {
+                PayloadSize =
+                    PerfectHashIocpBufferGetPayloadSizeFromClassIndex(
+                        (LONG)PoolIndex
+                    );
+
+                Result = PerfectHashIocpBufferPoolInitialize(
+                    Rtl,
+                    &Pools[PoolIndex],
+                    PayloadSize,
+                    NumaNode,
+                    Flags,
+                    Context->ProcessHandle,
+                    BufferList
+                );
+
+                if (FAILED(Result)) {
+                    ReleaseSRWLockExclusive(PoolLock);
+                    Allocator->Vtbl->FreePointer(
+                        Allocator,
+                        (PVOID *)&Pools
+                    );
+                    return Result;
+                }
+            }
+
+            *PoolArrayPointer = Pools;
+            *PoolCountField = PoolCount;
         }
-        if (Node) {
-            ReleaseSRWLockExclusive(&Node->FileWorkBufferPoolLock);
-        } else {
-            ReleaseSRWLockExclusive(&Context->Lock);
-        }
+        ReleaseSRWLockExclusive(PoolLock);
     }
 
-    *PoolPointer = Pool;
+    *PoolsPointer = Pools;
+    *PoolCountPointer = *PoolCountField;
+    *BufferListPointer = BufferList;
+    *NumaNodePointer = NumaNode;
     return S_OK;
 }
 
 static
 HRESULT
-Chm01CreateOneOffFileWorkBuffer(
+Chm01GetOversizeFileWorkBufferPool(
     _In_ PPERFECT_HASH_CONTEXT Context,
-    _In_ ULONGLONG RequiredPayloadBytes,
-    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer,
-    _Outptr_ PPERFECT_HASH_IOCP_BUFFER *BufferPointer
+    _In_ ULONGLONG PayloadSize,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer
     )
 {
     HRESULT Result;
-    ULONG Pages;
-    ULONGLONG RequiredSize;
+    ULONG Flags;
     PALLOCATOR Allocator;
     PRTL Rtl;
-    PPERFECT_HASH_IOCP_BUFFER Buffer;
     PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+    PPERFECT_HASH_IOCP_BUFFER_POOL *PoolArrayPointer;
+    PULONG PoolCountField;
+    PGUARDED_LIST BufferList;
+    PLIST_ENTRY OversizeList;
+    PLIST_ENTRY Entry;
+    PULONG OversizeCount;
+    PSRWLOCK PoolLock;
+    USHORT NumaNode;
 
-    if (!ARGUMENT_PRESENT(PoolPointer) || !ARGUMENT_PRESENT(BufferPointer)) {
-        return E_POINTER;
-    }
-
-    *PoolPointer = NULL;
-    *BufferPointer = NULL;
-
-    if (!ARGUMENT_PRESENT(Context)) {
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(PoolPointer)) {
         return E_POINTER;
     }
 
@@ -316,11 +229,33 @@ Chm01CreateOneOffFileWorkBuffer(
         return E_UNEXPECTED;
     }
 
-    RequiredSize = RequiredPayloadBytes +
-                   PERFECT_HASH_IOCP_BUFFER_HEADER_SIZE;
-    Pages = (ULONG)BYTES_TO_PAGES(RequiredSize);
-    if (Pages == 0) {
-        Pages = 1;
+    Chm01GetFileWorkBufferPoolState(Context,
+                                    &PoolArrayPointer,
+                                    &PoolCountField,
+                                    &BufferList,
+                                    &OversizeList,
+                                    &OversizeCount,
+                                    &PoolLock,
+                                    &NumaNode);
+
+    if (!OversizeList || !OversizeCount || !PoolLock) {
+        return E_UNEXPECTED;
+    }
+
+    AcquireSRWLockExclusive(PoolLock);
+
+    Entry = OversizeList->Flink;
+    while (Entry != OversizeList) {
+        Pool = CONTAINING_RECORD(Entry,
+                                 PERFECT_HASH_IOCP_BUFFER_POOL,
+                                 ListEntry);
+        if (Pool->PayloadSize == PayloadSize) {
+            ReleaseSRWLockExclusive(PoolLock);
+            *PoolPointer = Pool;
+            return S_OK;
+        }
+
+        Entry = Entry->Flink;
     }
 
     Pool = (PPERFECT_HASH_IOCP_BUFFER_POOL)Allocator->Vtbl->Calloc(
@@ -329,33 +264,87 @@ Chm01CreateOneOffFileWorkBuffer(
         sizeof(*Pool)
     );
     if (!Pool) {
+        ReleaseSRWLockExclusive(PoolLock);
         return E_OUTOFMEMORY;
     }
 
-    Result = PerfectHashIocpBufferPoolCreate(Rtl,
-                                             &Context->ProcessHandle,
-                                             PAGE_SIZE,
-                                             1,
-                                             Pages,
-                                             NULL,
-                                             NULL,
-                                             Pool);
+    Flags = PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_OVERSIZE;
+    Result = PerfectHashIocpBufferPoolInitialize(Rtl,
+                                                 Pool,
+                                                 PayloadSize,
+                                                 NumaNode,
+                                                 Flags,
+                                                 Context->ProcessHandle,
+                                                 BufferList);
+
     if (FAILED(Result)) {
         Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
+        ReleaseSRWLockExclusive(PoolLock);
         return Result;
     }
 
-    Pool->Flags |= PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_ONE_OFF;
-    Buffer = PerfectHashIocpBufferPoolPop(Pool);
-    if (!Buffer) {
-        PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
-        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
-        return E_OUTOFMEMORY;
-    }
+    InsertTailList(OversizeList, &Pool->ListEntry);
+    (*OversizeCount)++;
+    ReleaseSRWLockExclusive(PoolLock);
 
     *PoolPointer = Pool;
-    *BufferPointer = Buffer;
     return S_OK;
+}
+
+static
+HRESULT
+Chm01GetFileWorkBufferPool(
+    _In_ PPERFECT_HASH_CONTEXT Context,
+    _In_ ULONGLONG RequiredPayloadBytes,
+    _Outptr_ PPERFECT_HASH_IOCP_BUFFER_POOL *PoolPointer
+    )
+{
+    HRESULT Result;
+    LONG ClassIndex;
+    ULONG PoolCount;
+    ULONGLONG PayloadSize;
+    PRTL Rtl;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pools;
+    PGUARDED_LIST BufferList;
+    USHORT NumaNode;
+
+    if (!ARGUMENT_PRESENT(Context) || !ARGUMENT_PRESENT(PoolPointer)) {
+        return E_POINTER;
+    }
+
+    Rtl = Context->Rtl;
+    if (!Rtl) {
+        return E_UNEXPECTED;
+    }
+
+    ClassIndex = PerfectHashIocpBufferGetClassIndex(Rtl,
+                                                    RequiredPayloadBytes);
+    if (ClassIndex >= 0) {
+        Result = Chm01EnsureFileWorkBufferPools(Context,
+                                                &Pools,
+                                                &PoolCount,
+                                                &BufferList,
+                                                &NumaNode);
+        if (FAILED(Result)) {
+            return Result;
+        }
+
+        if ((ULONG)ClassIndex >= PoolCount) {
+            return E_INVALIDARG;
+        }
+
+        *PoolPointer = &Pools[ClassIndex];
+        return S_OK;
+    }
+
+    PayloadSize = Rtl->RoundUpPowerOfTwo64(RequiredPayloadBytes);
+    if (PayloadSize == 0) {
+        return E_INVALIDARG;
+    }
+
+    return Chm01GetOversizeFileWorkBufferPool(Context,
+                                              PayloadSize,
+                                              PoolPointer);
 }
 
 static
@@ -369,75 +358,48 @@ Chm01AcquireFileWorkBuffer(
     )
 {
     HRESULT Result;
-    ULONG Retry;
-    ULONG BucketIndex;
+    PALLOCATOR Allocator;
+    PRTL Rtl;
     PPERFECT_HASH_IOCP_BUFFER Buffer;
     PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
 
-    if (!ARGUMENT_PRESENT(BufferPointer)) {
+    UNREFERENCED_PARAMETER(FileIndex);
+
+    if (!ARGUMENT_PRESENT(BufferPointer) || !ARGUMENT_PRESENT(PoolPointer)) {
         return E_POINTER;
     }
 
     *BufferPointer = NULL;
+    *PoolPointer = NULL;
 
-    if (!ARGUMENT_PRESENT(Context) || !Context->Rtl) {
+    if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
     }
 
-    BucketIndex = Chm01GetFileWorkBufferBucketIndexForFile(Context,
-                                                           FileIndex);
+    Allocator = Context->Allocator;
+    Rtl = Context->Rtl;
+    if (!Allocator || !Rtl) {
+        return E_UNEXPECTED;
+    }
 
     Result = Chm01GetFileWorkBufferPool(Context,
-                                        FileIndex,
-                                        BucketIndex,
                                         RequiredPayloadBytes,
                                         &Pool);
     if (FAILED(Result)) {
         return Result;
     }
 
-    if (Pool->PayloadSizeInBytes < RequiredPayloadBytes) {
-        Result = Chm01CreateOneOffFileWorkBuffer(Context,
-                                                 RequiredPayloadBytes,
-                                                 &Pool,
-                                                 &Buffer);
-        if (FAILED(Result)) {
-            return Result;
-        }
-        goto AssignBuffer;
+    Result = PerfectHashIocpBufferPoolAcquire(Rtl,
+                                              Allocator,
+                                              Pool,
+                                              &Buffer);
+    if (FAILED(Result)) {
+        return Result;
     }
 
-    Buffer = NULL;
-    for (Retry = 0; Retry < 1024; Retry++) {
-        Buffer = PerfectHashIocpBufferPoolPop(Pool);
-        if (Buffer) {
-            break;
-        }
-        if ((Retry & 0x3F) == 0) {
-            Sleep(0);
-        } else {
-            YieldProcessor();
-        }
-    }
-
-    if (!Buffer) {
-        Result = Chm01CreateOneOffFileWorkBuffer(Context,
-                                                 RequiredPayloadBytes,
-                                                 &Pool,
-                                                 &Buffer);
-        if (FAILED(Result)) {
-            return Result;
-        }
-        goto AssignBuffer;
-    }
-
-AssignBuffer:
-    Buffer->BucketIndex = BucketIndex;
-    Buffer->FileId = FileIndex;
-    if (Context && Context->IocpNode) {
-        Buffer->NumaNode = (USHORT)Context->IocpNode->NodeId;
-    } else {
-        Buffer->NumaNode = 0;
+    if (Buffer->PayloadSize < RequiredPayloadBytes) {
+        PerfectHashIocpBufferPoolRelease(Pool, Buffer);
+        return E_FAIL;
     }
 
     *PoolPointer = Pool;
@@ -468,30 +430,13 @@ Chm01ReleaseIocpBuffer(
     _In_ PPERFECT_HASH_IOCP_BUFFER Buffer
     )
 {
-    PALLOCATOR Allocator;
-    PRTL Rtl;
+    UNREFERENCED_PARAMETER(Context);
 
     if (!ARGUMENT_PRESENT(Pool) || !ARGUMENT_PRESENT(Buffer)) {
         return;
     }
 
-    if (Pool->Flags & PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_ONE_OFF) {
-        if (!ARGUMENT_PRESENT(Context)) {
-            return;
-        }
-
-        Allocator = Context->Allocator;
-        Rtl = Context->Rtl;
-        if (!Allocator || !Rtl) {
-            return;
-        }
-
-        PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
-        Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Pool);
-        return;
-    }
-
-    PerfectHashIocpBufferPoolPush(Pool, Buffer);
+    PerfectHashIocpBufferPoolRelease(Pool, Buffer);
 }
 
 static
@@ -774,7 +719,7 @@ Chm01WriteFileFromBuffer(
 
     BytesRemaining.QuadPart = File->NumberOfBytesWritten.QuadPart;
     if (BytesRemaining.QuadPart <= 0) {
-        PerfectHashIocpBufferPoolPush(Pool, Buffer);
+        PerfectHashIocpBufferPoolRelease(Pool, Buffer);
         return S_OK;
     }
 

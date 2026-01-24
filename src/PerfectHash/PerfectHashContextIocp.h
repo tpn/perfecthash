@@ -111,10 +111,10 @@ typedef struct _PERFECT_HASH_IOCP_NODE {
 
     SRWLOCK FileWorkBufferPoolLock;
     PPERFECT_HASH_IOCP_BUFFER_POOL FileWorkBufferPools;
-    ULONG FileWorkBufferPoolBucketCount;
-    ULONG FileWorkBufferPoolFileCount;
     ULONG FileWorkBufferPoolCount;
-    ULONG FileWorkBufferPoolPageSize;
+    ULONG FileWorkOversizePoolCount;
+    LIST_ENTRY FileWorkOversizePools;
+    PGUARDED_LIST FileWorkBufferList;
 } PERFECT_HASH_IOCP_NODE;
 typedef PERFECT_HASH_IOCP_NODE *PPERFECT_HASH_IOCP_NODE;
 
