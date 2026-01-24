@@ -16,6 +16,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashIocpBufferPool.h"
 
 //
 // Forward decls for internal helpers.
@@ -164,10 +165,15 @@ Return Value:
 --*/
 {
     ULONG Index;
+    PRTL Rtl;
+    PALLOCATOR Allocator;
 
     if (!ARGUMENT_PRESENT(ContextIocp)) {
         return;
     }
+
+    Rtl = ContextIocp->Rtl;
+    Allocator = ContextIocp->Allocator;
 
     if (ContextIocp->State.Running) {
         PerfectHashContextIocpStop(ContextIocp);
@@ -178,6 +184,42 @@ Return Value:
             PPERFECT_HASH_IOCP_NODE Node = &ContextIocp->Nodes[Index];
             ULONG ThreadIndex;
 
+            if (Node->FileWorkBufferPools) {
+                ULONG PoolIndex;
+
+                for (PoolIndex = 0;
+                     PoolIndex < Node->FileWorkBufferPoolCount;
+                     PoolIndex++) {
+                    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
+
+                    Pool = &Node->FileWorkBufferPools[PoolIndex];
+                    if (!Pool->BaseAddress) {
+                        continue;
+                    }
+
+                    if (Rtl) {
+                        HRESULT Result;
+
+                        Result = PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
+                        if (FAILED(Result)) {
+                            PH_ERROR(PerfectHashIocpBufferPoolDestroy, Result);
+                        }
+                    }
+                }
+
+                if (Allocator) {
+                    Allocator->Vtbl->FreePointer(
+                        Allocator,
+                        (PVOID *)&Node->FileWorkBufferPools
+                    );
+                }
+
+                Node->FileWorkBufferPoolBucketCount = 0;
+                Node->FileWorkBufferPoolFileCount = 0;
+                Node->FileWorkBufferPoolCount = 0;
+                Node->FileWorkBufferPoolPageSize = 0;
+            }
+
             if (Node->WorkerThreads) {
                 for (ThreadIndex = 0;
                      ThreadIndex < Node->WorkerThreadCount;
@@ -186,9 +228,9 @@ Return Value:
                         CloseHandle(Node->WorkerThreads[ThreadIndex]);
                     }
                 }
-                if (ContextIocp->Allocator) {
-                    ContextIocp->Allocator->Vtbl->FreePointer(
-                        ContextIocp->Allocator,
+                if (Allocator) {
+                    Allocator->Vtbl->FreePointer(
+                        Allocator,
                         (PVOID *)&Node->WorkerThreads
                     );
                 }
@@ -198,9 +240,9 @@ Return Value:
                 CloseHandle(Node->IoCompletionPort);
             }
         }
-        if (ContextIocp->Allocator) {
-            ContextIocp->Allocator->Vtbl->FreePointer(
-                ContextIocp->Allocator,
+        if (Allocator) {
+            Allocator->Vtbl->FreePointer(
+                Allocator,
                 (PVOID *)&ContextIocp->Nodes
             );
         }
@@ -619,6 +661,7 @@ PerfectHashContextIocpEnumerateNumaNodes(
         Node->NodeId = NodeId;
         Node->ProcessorCount = ProcessorCount;
         Node->GroupAffinity = Affinity;
+        InitializeSRWLock(&Node->FileWorkBufferPoolLock);
     }
 
     //
@@ -1092,6 +1135,10 @@ Return Value:
                                                NULL,
                                                &IID_PERFECT_HASH_CONTEXT,
                                                ContextPointer);
+
+    if (SUCCEEDED(Result) && *ContextPointer) {
+        SetContextUseOverlappedIo(*ContextPointer);
+    }
 
     if (LocalTlsActive) {
         PerfectHashTlsClearContextIfActive(&LocalTlsContext);

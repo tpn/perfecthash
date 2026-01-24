@@ -1738,10 +1738,18 @@ typedef union _PERFECT_HASH_FILE_CREATE_FLAGS {
         ULONG EndOfFileIsExtensionSizeIfFileExists:1;
 
         //
+        // When set, skip creating a memory-mapped view for this file.  The
+        // caller is responsible for providing a suitable buffer and handling
+        // any I/O.
+        //
+
+        ULONG SkipMapping:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
 
     LONG AsLong;

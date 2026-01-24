@@ -95,7 +95,11 @@ PerfectHashAsyncIocpCompletionCallback(
     Result = Work->Step(Work);
 
     if (Result == S_FALSE) {
-        return PerfectHashAsyncRequeueWork(Work);
+        Result = PerfectHashAsyncRequeueWork(Work);
+        if (FAILED(Result)) {
+            return PerfectHashAsyncCompleteWork(Work, Result);
+        }
+        return S_OK;
     }
 
     return PerfectHashAsyncCompleteWork(Work, Result);

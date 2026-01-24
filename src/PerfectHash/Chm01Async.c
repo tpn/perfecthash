@@ -544,6 +544,40 @@ Chm01AsyncDispatchGraphWork(
 
         Result = PerfectHashAsyncSubmit(&Job->Async, &GraphWork->Work);
         if (FAILED(Result)) {
+            if (!GraphWork->Work.Flags.InlineDispatch) {
+                if (InterlockedDecrement(&Context->RemainingSolverLoops) == 0) {
+                    if (Context->FinishedCount == 0) {
+                        if (!SetEvent(Context->FailedEvent)) {
+                            SYS_ERROR(SetEvent);
+                        }
+                    } else {
+                        if (!SetEvent(Context->SucceededEvent)) {
+                            SYS_ERROR(SetEvent);
+                        }
+                    }
+                    SetStopSolving(Context);
+                }
+
+                if (InterlockedDecrement(&Job->ActiveGraphs) == 0) {
+                    if (Job->GraphsCompleteEvent) {
+                        if (!SetEvent(Job->GraphsCompleteEvent)) {
+                            SYS_ERROR(SetEvent);
+                        }
+                    }
+                }
+
+                if (Job->DispatchedGraphs > 0) {
+                    Job->DispatchedGraphs--;
+                }
+
+                if (Job->Allocator) {
+                    Job->Allocator->Vtbl->FreePointer(
+                        Job->Allocator,
+                        (PVOID *)&GraphWork
+                    );
+                }
+            }
+
             return Result;
         }
     }
@@ -1796,7 +1830,8 @@ Chm01AsyncPumpIoCompletionPort(
     const ULONG AllowedFlags = (
         PH_IOCP_WORK_FLAG_ASYNC |
         PH_IOCP_WORK_FLAG_FILE_WORK |
-        PH_IOCP_WORK_FLAG_PIPE
+        PH_IOCP_WORK_FLAG_PIPE |
+        PH_IOCP_WORK_FLAG_FILE_IO
     );
 
     IoCompletionPort = Job->Async.IoCompletionPort;

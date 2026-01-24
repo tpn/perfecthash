@@ -629,6 +629,7 @@ Return Value:
     }
 
     File->State.IsReadOnly = FALSE;
+    File->FileCreateFlags.AsULong = FileCreateFlags.AsULong;
 
     //
     // Add a reference to the source path.
@@ -772,11 +773,12 @@ Return Value:
     // Map the file into memory.
     //
 
-    Result = File->Vtbl->Map(File);
-
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashFileMap, Result);
-        goto Error;
+    if (!FileCreateFlags.SkipMapping) {
+        Result = File->Vtbl->Map(File);
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashFileMap, Result);
+            goto Error;
+        }
     }
 
     //
@@ -1331,6 +1333,11 @@ Return Value:
         return PH_E_FILE_NOT_OPEN;
     }
 
+    if (File->FileCreateFlags.SkipMapping) {
+        SetFileUnmapped(File);
+        return S_OK;
+    }
+
     if (IsFileUnmapped(File)) {
         return PH_E_FILE_ALREADY_UNMAPPED;
     }
@@ -1803,6 +1810,10 @@ Return Value:
     //
 
     File->NumberOfBytesWritten.QuadPart = 0;
+
+    if (File->FileCreateFlags.SkipMapping) {
+        goto End;
+    }
 
     Result = File->Vtbl->Map(File);
     if (FAILED(Result)) {

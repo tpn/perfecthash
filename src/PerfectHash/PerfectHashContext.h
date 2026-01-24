@@ -21,6 +21,11 @@ Abstract:
 #include "bsthreadpool.h"
 #endif
 
+typedef struct _PERFECT_HASH_IOCP_BUFFER_POOL PERFECT_HASH_IOCP_BUFFER_POOL;
+typedef PERFECT_HASH_IOCP_BUFFER_POOL *PPERFECT_HASH_IOCP_BUFFER_POOL;
+struct _PERFECT_HASH_IOCP_NODE;
+typedef struct _PERFECT_HASH_IOCP_NODE *PPERFECT_HASH_IOCP_NODE;
+
 //
 // Algorithms are required to register a callback routine with the perfect hash
 // table context that matches the following signature.  This routine will be
@@ -276,10 +281,17 @@ typedef union _PERFECT_HASH_CONTEXT_FLAGS {
         ULONG SkipThreadpoolInitialization:1;
 
         //
+        // When set, indicates file I/O should use overlapped buffers instead
+        // of memory-mapped views. Intended for IOCP-native contexts.
+        //
+
+        ULONG UseOverlappedIo:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -289,6 +301,15 @@ typedef PERFECT_HASH_CONTEXT_FLAGS *PPERFECT_HASH_CONTEXT_FLAGS;
 
 #define SkipThreadpoolInitialization(Context) \
     ((Context)->Flags.SkipThreadpoolInitialization != FALSE)
+
+#define UseOverlappedIo(Context) \
+    ((Context)->Flags.UseOverlappedIo != FALSE)
+
+#define SetContextUseOverlappedIo(Context) \
+    ((Context)->Flags.UseOverlappedIo = TRUE)
+
+#define ClearContextUseOverlappedIo(Context) \
+    ((Context)->Flags.UseOverlappedIo = FALSE)
 
 typedef struct _BEST_GRAPH_INFO {
 
@@ -1117,7 +1138,13 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_CONTEXT {
     HANDLE FileWorkIoCompletionPort;
     HANDLE FileWorkOutstandingEvent;
     volatile LONG FileWorkOutstanding;
-    ULONG Padding7;
+    ULONG FileWorkOutstandingPadding;
+    PPERFECT_HASH_IOCP_NODE IocpNode;
+    ULONG IocpNodeIndex;
+    ULONG IocpNodePadding;
+    PPERFECT_HASH_IOCP_BUFFER_POOL FileWorkBufferPools;
+    ULONG FileWorkBufferPoolCount;
+    ULONG FileWorkBufferPoolPageSize;
 
     volatile LONG GraphRegisterSolvedTsxSuccess;
     ULONG Padding4;

@@ -21,6 +21,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+#include "PerfectHashIocpBufferPool.h"
 #include "bsthreadpool.h"
 
 //
@@ -154,12 +155,13 @@ Return Value:
 
 --*/
 {
+    HRESULT Result = S_OK;
     PRTL Rtl;
+    PALLOCATOR Allocator;
     PACL Acl = NULL;
     BYTE Index;
     BYTE NumberOfEvents;
     BOOL Success;
-    HRESULT Result = S_OK;
     ULONG LastError;
     PHANDLE Event;
     PCHAR Buffer;
@@ -172,7 +174,6 @@ Return Value:
     PSTRING ComputerName;
     DWORD ComputerNameLength;
     PTP_POOL Threadpool;
-    PALLOCATOR Allocator;
     ULARGE_INTEGER AllocSize;
     ULONG ThreadpoolConcurrency;
     ULARGE_INTEGER ObjectNameArraySize;
@@ -891,12 +892,14 @@ Return Value:
 
 --*/
 {
+    HRESULT Result;
     PRTL Rtl;
+    PALLOCATOR Allocator;
     BYTE Index;
     BYTE NumberOfEvents;
-    PALLOCATOR Allocator;
+    ULONG PoolIndex;
     PHANDLE Event;
-    HRESULT Result;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
 
     //
     // Validate arguments.
@@ -907,6 +910,7 @@ Return Value:
     }
 
     Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
     Allocator = Context->Allocator;
 
     if (!Rtl || !Allocator) {
@@ -1061,6 +1065,28 @@ Return Value:
 
 #endif
 
+    if (Context->FileWorkBufferPools) {
+        for (PoolIndex = 0;
+             PoolIndex < Context->FileWorkBufferPoolCount;
+             PoolIndex++) {
+
+            Pool = &Context->FileWorkBufferPools[PoolIndex];
+            if (!Pool->BaseAddress) {
+                continue;
+            }
+
+            Result = PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashIocpBufferPoolDestroy, Result);
+            }
+        }
+
+        Allocator->Vtbl->FreePointer(Allocator,
+                                     (PVOID *)&Context->FileWorkBufferPools);
+        Context->FileWorkBufferPoolCount = 0;
+        Context->FileWorkBufferPoolPageSize = 0;
+    }
+
     if (Context->ObjectNames) {
         Allocator->Vtbl->FreePointer(Allocator,
                                      &Context->ObjectNames);
@@ -1123,13 +1149,18 @@ Return Value:
 
 --*/
 {
+    HRESULT Result;
     PRTL Rtl;
+    PALLOCATOR Allocator;
+    ULONG PoolIndex;
+    PPERFECT_HASH_IOCP_BUFFER_POOL Pool;
 
     if (!ARGUMENT_PRESENT(Context)) {
         return E_POINTER;
     }
 
     Rtl = Context->Rtl;
+    Allocator = Context->Allocator;
 
     Context->AlgorithmId = PerfectHashNullAlgorithmId;
     Context->HashFunctionId = PerfectHashNullHashFunctionId;
@@ -1201,6 +1232,33 @@ Return Value:
         SetEvent(Context->FileWorkOutstandingEvent);
     }
 #endif
+
+    if (Context->FileWorkBufferPools) {
+        for (PoolIndex = 0;
+             PoolIndex < Context->FileWorkBufferPoolCount;
+             PoolIndex++) {
+
+            Pool = &Context->FileWorkBufferPools[PoolIndex];
+            if (!Pool->BaseAddress) {
+                continue;
+            }
+
+            Result = PerfectHashIocpBufferPoolDestroy(Rtl, Pool);
+            if (FAILED(Result)) {
+                PH_ERROR(PerfectHashIocpBufferPoolDestroy, Result);
+            }
+        }
+
+        if (Allocator) {
+            Allocator->Vtbl->FreePointer(
+                Allocator,
+                (PVOID *)&Context->FileWorkBufferPools
+            );
+        }
+
+        Context->FileWorkBufferPoolCount = 0;
+        Context->FileWorkBufferPoolPageSize = 0;
+    }
 
     Context->KeysSubset = NULL;
     Context->UserSeeds = NULL;

@@ -2019,6 +2019,8 @@ PerfectHashServerBulkCreateWorkItemCallback(
         }
 
         if (WorkItem->Node && WorkItem->Node->IoCompletionPort) {
+            Context->IocpNode = WorkItem->Node;
+            Context->IocpNodeIndex = WorkItem->NodeIndex;
             Context->FileWorkIoCompletionPort = WorkItem->Node->IoCompletionPort;
         }
 

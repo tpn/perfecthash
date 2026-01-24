@@ -150,6 +150,7 @@
     <ClInclude Include="PerfectHashAllocator.h" />
     <ClInclude Include="PerfectHashContext.h" />
     <ClInclude Include="PerfectHashContextIocp.h" />
+    <ClInclude Include="PerfectHashIocpBufferPool.h" />
     <ClInclude Include="PerfectHashAsync.h" />
     <ClInclude Include="PerfectHashClient.h" />
     <ClInclude Include="PerfectHashDirectory.h" />
@@ -255,6 +256,7 @@
     <ClCompile Include="PerfectHashContext.c" />
     <ClCompile Include="PerfectHashContextIocp.c" />
     <ClCompile Include="PerfectHashContextIocpArgs.c" />
+    <ClCompile Include="PerfectHashIocpBufferPool.c" />
     <ClCompile Include="PerfectHashAsync.c" />
     <ClCompile Include="PerfectHashClient.c" />
     <ClCompile Include="PerfectHashFile.c" />

@@ -82,7 +82,14 @@ SaveTableInfoStreamChm01(
     // to save the timings for verification to the header.
     //
 
-    WaitResult = WaitForSingleObject(Context->VerifiedTableEvent, INFINITE);
+    WaitResult = WaitForSingleObject(
+        Context->VerifiedTableEvent,
+        UseOverlappedIo(Context) ? 0 : INFINITE
+    );
+
+    if (WaitResult == WAIT_TIMEOUT && UseOverlappedIo(Context)) {
+        return S_FALSE;
+    }
     if (WaitResult != WAIT_OBJECT_0) {
         SYS_ERROR(WaitForSingleObject);
         Result = PH_E_SYSTEM_CALL_FAILED;

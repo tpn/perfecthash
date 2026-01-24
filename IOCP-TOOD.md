@@ -1,5 +1,36 @@
 # IOCP TODO
 
+- Overlapped I/O plan (IOCP only; OG remains memory-mapped):
+  - Done: added `UseOverlappedIo` flag to `PERFECT_HASH_CONTEXT` (IOCP contexts set it).
+  - Done: added `PerfectHashFileCreateFlags.SkipMapping` so output files can be created with `FILE_FLAG_OVERLAPPED` and no mapping.
+  - Implement a per-NUMA buffer pool:
+    - Buckets keyed by `AlignUpPow2(NumberOfKeys)` (32 buckets max), then indexed by file id.
+    - Each bucket/file id has an `SLIST_HEADER` of buffers.
+    - New buffer header struct: `SLIST_ENTRY`, `ULONG Size`, `ULONG Bucket`, `ULONG FileId`, `USHORT NumaNode`, `USHORT Flags`, `PVOID Base`, `ULONG BytesCapacity`, `ULONG BytesWritten`.
+    - Base address for file work writes must point *after* the header. Account for header overhead in sizing; rely on existing EOF multipliers + trap-on-overrun. If traps occur, bump multipliers.
+    - Allocate buffers from NUMA node (or `RtlCreateMultipleBuffers()` if it supports NUMA), with guard pages enabled.
+    - Cap per-bucket buffers to `IocpConcurrency` (or `min(IocpConcurrency, FilesInBucket)`).
+    - Done (initial): per-file buffer pool backed by `RtlCreateMultipleBuffers()` + guard pages.
+    - Done (initial): per-NUMA bucketed pool indexing by bucket+file id (on-demand allocation). Still need directory-scan sizing and pre-allocation.
+  - Pre-size and allocate pools per bulk request:
+    - During directory scan, capture `NumberOfKeys` per file; compute bucket index and per-file output sizes via existing file work table logic.
+    - Compute total bytes for all buffers (sum of bucket capacity * per-buffer size) and allocate one large NUMA block; carve into buffer headers + payloads.
+  - Output file pipeline (IOCP):
+    - Pop a buffer for each file work save stage.
+    - Set `File->BaseAddress` to buffer base (after header) to reuse existing `OUTPUT_*` macros.
+    - Track `File->NumberOfBytesWritten` from `Output` - `BaseAddress`.
+    - Done: issue `WriteFile` with IOCP work item and handle completion in IOCP callback (no `GetOverlappedResult` waits).
+    - Done: `UnmapFileChm01()` no-ops in overlapped mode; `CloseFileChm01()` uses `File->NumberOfBytesWritten` (no mapping).
+  - Input file pipeline (IOCP):
+    - Replace memory-mapped keys file reads with overlapped `ReadFile` into a keys buffer (or reuse pool per key-size bucket).
+    - Parse keys from buffer; keep mapped path for OG.
+- Add lightweight stats (debug-only): pool exhaustion count, max buffers in use, per-bucket hits; optional ETW later.
+- Add unit tests for IOCP file-write completion handling (buffer return, event signal, error path).
+- Audit async accounting for leaks:
+  - Ensure `PerfectHashAsyncIocpCompletionCallback` decrements outstanding if requeue fails.
+  - Add cleanup in `Chm01AsyncDispatchGraphWork` when `PerfectHashAsyncSubmit` fails (decrement `ActiveGraphs`/`RemainingSolverLoops`, free `GraphWork`).
+  - Add logging/asserts for `Job->ActiveGraphs`, `Context->RemainingSolverLoops`, and `Job->Async.Outstanding` to catch leaks.
+
 - Get a sys32 `--NoFileIo` run to complete (Release, max concurrency); if it hangs, capture bulk-count logs and identify the stuck state.
 - Diagnose 1000-file sys32 subset hang with `--IocpConcurrency=32 --MaxThreads=64` (Release, `--NoFileIo`); identify which work items are stuck and why.
 - Re-run sys32 with file I/O to `G:\\Scratch` once `--NoFileIo` completes; record timing and correctness.
@@ -11,7 +42,8 @@
 - Exercise IOCP file work dispatch path (bulk create) to confirm outstanding event signaling and non-threadpool file work callbacks.
 - Identify root cause of remaining IOCP bulk-create failures (`E_UNEXPECTED` on `shell32-13803.keys` / `CoreUIComponents-7995.keys`) if they recur.
 - Investigate unexpected ~1500 threadpool worker threads (`ZwWaitForWorkViaWorkerFactory`) observed during IOCP server runs; identify source (RPC/TP APIs) and whether it contributes to hangs.
-- Validate context file work skip fix for `SetEndOfFile`/`PerfectHashFileTruncate` 1224 failures; decide whether to generate context files once per bulk request.
+- Re-run a larger file-I/O set to confirm the `PerfectHashFileExtend` skip-mapping fix and one-off buffer fallback eliminate `SetEndOfFile` 1224 and disk-full pre-size failures; decide whether context-file skip is still required.
+- Decide whether to keep the one-off buffer fallback or implement a pool resize/rehash strategy for oversized file-work payloads.
 - Decide whether `PerfectHashClientExe` should wait on bulk-create tokens for `BulkCreate=` requests now that the server routes them through the bulk-directory path.
 - Choose a node-selection policy for single table-create server requests (round-robin vs node 0 vs affinity).
 - Add IOCP work item queueing/state to drive per-request pipelines.

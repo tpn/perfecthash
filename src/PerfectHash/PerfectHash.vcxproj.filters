@@ -67,6 +67,9 @@
     <ClCompile Include="PerfectHashContextIocpArgs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashIocpBufferPool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashAsync.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -412,6 +415,9 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashContextIocp.h">
+      <Filter>Private Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PerfectHashIocpBufferPool.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PerfectHashAsync.h">

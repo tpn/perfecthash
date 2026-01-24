@@ -16,6 +16,9 @@ endif()
 
 add_executable(perfecthash_unit_tests
     PerfectHashArgvTests.cpp
+    PerfectHashIocpBufferPoolTests.cpp
+    ${PERFECTHASH_SRC_DIR}/PerfectHash/PerfectHashIocpBufferPool.c
+    ${PERFECTHASH_SRC_DIR}/PerfectHash/RtlBuffers.c
 )
 
 target_link_libraries(perfecthash_unit_tests
@@ -25,6 +28,18 @@ target_link_libraries(perfecthash_unit_tests
 )
 
 perfecthash_apply_common_definitions(perfecthash_unit_tests)
+
+set_source_files_properties(
+    ${PERFECTHASH_SRC_DIR}/PerfectHash/PerfectHashIocpBufferPool.c
+    PROPERTIES
+    COMPILE_DEFINITIONS _PERFECT_HASH_INTERNAL_BUILD
+)
+
+set_source_files_properties(
+    ${PERFECTHASH_SRC_DIR}/PerfectHash/RtlBuffers.c
+    PROPERTIES
+    COMPILE_DEFINITIONS _PERFECT_HASH_INTERNAL_BUILD
+)
 
 set_target_properties(perfecthash_unit_tests PROPERTIES
     CXX_STANDARD 17

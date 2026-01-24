@@ -76,6 +76,7 @@ typedef PERFECT_HASH_IOCP_COMPLETION_CALLBACK
 #define PH_IOCP_WORK_FLAG_BULK       0x00000002
 #define PH_IOCP_WORK_FLAG_ASYNC      0x00000004
 #define PH_IOCP_WORK_FLAG_FILE_WORK  0x00000008
+#define PH_IOCP_WORK_FLAG_FILE_IO    0x00000010
 
 typedef struct _PERFECT_HASH_IOCP_WORK {
     OVERLAPPED Overlapped;
@@ -103,6 +104,17 @@ typedef struct _PERFECT_HASH_IOCP_NODE {
     HANDLE *WorkerThreads;
     ULONG WorkerThreadCount;
     ULONG Padding2;
+
+    //
+    // IOCP file work buffer pools (per-node).
+    //
+
+    SRWLOCK FileWorkBufferPoolLock;
+    PPERFECT_HASH_IOCP_BUFFER_POOL FileWorkBufferPools;
+    ULONG FileWorkBufferPoolBucketCount;
+    ULONG FileWorkBufferPoolFileCount;
+    ULONG FileWorkBufferPoolCount;
+    ULONG FileWorkBufferPoolPageSize;
 } PERFECT_HASH_IOCP_NODE;
 typedef PERFECT_HASH_IOCP_NODE *PPERFECT_HASH_IOCP_NODE;
 
