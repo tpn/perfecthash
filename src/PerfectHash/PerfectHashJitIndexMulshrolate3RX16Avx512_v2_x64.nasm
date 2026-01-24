@@ -4,13 +4,14 @@
 ;
 ; Module Name:
 ;
-;   PerfectHashJitIndexMulshrolate3RX16Avx512_x64.nasm
+;   PerfectHashJitIndexMulshrolate3RX16Avx512_v2_x64.nasm
 ;
 ; Abstract:
 ;
 ;   This module implements the Mulshrolate3RX Index32x16() routine using
 ;   AVX-512 for 16-bit assigned elements as a position-independent blob
-;   suitable for RawDog JIT patching.
+;   suitable for RawDog JIT patching.  This variant uses register extracts
+;   instead of gathers for Assigned loads.
 ;
 ;--
 
@@ -151,73 +152,159 @@ PerfectHashJitIndexMulshrolate3RX16Avx512_x64:
         vpord   zmm4, zmm10, zmm11
         vpsrld  zmm4, zmm4, xmm5               ; Vertex2 >>= Seed3_Byte1.
 
-        mov     eax, 0xffff
-        kmovw   k1, eax
-
         mov     r10, [rel RawDogAssigned]
-        vpgatherdd zmm13{k1}, [r10 + zmm3 * 2]
-        kmovw   k1, eax                        ; Reset gather mask.
-        vpgatherdd zmm14{k1}, [r10 + zmm4 * 2]
+        mov     r9d, dword [rel RawDogIndexMask]
 
-        vmovd   xmm15, eax                     ; Mask to 16-bit elements.
-        vpbroadcastd zmm15, xmm15
-        vpandd  zmm13, zmm13, zmm15
-        vpandd  zmm14, zmm14, zmm15
+        vextracti32x4 xmm10, zmm3, 1
+        vextracti32x4 xmm11, zmm3, 2
+        vextracti32x4 xmm12, zmm3, 3
+        vextracti32x4 xmm13, zmm4, 1
+        vextracti32x4 xmm14, zmm4, 2
+        vextracti32x4 xmm15, zmm4, 3
 
-        vpaddd  zmm13, zmm13, zmm14            ; Vertex1 + Vertex2.
-        vpbroadcastd zmm12, dword [rel RawDogIndexMask]
-        vpandd  zmm13, zmm13, zmm12
+        vpextrd eax, xmm3, 0
+        vpextrd edx, xmm4, 0
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x58]
+        mov     dword [r8], eax
 
-        vmovdqu32 [rsp + 0x80], zmm13          ; Store indices.
+        vpextrd eax, xmm3, 1
+        vpextrd edx, xmm4, 1
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x60]
+        mov     dword [r8], eax
 
-        mov     eax, dword [rsp + 0x80]
-        mov     r10, [r11 + 0x58]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0x84]
-        mov     r10, [r11 + 0x60]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0x88]
-        mov     r10, [r11 + 0x68]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0x8c]
-        mov     r10, [r11 + 0x70]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0x90]
-        mov     r10, [r11 + 0x78]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0x94]
-        mov     r10, [r11 + 0x80]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0x98]
-        mov     r10, [r11 + 0x88]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0x9c]
-        mov     r10, [r11 + 0x90]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xa0]
-        mov     r10, [r11 + 0x98]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xa4]
-        mov     r10, [r11 + 0xa0]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xa8]
-        mov     r10, [r11 + 0xa8]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xac]
-        mov     r10, [r11 + 0xb0]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xb0]
-        mov     r10, [r11 + 0xb8]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xb4]
-        mov     r10, [r11 + 0xc0]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xb8]
-        mov     r10, [r11 + 0xc8]
-        mov     dword [r10], eax
-        mov     eax, dword [rsp + 0xbc]
-        mov     r10, [r11 + 0xd0]
-        mov     dword [r10], eax
+        vpextrd eax, xmm3, 2
+        vpextrd edx, xmm4, 2
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x68]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm3, 3
+        vpextrd edx, xmm4, 3
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x70]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm10, 0
+        vpextrd edx, xmm13, 0
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x78]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm10, 1
+        vpextrd edx, xmm13, 1
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x80]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm10, 2
+        vpextrd edx, xmm13, 2
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x88]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm10, 3
+        vpextrd edx, xmm13, 3
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x90]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm11, 0
+        vpextrd edx, xmm14, 0
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x98]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm11, 1
+        vpextrd edx, xmm14, 1
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0xa0]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm11, 2
+        vpextrd edx, xmm14, 2
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0xa8]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm11, 3
+        vpextrd edx, xmm14, 3
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0xb0]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm12, 0
+        vpextrd edx, xmm15, 0
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0xb8]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm12, 1
+        vpextrd edx, xmm15, 1
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0xc0]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm12, 2
+        vpextrd edx, xmm15, 2
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0xc8]
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm12, 3
+        vpextrd edx, xmm15, 3
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0xd0]
+        mov     dword [r8], eax
 
         vzeroupper
 

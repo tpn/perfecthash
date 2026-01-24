@@ -4,7 +4,7 @@
 ;
 ; Module Name:
 ;
-;   PerfectHashJitIndexMulshrolate3RXAvx512_x64.nasm
+;   PerfectHashJitIndexMulshrolate3RXAvx512_v1_x64.nasm
 ;
 ; Abstract:
 ;

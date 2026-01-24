@@ -4,13 +4,12 @@
 ;
 ; Module Name:
 ;
-;   PerfectHashJitIndexMulshrolate2RX16Avx512_x64.nasm
+;   PerfectHashJitIndexMulshrolate2RXAvx512_v1_x64.nasm
 ;
 ; Abstract:
 ;
 ;   This module implements the Mulshrolate2RX Index32x16() routine using
-;   AVX-512 for 16-bit assigned elements as a position-independent blob
-;   suitable for RawDog JIT patching.
+;   AVX-512 as a position-independent blob suitable for RawDog JIT patching.
 ;
 ;--
 
@@ -19,12 +18,12 @@
 
         section .text
 
-        global PerfectHashJitIndexMulshrolate2RX16Avx512_x64
+        global PerfectHashJitIndexMulshrolate2RXAvx512_x64
 
 ;+++
 ;
 ; VOID
-; PerfectHashJitIndexMulshrolate2RX16Avx512_x64(
+; PerfectHashJitIndexMulshrolate2RXAvx512_x64(
 ;     _In_ ULONG Key1,
 ;     _In_ ULONG Key2,
 ;     _In_ ULONG Key3,
@@ -61,10 +60,9 @@
 ;
 ; Routine Description:
 ;
-;   This routine implements the Mulshrolate2RX Index32x16() functionality for
-;   tables using 16-bit assigned elements.  It is designed to be patched in-
-;   place by replacing the sentinel values in the embedded data block that
-;   follows the routine.
+;   This routine implements the Mulshrolate2RX Index32x16() functionality.  It
+;   is designed to be patched in-place by replacing the sentinel values in the
+;   embedded data block that follows the routine.
 ;
 ; Arguments:
 ;
@@ -79,7 +77,7 @@
 ;--
 
         align 16
-PerfectHashJitIndexMulshrolate2RX16Avx512_x64:
+PerfectHashJitIndexMulshrolate2RXAvx512_x64:
 
         ;IACA_VC_START
 
@@ -153,18 +151,13 @@ PerfectHashJitIndexMulshrolate2RX16Avx512_x64:
         kmovw   k1, eax
 
         mov     r10, [rel RawDogAssigned]
-        vpgatherdd zmm13{k1}, [r10 + zmm3 * 2]
+        vpgatherdd zmm13{k1}, [r10 + zmm3 * 4]
         kmovw   k1, eax                        ; Reset gather mask.
-        vpgatherdd zmm14{k1}, [r10 + zmm4 * 2]
-
-        vmovd   xmm15, eax                     ; Mask to 16-bit elements.
-        vpbroadcastd zmm15, xmm15
-        vpandd  zmm13, zmm13, zmm15
-        vpandd  zmm14, zmm14, zmm15
+        vpgatherdd zmm14{k1}, [r10 + zmm4 * 4]
 
         vpaddd  zmm13, zmm13, zmm14            ; Vertex1 + Vertex2.
-        vpbroadcastd zmm12, dword [rel RawDogIndexMask]
-        vpandd  zmm13, zmm13, zmm12
+        vpbroadcastd zmm15, dword [rel RawDogIndexMask]
+        vpandd  zmm13, zmm13, zmm15
 
         vmovdqu32 [rsp + 0x80], zmm13          ; Store indices.
 

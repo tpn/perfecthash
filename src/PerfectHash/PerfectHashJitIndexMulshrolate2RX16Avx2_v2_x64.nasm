@@ -4,12 +4,13 @@
 ;
 ; Module Name:
 ;
-;   PerfectHashJitIndexMulshrolate2RXAvx2_x64.nasm
+;   PerfectHashJitIndexMulshrolate2RX16Avx2_v2_x64.nasm
 ;
 ; Abstract:
 ;
 ;   This module implements the Mulshrolate2RX Index32x8() routine using AVX2
-;   as a position-independent blob suitable for RawDog JIT patching.
+;   for 16-bit assigned elements as a position-independent blob suitable for
+;   RawDog JIT patching.
 ;
 ;--
 
@@ -18,12 +19,12 @@
 
         section .text
 
-        global PerfectHashJitIndexMulshrolate2RXAvx2_x64
+        global PerfectHashJitIndexMulshrolate2RX16Avx2_x64
 
 ;+++
 ;
 ; VOID
-; PerfectHashJitIndexMulshrolate2RXAvx2_x64(
+; PerfectHashJitIndexMulshrolate2RX16Avx2_x64(
 ;     _In_ ULONG Key1,
 ;     _In_ ULONG Key2,
 ;     _In_ ULONG Key3,
@@ -44,9 +45,10 @@
 ;
 ; Routine Description:
 ;
-;   This routine implements the Mulshrolate2RX Index32x8() functionality.  It
-;   is designed to be patched in-place by replacing the sentinel values in the
-;   embedded data block that follows the routine.
+;   This routine implements the Mulshrolate2RX Index32x8() functionality for
+;   tables using 16-bit assigned elements.  It is designed to be patched in-
+;   place by replacing the sentinel values in the embedded data block that
+;   follows the routine.
 ;
 ; Arguments:
 ;
@@ -61,7 +63,7 @@
 ;--
 
         align 16
-PerfectHashJitIndexMulshrolate2RXAvx2_x64:
+PerfectHashJitIndexMulshrolate2RX16Avx2_x64:
 
         ;IACA_VC_START
 
@@ -116,41 +118,82 @@ PerfectHashJitIndexMulshrolate2RXAvx2_x64:
         vpsrld  ymm4, ymm4, xmm5               ; Vertex2 >>= Seed3_Byte1.
 
         mov     r10, [rel RawDogAssigned]
-        vpcmpeqd ymm12, ymm12, ymm12           ; Gather mask = all ones.
-        vpgatherdd ymm13, [r10 + ymm3 * 4], ymm12
-        vpcmpeqd ymm12, ymm12, ymm12           ; Reset gather mask.
-        vpgatherdd ymm14, [r10 + ymm4 * 4], ymm12
+        mov     r9d, dword [rel RawDogIndexMask]
 
-        vpaddd  ymm13, ymm13, ymm14            ; Vertex1 + Vertex2.
-        vpbroadcastd ymm15, dword [rel RawDogIndexMask]
-        vpand   ymm13, ymm13, ymm15
-
-        vmovdqu [rsp + 0x40], ymm13            ; Store indices.
+        vmovdqu [rsp + 0x40], ymm3            ; Store vertex1 indices.
+        vmovdqu [rsp + 0x60], ymm4            ; Store vertex2 indices.
 
         mov     eax, dword [rsp + 0x40]
-        mov     r10, [r11 + 0x18]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x60]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x18]
+        mov     dword [r8], eax
+
         mov     eax, dword [rsp + 0x44]
-        mov     r10, [r11 + 0x20]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x64]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x20]
+        mov     dword [r8], eax
+
         mov     eax, dword [rsp + 0x48]
-        mov     r10, [r11 + 0x28]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x68]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x28]
+        mov     dword [r8], eax
+
         mov     eax, dword [rsp + 0x4c]
-        mov     r10, [r11 + 0x30]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x6c]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x30]
+        mov     dword [r8], eax
+
         mov     eax, dword [rsp + 0x50]
-        mov     r10, [r11 + 0x38]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x70]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x38]
+        mov     dword [r8], eax
+
         mov     eax, dword [rsp + 0x54]
-        mov     r10, [r11 + 0x40]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x74]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x40]
+        mov     dword [r8], eax
+
         mov     eax, dword [rsp + 0x58]
-        mov     r10, [r11 + 0x48]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x78]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x48]
+        mov     dword [r8], eax
+
         mov     eax, dword [rsp + 0x5c]
-        mov     r10, [r11 + 0x50]
-        mov     dword [r10], eax
+        mov     edx, dword [rsp + 0x7c]
+        movzx   eax, word [r10 + rax * 2]
+        movzx   edx, word [r10 + rdx * 2]
+        add     eax, edx
+        and     eax, r9d
+        mov     r8, [r11 + 0x50]
+        mov     dword [r8], eax
 
         vzeroupper
 
