@@ -1329,7 +1329,6 @@ list(FILTER ONLINE_SOURCE_FILES EXCLUDE REGEX "Chm01FileWork.*\\.c$")
 list(FILTER ONLINE_SOURCE_FILES EXCLUDE REGEX "PerfectHash(File|Path|Directory)\\.c$")
 list(FILTER ONLINE_SOURCE_FILES EXCLUDE REGEX "PerfectHashContext(BulkCreate|TableCreate)\\.c$")
 list(FILTER ONLINE_SOURCE_FILES EXCLUDE REGEX "VCProjectFileChunks\\.c$")
-list(FILTER ONLINE_SOURCE_FILES EXCLUDE REGEX "ExtractArg\\.c$")
 list(APPEND ONLINE_SOURCE_FILES "Chm01FileWorkStub.c")
 list(APPEND ONLINE_SOURCE_FILES "PerfectHashContextCreateStub.c")
 

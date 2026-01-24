@@ -11,4 +11,5 @@ dependencies:
   - libxml2
   - python=3.13
   - pip
+  - llvmlite
   - rust

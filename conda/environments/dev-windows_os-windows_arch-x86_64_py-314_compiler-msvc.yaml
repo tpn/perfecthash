@@ -10,6 +10,7 @@ dependencies:
 - ipdb
 - ipython
 - joypy
+- llvmlite
 - matplotlib
 - mypy
 - ninja

@@ -49,7 +49,7 @@ extern LOAD_SYMBOLS LoadSymbols;
 #if defined(PH_WINDOWS)
 #define PERFECT_HASH_LLVM_DLL_NAME "PerfectHashLLVM.dll"
 #elif defined(PH_MAC)
-#define PERFECT_HASH_LLVM_DLL_NAME "libPerfectHashLLVM.dylib"
+#define PERFECT_HASH_LLVM_DLL_NAME "@rpath/libPerfectHashLLVM.dylib"
 #else
 #define PERFECT_HASH_LLVM_DLL_NAME "libPerfectHashLLVM.so"
 #endif

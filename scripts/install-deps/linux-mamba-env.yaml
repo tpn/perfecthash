@@ -5,6 +5,7 @@ dependencies:
   - cmake>=3.20
   - ninja
   - llvmdev>=15
+  - nasm
   - clang
   - c-compiler
   - cxx-compiler
@@ -12,4 +13,5 @@ dependencies:
   - libxml2
   - python=3.13
   - pip
+  - llvmlite
   - rust

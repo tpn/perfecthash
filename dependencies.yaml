@@ -147,6 +147,7 @@ dependencies:
             packages:
               - make
               - pkg-config
+              - nasm
           - matrix: {}
             packages:
   compiler:
@@ -251,3 +252,4 @@ dependencies:
           - ruff
           - black
           - mypy
+          - llvmlite

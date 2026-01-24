@@ -11,7 +11,11 @@ option(PERFECTHASH_ENABLE_NATIVE_ARCH "Enable -march=native on supported compile
 option(PERFECTHASH_ENABLE_INSTALL "Enable install rules" ON)
 option(PERFECTHASH_ENABLE_TESTS "Enable tests" ON)
 option(PERFECTHASH_ENABLE_LLVM "Enable LLVM support if available" ON)
-option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ON)
+set(_perfecthash_static_llvm_default ON)
+if(APPLE)
+    set(_perfecthash_static_llvm_default OFF)
+endif()
+option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ${_perfecthash_static_llvm_default})
 
 if(DEFINED USE_CUDA AND NOT DEFINED PERFECTHASH_USE_CUDA)
     set(PERFECTHASH_USE_CUDA "${USE_CUDA}" CACHE BOOL "" FORCE)
@@ -184,6 +188,38 @@ endif()
 
 set(PERFECTHASH_HAS_LLVM FALSE)
 if(PERFECTHASH_ENABLE_LLVM)
+    if(NOT LLVM_DIR)
+        find_program(
+            LLVM_CONFIG_EXECUTABLE
+            NAMES llvm-config llvm-config-18 llvm-config-17 llvm-config-16 llvm-config-15
+        )
+        if(LLVM_CONFIG_EXECUTABLE)
+            execute_process(
+                COMMAND "${LLVM_CONFIG_EXECUTABLE}" --cmakedir
+                RESULT_VARIABLE LLVM_CONFIG_RESULT
+                OUTPUT_VARIABLE LLVM_CMAKE_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            if(LLVM_CONFIG_RESULT EQUAL 0 AND EXISTS "${LLVM_CMAKE_DIR}/LLVMConfig.cmake")
+                set(LLVM_DIR "${LLVM_CMAKE_DIR}" CACHE PATH "LLVM CMake directory")
+            else()
+                execute_process(
+                    COMMAND "${LLVM_CONFIG_EXECUTABLE}" --prefix
+                    RESULT_VARIABLE LLVM_PREFIX_RESULT
+                    OUTPUT_VARIABLE LLVM_PREFIX_DIR
+                    OUTPUT_STRIP_TRAILING_WHITESPACE
+                )
+                if(LLVM_PREFIX_RESULT EQUAL 0 AND LLVM_PREFIX_DIR)
+                    set(_llvm_guess_dir "${LLVM_PREFIX_DIR}/lib/cmake/llvm")
+                    if(EXISTS "${_llvm_guess_dir}/LLVMConfig.cmake")
+                        set(LLVM_DIR "${_llvm_guess_dir}" CACHE PATH "LLVM CMake directory")
+                    endif()
+                    unset(_llvm_guess_dir)
+                endif()
+            endif()
+        endif()
+    endif()
+
     if(PERFECTHASH_STATIC_LLVM)
         set(LLVM_LINK_LLVM_DYLIB OFF CACHE BOOL "" FORCE)
     else()

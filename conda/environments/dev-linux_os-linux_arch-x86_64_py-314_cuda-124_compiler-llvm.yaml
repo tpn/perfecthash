@@ -15,9 +15,11 @@ dependencies:
 - joypy
 - lld>=15
 - llvmdev>=15
+- llvmlite
 - make
 - matplotlib
 - mypy
+- nasm
 - ninja
 - numpy
 - pandas
