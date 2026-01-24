@@ -57,7 +57,9 @@ typedef struct _PERFECT_HASH_SERVER_CLI_OPTIONS {
     BOOLEAN VerbosePresent;
     BOOLEAN NoFileIo;
     BOOLEAN NoFileIoPresent;
-    UCHAR Padding1[6];
+    BOOLEAN IocpBufferGuardPages;
+    BOOLEAN IocpBufferGuardPagesPresent;
+    UCHAR Padding1[4];
 } PERFECT_HASH_SERVER_CLI_OPTIONS;
 typedef PERFECT_HASH_SERVER_CLI_OPTIONS *PPERFECT_HASH_SERVER_CLI_OPTIONS;
 
@@ -606,7 +608,8 @@ PrintUsage(
 {
     wprintf(L"Usage: PerfectHashServer [--IocpConcurrency=<N>] "
             L"[--MaxThreads=<N>] [--Numa=All|<list>] [--Endpoint=<pipe>] "
-            L"[--AllowRemote|--LocalOnly] [--Verbose] [--NoFileIo]\n");
+            L"[--AllowRemote|--LocalOnly] [--Verbose] [--NoFileIo] "
+            L"[--IocpBufferGuardPages]\n");
     wprintf(L"  --IocpConcurrency=<N> IOCP concurrency per NUMA node\n");
     wprintf(L"  --MaxConcurrency=<N>  Alias for --IocpConcurrency\n");
     wprintf(L"  --MaxThreads=<N>      Worker threads per NUMA node\n");
@@ -617,6 +620,7 @@ PrintUsage(
     wprintf(L"  --LocalOnly            Reject remote named pipe clients\n");
     wprintf(L"  --Verbose              Enable per-request console output\n");
     wprintf(L"  --NoFileIo             Disable file I/O for requests\n");
+    wprintf(L"  --IocpBufferGuardPages Enable guard pages for IOCP buffers\n");
 }
 
 static
@@ -732,6 +736,8 @@ ParseServerArgs(
     Options->VerbosePresent = FALSE;
     Options->NoFileIo = FALSE;
     Options->NoFileIoPresent = FALSE;
+    Options->IocpBufferGuardPages = FALSE;
+    Options->IocpBufferGuardPagesPresent = FALSE;
 
     for (Index = 1; Index < NumberOfArguments; Index++) {
         PCWSTR Arg = ArgvW[Index];
@@ -831,6 +837,12 @@ ParseServerArgs(
         if (_wcsicmp(Arg, L"NoFileIo") == 0) {
             Options->NoFileIo = TRUE;
             Options->NoFileIoPresent = TRUE;
+            continue;
+        }
+
+        if (_wcsicmp(Arg, L"IocpBufferGuardPages") == 0) {
+            Options->IocpBufferGuardPages = TRUE;
+            Options->IocpBufferGuardPagesPresent = TRUE;
             continue;
         }
 
@@ -991,6 +1003,16 @@ mainCRTStartup(
 
     if (Options.NoFileIoPresent) {
         Result = Server->Vtbl->SetNoFileIo(Server, Options.NoFileIo);
+        if (FAILED(Result)) {
+            goto Error;
+        }
+    }
+
+    if (Options.IocpBufferGuardPagesPresent) {
+        Result = Server->Vtbl->SetIocpBufferGuardPages(
+            Server,
+            Options.IocpBufferGuardPages
+        );
         if (FAILED(Result)) {
             goto Error;
         }

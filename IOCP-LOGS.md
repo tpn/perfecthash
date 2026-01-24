@@ -193,3 +193,8 @@
   - One-off allocations become reusable buffers owned by a pool; guarded list enables safe teardown.
   - Add optional guard-page allocation flag (default on) to choose between guard-page buffers vs raw chunks.
   - Add basic pool stats/diagnostics later (depth, alloc failures); ETW deferred.
+
+## 2026-01-26
+- Added IOCP buffer guard-page toggle: new server flag + CLI (`--IocpBufferGuardPages`), context flag propagation, and pool init wiring.
+- Implemented IOCP keys-load path: `PERFECT_HASH_KEYS_LOAD_FLAGS.UseOverlappedIo`, `PERFECT_HASH_FILE_LOAD_FLAGS.SkipMapping`, overlapped `ReadFile` into pooled buffers, and buffer release on file close.
+- Added gtest coverage for guard-page buffer pool flag propagation.

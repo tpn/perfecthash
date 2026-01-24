@@ -206,6 +206,10 @@ Return Value:
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
     VALIDATE_FLAGS(TableCompile, TABLE_COMPILE, ULong);
 
+    if (UseOverlappedIo(Context)) {
+        KeysLoadFlags.UseOverlappedIo = TRUE;
+    }
+
     //
     // IsValidTableCreateFlags() returns a more specific error code than the
     // other validation routines invoked above (which would be converted into

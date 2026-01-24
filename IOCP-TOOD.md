@@ -12,7 +12,7 @@
   - Base address for file work writes points *after* the header; sizing still uses EOF multipliers + trap-on-overrun.
   - Allocate on demand; buffers pushed to pool free list and guarded list for teardown.
   - One-off allocations removed; buffers reused via size-class or oversize pools.
-  - TODO: add a guard-page allocation flag to toggle `RtlCreateBuffer()` vs raw allocation.
+  - Done: add a guard-page allocation flag to toggle `RtlCreateBuffer()` vs raw allocation.
   - Output file pipeline (IOCP):
     - Pop a buffer for each file work save stage.
     - Set `File->BaseAddress` to buffer base (after header) to reuse existing `OUTPUT_*` macros.
@@ -20,8 +20,8 @@
     - Done: issue `WriteFile` with IOCP work item and handle completion in IOCP callback (no `GetOverlappedResult` waits).
     - Done: `UnmapFileChm01()` no-ops in overlapped mode; `CloseFileChm01()` uses `File->NumberOfBytesWritten` (no mapping).
   - Input file pipeline (IOCP):
-    - Replace memory-mapped keys file reads with overlapped `ReadFile` into a keys buffer (or reuse pool per key-size bucket).
-    - Parse keys from buffer; keep mapped path for OG.
+    - Done: replace memory-mapped keys file reads with overlapped `ReadFile` into a keys buffer (reuse size-class pool).
+    - Done: parse keys from buffer; keep mapped path for OG.
 - Add lightweight stats (debug-only): pool exhaustion count, max buffers in use, per-bucket hits; optional ETW later.
 - Add unit tests for IOCP file-write completion handling (buffer return, event signal, error path).
 - Audit async accounting for leaks:

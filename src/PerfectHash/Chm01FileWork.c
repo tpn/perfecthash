@@ -157,7 +157,9 @@ Chm01EnsureFileWorkBufferPools(
                 return E_OUTOFMEMORY;
             }
 
-            Flags = 0;
+            Flags = UseIocpBufferGuardPages(Context) ?
+                PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES :
+                0;
             for (PoolIndex = 0; PoolIndex < PoolCount; PoolIndex++) {
                 PayloadSize =
                     PerfectHashIocpBufferGetPayloadSizeFromClassIndex(
@@ -269,6 +271,9 @@ Chm01GetOversizeFileWorkBufferPool(
     }
 
     Flags = PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_OVERSIZE;
+    if (UseIocpBufferGuardPages(Context)) {
+        Flags |= PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES;
+    }
     Result = PerfectHashIocpBufferPoolInitialize(Rtl,
                                                  Pool,
                                                  PayloadSize,

@@ -341,6 +341,7 @@ Return Value:
     Server->Flags.EndpointAllocated = FALSE;
     Server->Flags.Verbose = FALSE;
     Server->Flags.NoFileIo = FALSE;
+    Server->Flags.IocpBufferGuardPages = FALSE;
     Server->State.Initialized = TRUE;
 
     return S_OK;
@@ -783,6 +784,50 @@ PerfectHashServerGetNoFileIo(
     }
 
     *NoFileIo = (Server->Flags.NoFileIo != 0);
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES
+    PerfectHashServerSetIocpBufferGuardPages;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerSetIocpBufferGuardPages(
+    PPERFECT_HASH_SERVER Server,
+    BOOLEAN GuardPages
+    )
+{
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (Server->State.Running) {
+        return E_UNEXPECTED;
+    }
+
+    Server->Flags.IocpBufferGuardPages = GuardPages ? 1 : 0;
+    return S_OK;
+}
+
+PERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES
+    PerfectHashServerGetIocpBufferGuardPages;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashServerGetIocpBufferGuardPages(
+    PPERFECT_HASH_SERVER Server,
+    PBOOLEAN GuardPages
+    )
+{
+    if (!ARGUMENT_PRESENT(Server)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(GuardPages)) {
+        return E_POINTER;
+    }
+
+    *GuardPages = (Server->Flags.IocpBufferGuardPages != 0);
     return S_OK;
 }
 
@@ -2014,6 +2059,11 @@ PerfectHashServerBulkCreateWorkItemCallback(
             goto Complete;
         }
 
+        if (Request && Request->Server &&
+            Request->Server->Flags.IocpBufferGuardPages) {
+            SetContextUseIocpBufferGuardPages(Context);
+        }
+
         if (Request->CommandLineBuffer) {
             Context->CommandLineW = Request->CommandLineBuffer;
         }
@@ -2961,6 +3011,10 @@ PerfectHashServerDispatchTableCreateRequest(
                                                       &Context);
     if (FAILED(Result)) {
         goto Error;
+    }
+
+    if (Server->Flags.IocpBufferGuardPages) {
+        SetContextUseIocpBufferGuardPages(Context);
     }
 
     if (CommandLine) {

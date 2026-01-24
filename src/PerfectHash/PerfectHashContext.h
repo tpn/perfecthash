@@ -288,10 +288,16 @@ typedef union _PERFECT_HASH_CONTEXT_FLAGS {
         ULONG UseOverlappedIo:1;
 
         //
+        // When set, IOCP file I/O buffers use guard pages.
+        //
+
+        ULONG UseIocpBufferGuardPages:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:30;
+        ULONG Unused:29;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -310,6 +316,15 @@ typedef PERFECT_HASH_CONTEXT_FLAGS *PPERFECT_HASH_CONTEXT_FLAGS;
 
 #define ClearContextUseOverlappedIo(Context) \
     ((Context)->Flags.UseOverlappedIo = FALSE)
+
+#define UseIocpBufferGuardPages(Context) \
+    ((Context)->Flags.UseIocpBufferGuardPages != FALSE)
+
+#define SetContextUseIocpBufferGuardPages(Context) \
+    ((Context)->Flags.UseIocpBufferGuardPages = TRUE)
+
+#define ClearContextUseIocpBufferGuardPages(Context) \
+    ((Context)->Flags.UseIocpBufferGuardPages = FALSE)
 
 typedef struct _BEST_GRAPH_INFO {
 

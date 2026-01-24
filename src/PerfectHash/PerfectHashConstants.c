@@ -1182,12 +1182,14 @@ const PERFECT_HASH_SERVER_VTBL PerfectHashServerInterface = {
     &PerfectHashServerGetVerbose,
     &PerfectHashServerSetNoFileIo,
     &PerfectHashServerGetNoFileIo,
+    &PerfectHashServerSetIocpBufferGuardPages,
+    &PerfectHashServerGetIocpBufferGuardPages,
     &PerfectHashServerStart,
     &PerfectHashServerStop,
     &PerfectHashServerWait,
     &PerfectHashServerSubmitRequest,
 };
-VERIFY_VTBL_SIZE(PERFECT_HASH_SERVER, 18);
+VERIFY_VTBL_SIZE(PERFECT_HASH_SERVER, 20);
 
 //
 // PerfectHashClient

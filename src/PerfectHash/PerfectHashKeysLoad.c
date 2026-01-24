@@ -231,6 +231,10 @@ Return Value:
         KeysLoadFlags.TryLargePagesForKeysData
     );
 
+    if (KeysLoadFlags.UseOverlappedIo) {
+        FileLoadFlags.SkipMapping = TRUE;
+    }
+
     Result = File->Vtbl->Load(File, Path, &EndOfFile, &FileLoadFlags);
 
     if (FAILED(Result)) {

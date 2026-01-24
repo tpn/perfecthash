@@ -1651,10 +1651,17 @@ typedef union _PERFECT_HASH_FILE_LOAD_FLAGS {
         ULONG TryLargePagesForFileData:1;
 
         //
+        // When set, skip mapping the file into memory.  The caller is
+        // responsible for providing a suitable buffer and handling any I/O.
+        //
+
+        ULONG SkipMapping:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:30;
     };
 
     LONG AsLong;
@@ -1993,6 +2000,13 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         ULONG TryLargePagesForKeysData:1;
 
         //
+        // When set, keys are loaded using overlapped I/O into a buffer instead
+        // of memory-mapped views. Intended for IOCP-native contexts.
+        //
+
+        ULONG UseOverlappedIo:1;
+
+        //
         // When set, skips the verification of keys during loading.
         // Specifically, skips enumerating all keys and verifying that the
         // keys are sorted, as well as constructing the keys bitmap.
@@ -2033,7 +2047,7 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:27;
     };
 
     LONG AsLong;
@@ -4728,6 +4742,24 @@ typedef PERFECT_HASH_SERVER_GET_NO_FILE_IO
 
 typedef
 HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _In_ BOOLEAN GuardPages
+    );
+typedef PERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES
+      *PPERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES;
+
+typedef
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES)(
+    _In_ PPERFECT_HASH_SERVER Server,
+    _Out_ PBOOLEAN GuardPages
+    );
+typedef PERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES
+      *PPERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES;
+
+typedef
+HRESULT
 (STDAPICALLTYPE PERFECT_HASH_SERVER_START)(
     _In_ PPERFECT_HASH_SERVER Server
     );
@@ -4773,6 +4805,10 @@ typedef struct _PERFECT_HASH_SERVER_VTBL {
     PPERFECT_HASH_SERVER_GET_VERBOSE GetVerbose;
     PPERFECT_HASH_SERVER_SET_NO_FILE_IO SetNoFileIo;
     PPERFECT_HASH_SERVER_GET_NO_FILE_IO GetNoFileIo;
+    PPERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES
+        SetIocpBufferGuardPages;
+    PPERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES
+        GetIocpBufferGuardPages;
     PPERFECT_HASH_SERVER_START Start;
     PPERFECT_HASH_SERVER_STOP Stop;
     PPERFECT_HASH_SERVER_WAIT Wait;

@@ -45,8 +45,9 @@ typedef union _PERFECT_HASH_SERVER_FLAGS {
         ULONG EndpointAllocated:1;
         ULONG Verbose:1;
         ULONG NoFileIo:1;
+        ULONG IocpBufferGuardPages:1;
 
-        ULONG Unused:28;
+        ULONG Unused:27;
     };
     LONG AsLong;
     ULONG AsULong;
@@ -139,6 +140,10 @@ extern PERFECT_HASH_SERVER_SET_VERBOSE PerfectHashServerSetVerbose;
 extern PERFECT_HASH_SERVER_GET_VERBOSE PerfectHashServerGetVerbose;
 extern PERFECT_HASH_SERVER_SET_NO_FILE_IO PerfectHashServerSetNoFileIo;
 extern PERFECT_HASH_SERVER_GET_NO_FILE_IO PerfectHashServerGetNoFileIo;
+extern PERFECT_HASH_SERVER_SET_IOCP_BUFFER_GUARD_PAGES
+    PerfectHashServerSetIocpBufferGuardPages;
+extern PERFECT_HASH_SERVER_GET_IOCP_BUFFER_GUARD_PAGES
+    PerfectHashServerGetIocpBufferGuardPages;
 extern PERFECT_HASH_SERVER_START PerfectHashServerStart;
 extern PERFECT_HASH_SERVER_STOP PerfectHashServerStop;
 extern PERFECT_HASH_SERVER_WAIT PerfectHashServerWait;

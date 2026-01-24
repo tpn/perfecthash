@@ -137,6 +137,34 @@ TEST_F(PerfectHashIocpBufferPoolTests, InitializeAcquireRelease) {
   PerfectHashIocpBufferPoolRundown(&rtl_, nullptr, &pool);
 }
 
+TEST_F(PerfectHashIocpBufferPoolTests, GuardPagesFlagPropagates) {
+  PERFECT_HASH_IOCP_BUFFER_POOL pool;
+  std::memset(&pool, 0, sizeof(pool));
+
+  HRESULT result = PerfectHashIocpBufferPoolInitialize(
+      &rtl_,
+      &pool,
+      4096,
+      0,
+      PERFECT_HASH_IOCP_BUFFER_POOL_FLAG_GUARD_PAGES,
+      nullptr,
+      nullptr);
+
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_IOCP_BUFFER buffer = nullptr;
+  result = PerfectHashIocpBufferPoolAcquire(&rtl_,
+                                            nullptr,
+                                            &pool,
+                                            &buffer);
+  ASSERT_GE(result, 0);
+  ASSERT_NE(buffer, nullptr);
+  EXPECT_NE(buffer->Flags & PERFECT_HASH_IOCP_BUFFER_FLAG_GUARD_PAGES, 0u);
+
+  PerfectHashIocpBufferPoolRelease(&pool, buffer);
+  PerfectHashIocpBufferPoolRundown(&rtl_, nullptr, &pool);
+}
+
 TEST_F(PerfectHashIocpBufferPoolTests, SizeClassHelpers) {
   EXPECT_EQ(PerfectHashIocpBufferGetClassIndex(&rtl_, 0), 0);
   EXPECT_EQ(PerfectHashIocpBufferGetClassIndex(&rtl_, 1), 0);
