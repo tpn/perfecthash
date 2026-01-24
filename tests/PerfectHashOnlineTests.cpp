@@ -259,6 +259,9 @@ TEST_F(PerfectHashOnlineTests, RawDogJitIndexMatchesSlowIndex) {
 }
 
 TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate1RXMatchesSlowIndex) {
+#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "RawDog ARM64 only supports MultiplyShiftR.";
+#endif
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
       59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
@@ -314,6 +317,9 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate1RXMatchesSlowIndex) {
 
 TEST_F(PerfectHashOnlineTests,
        RawDogJitMulshrolate2RXIndex32x8MatchesIndex) {
+#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "RawDog ARM64 only supports MultiplyShiftR.";
+#endif
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19,
       23, 29, 31, 37, 41, 43, 47, 53,
@@ -402,6 +408,9 @@ TEST_F(PerfectHashOnlineTests,
 
 TEST_F(PerfectHashOnlineTests,
        RawDogJitMulshrolate2RXIndex32x16MatchesIndex) {
+#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "RawDog ARM64 only supports MultiplyShiftR.";
+#endif
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19,
       23, 29, 31, 37, 41, 43, 47, 53,
@@ -521,6 +530,9 @@ TEST_F(PerfectHashOnlineTests,
 }
 
 TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate3RXMatchesSlowIndex) {
+#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "RawDog ARM64 only supports MultiplyShiftR.";
+#endif
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
       59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
@@ -558,6 +570,9 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate3RXMatchesSlowIndex) {
 
 TEST_F(PerfectHashOnlineTests,
        RawDogJitMulshrolate3RXIndex32x8MatchesIndex) {
+#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "RawDog ARM64 only supports MultiplyShiftR.";
+#endif
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19,
       23, 29, 31, 37, 41, 43, 47, 53,
@@ -646,6 +661,9 @@ TEST_F(PerfectHashOnlineTests,
 
 TEST_F(PerfectHashOnlineTests,
        RawDogJitMulshrolate3RXIndex32x16MatchesIndex) {
+#if defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "RawDog ARM64 only supports MultiplyShiftR.";
+#endif
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19,
       23, 29, 31, 37, 41, 43, 47, 53,

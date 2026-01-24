@@ -130,6 +130,7 @@ dependencies:
       - output_types: conda
         packages:
           - cmake>=3.20
+          - ccache
           - ninja
           - pip
           - rust

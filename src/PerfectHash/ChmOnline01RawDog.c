@@ -19,6 +19,8 @@ Abstract:
 #include <stdlib.h>
 
 #include "ChmOnline01.h"
+
+#if defined(PH_RAWDOG_X64)
 #include "PerfectHashJitRawDogMultiplyShiftR_x64.h"
 #include "PerfectHashJitRawDogMulshrolate1RX_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RX_x64.h"
@@ -47,6 +49,9 @@ Abstract:
 #include "PerfectHashJitRawDogMulshrolate3RX16Avx2_v3_x64.h"
 #include "PerfectHashJitRawDogMulshrolate3RX16Avx512_v1_x64.h"
 #include "PerfectHashJitRawDogMulshrolate3RX16Avx512_v2_x64.h"
+#elif defined(PH_RAWDOG_ARM64)
+#include "PerfectHashJitRawDogMultiplyShiftR_arm64.h"
+#endif
 
 #define RAWDOG_SENTINEL_ASSIGNED    0xA1A1A1A1A1A1A1A1ULL
 #define RAWDOG_SENTINEL_SEED1       0xB1B1B1B1B1B1B1B1ULL
@@ -124,7 +129,13 @@ typedef struct _RAW_DOG_PATCH_ENTRY {
     PCSZ Name;
 } RAW_DOG_PATCH_ENTRY;
 
+#if defined(PH_RAWDOG_X64)
 static const CHAR RawDogTargetCpu[] = "rawdog-x64";
+#elif defined(PH_RAWDOG_ARM64)
+static const CHAR RawDogTargetCpu[] = "rawdog-arm64";
+#else
+static const CHAR RawDogTargetCpu[] = "";
+#endif
 
 static
 ULONG
@@ -340,6 +351,12 @@ CompileChm01IndexJitRawDog(
     BOOLEAN UseAssigned16;
     HRESULT Result;
 
+#if defined(PH_RAWDOG_ARM64)
+    if (Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId ||
+        Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+#else
     if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
          Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
          Table->HashFunctionId != PerfectHashHashMulshrolate2RXFunctionId &&
@@ -347,8 +364,15 @@ CompileChm01IndexJitRawDog(
         Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
         return PH_E_NOT_IMPLEMENTED;
     }
+#endif
 
     UseAssigned16 = (Table->State.UsingAssigned16 != FALSE);
+#if defined(PH_RAWDOG_ARM64)
+    if (UseAssigned16) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+#endif
+
     if (UseAssigned16) {
         if (!ARGUMENT_PRESENT(Table->Assigned16)) {
             return PH_E_INVARIANT_CHECK_FAILED;
@@ -377,6 +401,10 @@ CompileChm01IndexJitRawDog(
 
     switch (Table->HashFunctionId) {
         case PerfectHashHashMultiplyShiftRFunctionId:
+#if defined(PH_RAWDOG_ARM64)
+            SourceCode = (PBYTE)PerfectHashJitRawDogMultiplyShiftR_arm64;
+            CodeSize = sizeof(PerfectHashJitRawDogMultiplyShiftR_arm64);
+#else
             if (UseAssigned16) {
                 SourceCode = (PBYTE)PerfectHashJitRawDogMultiplyShiftR16_x64;
                 CodeSize = sizeof(PerfectHashJitRawDogMultiplyShiftR16_x64);
@@ -384,6 +412,7 @@ CompileChm01IndexJitRawDog(
                 SourceCode = (PBYTE)PerfectHashJitRawDogMultiplyShiftR_x64;
                 CodeSize = sizeof(PerfectHashJitRawDogMultiplyShiftR_x64);
             }
+#endif
             Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
                 RAWDOG_SENTINEL_ASSIGNED,
                 Assigned,
@@ -421,6 +450,7 @@ CompileChm01IndexJitRawDog(
             };
             break;
 
+#if defined(PH_RAWDOG_X64)
         case PerfectHashHashMulshrolate1RXFunctionId:
             if (UseAssigned16) {
                 SourceCode = (PBYTE)PerfectHashJitRawDogMulshrolate1RX16_x64;
@@ -555,6 +585,7 @@ CompileChm01IndexJitRawDog(
                 "IndexMask"
             };
             break;
+#endif
 
         default:
             return PH_E_NOT_IMPLEMENTED;
@@ -600,6 +631,18 @@ CompileChm01IndexVectorJitRawDog(
     _Out_opt_ PERFECT_HASH_JIT_MAX_ISA_ID *UsedIsa
     )
 {
+#if defined(PH_RAWDOG_ARM64)
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(Jit);
+    UNREFERENCED_PARAMETER(CompileFlags);
+    UNREFERENCED_PARAMETER(CompileIndex32x8);
+    UNREFERENCED_PARAMETER(CompileIndex32x16);
+    if (ARGUMENT_PRESENT(UsedIsa)) {
+        *UsedIsa = PerfectHashJitMaxIsaAuto;
+    }
+    return PH_E_NOT_IMPLEMENTED;
+#else
+
     PRTL Rtl;
     PTABLE_INFO_ON_DISK TableInfo;
     ULONG_BYTES Seed3Bytes;
@@ -903,6 +946,7 @@ CompileChm01IndexVectorJitRawDog(
     }
 
     return S_OK;
+#endif
 }
 
 static

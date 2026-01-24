@@ -1315,6 +1315,59 @@ if(PERFECTHASH_IS_LINUX)
     endif()
 endif()
 
+if(PERFECTHASH_IS_MAC)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+    if(PERFECTHASH_ARCH_ARM64)
+        find_program(PERFECTHASH_CLANG_EXECUTABLE clang)
+        find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
+
+        if(PERFECTHASH_CLANG_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
+            set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
+
+            set(RAWDOG_ARM64_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR_arm64.s"
+            )
+            set(RAWDOG_ARM64_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR_arm64.o"
+            )
+            set(RAWDOG_ARM64_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR_arm64.bin"
+            )
+            set(RAWDOG_ARM64_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR_arm64.h"
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_ARM64_HDR}
+                COMMAND ${PERFECTHASH_CLANG_EXECUTABLE}
+                        -c
+                        -o "${RAWDOG_ARM64_OBJ}"
+                        "${RAWDOG_ARM64_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=__TEXT,__text=${RAWDOG_ARM64_BIN}
+                        "${RAWDOG_ARM64_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_ARM64_BIN}"
+                        --output "${RAWDOG_ARM64_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftR_arm64
+                DEPENDS
+                    "${RAWDOG_ARM64_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR (arm64)..."
+                VERBATIM
+            )
+
+            list(APPEND Private_Header_Files "${RAWDOG_ARM64_HDR}")
+            list(APPEND Source_Files "ChmOnline01RawDog.c")
+        else()
+            message(WARNING "RawDog JIT disabled (missing clang/llvm-objcopy).")
+            set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
+        endif()
+    endif()
+endif()
+
 source_group("Source Files" FILES ${Source_Files})
 
 set(ALL_FILES
@@ -1391,8 +1444,8 @@ endif()
 
 add_library(${target} SHARED ${ALL_FILES})
 
-# Generated Linux message table header lives in the build directory.
-if(PERFECTHASH_IS_LINUX)
+# Generated Linux message table header and RawDog blobs live in the build dir.
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_HAS_RAWDOG_JIT)
     target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
@@ -1418,6 +1471,19 @@ if(PERFECTHASH_HAS_RAWDOG_JIT)
         PRIVATE
         "PH_HAS_RAWDOG_JIT"
     )
+    if(PERFECTHASH_ARCH_X86_64)
+        target_compile_definitions(
+            ${target}
+            PRIVATE
+            "PH_RAWDOG_X64"
+        )
+    elseif(PERFECTHASH_ARCH_ARM64)
+        target_compile_definitions(
+            ${target}
+            PRIVATE
+            "PH_RAWDOG_ARM64"
+        )
+    endif()
 endif()
 
 # ###############################################################################
@@ -1481,8 +1547,8 @@ if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
 endif()
 
-# Generated Linux message table header lives in the build directory.
-if(PERFECTHASH_IS_LINUX)
+# Generated Linux message table header and RawDog blobs live in the build dir.
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_HAS_RAWDOG_JIT)
     target_include_directories(${online_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(${online_static_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(${online_core_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
@@ -1520,6 +1586,19 @@ foreach(ph_online_target ${online_target} ${online_static_target})
             PRIVATE
             "PH_HAS_RAWDOG_JIT"
         )
+        if(PERFECTHASH_ARCH_X86_64)
+            target_compile_definitions(
+                ${ph_online_target}
+                PRIVATE
+                "PH_RAWDOG_X64"
+            )
+        elseif(PERFECTHASH_ARCH_ARM64)
+            target_compile_definitions(
+                ${ph_online_target}
+                PRIVATE
+                "PH_RAWDOG_ARM64"
+            )
+        endif()
     endif()
 endforeach()
 

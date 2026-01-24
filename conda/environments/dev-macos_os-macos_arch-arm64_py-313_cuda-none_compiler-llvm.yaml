@@ -5,6 +5,7 @@ channels:
 dependencies:
 - black
 - bokeh
+- ccache
 - clang>=15
 - clangxx>=15
 - cmake>=3.20
