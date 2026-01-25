@@ -1,4 +1,4 @@
-        title "Perfect Hash RawDog Mulshrolate1RX Index32x16 x64"
+        title "Perfect Hash RawDog Mulshrolate2RX16 Avx512 v2 x64"
 
 ;++
 ;
@@ -6,12 +6,13 @@
 ;
 ; Module Name:
 ;
-;   PerfectHashJitIndexMulshrolate1RXIndex32x16_x64.asm
+;   PerfectHashJitIndexMulshrolate2RX16Avx512_v2_x64.asm
 ;
 ; Abstract:
 ;
-;   This module implements the Mulshrolate1RX Index32x16() routine as a
-;   position-independent blob suitable for RawDog JIT patching.
+;   This module implements the Mulshrolate2RX Index32x16() routine for 16-bit
+;   assigned tables using AVX-512 as a position-independent blob suitable for
+;   RawDog JIT patching.
 ;
 ;--
 
@@ -26,7 +27,7 @@ OUTPUT_OFFSET          equ 088h
 ;++
 ;
 ; VOID
-; PerfectHashJitIndexMulshrolate1RXIndex32x16_x64(
+; PerfectHashJitIndexMulshrolate2RX16Avx512_x64(
 ;     _In_ ULONG Key1,
 ;     _In_ ULONG Key2,
 ;     _In_ ULONG Key3,
@@ -63,9 +64,10 @@ OUTPUT_OFFSET          equ 088h
 ;
 ; Routine Description:
 ;
-;   This routine implements the Mulshrolate1RX index functionality for sixteen
-;   keys.  It is designed to be patched in-place by replacing the sentinel
-;   values embedded in the instruction stream.
+;   This routine implements the Mulshrolate2RX index functionality for sixteen
+;   keys using AVX-512 instructions and 16-bit assigned table data.  It is
+;   designed to be patched in-place by replacing the sentinel values embedded
+;   in the instruction stream.
 ;
 ; Arguments:
 ;
@@ -79,7 +81,7 @@ OUTPUT_OFFSET          equ 088h
 ;
 ;--
 
-        LEAF_ENTRY PerfectHashJitIndexMulshrolate1RXIndex32x16_x64, _TEXT$00, NoPad
+        LEAF_ENTRY PerfectHashJitIndexMulshrolate2RX16Avx512_x64, _TEXT$00, NoPad
 
         ;IACA_VC_START
 
@@ -141,6 +143,17 @@ OUTPUT_OFFSET          equ 088h
         vpslld  zmm1, zmm3, xmm2
         vpord   zmm3, zmm0, zmm1
 
+        mov     rax, 0D2D2D2D2D2D2D2D2h             ; Seed3 byte 3.
+        mov     ecx, eax
+        and     ecx, 31
+        mov     edx, 32
+        sub     edx, ecx
+        vmovd   xmm1, ecx
+        vmovd   xmm2, edx
+        vpsrld  zmm0, zmm4, xmm1
+        vpslld  zmm1, zmm4, xmm2
+        vpord   zmm4, zmm0, zmm1
+
         mov     rax, 0D1D1D1D1D1D1D1D1h             ; Seed3 byte 1.
         mov     ecx, eax
         and     ecx, 31
@@ -157,8 +170,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 00h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 00h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 00h]
@@ -166,8 +179,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 04h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 04h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 08h]
@@ -175,8 +188,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 08h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 08h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 10h]
@@ -184,8 +197,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 0Ch]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 0Ch]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 18h]
@@ -193,8 +206,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 10h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 10h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 20h]
@@ -202,8 +215,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 14h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 14h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 28h]
@@ -211,8 +224,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 18h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 18h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 30h]
@@ -220,8 +233,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 1Ch]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 1Ch]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 38h]
@@ -229,8 +242,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 20h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 20h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 40h]
@@ -238,8 +251,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 24h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 24h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 48h]
@@ -247,8 +260,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 28h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 28h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 50h]
@@ -256,8 +269,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 2Ch]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 2Ch]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 58h]
@@ -265,8 +278,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 30h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 30h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 60h]
@@ -274,8 +287,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 34h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 34h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 68h]
@@ -283,8 +296,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 38h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 38h]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 70h]
@@ -292,8 +305,8 @@ OUTPUT_OFFSET          equ 088h
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 3Ch]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 3Ch]
-        mov     eax, dword ptr [r10 + rax * 4]
-        mov     ecx, dword ptr [r10 + rcx * 4]
+        movzx   eax, word ptr [r10 + rax * 2]
+        movzx   ecx, word ptr [r10 + rcx * 2]
         add     eax, ecx
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 78h]
@@ -306,7 +319,7 @@ OUTPUT_OFFSET          equ 088h
 
         ;IACA_VC_END
 
-        LEAF_END PerfectHashJitIndexMulshrolate1RXIndex32x16_x64, _TEXT$00
+        LEAF_END PerfectHashJitIndexMulshrolate2RX16Avx512_x64, _TEXT$00
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=masm fo=croql comments=\:;           :
 

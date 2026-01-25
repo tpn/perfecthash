@@ -141,7 +141,7 @@ OUTPUT_OFFSET          equ 088h
         vmovd   xmm2, edx
         vpsrld  zmm0, zmm3, xmm1
         vpslld  zmm1, zmm3, xmm2
-        vpor    zmm3, zmm0, zmm1
+        vpord   zmm3, zmm0, zmm1
 
         mov     rax, 0D1D1D1D1D1D1D1D1h             ; Seed3 byte 1.
         mov     ecx, eax
