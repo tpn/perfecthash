@@ -131,9 +131,13 @@ dependencies:
         packages:
           - cmake>=3.20
           - ccache
+          - libxml2
+          - nasm
           - ninja
           - pip
           - rust
+          - zlib
+          - zstd
     specific:
       - output_types: conda
         matrices:

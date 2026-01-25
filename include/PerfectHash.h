@@ -726,7 +726,11 @@ PerfectHashInterfaceGuidToId(
     for (Index = 1; Index < Count; Index++) {
 #ifdef __cplusplus
         const GUID *Entry = PerfectHashInterfaceGuids[Index];
+#ifdef PH_WINDOWS
+        if (Entry && InlineIsEqualGUID(Guid, *Entry)) {
+#else
         if (Entry && InlineIsEqualGUID(Guid, Entry)) {
+#endif
             Id = (PERFECT_HASH_INTERFACE_ID)Index;
             break;
         }
