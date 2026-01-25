@@ -22,8 +22,13 @@ Abstract:
 #include "ChmOnline01.h"
 
 #if defined(PH_RAWDOG_X64)
+#include <immintrin.h>
 #include "PerfectHashJitRawDogMultiplyShiftR_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftR16_x64.h"
+#include "PerfectHashJitRawDogMultiplyShiftRIndex32x4_x64.h"
+#include "PerfectHashJitRawDogMultiplyShiftR16Index32x4_x64.h"
+#include "PerfectHashJitRawDogMultiplyShiftRIndex32x4Avx2_x64.h"
+#include "PerfectHashJitRawDogMultiplyShiftR16Index32x4Avx2_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftRIndex32x8_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftR16Index32x8_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftRIndex32x16_x64.h"
@@ -98,6 +103,122 @@ Abstract:
 #define RAWDOG_SENTINEL_SEED4       0xB2B2B2B2B2B2B2B2ULL
 #define RAWDOG_SENTINEL_HASH_MASK   0xF1F1F1F1F1F1F1F1ULL
 #define RAWDOG_SENTINEL_INDEX_MASK  0x2121212121212121ULL
+
+#if defined(PH_RAWDOG_X64)
+static
+BOOLEAN
+RawDogOsAvxEnabled(
+    _In_opt_ PRTL Rtl
+    )
+{
+    if (!ARGUMENT_PRESENT(Rtl) || Rtl->CpuFeatures.OSXSAVE == FALSE) {
+        return FALSE;
+    }
+
+#if defined(_M_AMD64) || defined(_M_X64)
+    return ((_xgetbv(0) & 0x6) == 0x6);
+#else
+    return FALSE;
+#endif
+}
+
+static
+BOOLEAN
+RawDogOsAvx512Enabled(
+    _In_opt_ PRTL Rtl
+    )
+{
+    if (!ARGUMENT_PRESENT(Rtl) || Rtl->CpuFeatures.OSXSAVE == FALSE) {
+        return FALSE;
+    }
+
+#if defined(_M_AMD64) || defined(_M_X64)
+    return ((_xgetbv(0) & 0xE6) == 0xE6);
+#else
+    return FALSE;
+#endif
+}
+
+static
+BOOLEAN
+RawDogHostHasAvx(
+    _In_opt_ PRTL Rtl
+    )
+{
+    if (!ARGUMENT_PRESENT(Rtl) ||
+        Rtl->CpuFeatures.AVX == FALSE ||
+        !RawDogOsAvxEnabled(Rtl)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+__declspec(noinline)
+static
+VOID
+RawDogProbeAvx2(
+    VOID
+    )
+{
+    int data[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+    __m256i indices = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+    __m256i values = _mm256_i32gather_epi32(data, indices, 4);
+    volatile __m256i sink = values;
+    (void)sink;
+}
+
+static
+BOOLEAN
+RawDogHostHasAvx2(
+    _In_opt_ PRTL Rtl
+    )
+{
+    if (!ARGUMENT_PRESENT(Rtl) ||
+        Rtl->CpuFeatures.AVX2 == FALSE ||
+        Rtl->CpuFeatures.AVX == FALSE ||
+        !RawDogOsAvxEnabled(Rtl)) {
+        return FALSE;
+    }
+
+    TRY_AVX2 {
+        RawDogProbeAvx2();
+    } CATCH_EXCEPTION_ILLEGAL_INSTRUCTION {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static
+BOOLEAN
+RawDogHostHasAvx512(
+    _In_opt_ PRTL Rtl
+    )
+{
+    if (!ARGUMENT_PRESENT(Rtl) ||
+        Rtl->CpuFeatures.AVX512F == FALSE ||
+        !RawDogOsAvx512Enabled(Rtl)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+#endif
+
+typedef
+VOID
+(PH_JIT_INDEX32X4_FUNCTION)(
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _In_ ULONG Key3,
+    _In_ ULONG Key4,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4
+    );
+typedef PH_JIT_INDEX32X4_FUNCTION *PPH_JIT_INDEX32X4_FUNCTION;
 
 typedef
 VOID
@@ -834,6 +955,7 @@ CompileChm01IndexVectorJitRawDog(
     _In_ PPERFECT_HASH_TABLE Table,
     _Inout_ PPERFECT_HASH_TABLE_JIT Jit,
     _In_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags,
+    _In_ BOOLEAN CompileIndex32x4,
     _In_ BOOLEAN CompileIndex32x8,
     _In_ BOOLEAN CompileIndex32x16,
     _Out_opt_ PERFECT_HASH_JIT_MAX_ISA_ID *UsedIsa
@@ -844,6 +966,7 @@ CompileChm01IndexVectorJitRawDog(
     UNREFERENCED_PARAMETER(Table);
     UNREFERENCED_PARAMETER(Jit);
     UNREFERENCED_PARAMETER(CompileFlags);
+    UNREFERENCED_PARAMETER(CompileIndex32x4);
     UNREFERENCED_PARAMETER(CompileIndex32x8);
     UNREFERENCED_PARAMETER(CompileIndex32x16);
 
@@ -854,20 +977,26 @@ CompileChm01IndexVectorJitRawDog(
     return PH_E_NOT_IMPLEMENTED;
 #else
     PTABLE_INFO_ON_DISK TableInfo;
+    PRTL Rtl;
     ULONG_BYTES Seed3Bytes;
     ULONGLONG Assigned;
     RAW_DOG_PATCH_ENTRY Entries[8];
     ULONG EntryCount = 0;
     BOOLEAN UseAssigned16;
+    BOOLEAN HostHasAvx;
+    BOOLEAN HostHasAvx2;
+    BOOLEAN HostHasAvx512;
+    BOOLEAN AllowAvx;
+    BOOLEAN AllowAvx2;
+    BOOLEAN AllowAvx512;
+    PERFECT_HASH_JIT_MAX_ISA_ID RequestedIsa;
     PERFECT_HASH_JIT_MAX_ISA_ID MaxIsa = PerfectHashJitMaxIsaAuto;
     PBYTE SourceCode = NULL;
     SIZE_T CodeSize = 0;
     PBYTE Code;
     HRESULT Result;
 
-    UNREFERENCED_PARAMETER(CompileFlags);
-
-    if (!CompileIndex32x8 && !CompileIndex32x16) {
+    if (!CompileIndex32x4 && !CompileIndex32x8 && !CompileIndex32x16) {
         if (ARGUMENT_PRESENT(UsedIsa)) {
             *UsedIsa = MaxIsa;
         }
@@ -892,6 +1021,21 @@ CompileChm01IndexVectorJitRawDog(
     if (!ARGUMENT_PRESENT(TableInfo)) {
         return PH_E_INVARIANT_CHECK_FAILED;
     }
+
+    Rtl = Table->Rtl;
+    HostHasAvx = RawDogHostHasAvx(Rtl);
+    HostHasAvx2 = RawDogHostHasAvx2(Rtl);
+    HostHasAvx512 = RawDogHostHasAvx512(Rtl);
+    RequestedIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
+    AllowAvx512 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
+                   RequestedIsa == PerfectHashJitMaxIsaAvx512);
+    AllowAvx = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
+                RequestedIsa == PerfectHashJitMaxIsaAvx ||
+                RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
+                RequestedIsa == PerfectHashJitMaxIsaAvx512);
+    AllowAvx2 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
+                 RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
+                 RequestedIsa == PerfectHashJitMaxIsaAvx512);
 
     Seed3Bytes.AsULong = TableInfo->Seed3;
     if (UseAssigned16) {
@@ -940,6 +1084,10 @@ CompileChm01IndexVectorJitRawDog(
     };
 
     if (CompileIndex32x16) {
+        if (!AllowAvx512 || !HostHasAvx512) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
         if (UseAssigned16) {
             SourceCode = (PBYTE)
                 PerfectHashJitRawDogMultiplyShiftR16Index32x16_x64;
@@ -966,9 +1114,14 @@ CompileChm01IndexVectorJitRawDog(
         Jit->Index32x16Function = Code;
         Jit->Flags.Index32x16Compiled = TRUE;
         Jit->Flags.Index32x16Vector = TRUE;
+        MaxIsa = PerfectHashJitMaxIsaAvx512;
     }
 
     if (CompileIndex32x8) {
+        if (!AllowAvx2 || !HostHasAvx2) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
         if (UseAssigned16) {
             SourceCode = (PBYTE)
                 PerfectHashJitRawDogMultiplyShiftR16Index32x8_x64;
@@ -995,6 +1148,63 @@ CompileChm01IndexVectorJitRawDog(
         Jit->Index32x8Function = Code;
         Jit->Flags.Index32x8Compiled = TRUE;
         Jit->Flags.Index32x8Vector = TRUE;
+        if (MaxIsa == PerfectHashJitMaxIsaAuto) {
+            MaxIsa = PerfectHashJitMaxIsaAvx2;
+        }
+    }
+
+    if (CompileIndex32x4) {
+        BOOLEAN UseAvx2;
+
+        if (!AllowAvx || !HostHasAvx) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
+        if ((RequestedIsa == PerfectHashJitMaxIsaAvx2 ||
+             RequestedIsa == PerfectHashJitMaxIsaAvx512) &&
+            !HostHasAvx2) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
+        UseAvx2 = (AllowAvx2 && HostHasAvx2 &&
+                   RequestedIsa != PerfectHashJitMaxIsaAvx);
+
+        if (UseAssigned16) {
+            SourceCode = (PBYTE)(
+                UseAvx2 ?
+                PerfectHashJitRawDogMultiplyShiftR16Index32x4Avx2_x64 :
+                PerfectHashJitRawDogMultiplyShiftR16Index32x4_x64
+            );
+            CodeSize = UseAvx2 ?
+                sizeof(PerfectHashJitRawDogMultiplyShiftR16Index32x4Avx2_x64) :
+                sizeof(PerfectHashJitRawDogMultiplyShiftR16Index32x4_x64);
+        } else {
+            SourceCode = (PBYTE)(
+                UseAvx2 ?
+                PerfectHashJitRawDogMultiplyShiftRIndex32x4Avx2_x64 :
+                PerfectHashJitRawDogMultiplyShiftRIndex32x4_x64
+            );
+            CodeSize = UseAvx2 ?
+                sizeof(PerfectHashJitRawDogMultiplyShiftRIndex32x4Avx2_x64) :
+                sizeof(PerfectHashJitRawDogMultiplyShiftRIndex32x4_x64);
+        }
+
+        Result = CreateRawDogCode(SourceCode,
+                                  CodeSize,
+                                  Entries,
+                                  EntryCount,
+                                  &Code);
+        if (FAILED(Result)) {
+            return Result;
+        }
+
+        Jit->Index32x4Function = Code;
+        Jit->Flags.Index32x4Compiled = TRUE;
+        Jit->Flags.Index32x4Vector = TRUE;
+        if (MaxIsa == PerfectHashJitMaxIsaAuto) {
+            MaxIsa = UseAvx2 ? PerfectHashJitMaxIsaAvx2 :
+                               PerfectHashJitMaxIsaAvx;
+        }
     }
 
     if (ARGUMENT_PRESENT(UsedIsa)) {
@@ -1017,11 +1227,15 @@ CompileChm01IndexVectorJitRawDog(
     PBYTE Code;
     HRESULT Result;
 
-    if (!CompileIndex32x8 && !CompileIndex32x16) {
+    if (!CompileIndex32x4 && !CompileIndex32x8 && !CompileIndex32x16) {
         if (ARGUMENT_PRESENT(UsedIsa)) {
             *UsedIsa = MaxIsa;
         }
         return S_OK;
+    }
+
+    if (CompileIndex32x4) {
+        return PH_E_NOT_IMPLEMENTED;
     }
 
     if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
@@ -1969,16 +2183,44 @@ RawDogJitInterfaceIndex32x4(
     _Out_ PULONG Index4
     )
 {
-    UNREFERENCED_PARAMETER(Jit);
-    UNREFERENCED_PARAMETER(Key1);
-    UNREFERENCED_PARAMETER(Key2);
-    UNREFERENCED_PARAMETER(Key3);
-    UNREFERENCED_PARAMETER(Key4);
-    UNREFERENCED_PARAMETER(Index1);
-    UNREFERENCED_PARAMETER(Index2);
-    UNREFERENCED_PARAMETER(Index3);
-    UNREFERENCED_PARAMETER(Index4);
-    return PH_E_NOT_IMPLEMENTED;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_JIT JitState;
+    PPH_JIT_INDEX32X4_FUNCTION IndexFunction;
+
+    if (!ARGUMENT_PRESENT(Jit) ||
+        !ARGUMENT_PRESENT(Index1) ||
+        !ARGUMENT_PRESENT(Index2) ||
+        !ARGUMENT_PRESENT(Index3) ||
+        !ARGUMENT_PRESENT(Index4)) {
+        return E_POINTER;
+    }
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    JitState = Table->Jit;
+    if (!ARGUMENT_PRESENT(JitState) ||
+        !JitState->Flags.Valid ||
+        !JitState->Flags.Index32x4Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction = (PPH_JIT_INDEX32X4_FUNCTION)JitState->Index32x4Function;
+    if (!ARGUMENT_PRESENT(IndexFunction)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    IndexFunction(Key1,
+                  Key2,
+                  Key3,
+                  Key4,
+                  Index1,
+                  Index2,
+                  Index3,
+                  Index4);
+    return S_OK;
 }
 
 static
@@ -2462,11 +2704,10 @@ PerfectHashTableCompileJitRawDog(
     WantsIndex32x8 = (CompileFlags.JitIndex32x8 != FALSE ||
                       CompileFlags.JitVectorIndex32x8 != FALSE);
     WantsIndex32x16 = (CompileFlags.JitIndex32x16 != FALSE);
-    WantsVector = (WantsIndex32x8 || WantsIndex32x16);
+    WantsVector = (WantsIndex32x4 || WantsIndex32x8 || WantsIndex32x16);
 
     if (CompileFlags.JitIndex64 ||
-        WantsIndex32x2 ||
-        WantsIndex32x4) {
+        WantsIndex32x2) {
         return PH_E_NOT_IMPLEMENTED;
     }
 
@@ -2518,6 +2759,7 @@ PerfectHashTableCompileJitRawDog(
         Result = CompileChm01IndexVectorJitRawDog(Table,
                                                   Jit,
                                                   &CompileFlags,
+                                                  WantsIndex32x4,
                                                   WantsIndex32x8,
                                                   WantsIndex32x16,
                                                   &UsedIsa);
@@ -2526,7 +2768,12 @@ PerfectHashTableCompileJitRawDog(
             return Result;
         }
 
-        if (UsedIsa == PerfectHashJitMaxIsaAvx2) {
+        if (UsedIsa == PerfectHashJitMaxIsaAvx) {
+            CopyRawDogString(Jit->TargetFeatures,
+                             sizeof(Jit->TargetFeatures),
+                             "avx");
+            Jit->JitMaxIsa = UsedIsa;
+        } else if (UsedIsa == PerfectHashJitMaxIsaAvx2) {
             CopyRawDogString(Jit->TargetFeatures,
                              sizeof(Jit->TargetFeatures),
                              "avx2");
@@ -2577,6 +2824,7 @@ PerfectHashTableJitRundownRawDog(
     Table->Flags.JitEnabled = FALSE;
 
     FreeRawDogCode(&Jit->Index32Function);
+    FreeRawDogCode(&Jit->Index32x4Function);
     FreeRawDogCode(&Jit->Index32x8Function);
     FreeRawDogCode(&Jit->Index32x16Function);
     Jit->ExecutionEngine = NULL;

@@ -895,14 +895,13 @@ int RunBenchmark(const BenchmarkOptions &base,
 
   if (options.jit_backend == BenchmarkOptions::JitBackend::RawDog) {
     const bool wants_vector =
-        options.index32x8 || options.index32x16 ||
-        options.jit_vector_index32x8;
+        options.index32x4 || options.index32x8 || options.index32x16 ||
+        options.jit_vector_index32x4 || options.jit_vector_index32x8;
     const bool wants_unsupported =
-        options.index32x2 || options.index32x4 ||
-        options.jit_vector_index32x2 || options.jit_vector_index32x4;
+        options.index32x2 || options.jit_vector_index32x2;
     if (wants_unsupported) {
-      std::cerr << "RawDog JIT only supports Index32(), Index32x8, "
-                   "and Index32x16.\n";
+      std::cerr << "RawDog JIT only supports Index32(), Index32x4, "
+                   "Index32x8, and Index32x16.\n";
       return 1;
     }
     if (wants_vector &&

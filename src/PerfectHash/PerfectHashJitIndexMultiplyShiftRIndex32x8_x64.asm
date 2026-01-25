@@ -18,13 +18,10 @@
 include PerfectHash.inc
 
 KEYS_OFFSET            equ 000h
-SEED1_OFFSET           equ 020h
-SEED2_OFFSET           equ 028h
-SEED3BYTE1_OFFSET      equ 030h
-SEED3BYTE2_OFFSET      equ 038h
-HASHMASK_OFFSET        equ 040h
-INDEXMASK_OFFSET       equ 048h
+VERTEX1_OFFSET         equ 020h
+VERTEX2_OFFSET         equ 040h
 LOCAL_STACK_SIZE       equ 060h
+OUTPUT_OFFSET          equ 048h
 
 ;++
 ;
@@ -86,53 +83,120 @@ LOCAL_STACK_SIZE       equ 060h
         mov     eax, dword ptr [r11 + 040h]
         mov     dword ptr [rsp + 1Ch], eax
 
+        vmovdqu ymm0, ymmword ptr [rsp + KEYS_OFFSET]
+
         mov     r10, 0A1A1A1A1A1A1A1A1h             ; Assigned base address.
 
         mov     rax, 0B1B1B1B1B1B1B1B1h             ; Seed1.
-        mov     qword ptr [rsp + SEED1_OFFSET], rax
+        vmovd   xmm1, eax
+        vpbroadcastd ymm1, xmm1
+
         mov     rax, 0C1C1C1C1C1C1C1C1h             ; Seed2.
-        mov     qword ptr [rsp + SEED2_OFFSET], rax
+        vmovd   xmm2, eax
+        vpbroadcastd ymm2, xmm2
+
+        vpmulld ymm3, ymm0, ymm1                   ; Vertex1 = Key * Seed1.
+        vpmulld ymm4, ymm0, ymm2                   ; Vertex2 = Key * Seed2.
+
         mov     rax, 0D1D1D1D1D1D1D1D1h             ; Seed3 byte 1.
-        mov     qword ptr [rsp + SEED3BYTE1_OFFSET], rax
+        mov     ecx, eax
+        and     ecx, 31
+        vmovd   xmm1, ecx
+
         mov     rax, 0E1E1E1E1E1E1E1E1h             ; Seed3 byte 2.
-        mov     qword ptr [rsp + SEED3BYTE2_OFFSET], rax
+        mov     ecx, eax
+        and     ecx, 31
+        vmovd   xmm2, ecx
+
+        vpsrld  ymm3, ymm3, xmm1
+        vpsrld  ymm4, ymm4, xmm2
+
         mov     rax, 0F1F1F1F1F1F1F1F1h             ; Hash mask.
-        mov     qword ptr [rsp + HASHMASK_OFFSET], rax
+        vmovd   xmm1, eax
+        vpbroadcastd ymm5, xmm1
+
+        vpand   ymm3, ymm3, ymm5                   ; Mask vertex1.
+        vpand   ymm4, ymm4, ymm5                   ; Mask vertex2.
+
+        vmovdqu ymmword ptr [rsp + VERTEX1_OFFSET], ymm3
+        vmovdqu ymmword ptr [rsp + VERTEX2_OFFSET], ymm4
+
         mov     rax, 02121212121212121h            ; Index mask.
-        mov     qword ptr [rsp + INDEXMASK_OFFSET], rax
+        mov     r9d, eax
 
-        xor     r8d, r8d                           ; Initialize index.
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 00h]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 00h]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 00h]
+        mov     dword ptr [rdx], eax
 
-Index32x8Loop:
-        mov     eax, dword ptr [rsp + r8 * 4]      ; Load key.
-        mov     edx, eax
-        mov     ecx, dword ptr [rsp + SEED1_OFFSET]
-        imul    eax, ecx                           ; Vertex1 = Key * Seed1.
-        mov     ecx, dword ptr [rsp + SEED3BYTE1_OFFSET]
-        shr     eax, cl                            ; Vertex1 >>= Seed3_Byte1.
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 04h]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 04h]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 08h]
+        mov     dword ptr [rdx], eax
 
-        mov     ecx, dword ptr [rsp + SEED2_OFFSET]
-        imul    edx, ecx                           ; Vertex2 = Key * Seed2.
-        mov     ecx, dword ptr [rsp + SEED3BYTE2_OFFSET]
-        shr     edx, cl                            ; Vertex2 >>= Seed3_Byte2.
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 08h]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 08h]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 10h]
+        mov     dword ptr [rdx], eax
 
-        mov     ecx, dword ptr [rsp + HASHMASK_OFFSET]
-        and     eax, ecx                           ; Mask vertex1.
-        and     edx, ecx                           ; Mask vertex2.
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 0Ch]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 0Ch]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 18h]
+        mov     dword ptr [rdx], eax
 
-        mov     eax, dword ptr [r10 + rax * 4]     ; Load vertex1.
-        mov     edx, dword ptr [r10 + rdx * 4]     ; Load vertex2.
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 10h]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 10h]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 20h]
+        mov     dword ptr [rdx], eax
 
-        add     eax, edx                           ; Add vertices.
-        mov     ecx, dword ptr [rsp + INDEXMASK_OFFSET]
-        and     eax, ecx                           ; Mask the index.
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 14h]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 14h]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 28h]
+        mov     dword ptr [rdx], eax
 
-        mov     r9, qword ptr [r11 + r8 * 8 + 048h]
-        mov     dword ptr [r9], eax
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 18h]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 18h]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 30h]
+        mov     dword ptr [rdx], eax
 
-        inc     r8d
-        cmp     r8d, 8
-        jl      Index32x8Loop
+        mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 1Ch]
+        mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 1Ch]
+        mov     eax, dword ptr [r10 + rax * 4]
+        mov     ecx, dword ptr [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 38h]
+        mov     dword ptr [rdx], eax
+
+        vzeroupper
 
         add     rsp, LOCAL_STACK_SIZE
         ret                                        ; Return.
