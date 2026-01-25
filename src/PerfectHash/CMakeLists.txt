@@ -1444,6 +1444,246 @@ if(PERFECTHASH_IS_WINDOWS)
             set(RAWDOG_MSR16_INDEX32X16_HDR
                 "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR16Index32x16_x64.h"
             )
+            set(RAWDOG_MSRX_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRX_x64.asm"
+            )
+            set(RAWDOG_MSRX_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX_x64.obj"
+            )
+            set(RAWDOG_MSRX_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX_x64.bin"
+            )
+            set(RAWDOG_MSRX_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRX_x64.h"
+            )
+            set(RAWDOG_MSRX16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRX16_x64.asm"
+            )
+            set(RAWDOG_MSRX16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16_x64.obj"
+            )
+            set(RAWDOG_MSRX16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16_x64.bin"
+            )
+            set(RAWDOG_MSRX16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRX16_x64.h"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x4_x64.asm"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x4_x64.obj"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x4_x64.bin"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRXIndex32x4_x64.h"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x4_x64.asm"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x4_x64.obj"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x4_x64.bin"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRX16Index32x4_x64.h"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x4Avx2_x64.asm"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x4Avx2_x64.obj"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x4Avx2_x64.bin"
+            )
+            set(RAWDOG_MSRX_INDEX32X4_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRXIndex32x4Avx2_x64.h"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64.asm"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64.obj"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64.bin"
+            )
+            set(RAWDOG_MSRX16_INDEX32X4_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRX16Index32x4Avx2_x64.h"
+            )
+            set(RAWDOG_MSRX_INDEX32X8_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64.asm"
+            )
+            set(RAWDOG_MSRX_INDEX32X8_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64.obj"
+            )
+            set(RAWDOG_MSRX_INDEX32X8_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64.bin"
+            )
+            set(RAWDOG_MSRX_INDEX32X8_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRXIndex32x8_x64.h"
+            )
+            set(RAWDOG_MSRX16_INDEX32X8_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x8_x64.asm"
+            )
+            set(RAWDOG_MSRX16_INDEX32X8_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x8_x64.obj"
+            )
+            set(RAWDOG_MSRX16_INDEX32X8_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x8_x64.bin"
+            )
+            set(RAWDOG_MSRX16_INDEX32X8_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRX16Index32x8_x64.h"
+            )
+            set(RAWDOG_MSRX_INDEX32X16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x16_x64.asm"
+            )
+            set(RAWDOG_MSRX_INDEX32X16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x16_x64.obj"
+            )
+            set(RAWDOG_MSRX_INDEX32X16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRXIndex32x16_x64.bin"
+            )
+            set(RAWDOG_MSRX_INDEX32X16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRXIndex32x16_x64.h"
+            )
+            set(RAWDOG_MSRX16_INDEX32X16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x16_x64.asm"
+            )
+            set(RAWDOG_MSRX16_INDEX32X16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x16_x64.obj"
+            )
+            set(RAWDOG_MSRX16_INDEX32X16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRX16Index32x16_x64.bin"
+            )
+            set(RAWDOG_MSRX16_INDEX32X16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRX16Index32x16_x64.h"
+            )
+            set(RAWDOG_M1RX_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX_x64.asm"
+            )
+            set(RAWDOG_M1RX_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX_x64.obj"
+            )
+            set(RAWDOG_M1RX_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX_x64.bin"
+            )
+            set(RAWDOG_M1RX_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX_x64.h"
+            )
+            set(RAWDOG_M1RX16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX16_x64.asm"
+            )
+            set(RAWDOG_M1RX16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16_x64.obj"
+            )
+            set(RAWDOG_M1RX16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16_x64.bin"
+            )
+            set(RAWDOG_M1RX16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX16_x64.h"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x4_x64.asm"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x4_x64.obj"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x4_x64.bin"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RXIndex32x4_x64.h"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x4_x64.asm"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x4_x64.obj"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x4_x64.bin"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX16Index32x4_x64.h"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x4Avx2_x64.asm"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x4Avx2_x64.obj"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x4Avx2_x64.bin"
+            )
+            set(RAWDOG_M1RX_INDEX32X4_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RXIndex32x4Avx2_x64.h"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_AVX2_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x4Avx2_x64.asm"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_AVX2_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x4Avx2_x64.obj"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_AVX2_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x4Avx2_x64.bin"
+            )
+            set(RAWDOG_M1RX16_INDEX32X4_AVX2_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX16Index32x4Avx2_x64.h"
+            )
+            set(RAWDOG_M1RX_INDEX32X8_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x8_x64.asm"
+            )
+            set(RAWDOG_M1RX_INDEX32X8_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x8_x64.obj"
+            )
+            set(RAWDOG_M1RX_INDEX32X8_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x8_x64.bin"
+            )
+            set(RAWDOG_M1RX_INDEX32X8_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RXIndex32x8_x64.h"
+            )
+            set(RAWDOG_M1RX16_INDEX32X8_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x8_x64.asm"
+            )
+            set(RAWDOG_M1RX16_INDEX32X8_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x8_x64.obj"
+            )
+            set(RAWDOG_M1RX16_INDEX32X8_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x8_x64.bin"
+            )
+            set(RAWDOG_M1RX16_INDEX32X8_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX16Index32x8_x64.h"
+            )
+            set(RAWDOG_M1RX_INDEX32X16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x16_x64.asm"
+            )
+            set(RAWDOG_M1RX_INDEX32X16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x16_x64.obj"
+            )
+            set(RAWDOG_M1RX_INDEX32X16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RXIndex32x16_x64.bin"
+            )
+            set(RAWDOG_M1RX_INDEX32X16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RXIndex32x16_x64.h"
+            )
+            set(RAWDOG_M1RX16_INDEX32X16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x16_x64.asm"
+            )
+            set(RAWDOG_M1RX16_INDEX32X16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x16_x64.obj"
+            )
+            set(RAWDOG_M1RX16_INDEX32X16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMulshrolate1RX16Index32x16_x64.bin"
+            )
+            set(RAWDOG_M1RX16_INDEX32X16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate1RX16Index32x16_x64.h"
+            )
 
             add_custom_command(
                 OUTPUT ${RAWDOG_HDR}
@@ -1675,6 +1915,466 @@ if(PERFECTHASH_IS_WINDOWS)
                 VERBATIM
             )
 
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX_BIN}
+                        "${RAWDOG_MSRX_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX_BIN}"
+                        --output "${RAWDOG_MSRX_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRX_x64
+                DEPENDS
+                    "${RAWDOG_MSRX_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX16_BIN}
+                        "${RAWDOG_MSRX16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX16_BIN}"
+                        --output "${RAWDOG_MSRX16_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRX16_x64
+                DEPENDS
+                    "${RAWDOG_MSRX16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX16 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX_INDEX32X4_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX_INDEX32X4_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX_INDEX32X4_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X4_BIN}
+                        "${RAWDOG_MSRX_INDEX32X4_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX_INDEX32X4_BIN}"
+                        --output "${RAWDOG_MSRX_INDEX32X4_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRXIndex32x4_x64
+                DEPENDS
+                    "${RAWDOG_MSRX_INDEX32X4_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX Index32x4 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX16_INDEX32X4_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX16_INDEX32X4_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX16_INDEX32X4_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X4_BIN}
+                        "${RAWDOG_MSRX16_INDEX32X4_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX16_INDEX32X4_BIN}"
+                        --output "${RAWDOG_MSRX16_INDEX32X4_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRX16Index32x4_x64
+                DEPENDS
+                    "${RAWDOG_MSRX16_INDEX32X4_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX16 Index32x4 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX_INDEX32X4_AVX2_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX_INDEX32X4_AVX2_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX_INDEX32X4_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X4_AVX2_BIN}
+                        "${RAWDOG_MSRX_INDEX32X4_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX_INDEX32X4_AVX2_BIN}"
+                        --output "${RAWDOG_MSRX_INDEX32X4_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRXIndex32x4Avx2_x64
+                DEPENDS
+                    "${RAWDOG_MSRX_INDEX32X4_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX Index32x4 Avx2 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX16_INDEX32X4_AVX2_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX16_INDEX32X4_AVX2_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX16_INDEX32X4_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X4_AVX2_BIN}
+                        "${RAWDOG_MSRX16_INDEX32X4_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX16_INDEX32X4_AVX2_BIN}"
+                        --output "${RAWDOG_MSRX16_INDEX32X4_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRX16Index32x4Avx2_x64
+                DEPENDS
+                    "${RAWDOG_MSRX16_INDEX32X4_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX16 Index32x4 Avx2 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX_INDEX32X8_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX_INDEX32X8_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX_INDEX32X8_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X8_BIN}
+                        "${RAWDOG_MSRX_INDEX32X8_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX_INDEX32X8_BIN}"
+                        --output "${RAWDOG_MSRX_INDEX32X8_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRXIndex32x8_x64
+                DEPENDS
+                    "${RAWDOG_MSRX_INDEX32X8_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX Index32x8 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX16_INDEX32X8_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX16_INDEX32X8_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX16_INDEX32X8_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X8_BIN}
+                        "${RAWDOG_MSRX16_INDEX32X8_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX16_INDEX32X8_BIN}"
+                        --output "${RAWDOG_MSRX16_INDEX32X8_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRX16Index32x8_x64
+                DEPENDS
+                    "${RAWDOG_MSRX16_INDEX32X8_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX16 Index32x8 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX_INDEX32X16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX_INDEX32X16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX_INDEX32X16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X16_BIN}
+                        "${RAWDOG_MSRX_INDEX32X16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX_INDEX32X16_BIN}"
+                        --output "${RAWDOG_MSRX_INDEX32X16_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRXIndex32x16_x64
+                DEPENDS
+                    "${RAWDOG_MSRX_INDEX32X16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX Index32x16 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSRX16_INDEX32X16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSRX16_INDEX32X16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSRX16_INDEX32X16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X16_BIN}
+                        "${RAWDOG_MSRX16_INDEX32X16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSRX16_INDEX32X16_BIN}"
+                        --output "${RAWDOG_MSRX16_INDEX32X16_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRX16Index32x16_x64
+                DEPENDS
+                    "${RAWDOG_MSRX16_INDEX32X16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftRX16 Index32x16 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX_BIN}
+                        "${RAWDOG_M1RX_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX_BIN}"
+                        --output "${RAWDOG_M1RX_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX_x64
+                DEPENDS
+                    "${RAWDOG_M1RX_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX16_BIN}
+                        "${RAWDOG_M1RX16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX16_BIN}"
+                        --output "${RAWDOG_M1RX16_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX16_x64
+                DEPENDS
+                    "${RAWDOG_M1RX16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX16 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX_INDEX32X4_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX_INDEX32X4_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX_INDEX32X4_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X4_BIN}
+                        "${RAWDOG_M1RX_INDEX32X4_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX_INDEX32X4_BIN}"
+                        --output "${RAWDOG_M1RX_INDEX32X4_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RXIndex32x4_x64
+                DEPENDS
+                    "${RAWDOG_M1RX_INDEX32X4_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX Index32x4 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX16_INDEX32X4_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX16_INDEX32X4_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX16_INDEX32X4_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X4_BIN}
+                        "${RAWDOG_M1RX16_INDEX32X4_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX16_INDEX32X4_BIN}"
+                        --output "${RAWDOG_M1RX16_INDEX32X4_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX16Index32x4_x64
+                DEPENDS
+                    "${RAWDOG_M1RX16_INDEX32X4_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX16 Index32x4 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX_INDEX32X4_AVX2_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX_INDEX32X4_AVX2_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX_INDEX32X4_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X4_AVX2_BIN}
+                        "${RAWDOG_M1RX_INDEX32X4_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX_INDEX32X4_AVX2_BIN}"
+                        --output "${RAWDOG_M1RX_INDEX32X4_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RXIndex32x4Avx2_x64
+                DEPENDS
+                    "${RAWDOG_M1RX_INDEX32X4_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX Index32x4 Avx2 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX16_INDEX32X4_AVX2_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX16_INDEX32X4_AVX2_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX16_INDEX32X4_AVX2_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X4_AVX2_BIN}
+                        "${RAWDOG_M1RX16_INDEX32X4_AVX2_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX16_INDEX32X4_AVX2_BIN}"
+                        --output "${RAWDOG_M1RX16_INDEX32X4_AVX2_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX16Index32x4Avx2_x64
+                DEPENDS
+                    "${RAWDOG_M1RX16_INDEX32X4_AVX2_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX16 Index32x4 Avx2 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX_INDEX32X8_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX_INDEX32X8_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX_INDEX32X8_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X8_BIN}
+                        "${RAWDOG_M1RX_INDEX32X8_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX_INDEX32X8_BIN}"
+                        --output "${RAWDOG_M1RX_INDEX32X8_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RXIndex32x8_x64
+                DEPENDS
+                    "${RAWDOG_M1RX_INDEX32X8_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX Index32x8 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX16_INDEX32X8_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX16_INDEX32X8_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX16_INDEX32X8_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X8_BIN}
+                        "${RAWDOG_M1RX16_INDEX32X8_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX16_INDEX32X8_BIN}"
+                        --output "${RAWDOG_M1RX16_INDEX32X8_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX16Index32x8_x64
+                DEPENDS
+                    "${RAWDOG_M1RX16_INDEX32X8_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX16 Index32x8 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX_INDEX32X16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX_INDEX32X16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX_INDEX32X16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X16_BIN}
+                        "${RAWDOG_M1RX_INDEX32X16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX_INDEX32X16_BIN}"
+                        --output "${RAWDOG_M1RX_INDEX32X16_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RXIndex32x16_x64
+                DEPENDS
+                    "${RAWDOG_M1RX_INDEX32X16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX Index32x16 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_M1RX16_INDEX32X16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_M1RX16_INDEX32X16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_M1RX16_INDEX32X16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X16_BIN}
+                        "${RAWDOG_M1RX16_INDEX32X16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_M1RX16_INDEX32X16_BIN}"
+                        --output "${RAWDOG_M1RX16_INDEX32X16_HDR}"
+                        --symbol PerfectHashJitRawDogMulshrolate1RX16Index32x16_x64
+                DEPENDS
+                    "${RAWDOG_M1RX16_INDEX32X16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for Mulshrolate1RX16 Index32x16 (MASM)..."
+                VERBATIM
+            )
+
             list(APPEND Private_Header_Files
                  "${RAWDOG_HDR}"
                  "${RAWDOG_MSR16_HDR}"
@@ -1685,7 +2385,27 @@ if(PERFECTHASH_IS_WINDOWS)
                  "${RAWDOG_MSR_INDEX32X8_HDR}"
                  "${RAWDOG_MSR16_INDEX32X8_HDR}"
                  "${RAWDOG_MSR_INDEX32X16_HDR}"
-                 "${RAWDOG_MSR16_INDEX32X16_HDR}")
+                 "${RAWDOG_MSR16_INDEX32X16_HDR}"
+                 "${RAWDOG_MSRX_HDR}"
+                 "${RAWDOG_MSRX16_HDR}"
+                 "${RAWDOG_MSRX_INDEX32X4_HDR}"
+                 "${RAWDOG_MSRX16_INDEX32X4_HDR}"
+                 "${RAWDOG_MSRX_INDEX32X4_AVX2_HDR}"
+                 "${RAWDOG_MSRX16_INDEX32X4_AVX2_HDR}"
+                 "${RAWDOG_MSRX_INDEX32X8_HDR}"
+                 "${RAWDOG_MSRX16_INDEX32X8_HDR}"
+                 "${RAWDOG_MSRX_INDEX32X16_HDR}"
+                 "${RAWDOG_MSRX16_INDEX32X16_HDR}"
+                 "${RAWDOG_M1RX_HDR}"
+                 "${RAWDOG_M1RX16_HDR}"
+                 "${RAWDOG_M1RX_INDEX32X4_HDR}"
+                 "${RAWDOG_M1RX16_INDEX32X4_HDR}"
+                 "${RAWDOG_M1RX_INDEX32X4_AVX2_HDR}"
+                 "${RAWDOG_M1RX16_INDEX32X4_AVX2_HDR}"
+                 "${RAWDOG_M1RX_INDEX32X8_HDR}"
+                 "${RAWDOG_M1RX16_INDEX32X8_HDR}"
+                 "${RAWDOG_M1RX_INDEX32X16_HDR}"
+                 "${RAWDOG_M1RX16_INDEX32X16_HDR}")
             list(APPEND Source_Files "ChmOnline01RawDog.c")
         else()
             message(WARNING "RawDog JIT disabled (missing ml64/llvm-objcopy).")
