@@ -130,7 +130,6 @@ source_group("Private Header Files %28Auto-Generated%29" FILES ${Private_Header_
 set(Public_Header_Files
     "../../include/CompiledPerfectHash.h"
     "../../include/PerfectHash.h"
-    "../../include/PerfectHashErrors.h"
     "../../include/PerfectHashEvents.h"
 )
 source_group("Public Header Files" FILES ${Public_Header_Files})
@@ -1315,6 +1314,242 @@ if(PERFECTHASH_IS_LINUX)
     endif()
 endif()
 
+if(PERFECTHASH_IS_WINDOWS)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+    if(PERFECTHASH_ARCH_X86_64)
+        find_program(PERFECTHASH_ML64_EXECUTABLE ml64)
+        find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
+
+        if(PERFECTHASH_ML64_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
+            set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
+
+            set(RAWDOG_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.asm"
+            )
+            set(RAWDOG_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.obj"
+            )
+            set(RAWDOG_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.bin"
+            )
+            set(RAWDOG_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR_x64.h"
+            )
+            set(RAWDOG_MSR16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR16_x64.asm"
+            )
+            set(RAWDOG_MSR16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16_x64.obj"
+            )
+            set(RAWDOG_MSR16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16_x64.bin"
+            )
+            set(RAWDOG_MSR16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR16_x64.h"
+            )
+            set(RAWDOG_MSR_INDEX32X8_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRIndex32x8_x64.asm"
+            )
+            set(RAWDOG_MSR_INDEX32X8_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRIndex32x8_x64.obj"
+            )
+            set(RAWDOG_MSR_INDEX32X8_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRIndex32x8_x64.bin"
+            )
+            set(RAWDOG_MSR_INDEX32X8_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRIndex32x8_x64.h"
+            )
+            set(RAWDOG_MSR16_INDEX32X8_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR16Index32x8_x64.asm"
+            )
+            set(RAWDOG_MSR16_INDEX32X8_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16Index32x8_x64.obj"
+            )
+            set(RAWDOG_MSR16_INDEX32X8_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16Index32x8_x64.bin"
+            )
+            set(RAWDOG_MSR16_INDEX32X8_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR16Index32x8_x64.h"
+            )
+            set(RAWDOG_MSR_INDEX32X16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftRIndex32x16_x64.asm"
+            )
+            set(RAWDOG_MSR_INDEX32X16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRIndex32x16_x64.obj"
+            )
+            set(RAWDOG_MSR_INDEX32X16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftRIndex32x16_x64.bin"
+            )
+            set(RAWDOG_MSR_INDEX32X16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftRIndex32x16_x64.h"
+            )
+            set(RAWDOG_MSR16_INDEX32X16_ASM
+                "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR16Index32x16_x64.asm"
+            )
+            set(RAWDOG_MSR16_INDEX32X16_OBJ
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16Index32x16_x64.obj"
+            )
+            set(RAWDOG_MSR16_INDEX32X16_BIN
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitIndexMultiplyShiftR16Index32x16_x64.bin"
+            )
+            set(RAWDOG_MSR16_INDEX32X16_HDR
+                "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMultiplyShiftR16Index32x16_x64.h"
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_BIN}
+                        "${RAWDOG_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_BIN}"
+                        --output "${RAWDOG_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftR_x64
+                DEPENDS
+                    "${RAWDOG_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSR16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSR16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSR16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSR16_BIN}
+                        "${RAWDOG_MSR16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSR16_BIN}"
+                        --output "${RAWDOG_MSR16_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftR16_x64
+                DEPENDS
+                    "${RAWDOG_MSR16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR16 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSR_INDEX32X8_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSR_INDEX32X8_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSR_INDEX32X8_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSR_INDEX32X8_BIN}
+                        "${RAWDOG_MSR_INDEX32X8_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSR_INDEX32X8_BIN}"
+                        --output "${RAWDOG_MSR_INDEX32X8_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRIndex32x8_x64
+                DEPENDS
+                    "${RAWDOG_MSR_INDEX32X8_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR Index32x8 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSR16_INDEX32X8_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSR16_INDEX32X8_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSR16_INDEX32X8_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSR16_INDEX32X8_BIN}
+                        "${RAWDOG_MSR16_INDEX32X8_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSR16_INDEX32X8_BIN}"
+                        --output "${RAWDOG_MSR16_INDEX32X8_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftR16Index32x8_x64
+                DEPENDS
+                    "${RAWDOG_MSR16_INDEX32X8_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR16 Index32x8 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSR_INDEX32X16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSR_INDEX32X16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSR_INDEX32X16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSR_INDEX32X16_BIN}
+                        "${RAWDOG_MSR_INDEX32X16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSR_INDEX32X16_BIN}"
+                        --output "${RAWDOG_MSR_INDEX32X16_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftRIndex32x16_x64
+                DEPENDS
+                    "${RAWDOG_MSR_INDEX32X16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR Index32x16 (MASM)..."
+                VERBATIM
+            )
+
+            add_custom_command(
+                OUTPUT ${RAWDOG_MSR16_INDEX32X16_HDR}
+                COMMAND ${PERFECTHASH_ML64_EXECUTABLE}
+                        /nologo
+                        /c
+                        /Fo "${RAWDOG_MSR16_INDEX32X16_OBJ}"
+                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        "${RAWDOG_MSR16_INDEX32X16_ASM}"
+                COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                        --dump-section=.text$mn$00=${RAWDOG_MSR16_INDEX32X16_BIN}
+                        "${RAWDOG_MSR16_INDEX32X16_OBJ}"
+                COMMAND "${Python3_EXECUTABLE}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                        --input "${RAWDOG_MSR16_INDEX32X16_BIN}"
+                        --output "${RAWDOG_MSR16_INDEX32X16_HDR}"
+                        --symbol PerfectHashJitRawDogMultiplyShiftR16Index32x16_x64
+                DEPENDS
+                    "${RAWDOG_MSR16_INDEX32X16_ASM}"
+                    "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                COMMENT "Generating RawDog JIT blob for MultiplyShiftR16 Index32x16 (MASM)..."
+                VERBATIM
+            )
+
+            list(APPEND Private_Header_Files
+                 "${RAWDOG_HDR}"
+                 "${RAWDOG_MSR16_HDR}"
+                 "${RAWDOG_MSR_INDEX32X8_HDR}"
+                 "${RAWDOG_MSR16_INDEX32X8_HDR}"
+                 "${RAWDOG_MSR_INDEX32X16_HDR}"
+                 "${RAWDOG_MSR16_INDEX32X16_HDR}")
+            list(APPEND Source_Files "ChmOnline01RawDog.c")
+        else()
+            message(WARNING "RawDog JIT disabled (missing ml64/llvm-objcopy).")
+            set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
+        endif()
+    endif()
+endif()
+
 if(PERFECTHASH_IS_MAC)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
@@ -2415,18 +2650,34 @@ if(WIN32)
         ${Assembly_Source_Files}
     )
 
-    set(OUTPUT_FILE "${PERFECTHASH_ROOT_DIR}/include/PerfectHashErrors.h")
+    set(PERFECTHASH_ERRORS_HEADER
+        "${PERFECTHASH_ROOT_DIR}/include/PerfectHashErrors.h"
+    )
+    set(PERFECTHASH_ERRORS_BIN
+        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors_English.bin"
+    )
+    set(PERFECTHASH_ERRORS_DBG
+        "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors.dbg"
+    )
 
     add_custom_command(
-        OUTPUT ${OUTPUT_FILE}
+        OUTPUT ${PERFECTHASH_ERRORS_HEADER}
         COMMAND mc.exe -v -o -c -b -h "${PERFECTHASH_ROOT_DIR}/include" -x .
                 -km PerfectHashEvents.man PerfectHashErrors.mc
+        BYPRODUCTS ${PERFECTHASH_ERRORS_BIN} ${PERFECTHASH_ERRORS_DBG}
         DEPENDS PerfectHashErrors.mc PerfectHashEvents.man
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Compiling PerfectHashErrors.mc and PerfectHashEvents.man..."
     )
 
-    add_custom_target(PerfectHashResources ALL DEPENDS ${OUTPUT_FILE})
+    add_custom_target(PerfectHashResources ALL DEPENDS ${PERFECTHASH_ERRORS_HEADER})
+    set_property(
+        TARGET PerfectHashResources
+        PROPERTY SOURCES
+        "${PERFECTHASH_ERRORS_HEADER}"
+        "PerfectHashErrors.mc"
+        "PerfectHashEvents.man"
+    )
 endif()
 
 add_library(${target} SHARED ${ALL_FILES})
@@ -2458,6 +2709,13 @@ if(PERFECTHASH_HAS_RAWDOG_JIT)
         PRIVATE
         "PH_HAS_RAWDOG_JIT"
     )
+    if(PERFECTHASH_IS_WINDOWS)
+        target_compile_definitions(
+            ${target}
+            PRIVATE
+            "PH_RAWDOG_MSR_ONLY"
+        )
+    endif()
     if(PERFECTHASH_ARCH_X86_64)
         target_compile_definitions(
             ${target}
@@ -2507,6 +2765,10 @@ if(MSVC)
     )
 endif()
 
+if(WIN32)
+    add_dependencies(${target} PerfectHashResources)
+endif()
+
 set(online_target PerfectHashOnline)
 set(online_static_target PerfectHashOnlineStatic)
 set(online_core_target PerfectHashOnlineCore)
@@ -2532,6 +2794,16 @@ set(llvm_target PerfectHashLLVM)
 
 if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
+endif()
+
+if(WIN32)
+    add_dependencies(${online_target} PerfectHashResources)
+    add_dependencies(${online_static_target} PerfectHashResources)
+    add_dependencies(${online_core_target} PerfectHashResources)
+    add_dependencies(${online_core_static_target} PerfectHashResources)
+    if(TARGET ${llvm_target})
+        add_dependencies(${llvm_target} PerfectHashResources)
+    endif()
 endif()
 
 # Generated Linux message table header and RawDog blobs live in the build dir.
@@ -2573,6 +2845,13 @@ foreach(ph_online_target ${online_target} ${online_static_target})
             PRIVATE
             "PH_HAS_RAWDOG_JIT"
         )
+        if(PERFECTHASH_IS_WINDOWS)
+            target_compile_definitions(
+                ${ph_online_target}
+                PRIVATE
+                "PH_RAWDOG_MSR_ONLY"
+            )
+        endif()
         if(PERFECTHASH_ARCH_X86_64)
             target_compile_definitions(
                 ${ph_online_target}

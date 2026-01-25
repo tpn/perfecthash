@@ -108,7 +108,7 @@ LoadPerfectHashLLVMFunctions(
     );
 
     if (!Success || NumberOfResolvedSymbols != ARRAYSIZE(Names)) {
-        ZeroStruct(PerfectHashLLVMFunctions);
+        ZeroStructInline(PerfectHashLLVMFunctions);
         FreeLibrary(Module);
         PerfectHashLLVMLoadResult = PH_E_LLVM_BACKEND_NOT_FOUND;
         return FALSE;
@@ -131,11 +131,11 @@ InitPerfectHashLLVM(
     UNREFERENCED_PARAMETER(InitOnce);
     UNREFERENCED_PARAMETER(Parameter);
 
-    PerfectHashLLVMLoaded = LoadPerfectHashLLVMFunctions();
-
     if (ARGUMENT_PRESENT(Context)) {
-        *Context = (PVOID)(ULONG_PTR)(PerfectHashLLVMLoaded != FALSE);
+        *Context = NULL;
     }
+
+    PerfectHashLLVMLoaded = LoadPerfectHashLLVMFunctions();
 
     return TRUE;
 }
@@ -146,12 +146,10 @@ EnsurePerfectHashLLVMLoaded(
     VOID
     )
 {
-    PVOID Context = NULL;
-
     InitOnceExecuteOnce(&PerfectHashLLVMInitOnce,
                         InitPerfectHashLLVM,
                         NULL,
-                        &Context);
+                        NULL);
 
     if (PerfectHashLLVMLoaded) {
         return S_OK;
@@ -194,7 +192,15 @@ PerfectHashTableCompileJit(
         return PH_E_LLVM_BACKEND_NOT_FOUND;
     }
 
+#if defined(PH_WINDOWS)
+    __try {
+        return PerfectHashLLVMFunctions.TableCompileJit(Table, CompileFlags);
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        return PH_E_TABLE_COMPILATION_FAILED;
+    }
+#else
     return PerfectHashLLVMFunctions.TableCompileJit(Table, CompileFlags);
+#endif
 }
 
 _Use_decl_annotations_

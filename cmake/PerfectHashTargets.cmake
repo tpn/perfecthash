@@ -44,12 +44,15 @@ function(perfecthash_apply_common_settings target)
     perfecthash_apply_common_definitions(${target})
 
     if(MSVC)
+        set(ph_asm_output_dir "${CMAKE_CURRENT_BINARY_DIR}/asm/${target}")
+        file(MAKE_DIRECTORY "${ph_asm_output_dir}")
         target_compile_options(
             ${target}
             PRIVATE
             /Gz         # __stdcall
             /TC         # Compile as C Code
             /FAcs       # Assembler Output: Assembly, Machine Code & Source
+            /Fa${ph_asm_output_dir}/
             /WX         # Warnings as errors
             /Wall       # All warnings
             /FC         # Use full paths

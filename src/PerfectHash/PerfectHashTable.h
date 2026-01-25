@@ -253,7 +253,7 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     //
     // Pad out to an 8-byte boundary.
     //
-    ULONG Padding;
+    ULONGLONG Padding;
     PVOID ExecutionEngine;
     PVOID Context;
     PVOID Index32Function;

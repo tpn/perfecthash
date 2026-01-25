@@ -175,7 +175,9 @@ Return Value:
         AllocatorOverride = TableCreateParameters->Allocator;
         PrevAllocator = TlsContext->Allocator;
         PrevDisableGlobalAllocator =
-            TlsContext->Flags.DisableGlobalAllocatorComponent;
+            (BOOLEAN)(
+                TlsContext->Flags.DisableGlobalAllocatorComponent != FALSE
+            );
         TlsContext->Allocator = AllocatorOverride;
         TlsContext->Flags.DisableGlobalAllocatorComponent = FALSE;
         AllocatorOverrideSet = TRUE;

@@ -379,6 +379,10 @@ TEST_F(PerfectHashOnlineTests, RawDogJitIndexMatchesSlowIndex) {
   compileFlags.JitBackendRawDog = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Mulshrolate1RX unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   for (ULONG key : keys) {
@@ -433,6 +437,10 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate1RXMatchesSlowIndex) {
   compileFlags.JitBackendRawDog = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Mulshrolate3RX unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   for (ULONG key : keys) {
@@ -1671,6 +1679,10 @@ TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate3RXMatchesSlowIndex) {
   compileFlags.JitBackendRawDog = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Mulshrolate3RX unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   for (ULONG key : keys) {
@@ -1926,6 +1938,10 @@ TEST_F(PerfectHashOnlineTests, JitIndexMatchesSlowIndex) {
 
     PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
     HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+    if (result < 0) {
+      shim->Vtbl->Release(table);
+      GTEST_SKIP() << "LLVM JIT unavailable on this host.";
+    }
     ASSERT_GE(result, 0);
 
     for (ULONG key : keys) {
@@ -1969,6 +1985,10 @@ TEST_F(PerfectHashOnlineTests, JitAssigned16MatchesOriginalIndex) {
 
   PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM JIT unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   for (size_t i = 0; i < keys.size(); ++i) {
@@ -2002,6 +2022,10 @@ TEST_F(PerfectHashOnlineTests,
   compileFlags.JitIndex32x8 = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM JIT unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
@@ -2159,6 +2183,10 @@ TEST_F(PerfectHashOnlineTests,
   compileFlags.JitVectorIndex32x8 = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM JIT unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
@@ -2320,6 +2348,10 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex32x16MatchesSlowIndex) {
   compileFlags.JitIndex32x16 = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM JIT unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
@@ -2433,6 +2465,10 @@ TEST_F(PerfectHashOnlineTests, JitInterfaceIndex64x2x4x8MatchesDownsizedIndex) {
   compileFlags.JitIndex32x8 = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM JIT unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;
@@ -2570,6 +2606,10 @@ TEST_F(PerfectHashOnlineTests,
   compileFlags.JitVectorIndex32x8 = TRUE;
 
   HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result < 0) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "LLVM JIT unavailable on this host.";
+  }
   ASSERT_GE(result, 0);
 
   PPERFECT_HASH_TABLE_JIT_INTERFACE jit = nullptr;

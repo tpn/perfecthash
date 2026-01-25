@@ -226,7 +226,7 @@ PERFECT_HASH_TABLE_JIT_INDEX64X8 PerfectHashTableJitInterfaceIndex64x8;
 PERFECT_HASH_TABLE_JIT_INDEX64X16 PerfectHashTableJitInterfaceIndex64x16;
 PERFECT_HASH_TABLE_JIT_GET_INFO PerfectHashTableJitInterfaceGetInfo;
 
-static const PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
+static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     PerfectHashTableJitInterfaceVtbl = {
     &PerfectHashTableJitInterfaceQueryInterface,
     &PerfectHashTableJitInterfaceAddRef,
@@ -346,6 +346,8 @@ BuildSplatVectorConstant(
 {
     LLVMValueRef Values[PH_JIT_VECTOR_MAX_LANES];
     ULONG Index;
+
+    UNREFERENCED_PARAMETER(VectorType);
 
     if (Lanes > PH_JIT_VECTOR_MAX_LANES) {
         return NULL;
@@ -1501,6 +1503,8 @@ BuildChm01IndexVectorFunction(
 
     UseHashMask = FALSE;
 
+#pragma warning(push)
+#pragma warning(disable: 4061)
     switch (Ctx->HashFunctionId) {
 
         case PerfectHashHashMultiplyShiftRFunctionId:
@@ -1751,6 +1755,7 @@ BuildChm01IndexVectorFunction(
         default:
             return NULL;
     }
+#pragma warning(pop)
 
     if (UseHashMask) {
         IndexVec1 = LLVMBuildAnd(Ctx->Builder,
@@ -2020,6 +2025,7 @@ CompileChm01IndexJit(
     LLVMExecutionEngineRef Engine = NULL;
     LLVMTargetMachineRef TargetMachine = NULL;
     LLVMTargetDataRef TargetData = NULL;
+    struct LLVMMCJITCompilerOptions McjitOptions;
 
     CHM01_JIT_CONTEXT JitContext;
     LLVMValueRef DownsizeFunction = NULL;
@@ -2149,8 +2155,8 @@ CompileChm01IndexJit(
     CompileIndex64x16 = FALSE;
 
     Jit->JitMaxIsa = JitMaxIsa;
-    ZeroMemory(Jit->TargetCpu, sizeof(Jit->TargetCpu));
-    ZeroMemory(Jit->TargetFeatures, sizeof(Jit->TargetFeatures));
+    ZeroInline(Jit->TargetCpu, sizeof(Jit->TargetCpu));
+    ZeroInline(Jit->TargetFeatures, sizeof(Jit->TargetFeatures));
     if (TargetCpu && *TargetCpu) {
         strncpy(Jit->TargetCpu,
                 TargetCpu,
@@ -2437,10 +2443,14 @@ CompileChm01IndexJit(
         goto Error;
     }
 
-    if (LLVMCreateJITCompilerForModule(&Engine,
-                                       Module,
-                                       3,
-                                       &ErrorMessage) != 0) {
+    LLVMInitializeMCJITCompilerOptions(&McjitOptions,
+                                       sizeof(McjitOptions));
+    McjitOptions.OptLevel = 3;
+    if (LLVMCreateMCJITCompilerForModule(&Engine,
+                                         Module,
+                                         &McjitOptions,
+                                         sizeof(McjitOptions),
+                                         &ErrorMessage) != 0) {
         Result = PH_E_TABLE_COMPILATION_FAILED;
         goto Error;
     }
@@ -3577,7 +3587,7 @@ PerfectHashTableJitInterfaceGetInfo(
         return PH_E_NOT_IMPLEMENTED;
     }
 
-    ZeroMemory(Info, sizeof(*Info));
+    ZeroStructPointerInline(Info);
     Info->SizeOfStruct = sizeof(*Info);
     Info->Flags.AsULong = JitState->Flags.AsULong;
     Info->JitMaxIsa = JitState->JitMaxIsa;
