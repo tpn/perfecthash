@@ -2003,7 +2003,7 @@ CompileChm01IndexJit(
     PTABLE_INFO_ON_DISK TableInfo;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     PPERFECT_HASH_KEYS Keys;
-    PPERFECT_HASH_KEYS_BITMAP KeysBitmap;
+    PRTL Rtl;
     ULONGLONG DownsizeBitmap = 0;
     ULONGLONG DownsizeShiftedMask = 0;
     BYTE DownsizeTrailingZeros = 0;
@@ -2042,6 +2042,7 @@ CompileChm01IndexJit(
     TableInfo = Table->TableInfoOnDisk;
     HashFunctionId = Table->HashFunctionId;
     Keys = Table->Keys;
+    Rtl = Table->Rtl;
     UseAssigned16 = (Table->State.UsingAssigned16 != FALSE);
     KeysDownsized = (TableInfo->OriginalKeySizeInBytes >
                      TableInfo->KeySizeInBytes);
@@ -2094,19 +2095,41 @@ CompileChm01IndexJit(
     CompileVectorIndex64x8 = (CompileIndex64 && CompileVectorIndex32x8);
 
     if (KeysDownsized) {
+        ULONGLONG One;
+        ULONGLONG Mask;
+        ULONGLONG Shifted;
+        ULONGLONG Leading;
+        ULONGLONG Trailing;
+        ULONGLONG PopCount;
+
         if (Keys) {
-            KeysBitmap = &Keys->Stats.KeysBitmap;
             DownsizeBitmap = Keys->DownsizeBitmap;
-            DownsizeTrailingZeros = KeysBitmap->TrailingZeros;
-            DownsizeShiftedMask = KeysBitmap->ShiftedMask;
-            DownsizeContiguous = (KeysBitmap->Flags.Contiguous != FALSE);
         } else if (Table->State.DownsizeMetadataValid) {
             DownsizeBitmap = Table->DownsizeBitmap;
-            DownsizeTrailingZeros = Table->DownsizeTrailingZeros;
-            DownsizeShiftedMask = Table->DownsizeShiftedMask;
-            DownsizeContiguous = (Table->DownsizeContiguous != FALSE);
         } else {
             return PH_E_NOT_IMPLEMENTED;
+        }
+
+        One = 1;
+        Leading = Rtl->LeadingZeros64(DownsizeBitmap);
+        Trailing = Rtl->TrailingZeros64(DownsizeBitmap);
+        PopCount = Rtl->PopulationCount64(DownsizeBitmap);
+        Mask = (One << (64 - Leading - Trailing)) - One;
+
+        DownsizeTrailingZeros = (BYTE)Trailing;
+
+        if (PopCount == 64) {
+            DownsizeContiguous = TRUE;
+        } else if (Leading == 0) {
+            DownsizeContiguous = FALSE;
+        } else {
+            Shifted = DownsizeBitmap;
+            Shifted >>= Trailing;
+            DownsizeContiguous = (Mask == Shifted);
+        }
+
+        if (DownsizeContiguous) {
+            DownsizeShiftedMask = Mask;
         }
     }
 
