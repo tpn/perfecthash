@@ -103,3 +103,4 @@ RawDogIndexMask:
         dq 0x2121212121212121
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=nasm fo=croql comments=\:;
+
