@@ -13,6 +13,7 @@ dependencies:
 - ipdb
 - ipython
 - joypy
+- libxml2
 - lld>=15
 - llvmdev>=15
 - llvmlite
@@ -36,4 +37,6 @@ dependencies:
 - setuptools>=61
 - tqdm
 - wheel
+- zlib
+- zstd
 name: dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm

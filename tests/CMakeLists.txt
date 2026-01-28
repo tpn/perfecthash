@@ -1,6 +1,10 @@
 include(FetchContent)
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+if(MSVC AND POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+endif()
 
 FetchContent_Declare(
     googletest

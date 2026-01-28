@@ -4836,6 +4836,7 @@ if(MSVC)
         $<$<CONFIG:Debug>:vcruntimed>
         $<$<NOT:$<CONFIG:Debug>>:vcruntime>
         $<$<CONFIG:Debug>:ucrtd>
+        $<$<CONFIG:Debug>:msvcrtd>
         $<$<NOT:$<CONFIG:Debug>>:ucrt>
     )
 endif()

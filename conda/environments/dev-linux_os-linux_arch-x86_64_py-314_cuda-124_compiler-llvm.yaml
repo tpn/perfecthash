@@ -14,6 +14,7 @@ dependencies:
 - ipdb
 - ipython
 - joypy
+- libxml2
 - lld>=15
 - llvmdev>=15
 - llvmlite
@@ -37,4 +38,6 @@ dependencies:
 - setuptools>=61
 - tqdm
 - wheel
+- zlib
+- zstd
 name: dev-linux_os-linux_arch-x86_64_py-314_cuda-124_compiler-llvm

@@ -185,6 +185,9 @@ dependencies:
               os: windows
               compiler: msvc
             packages:
+              - libxml2-devel
+              - llvm-tools>=15
+              - llvmdev>=15
           - matrix: {}
             packages:
   cuda:

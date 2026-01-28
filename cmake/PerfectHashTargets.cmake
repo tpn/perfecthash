@@ -78,7 +78,7 @@ function(perfecthash_apply_common_settings target)
             target_link_libraries(
                 ${target}
                 PRIVATE
-                $<$<CONFIG:Debug>:ucrtd;vcruntimed>
+                $<$<CONFIG:Debug>:ucrtd;vcruntimed;msvcrtd>
                 $<$<NOT:$<CONFIG:Debug>>:ucrt;vcruntime>
             )
         endif()

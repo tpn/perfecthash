@@ -11,9 +11,14 @@ dependencies:
 - ipdb
 - ipython
 - joypy
+- libxml2
+- libxml2-devel
+- llvm-tools>=15
+- llvmdev>=15
 - llvmlite
 - matplotlib
 - mypy
+- nasm
 - ninja
 - numpy
 - pandas
@@ -30,4 +35,6 @@ dependencies:
 - setuptools>=61
 - tqdm
 - wheel
+- zlib
+- zstd
 name: dev-windows_os-windows_arch-x86_64_py-314_compiler-msvc
