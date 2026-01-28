@@ -194,6 +194,11 @@ CreateComponent(
 
     TlsContext = PerfectHashTlsEnsureContext();
 
+    if (!ComponentInterfaces[Id]) {
+        TlsContext->LastResult = PH_E_NOT_IMPLEMENTED;
+        return NULL;
+    }
+
     HeapHandle = GetProcessHeap();
 
     AllocSize = ComponentSizes[Id];

@@ -17,6 +17,33 @@ Abstract:
 
 #include "stdafx.h"
 
+#ifdef PH_ONLINE_ONLY
+
+PERFECT_HASH_KEYS_LOAD_TABLE_SIZE PerfectHashKeysLoadTableSize;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysLoadTableSize(
+    PPERFECT_HASH_KEYS Keys,
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    PPERFECT_HASH_FILE *TableSizeFilePointer,
+    PULARGE_INTEGER RequestedNumberOfTableElements
+    )
+{
+    UNREFERENCED_PARAMETER(Keys);
+    UNREFERENCED_PARAMETER(AlgorithmId);
+    UNREFERENCED_PARAMETER(HashFunctionId);
+    UNREFERENCED_PARAMETER(MaskFunctionId);
+    UNREFERENCED_PARAMETER(TableSizeFilePointer);
+    UNREFERENCED_PARAMETER(RequestedNumberOfTableElements);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
+#else
+
 #define KEYS_TABLE_SIZE_FILE_SIZE sizeof(ULONGLONG)
 
 //
@@ -490,5 +517,7 @@ End:
 
     return Result;
 }
+
+#endif // PH_ONLINE_ONLY
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

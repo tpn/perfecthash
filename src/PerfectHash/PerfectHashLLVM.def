@@ -1,0 +1,4 @@
+LIBRARY PerfectHashLLVM
+EXPORTS
+    PerfectHashTableCompileJit
+    PerfectHashTableJitRundown

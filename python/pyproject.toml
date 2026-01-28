@@ -39,6 +39,7 @@ dev = [
     "cython>=3.0",
     "ipdb",
     "ipython",
+    "llvmlite",
     "mypy",
     "numpy",
     "pytest",

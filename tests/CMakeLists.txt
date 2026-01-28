@@ -1,6 +1,10 @@
 include(FetchContent)
 
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+if(MSVC AND POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL" CACHE STRING "" FORCE)
+endif()
 
 FetchContent_Declare(
     googletest
@@ -16,6 +20,7 @@ endif()
 
 add_executable(perfecthash_unit_tests
     PerfectHashArgvTests.cpp
+    PerfectHashOnlineTests.cpp
 )
 
 target_link_libraries(perfecthash_unit_tests
@@ -25,14 +30,49 @@ target_link_libraries(perfecthash_unit_tests
 )
 
 perfecthash_apply_common_definitions(perfecthash_unit_tests)
+target_compile_definitions(perfecthash_unit_tests
+    PRIVATE PERFECTHASH_TEST_ROOT_DIR="${PERFECTHASH_ROOT_DIR}"
+)
 
 set_target_properties(perfecthash_unit_tests PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED YES
 )
 
+if(PERFECTHASH_HAS_RAWDOG_JIT)
+    target_compile_definitions(perfecthash_unit_tests PRIVATE PH_HAS_RAWDOG_JIT)
+endif()
+
+add_executable(perfecthash_benchmarks
+    PerfectHashBenchmarks.cpp
+)
+
+target_link_libraries(perfecthash_benchmarks
+    PRIVATE
+        PerfectHash
+)
+
+perfecthash_apply_common_definitions(perfecthash_benchmarks)
+
+set_target_properties(perfecthash_benchmarks PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+)
+
+if(PERFECTHASH_HAS_RAWDOG_JIT)
+    target_compile_definitions(perfecthash_benchmarks PRIVATE PH_HAS_RAWDOG_JIT)
+endif()
+
 include(GoogleTest)
-gtest_discover_tests(perfecthash_unit_tests)
+gtest_discover_tests(perfecthash_unit_tests
+    TEST_PREFIX "perfecthash_unit_tests."
+)
+
+add_test(
+    NAME perfecthash.fast.unit
+    COMMAND $<TARGET_FILE:perfecthash_unit_tests>
+)
+set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
 
 set(TEST_KEYS_FILE "${PERFECTHASH_ROOT_DIR}/keys/HologramWorld-31016.keys")
 set(TEST_KEYS_DIR "${PERFECTHASH_ROOT_DIR}/keys")
@@ -142,4 +182,48 @@ add_test(
         -DTEST_CARGO=${CARGO_EXECUTABLE}
         -DTEST_BUILD_CONFIG=$<CONFIG>
         -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+add_test(
+    NAME perfecthash.fast.cli.create
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/fast-create
+        -DTEST_ARGS=Chm01|Mulshrolate4RX|And|1
+        -DTEST_FLAGS=--NoFileIo
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_test.cmake
+)
+
+add_test(
+    NAME perfecthash.fast.cli.bulk
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashBulkCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_DIR}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/fast-bulk
+        -DTEST_ARGS=Chm01|Mulshrolate4RX|And|1
+        -DTEST_FLAGS=--Quiet|--NoFileIo
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_test.cmake
+)
+
+add_test(
+    NAME perfecthash.fast.cli.codegen
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_KEYS=${TEST_KEYS_FILE}
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/fast-codegen
+        -DTEST_ARGS=Chm01|Mulshrolate4RX|And|1
+        -DTEST_FLAGS=--Quiet
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -DTEST_CARGO=${CARGO_EXECUTABLE}
+        -DTEST_BUILD_CONFIG=$<CONFIG>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_codegen_test.cmake
+)
+
+set_tests_properties(
+    perfecthash.fast.cli.create
+    perfecthash.fast.cli.bulk
+    perfecthash.fast.cli.codegen
+    PROPERTIES
+        LABELS fast
 )

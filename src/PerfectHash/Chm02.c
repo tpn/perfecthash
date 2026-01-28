@@ -724,7 +724,7 @@ Return Value:
         }
 
         CopyMemory(NewGraphInfoOnDisk,
-                   Table->TableInfoOnDisk,
+                   GraphInfoOnDisk,
                    sizeof(*NewGraphInfoOnDisk));
 
         //
