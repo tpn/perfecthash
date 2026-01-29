@@ -1911,6 +1911,7 @@ InterlockedCompareExchangePointer(
 
 #ifndef PH_CUDA
 
+#ifndef __cplusplus
 #ifndef min
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
 #endif
@@ -1918,6 +1919,7 @@ InterlockedCompareExchangePointer(
 #ifndef max
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #endif
+#endif  /* __cplusplus */
 
 #endif
 
