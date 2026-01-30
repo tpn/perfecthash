@@ -50,7 +50,7 @@ PerfectHashJitIndexMulshrolate4RX16Index32x8_x64:
         mov     r9d, 32
         sub     r9d, edx                       ; 32 - Seed3_Byte3.
 
-        vmovd   xmm5, eax                      ; Seed3_Byte1.
+        vmovd   xmm10, eax                     ; Seed3_Byte1.
         vmovd   xmm6, ecx                      ; Seed3_Byte2.
         vmovd   xmm7, r8d                      ; 32 - Seed3_Byte2.
         vmovd   xmm8, edx                      ; Seed3_Byte3.
@@ -60,13 +60,13 @@ PerfectHashJitIndexMulshrolate4RX16Index32x8_x64:
         vpslld  ymm13, ymm4, xmm7
         vpor    ymm4, ymm12, ymm13
         vpmulld ymm4, ymm4, ymm14              ; Vertex1 *= Seed4.
-        vpsrld  ymm4, ymm4, xmm5               ; Vertex1 >>= Seed3_Byte1.
+        vpsrld  ymm4, ymm4, xmm10              ; Vertex1 >>= Seed3_Byte1.
 
         vpsrld  ymm12, ymm5, xmm8              ; ror(Vertex2, Seed3_Byte3).
         vpslld  ymm13, ymm5, xmm9
         vpor    ymm5, ymm12, ymm13
         vpmulld ymm5, ymm5, ymm15              ; Vertex2 *= Seed5.
-        vpsrld  ymm5, ymm5, xmm5               ; Vertex2 >>= Seed3_Byte1.
+        vpsrld  ymm5, ymm5, xmm10              ; Vertex2 >>= Seed3_Byte1.
 
         mov     r9d, dword [rel RawDogIndexMask]
 
