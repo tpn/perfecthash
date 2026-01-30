@@ -131,7 +131,7 @@ dependencies:
         packages:
           - cmake>=3.20
           - ccache
-          - libxml2
+          - libxml2-devel
           - nasm
           - ninja
           - pip

@@ -806,13 +806,6 @@ CompileChm01IndexJitRawDog(
         Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
         return PH_E_NOT_IMPLEMENTED;
     }
-
-    if (Table->HashFunctionId == PerfectHashHashMulshrolate3RXFunctionId) {
-        if (CompileIndex32x4 && !CompileIndex32x8 && !CompileIndex32x16) {
-            return PH_E_NOT_IMPLEMENTED;
-        }
-        CompileIndex32x4 = FALSE;
-    }
 #else
     if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
          Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&

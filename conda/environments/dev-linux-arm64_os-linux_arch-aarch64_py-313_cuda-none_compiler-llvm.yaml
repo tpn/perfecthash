@@ -13,7 +13,7 @@ dependencies:
 - ipdb
 - ipython
 - joypy
-- libxml2
+- libxml2-devel
 - lld>=15
 - llvmdev>=15
 - llvmlite

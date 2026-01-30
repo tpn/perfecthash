@@ -345,13 +345,20 @@ if(PERFECTHASH_IS_LINUX)
     if(PERFECTHASH_ARCH_X86_64)
         find_program(PERFECTHASH_NASM_EXECUTABLE nasm)
         find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
+        if(PERFECTHASH_IS_LINUX AND NOT PERFECTHASH_OBJCOPY_EXECUTABLE)
+            find_program(PERFECTHASH_OBJCOPY_EXECUTABLE objcopy)
+        endif()
         if(NOT PERFECTHASH_OBJCOPY_EXECUTABLE)
             find_program(PERFECTHASH_OBJCOPY_EXECUTABLE objcopy)
         endif()
 
         if(PERFECTHASH_NASM_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
             set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
-
+            if(PERFECTHASH_IS_MAC)
+                set(RAWDOG_OBJCOPY_TEXT_SECTION "__TEXT,__text")
+            else()
+                set(RAWDOG_OBJCOPY_TEXT_SECTION ".text")
+            endif()
             set(RAWDOG_ASM
                 "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.nasm"
             )
@@ -3584,7 +3591,7 @@ if(PERFECTHASH_IS_WINDOWS)
     endif()
 endif()
 
-if(PERFECTHASH_IS_MAC)
+if(PERFECTHASH_IS_MAC OR (PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_ARM64))
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
     if(PERFECTHASH_ARCH_ARM64)
@@ -3593,6 +3600,11 @@ if(PERFECTHASH_IS_MAC)
 
         if(PERFECTHASH_CLANG_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
             set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
+            if(PERFECTHASH_IS_MAC)
+                set(RAWDOG_OBJCOPY_TEXT_SECTION "__TEXT,__text")
+            else()
+                set(RAWDOG_OBJCOPY_TEXT_SECTION ".text")
+            endif()
 
             set(RAWDOG_ARM64_ASM
                 "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR_arm64.s"
@@ -4082,7 +4094,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_ARM64_OBJ}"
                         "${RAWDOG_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_ARM64_BIN}
                         "${RAWDOG_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4103,7 +4115,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_ARM64_16_OBJ}"
                         "${RAWDOG_ARM64_16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_ARM64_16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_ARM64_16_BIN}
                         "${RAWDOG_ARM64_16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4124,7 +4136,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX_ARM64_OBJ}"
                         "${RAWDOG_MSRX_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX_ARM64_BIN}
                         "${RAWDOG_MSRX_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4145,7 +4157,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX_ARM64_16_OBJ}"
                         "${RAWDOG_MSRX_ARM64_16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX_ARM64_16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX_ARM64_16_BIN}
                         "${RAWDOG_MSRX_ARM64_16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4166,7 +4178,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1_ARM64_OBJ}"
                         "${RAWDOG_M1_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1_ARM64_BIN}
                         "${RAWDOG_M1_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4187,7 +4199,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSR_ARM64_X4_OBJ}"
                         "${RAWDOG_MSR_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSR_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSR_ARM64_X4_BIN}
                         "${RAWDOG_MSR_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4208,7 +4220,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSR16_ARM64_X4_OBJ}"
                         "${RAWDOG_MSR16_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSR16_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSR16_ARM64_X4_BIN}
                         "${RAWDOG_MSR16_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4229,7 +4241,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX_ARM64_X4_OBJ}"
                         "${RAWDOG_MSRX_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX_ARM64_X4_BIN}
                         "${RAWDOG_MSRX_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4250,7 +4262,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX16_ARM64_X4_OBJ}"
                         "${RAWDOG_MSRX16_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX16_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX16_ARM64_X4_BIN}
                         "${RAWDOG_MSRX16_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4271,7 +4283,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1_ARM64_X4_OBJ}"
                         "${RAWDOG_M1_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1_ARM64_X4_BIN}
                         "${RAWDOG_M1_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4292,7 +4304,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1RX16_ARM64_X4_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1RX16_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1RX16_ARM64_X4_BIN}
                         "${RAWDOG_M1RX16_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4313,7 +4325,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2_ARM64_X4_OBJ}"
                         "${RAWDOG_M2_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2_ARM64_X4_BIN}
                         "${RAWDOG_M2_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4334,7 +4346,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2RX16_ARM64_X4_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2RX16_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2RX16_ARM64_X4_BIN}
                         "${RAWDOG_M2RX16_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4355,7 +4367,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3_ARM64_X4_OBJ}"
                         "${RAWDOG_M3_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3_ARM64_X4_BIN}
                         "${RAWDOG_M3_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4376,7 +4388,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3RX16_ARM64_X4_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3RX16_ARM64_X4_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3RX16_ARM64_X4_BIN}
                         "${RAWDOG_M3RX16_ARM64_X4_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4397,7 +4409,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSR_ARM64_X8_OBJ}"
                         "${RAWDOG_MSR_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSR_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSR_ARM64_X8_BIN}
                         "${RAWDOG_MSR_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4418,7 +4430,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSR16_ARM64_X8_OBJ}"
                         "${RAWDOG_MSR16_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSR16_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSR16_ARM64_X8_BIN}
                         "${RAWDOG_MSR16_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4439,7 +4451,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSR_ARM64_X16_OBJ}"
                         "${RAWDOG_MSR_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSR_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSR_ARM64_X16_BIN}
                         "${RAWDOG_MSR_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4460,7 +4472,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSR16_ARM64_X16_OBJ}"
                         "${RAWDOG_MSR16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSR16_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSR16_ARM64_X16_BIN}
                         "${RAWDOG_MSR16_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4481,7 +4493,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX_ARM64_X8_OBJ}"
                         "${RAWDOG_MSRX_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX_ARM64_X8_BIN}
                         "${RAWDOG_MSRX_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4502,7 +4514,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX16_ARM64_X8_OBJ}"
                         "${RAWDOG_MSRX16_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX16_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX16_ARM64_X8_BIN}
                         "${RAWDOG_MSRX16_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4523,7 +4535,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX_ARM64_X16_OBJ}"
                         "${RAWDOG_MSRX_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX_ARM64_X16_BIN}
                         "${RAWDOG_MSRX_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4544,7 +4556,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_MSRX16_ARM64_X16_OBJ}"
                         "${RAWDOG_MSRX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_MSRX16_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_MSRX16_ARM64_X16_BIN}
                         "${RAWDOG_MSRX16_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4565,7 +4577,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1RX16_ARM64_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1RX16_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1RX16_ARM64_BIN}
                         "${RAWDOG_M1RX16_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4586,7 +4598,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1_ARM64_X8_OBJ}"
                         "${RAWDOG_M1_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1_ARM64_X8_BIN}
                         "${RAWDOG_M1_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4607,7 +4619,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1RX16_ARM64_X8_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1RX16_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1RX16_ARM64_X8_BIN}
                         "${RAWDOG_M1RX16_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4628,7 +4640,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1_ARM64_X16_OBJ}"
                         "${RAWDOG_M1_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1_ARM64_X16_BIN}
                         "${RAWDOG_M1_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4649,7 +4661,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M1RX16_ARM64_X16_OBJ}"
                         "${RAWDOG_M1RX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M1RX16_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M1RX16_ARM64_X16_BIN}
                         "${RAWDOG_M1RX16_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4670,7 +4682,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2_ARM64_OBJ}"
                         "${RAWDOG_M2_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2_ARM64_BIN}
                         "${RAWDOG_M2_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4691,7 +4703,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2RX16_ARM64_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2RX16_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2RX16_ARM64_BIN}
                         "${RAWDOG_M2RX16_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4712,7 +4724,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3_ARM64_OBJ}"
                         "${RAWDOG_M3_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3_ARM64_BIN}
                         "${RAWDOG_M3_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4733,7 +4745,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3RX16_ARM64_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3RX16_ARM64_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3RX16_ARM64_BIN}
                         "${RAWDOG_M3RX16_ARM64_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4754,7 +4766,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2_ARM64_X8_OBJ}"
                         "${RAWDOG_M2_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2_ARM64_X8_BIN}
                         "${RAWDOG_M2_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4775,7 +4787,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2RX16_ARM64_X8_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2RX16_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2RX16_ARM64_X8_BIN}
                         "${RAWDOG_M2RX16_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4796,7 +4808,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2_ARM64_X16_OBJ}"
                         "${RAWDOG_M2_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2_ARM64_X16_BIN}
                         "${RAWDOG_M2_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4817,7 +4829,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M2RX16_ARM64_X16_OBJ}"
                         "${RAWDOG_M2RX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M2RX16_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M2RX16_ARM64_X16_BIN}
                         "${RAWDOG_M2RX16_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4838,7 +4850,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3_ARM64_X8_OBJ}"
                         "${RAWDOG_M3_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3_ARM64_X8_BIN}
                         "${RAWDOG_M3_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4859,7 +4871,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3RX16_ARM64_X8_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3RX16_ARM64_X8_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3RX16_ARM64_X8_BIN}
                         "${RAWDOG_M3RX16_ARM64_X8_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4880,7 +4892,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3_ARM64_X16_OBJ}"
                         "${RAWDOG_M3_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3_ARM64_X16_BIN}
                         "${RAWDOG_M3_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
@@ -4901,7 +4913,7 @@ if(PERFECTHASH_IS_MAC)
                         -o "${RAWDOG_M3RX16_ARM64_X16_OBJ}"
                         "${RAWDOG_M3RX16_ARM64_X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
-                        --dump-section=__TEXT,__text=${RAWDOG_M3RX16_ARM64_X16_BIN}
+                        --dump-section=${RAWDOG_OBJCOPY_TEXT_SECTION}=${RAWDOG_M3RX16_ARM64_X16_BIN}
                         "${RAWDOG_M3RX16_ARM64_X16_OBJ}"
                 COMMAND "${Python3_EXECUTABLE}"
                         "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
