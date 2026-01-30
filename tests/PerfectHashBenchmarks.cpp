@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <random>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -1546,9 +1547,8 @@ int RunCompare(const BenchmarkOptions &base) {
   options.jit = false;
 #endif
 
-  if (options.jit_backend == BenchmarkOptions::JitBackend::RawDog) {
-    std::cerr << "--compare-isa requires the LLVM backend.\n";
-    return 1;
+  if (options.jit_backend != BenchmarkOptions::JitBackend::Auto) {
+    std::cerr << "--compare-isa ignores --jit-backend.\n";
   }
 
   if (!options.jit) {
@@ -1593,6 +1593,7 @@ int RunCompare(const BenchmarkOptions &base) {
 
   struct CompareEntry {
     const char *label = nullptr;
+    const char *backend_label = nullptr;
     const char *index_label = nullptr;
     BenchmarkOptions options;
     BenchmarkResult result;
@@ -1603,8 +1604,10 @@ int RunCompare(const BenchmarkOptions &base) {
 
   CompareEntry scalar;
   scalar.label = "scalar";
+  scalar.backend_label = "llvm";
   scalar.index_label = "x1";
   scalar.options = templateOptions;
+  scalar.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
   scalar.options.jit_max_isa =
       options.jit_max_isa == PerfectHashJitMaxIsaAuto
           ? PerfectHashJitMaxIsaAvx
@@ -1614,8 +1617,10 @@ int RunCompare(const BenchmarkOptions &base) {
   if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
     CompareEntry avx;
     avx.label = "avx";
+    avx.backend_label = "llvm";
     avx.index_label = "x4";
     avx.options = templateOptions;
+    avx.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
     avx.options.jit_max_isa = PerfectHashJitMaxIsaAvx;
     avx.options.jit_vector_index32x4 = true;
     avx.options.index32x4 = true;
@@ -1625,8 +1630,10 @@ int RunCompare(const BenchmarkOptions &base) {
   if (isaAllowed(PerfectHashJitMaxIsaAvx2)) {
     CompareEntry avx2;
     avx2.label = "avx2";
+    avx2.backend_label = "llvm";
     avx2.index_label = "x8";
     avx2.options = templateOptions;
+    avx2.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
     avx2.options.jit_max_isa = PerfectHashJitMaxIsaAvx2;
     avx2.options.jit_vector_index32x8 = true;
     avx2.options.index32x8 = true;
@@ -1636,12 +1643,75 @@ int RunCompare(const BenchmarkOptions &base) {
   if (isaAllowed(PerfectHashJitMaxIsaAvx512)) {
     CompareEntry avx512;
     avx512.label = "avx512";
+    avx512.backend_label = "llvm";
     avx512.index_label = "x16";
     avx512.options = templateOptions;
+    avx512.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
     avx512.options.jit_max_isa = PerfectHashJitMaxIsaAvx512;
     avx512.options.index32x16 = true;
     entries.push_back(avx512);
   }
+
+#if defined(PH_HAS_RAWDOG_JIT)
+  const bool rawdog_vector_supported =
+      options.hash_function_id == PerfectHashHashMultiplyShiftRFunctionId ||
+      options.hash_function_id == PerfectHashHashMultiplyShiftRXFunctionId ||
+      options.hash_function_id == PerfectHashHashMulshrolate1RXFunctionId ||
+      options.hash_function_id == PerfectHashHashMulshrolate2RXFunctionId ||
+      options.hash_function_id == PerfectHashHashMulshrolate3RXFunctionId;
+
+  CompareEntry rd_scalar;
+  rd_scalar.label = "scalar";
+  rd_scalar.backend_label = "rawdog";
+  rd_scalar.index_label = "x1";
+  rd_scalar.options = templateOptions;
+  rd_scalar.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
+  rd_scalar.options.jit_max_isa =
+      options.jit_max_isa == PerfectHashJitMaxIsaAuto
+          ? PerfectHashJitMaxIsaAvx
+          : options.jit_max_isa;
+  entries.push_back(rd_scalar);
+
+  if (rawdog_vector_supported) {
+    if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
+      CompareEntry rd_avx;
+      rd_avx.label = "avx";
+      rd_avx.backend_label = "rawdog";
+      rd_avx.index_label = "x4";
+      rd_avx.options = templateOptions;
+      rd_avx.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
+      rd_avx.options.jit_max_isa = PerfectHashJitMaxIsaAvx;
+      rd_avx.options.jit_vector_index32x4 = true;
+      rd_avx.options.index32x4 = true;
+      entries.push_back(rd_avx);
+    }
+
+    if (isaAllowed(PerfectHashJitMaxIsaAvx2)) {
+      CompareEntry rd_avx2;
+      rd_avx2.label = "avx2";
+      rd_avx2.backend_label = "rawdog";
+      rd_avx2.index_label = "x8";
+      rd_avx2.options = templateOptions;
+      rd_avx2.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
+      rd_avx2.options.jit_max_isa = PerfectHashJitMaxIsaAvx2;
+      rd_avx2.options.jit_vector_index32x8 = true;
+      rd_avx2.options.index32x8 = true;
+      entries.push_back(rd_avx2);
+    }
+
+    if (isaAllowed(PerfectHashJitMaxIsaAvx512)) {
+      CompareEntry rd_avx512;
+      rd_avx512.label = "avx512";
+      rd_avx512.backend_label = "rawdog";
+      rd_avx512.index_label = "x16";
+      rd_avx512.options = templateOptions;
+      rd_avx512.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
+      rd_avx512.options.jit_max_isa = PerfectHashJitMaxIsaAvx512;
+      rd_avx512.options.index32x16 = true;
+      entries.push_back(rd_avx512);
+    }
+  }
+#endif
 
   for (auto &entry : entries) {
     int runResult = RunBenchmark(entry.options, &entry.result, false);
@@ -1691,14 +1761,35 @@ int RunCompare(const BenchmarkOptions &base) {
     std::cout << "  JIT Target Features: " << baseline.jit_target_features << "\n";
   }
 
+  std::unordered_map<std::string, const BenchmarkResult *> llvm_results;
+  llvm_results.reserve(entries.size());
+
+  auto build_key = [&](const CompareEntry &entry) {
+    std::string key(entry.label ? entry.label : "unknown");
+    key.push_back('|');
+    key.append(JitMaxIsaToString(entry.options.jit_max_isa));
+    key.push_back('|');
+    key.append(entry.index_label ? entry.index_label : "x1");
+    return key;
+  };
+
+  for (const auto &entry : entries) {
+    if (entry.backend_label &&
+        std::strcmp(entry.backend_label, "llvm") == 0) {
+      llvm_results.emplace(build_key(entry), &entry.result);
+    }
+  }
+
   std::cout << "Comparison summary (PerfectHash lookup avg, ms)\n";
-  std::cout << std::left << std::setw(12) << "Mode"
+  std::cout << std::left << std::setw(10) << "Backend"
+            << std::setw(10) << "Mode"
             << std::setw(8) << "ISA"
             << std::setw(8) << "Index"
             << std::right << std::setw(12) << "Avg ms"
             << std::setw(12) << "ns/op"
             << std::setw(12) << "Speedup"
-            << " Delta\n";
+            << std::setw(8) << "Delta"
+            << std::setw(16) << "vsLLVM\n";
 
   std::cout << std::fixed;
   for (const auto &entry : entries) {
@@ -1708,15 +1799,38 @@ int RunCompare(const BenchmarkOptions &base) {
     double improvement = baselineMs > 0.0
                              ? (1.0 - (res.lookup_ph_ms / baselineMs)) * 100.0
                              : 0.0;
-    std::cout << std::left << std::setw(12) << entry.label
+    std::ostringstream delta_oss;
+    delta_oss << std::fixed << std::showpos << std::setprecision(1)
+              << improvement << "%" << std::noshowpos;
+    std::string delta_str = delta_oss.str();
+    std::string vs_llvm = "--";
+    if (entry.backend_label &&
+        std::strcmp(entry.backend_label, "rawdog") == 0) {
+      auto found = llvm_results.find(build_key(entry));
+      if (found != llvm_results.end() && found->second) {
+        double llvm_ms = found->second->lookup_ph_ms;
+        double speedup = llvm_ms > 0.0 ? (llvm_ms / res.lookup_ph_ms) : 0.0;
+        double improvement =
+            llvm_ms > 0.0 ? (1.0 - (res.lookup_ph_ms / llvm_ms)) * 100.0 : 0.0;
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2) << speedup << "x "
+            << std::showpos << std::setprecision(1) << improvement << "%"
+            << std::noshowpos;
+        vs_llvm = oss.str();
+      }
+    }
+
+    std::cout << std::left << std::setw(10)
+              << (entry.backend_label ? entry.backend_label : "unknown")
+              << std::setw(10) << entry.label
               << std::setw(8) << JitMaxIsaToString(entry.options.jit_max_isa)
               << std::setw(8) << entry.index_label
               << std::right << std::setw(12) << std::setprecision(2)
               << res.lookup_ph_ms
               << std::setw(12) << std::setprecision(1) << res.lookup_ph_ns
               << std::setw(11) << std::setprecision(2) << speedup << "x"
-              << " " << std::showpos << std::setprecision(1) << improvement
-              << "%" << std::noshowpos << "\n";
+              << std::setw(8) << delta_str
+              << std::setw(16) << vs_llvm << "\n";
   }
   std::cout << std::defaultfloat;
 
