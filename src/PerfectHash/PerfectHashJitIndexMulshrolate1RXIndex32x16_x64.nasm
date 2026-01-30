@@ -1,4 +1,4 @@
-;++
+;+
 ;
 ; Generated NASM RawDog JIT blob: PerfectHashJitIndexMulshrolate1RXIndex32x16_x64
 ;
@@ -11,20 +11,21 @@
 
         global PerfectHashJitIndexMulshrolate1RXIndex32x16_x64
 
+        align 16
 PerfectHashJitIndexMulshrolate1RXIndex32x16_x64:
 
         ;IACA_VC_START
 
-        mov     r11, rsp
-        sub     rsp, 0xc0
+        mov     r11, rsp                       ; Save stack base.
+        sub     rsp, 0xC0                      ; Reserve local storage.
 
-        mov     dword [rsp + 0x0], edi
-        mov     dword [rsp + 0x4], esi
-        mov     dword [rsp + 0x8], edx
-        mov     dword [rsp + 0xc], ecx
-        mov     dword [rsp + 0x10], r8d
+        mov     dword [rsp + 0x00], edi        ; Store keys 1-4.
+        mov     dword [rsp + 0x04], esi
+        mov     dword [rsp + 0x08], edx
+        mov     dword [rsp + 0x0c], ecx
+        mov     dword [rsp + 0x10], r8d        ; Store keys 5-6.
         mov     dword [rsp + 0x14], r9d
-        mov     eax, dword [r11 + 0x8]
+        mov     eax, dword [r11 + 0x08]        ; Load keys 7-16.
         mov     dword [rsp + 0x18], eax
         mov     eax, dword [r11 + 0x10]
         mov     dword [rsp + 0x1c], eax
@@ -45,315 +46,182 @@ PerfectHashJitIndexMulshrolate1RXIndex32x16_x64:
         mov     eax, dword [r11 + 0x50]
         mov     dword [rsp + 0x3c], eax
 
-        mov     rax, qword [r11 + 0x58]
-        mov     qword [rsp + 0x40], rax
-        mov     rax, qword [r11 + 0x60]
-        mov     qword [rsp + 0x48], rax
-        mov     rax, qword [r11 + 0x68]
-        mov     qword [rsp + 0x50], rax
-        mov     rax, qword [r11 + 0x70]
-        mov     qword [rsp + 0x58], rax
-        mov     rax, qword [r11 + 0x78]
-        mov     qword [rsp + 0x60], rax
-        mov     rax, qword [r11 + 0x80]
-        mov     qword [rsp + 0x68], rax
-        mov     rax, qword [r11 + 0x88]
-        mov     qword [rsp + 0x70], rax
-        mov     rax, qword [r11 + 0x90]
-        mov     qword [rsp + 0x78], rax
-        mov     rax, qword [r11 + 0x98]
-        mov     qword [rsp + 0x80], rax
-        mov     rax, qword [r11 + 0xa0]
-        mov     qword [rsp + 0x88], rax
-        mov     rax, qword [r11 + 0xa8]
-        mov     qword [rsp + 0x90], rax
-        mov     rax, qword [r11 + 0xb0]
-        mov     qword [rsp + 0x98], rax
-        mov     rax, qword [r11 + 0xb8]
-        mov     qword [rsp + 0xa0], rax
-        mov     rax, qword [r11 + 0xc0]
-        mov     qword [rsp + 0xa8], rax
-        mov     rax, qword [r11 + 0xc8]
-        mov     qword [rsp + 0xb0], rax
-        mov     rax, qword [r11 + 0xd0]
-        mov     qword [rsp + 0xb8], rax
+        vmovdqu32 zmm0, [rsp + 0x00]           ; Load keys.
 
         mov     r10, [rel RawDogAssigned]
-        mov     r8d, dword [rel RawDogSeed3Byte1]
+        vpbroadcastd zmm1, dword [rel RawDogSeed1]
+        vpbroadcastd zmm2, dword [rel RawDogSeed2]
 
-        mov     eax, dword [rsp + 0x0]
-        imul    eax, dword [rel RawDogSeed1]
+        vpmulld zmm3, zmm0, zmm1               ; Vertex1 = Key * Seed1.
+        vpmulld zmm4, zmm0, zmm2               ; Vertex2 = Key * Seed2.
+
         mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x0]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        and     ecx, 31
+        mov     edx, 32
+        sub     edx, ecx
+        mov     eax, dword [rel RawDogSeed3Byte1]
+        and     eax, 31
+
+        vmovd   xmm6, ecx                      ; Seed3_Byte2.
+        vmovd   xmm7, edx                      ; 32 - Seed3_Byte2.
+        vmovd   xmm5, eax                      ; Seed3_Byte1.
+
+        vpsrld  zmm9, zmm3, xmm6               ; ror(Vertex1, Seed3_Byte2).
+        vpslld  zmm10, zmm3, xmm7
+        vpord    zmm3, zmm9, zmm10
+        vpsrld  zmm3, zmm3, xmm5               ; Vertex1 >>= Seed3_Byte1.
+        vpsrld  zmm4, zmm4, xmm5               ; Vertex2 >>= Seed3_Byte1.
+
+        vmovdqu32 [rsp + 0x40], zmm3
+        vmovdqu32 [rsp + 0x80], zmm4
+
+        mov     r9d, dword [rel RawDogIndexMask]
+
+        mov     eax, dword [rsp + 0x40]
+        mov     ecx, dword [rsp + 0x80]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x40]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x58]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x4]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x4]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x44]
+        mov     ecx, dword [rsp + 0x84]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x48]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x60]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x8]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x8]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x48]
+        mov     ecx, dword [rsp + 0x88]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x50]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x68]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0xc]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0xc]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x4c]
+        mov     ecx, dword [rsp + 0x8c]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x58]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x70]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x10]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x10]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x50]
+        mov     ecx, dword [rsp + 0x90]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x60]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x78]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x14]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x14]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x54]
+        mov     ecx, dword [rsp + 0x94]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x68]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x80]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x18]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x18]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x58]
+        mov     ecx, dword [rsp + 0x98]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x70]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x88]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x1c]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x1c]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x5c]
+        mov     ecx, dword [rsp + 0x9c]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x78]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x90]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x20]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x20]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x60]
+        mov     ecx, dword [rsp + 0xa0]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x80]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x98]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x24]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x24]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x64]
+        mov     ecx, dword [rsp + 0xa4]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x88]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0xa0]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x28]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x28]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x68]
+        mov     ecx, dword [rsp + 0xa8]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x90]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0xa8]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x2c]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x2c]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x6c]
+        mov     ecx, dword [rsp + 0xac]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0x98]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0xb0]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x30]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x30]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x70]
+        mov     ecx, dword [rsp + 0xb0]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0xa0]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0xb8]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x34]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x34]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x74]
+        mov     ecx, dword [rsp + 0xb4]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0xa8]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0xc0]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x38]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x38]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x78]
+        mov     ecx, dword [rsp + 0xb8]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0xb0]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0xc8]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x3c]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x3c]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        mov     eax, dword [rsp + 0x7c]
+        mov     ecx, dword [rsp + 0xbc]
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
-        mov     rdx, qword [rsp + 0xb8]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0xd0]
         mov     dword [rdx], eax
 
-        add     rsp, 0xc0
+        add     rsp, 0xC0
 
         ;IACA_VC_END
 

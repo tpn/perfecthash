@@ -1,6 +1,6 @@
 ;+
 ;
-; Generated NASM RawDog JIT blob: PerfectHashJitIndexMulshrolate1RX16Index32x16_x64
+; Generated NASM RawDog JIT blob: PerfectHashJitIndexMulshrolate2RX16Index32x16_x64
 ;
 ;--
 
@@ -9,10 +9,10 @@
 
         section .text
 
-        global PerfectHashJitIndexMulshrolate1RX16Index32x16_x64
+        global PerfectHashJitIndexMulshrolate2RX16Index32x16_x64
 
         align 16
-PerfectHashJitIndexMulshrolate1RX16Index32x16_x64:
+PerfectHashJitIndexMulshrolate2RX16Index32x16_x64:
 
         ;IACA_VC_START
 
@@ -55,21 +55,32 @@ PerfectHashJitIndexMulshrolate1RX16Index32x16_x64:
         vpmulld zmm3, zmm0, zmm1               ; Vertex1 = Key * Seed1.
         vpmulld zmm4, zmm0, zmm2               ; Vertex2 = Key * Seed2.
 
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        and     ecx, 31
-        mov     edx, 32
-        sub     edx, ecx
         mov     eax, dword [rel RawDogSeed3Byte1]
+        mov     ecx, dword [rel RawDogSeed3Byte2]
+        mov     edx, dword [rel RawDogSeed3Byte3]
         and     eax, 31
+        and     ecx, 31
+        and     edx, 31
 
-        vmovd   xmm6, ecx                      ; Seed3_Byte2.
-        vmovd   xmm7, edx                      ; 32 - Seed3_Byte2.
+        mov     r8d, 32
+        sub     r8d, ecx                       ; 32 - Seed3_Byte2.
+        mov     r9d, 32
+        sub     r9d, edx                       ; 32 - Seed3_Byte3.
+
         vmovd   xmm5, eax                      ; Seed3_Byte1.
+        vmovd   xmm6, ecx                      ; Seed3_Byte2.
+        vmovd   xmm7, r8d                      ; 32 - Seed3_Byte2.
+        vmovd   xmm8, edx                      ; Seed3_Byte3.
+        vmovd   xmm9, r9d                      ; 32 - Seed3_Byte3.
 
         vpsrld  zmm9, zmm3, xmm6               ; ror(Vertex1, Seed3_Byte2).
         vpslld  zmm10, zmm3, xmm7
-        vpord    zmm3, zmm9, zmm10
+        vpord   zmm3, zmm9, zmm10
         vpsrld  zmm3, zmm3, xmm5               ; Vertex1 >>= Seed3_Byte1.
+
+        vpsrld  zmm9, zmm4, xmm8               ; ror(Vertex2, Seed3_Byte3).
+        vpslld  zmm10, zmm4, xmm9
+        vpord   zmm4, zmm9, zmm10
         vpsrld  zmm4, zmm4, xmm5               ; Vertex2 >>= Seed3_Byte1.
 
         vmovdqu32 [rsp + 0x40], zmm3
@@ -240,6 +251,9 @@ RawDogSeed3Byte1:
 
 RawDogSeed3Byte2:
         dq 0xE1E1E1E1E1E1E1E1
+
+RawDogSeed3Byte3:
+        dq 0xD2D2D2D2D2D2D2D2
 
 RawDogIndexMask:
         dq 0x2121212121212121

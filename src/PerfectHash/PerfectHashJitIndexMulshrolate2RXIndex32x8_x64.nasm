@@ -1,6 +1,6 @@
-;++
+;+
 ;
-; Generated NASM RawDog JIT blob: PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64
+; Generated NASM RawDog JIT blob: PerfectHashJitIndexMulshrolate2RXIndex32x8_x64
 ;
 ;--
 
@@ -9,11 +9,9 @@
 
         section .text
 
-        RAWDOG_IMM8_TABLE_MAGIC equ 0x8C4B2A1D9F573E61
+        global PerfectHashJitIndexMulshrolate2RXIndex32x8_x64
 
-        global PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64
-
-PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64:
+PerfectHashJitIndexMulshrolate2RXIndex32x8_x64:
 
         ;IACA_VC_START
 
@@ -35,13 +33,36 @@ PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64:
         vpbroadcastd ymm2, dword [rel RawDogSeed1]
         vpbroadcastd ymm3, dword [rel RawDogSeed2]
 
-        vpmulld ymm4, ymm1, ymm2
-        vpmulld ymm5, ymm1, ymm3
+        vpmulld ymm4, ymm1, ymm2               ; Vertex1 = Key * Seed1.
+        vpmulld ymm5, ymm1, ymm3               ; Vertex2 = Key * Seed2.
 
-        vpsrld  ymm4, ymm4, 0x2
-Seed3Byte1ImmOffset equ $-1-$$
-        vpsrld  ymm5, ymm5, 0x2
-Seed3Byte2ImmOffset equ $-1-$$
+        mov     eax, dword [rel RawDogSeed3Byte1]
+        mov     ecx, dword [rel RawDogSeed3Byte2]
+        mov     edx, dword [rel RawDogSeed3Byte3]
+        and     eax, 31
+        and     ecx, 31
+        and     edx, 31
+
+        mov     r8d, 32
+        sub     r8d, ecx                       ; 32 - Seed3_Byte2.
+        mov     r9d, 32
+        sub     r9d, edx                       ; 32 - Seed3_Byte3.
+
+        vmovd   xmm5, eax                      ; Seed3_Byte1.
+        vmovd   xmm6, ecx                      ; Seed3_Byte2.
+        vmovd   xmm7, r8d                      ; 32 - Seed3_Byte2.
+        vmovd   xmm8, edx                      ; Seed3_Byte3.
+        vmovd   xmm9, r9d                      ; 32 - Seed3_Byte3.
+
+        vpsrld  ymm9, ymm4, xmm6               ; ror(Vertex1, Seed3_Byte2).
+        vpslld  ymm10, ymm4, xmm7
+        vpor    ymm4, ymm9, ymm10
+        vpsrld  ymm4, ymm4, xmm5               ; Vertex1 >>= Seed3_Byte1.
+
+        vpsrld  ymm9, ymm5, xmm8               ; ror(Vertex2, Seed3_Byte3).
+        vpslld  ymm10, ymm5, xmm9
+        vpor    ymm5, ymm9, ymm10
+        vpsrld  ymm5, ymm5, xmm5               ; Vertex2 >>= Seed3_Byte1.
 
         mov     r9d, dword [rel RawDogIndexMask]
 
@@ -125,14 +146,6 @@ Seed3Byte2ImmOffset equ $-1-$$
         ret
 
         align 8
-RawDogImm8PatchTable:
-        dq RAWDOG_IMM8_TABLE_MAGIC
-        dd 2
-        dd 0
-        dd Seed3Byte1ImmOffset
-        dd Seed3Byte2ImmOffset
-
-        align 8
 RawDogAssigned:
         dq 0xA1A1A1A1A1A1A1A1
 
@@ -144,6 +157,12 @@ RawDogSeed2:
 
 RawDogSeed3Byte1:
         dq 0xD1D1D1D1D1D1D1D1
+
+RawDogSeed3Byte2:
+        dq 0xE1E1E1E1E1E1E1E1
+
+RawDogSeed3Byte3:
+        dq 0xD2D2D2D2D2D2D2D2
 
 RawDogIndexMask:
         dq 0x2121212121212121

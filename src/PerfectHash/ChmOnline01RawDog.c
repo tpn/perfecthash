@@ -64,6 +64,12 @@ Abstract:
 #include "PerfectHashJitRawDogMulshrolate2RX16Index32x4_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RXIndex32x4Avx2_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RX16Index32x4Avx2_x64.h"
+#if defined(PH_LINUX)
+#include "PerfectHashJitRawDogMulshrolate2RXIndex32x8_x64.h"
+#include "PerfectHashJitRawDogMulshrolate2RX16Index32x8_x64.h"
+#include "PerfectHashJitRawDogMulshrolate2RXIndex32x16_x64.h"
+#include "PerfectHashJitRawDogMulshrolate2RX16Index32x16_x64.h"
+#endif
 #include "PerfectHashJitRawDogMulshrolate2RXAvx2_v1_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RXAvx2_v2_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RXAvx2_v3_x64.h"
@@ -339,6 +345,21 @@ static const CHAR RawDogTargetCpu[] = "";
 
 static
 ULONG
+GetRawDogSeed3Byte2ForImm8Patch(
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ ULONG Seed3Byte1,
+    _In_ ULONG Seed3Byte2
+    )
+{
+    if (HashFunctionId == PerfectHashHashMultiplyShiftRXFunctionId) {
+        return Seed3Byte1;
+    }
+
+    return Seed3Byte2;
+}
+
+static
+ULONG
 GetRawDogVectorVersion(VOID)
 {
     const char *Value = NULL;
@@ -369,6 +390,10 @@ GetRawDogVectorVersion(VOID)
 
     if (*Value == '2') {
         return 2;
+    }
+
+    if (*Value == '4') {
+        return 4;
     }
 
     return 3;
@@ -1189,7 +1214,7 @@ CompileChm01IndexJitRawDog(
                               Entries,
                               EntryCount,
                               Seed3Bytes.Byte1,
-                              Seed3Bytes.Byte2,
+                              GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                               &Code);
     if (FAILED(Result)) {
         return Result;
@@ -1506,6 +1531,15 @@ CompileChm01IndexVectorJitRawDog(
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate2RXFunctionId) {
             if (UseAssigned16) {
+#if defined(PH_LINUX)
+                if (VectorVersion >= 4) {
+                    SourceCode = (PBYTE)
+                        PerfectHashJitRawDogMulshrolate2RX16Index32x16_x64;
+                    CodeSize = sizeof(
+                        PerfectHashJitRawDogMulshrolate2RX16Index32x16_x64
+                    );
+                } else
+#endif
                 if (VectorVersion >= 2) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMulshrolate2RX16Avx512_v2_x64;
@@ -1520,6 +1554,15 @@ CompileChm01IndexVectorJitRawDog(
                     );
                 }
             } else {
+#if defined(PH_LINUX)
+                if (VectorVersion >= 4) {
+                    SourceCode = (PBYTE)
+                        PerfectHashJitRawDogMulshrolate2RXIndex32x16_x64;
+                    CodeSize = sizeof(
+                        PerfectHashJitRawDogMulshrolate2RXIndex32x16_x64
+                    );
+                } else
+#endif
                 if (VectorVersion >= 2) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMulshrolate2RXAvx512_v2_x64;
@@ -1586,7 +1629,7 @@ CompileChm01IndexVectorJitRawDog(
                                   Entries,
                                   EntryCount,
                                   Seed3Bytes.Byte1,
-                                  Seed3Bytes.Byte2,
+                                  GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                   &Code);
         if (FAILED(Result)) {
             return Result;
@@ -1636,6 +1679,15 @@ CompileChm01IndexVectorJitRawDog(
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate2RXFunctionId) {
             if (UseAssigned16) {
+#if defined(PH_LINUX)
+                if (VectorVersion >= 4) {
+                    SourceCode = (PBYTE)
+                        PerfectHashJitRawDogMulshrolate2RX16Index32x8_x64;
+                    CodeSize = sizeof(
+                        PerfectHashJitRawDogMulshrolate2RX16Index32x8_x64
+                    );
+                } else
+#endif
                 if (VectorVersion == 3) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMulshrolate2RX16Avx2_v3_x64;
@@ -1656,6 +1708,15 @@ CompileChm01IndexVectorJitRawDog(
                     );
                 }
             } else {
+#if defined(PH_LINUX)
+                if (VectorVersion >= 4) {
+                    SourceCode = (PBYTE)
+                        PerfectHashJitRawDogMulshrolate2RXIndex32x8_x64;
+                    CodeSize = sizeof(
+                        PerfectHashJitRawDogMulshrolate2RXIndex32x8_x64
+                    );
+                } else
+#endif
                 if (VectorVersion == 3) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMulshrolate2RXAvx2_v3_x64;
@@ -1740,7 +1801,7 @@ CompileChm01IndexVectorJitRawDog(
                                   Entries,
                                   EntryCount,
                                   Seed3Bytes.Byte1,
-                                  Seed3Bytes.Byte2,
+                                  GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                   &Code);
         if (FAILED(Result)) {
             return Result;
@@ -1886,7 +1947,7 @@ CompileChm01IndexVectorJitRawDog(
                                   EntriesForX4,
                                   EntryCountForX4,
                                   Seed3Bytes.Byte1,
-                                  Seed3Bytes.Byte2,
+                                  GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                   &Code);
         if (FAILED(Result)) {
             return Result;
@@ -2157,7 +2218,7 @@ CompileChm01IndexVectorJitRawDog(
                                   Entries,
                                   EntryCount,
                                   Seed3Bytes.Byte1,
-                                  Seed3Bytes.Byte2,
+                                  GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                   &Code);
         if (FAILED(Result)) {
             return Result;
@@ -2251,7 +2312,7 @@ CompileChm01IndexVectorJitRawDog(
                                   Entries,
                                   EntryCount,
                                   Seed3Bytes.Byte1,
-                                  Seed3Bytes.Byte2,
+                                  GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                   &Code);
         if (FAILED(Result)) {
             return Result;
@@ -2343,7 +2404,7 @@ CompileChm01IndexVectorJitRawDog(
                                   Entries,
                                   EntryCount,
                                   Seed3Bytes.Byte1,
-                                  Seed3Bytes.Byte2,
+                                  GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                   &Code);
         if (FAILED(Result)) {
             return Result;
@@ -2613,7 +2674,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -2643,7 +2704,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -2677,7 +2738,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -2762,7 +2823,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -2797,7 +2858,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -2827,7 +2888,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -2861,7 +2922,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -2974,7 +3035,7 @@ CompileChm01IndexVectorJitRawDog(
                                       Entries,
                                       EntryCount,
                                       Seed3Bytes.Byte1,
-                                      Seed3Bytes.Byte2,
+                                      GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                       &Code);
             if (FAILED(Result)) {
                 return Result;
@@ -3173,7 +3234,7 @@ CompileChm01IndexVectorJitRawDog(
                                   EntriesForX4,
                                   EntryCountForX4,
                                   Seed3Bytes.Byte1,
-                                  Seed3Bytes.Byte2,
+                                  GetRawDogSeed3Byte2ForImm8Patch(Table->HashFunctionId, Seed3Bytes.Byte1, Seed3Bytes.Byte2),
                                   &Code);
         if (FAILED(Result)) {
             return Result;

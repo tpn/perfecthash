@@ -719,6 +719,10 @@ if(PERFECTHASH_IS_LINUX)
                 PerfectHashJitIndexMulshrolate2RX16Index32x4_x64
                 PerfectHashJitIndexMulshrolate2RXIndex32x4Avx2_x64
                 PerfectHashJitIndexMulshrolate2RX16Index32x4Avx2_x64
+                PerfectHashJitIndexMulshrolate2RXIndex32x8_x64
+                PerfectHashJitIndexMulshrolate2RX16Index32x8_x64
+                PerfectHashJitIndexMulshrolate2RXIndex32x16_x64
+                PerfectHashJitIndexMulshrolate2RX16Index32x16_x64
                 PerfectHashJitIndexMulshrolate1RXIndex32x8_x64
                 PerfectHashJitIndexMulshrolate1RX16Index32x8_x64
                 PerfectHashJitIndexMulshrolate1RXIndex32x16_x64
