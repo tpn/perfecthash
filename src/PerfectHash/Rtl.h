@@ -2080,6 +2080,8 @@ typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
 //      SEH operations.
 //
 
+#ifdef PH_WINDOWS
+
 #define TRY __try
 #define TRY_TSX __try
 #define TRY_AVX __try
@@ -2125,6 +2127,32 @@ typedef RTL_PRINT_SYS_ERROR *PRTL_PRINT_SYS_ERROR;
         EXCEPTION_EXECUTE_HANDLER :                              \
         EXCEPTION_CONTINUE_SEARCH                                \
     )
+
+#else
+
+#define TRY if (1)
+#define TRY_TSX if (1)
+#define TRY_AVX if (1)
+#define TRY_AVX2 if (1)
+#define TRY_AVX512 if (1)
+#define TRY_AVX_ALIGNED if (1)
+#define TRY_AVX_UNALIGNED if (1)
+
+#define TRY_SSE42 if (1)
+#define TRY_SSE42_ALIGNED if (1)
+#define TRY_SSE42_UNALIGNED if (1)
+
+#define TRY_PROBE_MEMORY if (1)
+#define TRY_MAPPED_MEMORY_OP if (1)
+
+#define EXCEPT else
+#define EXCEPT_FILTER(Name) else
+#define CATCH_EXCEPTION_ILLEGAL_INSTRUCTION else
+#define CATCH_EXCEPTION_ACCESS_VIOLATION else
+#define CATCH_STATUS_IN_PAGE_ERROR else
+#define CATCH_STATUS_IN_PAGE_ERROR_OR_ACCESS_VIOLATION else
+
+#endif
 
 #if 0
 FORCEINLINE

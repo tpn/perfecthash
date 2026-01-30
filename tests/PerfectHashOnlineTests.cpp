@@ -1838,6 +1838,78 @@ TEST_F(PerfectHashOnlineTests,
 }
 
 TEST_F(PerfectHashOnlineTests,
+       RawDogJitMulshrolate2RXIndex32x4MatchesIndex) {
+  const std::vector<ULONG> keys = {
+      1, 3, 5, 7, 11, 13, 17, 19,
+      23, 29, 31, 37, 41, 43, 47, 53,
+      59, 61, 67, 71, 73, 79, 83, 89,
+      97, 101, 103, 107, 109, 113, 127, 131,
+  };
+
+  PPERFECT_HASH_TABLE table =
+      CreateTableFromKeys(keys, PerfectHashHashMulshrolate2RXFunctionId);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x4 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x4 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  for (size_t i = 0; i < keys.size(); i += 4) {
+    ULONG i1 = 0;
+    ULONG i2 = 0;
+    ULONG i3 = 0;
+    ULONG i4 = 0;
+
+    result = jitInterface->Vtbl->Index32x4(jitInterface,
+                                           keys[i],
+                                           keys[i + 1],
+                                           keys[i + 2],
+                                           keys[i + 3],
+                                           &i1,
+                                           &i2,
+                                           &i3,
+                                           &i4);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], i1);
+    EXPECT_EQ(expected[i + 1], i2);
+    EXPECT_EQ(expected[i + 2], i3);
+    EXPECT_EQ(expected[i + 3], i4);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
        RawDogJitMulshrolate2RXIndex32x8MatchesIndex) {
   const std::vector<ULONG> keys = {
       1, 3, 5, 7, 11, 13, 17, 19,

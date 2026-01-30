@@ -25,9 +25,9 @@ PerfectHashJitIndexMultiplyShiftRIndex32x4Avx2_x64:
 
         mov     qword [rsp + 0x10], r8
         mov     qword [rsp + 0x18], r9
-        mov     rax, qword [r11 + 0x18]
+        mov     rax, qword [r11 + 0x8]
         mov     qword [rsp + 0x20], rax
-        mov     rax, qword [r11 + 0x20]
+        mov     rax, qword [r11 + 0x10]
         mov     qword [rsp + 0x28], rax
 
         vmovdqu xmm0, [rsp + 0x0]

@@ -25,9 +25,9 @@ PerfectHashJitIndexMulshrolate1RX16Index32x4_x64:
 
         mov     qword [rsp + 0x10], r8
         mov     qword [rsp + 0x18], r9
-        mov     rax, qword [r11 + 0x18]
+        mov     rax, qword [r11 + 0x8]
         mov     qword [rsp + 0x20], rax
-        mov     rax, qword [r11 + 0x20]
+        mov     rax, qword [r11 + 0x10]
         mov     qword [rsp + 0x28], rax
 
         mov     r10, [rel RawDogAssigned]

@@ -1,6 +1,6 @@
 ;++
 ;
-; Generated NASM RawDog JIT blob: PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64
+; Generated NASM RawDog JIT blob: PerfectHashJitIndexMulshrolate2RX16Index32x4Avx2_x64
 ;
 ;--
 
@@ -9,9 +9,9 @@
 
         section .text
 
-        global PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64
+        global PerfectHashJitIndexMulshrolate2RX16Index32x4Avx2_x64
 
-PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64:
+PerfectHashJitIndexMulshrolate2RX16Index32x4Avx2_x64:
 
         ;IACA_VC_START
 
@@ -43,6 +43,26 @@ PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64:
 
         vpmulld xmm3, xmm0, xmm1
         vpmulld xmm4, xmm0, xmm2
+
+        mov     ecx, dword [rel RawDogSeed3Byte2]
+        and     ecx, 31
+        mov     edx, 32
+        sub     edx, ecx
+        vmovd   xmm1, ecx
+        vmovd   xmm2, edx
+        vpsrld  xmm0, xmm3, xmm1
+        vpslld  xmm1, xmm3, xmm2
+        vpor    xmm3, xmm0, xmm1
+
+        mov     ecx, dword [rel RawDogSeed3Byte3]
+        and     ecx, 31
+        mov     edx, 32
+        sub     edx, ecx
+        vmovd   xmm1, ecx
+        vmovd   xmm2, edx
+        vpsrld  xmm0, xmm4, xmm1
+        vpslld  xmm1, xmm4, xmm2
+        vpor    xmm4, xmm0, xmm1
 
         mov     ecx, dword [rel RawDogSeed3Byte1]
         and     ecx, 31
@@ -107,6 +127,12 @@ RawDogSeed2:
 
 RawDogSeed3Byte1:
         dq 0xD1D1D1D1D1D1D1D1
+
+RawDogSeed3Byte2:
+        dq 0xE1E1E1E1E1E1E1E1
+
+RawDogSeed3Byte3:
+        dq 0xD2D2D2D2D2D2D2D2
 
 RawDogIndexMask:
         dq 0x2121212121212121
