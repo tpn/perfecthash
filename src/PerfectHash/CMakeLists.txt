@@ -343,18 +343,14 @@ if(PERFECTHASH_IS_LINUX)
     list(APPEND Private_Header_Files "${PERFECTHASH_MESSAGE_TABLE_H}")
 
     if(PERFECTHASH_ARCH_X86_64)
-        if(NOT PERFECTHASH_ENABLE_RAWDOG_LINUX)
-            message(STATUS "RawDog JIT disabled on Linux; set PERFECTHASH_ENABLE_RAWDOG_LINUX=ON to enable.")
-            set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
-        else()
-            find_program(PERFECTHASH_NASM_EXECUTABLE nasm)
-            find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
-            if(NOT PERFECTHASH_OBJCOPY_EXECUTABLE)
-                find_program(PERFECTHASH_OBJCOPY_EXECUTABLE objcopy)
-            endif()
+        find_program(PERFECTHASH_NASM_EXECUTABLE nasm)
+        find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
+        if(NOT PERFECTHASH_OBJCOPY_EXECUTABLE)
+            find_program(PERFECTHASH_OBJCOPY_EXECUTABLE objcopy)
+        endif()
 
-            if(PERFECTHASH_NASM_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
-                set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
+        if(PERFECTHASH_NASM_EXECUTABLE AND PERFECTHASH_OBJCOPY_EXECUTABLE)
+            set(PERFECTHASH_HAS_RAWDOG_JIT ON CACHE BOOL "RawDog JIT availability" FORCE)
 
             set(RAWDOG_ASM
                 "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashJitIndexMultiplyShiftR_x64.nasm"
@@ -693,6 +689,75 @@ if(PERFECTHASH_IS_LINUX)
             set(RAWDOG_M3RX16_AVX512_V2_HDR
                 "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RX16Avx512_v2_x64.h"
             )
+
+            set(RAWDOG_EXTRA_BLOBS
+                PerfectHashJitIndexMultiplyShiftRIndex32x4_x64
+                PerfectHashJitIndexMultiplyShiftRIndex32x4Avx2_x64
+                PerfectHashJitIndexMultiplyShiftRIndex32x8_x64
+                PerfectHashJitIndexMultiplyShiftRIndex32x16_x64
+                PerfectHashJitIndexMultiplyShiftR16Index32x4_x64
+                PerfectHashJitIndexMultiplyShiftR16Index32x4Avx2_x64
+                PerfectHashJitIndexMultiplyShiftR16Index32x8_x64
+                PerfectHashJitIndexMultiplyShiftR16Index32x16_x64
+                PerfectHashJitIndexMultiplyShiftRX_x64
+                PerfectHashJitIndexMultiplyShiftRX16_x64
+                PerfectHashJitIndexMultiplyShiftRXIndex32x4_x64
+                PerfectHashJitIndexMultiplyShiftRX16Index32x4_x64
+                PerfectHashJitIndexMultiplyShiftRXIndex32x4Avx2_x64
+                PerfectHashJitIndexMultiplyShiftRX16Index32x4Avx2_x64
+                PerfectHashJitIndexMultiplyShiftRXIndex32x8_x64
+                PerfectHashJitIndexMultiplyShiftRX16Index32x8_x64
+                PerfectHashJitIndexMultiplyShiftRXIndex32x16_x64
+                PerfectHashJitIndexMultiplyShiftRX16Index32x16_x64
+                PerfectHashJitIndexMulshrolate1RXIndex32x4_x64
+                PerfectHashJitIndexMulshrolate1RX16Index32x4_x64
+                PerfectHashJitIndexMulshrolate1RXIndex32x4Avx2_x64
+                PerfectHashJitIndexMulshrolate1RX16Index32x4Avx2_x64
+                PerfectHashJitIndexMulshrolate1RXIndex32x8_x64
+                PerfectHashJitIndexMulshrolate1RX16Index32x8_x64
+                PerfectHashJitIndexMulshrolate1RXIndex32x16_x64
+                PerfectHashJitIndexMulshrolate1RX16Index32x16_x64
+            )
+            set(RAWDOG_EXTRA_HDRS "")
+            foreach(RAWDOG_EXTRA_BLOB ${RAWDOG_EXTRA_BLOBS})
+                set(RAWDOG_EXTRA_ASM
+                    "${CMAKE_CURRENT_SOURCE_DIR}/${RAWDOG_EXTRA_BLOB}.nasm"
+                )
+                set(RAWDOG_EXTRA_OBJ
+                    "${CMAKE_CURRENT_BINARY_DIR}/${RAWDOG_EXTRA_BLOB}.o"
+                )
+                set(RAWDOG_EXTRA_BIN
+                    "${CMAKE_CURRENT_BINARY_DIR}/${RAWDOG_EXTRA_BLOB}.bin"
+                )
+                string(REPLACE "PerfectHashJitIndex" "PerfectHashJitRawDog"
+                    RAWDOG_EXTRA_HDR_BASE
+                    "${RAWDOG_EXTRA_BLOB}"
+                )
+                set(RAWDOG_EXTRA_HDR
+                    "${CMAKE_CURRENT_BINARY_DIR}/${RAWDOG_EXTRA_HDR_BASE}.h"
+                )
+                add_custom_command(
+                    OUTPUT "${RAWDOG_EXTRA_HDR}"
+                    COMMAND ${PERFECTHASH_NASM_EXECUTABLE}
+                            -f elf64
+                            -o "${RAWDOG_EXTRA_OBJ}"
+                            "${RAWDOG_EXTRA_ASM}"
+                    COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
+                            --dump-section=.text=${RAWDOG_EXTRA_BIN}
+                            "${RAWDOG_EXTRA_OBJ}"
+                    COMMAND "${Python3_EXECUTABLE}"
+                            "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                            --input "${RAWDOG_EXTRA_BIN}"
+                            --output "${RAWDOG_EXTRA_HDR}"
+                            --symbol "${RAWDOG_EXTRA_HDR_BASE}"
+                    DEPENDS
+                        "${RAWDOG_EXTRA_ASM}"
+                        "${PERFECTHASH_ROOT_DIR}/scripts/generate_rawdog_jit_header.py"
+                    COMMENT "Generating RawDog JIT blob for ${RAWDOG_EXTRA_HDR_BASE}..."
+                    VERBATIM
+                )
+                list(APPEND RAWDOG_EXTRA_HDRS "${RAWDOG_EXTRA_HDR}")
+            endforeach()
 
             add_custom_command(
                 OUTPUT ${RAWDOG_HDR}
@@ -1283,6 +1348,7 @@ if(PERFECTHASH_IS_LINUX)
             )
 
             list(APPEND Private_Header_Files
+                 ${RAWDOG_EXTRA_HDRS}
                  "${RAWDOG_HDR}"
                  "${RAWDOG_M1_HDR}"
                  "${RAWDOG_MSR16_HDR}"
@@ -1312,10 +1378,9 @@ if(PERFECTHASH_IS_LINUX)
                  "${RAWDOG_M3RX16_AVX512_V1_HDR}"
                  "${RAWDOG_M3RX16_AVX512_V2_HDR}")
             list(APPEND Source_Files "ChmOnline01RawDog.c")
-            else()
-                message(WARNING "RawDog JIT disabled (missing nasm/objcopy).")
-                set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
-            endif()
+        else()
+            message(WARNING "RawDog JIT disabled (missing nasm/objcopy).")
+            set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
         endif()
     endif()
 endif()

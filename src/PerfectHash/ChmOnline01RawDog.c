@@ -26,7 +26,6 @@ Abstract:
 #include <immintrin.h>
 #include "PerfectHashJitRawDogMultiplyShiftR_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftR16_x64.h"
-#if defined(PH_WINDOWS)
 #include "PerfectHashJitRawDogMultiplyShiftRIndex32x4_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftR16Index32x4_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftRIndex32x4Avx2_x64.h"
@@ -45,10 +44,8 @@ Abstract:
 #include "PerfectHashJitRawDogMultiplyShiftRX16Index32x8_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftRXIndex32x16_x64.h"
 #include "PerfectHashJitRawDogMultiplyShiftRX16Index32x16_x64.h"
-#endif
 #include "PerfectHashJitRawDogMulshrolate1RX_x64.h"
 #include "PerfectHashJitRawDogMulshrolate1RX16_x64.h"
-#if defined(PH_WINDOWS)
 #include "PerfectHashJitRawDogMulshrolate1RXIndex32x4_x64.h"
 #include "PerfectHashJitRawDogMulshrolate1RX16Index32x4_x64.h"
 #include "PerfectHashJitRawDogMulshrolate1RXIndex32x4Avx2_x64.h"
@@ -57,7 +54,6 @@ Abstract:
 #include "PerfectHashJitRawDogMulshrolate1RX16Index32x8_x64.h"
 #include "PerfectHashJitRawDogMulshrolate1RXIndex32x16_x64.h"
 #include "PerfectHashJitRawDogMulshrolate1RX16Index32x16_x64.h"
-#endif
 #include "PerfectHashJitRawDogMulshrolate2RX_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RX16_x64.h"
 #include "PerfectHashJitRawDogMulshrolate2RXAvx2_v1_x64.h"
@@ -791,7 +787,7 @@ CompileChm01IndexJitRawDog(
                 SourceCode = (PBYTE)PerfectHashJitRawDogMultiplyShiftRX_arm64;
                 CodeSize = sizeof(PerfectHashJitRawDogMultiplyShiftRX_arm64);
             }
-#elif defined(PH_RAWDOG_X64) && defined(PH_WINDOWS)
+#elif defined(PH_RAWDOG_X64)
             if (UseAssigned16) {
                 SourceCode = (PBYTE)PerfectHashJitRawDogMultiplyShiftRX16_x64;
                 CodeSize = sizeof(PerfectHashJitRawDogMultiplyShiftRX16_x64);

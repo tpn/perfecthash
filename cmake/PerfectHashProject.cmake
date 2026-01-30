@@ -11,7 +11,6 @@ option(PERFECTHASH_ENABLE_NATIVE_ARCH "Enable -march=native on supported compile
 option(PERFECTHASH_ENABLE_INSTALL "Enable install rules" ON)
 option(PERFECTHASH_ENABLE_TESTS "Enable tests" ON)
 option(PERFECTHASH_ENABLE_LLVM "Enable LLVM support if available" ON)
-option(PERFECTHASH_ENABLE_RAWDOG_LINUX "Enable RawDog JIT on Linux (experimental)" OFF)
 set(_perfecthash_static_llvm_default ON)
 if(APPLE)
     set(_perfecthash_static_llvm_default OFF)
