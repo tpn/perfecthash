@@ -30,77 +30,75 @@ PerfectHashJitIndexMulshrolate1RXIndex32x4Avx2_x64:
         mov     rax, qword [r11 + 0x20]
         mov     qword [rsp + 0x28], rax
 
-        mov     r10, [rel RawDogAssigned]
-        mov     r8d, dword [rel RawDogSeed3Byte1]
+        vmovdqu xmm0, [rsp + 0x0]
 
-        mov     eax, dword [rsp + 0x0]
-        imul    eax, dword [rel RawDogSeed1]
+        mov     r10, [rel RawDogAssigned]
+        mov     eax, dword [rel RawDogSeed1]
+        vmovd   xmm1, eax
+        vpshufd xmm1, xmm1, 0
+
+        mov     eax, dword [rel RawDogSeed2]
+        vmovd   xmm2, eax
+        vpshufd xmm2, xmm2, 0
+
+        vpmulld xmm3, xmm0, xmm1
+        vpmulld xmm4, xmm0, xmm2
+
         mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x0]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        and     ecx, 31
+        mov     edx, 32
+        sub     edx, ecx
+        vmovd   xmm1, ecx
+        vmovd   xmm2, edx
+        vpsrld  xmm0, xmm3, xmm1
+        vpslld  xmm1, xmm3, xmm2
+        vpor    xmm3, xmm0, xmm1
+
+        mov     ecx, dword [rel RawDogSeed3Byte1]
+        and     ecx, 31
+        vmovd   xmm1, ecx
+        vpsrld  xmm3, xmm3, xmm1
+        vpsrld  xmm4, xmm4, xmm1
+
+        mov     r9d, dword [rel RawDogIndexMask]
+
+        vpextrd eax, xmm3, 0
+        vpextrd ecx, xmm4, 0
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
         mov     rdx, qword [rsp + 0x10]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x4]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x4]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        vpextrd eax, xmm3, 1
+        vpextrd ecx, xmm4, 1
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
         mov     rdx, qword [rsp + 0x18]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0x8]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0x8]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        vpextrd eax, xmm3, 2
+        vpextrd ecx, xmm4, 2
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
         mov     rdx, qword [rsp + 0x20]
         mov     dword [rdx], eax
 
-        mov     eax, dword [rsp + 0xc]
-        imul    eax, dword [rel RawDogSeed1]
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        ror     eax, cl
-        mov     ecx, r8d
-        shr     eax, cl
-        mov     edx, dword [rsp + 0xc]
-        imul    edx, dword [rel RawDogSeed2]
-        mov     ecx, r8d
-        shr     edx, cl
+        vpextrd eax, xmm3, 3
+        vpextrd ecx, xmm4, 3
         mov     eax, dword [r10 + rax * 4]
-        mov     edx, dword [r10 + rdx * 4]
-        add     eax, edx
-        and     eax, dword [rel RawDogIndexMask]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
         mov     rdx, qword [rsp + 0x28]
         mov     dword [rdx], eax
 
+        vzeroupper
         add     rsp, 0x30
 
         ;IACA_VC_END
