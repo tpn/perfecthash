@@ -9,122 +9,87 @@
 
         section .text
 
+        RAWDOG_IMM8_TABLE_MAGIC equ 0x8C4B2A1D9F573E61
+
         global PerfectHashJitIndexMultiplyShiftR16Index32x4Avx2_x64
 
 PerfectHashJitIndexMultiplyShiftR16Index32x4Avx2_x64:
 
         ;IACA_VC_START
 
-        mov     r11, rsp
-        sub     rsp, 0x30
+        vmovd   xmm0, edi
+        vpinsrd xmm0, xmm0, esi, 1
+        vpinsrd xmm0, xmm0, edx, 2
+        vpinsrd xmm1, xmm0, ecx, 3
 
-        mov     dword [rsp + 0x0], edi
-        mov     dword [rsp + 0x4], esi
-        mov     dword [rsp + 0x8], edx
-        mov     dword [rsp + 0xc], ecx
+        mov     r10, 0xA1A1A1A1A1A1A1A1
+        vpbroadcastd xmm2, dword [rel RawDogMsrSeed1]
+        vpbroadcastd xmm3, dword [rel RawDogMsrSeed2]
 
-        mov     qword [rsp + 0x10], r8
-        mov     qword [rsp + 0x18], r9
-        mov     rax, qword [r11 + 0x8]
-        mov     qword [rsp + 0x20], rax
-        mov     rax, qword [r11 + 0x10]
-        mov     qword [rsp + 0x28], rax
+        vpmulld xmm4, xmm1, xmm2
+        vpmulld xmm5, xmm1, xmm3
 
-        vmovdqu xmm0, [rsp + 0x0]
+        vpsrld  xmm4, xmm4, 0x2
+Seed3Byte1ImmOffset equ $-1-$$
 
-        mov     r10, [rel RawDogAssigned]
-        mov     eax, dword [rel RawDogSeed1]
-        vmovd   xmm1, eax
-        vpshufd xmm1, xmm1, 0
+        vpsrld  xmm5, xmm5, 0x3
+Seed3Byte2ImmOffset equ $-1-$$
 
-        mov     eax, dword [rel RawDogSeed2]
-        vmovd   xmm2, eax
-        vpshufd xmm2, xmm2, 0
+        vpbroadcastd xmm2, dword [rel RawDogMsrHashMask]
+        vpand   xmm4, xmm4, xmm2
+        vpand   xmm5, xmm5, xmm2
 
-        vpmulld xmm3, xmm0, xmm1
-        vpmulld xmm4, xmm0, xmm2
+        mov     r11d, 0x06172839
 
-        mov     ecx, dword [rel RawDogSeed3Byte1]
-        and     ecx, 31
-        vmovd   xmm1, ecx
-        vpsrld  xmm3, xmm3, xmm1
-
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        and     ecx, 31
-        vmovd   xmm2, ecx
-        vpsrld  xmm4, xmm4, xmm2
-
-        mov     eax, dword [rel RawDogHashMask]
-        vmovd   xmm1, eax
-        vpshufd xmm1, xmm1, 0
-        vpand   xmm3, xmm3, xmm1
-        vpand   xmm4, xmm4, xmm1
-
-        mov     r9d, dword [rel RawDogIndexMask]
-
-        vpextrd eax, xmm3, 0
-        vpextrd ecx, xmm4, 0
+        vpextrd eax, xmm4, 0
+        vpextrd ecx, xmm5, 0
         movzx   eax, word [r10 + rax * 2]
         movzx   ecx, word [r10 + rcx * 2]
         add     eax, ecx
-        and     eax, r9d
+        and     eax, r11d
+        mov     dword [r8], eax
+
+        vpextrd eax, xmm4, 1
+        vpextrd ecx, xmm5, 1
+        movzx   eax, word [r10 + rax * 2]
+        movzx   ecx, word [r10 + rcx * 2]
+        add     eax, ecx
+        and     eax, r11d
+        mov     dword [r9], eax
+
+        vpextrd eax, xmm4, 2
+        vpextrd ecx, xmm5, 2
+        movzx   eax, word [r10 + rax * 2]
+        movzx   ecx, word [r10 + rcx * 2]
+        add     eax, ecx
+        and     eax, r11d
+        mov     rdx, qword [rsp + 0x8]
+        mov     dword [rdx], eax
+
+        vpextrd eax, xmm4, 3
+        vpextrd ecx, xmm5, 3
+        movzx   eax, word [r10 + rax * 2]
+        movzx   ecx, word [r10 + rcx * 2]
+        add     eax, ecx
+        and     eax, r11d
         mov     rdx, qword [rsp + 0x10]
         mov     dword [rdx], eax
-
-        vpextrd eax, xmm3, 1
-        vpextrd ecx, xmm4, 1
-        movzx   eax, word [r10 + rax * 2]
-        movzx   ecx, word [r10 + rcx * 2]
-        add     eax, ecx
-        and     eax, r9d
-        mov     rdx, qword [rsp + 0x18]
-        mov     dword [rdx], eax
-
-        vpextrd eax, xmm3, 2
-        vpextrd ecx, xmm4, 2
-        movzx   eax, word [r10 + rax * 2]
-        movzx   ecx, word [r10 + rcx * 2]
-        add     eax, ecx
-        and     eax, r9d
-        mov     rdx, qword [rsp + 0x20]
-        mov     dword [rdx], eax
-
-        vpextrd eax, xmm3, 3
-        vpextrd ecx, xmm4, 3
-        movzx   eax, word [r10 + rax * 2]
-        movzx   ecx, word [r10 + rcx * 2]
-        add     eax, ecx
-        and     eax, r9d
-        mov     rdx, qword [rsp + 0x28]
-        mov     dword [rdx], eax
-
-        vzeroupper
-        add     rsp, 0x30
 
         ;IACA_VC_END
 
         ret
 
+        align 4
+RawDogMsrSeed1:    dd 0xB1C2D3E4
+RawDogMsrSeed2:    dd 0xC2D3E4F5
+RawDogMsrHashMask: dd 0xF5061728
+
         align 8
-RawDogAssigned:
-        dq 0xA1A1A1A1A1A1A1A1
-
-RawDogSeed1:
-        dq 0xB1B1B1B1B1B1B1B1
-
-RawDogSeed2:
-        dq 0xC1C1C1C1C1C1C1C1
-
-RawDogSeed3Byte1:
-        dq 0xD1D1D1D1D1D1D1D1
-
-RawDogSeed3Byte2:
-        dq 0xE1E1E1E1E1E1E1E1
-
-RawDogHashMask:
-        dq 0xF1F1F1F1F1F1F1F1
-
-RawDogIndexMask:
-        dq 0x2121212121212121
+RawDogImm8PatchTable:
+        dq RAWDOG_IMM8_TABLE_MAGIC
+        dd 2
+        dd 0
+        dd Seed3Byte1ImmOffset
+        dd Seed3Byte2ImmOffset
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=nasm fo=croql comments=\:;

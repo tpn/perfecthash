@@ -18,6 +18,8 @@
 
         section .text
 
+        RAWDOG_IMM8_TABLE_MAGIC equ 0x8C4B2A1D9F573E61
+
         global PerfectHashJitIndexMultiplyShiftR_x64
 
 ;+++
@@ -48,52 +50,34 @@ PerfectHashJitIndexMultiplyShiftR_x64:
 
         ;IACA_VC_START
 
-        mov     r10, [rel RawDogAssigned]      ; Load assigned base address.
+        mov     r10, 0xA1A1A1A1A1A1A1A1         ; Load assigned base address.
 
-        mov     eax, edi                       ; Copy key into eax.
-        imul    eax, dword [rel RawDogSeed1]   ; Vertex1 = Key * Seed1.
-        mov     ecx, dword [rel RawDogSeed3Byte1]
-        shr     eax, cl                        ; Vertex1 >>= Seed3_Byte1.
+        imul    eax, edi, 0xB1C2D3E4           ; Vertex1 = Key * Seed1.
+        shr     eax, 0x2                       ; Vertex1 >>= Seed3_Byte1.
+Seed3Byte1ImmOffset equ $-1-$$
 
-        mov     edx, edi                       ; Copy key into edx.
-        imul    edx, dword [rel RawDogSeed2]   ; Vertex2 = Key * Seed2.
-        mov     ecx, dword [rel RawDogSeed3Byte2]
-        shr     edx, cl                        ; Vertex2 >>= Seed3_Byte2.
+        imul    edx, edi, 0xC2D3E4F5           ; Vertex2 = Key * Seed2.
+        shr     edx, 0x3                       ; Vertex2 >>= Seed3_Byte2.
+Seed3Byte2ImmOffset equ $-1-$$
 
-        mov     r11d, dword [rel RawDogHashMask]
+        mov     r11d, 0xF5061728
         and     eax, r11d                      ; Mask vertex1.
         and     edx, r11d                      ; Mask vertex2.
 
         mov     eax, dword [r10 + rax * 4]     ; Load vertex1.
-        mov     edx, dword [r10 + rdx * 4]     ; Load vertex2.
-
-        add     eax, edx                       ; Add vertices.
-        and     eax, dword [rel RawDogIndexMask]
+        add     eax, dword [r10 + rdx * 4]     ; Add vertex2.
+        and     eax, 0x06172839
 
         ;IACA_VC_END
 
         ret                                    ; Return.
 
         align 8
-RawDogAssigned:
-        dq 0xA1A1A1A1A1A1A1A1
-
-RawDogSeed1:
-        dq 0xB1B1B1B1B1B1B1B1
-
-RawDogSeed2:
-        dq 0xC1C1C1C1C1C1C1C1
-
-RawDogSeed3Byte1:
-        dq 0xD1D1D1D1D1D1D1D1
-
-RawDogSeed3Byte2:
-        dq 0xE1E1E1E1E1E1E1E1
-
-RawDogHashMask:
-        dq 0xF1F1F1F1F1F1F1F1
-
-RawDogIndexMask:
-        dq 0x2121212121212121
+RawDogImm8PatchTable:
+        dq RAWDOG_IMM8_TABLE_MAGIC
+        dd 2
+        dd 0
+        dd Seed3Byte1ImmOffset
+        dd Seed3Byte2ImmOffset
 
 ; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=nasm fo=croql comments=\:;

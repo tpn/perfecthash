@@ -70,30 +70,26 @@ OUTPUT_OFFSET          equ 028h
 
         mov     r10, 0A1A1A1A1A1A1A1A1h             ; Assigned base address.
 
-        mov     rax, 0B1B1B1B1B1B1B1B1h             ; Seed1.
+        mov     eax, 0B1C2D3E4h                    ; Seed1.
         vmovd   xmm1, eax
         vpshufd xmm1, xmm1, 0
 
-        mov     rax, 0C1C1C1C1C1C1C1C1h             ; Seed2.
+        mov     eax, 0C2D3E4F5h                    ; Seed2.
         vmovd   xmm2, eax
         vpshufd xmm2, xmm2, 0
 
         vpmulld xmm3, xmm0, xmm1                   ; Vertex1 = Key * Seed1.
         vpmulld xmm4, xmm0, xmm2                   ; Vertex2 = Key * Seed2.
 
-        mov     rax, 0D1D1D1D1D1D1D1D1h             ; Seed3 byte 1.
-        mov     ecx, eax
-        and     ecx, 31
+        mov     ecx, 0D31BEF20h                    ; Seed3 byte 1.
         vmovd   xmm1, ecx
         vpsrld  xmm3, xmm3, xmm1
 
-        mov     rax, 0E1E1E1E1E1E1E1E1h             ; Seed3 byte 2.
-        mov     ecx, eax
-        and     ecx, 31
+        mov     ecx, 0E4F50617h                    ; Seed3 byte 2.
         vmovd   xmm2, ecx
         vpsrld  xmm4, xmm4, xmm2
 
-        mov     rax, 0F1F1F1F1F1F1F1F1h             ; Hash mask.
+        mov     eax, 0F5061728h                    ; Hash mask.
         vmovd   xmm1, eax
         vpshufd xmm1, xmm1, 0
         vpand   xmm3, xmm3, xmm1                   ; Mask vertex1.
@@ -102,8 +98,7 @@ OUTPUT_OFFSET          equ 028h
         vmovdqu xmmword ptr [rsp + VERTEX1_OFFSET], xmm3
         vmovdqu xmmword ptr [rsp + VERTEX2_OFFSET], xmm4
 
-        mov     rax, 02121212121212121h            ; Index mask.
-        mov     r9d, eax
+        mov     r9d, 06172839h                     ; Index mask.
 
         mov     eax, dword ptr [rsp + VERTEX1_OFFSET + 00h]
         mov     ecx, dword ptr [rsp + VERTEX2_OFFSET + 00h]
@@ -140,8 +135,6 @@ OUTPUT_OFFSET          equ 028h
         and     eax, r9d
         mov     rdx, qword ptr [r11 + OUTPUT_OFFSET + 18h]
         mov     dword ptr [rdx], eax
-
-        vzeroupper
 
         add     rsp, LOCAL_STACK_SIZE
         ret                                        ; Return.

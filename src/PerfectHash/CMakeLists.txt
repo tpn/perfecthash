@@ -695,10 +695,12 @@ if(PERFECTHASH_IS_LINUX)
                 PerfectHashJitIndexMultiplyShiftRIndex32x4Avx2_x64
                 PerfectHashJitIndexMultiplyShiftRIndex32x8_x64
                 PerfectHashJitIndexMultiplyShiftRIndex32x16_x64
+                PerfectHashJitIndexMultiplyShiftRIndex32x16Avx512_x64
                 PerfectHashJitIndexMultiplyShiftR16Index32x4_x64
                 PerfectHashJitIndexMultiplyShiftR16Index32x4Avx2_x64
                 PerfectHashJitIndexMultiplyShiftR16Index32x8_x64
                 PerfectHashJitIndexMultiplyShiftR16Index32x16_x64
+                PerfectHashJitIndexMultiplyShiftR16Index32x16Avx512_x64
                 PerfectHashJitIndexMultiplyShiftRX_x64
                 PerfectHashJitIndexMultiplyShiftRX16_x64
                 PerfectHashJitIndexMultiplyShiftRXIndex32x4_x64

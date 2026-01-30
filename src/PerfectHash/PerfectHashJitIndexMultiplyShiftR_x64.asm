@@ -46,31 +46,23 @@ include PerfectHash.inc
         ;IACA_VC_START
 
         mov     r10, 0A1A1A1A1A1A1A1A1h             ; Assigned base address.
-        mov     r8,  0B1B1B1B1B1B1B1B1h             ; Seed1.
-        mov     r9,  0C1C1C1C1C1C1C1C1h             ; Seed2.
 
-        mov     eax, ecx                           ; Copy key into eax.
         mov     edx, ecx                           ; Copy key into edx.
-        imul    eax, r8d                           ; Vertex1 = Key * Seed1.
-        mov     r11, 0D1D1D1D1D1D1D1D1h             ; Seed3 byte 1.
-        mov     ecx, r11d
+        imul    eax, ecx, 0B1C2D3E4h               ; Vertex1 = Key * Seed1.
+        mov     ecx, 0D31BEF20h
         shr     eax, cl                            ; Vertex1 >>= Seed3_Byte1.
 
-        imul    edx, r9d                           ; Vertex2 = Key * Seed2.
-        mov     r11, 0E1E1E1E1E1E1E1E1h             ; Seed3 byte 2.
-        mov     ecx, r11d
+        imul    edx, edx, 0C2D3E4F5h               ; Vertex2 = Key * Seed2.
+        mov     ecx, 0E4F50617h
         shr     edx, cl                            ; Vertex2 >>= Seed3_Byte2.
 
-        mov     r11, 0F1F1F1F1F1F1F1F1h             ; Hash mask.
+        mov     r11d, 0F5061728h                   ; Hash mask.
         and     eax, r11d                          ; Mask vertex1.
         and     edx, r11d                          ; Mask vertex2.
 
         mov     eax, dword ptr [r10 + rax * 4]     ; Load vertex1.
-        mov     edx, dword ptr [r10 + rdx * 4]     ; Load vertex2.
-
-        add     eax, edx                           ; Add vertices.
-        mov     r11, 02121212121212121h            ; Index mask.
-        and     eax, r11d
+        add     eax, dword ptr [r10 + rdx * 4]     ; Add vertex2.
+        and     eax, 06172839h
 
         ;IACA_VC_END
 
