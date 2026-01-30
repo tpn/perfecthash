@@ -1825,23 +1825,27 @@ TEST_F(PerfectHashOnlineTests,
   const std::string keysPath =
       std::string(PERFECTHASH_TEST_ROOT_DIR) +
       "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate2RX.seeds";
   std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
   if (!LoadKeysFromFile(keysPath, &keys)) {
     GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
   }
 
   ScopedEnvVar rawdogVectorVersion("PH_RAWDOG_VECTOR_VERSION", "4");
   PPERFECT_HASH_TABLE table = CreateTableFromKeys(
-      keys, PerfectHashHashMulshrolate2RXFunctionId, true, 3);
+      keys, PerfectHashHashMulshrolate2RXFunctionId, true, 3, &seeds);
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
   PERFECT_HASH_TABLE_FLAGS flags = {0};
   ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
-  if ((flags.AssignedElementSizeInBits << 3) != 16u) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "Assigned16 unavailable for Mulshrolate2RX.";
-  }
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
 
   std::vector<ULONG> expected(keys.size());
   for (size_t i = 0; i < keys.size(); ++i) {
@@ -1922,23 +1926,27 @@ TEST_F(PerfectHashOnlineTests,
   const std::string keysPath =
       std::string(PERFECTHASH_TEST_ROOT_DIR) +
       "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate2RX.seeds";
   std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
   if (!LoadKeysFromFile(keysPath, &keys)) {
     GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
   }
 
   ScopedEnvVar rawdogVectorVersion("PH_RAWDOG_VECTOR_VERSION", "4");
   PPERFECT_HASH_TABLE table = CreateTableFromKeys(
-      keys, PerfectHashHashMulshrolate2RXFunctionId, true, 3);
+      keys, PerfectHashHashMulshrolate2RXFunctionId, true, 3, &seeds);
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
   PERFECT_HASH_TABLE_FLAGS flags = {0};
   ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
-  if ((flags.AssignedElementSizeInBits << 3) != 16u) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "Assigned16 unavailable for Mulshrolate2RX.";
-  }
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
 
   std::vector<ULONG> expected(keys.size());
   for (size_t i = 0; i < keys.size(); ++i) {
@@ -2023,23 +2031,27 @@ TEST_F(PerfectHashOnlineTests,
   const std::string keysPath =
       std::string(PERFECTHASH_TEST_ROOT_DIR) +
       "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate3RX.seeds";
   std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
   if (!LoadKeysFromFile(keysPath, &keys)) {
     GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 4) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
   }
 
   ScopedEnvVar rawdogVectorVersion("PH_RAWDOG_VECTOR_VERSION", "4");
   PPERFECT_HASH_TABLE table = CreateTableFromKeys(
-      keys, PerfectHashHashMulshrolate3RXFunctionId, true, 3);
+      keys, PerfectHashHashMulshrolate3RXFunctionId, true, 3, &seeds);
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
   PERFECT_HASH_TABLE_FLAGS flags = {0};
   ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
-  if ((flags.AssignedElementSizeInBits << 3) != 16u) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "Assigned16 unavailable for Mulshrolate3RX.";
-  }
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
 
   std::vector<ULONG> expected(keys.size());
   for (size_t i = 0; i < keys.size(); ++i) {
@@ -2120,23 +2132,27 @@ TEST_F(PerfectHashOnlineTests,
   const std::string keysPath =
       std::string(PERFECTHASH_TEST_ROOT_DIR) +
       "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate3RX.seeds";
   std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
   if (!LoadKeysFromFile(keysPath, &keys)) {
     GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 4) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
   }
 
   ScopedEnvVar rawdogVectorVersion("PH_RAWDOG_VECTOR_VERSION", "4");
   PPERFECT_HASH_TABLE table = CreateTableFromKeys(
-      keys, PerfectHashHashMulshrolate3RXFunctionId, true, 3);
+      keys, PerfectHashHashMulshrolate3RXFunctionId, true, 3, &seeds);
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
   PERFECT_HASH_TABLE_FLAGS flags = {0};
   ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
-  if ((flags.AssignedElementSizeInBits << 3) != 16u) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "Assigned16 unavailable for Mulshrolate3RX.";
-  }
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
 
   std::vector<ULONG> expected(keys.size());
   for (size_t i = 0; i < keys.size(); ++i) {
@@ -2221,23 +2237,27 @@ TEST_F(PerfectHashOnlineTests,
   const std::string keysPath =
       std::string(PERFECTHASH_TEST_ROOT_DIR) +
       "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate4RX.seeds";
   std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
   if (!LoadKeysFromFile(keysPath, &keys)) {
     GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 5) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
   }
 
   ScopedEnvVar rawdogVectorVersion("PH_RAWDOG_VECTOR_VERSION", "4");
   PPERFECT_HASH_TABLE table = CreateTableFromKeys(
-      keys, PerfectHashHashMulshrolate4RXFunctionId, true, 3);
+      keys, PerfectHashHashMulshrolate4RXFunctionId, true, 3, &seeds);
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
   PERFECT_HASH_TABLE_FLAGS flags = {0};
   ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
-  if ((flags.AssignedElementSizeInBits << 3) != 16u) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "Assigned16 unavailable for Mulshrolate4RX.";
-  }
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
 
   std::vector<ULONG> expected(keys.size());
   for (size_t i = 0; i < keys.size(); ++i) {
@@ -2318,23 +2338,367 @@ TEST_F(PerfectHashOnlineTests,
   const std::string keysPath =
       std::string(PERFECTHASH_TEST_ROOT_DIR) +
       "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate4RX.seeds";
   std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
   if (!LoadKeysFromFile(keysPath, &keys)) {
     GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 5) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
   }
 
   ScopedEnvVar rawdogVectorVersion("PH_RAWDOG_VECTOR_VERSION", "4");
   PPERFECT_HASH_TABLE table = CreateTableFromKeys(
-      keys, PerfectHashHashMulshrolate4RXFunctionId, true, 3);
+      keys, PerfectHashHashMulshrolate4RXFunctionId, true, 3, &seeds);
   ASSERT_NE(table, nullptr);
 
   auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
   PERFECT_HASH_TABLE_FLAGS flags = {0};
   ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
-  if ((flags.AssignedElementSizeInBits << 3) != 16u) {
-    shim->Vtbl->Release(table);
-    GTEST_SKIP() << "Assigned16 unavailable for Mulshrolate4RX.";
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
   }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x16 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x16 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  const size_t limit = keys.size() - (keys.size() % 16);
+  for (size_t i = 0; i < limit; i += 16) {
+    ULONG index[16] = {};
+
+    result = jitInterface->Vtbl->Index32x16(jitInterface,
+                                            keys[i],
+                                            keys[i + 1],
+                                            keys[i + 2],
+                                            keys[i + 3],
+                                            keys[i + 4],
+                                            keys[i + 5],
+                                            keys[i + 6],
+                                            keys[i + 7],
+                                            keys[i + 8],
+                                            keys[i + 9],
+                                            keys[i + 10],
+                                            keys[i + 11],
+                                            keys[i + 12],
+                                            keys[i + 13],
+                                            keys[i + 14],
+                                            keys[i + 15],
+                                            &index[0],
+                                            &index[1],
+                                            &index[2],
+                                            &index[3],
+                                            &index[4],
+                                            &index[5],
+                                            &index[6],
+                                            &index[7],
+                                            &index[8],
+                                            &index[9],
+                                            &index[10],
+                                            &index[11],
+                                            &index[12],
+                                            &index[13],
+                                            &index[14],
+                                            &index[15]);
+    ASSERT_GE(result, 0);
+
+    for (size_t lane = 0; lane < 16; ++lane) {
+      EXPECT_EQ(expected[i + lane], index[lane]);
+    }
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, RawDogJitMulshrolate1RXAssigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate1RX.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMulshrolate1RXFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Mulshrolate1RX unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  for (size_t i = 0; i < keys.size(); ++i) {
+    ULONG index = 0;
+    result = shim->Vtbl->Index(table, keys[i], &index);
+    ASSERT_GE(result, 0);
+    EXPECT_EQ(expected[i], index);
+  }
+
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMulshrolate1RXIndex32x4Assigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate1RX.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMulshrolate1RXFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x4 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x4 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  const size_t limit = keys.size() - (keys.size() % 4);
+  for (size_t i = 0; i < limit; i += 4) {
+    ULONG i1 = 0;
+    ULONG i2 = 0;
+    ULONG i3 = 0;
+    ULONG i4 = 0;
+
+    result = jitInterface->Vtbl->Index32x4(jitInterface,
+                                           keys[i],
+                                           keys[i + 1],
+                                           keys[i + 2],
+                                           keys[i + 3],
+                                           &i1,
+                                           &i2,
+                                           &i3,
+                                           &i4);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], i1);
+    EXPECT_EQ(expected[i + 1], i2);
+    EXPECT_EQ(expected[i + 2], i3);
+    EXPECT_EQ(expected[i + 3], i4);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMulshrolate1RXIndex32x8Assigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate1RX.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMulshrolate1RXFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
+
+  std::vector<ULONG> expected(keys.size());
+  for (size_t i = 0; i < keys.size(); ++i) {
+    HRESULT result = shim->Vtbl->Index(table, keys[i], &expected[i]);
+    ASSERT_GE(result, 0);
+  }
+
+  PERFECT_HASH_TABLE_COMPILE_FLAGS compileFlags = {0};
+  compileFlags.Jit = TRUE;
+  compileFlags.JitBackendRawDog = TRUE;
+  compileFlags.JitIndex32x8 = TRUE;
+
+  HRESULT result = online_->Vtbl->CompileTable(online_, table, &compileFlags);
+  if (result == PH_E_NOT_IMPLEMENTED) {
+    shim->Vtbl->Release(table);
+    GTEST_SKIP() << "RawDog Index32x8 unavailable on this host.";
+  }
+  ASSERT_GE(result, 0);
+
+  PPERFECT_HASH_TABLE_JIT_INTERFACE jitInterface = nullptr;
+  result = shim->Vtbl->QueryInterface(
+      table,
+#ifdef PH_WINDOWS
+      IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+      &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+      reinterpret_cast<void **>(&jitInterface));
+  ASSERT_GE(result, 0);
+  ASSERT_NE(jitInterface, nullptr);
+
+  const size_t limit = keys.size() - (keys.size() % 8);
+  for (size_t i = 0; i < limit; i += 8) {
+    ULONG i1 = 0;
+    ULONG i2 = 0;
+    ULONG i3 = 0;
+    ULONG i4 = 0;
+    ULONG i5 = 0;
+    ULONG i6 = 0;
+    ULONG i7 = 0;
+    ULONG i8 = 0;
+
+    result = jitInterface->Vtbl->Index32x8(jitInterface,
+                                           keys[i],
+                                           keys[i + 1],
+                                           keys[i + 2],
+                                           keys[i + 3],
+                                           keys[i + 4],
+                                           keys[i + 5],
+                                           keys[i + 6],
+                                           keys[i + 7],
+                                           &i1,
+                                           &i2,
+                                           &i3,
+                                           &i4,
+                                           &i5,
+                                           &i6,
+                                           &i7,
+                                           &i8);
+    ASSERT_GE(result, 0);
+
+    EXPECT_EQ(expected[i], i1);
+    EXPECT_EQ(expected[i + 1], i2);
+    EXPECT_EQ(expected[i + 2], i3);
+    EXPECT_EQ(expected[i + 3], i4);
+    EXPECT_EQ(expected[i + 4], i5);
+    EXPECT_EQ(expected[i + 5], i6);
+    EXPECT_EQ(expected[i + 6], i7);
+    EXPECT_EQ(expected[i + 7], i8);
+  }
+
+  jitInterface->Vtbl->Release(jitInterface);
+  shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests,
+       RawDogJitMulshrolate1RXIndex32x16Assigned16MatchesIndex) {
+  const std::string keysPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.keys";
+  const std::string seedsPath =
+      std::string(PERFECTHASH_TEST_ROOT_DIR) +
+      "/keys/HologramWorld-31016.Mulshrolate1RX.seeds";
+  std::vector<ULONG> keys;
+  std::vector<ULONG> seeds;
+  if (!LoadKeysFromFile(keysPath, &keys)) {
+    GTEST_SKIP() << "Keys file unavailable: " << keysPath;
+  }
+  if (!LoadSeedsFromFile(seedsPath, &seeds) || seeds.size() < 3) {
+    GTEST_SKIP() << "Seeds file unavailable: " << seedsPath;
+  }
+
+  PPERFECT_HASH_TABLE table = CreateTableFromKeys(
+      keys, PerfectHashHashMulshrolate1RXFunctionId, true, 3, &seeds);
+  ASSERT_NE(table, nullptr);
+
+  auto *shim = reinterpret_cast<PerfectHashTableShim *>(table);
+  PERFECT_HASH_TABLE_FLAGS flags = {0};
+  ASSERT_GE(shim->Vtbl->GetFlags(table, sizeof(flags), &flags), 0);
+  ASSERT_EQ(flags.AssignedElementSizeInBits << 3, 16u);
 
   std::vector<ULONG> expected(keys.size());
   for (size_t i = 0; i < keys.size(); ++i) {

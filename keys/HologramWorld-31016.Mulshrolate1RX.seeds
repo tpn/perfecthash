@@ -1,0 +1,12 @@
+# Mulshrolate1RX seed set for HologramWorld-31016.keys (offline PerfectHashCreate).
+# Generated: 2026-01-30
+# Command:
+#   PerfectHashCreate keys/HologramWorld-31016.keys /tmp/ph-msrol1 Chm01 Mulshrolate1RX And 0 --GraphImpl=3 --Quiet
+# Source CSV: /tmp/ph-msrol1/PerfectHashTableCreate_AD543A03.csv
+# UsedAssigned16: Y
+
+Seed1 = 0x73A4A582
+Seed2 = 0x6A37DC9E
+Seed3 = 0x0C040010
+Seed3_Byte1 = 0x10
+Seed3_Byte2 = 0x00
