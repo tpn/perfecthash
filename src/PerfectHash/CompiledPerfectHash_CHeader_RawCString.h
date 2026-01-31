@@ -11,7 +11,7 @@ const CHAR CompiledPerfectHashCHeaderRawCStr[] =
     "\n"
     "/*++\n"
     "\n"
-    "Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>\n"
+    "Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>\n"
     "\n"
     "Module Name:\n"
     "\n"

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2023-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -16,7 +16,7 @@ Abstract:
 #include "PerfectHashEventsPrivate.h"
 #include <sys/time.h>
 
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
 #include "PerfectHashErrors_EnglishBin.h"
 #endif
 
@@ -3844,7 +3844,7 @@ PerfectHashPrintError(
     return Result;
 }
 
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
 
 #define PH_MESSAGE_RESOURCE_UNICODE 0x0001
 
@@ -4229,7 +4229,7 @@ PerfectHashFormatMessageArgs(
     return S_OK;
 }
 
-#endif // PH_LINUX
+#endif // PH_LINUX || PH_MAC
 
 PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
 
@@ -4242,7 +4242,7 @@ PerfectHashPrintMessage(
 {
     PCSZ CodeString;
     HRESULT Result = S_OK;
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
     PSTR Message;
     PSTR FormattedMessage;
     SIZE_T MessageLength;
@@ -4250,7 +4250,7 @@ PerfectHashPrintMessage(
     va_list Args;
 #endif
 
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
     Message = NULL;
     FormattedMessage = NULL;
     MessageLength = 0;

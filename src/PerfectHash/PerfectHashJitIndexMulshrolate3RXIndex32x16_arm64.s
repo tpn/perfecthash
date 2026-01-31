@@ -163,4 +163,3 @@ RawDogSeed4:
 
 RawDogIndexMask:
         .quad 0x2121212121212121
-

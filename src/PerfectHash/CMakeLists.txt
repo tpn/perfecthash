@@ -312,7 +312,7 @@ else()
     endif()
 endif()
 
-if(PERFECTHASH_IS_LINUX)
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
     set(PERFECTHASH_MESSAGE_BIN
@@ -335,7 +335,7 @@ if(PERFECTHASH_IS_LINUX)
         DEPENDS
             "${PERFECTHASH_MESSAGE_BIN}"
             "${PERFECTHASH_ROOT_DIR}/scripts/generate_message_table.py"
-        COMMENT "Generating PerfectHash message table for Linux..."
+        COMMENT "Generating PerfectHash message table for Linux/macOS..."
         VERBATIM
     )
 
@@ -5074,8 +5074,8 @@ endif()
 
 add_library(${target} SHARED ${ALL_FILES})
 
-# Generated Linux message table header and RawDog blobs live in the build dir.
-if(PERFECTHASH_IS_LINUX OR PERFECTHASH_HAS_RAWDOG_JIT)
+# Generated Linux/macOS message table header and RawDog blobs live in the build dir.
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC OR PERFECTHASH_HAS_RAWDOG_JIT)
     target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
