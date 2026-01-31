@@ -1,0 +1,15 @@
+name: perfecthash-win
+channels:
+  - conda-forge
+dependencies:
+  - cmake>=3.20
+  - ninja
+  - nasm
+  - llvmdev>=15
+  - clang
+  - zlib
+  - libxml2
+  - python=3.13
+  - pip
+  - llvmlite
+  - rust

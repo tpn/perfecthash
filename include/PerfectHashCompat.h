@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1383,6 +1383,7 @@ typedef struct _PH_INIT_ONCE_COMPAT {
 } PH_INIT_ONCE_COMPAT;
 typedef PH_INIT_ONCE_COMPAT INIT_ONCE;
 typedef INIT_ONCE *PINIT_ONCE, *LPINIT_ONCE;
+#define INIT_ONCE_STATIC_INIT { PTHREAD_ONCE_INIT, NULL }
 #else
 typedef RTL_RUN_ONCE INIT_ONCE;
 typedef PRTL_RUN_ONCE PINIT_ONCE;
@@ -1877,10 +1878,18 @@ InterlockedCompareExchangePointer(
 #endif
 #if defined(PH_COMPILER_GCC) || defined(PH_COMPILER_GNU) || \
     defined(__GNUC__) || defined(__clang__)
+#ifndef _tzcnt_u32
 #define _tzcnt_u32 __builtin_ctz
+#endif
+#ifndef _tzcnt_u64
 #define _tzcnt_u64 __builtin_ctzll
+#endif
+#ifndef _lzcnt_u32
 #define _lzcnt_u32 __builtin_clz
+#endif
+#ifndef _lzcnt_u64
 #define _lzcnt_u64 __builtin_clzll
+#endif
 #endif
 
 #if (!defined PH_WINDOWS && !defined PH_CUDA)
@@ -1902,6 +1911,7 @@ InterlockedCompareExchangePointer(
 
 #ifndef PH_CUDA
 
+#ifndef __cplusplus
 #ifndef min
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
 #endif
@@ -1909,6 +1919,7 @@ InterlockedCompareExchangePointer(
 #ifndef max
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #endif
+#endif  /* __cplusplus */
 
 #endif
 

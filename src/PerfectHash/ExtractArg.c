@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -314,10 +314,178 @@ TryExtractArgTableCompileFlags(
     PPERFECT_HASH_TABLE_COMPILE_FLAGS Flags
     )
 {
-    UNREFERENCED_PARAMETER(Rtl);
+    PCUNICODE_STRING Arg = Argument;
+    DECL_ARG(Jit);
+    DECL_ARG(JitRawDog);
+    DECL_ARG(JitIndex64);
+    DECL_ARG(JitIndex32x2);
+    DECL_ARG(JitIndex32x4);
+    DECL_ARG(JitIndex32x8);
+    DECL_ARG(JitIndex32x16);
+    DECL_ARG(JitVectorIndex32x2);
+    DECL_ARG(JitVectorIndex32x4);
+    DECL_ARG(JitVectorIndex32x8);
+    DECL_ARG(JitIndex2);
+    DECL_ARG(JitIndex4);
+    DECL_ARG(JitIndex8);
+    DECL_ARG(JitVectorIndex2);
+    DECL_ARG(JitVectorIndex4);
+    DECL_ARG(JitVectorIndex8);
+    DECL_ARG(JitMaxIsa);
+    DECL_ARG(Auto);
+    DECL_ARG(Avx);
+    DECL_ARG(Avx2);
+    DECL_ARG(Avx512);
+    DECL_ARG(Neon);
+    DECL_ARG(Sve);
+    DECL_ARG(Sve2);
+
     UNREFERENCED_PARAMETER(Allocator);
-    UNREFERENCED_PARAMETER(Argument);
-    UNREFERENCED_PARAMETER(Flags);
+
+    if (IS_EQUAL(Jit)) {
+        Flags->Jit = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitRawDog)) {
+        Flags->Jit = TRUE;
+        Flags->JitBackendRawDog = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex64)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex64 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex32x2)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex32x16)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x16 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex32x2)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex2)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex4)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitIndex8)) {
+        Flags->Jit = TRUE;
+        Flags->JitIndex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex2)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x2 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex4)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorIndex8)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorIndex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (Arg->Length > JitMaxIsa.Length &&
+        Arg->Buffer[JitMaxIsa.Length / sizeof(WCHAR)] == L'=') {
+        USHORT ValueOffset;
+        UNICODE_STRING PrefixString;
+        UNICODE_STRING ValueString;
+
+        ValueOffset = JitMaxIsa.Length;
+        PrefixString.Buffer = Arg->Buffer;
+        PrefixString.Length = ValueOffset;
+        PrefixString.MaximumLength = ValueOffset;
+
+        if (!Rtl->RtlEqualUnicodeString(&PrefixString, &JitMaxIsa, FALSE)) {
+            return S_FALSE;
+        }
+
+        if (Arg->Length <= (ValueOffset + sizeof(WCHAR)) ||
+            Arg->Buffer[ValueOffset / sizeof(WCHAR)] != L'=') {
+            return PH_E_COMMANDLINE_ARG_MISSING_VALUE;
+        }
+
+        ValueString.Buffer = Arg->Buffer + (ValueOffset / sizeof(WCHAR) + 1);
+        ValueString.Length = Arg->Length - (ValueOffset + sizeof(WCHAR));
+        ValueString.MaximumLength = ValueString.Length;
+
+        if (ValueString.Length == 0) {
+            return PH_E_COMMANDLINE_ARG_MISSING_VALUE;
+        }
+
+        if (Rtl->RtlEqualUnicodeString(&ValueString, &Auto, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAuto;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Avx, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Avx2, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx2;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Avx512, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaAvx512;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Neon, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaNeon;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Sve, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaSve;
+        } else if (Rtl->RtlEqualUnicodeString(&ValueString, &Sve2, FALSE)) {
+            Flags->JitMaxIsa = PerfectHashJitMaxIsaSve2;
+        } else {
+            return PH_E_INVALID_TABLE_COMPILE_FLAGS;
+        }
+
+        Flags->Jit = TRUE;
+        return S_OK;
+    }
 
     return S_FALSE;
 }

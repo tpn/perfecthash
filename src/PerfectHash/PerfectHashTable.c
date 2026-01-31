@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -153,6 +153,12 @@ Return Value:
     Allocator = Table->Allocator;
 
     //
+    // Release any JIT resources before freeing table data.
+    //
+
+    PerfectHashTableJitRundown(Table);
+
+    //
     // Free the memory used for the values array, if applicable.
     //
 
@@ -263,7 +269,7 @@ PerfectHashTableGetFlags(
 
 Routine Description:
 
-    Returns the flags associated with a loaded table instance.
+    Returns the flags associated with a created or loaded table instance.
 
 Arguments:
 
@@ -283,7 +289,7 @@ Return Value:
 
     E_INVALIDARG - SizeOfFlags does not match the size of the flags structure.
 
-    PH_E_TABLE_NOT_LOADED - No file has been loaded yet.
+    PH_E_TABLE_NOT_CREATED - Table has not been created or loaded.
 
     PH_E_TABLE_LOCKED - The table is locked.
 
@@ -305,9 +311,9 @@ Return Value:
         return PH_E_TABLE_LOCKED;
     }
 
-    if (!Table->Flags.Loaded) {
+    if (!Table->Flags.Loaded && !Table->Flags.Created) {
         ReleasePerfectHashTableLockExclusive(Table);
-        return PH_E_TABLE_NOT_LOADED;
+        return PH_E_TABLE_NOT_CREATED;
     }
 
     Flags->AsULong = Table->Flags.AsULong;

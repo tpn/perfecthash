@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -570,12 +570,21 @@ PerfectHashGetCurrentCpuArch(
         )                                                            \
     )                                                                \
                                                                      \
-    LAST_ENTRY(                                                      \
+    ENTRY(                                                           \
         Rng,                                                         \
         RNG,                                                         \
         GUID_EX(                                                     \
             0xfd84eebe, 0x2571, 0x4517,                              \
             0xa5, 0x14, 0x7a, 0xe4, 0x50, 0x32, 0x7d, 0x48           \
+        )                                                            \
+    )                                                                \
+                                                                     \
+    LAST_ENTRY(                                                      \
+        Online,                                                      \
+        ONLINE,                                                      \
+        GUID_EX(                                                     \
+            0x22a8eb9b, 0xa421, 0x4634,                              \
+            0x98, 0x76, 0xd0, 0x7b, 0xfa, 0xa4, 0x69, 0x22           \
         )                                                            \
     )
 
@@ -664,6 +673,15 @@ DEFINE_GUID_EX(CLSID_PERFECT_HASH, 0x402045fd, 0x72f4, 0x4a05,
 PERFECT_HASH_INTERFACE_TABLE_ENTRY(EXPAND_AS_DEFINE_GUID_EX);
 
 //
+// IID_PERFECT_HASH_TABLE_JIT_INTERFACE:
+// 2F41C3CD-32FE-4FFA-94D5-36DCB5BE99A9
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+               0x2f41c3cd, 0x32fe, 0x4ffa,
+               0x94, 0xd5, 0x36, 0xdc, 0xb5, 0xbe, 0x99, 0xa9);
+
+//
 // GUID array.
 //
 
@@ -708,7 +726,11 @@ PerfectHashInterfaceGuidToId(
     for (Index = 1; Index < Count; Index++) {
 #ifdef __cplusplus
         const GUID *Entry = PerfectHashInterfaceGuids[Index];
+#ifdef PH_WINDOWS
+        if (Entry && InlineIsEqualGUID(Guid, *Entry)) {
+#else
         if (Entry && InlineIsEqualGUID(Guid, Entry)) {
+#endif
             Id = (PERFECT_HASH_INTERFACE_ID)Index;
             break;
         }
@@ -1995,10 +2017,22 @@ typedef union _PERFECT_HASH_KEYS_LOAD_FLAGS {
         ULONG TryInferKeySizeFromKeysFilename:1;
 
         //
+        // When set, indicates the keys are already sorted in ascending order.
+        //
+
+        ULONG KeysAreSorted:1;
+
+        //
+        // When set, requests sorting keys into ascending order prior to load.
+        //
+
+        ULONG SortKeys:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:28;
+        ULONG Unused:26;
     };
 
     LONG AsLong;
@@ -2015,6 +2049,10 @@ IsValidKeysLoadFlags(
 {
     if (!ARGUMENT_PRESENT(LoadFlags)) {
         return E_POINTER;
+    }
+
+    if (LoadFlags->KeysAreSorted && LoadFlags->SortKeys) {
+        return E_FAIL;
     }
 
     if (LoadFlags->Unused != 0) {
@@ -2065,10 +2103,17 @@ typedef union _PERFECT_HASH_KEYS_FLAGS {
         ULONG DownsizingOccurred:1;
 
         //
+        // When set, indicates the key array was heap allocated and should be
+        // freed during rundown.
+        //
+
+        ULONG KeyArrayIsHeapAllocated:1;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:29;
+        ULONG Unused:28;
     };
 
     LONG AsLong;
@@ -3400,6 +3445,75 @@ IsValidTableLoadFlags(
 // Define table compilation flags.
 //
 
+//
+// Define max ISA for JIT compilation.
+//
+
+typedef enum _PERFECT_HASH_JIT_MAX_ISA_ID {
+
+    //
+    // Auto-select the host CPU features.
+    //
+
+    PerfectHashJitMaxIsaAuto = 0,
+
+    //
+    // Cap JIT code generation at AVX.
+    //
+
+    PerfectHashJitMaxIsaAvx,
+
+    //
+    // Cap JIT code generation at AVX2.
+    //
+
+    PerfectHashJitMaxIsaAvx2,
+
+    //
+    // Cap JIT code generation at AVX-512.
+    //
+
+    PerfectHashJitMaxIsaAvx512,
+
+    //
+    // Cap JIT code generation at NEON (AArch64 ASIMD).
+    //
+
+    PerfectHashJitMaxIsaNeon,
+
+    //
+    // Cap JIT code generation at SVE.
+    //
+
+    PerfectHashJitMaxIsaSve,
+
+    //
+    // Cap JIT code generation at SVE2.
+    //
+
+    PerfectHashJitMaxIsaSve2,
+
+    //
+    // N.B. Keep the next value last.
+    //
+
+    PerfectHashInvalidJitMaxIsa,
+
+} PERFECT_HASH_JIT_MAX_ISA_ID;
+typedef PERFECT_HASH_JIT_MAX_ISA_ID *PPERFECT_HASH_JIT_MAX_ISA_ID;
+
+FORCEINLINE
+BOOLEAN
+IsValidPerfectHashJitMaxIsaId(
+    _In_ PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa
+    )
+{
+    return (
+        JitMaxIsa >= PerfectHashJitMaxIsaAuto &&
+        JitMaxIsa < PerfectHashInvalidJitMaxIsa
+    );
+}
+
 typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
 
     struct _Struct_size_bytes_(sizeof(ULONG)) {
@@ -3415,10 +3529,86 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG IgnoreAssembly:1;
 
         //
+        // When set, compiles an in-memory, online JIT representation of the
+        // table using LLVM.
+        //
+
+        ULONG Jit:1;
+
+        //
+        // When set, indicates the LLVM backend should be used for JIT
+        // compilation.
+        //
+
+        ULONG JitBackendLlvm:1;
+
+        //
+        // When set, indicates the RawDog backend should be used for JIT
+        // compilation.
+        //
+
+        ULONG JitBackendRawDog:1;
+
+        //
+        // When set, compiles the Index64() routine (keys must have been
+        // downsized from 64-bit to 32-bit for this to be valid).
+        //
+
+        ULONG JitIndex64:1;
+
+        //
+        // When set, compiles a 2-wide Index32() routine.
+        //
+
+        ULONG JitIndex32x2:1;
+
+        //
+        // When set, compiles a 4-wide Index32() routine.
+        //
+
+        ULONG JitIndex32x4:1;
+
+        //
+        // When set, compiles an 8-wide Index32() routine.
+        //
+
+        ULONG JitIndex32x8:1;
+
+        //
+        // When set, compiles a 16-wide Index32() routine.
+        //
+
+        ULONG JitIndex32x16:1;
+
+        //
+        // When set, compiles a vectorized 2-wide Index32() routine.
+        //
+
+        ULONG JitVectorIndex32x2:1;
+
+        //
+        // When set, compiles a vectorized 4-wide Index32() routine.
+        //
+
+        ULONG JitVectorIndex32x4:1;
+
+        //
+        // When set, compiles a vectorized 8-wide Index32() routine.
+        //
+
+        ULONG JitVectorIndex32x8:1;
+
+        //
+        // Optionally caps the maximum ISA used by the JIT backend.
+        //
+
+        ULONG JitMaxIsa:3;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:31;
+        ULONG Unused:17;
     };
 
     LONG AsLong;
@@ -3438,6 +3628,16 @@ IsValidTableCompileFlags(
     }
 
     if (CompileFlags->Unused != 0) {
+        return E_FAIL;
+    }
+
+    if (CompileFlags->JitBackendLlvm &&
+        CompileFlags->JitBackendRawDog) {
+        return E_FAIL;
+    }
+
+    if (!IsValidPerfectHashJitMaxIsaId(
+        (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa)) {
         return E_FAIL;
     }
 
@@ -4248,7 +4448,7 @@ typedef PERFECT_HASH_TABLE_LOAD *PPERFECT_HASH_TABLE_LOAD;
 
 //
 // Define the table flags enum and associated function pointer to obtain the
-// flags from a loaded table.
+// flags from a created or loaded table.
 //
 
 typedef union _PERFECT_HASH_TABLE_FLAGS {
@@ -4322,10 +4522,25 @@ typedef union _PERFECT_HASH_TABLE_FLAGS {
         ULONG UsedAvx2MemoryCoverageFunction:1;
 
         //
+        // When set, indicates a JIT-compiled online Index() routine is
+        // available for the table.
+        //
+
+        ULONG JitEnabled:1;
+
+        //
+        // Encoded assigned element size in bytes (1, 2, 4, 8). To obtain
+        // the size in bits, use `AssignedElementSizeInBits << 3`.
+        // Zero indicates unknown or not initialized.
+        //
+
+        ULONG AssignedElementSizeInBits:4;
+
+        //
         // Unused bits.
         //
 
-        ULONG Unused:24;
+        ULONG Unused:19;
     };
 
     LONG AsLong;
@@ -4530,6 +4745,446 @@ typedef struct _PERFECT_HASH_TABLE_VTBL {
     PPERFECT_HASH_TABLE_SEEDED_HASH16_EX SeededHash16Ex;
 } PERFECT_HASH_TABLE_VTBL;
 typedef PERFECT_HASH_TABLE_VTBL *PPERFECT_HASH_TABLE_VTBL;
+
+//
+// Define the PERFECT_HASH_TABLE_JIT_INTERFACE.
+//
+
+#define PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS 64
+#define PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS 1024
+
+typedef union _PERFECT_HASH_TABLE_JIT_INFO_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+        ULONG Valid:1;
+        ULONG BackendLlvm:1;
+        ULONG BackendRawDog:1;
+        ULONG Index32Compiled:1;
+        ULONG Index64Compiled:1;
+        ULONG Index32x2Compiled:1;
+        ULONG Index32x4Compiled:1;
+        ULONG Index32x8Compiled:1;
+        ULONG Index32x16Compiled:1;
+        ULONG Index64x2Compiled:1;
+        ULONG Index64x4Compiled:1;
+        ULONG Index64x8Compiled:1;
+        ULONG Index64x16Compiled:1;
+        ULONG Index32x2Vector:1;
+        ULONG Index32x4Vector:1;
+        ULONG Index32x8Vector:1;
+        ULONG Index64x2Vector:1;
+        ULONG Index64x4Vector:1;
+        ULONG Index64x8Vector:1;
+        ULONG Index32x16Vector:1;
+        ULONG Unused:12;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_JIT_INFO_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_JIT_INFO_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_JIT_INFO_FLAGS *PPERFECT_HASH_TABLE_JIT_INFO_FLAGS;
+
+typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE_JIT_INFO {
+    ULONG SizeOfStruct;
+    PERFECT_HASH_TABLE_JIT_INFO_FLAGS Flags;
+    PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
+    CHAR TargetCpu[PERFECT_HASH_JIT_CPU_NAME_MAX_CHARS];
+    CHAR TargetFeatures[PERFECT_HASH_JIT_CPU_FEATURES_MAX_CHARS];
+} PERFECT_HASH_TABLE_JIT_INFO;
+typedef PERFECT_HASH_TABLE_JIT_INFO *PPERFECT_HASH_TABLE_JIT_INFO;
+
+DECLARE_COMPONENT(TableJitInterface, PERFECT_HASH_TABLE_JIT_INTERFACE);
+
+typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE PERFECT_HASH_TABLE_JIT_INTERFACE;
+typedef PERFECT_HASH_TABLE_JIT_INTERFACE *PPERFECT_HASH_TABLE_JIT_INTERFACE;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONG Key,
+    _Out_ PULONG Index
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX32 *PPERFECT_HASH_TABLE_JIT_INDEX32;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key,
+    _Out_ PULONG Index
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64 *PPERFECT_HASH_TABLE_JIT_INDEX64;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X2)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X2 *PPERFECT_HASH_TABLE_JIT_INDEX32X2;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X4)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _In_ ULONG Key3,
+    _In_ ULONG Key4,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X4 *PPERFECT_HASH_TABLE_JIT_INDEX32X4;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X8)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _In_ ULONG Key3,
+    _In_ ULONG Key4,
+    _In_ ULONG Key5,
+    _In_ ULONG Key6,
+    _In_ ULONG Key7,
+    _In_ ULONG Key8,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X8 *PPERFECT_HASH_TABLE_JIT_INDEX32X8;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX32X16)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONG Key1,
+    _In_ ULONG Key2,
+    _In_ ULONG Key3,
+    _In_ ULONG Key4,
+    _In_ ULONG Key5,
+    _In_ ULONG Key6,
+    _In_ ULONG Key7,
+    _In_ ULONG Key8,
+    _In_ ULONG Key9,
+    _In_ ULONG Key10,
+    _In_ ULONG Key11,
+    _In_ ULONG Key12,
+    _In_ ULONG Key13,
+    _In_ ULONG Key14,
+    _In_ ULONG Key15,
+    _In_ ULONG Key16,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8,
+    _Out_ PULONG Index9,
+    _Out_ PULONG Index10,
+    _Out_ PULONG Index11,
+    _Out_ PULONG Index12,
+    _Out_ PULONG Index13,
+    _Out_ PULONG Index14,
+    _Out_ PULONG Index15,
+    _Out_ PULONG Index16
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX32X16 *PPERFECT_HASH_TABLE_JIT_INDEX32X16;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X2)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X2 *PPERFECT_HASH_TABLE_JIT_INDEX64X2;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X4)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _In_ ULONGLONG Key3,
+    _In_ ULONGLONG Key4,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X4 *PPERFECT_HASH_TABLE_JIT_INDEX64X4;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X8)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _In_ ULONGLONG Key3,
+    _In_ ULONGLONG Key4,
+    _In_ ULONGLONG Key5,
+    _In_ ULONGLONG Key6,
+    _In_ ULONGLONG Key7,
+    _In_ ULONGLONG Key8,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X8 *PPERFECT_HASH_TABLE_JIT_INDEX64X8;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_INDEX64X16)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _In_ ULONGLONG Key1,
+    _In_ ULONGLONG Key2,
+    _In_ ULONGLONG Key3,
+    _In_ ULONGLONG Key4,
+    _In_ ULONGLONG Key5,
+    _In_ ULONGLONG Key6,
+    _In_ ULONGLONG Key7,
+    _In_ ULONGLONG Key8,
+    _In_ ULONGLONG Key9,
+    _In_ ULONGLONG Key10,
+    _In_ ULONGLONG Key11,
+    _In_ ULONGLONG Key12,
+    _In_ ULONGLONG Key13,
+    _In_ ULONGLONG Key14,
+    _In_ ULONGLONG Key15,
+    _In_ ULONGLONG Key16,
+    _Out_ PULONG Index1,
+    _Out_ PULONG Index2,
+    _Out_ PULONG Index3,
+    _Out_ PULONG Index4,
+    _Out_ PULONG Index5,
+    _Out_ PULONG Index6,
+    _Out_ PULONG Index7,
+    _Out_ PULONG Index8,
+    _Out_ PULONG Index9,
+    _Out_ PULONG Index10,
+    _Out_ PULONG Index11,
+    _Out_ PULONG Index12,
+    _Out_ PULONG Index13,
+    _Out_ PULONG Index14,
+    _Out_ PULONG Index15,
+    _Out_ PULONG Index16
+    );
+typedef PERFECT_HASH_TABLE_JIT_INDEX64X16 *PPERFECT_HASH_TABLE_JIT_INDEX64X16;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_JIT_GET_INFO)(
+    _In_ PPERFECT_HASH_TABLE_JIT_INTERFACE Jit,
+    _Out_ PPERFECT_HASH_TABLE_JIT_INFO Info
+    );
+typedef PERFECT_HASH_TABLE_JIT_GET_INFO *PPERFECT_HASH_TABLE_JIT_GET_INFO;
+
+typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE_JIT_INTERFACE);
+    PPERFECT_HASH_TABLE_JIT_INDEX32 Index32;
+    PPERFECT_HASH_TABLE_JIT_INDEX64 Index64;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X2 Index32x2;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X4 Index32x4;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X8 Index32x8;
+    PPERFECT_HASH_TABLE_JIT_INDEX32X16 Index32x16;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X2 Index64x2;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X4 Index64x4;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X8 Index64x8;
+    PPERFECT_HASH_TABLE_JIT_INDEX64X16 Index64x16;
+    PPERFECT_HASH_TABLE_JIT_GET_INFO GetInfo;
+} PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL;
+typedef PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
+      *PPERFECT_HASH_TABLE_JIT_INTERFACE_VTBL;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE {
+    PPERFECT_HASH_TABLE_JIT_INTERFACE_VTBL Vtbl;
+} PERFECT_HASH_TABLE_JIT_INTERFACE;
+typedef PERFECT_HASH_TABLE_JIT_INTERFACE
+      *PPERFECT_HASH_TABLE_JIT_INTERFACE;
+#endif
+
+//
+// Define the PERFECT_HASH_ONLINE interface.
+//
+
+DECLARE_COMPONENT(Online, PERFECT_HASH_ONLINE);
+
+typedef struct _PERFECT_HASH_ONLINE PERFECT_HASH_ONLINE;
+typedef PERFECT_HASH_ONLINE *PPERFECT_HASH_ONLINE;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_ONLINE_CREATE_TABLE_FROM_KEYS)(
+    _In_ PPERFECT_HASH_ONLINE Online,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ ULONG KeySizeInBytes,
+    _In_ ULONGLONG NumberOfKeys,
+    _In_reads_bytes_(NumberOfKeys * KeySizeInBytes) PVOID Keys,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters,
+    _Outptr_ PPERFECT_HASH_TABLE *Table
+    );
+typedef PERFECT_HASH_ONLINE_CREATE_TABLE_FROM_KEYS
+      *PPERFECT_HASH_ONLINE_CREATE_TABLE_FROM_KEYS;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_ONLINE_COMPILE_TABLE)(
+    _In_ PPERFECT_HASH_ONLINE Online,
+    _In_ PPERFECT_HASH_TABLE Table,
+    _In_opt_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
+    );
+typedef PERFECT_HASH_ONLINE_COMPILE_TABLE
+      *PPERFECT_HASH_ONLINE_COMPILE_TABLE;
+
+typedef struct _PERFECT_HASH_ONLINE_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_ONLINE);
+    PPERFECT_HASH_ONLINE_CREATE_TABLE_FROM_KEYS CreateTableFromKeys;
+    PPERFECT_HASH_ONLINE_COMPILE_TABLE CompileTable;
+} PERFECT_HASH_ONLINE_VTBL;
+typedef PERFECT_HASH_ONLINE_VTBL *PPERFECT_HASH_ONLINE_VTBL;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_ONLINE {
+    PPERFECT_HASH_ONLINE_VTBL Vtbl;
+} PERFECT_HASH_ONLINE;
+typedef PERFECT_HASH_ONLINE *PPERFECT_HASH_ONLINE;
+
+//
+// Online helpers for sorted/unsorted key inputs.
+//
+
+FORCEINLINE
+HRESULT
+PerfectHashOnlineCreateTableFromSortedKeys(
+    _In_ PPERFECT_HASH_ONLINE Online,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ ULONG KeySizeInBytes,
+    _In_ ULONGLONG NumberOfKeys,
+    _In_reads_bytes_(NumberOfKeys * KeySizeInBytes) PVOID Keys,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters,
+    _Outptr_ PPERFECT_HASH_TABLE *Table
+    )
+{
+    PERFECT_HASH_KEYS_LOAD_FLAGS LocalFlags;
+
+    if (ARGUMENT_PRESENT(KeysLoadFlags)) {
+        LocalFlags.AsULong = KeysLoadFlags->AsULong;
+    } else {
+        LocalFlags.AsULong = 0;
+    }
+
+    LocalFlags.SortKeys = FALSE;
+    LocalFlags.KeysAreSorted = TRUE;
+
+    return Online->Vtbl->CreateTableFromKeys(Online,
+                                             AlgorithmId,
+                                             HashFunctionId,
+                                             MaskFunctionId,
+                                             KeySizeInBytes,
+                                             NumberOfKeys,
+                                             Keys,
+                                             &LocalFlags,
+                                             TableCreateFlags,
+                                             TableCreateParameters,
+                                             Table);
+}
+
+FORCEINLINE
+HRESULT
+PerfectHashOnlineCreateTableFromUnsortedKeys(
+    _In_ PPERFECT_HASH_ONLINE Online,
+    _In_ PERFECT_HASH_ALGORITHM_ID AlgorithmId,
+    _In_ PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId,
+    _In_ PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId,
+    _In_ ULONG KeySizeInBytes,
+    _In_ ULONGLONG NumberOfKeys,
+    _In_reads_bytes_(NumberOfKeys * KeySizeInBytes) PVOID Keys,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_FLAGS TableCreateFlags,
+    _In_opt_ PPERFECT_HASH_TABLE_CREATE_PARAMETERS TableCreateParameters,
+    _Outptr_ PPERFECT_HASH_TABLE *Table
+    )
+{
+    PERFECT_HASH_KEYS_LOAD_FLAGS LocalFlags;
+
+    if (ARGUMENT_PRESENT(KeysLoadFlags)) {
+        LocalFlags.AsULong = KeysLoadFlags->AsULong;
+    } else {
+        LocalFlags.AsULong = 0;
+    }
+
+    LocalFlags.SortKeys = TRUE;
+    LocalFlags.KeysAreSorted = FALSE;
+
+    return Online->Vtbl->CreateTableFromKeys(Online,
+                                             AlgorithmId,
+                                             HashFunctionId,
+                                             MaskFunctionId,
+                                             KeySizeInBytes,
+                                             NumberOfKeys,
+                                             Keys,
+                                             &LocalFlags,
+                                             TableCreateFlags,
+                                             TableCreateParameters,
+                                             Table);
+}
+#endif
 
 //
 // Helper functions for obtaining the string representation of enumeration IDs.

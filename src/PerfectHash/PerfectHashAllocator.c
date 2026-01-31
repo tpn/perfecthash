@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -553,6 +553,10 @@ AllocatorInitialize(
     PALLOCATOR Allocator
     )
 {
+    Allocator->HeapHandle = HeapCreate(0, 0, 0);
+    if (!Allocator->HeapHandle) {
+        return E_OUTOFMEMORY;
+    }
     return S_OK;
 }
 
@@ -565,7 +569,12 @@ AllocatorRundown(
     PALLOCATOR Allocator
     )
 {
-    UNREFERENCED_PARAMETER(Allocator);
+    if (!Allocator) {
+        return;
+    }
+
+    HeapDestroy(Allocator->HeapHandle);
+    Allocator->HeapHandle = NULL;
     return;
 }
 

@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -69,6 +69,9 @@ Return Value:
 
 --*/
 {
+    HRESULT Result = S_OK;
+    PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
+#ifndef PH_ONLINE_ONLY
     PRTL Rtl;
     PACL Acl = NULL;
     BOOL Success;
@@ -76,7 +79,6 @@ Return Value:
     ULONG ExitCode;
     ULONG WaitResult;
     ULONG CreationFlags;
-    HRESULT Result = S_OK;
     NTSTATUS Status;
     PWSTR Environment;
     PWSTR ApplicationName;
@@ -88,7 +90,6 @@ Return Value:
     SECURITY_DESCRIPTOR SecurityDescriptor;
     STARTUPINFOW StartupInfo;
     PROCESS_INFORMATION ProcessInfo;
-    PERFECT_HASH_TABLE_COMPILE_FLAGS TableCompileFlags;
     WCHAR CommandBuffer[COMPILE_COMMANDLINE_BUFFER_SIZE_IN_CHARS];
     PCUNICODE_STRING Source;
     UNICODE_STRING Command;
@@ -97,6 +98,7 @@ Return Value:
         L"msbuild /nologo /noconlog /m /t:Rebuild "
         L"/p:Configuration=Release;Platform=x64 "
     );
+#endif
 
     //
     // Validate arguments.
@@ -120,6 +122,21 @@ Return Value:
         ReleasePerfectHashTableLockExclusive(Table);
         return PH_E_TABLE_NOT_CREATED;
     }
+
+    if (TableCompileFlags.Jit) {
+        if (!TableCompileFlags.JitBackendLlvm &&
+            !TableCompileFlags.JitBackendRawDog) {
+            TableCompileFlags.JitBackendLlvm = TRUE;
+        }
+        Result = PerfectHashTableCompileJit(Table, &TableCompileFlags);
+        ReleasePerfectHashTableLockExclusive(Table);
+        return Result;
+    }
+
+#ifdef PH_ONLINE_ONLY
+    ReleasePerfectHashTableLockExclusive(Table);
+    return PH_E_NOT_IMPLEMENTED;
+#else
 
     //
     // Argument validation complete.
@@ -300,6 +317,7 @@ End:
     ReleasePerfectHashTableLockExclusive(Table);
 
     return Result;
+#endif // PH_ONLINE_ONLY
 }
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

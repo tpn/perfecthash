@@ -6,6 +6,7 @@ cython>=3.0
 ipdb
 ipython
 joypy
+llvmlite
 matplotlib
 mypy
 numpy

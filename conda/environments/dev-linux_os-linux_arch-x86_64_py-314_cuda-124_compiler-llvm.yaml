@@ -5,19 +5,23 @@ channels:
 dependencies:
 - black
 - bokeh
-- clang
-- clangxx
+- ccache
+- clang>=15
+- clangxx>=15
 - cmake>=3.20
 - cudatoolkit
 - cython>=3.0
 - ipdb
 - ipython
 - joypy
-- lld
-- llvmdev
+- libxml2-devel
+- lld>=15
+- llvmdev>=15
+- llvmlite
 - make
 - matplotlib
 - mypy
+- nasm
 - ninja
 - numpy
 - pandas
@@ -34,4 +38,6 @@ dependencies:
 - setuptools>=61
 - tqdm
 - wheel
+- zlib
+- zstd
 name: dev-linux_os-linux_arch-x86_64_py-314_cuda-124_compiler-llvm

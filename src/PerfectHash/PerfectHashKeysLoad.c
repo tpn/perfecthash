@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -15,7 +15,70 @@ Abstract:
 
 #include "stdafx.h"
 
+static
+int
+CompareUlongKeys(
+    const void *Left,
+    const void *Right
+    )
+{
+    const ULONG A = *(const ULONG *)Left;
+    const ULONG B = *(const ULONG *)Right;
+
+    if (A < B) {
+        return -1;
+    }
+
+    if (A > B) {
+        return 1;
+    }
+
+    return 0;
+}
+
+static
+int
+CompareUlongLongKeys(
+    const void *Left,
+    const void *Right
+    )
+{
+    const ULONGLONG A = *(const ULONGLONG *)Left;
+    const ULONGLONG B = *(const ULONGLONG *)Right;
+
+    if (A < B) {
+        return -1;
+    }
+
+    if (A > B) {
+        return 1;
+    }
+
+    return 0;
+}
+
 PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
+
+#ifdef PH_ONLINE_ONLY
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysLoad(
+    PPERFECT_HASH_KEYS Keys,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
+    PCUNICODE_STRING KeysPath,
+    ULONG KeySizeInBytes
+    )
+{
+    UNREFERENCED_PARAMETER(Keys);
+    UNREFERENCED_PARAMETER(KeysLoadFlagsPointer);
+    UNREFERENCED_PARAMETER(KeysPath);
+    UNREFERENCED_PARAMETER(KeySizeInBytes);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
+#else
 
 _Use_decl_annotations_
 HRESULT
@@ -77,7 +140,7 @@ Return Value:
 
 --*/
 {
-    PRTL Rtl;
+    PRTL Rtl = NULL;
     BOOLEAN Is32Bit;
     HRESULT Result = S_OK;
     PPERFECT_HASH_FILE File;
@@ -104,6 +167,10 @@ Return Value:
     }
 
     VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
+
+    if (KeysLoadFlags.SortKeys) {
+        return PH_E_INVALID_KEYS_LOAD_FLAGS;
+    }
 
     if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
         return PH_E_KEYS_LOCKED;
@@ -320,6 +387,196 @@ Error:
 End:
 
     RELEASE(Path);
+
+    ReleasePerfectHashKeysLockExclusive(Keys);
+
+    return Result;
+}
+
+#endif // PH_ONLINE_ONLY
+
+PERFECT_HASH_KEYS_LOAD_FROM_ARRAY PerfectHashKeysLoadFromArray;
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashKeysLoadFromArray(
+    PPERFECT_HASH_KEYS Keys,
+    PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlagsPointer,
+    ULONG KeySizeInBytes,
+    ULONGLONG NumberOfKeys,
+    PVOID KeysArray
+    )
+/*++
+
+Routine Description:
+
+    Initializes a keys instance from an in-memory key array.
+
+Arguments:
+
+    Keys - Supplies a pointer to the PERFECT_HASH_KEYS structure for
+        which the keys are to be loaded.
+
+    KeysLoadFlags - Optionally supplies a pointer to a keys load flags structure
+        that can be used to customize key loading behavior.
+
+    KeySizeInBytes - Supplies the size of each key element, in bytes.
+
+    NumberOfKeys - Supplies the number of elements in the KeysArray buffer.
+
+    KeysArray - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    E_POINTER - Keys or KeysArray was NULL.
+
+    E_INVALIDARG - NumberOfKeys was zero.
+
+    PH_E_INVALID_KEY_SIZE - The key size provided was not valid.
+
+    PH_E_INVALID_KEYS_LOAD_FLAGS - The provided load flags were invalid.
+
+    PH_E_KEYS_LOCKED - The keys are locked.
+
+    PH_E_KEYS_ALREADY_LOADED - Keys have already been loaded.
+
+    E_OUTOFMEMORY - Out of memory.
+
+--*/
+{
+    PRTL Rtl = NULL;
+    PVOID Buffer;
+    BOOLEAN Is32Bit;
+    HRESULT Result = S_OK;
+    SIZE_T AllocationSize;
+    PALLOCATOR Allocator;
+    PERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags;
+
+    //
+    // Validate arguments.
+    //
+
+    if (!ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(KeysArray)) {
+        return E_POINTER;
+    }
+
+    if (NumberOfKeys == 0) {
+        return E_INVALIDARG;
+    }
+
+    VALIDATE_FLAGS(KeysLoad, KEYS_LOAD, ULong);
+
+    if (!TryAcquirePerfectHashKeysLockExclusive(Keys)) {
+        return PH_E_KEYS_LOCKED;
+    }
+
+    if (IsLoadedKeys(Keys)) {
+        ReleasePerfectHashKeysLockExclusive(Keys);
+        return PH_E_KEYS_ALREADY_LOADED;
+    }
+
+    //
+    // Validate key size.  Support 32-bit and 64-bit keys.
+    //
+
+    if (KeySizeInBytes == sizeof(ULONG)) {
+        Is32Bit = TRUE;
+    } else if (KeySizeInBytes == sizeof(ULONGLONG)) {
+        Is32Bit = FALSE;
+    } else {
+        Result = PH_E_INVALID_KEY_SIZE;
+        goto Error;
+    }
+
+    if (NumberOfKeys > ((ULONGLONG)((SIZE_T)-1) / KeySizeInBytes)) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    AllocationSize = (SIZE_T)NumberOfKeys * KeySizeInBytes;
+    Allocator = Keys->Allocator;
+    Rtl = Keys->Rtl;
+    Buffer = Allocator->Vtbl->Malloc(Allocator, AllocationSize);
+
+    if (!Buffer) {
+        Result = E_OUTOFMEMORY;
+        goto Error;
+    }
+
+    CopyMemory(Buffer, KeysArray, AllocationSize);
+
+    if (KeysLoadFlags.SortKeys) {
+        size_t Count = (size_t)NumberOfKeys;
+
+        if (Is32Bit) {
+            qsort(Buffer, Count, sizeof(ULONG), CompareUlongKeys);
+        } else {
+            qsort(Buffer, Count, sizeof(ULONGLONG), CompareUlongLongKeys);
+        }
+
+        KeysLoadFlags.KeysAreSorted = TRUE;
+    }
+
+    Keys->KeyArrayBaseAddress = Buffer;
+    Keys->Flags.KeyArrayIsHeapAllocated = TRUE;
+    Keys->Flags.KeysDataUsesLargePages = FALSE;
+
+    Keys->OriginalKeySizeInBytes = Keys->KeySizeInBytes = KeySizeInBytes;
+    Keys->OriginalKeySizeType = Keys->KeySizeType = (
+        Is32Bit ? LongType : LongLongType
+    );
+
+    Keys->NumberOfKeys.QuadPart = NumberOfKeys;
+
+    Keys->NumberOfEdges.QuadPart = (
+        Rtl->RoundUpPowerOfTwo64(Keys->NumberOfKeys.QuadPart)
+    );
+
+    if (Keys->NumberOfKeys.QuadPart ==
+        Keys->NumberOfEdges.QuadPart) {
+
+        Keys->KeysToEdgesRatio = 1.0;
+    } else {
+        Keys->KeysToEdgesRatio = (DOUBLE)(
+            ((DOUBLE)Keys->NumberOfKeys.QuadPart) /
+            ((DOUBLE)Keys->NumberOfEdges.QuadPart)
+        );
+    }
+
+    if (!KeysLoadFlags.SkipKeysVerification) {
+        if (Is32Bit) {
+            Result = PerfectHashKeysLoadStats32(Keys);
+        } else {
+            Result = PerfectHashKeysLoadStats64(Keys);
+        }
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashKeysLoadStats, Result);
+            goto Error;
+        }
+    }
+
+    Keys->State.Loaded = TRUE;
+    Keys->LoadFlags.AsULong = KeysLoadFlags.AsULong;
+    Result = S_OK;
+    goto End;
+
+Error:
+
+    if (Result == S_OK) {
+        Result = E_UNEXPECTED;
+    }
+
+    //
+    // Intentional follow-on to End.
+    //
+
+End:
 
     ReleasePerfectHashKeysLockExclusive(Keys);
 
@@ -673,7 +930,7 @@ Return Value:
     ZeroStruct(Stats);
     Bitmap = 0;
     Prev = (ULONGLONG)-1;
-    KeyArray = (PULONGLONG)Keys->File->BaseAddress;
+    KeyArray = (PULONGLONG)Keys->KeyArrayBaseAddress;
     NumberOfKeys = Keys->NumberOfKeys.QuadPart;
     KeysBitmap = &Stats.KeysBitmap;
 
@@ -831,7 +1088,9 @@ Return Value:
         // file's base address at this point.
         //
 
-        ASSERT(Keys->KeyArrayBaseAddress == Keys->File->BaseAddress);
+        if (Keys->File) {
+            ASSERT(Keys->KeyArrayBaseAddress == Keys->File->BaseAddress);
+        }
 
         //
         // Update the array address to point at our new downsized array and

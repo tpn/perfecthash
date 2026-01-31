@@ -21,6 +21,9 @@ function(perfecthash_apply_common_definitions target)
     if(PERFECTHASH_USE_CUDA)
         target_compile_definitions(${target} PUBLIC PH_USE_CUDA)
     endif()
+    if(PERFECTHASH_HAS_LLVM)
+        target_compile_definitions(${target} PUBLIC PH_HAS_LLVM)
+    endif()
 
     if(PERFECTHASH_IS_WINDOWS)
         target_compile_definitions(${target} PUBLIC PH_WINDOWS _WINDOWS _UNICODE UNICODE)
@@ -41,12 +44,15 @@ function(perfecthash_apply_common_settings target)
     perfecthash_apply_common_definitions(${target})
 
     if(MSVC)
+        set(ph_asm_output_dir "${CMAKE_CURRENT_BINARY_DIR}/asm/${target}")
+        file(MAKE_DIRECTORY "${ph_asm_output_dir}")
         target_compile_options(
             ${target}
             PRIVATE
             /Gz         # __stdcall
             /TC         # Compile as C Code
             /FAcs       # Assembler Output: Assembly, Machine Code & Source
+            /Fa${ph_asm_output_dir}/
             /WX         # Warnings as errors
             /Wall       # All warnings
             /FC         # Use full paths
@@ -67,12 +73,15 @@ function(perfecthash_apply_common_settings target)
             chkstk.obj              # Link with chkstk.obj
             bufferoverflowU.lib     # Link with bufferoverflowU.lib
         )
-        target_link_libraries(
-            ${target}
-            PRIVATE
-            $<$<CONFIG:Debug>:ucrtd;vcruntimed>
-            $<$<NOT:$<CONFIG:Debug>>:ucrt;vcruntime>
-        )
+        get_target_property(ph_skip_runtime_libs ${target} PERFECTHASH_SKIP_RUNTIME_LIBS)
+        if(NOT ph_skip_runtime_libs)
+            target_link_libraries(
+                ${target}
+                PRIVATE
+                $<$<CONFIG:Debug>:ucrtd;vcruntimed;msvcrtd>
+                $<$<NOT:$<CONFIG:Debug>>:ucrt;vcruntime>
+            )
+        endif()
         target_link_options(
             ${target}
             PRIVATE

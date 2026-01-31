@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -203,6 +203,10 @@ Return Value:
 
     VALIDATE_FLAGS(TableCreate, TABLE_CREATE, ULongLong);
 
+#ifdef PH_ONLINE_ONLY
+    TableCreateFlags.NoFileIo = TRUE;
+#endif
+
     if (!IsValidPerfectHashAlgorithmId(AlgorithmId)) {
         return PH_E_INVALID_ALGORITHM_ID;
     }
@@ -281,6 +285,26 @@ Return Value:
 
     Keys->Vtbl->AddRef(Keys);
     Table->Keys = Keys;
+
+    //
+    // Capture downsizing metadata, if applicable, for JIT/runtime use.
+    //
+
+    Table->State.DownsizeMetadataValid = FALSE;
+    Table->DownsizeBitmap = 0;
+    Table->DownsizeShiftedMask = 0;
+    Table->DownsizeTrailingZeros = 0;
+    Table->DownsizeContiguous = FALSE;
+
+    if (KeysWereDownsized(Keys)) {
+        Table->DownsizeBitmap = Keys->DownsizeBitmap;
+        Table->DownsizeShiftedMask = Keys->Stats.KeysBitmap.ShiftedMask;
+        Table->DownsizeTrailingZeros = Keys->Stats.KeysBitmap.TrailingZeros;
+        Table->DownsizeContiguous = (
+            Keys->Stats.KeysBitmap.Flags.Contiguous != FALSE
+        );
+        Table->State.DownsizeMetadataValid = TRUE;
+    }
 
     //
     // Copy create flags.
@@ -368,24 +392,28 @@ Return Value:
     //
 
     RequestedNumberOfTableElements = &Table->RequestedNumberOfTableElements;
-    Result = PerfectHashKeysLoadTableSize(Keys,
-                                          AlgorithmId,
-                                          HashFunctionId,
-                                          MaskFunctionId,
-                                          &TableSizeFile,
-                                          RequestedNumberOfTableElements);
+    if (Keys->File && Keys->File->Path) {
+        Result = PerfectHashKeysLoadTableSize(Keys,
+                                              AlgorithmId,
+                                              HashFunctionId,
+                                              MaskFunctionId,
+                                              &TableSizeFile,
+                                              RequestedNumberOfTableElements);
 
-    if (FAILED(Result)) {
-        PH_ERROR(PerfectHashKeysLoadTableSize, Result);
-        goto Error;
-    }
+        if (FAILED(Result)) {
+            PH_ERROR(PerfectHashKeysLoadTableSize, Result);
+            goto Error;
+        }
 
-    //
-    // If we haven't been asked to use the previous table size, reset the
-    // table's requested number of elements back to 0.
-    //
+        //
+        // If we haven't been asked to use the previous table size, reset the
+        // table's requested number of elements back to 0.
+        //
 
-    if (TableCreateFlags.UsePreviousTableSize == FALSE) {
+        if (TableCreateFlags.UsePreviousTableSize == FALSE) {
+            Table->RequestedNumberOfTableElements.QuadPart = 0;
+        }
+    } else {
         Table->RequestedNumberOfTableElements.QuadPart = 0;
     }
 
@@ -417,56 +445,60 @@ Return Value:
     // write the size back to the file.
     //
 
-    if ((!TableCreateFlags.UsePreviousTableSize) || Result != S_OK) {
+    if (TableSizeFile) {
+        if ((!TableCreateFlags.UsePreviousTableSize) || Result != S_OK) {
 
-        EndOfFile = &EmptyEndOfFile;
+            EndOfFile = &EmptyEndOfFile;
 
-    } else {
+        } else {
 
-        EndOfFile = NULL;
+            EndOfFile = NULL;
 
-        RequestedNumberOfTableElements =
-            (PULARGE_INTEGER)TableSizeFile->BaseAddress;
+            RequestedNumberOfTableElements =
+                (PULARGE_INTEGER)TableSizeFile->BaseAddress;
 
-        //
-        // We can't use Table->TableInfoOnDisk->NumberOfTableElements.QuadPart
-        // here, as that won't be valid if the table was created with the flag
-        // 'CreateOnly'.  Use Table->HashSize instead, as that is always filled
-        // out.  (As a side note, this highlights some of the less-than-ideal
-        // quirks regarding our internal structure design and field naming.)
-        //
+            //
+            // We can't use Table->TableInfoOnDisk->NumberOfTableElements.QuadPart
+            // here, as that won't be valid if the table was created with the flag
+            // 'CreateOnly'.  Use Table->HashSize instead, as that is always filled
+            // out.  (As a side note, this highlights some of the less-than-ideal
+            // quirks regarding our internal structure design and field naming.)
+            //
 
-        RequestedNumberOfTableElements->QuadPart = Table->HashSize;
+            RequestedNumberOfTableElements->QuadPart = Table->HashSize;
 
-        //
-        // Invariant checks: the number of table elements should be greater than
-        // zero, and, if non-modulus masking is active, should be a power of 2.
-        //
+            //
+            // Invariant checks: the number of table elements should be greater than
+            // zero, and, if non-modulus masking is active, should be a power of 2.
+            //
 
-        if (RequestedNumberOfTableElements->QuadPart == 0) {
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PerfectHashTableCreate_NumTableElemsIsZero, Result);
+            if (RequestedNumberOfTableElements->QuadPart == 0) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(PerfectHashTableCreate_NumTableElemsIsZero, Result);
+                goto Error;
+            }
+
+            if (!IsModulusMasking(MaskFunctionId) &&
+                !IsPowerOfTwo(RequestedNumberOfTableElements->QuadPart)) {
+                Result = PH_E_INVARIANT_CHECK_FAILED;
+                PH_ERROR(PerfectHashTableCreate_NumTableElemsNotPow2, Result);
+                goto Error;
+            }
+
+            TableSizeFile->NumberOfBytesWritten.QuadPart = sizeof(ULARGE_INTEGER);
+        }
+
+        CloseResult = TableSizeFile->Vtbl->Close(TableSizeFile, EndOfFile);
+        if (FAILED(CloseResult)) {
+            PH_ERROR(PerfectHashTableCreate_TableSizeFileClose, CloseResult);
+            Result = CloseResult;
             goto Error;
         }
 
-        if (!IsModulusMasking(MaskFunctionId) &&
-            !IsPowerOfTwo(RequestedNumberOfTableElements->QuadPart)) {
-            Result = PH_E_INVARIANT_CHECK_FAILED;
-            PH_ERROR(PerfectHashTableCreate_NumTableElemsNotPow2, Result);
+        if (Result != S_OK) {
             goto Error;
         }
-
-        TableSizeFile->NumberOfBytesWritten.QuadPart = sizeof(ULARGE_INTEGER);
-    }
-
-    CloseResult = TableSizeFile->Vtbl->Close(TableSizeFile, EndOfFile);
-    if (FAILED(CloseResult)) {
-        PH_ERROR(PerfectHashTableCreate_TableSizeFileClose, CloseResult);
-        Result = CloseResult;
-        goto Error;
-    }
-
-    if (Result != S_OK) {
+    } else if (Result != S_OK) {
         goto Error;
     }
 
@@ -490,6 +522,11 @@ Return Value:
 
     Table->Flags.Created = TRUE;
     Table->Flags.Loaded = FALSE;
+    if (Table->State.UsingAssigned16) {
+        Table->Flags.AssignedElementSizeInBits = 2; // 16 bits
+    } else {
+        Table->Flags.AssignedElementSizeInBits = 4; // 32 bits
+    }
     Table->State.Valid = TRUE;
 
     goto End;

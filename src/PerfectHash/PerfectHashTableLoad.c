@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023. Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026. Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -16,6 +16,27 @@ Abstract:
 #include "stdafx.h"
 
 PERFECT_HASH_TABLE_LOAD PerfectHashTableLoad;
+
+#ifdef PH_ONLINE_ONLY
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableLoad(
+    PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_TABLE_LOAD_FLAGS TableLoadFlagsPointer,
+    PCUNICODE_STRING TablePath,
+    PPERFECT_HASH_KEYS Keys
+    )
+{
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(TableLoadFlagsPointer);
+    UNREFERENCED_PARAMETER(TablePath);
+    UNREFERENCED_PARAMETER(Keys);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
+#else
 
 _Use_decl_annotations_
 HRESULT
@@ -320,6 +341,26 @@ Return Value:
     }
 
     //
+    // Capture downsizing metadata if keys were supplied and downsized.
+    //
+
+    Table->State.DownsizeMetadataValid = FALSE;
+    Table->DownsizeBitmap = 0;
+    Table->DownsizeShiftedMask = 0;
+    Table->DownsizeTrailingZeros = 0;
+    Table->DownsizeContiguous = FALSE;
+
+    if (ARGUMENT_PRESENT(Keys) && KeysWereDownsized(Keys)) {
+        Table->DownsizeBitmap = Keys->DownsizeBitmap;
+        Table->DownsizeShiftedMask = Keys->Stats.KeysBitmap.ShiftedMask;
+        Table->DownsizeTrailingZeros = Keys->Stats.KeysBitmap.TrailingZeros;
+        Table->DownsizeContiguous = (
+            Keys->Stats.KeysBitmap.Flags.Contiguous != FALSE
+        );
+        Table->State.DownsizeMetadataValid = TRUE;
+    }
+
+    //
     // Validate the algorithm ID.  We use this as a lookup directly into the
     // loader routines array, so validation is especially important.
     //
@@ -507,6 +548,14 @@ Return Value:
 
     Table->State.Valid = TRUE;
     Table->Flags.Loaded = TRUE;
+    if (TableInfoOnDisk->AssignedElementSizeInBytes) {
+        Table->Flags.AssignedElementSizeInBits =
+            TableInfoOnDisk->AssignedElementSizeInBytes;
+    } else if (Table->State.UsingAssigned16) {
+        Table->Flags.AssignedElementSizeInBits = 2; // 16 bits
+    } else {
+        Table->Flags.AssignedElementSizeInBits = 4; // 32 bits
+    }
     Table->TableDataBaseAddress = Table->TableFile->BaseAddress;
     Table->TableDataSizeInBytes = Table->TableFile->FileInfo.EndOfFile.QuadPart;
 
@@ -542,5 +591,7 @@ End:
 
     return Result;
 }
+
+#endif // PH_ONLINE_ONLY
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

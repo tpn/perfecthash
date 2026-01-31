@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -666,6 +666,7 @@ const UNICODE_STRING KeysTableSizeSuffix = RCS(L".TableSize");
 const UNICODE_STRING TableValuesSuffix = RCS(L"_TableValues_");
 const UNICODE_STRING TableValuesExtension = RCS(L"bin");
 
+#ifndef PH_ONLINE_ONLY
 const UNICODE_STRING PerfectHashBulkCreateCsvBaseName =
     RCS(L"PerfectHashBulkCreate");
 
@@ -677,6 +678,7 @@ const UNICODE_STRING PerfectHashTableCreateCsvBaseName =
 
 const UNICODE_STRING PerfectHashTableCreateBestCsvBaseName =
     RCS(L"PerfectHashTableCreateBest");
+#endif // PH_ONLINE_ONLY
 
 const STRING NullString = RCS("");
 const STRING DotExeSuffixA = RCS(".exe");
@@ -900,7 +902,7 @@ const ULONG IndexMaskPlaceholder = 0xbbbbbbbb;
 //
 
 
-#define NUMBER_OF_INTERFACES 15
+#define NUMBER_OF_INTERFACES 16
 #define EXPECTED_ARRAY_SIZE NUMBER_OF_INTERFACES+2
 #define VERIFY_ARRAY_SIZE(Name) C_ASSERT(ARRAYSIZE(Name) == EXPECTED_ARRAY_SIZE)
 
@@ -999,6 +1001,7 @@ const SHORT ComponentInterfaceTlsContextOffsets[] = {
     -1, // GraphCu
     (SHORT)FIELD_OFFSET(PERFECT_HASH_TLS_CONTEXT, Cu),
     -1, // Rng
+    -1, // Online
 
     -1,
 };
@@ -1022,6 +1025,7 @@ const SHORT GlobalComponentsInterfaceOffsets[] = {
     -1, // GraphCu
     (SHORT)FIELD_OFFSET(GLOBAL_COMPONENTS, Cu),
     -1, // Rng
+    -1, // Online
 
     -1,
 };
@@ -1131,11 +1135,7 @@ const PERFECT_HASH_TABLE_VTBL PerfectHashTableInterface = {
     &PerfectHashTableCreate,
     &PerfectHashTableLoad,
     &PerfectHashTableGetFlags,
-#ifdef PH_WINDOWS
     &PerfectHashTableCompile,
-#else
-    NULL,
-#endif
     &PerfectHashTableTest,
     &PerfectHashTableInsert,
     &PerfectHashTableLookup,
@@ -1218,6 +1218,7 @@ const ALLOCATOR_VTBL AllocatorInterface = {
 };
 VERIFY_VTBL_SIZE(ALLOCATOR, 18);
 
+#ifndef PH_ONLINE_ONLY
 //
 // PerfectHashFile
 //
@@ -1298,6 +1299,7 @@ const PERFECT_HASH_DIRECTORY_VTBL PerfectHashDirectoryInterface = {
     &PerfectHashDirectoryRemoveFile,
 };
 VERIFY_VTBL_SIZE(PERFECT_HASH_DIRECTORY, 4 + 5);
+#endif // PH_ONLINE_ONLY
 
 //
 // GuardedList
@@ -1462,6 +1464,21 @@ RNG_VTBL RngInterface = {
 VERIFY_VTBL_SIZE(RNG, 3);
 
 //
+// PerfectHashOnline
+//
+
+const PERFECT_HASH_ONLINE_VTBL PerfectHashOnlineInterface = {
+    (PPERFECT_HASH_ONLINE_QUERY_INTERFACE)&ComponentQueryInterface,
+    (PPERFECT_HASH_ONLINE_ADD_REF)&ComponentAddRef,
+    (PPERFECT_HASH_ONLINE_RELEASE)&ComponentRelease,
+    (PPERFECT_HASH_ONLINE_CREATE_INSTANCE)&ComponentCreateInstance,
+    (PPERFECT_HASH_ONLINE_LOCK_SERVER)&ComponentLockServer,
+    &PerfectHashOnlineCreateTableFromKeys,
+    &PerfectHashOnlineCompileTable,
+};
+VERIFY_VTBL_SIZE(PERFECT_HASH_ONLINE, 2);
+
+//
 // Interface array.
 //
 
@@ -1475,9 +1492,15 @@ const VOID *ComponentInterfaces[] = {
     &PerfectHashTableInterface,
     &RtlInterface,
     &AllocatorInterface,
+#ifdef PH_ONLINE_ONLY
+    NULL,
+    NULL,
+    NULL,
+#else
     &PerfectHashFileInterface,
     &PerfectHashPathInterface,
     &PerfectHashDirectoryInterface,
+#endif
     &GuardedListInterface,
     &GraphInterface,
 #ifdef PH_USE_CUDA
@@ -1488,6 +1511,7 @@ const VOID *ComponentInterfaces[] = {
     NULL,
 #endif
     &RngInterface,
+    &PerfectHashOnlineInterface,
     NULL,
 };
 VERIFY_ARRAY_SIZE(ComponentInterfaces);
@@ -1503,9 +1527,15 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     (PCOMPONENT_INITIALIZE)&PerfectHashTableInitialize,
     (PCOMPONENT_INITIALIZE)&RtlInitialize,
     (PCOMPONENT_INITIALIZE)&AllocatorInitialize,
+#ifdef PH_ONLINE_ONLY
+    NULL,
+    NULL,
+    NULL,
+#else
     (PCOMPONENT_INITIALIZE)&PerfectHashFileInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashPathInitialize,
     (PCOMPONENT_INITIALIZE)&PerfectHashDirectoryInitialize,
+#endif
     (PCOMPONENT_INITIALIZE)&GuardedListInitialize,
     (PCOMPONENT_INITIALIZE)&GraphInitialize,
 #ifdef PH_USE_CUDA
@@ -1516,6 +1546,7 @@ const PCOMPONENT_INITIALIZE ComponentInitializeRoutines[] = {
     NULL,
 #endif
     (PCOMPONENT_INITIALIZE)&RngInitialize,
+    (PCOMPONENT_INITIALIZE)&PerfectHashOnlineInitialize,
 
     NULL,
 };
@@ -1532,9 +1563,15 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     (PCOMPONENT_RUNDOWN)&PerfectHashTableRundown,
     (PCOMPONENT_RUNDOWN)&RtlRundown,
     (PCOMPONENT_RUNDOWN)&AllocatorRundown,
+#ifdef PH_ONLINE_ONLY
+    NULL,
+    NULL,
+    NULL,
+#else
     (PCOMPONENT_RUNDOWN)&PerfectHashFileRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashPathRundown,
     (PCOMPONENT_RUNDOWN)&PerfectHashDirectoryRundown,
+#endif
     (PCOMPONENT_RUNDOWN)&GuardedListRundown,
     (PCOMPONENT_RUNDOWN)&GraphRundown,
 #ifdef PH_USE_CUDA
@@ -1545,11 +1582,13 @@ const PCOMPONENT_RUNDOWN ComponentRundownRoutines[] = {
     NULL,
 #endif
     (PCOMPONENT_RUNDOWN)&RngRundown,
+    (PCOMPONENT_RUNDOWN)&PerfectHashOnlineRundown,
 
     NULL,
 };
 VERIFY_ARRAY_SIZE(ComponentRundownRoutines);
 
+#ifndef PH_ONLINE_ONLY
 //
 // Include source files for any strings that are referenced in more than one
 // compilation unit.
@@ -1558,6 +1597,7 @@ VERIFY_ARRAY_SIZE(ComponentRundownRoutines);
 #include "CompiledPerfectHashTableRoutinesPre_CSource_RawCString.h"
 #include "CompiledPerfectHashTableRoutines_CSource_RawCString.h"
 #include "CompiledPerfectHashTableRoutinesPost_CSource_RawCString.h"
+#endif // PH_ONLINE_ONLY
 #include "CompiledPerfectHashTableTypesPre_CHeader_RawCString.h"
 #include "CompiledPerfectHashTableTypesPost_CHeader_RawCString.h"
 

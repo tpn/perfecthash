@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -13,9 +13,11 @@ Abstract:
 --*/
 
 #include "stdafx.h"
+
+#ifndef PH_ONLINE_ONLY
+
 #include "BulkCreateCsv.h"
 #include "BulkCreateBestCsv.h"
-
 
 #define PH_ERROR_EX(Name, Result, ...) \
     PH_ERROR(Name, Result)
@@ -1860,6 +1862,7 @@ Return Value:
 
     return Result;
 }
-#endif
+#endif // PH_WINDOWS
+#endif // PH_ONLINE_ONLY
 
 // vim:set ts=8 sw=4 sts=4 tw=80 expandtab                                     :

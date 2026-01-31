@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -795,7 +795,7 @@ FinishedSolution:
         }
 
         CopyMemory(NewGraphInfoOnDisk,
-                   Table->TableInfoOnDisk,
+                   GraphInfoOnDisk,
                    sizeof(*NewGraphInfoOnDisk));
 
         //

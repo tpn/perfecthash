@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2024 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -759,7 +759,38 @@ Abstract:
 //
 // Table Compile Flags:
 // 
-//     N/A
+//     --Jit
+// 
+//         Compiles an in-memory, online JIT representation of the table using
+//         LLVM.
+// 
+//     --JitIndex64
+// 
+//         Also compiles the Index64() routine (keys must have been
+//         downsized from 64-bit to 32-bit for this to be valid).
+// 
+//     --JitIndex32x2
+//     --JitIndex32x4
+//     --JitIndex32x8
+//     --JitIndex32x16
+// 
+//         Compiles the 2-wide, 4-wide, 8-wide, or 16-wide Index32() routines.
+//         The x16 variant requires AVX-512 support from the JIT backend.
+// 
+//     --JitVectorIndex32x2
+//     --JitVectorIndex32x4
+//     --JitVectorIndex32x8
+// 
+//         Compiles vectorized 2-wide, 4-wide, or 8-wide Index32() routines.
+//         These imply --JitIndex32x2/--JitIndex32x4 and are intended to map
+//         to NEON/SVE/SSE on the active CPU architecture. The 8-wide variant
+//         follows the same behavior.
+// 
+//     --JitMaxIsa=Auto|Avx|Avx2|Avx512|Neon|Sve|Sve2
+// 
+//         Caps the maximum ISA used by the LLVM JIT backend. Auto selects the
+//         host CPU features. Avx/Avx2/Avx512 downgrade the maximum ISA even if
+//         the host CPU supports higher levels. Neon/Sve/Sve2 apply to AArch64.
 // 
 // Table Create Parameters:
 // 
@@ -5138,4 +5169,13 @@ Abstract:
 // Error closing Rust benchmark file.
 //
 #define PH_E_ERROR_DURING_CLOSE_RUST_BENCH_FILE ((HRESULT)0xE004041BL)
+
+//
+// MessageId: PH_E_LLVM_BACKEND_NOT_FOUND
+//
+// MessageText:
+//
+// LLVM JIT backend library not found.
+//
+#define PH_E_LLVM_BACKEND_NOT_FOUND      ((HRESULT)0xE004041CL)
 

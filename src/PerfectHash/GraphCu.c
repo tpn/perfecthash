@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2020-2024 Trent Nelson <trent@trent.me>
+Copyright (c) 2020-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -528,7 +528,13 @@ Return Value:
     //
 
     Keys = Context->Table->Keys;
-    KeysFileName = Keys->File->Path->FileName.Buffer;
+
+    if (Keys->File && Keys->File->Path && Keys->File->Path->FileName.Buffer) {
+        KeysFileName = Keys->File->Path->FileName.Buffer;
+    } else {
+        static const WCHAR InMemoryKeysFileName[] = L"<memory>";
+        KeysFileName = InMemoryKeysFileName;
+    }
 
     if (Graph->Keys != NULL) {
         ASSERT(Graph->Keys == Keys);
