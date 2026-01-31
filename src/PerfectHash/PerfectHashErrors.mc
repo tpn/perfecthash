@@ -4702,3 +4702,11 @@ SymbolicName=PH_E_LLVM_BACKEND_NOT_FOUND
 Language=English
 LLVM JIT backend library not found.
 .
+
+MessageId=0x41D
+Severity=Fail
+Facility=ITF
+SymbolicName=PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
+Language=English
+---HashAllKeysFirst is required when specifying --TryUseJitHashFunction.
+.

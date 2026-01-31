@@ -144,6 +144,7 @@ source_group("Resource Files" FILES ${Resource_Files})
 set(Source_Files
     "BitManipulation.c"
     "ChmOnline01Stub.c"
+    "ChmOnline01HashJit.c"
     "Chm01Shared.c"
     "Chm01FileWork.c"
     "Chm01FileWorkBatchBuildSolutionFile.c"

@@ -2,3 +2,5 @@ LIBRARY PerfectHashLLVM
 EXPORTS
     PerfectHashTableCompileJit
     PerfectHashTableJitRundown
+    PerfectHashTableCompileHashJit
+    PerfectHashTableHashJitRundown

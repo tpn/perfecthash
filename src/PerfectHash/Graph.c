@@ -46,6 +46,9 @@ GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX512;
 GRAPH_HASH_KEYS GraphHashKeys16MultiplyShiftRX_AVX512;
 #endif
 
+GRAPH_HASH_KEYS GraphHashKeysJitBound;
+GRAPH_HASH_KEYS GraphHashKeys16JitBound;
+
 GRAPH_CALCULATE_MEMORY_COVERAGE_CACHE_LINE_COUNTS
     GraphCalculateMemoryCoverageCacheLineCounts;
 
@@ -225,6 +228,30 @@ Return Value:
                     NOTHING;
                 }
             }
+
+            if (TableCreateFlags.TryUseJitHashFunction) {
+                PERFECT_HASH_TABLE_COMPILE_FLAGS HashJitFlags;
+                HRESULT HashJitResult;
+
+                HashJitFlags.AsULong = 0;
+                HashJitFlags.Jit = TRUE;
+                HashJitFlags.JitHash16Ex = TRUE;
+                HashJitFlags.JitHash16Ex32x4 = TRUE;
+                HashJitFlags.JitHash16Ex32x8 = TRUE;
+                HashJitFlags.JitHash16Ex32x16 = TRUE;
+                HashJitFlags.JitVectorHash16Ex32x4 = TRUE;
+                HashJitFlags.JitVectorHash16Ex32x8 = TRUE;
+                HashJitFlags.JitVectorHash16Ex32x16 = TRUE;
+                HashJitFlags.JitMaxIsa = PerfectHashJitMaxIsaAuto;
+
+                HashJitResult = PerfectHashTableCompileHashJit(Table,
+                                                               &HashJitFlags);
+                if (SUCCEEDED(HashJitResult) &&
+                    ARGUMENT_PRESENT(Table->HashJit) &&
+                    Table->HashJit->Flags.Valid) {
+                    Graph->Vtbl->HashKeys = GraphHashKeys16JitBound;
+                }
+            }
         }
 
     } else if (TableCreateFlags.UseOriginalSeededHashRoutines != FALSE) {
@@ -283,6 +310,31 @@ Return Value:
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
 #endif
+                }
+            }
+
+            if (TableCreateFlags.TryUseJitHashFunction &&
+                Table->State.UsingAssigned16 == FALSE) {
+                PERFECT_HASH_TABLE_COMPILE_FLAGS HashJitFlags;
+                HRESULT HashJitResult;
+
+                HashJitFlags.AsULong = 0;
+                HashJitFlags.Jit = TRUE;
+                HashJitFlags.JitHashEx = TRUE;
+                HashJitFlags.JitHashEx32x4 = TRUE;
+                HashJitFlags.JitHashEx32x8 = TRUE;
+                HashJitFlags.JitHashEx32x16 = TRUE;
+                HashJitFlags.JitVectorHashEx32x4 = TRUE;
+                HashJitFlags.JitVectorHashEx32x8 = TRUE;
+                HashJitFlags.JitVectorHashEx32x16 = TRUE;
+                HashJitFlags.JitMaxIsa = PerfectHashJitMaxIsaAuto;
+
+                HashJitResult = PerfectHashTableCompileHashJit(Table,
+                                                               &HashJitFlags);
+                if (SUCCEEDED(HashJitResult) &&
+                    ARGUMENT_PRESENT(Table->HashJit) &&
+                    Table->HashJit->Flags.Valid) {
+                    Graph->Vtbl->HashKeys = GraphHashKeysJitBound;
                 }
             }
         }
@@ -902,6 +954,467 @@ Return Value:
             }
         }
     }
+
+    return Result;
+}
+
+
+_Use_decl_annotations_
+HRESULT
+GraphHashKeysJitBound(
+    PGRAPH Graph,
+    ULONG NumberOfKeys,
+    PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    Hashes all keys into vertex pairs using a bound hash JIT interface, when
+    available.  Falls back to GraphHashKeys() if the hash JIT is unavailable
+    or binding fails.  Intended for use with HashAllKeysFirst.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the hash values will be
+        created.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+--*/
+{
+    ULONG Mask;
+    ULONG Remaining;
+    HRESULT Result;
+    PULONG Seeds;
+    PULONG KeyPtr;
+    PULONGLONG VertexPairs;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit;
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL Vtbl;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND HashEx;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 HashEx32x4;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 HashEx32x8;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16 HashEx32x16;
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    if (!ARGUMENT_PRESENT(Graph) ||
+        !ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (IsUsingAssigned16(Graph)) {
+        return GraphHashKeys16(Graph, NumberOfKeys, Keys);
+    }
+
+    Table = Graph->Context->Table;
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid) {
+        return GraphHashKeys(Graph, NumberOfKeys, Keys);
+    }
+
+    Jit = &HashJit->Interface;
+    Vtbl = Jit->Vtbl;
+    if (!ARGUMENT_PRESENT(Vtbl) ||
+        !ARGUMENT_PRESENT(Vtbl->BindHashEx)) {
+        return GraphHashKeys(Graph, NumberOfKeys, Keys);
+    }
+
+    Mask = Table->HashMask;
+    Seeds = &Graph->FirstSeed;
+
+    Result = Vtbl->BindHashEx(Jit, Seeds, Mask, &HashEx);
+    if (FAILED(Result) || !ARGUMENT_PRESENT(HashEx)) {
+        return GraphHashKeys(Graph, NumberOfKeys, Keys);
+    }
+
+    HashEx32x4 = NULL;
+    HashEx32x8 = NULL;
+    HashEx32x16 = NULL;
+
+    if (HashJit->Flags.HashEx32x4Compiled &&
+        ARGUMENT_PRESENT(Vtbl->BindHashEx32x4)) {
+        Vtbl->BindHashEx32x4(Jit, Seeds, Mask, &HashEx32x4);
+    }
+
+    if (HashJit->Flags.HashEx32x8Compiled &&
+        ARGUMENT_PRESENT(Vtbl->BindHashEx32x8)) {
+        Vtbl->BindHashEx32x8(Jit, Seeds, Mask, &HashEx32x8);
+    }
+
+    if (HashJit->Flags.HashEx32x16Compiled &&
+        ARGUMENT_PRESENT(Vtbl->BindHashEx32x16)) {
+        Vtbl->BindHashEx32x16(Jit, Seeds, Mask, &HashEx32x16);
+    }
+
+    C_ASSERT(sizeof(*VertexPairs) == sizeof(Graph->VertexPairs));
+    VertexPairs = (PULONGLONG)Graph->VertexPairs;
+    KeyPtr = (PULONG)Keys;
+    Remaining = NumberOfKeys;
+
+    START_GRAPH_COUNTER();
+
+    while (Remaining >= 16 && ARGUMENT_PRESENT(HashEx32x16)) {
+        HashEx32x16(KeyPtr, VertexPairs);
+        for (ULONG Index = 0; Index < 16; Index++) {
+            const ULONGLONG Pair = VertexPairs[Index];
+            if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                goto End;
+            }
+        }
+        KeyPtr += 16;
+        VertexPairs += 16;
+        Remaining -= 16;
+    }
+
+    while (Remaining >= 8 && ARGUMENT_PRESENT(HashEx32x8)) {
+        HashEx32x8(KeyPtr, VertexPairs);
+        for (ULONG Index = 0; Index < 8; Index++) {
+            const ULONGLONG Pair = VertexPairs[Index];
+            if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                goto End;
+            }
+        }
+        KeyPtr += 8;
+        VertexPairs += 8;
+        Remaining -= 8;
+    }
+
+    while (Remaining >= 4 && ARGUMENT_PRESENT(HashEx32x4)) {
+        HashEx32x4(KeyPtr, VertexPairs);
+        for (ULONG Index = 0; Index < 4; Index++) {
+            const ULONGLONG Pair = VertexPairs[Index];
+            if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                goto End;
+            }
+        }
+        KeyPtr += 4;
+        VertexPairs += 4;
+        Remaining -= 4;
+    }
+
+    Result = S_OK;
+    while (Remaining--) {
+        const ULONGLONG Pair = HashEx(*KeyPtr++);
+        if ((ULONG)Pair == (ULONG)(Pair >> 32)) {
+            Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+            break;
+        }
+        *VertexPairs++ = Pair;
+    }
+
+End:
+
+    STOP_GRAPH_COUNTER(HashKeys);
+
+    EVENT_WRITE_GRAPH(HashKeys);
+
+    Result = GraphPostHashKeys(Result, Graph);
+
+    return Result;
+}
+
+_Use_decl_annotations_
+HRESULT
+GraphHashKeys16JitBound(
+    PGRAPH Graph,
+    ULONG NumberOfKeys,
+    PKEY Keys
+    )
+/*++
+
+Routine Description:
+
+    Hashes all keys into vertex pairs using a bound hash JIT interface, when
+    available, for assigned16 graphs.  Falls back to GraphHashKeys16() if the
+    hash JIT is unavailable or binding fails.
+
+Arguments:
+
+    Graph - Supplies a pointer to the graph for which the hash values will be
+        created.
+
+    NumberOfKeys - Supplies the number of keys.
+
+    Keys - Supplies the base address of the keys array.
+
+Return Value:
+
+    S_OK - Success.
+
+    PH_E_GRAPH_VERTEX_COLLISION_FAILURE - The graph encountered two vertices
+        that, when masked, were identical.
+
+--*/
+{
+    ULONG Mask;
+    ULONG Remaining;
+    HRESULT Result;
+    PULONG Seeds;
+    PULONG KeyPtr;
+    PULONG VertexPairs;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit;
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL Vtbl;
+    BOOLEAN UseHash16;
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND Hash16Ex;
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4 Hash16Ex32x4;
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8 Hash16Ex32x8;
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16 Hash16Ex32x16;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND HashEx;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 HashEx32x4;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 HashEx32x8;
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16 HashEx32x16;
+    ULONG Pairs32[16];
+    ULONGLONG Pairs64[16];
+
+    DECL_GRAPH_COUNTER_LOCAL_VARS();
+
+    if (!ARGUMENT_PRESENT(Graph) ||
+        !ARGUMENT_PRESENT(Keys)) {
+        return E_POINTER;
+    }
+
+    if (!IsUsingAssigned16(Graph)) {
+        return GraphHashKeys(Graph, NumberOfKeys, Keys);
+    }
+
+    Table = Graph->Context->Table;
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid) {
+        return GraphHashKeys16(Graph, NumberOfKeys, Keys);
+    }
+
+    Jit = &HashJit->Interface;
+    Vtbl = Jit->Vtbl;
+    if (!ARGUMENT_PRESENT(Vtbl)) {
+        return GraphHashKeys16(Graph, NumberOfKeys, Keys);
+    }
+
+    Mask = Table->HashMask;
+    Seeds = &Graph->FirstSeed;
+
+    UseHash16 = FALSE;
+    Hash16Ex = NULL;
+    Hash16Ex32x4 = NULL;
+    Hash16Ex32x8 = NULL;
+    Hash16Ex32x16 = NULL;
+    HashEx = NULL;
+    HashEx32x4 = NULL;
+    HashEx32x8 = NULL;
+    HashEx32x16 = NULL;
+
+    if (HashJit->Flags.Hash16ExCompiled &&
+        ARGUMENT_PRESENT(Vtbl->BindHash16Ex)) {
+        Result = Vtbl->BindHash16Ex(Jit, Seeds, Mask, &Hash16Ex);
+        if (SUCCEEDED(Result) && ARGUMENT_PRESENT(Hash16Ex)) {
+            UseHash16 = TRUE;
+        }
+    }
+
+    if (UseHash16) {
+        if (HashJit->Flags.Hash16Ex32x4Compiled &&
+            ARGUMENT_PRESENT(Vtbl->BindHash16Ex32x4)) {
+            Vtbl->BindHash16Ex32x4(Jit, Seeds, Mask, &Hash16Ex32x4);
+        }
+
+        if (HashJit->Flags.Hash16Ex32x8Compiled &&
+            ARGUMENT_PRESENT(Vtbl->BindHash16Ex32x8)) {
+            Vtbl->BindHash16Ex32x8(Jit, Seeds, Mask, &Hash16Ex32x8);
+        }
+
+        if (HashJit->Flags.Hash16Ex32x16Compiled &&
+            ARGUMENT_PRESENT(Vtbl->BindHash16Ex32x16)) {
+            Vtbl->BindHash16Ex32x16(Jit, Seeds, Mask, &Hash16Ex32x16);
+        }
+    } else {
+        if (!ARGUMENT_PRESENT(Vtbl->BindHashEx)) {
+            return GraphHashKeys16(Graph, NumberOfKeys, Keys);
+        }
+
+        Result = Vtbl->BindHashEx(Jit, Seeds, Mask, &HashEx);
+        if (FAILED(Result) || !ARGUMENT_PRESENT(HashEx)) {
+            return GraphHashKeys16(Graph, NumberOfKeys, Keys);
+        }
+
+        if (HashJit->Flags.HashEx32x4Compiled &&
+            ARGUMENT_PRESENT(Vtbl->BindHashEx32x4)) {
+            Vtbl->BindHashEx32x4(Jit, Seeds, Mask, &HashEx32x4);
+        }
+
+        if (HashJit->Flags.HashEx32x8Compiled &&
+            ARGUMENT_PRESENT(Vtbl->BindHashEx32x8)) {
+            Vtbl->BindHashEx32x8(Jit, Seeds, Mask, &HashEx32x8);
+        }
+
+        if (HashJit->Flags.HashEx32x16Compiled &&
+            ARGUMENT_PRESENT(Vtbl->BindHashEx32x16)) {
+            Vtbl->BindHashEx32x16(Jit, Seeds, Mask, &HashEx32x16);
+        }
+    }
+
+    C_ASSERT(sizeof(*VertexPairs) == sizeof(*Graph->Vertex16Pairs));
+    VertexPairs = (PULONG)Graph->Vertex16Pairs;
+    KeyPtr = (PULONG)Keys;
+    Remaining = NumberOfKeys;
+
+    START_GRAPH_COUNTER();
+
+    if (UseHash16) {
+        while (Remaining >= 16 && ARGUMENT_PRESENT(Hash16Ex32x16)) {
+            Hash16Ex32x16(KeyPtr, Pairs32);
+            for (ULONG Index = 0; Index < 16; Index++) {
+                const ULONG Pair = Pairs32[Index];
+                const USHORT Vertex1 = (USHORT)Pair;
+                const USHORT Vertex2 = (USHORT)(Pair >> 16);
+                if (Vertex1 == Vertex2) {
+                    Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                    goto End;
+                }
+                VertexPairs[Index] = Pair;
+            }
+            KeyPtr += 16;
+            VertexPairs += 16;
+            Remaining -= 16;
+        }
+
+        while (Remaining >= 8 && ARGUMENT_PRESENT(Hash16Ex32x8)) {
+            Hash16Ex32x8(KeyPtr, Pairs32);
+            for (ULONG Index = 0; Index < 8; Index++) {
+                const ULONG Pair = Pairs32[Index];
+                const USHORT Vertex1 = (USHORT)Pair;
+                const USHORT Vertex2 = (USHORT)(Pair >> 16);
+                if (Vertex1 == Vertex2) {
+                    Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                    goto End;
+                }
+                VertexPairs[Index] = Pair;
+            }
+            KeyPtr += 8;
+            VertexPairs += 8;
+            Remaining -= 8;
+        }
+
+        while (Remaining >= 4 && ARGUMENT_PRESENT(Hash16Ex32x4)) {
+            Hash16Ex32x4(KeyPtr, Pairs32);
+            for (ULONG Index = 0; Index < 4; Index++) {
+                const ULONG Pair = Pairs32[Index];
+                const USHORT Vertex1 = (USHORT)Pair;
+                const USHORT Vertex2 = (USHORT)(Pair >> 16);
+                if (Vertex1 == Vertex2) {
+                    Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                    goto End;
+                }
+                VertexPairs[Index] = Pair;
+            }
+            KeyPtr += 4;
+            VertexPairs += 4;
+            Remaining -= 4;
+        }
+
+        Result = S_OK;
+        while (Remaining--) {
+            const ULONG Pair = Hash16Ex(*KeyPtr++);
+            const USHORT Vertex1 = (USHORT)Pair;
+            const USHORT Vertex2 = (USHORT)(Pair >> 16);
+            if (Vertex1 == Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                break;
+            }
+            *VertexPairs++ = Pair;
+        }
+    } else {
+        while (Remaining >= 16 && ARGUMENT_PRESENT(HashEx32x16)) {
+            HashEx32x16(KeyPtr, Pairs64);
+            for (ULONG Index = 0; Index < 16; Index++) {
+                const ULONGLONG Pair = Pairs64[Index];
+                const USHORT Vertex1 = (USHORT)Pair;
+                const USHORT Vertex2 = (USHORT)(Pair >> 32);
+                if (Vertex1 == Vertex2) {
+                    Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                    goto End;
+                }
+                VertexPairs[Index] = (ULONG)Vertex1 |
+                                     ((ULONG)Vertex2 << 16);
+            }
+            KeyPtr += 16;
+            VertexPairs += 16;
+            Remaining -= 16;
+        }
+
+        while (Remaining >= 8 && ARGUMENT_PRESENT(HashEx32x8)) {
+            HashEx32x8(KeyPtr, Pairs64);
+            for (ULONG Index = 0; Index < 8; Index++) {
+                const ULONGLONG Pair = Pairs64[Index];
+                const USHORT Vertex1 = (USHORT)Pair;
+                const USHORT Vertex2 = (USHORT)(Pair >> 32);
+                if (Vertex1 == Vertex2) {
+                    Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                    goto End;
+                }
+                VertexPairs[Index] = (ULONG)Vertex1 |
+                                     ((ULONG)Vertex2 << 16);
+            }
+            KeyPtr += 8;
+            VertexPairs += 8;
+            Remaining -= 8;
+        }
+
+        while (Remaining >= 4 && ARGUMENT_PRESENT(HashEx32x4)) {
+            HashEx32x4(KeyPtr, Pairs64);
+            for (ULONG Index = 0; Index < 4; Index++) {
+                const ULONGLONG Pair = Pairs64[Index];
+                const USHORT Vertex1 = (USHORT)Pair;
+                const USHORT Vertex2 = (USHORT)(Pair >> 32);
+                if (Vertex1 == Vertex2) {
+                    Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                    goto End;
+                }
+                VertexPairs[Index] = (ULONG)Vertex1 |
+                                     ((ULONG)Vertex2 << 16);
+            }
+            KeyPtr += 4;
+            VertexPairs += 4;
+            Remaining -= 4;
+        }
+
+        Result = S_OK;
+        while (Remaining--) {
+            const ULONGLONG Pair = HashEx(*KeyPtr++);
+            const USHORT Vertex1 = (USHORT)Pair;
+            const USHORT Vertex2 = (USHORT)(Pair >> 32);
+            if (Vertex1 == Vertex2) {
+                Result = PH_E_GRAPH_VERTEX_COLLISION_FAILURE;
+                break;
+            }
+            *VertexPairs++ = (ULONG)Vertex1 | ((ULONG)Vertex2 << 16);
+        }
+    }
+
+End:
+
+    STOP_GRAPH_COUNTER(HashKeys);
+
+    EVENT_WRITE_GRAPH(HashKeys);
+
+    Result = GraphPostHashKeys(Result, Graph);
 
     return Result;
 }

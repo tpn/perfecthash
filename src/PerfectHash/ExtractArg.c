@@ -184,6 +184,8 @@ TryExtractArgTableCreateFlags(
     DECL_ARG(DoNotTryUseAvx2HashFunction);
     DECL_ARG(TryUseAvx512HashFunction);
     DECL_ARG(DoNotTryUseAvx512HashFunction);
+    DECL_ARG(TryUseJitHashFunction);
+    DECL_ARG(DoNotTryUseJitHashFunction);
     DECL_ARG(DoNotTryUseAvx2MemoryCoverageFunction);
     DECL_ARG(IncludeKeysInCompiledDll);
     DECL_ARG(DoNotIncludeKeysInCompiledDll);
@@ -242,6 +244,7 @@ TryExtractArgTableCreateFlags(
     SET_FLAG_AND_RETURN_IF_EQUAL(RngUseRandomStartSeed);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx2HashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(TryUseAvx512HashFunction);
+    SET_FLAG_AND_RETURN_IF_EQUAL(TryUseJitHashFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx2MemoryCoverageFunction);
     SET_FLAG_AND_RETURN_IF_EQUAL(IncludeKeysInCompiledDll);
     SET_FLAG_AND_RETURN_IF_EQUAL(DisableSavingCallbackTableValues);
@@ -263,6 +266,7 @@ TryExtractArgTableCreateFlags(
         Flags->HashAllKeysFirst = FALSE;
         Flags->TryUseAvx2HashFunction = FALSE;
         Flags->TryUseAvx512HashFunction = FALSE;
+        Flags->TryUseJitHashFunction = FALSE;
         return S_OK;
     }
 
@@ -270,6 +274,8 @@ TryExtractArgTableCreateFlags(
                                    TryUseAvx2HashFunction);
     CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseAvx512HashFunction,
                                    TryUseAvx512HashFunction);
+    CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotTryUseJitHashFunction,
+                                   TryUseJitHashFunction);
     CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotIncludeKeysInCompiledDll,
                                    IncludeKeysInCompiledDll);
     CLEAR_FLAG_AND_RETURN_IF_EQUAL(DoNotUseRwsSectionForTableValues,
@@ -325,6 +331,20 @@ TryExtractArgTableCompileFlags(
     DECL_ARG(JitVectorIndex32x2);
     DECL_ARG(JitVectorIndex32x4);
     DECL_ARG(JitVectorIndex32x8);
+    DECL_ARG(JitHashEx);
+    DECL_ARG(JitHashEx32x4);
+    DECL_ARG(JitHashEx32x8);
+    DECL_ARG(JitHashEx32x16);
+    DECL_ARG(JitVectorHashEx32x4);
+    DECL_ARG(JitVectorHashEx32x8);
+    DECL_ARG(JitVectorHashEx32x16);
+    DECL_ARG(JitHash16Ex);
+    DECL_ARG(JitHash16Ex32x4);
+    DECL_ARG(JitHash16Ex32x8);
+    DECL_ARG(JitHash16Ex32x16);
+    DECL_ARG(JitVectorHash16Ex32x4);
+    DECL_ARG(JitVectorHash16Ex32x8);
+    DECL_ARG(JitVectorHash16Ex32x16);
     DECL_ARG(JitIndex2);
     DECL_ARG(JitIndex4);
     DECL_ARG(JitIndex8);
@@ -398,6 +418,90 @@ TryExtractArgTableCompileFlags(
     if (IS_EQUAL(JitVectorIndex32x8)) {
         Flags->Jit = TRUE;
         Flags->JitVectorIndex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHashEx)) {
+        Flags->Jit = TRUE;
+        Flags->JitHashEx = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHashEx32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitHashEx32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHashEx32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitHashEx32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHashEx32x16)) {
+        Flags->Jit = TRUE;
+        Flags->JitHashEx32x16 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorHashEx32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorHashEx32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorHashEx32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorHashEx32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorHashEx32x16)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorHashEx32x16 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHash16Ex)) {
+        Flags->Jit = TRUE;
+        Flags->JitHash16Ex = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHash16Ex32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitHash16Ex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHash16Ex32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitHash16Ex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitHash16Ex32x16)) {
+        Flags->Jit = TRUE;
+        Flags->JitHash16Ex32x16 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorHash16Ex32x4)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorHash16Ex32x4 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorHash16Ex32x8)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorHash16Ex32x8 = TRUE;
+        return S_OK;
+    }
+
+    if (IS_EQUAL(JitVectorHash16Ex32x16)) {
+        Flags->Jit = TRUE;
+        Flags->JitVectorHash16Ex32x16 = TRUE;
         return S_OK;
     }
 

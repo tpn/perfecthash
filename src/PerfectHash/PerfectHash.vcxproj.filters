@@ -145,6 +145,9 @@
     <ClCompile Include="ChmOnline01Stub.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ChmOnline01HashJit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashTableCreate.c">
       <Filter>Source Files</Filter>
     </ClCompile>

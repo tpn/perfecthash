@@ -682,6 +682,15 @@ DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
                0x94, 0xd5, 0x36, 0xdc, 0xb5, 0xbe, 0x99, 0xa9);
 
 //
+// IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE:
+// 9F3E9CC1-9F72-4DF3-9F5A-3D073B2F5A61
+//
+
+DEFINE_GUID_EX(IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE,
+               0x9f3e9cc1, 0x9f72, 0x4df3,
+               0x9f, 0x5a, 0x3d, 0x07, 0x3b, 0x2f, 0x5a, 0x61);
+
+//
 // GUID array.
 //
 
@@ -3193,6 +3202,14 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         ULONGLONG TryUseAvx512HashFunction:1;
 
         //
+        // When set, tries to use the hash JIT interface for hashing keys.
+        //
+        // N.B. Only applies when HashAllKeysFirst is set.
+        //
+
+        ULONGLONG TryUseJitHashFunction:1;
+
+        //
         // When set, disables automatically using the AVX2 version of the
         // calculate memory coverage routine.
         //
@@ -3276,7 +3293,7 @@ typedef union _PERFECT_HASH_TABLE_CREATE_FLAGS {
         // Unused bits.
         //
 
-        ULONGLONG Unused:23;
+        ULONGLONG Unused:22;
     };
 
     LONGLONG AsLongLong;
@@ -3349,6 +3366,10 @@ IsValidTableCreateFlags(
 
         if (TableCreateFlags->TryUseAvx2HashFunction) {
             return PH_E_TRY_USE_AVX512_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST;
+        }
+
+        if (TableCreateFlags->TryUseJitHashFunction) {
+            return PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST;
         }
 
     } else if (TableCreateFlags->TryLargePagesForVertexPairs) {
@@ -3599,6 +3620,93 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         ULONG JitVectorIndex32x8:1;
 
         //
+        // When set, compiles a bound SeededHashEx() routine.
+        //
+
+        ULONG JitHashEx:1;
+
+        //
+        // When set, compiles a 4-wide bound SeededHashEx() routine.
+        //
+
+        ULONG JitHashEx32x4:1;
+
+        //
+        // When set, compiles an 8-wide bound SeededHashEx() routine.
+        //
+
+        ULONG JitHashEx32x8:1;
+
+        //
+        // When set, compiles a 16-wide bound SeededHashEx() routine.
+        //
+
+        ULONG JitHashEx32x16:1;
+
+        //
+        // When set, compiles a vectorized 4-wide bound SeededHashEx() routine.
+        //
+
+        ULONG JitVectorHashEx32x4:1;
+
+        //
+        // When set, compiles a vectorized 8-wide bound SeededHashEx() routine.
+        //
+
+        ULONG JitVectorHashEx32x8:1;
+
+        //
+        // When set, compiles a vectorized 16-wide bound SeededHashEx() routine.
+        //
+
+        ULONG JitVectorHashEx32x16:1;
+
+        //
+        // When set, compiles a bound SeededHash16Ex() routine.
+        //
+
+        ULONG JitHash16Ex:1;
+
+        //
+        // When set, compiles a 4-wide bound SeededHash16Ex() routine.
+        //
+
+        ULONG JitHash16Ex32x4:1;
+
+        //
+        // When set, compiles an 8-wide bound SeededHash16Ex() routine.
+        //
+
+        ULONG JitHash16Ex32x8:1;
+
+        //
+        // When set, compiles a 16-wide bound SeededHash16Ex() routine.
+        //
+
+        ULONG JitHash16Ex32x16:1;
+
+        //
+        // When set, compiles a vectorized 4-wide bound SeededHash16Ex()
+        // routine.
+        //
+
+        ULONG JitVectorHash16Ex32x4:1;
+
+        //
+        // When set, compiles a vectorized 8-wide bound SeededHash16Ex()
+        // routine.
+        //
+
+        ULONG JitVectorHash16Ex32x8:1;
+
+        //
+        // When set, compiles a vectorized 16-wide bound SeededHash16Ex()
+        // routine.
+        //
+
+        ULONG JitVectorHash16Ex32x16:1;
+
+        //
         // Optionally caps the maximum ISA used by the JIT backend.
         //
 
@@ -3608,7 +3716,7 @@ typedef union _PERFECT_HASH_TABLE_COMPILE_FLAGS {
         // Unused bits.
         //
 
-        ULONG Unused:17;
+        ULONG Unused:3;
     };
 
     LONG AsLong;
@@ -5045,6 +5153,212 @@ typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE {
 } PERFECT_HASH_TABLE_JIT_INTERFACE;
 typedef PERFECT_HASH_TABLE_JIT_INTERFACE
       *PPERFECT_HASH_TABLE_JIT_INTERFACE;
+#endif
+
+//
+// Define the PERFECT_HASH_TABLE_HASH_JIT_INTERFACE.
+//
+
+DECLARE_COMPONENT(TableHashJitInterface, PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);
+
+typedef struct _PERFECT_HASH_TABLE_HASH_JIT_INTERFACE
+    PERFECT_HASH_TABLE_HASH_JIT_INTERFACE;
+typedef PERFECT_HASH_TABLE_HASH_JIT_INTERFACE
+      *PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE;
+
+typedef
+ULONGLONG
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH_EX_BOUND)(
+    _In_ ULONG Key
+    );
+typedef PERFECT_HASH_SEEDED_HASH_EX_BOUND *PPERFECT_HASH_SEEDED_HASH_EX_BOUND;
+
+typedef
+VOID
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH_EX_BOUND32X4)(
+    _In_reads_(4) PULONG Keys,
+    _Out_writes_(4) PULONGLONG VertexPairs
+    );
+typedef PERFECT_HASH_SEEDED_HASH_EX_BOUND32X4
+      *PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4;
+
+typedef
+VOID
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH_EX_BOUND32X8)(
+    _In_reads_(8) PULONG Keys,
+    _Out_writes_(8) PULONGLONG VertexPairs
+    );
+typedef PERFECT_HASH_SEEDED_HASH_EX_BOUND32X8
+      *PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8;
+
+typedef
+VOID
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH_EX_BOUND32X16)(
+    _In_reads_(16) PULONG Keys,
+    _Out_writes_(16) PULONGLONG VertexPairs
+    );
+typedef PERFECT_HASH_SEEDED_HASH_EX_BOUND32X16
+      *PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16;
+
+typedef
+ULONG
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH16_EX_BOUND)(
+    _In_ ULONG Key
+    );
+typedef PERFECT_HASH_SEEDED_HASH16_EX_BOUND
+      *PPERFECT_HASH_SEEDED_HASH16_EX_BOUND;
+
+typedef
+VOID
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4)(
+    _In_reads_(4) PULONG Keys,
+    _Out_writes_(4) PULONG VertexPairs
+    );
+typedef PERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4
+      *PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4;
+
+typedef
+VOID
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8)(
+    _In_reads_(8) PULONG Keys,
+    _Out_writes_(8) PULONG VertexPairs
+    );
+typedef PERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8
+      *PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8;
+
+typedef
+VOID
+(STDAPICALLTYPE PERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16)(
+    _In_reads_(16) PULONG Keys,
+    _Out_writes_(16) PULONG VertexPairs
+    );
+typedef PERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16
+      *PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH_EX_BOUND *HashEx
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X4)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 *HashEx32x4
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X4
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X4;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X8)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 *HashEx32x8
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X8
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X8;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X16)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16 *HashEx32x16
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X16
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X16;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH16_EX_BOUND *Hash16Ex
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X4)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4 *Hash16Ex32x4
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X4
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X4;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X8)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8 *Hash16Ex32x8
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X8
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X8;
+
+typedef
+_Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(STDAPICALLTYPE PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X16)(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    _In_reads_(MAX_NUMBER_OF_SEEDS) PULONG Seeds,
+    _In_ ULONG Mask,
+    _Out_ PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16 *Hash16Ex32x16
+    );
+typedef PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X16
+      *PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X16;
+
+typedef struct _PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL {
+    DECLARE_COMPONENT_VTBL_HEADER(PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX BindHashEx;
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X4 BindHashEx32x4;
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X8 BindHashEx32x8;
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X16 BindHashEx32x16;
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX BindHash16Ex;
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X4 BindHash16Ex32x4;
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X8 BindHash16Ex32x8;
+    PPERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X16 BindHash16Ex32x16;
+} PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL;
+typedef PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL
+      *PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL;
+
+#ifndef _PERFECT_HASH_INTERNAL_BUILD
+typedef struct _PERFECT_HASH_TABLE_HASH_JIT_INTERFACE {
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL Vtbl;
+} PERFECT_HASH_TABLE_HASH_JIT_INTERFACE;
+typedef PERFECT_HASH_TABLE_HASH_JIT_INTERFACE
+      *PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE;
 #endif
 
 //

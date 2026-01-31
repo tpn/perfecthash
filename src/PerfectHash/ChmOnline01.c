@@ -18,6 +18,8 @@ Abstract:
 
 PERFECT_HASH_TABLE_COMPILE_JIT PerfectHashTableCompileJit;
 PERFECT_HASH_TABLE_JIT_RUNDOWN PerfectHashTableJitRundown;
+PERFECT_HASH_TABLE_COMPILE_HASH_JIT PerfectHashTableCompileHashJit;
+PERFECT_HASH_TABLE_HASH_JIT_RUNDOWN PerfectHashTableHashJitRundown;
 
 typedef
 ULONG
@@ -201,6 +203,37 @@ VOID
     );
 typedef PH_JIT_INDEX64X16_FUNCTION *PPH_JIT_INDEX64X16_FUNCTION;
 
+typedef
+ULONGLONG
+(PH_JIT_HASH_FUNCTION)(
+    _In_ ULONG Key
+    );
+typedef PH_JIT_HASH_FUNCTION *PPH_JIT_HASH_FUNCTION;
+
+typedef
+VOID
+(PH_JIT_HASH32X4_FUNCTION)(
+    _In_reads_(4) PULONG Keys,
+    _Out_writes_(4) PULONGLONG VertexPairs
+    );
+typedef PH_JIT_HASH32X4_FUNCTION *PPH_JIT_HASH32X4_FUNCTION;
+
+typedef
+VOID
+(PH_JIT_HASH32X8_FUNCTION)(
+    _In_reads_(8) PULONG Keys,
+    _Out_writes_(8) PULONGLONG VertexPairs
+    );
+typedef PH_JIT_HASH32X8_FUNCTION *PPH_JIT_HASH32X8_FUNCTION;
+
+typedef
+VOID
+(PH_JIT_HASH32X16_FUNCTION)(
+    _In_reads_(16) PULONG Keys,
+    _Out_writes_(16) PULONGLONG VertexPairs
+    );
+typedef PH_JIT_HASH32X16_FUNCTION *PPH_JIT_HASH32X16_FUNCTION;
+
 PERFECT_HASH_TABLE_INDEX PerfectHashTableIndexJit;
 PERFECT_HASH_TABLE_QUERY_INTERFACE PerfectHashTableQueryInterfaceJit;
 
@@ -226,6 +259,33 @@ PERFECT_HASH_TABLE_JIT_INDEX64X8 PerfectHashTableJitInterfaceIndex64x8;
 PERFECT_HASH_TABLE_JIT_INDEX64X16 PerfectHashTableJitInterfaceIndex64x16;
 PERFECT_HASH_TABLE_JIT_GET_INFO PerfectHashTableJitInterfaceGetInfo;
 
+PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_QUERY_INTERFACE
+    PerfectHashTableHashJitInterfaceQueryInterface;
+PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_ADD_REF
+    PerfectHashTableHashJitInterfaceAddRef;
+PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_RELEASE
+    PerfectHashTableHashJitInterfaceRelease;
+PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_CREATE_INSTANCE
+    PerfectHashTableHashJitInterfaceCreateInstance;
+PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_LOCK_SERVER
+    PerfectHashTableHashJitInterfaceLockServer;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX
+    PerfectHashTableHashJitInterfaceBindHashEx;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X4
+    PerfectHashTableHashJitInterfaceBindHashEx32x4;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X8
+    PerfectHashTableHashJitInterfaceBindHashEx32x8;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH_EX32X16
+    PerfectHashTableHashJitInterfaceBindHashEx32x16;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX
+    PerfectHashTableHashJitInterfaceBindHash16Ex;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X4
+    PerfectHashTableHashJitInterfaceBindHash16Ex32x4;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X8
+    PerfectHashTableHashJitInterfaceBindHash16Ex32x8;
+PERFECT_HASH_TABLE_HASH_JIT_BIND_HASH16_EX32X16
+    PerfectHashTableHashJitInterfaceBindHash16Ex32x16;
+
 static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     PerfectHashTableJitInterfaceVtbl = {
     &PerfectHashTableJitInterfaceQueryInterface,
@@ -244,6 +304,23 @@ static PERFECT_HASH_TABLE_JIT_INTERFACE_VTBL
     &PerfectHashTableJitInterfaceIndex64x8,
     &PerfectHashTableJitInterfaceIndex64x16,
     &PerfectHashTableJitInterfaceGetInfo,
+};
+
+static PERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL
+    PerfectHashTableHashJitInterfaceVtbl = {
+    &PerfectHashTableHashJitInterfaceQueryInterface,
+    &PerfectHashTableHashJitInterfaceAddRef,
+    &PerfectHashTableHashJitInterfaceRelease,
+    &PerfectHashTableHashJitInterfaceCreateInstance,
+    &PerfectHashTableHashJitInterfaceLockServer,
+    &PerfectHashTableHashJitInterfaceBindHashEx,
+    &PerfectHashTableHashJitInterfaceBindHashEx32x4,
+    &PerfectHashTableHashJitInterfaceBindHashEx32x8,
+    &PerfectHashTableHashJitInterfaceBindHashEx32x16,
+    &PerfectHashTableHashJitInterfaceBindHash16Ex,
+    &PerfectHashTableHashJitInterfaceBindHash16Ex32x4,
+    &PerfectHashTableHashJitInterfaceBindHash16Ex32x8,
+    &PerfectHashTableHashJitInterfaceBindHash16Ex32x16,
 };
 
 #if defined(PH_HAS_LLVM)
@@ -358,6 +435,49 @@ BuildSplatVectorConstant(
     }
 
     return LLVMConstVector(Values, Lanes);
+}
+
+static
+LLVMValueRef
+BuildSplatVectorValue(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ LLVMTypeRef VectorType,
+    _In_ LLVMValueRef Scalar,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMValueRef Result;
+    LLVMValueRef LaneConst;
+    ULONG Index;
+
+    Result = LLVMGetUndef(VectorType);
+
+    for (Index = 0; Index < Lanes; Index++) {
+        LaneConst = LLVMConstInt(Ctx->I32, Index, FALSE);
+        Result = LLVMBuildInsertElement(Ctx->Builder,
+                                        Result,
+                                        Scalar,
+                                        LaneConst,
+                                        "splat");
+    }
+
+    return Result;
+}
+
+static
+LLVMValueRef
+AddGlobalI32(
+    _In_ LLVMModuleRef Module,
+    _In_ LLVMTypeRef I32,
+    _In_ PCSTR Name
+    )
+{
+    LLVMValueRef Global;
+
+    Global = LLVMAddGlobal(Module, I32, Name);
+    LLVMSetInitializer(Global, LLVMConstInt(I32, 0, FALSE));
+
+    return Global;
 }
 
 FORCEINLINE
@@ -555,6 +675,16 @@ typedef struct _CHM01_JIT_CONTEXT {
     LLVMValueRef HashMaskConst;
     LLVMValueRef IndexMaskConst;
     LLVMValueRef TableDataConst;
+    LLVMValueRef Seed1Global;
+    LLVMValueRef Seed2Global;
+    LLVMValueRef Seed3Global;
+    LLVMValueRef Seed3Byte1Global;
+    LLVMValueRef Seed3Byte2Global;
+    LLVMValueRef Seed3Byte3Global;
+    LLVMValueRef Seed3Byte4Global;
+    LLVMValueRef Seed4Global;
+    LLVMValueRef Seed5Global;
+    LLVMValueRef HashMaskGlobal;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
     BOOLEAN UseAssigned16;
     BYTE Padding1[3];
@@ -1311,6 +1441,1800 @@ BuildChm01IndexFunction(
                          Ctx->IndexMaskConst,
                          "index_masked");
     LLVMBuildRet(Ctx->Builder, Index);
+
+    return Function;
+}
+
+static
+LLVMValueRef
+BuildChm01HashFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ LLVMTypeRef KeyType
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMValueRef Function;
+    LLVMValueRef Key;
+    LLVMValueRef Key32;
+    LLVMValueRef Seed1;
+    LLVMValueRef Seed2;
+    LLVMValueRef Seed3Byte1;
+    LLVMValueRef Seed3Byte2;
+    LLVMValueRef Seed3Byte3;
+    LLVMValueRef Seed3Byte4;
+    LLVMValueRef Seed4;
+    LLVMValueRef Seed5;
+    LLVMValueRef HashMask;
+    LLVMValueRef Vertex1;
+    LLVMValueRef Vertex2;
+    LLVMValueRef Pair;
+    LLVMValueRef Vertex1Ext;
+    LLVMValueRef Vertex2Ext;
+    LLVMValueRef Vertex2Shifted;
+    LLVMValueRef Shift32;
+    BOOLEAN UseHashMask;
+
+    FunctionType = LLVMFunctionType(Ctx->I64, &KeyType, 1, FALSE);
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    Key = LLVMGetParam(Function, 0);
+
+    if (KeyType == Ctx->I64) {
+        Key32 = LLVMBuildTrunc(Ctx->Builder, Key, Ctx->I32, "key32");
+    } else {
+        Key32 = Key;
+    }
+
+    Seed1 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed1Global,
+                           "seed1");
+    Seed2 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed2Global,
+                           "seed2");
+    Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte1Global,
+                                "seed3_b1");
+    Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte2Global,
+                                "seed3_b2");
+    Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte3Global,
+                                "seed3_b3");
+    Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte4Global,
+                                "seed3_b4");
+    Seed4 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed4Global,
+                           "seed4");
+    Seed5 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed5Global,
+                           "seed5");
+    HashMask = LLVMBuildLoad2(Ctx->Builder,
+                              Ctx->I32,
+                              Ctx->HashMaskGlobal,
+                              "hash_mask");
+
+    UseHashMask = FALSE;
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+    switch (Ctx->HashFunctionId) {
+
+        case PerfectHashHashMultiplyShiftRFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte2,
+                                    "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr1");
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed2,
+                                   "v1.mul2");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed4,
+                                   "v2.mul1");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte2,
+                                    "v2.shr1");
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex2,
+                                   Seed5,
+                                   "v2.mul2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftR2FunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr1");
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed2,
+                                   "v1.mul2");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte2,
+                                    "v1.shr2");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed4,
+                                   "v2.mul1");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte3,
+                                    "v2.shr1");
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex2,
+                                   Seed5,
+                                   "v2.mul2");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte4,
+                                    "v2.shr2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMultiplyShiftLRFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = LLVMBuildShl(Ctx->Builder,
+                                   Vertex1,
+                                   Seed3Byte1,
+                                   "v1.shl");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte2,
+                                    "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMulshrolate1RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate2RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex2,
+                                         Seed3Byte3);
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate3RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed4,
+                                   "v1.mul2");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex2,
+                                         Seed3Byte3);
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate4RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed4,
+                                   "v1.mul2");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul1");
+            Vertex2 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex2,
+                                         Seed3Byte3);
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex2,
+                                   Seed5,
+                                   "v2.mul2");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        default:
+            return NULL;
+    }
+#pragma warning(pop)
+
+    if (UseHashMask) {
+        Vertex1 = LLVMBuildAnd(Ctx->Builder,
+                               Vertex1,
+                               HashMask,
+                               "masked_low");
+        Vertex2 = LLVMBuildAnd(Ctx->Builder,
+                               Vertex2,
+                               HashMask,
+                               "masked_high");
+    }
+
+    Vertex1Ext = LLVMBuildZExt(Ctx->Builder, Vertex1, Ctx->I64, "v1_64");
+    Vertex2Ext = LLVMBuildZExt(Ctx->Builder, Vertex2, Ctx->I64, "v2_64");
+    Shift32 = LLVMConstInt(Ctx->I64, 32, FALSE);
+    Vertex2Shifted = LLVMBuildShl(Ctx->Builder,
+                                  Vertex2Ext,
+                                  Shift32,
+                                  "v2_shl");
+    Pair = LLVMBuildOr(Ctx->Builder,
+                       Vertex1Ext,
+                       Vertex2Shifted,
+                       "pair");
+
+    LLVMBuildRet(Ctx->Builder, Pair);
+
+    return Function;
+}
+
+static
+LLVMValueRef
+BuildChm01HashGroupFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ LLVMValueRef HashFunction,
+    _In_ LLVMTypeRef HashFunctionType,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMTypeRef Params[2];
+    LLVMTypeRef I64Ptr;
+    LLVMValueRef Function;
+    LLVMValueRef KeysPtr;
+    LLVMValueRef PairsPtr;
+    LLVMValueRef KeyPtr;
+    LLVMValueRef PairPtr;
+    LLVMValueRef Key;
+    LLVMValueRef Pair;
+    LLVMValueRef LaneConst;
+    ULONG Index;
+
+    if (Lanes != 4 && Lanes != 8 && Lanes != 16) {
+        return NULL;
+    }
+
+    I64Ptr = LLVMPointerType(Ctx->I64, 0);
+    Params[0] = Ctx->I32Ptr;
+    Params[1] = I64Ptr;
+
+    FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
+
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    KeysPtr = LLVMGetParam(Function, 0);
+    PairsPtr = LLVMGetParam(Function, 1);
+
+    for (Index = 0; Index < Lanes; Index++) {
+        LaneConst = LLVMConstInt(Ctx->I64, Index, FALSE);
+
+        KeyPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                       Ctx->I32,
+                                       KeysPtr,
+                                       &LaneConst,
+                                       1,
+                                       "key_ptr");
+        Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        Pair = LLVMBuildCall2(Ctx->Builder,
+                              HashFunctionType,
+                              HashFunction,
+                              &Key,
+                              1,
+                              "pair");
+        PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                        Ctx->I64,
+                                        PairsPtr,
+                                        &LaneConst,
+                                        1,
+                                        "pair_ptr");
+        LLVMBuildStore(Ctx->Builder, Pair, PairPtr);
+    }
+
+    LLVMBuildRetVoid(Ctx->Builder);
+
+    return Function;
+}
+
+static
+LLVMValueRef
+BuildChm01HashVectorFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMTypeRef VecType;
+    LLVMTypeRef Params[2];
+    LLVMTypeRef I64Ptr;
+    LLVMValueRef Function;
+    LLVMValueRef KeysPtr;
+    LLVMValueRef PairsPtr;
+    LLVMValueRef KeyVec;
+    LLVMValueRef KeyPtr;
+    LLVMValueRef Key;
+    LLVMValueRef Seed1;
+    LLVMValueRef Seed2;
+    LLVMValueRef Seed3Byte1;
+    LLVMValueRef Seed3Byte2;
+    LLVMValueRef Seed3Byte3;
+    LLVMValueRef Seed3Byte4;
+    LLVMValueRef Seed4;
+    LLVMValueRef Seed5;
+    LLVMValueRef HashMask;
+    LLVMValueRef Seed1Vec;
+    LLVMValueRef Seed2Vec;
+    LLVMValueRef Seed3Byte1Vec;
+    LLVMValueRef Seed3Byte2Vec;
+    LLVMValueRef Seed3Byte3Vec;
+    LLVMValueRef Seed3Byte4Vec;
+    LLVMValueRef Seed4Vec;
+    LLVMValueRef Seed5Vec;
+    LLVMValueRef HashMaskVec;
+    LLVMValueRef Vertex1Vec;
+    LLVMValueRef Vertex2Vec;
+    LLVMValueRef Vertex1;
+    LLVMValueRef Vertex2;
+    LLVMValueRef Vertex1Ext;
+    LLVMValueRef Vertex2Ext;
+    LLVMValueRef Vertex2Shifted;
+    LLVMValueRef Pair;
+    LLVMValueRef Shift32;
+    LLVMValueRef PairPtr;
+    LLVMValueRef LaneConst;
+    BOOLEAN UseHashMask;
+    ULONG IndexLane;
+
+    if (Lanes != 4 && Lanes != 8 && Lanes != 16) {
+        return NULL;
+    }
+
+    I64Ptr = LLVMPointerType(Ctx->I64, 0);
+    Params[0] = Ctx->I32Ptr;
+    Params[1] = I64Ptr;
+
+    FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
+
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    KeysPtr = LLVMGetParam(Function, 0);
+    PairsPtr = LLVMGetParam(Function, 1);
+
+    VecType = LLVMVectorType(Ctx->I32, Lanes);
+    KeyVec = LLVMGetUndef(VecType);
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        LaneConst = LLVMConstInt(Ctx->I64, IndexLane, FALSE);
+        KeyPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                       Ctx->I32,
+                                       KeysPtr,
+                                       &LaneConst,
+                                       1,
+                                       "key_ptr");
+        Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        LaneConst = LLVMConstInt(Ctx->I32, IndexLane, FALSE);
+        KeyVec = LLVMBuildInsertElement(Ctx->Builder,
+                                        KeyVec,
+                                        Key,
+                                        LaneConst,
+                                        "key_lane");
+    }
+
+    Seed1 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed1Global,
+                           "seed1");
+    Seed2 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed2Global,
+                           "seed2");
+    Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte1Global,
+                                "seed3_b1");
+    Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte2Global,
+                                "seed3_b2");
+    Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte3Global,
+                                "seed3_b3");
+    Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte4Global,
+                                "seed3_b4");
+    Seed4 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed4Global,
+                           "seed4");
+    Seed5 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed5Global,
+                           "seed5");
+    HashMask = LLVMBuildLoad2(Ctx->Builder,
+                              Ctx->I32,
+                              Ctx->HashMaskGlobal,
+                              "hash_mask");
+
+    Seed1Vec = BuildSplatVectorValue(Ctx, VecType, Seed1, Lanes);
+    Seed2Vec = BuildSplatVectorValue(Ctx, VecType, Seed2, Lanes);
+    Seed3Byte1Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte1, Lanes);
+    Seed3Byte2Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte2, Lanes);
+    Seed3Byte3Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte3, Lanes);
+    Seed3Byte4Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte4, Lanes);
+    Seed4Vec = BuildSplatVectorValue(Ctx, VecType, Seed4, Lanes);
+    Seed5Vec = BuildSplatVectorValue(Ctx, VecType, Seed5, Lanes);
+    HashMaskVec = BuildSplatVectorValue(Ctx, VecType, HashMask, Lanes);
+
+    UseHashMask = FALSE;
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+    switch (Ctx->HashFunctionId) {
+
+        case PerfectHashHashMultiplyShiftRFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr1");
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed2Vec,
+                                      "v1.mul2");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed4Vec,
+                                      "v2.mul1");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr1");
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftR2FunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr1");
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed2Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte2Vec,
+                                       "v1.shr2");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed4Vec,
+                                      "v2.mul1");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte3Vec,
+                                       "v2.shr1");
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte4Vec,
+                                       "v2.shr2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMultiplyShiftLRFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildShl(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed3Byte1Vec,
+                                      "v1.shl");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMulshrolate1RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate2RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate3RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed4Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate4RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed4Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul1");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        default:
+            return NULL;
+    }
+#pragma warning(pop)
+
+    if (UseHashMask) {
+        Vertex1Vec = LLVMBuildAnd(Ctx->Builder,
+                                  Vertex1Vec,
+                                  HashMaskVec,
+                                  "masked_low");
+        Vertex2Vec = LLVMBuildAnd(Ctx->Builder,
+                                  Vertex2Vec,
+                                  HashMaskVec,
+                                  "masked_high");
+    }
+
+    Shift32 = LLVMConstInt(Ctx->I64, 32, FALSE);
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        LaneConst = LLVMConstInt(Ctx->I32, IndexLane, FALSE);
+        Vertex1 = LLVMBuildExtractElement(Ctx->Builder,
+                                          Vertex1Vec,
+                                          LaneConst,
+                                          "v1_lane");
+        Vertex2 = LLVMBuildExtractElement(Ctx->Builder,
+                                          Vertex2Vec,
+                                          LaneConst,
+                                          "v2_lane");
+
+        Vertex1Ext = LLVMBuildZExt(Ctx->Builder,
+                                   Vertex1,
+                                   Ctx->I64,
+                                   "v1_64");
+        Vertex2Ext = LLVMBuildZExt(Ctx->Builder,
+                                   Vertex2,
+                                   Ctx->I64,
+                                   "v2_64");
+        Vertex2Shifted = LLVMBuildShl(Ctx->Builder,
+                                      Vertex2Ext,
+                                      Shift32,
+                                      "v2_shl");
+        Pair = LLVMBuildOr(Ctx->Builder,
+                           Vertex1Ext,
+                           Vertex2Shifted,
+                           "pair");
+        LaneConst = LLVMConstInt(Ctx->I64, IndexLane, FALSE);
+        PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                        Ctx->I64,
+                                        PairsPtr,
+                                        &LaneConst,
+                                        1,
+                                        "pair_ptr");
+        LLVMBuildStore(Ctx->Builder, Pair, PairPtr);
+    }
+
+    LLVMBuildRetVoid(Ctx->Builder);
+
+    return Function;
+}
+
+static
+LLVMValueRef
+BuildChm01Hash16Function(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ LLVMTypeRef KeyType
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMValueRef Function;
+    LLVMValueRef Key;
+    LLVMValueRef Key32;
+    LLVMValueRef Seed1;
+    LLVMValueRef Seed2;
+    LLVMValueRef Seed3Byte1;
+    LLVMValueRef Seed3Byte2;
+    LLVMValueRef Seed3Byte3;
+    LLVMValueRef Seed3Byte4;
+    LLVMValueRef Seed4;
+    LLVMValueRef Seed5;
+    LLVMValueRef HashMask;
+    LLVMValueRef Vertex1;
+    LLVMValueRef Vertex2;
+    LLVMValueRef Vertex1Trunc;
+    LLVMValueRef Vertex2Trunc;
+    LLVMValueRef Vertex1Ext;
+    LLVMValueRef Vertex2Ext;
+    LLVMValueRef Vertex2Shifted;
+    LLVMValueRef Pair;
+    LLVMValueRef Shift16;
+    BOOLEAN UseHashMask;
+
+    FunctionType = LLVMFunctionType(Ctx->I32, &KeyType, 1, FALSE);
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    Key = LLVMGetParam(Function, 0);
+
+    if (KeyType == Ctx->I64) {
+        Key32 = LLVMBuildTrunc(Ctx->Builder, Key, Ctx->I32, "key32");
+    } else {
+        Key32 = Key;
+    }
+
+    Seed1 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed1Global,
+                           "seed1");
+    Seed2 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed2Global,
+                           "seed2");
+    Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte1Global,
+                                "seed3_b1");
+    Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte2Global,
+                                "seed3_b2");
+    Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte3Global,
+                                "seed3_b3");
+    Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte4Global,
+                                "seed3_b4");
+    Seed4 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed4Global,
+                           "seed4");
+    Seed5 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed5Global,
+                           "seed5");
+    HashMask = LLVMBuildLoad2(Ctx->Builder,
+                              Ctx->I32,
+                              Ctx->HashMaskGlobal,
+                              "hash_mask");
+
+    UseHashMask = FALSE;
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+    switch (Ctx->HashFunctionId) {
+
+        case PerfectHashHashMultiplyShiftRFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte2,
+                                    "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr1");
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed2,
+                                   "v1.mul2");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed4,
+                                   "v2.mul1");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte2,
+                                    "v2.shr1");
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex2,
+                                   Seed5,
+                                   "v2.mul2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftR2FunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr1");
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed2,
+                                   "v1.mul2");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte2,
+                                    "v1.shr2");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed4,
+                                   "v2.mul1");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte3,
+                                    "v2.shr1");
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex2,
+                                   Seed5,
+                                   "v2.mul2");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte4,
+                                    "v2.shr2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMultiplyShiftLRFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = LLVMBuildShl(Ctx->Builder,
+                                   Vertex1,
+                                   Seed3Byte1,
+                                   "v1.shl");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte2,
+                                    "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMulshrolate1RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate2RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex2,
+                                         Seed3Byte3);
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate3RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed4,
+                                   "v1.mul2");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul");
+            Vertex2 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex2,
+                                         Seed3Byte3);
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate4RXFunctionId:
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed1,
+                                   "v1.mul1");
+            Vertex1 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex1,
+                                         Seed3Byte2);
+            Vertex1 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex1,
+                                   Seed4,
+                                   "v1.mul2");
+            Vertex1 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex1,
+                                    Seed3Byte1,
+                                    "v1.shr");
+
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Key32,
+                                   Seed2,
+                                   "v2.mul1");
+            Vertex2 = BuildRotateRight32(Ctx->Builder,
+                                         Vertex2,
+                                         Seed3Byte3);
+            Vertex2 = LLVMBuildMul(Ctx->Builder,
+                                   Vertex2,
+                                   Seed5,
+                                   "v2.mul2");
+            Vertex2 = LLVMBuildLShr(Ctx->Builder,
+                                    Vertex2,
+                                    Seed3Byte1,
+                                    "v2.shr");
+            break;
+
+        default:
+            return NULL;
+    }
+#pragma warning(pop)
+
+    if (UseHashMask) {
+        Vertex1 = LLVMBuildAnd(Ctx->Builder,
+                               Vertex1,
+                               HashMask,
+                               "masked_low");
+        Vertex2 = LLVMBuildAnd(Ctx->Builder,
+                               Vertex2,
+                               HashMask,
+                               "masked_high");
+    }
+
+    Vertex1Trunc = LLVMBuildTrunc(Ctx->Builder,
+                                  Vertex1,
+                                  Ctx->I16,
+                                  "v1_16");
+    Vertex2Trunc = LLVMBuildTrunc(Ctx->Builder,
+                                  Vertex2,
+                                  Ctx->I16,
+                                  "v2_16");
+    Vertex1Ext = LLVMBuildZExt(Ctx->Builder,
+                               Vertex1Trunc,
+                               Ctx->I32,
+                               "v1_32");
+    Vertex2Ext = LLVMBuildZExt(Ctx->Builder,
+                               Vertex2Trunc,
+                               Ctx->I32,
+                               "v2_32");
+    Shift16 = LLVMConstInt(Ctx->I32, 16, FALSE);
+    Vertex2Shifted = LLVMBuildShl(Ctx->Builder,
+                                  Vertex2Ext,
+                                  Shift16,
+                                  "v2_shl");
+    Pair = LLVMBuildOr(Ctx->Builder,
+                       Vertex1Ext,
+                       Vertex2Shifted,
+                       "pair");
+
+    LLVMBuildRet(Ctx->Builder, Pair);
+
+    return Function;
+}
+
+static
+LLVMValueRef
+BuildChm01Hash16GroupFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ LLVMValueRef HashFunction,
+    _In_ LLVMTypeRef HashFunctionType,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMTypeRef Params[2];
+    LLVMValueRef Function;
+    LLVMValueRef KeysPtr;
+    LLVMValueRef PairsPtr;
+    LLVMValueRef KeyPtr;
+    LLVMValueRef PairPtr;
+    LLVMValueRef Key;
+    LLVMValueRef Pair;
+    LLVMValueRef LaneConst;
+    ULONG Index;
+
+    if (Lanes != 4 && Lanes != 8 && Lanes != 16) {
+        return NULL;
+    }
+
+    Params[0] = Ctx->I32Ptr;
+    Params[1] = Ctx->I32Ptr;
+
+    FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
+
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    KeysPtr = LLVMGetParam(Function, 0);
+    PairsPtr = LLVMGetParam(Function, 1);
+
+    for (Index = 0; Index < Lanes; Index++) {
+        LaneConst = LLVMConstInt(Ctx->I64, Index, FALSE);
+
+        KeyPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                       Ctx->I32,
+                                       KeysPtr,
+                                       &LaneConst,
+                                       1,
+                                       "key_ptr");
+        Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        Pair = LLVMBuildCall2(Ctx->Builder,
+                              HashFunctionType,
+                              HashFunction,
+                              &Key,
+                              1,
+                              "pair");
+        PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                        Ctx->I32,
+                                        PairsPtr,
+                                        &LaneConst,
+                                        1,
+                                        "pair_ptr");
+        LLVMBuildStore(Ctx->Builder, Pair, PairPtr);
+    }
+
+    LLVMBuildRetVoid(Ctx->Builder);
+
+    return Function;
+}
+
+static
+LLVMValueRef
+BuildChm01Hash16VectorFunction(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ PCSTR Name,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMTypeRef FunctionType;
+    LLVMTypeRef VecType;
+    LLVMTypeRef Params[2];
+    LLVMValueRef Function;
+    LLVMValueRef KeysPtr;
+    LLVMValueRef PairsPtr;
+    LLVMValueRef KeyVec;
+    LLVMValueRef KeyPtr;
+    LLVMValueRef Key;
+    LLVMValueRef Seed1;
+    LLVMValueRef Seed2;
+    LLVMValueRef Seed3Byte1;
+    LLVMValueRef Seed3Byte2;
+    LLVMValueRef Seed3Byte3;
+    LLVMValueRef Seed3Byte4;
+    LLVMValueRef Seed4;
+    LLVMValueRef Seed5;
+    LLVMValueRef HashMask;
+    LLVMValueRef Seed1Vec;
+    LLVMValueRef Seed2Vec;
+    LLVMValueRef Seed3Byte1Vec;
+    LLVMValueRef Seed3Byte2Vec;
+    LLVMValueRef Seed3Byte3Vec;
+    LLVMValueRef Seed3Byte4Vec;
+    LLVMValueRef Seed4Vec;
+    LLVMValueRef Seed5Vec;
+    LLVMValueRef HashMaskVec;
+    LLVMValueRef Vertex1Vec;
+    LLVMValueRef Vertex2Vec;
+    LLVMValueRef Vertex1;
+    LLVMValueRef Vertex2;
+    LLVMValueRef Vertex1Trunc;
+    LLVMValueRef Vertex2Trunc;
+    LLVMValueRef Vertex1Ext;
+    LLVMValueRef Vertex2Ext;
+    LLVMValueRef Vertex2Shifted;
+    LLVMValueRef Pair;
+    LLVMValueRef Shift16;
+    LLVMValueRef PairPtr;
+    LLVMValueRef LaneConst;
+    BOOLEAN UseHashMask;
+    ULONG IndexLane;
+
+    if (Lanes != 4 && Lanes != 8 && Lanes != 16) {
+        return NULL;
+    }
+
+    Params[0] = Ctx->I32Ptr;
+    Params[1] = Ctx->I32Ptr;
+
+    FunctionType = LLVMFunctionType(LLVMVoidTypeInContext(Ctx->Context),
+                                    Params,
+                                    ARRAYSIZE(Params),
+                                    FALSE);
+
+    Function = LLVMAddFunction(Ctx->Module, Name, FunctionType);
+
+    LLVMPositionBuilderAtEnd(
+        Ctx->Builder,
+        LLVMAppendBasicBlockInContext(Ctx->Context, Function, "entry")
+    );
+
+    KeysPtr = LLVMGetParam(Function, 0);
+    PairsPtr = LLVMGetParam(Function, 1);
+
+    VecType = LLVMVectorType(Ctx->I32, Lanes);
+    KeyVec = LLVMGetUndef(VecType);
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        LaneConst = LLVMConstInt(Ctx->I64, IndexLane, FALSE);
+        KeyPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                       Ctx->I32,
+                                       KeysPtr,
+                                       &LaneConst,
+                                       1,
+                                       "key_ptr");
+        Key = LLVMBuildLoad2(Ctx->Builder, Ctx->I32, KeyPtr, "key");
+        LaneConst = LLVMConstInt(Ctx->I32, IndexLane, FALSE);
+        KeyVec = LLVMBuildInsertElement(Ctx->Builder,
+                                        KeyVec,
+                                        Key,
+                                        LaneConst,
+                                        "key_lane");
+    }
+
+    Seed1 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed1Global,
+                           "seed1");
+    Seed2 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed2Global,
+                           "seed2");
+    Seed3Byte1 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte1Global,
+                                "seed3_b1");
+    Seed3Byte2 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte2Global,
+                                "seed3_b2");
+    Seed3Byte3 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte3Global,
+                                "seed3_b3");
+    Seed3Byte4 = LLVMBuildLoad2(Ctx->Builder,
+                                Ctx->I32,
+                                Ctx->Seed3Byte4Global,
+                                "seed3_b4");
+    Seed4 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed4Global,
+                           "seed4");
+    Seed5 = LLVMBuildLoad2(Ctx->Builder,
+                           Ctx->I32,
+                           Ctx->Seed5Global,
+                           "seed5");
+    HashMask = LLVMBuildLoad2(Ctx->Builder,
+                              Ctx->I32,
+                              Ctx->HashMaskGlobal,
+                              "hash_mask");
+
+    Seed1Vec = BuildSplatVectorValue(Ctx, VecType, Seed1, Lanes);
+    Seed2Vec = BuildSplatVectorValue(Ctx, VecType, Seed2, Lanes);
+    Seed3Byte1Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte1, Lanes);
+    Seed3Byte2Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte2, Lanes);
+    Seed3Byte3Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte3, Lanes);
+    Seed3Byte4Vec = BuildSplatVectorValue(Ctx, VecType, Seed3Byte4, Lanes);
+    Seed4Vec = BuildSplatVectorValue(Ctx, VecType, Seed4, Lanes);
+    Seed5Vec = BuildSplatVectorValue(Ctx, VecType, Seed5, Lanes);
+    HashMaskVec = BuildSplatVectorValue(Ctx, VecType, HashMask, Lanes);
+
+    UseHashMask = FALSE;
+
+#pragma warning(push)
+#pragma warning(disable: 4061)
+    switch (Ctx->HashFunctionId) {
+
+        case PerfectHashHashMultiplyShiftRFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRMultiplyFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr1");
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed2Vec,
+                                      "v1.mul2");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed4Vec,
+                                      "v2.mul1");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr1");
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftR2FunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr1");
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed2Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte2Vec,
+                                       "v1.shr2");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed4Vec,
+                                      "v2.mul1");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte3Vec,
+                                       "v2.shr1");
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte4Vec,
+                                       "v2.shr2");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMultiplyShiftRXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMultiplyShiftLRFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = LLVMBuildShl(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed3Byte1Vec,
+                                      "v1.shl");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte2Vec,
+                                       "v2.shr");
+            UseHashMask = TRUE;
+            break;
+
+        case PerfectHashHashMulshrolate1RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate2RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate3RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed4Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        case PerfectHashHashMulshrolate4RXFunctionId:
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed1Vec,
+                                      "v1.mul1");
+            Vertex1Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex1Vec,
+                                            Seed3Byte2Vec);
+            Vertex1Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex1Vec,
+                                      Seed4Vec,
+                                      "v1.mul2");
+            Vertex1Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex1Vec,
+                                       Seed3Byte1Vec,
+                                       "v1.shr");
+
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      KeyVec,
+                                      Seed2Vec,
+                                      "v2.mul1");
+            Vertex2Vec = BuildRotateRight32(Ctx->Builder,
+                                            Vertex2Vec,
+                                            Seed3Byte3Vec);
+            Vertex2Vec = LLVMBuildMul(Ctx->Builder,
+                                      Vertex2Vec,
+                                      Seed5Vec,
+                                      "v2.mul2");
+            Vertex2Vec = LLVMBuildLShr(Ctx->Builder,
+                                       Vertex2Vec,
+                                       Seed3Byte1Vec,
+                                       "v2.shr");
+            break;
+
+        default:
+            return NULL;
+    }
+#pragma warning(pop)
+
+    if (UseHashMask) {
+        Vertex1Vec = LLVMBuildAnd(Ctx->Builder,
+                                  Vertex1Vec,
+                                  HashMaskVec,
+                                  "masked_low");
+        Vertex2Vec = LLVMBuildAnd(Ctx->Builder,
+                                  Vertex2Vec,
+                                  HashMaskVec,
+                                  "masked_high");
+    }
+
+    Shift16 = LLVMConstInt(Ctx->I32, 16, FALSE);
+
+    for (IndexLane = 0; IndexLane < Lanes; IndexLane++) {
+        LaneConst = LLVMConstInt(Ctx->I32, IndexLane, FALSE);
+        Vertex1 = LLVMBuildExtractElement(Ctx->Builder,
+                                          Vertex1Vec,
+                                          LaneConst,
+                                          "v1_lane");
+        Vertex2 = LLVMBuildExtractElement(Ctx->Builder,
+                                          Vertex2Vec,
+                                          LaneConst,
+                                          "v2_lane");
+
+        Vertex1Trunc = LLVMBuildTrunc(Ctx->Builder,
+                                      Vertex1,
+                                      Ctx->I16,
+                                      "v1_16");
+        Vertex2Trunc = LLVMBuildTrunc(Ctx->Builder,
+                                      Vertex2,
+                                      Ctx->I16,
+                                      "v2_16");
+        Vertex1Ext = LLVMBuildZExt(Ctx->Builder,
+                                   Vertex1Trunc,
+                                   Ctx->I32,
+                                   "v1_32");
+        Vertex2Ext = LLVMBuildZExt(Ctx->Builder,
+                                   Vertex2Trunc,
+                                   Ctx->I32,
+                                   "v2_32");
+        Vertex2Shifted = LLVMBuildShl(Ctx->Builder,
+                                      Vertex2Ext,
+                                      Shift16,
+                                      "v2_shl");
+        Pair = LLVMBuildOr(Ctx->Builder,
+                           Vertex1Ext,
+                           Vertex2Shifted,
+                           "pair");
+        LaneConst = LLVMConstInt(Ctx->I64, IndexLane, FALSE);
+        PairPtr = LLVMBuildInBoundsGEP2(Ctx->Builder,
+                                        Ctx->I32,
+                                        PairsPtr,
+                                        &LaneConst,
+                                        1,
+                                        "pair_ptr");
+        LLVMBuildStore(Ctx->Builder, Pair, PairPtr);
+    }
+
+    LLVMBuildRetVoid(Ctx->Builder);
 
     return Function;
 }
@@ -2684,6 +4608,623 @@ Error:
     return Result;
 }
 
+_Must_inspect_result_
+static
+HRESULT
+CompileChm01HashJit(
+    _In_ PPERFECT_HASH_TABLE Table,
+    _Inout_ PPERFECT_HASH_TABLE_HASH_JIT HashJit,
+    _In_ PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
+    )
+{
+    BOOLEAN CompileHashEx;
+    BOOLEAN CompileHashEx32x4;
+    BOOLEAN CompileHashEx32x8;
+    BOOLEAN CompileHashEx32x16;
+    BOOLEAN CompileVectorHashEx32x4;
+    BOOLEAN CompileVectorHashEx32x8;
+    BOOLEAN CompileVectorHashEx32x16;
+    BOOLEAN CompileHash16Ex;
+    BOOLEAN CompileHash16Ex32x4;
+    BOOLEAN CompileHash16Ex32x8;
+    BOOLEAN CompileHash16Ex32x16;
+    BOOLEAN CompileVectorHash16Ex32x4;
+    BOOLEAN CompileVectorHash16Ex32x8;
+    BOOLEAN CompileVectorHash16Ex32x16;
+    BOOLEAN HostHasAvx512;
+    HRESULT Result = S_OK;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+
+    char *ErrorMessage = NULL;
+    char *TargetTriple = NULL;
+    char *DataLayout = NULL;
+    char *HostCpuName = NULL;
+    char *HostCpuFeatures = NULL;
+    char *TargetCpu = NULL;
+    char *TargetFeatures = NULL;
+    char *ClampedFeatures = NULL;
+
+    LLVMTargetRef Target = NULL;
+    LLVMContextRef Context = NULL;
+    LLVMModuleRef Module = NULL;
+    LLVMBuilderRef Builder = NULL;
+    LLVMExecutionEngineRef Engine = NULL;
+    LLVMTargetMachineRef TargetMachine = NULL;
+    LLVMTargetDataRef TargetData = NULL;
+    struct LLVMMCJITCompilerOptions McjitOptions;
+
+    CHM01_JIT_CONTEXT JitContext;
+    LLVMValueRef HashFunction = NULL;
+    LLVMTypeRef HashFunctionType = NULL;
+    LLVMValueRef Hash16Function = NULL;
+    LLVMTypeRef Hash16FunctionType = NULL;
+    PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
+
+    HashFunctionId = Table->HashFunctionId;
+
+    CompileVectorHashEx32x4 = (CompileFlags->JitVectorHashEx32x4 != FALSE);
+    CompileVectorHashEx32x8 = (CompileFlags->JitVectorHashEx32x8 != FALSE);
+    CompileVectorHashEx32x16 = (CompileFlags->JitVectorHashEx32x16 != FALSE);
+    CompileVectorHash16Ex32x4 =
+        (CompileFlags->JitVectorHash16Ex32x4 != FALSE);
+    CompileVectorHash16Ex32x8 =
+        (CompileFlags->JitVectorHash16Ex32x8 != FALSE);
+    CompileVectorHash16Ex32x16 =
+        (CompileFlags->JitVectorHash16Ex32x16 != FALSE);
+
+    CompileHashEx32x4 = (CompileFlags->JitHashEx32x4 != FALSE) ||
+                        (CompileVectorHashEx32x4 != FALSE);
+    CompileHashEx32x8 = (CompileFlags->JitHashEx32x8 != FALSE) ||
+                        (CompileVectorHashEx32x8 != FALSE);
+    CompileHashEx32x16 = (CompileFlags->JitHashEx32x16 != FALSE) ||
+                         (CompileVectorHashEx32x16 != FALSE);
+    CompileHashEx = (CompileFlags->JitHashEx != FALSE) ||
+                    CompileHashEx32x4 ||
+                    CompileHashEx32x8 ||
+                    CompileHashEx32x16;
+
+    CompileHash16Ex32x4 = (CompileFlags->JitHash16Ex32x4 != FALSE) ||
+                          (CompileVectorHash16Ex32x4 != FALSE);
+    CompileHash16Ex32x8 = (CompileFlags->JitHash16Ex32x8 != FALSE) ||
+                          (CompileVectorHash16Ex32x8 != FALSE);
+    CompileHash16Ex32x16 = (CompileFlags->JitHash16Ex32x16 != FALSE) ||
+                           (CompileVectorHash16Ex32x16 != FALSE);
+    CompileHash16Ex = (CompileFlags->JitHash16Ex != FALSE) ||
+                      CompileHash16Ex32x4 ||
+                      CompileHash16Ex32x8 ||
+                      CompileHash16Ex32x16;
+
+    if (!CompileHashEx && !CompileHash16Ex) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    if (LLVMInitializeNativeTarget() != 0 ||
+        LLVMInitializeNativeAsmPrinter() != 0 ||
+        LLVMInitializeNativeAsmParser() != 0) {
+        return PH_E_TABLE_COMPILATION_FAILED;
+    }
+
+    LLVMLinkInMCJIT();
+
+    Context = LLVMContextCreate();
+    Module = LLVMModuleCreateWithNameInContext("PerfectHashChm01HashJit",
+                                               Context);
+    Builder = LLVMCreateBuilderInContext(Context);
+
+    TargetTriple = LLVMGetDefaultTargetTriple();
+    if (LLVMGetTargetFromTriple(TargetTriple, &Target, &ErrorMessage) != 0) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
+
+    HostCpuName = LLVMGetHostCPUName();
+    HostCpuFeatures = LLVMGetHostCPUFeatures();
+    TargetCpu = HostCpuName ? HostCpuName : "";
+    TargetFeatures = HostCpuFeatures ? HostCpuFeatures : "";
+    HostHasAvx512 = (HostCpuFeatures &&
+                     strstr(HostCpuFeatures, "+avx512f") != NULL);
+
+    JitMaxIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
+    if (JitMaxIsa != PerfectHashJitMaxIsaAuto) {
+        ClampedFeatures = BuildClampedHostFeatures(HostCpuFeatures, JitMaxIsa);
+        if (ClampedFeatures) {
+            TargetFeatures = ClampedFeatures;
+        }
+    }
+
+    if (JitMaxIsa != PerfectHashJitMaxIsaAuto &&
+        JitMaxIsa != PerfectHashJitMaxIsaAvx512) {
+        HostHasAvx512 = FALSE;
+    }
+
+    if (CompileHashEx32x16 && !HostHasAvx512) {
+        CompileHashEx32x16 = FALSE;
+        CompileVectorHashEx32x16 = FALSE;
+    }
+    if (CompileHash16Ex32x16 && !HostHasAvx512) {
+        CompileHash16Ex32x16 = FALSE;
+        CompileVectorHash16Ex32x16 = FALSE;
+    }
+
+    HashJit->JitMaxIsa = JitMaxIsa;
+
+    TargetMachine = LLVMCreateTargetMachine(Target,
+                                            TargetTriple,
+                                            TargetCpu,
+                                            TargetFeatures,
+                                            LLVMCodeGenLevelAggressive,
+                                            LLVMRelocDefault,
+                                            LLVMCodeModelDefault);
+    if (!TargetMachine) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
+
+    TargetData = LLVMCreateTargetDataLayout(TargetMachine);
+    DataLayout = LLVMCopyStringRepOfTargetData(TargetData);
+    if (!DataLayout) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
+
+    LLVMSetModuleDataLayout(Module, DataLayout);
+    LLVMSetTarget(Module, TargetTriple);
+
+    ZeroStruct(JitContext);
+    JitContext.Context = Context;
+    JitContext.Module = Module;
+    JitContext.Builder = Builder;
+    JitContext.I1 = LLVMInt1TypeInContext(Context);
+    JitContext.I16 = LLVMInt16TypeInContext(Context);
+    JitContext.I32 = LLVMInt32TypeInContext(Context);
+    JitContext.I64 = LLVMInt64TypeInContext(Context);
+    JitContext.I32Ptr = LLVMPointerType(JitContext.I32, 0);
+    JitContext.HashFunctionId = HashFunctionId;
+    JitContext.UseAssigned16 = FALSE;
+
+    JitContext.Seed1Global = AddGlobalI32(Module,
+                                          JitContext.I32,
+                                          "PerfectHashJitHashSeed1");
+    JitContext.Seed2Global = AddGlobalI32(Module,
+                                          JitContext.I32,
+                                          "PerfectHashJitHashSeed2");
+    JitContext.Seed3Global = AddGlobalI32(Module,
+                                          JitContext.I32,
+                                          "PerfectHashJitHashSeed3");
+    JitContext.Seed3Byte1Global = AddGlobalI32(
+        Module,
+        JitContext.I32,
+        "PerfectHashJitHashSeed3Byte1"
+    );
+    JitContext.Seed3Byte2Global = AddGlobalI32(
+        Module,
+        JitContext.I32,
+        "PerfectHashJitHashSeed3Byte2"
+    );
+    JitContext.Seed3Byte3Global = AddGlobalI32(
+        Module,
+        JitContext.I32,
+        "PerfectHashJitHashSeed3Byte3"
+    );
+    JitContext.Seed3Byte4Global = AddGlobalI32(
+        Module,
+        JitContext.I32,
+        "PerfectHashJitHashSeed3Byte4"
+    );
+    JitContext.Seed4Global = AddGlobalI32(Module,
+                                          JitContext.I32,
+                                          "PerfectHashJitHashSeed4");
+    JitContext.Seed5Global = AddGlobalI32(Module,
+                                          JitContext.I32,
+                                          "PerfectHashJitHashSeed5");
+    JitContext.HashMaskGlobal = AddGlobalI32(Module,
+                                             JitContext.I32,
+                                             "PerfectHashJitHashMask");
+
+    if (CompileHashEx) {
+        HashFunctionType = LLVMFunctionType(JitContext.I64,
+                                            &JitContext.I32,
+                                            1,
+                                            FALSE);
+        HashFunction = BuildChm01HashFunction(&JitContext,
+                                              "PerfectHashJitHashEx",
+                                              JitContext.I32);
+        if (!HashFunction) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+    }
+
+    if (CompileHash16Ex) {
+        Hash16FunctionType = LLVMFunctionType(JitContext.I32,
+                                              &JitContext.I32,
+                                              1,
+                                              FALSE);
+        Hash16Function = BuildChm01Hash16Function(&JitContext,
+                                                  "PerfectHashJitHash16Ex",
+                                                  JitContext.I32);
+        if (!Hash16Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+    }
+
+    if (CompileHashEx32x4) {
+        if (CompileVectorHashEx32x4) {
+            if (!BuildChm01HashVectorFunction(&JitContext,
+                                              "PerfectHashJitHashEx32x4Vector",
+                                              4)) {
+                CompileVectorHashEx32x4 = FALSE;
+            }
+        }
+
+        if (!CompileVectorHashEx32x4) {
+            if (!BuildChm01HashGroupFunction(&JitContext,
+                                             "PerfectHashJitHashEx32x4",
+                                             HashFunction,
+                                             HashFunctionType,
+                                             4)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    if (CompileHash16Ex32x4) {
+        if (CompileVectorHash16Ex32x4) {
+            if (!BuildChm01Hash16VectorFunction(
+                    &JitContext,
+                    "PerfectHashJitHash16Ex32x4Vector",
+                    4)) {
+                CompileVectorHash16Ex32x4 = FALSE;
+            }
+        }
+
+        if (!CompileVectorHash16Ex32x4) {
+            if (!BuildChm01Hash16GroupFunction(&JitContext,
+                                               "PerfectHashJitHash16Ex32x4",
+                                               Hash16Function,
+                                               Hash16FunctionType,
+                                               4)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    if (CompileHashEx32x8) {
+        if (CompileVectorHashEx32x8) {
+            if (!BuildChm01HashVectorFunction(&JitContext,
+                                              "PerfectHashJitHashEx32x8Vector",
+                                              8)) {
+                CompileVectorHashEx32x8 = FALSE;
+            }
+        }
+
+        if (!CompileVectorHashEx32x8) {
+            if (!BuildChm01HashGroupFunction(&JitContext,
+                                             "PerfectHashJitHashEx32x8",
+                                             HashFunction,
+                                             HashFunctionType,
+                                             8)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    if (CompileHash16Ex32x8) {
+        if (CompileVectorHash16Ex32x8) {
+            if (!BuildChm01Hash16VectorFunction(
+                    &JitContext,
+                    "PerfectHashJitHash16Ex32x8Vector",
+                    8)) {
+                CompileVectorHash16Ex32x8 = FALSE;
+            }
+        }
+
+        if (!CompileVectorHash16Ex32x8) {
+            if (!BuildChm01Hash16GroupFunction(&JitContext,
+                                               "PerfectHashJitHash16Ex32x8",
+                                               Hash16Function,
+                                               Hash16FunctionType,
+                                               8)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    if (CompileHashEx32x16) {
+        if (CompileVectorHashEx32x16) {
+            if (!BuildChm01HashVectorFunction(&JitContext,
+                                              "PerfectHashJitHashEx32x16Vector",
+                                              16)) {
+                CompileVectorHashEx32x16 = FALSE;
+            }
+        }
+
+        if (!CompileVectorHashEx32x16) {
+            if (!BuildChm01HashGroupFunction(&JitContext,
+                                             "PerfectHashJitHashEx32x16",
+                                             HashFunction,
+                                             HashFunctionType,
+                                             16)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    if (CompileHash16Ex32x16) {
+        if (CompileVectorHash16Ex32x16) {
+            if (!BuildChm01Hash16VectorFunction(
+                    &JitContext,
+                    "PerfectHashJitHash16Ex32x16Vector",
+                    16)) {
+                CompileVectorHash16Ex32x16 = FALSE;
+            }
+        }
+
+        if (!CompileVectorHash16Ex32x16) {
+            if (!BuildChm01Hash16GroupFunction(&JitContext,
+                                               "PerfectHashJitHash16Ex32x16",
+                                               Hash16Function,
+                                               Hash16FunctionType,
+                                               16)) {
+                Result = PH_E_TABLE_COMPILATION_FAILED;
+                goto Error;
+            }
+        }
+    }
+
+    DumpJitModuleIfEnabled(Module, TargetMachine);
+
+    if (LLVMVerifyModule(Module,
+                         LLVMReturnStatusAction,
+                         &ErrorMessage) != 0) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
+
+    LLVMInitializeMCJITCompilerOptions(&McjitOptions,
+                                       sizeof(McjitOptions));
+    McjitOptions.OptLevel = 3;
+    if (LLVMCreateMCJITCompilerForModule(&Engine,
+                                         Module,
+                                         &McjitOptions,
+                                         sizeof(McjitOptions),
+                                         &ErrorMessage) != 0) {
+        Result = PH_E_TABLE_COMPILATION_FAILED;
+        goto Error;
+    }
+
+    if (CompileHashEx) {
+        HashJit->HashExFunction = (PVOID)(ULONG_PTR)
+            LLVMGetFunctionAddress(Engine, "PerfectHashJitHashEx");
+        if (!HashJit->HashExFunction) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.HashExCompiled = TRUE;
+    }
+
+    if (CompileHashEx32x4) {
+        if (CompileVectorHashEx32x4) {
+            HashJit->HashEx32x4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHashEx32x4Vector");
+        } else {
+            HashJit->HashEx32x4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHashEx32x4");
+        }
+        if (!HashJit->HashEx32x4Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.HashEx32x4Compiled = TRUE;
+        HashJit->Flags.HashEx32x4Vector = (CompileVectorHashEx32x4 != FALSE);
+    }
+
+    if (CompileHashEx32x8) {
+        if (CompileVectorHashEx32x8) {
+            HashJit->HashEx32x8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHashEx32x8Vector");
+        } else {
+            HashJit->HashEx32x8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHashEx32x8");
+        }
+        if (!HashJit->HashEx32x8Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.HashEx32x8Compiled = TRUE;
+        HashJit->Flags.HashEx32x8Vector = (CompileVectorHashEx32x8 != FALSE);
+    }
+
+    if (CompileHashEx32x16) {
+        if (CompileVectorHashEx32x16) {
+            HashJit->HashEx32x16Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHashEx32x16Vector");
+        } else {
+            HashJit->HashEx32x16Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHashEx32x16");
+        }
+        if (!HashJit->HashEx32x16Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.HashEx32x16Compiled = TRUE;
+        HashJit->Flags.HashEx32x16Vector =
+            (CompileVectorHashEx32x16 != FALSE);
+    }
+
+    if (CompileHash16Ex) {
+        HashJit->Hash16ExFunction = (PVOID)(ULONG_PTR)
+            LLVMGetFunctionAddress(Engine, "PerfectHashJitHash16Ex");
+        if (!HashJit->Hash16ExFunction) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.Hash16ExCompiled = TRUE;
+    }
+
+    if (CompileHash16Ex32x4) {
+        if (CompileVectorHash16Ex32x4) {
+            HashJit->Hash16Ex32x4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHash16Ex32x4Vector");
+        } else {
+            HashJit->Hash16Ex32x4Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHash16Ex32x4");
+        }
+        if (!HashJit->Hash16Ex32x4Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.Hash16Ex32x4Compiled = TRUE;
+        HashJit->Flags.Hash16Ex32x4Vector =
+            (CompileVectorHash16Ex32x4 != FALSE);
+    }
+
+    if (CompileHash16Ex32x8) {
+        if (CompileVectorHash16Ex32x8) {
+            HashJit->Hash16Ex32x8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHash16Ex32x8Vector");
+        } else {
+            HashJit->Hash16Ex32x8Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHash16Ex32x8");
+        }
+        if (!HashJit->Hash16Ex32x8Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.Hash16Ex32x8Compiled = TRUE;
+        HashJit->Flags.Hash16Ex32x8Vector =
+            (CompileVectorHash16Ex32x8 != FALSE);
+    }
+
+    if (CompileHash16Ex32x16) {
+        if (CompileVectorHash16Ex32x16) {
+            HashJit->Hash16Ex32x16Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHash16Ex32x16Vector");
+        } else {
+            HashJit->Hash16Ex32x16Function = (PVOID)(ULONG_PTR)
+                LLVMGetFunctionAddress(Engine,
+                                       "PerfectHashJitHash16Ex32x16");
+        }
+        if (!HashJit->Hash16Ex32x16Function) {
+            Result = PH_E_TABLE_COMPILATION_FAILED;
+            goto Error;
+        }
+        HashJit->Flags.Hash16Ex32x16Compiled = TRUE;
+        HashJit->Flags.Hash16Ex32x16Vector =
+            (CompileVectorHash16Ex32x16 != FALSE);
+    }
+
+    HashJit->Seed1 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed1");
+    HashJit->Seed2 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed2");
+    HashJit->Seed3 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3");
+    HashJit->Seed3Byte1 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte1");
+    HashJit->Seed3Byte2 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte2");
+    HashJit->Seed3Byte3 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte3");
+    HashJit->Seed3Byte4 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed3Byte4");
+    HashJit->Seed4 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed4");
+    HashJit->Seed5 = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashSeed5");
+    HashJit->HashMask = (PULONG)(ULONG_PTR)
+        LLVMGetGlobalValueAddress(Engine, "PerfectHashJitHashMask");
+
+    HashJit->ExecutionEngine = Engine;
+    HashJit->Context = Context;
+    Engine = NULL;
+    Context = NULL;
+    Module = NULL;
+
+    Result = S_OK;
+
+Error:
+
+    if (ErrorMessage) {
+        LLVMDisposeMessage(ErrorMessage);
+        ErrorMessage = NULL;
+    }
+
+    if (Builder) {
+        LLVMDisposeBuilder(Builder);
+        Builder = NULL;
+    }
+
+    if (Engine) {
+        LLVMDisposeExecutionEngine(Engine);
+        Engine = NULL;
+    }
+
+    if (Module) {
+        LLVMDisposeModule(Module);
+        Module = NULL;
+    }
+
+    if (Context) {
+        LLVMContextDispose(Context);
+        Context = NULL;
+    }
+
+    if (TargetData) {
+        LLVMDisposeTargetData(TargetData);
+        TargetData = NULL;
+    }
+
+    if (TargetMachine) {
+        LLVMDisposeTargetMachine(TargetMachine);
+        TargetMachine = NULL;
+    }
+
+    if (ClampedFeatures) {
+        free(ClampedFeatures);
+        ClampedFeatures = NULL;
+    }
+
+    if (HostCpuFeatures) {
+        LLVMDisposeMessage(HostCpuFeatures);
+        HostCpuFeatures = NULL;
+    }
+
+    if (HostCpuName) {
+        LLVMDisposeMessage(HostCpuName);
+        HostCpuName = NULL;
+    }
+
+    if (DataLayout) {
+        LLVMDisposeMessage(DataLayout);
+        DataLayout = NULL;
+    }
+
+    if (TargetTriple) {
+        LLVMDisposeMessage(TargetTriple);
+        TargetTriple = NULL;
+    }
+
+    return Result;
+}
+
 _Use_decl_annotations_
 HRESULT
 PerfectHashTableCompileJit(
@@ -2702,10 +5243,6 @@ PerfectHashTableCompileJit(
 
     if (!ARGUMENT_PRESENT(Table)) {
         return E_POINTER;
-    }
-
-    if (!Table->Flags.Created) {
-        return PH_E_TABLE_NOT_CREATED;
     }
 
     if (!ARGUMENT_PRESENT(Table->TableInfoOnDisk)) {
@@ -2802,6 +5339,134 @@ PerfectHashTableCompileJit(
     return S_OK;
 }
 
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableCompileHashJit(
+    PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlagsPointer
+    )
+{
+    HRESULT Result = S_OK;
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+    PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags;
+
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    if (!ARGUMENT_PRESENT(Table->TableInfoOnDisk)) {
+        return PH_E_INVARIANT_CHECK_FAILED;
+    }
+
+    if (Table->AlgorithmId != PerfectHashChm01AlgorithmId) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    if (Table->TableInfoOnDisk->KeySizeInBytes != sizeof(ULONG)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    if (Table->MaskFunctionId != PerfectHashAndMaskFunctionId) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    if (!IsSupportedJitHashFunctionId(Table->HashFunctionId)) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    if (ARGUMENT_PRESENT(CompileFlagsPointer)) {
+        Result = IsValidTableCompileFlags(CompileFlagsPointer);
+        if (FAILED(Result)) {
+            return PH_E_INVALID_TABLE_COMPILE_FLAGS;
+        }
+        CompileFlags.AsULong = CompileFlagsPointer->AsULong;
+    } else {
+        CompileFlags.AsULong = 0;
+    }
+
+    CompileFlags.Jit = TRUE;
+    if (!CompileFlags.JitBackendLlvm && !CompileFlags.JitBackendRawDog) {
+        CompileFlags.JitBackendLlvm = TRUE;
+    }
+
+    if (Table->HashJit) {
+        PerfectHashTableHashJitRundown(Table);
+    }
+
+    Allocator = Table->Allocator;
+    HashJit = (PPERFECT_HASH_TABLE_HASH_JIT)(
+        Allocator->Vtbl->Calloc(
+            Allocator,
+            1,
+            sizeof(*HashJit)
+        )
+    );
+
+    if (!HashJit) {
+        return E_OUTOFMEMORY;
+    }
+
+    Table->HashJit = HashJit;
+    HashJit->SizeOfStruct = sizeof(*HashJit);
+    HashJit->AlgorithmId = Table->AlgorithmId;
+    HashJit->HashFunctionId = Table->HashFunctionId;
+    HashJit->MaskFunctionId = Table->MaskFunctionId;
+    HashJit->OriginalQueryInterface = Table->Vtbl->QueryInterface;
+    HashJit->Interface.Table = Table;
+    HashJit->Interface.Vtbl = &PerfectHashTableHashJitInterfaceVtbl;
+    Table->Vtbl->QueryInterface = PerfectHashTableQueryInterfaceJit;
+
+    Result = CompileChm01HashJit(Table, HashJit, &CompileFlags);
+    if (FAILED(Result)) {
+        PerfectHashTableHashJitRundown(Table);
+        return Result;
+    }
+
+    HashJit->Flags.BackendLlvm = TRUE;
+    HashJit->Flags.Valid = TRUE;
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+VOID
+PerfectHashTableHashJitRundown(
+    PPERFECT_HASH_TABLE Table
+    )
+{
+    PALLOCATOR Allocator;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Table)) {
+        return;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit)) {
+        return;
+    }
+
+    if (HashJit->OriginalQueryInterface) {
+        Table->Vtbl->QueryInterface = HashJit->OriginalQueryInterface;
+    }
+
+    if (HashJit->ExecutionEngine) {
+        LLVMDisposeExecutionEngine(
+            (LLVMExecutionEngineRef)HashJit->ExecutionEngine
+        );
+        HashJit->ExecutionEngine = NULL;
+    }
+
+    if (HashJit->Context) {
+        LLVMContextDispose((LLVMContextRef)HashJit->Context);
+        HashJit->Context = NULL;
+    }
+
+    Allocator = Table->Allocator;
+    Allocator->Vtbl->FreePointer(Allocator, (PVOID *)&Table->HashJit);
+}
+
 #else
 
 _Use_decl_annotations_
@@ -2817,6 +5482,28 @@ PerfectHashTableCompileJit(
     return PH_E_NOT_IMPLEMENTED;
 }
 
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableCompileHashJit(
+    PPERFECT_HASH_TABLE Table,
+    PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlagsPointer
+    )
+{
+    UNREFERENCED_PARAMETER(Table);
+    UNREFERENCED_PARAMETER(CompileFlagsPointer);
+
+    return PH_E_NOT_IMPLEMENTED;
+}
+
+_Use_decl_annotations_
+VOID
+PerfectHashTableHashJitRundown(
+    PPERFECT_HASH_TABLE Table
+    )
+{
+    UNREFERENCED_PARAMETER(Table);
+}
+
 #endif
 
 _Use_decl_annotations_
@@ -2829,6 +5516,7 @@ PerfectHashTableQueryInterfaceJit(
 {
     BOOLEAN Match;
     PPERFECT_HASH_TABLE_JIT Jit;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
 
     if (!ARGUMENT_PRESENT(Interface)) {
         return E_POINTER;
@@ -2857,6 +5545,35 @@ PerfectHashTableQueryInterfaceJit(
         *Interface = &Jit->Interface;
         Table->Vtbl->AddRef(Table);
         return S_OK;
+    }
+
+    //
+    // Hash JIT interface.
+    //
+
+#ifdef __cplusplus
+    Match = InlineIsEqualGUID(InterfaceId,
+                              IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);
+#else
+    Match = InlineIsEqualGUID(InterfaceId,
+                              &IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);
+#endif
+
+    if (Match) {
+        HashJit = Table->HashJit;
+        if (!ARGUMENT_PRESENT(HashJit) || !HashJit->Flags.Valid) {
+            return E_NOINTERFACE;
+        }
+
+        *Interface = &HashJit->Interface;
+        Table->Vtbl->AddRef(Table);
+        return S_OK;
+    }
+
+    HashJit = Table->HashJit;
+    if (ARGUMENT_PRESENT(HashJit) &&
+        ARGUMENT_PRESENT(HashJit->OriginalQueryInterface)) {
+        return HashJit->OriginalQueryInterface(Table, InterfaceId, Interface);
     }
 
     Jit = Table->Jit;
@@ -3627,6 +6344,460 @@ PerfectHashTableJitInterfaceGetInfo(
         Info->TargetFeatures[sizeof(Info->TargetFeatures) - 1] = '\0';
     }
 
+    return S_OK;
+}
+
+static
+HRESULT
+UpdateHashJitSeedsAndMask(
+    _In_ PPERFECT_HASH_TABLE_HASH_JIT HashJit,
+    _In_reads_(5) PULONG Seeds,
+    _In_ ULONG Mask
+    )
+{
+    ULONG Seed3;
+
+    if (!ARGUMENT_PRESENT(HashJit) || !ARGUMENT_PRESENT(Seeds)) {
+        return E_POINTER;
+    }
+
+    if (HashJit->Seed1) {
+        *HashJit->Seed1 = Seeds[0];
+    }
+    if (HashJit->Seed2) {
+        *HashJit->Seed2 = Seeds[1];
+    }
+    Seed3 = Seeds[2];
+    if (HashJit->Seed3) {
+        *HashJit->Seed3 = Seed3;
+    }
+    if (HashJit->Seed3Byte1) {
+        *HashJit->Seed3Byte1 = (Seed3 & 0xff);
+    }
+    if (HashJit->Seed3Byte2) {
+        *HashJit->Seed3Byte2 = ((Seed3 >> 8) & 0xff);
+    }
+    if (HashJit->Seed3Byte3) {
+        *HashJit->Seed3Byte3 = ((Seed3 >> 16) & 0xff);
+    }
+    if (HashJit->Seed3Byte4) {
+        *HashJit->Seed3Byte4 = ((Seed3 >> 24) & 0xff);
+    }
+    if (HashJit->Seed4) {
+        *HashJit->Seed4 = Seeds[3];
+    }
+    if (HashJit->Seed5) {
+        *HashJit->Seed5 = Seeds[4];
+    }
+    if (HashJit->HashMask) {
+        *HashJit->HashMask = Mask;
+    }
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceQueryInterface(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    REFIID InterfaceId,
+    PVOID *Interface
+    )
+{
+    if (!ARGUMENT_PRESENT(Jit) ||
+        !ARGUMENT_PRESENT(Jit->Table) ||
+        !ARGUMENT_PRESENT(Interface)) {
+        return E_POINTER;
+    }
+
+    return Jit->Table->Vtbl->QueryInterface(Jit->Table,
+                                            InterfaceId,
+                                            Interface);
+}
+
+_Use_decl_annotations_
+ULONG
+PerfectHashTableHashJitInterfaceAddRef(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit
+    )
+{
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
+        return 0;
+    }
+
+    return Jit->Table->Vtbl->AddRef(Jit->Table);
+}
+
+_Use_decl_annotations_
+ULONG
+PerfectHashTableHashJitInterfaceRelease(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit
+    )
+{
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
+        return 0;
+    }
+
+    return Jit->Table->Vtbl->Release(Jit->Table);
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceCreateInstance(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PIUNKNOWN UnknownOuter,
+    REFIID InterfaceId,
+    PVOID *Interface
+    )
+{
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
+        return E_POINTER;
+    }
+
+    return Jit->Table->Vtbl->CreateInstance(Jit->Table,
+                                            UnknownOuter,
+                                            InterfaceId,
+                                            Interface);
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceLockServer(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    BOOL Lock
+    )
+{
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Jit->Table)) {
+        return E_POINTER;
+    }
+
+    return Jit->Table->Vtbl->LockServer(Jit->Table, Lock);
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHashEx(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND *HashEx
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(HashEx)) {
+        return E_POINTER;
+    }
+
+    *HashEx = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.HashExCompiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *HashEx = (PPERFECT_HASH_SEEDED_HASH_EX_BOUND)HashJit->HashExFunction;
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHashEx32x4(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4 *HashEx32x4
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(HashEx32x4)) {
+        return E_POINTER;
+    }
+
+    *HashEx32x4 = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.HashEx32x4Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *HashEx32x4 =
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X4)HashJit->HashEx32x4Function;
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHashEx32x8(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8 *HashEx32x8
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(HashEx32x8)) {
+        return E_POINTER;
+    }
+
+    *HashEx32x8 = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.HashEx32x8Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *HashEx32x8 =
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X8)HashJit->HashEx32x8Function;
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHashEx32x16(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16 *HashEx32x16
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(HashEx32x16)) {
+        return E_POINTER;
+    }
+
+    *HashEx32x16 = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.HashEx32x16Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *HashEx32x16 =
+        (PPERFECT_HASH_SEEDED_HASH_EX_BOUND32X16)HashJit->HashEx32x16Function;
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHash16Ex(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND *Hash16Ex
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Hash16Ex)) {
+        return E_POINTER;
+    }
+
+    *Hash16Ex = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.Hash16ExCompiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *Hash16Ex =
+        (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND)HashJit->Hash16ExFunction;
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHash16Ex32x4(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4 *Hash16Ex32x4
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Hash16Ex32x4)) {
+        return E_POINTER;
+    }
+
+    *Hash16Ex32x4 = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.Hash16Ex32x4Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *Hash16Ex32x4 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X4)
+        HashJit->Hash16Ex32x4Function;
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHash16Ex32x8(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8 *Hash16Ex32x8
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Hash16Ex32x8)) {
+        return E_POINTER;
+    }
+
+    *Hash16Ex32x8 = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.Hash16Ex32x8Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *Hash16Ex32x8 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X8)
+        HashJit->Hash16Ex32x8Function;
+    return S_OK;
+}
+
+_Use_decl_annotations_
+HRESULT
+PerfectHashTableHashJitInterfaceBindHash16Ex32x16(
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE Jit,
+    PULONG Seeds,
+    ULONG Mask,
+    PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16 *Hash16Ex32x16
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
+
+    if (!ARGUMENT_PRESENT(Jit) || !ARGUMENT_PRESENT(Hash16Ex32x16)) {
+        return E_POINTER;
+    }
+
+    *Hash16Ex32x16 = NULL;
+
+    Table = Jit->Table;
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_POINTER;
+    }
+
+    HashJit = Table->HashJit;
+    if (!ARGUMENT_PRESENT(HashJit) ||
+        !HashJit->Flags.Valid ||
+        !HashJit->Flags.Hash16Ex32x16Compiled) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
+    Result = UpdateHashJitSeedsAndMask(HashJit, Seeds, Mask);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    *Hash16Ex32x16 = (PPERFECT_HASH_SEEDED_HASH16_EX_BOUND32X16)
+        HashJit->Hash16Ex32x16Function;
     return S_OK;
 }
 

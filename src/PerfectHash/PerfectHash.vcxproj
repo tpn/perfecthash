@@ -233,6 +233,7 @@
     <ClCompile Include="Chm01Index.c" />
     <ClCompile Include="ChmOnline01.c" />
     <ClCompile Include="ChmOnline01Stub.c" />
+    <ClCompile Include="ChmOnline01HashJit.c" />
     <ClCompile Include="Chm01.c" />
     <ClCompile Include="Chm01Shared.c" />
     <ClCompile Include="Chunk.c" />

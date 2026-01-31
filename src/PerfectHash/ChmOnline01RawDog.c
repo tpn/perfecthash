@@ -3664,6 +3664,7 @@ RawDogTableQueryInterfaceJit(
 {
     BOOLEAN Match;
     PPERFECT_HASH_TABLE_JIT Jit;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
 
     if (!ARGUMENT_PRESENT(Interface)) {
         return E_POINTER;
@@ -3692,6 +3693,35 @@ RawDogTableQueryInterfaceJit(
         *Interface = &Jit->Interface;
         Table->Vtbl->AddRef(Table);
         return S_OK;
+    }
+
+    //
+    // Hash JIT interface.
+    //
+
+#ifdef __cplusplus
+    Match = InlineIsEqualGUID(InterfaceId,
+                              IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);
+#else
+    Match = InlineIsEqualGUID(InterfaceId,
+                              &IID_PERFECT_HASH_TABLE_HASH_JIT_INTERFACE);
+#endif
+
+    if (Match) {
+        HashJit = Table->HashJit;
+        if (!ARGUMENT_PRESENT(HashJit) || !HashJit->Flags.Valid) {
+            return E_NOINTERFACE;
+        }
+
+        *Interface = &HashJit->Interface;
+        Table->Vtbl->AddRef(Table);
+        return S_OK;
+    }
+
+    HashJit = Table->HashJit;
+    if (ARGUMENT_PRESENT(HashJit) &&
+        ARGUMENT_PRESENT(HashJit->OriginalQueryInterface)) {
+        return HashJit->OriginalQueryInterface(Table, InterfaceId, Interface);
     }
 
     Jit = Table->Jit;

@@ -156,6 +156,7 @@ Return Value:
     // Release any JIT resources before freeing table data.
     //
 
+    PerfectHashTableHashJitRundown(Table);
     PerfectHashTableJitRundown(Table);
 
     //

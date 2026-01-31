@@ -5179,3 +5179,12 @@ Abstract:
 //
 #define PH_E_LLVM_BACKEND_NOT_FOUND      ((HRESULT)0xE004041CL)
 
+
+//
+// MessageId: PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST
+//
+// MessageText:
+//
+// ---HashAllKeysFirst is required when specifying --TryUseJitHashFunction.
+//
+#define PH_E_TRY_USE_JIT_HASH_FUNC_FLAG_REQUIRE_HASH_ALL_KEYS_FIRST ((HRESULT)0xE004041DL)

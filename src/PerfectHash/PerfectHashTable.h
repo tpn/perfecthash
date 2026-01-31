@@ -228,6 +228,132 @@ C_ASSERT(sizeof(PERFECT_HASH_TABLE_JIT_FLAGS) == sizeof(ULONG));
 typedef PERFECT_HASH_TABLE_JIT_FLAGS *PPERFECT_HASH_TABLE_JIT_FLAGS;
 
 //
+// Define the PERFECT_HASH_TABLE_HASH_JIT_FLAGS structure.
+//
+
+typedef union _PERFECT_HASH_TABLE_HASH_JIT_FLAGS {
+    struct _Struct_size_bytes_(sizeof(ULONG)) {
+
+        //
+        // When set, indicates the hash JIT state is initialized and usable.
+        //
+
+        ULONG Valid:1;
+
+        //
+        // When set, indicates the LLVM backend was used for JIT compilation.
+        //
+
+        ULONG BackendLlvm:1;
+
+        //
+        // When set, indicates the RawDog backend was used for JIT compilation.
+        //
+
+        ULONG BackendRawDog:1;
+
+        //
+        // When set, indicates the bound HashEx() routine has been compiled.
+        //
+
+        ULONG HashExCompiled:1;
+
+        //
+        // When set, indicates the bound HashEx32x4() routine has been compiled.
+        //
+
+        ULONG HashEx32x4Compiled:1;
+
+        //
+        // When set, indicates the bound HashEx32x8() routine has been compiled.
+        //
+
+        ULONG HashEx32x8Compiled:1;
+
+        //
+        // When set, indicates the bound HashEx32x16() routine has been compiled.
+        //
+
+        ULONG HashEx32x16Compiled:1;
+
+        //
+        // When set, indicates the HashEx32x4() routine uses vector IR.
+        //
+
+        ULONG HashEx32x4Vector:1;
+
+        //
+        // When set, indicates the HashEx32x8() routine uses vector IR.
+        //
+
+        ULONG HashEx32x8Vector:1;
+
+        //
+        // When set, indicates the HashEx32x16() routine uses vector IR.
+        //
+
+        ULONG HashEx32x16Vector:1;
+
+        //
+        // When set, indicates the bound Hash16Ex() routine has been compiled.
+        //
+
+        ULONG Hash16ExCompiled:1;
+
+        //
+        // When set, indicates the bound Hash16Ex32x4() routine has been
+        // compiled.
+        //
+
+        ULONG Hash16Ex32x4Compiled:1;
+
+        //
+        // When set, indicates the bound Hash16Ex32x8() routine has been
+        // compiled.
+        //
+
+        ULONG Hash16Ex32x8Compiled:1;
+
+        //
+        // When set, indicates the bound Hash16Ex32x16() routine has been
+        // compiled.
+        //
+
+        ULONG Hash16Ex32x16Compiled:1;
+
+        //
+        // When set, indicates the Hash16Ex32x4() routine uses vector IR.
+        //
+
+        ULONG Hash16Ex32x4Vector:1;
+
+        //
+        // When set, indicates the Hash16Ex32x8() routine uses vector IR.
+        //
+
+        ULONG Hash16Ex32x8Vector:1;
+
+        //
+        // When set, indicates the Hash16Ex32x16() routine uses vector IR.
+        //
+
+        ULONG Hash16Ex32x16Vector:1;
+
+        //
+        // Unused bits.
+        //
+
+        ULONG Unused:15;
+    };
+
+    LONG AsLong;
+    ULONG AsULong;
+} PERFECT_HASH_TABLE_HASH_JIT_FLAGS;
+C_ASSERT(sizeof(PERFECT_HASH_TABLE_HASH_JIT_FLAGS) == sizeof(ULONG));
+typedef PERFECT_HASH_TABLE_HASH_JIT_FLAGS
+      *PPERFECT_HASH_TABLE_HASH_JIT_FLAGS;
+
+//
 // Define the PERFECT_HASH_TABLE_JIT_INTERFACE structure used for QueryInterface
 // exposure of JIT-compiled routines.
 //
@@ -238,6 +364,18 @@ typedef struct _PERFECT_HASH_TABLE_JIT_INTERFACE {
 } PERFECT_HASH_TABLE_JIT_INTERFACE;
 typedef PERFECT_HASH_TABLE_JIT_INTERFACE
       *PPERFECT_HASH_TABLE_JIT_INTERFACE;
+
+//
+// Define the PERFECT_HASH_TABLE_HASH_JIT_INTERFACE structure used for
+// QueryInterface exposure of hash JIT-compiled routines.
+//
+
+typedef struct _PERFECT_HASH_TABLE_HASH_JIT_INTERFACE {
+    PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE_VTBL Vtbl;
+    struct _PERFECT_HASH_TABLE *Table;
+} PERFECT_HASH_TABLE_HASH_JIT_INTERFACE;
+typedef PERFECT_HASH_TABLE_HASH_JIT_INTERFACE
+      *PPERFECT_HASH_TABLE_HASH_JIT_INTERFACE;
 
 //
 // Define the PERFECT_HASH_TABLE_JIT structure.
@@ -275,6 +413,43 @@ typedef struct _PERFECT_HASH_TABLE_JIT {
     PERFECT_HASH_TABLE_JIT_INTERFACE Interface;
 } PERFECT_HASH_TABLE_JIT;
 typedef PERFECT_HASH_TABLE_JIT *PPERFECT_HASH_TABLE_JIT;
+
+//
+// Define the PERFECT_HASH_TABLE_HASH_JIT structure.
+//
+
+typedef struct _PERFECT_HASH_TABLE_HASH_JIT {
+    ULONG SizeOfStruct;
+    PERFECT_HASH_TABLE_HASH_JIT_FLAGS Flags;
+    PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
+    PERFECT_HASH_ALGORITHM_ID AlgorithmId;
+    PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+    PERFECT_HASH_MASK_FUNCTION_ID MaskFunctionId;
+    ULONGLONG Padding;
+    PVOID ExecutionEngine;
+    PVOID Context;
+    PULONG Seed1;
+    PULONG Seed2;
+    PULONG Seed3;
+    PULONG Seed4;
+    PULONG Seed5;
+    PULONG Seed3Byte1;
+    PULONG Seed3Byte2;
+    PULONG Seed3Byte3;
+    PULONG Seed3Byte4;
+    PULONG HashMask;
+    PVOID HashExFunction;
+    PVOID HashEx32x4Function;
+    PVOID HashEx32x8Function;
+    PVOID HashEx32x16Function;
+    PVOID Hash16ExFunction;
+    PVOID Hash16Ex32x4Function;
+    PVOID Hash16Ex32x8Function;
+    PVOID Hash16Ex32x16Function;
+    PPERFECT_HASH_TABLE_QUERY_INTERFACE OriginalQueryInterface;
+    PERFECT_HASH_TABLE_HASH_JIT_INTERFACE Interface;
+} PERFECT_HASH_TABLE_HASH_JIT;
+typedef PERFECT_HASH_TABLE_HASH_JIT *PPERFECT_HASH_TABLE_HASH_JIT;
 
 #define NoFileIo(Table) ((Table)->TableCreateFlags.NoFileIo == TRUE)
 #define IsParanoid(Table) ((Table)->TableCreateFlags.Paranoid == TRUE)
@@ -728,6 +903,7 @@ typedef struct _Struct_size_bytes_(SizeOfStruct) _PERFECT_HASH_TABLE {
     //
 
     PPERFECT_HASH_TABLE_JIT Jit;
+    PPERFECT_HASH_TABLE_HASH_JIT HashJit;
 
 } PERFECT_HASH_TABLE;
 typedef PERFECT_HASH_TABLE *PPERFECT_HASH_TABLE;
