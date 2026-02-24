@@ -992,6 +992,8 @@ Return Value:
 
 --*/
 {
+    KEY Key = 0;
+    EDGE Edge = 0;
     ULONG Mask;
     ULONG Remaining;
     HRESULT Result;
@@ -1162,6 +1164,8 @@ Return Value:
 
 --*/
 {
+    KEY Key = 0;
+    EDGE Edge = 0;
     ULONG Mask;
     ULONG Remaining;
     HRESULT Result;

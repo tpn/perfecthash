@@ -48,11 +48,11 @@ include PerfectHash.inc
         mov     r10, 0A1A1A1A1A1A1A1A1h             ; Assigned base address.
 
         mov     edx, ecx                           ; Copy key into edx.
-        imul    eax, ecx, 0B1C2D3E4h               ; Vertex1 = Key * Seed1.
+        imul    eax, ecx, -04E3D2C1Ch              ; Vertex1 = Key * Seed1.
         mov     ecx, 0D31BEF20h
         shr     eax, cl                            ; Vertex1 >>= Seed3_Byte1.
 
-        imul    edx, edx, 0C2D3E4F5h               ; Vertex2 = Key * Seed2.
+        imul    edx, edx, -03D2C1B0Bh              ; Vertex2 = Key * Seed2.
         mov     ecx, 0E4F50617h
         shr     edx, cl                            ; Vertex2 >>= Seed3_Byte2.
 
