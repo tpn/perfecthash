@@ -259,6 +259,9 @@ RawDogHostHasAvx512(
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX512F == FALSE ||
+        Rtl->CpuFeatures.AVX512DQ == FALSE ||
+        Rtl->CpuFeatures.AVX512BW == FALSE ||
+        Rtl->CpuFeatures.AVX512VL == FALSE ||
         !RawDogOsAvx512Enabled(Rtl)) {
         return FALSE;
     }
@@ -346,6 +349,7 @@ typedef struct _RAW_DOG_PATCH_ENTRY {
     ULONGLONG Value;
     PCSZ Name;
     ULONG SizeInBytes;
+    ULONG Reserved;
 } RAW_DOG_PATCH_ENTRY;
 
 #if defined(PH_RAWDOG_X64)
@@ -898,6 +902,20 @@ CompileChm01IndexJitRawDog(
                 "Seed2Imm",
                 sizeof(ULONG)
             };
+#if defined(PH_RAWDOG_MSR_ONLY)
+            Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE1,
+                (ULONGLONG)Seed3Bytes.Byte1,
+                "Seed3Byte1Imm",
+                sizeof(ULONG)
+            };
+            Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE2,
+                (ULONGLONG)Seed3Bytes.Byte2,
+                "Seed3Byte2Imm",
+                sizeof(ULONG)
+            };
+#endif
             Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
                 RAWDOG_SENTINEL_IMM32_HASH_MASK,
                 (ULONGLONG)Table->HashMask,
@@ -1645,6 +1663,10 @@ CompileChm01IndexVectorJitRawDog(
             }
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate1RXFunctionId) {
+            if (!AllowAvx512 || !HostHasAvx512) {
+                return PH_E_NOT_IMPLEMENTED;
+            }
+
             if (UseAssigned16) {
                 SourceCode = (PBYTE)
                     PerfectHashJitRawDogMulshrolate1RX16Index32x16_x64;
@@ -2134,6 +2156,18 @@ CompileChm01IndexVectorJitRawDog(
                 RAWDOG_SENTINEL_IMM32_SEED2,
                 (ULONGLONG)TableInfo->Seed2,
                 "Seed2Imm",
+                sizeof(ULONG)
+            };
+            ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE1,
+                (ULONGLONG)Seed3Bytes.Byte1,
+                "Seed3Byte1Imm",
+                sizeof(ULONG)
+            };
+            ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE2,
+                (ULONGLONG)Seed3Bytes.Byte2,
+                "Seed3Byte2Imm",
                 sizeof(ULONG)
             };
             ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
@@ -2923,7 +2957,7 @@ CompileChm01IndexVectorJitRawDog(
     Rtl = Table->Rtl;
     HostHasAvx = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX != FALSE);
     HostHasAvx2 = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX2 != FALSE);
-    HostHasAvx512 = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX512F != FALSE);
+    HostHasAvx512 = RawDogHostHasAvx512(Rtl);
 
     RequestedIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     AllowAvx512 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
@@ -2948,11 +2982,15 @@ CompileChm01IndexVectorJitRawDog(
 #endif
 
     if (CompileIndex32x16) {
+        if (!AllowAvx2 || !HostHasAvx2) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
         if (Table->HashFunctionId ==
             PerfectHashHashMultiplyShiftRFunctionId) {
             if (UseAssigned16) {
 #if defined(PH_LINUX)
-                if (VectorVersion >= 2) {
+                if (VectorVersion >= 2 && AllowAvx512 && HostHasAvx512) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMultiplyShiftR16Index32x16Avx512_x64;
                     CodeSize = sizeof(
@@ -2970,7 +3008,7 @@ CompileChm01IndexVectorJitRawDog(
 #endif
             } else {
 #if defined(PH_LINUX)
-                if (VectorVersion >= 2) {
+                if (VectorVersion >= 2 && AllowAvx512 && HostHasAvx512) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMultiplyShiftRIndex32x16Avx512_x64;
                     CodeSize = sizeof(
@@ -3004,6 +3042,10 @@ CompileChm01IndexVectorJitRawDog(
             Jit->Flags.Index32x16Vector = TRUE;
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate1RXFunctionId) {
+            if (!AllowAvx512 || !HostHasAvx512) {
+                return PH_E_NOT_IMPLEMENTED;
+            }
+
             if (UseAssigned16) {
                 SourceCode = (PBYTE)
                     PerfectHashJitRawDogMulshrolate1RX16Index32x16_x64;

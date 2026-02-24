@@ -439,33 +439,6 @@ BuildSplatVectorConstant(
 
 static
 LLVMValueRef
-BuildSplatVectorValue(
-    _In_ PCHM01_JIT_CONTEXT Ctx,
-    _In_ LLVMTypeRef VectorType,
-    _In_ LLVMValueRef Scalar,
-    _In_ ULONG Lanes
-    )
-{
-    LLVMValueRef Result;
-    LLVMValueRef LaneConst;
-    ULONG Index;
-
-    Result = LLVMGetUndef(VectorType);
-
-    for (Index = 0; Index < Lanes; Index++) {
-        LaneConst = LLVMConstInt(Ctx->I32, Index, FALSE);
-        Result = LLVMBuildInsertElement(Ctx->Builder,
-                                        Result,
-                                        Scalar,
-                                        LaneConst,
-                                        "splat");
-    }
-
-    return Result;
-}
-
-static
-LLVMValueRef
 AddGlobalI32(
     _In_ LLVMModuleRef Module,
     _In_ LLVMTypeRef I32,
@@ -690,6 +663,33 @@ typedef struct _CHM01_JIT_CONTEXT {
     BYTE Padding1[3];
 } CHM01_JIT_CONTEXT;
 typedef CHM01_JIT_CONTEXT *PCHM01_JIT_CONTEXT;
+
+static
+LLVMValueRef
+BuildSplatVectorValue(
+    _In_ PCHM01_JIT_CONTEXT Ctx,
+    _In_ LLVMTypeRef VectorType,
+    _In_ LLVMValueRef Scalar,
+    _In_ ULONG Lanes
+    )
+{
+    LLVMValueRef Result;
+    LLVMValueRef LaneConst;
+    ULONG Index;
+
+    Result = LLVMGetUndef(VectorType);
+
+    for (Index = 0; Index < Lanes; Index++) {
+        LaneConst = LLVMConstInt(Ctx->I32, Index, FALSE);
+        Result = LLVMBuildInsertElement(Ctx->Builder,
+                                        Result,
+                                        Scalar,
+                                        LaneConst,
+                                        "splat");
+    }
+
+    return Result;
+}
 
 FORCEINLINE
 LLVMValueRef
