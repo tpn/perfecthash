@@ -346,6 +346,7 @@ typedef struct _RAW_DOG_PATCH_ENTRY {
     ULONGLONG Value;
     PCSZ Name;
     ULONG SizeInBytes;
+    ULONG Reserved;
 } RAW_DOG_PATCH_ENTRY;
 
 #if defined(PH_RAWDOG_X64)
