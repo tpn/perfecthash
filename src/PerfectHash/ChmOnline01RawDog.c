@@ -2973,11 +2973,15 @@ CompileChm01IndexVectorJitRawDog(
 #endif
 
     if (CompileIndex32x16) {
+        if (!AllowAvx2 || !HostHasAvx2) {
+            return PH_E_NOT_IMPLEMENTED;
+        }
+
         if (Table->HashFunctionId ==
             PerfectHashHashMultiplyShiftRFunctionId) {
             if (UseAssigned16) {
 #if defined(PH_LINUX)
-                if (VectorVersion >= 2) {
+                if (VectorVersion >= 2 && AllowAvx512 && HostHasAvx512) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMultiplyShiftR16Index32x16Avx512_x64;
                     CodeSize = sizeof(
@@ -2995,7 +2999,7 @@ CompileChm01IndexVectorJitRawDog(
 #endif
             } else {
 #if defined(PH_LINUX)
-                if (VectorVersion >= 2) {
+                if (VectorVersion >= 2 && AllowAvx512 && HostHasAvx512) {
                     SourceCode = (PBYTE)
                         PerfectHashJitRawDogMultiplyShiftRIndex32x16Avx512_x64;
                     CodeSize = sizeof(
