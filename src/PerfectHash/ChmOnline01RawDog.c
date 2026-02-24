@@ -259,6 +259,9 @@ RawDogHostHasAvx512(
 {
     if (!ARGUMENT_PRESENT(Rtl) ||
         Rtl->CpuFeatures.AVX512F == FALSE ||
+        Rtl->CpuFeatures.AVX512DQ == FALSE ||
+        Rtl->CpuFeatures.AVX512BW == FALSE ||
+        Rtl->CpuFeatures.AVX512VL == FALSE ||
         !RawDogOsAvx512Enabled(Rtl)) {
         return FALSE;
     }
@@ -2954,7 +2957,7 @@ CompileChm01IndexVectorJitRawDog(
     Rtl = Table->Rtl;
     HostHasAvx = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX != FALSE);
     HostHasAvx2 = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX2 != FALSE);
-    HostHasAvx512 = (ARGUMENT_PRESENT(Rtl) && Rtl->CpuFeatures.AVX512F != FALSE);
+    HostHasAvx512 = RawDogHostHasAvx512(Rtl);
 
     RequestedIsa = (PERFECT_HASH_JIT_MAX_ISA_ID)CompileFlags->JitMaxIsa;
     AllowAvx512 = (RequestedIsa == PerfectHashJitMaxIsaAuto ||
