@@ -319,7 +319,7 @@ Return Value:
     // anything.
     //
 
-#if defined(_M_AMD64) || defined(_M_X64)
+#if (defined(_M_AMD64) || defined(_M_X64)) && !defined(PH_MAC)
     if (UseNonTemporalAvx2Routines(Table) &&
         Rtl->CpuFeatures.AVX2 != FALSE) {
 

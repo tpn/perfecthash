@@ -38,12 +38,14 @@ GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
 GRAPH_CALCULATE_ASSIGNED_MEMORY_COVERAGE
     GraphCalculateAssignedMemoryCoverage_AVX2;
 
+#if !defined(PH_MAC)
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX2;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftR_AVX512;
 
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX2;
 GRAPH_HASH_KEYS GraphHashKeysMultiplyShiftRX_AVX512;
 GRAPH_HASH_KEYS GraphHashKeys16MultiplyShiftRX_AVX512;
+#endif
 #endif
 
 GRAPH_HASH_KEYS GraphHashKeysJitBound;
@@ -212,7 +214,7 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
-#if defined(_M_AMD64) || defined(_M_X64)
+#if (defined(_M_AMD64) || defined(_M_X64)) && !defined(PH_MAC)
                     Graph->Vtbl->HashKeys =
                         GraphHashKeys16MultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
@@ -279,7 +281,7 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
-#if defined(_M_AMD64) || defined(_M_X64)
+#if (defined(_M_AMD64) || defined(_M_X64)) && !defined(PH_MAC)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
 #endif
@@ -287,7 +289,7 @@ Return Value:
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
-#if defined(_M_AMD64) || defined(_M_X64)
+#if (defined(_M_AMD64) || defined(_M_X64)) && !defined(PH_MAC)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftR_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
 #endif
@@ -298,7 +300,7 @@ Return Value:
                 if (TableCreateFlags.TryUseAvx512HashFunction &&
                     Rtl->CpuFeatures.AVX512F) {
 
-#if defined(_M_AMD64) || defined(_M_X64)
+#if (defined(_M_AMD64) || defined(_M_X64)) && !defined(PH_MAC)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX512;
                     Graph->Flags.UsedAvx512HashFunction = TRUE;
 #endif
@@ -306,7 +308,7 @@ Return Value:
                 } else if (TableCreateFlags.TryUseAvx2HashFunction &&
                            Rtl->CpuFeatures.AVX2) {
 
-#if defined(_M_AMD64) || defined(_M_X64)
+#if (defined(_M_AMD64) || defined(_M_X64)) && !defined(PH_MAC)
                     Graph->Vtbl->HashKeys = GraphHashKeysMultiplyShiftRX_AVX2;
                     Graph->Flags.UsedAvx2HashFunction = TRUE;
 #endif
