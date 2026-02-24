@@ -1,0 +1,12 @@
+# MultiplyShiftRX seed set for HologramWorld-31016.keys (offline PerfectHashCreate).
+# Generated: 2026-01-24
+# Command:
+#   PerfectHashCreate keys/HologramWorld-31016.keys /tmp/ph-msrx Chm01 MultiplyShiftRX And 0 --GraphImpl=3
+# Source CSV: /tmp/ph-msrx/PerfectHashTableCreate_AD543A03.csv
+# UsedAssigned16: Y
+
+Seed1 = 0xC2E3C0B7
+Seed2 = 0xE8D9CDF9
+Seed3 = 0x00001B10
+Seed3_Byte1 = 0x10
+Seed3_Byte2 = 0x1B

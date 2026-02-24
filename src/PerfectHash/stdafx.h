@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -153,6 +153,7 @@ Abstract:
 #include "PerfectHashDirectory.h"
 #include "PerfectHashKeys.h"
 #include "PerfectHashTable.h"
+#include "PerfectHashOnline.h"
 #include "PerfectHashNames.h"
 #include "PerfectHashPrimes.h"
 #include "PerfectHashPrivate.h"
@@ -169,6 +170,7 @@ Abstract:
 #include "PerfectHashConstants.h"
 #include "PerfectHashErrorHandling.h"
 #include "GraphImpl.h"
+#include "ChmOnline01.h"
 #include "Chm01.h"
 #include "Chm01FileWork.h"
 #include "ExtractArg.h"

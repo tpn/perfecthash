@@ -57,5 +57,35 @@
       "configurePreset": "ninja-multi-macos-x86_64",
       "configuration": "Release"
     }
+  ],
+  "testPresets": [
+    {
+      "name": "ctest-fast-debug",
+      "displayName": "CTest Fast (Debug)",
+      "configurePreset": "ninja-multi",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "fast"
+        }
+      }
+    },
+    {
+      "name": "ctest-fast-release",
+      "displayName": "CTest Fast (Release)",
+      "configurePreset": "ninja-multi",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "filter": {
+        "include": {
+          "label": "fast"
+        }
+      }
+    }
   ]
 }

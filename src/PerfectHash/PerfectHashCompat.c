@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2023-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -16,7 +16,7 @@ Abstract:
 #include "PerfectHashEventsPrivate.h"
 #include <sys/time.h>
 
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
 #include "PerfectHashErrors_EnglishBin.h"
 #endif
 
@@ -2391,6 +2391,103 @@ GetProcessHeap(
     return NULL;
 }
 
+#ifndef PH_WINDOWS
+
+typedef struct _PH_HEAP_ALLOCATION {
+    struct _PH_HEAP_ALLOCATION *Next;
+    struct _PH_HEAP_ALLOCATION *Prev;
+    struct _PH_HEAP *Heap;
+    SIZE_T Size;
+} PH_HEAP_ALLOCATION;
+typedef PH_HEAP_ALLOCATION *PPH_HEAP_ALLOCATION;
+
+typedef struct _PH_HEAP {
+    ULONG Magic;
+    SRWLOCK Lock;
+    PPH_HEAP_ALLOCATION Head;
+} PH_HEAP;
+typedef PH_HEAP *PPH_HEAP;
+
+#define PH_HEAP_MAGIC 0x50484850u
+
+static
+PPH_HEAP
+GetPerfectHashHeap(
+    _In_opt_ HANDLE Heap
+    )
+{
+    PPH_HEAP MaybeHeap = (PPH_HEAP)Heap;
+
+    if (!MaybeHeap || MaybeHeap->Magic != PH_HEAP_MAGIC) {
+        return NULL;
+    }
+
+    return MaybeHeap;
+}
+
+WINBASEAPI
+HANDLE
+WINAPI
+HeapCreate(
+    _In_ DWORD flOptions,
+    _In_ SIZE_T dwInitialSize,
+    _In_ SIZE_T dwMaximumSize
+    )
+{
+    PPH_HEAP Heap;
+
+    UNREFERENCED_PARAMETER(flOptions);
+    UNREFERENCED_PARAMETER(dwInitialSize);
+    UNREFERENCED_PARAMETER(dwMaximumSize);
+
+    Heap = (PPH_HEAP)calloc(1, sizeof(*Heap));
+    if (!Heap) {
+        SetLastError(ENOMEM);
+        return NULL;
+    }
+
+    Heap->Magic = PH_HEAP_MAGIC;
+    InitializeSRWLock(&Heap->Lock);
+
+    return (HANDLE)Heap;
+}
+
+WINBASEAPI
+BOOL
+WINAPI
+HeapDestroy(
+    _In_ HANDLE hHeap
+    )
+{
+    PPH_HEAP Heap;
+    PPH_HEAP_ALLOCATION Allocation;
+    PPH_HEAP_ALLOCATION Next;
+
+    Heap = GetPerfectHashHeap(hHeap);
+    if (!Heap) {
+        return FALSE;
+    }
+
+    AcquireSRWLockExclusive(&Heap->Lock);
+
+    Allocation = Heap->Head;
+    while (Allocation) {
+        Next = Allocation->Next;
+        free(Allocation);
+        Allocation = Next;
+    }
+
+    Heap->Head = NULL;
+
+    ReleaseSRWLockExclusive(&Heap->Lock);
+
+    free(Heap);
+
+    return TRUE;
+}
+
+#endif // PH_WINDOWS
+
 WINBASEAPI
 _Ret_maybenull_
 _Post_writable_byte_size_(dwBytes)
@@ -2402,7 +2499,40 @@ HeapAlloc(
     _In_ SIZE_T SizeInBytes
     )
 {
-    UNREFERENCED_PARAMETER(Heap);
+    PPH_HEAP PerfectHeap;
+    PPH_HEAP_ALLOCATION Allocation;
+    SIZE_T TotalSize;
+
+    PerfectHeap = GetPerfectHashHeap(Heap);
+    if (PerfectHeap) {
+        TotalSize = sizeof(*Allocation) + SizeInBytes;
+        if ((Flags & HEAP_ZERO_MEMORY) != 0) {
+            Allocation = (PPH_HEAP_ALLOCATION)calloc(1, TotalSize);
+        } else {
+            Allocation = (PPH_HEAP_ALLOCATION)malloc(TotalSize);
+        }
+
+        if (!Allocation) {
+            SetLastError(ENOMEM);
+            return NULL;
+        }
+
+        Allocation->Heap = PerfectHeap;
+        Allocation->Size = SizeInBytes;
+
+        AcquireSRWLockExclusive(&PerfectHeap->Lock);
+
+        Allocation->Next = PerfectHeap->Head;
+        Allocation->Prev = NULL;
+        if (PerfectHeap->Head) {
+            PerfectHeap->Head->Prev = Allocation;
+        }
+        PerfectHeap->Head = Allocation;
+
+        ReleaseSRWLockExclusive(&PerfectHeap->Lock);
+
+        return (LPVOID)(Allocation + 1);
+    }
 
     if ((Flags & HEAP_ZERO_MEMORY) != 0) {
         return calloc(1, SizeInBytes);
@@ -2424,7 +2554,79 @@ HeapReAlloc(
     _In_ SIZE_T SizeInBytes
     )
 {
-    UNREFERENCED_PARAMETER(Heap);
+    PPH_HEAP PerfectHeap;
+    PPH_HEAP_ALLOCATION Allocation;
+    PPH_HEAP_ALLOCATION NewAllocation;
+    SIZE_T TotalSize;
+    SIZE_T OldSize;
+
+    PerfectHeap = GetPerfectHashHeap(Heap);
+    if (PerfectHeap) {
+        if (!Mem) {
+            return HeapAlloc(Heap, Flags, SizeInBytes);
+        }
+
+        if (SizeInBytes == 0) {
+            HeapFree(Heap, 0, Mem);
+            return NULL;
+        }
+
+        Allocation = ((PPH_HEAP_ALLOCATION)Mem) - 1;
+        OldSize = Allocation->Size;
+        TotalSize = sizeof(*Allocation) + SizeInBytes;
+
+        AcquireSRWLockExclusive(&PerfectHeap->Lock);
+
+        if (Allocation->Prev) {
+            Allocation->Prev->Next = Allocation->Next;
+        } else {
+            PerfectHeap->Head = Allocation->Next;
+        }
+        if (Allocation->Next) {
+            Allocation->Next->Prev = Allocation->Prev;
+        }
+
+        ReleaseSRWLockExclusive(&PerfectHeap->Lock);
+
+        NewAllocation = (PPH_HEAP_ALLOCATION)realloc(Allocation, TotalSize);
+        if (!NewAllocation) {
+            AcquireSRWLockExclusive(&PerfectHeap->Lock);
+
+            Allocation->Next = PerfectHeap->Head;
+            Allocation->Prev = NULL;
+            if (PerfectHeap->Head) {
+                PerfectHeap->Head->Prev = Allocation;
+            }
+            PerfectHeap->Head = Allocation;
+
+            ReleaseSRWLockExclusive(&PerfectHeap->Lock);
+
+            SetLastError(ENOMEM);
+            return NULL;
+        }
+
+        NewAllocation->Heap = PerfectHeap;
+        NewAllocation->Size = SizeInBytes;
+
+        if ((Flags & HEAP_ZERO_MEMORY) != 0 && SizeInBytes > OldSize) {
+            memset((PBYTE)(NewAllocation + 1) + OldSize,
+                   0,
+                   SizeInBytes - OldSize);
+        }
+
+        AcquireSRWLockExclusive(&PerfectHeap->Lock);
+
+        NewAllocation->Next = PerfectHeap->Head;
+        NewAllocation->Prev = NULL;
+        if (PerfectHeap->Head) {
+            PerfectHeap->Head->Prev = NewAllocation;
+        }
+        PerfectHeap->Head = NewAllocation;
+
+        ReleaseSRWLockExclusive(&PerfectHeap->Lock);
+
+        return (LPVOID)(NewAllocation + 1);
+    }
 
     if ((Flags & HEAP_ZERO_MEMORY) != 0) {
 
@@ -2456,8 +2658,35 @@ HeapFree(
     __drv_freesMem(Mem) _Frees_ptr_opt_ LPVOID Mem
     )
 {
-    UNREFERENCED_PARAMETER(Heap);
     UNREFERENCED_PARAMETER(Flags);
+
+    PPH_HEAP PerfectHeap;
+    PPH_HEAP_ALLOCATION Allocation;
+
+    if (!Mem) {
+        return TRUE;
+    }
+
+    PerfectHeap = GetPerfectHashHeap(Heap);
+    if (PerfectHeap) {
+        Allocation = ((PPH_HEAP_ALLOCATION)Mem) - 1;
+
+        AcquireSRWLockExclusive(&PerfectHeap->Lock);
+
+        if (Allocation->Prev) {
+            Allocation->Prev->Next = Allocation->Next;
+        } else {
+            PerfectHeap->Head = Allocation->Next;
+        }
+        if (Allocation->Next) {
+            Allocation->Next->Prev = Allocation->Prev;
+        }
+
+        ReleaseSRWLockExclusive(&PerfectHeap->Lock);
+
+        free(Allocation);
+        return TRUE;
+    }
 
     free(Mem);
 
@@ -3615,7 +3844,7 @@ PerfectHashPrintError(
     return Result;
 }
 
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
 
 #define PH_MESSAGE_RESOURCE_UNICODE 0x0001
 
@@ -4000,7 +4229,7 @@ PerfectHashFormatMessageArgs(
     return S_OK;
 }
 
-#endif // PH_LINUX
+#endif // PH_LINUX || PH_MAC
 
 PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
 
@@ -4013,7 +4242,7 @@ PerfectHashPrintMessage(
 {
     PCSZ CodeString;
     HRESULT Result = S_OK;
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
     PSTR Message;
     PSTR FormattedMessage;
     SIZE_T MessageLength;
@@ -4021,7 +4250,7 @@ PerfectHashPrintMessage(
     va_list Args;
 #endif
 
-#ifdef PH_LINUX
+#if defined(PH_LINUX) || defined(PH_MAC)
     Message = NULL;
     FormattedMessage = NULL;
     MessageLength = 0;

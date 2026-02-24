@@ -1,0 +1,180 @@
+;+
+;
+; Generated NASM RawDog JIT blob: PerfectHashJitIndexMulshrolate4RXIndex32x8_x64
+;
+;--
+
+        bits 64
+        default rel
+
+        section .text
+
+        global PerfectHashJitIndexMulshrolate4RXIndex32x8_x64
+
+PerfectHashJitIndexMulshrolate4RXIndex32x8_x64:
+
+        ;IACA_VC_START
+
+        mov     r11, rsp
+
+        vmovd   xmm0, edi
+        vpinsrd xmm0, xmm0, esi, 1
+        vpinsrd xmm0, xmm0, edx, 2
+        vpinsrd xmm0, xmm0, ecx, 3
+
+        vmovd   xmm1, r8d
+        vpinsrd xmm1, xmm1, r9d, 1
+        vpinsrd xmm1, xmm1, dword [r11 + 0x8], 2
+        vpinsrd xmm1, xmm1, dword [r11 + 0x10], 3
+
+        vinserti128 ymm1, ymm0, xmm1, 1
+
+        mov     r10, [rel RawDogAssigned]
+        vpbroadcastd ymm2, dword [rel RawDogSeed1]
+        vpbroadcastd ymm3, dword [rel RawDogSeed2]
+        vpbroadcastd ymm14, dword [rel RawDogSeed4]
+        vpbroadcastd ymm15, dword [rel RawDogSeed5]
+
+        vpmulld ymm4, ymm1, ymm2               ; Vertex1 = Key * Seed1.
+        vpmulld ymm5, ymm1, ymm3               ; Vertex2 = Key * Seed2.
+
+        mov     eax, dword [rel RawDogSeed3Byte1]
+        mov     ecx, dword [rel RawDogSeed3Byte2]
+        mov     edx, dword [rel RawDogSeed3Byte3]
+        and     eax, 31
+        and     ecx, 31
+        and     edx, 31
+
+        mov     r8d, 32
+        sub     r8d, ecx                       ; 32 - Seed3_Byte2.
+        mov     r9d, 32
+        sub     r9d, edx                       ; 32 - Seed3_Byte3.
+
+        vmovd   xmm10, eax                     ; Seed3_Byte1.
+        vmovd   xmm6, ecx                      ; Seed3_Byte2.
+        vmovd   xmm7, r8d                      ; 32 - Seed3_Byte2.
+        vmovd   xmm8, edx                      ; Seed3_Byte3.
+        vmovd   xmm9, r9d                      ; 32 - Seed3_Byte3.
+
+        vpsrld  ymm12, ymm4, xmm6              ; ror(Vertex1, Seed3_Byte2).
+        vpslld  ymm13, ymm4, xmm7
+        vpor    ymm4, ymm12, ymm13
+        vpmulld ymm4, ymm4, ymm14              ; Vertex1 *= Seed4.
+        vpsrld  ymm4, ymm4, xmm10              ; Vertex1 >>= Seed3_Byte1.
+
+        vpsrld  ymm12, ymm5, xmm8              ; ror(Vertex2, Seed3_Byte3).
+        vpslld  ymm13, ymm5, xmm9
+        vpor    ymm5, ymm12, ymm13
+        vpmulld ymm5, ymm5, ymm15              ; Vertex2 *= Seed5.
+        vpsrld  ymm5, ymm5, xmm10              ; Vertex2 >>= Seed3_Byte1.
+
+        mov     r9d, dword [rel RawDogIndexMask]
+
+        vpextrd eax, xmm4, 0
+        vpextrd ecx, xmm5, 0
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x18]
+        mov     dword [rdx], eax
+
+        vpextrd eax, xmm4, 1
+        vpextrd ecx, xmm5, 1
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x20]
+        mov     dword [rdx], eax
+
+        vpextrd eax, xmm4, 2
+        vpextrd ecx, xmm5, 2
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x28]
+        mov     dword [rdx], eax
+
+        vpextrd eax, xmm4, 3
+        vpextrd ecx, xmm5, 3
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x30]
+        mov     dword [rdx], eax
+
+        vextracti128 xmm0, ymm4, 1
+        vextracti128 xmm1, ymm5, 1
+
+        vpextrd eax, xmm0, 0
+        vpextrd ecx, xmm1, 0
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x38]
+        mov     dword [rdx], eax
+
+        vpextrd eax, xmm0, 1
+        vpextrd ecx, xmm1, 1
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x40]
+        mov     dword [rdx], eax
+
+        vpextrd eax, xmm0, 2
+        vpextrd ecx, xmm1, 2
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x48]
+        mov     dword [rdx], eax
+
+        vpextrd eax, xmm0, 3
+        vpextrd ecx, xmm1, 3
+        mov     eax, dword [r10 + rax * 4]
+        mov     ecx, dword [r10 + rcx * 4]
+        add     eax, ecx
+        and     eax, r9d
+        mov     rdx, qword [r11 + 0x50]
+        mov     dword [rdx], eax
+
+        ;IACA_VC_END
+
+        ret
+
+        align 8
+RawDogAssigned:
+        dq 0xA1A1A1A1A1A1A1A1
+
+RawDogSeed1:
+        dq 0xB1B1B1B1B1B1B1B1
+
+RawDogSeed2:
+        dq 0xC1C1C1C1C1C1C1C1
+
+RawDogSeed3Byte1:
+        dq 0xD1D1D1D1D1D1D1D1
+
+RawDogSeed3Byte2:
+        dq 0xE1E1E1E1E1E1E1E1
+
+RawDogSeed3Byte3:
+        dq 0xD2D2D2D2D2D2D2D2
+
+RawDogSeed4:
+        dq 0xB2B2B2B2B2B2B2B2
+
+RawDogSeed5:
+        dq 0xB3B3B3B3B3B3B3B3
+
+RawDogIndexMask:
+        dq 0x2121212121212121
+
+; vim:set tw=80 ts=8 sw=4 sts=4 et syntax=nasm fo=croql comments=\:;

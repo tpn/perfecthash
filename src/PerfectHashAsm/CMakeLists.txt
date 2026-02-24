@@ -5,8 +5,17 @@ include(CheckLanguage)
 set(Assembly_Source_Files)
 set(ASM_LANGUAGE "")
 
+# CMake's ASM_NASM detection doesn't always search PATH; seed it explicitly.
+if(NOT CMAKE_ASM_NASM_COMPILER)
+    find_program(PERFECTHASH_NASM_EXECUTABLE nasm)
+    if(PERFECTHASH_NASM_EXECUTABLE)
+        set(CMAKE_ASM_NASM_COMPILER "${PERFECTHASH_NASM_EXECUTABLE}"
+            CACHE FILEPATH "NASM compiler" FORCE)
+    endif()
+endif()
+
 check_language(ASM_NASM)
-if (CMAKE_ASM_NASM_COMPILER)
+if(CMAKE_ASM_NASM_COMPILER)
     enable_language(ASM_NASM)
     set(ASM_LANGUAGE ASM_NASM)
     list(

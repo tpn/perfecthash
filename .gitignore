@@ -38,4 +38,6 @@ build.ninja
 .ninja_deps
 .ninja_log
 install/
+DartConfiguration.tcl
 keys/*.keys*
+*TableSize

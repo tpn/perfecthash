@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2022 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -61,6 +61,9 @@ typedef PERFECT_HASH_KEYS_STATE *PPERFECT_HASH_KEYS_STATE;
 
 #define KeysWereDownsized(Keys) \
     ((Keys)->Flags.DownsizingOccurred == TRUE)
+
+#define KeysKeyArrayWasHeapAllocated(Keys) \
+    ((Keys)->Flags.KeyArrayIsHeapAllocated == TRUE)
 
 //
 // Define the PERFECT_HASH_KEYS_STATS structure.
@@ -230,6 +233,20 @@ typedef PERFECT_HASH_KEYS_LOAD_STATS
 
 typedef
 _Must_inspect_result_
+_Success_(return >= 0)
+HRESULT
+(NTAPI PERFECT_HASH_KEYS_LOAD_FROM_ARRAY)(
+    _In_ PPERFECT_HASH_KEYS Keys,
+    _In_opt_ PPERFECT_HASH_KEYS_LOAD_FLAGS KeysLoadFlags,
+    _In_ ULONG KeySizeInBytes,
+    _In_ ULONGLONG NumberOfKeys,
+    _In_reads_bytes_(NumberOfKeys * KeySizeInBytes) PVOID KeysArray
+    );
+typedef PERFECT_HASH_KEYS_LOAD_FROM_ARRAY
+      *PPERFECT_HASH_KEYS_LOAD_FROM_ARRAY;
+
+typedef
+_Must_inspect_result_
 HRESULT
 (NTAPI TRY_EXTRACT_KEY_SIZE_FROM_FILENAME)(
     _In_ PPERFECT_HASH_PATH KeysPath,
@@ -278,6 +295,7 @@ extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats32;
 extern PERFECT_HASH_KEYS_LOAD_STATS PerfectHashKeysLoadStats64;
 extern PERFECT_HASH_KEYS_LOAD_TABLE_SIZE PerfectHashKeysLoadTableSize;
 extern PERFECT_HASH_KEYS_LOAD PerfectHashKeysLoad;
+extern PERFECT_HASH_KEYS_LOAD_FROM_ARRAY PerfectHashKeysLoadFromArray;
 extern PERFECT_HASH_KEYS_GET_FLAGS PerfectHashKeysGetFlags;
 extern PERFECT_HASH_KEYS_GET_ADDRESS PerfectHashKeysGetAddress;
 extern PERFECT_HASH_KEYS_GET_BITMAP PerfectHashKeysGetBitmap;

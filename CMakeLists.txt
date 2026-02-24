@@ -36,12 +36,25 @@ if(PERFECTHASH_ENABLE_INSTALL)
     install(
         TARGETS
             PerfectHash
+            PerfectHashOnline
+            PerfectHashOnlineStatic
+            PerfectHashOnlineCore
+            PerfectHashOnlineCoreStatic
             PerfectHashCreateExe
             PerfectHashBulkCreateExe
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
+
+    if(TARGET PerfectHashLLVM)
+        install(
+            TARGETS PerfectHashLLVM
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        )
+    endif()
 
     if(PERFECTHASH_HAS_CUDA)
         install(

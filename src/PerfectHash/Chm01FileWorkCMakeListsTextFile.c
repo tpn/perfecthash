@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2023-2024 Trent Nelson <trent@trent.me>
+Copyright (c) 2023-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 

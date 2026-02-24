@@ -5,13 +5,19 @@ channels:
 dependencies:
 - black
 - bokeh
+- ccache
 - cmake>=3.20
 - cython>=3.0
 - ipdb
 - ipython
 - joypy
+- libxml2-devel
+- llvm-tools>=15
+- llvmdev>=15
+- llvmlite
 - matplotlib
 - mypy
+- nasm
 - ninja
 - numpy
 - pandas
@@ -28,4 +34,6 @@ dependencies:
 - setuptools>=61
 - tqdm
 - wheel
+- zlib
+- zstd
 name: dev-windows_os-windows_arch-x86_64_py-313_compiler-msvc

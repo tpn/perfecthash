@@ -1,6 +1,6 @@
 /*++
 
-Copyright (c) 2018-2023 Trent Nelson <trent@trent.me>
+Copyright (c) 2018-2026 Trent Nelson <trent@trent.me>
 
 Module Name:
 
@@ -1258,7 +1258,7 @@ FinishedSolution:
         }
 
         CopyMemory(NewGraphInfoOnDisk,
-                   Table->TableInfoOnDisk,
+                   GraphInfoOnDisk,
                    sizeof(*NewGraphInfoOnDisk));
 
         //
@@ -2477,6 +2477,7 @@ Return Value:
     BOOL IsVerbose;
     BOOL IsMoreHelp;
     BOOL IsToggleCallback;
+    BOOL HasConsoleInput;
     BOOL DoFlushOnExit;
     BOOL IsInputEvent;
     BOOL IsBestGraphEvent;
@@ -2485,6 +2486,7 @@ Return Value:
     HRESULT Result;
     ULONG WaitResult;
     DWORD LastError;
+    DWORD ConsoleMode;
     HANDLE InputHandle;
     INPUT_RECORD Input;
     FILETIME64 FileTime;
@@ -2507,6 +2509,12 @@ Return Value:
     SetFunctionEntryCallback = Context->SetFunctionEntryCallback;
     ClearFunctionEntryCallback = Context->ClearFunctionEntryCallback;
     IsFunctionEntryCallbackEnabled = Context->IsFunctionEntryCallbackEnabled;
+    HasConsoleInput = FALSE;
+    ConsoleMode = 0;
+
+    if (InputHandle && InputHandle != INVALID_HANDLE_VALUE) {
+        HasConsoleInput = GetConsoleMode(InputHandle, &ConsoleMode);
+    }
 
     //
     // Initialize the event handles upon which we will wait.
@@ -2520,8 +2528,11 @@ Return Value:
     Events[NumberOfEvents++] = Context->TryLargerTableSizeEvent;
     Events[NumberOfEvents++] = Context->LowMemoryEvent;
     Events[NumberOfEvents++] = Context->SolveTimeoutExpiredEvent;
-    InputEvent = NumberOfEvents;
-    Events[NumberOfEvents++] = InputHandle;
+    InputEvent = -1;
+    if (HasConsoleInput) {
+        InputEvent = NumberOfEvents;
+        Events[NumberOfEvents++] = InputHandle;
+    }
 
     if (!TableCreateFlags.Quiet) {
         BestGraphEvent = NumberOfEvents;
@@ -2550,12 +2561,28 @@ Return Value:
                                             FALSE,
                                             INFINITE);
 
-        IsInputEvent = (WaitResult == (WAIT_OBJECT_0 + (DWORD)InputEvent));
+        IsInputEvent = FALSE;
+        if (InputEvent != -1) {
+            IsInputEvent = (
+                WaitResult == (WAIT_OBJECT_0 + (DWORD)InputEvent)
+            );
+        }
         if (BestGraphEvent != -1) {
             IsBestGraphEvent = (WaitResult == WAIT_OBJECT_0 + (DWORD)BestGraphEvent);
         }
         else {
             IsBestGraphEvent = FALSE;
+        }
+
+        if (WaitResult == WAIT_FAILED) {
+            LastError = GetLastError();
+            if (LastError == ERROR_INVALID_HANDLE) {
+                SetLastError(ERROR_SUCCESS);
+                goto End;
+            }
+            SetLastError(LastError);
+            SYS_ERROR(WaitForMultipleObjects);
+            goto End;
         }
 
         if (StopSolving(Context)) {
@@ -2567,6 +2594,9 @@ Return Value:
         //
 
         if (!IsInputEvent && !IsBestGraphEvent) {
+            if (InputEvent == -1) {
+                continue;
+            }
             SYS_ERROR(WaitForMultipleObjects);
             goto End;
         }
@@ -2804,7 +2834,7 @@ Return Value:
 
 End:
 
-    if (DoFlushOnExit && InputHandle && InputHandle != INVALID_HANDLE_VALUE) {
+    if (DoFlushOnExit && HasConsoleInput) {
         if (!FlushConsoleInputBuffer(InputHandle)) {
             LastError = GetLastError();
             if (LastError != ERROR_INVALID_HANDLE) {
