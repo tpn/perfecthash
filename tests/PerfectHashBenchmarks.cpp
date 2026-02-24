@@ -1565,7 +1565,44 @@ int RunCompare(const BenchmarkOptions &base) {
   templateOptions.jit_vector_index32x4 = false;
   templateOptions.jit_vector_index32x8 = false;
 
-  auto isaRank = [](PERFECT_HASH_JIT_MAX_ISA_ID isa) -> int {
+  const PERFECT_HASH_CPU_ARCH_ID cpuArch = PerfectHashGetCurrentCpuArch();
+  const bool arm64Compare = (cpuArch == PerfectHashArm64CpuArchId);
+
+  auto isArmIsa = [](PERFECT_HASH_JIT_MAX_ISA_ID isa) -> bool {
+    switch (isa) {
+      case PerfectHashJitMaxIsaNeon:
+      case PerfectHashJitMaxIsaSve:
+      case PerfectHashJitMaxIsaSve2:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  auto isX86Isa = [](PERFECT_HASH_JIT_MAX_ISA_ID isa) -> bool {
+    switch (isa) {
+      case PerfectHashJitMaxIsaAvx:
+      case PerfectHashJitMaxIsaAvx2:
+      case PerfectHashJitMaxIsaAvx512:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  auto isaRank = [&](PERFECT_HASH_JIT_MAX_ISA_ID isa) -> int {
+    if (arm64Compare) {
+      switch (isa) {
+        case PerfectHashJitMaxIsaNeon:
+          return 1;
+        case PerfectHashJitMaxIsaSve:
+          return 2;
+        case PerfectHashJitMaxIsaSve2:
+          return 3;
+        default:
+          return 0;
+      }
+    }
     switch (isa) {
       case PerfectHashJitMaxIsaAvx:
         return 1;
@@ -1573,20 +1610,24 @@ int RunCompare(const BenchmarkOptions &base) {
         return 2;
       case PerfectHashJitMaxIsaAvx512:
         return 3;
-      case PerfectHashJitMaxIsaNeon:
-        return 1;
-      case PerfectHashJitMaxIsaSve:
-        return 2;
-      case PerfectHashJitMaxIsaSve2:
-        return 3;
       default:
-        return 3;
+        return 0;
     }
   };
 
+  auto isaInFamily = [&](PERFECT_HASH_JIT_MAX_ISA_ID isa) -> bool {
+    return arm64Compare ? isArmIsa(isa) : isX86Isa(isa);
+  };
+
   auto isaAllowed = [&](PERFECT_HASH_JIT_MAX_ISA_ID isa) -> bool {
+    if (!isaInFamily(isa)) {
+      return false;
+    }
     if (options.jit_max_isa == PerfectHashJitMaxIsaAuto) {
       return true;
+    }
+    if (!isaInFamily(options.jit_max_isa)) {
+      return false;
     }
     return isaRank(isa) <= isaRank(options.jit_max_isa);
   };
@@ -1600,56 +1641,151 @@ int RunCompare(const BenchmarkOptions &base) {
   };
 
   std::vector<CompareEntry> entries;
-  entries.reserve(4);
+  entries.reserve(12);
 
-  CompareEntry scalar;
-  scalar.label = "scalar";
-  scalar.backend_label = "llvm";
-  scalar.index_label = "x1";
-  scalar.options = templateOptions;
-  scalar.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
-  scalar.options.jit_max_isa =
-      options.jit_max_isa == PerfectHashJitMaxIsaAuto
-          ? PerfectHashJitMaxIsaAvx
-          : options.jit_max_isa;
-  entries.push_back(scalar);
+  auto addEntry = [&](const char *label,
+                      const char *backendLabel,
+                      const char *indexLabel,
+                      BenchmarkOptions::JitBackend backend,
+                      PERFECT_HASH_JIT_MAX_ISA_ID isa,
+                      bool x4,
+                      bool x8,
+                      bool x16,
+                      bool jitVectorX4,
+                      bool jitVectorX8) {
+    CompareEntry entry;
+    entry.label = label;
+    entry.backend_label = backendLabel;
+    entry.index_label = indexLabel;
+    entry.options = templateOptions;
+    entry.options.jit_backend = backend;
+    entry.options.jit_max_isa = isa;
+    entry.options.index32x4 = x4;
+    entry.options.index32x8 = x8;
+    entry.options.index32x16 = x16;
+    entry.options.jit_vector_index32x4 = jitVectorX4;
+    entry.options.jit_vector_index32x8 = jitVectorX8;
+    entries.push_back(entry);
+  };
 
-  if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
-    CompareEntry avx;
-    avx.label = "avx";
-    avx.backend_label = "llvm";
-    avx.index_label = "x4";
-    avx.options = templateOptions;
-    avx.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
-    avx.options.jit_max_isa = PerfectHashJitMaxIsaAvx;
-    avx.options.jit_vector_index32x4 = true;
-    avx.options.index32x4 = true;
-    entries.push_back(avx);
+  const PERFECT_HASH_JIT_MAX_ISA_ID defaultScalarIsa =
+      arm64Compare ? PerfectHashJitMaxIsaNeon : PerfectHashJitMaxIsaAvx;
+  const bool incompatibleCap =
+      options.jit_max_isa != PerfectHashJitMaxIsaAuto &&
+      !isaInFamily(options.jit_max_isa);
+  if (incompatibleCap) {
+    std::cerr << "--compare-isa: --jit-max-isa="
+              << JitMaxIsaToString(options.jit_max_isa)
+              << " is incompatible with this architecture; using "
+              << JitMaxIsaToString(defaultScalarIsa)
+              << " scalar baseline only.\n";
+  }
+  PERFECT_HASH_JIT_MAX_ISA_ID scalarIsa =
+      options.jit_max_isa == PerfectHashJitMaxIsaAuto ? defaultScalarIsa
+                                                      : options.jit_max_isa;
+  if (!isaInFamily(scalarIsa)) {
+    scalarIsa = defaultScalarIsa;
   }
 
-  if (isaAllowed(PerfectHashJitMaxIsaAvx2)) {
-    CompareEntry avx2;
-    avx2.label = "avx2";
-    avx2.backend_label = "llvm";
-    avx2.index_label = "x8";
-    avx2.options = templateOptions;
-    avx2.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
-    avx2.options.jit_max_isa = PerfectHashJitMaxIsaAvx2;
-    avx2.options.jit_vector_index32x8 = true;
-    avx2.options.index32x8 = true;
-    entries.push_back(avx2);
-  }
+  addEntry("scalar",
+           "llvm",
+           "x1",
+           BenchmarkOptions::JitBackend::Llvm,
+           scalarIsa,
+           false,
+           false,
+           false,
+           false,
+           false);
 
-  if (isaAllowed(PerfectHashJitMaxIsaAvx512)) {
-    CompareEntry avx512;
-    avx512.label = "avx512";
-    avx512.backend_label = "llvm";
-    avx512.index_label = "x16";
-    avx512.options = templateOptions;
-    avx512.options.jit_backend = BenchmarkOptions::JitBackend::Llvm;
-    avx512.options.jit_max_isa = PerfectHashJitMaxIsaAvx512;
-    avx512.options.index32x16 = true;
-    entries.push_back(avx512);
+  if (arm64Compare) {
+    if (isaAllowed(PerfectHashJitMaxIsaNeon)) {
+      addEntry("neon",
+               "llvm",
+               "x4",
+               BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaNeon,
+               true,
+               false,
+               false,
+               true,
+               false);
+      addEntry("neon",
+               "llvm",
+               "x8",
+               BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaNeon,
+               false,
+               true,
+               false,
+               false,
+               true);
+    }
+
+    if (isaAllowed(PerfectHashJitMaxIsaSve)) {
+      addEntry("sve",
+               "llvm",
+               "x8",
+               BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaSve,
+               false,
+               true,
+               false,
+               false,
+               true);
+    }
+
+    if (isaAllowed(PerfectHashJitMaxIsaSve2)) {
+      addEntry("sve2",
+               "llvm",
+               "x8",
+               BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaSve2,
+               false,
+               true,
+               false,
+               false,
+               true);
+    }
+  } else {
+    if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
+      addEntry("avx",
+               "llvm",
+               "x4",
+               BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaAvx,
+               true,
+               false,
+               false,
+               true,
+               false);
+    }
+
+    if (isaAllowed(PerfectHashJitMaxIsaAvx2)) {
+      addEntry("avx2",
+               "llvm",
+               "x8",
+               BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaAvx2,
+               false,
+               true,
+               false,
+               false,
+               true);
+    }
+
+    if (isaAllowed(PerfectHashJitMaxIsaAvx512)) {
+      addEntry("avx512",
+               "llvm",
+               "x16",
+               BenchmarkOptions::JitBackend::Llvm,
+               PerfectHashJitMaxIsaAvx512,
+               false,
+               false,
+               true,
+               false,
+               false);
+    }
   }
 
 #if defined(PH_HAS_RAWDOG_JIT)
@@ -1660,55 +1796,80 @@ int RunCompare(const BenchmarkOptions &base) {
       options.hash_function_id == PerfectHashHashMulshrolate2RXFunctionId ||
       options.hash_function_id == PerfectHashHashMulshrolate3RXFunctionId;
 
-  CompareEntry rd_scalar;
-  rd_scalar.label = "scalar";
-  rd_scalar.backend_label = "rawdog";
-  rd_scalar.index_label = "x1";
-  rd_scalar.options = templateOptions;
-  rd_scalar.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
-  rd_scalar.options.jit_max_isa =
-      options.jit_max_isa == PerfectHashJitMaxIsaAuto
-          ? PerfectHashJitMaxIsaAvx
-          : options.jit_max_isa;
-  entries.push_back(rd_scalar);
+  addEntry("scalar",
+           "rawdog",
+           "x1",
+           BenchmarkOptions::JitBackend::RawDog,
+           scalarIsa,
+           false,
+           false,
+           false,
+           false,
+           false);
 
   if (rawdog_vector_supported) {
-    if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
-      CompareEntry rd_avx;
-      rd_avx.label = "avx";
-      rd_avx.backend_label = "rawdog";
-      rd_avx.index_label = "x4";
-      rd_avx.options = templateOptions;
-      rd_avx.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
-      rd_avx.options.jit_max_isa = PerfectHashJitMaxIsaAvx;
-      rd_avx.options.jit_vector_index32x4 = true;
-      rd_avx.options.index32x4 = true;
-      entries.push_back(rd_avx);
-    }
+    if (arm64Compare) {
+      if (isaAllowed(PerfectHashJitMaxIsaNeon)) {
+        addEntry("neon",
+                 "rawdog",
+                 "x4",
+                 BenchmarkOptions::JitBackend::RawDog,
+                 PerfectHashJitMaxIsaNeon,
+                 true,
+                 false,
+                 false,
+                 true,
+                 false);
+        addEntry("neon",
+                 "rawdog",
+                 "x8",
+                 BenchmarkOptions::JitBackend::RawDog,
+                 PerfectHashJitMaxIsaNeon,
+                 false,
+                 true,
+                 false,
+                 false,
+                 true);
+      }
+    } else {
+      if (isaAllowed(PerfectHashJitMaxIsaAvx)) {
+        addEntry("avx",
+                 "rawdog",
+                 "x4",
+                 BenchmarkOptions::JitBackend::RawDog,
+                 PerfectHashJitMaxIsaAvx,
+                 true,
+                 false,
+                 false,
+                 true,
+                 false);
+      }
 
-    if (isaAllowed(PerfectHashJitMaxIsaAvx2)) {
-      CompareEntry rd_avx2;
-      rd_avx2.label = "avx2";
-      rd_avx2.backend_label = "rawdog";
-      rd_avx2.index_label = "x8";
-      rd_avx2.options = templateOptions;
-      rd_avx2.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
-      rd_avx2.options.jit_max_isa = PerfectHashJitMaxIsaAvx2;
-      rd_avx2.options.jit_vector_index32x8 = true;
-      rd_avx2.options.index32x8 = true;
-      entries.push_back(rd_avx2);
-    }
+      if (isaAllowed(PerfectHashJitMaxIsaAvx2)) {
+        addEntry("avx2",
+                 "rawdog",
+                 "x8",
+                 BenchmarkOptions::JitBackend::RawDog,
+                 PerfectHashJitMaxIsaAvx2,
+                 false,
+                 true,
+                 false,
+                 false,
+                 true);
+      }
 
-    if (isaAllowed(PerfectHashJitMaxIsaAvx512)) {
-      CompareEntry rd_avx512;
-      rd_avx512.label = "avx512";
-      rd_avx512.backend_label = "rawdog";
-      rd_avx512.index_label = "x16";
-      rd_avx512.options = templateOptions;
-      rd_avx512.options.jit_backend = BenchmarkOptions::JitBackend::RawDog;
-      rd_avx512.options.jit_max_isa = PerfectHashJitMaxIsaAvx512;
-      rd_avx512.options.index32x16 = true;
-      entries.push_back(rd_avx512);
+      if (isaAllowed(PerfectHashJitMaxIsaAvx512)) {
+        addEntry("avx512",
+                 "rawdog",
+                 "x16",
+                 BenchmarkOptions::JitBackend::RawDog,
+                 PerfectHashJitMaxIsaAvx512,
+                 false,
+                 false,
+                 true,
+                 false,
+                 false);
+      }
     }
   }
 #endif
@@ -1716,6 +1877,12 @@ int RunCompare(const BenchmarkOptions &base) {
   for (auto &entry : entries) {
     int runResult = RunBenchmark(entry.options, &entry.result, false);
     if (runResult != 0) {
+      std::cerr << "Compare entry failed: backend="
+                << (entry.backend_label ? entry.backend_label : "unknown")
+                << " mode=" << (entry.label ? entry.label : "unknown")
+                << " isa=" << JitMaxIsaToString(entry.options.jit_max_isa)
+                << " index=" << (entry.index_label ? entry.index_label : "x1")
+                << "\n";
       return runResult;
     }
   }

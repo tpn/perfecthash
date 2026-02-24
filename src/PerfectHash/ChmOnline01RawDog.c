@@ -2201,6 +2201,15 @@ CompileChm01IndexVectorJitRawDog(
         return S_OK;
     }
 
+    //
+    // Arm64 Index32x16 RawDog code paths are not stable yet; fail fast so
+    // callers can skip unsupported configurations instead of crashing.
+    //
+
+    if (CompileIndex32x16) {
+        return PH_E_NOT_IMPLEMENTED;
+    }
+
     if ((Table->HashFunctionId != PerfectHashHashMultiplyShiftRFunctionId &&
          Table->HashFunctionId != PerfectHashHashMultiplyShiftRXFunctionId &&
          Table->HashFunctionId != PerfectHashHashMulshrolate1RXFunctionId &&
