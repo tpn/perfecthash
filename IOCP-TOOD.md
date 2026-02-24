@@ -1,51 +1,102 @@
 # IOCP TODO
 
-- Overlapped I/O plan (IOCP only; OG remains memory-mapped):
-  - Done: added `UseOverlappedIo` flag to `PERFECT_HASH_CONTEXT` (IOCP contexts set it).
-  - Done: added `PerfectHashFileCreateFlags.SkipMapping` so output files can be created with `FILE_FLAG_OVERLAPPED` and no mapping.
-- Done: rebuild IOCP file-work buffers as NUMA size-class pools (lookaside-style).
-  - Pools keyed by payload size class (power-of-two); 4KB–16MB classes.
-  - Dynamic oversize pools keyed by next power-of-two above max size class.
-  - Each pool has an `SLIST_HEADER` free list and a `GUARDED_LIST` of all buffers for rundown.
-  - New buffer header: `SLIST_ENTRY` + `LIST_ENTRY` + `OwnerPool` + `PayloadSize` +
-    `AllocationSize` + `PayloadOffset` + `BytesWritten` + flags.
-  - Base address for file work writes points *after* the header; sizing still uses EOF multipliers + trap-on-overrun.
-  - Allocate on demand; buffers pushed to pool free list and guarded list for teardown.
-  - One-off allocations removed; buffers reused via size-class or oversize pools.
-  - Done: add a guard-page allocation flag to toggle `RtlCreateBuffer()` vs raw allocation.
-  - Output file pipeline (IOCP):
-    - Pop a buffer for each file work save stage.
-    - Set `File->BaseAddress` to buffer base (after header) to reuse existing `OUTPUT_*` macros.
-    - Track `File->NumberOfBytesWritten` from `Output` - `BaseAddress`.
-    - Done: issue `WriteFile` with IOCP work item and handle completion in IOCP callback (no `GetOverlappedResult` waits).
-    - Done: `UnmapFileChm01()` no-ops in overlapped mode; `CloseFileChm01()` uses `File->NumberOfBytesWritten` (no mapping).
-  - Input file pipeline (IOCP):
-    - Done: replace memory-mapped keys file reads with overlapped `ReadFile` into a keys buffer (reuse size-class pool).
-    - Done: parse keys from buffer; keep mapped path for OG.
-- Add lightweight stats (debug-only): pool exhaustion count, max buffers in use, per-bucket hits; optional ETW later.
-- Add unit tests for IOCP file-write completion handling (buffer return, event signal, error path).
-- Audit async accounting for leaks:
-  - Ensure `PerfectHashAsyncIocpCompletionCallback` decrements outstanding if requeue fails.
-  - Add cleanup in `Chm01AsyncDispatchGraphWork` when `PerfectHashAsyncSubmit` fails (decrement `ActiveGraphs`/`RemainingSolverLoops`, free `GraphWork`).
-  - Add logging/asserts for `Job->ActiveGraphs`, `Context->RemainingSolverLoops`, and `Job->Async.Outstanding` to catch leaks.
+This is the prioritized, session-ready backlog for the IOCP server/client work.
 
-- Get a sys32 `--NoFileIo` run to complete (Release, max concurrency); if it hangs, capture bulk-count logs and identify the stuck state.
-- Diagnose 1000-file sys32 subset hang with `--IocpConcurrency=32 --MaxThreads=64` (Release, `--NoFileIo`); identify which work items are stuck and why.
-- Re-run sys32 with file I/O to `G:\\Scratch` once `--NoFileIo` completes; record timing and correctness.
-- Decide how to guard against stale PCH/obj after `PERFECT_HASH_CONTEXT` layout changes (force clean or touch header).
-- Track down `FlushConsoleInputBuffer` failures and fully disable console work for IOCP contexts if still triggered.
-- Validate access-denied fallback for per-file context threadpool minimum failures at higher concurrency.
-- Recheck named-pipe endpoint handling if `PerfectHashServer-StressSys32` continues to fail.
-- Decide whether BulkCreateDirectory should accept a single-directory short form or keep output dir required.
-- Exercise IOCP file work dispatch path (bulk create) to confirm outstanding event signaling and non-threadpool file work callbacks.
-- Identify root cause of remaining IOCP bulk-create failures (`E_UNEXPECTED` on `shell32-13803.keys` / `CoreUIComponents-7995.keys`) if they recur.
-- Investigate unexpected ~1500 threadpool worker threads (`ZwWaitForWorkViaWorkerFactory`) observed during IOCP server runs; identify source (RPC/TP APIs) and whether it contributes to hangs.
-- Re-run a larger file-I/O set to confirm the `PerfectHashFileExtend` skip-mapping fix and one-off buffer fallback eliminate `SetEndOfFile` 1224 and disk-full pre-size failures; decide whether context-file skip is still required.
-- Decide whether to keep the one-off buffer fallback or implement a pool resize/rehash strategy for oversized file-work payloads.
-- Decide whether `PerfectHashClientExe` should wait on bulk-create tokens for `BulkCreate=` requests now that the server routes them through the bulk-directory path.
-- Choose a node-selection policy for single table-create server requests (round-robin vs node 0 vs affinity).
-- Add IOCP work item queueing/state to drive per-request pipelines.
-- Integrate per-request concurrency caps and queueing policies.
-- Validate per-file concurrency ramp behavior (`--InitialPerFileConcurrency`, `--MaxPerFileConcurrency`, `--IncreaseConcurrencyAfterMilliseconds`) on `hard` and sys32 subsets; confirm no early failure.
-- Capture and diagnose `PerfectHashServer.exe` `0xC0000005` crash on `hard` (Release, `--NoFileIo`, concurrency 4); set `PH_SERVER_CRASH_DIR` for minidumps if needed.
-- Draft `IOCP-README.md` once protocol and dispatch behavior settle.
+## P0: Correctness + Completion Guarantees
+
+- [ ] Re-verify bulk completion accounting under stress (single token must always signal exactly once):
+  - `OutstandingWorkItems`
+  - `PendingCompletions`
+  - per-node decrement paths
+  - final request completion transition
+- [ ] Add/assert invariants in debug builds for async counters:
+  - `Job->ActiveGraphs`
+  - `Context->RemainingSolverLoops`
+  - `Job->Async.Outstanding`
+- [ ] Audit all failure/requeue paths again to ensure every submitted work item has exactly one completion/decrement.
+- [ ] Add targeted tests for:
+  - `PerfectHashAsyncRequeueWork()` failure path
+  - graph submit failure rollback
+  - bulk finalization when one node completes last.
+- [ ] Confirm server/client connection lifecycle robustness:
+  - `--WaitForServer`
+  - `--ConnectTimeout=<ms>`
+  - ping/pong readiness before bulk submission.
+
+## P0: IOCP-Only Runtime Hygiene
+
+- [ ] Ensure no legacy threadpool work submission is used by IOCP backend paths (except unavoidable OS-internal TP activity).
+- [ ] Keep server silent by default; output only when `--Verbose` is specified.
+- [ ] Re-verify `--NoFileIo` on server for fast stress loops and CI-style regression runs.
+
+## P1: Buffer Pool Redesign Completion (Lookaside/NUMA Style)
+
+- [ ] Finalize transition to per-NUMA global size-class pools (4KB..16MB default classes).
+- [ ] Ensure oversize buffers are pooled/reusable (not leaked one-offs), with guarded-list ownership for teardown.
+- [ ] Validate size-class mapping and payload offsets:
+  - header precedes payload
+  - `File->BaseAddress` points to payload only
+  - overrun should fail fast (`PH_RAISE`).
+- [ ] Add pool diagnostics (debug-only):
+  - allocation count
+  - in-use count
+  - exhaustion count
+  - per-class hit/miss.
+- [ ] Harden teardown/rundown:
+  - safe list flush
+  - safe free after server stop
+  - no outstanding buffer references.
+
+## P1: File I/O Pipeline Hardening (Overlapped)
+
+- [ ] Audit all CHM01 save callbacks for large-write safety with bounded, chunked writes.
+- [ ] Add explicit handling for payloads that exceed current buffer capacity:
+  - predictable flush-and-continue logic
+  - no undefined pointer arithmetic on overflow.
+- [ ] Keep OG memory-mapped path untouched and validated.
+- [ ] Re-check ReFS/ADS-related edge cases (table-size stream behavior) and preserve `ADS.md` notes.
+
+## P1: Tests (Unit + E2E)
+
+- [ ] Expand unit tests around IOCP buffer pool:
+  - guard-page mode on/off
+  - oversize class reuse
+  - multi-thread pop/push behavior.
+- [ ] Add IOCP file-write completion unit tests:
+  - success path (event signal + buffer return)
+  - error path (propagated HRESULT + release semantics).
+- [ ] Add repeatable E2E matrix scripts:
+  - `test1`, `hard`, `sys32-200`, `sys32-1000`
+  - `NoFileIo` and file-I/O modes
+  - standard ramp presets.
+
+## P2: Performance Characterization + Tuning
+
+- [ ] Re-run and capture normalized OG vs IOCP timings (same algo/flags/output drive):
+  - `Mulshrolate4RX`
+  - concurrency sets: `4`, `32`, `64`.
+- [ ] Sweep per-file ramp knobs:
+  - `--InitialPerFileConcurrency`
+  - `--MaxPerFileConcurrency`
+  - `--IncreaseConcurrencyAfterMilliseconds`
+- [ ] Profile system-vs-user overhead and memory footprint at high concurrency.
+- [ ] Tune default knobs for balanced throughput and memory use.
+
+## P2: API/CLI Polish
+
+- [ ] Keep/confirm naming split:
+  - `--IocpConcurrency`
+  - `--MaxThreads` (default `IocpConcurrency * 2`)
+  - `--MaxPerFileConcurrency` (must be `<= IocpConcurrency`).
+- [ ] Validate NUMA targeting options and document examples (all nodes, single node, mask).
+- [ ] Decide whether `BulkCreate=` request form should also block on token like `BulkCreateDirectory`.
+
+## Regression Commands (Baseline)
+
+- IOCP smoke:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\iocp-smoke.ps1 -BuildDir build-win -Config Release`
+- IOCP stress (NoFileIo):
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\stress-sys32-iocp.ps1 -BuildDir build-win -Config Release -IocpConcurrency 32 -MaxThreads 64 -NoFileIo`
+- OG stress:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\stress-sys32.ps1 -BuildDir build-win -Config Release -MaximumConcurrency 32`
+

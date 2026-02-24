@@ -1,5 +1,22 @@
 # IOCP Logs
 
+## 2026-02-24
+- Consolidated IOCP project ledgers for fresh-session handoff: `IOCP-LOGS.md`, `IOCP-TOOD.md`, `IOCP-PROMPT.md`, and new `IOCP-README.md`.
+- Captured current implementation status:
+  - IOCP server/client architecture is additive (new executables, OG paths retained).
+  - Per-NUMA-node IOCP runtime exists (one port per node, manual worker threads, affinity wiring).
+  - Named-pipe protocol supports ping/shutdown/table-create/bulk-directory requests.
+  - Bulk-directory request model provides single-token completion for client wait semantics.
+  - CHM01 async path exists and is IOCP-driven, with per-file concurrency ramp controls.
+  - IOCP file I/O path includes overlapped writes and overlapped keys loads (OG mmap path preserved).
+  - IOCP buffer pooling moved toward lookaside-style size classes with guard-page toggle support.
+- Captured key stability/perf findings to carry forward:
+  - Fixed multiple hangs/crashes caused by async accounting leaks, request lifetime bugs, and stale file-write byte tracking.
+  - Fixed `TpIsTimerSet` crash by guarding legacy threadpool callbacks when IOCP mode bypasses threadpool init.
+  - Full sys32 file-I/O IOCP runs complete; runtime is better than OG in some runs, but tuning is workload-sensitive.
+  - High-concurrency configurations can over-allocate memory; pool sizing policy requires further hardening.
+- No source-code behavior changes were introduced in this pass beyond documentation updates.
+
 ## 2026-01-19
 - Added IOCP context/server/client interfaces and COM scaffolding.
 - Added NUMA-aware IOCP runtime skeleton (per-node IOCPs, worker threads with affinity).
