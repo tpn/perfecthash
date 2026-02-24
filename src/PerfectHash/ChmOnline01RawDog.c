@@ -3042,6 +3042,10 @@ CompileChm01IndexVectorJitRawDog(
             Jit->Flags.Index32x16Vector = TRUE;
         } else if (Table->HashFunctionId ==
                    PerfectHashHashMulshrolate1RXFunctionId) {
+            if (!AllowAvx512 || !HostHasAvx512) {
+                return PH_E_NOT_IMPLEMENTED;
+            }
+
             if (UseAssigned16) {
                 SourceCode = (PBYTE)
                     PerfectHashJitRawDogMulshrolate1RX16Index32x16_x64;
