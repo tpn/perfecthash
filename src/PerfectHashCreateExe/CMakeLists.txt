@@ -34,6 +34,14 @@ endif()
 
 add_executable(${target} ${ALL_FILES})
 
+if(NOT MSVC)
+    set_target_properties(
+        ${target}
+        PROPERTIES
+        LINKER_LANGUAGE CXX
+    )
+endif()
+
 ################################################################################
 # Target
 ################################################################################
