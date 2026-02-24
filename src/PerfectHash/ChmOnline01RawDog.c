@@ -900,6 +900,18 @@ CompileChm01IndexJitRawDog(
                 sizeof(ULONG)
             };
             Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE1,
+                (ULONGLONG)Seed3Bytes.Byte1,
+                "Seed3Byte1Imm",
+                sizeof(ULONG)
+            };
+            Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE2,
+                (ULONGLONG)Seed3Bytes.Byte2,
+                "Seed3Byte2Imm",
+                sizeof(ULONG)
+            };
+            Entries[EntryCount++] = (RAW_DOG_PATCH_ENTRY){
                 RAWDOG_SENTINEL_IMM32_HASH_MASK,
                 (ULONGLONG)Table->HashMask,
                 "HashMaskImm",
@@ -2135,6 +2147,18 @@ CompileChm01IndexVectorJitRawDog(
                 RAWDOG_SENTINEL_IMM32_SEED2,
                 (ULONGLONG)TableInfo->Seed2,
                 "Seed2Imm",
+                sizeof(ULONG)
+            };
+            ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE1,
+                (ULONGLONG)Seed3Bytes.Byte1,
+                "Seed3Byte1Imm",
+                sizeof(ULONG)
+            };
+            ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE2,
+                (ULONGLONG)Seed3Bytes.Byte2,
+                "Seed3Byte2Imm",
                 sizeof(ULONG)
             };
             ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
@@ -3615,6 +3639,18 @@ CompileChm01IndexVectorJitRawDog(
                 RAWDOG_SENTINEL_IMM32_SEED2,
                 (ULONGLONG)TableInfo->Seed2,
                 "Seed2Imm",
+                sizeof(ULONG)
+            };
+            ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE1,
+                (ULONGLONG)Seed3Bytes.Byte1,
+                "Seed3Byte1Imm",
+                sizeof(ULONG)
+            };
+            ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
+                RAWDOG_SENTINEL_IMM32_SEED3_BYTE2,
+                (ULONGLONG)Seed3Bytes.Byte2,
+                "Seed3Byte2Imm",
                 sizeof(ULONG)
             };
             ImmediateEntries[ImmediateEntryCount++] = (RAW_DOG_PATCH_ENTRY){
