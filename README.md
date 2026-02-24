@@ -1,8 +1,5 @@
 # Perfect Hash
 
-<!-- Disable this whilst cuda-dev2 is in flux. 
-<img src="https://ci.appveyor.com/api/projects/status/github/tpn/perfecthash?svg=true&retina=true" alt="Appveyor Badge">
--->
 [![macos](https://github.com/tpn/perfecthash/actions/workflows/macos.yml/badge.svg)](https://github.com/tpn/perfecthash/actions/workflows/macos.yml)
 [![linux](https://github.com/tpn/perfecthash/actions/workflows/linux.yml/badge.svg)](https://github.com/tpn/perfecthash/actions/workflows/linux.yml)
 [![windows](https://github.com/tpn/perfecthash/actions/workflows/windows.yml/badge.svg)](https://github.com/tpn/perfecthash/actions/workflows/windows.yml)
