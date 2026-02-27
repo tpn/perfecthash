@@ -69,3 +69,37 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - Mitigation added in slim API wrapper: compile retries smaller vector widths
   before returning `PH_E_NOT_IMPLEMENTED`, which keeps RawDog JIT enabled when
   at least scalar JIT codegen is available.
+
+## Dual-Backend Console Example (2026-02-27)
+- Added `include/PerfectHashOnlineJit.h` and
+  `src/PerfectHash/PerfectHashOnlineJit.c` as a slim public online API that
+  supports both RawDog JIT and LLVM JIT backends.
+- Added a second C++ CMake sample:
+  `examples/cpp-console-online-jit/`.
+- New sample supports `--backend rawdog-jit|llvm-jit|auto`.
+- Default hash for the console flow is `mulshrolate2rx`.
+- Finder module (`FindPerfectHashOnlineJit.cmake`) resolves both:
+- `PerfectHashOnline` runtime (main API surface),
+- `PerfectHashLLVM` runtime (needed for LLVM JIT backend use).
+
+## CI Matrix Coverage For Examples (2026-02-27)
+- Linux, macOS, and Windows workflows now build and execute:
+- `cpp-console-online-rawdog-jit`
+- `cpp-console-online-jit` in both backend modes:
+  `--backend rawdog-jit` and `--backend llvm-jit`.
+- This gives platform-matrix coverage for the minimal RawDog-JIT runtime path
+  and the dual-backend path.
+
+## SQLite Online JIT Integration Direction (Draft, 2026-02-27)
+- Reviewed upstream sqlite planner/virtual-table internals to identify the
+  lowest-risk integration seam:
+- `sqlite/src/where.c` (`xBestIndex` planning/loop costing hooks),
+- `sqlite/src/vtab.c` (module lifecycle and registration),
+- `sqlite/ext/misc/series.c` (reference virtual table implementation style).
+- Chosen first strategy: integrate PerfectHash as a virtual table module
+  backed by an in-memory perfect hash index for 32-bit keys, instead of
+  patching sqlite core planner internals in v1.
+- Planned A/B benchmark modes:
+- baseline join (`fact` + `dim` with sqlite B-tree index),
+- PerfectHash virtual-table join (`fact` + `dim_ph`),
+- backend variant toggle (`rawdog-jit` vs `llvm-jit`) for the PerfectHash path.

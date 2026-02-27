@@ -18,3 +18,8 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Changed console example default hash to `multiplyshiftr` for a cross-platform RawDog JIT-success default path.
 - 2026-02-27: Updated console example default hash to `mulshrolate2rx` per user direction.
 - 2026-02-27: Fixed Windows build break in `PerfectHashOnlineRawdog.c` by using GUID pointer forms (`&CLSID`, `&IID`) for `PerfectHashDllGetClassObject()` / `CreateInstance()` arguments.
+- 2026-02-27: Added slim dual-backend online API (`PerfectHashOnlineJit.h` + `PerfectHashOnlineJit.c`) supporting RawDog JIT and LLVM JIT backend selection.
+- 2026-02-27: Added `examples/cpp-console-online-jit/` C++ CMake sample for runtime table generation with `rawdog-jit`, `llvm-jit`, or `auto`.
+- 2026-02-27: Added GitHub Actions coverage to build/run both C++ online JIT examples on Linux/macOS/Windows matrices.
+- 2026-02-27: Began sqlite integration discovery by ingesting sqlite upstream source and reviewing `src/where.c`, `src/vtab.c`, and `ext/misc/series.c`.
+- 2026-02-27: Added sqlite example planning scaffold under `examples/sqlite-online-jit/` with integration and benchmark design notes.

@@ -27,3 +27,28 @@
 - [x] Add `README.md` inside the example with quickstart and troubleshooting.
 - [ ] Add compact architecture diagram or bullet walkthrough for human + LLM ingestion.
 - [ ] Record final results and residual follow-up ideas (e.g., UnrealEngine/sqlite3 integrations).
+
+## Dual-Backend Example (`cpp-console-online-jit`)
+- [x] Add slim public online API that supports RawDog JIT and LLVM JIT.
+- [x] Add `examples/cpp-console-online-jit/` with CMake finder + console app.
+- [x] Support explicit backend selection (`rawdog-jit`, `llvm-jit`, `auto`).
+- [x] Ensure default hash is `mulshrolate2rx`.
+
+## CI Coverage
+- [x] Add GitHub Actions steps for Linux/macOS/Windows to build and run both
+  C++ online JIT examples.
+- [ ] Monitor PR checks and confirm all platform jobs are green after push.
+
+## SQLite Online JIT Example
+- [x] Ingest sqlite source tree for design review and identify integration seam.
+- [x] Review sqlite planner/virtual-table internals (`where.c`, `vtab.c`,
+  `ext/misc/series.c`).
+- [x] Select initial integration strategy (virtual table module + PerfectHash
+  online JIT).
+- [x] Draft `examples/sqlite-online-jit/README.md` and `PLAN.md`.
+- [ ] Choose and document sqlite vendoring approach for this repo
+  (`amalgamation` snapshot vs full mirror snapshot).
+- [ ] Scaffold `examples/sqlite-online-jit/` CMake project (sqlite + PerfectHash).
+- [ ] Implement PerfectHash-backed virtual table module.
+- [ ] Add benchmark harness with easy A/B toggles.
+- [ ] Add CI execution for sqlite example.
