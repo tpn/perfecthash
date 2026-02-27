@@ -319,11 +319,35 @@ PhOnlineJitCompileTable(
     PH_ONLINE_JIT_MAX_ISA JitMaxIsa
     )
 {
+    return PhOnlineJitCompileTableEx(Context,
+                                     Table,
+                                     Backend,
+                                     VectorWidth,
+                                     JitMaxIsa,
+                                     0,
+                                     NULL,
+                                     NULL);
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitCompileTableEx(
+    PH_ONLINE_JIT_CONTEXT *Context,
+    PH_ONLINE_JIT_TABLE *Table,
+    PH_ONLINE_JIT_BACKEND Backend,
+    uint32_t VectorWidth,
+    PH_ONLINE_JIT_MAX_ISA JitMaxIsa,
+    uint32_t Flags,
+    PH_ONLINE_JIT_BACKEND *EffectiveBackend,
+    uint32_t *EffectiveVectorWidth
+    )
+{
     HRESULT Result;
     HRESULT LastResult;
     ULONG CandidateWidths[4] = {0};
     ULONG CandidateCount = 0;
     ULONG Index;
+    BOOLEAN StrictVectorWidth;
 
     if (!ARGUMENT_PRESENT(Context) ||
         !ARGUMENT_PRESENT(Context->Online) ||
@@ -336,12 +360,36 @@ PhOnlineJitCompileTable(
         return E_INVALIDARG;
     }
 
+    if (Backend != PhOnlineJitBackendAuto &&
+        Backend != PhOnlineJitBackendRawDogJit &&
+        Backend != PhOnlineJitBackendLlvmJit) {
+        return E_INVALIDARG;
+    }
+
+    StrictVectorWidth = ((Flags & PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH) != 0);
+
+    if (ARGUMENT_PRESENT(EffectiveBackend)) {
+        *EffectiveBackend = Backend;
+    }
+    if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+        *EffectiveVectorWidth = VectorWidth;
+    }
+
     if (Backend == PhOnlineJitBackendLlvmJit) {
-        return PhCompileOnlineJitBackend(Context,
-                                         Table,
-                                         Backend,
-                                         VectorWidth,
-                                         JitMaxIsa);
+        Result = PhCompileOnlineJitBackend(Context,
+                                           Table,
+                                           Backend,
+                                           VectorWidth,
+                                           JitMaxIsa);
+        if (SUCCEEDED(Result)) {
+            if (ARGUMENT_PRESENT(EffectiveBackend)) {
+                *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+            }
+            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+                *EffectiveVectorWidth = VectorWidth;
+            }
+        }
+        return Result;
     }
 
     switch (VectorWidth) {
@@ -351,22 +399,30 @@ PhOnlineJitCompileTable(
             break;
         case 2:
             CandidateWidths[CandidateCount++] = 2;
-            CandidateWidths[CandidateCount++] = 1;
+            if (!StrictVectorWidth) {
+                CandidateWidths[CandidateCount++] = 1;
+            }
             break;
         case 4:
             CandidateWidths[CandidateCount++] = 4;
-            CandidateWidths[CandidateCount++] = 1;
+            if (!StrictVectorWidth) {
+                CandidateWidths[CandidateCount++] = 1;
+            }
             break;
         case 8:
             CandidateWidths[CandidateCount++] = 8;
-            CandidateWidths[CandidateCount++] = 4;
-            CandidateWidths[CandidateCount++] = 1;
+            if (!StrictVectorWidth) {
+                CandidateWidths[CandidateCount++] = 4;
+                CandidateWidths[CandidateCount++] = 1;
+            }
             break;
         case 16:
             CandidateWidths[CandidateCount++] = 16;
-            CandidateWidths[CandidateCount++] = 8;
-            CandidateWidths[CandidateCount++] = 4;
-            CandidateWidths[CandidateCount++] = 1;
+            if (!StrictVectorWidth) {
+                CandidateWidths[CandidateCount++] = 8;
+                CandidateWidths[CandidateCount++] = 4;
+                CandidateWidths[CandidateCount++] = 1;
+            }
             break;
         default:
             return E_INVALIDARG;
@@ -381,6 +437,12 @@ PhOnlineJitCompileTable(
                                            CandidateWidths[Index],
                                            JitMaxIsa);
         if (SUCCEEDED(Result)) {
+            if (ARGUMENT_PRESENT(EffectiveBackend)) {
+                *EffectiveBackend = PhOnlineJitBackendRawDogJit;
+            }
+            if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+                *EffectiveVectorWidth = CandidateWidths[Index];
+            }
             return S_OK;
         }
 
@@ -406,6 +468,12 @@ PhOnlineJitCompileTable(
                                        VectorWidth,
                                        JitMaxIsa);
     if (SUCCEEDED(Result)) {
+        if (ARGUMENT_PRESENT(EffectiveBackend)) {
+            *EffectiveBackend = PhOnlineJitBackendLlvmJit;
+        }
+        if (ARGUMENT_PRESENT(EffectiveVectorWidth)) {
+            *EffectiveVectorWidth = VectorWidth;
+        }
         return S_OK;
     }
 

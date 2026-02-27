@@ -67,6 +67,8 @@ typedef enum PH_ONLINE_JIT_MAX_ISA {
     PhOnlineJitMaxIsaSve2,
 } PH_ONLINE_JIT_MAX_ISA;
 
+#define PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH (1u << 0)
+
 PH_ONLINE_JIT_API
 int32_t
 PhOnlineJitOpen(
@@ -97,6 +99,19 @@ PhOnlineJitCompileTable(
     PH_ONLINE_JIT_BACKEND Backend,
     uint32_t VectorWidth,
     PH_ONLINE_JIT_MAX_ISA JitMaxIsa
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitCompileTableEx(
+    PH_ONLINE_JIT_CONTEXT *Context,
+    PH_ONLINE_JIT_TABLE *Table,
+    PH_ONLINE_JIT_BACKEND Backend,
+    uint32_t VectorWidth,
+    PH_ONLINE_JIT_MAX_ISA JitMaxIsa,
+    uint32_t Flags,
+    PH_ONLINE_JIT_BACKEND *EffectiveBackend,
+    uint32_t *EffectiveVectorWidth
     );
 
 PH_ONLINE_JIT_API
