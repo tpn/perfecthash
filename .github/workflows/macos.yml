@@ -97,4 +97,6 @@ jobs:
             --backend llvm-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 1
           micromamba run -n "${{ matrix.env_name }}" \
             "${{ matrix.build_dir }}/examples/sqlite-online-jit/sqlite-online-jit" \
-            --matrix --dim-size 512 --fact-size 4096 --iterations 1
+            --matrix --dim-size 512 --fact-size 4096 --iterations 1 --build-runs 2 \
+            --output-detailed-csv /tmp/sqlite-online-jit-detailed.csv \
+            --output-summary-csv /tmp/sqlite-online-jit-summary.csv
