@@ -46,9 +46,9 @@
 - [x] Select initial integration strategy (virtual table module + PerfectHash
   online JIT).
 - [x] Draft `examples/sqlite-online-jit/README.md` and `PLAN.md`.
-- [ ] Choose and document sqlite vendoring approach for this repo
+- [x] Choose and document sqlite vendoring approach for this repo
   (`amalgamation` snapshot vs full mirror snapshot).
-- [ ] Scaffold `examples/sqlite-online-jit/` CMake project (sqlite + PerfectHash).
-- [ ] Implement PerfectHash-backed virtual table module.
-- [ ] Add benchmark harness with easy A/B toggles.
+- [x] Scaffold `examples/sqlite-online-jit/` CMake project (sqlite + PerfectHash).
+- [x] Implement PerfectHash-backed virtual table module.
+- [x] Add benchmark harness with easy A/B toggles.
 - [ ] Add CI execution for sqlite example.

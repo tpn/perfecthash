@@ -1,45 +1,81 @@
 # sqlite-online-jit
 
-Planned example showing how to integrate PerfectHash online table generation
-into sqlite for fast 32-bit key lookups, with a reproducible A/B benchmark.
+Real-world sqlite integration example that embeds PerfectHash online JIT in a
+virtual table module and benchmarks A/B behavior.
 
-## Status
+## What This Example Demonstrates
 
-Planning complete for v1 integration approach. Implementation is next.
+- sqlite integration without sqlite core planner patches
+- runtime PerfectHash table generation from a sqlite dimension table
+- backend toggle for PerfectHash compile path:
+  `rawdog-jit`, `llvm-jit`, `auto`
+- direct A/B benchmark in one executable:
+  baseline B-tree join vs PerfectHash virtual-table join
 
-## Goal
+## Integration Shape
 
-Provide a real-world sqlite integration example that is:
+- sqlite is vendored as a pinned amalgamation snapshot under `sqlite/`.
+- The module `perfecthash` is registered in-process.
+- `CREATE VIRTUAL TABLE ... USING perfecthash(...)` materializes a PerfectHash
+  lookup index from a source table (`dim`) and key/value columns.
+- Join queries probe the virtual table through `xBestIndex` equality constraints.
 
-- portable across Windows/Linux/macOS,
-- easy for humans and LLMs to read,
-- easy to benchmark in A/B mode.
+## Vendored sqlite Snapshot
 
-## Selected v1 Approach
+- Version: `3.51.2` (`3510200`)
+- Source: `https://www.sqlite.org/2026/sqlite-amalgamation-3510200.zip`
+- Files: `sqlite3.c`, `sqlite3.h`, `sqlite3ext.h`
 
-Use a sqlite virtual table module backed by PerfectHash online JIT.
+## Build
 
-- Base mode: regular sqlite join/index behavior.
-- PerfectHash mode: join through a PerfectHash-backed virtual table.
-- Backend toggle in PerfectHash mode: `rawdog-jit` or `llvm-jit`.
+### Linux/macOS
 
-This avoids invasive sqlite planner patches in the first iteration while still
-using a planner-aware integration seam (`xBestIndex`).
+```bash
+cmake -S examples/sqlite-online-jit \
+      -B build/examples/sqlite-online-jit \
+      -DPERFECTHASH_ROOT=/path/to/perfecthash
 
-## A/B Benchmark Concept
+cmake --build build/examples/sqlite-online-jit -j
+```
 
-Initial benchmark will compare:
+### Windows (Visual Studio)
 
-1. Baseline sqlite join path (B-tree indexed dimension table).
-2. PerfectHash virtual-table join path (`rawdog-jit` backend).
-3. PerfectHash virtual-table join path (`llvm-jit` backend).
+```powershell
+cmake -S examples/sqlite-online-jit `
+      -B build\\examples\\sqlite-online-jit `
+      -G \"Visual Studio 17 2022\" -A x64 `
+      -DPERFECTHASH_ROOT=C:\\path\\to\\perfecthash
 
-Benchmark harness will report total runtime, rows/s, and query plan text so
-speedups can be interpreted with planner context.
+cmake --build build\\examples\\sqlite-online-jit --config Release
+```
 
-## Next Deliverables
+## Run
 
-- finalize sqlite vendoring strategy for this repo,
-- scaffold CMake build for sqlite + PerfectHash integration,
-- implement virtual-table module and benchmark runner,
-- add CI job coverage for the sqlite example.
+```bash
+./build/examples/sqlite-online-jit/sqlite-online-jit \
+  --backend rawdog-jit \
+  --dim-size 50000 \
+  --fact-size 1000000 \
+  --iterations 5 \
+  --vector-width 16
+```
+
+Optional flags:
+
+- `--backend <rawdog-jit|llvm-jit|auto>`
+- `--hash <name>`
+- `--vector-width <0|1|2|4|8|16>`
+- `--dim-size <count>`
+- `--fact-size <count>`
+- `--iterations <count>`
+- `--seed <value>`
+
+## Output
+
+The executable prints:
+
+- `EXPLAIN QUERY PLAN` for baseline and PerfectHash queries
+- average runtime for both modes
+- relative speedup (`baseline/perfecthash`)
+
+The run fails if query results diverge between baseline and PerfectHash paths.

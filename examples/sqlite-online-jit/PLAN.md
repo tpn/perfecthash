@@ -1,5 +1,11 @@
 # sqlite-online-jit Plan
 
+## Status
+
+- Phase 1 (vendoring + scaffold) implemented.
+- Phase 2 (virtual table core) implemented.
+- Phase 3+ (benchmark tuning and CI expansion) in progress.
+
 ## Inputs Reviewed
 
 sqlite source components reviewed for integration fit:

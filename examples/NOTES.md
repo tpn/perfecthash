@@ -103,3 +103,19 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - baseline join (`fact` + `dim` with sqlite B-tree index),
 - PerfectHash virtual-table join (`fact` + `dim_ph`),
 - backend variant toggle (`rawdog-jit` vs `llvm-jit`) for the PerfectHash path.
+
+## SQLite Online JIT Prototype Implemented (2026-02-27)
+- Added `examples/sqlite-online-jit/` CMake project with vendored sqlite
+  amalgamation (`3.51.2` / `3510200`).
+- Implemented `perfecthash` sqlite virtual table module in
+  `src/perfecthash_vtab.cpp`.
+- Module builds a PerfectHash table from sqlite source table rows
+  (`source_table`, `key_column`, `value_column`) and serves lookup rows via:
+- `xBestIndex` equality planning on key,
+- `xFilter`/`xColumn` point-lookup fast path backed by `PhOnlineJitIndex32()`.
+- Implemented benchmark runner in `src/main.cpp` with direct A/B execution:
+- baseline sqlite join against B-tree path,
+- PerfectHash virtual-table join using selectable backend
+  (`rawdog-jit`, `llvm-jit`, `auto`).
+- Added result parity check (baseline sum must equal PerfectHash sum) and
+  reported average runtime + speedup.

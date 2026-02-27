@@ -23,3 +23,8 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Added GitHub Actions coverage to build/run both C++ online JIT examples on Linux/macOS/Windows matrices.
 - 2026-02-27: Began sqlite integration discovery by ingesting sqlite upstream source and reviewing `src/where.c`, `src/vtab.c`, and `ext/misc/series.c`.
 - 2026-02-27: Added sqlite example planning scaffold under `examples/sqlite-online-jit/` with integration and benchmark design notes.
+- 2026-02-27: Vendored sqlite amalgamation snapshot `3.51.2` (`3510200`) into `examples/sqlite-online-jit/sqlite/`.
+- 2026-02-27: Added `examples/sqlite-online-jit/CMakeLists.txt` and finder wiring for `PerfectHashOnlineJit`.
+- 2026-02-27: Implemented `perfecthash` sqlite virtual table module (`src/perfecthash_vtab.cpp`) backed by runtime PerfectHash index generation.
+- 2026-02-27: Implemented sqlite benchmark runner (`src/main.cpp`) with A/B comparison between baseline B-tree join and PerfectHash virtual-table join.
+- 2026-02-27: Validated local runs for backends `rawdog-jit`, `llvm-jit`, and `auto` with matching results and reported speedups.

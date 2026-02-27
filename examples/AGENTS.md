@@ -26,6 +26,8 @@
 - Keep key-path assumptions explicit:
   primary target is 32-bit keys; if 64-bit inputs are used, define and validate
   the downsize/coercion strategy in docs and code.
+- Keep sqlite vendoring explicit and pinned:
+  record exact upstream version and download source in `sqlite/VERSION.txt`.
 
 ## Documentation Style
 - Use concrete file paths and exact target names.
