@@ -17,3 +17,4 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Updated slim RawDog JIT API compile wrapper to retry smaller vector widths (e.g., 16->8->4->1) before surfacing `PH_E_NOT_IMPLEMENTED`.
 - 2026-02-27: Changed console example default hash to `multiplyshiftr` for a cross-platform RawDog JIT-success default path.
 - 2026-02-27: Updated console example default hash to `mulshrolate2rx` per user direction.
+- 2026-02-27: Fixed Windows build break in `PerfectHashOnlineRawdog.c` by using GUID pointer forms (`&CLSID`, `&IID`) for `PerfectHashDllGetClassObject()` / `CreateInstance()` arguments.

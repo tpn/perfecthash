@@ -158,15 +158,9 @@ PhOnlineRawdogOpen(
         return E_OUTOFMEMORY;
     }
 
-#ifdef PH_WINDOWS
-    Result = PerfectHashDllGetClassObject(CLSID_PERFECT_HASH,
-                                          IID_PERFECT_HASH_ICLASSFACTORY,
-                                          (PVOID *)&ClassFactory);
-#else
     Result = PerfectHashDllGetClassObject(&CLSID_PERFECT_HASH,
                                           &IID_PERFECT_HASH_ICLASSFACTORY,
                                           (PVOID *)&ClassFactory);
-#endif
     if (FAILED(Result)) {
         goto Error;
     }
@@ -174,11 +168,7 @@ PhOnlineRawdogOpen(
     Result = ClassFactory->Vtbl->CreateInstance(
         ClassFactory,
         NULL,
-#ifdef PH_WINDOWS
-        IID_PERFECT_HASH_ONLINE,
-#else
         &IID_PERFECT_HASH_ONLINE,
-#endif
         (void **)&Online
     );
     if (FAILED(Result)) {
