@@ -37,7 +37,7 @@
 ## CI Coverage
 - [x] Add GitHub Actions steps for Linux/macOS/Windows to build and run both
   C++ online JIT examples.
-- [ ] Monitor PR checks and confirm all platform jobs are green after push.
+- [x] Monitor PR checks and confirm all platform jobs are green after push.
 
 ## SQLite Online JIT Example
 - [x] Ingest sqlite source tree for design review and identify integration seam.

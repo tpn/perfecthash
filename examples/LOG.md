@@ -32,3 +32,4 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Fixed Windows `PerfectHashOnlineJit` build issues by adding `PERFECT_HASH_ONLINE_JIT_BUILD` to the core `PerfectHash` target definitions and handling `PhOnlineJitBackendAuto` explicitly in backend switch logic.
 - 2026-02-27: Fixed Linux/macOS example discovery in CI by extending example finder module library path suffixes for multi-config output directories (`lib/Release`, `lib/RelWithDebInfo`, `lib/Debug`, and static variants).
 - 2026-02-27: Made `FindPerfectHashOnlineJit.cmake` treat `PerfectHashLLVM` as optional so Windows CI can run examples when LLVM runtime artifacts are unavailable (runtime backend-not-found fallback remains supported).
+- 2026-02-27: Re-monitored PR #70 checks after CI fixes and confirmed all checks are green (`13/13` passed).
