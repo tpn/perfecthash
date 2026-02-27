@@ -28,7 +28,7 @@ jobs:
         run: cmake --build --preset ninja-release --parallel
       - name: Test (Release)
         run: ctest --test-dir build -C Release --output-on-failure --timeout 300
-      - name: Examples (RawDog JIT + LLVM JIT)
+      - name: Examples (RawDog JIT + LLVM JIT + sqlite-online-jit)
         shell: pwsh
         run: |
           $root = "${{ github.workspace }}"
@@ -49,3 +49,12 @@ jobs:
           cmake --build build/examples/cpp-console-online-jit --config Release --parallel
           & "$root/build/examples/cpp-console-online-jit/Release/cpp-console-online-jit.exe" --backend rawdog-jit --vector-width 16
           & "$root/build/examples/cpp-console-online-jit/Release/cpp-console-online-jit.exe" --backend llvm-jit --vector-width 1
+
+          cmake -S examples/sqlite-online-jit `
+            -B build/examples/sqlite-online-jit `
+            -G "Ninja Multi-Config" `
+            -DPERFECTHASH_ROOT="$root" `
+            -DPerfectHashOnlineJit_ROOT="$root/build"
+          cmake --build build/examples/sqlite-online-jit --config Release --parallel
+          & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend rawdog-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 16
+          & "$root/build/examples/sqlite-online-jit/Release/sqlite-online-jit.exe" --backend llvm-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 1

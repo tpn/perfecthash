@@ -28,3 +28,4 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Implemented `perfecthash` sqlite virtual table module (`src/perfecthash_vtab.cpp`) backed by runtime PerfectHash index generation.
 - 2026-02-27: Implemented sqlite benchmark runner (`src/main.cpp`) with A/B comparison between baseline B-tree join and PerfectHash virtual-table join.
 - 2026-02-27: Validated local runs for backends `rawdog-jit`, `llvm-jit`, and `auto` with matching results and reported speedups.
+- 2026-02-27: Added GitHub Actions workflow coverage to build and run `examples/sqlite-online-jit` on Linux/macOS/Windows.

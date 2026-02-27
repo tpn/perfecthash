@@ -51,4 +51,4 @@
 - [x] Scaffold `examples/sqlite-online-jit/` CMake project (sqlite + PerfectHash).
 - [x] Implement PerfectHash-backed virtual table module.
 - [x] Add benchmark harness with easy A/B toggles.
-- [ ] Add CI execution for sqlite example.
+- [x] Add CI execution for sqlite example.

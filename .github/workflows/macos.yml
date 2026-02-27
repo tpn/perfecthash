@@ -55,7 +55,7 @@ jobs:
         run: |
           micromamba run -n "${{ matrix.env_name }}" ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure -C Release
 
-      - name: Examples (RawDog JIT + LLVM JIT)
+      - name: Examples (RawDog JIT + LLVM JIT + sqlite-online-jit)
         shell: bash -l {0}
         run: |
           micromamba run -n "${{ matrix.env_name }}" cmake \
@@ -81,3 +81,17 @@ jobs:
           micromamba run -n "${{ matrix.env_name }}" \
             "${{ matrix.build_dir }}/examples/cpp-console-online-jit/cpp-console-online-jit" \
             --backend llvm-jit --vector-width 1
+
+          micromamba run -n "${{ matrix.env_name }}" cmake \
+            -S examples/sqlite-online-jit \
+            -B "${{ matrix.build_dir }}/examples/sqlite-online-jit" \
+            -DPERFECTHASH_ROOT="${GITHUB_WORKSPACE}" \
+            -DPerfectHashOnlineJit_ROOT="${GITHUB_WORKSPACE}/${{ matrix.build_dir }}"
+          micromamba run -n "${{ matrix.env_name }}" cmake \
+            --build "${{ matrix.build_dir }}/examples/sqlite-online-jit"
+          micromamba run -n "${{ matrix.env_name }}" \
+            "${{ matrix.build_dir }}/examples/sqlite-online-jit/sqlite-online-jit" \
+            --backend rawdog-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 16
+          micromamba run -n "${{ matrix.env_name }}" \
+            "${{ matrix.build_dir }}/examples/sqlite-online-jit/sqlite-online-jit" \
+            --backend llvm-jit --dim-size 2000 --fact-size 20000 --iterations 2 --vector-width 1
