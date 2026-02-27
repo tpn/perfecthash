@@ -2,11 +2,13 @@
 
 #include <sqlite3.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cerrno>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -44,6 +46,10 @@ struct Options {
   uint32_t fact_size = 100'000;
   uint32_t iterations = 2;
   uint32_t seed = 1;
+  uint32_t build_runs = 1;
+
+  std::string output_detailed_csv;
+  std::string output_summary_csv;
 };
 
 struct BenchmarkCase {
@@ -53,15 +59,79 @@ struct BenchmarkCase {
   bool strict_vector_width = false;
 };
 
-struct BenchmarkResult {
+struct BenchmarkRun {
   BenchmarkCase config;
+  uint32_t run_index = 0;
+
   bool create_ok = false;
   bool query_ok = false;
   bool result_match = false;
   bool have_build_status = false;
+
   PerfectHashBuildStatus build_status;
+
   sqlite3_int64 sum = 0;
-  double avg_ms = 0.0;
+  double create_ms = 0.0;
+  double query_ms = 0.0;
+  double end_to_end_ms = 0.0;
+
+  double source_extract_ms = 0.0;
+  double table_create_ms = 0.0;
+  double compile_ms = 0.0;
+  double materialize_ms = 0.0;
+  double internal_create_ms = 0.0;
+
+  std::string error;
+};
+
+struct BenchmarkResult {
+  BenchmarkCase config;
+  std::vector<BenchmarkRun> runs;
+
+  bool any_create_ok = false;
+  bool any_query_ok = false;
+  bool all_result_match = true;
+
+  uint32_t total_runs = 0;
+  uint32_t create_success_runs = 0;
+  uint32_t query_success_runs = 0;
+  uint32_t jit_success_runs = 0;
+  uint32_t jit_fallback_runs = 0;
+
+  double create_avg_ms = 0.0;
+  double create_min_ms = 0.0;
+  double create_max_ms = 0.0;
+
+  double query_avg_ms = 0.0;
+  double query_min_ms = 0.0;
+  double query_max_ms = 0.0;
+
+  double end_to_end_avg_ms = 0.0;
+  double end_to_end_min_ms = 0.0;
+  double end_to_end_max_ms = 0.0;
+
+  double source_extract_avg_ms = 0.0;
+  double source_extract_min_ms = 0.0;
+  double source_extract_max_ms = 0.0;
+
+  double table_create_avg_ms = 0.0;
+  double table_create_min_ms = 0.0;
+  double table_create_max_ms = 0.0;
+
+  double compile_avg_ms = 0.0;
+  double compile_min_ms = 0.0;
+  double compile_max_ms = 0.0;
+
+  double materialize_avg_ms = 0.0;
+  double materialize_min_ms = 0.0;
+  double materialize_max_ms = 0.0;
+
+  double internal_create_avg_ms = 0.0;
+  double internal_create_min_ms = 0.0;
+  double internal_create_max_ms = 0.0;
+
+  sqlite3_int64 representative_sum = 0;
+  std::string outcome = "ok";
   std::string error;
 };
 
@@ -69,6 +139,34 @@ std::string HrToHex(int32_t hr) {
   std::ostringstream stream;
   stream << "0x" << std::hex << std::uppercase << static_cast<uint32_t>(hr);
   return stream.str();
+}
+
+std::string CsvEscape(const std::string &text) {
+  bool needs_quotes = false;
+  for (const char c : text) {
+    if (c == ',' || c == '"' || c == '\n' || c == '\r') {
+      needs_quotes = true;
+      break;
+    }
+  }
+
+  if (!needs_quotes) {
+    return text;
+  }
+
+  std::string escaped;
+  escaped.reserve(text.size() + 2);
+  escaped.push_back('"');
+  for (const char c : text) {
+    if (c == '"') {
+      escaped.push_back('"');
+      escaped.push_back('"');
+    } else {
+      escaped.push_back(c);
+    }
+  }
+  escaped.push_back('"');
+  return escaped;
 }
 
 void PrintUsage(const char *argv0) {
@@ -79,14 +177,17 @@ void PrintUsage(const char *argv0) {
          " [--hash <name>]"
          " [--vector-width <0|1|2|4|8|16>]"
          " [--strict-vector-width <0|1>]"
+         " [--build-runs <count>]"
+         " [--output-detailed-csv <path>]"
+         " [--output-summary-csv <path>]"
          " [--dim-size <count>]"
          " [--fact-size <count>]"
          " [--iterations <count>]"
          " [--seed <value>]\n"
       << "\n"
-      << "Default behavior: run a full matrix across RawDog-JIT + LLVM-JIT,\n"
-      << "all curated hash functions, and vector widths 1/2/4/8/16.\n"
-      << "Passing --backend/--hash/--vector-width without --matrix forces single mode.\n";
+      << "Default behavior: run full matrix across RawDog-JIT + LLVM-JIT,\n"
+      << "all curated hash functions, vector widths 1/2/4/8/16.\n"
+      << "Pass --build-runs N to measure creation-time distributions per permutation.\n";
 }
 
 bool ParseUint32(const char *text, uint32_t *value) {
@@ -178,6 +279,34 @@ bool ParseArgs(int argc, char **argv, Options *options) {
       }
       options->strict_vector_width = (strict_value != 0);
       options->strict_vector_width_set = true;
+      continue;
+    }
+
+    if (std::strcmp(arg, "--build-runs") == 0) {
+      const char *value = require_value("--build-runs");
+      if (!value || !ParseUint32(value, &options->build_runs) ||
+          options->build_runs == 0) {
+        std::cerr << "Invalid build-runs value.\n";
+        return false;
+      }
+      continue;
+    }
+
+    if (std::strcmp(arg, "--output-detailed-csv") == 0) {
+      const char *value = require_value("--output-detailed-csv");
+      if (!value) {
+        return false;
+      }
+      options->output_detailed_csv = value;
+      continue;
+    }
+
+    if (std::strcmp(arg, "--output-summary-csv") == 0) {
+      const char *value = require_value("--output-summary-csv");
+      if (!value) {
+        return false;
+      }
+      options->output_summary_csv = value;
       continue;
     }
 
@@ -480,50 +609,196 @@ bool CreatePerfectHashVtab(sqlite3 *db,
   return ExecSql(db, create_vtab_sql, error);
 }
 
+void AggregateResult(BenchmarkResult *result, sqlite3_int64 baseline_sum) {
+  if (!result) {
+    return;
+  }
+
+  result->total_runs = static_cast<uint32_t>(result->runs.size());
+  result->all_result_match = true;
+  result->outcome = "ok";
+
+  std::vector<double> create_samples;
+  std::vector<double> query_samples;
+  std::vector<double> end_to_end_samples;
+  std::vector<double> source_extract_samples;
+  std::vector<double> table_create_samples;
+  std::vector<double> compile_samples;
+  std::vector<double> materialize_samples;
+  std::vector<double> internal_create_samples;
+
+  for (const auto &run : result->runs) {
+    if (run.create_ok) {
+      result->create_success_runs += 1;
+      result->any_create_ok = true;
+      create_samples.push_back(run.create_ms);
+    }
+
+    if (run.have_build_status) {
+      if (run.build_status.jit_enabled) {
+        result->jit_success_runs += 1;
+      } else {
+        result->jit_fallback_runs += 1;
+      }
+
+      source_extract_samples.push_back(run.source_extract_ms);
+      table_create_samples.push_back(run.table_create_ms);
+      compile_samples.push_back(run.compile_ms);
+      materialize_samples.push_back(run.materialize_ms);
+      internal_create_samples.push_back(run.internal_create_ms);
+    }
+
+    if (run.query_ok) {
+      result->query_success_runs += 1;
+      result->any_query_ok = true;
+      query_samples.push_back(run.query_ms);
+      end_to_end_samples.push_back(run.end_to_end_ms);
+      result->representative_sum = run.sum;
+    }
+
+    if (!run.result_match && run.query_ok) {
+      result->all_result_match = false;
+    }
+
+    if (!run.error.empty() && result->error.empty()) {
+      result->error = run.error;
+    }
+  }
+
+  auto populate_stats = [](std::vector<double> *samples,
+                           double *avg,
+                           double *min,
+                           double *max) {
+    if (!samples || !avg || !min || !max || samples->empty()) {
+      return;
+    }
+
+    std::sort(samples->begin(), samples->end());
+    *min = samples->front();
+    *max = samples->back();
+    double sum = 0.0;
+    for (double sample : *samples) {
+      sum += sample;
+    }
+    *avg = sum / static_cast<double>(samples->size());
+  };
+
+  populate_stats(&create_samples,
+                 &result->create_avg_ms,
+                 &result->create_min_ms,
+                 &result->create_max_ms);
+  populate_stats(&query_samples,
+                 &result->query_avg_ms,
+                 &result->query_min_ms,
+                 &result->query_max_ms);
+  populate_stats(&end_to_end_samples,
+                 &result->end_to_end_avg_ms,
+                 &result->end_to_end_min_ms,
+                 &result->end_to_end_max_ms);
+  populate_stats(&source_extract_samples,
+                 &result->source_extract_avg_ms,
+                 &result->source_extract_min_ms,
+                 &result->source_extract_max_ms);
+  populate_stats(&table_create_samples,
+                 &result->table_create_avg_ms,
+                 &result->table_create_min_ms,
+                 &result->table_create_max_ms);
+  populate_stats(&compile_samples,
+                 &result->compile_avg_ms,
+                 &result->compile_min_ms,
+                 &result->compile_max_ms);
+  populate_stats(&materialize_samples,
+                 &result->materialize_avg_ms,
+                 &result->materialize_min_ms,
+                 &result->materialize_max_ms);
+  populate_stats(&internal_create_samples,
+                 &result->internal_create_avg_ms,
+                 &result->internal_create_min_ms,
+                 &result->internal_create_max_ms);
+
+  if (!result->any_create_ok) {
+    result->outcome = "create_failed";
+  } else if (!result->any_query_ok) {
+    result->outcome = "query_failed";
+  } else if (!result->all_result_match || result->representative_sum != baseline_sum) {
+    result->outcome = "sum_mismatch";
+  }
+}
+
 BenchmarkResult RunPerfectHashCase(sqlite3 *db,
                                    const BenchmarkCase &benchmark_case,
                                    const std::string &query,
                                    sqlite3_int64 baseline_sum,
                                    uint32_t iterations,
+                                   uint32_t build_runs,
                                    bool print_query_plan) {
   BenchmarkResult result;
   result.config = benchmark_case;
 
-  if (!CreatePerfectHashVtab(db, benchmark_case, &result.error)) {
-    result.create_ok = false;
-    return result;
-  }
+  bool printed_plan = false;
 
-  result.create_ok = true;
+  for (uint32_t run_index = 0; run_index < build_runs; ++run_index) {
+    BenchmarkRun run;
+    run.config = benchmark_case;
+    run.run_index = run_index;
 
-  if (GetLastPerfectHashBuildStatus(&result.build_status)) {
-    result.have_build_status = true;
-  }
-
-  if (print_query_plan) {
-    if (!PrintExplainQueryPlan(db,
-                               "perfecthash-" + benchmark_case.backend +
-                                   "-" + benchmark_case.hash + "-v" +
-                                   std::to_string(benchmark_case.vector_width),
-                               query)) {
-      result.query_ok = false;
-      result.error = "Failed to print query plan.";
-      return result;
+    const auto create_start = std::chrono::steady_clock::now();
+    if (!CreatePerfectHashVtab(db, benchmark_case, &run.error)) {
+      const auto create_end = std::chrono::steady_clock::now();
+      run.create_ms =
+          std::chrono::duration<double, std::milli>(create_end - create_start)
+              .count();
+      run.create_ok = false;
+      result.runs.push_back(std::move(run));
+      continue;
     }
+
+    const auto create_end = std::chrono::steady_clock::now();
+    run.create_ms =
+        std::chrono::duration<double, std::milli>(create_end - create_start)
+            .count();
+    run.create_ok = true;
+
+    if (GetLastPerfectHashBuildStatus(&run.build_status)) {
+      run.have_build_status = true;
+      run.source_extract_ms = run.build_status.source_extract_ms;
+      run.table_create_ms = run.build_status.table_create_ms;
+      run.compile_ms = run.build_status.compile_ms;
+      run.materialize_ms = run.build_status.materialize_ms;
+      run.internal_create_ms = run.build_status.internal_total_create_ms;
+    }
+
+    if (print_query_plan && !printed_plan) {
+      if (!PrintExplainQueryPlan(db,
+                                 "perfecthash-" + benchmark_case.backend +
+                                     "-" + benchmark_case.hash + "-v" +
+                                     std::to_string(benchmark_case.vector_width),
+                                 query)) {
+        run.error = "Failed to print query plan.";
+        result.runs.push_back(std::move(run));
+        continue;
+      }
+      printed_plan = true;
+    }
+
+    if (!RunBenchmark(db, query, iterations, &run.query_ms, &run.sum)) {
+      run.query_ok = false;
+      run.error = "Failed to run benchmark query.";
+      result.runs.push_back(std::move(run));
+      continue;
+    }
+
+    run.query_ok = true;
+    run.end_to_end_ms = run.create_ms + run.query_ms;
+    run.result_match = (run.sum == baseline_sum);
+    if (!run.result_match) {
+      run.error = "Result mismatch versus baseline.";
+    }
+
+    result.runs.push_back(std::move(run));
   }
 
-  if (!RunBenchmark(db, query, iterations, &result.avg_ms, &result.sum)) {
-    result.query_ok = false;
-    result.error = "Failed to run benchmark query.";
-    return result;
-  }
-
-  result.query_ok = true;
-  result.result_match = (result.sum == baseline_sum);
-  if (!result.result_match) {
-    result.error = "Result mismatch versus baseline.";
-  }
-
+  AggregateResult(&result, baseline_sum);
   return result;
 }
 
@@ -570,6 +845,166 @@ std::vector<BenchmarkCase> BuildMatrixCases() {
   return cases;
 }
 
+double QuerySpeedup(double baseline_avg_ms, double query_avg_ms) {
+  if (baseline_avg_ms <= 0.0 || query_avg_ms <= 0.0) {
+    return 0.0;
+  }
+  return baseline_avg_ms / query_avg_ms;
+}
+
+double EndToEndSpeedup(double baseline_avg_ms, double end_to_end_avg_ms) {
+  if (baseline_avg_ms <= 0.0 || end_to_end_avg_ms <= 0.0) {
+    return 0.0;
+  }
+  return baseline_avg_ms / end_to_end_avg_ms;
+}
+
+double BreakEvenQueryCount(double baseline_avg_ms,
+                           double query_avg_ms,
+                           double create_avg_ms) {
+  const double per_query_delta_ms = baseline_avg_ms - query_avg_ms;
+  if (per_query_delta_ms <= 0.0 || create_avg_ms <= 0.0) {
+    return 0.0;
+  }
+  return create_avg_ms / per_query_delta_ms;
+}
+
+void WriteDetailedCsv(const std::string &path,
+                      const std::vector<BenchmarkResult> &results) {
+  if (path.empty()) {
+    return;
+  }
+
+  std::ofstream file(path);
+  if (!file.is_open()) {
+    std::cerr << "Warning: unable to open detailed CSV for writing: " << path
+              << "\n";
+    return;
+  }
+
+  file << "backend,hash,req_vec,strict_vec,run_index,create_ok,query_ok,result_match,"
+          "create_ms,query_ms,end_to_end_ms,source_extract_ms,table_create_ms,"
+          "compile_ms,materialize_ms,internal_create_ms,sum,key_count,requested_backend,"
+          "effective_backend,requested_vector,effective_vector,compile_hr,jit,error\n";
+
+  for (const auto &result : results) {
+    for (const auto &run : result.runs) {
+      file << run.config.backend << ","
+           << run.config.hash << ","
+           << run.config.vector_width << ","
+           << (run.config.strict_vector_width ? 1 : 0) << ","
+           << run.run_index << ","
+           << (run.create_ok ? 1 : 0) << ","
+           << (run.query_ok ? 1 : 0) << ","
+           << (run.result_match ? 1 : 0) << ","
+           << std::fixed << std::setprecision(6) << run.create_ms << ","
+           << std::fixed << std::setprecision(6) << run.query_ms << ","
+           << std::fixed << std::setprecision(6) << run.end_to_end_ms << ","
+           << std::fixed << std::setprecision(6) << run.source_extract_ms << ","
+           << std::fixed << std::setprecision(6) << run.table_create_ms << ","
+           << std::fixed << std::setprecision(6) << run.compile_ms << ","
+           << std::fixed << std::setprecision(6) << run.materialize_ms << ","
+           << std::fixed << std::setprecision(6) << run.internal_create_ms << ","
+           << run.sum << ",";
+
+      if (run.have_build_status) {
+        file << run.build_status.key_count << ","
+             << CsvEscape(run.build_status.requested_backend) << ","
+             << CsvEscape(run.build_status.effective_backend) << ","
+             << run.build_status.requested_vector_width << ","
+             << run.build_status.effective_vector_width << ","
+             << HrToHex(run.build_status.compile_result) << ","
+             << (run.build_status.jit_enabled ? 1 : 0) << ",";
+      } else {
+        file << "0,n/a,n/a,0,0,n/a,0,";
+      }
+
+      file << CsvEscape(run.error) << "\n";
+    }
+  }
+}
+
+void WriteSummaryCsv(const std::string &path,
+                     const std::vector<BenchmarkResult> &results,
+                     double baseline_avg_ms,
+                     sqlite3_int64 baseline_sum) {
+  if (path.empty()) {
+    return;
+  }
+
+  std::ofstream file(path);
+  if (!file.is_open()) {
+    std::cerr << "Warning: unable to open summary CSV for writing: " << path
+              << "\n";
+    return;
+  }
+
+  file << "baseline_avg_ms,baseline_sum,backend,hash,req_vec,strict_vec,"
+          "build_runs,create_success_runs,query_success_runs,jit_success_runs,"
+          "jit_fallback_runs,source_extract_avg_ms,source_extract_min_ms,source_extract_max_ms,"
+          "table_create_avg_ms,table_create_min_ms,table_create_max_ms,"
+          "compile_avg_ms,compile_min_ms,compile_max_ms,"
+          "materialize_avg_ms,materialize_min_ms,materialize_max_ms,"
+          "internal_create_avg_ms,internal_create_min_ms,internal_create_max_ms,"
+          "create_avg_ms,create_min_ms,create_max_ms,"
+          "query_avg_ms,query_min_ms,query_max_ms,"
+          "end_to_end_avg_ms,end_to_end_min_ms,end_to_end_max_ms,"
+          "query_speedup,end_to_end_speedup,break_even_queries,outcome,error\n";
+
+  for (const auto &result : results) {
+    const double query_speedup = QuerySpeedup(baseline_avg_ms, result.query_avg_ms);
+    const double end_to_end_speedup =
+        EndToEndSpeedup(baseline_avg_ms, result.end_to_end_avg_ms);
+    const double break_even_queries =
+        BreakEvenQueryCount(baseline_avg_ms,
+                            result.query_avg_ms,
+                            result.create_avg_ms);
+
+    file << std::fixed << std::setprecision(6)
+         << baseline_avg_ms << ","
+         << baseline_sum << ","
+         << result.config.backend << ","
+         << result.config.hash << ","
+         << result.config.vector_width << ","
+         << (result.config.strict_vector_width ? 1 : 0) << ","
+         << result.total_runs << ","
+         << result.create_success_runs << ","
+         << result.query_success_runs << ","
+         << result.jit_success_runs << ","
+         << result.jit_fallback_runs << ","
+         << result.source_extract_avg_ms << ","
+         << result.source_extract_min_ms << ","
+         << result.source_extract_max_ms << ","
+         << result.table_create_avg_ms << ","
+         << result.table_create_min_ms << ","
+         << result.table_create_max_ms << ","
+         << result.compile_avg_ms << ","
+         << result.compile_min_ms << ","
+         << result.compile_max_ms << ","
+         << result.materialize_avg_ms << ","
+         << result.materialize_min_ms << ","
+         << result.materialize_max_ms << ","
+         << result.internal_create_avg_ms << ","
+         << result.internal_create_min_ms << ","
+         << result.internal_create_max_ms << ","
+         << result.create_avg_ms << ","
+         << result.create_min_ms << ","
+         << result.create_max_ms << ","
+         << result.query_avg_ms << ","
+         << result.query_min_ms << ","
+         << result.query_max_ms << ","
+         << result.end_to_end_avg_ms << ","
+         << result.end_to_end_min_ms << ","
+         << result.end_to_end_max_ms << ","
+         << query_speedup << ","
+         << end_to_end_speedup << ","
+         << break_even_queries << ","
+         << result.outcome << ","
+         << CsvEscape(result.error)
+         << "\n";
+  }
+}
+
 void PrintSingleResult(const Options &options,
                        const BenchmarkResult &result,
                        double baseline_avg_ms,
@@ -582,42 +1017,53 @@ void PrintSingleResult(const Options &options,
   std::cout << "  vector-width=" << options.vector_width << "\n";
   std::cout << "  strict-vector-width=" << (options.strict_vector_width ? 1 : 0)
             << "\n";
+  std::cout << "  build-runs=" << options.build_runs << "\n";
   std::cout << "  dim-size=" << options.dim_size << "\n";
   std::cout << "  fact-size=" << options.fact_size << "\n";
   std::cout << "  iterations=" << options.iterations << "\n";
 
   std::cout << "\nResults:\n";
-  std::cout << "  baseline avg ms:     " << baseline_avg_ms << "\n";
+  std::cout << "  baseline avg ms:          " << baseline_avg_ms << "\n";
+  std::cout << "  create avg/min/max ms:    " << result.create_avg_ms << " / "
+            << result.create_min_ms << " / " << result.create_max_ms << "\n";
+  std::cout << "  table-create avg/min/max: " << result.table_create_avg_ms
+            << " / " << result.table_create_min_ms << " / "
+            << result.table_create_max_ms << "\n";
+  std::cout << "  compile avg/min/max ms:   " << result.compile_avg_ms << " / "
+            << result.compile_min_ms << " / " << result.compile_max_ms << "\n";
+  std::cout << "  query avg/min/max ms:     " << result.query_avg_ms << " / "
+            << result.query_min_ms << " / " << result.query_max_ms << "\n";
+  std::cout << "  end-to-end avg/min/max:   " << result.end_to_end_avg_ms
+            << " / " << result.end_to_end_min_ms << " / "
+            << result.end_to_end_max_ms << "\n";
 
-  if (!result.create_ok || !result.query_ok || !result.result_match) {
-    std::cout << "  perfecthash status:  failed\n";
+  if (result.outcome != "ok") {
+    std::cout << "  perfecthash status:       " << result.outcome << "\n";
     if (!result.error.empty()) {
-      std::cout << "  error:               " << result.error << "\n";
+      std::cout << "  error:                    " << result.error << "\n";
     }
     return;
   }
 
-  const double speedup = baseline_avg_ms / result.avg_ms;
-  std::cout << "  perfecthash avg ms:  " << result.avg_ms << "\n";
-  std::cout << "  speedup (baseline/perfecthash): " << speedup << "x\n";
+  const double query_speedup = QuerySpeedup(baseline_avg_ms, result.query_avg_ms);
+  const double end_to_end_speedup =
+      EndToEndSpeedup(baseline_avg_ms, result.end_to_end_avg_ms);
+  const double break_even_queries =
+      BreakEvenQueryCount(baseline_avg_ms,
+                          result.query_avg_ms,
+                          result.create_avg_ms);
 
-  if (result.have_build_status) {
-    std::cout << "  compile hr:          "
-              << HrToHex(result.build_status.compile_result) << "\n";
-    std::cout << "  requested backend:   "
-              << result.build_status.requested_backend << "\n";
-    std::cout << "  effective backend:   "
-              << result.build_status.effective_backend << "\n";
-    std::cout << "  requested vector:    "
-              << result.build_status.requested_vector_width << "\n";
-    std::cout << "  effective vector:    "
-              << result.build_status.effective_vector_width << "\n";
-    std::cout << "  jit enabled:         "
-              << (result.build_status.jit_enabled ? 1 : 0) << "\n";
+  std::cout << "  speedup (query-only):     " << query_speedup << "x\n";
+  std::cout << "  speedup (with create):    " << end_to_end_speedup << "x\n";
+  if (break_even_queries > 0.0) {
+    std::cout << "  break-even queries:       " << break_even_queries << "\n";
+  } else {
+    std::cout << "  break-even queries:       n/a\n";
   }
-
-  std::cout << "  baseline sum:        " << baseline_sum << "\n";
-  std::cout << "  perfecthash sum:     " << result.sum << "\n";
+  std::cout << "  jit success/fallback:     " << result.jit_success_runs << " / "
+            << result.jit_fallback_runs << "\n";
+  std::cout << "  baseline sum:             " << baseline_sum << "\n";
+  std::cout << "  perfecthash sum:          " << result.representative_sum << "\n";
 }
 
 bool PrintMatrixSummary(const std::vector<BenchmarkResult> &results,
@@ -628,46 +1074,38 @@ bool PrintMatrixSummary(const std::vector<BenchmarkResult> &results,
   std::cout << std::fixed << std::setprecision(3);
   std::cout << "\nMatrix Summary (baseline avg ms=" << baseline_avg_ms
             << ", baseline sum=" << baseline_sum << ")\n";
-  std::cout << "backend,hash,req_vec,eff_backend,eff_vec,jit,compile_hr,avg_ms,speedup,result\n";
+  std::cout << "backend,hash,req_vec,build_runs,create_avg_ms,table_create_avg_ms,"
+               "compile_avg_ms,query_avg_ms,end_to_end_avg_ms,query_speedup,"
+               "end_to_end_speedup,break_even_queries,jit_success,jit_fallback,result\n";
 
   for (const auto &result : results) {
-    std::string outcome = "ok";
-    std::string compile_hr = "n/a";
-    std::string effective_backend = "n/a";
-    uint32_t effective_vector = 0;
-    int jit_enabled = 0;
+    const double query_speedup = QuerySpeedup(baseline_avg_ms, result.query_avg_ms);
+    const double end_to_end_speedup =
+        EndToEndSpeedup(baseline_avg_ms, result.end_to_end_avg_ms);
+    const double break_even_queries =
+        BreakEvenQueryCount(baseline_avg_ms,
+                            result.query_avg_ms,
+                            result.create_avg_ms);
 
-    if (!result.create_ok) {
-      outcome = "create_failed";
-      all_ok = false;
-    } else if (!result.query_ok) {
-      outcome = "query_failed";
-      all_ok = false;
-    } else if (!result.result_match) {
-      outcome = "sum_mismatch";
+    if (result.outcome != "ok") {
       all_ok = false;
     }
-
-    if (result.have_build_status) {
-      compile_hr = HrToHex(result.build_status.compile_result);
-      effective_backend = result.build_status.effective_backend;
-      effective_vector = result.build_status.effective_vector_width;
-      jit_enabled = result.build_status.jit_enabled ? 1 : 0;
-    }
-
-    const double speedup =
-        (result.avg_ms > 0.0) ? (baseline_avg_ms / result.avg_ms) : 0.0;
 
     std::cout << result.config.backend << ","
               << result.config.hash << ","
               << result.config.vector_width << ","
-              << effective_backend << ","
-              << effective_vector << ","
-              << jit_enabled << ","
-              << compile_hr << ","
-              << result.avg_ms << ","
-              << speedup << ","
-              << outcome << "\n";
+              << result.total_runs << ","
+              << result.create_avg_ms << ","
+              << result.table_create_avg_ms << ","
+              << result.compile_avg_ms << ","
+              << result.query_avg_ms << ","
+              << result.end_to_end_avg_ms << ","
+              << query_speedup << ","
+              << end_to_end_speedup << ","
+              << break_even_queries << ","
+              << result.jit_success_runs << ","
+              << result.jit_fallback_runs << ","
+              << result.outcome << "\n";
 
     if (!result.error.empty()) {
       std::cout << "  note," << result.config.backend << ","
@@ -749,6 +1187,7 @@ int main(int argc, char **argv) {
   }
 
   bool ok = true;
+  std::vector<BenchmarkResult> all_results;
 
   if (options.mode == RunMode::Single) {
     BenchmarkCase benchmark_case;
@@ -757,36 +1196,44 @@ int main(int argc, char **argv) {
     benchmark_case.vector_width = options.vector_width;
     benchmark_case.strict_vector_width = options.strict_vector_width;
 
-    const BenchmarkResult result = RunPerfectHashCase(db,
-                                                      benchmark_case,
-                                                      perfecthash_query,
-                                                      baseline_sum,
-                                                      options.iterations,
-                                                      true);
+    BenchmarkResult result = RunPerfectHashCase(db,
+                                                benchmark_case,
+                                                perfecthash_query,
+                                                baseline_sum,
+                                                options.iterations,
+                                                options.build_runs,
+                                                true);
 
     PrintSingleResult(options, result, baseline_avg_ms, baseline_sum);
+    all_results.push_back(result);
 
-    ok = result.create_ok && result.query_ok && result.result_match;
+    ok = (result.outcome == "ok");
   } else {
     std::vector<BenchmarkCase> cases = BuildMatrixCases();
-    std::vector<BenchmarkResult> results;
-    results.reserve(cases.size());
+    all_results.reserve(cases.size());
 
     bool printed_first_plan = false;
 
     for (const auto &benchmark_case : cases) {
-      const BenchmarkResult result = RunPerfectHashCase(db,
-                                                        benchmark_case,
-                                                        perfecthash_query,
-                                                        baseline_sum,
-                                                        options.iterations,
-                                                        !printed_first_plan);
+      BenchmarkResult result = RunPerfectHashCase(db,
+                                                  benchmark_case,
+                                                  perfecthash_query,
+                                                  baseline_sum,
+                                                  options.iterations,
+                                                  options.build_runs,
+                                                  !printed_first_plan);
       printed_first_plan = true;
-      results.push_back(result);
+      all_results.push_back(result);
     }
 
-    ok = PrintMatrixSummary(results, baseline_avg_ms, baseline_sum);
+    ok = PrintMatrixSummary(all_results, baseline_avg_ms, baseline_sum);
   }
+
+  WriteDetailedCsv(options.output_detailed_csv, all_results);
+  WriteSummaryCsv(options.output_summary_csv,
+                  all_results,
+                  baseline_avg_ms,
+                  baseline_sum);
 
   sqlite3_close(db);
   return ok ? 0 : 1;

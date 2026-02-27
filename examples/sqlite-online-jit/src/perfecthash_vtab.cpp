@@ -3,6 +3,7 @@
 #include <PerfectHashOnlineJit.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
@@ -41,6 +42,13 @@ struct PerfectHashVtab {
   int32_t compile_result = 0;
   PH_ONLINE_JIT_BACKEND effective_backend = PhOnlineJitBackendRawDogJit;
   uint32_t effective_vector_width = 16;
+  uint32_t key_count = 0;
+
+  double source_extract_ms = 0.0;
+  double table_create_ms = 0.0;
+  double compile_ms = 0.0;
+  double materialize_ms = 0.0;
+  double internal_total_create_ms = 0.0;
 
   PH_ONLINE_JIT_CONTEXT *context = nullptr;
   PH_ONLINE_JIT_TABLE *table = nullptr;
@@ -228,6 +236,12 @@ void ReleasePerfectHashResources(PerfectHashVtab *vtab) {
   vtab->compile_result = 0;
   vtab->effective_backend = vtab->backend;
   vtab->effective_vector_width = vtab->vector_width;
+  vtab->key_count = 0;
+  vtab->source_extract_ms = 0.0;
+  vtab->table_create_ms = 0.0;
+  vtab->compile_ms = 0.0;
+  vtab->materialize_ms = 0.0;
+  vtab->internal_total_create_ms = 0.0;
 }
 
 void UpdateLastBuildStatus(const PerfectHashVtab *vtab) {
@@ -240,9 +254,15 @@ void UpdateLastBuildStatus(const PerfectHashVtab *vtab) {
   g_last_build_status.hash = vtab->hash_name;
   g_last_build_status.requested_vector_width = vtab->vector_width;
   g_last_build_status.effective_vector_width = vtab->effective_vector_width;
+  g_last_build_status.key_count = vtab->key_count;
   g_last_build_status.compile_result = vtab->compile_result;
   g_last_build_status.strict_vector_width = vtab->strict_vector_width;
   g_last_build_status.jit_enabled = vtab->jit_enabled;
+  g_last_build_status.source_extract_ms = vtab->source_extract_ms;
+  g_last_build_status.table_create_ms = vtab->table_create_ms;
+  g_last_build_status.compile_ms = vtab->compile_ms;
+  g_last_build_status.materialize_ms = vtab->materialize_ms;
+  g_last_build_status.internal_total_create_ms = vtab->internal_total_create_ms;
 
   g_has_last_build_status = true;
 }
@@ -295,8 +315,14 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
     return SQLITE_ERROR;
   }
 
+  const auto build_start = std::chrono::steady_clock::now();
+  auto elapsed_ms = [](const auto &start, const auto &end) {
+    return std::chrono::duration<double, std::milli>(end - start).count();
+  };
+
   ReleasePerfectHashResources(vtab);
 
+  const auto source_start = std::chrono::steady_clock::now();
   char *query = sqlite3_mprintf(
       "SELECT \"%w\", \"%w\" FROM \"%w\" ORDER BY \"%w\";",
       vtab->key_column.c_str(),
@@ -362,6 +388,8 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
 
   sqlite3_finalize(statement);
   statement = nullptr;
+  const auto source_end = std::chrono::steady_clock::now();
+  vtab->source_extract_ms = elapsed_ms(source_start, source_end);
 
   if (keys.empty()) {
     SetVtabError(base_vtab,
@@ -377,11 +405,15 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
     return SQLITE_ERROR;
   }
 
+  const auto table_create_start = std::chrono::steady_clock::now();
   hr = PhOnlineJitCreateTable32(vtab->context,
                                 vtab->hash,
                                 keys.data(),
                                 static_cast<uint64_t>(keys.size()),
                                 &vtab->table);
+  const auto table_create_end = std::chrono::steady_clock::now();
+  vtab->table_create_ms = elapsed_ms(table_create_start, table_create_end);
+  vtab->key_count = static_cast<uint32_t>(keys.size());
   if (hr < 0) {
     SetVtabError(base_vtab,
                  "PhOnlineJitCreateTable32() failed: " + HrToHex(hr));
@@ -394,6 +426,7 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
     compile_flags |= PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH;
   }
 
+  const auto compile_start = std::chrono::steady_clock::now();
   hr = PhOnlineJitCompileTableEx(vtab->context,
                                  vtab->table,
                                  vtab->backend,
@@ -402,6 +435,8 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
                                  compile_flags,
                                  &vtab->effective_backend,
                                  &vtab->effective_vector_width);
+  const auto compile_end = std::chrono::steady_clock::now();
+  vtab->compile_ms = elapsed_ms(compile_start, compile_end);
   vtab->compile_result = hr;
 
   if (hr < 0) {
@@ -420,6 +455,8 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
     } else {
       SetVtabError(base_vtab,
                    "PhOnlineJitCompileTableEx() failed: " + HrToHex(hr));
+      vtab->internal_total_create_ms =
+          elapsed_ms(build_start, std::chrono::steady_clock::now());
       UpdateLastBuildStatus(vtab);
       ReleasePerfectHashResources(vtab);
       return SQLITE_ERROR;
@@ -433,6 +470,7 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
   vtab->keys_by_index.assign(keys.size(), std::numeric_limits<uint32_t>::max());
   vtab->values_by_index.assign(values.size(), 0);
 
+  const auto materialize_start = std::chrono::steady_clock::now();
   for (size_t index = 0; index < keys.size(); ++index) {
     uint32_t mapped_index = 0;
     hr = PhOnlineJitIndex32(vtab->table, keys[index], &mapped_index);
@@ -463,6 +501,10 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
     vtab->keys_by_index[mapped_index] = keys[index];
     vtab->values_by_index[mapped_index] = values[index];
   }
+  const auto materialize_end = std::chrono::steady_clock::now();
+  vtab->materialize_ms = elapsed_ms(materialize_start, materialize_end);
+  vtab->internal_total_create_ms =
+      elapsed_ms(build_start, std::chrono::steady_clock::now());
 
   UpdateLastBuildStatus(vtab);
 
