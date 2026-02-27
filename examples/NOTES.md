@@ -28,7 +28,7 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - `examples/NOTES.md`: evolving architecture/design decisions.
 - `examples/LOG.md`: append-only execution log.
 - `examples/TODO.md`: actionable task tracker.
-- `examples/cpp-online-rawdog-console/` (planned): standalone C++ CMake project.
+- `examples/cpp-console-online-rawdog-jit/`: standalone C++ CMake project.
 
 ## Planned Implementation Phases
 1. Ledger setup and planning docs.
@@ -41,3 +41,20 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - Preferred external `find_package` UX: `find_package(PerfectHash CONFIG REQUIRED)` (if we add package export), or `find_package(PerfectHashOnline REQUIRED)` via a module in `examples/`.
 - Whether the sample should default to shared or static linking for easiest cross-platform adoption.
 - Whether to include a tiny generated key dataset in-tree or build keys at runtime in code.
+
+## Current Direction (2026-02-27)
+- Added a new slim public header: `include/PerfectHashOnlineRawdog.h`.
+- Added a new wrapper implementation: `src/PerfectHash/PerfectHashOnlineRawdog.c`.
+- Wrapper API hides internal COM-style interfaces and exposes a compact C API for:
+- open/close online context,
+- create 32-bit table,
+- compile table with RawDog JIT flags,
+- index 32-bit keys,
+- release table.
+- Enabled RawDog compile flow for `PH_ONLINE_CORE_ONLY` builds by routing
+  core-only JIT compile stubs through RawDog paths when requested.
+- Enabled RawDog compile defines for `PerfectHashOnlineCore` targets in CMake.
+- Example project name is now fixed as `cpp-console-online-rawdog-jit`.
+- The console example handles `PH_E_NOT_IMPLEMENTED` from RawDog JIT as a
+  host/table capability fallback and still verifies index uniqueness via
+  non-JIT indexing.
