@@ -51,4 +51,8 @@
 - [x] Scaffold `examples/sqlite-online-jit/` CMake project (sqlite + PerfectHash).
 - [x] Implement PerfectHash-backed virtual table module.
 - [x] Add benchmark harness with easy A/B toggles.
+- [x] Expand benchmark harness to full permutation matrix:
+  backend x hash function x vector width.
+- [x] Add strict vector-width benchmarking mode to distinguish AVX/AVX2/AVX-512
+  variant outcomes per permutation.
 - [x] Add CI execution for sqlite example.

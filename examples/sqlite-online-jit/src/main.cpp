@@ -11,7 +11,9 @@
 #include <iostream>
 #include <limits>
 #include <random>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #if !defined(_WIN32) && defined(PH_ONLINE_JIT_LLVM_LIBRARY_PATH)
 #include <dlfcn.h>
@@ -19,26 +21,72 @@
 
 namespace {
 
+enum class RunMode {
+  Single,
+  Matrix,
+};
+
 struct Options {
+  RunMode mode = RunMode::Matrix;
+  bool mode_explicit = false;
+
   std::string backend = "rawdog-jit";
   std::string hash = "mulshrolate2rx";
   uint32_t vector_width = 16;
-  uint32_t dim_size = 50'000;
-  uint32_t fact_size = 1'000'000;
-  uint32_t iterations = 5;
+  bool strict_vector_width = false;
+
+  bool backend_set = false;
+  bool hash_set = false;
+  bool vector_width_set = false;
+  bool strict_vector_width_set = false;
+
+  uint32_t dim_size = 5'000;
+  uint32_t fact_size = 100'000;
+  uint32_t iterations = 2;
   uint32_t seed = 1;
 };
+
+struct BenchmarkCase {
+  std::string backend;
+  std::string hash;
+  uint32_t vector_width = 16;
+  bool strict_vector_width = false;
+};
+
+struct BenchmarkResult {
+  BenchmarkCase config;
+  bool create_ok = false;
+  bool query_ok = false;
+  bool result_match = false;
+  bool have_build_status = false;
+  PerfectHashBuildStatus build_status;
+  sqlite3_int64 sum = 0;
+  double avg_ms = 0.0;
+  std::string error;
+};
+
+std::string HrToHex(int32_t hr) {
+  std::ostringstream stream;
+  stream << "0x" << std::hex << std::uppercase << static_cast<uint32_t>(hr);
+  return stream.str();
+}
 
 void PrintUsage(const char *argv0) {
   std::cout
       << "Usage: " << argv0
-      << " [--backend <rawdog-jit|llvm-jit|auto>]"
+      << " [--matrix|--single]"
+         " [--backend <rawdog-jit|llvm-jit|auto>]"
          " [--hash <name>]"
          " [--vector-width <0|1|2|4|8|16>]"
+         " [--strict-vector-width <0|1>]"
          " [--dim-size <count>]"
          " [--fact-size <count>]"
          " [--iterations <count>]"
-         " [--seed <value>]\n";
+         " [--seed <value>]\n"
+      << "\n"
+      << "Default behavior: run a full matrix across RawDog-JIT + LLVM-JIT,\n"
+      << "all curated hash functions, and vector widths 1/2/4/8/16.\n"
+      << "Passing --backend/--hash/--vector-width without --matrix forces single mode.\n";
 }
 
 bool ParseUint32(const char *text, uint32_t *value) {
@@ -79,12 +127,25 @@ bool ParseArgs(int argc, char **argv, Options *options) {
       return argv[++index];
     };
 
+    if (std::strcmp(arg, "--matrix") == 0) {
+      options->mode = RunMode::Matrix;
+      options->mode_explicit = true;
+      continue;
+    }
+
+    if (std::strcmp(arg, "--single") == 0) {
+      options->mode = RunMode::Single;
+      options->mode_explicit = true;
+      continue;
+    }
+
     if (std::strcmp(arg, "--backend") == 0) {
       const char *value = require_value("--backend");
       if (!value) {
         return false;
       }
       options->backend = value;
+      options->backend_set = true;
       continue;
     }
 
@@ -94,6 +155,7 @@ bool ParseArgs(int argc, char **argv, Options *options) {
         return false;
       }
       options->hash = value;
+      options->hash_set = true;
       continue;
     }
 
@@ -103,6 +165,19 @@ bool ParseArgs(int argc, char **argv, Options *options) {
         std::cerr << "Invalid vector width.\n";
         return false;
       }
+      options->vector_width_set = true;
+      continue;
+    }
+
+    if (std::strcmp(arg, "--strict-vector-width") == 0) {
+      uint32_t strict_value = 0;
+      const char *value = require_value("--strict-vector-width");
+      if (!value || !ParseUint32(value, &strict_value) || strict_value > 1) {
+        std::cerr << "strict-vector-width must be 0 or 1.\n";
+        return false;
+      }
+      options->strict_vector_width = (strict_value != 0);
+      options->strict_vector_width_set = true;
       continue;
     }
 
@@ -149,6 +224,12 @@ bool ParseArgs(int argc, char **argv, Options *options) {
     return false;
   }
 
+  if (!options->mode_explicit &&
+      (options->backend_set || options->hash_set || options->vector_width_set ||
+       options->strict_vector_width_set)) {
+    options->mode = RunMode::Single;
+  }
+
   if (options->backend != "rawdog-jit" && options->backend != "llvm-jit" &&
       options->backend != "auto") {
     std::cerr << "Unsupported backend: " << options->backend << "\n";
@@ -186,14 +267,20 @@ void PreloadLlvmRuntimeLibrary(const std::string &backend) {
 #endif
 }
 
-bool ExecSql(sqlite3 *db, const std::string &sql) {
-  char *error = nullptr;
-  const int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &error);
+bool ExecSql(sqlite3 *db, const std::string &sql, std::string *error = nullptr) {
+  char *raw_error = nullptr;
+  const int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &raw_error);
   if (rc != SQLITE_OK) {
+    const std::string sqlite_error =
+        raw_error ? raw_error : std::string(sqlite3_errmsg(db));
+    sqlite3_free(raw_error);
+
+    if (error) {
+      *error = sqlite_error;
+    }
+
     std::cerr << "SQL failed: " << sql << "\n";
-    std::cerr << "sqlite error: " << (error ? error : sqlite3_errmsg(db))
-              << "\n";
-    sqlite3_free(error);
+    std::cerr << "sqlite error: " << sqlite_error << "\n";
     return false;
   }
 
@@ -377,6 +464,222 @@ bool RunBenchmark(sqlite3 *db,
   return true;
 }
 
+bool CreatePerfectHashVtab(sqlite3 *db,
+                           const BenchmarkCase &benchmark_case,
+                           std::string *error) {
+  if (!ExecSql(db, "DROP TABLE IF EXISTS temp.dim_ph;", error)) {
+    return false;
+  }
+
+  const std::string create_vtab_sql =
+      "CREATE VIRTUAL TABLE temp.dim_ph USING perfecthash(" +
+      std::string("'dim','key','value','") + benchmark_case.backend + "','" +
+      benchmark_case.hash + "'," + std::to_string(benchmark_case.vector_width) +
+      "," + (benchmark_case.strict_vector_width ? "1" : "0") + ");";
+
+  return ExecSql(db, create_vtab_sql, error);
+}
+
+BenchmarkResult RunPerfectHashCase(sqlite3 *db,
+                                   const BenchmarkCase &benchmark_case,
+                                   const std::string &query,
+                                   sqlite3_int64 baseline_sum,
+                                   uint32_t iterations,
+                                   bool print_query_plan) {
+  BenchmarkResult result;
+  result.config = benchmark_case;
+
+  if (!CreatePerfectHashVtab(db, benchmark_case, &result.error)) {
+    result.create_ok = false;
+    return result;
+  }
+
+  result.create_ok = true;
+
+  if (GetLastPerfectHashBuildStatus(&result.build_status)) {
+    result.have_build_status = true;
+  }
+
+  if (print_query_plan) {
+    if (!PrintExplainQueryPlan(db,
+                               "perfecthash-" + benchmark_case.backend +
+                                   "-" + benchmark_case.hash + "-v" +
+                                   std::to_string(benchmark_case.vector_width),
+                               query)) {
+      result.query_ok = false;
+      result.error = "Failed to print query plan.";
+      return result;
+    }
+  }
+
+  if (!RunBenchmark(db, query, iterations, &result.avg_ms, &result.sum)) {
+    result.query_ok = false;
+    result.error = "Failed to run benchmark query.";
+    return result;
+  }
+
+  result.query_ok = true;
+  result.result_match = (result.sum == baseline_sum);
+  if (!result.result_match) {
+    result.error = "Result mismatch versus baseline.";
+  }
+
+  return result;
+}
+
+std::vector<BenchmarkCase> BuildMatrixCases() {
+  static const char *kBackends[] = {
+      "rawdog-jit",
+      "llvm-jit",
+  };
+
+  static const char *kHashes[] = {
+      "multiplyshiftr",
+      "multiplyshiftlr",
+      "multiplyshiftrmultiply",
+      "multiplyshiftr2",
+      "multiplyshiftrx",
+      "mulshrolate1rx",
+      "mulshrolate2rx",
+      "mulshrolate3rx",
+      "mulshrolate4rx",
+  };
+
+  static const uint32_t kVectorWidths[] = {
+      1,
+      2,
+      4,
+      8,
+      16,
+  };
+
+  std::vector<BenchmarkCase> cases;
+  for (const char *backend : kBackends) {
+    for (const char *hash : kHashes) {
+      for (uint32_t vector_width : kVectorWidths) {
+        BenchmarkCase benchmark_case;
+        benchmark_case.backend = backend;
+        benchmark_case.hash = hash;
+        benchmark_case.vector_width = vector_width;
+        benchmark_case.strict_vector_width = true;
+        cases.push_back(benchmark_case);
+      }
+    }
+  }
+
+  return cases;
+}
+
+void PrintSingleResult(const Options &options,
+                       const BenchmarkResult &result,
+                       double baseline_avg_ms,
+                       sqlite3_int64 baseline_sum) {
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "\nBenchmark configuration:\n";
+  std::cout << "  mode=single\n";
+  std::cout << "  backend=" << options.backend << "\n";
+  std::cout << "  hash=" << options.hash << "\n";
+  std::cout << "  vector-width=" << options.vector_width << "\n";
+  std::cout << "  strict-vector-width=" << (options.strict_vector_width ? 1 : 0)
+            << "\n";
+  std::cout << "  dim-size=" << options.dim_size << "\n";
+  std::cout << "  fact-size=" << options.fact_size << "\n";
+  std::cout << "  iterations=" << options.iterations << "\n";
+
+  std::cout << "\nResults:\n";
+  std::cout << "  baseline avg ms:     " << baseline_avg_ms << "\n";
+
+  if (!result.create_ok || !result.query_ok || !result.result_match) {
+    std::cout << "  perfecthash status:  failed\n";
+    if (!result.error.empty()) {
+      std::cout << "  error:               " << result.error << "\n";
+    }
+    return;
+  }
+
+  const double speedup = baseline_avg_ms / result.avg_ms;
+  std::cout << "  perfecthash avg ms:  " << result.avg_ms << "\n";
+  std::cout << "  speedup (baseline/perfecthash): " << speedup << "x\n";
+
+  if (result.have_build_status) {
+    std::cout << "  compile hr:          "
+              << HrToHex(result.build_status.compile_result) << "\n";
+    std::cout << "  requested backend:   "
+              << result.build_status.requested_backend << "\n";
+    std::cout << "  effective backend:   "
+              << result.build_status.effective_backend << "\n";
+    std::cout << "  requested vector:    "
+              << result.build_status.requested_vector_width << "\n";
+    std::cout << "  effective vector:    "
+              << result.build_status.effective_vector_width << "\n";
+    std::cout << "  jit enabled:         "
+              << (result.build_status.jit_enabled ? 1 : 0) << "\n";
+  }
+
+  std::cout << "  baseline sum:        " << baseline_sum << "\n";
+  std::cout << "  perfecthash sum:     " << result.sum << "\n";
+}
+
+bool PrintMatrixSummary(const std::vector<BenchmarkResult> &results,
+                        double baseline_avg_ms,
+                        sqlite3_int64 baseline_sum) {
+  bool all_ok = true;
+
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "\nMatrix Summary (baseline avg ms=" << baseline_avg_ms
+            << ", baseline sum=" << baseline_sum << ")\n";
+  std::cout << "backend,hash,req_vec,eff_backend,eff_vec,jit,compile_hr,avg_ms,speedup,result\n";
+
+  for (const auto &result : results) {
+    std::string outcome = "ok";
+    std::string compile_hr = "n/a";
+    std::string effective_backend = "n/a";
+    uint32_t effective_vector = 0;
+    int jit_enabled = 0;
+
+    if (!result.create_ok) {
+      outcome = "create_failed";
+      all_ok = false;
+    } else if (!result.query_ok) {
+      outcome = "query_failed";
+      all_ok = false;
+    } else if (!result.result_match) {
+      outcome = "sum_mismatch";
+      all_ok = false;
+    }
+
+    if (result.have_build_status) {
+      compile_hr = HrToHex(result.build_status.compile_result);
+      effective_backend = result.build_status.effective_backend;
+      effective_vector = result.build_status.effective_vector_width;
+      jit_enabled = result.build_status.jit_enabled ? 1 : 0;
+    }
+
+    const double speedup =
+        (result.avg_ms > 0.0) ? (baseline_avg_ms / result.avg_ms) : 0.0;
+
+    std::cout << result.config.backend << ","
+              << result.config.hash << ","
+              << result.config.vector_width << ","
+              << effective_backend << ","
+              << effective_vector << ","
+              << jit_enabled << ","
+              << compile_hr << ","
+              << result.avg_ms << ","
+              << speedup << ","
+              << outcome << "\n";
+
+    if (!result.error.empty()) {
+      std::cout << "  note," << result.config.backend << ","
+                << result.config.hash << ","
+                << result.config.vector_width << ","
+                << result.error << "\n";
+    }
+  }
+
+  return all_ok;
+}
+
 }  // namespace
 
 int main(int argc, char **argv) {
@@ -386,7 +689,11 @@ int main(int argc, char **argv) {
     return 2;
   }
 
-  PreloadLlvmRuntimeLibrary(options.backend);
+  if (options.mode == RunMode::Matrix) {
+    PreloadLlvmRuntimeLibrary("llvm-jit");
+  } else {
+    PreloadLlvmRuntimeLibrary(options.backend);
+  }
 
   sqlite3 *db = nullptr;
   int rc = sqlite3_open(":memory:", &db);
@@ -415,16 +722,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  const std::string create_vtab_sql =
-      "CREATE VIRTUAL TABLE temp.dim_ph USING perfecthash(" +
-      std::string("'dim','key','value','") + options.backend + "','" +
-      options.hash + "'," + std::to_string(options.vector_width) + ");";
-
-  if (!ExecSql(db, create_vtab_sql)) {
-    sqlite3_close(db);
-    return 1;
-  }
-
   const std::string baseline_query =
       "SELECT SUM(f.measure * d.value) "
       "FROM fact AS f "
@@ -435,56 +732,62 @@ int main(int argc, char **argv) {
       "FROM fact AS f "
       "JOIN dim_ph AS p ON p.key = f.key;";
 
-  if (!PrintExplainQueryPlan(db, "baseline-btree", baseline_query) ||
-      !PrintExplainQueryPlan(db,
-                             "perfecthash-" + options.backend,
-                             perfecthash_query)) {
+  if (!PrintExplainQueryPlan(db, "baseline-btree", baseline_query)) {
     sqlite3_close(db);
     return 1;
   }
 
   sqlite3_int64 baseline_sum = 0;
-  sqlite3_int64 perfecthash_sum = 0;
   double baseline_avg_ms = 0.0;
-  double perfecthash_avg_ms = 0.0;
-
   if (!RunBenchmark(db,
                     baseline_query,
                     options.iterations,
                     &baseline_avg_ms,
-                    &baseline_sum) ||
-      !RunBenchmark(db,
-                    perfecthash_query,
-                    options.iterations,
-                    &perfecthash_avg_ms,
-                    &perfecthash_sum)) {
+                    &baseline_sum)) {
     sqlite3_close(db);
     return 1;
   }
 
-  if (baseline_sum != perfecthash_sum) {
-    std::cerr << "Result mismatch: baseline=" << baseline_sum
-              << ", perfecthash=" << perfecthash_sum << "\n";
-    sqlite3_close(db);
-    return 1;
+  bool ok = true;
+
+  if (options.mode == RunMode::Single) {
+    BenchmarkCase benchmark_case;
+    benchmark_case.backend = options.backend;
+    benchmark_case.hash = options.hash;
+    benchmark_case.vector_width = options.vector_width;
+    benchmark_case.strict_vector_width = options.strict_vector_width;
+
+    const BenchmarkResult result = RunPerfectHashCase(db,
+                                                      benchmark_case,
+                                                      perfecthash_query,
+                                                      baseline_sum,
+                                                      options.iterations,
+                                                      true);
+
+    PrintSingleResult(options, result, baseline_avg_ms, baseline_sum);
+
+    ok = result.create_ok && result.query_ok && result.result_match;
+  } else {
+    std::vector<BenchmarkCase> cases = BuildMatrixCases();
+    std::vector<BenchmarkResult> results;
+    results.reserve(cases.size());
+
+    bool printed_first_plan = false;
+
+    for (const auto &benchmark_case : cases) {
+      const BenchmarkResult result = RunPerfectHashCase(db,
+                                                        benchmark_case,
+                                                        perfecthash_query,
+                                                        baseline_sum,
+                                                        options.iterations,
+                                                        !printed_first_plan);
+      printed_first_plan = true;
+      results.push_back(result);
+    }
+
+    ok = PrintMatrixSummary(results, baseline_avg_ms, baseline_sum);
   }
-
-  const double speedup = baseline_avg_ms / perfecthash_avg_ms;
-
-  std::cout << std::fixed << std::setprecision(3);
-  std::cout << "\nBenchmark configuration:\n";
-  std::cout << "  backend=" << options.backend << "\n";
-  std::cout << "  hash=" << options.hash << "\n";
-  std::cout << "  vector-width=" << options.vector_width << "\n";
-  std::cout << "  dim-size=" << options.dim_size << "\n";
-  std::cout << "  fact-size=" << options.fact_size << "\n";
-  std::cout << "  iterations=" << options.iterations << "\n";
-
-  std::cout << "\nResults:\n";
-  std::cout << "  baseline avg ms:     " << baseline_avg_ms << "\n";
-  std::cout << "  perfecthash avg ms:  " << perfecthash_avg_ms << "\n";
-  std::cout << "  speedup (baseline/perfecthash): " << speedup << "x\n";
 
   sqlite3_close(db);
-  return 0;
+  return ok ? 0 : 1;
 }

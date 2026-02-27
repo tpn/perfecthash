@@ -119,3 +119,19 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
   (`rawdog-jit`, `llvm-jit`, `auto`).
 - Added result parity check (baseline sum must equal PerfectHash sum) and
   reported average runtime + speedup.
+
+## SQLite Permutation Matrix Expansion (2026-02-27)
+- Expanded sqlite benchmark runner to compare full permutations of:
+- backend: `rawdog-jit`, `llvm-jit`,
+- hash function: all curated 32-bit hashes,
+- vector width: `1`, `2`, `4`, `8`, `16` (including AVX-512 width `16`).
+- Matrix mode is now the default when no single-run override flags are passed.
+- Added strict vector-width compile support to slim online API:
+  `PhOnlineJitCompileTableEx(..., Flags, EffectiveBackend, EffectiveVectorWidth)`
+  with `PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH`.
+- sqlite virtual-table integration now records and reports per-run compile
+  metadata:
+- requested/effective backend,
+- requested/effective vector width,
+- compile HRESULT,
+- JIT enabled/disabled state.

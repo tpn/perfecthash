@@ -19,6 +19,9 @@ namespace {
 constexpr int32_t kPhNotImplemented = static_cast<int32_t>(0xE0040230u);
 constexpr int32_t kPhLlvmBackendNotFound = static_cast<int32_t>(0xE004041Cu);
 
+PerfectHashBuildStatus g_last_build_status;
+bool g_has_last_build_status = false;
+
 struct PerfectHashVtab {
   sqlite3_vtab base{};
   sqlite3 *db = nullptr;
@@ -26,12 +29,18 @@ struct PerfectHashVtab {
   std::string source_table;
   std::string key_column;
   std::string value_column;
+  std::string backend_name = "rawdog-jit";
+  std::string hash_name = "mulshrolate2rx";
 
   PH_ONLINE_JIT_BACKEND backend = PhOnlineJitBackendRawDogJit;
   PH_ONLINE_JIT_HASH_FUNCTION hash = PhOnlineJitHashMulshrolate2RX;
   uint32_t vector_width = 16;
+  bool strict_vector_width = false;
 
   bool jit_enabled = false;
+  int32_t compile_result = 0;
+  PH_ONLINE_JIT_BACKEND effective_backend = PhOnlineJitBackendRawDogJit;
+  uint32_t effective_vector_width = 16;
 
   PH_ONLINE_JIT_CONTEXT *context = nullptr;
   PH_ONLINE_JIT_TABLE *table = nullptr;
@@ -60,6 +69,44 @@ std::string HrToHex(int32_t hr) {
   stream << "0x" << std::hex << std::uppercase
          << static_cast<uint32_t>(hr);
   return stream.str();
+}
+
+const char *BackendToString(PH_ONLINE_JIT_BACKEND backend) {
+  switch (backend) {
+    case PhOnlineJitBackendAuto:
+      return "auto";
+    case PhOnlineJitBackendRawDogJit:
+      return "rawdog-jit";
+    case PhOnlineJitBackendLlvmJit:
+      return "llvm-jit";
+    default:
+      return "unknown";
+  }
+}
+
+const char *HashToString(PH_ONLINE_JIT_HASH_FUNCTION hash) {
+  switch (hash) {
+    case PhOnlineJitHashMultiplyShiftR:
+      return "multiplyshiftr";
+    case PhOnlineJitHashMultiplyShiftLR:
+      return "multiplyshiftlr";
+    case PhOnlineJitHashMultiplyShiftRMultiply:
+      return "multiplyshiftrmultiply";
+    case PhOnlineJitHashMultiplyShiftR2:
+      return "multiplyshiftr2";
+    case PhOnlineJitHashMultiplyShiftRX:
+      return "multiplyshiftrx";
+    case PhOnlineJitHashMulshrolate1RX:
+      return "mulshrolate1rx";
+    case PhOnlineJitHashMulshrolate2RX:
+      return "mulshrolate2rx";
+    case PhOnlineJitHashMulshrolate3RX:
+      return "mulshrolate3rx";
+    case PhOnlineJitHashMulshrolate4RX:
+      return "mulshrolate4rx";
+    default:
+      return "unknown";
+  }
 }
 
 std::string NormalizeArgument(const char *arg) {
@@ -178,6 +225,26 @@ void ReleasePerfectHashResources(PerfectHashVtab *vtab) {
   vtab->keys_by_index.clear();
   vtab->values_by_index.clear();
   vtab->jit_enabled = false;
+  vtab->compile_result = 0;
+  vtab->effective_backend = vtab->backend;
+  vtab->effective_vector_width = vtab->vector_width;
+}
+
+void UpdateLastBuildStatus(const PerfectHashVtab *vtab) {
+  if (!vtab) {
+    return;
+  }
+
+  g_last_build_status.requested_backend = vtab->backend_name;
+  g_last_build_status.effective_backend = BackendToString(vtab->effective_backend);
+  g_last_build_status.hash = vtab->hash_name;
+  g_last_build_status.requested_vector_width = vtab->vector_width;
+  g_last_build_status.effective_vector_width = vtab->effective_vector_width;
+  g_last_build_status.compile_result = vtab->compile_result;
+  g_last_build_status.strict_vector_width = vtab->strict_vector_width;
+  g_last_build_status.jit_enabled = vtab->jit_enabled;
+
+  g_has_last_build_status = true;
 }
 
 bool TryLookup(PerfectHashVtab *vtab, uint32_t key, sqlite3_int64 *value) {
@@ -322,21 +389,38 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
     return SQLITE_ERROR;
   }
 
-  hr = PhOnlineJitCompileTable(vtab->context,
-                               vtab->table,
-                               vtab->backend,
-                               vtab->vector_width,
-                               PhOnlineJitMaxIsaAuto);
+  uint32_t compile_flags = 0;
+  if (vtab->strict_vector_width) {
+    compile_flags |= PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH;
+  }
+
+  hr = PhOnlineJitCompileTableEx(vtab->context,
+                                 vtab->table,
+                                 vtab->backend,
+                                 vtab->vector_width,
+                                 PhOnlineJitMaxIsaAuto,
+                                 compile_flags,
+                                 &vtab->effective_backend,
+                                 &vtab->effective_vector_width);
+  vtab->compile_result = hr;
+
   if (hr < 0) {
-    if (hr == kPhNotImplemented || hr == kPhLlvmBackendNotFound) {
+    const bool nonfatal_compile_failure =
+        (hr == kPhNotImplemented ||
+         hr == kPhLlvmBackendNotFound ||
+         vtab->strict_vector_width);
+    if (nonfatal_compile_failure) {
       vtab->jit_enabled = false;
-      std::fprintf(stderr,
-                   "[sqlite-online-jit] Warning: JIT backend unavailable "
-                   "(%s), continuing with non-JIT index path.\n",
-                   HrToHex(hr).c_str());
+      if (!vtab->strict_vector_width) {
+        std::fprintf(stderr,
+                     "[sqlite-online-jit] Warning: JIT backend unavailable "
+                     "(%s), continuing with non-JIT index path.\n",
+                     HrToHex(hr).c_str());
+      }
     } else {
       SetVtabError(base_vtab,
-                   "PhOnlineJitCompileTable() failed: " + HrToHex(hr));
+                   "PhOnlineJitCompileTableEx() failed: " + HrToHex(hr));
+      UpdateLastBuildStatus(vtab);
       ReleasePerfectHashResources(vtab);
       return SQLITE_ERROR;
     }
@@ -380,6 +464,8 @@ int BuildPerfectHashIndex(PerfectHashVtab *vtab, sqlite3_vtab *base_vtab) {
     vtab->values_by_index[mapped_index] = values[index];
   }
 
+  UpdateLastBuildStatus(vtab);
+
   return SQLITE_OK;
 }
 
@@ -394,7 +480,7 @@ int ParseVtabArguments(int argc,
   if (argc < 6) {
     SetVtabError(base_vtab,
                  "Usage: perfecthash(source_table,key_column,value_column,"
-                 "backend,hash,vector_width)");
+                 "backend,hash,vector_width,strict_vector_width)");
     return SQLITE_MISUSE;
   }
 
@@ -408,6 +494,8 @@ int ParseVtabArguments(int argc,
       (argc >= 8) ? NormalizeArgument(argv[7]) : "mulshrolate2rx";
   const std::string vector_width =
       (argc >= 9) ? NormalizeArgument(argv[8]) : "16";
+  const std::string strict_vector_width =
+      (argc >= 10) ? NormalizeArgument(argv[9]) : "0";
 
   if (vtab->source_table.empty() || vtab->key_column.empty() ||
       vtab->value_column.empty()) {
@@ -417,13 +505,23 @@ int ParseVtabArguments(int argc,
   }
 
   vtab->backend = ParseBackend(backend);
+  vtab->backend_name = BackendToString(vtab->backend);
   vtab->hash = ParseHashFunction(hash);
+  vtab->hash_name = HashToString(vtab->hash);
 
   if (!ParseUInt32(vector_width, &vtab->vector_width)) {
     SetVtabError(base_vtab,
                  "Invalid vector width argument: " + vector_width);
     return SQLITE_MISUSE;
   }
+
+  uint32_t strict_width = 0;
+  if (!ParseUInt32(strict_vector_width, &strict_width) || strict_width > 1) {
+    SetVtabError(base_vtab,
+                 "strict_vector_width must be 0 or 1.");
+    return SQLITE_MISUSE;
+  }
+  vtab->strict_vector_width = (strict_width != 0);
 
   switch (vtab->vector_width) {
     case 0:
@@ -699,4 +797,13 @@ int RegisterPerfectHashModule(sqlite3 *db) {
                                   &kPerfectHashModule,
                                   nullptr,
                                   nullptr);
+}
+
+bool GetLastPerfectHashBuildStatus(PerfectHashBuildStatus *status) {
+  if (!status || !g_has_last_build_status) {
+    return false;
+  }
+
+  *status = g_last_build_status;
+  return true;
 }

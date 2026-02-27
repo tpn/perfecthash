@@ -11,6 +11,9 @@ virtual table module and benchmarks A/B behavior.
   `rawdog-jit`, `llvm-jit`, `auto`
 - direct A/B benchmark in one executable:
   baseline B-tree join vs PerfectHash virtual-table join
+- full permutation matrix mode:
+  `rawdog-jit` + `llvm-jit` x curated hash functions x vector widths
+  `1/2/4/8/16`
 
 ## Integration Shape
 
@@ -51,20 +54,46 @@ cmake --build build\\examples\\sqlite-online-jit --config Release
 
 ## Run
 
+### Full Permutation Matrix (Default)
+
+Running with no backend/hash/vector overrides executes the full comparison
+matrix:
+
+```bash
+./build/examples/sqlite-online-jit/sqlite-online-jit
+```
+
+This runs:
+
+- backends: `rawdog-jit`, `llvm-jit`
+- hash functions:
+  `multiplyshiftr`, `multiplyshiftlr`, `multiplyshiftrmultiply`,
+  `multiplyshiftr2`, `multiplyshiftrx`, `mulshrolate1rx`,
+  `mulshrolate2rx`, `mulshrolate3rx`, `mulshrolate4rx`
+- vector widths: `1`, `2`, `4`, `8`, `16`
+
+For matrix mode, strict vector-width behavior is enabled so AVX-512 (`16`) and
+other widths are measured as requested per permutation.
+
+### Single Configuration
+
+Use explicit backend/hash/vector options to run one configuration:
+
 ```bash
 ./build/examples/sqlite-online-jit/sqlite-online-jit \
+  --single \
   --backend rawdog-jit \
-  --dim-size 50000 \
-  --fact-size 1000000 \
-  --iterations 5 \
+  --hash mulshrolate2rx \
   --vector-width 16
 ```
 
 Optional flags:
 
+- `--matrix` or `--single`
 - `--backend <rawdog-jit|llvm-jit|auto>`
 - `--hash <name>`
 - `--vector-width <0|1|2|4|8|16>`
+- `--strict-vector-width <0|1>` (single mode)
 - `--dim-size <count>`
 - `--fact-size <count>`
 - `--iterations <count>`
@@ -75,7 +104,11 @@ Optional flags:
 The executable prints:
 
 - `EXPLAIN QUERY PLAN` for baseline and PerfectHash queries
-- average runtime for both modes
-- relative speedup (`baseline/perfecthash`)
+- baseline runtime summary
+- single mode:
+  requested/effective backend + vector width, compile HRESULT, speedup
+- matrix mode:
+  one CSV row per permutation with
+  backend/hash/requested+effective vector width/JIT status/compile HRESULT/runtime/speedup
 
 The run fails if query results diverge between baseline and PerfectHash paths.

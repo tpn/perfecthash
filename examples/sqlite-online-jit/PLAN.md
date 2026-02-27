@@ -4,7 +4,8 @@
 
 - Phase 1 (vendoring + scaffold) implemented.
 - Phase 2 (virtual table core) implemented.
-- Phase 3+ (benchmark tuning and CI expansion) in progress.
+- Phase 3 (A/B benchmark harness) expanded with full permutation matrix mode.
+- Phase 4 (CI expansion) implemented for single-mode smoke runs.
 
 ## Inputs Reviewed
 

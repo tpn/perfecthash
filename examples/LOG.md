@@ -33,3 +33,7 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Fixed Linux/macOS example discovery in CI by extending example finder module library path suffixes for multi-config output directories (`lib/Release`, `lib/RelWithDebInfo`, `lib/Debug`, and static variants).
 - 2026-02-27: Made `FindPerfectHashOnlineJit.cmake` treat `PerfectHashLLVM` as optional so Windows CI can run examples when LLVM runtime artifacts are unavailable (runtime backend-not-found fallback remains supported).
 - 2026-02-27: Re-monitored PR #70 checks after CI fixes and confirmed all checks are green (`13/13` passed).
+- 2026-02-27: Added `PhOnlineJitCompileTableEx()` and `PH_ONLINE_JIT_COMPILE_FLAG_STRICT_VECTOR_WIDTH` to the slim online JIT API, including effective backend/vector-width outputs.
+- 2026-02-27: Expanded `sqlite-online-jit` benchmark runner to a full permutation matrix mode (RawDog-JIT + LLVM-JIT x curated hash functions x vector widths `1/2/4/8/16`).
+- 2026-02-27: Added per-permutation compile metadata reporting in sqlite integration (requested/effective backend and vector width, compile HRESULT, JIT enabled state).
+- 2026-02-27: Validated local matrix runs on x64 AVX-512 host and confirmed AVX-512 (`vector-width=16`) permutations are exercised and reported.
