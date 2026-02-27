@@ -27,6 +27,13 @@ PerfectHashTableCompileJit(
     PPERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags
     )
 {
+#if defined(PH_HAS_RAWDOG_JIT)
+    if (ARGUMENT_PRESENT(CompileFlags) &&
+        CompileFlags->JitBackendRawDog) {
+        return PerfectHashTableCompileJitRawDog(Table, CompileFlags);
+    }
+#endif
+
     UNREFERENCED_PARAMETER(Table);
     UNREFERENCED_PARAMETER(CompileFlags);
 
@@ -39,6 +46,15 @@ PerfectHashTableJitRundown(
     PPERFECT_HASH_TABLE Table
     )
 {
+#if defined(PH_HAS_RAWDOG_JIT)
+    if (ARGUMENT_PRESENT(Table) &&
+        ARGUMENT_PRESENT(Table->Jit) &&
+        Table->Jit->Flags.BackendRawDog) {
+        PerfectHashTableJitRundownRawDog(Table);
+        return;
+    }
+#endif
+
     UNREFERENCED_PARAMETER(Table);
 }
 
