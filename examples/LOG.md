@@ -13,3 +13,6 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Enabled core-only online compile and JIT stubs to route RawDog backend requests instead of unconditional `PH_E_NOT_IMPLEMENTED`.
 - 2026-02-27: Enabled RawDog compile definitions for `PerfectHashOnlineCore` targets.
 - 2026-02-27: Validated Linux configure/build/run for the new example with static and shared discovery; observed expected RawDog capability fallback (`PH_E_NOT_IMPLEMENTED`) on this host and retained non-JIT verification path.
+- 2026-02-27: Investigated `PH_E_NOT_IMPLEMENTED` on x64 AVX-512 host; confirmed CPU feature detection is correct and failure was due to hash/vector kernel availability (`mulshrolate4rx` vector path with default `PH_RAWDOG_VECTOR_VERSION=3`), not missing AVX-512 support.
+- 2026-02-27: Updated slim RawDog JIT API compile wrapper to retry smaller vector widths (e.g., 16->8->4->1) before surfacing `PH_E_NOT_IMPLEMENTED`.
+- 2026-02-27: Changed console example default hash to `multiplyshiftr` for a cross-platform RawDog JIT-success default path.

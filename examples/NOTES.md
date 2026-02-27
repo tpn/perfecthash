@@ -32,7 +32,7 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 
 ## Planned Implementation Phases
 1. Ledger setup and planning docs.
-2. Define downstream CMake discovery contract for online/rawdog runtime.
+2. Define downstream CMake discovery contract for online/RawDog-JIT runtime.
 3. Create minimal console example that loads/provides a 32-bit key set, creates a table via online API, compiles the table with the RawDog JIT backend, and validates lookup uniqueness.
 4. Add platform-aware CMake logic for Windows/Linux/macOS and x86_64/arm64 routing.
 5. Add verification notes and copy/paste build instructions for each platform/compiler family.
@@ -58,3 +58,14 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - The console example handles `PH_E_NOT_IMPLEMENTED` from RawDog JIT as a
   host/table capability fallback and still verifies index uniqueness via
   non-JIT indexing.
+
+## PH_E_NOT_IMPLEMENTED Investigation (2026-02-27)
+- Reproduced the issue on x64 AVX-512 host with `--hash mulshrolate4rx --vector-width 16`.
+- Enabled RawDog JIT CPU tracing and confirmed host detection is healthy:
+  `AVX=1`, `AVX2=1`, `AVX512F=1`, `OSXSAVE=1`, valid `XCR0`.
+- Root cause is vector kernel availability for specific hash + vector-width
+  combinations (notably `mulshrolate4rx` under default
+  `PH_RAWDOG_VECTOR_VERSION=3`), not ISA detection failure.
+- Mitigation added in slim API wrapper: compile retries smaller vector widths
+  before returning `PH_E_NOT_IMPLEMENTED`, which keeps RawDog JIT enabled when
+  at least scalar JIT codegen is available.

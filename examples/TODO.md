@@ -2,8 +2,8 @@
 
 ## Ledger Bootstrap
 - [x] Create `examples/` ledgers: `NOTES.md`, `LOG.md`, `AGENTS.md`, `TODO.md`.
-- [x] Capture initial technical assumptions for online/rawdog integration.
-- [ ] Confirm with user that ledger direction and scope are acceptable before code scaffolding.
+- [x] Capture initial technical assumptions for online/RawDog-JIT integration.
+- [x] Confirm with user that ledger direction and scope are acceptable before code scaffolding.
 
 ## Discovery and Packaging Contract
 - [x] Decide initial downstream discovery mechanism: module-based `find_package(PerfectHashOnlineRawdog)` in the example subtree.
@@ -21,7 +21,7 @@
 - [ ] Test configure/build/run on Linux (`clang`).
 - [ ] Test configure/build/run on macOS (`appleclang`).
 - [ ] Test configure/build/run on Windows (`msvc`, `clang-cl`).
-- [ ] Verify x86_64 and arm64 builds only include their respective rawdog routines.
+- [ ] Verify x86_64 and arm64 builds only include their respective RawDog-JIT routines.
 
 ## Docs and Handoff
 - [x] Add `README.md` inside the example with quickstart and troubleshooting.

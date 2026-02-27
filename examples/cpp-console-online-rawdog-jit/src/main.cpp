@@ -39,7 +39,7 @@ PH_ONLINE_RAWDOG_HASH_FUNCTION ParseHashFunction(const std::string &name) {
     return PhOnlineRawdogHashMulshrolate4RX;
   }
 
-  return PhOnlineRawdogHashMulshrolate4RX;
+  return PhOnlineRawdogHashMultiplyShiftR;
 }
 
 void PrintUsage(const char *argv0) {
@@ -55,7 +55,7 @@ void PrintUsage(const char *argv0) {
 
 int main(int argc, char **argv) {
   constexpr int32_t kPhNotImplemented = static_cast<int32_t>(0xE0040230u);
-  std::string hash_name = "mulshrolate4rx";
+  std::string hash_name = "multiplyshiftr";
   uint32_t vector_width = 16;
 
   for (int index = 1; index < argc; ++index) {

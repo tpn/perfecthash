@@ -24,7 +24,7 @@ is applied automatically when needed.
 
 - CMake 3.20+
 - C++17 compiler
-- A built (or installed) PerfectHash tree with online/rawdog-enabled targets
+- A built (or installed) PerfectHash tree with online/RawDog-JIT enabled targets
 
 ## Configure and Build
 
@@ -63,14 +63,17 @@ Optional arguments:
 Example:
 
 ```bash
-./cpp-console-online-rawdog-jit --hash mulshrolate4rx --vector-width 16
+./cpp-console-online-rawdog-jit --hash multiplyshiftr --vector-width 16
 ```
 
 ## Notes
 
 - The app validates that every key maps to a unique index.
-- If RawDog JIT returns `PH_E_NOT_IMPLEMENTED` on the current host/table
-  combination, the sample continues with the non-JIT index path and prints a
-  clear fallback mode.
+- The slim `PhOnlineRawdogCompileTable()` wrapper retries smaller vector widths
+  when a requested RawDog JIT vector kernel is unavailable on the current
+  host/hash combination.
+- If RawDog JIT still returns `PH_E_NOT_IMPLEMENTED` after retries (for example,
+  unsupported hash scalar kernel on that platform), the sample continues with
+  the non-JIT index path and prints a clear fallback mode.
 - `x86_64` and `arm64` RawDog routine selection stays architecture-specific via
   upstream library build flags/macros.

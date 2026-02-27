@@ -109,6 +109,33 @@ PhApplyRawdogVectorWidth(
     return S_OK;
 }
 
+static
+HRESULT
+PhCompileRawdogTableWithVectorWidth(
+    _In_ PH_ONLINE_RAWDOG_CONTEXT *Context,
+    _In_ PH_ONLINE_RAWDOG_TABLE *Table,
+    _In_ ULONG VectorWidth,
+    _In_ PH_ONLINE_RAWDOG_JIT_MAX_ISA JitMaxIsa
+    )
+{
+    HRESULT Result;
+    PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags = {0};
+
+    CompileFlags.Jit = TRUE;
+    CompileFlags.JitBackendRawDog = TRUE;
+
+    Result = PhApplyRawdogVectorWidth(VectorWidth, &CompileFlags);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    CompileFlags.JitMaxIsa = (ULONG)JitMaxIsa;
+
+    return Context->Online->Vtbl->CompileTable(Context->Online,
+                                               Table->Table,
+                                               &CompileFlags);
+}
+
 PH_ONLINE_RAWDOG_API
 int32_t
 PhOnlineRawdogOpen(
@@ -282,7 +309,10 @@ PhOnlineRawdogCompileTable(
     )
 {
     HRESULT Result;
-    PERFECT_HASH_TABLE_COMPILE_FLAGS CompileFlags = {0};
+    HRESULT LastResult;
+    ULONG CandidateWidths[4] = {0};
+    ULONG CandidateCount = 0;
+    ULONG Index;
 
     if (!ARGUMENT_PRESENT(Context) ||
         !ARGUMENT_PRESENT(Context->Online) ||
@@ -291,22 +321,64 @@ PhOnlineRawdogCompileTable(
         return E_INVALIDARG;
     }
 
-    CompileFlags.Jit = TRUE;
-    CompileFlags.JitBackendRawDog = TRUE;
-
-    Result = PhApplyRawdogVectorWidth(VectorWidth, &CompileFlags);
-    if (FAILED(Result)) {
-        return Result;
-    }
-
     if (!IsValidPerfectHashJitMaxIsaId((PERFECT_HASH_JIT_MAX_ISA_ID)JitMaxIsa)) {
         return E_INVALIDARG;
     }
-    CompileFlags.JitMaxIsa = (ULONG)JitMaxIsa;
 
-    return Context->Online->Vtbl->CompileTable(Context->Online,
-                                               Table->Table,
-                                               &CompileFlags);
+    //
+    // RawDog JIT supports a platform/hash-specific subset of vectorized
+    // kernels. If a requested width is unavailable, retry progressively
+    // smaller widths before surfacing not-implemented.
+    //
+
+    switch (VectorWidth) {
+        case 0:
+        case 1:
+            CandidateWidths[CandidateCount++] = VectorWidth;
+            break;
+        case 2:
+            CandidateWidths[CandidateCount++] = 2;
+            CandidateWidths[CandidateCount++] = 1;
+            break;
+        case 4:
+            CandidateWidths[CandidateCount++] = 4;
+            CandidateWidths[CandidateCount++] = 1;
+            break;
+        case 8:
+            CandidateWidths[CandidateCount++] = 8;
+            CandidateWidths[CandidateCount++] = 4;
+            CandidateWidths[CandidateCount++] = 1;
+            break;
+        case 16:
+            CandidateWidths[CandidateCount++] = 16;
+            CandidateWidths[CandidateCount++] = 8;
+            CandidateWidths[CandidateCount++] = 4;
+            CandidateWidths[CandidateCount++] = 1;
+            break;
+        default:
+            return E_INVALIDARG;
+    }
+
+    LastResult = PH_E_NOT_IMPLEMENTED;
+
+    for (Index = 0; Index < CandidateCount; Index++) {
+        Result = PhCompileRawdogTableWithVectorWidth(Context,
+                                                     Table,
+                                                     CandidateWidths[Index],
+                                                     JitMaxIsa);
+        if (SUCCEEDED(Result)) {
+            return S_OK;
+        }
+
+        if (Result != PH_E_NOT_IMPLEMENTED &&
+            Result != PH_E_INVARIANT_CHECK_FAILED) {
+            return Result;
+        }
+
+        LastResult = Result;
+    }
+
+    return LastResult;
 }
 
 PH_ONLINE_RAWDOG_API
