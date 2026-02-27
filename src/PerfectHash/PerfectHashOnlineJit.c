@@ -142,6 +142,9 @@ PhCompileOnlineJitBackend(
             }
             break;
 
+        case PhOnlineJitBackendAuto:
+            return E_INVALIDARG;
+
         default:
             return E_INVALIDARG;
     }

@@ -29,3 +29,5 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Implemented sqlite benchmark runner (`src/main.cpp`) with A/B comparison between baseline B-tree join and PerfectHash virtual-table join.
 - 2026-02-27: Validated local runs for backends `rawdog-jit`, `llvm-jit`, and `auto` with matching results and reported speedups.
 - 2026-02-27: Added GitHub Actions workflow coverage to build and run `examples/sqlite-online-jit` on Linux/macOS/Windows.
+- 2026-02-27: Fixed Windows `PerfectHashOnlineJit` build issues by adding `PERFECT_HASH_ONLINE_JIT_BUILD` to the core `PerfectHash` target definitions and handling `PhOnlineJitBackendAuto` explicitly in backend switch logic.
+- 2026-02-27: Fixed Linux/macOS example discovery in CI by extending example finder module library path suffixes for multi-config output directories (`lib/Release`, `lib/RelWithDebInfo`, `lib/Debug`, and static variants).

@@ -68,8 +68,20 @@ else()
     list(APPEND _ph_lib_suffixes
         lib
         build/lib
+        lib/Release
+        build/lib/Release
+        lib/RelWithDebInfo
+        build/lib/RelWithDebInfo
+        lib/Debug
+        build/lib/Debug
         lib/static
         build/lib/static
+        lib/static/Release
+        build/lib/static/Release
+        lib/static/RelWithDebInfo
+        build/lib/static/RelWithDebInfo
+        lib/static/Debug
+        build/lib/static/Debug
     )
 endif()
 
