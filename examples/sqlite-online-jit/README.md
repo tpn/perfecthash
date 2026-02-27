@@ -14,6 +14,7 @@ virtual table module and benchmarks A/B behavior.
 - full permutation matrix mode:
   `rawdog-jit` + `llvm-jit` x curated hash functions x vector widths
   `1/2/4/8/16`
+- repeated build-run analysis (`--build-runs`) for creation-time distributions
 
 ## Integration Shape
 
@@ -45,11 +46,11 @@ cmake --build build/examples/sqlite-online-jit -j
 
 ```powershell
 cmake -S examples/sqlite-online-jit `
-      -B build\\examples\\sqlite-online-jit `
-      -G \"Visual Studio 17 2022\" -A x64 `
-      -DPERFECTHASH_ROOT=C:\\path\\to\\perfecthash
+      -B build\examples\sqlite-online-jit `
+      -G "Visual Studio 17 2022" -A x64 `
+      -DPERFECTHASH_ROOT=C:\path\to\perfecthash
 
-cmake --build build\\examples\\sqlite-online-jit --config Release
+cmake --build build\examples\sqlite-online-jit --config Release
 ```
 
 ## Run
@@ -57,34 +58,38 @@ cmake --build build\\examples\\sqlite-online-jit --config Release
 ### Full Permutation Matrix (Default)
 
 Running with no backend/hash/vector overrides executes the full comparison
-matrix:
+matrix with strict vector width enabled:
 
 ```bash
 ./build/examples/sqlite-online-jit/sqlite-online-jit
 ```
 
-This runs:
+### Comprehensive Multi-Run Matrix (Recommended)
 
-- backends: `rawdog-jit`, `llvm-jit`
-- hash functions:
-  `multiplyshiftr`, `multiplyshiftlr`, `multiplyshiftrmultiply`,
-  `multiplyshiftr2`, `multiplyshiftrx`, `mulshrolate1rx`,
-  `mulshrolate2rx`, `mulshrolate3rx`, `mulshrolate4rx`
-- vector widths: `1`, `2`, `4`, `8`, `16`
+Use the helper script to generate notebook-ready CSV outputs under
+`examples/sqlite-online-jit/results/latest/`:
 
-For matrix mode, strict vector-width behavior is enabled so AVX-512 (`16`) and
-other widths are measured as requested per permutation.
+```bash
+examples/sqlite-online-jit/scripts/run_matrix_benchmark.sh
+```
+
+Environment overrides for larger/smaller runs:
+
+```bash
+BUILD_RUNS=50 DIM_SIZE=50000 FACT_SIZE=200000 ITERATIONS=1 \
+  examples/sqlite-online-jit/scripts/run_matrix_benchmark.sh
+```
 
 ### Single Configuration
-
-Use explicit backend/hash/vector options to run one configuration:
 
 ```bash
 ./build/examples/sqlite-online-jit/sqlite-online-jit \
   --single \
   --backend rawdog-jit \
   --hash mulshrolate2rx \
-  --vector-width 16
+  --vector-width 16 \
+  --strict-vector-width 1 \
+  --build-runs 20
 ```
 
 Optional flags:
@@ -94,21 +99,53 @@ Optional flags:
 - `--hash <name>`
 - `--vector-width <0|1|2|4|8|16>`
 - `--strict-vector-width <0|1>` (single mode)
+- `--build-runs <count>`
+- `--output-detailed-csv <path>`
+- `--output-summary-csv <path>`
 - `--dim-size <count>`
 - `--fact-size <count>`
 - `--iterations <count>`
 - `--seed <value>`
 
-## Output
+## Output Model
 
-The executable prints:
+Two CSV output levels are supported:
 
-- `EXPLAIN QUERY PLAN` for baseline and PerfectHash queries
-- baseline runtime summary
-- single mode:
-  requested/effective backend + vector width, compile HRESULT, speedup
-- matrix mode:
-  one CSV row per permutation with
-  backend/hash/requested+effective vector width/JIT status/compile HRESULT/runtime/speedup
+- Detailed CSV (`--output-detailed-csv`): one row per build-run
+  permutation sample.
+- Summary CSV (`--output-summary-csv`): one row per permutation with aggregate
+  stats.
+
+Timing fields now separate build phases:
+
+- `create_*`: external full CREATE VIRTUAL TABLE wall time
+- `table_create_*`: `PhOnlineJitCreateTable32()` wall time
+  (captures the probabilistic random-search build phase)
+- `compile_*`: JIT compile wall time
+- `end_to_end_*`: `create + query` wall time
+- `query_speedup`: baseline/query
+- `end_to_end_speedup`: baseline/(create+query)
+- `break_even_queries`: estimated number of queries to amortize build cost
 
 The run fails if query results diverge between baseline and PerfectHash paths.
+
+## Notebook Visualization
+
+Open the included notebook:
+
+```bash
+python -m pip install -r examples/sqlite-online-jit/notebooks/requirements.txt
+jupyter notebook examples/sqlite-online-jit/notebooks/sqlite_online_jit_matrix_analysis.ipynb
+```
+
+Notebook expectations:
+
+- `examples/sqlite-online-jit/results/latest/summary.csv`
+- `examples/sqlite-online-jit/results/latest/detailed.csv`
+
+The notebook provides:
+
+- heatmaps for speedup and build cost across hash/vector/backend combinations
+- repeated-run table-creation distribution plots
+- query-speedup vs creation-cost scatter plots
+- ranked top configurations for query-only and end-to-end scenarios

@@ -1,0 +1,4 @@
+# Keep directory, ignore generated benchmark outputs.
+*
+!.gitignore
+!.gitkeep

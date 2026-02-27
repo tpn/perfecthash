@@ -37,3 +37,11 @@ This file is append-only. Add new entries at the end with an explicit date.
 - 2026-02-27: Expanded `sqlite-online-jit` benchmark runner to a full permutation matrix mode (RawDog-JIT + LLVM-JIT x curated hash functions x vector widths `1/2/4/8/16`).
 - 2026-02-27: Added per-permutation compile metadata reporting in sqlite integration (requested/effective backend and vector width, compile HRESULT, JIT enabled state).
 - 2026-02-27: Validated local matrix runs on x64 AVX-512 host and confirmed AVX-512 (`vector-width=16`) permutations are exercised and reported.
+- 2026-02-27: Added sqlite benchmark `--build-runs` multi-sample reporting to capture creation-time distributions per backend/hash/vector permutation.
+- 2026-02-27: Added sqlite virtual-table build-phase timing instrumentation (`source_extract_ms`, `table_create_ms`, `compile_ms`, `materialize_ms`, internal total build time) and propagated metrics through benchmark CSV output.
+- 2026-02-27: Expanded sqlite benchmark summary metrics with query-only speedup, end-to-end speedup (create+query), and estimated break-even query count.
+- 2026-02-27: Added notebook packaging for matrix analysis at `examples/sqlite-online-jit/notebooks/sqlite_online_jit_matrix_analysis.ipynb`.
+- 2026-02-27: Added helper runner script `examples/sqlite-online-jit/scripts/run_matrix_benchmark.sh` and standardized notebook input output location `examples/sqlite-online-jit/results/latest/`.
+- 2026-02-27: Executed comprehensive matrix run (`dim-size=50000`, `fact-size=200000`, `iterations=1`, `build-runs=20`) covering 90 permutations with 1800 build/query samples; exported detailed and summary CSVs for notebook visualization.
+- 2026-02-27: Updated Linux/macOS/Windows GitHub Actions sqlite matrix smoke step to include `--build-runs 2` plus detailed/summary CSV output flags, exercising new reporting paths in CI.
+- 2026-02-27: Comprehensive run summary (`dim=50000`, `fact=200000`, `iterations=1`, `build-runs=20`): baseline avg `136.732 ms`; mean query speedup across 90 permutations `3.7055x`; mean end-to-end speedup `2.1419x`; mean break-even queries `0.2696`.

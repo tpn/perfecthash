@@ -56,3 +56,13 @@
 - [x] Add strict vector-width benchmarking mode to distinguish AVX/AVX2/AVX-512
   variant outcomes per permutation.
 - [x] Add CI execution for sqlite example.
+- [x] Add repeated build-run support (`--build-runs`) for per-permutation
+  creation-time distributions.
+- [x] Capture build-phase timings in benchmark output
+  (`table_create`, `compile`, `materialize`, end-to-end).
+- [x] Emit notebook-friendly detailed/summary CSV outputs.
+- [x] Add a Jupyter Notebook that visualizes backend/hash/vector matrix results.
+- [x] Add a helper script to run comprehensive matrix benchmarks and write
+  notebook input CSVs under `examples/sqlite-online-jit/results/latest/`.
+- [ ] Evaluate exposing direct PerfectHash solver attempt counters in slim API
+  (if available) to complement wall-time creation metrics.

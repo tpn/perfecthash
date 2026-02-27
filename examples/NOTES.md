@@ -135,3 +135,42 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - requested/effective vector width,
 - compile HRESULT,
 - JIT enabled/disabled state.
+
+## SQLite Creation-Time Analysis + Notebook Packaging (2026-02-27)
+- Benchmark runner now supports repeated table-build samples per permutation via
+  `--build-runs <N>`.
+- Added build-phase timing instrumentation to sqlite virtual-table integration:
+- source extraction time from sqlite table,
+- `PhOnlineJitCreateTable32()` time (probabilistic search phase),
+- JIT compile time (`PhOnlineJitCompileTableEx()`),
+- map materialization time,
+- total internal build time and external CREATE VIRTUAL TABLE wall time.
+- Added richer benchmark metrics in summary output:
+- query-only speedup,
+- end-to-end speedup (build + query),
+- estimated break-even query count to amortize build cost.
+- Added notebook packaging under:
+- `examples/sqlite-online-jit/notebooks/sqlite_online_jit_matrix_analysis.ipynb`
+- Added matrix helper script:
+- `examples/sqlite-online-jit/scripts/run_matrix_benchmark.sh`
+- Script writes notebook-ready outputs to:
+- `examples/sqlite-online-jit/results/latest/{summary.csv,detailed.csv,run.log}`
+  (ignored by git, directory retained for workflow consistency).
+
+## SQLite Comprehensive Matrix Snapshot (2026-02-27)
+Host run parameters:
+- `--matrix --dim-size 50000 --fact-size 200000 --iterations 1 --build-runs 20`
+
+Observed highlights (90 permutations, 1800 detailed samples):
+- Baseline avg query time: `136.732 ms`.
+- Mean query-only speedup: `3.7055x`.
+- Mean end-to-end speedup (create + query): `2.1419x`.
+- Mean break-even query count: `0.2696`.
+- RawDog-JIT:
+- mean query speedup `3.5842x`, mean end-to-end speedup `2.1472x`,
+  mean create time `25.494 ms`, compile avg `0.023 ms`.
+- LLVM-JIT:
+- mean query speedup `3.8268x`, mean end-to-end speedup `2.1367x`,
+  mean create time `28.308 ms`, compile avg `3.077 ms`.
+- Requested vector width `16` (AVX-512 target) incurs higher compile/build cost
+  on average than widths `1/2/4/8`, especially under LLVM-JIT.

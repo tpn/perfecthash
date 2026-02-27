@@ -34,3 +34,13 @@
 - Keep sections short and scannable.
 - Include copy/paste command examples where possible.
 - Call out assumptions explicitly, then record validation status once verified.
+
+## SQLite Benchmark Artifacts
+- Prefer writing matrix outputs to
+  `examples/sqlite-online-jit/results/latest/` so the notebook default paths
+  work without edits.
+- Use `examples/sqlite-online-jit/scripts/run_matrix_benchmark.sh` for repeated
+  matrix runs and set `BUILD_RUNS` high enough for distribution analysis.
+- Treat creation-cost reporting as first-class:
+  when summarizing performance, include query-only and end-to-end views
+  (`create + query`) plus break-even query counts.
