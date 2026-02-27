@@ -130,6 +130,7 @@ source_group("Private Header Files %28Auto-Generated%29" FILES ${Private_Header_
 set(Public_Header_Files
     "../../include/CompiledPerfectHash.h"
     "../../include/PerfectHash.h"
+    "../../include/PerfectHashOnlineJit.h"
     "../../include/PerfectHashOnlineRawdog.h"
     "../../include/PerfectHashEvents.h"
 )
@@ -217,6 +218,7 @@ set(Source_Files
     "PerfectHashOnline.c"
     "PerfectHashOnlineCompile.c"
     "PerfectHashOnlineCreate.c"
+    "PerfectHashOnlineJit.c"
     "PerfectHashOnlineRawdog.c"
     "PerfectHashNames.c"
     "PerfectHashPath.c"
@@ -5269,12 +5271,14 @@ foreach(ph_online_target ${online_target} ${online_static_target})
             ${ph_online_target}
             PRIVATE
             "PERFECT_HASH_ONLINE_RAWDOG_BUILD"
+            "PERFECT_HASH_ONLINE_JIT_BUILD"
         )
     else()
         target_compile_definitions(
             ${ph_online_target}
             PRIVATE
             "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
+            "PERFECT_HASH_ONLINE_JIT_STATIC"
         )
     endif()
 endforeach()
@@ -5321,12 +5325,14 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
             ${ph_online_target}
             PRIVATE
             "PERFECT_HASH_ONLINE_RAWDOG_BUILD"
+            "PERFECT_HASH_ONLINE_JIT_BUILD"
         )
     else()
         target_compile_definitions(
             ${ph_online_target}
             PRIVATE
             "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
+            "PERFECT_HASH_ONLINE_JIT_STATIC"
         )
     endif()
 endforeach()

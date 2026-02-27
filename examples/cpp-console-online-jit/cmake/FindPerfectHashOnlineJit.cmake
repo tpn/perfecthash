@@ -7,8 +7,8 @@ endif()
 if(DEFINED ENV{PERFECTHASH_ROOT} AND NOT "$ENV{PERFECTHASH_ROOT}" STREQUAL "")
     list(APPEND _ph_root_hints "$ENV{PERFECTHASH_ROOT}")
 endif()
-if(PerfectHashOnlineRawdog_ROOT)
-    list(APPEND _ph_root_hints "${PerfectHashOnlineRawdog_ROOT}")
+if(PerfectHashOnlineJit_ROOT)
+    list(APPEND _ph_root_hints "${PerfectHashOnlineJit_ROOT}")
 endif()
 
 list(REMOVE_DUPLICATES _ph_root_hints)
@@ -28,8 +28,8 @@ endforeach()
 list(REMOVE_DUPLICATES _ph_search_hints)
 
 find_path(
-    PERFECTHASH_ONLINE_RAWDOG_INCLUDE_DIR
-    NAMES PerfectHashOnlineRawdog.h
+    PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
+    NAMES PerfectHashOnlineJit.h
     HINTS ${_ph_search_hints}
     PATH_SUFFIXES
         include
@@ -37,7 +37,7 @@ find_path(
 
 set(_ph_lib_suffixes)
 if(WIN32)
-    if(PH_ONLINE_RAWDOG_PREFER_SHARED)
+    if(PH_ONLINE_JIT_PREFER_SHARED)
         list(APPEND _ph_lib_suffixes
             lib
             build/lib
@@ -75,7 +75,7 @@ endif()
 
 set(_ph_saved_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
 if(NOT WIN32)
-    if(PH_ONLINE_RAWDOG_PREFER_SHARED)
+    if(PH_ONLINE_JIT_PREFER_SHARED)
         if(APPLE)
             set(CMAKE_FIND_LIBRARY_SUFFIXES .dylib .so .a)
         else()
@@ -91,33 +91,65 @@ if(NOT WIN32)
 endif()
 
 find_library(
-    PERFECTHASH_ONLINE_RAWDOG_LIBRARY
+    PERFECTHASH_ONLINE_JIT_LIBRARY
     NAMES
-        PerfectHashOnlineCore
         PerfectHashOnline
+    HINTS ${_ph_search_hints}
+    PATH_SUFFIXES ${_ph_lib_suffixes}
+)
+
+find_library(
+    PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY
+    NAMES
+        PerfectHashLLVM
     HINTS ${_ph_search_hints}
     PATH_SUFFIXES ${_ph_lib_suffixes}
 )
 
 set(CMAKE_FIND_LIBRARY_SUFFIXES "${_ph_saved_suffixes}")
 
-if(PERFECTHASH_ONLINE_RAWDOG_LIBRARY)
+if(PERFECTHASH_ONLINE_JIT_LIBRARY)
     get_filename_component(
-        PERFECTHASH_ONLINE_RAWDOG_LIBRARY_DIR
-        "${PERFECTHASH_ONLINE_RAWDOG_LIBRARY}"
+        PERFECTHASH_ONLINE_JIT_LIBRARY_DIR
+        "${PERFECTHASH_ONLINE_JIT_LIBRARY}"
+        DIRECTORY
+    )
+endif()
+
+if(PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY)
+    get_filename_component(
+        PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_DIR
+        "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY}"
         DIRECTORY
     )
 endif()
 
 if(WIN32)
     find_file(
-        PERFECTHASH_ONLINE_RAWDOG_RUNTIME_DLL
+        PERFECTHASH_ONLINE_JIT_RUNTIME_DLL
         NAMES
-            PerfectHashOnlineCore.dll
             PerfectHashOnline.dll
         HINTS
             ${_ph_search_hints}
-            "${PERFECTHASH_ONLINE_RAWDOG_LIBRARY_DIR}"
+            "${PERFECTHASH_ONLINE_JIT_LIBRARY_DIR}"
+        PATH_SUFFIXES
+            bin
+            build/bin
+            bin/Release
+            build/bin/Release
+            bin/RelWithDebInfo
+            build/bin/RelWithDebInfo
+            bin/Debug
+            build/bin/Debug
+    )
+
+    find_file(
+        PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL
+        NAMES
+            PerfectHashLLVM.dll
+        HINTS
+            ${_ph_search_hints}
+            "${PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_DIR}"
         PATH_SUFFIXES
             bin
             build/bin
@@ -131,40 +163,41 @@ if(WIN32)
 endif()
 
 find_package_handle_standard_args(
-    PerfectHashOnlineRawdog
+    PerfectHashOnlineJit
     REQUIRED_VARS
-        PERFECTHASH_ONLINE_RAWDOG_LIBRARY
-        PERFECTHASH_ONLINE_RAWDOG_INCLUDE_DIR
+        PERFECTHASH_ONLINE_JIT_LIBRARY
+        PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY
+        PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
 )
 
-if(PerfectHashOnlineRawdog_FOUND AND NOT TARGET PerfectHash::OnlineRawdog)
-    add_library(PerfectHash::OnlineRawdog UNKNOWN IMPORTED)
+if(PerfectHashOnlineJit_FOUND AND NOT TARGET PerfectHash::OnlineJit)
+    add_library(PerfectHash::OnlineJit UNKNOWN IMPORTED)
     set_target_properties(
-        PerfectHash::OnlineRawdog
+        PerfectHash::OnlineJit
         PROPERTIES
-            IMPORTED_LOCATION "${PERFECTHASH_ONLINE_RAWDOG_LIBRARY}"
-            INTERFACE_INCLUDE_DIRECTORIES "${PERFECTHASH_ONLINE_RAWDOG_INCLUDE_DIR}"
+            IMPORTED_LOCATION "${PERFECTHASH_ONLINE_JIT_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${PERFECTHASH_ONLINE_JIT_INCLUDE_DIR}"
     )
 
     set(_ph_assume_static FALSE)
     if(NOT WIN32)
-        if(PERFECTHASH_ONLINE_RAWDOG_LIBRARY MATCHES "\\.a$")
+        if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "\\.a$")
             set(_ph_assume_static TRUE)
         endif()
     endif()
 
     if(WIN32)
-        if(PERFECTHASH_ONLINE_RAWDOG_LIBRARY MATCHES "([/\\\\]|^)static([/\\\\]|$)")
+        if(PERFECTHASH_ONLINE_JIT_LIBRARY MATCHES "([/\\\\]|^)static([/\\\\]|$)")
             set(_ph_assume_static TRUE)
-        elseif(NOT PERFECTHASH_ONLINE_RAWDOG_RUNTIME_DLL)
+        elseif(NOT PERFECTHASH_ONLINE_JIT_RUNTIME_DLL)
             set(_ph_assume_static TRUE)
         endif()
 
         if(_ph_assume_static)
             set_property(
-                TARGET PerfectHash::OnlineRawdog
+                TARGET PerfectHash::OnlineJit
                 APPEND
-                PROPERTY INTERFACE_COMPILE_DEFINITIONS PERFECT_HASH_ONLINE_RAWDOG_STATIC
+                PROPERTY INTERFACE_COMPILE_DEFINITIONS PERFECT_HASH_ONLINE_JIT_STATIC
             )
         endif()
     endif()
@@ -179,7 +212,7 @@ if(PerfectHashOnlineRawdog_FOUND AND NOT TARGET PerfectHash::OnlineRawdog)
 
         if(PERFECTHASH_ASM_LIBRARY)
             set_property(
-                TARGET PerfectHash::OnlineRawdog
+                TARGET PerfectHash::OnlineJit
                 APPEND
                 PROPERTY INTERFACE_LINK_LIBRARIES "${PERFECTHASH_ASM_LIBRARY}"
             )
@@ -187,20 +220,20 @@ if(PerfectHashOnlineRawdog_FOUND AND NOT TARGET PerfectHash::OnlineRawdog)
 
         if(WIN32)
             set_property(
-                TARGET PerfectHash::OnlineRawdog
+                TARGET PerfectHash::OnlineJit
                 APPEND
                 PROPERTY INTERFACE_LINK_LIBRARIES rpcrt4
             )
         elseif(UNIX)
             find_package(Threads REQUIRED)
             set_property(
-                TARGET PerfectHash::OnlineRawdog
+                TARGET PerfectHash::OnlineJit
                 APPEND
                 PROPERTY INTERFACE_LINK_LIBRARIES Threads::Threads
             )
             if(NOT APPLE)
                 set_property(
-                    TARGET PerfectHash::OnlineRawdog
+                    TARGET PerfectHash::OnlineJit
                     APPEND
                     PROPERTY INTERFACE_LINK_LIBRARIES rt
                 )
@@ -210,9 +243,12 @@ if(PerfectHashOnlineRawdog_FOUND AND NOT TARGET PerfectHash::OnlineRawdog)
 endif()
 
 mark_as_advanced(
-    PERFECTHASH_ONLINE_RAWDOG_INCLUDE_DIR
-    PERFECTHASH_ONLINE_RAWDOG_LIBRARY
+    PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
+    PERFECTHASH_ONLINE_JIT_LIBRARY
+    PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY
     PERFECTHASH_ASM_LIBRARY
-    PERFECTHASH_ONLINE_RAWDOG_RUNTIME_DLL
-    PERFECTHASH_ONLINE_RAWDOG_LIBRARY_DIR
+    PERFECTHASH_ONLINE_JIT_LIBRARY_DIR
+    PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY_DIR
+    PERFECTHASH_ONLINE_JIT_RUNTIME_DLL
+    PERFECTHASH_ONLINE_JIT_LLVM_RUNTIME_DLL
 )

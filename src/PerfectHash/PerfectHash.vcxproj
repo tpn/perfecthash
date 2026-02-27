@@ -65,6 +65,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\CompiledPerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHash.h" />
+    <ClInclude Include="..\..\include\PerfectHashOnlineJit.h" />
     <ClInclude Include="..\..\include\PerfectHashOnlineRawdog.h" />
     <ClInclude Include="..\..\include\PerfectHashErrors.h" />
     <ClInclude Include="..\..\include\PerfectHashEvents.h" />
@@ -262,6 +263,7 @@
     <ClCompile Include="PerfectHashOnline.c" />
     <ClCompile Include="PerfectHashOnlineCompile.c" />
     <ClCompile Include="PerfectHashOnlineCreate.c" />
+    <ClCompile Include="PerfectHashOnlineJit.c" />
     <ClCompile Include="PerfectHashOnlineRawdog.c" />
     <ClCompile Include="PerfectHashNames.c" />
     <ClCompile Include="PerfectHashPath.c" />
