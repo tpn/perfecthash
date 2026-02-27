@@ -178,7 +178,6 @@ find_package_handle_standard_args(
     PerfectHashOnlineJit
     REQUIRED_VARS
         PERFECTHASH_ONLINE_JIT_LIBRARY
-        PERFECTHASH_ONLINE_JIT_LLVM_LIBRARY
         PERFECTHASH_ONLINE_JIT_INCLUDE_DIR
 )
 
