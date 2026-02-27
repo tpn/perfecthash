@@ -130,6 +130,8 @@ source_group("Private Header Files %28Auto-Generated%29" FILES ${Private_Header_
 set(Public_Header_Files
     "../../include/CompiledPerfectHash.h"
     "../../include/PerfectHash.h"
+    "../../include/PerfectHashOnlineJit.h"
+    "../../include/PerfectHashOnlineRawdog.h"
     "../../include/PerfectHashEvents.h"
 )
 source_group("Public Header Files" FILES ${Public_Header_Files})
@@ -216,6 +218,8 @@ set(Source_Files
     "PerfectHashOnline.c"
     "PerfectHashOnlineCompile.c"
     "PerfectHashOnlineCreate.c"
+    "PerfectHashOnlineJit.c"
+    "PerfectHashOnlineRawdog.c"
     "PerfectHashNames.c"
     "PerfectHashPath.c"
     "PerfectHashPrimes.c"
@@ -5093,6 +5097,8 @@ target_compile_definitions(
     ${target}
     PRIVATE
     "_PERFECT_HASH_INTERNAL_BUILD"
+    "PERFECT_HASH_ONLINE_RAWDOG_BUILD"
+    "PERFECT_HASH_ONLINE_JIT_BUILD"
     "PH_USE_LLVMLIB"
 )
 
@@ -5260,6 +5266,22 @@ foreach(ph_online_target ${online_target} ${online_static_target})
             )
         endif()
     endif()
+
+    if("${ph_online_target}" STREQUAL "${online_target}")
+        target_compile_definitions(
+            ${ph_online_target}
+            PRIVATE
+            "PERFECT_HASH_ONLINE_RAWDOG_BUILD"
+            "PERFECT_HASH_ONLINE_JIT_BUILD"
+        )
+    else()
+        target_compile_definitions(
+            ${ph_online_target}
+            PRIVATE
+            "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
+            "PERFECT_HASH_ONLINE_JIT_STATIC"
+        )
+    endif()
 endforeach()
 
 foreach(ph_online_target ${online_core_target} ${online_core_static_target})
@@ -5270,6 +5292,50 @@ foreach(ph_online_target ${online_core_target} ${online_core_static_target})
         "PH_ONLINE_ONLY"
         "PH_ONLINE_CORE_ONLY"
     )
+
+    if(PERFECTHASH_HAS_RAWDOG_JIT)
+        target_compile_definitions(
+            ${ph_online_target}
+            PRIVATE
+            "PH_HAS_RAWDOG_JIT"
+        )
+        if(PERFECTHASH_IS_WINDOWS)
+            target_compile_definitions(
+                ${ph_online_target}
+                PRIVATE
+                "PH_RAWDOG_MSR_ONLY"
+            )
+        endif()
+        if(PERFECTHASH_ARCH_X86_64)
+            target_compile_definitions(
+                ${ph_online_target}
+                PRIVATE
+                "PH_RAWDOG_X64"
+            )
+        elseif(PERFECTHASH_ARCH_ARM64)
+            target_compile_definitions(
+                ${ph_online_target}
+                PRIVATE
+                "PH_RAWDOG_ARM64"
+            )
+        endif()
+    endif()
+
+    if("${ph_online_target}" STREQUAL "${online_core_target}")
+        target_compile_definitions(
+            ${ph_online_target}
+            PRIVATE
+            "PERFECT_HASH_ONLINE_RAWDOG_BUILD"
+            "PERFECT_HASH_ONLINE_JIT_BUILD"
+        )
+    else()
+        target_compile_definitions(
+            ${ph_online_target}
+            PRIVATE
+            "PERFECT_HASH_ONLINE_RAWDOG_STATIC"
+            "PERFECT_HASH_ONLINE_JIT_STATIC"
+        )
+    endif()
 endforeach()
 
 if(TARGET ${llvm_target})

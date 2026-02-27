@@ -47,7 +47,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>_PERFECT_HASH_INTERNAL_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_PERFECT_HASH_INTERNAL_BUILD;PERFECT_HASH_ONLINE_RAWDOG_BUILD;PERFECT_HASH_ONLINE_JIT_BUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions Condition="$(HookPenter) == '1'">/Gh %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Bscmake>
@@ -65,6 +65,8 @@
   <ItemGroup>
     <ClInclude Include="..\..\include\CompiledPerfectHash.h" />
     <ClInclude Include="..\..\include\PerfectHash.h" />
+    <ClInclude Include="..\..\include\PerfectHashOnlineJit.h" />
+    <ClInclude Include="..\..\include\PerfectHashOnlineRawdog.h" />
     <ClInclude Include="..\..\include\PerfectHashErrors.h" />
     <ClInclude Include="..\..\include\PerfectHashEvents.h" />
     <ClInclude Include="BulkCreateBestCsv.h" />
@@ -261,6 +263,8 @@
     <ClCompile Include="PerfectHashOnline.c" />
     <ClCompile Include="PerfectHashOnlineCompile.c" />
     <ClCompile Include="PerfectHashOnlineCreate.c" />
+    <ClCompile Include="PerfectHashOnlineJit.c" />
+    <ClCompile Include="PerfectHashOnlineRawdog.c" />
     <ClCompile Include="PerfectHashNames.c" />
     <ClCompile Include="PerfectHashPath.c" />
     <ClCompile Include="PerfectHashPrimes.c" />

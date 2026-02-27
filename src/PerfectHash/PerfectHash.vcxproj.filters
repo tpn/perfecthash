@@ -79,6 +79,12 @@
     <ClCompile Include="PerfectHashOnlineCreate.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PerfectHashOnlineJit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PerfectHashOnlineRawdog.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PerfectHashTls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -397,6 +403,12 @@
       <Filter>Private Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\PerfectHash.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\PerfectHashOnlineJit.h">
+      <Filter>Public Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\PerfectHashOnlineRawdog.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\PerfectHashEvents.h">
