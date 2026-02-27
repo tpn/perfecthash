@@ -63,7 +63,7 @@ Optional arguments:
 Example:
 
 ```bash
-./cpp-console-online-rawdog-jit --hash multiplyshiftr --vector-width 16
+./cpp-console-online-rawdog-jit --hash mulshrolate2rx --vector-width 16
 ```
 
 ## Notes
