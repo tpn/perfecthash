@@ -28,3 +28,24 @@ jobs:
         run: cmake --build --preset ninja-release --parallel
       - name: Test (Release)
         run: ctest --test-dir build -C Release --output-on-failure --timeout 300
+      - name: Examples (RawDog JIT + LLVM JIT)
+        shell: pwsh
+        run: |
+          $root = "${{ github.workspace }}"
+
+          cmake -S examples/cpp-console-online-rawdog-jit `
+            -B build/examples/cpp-console-online-rawdog-jit `
+            -G "Ninja Multi-Config" `
+            -DPERFECTHASH_ROOT="$root" `
+            -DPerfectHashOnlineRawdog_ROOT="$root/build"
+          cmake --build build/examples/cpp-console-online-rawdog-jit --config Release --parallel
+          & "$root/build/examples/cpp-console-online-rawdog-jit/Release/cpp-console-online-rawdog-jit.exe"
+
+          cmake -S examples/cpp-console-online-jit `
+            -B build/examples/cpp-console-online-jit `
+            -G "Ninja Multi-Config" `
+            -DPERFECTHASH_ROOT="$root" `
+            -DPerfectHashOnlineJit_ROOT="$root/build"
+          cmake --build build/examples/cpp-console-online-jit --config Release --parallel
+          & "$root/build/examples/cpp-console-online-jit/Release/cpp-console-online-jit.exe" --backend rawdog-jit --vector-width 16
+          & "$root/build/examples/cpp-console-online-jit/Release/cpp-console-online-jit.exe" --backend llvm-jit --vector-width 1

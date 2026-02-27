@@ -54,3 +54,30 @@ jobs:
         shell: bash -l {0}
         run: |
           micromamba run -n "${{ matrix.env_name }}" ctest --test-dir "${{ matrix.build_dir }}" --output-on-failure -C Release
+
+      - name: Examples (RawDog JIT + LLVM JIT)
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" cmake \
+            -S examples/cpp-console-online-rawdog-jit \
+            -B "${{ matrix.build_dir }}/examples/cpp-console-online-rawdog-jit" \
+            -DPERFECTHASH_ROOT="${GITHUB_WORKSPACE}" \
+            -DPerfectHashOnlineRawdog_ROOT="${GITHUB_WORKSPACE}/${{ matrix.build_dir }}"
+          micromamba run -n "${{ matrix.env_name }}" cmake \
+            --build "${{ matrix.build_dir }}/examples/cpp-console-online-rawdog-jit"
+          micromamba run -n "${{ matrix.env_name }}" \
+            "${{ matrix.build_dir }}/examples/cpp-console-online-rawdog-jit/cpp-console-online-rawdog-jit"
+
+          micromamba run -n "${{ matrix.env_name }}" cmake \
+            -S examples/cpp-console-online-jit \
+            -B "${{ matrix.build_dir }}/examples/cpp-console-online-jit" \
+            -DPERFECTHASH_ROOT="${GITHUB_WORKSPACE}" \
+            -DPerfectHashOnlineJit_ROOT="${GITHUB_WORKSPACE}/${{ matrix.build_dir }}"
+          micromamba run -n "${{ matrix.env_name }}" cmake \
+            --build "${{ matrix.build_dir }}/examples/cpp-console-online-jit"
+          micromamba run -n "${{ matrix.env_name }}" \
+            "${{ matrix.build_dir }}/examples/cpp-console-online-jit/cpp-console-online-jit" \
+            --backend rawdog-jit --vector-width 16
+          micromamba run -n "${{ matrix.env_name }}" \
+            "${{ matrix.build_dir }}/examples/cpp-console-online-jit/cpp-console-online-jit" \
+            --backend llvm-jit --vector-width 1
