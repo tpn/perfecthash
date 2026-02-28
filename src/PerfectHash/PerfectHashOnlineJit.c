@@ -27,7 +27,56 @@ struct PH_ONLINE_JIT_CONTEXT {
 
 struct PH_ONLINE_JIT_TABLE {
     PPERFECT_HASH_TABLE Table;
+    PPERFECT_HASH_TABLE_JIT_INTERFACE JitInterface;
 };
+
+static
+HRESULT
+PhReleaseOnlineJitInterface(
+    _Inout_ PH_ONLINE_JIT_TABLE *Table
+    )
+{
+    if (!ARGUMENT_PRESENT(Table)) {
+        return E_INVALIDARG;
+    }
+
+    if (Table->JitInterface) {
+        Table->JitInterface->Vtbl->Release(Table->JitInterface);
+        Table->JitInterface = NULL;
+    }
+
+    return S_OK;
+}
+
+static
+HRESULT
+PhEnsureOnlineJitInterface(
+    _Inout_ PH_ONLINE_JIT_TABLE *Table
+    )
+{
+    HRESULT Result;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Table->Table)) {
+        return E_INVALIDARG;
+    }
+
+    if (ARGUMENT_PRESENT(Table->JitInterface)) {
+        return S_OK;
+    }
+
+    Result = Table->Table->Vtbl->QueryInterface(
+        Table->Table,
+#ifdef __cplusplus
+        IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#else
+        &IID_PERFECT_HASH_TABLE_JIT_INTERFACE,
+#endif
+        (void **)&Table->JitInterface
+    );
+
+    return Result;
+}
 
 static
 HRESULT
@@ -356,6 +405,13 @@ PhOnlineJitCompileTableEx(
         return E_INVALIDARG;
     }
 
+    //
+    // Force lazy re-acquisition on subsequent vector index requests after
+    // every compile path.
+    //
+
+    PhReleaseOnlineJitInterface(Table);
+
     if (!IsValidPerfectHashJitMaxIsaId((PERFECT_HASH_JIT_MAX_ISA_ID)JitMaxIsa)) {
         return E_INVALIDARG;
     }
@@ -503,6 +559,146 @@ PhOnlineJitIndex32(
 }
 
 PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x4(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Keys) ||
+        !ARGUMENT_PRESENT(Indexes)) {
+        return E_INVALIDARG;
+    }
+
+    Result = PhEnsureOnlineJitInterface(Table);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Jit = Table->JitInterface;
+    return Jit->Vtbl->Index32x4(
+        Jit,
+        (ULONG)Keys[0],
+        (ULONG)Keys[1],
+        (ULONG)Keys[2],
+        (ULONG)Keys[3],
+        (PULONG)&Indexes[0],
+        (PULONG)&Indexes[1],
+        (PULONG)&Indexes[2],
+        (PULONG)&Indexes[3]
+    );
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x8(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Keys) ||
+        !ARGUMENT_PRESENT(Indexes)) {
+        return E_INVALIDARG;
+    }
+
+    Result = PhEnsureOnlineJitInterface(Table);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Jit = Table->JitInterface;
+    return Jit->Vtbl->Index32x8(
+        Jit,
+        (ULONG)Keys[0],
+        (ULONG)Keys[1],
+        (ULONG)Keys[2],
+        (ULONG)Keys[3],
+        (ULONG)Keys[4],
+        (ULONG)Keys[5],
+        (ULONG)Keys[6],
+        (ULONG)Keys[7],
+        (PULONG)&Indexes[0],
+        (PULONG)&Indexes[1],
+        (PULONG)&Indexes[2],
+        (PULONG)&Indexes[3],
+        (PULONG)&Indexes[4],
+        (PULONG)&Indexes[5],
+        (PULONG)&Indexes[6],
+        (PULONG)&Indexes[7]
+    );
+}
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x16(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
+    )
+{
+    HRESULT Result;
+    PPERFECT_HASH_TABLE_JIT_INTERFACE Jit;
+
+    if (!ARGUMENT_PRESENT(Table) ||
+        !ARGUMENT_PRESENT(Keys) ||
+        !ARGUMENT_PRESENT(Indexes)) {
+        return E_INVALIDARG;
+    }
+
+    Result = PhEnsureOnlineJitInterface(Table);
+    if (FAILED(Result)) {
+        return Result;
+    }
+
+    Jit = Table->JitInterface;
+    return Jit->Vtbl->Index32x16(
+        Jit,
+        (ULONG)Keys[0],
+        (ULONG)Keys[1],
+        (ULONG)Keys[2],
+        (ULONG)Keys[3],
+        (ULONG)Keys[4],
+        (ULONG)Keys[5],
+        (ULONG)Keys[6],
+        (ULONG)Keys[7],
+        (ULONG)Keys[8],
+        (ULONG)Keys[9],
+        (ULONG)Keys[10],
+        (ULONG)Keys[11],
+        (ULONG)Keys[12],
+        (ULONG)Keys[13],
+        (ULONG)Keys[14],
+        (ULONG)Keys[15],
+        (PULONG)&Indexes[0],
+        (PULONG)&Indexes[1],
+        (PULONG)&Indexes[2],
+        (PULONG)&Indexes[3],
+        (PULONG)&Indexes[4],
+        (PULONG)&Indexes[5],
+        (PULONG)&Indexes[6],
+        (PULONG)&Indexes[7],
+        (PULONG)&Indexes[8],
+        (PULONG)&Indexes[9],
+        (PULONG)&Indexes[10],
+        (PULONG)&Indexes[11],
+        (PULONG)&Indexes[12],
+        (PULONG)&Indexes[13],
+        (PULONG)&Indexes[14],
+        (PULONG)&Indexes[15]
+    );
+}
+
+PH_ONLINE_JIT_API
 void
 PhOnlineJitReleaseTable(
     PH_ONLINE_JIT_TABLE *Table
@@ -511,6 +707,8 @@ PhOnlineJitReleaseTable(
     if (!Table) {
         return;
     }
+
+    PhReleaseOnlineJitInterface(Table);
 
     if (Table->Table) {
         Table->Table->Vtbl->Release(Table->Table);

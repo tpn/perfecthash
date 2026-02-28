@@ -123,6 +123,30 @@ PhOnlineJitIndex32(
     );
 
 PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x4(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x8(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
+    );
+
+PH_ONLINE_JIT_API
+int32_t
+PhOnlineJitIndex32x16(
+    PH_ONLINE_JIT_TABLE *Table,
+    const uint32_t *Keys,
+    uint32_t *Indexes
+    );
+
+PH_ONLINE_JIT_API
 void
 PhOnlineJitReleaseTable(
     PH_ONLINE_JIT_TABLE *Table
