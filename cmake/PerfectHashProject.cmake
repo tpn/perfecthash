@@ -5,12 +5,25 @@ set(PERFECTHASH_SRC_DIR "${PERFECTHASH_ROOT_DIR}/src")
 
 include(GNUInstallDirs)
 
+set(PERFECTHASH_IS_TOP_LEVEL_PROJECT OFF)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(PERFECTHASH_IS_TOP_LEVEL_PROJECT ON)
+endif()
+
 option(PERFECTHASH_USE_CUDA "Enable CUDA support if available" OFF)
 option(PERFECTHASH_ENABLE_PENTER "Enable FunctionHook support" OFF)
 option(PERFECTHASH_ENABLE_NATIVE_ARCH "Enable -march=native on supported compilers" ON)
 option(PERFECTHASH_ENABLE_INSTALL "Enable install rules" ON)
-option(PERFECTHASH_ENABLE_TESTS "Enable tests" ON)
-option(PERFECTHASH_BUILD_EXES "Build CLI executables." ON)
+set(_perfecthash_default_enable_tests ON)
+set(_perfecthash_default_build_exes ON)
+if(NOT PERFECTHASH_IS_TOP_LEVEL_PROJECT)
+    # Dependency consumers generally only want linked targets, not full self-hosted
+    # test/exe trees in default ALL builds.
+    set(_perfecthash_default_enable_tests OFF)
+    set(_perfecthash_default_build_exes OFF)
+endif()
+option(PERFECTHASH_ENABLE_TESTS "Enable tests" ${_perfecthash_default_enable_tests})
+option(PERFECTHASH_BUILD_EXES "Build CLI executables." ${_perfecthash_default_build_exes})
 option(PERFECTHASH_ENABLE_LLVM "Enable LLVM support if available" ON)
 set(
     PERFECTHASH_BUILD_PROFILE

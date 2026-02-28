@@ -5196,21 +5196,50 @@ if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
 endif()
 
-# Keep slim profiles lean and avoid building non-consumer targets in default
-# ALL builds (for example FetchContent consumers invoking plain `cmake --build`).
+# Keep default ALL builds lean. Profile defaults stay optimized for top-level
+# builds, and dependency/subproject builds only compile targets that are
+# explicitly linked by the consumer.
+set(PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS)
 if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
-    set_property(TARGET ${target} PROPERTY EXCLUDE_FROM_ALL TRUE)
-    set_property(TARGET ${online_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
-    set_property(TARGET ${online_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
-    set_property(TARGET ${online_core_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    list(
+        APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS
+        ${target}
+        ${online_target}
+        ${online_static_target}
+        ${online_core_static_target}
+    )
     if(TARGET ${llvm_target})
-        set_property(TARGET ${llvm_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+        list(APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS ${llvm_target})
     endif()
 elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-llvm")
-    set_property(TARGET ${online_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
-    set_property(TARGET ${online_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
-    set_property(TARGET ${online_core_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    list(
+        APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS
+        ${online_target}
+        ${online_static_target}
+        ${online_core_static_target}
+    )
 endif()
+
+if(NOT PERFECTHASH_IS_TOP_LEVEL_PROJECT)
+    list(
+        APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS
+        ${target}
+        ${online_target}
+        ${online_static_target}
+        ${online_core_target}
+        ${online_core_static_target}
+    )
+    if(TARGET ${llvm_target})
+        list(APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS ${llvm_target})
+    endif()
+endif()
+
+list(REMOVE_DUPLICATES PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS)
+foreach(ph_exclude_target ${PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS})
+    if(TARGET ${ph_exclude_target})
+        set_property(TARGET ${ph_exclude_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    endif()
+endforeach()
 
 if(WIN32)
     add_dependencies(${online_target} PerfectHashResources)

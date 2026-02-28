@@ -15,10 +15,10 @@
 - No new additions yet.
 
 ### Changed
-- No unreleased behavior changes yet.
+- Dependency-mode defaults now disable `PERFECTHASH_BUILD_EXES` and `PERFECTHASH_ENABLE_TESTS` when PerfectHash is consumed as a subproject.
 
 ### Fixed
-- No unreleased fixes yet.
+- FetchContent consumer `ALL` builds now avoid multi-target RawDog header generation races for `online-rawdog-llvm` and `full` profiles.
 
 ### Docs
 - No documentation-only updates yet.
