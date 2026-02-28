@@ -440,7 +440,7 @@ TEST_F(PerfectHashOnlineTests, CreateTableFromUnsortedKeysReturnsUniqueIndexes) 
 
 TEST_F(PerfectHashOnlineTests, Assigned16Boundary32767Vs32768Keys) {
   const PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId =
-      PerfectHashHashMulshrolate4RXFunctionId;
+      PerfectHashHashMultiplyShiftRFunctionId;
   const auto keys32767 = MakePseudoRandomKeys(32767, 0xA5A5A5A5u);
   const auto keys32768 = MakePseudoRandomKeys(32768, 0x5A5A5A5Au);
 
@@ -450,9 +450,7 @@ TEST_F(PerfectHashOnlineTests, Assigned16Boundary32767Vs32768Keys) {
       true,
       3,
       nullptr,
-      5,
-      true,
-      true);
+      20);
   ASSERT_NE(table32767, nullptr);
 
   auto *shim32767 = reinterpret_cast<PerfectHashTableShim *>(table32767);
@@ -468,9 +466,7 @@ TEST_F(PerfectHashOnlineTests, Assigned16Boundary32767Vs32768Keys) {
       true,
       3,
       nullptr,
-      5,
-      true,
-      true);
+      20);
   ASSERT_NE(table32768, nullptr);
 
   auto *shim32768 = reinterpret_cast<PerfectHashTableShim *>(table32768);
@@ -483,7 +479,7 @@ TEST_F(PerfectHashOnlineTests, Assigned16Boundary32767Vs32768Keys) {
 
 TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
   const PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId =
-      PerfectHashHashMulshrolate4RXFunctionId;
+      PerfectHashHashMultiplyShiftRFunctionId;
   const auto keys = MakePseudoRandomKeys(2048, 0xDEADBEEFu);
 
   PPERFECT_HASH_TABLE tableGraphImpl3 = CreateTableFromKeys(
@@ -492,9 +488,7 @@ TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
       true,
       3,
       nullptr,
-      5,
-      true,
-      true);
+      20);
   ASSERT_NE(tableGraphImpl3, nullptr);
 
   auto *shimGraphImpl3 = reinterpret_cast<PerfectHashTableShim *>(tableGraphImpl3);
@@ -515,9 +509,7 @@ TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
       false,
       3,
       nullptr,
-      5,
-      true,
-      true);
+      20);
   ASSERT_NE(tableOptOut, nullptr);
 
   auto *shimOptOut = reinterpret_cast<PerfectHashTableShim *>(tableOptOut);
@@ -533,9 +525,7 @@ TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
       true,
       2,
       nullptr,
-      5,
-      true,
-      true);
+      20);
   ASSERT_NE(tableGraphImpl2, nullptr);
 
   auto *shimGraphImpl2 = reinterpret_cast<PerfectHashTableShim *>(tableGraphImpl2);

@@ -70,7 +70,9 @@ gtest_discover_tests(perfecthash_unit_tests
 
 add_test(
     NAME perfecthash.fast.unit
-    COMMAND $<TARGET_FILE:perfecthash_unit_tests>
+    COMMAND
+        $<TARGET_FILE:perfecthash_unit_tests>
+        "--gtest_filter=-PerfectHashOnlineTests.Assigned16Boundary32767Vs32768Keys:PerfectHashOnlineTests.Assigned16RequiresGraphImpl3AndOptIn"
 )
 set_tests_properties(perfecthash.fast.unit PROPERTIES LABELS fast)
 

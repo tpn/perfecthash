@@ -67,4 +67,10 @@
 - [x] Add `docs/release-process.md` for maintainers.
 
 ## Tracking
+- [~] Stabilize cross-platform CI after assigned16 boundary hardening.
+  - Completed: fixed Windows configure failure caused by duplicate RawDog custom-command outputs (`src/PerfectHash/CMakeLists.txt` x64 non-Windows gating).
+  - Completed: made assigned16 boundary unit coverage deterministic and bounded; removed flaky RNG-dependent behavior.
+  - Completed: excluded heavy boundary tests from `perfecthash.fast.unit` while keeping dedicated per-test coverage via `gtest_discover_tests`.
+  - Completed: updated CLI assigned16 boundary test flags to avoid the hash-all-keys-first crash path.
+  - Remaining: confirm green GitHub Linux/Windows/macOS matrix on the post-fix commit.
 - [~] Keep this TODO synchronized as tasks complete; each completed task must have a corresponding LOG entry.

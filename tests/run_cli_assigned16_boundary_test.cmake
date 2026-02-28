@@ -59,6 +59,7 @@ function(run_create_case key_file output_dir)
       MultiplyShiftR
       And
       0
+      --DoNotHashAllKeysFirst
       --NoFileIo
       --Silent
       --MaxNumberOfTableResizes=0

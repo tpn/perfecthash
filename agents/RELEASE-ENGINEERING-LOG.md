@@ -183,3 +183,22 @@
     - `online-rawdog-and-llvm-jit`: success, RawDog enabled, no message payload embedding, `libPerfectHashOnlineCore.so` = `760,640` bytes.
     - `online-llvm-jit`: success, RawDog disabled, no message payload embedding, `libPerfectHashOnlineCore.so` = `713,544` bytes.
     - `full`: success, RawDog enabled, embedded message payloads present, `libPerfectHashOnlineCore.so` = `923,856` bytes.
+- Stabilized CI regressions observed on commit `864a2a3`:
+  - Fixed Windows configure failure (`Attempt to add a custom rule ... already has a custom rule`) by making the generic x64 NASM/objcopy RawDog generation block non-Windows-only.
+  - Hardened assigned16 boundary unit coverage against matrix flakiness:
+    - switched hash function from `Mulshrolate4RX` to `MultiplyShiftR`,
+    - removed RNG-dependent table-create inputs from the two new tests,
+    - increased bounded solve time to `20s`.
+  - Kept fast-suite runtime bounded:
+    - updated `perfecthash.fast.unit` to exclude:
+      - `PerfectHashOnlineTests.Assigned16Boundary32767Vs32768Keys`
+      - `PerfectHashOnlineTests.Assigned16RequiresGraphImpl3AndOptIn`
+    - dedicated per-test coverage remains active via `gtest_discover_tests`.
+  - Updated CLI assigned16 boundary test to avoid the unstable hash-all-keys-first path:
+    - retained `MultiplyShiftR`,
+    - added `--DoNotHashAllKeysFirst`.
+  - Local validation (`build-ci`, Ninja Multi-Config, Release) passed:
+    - `perfecthash_unit_tests.PerfectHashOnlineTests.Assigned16Boundary32767Vs32768Keys`
+    - `perfecthash_unit_tests.PerfectHashOnlineTests.Assigned16RequiresGraphImpl3AndOptIn`
+    - `perfecthash.fast.unit`
+    - `perfecthash.cli.create.assigned16-boundary`
