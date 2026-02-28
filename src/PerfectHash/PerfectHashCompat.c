@@ -16,7 +16,8 @@ Abstract:
 #include "PerfectHashEventsPrivate.h"
 #include <sys/time.h>
 
-#if defined(PH_LINUX) || defined(PH_MAC)
+#if (defined(PH_LINUX) || defined(PH_MAC)) && \
+    defined(PH_HAS_EMBEDDED_ERROR_STRINGS)
 #include "PerfectHashErrors_EnglishBin.h"
 #endif
 
@@ -3844,7 +3845,8 @@ PerfectHashPrintError(
     return Result;
 }
 
-#if defined(PH_LINUX) || defined(PH_MAC)
+#if (defined(PH_LINUX) || defined(PH_MAC)) && \
+    defined(PH_HAS_EMBEDDED_ERROR_STRINGS)
 
 #define PH_MESSAGE_RESOURCE_UNICODE 0x0001
 
@@ -4229,7 +4231,7 @@ PerfectHashFormatMessageArgs(
     return S_OK;
 }
 
-#endif // PH_LINUX || PH_MAC
+#endif // (PH_LINUX || PH_MAC) && PH_HAS_EMBEDDED_ERROR_STRINGS
 
 PERFECT_HASH_PRINT_MESSAGE PerfectHashPrintMessage;
 
@@ -4242,7 +4244,8 @@ PerfectHashPrintMessage(
 {
     PCSZ CodeString;
     HRESULT Result = S_OK;
-#if defined(PH_LINUX) || defined(PH_MAC)
+#if (defined(PH_LINUX) || defined(PH_MAC)) && \
+    defined(PH_HAS_EMBEDDED_ERROR_STRINGS)
     PSTR Message;
     PSTR FormattedMessage;
     SIZE_T MessageLength;
@@ -4250,7 +4253,8 @@ PerfectHashPrintMessage(
     va_list Args;
 #endif
 
-#if defined(PH_LINUX) || defined(PH_MAC)
+#if (defined(PH_LINUX) || defined(PH_MAC)) && \
+    defined(PH_HAS_EMBEDDED_ERROR_STRINGS)
     Message = NULL;
     FormattedMessage = NULL;
     MessageLength = 0;

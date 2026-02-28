@@ -19,19 +19,25 @@
 ## CMake Packaging + Consumer Experience
 - [x] Add install/export package config support (`PerfectHashConfig.cmake`, `PerfectHashTargets.cmake`, version config).
 - [x] Provide `FetchContent`/CPM consumer example under `examples/`.
+- [x] Migrate all maintained examples to GitHub-backed FetchContent-first workflows with local fallback.
 - [x] Add/verify namespaced imported targets (for example `PerfectHash::PerfectHashOnlineCore`).
 - [x] Validate FetchContent consumer builds across profiles against GitHub `main`.
-  - Completed: `online-rawdog`, `online-rawdog-llvm`, and `full` all pass after subproject dependency-mode hardening.
+  - Completed: `online-rawdog-jit`, `online-rawdog-and-llvm-jit`, `online-llvm-jit`, and `full` all pass with local source-override validation.
+  - Note: direct GitHub `main` currently still uses legacy profile names until these profile-renaming changes are published.
 
 ## Build Profiles
 - [x] Introduce explicit build profile options:
-  - `online-rawdog`
-  - `online-rawdog-llvm`
+  - `online-rawdog-jit`
+  - `online-rawdog-and-llvm-jit`
+  - `online-llvm-jit`
   - `full`
+- [x] Disable embedded human-readable error payloads for online profiles while preserving raw `PH_*` HRESULT behavior.
+  - Completed: added `PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS` and set profile defaults to `OFF` for online profiles, `ON` for `full`.
+  - Completed: fixed RawDog/header-generation independence from embedded-error toggling and revalidated all profile builds.
 - [x] Ensure profile docs map to concrete CMake options and emitted targets.
 - [x] Add CMake presets for each profile.
 - [x] Validate release-profile behavior across all platforms in CI.
-  - Completed: local online-rawdog install/consume path.
+  - Completed: local online-rawdog-jit install/consume path.
   - Completed: full profile matrix tag run (`v0.70.5`) succeeded on Linux/macOS/Windows publish path.
 
 ## GitHub Release Workflow
@@ -50,7 +56,7 @@
 ## Conda / Package Distribution
 - [x] Create conda package strategy doc and scaffolding.
   - Completed: `conda/recipe/meta.yaml`, `conda/recipe/build.sh`, `.github/workflows/conda-package.yml`, docs strategy.
-- [x] Validate conda package workflow on `main` for `online-rawdog`.
+- [x] Validate conda package workflow on `main` for `online-rawdog-jit`.
   - Completed: workflow dispatch run `22515274877` succeeded after recipe fixes.
 - [~] Evaluate staged rollout to conda-forge (manual PR assist + bot automation hooks).
   - Remaining: implement feedstock update automation and credentials governance.

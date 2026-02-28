@@ -25,18 +25,23 @@ endif()
 option(PERFECTHASH_ENABLE_TESTS "Enable tests" ${_perfecthash_default_enable_tests})
 option(PERFECTHASH_BUILD_EXES "Build CLI executables." ${_perfecthash_default_build_exes})
 option(PERFECTHASH_ENABLE_LLVM "Enable LLVM support if available" ON)
+option(PERFECTHASH_ENABLE_RAWDOG_JIT "Enable RawDog JIT support if available" ON)
+option(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS
+       "Embed human-readable error/message payloads into binaries."
+       ON)
 set(
     PERFECTHASH_BUILD_PROFILE
     "full"
     CACHE STRING
-    "Build profile: full, online-rawdog, online-rawdog-llvm."
+    "Build profile: full, online-rawdog-jit, online-rawdog-and-llvm-jit, online-llvm-jit."
 )
 set_property(
     CACHE PERFECTHASH_BUILD_PROFILE
     PROPERTY STRINGS
     full
-    online-rawdog
-    online-rawdog-llvm
+    online-rawdog-jit
+    online-rawdog-and-llvm-jit
+    online-llvm-jit
 )
 set(_perfecthash_static_llvm_default ON)
 if(APPLE)
@@ -46,18 +51,45 @@ option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ${_perfecth
 
 string(TOLOWER "${PERFECTHASH_BUILD_PROFILE}" PERFECTHASH_BUILD_PROFILE_NORMALIZED)
 if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
+    message(WARNING
+        "PERFECTHASH_BUILD_PROFILE=online-rawdog is deprecated; use "
+        "online-rawdog-jit."
+    )
+    set(PERFECTHASH_BUILD_PROFILE_NORMALIZED "online-rawdog-jit")
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-llvm")
+    message(WARNING
+        "PERFECTHASH_BUILD_PROFILE=online-rawdog-llvm is deprecated; use "
+        "online-rawdog-and-llvm-jit."
+    )
+    set(PERFECTHASH_BUILD_PROFILE_NORMALIZED "online-rawdog-and-llvm-jit")
+endif()
+
+if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-jit")
     set(PERFECTHASH_BUILD_EXES OFF CACHE BOOL "Build CLI executables." FORCE)
     set(PERFECTHASH_ENABLE_LLVM OFF CACHE BOOL "Enable LLVM support if available" FORCE)
-elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-llvm")
+    set(PERFECTHASH_ENABLE_RAWDOG_JIT ON CACHE BOOL "Enable RawDog JIT support if available" FORCE)
+    set(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS OFF CACHE BOOL
+        "Embed human-readable error/message payloads into binaries." FORCE)
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-and-llvm-jit")
     set(PERFECTHASH_BUILD_EXES OFF CACHE BOOL "Build CLI executables." FORCE)
     set(PERFECTHASH_ENABLE_LLVM ON CACHE BOOL "Enable LLVM support if available" FORCE)
+    set(PERFECTHASH_ENABLE_RAWDOG_JIT ON CACHE BOOL "Enable RawDog JIT support if available" FORCE)
+    set(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS OFF CACHE BOOL
+        "Embed human-readable error/message payloads into binaries." FORCE)
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-llvm-jit")
+    set(PERFECTHASH_BUILD_EXES OFF CACHE BOOL "Build CLI executables." FORCE)
+    set(PERFECTHASH_ENABLE_LLVM ON CACHE BOOL "Enable LLVM support if available" FORCE)
+    set(PERFECTHASH_ENABLE_RAWDOG_JIT OFF CACHE BOOL "Enable RawDog JIT support if available" FORCE)
+    set(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS OFF CACHE BOOL
+        "Embed human-readable error/message payloads into binaries." FORCE)
 elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "full")
     # Keep user-selected option values for the full profile.
 else()
     message(
         FATAL_ERROR
         "Invalid PERFECTHASH_BUILD_PROFILE: '${PERFECTHASH_BUILD_PROFILE}'. "
-        "Expected one of: full, online-rawdog, online-rawdog-llvm."
+        "Expected one of: full, online-rawdog-jit, online-rawdog-and-llvm-jit, "
+        "online-llvm-jit."
     )
 endif()
 

@@ -22,8 +22,9 @@ Establish a robust, low-friction, highly automated release process for PerfectHa
 - Keep workflow friction minimal: tag + push should be enough for a standard release.
 
 ## Desired Build Offerings
-- `online-rawdog`: slim online/JIT-focused build (x64/arm64).
-- `online-rawdog-llvm`: slim build plus LLVM JIT support.
+- `online-rawdog-jit`: slim online/JIT-focused build (x64/arm64).
+- `online-rawdog-and-llvm-jit`: slim build plus LLVM JIT support.
+- `online-llvm-jit`: LLVM-JIT-only online build with RawDog generation disabled.
 - `full`: full build including executables and all enabled JIT paths.
 
 ## Open Questions / Follow-Up
@@ -45,4 +46,16 @@ Establish a robust, low-friction, highly automated release process for PerfectHa
 - Conda packaging workflow (`22515274877`) now passes after recipe conflict and toolchain dependency fixes.
 - Follow-on fix shipped in `v0.70.6`: Windows release now publishes both `.zip` and `.zip.sha256` assets as expected.
 - FetchContent consumer validation against GitHub `main` now passes for all profiles (`online-rawdog`, `online-rawdog-llvm`, `full`) after subproject dependency-mode hardening.
+  - Legacy profile names are now mapped to new names in-project:
+    - `online-rawdog` -> `online-rawdog-jit`
+    - `online-rawdog-llvm` -> `online-rawdog-and-llvm-jit`
 - Tag `v0.70.7` release workflow (`22516149968`) completed successfully across Linux/macOS/Windows with publish step green and complete asset set.
+- Online slim error-path policy validated:
+  - `PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS` is now profile-driven (`OFF` for online profiles, `ON` for `full`).
+  - Embedded message payload generation is absent from online profiles and retained in `full`.
+  - RawDog profiles remain functional with embedded strings disabled after decoupling RawDog header generation from message-table generation.
+  - `PerfectHashOnlineCore.so` verification sizes:
+    - `online-rawdog-jit`: `760,640` bytes
+    - `online-rawdog-and-llvm-jit`: `760,640` bytes
+    - `online-llvm-jit`: `713,544` bytes
+    - `full`: `923,856` bytes

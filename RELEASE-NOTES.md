@@ -15,10 +15,10 @@
 - No new additions yet.
 
 ### Changed
-- No unreleased behavior changes yet.
+- Online build profiles now default to raw `PH_*` HRESULT/status/info behavior without embedding human-readable message payload tables.
 
 ### Fixed
-- No unreleased fixes yet.
+- Restored RawDog JIT header generation in online RawDog profiles when embedded error strings are disabled.
 
 ### Docs
 - No documentation-only updates yet.

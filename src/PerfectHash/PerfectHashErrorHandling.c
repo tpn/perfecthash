@@ -292,7 +292,9 @@ static const ERROR_CODE_SYMBOL_NAME CommonErrorCodes[] = {
 
 #pragma warning(push)
 #pragma warning(disable: 4820)
+#if defined(PH_HAS_EMBEDDED_ERROR_STRINGS)
 #include "PerfectHashErrors.dbg"
+#endif
 #pragma warning(pop)
 
 static const PCSZ UnknownErrorCode = "Unknown";
@@ -367,9 +369,11 @@ Return Value:
     }
 
     //
-    // Linear scan through the PerfectHashErrors.dbg array.
+    // Linear scan through the PerfectHashErrors.dbg array when embedded
+    // symbolic names are enabled.
     //
 
+#if defined(PH_HAS_EMBEDDED_ERROR_STRINGS)
     Entry = (PCERROR_CODE_SYMBOL_NAME)PerfectHashErrorsSymbolicNames;
     Count = ARRAYSIZE(PerfectHashErrorsSymbolicNames);
 
@@ -379,6 +383,7 @@ Return Value:
             return S_OK;
         }
     }
+#endif
 
     //
     // If we get here, we haven't found a match, so return the unknown string.

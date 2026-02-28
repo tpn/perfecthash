@@ -101,3 +101,85 @@
   - Release `v0.70.7` published complete assets including:
     - `perfecthash-0.70.7-full-windows-x86_64.zip`
     - `perfecthash-0.70.7-full-windows-x86_64.zip.sha256`
+- Completed profile naming refresh and expansion:
+  - Renamed profiles across CMake/project/workflows/scripts/docs to:
+    - `online-rawdog-jit`
+    - `online-rawdog-and-llvm-jit`
+    - `online-llvm-jit`
+    - `full`
+  - Added compatibility alias mapping in `cmake/PerfectHashProject.cmake`:
+    - `online-rawdog` -> `online-rawdog-jit`
+    - `online-rawdog-llvm` -> `online-rawdog-and-llvm-jit`
+- Fixed `online-llvm-jit` build path regressions:
+  - `src/PerfectHash/CMakeLists.txt`: decoupled Linux/macOS message-table generation from RawDog enablement so `PerfectHashErrors_EnglishBin.h` is always generated where required.
+  - `tests/CMakeLists.txt`: gated CLI tests on `PerfectHashCreateExe`/`PerfectHashBulkCreateExe` target availability to avoid configure-time generator-expression failures in online-only profiles.
+- Migrated maintained examples to GitHub-backed FetchContent-first workflows (with explicit opt-out fallback to local-tree finder modules):
+  - `examples/cpp-console-online-rawdog-jit`
+  - `examples/cpp-console-online-jit`
+  - `examples/sqlite-online-jit`
+  - Updated READMEs and added `PERFECTHASH_GIT_REPOSITORY` + `PERFECTHASH_GIT_TAG` knobs for branch/fork/repo overrides.
+  - Added `PERFECTHASH_GIT_REPOSITORY` to `examples/cmake-fetchcontent-consumer` as well.
+- Validation updates:
+  - `online-llvm-jit` top-level configure+build now passes.
+  - `examples/cmake-fetchcontent-consumer` configure+build passes for `online-llvm-jit`.
+  - Updated FetchContent-mode examples (`cpp-console-online-rawdog-jit`, `cpp-console-online-jit`, `sqlite-online-jit`) all pass configure+build after migration.
+- RawDog artifact sizing audit (Linux x86_64, `online-rawdog-jit` via CMake consumer):
+  - Example build dir: `build/examples/cpp-console-online-rawdog-jit-fc-verify/`.
+  - Linked runtime artifact: `lib/libPerfectHashOnlineCore.so` (`923,856` bytes) + `lib/libPerfectHashAsm.a` (`6,012` bytes).
+  - Generated RawDog headers (in `_deps/perfecthash-build/src/PerfectHash/`):
+    - `74` files matching `PerfectHashJitRawDog*.h`
+    - aggregate size `250,550` bytes
+  - Generated RawDog blobs (same directory):
+    - `74` files matching `PerfectHashJitIndex*.bin`
+    - aggregate size `37,952` bytes
+  - Incremental shared-library size signal:
+    - `libPerfectHashOnlineCore.so` (`online-rawdog-jit`): `923,856` bytes
+    - `libPerfectHashOnlineCore.so` (`online-llvm-jit`): `872,704` bytes
+    - delta: `51,152` bytes
+- Transition note:
+  - A true remote GitHub FetchContent test currently fails with new profile names against `main` because remote `main` still has legacy accepted values; local source-override/fork-repo override paths validate the new naming and behavior.
+- Investigated `libPerfectHashOnlineCore.so` size composition for `online-rawdog-jit` profile.
+  - Target analyzed: `build/examples/cpp-console-online-rawdog-jit-fc-verify/lib/libPerfectHashOnlineCore.so` (`923,856` bytes, ELF x86_64, not stripped).
+  - Section-level highlights:
+    - `.rodata`: `318,512` bytes
+    - `.text`: `263,107` bytes
+    - non-alloc symbol/string tables (`.symtab` + `.strtab` + `.shstrtab` + `.comment`): `98,668` bytes
+    - `strip --strip-unneeded` test reduced file by `98,496` bytes (`923,856` -> `825,360`).
+  - Largest named data contributors:
+    - `PerfectHashErrorsEnglishBin`: `119,756` bytes
+    - `CompiledPerfectHashTable*` symbols (aggregate): `71,092` bytes
+    - `PerfectHashJitRawDog*` symbols (aggregate in final .so): `29,456` bytes
+    - `PerfectHashErrorsSymbolicNames`: `7,280` bytes
+  - Largest function symbols:
+    - `CreatePerfectHashTableImplChm01`: `30,072` bytes
+    - `TryExtractArgTableCreateParameters`: `11,945` bytes
+    - `_dtoa`: `7,971` bytes
+    - `GraphRegisterSolved`: `6,220` bytes
+    - `GraphRegisterSolved16`: `6,157` bytes
+  - Function size distribution:
+    - `890` function symbols total, average `300.89` bytes.
+    - `75` functions >= `1,000` bytes (8.43% of functions) account for 55.23% of function-symbol bytes.
+  - Object-level contributors in `PerfectHashOnlineCore` link:
+    - `PerfectHashErrors_EnglishBin.c.o` contributes `119,788` bytes of rodata.
+    - `PerfectHashConstants.c.o` contributes `73,036` bytes of rodata + `8,376` bytes data.rel.ro.
+    - `ChmOnline01RawDog.c.o` contributes `13,133` bytes text + `30,512` bytes rodata.
+  - Cross-profile comparison (`online-rawdog-jit` vs `online-llvm-jit`) for `PerfectHashOnlineCore.so`:
+    - file delta: `+51,152` bytes.
+    - section deltas: `+31,044` bytes rodata, `+13,328` bytes text (rest metadata/relocations).
+    - aligns closely with inclusion of `ChmOnline01RawDog.c.o` and RawDog blob symbols.
+- Implemented online-profile error payload slimming:
+  - Added `PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS` profile defaults:
+    - `online-rawdog-jit`: `OFF`
+    - `online-rawdog-and-llvm-jit`: `OFF`
+    - `online-llvm-jit`: `OFF`
+    - `full`: `ON` (default)
+  - Gated Linux/macOS embedded message table generation and symbolic-name tables on `PH_HAS_EMBEDDED_ERROR_STRINGS`.
+  - Online slim libraries now avoid embedded human-readable message payloads and return raw `PH_*` HRESULT/status/info codes.
+- Fixed follow-on regressions from the slimming change:
+  - Decoupled RawDog enablement from embedded-error-string generation in `src/PerfectHash/CMakeLists.txt`.
+  - Ensured Python discovery occurs for RawDog header generation even when embedded error strings are disabled.
+  - Revalidated all profiles (`PerfectHashOnlineCore` target) with expected behavior:
+    - `online-rawdog-jit`: success, RawDog enabled, no message payload embedding, `libPerfectHashOnlineCore.so` = `760,640` bytes.
+    - `online-rawdog-and-llvm-jit`: success, RawDog enabled, no message payload embedding, `libPerfectHashOnlineCore.so` = `760,640` bytes.
+    - `online-llvm-jit`: success, RawDog disabled, no message payload embedding, `libPerfectHashOnlineCore.so` = `713,544` bytes.
+    - `full`: success, RawDog enabled, embedded message payloads present, `libPerfectHashOnlineCore.so` = `923,856` bytes.

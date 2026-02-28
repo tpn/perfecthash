@@ -3,6 +3,16 @@ set(target PerfectHash)
 if(NOT DEFINED PERFECTHASH_HAS_RAWDOG_JIT)
     set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability")
 endif()
+if(NOT DEFINED PERFECTHASH_ENABLE_RAWDOG_JIT)
+    set(PERFECTHASH_ENABLE_RAWDOG_JIT ON CACHE BOOL "Enable RawDog JIT support if available")
+endif()
+if(NOT DEFINED PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS)
+    set(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS ON CACHE BOOL
+        "Embed human-readable error/message payloads into binaries")
+endif()
+if(NOT PERFECTHASH_ENABLE_RAWDOG_JIT)
+    set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
+endif()
 
 # ###############################################################################
 # Source groups
@@ -317,9 +327,14 @@ else()
     endif()
 endif()
 
-if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
+if((PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS AND
+    (PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)) OR
+   PERFECTHASH_ENABLE_RAWDOG_JIT)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
+endif()
 
+if(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS AND
+   (PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC))
     set(PERFECTHASH_MESSAGE_BIN
         "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors_English.bin"
     )
@@ -346,7 +361,9 @@ if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
 
     list(APPEND Source_Files "${PERFECTHASH_MESSAGE_TABLE_C}")
     list(APPEND Private_Header_Files "${PERFECTHASH_MESSAGE_TABLE_H}")
+endif()
 
+if(PERFECTHASH_ENABLE_RAWDOG_JIT)
     if(PERFECTHASH_ARCH_X86_64)
         find_program(PERFECTHASH_NASM_EXECUTABLE nasm)
         find_program(PERFECTHASH_OBJCOPY_EXECUTABLE llvm-objcopy)
@@ -1483,10 +1500,10 @@ if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC)
             message(WARNING "RawDog JIT disabled (missing nasm/objcopy).")
             set(PERFECTHASH_HAS_RAWDOG_JIT OFF CACHE BOOL "RawDog JIT availability" FORCE)
         endif()
-    endif()
+        endif()
 endif()
 
-if(PERFECTHASH_IS_WINDOWS)
+if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
     if(PERFECTHASH_ARCH_X86_64)
@@ -3596,7 +3613,8 @@ if(PERFECTHASH_IS_WINDOWS)
     endif()
 endif()
 
-if(PERFECTHASH_IS_MAC OR (PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_ARM64))
+if(PERFECTHASH_ENABLE_RAWDOG_JIT AND (PERFECTHASH_IS_MAC OR
+   (PERFECTHASH_IS_LINUX AND PERFECTHASH_ARCH_ARM64)))
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
     if(PERFECTHASH_ARCH_ARM64)
@@ -5080,7 +5098,8 @@ endif()
 add_library(${target} SHARED ${ALL_FILES})
 
 # Generated Linux/macOS message table header and RawDog blobs live in the build dir.
-if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC OR PERFECTHASH_HAS_RAWDOG_JIT)
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC OR PERFECTHASH_HAS_RAWDOG_JIT OR
+   PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS)
     target_include_directories(${target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
@@ -5196,11 +5215,29 @@ if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
 endif()
 
+if(PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS)
+    foreach(ph_error_target
+            ${target}
+            ${online_target}
+            ${online_static_target}
+            ${online_core_target}
+            ${online_core_static_target}
+            ${llvm_target})
+        if(TARGET ${ph_error_target})
+            target_compile_definitions(
+                ${ph_error_target}
+                PRIVATE
+                "PH_HAS_EMBEDDED_ERROR_STRINGS"
+            )
+        endif()
+    endforeach()
+endif()
+
 # Keep default ALL builds lean. Profile defaults stay optimized for top-level
 # builds, and dependency/subproject builds only compile targets that are
 # explicitly linked by the consumer.
 set(PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS)
-if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
+if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-jit")
     list(
         APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS
         ${target}
@@ -5211,7 +5248,8 @@ if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
     if(TARGET ${llvm_target})
         list(APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS ${llvm_target})
     endif()
-elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-llvm")
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-and-llvm-jit" OR
+       PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-llvm-jit")
     list(
         APPEND PERFECTHASH_EXCLUDE_FROM_ALL_TARGETS
         ${online_target}
@@ -5252,7 +5290,8 @@ if(WIN32)
 endif()
 
 # Generated Linux message table header and RawDog blobs live in the build dir.
-if(PERFECTHASH_IS_LINUX OR PERFECTHASH_HAS_RAWDOG_JIT)
+if(PERFECTHASH_IS_LINUX OR PERFECTHASH_IS_MAC OR PERFECTHASH_HAS_RAWDOG_JIT OR
+   PERFECTHASH_ENABLE_EMBEDDED_ERROR_STRINGS)
     target_include_directories(${online_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(${online_static_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_include_directories(${online_core_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
