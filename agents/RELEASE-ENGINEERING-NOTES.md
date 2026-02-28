@@ -44,3 +44,4 @@ Establish a robust, low-friction, highly automated release process for PerfectHa
 - Tag `v0.70.5` release workflow (`22515338522`) completed successfully across Linux/macOS/Windows and published assets.
 - Conda packaging workflow (`22515274877`) now passes after recipe conflict and toolchain dependency fixes.
 - Follow-on fix shipped in `v0.70.6`: Windows release now publishes both `.zip` and `.zip.sha256` assets as expected.
+- FetchContent consumer validation against GitHub `main` now passes for all profiles (`online-rawdog`, `online-rawdog-llvm`, `full`) after subproject dependency-mode hardening.

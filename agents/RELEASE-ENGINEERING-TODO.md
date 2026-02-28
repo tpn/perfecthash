@@ -20,6 +20,8 @@
 - [x] Add install/export package config support (`PerfectHashConfig.cmake`, `PerfectHashTargets.cmake`, version config).
 - [x] Provide `FetchContent`/CPM consumer example under `examples/`.
 - [x] Add/verify namespaced imported targets (for example `PerfectHash::PerfectHashOnlineCore`).
+- [x] Validate FetchContent consumer builds across profiles against GitHub `main`.
+  - Completed: `online-rawdog`, `online-rawdog-llvm`, and `full` all pass after subproject dependency-mode hardening.
 
 ## Build Profiles
 - [x] Introduce explicit build profile options:

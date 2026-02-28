@@ -88,3 +88,9 @@
   - Release `v0.70.6` now includes both:
     - `perfecthash-0.70.6-full-windows-x86_64.zip`
     - `perfecthash-0.70.6-full-windows-x86_64.zip.sha256`
+- Hardened FetchContent/subproject behavior for multi-profile consumers:
+  - Commit `6b7e2e6`: added dependency-mode defaults in `cmake/PerfectHashProject.cmake` and expanded EXCLUDE_FROM_ALL handling in `src/PerfectHash/CMakeLists.txt`.
+  - Root issue addressed: duplicated RawDog header-generation rules across multiple targets caused objcopy races in `online-rawdog-llvm` and `full` consumer `ALL` builds.
+  - Validation:
+    - Local dependency-mode matrix (source override with `FETCHCONTENT_SOURCE_DIR_PERFECTHASH`) passed for `online-rawdog`, `online-rawdog-llvm`, `full`.
+    - GitHub-backed FetchContent matrix against `main` also passed for all three profiles.
