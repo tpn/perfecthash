@@ -4634,6 +4634,7 @@ CompileChm01HashJit(
     BOOLEAN HostHasAvx512;
     HRESULT Result = S_OK;
     PERFECT_HASH_HASH_FUNCTION_ID HashFunctionId;
+    PRTL Rtl;
 
     char *ErrorMessage = NULL;
     char *TargetTriple = NULL;
@@ -4661,6 +4662,7 @@ CompileChm01HashJit(
     PERFECT_HASH_JIT_MAX_ISA_ID JitMaxIsa;
 
     HashFunctionId = Table->HashFunctionId;
+    Rtl = Table->Rtl;
 
     CompileVectorHashEx32x4 = (CompileFlags->JitVectorHashEx32x4 != FALSE);
     CompileVectorHashEx32x8 = (CompileFlags->JitVectorHashEx32x8 != FALSE);
@@ -4767,7 +4769,7 @@ CompileChm01HashJit(
         goto Error;
     }
 
-    LLVMSetModuleDataLayout(Module, DataLayout);
+    LLVMSetDataLayout(Module, DataLayout);
     LLVMSetTarget(Module, TargetTriple);
 
     ZeroStruct(JitContext);
