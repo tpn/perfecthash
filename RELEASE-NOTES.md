@@ -15,13 +15,27 @@
 - No new additions yet.
 
 ### Changed
+- No unreleased behavior changes yet.
+
+### Fixed
+- No unreleased fixes yet.
+
+### Docs
+- No documentation-only updates yet.
+
+## v0.70.7 - 2026-02-28
+
+### Added
+- No new additions.
+
+### Changed
 - Dependency-mode defaults now disable `PERFECTHASH_BUILD_EXES` and `PERFECTHASH_ENABLE_TESTS` when PerfectHash is consumed as a subproject.
 
 ### Fixed
 - FetchContent consumer `ALL` builds now avoid multi-target RawDog header generation races for `online-rawdog-llvm` and `full` profiles.
 
 ### Docs
-- No documentation-only updates yet.
+- Release engineering ledgers now include the full FetchContent profile-matrix validation and `v0.70.7` release verification trail.
 
 ## v0.70.6 - 2026-02-28
 

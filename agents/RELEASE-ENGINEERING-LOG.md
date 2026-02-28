@@ -94,3 +94,10 @@
   - Validation:
     - Local dependency-mode matrix (source override with `FETCHCONTENT_SOURCE_DIR_PERFECTHASH`) passed for `online-rawdog`, `online-rawdog-llvm`, `full`.
     - GitHub-backed FetchContent matrix against `main` also passed for all three profiles.
+- Published and verified follow-on release with FetchContent hardening:
+  - Commit `4dd53ce`: recorded FetchContent matrix validation in ledgers.
+  - Tag `v0.70.7` cut via `ci/cut-release.sh --version 0.70.7 --push`.
+  - Release run `22516149968` succeeded across all build jobs and publish.
+  - Release `v0.70.7` published complete assets including:
+    - `perfecthash-0.70.7-full-windows-x86_64.zip`
+    - `perfecthash-0.70.7-full-windows-x86_64.zip.sha256`
