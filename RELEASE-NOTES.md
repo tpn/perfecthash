@@ -12,6 +12,21 @@
 ## Unreleased
 
 ### Added
+- No new additions yet.
+
+### Changed
+- Conda recipe now relies on canonical `build.sh` behavior without duplicate `build.script` declaration.
+- Conda recipe build requirements now include `nasm` for Linux/macOS assembly builds.
+
+### Fixed
+- Windows release packaging now uses strict error handling and consistent stage/package naming so `.zip` artifacts are generated reliably.
+
+### Docs
+- No documentation-only updates yet.
+
+## v0.70.5 - 2026-02-28
+
+### Added
 - Tag-derived CMake version resolution with optional explicit override for release automation.
 - CMake package export/config support for downstream `find_package(PerfectHash CONFIG REQUIRED)` usage.
 - Build profiles: `full`, `online-rawdog`, and `online-rawdog-llvm`.
@@ -27,6 +42,7 @@
 
 ### Fixed
 - Installed CMake package now exports only profile-relevant targets, enabling slim-profile install + consume flows.
+- Slim-profile FetchContent consumers no longer pull unnecessary ALL-target build edges that caused RawDog object race failures.
 
 ### Docs
 - Release engineering ledgers added under `agents/RELEASE-ENGINEERING-*`.

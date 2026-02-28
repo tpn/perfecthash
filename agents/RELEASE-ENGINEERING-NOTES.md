@@ -39,3 +39,8 @@ Establish a robust, low-friction, highly automated release process for PerfectHa
 - Release artifact names include build profile for clearer distribution semantics.
 - Conda packaging is staged with local recipe + CI build scaffold; conda-forge publication remains a follow-on.
 - Legacy manual version-bump helper has been removed; release tag cutting is now handled by `ci/cut-release.sh`.
+
+## Verification Updates (2026-02-28)
+- Tag `v0.70.5` release workflow (`22515338522`) completed successfully across Linux/macOS/Windows and published assets.
+- Conda packaging workflow (`22515274877`) now passes after recipe conflict and toolchain dependency fixes.
+- Windows packaging path still needs one follow-on fix: `v0.70.5` published only `*.zip.sha256` for Windows, indicating a packaging script mismatch that must be corrected before the next tag.

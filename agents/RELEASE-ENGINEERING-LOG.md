@@ -61,3 +61,23 @@
   - `ci/README.md`
   - `docs/release-process.md`
 - Updated `RELEASE-NOTES.md` and release-engineering TODO for this change set.
+- Validated and fixed conda workflow iteratively:
+  - Run `22515157016` failed: recipe conflict (`build.sh` plus `build.script` in `meta.yaml`).
+  - Commit `b0b516d`: removed duplicate `build.script` from `conda/recipe/meta.yaml`.
+  - Run `22515222019` failed: NASM missing for `PerfectHashAsm` on Linux conda build.
+  - Commit `885ad60`: added `nasm` to conda build requirements.
+  - Run `22515274877` succeeded for profile `online-rawdog`.
+- Verified release progression and cut a new patch release:
+  - Confirmed previous 0.70.x stabilization tags and green status.
+  - Tag `v0.70.5` cut via `ci/cut-release.sh --version 0.70.5 --push`.
+  - Release workflow run `22515338522` succeeded (Linux/macOS/Windows + publish).
+- Identified post-release Windows artifact defect:
+  - `v0.70.5` release contains `perfecthash-0.70.5-full-windows-x86_64.zip.sha256` but no `.zip`.
+  - Root cause in `ci/release-windows.ps1`:
+    - stage directory name omitted build profile while package name included profile.
+    - script did not fail hard on cmdlet/runtime errors.
+  - Implemented fix locally:
+    - added `Set-StrictMode -Version Latest`.
+    - added `$ErrorActionPreference = "Stop"`.
+    - aligned default stage directory naming with package naming (`...-$BuildProfile-$platform`).
+    - added explicit post-archive existence assertion for the generated `.zip`.

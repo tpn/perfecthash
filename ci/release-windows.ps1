@@ -15,6 +15,9 @@ Param(
     [switch]$Help
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
 if ($Help) {
     Write-Host @"
 Usage: pwsh -File ci/release-windows.ps1 [options]
@@ -130,7 +133,7 @@ $baseDir = Join-Path $rootDir "out/release/$version/$BuildProfile/$platform"
 
 if (-not $BuildDir) { $BuildDir = Join-Path $baseDir "build" }
 if (-not $InstallDir) { $InstallDir = Join-Path $baseDir "install" }
-if (-not $StageDir) { $StageDir = Join-Path $baseDir "stage\perfecthash-$version-$platform" }
+if (-not $StageDir) { $StageDir = Join-Path $baseDir "stage\perfecthash-$version-$BuildProfile-$platform" }
 if (-not $DistDir) { $DistDir = Join-Path $baseDir "dist" }
 
 if ($Clean) {
@@ -208,6 +211,9 @@ if (-not $SkipPackage) {
     if (-not $DryRun) {
         if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
         Compress-Archive -Path (Join-Path $stageRoot $packageName) -DestinationPath $zipPath
+        if (-not (Test-Path $zipPath)) {
+            throw "expected package archive not found: $zipPath"
+        }
         Write-Sha256 -File $zipPath
     } else {
         Write-Host "+ Compress-Archive -Path $stageRoot\\$packageName -DestinationPath $zipPath"

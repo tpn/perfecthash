@@ -28,9 +28,9 @@
   - `full`
 - [x] Ensure profile docs map to concrete CMake options and emitted targets.
 - [x] Add CMake presets for each profile.
-- [~] Validate release-profile behavior across all platforms in CI.
+- [x] Validate release-profile behavior across all platforms in CI.
   - Completed: local online-rawdog install/consume path.
-  - Remaining: full matrix run on GitHub Actions after merge.
+  - Completed: full profile matrix tag run (`v0.70.5`) succeeded on Linux/macOS/Windows publish path.
 
 ## GitHub Release Workflow
 - [x] Extend release workflow with generated release notes from commits since previous tag.
@@ -48,6 +48,8 @@
 ## Conda / Package Distribution
 - [x] Create conda package strategy doc and scaffolding.
   - Completed: `conda/recipe/meta.yaml`, `conda/recipe/build.sh`, `.github/workflows/conda-package.yml`, docs strategy.
+- [x] Validate conda package workflow on `main` for `online-rawdog`.
+  - Completed: workflow dispatch run `22515274877` succeeded after recipe fixes.
 - [~] Evaluate staged rollout to conda-forge (manual PR assist + bot automation hooks).
   - Remaining: implement feedstock update automation and credentials governance.
 
