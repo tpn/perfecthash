@@ -56,15 +56,13 @@ function(run_create_case key_file output_dir)
       "${key_native}"
       "${output_native}"
       Chm01
-      Mulshrolate4RX
+      MultiplyShiftR
       And
       0
-      --MaxConcurrency=1
-      --Rng=System
       --NoFileIo
       --Silent
       --MaxNumberOfTableResizes=0
-      --MaxSolveTimeInSeconds=5
+      --MaxSolveTimeInSeconds=20
     RESULT_VARIABLE result
     OUTPUT_VARIABLE stdout
     ERROR_VARIABLE stderr
