@@ -5196,6 +5196,22 @@ if(PERFECTHASH_HAS_LLVM)
     add_library(${llvm_target} SHARED ${LLVM_SOURCE_FILES})
 endif()
 
+# Keep slim profiles lean and avoid building non-consumer targets in default
+# ALL builds (for example FetchContent consumers invoking plain `cmake --build`).
+if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
+    set_property(TARGET ${target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    set_property(TARGET ${online_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    set_property(TARGET ${online_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    set_property(TARGET ${online_core_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    if(TARGET ${llvm_target})
+        set_property(TARGET ${llvm_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    endif()
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-llvm")
+    set_property(TARGET ${online_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    set_property(TARGET ${online_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+    set_property(TARGET ${online_core_static_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
+endif()
+
 if(WIN32)
     add_dependencies(${online_target} PerfectHashResources)
     add_dependencies(${online_static_target} PerfectHashResources)
