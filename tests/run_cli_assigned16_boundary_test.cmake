@@ -16,8 +16,19 @@ file(WRITE "${generator_script}" "import struct\n")
 file(APPEND "${generator_script}" "from pathlib import Path\n")
 file(APPEND "${generator_script}" "out = Path(r'''${test_output}''')\n")
 file(APPEND "${generator_script}" "out.mkdir(parents=True, exist_ok=True)\n")
-file(APPEND "${generator_script}" "(out / 'keys-32768.keys').write_bytes(b''.join(struct.pack('<I', i) for i in range(32768)))\n")
-file(APPEND "${generator_script}" "(out / 'keys-32767.keys').write_bytes(b''.join(struct.pack('<I', i) for i in range(32767)))\n")
+file(APPEND "${generator_script}" "def make_keys(count, salt):\n")
+file(APPEND "${generator_script}" "    keys = []\n")
+file(APPEND "${generator_script}" "    i = 1\n")
+file(APPEND "${generator_script}" "    multiplier = 2654435761\n")
+file(APPEND "${generator_script}" "    while len(keys) < count:\n")
+file(APPEND "${generator_script}" "        value = ((i * multiplier) ^ salt) & 0xffffffff\n")
+file(APPEND "${generator_script}" "        if value != 0 and value != 0xffffffff:\n")
+file(APPEND "${generator_script}" "            keys.append(value)\n")
+file(APPEND "${generator_script}" "        i += 1\n")
+file(APPEND "${generator_script}" "    keys.sort()\n")
+file(APPEND "${generator_script}" "    return keys\n")
+file(APPEND "${generator_script}" "(out / 'keys-32768.keys').write_bytes(b''.join(struct.pack('<I', v) for v in make_keys(32768, 0x5a5a5a5a)))\n")
+file(APPEND "${generator_script}" "(out / 'keys-32767.keys').write_bytes(b''.join(struct.pack('<I', v) for v in make_keys(32767, 0xa5a5a5a5)))\n")
 
 execute_process(
   COMMAND "${TEST_PYTHON}" "${generator_script}"
@@ -45,13 +56,15 @@ function(run_create_case key_file output_dir)
       "${key_native}"
       "${output_native}"
       Chm01
-      MultiplyShiftR
+      Mulshrolate4RX
       And
       0
+      --MaxConcurrency=1
+      --Rng=System
       --NoFileIo
       --Silent
       --MaxNumberOfTableResizes=0
-      --MaxSolveTimeInSeconds=20
+      --MaxSolveTimeInSeconds=5
     RESULT_VARIABLE result
     OUTPUT_VARIABLE stdout
     ERROR_VARIABLE stderr

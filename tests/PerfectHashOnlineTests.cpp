@@ -164,6 +164,21 @@ bool LoadSeedsFromFile(const std::string &path, std::vector<ULONG> *seeds) {
   return true;
 }
 
+std::vector<ULONG> MakePseudoRandomKeys(size_t count, ULONG salt = 0xA5A5A5A5u) {
+  std::vector<ULONG> keys;
+  keys.reserve(count);
+  constexpr ULONG kMultiplier = 2654435761u;
+  for (ULONG index = 1; keys.size() < count; ++index) {
+    ULONG value = (index * kMultiplier) ^ salt;
+    if (value == 0 || value == 0xffffffffu) {
+      continue;
+    }
+    keys.push_back(value);
+  }
+  std::sort(keys.begin(), keys.end());
+  return keys;
+}
+
 class ScopedEnvVar {
 public:
   ScopedEnvVar(const char *name, const char *value) : name_(name) {
@@ -254,7 +269,10 @@ protected:
       PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId,
       bool allowAssigned16 = false,
       ULONG graphImpl = 0,
-      const std::vector<ULONG> *seeds = nullptr) {
+      const std::vector<ULONG> *seeds = nullptr,
+      ULONG maxSolveTimeInSeconds = 0,
+      bool useSystemRng = false,
+      bool useRandomStartSeed = false) {
     PERFECT_HASH_KEYS_LOAD_FLAGS keysFlags = {0};
     PERFECT_HASH_TABLE_CREATE_FLAGS tableFlags = {0};
     std::vector<PERFECT_HASH_TABLE_CREATE_PARAMETER> table_params;
@@ -265,6 +283,7 @@ protected:
     tableFlags.NoFileIo = TRUE;
     tableFlags.Quiet = TRUE;
     tableFlags.DoNotTryUseHash16Impl = allowAssigned16 ? FALSE : TRUE;
+    tableFlags.RngUseRandomStartSeed = useRandomStartSeed ? TRUE : FALSE;
 
     if (graphImpl != 0) {
       PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
@@ -279,6 +298,20 @@ protected:
       param.AsValueArray.Values = const_cast<ULONG *>(seeds->data());
       param.AsValueArray.NumberOfValues = static_cast<ULONG>(seeds->size());
       param.AsValueArray.ValueSizeInBytes = sizeof(ULONG);
+      table_params.push_back(param);
+    }
+
+    if (maxSolveTimeInSeconds > 0) {
+      PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+      param.Id = TableCreateParameterMaxSolveTimeInSecondsId;
+      param.AsULong = maxSolveTimeInSeconds;
+      table_params.push_back(param);
+    }
+
+    if (useSystemRng) {
+      PERFECT_HASH_TABLE_CREATE_PARAMETER param = {};
+      param.Id = TableCreateParameterRngId;
+      param.AsULong = PerfectHashRngSystemId;
       table_params.push_back(param);
     }
 
@@ -403,6 +436,119 @@ TEST_F(PerfectHashOnlineTests, CreateTableFromUnsortedKeysReturnsUniqueIndexes) 
   }
 
   shim->Vtbl->Release(table);
+}
+
+TEST_F(PerfectHashOnlineTests, Assigned16Boundary32767Vs32768Keys) {
+  const PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId =
+      PerfectHashHashMulshrolate4RXFunctionId;
+  const auto keys32767 = MakePseudoRandomKeys(32767, 0xA5A5A5A5u);
+  const auto keys32768 = MakePseudoRandomKeys(32768, 0x5A5A5A5Au);
+
+  PPERFECT_HASH_TABLE table32767 = CreateTableFromKeys(
+      keys32767,
+      hashFunctionId,
+      true,
+      3,
+      nullptr,
+      5,
+      true,
+      true);
+  ASSERT_NE(table32767, nullptr);
+
+  auto *shim32767 = reinterpret_cast<PerfectHashTableShim *>(table32767);
+  PERFECT_HASH_TABLE_FLAGS flags32767 = {0};
+  ASSERT_GE(shim32767->Vtbl->GetFlags(table32767, sizeof(flags32767), &flags32767), 0);
+  EXPECT_EQ(flags32767.AssignedElementSizeInBits << 3, 16u);
+  EXPECT_EQ(shim32767->Vtbl->SlowIndex, nullptr);
+  shim32767->Vtbl->Release(table32767);
+
+  PPERFECT_HASH_TABLE table32768 = CreateTableFromKeys(
+      keys32768,
+      hashFunctionId,
+      true,
+      3,
+      nullptr,
+      5,
+      true,
+      true);
+  ASSERT_NE(table32768, nullptr);
+
+  auto *shim32768 = reinterpret_cast<PerfectHashTableShim *>(table32768);
+  PERFECT_HASH_TABLE_FLAGS flags32768 = {0};
+  ASSERT_GE(shim32768->Vtbl->GetFlags(table32768, sizeof(flags32768), &flags32768), 0);
+  EXPECT_EQ(flags32768.AssignedElementSizeInBits << 3, 32u);
+  EXPECT_NE(shim32768->Vtbl->SlowIndex, nullptr);
+  shim32768->Vtbl->Release(table32768);
+}
+
+TEST_F(PerfectHashOnlineTests, Assigned16RequiresGraphImpl3AndOptIn) {
+  const PERFECT_HASH_HASH_FUNCTION_ID hashFunctionId =
+      PerfectHashHashMulshrolate4RXFunctionId;
+  const auto keys = MakePseudoRandomKeys(2048, 0xDEADBEEFu);
+
+  PPERFECT_HASH_TABLE tableGraphImpl3 = CreateTableFromKeys(
+      keys,
+      hashFunctionId,
+      true,
+      3,
+      nullptr,
+      5,
+      true,
+      true);
+  ASSERT_NE(tableGraphImpl3, nullptr);
+
+  auto *shimGraphImpl3 = reinterpret_cast<PerfectHashTableShim *>(tableGraphImpl3);
+  PERFECT_HASH_TABLE_FLAGS flagsGraphImpl3 = {0};
+  ASSERT_GE(
+      shimGraphImpl3->Vtbl->GetFlags(
+          tableGraphImpl3,
+          sizeof(flagsGraphImpl3),
+          &flagsGraphImpl3),
+      0);
+  EXPECT_EQ(flagsGraphImpl3.AssignedElementSizeInBits << 3, 16u);
+  EXPECT_EQ(shimGraphImpl3->Vtbl->SlowIndex, nullptr);
+  shimGraphImpl3->Vtbl->Release(tableGraphImpl3);
+
+  PPERFECT_HASH_TABLE tableOptOut = CreateTableFromKeys(
+      keys,
+      hashFunctionId,
+      false,
+      3,
+      nullptr,
+      5,
+      true,
+      true);
+  ASSERT_NE(tableOptOut, nullptr);
+
+  auto *shimOptOut = reinterpret_cast<PerfectHashTableShim *>(tableOptOut);
+  PERFECT_HASH_TABLE_FLAGS flagsOptOut = {0};
+  ASSERT_GE(shimOptOut->Vtbl->GetFlags(tableOptOut, sizeof(flagsOptOut), &flagsOptOut), 0);
+  EXPECT_EQ(flagsOptOut.AssignedElementSizeInBits << 3, 32u);
+  EXPECT_NE(shimOptOut->Vtbl->SlowIndex, nullptr);
+  shimOptOut->Vtbl->Release(tableOptOut);
+
+  PPERFECT_HASH_TABLE tableGraphImpl2 = CreateTableFromKeys(
+      keys,
+      hashFunctionId,
+      true,
+      2,
+      nullptr,
+      5,
+      true,
+      true);
+  ASSERT_NE(tableGraphImpl2, nullptr);
+
+  auto *shimGraphImpl2 = reinterpret_cast<PerfectHashTableShim *>(tableGraphImpl2);
+  PERFECT_HASH_TABLE_FLAGS flagsGraphImpl2 = {0};
+  ASSERT_GE(
+      shimGraphImpl2->Vtbl->GetFlags(
+          tableGraphImpl2,
+          sizeof(flagsGraphImpl2),
+          &flagsGraphImpl2),
+      0);
+  EXPECT_EQ(flagsGraphImpl2.AssignedElementSizeInBits << 3, 32u);
+  EXPECT_NE(shimGraphImpl2->Vtbl->SlowIndex, nullptr);
+  shimGraphImpl2->Vtbl->Release(tableGraphImpl2);
 }
 
 #if defined(PH_HAS_RAWDOG_JIT)

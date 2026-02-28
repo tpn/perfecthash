@@ -11,3 +11,7 @@
 
 - [ ] Add masked vector index variants to handle tail keys without scalar fallback (AVX2/AVX-512 masks).
 - [ ] Benchmark tail handling with non-multiple key counts (e.g., 31,021) and consider x4/x2 fallback.
+
+# Keyset Edge Cases
+
+- [ ] Investigate solver/pathology behavior for keysets containing `0` and `~0` (`0xffffffff` for 32-bit keys), including interactions with sequential/near-sequential distributions; add deterministic regression tests and document guidance.
