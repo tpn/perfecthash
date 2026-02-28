@@ -43,4 +43,4 @@ Establish a robust, low-friction, highly automated release process for PerfectHa
 ## Verification Updates (2026-02-28)
 - Tag `v0.70.5` release workflow (`22515338522`) completed successfully across Linux/macOS/Windows and published assets.
 - Conda packaging workflow (`22515274877`) now passes after recipe conflict and toolchain dependency fixes.
-- Windows packaging path still needs one follow-on fix: `v0.70.5` published only `*.zip.sha256` for Windows, indicating a packaging script mismatch that must be corrected before the next tag.
+- Follow-on fix shipped in `v0.70.6`: Windows release now publishes both `.zip` and `.zip.sha256` assets as expected.

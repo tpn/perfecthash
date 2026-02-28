@@ -15,6 +15,20 @@
 - No new additions yet.
 
 ### Changed
+- No unreleased behavior changes yet.
+
+### Fixed
+- No unreleased fixes yet.
+
+### Docs
+- No documentation-only updates yet.
+
+## v0.70.6 - 2026-02-28
+
+### Added
+- No new additions.
+
+### Changed
 - Conda recipe now relies on canonical `build.sh` behavior without duplicate `build.script` declaration.
 - Conda recipe build requirements now include `nasm` for Linux/macOS assembly builds.
 
@@ -22,7 +36,7 @@
 - Windows release packaging now uses strict error handling and consistent stage/package naming so `.zip` artifacts are generated reliably.
 
 ### Docs
-- No documentation-only updates yet.
+- Updated release engineering ledgers with post-release validation outcomes and run references.
 
 ## v0.70.5 - 2026-02-28
 

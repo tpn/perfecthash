@@ -81,3 +81,10 @@
     - added `$ErrorActionPreference = "Stop"`.
     - aligned default stage directory naming with package naming (`...-$BuildProfile-$platform`).
     - added explicit post-archive existence assertion for the generated `.zip`.
+- Published fix and verified end-to-end:
+  - Commit `0df2a01`: `Fix Windows release packaging and update release ledgers`.
+  - Tag `v0.70.6` cut via `ci/cut-release.sh --version 0.70.6 --push`.
+  - Release run `22515710010` succeeded across all jobs, including publish.
+  - Release `v0.70.6` now includes both:
+    - `perfecthash-0.70.6-full-windows-x86_64.zip`
+    - `perfecthash-0.70.6-full-windows-x86_64.zip.sha256`
