@@ -363,13 +363,20 @@ Return Value:
     }
 
     //
-    // If our graph impl is v3, our vertex count - 1 is less than or equal to
-    // MAX_USHORT (i.e. 65535), and the user hasn't supplied the flag to the
-    // contrary, use the 16-bit hash/assigned implementation.
+    // If our graph impl is v3 and the user hasn't supplied the flag to the
+    // contrary, use the 16-bit hash/assigned implementation only when all
+    // 16-bit infrastructure limits are respected:
+    //
+    //  1) vertex ids are USHORT-based, so max vertex id <= 65535
+    //  2) edge ids stored in ORDER16 must remain representable as SHORT, so
+    //     NumberOfEdges <= 32768 (max edge id == 32767)
+    //  3) Order16Index is a signed SHORT, so NumberOfKeys <= 32767
     //
 
     if ((GraphImpl == 3) &&
-        ((NumberOfVertices.LowPart-1) <= 0x0000ffff) &&
+        ((NumberOfVertices.LowPart - 1) <= 0x0000ffff) &&
+        (NumberOfEdges.LowPart <= 0x00008000) &&
+        (NumberOfKeys <= 0x00007fff) &&
         (TableCreateFlags.DoNotTryUseHash16Impl == FALSE)) {
 
         UseAssigned16 = TRUE;

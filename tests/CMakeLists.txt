@@ -90,6 +90,15 @@ add_test(
 )
 
 add_test(
+    NAME perfecthash.cli.create.assigned16-boundary
+    COMMAND ${CMAKE_COMMAND}
+        -DTEST_EXE=$<TARGET_FILE:PerfectHashCreateExe>
+        -DTEST_OUTPUT=${TEST_OUTPUT_DIR}/assigned16-boundary
+        -DTEST_PYTHON=${Python3_EXECUTABLE}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_cli_assigned16_boundary_test.cmake
+)
+
+add_test(
     NAME perfecthash.cli.bulk
     COMMAND ${CMAKE_COMMAND}
         -DTEST_EXE=$<TARGET_FILE:PerfectHashBulkCreateExe>
