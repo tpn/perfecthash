@@ -50,13 +50,27 @@ ph_guess_version() {
     echo "${RELEASE_VERSION#v}"
     return 0
   fi
-  version="$(awk 'match($0, /^[[:space:]]*VERSION[[:space:]]+[0-9]/) { print $2; exit }' \
-    "$PH_ROOT_DIR/CMakeLists.txt" 2>/dev/null || true)"
-  if [ -z "$version" ]; then
-    if command -v git >/dev/null 2>&1; then
-      version="$(git -C "$PH_ROOT_DIR" describe --tags --abbrev=0 2>/dev/null || true)"
+
+  if command -v git >/dev/null 2>&1; then
+    version="$(
+      git -C "$PH_ROOT_DIR" describe --tags --exact-match --match 'v[0-9]*' \
+        2>/dev/null || true
+    )"
+    if [ -z "$version" ]; then
+      version="$(
+        git -C "$PH_ROOT_DIR" describe --tags --abbrev=0 --match 'v[0-9]*' \
+          2>/dev/null || true
+      )"
     fi
   fi
+
+  if [ -z "$version" ]; then
+    version="$(
+      awk 'match($0, /^[[:space:]]*VERSION[[:space:]]+[0-9]/) { print $2; exit }' \
+        "$PH_ROOT_DIR/CMakeLists.txt" 2>/dev/null || true
+    )"
+  fi
+
   if [ -z "$version" ]; then
     ph_die "unable to determine release version (set RELEASE_VERSION)"
   fi

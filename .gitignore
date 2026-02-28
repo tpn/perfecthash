@@ -41,3 +41,4 @@ install/
 DartConfiguration.tcl
 keys/*.keys*
 *TableSize
+examples/sqlite-online-jit/results/

@@ -4,8 +4,9 @@ function(perfecthash_apply_common_definitions target)
     target_include_directories(
         ${target}
         PUBLIC
-        "${PERFECTHASH_ROOT_DIR}/include"
-        "${PERFECTHASH_SRC_DIR}"
+        "$<BUILD_INTERFACE:${PERFECTHASH_ROOT_DIR}/include>"
+        "$<BUILD_INTERFACE:${PERFECTHASH_SRC_DIR}>"
+        "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
     )
 
     target_compile_definitions(${target} PUBLIC PERFECT_HASH_CMAKE)

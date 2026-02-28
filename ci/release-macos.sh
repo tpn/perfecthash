@@ -12,7 +12,8 @@ usage() {
 Usage: ci/release-macos.sh [options]
 
 Options:
-  --version <ver>       Release version (defaults to RELEASE_VERSION/git/CMakeLists)
+  --version <ver>       Release version (defaults to RELEASE_VERSION/git tag)
+  --profile <name>      Build profile (default: full)
   --config <cfg>        Build config (default: Release)
   --arch <arch>         macOS arch (arm64 or x86_64; default: host arch)
   --build-dir <dir>     Build directory
@@ -28,12 +29,14 @@ Options:
 
 Environment:
   RELEASE_VERSION, CONFIG, CMAKE_GENERATOR, CMAKE_OSX_ARCHITECTURES
-  PERFECTHASH_ENABLE_NATIVE_ARCH, SKIP_TESTS, SKIP_INSTALL, SKIP_PACKAGE
+  PERFECTHASH_BUILD_PROFILE, PERFECTHASH_ENABLE_NATIVE_ARCH
+  SKIP_TESTS, SKIP_INSTALL, SKIP_PACKAGE
   DRY_RUN
 EOF
 }
 
 release_version=""
+build_profile="${PERFECTHASH_BUILD_PROFILE:-full}"
 config="${CONFIG:-Release}"
 arch="${CMAKE_OSX_ARCHITECTURES:-}"
 build_dir="${BUILD_DIR:-}"
@@ -54,6 +57,10 @@ while [ $# -gt 0 ]; do
       ;;
     --config)
       config="$2"
+      shift 2
+      ;;
+    --profile)
+      build_profile="$2"
       shift 2
       ;;
     --arch)
@@ -110,6 +117,15 @@ if [ -z "$release_version" ]; then
   release_version="$(ph_guess_version)"
 fi
 
+build_profile="$(printf '%s' "$build_profile" | tr '[:upper:]' '[:lower:]')"
+case "$build_profile" in
+  full|online-rawdog|online-rawdog-llvm)
+    ;;
+  *)
+    ph_die "unsupported profile: $build_profile"
+    ;;
+esac
+
 if [ -z "$arch" ]; then
   arch="$(uname -m)"
 fi
@@ -120,7 +136,7 @@ case "$arch" in
 esac
 
 platform="macos-${arch}"
-base_dir="${PH_ROOT_DIR}/out/release/${release_version}/${platform}"
+base_dir="${PH_ROOT_DIR}/out/release/${release_version}/${build_profile}/${platform}"
 
 if [ -z "$build_dir" ]; then
   build_dir="${base_dir}/build"
@@ -154,6 +170,7 @@ fi
 native_arch="${PERFECTHASH_ENABLE_NATIVE_ARCH:-ON}"
 
 ph_info "release version: ${release_version}"
+ph_info "build profile: ${build_profile}"
 ph_info "platform: ${platform}"
 ph_info "build dir: ${build_dir}"
 ph_info "install dir: ${install_dir}"
@@ -164,6 +181,8 @@ cmake_args=(
   -B "$build_dir"
   "-DCMAKE_INSTALL_PREFIX=$install_dir"
   "-DCMAKE_BUILD_TYPE=$config"
+  "-DPERFECTHASH_VERSION_OVERRIDE=$release_version"
+  "-DPERFECTHASH_BUILD_PROFILE=$build_profile"
   "-DCMAKE_OSX_ARCHITECTURES=$arch"
   "-DPERFECTHASH_ENABLE_TESTS=ON"
   "-DBUILD_TESTING=ON"
@@ -194,7 +213,7 @@ if [ "$skip_package" != "1" ]; then
   ph_run cp -a "$install_dir"/. "$stage_dir"/
   ph_copy_docs "$stage_dir"
   ph_run mkdir -p "$dist_dir"
-  package_name="perfecthash-${release_version}-${platform}"
+  package_name="perfecthash-${release_version}-${build_profile}-${platform}"
   tarball="${dist_dir}/${package_name}.tar.gz"
   COPYFILE_DISABLE=1 ph_run tar -C "$(dirname "$stage_dir")" -czf "$tarball" "$(basename "$stage_dir")"
   ph_write_sha256 "$tarball"

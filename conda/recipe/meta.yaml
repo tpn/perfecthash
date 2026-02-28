@@ -1,0 +1,42 @@
+{% set name = "perfecthash" %}
+{% set version = environ.get("PERFECTHASH_CONDA_VERSION", "0.0.0") %}
+
+package:
+  name: {{ name }}
+  version: {{ version }}
+
+source:
+  path: ../..
+
+build:
+  number: 0
+  script: bash conda/recipe/build.sh
+  skip: true  # [win]
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - cmake >=3.20
+    - ninja
+    - make  # [unix]
+    - pkg-config  # [unix]
+
+test:
+  commands:
+    - test -f $PREFIX/include/PerfectHash.h  # [unix]
+    - test -f $PREFIX/lib/cmake/PerfectHash/PerfectHashConfig.cmake  # [unix]
+
+about:
+  home: https://github.com/tpn/perfecthash
+  summary: Perfect hash table generation and online JIT runtime libraries.
+  license: MIT
+  license_file: LICENSE
+
+description: |
+  PerfectHash builds fast perfect hash table generation/runtime libraries with
+  profile-aware CMake outputs and release automation.
+
+extra:
+  recipe-maintainers:
+    - tpn

@@ -1,5 +1,6 @@
 Param(
     [string]$ReleaseVersion = "",
+    [string]$BuildProfile = $env:PERFECTHASH_BUILD_PROFILE,
     [string]$Configuration = $env:CONFIG,
     [string]$Generator = $env:CMAKE_GENERATOR,
     [string]$BuildDir = $env:BUILD_DIR,
@@ -19,7 +20,8 @@ if ($Help) {
 Usage: pwsh -File ci/release-windows.ps1 [options]
 
 Options:
-  -ReleaseVersion <ver>  Release version (defaults to env/git/CMakeLists)
+  -ReleaseVersion <ver>  Release version (defaults to env/git tag)
+  -BuildProfile <name>   Build profile (default: full)
   -Configuration <cfg>   Build config (default: Release)
   -Generator <gen>       CMake generator (default: Ninja Multi-Config)
   -BuildDir <dir>        Build directory
@@ -65,6 +67,18 @@ function Get-ReleaseVersion {
     param([string]$RootDir)
     if ($ReleaseVersion) { return $ReleaseVersion.Trim().TrimStart("v") }
     if ($env:RELEASE_VERSION) { return $env:RELEASE_VERSION.Trim().TrimStart("v") }
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+        $exactTag = & git -C $RootDir describe --tags --exact-match --match "v[0-9]*" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $exactTag) {
+            return $exactTag.Trim().TrimStart("v")
+        }
+
+        $latestTag = & git -C $RootDir describe --tags --abbrev=0 --match "v[0-9]*" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $latestTag) {
+            return $latestTag.Trim().TrimStart("v")
+        }
+    }
+
     $line = Get-Content (Join-Path $RootDir "CMakeLists.txt") |
         Select-String -Pattern "^\s*VERSION\s+[0-9]" |
         Select-Object -First 1
@@ -73,12 +87,6 @@ function Get-ReleaseVersion {
         $idx = [Array]::IndexOf($parts, "VERSION")
         if ($idx -ge 0 -and ($idx + 1) -lt $parts.Length) {
             return $parts[$idx + 1]
-        }
-    }
-    if (Get-Command git -ErrorAction SilentlyContinue) {
-        $tag = & git -C $RootDir describe --tags --abbrev=0 2>$null
-        if ($LASTEXITCODE -eq 0 -and $tag) {
-            return $tag.Trim().TrimStart("v")
         }
     }
     throw "Unable to determine release version (set RELEASE_VERSION)."
@@ -107,10 +115,18 @@ function Write-Sha256 {
 
 if (-not $Configuration) { $Configuration = "Release" }
 if (-not $Generator) { $Generator = Get-DefaultGenerator }
+if (-not $BuildProfile) { $BuildProfile = "full" }
+$BuildProfile = $BuildProfile.Trim().ToLowerInvariant()
+switch ($BuildProfile) {
+    "full" {}
+    "online-rawdog" {}
+    "online-rawdog-llvm" {}
+    default { throw "Unsupported build profile: $BuildProfile" }
+}
 
 $version = Get-ReleaseVersion -RootDir $rootDir
 $platform = Get-PlatformLabel
-$baseDir = Join-Path $rootDir "out/release/$version/$platform"
+$baseDir = Join-Path $rootDir "out/release/$version/$BuildProfile/$platform"
 
 if (-not $BuildDir) { $BuildDir = Join-Path $baseDir "build" }
 if (-not $InstallDir) { $InstallDir = Join-Path $baseDir "install" }
@@ -128,6 +144,7 @@ if ($Clean) {
 }
 
 Write-Host "release version: $version"
+Write-Host "build profile: $BuildProfile"
 Write-Host "platform: $platform"
 Write-Host "build dir: $BuildDir"
 Write-Host "install dir: $InstallDir"
@@ -137,6 +154,8 @@ Invoke-Run @("cmake", "-S", $rootDir, "-B", $BuildDir,
     "-G", $Generator,
     "-DCMAKE_INSTALL_PREFIX=$InstallDir",
     "-DCMAKE_BUILD_TYPE=$Configuration",
+    "-DPERFECTHASH_VERSION_OVERRIDE=$version",
+    "-DPERFECTHASH_BUILD_PROFILE=$BuildProfile",
     "-DPERFECTHASH_ENABLE_TESTS=ON",
     "-DBUILD_TESTING=ON")
 
@@ -184,7 +203,7 @@ if (-not $SkipPackage) {
         Write-Host "+ New-Item -ItemType Directory -Force -Path $DistDir"
     }
 
-    $packageName = "perfecthash-$version-$platform"
+    $packageName = "perfecthash-$version-$BuildProfile-$platform"
     $zipPath = Join-Path $DistDir "$packageName.zip"
     if (-not $DryRun) {
         if (Test-Path $zipPath) { Remove-Item -Force $zipPath }

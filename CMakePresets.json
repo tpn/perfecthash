@@ -34,6 +34,33 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_OSX_ARCHITECTURES": "x86_64"
       }
+    },
+    {
+      "name": "ninja-multi-online-rawdog",
+      "displayName": "Ninja Multi-Config (online rawdog)",
+      "inherits": "ninja-multi",
+      "binaryDir": "${sourceDir}/build-online-rawdog",
+      "cacheVariables": {
+        "PERFECTHASH_BUILD_PROFILE": "online-rawdog"
+      }
+    },
+    {
+      "name": "ninja-multi-online-rawdog-llvm",
+      "displayName": "Ninja Multi-Config (online rawdog + llvm)",
+      "inherits": "ninja-multi",
+      "binaryDir": "${sourceDir}/build-online-rawdog-llvm",
+      "cacheVariables": {
+        "PERFECTHASH_BUILD_PROFILE": "online-rawdog-llvm"
+      }
+    },
+    {
+      "name": "ninja-multi-full",
+      "displayName": "Ninja Multi-Config (full)",
+      "inherits": "ninja-multi",
+      "binaryDir": "${sourceDir}/build-full",
+      "cacheVariables": {
+        "PERFECTHASH_BUILD_PROFILE": "full"
+      }
     }
   ],
   "buildPresets": [
@@ -55,6 +82,21 @@
     {
       "name": "ninja-macos-x86_64-release",
       "configurePreset": "ninja-multi-macos-x86_64",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-online-rawdog-release",
+      "configurePreset": "ninja-multi-online-rawdog",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-online-rawdog-llvm-release",
+      "configurePreset": "ninja-multi-online-rawdog-llvm",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-full-release",
+      "configurePreset": "ninja-multi-full",
       "configuration": "Release"
     }
   ],

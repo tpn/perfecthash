@@ -1,0 +1,87 @@
+name: conda-package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Package version override (defaults to latest git tag)"
+        required: false
+        type: string
+      profile:
+        description: "PerfectHash build profile for package"
+        required: false
+        default: online-rawdog
+        type: choice
+        options:
+          - online-rawdog
+          - online-rawdog-llvm
+          - full
+  pull_request:
+    paths:
+      - conda/recipe/**
+      - CMakeLists.txt
+      - cmake/**
+      - src/**
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-24.04
+    env:
+      ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_API_TOKEN }}
+      PERFECTHASH_BUILD_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'online-rawdog' }}
+      DISPATCH_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-variant: Miniforge3
+          miniforge-version: latest
+          activate-environment: conda-build
+          auto-activate-base: false
+          channels: conda-forge
+          channel-priority: strict
+
+      - name: Install conda-build toolchain
+        shell: bash -l {0}
+        run: |
+          conda install -y conda-build boa anaconda-client
+
+      - name: Resolve package version
+        id: version
+        shell: bash -l {0}
+        run: |
+          if [ -n "${DISPATCH_VERSION}" ]; then
+            version="${DISPATCH_VERSION}"
+          else
+            version="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)"
+          fi
+          version="${version#v}"
+          echo "PERFECTHASH_CONDA_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Build conda package
+        shell: bash -l {0}
+        run: |
+          conda build conda/recipe --output-folder conda/out --no-anaconda-upload
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: conda-${{ steps.version.outputs.version }}-${{ env.PERFECTHASH_BUILD_PROFILE }}
+          path: |
+            conda/out/**/*.conda
+            conda/out/**/*.tar.bz2
+
+      - name: Publish to anaconda channel (optional)
+        if: startsWith(github.ref, 'refs/tags/') && env.ANACONDA_API_TOKEN != ''
+        shell: bash -l {0}
+        run: |
+          anaconda -t "$ANACONDA_API_TOKEN" upload --force conda/out/**/*.conda conda/out/**/*.tar.bz2

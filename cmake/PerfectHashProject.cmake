@@ -10,12 +10,43 @@ option(PERFECTHASH_ENABLE_PENTER "Enable FunctionHook support" OFF)
 option(PERFECTHASH_ENABLE_NATIVE_ARCH "Enable -march=native on supported compilers" ON)
 option(PERFECTHASH_ENABLE_INSTALL "Enable install rules" ON)
 option(PERFECTHASH_ENABLE_TESTS "Enable tests" ON)
+option(PERFECTHASH_BUILD_EXES "Build CLI executables." ON)
 option(PERFECTHASH_ENABLE_LLVM "Enable LLVM support if available" ON)
+set(
+    PERFECTHASH_BUILD_PROFILE
+    "full"
+    CACHE STRING
+    "Build profile: full, online-rawdog, online-rawdog-llvm."
+)
+set_property(
+    CACHE PERFECTHASH_BUILD_PROFILE
+    PROPERTY STRINGS
+    full
+    online-rawdog
+    online-rawdog-llvm
+)
 set(_perfecthash_static_llvm_default ON)
 if(APPLE)
     set(_perfecthash_static_llvm_default OFF)
 endif()
 option(PERFECTHASH_STATIC_LLVM "Link LLVM statically when available" ${_perfecthash_static_llvm_default})
+
+string(TOLOWER "${PERFECTHASH_BUILD_PROFILE}" PERFECTHASH_BUILD_PROFILE_NORMALIZED)
+if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
+    set(PERFECTHASH_BUILD_EXES OFF CACHE BOOL "Build CLI executables." FORCE)
+    set(PERFECTHASH_ENABLE_LLVM OFF CACHE BOOL "Enable LLVM support if available" FORCE)
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-llvm")
+    set(PERFECTHASH_BUILD_EXES OFF CACHE BOOL "Build CLI executables." FORCE)
+    set(PERFECTHASH_ENABLE_LLVM ON CACHE BOOL "Enable LLVM support if available" FORCE)
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "full")
+    # Keep user-selected option values for the full profile.
+else()
+    message(
+        FATAL_ERROR
+        "Invalid PERFECTHASH_BUILD_PROFILE: '${PERFECTHASH_BUILD_PROFILE}'. "
+        "Expected one of: full, online-rawdog, online-rawdog-llvm."
+    )
+endif()
 
 if(DEFINED USE_CUDA AND NOT DEFINED PERFECTHASH_USE_CUDA)
     set(PERFECTHASH_USE_CUDA "${USE_CUDA}" CACHE BOOL "" FORCE)

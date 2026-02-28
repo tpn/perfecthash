@@ -8,6 +8,17 @@
 The `ui/` directory contains the companion web UI (submodule) for generating
 command line syntax. See [ui/README.md](ui/README.md) for details.
 
+## Project Status (2026)
+
+- Cross-platform CMake builds and CI are active for Linux, macOS, and Windows.
+- Tag-driven release automation is available via GitHub Actions (`.github/workflows/release.yml`).
+- CMake build profiles are supported:
+  - `full`
+  - `online-rawdog`
+  - `online-rawdog-llvm`
+- CMake package export/config support is available for downstream
+  `find_package(PerfectHash CONFIG REQUIRED)` consumers.
+
 
 ## Overview
 
@@ -142,11 +153,9 @@ both locations for cold or infrequent keys.
 
 ## Quick Guide
 
-Initially, all development on this project was done exclusively on Windows, with
-Visual Studio 2022.  Linux support has recently been added, although it is still
-quite rough around the edges.  For some context: about 1,700 hours have been
-spent on the Windows portion.  The Linux support was hacked together in about
-two weeks of evening and weekend work.
+Current development is CMake-first and cross-platform. CI continuously builds
+Linux, macOS, and Windows configurations, and release automation is tag-driven.
+The historical Visual Studio solution remains available for Windows workflows.
 
 The generated compiled perfect hash tables are cross-platform, and will work on
 Windows, Mac, Linux, x86, x64, and ARM64.
@@ -222,6 +231,14 @@ cmake --build build --config Debug
 Note: the default build enables `-march=native` for required SIMD intrinsics.
 Use `-DPERFECTHASH_ENABLE_NATIVE_ARCH=OFF` if you need a portable binary.
 
+Build profile examples:
+
+```
+cmake -S . -B build-full -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=full
+cmake -S . -B build-online -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=online-rawdog
+cmake -S . -B build-online-llvm -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=online-rawdog-llvm
+```
+
 CUDA build (Ninja Multi-Config):
 
 ```
@@ -290,6 +307,27 @@ Tests:
 ```
 ctest --test-dir build-macos --output-on-failure -C Release
 ```
+
+### CMake Consumer Integration
+
+Installed-package flow:
+
+```
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=$PWD/install
+cmake --build build --config Release
+cmake --install build --config Release
+```
+
+In a downstream CMake project:
+
+```cmake
+find_package(PerfectHash CONFIG REQUIRED)
+target_link_libraries(my_target PRIVATE PerfectHash::PerfectHashOnlineCore)
+```
+
+FetchContent/CPM-style consumer example:
+
+- `examples/cmake-fetchcontent-consumer`
 
 ### Usage
 

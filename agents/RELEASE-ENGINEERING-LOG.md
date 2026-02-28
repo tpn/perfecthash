@@ -1,0 +1,63 @@
+# Release Engineering Log
+
+## 2026-02-28
+- Created release engineering ledgers:
+  - `agents/RELEASE-ENGINEERING-NOTES.md`
+  - `agents/RELEASE-ENGINEERING-TODO.md`
+  - `agents/RELEASE-ENGINEERING-LOG.md`
+- Audited current release/CI/version state:
+  - Existing workflows: Linux/macOS/Windows + tag-triggered `release.yml`.
+  - Existing release scripts: `ci/release-linux.sh`, `ci/release-macos.sh`, `ci/release-windows.ps1`, `ci/release-common.sh`.
+  - Versioning still anchored to hardcoded `project(VERSION 0.63.0)` and manual bump script/docs.
+  - CMake package export/config support and consumer example are currently missing.
+- Captured prioritized execution plan focused on automation-first release engineering.
+- Implemented tag-driven version automation:
+  - Added `cmake/PerfectHashVersion.cmake` for git tag/override/fallback resolution.
+  - Wired version resolver into top-level `CMakeLists.txt` and standalone `src/CMakeLists.txt`.
+  - Updated release scripts to resolve version from exact/latest git tags before file fallback.
+  - Added `PERFECTHASH_VERSION_OVERRIDE` propagation from release scripts into CMake configure.
+- Added CMake package/export consumer scaffolding:
+  - Added `cmake/PerfectHashConfig.cmake.in`.
+  - Added install/export logic with `PerfectHashTargets` namespace export.
+  - Added namespaced in-build aliases (for example `PerfectHash::PerfectHashOnlineCore`).
+  - Updated include interfaces for install-safe exported targets.
+- Added build profile support:
+  - Added `PERFECTHASH_BUILD_PROFILE` (`full`, `online-rawdog`, `online-rawdog-llvm`).
+  - Added `PERFECTHASH_BUILD_EXES` and profile-derived defaults.
+  - Added profile presets to `CMakePresets.json`.
+  - Updated `src/CMakeLists.txt` to conditionally build CLI exes.
+- Added downstream consumer example:
+  - `examples/cmake-fetchcontent-consumer/CMakeLists.txt`
+  - `examples/cmake-fetchcontent-consumer/src/main.c`
+  - `examples/cmake-fetchcontent-consumer/README.md`
+- Enhanced release workflow automation:
+  - Updated `.github/workflows/release.yml` with profile input and profile-aware artifact naming.
+  - Added generated release note integration via new `ci/generate-release-notes.sh`.
+  - Release publication now uses generated body content (curated + commit summary).
+- Added release documentation/process assets:
+  - Added `RELEASE-NOTES.md` with agent update instructions.
+  - Added `docs/release-process.md`.
+  - Rewrote `ci/README.md` for tag-first/profile-aware releases.
+  - Updated `README.md` with project status, profiles, and CMake consumer guidance.
+- Added conda packaging scaffolding:
+  - Added `conda/recipe/meta.yaml` and `conda/recipe/build.sh`.
+  - Added `.github/workflows/conda-package.yml` for recipe build validation and optional publish.
+- Validation completed:
+  - `bash -n` checks passed for updated shell scripts.
+  - `ruby -ryaml` parse check passed for updated workflow YAML files.
+  - CMake configure checks passed for `full` and `online-rawdog-llvm` profiles.
+  - End-to-end local validation passed for `online-rawdog` install/export + downstream `find_package()` consumer build.
+- Known validation gap:
+  - PowerShell syntax/runtime checks could not be executed locally because `pwsh` is not available in this environment.
+- Replaced manual version-bump helper with tag-cut helper:
+  - Removed `ci/bump-version.sh`.
+  - Added `ci/cut-release.sh` for tag-first release cutting with preflight checks:
+    - version format validation
+    - clean-tree check (overrideable)
+    - local/remote tag collision checks
+    - optional tag push
+    - release notes generation hook
+- Updated release docs to use the new helper:
+  - `ci/README.md`
+  - `docs/release-process.md`
+- Updated `RELEASE-NOTES.md` and release-engineering TODO for this change set.

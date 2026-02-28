@@ -7,16 +7,25 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (defaults to tag or CMakeLists.txt)"
+        description: "Release version (defaults to tag or latest git tag)"
         required: false
         type: string
+      profile:
+        description: "Build profile"
+        required: false
+        default: full
+        type: choice
+        options:
+          - full
+          - online-rawdog
+          - online-rawdog-llvm
 
 permissions:
   contents: write
 
 jobs:
   linux:
-    name: linux-${{ matrix.arch }}
+    name: linux-${{ matrix.arch }}-${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -32,6 +41,7 @@ jobs:
             env_name: dev-linux-arm64_os-linux_arch-aarch64_py-313_cuda-none_compiler-llvm
     env:
       RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+      RELEASE_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,16 +60,16 @@ jobs:
       - name: Build release
         shell: bash -l {0}
         run: |
-          micromamba run -n "${{ matrix.env_name }}" ci/release-linux.sh --clean
+          micromamba run -n "${{ matrix.env_name }}" ci/release-linux.sh --profile "${{ env.RELEASE_PROFILE }}" --clean
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-linux-${{ matrix.arch }}
+          name: release-${{ env.RELEASE_PROFILE }}-linux-${{ matrix.arch }}
           path: out/release/**/dist/*
 
   macos:
-    name: macos-${{ matrix.arch }}
+    name: macos-${{ matrix.arch }}-${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -75,6 +85,7 @@ jobs:
             env_name: dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm
     env:
       RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+      RELEASE_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -93,19 +104,20 @@ jobs:
       - name: Build release
         shell: bash -l {0}
         run: |
-          micromamba run -n "${{ matrix.env_name }}" ci/release-macos.sh --arch "${{ matrix.arch }}" --clean
+          micromamba run -n "${{ matrix.env_name }}" ci/release-macos.sh --profile "${{ env.RELEASE_PROFILE }}" --arch "${{ matrix.arch }}" --clean
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-macos-${{ matrix.arch }}
+          name: release-${{ env.RELEASE_PROFILE }}-macos-${{ matrix.arch }}
           path: out/release/**/dist/*
 
   windows:
-    name: windows-x86_64
+    name: windows-x86_64-${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
     runs-on: windows-latest
     env:
       RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
+      RELEASE_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -126,12 +138,12 @@ jobs:
       - name: Build release
         shell: pwsh
         run: |
-          pwsh -File ci/release-windows.ps1 -ReleaseVersion $env:RELEASE_VERSION -Clean
+          pwsh -File ci/release-windows.ps1 -ReleaseVersion $env:RELEASE_VERSION -BuildProfile $env:RELEASE_PROFILE -Clean
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-windows-x86_64
+          name: release-${{ env.RELEASE_PROFILE }}-windows-x86_64
           path: out/release/**/dist/*
 
   publish:
@@ -140,13 +152,22 @@ jobs:
     needs: [linux, macos, windows]
     if: startsWith(github.ref, 'refs/tags/')
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      - name: Generate release notes
+        run: |
+          ci/generate-release-notes.sh --tag "${{ github.ref_name }}" --output release-notes.generated.md
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
-          generate_release_notes: true
+          body_path: release-notes.generated.md
