@@ -80,7 +80,7 @@ jobs:
             env_file: conda/environments/dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm.yaml
             env_name: dev-macos_os-macos_arch-arm64_py-313_cuda-none_compiler-llvm
           - arch: x86_64
-            runner: macos-13
+            runner: macos-15-intel
             env_file: conda/environments/dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm.yaml
             env_name: dev-macos_os-macos_arch-x86_64_py-313_cuda-none_compiler-llvm
     env:
