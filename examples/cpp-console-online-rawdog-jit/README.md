@@ -24,6 +24,10 @@ is applied automatically when needed.
 
 - CMake 3.20+
 - C++17 compiler
+- Internet access for default FetchContent mode
+
+Optional fallback:
+
 - A built (or installed) PerfectHash tree with online/RawDog-JIT enabled targets
 
 ## Configure and Build
@@ -33,7 +37,7 @@ is applied automatically when needed.
 ```bash
 cmake -S examples/cpp-console-online-rawdog-jit \
       -B build/examples/cpp-console-online-rawdog-jit \
-      -DPERFECTHASH_ROOT=/path/to/perfecthash
+      -DPERFECTHASH_BUILD_PROFILE=online-rawdog-jit
 
 cmake --build build/examples/cpp-console-online-rawdog-jit -j
 ```
@@ -44,10 +48,24 @@ cmake --build build/examples/cpp-console-online-rawdog-jit -j
 cmake -S examples/cpp-console-online-rawdog-jit `
       -B build\examples\cpp-console-online-rawdog-jit `
       -G "Visual Studio 17 2022" -A x64 `
-      -DPERFECTHASH_ROOT=C:\path\to\perfecthash
+      -DPERFECTHASH_BUILD_PROFILE=online-rawdog-jit
 
 cmake --build build\examples\cpp-console-online-rawdog-jit --config Release
 ```
+
+### Local Tree Fallback (No FetchContent)
+
+```bash
+cmake -S examples/cpp-console-online-rawdog-jit \
+      -B build/examples/cpp-console-online-rawdog-jit \
+      -DPH_ONLINE_RAWDOG_USE_FETCHCONTENT=OFF \
+      -DPERFECTHASH_ROOT=/path/to/perfecthash
+```
+
+Optional knobs:
+
+- `-DPERFECTHASH_GIT_REPOSITORY=<repo-url-or-path>` (default: `https://github.com/tpn/perfecthash.git`)
+- `-DPERFECTHASH_GIT_TAG=<tag-or-branch>` (default: `main`)
 
 ## Run
 

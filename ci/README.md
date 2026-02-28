@@ -8,7 +8,7 @@ publish PerfectHash release artifacts.
 - Release versions come from git tags (`vX.Y.Z`) by default.
 - No post-tag CMake version bump is required.
 - `tag + push` is the default release trigger path.
-- Build profile is explicit (`full`, `online-rawdog`, `online-rawdog-llvm`).
+- Build profile is explicit (`full`, `online-rawdog-jit`, `online-rawdog-and-llvm-jit`, `online-llvm-jit`).
 
 ## Release Scripts
 
@@ -52,13 +52,14 @@ All release scripts resolve version in this order:
 ## Build Profiles
 
 - `full`: full build including CLI executables and online/JIT targets.
-- `online-rawdog`: slim online/rawdog package.
-- `online-rawdog-llvm`: online/rawdog + LLVM support.
+- `online-rawdog-jit`: slim online/rawdog package.
+- `online-rawdog-and-llvm-jit`: online/rawdog + LLVM support.
+- `online-llvm-jit`: LLVM-only online JIT package.
 
 Artifacts include profile in the filename, for example:
 
 - `perfecthash-0.63.0-full-linux-x86_64.tar.gz`
-- `perfecthash-0.63.0-online-rawdog-macos-arm64.tar.gz`
+- `perfecthash-0.63.0-online-rawdog-jit-macos-arm64.tar.gz`
 
 ## GitHub Actions Release
 
@@ -80,7 +81,7 @@ ci/release-linux.sh --profile full --clean
 macOS:
 
 ```bash
-ci/release-macos.sh --profile online-rawdog --arch arm64 --clean
+ci/release-macos.sh --profile online-rawdog-jit --arch arm64 --clean
 ```
 
 Windows:

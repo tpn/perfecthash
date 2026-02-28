@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-profile="${PERFECTHASH_BUILD_PROFILE:-online-rawdog}"
+profile="${PERFECTHASH_BUILD_PROFILE:-online-rawdog-jit}"
 
 cmake -S . -B build-conda -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \

@@ -10,11 +10,12 @@ on:
       profile:
         description: "PerfectHash build profile for package"
         required: false
-        default: online-rawdog
+        default: online-rawdog-jit
         type: choice
         options:
-          - online-rawdog
-          - online-rawdog-llvm
+          - online-rawdog-jit
+          - online-rawdog-and-llvm-jit
+          - online-llvm-jit
           - full
   pull_request:
     paths:
@@ -31,7 +32,7 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_API_TOKEN }}
-      PERFECTHASH_BUILD_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'online-rawdog' }}
+      PERFECTHASH_BUILD_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'online-rawdog-jit' }}
       DISPATCH_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
     steps:
       - name: Checkout

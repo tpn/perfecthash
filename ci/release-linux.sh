@@ -113,7 +113,7 @@ fi
 
 build_profile="$(printf '%s' "$build_profile" | tr '[:upper:]' '[:lower:]')"
 case "$build_profile" in
-  full|online-rawdog|online-rawdog-llvm)
+  full|online-rawdog-jit|online-rawdog-and-llvm-jit|online-llvm-jit)
     ;;
   *)
     ph_die "unsupported profile: $build_profile"

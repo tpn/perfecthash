@@ -36,21 +36,30 @@
       }
     },
     {
-      "name": "ninja-multi-online-rawdog",
-      "displayName": "Ninja Multi-Config (online rawdog)",
+      "name": "ninja-multi-online-rawdog-jit",
+      "displayName": "Ninja Multi-Config (online rawdog jit)",
       "inherits": "ninja-multi",
-      "binaryDir": "${sourceDir}/build-online-rawdog",
+      "binaryDir": "${sourceDir}/build-online-rawdog-jit",
       "cacheVariables": {
-        "PERFECTHASH_BUILD_PROFILE": "online-rawdog"
+        "PERFECTHASH_BUILD_PROFILE": "online-rawdog-jit"
       }
     },
     {
-      "name": "ninja-multi-online-rawdog-llvm",
-      "displayName": "Ninja Multi-Config (online rawdog + llvm)",
+      "name": "ninja-multi-online-rawdog-and-llvm-jit",
+      "displayName": "Ninja Multi-Config (online rawdog and llvm jit)",
       "inherits": "ninja-multi",
-      "binaryDir": "${sourceDir}/build-online-rawdog-llvm",
+      "binaryDir": "${sourceDir}/build-online-rawdog-and-llvm-jit",
       "cacheVariables": {
-        "PERFECTHASH_BUILD_PROFILE": "online-rawdog-llvm"
+        "PERFECTHASH_BUILD_PROFILE": "online-rawdog-and-llvm-jit"
+      }
+    },
+    {
+      "name": "ninja-multi-online-llvm-jit",
+      "displayName": "Ninja Multi-Config (online llvm jit)",
+      "inherits": "ninja-multi",
+      "binaryDir": "${sourceDir}/build-online-llvm-jit",
+      "cacheVariables": {
+        "PERFECTHASH_BUILD_PROFILE": "online-llvm-jit"
       }
     },
     {
@@ -85,13 +94,18 @@
       "configuration": "Release"
     },
     {
-      "name": "ninja-online-rawdog-release",
-      "configurePreset": "ninja-multi-online-rawdog",
+      "name": "ninja-online-rawdog-jit-release",
+      "configurePreset": "ninja-multi-online-rawdog-jit",
       "configuration": "Release"
     },
     {
-      "name": "ninja-online-rawdog-llvm-release",
-      "configurePreset": "ninja-multi-online-rawdog-llvm",
+      "name": "ninja-online-rawdog-and-llvm-jit-release",
+      "configurePreset": "ninja-multi-online-rawdog-and-llvm-jit",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-online-llvm-jit-release",
+      "configurePreset": "ninja-multi-online-llvm-jit",
       "configuration": "Release"
     },
     {

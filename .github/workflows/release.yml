@@ -17,8 +17,9 @@ on:
         type: choice
         options:
           - full
-          - online-rawdog
-          - online-rawdog-llvm
+          - online-rawdog-jit
+          - online-rawdog-and-llvm-jit
+          - online-llvm-jit
 
 permissions:
   contents: write

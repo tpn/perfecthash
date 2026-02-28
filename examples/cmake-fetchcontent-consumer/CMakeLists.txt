@@ -7,12 +7,18 @@ option(
     "Build PerfectHash from GitHub via FetchContent."
     ON
 )
+set(
+    PERFECTHASH_GIT_REPOSITORY
+    "https://github.com/tpn/perfecthash.git"
+    CACHE STRING
+    "PerfectHash git repository used with FetchContent."
+)
 set(PERFECTHASH_GIT_TAG "main" CACHE STRING "PerfectHash git ref used with FetchContent.")
 set(
     PERFECTHASH_BUILD_PROFILE
-    "online-rawdog"
+    "online-rawdog-jit"
     CACHE STRING
-    "PerfectHash profile: online-rawdog, online-rawdog-llvm, full."
+    "PerfectHash profile: online-rawdog-jit, online-rawdog-and-llvm-jit, online-llvm-jit, full."
 )
 set(
     PERFECTHASH_CONSUMER_TARGET
@@ -31,7 +37,7 @@ if(PERFECTHASH_CONSUMER_USE_FETCHCONTENT)
 
     FetchContent_Declare(
         PerfectHash
-        GIT_REPOSITORY https://github.com/tpn/perfecthash.git
+        GIT_REPOSITORY ${PERFECTHASH_GIT_REPOSITORY}
         GIT_TAG ${PERFECTHASH_GIT_TAG}
     )
     FetchContent_MakeAvailable(PerfectHash)

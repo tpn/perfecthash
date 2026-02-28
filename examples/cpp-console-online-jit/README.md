@@ -22,6 +22,10 @@ On Linux/macOS, build-time rpaths are set for local runs.
 
 - CMake 3.20+
 - C++17 compiler
+- Internet access for default FetchContent mode
+
+Optional fallback:
+
 - A built (or installed) PerfectHash tree with online and LLVM support enabled
 
 ## Configure and Build
@@ -31,7 +35,7 @@ On Linux/macOS, build-time rpaths are set for local runs.
 ```bash
 cmake -S examples/cpp-console-online-jit \
       -B build/examples/cpp-console-online-jit \
-      -DPERFECTHASH_ROOT=/path/to/perfecthash
+      -DPERFECTHASH_BUILD_PROFILE=online-rawdog-and-llvm-jit
 
 cmake --build build/examples/cpp-console-online-jit -j
 ```
@@ -42,10 +46,24 @@ cmake --build build/examples/cpp-console-online-jit -j
 cmake -S examples/cpp-console-online-jit `
       -B build\examples\cpp-console-online-jit `
       -G "Visual Studio 17 2022" -A x64 `
-      -DPERFECTHASH_ROOT=C:\path\to\perfecthash
+      -DPERFECTHASH_BUILD_PROFILE=online-rawdog-and-llvm-jit
 
 cmake --build build\examples\cpp-console-online-jit --config Release
 ```
+
+### Local Tree Fallback (No FetchContent)
+
+```bash
+cmake -S examples/cpp-console-online-jit \
+      -B build/examples/cpp-console-online-jit \
+      -DPH_ONLINE_JIT_USE_FETCHCONTENT=OFF \
+      -DPERFECTHASH_ROOT=/path/to/perfecthash
+```
+
+Optional knobs:
+
+- `-DPERFECTHASH_GIT_REPOSITORY=<repo-url-or-path>` (default: `https://github.com/tpn/perfecthash.git`)
+- `-DPERFECTHASH_GIT_TAG=<tag-or-branch>` (default: `main`)
 
 ## Run
 

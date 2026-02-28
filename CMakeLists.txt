@@ -70,9 +70,10 @@ function(perfecthash_add_namespace_alias target_name)
 endfunction()
 
 set(PERFECTHASH_EXPORT_TARGETS)
-if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog")
+if(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-jit")
     list(APPEND PERFECTHASH_EXPORT_TARGETS PerfectHashOnlineCore)
-elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-llvm")
+elseif(PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-rawdog-and-llvm-jit" OR
+       PERFECTHASH_BUILD_PROFILE_NORMALIZED STREQUAL "online-llvm-jit")
     list(APPEND PERFECTHASH_EXPORT_TARGETS PerfectHashOnlineCore)
     if(TARGET PerfectHashLLVM)
         list(APPEND PERFECTHASH_EXPORT_TARGETS PerfectHashLLVM)

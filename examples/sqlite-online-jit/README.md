@@ -31,12 +31,14 @@ virtual table module and benchmarks A/B behavior.
 
 ## Build
 
+Default mode pulls PerfectHash from GitHub using FetchContent.
+
 ### Linux/macOS
 
 ```bash
 cmake -S examples/sqlite-online-jit \
       -B build/examples/sqlite-online-jit \
-      -DPERFECTHASH_ROOT=/path/to/perfecthash
+      -DPERFECTHASH_BUILD_PROFILE=online-rawdog-and-llvm-jit
 
 cmake --build build/examples/sqlite-online-jit -j
 ```
@@ -47,10 +49,24 @@ cmake --build build/examples/sqlite-online-jit -j
 cmake -S examples/sqlite-online-jit `
       -B build\\examples\\sqlite-online-jit `
       -G \"Visual Studio 17 2022\" -A x64 `
-      -DPERFECTHASH_ROOT=C:\\path\\to\\perfecthash
+      -DPERFECTHASH_BUILD_PROFILE=online-rawdog-and-llvm-jit
 
 cmake --build build\\examples\\sqlite-online-jit --config Release
 ```
+
+### Local Tree Fallback (No FetchContent)
+
+```bash
+cmake -S examples/sqlite-online-jit \
+      -B build/examples/sqlite-online-jit \
+      -DPH_ONLINE_JIT_USE_FETCHCONTENT=OFF \
+      -DPERFECTHASH_ROOT=/path/to/perfecthash
+```
+
+Optional knobs:
+
+- `-DPERFECTHASH_GIT_REPOSITORY=<repo-url-or-path>` (default: `https://github.com/tpn/perfecthash.git`)
+- `-DPERFECTHASH_GIT_TAG=<tag-or-branch>` (default: `main`)
 
 ## Run
 

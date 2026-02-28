@@ -30,13 +30,15 @@
 
 - `full`
   - Includes CLI executables and full online/JIT set.
-- `online-rawdog`
+- `online-rawdog-jit`
   - Slim online/rawdog package for x64/arm64 use cases.
-- `online-rawdog-llvm`
+- `online-rawdog-and-llvm-jit`
   - Slim profile plus LLVM JIT support.
+- `online-llvm-jit`
+  - LLVM-only online JIT profile with RawDog generation disabled.
 
 Artifacts include profile in names (for example,
-`perfecthash-0.63.0-online-rawdog-linux-x86_64.tar.gz`).
+`perfecthash-0.63.0-online-rawdog-jit-linux-x86_64.tar.gz`).
 
 ## Release Notes Strategy
 

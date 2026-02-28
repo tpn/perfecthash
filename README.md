@@ -14,8 +14,9 @@ command line syntax. See [ui/README.md](ui/README.md) for details.
 - Tag-driven release automation is available via GitHub Actions (`.github/workflows/release.yml`).
 - CMake build profiles are supported:
   - `full`
-  - `online-rawdog`
-  - `online-rawdog-llvm`
+  - `online-rawdog-jit`
+  - `online-rawdog-and-llvm-jit`
+  - `online-llvm-jit`
 - CMake package export/config support is available for downstream
   `find_package(PerfectHash CONFIG REQUIRED)` consumers.
 
@@ -235,8 +236,9 @@ Build profile examples:
 
 ```
 cmake -S . -B build-full -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=full
-cmake -S . -B build-online -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=online-rawdog
-cmake -S . -B build-online-llvm -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=online-rawdog-llvm
+cmake -S . -B build-online-rawdog -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=online-rawdog-jit
+cmake -S . -B build-online-rawdog-llvm -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=online-rawdog-and-llvm-jit
+cmake -S . -B build-online-llvm -G"Ninja Multi-Config" -DPERFECTHASH_BUILD_PROFILE=online-llvm-jit
 ```
 
 CUDA build (Ninja Multi-Config):

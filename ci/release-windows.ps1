@@ -122,8 +122,9 @@ if (-not $BuildProfile) { $BuildProfile = "full" }
 $BuildProfile = $BuildProfile.Trim().ToLowerInvariant()
 switch ($BuildProfile) {
     "full" {}
-    "online-rawdog" {}
-    "online-rawdog-llvm" {}
+    "online-rawdog-jit" {}
+    "online-rawdog-and-llvm-jit" {}
+    "online-llvm-jit" {}
     default { throw "Unsupported build profile: $BuildProfile" }
 }
 
