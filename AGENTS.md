@@ -11,7 +11,7 @@
 
 ## Main hash functions
 - Use `PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY` and `IsGoodPerfectHashHashFunctionId()` in `include/PerfectHash.h` to identify the curated hash set for downstream outputs.
-- Current good set: MultiplyShiftR, MultiplyShiftLR, MultiplyShiftRMultiply, MultiplyShiftR2, MultiplyShiftRX, Mulshrolate1RX, Mulshrolate2RX, Mulshrolate3RX, Mulshrolate4RX.
+- Current good set: MultiplyShiftR, MultiplyShiftRX, Mulshrolate1RX, Mulshrolate2RX, Mulshrolate3RX, Mulshrolate4RX.
 
 ## File enum capacity
 - File enums are tracked via a 64-bit bitmap. When we run out of bits, add a new enum group with a `_2`, `_3`, etc. suffix and keep the existing enum ordering rules intact.

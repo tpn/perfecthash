@@ -83,8 +83,7 @@ This runs:
 
 - backends: `rawdog-jit`, `llvm-jit`
 - hash functions:
-  `multiplyshiftr`, `multiplyshiftlr`, `multiplyshiftrmultiply`,
-  `multiplyshiftr2`, `multiplyshiftrx`, `mulshrolate1rx`,
+  `multiplyshiftr`, `multiplyshiftrx`, `mulshrolate1rx`,
   `mulshrolate2rx`, `mulshrolate3rx`, `mulshrolate4rx`
 - vector widths: `1`, `2`, `4`, `8`, `16`
 

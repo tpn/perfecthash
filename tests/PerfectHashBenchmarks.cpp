@@ -176,18 +176,6 @@ bool ParseHashFunction(std::string_view value,
     return true;
   }
 
-  if (lowered == "multiplyshiftr2" || lowered == "msr2") {
-    *id = PerfectHashHashMultiplyShiftR2FunctionId;
-    *name = "MultiplyShiftR2";
-    return true;
-  }
-
-  if (lowered == "multiplyshiftlr" || lowered == "mslr") {
-    *id = PerfectHashHashMultiplyShiftLRFunctionId;
-    *name = "MultiplyShiftLR";
-    return true;
-  }
-
   if (lowered == "mulshrolate1rx" || lowered == "msrol1rx") {
     *id = PerfectHashHashMulshrolate1RXFunctionId;
     *name = "Mulshrolate1RX";
@@ -577,8 +565,8 @@ void PrintUsage(const char *exe) {
             << " [--keys-file=PATH]"
             << " [--seed1=VALUE] [--seed2=VALUE] [--seed3=VALUE]"
             << " [--seed3-byte1=VALUE] [--seed3-byte2=VALUE]"
-            << " [--hash=MultiplyShiftR|MultiplyShiftRX|MultiplyShiftR2"
-            << "|MultiplyShiftLR|Mulshrolate1RX|Mulshrolate2RX"
+            << " [--hash=MultiplyShiftR|MultiplyShiftRX"
+            << "|Mulshrolate1RX|Mulshrolate2RX"
             << "|Mulshrolate3RX|Mulshrolate4RX]"
             << " [--preset=hologramworld-msr]"
             << " [--graph-impl=N]"

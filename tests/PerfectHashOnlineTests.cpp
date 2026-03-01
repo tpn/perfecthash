@@ -3822,9 +3822,6 @@ TEST_F(PerfectHashOnlineTests, JitIndexMatchesSlowIndex) {
 
   const PERFECT_HASH_HASH_FUNCTION_ID hashFunctions[] = {
       PerfectHashHashMultiplyShiftRFunctionId,
-      PerfectHashHashMultiplyShiftLRFunctionId,
-      PerfectHashHashMultiplyShiftRMultiplyFunctionId,
-      PerfectHashHashMultiplyShiftR2FunctionId,
       PerfectHashHashMultiplyShiftRXFunctionId,
       PerfectHashHashMulshrolate1RXFunctionId,
       PerfectHashHashMulshrolate2RXFunctionId,

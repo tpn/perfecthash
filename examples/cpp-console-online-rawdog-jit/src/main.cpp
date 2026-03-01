@@ -18,15 +18,20 @@ std::string ToHex(int32_t hr) {
 
 bool Succeeded(int32_t hr) { return hr >= 0; }
 
+bool IsSupportedHashName(const std::string &name) {
+  return (
+      name == "multiplyshiftr" ||
+      name == "multiplyshiftrx" ||
+      name == "mulshrolate1rx" ||
+      name == "mulshrolate2rx" ||
+      name == "mulshrolate3rx" ||
+      name == "mulshrolate4rx"
+  );
+}
+
 PH_ONLINE_RAWDOG_HASH_FUNCTION ParseHashFunction(const std::string &name) {
   if (name == "multiplyshiftr") {
     return PhOnlineRawdogHashMultiplyShiftR;
-  } else if (name == "multiplyshiftlr") {
-    return PhOnlineRawdogHashMultiplyShiftLR;
-  } else if (name == "multiplyshiftrmultiply") {
-    return PhOnlineRawdogHashMultiplyShiftRMultiply;
-  } else if (name == "multiplyshiftr2") {
-    return PhOnlineRawdogHashMultiplyShiftR2;
   } else if (name == "multiplyshiftrx") {
     return PhOnlineRawdogHashMultiplyShiftRX;
   } else if (name == "mulshrolate1rx") {
@@ -45,9 +50,7 @@ PH_ONLINE_RAWDOG_HASH_FUNCTION ParseHashFunction(const std::string &name) {
 void PrintUsage(const char *argv0) {
   std::cout << "Usage: " << argv0
             << " [--hash <name>] [--vector-width <0|1|2|4|8|16>]\n";
-  std::cout << "Hash names: multiplyshiftr, multiplyshiftlr, "
-               "multiplyshiftrmultiply,\n";
-  std::cout << "            multiplyshiftr2, multiplyshiftrx, mulshrolate1rx,\n";
+  std::cout << "Hash names: multiplyshiftr, multiplyshiftrx, mulshrolate1rx,\n";
   std::cout << "            mulshrolate2rx, mulshrolate3rx, mulshrolate4rx\n";
 }
 
@@ -76,6 +79,12 @@ int main(int argc, char **argv) {
     }
 
     std::cerr << "Unknown argument: " << arg << "\n";
+    PrintUsage(argv[0]);
+    return 2;
+  }
+
+  if (!IsSupportedHashName(hash_name)) {
+    std::cerr << "Unsupported hash: " << hash_name << "\n";
     PrintUsage(argv[0]);
     return 2;
   }

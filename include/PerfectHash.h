@@ -2405,9 +2405,6 @@ IsValidSeedMasks(
 
 #define PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY(ENTRY) \
     ENTRY(MultiplyShiftR)                                  \
-    ENTRY(MultiplyShiftLR)                                 \
-    ENTRY(MultiplyShiftRMultiply)                          \
-    ENTRY(MultiplyShiftR2)                                 \
     ENTRY(MultiplyShiftRX)                                 \
     ENTRY(Mulshrolate1RX)                                  \
     ENTRY(Mulshrolate2RX)                                  \

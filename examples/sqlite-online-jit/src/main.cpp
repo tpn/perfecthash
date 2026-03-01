@@ -106,6 +106,17 @@ bool ParseUint32(const char *text, uint32_t *value) {
   return true;
 }
 
+bool IsSupportedHashName(const std::string &name) {
+  return (
+      name == "multiplyshiftr" ||
+      name == "multiplyshiftrx" ||
+      name == "mulshrolate1rx" ||
+      name == "mulshrolate2rx" ||
+      name == "mulshrolate3rx" ||
+      name == "mulshrolate4rx"
+  );
+}
+
 bool ParseArgs(int argc, char **argv, Options *options) {
   if (!options) {
     return false;
@@ -233,6 +244,11 @@ bool ParseArgs(int argc, char **argv, Options *options) {
   if (options->backend != "rawdog-jit" && options->backend != "llvm-jit" &&
       options->backend != "auto") {
     std::cerr << "Unsupported backend: " << options->backend << "\n";
+    return false;
+  }
+
+  if (!IsSupportedHashName(options->hash)) {
+    std::cerr << "Unsupported hash: " << options->hash << "\n";
     return false;
   }
 
@@ -535,9 +551,6 @@ std::vector<BenchmarkCase> BuildMatrixCases() {
 
   static const char *kHashes[] = {
       "multiplyshiftr",
-      "multiplyshiftlr",
-      "multiplyshiftrmultiply",
-      "multiplyshiftr2",
       "multiplyshiftrx",
       "mulshrolate1rx",
       "mulshrolate2rx",

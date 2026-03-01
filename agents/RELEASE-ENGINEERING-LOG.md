@@ -202,3 +202,26 @@
     - `perfecthash_unit_tests.PerfectHashOnlineTests.Assigned16RequiresGraphImpl3AndOptIn`
     - `perfecthash.fast.unit`
     - `perfecthash.cli.create.assigned16-boundary`
+- Verified post-fix CI matrix for commit `01533a5`:
+  - linux run `22531249632`: success
+  - Windows run `22531249647`: success
+  - macos run `22531249626`: success
+- Restricted curated/supported online hash selection to the current supported set:
+  - Updated `PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY` to:
+    - `MultiplyShiftR`
+    - `MultiplyShiftRX`
+    - `Mulshrolate1RX`
+    - `Mulshrolate2RX`
+    - `Mulshrolate3RX`
+    - `Mulshrolate4RX`
+  - Removed legacy hash options (`multiplyshiftlr`, `multiplyshiftrmultiply`, `multiplyshiftr2`) from:
+    - sqlite benchmark matrix generation (`examples/sqlite-online-jit/src/main.cpp`)
+    - sample CLI hash parsers/help (`examples/cpp-console-online-jit`, `examples/cpp-console-online-rawdog-jit`)
+    - benchmark parser/help (`tests/PerfectHashBenchmarks.cpp`)
+    - LLVM JIT hash-iteration unit coverage list (`tests/PerfectHashOnlineTests.cpp`)
+  - Hardened sqlite virtual table hash parsing (`examples/sqlite-online-jit/src/perfecthash_vtab.cpp`) to reject unsupported hash arguments instead of silently defaulting.
+  - Updated hash-set guidance in `AGENTS.md` and `examples/sqlite-online-jit/README.md`.
+  - Local validation:
+    - rebuilt touched targets/examples in `build-ci`,
+    - verified unsupported-hash CLI behavior returns a clear error (`exit=2`),
+    - verified sqlite matrix output no longer emits legacy hash names.

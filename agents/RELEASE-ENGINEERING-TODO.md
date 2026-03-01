@@ -67,10 +67,19 @@
 - [x] Add `docs/release-process.md` for maintainers.
 
 ## Tracking
-- [~] Stabilize cross-platform CI after assigned16 boundary hardening.
+- [x] Stabilize cross-platform CI after assigned16 boundary hardening.
   - Completed: fixed Windows configure failure caused by duplicate RawDog custom-command outputs (`src/PerfectHash/CMakeLists.txt` x64 non-Windows gating).
   - Completed: made assigned16 boundary unit coverage deterministic and bounded; removed flaky RNG-dependent behavior.
   - Completed: excluded heavy boundary tests from `perfecthash.fast.unit` while keeping dedicated per-test coverage via `gtest_discover_tests`.
   - Completed: updated CLI assigned16 boundary test flags to avoid the hash-all-keys-first crash path.
-  - Remaining: confirm green GitHub Linux/Windows/macOS matrix on the post-fix commit.
+- Completed: green post-fix matrix confirmed:
+    - linux run `22531249632`
+    - Windows run `22531249647`
+    - macos run `22531249626`
+- [x] Restrict curated/supported online hash selection to supported modern set only.
+  - Completed: `PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY` now includes only:
+    - `MultiplyShiftR`, `MultiplyShiftRX`, `Mulshrolate1RX`, `Mulshrolate2RX`, `Mulshrolate3RX`, `Mulshrolate4RX`.
+  - Completed: removed legacy hash choices from sqlite matrix generation and sample CLI parsers/help text.
+  - Completed: sqlite virtual table argument parsing now rejects unsupported hash names instead of silently defaulting.
+  - Completed: benchmark parser/help and LLVM JIT hash-iteration unit test now track the supported set.
 - [~] Keep this TODO synchronized as tasks complete; each completed task must have a corresponding LOG entry.

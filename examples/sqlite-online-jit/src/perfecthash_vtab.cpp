@@ -164,36 +164,38 @@ PH_ONLINE_JIT_BACKEND ParseBackend(const std::string &name) {
   return PhOnlineJitBackendRawDogJit;
 }
 
-PH_ONLINE_JIT_HASH_FUNCTION ParseHashFunction(const std::string &name) {
-  if (name == "multiplyshiftr") {
-    return PhOnlineJitHashMultiplyShiftR;
-  }
-  if (name == "multiplyshiftlr") {
-    return PhOnlineJitHashMultiplyShiftLR;
-  }
-  if (name == "multiplyshiftrmultiply") {
-    return PhOnlineJitHashMultiplyShiftRMultiply;
-  }
-  if (name == "multiplyshiftr2") {
-    return PhOnlineJitHashMultiplyShiftR2;
-  }
-  if (name == "multiplyshiftrx") {
-    return PhOnlineJitHashMultiplyShiftRX;
-  }
-  if (name == "mulshrolate1rx") {
-    return PhOnlineJitHashMulshrolate1RX;
-  }
-  if (name == "mulshrolate2rx") {
-    return PhOnlineJitHashMulshrolate2RX;
-  }
-  if (name == "mulshrolate3rx") {
-    return PhOnlineJitHashMulshrolate3RX;
-  }
-  if (name == "mulshrolate4rx") {
-    return PhOnlineJitHashMulshrolate4RX;
+bool ParseHashFunction(const std::string &name,
+                       PH_ONLINE_JIT_HASH_FUNCTION *hash) {
+  if (!hash) {
+    return false;
   }
 
-  return PhOnlineJitHashMulshrolate2RX;
+  if (name == "multiplyshiftr") {
+    *hash = PhOnlineJitHashMultiplyShiftR;
+    return true;
+  }
+  if (name == "multiplyshiftrx") {
+    *hash = PhOnlineJitHashMultiplyShiftRX;
+    return true;
+  }
+  if (name == "mulshrolate1rx") {
+    *hash = PhOnlineJitHashMulshrolate1RX;
+    return true;
+  }
+  if (name == "mulshrolate2rx") {
+    *hash = PhOnlineJitHashMulshrolate2RX;
+    return true;
+  }
+  if (name == "mulshrolate3rx") {
+    *hash = PhOnlineJitHashMulshrolate3RX;
+    return true;
+  }
+  if (name == "mulshrolate4rx") {
+    *hash = PhOnlineJitHashMulshrolate4RX;
+    return true;
+  }
+
+  return false;
 }
 
 void SetVtabError(sqlite3_vtab *vtab, const std::string &message) {
@@ -506,7 +508,10 @@ int ParseVtabArguments(int argc,
 
   vtab->backend = ParseBackend(backend);
   vtab->backend_name = BackendToString(vtab->backend);
-  vtab->hash = ParseHashFunction(hash);
+  if (!ParseHashFunction(hash, &vtab->hash)) {
+    SetVtabError(base_vtab, "Unsupported hash argument: " + hash);
+    return SQLITE_MISUSE;
+  }
   vtab->hash_name = HashToString(vtab->hash);
 
   if (!ParseUInt32(vector_width, &vtab->vector_width)) {
