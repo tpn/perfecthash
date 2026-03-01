@@ -34,3 +34,12 @@ After `Mulshrolate1RX` is complete and validated, apply the same approach to:
 - Generated code path uses embedded RawCString headers in `src/PerfectHash/`; template changes require synchronized RawCString updates.
 - AVX feature availability/flags differ across compilers and generated build systems.
 - Inline-header generation mode (`CPH_INLINE_ROUTINES`) must not emit non-inline exported symbols.
+
+## Current Results (Mulshrolate1RX)
+- Generated-code correctness:
+  - Offline codegen test for `Mulshrolate1RX` passes after adding `Index32x8`/`Index32x16` checks in generated `Test_*`.
+- Compiler validation:
+  - Generated project builds and runs with GCC and Clang using mamba environments.
+- Initial benchmark observations:
+  - Generated scalar `BenchmarkIndex_*` reported `13866` (GCC build) and `19352` (Clang build) on this host.
+  - Temporary direct vector harness indicates `Index32x16` can improve over scalar on GCC for this table/workload; x8/x16 were neutral-to-slower on Clang in this first pass.
