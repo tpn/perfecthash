@@ -47,6 +47,7 @@ ci/cut-release.sh --version X.Y.Z --push
 ## Guardrails
 
 - Do not invent release versions. Base them on the existing tag series and explain the chosen increment.
+- Reserve patch (`X.Y.Z`) bumps for release-oriented non-functional fixes only. Use a minor or major bump when the shipped change is functional, feature-bearing, or otherwise user-visible.
 - Do not push a tag that already exists locally or remotely.
 - Do not bypass the clean-tree guard with `--allow-dirty` unless the user explicitly approves that release policy.
 - Keep version references tag-centric; avoid reintroducing manual version-bump workflows.

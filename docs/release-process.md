@@ -18,6 +18,9 @@
 ## Versioning Model
 
 - Source of truth: git tags matching `v*`.
+- Reserve patch (`X.Y.Z`) bumps for release-oriented non-functional fixes only.
+- Use a minor or major bump for shipped functional changes, new features, or
+  other user-visible behavior changes.
 - CMake resolves version automatically from:
   1. `PERFECTHASH_VERSION_OVERRIDE` (when set)
   2. exact tag on `HEAD`

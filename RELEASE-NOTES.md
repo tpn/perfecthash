@@ -12,16 +12,18 @@
 ## Unreleased
 
 ### Added
-- No new additions yet.
+- Repo-local release-engineering and conda-packaging skills now capture the maintainer workflows used to cut releases, validate conda packages, and publish org-channel artifacts.
 
 ### Changed
-- Online build profiles now default to raw `PH_*` HRESULT/status/info behavior without embedding human-readable message payload tables.
+- Installed public headers now live under `include/PerfectHash/`, and public consumers use `<PerfectHash/...>` include paths instead of polluting the flat include directory.
+- Conda packaging now propagates the package version into CMake/binaries via `PERFECTHASH_VERSION_OVERRIDE`, so org-channel builds report the shipped version instead of the latest git tag.
 
 ### Fixed
-- Restored RawDog JIT header generation in online RawDog profiles when embedded error strings are disabled.
+- Windows RawDog MASM header generation now resolves the new public include root correctly after the header-layout refactor.
+- Conda profile variants now declare solver-level mutual exclusion, preventing co-install of conflicting profile packages.
 
 ### Docs
-- No documentation-only updates yet.
+- Added `docs/packaging.md` and refreshed release/CI notes to reflect the current conda workflow, org-channel publishing, and release-versioning policy.
 
 ## v0.70.7 - 2026-02-28
 

@@ -21,3 +21,4 @@
 
 ## Release Engineering
 - Use `skills/perfecthash-release-engineering/SKILL.md` for tag-first release cutting, release workflow validation, release-notes/doc synchronization, and release automation audits.
+- Release versioning rule: reserve patch (`X.Y.Z`) bumps for release-oriented non-functional fixes only. Use a minor or major bump for functional changes, new features, or user-visible behavior changes.
