@@ -18,13 +18,24 @@ build_dir="build-conda-${profile}"
 echo "==> Building conda output for profile: ${profile}"
 echo "==> Using version override: ${version_override}"
 
-cmake -S . -B "${build_dir}" -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-  -DPERFECTHASH_BUILD_PROFILE="$profile" \
-  -DPERFECTHASH_VERSION_OVERRIDE="${version_override}" \
-  -DPERFECTHASH_ENABLE_TESTS=OFF \
+cmake_args=(
+  -S .
+  -B "${build_dir}"
+  -G Ninja
+  -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_INSTALL_PREFIX="$PREFIX"
+  -DPERFECTHASH_BUILD_PROFILE="$profile"
+  -DPERFECTHASH_VERSION_OVERRIDE="${version_override}"
+  -DPERFECTHASH_ENABLE_TESTS=OFF
   -DBUILD_TESTING=OFF
+)
+
+if [ -n "${BUILD_PREFIX:-}" ] && [ -x "${BUILD_PREFIX}/bin/nasm" ]; then
+  echo "==> Using NASM from BUILD_PREFIX: ${BUILD_PREFIX}/bin/nasm"
+  cmake_args+=("-DCMAKE_ASM_NASM_COMPILER=${BUILD_PREFIX}/bin/nasm")
+fi
+
+cmake "${cmake_args[@]}"
 
 cmake --build "${build_dir}" --parallel
 cmake --install "${build_dir}"
