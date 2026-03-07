@@ -1,4 +1,4 @@
-#include <PerfectHash.h>
+#include <PerfectHash/PerfectHash.h>
 
 int
 main(void)

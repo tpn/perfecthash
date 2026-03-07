@@ -1,14 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-profile="${PERFECTHASH_BUILD_PROFILE:-online-rawdog-jit}"
+profile="${PERFECTHASH_BUILD_PROFILE:-full}"
+version_override="${PERFECTHASH_VERSION_OVERRIDE:-${PKG_VERSION:-${PERFECTHASH_CONDA_VERSION:-0.0.0}}}"
 
-cmake -S . -B build-conda -G Ninja \
+case "$profile" in
+  full|online-rawdog-jit|online-rawdog-and-llvm-jit|online-llvm-jit)
+    ;;
+  *)
+    echo "error: invalid PERFECTHASH_BUILD_PROFILE '$profile'" >&2
+    exit 1
+    ;;
+esac
+
+build_dir="build-conda-${profile}"
+
+echo "==> Building conda output for profile: ${profile}"
+echo "==> Using version override: ${version_override}"
+
+cmake -S . -B "${build_dir}" -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$PREFIX" \
   -DPERFECTHASH_BUILD_PROFILE="$profile" \
+  -DPERFECTHASH_VERSION_OVERRIDE="${version_override}" \
   -DPERFECTHASH_ENABLE_TESTS=OFF \
   -DBUILD_TESTING=OFF
 
-cmake --build build-conda --parallel
-cmake --install build-conda
+cmake --build "${build_dir}" --parallel
+cmake --install "${build_dir}"

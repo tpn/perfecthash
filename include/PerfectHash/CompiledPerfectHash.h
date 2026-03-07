@@ -200,7 +200,7 @@ Crc32u32_C(
 #endif
 
 #ifndef PH_UNITY
-#include <no_sal2.h>
+#include <PerfectHash/no_sal2.h>
 #endif
 #ifndef FORCEINLINE
 #define FORCEINLINE static inline __attribute__((always_inline))

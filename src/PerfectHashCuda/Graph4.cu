@@ -14,7 +14,7 @@ Abstract:
 
 #define PH_CU
 
-#include <PerfectHash.h>
+#include <PerfectHash/PerfectHash.h>
 
 EXTERN_C_BEGIN
 #include "../PerfectHash/CuDeviceAttributes.h"

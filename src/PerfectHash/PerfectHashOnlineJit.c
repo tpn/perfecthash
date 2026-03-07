@@ -14,7 +14,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
-#include <PerfectHashOnlineJit.h>
+#include <PerfectHash/PerfectHashOnlineJit.h>
 
 #include <stdlib.h>
 

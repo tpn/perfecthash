@@ -120,15 +120,15 @@ Abstract:
 #include <pthread.h>
 #endif
 #else // ifndef __CUDA_ARCH__
-#include <no_sal2.h>
+#include <PerfectHash/no_sal2.h>
 #endif
 
 //
 // PerfectHash-related headers.
 //
 
-#include <PerfectHash.h>
-#include <PerfectHashErrors.h>
+#include <PerfectHash/PerfectHash.h>
+#include <PerfectHash/PerfectHashErrors.h>
 
 #ifdef PH_COMPAT
 #include "PerfectHashCompatPrivate.h"

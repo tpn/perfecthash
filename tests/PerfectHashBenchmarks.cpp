@@ -26,7 +26,7 @@
 #endif
 #endif
 
-#include <PerfectHash.h>
+#include <PerfectHash/PerfectHash.h>
 
 #ifdef min
 #undef min

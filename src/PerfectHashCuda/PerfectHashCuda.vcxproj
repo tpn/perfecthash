@@ -110,10 +110,10 @@
     <ClCompile Include="Random.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\no_sal2.h" />
-    <ClInclude Include="..\..\include\PerfectHash.h" />
-    <ClInclude Include="..\..\include\PerfectHashCuda.h" />
-    <ClInclude Include="..\..\include\PerfectHashErrors.h" />
+    <ClInclude Include="..\..\include\PerfectHash\no_sal2.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHash.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashCuda.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashErrors.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

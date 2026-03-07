@@ -1,31 +1,22 @@
 {% set name = "perfecthash" %}
 {% set version = environ.get("PERFECTHASH_CONDA_VERSION", "0.0.0") %}
+{% set source_url = environ.get("PERFECTHASH_CONDA_SOURCE_URL", "") %}
+{% set source_sha256 = environ.get("PERFECTHASH_CONDA_SOURCE_SHA256", "") %}
 
 package:
-  name: {{ name }}
+  name: {{ name }}-suite
   version: {{ version }}
 
 source:
+  {% if source_url %}
+  url: {{ source_url }}
+  sha256: {{ source_sha256 }}
+  {% else %}
   path: ../..
+  {% endif %}
 
 build:
   number: 0
-  skip: true  # [win]
-
-requirements:
-  build:
-    - {{ compiler('c') }}
-    - {{ compiler('cxx') }}
-    - nasm
-    - cmake >=3.20
-    - ninja
-    - make  # [unix]
-    - pkg-config  # [unix]
-
-test:
-  commands:
-    - test -f $PREFIX/include/PerfectHash.h  # [unix]
-    - test -f $PREFIX/lib/cmake/PerfectHash/PerfectHashConfig.cmake  # [unix]
 
 about:
   home: https://github.com/tpn/perfecthash
@@ -36,6 +27,141 @@ about:
 description: |
   PerfectHash builds fast perfect hash table generation/runtime libraries with
   profile-aware CMake outputs and release automation.
+
+outputs:
+  - name: perfecthash-online-rawdog-jit
+    build:
+      skip: true  # [not linux]
+      script:
+        - export PERFECTHASH_BUILD_PROFILE=online-rawdog-jit
+        - export PERFECTHASH_VERSION_OVERRIDE={{ version }}
+        - bash "${RECIPE_DIR}/build.sh"
+    files:
+      - include/PerfectHash/*
+      - lib/libPerfectHash*
+      - lib/cmake/PerfectHash/*
+    requirements:
+      build:
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+        - cmake >=3.20
+        - ninja
+        - nasm
+        - make
+        - pkg-config
+      run_constrained:
+        - perfecthash-full <0a0
+        - perfecthash-online-rawdog-and-llvm-jit <0a0
+        - perfecthash-online-llvm-jit <0a0
+    test:
+      commands:
+        - test -f $PREFIX/include/PerfectHash/PerfectHash.h
+        - test -f $PREFIX/lib/cmake/PerfectHash/PerfectHashConfig.cmake
+
+  - name: perfecthash-online-rawdog-and-llvm-jit
+    build:
+      skip: true  # [not linux]
+      script:
+        - export PERFECTHASH_BUILD_PROFILE=online-rawdog-and-llvm-jit
+        - export PERFECTHASH_VERSION_OVERRIDE={{ version }}
+        - bash "${RECIPE_DIR}/build.sh"
+    files:
+      - include/PerfectHash/*
+      - lib/libPerfectHash*
+      - lib/cmake/PerfectHash/*
+    requirements:
+      build:
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+        - cmake >=3.20
+        - ninja
+        - nasm
+        - make
+        - pkg-config
+      host:
+        - llvmdev >=15
+      run_constrained:
+        - perfecthash-full <0a0
+        - perfecthash-online-llvm-jit <0a0
+        - perfecthash-online-rawdog-jit <0a0
+    test:
+      commands:
+        - test -f $PREFIX/include/PerfectHash/PerfectHash.h
+        - test -f $PREFIX/lib/cmake/PerfectHash/PerfectHashConfig.cmake
+
+  - name: perfecthash-online-llvm-jit
+    build:
+      skip: true  # [not linux]
+      script:
+        - export PERFECTHASH_BUILD_PROFILE=online-llvm-jit
+        - export PERFECTHASH_VERSION_OVERRIDE={{ version }}
+        - bash "${RECIPE_DIR}/build.sh"
+    files:
+      - include/PerfectHash/*
+      - lib/libPerfectHash*
+      - lib/cmake/PerfectHash/*
+    requirements:
+      build:
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+        - cmake >=3.20
+        - ninja
+        - nasm
+        - make
+        - pkg-config
+      host:
+        - llvmdev >=15
+      run_constrained:
+        - perfecthash-full <0a0
+        - perfecthash-online-rawdog-and-llvm-jit <0a0
+        - perfecthash-online-rawdog-jit <0a0
+    test:
+      commands:
+        - test -f $PREFIX/include/PerfectHash/PerfectHash.h
+        - test -f $PREFIX/lib/cmake/PerfectHash/PerfectHashConfig.cmake
+
+  - name: perfecthash-full
+    build:
+      skip: true  # [not linux]
+      script:
+        - export PERFECTHASH_BUILD_PROFILE=full
+        - export PERFECTHASH_VERSION_OVERRIDE={{ version }}
+        - bash "${RECIPE_DIR}/build.sh"
+    files:
+      - bin/PerfectHash*
+      - include/PerfectHash/*
+      - lib/libPerfectHash*
+      - lib/cmake/PerfectHash/*
+    requirements:
+      build:
+        - {{ compiler('c') }}
+        - {{ compiler('cxx') }}
+        - cmake >=3.20
+        - ninja
+        - nasm
+        - make
+        - pkg-config
+      host:
+        - llvmdev >=15
+      run_constrained:
+        - perfecthash-online-llvm-jit <0a0
+        - perfecthash-online-rawdog-and-llvm-jit <0a0
+        - perfecthash-online-rawdog-jit <0a0
+    test:
+      commands:
+        - test -f $PREFIX/include/PerfectHash/PerfectHash.h
+        - test -f $PREFIX/lib/cmake/PerfectHash/PerfectHashConfig.cmake
+
+  - name: perfecthash
+    build:
+      skip: true  # [not linux]
+    requirements:
+      run:
+        - {{ pin_subpackage('perfecthash-full', exact=True) }}
+    test:
+      commands:
+        - test -f $PREFIX/include/PerfectHash/PerfectHash.h
+        - test -f $PREFIX/lib/cmake/PerfectHash/PerfectHashConfig.cmake
 
 extra:
   recipe-maintainers:

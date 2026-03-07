@@ -1,22 +1,15 @@
 name: conda-package
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
-        description: "Package version override (defaults to latest git tag)"
+        description: "Package version override (defaults to git tag or latest git tag)"
         required: false
         type: string
-      profile:
-        description: "PerfectHash build profile for package"
-        required: false
-        default: online-rawdog-jit
-        type: choice
-        options:
-          - online-rawdog-jit
-          - online-rawdog-and-llvm-jit
-          - online-llvm-jit
-          - full
   pull_request:
     paths:
       - conda/recipe/**
@@ -32,7 +25,6 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_API_TOKEN }}
-      PERFECTHASH_BUILD_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'online-rawdog-jit' }}
       DISPATCH_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
     steps:
       - name: Checkout
@@ -61,6 +53,8 @@ jobs:
         run: |
           if [ -n "${DISPATCH_VERSION}" ]; then
             version="${DISPATCH_VERSION}"
+          elif [ "${GITHUB_REF_TYPE}" = "tag" ] && [ -n "${GITHUB_REF_NAME}" ]; then
+            version="${GITHUB_REF_NAME}"
           else
             version="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)"
           fi
@@ -68,7 +62,26 @@ jobs:
           echo "PERFECTHASH_CONDA_VERSION=${version}" >> "$GITHUB_ENV"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-      - name: Build conda package
+      - name: Resolve release source archive (tag builds)
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash -l {0}
+        run: |
+          tag="v${{ steps.version.outputs.version }}"
+          url="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${tag}.tar.gz"
+          archive_path="${RUNNER_TEMP}/perfecthash-${tag}.tar.gz"
+          curl -LfsS "$url" -o "$archive_path"
+          sha256="$(sha256sum "$archive_path" | awk '{print $1}')"
+          echo "PERFECTHASH_CONDA_SOURCE_URL=${url}" >> "$GITHUB_ENV"
+          echo "PERFECTHASH_CONDA_SOURCE_SHA256=${sha256}" >> "$GITHUB_ENV"
+          echo "Resolved source archive: ${url}"
+          echo "Resolved source sha256: ${sha256}"
+
+      - name: Render output package list
+        shell: bash -l {0}
+        run: |
+          conda build conda/recipe --output
+
+      - name: Build conda packages (linux multi-output)
         shell: bash -l {0}
         run: |
           conda build conda/recipe --output-folder conda/out --no-anaconda-upload
@@ -76,13 +89,18 @@ jobs:
       - name: Upload package artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: conda-${{ steps.version.outputs.version }}-${{ env.PERFECTHASH_BUILD_PROFILE }}
+          name: conda-${{ steps.version.outputs.version }}-linux-multi-output
           path: |
             conda/out/**/*.conda
             conda/out/**/*.tar.bz2
 
-      - name: Publish to anaconda channel (optional)
+      - name: Publish to Anaconda.org user channel (optional, not conda-forge)
         if: startsWith(github.ref, 'refs/tags/') && env.ANACONDA_API_TOKEN != ''
         shell: bash -l {0}
         run: |
-          anaconda -t "$ANACONDA_API_TOKEN" upload --force conda/out/**/*.conda conda/out/**/*.tar.bz2
+          upload_user="${ANACONDA_UPLOAD_USER:-perfecthash}"
+          anaconda -t "$ANACONDA_API_TOKEN" upload \
+            --user "$upload_user" \
+            --label main \
+            --skip-existing \
+            conda/out/**/*.conda conda/out/**/*.tar.bz2

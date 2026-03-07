@@ -43,7 +43,7 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
 - Whether to include a tiny generated key dataset in-tree or build keys at runtime in code.
 
 ## Current Direction (2026-02-27)
-- Added a new slim public header: `include/PerfectHashOnlineRawdog.h`.
+- Added a new slim public header: `include/PerfectHash/PerfectHashOnlineRawdog.h`.
 - Added a new wrapper implementation: `src/PerfectHash/PerfectHashOnlineRawdog.c`.
 - Wrapper API hides internal COM-style interfaces and exposes a compact C API for:
 - open/close online context,
@@ -71,7 +71,7 @@ Start with `PerfectHashOnlineCore` / `PerfectHashOnlineCoreStatic` as the baseli
   at least scalar JIT codegen is available.
 
 ## Dual-Backend Console Example (2026-02-27)
-- Added `include/PerfectHashOnlineJit.h` and
+- Added `include/PerfectHash/PerfectHashOnlineJit.h` and
   `src/PerfectHash/PerfectHashOnlineJit.c` as a slim public online API that
   supports both RawDog JIT and LLVM JIT backends.
 - Added a second C++ CMake sample:

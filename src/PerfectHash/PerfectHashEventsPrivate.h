@@ -34,7 +34,7 @@ Abstract:
 #pragma warning(push)
 #pragma warning(disable: 4514 4710 4820 5045 26451)
 #define RtlZeroMemory(Destination,Length) memset((Destination),0,(Length))
-#include <PerfectHashEvents.h>
+#include <PerfectHash/PerfectHashEvents.h>
 #undef RtlZeroMemory
 #pragma warning(pop)
 

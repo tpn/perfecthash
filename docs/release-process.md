@@ -59,11 +59,25 @@ Artifacts include profile in names (for example,
 
 ## Conda / Conda-Forge Strategy (Staged)
 
-1. Maintain a local recipe under `conda/recipe/` and validate it in CI.
-2. Publish optional channel artifacts (if desired) via `ANACONDA_API_TOKEN`.
-3. For conda-forge, automate feedstock PR updates from release tags.
-   Note: conda-forge publication requires feedstock governance/bot integration
-   and cannot be fully controlled from this repository alone.
+1. Linux-first multi-output recipe is maintained under `conda/recipe/` and
+   validated in CI.
+2. Recipe outputs:
+   - `perfecthash` (meta package, depends on `perfecthash-full`)
+   - `perfecthash-full`
+   - `perfecthash-online-rawdog-jit`
+   - `perfecthash-online-rawdog-and-llvm-jit`
+   - `perfecthash-online-llvm-jit`
+3. Tag pushes trigger `.github/workflows/conda-package.yml`, which builds the
+   Linux outputs and uploads artifacts.
+   - Tag builds resolve GitHub release tarball URL + SHA256 and build from that
+     source archive for feedstock-style validation.
+4. Optional publish to a maintainer Anaconda channel remains available via
+   `ANACONDA_API_TOKEN` (not conda-forge publication).
+5. Conda-forge publication still requires one-time staged-recipes/feedstock
+   bootstrap and feedstock bot governance; recurring publication is feedstock
+   CI/bot-driven.
+
+See `docs/packaging.md` for the operational checklist and maintainer actions.
 
 ## Operational Notes
 

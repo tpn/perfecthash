@@ -1,0 +1,11 @@
+# Copy this file to .envrc and run: direnv allow
+
+# Option 1 (recommended): decrypt token from your local encrypted file.
+if [[ -f ~/.zsh/anaconda_perfecthash_token.asc ]]; then
+  export ANACONDA_API_TOKEN="$(gpg -q -d ~/.zsh/anaconda_perfecthash_token.asc | tr -d '\r\n')"
+fi
+
+# Option 2 (fallback): inline token (replace this placeholder).
+# export ANACONDA_API_TOKEN=pe-1234...
+
+export ANACONDA_UPLOAD_USER=perfecthash

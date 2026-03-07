@@ -31,7 +31,7 @@ Abstract:
 #error PH_USE_CUDA must be defined by this stage.
 #endif
 
-#include <PerfectHash.h>
+#include <PerfectHash/PerfectHash.h>
 
 EXTERN_C_BEGIN
 #include "../PerfectHash/CuDeviceAttributes.h"

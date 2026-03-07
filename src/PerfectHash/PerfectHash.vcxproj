@@ -63,12 +63,12 @@
     <None Include="PerfectHashEvents.man" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\include\CompiledPerfectHash.h" />
-    <ClInclude Include="..\..\include\PerfectHash.h" />
-    <ClInclude Include="..\..\include\PerfectHashOnlineJit.h" />
-    <ClInclude Include="..\..\include\PerfectHashOnlineRawdog.h" />
-    <ClInclude Include="..\..\include\PerfectHashErrors.h" />
-    <ClInclude Include="..\..\include\PerfectHashEvents.h" />
+    <ClInclude Include="..\..\include\PerfectHash\CompiledPerfectHash.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHash.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashOnlineJit.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashOnlineRawdog.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashErrors.h" />
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashEvents.h" />
     <ClInclude Include="BulkCreateBestCsv.h" />
     <ClInclude Include="ChmOnline01.h" />
     <ClInclude Include="Chm01.h" />

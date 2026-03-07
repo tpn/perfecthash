@@ -1,6 +1,6 @@
 #include "perfecthash_vtab.h"
 
-#include <PerfectHashOnlineJit.h>
+#include <PerfectHash/PerfectHashOnlineJit.h>
 
 #include <algorithm>
 #include <cerrno>

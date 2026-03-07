@@ -402,22 +402,22 @@
     <ClInclude Include="stdafx.h">
       <Filter>Private Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\PerfectHash.h">
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHash.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\PerfectHashOnlineJit.h">
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashOnlineJit.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\PerfectHashOnlineRawdog.h">
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashOnlineRawdog.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\PerfectHashEvents.h">
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashEvents.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\PerfectHashErrors.h">
+    <ClInclude Include="..\..\include\PerfectHash\PerfectHashErrors.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\CompiledPerfectHash.h">
+    <ClInclude Include="..\..\include\PerfectHash\CompiledPerfectHash.h">
       <Filter>Public Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Rtl.h">

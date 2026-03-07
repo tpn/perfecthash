@@ -1,0 +1,4 @@
+interface:
+  display_name: "PerfectHash Conda Packaging"
+  short_description: "Build, test, and publish PerfectHash conda packages"
+  default_prompt: "Use $perfecthash-conda-packaging to build, smoke-test, upload, or debug PerfectHash conda packaging and conda-forge prep."

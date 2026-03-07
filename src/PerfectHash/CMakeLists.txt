@@ -138,11 +138,11 @@ set(Private_Header_Files_28Auto-Generated29
 source_group("Private Header Files %28Auto-Generated%29" FILES ${Private_Header_Files_28Auto-Generated29})
 
 set(Public_Header_Files
-    "../../include/CompiledPerfectHash.h"
-    "../../include/PerfectHash.h"
-    "../../include/PerfectHashOnlineJit.h"
-    "../../include/PerfectHashOnlineRawdog.h"
-    "../../include/PerfectHashEvents.h"
+    "../../include/PerfectHash/CompiledPerfectHash.h"
+    "../../include/PerfectHash/PerfectHash.h"
+    "../../include/PerfectHash/PerfectHashOnlineJit.h"
+    "../../include/PerfectHash/PerfectHashOnlineRawdog.h"
+    "../../include/PerfectHash/PerfectHashEvents.h"
 )
 source_group("Public Header Files" FILES ${Public_Header_Files})
 
@@ -5065,7 +5065,7 @@ if(WIN32)
     )
 
     set(PERFECTHASH_ERRORS_HEADER
-        "${PERFECTHASH_ROOT_DIR}/include/PerfectHashErrors.h"
+        "${PERFECTHASH_ROOT_DIR}/include/PerfectHash/PerfectHashErrors.h"
     )
     set(PERFECTHASH_ERRORS_BIN
         "${CMAKE_CURRENT_SOURCE_DIR}/PerfectHashErrors_English.bin"

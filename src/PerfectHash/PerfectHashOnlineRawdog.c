@@ -14,7 +14,7 @@ Abstract:
 --*/
 
 #include "stdafx.h"
-#include <PerfectHashOnlineRawdog.h>
+#include <PerfectHash/PerfectHashOnlineRawdog.h>
 
 #include <stdlib.h>
 

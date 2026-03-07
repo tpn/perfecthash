@@ -18,7 +18,7 @@ Abstract:
 extern "C" {
 #endif
 
-#include <no_sal2.h>
+#include <PerfectHash/no_sal2.h>
 
 //
 // Define NT-style typedefs.
@@ -173,7 +173,7 @@ typedef LIST_ENTRY *PLIST_ENTRY;
 typedef _Return_type_success_(return >= 0) long HRESULT;
 #endif
 
-#include <PerfectHash.h>
+#include <PerfectHash/PerfectHash.h>
 
 //
 // Define CUDA macros and typedefs in NT style.

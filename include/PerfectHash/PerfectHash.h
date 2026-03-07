@@ -20,7 +20,7 @@ Abstract:
 extern "C" {
 #endif
 
-#include <PerfectHashErrors.h>
+#include <PerfectHash/PerfectHashErrors.h>
 
 #ifdef PH_WINDOWS
 
@@ -92,7 +92,7 @@ extern "C" {
 #pragma warning(disable: 26110 26165 26167)
 
 #else // PH_WINDOWS
-#include <PerfectHashCompat.h>
+#include <PerfectHash/PerfectHashCompat.h>
 #endif
 
 //
@@ -6126,7 +6126,7 @@ Return Value:
 #endif // __CUDA_ARCH__
 
 #ifdef PH_CUDA
-#include <PerfectHashCuda.h>
+#include <PerfectHash/PerfectHashCuda.h>
 #endif
 
 #ifdef __cplusplus

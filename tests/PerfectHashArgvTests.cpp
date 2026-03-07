@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <PerfectHash.h>
+#include <PerfectHash/PerfectHash.h>
 
 #include <string>
 #include <vector>

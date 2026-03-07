@@ -240,7 +240,7 @@ __rdtscp(
 // SAL compat.
 //
 
-#include <no_sal2.h>
+#include <PerfectHash/no_sal2.h>
 
 #define IN
 #define OUT

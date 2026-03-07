@@ -1,0 +1,96 @@
+# Packaging Log
+
+## 2026-03-01
+- Created packaging ledgers:
+  - `agents/PACKAGING-NOTES.md`
+  - `agents/PACKAGING-TODO.md`
+  - `agents/PACKAGING-LOG.md`
+- Audited current repository state for packaging automation:
+  - Existing tag-driven release pipeline (`ci/cut-release.sh`, `.github/workflows/release.yml`).
+  - Existing local conda recipe/workflow (`conda/recipe`, `.github/workflows/conda-package.yml`).
+  - Existing Python packaging baseline (`python/pyproject.toml`, `python/setup.py`).
+- Confirmed current conda recipe limitations relevant to conda-forge:
+  - Linux-focused validation path.
+  - Single-profile-per-run behavior.
+  - No feedstock integration yet.
+- Researched conda-forge maintainer docs and captured constraints:
+  - staged-recipes bootstrap requirement for new packages,
+  - feedstock-centric CI/publication model,
+  - bot-driven update and automerge capabilities.
+- Captured recommended automation architecture in notes:
+  - bot-managed feedstock version bump + automerge as default no-secret steady state,
+  - optional upstream-driven feedstock PR automation as fallback.
+- Drafted profile permutation packaging strategy:
+  - single feedstock, multi-output profile packages,
+  - default meta-package selection decision left explicit in TODO.
+- Added follow-on pip roadmap:
+  - metadata normalization,
+  - trusted publishing,
+  - wheel strategy alignment with profile model.
+- Finalized key implementation decisions with maintainer:
+  - `perfecthash` default package should map to `full`.
+  - rollout starts with Linux only.
+- Implemented Linux-first multi-output conda recipe in `conda/recipe/meta.yaml`:
+  - `perfecthash-online-rawdog-jit`
+  - `perfecthash-online-rawdog-and-llvm-jit`
+  - `perfecthash-online-llvm-jit`
+  - `perfecthash-full`
+  - `perfecthash` meta package depending on `perfecthash-full`
+- Refactored conda recipe build script:
+  - hardened profile validation in `conda/recipe/build.sh`
+  - isolated build directories per profile to avoid cross-profile CMake cache leakage.
+- Updated `.github/workflows/conda-package.yml`:
+  - added tag push trigger (`v*`)
+  - removed single-profile dispatch model
+  - builds Linux multi-output recipe and uploads artifacts
+  - tag-triggered runs now resolve GitHub release tarball URL + SHA256 and build from archive source
+  - upload now defaults to org channel target `--user perfecthash --label main --skip-existing`
+  - retained optional maintainer-channel Anaconda upload (explicitly not conda-forge).
+- Added packaging runbook:
+  - `docs/packaging.md` with one-time conda-forge maintainer actions and recurring automation flow.
+- Updated release documentation:
+  - `docs/release-process.md` conda section now reflects multi-output Linux-first packaging.
+  - `ci/README.md` now documents conda-package workflow behavior and output package set.
+- Validation:
+  - `bash -n conda/recipe/build.sh` passed.
+  - workflow YAML parse check passed.
+  - `conda build conda/recipe --output` now succeeds and emits all expected Linux outputs.
+- Added repo-local release skill and wired discovery hint:
+  - `skills/perfecthash-release-engineering/SKILL.md`
+  - `skills/perfecthash-release-engineering/agents/openai.yaml`
+  - `AGENTS.md` now points to both conda packaging and release-engineering skills.
+- Ran a real Linux org-channel packaging cycle for version `0.71.1` without cutting a git tag:
+  - did not tag because the working tree is dirty and `ci/cut-release.sh` correctly guards against that by default.
+  - local multi-output `conda build` completed successfully after adding explicit output file capture.
+  - local `file://` smoke install for `perfecthash` passed.
+  - uploaded successfully to `anaconda.org/perfecthash`:
+    - `perfecthash`
+    - `perfecthash-full`
+    - `perfecthash-online-llvm-jit`
+    - `perfecthash-online-rawdog-and-llvm-jit`
+    - `perfecthash-online-rawdog-jit`
+  - remote smoke install from `-c perfecthash -c conda-forge perfecthash` passed.
+- Important follow-on issues identified during the real run:
+  - conda package version `0.71.1` does not yet propagate to the internal CMake/binary version, which still reports `0.71.0.dirty`.
+  - output packages intentionally overlap on installed headers/CMake config and most runtime artifacts; they should be treated as mutually exclusive profile variants and should not be co-installed together.
+- Refactored the public install/include surface to use `include/PerfectHash/`:
+  - moved installed public headers under `include/PerfectHash/`
+  - updated repo consumers/examples/tests to include headers via `<PerfectHash/...>`
+  - updated build/project metadata for moved public headers
+  - retained standalone/generated compiled-table output behavior separately from the installed library surface.
+- Fixed conda version propagation:
+  - `conda/recipe/meta.yaml` now exports `PERFECTHASH_VERSION_OVERRIDE={{ version }}` per output.
+  - `conda/recipe/build.sh` now honors `PERFECTHASH_VERSION_OVERRIDE` before fallback envs.
+- Validated include-surface refactor locally:
+  - top-level configure for `build-include-layout` succeeded.
+  - targeted build of `PerfectHashOnlineCore`, `PerfectHashCreateExe`, and `perfecthash_unit_tests` succeeded.
+  - `ctest --test-dir build-include-layout -R '^perfecthash.fast.unit$'` passed.
+- Revalidated Linux conda packaging locally for `0.71.2`:
+  - CMake/binary version now reports `PerfectHash version: 0.71.2 (source: override, semver: 0.71.2)`.
+  - all package self-tests passed against `include/PerfectHash/PerfectHash.h`.
+  - local `file://` smoke install of `perfecthash` passed.
+- Published and validated updated org-channel artifacts for `0.71.2`:
+  - uploaded `perfecthash`, `perfecthash-full`, `perfecthash-online-llvm-jit`, `perfecthash-online-rawdog-and-llvm-jit`, and `perfecthash-online-rawdog-jit`.
+  - remote smoke install from `-c perfecthash -c conda-forge perfecthash` passed with the new include layout.
+- Current residual packaging caveat:
+  - profile outputs are now solver-mutually-exclusive, but conda-build still warns about overlapping installed files because the variants intentionally ship different contents at the same paths.

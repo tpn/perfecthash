@@ -1,0 +1,4 @@
+interface:
+  display_name: "PerfectHash Release Engineering"
+  short_description: "Cut, validate, and publish PerfectHash releases"
+  default_prompt: "Use $perfecthash-release-engineering to cut, validate, or document a PerfectHash release."

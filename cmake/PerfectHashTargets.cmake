@@ -5,6 +5,7 @@ function(perfecthash_apply_common_definitions target)
         ${target}
         PUBLIC
         "$<BUILD_INTERFACE:${PERFECTHASH_ROOT_DIR}/include>"
+        "$<BUILD_INTERFACE:${PERFECTHASH_ROOT_DIR}/include/PerfectHash>"
         "$<BUILD_INTERFACE:${PERFECTHASH_SRC_DIR}>"
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
     )

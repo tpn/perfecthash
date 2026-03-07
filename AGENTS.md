@@ -15,3 +15,9 @@
 
 ## File enum capacity
 - File enums are tracked via a 64-bit bitmap. When we run out of bits, add a new enum group with a `_2`, `_3`, etc. suffix and keep the existing enum ordering rules intact.
+
+## Packaging
+- Use `skills/perfecthash-conda-packaging/SKILL.md` for PerfectHash conda build/smoke-test/upload flows, Anaconda.org org-channel publishing, and conda-forge bootstrap/feedstock workflow updates.
+
+## Release Engineering
+- Use `skills/perfecthash-release-engineering/SKILL.md` for tag-first release cutting, release workflow validation, release-notes/doc synchronization, and release automation audits.

@@ -90,19 +90,21 @@ if (ASM_LANGUAGE STREQUAL "ASM_MASM")
         /WX         # Warnings as errors
         /nologo
         /I${PERFECTHASH_ROOT_DIR}/include
+        /I${PERFECTHASH_ROOT_DIR}/include/PerfectHash
     )
 
     # ^ This appears to have stopped working, so hack it in here.
     set(CMAKE_ASM_MASM_FLAGS
-        "${CMAKE_ASM_MASM_FLAGS} /Zd /Zf /WX /nologo /I${PERFECTHASH_ROOT_DIR}/include")
+        "${CMAKE_ASM_MASM_FLAGS} /Zd /Zf /WX /nologo /I${PERFECTHASH_ROOT_DIR}/include /I${PERFECTHASH_ROOT_DIR}/include/PerfectHash")
 else()
     target_compile_options(
         ${target}
         PRIVATE
         -I${PERFECTHASH_ROOT_DIR}/include
+        -I${PERFECTHASH_ROOT_DIR}/include/PerfectHash
     )
     set(CMAKE_ASM_NASM_FLAGS
-        "${CMAKE_ASM_NASM_FLAGS} -I${PERFECTHASH_ROOT_DIR}/include")
+        "${CMAKE_ASM_NASM_FLAGS} -I${PERFECTHASH_ROOT_DIR}/include -I${PERFECTHASH_ROOT_DIR}/include/PerfectHash")
 endif()
 
 ################################################################################

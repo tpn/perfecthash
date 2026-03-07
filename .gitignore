@@ -42,3 +42,5 @@ DartConfiguration.tcl
 keys/*.keys*
 *TableSize
 examples/sqlite-online-jit/results/
+conda/out/
+.envrc

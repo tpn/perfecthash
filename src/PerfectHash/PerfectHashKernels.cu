@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 #include "Cu.cuh"
-#include <no_sal2.h>
+#include <PerfectHash/no_sal2.h>
 
 GLOBAL
 VOID
