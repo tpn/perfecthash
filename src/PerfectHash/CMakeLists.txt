@@ -2208,6 +2208,10 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
             set(RAWDOG_M3RX16_AVX512_V2_HDR
                 "${CMAKE_CURRENT_BINARY_DIR}/PerfectHashJitRawDogMulshrolate3RX16Avx512_v2_x64.h"
             )
+            set(PERFECTHASH_ML64_INCLUDE_ARGS
+                /I "${PERFECTHASH_ROOT_DIR}/include"
+                /I "${PERFECTHASH_ROOT_DIR}/include/PerfectHash"
+            )
 
             add_custom_command(
                 OUTPUT ${RAWDOG_HDR}
@@ -2215,7 +2219,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_BIN}
@@ -2238,7 +2242,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR16_BIN}
@@ -2261,7 +2265,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR_INDEX32X4_BIN}
@@ -2284,7 +2288,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR16_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR16_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR16_INDEX32X4_BIN}
@@ -2307,7 +2311,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR_INDEX32X4_AVX2_BIN}
@@ -2330,7 +2334,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR16_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR16_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR16_INDEX32X4_AVX2_BIN}
@@ -2353,7 +2357,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR_INDEX32X8_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR_INDEX32X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR_INDEX32X8_BIN}
@@ -2376,7 +2380,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR16_INDEX32X8_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR16_INDEX32X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR16_INDEX32X8_BIN}
@@ -2399,7 +2403,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR_INDEX32X16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR_INDEX32X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR_INDEX32X16_BIN}
@@ -2422,7 +2426,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSR16_INDEX32X16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSR16_INDEX32X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSR16_INDEX32X16_BIN}
@@ -2445,7 +2449,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX_BIN}
@@ -2468,7 +2472,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX16_BIN}
@@ -2491,7 +2495,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X4_BIN}
@@ -2514,7 +2518,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX16_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX16_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X4_BIN}
@@ -2537,7 +2541,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X4_AVX2_BIN}
@@ -2560,7 +2564,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX16_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX16_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X4_AVX2_BIN}
@@ -2583,7 +2587,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX_INDEX32X8_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX_INDEX32X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X8_BIN}
@@ -2606,7 +2610,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX16_INDEX32X8_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX16_INDEX32X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X8_BIN}
@@ -2629,7 +2633,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX_INDEX32X16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX_INDEX32X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX_INDEX32X16_BIN}
@@ -2652,7 +2656,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_MSRX16_INDEX32X16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_MSRX16_INDEX32X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_MSRX16_INDEX32X16_BIN}
@@ -2675,7 +2679,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX_BIN}
@@ -2698,7 +2702,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX16_BIN}
@@ -2721,7 +2725,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X4_BIN}
@@ -2744,7 +2748,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX16_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX16_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X4_BIN}
@@ -2767,7 +2771,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X4_AVX2_BIN}
@@ -2790,7 +2794,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX16_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX16_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X4_AVX2_BIN}
@@ -2813,7 +2817,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX_INDEX32X4_BIN}
@@ -2836,7 +2840,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_INDEX32X4_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_INDEX32X4_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_INDEX32X4_BIN}
@@ -2859,7 +2863,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX_INDEX32X4_AVX2_BIN}
@@ -2882,7 +2886,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_INDEX32X4_AVX2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_INDEX32X4_AVX2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_INDEX32X4_AVX2_BIN}
@@ -2905,7 +2909,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX_INDEX32X8_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX_INDEX32X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X8_BIN}
@@ -2928,7 +2932,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX16_INDEX32X8_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX16_INDEX32X8_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X8_BIN}
@@ -2951,7 +2955,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX_INDEX32X16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX_INDEX32X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX_INDEX32X16_BIN}
@@ -2974,7 +2978,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M1RX16_INDEX32X16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M1RX16_INDEX32X16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M1RX16_INDEX32X16_BIN}
@@ -2997,7 +3001,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2_BIN}
@@ -3020,7 +3024,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_BIN}
@@ -3043,7 +3047,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2_AVX2_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2_AVX2_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2_AVX2_V1_BIN}
@@ -3066,7 +3070,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2_AVX2_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2_AVX2_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2_AVX2_V2_BIN}
@@ -3089,7 +3093,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2_AVX2_V3_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2_AVX2_V3_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2_AVX2_V3_BIN}
@@ -3112,7 +3116,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_AVX2_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_AVX2_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_AVX2_V1_BIN}
@@ -3135,7 +3139,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_AVX2_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_AVX2_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_AVX2_V2_BIN}
@@ -3158,7 +3162,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_AVX2_V3_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_AVX2_V3_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_AVX2_V3_BIN}
@@ -3181,7 +3185,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2_AVX512_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2_AVX512_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2_AVX512_V1_BIN}
@@ -3204,7 +3208,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2_AVX512_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2_AVX512_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2_AVX512_V2_BIN}
@@ -3227,7 +3231,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_AVX512_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_AVX512_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_AVX512_V1_BIN}
@@ -3250,7 +3254,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M2RX16_AVX512_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M2RX16_AVX512_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M2RX16_AVX512_V2_BIN}
@@ -3273,7 +3277,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3_BIN}
@@ -3296,7 +3300,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3RX16_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3RX16_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3RX16_BIN}
@@ -3319,7 +3323,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3_AVX2_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3_AVX2_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3_AVX2_V1_BIN}
@@ -3342,7 +3346,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3_AVX2_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3_AVX2_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3_AVX2_V2_BIN}
@@ -3365,7 +3369,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3_AVX2_V3_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3_AVX2_V3_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3_AVX2_V3_BIN}
@@ -3388,7 +3392,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3RX16_AVX2_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3RX16_AVX2_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3RX16_AVX2_V1_BIN}
@@ -3411,7 +3415,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3RX16_AVX2_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3RX16_AVX2_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3RX16_AVX2_V2_BIN}
@@ -3434,7 +3438,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3RX16_AVX2_V3_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3RX16_AVX2_V3_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3RX16_AVX2_V3_BIN}
@@ -3457,7 +3461,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3_AVX512_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3_AVX512_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3_AVX512_V1_BIN}
@@ -3480,7 +3484,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3_AVX512_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3_AVX512_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3_AVX512_V2_BIN}
@@ -3503,7 +3507,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3RX16_AVX512_V1_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3RX16_AVX512_V1_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3RX16_AVX512_V1_BIN}
@@ -3526,7 +3530,7 @@ if(PERFECTHASH_ENABLE_RAWDOG_JIT AND PERFECTHASH_IS_WINDOWS)
                         /nologo
                         /c
                         /Fo "${RAWDOG_M3RX16_AVX512_V2_OBJ}"
-                        /I "${PERFECTHASH_ROOT_DIR}/include"
+                        ${PERFECTHASH_ML64_INCLUDE_ARGS}
                         "${RAWDOG_M3RX16_AVX512_V2_ASM}"
                 COMMAND ${PERFECTHASH_OBJCOPY_EXECUTABLE}
                         --dump-section=.text$mn$00=${RAWDOG_M3RX16_AVX512_V2_BIN}
