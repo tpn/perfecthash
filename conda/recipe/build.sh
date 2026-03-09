@@ -30,7 +30,11 @@ cmake_args=(
   -DBUILD_TESTING=OFF
 )
 
-if [ -n "${BUILD_PREFIX:-}" ] && [ -x "${BUILD_PREFIX}/bin/nasm" ]; then
+if command -v nasm >/dev/null 2>&1; then
+  nasm_path="$(command -v nasm)"
+  echo "==> Using NASM from PATH: ${nasm_path}"
+  cmake_args+=("-DCMAKE_ASM_NASM_COMPILER=${nasm_path}")
+elif [ -n "${BUILD_PREFIX:-}" ] && [ -x "${BUILD_PREFIX}/bin/nasm" ]; then
   echo "==> Using NASM from BUILD_PREFIX: ${BUILD_PREFIX}/bin/nasm"
   cmake_args+=("-DCMAKE_ASM_NASM_COMPILER=${BUILD_PREFIX}/bin/nasm")
 fi

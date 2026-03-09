@@ -21,6 +21,7 @@
 ### Fixed
 - Windows RawDog MASM header generation now resolves the new public include root correctly after the header-layout refactor.
 - Conda profile variants now declare solver-level mutual exclusion, preventing co-install of conflicting profile packages.
+- Tag-triggered Linux conda packaging now installs and resolves NASM reliably on the GitHub runner when building from release tarballs.
 
 ### Docs
 - Added `docs/packaging.md` and refreshed release/CI notes to reflect the current conda workflow, org-channel publishing, and release-versioning policy.

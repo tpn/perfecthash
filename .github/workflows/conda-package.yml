@@ -45,7 +45,7 @@ jobs:
       - name: Install conda-build toolchain
         shell: bash -l {0}
         run: |
-          conda install -y conda-build boa anaconda-client
+          conda install -y conda-build boa anaconda-client nasm
 
       - name: Resolve package version
         id: version
