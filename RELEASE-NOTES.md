@@ -12,6 +12,48 @@
 ## Unreleased
 
 ### Added
+- No new additions yet.
+
+### Changed
+- No changes yet.
+
+### Fixed
+- No fixes yet.
+
+### Docs
+- No documentation-only updates yet.
+
+## v0.72.2 - 2026-03-08
+
+### Added
+- No new additions.
+
+### Changed
+- No changes.
+
+### Fixed
+- Tag-triggered Linux conda packaging now installs and resolves NASM reliably on GitHub runners by provisioning `nasm` in the workflow environment and preferring PATH-based NASM discovery before BUILD_PREFIX fallback.
+
+### Docs
+- No documentation-only updates.
+
+## v0.72.1 - 2026-03-08
+
+### Added
+- No new additions.
+
+### Changed
+- No changes.
+
+### Fixed
+- Improved tag-triggered conda packaging NASM discovery by allowing the recipe build to prefer a BUILD_PREFIX-provided assembler when available.
+
+### Docs
+- No documentation-only updates.
+
+## v0.72.0 - 2026-03-07
+
+### Added
 - Repo-local release-engineering and conda-packaging skills now capture the maintainer workflows used to cut releases, validate conda packages, and publish org-channel artifacts.
 
 ### Changed
@@ -21,7 +63,6 @@
 ### Fixed
 - Windows RawDog MASM header generation now resolves the new public include root correctly after the header-layout refactor.
 - Conda profile variants now declare solver-level mutual exclusion, preventing co-install of conflicting profile packages.
-- Tag-triggered Linux conda packaging now installs and resolves NASM reliably on the GitHub runner when building from release tarballs.
 
 ### Docs
 - Added `docs/packaging.md` and refreshed release/CI notes to reflect the current conda workflow, org-channel publishing, and release-versioning policy.
