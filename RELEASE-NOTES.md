@@ -18,7 +18,7 @@
 - No changes yet.
 
 ### Fixed
-- No fixes yet.
+- Tag-triggered conda publication now expands the built package artifact list before invoking the Anaconda CLI, avoiding literal `**` glob failures in GitHub Actions.
 
 ### Docs
 - No documentation-only updates yet.

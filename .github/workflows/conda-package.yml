@@ -99,8 +99,14 @@ jobs:
         shell: bash -l {0}
         run: |
           upload_user="${ANACONDA_UPLOAD_USER:-perfecthash}"
+          shopt -s globstar nullglob
+          artifacts=(conda/out/**/*.conda conda/out/**/*.tar.bz2)
+          if [ "${#artifacts[@]}" -eq 0 ]; then
+            echo "error: no conda artifacts found under conda/out" >&2
+            exit 1
+          fi
           anaconda -t "$ANACONDA_API_TOKEN" upload \
             --user "$upload_user" \
             --label main \
             --skip-existing \
-            conda/out/**/*.conda conda/out/**/*.tar.bz2
+            "${artifacts[@]}"
