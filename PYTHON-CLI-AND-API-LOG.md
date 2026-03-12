@@ -1,0 +1,47 @@
+# PYTHON-CLI-AND-API Log
+
+## 2026-03-09
+
+- 21:07 PT: Created the `python-dev` worktree at `/home/trentn/src/perfecthash-python-dev`.
+- 21:10 PT: Switched work to the new worktree and confirmed no project ledgers existed there yet.
+- 21:12 PT: Checked available tooling. `python3` and `uv` are present; `ruff`, `black`, and `pre-commit` are not installed globally.
+- 21:14 PT: Chose the bootstrap structure: root-level Python project config, `python_src/` source layout, `hatchling` backend, `uv`-managed dev tooling, and local `pre-commit` hooks.
+- 21:20 PT: Added the initial scaffold files: project ledgers, root `pyproject.toml`, `README-python.md`, `.pre-commit-config.yaml`, `python_src/perfecthash/` package skeleton, `python_tests/`, and Python-specific `.gitignore` entries.
+- 21:21 PT: Ran `uv sync`, which created `.venv` and `uv.lock` and installed the baseline dev toolchain (`ruff`, `black`, `pytest`, `mypy`, `pre-commit`, `build`).
+- 21:22 PT: First validation pass failed because an inherited `PYTHONPATH` pointed at the legacy `/home/trentn/src/perfecthash/python` tree, causing imports to resolve to the old package.
+- 21:24 PT: Hardened the scaffold against inherited `PYTHONPATH` by updating README instructions and local pre-commit hook commands to invoke tooling via `env -u PYTHONPATH`.
+- 21:25 PT: Re-ran baseline validation in a clean environment; `pytest`, `ruff check`, `black --check`, and `mypy` all passed.
+- 21:28 PT: Configured worktree-local hooks via `extensions.worktreeConfig=true` and `core.hooksPath=.githooks`, added a tracked `.githooks/pre-commit` script, and removed the shared common-dir hook created during the first install attempt.
+- 21:29 PT: Sanity-checked `.githooks/pre-commit` directly. It ran successfully and correctly skipped work because the new files are not staged yet.
+- 21:31 PT: Traced the inherited `PYTHONPATH` to the active zsh domain configuration: `~/.zsh/desired_domain` is `nvidia`, and `~/.zsh/domains/nvidia/zshrc` prepends `~/src/tpn/lib` and `~/src/perfecthash/python`.
+- 21:40 PT: Recorded the current CLI-framework recommendation: use `Typer` for the new public CLI, use `Pydantic` for structured validation/models where helpful, and keep core runtime logic independent of both.
+- 21:48 PT: Verified the curated hash-function set is explicitly defined in `include/PerfectHash/PerfectHash.h` via `PERFECT_HASH_GOOD_HASH_FUNCTION_TABLE_ENTRY()` / `IsGoodPerfectHashHashFunctionId()`. Current set: `MultiplyShiftR`, `MultiplyShiftRX`, `Mulshrolate1RX`, `Mulshrolate2RX`, `Mulshrolate3RX`, `Mulshrolate4RX`.
+- 21:52 PT: Replaced the argparse bootstrap CLI with a `Typer` app and added a first `Pydantic` request model plus a small `PerfectHashCreate` argv renderer that preserves hash-function spellings exactly as they appear in C.
+- 21:55 PT: Added tests covering version output, `ph create --help`, curated hash-function exposure, and `--emit-c-argv` translation.
+- 21:57 PT: Ran `uv sync`, `pytest`, `ruff check`, `black`, and `mypy`; adjusted the Typer entrypoint behavior and help text so all checks pass cleanly.
+- 22:05 PT: Inspected the existing online C surfaces and chose `PerfectHashOnlineRawdog` as the first Python binding target because it exposes a small exported API and avoids the full internal interface.
+- 22:10 PT: Added `perfecthash.online.rawdog` with low-level ctypes bindings, development-oriented shared-library discovery, and a `RawdogTable` wrapper exposing `index()` / `indexes()` plus deterministic resource cleanup.
+- 22:13 PT: Added focused tests for sorted and unsorted key sets, out-of-range key rejection, and missing-library behavior.
+- 22:17 PT: Ran the full validation pass again; fixed the initial test, lint, formatting, and mypy issues. Final status for this slice is green: `pytest`, `ruff check`, `black`, and `mypy` all pass.
+- 22:22 PT: Recorded the runtime design constraints from discussion: keep the fast path native, avoid requiring end-user compilers where possible, and prefer `rawdog_jit` naming for Python-facing code.
+- 22:29 PT: Renamed the preferred Python-facing low-level module to `rawdog_jit` / `RawdogJitTable`, kept `perfecthash.online.rawdog` as a compatibility shim, and added a backend-neutral `Table` / `build_table()` layer in `python_src/perfecthash/table.py`.
+- 22:33 PT: Added tests for the new `Table` API and reran the full pass. Final status for the higher-level API slice is green: `pytest`, `ruff check`, `black`, and `mypy` all pass.
+- 22:38 PT: Recorded the architectural split from discussion: `ph create` should stay aligned with the offline creation workflow, while the `rawdog_jit` / `Table` path is the programmatic in-process Python API story.
+- 22:45 PT: Added `python_src/perfecthash/c_cli.py` with offline `PerfectHashCreate` binary discovery, command formatting, and subprocess execution helpers.
+- 22:48 PT: Wired `ph create` to the offline C create workflow: `--emit-c-argv` prints abstract argv, `--dry-run` prints the resolved executable command, and default behavior now shells out to the C create binary.
+- 22:51 PT: Added focused tests for create-binary discovery/rendering/execution helpers plus CLI dry-run/execution behavior.
+- 22:53 PT: Ran the full validation pass again. Final status for the offline CLI execution slice is green: `pytest`, `ruff check`, `black`, and `mypy` all pass.
+- 23:00 PT: Tightened the Typer help text so the root CLI and `create` command describe the current semantics instead of calling themselves "bootstrap".
+- 23:03 PT: Expanded `README-python.md` with user-facing CLI/API status, a worked `ph create --dry-run` example, a worked `build_table()` example, and the curated hash-function list.
+- 23:05 PT: Added `docs/python-cli-and-api.md` to document the offline CLI vs in-process API split, current command/API surfaces, limitations, and near-term direction.
+- 23:07 PT: Rechecked `ph --help`, `ph create --help`, `pytest`, `ruff check`, `black --check`, and `mypy`. Final status for the docs/help slice is green.
+- 23:15 PT: Reverted a short-lived `Table.__getitem__()` experiment after discussion. We are not using square-bracket semantics for `Table` right now; index lookup remains explicit via `index()` / `index_many()`.
+- 23:24 PT: Added the initial `ph bulk-create` surface: `BulkCreateRequest`, C-argv rendering, bulk-create binary discovery/execution helpers, Typer command wiring, and focused tests for dry-run/execution behavior.
+- 23:27 PT: Updated user-facing docs and project notes to include `ph bulk-create`, then reran the full validation pass. Final status for this slice is green: `pytest`, `ruff check`, `black`, and `mypy` all pass.
+- 22:56 PT: Checked current Typer/docs wiring. Root and command help are working and useful, but user-facing documentation is still limited to inline help plus the developer-oriented `README-python.md`.
+- 23:34 PT: Added shared discovery helpers that prefer package-native dirs and install prefixes (`PERFECTHASH_PREFIX`, `CONDA_PREFIX`, `sys.prefix`) before falling back to development-tree build outputs.
+- 23:37 PT: Added focused tests for prefix-based binary and library discovery and reran the full validation pass. Final status for the installation-oriented discovery slice is green: `pytest`, `ruff check`, `black`, and `mypy` all pass.
+- 23:41 PT: Recorded the current packaging recommendation: wheels should bundle native artifacts under `perfecthash/_native/`, while conda should keep binaries/libraries in the environment prefix and let the Python package discover them there.
+- 23:44 PT: Recorded the editable-install recommendation: keep `pip install -e .` supported, but drive native discovery through a repo-local install prefix such as `.perfecthash-prefix/` instead of relying on arbitrary build-tree fallbacks.
+- 23:49 PT: Added `scripts/install-python-native-prefix.sh`, updated `.gitignore` for `.perfecthash-prefix/`, and expanded README/docs to document the repo-local native-prefix editable-install workflow.
+- 23:51 PT: Re-ran the standard validation pass after the helper/docs updates. Final status remains green: `pytest`, `ruff check`, `black`, and `mypy` all pass.

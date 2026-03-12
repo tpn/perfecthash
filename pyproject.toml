@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "perfecthash"
+version = "0.1.0a0"
+description = "Python CLI and API scaffolding for PerfectHash."
+readme = "README-python.md"
+requires-python = ">=3.12"
+license = "BSD-3-Clause"
+authors = [
+  { name = "Trent Nelson" },
+]
+dependencies = [
+  "pydantic>=2.11",
+  "typer>=0.16",
+]
+
+[project.scripts]
+ph = "perfecthash.cli:main"
+
+[dependency-groups]
+dev = [
+  "black>=24.10",
+  "build>=1.2",
+  "mypy>=1.15",
+  "pre-commit>=4.0",
+  "pytest>=8.3",
+  "ruff>=0.11",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/.pre-commit-config.yaml",
+  "/LICENSE",
+  "/README-python.md",
+  "/pyproject.toml",
+  "/python_src/perfecthash",
+  "/python_tests",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["python_src/perfecthash"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 88
+src = ["python_src", "python_tests"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "C4", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["perfecthash"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["python_tests"]
+
+[tool.mypy]
+files = ["python_src", "python_tests"]
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
