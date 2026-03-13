@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from .c_argv import render_bulk_create_c_argv, render_create_c_argv
-from .discovery import installed_binary_dirs
+from .discovery import installed_binary_dirs, source_checkout_root
 from .models import BulkCreateRequest, CreateRequest
 
 
@@ -30,8 +30,14 @@ def _bulk_create_binary_names() -> tuple[str, ...]:
 
 
 def _candidate_roots() -> tuple[Path, ...]:
-    package_root = Path(__file__).resolve().parents[3]
+    package_root = source_checkout_root(__file__)
+    if package_root is None:
+        return ()
+
     sibling_root = package_root.parent / "perfecthash"
+    if sibling_root == package_root:
+        return (package_root,)
+
     return (package_root, sibling_root)
 
 

@@ -19,6 +19,18 @@ def _dedupe_paths(paths: Iterable[Path]) -> tuple[Path, ...]:
     return tuple(unique_paths)
 
 
+def source_checkout_root(module_file: str | Path) -> Path | None:
+    module_path = Path(module_file).resolve()
+
+    for candidate in module_path.parents:
+        pyproject = candidate / "pyproject.toml"
+        package_dir = candidate / "python_src" / "perfecthash"
+        if pyproject.is_file() and package_dir.is_dir():
+            return candidate
+
+    return None
+
+
 def package_native_root() -> Path:
     return Path(__file__).resolve().parent / "_native"
 

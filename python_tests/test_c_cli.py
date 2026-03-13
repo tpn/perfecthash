@@ -7,6 +7,7 @@ import pytest
 
 from perfecthash.c_cli import (
     CliBinaryNotFoundError,
+    _candidate_roots,
     find_default_bulk_create_binary_path,
     find_default_create_binary_path,
     format_command,
@@ -17,6 +18,15 @@ from perfecthash.c_cli import (
 )
 from perfecthash.hash_functions import GoodHashFunction
 from perfecthash.models import BulkCreateRequest, CreateRequest
+
+
+def test_candidate_roots_include_repo_root() -> None:
+    roots = _candidate_roots()
+
+    expected_root = Path(__file__).resolve().parents[1]
+    assert roots[0] == expected_root
+    assert (roots[0] / "pyproject.toml").is_file()
+    assert (roots[0] / "python_src" / "perfecthash").is_dir()
 
 
 def test_render_create_command_replaces_program_name(tmp_path: Path) -> None:

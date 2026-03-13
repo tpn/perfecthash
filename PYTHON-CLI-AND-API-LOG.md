@@ -45,3 +45,8 @@
 - 23:44 PT: Recorded the editable-install recommendation: keep `pip install -e .` supported, but drive native discovery through a repo-local install prefix such as `.perfecthash-prefix/` instead of relying on arbitrary build-tree fallbacks.
 - 23:49 PT: Added `scripts/install-python-native-prefix.sh`, updated `.gitignore` for `.perfecthash-prefix/`, and expanded README/docs to document the repo-local native-prefix editable-install workflow.
 - 23:51 PT: Re-ran the standard validation pass after the helper/docs updates. Final status remains green: `pytest`, `ruff check`, `black`, and `mypy` all pass.
+- 23:58 PT: Committed the `python-dev` work as `67d9114` (`python: add initial package, CLI, and runtime bindings`), pushed the branch, and opened PR #74: `https://github.com/tpn/perfecthash/pull/74`.
+- 00:10 PT: Monitored PR CI. An initial `macos-x86_64` pull-request job failed during `Set up job` only; all other PR checks progressed normally. Reran the failed macOS workflow once the run completed.
+- 00:22 PT: Current PR CI picture after the macOS rerun: 11 PR checks green, 0 failing, and 2 `macos-x86_64` checks still in progress (push + pull_request variants). No code-level CI failures from the Python changes have surfaced so far.
+- 14:18 PDT: Rechecked PR #74 after session restart. Current state: PR open, merge state clean, and all GitHub Actions workflows/checks for the current branch head are green.
+- 14:33 PDT: Addressed PR feedback about source-tree fallback root detection. Replaced depth-based repo-root assumptions with a structural `source_checkout_root()` helper and updated the regression tests so they no longer depend on the temporary `perfecthash-python-dev` worktree name.

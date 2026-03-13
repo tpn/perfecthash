@@ -7,11 +7,21 @@ import pytest
 from perfecthash.hash_functions import GoodHashFunction
 from perfecthash.online import OnlineLibraryNotFoundError, build_rawdog_table
 from perfecthash.online.rawdog import find_default_library_path
+from perfecthash.online.rawdog_jit import _candidate_roots
 
 pytestmark = pytest.mark.skipif(
     find_default_library_path() is None,
     reason="PerfectHash shared library not found for online RawDog tests.",
 )
+
+
+def test_candidate_roots_include_repo_root() -> None:
+    roots = _candidate_roots()
+
+    expected_root = Path(__file__).resolve().parents[1]
+    assert roots[0] == expected_root
+    assert (roots[0] / "pyproject.toml").is_file()
+    assert (roots[0] / "python_src" / "perfecthash").is_dir()
 
 
 def test_build_rawdog_table_indexes_small_sorted_key_set() -> None:

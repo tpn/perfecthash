@@ -6,7 +6,7 @@ import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
-from perfecthash.discovery import installed_library_dirs
+from perfecthash.discovery import installed_library_dirs, source_checkout_root
 from perfecthash.hash_functions import GoodHashFunction
 
 _ContextPointer = ctypes.c_void_p
@@ -37,8 +37,14 @@ def _candidate_library_names() -> tuple[str, ...]:
 
 
 def _candidate_roots() -> tuple[Path, ...]:
-    package_root = Path(__file__).resolve().parents[3]
+    package_root = source_checkout_root(__file__)
+    if package_root is None:
+        return ()
+
     sibling_root = package_root.parent / "perfecthash"
+    if sibling_root == package_root:
+        return (package_root,)
+
     return (package_root, sibling_root)
 
 
