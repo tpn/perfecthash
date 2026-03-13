@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INSTALL_PYTHON="${ROOT}/.venv/bin/python"
+ARGS=(
+  hook-impl
+  --config="${ROOT}/.pre-commit-config.yaml"
+  --hook-type=pre-commit
+  --hook-dir "${HOOK_DIR}"
+  --
+  "$@"
+)
+
+if [[ -x "${INSTALL_PYTHON}" ]]; then
+  exec env -u PYTHONPATH "${INSTALL_PYTHON}" -mpre_commit "${ARGS[@]}"
+elif command -v pre-commit >/dev/null 2>&1; then
+  exec env -u PYTHONPATH pre-commit "${ARGS[@]}"
+else
+  printf '%s\n' '`pre-commit` not found. Run: env -u PYTHONPATH uv sync' >&2
+  exit 1
+fi

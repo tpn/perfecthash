@@ -44,3 +44,13 @@ keys/*.keys*
 examples/sqlite-online-jit/results/
 conda/out/
 .envrc
+.venv/
+.perfecthash-prefix/
+.coverage
+.coverage.*
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+dist/
+htmlcov/
+*.egg-info/
