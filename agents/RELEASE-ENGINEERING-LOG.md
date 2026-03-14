@@ -1,5 +1,22 @@
 # Release Engineering Log
 
+## 2026-03-13
+- Added GitHub OIDC trusted publishing to `.github/workflows/release.yml` for
+  bundled Python wheels:
+  - `publish-testpypi` now runs for release tags and manual `full` dispatches.
+  - `publish-pypi` now runs for release tags behind the `pypi` environment gate.
+- Renamed the published Python distribution to `tpn-perfecthash` after real
+  PyPI rejected `perfecthash`, while preserving:
+  - `import perfecthash`
+  - `ph`
+  - bundled native asset layout under `perfecthash/_native/`
+- Updated release/packaging docs and curated release notes to describe the new
+  Python publication path and maintainer setup.
+- Verified pre-release Python publication end-to-end:
+  - workflow dispatch run `23080492609` for `0.74.0` / `full` succeeded
+  - bundled wheels uploaded successfully to TestPyPI
+  - downstream install smoke from TestPyPI passed for `tpn-perfecthash==0.74.0`
+
 ## 2026-02-28
 - Created release engineering ledgers:
   - `agents/RELEASE-ENGINEERING-NOTES.md`
