@@ -167,7 +167,7 @@ outputs:
     files:
       - bin/ph
       - lib/python*/site-packages/perfecthash/**
-      - lib/python*/site-packages/perfecthash-*.dist-info/**
+      - lib/python*/site-packages/tpn_perfecthash-*.dist-info/**
     requirements:
       host:
         - python >=3.12

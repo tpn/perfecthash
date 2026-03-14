@@ -3,10 +3,13 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+PACKAGE_DISTRIBUTION_NAME = "tpn-perfecthash"
 
 
 def run(cmd: list[str], *, env: dict[str, str] | None = None) -> None:
@@ -25,8 +28,22 @@ def build_env(*, version: str, native_root: Path | None) -> dict[str, str]:
     return env
 
 
+def artifact_prefixes(version: str) -> tuple[str, ...]:
+    normalized_name = re.sub(r"[-_.]+", "-", PACKAGE_DISTRIBUTION_NAME).lower()
+    wheel_name = normalized_name.replace("-", "_")
+    return (
+        f"{normalized_name}-{version}",
+        f"{wheel_name}-{version}",
+    )
+
+
 def find_built_artifact(dist_dir: Path, suffix: str, version: str) -> Path:
-    matches = sorted(path for path in dist_dir.iterdir() if path.name.startswith(f"perfecthash-{version}") and path.name.endswith(suffix))
+    prefixes = artifact_prefixes(version)
+    matches = sorted(
+        path
+        for path in dist_dir.iterdir()
+        if path.name.startswith(prefixes) and path.name.endswith(suffix)
+    )
     if not matches:
         raise FileNotFoundError(
             f"Unable to find built artifact with suffix {suffix!r} in {dist_dir}"

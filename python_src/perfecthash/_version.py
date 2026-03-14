@@ -8,6 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 
 FALLBACK_VERSION = "0.63.0"
+PACKAGE_DISTRIBUTION_NAME = "tpn-perfecthash"
 _VERSION_PATTERN = re.compile(r"^[0-9]+(\.[0-9]+){1,3}$")
 
 
@@ -97,7 +98,7 @@ def resolve_runtime_version() -> str:
             return normalized
 
     try:
-        normalized = _normalize_version(package_version("perfecthash"))
+        normalized = _normalize_version(package_version(PACKAGE_DISTRIBUTION_NAME))
         if normalized is not None:
             return normalized
     except PackageNotFoundError:

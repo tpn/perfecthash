@@ -44,10 +44,66 @@ All profile outputs are currently Linux-only.
   - `build_table()` from a clean virtual environment
 
 Note:
+- PyPI/TestPyPI publication is now wired via GitHub OIDC Trusted Publishing,
+  not long-lived API tokens.
+- The published Python distribution name is `tpn-perfecthash`; the import
+  package remains `perfecthash`.
+- Only bundled wheels are uploaded to PyPI/TestPyPI for now.
+- The current sdist is still attached to GitHub releases, but it is not
+  published to PyPI because it does not yet build or bundle the native runtime
+  by itself.
 - Upload to `anaconda.org` via `ANACONDA_API_TOKEN` remains optional and is not
   part of conda-forge publishing.
 - CI upload defaults to `--user perfecthash --label main --skip-existing`.
 - Override upload user by setting GitHub Actions variable `ANACONDA_UPLOAD_USER`.
+
+## PyPI / TestPyPI Trusted Publishing
+
+The release workflow now has two Python publication jobs:
+
+1. `publish-testpypi`
+2. `publish-pypi`
+
+Behavior:
+
+- `publish-testpypi` runs for release tags and for manual `workflow_dispatch`
+  runs of the `full` profile.
+- Manual `workflow_dispatch` TestPyPI runs should provide an explicit unique
+  release version input.
+- `publish-pypi` runs only for release tags, and only after `publish-testpypi`
+  succeeds.
+- Both jobs publish bundled wheels only.
+- `publish-pypi` uses the GitHub `pypi` environment; require manual approval on
+  that environment.
+- `publish-testpypi` uses the GitHub `testpypi` environment; manual approval is
+  usually unnecessary there.
+
+One-time maintainer setup:
+
+1. Create a TestPyPI account if you do not already have one.
+2. In GitHub repository settings, create environments named `testpypi` and
+   `pypi`.
+3. Add protection rules to `pypi` that require manual approval by trusted
+   maintainers.
+4. On PyPI, configure the trusted publisher for:
+   - owner: `tpn`
+   - repository: `perfecthash`
+   - workflow file: `.github/workflows/release.yml`
+   - environment: `pypi`
+5. On TestPyPI, configure the trusted publisher for:
+   - owner: `tpn`
+   - repository: `perfecthash`
+   - workflow file: `.github/workflows/release.yml`
+   - environment: `testpypi`
+
+Notes:
+
+- PyPI and TestPyPI are separate services; a PyPI account/project does not
+  automatically exist on TestPyPI.
+- Use `tpn-perfecthash` on both services for the published project name.
+- If you want TestPyPI to create the project on first publish, use a pending
+  publisher there.
+- No `PYPI_TOKEN` or `TEST_PYPI_TOKEN` secret is required with this setup.
 
 ## Conda-forge Automation Model
 Target recurring flow:

@@ -66,8 +66,12 @@
   - license consistency,
   - versioning strategy tied to release tags,
   - long description/readme sanity.
-- [ ] Configure PyPI Trusted Publishing via GitHub OIDC.
-- [ ] Add publish workflow gated on release tags.
+- [~] Configure PyPI Trusted Publishing via GitHub OIDC.
+  - Completed in-repo: `release.yml` now has OIDC-based `publish-testpypi` and
+    `publish-pypi` jobs.
+  - Remaining: register the trusted publishers on PyPI/TestPyPI and create the
+    matching GitHub environments.
+- [x] Add publish workflow gated on release tags.
 - [ ] Decide wheel strategy for native runtime/profile distribution:
   - Python-only first, native wheels second; or
   - native wheels from day one via `cibuildwheel`.

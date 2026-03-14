@@ -8,7 +8,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "perfecthash"
+name = "tpn-perfecthash"
 version = "0.1.0"
 description = "Perfect hash table tooling and analysis."
 readme = "README.md"

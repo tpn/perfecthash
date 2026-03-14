@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "perfecthash"
+name = "tpn-perfecthash"
 dynamic = ["version"]
 description = "Python CLI and API scaffolding for PerfectHash."
 readme = "README-python.md"

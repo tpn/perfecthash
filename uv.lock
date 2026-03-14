@@ -779,71 +779,6 @@ wheels = [
 ]
 
 [[package]]
-name = "perfecthash"
-source = { editable = "." }
-dependencies = [
-    { name = "pydantic" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-analysis = [
-    { name = "bokeh" },
-    { name = "joypy" },
-    { name = "matplotlib" },
-    { name = "pyarrow" },
-    { name = "scipy" },
-    { name = "seaborn" },
-]
-dev = [
-    { name = "black" },
-    { name = "build" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "black" },
-    { name = "build" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "black", marker = "extra == 'dev'", specifier = ">=24.10" },
-    { name = "bokeh", marker = "extra == 'analysis'", specifier = ">=3.0" },
-    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
-    { name = "joypy", marker = "extra == 'analysis'", specifier = ">=0.2" },
-    { name = "matplotlib", marker = "extra == 'analysis'", specifier = ">=3.9" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
-    { name = "pyarrow", marker = "extra == 'analysis'", specifier = ">=19.0" },
-    { name = "pydantic", specifier = ">=2.11" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11" },
-    { name = "scipy", marker = "extra == 'analysis'", specifier = ">=1.15" },
-    { name = "seaborn", marker = "extra == 'analysis'", specifier = ">=0.13" },
-    { name = "typer", specifier = ">=0.16" },
-]
-provides-extras = ["analysis", "dev"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "black", specifier = ">=24.10" },
-    { name = "build", specifier = ">=1.2" },
-    { name = "mypy", specifier = ">=1.15" },
-    { name = "pre-commit", specifier = ">=4.0" },
-    { name = "pytest", specifier = ">=8.3" },
-    { name = "ruff", specifier = ">=0.11" },
-]
-
-[[package]]
 name = "pillow"
 version = "12.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1364,6 +1299,71 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/76/4921c00511f88af86a33de770d64141170f1cfd9c00311aea689949e274e/tornado-6.5.5-cp39-abi3-win32.whl", hash = "sha256:dd3eafaaeec1c7f2f8fdcd5f964e8907ad788fe8a5a32c4426fbbdda621223b7", size = 448582, upload-time = "2026-03-10T21:30:57.142Z" },
     { url = "https://files.pythonhosted.org/packages/2c/23/f6c6112a04d28eed765e374435fb1a9198f73e1ec4b4024184f21faeb1ad/tornado-6.5.5-cp39-abi3-win_amd64.whl", hash = "sha256:6443a794ba961a9f619b1ae926a2e900ac20c34483eea67be4ed8f1e58d3ef7b", size = 448990, upload-time = "2026-03-10T21:30:58.857Z" },
     { url = "https://files.pythonhosted.org/packages/b7/c8/876602cbc96469911f0939f703453c1157b0c826ecb05bdd32e023397d4e/tornado-6.5.5-cp39-abi3-win_arm64.whl", hash = "sha256:2c9a876e094109333f888539ddb2de4361743e5d21eece20688e3e351e4990a6", size = 448016, upload-time = "2026-03-10T21:31:00.43Z" },
+]
+
+[[package]]
+name = "tpn-perfecthash"
+source = { editable = "." }
+dependencies = [
+    { name = "pydantic" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+analysis = [
+    { name = "bokeh" },
+    { name = "joypy" },
+    { name = "matplotlib" },
+    { name = "pyarrow" },
+    { name = "scipy" },
+    { name = "seaborn" },
+]
+dev = [
+    { name = "black" },
+    { name = "build" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+    { name = "build" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "black", marker = "extra == 'dev'", specifier = ">=24.10" },
+    { name = "bokeh", marker = "extra == 'analysis'", specifier = ">=3.0" },
+    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
+    { name = "joypy", marker = "extra == 'analysis'", specifier = ">=0.2" },
+    { name = "matplotlib", marker = "extra == 'analysis'", specifier = ">=3.9" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
+    { name = "pyarrow", marker = "extra == 'analysis'", specifier = ">=19.0" },
+    { name = "pydantic", specifier = ">=2.11" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.11" },
+    { name = "scipy", marker = "extra == 'analysis'", specifier = ">=1.15" },
+    { name = "seaborn", marker = "extra == 'analysis'", specifier = ">=0.13" },
+    { name = "typer", specifier = ">=0.16" },
+]
+provides-extras = ["analysis", "dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "black", specifier = ">=24.10" },
+    { name = "build", specifier = ">=1.2" },
+    { name = "mypy", specifier = ">=1.15" },
+    { name = "pre-commit", specifier = ">=4.0" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "ruff", specifier = ">=0.11" },
 ]
 
 [[package]]

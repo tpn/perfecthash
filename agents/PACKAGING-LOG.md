@@ -94,3 +94,25 @@
   - remote smoke install from `-c perfecthash -c conda-forge perfecthash` passed with the new include layout.
 - Current residual packaging caveat:
   - profile outputs are now solver-mutually-exclusive, but conda-build still warns about overlapping installed files because the variants intentionally ship different contents at the same paths.
+
+## 2026-03-13
+- Added PyPI/TestPyPI trusted publishing integration to `.github/workflows/release.yml`:
+  - switched workflow default permissions to `contents: read`
+  - scoped GitHub release creation to a dedicated job with `contents: write`
+  - added `publish-testpypi` job using GitHub OIDC + `pypa/gh-action-pypi-publish`
+  - added `publish-pypi` job gated behind successful TestPyPI publication
+  - both publish jobs now collect and validate bundled wheels with `twine check`
+- Chose wheel-only index publication for the first PyPI rollout:
+  - local bundled wheel build succeeded from `build/python-prefix`
+  - local wheel smoke test passed
+  - local `twine check` passed for both wheel and sdist metadata
+  - local install from the current sdist built a pure wheel without native artifacts
+  - runtime smoke from that sdist install failed with `OnlineLibraryNotFoundError`
+- Updated packaging/release docs:
+  - documented one-time GitHub environment + PyPI/TestPyPI trusted publisher setup
+  - documented that PyPI/TestPyPI publication currently excludes the sdist
+- Renamed the published Python distribution to `tpn-perfecthash` after PyPI
+  name reservation rejected `perfecthash` on the real index:
+  - kept the import package as `perfecthash`
+  - updated wheel artifact detection and runtime metadata lookup
+  - updated conda recipe `dist-info` capture globs to the normalized wheel name

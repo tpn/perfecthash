@@ -15,7 +15,10 @@
 3. GitHub `release.yml` builds Linux/macOS/Windows native artifacts.
 4. For the `full` profile, the workflow also builds bundled standalone Python
    wheels per platform plus a source distribution.
-4. Workflow publishes GitHub release assets and generated release notes.
+5. Workflow publishes bundled Python wheels to TestPyPI.
+6. Workflow publishes bundled Python wheels to PyPI after `pypi` environment
+   approval.
+7. Workflow publishes GitHub release assets and generated release notes.
 
 ## Versioning Model
 
@@ -56,8 +59,12 @@ Artifacts include profile in names (for example,
 
 Python packaging currently targets the `full` profile only:
 
+- published distribution name: `tpn-perfecthash`
+- import package / CLI module name: `perfecthash`
 - standalone release wheels bundle native assets under `perfecthash/_native/`
 - slim native profiles do not currently produce Python wheels
+- PyPI/TestPyPI publication is wheel-only for now; the sdist remains a GitHub
+  release asset until source builds can produce a working native runtime
 
 ## Release Notes Strategy
 
@@ -101,11 +108,20 @@ Python packaging currently targets the `full` profile only:
 
 See `docs/packaging.md` for the operational checklist and maintainer actions.
 
+## PyPI / TestPyPI Strategy
+
+1. Use Trusted Publishing via GitHub OIDC; do not add long-lived API tokens.
+2. Publish to TestPyPI first from the same `release.yml` workflow.
+3. Gate real PyPI publication behind the GitHub `pypi` environment.
+4. Publish only bundled wheels until the sdist can build/package native
+   artifacts on its own.
+
 ## Operational Notes
 
 - Keep release scripts dry-run-friendly for local validation.
 - Prefer workflow dispatch for pre-release profile smoke tests.
 - Treat the Python wheel/sdist path as part of release validation, not as a
   post-release follow-up.
+- Treat TestPyPI as the pre-PyPI release gate for Python artifacts.
 - Keep `agents/RELEASE-ENGINEERING-TODO.md` and
   `agents/RELEASE-ENGINEERING-LOG.md` in sync with progress.
