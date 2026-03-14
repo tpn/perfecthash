@@ -29,6 +29,7 @@ output
 ctags.exe
 build
 build-*
+!scripts/build-python-release.py
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
@@ -43,6 +44,7 @@ keys/*.keys*
 *TableSize
 examples/sqlite-online-jit/results/
 conda/out/
+conda/out-*/
 .envrc
 .venv/
 .perfecthash-prefix/

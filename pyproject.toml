@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "perfecthash"
-version = "0.1.0a0"
+dynamic = ["version"]
 description = "Python CLI and API scaffolding for PerfectHash."
 readme = "README-python.md"
 requires-python = ">=3.12"
@@ -20,6 +20,24 @@ dependencies = [
 [project.scripts]
 ph = "perfecthash.cli:main"
 
+[project.optional-dependencies]
+analysis = [
+  "bokeh>=3.0",
+  "joypy>=0.2",
+  "matplotlib>=3.9",
+  "pyarrow>=19.0",
+  "scipy>=1.15",
+  "seaborn>=0.13",
+]
+dev = [
+  "black>=24.10",
+  "build>=1.2",
+  "mypy>=1.15",
+  "pre-commit>=4.0",
+  "pytest>=8.3",
+  "ruff>=0.11",
+]
+
 [dependency-groups]
 dev = [
   "black>=24.10",
@@ -33,9 +51,17 @@ dev = [
 [tool.uv]
 default-groups = ["dev"]
 
+[tool.hatch.version]
+source = "code"
+path = "python_src/perfecthash/_version.py"
+expression = "resolve_build_version()"
+
+[tool.hatch.build.hooks.custom]
+
 [tool.hatch.build.targets.sdist]
 include = [
   "/.pre-commit-config.yaml",
+  "/hatch_build.py",
   "/LICENSE",
   "/README-python.md",
   "/pyproject.toml",

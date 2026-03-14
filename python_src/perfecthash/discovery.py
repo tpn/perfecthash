@@ -76,6 +76,8 @@ def installed_binary_dirs() -> tuple[Path, ...]:
 
 def installed_library_dirs() -> tuple[Path, ...]:
     candidates = [package_native_root() / "lib"]
+    if sys.platform == "win32":
+        candidates.append(package_native_root() / "bin")
 
     for prefix in install_prefixes():
         if sys.platform == "win32":

@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from .c_argv import render_bulk_create_c_argv, render_create_c_argv
-from .discovery import installed_binary_dirs, source_checkout_root
+from .discovery import installed_binary_dirs, installed_library_dirs, source_checkout_root
 from .models import BulkCreateRequest, CreateRequest
 
 
@@ -122,13 +122,39 @@ def format_command(argv: list[str]) -> str:
     return " ".join(shlex.quote(part) for part in argv)
 
 
+def _augment_subprocess_env() -> dict[str, str]:
+    env = os.environ.copy()
+    library_dirs = [str(path) for path in installed_library_dirs() if path.is_dir()]
+    if not library_dirs:
+        return env
+
+    if sys.platform == "win32":
+        separator = os.pathsep
+        existing_path = env.get("PATH", "")
+        env["PATH"] = separator.join(
+            [*library_dirs, *([existing_path] if existing_path else [])]
+        )
+        return env
+
+    if sys.platform == "darwin":
+        env_name = "DYLD_LIBRARY_PATH"
+    else:
+        env_name = "LD_LIBRARY_PATH"
+
+    existing_value = env.get(env_name, "")
+    env[env_name] = os.pathsep.join(
+        [*library_dirs, *([existing_value] if existing_value else [])]
+    )
+    return env
+
+
 def run_create_command(
     request: CreateRequest,
     *,
     create_binary: str | Path | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     argv = render_create_command(request, create_binary=create_binary)
-    return subprocess.run(argv, check=False)
+    return subprocess.run(argv, check=False, env=_augment_subprocess_env())
 
 
 def render_bulk_create_command(
@@ -161,4 +187,4 @@ def run_bulk_create_command(
         request,
         bulk_create_binary=bulk_create_binary,
     )
-    return subprocess.run(argv, check=False)
+    return subprocess.run(argv, check=False, env=_augment_subprocess_env())

@@ -86,9 +86,12 @@ def test_run_create_command_invokes_subprocess(
     )
     recorded: dict[str, object] = {}
 
-    def fake_run(argv: list[str], *, check: bool) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(
+        argv: list[str], *, check: bool, env: dict[str, str]
+    ) -> subprocess.CompletedProcess[bytes]:
         recorded["argv"] = argv
         recorded["check"] = check
+        recorded["env"] = env
         return subprocess.CompletedProcess(args=argv, returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -97,6 +100,7 @@ def test_run_create_command_invokes_subprocess(
 
     assert result.returncode == 0
     assert recorded["check"] is False
+    assert isinstance(recorded["env"], dict)
     assert recorded["argv"] == [
         str(create_binary.resolve()),
         "keys/example.keys",
@@ -173,9 +177,12 @@ def test_run_bulk_create_command_invokes_subprocess(
     )
     recorded: dict[str, object] = {}
 
-    def fake_run(argv: list[str], *, check: bool) -> subprocess.CompletedProcess[bytes]:
+    def fake_run(
+        argv: list[str], *, check: bool, env: dict[str, str]
+    ) -> subprocess.CompletedProcess[bytes]:
         recorded["argv"] = argv
         recorded["check"] = check
+        recorded["env"] = env
         return subprocess.CompletedProcess(args=argv, returncode=0)
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -187,6 +194,7 @@ def test_run_bulk_create_command_invokes_subprocess(
 
     assert result.returncode == 0
     assert recorded["check"] is False
+    assert isinstance(recorded["env"], dict)
     assert recorded["argv"] == [
         str(bulk_create_binary.resolve()),
         "keys",

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import perfecthash
 from perfecthash.cli import app, main
 from perfecthash.models import BulkCreateRequest, CreateRequest
 
@@ -26,7 +27,7 @@ def test_module_version_output() -> None:
     )
 
     assert result.returncode == 0
-    assert result.stdout.strip() == "ph 0.1.0a0"
+    assert result.stdout.strip() == f"ph {perfecthash.__version__}"
 
 
 def test_create_help_includes_curated_hash_functions() -> None:

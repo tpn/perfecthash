@@ -1,7 +1,6 @@
 # PerfectHash Python
 
-This worktree hosts the fresh Python extraction/bootstrap effort for
-PerfectHash.
+This is the supported Python package for PerfectHash.
 
 The current goal is to build a modern, testable Python package and migrate
 useful legacy functionality over in small, verifiable slices.
@@ -75,6 +74,17 @@ Discovery now prefers installation-oriented locations first:
 For now, you may still need to pass `--create-binary` or set
 `PERFECTHASH_CREATE_BINARY`, but the package no longer assumes a source-tree
 build first.
+
+## Packaging
+
+The current packaging split is:
+
+- standalone release wheels bundle native assets under `perfecthash/_native/`
+- conda installs the Python package unbundled and relies on the matching native
+  `perfecthash-full` package in the same prefix
+
+Python package versions are resolved from the same release/tag inputs as the
+native build so tagged releases ship matching native and Python versions.
 
 ## Programmatic API
 
