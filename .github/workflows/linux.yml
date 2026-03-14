@@ -113,3 +113,28 @@ jobs:
           micromamba run -n "${{ matrix.env_name }}" \
             "${{ matrix.build_dir }}/examples/sqlite-online-jit/sqlite-online-jit" \
             --matrix --dim-size 512 --fact-size 4096 --iterations 1
+
+      - name: Install Python package test prefix
+        if: matrix.name == 'linux-x86_64-py313'
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" cmake \
+            --install "${{ matrix.build_dir }}" \
+            --config Release \
+            --prefix "${GITHUB_WORKSPACE}/${{ matrix.build_dir }}/python-prefix"
+
+      - name: Python Packaging And Runtime Checks
+        if: matrix.name == 'linux-x86_64-py313'
+        shell: bash -l {0}
+        run: |
+          release_version="$(git describe --tags --abbrev=0 --match 'v[0-9]*' | sed 's/^v//')"
+          prefix="${GITHUB_WORKSPACE}/${{ matrix.build_dir }}/python-prefix"
+          export PERFECTHASH_PREFIX="${prefix}"
+          micromamba run -n "${{ matrix.env_name }}" python -m pip install '.[dev]'
+          micromamba run -n "${{ matrix.env_name }}" env -u PYTHONPATH pytest -q python_tests
+          micromamba run -n "${{ matrix.env_name }}" python -m pip install build
+          micromamba run -n "${{ matrix.env_name }}" env -u PYTHONPATH python scripts/build-python-release.py \
+            --version "${release_version}" \
+            --native-root "${prefix}" \
+            --dist-dir "${GITHUB_WORKSPACE}/${{ matrix.build_dir }}/python-dist" \
+            --smoke-test-wheel

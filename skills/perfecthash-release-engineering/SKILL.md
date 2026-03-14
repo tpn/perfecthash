@@ -42,6 +42,7 @@ ci/cut-release.sh --version X.Y.Z --push
 ```
 
 5. After tag push, rely on `.github/workflows/release.yml` for the cross-platform build and GitHub release publication.
+   - For the `full` profile, this now includes bundled standalone Python wheels.
 6. Record significant release-engineering changes in `agents/RELEASE-ENGINEERING-LOG.md` and keep `agents/RELEASE-ENGINEERING-TODO.md` synchronized.
 
 ## Guardrails
@@ -73,6 +74,17 @@ If release docs changed, re-read:
 - `docs/release-process.md`
 - `ci/README.md`
 - `RELEASE-NOTES.md`
+
+If Python release packaging changed, also validate:
+
+```bash
+env -u PYTHONPATH uv build --out-dir build/python-dist-check
+python scripts/build-python-release.py \
+  --version X.Y.Z \
+  --native-root build/python-prefix \
+  --dist-dir build/python-dist-bundled \
+  --smoke-test-wheel
+```
 
 ## Documentation Rules
 

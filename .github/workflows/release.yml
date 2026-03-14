@@ -63,6 +63,31 @@ jobs:
         run: |
           micromamba run -n "${{ matrix.env_name }}" ci/release-linux.sh --profile "${{ env.RELEASE_PROFILE }}" --clean
 
+      - name: Install Python build tooling
+        if: env.RELEASE_PROFILE == 'full'
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" python -m pip install build
+
+      - name: Build bundled Python wheel
+        if: env.RELEASE_PROFILE == 'full'
+        shell: bash -l {0}
+        run: |
+          release_version="${RELEASE_VERSION#v}"
+          platform="linux-${{ matrix.arch }}"
+          native_root="${GITHUB_WORKSPACE}/out/release/${release_version}/${RELEASE_PROFILE}/${platform}/install"
+          dist_dir="${GITHUB_WORKSPACE}/out/release/${release_version}/${RELEASE_PROFILE}/${platform}/dist"
+          args=(
+            --version "${release_version}"
+            --native-root "${native_root}"
+            --dist-dir "${dist_dir}"
+            --smoke-test-wheel
+          )
+          if [ "${{ matrix.arch }}" = "x86_64" ]; then
+            args+=(--build-sdist)
+          fi
+          micromamba run -n "${{ matrix.env_name }}" python scripts/build-python-release.py "${args[@]}"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -107,6 +132,26 @@ jobs:
         run: |
           micromamba run -n "${{ matrix.env_name }}" ci/release-macos.sh --profile "${{ env.RELEASE_PROFILE }}" --arch "${{ matrix.arch }}" --clean
 
+      - name: Install Python build tooling
+        if: env.RELEASE_PROFILE == 'full'
+        shell: bash -l {0}
+        run: |
+          micromamba run -n "${{ matrix.env_name }}" python -m pip install build
+
+      - name: Build bundled Python wheel
+        if: env.RELEASE_PROFILE == 'full'
+        shell: bash -l {0}
+        run: |
+          release_version="${RELEASE_VERSION#v}"
+          platform="macos-${{ matrix.arch }}"
+          native_root="${GITHUB_WORKSPACE}/out/release/${release_version}/${RELEASE_PROFILE}/${platform}/install"
+          dist_dir="${GITHUB_WORKSPACE}/out/release/${release_version}/${RELEASE_PROFILE}/${platform}/dist"
+          micromamba run -n "${{ matrix.env_name }}" python scripts/build-python-release.py \
+            --version "${release_version}" \
+            --native-root "${native_root}" \
+            --dist-dir "${dist_dir}" \
+            --smoke-test-wheel
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -146,6 +191,26 @@ jobs:
         shell: pwsh
         run: |
           pwsh -File ci/release-windows.ps1 -ReleaseVersion $env:RELEASE_VERSION -BuildProfile $env:RELEASE_PROFILE -Clean -SkipTests
+
+      - name: Install Python build tooling
+        if: env.RELEASE_PROFILE == 'full'
+        shell: pwsh
+        run: |
+          python -m pip install build
+
+      - name: Build bundled Python wheel
+        if: env.RELEASE_PROFILE == 'full'
+        shell: pwsh
+        run: |
+          $releaseVersion = $env:RELEASE_VERSION.TrimStart('v')
+          $platform = 'windows-x86_64'
+          $nativeRoot = Join-Path $env:GITHUB_WORKSPACE "out/release/$releaseVersion/$env:RELEASE_PROFILE/$platform/install"
+          $distDir = Join-Path $env:GITHUB_WORKSPACE "out/release/$releaseVersion/$env:RELEASE_PROFILE/$platform/dist"
+          python scripts/build-python-release.py `
+            --version $releaseVersion `
+            --native-root $nativeRoot `
+            --dist-dir $distDir `
+            --smoke-test-wheel
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
