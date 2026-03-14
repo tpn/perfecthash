@@ -53,7 +53,7 @@ default-groups = ["dev"]
 
 [tool.hatch.version]
 source = "code"
-path = "python_src/perfecthash/_version.py"
+path = "python/perfecthash/_version.py"
 expression = "resolve_build_version()"
 
 [tool.hatch.build.hooks.custom]
@@ -65,12 +65,12 @@ include = [
   "/LICENSE",
   "/README-python.md",
   "/pyproject.toml",
-  "/python_src/perfecthash",
+  "/python/perfecthash",
   "/python_tests",
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["python_src/perfecthash"]
+packages = ["python/perfecthash"]
 
 [tool.black]
 line-length = 88
@@ -78,7 +78,7 @@ target-version = ["py312"]
 
 [tool.ruff]
 line-length = 88
-src = ["python_src", "python_tests"]
+src = ["python", "python_tests"]
 target-version = "py312"
 
 [tool.ruff.lint]
@@ -92,7 +92,7 @@ addopts = "-ra"
 testpaths = ["python_tests"]
 
 [tool.mypy]
-files = ["python_src", "python_tests"]
+files = ["python", "python_tests"]
 python_version = "3.12"
 strict = true
 warn_unused_configs = true

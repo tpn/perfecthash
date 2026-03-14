@@ -31,7 +31,7 @@ def _source_checkout_root() -> Path | None:
 
     for candidate in module_path.parents:
         pyproject = candidate / "pyproject.toml"
-        package_dir = candidate / "python_src" / "perfecthash"
+        package_dir = candidate / "python" / "perfecthash"
         if pyproject.is_file() and package_dir.is_dir():
             return candidate
 

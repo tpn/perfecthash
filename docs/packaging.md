@@ -5,7 +5,7 @@
 - Multi-output conda recipe under `conda/recipe/`.
 - `perfecthash` defaults to full package behavior via dependency on
   `perfecthash-full` and `perfecthash-python`.
-- Root Python packaging lives at repo root (`pyproject.toml` + `python_src/`).
+- Root Python packaging lives at repo root (`pyproject.toml` + `python/`).
 
 ## Conda Package Outputs
 - `perfecthash` (meta package, depends on `perfecthash-full` and `perfecthash-python`)
@@ -30,7 +30,7 @@ All profile outputs are currently Linux-only.
   bundling native artifacts, and depends on the matching `perfecthash-full`
   native package.
 - Packaging-related PR validation now tracks root Python packaging files
-  (`pyproject.toml`, `python_src/**`, `hatch_build.py`) in addition to native
+  (`pyproject.toml`, `python/**`, `hatch_build.py`) in addition to native
   recipe inputs.
 
 ## GitHub Release Python Assets

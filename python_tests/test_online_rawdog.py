@@ -18,10 +18,10 @@ pytestmark = pytest.mark.skipif(
 def test_candidate_roots_include_repo_root() -> None:
     roots = _candidate_roots()
 
-    expected_root = Path(__file__).resolve().parents[1]
+    expected_root = Path(__file__).resolve().parents[2]
     assert roots[0] == expected_root
     assert (roots[0] / "pyproject.toml").is_file()
-    assert (roots[0] / "python_src" / "perfecthash").is_dir()
+    assert (roots[0] / "python" / "perfecthash").is_dir()
 
 
 def test_build_rawdog_table_indexes_small_sorted_key_set() -> None:

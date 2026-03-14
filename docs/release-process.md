@@ -39,7 +39,7 @@
   3. `PERFECTHASH_CONDA_VERSION`
   4. exact git tag on `HEAD`
   5. latest reachable `v*` tag
-  6. fallback value in `python_src/perfecthash/_version.py`
+  6. fallback value in `python/perfecthash/_version.py`
 - Tagged release wheels and sdists must report the same release version as the
   native artifacts.
 
