@@ -12,16 +12,27 @@
 ## Unreleased
 
 ### Added
-- No new additions yet.
+- Release automation now builds bundled standalone Python wheels for the `full`
+  profile and a matching source distribution on Linux x86_64.
+- Conda packaging now includes a `perfecthash-python` output, and the top-level
+  `perfecthash` package now installs both the native full profile and the
+  Python package.
 
 ### Changed
-- No changes yet.
+- The supported Python package now resolves its version from the same tag/CI
+  inputs as the native release path instead of using a hard-coded pre-release
+  version string.
+- Linux branch CI now validates the root Python package, bundled-wheel build,
+  and runtime smoke path on the `linux-x86_64-py313` leg.
 
 ### Fixed
 - Tag-triggered conda publication now expands the built package artifact list before invoking the Anaconda CLI, avoiding literal `**` glob failures in GitHub Actions.
+- Standalone bundled Python wheels now report the installed package version
+  correctly outside a git checkout by preferring wheel metadata at runtime.
 
 ### Docs
-- No documentation-only updates yet.
+- Release, packaging, CI, and Python docs now describe the root Python package,
+  bundled-wheel release assets, and the legacy status of `python/`.
 
 ## v0.72.2 - 2026-03-08
 

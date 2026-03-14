@@ -208,6 +208,9 @@ mamba activate dev-linux-arm64_os-linux_arch-aarch64_py-313_cuda-none_compiler-l
 
 Generated environment files live under `conda/environments/` and are produced
 from `dependencies.yaml` using `rapids-dependency-file-generator`.
+Python package metadata is maintained separately in the repo-root
+`pyproject.toml`; `dependencies.yaml` is no longer used to generate the legacy
+`python/` package metadata.
 
 If you need a different Python version, pick the matching `py-314` environment
 file from `conda/environments/`.  You can also create a minimal dev/test

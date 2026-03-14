@@ -3,11 +3,14 @@
 ## Current Scope
 - Linux-first packaging implementation.
 - Multi-output conda recipe under `conda/recipe/`.
-- `perfecthash` defaults to full package behavior via dependency on `perfecthash-full`.
+- `perfecthash` defaults to full package behavior via dependency on
+  `perfecthash-full` and `perfecthash-python`.
+- Root Python packaging lives at repo root (`pyproject.toml` + `python_src/`).
 
 ## Conda Package Outputs
-- `perfecthash` (meta package, depends on `perfecthash-full`)
+- `perfecthash` (meta package, depends on `perfecthash-full` and `perfecthash-python`)
 - `perfecthash-full`
+- `perfecthash-python`
 - `perfecthash-online-rawdog-jit`
 - `perfecthash-online-rawdog-and-llvm-jit`
 - `perfecthash-online-llvm-jit`
@@ -23,6 +26,22 @@ All profile outputs are currently Linux-only.
 - The conda workflow builds Linux multi-output packages and uploads artifacts.
 - On tag builds, the workflow resolves GitHub release source tarball URL +
   SHA256 and builds from that archive (feedstock-style source validation).
+- The Python conda output installs the root Python package via `pip` without
+  bundling native artifacts, and depends on the matching `perfecthash-full`
+  native package.
+- Packaging-related PR validation now tracks root Python packaging files
+  (`pyproject.toml`, `python_src/**`, `hatch_build.py`) in addition to native
+  recipe inputs.
+
+## GitHub Release Python Assets
+- `release.yml` builds bundled standalone Python wheels for the `full` profile
+  on each release platform.
+- Linux x86_64 also emits a source distribution.
+- Bundled wheels stage native assets under `perfecthash/_native/`.
+- Wheel smoke tests currently verify:
+  - `ph --version`
+  - `ph create --dry-run`
+  - `build_table()` from a clean virtual environment
 
 Note:
 - Upload to `anaconda.org` via `ANACONDA_API_TOKEN` remains optional and is not

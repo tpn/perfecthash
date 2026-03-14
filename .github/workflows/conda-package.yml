@@ -16,6 +16,11 @@ on:
       - CMakeLists.txt
       - cmake/**
       - src/**
+      - pyproject.toml
+      - hatch_build.py
+      - python_src/**
+      - python_tests/**
+      - scripts/build-python-release.py
 
 permissions:
   contents: read

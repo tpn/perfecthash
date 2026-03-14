@@ -16,7 +16,7 @@ Use this skill for the full PerfectHash conda lifecycle:
 
 Current repository assumptions:
 - packaging is Linux-first
-- `perfecthash` is a meta package that depends on `perfecthash-full`
+- `perfecthash` is a meta package that depends on `perfecthash-full` and `perfecthash-python`
 - upload credentials come from `ANACONDA_API_TOKEN`
 - default upload target comes from `ANACONDA_UPLOAD_USER` and currently defaults to `perfecthash`
 
@@ -76,8 +76,9 @@ What the script does:
 
 When changing `conda/recipe/meta.yaml`:
 - keep the multi-output package names stable unless the user explicitly wants a package rename
-- keep `perfecthash` as the meta package and `perfecthash-full` as the default dependency unless the user explicitly changes policy
+- keep `perfecthash` as the meta package and `perfecthash-full` + `perfecthash-python` as the default dependency set unless the user explicitly changes policy
 - keep LLVM requirements restricted to LLVM-backed outputs
+- keep the Python output unbundled for conda and let it depend on the matching native package output
 - remember that local tree builds may use `source.path`, while tag-triggered CI builds use release tarball URL + SHA256
 
 When changing `.github/workflows/conda-package.yml`:

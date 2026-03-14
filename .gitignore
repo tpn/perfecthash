@@ -30,6 +30,7 @@ ctags.exe
 build
 build-*
 !scripts/build-python-release.py
+!conda/recipe/build-python.sh
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
