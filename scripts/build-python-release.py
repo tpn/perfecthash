@@ -111,10 +111,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     root_dir = Path(__file__).resolve().parents[1]
+    version = args.version.strip().removeprefix("v")
+    if not version:
+        raise SystemExit("error: --version must not be empty")
     dist_dir = args.dist_dir.resolve()
     dist_dir.mkdir(parents=True, exist_ok=True)
 
-    env = build_env(version=args.version, native_root=args.native_root)
+    env = build_env(version=version, native_root=args.native_root)
 
     run(
         [
@@ -141,11 +144,11 @@ def main() -> int:
             env=env,
         )
 
-    wheel = find_built_artifact(dist_dir, ".whl", args.version)
+    wheel = find_built_artifact(dist_dir, ".whl", version)
     print(f"Built wheel: {wheel}")
 
     if args.smoke_test_wheel:
-        smoke_test_wheel(wheel=wheel, version=args.version, root_dir=root_dir)
+        smoke_test_wheel(wheel=wheel, version=version, root_dir=root_dir)
 
     return 0
 
