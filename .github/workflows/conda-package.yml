@@ -18,8 +18,7 @@ on:
       - src/**
       - pyproject.toml
       - hatch_build.py
-      - python/perfecthash/**
-      - python_tests/**
+      - python/**
       - scripts/build-python-release.py
 
 permissions:

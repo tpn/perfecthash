@@ -132,7 +132,7 @@ jobs:
           prefix="${GITHUB_WORKSPACE}/${{ matrix.build_dir }}/python-prefix"
           export PERFECTHASH_PREFIX="${prefix}"
           micromamba run -n "${{ matrix.env_name }}" python -m pip install '.[dev]'
-          micromamba run -n "${{ matrix.env_name }}" env -u PYTHONPATH pytest -q python_tests
+          micromamba run -n "${{ matrix.env_name }}" env -u PYTHONPATH pytest -q python/tests
           micromamba run -n "${{ matrix.env_name }}" python -m pip install build
           micromamba run -n "${{ matrix.env_name }}" env -u PYTHONPATH python scripts/build-python-release.py \
             --version "${release_version}" \

@@ -154,8 +154,8 @@ Run the baseline checks with:
 
 ```bash
 env -u PYTHONPATH uv run pytest
-env -u PYTHONPATH uv run ruff check python python_tests
-env -u PYTHONPATH uv run black --check python python_tests
+env -u PYTHONPATH uv run ruff check python python/tests
+env -u PYTHONPATH uv run black --check python python/tests
 env -u PYTHONPATH uv run mypy
 ```
 
