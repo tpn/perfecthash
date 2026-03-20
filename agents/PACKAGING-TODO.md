@@ -26,7 +26,9 @@
   - Planned follow-on: macOS, then Windows.
 
 ## Conda-forge Bootstrap (One-Time Human Setup)
-- [ ] Prepare staged-recipes submission for initial package creation.
+- [x] Prepare staged-recipes submission for initial package creation.
+  - Completed: local staged-recipes payload added under `conda/staged-recipes/recipes/perfecthash/`.
+  - Completed: opened staged-recipes PR `conda-forge/staged-recipes#32589`.
 - [ ] Get feedstock created and maintainer access confirmed.
 - [ ] Enable feedstock bot automerge:
   - `bot.automerge: true` in `conda-forge.yml`.
@@ -84,7 +86,7 @@
   - recurring release SLO/expectations,
   - failure playbook.
 - [x] Update `docs/release-process.md` with packaging automation status and trigger mapping.
-- [ ] Keep `agents/PACKAGING-LOG.md` updated for each completed TODO item.
+- [~] Keep `agents/PACKAGING-LOG.md` updated for each completed TODO item.
 
 ## Tracking
 - [~] Keep this TODO synchronized with NOTES/LOG as implementation progresses.

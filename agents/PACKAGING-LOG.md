@@ -95,6 +95,29 @@
 - Current residual packaging caveat:
   - profile outputs are now solver-mutually-exclusive, but conda-build still warns about overlapping installed files because the variants intentionally ship different contents at the same paths.
 
+## 2026-03-20
+- Prepared a staged-recipes-specific snapshot of the current conda recipe under:
+  - `conda/staged-recipes/recipes/perfecthash/meta.yaml`
+  - `conda/staged-recipes/recipes/perfecthash/build.sh`
+  - `conda/staged-recipes/recipes/perfecthash/build-python.sh`
+- Chose `package.name: perfecthash` plus `extra.feedstock-name: perfecthash` for
+  the staged-recipes submission so the resulting feedstock name is unambiguous.
+- Pinned the staged-recipes source tarball to upstream release `v0.73.0` with
+  SHA256:
+  - `dd5045adddb8e0ce1d2fdd13ffa0a10839e435eeb66c0c68c82bef3f4d98d293`
+- Opened conda-forge staged-recipes PR:
+  - `https://github.com/conda-forge/staged-recipes/pull/32589`
+- Added review-team ping comment:
+  - `https://github.com/conda-forge/staged-recipes/pull/32589#issuecomment-4059240693`
+- Addressed initial staged-recipes lint feedback on the PR branch:
+  - added `extra.feedstock-name`
+  - moved package description under `about`
+  - added `{{ stdlib("c") }}` to compiler-using outputs
+  - corrected the Python `dist-info` glob for the renamed PyPI distribution
+    (`tpn-perfecthash`)
+- Current staged-recipes PR status:
+  - open and waiting on conda-forge CI/review
+
 ## 2026-03-13
 - Added PyPI/TestPyPI trusted publishing integration to `.github/workflows/release.yml`:
   - switched workflow default permissions to `contents: read`
