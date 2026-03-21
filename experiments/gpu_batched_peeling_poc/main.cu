@@ -3,18 +3,24 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace {
 
-constexpr uint32_t INVALID_U32 = 0xffffffffu;
+enum class StorageMode {
+    Auto,
+    Bits16,
+    Bits32,
+};
 
 struct Options {
     uint32_t Edges = 2048;
@@ -23,13 +29,15 @@ struct Options {
     uint64_t KeySeed = 0x123456789abcdef0ull;
     uint64_t GraphSeed = 0x0f1e2d3c4b5a6978ull;
     std::string KeysFile;
+    StorageMode Storage = StorageMode::Auto;
     bool Verbose = false;
 };
 
-struct FrontierItem {
+template<typename StorageT>
+struct FrontierItemT {
     uint32_t Graph;
-    uint32_t Vertex;
-    uint32_t Edge;
+    StorageT Vertex;
+    StorageT Edge;
 };
 
 struct CpuResult {
@@ -38,6 +46,28 @@ struct CpuResult {
     bool Invalid = false;
     uint32_t Peeled = 0;
 };
+
+struct ExperimentResult {
+    uint32_t KeyCount = 0;
+    uint32_t EdgeCapacity = 0;
+    uint32_t Vertices = 0;
+    uint32_t Batch = 0;
+    uint32_t Rounds = 0;
+    uint32_t GpuSuccess = 0;
+    uint32_t CpuSuccess = 0;
+    uint32_t Mismatches = 0;
+    uint32_t CpuVerifyIssues = 0;
+    float GpuMilliseconds = 0.0f;
+    double CpuMilliseconds = 0.0;
+    uint32_t StorageBits = 0;
+};
+
+template<typename T>
+constexpr T
+MaxValue()
+{
+    return std::numeric_limits<T>::max();
+}
 
 inline void
 CheckCuda(cudaError_t Error, const char *Message)
@@ -70,8 +100,22 @@ LoadKeysFromFile(const std::string &Path)
         std::exit(EXIT_FAILURE);
     }
 
-    std::vector<uint64_t> Keys(Raw.begin(), Raw.end());
-    return Keys;
+    return std::vector<uint64_t>(Raw.begin(), Raw.end());
+}
+
+const char *
+StorageModeToString(StorageMode Mode)
+{
+    switch (Mode) {
+        case StorageMode::Auto:
+            return "auto";
+        case StorageMode::Bits16:
+            return "16";
+        case StorageMode::Bits32:
+            return "32";
+        default:
+            return "unknown";
+    }
 }
 
 Options
@@ -102,18 +146,31 @@ ParseOptions(int argc, char **argv)
             Opts.KeySeed = std::stoull(RequireValue("--key-seed"), nullptr, 0);
         } else if (Arg == "--graph-seed") {
             Opts.GraphSeed = std::stoull(RequireValue("--graph-seed"), nullptr, 0);
+        } else if (Arg == "--storage-bits") {
+            auto Value = RequireValue("--storage-bits");
+            if (Value == "auto") {
+                Opts.Storage = StorageMode::Auto;
+            } else if (Value == "16") {
+                Opts.Storage = StorageMode::Bits16;
+            } else if (Value == "32") {
+                Opts.Storage = StorageMode::Bits32;
+            } else {
+                std::cerr << "Invalid --storage-bits value: " << Value << "\n";
+                std::exit(EXIT_FAILURE);
+            }
         } else if (Arg == "--verbose") {
             Opts.Verbose = true;
         } else if (Arg == "--help" || Arg == "-h") {
             std::cout
                 << "Usage: gpu_batched_peeling_poc [options]\n"
-                << "  --edges <n>       Number of logical keys for generated input\n"
-                << "  --keys-file <p>   Load 32-bit keys from a .keys file\n"
-                << "  --batch <n>       Number of graph attempts in the batch\n"
-                << "  --threads <n>     Threads per block for build/collect/peel kernels\n"
-                << "  --key-seed <x>    Base seed for generated keys\n"
-                << "  --graph-seed <x>  Base seed for per-graph hash seeds\n"
-                << "  --verbose         Print per-graph mismatch details\n";
+                << "  --edges <n>         Number of logical keys for generated input\n"
+                << "  --keys-file <p>     Load 32-bit keys from a .keys file\n"
+                << "  --batch <n>         Number of graph attempts in the batch\n"
+                << "  --threads <n>       Threads per block for build/collect/peel kernels\n"
+                << "  --storage-bits <x>  auto, 16, or 32\n"
+                << "  --key-seed <x>      Base seed for generated keys\n"
+                << "  --graph-seed <x>    Base seed for per-graph hash seeds\n"
+                << "  --verbose           Print per-graph mismatch details\n";
             std::exit(EXIT_SUCCESS);
         } else {
             std::cerr << "Unknown argument: " << Arg << "\n";
@@ -160,6 +217,7 @@ HashVertex(uint64_t Key, uint64_t Seed, uint32_t VertexMask)
     return static_cast<uint32_t>(SplitMix64(Key ^ Seed) & VertexMask);
 }
 
+template<typename StorageT>
 __global__ void
 BuildGraphsKernel(uint32_t Edges,
                   uint32_t Vertices,
@@ -167,8 +225,8 @@ BuildGraphsKernel(uint32_t Edges,
                   const uint64_t *Keys,
                   const uint64_t *Seeds1,
                   const uint64_t *Seeds2,
-                  uint32_t *EdgeU,
-                  uint32_t *EdgeV,
+                  StorageT *EdgeU,
+                  StorageT *EdgeV,
                   uint32_t *Degree,
                   uint32_t *XorEdge,
                   uint32_t *InvalidGraphs)
@@ -187,8 +245,8 @@ BuildGraphsKernel(uint32_t Edges,
         uint32_t U = HashVertex(Key, Seeds1[Graph], VertexMask);
         uint32_t V = HashVertex(Key, Seeds2[Graph], VertexMask);
 
-        EdgeU[EdgeIndex] = U;
-        EdgeV[EdgeIndex] = V;
+        EdgeU[EdgeIndex] = static_cast<StorageT>(U);
+        EdgeV[EdgeIndex] = static_cast<StorageT>(V);
 
         if (U == V) {
             atomicExch(&InvalidGraphs[Graph], 1u);
@@ -205,13 +263,14 @@ BuildGraphsKernel(uint32_t Edges,
     }
 }
 
+template<typename StorageT>
 __global__ void
 CollectFrontierKernel(uint32_t Vertices,
                       uint32_t Batch,
                       const uint32_t *Degree,
                       const uint32_t *XorEdge,
                       const uint32_t *InvalidGraphs,
-                      FrontierItem *Frontier,
+                      FrontierItemT<StorageT> *Frontier,
                       uint32_t *FrontierCount)
 {
     uint64_t Global = blockIdx.x * blockDim.x + threadIdx.x;
@@ -224,68 +283,71 @@ CollectFrontierKernel(uint32_t Vertices,
         if (InvalidGraphs[Graph] == 0 && Degree[Global] == 1) {
             uint32_t Position = atomicAdd(FrontierCount, 1u);
             Frontier[Position].Graph = Graph;
-            Frontier[Position].Vertex = Vertex;
-            Frontier[Position].Edge = XorEdge[Global];
+            Frontier[Position].Vertex = static_cast<StorageT>(Vertex);
+            Frontier[Position].Edge = static_cast<StorageT>(XorEdge[Global]);
         }
 
         Global += blockDim.x * gridDim.x;
     }
 }
 
+template<typename StorageT>
 __global__ void
 PeelFrontierKernel(uint32_t Edges,
                    uint32_t Vertices,
                    uint32_t FrontierCount,
-                   const FrontierItem *Frontier,
-                   const uint32_t *EdgeU,
-                   const uint32_t *EdgeV,
+                   const FrontierItemT<StorageT> *Frontier,
+                   const StorageT *EdgeU,
+                   const StorageT *EdgeV,
                    uint32_t *Degree,
                    uint32_t *XorEdge,
                    uint32_t *EdgePeeled,
-                   uint32_t *OwnerVertex,
-                   uint32_t *PeelOrder,
+                   StorageT *OwnerVertex,
+                   StorageT *PeelOrder,
                    uint32_t *PeeledCount)
 {
     uint64_t Global = blockIdx.x * blockDim.x + threadIdx.x;
 
     while (Global < FrontierCount) {
-        FrontierItem Item = Frontier[Global];
-        uint32_t EdgeIndex = Item.Graph * Edges + Item.Edge;
+        FrontierItemT<StorageT> Item = Frontier[Global];
+        uint32_t Edge = static_cast<uint32_t>(Item.Edge);
+        uint32_t EdgeIndex = Item.Graph * Edges + Edge;
 
         if (atomicCAS(&EdgePeeled[EdgeIndex], 0u, 1u) == 0u) {
             uint32_t Order = atomicAdd(&PeeledCount[Item.Graph], 1u);
             uint32_t VertexBase = Item.Graph * Vertices;
-            uint32_t U = EdgeU[EdgeIndex];
-            uint32_t V = EdgeV[EdgeIndex];
+            uint32_t U = static_cast<uint32_t>(EdgeU[EdgeIndex]);
+            uint32_t V = static_cast<uint32_t>(EdgeV[EdgeIndex]);
 
             OwnerVertex[EdgeIndex] = Item.Vertex;
-            PeelOrder[Item.Graph * Edges + Order] = Item.Edge;
+            PeelOrder[Item.Graph * Edges + Order] = static_cast<StorageT>(Edge);
 
             atomicSub(&Degree[VertexBase + U], 1u);
-            atomicXor(&XorEdge[VertexBase + U], Item.Edge);
+            atomicXor(&XorEdge[VertexBase + U], Edge);
             atomicSub(&Degree[VertexBase + V], 1u);
-            atomicXor(&XorEdge[VertexBase + V], Item.Edge);
+            atomicXor(&XorEdge[VertexBase + V], Edge);
         }
 
         Global += blockDim.x * gridDim.x;
     }
 }
 
+template<typename StorageT>
 __global__ void
 AssignGraphsKernel(uint32_t Edges,
                    uint32_t Vertices,
                    uint32_t EdgeMask,
                    const uint32_t *InvalidGraphs,
-                   const uint32_t *EdgeU,
-                   const uint32_t *EdgeV,
-                   const uint32_t *OwnerVertex,
-                   const uint32_t *PeelOrder,
+                   const StorageT *EdgeU,
+                   const StorageT *EdgeV,
+                   const StorageT *OwnerVertex,
+                   const StorageT *PeelOrder,
                    const uint32_t *PeeledCount,
-                   uint32_t *Assigned)
+                   StorageT *Assigned)
 {
     uint32_t Graph = blockIdx.x;
 
-    if (Graph >= gridDim.x || threadIdx.x != 0) {
+    if (threadIdx.x != 0) {
         return;
     }
 
@@ -297,26 +359,28 @@ AssignGraphsKernel(uint32_t Edges,
     uint32_t EdgeBase = Graph * Edges;
 
     for (int64_t Index = static_cast<int64_t>(Edges) - 1; Index >= 0; --Index) {
-        uint32_t Edge = PeelOrder[EdgeBase + static_cast<uint32_t>(Index)];
-        uint32_t Owner = OwnerVertex[EdgeBase + Edge];
-        uint32_t U = EdgeU[EdgeBase + Edge];
-        uint32_t V = EdgeV[EdgeBase + Edge];
+        uint32_t Edge = static_cast<uint32_t>(PeelOrder[EdgeBase + static_cast<uint32_t>(Index)]);
+        uint32_t Owner = static_cast<uint32_t>(OwnerVertex[EdgeBase + Edge]);
+        uint32_t U = static_cast<uint32_t>(EdgeU[EdgeBase + Edge]);
+        uint32_t V = static_cast<uint32_t>(EdgeV[EdgeBase + Edge]);
         uint32_t Other = (Owner == U) ? V : U;
-        uint32_t OtherAssigned = Assigned[VertexBase + Other];
+        uint32_t OtherAssigned = static_cast<uint32_t>(Assigned[VertexBase + Other]);
+        uint32_t Value = (Edge - OtherAssigned) & EdgeMask;
 
-        Assigned[VertexBase + Owner] = (Edge - OtherAssigned) & EdgeMask;
+        Assigned[VertexBase + Owner] = static_cast<StorageT>(Value);
     }
 }
 
+template<typename StorageT>
 __global__ void
 VerifyGraphsKernel(uint32_t Edges,
                    uint32_t Vertices,
                    uint32_t Batch,
                    uint32_t EdgeMask,
                    const uint32_t *InvalidGraphs,
-                   const uint32_t *EdgeU,
-                   const uint32_t *EdgeV,
-                   const uint32_t *Assigned,
+                   const StorageT *EdgeU,
+                   const StorageT *EdgeV,
+                   const StorageT *Assigned,
                    const uint32_t *PeeledCount,
                    uint32_t *VerifyFailures)
 {
@@ -335,10 +399,12 @@ VerifyGraphsKernel(uint32_t Edges,
 
         uint32_t EdgeBase = Graph * Edges;
         uint32_t VertexBase = Graph * Vertices;
-        uint32_t U = EdgeU[EdgeBase + Edge];
-        uint32_t V = EdgeV[EdgeBase + Edge];
-        uint32_t Index = (Assigned[VertexBase + U] +
-                          Assigned[VertexBase + V]) & EdgeMask;
+        uint32_t U = static_cast<uint32_t>(EdgeU[EdgeBase + Edge]);
+        uint32_t V = static_cast<uint32_t>(EdgeV[EdgeBase + Edge]);
+        uint32_t Index = (
+            static_cast<uint32_t>(Assigned[VertexBase + U]) +
+            static_cast<uint32_t>(Assigned[VertexBase + V])
+        ) & EdgeMask;
 
         if (Index != Edge) {
             atomicAdd(&VerifyFailures[Graph], 1u);
@@ -348,6 +414,7 @@ VerifyGraphsKernel(uint32_t Edges,
     }
 }
 
+template<typename StorageT>
 CpuResult
 RunCpuReference(uint32_t Graph,
                 uint32_t Edges,
@@ -360,11 +427,11 @@ RunCpuReference(uint32_t Graph,
     CpuResult Result;
     std::vector<uint32_t> Degree(Vertices, 0);
     std::vector<uint32_t> XorEdge(Vertices, 0);
-    std::vector<uint32_t> EdgeU(Edges, 0);
-    std::vector<uint32_t> EdgeV(Edges, 0);
-    std::vector<uint32_t> Owner(Edges, INVALID_U32);
-    std::vector<uint32_t> Order;
-    std::vector<uint32_t> Assigned(Vertices, 0);
+    std::vector<StorageT> EdgeU(Edges, 0);
+    std::vector<StorageT> EdgeV(Edges, 0);
+    std::vector<StorageT> Owner(Edges, MaxValue<StorageT>());
+    std::vector<StorageT> Order;
+    std::vector<StorageT> Assigned(Vertices, 0);
     std::vector<uint8_t> Peeled(Edges, 0);
     std::vector<uint32_t> Queue;
 
@@ -375,8 +442,8 @@ RunCpuReference(uint32_t Graph,
         uint32_t U = HashVertex(Keys[Edge], Seeds1[Graph], Vertices - 1);
         uint32_t V = HashVertex(Keys[Edge], Seeds2[Graph], Vertices - 1);
 
-        EdgeU[Edge] = U;
-        EdgeV[Edge] = V;
+        EdgeU[Edge] = static_cast<StorageT>(U);
+        EdgeV[Edge] = static_cast<StorageT>(V);
 
         if (U == V) {
             Result.Invalid = true;
@@ -408,11 +475,11 @@ RunCpuReference(uint32_t Graph,
         }
 
         Peeled[Edge] = 1;
-        Owner[Edge] = Vertex;
-        Order.push_back(Edge);
+        Owner[Edge] = static_cast<StorageT>(Vertex);
+        Order.push_back(static_cast<StorageT>(Edge));
 
-        uint32_t U = EdgeU[Edge];
-        uint32_t V = EdgeV[Edge];
+        uint32_t U = static_cast<uint32_t>(EdgeU[Edge]);
+        uint32_t V = static_cast<uint32_t>(EdgeV[Edge]);
 
         if (Degree[U] > 0) {
             --Degree[U];
@@ -438,18 +505,23 @@ RunCpuReference(uint32_t Graph,
     }
 
     for (int64_t Index = static_cast<int64_t>(Order.size()) - 1; Index >= 0; --Index) {
-        uint32_t Edge = Order[static_cast<size_t>(Index)];
-        uint32_t OwnerVertex = Owner[Edge];
-        uint32_t U = EdgeU[Edge];
-        uint32_t V = EdgeV[Edge];
+        uint32_t Edge = static_cast<uint32_t>(Order[static_cast<size_t>(Index)]);
+        uint32_t OwnerVertex = static_cast<uint32_t>(Owner[Edge]);
+        uint32_t U = static_cast<uint32_t>(EdgeU[Edge]);
+        uint32_t V = static_cast<uint32_t>(EdgeV[Edge]);
         uint32_t Other = (OwnerVertex == U) ? V : U;
-        Assigned[OwnerVertex] = (Edge - Assigned[Other]) & EdgeMask;
+        uint32_t Value = (Edge - static_cast<uint32_t>(Assigned[Other])) & EdgeMask;
+
+        Assigned[OwnerVertex] = static_cast<StorageT>(Value);
     }
 
     Result.Verified = true;
 
     for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
-        uint32_t Index = (Assigned[EdgeU[Edge]] + Assigned[EdgeV[Edge]]) & EdgeMask;
+        uint32_t Index = (
+            static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeU[Edge])]) +
+            static_cast<uint32_t>(Assigned[static_cast<uint32_t>(EdgeV[Edge])])
+        ) & EdgeMask;
         if (Index != Edge) {
             Result.Verified = false;
             break;
@@ -459,38 +531,29 @@ RunCpuReference(uint32_t Graph,
     return Result;
 }
 
-} // namespace
-
-int
-main(int argc, char **argv)
+template<typename StorageT>
+ExperimentResult
+RunExperiment(const Options &Opts,
+              const std::vector<uint64_t> &Keys,
+              const std::vector<uint64_t> &Seeds1,
+              const std::vector<uint64_t> &Seeds2,
+              const std::string &RequestedKeys)
 {
-    Options Opts = ParseOptions(argc, argv);
+    using FrontierItem = FrontierItemT<StorageT>;
+
+    ExperimentResult Result;
 
     uint32_t Batch = Opts.Batch;
-    std::vector<uint64_t> Keys;
-    std::vector<uint64_t> Seeds1(Batch);
-    std::vector<uint64_t> Seeds2(Batch);
-    std::string RequestedKeys = std::to_string(Opts.Edges);
-
-    if (!Opts.KeysFile.empty()) {
-        Keys = LoadKeysFromFile(Opts.KeysFile);
-        RequestedKeys = "<n/a>";
-    } else {
-        Keys.resize(Opts.Edges);
-        for (uint32_t Edge = 0; Edge < Opts.Edges; ++Edge) {
-            Keys[Edge] = SplitMix64(Opts.KeySeed + Edge);
-        }
-    }
-
     uint32_t KeyCount = static_cast<uint32_t>(Keys.size());
     uint32_t EdgeCapacity = NextPowerOfTwo(KeyCount);
     uint32_t Vertices = NextPowerOfTwo(EdgeCapacity + 1);
     uint32_t EdgeMask = EdgeCapacity - 1;
 
-    for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
-        Seeds1[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull));
-        Seeds2[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull) + 1ull);
-    }
+    Result.KeyCount = KeyCount;
+    Result.EdgeCapacity = EdgeCapacity;
+    Result.Vertices = Vertices;
+    Result.Batch = Batch;
+    Result.StorageBits = static_cast<uint32_t>(sizeof(StorageT) * 8);
 
     uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
     uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
@@ -499,16 +562,16 @@ main(int argc, char **argv)
     uint64_t *DKeys = nullptr;
     uint64_t *DSeeds1 = nullptr;
     uint64_t *DSeeds2 = nullptr;
-    uint32_t *DEdgeU = nullptr;
-    uint32_t *DEdgeV = nullptr;
+    StorageT *DEdgeU = nullptr;
+    StorageT *DEdgeV = nullptr;
     uint32_t *DDegree = nullptr;
     uint32_t *DXorEdge = nullptr;
     uint32_t *DInvalidGraphs = nullptr;
     uint32_t *DEdgePeeled = nullptr;
-    uint32_t *DOwnerVertex = nullptr;
-    uint32_t *DPeelOrder = nullptr;
+    StorageT *DOwnerVertex = nullptr;
+    StorageT *DPeelOrder = nullptr;
     uint32_t *DPeeledCount = nullptr;
-    uint32_t *DAssigned = nullptr;
+    StorageT *DAssigned = nullptr;
     uint32_t *DVerifyFailures = nullptr;
     FrontierItem *DFrontier = nullptr;
     uint32_t *DFrontierCount = nullptr;
@@ -516,16 +579,16 @@ main(int argc, char **argv)
     CheckCuda(cudaMalloc(&DKeys, Keys.size() * sizeof(Keys[0])), "cudaMalloc(DKeys)");
     CheckCuda(cudaMalloc(&DSeeds1, Seeds1.size() * sizeof(Seeds1[0])), "cudaMalloc(DSeeds1)");
     CheckCuda(cudaMalloc(&DSeeds2, Seeds2.size() * sizeof(Seeds2[0])), "cudaMalloc(DSeeds2)");
-    CheckCuda(cudaMalloc(&DEdgeU, TotalEdges * sizeof(uint32_t)), "cudaMalloc(DEdgeU)");
-    CheckCuda(cudaMalloc(&DEdgeV, TotalEdges * sizeof(uint32_t)), "cudaMalloc(DEdgeV)");
+    CheckCuda(cudaMalloc(&DEdgeU, TotalEdges * sizeof(StorageT)), "cudaMalloc(DEdgeU)");
+    CheckCuda(cudaMalloc(&DEdgeV, TotalEdges * sizeof(StorageT)), "cudaMalloc(DEdgeV)");
     CheckCuda(cudaMalloc(&DDegree, TotalVertices * sizeof(uint32_t)), "cudaMalloc(DDegree)");
     CheckCuda(cudaMalloc(&DXorEdge, TotalVertices * sizeof(uint32_t)), "cudaMalloc(DXorEdge)");
     CheckCuda(cudaMalloc(&DInvalidGraphs, Batch * sizeof(uint32_t)), "cudaMalloc(DInvalidGraphs)");
     CheckCuda(cudaMalloc(&DEdgePeeled, TotalEdges * sizeof(uint32_t)), "cudaMalloc(DEdgePeeled)");
-    CheckCuda(cudaMalloc(&DOwnerVertex, TotalEdges * sizeof(uint32_t)), "cudaMalloc(DOwnerVertex)");
-    CheckCuda(cudaMalloc(&DPeelOrder, TotalEdges * sizeof(uint32_t)), "cudaMalloc(DPeelOrder)");
+    CheckCuda(cudaMalloc(&DOwnerVertex, TotalEdges * sizeof(StorageT)), "cudaMalloc(DOwnerVertex)");
+    CheckCuda(cudaMalloc(&DPeelOrder, TotalEdges * sizeof(StorageT)), "cudaMalloc(DPeelOrder)");
     CheckCuda(cudaMalloc(&DPeeledCount, Batch * sizeof(uint32_t)), "cudaMalloc(DPeeledCount)");
-    CheckCuda(cudaMalloc(&DAssigned, TotalVertices * sizeof(uint32_t)), "cudaMalloc(DAssigned)");
+    CheckCuda(cudaMalloc(&DAssigned, TotalVertices * sizeof(StorageT)), "cudaMalloc(DAssigned)");
     CheckCuda(cudaMalloc(&DVerifyFailures, Batch * sizeof(uint32_t)), "cudaMalloc(DVerifyFailures)");
     CheckCuda(cudaMalloc(&DFrontier, FrontierCapacity * sizeof(FrontierItem)), "cudaMalloc(DFrontier)");
     CheckCuda(cudaMalloc(&DFrontierCount, sizeof(uint32_t)), "cudaMalloc(DFrontierCount)");
@@ -537,16 +600,16 @@ main(int argc, char **argv)
     CheckCuda(cudaMemcpy(DSeeds2, Seeds2.data(), Seeds2.size() * sizeof(Seeds2[0]), cudaMemcpyHostToDevice),
               "cudaMemcpy(DSeeds2)");
 
-    CheckCuda(cudaMemset(DEdgeU, 0, TotalEdges * sizeof(uint32_t)), "cudaMemset(DEdgeU)");
-    CheckCuda(cudaMemset(DEdgeV, 0, TotalEdges * sizeof(uint32_t)), "cudaMemset(DEdgeV)");
+    CheckCuda(cudaMemset(DEdgeU, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeU)");
+    CheckCuda(cudaMemset(DEdgeV, 0, TotalEdges * sizeof(StorageT)), "cudaMemset(DEdgeV)");
     CheckCuda(cudaMemset(DDegree, 0, TotalVertices * sizeof(uint32_t)), "cudaMemset(DDegree)");
     CheckCuda(cudaMemset(DXorEdge, 0, TotalVertices * sizeof(uint32_t)), "cudaMemset(DXorEdge)");
     CheckCuda(cudaMemset(DInvalidGraphs, 0, Batch * sizeof(uint32_t)), "cudaMemset(DInvalidGraphs)");
     CheckCuda(cudaMemset(DEdgePeeled, 0, TotalEdges * sizeof(uint32_t)), "cudaMemset(DEdgePeeled)");
-    CheckCuda(cudaMemset(DOwnerVertex, 0xff, TotalEdges * sizeof(uint32_t)), "cudaMemset(DOwnerVertex)");
-    CheckCuda(cudaMemset(DPeelOrder, 0xff, TotalEdges * sizeof(uint32_t)), "cudaMemset(DPeelOrder)");
+    CheckCuda(cudaMemset(DOwnerVertex, 0xff, TotalEdges * sizeof(StorageT)), "cudaMemset(DOwnerVertex)");
+    CheckCuda(cudaMemset(DPeelOrder, 0xff, TotalEdges * sizeof(StorageT)), "cudaMemset(DPeelOrder)");
     CheckCuda(cudaMemset(DPeeledCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DPeeledCount)");
-    CheckCuda(cudaMemset(DAssigned, 0, TotalVertices * sizeof(uint32_t)), "cudaMemset(DAssigned)");
+    CheckCuda(cudaMemset(DAssigned, 0, TotalVertices * sizeof(StorageT)), "cudaMemset(DAssigned)");
     CheckCuda(cudaMemset(DVerifyFailures, 0, Batch * sizeof(uint32_t)), "cudaMemset(DVerifyFailures)");
 
     cudaEvent_t Start = nullptr;
@@ -559,32 +622,31 @@ main(int argc, char **argv)
 
     CheckCuda(cudaEventRecord(Start), "cudaEventRecord(Start)");
 
-    BuildGraphsKernel<<<BuildBlocks, Opts.Threads>>>(KeyCount,
-                                                     Vertices,
-                                                     Batch,
-                                                     DKeys,
-                                                     DSeeds1,
-                                                     DSeeds2,
-                                                     DEdgeU,
-                                                     DEdgeV,
-                                                     DDegree,
-                                                     DXorEdge,
-                                                     DInvalidGraphs);
+    BuildGraphsKernel<StorageT><<<BuildBlocks, Opts.Threads>>>(KeyCount,
+                                                               Vertices,
+                                                               Batch,
+                                                               DKeys,
+                                                               DSeeds1,
+                                                               DSeeds2,
+                                                               DEdgeU,
+                                                               DEdgeV,
+                                                               DDegree,
+                                                               DXorEdge,
+                                                               DInvalidGraphs);
     CheckCuda(cudaGetLastError(), "BuildGraphsKernel launch");
 
-    uint32_t Rounds = 0;
     uint32_t FrontierCount = 0;
 
     for (;;) {
         CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
 
-        CollectFrontierKernel<<<VertexBlocks, Opts.Threads>>>(Vertices,
-                                                              Batch,
-                                                              DDegree,
-                                                              DXorEdge,
-                                                              DInvalidGraphs,
-                                                              DFrontier,
-                                                              DFrontierCount);
+        CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
+                                                                        Batch,
+                                                                        DDegree,
+                                                                        DXorEdge,
+                                                                        DInvalidGraphs,
+                                                                        DFrontier,
+                                                                        DFrontierCount);
         CheckCuda(cudaGetLastError(), "CollectFrontierKernel launch");
         CheckCuda(cudaMemcpy(&FrontierCount, DFrontierCount, sizeof(uint32_t), cudaMemcpyDeviceToHost),
                   "cudaMemcpy(FrontierCount)");
@@ -593,54 +655,52 @@ main(int argc, char **argv)
             break;
         }
 
-        ++Rounds;
+        ++Result.Rounds;
 
         uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
-        PeelFrontierKernel<<<PeelBlocks, Opts.Threads>>>(KeyCount,
-                                                         Vertices,
-                                                         FrontierCount,
-                                                         DFrontier,
-                                                         DEdgeU,
-                                                         DEdgeV,
-                                                         DDegree,
-                                                         DXorEdge,
-                                                         DEdgePeeled,
-                                                         DOwnerVertex,
-                                                         DPeelOrder,
-                                                         DPeeledCount);
+        PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
+                                                                   Vertices,
+                                                                   FrontierCount,
+                                                                   DFrontier,
+                                                                   DEdgeU,
+                                                                   DEdgeV,
+                                                                   DDegree,
+                                                                   DXorEdge,
+                                                                   DEdgePeeled,
+                                                                   DOwnerVertex,
+                                                                   DPeelOrder,
+                                                                   DPeeledCount);
         CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
     }
 
-    AssignGraphsKernel<<<Batch, 1>>>(KeyCount,
-                                     Vertices,
-                                     EdgeMask,
-                                     DInvalidGraphs,
-                                     DEdgeU,
-                                     DEdgeV,
-                                     DOwnerVertex,
-                                     DPeelOrder,
-                                     DPeeledCount,
-                                     DAssigned);
+    AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                               Vertices,
+                                               EdgeMask,
+                                               DInvalidGraphs,
+                                               DEdgeU,
+                                               DEdgeV,
+                                               DOwnerVertex,
+                                               DPeelOrder,
+                                               DPeeledCount,
+                                               DAssigned);
     CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
 
-    dim3 VerifyGrid(static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads), Batch);
-    VerifyGraphsKernel<<<VerifyGrid.x, Opts.Threads>>>(KeyCount,
-                                                       Vertices,
-                                                       Batch,
-                                                       EdgeMask,
-                                                       DInvalidGraphs,
-                                                       DEdgeU,
-                                                       DEdgeV,
-                                                       DAssigned,
-                                                       DPeeledCount,
-                                                       DVerifyFailures);
+    uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
+    VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                 Vertices,
+                                                                 Batch,
+                                                                 EdgeMask,
+                                                                 DInvalidGraphs,
+                                                                 DEdgeU,
+                                                                 DEdgeV,
+                                                                 DAssigned,
+                                                                 DPeeledCount,
+                                                                 DVerifyFailures);
     CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
 
     CheckCuda(cudaEventRecord(Stop), "cudaEventRecord(Stop)");
     CheckCuda(cudaEventSynchronize(Stop), "cudaEventSynchronize(Stop)");
-
-    float GpuMilliseconds = 0.0f;
-    CheckCuda(cudaEventElapsedTime(&GpuMilliseconds, Start, Stop), "cudaEventElapsedTime");
+    CheckCuda(cudaEventElapsedTime(&Result.GpuMilliseconds, Start, Stop), "cudaEventElapsedTime");
 
     std::vector<uint32_t> InvalidGraphs(Batch);
     std::vector<uint32_t> PeeledCount(Batch);
@@ -657,22 +717,18 @@ main(int argc, char **argv)
     std::vector<CpuResult> CpuResults(Batch);
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
-        CpuResults[Graph] = RunCpuReference(Graph,
-                                            KeyCount,
-                                            Vertices,
-                                            EdgeMask,
-                                            Keys,
-                                            Seeds1,
-                                            Seeds2);
+        CpuResults[Graph] = RunCpuReference<StorageT>(Graph,
+                                                      KeyCount,
+                                                      Vertices,
+                                                      EdgeMask,
+                                                      Keys,
+                                                      Seeds1,
+                                                      Seeds2);
     }
 
     auto CpuStop = std::chrono::steady_clock::now();
-    double CpuMilliseconds = std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
-
-    uint32_t GpuSuccess = 0;
-    uint32_t CpuSuccess = 0;
-    uint32_t Mismatches = 0;
-    uint32_t VerifiedMismatch = 0;
+    Result.CpuMilliseconds =
+        std::chrono::duration<double, std::milli>(CpuStop - CpuStart).count();
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
         bool ThisGpuSuccess = (InvalidGraphs[Graph] == 0 &&
@@ -681,13 +737,13 @@ main(int argc, char **argv)
         bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
 
         if (ThisGpuSuccess) {
-            ++GpuSuccess;
+            ++Result.GpuSuccess;
         }
         if (ThisCpuSuccess) {
-            ++CpuSuccess;
+            ++Result.CpuSuccess;
         }
         if (ThisGpuSuccess != ThisCpuSuccess) {
-            ++Mismatches;
+            ++Result.Mismatches;
             if (Opts.Verbose) {
                 std::cout << "Mismatch graph=" << Graph
                           << " gpu_success=" << ThisGpuSuccess
@@ -700,26 +756,29 @@ main(int argc, char **argv)
             }
         }
         if (CpuResults[Graph].Success && !CpuResults[Graph].Verified) {
-            ++VerifiedMismatch;
+            ++Result.CpuVerifyIssues;
         }
     }
 
     std::cout
         << "GPU Batched Peeling POC\n"
-        << "  Keys file:          " << (Opts.KeysFile.empty() ? "<generated>" : Opts.KeysFile) << "\n"
+        << "  Keys file:          "
+        << (Opts.KeysFile.empty() ? "<generated>" : Opts.KeysFile) << "\n"
         << "  Requested keys:     " << RequestedKeys << "\n"
         << "  Actual keys:        " << KeyCount << "\n"
         << "  Edge capacity:      " << EdgeCapacity << "\n"
         << "  Vertices:           " << Vertices << "\n"
         << "  Batch size:         " << Batch << "\n"
-        << "  Peel rounds:        " << Rounds << "\n"
-        << "  GPU success:        " << GpuSuccess << "/" << Batch << "\n"
-        << "  CPU success:        " << CpuSuccess << "/" << Batch << "\n"
-        << "  Success mismatches: " << Mismatches << "\n"
-        << "  CPU verify issues:  " << VerifiedMismatch << "\n"
+        << "  Storage bits:       " << Result.StorageBits << "\n"
+        << "  Storage mode:       " << StorageModeToString(Opts.Storage) << "\n"
+        << "  Peel rounds:        " << Result.Rounds << "\n"
+        << "  GPU success:        " << Result.GpuSuccess << "/" << Batch << "\n"
+        << "  CPU success:        " << Result.CpuSuccess << "/" << Batch << "\n"
+        << "  Success mismatches: " << Result.Mismatches << "\n"
+        << "  CPU verify issues:  " << Result.CpuVerifyIssues << "\n"
         << std::fixed << std::setprecision(3)
-        << "  GPU time (ms):      " << GpuMilliseconds << "\n"
-        << "  CPU time (ms):      " << CpuMilliseconds << "\n";
+        << "  GPU time (ms):      " << Result.GpuMilliseconds << "\n"
+        << "  CPU time (ms):      " << Result.CpuMilliseconds << "\n";
 
     CheckCuda(cudaFree(DFrontierCount), "cudaFree(DFrontierCount)");
     CheckCuda(cudaFree(DFrontier), "cudaFree(DFrontier)");
@@ -740,5 +799,77 @@ main(int argc, char **argv)
     CheckCuda(cudaEventDestroy(Stop), "cudaEventDestroy(Stop)");
     CheckCuda(cudaEventDestroy(Start), "cudaEventDestroy(Start)");
 
-    return (Mismatches == 0 && VerifiedMismatch == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return Result;
+}
+
+template<typename StorageT>
+bool
+SupportsStorage(uint32_t EdgeCapacity, uint32_t Vertices)
+{
+    constexpr uint64_t Max = static_cast<uint64_t>(std::numeric_limits<StorageT>::max());
+    return (static_cast<uint64_t>(EdgeCapacity - 1) <= Max &&
+            static_cast<uint64_t>(Vertices - 1) <= Max);
+}
+
+} // namespace
+
+int
+main(int argc, char **argv)
+{
+    Options Opts = ParseOptions(argc, argv);
+
+    std::vector<uint64_t> Keys;
+    std::string RequestedKeys = std::to_string(Opts.Edges);
+
+    if (!Opts.KeysFile.empty()) {
+        Keys = LoadKeysFromFile(Opts.KeysFile);
+        RequestedKeys = "<n/a>";
+    } else {
+        Keys.resize(Opts.Edges);
+        for (uint32_t Edge = 0; Edge < Opts.Edges; ++Edge) {
+            Keys[Edge] = SplitMix64(Opts.KeySeed + Edge);
+        }
+    }
+
+    if (Keys.empty()) {
+        std::cerr << "No keys available.\n";
+        return EXIT_FAILURE;
+    }
+
+    uint32_t KeyCount = static_cast<uint32_t>(Keys.size());
+    uint32_t EdgeCapacity = NextPowerOfTwo(KeyCount);
+    uint32_t Vertices = NextPowerOfTwo(EdgeCapacity + 1);
+
+    std::vector<uint64_t> Seeds1(Opts.Batch);
+    std::vector<uint64_t> Seeds2(Opts.Batch);
+    for (uint32_t Graph = 0; Graph < Opts.Batch; ++Graph) {
+        Seeds1[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull));
+        Seeds2[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull) + 1ull);
+    }
+
+    StorageMode Selected = Opts.Storage;
+    if (Selected == StorageMode::Auto) {
+        if (SupportsStorage<uint16_t>(EdgeCapacity, Vertices)) {
+            Selected = StorageMode::Bits16;
+        } else {
+            Selected = StorageMode::Bits32;
+        }
+    }
+
+    if (Selected == StorageMode::Bits16 && !SupportsStorage<uint16_t>(EdgeCapacity, Vertices)) {
+        std::cerr << "16-bit storage does not support edge capacity " << EdgeCapacity
+                  << " and vertex count " << Vertices << ".\n";
+        return EXIT_FAILURE;
+    }
+
+    ExperimentResult Result;
+    if (Selected == StorageMode::Bits16) {
+        Result = RunExperiment<uint16_t>(Opts, Keys, Seeds1, Seeds2, RequestedKeys);
+    } else {
+        Result = RunExperiment<uint32_t>(Opts, Keys, Seeds1, Seeds2, RequestedKeys);
+    }
+
+    return (Result.Mismatches == 0 && Result.CpuVerifyIssues == 0) ?
+        EXIT_SUCCESS :
+        EXIT_FAILURE;
 }

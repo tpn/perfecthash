@@ -46,6 +46,8 @@ cmake --build build/gpu-batched-peeling-poc -j
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --edges 4096 --batch 512 --threads 256
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file keys/HologramWorld-31016.keys --batch 128
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file /home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys --batch 128
+./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file keys/HologramWorld-31016.keys --batch 128 --storage-bits 16
+./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file keys/HologramWorld-31016.keys --batch 128 --storage-bits 32
 ```
 
 ## Notes
@@ -54,6 +56,10 @@ cmake --build build/gpu-batched-peeling-poc -j
 - Edge capacity is rounded up to the next power of two from the logical key
   count; vertex count is then the next power of two above edge capacity, which
   for the current settings means `vertices = 2 * edge_capacity`.
+- `--storage-bits` selects the templated storage variant:
+  - `auto`: choose the smallest supported storage type for edges/vertices
+  - `16`: force 16-bit edge/vertex/owner/order/assigned storage if supported
+  - `32`: force the original 32-bit storage path
 - The POC uses simple 64-bit mixing for seeded hashing; it is not wired to the
   PerfectHash hash-function table yet.
 - The point here is to validate the execution model, not the exact CLI/plumbing.
