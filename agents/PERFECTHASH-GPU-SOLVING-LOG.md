@@ -1,0 +1,36 @@
+# PerfectHash GPU Solving Log
+
+- 2026-03-20 17:08:40 PDT: Started GPU perfect-hash solving investigation in `/home/trent/src/perfecthash`.
+- 2026-03-20 17:08:40 PDT: Confirmed clean git worktree.
+- 2026-03-20 17:08:40 PDT: Enumerated candidate implementation files in `src/PerfectHash/` and `src/PerfectHashCuda/`.
+- 2026-03-20 17:08:40 PDT: Read `~/.zsh/PROMPT-LEDGERS-SLIM.md`, `~/.zsh/PROMPT-PROJECT.md`, and `~/.zsh/PROMPT-PROJECT-SUB.md` to establish ledger workflow.
+- 2026-03-20 17:08:40 PDT: Created project ledgers under `agents/` with prefix `PERFECTHASH-GPU-SOLVING`.
+- 2026-03-20 17:15:32 PDT: Read `GraphImpl1.c`, `GraphImpl2.c`, `GraphImpl3.c`, `Graph.h`, `GraphCu.c`, `PerfectHashCuda/Graph.cu`, `PerfectHashCuda/GraphThrust.cu`, and `PerfectHashCuda/Graph4.cu` to map CPU and CUDA solver flow.
+- 2026-03-20 17:15:32 PDT: Confirmed active CUDA backend is hybrid: GPU hashes/builds/tests acyclicity, then CPU `CpuGraph` rebuilds, computes `Order[]`, assigns, and verifies.
+- 2026-03-20 17:15:32 PDT: Confirmed `PerfectHashCuda/GraphThrust.cu` and `Graph4.cu` are incomplete experimental paths with disabled or stubbed solve stages.
+- 2026-03-20 17:15:32 PDT: Identified main device-side contention pattern: managed arrays plus `CuVertexLocks`/`CuEdgeLocks` and retry loops in add/remove kernels.
+- 2026-03-20 17:15:32 PDT: Inspected local `~/src/tile-interop` notes for available CCCL/CUB/Tile interop options; `~/src/dkg` is not present on this machine.
+- 2026-03-20 17:15:32 PDT: Reviewed external references on GPU MPHF / AMQ construction and lookup: PHOBIC (ESA 2024), GPU-accelerated BDZ/xor-filter thesis, PtrHash (2025), GPH (SIGMOD 2025), Cuckoo-GPU (2026), cuCollections, and `cuda.coop` docs.
+- 2026-03-20 17:15:32 PDT: Synthesized recommendation: preserve `GraphImpl3` representation if CHM must stay, but move to batched bulk-synchronous layer/frontier peeling and reverse-layer assignment; otherwise seriously consider bucket+pilot families such as PHOBIC/PTHash for a more GPU-native build path.
+- 2026-03-20 17:36:01 PDT: Created and switched to branch `gpu-batched-peeling-poc`.
+- 2026-03-20 17:36:01 PDT: Confirmed local toolchain: CUDA 13.1.115, `cmake` 4.2.3, GPU reported by `nvidia-smi` as `NVIDIA GB10`.
+- 2026-03-20 17:36:01 PDT: Added standalone experiment under `experiments/gpu_batched_peeling_poc/` with minimal CMake project, README, and CUDA source.
+- 2026-03-20 17:36:01 PDT: Implemented proof-of-concept batching model:
+  - shared key set across attempts
+  - one seeded graph attempt per batch element
+  - GPU build kernel
+  - GPU frontier collection + peel kernels
+  - GPU per-graph reverse-order assignment
+  - GPU verification kernel
+  - CPU sequential reference for cross-checking
+- 2026-03-20 17:36:01 PDT: Built prototype successfully with:
+  - `cmake -S experiments/gpu_batched_peeling_poc -B build/gpu-batched-peeling-poc`
+  - `cmake --build build/gpu-batched-peeling-poc -j`
+- 2026-03-20 17:36:01 PDT: Ran prototype default configuration:
+  - `./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc`
+  - result: GPU success `42/256`, CPU success `42/256`, mismatches `0`, GPU `3.080 ms`, CPU `5.145 ms`
+- 2026-03-20 17:36:01 PDT: Ran larger configurations:
+  - `--edges 4096 --batch 512`: GPU `63/512`, CPU `63/512`, mismatches `0`, GPU `13.089 ms`, CPU `20.644 ms`
+  - `--edges 1024 --batch 1024`: GPU `177/1024`, CPU `177/1024`, mismatches `0`, GPU `4.879 ms`, CPU `10.104 ms`
+  - `--edges 8192 --batch 256`: GPU `34/256`, CPU `34/256`, mismatches `0`, GPU `14.247 ms`, CPU `22.058 ms`
+- 2026-03-20 17:36:01 PDT: Confirmed the POC validates the central design claim: batching many attempts with bulk-synchronous peeling is workable and avoids the lock-heavy single-graph execution model in the current CUDA backend.
