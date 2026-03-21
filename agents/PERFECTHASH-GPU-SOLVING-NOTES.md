@@ -192,6 +192,20 @@
     - GPU time: `66.623 ms`
     - CPU time: `95.456 ms`
 
+## Cross-Machine Results
+- Local machine (`NVIDIA GB10`, CUDA 13.1):
+  - `HologramWorld-31016.keys`, batch `128`: GPU `55.471 ms`, CPU `47.300 ms`
+  - `Hydrogen-40147.keys`, batch `128`: GPU `68.038 ms`, CPU `92.163 ms`
+- `nv1` (`NVIDIA RTX PRO 6000 Blackwell Workstation Edition`, CUDA 13.1):
+  - `HologramWorld-31016.keys`, batch `128`: GPU `20.761 ms`, CPU `58.231 ms`
+  - `Hydrogen-40147.keys`, batch `128`: GPU `78.354 ms`, CPU `122.843 ms`
+  - `Hydrogen-40147.keys`, batch `256`: GPU `93.918 ms`, CPU `240.248 ms`
+- Current inference:
+  - the SplitMix-based POC scales to `nv1` cleanly with exact GPU/CPU agreement
+  - HologramWorld benefits much more from the workstation GPU/CPU combination than the current local box
+  - Hydrogen remains GPU-favorable on both machines once batch size is large enough
+  - the remaining dominant cost is still the host-driven peel-round loop, not correctness
+
 ## What The POC Proves
 - The batched execution model is viable.
 - We do not need per-vertex/per-edge lock objects plus retry loops to peel many attempts in parallel.

@@ -53,3 +53,20 @@
 - 2026-03-20 17:55:52 PDT: Committed second checkpoint on branch:
   - `1846874 Extend GPU peeling POC to real keys files`
 - 2026-03-20 17:55:52 PDT: Verified branch is clean after the second checkpoint commit.
+- 2026-03-20 18:08:44 PDT: Synced branch `gpu-batched-peeling-poc` to `nv1` via git bundle and fast-forwarded a same-named dev branch there; kept remote `main` untouched.
+- 2026-03-20 18:08:44 PDT: Confirmed `nv1` environment:
+  - host: `nv1`
+  - CPUs: `64`
+  - target GPU: `NVIDIA RTX PRO 6000 Blackwell Workstation Edition`
+  - additional GPU present: `Quadro RTX 4000`
+  - env used: `~/envs/ph314`
+- 2026-03-20 18:08:44 PDT: Resolved remote build issues by configuring `nv1` with:
+  - `CUDACXX=/usr/local/cuda-13.1/bin/nvcc`
+  - `-DCMAKE_CUDA_ARCHITECTURES=120`
+- 2026-03-20 18:08:44 PDT: Built the POC on `nv1` in `build/gpu-batched-peeling-poc-nv1/`.
+- 2026-03-20 18:08:44 PDT: Ran `keys/HologramWorld-31016.keys` on `nv1`:
+  - batch `128`: GPU `26/128`, CPU `26/128`, mismatches `0`, GPU `20.761 ms`, CPU `58.231 ms`
+- 2026-03-20 18:08:44 PDT: Ran `/home/trentn/src/perfecthash-keys/sys32/Hydrogen-40147.keys` on `nv1`:
+  - batch `128`: GPU `78/128`, CPU `78/128`, mismatches `0`, GPU `78.354 ms`, CPU `122.843 ms`
+  - batch `256`: GPU `155/256`, CPU `155/256`, mismatches `0`, GPU `93.918 ms`, CPU `240.248 ms`
+- 2026-03-20 18:08:44 PDT: Observed exact GPU/CPU agreement on `nv1` as well; cross-machine data now confirms the SplitMix-based batched peeling model is portable and benefits from a stronger workstation CPU+GPU setup.

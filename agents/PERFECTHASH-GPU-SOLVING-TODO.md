@@ -15,6 +15,7 @@
 - Ran the prototype on `keys/HologramWorld-31016.keys`.
 - Ran the prototype on `/home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys`.
 - Committed the initial POC checkpoint.
+- Synced the branch to `nv1`, built there, and collected cross-machine Hologram/Hydrogen results.
 
 ## In Progress
 - Decide whether the next cut should stay standalone or start reusing PerfectHash hash routines and seed semantics.
