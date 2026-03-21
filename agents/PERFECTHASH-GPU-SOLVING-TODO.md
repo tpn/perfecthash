@@ -11,12 +11,20 @@
 - Implemented a standalone batched GPU peeling/assignment proof-of-concept under `experiments/gpu_batched_peeling_poc/`.
 - Built and ran the prototype successfully on the local GB10 system.
 - Verified exact GPU/CPU agreement on solve success across multiple size/batch configurations.
+- Added real `.keys` file loading to the prototype.
+- Ran the prototype on `keys/HologramWorld-31016.keys`.
+- Ran the prototype on `/home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys`.
+- Committed the initial POC checkpoint.
 
 ## In Progress
-- Decide whether the next cut should stay standalone or start reusing PerfectHash hash routines and graph dimensions.
+- Decide whether the next cut should stay standalone or start reusing PerfectHash hash routines and seed semantics.
 
 ## Next
-- Add an option to use real PerfectHash hash functions / seed semantics instead of the local SplitMix-based surrogate.
+- Replace the surrogate hash with one or more real PerfectHash hash functions:
+  - `MultiplyShiftR`
+  - `MultiplyShiftRX`
+  - good `Mulshrolate*RX` family members
+- Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:
   - edges
   - batch size

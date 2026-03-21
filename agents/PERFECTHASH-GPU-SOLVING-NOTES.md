@@ -108,6 +108,7 @@
 - Prototype scope:
   - independent of existing PerfectHash CLI and `GraphCu`
   - same generated key set shared across all attempts
+  - now also supports loading real 32-bit `.keys` files directly
   - one seeded graph attempt per batch element
   - GPU build, peel, assign, and verify
   - CPU queue-based reference in the same binary for correctness comparison
@@ -160,12 +161,58 @@
     - success mismatches: `0`
     - GPU time: `14.247 ms`
     - CPU time: `22.058 ms`
+  - `--keys-file keys/HologramWorld-31016.keys --batch 128`
+    - actual keys: `31,016`
+    - edge capacity: `32,768`
+    - vertices: `65,536`
+    - peel rounds: `96`
+    - GPU success: `26/128`
+    - CPU success: `26/128`
+    - success mismatches: `0`
+    - GPU time: `55.471 ms`
+    - CPU time: `47.300 ms`
+  - `--keys-file /home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys --batch 64`
+    - actual keys: `40,147`
+    - edge capacity: `65,536`
+    - vertices: `131,072`
+    - peel rounds: `13`
+    - GPU success: `35/64`
+    - CPU success: `35/64`
+    - success mismatches: `0`
+    - GPU time: `48.020 ms`
+    - CPU time: `45.235 ms`
+  - `--keys-file /home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys --batch 128`
+    - actual keys: `40,147`
+    - edge capacity: `65,536`
+    - vertices: `131,072`
+    - peel rounds: `13`
+    - GPU success: `78/128`
+    - CPU success: `78/128`
+    - success mismatches: `0`
+    - GPU time: `66.623 ms`
+    - CPU time: `95.456 ms`
 
 ## What The POC Proves
 - The batched execution model is viable.
 - We do not need per-vertex/per-edge lock objects plus retry loops to peel many attempts in parallel.
 - Capturing explicit peel order and owner-vertex metadata is enough to support assignment after peeling.
 - Even with a conservative host-driven peel-round loop and sequential-per-graph assignment, batching across many graphs already yields a useful GPU advantage.
+- We are already close to real PerfectHash datasets:
+  - `HologramWorld-31016.keys` runs today
+  - `Hydrogen-40147.keys` from the external `perfecthash-keys` repo runs today
+  - the remaining distance to “try Hydrogen” is basically operational, not architectural
+
+## Assignment / Order Semantics
+- The POC does perform assignment.
+- It explicitly verifies order-preserving indexing for actual keys:
+  - for each edge/key id `e`, it checks `(assigned[u] + assigned[v]) & edge_mask == e`
+  - this means the resulting index reconstructs the original key ordinal in the input file / array
+- This is stricter than merely asking for a collision-free index into `[0, n)`.
+- Exploring unordered indexing does make sense:
+  - it relaxes the verification target and may open up more GPU-friendly formulations
+  - it could reduce assignment constraints if the downstream consumer only needs a stable collision-free placement plus a values array
+  - however, it is a semantic change relative to the existing PerfectHash model and compiled-table expectations
+  - it is probably best treated as a parallel design branch, not as a silent change to CHM behavior
 
 ## Immediate Follow-On Improvements
 - Replace the host round loop with cooperative launch / grid-synchronous or device-side work queues.

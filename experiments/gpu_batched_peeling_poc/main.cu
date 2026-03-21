@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -21,6 +22,7 @@ struct Options {
     uint32_t Threads = 256;
     uint64_t KeySeed = 0x123456789abcdef0ull;
     uint64_t GraphSeed = 0x0f1e2d3c4b5a6978ull;
+    std::string KeysFile;
     bool Verbose = false;
 };
 
@@ -46,6 +48,32 @@ CheckCuda(cudaError_t Error, const char *Message)
     }
 }
 
+std::vector<uint64_t>
+LoadKeysFromFile(const std::string &Path)
+{
+    std::ifstream File(Path, std::ios::binary | std::ios::ate);
+    if (!File) {
+        std::cerr << "Failed to open keys file: " << Path << "\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    std::streamsize Size = File.tellg();
+    if (Size <= 0 || (Size % static_cast<std::streamsize>(sizeof(uint32_t))) != 0) {
+        std::cerr << "Invalid keys file size: " << Path << "\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    std::vector<uint32_t> Raw(static_cast<size_t>(Size / sizeof(uint32_t)));
+    File.seekg(0, std::ios::beg);
+    if (!File.read(reinterpret_cast<char *>(Raw.data()), Size)) {
+        std::cerr << "Failed to read keys file: " << Path << "\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    std::vector<uint64_t> Keys(Raw.begin(), Raw.end());
+    return Keys;
+}
+
 Options
 ParseOptions(int argc, char **argv)
 {
@@ -64,6 +92,8 @@ ParseOptions(int argc, char **argv)
 
         if (Arg == "--edges") {
             Opts.Edges = static_cast<uint32_t>(std::stoul(RequireValue("--edges")));
+        } else if (Arg == "--keys-file") {
+            Opts.KeysFile = RequireValue("--keys-file");
         } else if (Arg == "--batch") {
             Opts.Batch = static_cast<uint32_t>(std::stoul(RequireValue("--batch")));
         } else if (Arg == "--threads") {
@@ -77,7 +107,8 @@ ParseOptions(int argc, char **argv)
         } else if (Arg == "--help" || Arg == "-h") {
             std::cout
                 << "Usage: gpu_batched_peeling_poc [options]\n"
-                << "  --edges <n>       Number of edges/keys (rounded up to power of two)\n"
+                << "  --edges <n>       Number of logical keys for generated input\n"
+                << "  --keys-file <p>   Load 32-bit keys from a .keys file\n"
                 << "  --batch <n>       Number of graph attempts in the batch\n"
                 << "  --threads <n>     Threads per block for build/collect/peel kernels\n"
                 << "  --key-seed <x>    Base seed for generated keys\n"
@@ -435,25 +466,33 @@ main(int argc, char **argv)
 {
     Options Opts = ParseOptions(argc, argv);
 
-    uint32_t Edges = NextPowerOfTwo(Opts.Edges);
-    uint32_t Vertices = NextPowerOfTwo(Edges + 1);
     uint32_t Batch = Opts.Batch;
-    uint32_t EdgeMask = Edges - 1;
-
-    std::vector<uint64_t> Keys(Edges);
+    std::vector<uint64_t> Keys;
     std::vector<uint64_t> Seeds1(Batch);
     std::vector<uint64_t> Seeds2(Batch);
+    std::string RequestedKeys = std::to_string(Opts.Edges);
 
-    for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
-        Keys[Edge] = SplitMix64(Opts.KeySeed + Edge);
+    if (!Opts.KeysFile.empty()) {
+        Keys = LoadKeysFromFile(Opts.KeysFile);
+        RequestedKeys = "<n/a>";
+    } else {
+        Keys.resize(Opts.Edges);
+        for (uint32_t Edge = 0; Edge < Opts.Edges; ++Edge) {
+            Keys[Edge] = SplitMix64(Opts.KeySeed + Edge);
+        }
     }
+
+    uint32_t KeyCount = static_cast<uint32_t>(Keys.size());
+    uint32_t EdgeCapacity = NextPowerOfTwo(KeyCount);
+    uint32_t Vertices = NextPowerOfTwo(EdgeCapacity + 1);
+    uint32_t EdgeMask = EdgeCapacity - 1;
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
         Seeds1[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull));
         Seeds2[Graph] = SplitMix64(Opts.GraphSeed + (Graph * 2ull) + 1ull);
     }
 
-    uint64_t TotalEdges = static_cast<uint64_t>(Edges) * Batch;
+    uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
     uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
     uint64_t FrontierCapacity = TotalVertices;
 
@@ -520,7 +559,7 @@ main(int argc, char **argv)
 
     CheckCuda(cudaEventRecord(Start), "cudaEventRecord(Start)");
 
-    BuildGraphsKernel<<<BuildBlocks, Opts.Threads>>>(Edges,
+    BuildGraphsKernel<<<BuildBlocks, Opts.Threads>>>(KeyCount,
                                                      Vertices,
                                                      Batch,
                                                      DKeys,
@@ -557,7 +596,7 @@ main(int argc, char **argv)
         ++Rounds;
 
         uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
-        PeelFrontierKernel<<<PeelBlocks, Opts.Threads>>>(Edges,
+        PeelFrontierKernel<<<PeelBlocks, Opts.Threads>>>(KeyCount,
                                                          Vertices,
                                                          FrontierCount,
                                                          DFrontier,
@@ -572,7 +611,7 @@ main(int argc, char **argv)
         CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
     }
 
-    AssignGraphsKernel<<<Batch, 1>>>(Edges,
+    AssignGraphsKernel<<<Batch, 1>>>(KeyCount,
                                      Vertices,
                                      EdgeMask,
                                      DInvalidGraphs,
@@ -585,7 +624,7 @@ main(int argc, char **argv)
     CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
 
     dim3 VerifyGrid(static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads), Batch);
-    VerifyGraphsKernel<<<VerifyGrid.x, Opts.Threads>>>(Edges,
+    VerifyGraphsKernel<<<VerifyGrid.x, Opts.Threads>>>(KeyCount,
                                                        Vertices,
                                                        Batch,
                                                        EdgeMask,
@@ -619,7 +658,7 @@ main(int argc, char **argv)
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
         CpuResults[Graph] = RunCpuReference(Graph,
-                                            Edges,
+                                            KeyCount,
                                             Vertices,
                                             EdgeMask,
                                             Keys,
@@ -637,7 +676,7 @@ main(int argc, char **argv)
 
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
         bool ThisGpuSuccess = (InvalidGraphs[Graph] == 0 &&
-                               PeeledCount[Graph] == Edges &&
+                               PeeledCount[Graph] == KeyCount &&
                                VerifyFailures[Graph] == 0);
         bool ThisCpuSuccess = (CpuResults[Graph].Success && CpuResults[Graph].Verified);
 
@@ -667,8 +706,10 @@ main(int argc, char **argv)
 
     std::cout
         << "GPU Batched Peeling POC\n"
-        << "  Requested edges:    " << Opts.Edges << "\n"
-        << "  Actual edges:       " << Edges << "\n"
+        << "  Keys file:          " << (Opts.KeysFile.empty() ? "<generated>" : Opts.KeysFile) << "\n"
+        << "  Requested keys:     " << RequestedKeys << "\n"
+        << "  Actual keys:        " << KeyCount << "\n"
+        << "  Edge capacity:      " << EdgeCapacity << "\n"
         << "  Vertices:           " << Vertices << "\n"
         << "  Batch size:         " << Batch << "\n"
         << "  Peel rounds:        " << Rounds << "\n"

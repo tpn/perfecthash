@@ -44,13 +44,16 @@ cmake --build build/gpu-batched-peeling-poc -j
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --edges 2048 --batch 256
 ./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --edges 4096 --batch 512 --threads 256
+./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file keys/HologramWorld-31016.keys --batch 128
+./build/gpu-batched-peeling-poc/gpu_batched_peeling_poc --keys-file /home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys --batch 128
 ```
 
 ## Notes
 
-- `--edges` is rounded up to a power of two.
-- Vertex count is set to the next power of two above edge count, which for
-  power-of-two edge counts means `vertices = 2 * edges`.
+- `--edges` controls the number of generated logical keys.
+- Edge capacity is rounded up to the next power of two from the logical key
+  count; vertex count is then the next power of two above edge capacity, which
+  for the current settings means `vertices = 2 * edge_capacity`.
 - The POC uses simple 64-bit mixing for seeded hashing; it is not wired to the
   PerfectHash hash-function table yet.
 - The point here is to validate the execution model, not the exact CLI/plumbing.

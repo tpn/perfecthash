@@ -34,3 +34,17 @@
   - `--edges 1024 --batch 1024`: GPU `177/1024`, CPU `177/1024`, mismatches `0`, GPU `4.879 ms`, CPU `10.104 ms`
   - `--edges 8192 --batch 256`: GPU `34/256`, CPU `34/256`, mismatches `0`, GPU `14.247 ms`, CPU `22.058 ms`
 - 2026-03-20 17:36:01 PDT: Confirmed the POC validates the central design claim: batching many attempts with bulk-synchronous peeling is workable and avoids the lock-heavy single-graph execution model in the current CUDA backend.
+- 2026-03-20 17:54:37 PDT: Committed initial checkpoint on branch:
+  - `72f8968 Add batched GPU peeling proof of concept`
+- 2026-03-20 17:54:37 PDT: Extended the POC to support:
+  - real `.keys` file loading
+  - logical key count distinct from edge-capacity mask
+  - real PerfectHash fixture runs without padding the key array to a power of two
+- 2026-03-20 17:54:37 PDT: Ran `keys/HologramWorld-31016.keys`:
+  - batch `128`: GPU `26/128`, CPU `26/128`, mismatches `0`, GPU `55.471 ms`, CPU `47.300 ms`
+  - batch `256`: GPU `58/256`, CPU `58/256`, mismatches `0`, GPU `114.279 ms`, CPU `101.794 ms`
+- 2026-03-20 17:54:37 PDT: Located Hydrogen fixtures under `/home/trent/src/perfecthash-keys/`.
+- 2026-03-20 17:54:37 PDT: Ran `/home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys`:
+  - batch `64`: GPU `35/64`, CPU `35/64`, mismatches `0`, GPU `48.020 ms`, CPU `45.235 ms`
+  - batch `128`: GPU `78/128`, CPU `78/128`, mismatches `0`, GPU `66.623 ms`, CPU `95.456 ms`
+- 2026-03-20 17:54:37 PDT: Confirmed the POC assignment step preserves original key order by verifying `(assigned[u] + assigned[v]) & edge_mask == edge_id` for every real key.
