@@ -48,3 +48,8 @@
   - batch `64`: GPU `35/64`, CPU `35/64`, mismatches `0`, GPU `48.020 ms`, CPU `45.235 ms`
   - batch `128`: GPU `78/128`, CPU `78/128`, mismatches `0`, GPU `66.623 ms`, CPU `95.456 ms`
 - 2026-03-20 17:54:37 PDT: Confirmed the POC assignment step preserves original key order by verifying `(assigned[u] + assigned[v]) & edge_mask == edge_id` for every real key.
+- 2026-03-20 17:55:52 PDT: Rebuilt after output/doc cleanup and reran Hydrogen batch `128`:
+  - GPU `78/128`, CPU `78/128`, mismatches `0`, GPU `68.038 ms`, CPU `92.163 ms`
+- 2026-03-20 17:55:52 PDT: Committed second checkpoint on branch:
+  - `1846874 Extend GPU peeling POC to real keys files`
+- 2026-03-20 17:55:52 PDT: Verified branch is clean after the second checkpoint commit.
