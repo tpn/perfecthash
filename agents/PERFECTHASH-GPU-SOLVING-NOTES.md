@@ -126,6 +126,7 @@
     - record peel order and owner vertex
   - GPU assignment runs one block per graph, with one thread walking reverse peel order
   - GPU verification checks `(assigned[u] + assigned[v]) & edge_mask == edge_id`
+  - storage model is now templated for 16-bit vs 32-bit variants
 
 ## Prototype Results
 - Build command:
@@ -215,6 +216,37 @@
   - `HologramWorld-31016.keys` runs today
   - `Hydrogen-40147.keys` from the external `perfecthash-keys` repo runs today
   - the remaining distance to “try Hydrogen” is basically operational, not architectural
+
+## 16-bit Templating Results
+- The standalone POC now uses C++ templates to select 16-bit or 32-bit storage for:
+  - `EdgeU`
+  - `EdgeV`
+  - `OwnerVertex`
+  - `PeelOrder`
+  - `Assigned`
+- The atomic-heavy arrays are still 32-bit for now:
+  - `Degree`
+  - `XorEdge`
+  - `EdgePeeled`
+  - per-graph counters / verification counters
+- This is intentionally the lowest-risk analogue of the library’s `assigned16` idea:
+  - reduce memory footprint where it is easy and safe
+  - avoid immediately rewriting the peel/update atomics around packed 16-bit state
+- Serial benchmark results for `HologramWorld-31016.keys`, batch `128`:
+  - local machine:
+    - 32-bit storage: GPU `38.958 ms`, CPU `47.473 ms`
+    - 16-bit storage: GPU `35.812 ms`, CPU `46.817 ms`
+    - approximate GPU improvement from templated 16-bit storage: `~8.1%`
+  - `nv1`:
+    - 32-bit storage: GPU `20.218 ms`, CPU `56.878 ms`
+    - 16-bit storage: GPU `18.913 ms`, CPU `54.885 ms`
+    - approximate GPU improvement from templated 16-bit storage: `~6.5%`
+- Interpretation:
+  - downsizing helps, but not dramatically yet
+  - this is consistent with the current bottleneck still being the host-driven peel-round loop rather than raw assigned-array traffic alone
+  - a larger benefit likely requires either:
+    - more state downsizing, including peel/update structures, or
+    - removing the host round-trip from the inner solve loop
 
 ## Assignment / Order Semantics
 - The POC does perform assignment.

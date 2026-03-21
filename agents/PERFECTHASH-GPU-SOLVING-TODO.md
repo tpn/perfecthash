@@ -16,11 +16,16 @@
 - Ran the prototype on `/home/trent/src/perfecthash-keys/sys32/Hydrogen-40147.keys`.
 - Committed the initial POC checkpoint.
 - Synced the branch to `nv1`, built there, and collected cross-machine Hologram/Hydrogen results.
+- Refactored the POC to use C++ templates for 16-bit and 32-bit storage variants.
+- Benchmarked serial 16-bit vs 32-bit HologramWorld runs locally and on `nv1`.
 
 ## In Progress
 - Decide whether the next cut should stay standalone or start reusing PerfectHash hash routines and seed semantics.
 
 ## Next
+- Decide whether to push the 16-bit idea further:
+  - keep only the current light-touch downsizing, or
+  - template more of the peel/update state, including `XorEdge`
 - Replace the surrogate hash with one or more real PerfectHash hash functions:
   - `MultiplyShiftR`
   - `MultiplyShiftRX`

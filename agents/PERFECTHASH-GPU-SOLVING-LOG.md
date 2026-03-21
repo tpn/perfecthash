@@ -70,3 +70,19 @@
   - batch `128`: GPU `78/128`, CPU `78/128`, mismatches `0`, GPU `78.354 ms`, CPU `122.843 ms`
   - batch `256`: GPU `155/256`, CPU `155/256`, mismatches `0`, GPU `93.918 ms`, CPU `240.248 ms`
 - 2026-03-20 18:08:44 PDT: Observed exact GPU/CPU agreement on `nv1` as well; cross-machine data now confirms the SplitMix-based batched peeling model is portable and benefits from a stronger workstation CPU+GPU setup.
+- 2026-03-20 20:28:09 PDT: Refactored `experiments/gpu_batched_peeling_poc/main.cu` to use C++ templates for 16-bit vs 32-bit storage variants, selected via `--storage-bits`.
+- 2026-03-20 20:28:09 PDT: Kept `Degree`/`XorEdge` and other atomic-heavy counters as 32-bit while downsizing:
+  - `EdgeU`
+  - `EdgeV`
+  - `OwnerVertex`
+  - `PeelOrder`
+  - `Assigned`
+- 2026-03-20 20:28:09 PDT: Serial local benchmarks after templating:
+  - `HologramWorld-31016.keys`, batch `128`, storage `32`: GPU `38.958 ms`, CPU `47.473 ms`
+  - `HologramWorld-31016.keys`, batch `128`, storage `16`: GPU `35.812 ms`, CPU `46.817 ms`
+  - `Hydrogen-40147.keys`, batch `128`, storage `32`: GPU `67.192 ms`, CPU `96.308 ms`
+- 2026-03-20 20:28:09 PDT: Synced templated branch state to `nv1` via `git am`, rebuilt there, and reran serial benchmarks:
+  - `HologramWorld-31016.keys`, batch `128`, storage `32`: GPU `20.218 ms`, CPU `56.878 ms`
+  - `HologramWorld-31016.keys`, batch `128`, storage `16`: GPU `18.913 ms`, CPU `54.885 ms`
+  - `Hydrogen-40147.keys`, batch `128`, storage `32`: GPU `30.982 ms`, CPU `119.915 ms`
+- 2026-03-20 20:28:09 PDT: Corrected an earlier measurement mistake: parallel benchmark launches on the same GPU materially distorted timings, so final 16/32 comparisons were rerun serially.
