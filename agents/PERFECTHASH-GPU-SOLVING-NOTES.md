@@ -442,6 +442,25 @@
   - unified-like: `Y`
   - estimated bytes for `CoreUIComponents-8193`, batch `2048`, `device-serial`, storage `16`: `832.16 MiB`
 
+## PerfectHashCuda Review
+- Why the historical `PerfectHashCuda` work struggled with parity:
+  - the active `GraphCu` path was always hybrid:
+    - GPU acyclicity result was followed by CPU `AddKeys()`, CPU `IsAcyclic()`, CPU `Assign()`, and CPU `Verify()`
+    - this meant the GPU path never actually owned the full solve/assign/verify pipeline
+  - the older standalone `PerfectHashCuda/GraphThrust.cu` path was incomplete:
+    - reset returns early
+    - acyclicity is stubbed
+    - assignment kernel is empty
+    - solve body exits before the disabled downstream stages
+  - the lock-based concurrent peel in `PerfectHashCuda/Graph.cu` had multiple correctness hazards:
+    - `GraphCuRemoveVertex()` reads `Degree`/`Edges` before acquiring locks, then never revalidates that the chosen edge is still current
+    - the code decrements `OrderIndex` but does not record the peeled edge into `Order[]`
+    - one add-edge helper increments degree twice
+- In other words:
+  - parity trouble was not just “GPU graphs are hard”
+  - some of the historical GPU code paths were structurally incomplete
+  - and parts of the concurrency logic that did exist were not robust enough to preserve the exact CPU semantics
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:

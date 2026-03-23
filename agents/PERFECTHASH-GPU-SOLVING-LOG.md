@@ -177,3 +177,8 @@
   - unified-like `Y`
   - estimated bytes `832.16 MiB`
 - 2026-03-23 15:26:56 PDT: Terminated an intentionally oversized benchmark after validating the new guard logic, in order to avoid stressing the shared-memory GB10 system again.
+- 2026-03-23 16:42:56 PDT: Reviewed the historical `PerfectHashCuda` efforts specifically for parity issues.
+- 2026-03-23 16:42:56 PDT: Main review findings:
+  - active `GraphCu` path never owned full parity because it fell back to CPU for `Order[]`, assignment, and verification
+  - `PerfectHashCuda/GraphThrust.cu` path was incomplete / stubbed in multiple stages
+  - lock-based concurrent peel path in `PerfectHashCuda/Graph.cu` had correctness hazards, including stale vertex reads and missing `Order[]` recording
