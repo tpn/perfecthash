@@ -25,6 +25,11 @@ enum class StorageMode {
     Bits32,
 };
 
+enum class SolveMode {
+    HostRoundTrip,
+    DeviceSerial,
+};
+
 enum class HashFunctionKind {
     SplitMix,
     MultiplyShiftR,
@@ -47,7 +52,10 @@ struct Options {
     std::string SeedsFile;
     std::string DumpSolvedSeedsFile;
     StorageMode Storage = StorageMode::Auto;
+    SolveMode Solve = SolveMode::HostRoundTrip;
     HashFunctionKind HashFunction = HashFunctionKind::MultiplyShiftR;
+    double MemoryHeadroomPct = 10.0;
+    bool AutoScaleBatchToFit = true;
     bool Verbose = false;
 };
 
@@ -116,6 +124,18 @@ struct ExperimentResult {
     uint32_t StorageBits = 0;
     const char *HashFunctionName = nullptr;
     StorageMode SelectedStorage = StorageMode::Auto;
+    const char *SolveModeName = nullptr;
+    size_t EstimatedDeviceBytes = 0;
+    size_t DeviceFreeBytes = 0;
+    size_t DeviceTotalBytes = 0;
+    bool UnifiedLikeDevice = false;
+};
+
+struct DeviceMemoryInfo {
+    size_t FreeBytes = 0;
+    size_t TotalBytes = 0;
+    bool Valid = false;
+    bool UnifiedLike = false;
 };
 
 template<typename T>
@@ -132,6 +152,64 @@ CheckCuda(cudaError_t Error, const char *Message)
         std::cerr << Message << ": " << cudaGetErrorString(Error) << "\n";
         std::exit(EXIT_FAILURE);
     }
+}
+
+std::string
+FormatBytes(size_t Value)
+{
+    static const char *Suffixes[] = {"B", "KiB", "MiB", "GiB", "TiB"};
+    double Amount = static_cast<double>(Value);
+    size_t Index = 0;
+
+    while (Amount >= 1024.0 && Index + 1 < (sizeof(Suffixes) / sizeof(Suffixes[0]))) {
+        Amount /= 1024.0;
+        ++Index;
+    }
+
+    char Buffer[64];
+    std::snprintf(Buffer, sizeof(Buffer), "%.2f %s", Amount, Suffixes[Index]);
+    return Buffer;
+}
+
+DeviceMemoryInfo
+QueryDeviceMemoryInfo()
+{
+    DeviceMemoryInfo Info = {};
+    int Device = 0;
+    cudaDeviceProp Props = {};
+    int Integrated = 0;
+    int ConcurrentManagedAccess = 0;
+    int PageableMemoryAccess = 0;
+
+    if (cudaGetDevice(&Device) != cudaSuccess) {
+        return Info;
+    }
+
+    if (cudaMemGetInfo(&Info.FreeBytes, &Info.TotalBytes) == cudaSuccess) {
+        Info.Valid = true;
+    }
+
+    if (cudaGetDeviceProperties(&Props, Device) == cudaSuccess) {
+        Integrated = Props.integrated;
+    }
+
+    if (cudaDeviceGetAttribute(&ConcurrentManagedAccess,
+                               cudaDevAttrConcurrentManagedAccess,
+                               Device) != cudaSuccess) {
+        ConcurrentManagedAccess = 0;
+    }
+
+    if (cudaDeviceGetAttribute(&PageableMemoryAccess,
+                               cudaDevAttrPageableMemoryAccess,
+                               Device) != cudaSuccess) {
+        PageableMemoryAccess = 0;
+    }
+
+    Info.UnifiedLike = (Integrated != 0 ||
+                        ConcurrentManagedAccess != 0 ||
+                        PageableMemoryAccess != 0);
+
+    return Info;
 }
 
 std::vector<uint32_t>
@@ -256,6 +334,19 @@ StorageModeToString(StorageMode Mode)
     }
 }
 
+const char *
+SolveModeToString(SolveMode Mode)
+{
+    switch (Mode) {
+        case SolveMode::HostRoundTrip:
+            return "host-roundtrip";
+        case SolveMode::DeviceSerial:
+            return "device-serial";
+        default:
+            return "unknown";
+    }
+}
+
 HashFunctionKind
 ParseHashFunctionKind(const std::string &Value)
 {
@@ -329,6 +420,20 @@ ParseOptions(int argc, char **argv)
                 std::cerr << "Invalid --storage-bits value: " << Value << "\n";
                 std::exit(EXIT_FAILURE);
             }
+        } else if (Arg == "--solve-mode") {
+            const auto Value = ToLower(RequireValue("--solve-mode"));
+            if (Value == "host-roundtrip") {
+                Opts.Solve = SolveMode::HostRoundTrip;
+            } else if (Value == "device-serial") {
+                Opts.Solve = SolveMode::DeviceSerial;
+            } else {
+                std::cerr << "Invalid --solve-mode value: " << Value << "\n";
+                std::exit(EXIT_FAILURE);
+            }
+        } else if (Arg == "--memory-headroom-pct") {
+            Opts.MemoryHeadroomPct = std::stod(RequireValue("--memory-headroom-pct"));
+        } else if (Arg == "--disable-auto-batch-scale") {
+            Opts.AutoScaleBatchToFit = false;
         } else if (Arg == "--hash-function") {
             Opts.HashFunction = ParseHashFunctionKind(RequireValue("--hash-function"));
         } else if (Arg == "--verbose") {
@@ -344,6 +449,11 @@ ParseOptions(int argc, char **argv)
                 << "  --batch <n>           Number of graph attempts in the batch\n"
                 << "  --threads <n>         Threads per block for build/collect/peel kernels\n"
                 << "  --storage-bits <x>    auto, 16, or 32\n"
+                << "  --solve-mode <x>      host-roundtrip or device-serial\n"
+                << "  --memory-headroom-pct <x>\n"
+                << "                        required free-memory headroom percentage [default: 10]\n"
+                << "  --disable-auto-batch-scale\n"
+                << "                        fail instead of shrinking batch to fit available memory\n"
                 << "  --hash-function <x>   SplitMix, MultiplyShiftR, MultiplyShiftRX,\n"
                 << "                        Mulshrolate1RX, Mulshrolate2RX, Mulshrolate3RX,\n"
                 << "                        or Mulshrolate4RX\n"
@@ -361,6 +471,11 @@ ParseOptions(int argc, char **argv)
 
     if (Opts.Edges == 0 || Opts.Batch == 0 || Opts.Threads == 0) {
         std::cerr << "Edges, batch, and threads must be non-zero.\n";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (Opts.MemoryHeadroomPct < 0.0 || Opts.MemoryHeadroomPct >= 100.0) {
+        std::cerr << "--memory-headroom-pct must be in the range [0, 100).\n";
         std::exit(EXIT_FAILURE);
     }
 
@@ -1119,6 +1234,123 @@ VerifyGraphsKernel(uint32_t Edges,
     }
 }
 
+template<typename StorageT>
+__global__ void
+SolveGraphsDeviceSerialKernel(uint32_t Edges,
+                              uint32_t Vertices,
+                              uint32_t Batch,
+                              uint32_t EdgeMask,
+                              const uint32_t *InvalidGraphs,
+                              const StorageT *EdgeU,
+                              const StorageT *EdgeV,
+                              uint32_t *Degree,
+                              uint32_t *XorEdge,
+                              uint32_t *EdgePeeled,
+                              StorageT *OwnerVertex,
+                              StorageT *PeelOrder,
+                              uint32_t *PeeledCount,
+                              StorageT *Assigned,
+                              uint32_t *VerifyFailures,
+                              uint32_t *GraphRounds)
+{
+    const uint32_t Graph = blockIdx.x;
+
+    if (Graph >= Batch || threadIdx.x != 0) {
+        return;
+    }
+
+    const uint32_t VertexBase = Graph * Vertices;
+    const uint32_t EdgeBase = Graph * Edges;
+    uint32_t Rounds = 0;
+
+    if (InvalidGraphs[Graph] != 0) {
+        VerifyFailures[Graph] = 1;
+        GraphRounds[Graph] = 0;
+        return;
+    }
+
+    for (;;) {
+        bool Progress = false;
+
+        for (uint32_t Vertex = 0; Vertex < Vertices; ++Vertex) {
+            if (Degree[VertexBase + Vertex] != 1) {
+                continue;
+            }
+
+            const uint32_t Edge = XorEdge[VertexBase + Vertex];
+            const uint32_t EdgeIndex = EdgeBase + Edge;
+
+            if (EdgePeeled[EdgeIndex] != 0) {
+                continue;
+            }
+
+            EdgePeeled[EdgeIndex] = 1;
+
+            const uint32_t Order = PeeledCount[Graph]++;
+            const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeIndex]);
+            const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeIndex]);
+
+            OwnerVertex[EdgeIndex] = static_cast<StorageT>(Vertex);
+            PeelOrder[EdgeBase + Order] = static_cast<StorageT>(Edge);
+
+            if (Degree[VertexBase + U] > 0) {
+                --Degree[VertexBase + U];
+                XorEdge[VertexBase + U] ^= Edge;
+            }
+
+            if (Degree[VertexBase + V] > 0) {
+                --Degree[VertexBase + V];
+                XorEdge[VertexBase + V] ^= Edge;
+            }
+
+            Progress = true;
+        }
+
+        if (!Progress) {
+            break;
+        }
+
+        ++Rounds;
+    }
+
+    GraphRounds[Graph] = Rounds;
+
+    if (PeeledCount[Graph] != Edges) {
+        VerifyFailures[Graph] = 1;
+        return;
+    }
+
+    for (int64_t Index = static_cast<int64_t>(Edges) - 1; Index >= 0; --Index) {
+        const uint32_t Edge =
+            static_cast<uint32_t>(PeelOrder[EdgeBase + static_cast<uint32_t>(Index)]);
+        const uint32_t Owner = static_cast<uint32_t>(OwnerVertex[EdgeBase + Edge]);
+        const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeBase + Edge]);
+        const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeBase + Edge]);
+        const uint32_t Other = (Owner == U) ? V : U;
+        const uint32_t OtherAssigned = static_cast<uint32_t>(Assigned[VertexBase + Other]);
+        const uint32_t Value = (Edge - OtherAssigned) & EdgeMask;
+
+        Assigned[VertexBase + Owner] = static_cast<StorageT>(Value);
+    }
+
+    uint32_t Failures = 0;
+
+    for (uint32_t Edge = 0; Edge < Edges; ++Edge) {
+        const uint32_t U = static_cast<uint32_t>(EdgeU[EdgeBase + Edge]);
+        const uint32_t V = static_cast<uint32_t>(EdgeV[EdgeBase + Edge]);
+        const uint32_t Index = (
+            static_cast<uint32_t>(Assigned[VertexBase + U]) +
+            static_cast<uint32_t>(Assigned[VertexBase + V])
+        ) & EdgeMask;
+
+        if (Index != Edge) {
+            ++Failures;
+        }
+    }
+
+    VerifyFailures[Graph] = Failures;
+}
+
 template<HashFunctionKind Kind, typename StorageT>
 CpuResult
 RunCpuReference(uint32_t Graph,
@@ -1262,6 +1494,7 @@ RunExperiment(const Options &Opts,
     Result.StorageBits = static_cast<uint32_t>(sizeof(StorageT) * 8);
     Result.HashFunctionName = HashTraits<Kind>::Name;
     Result.SelectedStorage = SelectedStorage;
+    Result.SolveModeName = SolveModeToString(Opts.Solve);
 
     const uint64_t TotalEdges = static_cast<uint64_t>(KeyCount) * Batch;
     const uint64_t TotalVertices = static_cast<uint64_t>(Vertices) * Batch;
@@ -1282,6 +1515,7 @@ RunExperiment(const Options &Opts,
     uint32_t *DVerifyFailures = nullptr;
     FrontierItem *DFrontier = nullptr;
     uint32_t *DFrontierCount = nullptr;
+    uint32_t *DGraphRounds = nullptr;
 
     CheckCuda(cudaMalloc(&DKeys, Keys.size() * sizeof(Keys[0])), "cudaMalloc(DKeys)");
     CheckCuda(cudaMalloc(&DGraphSeeds,
@@ -1298,8 +1532,12 @@ RunExperiment(const Options &Opts,
     CheckCuda(cudaMalloc(&DPeeledCount, Batch * sizeof(uint32_t)), "cudaMalloc(DPeeledCount)");
     CheckCuda(cudaMalloc(&DAssigned, TotalVertices * sizeof(StorageT)), "cudaMalloc(DAssigned)");
     CheckCuda(cudaMalloc(&DVerifyFailures, Batch * sizeof(uint32_t)), "cudaMalloc(DVerifyFailures)");
-    CheckCuda(cudaMalloc(&DFrontier, FrontierCapacity * sizeof(FrontierItem)), "cudaMalloc(DFrontier)");
-    CheckCuda(cudaMalloc(&DFrontierCount, sizeof(uint32_t)), "cudaMalloc(DFrontierCount)");
+    CheckCuda(cudaMalloc(&DGraphRounds, Batch * sizeof(uint32_t)), "cudaMalloc(DGraphRounds)");
+
+    if (Opts.Solve == SolveMode::HostRoundTrip) {
+        CheckCuda(cudaMalloc(&DFrontier, FrontierCapacity * sizeof(FrontierItem)), "cudaMalloc(DFrontier)");
+        CheckCuda(cudaMalloc(&DFrontierCount, sizeof(uint32_t)), "cudaMalloc(DFrontierCount)");
+    }
 
     CheckCuda(cudaMemcpy(DKeys, Keys.data(), Keys.size() * sizeof(Keys[0]), cudaMemcpyHostToDevice),
               "cudaMemcpy(DKeys)");
@@ -1320,6 +1558,11 @@ RunExperiment(const Options &Opts,
     CheckCuda(cudaMemset(DPeeledCount, 0, Batch * sizeof(uint32_t)), "cudaMemset(DPeeledCount)");
     CheckCuda(cudaMemset(DAssigned, 0, TotalVertices * sizeof(StorageT)), "cudaMemset(DAssigned)");
     CheckCuda(cudaMemset(DVerifyFailures, 0, Batch * sizeof(uint32_t)), "cudaMemset(DVerifyFailures)");
+    CheckCuda(cudaMemset(DGraphRounds, 0, Batch * sizeof(uint32_t)), "cudaMemset(DGraphRounds)");
+
+    if (Opts.Solve == SolveMode::HostRoundTrip) {
+        CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
+    }
 
     cudaEvent_t Start = nullptr;
     cudaEvent_t Stop = nullptr;
@@ -1343,68 +1586,88 @@ RunExperiment(const Options &Opts,
                                                                      DInvalidGraphs);
     CheckCuda(cudaGetLastError(), "BuildGraphsKernel launch");
 
-    uint32_t FrontierCount = 0;
+    if (Opts.Solve == SolveMode::HostRoundTrip) {
+        uint32_t FrontierCount = 0;
 
-    for (;;) {
-        CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
+        for (;;) {
+            CheckCuda(cudaMemset(DFrontierCount, 0, sizeof(uint32_t)), "cudaMemset(DFrontierCount)");
 
-        CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
-                                                                        Batch,
-                                                                        DDegree,
-                                                                        DXorEdge,
-                                                                        DInvalidGraphs,
-                                                                        DFrontier,
-                                                                        DFrontierCount);
-        CheckCuda(cudaGetLastError(), "CollectFrontierKernel launch");
-        CheckCuda(cudaMemcpy(&FrontierCount, DFrontierCount, sizeof(uint32_t), cudaMemcpyDeviceToHost),
-                  "cudaMemcpy(FrontierCount)");
+            CollectFrontierKernel<StorageT><<<VertexBlocks, Opts.Threads>>>(Vertices,
+                                                                            Batch,
+                                                                            DDegree,
+                                                                            DXorEdge,
+                                                                            DInvalidGraphs,
+                                                                            DFrontier,
+                                                                            DFrontierCount);
+            CheckCuda(cudaGetLastError(), "CollectFrontierKernel launch");
+            CheckCuda(cudaMemcpy(&FrontierCount, DFrontierCount, sizeof(uint32_t), cudaMemcpyDeviceToHost),
+                      "cudaMemcpy(FrontierCount)");
 
-        if (FrontierCount == 0) {
-            break;
+            if (FrontierCount == 0) {
+                break;
+            }
+
+            ++Result.Rounds;
+
+            const uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
+            PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
+                                                                       Vertices,
+                                                                       FrontierCount,
+                                                                       DFrontier,
+                                                                       DEdgeU,
+                                                                       DEdgeV,
+                                                                       DDegree,
+                                                                       DXorEdge,
+                                                                       DEdgePeeled,
+                                                                       DOwnerVertex,
+                                                                       DPeelOrder,
+                                                                       DPeeledCount);
+            CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
         }
 
-        ++Result.Rounds;
+        AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                                   Vertices,
+                                                   EdgeMask,
+                                                   DInvalidGraphs,
+                                                   DEdgeU,
+                                                   DEdgeV,
+                                                   DOwnerVertex,
+                                                   DPeelOrder,
+                                                   DPeeledCount,
+                                                   DAssigned);
+        CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
 
-        const uint32_t PeelBlocks = static_cast<uint32_t>((FrontierCount + Opts.Threads - 1) / Opts.Threads);
-        PeelFrontierKernel<StorageT><<<PeelBlocks, Opts.Threads>>>(KeyCount,
-                                                                   Vertices,
-                                                                   FrontierCount,
-                                                                   DFrontier,
-                                                                   DEdgeU,
-                                                                   DEdgeV,
-                                                                   DDegree,
-                                                                   DXorEdge,
-                                                                   DEdgePeeled,
-                                                                   DOwnerVertex,
-                                                                   DPeelOrder,
-                                                                   DPeeledCount);
-        CheckCuda(cudaGetLastError(), "PeelFrontierKernel launch");
+        const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
+        VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
+                                                                     Vertices,
+                                                                     Batch,
+                                                                     EdgeMask,
+                                                                     DInvalidGraphs,
+                                                                     DEdgeU,
+                                                                     DEdgeV,
+                                                                     DAssigned,
+                                                                     DPeeledCount,
+                                                                     DVerifyFailures);
+        CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
+    } else {
+        SolveGraphsDeviceSerialKernel<StorageT><<<Batch, 1>>>(KeyCount,
+                                                              Vertices,
+                                                              Batch,
+                                                              EdgeMask,
+                                                              DInvalidGraphs,
+                                                              DEdgeU,
+                                                              DEdgeV,
+                                                              DDegree,
+                                                              DXorEdge,
+                                                              DEdgePeeled,
+                                                              DOwnerVertex,
+                                                              DPeelOrder,
+                                                              DPeeledCount,
+                                                              DAssigned,
+                                                              DVerifyFailures,
+                                                              DGraphRounds);
+        CheckCuda(cudaGetLastError(), "SolveGraphsDeviceSerialKernel launch");
     }
-
-    AssignGraphsKernel<StorageT><<<Batch, 1>>>(KeyCount,
-                                               Vertices,
-                                               EdgeMask,
-                                               DInvalidGraphs,
-                                               DEdgeU,
-                                               DEdgeV,
-                                               DOwnerVertex,
-                                               DPeelOrder,
-                                               DPeeledCount,
-                                               DAssigned);
-    CheckCuda(cudaGetLastError(), "AssignGraphsKernel launch");
-
-    const uint32_t VerifyBlocks = static_cast<uint32_t>((TotalEdges + Opts.Threads - 1) / Opts.Threads);
-    VerifyGraphsKernel<StorageT><<<VerifyBlocks, Opts.Threads>>>(KeyCount,
-                                                                 Vertices,
-                                                                 Batch,
-                                                                 EdgeMask,
-                                                                 DInvalidGraphs,
-                                                                 DEdgeU,
-                                                                 DEdgeV,
-                                                                 DAssigned,
-                                                                 DPeeledCount,
-                                                                 DVerifyFailures);
-    CheckCuda(cudaGetLastError(), "VerifyGraphsKernel launch");
 
     CheckCuda(cudaEventRecord(Stop), "cudaEventRecord(Stop)");
     CheckCuda(cudaEventSynchronize(Stop), "cudaEventSynchronize(Stop)");
@@ -1413,6 +1676,7 @@ RunExperiment(const Options &Opts,
     std::vector<uint32_t> InvalidGraphs(Batch);
     std::vector<uint32_t> PeeledCount(Batch);
     std::vector<uint32_t> VerifyFailures(Batch);
+    std::vector<uint32_t> GraphRounds(Batch);
 
     CheckCuda(cudaMemcpy(InvalidGraphs.data(), DInvalidGraphs, Batch * sizeof(uint32_t), cudaMemcpyDeviceToHost),
               "cudaMemcpy(InvalidGraphs)");
@@ -1420,6 +1684,16 @@ RunExperiment(const Options &Opts,
               "cudaMemcpy(PeeledCount)");
     CheckCuda(cudaMemcpy(VerifyFailures.data(), DVerifyFailures, Batch * sizeof(uint32_t), cudaMemcpyDeviceToHost),
               "cudaMemcpy(VerifyFailures)");
+    CheckCuda(cudaMemcpy(GraphRounds.data(), DGraphRounds, Batch * sizeof(uint32_t), cudaMemcpyDeviceToHost),
+              "cudaMemcpy(GraphRounds)");
+
+    if (Opts.Solve == SolveMode::DeviceSerial) {
+        uint32_t MaxRounds = 0;
+        for (uint32_t Round : GraphRounds) {
+            MaxRounds = std::max(MaxRounds, Round);
+        }
+        Result.Rounds = MaxRounds;
+    }
 
     auto CpuStart = std::chrono::steady_clock::now();
     std::vector<CpuResult> CpuResults(Batch);
@@ -1508,6 +1782,7 @@ RunExperiment(const Options &Opts,
         << "  Vertices:           " << Vertices << "\n"
         << "  Batch size:         " << Batch << "\n"
         << "  Hash function:      " << Result.HashFunctionName << "\n"
+        << "  Solve mode:         " << Result.SolveModeName << "\n"
         << "  Storage bits:       " << Result.StorageBits << "\n"
         << "  Storage mode:       " << StorageModeToString(Result.SelectedStorage) << "\n"
         << "  Peel rounds:        " << Result.Rounds << "\n"
@@ -1519,9 +1794,14 @@ RunExperiment(const Options &Opts,
         << "  GPU time (ms):      " << Result.GpuMilliseconds << "\n"
         << "  CPU time (ms):      " << Result.CpuMilliseconds << "\n";
 
-    CheckCuda(cudaFree(DFrontierCount), "cudaFree(DFrontierCount)");
-    CheckCuda(cudaFree(DFrontier), "cudaFree(DFrontier)");
+    if (DFrontierCount) {
+        CheckCuda(cudaFree(DFrontierCount), "cudaFree(DFrontierCount)");
+    }
+    if (DFrontier) {
+        CheckCuda(cudaFree(DFrontier), "cudaFree(DFrontier)");
+    }
     CheckCuda(cudaFree(DVerifyFailures), "cudaFree(DVerifyFailures)");
+    CheckCuda(cudaFree(DGraphRounds), "cudaFree(DGraphRounds)");
     CheckCuda(cudaFree(DAssigned), "cudaFree(DAssigned)");
     CheckCuda(cudaFree(DPeeledCount), "cudaFree(DPeeledCount)");
     CheckCuda(cudaFree(DPeelOrder), "cudaFree(DPeelOrder)");
@@ -1547,6 +1827,43 @@ SupportsStorage(uint32_t EdgeCapacity, uint32_t Vertices)
     constexpr uint64_t Max = static_cast<uint64_t>(std::numeric_limits<StorageT>::max());
     return (static_cast<uint64_t>(EdgeCapacity - 1) <= Max &&
             static_cast<uint64_t>(Vertices - 1) <= Max);
+}
+
+template<typename StorageT>
+size_t
+EstimateDeviceBytes(uint32_t KeyCount,
+                    uint32_t Vertices,
+                    uint32_t Batch,
+                    SolveMode Mode)
+{
+    using FrontierItem = FrontierItemT<StorageT>;
+
+    const size_t TotalEdges = static_cast<size_t>(KeyCount) * Batch;
+    const size_t TotalVertices = static_cast<size_t>(Vertices) * Batch;
+
+    size_t Bytes = 0;
+
+    Bytes += static_cast<size_t>(KeyCount) * sizeof(uint32_t);      // DKeys
+    Bytes += static_cast<size_t>(Batch) * sizeof(GraphSeeds);       // DGraphSeeds
+    Bytes += TotalEdges * sizeof(StorageT);                         // DEdgeU
+    Bytes += TotalEdges * sizeof(StorageT);                         // DEdgeV
+    Bytes += TotalVertices * sizeof(uint32_t);                      // DDegree
+    Bytes += TotalVertices * sizeof(uint32_t);                      // DXorEdge
+    Bytes += static_cast<size_t>(Batch) * sizeof(uint32_t);         // DInvalidGraphs
+    Bytes += TotalEdges * sizeof(uint32_t);                         // DEdgePeeled
+    Bytes += TotalEdges * sizeof(StorageT);                         // DOwnerVertex
+    Bytes += TotalEdges * sizeof(StorageT);                         // DPeelOrder
+    Bytes += static_cast<size_t>(Batch) * sizeof(uint32_t);         // DPeeledCount
+    Bytes += TotalVertices * sizeof(StorageT);                      // DAssigned
+    Bytes += static_cast<size_t>(Batch) * sizeof(uint32_t);         // DVerifyFailures
+    Bytes += static_cast<size_t>(Batch) * sizeof(uint32_t);         // DGraphRounds
+
+    if (Mode == SolveMode::HostRoundTrip) {
+        Bytes += TotalVertices * sizeof(FrontierItem);              // DFrontier
+        Bytes += sizeof(uint32_t);                                  // DFrontierCount
+    }
+
+    return Bytes;
 }
 
 template<HashFunctionKind Kind>
@@ -1628,12 +1945,108 @@ main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
+    const DeviceMemoryInfo MemoryInfo = QueryDeviceMemoryInfo();
+    const size_t RequestedBytes = (
+        SelectedStorage == StorageMode::Bits16 ?
+            EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, Opts.Batch, Opts.Solve) :
+            EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, Opts.Batch, Opts.Solve)
+    );
+
+    Options EffectiveOpts = Opts;
+
+    if (MemoryInfo.Valid) {
+        const double HeadroomScale = (100.0 - Opts.MemoryHeadroomPct) / 100.0;
+        const size_t AllowedBytes = static_cast<size_t>(
+            static_cast<double>(MemoryInfo.FreeBytes) * HeadroomScale
+        );
+
+        if (RequestedBytes > AllowedBytes) {
+            size_t FixedBytes = (
+                SelectedStorage == StorageMode::Bits16 ?
+                    EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, 0, Opts.Solve) :
+                    EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, 0, Opts.Solve)
+            );
+            size_t OneGraphBytes = (
+                SelectedStorage == StorageMode::Bits16 ?
+                    EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, 1, Opts.Solve) :
+                    EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, 1, Opts.Solve)
+            );
+
+            if (OneGraphBytes <= FixedBytes || AllowedBytes <= FixedBytes) {
+                std::cerr
+                    << "Estimated device memory requirement "
+                    << FormatBytes(RequestedBytes)
+                    << " exceeds allowed headroom-adjusted free memory "
+                    << FormatBytes(AllowedBytes)
+                    << ".\n";
+                return EXIT_FAILURE;
+            }
+
+            const size_t PerBatchBytes = OneGraphBytes - FixedBytes;
+            const size_t MaxBatch = (AllowedBytes - FixedBytes) / PerBatchBytes;
+
+            if (!Opts.AutoScaleBatchToFit) {
+                std::cerr
+                    << "Requested batch " << Opts.Batch
+                    << " requires " << FormatBytes(RequestedBytes)
+                    << ", but only " << FormatBytes(AllowedBytes)
+                    << " is allowed after leaving "
+                    << Opts.MemoryHeadroomPct << "% headroom.\n";
+                return EXIT_FAILURE;
+            }
+
+            if (MaxBatch < 1) {
+                std::cerr
+                    << "Unable to fit even batch size 1 within available device memory headroom.\n";
+                return EXIT_FAILURE;
+            }
+
+            EffectiveOpts.Batch = static_cast<uint32_t>(MaxBatch);
+
+            std::cout
+                << "Adjusting batch from " << Opts.Batch
+                << " to " << EffectiveOpts.Batch
+                << " to fit available device memory (estimated "
+                << FormatBytes(RequestedBytes)
+                << ", allowed "
+                << FormatBytes(AllowedBytes)
+                << ").\n";
+
+            if (Opts.Solve == SolveMode::HostRoundTrip) {
+                const size_t DeviceSerialBytes = (
+                    SelectedStorage == StorageMode::Bits16 ?
+                        EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, Opts.Batch, SolveMode::DeviceSerial) :
+                        EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, Opts.Batch, SolveMode::DeviceSerial)
+                );
+                if (DeviceSerialBytes <= AllowedBytes) {
+                    std::cout
+                        << "Hint: requested batch would fit without scaling under --solve-mode device-serial.\n";
+                }
+            }
+        }
+
+        const size_t EffectiveBytes = (
+            SelectedStorage == StorageMode::Bits16 ?
+                EstimateDeviceBytes<uint16_t>(KeyCount, Vertices, EffectiveOpts.Batch, EffectiveOpts.Solve) :
+                EstimateDeviceBytes<uint32_t>(KeyCount, Vertices, EffectiveOpts.Batch, EffectiveOpts.Solve)
+        );
+
+        std::cout
+            << "CUDA memory summary\n"
+            << "  Free:               " << FormatBytes(MemoryInfo.FreeBytes) << "\n"
+            << "  Total:              " << FormatBytes(MemoryInfo.TotalBytes) << "\n"
+            << "  Unified-like:       " << (MemoryInfo.UnifiedLike ? "Y" : "N") << "\n"
+            << "  Headroom target:    " << Opts.MemoryHeadroomPct << "%\n"
+            << "  Estimated bytes:    " << FormatBytes(EffectiveBytes) << "\n"
+            << "  Effective batch:    " << EffectiveOpts.Batch << "\n";
+    }
+
     ExperimentResult Result = {};
 
     switch (Opts.HashFunction) {
         case HashFunctionKind::SplitMix:
             Result = RunWithSelectedStorage<HashFunctionKind::SplitMix>(
-                Opts,
+                EffectiveOpts,
                 Keys,
                 RequestedKeys,
                 SelectedStorage
@@ -1641,7 +2054,7 @@ main(int argc, char **argv)
             break;
         case HashFunctionKind::MultiplyShiftR:
             Result = RunWithSelectedStorage<HashFunctionKind::MultiplyShiftR>(
-                Opts,
+                EffectiveOpts,
                 Keys,
                 RequestedKeys,
                 SelectedStorage
@@ -1649,7 +2062,7 @@ main(int argc, char **argv)
             break;
         case HashFunctionKind::MultiplyShiftRX:
             Result = RunWithSelectedStorage<HashFunctionKind::MultiplyShiftRX>(
-                Opts,
+                EffectiveOpts,
                 Keys,
                 RequestedKeys,
                 SelectedStorage
@@ -1657,7 +2070,7 @@ main(int argc, char **argv)
             break;
         case HashFunctionKind::Mulshrolate1RX:
             Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate1RX>(
-                Opts,
+                EffectiveOpts,
                 Keys,
                 RequestedKeys,
                 SelectedStorage
@@ -1665,7 +2078,7 @@ main(int argc, char **argv)
             break;
         case HashFunctionKind::Mulshrolate2RX:
             Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate2RX>(
-                Opts,
+                EffectiveOpts,
                 Keys,
                 RequestedKeys,
                 SelectedStorage
@@ -1673,7 +2086,7 @@ main(int argc, char **argv)
             break;
         case HashFunctionKind::Mulshrolate3RX:
             Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate3RX>(
-                Opts,
+                EffectiveOpts,
                 Keys,
                 RequestedKeys,
                 SelectedStorage
@@ -1681,7 +2094,7 @@ main(int argc, char **argv)
             break;
         case HashFunctionKind::Mulshrolate4RX:
             Result = RunWithSelectedStorage<HashFunctionKind::Mulshrolate4RX>(
-                Opts,
+                EffectiveOpts,
                 Keys,
                 RequestedKeys,
                 SelectedStorage

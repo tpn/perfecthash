@@ -20,7 +20,11 @@ Understand the current CPU and CUDA graph-solving implementations in PerfectHash
 - Code and repository reconnaissance completed.
 - Active CUDA backend understood as a hybrid GPU+CPU path.
 - External GPU MPHF / AMQ literature survey completed.
-- Next step is selecting a concrete prototype design for batched GPU solving.
+- Current chosen implementation direction:
+  - device-resident per-graph solve loop (`device-serial`)
+- Explicitly deferred alternative:
+  - cooperative-groups / global frontier device-side convergence across the full batch
+  - deferred because it is more invasive and harder to validate quickly against the current baseline
 
 ## Phases
 1. Inspect existing CPU and CUDA solver implementations.

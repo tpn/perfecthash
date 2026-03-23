@@ -389,6 +389,59 @@
   - known-good CPU seeds solve correctly
   - fixed-attempt yield matches CPU for tested cases when concurrency semantics are aligned
 
+## Chosen Direction
+- Chosen now:
+  - device-resident per-graph solve loop (`device-serial`)
+  - one block per graph
+  - local convergence on device
+- Deferred for later:
+  - cooperative-groups / global frontier device-side convergence across the full batch
+  - I am not taking this path yet so it remains easy to revisit later
+
+## Device-Resident Solve Mode
+- The POC now supports two solve modes:
+  - `host-roundtrip`
+  - `device-serial`
+- `device-serial` keeps the same graph state and verification semantics, but performs the peel/assign/verify loop entirely inside a device kernel, one block per graph.
+- Clean local comparison on the easy case:
+  - `CoreUIComponents-8193.keys`
+  - `MultiplyShiftR`, Philox, batch `2048`, storage `16`
+  - `host-roundtrip`
+    - GPU success `164/2048`
+    - CPU success `164/2048`
+    - GPU time `242.481 ms`
+  - `device-serial`
+    - GPU success `164/2048`
+    - CPU success `164/2048`
+    - GPU time `217.927 ms`
+- Interpretation:
+  - the chosen direction is functionally correct
+  - it removes the host frontier-count round trip
+  - it is only a stepping stone, not the final high-performance design, because each graph’s inner convergence loop is still serialized to one thread/block
+
+## Memory Guarding
+- The POC now estimates required device bytes before large allocations.
+- Inputs to the estimate:
+  - logical key count
+  - vertex count
+  - batch size
+  - storage width (`16` vs `32`)
+  - solve mode (`host-roundtrip` vs `device-serial`)
+- It queries CUDA free/total memory and enforces configurable headroom:
+  - `--memory-headroom-pct` (default `10`)
+- It also detects unified-like device characteristics from the CUDA runtime/device attributes and prints a summary before the run.
+- If the requested batch does not fit with headroom:
+  - default behavior is to auto-scale batch down
+  - `--disable-auto-batch-scale` converts that into a hard failure
+- The estimator is solve-mode aware:
+  - `host-roundtrip` includes the large frontier buffer
+  - `device-serial` omits that buffer
+- Example summary on the local GB10:
+  - free: `113.68 GiB`
+  - total: `121.69 GiB`
+  - unified-like: `Y`
+  - estimated bytes for `CoreUIComponents-8193`, batch `2048`, `device-serial`, storage `16`: `832.16 MiB`
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:

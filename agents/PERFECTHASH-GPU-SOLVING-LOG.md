@@ -155,3 +155,25 @@
   - POC result: `164/2048`
 - 2026-03-23 13:08:47 PDT: Also confirmed `Hydrogen-40147.keys`, `Mulshrolate3RX`, Philox, fixed `2048` remains `26/2048` with CPU `MaximumConcurrency=1`, matching the POC.
 - 2026-03-23 13:08:47 PDT: Updated conclusion: the standalone solver is CPU-equivalent for the tested cases when concurrency semantics are aligned (`MaximumConcurrency=1`).
+- 2026-03-23 15:26:56 PDT: Added a second solve mode to the POC:
+  - `host-roundtrip`
+  - `device-serial`
+- 2026-03-23 15:26:56 PDT: Recorded the explicit design choice:
+  - chosen now: per-graph device-resident loop
+  - deferred for later: cooperative-groups / global frontier device-side convergence
+- 2026-03-23 15:26:56 PDT: Clean local comparison on the easy case:
+  - `CoreUIComponents-8193.keys`
+  - `MultiplyShiftR`, Philox, batch `2048`, storage `16`
+  - `host-roundtrip`: GPU `164/2048`, CPU `164/2048`, GPU `242.481 ms`
+  - `device-serial`: GPU `164/2048`, CPU `164/2048`, GPU `217.927 ms`
+- 2026-03-23 15:26:56 PDT: Added memory estimation / headroom logic:
+  - estimates required device bytes before allocation
+  - queries CUDA free/total memory
+  - prints unified-like device detection
+  - auto-scales batch down by default to preserve headroom
+- 2026-03-23 15:26:56 PDT: Confirmed memory summary on local GB10 for the easy case:
+  - free `113.68 GiB`
+  - total `121.69 GiB`
+  - unified-like `Y`
+  - estimated bytes `832.16 MiB`
+- 2026-03-23 15:26:56 PDT: Terminated an intentionally oversized benchmark after validating the new guard logic, in order to avoid stressing the shared-memory GB10 system again.

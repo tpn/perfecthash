@@ -28,6 +28,8 @@
 - Added solved-seed dumping to the POC for mismatch analysis.
 - Confirmed an easy-case random-yield discrepancy on `CoreUIComponents-8193.keys`.
 - Resolved the CoreUI discrepancy as a CPU concurrency-semantic issue; with `MaximumConcurrency=1`, CPU and POC fixed-attempt yield match.
+- Added a device-resident per-graph solve mode and benchmarked it against the host-roundtrip baseline.
+- Added CUDA memory estimation, headroom enforcement, and auto batch scaling.
 
 ## In Progress
 - Expand the `MaximumConcurrency=1` equivalence checks to more hash functions and datasets.
@@ -46,12 +48,14 @@
 - Replay dumped POC-success seeds against the real CLI until the first true mismatch is identified.
 - Sync the latest equivalence findings to `nv1` if cross-machine confirmation is still useful.
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
+- Compare `host-roundtrip` vs `device-serial` on hard cases with clean serial measurements.
 - Measure solve throughput as a function of:
   - edges
   - batch size
   - threads per block
   - vertex/edge ratio
-- Replace the host-driven peel-round loop with a more GPU-native synchronization strategy.
+- Revisit the deferred direction:
+  - cooperative-groups / global frontier device-side convergence
 - Evaluate one-warp-per-graph and one-CTA-per-graph assignment kernels.
 - Add richer instrumentation:
   - per-graph peel rounds
