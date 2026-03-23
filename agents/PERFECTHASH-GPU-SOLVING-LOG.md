@@ -115,3 +115,8 @@
   - `HologramWorld-31016.keys`, batch `2048`, `MultiplyShiftR`, storage `16`
   - result: GPU `0/2048`, CPU `0/2048`, mismatches `0`, GPU `113.163 ms`, CPU `455.704 ms`
 - 2026-03-22 22:45:39 PDT: Cross-machine conclusion unchanged: Philox + `HashShift` override still does not recover real solver yield on its own.
+- 2026-03-22 23:00:22 PDT: Compared POC fixed-batch yield directly against local `PerfectHashCreate` CSV output:
+  - `HologramWorld-31016.keys`, `MultiplyShiftR`, Philox, fixed/batch `2048`: CPU `0/2048`, POC `0/2048`
+  - `HologramWorld-31016.keys`, `Mulshrolate3RX`, Philox, fixed/batch `2048`: CPU `1/2048`, POC `1/2048`
+  - `Hydrogen-40147.keys`, `MultiplyShiftR`, Philox, fixed/batch `128`: CPU `0/128`, POC `0/128`
+- 2026-03-22 23:00:22 PDT: Current status: for the tested real-key / real-hash cases above, the standalone solver now matches CPU fixed-attempt yield as well as per-seed correctness.

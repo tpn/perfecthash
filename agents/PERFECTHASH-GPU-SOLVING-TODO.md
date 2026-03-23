@@ -22,9 +22,10 @@
 - Validated the hash-family port against known-good offline `.seeds` files.
 - Replaced SplitMix-derived candidate seeds with a Philox-based generator closer to solver precedent.
 - Mirrored the `HashShift` override for non-AND-mask (`RX`) families.
+- Matched CPU fixed-attempt yield for representative real-key cases using Philox and real hash families.
 
 ## In Progress
-- Improve seed-generation / seed-search fidelity beyond plain Philox + masks.
+- Expand CPU-equivalence checks beyond the current representative cases.
 
 ## Next
 - Decide whether to push the 16-bit idea further:
@@ -35,6 +36,7 @@
   - compare Philox-only yield against actual CLI / library solve yield
   - consider a mutation step around known-good seed shapes instead of full random generation
 - Consider measuring actual `PerfectHashCreate` attempt yield for one representative case so the POC has a concrete target.
+- Compare winning subsequence / seed material against CPU CSV for a case with non-zero solutions.
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:
   - edges

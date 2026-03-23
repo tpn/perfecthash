@@ -326,6 +326,19 @@
     - CPU time `455.704 ms`
   - This matches the local yield result and reinforces that the remaining issue is algorithmic seed shaping, not machine-specific behavior.
 
+## CPU-Equivalent Yield Checks
+- The strongest current equivalence signal is no longer just “known-good seeds solve”, but that fixed-attempt yield matches the real CPU solver on tested cases:
+  - `HologramWorld-31016.keys`, `MultiplyShiftR`, Philox, fixed/batch `2048`
+    - CPU solver: `0/2048`
+    - POC: `0/2048`
+  - `HologramWorld-31016.keys`, `Mulshrolate3RX`, Philox, fixed/batch `2048`
+    - CPU solver: `1/2048`
+    - POC: `1/2048`
+  - `Hydrogen-40147.keys`, `MultiplyShiftR`, Philox, fixed/batch `128`
+    - CPU solver: `0/128`
+    - POC: `0/128`
+- This does not prove full equivalence yet, but it does show the standalone GPU+CPU reference path is now matching the library’s fixed-attempt yield behavior for representative real-key cases and real hash families.
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:
