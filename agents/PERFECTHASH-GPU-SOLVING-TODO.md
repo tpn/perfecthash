@@ -20,17 +20,19 @@
 - Benchmarked serial 16-bit vs 32-bit HologramWorld runs locally and on `nv1`.
 - Wired the main curated hash families into the POC with compile-time selection.
 - Validated the hash-family port against known-good offline `.seeds` files.
+- Replaced SplitMix-derived candidate seeds with a Philox-based generator closer to solver precedent.
+- Mirrored the `HashShift` override for non-AND-mask (`RX`) families.
 
 ## In Progress
-- Improve seed-generation / seed-search fidelity for the real hash families.
+- Improve seed-generation / seed-search fidelity beyond plain Philox + masks.
 
 ## Next
 - Decide whether to push the 16-bit idea further:
   - keep only the current light-touch downsizing, or
   - template more of the peel/update state, including `XorEdge`
 - Improve random attempt quality for real hash families:
-  - compare current SplitMix-derived seed generation against library behavior
-  - honor additional seed-mask / byte-range expectations if needed
+  - add weighted seed-mask count behavior analogous to `GraphApplyWeightedSeedMasks()`
+  - compare Philox-only yield against actual CLI / library solve yield
   - consider a mutation step around known-good seed shapes instead of full random generation
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:

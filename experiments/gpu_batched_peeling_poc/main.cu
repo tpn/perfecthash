@@ -17,6 +17,7 @@
 namespace {
 
 constexpr uint32_t MAX_NUMBER_OF_SEEDS = 8;
+constexpr uint64_t RNG_DEFAULT_SEED = 0x2019090319811025ull;
 
 enum class StorageMode {
     Auto,
@@ -39,7 +40,9 @@ struct Options {
     uint32_t Batch = 256;
     uint32_t Threads = 256;
     uint64_t KeySeed = 0x123456789abcdef0ull;
-    uint64_t GraphSeed = 0x0f1e2d3c4b5a6978ull;
+    uint64_t GraphSeed = RNG_DEFAULT_SEED;
+    uint64_t RngSubsequence = 0;
+    uint64_t RngOffset = 0;
     std::string KeysFile;
     std::string SeedsFile;
     StorageMode Storage = StorageMode::Auto;
@@ -68,6 +71,20 @@ union ULongBytes {
         uint8_t Byte3;
         uint8_t Byte4;
     };
+};
+
+struct Philox4x32State {
+    uint32_t CounterX = 0;
+    uint32_t CounterY = 0;
+    uint32_t CounterZ = 0;
+    uint32_t CounterW = 0;
+    uint32_t OutputX = 0;
+    uint32_t OutputY = 0;
+    uint32_t OutputZ = 0;
+    uint32_t OutputW = 0;
+    uint32_t KeyX = 0;
+    uint32_t KeyY = 0;
+    uint32_t CurrentCount = 0;
 };
 
 struct GraphSeeds {
@@ -293,6 +310,10 @@ ParseOptions(int argc, char **argv)
             Opts.KeySeed = std::stoull(RequireValue("--key-seed"), nullptr, 0);
         } else if (Arg == "--graph-seed") {
             Opts.GraphSeed = std::stoull(RequireValue("--graph-seed"), nullptr, 0);
+        } else if (Arg == "--rng-subsequence") {
+            Opts.RngSubsequence = std::stoull(RequireValue("--rng-subsequence"), nullptr, 0);
+        } else if (Arg == "--rng-offset") {
+            Opts.RngOffset = std::stoull(RequireValue("--rng-offset"), nullptr, 0);
         } else if (Arg == "--storage-bits") {
             const auto Value = RequireValue("--storage-bits");
             if (Value == "auto") {
@@ -322,7 +343,9 @@ ParseOptions(int argc, char **argv)
                 << "                        Mulshrolate1RX, Mulshrolate2RX, Mulshrolate3RX,\n"
                 << "                        or Mulshrolate4RX\n"
                 << "  --key-seed <x>        Base seed for generated keys\n"
-                << "  --graph-seed <x>      Base seed for per-graph hash seeds\n"
+                << "  --graph-seed <x>      Philox seed for per-graph hash seeds\n"
+                << "  --rng-subsequence <x> Philox subsequence base for graph seeds\n"
+                << "  --rng-offset <x>      Philox offset base for graph seeds\n"
                 << "  --verbose             Print per-graph mismatch details\n";
             std::exit(EXIT_SUCCESS);
         } else {
@@ -364,6 +387,25 @@ SplitMix64(uint64_t Value)
     return Value ^ (Value >> 31);
 }
 
+inline uint32_t
+TrailingZeros32(uint32_t Value)
+{
+    if (Value == 0) {
+        return 32;
+    }
+
+#if defined(__GNUG__) || defined(__clang__)
+    return static_cast<uint32_t>(__builtin_ctz(Value));
+#else
+    uint32_t Count = 0;
+    while ((Value & 1u) == 0) {
+        Value >>= 1;
+        ++Count;
+    }
+    return Count;
+#endif
+}
+
 template<typename ValueType,
          typename ShiftType>
 __host__ __device__ inline ValueType
@@ -377,6 +419,212 @@ RotateRight(ValueType Value, ShiftType Shift)
 
     Shift %= Bits;
     return (Value >> Shift) | (Value << (Bits - Shift));
+}
+
+inline uint32_t
+MulHighLow32(uint32_t A, uint32_t B, uint32_t *OutHigh)
+{
+    uint64_t Product = static_cast<uint64_t>(A) * static_cast<uint64_t>(B);
+    *OutHigh = static_cast<uint32_t>(Product >> 32u);
+    return static_cast<uint32_t>(Product);
+}
+
+inline void
+PhiloxStateIncrement(Philox4x32State *State, uint64_t Offset)
+{
+    uint32_t Low = static_cast<uint32_t>(Offset);
+    uint32_t High = static_cast<uint32_t>(Offset >> 32u);
+
+    State->CounterX += Low;
+
+    if (State->CounterX < Low) {
+        ++High;
+    }
+
+    State->CounterY += High;
+
+    if (High <= State->CounterY) {
+        return;
+    }
+
+    if (++State->CounterZ) {
+        return;
+    }
+
+    ++State->CounterW;
+}
+
+inline void
+PhiloxStateIncrementHigh(Philox4x32State *State, uint64_t Number)
+{
+    uint32_t Low = static_cast<uint32_t>(Number);
+    uint32_t High = static_cast<uint32_t>(Number >> 32u);
+
+    State->CounterZ += Low;
+    if (State->CounterZ < Low) {
+        ++High;
+    }
+
+    State->CounterW += High;
+}
+
+inline void
+PhiloxStateIncrementNoOffset(Philox4x32State *State)
+{
+    if (++State->CounterX) {
+        return;
+    }
+    if (++State->CounterY) {
+        return;
+    }
+    if (++State->CounterZ) {
+        return;
+    }
+    ++State->CounterW;
+}
+
+inline void
+Philox4x32Round(uint32_t CounterX,
+                uint32_t CounterY,
+                uint32_t CounterZ,
+                uint32_t CounterW,
+                uint32_t KeyX,
+                uint32_t KeyY,
+                uint32_t *OutX,
+                uint32_t *OutY,
+                uint32_t *OutZ,
+                uint32_t *OutW)
+{
+    constexpr uint32_t PHILOX_M4x32_0 = 0xD2511F53u;
+    constexpr uint32_t PHILOX_M4x32_1 = 0xCD9E8D57u;
+
+    uint32_t High0 = 0;
+    uint32_t High1 = 0;
+    uint32_t Low0 = MulHighLow32(PHILOX_M4x32_0, CounterX, &High0);
+    uint32_t Low1 = MulHighLow32(PHILOX_M4x32_1, CounterZ, &High1);
+
+    *OutX = High1 ^ CounterY ^ KeyX;
+    *OutY = Low1;
+    *OutZ = High0 ^ CounterW ^ KeyY;
+    *OutW = Low0;
+}
+
+inline void
+Philox4x32_10(Philox4x32State *State)
+{
+    constexpr uint32_t PHILOX_W32_0 = 0x9E3779B9u;
+    constexpr uint32_t PHILOX_W32_1 = 0xBB67AE85u;
+
+    uint32_t Cx = State->CounterX;
+    uint32_t Cy = State->CounterY;
+    uint32_t Cz = State->CounterZ;
+    uint32_t Cw = State->CounterW;
+    uint32_t Kx = State->KeyX;
+    uint32_t Ky = State->KeyY;
+
+    for (int Round = 0; Round < 9; ++Round) {
+        uint32_t Ox = 0;
+        uint32_t Oy = 0;
+        uint32_t Oz = 0;
+        uint32_t Ow = 0;
+        Philox4x32Round(Cx, Cy, Cz, Cw, Kx, Ky, &Ox, &Oy, &Oz, &Ow);
+        Cx = Ox;
+        Cy = Oy;
+        Cz = Oz;
+        Cw = Ow;
+        Kx += PHILOX_W32_0;
+        Ky += PHILOX_W32_1;
+    }
+
+    Philox4x32Round(Cx, Cy, Cz, Cw, Kx, Ky,
+                    &State->OutputX,
+                    &State->OutputY,
+                    &State->OutputZ,
+                    &State->OutputW);
+}
+
+inline void
+Skipahead(Philox4x32State *State, uint64_t Offset)
+{
+    State->CurrentCount += static_cast<uint32_t>(Offset & 3u);
+    Offset /= 4u;
+
+    if (State->CurrentCount > 3) {
+        Offset += 1u;
+        State->CurrentCount -= 4u;
+    }
+
+    PhiloxStateIncrement(State, Offset);
+    Philox4x32_10(State);
+}
+
+inline void
+SkipaheadSubsequence(Philox4x32State *State, uint64_t Subsequence)
+{
+    PhiloxStateIncrementHigh(State, Subsequence);
+    Philox4x32_10(State);
+}
+
+inline Philox4x32State
+InitializePhiloxState(uint64_t Seed,
+                      uint64_t Subsequence,
+                      uint64_t Offset)
+{
+    Philox4x32State State = {};
+    State.KeyX = static_cast<uint32_t>(Seed);
+    State.KeyY = static_cast<uint32_t>(Seed >> 32u);
+    SkipaheadSubsequence(&State, Subsequence);
+    Skipahead(&State, Offset);
+    return State;
+}
+
+inline uint32_t
+GetRandomLong(Philox4x32State *State)
+{
+    uint32_t Value = 0;
+
+    switch (State->CurrentCount++) {
+        case 0:
+            Value = State->OutputX;
+            break;
+        case 1:
+            Value = State->OutputY;
+            break;
+        case 2:
+            Value = State->OutputZ;
+            break;
+        case 3:
+            Value = State->OutputW;
+            break;
+        default:
+            std::abort();
+    }
+
+    if (State->CurrentCount == 4) {
+        PhiloxStateIncrementNoOffset(State);
+        Philox4x32_10(State);
+        State->CurrentCount = 0;
+    }
+
+    return Value;
+}
+
+inline uint32_t
+GetRandomNonZeroLong(Philox4x32State *State)
+{
+    uint32_t Random = 0;
+    unsigned Attempts = 0;
+
+    do {
+        Random = GetRandomLong(State);
+        ++Attempts;
+        if (Attempts > 16) {
+            std::cerr << "Philox produced too many zero outputs in a row.\n";
+            std::exit(EXIT_FAILURE);
+        }
+    } while (Random == 0);
+
+    return Random;
 }
 
 template<HashFunctionKind Kind>
@@ -432,24 +680,30 @@ struct HashTraits<HashFunctionKind::Mulshrolate4RX> {
 };
 
 template<HashFunctionKind Kind>
+constexpr bool
+RequiresAndMask()
+{
+    return !(Kind == HashFunctionKind::MultiplyShiftRX ||
+             Kind == HashFunctionKind::Mulshrolate1RX ||
+             Kind == HashFunctionKind::Mulshrolate2RX ||
+             Kind == HashFunctionKind::Mulshrolate3RX ||
+             Kind == HashFunctionKind::Mulshrolate4RX);
+}
+
+template<HashFunctionKind Kind>
 GraphSeeds
 MakeGraphSeeds(uint64_t GraphSeed, uint32_t GraphIndex)
 {
     GraphSeeds Seeds = {};
     constexpr uint32_t NumberOfSeeds = HashTraits<Kind>::NumberOfSeeds;
-    constexpr uint32_t Seed3Mask = HashTraits<Kind>::Seed3Mask;
+    Philox4x32State State = InitializePhiloxState(GraphSeed,
+                                                  static_cast<uint64_t>(GraphIndex),
+                                                  0);
 
     Seeds.NumberOfSeeds = NumberOfSeeds;
 
     for (uint32_t Index = 0; Index < NumberOfSeeds; ++Index) {
-        uint64_t Material = GraphSeed;
-        Material ^= (static_cast<uint64_t>(GraphIndex) << 32);
-        Material ^= (static_cast<uint64_t>(Index) * 0x9e3779b97f4a7c15ull);
-        Seeds.Seeds[Index] = static_cast<uint32_t>(SplitMix64(Material));
-    }
-
-    if constexpr (Seed3Mask != 0) {
-        Seeds.Seeds[2] &= Seed3Mask;
+        Seeds.Seeds[Index] = GetRandomNonZeroLong(&State);
     }
 
     return Seeds;
@@ -459,6 +713,9 @@ template<HashFunctionKind Kind>
 std::vector<GraphSeeds>
 MakeGraphSeedsVector(uint32_t Batch,
                      uint64_t GraphSeed,
+                     uint64_t RngSubsequence,
+                     uint64_t RngOffset,
+                     uint32_t Vertices,
                      const std::string &SeedsFile)
 {
     if (!SeedsFile.empty()) {
@@ -468,8 +725,39 @@ MakeGraphSeedsVector(uint32_t Batch,
     }
 
     std::vector<GraphSeeds> Seeds(Batch);
+    constexpr uint32_t Seed3Mask = HashTraits<Kind>::Seed3Mask;
+    const uint32_t HashShift = 32u - TrailingZeros32(Vertices);
+
     for (uint32_t Graph = 0; Graph < Batch; ++Graph) {
-        Seeds[Graph] = MakeGraphSeeds<Kind>(GraphSeed, Graph);
+        GraphSeeds Generated = {};
+        Philox4x32State State = InitializePhiloxState(GraphSeed,
+                                                      RngSubsequence + Graph,
+                                                      RngOffset);
+
+        Generated.NumberOfSeeds = HashTraits<Kind>::NumberOfSeeds;
+
+        for (uint32_t Index = 0; Index < Generated.NumberOfSeeds; ++Index) {
+            Generated.Seeds[Index] = GetRandomNonZeroLong(&State);
+        }
+
+        if constexpr (!RequiresAndMask<Kind>()) {
+            ULongBytes Seed3 = {};
+            Seed3.AsULong = Generated.Seeds[2];
+            Seed3.Byte1 = static_cast<uint8_t>(HashShift);
+            Generated.Seeds[2] = Seed3.AsULong;
+        }
+
+        if constexpr (Seed3Mask != 0) {
+            Generated.Seeds[2] &= Seed3Mask;
+            if constexpr (!RequiresAndMask<Kind>()) {
+                ULongBytes Seed3 = {};
+                Seed3.AsULong = Generated.Seeds[2];
+                Seed3.Byte1 = static_cast<uint8_t>(HashShift);
+                Generated.Seeds[2] = Seed3.AsULong;
+            }
+        }
+
+        Seeds[Graph] = Generated;
     }
     return Seeds;
 }
@@ -1236,6 +1524,11 @@ RunWithSelectedStorage(const Options &Opts,
 {
     auto GraphSeedsVector = MakeGraphSeedsVector<Kind>(Opts.Batch,
                                                        Opts.GraphSeed,
+                                                       Opts.RngSubsequence,
+                                                       Opts.RngOffset,
+                                                       NextPowerOfTwo(NextPowerOfTwo(
+                                                           static_cast<uint32_t>(Keys.size())
+                                                       ) + 1),
                                                        Opts.SeedsFile);
 
     if (SelectedStorage == StorageMode::Bits16) {

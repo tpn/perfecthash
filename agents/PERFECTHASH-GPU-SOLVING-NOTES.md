@@ -284,6 +284,41 @@
   - the earlier `0/128` random-attempt runs for some real hash families are therefore most likely a seed-generation / seed-yield issue, not a bad hash implementation
   - this suggests the next fidelity step is to improve how the POC generates or mutates candidate seed sets, not to rework the formulas again
 
+## Philox Seed Generation
+- The POC now uses a Philox 4x32 10-round seed generator for candidate graph seeds, aligned with repo precedent:
+  - non-zero 32-bit words are generated from Philox output
+  - per-graph subsequence is derived from a base subsequence plus the graph index
+  - a base offset is supported
+- The POC also now mirrors the non-AND-mask behavior for `RX` families:
+  - `Seed3.Byte1` is forced to `HashShift`
+  - then seed masks are applied / preserved
+- This is closer to the real solver than the earlier SplitMix-derived seed words.
+
+## Philox Yield Results
+- Even after switching to Philox and `HashShift` override, random yield for real hash families remains very low in the POC:
+  - `HologramWorld-31016.keys`, batch `128`, `MultiplyShiftR`, storage `16`
+    - GPU success `0/128`
+    - CPU success `0/128`
+  - `HologramWorld-31016.keys`, batch `128`, `Mulshrolate3RX`, storage `16`
+    - GPU success `0/128`
+    - CPU success `0/128`
+  - `Hydrogen-40147.keys`, batch `128`, `MultiplyShiftR`, storage `32`
+    - GPU success `0/128`
+    - CPU success `0/128`
+  - `HologramWorld-31016.keys`, batch `2048`, `MultiplyShiftR`, storage `16`
+    - GPU success `0/2048`
+    - CPU success `0/2048`
+  - `HologramWorld-31016.keys`, batch `2048`, `Mulshrolate3RX`, storage `16`
+    - GPU success `1/2048`
+    - CPU success `1/2048`
+- Current interpretation:
+  - the ported hashes are correct
+  - Philox alone was not enough to reproduce the practical seed yield of the full solver
+  - the next likely missing piece is seed-shaping behavior:
+    - weighted seed-mask counts
+    - better constrained seed-byte mutation
+    - or additional solver heuristics around candidate seed selection
+
 ## Assignment / Order Semantics
 - The POC does perform assignment.
 - It explicitly verifies order-preserving indexing for actual keys:

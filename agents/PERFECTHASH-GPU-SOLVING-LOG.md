@@ -101,3 +101,13 @@
   - `HologramWorld-31016.Mulshrolate3RX.seeds` + `Mulshrolate3RX`: GPU `1/1`, CPU `1/1`
   - `tests/data/HologramWorld-31016.Mulshrolate1RX.seeds` + `Mulshrolate1RX`: GPU `1/1`, CPU `1/1`
 - 2026-03-22 19:17:08 PDT: Conclusion from the validation run: current real-hash implementation is correct for the tested families; poor random-attempt yield is now the main issue to investigate.
+- 2026-03-22 22:44:02 PDT: Replaced SplitMix-derived candidate graph seeds with a Philox 4x32 10-round generator modeled after `RngPhilox4x32.c`.
+- 2026-03-22 22:44:02 PDT: Added support for base Philox subsequence/offset in the POC seed path, and mirrored the `HashShift` override for non-AND-mask (`RX`) hash families.
+- 2026-03-22 22:44:02 PDT: Reran real-hash random-attempt experiments after the Philox change:
+  - `HologramWorld-31016.keys`, batch `128`, `MultiplyShiftR`, storage `16`: GPU `0/128`, CPU `0/128`
+  - `HologramWorld-31016.keys`, batch `128`, `Mulshrolate3RX`, storage `16`: GPU `0/128`, CPU `0/128`
+  - `Hydrogen-40147.keys`, batch `128`, `MultiplyShiftR`, storage `32`: GPU `0/128`, CPU `0/128`
+- 2026-03-22 22:44:02 PDT: Increased batch size for HologramWorld to probe yield:
+  - `MultiplyShiftR`, batch `2048`, storage `16`: GPU `0/2048`, CPU `0/2048`
+  - `Mulshrolate3RX`, batch `2048`, storage `16`: GPU `1/2048`, CPU `1/2048`
+- 2026-03-22 22:44:02 PDT: Conclusion from the Philox experiment: seed generation is now closer to repo precedent, but real-hash solve yield is still extremely low; likely missing weighted mask counts or other solver seed-shaping behavior.
