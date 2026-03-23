@@ -34,6 +34,7 @@
   - add weighted seed-mask count behavior analogous to `GraphApplyWeightedSeedMasks()`
   - compare Philox-only yield against actual CLI / library solve yield
   - consider a mutation step around known-good seed shapes instead of full random generation
+- Consider measuring actual `PerfectHashCreate` attempt yield for one representative case so the POC has a concrete target.
 - Measure real-key throughput and solve rate on Hydrogen/HologramWorld across batch sizes.
 - Measure solve throughput as a function of:
   - edges

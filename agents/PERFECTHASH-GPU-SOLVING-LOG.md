@@ -111,3 +111,7 @@
   - `MultiplyShiftR`, batch `2048`, storage `16`: GPU `0/2048`, CPU `0/2048`
   - `Mulshrolate3RX`, batch `2048`, storage `16`: GPU `1/2048`, CPU `1/2048`
 - 2026-03-22 22:44:02 PDT: Conclusion from the Philox experiment: seed generation is now closer to repo precedent, but real-hash solve yield is still extremely low; likely missing weighted mask counts or other solver seed-shaping behavior.
+- 2026-03-22 22:45:39 PDT: Synced the Philox/hash updates to `nv1`, rebuilt there, and ran:
+  - `HologramWorld-31016.keys`, batch `2048`, `MultiplyShiftR`, storage `16`
+  - result: GPU `0/2048`, CPU `0/2048`, mismatches `0`, GPU `113.163 ms`, CPU `455.704 ms`
+- 2026-03-22 22:45:39 PDT: Cross-machine conclusion unchanged: Philox + `HashShift` override still does not recover real solver yield on its own.

@@ -318,6 +318,13 @@
     - weighted seed-mask counts
     - better constrained seed-byte mutation
     - or additional solver heuristics around candidate seed selection
+- Cross-machine confirmation:
+  - `nv1`, `HologramWorld-31016.keys`, batch `2048`, `MultiplyShiftR`, storage `16`
+    - GPU success `0/2048`
+    - CPU success `0/2048`
+    - GPU time `113.163 ms`
+    - CPU time `455.704 ms`
+  - This matches the local yield result and reinforces that the remaining issue is algorithmic seed shaping, not machine-specific behavior.
 
 ## Assignment / Order Semantics
 - The POC does perform assignment.
